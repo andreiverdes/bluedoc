@@ -1,0 +1,1814 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="bluedoc">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 22 22'%3E%3Crect width='22' height='22' rx='6' fill='%230b2a4f'/%3E%3Crect x='4.5' y='5' width='7' height='5' rx='1.2' fill='none' stroke='%23d6e9ff' stroke-width='1.3'/%3E%3Crect x='10.5' y='12' width='7' height='5' rx='1.2' fill='none' stroke='%235fd4ff' stroke-width='1.3'/%3E%3C/svg%3E">
+<title>acme-shop#412: bulk discount tiers</title>
+<style>
+/* bluedoc. Page tokens follow the HorizonUI design system (@horizonloop/ui): one value per
+   theme through light-dark(), so the system setting picks the theme and [data-theme] overrides it.
+   The blueprint drawing keeps its own navy palette (--bp-*) in both themes. */
+:root {
+  color-scheme: light dark;
+  --canvas: light-dark(oklch(97.3% 0.002 264), oklch(15.5% 0.003 264));
+  --panel: light-dark(oklch(98.6% 0.0015 264), oklch(19.8% 0.0035 264));
+  --surface: light-dark(oklch(100% 0 0), oklch(21.8% 0.004 264));
+  --raised: light-dark(oklch(100% 0 0), oklch(26.2% 0.0045 264));
+  --inset: light-dark(oklch(96.4% 0.002 264), oklch(18.2% 0.0035 264));
+  --fg: light-dark(oklch(23% 0.006 264), oklch(95% 0.002 264));
+  --fg-muted: light-dark(oklch(45% 0.008 264), oklch(80% 0.005 264));
+  --fg-subtle: light-dark(oklch(55% 0.007 264), oklch(68% 0.006 264));
+  --line: light-dark(oklch(92.6% 0.003 264), oklch(30% 0.006 264));
+  --line-strong: light-dark(oklch(87% 0.004 264), oklch(40% 0.007 264));
+  --line-soft: light-dark(oklch(95.2% 0.002 264), oklch(26% 0.005 264));
+  --hover: light-dark(oklch(23% 0.01 264 / 0.045), oklch(100% 0 0 / 0.05));
+  --selected: light-dark(oklch(23% 0.01 264 / 0.065), oklch(100% 0 0 / 0.08));
+  --focus: light-dark(oklch(62% 0.18 256), oklch(70% 0.15 254));
+  --code-bg: light-dark(oklch(95.6% 0.003 264), oklch(100% 0 0 / 0.08));
+  --accent: light-dark(oklch(58% 0.19 254), oklch(66% 0.17 254));
+  --accent-fg: light-dark(oklch(48% 0.17 254), oklch(80% 0.11 254));
+  --accent-tint: light-dark(oklch(95.6% 0.025 254), oklch(66% 0.17 254 / 0.16));
+  --ok: light-dark(oklch(62% 0.15 152), oklch(71% 0.15 152));
+  --ok-fg: light-dark(oklch(45% 0.12 152), oklch(82% 0.12 152));
+  --ok-tint: light-dark(oklch(95.8% 0.03 152), oklch(71% 0.15 152 / 0.14));
+  --warn: light-dark(oklch(75% 0.16 70), oklch(80% 0.14 80));
+  --warn-fg: light-dark(oklch(51% 0.13 60), oklch(86% 0.11 85));
+  --warn-tint: light-dark(oklch(96.4% 0.04 80), oklch(80% 0.14 80 / 0.14));
+  --risk: light-dark(oklch(61% 0.2 25), oklch(68% 0.18 25));
+  --risk-fg: light-dark(oklch(49% 0.18 25), oklch(82% 0.11 25));
+  --risk-tint: light-dark(oklch(95.8% 0.025 25), oklch(68% 0.18 25 / 0.15));
+  --info: var(--accent); --info-fg: var(--accent-fg); --info-tint: var(--accent-tint);
+  --todo: light-dark(oklch(62% 0.02 264), oklch(68% 0.02 264));
+  --todo-fg: var(--fg-muted);
+  --todo-tint: light-dark(oklch(95% 0.003 264), oklch(100% 0 0 / 0.07));
+  --sh-ring: light-dark(oklch(23% 0.01 264 / 0.07), oklch(100% 0 0 / 0.08));
+  --sh-a: light-dark(oklch(23% 0.01 264 / 0.04), oklch(0% 0 0 / 0.4));
+  --sh-b: light-dark(oklch(23% 0.01 264 / 0.035), oklch(0% 0 0 / 0.25));
+  --shadow-1: 0 0 0 1px var(--sh-ring), 0 1px 2px var(--sh-a), 0 2px 6px var(--sh-b);
+  --shadow-3: 0 0 0 1px var(--sh-ring), 0 6px 12px var(--sh-a), 0 18px 40px var(--sh-b);
+  --key-top: light-dark(oklch(100% 0 0), oklch(95% 0.002 264 / 0.1));
+  --key-bot: light-dark(oklch(97.2% 0.002 264), oklch(95% 0.002 264 / 0.07));
+  --key-ring: light-dark(oklch(23% 0.01 264 / 0.1), oklch(95% 0.002 264 / 0.1));
+  --key-hi: light-dark(oklch(100% 0 0), oklch(100% 0 0 / 0.05));
+  --shadow-key: 0 0 0 1px var(--key-ring), 0 1px 1.5px var(--sh-a), inset 0 1px 0 var(--key-hi);
+  --focus-ring: 0 0 0 1px color-mix(in oklch, var(--focus) 60%, transparent), 0 0 0 4px color-mix(in oklch, var(--focus) 18%, transparent);
+  --bp-bg: #0b2a4f; --bp-bg2: #0e3260; --bp-deep: #08203d; --bp-line: #d6e9ff; --bp-dim: #8db2da; --bp-cyan: #5fd4ff;
+  --bp-amber: #ffc35a; --bp-green: #74e6ab; --bp-red: #ff8a7a; --bp-violet: #c3a6ff;
+  --sans: "Inter Variable", Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --mono: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --ease: cubic-bezier(0.23, 1, 0.32, 1);
+  --rail: 204px; --content-w: 920px; --gap: 32px; --bar-h: 52px;
+}
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: calc(var(--bar-h) + 16px); }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body { margin: 0; background: var(--canvas); color: var(--fg); font: 15px/1.6 var(--sans); -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; font-feature-settings: "cv11", "ss01"; }
+a { color: var(--accent-fg); text-decoration-color: color-mix(in oklch, currentColor 35%, transparent); text-underline-offset: 2px; }
+a:hover { text-decoration-color: currentColor; }
+code { font-family: var(--mono); font-size: .86em; background: var(--code-bg); color: var(--fg); padding: .1em .38em; border-radius: 5px; overflow-wrap: anywhere; }
+button { font: inherit; color: inherit; cursor: pointer; }
+:focus-visible { outline: none; box-shadow: var(--focus-ring); border-radius: 6px; }
+.bd-ic { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+
+/* app bar */
+.bd-bar { position: sticky; top: 0; z-index: 40; height: var(--bar-h); display: flex; align-items: center; gap: 12px; padding: 0 20px;
+  background: color-mix(in oklch, var(--canvas) 84%, transparent); -webkit-backdrop-filter: saturate(1.5) blur(14px); backdrop-filter: saturate(1.5) blur(14px);
+  border-bottom: 1px solid var(--line); }
+.bd-mark { display: inline-flex; align-items: center; gap: 8px; font: 650 15px/1 var(--sans); letter-spacing: -.01em; color: var(--fg); text-decoration: none; flex: none; }
+.bd-mark svg { width: 22px; height: 22px; border-radius: 6px; box-shadow: 0 0 0 1px oklch(30% 0.06 255 / .5); }
+.bd-mark b { font-weight: 650; color: var(--accent-fg); }
+.bd-crumb { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 13px; color: var(--fg-subtle); }
+.bd-crumb .sep { color: var(--line-strong); flex: none; }
+.bd-crumb .t { color: var(--fg-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bd-bar-r { margin-left: auto; display: flex; align-items: center; gap: 10px; flex: none; }
+.bd-overall { display: flex; align-items: center; gap: 8px; font: 500 12px var(--mono); color: var(--fg-muted); }
+.bd-overall .bp-bar { width: 72px; }
+.bd-ibtn { display: inline-grid; place-items: center; width: 30px; height: 30px; border: 0; border-radius: 9px; color: var(--fg-muted);
+  background: linear-gradient(180deg, var(--key-top), var(--key-bot)); box-shadow: var(--shadow-key); transition: color .12s var(--ease), transform .09s; }
+.bd-ibtn:hover { color: var(--fg); }
+.bd-ibtn:active { transform: translateY(.5px); }
+
+/* shell: three columns; the content column is centred on the page, Contents floats in the left
+   margin and the document rail (status, links, drawing) in the right one. Both margins are at least
+   one rail wide, so the content narrows before either rail can touch it. */
+.bd-shell { display: grid; grid-template-columns: minmax(var(--rail), 1fr) minmax(0, var(--content-w)) minmax(var(--rail), 1fr);
+  grid-template-areas: "side head meta" "side tldr meta" "side main meta"; grid-template-rows: auto auto 1fr;
+  column-gap: var(--gap); padding: 0 20px 120px; }
+.bd-head { grid-area: head; padding-top: 56px; min-width: 0; }
+.bd-tldr { grid-area: tldr; min-width: 0; }
+.bd-shell > main { grid-area: main; min-width: 0; }
+.bp-side { grid-area: side; justify-self: end; width: var(--rail); position: sticky; top: calc(var(--bar-h) + 20px); align-self: start;
+  margin-top: 60px; max-height: calc(100vh - var(--bar-h) - 40px); overflow: auto; font-size: 13.5px; scrollbar-width: thin; }
+.bd-meta { grid-area: meta; justify-self: start; width: var(--rail); position: sticky; top: calc(var(--bar-h) + 20px); align-self: start;
+  margin-top: 60px; max-height: calc(100vh - var(--bar-h) - 40px); overflow: auto; font-size: 13px; scrollbar-width: thin; }
+
+/* header */
+.bd-eyebrow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: 13px; color: var(--fg-subtle); }
+.bd-eyebrow .dot { width: 3px; height: 3px; border-radius: 50%; background: currentColor; opacity: .6; }
+.bd-head h1 { font: 680 clamp(28px, 3.4vw, 38px)/1.14 var(--sans); letter-spacing: -.024em; margin: 14px 0 0; text-wrap: balance; max-width: 22em; }
+.bd-sub { font-size: 17px; line-height: 1.55; color: var(--fg-muted); margin: 14px 0 0; max-width: 40em; text-wrap: pretty; }
+.bd-tldr-card { margin-top: 32px; background: var(--surface); border-radius: 14px; box-shadow: var(--shadow-1); padding: 18px 22px 18px 20px;
+  display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 14px; }
+.bd-tldr-card .ico { grid-row: 1 / span 2; width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; color: var(--accent-fg); background: var(--accent-tint); }
+.bd-tldr-card .lbl { font: 600 11px/1.6 var(--sans); letter-spacing: .08em; text-transform: uppercase; color: var(--accent-fg); }
+.bd-tldr-card .body { font-size: 15.5px; line-height: 1.62; }
+.bd-tldr-card .body p { margin: 2px 0 6px; } .bd-tldr-card .body p:last-child { margin-bottom: 0; }
+
+/* rails */
+.bd-rail-h { font: 600 11px/1.4 var(--sans); letter-spacing: .07em; text-transform: uppercase; color: var(--fg-subtle); margin: 0 0 8px 10px; }
+.bd-rail-sec + .bd-rail-sec { margin-top: 24px; }
+.bd-states { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.bd-state { display: flex; gap: 9px; align-items: baseline; padding: 4px 10px; color: var(--fg); line-height: 1.45; }
+.bd-state i { width: 7px; height: 7px; border-radius: 50%; flex: none; position: relative; top: -1px; background: var(--todo); box-shadow: 0 0 0 3px var(--todo-tint); }
+.bd-state.ok i { background: var(--ok); box-shadow: 0 0 0 3px var(--ok-tint); }
+.bd-state.warn i { background: var(--warn); box-shadow: 0 0 0 3px var(--warn-tint); }
+.bd-state.risk i { background: var(--risk); box-shadow: 0 0 0 3px var(--risk-tint); }
+.bd-state.info i { background: var(--accent); box-shadow: 0 0 0 3px var(--accent-tint); }
+.bd-links { list-style: none; margin: 0; padding: 0; }
+.bd-links a { display: flex; gap: 8px; align-items: flex-start; padding: 5px 10px; border-radius: 8px; color: var(--fg-muted); text-decoration: none; line-height: 1.4; }
+.bd-links a .bd-ic { width: 14px; height: 14px; margin-top: 2px; color: var(--fg-subtle); }
+.bd-links a:hover { background: var(--hover); color: var(--fg); }
+.bd-props { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 12px; margin: 0; padding: 0 10px; }
+.bd-props dt { color: var(--fg-subtle); }
+.bd-props dd { margin: 0; font: 500 12px/1.65 var(--mono); color: var(--fg-muted); overflow-wrap: anywhere; }
+
+/* sidebar: contents + tracker */
+.bp-side ol { list-style: none; margin: 0 0 26px; padding: 0; }
+.bp-side li a { display: flex; gap: 10px; padding: 6px 10px; border-radius: 8px; color: var(--fg-muted); text-decoration: none; line-height: 1.4; transition: background .12s, color .12s; }
+.bp-side li a:hover { background: var(--hover); color: var(--fg); }
+.bp-side li a.on { background: var(--selected); color: var(--fg); font-weight: 550; box-shadow: inset 2px 0 0 var(--accent); border-radius: 2px 8px 8px 2px; }
+.bp-side li a span.n { font: 500 11px/1.9 var(--mono); color: var(--fg-subtle); min-width: 16px; flex: none; }
+.bp-prog { background: var(--surface); border-radius: 12px; box-shadow: var(--shadow-1); padding: 6px; }
+.bp-side .bp-prog-row { display: block; padding: 7px 8px; border-radius: 8px; color: var(--fg); text-decoration: none; }
+.bp-side .bp-prog-row:hover { background: var(--hover); }
+.bp-side .bp-prog-row .t { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; line-height: 1.4; }
+.bp-side .bp-prog-row .c { font: 500 11.5px/1.6 var(--mono); color: var(--fg-subtle); white-space: nowrap; }
+.bp-side .bp-prog-row .bp-bar { margin-top: 6px; }
+.bp-side-tools { display: flex; justify-content: space-between; gap: 4px; margin: 4px -6px -6px; padding: 4px; border-top: 1px solid var(--line-soft); }
+.bp-btn { display: inline-flex; align-items: center; gap: 6px; height: 28px; border: 0; border-radius: 9px; padding: 0 10px; font-size: 12.5px; font-weight: 500; color: var(--fg);
+  background: linear-gradient(180deg, var(--key-top), var(--key-bot)); box-shadow: var(--shadow-key); white-space: nowrap; transition: transform .09s; }
+.bp-btn .bd-ic { width: 14px; height: 14px; color: var(--fg-subtle); }
+.bp-btn:active { transform: translateY(.5px); }
+.bp-btn.ghost { background: none; box-shadow: none; color: var(--fg-muted); padding: 0 8px; }
+.bp-btn.ghost:hover { background: var(--hover); color: var(--fg); }
+.bp-side-toggle { display: none !important; }
+
+/* sections */
+.bp-sec { padding-top: 56px; scroll-margin-top: calc(var(--bar-h) + 12px); }
+.bp-sec + .bp-sec { margin-top: 56px; border-top: 1px solid var(--line); }
+.bp-sec > h2 { display: flex; align-items: center; gap: 12px; font: 650 23px/1.25 var(--sans); letter-spacing: -.016em; margin: 0 0 6px; text-wrap: balance; }
+.bp-sec > h2 .n { flex: none; display: inline-grid; place-items: center; min-width: 30px; height: 26px; padding: 0 6px; border-radius: 8px; font: 600 11.5px/1 var(--mono); color: var(--fg-muted);
+  background: linear-gradient(180deg, var(--key-top), var(--key-bot)); box-shadow: var(--shadow-key); }
+.bp-sec > .bp-lead { color: var(--fg-muted); font-size: 15.5px; margin: 10px 0 22px; max-width: 46em; text-wrap: pretty; }
+.bp-block { margin: 18px 0; }
+.bp-text p, .bp-text li { max-width: 46em; }
+.bp-text p { margin: 10px 0; }
+.bp-text ul, .bp-text ol { padding-left: 22px; margin: 10px 0; }
+.bp-text li { margin: 4px 0; }
+.bp-text li::marker { color: var(--fg-subtle); }
+
+/* chips: HorizonUI soft Badge */
+.bp-chip { display: inline-flex; align-items: center; gap: 5px; font: 500 12px/1 var(--sans); padding: 4px 8px; border-radius: 999px; white-space: nowrap; color: var(--todo-fg); background: var(--todo-tint); }
+.bp-chip.ok { color: var(--ok-fg); background: var(--ok-tint); }
+.bp-chip.warn { color: var(--warn-fg); background: var(--warn-tint); }
+.bp-chip.risk { color: var(--risk-fg); background: var(--risk-tint); }
+.bp-chip.info { color: var(--accent-fg); background: var(--accent-tint); }
+.bp-chip.todo { color: var(--todo-fg); background: var(--todo-tint); }
+
+/* callouts: HorizonUI InlineAlert */
+.bp-callout { --t: var(--accent); --tf: var(--accent-fg); --tt: var(--accent-tint);
+  display: grid; grid-template-columns: 18px minmax(0, 1fr); column-gap: 11px; padding: 13px 16px; border-radius: 12px;
+  background: var(--tt); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--t) 26%, transparent); font-size: 14.5px; }
+.bp-callout > .bd-ic { color: var(--tf); width: 17px; height: 17px; margin-top: 2px; grid-row: 1 / span 2; }
+.bp-callout .lbl { font-weight: 600; color: var(--tf); line-height: 1.5; }
+.bp-callout p { margin: 3px 0 0; }
+.bp-callout ul, .bp-callout ol { margin: 4px 0 0; padding-left: 20px; }
+.bp-callout.caution { --t: var(--warn); --tf: var(--warn-fg); --tt: var(--warn-tint); }
+.bp-callout.warning, .bp-callout.risk { --t: var(--risk); --tf: var(--risk-fg); --tt: var(--risk-tint); }
+.bp-callout.decision { --t: var(--todo); --tf: var(--fg); --tt: var(--surface); box-shadow: var(--shadow-1); }
+.bp-callout.decision > .bd-ic { color: var(--accent-fg); }
+
+/* tables: HorizonUI DataGrid */
+.bp-table-wrap { overflow-x: auto; background: var(--surface); border-radius: 12px; box-shadow: var(--shadow-1); }
+.bp-table { border-collapse: collapse; width: 100%; font-size: 14px; line-height: 1.5; }
+.bp-table th { text-align: left; font: 600 11px/1.4 var(--sans); letter-spacing: .06em; text-transform: uppercase; color: var(--fg-subtle); padding: 11px 14px 9px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.bp-table td { padding: 10px 14px; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+.bp-table td:first-child { font-weight: 500; }
+.bp-table tr:last-child td { border-bottom: 0; }
+.bp-table tbody tr { transition: background .1s; }
+.bp-table tbody tr:hover { background: var(--hover); }
+.bp-caption { font-size: 13px; color: var(--fg-subtle); margin: 8px 2px 0; }
+
+/* code: HorizonUI CodeBlock */
+.bp-code { border-radius: 12px; overflow: hidden; background: var(--surface); box-shadow: var(--shadow-1); }
+.bp-code-h { display: flex; justify-content: space-between; align-items: center; gap: 8px; height: 36px; padding: 0 6px 0 12px; font: 500 11px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--fg-subtle); border-bottom: 1px solid var(--line-soft); }
+.bp-code-h > span { display: inline-flex; align-items: center; gap: 7px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bp-code pre { margin: 0; padding: 12px 14px; overflow-x: auto; color: var(--fg); font: 13px/1.65 var(--mono); background: var(--panel); }
+.bp-code pre code { background: none; padding: 0; font-size: inherit; color: inherit; overflow-wrap: normal; }
+
+/* terms: HorizonUI PropertyGrid */
+.bp-terms { display: grid; grid-template-columns: max-content minmax(0, 1fr); margin: 0; background: var(--surface); border-radius: 12px; box-shadow: var(--shadow-1); overflow: hidden; }
+.bp-terms dt, .bp-terms dd { padding: 10px 16px; border-bottom: 1px solid var(--line-soft); }
+.bp-terms dt { font: 600 13px/1.6 var(--mono); color: var(--fg); background: var(--panel); border-right: 1px solid var(--line-soft); }
+.bp-terms dd { margin: 0; font-size: 14px; }
+.bp-terms dt:nth-last-of-type(1), .bp-terms dd:last-child { border-bottom: 0; }
+.bp-terms dd p { margin: 0; } .bp-terms dd p + p { margin-top: 6px; }
+
+/* cards: HorizonUI Card */
+.bp-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+.bp-card { background: var(--surface); border-radius: 14px; box-shadow: var(--shadow-1); padding: 15px 17px; font-size: 14px; color: var(--fg-muted); }
+.bp-card h4 { margin: 0 0 6px; font-size: 14.5px; font-weight: 600; line-height: 1.4; color: var(--fg); display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
+.bp-card h4 .bp-chip { margin-top: 1px; }
+.bp-card p { margin: 4px 0; }
+.bp-card ul { margin: 4px 0; padding-left: 18px; }
+
+/* checklists: HorizonUI PlanChecklist + ProgressBar */
+.bp-cl { --ind: 60px; background: var(--surface); border-radius: 14px; box-shadow: var(--shadow-1); overflow: hidden; scroll-margin-top: calc(var(--bar-h) + 16px); }
+.bp-cl:has(ul.bp-cl-items) { --ind: 28px; }
+.bp-cl-h { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; padding: 12px 10px 10px 16px; }
+.bp-cl-h > .bd-ic { color: var(--fg-subtle); }
+.bp-cl-h h3 { margin: 0; font-size: 15px; font-weight: 600; letter-spacing: -.005em; flex: 1 1 180px; line-height: 1.4; }
+.bp-cl-count { font: 500 12px var(--mono); color: var(--fg-subtle); white-space: nowrap; }
+.bp-cl.complete .bp-cl-count { color: var(--ok-fg); }
+.bp-cl-h .tools { display: flex; gap: 2px; }
+.bp-cl > .bp-bar { height: 2px; border-radius: 0; margin: 0 16px; }
+.bp-bar { height: 4px; background: var(--line); border-radius: 99px; overflow: hidden; }
+.bp-bar i { display: block; height: 100%; width: 0; background: var(--accent); border-radius: inherit; transition: width .3s var(--ease); }
+.bp-cl.complete .bp-bar i, .bp-bar.full i { background: var(--ok); }
+.bp-cl-items { margin: 0; padding: 6px 0 8px; list-style: none; }
+.bp-cl-item { padding: 10px 16px; }
+.bp-cl-item + .bp-cl-item { border-top: 1px solid var(--line-soft); }
+.bp-cl-item > label { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; }
+:is(.bp-cl-item, .bd-cm) input { appearance: none; -webkit-appearance: none; width: 18px; height: 18px; margin: 2px 0 0; flex: none; border-radius: 50%; cursor: pointer;
+  background: var(--surface); box-shadow: inset 0 0 0 1.5px var(--line-strong); transition: background .15s, box-shadow .15s; }
+:is(.bp-cl-item, .bd-cm) input:hover { box-shadow: inset 0 0 0 1.5px var(--fg-subtle); }
+:is(.bp-cl-item, .bd-cm) input:checked { background: var(--ok) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / 11px no-repeat; box-shadow: none; }
+:is(.bp-cl-item, .bd-cm) input:focus-visible { box-shadow: var(--focus-ring); }
+.bp-cl-num { font: 500 11.5px/1.95 var(--mono); color: var(--fg-subtle); min-width: 22px; flex: none; }
+.bp-cl-text { flex: 1; min-width: 0; font-size: 14.5px; line-height: 1.55; }
+.bp-cl-item.done .bp-cl-text { color: var(--fg-subtle); }
+.bp-cl-item.done .bp-cl-text code { color: var(--fg-subtle); }
+.bp-cl-item > label > .bp-chip { margin-top: 1px; }
+.bp-cl-sub { margin: 6px 0 0 var(--ind); font-size: 14px; }
+.bp-cl-sub details summary { cursor: pointer; color: var(--accent-fg); font-size: 13px; font-weight: 500; width: max-content; }
+.bp-cl-sub details p { margin: 6px 0; color: var(--fg-muted); }
+.bp-cl-verify { margin: 8px 0 0 var(--ind); font-size: 13.5px; color: var(--fg-muted); display: flex; gap: 8px; align-items: flex-start; line-height: 1.5; }
+.bp-cl-verify .bd-ic { width: 15px; height: 15px; color: var(--ok); margin-top: 2px; }
+.bp-cl-verify b { font-weight: 600; color: var(--ok-fg); margin-right: 4px; }
+.bp-cl-item .bp-code { margin: 8px 0 0 var(--ind); box-shadow: 0 0 0 1px var(--line); }
+.bp-cl-item .bp-code-h { height: 30px; }
+.bp-refs { margin: 8px 0 0 var(--ind); display: flex; gap: 6px; flex-wrap: wrap; }
+.bp-ref { display: inline-flex; align-items: center; gap: 5px; height: 24px; font: 500 12px var(--sans); border: 0; color: var(--fg-muted); background: var(--inset); box-shadow: inset 0 0 0 1px var(--line); border-radius: 7px; padding: 0 8px; transition: color .12s, box-shadow .12s; }
+.bp-ref .bd-ic { width: 13px; height: 13px; color: var(--accent-fg); }
+.bp-ref:hover { color: var(--accent-fg); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--accent) 45%, transparent); }
+
+/* toast: HorizonUI Toaster */
+.bp-toast { position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 8px); display: flex; align-items: center; gap: 8px;
+  background: light-dark(oklch(22% 0.006 264), oklch(30% 0.005 264)); color: oklch(97% 0 0); padding: 9px 14px; border-radius: 10px; font-size: 13.5px; font-weight: 500;
+  box-shadow: var(--shadow-3); opacity: 0; pointer-events: none; transition: opacity .2s var(--ease), transform .2s var(--ease); z-index: 60; }
+.bp-toast::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--ok); }
+.bp-toast.on { opacity: 1; transform: translate(-50%, 0); }
+
+/* code review: diff block (HorizonUI DiffReview, ChangeTable, CodeBlock syntax tokens) */
+:root {
+  --syn-keyword: light-dark(oklch(48% 0.19 285), oklch(76% 0.12 285));
+  --syn-string: light-dark(oklch(50% 0.12 170), oklch(78% 0.1 170));
+  --syn-number: light-dark(oklch(55% 0.15 70), oklch(80% 0.12 80));
+  --syn-comment: light-dark(oklch(58% 0.008 264), oklch(60% 0.008 264));
+  --syn-function: light-dark(oklch(47% 0.15 240), oklch(80% 0.1 230));
+  --syn-type: light-dark(oklch(52% 0.17 350), oklch(78% 0.11 350));
+  --syn-constant: light-dark(oklch(55% 0.15 45), oklch(78% 0.12 50));
+  --syn-field: light-dark(oklch(45% 0.05 264), oklch(80% 0.05 264));
+  --syn-annotation: light-dark(oklch(52% 0.12 120), oklch(78% 0.1 115));
+  --syn-tag: light-dark(oklch(50% 0.16 20), oklch(78% 0.11 20));
+  --add-bg: light-dark(oklch(96.6% 0.032 152), oklch(71% 0.15 152 / 0.12));
+  --add-num: light-dark(oklch(93% 0.05 152), oklch(71% 0.15 152 / 0.2));
+  --del-bg: light-dark(oklch(96.6% 0.022 25), oklch(68% 0.18 25 / 0.12));
+  --del-num: light-dark(oklch(93.5% 0.035 25), oklch(68% 0.18 25 / 0.2));
+}
+.t-k { color: var(--syn-keyword); } .t-s { color: var(--syn-string); } .t-n { color: var(--syn-number); } .t-c { color: var(--syn-comment); font-style: italic; }
+.t-f { color: var(--syn-function); } .t-t { color: var(--syn-type); } .t-K { color: var(--syn-constant); } .t-p { color: var(--syn-field); }
+.t-a { color: var(--syn-annotation); } .t-g { color: var(--syn-tag); }
+.bd-diff { --pane-h: min(74vh, 780px); background: var(--surface); border-radius: 14px; box-shadow: var(--shadow-1); overflow: clip; scroll-margin-top: calc(var(--bar-h) + 16px); }
+.bd-diff:fullscreen { --pane-h: calc(100vh - 104px); border-radius: 0; }
+.bd-diff-h { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 12px 12px 10px 16px; }
+.bd-diff-h > .bd-ic { color: var(--fg-subtle); }
+.bd-diff-h h3 { margin: 0; font-size: 15px; font-weight: 600; letter-spacing: -.005em; }
+.bd-diff-h .ref { font: 500 11.5px/1 var(--mono); color: var(--fg-muted); background: var(--inset); box-shadow: inset 0 0 0 1px var(--line); border-radius: 6px; padding: 4px 6px; white-space: nowrap; }
+.bd-diff-h .sp { flex: 1; }
+.bd-diff-h .stat { font: 500 12px var(--mono); color: var(--fg-subtle); white-space: nowrap; }
+.bd-diff-h a.gh { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; font-weight: 500; color: var(--fg-muted); text-decoration: none; padding: 4px 6px; border-radius: 7px; }
+.bd-diff-h a.gh:hover { background: var(--hover); color: var(--fg); }
+.bd-diff-h a.gh .bd-ic { width: 13px; height: 13px; }
+.add-c { color: var(--ok-fg); } .del-c { color: var(--risk-fg); }
+.bd-diff-note { padding: 0 16px 10px; font-size: 13px; color: var(--fg-muted); line-height: 1.5; }
+.bd-diff-note p { margin: 0; }
+.bd-diff-tb { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 10px; border-block: 1px solid var(--line); background: var(--panel); }
+.bd-seg { display: inline-flex; padding: 2px; gap: 2px; border-radius: 9px; background: var(--inset); box-shadow: inset 0 0 0 1px var(--line); }
+.bd-seg button { height: 26px; padding: 0 10px; border: 0; border-radius: 7px; background: none; font-size: 12.5px; font-weight: 500; color: var(--fg-muted); white-space: nowrap; }
+.bd-seg button:hover { color: var(--fg); }
+.bd-seg button[aria-pressed="true"] { background: linear-gradient(180deg, var(--key-top), var(--key-bot)); color: var(--fg); box-shadow: var(--shadow-key); }
+.bd-prog { display: inline-flex; align-items: center; gap: 8px; font: 500 12px var(--mono); color: var(--fg-subtle); white-space: nowrap; }
+.bd-prog .bp-bar { width: 64px; }
+.bd-cnav { display: inline-flex; align-items: center; gap: 2px; margin-left: auto; font-size: 12.5px; color: var(--fg-muted); white-space: nowrap; }
+.bd-cnav .lbl { padding: 0 6px; font-variant-numeric: tabular-nums; }
+.bd-cnav .bd-ibtn { width: 28px; height: 28px; }
+.bd-fsel { display: none; }
+.bd-diff-body { display: grid; grid-template-columns: 252px minmax(0, 1fr); height: var(--pane-h); }
+.bd-files { overflow: auto; border-right: 1px solid var(--line); padding: 6px; background: var(--panel); scrollbar-width: thin; }
+.bd-files .grp { font: 600 10.5px/1 var(--sans); letter-spacing: .07em; text-transform: uppercase; color: var(--fg-subtle); padding: 10px 8px 6px; }
+.bd-file { display: grid; grid-template-columns: 14px minmax(0, 1fr) auto; column-gap: 8px; align-items: center; width: 100%; text-align: left; border: 0; background: none; padding: 6px 8px; border-radius: 8px; color: var(--fg); }
+.bd-file:hover { background: var(--hover); }
+.bd-file[aria-current="true"] { background: var(--selected); box-shadow: inset 2px 0 0 var(--accent); border-radius: 2px 8px 8px 2px; }
+.bd-file .st { font: 700 10.5px/1 var(--mono); text-align: center; color: var(--fg-subtle); }
+.bd-file .st.A { color: var(--ok-fg); } .bd-file .st.D { color: var(--risk-fg); } .bd-file .st.M { color: var(--accent-fg); } .bd-file .st.R { color: var(--warn-fg); }
+.bd-file .st .bd-ic { width: 13px; height: 13px; }
+.bd-file .nm { font: 500 13px/1.4 var(--sans); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bd-file .dir { grid-column: 2 / 4; font: 11px/1.45 var(--mono); color: var(--fg-subtle); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bd-file .cnt { display: inline-flex; align-items: center; gap: 4px; font: 600 11px/1 var(--sans); color: var(--accent-fg); background: var(--accent-tint); border-radius: 999px; padding: 3px 7px; }
+.bd-file .cnt.all { color: var(--ok-fg); background: var(--ok-tint); }
+.bd-file .cnt .bd-ic { width: 11px; height: 11px; }
+.bd-file .ch { font: 500 10.5px var(--mono); color: var(--fg-subtle); white-space: nowrap; }
+.bd-pane { position: relative; overflow: auto; min-width: 0; scrollbar-width: thin; }
+.bd-fh { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 6px 8px 6px 14px; background: var(--surface); border-bottom: 1px solid var(--line); }
+.bd-fh .p { flex: 1; min-width: 0; font: 12px/1.45 var(--mono); color: var(--fg-subtle); overflow-wrap: anywhere; }
+.bd-fh .p b { color: var(--fg); font-weight: 600; }
+.bd-fh .stat { font: 500 11.5px var(--mono); white-space: nowrap; }
+.bd-code { font: 12.5px/1.65 var(--mono); padding-bottom: 12px; }
+.bd-hh { padding: 5px 14px; font: 11.5px/1.6 var(--mono); color: var(--fg-subtle); background: var(--inset); border-block: 1px solid var(--line-soft); overflow-wrap: anywhere; }
+.bd-hh.ctx { font-family: var(--sans); font-size: 12px; }
+.bd-gap { padding: 4px 14px; font: 11.5px/1.6 var(--sans); color: var(--fg-subtle); background: var(--panel); border-block: 1px solid var(--line-soft); text-align: center; }
+.bd-ln { display: grid; grid-template-columns: 3.6em 3.6em 1.5em minmax(0, 1fr); }
+.bd-ln > .o, .bd-ln > .n { text-align: right; padding-right: .7em; color: var(--fg-subtle); user-select: none; -webkit-user-select: none; font-variant-numeric: tabular-nums; font-size: 11.5px; }
+.bd-ln > .s { user-select: none; -webkit-user-select: none; text-align: center; color: var(--fg-subtle); }
+.bd-ln > .c { white-space: pre-wrap; overflow-wrap: anywhere; padding-right: 14px; min-width: 0; }
+.bd-ln.add { background: var(--add-bg); } .bd-ln.add > .o, .bd-ln.add > .n { background: var(--add-num); } .bd-ln.add > .s { color: var(--ok-fg); }
+.bd-ln.del { background: var(--del-bg); } .bd-ln.del > .o, .bd-ln.del > .n { background: var(--del-num); } .bd-ln.del > .s { color: var(--risk-fg); }
+.bd-ln.hit { box-shadow: inset 3px 0 0 var(--accent); }
+.bd-ln.hit:not(.add):not(.del) { background: color-mix(in oklch, var(--accent-tint) 70%, transparent); }
+.bd-ln.hit > .n, .bd-ln.hit > .o { color: var(--accent-fg); font-weight: 600; }
+.bd-cmw { padding: 8px 14px 12px calc(7.2em + 14px); font-size: 14px; }
+.bd-cmw.top { padding: 12px 14px 4px; }
+.bd-cm { --t: var(--accent); font: 14px/1.55 var(--sans); background: var(--surface); border-radius: 12px; box-shadow: var(--shadow-1), inset 3px 0 0 var(--t); padding: 10px 12px 10px 15px; max-width: 760px; }
+.bd-cm.risk { --t: var(--risk); } .bd-cm.warn { --t: var(--warn); } .bd-cm.ok { --t: var(--ok); } .bd-cm.todo { --t: var(--todo); }
+.bd-cm .hd { display: flex; align-items: flex-start; gap: 10px; }
+.bd-cm .hd > .bd-ic { margin-top: 3px; color: var(--fg-subtle); }
+.bd-cm .tk { display: inline-flex; flex: none; cursor: pointer; }
+.bd-cm .tt { flex: 1; min-width: 0; font-weight: 550; }
+.bd-cm .hd > .bp-chip { margin-top: 1px; flex: none; }
+.bd-cm .mt { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin: 6px 0 0 28px; font-size: 12.5px; color: var(--fg-subtle); }
+.bd-cm .mt a { display: inline-flex; align-items: center; gap: 3px; color: var(--accent-fg); text-decoration: none; font-weight: 500; }
+.bd-cm .mt a:hover { text-decoration: underline; }
+.bd-cm .mt a .bd-ic { width: 12px; height: 12px; }
+.bd-cm details { margin: 6px 0 0 28px; }
+.bd-cm summary { cursor: pointer; width: max-content; font-size: 12.5px; font-weight: 500; color: var(--accent-fg); }
+.bd-cm details .bd { margin-top: 6px; font-size: 13.5px; color: var(--fg-muted); }
+.bd-cm details .bd p { margin: 6px 0; }
+.bd-cm.done { box-shadow: var(--shadow-1), inset 3px 0 0 var(--ok); }
+.bd-cm.done .tt { color: var(--fg-subtle); }
+.bd-cm.nott .mt, .bd-cm.nott details { margin-left: 26px; }
+.bd-omit { padding: 28px 16px; text-align: center; font-size: 13.5px; color: var(--fg-subtle); }
+.bd-flash { animation: bd-flash 1.4s var(--ease); }
+@keyframes bd-flash { 0%, 30% { box-shadow: var(--shadow-1), inset 3px 0 0 var(--t), 0 0 0 3px color-mix(in oklch, var(--accent) 45%, transparent); } 100% { box-shadow: var(--shadow-1), inset 3px 0 0 var(--t), 0 0 0 3px transparent; } }
+.bd-ln.bd-flash { animation: bd-flash-ln 1.4s var(--ease); }
+@keyframes bd-flash-ln { 0%, 30% { background: color-mix(in oklch, var(--accent) 28%, transparent); } }
+.bp-ref.code .bd-ic { color: var(--fg-subtle); }
+.bp-ref.code { font-family: var(--mono); font-size: 11.5px; }
+
+/* blueprint canvas */
+.bp-canvas { margin: 0; border-radius: 14px; overflow: hidden; background: var(--bp-bg); color: var(--bp-line);
+  box-shadow: 0 0 0 1px #06203e, 0 2px 4px oklch(20% 0.05 255 / .12), 0 12px 32px oklch(20% 0.06 255 / .18); }
+.bp-tb { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 8px 8px 16px; background: var(--bp-deep); border-bottom: 1px solid rgba(214,233,255,.1); font: 13px var(--sans); }
+.bp-tb .ttl { font-weight: 600; color: #eef6ff; margin-right: auto; padding-right: 8px; letter-spacing: -.005em; min-width: 0; }
+.bp-tb .grp { display: inline-flex; align-items: center; gap: 2px; padding: 2px; border-radius: 10px; background: rgba(0,0,0,.22); box-shadow: inset 0 0 0 1px rgba(214,233,255,.08); }
+.bp-tb button { display: inline-grid; place-items: center; width: 30px; height: 28px; border: 0; border-radius: 8px; background: transparent; color: #c9def6; transition: background .12s, color .12s; }
+.bp-tb button .bd-ic { width: 15px; height: 15px; }
+.bp-tb button:hover { background: rgba(214,233,255,.1); color: #fff; }
+.bp-tb button[aria-pressed="true"] { background: rgba(95,212,255,.16); color: var(--bp-cyan); }
+.bp-tb button:focus-visible, .bp-tb select:focus-visible { box-shadow: 0 0 0 2px rgba(95,212,255,.6); }
+.bp-tb select { appearance: none; -webkit-appearance: none; height: 28px; max-width: 220px; border: 0; border-radius: 8px; padding: 0 28px 0 10px; font: 500 12.5px var(--sans); color: #eef6ff;
+  background: rgba(214,233,255,.08) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238db2da' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") right 8px center / 14px no-repeat; text-overflow: ellipsis; }
+.bp-tb select option { color: #0b2a4f; }
+.bp-stage { position: relative; height: var(--h, 540px); overflow: hidden; cursor: grab; outline: none; touch-action: pan-y; user-select: none; -webkit-user-select: none;
+  background: radial-gradient(120% 90% at 50% 35%, #0f3566 0%, var(--bp-bg) 55%, #082140 100%); }
+.bp-stage.dragging { cursor: grabbing; }
+.bp-stage.active { box-shadow: inset 0 0 0 2px rgba(95,212,255,.45); touch-action: none; }
+.bp-stage:focus-visible { box-shadow: inset 0 0 0 2px rgba(95,212,255,.7); border-radius: 0; }
+.bp-stage svg { display: block; width: 100%; height: 100%; }
+.bp-crumbs { position: absolute; left: 12px; top: 12px; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; max-width: calc(100% - 24px); pointer-events: none; }
+.bp-crumbs button { pointer-events: auto; height: 26px; background: rgba(8,32,61,.78); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); color: #c9def6; border: 0;
+  box-shadow: inset 0 0 0 1px rgba(214,233,255,.16); border-radius: 8px; padding: 0 10px; font: 500 12px var(--sans); }
+.bp-crumbs button:hover { color: #fff; }
+.bp-crumbs button:last-child { color: #fff; box-shadow: inset 0 0 0 1px rgba(95,212,255,.55); }
+.bp-crumbs span { color: var(--bp-dim); font-size: 13px; padding: 0 1px; }
+.bp-tblock { position: absolute; right: 12px; bottom: 12px; display: grid; grid-template-columns: auto auto; font: 10px/1.35 var(--mono); letter-spacing: .02em; color: var(--bp-line);
+  border: 1px solid rgba(214,233,255,.4); background: rgba(8,32,61,.82); pointer-events: none; }
+.bp-tblock div { padding: 3px 8px; border-right: 1px solid rgba(214,233,255,.2); border-bottom: 1px solid rgba(214,233,255,.2); }
+.bp-tblock div:nth-child(2n) { border-right: 0; }
+.bp-tblock div:nth-last-child(-n+2) { border-bottom: 0; }
+.bp-tblock .k { color: var(--bp-dim); }
+.bp-tblock .wide { grid-column: 1 / -1; font-weight: 700; letter-spacing: .06em; border-right: 0; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bp-hint { position: absolute; right: 12px; top: 12px; max-width: calc(100% - 140px); background: rgba(8,32,61,.82); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  box-shadow: inset 0 0 0 1px rgba(214,233,255,.14); color: #c9def6; font: 12px/1.4 var(--sans); padding: 6px 10px; border-radius: 8px; transition: opacity .4s; pointer-events: none; }
+.bp-hint.off { opacity: 0; }
+.bp-stage.deep .bp-tblock { opacity: .45; transition: opacity .3s; }
+.bp-capbar[hidden] { display: none; }
+.bp-capbar { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; min-height: 44px; padding: 9px 16px; border-top: 1px solid rgba(214,233,255,.1); background: var(--bp-deep); font: 13.5px/1.5 var(--sans); color: var(--bp-line); }
+.bp-capbar .lbl { display: inline-flex; align-items: center; gap: 8px; color: var(--bp-cyan); font: 600 12px var(--sans); white-space: nowrap; }
+.bp-capbar .lbl:empty { display: none; }
+.bp-capbar .txt { color: #e3efff; flex: 1 1 280px; min-width: 0; }
+.bp-capbar .txt:empty { display: none; }
+.bp-capbar code, .bp-detail code, .bp-outline code { background: rgba(95,212,255,.12); color: #e6f2ff; }
+.bp-steps { display: inline-flex; gap: 4px; align-items: center; }
+.bp-steps i { width: 6px; height: 6px; border-radius: 50%; background: rgba(214,233,255,.22); transition: background .2s, width .2s; }
+.bp-steps i.done { background: rgba(95,212,255,.55); }
+.bp-steps i.on { width: 16px; border-radius: 3px; background: var(--bp-cyan); }
+figcaption.bp-capbar .lbl { color: var(--bp-dim); }
+.bp-scope > .bp-edges, .bp-scope > .bp-tokens, .bp-scope > .bp-nodes > .bp-node { transition: opacity .35s; }
+.bp-scope.dim > .bp-edges, .bp-scope.dim > .bp-tokens { opacity: .22; }
+.bp-scope.dim > .bp-nodes > .bp-node:not(.focus) { opacity: .3; }
+.bp-detail { position: relative; border-top: 1px solid rgba(214,233,255,.1); background: #0a2647; padding: 14px 48px 14px 16px; font-size: 14px; color: var(--bp-line); }
+.bp-detail h4 { margin: 0 0 4px; font-size: 15.5px; font-weight: 600; color: #fff; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.bp-detail .sub { color: var(--bp-dim); font: 12.5px var(--mono); }
+.bp-detail .k { display: block; margin-top: 10px; font: 600 10.5px var(--sans); letter-spacing: .08em; text-transform: uppercase; color: var(--bp-dim); }
+.bp-detail p { margin: 6px 0; }
+.bp-detail a { color: var(--bp-cyan); }
+.bp-detail .x { position: absolute; right: 10px; top: 10px; display: grid; place-items: center; width: 28px; height: 28px; background: none; border: 0; border-radius: 8px; color: var(--bp-dim); }
+.bp-detail .x:hover { background: rgba(214,233,255,.1); color: #fff; }
+.bp-detail .bp-btn { margin-top: 10px; background: rgba(214,233,255,.08); color: #eef6ff; box-shadow: inset 0 0 0 1px rgba(214,233,255,.16); }
+.bp-detail .bp-btn .bd-ic { color: var(--bp-cyan); }
+.bp-detail ul { margin: 4px 0; padding-left: 20px; }
+.bp-canvas .bp-chip { color: #cfe3ff; background: rgba(214,233,255,.1); }
+.bp-canvas .bp-chip.ok { color: var(--bp-green); background: rgba(116,230,171,.13); }
+.bp-canvas .bp-chip.warn { color: var(--bp-amber); background: rgba(255,195,90,.13); }
+.bp-canvas .bp-chip.risk { color: var(--bp-red); background: rgba(255,138,122,.14); }
+.bp-canvas .bp-chip.info { color: var(--bp-cyan); background: rgba(95,212,255,.13); }
+.bp-outline { border-top: 1px solid rgba(214,233,255,.1); background: var(--bp-deep); font-size: 13.5px; }
+.bp-outline summary { cursor: pointer; padding: 10px 16px; font: 500 12.5px var(--sans); color: var(--bp-dim); list-style-position: inside; }
+.bp-outline summary:hover { color: #fff; }
+.bp-outline .in { padding: 0 16px 14px; color: var(--bp-line); }
+.bp-outline ul { margin: 4px 0; padding-left: 18px; }
+.bp-outline p { margin: 10px 0 4px; }
+.bp-canvas:fullscreen { border-radius: 0; display: flex; flex-direction: column; }
+.bp-canvas:fullscreen .bp-stage { flex: 1; height: auto; }
+
+/* svg */
+.bp-node { cursor: pointer; }
+.bp-node:focus { outline: none; box-shadow: none; }
+.bp-shape { fill: rgba(140,190,255,.07); stroke: var(--bp-line); stroke-width: 1.3; vector-effect: non-scaling-stroke; transition: stroke .2s, fill .2s; }
+.bp-node.external > .bp-shp .bp-shape { stroke-dasharray: 6 4; }
+.bp-node.st-proposed > .bp-shp .bp-shape, .bp-node.st-unverified > .bp-shp .bp-shape { stroke: var(--bp-amber); stroke-dasharray: 6 4; }
+.bp-node.st-removed > .bp-shp .bp-shape, .bp-node.st-replaced > .bp-shp .bp-shape { stroke: var(--bp-red); stroke-dasharray: 3 4; }
+.bp-node.st-live > .bp-shp .bp-shape { stroke: var(--bp-green); }
+.bp-node.st-local > .bp-shp .bp-shape { stroke: var(--bp-cyan); }
+.bp-node:hover > .bp-shp .bp-shape { fill: rgba(140,190,255,.14); }
+.bp-node:focus-visible > .bp-shp .bp-shape { fill: rgba(140,190,255,.14); stroke: #fff; stroke-width: 2; }
+.bp-node.hl > .bp-shp .bp-shape { stroke: var(--bp-cyan); fill: rgba(95,212,255,.15); filter: url(#bp-glow); }
+.bp-node.sel > .bp-shp .bp-shape { stroke: #fff; stroke-width: 2.2; }
+.bp-node.pulse > .bp-shp .bp-shape { animation: bp-pulse .5s ease-out; }
+.bp-node.open > .bp-shp .bp-shape { fill: rgba(4,20,40,.6); }
+.bp-node.open > .bp-shp circle { opacity: 0; }
+@keyframes bp-pulse { 0% { fill: rgba(95,212,255,.45); } 100% { fill: rgba(95,212,255,.15); } }
+.bp-lbl { fill: #f2f8ff; font: 600 13px var(--sans); letter-spacing: -.005em; }
+.bp-sublbl { fill: var(--bp-dim); font: 10.5px var(--mono); }
+.bp-badge rect { fill: var(--bp-bg); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.bp-badge text { font: 600 9px var(--sans); letter-spacing: .07em; text-transform: uppercase; }
+.bp-open { fill: var(--bp-cyan); font: 600 9.5px var(--sans); letter-spacing: .08em; }
+.bp-frame-h { fill: rgba(95,212,255,.12); stroke: none; }
+.bp-frame-t { fill: var(--bp-cyan); font: 700 4.2px var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+.bp-frame-bg { stroke: none; fill: var(--bp-bg); }
+.bp-edge { fill: none; stroke-width: 1.4; vector-effect: non-scaling-stroke; transition: stroke .2s, opacity .2s; }
+.bp-edge.k-data { stroke: var(--bp-cyan); }
+.bp-edge.k-control { stroke: var(--bp-line); stroke-dasharray: 7 5; }
+.bp-edge.k-async { stroke: var(--bp-violet); stroke-dasharray: 2 5; stroke-linecap: round; }
+.bp-edge.k-power { stroke: var(--bp-amber); }
+.bp-edge.k-dep { stroke: var(--bp-dim); stroke-dasharray: 4 4; opacity: .8; }
+.bp-edge.k-replaced { stroke: var(--bp-red); stroke-dasharray: 3 5; opacity: .75; }
+svg.anim .bp-edge.k-data { stroke-dasharray: 10 6; animation: bp-march 1.1s linear infinite; }
+svg.anim .bp-edge.k-async { animation: bp-march 1.6s linear infinite; }
+@keyframes bp-march { to { stroke-dashoffset: -32; } }
+.bp-edge.act { stroke: #fff; stroke-width: 2.6; filter: url(#bp-glow); }
+.bp-elbl rect { fill: #0a2647; stroke: rgba(214,233,255,.24); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.bp-elbl text { fill: #cfe3ff; font: 500 10.5px var(--sans); }
+.bp-tok circle.core { stroke: #fff; stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+.bp-tok text { font: 600 10.5px var(--sans); fill: #fff; paint-order: stroke; stroke: var(--bp-bg); stroke-width: 3px; }
+.bp-dim-t { fill: var(--bp-dim); font: 10px var(--mono); }
+
+/* responsive: below 1240 px the document rail joins the content column; below 900 px Contents
+   becomes a collapsible card above the sections */
+@media (max-width: 1240px) {
+  .bd-shell { grid-template-columns: minmax(200px, 232px) minmax(0, 1fr); grid-template-areas: "side head" "side tldr" "side meta" "side main"; grid-template-rows: auto auto auto 1fr; column-gap: 32px; max-width: 1180px; margin: 0 auto; }
+  .bp-side { justify-self: stretch; width: auto; }
+  .bd-meta { position: static; width: auto; max-height: none; overflow: visible; margin-top: 20px; justify-self: stretch;
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px 24px; padding: 16px 8px 14px; border-radius: 14px; background: var(--panel); box-shadow: inset 0 0 0 1px var(--line); }
+  .bd-rail-sec + .bd-rail-sec { margin-top: 0; }
+}
+@media (max-width: 900px) {
+  :root { --bar-h: 48px; }
+  body { font-size: 15px; }
+  .bd-bar { padding: 0 14px; }
+  .bd-crumb { display: none; }
+  .bd-shell { display: flex; flex-direction: column; padding: 0 16px 80px; }
+  .bd-head { order: 1; padding-top: 30px; } .bd-tldr { order: 2; } .bd-meta { order: 3; align-self: stretch; } .bp-side { order: 4; align-self: stretch; } .bd-shell > main { order: 5; }
+  .bd-sub { font-size: 16px; }
+  .bd-tldr-card { margin-top: 22px; padding: 14px 16px; grid-template-columns: minmax(0, 1fr); }
+  .bd-tldr-card .ico { display: none; }
+  .bp-side { position: static; width: auto; max-height: none; margin-top: 16px; background: var(--surface); border-radius: 14px; box-shadow: var(--shadow-1); padding: 6px; overflow: visible; }
+  .bp-side-toggle { display: flex !important; width: 100%; justify-content: space-between; height: 38px; background: none; box-shadow: none; font-size: 14px; font-weight: 600; }
+  .bp-side-toggle .chev { transition: transform .2s; }
+  .bp-side.open .bp-side-toggle .chev { transform: rotate(90deg); }
+  .bp-side-toc { display: none; padding: 6px 4px 8px; }
+  .bp-side.open .bp-side-toc { display: block; }
+  .bp-side-toc > .bd-rail-sec:first-child > .bd-rail-h { display: none; }
+  .bp-prog { box-shadow: inset 0 0 0 1px var(--line); }
+  .bp-sec { padding-top: 40px; }
+  .bp-sec + .bp-sec { margin-top: 40px; }
+  .bp-sec > h2 { font-size: 20px; align-items: flex-start; }
+  .bp-sec > h2 .n { margin-top: 0; }
+  .bp-stage { height: min(var(--h, 540px), 68vh); }
+  .bp-tblock { display: none; }
+  .bp-tb { padding: 8px; gap: 6px; }
+  .bp-tb .ttl { flex: 1 1 100%; padding: 2px 4px 0; }
+  .bp-tb .flowgrp { flex: 1 1 0; min-width: 150px; }
+  .bp-tb .flowgrp select { flex: 1 1 80px; min-width: 0; max-width: none; }
+  .bp-tb button { width: 28px; }
+  .bp-hint { max-width: calc(100% - 110px); }
+  .bp-cl { --ind: 0px; }
+  .bp-cl-item { padding: 10px 12px; }
+  .bp-terms { grid-template-columns: minmax(0, 1fr); }
+  .bp-terms dt { border-right: 0; border-bottom: 0; padding-bottom: 2px; background: none; }
+  .bp-terms dd { padding-top: 0; }
+  .bp-table { font-size: 13.5px; }
+  .bp-table th, .bp-table td { padding-left: 11px; padding-right: 11px; }
+  .bd-diff-body { display: block; height: auto; }
+  .bd-files { display: none; }
+  .bd-fsel { display: block; flex: 1 1 100%; order: -1; min-width: 0; height: 32px; border: 0; border-radius: 9px; padding: 0 30px 0 10px; font: 500 12.5px var(--mono); color: var(--fg);
+    background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") right 9px center / 14px no-repeat;
+    box-shadow: inset 0 0 0 1px var(--line-strong); appearance: none; -webkit-appearance: none; }
+  .bd-pane { overflow: visible; }
+  .bd-fh { top: var(--bar-h); }
+  .bd-ln { grid-template-columns: 2.9em 2.9em 1.2em minmax(0, 1fr); font-size: 11.5px; }
+  .bd-ln > .o, .bd-ln > .n { font-size: 10.5px; padding-right: .5em; }
+  .bd-cmw { padding: 6px 10px 10px; }
+  .bd-cm .mt, .bd-cm details { margin-left: 0; }
+}
+@media print {
+  :root { color-scheme: light; }
+  body { background: #fff; font-size: 12pt; }
+  .bd-bar, .bp-side, .bp-tb, .bp-hint, .bp-cl-h .tools, .bp-code-h button { display: none !important; }
+  .bd-shell { display: block; padding: 0; }
+  .bd-meta { position: static; width: auto; max-height: none; margin-top: 16px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .bp-sec { break-inside: avoid-page; }
+  .bp-table-wrap, .bp-card, .bp-cl, .bp-code, .bp-terms, .bd-tldr-card, .bd-diff { box-shadow: 0 0 0 1px #ccd; }
+  .bd-diff-body { display: block; height: auto; } .bd-files, .bd-diff-tb { display: none; } .bd-pane { overflow: visible; }
+}
+</style>
+</head>
+<body>
+<div id="bp-app"><noscript>This bluedoc page needs JavaScript to render. The source data is in the bp-doc script element.</noscript></div>
+<div class="bp-toast" id="bp-toast" role="status"></div>
+<script type="application/json" id="bp-doc">{"id":"acme-pr-412-review","title":"acme-shop#412: bulk discount tiers","subtitle":"One reviewer read PR #412 locally. Tick a finding to accept it as a fix; leave it unticked to reject or discuss.","meta":{"org":"Acme Corp","kind":"Review","dwg":"ACME-REV-412","rev":"A","date":"2026-03-14"},"state":[{"label":"request changes","kind":"risk"},{"label":"tests run locally","kind":"ok"},{"label":"nothing posted to GitHub","kind":"info"}],"links":[{"label":"acme-shop#412","href":"https://github.com/acme/acme-shop/pull/412"},{"label":"PRICING-88 spec","href":"https://example.com/acme/tickets/PRICING-88"}],"tldr":"Request changes. The tier check uses `>` where the spec says \"10 or more\", so an order of exactly 10 or 50 units gets no discount. Discounted line totals are fractional cents. Both are one-line fixes; add boundary tests at 9, 10, 49 and 50 before merging.","sections":[{"id":"how","title":"How to use this page","lead":"Each finding is a checklist item and a comment on its code. Ticking either one ticks both.","blocks":[{"type":"terms","items":[{"term":"blocker","md":"Wrong behaviour; fix before merge."},{"term":"major","md":"Likely bug or real risk."},{"term":"minor","md":"Small correctness or maintainability issue."},{"term":"nit","md":"Optional."}]}]},{"id":"verdict","title":"Verdict","lead":"One blocker, two majors: the tiers do not match the spec at their boundaries.","blocks":[{"type":"table","columns":["PR","Scope","Verdict","Blocker","Major","Minor","Nit"],"rows":[["[acme-shop#412](https://github.com/acme/acme-shop/pull/412)","[Bulk discount tiers](#review)","**Request changes**","1","2","2","1"]]}]},{"id":"review","title":"#412 · bulk discount tiers","lead":"**Request changes.** The design is right: tiers apply per line, before the coupon and before VAT.","blocks":[{"type":"text","md":"`tierFor` picks the highest tier first, `applyCoupon` now sums tiered line totals, and `priceOrder` reports what the customer saved. The boundary check and the money type are wrong, and the tests stop short of both boundaries."},{"type":"checklist","id":"findings","title":"Findings · #412","numbered":false,"items":[{"id":"tier-boundary","text":"Fix: an order of exactly 10 or 50 units gets no tier","state":"blocker · high","stateKind":"risk","detail":"**File:** `src/pricing/tiers.ts:17`\n\nThe spec says \"10 or more\" and \"50 or more\". `qty > t.minQty` excludes both thresholds: 10 units get no discount, 50 units get 5 % instead of 10 %.\n\n**Suggested fix:** `qty >= t.minQty`."},{"id":"float-cents","text":"Fix: tiered line totals are fractional cents","state":"major · high","stateKind":"warn","detail":"**File:** `src/pricing/tiers.ts:25`\n\n`gross * (1 - tier.percent / 100)` returns 3,163.5 for 3 × 1,110 cents at 5 %. `applyCoupon` rounds only when a coupon is present, so without one the fraction reaches `addTax` and the payment request.\n\n**Suggested fix:** `Math.round(gross * (100 - tier.percent) / 100)`, the same form `applyCoupon` uses."},{"id":"savings-includes-coupon","text":"Fix: `bulkSavingsCents` also counts the coupon","state":"major · medium","stateKind":"warn","detail":"**File:** `src/orders/createOrder.ts:16`\n\nThe savings figure is gross-with-tax minus final total, so a 15 % coupon shows up as bulk savings on the receipt.\n\n**Suggested fix:** compute savings from `lineTotal` alone: `sum(gross) - sum(lineTotal)`, then add tax."},{"id":"boundary-tests","text":"Add tests at 9, 10, 49 and 50 units","state":"minor · high","stateKind":"info","detail":"**File:** `test/tiers.test.ts:5-11`\n\nThe tests check 5 and 60 units, so they pass with the off-by-one above. Boundary cases would have caught it."},{"id":"docs-stale","text":"Update `docs/pricing.md`, which still says there are no bulk discounts","state":"minor · high","stateKind":"info","detail":"**File:** `docs/pricing.md:11` (not changed by this PR)\n\nAdd tiers to the order of operations: sum lines, apply tiers, apply coupon, add VAT."},{"id":"pr-claims-tests","text":"Fix the PR description: it says every tier is tested","state":"nit · high","stateKind":"todo","detail":"The description says \"tests cover every tier\"; only the 10 % tier has a positive test."}]},{"type":"diff","id":"pr-412","title":"acme-shop#412","repo":"acme-shop","base":"89efd8e","head":"62ccc86","url":"https://github.com/acme/acme-shop/pull/412/files","note":"The commit the reviewer read. Line numbers in the findings refer to it.","files":[{"path":"docs/pricing.md","status":"context","add":0,"del":0,"hunks":[{"old":6,"new":6,"context":true,"lines":[" "," 1. Sum the cart lines."," 2. Apply the coupon, if any."," 3. Add VAT."," "," There are no bulk discounts: every unit costs the same."]}]},{"path":"src/orders/createOrder.ts","status":"modified","add":4,"del":1,"hunks":[{"old":6,"new":6,"lines":["   customerId: string;","   subtotalCents: number;","   totalCents: number;","+  bulkSavingsCents: number;"," }"," "," export function priceOrder(draft: OrderDraft, coupon?: Discount): PricedOrder {","+  const gross = draft.lines.reduce((sum, l) => sum + l.unitCents * l.qty, 0);","   const subtotalCents = applyCoupon(draft.lines, coupon);","   const totalCents = addTax(subtotalCents);","-  return { customerId: draft.customerId, subtotalCents, totalCents };","+  const bulkSavingsCents = addTax(gross) - totalCents;","+  return { customerId: draft.customerId, subtotalCents, totalCents, bulkSavingsCents };"," }"],"header":"export interface PricedOrder {"}]},{"path":"src/pricing/discounts.ts","status":"modified","add":3,"del":2,"hunks":[{"old":1,"new":1,"lines":[" // Discounts applied to a cart before tax."," import type { CartLine } from \"../orders/types\";","+import { lineTotal } from \"./tiers\";"," "," export interface Discount {","   code: string;","   percent: number;"," }"," ","-/** Returns the cart subtotal in cents after a coupon, if any. */","+/** Returns the cart subtotal in cents after bulk tiers and a coupon, if any. */"," export function applyCoupon(lines: CartLine[], coupon?: Discount): number {","-  const subtotal = lines.reduce((sum, l) => sum + l.unitCents * l.qty, 0);","+  const subtotal = lines.reduce((sum, l) => sum + lineTotal(l), 0);","   if (!coupon) return subtotal;","   return Math.round(subtotal * (100 - coupon.percent) / 100);"," }"]}]},{"path":"src/pricing/tiers.ts","status":"added","add":26,"del":0,"hunks":[{"old":0,"new":1,"lines":["+// Bulk discount tiers (PRICING-88).","+// Spec: 10 or more units of one SKU get 5 %, 50 or more get 10 %.","+import type { CartLine } from \"../orders/types\";","+","+export interface Tier {","+  minQty: number;","+  percent: number;","+}","+","+export const TIERS: Tier[] = [","+  { minQty: 50, percent: 10 },","+  { minQty: 10, percent: 5 },","+];","+","+/** The tier a line qualifies for, or undefined. */","+export function tierFor(qty: number): Tier | undefined {","+  return TIERS.find((t) => qty > t.minQty);","+}","+","+/** Line total in cents after its bulk tier. */","+export function lineTotal(line: CartLine): number {","+  const tier = tierFor(line.qty);","+  const gross = line.unitCents * line.qty;","+  if (!tier) return gross;","+  return gross * (1 - tier.percent / 100);","+}"]}]},{"path":"test/tiers.test.ts","status":"added","add":16,"del":0,"hunks":[{"old":0,"new":1,"lines":["+import { describe, expect, it } from \"vitest\";","+import { lineTotal, tierFor } from \"../src/pricing/tiers\";","+","+describe(\"bulk tiers\", () => {","+  it(\"gives no tier below 10 units\", () => {","+    expect(tierFor(5)).toBeUndefined();","+  });","+","+  it(\"gives 10 % at 60 units\", () => {","+    expect(tierFor(60)?.percent).toBe(10);","+  });","+","+  it(\"discounts the line total\", () => {","+    expect(lineTotal({ sku: \"A\", qty: 60, unitCents: 100 })).toBe(5400);","+  });","+});"]}]}],"comments":[{"item":"findings/tier-boundary","file":"src/pricing/tiers.ts","line":17},{"item":"findings/float-cents","file":"src/pricing/tiers.ts","line":25},{"item":"findings/savings-includes-coupon","file":"src/orders/createOrder.ts","line":16},{"item":"findings/boundary-tests","file":"test/tiers.test.ts","line":5,"end":11},{"item":"findings/docs-stale","file":"docs/pricing.md","line":11},{"label":"PR description","item":"findings/pr-claims-tests"}]},{"type":"table","columns":["Check the reviewer ran","Result"],"rows":[["`npx vitest run test/tiers.test.ts`","3 passed; none at a boundary"],["`node -e \"console.log(require('./dist/pricing/tiers').lineTotal({sku:'A',qty:10,unitCents:100}))\"`","1000: no discount at exactly 10 units"]],"caption":"Commands run against the PR head, with the observed result."}]}]}</script>
+<script>
+(() => {
+'use strict';
+const DOC = JSON.parse(document.getElementById('bp-doc').textContent);
+const NS = 'http://www.w3.org/2000/svg';
+const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const $ = (q, r = document) => r.querySelector(q);
+
+function h(tag, attrs, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v == null || v === false) continue;
+    if (k === 'html') e.innerHTML = v;
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else e.setAttribute(k, v === true ? '' : v);
+  }
+  for (const c of kids.flat(Infinity)) if (c != null && c !== false) e.append(c.nodeType ? c : document.createTextNode(c));
+  return e;
+}
+function sv(tag, attrs, ...kids) {
+  const e = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs || {})) if (v != null) e.setAttribute(k, v);
+  for (const c of kids.flat(Infinity)) if (c != null) e.append(c.nodeType ? c : document.createTextNode(c));
+  return e;
+}
+// Lucide-style 24px stroke icons, the set HorizonUI uses
+const ICONS = {
+  copy: '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
+  reset: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>',
+  info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>',
+  alert: '<path d="m21.7 18-8-14a2 2 0 0 0-3.4 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.7-3Z"/><path d="M12 9v4M12 17h.01"/>',
+  octagon: '<path d="M7.9 2h8.2L22 7.9v8.2L16.1 22H7.9L2 16.1V7.9Z"/><path d="M12 8v4M12 16h.01"/>',
+  flag: '<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7"/>',
+  split: '<path d="M16 3h5v5M8 3H3v5M12 22v-8.3a4 4 0 0 0-1.2-2.8L3 3M15 9l6-6"/>',
+  zap: '<path d="M4 14a1 1 0 0 1-.8-1.6l9.9-10.2a.5.5 0 0 1 .9.5l-1.9 6a1 1 0 0 0 .9 1.3h7a1 1 0 0 1 .8 1.6l-9.9 10.2a.5.5 0 0 1-.9-.5l1.9-6a1 1 0 0 0-.9-1.3z"/>',
+  list: '<path d="M13 5h8M13 12h8M13 19h8"/><path d="m3 17 2 2 4-4"/><rect x="3" y="4" width="6" height="6" rx="1"/>',
+  check: '<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
+  target: '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
+  link: '<path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>',
+  doc: '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4M10 9H8M16 13H8M16 17H8"/>',
+  play: '<path d="M6 4.5v15a1 1 0 0 0 1.5.9l12-7.5a1 1 0 0 0 0-1.8l-12-7.5A1 1 0 0 0 6 4.5"/>',
+  pause: '<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>',
+  prev: '<path d="m15 18-6-6 6-6"/>',
+  next: '<path d="m9 18 6-6-6-6"/>',
+  minus: '<path d="M5 12h14"/>',
+  plus: '<path d="M5 12h14M12 5v14"/>',
+  fit: '<path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><rect x="7" y="8" width="10" height="8" rx="1"/>',
+  full: '<path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>',
+  x: '<path d="M18 6 6 18M6 6l12 12"/>',
+  open: '<circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8v8"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M6.3 17.7l-1.4 1.4M19.1 4.9l-1.4 1.4"/>',
+  moon: '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
+  chev: '<path d="m9 18 6-6-6-6"/>',
+  code: '<path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/>',
+  msg: '<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>',
+  pr: '<circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7M6 9v12"/>',
+  up: '<path d="m18 15-6-6-6 6"/>',
+  down: '<path d="m6 9 6 6 6-6"/>',
+};
+function ic(name, cls) {
+  const s = document.createElementNS(NS, 'svg');
+  s.setAttribute('viewBox', '0 0 24 24'); s.setAttribute('class', 'bd-ic' + (cls ? ' ' + cls : '')); s.setAttribute('aria-hidden', 'true');
+  s.innerHTML = ICONS[name] || '';
+  return s;
+}
+
+/* ---------- markdown-lite ---------- */
+const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ESC[c]);
+const safeUrl = u => /^\s*(javascript|data|vbscript):/i.test(u) ? '#' : u;
+function inline(src) {
+  let t = esc(src);
+  const codes = [];
+  t = t.replace(/`([^`]+)`/g, (_, c) => { codes.push(c); return '\u0000' + (codes.length - 1) + '\u0000'; });
+  t = t.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+       .replace(/(^|[\s(])\*([^*\s][^*]*)\*/g, '$1<em>$2</em>')
+       .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_, txt, url) => {
+         const u = safeUrl(url);
+         const m = /^#node:([\w-]+)\/([\w-]+)$/.exec(u);
+         return m ? `<a href="${u}" data-node="${m[1]}/${m[2]}">${txt}</a>` : `<a href="${u}">${txt}</a>`;
+       });
+  return t.replace(/\u0000(\d+)\u0000/g, (_, i) => `<code>${codes[+i]}</code>`);
+}
+function md(src) {
+  if (!src) return '';
+  return String(src).trim().split(/\n\s*\n/).map(block => {
+    const lines = block.split('\n').filter(l => l.trim());
+    if (lines.every(l => /^\s*[-*] /.test(l))) return '<ul>' + lines.map(l => '<li>' + inline(l.replace(/^\s*[-*] /, '')) + '</li>').join('') + '</ul>';
+    if (lines.every(l => /^\s*\d+[.)] /.test(l))) return '<ol>' + lines.map(l => '<li>' + inline(l.replace(/^\s*\d+[.)] /, '')) + '</li>').join('') + '</ol>';
+    return '<p>' + inline(lines.join(' ')) + '</p>';
+  }).join('');
+}
+
+/* ---------- storage ---------- */
+const store = (() => {
+  let ok = true; const mem = {};
+  try { localStorage.setItem('bp:probe', '1'); localStorage.removeItem('bp:probe'); } catch { ok = false; }
+  return {
+    get: k => ok ? localStorage.getItem(k) : (k in mem ? mem[k] : null),
+    set: (k, v) => { if (ok) localStorage.setItem(k, v); else mem[k] = v; },
+    del: k => { if (ok) localStorage.removeItem(k); else delete mem[k]; },
+  };
+})();
+const docId = DOC.id || 'doc';
+
+function toast(msg) {
+  const t = $('#bp-toast'); t.textContent = msg; t.classList.add('on');
+  clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('on'), 2200);
+}
+async function copyText(text, msg) {
+  try { await navigator.clipboard.writeText(text); toast(msg); }
+  catch {
+    const ta = h('textarea', { style: 'position:fixed;left:-9999px' }); ta.value = text; document.body.append(ta);
+    ta.select(); try { document.execCommand('copy'); toast(msg); } catch { toast('Copy failed: select the text by hand'); } ta.remove();
+  }
+}
+
+/* ---------- theme ---------- */
+const THEME_KEY = 'bluedoc:theme';
+const darkMQ = matchMedia('(prefers-color-scheme: dark)');
+function setTheme(t) { if (t) document.documentElement.dataset.theme = t; else delete document.documentElement.dataset.theme; }
+setTheme(store.get(THEME_KEY));
+const isDark = () => (document.documentElement.dataset.theme || (darkMQ.matches ? 'dark' : 'light')) === 'dark';
+
+/* ---------- app bar, header, rails ---------- */
+const app = $('#bp-app'); app.textContent = '';
+document.title = DOC.title ? DOC.title + ' · bluedoc' : 'bluedoc';
+const meta = DOC.meta || {};
+const overallBar = h('div', { class: 'bp-bar' }, h('i'));
+const overallTxt = h('span');
+const overall = h('div', { class: 'bd-overall', hidden: true, title: 'Checklist progress across this document' }, overallBar, overallTxt);
+const themeBtn = h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Switch light or dark theme' });
+const paintTheme = () => { themeBtn.textContent = ''; themeBtn.append(ic(isDark() ? 'sun' : 'moon')); };
+themeBtn.addEventListener('click', () => { const t = isDark() ? 'light' : 'dark'; setTheme(t); store.set(THEME_KEY, t); paintTheme(); });
+darkMQ.addEventListener?.('change', paintTheme);
+paintTheme();
+const mark = h('a', { class: 'bd-mark', href: '#top', 'aria-label': 'bluedoc, back to top', html:
+  '<svg viewBox="0 0 22 22" aria-hidden="true"><rect width="22" height="22" rx="6" fill="#0b2a4f"/><path d="M0 7.5h22M0 14.5h22M7.5 0v22M14.5 0v22" stroke="#5fd4ff" stroke-opacity=".18"/>' +
+  '<rect x="4.5" y="5" width="7" height="5" rx="1.2" fill="none" stroke="#d6e9ff" stroke-width="1.3"/><rect x="10.5" y="12" width="7" height="5" rx="1.2" fill="none" stroke="#5fd4ff" stroke-width="1.3"/>' +
+  '<path d="M8 10v4.5h2.5" fill="none" stroke="#5fd4ff" stroke-width="1.3" stroke-linecap="round"/></svg><span>blue<b>doc</b></span>' });
+app.append(h('header', { class: 'bd-bar' }, mark,
+  h('div', { class: 'bd-crumb' }, h('span', { class: 'sep' }, '/'), h('span', { class: 't' }, DOC.title || '')),
+  h('div', { class: 'bd-bar-r' }, overall, themeBtn)));
+
+const eyebrow = [meta.org, meta.kind, meta.date].filter(Boolean);
+const head = h('header', { class: 'bd-head', id: 'top' },
+  eyebrow.length && h('div', { class: 'bd-eyebrow' }, eyebrow.map((t, i) => [i ? h('span', { class: 'dot' }) : null, h('span', {}, t)])),
+  h('h1', {}, DOC.title || ''),
+  DOC.subtitle && h('p', { class: 'bd-sub', html: inline(DOC.subtitle) }));
+const tldr = h('div', { class: 'bd-tldr' }, DOC.tldr && h('div', { class: 'bd-tldr-card' },
+  h('span', { class: 'ico' }, ic('zap')), h('span', { class: 'lbl' }, 'TL;DR'), h('div', { class: 'body', html: md(DOC.tldr) })));
+
+// document rail: status, document properties, links
+// org, kind and date already sit in the eyebrow; the rail adds only the drawing identity
+const props = [['Drawing', meta.dwg], ['Revision', meta.rev]].filter(p => p[1]);
+const metaRail = h('aside', { class: 'bd-meta', 'aria-label': 'Document status' },
+  DOC.state && DOC.state.length && h('div', { class: 'bd-rail-sec' }, h('h4', { class: 'bd-rail-h' }, 'Status'),
+    h('ul', { class: 'bd-states' }, DOC.state.map(s => h('li', { class: 'bd-state ' + (s.kind || 'info') }, h('i'), h('span', {}, s.label))))),
+  props.length && h('div', { class: 'bd-rail-sec' }, h('h4', { class: 'bd-rail-h' }, 'Document'),
+    h('dl', { class: 'bd-props' }, props.map(([k, v]) => [h('dt', {}, k), h('dd', {}, v)]))),
+  DOC.links && DOC.links.length && h('div', { class: 'bd-rail-sec' }, h('h4', { class: 'bd-rail-h' }, 'Related'),
+    h('ul', { class: 'bd-links' }, DOC.links.map(l => h('li', {}, h('a', { href: safeUrl(l.href) }, ic(/^https?:/.test(l.href) ? 'link' : 'doc'), h('span', {}, l.label)))))));
+
+const side = h('aside', { class: 'bp-side', 'aria-label': 'Contents' });
+const main = h('main');
+app.append(h('div', { class: 'bd-shell' }, head, tldr, metaRail.childNodes.length ? metaRail : null, side, main));
+
+/* ---------- blocks ---------- */
+const CHECKLISTS = [];
+const NODE_REFS = {};   // "canvas/node" -> [{checklist, item, li}]
+const CANVASES = {};
+
+const RENDER = {
+  text: b => h('div', { class: 'bp-text', html: md(b.md) }),
+  callout: b => {
+    const kind = b.kind || 'note';
+    const label = b.title || { note: 'Note', caution: 'Caution', warning: 'Warning', risk: 'Risk', decision: 'Decision' }[kind] || kind;
+    const icon = { note: 'info', caution: 'alert', warning: 'octagon', risk: 'flag', decision: 'split' }[kind] || 'info';
+    return h('div', { class: 'bp-callout ' + kind, role: kind === 'warning' ? 'alert' : null }, ic(icon), h('span', { class: 'lbl' }, label), h('div', { html: md(b.md) }));
+  },
+  table: b => h('div', {},
+    h('div', { class: 'bp-table-wrap' }, h('table', { class: 'bp-table' },
+      h('thead', {}, h('tr', {}, (b.columns || []).map(c => h('th', {}, c)))),
+      h('tbody', {}, (b.rows || []).map(r => h('tr', {}, r.map(c => h('td', { html: inline(c) }))))))),
+    b.caption && h('div', { class: 'bp-caption', html: inline(b.caption) })),
+  code: b => codeBlock(b.code, b.lang, b.title),
+  terms: b => h('dl', { class: 'bp-terms' }, (b.items || []).map(t => [h('dt', {}, t.term), h('dd', { html: md(t.md) })])),
+  cards: b => h('div', { class: 'bp-cards' }, (b.items || []).map(c => h('div', { class: 'bp-card' },
+    h('h4', {}, h('span', {}, c.title), c.tag && h('span', { class: 'bp-chip ' + (c.kind || 'info') }, c.tag)),
+    h('div', { html: md(c.md) })))),
+  checklist: b => renderChecklist(b),
+  diff: b => renderDiff(b),
+  canvas: b => renderCanvas(b),
+};
+function codeBlock(code, lang, title) {
+  const pre = h('pre', {}, h('code', {}, code || ''));
+  return h('div', { class: 'bp-code' },
+    h('div', { class: 'bp-code-h' }, h('span', {}, title || lang || 'code'),
+      h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => copyText(code || '', 'Copied') }, ic('copy'), 'Copy')),
+    pre);
+}
+
+/* ---------- checklists ---------- */
+function itemKey(cid, iid) { return `bp:${docId}:${cid}:${iid}`; }
+function renderChecklist(b) {
+  const cid = b.id;
+  const numbered = b.numbered !== false;
+  const list = h(numbered ? 'ol' : 'ul', { class: 'bp-cl-items' });
+  const items = [];
+  const root = h('div', { class: 'bp-cl', id: 'cl-' + cid });
+  (b.items || []).forEach((it, i) => {
+    const key = itemKey(cid, it.id);
+    const authorDone = it.done ? '1' : '0';
+    // A saved tick is the reader's override of the author's `done`, stored with the `done` it
+    // overrode ("<tick><done>"). If the author has since changed `done`, the author wins: a
+    // stale "not done" must not hide a step the author later marked done. Legacy one-char
+    // values carry no `done`; only a legacy "0" against `done: true` is treated as stale.
+    let stored = store.get(key);
+    if (stored != null && (stored.length === 2 ? stored[1] !== authorDone : stored === '0' && it.done)) { store.del(key); stored = null; }
+    const cb = h('input', { type: 'checkbox', id: `cb-${cid}-${it.id}`, 'aria-describedby': it.verify ? `vf-${cid}-${it.id}` : null });
+    cb.checked = stored == null ? !!it.done : stored[0] === '1';
+    const li = h('li', { class: 'bp-cl-item', id: `item-${cid}-${it.id}` },
+      h('label', { for: cb.id }, cb, numbered && h('span', { class: 'bp-cl-num' }, String(i + 1).padStart(2, '0')),
+        h('span', { class: 'bp-cl-text', html: inline(it.text) }),
+        it.state && h('span', { class: 'bp-chip ' + (it.stateKind || 'warn') }, it.state)),
+      it.detail && h('div', { class: 'bp-cl-sub' }, h('details', {}, h('summary', {}, 'How'), h('div', { html: md(it.detail) }))),
+      it.code && codeBlock(it.code, it.lang || 'sh'),
+      it.verify && h('div', { class: 'bp-cl-verify', id: `vf-${cid}-${it.id}` }, ic('check'), h('span', {}, h('b', {}, 'Check'), h('span', { html: inline(it.verify) }))),
+      it.refs && it.refs.length && h('div', { class: 'bp-refs' }, it.refs.map(r => h('button', { type: 'button', class: 'bp-ref', onclick: () => focusNode(r) }, ic('target'), refLabel(r)))));
+    li.classList.toggle('done', cb.checked);
+    cb.addEventListener('change', () => {
+      if (cb.checked === !!it.done) store.del(key); else store.set(key, (cb.checked ? '1' : '0') + authorDone);
+      li.classList.toggle('done', cb.checked); update();
+    });
+    items.push({ it, cb, li });
+    ITEMS[`${cid}/${it.id}`] = { it, cb, li, cid };
+    for (const r of it.refs || []) (NODE_REFS[r] ||= []).push({ checklist: b, item: it, li });
+    list.append(li);
+  });
+  const count = h('span', { class: 'bp-cl-count' });
+  const bar = h('div', { class: 'bp-bar' }, h('i'));
+  root.append(h('div', { class: 'bp-cl-h' },
+    ic('list'), h('h3', {}, b.title || 'Checklist'), count,
+    h('span', { class: 'tools' },
+      h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => copyText(checklistMd(entry), 'Copied checklist as Markdown') }, ic('copy'), 'Copy'),
+      h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => { if (!confirm('Reset this checklist?')) return; items.forEach(x => { store.del(itemKey(cid, x.it.id)); x.cb.checked = !!x.it.done; x.li.classList.toggle('done', x.cb.checked); }); update(); } }, ic('reset'), 'Reset'))),
+    bar, list);
+  const entry = { b, items, root, count, bar, sideRow: null };
+  function update() {
+    const n = items.filter(x => x.cb.checked).length;
+    count.textContent = `${n} of ${items.length}`;
+    bar.firstChild.style.width = (items.length ? n / items.length * 100 : 0) + '%';
+    root.classList.toggle('complete', items.length > 0 && n === items.length);
+    if (entry.sideRow) entry.sideRow();
+    syncDiffs();
+    updateOverall();
+  }
+  entry.update = update;
+  CHECKLISTS.push(entry);
+  return root;
+}
+function checklistMd(c) {
+  const n = c.items.filter(x => x.cb.checked).length;
+  return `## ${c.b.title || c.b.id} (${n}/${c.items.length})\n` + c.items.map(x => `- [${x.cb.checked ? 'x' : ' '}] ${x.it.text}`).join('\n') + '\n';
+}
+function allChecklistsMd() {
+  return `# ${DOC.title} — progress ${new Date().toISOString().slice(0, 10)}\n\n` + CHECKLISTS.map(checklistMd).join('\n');
+}
+function updateOverall() {
+  if (!CHECKLISTS.length) return;
+  let n = 0, t = 0;
+  for (const c of CHECKLISTS) { t += c.items.length; n += c.items.filter(x => x.cb.checked).length; }
+  overall.hidden = false;
+  overallTxt.textContent = `${n}/${t}`;
+  overallBar.firstChild.style.width = (t ? n / t * 100 : 0) + '%';
+  overallBar.classList.toggle('full', t > 0 && n === t);
+}
+
+/* ---------- sections (run at the end, after the canvas engine is defined) ---------- */
+function renderDocument() {
+const tocLinks = [];
+(DOC.sections || []).forEach((sec, i) => {
+  const num = String(i + 1).padStart(2, '0');
+  const el = h('section', { class: 'bp-sec', id: sec.id },
+    h('h2', {}, h('span', { class: 'n' }, num), h('span', {}, sec.title)),
+    sec.lead && h('p', { class: 'bp-lead', html: inline(sec.lead) }));
+  for (const b of sec.blocks || []) {
+    const r = RENDER[b.type];
+    el.append(h('div', { class: 'bp-block' }, r ? r(b) : h('div', { class: 'bp-callout risk' }, ic('octagon'), h('span', { class: 'lbl' }, 'Unknown block'), h('div', {}, `Type "${b.type}" has no renderer.`))));
+  }
+  main.append(el);
+  tocLinks.push(h('a', { href: '#' + sec.id }, h('span', { class: 'n' }, num), h('span', {}, sec.title)));
+});
+
+/* sidebar: toc + tracker */
+const toggle = h('button', { type: 'button', class: 'bp-btn bp-side-toggle', 'aria-expanded': 'false', onclick: () => { const o = side.classList.toggle('open'); toggle.setAttribute('aria-expanded', String(o)); } },
+  h('span', {}, 'Contents'), ic('chev', 'chev'));
+const tocWrap = h('div', { class: 'bp-side-toc' }, h('div', { class: 'bd-rail-sec' }, h('h4', { class: 'bd-rail-h' }, 'Contents'), h('ol', {}, tocLinks.map(a => h('li', {}, a)))));
+side.append(toggle, tocWrap);
+if (CHECKLISTS.length) {
+  const rows = CHECKLISTS.map(c => {
+    const cnt = h('span', { class: 'c' }); const bar = h('div', { class: 'bp-bar' }, h('i'));
+    const row = h('a', { class: 'bp-prog-row', href: '#cl-' + c.b.id }, h('span', { class: 't' }, h('span', {}, c.b.title || c.b.id), cnt), bar);
+    c.sideRow = () => {
+      const n = c.items.filter(x => x.cb.checked).length;
+      cnt.textContent = `${n}/${c.items.length}`;
+      bar.firstChild.style.width = (c.items.length ? n / c.items.length * 100 : 0) + '%';
+      bar.classList.toggle('full', c.items.length > 0 && n === c.items.length);
+    };
+    return row;
+  });
+  tocWrap.append(h('div', { class: 'bd-rail-sec' }, h('h4', { class: 'bd-rail-h' }, 'Tracker'), h('div', { class: 'bp-prog' }, rows,
+    h('div', { class: 'bp-side-tools' },
+      h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => copyText(allChecklistsMd(), 'Copied progress as Markdown') }, ic('copy'), 'Copy progress'),
+      h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => {
+        if (!confirm('Reset all checklists in this document?')) return;
+        CHECKLISTS.forEach(c => c.items.forEach(x => { store.del(itemKey(c.b.id, x.it.id)); x.cb.checked = !!x.it.done; x.li.classList.toggle('done', x.cb.checked); }));
+        CHECKLISTS.forEach(c => c.update());
+      } }, ic('reset'), 'Reset')))));
+  CHECKLISTS.forEach(c => c.update());
+}
+Object.values(DIFFS).forEach(initDiff);
+const codeHash = () => { if (location.hash.startsWith('#code:')) openCodeLink(decodeURIComponent(location.hash.slice(6))); };
+if (location.hash.startsWith('#code:')) { if ('scrollRestoration' in history) history.scrollRestoration = 'manual'; setTimeout(codeHash, 300); }
+addEventListener('hashchange', codeHash);
+if ('IntersectionObserver' in window) {
+  const io = new IntersectionObserver(es => {
+    for (const e of es) if (e.isIntersecting) tocLinks.forEach(a => a.classList.toggle('on', a.getAttribute('href') === '#' + e.target.id));
+  }, { rootMargin: '-10% 0px -75% 0px' });
+  main.querySelectorAll('.bp-sec').forEach(s => io.observe(s));
+}
+document.addEventListener('click', e => {
+  const a = e.target.closest('a[data-node], a[href^="#code:"]');
+  if (!a) return;
+  e.preventDefault();
+  if (a.dataset.node) focusNode(a.dataset.node); else openCodeLink(decodeURIComponent(a.getAttribute('href').slice(6)));
+});
+}
+
+/* ======================================================================
+   Code review: diff blocks with line comments synced to checklist items
+   ====================================================================== */
+const ITEMS = {};  // "checklist-id/item-id" -> { it, cb, li, cid }
+const DIFFS = {};
+const LANG_BY_EXT = { dart: 'dart', kt: 'kotlin', kts: 'kotlin', java: 'kotlin', swift: 'kotlin', gradle: 'kotlin', js: 'js', mjs: 'js', cjs: 'js', ts: 'js', tsx: 'js', jsx: 'js',
+  json: 'json', yaml: 'yaml', yml: 'yaml', sh: 'bash', bash: 'bash', zsh: 'bash', env: 'bash', go: 'go', py: 'python', rs: 'rust', xml: 'xml', html: 'xml', svg: 'xml', plist: 'xml' };
+const SYN = (() => {
+  const W = s => new Set(s.split(' '));
+  const DQ = String.raw`"(?:\\.|[^"\\])*"?`, SQ = String.raw`'(?:\\.|[^'\\])*'?`, BT = String.raw`\`(?:\\.|[^\`\\])*\`?`;
+  const C = String.raw`\/\/.*|\/\*.*?(?:\*\/|$)|^\s*\*.*`, ANN = String.raw`@[A-Za-z_][\w.]*`;
+  return {
+    dart: { kw: W('abstract as assert async await break case catch class const continue covariant default deferred do dynamic else enum export extends extension external factory final finally for get hide if implements import in interface is late library mixin new on operator part required rethrow return sealed set show static switch sync throw try typedef var void while with yield'),
+      k: W('true false null this super'), cm: C, str: `r?${DQ}|r?${SQ}`, ann: ANN },
+    kotlin: { kw: W('package import class interface object fun val var if else when for while do return break continue is in as try catch finally throw private public protected internal override open abstract sealed data enum companion const suspend inline init constructor typealias by where lateinit new static final void extends implements let guard func struct'),
+      k: W('true false null this super it nil self'), cm: C, str: `${DQ}|${SQ}`, ann: ANN },
+    js: { kw: W('import export from default const let var function return if else for while do switch case break continue new class extends implements interface type enum async await try catch finally throw typeof instanceof in of as public private protected readonly static void yield delete'),
+      k: W('true false null undefined this super NaN Infinity'), cm: C, str: `${DQ}|${SQ}|${BT}`, ann: ANN },
+    go: { kw: W('package import func return if else for range switch case default break continue go defer select chan map struct interface type var const fallthrough goto'), k: W('true false nil iota'), cm: C, str: `${DQ}|${BT}|${SQ}` },
+    python: { kw: W('def class return if elif else for while in not and or is import from as with try except finally raise pass break continue lambda yield async await global nonlocal del assert'), k: W('True False None self cls'), cm: '#.*', str: `${DQ}|${SQ}`, ann: ANN },
+    rust: { kw: W('fn let mut const static struct enum impl trait pub use mod crate super match if else for while loop return break continue as in ref move async await unsafe where type dyn'), k: W('true false None Some Ok Err self Self'), cm: C, str: DQ },
+    json: { kw: W(''), k: W('true false null'), str: DQ, keys: true },
+    yaml: { kw: W(''), k: W('true false null yes no on off'), cm: String.raw`(?<!\S)#.*`, str: `${DQ}|${SQ}`, key: String.raw`^\s*(?:-\s+)?[^\s#:'"{}\[\]][^:#]*?(?=:(?:\s|$))`, vars: true },
+    bash: { kw: W('if then else elif fi for while until do done case esac in function return exit export local source echo cd set unset shift read trap'), k: W('true false'), cm: String.raw`(?<![^\s;|&(])#.*`, str: `${DQ}|${SQ}`, vars: true },
+    xml: { kw: W(''), k: W(''), cm: String.raw`<!--.*?(?:-->|$)`, str: `${DQ}|${SQ}`, tag: true },
+  };
+})();
+const SYN_RE = {};
+function synRe(lang) {
+  if (SYN_RE[lang]) return SYN_RE[lang];
+  const g = SYN[lang]; const p = [];
+  if (g.key) p.push(`(?<key>${g.key})`);
+  if (g.cm) p.push(`(?<c>${g.cm})`);
+  p.push(`(?<s>${g.str})`);
+  if (g.ann) p.push(`(?<a>${g.ann})`);
+  if (g.tag) p.push(String.raw`(?<g><\/?[A-Za-z][\w.:-]*|\/?>)`);
+  if (g.vars) p.push(String.raw`(?<v>\$\{[^}]*\}|\$\w+|\$[#?$!@*])`);
+  p.push(String.raw`(?<n>\b\d[\d_]*(?:\.\d+)?(?:[eE][+-]?\d+)?[a-zA-Z]?\b)`, String.raw`(?<w>[A-Za-z_$][\w$]*)`, String.raw`(?<o>[\s\S])`);
+  return (SYN_RE[lang] = new RegExp(p.join('|'), 'g'));
+}
+function highlightLine(text, lang) {
+  const g = SYN[lang];
+  if (!g) return esc(text);
+  let out = '', prev = '';
+  for (const m of text.matchAll(synRe(lang))) {
+    const t = m[0], gr = m.groups; let k = '';
+    if (gr.key !== undefined) k = 'p';
+    else if (gr.c !== undefined) k = 'c';
+    else if (gr.s !== undefined) k = g.keys && /^\s*:/.test(text.slice(m.index + t.length)) ? 'p' : 's';
+    else if (gr.a !== undefined) k = 'a';
+    else if (gr.g !== undefined) k = 'g';
+    else if (gr.v !== undefined) k = 'K';
+    else if (gr.n !== undefined) k = 'n';
+    else if (gr.w !== undefined) {
+      const next = text[m.index + t.length] || '';
+      k = g.kw.has(t) ? 'k' : g.k.has(t) || /^[A-Z][A-Z0-9_]+$/.test(t) ? 'K' : /^[A-Z]/.test(t) ? 't' : next === '(' ? 'f' : prev === '.' ? 'p' : '';
+    }
+    if (!/^\s+$/.test(t)) prev = t[t.length - 1];
+    out += k ? `<span class="t-${k}">${esc(t)}</span>` : esc(t);
+  }
+  return out;
+}
+const plainText = s => String(s || '').replace(/[`*]/g, '');
+function shortDir(p, max = 36) {
+  const i = p.lastIndexOf('/'); const dir = i < 0 ? '' : p.slice(0, i);
+  if (dir.length <= max) return dir;
+  const parts = dir.split('/'); let out = parts.pop();
+  while (parts.length && parts[parts.length - 1].length + out.length + 3 <= max) out = parts.pop() + '/' + out;
+  return '…/' + out;
+}
+const baseName = p => p.slice(p.lastIndexOf('/') + 1);
+const STATUS_LETTER = { added: 'A', modified: 'M', deleted: 'D', renamed: 'R', context: '' };
+const PR_KEY = '\u0000pr';
+
+function renderDiff(b) {
+  const d = { b, id: b.id, files: b.files || [], comments: (b.comments || []).map((c, i) => ({ ...c, _i: i })), sel: null, filter: 'all', ci: -1, mirrors: [] };
+  DIFFS[d.id] = d;
+  d.byPath = Object.fromEntries(d.files.map(f => [f.path, f]));
+  // comments read in file-list order: whole-change comments, changed files, then unchanged files
+  const rank = c => !c.file ? -1 : (d.byPath[c.file] && d.byPath[c.file].status === 'context' ? 1e5 : 0) + d.files.indexOf(d.byPath[c.file]);
+  d.order = [...d.comments].sort((x, y) => rank(x) - rank(y) || (x.line || 0) - (y.line || 0) || x._i - y._i);
+  d.order.forEach((c, i) => { c._o = i; });
+  const changed = d.files.filter(f => f.status !== 'context');
+  const add = changed.reduce((s, f) => s + (f.add || 0), 0), del = changed.reduce((s, f) => s + (f.del || 0), 0);
+  d.progTxt = h('span'); d.progBar = h('div', { class: 'bp-bar' }, h('i'));
+  d.navLbl = h('span', { class: 'lbl', 'aria-live': 'polite' });
+  d.files_ = h('nav', { class: 'bd-files', 'aria-label': 'Files' });
+  d.fsel = h('select', { class: 'bd-fsel', 'aria-label': 'File', onchange: () => selectFile(d, d.fsel.value) });
+  d.pane = h('div', { class: 'bd-pane', tabindex: 0, 'aria-label': 'Code' });
+  const segBtn = (label, v) => h('button', { type: 'button', 'aria-pressed': String(v === 'all'), onclick: e => {
+    d.filter = v; e.currentTarget.parentElement.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x === e.currentTarget))); paintFiles(d);
+  } }, label);
+  const hasComments = d.comments.length > 0;
+  d.root = h('section', { class: 'bd-diff', id: 'diff-' + d.id, 'aria-label': 'Code review: ' + (b.title || d.id) },
+    h('div', { class: 'bd-diff-h' }, ic('pr'), h('h3', {}, b.title || d.id),
+      b.repo && h('span', { class: 'ref', title: 'Repository' }, b.repo),
+      (b.base || b.head) && h('span', { class: 'ref', title: 'Compared range' }, `${b.base || '?'}…${b.head || '?'}`),
+      h('span', { class: 'sp' }),
+      h('span', { class: 'stat' }, `${changed.length} file${changed.length === 1 ? '' : 's'} `, h('span', { class: 'add-c' }, '+' + add), ' ', h('span', { class: 'del-c' }, '−' + del)),
+      b.url && h('a', { class: 'gh', href: safeUrl(b.url), target: '_blank', rel: 'noopener' }, 'Open', ic('link'))),
+    b.note && h('div', { class: 'bd-diff-note', html: md(b.note) }),
+    h('div', { class: 'bd-diff-tb' }, d.fsel,
+      hasComments && h('span', { class: 'bd-seg', role: 'group', 'aria-label': 'Show files' }, segBtn('All files', 'all'), segBtn('With comments', 'commented')),
+      hasComments && d.comments.some(c => c.item) && h('span', { class: 'bd-prog', title: 'Comments whose checklist item is ticked' }, d.progBar, d.progTxt),
+      h('span', { class: 'bd-cnav' }, hasComments && [
+        h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Previous comment', title: 'Previous comment (p)', onclick: () => stepComment(d, -1) }, ic('up')), d.navLbl,
+        h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Next comment', title: 'Next comment (n)', onclick: () => stepComment(d, 1) }, ic('down'))],
+        h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Full screen', title: 'Full screen', style: 'margin-left:6px', onclick: () => document.fullscreenElement ? document.exitFullscreen() : d.root.requestFullscreen?.() }, ic('full')))),
+    h('div', { class: 'bd-diff-body' }, d.files_, d.pane));
+  d.root.addEventListener('keydown', e => {
+    if (e.target.closest('input, select, textarea') || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.key === 'n' || e.key === ']') { e.preventDefault(); stepComment(d, 1); }
+    else if (e.key === 'p' || e.key === '[') { e.preventDefault(); stepComment(d, -1); }
+  });
+  return d.root;
+}
+function commentsIn(d, key) { return d.comments.filter(c => key === PR_KEY ? !c.file : c.file === key); }
+function paintFiles(d) {
+  const rows = [];
+  const pr = commentsIn(d, PR_KEY);
+  const fileRow = (key, name, dir, st, cs, extra) => {
+    const ticked = cs.filter(c => c.item && ITEMS[c.item] && ITEMS[c.item].cb.checked).length;
+    const linked = cs.filter(c => c.item && ITEMS[c.item]).length;
+    return h('button', { type: 'button', class: 'bd-file', 'data-key': key, 'aria-current': String(d.sel === key), title: key === PR_KEY ? name : key, onclick: () => selectFile(d, key) },
+      h('span', { class: 'st ' + st }, st === 'PR' ? ic('msg') : st), h('span', { class: 'nm' }, name),
+      cs.length ? h('span', { class: 'cnt' + (linked && ticked === linked ? ' all' : '') }, ic('msg'), String(cs.length)) : extra || h('span'),
+      dir != null && h('span', { class: 'dir' }, dir));
+  };
+  if (pr.length) rows.push(fileRow(PR_KEY, 'Whole change', 'not tied to a line', 'PR', pr));
+  const shown = d.files.filter(f => d.filter === 'all' || commentsIn(d, f.path).length);
+  const changed = shown.filter(f => f.status !== 'context'), ctx = shown.filter(f => f.status === 'context');
+  const row = f => fileRow(f.path, baseName(f.path), shortDir(f.path) || '/', STATUS_LETTER[f.status || 'modified'], commentsIn(d, f.path),
+    f.status !== 'context' && h('span', { class: 'ch' }, h('span', { class: 'add-c' }, '+' + (f.add || 0)), ' ', h('span', { class: 'del-c' }, '−' + (f.del || 0))));
+  if (changed.length) rows.push(h('div', { class: 'grp' }, `Changed · ${changed.length}`), changed.map(row));
+  if (ctx.length) rows.push(h('div', { class: 'grp', title: 'Files the comments point at that this change does not touch' }, `Not changed · ${ctx.length}`), ctx.map(row));
+  d.files_.replaceChildren(...rows.flat());
+  d.fsel.replaceChildren(...[pr.length ? h('option', { value: PR_KEY }, `Whole change (${pr.length})`) : null,
+    ...shown.map(f => h('option', { value: f.path }, `${STATUS_LETTER[f.status || 'modified'] || '·'}  ${f.path}${commentsIn(d, f.path).length ? `  (${commentsIn(d, f.path).length})` : ''}`))].filter(Boolean));
+  if (d.sel) d.fsel.value = d.sel;
+}
+function commentCard(d, c) {
+  const src = c.item ? ITEMS[c.item] : null;
+  const it = src && src.it;
+  const kind = c.kind || (it && it.stateKind) || 'info';
+  const title = c.title || (it && it.text) || '';
+  const where = c.line ? (c.end && c.end !== c.line ? `Lines ${c.line}–${c.end}` : `Line ${c.line}`) + (c.side === 'old' ? ' (before)' : '') : c.file ? 'Whole file' : (c.label || 'Whole change');
+  const card = h('article', { class: `bd-cm ${kind}${src ? '' : ' nott'}`, 'data-ci': c._i, tabindex: -1 });
+  let tick = null;
+  if (src) {
+    tick = h('input', { type: 'checkbox', 'aria-label': 'Tick: ' + plainText(title) });
+    tick.addEventListener('change', () => { src.cb.checked = tick.checked; src.cb.dispatchEvent(new Event('change')); });
+    d.mirrors.push({ tick, src, card });
+  }
+  const detail = c.md || (it && it.detail);
+  card.append(
+    h('div', { class: 'hd' }, tick ? h('label', { class: 'tk' }, tick) : ic('msg'), h('div', { class: 'tt', html: inline(title) }),
+      ((it && it.state) || c.state) && h('span', { class: 'bp-chip ' + kind }, c.state || it.state)),
+    h('div', { class: 'mt' }, h('span', {}, where),
+      src && h('a', { href: `#item-${src.cid}-${it.id}`, onclick: e => { e.preventDefault(); src.li.scrollIntoView({ behavior: REDUCE ? 'auto' : 'smooth', block: 'center' }); flash(src.li); } }, 'Checklist item', ic('chev'))),
+    detail && h('details', {}, h('summary', {}, 'Details'), h('div', { class: 'bd', html: md(detail) })));
+  return card;
+}
+function renderPane(d) {
+  d.mirrors = [];
+  const key = d.sel; const pane = d.pane;
+  if (key === PR_KEY) {
+    pane.replaceChildren(h('div', { class: 'bd-fh' }, h('div', { class: 'p' }, h('b', {}, 'Whole change'), ' · comments not tied to a line')),
+      h('div', { class: 'bd-code' }, commentsIn(d, PR_KEY).map(c => h('div', { class: 'bd-cmw top' }, commentCard(d, c)))));
+    syncDiffs(); return;
+  }
+  const f = d.byPath[key]; if (!f) { pane.replaceChildren(h('div', { class: 'bd-omit' }, 'No file selected.')); return; }
+  const i = f.path.lastIndexOf('/');
+  const head = h('div', { class: 'bd-fh' },
+    h('div', { class: 'p' }, i >= 0 ? f.path.slice(0, i + 1) : '', h('b', {}, baseName(f.path)), f.from ? ` ← ${f.from}` : ''),
+    f.status === 'context' ? h('span', { class: 'bp-chip todo' }, 'not changed') : h('span', { class: 'stat' }, h('span', { class: 'add-c' }, '+' + (f.add || 0)), ' ', h('span', { class: 'del-c' }, '−' + (f.del || 0))),
+    h('button', { type: 'button', class: 'bp-btn ghost', title: 'Copy path', 'aria-label': 'Copy path', onclick: () => copyText(f.path, 'Copied path') }, ic('copy')));
+  const cs = commentsIn(d, f.path);
+  const ends = {};  // "n:12" / "o:12" -> [comment]
+  for (const c of cs) if (c.line) (ends[(c.side === 'old' ? 'o:' : 'n:') + (c.end || c.line)] ||= []).push(c);
+  const hits = (o, n) => cs.some(c => c.line && (c.side === 'old' ? o != null && o >= c.line && o <= (c.end || c.line) : n != null && n >= c.line && n <= (c.end || c.line)));
+  const lang = LANG_BY_EXT[(f.path.match(/\.([\w]+)$/) || [])[1]] || (/(^|\/)\.env|\.env\./.test(f.path) ? 'bash' : '');
+  let html = '', prevNew = null; const slots = [];
+  const top = cs.filter(c => !c.line);
+  for (const hk of f.hunks || []) {
+    if (prevNew != null && hk.new > prevNew + 1) html += `<div class="bd-gap">⋯ ${hk.new - prevNew - 1} unchanged line${hk.new - prevNew - 1 === 1 ? '' : 's'}</div>`;
+    const nOld = hk.lines.filter(l => l[0] !== '+').length, nNew = hk.lines.filter(l => l[0] !== '-').length;
+    html += hk.context ? `<div class="bd-hh ctx">Unchanged code, shown for a comment · lines ${hk.new}–${hk.new + nNew - 1}</div>`
+      : `<div class="bd-hh">@@ -${hk.old},${nOld} +${hk.new},${nNew} @@${hk.header ? ' ' + esc(hk.header) : ''}</div>`;
+    let o = hk.old, n = hk.new;
+    for (const l of hk.lines) {
+      const t = l[0]; const lo = t === '+' ? null : o, ln = t === '-' ? null : n;
+      const cls = t === '+' ? 'add' : t === '-' ? 'del' : '';
+      html += `<div class="bd-ln ${cls}${hits(lo, ln) ? ' hit' : ''}"${ln != null ? ` data-n="${ln}"` : ''}${lo != null ? ` data-o="${lo}"` : ''}><span class="o">${lo ?? ''}</span><span class="n">${ln ?? ''}</span><span class="s">${t === '+' ? '+' : t === '-' ? '−' : ''}</span><span class="c">${highlightLine(l.slice(1), lang) || ' '}</span></div>`;
+      for (const c of [...(ln != null ? ends['n:' + ln] || [] : []), ...(lo != null ? ends['o:' + lo] || [] : [])]) { html += `<div class="bd-cmw" data-slot="${slots.length}"></div>`; slots.push(c); }
+      if (t !== '+') o++; if (t !== '-') n++;
+    }
+    prevNew = n - 1;
+  }
+  const code = h('div', { class: 'bd-code' });
+  code.innerHTML = html || '';
+  code.querySelectorAll('[data-slot]').forEach(el => el.append(commentCard(d, slots[+el.dataset.slot])));
+  if (top.length) code.prepend(...top.map(c => h('div', { class: 'bd-cmw top' }, commentCard(d, c))));
+  const shownIds = new Set(slots.concat(top).map(c => c._i));
+  const orphans = cs.filter(c => !shownIds.has(c._i));
+  if (orphans.length) code.append(...orphans.map(c => h('div', { class: 'bd-cmw top' }, commentCard(d, c))));
+  pane.replaceChildren(...[head, f.omitted && h('div', { class: 'bd-omit' }, `Diff not included: ${f.omitted}.`), code].filter(Boolean));
+  syncDiffs();
+}
+function selectFile(d, key, keepScroll) {
+  if (d.sel !== key) { d.sel = key; renderPane(d); paintFiles(d); if (!keepScroll) d.pane.scrollTop = 0; }
+  // keep the selected file visible in the list; scrollIntoView would also move the page
+  const cur = d.files_.querySelector('[aria-current="true"]'), L = d.files_;
+  if (cur && L.scrollHeight > L.clientHeight) {
+    const top = cur.getBoundingClientRect().top - L.getBoundingClientRect().top + L.scrollTop, bottom = top + cur.offsetHeight;
+    if (top < L.scrollTop) L.scrollTop = top - 8; else if (bottom > L.scrollTop + L.clientHeight) L.scrollTop = bottom - L.clientHeight + 8;
+  }
+}
+function paneScrollTo(d, el) {
+  const p = d.pane;
+  if (p.scrollHeight > p.clientHeight + 2) {
+    const top = el.getBoundingClientRect().top - p.getBoundingClientRect().top + p.scrollTop;
+    p.scrollTo({ top: Math.max(0, top - p.clientHeight / 3), behavior: REDUCE ? 'auto' : 'smooth' });
+  } else el.scrollIntoView({ behavior: REDUCE ? 'auto' : 'smooth', block: 'center' });
+}
+function flash(el) { el.classList.remove('bd-flash'); void el.offsetWidth; el.classList.add('bd-flash'); setTimeout(() => el.classList.remove('bd-flash'), 1500); }
+function openComment(d, c, fromOutside) {
+  d.ci = c._o;
+  selectFile(d, c.file || PR_KEY);
+  paintNav(d);
+  // with an inner scrolling pane, bring the whole diff into view; without one (narrow screens) the card scroll does it
+  if (fromOutside && d.pane.scrollHeight > d.pane.clientHeight + 2) d.root.scrollIntoView({ behavior: REDUCE ? 'auto' : 'smooth', block: 'start' });
+  const card = d.pane.querySelector(`[data-ci="${c._i}"]`);
+  if (!card) return;
+  setTimeout(() => { paneScrollTo(d, card); flash(card); card.focus({ preventScroll: true }); }, fromOutside && !REDUCE ? 350 : 0);
+}
+function stepComment(d, dir) {
+  if (!d.order.length) return;
+  openComment(d, d.order[(d.ci + dir + d.order.length) % d.order.length]);
+}
+function paintNav(d) { if (d.order.length) d.navLbl.textContent = d.ci < 0 ? `${d.order.length} comment${d.order.length === 1 ? '' : 's'}` : `Comment ${d.ci + 1} of ${d.order.length}`; }
+function openCode(did, path, line, fromOutside = true) {
+  const d = DIFFS[did]; if (!d) return false;
+  const toDiff = () => d.root.scrollIntoView({ behavior: REDUCE ? 'auto' : 'smooth', block: 'start' });
+  if (!path || !d.byPath[path]) { if (fromOutside) toDiff(); return !path; }
+  selectFile(d, path);
+  const row = line && (d.pane.querySelector(`.bd-ln[data-n="${line}"]`) || d.pane.querySelector(`.bd-ln[data-o="${line}"]`));
+  if (fromOutside && (!row || d.pane.scrollHeight > d.pane.clientHeight + 2)) toDiff();
+  if (!line) return true;
+  if (row) setTimeout(() => { paneScrollTo(d, row); flash(row); }, fromOutside && !REDUCE ? 350 : 0);
+  return !!row;
+}
+function openCodeLink(s) {
+  const m = /^([\w-]+)(?:\/(.+?))?(?::(\d+))?$/.exec(s); if (!m) return false;
+  return openCode(m[1], m[2], m[3] && +m[3]);
+}
+function syncDiffs() {
+  for (const d of Object.values(DIFFS)) {
+    for (const m of d.mirrors) { m.tick.checked = m.src.cb.checked; m.card.classList.toggle('done', m.src.cb.checked); }
+    const linked = d.comments.filter(c => c.item && ITEMS[c.item]);
+    if (linked.length && d.progTxt) {
+      const n = linked.filter(c => ITEMS[c.item].cb.checked).length;
+      d.progTxt.textContent = `${n}/${linked.length}`;
+      d.progBar.firstChild.style.width = (n / linked.length * 100) + '%';
+      d.progBar.classList.toggle('full', n === linked.length);
+    }
+    d.files_?.querySelectorAll('.bd-file').forEach(btn => {
+      const cs = commentsIn(d, btn.dataset.key).filter(c => c.item && ITEMS[c.item]);
+      btn.querySelector('.cnt')?.classList.toggle('all', cs.length > 0 && cs.every(c => ITEMS[c.item].cb.checked));
+    });
+  }
+}
+function initDiff(d) {
+  // "View in code" on each checklist item a comment points at
+  for (const c of d.comments) {
+    const src = c.item && ITEMS[c.item]; if (!src) continue;
+    let refs = src.li.querySelector(':scope > .bp-refs');
+    if (!refs) { refs = h('div', { class: 'bp-refs' }); src.li.append(refs); }
+    const label = c.file ? baseName(c.file) + (c.line ? ':' + c.line : '') : (d.b.title || d.id);
+    refs.append(h('button', { type: 'button', class: 'bp-ref code', title: 'Show this comment in the code' + (c.file ? ': ' + c.file : ''), onclick: () => openComment(d, c, true) }, ic('code'), label));
+  }
+  d.sel = null;
+  paintFiles(d);
+  // open on the changed file with the most comments, else the first comment, else the first file with code
+  const tally = {}; for (const c of d.comments) if (c.file && d.byPath[c.file] && d.byPath[c.file].status !== 'context') tally[c.file] = (tally[c.file] || 0) + 1;
+  const busiest = Object.keys(tally).sort((a, b) => tally[b] - tally[a])[0];
+  const first = d.order.find(c => c.file) || d.order[0];
+  selectFile(d, busiest || (first ? (first.file || PR_KEY) : (d.files.find(f => f.hunks && f.hunks.length) || d.files[0] || {}).path));
+  paintNav(d);
+}
+
+/* ======================================================================
+   Blueprint canvas: pan/zoom, semantic zoom into children, animated flows
+   ====================================================================== */
+const DEF_W = 180, DEF_H = 80, SYS_W = 240, SYS_H = 140, COL_W = 250, ROW_H = 160;
+const HEAD = 7, PAD = 5;
+const REVEAL_A = 0.40, REVEAL_B = 0.72;
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const ease = p => p < .5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+const CHAR = 7.4; // sans 13px semibold, average advance
+
+function wrap(text, width, charW = CHAR, maxLines = 3) {
+  const max = Math.max(4, Math.floor(width / charW));
+  const words = String(text || '').split(/\s+/); const lines = []; let cur = '';
+  for (const w of words) {
+    if (!cur) cur = w; else if ((cur + ' ' + w).length <= max) cur += ' ' + w; else { lines.push(cur); cur = w; }
+  }
+  if (cur) lines.push(cur);
+  if (lines.length > maxLines) { lines.length = maxLines; lines[maxLines - 1] = lines[maxLines - 1].slice(0, max - 1) + '…'; }
+  return lines.map(l => l.length > max ? l.slice(0, max - 1) + '…' : l);
+}
+
+function shapeFor(n) {
+  const { w, h: H } = n; const k = n.kind || 'service';
+  const cls = 'bp-shape';
+  const out = sv('g', { class: 'bp-shp' });
+  out.append(shapeEl(k, w, H, cls));
+  return out;
+}
+function shapeEl(k, w, H, cls) {
+  switch (k) {
+    case 'store': case 'db': case 'cache': case 'stream': {
+      const r = Math.min(10, H / 6);
+      return sv('g', {}, sv('path', { class: cls, d: `M0,${r} A${w / 2},${r} 0 0 1 ${w},${r} V${H - r} A${w / 2},${r} 0 0 1 0,${H - r} Z` }),
+        sv('path', { class: cls, style: 'fill:none', d: `M0,${r} A${w / 2},${r} 0 0 0 ${w},${r}` }));
+    }
+    case 'queue': return sv('g', {}, sv('rect', { class: cls, width: w, height: H, rx: 4 }),
+      ...[14, 24, 34].map(dx => sv('line', { class: cls, x1: w - dx, y1: 6, x2: w - dx, y2: H - 6 })));
+    case 'device': case 'hardware': { const c = 10; return sv('polygon', { class: cls, points: `${c},0 ${w - c},0 ${w},${c} ${w},${H - c} ${w - c},${H} ${c},${H} 0,${H - c} 0,${c}` }); }
+    case 'actor': case 'user': case 'person': return sv('rect', { class: cls, width: w, height: H, rx: Math.min(H / 2, 28) });
+    case 'client': case 'app': case 'ui': return sv('g', {}, sv('rect', { class: cls, width: w, height: H, rx: 6 }),
+      sv('line', { class: cls, x1: 0, y1: 14, x2: w, y2: 14 }), ...[8, 16, 24].map(x => sv('circle', { cx: x, cy: 7, r: 2, fill: 'var(--bp-dim)' })));
+    case 'external': case 'cloud': return sv('rect', { class: cls, width: w, height: H, rx: 12 });
+    case 'note': return sv('path', { class: cls, d: `M0,0 H${w - 14} L${w},14 V${H} H0 Z` });
+    case 'port': return sv('rect', { class: cls, width: w, height: H, rx: H / 2 });
+    default: return sv('rect', { class: cls, width: w, height: H, rx: 5 });
+  }
+}
+
+const STATE_COLORS = { live: 'var(--bp-green)', local: 'var(--bp-cyan)', proposed: 'var(--bp-amber)', unverified: 'var(--bp-amber)', removed: 'var(--bp-red)', replaced: 'var(--bp-red)' };
+
+function prepScope(scope, parentPath) {
+  scope.nodes = scope.nodes || []; scope.edges = scope.edges || []; scope.flows = scope.flows || [];
+  scope._byId = {};
+  for (const n of scope.nodes) {
+    const sys = !!(n.children && n.children.nodes && n.children.nodes.length);
+    n.w = n.w || (sys ? SYS_W : DEF_W); n.h = n.h || (sys ? SYS_H : DEF_H);
+    const cx = n.x != null ? n.x : (n.col || 0) * COL_W;
+    const cy = n.y != null ? n.y : (n.row || 0) * ROW_H;
+    n._l = cx - n.w / 2; n._t = cy - n.h / 2;
+    n._path = parentPath.concat(n.id);
+    n._sys = sys;
+    scope._byId[n.id] = n;
+    if (sys) prepScope(n.children, n._path);
+  }
+  const b = boundsOf(scope.nodes);
+  scope._bounds = b;
+}
+function boundsOf(nodes) {
+  if (!nodes.length) return { x: 0, y: 0, w: 1, h: 1 };
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const n of nodes) { x0 = Math.min(x0, n._l); y0 = Math.min(y0, n._t); x1 = Math.max(x1, n._l + n.w); y1 = Math.max(y1, n._t + n.h); }
+  return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+}
+function innerFit(n) {
+  const B = n.children._bounds; const pad = 36;
+  const bx = B.x - pad, by = B.y - pad, bw = B.w + 2 * pad, bh = B.h + 2 * pad;
+  const aw = n.w - 2 * PAD, ah = n.h - HEAD - 2 * PAD;
+  const s = Math.min(aw / bw, ah / bh);
+  const tx = PAD + (aw - bw * s) / 2 - bx * s;
+  const ty = HEAD + PAD + (ah - bh * s) / 2 - by * s;
+  return { s, tx, ty };
+}
+function scopeBox(scope, n) {
+  // pseudo-boxes for @left/@right/@top/@bottom ports, in the scope's coordinates
+  if (!n) return null;
+  const f = n._inner; const X0 = (0 - f.tx) / f.s, X1 = (n.w - f.tx) / f.s, Y0 = (HEAD - f.ty) / f.s, Y1 = (n.h - f.ty) / f.s;
+  const my = (Y0 + Y1) / 2, mx = (X0 + X1) / 2;
+  return { '@left': { _l: X0, _t: my, w: 0, h: 0 }, '@right': { _l: X1, _t: my, w: 0, h: 0 }, '@top': { _l: mx, _t: Y0, w: 0, h: 0 }, '@bottom': { _l: mx, _t: Y1, w: 0, h: 0 } };
+}
+
+function edgeGeom(a, b, offset) {
+  const ac = { x: a._l + a.w / 2, y: a._t + a.h / 2 }, bc = { x: b._l + b.w / 2, y: b._t + b.h / 2 };
+  const dx = bc.x - ac.x, dy = bc.y - ac.y;
+  let p0, p3, c1, c2;
+  if (Math.abs(dx) >= Math.abs(dy) * 0.8) {
+    const sx = Math.sign(dx) || 1;
+    p0 = { x: ac.x + sx * a.w / 2, y: ac.y + offset }; p3 = { x: bc.x - sx * b.w / 2, y: bc.y + offset };
+    const m = Math.max(28, Math.abs(p3.x - p0.x) / 2);
+    c1 = { x: p0.x + sx * m, y: p0.y }; c2 = { x: p3.x - sx * m, y: p3.y };
+  } else {
+    const sy = Math.sign(dy) || 1;
+    p0 = { x: ac.x + offset, y: ac.y + sy * a.h / 2 }; p3 = { x: bc.x + offset, y: bc.y - sy * b.h / 2 };
+    const m = Math.max(28, Math.abs(p3.y - p0.y) / 2);
+    c1 = { x: p0.x, y: p0.y + sy * m }; c2 = { x: p3.x, y: p3.y - sy * m };
+  }
+  const mid = { x: (p0.x + 3 * c1.x + 3 * c2.x + p3.x) / 8, y: (p0.y + 3 * c1.y + 3 * c2.y + p3.y) / 8 };
+  return { d: `M${p0.x},${p0.y} C${c1.x},${c1.y} ${c2.x},${c2.y} ${p3.x},${p3.y}`, mid };
+}
+
+let uid = 0;
+function renderCanvas(spec) {
+  const cv = { spec, id: spec.id, k: 1, tx: 0, ty: 0, active: false, touched: false, animOn: !REDUCE, players: [], sysNodes: [], allNodes: [], onscreen: true, focusPath: [] };
+  CANVASES[spec.id] = cv;
+  const root = { nodes: spec.nodes, edges: spec.edges, flows: spec.flows };
+  cv.root = root;
+  prepScope(root, []);
+
+  const gid = 'bp' + (++uid);
+  const svg = sv('svg', { role: 'img', 'aria-label': spec.title || 'Blueprint canvas', class: cv.animOn ? 'anim' : '' });
+  const defs = sv('defs', {},
+    sv('pattern', { id: gid + '-g1', width: 20, height: 20, patternUnits: 'userSpaceOnUse' }, sv('path', { d: 'M20 0H0V20', fill: 'none', stroke: 'rgba(160,200,255,.07)', 'stroke-width': 1, 'vector-effect': 'non-scaling-stroke' })),
+    sv('pattern', { id: gid + '-g2', width: 100, height: 100, patternUnits: 'userSpaceOnUse' }, sv('rect', { width: 100, height: 100, fill: 'url(#' + gid + '-g1)' }), sv('path', { d: 'M100 0H0V100', fill: 'none', stroke: 'rgba(160,200,255,.16)', 'stroke-width': 1, 'vector-effect': 'non-scaling-stroke' })),
+    sv('filter', { id: 'bp-glow', x: '-50%', y: '-50%', width: '200%', height: '200%' }, sv('feGaussianBlur', { stdDeviation: 2.5, result: 'b' }), sv('feMerge', {}, sv('feMergeNode', { in: 'b' }), sv('feMergeNode', { in: 'SourceGraphic' }))),
+    ...[['data', '#5fd4ff'], ['control', '#d6e9ff'], ['async', '#c3a6ff'], ['power', '#ffc35a'], ['dep', '#8db2da'], ['replaced', '#ff8a7a'], ['act', '#ffffff']].map(([k, c]) =>
+      sv('marker', { id: `${gid}-m-${k}`, viewBox: '0 0 10 10', refX: 9, refY: 5, markerWidth: 7, markerHeight: 7, markerUnits: 'userSpaceOnUse', orient: 'auto-start-reverse' }, sv('path', { d: 'M0,0 L10,5 L0,10 z', fill: c }))));
+  svg.append(defs);
+  const vp = sv('g', { class: 'bp-vp' });
+  vp.append(sv('rect', { x: -200000, y: -200000, width: 400000, height: 400000, fill: `url(#${gid}-g2)` }));
+  svg.append(vp);
+  cv.gid = gid; cv.svg = svg; cv.vp = vp;
+
+  const abs0 = { s: 1, x: 0, y: 0 };
+  vp.append(buildScope(cv, root, abs0, null));
+
+  // chrome
+  const flowSel = h('select', { 'aria-label': 'Flow' });
+  const tbBtn = (label, icon) => h('button', { type: 'button', 'aria-label': label, title: label }, ic(icon));
+  const playBtn = h('button', { type: 'button', 'aria-label': 'Play or pause flows', title: 'Play or pause flows', 'aria-pressed': String(cv.animOn) }, ic(cv.animOn ? 'pause' : 'play'));
+  const prevBtn = tbBtn('Previous step', 'prev');
+  const nextBtn = tbBtn('Next step', 'next');
+  const outBtn = tbBtn('Zoom out', 'minus');
+  const inBtn = tbBtn('Zoom in', 'plus');
+  const fitBtn = tbBtn('Fit drawing', 'fit');
+  const fsBtn = tbBtn('Full screen', 'full');
+  const tb = h('div', { class: 'bp-tb' }, h('span', { class: 'ttl' }, spec.title || 'Drawing'),
+    h('span', { class: 'grp flowgrp' }, flowSel, playBtn, prevBtn, nextBtn), h('span', { class: 'grp' }, outBtn, inBtn, fitBtn, fsBtn));
+  const crumbs = h('div', { class: 'bp-crumbs' });
+  const tblockZoom = h('div', {}, '100%'); const tblockLvl = h('div', {}, 'L0');
+  const tblock = h('div', { class: 'bp-tblock', 'aria-hidden': 'true' },
+    h('div', { class: 'wide' }, (spec.title || '').toUpperCase()),
+    h('div', { class: 'k' }, 'DWG'), h('div', {}, meta.dwg ? `${meta.dwg}-${spec.id}`.toUpperCase() : spec.id.toUpperCase()),
+    h('div', { class: 'k' }, 'REV'), h('div', {}, meta.rev || 'A'),
+    h('div', { class: 'k' }, 'ZOOM'), tblockZoom,
+    h('div', { class: 'k' }, 'LEVEL'), tblockLvl);
+  const coarse = matchMedia('(pointer: coarse)').matches;
+  const hint = h('div', { class: 'bp-hint' }, spec.hint || (coarse ? 'Pinch to zoom · tap the drawing, then drag to pan · tap a system twice to open it' : 'Pinch or ⌘/Ctrl + scroll to zoom · drag to pan · double-click a system to open it'));
+  const stage = h('div', { class: 'bp-stage', tabindex: 0, style: `--h:${spec.height || 540}px`, 'aria-label': (spec.title || 'Canvas') + '. Focus, then use plus, minus, arrows, zero to fit, Escape to go up a level.' }, svg, crumbs, tblock, hint);
+  const capLbl = h('span', { class: 'lbl' }, '');
+  const capTxt = h('span', { class: 'txt', 'aria-live': 'polite' });
+  const capbar = h('div', { class: 'bp-capbar' }, capLbl, capTxt);
+  const detail = h('div', { class: 'bp-detail', hidden: true });
+  const fig = h('figure', { class: 'bp-canvas', id: 'cv-' + spec.id }, tb, stage, capbar, detail, outlineOf(spec, root));
+  if (spec.caption) fig.append(h('figcaption', { class: 'bp-capbar', html: '<span class="lbl">Note</span><span class="txt">' + inline(spec.caption) + '</span>' }));
+  Object.assign(cv, { fig, stage, crumbs, tblockZoom, tblockLvl, hint, capbar, capLbl, capTxt, detail, flowSel, playBtn });
+  // a drawing with no flows at any level has nothing to caption
+  capbar.hidden = !cv.players.length;
+
+  // players
+  cv.players.forEach(p => p.layerReady());
+  cv.focusPlayer = cv.players.find(p => !p.owner) || null;
+
+  // ---- transforms
+  let raf = 0;
+  cv.apply = () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; applyNow(cv); }); };
+  cv.size = () => ({ w: stage.clientWidth || 800, h: stage.clientHeight || 500 });
+  cv.fitK = 1;
+  cv.fit = (animate) => {
+    const B = root._bounds; const m = 40;
+    if (!cv.touched && stage.clientWidth && stage.clientWidth < 700) {
+      const want = clamp(stage.clientWidth * (B.h + 2 * m) / (B.w + 2 * m) + 150, 300, Math.round(innerHeight * 0.68));
+      if (Math.abs(stage.clientHeight - want) > 4) stage.style.height = want + 'px';
+    }
+    const { w, h: H } = cv.size();
+    const k = Math.min((w - 2 * m) / B.w, (H - 2 * m - 30) / B.h, 1.6);
+    cv.fitK = k;
+    const tx = w / 2 - (B.x + B.w / 2) * k, ty = H / 2 + 12 - (B.y + B.h / 2) * k;
+    if (animate) animateTo(cv, k, tx, ty); else { cv.k = k; cv.tx = tx; cv.ty = ty; applyNow(cv); }
+  };
+  const minAbs = Math.min(1, ...cv.sysNodes.map(n => n._childAbs.s));
+  cv.kMax = () => Math.max(4, 3.2 / minAbs);
+  cv.kMin = () => Math.min(cv.fitK * 0.5, 0.5);
+  cv.zoomAt = (px, py, f) => {
+    const k2 = clamp(cv.k * f, cv.kMin(), cv.kMax()); const r = k2 / cv.k;
+    cv.tx = px - (px - cv.tx) * r; cv.ty = py - (py - cv.ty) * r; cv.k = k2; cv.apply();
+  };
+
+  // ---- toolbar
+  const touch = () => { if (!cv.touched) { cv.touched = true; hint.classList.add('off'); } };
+  inBtn.onclick = () => { touch(); const { w, h: H } = cv.size(); animateTo(cv, clamp(cv.k * 1.6, cv.kMin(), cv.kMax()), null, null, w / 2, H / 2); };
+  outBtn.onclick = () => { touch(); const { w, h: H } = cv.size(); animateTo(cv, clamp(cv.k / 1.6, cv.kMin(), cv.kMax()), null, null, w / 2, H / 2); };
+  fitBtn.onclick = () => { touch(); cv.fit(true); };
+  fsBtn.onclick = () => { if (document.fullscreenElement) document.exitFullscreen(); else fig.requestFullscreen?.().then(() => setTimeout(() => cv.fit(false), 60)); };
+  playBtn.onclick = () => {
+    cv.animOn = !cv.animOn; playBtn.replaceChildren(ic(cv.animOn ? 'pause' : 'play')); playBtn.setAttribute('aria-pressed', String(cv.animOn));
+    svg.classList.toggle('anim', cv.animOn);
+    if (cv.animOn && cv.focusPlayer) cv.focusPlayer.restart(performance.now(), true);
+    if (!cv.animOn) cv.players.forEach(p => p.clear());
+  };
+  prevBtn.onclick = () => cv.focusPlayer && cv.focusPlayer.stepBy(-1);
+  nextBtn.onclick = () => cv.focusPlayer && cv.focusPlayer.stepBy(1);
+  flowSel.onchange = () => { if (cv.focusPlayer) { cv.focusPlayer.fi = +flowSel.value; cv.focusPlayer.restart(performance.now(), cv.animOn); } };
+
+  // ---- pointer
+  const ptrs = new Map(); let pan = null, pinch = null, moved = false, downNode = null, lastTap = { t: 0, id: null };
+  const rel = e => { const r = stage.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
+  stage.addEventListener('pointerdown', e => {
+    if (e.target.closest && e.target.closest('.bp-crumbs button')) return;
+    touch(); cancelAnim(cv);
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    setActive(cv, true);
+    stage.setPointerCapture(e.pointerId);
+    ptrs.set(e.pointerId, rel(e)); moved = false;
+    downNode = e.target.closest && e.target.closest('.bp-node');
+    if (ptrs.size === 1) pan = { ...rel(e), tx: cv.tx, ty: cv.ty };
+    if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), k: cv.k, tx: cv.tx, ty: cv.ty, mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 }; pan = null; }
+  });
+  stage.addEventListener('pointermove', e => {
+    if (!ptrs.has(e.pointerId)) return;
+    ptrs.set(e.pointerId, rel(e));
+    if (pinch && ptrs.size >= 2) {
+      const [a, b] = [...ptrs.values()]; const d = Math.hypot(a.x - b.x, a.y - b.y);
+      const k2 = clamp(pinch.k * d / pinch.d, cv.kMin(), cv.kMax()); const r = k2 / pinch.k;
+      const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+      cv.k = k2; cv.tx = mx - (pinch.mx - pinch.tx) * r; cv.ty = my - (pinch.my - pinch.ty) * r; moved = true; cv.apply();
+    } else if (pan) {
+      const p = rel(e); const dx = p.x - pan.x, dy = p.y - pan.y;
+      if (!moved && Math.hypot(dx, dy) > 4) { moved = true; stage.classList.add('dragging'); }
+      if (moved) { cv.tx = pan.tx + dx; cv.ty = pan.ty + dy; cv.apply(); }
+    }
+  });
+  const up = e => {
+    if (!ptrs.has(e.pointerId)) return;
+    ptrs.delete(e.pointerId);
+    if (ptrs.size < 2) pinch = null;
+    if (ptrs.size === 1) { const p = [...ptrs.values()][0]; pan = { ...p, tx: cv.tx, ty: cv.ty }; return; }
+    stage.classList.remove('dragging'); pan = null;
+    if (!moved && e.type === 'pointerup') {
+      const now = performance.now(); const id = downNode ? downNode.dataset.key : null;
+      if (id && lastTap.id === id && now - lastTap.t < 320) { const n = cv.byKey[id]; if (n && n._sys) openNode(cv, n); lastTap = { t: 0, id: null }; }
+      else { lastTap = { t: now, id }; select(cv, id ? cv.byKey[id] : null); }
+    }
+  };
+  stage.addEventListener('pointerup', up); stage.addEventListener('pointercancel', up);
+  stage.addEventListener('wheel', e => {
+    if (!(e.ctrlKey || e.metaKey || cv.active)) { hint.classList.remove('off'); clearTimeout(cv._ht); cv._ht = setTimeout(() => hint.classList.add('off'), 1600); return; }
+    e.preventDefault(); touch(); cancelAnim(cv);
+    const p = rel(e); const f = Math.exp(-e.deltaY * (e.ctrlKey ? 0.012 : 0.0022));
+    cv.zoomAt(p.x, p.y, f);
+  }, { passive: false });
+  fig.addEventListener('keydown', e => {
+    if (e.target.closest('select')) return;
+    if (e.target.closest('button') && (e.key === 'Enter' || e.key === ' ')) return;
+    const { w, h: H } = cv.size(); let used = true;
+    if (e.key === '+' || e.key === '=') cv.zoomAt(w / 2, H / 2, 1.25);
+    else if (e.key === '-' || e.key === '_') cv.zoomAt(w / 2, H / 2, 0.8);
+    else if (e.key === '0') cv.fit(true);
+    else if (e.key === 'ArrowLeft') { cv.tx += 60; cv.apply(); }
+    else if (e.key === 'ArrowRight') { cv.tx -= 60; cv.apply(); }
+    else if (e.key === 'ArrowUp') { cv.ty += 60; cv.apply(); }
+    else if (e.key === 'ArrowDown') { cv.ty -= 60; cv.apply(); }
+    else if (e.key === 'Escape') { goUp(cv); }
+    else if (e.key === 'Enter' && e.target.closest('.bp-node')) { const n = cv.byKey[e.target.closest('.bp-node').dataset.key]; if (n._sys) openNode(cv, n); else select(cv, n); }
+    else used = false;
+    if (used) { e.preventDefault(); touch(); }
+  });
+  stage.addEventListener('focusin', e => { const g = e.target.closest && e.target.closest('.bp-node'); if (g && e.target === g) select(cv, cv.byKey[g.dataset.key], true); });
+
+  // initial layout once mounted
+  requestAnimationFrame(() => { cv.fit(false); refreshFlowSelect(cv); });
+  if ('ResizeObserver' in window) new ResizeObserver(() => { if (!cv.touched) cv.fit(false); else cv.apply(); }).observe(stage);
+  if ('IntersectionObserver' in window) new IntersectionObserver(es => { cv.onscreen = es[0].isIntersecting; }).observe(stage);
+  return fig;
+}
+
+document.addEventListener('pointerdown', e => {
+  for (const cv of Object.values(CANVASES)) if (cv.active && !cv.stage.contains(e.target) && !cv.fig.querySelector('.bp-tb').contains(e.target)) setActive(cv, false);
+});
+function setActive(cv, on) { cv.active = on; cv.stage.classList.toggle('active', on); }
+
+function buildScope(cv, scope, abs, owner) {
+  const g = sv('g', { class: 'bp-scope' });
+  scope._g = g;
+  const gE = sv('g', { class: 'bp-edges' }), gN = sv('g', { class: 'bp-nodes' }), gT = sv('g', { class: 'bp-tokens' });
+  scope._abs = abs; scope._owner = owner; scope._edgeEls = {}; scope._tokLayer = gT;
+  cv.byKey = cv.byKey || {};
+  // nodes
+  for (const n of scope.nodes) {
+    const key = n._path.join('/');
+    n._key = key; cv.byKey[key] = n; cv.allNodes.push(n); n._scope = scope;
+    n._abs = { x: abs.x + n._l * abs.s, y: abs.y + n._t * abs.s, w: n.w * abs.s, h: n.h * abs.s };
+    const kind = n.kind || 'service';
+    const ng = sv('g', { class: `bp-node ${kind === 'external' || kind === 'cloud' ? 'external' : ''} ${n.state ? 'st-' + n.state : ''}`.trim(), transform: `translate(${n._l},${n._t})`, tabindex: 0, 'data-key': key, role: 'button', 'aria-label': `${n.label || n.id}${n.sub ? ', ' + n.sub : ''}${n._sys ? ', has inner architecture' : ''}` });
+    n._el = ng;
+    ng.append(shapeFor(n));
+    // cover (collapsed view)
+    const cover = sv('g', { class: 'bp-cover' });
+    const lines = wrap(n.label || n.id, n.w - 20, CHAR, 2);
+    const subLines = n.sub ? wrap(n.sub, n.w - 20, 7.2, 2) : [];
+    const totalH = lines.length * 18 + subLines.length * 15;
+    let y = n.h / 2 - totalH / 2 + 13 + (kind === 'client' || kind === 'app' ? 6 : 0);
+    for (const l of lines) { cover.append(sv('text', { class: 'bp-lbl', x: n.w / 2, y, 'text-anchor': 'middle' }, l)); y += 18; }
+    for (const l of subLines) { cover.append(sv('text', { class: 'bp-sublbl', x: n.w / 2, y: y - 2, 'text-anchor': 'middle' }, l)); y += 15; }
+    if (n.state) {
+      const t = n.state.toUpperCase(); const bw = t.length * 6.8 + 12; const col = STATE_COLORS[n.state] || 'var(--bp-dim)';
+      cover.append(sv('g', { class: 'bp-badge', transform: `translate(${n.w - bw - 6},${-9})` }, sv('rect', { width: bw, height: 16, rx: 3, stroke: col }), sv('text', { x: bw / 2, y: 11.5, 'text-anchor': 'middle', fill: col }, t)));
+    }
+    if (n._sys) cover.append(sv('text', { class: 'bp-open', x: n.w - 8, y: n.h - 8, 'text-anchor': 'end' }, '⊕ OPEN'));
+    ng.append(cover);
+    n._cover = cover;
+    if (n._sys) {
+      n._inner = innerFit(n);
+      const f = n._inner;
+      n._childAbs = { s: abs.s * f.s, x: abs.x + (n._l + f.tx) * abs.s, y: abs.y + (n._t + f.ty) * abs.s };
+      const frame = sv('g', { class: 'bp-frame', opacity: 0 });
+      frame.append(sv('rect', { class: 'bp-frame-bg', x: 0.5, y: HEAD, width: n.w - 1, height: n.h - HEAD - 0.5 }));
+      frame.append(sv('rect', { class: 'bp-frame-h', x: 0, y: 0, width: n.w, height: HEAD }));
+      frame.append(sv('text', { class: 'bp-frame-t', x: 3, y: 4.9 }, ((n.label || n.id) + (n.sub ? ' · ' + n.sub : '')).slice(0, Math.floor((n.w - 6) / 2.8))));
+      const inner = sv('g', { class: 'bp-inner', transform: `translate(${f.tx},${f.ty}) scale(${f.s})`, opacity: 0, style: 'pointer-events:none' });
+      inner.append(sv('rect', { x: (0.5 - f.tx) / f.s, y: (HEAD - f.ty) / f.s, width: (n.w - 1) / f.s, height: (n.h - HEAD - 0.5) / f.s, fill: `url(#${cv.gid}-g2)` }));
+      inner.append(buildScope(cv, n.children, n._childAbs, n));
+      ng.append(frame, inner);
+      n._frame = frame; n._innerEl = inner; n._reveal = 0;
+      cv.sysNodes.push(n);
+    }
+    gN.append(ng);
+  }
+  // edges
+  const ports = owner ? scopeBox(scope, owner) : null;
+  const pairCount = {}, pairIdx = {};
+  for (const e of scope.edges) { const k = [e.from, e.to].sort().join('|'); pairCount[k] = (pairCount[k] || 0) + 1; }
+  for (const e of scope.edges) {
+    const a = scope._byId[e.from] || (ports && ports[e.from]); const b = scope._byId[e.to] || (ports && ports[e.to]);
+    if (!a || !b) continue;
+    const pk = [e.from, e.to].sort().join('|'); const i = (pairIdx[pk] = (pairIdx[pk] || 0) + 1) - 1;
+    const off = (e.bend || 0) + (pairCount[pk] > 1 ? (i - (pairCount[pk] - 1) / 2) * 14 : 0);
+    const geo = edgeGeom(a, b, off);
+    const kind = e.kind || 'data';
+    const path = sv('path', { class: `bp-edge k-${kind}`, d: geo.d, 'marker-end': e.dir === 'none' ? null : `url(#${cv.gid}-m-${kind})`, 'marker-start': e.dir === 'both' ? `url(#${cv.gid}-m-${kind})` : null });
+    path._kind = kind;
+    gE.append(path);
+    if (e.label) {
+      const t = e.label; const lw = t.length * 5.9 + 14;
+      gE.append(sv('g', { class: 'bp-elbl', transform: `translate(${geo.mid.x - lw / 2},${geo.mid.y - 9})` }, sv('rect', { width: lw, height: 18, rx: 3 }), sv('text', { x: lw / 2, y: 12.5, 'text-anchor': 'middle' }, t)));
+    }
+    scope._edgeEls[e.id || `${e.from}->${e.to}`] = { path, e, from: a, to: b };
+  }
+  g.append(gE, gN, gT);
+  if (scope.flows.length) cv.players.push(new Player(cv, scope, owner));
+  return g;
+}
+
+function applyNow(cv) {
+  cv.vp.setAttribute('transform', `translate(${cv.tx},${cv.ty}) scale(${cv.k})`);
+  // semantic zoom
+  for (const n of cv.sysNodes) {
+    const sc = cv.k * n._childAbs.s;
+    const r = clamp((sc - REVEAL_A) / (REVEAL_B - REVEAL_A), 0, 1);
+    if (Math.abs(r - n._reveal) < 0.001) continue;
+    n._reveal = r;
+    n._cover.setAttribute('opacity', (1 - r).toFixed(3));
+    n._cover.style.pointerEvents = r > 0.5 ? 'none' : '';
+    n._frame.setAttribute('opacity', r.toFixed(3));
+    n._innerEl.setAttribute('opacity', r.toFixed(3));
+    n._innerEl.style.pointerEvents = r > 0.5 ? '' : 'none';
+    n._el.classList.toggle('open', r > 0.05);
+  }
+  // focus scope = deepest opened system containing the viewport centre
+  const { w, h: H } = cv.size();
+  const cx = (w / 2 - cv.tx) / cv.k, cy = (H / 2 - cv.ty) / cv.k;
+  let scope = cv.root, path = [];
+  for (;;) {
+    const hit = scope.nodes.find(n => n._sys && n._reveal > 0.85 && cx >= n._abs.x && cx <= n._abs.x + n._abs.w && cy >= n._abs.y && cy <= n._abs.y + n._abs.h);
+    if (!hit) break; path.push(hit); scope = hit.children;
+  }
+  const changed = path.length !== cv.focusPath.length || path.some((n, i) => n !== cv.focusPath[i]);
+  cv.focusPath = path;
+  cv.tblockZoom.textContent = Math.round(cv.k * 100) + '%';
+  cv.tblockLvl.textContent = 'L' + path.length;
+  cv.stage.classList.toggle('deep', path.length > 0);
+  if (changed) {
+    cv.svg.querySelectorAll('.bp-scope.dim').forEach(x => x.classList.remove('dim'));
+    cv.svg.querySelectorAll('.bp-node.focus').forEach(x => x.classList.remove('focus'));
+    let s = cv.root;
+    for (const n of path) { s._g.classList.add('dim'); n._el.classList.add('focus'); s = n.children; }
+    cv.crumbs.textContent = '';
+    const parts = [{ label: cv.spec.rootLabel || 'System', n: null }, ...path.map(n => ({ label: n.label || n.id, n }))];
+    parts.forEach((p, i) => {
+      if (i) cv.crumbs.append(h('span', {}, '›'));
+      cv.crumbs.append(h('button', { type: 'button', onclick: () => p.n ? openNode(cv, p.n) : cv.fit(true) }, p.label));
+    });
+    const sc = path.length ? path[path.length - 1].children : cv.root;
+    const pl = cv.players.find(p => p.scope === sc) || cv.players.find(p => !p.owner) || null;
+    if (pl !== cv.focusPlayer) { cv.focusPlayer = pl; refreshFlowSelect(cv); if (pl) pl.restart(performance.now(), cv.animOn); }
+  }
+}
+function refreshFlowSelect(cv) {
+  const pl = cv.focusPlayer; const sel = cv.flowSel;
+  sel.textContent = '';
+  const grp = sel.parentElement;
+  if (!pl || !pl.flows.length) { grp.style.display = 'none'; cv.capLbl.textContent = ''; cv.capTxt.textContent = cv.spec.flows && cv.spec.flows.length ? '' : 'Open a system to see its flows.'; return; }
+  grp.style.display = '';
+  pl.flows.forEach((f, i) => sel.append(h('option', { value: i }, f.label || f.id)));
+  sel.value = pl.fi;
+  pl.caption(true);
+}
+
+/* ---------- animation helpers ---------- */
+function cancelAnim(cv) { if (cv._anim) { cancelAnimationFrame(cv._anim); cv._anim = 0; } }
+function animateTo(cv, k2, tx2, ty2, px, py) {
+  cancelAnim(cv);
+  const { w, h: H } = cv.size();
+  if (tx2 == null) { const r = k2 / cv.k; tx2 = px - (px - cv.tx) * r; ty2 = py - (py - cv.ty) * r; }
+  const c0 = { x: (w / 2 - cv.tx) / cv.k, y: (H / 2 - cv.ty) / cv.k }, c1 = { x: (w / 2 - tx2) / k2, y: (H / 2 - ty2) / k2 };
+  const l0 = Math.log(cv.k), l1 = Math.log(k2);
+  const dur = REDUCE ? 0 : 650; const t0 = performance.now();
+  const step = now => {
+    const p = dur ? clamp((now - t0) / dur, 0, 1) : 1; const e = ease(p);
+    const k = Math.exp(l0 + (l1 - l0) * e); const cx = c0.x + (c1.x - c0.x) * e, cy = c0.y + (c1.y - c0.y) * e;
+    cv.k = k; cv.tx = w / 2 - cx * k; cv.ty = H / 2 - cy * k; applyNow(cv);
+    cv._anim = p < 1 ? requestAnimationFrame(step) : 0;
+  };
+  cv._anim = requestAnimationFrame(step);
+}
+function openNode(cv, n) {
+  const { w, h: H } = cv.size(); const a = n._abs; const m = 0.06;
+  let k = Math.min(w / (a.w * (1 + 2 * m)), (H - 30) / (a.h * (1 + 2 * m)));
+  if (n._sys) k = Math.max(k, (REVEAL_B + 0.12) / n._childAbs.s);
+  k = clamp(k, cv.kMin(), cv.kMax());
+  const tx = w / 2 - (a.x + a.w / 2) * k, ty = H / 2 + 12 - (a.y + a.h / 2) * k;
+  cv.touched = true; cv.hint.classList.add('off');
+  animateTo(cv, k, tx, ty);
+  select(cv, n, true);
+}
+function goUp(cv) {
+  const p = cv.focusPath; if (p.length > 1) openNode(cv, p[p.length - 2]); else cv.fit(true);
+}
+function select(cv, n, quiet) {
+  cv.allNodes.forEach(x => x._el.classList.toggle('sel', x === n));
+  const d = cv.detail;
+  if (!n) { d.hidden = true; return; }
+  d.textContent = '';
+  const refs = NODE_REFS[`${cv.id}/${n.id}`] || NODE_REFS[`${cv.id}/${n._key}`] || [];
+  d.append(...[
+    h('button', { type: 'button', class: 'x', 'aria-label': 'Close details', onclick: () => select(cv, null) }, ic('x')),
+    h('h4', {}, h('span', {}, n.label || n.id), n.kind && h('span', { class: 'bp-chip info' }, n.kind), n.state && h('span', { class: 'bp-chip ' + ({ live: 'ok', local: 'info', proposed: 'warn', unverified: 'warn', removed: 'risk', replaced: 'risk' }[n.state] || 'todo') }, n.state)),
+    n.sub && h('div', { class: 'sub' }, n.sub),
+    n.md && h('div', { html: md(n.md) }),
+    n.refs && n.refs.length && h('div', {}, h('span', { class: 'k' }, 'Source'), h('ul', {}, n.refs.map(r => h('li', { html: inline(r) })))),
+    refs.length && h('div', {}, h('span', { class: 'k' }, 'Checklist'), h('ul', {}, refs.map(r => h('li', {}, h('a', { href: `#item-${r.checklist.id}-${r.item.id}` }, r.item.text.replace(/[`*]/g, '')))))),
+    n._sys && h('button', { type: 'button', class: 'bp-btn', onclick: () => openNode(cv, n) }, ic('open'), 'Open inner architecture')].filter(Boolean));
+  d.hidden = false;
+}
+function refLabel(r) {
+  const [cid, ...rest] = r.split('/'); const cv = CANVASES[cid]; const key = rest.join('/');
+  const n = cv && (cv.byKey[key] || cv.allNodes.find(x => x.id === key));
+  return n ? (n.label || n.id) : r;
+}
+function focusNode(r) {
+  const [cid, ...rest] = r.split('/'); const cv = CANVASES[cid]; if (!cv) return;
+  const key = rest.join('/'); const n = cv.byKey[key] || cv.allNodes.find(x => x.id === key); if (!n) return;
+  cv.fig.scrollIntoView({ behavior: REDUCE ? 'auto' : 'smooth', block: 'center' });
+  setTimeout(() => { openNode(cv, n); n._el.classList.add('pulse'); setTimeout(() => n._el.classList.remove('pulse'), 600); }, REDUCE ? 0 : 350);
+}
+
+/* ---------- flows ---------- */
+class Player {
+  constructor(cv, scope, owner) { Object.assign(this, { cv, scope, owner, flows: scope.flows, fi: 0, si: 0, t0: 0, mode: 'auto', toks: [], act: new Set(), hl: new Set(), lastCap: '' }); }
+  layerReady() { this.layer = this.scope._tokLayer; }
+  get flow() { return this.flows[this.fi]; }
+  steps() { return (this.flow && this.flow.steps) || []; }
+  edgesOf(st) { return (st.edges || (st.edge ? [st.edge] : [])).map(id => this.scope._edgeEls[id]).filter(Boolean); }
+  restart(now, auto) { this.si = 0; this.t0 = now; this.mode = auto ? 'auto' : 'step'; this.caption(true); }
+  stepBy(d) {
+    const n = this.steps().length; if (!n) return;
+    this.mode = 'step'; this.si = (this.si + d + n) % n;
+    this.caption(true); this.render(1);
+  }
+  visible() { if (!this.cv.onscreen) return false; let o = this.owner; while (o) { if ((o._reveal || 0) < 0.5) return false; o = o._scope._owner; } return true; }
+  tick(now) {
+    if (!this.flow) return;
+    if (!this.visible()) { this.clear(); return; }
+    if (this.mode === 'step') { this.render(1); return; }
+    if (!this.cv.animOn) { this.clear(); return; }
+    const st = this.steps()[this.si]; if (!st) return;
+    const dur = st.ms || 1200; const p = (now - this.t0) / dur;
+    if (p >= 1) {
+      this.render(1);
+      if (now - this.t0 > dur + 220) {
+        this.edgesOf(st).forEach(x => { const to = x.e.reverse ? x.from : x.to; if (to._el) { to._el.classList.add('pulse'); setTimeout(() => to._el.classList.remove('pulse'), 500); } });
+        this.si++;
+        if (this.si >= this.steps().length) {
+          if (this.flow.loop === false) { this.si = this.steps().length - 1; this.mode = 'step'; }
+          else { this.si = 0; this.t0 = now + 700; }
+        } else this.t0 = now;
+        if (this === this.cv.focusPlayer) this.caption();
+      }
+      return;
+    }
+    this.render(ease(clamp(p, 0, 1)));
+  }
+  render(p) {
+    const st = this.steps()[this.si]; if (!st) return;
+    const eds = this.edgesOf(st);
+    const nextAct = new Set(eds.map(x => x.path)); const nextHl = new Set();
+    eds.forEach((x, i) => {
+      const len = x.path._len || (x.path._len = x.path.getTotalLength());
+      const rev = !!st.reverse;
+      const pt = x.path.getPointAtLength((rev ? 1 - p : p) * len);
+      const tok = this.tok(i, st, x);
+      tok.setAttribute('transform', `translate(${pt.x},${pt.y})`); tok.style.display = '';
+      const from = rev ? x.to : x.from, to = rev ? x.from : x.to;
+      if (from._el) nextHl.add(from._el); if (p > 0.92 && to._el) nextHl.add(to._el);
+    });
+    for (let i = eds.length; i < this.toks.length; i++) this.toks[i].style.display = 'none';
+    for (const el of this.act) if (!nextAct.has(el)) el.classList.remove('act');
+    for (const el of nextAct) el.classList.add('act');
+    for (const el of this.hl) if (!nextHl.has(el)) el.classList.remove('hl');
+    for (const el of nextHl) el.classList.add('hl');
+    this.act = nextAct; this.hl = nextHl;
+  }
+  tok(i, st, x) {
+    let t = this.toks[i];
+    if (!t) {
+      t = sv('g', { class: 'bp-tok' }, sv('circle', { r: 11, opacity: 0.28 }), sv('circle', { class: 'core', r: 5 }), sv('text', { x: 10, y: -9 }));
+      this.layer.append(t); this.toks[i] = t;
+    }
+    const col = st.color || this.flow.color || ({ data: '#5fd4ff', async: '#c3a6ff', power: '#ffc35a', control: '#d6e9ff' }[x.path._kind] || '#5fd4ff');
+    t.children[0].setAttribute('fill', col); t.children[1].setAttribute('fill', col);
+    if (t._p !== st.payload) { t.children[2].textContent = st.payload || ''; t._p = st.payload; }
+    return t;
+  }
+  clear() {
+    this.toks.forEach(t => t.style.display = 'none');
+    this.act.forEach(el => el.classList.remove('act')); this.hl.forEach(el => el.classList.remove('hl'));
+    this.act = new Set(); this.hl = new Set();
+  }
+  caption(force) {
+    if (this !== this.cv.focusPlayer) return;
+    const st = this.steps()[this.si]; const n = this.steps().length;
+    const flowName = this.flow.label || this.flow.id;
+    const txt = st ? (st.label || '') : '';
+    if (!force && this.si + flowName + txt === this.lastCap) return;
+    this.lastCap = this.si + flowName + txt;
+    const dots = n <= 12 ? h('span', { class: 'bp-steps', 'aria-hidden': 'true' }, Array.from({ length: n }, (_, i) => h('i', { class: i < this.si ? 'done' : i === this.si ? 'on' : null }))) : null;
+    this.cv.capLbl.replaceChildren(...[dots, h('span', {}, `Step ${this.si + 1} of ${n}`)].filter(Boolean));
+    this.cv.capLbl.setAttribute('aria-label', `${flowName}, step ${this.si + 1} of ${n}`);
+    this.cv.capTxt.innerHTML = inline(txt);
+  }
+}
+function loop(now) {
+  for (const cv of Object.values(CANVASES)) for (const p of cv.players) p.tick(now);
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+/* ---------- text outline (a11y + agents) ---------- */
+function outlineOf(spec, root) {
+  const nodeList = scope => h('ul', {}, scope.nodes.map(n => h('li', {},
+    h('strong', {}, n.label || n.id), n.sub ? ` — ${n.sub}` : '', n.state ? ` [${n.state}]` : '',
+    n._sys ? nodeList(n.children) : null)));
+  const edgeList = (scope, prefix) => {
+    const out = [];
+    for (const e of scope.edges) {
+      const name = id => (scope._byId[id] && (scope._byId[id].label || id)) || id;
+      out.push(h('li', {}, `${prefix}${name(e.from)} → ${name(e.to)}`, e.label ? ` (${e.label})` : ''));
+    }
+    for (const n of scope.nodes) if (n._sys) out.push(...edgeList(n.children, `${prefix}${n.label || n.id} › `));
+    return out;
+  };
+  const flowList = (scope, prefix) => {
+    const out = [];
+    for (const f of scope.flows) out.push(h('li', {}, h('strong', {}, prefix + (f.label || f.id)), h('ol', {}, (f.steps || []).map(s => h('li', { html: inline(s.label || (s.edge || (s.edges || []).join(' + '))) })))));
+    for (const n of scope.nodes) if (n._sys) out.push(...flowList(n.children, `${prefix}${n.label || n.id} › `));
+    return out;
+  };
+  const flows = flowList(root, '');
+  return h('details', { class: 'bp-outline' }, h('summary', {}, 'Text outline of this drawing'),
+    h('div', { class: 'in' }, h('p', {}, h('b', {}, 'Parts')), nodeList(root), h('p', {}, h('b', {}, 'Connections')), h('ul', {}, edgeList(root, '')),
+      flows.length ? [h('p', {}, h('b', {}, 'Flows')), h('ul', {}, flows)] : null));
+}
+
+renderDocument();
+
+/* ---------- public API (for tests and agents) ---------- */
+window.BP = {
+  doc: DOC,
+  canvases: CANVASES,
+  zoomTo: (canvasId, nodeKey) => focusNode(`${canvasId}/${nodeKey}`),
+  fit: canvasId => CANVASES[canvasId] && CANVASES[canvasId].fit(false),
+  state: canvasId => { const cv = CANVASES[canvasId]; return cv && { k: cv.k, focus: cv.focusPath.map(n => n._key), revealed: cv.sysNodes.filter(n => n._reveal > 0.5).map(n => n._key), flow: cv.focusPlayer && cv.focusPlayer.flow && cv.focusPlayer.flow.id, step: cv.focusPlayer && cv.focusPlayer.si, tokens: [...cv.svg.querySelectorAll('.bp-tok')].filter(t => t.style.display !== 'none').length }; },
+  progress: () => CHECKLISTS.map(c => ({ id: c.b.id, done: c.items.filter(x => x.cb.checked).length, total: c.items.length })),
+  progressMarkdown: allChecklistsMd,
+  openCode: (diffId, path, line) => openCode(diffId, path, line),
+  openComment: (diffId, index) => { const d = DIFFS[diffId]; const c = d && d.order[index]; if (c) openComment(d, c, true); return !!c; },
+  diffState: diffId => { const d = DIFFS[diffId]; if (!d) return null; const linked = d.comments.filter(c => c.item && ITEMS[c.item]);
+    return { file: d.sel === PR_KEY ? null : d.sel, comment: d.ci, comments: d.comments.length, cards: d.pane.querySelectorAll('.bd-cm').length, lines: d.pane.querySelectorAll('.bd-ln').length, ticked: linked.filter(c => ITEMS[c.item].cb.checked).length, linked: linked.length }; },
+};
+})();
+</script>
+</body>
+</html>

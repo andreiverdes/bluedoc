@@ -1,0 +1,251 @@
+{
+  "id": "acme-orders-arch",
+  "title": "Acme order path: checkout to pick ticket",
+  "subtitle": "How one order travels from the Acme Shop checkout to a warehouse pick ticket, and how to run the fulfilment half on your laptop.",
+  "meta": { "org": "Acme Corp", "kind": "Architecture", "dwg": "ACME-ORD", "rev": "B", "date": "2026-03-12" },
+  "state": [
+    { "label": "path read from source", "kind": "ok" },
+    { "label": "local stack verified", "kind": "ok" },
+    { "label": "PayCo internals unverified", "kind": "warn" }
+  ],
+  "links": [
+    { "label": "Payments outage runbook", "href": "https://example.com/acme/runbooks/payments" },
+    { "label": "Order event schema", "href": "https://example.com/acme/schemas/order-placed" }
+  ],
+  "tldr": "An order is written once, in one Postgres transaction, together with an `order.placed` row in the outbox. The outbox relay publishes that row to the `order-events` topic, and the fulfilment worker turns it into a pick ticket in the warehouse system. If a ticket is missing, the order row exists but the event never left the outbox: check the relay first.",
+  "sections": [
+    {
+      "id": "path",
+      "title": "The order path",
+      "lead": "Open a system to see its parts. Each level plays its own flow.",
+      "blocks": [
+        {
+          "type": "canvas",
+          "id": "orders",
+          "title": "Checkout → pick ticket",
+          "rootLabel": "Order path",
+          "height": 560,
+          "caption": "Ports `@left`, `@right` and `@bottom` inside a system mark where data enters or leaves it.",
+          "nodes": [
+            {
+              "id": "shop", "label": "Acme Shop web", "sub": "React · checkout", "kind": "client", "x": 0, "y": 0,
+              "md": "The browser app. The checkout form builds an order draft and posts it with an idempotency key.",
+              "refs": ["`web/src/checkout/CheckoutForm.tsx`"],
+              "children": {
+                "nodes": [
+                  { "id": "cart", "label": "Cart page", "sub": "CartPage.tsx", "kind": "ui", "col": 0, "row": 0 },
+                  { "id": "checkout", "label": "Checkout form", "sub": "CheckoutForm.tsx", "kind": "ui", "col": 1, "row": 0 },
+                  { "id": "client", "label": "API client", "sub": "ordersApi.ts", "col": 1, "row": 1, "w": 200,
+                    "md": "Adds the `Idempotency-Key` header, so a double click creates one order." }
+                ],
+                "edges": [
+                  { "from": "cart", "to": "checkout", "label": "cart" },
+                  { "from": "checkout", "to": "client", "label": "order draft" },
+                  { "id": "req", "from": "client", "to": "@right", "label": "POST /orders" },
+                  { "id": "resp", "from": "@right", "to": "client", "label": "201 Created", "bend": 18 }
+                ],
+                "flows": [
+                  { "id": "click", "label": "Click to order", "steps": [
+                    { "edge": "cart->checkout", "label": "The cart page hands its lines to the checkout form.", "payload": "cart" },
+                    { "edge": "checkout->client", "label": "The form builds an order draft.", "payload": "draft" },
+                    { "edge": "req", "label": "The API client posts the draft with an idempotency key.", "payload": "POST" },
+                    { "edge": "resp", "label": "The orders API answers 201 with the order id.", "payload": "201" }
+                  ] }
+                ]
+              }
+            },
+            {
+              "id": "api", "label": "orders-api", "sub": "Node · Fastify", "x": 340, "y": 0, "w": 300, "h": 150,
+              "md": "Validates, prices and charges the order, then writes it and its outbox row in one transaction.",
+              "refs": ["`services/orders-api/src/routes/createOrder.ts:18-96`"],
+              "children": {
+                "nodes": [
+                  { "id": "auth", "label": "auth hook", "sub": "JWT check", "col": 0, "row": 0 },
+                  { "id": "validate", "label": "validate", "sub": "zod schema", "col": 1, "row": 0 },
+                  {
+                    "id": "price", "label": "pricing", "sub": "rules + tax", "col": 2, "row": 0, "w": 220, "h": 120,
+                    "children": {
+                      "nodes": [
+                        { "id": "rules", "label": "discount rules", "sub": "tiers.ts", "col": 0, "row": 0, "w": 230 },
+                        { "id": "tax", "label": "tax table", "sub": "tax.ts", "col": 0, "row": 1, "w": 230 }
+                      ],
+                      "edges": [
+                        { "from": "@left", "to": "rules", "label": "cart" },
+                        { "from": "rules", "to": "tax", "label": "subtotal" },
+                        { "from": "tax", "to": "@bottom", "label": "total" }
+                      ],
+                      "flows": [
+                        { "id": "price-cart", "label": "Price a cart", "steps": [
+                          { "edge": "@left->rules", "label": "The discount rules read the cart lines." },
+                          { "edge": "rules->tax", "label": "The tax table adds VAT to the subtotal.", "payload": "subtotal" },
+                          { "edge": "tax->@bottom", "label": "Pricing returns the total.", "payload": "total" }
+                        ] }
+                      ]
+                    }
+                  },
+                  { "id": "relay", "label": "outbox relay", "sub": "every 500 ms", "kind": "process", "col": 2, "row": 1 },
+                  { "id": "write", "label": "write order", "sub": "one transaction", "col": 0, "row": 1 },
+                  { "id": "charge", "label": "charge", "sub": "PayCo client", "col": 1, "row": 1 }
+                ],
+                "edges": [
+                  { "from": "@left", "to": "auth", "label": "POST /orders" },
+                  { "from": "auth", "to": "validate" },
+                  { "from": "validate", "to": "price", "label": "cart" },
+                  { "from": "price", "to": "charge", "label": "total" },
+                  { "from": "charge", "to": "@bottom", "label": "authorize", "kind": "control" },
+                  { "from": "charge", "to": "write", "label": "auth id" },
+                  { "from": "write", "to": "@bottom", "label": "INSERT" },
+                  { "from": "@bottom", "to": "relay", "label": "outbox rows", "kind": "async" },
+                  { "from": "relay", "to": "@right", "label": "order.placed", "kind": "async" }
+                ],
+                "flows": [
+                  { "id": "create", "label": "Create one order", "steps": [
+                    { "edge": "@left->auth", "label": "The auth hook checks the JWT.", "payload": "JWT" },
+                    { "edge": "auth->validate", "label": "The schema rejects malformed drafts with 400." },
+                    { "edge": "validate->price", "label": "Pricing computes the total.", "payload": "cart" },
+                    { "edge": "price->charge", "label": "The charge step asks PayCo to authorize the total.", "payload": "total" },
+                    { "edge": "charge->@bottom", "label": "PayCo returns an authorization id.", "payload": "auth" },
+                    { "edge": "charge->write", "label": "The order and its outbox row commit together." },
+                    { "edge": "write->@bottom", "label": "Postgres stores both rows.", "payload": "INSERT" },
+                    { "edge": "@bottom->relay", "label": "The relay picks up unsent outbox rows." },
+                    { "edge": "relay->@right", "label": "The relay publishes `order.placed`.", "payload": "event" }
+                  ] }
+                ]
+              }
+            },
+            {
+              "id": "bus", "label": "order-events", "sub": "Kafka topic · 6 partitions", "kind": "queue", "x": 640, "y": 0,
+              "md": "Keyed by order id, so events for one order stay in order.",
+              "refs": ["`infra/kafka/topics.yaml:12`"]
+            },
+            {
+              "id": "fulfil", "label": "fulfilment-worker", "sub": "Go · consumer group", "x": 950, "y": 0,
+              "md": "Reserves stock and creates the pick ticket. Out-of-stock orders go to the dead-letter topic.",
+              "refs": ["`services/fulfilment/internal/consume.go:40-118`"],
+              "children": {
+                "nodes": [
+                  { "id": "consume", "label": "consume", "sub": "commit after ticket", "col": 0, "row": 0 },
+                  { "id": "reserve", "label": "reserve stock", "sub": "SELECT … FOR UPDATE", "col": 1, "row": 0, "w": 200 },
+                  { "id": "ticket", "label": "create pick ticket", "sub": "WMS client", "col": 2, "row": 0, "w": 200 },
+                  { "id": "dlq", "label": "dead-letter", "sub": "order-events.dlq", "kind": "queue", "col": 0, "row": 1 }
+                ],
+                "edges": [
+                  { "from": "@left", "to": "consume", "label": "order.placed", "kind": "async" },
+                  { "from": "consume", "to": "reserve", "label": "order" },
+                  { "from": "reserve", "to": "ticket", "label": "reserved lines" },
+                  { "from": "ticket", "to": "@bottom", "label": "pick ticket" },
+                  { "from": "reserve", "to": "dlq", "label": "out of stock", "kind": "async" }
+                ],
+                "flows": [
+                  { "id": "pick", "label": "Event to pick ticket", "steps": [
+                    { "edge": "@left->consume", "label": "The worker reads `order.placed`.", "payload": "event" },
+                    { "edge": "consume->reserve", "label": "It locks the stock rows for each line." },
+                    { "edge": "reserve->ticket", "label": "It sends the reserved lines to the WMS client.", "payload": "lines" },
+                    { "edge": "ticket->@bottom", "label": "The WMS returns a pick ticket id.", "payload": "ticket" }
+                  ] },
+                  { "id": "oos", "label": "Out of stock", "steps": [
+                    { "edge": "@left->consume", "label": "The worker reads `order.placed`." },
+                    { "edge": "consume->reserve", "label": "A line has no stock left." },
+                    { "edge": "reserve->dlq", "label": "The worker parks the event on the dead-letter topic.", "payload": "event" }
+                  ] }
+                ]
+              }
+            },
+            { "id": "pay", "label": "PayCo", "sub": "card authorization", "kind": "external", "state": "unverified", "x": 0, "y": 270,
+              "md": "Third-party payment provider. We see its API, not its internals." },
+            { "id": "db", "label": "orders DB", "sub": "Postgres 16 · orders, outbox", "kind": "db", "x": 340, "y": 270,
+              "refs": ["`services/orders-api/migrations/0007_outbox.sql`"] },
+            { "id": "seeder", "label": "seed-orders.py", "sub": "local only", "state": "local", "x": 640, "y": 270,
+              "md": "Publishes synthetic `order.placed` events to a local Kafka. Never points at production.",
+              "refs": ["`scripts/seed-orders.py`"] },
+            { "id": "wms", "label": "Warehouse WMS", "sub": "REST · pick tickets", "kind": "external", "x": 950, "y": 270 }
+          ],
+          "edges": [
+            { "from": "shop", "to": "api", "label": "HTTPS" },
+            { "from": "api", "to": "pay", "label": "authorize", "kind": "control" },
+            { "from": "api", "to": "db", "label": "INSERT" },
+            { "from": "api", "to": "bus", "label": "order.placed", "kind": "async" },
+            { "from": "bus", "to": "fulfil", "kind": "async" },
+            { "from": "seeder", "to": "bus", "label": "events (local)", "kind": "async" },
+            { "from": "fulfil", "to": "wms", "label": "pick ticket" }
+          ],
+          "flows": [
+            { "id": "prod", "label": "Production path", "steps": [
+              { "edge": "shop->api", "label": "The shop posts the order draft.", "payload": "draft" },
+              { "edge": "api->pay", "label": "orders-api authorizes the card with PayCo.", "payload": "total" },
+              { "edge": "api->db", "label": "orders-api writes the order and its outbox row.", "payload": "INSERT" },
+              { "edge": "api->bus", "label": "The outbox relay publishes `order.placed`.", "payload": "event" },
+              { "edge": "bus->fulfil", "label": "The fulfilment worker consumes the event." },
+              { "edge": "fulfil->wms", "label": "The worker creates the pick ticket.", "payload": "ticket" }
+            ] },
+            { "id": "local", "label": "Local stack path", "steps": [
+              { "edge": "seeder->bus", "label": "The seeder publishes synthetic events.", "payload": "event" },
+              { "edge": "bus->fulfil", "label": "The fulfilment worker consumes them." },
+              { "edge": "fulfil->wms", "label": "The worker calls the WMS stub.", "payload": "ticket" }
+            ] }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "terms",
+      "title": "Terms",
+      "blocks": [
+        { "type": "terms", "items": [
+          { "term": "order", "md": "One row in `orders`, created by `POST /orders`. Its id is the Kafka message key." },
+          { "term": "outbox", "md": "The `outbox` table. A row is written in the same transaction as its order and deleted after the relay publishes it." },
+          { "term": "pick ticket", "md": "The warehouse's work item for one order. The WMS returns its id; we store it on the order." },
+          { "term": "idempotency key", "md": "A UUID the shop sends in `Idempotency-Key`. A repeat with the same key returns the first order." }
+        ] }
+      ]
+    },
+    {
+      "id": "options",
+      "title": "Ways to test fulfilment without a real checkout",
+      "lead": "Use the seeder unless you are changing orders-api itself.",
+      "blocks": [
+        { "type": "cards", "items": [
+          { "title": "Seeder", "tag": "recommended", "kind": "ok", "md": "Publish synthetic events with `scripts/seed-orders.py`. Exercises the worker and the WMS stub; skips PayCo and Postgres." },
+          { "title": "Full local stack", "tag": "slower", "kind": "info", "md": "Run orders-api against the PayCo sandbox. Exercises the outbox relay too. Needs a sandbox key from the payments team." },
+          { "title": "Replay from staging", "tag": "read-only data", "kind": "warn", "md": "Copy events from the staging topic with `kcat`. Real shapes, but customer data: never paste them into tickets." }
+        ] }
+      ]
+    },
+    {
+      "id": "run",
+      "title": "Run the local stack",
+      "lead": "Your ticks stay in this browser. **Copy progress** exports them as Markdown.",
+      "blocks": [
+        { "type": "callout", "kind": "caution", "md": "Check that `KAFKA_BROKERS` points at `localhost:9092` before you seed. The seeder publishes to whatever broker the variable names." },
+        { "type": "checklist", "id": "local", "title": "Local stack", "items": [
+          { "id": "doctor", "text": "Check the tools.", "code": "make doctor", "verify": "Last line: `doctor: all checks passed`." },
+          { "id": "up", "text": "Start Postgres, Kafka and the WMS stub.", "code": "docker compose up -d postgres kafka wms-stub", "verify": "`docker compose ps` shows 3 services `running`.", "refs": ["orders/db", "orders/bus", "orders/wms"] },
+          { "id": "worker", "text": "Start the fulfilment worker.", "code": "make run-fulfilment", "verify": "Log line `joined group fulfilment, 6 partitions`.", "refs": ["orders/fulfil/consume"] },
+          { "id": "seed", "text": "Seed 20 orders.", "code": "python3 scripts/seed-orders.py --count 20", "refs": ["orders/seeder"] },
+          { "id": "tickets", "text": "Watch the pick tickets arrive.", "code": "make tail-tickets", "verify": "20 lines `ticket created`, one per order id.", "refs": ["orders/fulfil/ticket"] },
+          { "id": "down", "text": "Stop everything.", "code": "docker compose down -v", "verify": "No containers; ports 5432 and 9092 are free." }
+        ] }
+      ]
+    },
+    {
+      "id": "trouble",
+      "title": "Troubleshooting",
+      "blocks": [
+        { "type": "table", "columns": ["Symptom", "Cause", "Fix"], "rows": [
+          ["Order exists, no pick ticket", "The outbox relay stopped; rows pile up in `outbox`.", "Run `SELECT count(*) FROM outbox;`. If it grows, restart orders-api and read the relay log."],
+          ["Worker log: `rebalancing` every few seconds", "A handler takes longer than `max.poll.interval.ms` (300 s).", "Find the slow WMS call; the worker commits only after the ticket exists."],
+          ["Two tickets for one order", "The WMS stub ignores the `Idempotency-Key` header.", "Use `wms-stub` 2.3 or later."],
+          ["`seed-orders.py` exits with `NoBrokersAvailable`", "Kafka is not up yet.", "Wait for `docker compose ps` to show `running`, then seed again."]
+        ] }
+      ]
+    },
+    {
+      "id": "issues",
+      "title": "Known issues",
+      "blocks": [
+        { "type": "callout", "kind": "risk", "title": "Relay lag hides failures", "md": "The relay retries a failing publish forever. A broken broker shows up as a growing `outbox` table, not as an error. Alert on `outbox` row count above 1,000." },
+        { "type": "callout", "kind": "decision", "md": "We keep the outbox instead of publishing from the request handler. A crash between commit and publish would otherwise lose the event." }
+      ]
+    }
+  ]
+}

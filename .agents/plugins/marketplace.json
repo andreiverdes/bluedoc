@@ -1,0 +1,12 @@
+{
+  "name": "bluedoc",
+  "interface": { "displayName": "bluedoc" },
+  "plugins": [
+    {
+      "name": "bluedoc",
+      "source": { "source": "local", "path": "./" },
+      "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" },
+      "category": "Productivity"
+    }
+  ]
+}

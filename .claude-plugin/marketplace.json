@@ -1,0 +1,16 @@
+{
+  "name": "bluedoc",
+  "owner": { "name": "Andrei Verdeș" },
+  "metadata": { "description": "bluedoc: self-contained HTML engineering docs.", "version": "1.0.0" },
+  "plugins": [
+    {
+      "name": "bluedoc",
+      "source": "./",
+      "version": "1.0.0",
+      "description": "Self-contained HTML engineering docs: zoomable blueprint canvases with animated flows, persistent checklists, and a code browser that pins PR review findings to their lines.",
+      "category": "documentation",
+      "license": "MIT",
+      "keywords": ["documentation", "architecture", "html", "runbook", "code-review"]
+    }
+  ]
+}

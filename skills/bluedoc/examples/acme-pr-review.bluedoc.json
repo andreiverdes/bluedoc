@@ -1,0 +1,371 @@
+{
+  "id": "acme-pr-412-review",
+  "title": "acme-shop#412: bulk discount tiers",
+  "subtitle": "One reviewer read PR #412 locally. Tick a finding to accept it as a fix; leave it unticked to reject or discuss.",
+  "meta": {
+    "org": "Acme Corp",
+    "kind": "Review",
+    "dwg": "ACME-REV-412",
+    "rev": "A",
+    "date": "2026-03-14"
+  },
+  "state": [
+    {
+      "label": "request changes",
+      "kind": "risk"
+    },
+    {
+      "label": "tests run locally",
+      "kind": "ok"
+    },
+    {
+      "label": "nothing posted to GitHub",
+      "kind": "info"
+    }
+  ],
+  "links": [
+    {
+      "label": "acme-shop#412",
+      "href": "https://github.com/acme/acme-shop/pull/412"
+    },
+    {
+      "label": "PRICING-88 spec",
+      "href": "https://example.com/acme/tickets/PRICING-88"
+    }
+  ],
+  "tldr": "Request changes. The tier check uses `>` where the spec says \"10 or more\", so an order of exactly 10 or 50 units gets no discount. Discounted line totals are fractional cents. Both are one-line fixes; add boundary tests at 9, 10, 49 and 50 before merging.",
+  "sections": [
+    {
+      "id": "how",
+      "title": "How to use this page",
+      "lead": "Each finding is a checklist item and a comment on its code. Ticking either one ticks both.",
+      "blocks": [
+        {
+          "type": "terms",
+          "items": [
+            {
+              "term": "blocker",
+              "md": "Wrong behaviour; fix before merge."
+            },
+            {
+              "term": "major",
+              "md": "Likely bug or real risk."
+            },
+            {
+              "term": "minor",
+              "md": "Small correctness or maintainability issue."
+            },
+            {
+              "term": "nit",
+              "md": "Optional."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "verdict",
+      "title": "Verdict",
+      "lead": "One blocker, two majors: the tiers do not match the spec at their boundaries.",
+      "blocks": [
+        {
+          "type": "table",
+          "columns": [
+            "PR",
+            "Scope",
+            "Verdict",
+            "Blocker",
+            "Major",
+            "Minor",
+            "Nit"
+          ],
+          "rows": [
+            [
+              "[acme-shop#412](https://github.com/acme/acme-shop/pull/412)",
+              "[Bulk discount tiers](#review)",
+              "**Request changes**",
+              "1",
+              "2",
+              "2",
+              "1"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "review",
+      "title": "#412 · bulk discount tiers",
+      "lead": "**Request changes.** The design is right: tiers apply per line, before the coupon and before VAT.",
+      "blocks": [
+        {
+          "type": "text",
+          "md": "`tierFor` picks the highest tier first, `applyCoupon` now sums tiered line totals, and `priceOrder` reports what the customer saved. The boundary check and the money type are wrong, and the tests stop short of both boundaries."
+        },
+        {
+          "type": "checklist",
+          "id": "findings",
+          "title": "Findings · #412",
+          "numbered": false,
+          "items": [
+            {
+              "id": "tier-boundary",
+              "text": "Fix: an order of exactly 10 or 50 units gets no tier",
+              "state": "blocker · high",
+              "stateKind": "risk",
+              "detail": "**File:** `src/pricing/tiers.ts:17`\n\nThe spec says \"10 or more\" and \"50 or more\". `qty > t.minQty` excludes both thresholds: 10 units get no discount, 50 units get 5 % instead of 10 %.\n\n**Suggested fix:** `qty >= t.minQty`."
+            },
+            {
+              "id": "float-cents",
+              "text": "Fix: tiered line totals are fractional cents",
+              "state": "major · high",
+              "stateKind": "warn",
+              "detail": "**File:** `src/pricing/tiers.ts:25`\n\n`gross * (1 - tier.percent / 100)` returns 3,163.5 for 3 × 1,110 cents at 5 %. `applyCoupon` rounds only when a coupon is present, so without one the fraction reaches `addTax` and the payment request.\n\n**Suggested fix:** `Math.round(gross * (100 - tier.percent) / 100)`, the same form `applyCoupon` uses."
+            },
+            {
+              "id": "savings-includes-coupon",
+              "text": "Fix: `bulkSavingsCents` also counts the coupon",
+              "state": "major · medium",
+              "stateKind": "warn",
+              "detail": "**File:** `src/orders/createOrder.ts:16`\n\nThe savings figure is gross-with-tax minus final total, so a 15 % coupon shows up as bulk savings on the receipt.\n\n**Suggested fix:** compute savings from `lineTotal` alone: `sum(gross) - sum(lineTotal)`, then add tax."
+            },
+            {
+              "id": "boundary-tests",
+              "text": "Add tests at 9, 10, 49 and 50 units",
+              "state": "minor · high",
+              "stateKind": "info",
+              "detail": "**File:** `test/tiers.test.ts:5-11`\n\nThe tests check 5 and 60 units, so they pass with the off-by-one above. Boundary cases would have caught it."
+            },
+            {
+              "id": "docs-stale",
+              "text": "Update `docs/pricing.md`, which still says there are no bulk discounts",
+              "state": "minor · high",
+              "stateKind": "info",
+              "detail": "**File:** `docs/pricing.md:11` (not changed by this PR)\n\nAdd tiers to the order of operations: sum lines, apply tiers, apply coupon, add VAT."
+            },
+            {
+              "id": "pr-claims-tests",
+              "text": "Fix the PR description: it says every tier is tested",
+              "state": "nit · high",
+              "stateKind": "todo",
+              "detail": "The description says \"tests cover every tier\"; only the 10 % tier has a positive test."
+            }
+          ]
+        },
+        {
+          "type": "diff",
+          "id": "pr-412",
+          "title": "acme-shop#412",
+          "repo": "acme-shop",
+          "base": "89efd8e",
+          "head": "62ccc86",
+          "url": "https://github.com/acme/acme-shop/pull/412/files",
+          "note": "The commit the reviewer read. Line numbers in the findings refer to it.",
+          "files": [
+            {
+              "path": "docs/pricing.md",
+              "status": "context",
+              "add": 0,
+              "del": 0,
+              "hunks": [
+                {
+                  "old": 6,
+                  "new": 6,
+                  "context": true,
+                  "lines": [
+                    " ",
+                    " 1. Sum the cart lines.",
+                    " 2. Apply the coupon, if any.",
+                    " 3. Add VAT.",
+                    " ",
+                    " There are no bulk discounts: every unit costs the same."
+                  ]
+                }
+              ]
+            },
+            {
+              "path": "src/orders/createOrder.ts",
+              "status": "modified",
+              "add": 4,
+              "del": 1,
+              "hunks": [
+                {
+                  "old": 6,
+                  "new": 6,
+                  "lines": [
+                    "   customerId: string;",
+                    "   subtotalCents: number;",
+                    "   totalCents: number;",
+                    "+  bulkSavingsCents: number;",
+                    " }",
+                    " ",
+                    " export function priceOrder(draft: OrderDraft, coupon?: Discount): PricedOrder {",
+                    "+  const gross = draft.lines.reduce((sum, l) => sum + l.unitCents * l.qty, 0);",
+                    "   const subtotalCents = applyCoupon(draft.lines, coupon);",
+                    "   const totalCents = addTax(subtotalCents);",
+                    "-  return { customerId: draft.customerId, subtotalCents, totalCents };",
+                    "+  const bulkSavingsCents = addTax(gross) - totalCents;",
+                    "+  return { customerId: draft.customerId, subtotalCents, totalCents, bulkSavingsCents };",
+                    " }"
+                  ],
+                  "header": "export interface PricedOrder {"
+                }
+              ]
+            },
+            {
+              "path": "src/pricing/discounts.ts",
+              "status": "modified",
+              "add": 3,
+              "del": 2,
+              "hunks": [
+                {
+                  "old": 1,
+                  "new": 1,
+                  "lines": [
+                    " // Discounts applied to a cart before tax.",
+                    " import type { CartLine } from \"../orders/types\";",
+                    "+import { lineTotal } from \"./tiers\";",
+                    " ",
+                    " export interface Discount {",
+                    "   code: string;",
+                    "   percent: number;",
+                    " }",
+                    " ",
+                    "-/** Returns the cart subtotal in cents after a coupon, if any. */",
+                    "+/** Returns the cart subtotal in cents after bulk tiers and a coupon, if any. */",
+                    " export function applyCoupon(lines: CartLine[], coupon?: Discount): number {",
+                    "-  const subtotal = lines.reduce((sum, l) => sum + l.unitCents * l.qty, 0);",
+                    "+  const subtotal = lines.reduce((sum, l) => sum + lineTotal(l), 0);",
+                    "   if (!coupon) return subtotal;",
+                    "   return Math.round(subtotal * (100 - coupon.percent) / 100);",
+                    " }"
+                  ]
+                }
+              ]
+            },
+            {
+              "path": "src/pricing/tiers.ts",
+              "status": "added",
+              "add": 26,
+              "del": 0,
+              "hunks": [
+                {
+                  "old": 0,
+                  "new": 1,
+                  "lines": [
+                    "+// Bulk discount tiers (PRICING-88).",
+                    "+// Spec: 10 or more units of one SKU get 5 %, 50 or more get 10 %.",
+                    "+import type { CartLine } from \"../orders/types\";",
+                    "+",
+                    "+export interface Tier {",
+                    "+  minQty: number;",
+                    "+  percent: number;",
+                    "+}",
+                    "+",
+                    "+export const TIERS: Tier[] = [",
+                    "+  { minQty: 50, percent: 10 },",
+                    "+  { minQty: 10, percent: 5 },",
+                    "+];",
+                    "+",
+                    "+/** The tier a line qualifies for, or undefined. */",
+                    "+export function tierFor(qty: number): Tier | undefined {",
+                    "+  return TIERS.find((t) => qty > t.minQty);",
+                    "+}",
+                    "+",
+                    "+/** Line total in cents after its bulk tier. */",
+                    "+export function lineTotal(line: CartLine): number {",
+                    "+  const tier = tierFor(line.qty);",
+                    "+  const gross = line.unitCents * line.qty;",
+                    "+  if (!tier) return gross;",
+                    "+  return gross * (1 - tier.percent / 100);",
+                    "+}"
+                  ]
+                }
+              ]
+            },
+            {
+              "path": "test/tiers.test.ts",
+              "status": "added",
+              "add": 16,
+              "del": 0,
+              "hunks": [
+                {
+                  "old": 0,
+                  "new": 1,
+                  "lines": [
+                    "+import { describe, expect, it } from \"vitest\";",
+                    "+import { lineTotal, tierFor } from \"../src/pricing/tiers\";",
+                    "+",
+                    "+describe(\"bulk tiers\", () => {",
+                    "+  it(\"gives no tier below 10 units\", () => {",
+                    "+    expect(tierFor(5)).toBeUndefined();",
+                    "+  });",
+                    "+",
+                    "+  it(\"gives 10 % at 60 units\", () => {",
+                    "+    expect(tierFor(60)?.percent).toBe(10);",
+                    "+  });",
+                    "+",
+                    "+  it(\"discounts the line total\", () => {",
+                    "+    expect(lineTotal({ sku: \"A\", qty: 60, unitCents: 100 })).toBe(5400);",
+                    "+  });",
+                    "+});"
+                  ]
+                }
+              ]
+            }
+          ],
+          "comments": [
+            {
+              "item": "findings/tier-boundary",
+              "file": "src/pricing/tiers.ts",
+              "line": 17
+            },
+            {
+              "item": "findings/float-cents",
+              "file": "src/pricing/tiers.ts",
+              "line": 25
+            },
+            {
+              "item": "findings/savings-includes-coupon",
+              "file": "src/orders/createOrder.ts",
+              "line": 16
+            },
+            {
+              "item": "findings/boundary-tests",
+              "file": "test/tiers.test.ts",
+              "line": 5,
+              "end": 11
+            },
+            {
+              "item": "findings/docs-stale",
+              "file": "docs/pricing.md",
+              "line": 11
+            },
+            {
+              "label": "PR description",
+              "item": "findings/pr-claims-tests"
+            }
+          ]
+        },
+        {
+          "type": "table",
+          "columns": [
+            "Check the reviewer ran",
+            "Result"
+          ],
+          "rows": [
+            [
+              "`npx vitest run test/tiers.test.ts`",
+              "3 passed; none at a boundary"
+            ],
+            [
+              "`node -e \"console.log(require('./dist/pricing/tiers').lineTotal({sku:'A',qty:10,unitCents:100}))\"`",
+              "1000: no discount at exactly 10 units"
+            ]
+          ],
+          "caption": "Commands run against the PR head, with the observed result."
+        }
+      ]
+    }
+  ]
+}
