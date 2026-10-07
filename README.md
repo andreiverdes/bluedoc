@@ -1,8 +1,8 @@
 # bluedoc
 
-An agent skill that writes engineering docs as one self-contained HTML page: a zoomable blueprint of the system, checklists that remember your ticks, and a code browser that pins review findings to their lines. Works with Claude Code, Codex, pi and omp.
+![Zooming into the orders-api system, then into pricing inside it, then into fulfilment-worker, each level playing its own flow](docs/tour.gif)
 
-![A bluedoc page: header, status rail, contents and the blueprint canvas](docs/header.png)
+An agent skill that writes engineering docs as one self-contained HTML page: a zoomable blueprint of the system, checklists that remember your ticks, and a code browser that pins review findings to their lines. Works with Claude Code, Codex, pi and omp.
 
 ## What you get
 
@@ -12,9 +12,9 @@ An agent skill that writes engineering docs as one self-contained HTML page: a z
 - **One file.** No network at view time, works from `file://`, prints cleanly, light and dark theme, keyboard and screen-reader outline.
 - **Linted writing.** The build flags filler, vague words, long sentences and checklist items that don't start with a verb.
 
-| Inside a system | A review finding on its code |
+| The page | A review finding on its code |
 |---|---|
-| ![The orders-api system opened, showing its parts and flow](docs/canvas.png) | ![A diff block with a blocker comment under line 17](docs/review.png) |
+| ![A bluedoc page: header, status rail, contents and the blueprint canvas](docs/header.png) | ![A diff block with a blocker comment under line 17](docs/review.png) |
 
 Open the examples in a browser to try them: [`acme-orders.html`](skills/bluedoc/examples/acme-orders.html) (architecture and runbook) and [`acme-pr-review.html`](skills/bluedoc/examples/acme-pr-review.html) (PR review). Download the file, then open it; GitHub shows HTML as source.
 
