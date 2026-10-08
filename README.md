@@ -7,7 +7,7 @@ An agent skill that writes engineering docs as one self-contained HTML page: a z
 ## What you get
 
 - **Blueprint canvas.** Open a system to see its parts; each level plays its own animated flow (request, event, data). Nests 3 levels deep.
-- **Checklists as task trackers.** Every procedure is a checklist. Ticks persist in the reader's browser; **Copy progress** exports Markdown for a PR or issue.
+- **Checklists as task trackers.** Every procedure is a checklist. Each item is a two-line row (the action, then why it matters) that opens to show details, commands, checks, tables or a sub-checklist. Ticks persist in the reader's browser; **Copy progress** exports Markdown for a PR or issue.
 - **Code review.** A `diff` block shows a change with each finding as a comment on its lines. Ticking a comment ticks the finding. Generated from git by `gitdiff.py`.
 - **One file.** No network at view time, works from `file://`, prints cleanly, light and dark theme, keyboard and screen-reader outline.
 - **Adjustable width.** Drag the handle on either side of the text to widen or narrow it; it stays centred and every bluedoc page in that browser remembers the width. Wide tables stop wrapping. Double-click a handle to reset.

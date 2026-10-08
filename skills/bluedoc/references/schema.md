@@ -41,24 +41,33 @@ One JSON file describes one HTML document. `scripts/build.py` validates it and i
 
 ## Checklist
 
+Each item is a collapsed row: a tick, a one-line **title** (`text`), a one-line **subtitle** and an optional chip. Clicking the row opens everything else. Write the row so a reader can scan the list without opening anything.
+
 ```json
 { "type": "checklist", "id": "setup", "title": "Set up", "items": [
-  { "id": "install", "text": "Install the CLI.", "code": "brew install foo",
-    "verify": "`foo --version` prints 2.x.", "detail": "md shown under **How**",
-    "refs": ["arch/api"], "state": "unverified", "stateKind": "warn", "done": false }
+  { "id": "install", "text": "Install the CLI", "sub": "Needs Homebrew; takes 1 minute",
+    "code": "brew install foo", "verify": "`foo --version` prints 2.x.",
+    "detail": "md shown when the row is open", "refs": ["arch/api"],
+    "state": "unverified", "stateKind": "warn", "done": false,
+    "blocks": [ { "type": "table", "columns": ["OS", "Command"], "rows": [["macOS", "`brew install foo`"]] },
+                { "type": "checklist", "id": "setup-install-steps", "title": "Steps", "items": [ … ] } ] }
 ] }
 ```
 
-| Item field | Meaning |
-|---|---|
-| `id` | Stable id. Progress key = `bp:<doc.id>:<checklist.id>:<item.id>`. Renaming resets that tick. |
-| `text` | One action, imperative, ≤ 1 sentence. |
-| `code`, `lang` | Command to run for this step. |
-| `verify` | Observable success check (output, state, file). Required for steps whose failure is silent. |
-| `detail` | Extra md, collapsed. |
-| `refs` | `"<canvasId>/<nodeKey>"`; renders buttons that open that node. Node keys nest with `/`: `arch/api/auth`. |
-| `state`, `stateKind` | Chip such as `unverified` / `warn`. |
-| `done` | Initial tick before the reader touches it (e.g. steps the author already verified). |
+| Item field | Where it shows | Meaning |
+|---|---|---|
+| `id` | | Stable id. Progress key = `bp:<doc.id>:<checklist.id>:<item.id>`. Renaming resets that tick. |
+| `text` | row, line 1 | The action, imperative, one line (≤ 90 characters; the build warns above that and the row truncates with …). Full text shows when the row is open. |
+| `sub` | row, line 2 | One line of context: why, what it unblocks, who owns it (≤ 120 characters). If absent, `verify` takes this line with a ✓ icon. |
+| `state`, `stateKind` | row, right | Chip such as `unverified` / `warn`. Keep it to 1–3 words. |
+| `detail` | open | Extra md: lists, paragraphs, links. |
+| `code`, `lang` | open | Command to run for this step, with a Copy button. |
+| `blocks` | open | Any of `text`, `callout`, `table`, `code`, `terms`, `cards`, `checklist`. A nested checklist ticks on its own, counts in the page total and exports indented under its parent; nested checklists can't nest again. |
+| `verify` | open (or row line 2) | Observable success check (output, state, file). Required for steps whose failure is silent. Shown as **Check** when the row is open, unless it already fills line 2. |
+| `refs` | open | `"<canvasId>/<nodeKey>"`; renders buttons that open that node. Node keys nest with `/`: `arch/api/auth`. |
+| `done` | | Initial tick before the reader touches it (e.g. steps the author already verified). |
+
+A row with nothing to open has no chevron; clicking it ticks it. **Expand** in the checklist header opens or closes every row. Links to `#item-<checklist>-<item>` (from a canvas node, a table cell or a shared URL) open the row, and its parents, before scrolling to it. Print shows every row open.
 
 Ticks persist per browser. The sidebar shows per-checklist progress; **Copy progress** exports all checklists as Markdown task lists (`- [x] …`) for PRs or issues.
 
