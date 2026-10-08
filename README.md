@@ -10,6 +10,7 @@ An agent skill that writes engineering docs as one self-contained HTML page: a z
 - **Checklists as task trackers.** Every procedure is a checklist. Ticks persist in the reader's browser; **Copy progress** exports Markdown for a PR or issue.
 - **Code review.** A `diff` block shows a change with each finding as a comment on its lines. Ticking a comment ticks the finding. Generated from git by `gitdiff.py`.
 - **One file.** No network at view time, works from `file://`, prints cleanly, light and dark theme, keyboard and screen-reader outline.
+- **Adjustable width.** Drag the handle on either side of the text to widen or narrow it; it stays centred and every bluedoc page in that browser remembers the width. Wide tables stop wrapping. Double-click a handle to reset.
 - **Linted writing.** The build flags filler, vague words, long sentences and checklist items that don't start with a verb.
 
 | The page | A review finding on its code |
