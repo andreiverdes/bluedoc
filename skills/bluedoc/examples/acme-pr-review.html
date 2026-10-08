@@ -556,10 +556,48 @@ svg.anim .bp-edge.k-async { animation: bp-march 1.6s linear infinite; }
   .bd-cmw { padding: 6px 10px 10px; }
   .bd-cm .mt, .bd-cm details { margin-left: 0; }
 }
+
+/* reader-chosen content width (drag handles). With no choice the layouts above apply. Once the reader
+   picks a width, the column stays centred at that width: "three" keeps both rails beside it when they
+   fit, "wide" gives the rails' space to the content, puts the status rail under the TL;DR and turns
+   Contents into a drawer opened from the app bar. JS sets data-layout from the width and the window. */
+.bd-rh { position: fixed; top: var(--bar-h); bottom: 0; z-index: 30; width: 16px; margin-left: -8px; cursor: col-resize; touch-action: none; display: none; }
+.bd-rh::before { content: ""; position: absolute; top: 0; bottom: 0; left: 7.5px; width: 1px; background: var(--accent); opacity: 0; transition: opacity .15s; }
+.bd-rh i { position: absolute; left: 5px; top: 50%; width: 6px; height: 44px; margin-top: -22px; border-radius: 3px; background: var(--line-strong);
+  box-shadow: 0 0 0 2px var(--canvas); opacity: .8; transition: background .15s, opacity .15s, height .15s, margin-top .15s; }
+.bd-rh:hover i, .bd-rh:focus-visible i, .bd-rh.on i { background: var(--accent); opacity: 1; height: 64px; margin-top: -32px; }
+.bd-rh:hover::before, .bd-rh.on::before { opacity: .35; }
+.bd-rh:focus-visible { box-shadow: none; outline: none; }
+.bd-wchip { position: fixed; left: 50%; top: calc(var(--bar-h) + 12px); transform: translate(-50%, -4px); z-index: 50; padding: 6px 12px; border-radius: 9px;
+  background: light-dark(oklch(22% 0.006 264), oklch(30% 0.005 264)); color: oklch(97% 0 0); font: 500 12.5px var(--sans); box-shadow: var(--shadow-3);
+  opacity: 0; pointer-events: none; transition: opacity .15s, transform .15s; white-space: nowrap; }
+.bd-wchip b { font: 600 12.5px var(--mono); }
+.bd-wchip.on { opacity: 1; transform: translate(-50%, 0); }
+html.bd-resizing, html.bd-resizing * { cursor: col-resize !important; user-select: none !important; -webkit-user-select: none !important; }
+.bd-toc-btn { display: none !important; }
+@media (min-width: 901px) {
+  .bd-rh { display: block; }
+  :root[data-layout="three"] .bd-shell { grid-template-columns: minmax(var(--rail), 1fr) minmax(0, var(--content-w)) minmax(var(--rail), 1fr);
+    grid-template-areas: "side head meta" "side tldr meta" "side main meta"; grid-template-rows: auto auto 1fr; column-gap: var(--gap); max-width: none; margin: 0; }
+  :root[data-layout="three"] .bp-side { justify-self: end; width: var(--rail); }
+  :root[data-layout="three"] .bd-meta { position: sticky; width: var(--rail); max-height: calc(100vh - var(--bar-h) - 40px); overflow: auto; margin-top: 60px; justify-self: start;
+    display: block; padding: 0; border-radius: 0; background: none; box-shadow: none; }
+  :root[data-layout="three"] .bd-rail-sec + .bd-rail-sec { margin-top: 24px; }
+  :root[data-layout="wide"] .bd-shell { grid-template-columns: 1fr minmax(0, var(--content-w)) 1fr; grid-template-areas: ". head ." ". tldr ." ". meta ." ". main .";
+    grid-template-rows: auto auto auto 1fr; column-gap: 0; max-width: none; margin: 0; }
+  :root[data-layout="wide"] .bd-meta { position: static; width: auto; max-height: none; overflow: visible; margin-top: 20px; justify-self: stretch;
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px 24px; padding: 16px 8px 14px; border-radius: 14px; background: var(--panel); box-shadow: inset 0 0 0 1px var(--line); }
+  :root[data-layout="wide"] .bd-rail-sec + .bd-rail-sec { margin-top: 0; }
+  :root[data-layout="wide"] .bp-side { position: fixed; z-index: 45; top: calc(var(--bar-h) + 10px); left: 12px; width: 268px; max-height: calc(100vh - var(--bar-h) - 24px);
+    margin: 0; padding: 14px 8px 8px; border-radius: 14px; background: var(--surface); box-shadow: var(--shadow-3);
+    visibility: hidden; opacity: 0; transform: translateX(-10px); transition: opacity .16s var(--ease), transform .16s var(--ease), visibility 0s .16s; }
+  :root[data-layout="wide"] .bp-side.drawer { visibility: visible; opacity: 1; transform: none; transition: opacity .16s var(--ease), transform .16s var(--ease); }
+  :root[data-layout="wide"] .bd-toc-btn { display: inline-grid !important; }
+}
 @media print {
   :root { color-scheme: light; }
   body { background: #fff; font-size: 12pt; }
-  .bd-bar, .bp-side, .bp-tb, .bp-hint, .bp-cl-h .tools, .bp-code-h button { display: none !important; }
+  .bd-bar, .bp-side, .bp-tb, .bp-hint, .bp-cl-h .tools, .bp-code-h button, .bd-rh, .bd-wchip { display: none !important; }
   .bd-shell { display: block; padding: 0; }
   .bd-meta { position: static; width: auto; max-height: none; margin-top: 16px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
   .bp-sec { break-inside: avoid-page; }
@@ -714,7 +752,10 @@ const mark = h('a', { class: 'bd-mark', href: '#top', 'aria-label': 'bluedoc, ba
   '<path d="M8 10v4.5h2.5" fill="none" stroke="#5fd4ff" stroke-width="1.3" stroke-linecap="round"/></svg><span>blue<b>doc</b></span>' });
 app.append(h('header', { class: 'bd-bar' }, mark,
   h('div', { class: 'bd-crumb' }, h('span', { class: 'sep' }, '/'), h('span', { class: 't' }, DOC.title || '')),
-  h('div', { class: 'bd-bar-r' }, overall, themeBtn)));
+  h('div', { class: 'bd-bar-r' }, overall,
+    h('button', { type: 'button', class: 'bd-ibtn bd-toc-btn', 'aria-label': 'Contents', title: 'Contents', 'aria-expanded': 'false',
+      onclick: e => { e.stopPropagation(); setDrawer(!side.classList.contains('drawer')); } }, ic('list')),
+    themeBtn)));
 
 const eyebrow = [meta.org, meta.kind, meta.date].filter(Boolean);
 const head = h('header', { class: 'bd-head', id: 'top' },
@@ -738,6 +779,94 @@ const metaRail = h('aside', { class: 'bd-meta', 'aria-label': 'Document status' 
 const side = h('aside', { class: 'bp-side', 'aria-label': 'Contents' });
 const main = h('main');
 app.append(h('div', { class: 'bd-shell' }, head, tldr, metaRail.childNodes.length ? metaRail : null, side, main));
+
+/* ---------- content width: drag either edge; the column stays centred ---------- */
+// The width is a reader preference, shared by every bluedoc page in this browser. No stored width
+// means the default layout. Double-click a handle (or press Home on it) to go back to it.
+const WIDTH_KEY = 'bluedoc:width', MIN_W = 520, PAGE_PAD = 20;   // PAGE_PAD = .bd-shell side padding
+const root = document.documentElement;
+let userW = +store.get(WIDTH_KEY) || 0;
+const cssPx = v => parseFloat(getComputedStyle(root).getPropertyValue(v)) || 0;
+const maxW = () => Math.max(MIN_W, innerWidth - 2 * PAGE_PAD);
+function setDrawer(open) {
+  side.classList.toggle('drawer', open);
+  document.querySelector('.bd-toc-btn')?.setAttribute('aria-expanded', String(open));
+}
+function applyWidth() {
+  if (!userW) { delete root.dataset.layout; root.style.removeProperty('--content-w'); }
+  else {
+    root.style.setProperty('--content-w', userW + 'px');
+    // both rails fit beside the column, or the column takes their space
+    const three = innerWidth >= Math.min(userW, maxW()) + 2 * (cssPx('--rail') + cssPx('--gap') + PAGE_PAD);
+    root.dataset.layout = three ? 'three' : 'wide';
+  }
+  if (root.dataset.layout !== 'wide') setDrawer(false);
+  placeHandles();
+}
+const handles = ['left', 'right'].map(edge => {
+  const el = h('div', { class: 'bd-rh', role: 'separator', 'aria-orientation': 'vertical', tabindex: 0, 'aria-label': 'Content width',
+    'aria-valuemin': MIN_W, title: 'Drag to change the content width · double-click to reset' }, h('i'));
+  el.dataset.edge = edge;
+  return el;
+});
+const wchip = h('div', { class: 'bd-wchip', 'aria-hidden': 'true' });
+document.body.append(...handles, wchip);
+function placeHandles() {
+  const r = main.getBoundingClientRect();
+  if (!r.width) return;
+  // in the gap beside the column when there is one, else on the column's edge
+  const off = root.dataset.layout === 'wide' || innerWidth - r.right < 2 * PAGE_PAD ? PAGE_PAD / 2 : Math.min(cssPx('--gap') / 2, (innerWidth - r.right) / 2);
+  handles[0].style.left = (r.left - off) + 'px';
+  handles[1].style.left = (r.right + off) + 'px';
+  for (const el of handles) { el.setAttribute('aria-valuenow', Math.round(r.width)); el.setAttribute('aria-valuemax', maxW()); }
+}
+let chipT = 0;
+function showChip() {
+  wchip.innerHTML = `<b>${Math.round(main.getBoundingClientRect().width)} px</b> · double-click a handle to reset`;
+  wchip.classList.add('on'); clearTimeout(chipT); chipT = setTimeout(() => wchip.classList.remove('on'), 1200);
+}
+function setWidth(w, save) {
+  userW = Math.round(Math.min(Math.max(w, MIN_W), maxW()));
+  applyWidth(); showChip();
+  if (save) store.set(WIDTH_KEY, String(userW));
+}
+function resetWidth() { userW = 0; store.del(WIDTH_KEY); applyWidth(); toast('Content width reset'); }
+for (const el of handles) {
+  const dir = el.dataset.edge === 'right' ? 1 : -1;
+  let drag = null, raf = 0, lastDown = 0;
+  el.addEventListener('pointerdown', e => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    // a second press within 350 ms resets; pointer capture swallows the browser's own dblclick
+    if (e.timeStamp - lastDown < 350) { lastDown = 0; resetWidth(); return; }
+    lastDown = e.timeStamp;
+    el.setPointerCapture(e.pointerId);
+    drag = { x: e.clientX, w: main.getBoundingClientRect().width };
+    el.classList.add('on'); root.classList.add('bd-resizing');
+  });
+  el.addEventListener('pointermove', e => {
+    if (!drag) return;
+    const w = drag.w + 2 * dir * (e.clientX - drag.x);   // both edges move: the column stays centred
+    if (!raf) raf = requestAnimationFrame(() => { raf = 0; setWidth(w, false); });
+  });
+  const end = () => {
+    if (!drag) return;
+    drag = null; el.classList.remove('on'); root.classList.remove('bd-resizing');
+    if (userW) store.set(WIDTH_KEY, String(userW));
+  };
+  el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
+  el.addEventListener('keydown', e => {
+    const step = e.shiftKey ? 160 : 40, cur = main.getBoundingClientRect().width;
+    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { e.preventDefault(); setWidth(cur + (e.key === 'ArrowRight' ? dir : -dir) * step, true); }
+    else if (e.key === 'Home') { e.preventDefault(); resetWidth(); }
+  });
+}
+addEventListener('resize', applyWidth);
+if ('ResizeObserver' in window) new ResizeObserver(placeHandles).observe(main);
+document.addEventListener('pointerdown', e => { if (side.classList.contains('drawer') && !side.contains(e.target) && !e.target.closest('.bd-toc-btn')) setDrawer(false); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && side.classList.contains('drawer')) setDrawer(false); });
+side.addEventListener('click', e => { if (e.target.closest('a') && root.dataset.layout === 'wide') setDrawer(false); });
+applyWidth();
 
 /* ---------- blocks ---------- */
 const CHECKLISTS = [];
