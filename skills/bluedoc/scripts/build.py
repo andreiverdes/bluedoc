@@ -22,6 +22,8 @@ TEMPLATE = HERE.parent / "assets" / "template.html"
 
 BLOCK_TYPES = {"text", "callout", "table", "code", "terms", "cards", "checklist", "canvas", "diff"}
 FILE_STATUSES = {"added", "modified", "deleted", "renamed", "context"}
+ITEM_BLOCK_TYPES = {"text", "callout", "table", "code", "terms", "cards", "checklist"}
+MAX_TITLE, MAX_SUB = 90, 120   # characters that fit the collapsed checklist row
 CALLOUT_KINDS = {"note", "caution", "warning", "risk", "decision"}
 STATE_KINDS = {"ok", "warn", "risk", "info", "todo"}
 NODE_KINDS = {"service", "process", "function", "store", "db", "cache", "stream", "queue", "device", "hardware",
@@ -233,6 +235,90 @@ def validate(doc: dict) -> Report:
     checklist_items: dict[str, set[str]] = {}
     diffs: dict[str, dict[str, tuple[set[int], set[int]]]] = {}
     comments_to_check: list[tuple[str, str, dict]] = []
+
+    def check_block(bw: str, b: dict, depth: int) -> None:
+        """depth 0 = section block, 1 = inside a checklist item, 2 = inside a nested checklist's item."""
+        t = b.get("type")
+        if t not in BLOCK_TYPES:
+            rep.err(bw, f"type {t!r} not in {sorted(BLOCK_TYPES)}")
+            return
+        if depth and t not in ITEM_BLOCK_TYPES:
+            rep.err(bw, f"type {t!r} can't sit inside a checklist item; use one of {sorted(ITEM_BLOCK_TYPES)}")
+            return
+        if depth >= 2 and t == "checklist":
+            rep.err(bw, "checklists nest one level only: a nested checklist's items can't hold another checklist")
+            return
+        if t in ("text", "callout"):
+            need(rep, bw, b, "md")
+            lint_text(rep, bw, b.get("md"))
+            if t == "callout" and b.get("kind", "note") not in CALLOUT_KINDS:
+                rep.err(bw, f"callout kind '{b.get('kind')}' not in {sorted(CALLOUT_KINDS)}")
+        elif t == "table":
+            if need(rep, bw, b, "columns", "rows"):
+                for ri, row in enumerate(b["rows"]):
+                    if len(row) != len(b["columns"]):
+                        rep.err(f"{bw}.rows[{ri}]", f"{len(row)} cells, {len(b['columns'])} columns")
+        elif t == "code":
+            need(rep, bw, b, "code")
+        elif t == "terms":
+            for ti, it in enumerate(b.get("items") or []):
+                need(rep, f"{bw}.items[{ti}]", it, "term", "md")
+                lint_text(rep, f"{bw}.items[{ti}]", it.get("md"))
+        elif t == "cards":
+            for ci, it in enumerate(b.get("items") or []):
+                need(rep, f"{bw}.items[{ci}]", it, "title", "md")
+                lint_text(rep, f"{bw}.items[{ci}]", it.get("md"))
+        elif t == "checklist":
+            if not need(rep, bw, b, "id", "title", "items"):
+                return
+            check_id(rep, bw, b["id"])
+            if b["id"] in checklist_ids:
+                rep.err(bw, f"duplicate checklist id '{b['id']}'")
+            checklist_ids.add(b["id"])
+            checklist_items[b["id"]] = {it.get("id") for it in b["items"]}
+            item_ids: set[str] = set()
+            for ii, it in enumerate(b["items"]):
+                iw = f"{bw}.items[{ii}]"
+                if not need(rep, iw, it, "id", "text"):
+                    continue
+                check_id(rep, iw, it["id"])
+                if it["id"] in item_ids:
+                    rep.err(iw, f"duplicate item id '{it['id']}'")
+                item_ids.add(it["id"])
+                lint_text(rep, iw + ".text", it.get("text"), imperative=True)
+                title = re.sub(r"`([^`]*)`", r"\1", it.get("text", ""))
+                if len(title) > MAX_TITLE:
+                    rep.warn(iw + ".text", f"{len(title)} characters: the collapsed row shows one line (about {MAX_TITLE}); "
+                             "keep the action there and move the rest to 'sub', 'detail' or 'blocks'")
+                if "\n" in (it.get("sub") or "") or len(it.get("sub") or "") > MAX_SUB:
+                    rep.warn(iw + ".sub", f"the subtitle shows one line (about {MAX_SUB} characters); move the rest to 'detail'")
+                lint_text(rep, iw + ".sub", it.get("sub"))
+                lint_text(rep, iw + ".detail", it.get("detail"))
+                for r in it.get("refs") or []:
+                    refs_to_check.append((iw, r))
+                for ki, kb in enumerate(it.get("blocks") or []):
+                    check_block(f"{iw}.blocks[{ki}]", kb, depth + 1)
+        elif t == "canvas":
+            if not need(rep, bw, b, "id", "title", "nodes"):
+                return
+            check_id(rep, bw, b["id"])
+            if b["id"] in canvas_nodes:
+                rep.err(bw, f"duplicate canvas id '{b['id']}'")
+            keys: set[str] = set()
+            validate_scope(rep, bw, b, 0, keys, "", False)
+            canvas_nodes[b["id"]] = keys
+            lint_text(rep, bw + ".caption", b.get("caption"))
+        elif t == "diff":
+            if not need(rep, bw, b, "id", "title", "files"):
+                return
+            check_id(rep, bw, b["id"])
+            if b["id"] in diffs:
+                rep.err(bw, f"duplicate diff id '{b['id']}'")
+            diffs[b["id"]] = validate_diff(rep, bw, b)
+            lint_text(rep, bw + ".note", b.get("note"))
+            for ci, c in enumerate(b.get("comments") or []):
+                comments_to_check.append((f"{bw}.comments[{ci}]", b["id"], c))
+
     for si, sec in enumerate(doc.get("sections") or []):
         sw = f"sections[{si}]"
         if not need(rep, sw, sec, "id", "title"):
@@ -249,72 +335,8 @@ def validate(doc: dict) -> Report:
         if not blocks:
             rep.warn(sw, "section has no blocks")
         for bi, b in enumerate(blocks):
-            bw = f"{sw}.blocks[{bi}]"
-            t = b.get("type")
-            if t not in BLOCK_TYPES:
-                rep.err(bw, f"type {t!r} not in {sorted(BLOCK_TYPES)}")
-                continue
-            if t in ("text", "callout"):
-                need(rep, bw, b, "md")
-                lint_text(rep, bw, b.get("md"))
-                if t == "callout" and b.get("kind", "note") not in CALLOUT_KINDS:
-                    rep.err(bw, f"callout kind '{b.get('kind')}' not in {sorted(CALLOUT_KINDS)}")
-            elif t == "table":
-                if need(rep, bw, b, "columns", "rows"):
-                    for ri, row in enumerate(b["rows"]):
-                        if len(row) != len(b["columns"]):
-                            rep.err(f"{bw}.rows[{ri}]", f"{len(row)} cells, {len(b['columns'])} columns")
-            elif t == "code":
-                need(rep, bw, b, "code")
-            elif t == "terms":
-                for ti, it in enumerate(b.get("items") or []):
-                    need(rep, f"{bw}.items[{ti}]", it, "term", "md")
-                    lint_text(rep, f"{bw}.items[{ti}]", it.get("md"))
-            elif t == "cards":
-                for ci, it in enumerate(b.get("items") or []):
-                    need(rep, f"{bw}.items[{ci}]", it, "title", "md")
-                    lint_text(rep, f"{bw}.items[{ci}]", it.get("md"))
-            elif t == "checklist":
-                if not need(rep, bw, b, "id", "title", "items"):
-                    continue
-                check_id(rep, bw, b["id"])
-                if b["id"] in checklist_ids:
-                    rep.err(bw, f"duplicate checklist id '{b['id']}'")
-                checklist_ids.add(b["id"])
-                checklist_items[b["id"]] = {it.get("id") for it in b["items"]}
-                item_ids: set[str] = set()
-                for ii, it in enumerate(b["items"]):
-                    iw = f"{bw}.items[{ii}]"
-                    if not need(rep, iw, it, "id", "text"):
-                        continue
-                    check_id(rep, iw, it["id"])
-                    if it["id"] in item_ids:
-                        rep.err(iw, f"duplicate item id '{it['id']}'")
-                    item_ids.add(it["id"])
-                    lint_text(rep, iw + ".text", it.get("text"), imperative=True)
-                    lint_text(rep, iw + ".detail", it.get("detail"))
-                    for r in it.get("refs") or []:
-                        refs_to_check.append((iw, r))
-            elif t == "canvas":
-                if not need(rep, bw, b, "id", "title", "nodes"):
-                    continue
-                check_id(rep, bw, b["id"])
-                if b["id"] in canvas_nodes:
-                    rep.err(bw, f"duplicate canvas id '{b['id']}'")
-                keys: set[str] = set()
-                validate_scope(rep, bw, b, 0, keys, "", False)
-                canvas_nodes[b["id"]] = keys
-                lint_text(rep, bw + ".caption", b.get("caption"))
-            elif t == "diff":
-                if not need(rep, bw, b, "id", "title", "files"):
-                    continue
-                check_id(rep, bw, b["id"])
-                if b["id"] in diffs:
-                    rep.err(bw, f"duplicate diff id '{b['id']}'")
-                diffs[b["id"]] = validate_diff(rep, bw, b)
-                lint_text(rep, bw + ".note", b.get("note"))
-                for ci, c in enumerate(b.get("comments") or []):
-                    comments_to_check.append((f"{bw}.comments[{ci}]", b["id"], c))
+            check_block(f"{sw}.blocks[{bi}]", b, 0)
+
     for where, r in refs_to_check:
         cid, _, key = r.partition("/")
         if cid not in canvas_nodes:

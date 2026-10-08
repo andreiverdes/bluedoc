@@ -239,29 +239,53 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .bp-bar { height: 4px; background: var(--line); border-radius: 99px; overflow: hidden; }
 .bp-bar i { display: block; height: 100%; width: 0; background: var(--accent); border-radius: inherit; transition: width .3s var(--ease); }
 .bp-cl.complete .bp-bar i, .bp-bar.full i { background: var(--ok); }
-.bp-cl-items { margin: 0; padding: 6px 0 8px; list-style: none; }
-.bp-cl-item { padding: 10px 16px; }
+.bp-cl-items { margin: 0; padding: 4px 0 6px; list-style: none; }
 .bp-cl-item + .bp-cl-item { border-top: 1px solid var(--line-soft); }
-.bp-cl-item > label { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; }
 :is(.bp-cl-item, .bd-cm) input { appearance: none; -webkit-appearance: none; width: 18px; height: 18px; margin: 2px 0 0; flex: none; border-radius: 50%; cursor: pointer;
   background: var(--surface); box-shadow: inset 0 0 0 1.5px var(--line-strong); transition: background .15s, box-shadow .15s; }
 :is(.bp-cl-item, .bd-cm) input:hover { box-shadow: inset 0 0 0 1.5px var(--fg-subtle); }
 :is(.bp-cl-item, .bd-cm) input:checked { background: var(--ok) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / 11px no-repeat; box-shadow: none; }
 :is(.bp-cl-item, .bd-cm) input:focus-visible { box-shadow: var(--focus-ring); }
-.bp-cl-num { font: 500 11.5px/1.95 var(--mono); color: var(--fg-subtle); min-width: 22px; flex: none; }
-.bp-cl-text { flex: 1; min-width: 0; font-size: 14.5px; line-height: 1.55; }
-.bp-cl-item.done .bp-cl-text { color: var(--fg-subtle); }
-.bp-cl-item.done .bp-cl-text code { color: var(--fg-subtle); }
-.bp-cl-item > label > .bp-chip { margin-top: 1px; }
-.bp-cl-sub { margin: 6px 0 0 var(--ind); font-size: 14px; }
-.bp-cl-sub details summary { cursor: pointer; color: var(--accent-fg); font-size: 13px; font-weight: 500; width: max-content; }
-.bp-cl-sub details p { margin: 6px 0; color: var(--fg-muted); }
-.bp-cl-verify { margin: 8px 0 0 var(--ind); font-size: 13.5px; color: var(--fg-muted); display: flex; gap: 8px; align-items: flex-start; line-height: 1.5; }
+.bp-cl-num { font: 500 11.5px/1.95 var(--mono); color: var(--fg-subtle); min-width: 22px; flex: none; margin-top: 1px; }
+/* collapsed row: [tick] [num] title / subtitle [chip] [chevron]; the whole row except the tick toggles */
+.bp-cl-row { display: flex; align-items: flex-start; gap: 10px; padding: 0 8px 0 16px; }
+.bp-cl-row > input { margin-top: 13px !important; }
+.bp-cl-head { flex: 1; min-width: 0; display: flex; align-items: flex-start; gap: 10px; padding: 10px 4px 10px 0; border: 0; background: none; text-align: left; color: inherit; font: inherit; border-radius: 8px; }
+.bp-cl-head:focus-visible { box-shadow: var(--focus-ring); }
+.bp-cl-item:not(.empty) .bp-cl-head:hover .bp-cl-text { color: var(--accent-fg); }
+.bp-cl-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.bp-cl-text { font-size: 14.5px; line-height: 1.55; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bp-cl-subt { display: flex; align-items: flex-start; gap: 5px; min-width: 0; font-size: 13px; line-height: 1.5; color: var(--fg-subtle); }
+.bp-cl-subt > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.bp-cl-subt .bd-ic { width: 13px; height: 13px; color: var(--ok); flex: none; margin-top: 3px; }
+.bp-cl-subt code { font-size: .9em; }
+.bp-cl-item.open .bp-cl-text, .bp-cl-item.open .bp-cl-subt > span { white-space: normal; overflow: visible; }
+.bp-cl-item.done .bp-cl-text, .bp-cl-item.done .bp-cl-text code { color: var(--fg-subtle); }
+.bp-cl-head > .bp-chip { margin-top: 2px; flex: none; }
+.bp-cl-chev { width: 16px; height: 16px; flex: none; margin-top: 4px; color: var(--fg-subtle); transition: transform .18s var(--ease); }
+.bp-cl-item.open .bp-cl-chev { transform: rotate(90deg); }
+.bp-cl-item.empty .bp-cl-chev { visibility: hidden; }
+/* expanded body, aligned with the title */
+.bp-cl-body { padding: 0 16px 14px calc(16px + var(--ind)); font-size: 14px; }
+.bp-cl-body[hidden] { display: none; }
+.bp-cl-body > * + * { margin-top: 10px; }
+.bp-cl-detail { color: var(--fg-muted); }
+.bp-cl-detail > :first-child { margin-top: 0; } .bp-cl-detail > :last-child { margin-bottom: 0; }
+.bp-cl-detail p { margin: 6px 0; } .bp-cl-detail ul, .bp-cl-detail ol { margin: 6px 0; padding-left: 20px; }
+.bp-cl-block .bp-table { font-size: 13.5px; }
+.bp-cl.nested { box-shadow: inset 0 0 0 1px var(--line); border-radius: 12px; background: var(--panel); }
+.bp-cl.nested .bp-cl-h { padding: 8px 8px 6px 14px; }
+.bp-cl.nested .bp-cl-h h4 { margin: 0; flex: 1 1 160px; font-size: 13.5px; font-weight: 600; }
+.bp-cl.nested > .bp-bar { margin: 0 14px; }
+.bp-cl.nested .bp-cl-row { padding-left: 14px; }
+.bp-cl.nested .bp-cl-text { font-size: 14px; }
+.bp-cl.nested .bp-cl-body { padding-left: calc(14px + var(--ind)); padding-right: 14px; }
+.bp-cl-verify { font-size: 13.5px; color: var(--fg-muted); display: flex; gap: 8px; align-items: flex-start; line-height: 1.5; }
 .bp-cl-verify .bd-ic { width: 15px; height: 15px; color: var(--ok); margin-top: 2px; }
 .bp-cl-verify b { font-weight: 600; color: var(--ok-fg); margin-right: 4px; }
-.bp-cl-item .bp-code { margin: 8px 0 0 var(--ind); box-shadow: 0 0 0 1px var(--line); }
+.bp-cl-item .bp-code { box-shadow: 0 0 0 1px var(--line); }
 .bp-cl-item .bp-code-h { height: 30px; }
-.bp-refs { margin: 8px 0 0 var(--ind); display: flex; gap: 6px; flex-wrap: wrap; }
+.bp-refs { display: flex; gap: 6px; flex-wrap: wrap; }
 .bp-ref { display: inline-flex; align-items: center; gap: 5px; height: 24px; font: 500 12px var(--sans); border: 0; color: var(--fg-muted); background: var(--inset); box-shadow: inset 0 0 0 1px var(--line); border-radius: 7px; padding: 0 8px; transition: color .12s, box-shadow .12s; }
 .bp-ref .bd-ic { width: 13px; height: 13px; color: var(--accent-fg); }
 .bp-ref:hover { color: var(--accent-fg); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--accent) 45%, transparent); }
@@ -375,6 +399,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .bd-flash { animation: bd-flash 1.4s var(--ease); }
 @keyframes bd-flash { 0%, 30% { box-shadow: var(--shadow-1), inset 3px 0 0 var(--t), 0 0 0 3px color-mix(in oklch, var(--accent) 45%, transparent); } 100% { box-shadow: var(--shadow-1), inset 3px 0 0 var(--t), 0 0 0 3px transparent; } }
 .bd-ln.bd-flash { animation: bd-flash-ln 1.4s var(--ease); }
+.bp-cl-item.bd-flash { animation: bd-flash-ln 1.4s var(--ease); }
 @keyframes bd-flash-ln { 0%, 30% { background: color-mix(in oklch, var(--accent) 28%, transparent); } }
 .bp-ref.code .bd-ic { color: var(--fg-subtle); }
 .bp-ref.code { font-family: var(--mono); font-size: 11.5px; }
@@ -537,8 +562,13 @@ svg.anim .bp-edge.k-async { animation: bp-march 1.6s linear infinite; }
   .bp-tb .flowgrp select { flex: 1 1 80px; min-width: 0; max-width: none; }
   .bp-tb button { width: 28px; }
   .bp-hint { max-width: calc(100% - 110px); }
-  .bp-cl { --ind: 0px; }
-  .bp-cl-item { padding: 10px 12px; }
+  .bp-cl { --ind: 28px; }
+  .bp-cl-row { padding: 0 4px 0 12px; }
+  .bp-cl-body { padding: 0 12px 12px 12px; }
+  .bp-cl-num { display: none; }
+  .bp-cl-head { flex-wrap: wrap; row-gap: 4px; }
+  .bp-cl-main { flex: 1 1 calc(100% - 30px); }
+  .bp-cl-head > .bp-chip { order: 3; margin-top: 0; font-size: 11.5px; padding: 3px 7px; }
   .bp-terms { grid-template-columns: minmax(0, 1fr); }
   .bp-terms dt { border-right: 0; border-bottom: 0; padding-bottom: 2px; background: none; }
   .bp-terms dd { padding-top: 0; }
@@ -603,6 +633,8 @@ html.bd-resizing, html.bd-resizing * { cursor: col-resize !important; user-selec
   .bp-sec { break-inside: avoid-page; }
   .bp-table-wrap, .bp-card, .bp-cl, .bp-code, .bp-terms, .bd-tldr-card, .bd-diff { box-shadow: 0 0 0 1px #ccd; }
   .bd-diff-body { display: block; height: auto; } .bd-files, .bd-diff-tb { display: none; } .bd-pane { overflow: visible; }
+  .bp-cl-body[hidden] { display: block !important; } .bp-cl-chev { display: none; }
+  .bp-cl-text, .bp-cl-subt > span { white-space: normal !important; overflow: visible !important; }
 }
 </style>
 </head>
@@ -905,12 +937,14 @@ function codeBlock(code, lang, title) {
 
 /* ---------- checklists ---------- */
 function itemKey(cid, iid) { return `bp:${docId}:${cid}:${iid}`; }
-function renderChecklist(b) {
+// Each item is a two-line row (title, subtitle) that expands to show everything else: detail, code,
+// the check, canvas refs, code-review links and any nested blocks (tables, sub-checklists, ...).
+function renderChecklist(b, parent) {
   const cid = b.id;
   const numbered = b.numbered !== false;
   const list = h(numbered ? 'ol' : 'ul', { class: 'bp-cl-items' });
   const items = [];
-  const root = h('div', { class: 'bp-cl', id: 'cl-' + cid });
+  const root = h('div', { class: 'bp-cl' + (parent ? ' nested' : ''), id: 'cl-' + cid });
   (b.items || []).forEach((it, i) => {
     const key = itemKey(cid, it.id);
     const authorDone = it.done ? '1' : '0';
@@ -920,35 +954,76 @@ function renderChecklist(b) {
     // values carry no `done`; only a legacy "0" against `done: true` is treated as stale.
     let stored = store.get(key);
     if (stored != null && (stored.length === 2 ? stored[1] !== authorDone : stored === '0' && it.done)) { store.del(key); stored = null; }
-    const cb = h('input', { type: 'checkbox', id: `cb-${cid}-${it.id}`, 'aria-describedby': it.verify ? `vf-${cid}-${it.id}` : null });
+    const cb = h('input', { type: 'checkbox', id: `cb-${cid}-${it.id}`, 'aria-label': 'Done: ' + String(it.text || '').replace(/[`*]/g, '') });
     cb.checked = stored == null ? !!it.done : stored[0] === '1';
-    const li = h('li', { class: 'bp-cl-item', id: `item-${cid}-${it.id}` },
-      h('label', { for: cb.id }, cb, numbered && h('span', { class: 'bp-cl-num' }, String(i + 1).padStart(2, '0')),
-        h('span', { class: 'bp-cl-text', html: inline(it.text) }),
-        it.state && h('span', { class: 'bp-chip ' + (it.stateKind || 'warn') }, it.state)),
-      it.detail && h('div', { class: 'bp-cl-sub' }, h('details', {}, h('summary', {}, 'How'), h('div', { html: md(it.detail) }))),
+    // subtitle: the author's `sub`, else the check (what "done" looks like), else nothing
+    const subMd = it.sub || it.verify;
+    const subIsCheck = !it.sub && !!it.verify;
+    const bodyId = `body-${cid}-${it.id}`;
+    const body = h('div', { class: 'bp-cl-body', id: bodyId, role: 'region', 'aria-label': String(it.text || '').replace(/[`*]/g, '') },
+      it.detail && h('div', { class: 'bp-cl-detail', html: md(it.detail) }),
       it.code && codeBlock(it.code, it.lang || 'sh'),
-      it.verify && h('div', { class: 'bp-cl-verify', id: `vf-${cid}-${it.id}` }, ic('check'), h('span', {}, h('b', {}, 'Check'), h('span', { html: inline(it.verify) }))),
+      (it.blocks || []).map(kb => h('div', { class: 'bp-cl-block' }, kb.type === 'checklist' ? renderChecklist(kb, { cid, iid: it.id }) : (RENDER[kb.type] || RENDER.text)(kb))),
+      it.verify && !subIsCheck && h('div', { class: 'bp-cl-verify' }, ic('check'), h('span', {}, h('b', {}, 'Check'), h('span', { html: inline(it.verify) }))),
       it.refs && it.refs.length && h('div', { class: 'bp-refs' }, it.refs.map(r => h('button', { type: 'button', class: 'bp-ref', onclick: () => focusNode(r) }, ic('target'), refLabel(r)))));
+    body.hidden = 'until-found';  // find-in-page still reaches collapsed content where supported
+    const head = h('button', { type: 'button', class: 'bp-cl-head', 'aria-expanded': 'false', 'aria-controls': bodyId },
+      numbered && h('span', { class: 'bp-cl-num' }, String(i + 1).padStart(2, '0')),
+      h('span', { class: 'bp-cl-main' },
+        h('span', { class: 'bp-cl-text', html: inline(it.text) }),
+        subMd && h('span', { class: 'bp-cl-subt' + (subIsCheck ? ' check' : '') }, subIsCheck && ic('check'), h('span', { html: inline(subMd) }))),
+      it.state && h('span', { class: 'bp-chip ' + (it.stateKind || 'warn') }, it.state),
+      ic('chev', 'bp-cl-chev'));
+    const li = h('li', { class: 'bp-cl-item', id: `item-${cid}-${it.id}` }, h('div', { class: 'bp-cl-row' }, cb, head), body);
+    const entryItem = { it, cb, li, cid, body, head };
+    entryItem.setOpen = open => {
+      li.classList.toggle('open', open); head.setAttribute('aria-expanded', String(open));
+      if (open) body.removeAttribute('hidden'); else body.hidden = 'until-found';
+    };
+    entryItem.refresh = () => {
+      // nothing to expand: the row is just the tick's label, and keyboard focus stays on the tick
+      const empty = !body.childElementCount;
+      li.classList.toggle('empty', empty);
+      if (empty) { head.removeAttribute('aria-expanded'); head.removeAttribute('aria-controls'); head.tabIndex = -1; head.setAttribute('aria-hidden', 'true'); }
+      else { head.setAttribute('aria-expanded', String(li.classList.contains('open'))); head.setAttribute('aria-controls', bodyId); head.removeAttribute('tabindex'); head.removeAttribute('aria-hidden'); }
+    };
+    head.addEventListener('click', () => {
+      if (li.classList.contains('empty')) { cb.click(); return; }   // nothing to show: the row ticks
+      entryItem.setOpen(!li.classList.contains('open'));
+    });
+    body.addEventListener('beforematch', () => entryItem.setOpen(true));
+    entryItem.refresh();
     li.classList.toggle('done', cb.checked);
     cb.addEventListener('change', () => {
       if (cb.checked === !!it.done) store.del(key); else store.set(key, (cb.checked ? '1' : '0') + authorDone);
       li.classList.toggle('done', cb.checked); update();
     });
-    items.push({ it, cb, li });
-    ITEMS[`${cid}/${it.id}`] = { it, cb, li, cid };
+    items.push(entryItem);
+    ITEMS[`${cid}/${it.id}`] = entryItem;
     for (const r of it.refs || []) (NODE_REFS[r] ||= []).push({ checklist: b, item: it, li });
     list.append(li);
   });
   const count = h('span', { class: 'bp-cl-count' });
   const bar = h('div', { class: 'bp-bar' }, h('i'));
+  const expandBtn = h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => {
+    const open = !items.every(x => x.li.classList.contains('empty') || x.li.classList.contains('open'));
+    items.forEach(x => { if (!x.li.classList.contains('empty')) x.setOpen(open); });
+    paintExpand();
+  } });
+  const paintExpand = () => {
+    const all = items.filter(x => !x.li.classList.contains('empty'));
+    const open = all.length && all.every(x => x.li.classList.contains('open'));
+    expandBtn.replaceChildren(ic(open ? 'up' : 'down'), open ? 'Collapse' : 'Expand');
+    expandBtn.hidden = !all.length;
+  };
+  list.addEventListener('click', e => { if (e.target.closest('.bp-cl-head')) paintExpand(); });
   root.append(h('div', { class: 'bp-cl-h' },
-    ic('list'), h('h3', {}, b.title || 'Checklist'), count,
-    h('span', { class: 'tools' },
-      h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => copyText(checklistMd(entry), 'Copied checklist as Markdown') }, ic('copy'), 'Copy'),
-      h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => { if (!confirm('Reset this checklist?')) return; items.forEach(x => { store.del(itemKey(cid, x.it.id)); x.cb.checked = !!x.it.done; x.li.classList.toggle('done', x.cb.checked); }); update(); } }, ic('reset'), 'Reset'))),
+    ic('list'), h(parent ? 'h4' : 'h3', {}, b.title || 'Checklist'), count,
+    h('span', { class: 'tools' }, expandBtn,
+      !parent && h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => copyText(checklistMd(entry), 'Copied checklist as Markdown') }, ic('copy'), 'Copy'),
+      !parent && h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => { if (!confirm('Reset this checklist?')) return; resetChecklist(entry); } }, ic('reset'), 'Reset'))),
     bar, list);
-  const entry = { b, items, root, count, bar, sideRow: null };
+  const entry = { b, items, root, count, bar, sideRow: null, parent, paintExpand };
   function update() {
     const n = items.filter(x => x.cb.checked).length;
     count.textContent = `${n} of ${items.length}`;
@@ -962,12 +1037,30 @@ function renderChecklist(b) {
   CHECKLISTS.push(entry);
   return root;
 }
-function checklistMd(c) {
+function resetChecklist(c) {
+  c.items.forEach(x => { store.del(itemKey(c.b.id, x.it.id)); x.cb.checked = !!x.it.done; x.li.classList.toggle('done', x.cb.checked); });
+  CHECKLISTS.filter(n => n.parent && n.parent.cid === c.b.id).forEach(resetChecklist);
+  c.update();
+}
+function openItem(x) {
+  // open the item and every collapsed item it sits inside
+  for (let el = x.li; el; el = el.parentElement && el.parentElement.closest('.bp-cl-item')) {
+    const owner = Object.values(ITEMS).find(y => y.li === el);
+    if (owner && !owner.li.classList.contains('empty')) owner.setOpen(true);
+  }
+  CHECKLISTS.forEach(c => c.paintExpand());
+}
+function checklistMd(c, indent = '') {
+  const lines = c.items.map(x => {
+    const sub = CHECKLISTS.filter(n => n.parent && n.parent.cid === c.b.id && n.parent.iid === x.it.id);
+    return `${indent}- [${x.cb.checked ? 'x' : ' '}] ${x.it.text}` + sub.map(n => '\n' + checklistMd(n, indent + '  ').trimEnd()).join('');
+  });
+  if (indent) return lines.join('\n') + '\n';
   const n = c.items.filter(x => x.cb.checked).length;
-  return `## ${c.b.title || c.b.id} (${n}/${c.items.length})\n` + c.items.map(x => `- [${x.cb.checked ? 'x' : ' '}] ${x.it.text}`).join('\n') + '\n';
+  return `## ${c.b.title || c.b.id} (${n}/${c.items.length})\n` + lines.join('\n') + '\n';
 }
 function allChecklistsMd() {
-  return `# ${DOC.title} — progress ${new Date().toISOString().slice(0, 10)}\n\n` + CHECKLISTS.map(checklistMd).join('\n');
+  return `# ${DOC.title} — progress ${new Date().toISOString().slice(0, 10)}\n\n` + CHECKLISTS.filter(c => !c.parent).map(c => checklistMd(c)).join('\n');
 }
 function updateOverall() {
   if (!CHECKLISTS.length) return;
@@ -1001,7 +1094,7 @@ const toggle = h('button', { type: 'button', class: 'bp-btn bp-side-toggle', 'ar
 const tocWrap = h('div', { class: 'bp-side-toc' }, h('div', { class: 'bd-rail-sec' }, h('h4', { class: 'bd-rail-h' }, 'Contents'), h('ol', {}, tocLinks.map(a => h('li', {}, a)))));
 side.append(toggle, tocWrap);
 if (CHECKLISTS.length) {
-  const rows = CHECKLISTS.map(c => {
+  const rows = CHECKLISTS.filter(c => !c.parent).map(c => {
     const cnt = h('span', { class: 'c' }); const bar = h('div', { class: 'bp-bar' }, h('i'));
     const row = h('a', { class: 'bp-prog-row', href: '#cl-' + c.b.id }, h('span', { class: 't' }, h('span', {}, c.b.title || c.b.id), cnt), bar);
     c.sideRow = () => {
@@ -1017,15 +1110,20 @@ if (CHECKLISTS.length) {
       h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => copyText(allChecklistsMd(), 'Copied progress as Markdown') }, ic('copy'), 'Copy progress'),
       h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => {
         if (!confirm('Reset all checklists in this document?')) return;
-        CHECKLISTS.forEach(c => c.items.forEach(x => { store.del(itemKey(c.b.id, x.it.id)); x.cb.checked = !!x.it.done; x.li.classList.toggle('done', x.cb.checked); }));
-        CHECKLISTS.forEach(c => c.update());
+        CHECKLISTS.filter(c => !c.parent).forEach(resetChecklist);
       } }, ic('reset'), 'Reset')))));
   CHECKLISTS.forEach(c => c.update());
 }
 Object.values(DIFFS).forEach(initDiff);
+CHECKLISTS.forEach(c => c.paintExpand());   // after code-review links may have filled empty rows
 const codeHash = () => { if (location.hash.startsWith('#code:')) openCodeLink(decodeURIComponent(location.hash.slice(6))); };
 if (location.hash.startsWith('#code:')) { if ('scrollRestoration' in history) history.scrollRestoration = 'manual'; setTimeout(codeHash, 300); }
 addEventListener('hashchange', codeHash);
+// #item-<checklist>-<item> (from canvases, tables, shared links) opens that row before the browser scrolls to it
+const itemFromHash = hash => { const el = hash.startsWith('#item-') && document.getElementById(decodeURIComponent(hash.slice(1))); return el && Object.values(ITEMS).find(x => x.li === el); };
+const openHashItem = () => { const x = itemFromHash(location.hash); if (x) { openItem(x); x.li.scrollIntoView({ block: 'center' }); flash(x.li); } };
+addEventListener('hashchange', openHashItem);
+if (location.hash.startsWith('#item-')) setTimeout(openHashItem, 100);
 if ('IntersectionObserver' in window) {
   const io = new IntersectionObserver(es => {
     for (const e of es) if (e.isIntersecting) tocLinks.forEach(a => a.classList.toggle('on', a.getAttribute('href') === '#' + e.target.id));
@@ -1198,7 +1296,7 @@ function commentCard(d, c) {
     h('div', { class: 'hd' }, tick ? h('label', { class: 'tk' }, tick) : ic('msg'), h('div', { class: 'tt', html: inline(title) }),
       ((it && it.state) || c.state) && h('span', { class: 'bp-chip ' + kind }, c.state || it.state)),
     h('div', { class: 'mt' }, h('span', {}, where),
-      src && h('a', { href: `#item-${src.cid}-${it.id}`, onclick: e => { e.preventDefault(); src.li.scrollIntoView({ behavior: REDUCE ? 'auto' : 'smooth', block: 'center' }); flash(src.li); } }, 'Checklist item', ic('chev'))),
+      src && h('a', { href: `#item-${src.cid}-${it.id}`, onclick: e => { e.preventDefault(); openItem(src); src.li.scrollIntoView({ behavior: REDUCE ? 'auto' : 'smooth', block: 'center' }); flash(src.li); } }, 'Checklist item', ic('chev'))),
     detail && h('details', {}, h('summary', {}, 'Details'), h('div', { class: 'bd', html: md(detail) })));
   return card;
 }
@@ -1315,10 +1413,11 @@ function initDiff(d) {
   // "View in code" on each checklist item a comment points at
   for (const c of d.comments) {
     const src = c.item && ITEMS[c.item]; if (!src) continue;
-    let refs = src.li.querySelector(':scope > .bp-refs');
-    if (!refs) { refs = h('div', { class: 'bp-refs' }); src.li.append(refs); }
+    let refs = src.body.querySelector(':scope > .bp-refs');
+    if (!refs) { refs = h('div', { class: 'bp-refs' }); src.body.append(refs); }
     const label = c.file ? baseName(c.file) + (c.line ? ':' + c.line : '') : (d.b.title || d.id);
     refs.append(h('button', { type: 'button', class: 'bp-ref code', title: 'Show this comment in the code' + (c.file ? ': ' + c.file : ''), onclick: () => openComment(d, c, true) }, ic('code'), label));
+    src.refresh();
   }
   d.sel = null;
   paintFiles(d);
