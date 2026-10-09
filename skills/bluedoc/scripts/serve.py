@@ -7,7 +7,7 @@ Usage:
 Prints the page URL, then waits. When the reader presses Send in the page, the reply is
 printed to stdout as Markdown and saved next to the page:
   <doc>.reply.md    the same Markdown as Copy progress (picks, ticks, comments, message)
-  <doc>.reply.json  {"doc", "title", "path", "at", "message", "items": [{checklist, item, text,
+  <doc>.reply.json  {"doc", "rev", "title", "path", "at", "message", "items": [{checklist, item, text,
                      choice, recommend | done, note?}], "markdown"}
 Each Send overwrites both files. --once exits after the first reply, so an agent can run
 this in the background and treat the exit as "the reader answered".

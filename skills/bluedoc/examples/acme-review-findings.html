@@ -60,11 +60,12 @@
   --mono: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   --ease: cubic-bezier(0.23, 1, 0.32, 1);
   --rail: 204px; --content-w: 920px; --gap: 32px; --bar-h: 52px;
+  --top-h: calc(var(--bar-h) + var(--rv-h, 0px));   /* app bar plus the revision strip, when shown */
 }
 :root[data-theme="light"] { color-scheme: light; }
 :root[data-theme="dark"] { color-scheme: dark; }
 * { box-sizing: border-box; }
-html { scroll-behavior: smooth; scroll-padding-top: calc(var(--bar-h) + 16px); }
+html { scroll-behavior: smooth; scroll-padding-top: calc(var(--top-h) + 16px); }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 body { margin: 0; background: var(--canvas); color: var(--fg); font: 15px/1.6 var(--sans); -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; font-feature-settings: "cv11", "ss01"; }
 a { color: var(--accent-fg); text-decoration-color: color-mix(in oklch, currentColor 35%, transparent); text-underline-offset: 2px; }
@@ -101,9 +102,9 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .bd-head { grid-area: head; padding-top: 56px; min-width: 0; }
 .bd-tldr { grid-area: tldr; min-width: 0; }
 .bd-shell > main { grid-area: main; min-width: 0; }
-.bp-side { grid-area: side; justify-self: end; width: var(--rail); position: sticky; top: calc(var(--bar-h) + 20px); align-self: start;
+.bp-side { grid-area: side; justify-self: end; width: var(--rail); position: sticky; top: calc(var(--top-h) + 20px); align-self: start;
   margin-top: 60px; max-height: calc(100vh - var(--bar-h) - 40px); overflow: auto; font-size: 13.5px; scrollbar-width: thin; }
-.bd-meta { grid-area: meta; justify-self: start; width: var(--rail); position: sticky; top: calc(var(--bar-h) + 20px); align-self: start;
+.bd-meta { grid-area: meta; justify-self: start; width: var(--rail); position: sticky; top: calc(var(--top-h) + 20px); align-self: start;
   margin-top: 60px; max-height: calc(100vh - var(--bar-h) - 40px); overflow: auto; font-size: 13px; scrollbar-width: thin; }
 
 /* header */
@@ -175,7 +176,74 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .bd-send .how { margin-top: 12px; font-size: 12.5px; color: var(--fg-subtle); }
 .bd-send .ft { display: flex; justify-content: flex-end; gap: 8px; margin: 0; padding: 14px 20px 18px; }
 .bd-send .ft .bp-btn { height: 32px; padding: 0 14px; font-size: 13px; }
-.bd-send .ft .bp-btn[hidden] { display: none; }
+.bd-send .ft .bp-btn[hidden], .bd-send-btn[hidden] { display: none; }
+/* revisions: app-bar button, strip under the bar, dialog, change marks */
+.bd-rev-btn { height: 30px; padding: 0 10px; font: 500 12.5px var(--mono); }
+.bd-rev-btn.old { color: var(--warn-fg); background: var(--warn-tint); box-shadow: none; }
+.bd-rev-btn.old .bd-ic { color: currentColor; }
+.bd-rev-link { border: 0; padding: 0; background: none; font: inherit; color: var(--accent-fg); cursor: pointer; text-decoration: underline; text-decoration-color: color-mix(in oklch, currentColor 35%, transparent); text-underline-offset: 2px; }
+.bd-revbar { position: sticky; top: var(--bar-h); z-index: 39; background: var(--panel); box-shadow: inset 0 -1px 0 var(--line); font-size: 13.5px; }
+.bd-revbar.cmp { background: color-mix(in oklch, var(--accent) 10%, var(--canvas)); }
+.bd-revbar.old { background: color-mix(in oklch, var(--warn) 14%, var(--canvas)); }
+.bd-revbar .in { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; max-width: 1180px; margin: 0 auto; padding: 7px 20px; }
+.bd-revbar .in > .bd-ic { width: 16px; height: 16px; color: var(--fg-muted); flex: none; }
+.bd-revbar .t { min-width: 0; }
+.bd-revbar .sp { flex: 1; }
+.bd-revbar .pos { font: 500 12px var(--mono); color: var(--fg-muted); min-width: 4.5em; text-align: center; }
+.bd-revbar .k { margin-left: 6px; font-weight: 600; }
+.bd-revbar .k.add { color: var(--ok-fg); } .bd-revbar .k.mod { color: var(--warn-fg); } .bd-revbar .k.del { color: var(--risk-fg); }
+.bd-revbar .bp-btn { height: 28px; }
+.bd-revs .rv-list { list-style: none; margin: 0 20px; padding: 0; max-height: 52vh; overflow: auto; }
+.bd-revs .rv { padding: 12px 0; border-top: 1px solid var(--line-soft); }
+.bd-revs .rv:first-child { border-top: 0; }
+.bd-revs .rv-h { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.bd-revs .rv-h b { font: 600 14px var(--mono); }
+.bd-revs .rv-h .d { color: var(--fg-muted); font-size: 13px; }
+.bd-revs .rv-notes { margin: 6px 0 0; padding-left: 18px; font-size: 13.5px; color: var(--fg-muted); }
+.bd-revs .rv-act { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.bd-revs .rv-act .bp-btn { text-decoration: none; }
+.bd-revs .rv-cmp { flex-wrap: wrap; align-items: center; border-top: 1px solid var(--line); margin-top: 6px; }
+.bd-revs .rv-cmp label { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--fg-muted); }
+.rv-sel { height: 32px; border: 0; border-radius: 9px; padding: 0 8px; font: 500 12.5px var(--sans); color: var(--fg); background: var(--inset); box-shadow: inset 0 0 0 1px var(--line); }
+.bd-chg { --chg: var(--warn); }
+.bd-chg-add { --chg: var(--ok); } .bd-chg-del { --chg: var(--risk); }
+.bp-block.bd-chg, .bd-chg-wrap { box-shadow: -10px 0 0 -7px var(--chg); }
+.bp-sec.bd-ghost { padding-left: 14px; box-shadow: inset 3px 0 0 var(--chg); }
+.bp-cl-item.bd-chg { box-shadow: inset 3px 0 0 var(--chg); }
+tr.bd-chg > td:first-child { box-shadow: inset 3px 0 0 var(--chg); }
+tr.bd-chg-add > td { background: color-mix(in oklch, var(--ok-tint) 70%, transparent); }
+td.bd-cell-mod { background: color-mix(in oklch, var(--warn-tint) 70%, transparent); }
+.bd-chg-flash { animation: bd-chg-flash 1.4s var(--ease); }
+@keyframes bd-chg-flash { 0%, 30% { outline: 3px solid color-mix(in oklch, var(--chg) 55%, transparent); outline-offset: 4px; } 100% { outline: 3px solid transparent; outline-offset: 4px; } }
+.bd-chg-tag { display: inline-flex; align-items: center; flex: none; height: 20px; padding: 0 7px; border-radius: 6px; font: 600 11px/1 var(--sans); letter-spacing: .02em; text-transform: uppercase; vertical-align: middle; }
+.bd-chg-tag.add { color: var(--ok-fg); background: var(--ok-tint); }
+.bd-chg-tag.mod { color: var(--warn-fg); background: var(--warn-tint); }
+.bd-chg-tag.del { color: var(--risk-fg); background: var(--risk-tint); }
+.bp-cl-head > .bd-chg-tag { margin-top: 2px; }
+.bp-sec > h2 > .bd-chg-tag { margin-left: 4px; }
+.bd-chg-hd { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 13px; font-weight: 600; color: var(--fg-muted); }
+.bd-chg-hd .x { font-weight: 400; }
+.bd-chgbox { margin: 10px 0 12px; padding: 10px 14px; border-radius: 10px; background: color-mix(in oklch, var(--warn-tint) 45%, var(--surface)); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--warn) 30%, transparent); font-size: 13.5px; }
+.bd-chgbox summary { cursor: pointer; font-weight: 600; font-size: 12.5px; color: var(--warn-fg); }
+.bd-chgbox dl { display: grid; grid-template-columns: minmax(80px, max-content) 1fr; gap: 6px 14px; margin: 8px 0 2px; }
+.bd-chgbox dt { color: var(--fg-muted); font-weight: 500; }
+.bd-chgbox dd { margin: 0; min-width: 0; }
+@media (max-width: 600px) { .bd-chgbox dl { grid-template-columns: 1fr; gap: 2px; } .bd-chgbox dd { margin-bottom: 6px; } }
+.bd-wd { white-space: pre-wrap; overflow-wrap: anywhere; }
+.bd-wd ins { text-decoration: none; color: var(--ok-fg); background: var(--ok-tint); border-radius: 3px; }
+.bd-wd del { color: var(--risk-fg); background: var(--risk-tint); border-radius: 3px; text-decoration-thickness: 1px; }
+.bd-ghost { opacity: .78; }
+.bd-ghost .bp-cl-text, .bp-sec.bd-ghost > h2 > span:first-child { text-decoration: line-through; text-decoration-color: var(--risk); }
+.bd-ghost .bd-wd { font-size: 13.5px; color: var(--fg-muted); }
+.bd-revnotes { margin-top: 14px; padding: 12px 16px; border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-1); font-size: 14px; }
+.bd-revnotes ul { margin: 6px 0 0; padding-left: 18px; }
+.bd-revnotes .r { font: 600 11.5px var(--mono); color: var(--fg-muted); margin-right: 8px; }
+.bd-chg-wrap { margin-top: 14px; }
+.bp-node.chg-add { filter: drop-shadow(0 0 5px #3fd17f) drop-shadow(0 0 2px #3fd17f); }
+.bp-node.chg-mod { filter: drop-shadow(0 0 5px #f5b544) drop-shadow(0 0 2px #f5b544); }
+@media (max-width: 900px) { .bd-rev-btn .l { display: none; } .bd-rev-btn { padding: 0 8px; } }
+@media (max-width: 600px) { .bd-revbar .in { padding: 6px 12px; gap: 2px 6px; font-size: 13px; } .bd-revbar .in > .bd-ic { display: none; } .bd-revbar .t { flex: 1 1 100%; } }
+@media print { .bd-revbar .bd-ibtn, .bd-revbar .bp-btn, .bd-rev-btn { display: none !important; } .bd-revbar { position: static; } }
 /* the reader's comment on an item */
 .bp-note { display: flex; align-items: flex-start; gap: 8px; }
 .bp-note > .bd-ic { flex: none; width: 15px; height: 15px; margin-top: 8px; color: var(--fg-subtle); }
@@ -192,7 +260,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .bp-side-toggle { display: none !important; }
 
 /* sections */
-.bp-sec { padding-top: 56px; scroll-margin-top: calc(var(--bar-h) + 12px); }
+.bp-sec { padding-top: 56px; scroll-margin-top: calc(var(--top-h) + 12px); }
 .bp-sec + .bp-sec { margin-top: 56px; border-top: 1px solid var(--line); }
 .bp-sec > h2 { display: flex; align-items: center; gap: 12px; font: 650 23px/1.25 var(--sans); letter-spacing: -.016em; margin: 0 0 6px; text-wrap: balance; }
 .bp-sec > h2 .n { flex: none; display: inline-grid; place-items: center; min-width: 30px; height: 26px; padding: 0 6px; border-radius: 8px; font: 600 11.5px/1 var(--mono); color: var(--fg-muted);
@@ -261,7 +329,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .bp-card ul { margin: 4px 0; padding-left: 18px; }
 
 /* checklists: HorizonUI PlanChecklist + ProgressBar */
-.bp-cl { --ind: 60px; background: var(--surface); border-radius: 14px; box-shadow: var(--shadow-1); overflow: hidden; scroll-margin-top: calc(var(--bar-h) + 16px); }
+.bp-cl { --ind: 60px; background: var(--surface); border-radius: 14px; box-shadow: var(--shadow-1); overflow: hidden; scroll-margin-top: calc(var(--top-h) + 16px); }
 .bp-cl:has(ul.bp-cl-items) { --ind: 28px; }
 .bp-cl-h { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; padding: 12px 10px 10px 16px; }
 .bp-cl-h > .bd-ic { color: var(--fg-subtle); }
@@ -372,7 +440,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .t-k { color: var(--syn-keyword); } .t-s { color: var(--syn-string); } .t-n { color: var(--syn-number); } .t-c { color: var(--syn-comment); font-style: italic; }
 .t-f { color: var(--syn-function); } .t-t { color: var(--syn-type); } .t-K { color: var(--syn-constant); } .t-p { color: var(--syn-field); }
 .t-a { color: var(--syn-annotation); } .t-g { color: var(--syn-tag); }
-.bd-diff { --pane-h: min(74vh, 780px); background: var(--surface); border-radius: 14px; box-shadow: var(--shadow-1); overflow: clip; scroll-margin-top: calc(var(--bar-h) + 16px); }
+.bd-diff { --pane-h: min(74vh, 780px); background: var(--surface); border-radius: 14px; box-shadow: var(--shadow-1); overflow: clip; scroll-margin-top: calc(var(--top-h) + 16px); }
 .bd-diff:fullscreen { --pane-h: calc(100vh - 104px); border-radius: 0; }
 .bd-diff-h { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 12px 12px 10px 16px; }
 .bd-diff-h > .bd-ic { color: var(--fg-subtle); }
@@ -655,8 +723,8 @@ svg.anim .bp-edge.k-async { animation: bp-march 1.6s linear infinite; }
     background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") right 9px center / 14px no-repeat;
     box-shadow: inset 0 0 0 1px var(--line-strong); appearance: none; -webkit-appearance: none; }
   .bd-pane { overflow: visible; }
-  .bd-fh { top: var(--bar-h); flex-wrap: wrap; row-gap: 4px; }
-  .bd-diff { --fh-top: var(--bar-h); }
+  .bd-fh { top: var(--top-h); flex-wrap: wrap; row-gap: 4px; }
+  .bd-diff { --fh-top: var(--top-h); }
   .bd-fh .p { flex: 1 1 100%; }
   .bd-ln { grid-template-columns: 2.9em 2.9em 1.2em minmax(0, 1fr); font-size: 11.5px; }
   .bd-ln > .o, .bd-ln > .n { font-size: 10.5px; padding-right: .5em; }
@@ -695,7 +763,7 @@ html.bd-resizing, html.bd-resizing * { cursor: col-resize !important; user-selec
   :root[data-layout="wide"] .bd-meta { position: static; width: auto; max-height: none; overflow: visible; margin-top: 20px; justify-self: stretch;
     display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px 24px; padding: 16px 8px 14px; border-radius: 14px; background: var(--panel); box-shadow: inset 0 0 0 1px var(--line); }
   :root[data-layout="wide"] .bd-rail-sec + .bd-rail-sec { margin-top: 0; }
-  :root[data-layout="wide"] .bp-side { position: fixed; z-index: 45; top: calc(var(--bar-h) + 10px); left: 12px; width: 268px; max-height: calc(100vh - var(--bar-h) - 24px);
+  :root[data-layout="wide"] .bp-side { position: fixed; z-index: 45; top: calc(var(--top-h) + 10px); left: 12px; width: 268px; max-height: calc(100vh - var(--bar-h) - 24px);
     margin: 0; padding: 14px 8px 8px; border-radius: 14px; background: var(--surface); box-shadow: var(--shadow-3);
     visibility: hidden; opacity: 0; transform: translateX(-10px); transition: opacity .16s var(--ease), transform .16s var(--ease), visibility 0s .16s; }
   :root[data-layout="wide"] .bp-side.drawer { visibility: visible; opacity: 1; transform: none; transition: opacity .16s var(--ease), transform .16s var(--ease); }
@@ -719,11 +787,35 @@ html.bd-resizing, html.bd-resizing * { cursor: col-resize !important; user-selec
 <body>
 <div id="bp-app"><noscript>This bluedoc page needs JavaScript to render. The source data is in the bp-doc script element.</noscript></div>
 <div class="bp-toast" id="bp-toast" role="status"></div>
-<script type="application/json" id="bp-doc">{"id":"acme-review-findings-2026-03","title":"Review findings: acme-shop #412 and #415","subtitle":"The 11 review comments on two open PRs, each next to its code. Pick what to do with each; my recommendation is starred.","meta":{"org":"Acme Corp","kind":"Review","rev":"A","date":"2026-03-14"},"state":[{"label":"11 review comments","kind":"warn"},{"label":"6 fix in the PR","kind":"warn"},{"label":"2 follow-up tickets","kind":"info"},{"label":"2 decline","kind":"todo"},{"label":"1 resolves when a fix lands","kind":"info"}],"links":[{"label":"acme-shop #412 (bulk tiers)","href":"https://github.com/acme/acme-shop/pull/412"},{"label":"acme-shop #415 (PayCo retry)","href":"https://github.com/acme/acme-shop/pull/415"},{"label":"PRICING-88 spec","href":"https://example.com/acme/tickets/PRICING-88"}],"tldr":"Fix 6 in the PRs, ticket 2, decline 2; 1 resolves itself. Two are real bugs these PRs introduce: #412 gives no discount at exactly 10 or 50 units, and #415 can authorize a card twice when PayCo times out after accepting. Both are one-line fixes; neither PR should merge before them.","sections":[{"id":"summary","title":"Summary","lead":"Each finding has its options under it, with my recommendation starred. Pick one per finding, comment where you disagree, then press **Send to agent**.","blocks":[{"type":"table","columns":["PR","Finding","Size","Recommendation"],"rows":[["#412","[`tierFor` gives no tier at exactly 10 or 50 units](#item-t412-tier-boundary)","blocker","Fix in PR (1 line)"],["#412","[Tiered line totals are fractional cents](#item-t412-float-cents)","major","Fix in PR (1 line)"],["#412","[`bulkSavingsCents` also counts the coupon](#item-t412-savings-coupon)","major","Fix in PR"],["#412","[Tier tests stop short of both thresholds](#item-t412-boundary-tests)","minor","Fix in PR (4 cases)"],["#412","[`docs/pricing.md` still says there are no bulk discounts](#item-t412-docs-stale)","minor","Ticket"],["#412","[Turn `TIERS` into a `Map`](#item-t412-tiers-map)","nit","Decline"],["#412","[PR description says every tier is tested](#item-t412-pr-claims)","nit","After the boundary tests"],["#415","[A retry can authorize the card twice](#item-t415-double-auth)","blocker","Fix in PR (1 header)"],["#415","[Card declines are retried too](#item-t415-retry-4xx)","major","Fix in PR"],["#415","[Worst case blocks checkout for 31.5 s](#item-t415-latency)","minor","Ticket"],["#415","[Name the 250 ms backoff](#item-t415-backoff-const)","nit","Decline"]]},{"type":"callout","kind":"note","md":"Two review agents read the PRs at the heads below and posted with your `gh` login, so every comment on GitHub reads as yours. I checked each finding against the code before recommending."}]},{"id":"pr-412","title":"#412 · bulk discount tiers","lead":"3 bugs this PR introduces, 1 test gap, 3 smaller comments. Diff: `main` `89efd8e` → head `62ccc86`, limited to the commented files.","blocks":[{"type":"checklist","id":"t412","title":"Findings · #412","numbered":false,"items":[{"id":"tier-boundary","text":"`tierFor` gives no tier at exactly 10 or 50 units","sub":"Recommend fix in PR: The spec says \"10 or more\"; `>` drops both thresholds. One character.","state":"blocker","stateKind":"risk","detail":"**Reviewer:** `TIERS.find((t) => qty > t.minQty)` excludes the threshold, so 10 units get no discount and 50 units get 5 % instead of 10 %.\n\n**My reasoning:** the file header (`src/pricing/tiers.ts:2`) quotes PRICING-88 as \"10 or more … 50 or more\". `lineTotal({qty: 10, unitCents: 100})` returns 1000, the undiscounted price. The fix is one character in a file this PR adds.\n\n**Fix:** `TIERS.find((t) => qty >= t.minQty)` at `src/pricing/tiers.ts:17`.\n\n**Verify:** `tierFor(10)?.percent === 5` and `tierFor(50)?.percent === 10` (the boundary tests below).","choices":[{"id":"fix","label":"Fix in PR"},{"id":"ticket","label":"Ticket"},{"id":"decline","label":"Decline"}],"recommend":"fix"},{"id":"float-cents","text":"Tiered line totals are fractional cents","sub":"Recommend fix in PR: Without a coupon the fraction reaches VAT and the payment request.","state":"major","stateKind":"warn","detail":"**Reviewer:** `gross * (1 - tier.percent / 100)` returns 3163.5 for 3 × 1110 cents at 5 %.\n\n**My reasoning:** `applyCoupon` rounds only when a coupon is present (`src/pricing/discounts.ts:14`). Without one, the subtotal stays fractional and `addTax` rounds once more, so line and order totals can disagree by a cent. Every other money path in the repo uses integer cents (`docs/pricing.md:3`).\n\n**Fix:** `Math.round(gross * (100 - tier.percent) / 100)`, the form `applyCoupon` already uses.\n\n**Verify:** `Number.isInteger(lineTotal({qty: 3, unitCents: 1110}))`.","choices":[{"id":"fix","label":"Fix in PR"},{"id":"ticket","label":"Ticket"},{"id":"decline","label":"Decline"}],"recommend":"fix"},{"id":"savings-coupon","text":"`bulkSavingsCents` also counts the coupon","sub":"Recommend fix in PR: A 15 % coupon would show on the receipt as a bulk saving.","state":"major","stateKind":"warn","detail":"**Reviewer:** savings are gross-with-tax minus the final total, so the coupon counts as a bulk saving.\n\n**My reasoning:** `src/orders/createOrder.ts:16` subtracts `totalCents`, which already includes the coupon. The field name promises the tier saving, so every caller will read it that way; with a coupon it isn't.\n\n**Fix:** `addTax(gross) - addTax(sum of lineTotal)`, before the coupon.\n\n**Verify:** a 20-unit order with a 15 % coupon reports savings equal to 5 % of gross plus VAT.","choices":[{"id":"fix","label":"Fix in PR"},{"id":"ticket","label":"Ticket"},{"id":"decline","label":"Decline"}],"recommend":"fix"},{"id":"boundary-tests","text":"Tier tests stop short of both thresholds","sub":"Recommend fix in PR: The cases use 5 and 60 units, so they pass with the off-by-one.","state":"minor","stateKind":"info","detail":"**Reviewer:** the tests never touch a threshold.\n\n**My reasoning:** the three cases (`test/tiers.test.ts:5-15`) use 5 and 60 units. Neither sits on a threshold, so all three pass with the `>` bug present.\n\n**Fix:** four `it` cases in `test/tiers.test.ts`: 9 → none, 10 → 5 %, 49 → 5 %, 50 → 10 %.\n\n**Verify:** the 10 and 50 cases fail on the current head and pass after the `>=` fix.","choices":[{"id":"fix","label":"Fix in PR"},{"id":"ticket","label":"Ticket"},{"id":"decline","label":"Decline"}],"recommend":"fix"},{"id":"docs-stale","text":"`docs/pricing.md` still says there are no bulk discounts","sub":"Recommend ticket: The pricing spec needs a tier step; the PR is right without it.","state":"minor","stateKind":"info","detail":"**Reviewer:** `docs/pricing.md:11` still says \"There are no bulk discounts\".\n\n**My reasoning:** the doc is the pricing spec for every flow, and its order of operations (lines 5-9) needs a tier step, which is a product decision for PRICING-88's owner. This PR doesn't touch the file, and the code is right without it.\n\n**Fix:** a ticket for the PRICING-88 owner: add tiers to the order of operations (sum lines, apply tiers, apply coupon, add VAT).\n\n**Reply I'd post:** \"Agreed; ticketed (PRICING-91) so the spec change gets its own review.\"","choices":[{"id":"fix","label":"Fix in PR"},{"id":"ticket","label":"Ticket"},{"id":"decline","label":"Decline"}],"recommend":"ticket"},{"id":"tiers-map","text":"Turn `TIERS` into a `Map`","sub":"Recommend decline: It's a range lookup over 2 sorted tiers; a Map wouldn't remove the scan.","state":"nit","stateKind":"todo","detail":"**Reviewer:** a `Map` would make the lookup O(1).\n\n**My reasoning:** the lookup is a range match, not a key match: `tierFor(37)` needs the highest tier at or below 37, which a `Map` can't answer without the same scan. With 2 tiers the scan is free, and the array's order is the rule.\n\n**Reply I'd post:** \"Not taken: it's a range lookup over 2 sorted tiers, so a Map wouldn't remove the scan.\"","choices":[{"id":"fix","label":"Fix in PR"},{"id":"ticket","label":"Ticket"},{"id":"decline","label":"Decline"}],"recommend":"decline"},{"id":"pr-claims","text":"PR description says every tier is tested","sub":"Recommend resolve after the tests: The boundary tests make the sentence true; nothing else to change.","state":"nit","stateKind":"todo","detail":"**Reviewer:** the description says \"tests cover every tier\"; only the 10 % tier has a positive test.\n\n**My reasoning:** with the boundary tests, every tier and both thresholds are covered, so the sentence becomes accurate.\n\n**Reply I'd post:** \"Covered by the boundary tests in <sha>.\"","choices":[{"id":"after","label":"Resolve after the tests"},{"id":"fix","label":"Edit the description"}],"recommend":"after"}]},{"type":"diff","id":"diff-412","title":"acme-shop #412","repo":"acme-shop","base":"89efd8e","head":"62ccc86","url":"https://github.com/acme/acme-shop/pull/412/files","note":"Only the commented files. Head `62ccc86`; `docs/pricing.md` is unchanged and shown for its comment.","files":[{"path":"docs/pricing.md","status":"context","add":0,"del":0,"hunks":[{"old":6,"new":6,"context":true,"lines":[" "," 1. Sum the cart lines."," 2. Apply the coupon, if any."," 3. Add VAT."," "," There are no bulk discounts: every unit costs the same."]}]},{"path":"src/orders/createOrder.ts","status":"modified","add":4,"del":1,"hunks":[{"old":6,"new":6,"lines":["   customerId: string;","   subtotalCents: number;","   totalCents: number;","+  bulkSavingsCents: number;"," }"," "," export function priceOrder(draft: OrderDraft, coupon?: Discount): PricedOrder {","+  const gross = draft.lines.reduce((sum, l) => sum + l.unitCents * l.qty, 0);","   const subtotalCents = applyCoupon(draft.lines, coupon);","   const totalCents = addTax(subtotalCents);","-  return { customerId: draft.customerId, subtotalCents, totalCents };","+  const bulkSavingsCents = addTax(gross) - totalCents;","+  return { customerId: draft.customerId, subtotalCents, totalCents, bulkSavingsCents };"," }"],"header":"export interface PricedOrder {"}]},{"path":"src/pricing/tiers.ts","status":"added","add":26,"del":0,"hunks":[{"old":0,"new":1,"lines":["+// Bulk discount tiers (PRICING-88).","+// Spec: 10 or more units of one SKU get 5 %, 50 or more get 10 %.","+import type { CartLine } from \"../orders/types\";","+","+export interface Tier {","+  minQty: number;","+  percent: number;","+}","+","+export const TIERS: Tier[] = [","+  { minQty: 50, percent: 10 },","+  { minQty: 10, percent: 5 },","+];","+","+/** The tier a line qualifies for, or undefined. */","+export function tierFor(qty: number): Tier | undefined {","+  return TIERS.find((t) => qty > t.minQty);","+}","+","+/** Line total in cents after its bulk tier. */","+export function lineTotal(line: CartLine): number {","+  const tier = tierFor(line.qty);","+  const gross = line.unitCents * line.qty;","+  if (!tier) return gross;","+  return gross * (1 - tier.percent / 100);","+}"]}]},{"path":"test/tiers.test.ts","status":"added","add":16,"del":0,"hunks":[{"old":0,"new":1,"lines":["+import { describe, expect, it } from \"vitest\";","+import { lineTotal, tierFor } from \"../src/pricing/tiers\";","+","+describe(\"bulk tiers\", () => {","+  it(\"gives no tier below 10 units\", () => {","+    expect(tierFor(5)).toBeUndefined();","+  });","+","+  it(\"gives 10 % at 60 units\", () => {","+    expect(tierFor(60)?.percent).toBe(10);","+  });","+","+  it(\"discounts the line total\", () => {","+    expect(lineTotal({ sku: \"A\", qty: 60, unitCents: 100 })).toBe(5400);","+  });","+});"]}]}],"comments":[{"item":"t412/tier-boundary","file":"src/pricing/tiers.ts","line":17},{"item":"t412/float-cents","file":"src/pricing/tiers.ts","line":25},{"item":"t412/savings-coupon","file":"src/orders/createOrder.ts","line":16},{"item":"t412/boundary-tests","file":"test/tiers.test.ts","line":5,"end":15},{"item":"t412/docs-stale","file":"docs/pricing.md","line":11},{"item":"t412/tiers-map","file":"src/pricing/tiers.ts","line":10,"end":13},{"label":"PR description","item":"t412/pr-claims"}]}]},{"id":"pr-415","title":"#415 · retry PayCo authorization","lead":"1 bug this PR introduces, 1 behaviour gap, 2 smaller comments. Diff: `main` `89efd8e` → head `0a46a97`, limited to the two commented files.","blocks":[{"type":"checklist","id":"t415","title":"Findings · #415","numbered":false,"items":[{"id":"double-auth","text":"A retry can authorize the card twice","sub":"Recommend fix in PR: A timeout after PayCo accepted the call becomes a second authorization.","state":"blocker","stateKind":"risk","detail":"**Reviewer:** the retry re-POSTs `/v2/authorizations` with no idempotency key. If the first call succeeds but the response times out, the retry authorizes the card again.\n\n**My reasoning:** `src/orders/charge.ts:17-21` sends only amount, currency and reference; `src/payments/paycoClient.ts` sets no default header. The 10 s client timeout makes \"accepted but timed out\" a realistic case. *Unverified:* that PayCo deduplicates on `Idempotency-Key`; their public docs say so, but I haven't seen it in the sandbox.\n\n**Fix:** pass `{ headers: { \"Idempotency-Key\": orderId } }` as the third argument to `payco.post`.\n\n**Verify (required):** in the PayCo sandbox, two calls with the same key return the same authorization id; the unit test asserts both attempts carry the same key.","choices":[{"id":"fix","label":"Fix in PR"},{"id":"ticket","label":"Ticket"},{"id":"decline","label":"Decline"}],"recommend":"fix"},{"id":"retry-4xx","text":"Card declines are retried too","sub":"Recommend fix in PR: The doc comment says network errors and 5xx; the `catch` retries everything.","state":"major","stateKind":"warn","detail":"**Reviewer:** a 402 decline is retried twice more, adding 750 ms before the customer sees it.\n\n**My reasoning:** the comment at `src/orders/charge.ts:12` promises \"network errors and 5xx\"; the `catch` at line 23 doesn't look at the status.\n\n**Fix:** in the `catch`, rethrow when `err.response?.status` is below 500.\n\n**Verify:** a test where the first call rejects with status 402 expects one call and a thrown error.","choices":[{"id":"fix","label":"Fix in PR"},{"id":"ticket","label":"Ticket"},{"id":"decline","label":"Decline"}],"recommend":"fix"},{"id":"latency","text":"Worst case blocks checkout for 31.5 s","sub":"Recommend ticket: Real, but the timeout budget is a checkout decision, not this PR's.","state":"minor","stateKind":"info","detail":"**Reviewer:** 3 attempts × 10 s timeout plus backoff is 31.5 s worst case, past checkout's 15 s gateway timeout.\n\n**My reasoning:** `src/payments/paycoClient.ts:5` sets 10 s for every PayCo call, including refunds. Lowering it here changes those too. The fix needs a budget from the checkout owners: per-attempt timeout, attempts, and what the customer sees when it runs out.\n\n**Reply I'd post:** \"Agreed it's too long; ticketed (PAY-34) so checkout can set the budget.\"","choices":[{"id":"fix","label":"Fix in PR"},{"id":"ticket","label":"Ticket"},{"id":"decline","label":"Decline"}],"recommend":"ticket"},{"id":"backoff-const","text":"Name the 250 ms backoff","sub":"Recommend decline: Used once, inside the loop it controls.","state":"nit","stateKind":"todo","detail":"**Reviewer:** `250 * attempt` is a magic number; make it a constant.\n\n**My reasoning:** the number appears once, inside the retry loop it controls (`src/orders/charge.ts:25`), and nothing else reads it. A constant would move it away from the only place it means anything.\n\n**Reply I'd post:** \"Not taken: it's used once, inside the loop it controls.\"","choices":[{"id":"fix","label":"Fix in PR"},{"id":"ticket","label":"Ticket"},{"id":"decline","label":"Decline"}],"recommend":"decline"}]},{"type":"diff","id":"diff-415","title":"acme-shop #415","repo":"acme-shop","base":"89efd8e","head":"0a46a97","url":"https://github.com/acme/acme-shop/pull/415/files","note":"Only the two commented files; the new test is left out. Head `0a46a97`.","files":[{"path":"src/orders/charge.ts","status":"added","add":29,"del":0,"hunks":[{"old":0,"new":1,"lines":["+// Card authorization through PayCo, with retries (PAY-31).","+import { payco } from \"../payments/paycoClient\";","+import type { PricedOrder } from \"./createOrder\";","+","+export interface Authorization {","+  id: string;","+  amountCents: number;","+}","+","+const MAX_ATTEMPTS = 3;","+","+/** Authorizes the order total. Retries on network errors and 5xx. */","+export async function authorize(order: PricedOrder, orderId: string): Promise<Authorization> {","+  let lastError: unknown;","+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {","+    try {","+      const res = await payco.post(\"/v2/authorizations\", {","+        amount: order.totalCents,","+        currency: \"EUR\",","+        reference: orderId,","+      });","+      return { id: res.data.id, amountCents: order.totalCents };","+    } catch (err) {","+      lastError = err;","+      await new Promise((r) => setTimeout(r, 250 * attempt));","+    }","+  }","+  throw lastError;","+}"]}]},{"path":"src/payments/paycoClient.ts","status":"added","add":7,"del":0,"hunks":[{"old":0,"new":1,"lines":["+import axios from \"axios\";","+","+export const payco = axios.create({","+  baseURL: process.env.PAYCO_URL,","+  timeout: 10_000,","+  headers: { Authorization: `Bearer ${process.env.PAYCO_KEY}` },","+});"]}]}],"comments":[{"item":"t415/double-auth","file":"src/orders/charge.ts","line":17,"end":21},{"item":"t415/retry-4xx","file":"src/orders/charge.ts","line":23,"end":25},{"item":"t415/latency","file":"src/payments/paycoClient.ts","line":5},{"item":"t415/backoff-const","file":"src/orders/charge.ts","line":25}]}]}]}</script>
+<script type="application/json" id="bp-doc">{"id":"acme-review-findings-2026-03","title":"Review findings: acme-shop #412 and #415","subtitle":"The 11 review comments on two open PRs, each next to its code. Pick what to do with each; my recommendation is starred.","meta":{"org":"Acme Corp","kind":"Review","rev":"B","date":"2026-03-14"},"state":[{"label":"11 review comments","kind":"warn"},{"label":"6 fix in the PR","kind":"warn"},{"label":"2 follow-up tickets","kind":"info"},{"label":"2 decline","kind":"todo"},{"label":"1 resolves when a fix lands","kind":"info"}],"links":[{"label":"acme-shop #412 (bulk tiers)","href":"https://github.com/acme/acme-shop/pull/412"},{"label":"acme-shop #415 (PayCo retry)","href":"https://github.com/acme/acme-shop/pull/415"},{"label":"PRICING-88 spec","href":"https://example.com/acme/tickets/PRICING-88"}],"tldr":"Fix 6 in the PRs, ticket 2, decline 2; 1 resolves itself. Two are real bugs these PRs introduce: #412 gives no discount at exactly 10 or 50 units, and #415 can authorize a card twice when PayCo times out after accepting. Both are one-line fixes; neither PR should merge before them.","changes":["`docs/pricing.md` is now a ticket, not a fix in #412: its order of operations needs a product decision from the PRICING-88 owner."],"sections":[{"id":"summary","title":"Summary","lead":"Each finding has its options under it, with my recommendation starred. Pick one per finding, comment where you disagree, then press **Send to agent**.","blocks":[{"type":"table","columns":["PR","Finding","Size","Recommendation"],"rows":[["#412","[`tierFor` gives no tier at exactly 10 or 50 units](#item-t412-tier-boundary)","blocker","Fix in PR (1 line)"],["#412","[Tiered line totals are fractional cents](#item-t412-float-cents)","major","Fix in PR (1 line)"],["#412","[`bulkSavingsCents` also counts the coupon](#item-t412-savings-coupon)","major","Fix in PR"],["#412","[Tier tests stop short of both thresholds](#item-t412-boundary-tests)","minor","Fix in PR (4 cases)"],["#412","[`docs/pricing.md` still says there are no bulk discounts](#item-t412-docs-stale)","minor","Ticket"],["#412","[Turn `TIERS` into a `Map`](#item-t412-tiers-map)","nit","Decline"],["#412","[PR description says every tier is tested](#item-t412-pr-claims)","nit","After the boundary tests"],["#415","[A retry can authorize the card twice](#item-t415-double-auth)","blocker","Fix in PR (1 header)"],["#415","[Card declines are retried too](#item-t415-retry-4xx)","major","Fix in PR"],["#415","[Worst case blocks checkout for 31.5 s](#item-t415-latency)","minor","Ticket"],["#415","[Name the 250 ms backoff](#item-t415-backoff-const)","nit","Decline"]]},{"type":"callout","kind":"note","md":"Two review agents read the PRs at the heads below and posted with your `gh` login, so every comment on GitHub reads as yours. I checked each finding against the code before recommending."}]},{"id":"pr-412","title":"#412 · bulk discount tiers","lead":"3 bugs this PR introduces, 1 test gap, 3 smaller comments. Diff: `main` `89efd8e` → head `62ccc86`, limited to the commented files.","blocks":[{"type":"checklist","id":"t412","title":"Findings · #412","numbered":false,"items":[{"id":"tier-boundary","text":"`tierFor` gives no tier at exactly 10 or 50 units","sub":"Recommend fix in PR: The spec says \"10 or more\"; `>` drops both thresholds. One character.","state":"blocker","stateKind":"risk","detail":"**Reviewer:** `TIERS.find((t) => qty > t.minQty)` excludes the threshold, so 10 units get no discount and 50 units get 5 % instead of 10 %.\n\n**My reasoning:** the file header (`src/pricing/tiers.ts:2`) quotes PRICING-88 as \"10 or more … 50 or more\". `lineTotal({qty: 10, unitCents: 100})` returns 1000, the undiscounted price. The fix is one character in a file this PR adds.\n\n**Fix:** `TIERS.find((t) => qty >= t.minQty)` at `src/pricing/tiers.ts:17`.\n\n**Verify:** `tierFor(10)?.percent === 5` and `tierFor(50)?.percent === 10` (the boundary tests below).","choices":[{"id":"fix","label":"Fix in PR"},{"id":"ticket","label":"Ticket"},{"id":"decline","label":"Decline"}],"recommend":"fix"},{"id":"float-cents","text":"Tiered line totals are fractional cents","sub":"Recommend fix in PR: Without a coupon the fraction reaches VAT and the payment request.","state":"major","stateKind":"warn","detail":"**Reviewer:** `gross * (1 - tier.percent / 100)` returns 3163.5 for 3 × 1110 cents at 5 %.\n\n**My reasoning:** `applyCoupon` rounds only when a coupon is present (`src/pricing/discounts.ts:14`). Without one, the subtotal stays fractional and `addTax` rounds once more, so line and order totals can disagree by a cent. Every other money path in the repo uses integer cents (`docs/pricing.md:3`).\n\n**Fix:** `Math.round(gross * (100 - tier.percent) / 100)`, the form `applyCoupon` already uses.\n\n**Verify:** `Number.isInteger(lineTotal({qty: 3, unitCents: 1110}))`.","choices":[{"id":"fix","label":"Fix in PR"},{"id":"ticket","label":"Ticket"},{"id":"decline","label":"Decline"}],"recommend":"fix"},{"id":"savings-coupon","text":"`bulkSavingsCents` also counts the coupon","sub":"Recommend fix in PR: A 15 % coupon would show on the receipt as a bulk saving.","state":"major","stateKind":"warn","detail":"**Reviewer:** savings are gross-with-tax minus the final total, so the coupon counts as a bulk saving.\n\n**My reasoning:** `src/orders/createOrder.ts:16` subtracts `totalCents`, which already includes the coupon. The field name promises the tier saving, so every caller will read it that way; with a coupon it isn't.\n\n**Fix:** `addTax(gross) - addTax(sum of lineTotal)`, before the coupon.\n\n**Verify:** a 20-unit order with a 15 % coupon reports savings equal to 5 % of gross plus VAT.","choices":[{"id":"fix","label":"Fix in PR"},{"id":"ticket","label":"Ticket"},{"id":"decline","label":"Decline"}],"recommend":"fix"},{"id":"boundary-tests","text":"Tier tests stop short of both thresholds","sub":"Recommend fix in PR: The cases use 5 and 60 units, so they pass with the off-by-one.","state":"minor","stateKind":"info","detail":"**Reviewer:** the tests never touch a threshold.\n\n**My reasoning:** the three cases (`test/tiers.test.ts:5-15`) use 5 and 60 units. Neither sits on a threshold, so all three pass with the `>` bug present.\n\n**Fix:** four `it` cases in `test/tiers.test.ts`: 9 → none, 10 → 5 %, 49 → 5 %, 50 → 10 %.\n\n**Verify:** the 10 and 50 cases fail on the current head and pass after the `>=` fix.","choices":[{"id":"fix","label":"Fix in PR"},{"id":"ticket","label":"Ticket"},{"id":"decline","label":"Decline"}],"recommend":"fix"},{"id":"docs-stale","text":"`docs/pricing.md` still says there are no bulk discounts","sub":"Recommend ticket: The pricing spec needs a tier step; the PR is right without it.","state":"minor","stateKind":"info","detail":"**Reviewer:** `docs/pricing.md:11` still says \"There are no bulk discounts\".\n\n**My reasoning:** the doc is the pricing spec for every flow, and its order of operations (lines 5-9) needs a tier step, which is a product decision for PRICING-88's owner. This PR doesn't touch the file, and the code is right without it.\n\n**Fix:** a ticket for the PRICING-88 owner: add tiers to the order of operations (sum lines, apply tiers, apply coupon, add VAT).\n\n**Reply I'd post:** \"Agreed; ticketed (PRICING-91) so the spec change gets its own review.\"","choices":[{"id":"fix","label":"Fix in PR"},{"id":"ticket","label":"Ticket"},{"id":"decline","label":"Decline"}],"recommend":"ticket"},{"id":"tiers-map","text":"Turn `TIERS` into a `Map`","sub":"Recommend decline: It's a range lookup over 2 sorted tiers; a Map wouldn't remove the scan.","state":"nit","stateKind":"todo","detail":"**Reviewer:** a `Map` would make the lookup O(1).\n\n**My reasoning:** the lookup is a range match, not a key match: `tierFor(37)` needs the highest tier at or below 37, which a `Map` can't answer without the same scan. With 2 tiers the scan is free, and the array's order is the rule.\n\n**Reply I'd post:** \"Not taken: it's a range lookup over 2 sorted tiers, so a Map wouldn't remove the scan.\"","choices":[{"id":"fix","label":"Fix in PR"},{"id":"ticket","label":"Ticket"},{"id":"decline","label":"Decline"}],"recommend":"decline"},{"id":"pr-claims","text":"PR description says every tier is tested","sub":"Recommend resolve after the tests: The boundary tests make the sentence true; nothing else to change.","state":"nit","stateKind":"todo","detail":"**Reviewer:** the description says \"tests cover every tier\"; only the 10 % tier has a positive test.\n\n**My reasoning:** with the boundary tests, every tier and both thresholds are covered, so the sentence becomes accurate.\n\n**Reply I'd post:** \"Covered by the boundary tests in <sha>.\"","choices":[{"id":"after","label":"Resolve after the tests"},{"id":"fix","label":"Edit the description"}],"recommend":"after"}]},{"type":"diff","id":"diff-412","title":"acme-shop #412","repo":"acme-shop","base":"89efd8e","head":"62ccc86","url":"https://github.com/acme/acme-shop/pull/412/files","note":"Only the commented files. Head `62ccc86`; `docs/pricing.md` is unchanged and shown for its comment.","files":[{"path":"docs/pricing.md","status":"context","add":0,"del":0,"hunks":[{"old":6,"new":6,"context":true,"lines":[" "," 1. Sum the cart lines."," 2. Apply the coupon, if any."," 3. Add VAT."," "," There are no bulk discounts: every unit costs the same."]}]},{"path":"src/orders/createOrder.ts","status":"modified","add":4,"del":1,"hunks":[{"old":6,"new":6,"lines":["   customerId: string;","   subtotalCents: number;","   totalCents: number;","+  bulkSavingsCents: number;"," }"," "," export function priceOrder(draft: OrderDraft, coupon?: Discount): PricedOrder {","+  const gross = draft.lines.reduce((sum, l) => sum + l.unitCents * l.qty, 0);","   const subtotalCents = applyCoupon(draft.lines, coupon);","   const totalCents = addTax(subtotalCents);","-  return { customerId: draft.customerId, subtotalCents, totalCents };","+  const bulkSavingsCents = addTax(gross) - totalCents;","+  return { customerId: draft.customerId, subtotalCents, totalCents, bulkSavingsCents };"," }"],"header":"export interface PricedOrder {"}]},{"path":"src/pricing/tiers.ts","status":"added","add":26,"del":0,"hunks":[{"old":0,"new":1,"lines":["+// Bulk discount tiers (PRICING-88).","+// Spec: 10 or more units of one SKU get 5 %, 50 or more get 10 %.","+import type { CartLine } from \"../orders/types\";","+","+export interface Tier {","+  minQty: number;","+  percent: number;","+}","+","+export const TIERS: Tier[] = [","+  { minQty: 50, percent: 10 },","+  { minQty: 10, percent: 5 },","+];","+","+/** The tier a line qualifies for, or undefined. */","+export function tierFor(qty: number): Tier | undefined {","+  return TIERS.find((t) => qty > t.minQty);","+}","+","+/** Line total in cents after its bulk tier. */","+export function lineTotal(line: CartLine): number {","+  const tier = tierFor(line.qty);","+  const gross = line.unitCents * line.qty;","+  if (!tier) return gross;","+  return gross * (1 - tier.percent / 100);","+}"]}]},{"path":"test/tiers.test.ts","status":"added","add":16,"del":0,"hunks":[{"old":0,"new":1,"lines":["+import { describe, expect, it } from \"vitest\";","+import { lineTotal, tierFor } from \"../src/pricing/tiers\";","+","+describe(\"bulk tiers\", () => {","+  it(\"gives no tier below 10 units\", () => {","+    expect(tierFor(5)).toBeUndefined();","+  });","+","+  it(\"gives 10 % at 60 units\", () => {","+    expect(tierFor(60)?.percent).toBe(10);","+  });","+","+  it(\"discounts the line total\", () => {","+    expect(lineTotal({ sku: \"A\", qty: 60, unitCents: 100 })).toBe(5400);","+  });","+});"]}]}],"comments":[{"item":"t412/tier-boundary","file":"src/pricing/tiers.ts","line":17},{"item":"t412/float-cents","file":"src/pricing/tiers.ts","line":25},{"item":"t412/savings-coupon","file":"src/orders/createOrder.ts","line":16},{"item":"t412/boundary-tests","file":"test/tiers.test.ts","line":5,"end":15},{"item":"t412/docs-stale","file":"docs/pricing.md","line":11},{"item":"t412/tiers-map","file":"src/pricing/tiers.ts","line":10,"end":13},{"label":"PR description","item":"t412/pr-claims"}]}]},{"id":"pr-415","title":"#415 · retry PayCo authorization","lead":"1 bug this PR introduces, 1 behaviour gap, 2 smaller comments. Diff: `main` `89efd8e` → head `0a46a97`, limited to the two commented files.","blocks":[{"type":"checklist","id":"t415","title":"Findings · #415","numbered":false,"items":[{"id":"double-auth","text":"A retry can authorize the card twice","sub":"Recommend fix in PR: A timeout after PayCo accepted the call becomes a second authorization.","state":"blocker","stateKind":"risk","detail":"**Reviewer:** the retry re-POSTs `/v2/authorizations` with no idempotency key. If the first call succeeds but the response times out, the retry authorizes the card again.\n\n**My reasoning:** `src/orders/charge.ts:17-21` sends only amount, currency and reference; `src/payments/paycoClient.ts` sets no default header. The 10 s client timeout makes \"accepted but timed out\" a realistic case. *Unverified:* that PayCo deduplicates on `Idempotency-Key`; their public docs say so, but I haven't seen it in the sandbox.\n\n**Fix:** pass `{ headers: { \"Idempotency-Key\": orderId } }` as the third argument to `payco.post`.\n\n**Verify (required):** in the PayCo sandbox, two calls with the same key return the same authorization id; the unit test asserts both attempts carry the same key.","choices":[{"id":"fix","label":"Fix in PR"},{"id":"ticket","label":"Ticket"},{"id":"decline","label":"Decline"}],"recommend":"fix"},{"id":"retry-4xx","text":"Card declines are retried too","sub":"Recommend fix in PR: The doc comment says network errors and 5xx; the `catch` retries everything.","state":"major","stateKind":"warn","detail":"**Reviewer:** a 402 decline is retried twice more, adding 750 ms before the customer sees it.\n\n**My reasoning:** the comment at `src/orders/charge.ts:12` promises \"network errors and 5xx\"; the `catch` at line 23 doesn't look at the status.\n\n**Fix:** in the `catch`, rethrow when `err.response?.status` is below 500.\n\n**Verify:** a test where the first call rejects with status 402 expects one call and a thrown error.","choices":[{"id":"fix","label":"Fix in PR"},{"id":"ticket","label":"Ticket"},{"id":"decline","label":"Decline"}],"recommend":"fix"},{"id":"latency","text":"Worst case blocks checkout for 31.5 s","sub":"Recommend ticket: Real, but the timeout budget is a checkout decision, not this PR's.","state":"minor","stateKind":"info","detail":"**Reviewer:** 3 attempts × 10 s timeout plus backoff is 31.5 s worst case, past checkout's 15 s gateway timeout.\n\n**My reasoning:** `src/payments/paycoClient.ts:5` sets 10 s for every PayCo call, including refunds. Lowering it here changes those too. The fix needs a budget from the checkout owners: per-attempt timeout, attempts, and what the customer sees when it runs out.\n\n**Reply I'd post:** \"Agreed it's too long; ticketed (PAY-34) so checkout can set the budget.\"","choices":[{"id":"fix","label":"Fix in PR"},{"id":"ticket","label":"Ticket"},{"id":"decline","label":"Decline"}],"recommend":"ticket"},{"id":"backoff-const","text":"Name the 250 ms backoff","sub":"Recommend decline: Used once, inside the loop it controls.","state":"nit","stateKind":"todo","detail":"**Reviewer:** `250 * attempt` is a magic number; make it a constant.\n\n**My reasoning:** the number appears once, inside the retry loop it controls (`src/orders/charge.ts:25`), and nothing else reads it. A constant would move it away from the only place it means anything.\n\n**Reply I'd post:** \"Not taken: it's used once, inside the loop it controls.\"","choices":[{"id":"fix","label":"Fix in PR"},{"id":"ticket","label":"Ticket"},{"id":"decline","label":"Decline"}],"recommend":"decline"}]},{"type":"diff","id":"diff-415","title":"acme-shop #415","repo":"acme-shop","base":"89efd8e","head":"0a46a97","url":"https://github.com/acme/acme-shop/pull/415/files","note":"Only the two commented files; the new test is left out. Head `0a46a97`.","files":[{"path":"src/orders/charge.ts","status":"added","add":29,"del":0,"hunks":[{"old":0,"new":1,"lines":["+// Card authorization through PayCo, with retries (PAY-31).","+import { payco } from \"../payments/paycoClient\";","+import type { PricedOrder } from \"./createOrder\";","+","+export interface Authorization {","+  id: string;","+  amountCents: number;","+}","+","+const MAX_ATTEMPTS = 3;","+","+/** Authorizes the order total. Retries on network errors and 5xx. */","+export async function authorize(order: PricedOrder, orderId: string): Promise<Authorization> {","+  let lastError: unknown;","+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {","+    try {","+      const res = await payco.post(\"/v2/authorizations\", {","+        amount: order.totalCents,","+        currency: \"EUR\",","+        reference: orderId,","+      });","+      return { id: res.data.id, amountCents: order.totalCents };","+    } catch (err) {","+      lastError = err;","+      await new Promise((r) => setTimeout(r, 250 * attempt));","+    }","+  }","+  throw lastError;","+}"]}]},{"path":"src/payments/paycoClient.ts","status":"added","add":7,"del":0,"hunks":[{"old":0,"new":1,"lines":["+import axios from \"axios\";","+","+export const payco = axios.create({","+  baseURL: process.env.PAYCO_URL,","+  timeout: 10_000,","+  headers: { Authorization: `Bearer ${process.env.PAYCO_KEY}` },","+});"]}]}],"comments":[{"item":"t415/double-auth","file":"src/orders/charge.ts","line":17,"end":21},{"item":"t415/retry-4xx","file":"src/orders/charge.ts","line":23,"end":25},{"item":"t415/latency","file":"src/payments/paycoClient.ts","line":5},{"item":"t415/backoff-const","file":"src/orders/charge.ts","line":25}]}]}]}</script>
+<script type="application/json" id="bp-hist">{"revs":[{"rev":"A","date":"2026-03-13","built":"2026-10-09T16:31:19+00:00","head":{"id":"acme-review-findings-2026-03","title":"Review findings: acme-shop #412 and #415","subtitle":"The 11 review comments on two open PRs, each next to its code. Pick what to do with each; my recommendation is starred.","meta":{"org":"Acme Corp","kind":"Review","rev":"A","date":"2026-03-13"},"state":[{"label":"11 review comments","kind":"warn"},{"label":"7 fix in the PR","kind":"warn"},{"label":"1 follow-up ticket","kind":"info"},{"label":"2 decline","kind":"todo"},{"label":"1 resolves when a fix lands","kind":"info"}],"links":[{"label":"acme-shop #412 (bulk tiers)","href":"https://github.com/acme/acme-shop/pull/412"},{"label":"acme-shop #415 (PayCo retry)","href":"https://github.com/acme/acme-shop/pull/415"},{"label":"PRICING-88 spec","href":"https://example.com/acme/tickets/PRICING-88"}],"tldr":"Fix 7 in the PRs, ticket 1, decline 2; 1 resolves itself. Two are real bugs these PRs introduce: #412 gives no discount at exactly 10 or 50 units, and #415 can authorize a card twice when PayCo times out after accepting. Both are one-line fixes; neither PR should merge before them."},"sections":[{"id":"summary","title":"Summary","lead":"Each finding has its options under it, with my recommendation starred. Pick one per finding, comment where you disagree, then press **Send to agent**.","blocks":["91fdf7f28efc49b0","@0/1"]},{"id":"pr-412","title":"#412 · bulk discount tiers","lead":"3 bugs this PR introduces, 1 test gap, 3 smaller comments. Diff: `main` `89efd8e` → head `62ccc86`, limited to the commented files.","blocks":["f83072cdb3f0b5c5","@1/1"]},{"id":"pr-415","title":"#415 · retry PayCo authorization","lead":"1 bug this PR introduces, 1 behaviour gap, 2 smaller comments. Diff: `main` `89efd8e` → head `0a46a97`, limited to the two commented files.","blocks":["@2/0","@2/1"]}]},{"rev":"B","date":"2026-03-14","built":"2026-10-09T16:31:19+00:00"}],"blocks":{"91fdf7f28efc49b0":{"type":"table","columns":["PR","Finding","Size","Recommendation"],"rows":[["#412","[`tierFor` gives no tier at exactly 10 or 50 units](#item-t412-tier-boundary)","blocker","Fix in PR (1 line)"],["#412","[Tiered line totals are fractional cents](#item-t412-float-cents)","major","Fix in PR (1 line)"],["#412","[`bulkSavingsCents` also counts the coupon](#item-t412-savings-coupon)","major","Fix in PR"],["#412","[Tier tests stop short of both thresholds](#item-t412-boundary-tests)","minor","Fix in PR (4 cases)"],["#412","[`docs/pricing.md` still says there are no bulk discounts](#item-t412-docs-stale)","minor","Fix in PR"],["#412","[Turn `TIERS` into a `Map`](#item-t412-tiers-map)","nit","Decline"],["#412","[PR description says every tier is tested](#item-t412-pr-claims)","nit","After the boundary tests"],["#415","[A retry can authorize the card twice](#item-t415-double-auth)","blocker","Fix in PR (1 header)"],["#415","[Card declines are retried too](#item-t415-retry-4xx)","major","Fix in PR"],["#415","[Worst case blocks checkout for 31.5 s](#item-t415-latency)","minor","Ticket"],["#415","[Name the 250 ms backoff](#item-t415-backoff-const)","nit","Decline"]]},"f83072cdb3f0b5c5":{"type":"checklist","id":"t412","title":"Findings · #412","numbered":false,"items":[{"id":"tier-boundary","text":"`tierFor` gives no tier at exactly 10 or 50 units","sub":"Recommend fix in PR: The spec says \"10 or more\"; `>` drops both thresholds. One character.","state":"blocker","stateKind":"risk","detail":"**Reviewer:** `TIERS.find((t) => qty > t.minQty)` excludes the threshold, so 10 units get no discount and 50 units get 5 % instead of 10 %.\n\n**My reasoning:** the file header (`src/pricing/tiers.ts:2`) quotes PRICING-88 as \"10 or more … 50 or more\". `lineTotal({qty: 10, unitCents: 100})` returns 1000, the undiscounted price. The fix is one character in a file this PR adds.\n\n**Fix:** `TIERS.find((t) => qty >= t.minQty)` at `src/pricing/tiers.ts:17`.\n\n**Verify:** `tierFor(10)?.percent === 5` and `tierFor(50)?.percent === 10` (the boundary tests below).","choices":[{"id":"fix","label":"Fix in PR"},{"id":"ticket","label":"Ticket"},{"id":"decline","label":"Decline"}],"recommend":"fix"},{"id":"float-cents","text":"Tiered line totals are fractional cents","sub":"Recommend fix in PR: Without a coupon the fraction reaches VAT and the payment request.","state":"major","stateKind":"warn","detail":"**Reviewer:** `gross * (1 - tier.percent / 100)` returns 3163.5 for 3 × 1110 cents at 5 %.\n\n**My reasoning:** `applyCoupon` rounds only when a coupon is present (`src/pricing/discounts.ts:14`). Without one, the subtotal stays fractional and `addTax` rounds once more, so line and order totals can disagree by a cent. Every other money path in the repo uses integer cents (`docs/pricing.md:3`).\n\n**Fix:** `Math.round(gross * (100 - tier.percent) / 100)`, the form `applyCoupon` already uses.\n\n**Verify:** `Number.isInteger(lineTotal({qty: 3, unitCents: 1110}))`.","choices":[{"id":"fix","label":"Fix in PR"},{"id":"ticket","label":"Ticket"},{"id":"decline","label":"Decline"}],"recommend":"fix"},{"id":"savings-coupon","text":"`bulkSavingsCents` also counts the coupon","sub":"Recommend fix in PR: A 15 % coupon would show on the receipt as a bulk saving.","state":"major","stateKind":"warn","detail":"**Reviewer:** savings are gross-with-tax minus the final total, so the coupon counts as a bulk saving.\n\n**My reasoning:** `src/orders/createOrder.ts:16` subtracts `totalCents`, which already includes the coupon. The field name promises the tier saving, so every caller will read it that way; with a coupon it isn't.\n\n**Fix:** `addTax(gross) - addTax(sum of lineTotal)`, before the coupon.\n\n**Verify:** a 20-unit order with a 15 % coupon reports savings equal to 5 % of gross plus VAT.","choices":[{"id":"fix","label":"Fix in PR"},{"id":"ticket","label":"Ticket"},{"id":"decline","label":"Decline"}],"recommend":"fix"},{"id":"boundary-tests","text":"Tier tests stop short of both thresholds","sub":"Recommend fix in PR: The cases use 5 and 60 units, so they pass with the off-by-one.","state":"minor","stateKind":"info","detail":"**Reviewer:** the tests never touch a threshold.\n\n**My reasoning:** the three cases (`test/tiers.test.ts:5-15`) use 5 and 60 units. Neither sits on a threshold, so all three pass with the `>` bug present.\n\n**Fix:** four `it` cases in `test/tiers.test.ts`: 9 → none, 10 → 5 %, 49 → 5 %, 50 → 10 %.\n\n**Verify:** the 10 and 50 cases fail on the current head and pass after the `>=` fix.","choices":[{"id":"fix","label":"Fix in PR"},{"id":"ticket","label":"Ticket"},{"id":"decline","label":"Decline"}],"recommend":"fix"},{"id":"docs-stale","text":"`docs/pricing.md` still says there are no bulk discounts","sub":"Recommend fix in PR: one sentence in a doc this PR makes wrong.","state":"minor","stateKind":"info","detail":"**Reviewer:** `docs/pricing.md:11` still says \"There are no bulk discounts\".\n\n**My reasoning:** the sentence is false once this PR merges, and the fix is one line.\n\n**Fix:** replace line 11 with \"10 or more units of one SKU get 5 %, 50 or more get 10 %\".\n\n**Verify:** `grep -n 'bulk' docs/pricing.md` shows the new sentence.","choices":[{"id":"fix","label":"Fix in PR"},{"id":"ticket","label":"Ticket"},{"id":"decline","label":"Decline"}],"recommend":"fix"},{"id":"tiers-map","text":"Turn `TIERS` into a `Map`","sub":"Recommend decline: It's a range lookup over 2 sorted tiers; a Map wouldn't remove the scan.","state":"nit","stateKind":"todo","detail":"**Reviewer:** a `Map` would make the lookup O(1).\n\n**My reasoning:** the lookup is a range match, not a key match: `tierFor(37)` needs the highest tier at or below 37, which a `Map` can't answer without the same scan. With 2 tiers the scan is free, and the array's order is the rule.\n\n**Reply I'd post:** \"Not taken: it's a range lookup over 2 sorted tiers, so a Map wouldn't remove the scan.\"","choices":[{"id":"fix","label":"Fix in PR"},{"id":"ticket","label":"Ticket"},{"id":"decline","label":"Decline"}],"recommend":"decline"},{"id":"pr-claims","text":"PR description says every tier is tested","sub":"Recommend resolve after the tests: The boundary tests make the sentence true; nothing else to change.","state":"nit","stateKind":"todo","detail":"**Reviewer:** the description says \"tests cover every tier\"; only the 10 % tier has a positive test.\n\n**My reasoning:** with the boundary tests, every tier and both thresholds are covered, so the sentence becomes accurate.\n\n**Reply I'd post:** \"Covered by the boundary tests in <sha>.\"","choices":[{"id":"after","label":"Resolve after the tests"},{"id":"fix","label":"Edit the description"}],"recommend":"after"}]}}}</script>
 <script>
 (() => {
 'use strict';
-const DOC = JSON.parse(document.getElementById('bp-doc').textContent);
+/* ---------- revisions: which document this page shows ---------- */
+// bp-doc is the current revision. bp-hist (from build.py) holds earlier ones; their blocks are either
+// in hist.blocks or '@section/block' references to blocks the current revision still has.
+// Rendering adds fields to the objects it draws, so diffs always read fresh, untouched copies.
+const DOC_SRC = document.getElementById('bp-doc').textContent;
+const HIST = (() => { try { const x = JSON.parse(document.getElementById('bp-hist').textContent); return x && Array.isArray(x.revs) ? x : null; } catch { return null; } })();
+const PRISTINE = JSON.parse(DOC_SRC);
+const REVS = (() => {
+  const m = PRISTINE.meta || {};
+  const cur = { rev: String(m.rev || ''), date: m.date || '', current: true, doc: PRISTINE };
+  if (!HIST) return [cur];
+  const blk = ref => ref[0] === '@' ? (([i, j]) => PRISTINE.sections[i].blocks[j])(ref.slice(1).split('/').map(Number)) : HIST.blocks[ref];
+  const out = HIST.revs.map(r => r.head ? { rev: r.rev, date: r.date, built: r.built,
+    get doc() { return this._d ||= { ...r.head, sections: r.sections.map(s => ({ ...s, blocks: s.blocks.map(blk) })) }; } } : null).filter(Boolean);
+  cur.built = (HIST.revs.find(r => !r.head) || {}).built || '';
+  out.push(cur);
+  return out;
+})();
+const QP = new URLSearchParams(location.search);
+const CUR = REVS[REVS.length - 1];
+const VIEW = REVS.find(r => r.rev === QP.get('rev')) || CUR;
+const BASE = REVS.find(r => r.rev === QP.get('diff') && r !== VIEW) || null;
+const OLD = VIEW !== CUR;   // an earlier revision: read-only, nothing is stored
+const DOC = OLD ? JSON.parse(JSON.stringify(VIEW.doc)) : JSON.parse(DOC_SRC);
 const NS = 'http://www.w3.org/2000/svg';
 const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const $ = (q, r = document) => r.querySelector(q);
@@ -754,6 +846,7 @@ const ICONS = {
   octagon: '<path d="M7.9 2h8.2L22 7.9v8.2L16.1 22H7.9L2 16.1V7.9Z"/><path d="M12 8v4M12 16h.01"/>',
   flag: '<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7"/>',
   split: '<path d="M16 3h5v5M8 3H3v5M12 22v-8.3a4 4 0 0 0-1.2-2.8L3 3M15 9l6-6"/>',
+  hist: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/>',
   zap: '<path d="M4 14a1 1 0 0 1-.8-1.6l9.9-10.2a.5.5 0 0 1 .9.5l-1.9 6a1 1 0 0 0 .9 1.3h7a1 1 0 0 1 .8 1.6l-9.9 10.2a.5.5 0 0 1-.9-.5l1.9-6a1 1 0 0 0-.9-1.3z"/>',
   list: '<path d="M13 5h8M13 12h8M13 19h8"/><path d="m3 17 2 2 4-4"/><rect x="3" y="4" width="6" height="6" rx="1"/>',
   check: '<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
@@ -819,10 +912,13 @@ function md(src) {
 const store = (() => {
   let ok = true; const mem = {};
   try { localStorage.setItem('bp:probe', '1'); localStorage.removeItem('bp:probe'); } catch { ok = false; }
+  // An earlier revision reads the reader's ticks, picks and comments but never writes them: its item
+  // ids and `done` values differ from the current ones, and storing would clobber current progress.
+  const local = k => !ok || (OLD && k.startsWith('bp:'));
   return {
-    get: k => ok ? localStorage.getItem(k) : (k in mem ? mem[k] : null),
-    set: (k, v) => { if (ok) localStorage.setItem(k, v); else mem[k] = v; },
-    del: k => { if (ok) localStorage.removeItem(k); else delete mem[k]; },
+    get: k => local(k) && k in mem ? mem[k] : ok ? localStorage.getItem(k) : null,
+    set: (k, v) => { if (local(k)) mem[k] = v; else localStorage.setItem(k, v); },
+    del: k => { if (local(k)) mem[k] = null; else localStorage.removeItem(k); },
   };
 })();
 const docId = DOC.id || 'doc';
@@ -996,7 +1092,7 @@ const RENDER = {
   table: b => h('div', {},
     h('div', { class: 'bp-table-wrap' }, h('table', { class: 'bp-table' },
       h('thead', {}, h('tr', {}, (b.columns || []).map(c => h('th', {}, c)))),
-      h('tbody', {}, (b.rows || []).map(r => h('tr', {}, r.map(c => h('td', { html: inline(c) }))))))),
+      h('tbody', {}, (b.rows || []).map((r, ri) => h('tr', { 'data-r': ri }, r.map(c => h('td', { html: inline(c) }))))))),
     b.caption && h('div', { class: 'bp-caption', html: inline(b.caption) })),
   code: b => codeBlock(b.code, b.lang, b.title),
   terms: b => h('dl', { class: 'bp-terms' }, (b.items || []).map(t => [h('dt', {}, t.term), h('dd', { html: md(t.md) })])),
@@ -1252,7 +1348,7 @@ function noteBox(x, compact) {
 function replyPayload() {
   const all = Object.values(ITEMS);
   return {
-    doc: docId, title: DOC.title || '', path: location.pathname, at: new Date().toISOString(),
+    doc: docId, rev: CUR.rev, title: DOC.title || '', path: location.pathname, at: new Date().toISOString(),
     message: (store.get(MSG_KEY) || '').trim(),
     items: all.map(x => ({
       checklist: x.cid, item: x.it.id, text: x.it.text,
@@ -1279,7 +1375,7 @@ function replyCounts() {
 }
 function paintSend() {
   if (!sendBtn) return;
-  sendBtn.hidden = !CHECKLISTS.length;
+  sendBtn.hidden = !CHECKLISTS.length || OLD;   // answers go with the current revision only
   const c = replyCounts();
   sendBtn.classList.toggle('has', !!(c.decided || c.notes || c.ticked));
   if (sendDlg && sendDlg.open) sendDlg._paint();
@@ -1347,10 +1443,10 @@ const tocLinks = [];
   const el = h('section', { class: 'bp-sec', id: sec.id },
     h('h2', {}, h('span', { class: 'n' }, num), h('span', {}, sec.title)),
     sec.lead && h('p', { class: 'bp-lead', html: inline(sec.lead) }));
-  for (const b of sec.blocks || []) {
+  (sec.blocks || []).forEach((b, bi) => {
     const r = RENDER[b.type];
-    el.append(h('div', { class: 'bp-block' }, r ? r(b) : h('div', { class: 'bp-callout risk' }, ic('octagon'), h('span', { class: 'lbl' }, 'Unknown block'), h('div', {}, `Type "${b.type}" has no renderer.`))));
-  }
+    el.append(h('div', { class: 'bp-block', 'data-bk': `${sec.id}/${bi}` }, r ? r(b) : h('div', { class: 'bp-callout risk' }, ic('octagon'), h('span', { class: 'lbl' }, 'Unknown block'), h('div', {}, `Type "${b.type}" has no renderer.`))));
+  });
   main.append(el);
   tocLinks.push(h('a', { href: '#' + sec.id }, h('span', { class: 'n' }, num), h('span', {}, sec.title)));
 });
@@ -1661,7 +1757,7 @@ function fileNav(d) {
     // what the reader can see: the pane when it scrolls itself, else the window under the app bar
     const scrolls = pane.scrollHeight > pane.clientHeight + 2;
     const pr = pane.getBoundingClientRect(), fh = head.getBoundingClientRect();
-    const top = Math.max(fh.bottom, scrolls ? pr.top : cssPx('--bar-h')), bottom = scrolls ? pr.bottom : innerHeight;
+    const top = Math.max(fh.bottom, scrolls ? pr.top : cssPx('--bar-h') + cssPx('--rv-h')), bottom = scrolls ? pr.bottom : innerHeight;
     const above = [], below = []; let cur = -1;
     cards.forEach((c, i) => { const r = c.getBoundingClientRect(); if (r.bottom < top + 6) above.push(i); else if (r.top > bottom - 6) below.push(i); else if (cur < 0) cur = i; });
     return { above, below, cur };
@@ -2366,6 +2462,361 @@ function outlineOf(spec, root) {
 
 renderDocument();
 
+/* ---------- revisions: switch between them, compare two ---------- */
+// ?rev=B shows revision B (read-only); ?diff=A marks what changed from A to the shown revision.
+const canon = x => JSON.stringify(x === undefined ? null : x);
+const plain = s => String(s ?? '').replace(/[`*]/g, '');
+function lcsPairs(a, b, eq) {
+  const n = a.length, m = b.length;
+  const L = Array.from({ length: n + 1 }, () => new Uint32Array(m + 1));
+  for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) L[i][j] = eq(a[i], b[j]) ? L[i + 1][j + 1] + 1 : Math.max(L[i + 1][j], L[i][j + 1]);
+  const out = []; let i = 0, j = 0;
+  while (i < n && j < m) { if (eq(a[i], b[j])) { out.push([i, j]); i++; j++; } else if (L[i + 1][j] >= L[i][j + 1]) i++; else j++; }
+  return out;
+}
+// Text diff as HTML: <del> for removed text, <ins> for added. Paragraphs are matched first; inside a
+// matched paragraph words are diffed, unless most of it was rewritten, which reads better whole.
+const DEL = t => t ? `<del>${esc(t)}</del>` : '', INS = t => t ? `<ins>${esc(t)}</ins>` : '';
+function wordDiff(a, b) {
+  const clean = s => String(s ?? '').replace(/\*\*/g, '');
+  const split = s => s.split(/(\n{2,})/).reduce((out, x, i) => (i % 2 ? out[out.length - 1] += x : out.push(x), out), []);
+  const A = split(clean(a)), B = split(clean(b)), html = [];
+  let i = 0, j = 0;
+  for (const [pi, pj] of [...lcsPairs(A, B, (x, y) => x === y), [A.length, B.length]]) {
+    // pair the paragraphs between two equal ones in order; extras are wholly removed or added
+    while (i < pi && j < pj) html.push(paraDiff(A[i++], B[j++]));
+    while (i < pi) html.push(DEL(A[i++]));
+    while (j < pj) html.push(INS(B[j++]));
+    if (pi < A.length) { html.push(esc(A[pi])); i = pi + 1; j = pj + 1; }
+  }
+  return html.join('');
+}
+function paraDiff(a, b) {
+  const tok = s => s.match(/\s+|[\p{L}\p{N}_]+|[^\s\p{L}\p{N}_]/gu) || [];
+  const A = tok(a), B = tok(b);
+  if (A.length * B.length > 2.5e6) return DEL(a) + INS(b);
+  const runs = []; let i = 0, j = 0, same = 0;
+  const push = (k, t) => { const l = runs[runs.length - 1]; if (k === '=') { if (l && l.eq != null) l.eq += t; else runs.push({ eq: t }); } else { if (!l || l.eq != null) runs.push({ del: '', ins: '' }); runs[runs.length - 1][k] += t; } };
+  for (const [pi, pj] of [...lcsPairs(A, B, (x, y) => x === y), [A.length, B.length]]) {
+    if (pi > i) push('del', A.slice(i, pi).join(''));
+    if (pj > j) push('ins', B.slice(j, pj).join(''));
+    if (pi < A.length) { push('=', A[pi]); if (/\S/.test(A[pi])) same += A[pi].length; }
+    i = pi + 1; j = pj + 1;
+  }
+  const size = (a + b).replace(/\s/g, '').length;
+  if (size && 2 * same / size < 0.5) return DEL(a) + INS(b);   // mostly rewritten
+  // fold short unchanged bits ("the", ", ") between two changes into the change
+  for (let k = 1; k < runs.length - 1; k++) {
+    const r = runs[k];
+    if (r.eq != null && r.eq.replace(/\s/g, '').length <= 3 && runs[k - 1].eq == null && runs[k + 1].eq == null) {
+      const p = runs[k - 1], n = runs[k + 1];
+      runs.splice(k - 1, 3, { del: p.del + r.eq + n.del, ins: p.ins + r.eq + n.ins }); k = Math.max(0, k - 2);
+    }
+  }
+  return runs.map(r => r.eq != null ? esc(r.eq) : DEL(r.del) + INS(r.ins)).join('');
+}
+// Align two lists: equal neighbours by content, the rest paired by key inside each gap.
+function alignSeq(a, b, key) {
+  const ca = a.map(canon), cb = b.map(canon);
+  const pairs = a.length * b.length > 1e6 ? [] : lcsPairs(ca, cb, (x, y) => x === y);
+  const ops = []; let i = 0, j = 0;
+  for (const [pi, pj] of [...pairs, [a.length, b.length]]) {
+    const ga = []; for (; i < pi; i++) ga.push(i);
+    const used = new Set();
+    for (; j < pj; j++) {
+      const k = key(b[j]); const x = ga.find(x => !used.has(x) && key(a[x]) === k);
+      if (x != null) { used.add(x); ops.push({ op: 'mod', a: x, b: j }); } else ops.push({ op: 'add', b: j });
+    }
+    for (const x of ga) if (!used.has(x)) ops.push({ op: 'del', a: x, before: pj });
+    if (pi < a.length) { ops.push({ op: 'same', a: pi, b: pj }); i = pi + 1; j = pj + 1; }
+  }
+  return ops;
+}
+// A block as plain text, for diffs and for removed blocks.
+function blockText(b) {
+  switch (b.type) {
+    case 'text': return b.md || '';
+    case 'callout': return [b.title, b.md].filter(Boolean).join('\n');
+    case 'code': return [b.title, b.code].filter(Boolean).join('\n');
+    case 'terms': return (b.items || []).map(t => `${t.term}: ${t.md}`).join('\n');
+    case 'cards': return (b.items || []).map(c => `${c.title}${c.tag ? ` [${c.tag}]` : ''}: ${c.md}`).join('\n');
+    case 'table': return [(b.columns || []).join(' | '), ...(b.rows || []).map(r => r.join(' | ')), b.caption].filter(Boolean).join('\n');
+    case 'checklist': return [b.title, ...(b.items || []).map(x => '- ' + x.text)].filter(Boolean).join('\n');
+    case 'canvas': return [b.title, ...(b.nodes || []).map(n => '- ' + n.label)].filter(Boolean).join('\n');
+    case 'diff': return [b.title, ...(b.files || []).map(f => '- ' + f.path)].filter(Boolean).join('\n');
+    default: return canon(b);
+  }
+}
+const blockLabel = b => ({ text: 'Text', callout: b.title || `${(b.kind || 'note')[0].toUpperCase()}${(b.kind || 'note').slice(1)} callout`, table: 'Table',
+  code: b.title || 'Code', terms: 'Terms', cards: 'Cards', checklist: b.title || 'Checklist', canvas: b.title || 'Drawing', diff: b.title || 'Code change' }[b.type] || b.type);
+
+const CHG = [];   // every marked change, in page order once sorted
+const CHG_WORD = { add: 'New', mod: 'Changed', del: 'Removed' };
+const chgTag = kind => h('span', { class: 'bd-chg-tag ' + kind }, CHG_WORD[kind]);
+function markChg(el, kind, label) { el.classList.add('bd-chg', 'bd-chg-' + kind); CHG.push({ el, kind, label }); return el; }
+function chgHead(kind, label, extra) { return h('div', { class: 'bd-chg-hd' }, chgTag(kind), h('span', {}, plain(label)), extra && h('span', { class: 'x' }, extra)); }
+function chgBox(rows) {
+  return h('details', { class: 'bd-chgbox', open: true }, h('summary', {}, 'What changed'),
+    h('dl', {}, rows.map(([k, v]) => [h('dt', {}, k), h('dd', { class: 'bd-wd', html: v })])));
+}
+const fieldRows = (pairs) => pairs.filter(([, a, b]) => canon(a ?? null) !== canon(b ?? null)).map(([k, a, b]) => [k, wordDiff(Array.isArray(a) ? a.join('\n') : a ?? '', Array.isArray(b) ? b.join('\n') : b ?? '')]);
+
+function compareDocs(base, view) {
+  // header
+  const lines = d => ({ state: (d.state || []).map(s => s.label), links: (d.links || []).map(l => `${l.label} (${l.href})`) });
+  const ob = lines(base), nb = lines(view), om = base.meta || {}, nm = view.meta || {};
+  const hrows = fieldRows([['Title', base.title, view.title], ['Subtitle', base.subtitle, view.subtitle], ['TL;DR', base.tldr, view.tldr],
+    ['Status', ob.state, nb.state], ['Related', ob.links, nb.links], ['Kind', om.kind, nm.kind], ['Drawing', om.dwg, nm.dwg]]);
+  if (hrows.length) { const box = chgBox(hrows); tldr.append(markChg(h('div', { class: 'bd-chg-wrap' }, chgHead('mod', 'Header'), box), 'mod', 'Header')); }
+  // sections, matched by id
+  const oldSecs = base.sections || [], newSecs = view.sections || [];
+  const oldById = new Map(oldSecs.map(s => [s.id, s]));
+  const newIds = new Set(newSecs.map(s => s.id));
+  const secEl = id => [...main.children].find(e => e.id === id);
+  for (const s of newSecs) {
+    const el = secEl(s.id); if (!el) continue;
+    const o = oldById.get(s.id);
+    if (!o) { el.querySelector('h2').append(chgTag('add')); markChg(el, 'add', s.title); continue; }
+    const rows = fieldRows([['Title', o.title, s.title], ['Lead', o.lead, s.lead]]);
+    if (rows.length) { const box = chgBox(rows); (el.querySelector(':scope > .bp-lead') || el.querySelector('h2')).after(box); el.querySelector('h2').append(chgTag('mod')); markChg(box, 'mod', s.title); }
+    compareBlocks(o.blocks || [], s.blocks || [], el);
+  }
+  oldSecs.forEach((o, i) => {
+    if (newIds.has(o.id)) return;
+    const ghost = h('section', { class: 'bp-sec bd-ghost' }, h('h2', {}, h('span', {}, o.title), chgTag('del')),
+      o.lead && h('p', { class: 'bp-lead', html: `<del>${esc(o.lead)}</del>` }),
+      (o.blocks || []).map(b => h('div', { class: 'bp-block' }, h('div', { class: 'bd-chg-hd' }, h('span', {}, blockLabel(b))), h('div', { class: 'bd-wd', html: `<del>${esc(blockText(b))}</del>` }))));
+    const prev = oldSecs.slice(0, i).reverse().map(p => newIds.has(p.id) && secEl(p.id)).find(Boolean);
+    if (prev) prev.after(ghost); else main.prepend(ghost);
+    markChg(ghost, 'del', o.title);
+  });
+  // page order, so next/previous walk down the page
+  CHG.sort((a, b) => a.el.compareDocumentPosition(b.el) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1);
+}
+function compareBlocks(ob, nb, secElm) {
+  const els = [...secElm.querySelectorAll(':scope > .bp-block')];
+  for (const op of alignSeq(ob, nb, b => b.type + ':' + (b.id || ''))) {
+    if (op.op === 'same') continue;
+    if (op.op === 'del') {
+      const b = ob[op.a];
+      const ghost = h('div', { class: 'bp-block bd-ghost' }, chgHead('del', blockLabel(b)), h('div', { class: 'bd-wd', html: `<del>${esc(blockText(b))}</del>` }));
+      if (els[op.before]) els[op.before].before(ghost); else secElm.append(ghost);
+      markChg(ghost, 'del', blockLabel(b));
+      continue;
+    }
+    const b = nb[op.b], el = els[op.b];
+    if (op.op === 'add') { el.prepend(chgHead('add', blockLabel(b))); markChg(el, 'add', blockLabel(b)); continue; }
+    const o = ob[op.a];
+    let summary = '';
+    const before = CHG.length;
+    if (b.type === 'checklist') {
+      const n = compareChecklist(o, b); summary = countWords(n);
+      const rows = fieldRows([['Title', o.title, b.title]]);
+      if (!rows.length && CHG.length === before) continue;
+      if (rows.length) el.querySelector('.bp-cl-h').after(chgBox(rows));
+    }
+    else if (b.type === 'table') compareTable(o, b, el);
+    else if (b.type === 'canvas') el.append(chgBox(compareCanvas(o, b)));
+    else if (b.type === 'diff') el.append(chgBox(compareDiff(o, b)));
+    else el.append(chgBox([['Text', wordDiff(blockText(o), blockText(b))]]));
+    el.prepend(chgHead('mod', blockLabel(b), summary));
+    // a list or table whose rows carry their own marks counts as those rows, not once more
+    if (CHG.length === before) markChg(el, 'mod', blockLabel(b)); else el.classList.add('bd-chg', 'bd-chg-mod');
+  }
+}
+const countWords = n => [n.add && `${n.add} new`, n.mod && `${n.mod} changed`, n.del && `${n.del} removed`].filter(Boolean).join(', ');
+function compareChecklist(o, n) {
+  const cid = n.id, cnt = { add: 0, mod: 0, del: 0 };
+  const was = new Map((o.items || []).map(x => [x.id, x])), now = new Set((n.items || []).map(x => x.id));
+  for (const it of n.items || []) {
+    const x = ITEMS[`${cid}/${it.id}`]; if (!x) continue;
+    const w = was.get(it.id);
+    if (!w) { cnt.add++; x.head.insertBefore(chgTag('add'), x.head.querySelector('.bp-cl-noteic')); markChg(x.li, 'add', it.text); continue; }
+    if (canon(w) === canon(it)) continue;
+    const lbl = (c, id) => { const f = (c.choices || []).find(y => y.id === id); return f ? f.label : id; };
+    const rows = fieldRows([['Title', w.text, it.text], ['Subtitle', w.sub, it.sub], ['Size', w.state, it.state],
+      ['Options', (w.choices || []).map(c => c.label), (it.choices || []).map(c => c.label)],
+      ['Recommended', w.recommend && lbl(w, w.recommend), it.recommend && lbl(it, it.recommend)],
+      ['Picked', w.choice && lbl(w, w.choice), it.choice && lbl(it, it.choice)], ['Done', w.done ? 'yes' : 'no', it.done ? 'yes' : 'no'],
+      ['Details', w.detail, it.detail], ['Command', w.code, it.code], ['Check', w.verify, it.verify], ['Links', w.refs, it.refs]]);
+    // nested blocks: sub-checklists mark their own items; anything else is diffed as text
+    const wb = w.blocks || [], ib = it.blocks || [];
+    for (const op of alignSeq(wb, ib, b => b.type + ':' + (b.id || ''))) {
+      if (op.op === 'same') continue;
+      if (op.op === 'mod' && ib[op.b].type === 'checklist') { const k = compareChecklist(wb[op.a], ib[op.b]); if (k.add || k.mod || k.del) rows.push([blockLabel(ib[op.b]), esc(countWords(k))]); continue; }
+      rows.push([op.op === 'add' ? 'Added ' + blockLabel(ib[op.b]).toLowerCase() : op.op === 'del' ? 'Removed ' + blockLabel(wb[op.a]).toLowerCase() : blockLabel(ib[op.b]),
+        wordDiff(op.a != null ? blockText(wb[op.a]) : '', op.b != null ? blockText(ib[op.b]) : '')]);
+    }
+    if (!rows.length) continue;
+    cnt.mod++;
+    x.head.insertBefore(chgTag('mod'), x.head.querySelector('.bp-cl-noteic'));
+    x.body.prepend(chgBox(rows));
+    if (x.li.classList.contains('empty')) x.refresh();
+    openItem(x);
+    markChg(x.li, 'mod', it.text);
+  }
+  const entry = CHECKLISTS.find(c => c.b.id === cid);
+  const list = entry && entry.root.querySelector('.bp-cl-items');
+  for (const w of o.items || []) {
+    if (now.has(w.id) || !list) continue;
+    cnt.del++;
+    const ghost = h('li', { class: 'bp-cl-item bd-ghost' }, h('div', { class: 'bp-cl-row' }, h('span', { class: 'bp-cl-dot', 'aria-hidden': 'true' }),
+      h('div', { class: 'bp-cl-head' }, h('span', { class: 'bp-cl-main' }, h('span', { class: 'bp-cl-text', html: inline(w.text) }), w.sub && h('span', { class: 'bp-cl-subt' }, h('span', { html: inline(w.sub) }))), chgTag('del'))));
+    const idx = (o.items || []).indexOf(w);
+    const prevId = (o.items || []).slice(0, idx).reverse().map(p => now.has(p.id) && ITEMS[`${cid}/${p.id}`]).find(Boolean);
+    if (prevId) prevId.li.after(ghost); else list.prepend(ghost);
+    markChg(ghost, 'del', w.text);
+  }
+  return cnt;
+}
+function compareTable(o, n, el) {
+  const rowsEl = [...el.querySelectorAll('tbody > tr')], cols = n.columns || [];
+  const rows = fieldRows([['Columns', o.columns, n.columns], ['Caption', o.caption, n.caption]]);
+  for (const op of alignSeq(o.rows || [], n.rows || [], r => plain(r[0]))) {
+    if (op.op === 'same') continue;
+    if (op.op === 'add') { markChg(rowsEl[op.b], 'add', 'Row ' + plain(n.rows[op.b][0])); continue; }
+    if (op.op === 'del') {
+      const ghost = h('tr', { class: 'bd-ghost' }, o.rows[op.a].map(c => h('td', { html: `<del>${esc(plain(c))}</del>` })));
+      const tb = el.querySelector('tbody');
+      if (rowsEl[op.before]) rowsEl[op.before].before(ghost); else tb.append(ghost);
+      markChg(ghost, 'del', 'Row ' + plain(o.rows[op.a][0]));
+      continue;
+    }
+    const tr = rowsEl[op.b], a = o.rows[op.a], b = n.rows[op.b];
+    b.forEach((c, ci) => { if (canon(a[ci] ?? '') !== canon(c)) { const td = tr.children[ci]; td && td.classList.add('bd-cell-mod'); td && (td.title = 'Was: ' + plain(a[ci] ?? '(empty)')); rows.push([`${plain(b[0]).slice(0, 40)} · ${cols[ci] || ci + 1}`, wordDiff(a[ci] ?? '', c)]); } });
+    markChg(tr, 'mod', 'Row ' + plain(b[0]));
+  }
+  if (rows.length) el.append(chgBox(rows));
+}
+function compareCanvas(o, n) {
+  const walk = (scope, pre, nodes, edges, flows) => {
+    for (const nd of scope.nodes || []) { const k = pre ? `${pre}/${nd.id}` : nd.id; const { children, x, y, col, row, w, h: hh, ...rest } = nd; nodes.set(k, rest); if (children) walk(children, k, nodes, edges, flows); }
+    for (const e of scope.edges || []) edges.set(`${pre}:${e.from}>${e.to}:${e.label || ''}`, e);
+    for (const f of scope.flows || []) flows.set(`${pre}:${f.id}`, f);
+    return { nodes, edges, flows };
+  };
+  const A = walk(o, '', new Map(), new Map(), new Map()), B = walk(n, '', new Map(), new Map(), new Map());
+  const cv = CANVASES[n.id], rows = [];
+  const paint = (k, cls) => cv && cv.svg.querySelectorAll(`[data-key="${CSS.escape(k)}"]`).forEach(g => g.classList.add(cls));
+  const nodeText = nd => [nd.label, nd.sub, nd.state && `(${nd.state})`, nd.md].filter(Boolean).join('\n');
+  for (const [k, nd] of B.nodes) {
+    const w = A.nodes.get(k);
+    if (!w) { rows.push(['New part', esc(nd.label + (nd.sub ? ' · ' + nd.sub : ''))]); paint(k, 'chg-add'); }
+    else if (canon(w) !== canon(nd)) { rows.push([`Part ${nd.label}`, wordDiff(nodeText(w), nodeText(nd))]); paint(k, 'chg-mod'); }
+  }
+  for (const [k, nd] of A.nodes) if (!B.nodes.has(k)) rows.push(['Removed part', `<del>${esc(nd.label)}</del>`]);
+  const edgeTxt = e => `${e.from} → ${e.to}${e.label ? ': ' + e.label : ''}`;
+  for (const [k, e] of B.edges) if (!A.edges.has(k)) rows.push(['New connection', esc(edgeTxt(e))]);
+  for (const [k, e] of A.edges) if (!B.edges.has(k)) rows.push(['Removed connection', `<del>${esc(edgeTxt(e))}</del>`]);
+  for (const [k, f] of B.flows) { const w = A.flows.get(k); if (!w) rows.push(['New flow', esc(f.label || f.id)]); else if (canon(w) !== canon(f)) rows.push([`Flow ${f.label || f.id}`, wordDiff((w.steps || []).map(s => s.label || '').join('\n'), (f.steps || []).map(s => s.label || '').join('\n'))]); }
+  for (const [k, f] of A.flows) if (!B.flows.has(k)) rows.push(['Removed flow', `<del>${esc(f.label || f.id)}</del>`]);
+  rows.push(...fieldRows([['Title', o.title, n.title], ['Caption', o.caption, n.caption]]));
+  if (!rows.length) rows.push(['Layout', 'Positions or sizes changed.']);
+  return rows;
+}
+function compareDiff(o, n) {
+  const rows = fieldRows([['Range', `${o.base || ''}…${o.head || ''}`, `${n.base || ''}…${n.head || ''}`], ['Note', o.note, n.note]]);
+  const of = new Map((o.files || []).map(f => [f.path, f]));
+  const nf = new Set((n.files || []).map(f => f.path));
+  for (const f of n.files || []) { const w = of.get(f.path); if (!w) rows.push(['New file', esc(f.path)]); else if (canon(w.hunks) !== canon(f.hunks)) rows.push(['Changed file', esc(`${f.path} (+${f.add || 0} −${f.del || 0}, was +${w.add || 0} −${w.del || 0})`)]); }
+  for (const f of o.files || []) if (!nf.has(f.path)) rows.push(['Removed file', `<del>${esc(f.path)}</del>`]);
+  const ct = c => `${c.file || 'Whole change'}${c.line ? ':' + c.line : ''} ${c.item || c.title || ''}`;
+  const oc = new Set((o.comments || []).map(ct)), nc = new Set((n.comments || []).map(ct));
+  for (const c of nc) if (!oc.has(c)) rows.push(['New comment', esc(c)]);
+  for (const c of oc) if (!nc.has(c)) rows.push(['Removed comment', `<del>${esc(c)}</del>`]);
+  if (!rows.length) rows.push(['Comments', 'Comment text changed.']);
+  return rows;
+}
+
+// URLs and UI
+function revUrl(view, base) {
+  const q = new URLSearchParams();
+  if (view !== CUR) q.set('rev', view.rev);
+  if (base) q.set('diff', base.rev);
+  const s = q.toString();
+  return location.pathname + (s ? '?' + s : '');
+}
+const revName = r => `Rev ${r.rev}`;
+let revDlg = null;
+function openRevs() {
+  if (!revDlg) {
+    const list = [...REVS].reverse().map(r => {
+      const i = REVS.indexOf(r), prev = REVS[i - 1];
+      const notes = (r.doc.changes || []);
+      return h('li', { class: 'rv' + (r === VIEW ? ' on' : '') },
+        h('div', { class: 'rv-h' }, h('b', {}, revName(r)), r.date && h('span', { class: 'd' }, r.date),
+          r.current && h('span', { class: 'bp-chip ok' }, 'current'), r === VIEW && h('span', { class: 'bp-chip info' }, 'shown')),
+        notes.length ? h('ul', { class: 'rv-notes' }, notes.map(t => h('li', { html: inline(t) }))) : null,
+        h('div', { class: 'rv-act' },
+          r !== VIEW && h('a', { class: 'bp-btn', href: revUrl(r, null) }, 'View'),
+          prev && h('a', { class: 'bp-btn', href: revUrl(r, prev) }, ic('split'), `Changes from ${prev.rev}`)));
+    });
+    const sel = (def) => h('select', { class: 'rv-sel' }, REVS.map(r => h('option', { value: r.rev, selected: r === def }, revName(r) + (r.date ? ` · ${r.date}` : ''))));
+    const from = sel(BASE || (OLD ? VIEW : REVS[REVS.length - 2])), to = sel(BASE ? VIEW : CUR);
+    const go = () => { const a = REVS.find(r => r.rev === from.value), b = REVS.find(r => r.rev === to.value); if (a && b && a !== b) location.href = revUrl(b, a); else toast('Pick two different revisions'); };
+    revDlg = h('dialog', { class: 'bd-send bd-revs', 'aria-labelledby': 'bd-revs-h' },
+      h('div', { class: 'hd' }, h('h3', { id: 'bd-revs-h' }, 'Revisions'), h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Close', onclick: () => revDlg.close() }, ic('x'))),
+      h('p', { class: 'sum' }, `${REVS.length} revisions of this document. Older ones are read-only: ticks, picks and comments made there aren't saved.`),
+      h('ol', { class: 'rv-list' }, list),
+      h('div', { class: 'ft rv-cmp' }, h('label', {}, 'Compare', from), h('label', {}, 'with', to), h('button', { type: 'button', class: 'bp-btn primary', onclick: go }, ic('split'), 'Compare')));
+    document.body.append(revDlg);
+    revDlg.addEventListener('click', e => { if (e.target === revDlg) revDlg.close(); });
+  }
+  revDlg.showModal();
+}
+let chgAt = -1;
+function gotoChg(step) {
+  if (!CHG.length) return;
+  chgAt = (chgAt + step + CHG.length) % CHG.length;
+  const c = CHG[chgAt];
+  c.el.scrollIntoView({ behavior: REDUCE ? 'auto' : 'smooth', block: 'center' });
+  c.el.classList.remove('bd-chg-flash'); void c.el.offsetWidth; c.el.classList.add('bd-chg-flash');
+  revPos && (revPos.textContent = `${chgAt + 1} of ${CHG.length}`);
+}
+let revPos = null;
+if (REVS.length > 1) {
+  const label = h('span', { class: 'l' }, revName(VIEW));
+  const btn = h('button', { type: 'button', class: 'bp-btn bd-rev-btn' + (OLD ? ' old' : ''), title: 'Revisions', onclick: openRevs }, ic('hist'), label);
+  document.querySelector('.bd-bar-r').prepend(btn);
+  const revDd = [...document.querySelectorAll('.bd-props dt')].find(dt => dt.textContent === 'Revision');
+  if (revDd) { const dd = revDd.nextElementSibling; dd.textContent = ''; dd.append(h('button', { type: 'button', class: 'bd-rev-link', onclick: openRevs }, `${VIEW.rev} of ${REVS.length}`)); }
+  if (OLD) document.title = `${revName(VIEW)} · ${document.title}`;
+  const strip = (cls, ...kids) => { const s = h('div', { class: 'bd-revbar ' + cls, role: 'region', 'aria-label': 'Revision' }, h('div', { class: 'in' }, kids)); document.querySelector('.bd-bar').after(s); return s; };
+  if (BASE) {
+    // the author's notes for every revision after the base, up to the shown one, then the marked changes
+    const a = REVS.indexOf(BASE), b = REVS.indexOf(VIEW);
+    const span = a < b ? REVS.slice(a + 1, b + 1) : [];
+    const notes = span.flatMap(r => (r.doc.changes || []).map(t => [r, t]));
+    if (notes.length) tldr.append(h('div', { class: 'bd-revnotes' }, h('h4', { class: 'bd-rail-h' }, 'Author\'s notes on these changes'),
+      h('ul', {}, notes.map(([r, t]) => h('li', {}, span.length > 1 && h('span', { class: 'r' }, r.rev), h('span', { html: inline(t) }))))));
+    compareDocs(BASE.doc, VIEW.doc);
+    const n = { add: 0, mod: 0, del: 0 }; CHG.forEach(c => n[c.kind]++);
+    revPos = h('span', { class: 'pos' }, CHG.length === 1 ? '1 change' : `${CHG.length} changes`);
+    strip('cmp', ic('split'), h('span', { class: 't' }, h('b', {}, `${revName(BASE)} → ${VIEW.rev}`), ': ',
+      CHG.length ? [n.add > 0 && h('span', { class: 'k add' }, `${n.add} new`), n.mod > 0 && h('span', { class: 'k mod' }, `${n.mod} changed`), n.del > 0 && h('span', { class: 'k del' }, `${n.del} removed`)] : 'no differences'),
+      h('span', { class: 'sp' }),
+      CHG.length > 0 && h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Previous change', title: 'Previous change', onclick: () => gotoChg(-1) }, ic('up')),
+      CHG.length > 0 && revPos,
+      CHG.length > 0 && h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Next change', title: 'Next change', onclick: () => gotoChg(1) }, ic('down')),
+      h('a', { class: 'bp-btn ghost', href: revUrl(VIEW, null) }, 'Done'));
+  } else if (OLD) {
+    strip('old', ic('hist'), h('span', { class: 't' }, h('b', {}, revName(VIEW)), VIEW.date ? ` of ${VIEW.date}` : '', `: an earlier revision. The current one is ${CUR.rev}; nothing you change here is saved.`),
+      h('span', { class: 'sp' }), h('a', { class: 'bp-btn', href: revUrl(CUR, VIEW) }, ic('split'), `Changes since ${VIEW.rev}`), h('a', { class: 'bp-btn primary', href: revUrl(CUR, null) }, `Go to ${CUR.rev}`));
+  } else {
+    // the current revision: tell returning readers it changed since their last visit
+    const SEEN_KEY = `bp:${docId}:__seen`, seen = store.get(SEEN_KEY);
+    const was = seen && seen !== CUR.rev && REVS.find(r => r.rev === seen);
+    if (was) {
+      const s = strip('upd', ic('hist'), h('span', { class: 't' }, 'Updated since you last opened it: ', h('b', {}, `${was.rev} → ${CUR.rev}`), CUR.date ? ` (${CUR.date})` : ''),
+        h('span', { class: 'sp' }), h('a', { class: 'bp-btn primary', href: revUrl(CUR, was) }, ic('split'), 'Show what changed'),
+        h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Dismiss', onclick: () => { s.remove(); root.style.removeProperty('--rv-h'); } }, ic('x')));
+    }
+    store.set(SEEN_KEY, CUR.rev);
+  }
+  const bar = document.querySelector('.bd-revbar');
+  if (bar) { const fit = () => root.style.setProperty('--rv-h', bar.offsetHeight + 'px'); fit(); addEventListener('resize', fit); }
+}
+
 /* ---------- public API (for tests and agents) ---------- */
 window.BP = {
   doc: DOC,
@@ -2382,6 +2833,8 @@ window.BP = {
   openComment: (diffId, index) => { const d = DIFFS[diffId]; const c = d && d.order[index]; if (c) openComment(d, c, true); return !!c; },
   diffState: diffId => { const d = DIFFS[diffId]; if (!d) return null; const linked = d.comments.filter(c => c.item && ITEMS[c.item]);
     return { file: d.sel === PR_KEY ? null : d.sel, comment: d.ci, comments: d.comments.length, cards: d.pane.querySelectorAll('.bd-cm').length, lines: d.pane.querySelectorAll('.bd-ln').length, ticked: linked.filter(c => ITEMS[c.item].cb.checked).length, linked: linked.length }; },
+  revisions: () => REVS.map(r => ({ rev: r.rev, date: r.date, current: !!r.current, shown: r === VIEW, changes: r.doc.changes || [] })),
+  compare: () => BASE && { from: BASE.rev, to: VIEW.rev, changes: CHG.map(c => ({ kind: c.kind, label: plain(c.label) })) },
 };
 })();
 </script>

@@ -60,11 +60,12 @@
   --mono: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   --ease: cubic-bezier(0.23, 1, 0.32, 1);
   --rail: 204px; --content-w: 920px; --gap: 32px; --bar-h: 52px;
+  --top-h: calc(var(--bar-h) + var(--rv-h, 0px));   /* app bar plus the revision strip, when shown */
 }
 :root[data-theme="light"] { color-scheme: light; }
 :root[data-theme="dark"] { color-scheme: dark; }
 * { box-sizing: border-box; }
-html { scroll-behavior: smooth; scroll-padding-top: calc(var(--bar-h) + 16px); }
+html { scroll-behavior: smooth; scroll-padding-top: calc(var(--top-h) + 16px); }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 body { margin: 0; background: var(--canvas); color: var(--fg); font: 15px/1.6 var(--sans); -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; font-feature-settings: "cv11", "ss01"; }
 a { color: var(--accent-fg); text-decoration-color: color-mix(in oklch, currentColor 35%, transparent); text-underline-offset: 2px; }
@@ -101,9 +102,9 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .bd-head { grid-area: head; padding-top: 56px; min-width: 0; }
 .bd-tldr { grid-area: tldr; min-width: 0; }
 .bd-shell > main { grid-area: main; min-width: 0; }
-.bp-side { grid-area: side; justify-self: end; width: var(--rail); position: sticky; top: calc(var(--bar-h) + 20px); align-self: start;
+.bp-side { grid-area: side; justify-self: end; width: var(--rail); position: sticky; top: calc(var(--top-h) + 20px); align-self: start;
   margin-top: 60px; max-height: calc(100vh - var(--bar-h) - 40px); overflow: auto; font-size: 13.5px; scrollbar-width: thin; }
-.bd-meta { grid-area: meta; justify-self: start; width: var(--rail); position: sticky; top: calc(var(--bar-h) + 20px); align-self: start;
+.bd-meta { grid-area: meta; justify-self: start; width: var(--rail); position: sticky; top: calc(var(--top-h) + 20px); align-self: start;
   margin-top: 60px; max-height: calc(100vh - var(--bar-h) - 40px); overflow: auto; font-size: 13px; scrollbar-width: thin; }
 
 /* header */
@@ -175,7 +176,74 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .bd-send .how { margin-top: 12px; font-size: 12.5px; color: var(--fg-subtle); }
 .bd-send .ft { display: flex; justify-content: flex-end; gap: 8px; margin: 0; padding: 14px 20px 18px; }
 .bd-send .ft .bp-btn { height: 32px; padding: 0 14px; font-size: 13px; }
-.bd-send .ft .bp-btn[hidden] { display: none; }
+.bd-send .ft .bp-btn[hidden], .bd-send-btn[hidden] { display: none; }
+/* revisions: app-bar button, strip under the bar, dialog, change marks */
+.bd-rev-btn { height: 30px; padding: 0 10px; font: 500 12.5px var(--mono); }
+.bd-rev-btn.old { color: var(--warn-fg); background: var(--warn-tint); box-shadow: none; }
+.bd-rev-btn.old .bd-ic { color: currentColor; }
+.bd-rev-link { border: 0; padding: 0; background: none; font: inherit; color: var(--accent-fg); cursor: pointer; text-decoration: underline; text-decoration-color: color-mix(in oklch, currentColor 35%, transparent); text-underline-offset: 2px; }
+.bd-revbar { position: sticky; top: var(--bar-h); z-index: 39; background: var(--panel); box-shadow: inset 0 -1px 0 var(--line); font-size: 13.5px; }
+.bd-revbar.cmp { background: color-mix(in oklch, var(--accent) 10%, var(--canvas)); }
+.bd-revbar.old { background: color-mix(in oklch, var(--warn) 14%, var(--canvas)); }
+.bd-revbar .in { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; max-width: 1180px; margin: 0 auto; padding: 7px 20px; }
+.bd-revbar .in > .bd-ic { width: 16px; height: 16px; color: var(--fg-muted); flex: none; }
+.bd-revbar .t { min-width: 0; }
+.bd-revbar .sp { flex: 1; }
+.bd-revbar .pos { font: 500 12px var(--mono); color: var(--fg-muted); min-width: 4.5em; text-align: center; }
+.bd-revbar .k { margin-left: 6px; font-weight: 600; }
+.bd-revbar .k.add { color: var(--ok-fg); } .bd-revbar .k.mod { color: var(--warn-fg); } .bd-revbar .k.del { color: var(--risk-fg); }
+.bd-revbar .bp-btn { height: 28px; }
+.bd-revs .rv-list { list-style: none; margin: 0 20px; padding: 0; max-height: 52vh; overflow: auto; }
+.bd-revs .rv { padding: 12px 0; border-top: 1px solid var(--line-soft); }
+.bd-revs .rv:first-child { border-top: 0; }
+.bd-revs .rv-h { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.bd-revs .rv-h b { font: 600 14px var(--mono); }
+.bd-revs .rv-h .d { color: var(--fg-muted); font-size: 13px; }
+.bd-revs .rv-notes { margin: 6px 0 0; padding-left: 18px; font-size: 13.5px; color: var(--fg-muted); }
+.bd-revs .rv-act { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.bd-revs .rv-act .bp-btn { text-decoration: none; }
+.bd-revs .rv-cmp { flex-wrap: wrap; align-items: center; border-top: 1px solid var(--line); margin-top: 6px; }
+.bd-revs .rv-cmp label { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--fg-muted); }
+.rv-sel { height: 32px; border: 0; border-radius: 9px; padding: 0 8px; font: 500 12.5px var(--sans); color: var(--fg); background: var(--inset); box-shadow: inset 0 0 0 1px var(--line); }
+.bd-chg { --chg: var(--warn); }
+.bd-chg-add { --chg: var(--ok); } .bd-chg-del { --chg: var(--risk); }
+.bp-block.bd-chg, .bd-chg-wrap { box-shadow: -10px 0 0 -7px var(--chg); }
+.bp-sec.bd-ghost { padding-left: 14px; box-shadow: inset 3px 0 0 var(--chg); }
+.bp-cl-item.bd-chg { box-shadow: inset 3px 0 0 var(--chg); }
+tr.bd-chg > td:first-child { box-shadow: inset 3px 0 0 var(--chg); }
+tr.bd-chg-add > td { background: color-mix(in oklch, var(--ok-tint) 70%, transparent); }
+td.bd-cell-mod { background: color-mix(in oklch, var(--warn-tint) 70%, transparent); }
+.bd-chg-flash { animation: bd-chg-flash 1.4s var(--ease); }
+@keyframes bd-chg-flash { 0%, 30% { outline: 3px solid color-mix(in oklch, var(--chg) 55%, transparent); outline-offset: 4px; } 100% { outline: 3px solid transparent; outline-offset: 4px; } }
+.bd-chg-tag { display: inline-flex; align-items: center; flex: none; height: 20px; padding: 0 7px; border-radius: 6px; font: 600 11px/1 var(--sans); letter-spacing: .02em; text-transform: uppercase; vertical-align: middle; }
+.bd-chg-tag.add { color: var(--ok-fg); background: var(--ok-tint); }
+.bd-chg-tag.mod { color: var(--warn-fg); background: var(--warn-tint); }
+.bd-chg-tag.del { color: var(--risk-fg); background: var(--risk-tint); }
+.bp-cl-head > .bd-chg-tag { margin-top: 2px; }
+.bp-sec > h2 > .bd-chg-tag { margin-left: 4px; }
+.bd-chg-hd { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 13px; font-weight: 600; color: var(--fg-muted); }
+.bd-chg-hd .x { font-weight: 400; }
+.bd-chgbox { margin: 10px 0 12px; padding: 10px 14px; border-radius: 10px; background: color-mix(in oklch, var(--warn-tint) 45%, var(--surface)); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--warn) 30%, transparent); font-size: 13.5px; }
+.bd-chgbox summary { cursor: pointer; font-weight: 600; font-size: 12.5px; color: var(--warn-fg); }
+.bd-chgbox dl { display: grid; grid-template-columns: minmax(80px, max-content) 1fr; gap: 6px 14px; margin: 8px 0 2px; }
+.bd-chgbox dt { color: var(--fg-muted); font-weight: 500; }
+.bd-chgbox dd { margin: 0; min-width: 0; }
+@media (max-width: 600px) { .bd-chgbox dl { grid-template-columns: 1fr; gap: 2px; } .bd-chgbox dd { margin-bottom: 6px; } }
+.bd-wd { white-space: pre-wrap; overflow-wrap: anywhere; }
+.bd-wd ins { text-decoration: none; color: var(--ok-fg); background: var(--ok-tint); border-radius: 3px; }
+.bd-wd del { color: var(--risk-fg); background: var(--risk-tint); border-radius: 3px; text-decoration-thickness: 1px; }
+.bd-ghost { opacity: .78; }
+.bd-ghost .bp-cl-text, .bp-sec.bd-ghost > h2 > span:first-child { text-decoration: line-through; text-decoration-color: var(--risk); }
+.bd-ghost .bd-wd { font-size: 13.5px; color: var(--fg-muted); }
+.bd-revnotes { margin-top: 14px; padding: 12px 16px; border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-1); font-size: 14px; }
+.bd-revnotes ul { margin: 6px 0 0; padding-left: 18px; }
+.bd-revnotes .r { font: 600 11.5px var(--mono); color: var(--fg-muted); margin-right: 8px; }
+.bd-chg-wrap { margin-top: 14px; }
+.bp-node.chg-add { filter: drop-shadow(0 0 5px #3fd17f) drop-shadow(0 0 2px #3fd17f); }
+.bp-node.chg-mod { filter: drop-shadow(0 0 5px #f5b544) drop-shadow(0 0 2px #f5b544); }
+@media (max-width: 900px) { .bd-rev-btn .l { display: none; } .bd-rev-btn { padding: 0 8px; } }
+@media (max-width: 600px) { .bd-revbar .in { padding: 6px 12px; gap: 2px 6px; font-size: 13px; } .bd-revbar .in > .bd-ic { display: none; } .bd-revbar .t { flex: 1 1 100%; } }
+@media print { .bd-revbar .bd-ibtn, .bd-revbar .bp-btn, .bd-rev-btn { display: none !important; } .bd-revbar { position: static; } }
 /* the reader's comment on an item */
 .bp-note { display: flex; align-items: flex-start; gap: 8px; }
 .bp-note > .bd-ic { flex: none; width: 15px; height: 15px; margin-top: 8px; color: var(--fg-subtle); }
@@ -192,7 +260,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .bp-side-toggle { display: none !important; }
 
 /* sections */
-.bp-sec { padding-top: 56px; scroll-margin-top: calc(var(--bar-h) + 12px); }
+.bp-sec { padding-top: 56px; scroll-margin-top: calc(var(--top-h) + 12px); }
 .bp-sec + .bp-sec { margin-top: 56px; border-top: 1px solid var(--line); }
 .bp-sec > h2 { display: flex; align-items: center; gap: 12px; font: 650 23px/1.25 var(--sans); letter-spacing: -.016em; margin: 0 0 6px; text-wrap: balance; }
 .bp-sec > h2 .n { flex: none; display: inline-grid; place-items: center; min-width: 30px; height: 26px; padding: 0 6px; border-radius: 8px; font: 600 11.5px/1 var(--mono); color: var(--fg-muted);
@@ -261,7 +329,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .bp-card ul { margin: 4px 0; padding-left: 18px; }
 
 /* checklists: HorizonUI PlanChecklist + ProgressBar */
-.bp-cl { --ind: 60px; background: var(--surface); border-radius: 14px; box-shadow: var(--shadow-1); overflow: hidden; scroll-margin-top: calc(var(--bar-h) + 16px); }
+.bp-cl { --ind: 60px; background: var(--surface); border-radius: 14px; box-shadow: var(--shadow-1); overflow: hidden; scroll-margin-top: calc(var(--top-h) + 16px); }
 .bp-cl:has(ul.bp-cl-items) { --ind: 28px; }
 .bp-cl-h { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; padding: 12px 10px 10px 16px; }
 .bp-cl-h > .bd-ic { color: var(--fg-subtle); }
@@ -372,7 +440,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .t-k { color: var(--syn-keyword); } .t-s { color: var(--syn-string); } .t-n { color: var(--syn-number); } .t-c { color: var(--syn-comment); font-style: italic; }
 .t-f { color: var(--syn-function); } .t-t { color: var(--syn-type); } .t-K { color: var(--syn-constant); } .t-p { color: var(--syn-field); }
 .t-a { color: var(--syn-annotation); } .t-g { color: var(--syn-tag); }
-.bd-diff { --pane-h: min(74vh, 780px); background: var(--surface); border-radius: 14px; box-shadow: var(--shadow-1); overflow: clip; scroll-margin-top: calc(var(--bar-h) + 16px); }
+.bd-diff { --pane-h: min(74vh, 780px); background: var(--surface); border-radius: 14px; box-shadow: var(--shadow-1); overflow: clip; scroll-margin-top: calc(var(--top-h) + 16px); }
 .bd-diff:fullscreen { --pane-h: calc(100vh - 104px); border-radius: 0; }
 .bd-diff-h { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 12px 12px 10px 16px; }
 .bd-diff-h > .bd-ic { color: var(--fg-subtle); }
@@ -655,8 +723,8 @@ svg.anim .bp-edge.k-async { animation: bp-march 1.6s linear infinite; }
     background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") right 9px center / 14px no-repeat;
     box-shadow: inset 0 0 0 1px var(--line-strong); appearance: none; -webkit-appearance: none; }
   .bd-pane { overflow: visible; }
-  .bd-fh { top: var(--bar-h); flex-wrap: wrap; row-gap: 4px; }
-  .bd-diff { --fh-top: var(--bar-h); }
+  .bd-fh { top: var(--top-h); flex-wrap: wrap; row-gap: 4px; }
+  .bd-diff { --fh-top: var(--top-h); }
   .bd-fh .p { flex: 1 1 100%; }
   .bd-ln { grid-template-columns: 2.9em 2.9em 1.2em minmax(0, 1fr); font-size: 11.5px; }
   .bd-ln > .o, .bd-ln > .n { font-size: 10.5px; padding-right: .5em; }
@@ -695,7 +763,7 @@ html.bd-resizing, html.bd-resizing * { cursor: col-resize !important; user-selec
   :root[data-layout="wide"] .bd-meta { position: static; width: auto; max-height: none; overflow: visible; margin-top: 20px; justify-self: stretch;
     display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px 24px; padding: 16px 8px 14px; border-radius: 14px; background: var(--panel); box-shadow: inset 0 0 0 1px var(--line); }
   :root[data-layout="wide"] .bd-rail-sec + .bd-rail-sec { margin-top: 0; }
-  :root[data-layout="wide"] .bp-side { position: fixed; z-index: 45; top: calc(var(--bar-h) + 10px); left: 12px; width: 268px; max-height: calc(100vh - var(--bar-h) - 24px);
+  :root[data-layout="wide"] .bp-side { position: fixed; z-index: 45; top: calc(var(--top-h) + 10px); left: 12px; width: 268px; max-height: calc(100vh - var(--bar-h) - 24px);
     margin: 0; padding: 14px 8px 8px; border-radius: 14px; background: var(--surface); box-shadow: var(--shadow-3);
     visibility: hidden; opacity: 0; transform: translateX(-10px); transition: opacity .16s var(--ease), transform .16s var(--ease), visibility 0s .16s; }
   :root[data-layout="wide"] .bp-side.drawer { visibility: visible; opacity: 1; transform: none; transition: opacity .16s var(--ease), transform .16s var(--ease); }
@@ -720,10 +788,34 @@ html.bd-resizing, html.bd-resizing * { cursor: col-resize !important; user-selec
 <div id="bp-app"><noscript>This bluedoc page needs JavaScript to render. The source data is in the bp-doc script element.</noscript></div>
 <div class="bp-toast" id="bp-toast" role="status"></div>
 <script type="application/json" id="bp-doc">{"id":"acme-orders-arch","title":"Acme order path: checkout to pick ticket","subtitle":"How one order travels from the Acme Shop checkout to a warehouse pick ticket, and how to run the fulfilment half on your laptop.","meta":{"org":"Acme Corp","kind":"Architecture","dwg":"ACME-ORD","rev":"B","date":"2026-03-12"},"state":[{"label":"path read from source","kind":"ok"},{"label":"local stack verified","kind":"ok"},{"label":"PayCo internals unverified","kind":"warn"}],"links":[{"label":"Payments outage runbook","href":"https://example.com/acme/runbooks/payments"},{"label":"Order event schema","href":"https://example.com/acme/schemas/order-placed"}],"tldr":"An order is written once, in one Postgres transaction, together with an `order.placed` row in the outbox. The outbox relay publishes that row to the `order-events` topic, and the fulfilment worker turns it into a pick ticket in the warehouse system. If a ticket is missing, the order row exists but the event never left the outbox: check the relay first.","sections":[{"id":"path","title":"The order path","lead":"Open a system to see its parts. Each level plays its own flow.","blocks":[{"type":"canvas","id":"orders","title":"Checkout → pick ticket","rootLabel":"Order path","height":560,"caption":"Ports `@left`, `@right` and `@bottom` inside a system mark where data enters or leaves it.","nodes":[{"id":"shop","label":"Acme Shop web","sub":"React · checkout","kind":"client","x":0,"y":0,"md":"The browser app. The checkout form builds an order draft and posts it with an idempotency key.","refs":["`web/src/checkout/CheckoutForm.tsx`"],"children":{"nodes":[{"id":"cart","label":"Cart page","sub":"CartPage.tsx","kind":"ui","col":0,"row":0},{"id":"checkout","label":"Checkout form","sub":"CheckoutForm.tsx","kind":"ui","col":1,"row":0},{"id":"client","label":"API client","sub":"ordersApi.ts","col":1,"row":1,"w":200,"md":"Adds the `Idempotency-Key` header, so a double click creates one order."}],"edges":[{"from":"cart","to":"checkout","label":"cart"},{"from":"checkout","to":"client","label":"order draft"},{"id":"req","from":"client","to":"@right","label":"POST /orders"},{"id":"resp","from":"@right","to":"client","label":"201 Created","bend":18}],"flows":[{"id":"click","label":"Click to order","steps":[{"edge":"cart->checkout","label":"The cart page hands its lines to the checkout form.","payload":"cart"},{"edge":"checkout->client","label":"The form builds an order draft.","payload":"draft"},{"edge":"req","label":"The API client posts the draft with an idempotency key.","payload":"POST"},{"edge":"resp","label":"The orders API answers 201 with the order id.","payload":"201"}]}]}},{"id":"api","label":"orders-api","sub":"Node · Fastify","x":340,"y":0,"w":300,"h":150,"md":"Validates, prices and charges the order, then writes it and its outbox row in one transaction.","refs":["`services/orders-api/src/routes/createOrder.ts:18-96`"],"children":{"nodes":[{"id":"auth","label":"auth hook","sub":"JWT check","col":0,"row":0},{"id":"validate","label":"validate","sub":"zod schema","col":1,"row":0},{"id":"price","label":"pricing","sub":"rules + tax","col":2,"row":0,"w":220,"h":120,"children":{"nodes":[{"id":"rules","label":"discount rules","sub":"tiers.ts","col":0,"row":0,"w":230},{"id":"tax","label":"tax table","sub":"tax.ts","col":0,"row":1,"w":230}],"edges":[{"from":"@left","to":"rules","label":"cart"},{"from":"rules","to":"tax","label":"subtotal"},{"from":"tax","to":"@bottom","label":"total"}],"flows":[{"id":"price-cart","label":"Price a cart","steps":[{"edge":"@left->rules","label":"The discount rules read the cart lines."},{"edge":"rules->tax","label":"The tax table adds VAT to the subtotal.","payload":"subtotal"},{"edge":"tax->@bottom","label":"Pricing returns the total.","payload":"total"}]}]}},{"id":"relay","label":"outbox relay","sub":"every 500 ms","kind":"process","col":2,"row":1},{"id":"write","label":"write order","sub":"one transaction","col":0,"row":1},{"id":"charge","label":"charge","sub":"PayCo client","col":1,"row":1}],"edges":[{"from":"@left","to":"auth","label":"POST /orders"},{"from":"auth","to":"validate"},{"from":"validate","to":"price","label":"cart"},{"from":"price","to":"charge","label":"total"},{"from":"charge","to":"@bottom","label":"authorize","kind":"control"},{"from":"charge","to":"write","label":"auth id"},{"from":"write","to":"@bottom","label":"INSERT"},{"from":"@bottom","to":"relay","label":"outbox rows","kind":"async"},{"from":"relay","to":"@right","label":"order.placed","kind":"async"}],"flows":[{"id":"create","label":"Create one order","steps":[{"edge":"@left->auth","label":"The auth hook checks the JWT.","payload":"JWT"},{"edge":"auth->validate","label":"The schema rejects malformed drafts with 400."},{"edge":"validate->price","label":"Pricing computes the total.","payload":"cart"},{"edge":"price->charge","label":"The charge step asks PayCo to authorize the total.","payload":"total"},{"edge":"charge->@bottom","label":"PayCo returns an authorization id.","payload":"auth"},{"edge":"charge->write","label":"The order and its outbox row commit together."},{"edge":"write->@bottom","label":"Postgres stores both rows.","payload":"INSERT"},{"edge":"@bottom->relay","label":"The relay picks up unsent outbox rows."},{"edge":"relay->@right","label":"The relay publishes `order.placed`.","payload":"event"}]}]}},{"id":"bus","label":"order-events","sub":"Kafka topic · 6 partitions","kind":"queue","x":640,"y":0,"md":"Keyed by order id, so events for one order stay in order.","refs":["`infra/kafka/topics.yaml:12`"]},{"id":"fulfil","label":"fulfilment-worker","sub":"Go · consumer group","x":950,"y":0,"md":"Reserves stock and creates the pick ticket. Out-of-stock orders go to the dead-letter topic.","refs":["`services/fulfilment/internal/consume.go:40-118`"],"children":{"nodes":[{"id":"consume","label":"consume","sub":"commit after ticket","col":0,"row":0},{"id":"reserve","label":"reserve stock","sub":"SELECT … FOR UPDATE","col":1,"row":0,"w":200},{"id":"ticket","label":"create pick ticket","sub":"WMS client","col":2,"row":0,"w":200},{"id":"dlq","label":"dead-letter","sub":"order-events.dlq","kind":"queue","col":0,"row":1}],"edges":[{"from":"@left","to":"consume","label":"order.placed","kind":"async"},{"from":"consume","to":"reserve","label":"order"},{"from":"reserve","to":"ticket","label":"reserved lines"},{"from":"ticket","to":"@bottom","label":"pick ticket"},{"from":"reserve","to":"dlq","label":"out of stock","kind":"async"}],"flows":[{"id":"pick","label":"Event to pick ticket","steps":[{"edge":"@left->consume","label":"The worker reads `order.placed`.","payload":"event"},{"edge":"consume->reserve","label":"It locks the stock rows for each line."},{"edge":"reserve->ticket","label":"It sends the reserved lines to the WMS client.","payload":"lines"},{"edge":"ticket->@bottom","label":"The WMS returns a pick ticket id.","payload":"ticket"}]},{"id":"oos","label":"Out of stock","steps":[{"edge":"@left->consume","label":"The worker reads `order.placed`."},{"edge":"consume->reserve","label":"A line has no stock left."},{"edge":"reserve->dlq","label":"The worker parks the event on the dead-letter topic.","payload":"event"}]}]}},{"id":"pay","label":"PayCo","sub":"card authorization","kind":"external","state":"unverified","x":0,"y":270,"md":"Third-party payment provider. We see its API, not its internals."},{"id":"db","label":"orders DB","sub":"Postgres 16 · orders, outbox","kind":"db","x":340,"y":270,"refs":["`services/orders-api/migrations/0007_outbox.sql`"]},{"id":"seeder","label":"seed-orders.py","sub":"local only","state":"local","x":640,"y":270,"md":"Publishes synthetic `order.placed` events to a local Kafka. Never points at production.","refs":["`scripts/seed-orders.py`"]},{"id":"wms","label":"Warehouse WMS","sub":"REST · pick tickets","kind":"external","x":950,"y":270}],"edges":[{"from":"shop","to":"api","label":"HTTPS"},{"from":"api","to":"pay","label":"authorize","kind":"control"},{"from":"api","to":"db","label":"INSERT"},{"from":"api","to":"bus","label":"order.placed","kind":"async"},{"from":"bus","to":"fulfil","kind":"async"},{"from":"seeder","to":"bus","label":"events (local)","kind":"async"},{"from":"fulfil","to":"wms","label":"pick ticket"}],"flows":[{"id":"prod","label":"Production path","steps":[{"edge":"shop->api","label":"The shop posts the order draft.","payload":"draft"},{"edge":"api->pay","label":"orders-api authorizes the card with PayCo.","payload":"total"},{"edge":"api->db","label":"orders-api writes the order and its outbox row.","payload":"INSERT"},{"edge":"api->bus","label":"The outbox relay publishes `order.placed`.","payload":"event"},{"edge":"bus->fulfil","label":"The fulfilment worker consumes the event."},{"edge":"fulfil->wms","label":"The worker creates the pick ticket.","payload":"ticket"}]},{"id":"local","label":"Local stack path","steps":[{"edge":"seeder->bus","label":"The seeder publishes synthetic events.","payload":"event"},{"edge":"bus->fulfil","label":"The fulfilment worker consumes them."},{"edge":"fulfil->wms","label":"The worker calls the WMS stub.","payload":"ticket"}]}]}]},{"id":"terms","title":"Terms","blocks":[{"type":"terms","items":[{"term":"order","md":"One row in `orders`, created by `POST /orders`. Its id is the Kafka message key."},{"term":"outbox","md":"The `outbox` table. A row is written in the same transaction as its order and deleted after the relay publishes it."},{"term":"pick ticket","md":"The warehouse's work item for one order. The WMS returns its id; we store it on the order."},{"term":"idempotency key","md":"A UUID the shop sends in `Idempotency-Key`. A repeat with the same key returns the first order."}]}]},{"id":"options","title":"Ways to test fulfilment without a real checkout","lead":"Use the seeder unless you are changing orders-api itself.","blocks":[{"type":"cards","items":[{"title":"Seeder","tag":"recommended","kind":"ok","md":"Publish synthetic events with `scripts/seed-orders.py`. Exercises the worker and the WMS stub; skips PayCo and Postgres."},{"title":"Full local stack","tag":"slower","kind":"info","md":"Run orders-api against the PayCo sandbox. Exercises the outbox relay too. Needs a sandbox key from the payments team."},{"title":"Replay from staging","tag":"read-only data","kind":"warn","md":"Copy events from the staging topic with `kcat`. Real shapes, but customer data: never paste them into tickets."}]}]},{"id":"run","title":"Run the local stack","lead":"Your ticks stay in this browser. **Copy progress** exports them as Markdown.","blocks":[{"type":"callout","kind":"caution","md":"Check that `KAFKA_BROKERS` points at `localhost:9092` before you seed. The seeder publishes to whatever broker the variable names."},{"type":"checklist","id":"local","title":"Local stack","items":[{"id":"doctor","text":"Check the tools.","code":"make doctor","verify":"Last line: `doctor: all checks passed`.","sub":"Docker 24+, Python 3.11 and make on PATH"},{"id":"up","text":"Start Postgres, Kafka and the WMS stub.","code":"docker compose up -d postgres kafka wms-stub","verify":"`docker compose ps` shows 3 services `running`.","refs":["orders/db","orders/bus","orders/wms"],"sub":"The worker needs all three before it starts","blocks":[{"type":"table","columns":["Service","Port","Ready when"],"rows":[["postgres","5432","`pg_isready` exits 0"],["kafka","9092","log line `started (kafka.server.KafkaServer)`"],["wms-stub","8085","`GET /health` returns 200"]]}]},{"id":"worker","text":"Start the fulfilment worker.","code":"make run-fulfilment","verify":"Log line `joined group fulfilment, 6 partitions`.","refs":["orders/fulfil/consume"]},{"id":"seed","text":"Seed 20 orders.","code":"python3 scripts/seed-orders.py --count 20","refs":["orders/seeder"],"sub":"Synthetic orders; never point the seeder at staging","blocks":[{"type":"checklist","id":"local-seed-checks","title":"Before you seed","items":[{"id":"brokers","text":"Check `KAFKA_BROKERS` is `localhost:9092`"},{"id":"topic","text":"Create the `order-events` topic","code":"make topics","verify":"`kcat -L` lists `order-events` with 6 partitions."}]}]},{"id":"tickets","text":"Watch the pick tickets arrive.","code":"make tail-tickets","verify":"20 lines `ticket created`, one per order id.","refs":["orders/fulfil/ticket"]},{"id":"down","text":"Stop everything.","code":"docker compose down -v","verify":"No containers; ports 5432 and 9092 are free.","sub":"Removes the volumes too, so the next run starts clean"}]}]},{"id":"trouble","title":"Troubleshooting","blocks":[{"type":"table","columns":["Symptom","Cause","Fix"],"rows":[["Order exists, no pick ticket","The outbox relay stopped; rows pile up in `outbox`.","Run `SELECT count(*) FROM outbox;`. If it grows, restart orders-api and read the relay log."],["Worker log: `rebalancing` every few seconds","A handler takes longer than `max.poll.interval.ms` (300 s).","Find the slow WMS call; the worker commits only after the ticket exists."],["Two tickets for one order","The WMS stub ignores the `Idempotency-Key` header.","Use `wms-stub` 2.3 or later."],["`seed-orders.py` exits with `NoBrokersAvailable`","Kafka is not up yet.","Wait for `docker compose ps` to show `running`, then seed again."]]}]},{"id":"issues","title":"Known issues","blocks":[{"type":"callout","kind":"risk","title":"Relay lag hides failures","md":"The relay retries a failing publish forever. A broken broker shows up as a growing `outbox` table, not as an error. Alert on `outbox` row count above 1,000."},{"type":"callout","kind":"decision","md":"We keep the outbox instead of publishing from the request handler. A crash between commit and publish would otherwise lose the event."}]}]}</script>
+<script type="application/json" id="bp-hist">null</script>
 <script>
 (() => {
 'use strict';
-const DOC = JSON.parse(document.getElementById('bp-doc').textContent);
+/* ---------- revisions: which document this page shows ---------- */
+// bp-doc is the current revision. bp-hist (from build.py) holds earlier ones; their blocks are either
+// in hist.blocks or '@section/block' references to blocks the current revision still has.
+// Rendering adds fields to the objects it draws, so diffs always read fresh, untouched copies.
+const DOC_SRC = document.getElementById('bp-doc').textContent;
+const HIST = (() => { try { const x = JSON.parse(document.getElementById('bp-hist').textContent); return x && Array.isArray(x.revs) ? x : null; } catch { return null; } })();
+const PRISTINE = JSON.parse(DOC_SRC);
+const REVS = (() => {
+  const m = PRISTINE.meta || {};
+  const cur = { rev: String(m.rev || ''), date: m.date || '', current: true, doc: PRISTINE };
+  if (!HIST) return [cur];
+  const blk = ref => ref[0] === '@' ? (([i, j]) => PRISTINE.sections[i].blocks[j])(ref.slice(1).split('/').map(Number)) : HIST.blocks[ref];
+  const out = HIST.revs.map(r => r.head ? { rev: r.rev, date: r.date, built: r.built,
+    get doc() { return this._d ||= { ...r.head, sections: r.sections.map(s => ({ ...s, blocks: s.blocks.map(blk) })) }; } } : null).filter(Boolean);
+  cur.built = (HIST.revs.find(r => !r.head) || {}).built || '';
+  out.push(cur);
+  return out;
+})();
+const QP = new URLSearchParams(location.search);
+const CUR = REVS[REVS.length - 1];
+const VIEW = REVS.find(r => r.rev === QP.get('rev')) || CUR;
+const BASE = REVS.find(r => r.rev === QP.get('diff') && r !== VIEW) || null;
+const OLD = VIEW !== CUR;   // an earlier revision: read-only, nothing is stored
+const DOC = OLD ? JSON.parse(JSON.stringify(VIEW.doc)) : JSON.parse(DOC_SRC);
 const NS = 'http://www.w3.org/2000/svg';
 const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const $ = (q, r = document) => r.querySelector(q);
@@ -754,6 +846,7 @@ const ICONS = {
   octagon: '<path d="M7.9 2h8.2L22 7.9v8.2L16.1 22H7.9L2 16.1V7.9Z"/><path d="M12 8v4M12 16h.01"/>',
   flag: '<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7"/>',
   split: '<path d="M16 3h5v5M8 3H3v5M12 22v-8.3a4 4 0 0 0-1.2-2.8L3 3M15 9l6-6"/>',
+  hist: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/>',
   zap: '<path d="M4 14a1 1 0 0 1-.8-1.6l9.9-10.2a.5.5 0 0 1 .9.5l-1.9 6a1 1 0 0 0 .9 1.3h7a1 1 0 0 1 .8 1.6l-9.9 10.2a.5.5 0 0 1-.9-.5l1.9-6a1 1 0 0 0-.9-1.3z"/>',
   list: '<path d="M13 5h8M13 12h8M13 19h8"/><path d="m3 17 2 2 4-4"/><rect x="3" y="4" width="6" height="6" rx="1"/>',
   check: '<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
@@ -819,10 +912,13 @@ function md(src) {
 const store = (() => {
   let ok = true; const mem = {};
   try { localStorage.setItem('bp:probe', '1'); localStorage.removeItem('bp:probe'); } catch { ok = false; }
+  // An earlier revision reads the reader's ticks, picks and comments but never writes them: its item
+  // ids and `done` values differ from the current ones, and storing would clobber current progress.
+  const local = k => !ok || (OLD && k.startsWith('bp:'));
   return {
-    get: k => ok ? localStorage.getItem(k) : (k in mem ? mem[k] : null),
-    set: (k, v) => { if (ok) localStorage.setItem(k, v); else mem[k] = v; },
-    del: k => { if (ok) localStorage.removeItem(k); else delete mem[k]; },
+    get: k => local(k) && k in mem ? mem[k] : ok ? localStorage.getItem(k) : null,
+    set: (k, v) => { if (local(k)) mem[k] = v; else localStorage.setItem(k, v); },
+    del: k => { if (local(k)) mem[k] = null; else localStorage.removeItem(k); },
   };
 })();
 const docId = DOC.id || 'doc';
@@ -996,7 +1092,7 @@ const RENDER = {
   table: b => h('div', {},
     h('div', { class: 'bp-table-wrap' }, h('table', { class: 'bp-table' },
       h('thead', {}, h('tr', {}, (b.columns || []).map(c => h('th', {}, c)))),
-      h('tbody', {}, (b.rows || []).map(r => h('tr', {}, r.map(c => h('td', { html: inline(c) }))))))),
+      h('tbody', {}, (b.rows || []).map((r, ri) => h('tr', { 'data-r': ri }, r.map(c => h('td', { html: inline(c) }))))))),
     b.caption && h('div', { class: 'bp-caption', html: inline(b.caption) })),
   code: b => codeBlock(b.code, b.lang, b.title),
   terms: b => h('dl', { class: 'bp-terms' }, (b.items || []).map(t => [h('dt', {}, t.term), h('dd', { html: md(t.md) })])),
@@ -1252,7 +1348,7 @@ function noteBox(x, compact) {
 function replyPayload() {
   const all = Object.values(ITEMS);
   return {
-    doc: docId, title: DOC.title || '', path: location.pathname, at: new Date().toISOString(),
+    doc: docId, rev: CUR.rev, title: DOC.title || '', path: location.pathname, at: new Date().toISOString(),
     message: (store.get(MSG_KEY) || '').trim(),
     items: all.map(x => ({
       checklist: x.cid, item: x.it.id, text: x.it.text,
@@ -1279,7 +1375,7 @@ function replyCounts() {
 }
 function paintSend() {
   if (!sendBtn) return;
-  sendBtn.hidden = !CHECKLISTS.length;
+  sendBtn.hidden = !CHECKLISTS.length || OLD;   // answers go with the current revision only
   const c = replyCounts();
   sendBtn.classList.toggle('has', !!(c.decided || c.notes || c.ticked));
   if (sendDlg && sendDlg.open) sendDlg._paint();
@@ -1347,10 +1443,10 @@ const tocLinks = [];
   const el = h('section', { class: 'bp-sec', id: sec.id },
     h('h2', {}, h('span', { class: 'n' }, num), h('span', {}, sec.title)),
     sec.lead && h('p', { class: 'bp-lead', html: inline(sec.lead) }));
-  for (const b of sec.blocks || []) {
+  (sec.blocks || []).forEach((b, bi) => {
     const r = RENDER[b.type];
-    el.append(h('div', { class: 'bp-block' }, r ? r(b) : h('div', { class: 'bp-callout risk' }, ic('octagon'), h('span', { class: 'lbl' }, 'Unknown block'), h('div', {}, `Type "${b.type}" has no renderer.`))));
-  }
+    el.append(h('div', { class: 'bp-block', 'data-bk': `${sec.id}/${bi}` }, r ? r(b) : h('div', { class: 'bp-callout risk' }, ic('octagon'), h('span', { class: 'lbl' }, 'Unknown block'), h('div', {}, `Type "${b.type}" has no renderer.`))));
+  });
   main.append(el);
   tocLinks.push(h('a', { href: '#' + sec.id }, h('span', { class: 'n' }, num), h('span', {}, sec.title)));
 });
@@ -1661,7 +1757,7 @@ function fileNav(d) {
     // what the reader can see: the pane when it scrolls itself, else the window under the app bar
     const scrolls = pane.scrollHeight > pane.clientHeight + 2;
     const pr = pane.getBoundingClientRect(), fh = head.getBoundingClientRect();
-    const top = Math.max(fh.bottom, scrolls ? pr.top : cssPx('--bar-h')), bottom = scrolls ? pr.bottom : innerHeight;
+    const top = Math.max(fh.bottom, scrolls ? pr.top : cssPx('--bar-h') + cssPx('--rv-h')), bottom = scrolls ? pr.bottom : innerHeight;
     const above = [], below = []; let cur = -1;
     cards.forEach((c, i) => { const r = c.getBoundingClientRect(); if (r.bottom < top + 6) above.push(i); else if (r.top > bottom - 6) below.push(i); else if (cur < 0) cur = i; });
     return { above, below, cur };
@@ -2366,6 +2462,361 @@ function outlineOf(spec, root) {
 
 renderDocument();
 
+/* ---------- revisions: switch between them, compare two ---------- */
+// ?rev=B shows revision B (read-only); ?diff=A marks what changed from A to the shown revision.
+const canon = x => JSON.stringify(x === undefined ? null : x);
+const plain = s => String(s ?? '').replace(/[`*]/g, '');
+function lcsPairs(a, b, eq) {
+  const n = a.length, m = b.length;
+  const L = Array.from({ length: n + 1 }, () => new Uint32Array(m + 1));
+  for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) L[i][j] = eq(a[i], b[j]) ? L[i + 1][j + 1] + 1 : Math.max(L[i + 1][j], L[i][j + 1]);
+  const out = []; let i = 0, j = 0;
+  while (i < n && j < m) { if (eq(a[i], b[j])) { out.push([i, j]); i++; j++; } else if (L[i + 1][j] >= L[i][j + 1]) i++; else j++; }
+  return out;
+}
+// Text diff as HTML: <del> for removed text, <ins> for added. Paragraphs are matched first; inside a
+// matched paragraph words are diffed, unless most of it was rewritten, which reads better whole.
+const DEL = t => t ? `<del>${esc(t)}</del>` : '', INS = t => t ? `<ins>${esc(t)}</ins>` : '';
+function wordDiff(a, b) {
+  const clean = s => String(s ?? '').replace(/\*\*/g, '');
+  const split = s => s.split(/(\n{2,})/).reduce((out, x, i) => (i % 2 ? out[out.length - 1] += x : out.push(x), out), []);
+  const A = split(clean(a)), B = split(clean(b)), html = [];
+  let i = 0, j = 0;
+  for (const [pi, pj] of [...lcsPairs(A, B, (x, y) => x === y), [A.length, B.length]]) {
+    // pair the paragraphs between two equal ones in order; extras are wholly removed or added
+    while (i < pi && j < pj) html.push(paraDiff(A[i++], B[j++]));
+    while (i < pi) html.push(DEL(A[i++]));
+    while (j < pj) html.push(INS(B[j++]));
+    if (pi < A.length) { html.push(esc(A[pi])); i = pi + 1; j = pj + 1; }
+  }
+  return html.join('');
+}
+function paraDiff(a, b) {
+  const tok = s => s.match(/\s+|[\p{L}\p{N}_]+|[^\s\p{L}\p{N}_]/gu) || [];
+  const A = tok(a), B = tok(b);
+  if (A.length * B.length > 2.5e6) return DEL(a) + INS(b);
+  const runs = []; let i = 0, j = 0, same = 0;
+  const push = (k, t) => { const l = runs[runs.length - 1]; if (k === '=') { if (l && l.eq != null) l.eq += t; else runs.push({ eq: t }); } else { if (!l || l.eq != null) runs.push({ del: '', ins: '' }); runs[runs.length - 1][k] += t; } };
+  for (const [pi, pj] of [...lcsPairs(A, B, (x, y) => x === y), [A.length, B.length]]) {
+    if (pi > i) push('del', A.slice(i, pi).join(''));
+    if (pj > j) push('ins', B.slice(j, pj).join(''));
+    if (pi < A.length) { push('=', A[pi]); if (/\S/.test(A[pi])) same += A[pi].length; }
+    i = pi + 1; j = pj + 1;
+  }
+  const size = (a + b).replace(/\s/g, '').length;
+  if (size && 2 * same / size < 0.5) return DEL(a) + INS(b);   // mostly rewritten
+  // fold short unchanged bits ("the", ", ") between two changes into the change
+  for (let k = 1; k < runs.length - 1; k++) {
+    const r = runs[k];
+    if (r.eq != null && r.eq.replace(/\s/g, '').length <= 3 && runs[k - 1].eq == null && runs[k + 1].eq == null) {
+      const p = runs[k - 1], n = runs[k + 1];
+      runs.splice(k - 1, 3, { del: p.del + r.eq + n.del, ins: p.ins + r.eq + n.ins }); k = Math.max(0, k - 2);
+    }
+  }
+  return runs.map(r => r.eq != null ? esc(r.eq) : DEL(r.del) + INS(r.ins)).join('');
+}
+// Align two lists: equal neighbours by content, the rest paired by key inside each gap.
+function alignSeq(a, b, key) {
+  const ca = a.map(canon), cb = b.map(canon);
+  const pairs = a.length * b.length > 1e6 ? [] : lcsPairs(ca, cb, (x, y) => x === y);
+  const ops = []; let i = 0, j = 0;
+  for (const [pi, pj] of [...pairs, [a.length, b.length]]) {
+    const ga = []; for (; i < pi; i++) ga.push(i);
+    const used = new Set();
+    for (; j < pj; j++) {
+      const k = key(b[j]); const x = ga.find(x => !used.has(x) && key(a[x]) === k);
+      if (x != null) { used.add(x); ops.push({ op: 'mod', a: x, b: j }); } else ops.push({ op: 'add', b: j });
+    }
+    for (const x of ga) if (!used.has(x)) ops.push({ op: 'del', a: x, before: pj });
+    if (pi < a.length) { ops.push({ op: 'same', a: pi, b: pj }); i = pi + 1; j = pj + 1; }
+  }
+  return ops;
+}
+// A block as plain text, for diffs and for removed blocks.
+function blockText(b) {
+  switch (b.type) {
+    case 'text': return b.md || '';
+    case 'callout': return [b.title, b.md].filter(Boolean).join('\n');
+    case 'code': return [b.title, b.code].filter(Boolean).join('\n');
+    case 'terms': return (b.items || []).map(t => `${t.term}: ${t.md}`).join('\n');
+    case 'cards': return (b.items || []).map(c => `${c.title}${c.tag ? ` [${c.tag}]` : ''}: ${c.md}`).join('\n');
+    case 'table': return [(b.columns || []).join(' | '), ...(b.rows || []).map(r => r.join(' | ')), b.caption].filter(Boolean).join('\n');
+    case 'checklist': return [b.title, ...(b.items || []).map(x => '- ' + x.text)].filter(Boolean).join('\n');
+    case 'canvas': return [b.title, ...(b.nodes || []).map(n => '- ' + n.label)].filter(Boolean).join('\n');
+    case 'diff': return [b.title, ...(b.files || []).map(f => '- ' + f.path)].filter(Boolean).join('\n');
+    default: return canon(b);
+  }
+}
+const blockLabel = b => ({ text: 'Text', callout: b.title || `${(b.kind || 'note')[0].toUpperCase()}${(b.kind || 'note').slice(1)} callout`, table: 'Table',
+  code: b.title || 'Code', terms: 'Terms', cards: 'Cards', checklist: b.title || 'Checklist', canvas: b.title || 'Drawing', diff: b.title || 'Code change' }[b.type] || b.type);
+
+const CHG = [];   // every marked change, in page order once sorted
+const CHG_WORD = { add: 'New', mod: 'Changed', del: 'Removed' };
+const chgTag = kind => h('span', { class: 'bd-chg-tag ' + kind }, CHG_WORD[kind]);
+function markChg(el, kind, label) { el.classList.add('bd-chg', 'bd-chg-' + kind); CHG.push({ el, kind, label }); return el; }
+function chgHead(kind, label, extra) { return h('div', { class: 'bd-chg-hd' }, chgTag(kind), h('span', {}, plain(label)), extra && h('span', { class: 'x' }, extra)); }
+function chgBox(rows) {
+  return h('details', { class: 'bd-chgbox', open: true }, h('summary', {}, 'What changed'),
+    h('dl', {}, rows.map(([k, v]) => [h('dt', {}, k), h('dd', { class: 'bd-wd', html: v })])));
+}
+const fieldRows = (pairs) => pairs.filter(([, a, b]) => canon(a ?? null) !== canon(b ?? null)).map(([k, a, b]) => [k, wordDiff(Array.isArray(a) ? a.join('\n') : a ?? '', Array.isArray(b) ? b.join('\n') : b ?? '')]);
+
+function compareDocs(base, view) {
+  // header
+  const lines = d => ({ state: (d.state || []).map(s => s.label), links: (d.links || []).map(l => `${l.label} (${l.href})`) });
+  const ob = lines(base), nb = lines(view), om = base.meta || {}, nm = view.meta || {};
+  const hrows = fieldRows([['Title', base.title, view.title], ['Subtitle', base.subtitle, view.subtitle], ['TL;DR', base.tldr, view.tldr],
+    ['Status', ob.state, nb.state], ['Related', ob.links, nb.links], ['Kind', om.kind, nm.kind], ['Drawing', om.dwg, nm.dwg]]);
+  if (hrows.length) { const box = chgBox(hrows); tldr.append(markChg(h('div', { class: 'bd-chg-wrap' }, chgHead('mod', 'Header'), box), 'mod', 'Header')); }
+  // sections, matched by id
+  const oldSecs = base.sections || [], newSecs = view.sections || [];
+  const oldById = new Map(oldSecs.map(s => [s.id, s]));
+  const newIds = new Set(newSecs.map(s => s.id));
+  const secEl = id => [...main.children].find(e => e.id === id);
+  for (const s of newSecs) {
+    const el = secEl(s.id); if (!el) continue;
+    const o = oldById.get(s.id);
+    if (!o) { el.querySelector('h2').append(chgTag('add')); markChg(el, 'add', s.title); continue; }
+    const rows = fieldRows([['Title', o.title, s.title], ['Lead', o.lead, s.lead]]);
+    if (rows.length) { const box = chgBox(rows); (el.querySelector(':scope > .bp-lead') || el.querySelector('h2')).after(box); el.querySelector('h2').append(chgTag('mod')); markChg(box, 'mod', s.title); }
+    compareBlocks(o.blocks || [], s.blocks || [], el);
+  }
+  oldSecs.forEach((o, i) => {
+    if (newIds.has(o.id)) return;
+    const ghost = h('section', { class: 'bp-sec bd-ghost' }, h('h2', {}, h('span', {}, o.title), chgTag('del')),
+      o.lead && h('p', { class: 'bp-lead', html: `<del>${esc(o.lead)}</del>` }),
+      (o.blocks || []).map(b => h('div', { class: 'bp-block' }, h('div', { class: 'bd-chg-hd' }, h('span', {}, blockLabel(b))), h('div', { class: 'bd-wd', html: `<del>${esc(blockText(b))}</del>` }))));
+    const prev = oldSecs.slice(0, i).reverse().map(p => newIds.has(p.id) && secEl(p.id)).find(Boolean);
+    if (prev) prev.after(ghost); else main.prepend(ghost);
+    markChg(ghost, 'del', o.title);
+  });
+  // page order, so next/previous walk down the page
+  CHG.sort((a, b) => a.el.compareDocumentPosition(b.el) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1);
+}
+function compareBlocks(ob, nb, secElm) {
+  const els = [...secElm.querySelectorAll(':scope > .bp-block')];
+  for (const op of alignSeq(ob, nb, b => b.type + ':' + (b.id || ''))) {
+    if (op.op === 'same') continue;
+    if (op.op === 'del') {
+      const b = ob[op.a];
+      const ghost = h('div', { class: 'bp-block bd-ghost' }, chgHead('del', blockLabel(b)), h('div', { class: 'bd-wd', html: `<del>${esc(blockText(b))}</del>` }));
+      if (els[op.before]) els[op.before].before(ghost); else secElm.append(ghost);
+      markChg(ghost, 'del', blockLabel(b));
+      continue;
+    }
+    const b = nb[op.b], el = els[op.b];
+    if (op.op === 'add') { el.prepend(chgHead('add', blockLabel(b))); markChg(el, 'add', blockLabel(b)); continue; }
+    const o = ob[op.a];
+    let summary = '';
+    const before = CHG.length;
+    if (b.type === 'checklist') {
+      const n = compareChecklist(o, b); summary = countWords(n);
+      const rows = fieldRows([['Title', o.title, b.title]]);
+      if (!rows.length && CHG.length === before) continue;
+      if (rows.length) el.querySelector('.bp-cl-h').after(chgBox(rows));
+    }
+    else if (b.type === 'table') compareTable(o, b, el);
+    else if (b.type === 'canvas') el.append(chgBox(compareCanvas(o, b)));
+    else if (b.type === 'diff') el.append(chgBox(compareDiff(o, b)));
+    else el.append(chgBox([['Text', wordDiff(blockText(o), blockText(b))]]));
+    el.prepend(chgHead('mod', blockLabel(b), summary));
+    // a list or table whose rows carry their own marks counts as those rows, not once more
+    if (CHG.length === before) markChg(el, 'mod', blockLabel(b)); else el.classList.add('bd-chg', 'bd-chg-mod');
+  }
+}
+const countWords = n => [n.add && `${n.add} new`, n.mod && `${n.mod} changed`, n.del && `${n.del} removed`].filter(Boolean).join(', ');
+function compareChecklist(o, n) {
+  const cid = n.id, cnt = { add: 0, mod: 0, del: 0 };
+  const was = new Map((o.items || []).map(x => [x.id, x])), now = new Set((n.items || []).map(x => x.id));
+  for (const it of n.items || []) {
+    const x = ITEMS[`${cid}/${it.id}`]; if (!x) continue;
+    const w = was.get(it.id);
+    if (!w) { cnt.add++; x.head.insertBefore(chgTag('add'), x.head.querySelector('.bp-cl-noteic')); markChg(x.li, 'add', it.text); continue; }
+    if (canon(w) === canon(it)) continue;
+    const lbl = (c, id) => { const f = (c.choices || []).find(y => y.id === id); return f ? f.label : id; };
+    const rows = fieldRows([['Title', w.text, it.text], ['Subtitle', w.sub, it.sub], ['Size', w.state, it.state],
+      ['Options', (w.choices || []).map(c => c.label), (it.choices || []).map(c => c.label)],
+      ['Recommended', w.recommend && lbl(w, w.recommend), it.recommend && lbl(it, it.recommend)],
+      ['Picked', w.choice && lbl(w, w.choice), it.choice && lbl(it, it.choice)], ['Done', w.done ? 'yes' : 'no', it.done ? 'yes' : 'no'],
+      ['Details', w.detail, it.detail], ['Command', w.code, it.code], ['Check', w.verify, it.verify], ['Links', w.refs, it.refs]]);
+    // nested blocks: sub-checklists mark their own items; anything else is diffed as text
+    const wb = w.blocks || [], ib = it.blocks || [];
+    for (const op of alignSeq(wb, ib, b => b.type + ':' + (b.id || ''))) {
+      if (op.op === 'same') continue;
+      if (op.op === 'mod' && ib[op.b].type === 'checklist') { const k = compareChecklist(wb[op.a], ib[op.b]); if (k.add || k.mod || k.del) rows.push([blockLabel(ib[op.b]), esc(countWords(k))]); continue; }
+      rows.push([op.op === 'add' ? 'Added ' + blockLabel(ib[op.b]).toLowerCase() : op.op === 'del' ? 'Removed ' + blockLabel(wb[op.a]).toLowerCase() : blockLabel(ib[op.b]),
+        wordDiff(op.a != null ? blockText(wb[op.a]) : '', op.b != null ? blockText(ib[op.b]) : '')]);
+    }
+    if (!rows.length) continue;
+    cnt.mod++;
+    x.head.insertBefore(chgTag('mod'), x.head.querySelector('.bp-cl-noteic'));
+    x.body.prepend(chgBox(rows));
+    if (x.li.classList.contains('empty')) x.refresh();
+    openItem(x);
+    markChg(x.li, 'mod', it.text);
+  }
+  const entry = CHECKLISTS.find(c => c.b.id === cid);
+  const list = entry && entry.root.querySelector('.bp-cl-items');
+  for (const w of o.items || []) {
+    if (now.has(w.id) || !list) continue;
+    cnt.del++;
+    const ghost = h('li', { class: 'bp-cl-item bd-ghost' }, h('div', { class: 'bp-cl-row' }, h('span', { class: 'bp-cl-dot', 'aria-hidden': 'true' }),
+      h('div', { class: 'bp-cl-head' }, h('span', { class: 'bp-cl-main' }, h('span', { class: 'bp-cl-text', html: inline(w.text) }), w.sub && h('span', { class: 'bp-cl-subt' }, h('span', { html: inline(w.sub) }))), chgTag('del'))));
+    const idx = (o.items || []).indexOf(w);
+    const prevId = (o.items || []).slice(0, idx).reverse().map(p => now.has(p.id) && ITEMS[`${cid}/${p.id}`]).find(Boolean);
+    if (prevId) prevId.li.after(ghost); else list.prepend(ghost);
+    markChg(ghost, 'del', w.text);
+  }
+  return cnt;
+}
+function compareTable(o, n, el) {
+  const rowsEl = [...el.querySelectorAll('tbody > tr')], cols = n.columns || [];
+  const rows = fieldRows([['Columns', o.columns, n.columns], ['Caption', o.caption, n.caption]]);
+  for (const op of alignSeq(o.rows || [], n.rows || [], r => plain(r[0]))) {
+    if (op.op === 'same') continue;
+    if (op.op === 'add') { markChg(rowsEl[op.b], 'add', 'Row ' + plain(n.rows[op.b][0])); continue; }
+    if (op.op === 'del') {
+      const ghost = h('tr', { class: 'bd-ghost' }, o.rows[op.a].map(c => h('td', { html: `<del>${esc(plain(c))}</del>` })));
+      const tb = el.querySelector('tbody');
+      if (rowsEl[op.before]) rowsEl[op.before].before(ghost); else tb.append(ghost);
+      markChg(ghost, 'del', 'Row ' + plain(o.rows[op.a][0]));
+      continue;
+    }
+    const tr = rowsEl[op.b], a = o.rows[op.a], b = n.rows[op.b];
+    b.forEach((c, ci) => { if (canon(a[ci] ?? '') !== canon(c)) { const td = tr.children[ci]; td && td.classList.add('bd-cell-mod'); td && (td.title = 'Was: ' + plain(a[ci] ?? '(empty)')); rows.push([`${plain(b[0]).slice(0, 40)} · ${cols[ci] || ci + 1}`, wordDiff(a[ci] ?? '', c)]); } });
+    markChg(tr, 'mod', 'Row ' + plain(b[0]));
+  }
+  if (rows.length) el.append(chgBox(rows));
+}
+function compareCanvas(o, n) {
+  const walk = (scope, pre, nodes, edges, flows) => {
+    for (const nd of scope.nodes || []) { const k = pre ? `${pre}/${nd.id}` : nd.id; const { children, x, y, col, row, w, h: hh, ...rest } = nd; nodes.set(k, rest); if (children) walk(children, k, nodes, edges, flows); }
+    for (const e of scope.edges || []) edges.set(`${pre}:${e.from}>${e.to}:${e.label || ''}`, e);
+    for (const f of scope.flows || []) flows.set(`${pre}:${f.id}`, f);
+    return { nodes, edges, flows };
+  };
+  const A = walk(o, '', new Map(), new Map(), new Map()), B = walk(n, '', new Map(), new Map(), new Map());
+  const cv = CANVASES[n.id], rows = [];
+  const paint = (k, cls) => cv && cv.svg.querySelectorAll(`[data-key="${CSS.escape(k)}"]`).forEach(g => g.classList.add(cls));
+  const nodeText = nd => [nd.label, nd.sub, nd.state && `(${nd.state})`, nd.md].filter(Boolean).join('\n');
+  for (const [k, nd] of B.nodes) {
+    const w = A.nodes.get(k);
+    if (!w) { rows.push(['New part', esc(nd.label + (nd.sub ? ' · ' + nd.sub : ''))]); paint(k, 'chg-add'); }
+    else if (canon(w) !== canon(nd)) { rows.push([`Part ${nd.label}`, wordDiff(nodeText(w), nodeText(nd))]); paint(k, 'chg-mod'); }
+  }
+  for (const [k, nd] of A.nodes) if (!B.nodes.has(k)) rows.push(['Removed part', `<del>${esc(nd.label)}</del>`]);
+  const edgeTxt = e => `${e.from} → ${e.to}${e.label ? ': ' + e.label : ''}`;
+  for (const [k, e] of B.edges) if (!A.edges.has(k)) rows.push(['New connection', esc(edgeTxt(e))]);
+  for (const [k, e] of A.edges) if (!B.edges.has(k)) rows.push(['Removed connection', `<del>${esc(edgeTxt(e))}</del>`]);
+  for (const [k, f] of B.flows) { const w = A.flows.get(k); if (!w) rows.push(['New flow', esc(f.label || f.id)]); else if (canon(w) !== canon(f)) rows.push([`Flow ${f.label || f.id}`, wordDiff((w.steps || []).map(s => s.label || '').join('\n'), (f.steps || []).map(s => s.label || '').join('\n'))]); }
+  for (const [k, f] of A.flows) if (!B.flows.has(k)) rows.push(['Removed flow', `<del>${esc(f.label || f.id)}</del>`]);
+  rows.push(...fieldRows([['Title', o.title, n.title], ['Caption', o.caption, n.caption]]));
+  if (!rows.length) rows.push(['Layout', 'Positions or sizes changed.']);
+  return rows;
+}
+function compareDiff(o, n) {
+  const rows = fieldRows([['Range', `${o.base || ''}…${o.head || ''}`, `${n.base || ''}…${n.head || ''}`], ['Note', o.note, n.note]]);
+  const of = new Map((o.files || []).map(f => [f.path, f]));
+  const nf = new Set((n.files || []).map(f => f.path));
+  for (const f of n.files || []) { const w = of.get(f.path); if (!w) rows.push(['New file', esc(f.path)]); else if (canon(w.hunks) !== canon(f.hunks)) rows.push(['Changed file', esc(`${f.path} (+${f.add || 0} −${f.del || 0}, was +${w.add || 0} −${w.del || 0})`)]); }
+  for (const f of o.files || []) if (!nf.has(f.path)) rows.push(['Removed file', `<del>${esc(f.path)}</del>`]);
+  const ct = c => `${c.file || 'Whole change'}${c.line ? ':' + c.line : ''} ${c.item || c.title || ''}`;
+  const oc = new Set((o.comments || []).map(ct)), nc = new Set((n.comments || []).map(ct));
+  for (const c of nc) if (!oc.has(c)) rows.push(['New comment', esc(c)]);
+  for (const c of oc) if (!nc.has(c)) rows.push(['Removed comment', `<del>${esc(c)}</del>`]);
+  if (!rows.length) rows.push(['Comments', 'Comment text changed.']);
+  return rows;
+}
+
+// URLs and UI
+function revUrl(view, base) {
+  const q = new URLSearchParams();
+  if (view !== CUR) q.set('rev', view.rev);
+  if (base) q.set('diff', base.rev);
+  const s = q.toString();
+  return location.pathname + (s ? '?' + s : '');
+}
+const revName = r => `Rev ${r.rev}`;
+let revDlg = null;
+function openRevs() {
+  if (!revDlg) {
+    const list = [...REVS].reverse().map(r => {
+      const i = REVS.indexOf(r), prev = REVS[i - 1];
+      const notes = (r.doc.changes || []);
+      return h('li', { class: 'rv' + (r === VIEW ? ' on' : '') },
+        h('div', { class: 'rv-h' }, h('b', {}, revName(r)), r.date && h('span', { class: 'd' }, r.date),
+          r.current && h('span', { class: 'bp-chip ok' }, 'current'), r === VIEW && h('span', { class: 'bp-chip info' }, 'shown')),
+        notes.length ? h('ul', { class: 'rv-notes' }, notes.map(t => h('li', { html: inline(t) }))) : null,
+        h('div', { class: 'rv-act' },
+          r !== VIEW && h('a', { class: 'bp-btn', href: revUrl(r, null) }, 'View'),
+          prev && h('a', { class: 'bp-btn', href: revUrl(r, prev) }, ic('split'), `Changes from ${prev.rev}`)));
+    });
+    const sel = (def) => h('select', { class: 'rv-sel' }, REVS.map(r => h('option', { value: r.rev, selected: r === def }, revName(r) + (r.date ? ` · ${r.date}` : ''))));
+    const from = sel(BASE || (OLD ? VIEW : REVS[REVS.length - 2])), to = sel(BASE ? VIEW : CUR);
+    const go = () => { const a = REVS.find(r => r.rev === from.value), b = REVS.find(r => r.rev === to.value); if (a && b && a !== b) location.href = revUrl(b, a); else toast('Pick two different revisions'); };
+    revDlg = h('dialog', { class: 'bd-send bd-revs', 'aria-labelledby': 'bd-revs-h' },
+      h('div', { class: 'hd' }, h('h3', { id: 'bd-revs-h' }, 'Revisions'), h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Close', onclick: () => revDlg.close() }, ic('x'))),
+      h('p', { class: 'sum' }, `${REVS.length} revisions of this document. Older ones are read-only: ticks, picks and comments made there aren't saved.`),
+      h('ol', { class: 'rv-list' }, list),
+      h('div', { class: 'ft rv-cmp' }, h('label', {}, 'Compare', from), h('label', {}, 'with', to), h('button', { type: 'button', class: 'bp-btn primary', onclick: go }, ic('split'), 'Compare')));
+    document.body.append(revDlg);
+    revDlg.addEventListener('click', e => { if (e.target === revDlg) revDlg.close(); });
+  }
+  revDlg.showModal();
+}
+let chgAt = -1;
+function gotoChg(step) {
+  if (!CHG.length) return;
+  chgAt = (chgAt + step + CHG.length) % CHG.length;
+  const c = CHG[chgAt];
+  c.el.scrollIntoView({ behavior: REDUCE ? 'auto' : 'smooth', block: 'center' });
+  c.el.classList.remove('bd-chg-flash'); void c.el.offsetWidth; c.el.classList.add('bd-chg-flash');
+  revPos && (revPos.textContent = `${chgAt + 1} of ${CHG.length}`);
+}
+let revPos = null;
+if (REVS.length > 1) {
+  const label = h('span', { class: 'l' }, revName(VIEW));
+  const btn = h('button', { type: 'button', class: 'bp-btn bd-rev-btn' + (OLD ? ' old' : ''), title: 'Revisions', onclick: openRevs }, ic('hist'), label);
+  document.querySelector('.bd-bar-r').prepend(btn);
+  const revDd = [...document.querySelectorAll('.bd-props dt')].find(dt => dt.textContent === 'Revision');
+  if (revDd) { const dd = revDd.nextElementSibling; dd.textContent = ''; dd.append(h('button', { type: 'button', class: 'bd-rev-link', onclick: openRevs }, `${VIEW.rev} of ${REVS.length}`)); }
+  if (OLD) document.title = `${revName(VIEW)} · ${document.title}`;
+  const strip = (cls, ...kids) => { const s = h('div', { class: 'bd-revbar ' + cls, role: 'region', 'aria-label': 'Revision' }, h('div', { class: 'in' }, kids)); document.querySelector('.bd-bar').after(s); return s; };
+  if (BASE) {
+    // the author's notes for every revision after the base, up to the shown one, then the marked changes
+    const a = REVS.indexOf(BASE), b = REVS.indexOf(VIEW);
+    const span = a < b ? REVS.slice(a + 1, b + 1) : [];
+    const notes = span.flatMap(r => (r.doc.changes || []).map(t => [r, t]));
+    if (notes.length) tldr.append(h('div', { class: 'bd-revnotes' }, h('h4', { class: 'bd-rail-h' }, 'Author\'s notes on these changes'),
+      h('ul', {}, notes.map(([r, t]) => h('li', {}, span.length > 1 && h('span', { class: 'r' }, r.rev), h('span', { html: inline(t) }))))));
+    compareDocs(BASE.doc, VIEW.doc);
+    const n = { add: 0, mod: 0, del: 0 }; CHG.forEach(c => n[c.kind]++);
+    revPos = h('span', { class: 'pos' }, CHG.length === 1 ? '1 change' : `${CHG.length} changes`);
+    strip('cmp', ic('split'), h('span', { class: 't' }, h('b', {}, `${revName(BASE)} → ${VIEW.rev}`), ': ',
+      CHG.length ? [n.add > 0 && h('span', { class: 'k add' }, `${n.add} new`), n.mod > 0 && h('span', { class: 'k mod' }, `${n.mod} changed`), n.del > 0 && h('span', { class: 'k del' }, `${n.del} removed`)] : 'no differences'),
+      h('span', { class: 'sp' }),
+      CHG.length > 0 && h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Previous change', title: 'Previous change', onclick: () => gotoChg(-1) }, ic('up')),
+      CHG.length > 0 && revPos,
+      CHG.length > 0 && h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Next change', title: 'Next change', onclick: () => gotoChg(1) }, ic('down')),
+      h('a', { class: 'bp-btn ghost', href: revUrl(VIEW, null) }, 'Done'));
+  } else if (OLD) {
+    strip('old', ic('hist'), h('span', { class: 't' }, h('b', {}, revName(VIEW)), VIEW.date ? ` of ${VIEW.date}` : '', `: an earlier revision. The current one is ${CUR.rev}; nothing you change here is saved.`),
+      h('span', { class: 'sp' }), h('a', { class: 'bp-btn', href: revUrl(CUR, VIEW) }, ic('split'), `Changes since ${VIEW.rev}`), h('a', { class: 'bp-btn primary', href: revUrl(CUR, null) }, `Go to ${CUR.rev}`));
+  } else {
+    // the current revision: tell returning readers it changed since their last visit
+    const SEEN_KEY = `bp:${docId}:__seen`, seen = store.get(SEEN_KEY);
+    const was = seen && seen !== CUR.rev && REVS.find(r => r.rev === seen);
+    if (was) {
+      const s = strip('upd', ic('hist'), h('span', { class: 't' }, 'Updated since you last opened it: ', h('b', {}, `${was.rev} → ${CUR.rev}`), CUR.date ? ` (${CUR.date})` : ''),
+        h('span', { class: 'sp' }), h('a', { class: 'bp-btn primary', href: revUrl(CUR, was) }, ic('split'), 'Show what changed'),
+        h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Dismiss', onclick: () => { s.remove(); root.style.removeProperty('--rv-h'); } }, ic('x')));
+    }
+    store.set(SEEN_KEY, CUR.rev);
+  }
+  const bar = document.querySelector('.bd-revbar');
+  if (bar) { const fit = () => root.style.setProperty('--rv-h', bar.offsetHeight + 'px'); fit(); addEventListener('resize', fit); }
+}
+
 /* ---------- public API (for tests and agents) ---------- */
 window.BP = {
   doc: DOC,
@@ -2382,6 +2833,8 @@ window.BP = {
   openComment: (diffId, index) => { const d = DIFFS[diffId]; const c = d && d.order[index]; if (c) openComment(d, c, true); return !!c; },
   diffState: diffId => { const d = DIFFS[diffId]; if (!d) return null; const linked = d.comments.filter(c => c.item && ITEMS[c.item]);
     return { file: d.sel === PR_KEY ? null : d.sel, comment: d.ci, comments: d.comments.length, cards: d.pane.querySelectorAll('.bd-cm').length, lines: d.pane.querySelectorAll('.bd-ln').length, ticked: linked.filter(c => ITEMS[c.item].cb.checked).length, linked: linked.length }; },
+  revisions: () => REVS.map(r => ({ rev: r.rev, date: r.date, current: !!r.current, shown: r === VIEW, changes: r.doc.changes || [] })),
+  compare: () => BASE && { from: BASE.rev, to: VIEW.rev, changes: CHG.map(c => ({ kind: c.kind, label: plain(c.label) })) },
 };
 })();
 </script>
