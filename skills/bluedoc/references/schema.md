@@ -1,6 +1,6 @@
 # bluedoc JSON schema
 
-One JSON file describes one HTML document. `scripts/build.py` validates it and inlines it into `assets/template.html`. Worked examples: `examples/acme-orders.bluedoc.json` (canvas, flows, checklists) and `examples/acme-pr-review.bluedoc.json` (code review).
+One JSON file describes one HTML document. `scripts/build.py` validates it and inlines it into `assets/template.html`. Worked examples: `examples/acme-orders.bluedoc.json` (canvas, flows, checklists) and `examples/acme-review-findings.bluedoc.json` (review findings: decision items and diffs).
 
 ## Document
 
@@ -65,13 +65,43 @@ Each item is a collapsed row: a tick, a one-line **title** (`text`), a one-line 
 | `blocks` | open | Any of `text`, `callout`, `table`, `code`, `terms`, `cards`, `checklist`. A nested checklist ticks on its own, counts in the page total and exports indented under its parent; nested checklists can't nest again. |
 | `verify` | open (or row line 2) | Observable success check (output, state, file). Required for steps whose failure is silent. Shown as **Check** when the row is open, unless it already fills line 2. |
 | `refs` | open | `"<canvasId>/<nodeKey>"`; renders buttons that open that node. Node keys nest with `/`: `arch/api/auth`. |
-| `done` | | Initial tick before the reader touches it (e.g. steps the author already verified). |
+| `done` | | Initial tick before the reader touches it (e.g. steps the author already verified). Not for decision items. |
+| `choices` | row, line 3 | Makes the item a **decision**: 2–6 options `{id, label, md?}` shown as pills instead of a tick. Label ≤ 28 characters; `md` is the tooltip. The reader picks one; picking it again clears it. A picked item counts as done. |
+| `recommend` | row, line 3 | The id of the recommended option, starred. |
+| `choice` | | The author's pre-picked option, like `done` for ticks. Leave it unset when the reader is meant to decide. |
+
+```json
+{ "id": "double-auth", "text": "A retry can authorize the card twice", "sub": "Recommend fix in PR: a timeout after PayCo accepted becomes a second charge.",
+  "state": "blocker", "stateKind": "risk", "recommend": "fix",
+  "choices": [ { "id": "fix", "label": "Fix in PR" }, { "id": "ticket", "label": "Ticket" }, { "id": "decline", "label": "Decline" } ] }
+```
+
+Use a decision item whenever the reader has to choose, instead of a step like "check if you agree". Its title states the finding or question, not an action. **Copy progress** writes the pick: `- [x] A retry can authorize the card twice → **Fix in PR**`, adds `(recommended: …)` when the pick differs, and `(no decision; recommended: …)` when there is none. In a `diff` block, the comment card for a decision item carries the same pills, kept in sync with the row.
 
 A row with nothing to open has no chevron; clicking it ticks it. **Expand** in the checklist header opens or closes every row. Links to `#item-<checklist>-<item>` (from a canvas node, a table cell or a shared URL) open the row, and its parents, before scrolling to it. Print shows every row open.
 
 Ticks persist per browser. The sidebar shows per-checklist progress; **Copy progress** exports all checklists as Markdown task lists (`- [x] …`) for PRs or issues.
 
-A reader's tick is stored only when it differs from the item's `done`, together with the `done` it overrode. If the author later changes `done`, the author wins and the old tick is dropped, so marking a step done in a new revision shows as done for readers who unticked it earlier.
+A reader's tick is stored only when it differs from the item's `done`, together with the `done` it overrode. If the author later changes `done`, the author wins and the old tick is dropped, so marking a step done in a new revision shows as done for readers who unticked it earlier. Picks follow the same rule against `choice`, and a pick is dropped when its option no longer exists.
+
+### Reader comments and replies
+
+Every item has a comment box at the bottom of its open body (and on its diff card); the two stay in sync. A row with a comment shows a speech-bubble icon. Comments are stored per browser under `bp:<doc.id>:<checklist>:<item>:note`; **Reset** clears ticks and picks, not comments. The export quotes each comment under its item:
+
+```md
+- [x] `tierFor` gives no tier at exactly 10 or 50 units → **Ticket** (recommended: Fix in PR)
+  > Ship it with the test first.
+```
+
+**Send to agent** (app bar, shown when the page has a checklist) opens a dialog: a count of decisions, ticks and comments, an overall message (stored under `bp:<doc.id>:__message`, printed after the page title in the export), a Markdown preview, **Copy**, and **Send**. Send appears only when the page is served by `scripts/serve.py`: the page probes `GET /__bluedoc/ping` and posts the reply to `/__bluedoc/reply`. `serve.py` prints the Markdown and writes `<name>.reply.md` and `<name>.reply.json` next to the page. The JSON:
+
+```json
+{ "doc": "<doc.id>", "title": "…", "path": "/<name>.html", "at": "<ISO time>", "message": "…",
+  "items": [ { "checklist": "t412", "item": "tier-boundary", "text": "…", "choice": "ticket", "recommend": "fix", "note": "…" },
+             { "checklist": "local", "item": "doctor", "text": "…", "done": true } ],
+  "markdown": "<the Copy progress text>" }
+```
+Decision items carry `choice` (null when undecided) and `recommend`; plain items carry `done`; `note` appears only when the reader wrote one.
 
 ## Diff
 
@@ -97,6 +127,8 @@ A `diff` block shows one code change and the comments on it. Use it for PR revie
 | `comments[].title`, `md`, `kind`, `state`, `label` | A comment with no `item`: its own title, body, colour (`ok`, `warn`, `risk`, `info`, `todo`) and chip. `label` names a whole-change anchor. |
 
 The validator checks that every anchored line is shown in the diff, every `item` exists, and every `#code:` link resolves.
+
+In the page, a file header shows how many comments the file has and, with 2+, ‹ › buttons and "n of N" for the comment in view. While a file's comments sit outside the visible part of the code, a floating pill says "N more comments above/below"; clicking it scrolls to the nearest one.
 
 **Generate it from git**, never by hand:
 
@@ -187,7 +219,10 @@ The built page exposes `window.BP`:
 | `BP.fit('arch')` | Fits the root drawing. |
 | `BP.state('arch')` | `{k, focus, revealed, flow, step, tokens}` |
 | `BP.progress()` | `[{id, done, total}]` per checklist. |
-| `BP.progressMarkdown()` | The **Copy progress** Markdown. |
+| `BP.progressMarkdown()` | The **Copy progress** Markdown, with the overall message and comments. |
+| `BP.replyPayload()` | The reply JSON that **Send** posts. |
+| `BP.choose('t412/tier-boundary', 'fix')` | Picks an option, as a click would (`null` clears). `false` if the item has no choices. |
+| `BP.setNote('t412/tier-boundary', 'text')` | Sets the reader comment on an item (`''` clears). |
 | `BP.openCode('pr-412', 'src/pricing/tiers.ts', 11)` | Scrolls to the diff, opens the file, jumps to the line. |
 | `BP.openComment('pr-412', 0)` | Opens the n-th comment, in file-list order. |
 | `BP.diffState('pr-412')` | `{file, comment, comments, cards, lines, ticked, linked}` |

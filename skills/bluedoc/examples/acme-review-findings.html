@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="generator" content="bluedoc">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 22 22'%3E%3Crect width='22' height='22' rx='6' fill='%230b2a4f'/%3E%3Crect x='4.5' y='5' width='7' height='5' rx='1.2' fill='none' stroke='%23d6e9ff' stroke-width='1.3'/%3E%3Crect x='10.5' y='12' width='7' height='5' rx='1.2' fill='none' stroke='%235fd4ff' stroke-width='1.3'/%3E%3C/svg%3E">
-<title>acme-shop#412: bulk discount tiers</title>
+<title>Review findings: acme-shop #412 and #415</title>
 <style>
 /* bluedoc. Page tokens follow the HorizonUI design system (@horizonloop/ui): one value per
    theme through light-dark(), so the system setting picks the theme and [data-theme] overrides it.
@@ -155,6 +155,40 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .bp-btn:active { transform: translateY(.5px); }
 .bp-btn.ghost { background: none; box-shadow: none; color: var(--fg-muted); padding: 0 8px; }
 .bp-btn.ghost:hover { background: var(--hover); color: var(--fg); }
+.bp-btn.primary { background: var(--accent); color: #fff; box-shadow: 0 1px 2px oklch(20% 0.05 255 / .25), inset 0 1px 0 oklch(100% 0 0 / .15); }
+.bp-btn.primary .bd-ic { color: currentColor; }
+.bp-btn.primary:hover { background: color-mix(in oklch, var(--accent), black 8%); }
+/* send to agent: app-bar button and dialog */
+.bd-send-btn { height: 30px; padding: 0 12px; }
+.bd-send-btn.has { background: var(--accent); color: #fff; box-shadow: 0 1px 2px oklch(20% 0.05 255 / .25); }
+.bd-send-btn.has .bd-ic { color: currentColor; }
+.bd-send { width: min(560px, calc(100vw - 32px)); max-height: calc(100vh - 64px); padding: 0; border: 0; border-radius: 16px; background: var(--surface); color: var(--fg); box-shadow: var(--shadow-3); }
+.bd-send::backdrop { background: oklch(15% 0.01 264 / .36); }
+.bd-send > * { margin: 0 20px; }
+.bd-send .hd { display: flex; align-items: center; gap: 10px; margin: 0; padding: 16px 14px 4px 20px; }
+.bd-send .hd h3 { flex: 1; margin: 0; font-size: 16px; font-weight: 600; }
+.bd-send .sum { margin-top: 2px; margin-bottom: 12px; font-size: 13.5px; color: var(--fg-muted); }
+.bd-send textarea { display: block; box-sizing: border-box; width: calc(100% - 40px); min-height: 84px; }
+.bd-send details { margin-top: 10px; }
+.bd-send summary { cursor: pointer; font-size: 13px; font-weight: 500; color: var(--accent-fg); width: max-content; }
+.bd-send pre { margin: 8px 0 0; max-height: 220px; overflow: auto; padding: 10px 12px; border-radius: 10px; background: var(--inset); font: 12px/1.55 var(--mono); white-space: pre-wrap; }
+.bd-send .how { margin-top: 12px; font-size: 12.5px; color: var(--fg-subtle); }
+.bd-send .ft { display: flex; justify-content: flex-end; gap: 8px; margin: 0; padding: 14px 20px 18px; }
+.bd-send .ft .bp-btn { height: 32px; padding: 0 14px; font-size: 13px; }
+.bd-send .ft .bp-btn[hidden] { display: none; }
+/* the reader's comment on an item */
+.bp-note { display: flex; align-items: flex-start; gap: 8px; }
+.bp-note > .bd-ic { flex: none; width: 15px; height: 15px; margin-top: 8px; color: var(--fg-subtle); }
+.bp-note-ta { flex: 1; min-width: 0; resize: none; overflow: hidden; padding: 6px 10px; border: 0; border-radius: 9px; font: 13.5px/1.5 var(--sans); color: var(--fg);
+  background: var(--inset); box-shadow: inset 0 0 0 1px var(--line); transition: box-shadow .12s; }
+.bp-note-ta::placeholder { color: var(--fg-subtle); }
+.bp-note-ta:focus { outline: none; background: var(--surface); box-shadow: var(--focus-ring); }
+.bp-note.compact { margin-top: 8px; padding-left: 28px; }
+.bp-note.compact > .bd-ic { display: none; }
+.bp-note.compact .bp-note-ta { font-size: 13px; padding: 5px 9px; }
+.bp-cl-noteic { display: none; flex: none; margin-top: 4px; color: var(--accent-fg); }
+.bp-cl-noteic .bd-ic { width: 15px; height: 15px; }
+.bp-cl-item.has-note > .bp-cl-row .bp-cl-noteic { display: inline-flex; }
 .bp-side-toggle { display: none !important; }
 
 /* sections */
@@ -265,6 +299,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .bp-cl-chev { width: 16px; height: 16px; flex: none; margin-top: 4px; color: var(--fg-subtle); transition: transform .18s var(--ease); }
 .bp-cl-item.open .bp-cl-chev { transform: rotate(90deg); }
 .bp-cl-item.empty .bp-cl-chev { visibility: hidden; }
+@media (max-width: 900px) { .bd-send-btn .l { display: none; } .bd-send-btn { padding: 0 8px; } }
+@media print { .bp-note:not(:has(.bp-note-ta:not(:placeholder-shown))) { display: none; } .bd-send-btn { display: none !important; } }
 /* expanded body, aligned with the title */
 .bp-cl-body { padding: 0 16px 14px calc(16px + var(--ind)); font-size: 14px; }
 .bp-cl-body[hidden] { display: none; }
@@ -286,6 +322,25 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .bp-cl-item .bp-code { box-shadow: 0 0 0 1px var(--line); }
 .bp-cl-item .bp-code-h { height: 30px; }
 .bp-refs { display: flex; gap: 6px; flex-wrap: wrap; }
+/* decision items: options as pills under the title; the star marks the recommended one */
+.bp-cl-dot { flex: none; width: 18px; height: 18px; margin-top: 13px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--line-strong); }
+.bp-cl-item.done .bp-cl-dot, .bd-cm.done .bp-cl-dot { background: var(--ok) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / 11px no-repeat; box-shadow: none; }
+.bd-cm .hd > .bp-cl-dot { margin-top: 2px; }
+.bp-cl-choices { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 16px 12px calc(16px + var(--ind)); margin-top: -2px; }
+.bp-cl.nested .bp-cl-choices { padding-left: calc(14px + var(--ind)); }
+.bp-cl-choices.compact { padding: 8px 0 0 28px; margin: 0; }
+.bp-choice { display: inline-flex; align-items: center; gap: 5px; height: 28px; padding: 0 12px; border: 0; border-radius: 999px; font: 500 12.5px var(--sans); color: var(--fg-muted);
+  background: var(--surface); box-shadow: inset 0 0 0 1px var(--line-strong); transition: background .12s, color .12s, box-shadow .12s; }
+.bp-choice:hover { color: var(--fg); box-shadow: inset 0 0 0 1px var(--fg-subtle); }
+.bp-choice .bd-ic { width: 12px; height: 12px; fill: currentColor; stroke: none; color: var(--warn); }
+.bp-choice.rec { color: var(--fg); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--accent) 55%, transparent); }
+.bp-choice[aria-checked="true"] { color: #fff; background: var(--accent); box-shadow: none; }
+.bp-choice[aria-checked="true"] .bd-ic { color: currentColor; }
+.bp-cl-choices.answered .bp-choice[aria-checked="false"] { opacity: .65; }
+.bp-cl-choices.answered .bp-choice[aria-checked="false"]:hover { opacity: 1; }
+.bp-choice .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.bp-choice code { font-size: .92em; background: none; padding: 0; color: inherit; }
+.bp-cl-item.has-choices.done .bp-cl-text { color: var(--fg); }
 .bp-ref { display: inline-flex; align-items: center; gap: 5px; height: 24px; font: 500 12px var(--sans); border: 0; color: var(--fg-muted); background: var(--inset); box-shadow: inset 0 0 0 1px var(--line); border-radius: 7px; padding: 0 8px; transition: color .12s, box-shadow .12s; }
 .bp-ref .bd-ic { width: 13px; height: 13px; color: var(--accent-fg); }
 .bp-ref:hover { color: var(--accent-fg); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--accent) 45%, transparent); }
@@ -362,6 +417,25 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .bd-fh .p { flex: 1; min-width: 0; font: 12px/1.45 var(--mono); color: var(--fg-subtle); overflow-wrap: anywhere; }
 .bd-fh .p b { color: var(--fg); font-weight: 600; }
 .bd-fh .stat { font: 500 11.5px var(--mono); white-space: nowrap; }
+.bd-fnav { display: inline-flex; align-items: center; gap: 2px; flex: none; font-size: 12px; color: var(--fg-muted); white-space: nowrap; }
+.bd-fnav .cnt { display: inline-flex; align-items: center; gap: 4px; margin-right: 4px; font: 600 11.5px/1 var(--sans); color: var(--accent-fg); background: var(--accent-tint); border-radius: 999px; padding: 4px 8px; }
+.bd-fnav .cnt .bd-ic { width: 12px; height: 12px; }
+.bd-fnav .lbl { min-width: 46px; text-align: center; font-variant-numeric: tabular-nums; }
+.bd-fnav.one .lbl { display: none; }
+.bd-fnav .bd-ibtn { width: 26px; height: 26px; }
+.bd-fnav .bd-ibtn .bd-ic { width: 14px; height: 14px; }
+.bd-fnav .bd-ibtn:disabled { opacity: .35; cursor: default; }
+.bd-pill-wrap { position: sticky; z-index: 3; height: 0; pointer-events: none; }
+.bd-pill-wrap.up { top: calc(var(--fh-top, 0px) + var(--fh-h, 40px)); }
+.bd-pill-wrap.down { bottom: 0; }
+.bd-pill { position: absolute; left: 50%; transform: translateX(-50%); pointer-events: auto; display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 14px 0 10px;
+  border: 0; border-radius: 999px; white-space: nowrap; font: 500 12.5px var(--sans); color: var(--accent-fg); background: var(--surface);
+  box-shadow: var(--shadow-3), inset 0 0 0 1px color-mix(in oklch, var(--accent) 40%, transparent); }
+.bd-pill .bd-ic { width: 14px; height: 14px; }
+.bd-pill:hover { color: var(--fg); }
+.bd-pill[hidden] { display: none; }
+.bd-pill-wrap.up .bd-pill { top: 8px; }
+.bd-pill-wrap.down .bd-pill { bottom: 14px; }
 .bd-code { font: 12.5px/1.65 var(--mono); padding-bottom: 12px; }
 .bd-hh { padding: 5px 14px; font: 11.5px/1.6 var(--mono); color: var(--fg-subtle); background: var(--inset); border-block: 1px solid var(--line-soft); overflow-wrap: anywhere; }
 .bd-hh.ctx { font-family: var(--sans); font-size: 12px; }
@@ -565,6 +639,7 @@ svg.anim .bp-edge.k-async { animation: bp-march 1.6s linear infinite; }
   .bp-cl { --ind: 28px; }
   .bp-cl-row { padding: 0 4px 0 12px; }
   .bp-cl-body { padding: 0 12px 12px 12px; }
+  .bp-cl-choices { padding: 0 12px 12px 40px; }
   .bp-cl-num { display: none; }
   .bp-cl-head { flex-wrap: wrap; row-gap: 4px; }
   .bp-cl-main { flex: 1 1 calc(100% - 30px); }
@@ -580,7 +655,9 @@ svg.anim .bp-edge.k-async { animation: bp-march 1.6s linear infinite; }
     background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") right 9px center / 14px no-repeat;
     box-shadow: inset 0 0 0 1px var(--line-strong); appearance: none; -webkit-appearance: none; }
   .bd-pane { overflow: visible; }
-  .bd-fh { top: var(--bar-h); }
+  .bd-fh { top: var(--bar-h); flex-wrap: wrap; row-gap: 4px; }
+  .bd-diff { --fh-top: var(--bar-h); }
+  .bd-fh .p { flex: 1 1 100%; }
   .bd-ln { grid-template-columns: 2.9em 2.9em 1.2em minmax(0, 1fr); font-size: 11.5px; }
   .bd-ln > .o, .bd-ln > .n { font-size: 10.5px; padding-right: .5em; }
   .bd-cmw { padding: 6px 10px 10px; }
@@ -634,6 +711,7 @@ html.bd-resizing, html.bd-resizing * { cursor: col-resize !important; user-selec
   .bp-table-wrap, .bp-card, .bp-cl, .bp-code, .bp-terms, .bd-tldr-card, .bd-diff { box-shadow: 0 0 0 1px #ccd; }
   .bd-diff-body { display: block; height: auto; } .bd-files, .bd-diff-tb { display: none; } .bd-pane { overflow: visible; }
   .bp-cl-body[hidden] { display: block !important; } .bp-cl-chev { display: none; }
+  .bp-choice[aria-checked="true"] { color: #000; background: none; box-shadow: inset 0 0 0 2px #000; font-weight: 700; }
   .bp-cl-text, .bp-cl-subt > span { white-space: normal !important; overflow: visible !important; }
 }
 </style>
@@ -641,7 +719,7 @@ html.bd-resizing, html.bd-resizing * { cursor: col-resize !important; user-selec
 <body>
 <div id="bp-app"><noscript>This bluedoc page needs JavaScript to render. The source data is in the bp-doc script element.</noscript></div>
 <div class="bp-toast" id="bp-toast" role="status"></div>
-<script type="application/json" id="bp-doc">{"id":"acme-pr-412-review","title":"acme-shop#412: bulk discount tiers","subtitle":"One reviewer read PR #412 locally. Tick a finding to accept it as a fix; leave it unticked to reject or discuss.","meta":{"org":"Acme Corp","kind":"Review","dwg":"ACME-REV-412","rev":"A","date":"2026-03-14"},"state":[{"label":"request changes","kind":"risk"},{"label":"tests run locally","kind":"ok"},{"label":"nothing posted to GitHub","kind":"info"}],"links":[{"label":"acme-shop#412","href":"https://github.com/acme/acme-shop/pull/412"},{"label":"PRICING-88 spec","href":"https://example.com/acme/tickets/PRICING-88"}],"tldr":"Request changes. The tier check uses `>` where the spec says \"10 or more\", so an order of exactly 10 or 50 units gets no discount. Discounted line totals are fractional cents. Both are one-line fixes; add boundary tests at 9, 10, 49 and 50 before merging.","sections":[{"id":"how","title":"How to use this page","lead":"Each finding is a checklist item and a comment on its code. Ticking either one ticks both.","blocks":[{"type":"terms","items":[{"term":"blocker","md":"Wrong behaviour; fix before merge."},{"term":"major","md":"Likely bug or real risk."},{"term":"minor","md":"Small correctness or maintainability issue."},{"term":"nit","md":"Optional."}]}]},{"id":"verdict","title":"Verdict","lead":"One blocker, two majors: the tiers do not match the spec at their boundaries.","blocks":[{"type":"table","columns":["PR","Scope","Verdict","Blocker","Major","Minor","Nit"],"rows":[["[acme-shop#412](https://github.com/acme/acme-shop/pull/412)","[Bulk discount tiers](#review)","**Request changes**","1","2","2","1"]]}]},{"id":"review","title":"#412 · bulk discount tiers","lead":"**Request changes.** The design is right: tiers apply per line, before the coupon and before VAT.","blocks":[{"type":"text","md":"`tierFor` picks the highest tier first, `applyCoupon` now sums tiered line totals, and `priceOrder` reports what the customer saved. The boundary check and the money type are wrong, and the tests stop short of both boundaries."},{"type":"checklist","id":"findings","title":"Findings · #412","numbered":false,"items":[{"id":"tier-boundary","text":"Fix: an order of exactly 10 or 50 units gets no tier","state":"blocker · high","stateKind":"risk","detail":"**File:** `src/pricing/tiers.ts:17`\n\nThe spec says \"10 or more\" and \"50 or more\". `qty > t.minQty` excludes both thresholds: 10 units get no discount, 50 units get 5 % instead of 10 %.\n\n**Suggested fix:** `qty >= t.minQty`."},{"id":"float-cents","text":"Fix: tiered line totals are fractional cents","state":"major · high","stateKind":"warn","detail":"**File:** `src/pricing/tiers.ts:25`\n\n`gross * (1 - tier.percent / 100)` returns 3,163.5 for 3 × 1,110 cents at 5 %. `applyCoupon` rounds only when a coupon is present, so without one the fraction reaches `addTax` and the payment request.\n\n**Suggested fix:** `Math.round(gross * (100 - tier.percent) / 100)`, the same form `applyCoupon` uses."},{"id":"savings-includes-coupon","text":"Fix: `bulkSavingsCents` also counts the coupon","state":"major · medium","stateKind":"warn","detail":"**File:** `src/orders/createOrder.ts:16`\n\nThe savings figure is gross-with-tax minus final total, so a 15 % coupon shows up as bulk savings on the receipt.\n\n**Suggested fix:** compute savings from `lineTotal` alone: `sum(gross) - sum(lineTotal)`, then add tax."},{"id":"boundary-tests","text":"Add tests at 9, 10, 49 and 50 units","state":"minor · high","stateKind":"info","detail":"**File:** `test/tiers.test.ts:5-11`\n\nThe tests check 5 and 60 units, so they pass with the off-by-one above. Boundary cases would have caught it."},{"id":"docs-stale","text":"Update `docs/pricing.md`, which still says there are no bulk discounts","state":"minor · high","stateKind":"info","detail":"**File:** `docs/pricing.md:11` (not changed by this PR)\n\nAdd tiers to the order of operations: sum lines, apply tiers, apply coupon, add VAT."},{"id":"pr-claims-tests","text":"Fix the PR description: it says every tier is tested","state":"nit · high","stateKind":"todo","detail":"The description says \"tests cover every tier\"; only the 10 % tier has a positive test."}]},{"type":"diff","id":"pr-412","title":"acme-shop#412","repo":"acme-shop","base":"89efd8e","head":"62ccc86","url":"https://github.com/acme/acme-shop/pull/412/files","note":"The commit the reviewer read. Line numbers in the findings refer to it.","files":[{"path":"docs/pricing.md","status":"context","add":0,"del":0,"hunks":[{"old":6,"new":6,"context":true,"lines":[" "," 1. Sum the cart lines."," 2. Apply the coupon, if any."," 3. Add VAT."," "," There are no bulk discounts: every unit costs the same."]}]},{"path":"src/orders/createOrder.ts","status":"modified","add":4,"del":1,"hunks":[{"old":6,"new":6,"lines":["   customerId: string;","   subtotalCents: number;","   totalCents: number;","+  bulkSavingsCents: number;"," }"," "," export function priceOrder(draft: OrderDraft, coupon?: Discount): PricedOrder {","+  const gross = draft.lines.reduce((sum, l) => sum + l.unitCents * l.qty, 0);","   const subtotalCents = applyCoupon(draft.lines, coupon);","   const totalCents = addTax(subtotalCents);","-  return { customerId: draft.customerId, subtotalCents, totalCents };","+  const bulkSavingsCents = addTax(gross) - totalCents;","+  return { customerId: draft.customerId, subtotalCents, totalCents, bulkSavingsCents };"," }"],"header":"export interface PricedOrder {"}]},{"path":"src/pricing/discounts.ts","status":"modified","add":3,"del":2,"hunks":[{"old":1,"new":1,"lines":[" // Discounts applied to a cart before tax."," import type { CartLine } from \"../orders/types\";","+import { lineTotal } from \"./tiers\";"," "," export interface Discount {","   code: string;","   percent: number;"," }"," ","-/** Returns the cart subtotal in cents after a coupon, if any. */","+/** Returns the cart subtotal in cents after bulk tiers and a coupon, if any. */"," export function applyCoupon(lines: CartLine[], coupon?: Discount): number {","-  const subtotal = lines.reduce((sum, l) => sum + l.unitCents * l.qty, 0);","+  const subtotal = lines.reduce((sum, l) => sum + lineTotal(l), 0);","   if (!coupon) return subtotal;","   return Math.round(subtotal * (100 - coupon.percent) / 100);"," }"]}]},{"path":"src/pricing/tiers.ts","status":"added","add":26,"del":0,"hunks":[{"old":0,"new":1,"lines":["+// Bulk discount tiers (PRICING-88).","+// Spec: 10 or more units of one SKU get 5 %, 50 or more get 10 %.","+import type { CartLine } from \"../orders/types\";","+","+export interface Tier {","+  minQty: number;","+  percent: number;","+}","+","+export const TIERS: Tier[] = [","+  { minQty: 50, percent: 10 },","+  { minQty: 10, percent: 5 },","+];","+","+/** The tier a line qualifies for, or undefined. */","+export function tierFor(qty: number): Tier | undefined {","+  return TIERS.find((t) => qty > t.minQty);","+}","+","+/** Line total in cents after its bulk tier. */","+export function lineTotal(line: CartLine): number {","+  const tier = tierFor(line.qty);","+  const gross = line.unitCents * line.qty;","+  if (!tier) return gross;","+  return gross * (1 - tier.percent / 100);","+}"]}]},{"path":"test/tiers.test.ts","status":"added","add":16,"del":0,"hunks":[{"old":0,"new":1,"lines":["+import { describe, expect, it } from \"vitest\";","+import { lineTotal, tierFor } from \"../src/pricing/tiers\";","+","+describe(\"bulk tiers\", () => {","+  it(\"gives no tier below 10 units\", () => {","+    expect(tierFor(5)).toBeUndefined();","+  });","+","+  it(\"gives 10 % at 60 units\", () => {","+    expect(tierFor(60)?.percent).toBe(10);","+  });","+","+  it(\"discounts the line total\", () => {","+    expect(lineTotal({ sku: \"A\", qty: 60, unitCents: 100 })).toBe(5400);","+  });","+});"]}]}],"comments":[{"item":"findings/tier-boundary","file":"src/pricing/tiers.ts","line":17},{"item":"findings/float-cents","file":"src/pricing/tiers.ts","line":25},{"item":"findings/savings-includes-coupon","file":"src/orders/createOrder.ts","line":16},{"item":"findings/boundary-tests","file":"test/tiers.test.ts","line":5,"end":11},{"item":"findings/docs-stale","file":"docs/pricing.md","line":11},{"label":"PR description","item":"findings/pr-claims-tests"}]},{"type":"table","columns":["Check the reviewer ran","Result"],"rows":[["`npx vitest run test/tiers.test.ts`","3 passed; none at a boundary"],["`node -e \"console.log(require('./dist/pricing/tiers').lineTotal({sku:'A',qty:10,unitCents:100}))\"`","1000: no discount at exactly 10 units"]],"caption":"Commands run against the PR head, with the observed result."}]}]}</script>
+<script type="application/json" id="bp-doc">{"id":"acme-review-findings-2026-03","title":"Review findings: acme-shop #412 and #415","subtitle":"The 11 review comments on two open PRs, each next to its code. Pick what to do with each; my recommendation is starred.","meta":{"org":"Acme Corp","kind":"Review","rev":"A","date":"2026-03-14"},"state":[{"label":"11 review comments","kind":"warn"},{"label":"6 fix in the PR","kind":"warn"},{"label":"2 follow-up tickets","kind":"info"},{"label":"2 decline","kind":"todo"},{"label":"1 resolves when a fix lands","kind":"info"}],"links":[{"label":"acme-shop #412 (bulk tiers)","href":"https://github.com/acme/acme-shop/pull/412"},{"label":"acme-shop #415 (PayCo retry)","href":"https://github.com/acme/acme-shop/pull/415"},{"label":"PRICING-88 spec","href":"https://example.com/acme/tickets/PRICING-88"}],"tldr":"Fix 6 in the PRs, ticket 2, decline 2; 1 resolves itself. Two are real bugs these PRs introduce: #412 gives no discount at exactly 10 or 50 units, and #415 can authorize a card twice when PayCo times out after accepting. Both are one-line fixes; neither PR should merge before them.","sections":[{"id":"summary","title":"Summary","lead":"Each finding has its options under it, with my recommendation starred. Pick one per finding, comment where you disagree, then press **Send to agent**.","blocks":[{"type":"table","columns":["PR","Finding","Size","Recommendation"],"rows":[["#412","[`tierFor` gives no tier at exactly 10 or 50 units](#item-t412-tier-boundary)","blocker","Fix in PR (1 line)"],["#412","[Tiered line totals are fractional cents](#item-t412-float-cents)","major","Fix in PR (1 line)"],["#412","[`bulkSavingsCents` also counts the coupon](#item-t412-savings-coupon)","major","Fix in PR"],["#412","[Tier tests stop short of both thresholds](#item-t412-boundary-tests)","minor","Fix in PR (4 cases)"],["#412","[`docs/pricing.md` still says there are no bulk discounts](#item-t412-docs-stale)","minor","Ticket"],["#412","[Turn `TIERS` into a `Map`](#item-t412-tiers-map)","nit","Decline"],["#412","[PR description says every tier is tested](#item-t412-pr-claims)","nit","After the boundary tests"],["#415","[A retry can authorize the card twice](#item-t415-double-auth)","blocker","Fix in PR (1 header)"],["#415","[Card declines are retried too](#item-t415-retry-4xx)","major","Fix in PR"],["#415","[Worst case blocks checkout for 31.5 s](#item-t415-latency)","minor","Ticket"],["#415","[Name the 250 ms backoff](#item-t415-backoff-const)","nit","Decline"]]},{"type":"callout","kind":"note","md":"Two review agents read the PRs at the heads below and posted with your `gh` login, so every comment on GitHub reads as yours. I checked each finding against the code before recommending."}]},{"id":"pr-412","title":"#412 · bulk discount tiers","lead":"3 bugs this PR introduces, 1 test gap, 3 smaller comments. Diff: `main` `89efd8e` → head `62ccc86`, limited to the commented files.","blocks":[{"type":"checklist","id":"t412","title":"Findings · #412","numbered":false,"items":[{"id":"tier-boundary","text":"`tierFor` gives no tier at exactly 10 or 50 units","sub":"Recommend fix in PR: The spec says \"10 or more\"; `>` drops both thresholds. One character.","state":"blocker","stateKind":"risk","detail":"**Reviewer:** `TIERS.find((t) => qty > t.minQty)` excludes the threshold, so 10 units get no discount and 50 units get 5 % instead of 10 %.\n\n**My reasoning:** the file header (`src/pricing/tiers.ts:2`) quotes PRICING-88 as \"10 or more … 50 or more\". `lineTotal({qty: 10, unitCents: 100})` returns 1000, the undiscounted price. The fix is one character in a file this PR adds.\n\n**Fix:** `TIERS.find((t) => qty >= t.minQty)` at `src/pricing/tiers.ts:17`.\n\n**Verify:** `tierFor(10)?.percent === 5` and `tierFor(50)?.percent === 10` (the boundary tests below).","choices":[{"id":"fix","label":"Fix in PR"},{"id":"ticket","label":"Ticket"},{"id":"decline","label":"Decline"}],"recommend":"fix"},{"id":"float-cents","text":"Tiered line totals are fractional cents","sub":"Recommend fix in PR: Without a coupon the fraction reaches VAT and the payment request.","state":"major","stateKind":"warn","detail":"**Reviewer:** `gross * (1 - tier.percent / 100)` returns 3163.5 for 3 × 1110 cents at 5 %.\n\n**My reasoning:** `applyCoupon` rounds only when a coupon is present (`src/pricing/discounts.ts:14`). Without one, the subtotal stays fractional and `addTax` rounds once more, so line and order totals can disagree by a cent. Every other money path in the repo uses integer cents (`docs/pricing.md:3`).\n\n**Fix:** `Math.round(gross * (100 - tier.percent) / 100)`, the form `applyCoupon` already uses.\n\n**Verify:** `Number.isInteger(lineTotal({qty: 3, unitCents: 1110}))`.","choices":[{"id":"fix","label":"Fix in PR"},{"id":"ticket","label":"Ticket"},{"id":"decline","label":"Decline"}],"recommend":"fix"},{"id":"savings-coupon","text":"`bulkSavingsCents` also counts the coupon","sub":"Recommend fix in PR: A 15 % coupon would show on the receipt as a bulk saving.","state":"major","stateKind":"warn","detail":"**Reviewer:** savings are gross-with-tax minus the final total, so the coupon counts as a bulk saving.\n\n**My reasoning:** `src/orders/createOrder.ts:16` subtracts `totalCents`, which already includes the coupon. The field name promises the tier saving, so every caller will read it that way; with a coupon it isn't.\n\n**Fix:** `addTax(gross) - addTax(sum of lineTotal)`, before the coupon.\n\n**Verify:** a 20-unit order with a 15 % coupon reports savings equal to 5 % of gross plus VAT.","choices":[{"id":"fix","label":"Fix in PR"},{"id":"ticket","label":"Ticket"},{"id":"decline","label":"Decline"}],"recommend":"fix"},{"id":"boundary-tests","text":"Tier tests stop short of both thresholds","sub":"Recommend fix in PR: The cases use 5 and 60 units, so they pass with the off-by-one.","state":"minor","stateKind":"info","detail":"**Reviewer:** the tests never touch a threshold.\n\n**My reasoning:** the three cases (`test/tiers.test.ts:5-15`) use 5 and 60 units. Neither sits on a threshold, so all three pass with the `>` bug present.\n\n**Fix:** four `it` cases in `test/tiers.test.ts`: 9 → none, 10 → 5 %, 49 → 5 %, 50 → 10 %.\n\n**Verify:** the 10 and 50 cases fail on the current head and pass after the `>=` fix.","choices":[{"id":"fix","label":"Fix in PR"},{"id":"ticket","label":"Ticket"},{"id":"decline","label":"Decline"}],"recommend":"fix"},{"id":"docs-stale","text":"`docs/pricing.md` still says there are no bulk discounts","sub":"Recommend ticket: The pricing spec needs a tier step; the PR is right without it.","state":"minor","stateKind":"info","detail":"**Reviewer:** `docs/pricing.md:11` still says \"There are no bulk discounts\".\n\n**My reasoning:** the doc is the pricing spec for every flow, and its order of operations (lines 5-9) needs a tier step, which is a product decision for PRICING-88's owner. This PR doesn't touch the file, and the code is right without it.\n\n**Fix:** a ticket for the PRICING-88 owner: add tiers to the order of operations (sum lines, apply tiers, apply coupon, add VAT).\n\n**Reply I'd post:** \"Agreed; ticketed (PRICING-91) so the spec change gets its own review.\"","choices":[{"id":"fix","label":"Fix in PR"},{"id":"ticket","label":"Ticket"},{"id":"decline","label":"Decline"}],"recommend":"ticket"},{"id":"tiers-map","text":"Turn `TIERS` into a `Map`","sub":"Recommend decline: It's a range lookup over 2 sorted tiers; a Map wouldn't remove the scan.","state":"nit","stateKind":"todo","detail":"**Reviewer:** a `Map` would make the lookup O(1).\n\n**My reasoning:** the lookup is a range match, not a key match: `tierFor(37)` needs the highest tier at or below 37, which a `Map` can't answer without the same scan. With 2 tiers the scan is free, and the array's order is the rule.\n\n**Reply I'd post:** \"Not taken: it's a range lookup over 2 sorted tiers, so a Map wouldn't remove the scan.\"","choices":[{"id":"fix","label":"Fix in PR"},{"id":"ticket","label":"Ticket"},{"id":"decline","label":"Decline"}],"recommend":"decline"},{"id":"pr-claims","text":"PR description says every tier is tested","sub":"Recommend resolve after the tests: The boundary tests make the sentence true; nothing else to change.","state":"nit","stateKind":"todo","detail":"**Reviewer:** the description says \"tests cover every tier\"; only the 10 % tier has a positive test.\n\n**My reasoning:** with the boundary tests, every tier and both thresholds are covered, so the sentence becomes accurate.\n\n**Reply I'd post:** \"Covered by the boundary tests in <sha>.\"","choices":[{"id":"after","label":"Resolve after the tests"},{"id":"fix","label":"Edit the description"}],"recommend":"after"}]},{"type":"diff","id":"diff-412","title":"acme-shop #412","repo":"acme-shop","base":"89efd8e","head":"62ccc86","url":"https://github.com/acme/acme-shop/pull/412/files","note":"Only the commented files. Head `62ccc86`; `docs/pricing.md` is unchanged and shown for its comment.","files":[{"path":"docs/pricing.md","status":"context","add":0,"del":0,"hunks":[{"old":6,"new":6,"context":true,"lines":[" "," 1. Sum the cart lines."," 2. Apply the coupon, if any."," 3. Add VAT."," "," There are no bulk discounts: every unit costs the same."]}]},{"path":"src/orders/createOrder.ts","status":"modified","add":4,"del":1,"hunks":[{"old":6,"new":6,"lines":["   customerId: string;","   subtotalCents: number;","   totalCents: number;","+  bulkSavingsCents: number;"," }"," "," export function priceOrder(draft: OrderDraft, coupon?: Discount): PricedOrder {","+  const gross = draft.lines.reduce((sum, l) => sum + l.unitCents * l.qty, 0);","   const subtotalCents = applyCoupon(draft.lines, coupon);","   const totalCents = addTax(subtotalCents);","-  return { customerId: draft.customerId, subtotalCents, totalCents };","+  const bulkSavingsCents = addTax(gross) - totalCents;","+  return { customerId: draft.customerId, subtotalCents, totalCents, bulkSavingsCents };"," }"],"header":"export interface PricedOrder {"}]},{"path":"src/pricing/tiers.ts","status":"added","add":26,"del":0,"hunks":[{"old":0,"new":1,"lines":["+// Bulk discount tiers (PRICING-88).","+// Spec: 10 or more units of one SKU get 5 %, 50 or more get 10 %.","+import type { CartLine } from \"../orders/types\";","+","+export interface Tier {","+  minQty: number;","+  percent: number;","+}","+","+export const TIERS: Tier[] = [","+  { minQty: 50, percent: 10 },","+  { minQty: 10, percent: 5 },","+];","+","+/** The tier a line qualifies for, or undefined. */","+export function tierFor(qty: number): Tier | undefined {","+  return TIERS.find((t) => qty > t.minQty);","+}","+","+/** Line total in cents after its bulk tier. */","+export function lineTotal(line: CartLine): number {","+  const tier = tierFor(line.qty);","+  const gross = line.unitCents * line.qty;","+  if (!tier) return gross;","+  return gross * (1 - tier.percent / 100);","+}"]}]},{"path":"test/tiers.test.ts","status":"added","add":16,"del":0,"hunks":[{"old":0,"new":1,"lines":["+import { describe, expect, it } from \"vitest\";","+import { lineTotal, tierFor } from \"../src/pricing/tiers\";","+","+describe(\"bulk tiers\", () => {","+  it(\"gives no tier below 10 units\", () => {","+    expect(tierFor(5)).toBeUndefined();","+  });","+","+  it(\"gives 10 % at 60 units\", () => {","+    expect(tierFor(60)?.percent).toBe(10);","+  });","+","+  it(\"discounts the line total\", () => {","+    expect(lineTotal({ sku: \"A\", qty: 60, unitCents: 100 })).toBe(5400);","+  });","+});"]}]}],"comments":[{"item":"t412/tier-boundary","file":"src/pricing/tiers.ts","line":17},{"item":"t412/float-cents","file":"src/pricing/tiers.ts","line":25},{"item":"t412/savings-coupon","file":"src/orders/createOrder.ts","line":16},{"item":"t412/boundary-tests","file":"test/tiers.test.ts","line":5,"end":15},{"item":"t412/docs-stale","file":"docs/pricing.md","line":11},{"item":"t412/tiers-map","file":"src/pricing/tiers.ts","line":10,"end":13},{"label":"PR description","item":"t412/pr-claims"}]}]},{"id":"pr-415","title":"#415 · retry PayCo authorization","lead":"1 bug this PR introduces, 1 behaviour gap, 2 smaller comments. Diff: `main` `89efd8e` → head `0a46a97`, limited to the two commented files.","blocks":[{"type":"checklist","id":"t415","title":"Findings · #415","numbered":false,"items":[{"id":"double-auth","text":"A retry can authorize the card twice","sub":"Recommend fix in PR: A timeout after PayCo accepted the call becomes a second authorization.","state":"blocker","stateKind":"risk","detail":"**Reviewer:** the retry re-POSTs `/v2/authorizations` with no idempotency key. If the first call succeeds but the response times out, the retry authorizes the card again.\n\n**My reasoning:** `src/orders/charge.ts:17-21` sends only amount, currency and reference; `src/payments/paycoClient.ts` sets no default header. The 10 s client timeout makes \"accepted but timed out\" a realistic case. *Unverified:* that PayCo deduplicates on `Idempotency-Key`; their public docs say so, but I haven't seen it in the sandbox.\n\n**Fix:** pass `{ headers: { \"Idempotency-Key\": orderId } }` as the third argument to `payco.post`.\n\n**Verify (required):** in the PayCo sandbox, two calls with the same key return the same authorization id; the unit test asserts both attempts carry the same key.","choices":[{"id":"fix","label":"Fix in PR"},{"id":"ticket","label":"Ticket"},{"id":"decline","label":"Decline"}],"recommend":"fix"},{"id":"retry-4xx","text":"Card declines are retried too","sub":"Recommend fix in PR: The doc comment says network errors and 5xx; the `catch` retries everything.","state":"major","stateKind":"warn","detail":"**Reviewer:** a 402 decline is retried twice more, adding 750 ms before the customer sees it.\n\n**My reasoning:** the comment at `src/orders/charge.ts:12` promises \"network errors and 5xx\"; the `catch` at line 23 doesn't look at the status.\n\n**Fix:** in the `catch`, rethrow when `err.response?.status` is below 500.\n\n**Verify:** a test where the first call rejects with status 402 expects one call and a thrown error.","choices":[{"id":"fix","label":"Fix in PR"},{"id":"ticket","label":"Ticket"},{"id":"decline","label":"Decline"}],"recommend":"fix"},{"id":"latency","text":"Worst case blocks checkout for 31.5 s","sub":"Recommend ticket: Real, but the timeout budget is a checkout decision, not this PR's.","state":"minor","stateKind":"info","detail":"**Reviewer:** 3 attempts × 10 s timeout plus backoff is 31.5 s worst case, past checkout's 15 s gateway timeout.\n\n**My reasoning:** `src/payments/paycoClient.ts:5` sets 10 s for every PayCo call, including refunds. Lowering it here changes those too. The fix needs a budget from the checkout owners: per-attempt timeout, attempts, and what the customer sees when it runs out.\n\n**Reply I'd post:** \"Agreed it's too long; ticketed (PAY-34) so checkout can set the budget.\"","choices":[{"id":"fix","label":"Fix in PR"},{"id":"ticket","label":"Ticket"},{"id":"decline","label":"Decline"}],"recommend":"ticket"},{"id":"backoff-const","text":"Name the 250 ms backoff","sub":"Recommend decline: Used once, inside the loop it controls.","state":"nit","stateKind":"todo","detail":"**Reviewer:** `250 * attempt` is a magic number; make it a constant.\n\n**My reasoning:** the number appears once, inside the retry loop it controls (`src/orders/charge.ts:25`), and nothing else reads it. A constant would move it away from the only place it means anything.\n\n**Reply I'd post:** \"Not taken: it's used once, inside the loop it controls.\"","choices":[{"id":"fix","label":"Fix in PR"},{"id":"ticket","label":"Ticket"},{"id":"decline","label":"Decline"}],"recommend":"decline"}]},{"type":"diff","id":"diff-415","title":"acme-shop #415","repo":"acme-shop","base":"89efd8e","head":"0a46a97","url":"https://github.com/acme/acme-shop/pull/415/files","note":"Only the two commented files; the new test is left out. Head `0a46a97`.","files":[{"path":"src/orders/charge.ts","status":"added","add":29,"del":0,"hunks":[{"old":0,"new":1,"lines":["+// Card authorization through PayCo, with retries (PAY-31).","+import { payco } from \"../payments/paycoClient\";","+import type { PricedOrder } from \"./createOrder\";","+","+export interface Authorization {","+  id: string;","+  amountCents: number;","+}","+","+const MAX_ATTEMPTS = 3;","+","+/** Authorizes the order total. Retries on network errors and 5xx. */","+export async function authorize(order: PricedOrder, orderId: string): Promise<Authorization> {","+  let lastError: unknown;","+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {","+    try {","+      const res = await payco.post(\"/v2/authorizations\", {","+        amount: order.totalCents,","+        currency: \"EUR\",","+        reference: orderId,","+      });","+      return { id: res.data.id, amountCents: order.totalCents };","+    } catch (err) {","+      lastError = err;","+      await new Promise((r) => setTimeout(r, 250 * attempt));","+    }","+  }","+  throw lastError;","+}"]}]},{"path":"src/payments/paycoClient.ts","status":"added","add":7,"del":0,"hunks":[{"old":0,"new":1,"lines":["+import axios from \"axios\";","+","+export const payco = axios.create({","+  baseURL: process.env.PAYCO_URL,","+  timeout: 10_000,","+  headers: { Authorization: `Bearer ${process.env.PAYCO_KEY}` },","+});"]}]}],"comments":[{"item":"t415/double-auth","file":"src/orders/charge.ts","line":17,"end":21},{"item":"t415/retry-4xx","file":"src/orders/charge.ts","line":23,"end":25},{"item":"t415/latency","file":"src/payments/paycoClient.ts","line":5},{"item":"t415/backoff-const","file":"src/orders/charge.ts","line":25}]}]}]}</script>
 <script>
 (() => {
 'use strict';
@@ -700,6 +778,8 @@ const ICONS = {
   pr: '<circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7M6 9v12"/>',
   up: '<path d="m18 15-6-6-6 6"/>',
   down: '<path d="m6 9 6 6 6-6"/>',
+  star: '<path d="M11.5 2.8a.6.6 0 0 1 1 0l2.6 5.3 5.8.8a.6.6 0 0 1 .3 1l-4.2 4.1 1 5.8a.6.6 0 0 1-.8.6L12 17.7l-5.2 2.7a.6.6 0 0 1-.8-.6l1-5.8-4.2-4.1a.6.6 0 0 1 .3-1l5.8-.8Z"/>',
+  send: '<path d="M14.5 21.7a.5.5 0 0 0 .9 0L22 3.5a.5.5 0 0 0-.6-.6L3.3 9.5a.5.5 0 0 0 0 .9l7.6 3a2 2 0 0 1 1.1 1.1zM21.9 2.1l-10.9 11"/>',
 };
 function ic(name, cls) {
   const s = document.createElementNS(NS, 'svg');
@@ -947,15 +1027,22 @@ function renderChecklist(b, parent) {
   const root = h('div', { class: 'bp-cl' + (parent ? ' nested' : ''), id: 'cl-' + cid });
   (b.items || []).forEach((it, i) => {
     const key = itemKey(cid, it.id);
+    const choices = Array.isArray(it.choices) && it.choices.length ? it.choices : null;
     const authorDone = it.done ? '1' : '0';
+    const authorChoice = choices && it.choice || '';
     // A saved tick is the reader's override of the author's `done`, stored with the `done` it
     // overrode ("<tick><done>"). If the author has since changed `done`, the author wins: a
     // stale "not done" must not hide a step the author later marked done. Legacy one-char
     // values carry no `done`; only a legacy "0" against `done: true` is treated as stale.
+    // A saved pick is "=<choice>|<author's choice>", with the same rule.
     let stored = store.get(key);
-    if (stored != null && (stored.length === 2 ? stored[1] !== authorDone : stored === '0' && it.done)) { store.del(key); stored = null; }
+    if (stored != null && (choices
+      ? !stored.startsWith('=') || stored.slice(stored.indexOf('|') + 1) !== authorChoice || !choices.some(c => c.id === stored.slice(1, stored.indexOf('|')))
+      : stored.startsWith('=') || (stored.length === 2 ? stored[1] !== authorDone : stored === '0' && it.done))) { store.del(key); stored = null; }
     const cb = h('input', { type: 'checkbox', id: `cb-${cid}-${it.id}`, 'aria-label': 'Done: ' + String(it.text || '').replace(/[`*]/g, '') });
-    cb.checked = stored == null ? !!it.done : stored[0] === '1';
+    let choice = null;
+    if (choices) { choice = stored != null ? stored.slice(1, stored.indexOf('|')) : (authorChoice || null); cb.checked = !!choice; cb.hidden = true; cb.tabIndex = -1; }
+    else cb.checked = stored == null ? !!it.done : stored[0] === '1';
     // subtitle: the author's `sub`, else the check (what "done" looks like), else nothing
     const subMd = it.sub || it.verify;
     const subIsCheck = !it.sub && !!it.verify;
@@ -966,6 +1053,9 @@ function renderChecklist(b, parent) {
       (it.blocks || []).map(kb => h('div', { class: 'bp-cl-block' }, kb.type === 'checklist' ? renderChecklist(kb, { cid, iid: it.id }) : (RENDER[kb.type] || RENDER.text)(kb))),
       it.verify && !subIsCheck && h('div', { class: 'bp-cl-verify' }, ic('check'), h('span', {}, h('b', {}, 'Check'), h('span', { html: inline(it.verify) }))),
       it.refs && it.refs.length && h('div', { class: 'bp-refs' }, it.refs.map(r => h('button', { type: 'button', class: 'bp-ref', onclick: () => focusNode(r) }, ic('target'), refLabel(r)))));
+    // the reader's comment for the agent: stored per item, exported with the answers
+    const noteKey = key + ':note';
+    let note = store.get(noteKey) || '';
     body.hidden = 'until-found';  // find-in-page still reaches collapsed content where supported
     const head = h('button', { type: 'button', class: 'bp-cl-head', 'aria-expanded': 'false', 'aria-controls': bodyId },
       numbered && h('span', { class: 'bp-cl-num' }, String(i + 1).padStart(2, '0')),
@@ -973,9 +1063,31 @@ function renderChecklist(b, parent) {
         h('span', { class: 'bp-cl-text', html: inline(it.text) }),
         subMd && h('span', { class: 'bp-cl-subt' + (subIsCheck ? ' check' : '') }, subIsCheck && ic('check'), h('span', { html: inline(subMd) }))),
       it.state && h('span', { class: 'bp-chip ' + (it.stateKind || 'warn') }, it.state),
+      h('span', { class: 'bp-cl-noteic', title: 'You left a comment' }, ic('msg')),
       ic('chev', 'bp-cl-chev'));
-    const li = h('li', { class: 'bp-cl-item', id: `item-${cid}-${it.id}` }, h('div', { class: 'bp-cl-row' }, cb, head), body);
-    const entryItem = { it, cb, li, cid, body, head };
+    const dot = choices && h('span', { class: 'bp-cl-dot', 'aria-hidden': 'true' });
+    const li = h('li', { class: 'bp-cl-item' + (choices ? ' has-choices' : ''), id: `item-${cid}-${it.id}` }, h('div', { class: 'bp-cl-row' }, cb, dot, head));
+    const entryItem = { it, cb, li, cid, body, head, choices, get choice() { return choice; }, get note() { return note; } };
+    entryItem.setNote = (v, from) => {
+      note = v.trim() ? v : '';
+      if (note) store.set(noteKey, note); else store.del(noteKey);
+      li.classList.toggle('has-note', !!note);
+      if (from !== entryItem.noteView) entryItem.noteView.paint();
+      syncDiffs(); paintSend();
+    };
+    entryItem.noteView = noteBox(entryItem);
+    li.classList.toggle('has-note', !!note);
+    if (choices) {
+      entryItem.setChoice = id => {
+        choice = id || null; cb.checked = !!choice;
+        if ((choice || '') === authorChoice) store.del(key); else store.set(key, `=${choice || ''}|${authorChoice}`);
+        li.classList.toggle('done', cb.checked); entryItem.pills.paint(); update();
+      };
+      entryItem.pills = choicePills(entryItem);
+      li.append(entryItem.pills.el);
+    }
+    body.append(entryItem.noteView.el);
+    li.append(body);
     entryItem.setOpen = open => {
       li.classList.toggle('open', open); head.setAttribute('aria-expanded', String(open));
       if (open) body.removeAttribute('hidden'); else body.hidden = 'until-found';
@@ -988,16 +1100,23 @@ function renderChecklist(b, parent) {
       else { head.setAttribute('aria-expanded', String(li.classList.contains('open'))); head.setAttribute('aria-controls', bodyId); head.removeAttribute('tabindex'); head.removeAttribute('aria-hidden'); }
     };
     head.addEventListener('click', () => {
-      if (li.classList.contains('empty')) { cb.click(); return; }   // nothing to show: the row ticks
+      if (li.classList.contains('empty')) { if (!choices) cb.click(); return; }   // nothing to show: the row ticks
       entryItem.setOpen(!li.classList.contains('open'));
     });
     body.addEventListener('beforematch', () => entryItem.setOpen(true));
     entryItem.refresh();
     li.classList.toggle('done', cb.checked);
     cb.addEventListener('change', () => {
+      if (choices) return;
       if (cb.checked === !!it.done) store.del(key); else store.set(key, (cb.checked ? '1' : '0') + authorDone);
       li.classList.toggle('done', cb.checked); update();
     });
+    entryItem.reset = () => {
+      store.del(key);
+      if (choices) { choice = authorChoice || null; cb.checked = !!choice; entryItem.pills.paint(); }
+      else cb.checked = !!it.done;
+      li.classList.toggle('done', cb.checked);
+    };
     items.push(entryItem);
     ITEMS[`${cid}/${it.id}`] = entryItem;
     for (const r of it.refs || []) (NODE_REFS[r] ||= []).push({ checklist: b, item: it, li });
@@ -1030,6 +1149,7 @@ function renderChecklist(b, parent) {
     bar.firstChild.style.width = (items.length ? n / items.length * 100 : 0) + '%';
     root.classList.toggle('complete', items.length > 0 && n === items.length);
     if (entry.sideRow) entry.sideRow();
+    paintSend();
     syncDiffs();
     updateOverall();
   }
@@ -1038,10 +1158,43 @@ function renderChecklist(b, parent) {
   return root;
 }
 function resetChecklist(c) {
-  c.items.forEach(x => { store.del(itemKey(c.b.id, x.it.id)); x.cb.checked = !!x.it.done; x.li.classList.toggle('done', x.cb.checked); });
+  c.items.forEach(x => x.reset());
   CHECKLISTS.filter(n => n.parent && n.parent.cid === c.b.id).forEach(resetChecklist);
   c.update();
 }
+// The options of a choice item as a radio group of pills. The same item can have several groups
+// (its row, its comment card in a diff); every group repaints from the item's current choice.
+function choicePills(x, compact) {
+  const name = String(x.it.text || '').replace(/[`*]/g, '');
+  const el = h('div', { class: 'bp-cl-choices' + (compact ? ' compact' : ''), role: 'radiogroup', 'aria-label': 'Decision: ' + name });
+  const btns = x.choices.map(c => {
+    const rec = c.id === x.it.recommend;
+    const b = h('button', { type: 'button', role: 'radio', class: 'bp-choice' + (rec ? ' rec' : ''), 'data-id': c.id,
+      title: (rec ? 'Recommended. ' : '') + (c.md ? String(c.md).replace(/[`*]/g, '') : c.label),
+      onclick: () => x.setChoice(x.choice === c.id ? null : c.id) },
+      rec && ic('star'), h('span', { html: inline(c.label) }), rec && h('span', { class: 'sr' }, ' (recommended)'));
+    return b;
+  });
+  el.append(...btns);
+  el.addEventListener('keydown', e => {
+    const i = btns.indexOf(document.activeElement); if (i < 0) return;
+    const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
+    if (step) { e.preventDefault(); btns[(i + step + btns.length) % btns.length].focus(); }
+  });
+  const paint = () => {
+    const cur = x.choice;
+    btns.forEach((b, i) => {
+      const on = b.dataset.id === cur;
+      b.setAttribute('aria-checked', String(on));
+      b.tabIndex = on || (!cur && i === 0) ? 0 : -1;
+    });
+    el.classList.toggle('answered', !!cur);
+    el.classList.toggle('off-rec', !!cur && !!x.it.recommend && cur !== x.it.recommend);
+  };
+  paint();
+  return { el, paint };
+}
+const choiceLabel = (x, id) => { const c = x.choices && x.choices.find(c => c.id === id); return c ? c.label.replace(/[`*]/g, '') : id; };
 function openItem(x) {
   // open the item and every collapsed item it sits inside
   for (let el = x.li; el; el = el.parentElement && el.parentElement.closest('.bp-cl-item')) {
@@ -1053,14 +1206,119 @@ function openItem(x) {
 function checklistMd(c, indent = '') {
   const lines = c.items.map(x => {
     const sub = CHECKLISTS.filter(n => n.parent && n.parent.cid === c.b.id && n.parent.iid === x.it.id);
-    return `${indent}- [${x.cb.checked ? 'x' : ' '}] ${x.it.text}` + sub.map(n => '\n' + checklistMd(n, indent + '  ').trimEnd()).join('');
+    let line = `${indent}- [${x.cb.checked ? 'x' : ' '}] ${x.it.text}`;
+    if (x.choices) {
+      const rec = x.it.recommend && choiceLabel(x, x.it.recommend);
+      if (x.choice) line += ` → **${choiceLabel(x, x.choice)}**` + (rec && x.choice !== x.it.recommend ? ` (recommended: ${rec})` : '');
+      else line += rec ? ` (no decision; recommended: ${rec})` : ' (no decision)';
+    }
+    const quoted = x.note ? '\n' + x.note.trim().split('\n').map(l => `${indent}  > ${l}`).join('\n') : '';
+    return line + quoted + sub.map(n => '\n' + checklistMd(n, indent + '  ').trimEnd()).join('');
   });
   if (indent) return lines.join('\n') + '\n';
   const n = c.items.filter(x => x.cb.checked).length;
   return `## ${c.b.title || c.b.id} (${n}/${c.items.length})\n` + lines.join('\n') + '\n';
 }
 function allChecklistsMd() {
-  return `# ${DOC.title} — progress ${new Date().toISOString().slice(0, 10)}\n\n` + CHECKLISTS.filter(c => !c.parent).map(c => checklistMd(c)).join('\n');
+  const msg = store.get(MSG_KEY) || '';
+  return `# ${DOC.title} — progress ${new Date().toISOString().slice(0, 10)}\n\n` + (msg.trim() ? `${msg.trim()}\n\n` : '') + CHECKLISTS.filter(c => !c.parent).map(c => checklistMd(c)).join('\n');
+}
+
+/* ---------- replies: comments and answers back to the agent ---------- */
+const MSG_KEY = `bp:${docId}:__message`;
+// A comment box bound to one item. Rows and diff cards each get one; they stay in sync.
+function noteBox(x, compact) {
+  const ta = h('textarea', { class: 'bp-note-ta', rows: 1, placeholder: compact ? 'Comment for the agent…' : 'Comment for the agent (sent with your answers)…',
+    'aria-label': 'Comment for the agent on: ' + String(x.it.text || '').replace(/[`*]/g, '') });
+  const fit = () => { ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight + 2, 240) + 'px'; };
+  let t = 0;
+  const view = { el: h('div', { class: 'bp-note' + (compact ? ' compact' : '') }, ic('msg'), ta), paint: () => { if (document.activeElement !== ta && ta.value !== x.note) { ta.value = x.note; fit(); } } };
+  ta.addEventListener('input', () => { fit(); clearTimeout(t); t = setTimeout(() => x.setNote(ta.value, view), 250); });
+  ta.addEventListener('blur', () => { clearTimeout(t); if (ta.value !== x.note) x.setNote(ta.value, view); });
+  ta.addEventListener('keydown', e => e.stopPropagation());   // n/p and canvas keys must not fire while typing
+  ta.value = x.note;
+  requestAnimationFrame(fit);
+  return view;
+}
+function replyPayload() {
+  const all = Object.values(ITEMS);
+  return {
+    doc: docId, title: DOC.title || '', path: location.pathname, at: new Date().toISOString(),
+    message: (store.get(MSG_KEY) || '').trim(),
+    items: all.map(x => ({
+      checklist: x.cid, item: x.it.id, text: x.it.text,
+      ...(x.choices ? { choice: x.choice || null, recommend: x.it.recommend || null } : { done: x.cb.checked }),
+      ...(x.note ? { note: x.note.trim() } : {}),
+    })),
+    markdown: allChecklistsMd(),
+  };
+}
+// The page can send replies itself when it is served by scripts/serve.py; otherwise it copies them.
+const REPLY = { url: null, to: '' };
+if (/^https?:$/.test(location.protocol)) {
+  fetch('/__bluedoc/ping', { cache: 'no-store' }).then(r => r.ok ? r.json() : null).then(j => {
+    if (j && j.bluedoc) { REPLY.url = '/__bluedoc/reply'; REPLY.to = j.to || ''; paintSend(); }
+  }).catch(() => {});
+}
+const sendBtn = h('button', { type: 'button', class: 'bp-btn bd-send-btn', hidden: true, onclick: () => openSend() }, ic('send'), h('span', { class: 'l' }, 'Send to agent'));
+document.querySelector('.bd-bar-r')?.insertBefore(sendBtn, document.querySelector('.bd-bar-r .bd-toc-btn'));
+let sendDlg = null;
+function replyCounts() {
+  const all = Object.values(ITEMS), dec = all.filter(x => x.choices);
+  return { decisions: dec.length, decided: dec.filter(x => x.choice).length, steps: all.length - dec.length,
+    ticked: all.filter(x => !x.choices && x.cb.checked).length, notes: all.filter(x => x.note).length };
+}
+function paintSend() {
+  if (!sendBtn) return;
+  sendBtn.hidden = !CHECKLISTS.length;
+  const c = replyCounts();
+  sendBtn.classList.toggle('has', !!(c.decided || c.notes || c.ticked));
+  if (sendDlg && sendDlg.open) sendDlg._paint();
+}
+function openSend() {
+  if (!sendDlg) {
+    const msg = h('textarea', { class: 'bp-note-ta', rows: 3, placeholder: 'Anything else for the agent? (optional)' });
+    msg.value = store.get(MSG_KEY) || '';
+    msg.addEventListener('input', () => { if (msg.value.trim()) store.set(MSG_KEY, msg.value); else store.del(MSG_KEY); pre.textContent = allChecklistsMd(); });
+    msg.addEventListener('keydown', e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); doSend(); } });
+    const summary = h('p', { class: 'sum' });
+    const how = h('p', { class: 'how' });
+    const pre = h('pre', {});
+    const send = h('button', { type: 'button', class: 'bp-btn primary', onclick: () => doSend() }, ic('send'), 'Send');
+    const copy = h('button', { type: 'button', class: 'bp-btn', onclick: () => { copyText(allChecklistsMd(), 'Copied: paste it into the chat with the agent'); sendDlg.close(); } }, ic('copy'), 'Copy');
+    sendDlg = h('dialog', { class: 'bd-send', 'aria-labelledby': 'bd-send-h' },
+      h('div', { class: 'hd' }, h('h3', { id: 'bd-send-h' }, 'Send your answers to the agent'), h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Close', onclick: () => sendDlg.close() }, ic('x'))),
+      summary, msg, h('details', {}, h('summary', {}, 'Preview'), pre), how, h('div', { class: 'ft' }, copy, send));
+    document.body.append(sendDlg);
+    sendDlg.addEventListener('click', e => { if (e.target === sendDlg) sendDlg.close(); });
+    sendDlg._paint = () => {
+      const c = replyCounts();
+      const parts = [];
+      if (c.decisions) parts.push(`${c.decided} of ${c.decisions} decision${c.decisions === 1 ? '' : 's'} made`);
+      if (c.steps) parts.push(`${c.ticked} of ${c.steps} step${c.steps === 1 ? '' : 's'} ticked`);
+      parts.push(`${c.notes} comment${c.notes === 1 ? '' : 's'}`);
+      summary.textContent = parts.join(' · ');
+      send.hidden = !REPLY.url;
+      copy.classList.toggle('primary', !REPLY.url);
+      how.textContent = REPLY.url ? `Send delivers this to ${REPLY.to || 'the agent that opened this page'}. Copy gives you the same text to paste.`
+        : 'This page isn\'t connected to an agent. Copy the text and paste it into the chat. (Pages opened through serve.py can send directly.)';
+      pre.textContent = allChecklistsMd();
+    };
+  }
+  sendDlg._paint();
+  sendDlg.showModal();
+  sendDlg.querySelector('textarea').focus();
+}
+async function doSend() {
+  if (!REPLY.url) { copyText(allChecklistsMd(), 'Copied: paste it into the chat with the agent'); sendDlg && sendDlg.close(); return; }
+  try {
+    const r = await fetch(REPLY.url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Bluedoc': '1' }, body: JSON.stringify(replyPayload()) });
+    if (!r.ok) throw new Error(String(r.status));
+    sendDlg && sendDlg.close();
+    toast(`Sent to ${REPLY.to || 'the agent'}`);
+  } catch {
+    copyText(allChecklistsMd(), 'Couldn\'t reach the agent; copied instead, paste it into the chat');
+  }
 }
 function updateOverall() {
   if (!CHECKLISTS.length) return;
@@ -1247,6 +1505,12 @@ function renderDiff(b) {
         h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Next comment', title: 'Next comment (n)', onclick: () => stepComment(d, 1) }, ic('down'))],
         h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Full screen', title: 'Full screen', style: 'margin-left:6px', onclick: () => document.fullscreenElement ? document.exitFullscreen() : d.root.requestFullscreen?.() }, ic('full')))),
     h('div', { class: 'bd-diff-body' }, d.files_, d.pane));
+  let navRaf = 0;
+  const repaintNav = () => { if (!navRaf) navRaf = requestAnimationFrame(() => { navRaf = 0; d.fnav && d.fnav.paint(); }); };
+  d.pane.addEventListener('scroll', repaintNav, { passive: true });
+  addEventListener('scroll', repaintNav, { passive: true });
+  addEventListener('resize', repaintNav);
+  d.pane.addEventListener('toggle', repaintNav, true);   // a card's Details opening moves the ones below
   d.root.addEventListener('keydown', e => {
     if (e.target.closest('input, select, textarea') || e.metaKey || e.ctrlKey || e.altKey) return;
     if (e.key === 'n' || e.key === ']') { e.preventDefault(); stepComment(d, 1); }
@@ -1285,19 +1549,30 @@ function commentCard(d, c) {
   const title = c.title || (it && it.text) || '';
   const where = c.line ? (c.end && c.end !== c.line ? `Lines ${c.line}–${c.end}` : `Line ${c.line}`) + (c.side === 'old' ? ' (before)' : '') : c.file ? 'Whole file' : (c.label || 'Whole change');
   const card = h('article', { class: `bd-cm ${kind}${src ? '' : ' nott'}`, 'data-ci': c._i, tabindex: -1 });
-  let tick = null;
-  if (src) {
+  let tick = null, pills = null, dot = null;
+  if (src && src.choices) {
+    // a decision item: the card carries the same options as its row
+    pills = choicePills(src, true);
+    dot = h('span', { class: 'bp-cl-dot', 'aria-hidden': 'true' });
+    d.mirrors.push({ pills, src, card });
+  } else if (src) {
     tick = h('input', { type: 'checkbox', 'aria-label': 'Tick: ' + plainText(title) });
     tick.addEventListener('change', () => { src.cb.checked = tick.checked; src.cb.dispatchEvent(new Event('change')); });
     d.mirrors.push({ tick, src, card });
   }
   const detail = c.md || (it && it.detail);
   card.append(
-    h('div', { class: 'hd' }, tick ? h('label', { class: 'tk' }, tick) : ic('msg'), h('div', { class: 'tt', html: inline(title) }),
+    h('div', { class: 'hd' }, tick ? h('label', { class: 'tk' }, tick) : dot || ic('msg'), h('div', { class: 'tt', html: inline(title) }),
       ((it && it.state) || c.state) && h('span', { class: 'bp-chip ' + kind }, c.state || it.state)),
+    pills && pills.el,
     h('div', { class: 'mt' }, h('span', {}, where),
       src && h('a', { href: `#item-${src.cid}-${it.id}`, onclick: e => { e.preventDefault(); openItem(src); src.li.scrollIntoView({ behavior: REDUCE ? 'auto' : 'smooth', block: 'center' }); flash(src.li); } }, 'Checklist item', ic('chev'))),
     detail && h('details', {}, h('summary', {}, 'Details'), h('div', { class: 'bd', html: md(detail) })));
+  if (src) {
+    const nv = noteBox(src, true);
+    card.append(nv.el);
+    d.mirrors.push({ note: nv, src, card });
+  }
   return card;
 }
 function renderPane(d) {
@@ -1306,7 +1581,7 @@ function renderPane(d) {
   if (key === PR_KEY) {
     pane.replaceChildren(h('div', { class: 'bd-fh' }, h('div', { class: 'p' }, h('b', {}, 'Whole change'), ' · comments not tied to a line')),
       h('div', { class: 'bd-code' }, commentsIn(d, PR_KEY).map(c => h('div', { class: 'bd-cmw top' }, commentCard(d, c)))));
-    syncDiffs(); return;
+    fileNav(d); syncDiffs(); return;
   }
   const f = d.byPath[key]; if (!f) { pane.replaceChildren(h('div', { class: 'bd-omit' }, 'No file selected.')); return; }
   const i = f.path.lastIndexOf('/');
@@ -1344,10 +1619,65 @@ function renderPane(d) {
   const orphans = cs.filter(c => !shownIds.has(c._i));
   if (orphans.length) code.append(...orphans.map(c => h('div', { class: 'bd-cmw top' }, commentCard(d, c))));
   pane.replaceChildren(...[head, f.omitted && h('div', { class: 'bd-omit' }, `Diff not included: ${f.omitted}.`), code].filter(Boolean));
+  fileNav(d);
   syncDiffs();
 }
+/* Comments in the open file: a count in the file header, ‹ › to step through them, and pills that
+   say how many are above or below what you can see, so no comment hides off-screen unnoticed. */
+function fileNav(d) {
+  const pane = d.pane, head = pane.querySelector('.bd-fh');
+  const cards = [...pane.querySelectorAll('.bd-code .bd-cm')];
+  d.fnav = null;
+  if (!head || !cards.length) return;
+  const n = cards.length;
+  const lbl = h('span', { class: 'lbl', 'aria-live': 'polite' });
+  const go = target => {
+    const card = cards[target]; if (!card) return;
+    const c = d.comments.find(x => String(x._i) === card.dataset.ci);
+    if (c) { d.ci = c._o; paintNav(d); }
+    paneScrollTo(d, card); flash(card);
+  };
+  const prev = h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Previous comment in this file', title: 'Previous comment in this file' }, ic('up'));
+  const next = h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Next comment in this file', title: 'Next comment in this file' }, ic('down'));
+  const nav = h('span', { class: 'bd-fnav' + (n > 1 ? '' : ' one') },
+    h('span', { class: 'cnt', title: `${n} comment${n === 1 ? '' : 's'} in this file` }, ic('msg'), String(n)), n > 1 && prev, lbl, n > 1 && next);
+  head.insertBefore(nav, head.lastElementChild && head.lastElementChild.matches('button') ? head.lastElementChild : null);
+  const upTxt = h('span'), downTxt = h('span');
+  const up = h('button', { type: 'button', class: 'bd-pill' }, ic('up'), upTxt);
+  const down = h('button', { type: 'button', class: 'bd-pill' }, ic('down'), downTxt);
+  head.after(h('div', { class: 'bd-pill-wrap up' }, up));
+  pane.append(h('div', { class: 'bd-pill-wrap down' }, down));
+  pane.style.setProperty('--fh-h', head.offsetHeight + 'px');
+  const state = () => {
+    // what the reader can see: the pane when it scrolls itself, else the window under the app bar
+    const scrolls = pane.scrollHeight > pane.clientHeight + 2;
+    const pr = pane.getBoundingClientRect(), fh = head.getBoundingClientRect();
+    const top = Math.max(fh.bottom, scrolls ? pr.top : cssPx('--bar-h')), bottom = scrolls ? pr.bottom : innerHeight;
+    const above = [], below = []; let cur = -1;
+    cards.forEach((c, i) => { const r = c.getBoundingClientRect(); if (r.bottom < top + 6) above.push(i); else if (r.top > bottom - 6) below.push(i); else if (cur < 0) cur = i; });
+    return { above, below, cur };
+  };
+  const paint = () => {
+    const s = state();
+    const seen = s.cur >= 0 || s.above.length || s.below.length < n;
+    lbl.textContent = s.cur >= 0 && n > 1 ? `${s.cur + 1} of ${n}` : '';
+    lbl.hidden = !lbl.textContent;
+    prev.disabled = !s.above.length && s.cur <= 0;
+    next.disabled = !s.below.length && (s.cur < 0 || s.cur >= n - 1);
+    up.hidden = !s.above.length; down.hidden = !s.below.length;
+    upTxt.textContent = `${s.above.length} ${s.cur >= 0 || s.below.length ? 'more ' : ''}comment${s.above.length === 1 ? '' : 's'} above`;
+    downTxt.textContent = `${s.below.length} ${seen ? 'more ' : ''}comment${s.below.length === 1 ? '' : 's'} below`;
+  };
+  prev.onclick = () => { const s = state(); go(s.cur > 0 ? s.cur - 1 : s.above[s.above.length - 1]); };
+  next.onclick = () => { const s = state(); go(s.cur >= 0 && s.cur < n - 1 ? s.cur + 1 : s.below[0]); };
+  up.onclick = () => { const s = state(); go(s.above[s.above.length - 1]); };
+  down.onclick = () => { const s = state(); go(s.below[0]); };
+  d.fnav = { paint, state };
+  paint();
+  requestAnimationFrame(paint);   // after layout settles (code highlight, fonts)
+}
 function selectFile(d, key, keepScroll) {
-  if (d.sel !== key) { d.sel = key; renderPane(d); paintFiles(d); if (!keepScroll) d.pane.scrollTop = 0; }
+  if (d.sel !== key) { d.sel = key; renderPane(d); paintFiles(d); if (!keepScroll) d.pane.scrollTop = 0; d.fnav && d.fnav.paint(); }
   // keep the selected file visible in the list; scrollIntoView would also move the page
   const cur = d.files_.querySelector('[aria-current="true"]'), L = d.files_;
   if (cur && L.scrollHeight > L.clientHeight) {
@@ -1395,7 +1725,12 @@ function openCodeLink(s) {
 }
 function syncDiffs() {
   for (const d of Object.values(DIFFS)) {
-    for (const m of d.mirrors) { m.tick.checked = m.src.cb.checked; m.card.classList.toggle('done', m.src.cb.checked); }
+    for (const m of d.mirrors) {
+      if (m.tick) m.tick.checked = m.src.cb.checked;
+      if (m.pills) m.pills.paint();
+      if (m.note) m.note.paint();
+      m.card.classList.toggle('done', m.src.cb.checked);
+    }
     const linked = d.comments.filter(c => c.item && ITEMS[c.item]);
     if (linked.length && d.progTxt) {
       const n = linked.filter(c => ITEMS[c.item].cb.checked).length;
@@ -2031,6 +2366,9 @@ window.BP = {
   state: canvasId => { const cv = CANVASES[canvasId]; return cv && { k: cv.k, focus: cv.focusPath.map(n => n._key), revealed: cv.sysNodes.filter(n => n._reveal > 0.5).map(n => n._key), flow: cv.focusPlayer && cv.focusPlayer.flow && cv.focusPlayer.flow.id, step: cv.focusPlayer && cv.focusPlayer.si, tokens: [...cv.svg.querySelectorAll('.bp-tok')].filter(t => t.style.display !== 'none').length }; },
   progress: () => CHECKLISTS.map(c => ({ id: c.b.id, done: c.items.filter(x => x.cb.checked).length, total: c.items.length })),
   progressMarkdown: allChecklistsMd,
+  replyPayload,
+  choose: (key, choice) => { const x = ITEMS[key]; if (!x || !x.setChoice) return false; x.setChoice(choice); return true; },
+  setNote: (key, text) => { const x = ITEMS[key]; if (!x) return false; x.setNote(text || ''); return true; },
   openCode: (diffId, path, line) => openCode(diffId, path, line),
   openComment: (diffId, index) => { const d = DIFFS[diffId]; const c = d && d.order[index]; if (c) openComment(d, c, true); return !!c; },
   diffState: diffId => { const d = DIFFS[diffId]; if (!d) return null; const linked = d.comments.filter(c => c.item && ITEMS[c.item]);

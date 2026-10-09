@@ -24,6 +24,8 @@ BLOCK_TYPES = {"text", "callout", "table", "code", "terms", "cards", "checklist"
 FILE_STATUSES = {"added", "modified", "deleted", "renamed", "context"}
 ITEM_BLOCK_TYPES = {"text", "callout", "table", "code", "terms", "cards", "checklist"}
 MAX_TITLE, MAX_SUB = 90, 120   # characters that fit the collapsed checklist row
+MAX_CHOICES, MAX_CHOICE_LABEL = 6, 28
+PLACEHOLDER = re.compile(r"<<[^<>\n]{1,120}>>")
 CALLOUT_KINDS = {"note", "caution", "warning", "risk", "decision"}
 STATE_KINDS = {"ok", "warn", "risk", "info", "todo"}
 NODE_KINDS = {"service", "process", "function", "store", "db", "cache", "stream", "queue", "device", "hardware",
@@ -285,7 +287,32 @@ def validate(doc: dict) -> Report:
                 if it["id"] in item_ids:
                     rep.err(iw, f"duplicate item id '{it['id']}'")
                 item_ids.add(it["id"])
-                lint_text(rep, iw + ".text", it.get("text"), imperative=True)
+                choices = it.get("choices")
+                # a decision item's title names the question or finding, so it need not be imperative
+                lint_text(rep, iw + ".text", it.get("text"), imperative=not choices)
+                if choices is not None:
+                    if not isinstance(choices, list) or not 2 <= len(choices) <= MAX_CHOICES:
+                        rep.err(iw + ".choices", f"give 2 to {MAX_CHOICES} options, each {{id, label}}")
+                    else:
+                        cids: set[str] = set()
+                        for ci, c in enumerate(choices):
+                            cw = f"{iw}.choices[{ci}]"
+                            if not isinstance(c, dict) or not need(rep, cw, c, "id", "label"):
+                                continue
+                            check_id(rep, cw, c["id"])
+                            if c["id"] in cids:
+                                rep.err(cw, f"duplicate option id '{c['id']}'")
+                            cids.add(c["id"])
+                            if len(re.sub(r"`", "", c["label"])) > MAX_CHOICE_LABEL:
+                                rep.warn(cw, f"option label over {MAX_CHOICE_LABEL} characters: options are pills; put the explanation in 'md'")
+                            lint_text(rep, cw + ".md", c.get("md"))
+                        for field in ("recommend", "choice"):
+                            if it.get(field) is not None and it[field] not in cids:
+                                rep.err(f"{iw}.{field}", f"'{it[field]}' is not one of the option ids {sorted(cids)}")
+                    if it.get("done"):
+                        rep.err(iw + ".done", "a decision item is answered by 'choice', not 'done'")
+                elif it.get("recommend") or it.get("choice"):
+                    rep.err(iw, "'recommend' and 'choice' need 'choices'")
                 title = re.sub(r"`([^`]*)`", r"\1", it.get("text", ""))
                 if len(title) > MAX_TITLE:
                     rep.warn(iw + ".text", f"{len(title)} characters: the collapsed row shows one line (about {MAX_TITLE}); "
@@ -374,6 +401,25 @@ def validate(doc: dict) -> Report:
     for cid, key in md_links:
         if cid not in canvas_nodes or (key not in canvas_nodes[cid] and not any(k.split('/')[-1] == key for k in canvas_nodes[cid])):
             rep.err("links", f"#node:{cid}/{key} points to no node")
+    item_anchors = {f"item-{cid}-{iid}" for cid, iids in checklist_items.items() for iid in iids}
+    for anchor in re.findall(r"\]\(#(item-[\w-]+)\)", json.dumps(doc)):
+        if anchor not in item_anchors:
+            rep.err("links", f"#{anchor} points to no checklist item (#item-<checklist>-<item>)")
+
+    def placeholders(node, where: str) -> None:
+        # ghthreads.py stubs carry <<...>> where the author's verdict and reasoning go;
+        # code (diff files, code blocks) is quoted source and may legitimately contain << >>
+        if isinstance(node, dict):
+            for k, v in node.items():
+                if k not in ("files", "code"):
+                    placeholders(v, f"{where}.{k}")
+        elif isinstance(node, list):
+            for i, v in enumerate(node):
+                placeholders(v, f"{where}[{i}]")
+        elif isinstance(node, str):
+            for m in PLACEHOLDER.findall(node):
+                rep.err(where, f"unfilled placeholder {m}: write the verdict, reasoning, fix and check")
+    placeholders(doc.get("sections") or [], "sections")
     return rep
 
 

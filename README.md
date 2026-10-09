@@ -8,7 +8,9 @@ An agent skill that writes engineering docs as one self-contained HTML page: a z
 
 - **Blueprint canvas.** Open a system to see its parts; each level plays its own animated flow (request, event, data). Nests 3 levels deep.
 - **Checklists as task trackers.** Every procedure is a checklist. Each item is a two-line row (the action, then why it matters) that opens to show details, commands, checks, tables or a sub-checklist. Ticks persist in the reader's browser; **Copy progress** exports Markdown for a PR or issue.
-- **Code review.** A `diff` block shows a change with each finding as a comment on its lines. Ticking a comment ticks the finding. Generated from git by `gitdiff.py`.
+- **Decisions, not "tick if you agree".** When the agent needs you to choose, an item shows its options as pills with the agent's recommendation starred. You pick one; the export says what you picked and what was recommended.
+- **Answers back to the agent.** Every item takes a comment. **Send to agent** collects your picks, ticks and comments, plus an overall message, and either sends them to the agent (when it served the page with `serve.py`) or copies them for you to paste.
+- **Code review.** A `diff` block shows a change with each finding as a comment on its lines, and its options on the card. A file with several comments says how many, steps between them, and tells you how many sit above or below what you can see. Generated from git by `gitdiff.py`; GitHub review threads come in through `ghthreads.py`.
 - **One file.** No network at view time, works from `file://`, prints cleanly, light and dark theme, keyboard and screen-reader outline.
 - **Adjustable width.** Drag the handle on either side of the text to widen or narrow it; it stays centred and every bluedoc page in that browser remembers the width. Wide tables stop wrapping. Double-click a handle to reset.
 - **Linted writing.** The build flags filler, vague words, long sentences and checklist items that don't start with a verb.
@@ -17,7 +19,7 @@ An agent skill that writes engineering docs as one self-contained HTML page: a z
 |---|---|
 | ![A bluedoc page: header, status rail, contents and the blueprint canvas](docs/header.png) | ![A diff block with a blocker comment under line 17](docs/review.png) |
 
-Open the examples in a browser to try them: [`acme-orders.html`](skills/bluedoc/examples/acme-orders.html) (architecture and runbook) and [`acme-pr-review.html`](skills/bluedoc/examples/acme-pr-review.html) (PR review). Download the file, then open it; GitHub shows HTML as source.
+Open the examples in a browser to try them: [`acme-orders.html`](skills/bluedoc/examples/acme-orders.html) (architecture and runbook) and [`acme-review-findings.html`](skills/bluedoc/examples/acme-review-findings.html) (review findings for two PRs). Download the file, then open it; GitHub shows HTML as source.
 
 ## Install
 
@@ -86,6 +88,7 @@ Ask in plain words. The skill triggers on requests for HTML docs, architecture p
 - "Write a bluedoc of how a request flows through this service."
 - "Make a runbook for setting up the local stack, as a bluedoc with checklists."
 - "Review PR 412 and give me a bluedoc where each finding sits on its code."
+- "Put the open review threads on PR 412 in a bluedoc so I can decide what to do with each."
 
 The agent writes `docs/<topic>/<name>.bluedoc.json`, builds `docs/<topic>/<name>.html` next to it, and keeps the JSON as the source. To rebuild after editing the JSON by hand:
 
@@ -113,6 +116,8 @@ skills/bluedoc/
   references/schema.md   every JSON field
   scripts/build.py       validate, lint, build the HTML
   scripts/gitdiff.py     git range + findings -> diff block
+  scripts/ghthreads.py   GitHub review threads -> findings + diff comments
+  scripts/serve.py       serve a page so Send to agent reaches the agent
   assets/template.html   the page runtime (styling, canvas, checklists, diff browser)
   examples/              Acme examples, JSON and built HTML
 .claude-plugin/          Claude Code plugin and marketplace (omp reads it too)
