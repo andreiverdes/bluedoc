@@ -507,7 +507,10 @@ html.bd-ann-m-select .bp-cl-head { user-select: text; -webkit-user-select: text;
   font: 650 12px/1 var(--sans); color: #fff; background: var(--pen, var(--accent)); box-shadow: 0 0 0 2px var(--surface), 0 2px 8px oklch(20% 0.05 255 / .3);
   pointer-events: auto; cursor: pointer !important; transition: scale .12s var(--ease); transform-origin: 0 100%; }
 .bd-ann-pin[hidden] { display: none; }
-.bd-ann-pin.sent { background: var(--todo); opacity: .6; }
+.bd-ann-pin.sent { background: var(--todo); opacity: .7; }
+.bd-ann-pin.res { opacity: .5; }
+.bd-ann-pin.res::after { content: "✓"; position: absolute; right: -5px; top: -5px; width: 13px; height: 13px; border-radius: 50%; display: grid; place-items: center;
+  font: 700 8.5px/1 var(--sans); color: #fff; background: var(--ok); box-shadow: 0 0 0 2px var(--surface); }
 .bd-ann-pin.away { color: var(--pen, var(--accent-fg)); background: var(--surface); box-shadow: inset 0 0 0 1.5px var(--pen, var(--accent)), 0 2px 8px oklch(20% 0.05 255 / .25); }
 .bd-ann-pin.sent.away { color: var(--fg-muted); box-shadow: inset 0 0 0 1.5px var(--todo); }
 .bd-ann-pin.old::after { content: ""; position: absolute; right: -3px; top: -3px; width: 9px; height: 9px; border-radius: 50%; background: var(--warn); box-shadow: 0 0 0 2px var(--surface); }
@@ -532,6 +535,30 @@ html.bd-ann-m-select .bp-cl-head { user-select: text; -webkit-user-select: text;
   color: #fff; background: var(--pen, var(--accent)); }
 .bd-ann-num.sent { background: var(--todo); }
 
+/* the composer: a new note is written here, next to its mark (HorizonUI popover), until it is saved */
+.bd-cmp { position: fixed; left: 0; top: 0; z-index: 56; width: min(320px, calc(100vw - 16px)); padding: 10px 10px 10px 12px; border-radius: 12px;
+  background: var(--surface); color: var(--fg); box-shadow: var(--shadow-3); font-size: 13.5px; }
+.bd-cmp[hidden] { display: none; }
+.bd-cmp .hd { display: flex; align-items: center; gap: 7px; min-width: 0; margin-bottom: 8px; }
+.bd-cmp .hd > .bd-ic { width: 14px; height: 14px; color: var(--fg-subtle); }
+.bd-cmp .lb { flex: 1; min-width: 0; font-size: 12.5px; font-weight: 600; color: var(--fg-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bd-cmp .bp-note-ta { display: block; width: 100%; min-height: 60px; max-height: 160px; overflow: auto; resize: none; }
+.bd-cmp .ft { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
+.bd-cmp .ft .sp { flex: 1; }
+.bd-cmp .ft .hint { display: inline-flex; align-items: center; gap: 3px; font-size: 11.5px; color: var(--fg-subtle); white-space: nowrap; }
+.bd-cmp .ft .hint .dot { width: 3px; height: 3px; margin: 0 4px; border-radius: 50%; background: currentColor; opacity: .6; }
+.bd-cmp .ft .bp-btn { height: 28px; }
+.bd-cmp .ft .bp-btn:disabled { opacity: .5; cursor: default; }
+.bd-cmp .ar { position: absolute; display: none; width: 12px; height: 12px; background: var(--surface); }
+.bd-cmp[data-side="r"] .ar { display: block; left: -6px; clip-path: polygon(0 50%, 50% 0, 50% 100%); }
+.bd-cmp[data-side="l"] .ar { display: block; right: -6px; clip-path: polygon(100% 50%, 50% 0, 50% 100%); }
+.bd-cmp[data-side="b"] .ar { display: block; top: -6px; clip-path: polygon(50% 0, 0 50%, 100% 50%); }
+.bd-cmp[data-side="t"] .ar { display: block; bottom: -6px; clip-path: polygon(50% 100%, 0 50%, 100% 50%); }
+.bd-cmp.dock { left: 8px; right: 8px; top: auto; bottom: var(--cmp-b, 70px); width: auto; padding: 8px 8px 8px 10px; }
+.bd-cmp.dock .ar { display: none; }
+.bd-cmp.dock .bp-note-ta { min-height: 44px; max-height: 96px; }
+.bd-cmp.dock .ft .hint { display: none; }
+
 /* right panel: Comments and Revisions. Docked beside the page on wide windows (the page lays out in what
    is left), a drawer over it below 1100 px, a bottom sheet below 900 px. JS sets html.bd-sp-open and
    html.bd-sp-dock. */
@@ -549,19 +576,21 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .bd-sp-h .bd-ibtn { width: 28px; height: 28px; }
 .bd-sp-tabs { flex: 0 1 250px; }
 .bd-sp-tabs button { height: 28px; font-size: 13px; }
+.bd-cs-c.res:not(.on, .hot) { opacity: .5; }
+.bd-cs-c .acts .bd-cs-ib[aria-label="Resolve"]:hover { color: var(--ok-fg); background: var(--ok-tint); }
 .bd-sp-sec { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .bd-sp-sec[hidden] { display: none; }
 .bd-cs-ft .sp, .bd-cs-c .ef .sp { flex: 1; }
 .bd-cs-f { flex: none; display: flex; align-items: center; gap: 6px; padding: 0 12px 10px; box-shadow: inset 0 -1px 0 var(--line-soft); }
-.bd-cs-f .bd-seg { flex: 1; }
-.bd-cs-f .srt { flex: none; height: 28px; padding: 0 8px; font-size: 12px; }
-.bd-seg { display: flex; padding: 2px; border-radius: 10px; background: var(--inset); box-shadow: var(--shadow-well); }
-.bd-seg button { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 26px; padding: 0 8px; border: 0; border-radius: 8px; background: none;
-  font-size: 12.5px; font-weight: 500; color: var(--fg-muted); transition: background .12s, color .12s; }
-.bd-seg button:hover { color: var(--fg); }
-.bd-seg button:is([aria-checked="true"], [aria-selected="true"]) { color: var(--fg); background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: var(--shadow-hk); }
-.bd-seg button i { font: 500 11px/1 var(--mono); font-style: normal; color: var(--fg-subtle); }
-.bd-seg button i:empty { display: none; }
+.bd-cs-f .bd-sg { flex: 1; min-width: 0; }
+.bd-cs-f .srt { flex: none; width: 28px; height: 28px; padding: 0; justify-content: center; }
+.bd-sg { display: flex; padding: 2px; border-radius: 10px; background: var(--inset); box-shadow: var(--shadow-well); }
+.bd-sg button { flex: 1 1 auto; min-width: 0; display: inline-flex; align-items: center; justify-content: center; gap: 5px; height: 26px; padding: 0 6px; border: 0; border-radius: 8px; background: none;
+  font-size: 12px; font-weight: 500; color: var(--fg-muted); white-space: nowrap; transition: background .12s, color .12s; }
+.bd-sg button:hover { color: var(--fg); }
+.bd-sg button:is([aria-checked="true"], [aria-selected="true"]) { color: var(--fg); background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: var(--shadow-hk); }
+.bd-sg button i { font: 500 11px/1 var(--mono); font-style: normal; color: var(--fg-subtle); }
+.bd-sg button i:empty { display: none; }
 .bd-cs-l { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 10px 12px 16px; scrollbar-width: thin; position: relative; }
 .bd-cs-l ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .bd-cs-c { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 10px; padding: 10px 10px 10px 11px; border-radius: 12px; background: var(--surface);
@@ -571,7 +600,7 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .bd-cs-c.hot { box-shadow: 0 0 0 1px color-mix(in oklch, var(--accent) 50%, transparent), var(--shadow-1); }
 .bd-cs-c.on, .bd-cs-c.edit { box-shadow: 0 0 0 1.5px var(--accent), 0 4px 14px color-mix(in oklch, var(--accent) 16%, transparent); }
 .bd-cs-c.edit { cursor: default; }
-.bd-cs-c.sent:not(.on, .hot) { opacity: .62; }
+.bd-cs-c.sent:not(.res, .on, .hot) { opacity: .85; }
 .bd-cs-c.flash { animation: bd-cs-flash 1.2s var(--ease); }
 @keyframes bd-cs-flash { 0%, 40% { box-shadow: 0 0 0 1.5px var(--accent), 0 0 0 6px color-mix(in oklch, var(--accent) 22%, transparent); } }
 .bd-cs-c .cb { display: grid; gap: 4px; min-width: 0; }
@@ -685,7 +714,7 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .bd-chgs pre { max-height: 260px; }
 .bd-chgs .ft .sp { flex: 1; }
 .bd-chgs .ft .bp-btn:disabled { opacity: .5; cursor: default; }
-@media print { .bd-anntb, .bd-ann-layer, .bd-ann-hov, .bd-ann-cap, .bd-tip, .bd-sp, .bd-home { display: none !important; } html.bd-ann-on .bd-shell, :root.bd-sp-dock .bd-shell { padding: 0; } }
+@media print { .bd-anntb, .bd-ann-layer, .bd-ann-hov, .bd-ann-cap, .bd-tip, .bd-sp, .bd-cmp, .bd-home { display: none !important; } html.bd-ann-on .bd-shell, :root.bd-sp-dock .bd-shell { padding: 0; } }
 
 /* code review: diff block (HorizonUI DiffReview, ChangeTable, CodeBlock syntax tokens) */
 :root {
@@ -3037,7 +3066,7 @@ const SIDE = (() => {
   const OPEN_KEY = 'bluedoc:comments', SECTION_KEY = 'bluedoc:sidepanel', ORDER = ['comments', 'revisions'];
   const secs = new Map();   // id -> { id, label, body, count, chip, onToggle, buttons, tab, shown }
   let section = null;
-  const tabs = h('div', { class: 'bd-seg bd-sp-tabs', role: 'tablist', 'aria-label': 'Panel sections', hidden: true });
+  const tabs = h('div', { class: 'bd-sg bd-sp-tabs', role: 'tablist', 'aria-label': 'Panel sections', hidden: true });
   const title = h('h2', { hidden: true }), chip = h('span', { class: 'n', hidden: true });
   const el = h('aside', { class: 'bd-sp', id: 'bd-sp', 'aria-label': 'Side panel', inert: true },
     h('div', { class: 'bd-sp-h' }, tabs, title, chip, h('span', { class: 'sp' }),
@@ -3239,15 +3268,22 @@ const MARKUP = (() => {
   const KEY = `bp:${docId}:__ann`, MSG = `bp:${docId}:__chgmsg`, PEN_KEY = 'bluedoc:pen';
   let list = [];
   try { const x = JSON.parse(store.get(KEY) || '[]'); if (Array.isArray(x)) list = x.filter(a => a && a.id && a.target && a.target.key); } catch { list = []; }
+  // A comment is pending (saved, not sent), open (sent with Request changes) or resolved (the reader
+  // marked it done). Notes stored before statuses existed carry `sent: <time>` instead.
+  const STATUSES = ['pending', 'open', 'resolved'];
+  for (const a of list) {
+    if (!STATUSES.includes(a.status)) a.status = a.sent ? 'open' : 'pending';
+    if (a.sent) { a.sentAt ||= typeof a.sent === 'string' ? a.sent : a.at; delete a.sent; }
+  }
   const save = () => { if (list.length) store.set(KEY, JSON.stringify(list)); else store.del(KEY); };
-  const unsent = () => list.filter(a => !a.sent);
+  const pending = () => list.filter(a => a.status === 'pending');
   const cut = (s, n) => { s = String(s ?? '').replace(/\s+/g, ' ').trim(); return s.length > n ? s.slice(0, n - 1).trimEnd() + '…' : s; };
   const TYPE_IC = { pin: 'pin', text: 'type', draw: 'pencil' };
   const TYPE_WORD = { pin: 'pin', text: 'text', draw: 'drawing' };
   const excerpt = a => a.type === 'text' ? a.quote : a.type === 'draw' && a.targets && a.targets.length ? a.targets.map(t => t.text).filter(Boolean).join(' / ') : a.target.text;
   const pub = a => ({ id: a.id, type: a.type, note: a.note, target: a.target, ...(a.type === 'draw' ? { targets: a.targets || [a.target] } : {}),
     ...(a.type === 'text' ? { quote: a.quote } : {}), rev: a.rev, at: a.at });
-  function changesMd(items = unsent()) {
+  function changesMd(items = pending()) {
     const msg = (store.get(MSG) || '').trim();
     return `# Change requests: ${DOC.title || docId}${CUR.rev ? ` (rev ${CUR.rev})` : ''}, ${new Date().toISOString().slice(0, 10)}\n\n` + (msg ? msg + '\n\n' : '') +
       items.map((a, i) => {
@@ -3257,7 +3293,7 @@ const MARKUP = (() => {
       }).join('\n\n') + '\n';
   }
   function payload() {
-    const items = unsent();
+    const items = pending();
     return { kind: 'changes', doc: docId, rev: CUR.rev, title: DOC.title || '', path: location.pathname, at: new Date().toISOString(),
       message: (store.get(MSG) || '').trim(), annotations: items.map(pub), markdown: changesMd(items) };
   }
@@ -3357,7 +3393,7 @@ const MARKUP = (() => {
   const info = el => ({ key: keyOf(el), label: labelOf(el), text: textOf(el) });
   function ups(el) { const out = []; for (let p = el.parentElement?.closest(ANY); p; p = p.parentElement?.closest(ANY)) out.push(keyOf(p)); return out; }
   const newId = () => 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-  const newAnn = (type, el) => ({ id: newId(), type, note: '', target: info(el), rev: CUR.rev, at: new Date().toISOString(), up: ups(el) });
+  const newAnn = (type, el) => ({ id: newId(), type, status: 'pending', note: '', target: info(el), rev: CUR.rev, at: new Date().toISOString(), up: ups(el) });
   const r4 = v => Math.round(v * 1e4) / 1e4;
 
   /* geometry */
@@ -3485,8 +3521,17 @@ const MARKUP = (() => {
   const groove = () => h('span', { class: 'bd-groove', role: 'separator', 'aria-orientation': 'vertical' });
   const tb = h('div', { class: 'bd-anntb bd-ann-ui', role: 'toolbar', 'aria-label': 'Comment on this doc' }, modeBtns, swatches, groove(), eye, csKey, groove(), go);
   let page = null, swallow = false, press = null, ink = null, lastUp = 0, dlg = null, hovEl = null, hovFor = null, flashT = 0;
-  // the comment being written (not in the list until saved), the one being edited, the selected one, the hovered one
-  let draft = null, editA = null, editTa = null, selA = null, hotA = null;
+  // the comment being written (on the page, in the composer; not in the list until saved), the one being
+  // edited in its sidebar card, the selected one, the hovered one
+  let draft = null, draftBox = null, editA = null, editTa = null, selA = null, hotA = null;
+  // the composer: a small popover beside a new mark (docked above the tray on narrow screens)
+  const cmpTa = h('textarea', { class: 'bp-note-ta', rows: 2, 'aria-label': 'Requested change' });
+  const cmpHd = h('div', { class: 'hd' });
+  const cmpSave = h('button', { type: 'button', class: 'bp-btn primary', onclick: () => finishDraft(true) }, 'Save');
+  const cmp = h('div', { class: 'bd-cmp bd-ann-ui', role: 'dialog', 'aria-label': 'New comment', hidden: true },
+    h('span', { class: 'ar', 'aria-hidden': 'true' }), cmpHd, cmpTa,
+    h('div', { class: 'ft' }, h('span', { class: 'hint', 'aria-hidden': 'true' }, kbd(MAC ? '⌘' : 'Ctrl'), kbd('↵'), ' save', h('span', { class: 'dot' }), kbd('Esc'), ' cancel'),
+      h('span', { class: 'sp' }), h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => finishDraft(false) }, 'Cancel'), cmpSave));
 
   /* placing marks: on scroll only boxes move; after DOM or size changes keys resolve afresh */
   const marks = new Map();   // id -> { a, pin, ink }
@@ -3526,7 +3571,7 @@ const MARKUP = (() => {
     let m = marks.get(a.id);
     if (!m) {
       m = { a, ink: null, inkFor: null, flashUntil: 0 };
-      m.pin = h('button', { type: 'button', class: 'bd-ann-pin', onclick: e => { e.stopPropagation(); select(m.a, { open: true, scroll: true }); } });
+      m.pin = h('button', { type: 'button', class: 'bd-ann-pin', onclick: e => { e.stopPropagation(); if (m.a === draft) cmpTa.focus(); else select(m.a, { open: true, scroll: true }); } });
       m.pin.addEventListener('pointerenter', () => setHot(m.a, false));
       m.pin.addEventListener('pointerleave', () => setHot(null, false));
       layer.append(m.pin); marks.set(a.id, m);
@@ -3535,7 +3580,7 @@ const MARKUP = (() => {
     if (a.type === 'draw' && !m.ink) { m.ink = sv('svg', { class: 'bd-ann-ink', viewBox: '0 0 1 1', preserveAspectRatio: 'none', 'aria-hidden': 'true' }); layer.prepend(m.ink); }
     return m;
   }
-  const isOn = a => a === selA || a === editA;
+  const isOn = a => a === selA || a === editA || a === draft;
   function place() {
     raf = 0;
     const full = dirty; dirty = false;
@@ -3543,30 +3588,35 @@ const MARKUP = (() => {
     if (full) { els = new Map(); ranges = new Map(); }
     capG.setAttribute('transform', `translate(${-scrollX},${-scrollY})`);
     const all = draft ? [...list, draft] : list, keep = new Set(), stacks = new Map(), hl = { on: [], sent: [], open: [] };
+    draftBox = null;
     const vw = root.clientWidth - dockW(), now = performance.now();
+    // resolved notes stay off the page unless the sidebar is showing them (or one is selected)
+    const showRes = SIDE.shows('comments') && (filter === 'resolved' || filter === 'all');
     all.forEach((a, i) => {
       const m = markFor(a); keep.add(a.id);
-      if (hlNow && a.type === 'text' && !marksOff) { const rg = rangeOf(a); if (rg && shown(cachedEl(a.target.key))) (isOn(a) || a === hotA ? hl.open : a.sent ? hl.sent : hl.on).push(rg); }
-      const p = marksOff ? null : locate(a);
+      const off = marksOff || (a.status === 'resolved' && !showRes && a !== selA);
+      if (hlNow && a.type === 'text' && !off) { const rg = rangeOf(a); if (rg && shown(cachedEl(a.target.key))) (isOn(a) || a === hotA ? hl.open : a.status !== 'pending' && a !== draft ? hl.sent : hl.on).push(rg); }
+      const p = off ? null : locate(a);
       m.pin.hidden = !p;
       if (m.ink) m.ink.style.display = p && p.exact ? '' : 'none';
       if (!p) return;
-      const old = !a.sent && a.rev !== CUR.rev;
-      m.pin.className = 'bd-ann-pin' + (a.type === 'draw' ? ' bd-pen-' + (a.color || 'risk') : '') + (a.sent ? ' sent' : '') + (old ? ' old' : '') +
+      const old = a.status === 'pending' && a.rev !== CUR.rev, st = a === draft ? '' : { open: ' sent', resolved: ' sent res' }[a.status] || '';
+      m.pin.className = 'bd-ann-pin' + (a.type === 'draw' ? ' bd-pen-' + (a.color || 'risk') : '') + st + (old ? ' old' : '') +
         (p.exact ? '' : ' away') + (isOn(a) ? ' on' : '') + (a === hotA ? ' hot' : '') + (m.flashUntil > now ? ' flash' : '');
       m.pin.textContent = String(i + 1);
-      const label = `${i + 1}. ${a.target.label}${a.note ? ': ' + cut(a.note, 90) : ''}${a.sent ? ' (sent)' : old ? ` (made on rev ${a.rev})` : ''}${p.exact ? '' : ' · hidden here, click to see it'}`;
+      const label = `${i + 1}. ${a.target.label}${a.note ? ': ' + cut(a.note, 90) : ''}${a === draft ? ' (new)' : a.status !== 'pending' ? ` (${a.status === 'open' ? 'sent' : 'resolved'})` : old ? ` (made on rev ${a.rev})` : ''}${p.exact ? '' : ' · hidden here, click to see it'}`;
       if (m.pin.title !== label) { m.pin.title = label; m.pin.setAttribute('aria-label', 'Comment ' + label); }
       let x = p.x;
       if (!p.exact) { const k = stacks.get(p.el) || 0; stacks.set(p.el, k + 1); x -= k * 30; }
       x = Math.max(2, Math.min(x, vw - 30));
       m.pin.style.translate = `${Math.round(x)}px ${Math.round(p.y)}px`;   // `translate`, not `transform`: the hover `scale` must not scale the offset
+      if (a === draft) draftBox = markBox(a, p, x);
       if (m.ink && p.exact) {
-        const r = p.r, c = p.clip, st = m.ink.style;
-        st.transform = `translate(${r.left}px,${r.top}px)`; st.width = r.width + 'px'; st.height = r.height + 'px';
-        st.clipPath = c ? `inset(${c.t - r.top}px ${r.right - c.r}px ${r.bottom - c.b}px ${c.l - r.left}px)` : '';
+        const r = p.r, c = p.clip, ist = m.ink.style;
+        ist.transform = `translate(${r.left}px,${r.top}px)`; ist.width = r.width + 'px'; ist.height = r.height + 'px';
+        ist.clipPath = c ? `inset(${c.t - r.top}px ${r.right - c.r}px ${r.bottom - c.b}px ${c.l - r.left}px)` : '';
         if (m.inkFor !== a.strokes) { m.inkFor = a.strokes; m.ink.replaceChildren(...(a.strokes || []).map(s => sv('path', { d: pathD(s) }))); }
-        m.ink.setAttribute('class', `bd-ann-ink bd-pen-${a.color || 'risk'}${a.sent ? ' sent' : ''}${a === hotA || isOn(a) ? ' hot' : ''}`);
+        m.ink.setAttribute('class', `bd-ann-ink bd-pen-${a.color || 'risk'}${st}${a === hotA || isOn(a) ? ' hot' : ''}`);
       }
     });
     for (const [id, m] of marks) if (!keep.has(id)) { m.pin.remove(); m.ink?.remove(); marks.delete(id); }
@@ -3574,6 +3624,57 @@ const MARKUP = (() => {
       if (rs.length) CSS.highlights.set(name, new Highlight(...rs)); else CSS.highlights.delete(name);
     }
     if (hovEl) showHover(hovEl);
+    if (draft) placeComposer();
+  }
+  // the new mark's box on screen: the pin, plus the selection or the drawing it belongs to
+  function markBox(a, p, x) {
+    const pin = { l: x, t: p.y - 26, r: x + 26, b: p.y };
+    let box = null;
+    if (p.exact && a.type === 'text') {
+      const rs = [...(rangeOf(a)?.getClientRects() || [])].filter(r => r.width);
+      if (rs.length) { const last = rs[rs.length - 1]; box = { l: Math.min(...rs.map(r => r.left)), t: rs[0].top, r: Math.max(...rs.map(r => r.right)), b: last.bottom, at: last.left }; }
+    } else if (p.exact && a.type === 'draw') {
+      const s = bounds(a.strokes || []), r = p.r;
+      if (isFinite(s.x1)) box = { l: r.left + s.x0 * r.width, t: r.top + s.y0 * r.height, r: r.left + s.x1 * r.width, b: r.top + s.y1 * r.height };
+    }
+    if (!box) return { ...pin, side: true };
+    return { l: Math.min(box.l, pin.l), t: Math.min(box.t, pin.t), r: Math.max(box.r, pin.r), b: Math.max(box.b, pin.b), at: box.at, side: a.type !== 'text' };
+  }
+  // beside the mark (pins, drawings) or under its last line (text), flipped or shifted to stay in the
+  // part of the window the sidebar, the tray and the app bar leave; on narrow screens, above the tray
+  function placeComposer() {
+    if (!draft || cmp.hidden) return;
+    const tray = tb.getBoundingClientRect(), as = SIDE.as();
+    const bottom = Math.min(innerHeight, tray.top, as === 'sheet' ? SIDE.el.getBoundingClientRect().top : innerHeight) - 8;
+    const compact = innerWidth <= 600;
+    cmp.classList.toggle('dock', compact);
+    if (compact) { cmp.style.translate = ''; cmp.style.setProperty('--cmp-b', Math.round(innerHeight - bottom) + 'px'); return; }
+    const top = cssPx('--top-h') + 8, right = (as === 'dock' || as === 'drawer' ? SIDE.el.getBoundingClientRect().left : root.clientWidth) - 8;
+    const w = cmp.offsetWidth, hh = cmp.offsetHeight, B = draftBox;
+    if (!B) return;   // the mark is hidden for now: stay where it was
+    const fitsX = x => x >= 8 && x + w <= right, fitsY = y => y >= top && y + hh <= bottom;
+    let x, y, side;
+    const sideways = () => {
+      y = B.t - 6;
+      if (fitsX(B.r + 12)) { x = B.r + 12; side = 'r'; return true; }
+      if (fitsX(B.l - 12 - w)) { x = B.l - 12 - w; side = 'l'; return true; }
+      return false;
+    };
+    const vertical = () => {
+      x = clamp(B.at ?? B.l, 8, right - w);
+      if (fitsY(B.b + 10)) { y = B.b + 10; side = 'b'; return true; }
+      if (fitsY(B.t - 10 - hh)) { y = B.t - 10 - hh; side = 't'; return true; }
+      return false;
+    };
+    if (!(B.side ? sideways() || vertical() : vertical() || sideways())) { if (B.side) sideways(); else vertical(); }
+    x = clamp(x ?? 8, 8, Math.max(8, right - w)); y = clamp(y, top, Math.max(top, bottom - hh));
+    // the pointer: at the mark's middle, when that middle is along the composer's edge
+    const ar = cmp.firstChild, my = (B.t + B.b) / 2 - y, mx = ((B.at ?? B.l) + Math.min(B.r, (B.at ?? B.l) + 40)) / 2 - x;
+    const along = side === 'l' || side === 'r' ? my > 12 && my < hh - 12 : mx > 12 && mx < w - 12;
+    cmp.dataset.side = along ? side : '';
+    ar.style.top = side === 'l' || side === 'r' ? Math.round(my - 6) + 'px' : '';
+    ar.style.left = side === 't' || side === 'b' ? Math.round(mx - 6) + 'px' : '';
+    cmp.style.translate = `${Math.round(x)}px ${Math.round(y)}px`;
   }
   function showHover(el) {
     hovEl = el;
@@ -3593,29 +3694,36 @@ const MARKUP = (() => {
     flashT = setTimeout(() => { if (mode !== 'point' || hovEl === el) showHover(null); }, 1400);
   }
 
-  /* comments sidebar: one card per note, in page order or newest first; the note is written and edited
-     in its card. Hovering a card or a mark lights up the other; clicking one brings the other into view. */
-  const FILTERS = { unsent: 'Unsent', sent: 'Sent', all: 'All' };
-  let filter = 'all', sort = 'page';
+  /* comments sidebar: one card per saved note, in page order or newest first; a saved note is edited in
+     its card. Hovering a card or a mark lights up the other; clicking one brings the other into view. */
+  const FILTERS = { pending: 'Pending', open: 'Open', resolved: 'Resolved', all: 'All' }, FILTER_KEY = 'bluedoc:comments-filter';
+  // the reader's last pick, else Pending while there are pending notes, else Open
+  let filter = FILTERS[store.get(FILTER_KEY)] ? store.get(FILTER_KEY) : pending().length || !list.length ? 'pending' : 'open', sort = 'page';
+  const matches = a => filter === 'all' || a.status === filter;
+  function setFilter(f, remember) {
+    if (remember) store.set(FILTER_KEY, f);
+    if (f === filter) return;
+    filter = f; hlDirty = true; schedule(true);   // resolved marks show on the page only under Resolved and All
+  }
   const fmtDay = iso => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleDateString([], { month: 'short', day: 'numeric' }); };
   function ago(iso) {
     const s = (Date.now() - new Date(iso)) / 1000;
     if (!(s >= -60)) return fmtDay(iso);
     return s < 45 ? 'just now' : s < 3600 ? Math.max(1, Math.round(s / 60)) + ' min ago' : s < 86400 ? Math.round(s / 3600) + ' h ago' : s < 7 * 86400 ? Math.round(s / 86400) + ' d ago' : fmtDay(iso);
   }
-  const numChip = (a, n) => h('span', { class: 'bd-ann-num' + (a.type === 'draw' ? ' bd-pen-' + (a.color || 'risk') : '') + (a.sent ? ' sent' : '') }, String(n));
+  const numChip = (a, n) => h('span', { class: 'bd-ann-num' + (a.type === 'draw' ? ' bd-pen-' + (a.color || 'risk') : '') + (a.status === 'pending' ? '' : ' sent') }, String(n));
   const grow = ta => { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; };
   const sortBtn = h('button', { type: 'button', class: 'bp-btn ghost srt', onclick: () => { sort = sort === 'page' ? 'new' : 'page'; paint(); } });
-  const filterBtns = Object.keys(FILTERS).map(f => h('button', { type: 'button', role: 'radio', 'data-f': f, onclick: () => { filter = f; paint(); } }));
+  const filterBtns = Object.keys(FILTERS).map(f => h('button', { type: 'button', role: 'radio', 'data-f': f, onclick: () => { setFilter(f, true); paint(); } }));
   const listOl = h('ol', { 'aria-label': 'Comments' });
   const emptyEl = h('div', { class: 'bd-cs-e', hidden: true });
   const listBox = h('div', { class: 'bd-cs-l' }, listOl, emptyEl);
   const csMsg = h('textarea', { class: 'bp-note-ta', rows: 1, placeholder: 'Overall message', 'aria-label': 'Overall message with the change requests (optional)' });
-  const clearBtn = h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => clearSent() }, ic('trash'), 'Clear sent');
+  const clearBtn = h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => clearResolved() }, ic('trash'), 'Clear resolved');
   const csGoN = h('span', { class: 'n' });
   const csGo = h('button', { type: 'button', class: 'bp-btn primary', onclick: () => openDlg() }, ic('send'), 'Request changes', csGoN);
   const csBody = h('div', {},
-    h('div', { class: 'bd-cs-f' }, h('div', { class: 'bd-seg', role: 'radiogroup', 'aria-label': 'Show' }, filterBtns), sortBtn),
+    h('div', { class: 'bd-cs-f' }, h('div', { class: 'bd-sg', role: 'radiogroup', 'aria-label': 'Show' }, filterBtns), sortBtn),
     listBox,
     h('div', { class: 'bd-cs-ft' }, csMsg, h('div', { class: 'row' }, clearBtn, h('span', { class: 'sp' }), csGo)));
   const barN = h('span', { class: 'n', 'aria-hidden': 'true', hidden: true });
@@ -3642,23 +3750,22 @@ const MARKUP = (() => {
     });
   }
   function shownList() {
-    const xs = list.filter(a => filter === 'all' || (filter === 'sent') === !!a.sent);
-    if (draft) xs.push(draft);
+    const xs = list.filter(matches);
     return sort === 'page' ? pageOrder(xs) : xs.sort((a, b) => (a.at < b.at) - (a.at > b.at));
   }
   const cards = new Map();   // id -> li
-  const cardCls = (li, a) => 'bd-cs-c' + (a.sent ? ' sent' : '') + (a === selA ? ' on' : '') + (a === hotA ? ' hot' : '') + (a === editA ? ' edit' : '') +
+  const cardCls = (li, a) => 'bd-cs-c' + ({ open: ' sent', resolved: ' sent res' }[a.status] || '') + (a === selA ? ' on' : '') + (a === hotA ? ' hot' : '') + (a === editA ? ' edit' : '') +
     (li._flash > performance.now() ? ' flash' : '');
   function card(a) {
     let li = cards.get(a.id);
     if (!li) { li = h('li', { class: 'bd-cs-c', tabindex: '0', 'data-id': a.id }); cards.set(a.id, li); }
     li._a = a;
-    const n = a === draft ? list.length + 1 : list.indexOf(a) + 1, editing = a === editA;
-    const sig = [n, a.note, a.sent, a.rev, a.target.key, a.target.label, a.color, editing, (a.targets || []).length].join('\u0001');
+    const n = list.indexOf(a) + 1, editing = a === editA;
+    const sig = [n, a.note, a.status, a.rev, a.target.key, a.target.label, a.color, editing, (a.targets || []).length].join('\u0001');
     if (li._sig !== sig) { li._sig = sig; fill(li, a, n, editing); }
     li.className = cardCls(li, a);
-    li.querySelector('.ago').textContent = a === draft ? 'new' : ago(a.at);
-    const s = li.querySelector('.sago'); if (s) s.textContent = 'Sent ' + ago(a.sent);
+    li.querySelector('.ago').textContent = ago(a.at);
+    const s = li.querySelector('.sago'); if (s) s.textContent = a.status === 'open' ? 'Sent ' + ago(a.sentAt) : 'Resolved ' + ago(a.resolvedAt);
     li.setAttribute('aria-label', `Comment ${n} on ${a.target.label}`);
     return li;
   }
@@ -3673,13 +3780,15 @@ const MARKUP = (() => {
     const ib = (icon, label, fn) => h('button', { type: 'button', class: 'bd-cs-ib', 'aria-label': label, title: label, onclick: fn }, ic(icon));
     const mt = [];
     if (a.type === 'draw' && a.targets && a.targets.length > 1) mt.push(h('span', {}, 'Covers ' + a.targets.map(t => t.label.split(' › ').pop()).join(' · ')));
-    if (a.sent) mt.push(h('span', { class: 'sago' }));
+    if (a.status !== 'pending') mt.push(h('span', { class: 'sago' }));
     else if (a.rev !== CUR.rev) mt.push(h('span', { class: 'old' }, `Made on rev ${a.rev}`));
     li.replaceChildren(numChip(a, n), h('div', { class: 'cb' },
       h('div', { class: 'ch' }, ic(TYPE_IC[a.type]), h('span', { class: 'lb', title: a.target.label }, last), h('span', { class: 'ago' }),
         h('span', { class: 'acts' }, ib('target', 'Show on the page', () => { select(a); reveal(a); }),
-          !a.sent && !editing && ib('pencil', 'Edit', () => startEdit(a)),
-          a !== draft && ib('trash', 'Delete', () => remove(a)))),
+          a.status === 'pending' && !editing && ib('pencil', 'Edit', () => startEdit(a)),
+          a.status === 'open' && ib('check', 'Resolve', () => setStatus(a, 'resolved')),
+          a.status === 'resolved' && ib('reset', 'Reopen', () => setStatus(a, 'open')),
+          ib('trash', 'Delete', () => remove(a)))),
       segs.length > 0 && h('div', { class: 'path', title: a.target.label }, segs.join(' › ')),
       ex && h('q', { class: a.type === 'text' ? 'tx' : null }, cut(ex, 240)),
       editing ? editor(a) : a.note ? h('p', { class: 'nt' }, a.note) : null,
@@ -3709,7 +3818,8 @@ const MARKUP = (() => {
     if (editTa) grow(editTa);
     emptyEl.hidden = xs.length > 0;
     if (!xs.length) emptyEl.replaceChildren(...(list.length
-      ? [h('span', {}, filter === 'sent' ? 'Nothing sent yet.' : 'Every comment has been sent. Sent ones are under Sent.')]
+      ? [h('span', {}, { pending: 'Nothing pending. Comments you have sent are under Open.', open: 'Nothing open. Comments you send show here until you resolve them.',
+          resolved: 'Nothing resolved yet. Resolve an open comment once the agent has made the change.' }[filter] || '')]
       : [h('span', { class: 'ico' }, ic('msg')), h('b', {}, 'No comments yet'),
         h('span', {}, 'Pick a tool, then click, select or draw on the page. Each comment asks the agent to change that spot.'),
         h('span', { class: 'keys' }, ['point', 'select', 'draw'].map(m => h('span', {}, kbd(MODES[m][2]), MODES[m][1])))]));
@@ -3726,8 +3836,8 @@ const MARKUP = (() => {
     if (editA && editA !== a) endEdit(true);
     selA = a; hlDirty = true;
     if (a && open) SIDE.show('comments');
-    if (a && filter !== 'all' && (filter === 'sent') !== !!a.sent) filter = 'all';
-    paint(); schedule(false);
+    if (a && !matches(a)) setFilter(a.status, false);
+    paint(); schedule(true);
     const li = a && cards.get(a.id);
     if (li && scroll) {
       li._flash = performance.now() + 1200; li.classList.remove('flash'); void li.offsetWidth; li.classList.add('flash');
@@ -3735,28 +3845,20 @@ const MARKUP = (() => {
     }
   }
   function startEdit(a) {
-    if (a.sent) return;
+    if (a.status !== 'pending') return;
     if (editA && editA !== a) endEdit(true);
     editA = a; selA = a; hlDirty = true;
     SIDE.show('comments');
-    if (a !== draft && filter === 'sent') filter = 'all';
+    if (!matches(a)) setFilter('pending', false);
     paint(); schedule(true);
     const li = cards.get(a.id); if (li) scrollCard(li);
     requestAnimationFrame(() => { if (editA === a && editTa) { editTa.focus({ preventScroll: true }); const n = editTa.value.length; editTa.setSelectionRange(n, n); grow(editTa); } });
   }
-  function startDraft(a) {
-    if (editA) endEdit(true);
-    draft = a;
-    if (filter === 'sent') filter = 'all';
-    startEdit(a);
-  }
-  // keep: what was typed is saved (Save, an outside click, a mode switch); else it's dropped (Cancel, Esc).
-  // A new comment with nothing typed is dropped either way. Returns whether something was saved.
+  // keep: what was typed is saved (Save, an outside click, a mode switch); else it's dropped (Cancel, Esc)
   function endEdit(keep) {
     const a = editA; if (!a) return false;
     const v = editTa ? editTa.value.trim() : '', saved = keep && !!v;
-    if (saved) { a.note = v; if (a === draft) { list.push(a); draft = null; page = null; } save(); }
-    else if (a === draft) { draft = null; page = null; if (selA === a) selA = null; }
+    if (saved) { a.note = v; save(); }
     const back = !!editTa && document.activeElement === editTa;
     editA = null; editTa = null; hlDirty = true;
     schedule(true); paint();
@@ -3766,20 +3868,73 @@ const MARKUP = (() => {
   const commitEdit = () => { if (editTa && editTa.value.trim()) endEdit(true); };
   function remove(a) {
     if (a === editA) { editA = null; editTa = null; }
-    if (a === draft) { draft = null; page = null; }
     if (a === selA) selA = null;
     if (a === hotA) setHot(null, true);
     list = list.filter(x => x !== a); save(); hlDirty = true;
     schedule(true); paint();
   }
-  function clearSent() {
-    if (selA && selA.sent) selA = null;
-    list = list.filter(a => !a.sent); save(); schedule(true); paint();
+  function clearResolved() {
+    if (selA && selA.status === 'resolved') selA = null;
+    list = list.filter(a => a.status !== 'resolved'); save(); hlDirty = true; schedule(true); paint();
   }
+  // Resolve (open → resolved) and Reopen (resolved → open); sending makes pending notes open
+  function setStatus(a, s) {
+    a.status = s;
+    if (s === 'resolved') a.resolvedAt = new Date().toISOString(); else delete a.resolvedAt;
+    save(); hlDirty = true; schedule(true); paint();
+  }
+
+  /* a new note: its mark shows on the page with the composer beside it; Save adds it to the list */
+  function startDraft(a) {
+    endEdit(true);
+    if (draft && draft !== a) finishDraft(true);
+    draft = a;
+    cmpHd.replaceChildren(numChip(a, list.length + 1), ic(TYPE_IC[a.type]), h('span', { class: 'lb', title: a.target.label }, a.target.label.split(' › ').pop()));
+    cmpTa.value = ''; cmpTa.placeholder = a.type === 'text' ? 'What should change in this text?' : 'What should change here?';
+    cmpSave.disabled = true; cmpSave.title = `Save (${MAC ? '⌘' : 'Ctrl'} + Enter)`;
+    cmp.hidden = false; grow(cmpTa);
+    hlDirty = true; schedule(true); paint();
+    requestAnimationFrame(() => {
+      if (draft !== a) return;
+      cmpTa.focus({ preventScroll: true });
+      // narrow screens: the composer sits above the tray; keep the mark in view above it
+      if (cmp.classList.contains('dock') && draftBox) {
+        const free = cmp.getBoundingClientRect().top - 16;
+        if (draftBox.b > free) scrollBy({ top: draftBox.b - free + 24, behavior: REDUCE ? 'auto' : 'smooth' });
+      }
+    });
+  }
+  // keep: save what was typed (Save, ⌘↵, a click elsewhere, a mode switch); a draft with nothing typed,
+  // and any draft on Cancel or Esc, is removed with its mark. Returns whether a note was saved.
+  function finishDraft(keep) {
+    const a = draft; if (!a) return false;
+    const v = cmpTa.value.trim(), saved = keep && !!v;
+    if (saved) { a.note = v; a.status = 'pending'; list.push(a); save(); }
+    draft = null; draftBox = null; page = null; cmp.hidden = true;
+    if (document.activeElement === cmpTa) cmpTa.blur();
+    hlDirty = true; schedule(true); paint();
+    if (saved) {
+      const m = marks.get(a.id); if (m) m.flashUntil = performance.now() + 1300;
+      setTimeout(() => schedule(false), 1350);
+      // in the open sidebar the new card scrolls into view and flashes; a closed one only counts it
+      if (SIDE.shows('comments')) {
+        if (!matches(a)) { setFilter('pending', false); paint(); }
+        const li = cards.get(a.id);
+        if (li) { li._flash = performance.now() + 1200; li.classList.add('flash'); scrollCard(li); }
+      }
+    }
+    return saved;
+  }
+  cmpTa.addEventListener('input', () => { cmpSave.disabled = !cmpTa.value.trim(); grow(cmpTa); placeComposer(); });
+  cmpTa.addEventListener('keydown', e => {
+    e.stopPropagation();   // page keys (modes, n/p, canvas) must not fire while typing
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); if (cmpTa.value.trim()) finishDraft(true); }
+    else if (e.key === 'Escape') { e.preventDefault(); finishDraft(false); }
+  });
   listBox.addEventListener('click', e => {
     const li = e.target.closest('.bd-cs-c'); if (!li || e.target.closest('button, textarea, a')) return;
     const a = li._a; if (a === editA) return;
-    if (!a.sent && e.target.closest('.nt') && !getSelection().toString()) { startEdit(a); return; }
+    if (a.status === 'pending' && e.target.closest('.nt') && !getSelection().toString()) { startEdit(a); return; }
     select(a); reveal(a);
   });
   listBox.addEventListener('keydown', e => {
@@ -3796,31 +3951,30 @@ const MARKUP = (() => {
   function setMode(m) {
     if (!MODES[m]) return false;
     if (m === mode) return true;
-    endEdit(true);
+    endEdit(true); finishDraft(true);
     root.classList.remove('bd-ann-m-' + mode);
     mode = m;
     if (m !== 'view') root.classList.add('bd-ann-m-' + m);
     cap.hidden = m !== 'draw';
     showHover(null);
     if (m !== 'view' && marksOff) { marksOff = false; schedule(true); }   // marking with the marks hidden would hide the new one too
-    if (m !== 'view' && !SIDE.shows('comments') && !SIDE.sheet()) SIDE.show('comments');   // a bottom sheet would cover what you mark: it opens with the first note instead
     paint();
     return true;
   }
   function paint() {
-    const n = unsent().length, total = list.length, sent = total - n;
+    const n = pending().length, total = list.length, by = s => list.filter(a => a.status === s).length;
     goN.textContent = String(n);
     go.disabled = csGo.disabled = !n;
-    go.setAttribute('aria-label', `Request changes: ${n} unsent`);
-    go._tip = n ? `Review and send ${n} change request${n === 1 ? '' : 's'}` : 'Point, select or draw on the page to request a change';
+    go.setAttribute('aria-label', `Request changes: ${n} pending`);
+    go._tip = n ? `Review and send ${n} pending change request${n === 1 ? '' : 's'}` : 'Point, select or draw on the page to request a change';
     csGoN.textContent = String(n);
-    for (const el of [csKeyN, barN]) { el.hidden = !total; el.textContent = String(total); }
-    for (const el of [csKey, barBtn]) el.setAttribute('aria-label', `Comments: ${total}`);
+    for (const el of [csKeyN, barN]) { el.hidden = !n; el.textContent = String(n); }
+    for (const el of [csKey, barBtn]) el.setAttribute('aria-label', `Comments: ${n} pending`);
     csKey._tip = SIDE.shows('comments') ? 'Hide comments' : 'Show comments';
-    filterBtns.forEach(b => { const f = b.dataset.f; b.setAttribute('aria-checked', String(f === filter)); b.replaceChildren(FILTERS[f], h('i', {}, String(f === 'all' ? total : f === 'sent' ? sent : n))); });
-    sortBtn.replaceChildren(ic(sort === 'page' ? 'doc' : 'hist'), sort === 'page' ? 'Page order' : 'Newest first');
-    sortBtn.title = sort === 'page' ? 'In page order; click for newest first' : 'Newest first; click for page order';
-    clearBtn.hidden = !sent;
+    filterBtns.forEach(b => { const f = b.dataset.f; b.setAttribute('aria-checked', String(f === filter)); b.replaceChildren(FILTERS[f], h('i', {}, String(f === 'all' ? total : by(f)))); });
+    sortBtn.replaceChildren(ic(sort === 'page' ? 'doc' : 'hist'));
+    sortBtn.title = sort === 'page' ? 'In page order; click for newest first' : 'Newest first; click for page order'; sortBtn.setAttribute('aria-label', sortBtn.title);
+    clearBtn.hidden = !by('resolved');
     if (document.activeElement !== csMsg) { const v = store.get(MSG) || ''; if (csMsg.value !== v) { csMsg.value = v; grow(csMsg); } }
     tb.dataset.m = mode;
     modeBtns.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.m === mode)));
@@ -3831,7 +3985,7 @@ const MARKUP = (() => {
     layer.hidden = marksOff;
     renderList();
     if (dlg && dlg.open) dlg._paint();
-    SIDE.paint();   // the tab's unsent count
+    SIDE.paint();   // the tab's pending count
   }
   // Point and Select keep the page inert where it's marked: no links, ticks, row toggles or canvas pans.
   // A pin goes where the press was: after a small drag the click lands on a shared ancestor instead.
@@ -3839,9 +3993,10 @@ const MARKUP = (() => {
     const t = e.target && e.target.nodeType === 1 ? e.target : null;
     if (e.type === 'pointerdown') {
       swallow = false; press = null;
-      // a press outside the sidebar ends the edit (keeping what was typed) and the selection
-      if (t && t !== cap && !t.closest('.bd-sp, .bd-anntb, .bd-ann-pin, dialog')) {
+      // a press outside the sidebar and the composer ends the edit or the draft (keeping what was typed) and the selection
+      if (t && t !== cap && !t.closest('.bd-sp, .bd-anntb, .bd-ann-pin, .bd-cmp, dialog')) {
         if (editA) swallow = endEdit(true) && mode === 'point';   // this click saved a note; the next one pins
+        if (draft) swallow = finishDraft(true) && mode === 'point' || swallow;
         if (selA) select(null);
       }
     }
@@ -3886,8 +4041,9 @@ const MARKUP = (() => {
   cap.addEventListener('pointerdown', e => {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
     e.preventDefault();
-    const join = draft && draft.type === 'draw' && page && (e.timeStamp - lastUp < 1500 || !(editTa && editTa.value.trim()));
-    if (!join) { endEdit(true); page = []; }
+    const join = draft && draft.type === 'draw' && page && (e.timeStamp - lastUp < 1500 || !cmpTa.value.trim());
+    if (!join) { endEdit(true); finishDraft(true); page = []; }
+    cmp.hidden = true;   // out of the way while drawing
     cap.setPointerCapture(e.pointerId);
     ink = { id: e.pointerId, pts: [Math.round(e.clientX + scrollX), Math.round(e.clientY + scrollY)], el: sv('path', { class: 'bd-pen-' + pen }) };
     capG.append(ink.el);
@@ -3904,19 +4060,19 @@ const MARKUP = (() => {
   const endInk = e => {
     if (!ink || e.pointerId !== ink.id) return;
     const pts = ink.pts; ink.el.remove(); ink = null; lastUp = e.timeStamp;
-    if (pts.length < 6 || !page) return;   // a tap, not a stroke
+    if (pts.length < 6 || !page) { if (draft) { cmp.hidden = false; schedule(false); } return; }   // a tap, not a stroke
     page.push(pts);
-    const strokes = page, a = draft && draft.type === 'draw' ? draft : { id: newId(), type: 'draw', note: '', rev: CUR.rev, at: new Date().toISOString(), color: pen };
+    const strokes = page, a = draft && draft.type === 'draw' ? draft : { id: newId(), type: 'draw', status: 'pending', note: '', rev: CUR.rev, at: new Date().toISOString(), color: pen };
     fitDrawing(a, strokes);
     if (a !== draft) { startDraft(a); page = strokes; }
-    else { schedule(true); paint(); editTa?.focus({ preventScroll: true }); }
+    else { cmp.hidden = false; cmpHd.querySelector('.lb').textContent = a.target.label.split(' › ').pop(); schedule(true); cmpTa.focus({ preventScroll: true }); }
   };
   cap.addEventListener('pointerup', endInk); cap.addEventListener('pointercancel', endInk);
 
   /* the dialog: the overall message, the Markdown that goes, Copy and Send (the notes themselves are in the sidebar) */
   function openDlg() {
-    endEdit(true);
-    if (!unsent().length) return;
+    endEdit(true); finishDraft(true);
+    if (!pending().length) return;
     if (!dlg) {
       const msg = h('textarea', { class: 'bp-note-ta', rows: 2, placeholder: 'Anything else about these changes? (optional)', 'aria-label': 'Message with the change requests' });
       const pre = h('pre', {}), cnt = h('p', { class: 'cnt' }), how = h('p', { class: 'how' });
@@ -3932,8 +4088,8 @@ const MARKUP = (() => {
       dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });
       dlg._msg = msg;
       dlg._paint = () => {
-        const open = unsent(), old = open.filter(a => a.rev !== CUR.rev).length;
-        cnt.replaceChildren(h('b', {}, `${open.length} comment${open.length === 1 ? '' : 's'}`), ' go with this request',
+        const open = pending(), old = open.filter(a => a.rev !== CUR.rev).length;
+        cnt.replaceChildren(h('b', {}, `${open.length} pending comment${open.length === 1 ? '' : 's'}`), ' go with this request',
           ...(old ? [' (', h('span', { class: 'old' }, `${old} made on an earlier revision`), ')'] : []), '. Edit or delete them in the Comments sidebar.');
         send.hidden = !REPLY.changes; send.disabled = copy.disabled = !open.length;
         copy.classList.toggle('primary', !REPLY.changes);
@@ -3954,7 +4110,8 @@ const MARKUP = (() => {
       const r = await fetch(REPLY.changes, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Bluedoc': '1' }, body: JSON.stringify(p) });
       if (!r.ok) throw new Error(String(r.status));
       const ids = new Set(p.annotations.map(x => x.id));
-      for (const a of list) if (ids.has(a.id)) a.sent = p.at;
+      for (const a of list) if (ids.has(a.id)) { a.status = 'open'; a.sentAt = p.at; }
+      if (filter === 'pending') setFilter('open', false);   // what was just sent, not an empty list
       save(); store.del(MSG);
       csMsg.value = ''; grow(csMsg);
       if (dlg) { dlg._msg.value = ''; dlg.close(); }
@@ -4025,13 +4182,14 @@ const MARKUP = (() => {
   }
   function comments(o) {
     if (o && typeof o === 'object' && 'open' in o) { if (o.open) SIDE.show('comments'); else if (SIDE.shows('comments')) SIDE.setOpen(false, true); }
-    return { available: true, open: SIDE.shows('comments'), as: SIDE.shows('comments') ? SIDE.as() : null, count: list.length, unsent: unsent().length,
+    return { available: true, open: SIDE.shows('comments'), as: SIDE.shows('comments') ? SIDE.as() : null, count: list.length, unsent: pending().length, pending: pending().length,
+      statuses: Object.fromEntries(STATUSES.map(s => [s, list.filter(a => a.status === s).length])), draft: draft && draft.id,
       filter, sort, cards: [...listOl.children].map(li => li.dataset.id), selected: selA && selA.id, editing: editA && editA.id };
   }
 
   /* wiring */
-  document.body.append(layer, hov, cap, tb, tip);
-  SIDE.add({ id: 'comments', label: 'Comments', body: csBody, count: () => unsent().length || '', chip: () => unsent().length ? `${unsent().length} unsent` : '',
+  document.body.append(layer, hov, cap, cmp, tb, tip);
+  SIDE.add({ id: 'comments', label: 'Comments', body: csBody, count: () => pending().length || '', chip: () => pending().length ? `${pending().length} pending` : '',
     onToggle: shown => { if (!shown) endEdit(true); schedule(true); paint(); } });
   SIDE.bind(csKey, 'comments'); SIDE.bind(barBtn, 'comments');
   document.querySelector('.bd-bar-r')?.insertBefore(barBtn, themeBtn);
@@ -4044,7 +4202,7 @@ const MARKUP = (() => {
     const t = e.target;
     if (t.isContentEditable || (t.closest && t.closest('input, textarea, select, [contenteditable]')) || document.querySelector('dialog[open]')) return;
     if (e.key === 'Escape') {
-      if (editA) endEdit(false); else if (selA) select(null); else if (mode !== 'view') setMode('view'); else return;
+      if (draft) finishDraft(false); else if (editA) endEdit(false); else if (selA) select(null); else if (mode !== 'view') setMode('view'); else return;
       e.preventDefault();   // handled here: the panel's own Escape (close the drawer or sheet) waits for the next press
       return;
     }
