@@ -137,7 +137,7 @@ It prints `--- bluedoc answers (…json) ---` or `--- bluedoc change request (�
 3. Update the JSON with what changed (`done: true` on finished steps, `choice` carrying the reader's picks, new findings as items), bump `meta.rev`, write `changes`, validate, and tell the reader the `?diff=` link.
 
 **Change requests**
-1. Each annotation names its target (`label`, and `key` such as `item:t412/tier-boundary`, `block:<section>/<n>`, `row:…`, `node:<canvas>/<key>`, `line:<diff>/<path>:<n>`), the quoted or covered text, and the requested change. Edit exactly those places in the JSON.
+1. `type: "general"` annotations are about the whole doc (target `doc`); apply them across it. Every other annotation names its target (`label`, and `key` such as `item:t412/tier-boundary`, `block:<section>/<n>`, `row:…`, `node:<canvas>/<key>`, `line:<diff>/<path>:<n>`), the quoted or covered text, and the requested change. Edit exactly those places in the JSON.
 2. A request you can't or shouldn't do (it contradicts the source, or needs a decision): don't silently skip it; say so in `changes` or ask.
 3. Bump `meta.rev`, write `changes` listing what you changed per request, validate, give the `?diff=` link, and `wait` again.
 

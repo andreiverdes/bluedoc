@@ -544,6 +544,8 @@ html.bd-ann-m-select .bp-cl-head { user-select: text; -webkit-user-select: text;
 .bd-ann-num { display: inline-grid; place-items: center; flex: none; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 10px 10px 10px 3px; font: 650 11px/1 var(--sans);
   color: #fff; background: var(--pen, var(--accent)); }
 .bd-ann-num.sent { background: var(--todo); }
+.bd-ann-num.gen { padding: 0; }
+.bd-ann-num.gen .bd-ic { width: 12px; height: 12px; }
 
 /* the composer: a new note is written here, next to its mark (HorizonUI popover), until it is saved */
 .bd-cmp { position: fixed; left: 0; top: 0; z-index: 56; width: min(320px, calc(100vw - 16px)); padding: 10px 10px 10px 12px; border-radius: 12px;
@@ -590,7 +592,7 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .bd-cs-c .acts .bd-cs-ib[aria-label="Resolve"]:hover { color: var(--ok-fg); background: var(--ok-tint); }
 .bd-sp-sec { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .bd-sp-sec[hidden] { display: none; }
-.bd-cs-ft .sp, .bd-cs-c .ef .sp { flex: 1; }
+.bd-gc .gf .sp, .bd-cs-c .ef .sp { flex: 1; }
 .bd-cs-f { flex: none; display: flex; align-items: center; gap: 6px; padding: 0 12px 10px; box-shadow: inset 0 -1px 0 var(--line-soft); }
 .bd-cs-f .bd-sg { flex: 1; min-width: 0; }
 .bd-cs-f .srt { flex: none; width: 28px; height: 28px; padding: 0; justify-content: center; }
@@ -649,14 +651,22 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .bd-cs-e .keys { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 12px; }
 .bd-cs-e .keys span { display: inline-flex; align-items: center; gap: 5px; }
 .bd-cs-ft { flex: none; display: grid; gap: 8px; padding: 10px 12px 12px; box-shadow: inset 0 1px 0 var(--line); }
-.bd-cs-ft .bp-note-ta { display: block; width: 100%; min-height: 34px; max-height: 120px; resize: none; overflow: auto; }
-.bd-cs-ft .row { display: flex; align-items: center; gap: 6px; }
-.bd-cs-ft .row .bp-btn { height: 32px; font-size: 13px; }
-.bd-cs-ft .row .bp-btn[hidden] { display: none; }
-.bd-cs-ft .row .primary { padding: 0 8px 0 12px; font-weight: 600; background: var(--accent-solid) linear-gradient(180deg, color-mix(in oklch, var(--accent-solid), white 8%), var(--accent-solid)); box-shadow: var(--shadow-fill); }
-.bd-cs-ft .row .primary .n { min-width: 20px; height: 20px; padding: 0 5px; border-radius: 7px; display: grid; place-items: center; font: 650 11.5px/1 var(--sans); background: oklch(100% 0 0 / .2); }
-.bd-cs-ft .row .primary:disabled { cursor: default; color: var(--fg-subtle); background: var(--inset); box-shadow: inset 0 0 0 1px var(--line); }
-.bd-cs-ft .row .primary:disabled .bd-ic { color: currentColor; }
+.bd-cs-ft .row { display: flex; align-items: center; gap: 6px; margin: -2px -4px 0; }
+.bd-cs-ft .row[hidden] { display: none; }
+.bd-cs-ft .row .bp-btn { height: 28px; font-size: 12.5px; }
+/* the general comment field: a labelled one-line field that grows into a composer on focus */
+.bd-gc { display: grid; gap: 6px; }
+.bd-gc .gh { display: flex; align-items: baseline; flex-wrap: wrap; gap: 2px 8px; min-width: 0; }
+.bd-gc .gh b { font-size: 12.5px; font-weight: 600; color: var(--fg); }
+.bd-gc .gh span { font-size: 11.5px; color: var(--fg-subtle); }
+.bd-gc .bp-note-ta { display: block; width: 100%; min-height: 34px; max-height: 120px; resize: none; overflow: auto; }
+.bd-gc.on .bp-note-ta { min-height: 60px; max-height: 160px; }
+.bd-gc .gf { display: flex; align-items: center; gap: 6px; }
+.bd-gc .gf[hidden] { display: none; }
+.bd-gc .gf .hint { display: inline-flex; align-items: center; gap: 3px; font-size: 11.5px; color: var(--fg-subtle); white-space: nowrap; }
+.bd-gc .gf .hint .dot { width: 3px; height: 3px; margin: 0 4px; border-radius: 50%; background: currentColor; opacity: .6; }
+.bd-gc .gf .bp-btn { height: 28px; }
+.bd-gc .gf .bp-btn:disabled { opacity: .5; cursor: default; }
 .bd-sp-btn { position: relative; }
 .bd-sp-btn[aria-pressed="true"] { color: var(--fg); background: var(--hk-down); box-shadow: var(--shadow-hk-down); }
 .bd-sp-btn .n { position: absolute; top: -5px; right: -6px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; display: grid; place-items: center;
@@ -706,15 +716,14 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
   .bd-sp { top: auto; left: 0; width: auto; height: var(--sp-sheet-h); border-radius: 18px 18px 0 0; transform: translateY(100%); }
   .bd-sp::before { content: ""; position: absolute; left: 50%; top: 6px; width: 36px; height: 4px; margin-left: -18px; border-radius: 2px; background: var(--line-strong); }
   .bd-sp-h { padding-top: 16px; }
-  .bd-cs-ft { grid-template-columns: minmax(0, 1fr) auto; align-items: end; }
-  .bd-cs-ft .row .bp-btn.ghost { display: none; }
+  .bd-gc .gf .hint { display: none; }
   html.bd-sp-open { scroll-padding-bottom: var(--sp-sheet-h); }
   html.bd-sp-open .bd-anntb { bottom: calc(var(--sp-sheet-h) + 10px); }
   html.bd-sp-open .bp-toast { bottom: calc(var(--sp-sheet-h) + 64px); }
   html.bd-sp-open .bd-shell { padding-bottom: calc(var(--sp-sheet-h) + 90px); }
 }
 
-/* Request changes dialog: message, preview, Copy and Send */
+/* Request changes dialog: count, preview, Copy and Send */
 .bd-chgs[open] { display: flex; flex-direction: column; }
 .bd-chgs[open] > * { flex: none; }
 .bd-chgs .cnt { margin-top: -4px; margin-bottom: 12px; font-size: 13.5px; }
@@ -1174,6 +1183,7 @@ const ICONS = {
   chev: '<path d="m9 18 6-6-6-6"/>',
   code: '<path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/>',
   msg: '<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>',
+  msgsq: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
   panel: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M15 3v18"/>',
   panelon: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4Z" fill="currentColor"/>',
   pr: '<circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7M6 9v12"/>',
@@ -3348,26 +3358,40 @@ const MARKUP = (() => {
     if (a.sent) { a.sentAt ||= typeof a.sent === 'string' ? a.sent : a.at; delete a.sent; }
   }
   const save = () => { if (list.length) store.set(KEY, JSON.stringify(list)); else store.del(KEY); };
+  const newId = () => 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  // a general comment is about the whole doc: no mark on the page, written in the sidebar's footer
+  const isGeneral = a => a.type === 'general';
+  const generalAnn = note => ({ id: newId(), type: 'general', status: 'pending', note, target: { key: 'doc', label: 'Whole doc', text: '' }, rev: CUR.rev, at: new Date().toISOString() });
+  {   // the overall message pages used to keep beside the comments becomes one pending general comment
+    const old = store.get(MSG);
+    if (old != null) { if (old.trim()) { list.push(generalAnn(old.trim())); save(); } store.del(MSG); }
+  }
   const pending = () => list.filter(a => a.status === 'pending');
+  const onPage = () => list.filter(a => !isGeneral(a));
   const cut = (s, n) => { s = String(s ?? '').replace(/\s+/g, ' ').trim(); return s.length > n ? s.slice(0, n - 1).trimEnd() + '…' : s; };
-  const TYPE_IC = { pin: 'msg', text: 'type', draw: 'pencil' };
-  const TYPE_WORD = { pin: 'pin', text: 'text', draw: 'drawing' };
+  const TYPE_IC = { pin: 'msg', text: 'type', draw: 'pencil', general: 'msgsq' };
+  const TYPE_WORD = { pin: 'pin', text: 'text', draw: 'drawing', general: 'general' };
   const excerpt = a => a.type === 'text' ? a.quote : a.type === 'draw' && a.targets && a.targets.length ? a.targets.map(t => t.text).filter(Boolean).join(' / ') : a.target.text;
   const pub = a => ({ id: a.id, type: a.type, note: a.note, target: a.target, ...(a.type === 'draw' ? { targets: a.targets || [a.target] } : {}),
     ...(a.type === 'text' ? { quote: a.quote } : {}), rev: a.rev, at: a.at });
+  const noteText = a => String(a.note || '').trim();
+  // general comments first, under General; then the page comments, numbered
   function changesMd(items = pending()) {
-    const msg = (store.get(MSG) || '').trim();
-    return `# Change requests: ${DOC.title || docId}${CUR.rev ? ` (rev ${CUR.rev})` : ''}, ${new Date().toISOString().slice(0, 10)}\n\n` + (msg ? msg + '\n\n' : '') +
-      items.map((a, i) => {
-        const ex = cut(excerpt(a), 200);
-        return [`${i + 1}. **${a.target.label}** (${TYPE_WORD[a.type]})`, ex && `   > ${ex}`,
-          `   Change: ${String(a.note || '').trim().split('\n').join('\n   ')}`].filter(Boolean).join('\n');
-      }).join('\n\n') + '\n';
+    const gen = items.filter(isGeneral), pg = items.filter(a => !isGeneral(a)), parts = [];
+    if (gen.length) parts.push('## General\n\n' + gen.map(a => '- ' + noteText(a).split('\n').join('\n  ')).join('\n'));
+    if (gen.length && pg.length) parts.push('## On the page');
+    if (pg.length) parts.push(pg.map((a, i) => {
+      const ex = cut(excerpt(a), 200);
+      return [`${i + 1}. **${a.target.label}** (${TYPE_WORD[a.type]})`, ex && `   > ${ex}`,
+        `   Change: ${noteText(a).split('\n').join('\n   ')}`].filter(Boolean).join('\n');
+    }).join('\n\n'));
+    return `# Change requests: ${DOC.title || docId}${CUR.rev ? ` (rev ${CUR.rev})` : ''}, ${new Date().toISOString().slice(0, 10)}\n\n` + parts.join('\n\n') + '\n';
   }
+  // `message` repeats the general comments for agents that read only it
   function payload() {
     const items = pending();
     return { kind: 'changes', doc: docId, rev: CUR.rev, title: DOC.title || '', path: location.pathname, at: new Date().toISOString(),
-      message: (store.get(MSG) || '').trim(), annotations: items.map(pub), markdown: changesMd(items) };
+      message: items.filter(isGeneral).map(noteText).join('\n\n'), annotations: items.map(pub), markdown: changesMd(items) };
   }
   const api = { all: () => JSON.parse(JSON.stringify(list)), payload, annotate: () => null, setMode: () => false, paint: () => {}, comments: () => ({ open: false, available: false }) };
   if (OLD || BASE) return api;
@@ -3464,7 +3488,6 @@ const MARKUP = (() => {
     : el.matches('.bd-ln') ? el.querySelector('.c')?.textContent : el.matches('.bp-cl-item') ? contentText(el.querySelector('.bp-cl-row') || el) : contentText(el), 300);
   const info = el => ({ key: keyOf(el), label: labelOf(el), text: textOf(el) });
   function ups(el) { const out = []; for (let p = el.parentElement?.closest(ANY); p; p = p.parentElement?.closest(ANY)) out.push(keyOf(p)); return out; }
-  const newId = () => 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   const newAnn = (type, el) => ({ id: newId(), type, status: 'pending', note: '', target: info(el), rev: CUR.rev, at: new Date().toISOString(), up: ups(el) });
   const r4 = v => Math.round(v * 1e4) / 1e4;
 
@@ -3628,7 +3651,8 @@ const MARKUP = (() => {
     const hlNow = HL && (full || hlDirty); hlDirty = false;
     if (full) { els = new Map(); ranges = new Map(); }
     capG.setAttribute('transform', `translate(${-scrollX},${-scrollY})`);
-    const all = draft ? [...list, draft] : list, keep = new Set(), stacks = new Map(), hl = { on: [], sent: [], open: [] };
+    const all = onPage(), keep = new Set(), stacks = new Map(), hl = { on: [], sent: [], open: [] };
+    if (draft) all.push(draft);
     draftBox = null;
     const vw = root.clientWidth - dockW(), now = performance.now();
     // resolved notes stay off the page unless the sidebar is showing them (or one is selected)
@@ -3752,24 +3776,51 @@ const MARKUP = (() => {
     if (!(s >= -60)) return fmtDay(iso);
     return s < 45 ? 'just now' : s < 3600 ? Math.max(1, Math.round(s / 60)) + ' min ago' : s < 86400 ? Math.round(s / 3600) + ' h ago' : s < 7 * 86400 ? Math.round(s / 86400) + ' d ago' : fmtDay(iso);
   }
-  const numChip = (a, n) => h('span', { class: 'bd-ann-num' + (a.type === 'draw' ? ' bd-pen-' + (a.color || 'risk') : '') + (a.status === 'pending' ? '' : ' sent') }, String(n));
+  const numChip = (a, n) => isGeneral(a) ? h('span', { class: 'bd-ann-num gen' + (a.status === 'pending' ? '' : ' sent') }, ic(TYPE_IC.general))
+    : h('span', { class: 'bd-ann-num' + (a.type === 'draw' ? ' bd-pen-' + (a.color || 'risk') : '') + (a.status === 'pending' ? '' : ' sent') }, String(n));
   const grow = ta => { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; };
   const sortBtn = h('button', { type: 'button', class: 'bp-btn ghost srt', onclick: () => { sort = sort === 'page' ? 'new' : 'page'; paint(); } });
   const filterBtns = Object.keys(FILTERS).map(f => h('button', { type: 'button', role: 'radio', 'data-f': f, onclick: () => { setFilter(f, true); paint(); } }));
   const listOl = h('ol', { 'aria-label': 'Comments' });
   const emptyEl = h('div', { class: 'bd-cs-e', hidden: true });
   const listBox = h('div', { class: 'bd-cs-l' }, listOl, emptyEl);
-  const csMsg = h('textarea', { class: 'bp-note-ta', rows: 1, placeholder: 'Overall message', 'aria-label': 'Overall message with the change requests (optional)' });
   const clearBtn = h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => clearResolved() }, ic('trash'), 'Clear resolved');
-  const csGoN = h('span', { class: 'n' });
-  const csGo = h('button', { type: 'button', class: 'bp-btn primary', onclick: () => openDlg() }, ic('send'), 'Request changes', csGoN);
+  // the general comment field: one line until focused, then a composer like the page's (Save, Cancel)
+  const genTa = h('textarea', { class: 'bp-note-ta', rows: 1, placeholder: 'Add a general comment…', 'aria-label': 'General comment about the whole doc' });
+  const genSave = h('button', { type: 'button', class: 'bp-btn primary', title: `Save (${MAC ? '⌘' : 'Ctrl'} + Enter)`, disabled: true, onclick: () => finishGeneral(true) }, 'Save');
+  const genFt = h('div', { class: 'gf', hidden: true }, h('span', { class: 'hint', 'aria-hidden': 'true' }, kbd(MAC ? '⌘' : 'Ctrl'), kbd('↵'), ' save', h('span', { class: 'dot' }), kbd('Esc'), ' cancel'),
+    h('span', { class: 'sp' }), h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => finishGeneral(false) }, 'Cancel'), genSave);
+  const gen = h('div', { class: 'bd-gc' },
+    h('div', { class: 'gh' }, h('b', {}, 'General comment'), h('span', {}, 'About the whole doc, not one spot')), genTa, genFt);
+  const clearRow = h('div', { class: 'row' }, clearBtn);
   const csBody = h('div', {},
     h('div', { class: 'bd-cs-f' }, h('div', { class: 'bd-sg', role: 'radiogroup', 'aria-label': 'Show' }, filterBtns), sortBtn),
     listBox,
-    h('div', { class: 'bd-cs-ft' }, csMsg, h('div', { class: 'row' }, clearBtn, h('span', { class: 'sp' }), csGo)));
-  function setMsg(v) { if (v.trim()) store.set(MSG, v); else store.del(MSG); }
-  csMsg.addEventListener('input', () => { setMsg(csMsg.value); grow(csMsg); });
-  csMsg.addEventListener('keydown', e => { e.stopPropagation(); if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); openDlg(); } });
+    h('div', { class: 'bd-cs-ft' }, clearRow, gen));
+  const genOpen = on => { gen.classList.toggle('on', on); genFt.hidden = !on; grow(genTa); };
+  // keep: save what was typed (Save, ⌘↵, opening Request changes); else drop it (Cancel, Esc). Returns whether one was saved.
+  function finishGeneral(keep) {
+    const v = genTa.value.trim(), saved = keep && !!v;
+    genTa.value = ''; genSave.disabled = true;
+    if (document.activeElement === genTa) genTa.blur();
+    genOpen(false);
+    if (!saved) return false;
+    const a = generalAnn(v);
+    list.push(a); save();
+    if (!matches(a)) setFilter('pending', false);
+    paint();
+    const li = cards.get(a.id);
+    if (li) { li._flash = performance.now() + 1200; li.classList.add('flash'); scrollCard(li); }
+    return true;
+  }
+  genTa.addEventListener('focus', () => { endEdit(true); finishDraft(true); genOpen(true); });
+  genTa.addEventListener('focusout', e => { if (!genTa.value.trim() && !gen.contains(e.relatedTarget)) genOpen(false); });
+  genTa.addEventListener('input', () => { genSave.disabled = !genTa.value.trim(); grow(genTa); });
+  genTa.addEventListener('keydown', e => {
+    e.stopPropagation();   // page keys (modes, n/p, canvas) must not fire while typing
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); finishGeneral(true); }
+    else if (e.key === 'Escape') { e.preventDefault(); finishGeneral(false); }
+  });
 
   // page order: by the anchor's place in the document, then by the spot inside it
   function pageOrder(xs) {
@@ -3787,9 +3838,11 @@ const MARKUP = (() => {
       return p.y - q.y || byTime(a, b);
     });
   }
+  // general comments first (oldest first), then the page's in page order; or all newest first
   function shownList() {
     const xs = list.filter(matches);
-    return sort === 'page' ? pageOrder(xs) : xs.sort((a, b) => (a.at < b.at) - (a.at > b.at));
+    if (sort !== 'page') return xs.sort((a, b) => (a.at < b.at) - (a.at > b.at));
+    return [...xs.filter(isGeneral).sort((a, b) => (a.at > b.at) - (a.at < b.at)), ...pageOrder(xs.filter(a => !isGeneral(a)))];
   }
   const cards = new Map();   // id -> li
   const cardCls = (li, a) => 'bd-cs-c' + ({ open: ' sent', resolved: ' sent res' }[a.status] || '') + (a === selA ? ' on' : '') + (a === hotA ? ' hot' : '') + (a === editA ? ' edit' : '') +
@@ -3798,13 +3851,13 @@ const MARKUP = (() => {
     let li = cards.get(a.id);
     if (!li) { li = h('li', { class: 'bd-cs-c', tabindex: '0', 'data-id': a.id }); cards.set(a.id, li); }
     li._a = a;
-    const n = list.indexOf(a) + 1, editing = a === editA;
+    const n = isGeneral(a) ? 0 : onPage().indexOf(a) + 1, editing = a === editA;
     const sig = [n, a.note, a.status, a.rev, a.target.key, a.target.label, a.color, editing, (a.targets || []).length].join('\u0001');
     if (li._sig !== sig) { li._sig = sig; fill(li, a, n, editing); }
     li.className = cardCls(li, a);
     li.querySelector('.ago').textContent = ago(a.at);
     const s = li.querySelector('.sago'); if (s) s.textContent = a.status === 'open' ? 'Sent ' + ago(a.sentAt) : 'Resolved ' + ago(a.resolvedAt);
-    li.setAttribute('aria-label', `Comment ${n} on ${a.target.label}`);
+    li.setAttribute('aria-label', isGeneral(a) ? 'General comment' : `Comment ${n} on ${a.target.label}`);
     return li;
   }
   function fill(li, a, n, editing) {
@@ -3821,8 +3874,8 @@ const MARKUP = (() => {
     if (a.status !== 'pending') mt.push(h('span', { class: 'sago' }));
     else if (a.rev !== CUR.rev) mt.push(h('span', { class: 'old' }, `Made on rev ${a.rev}`));
     li.replaceChildren(numChip(a, n), h('div', { class: 'cb' },
-      h('div', { class: 'ch' }, ic(TYPE_IC[a.type]), h('span', { class: 'lb', title: a.target.label }, last), h('span', { class: 'ago' }),
-        h('span', { class: 'acts' }, ib('target', 'Show on the page', () => { select(a); reveal(a); }),
+      h('div', { class: 'ch' }, !isGeneral(a) && ic(TYPE_IC[a.type]), h('span', { class: 'lb', title: a.target.label }, isGeneral(a) ? 'General' : last), h('span', { class: 'ago' }),
+        h('span', { class: 'acts' }, !isGeneral(a) && ib('target', 'Show on the page', () => { select(a); reveal(a); }),
           a.status === 'pending' && !editing && ib('pencil', 'Edit', () => startEdit(a)),
           a.status === 'open' && ib('check', 'Resolve', () => setStatus(a, 'resolved')),
           a.status === 'resolved' && ib('reset', 'Reopen', () => setStatus(a, 'open')),
@@ -3833,7 +3886,8 @@ const MARKUP = (() => {
       h('div', { class: 'mt' }, mt)));
   }
   function editor(a) {
-    const ta = h('textarea', { class: 'bp-note-ta', rows: 2, placeholder: a.type === 'text' ? 'What should change in this text?' : 'What should change here?', 'aria-label': 'Requested change' });
+    const ta = h('textarea', { class: 'bp-note-ta', rows: 2, placeholder: isGeneral(a) ? 'What should change in the doc?' : a.type === 'text' ? 'What should change in this text?' : 'What should change here?',
+      'aria-label': isGeneral(a) ? 'General comment' : 'Requested change' });
     ta.value = editTa && editA === a ? editTa.value : a.note || '';
     const ok = h('button', { type: 'button', class: 'bp-btn primary', title: `Save (${MAC ? '⌘' : 'Ctrl'} + Enter)`, onclick: () => commitEdit() }, 'Save');
     ok.disabled = !ta.value.trim();
@@ -3859,7 +3913,7 @@ const MARKUP = (() => {
       ? [h('span', {}, { pending: 'Nothing pending. Comments you have sent are under Open.', open: 'Nothing open. Comments you send show here until you resolve them.',
           resolved: 'Nothing resolved yet. Resolve an open comment once the agent has made the change.' }[filter] || '')]
       : [h('span', { class: 'ico' }, ic('msg')), h('b', {}, 'No comments yet'),
-        h('span', {}, 'Pick a tool, then click, select or draw on the page. Each comment asks the agent to change that spot.'),
+        h('span', {}, 'Pick a tool, then click, select or draw on the page. Each comment asks the agent to change that spot. For the doc as a whole, use the general comment field below.'),
         h('span', { class: 'keys' }, ['point', 'select', 'draw'].map(m => h('span', {}, kbd(MODES[m][2]), MODES[m][1])))]));
   }
   const scrollCard = li => scrollWithin(listBox, li);
@@ -3867,7 +3921,7 @@ const MARKUP = (() => {
     if (hotA === a) return;
     const prev = hotA; hotA = a; hlDirty = true;
     for (const x of [prev, a]) { const li = x && cards.get(x.id); if (li) li.classList.toggle('hot', x === a); }
-    if (fromCard) { const el = a && a.type !== 'draw' && cachedEl(a.target.key); showHover(el && el !== shell && shown(el) ? el : null); }
+    if (fromCard) { const el = a && a.type !== 'draw' && !isGeneral(a) && cachedEl(a.target.key); showHover(el && el !== shell && shown(el) ? el : null); }
     schedule(false);
   }
   function select(a, { open = false, scroll = false } = {}) {
@@ -3927,7 +3981,7 @@ const MARKUP = (() => {
     endEdit(true);
     if (draft && draft !== a) finishDraft(true);
     draft = a;
-    cmpHd.replaceChildren(numChip(a, list.length + 1), ic(TYPE_IC[a.type]), h('span', { class: 'lb', title: a.target.label }, a.target.label.split(' › ').pop()));
+    cmpHd.replaceChildren(numChip(a, onPage().length + 1), ic(TYPE_IC[a.type]), h('span', { class: 'lb', title: a.target.label }, a.target.label.split(' › ').pop()));
     cmpTa.value = ''; cmpTa.placeholder = a.type === 'text' ? 'What should change in this text?' : 'What should change here?';
     cmpSave.disabled = true; cmpSave.title = `Save (${MAC ? '⌘' : 'Ctrl'} + Enter)`;
     cmp.hidden = false; grow(cmpTa);
@@ -4002,16 +4056,14 @@ const MARKUP = (() => {
   function paint() {
     const n = pending().length, total = list.length, by = s => list.filter(a => a.status === s).length;
     goN.textContent = String(n);
-    go.disabled = csGo.disabled = !n;
+    go.disabled = !n;
     go.setAttribute('aria-label', `Request changes: ${n} pending`);
-    go._tip = n ? `Review and send ${n} pending change request${n === 1 ? '' : 's'}` : 'Point, select or draw on the page to request a change';
-    csGoN.textContent = String(n);
+    go._tip = n ? `Review and send ${n} pending change request${n === 1 ? '' : 's'}` : 'Point, select or draw on the page, or add a general comment, to request a change';
     SIDE.badge(n);
     filterBtns.forEach(b => { const f = b.dataset.f; b.setAttribute('aria-checked', String(f === filter)); b.replaceChildren(FILTERS[f], h('i', {}, String(f === 'all' ? total : by(f)))); });
     sortBtn.replaceChildren(ic(sort === 'page' ? 'doc' : 'hist'));
     sortBtn.title = sort === 'page' ? 'In page order; click for newest first' : 'Newest first; click for page order'; sortBtn.setAttribute('aria-label', sortBtn.title);
-    clearBtn.hidden = !by('resolved');
-    if (document.activeElement !== csMsg) { const v = store.get(MSG) || ''; if (csMsg.value !== v) { csMsg.value = v; grow(csMsg); } }
+    clearRow.hidden = !by('resolved');
     tb.dataset.m = mode;
     modeBtns.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.m === mode)));
     swatches.hidden = mode !== 'draw';
@@ -4105,27 +4157,23 @@ const MARKUP = (() => {
   };
   cap.addEventListener('pointerup', endInk); cap.addEventListener('pointercancel', endInk);
 
-  /* the dialog: the overall message, the Markdown that goes, Copy and Send (the notes themselves are in the sidebar) */
+  /* the dialog: the count, the Markdown that goes, Copy and Send (the comments themselves are in the sidebar) */
   function openDlg() {
-    endEdit(true); finishDraft(true);
+    endEdit(true); finishDraft(true); finishGeneral(true);
     if (!pending().length) return;
     if (!dlg) {
-      const msg = h('textarea', { class: 'bp-note-ta', rows: 2, placeholder: 'Anything else about these changes? (optional)', 'aria-label': 'Message with the change requests' });
       const pre = h('pre', {}), cnt = h('p', { class: 'cnt' }), how = h('p', { class: 'how' });
-      msg.addEventListener('input', () => { setMsg(msg.value); csMsg.value = msg.value; grow(csMsg); pre.textContent = changesMd(); });
-      msg.addEventListener('keydown', e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); sendChanges(); } });
       const copy = h('button', { type: 'button', class: 'bp-btn', onclick: () => { copyText(changesMd(), 'Copied: paste it into the chat with the agent'); dlg.close(); } }, ic('copy'), 'Copy');
       const send = h('button', { type: 'button', class: 'bp-btn primary', onclick: () => sendChanges() }, ic('send'), 'Send');
       dlg = h('dialog', { class: 'bd-send bd-chgs', 'aria-labelledby': 'bd-chgs-h' },
         h('div', { class: 'hd' }, h('h3', { id: 'bd-chgs-h' }, 'Request changes to this doc'), h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Close', onclick: () => dlg.close() }, ic('x'))),
         h('p', { class: 'sum' }, 'Change requests ask the agent to edit the document. Your decisions and comments on items go with Send answers.'),
-        cnt, msg, h('details', { open: true }, h('summary', {}, 'Preview'), pre), how, h('div', { class: 'ft' }, copy, send));
+        cnt, h('details', { open: true }, h('summary', {}, 'Preview'), pre), how, h('div', { class: 'ft' }, copy, send));
       document.body.append(dlg);
       dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });
-      dlg._msg = msg;
       dlg._paint = () => {
-        const open = pending(), old = open.filter(a => a.rev !== CUR.rev).length;
-        cnt.replaceChildren(h('b', {}, `${open.length} pending comment${open.length === 1 ? '' : 's'}`), ' go with this request',
+        const open = pending(), old = open.filter(a => a.rev !== CUR.rev).length, gn = open.filter(isGeneral).length;
+        cnt.replaceChildren(h('b', {}, `${open.length} pending comment${open.length === 1 ? '' : 's'}${gn ? `, ${gn} general` : ''}`), ' go with this request',
           ...(old ? [' (', h('span', { class: 'old' }, `${old} made on an earlier revision`), ')'] : []), '. Edit or delete them in the Comments sidebar.');
         send.hidden = !REPLY.changes; send.disabled = copy.disabled = !open.length;
         copy.classList.toggle('primary', !REPLY.changes);
@@ -4134,7 +4182,6 @@ const MARKUP = (() => {
         pre.textContent = changesMd();
       };
     }
-    dlg._msg.value = store.get(MSG) || '';
     dlg._paint();
     dlg.showModal();
   }
@@ -4148,9 +4195,8 @@ const MARKUP = (() => {
       const ids = new Set(p.annotations.map(x => x.id));
       for (const a of list) if (ids.has(a.id)) { a.status = 'open'; a.sentAt = p.at; }
       if (filter === 'pending') setFilter('open', false);   // what was just sent, not an empty list
-      save(); store.del(MSG);
-      csMsg.value = ''; grow(csMsg);
-      if (dlg) { dlg._msg.value = ''; dlg.close(); }
+      save();
+      if (dlg) dlg.close();
       hlDirty = true; schedule(true); paint();
       toast(`Change request sent to ${REPLY.to || 'the agent'}`);
     } catch {
@@ -4172,6 +4218,7 @@ const MARKUP = (() => {
     return false;
   }
   function reveal(a) {
+    if (isGeneral(a)) return;   // about the whole doc: nothing on the page to show
     if (marksOff) { marksOff = false; paint(); }
     let canvas = false;
     for (const k of [a.target.key, ...(a.up || [])].reverse()) canvas = openKey(k) || canvas;
@@ -4195,8 +4242,14 @@ const MARKUP = (() => {
     }, canvas ? 700 : 60);
   }
 
-  /* tests and agents: BP.annotate({type, key, note, quote?, pos?, strokes?, color?}), BP.comments({open}) */
+  /* tests and agents: BP.annotate({type, key, note, quote?, pos?, strokes?, color?}) or ({type: 'general', note}), BP.comments({open}) */
   function annotate(spec) {
+    if (spec && spec.type === 'general') {
+      const note = String(spec.note || '').trim(); if (!note) return null;
+      const a = generalAnn(note);
+      list.push(a); save(); paint();
+      return JSON.parse(JSON.stringify(a));
+    }
     if (!spec || !TYPE_IC[spec.type] || !spec.key) return null;
     const el = elOf(String(spec.key)); if (!el) return null;
     const a = newAnn(spec.type, el);
