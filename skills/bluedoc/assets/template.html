@@ -155,6 +155,40 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .bp-btn:active { transform: translateY(.5px); }
 .bp-btn.ghost { background: none; box-shadow: none; color: var(--fg-muted); padding: 0 8px; }
 .bp-btn.ghost:hover { background: var(--hover); color: var(--fg); }
+.bp-btn.primary { background: var(--accent); color: #fff; box-shadow: 0 1px 2px oklch(20% 0.05 255 / .25), inset 0 1px 0 oklch(100% 0 0 / .15); }
+.bp-btn.primary .bd-ic { color: currentColor; }
+.bp-btn.primary:hover { background: color-mix(in oklch, var(--accent), black 8%); }
+/* send to agent: app-bar button and dialog */
+.bd-send-btn { height: 30px; padding: 0 12px; }
+.bd-send-btn.has { background: var(--accent); color: #fff; box-shadow: 0 1px 2px oklch(20% 0.05 255 / .25); }
+.bd-send-btn.has .bd-ic { color: currentColor; }
+.bd-send { width: min(560px, calc(100vw - 32px)); max-height: calc(100vh - 64px); padding: 0; border: 0; border-radius: 16px; background: var(--surface); color: var(--fg); box-shadow: var(--shadow-3); }
+.bd-send::backdrop { background: oklch(15% 0.01 264 / .36); }
+.bd-send > * { margin: 0 20px; }
+.bd-send .hd { display: flex; align-items: center; gap: 10px; margin: 0; padding: 16px 14px 4px 20px; }
+.bd-send .hd h3 { flex: 1; margin: 0; font-size: 16px; font-weight: 600; }
+.bd-send .sum { margin-top: 2px; margin-bottom: 12px; font-size: 13.5px; color: var(--fg-muted); }
+.bd-send textarea { display: block; box-sizing: border-box; width: calc(100% - 40px); min-height: 84px; }
+.bd-send details { margin-top: 10px; }
+.bd-send summary { cursor: pointer; font-size: 13px; font-weight: 500; color: var(--accent-fg); width: max-content; }
+.bd-send pre { margin: 8px 0 0; max-height: 220px; overflow: auto; padding: 10px 12px; border-radius: 10px; background: var(--inset); font: 12px/1.55 var(--mono); white-space: pre-wrap; }
+.bd-send .how { margin-top: 12px; font-size: 12.5px; color: var(--fg-subtle); }
+.bd-send .ft { display: flex; justify-content: flex-end; gap: 8px; margin: 0; padding: 14px 20px 18px; }
+.bd-send .ft .bp-btn { height: 32px; padding: 0 14px; font-size: 13px; }
+.bd-send .ft .bp-btn[hidden] { display: none; }
+/* the reader's comment on an item */
+.bp-note { display: flex; align-items: flex-start; gap: 8px; }
+.bp-note > .bd-ic { flex: none; width: 15px; height: 15px; margin-top: 8px; color: var(--fg-subtle); }
+.bp-note-ta { flex: 1; min-width: 0; resize: none; overflow: hidden; padding: 6px 10px; border: 0; border-radius: 9px; font: 13.5px/1.5 var(--sans); color: var(--fg);
+  background: var(--inset); box-shadow: inset 0 0 0 1px var(--line); transition: box-shadow .12s; }
+.bp-note-ta::placeholder { color: var(--fg-subtle); }
+.bp-note-ta:focus { outline: none; background: var(--surface); box-shadow: var(--focus-ring); }
+.bp-note.compact { margin-top: 8px; padding-left: 28px; }
+.bp-note.compact > .bd-ic { display: none; }
+.bp-note.compact .bp-note-ta { font-size: 13px; padding: 5px 9px; }
+.bp-cl-noteic { display: none; flex: none; margin-top: 4px; color: var(--accent-fg); }
+.bp-cl-noteic .bd-ic { width: 15px; height: 15px; }
+.bp-cl-item.has-note > .bp-cl-row .bp-cl-noteic { display: inline-flex; }
 .bp-side-toggle { display: none !important; }
 
 /* sections */
@@ -265,6 +299,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .bp-cl-chev { width: 16px; height: 16px; flex: none; margin-top: 4px; color: var(--fg-subtle); transition: transform .18s var(--ease); }
 .bp-cl-item.open .bp-cl-chev { transform: rotate(90deg); }
 .bp-cl-item.empty .bp-cl-chev { visibility: hidden; }
+@media (max-width: 900px) { .bd-send-btn .l { display: none; } .bd-send-btn { padding: 0 8px; } }
+@media print { .bp-note:not(:has(.bp-note-ta:not(:placeholder-shown))) { display: none; } .bd-send-btn { display: none !important; } }
 /* expanded body, aligned with the title */
 .bp-cl-body { padding: 0 16px 14px calc(16px + var(--ind)); font-size: 14px; }
 .bp-cl-body[hidden] { display: none; }
@@ -286,6 +322,25 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .bp-cl-item .bp-code { box-shadow: 0 0 0 1px var(--line); }
 .bp-cl-item .bp-code-h { height: 30px; }
 .bp-refs { display: flex; gap: 6px; flex-wrap: wrap; }
+/* decision items: options as pills under the title; the star marks the recommended one */
+.bp-cl-dot { flex: none; width: 18px; height: 18px; margin-top: 13px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--line-strong); }
+.bp-cl-item.done .bp-cl-dot, .bd-cm.done .bp-cl-dot { background: var(--ok) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / 11px no-repeat; box-shadow: none; }
+.bd-cm .hd > .bp-cl-dot { margin-top: 2px; }
+.bp-cl-choices { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 16px 12px calc(16px + var(--ind)); margin-top: -2px; }
+.bp-cl.nested .bp-cl-choices { padding-left: calc(14px + var(--ind)); }
+.bp-cl-choices.compact { padding: 8px 0 0 28px; margin: 0; }
+.bp-choice { display: inline-flex; align-items: center; gap: 5px; height: 28px; padding: 0 12px; border: 0; border-radius: 999px; font: 500 12.5px var(--sans); color: var(--fg-muted);
+  background: var(--surface); box-shadow: inset 0 0 0 1px var(--line-strong); transition: background .12s, color .12s, box-shadow .12s; }
+.bp-choice:hover { color: var(--fg); box-shadow: inset 0 0 0 1px var(--fg-subtle); }
+.bp-choice .bd-ic { width: 12px; height: 12px; fill: currentColor; stroke: none; color: var(--warn); }
+.bp-choice.rec { color: var(--fg); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--accent) 55%, transparent); }
+.bp-choice[aria-checked="true"] { color: #fff; background: var(--accent); box-shadow: none; }
+.bp-choice[aria-checked="true"] .bd-ic { color: currentColor; }
+.bp-cl-choices.answered .bp-choice[aria-checked="false"] { opacity: .65; }
+.bp-cl-choices.answered .bp-choice[aria-checked="false"]:hover { opacity: 1; }
+.bp-choice .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.bp-choice code { font-size: .92em; background: none; padding: 0; color: inherit; }
+.bp-cl-item.has-choices.done .bp-cl-text { color: var(--fg); }
 .bp-ref { display: inline-flex; align-items: center; gap: 5px; height: 24px; font: 500 12px var(--sans); border: 0; color: var(--fg-muted); background: var(--inset); box-shadow: inset 0 0 0 1px var(--line); border-radius: 7px; padding: 0 8px; transition: color .12s, box-shadow .12s; }
 .bp-ref .bd-ic { width: 13px; height: 13px; color: var(--accent-fg); }
 .bp-ref:hover { color: var(--accent-fg); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--accent) 45%, transparent); }
@@ -362,6 +417,25 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .bd-fh .p { flex: 1; min-width: 0; font: 12px/1.45 var(--mono); color: var(--fg-subtle); overflow-wrap: anywhere; }
 .bd-fh .p b { color: var(--fg); font-weight: 600; }
 .bd-fh .stat { font: 500 11.5px var(--mono); white-space: nowrap; }
+.bd-fnav { display: inline-flex; align-items: center; gap: 2px; flex: none; font-size: 12px; color: var(--fg-muted); white-space: nowrap; }
+.bd-fnav .cnt { display: inline-flex; align-items: center; gap: 4px; margin-right: 4px; font: 600 11.5px/1 var(--sans); color: var(--accent-fg); background: var(--accent-tint); border-radius: 999px; padding: 4px 8px; }
+.bd-fnav .cnt .bd-ic { width: 12px; height: 12px; }
+.bd-fnav .lbl { min-width: 46px; text-align: center; font-variant-numeric: tabular-nums; }
+.bd-fnav.one .lbl { display: none; }
+.bd-fnav .bd-ibtn { width: 26px; height: 26px; }
+.bd-fnav .bd-ibtn .bd-ic { width: 14px; height: 14px; }
+.bd-fnav .bd-ibtn:disabled { opacity: .35; cursor: default; }
+.bd-pill-wrap { position: sticky; z-index: 3; height: 0; pointer-events: none; }
+.bd-pill-wrap.up { top: calc(var(--fh-top, 0px) + var(--fh-h, 40px)); }
+.bd-pill-wrap.down { bottom: 0; }
+.bd-pill { position: absolute; left: 50%; transform: translateX(-50%); pointer-events: auto; display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 14px 0 10px;
+  border: 0; border-radius: 999px; white-space: nowrap; font: 500 12.5px var(--sans); color: var(--accent-fg); background: var(--surface);
+  box-shadow: var(--shadow-3), inset 0 0 0 1px color-mix(in oklch, var(--accent) 40%, transparent); }
+.bd-pill .bd-ic { width: 14px; height: 14px; }
+.bd-pill:hover { color: var(--fg); }
+.bd-pill[hidden] { display: none; }
+.bd-pill-wrap.up .bd-pill { top: 8px; }
+.bd-pill-wrap.down .bd-pill { bottom: 14px; }
 .bd-code { font: 12.5px/1.65 var(--mono); padding-bottom: 12px; }
 .bd-hh { padding: 5px 14px; font: 11.5px/1.6 var(--mono); color: var(--fg-subtle); background: var(--inset); border-block: 1px solid var(--line-soft); overflow-wrap: anywhere; }
 .bd-hh.ctx { font-family: var(--sans); font-size: 12px; }
@@ -565,6 +639,7 @@ svg.anim .bp-edge.k-async { animation: bp-march 1.6s linear infinite; }
   .bp-cl { --ind: 28px; }
   .bp-cl-row { padding: 0 4px 0 12px; }
   .bp-cl-body { padding: 0 12px 12px 12px; }
+  .bp-cl-choices { padding: 0 12px 12px 40px; }
   .bp-cl-num { display: none; }
   .bp-cl-head { flex-wrap: wrap; row-gap: 4px; }
   .bp-cl-main { flex: 1 1 calc(100% - 30px); }
@@ -580,7 +655,9 @@ svg.anim .bp-edge.k-async { animation: bp-march 1.6s linear infinite; }
     background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") right 9px center / 14px no-repeat;
     box-shadow: inset 0 0 0 1px var(--line-strong); appearance: none; -webkit-appearance: none; }
   .bd-pane { overflow: visible; }
-  .bd-fh { top: var(--bar-h); }
+  .bd-fh { top: var(--bar-h); flex-wrap: wrap; row-gap: 4px; }
+  .bd-diff { --fh-top: var(--bar-h); }
+  .bd-fh .p { flex: 1 1 100%; }
   .bd-ln { grid-template-columns: 2.9em 2.9em 1.2em minmax(0, 1fr); font-size: 11.5px; }
   .bd-ln > .o, .bd-ln > .n { font-size: 10.5px; padding-right: .5em; }
   .bd-cmw { padding: 6px 10px 10px; }
@@ -634,6 +711,7 @@ html.bd-resizing, html.bd-resizing * { cursor: col-resize !important; user-selec
   .bp-table-wrap, .bp-card, .bp-cl, .bp-code, .bp-terms, .bd-tldr-card, .bd-diff { box-shadow: 0 0 0 1px #ccd; }
   .bd-diff-body { display: block; height: auto; } .bd-files, .bd-diff-tb { display: none; } .bd-pane { overflow: visible; }
   .bp-cl-body[hidden] { display: block !important; } .bp-cl-chev { display: none; }
+  .bp-choice[aria-checked="true"] { color: #000; background: none; box-shadow: inset 0 0 0 2px #000; font-weight: 700; }
   .bp-cl-text, .bp-cl-subt > span { white-space: normal !important; overflow: visible !important; }
 }
 </style>
@@ -700,6 +778,8 @@ const ICONS = {
   pr: '<circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7M6 9v12"/>',
   up: '<path d="m18 15-6-6-6 6"/>',
   down: '<path d="m6 9 6 6 6-6"/>',
+  star: '<path d="M11.5 2.8a.6.6 0 0 1 1 0l2.6 5.3 5.8.8a.6.6 0 0 1 .3 1l-4.2 4.1 1 5.8a.6.6 0 0 1-.8.6L12 17.7l-5.2 2.7a.6.6 0 0 1-.8-.6l1-5.8-4.2-4.1a.6.6 0 0 1 .3-1l5.8-.8Z"/>',
+  send: '<path d="M14.5 21.7a.5.5 0 0 0 .9 0L22 3.5a.5.5 0 0 0-.6-.6L3.3 9.5a.5.5 0 0 0 0 .9l7.6 3a2 2 0 0 1 1.1 1.1zM21.9 2.1l-10.9 11"/>',
 };
 function ic(name, cls) {
   const s = document.createElementNS(NS, 'svg');
@@ -947,15 +1027,22 @@ function renderChecklist(b, parent) {
   const root = h('div', { class: 'bp-cl' + (parent ? ' nested' : ''), id: 'cl-' + cid });
   (b.items || []).forEach((it, i) => {
     const key = itemKey(cid, it.id);
+    const choices = Array.isArray(it.choices) && it.choices.length ? it.choices : null;
     const authorDone = it.done ? '1' : '0';
+    const authorChoice = choices && it.choice || '';
     // A saved tick is the reader's override of the author's `done`, stored with the `done` it
     // overrode ("<tick><done>"). If the author has since changed `done`, the author wins: a
     // stale "not done" must not hide a step the author later marked done. Legacy one-char
     // values carry no `done`; only a legacy "0" against `done: true` is treated as stale.
+    // A saved pick is "=<choice>|<author's choice>", with the same rule.
     let stored = store.get(key);
-    if (stored != null && (stored.length === 2 ? stored[1] !== authorDone : stored === '0' && it.done)) { store.del(key); stored = null; }
+    if (stored != null && (choices
+      ? !stored.startsWith('=') || stored.slice(stored.indexOf('|') + 1) !== authorChoice || !choices.some(c => c.id === stored.slice(1, stored.indexOf('|')))
+      : stored.startsWith('=') || (stored.length === 2 ? stored[1] !== authorDone : stored === '0' && it.done))) { store.del(key); stored = null; }
     const cb = h('input', { type: 'checkbox', id: `cb-${cid}-${it.id}`, 'aria-label': 'Done: ' + String(it.text || '').replace(/[`*]/g, '') });
-    cb.checked = stored == null ? !!it.done : stored[0] === '1';
+    let choice = null;
+    if (choices) { choice = stored != null ? stored.slice(1, stored.indexOf('|')) : (authorChoice || null); cb.checked = !!choice; cb.hidden = true; cb.tabIndex = -1; }
+    else cb.checked = stored == null ? !!it.done : stored[0] === '1';
     // subtitle: the author's `sub`, else the check (what "done" looks like), else nothing
     const subMd = it.sub || it.verify;
     const subIsCheck = !it.sub && !!it.verify;
@@ -966,6 +1053,9 @@ function renderChecklist(b, parent) {
       (it.blocks || []).map(kb => h('div', { class: 'bp-cl-block' }, kb.type === 'checklist' ? renderChecklist(kb, { cid, iid: it.id }) : (RENDER[kb.type] || RENDER.text)(kb))),
       it.verify && !subIsCheck && h('div', { class: 'bp-cl-verify' }, ic('check'), h('span', {}, h('b', {}, 'Check'), h('span', { html: inline(it.verify) }))),
       it.refs && it.refs.length && h('div', { class: 'bp-refs' }, it.refs.map(r => h('button', { type: 'button', class: 'bp-ref', onclick: () => focusNode(r) }, ic('target'), refLabel(r)))));
+    // the reader's comment for the agent: stored per item, exported with the answers
+    const noteKey = key + ':note';
+    let note = store.get(noteKey) || '';
     body.hidden = 'until-found';  // find-in-page still reaches collapsed content where supported
     const head = h('button', { type: 'button', class: 'bp-cl-head', 'aria-expanded': 'false', 'aria-controls': bodyId },
       numbered && h('span', { class: 'bp-cl-num' }, String(i + 1).padStart(2, '0')),
@@ -973,9 +1063,31 @@ function renderChecklist(b, parent) {
         h('span', { class: 'bp-cl-text', html: inline(it.text) }),
         subMd && h('span', { class: 'bp-cl-subt' + (subIsCheck ? ' check' : '') }, subIsCheck && ic('check'), h('span', { html: inline(subMd) }))),
       it.state && h('span', { class: 'bp-chip ' + (it.stateKind || 'warn') }, it.state),
+      h('span', { class: 'bp-cl-noteic', title: 'You left a comment' }, ic('msg')),
       ic('chev', 'bp-cl-chev'));
-    const li = h('li', { class: 'bp-cl-item', id: `item-${cid}-${it.id}` }, h('div', { class: 'bp-cl-row' }, cb, head), body);
-    const entryItem = { it, cb, li, cid, body, head };
+    const dot = choices && h('span', { class: 'bp-cl-dot', 'aria-hidden': 'true' });
+    const li = h('li', { class: 'bp-cl-item' + (choices ? ' has-choices' : ''), id: `item-${cid}-${it.id}` }, h('div', { class: 'bp-cl-row' }, cb, dot, head));
+    const entryItem = { it, cb, li, cid, body, head, choices, get choice() { return choice; }, get note() { return note; } };
+    entryItem.setNote = (v, from) => {
+      note = v.trim() ? v : '';
+      if (note) store.set(noteKey, note); else store.del(noteKey);
+      li.classList.toggle('has-note', !!note);
+      if (from !== entryItem.noteView) entryItem.noteView.paint();
+      syncDiffs(); paintSend();
+    };
+    entryItem.noteView = noteBox(entryItem);
+    li.classList.toggle('has-note', !!note);
+    if (choices) {
+      entryItem.setChoice = id => {
+        choice = id || null; cb.checked = !!choice;
+        if ((choice || '') === authorChoice) store.del(key); else store.set(key, `=${choice || ''}|${authorChoice}`);
+        li.classList.toggle('done', cb.checked); entryItem.pills.paint(); update();
+      };
+      entryItem.pills = choicePills(entryItem);
+      li.append(entryItem.pills.el);
+    }
+    body.append(entryItem.noteView.el);
+    li.append(body);
     entryItem.setOpen = open => {
       li.classList.toggle('open', open); head.setAttribute('aria-expanded', String(open));
       if (open) body.removeAttribute('hidden'); else body.hidden = 'until-found';
@@ -988,16 +1100,23 @@ function renderChecklist(b, parent) {
       else { head.setAttribute('aria-expanded', String(li.classList.contains('open'))); head.setAttribute('aria-controls', bodyId); head.removeAttribute('tabindex'); head.removeAttribute('aria-hidden'); }
     };
     head.addEventListener('click', () => {
-      if (li.classList.contains('empty')) { cb.click(); return; }   // nothing to show: the row ticks
+      if (li.classList.contains('empty')) { if (!choices) cb.click(); return; }   // nothing to show: the row ticks
       entryItem.setOpen(!li.classList.contains('open'));
     });
     body.addEventListener('beforematch', () => entryItem.setOpen(true));
     entryItem.refresh();
     li.classList.toggle('done', cb.checked);
     cb.addEventListener('change', () => {
+      if (choices) return;
       if (cb.checked === !!it.done) store.del(key); else store.set(key, (cb.checked ? '1' : '0') + authorDone);
       li.classList.toggle('done', cb.checked); update();
     });
+    entryItem.reset = () => {
+      store.del(key);
+      if (choices) { choice = authorChoice || null; cb.checked = !!choice; entryItem.pills.paint(); }
+      else cb.checked = !!it.done;
+      li.classList.toggle('done', cb.checked);
+    };
     items.push(entryItem);
     ITEMS[`${cid}/${it.id}`] = entryItem;
     for (const r of it.refs || []) (NODE_REFS[r] ||= []).push({ checklist: b, item: it, li });
@@ -1030,6 +1149,7 @@ function renderChecklist(b, parent) {
     bar.firstChild.style.width = (items.length ? n / items.length * 100 : 0) + '%';
     root.classList.toggle('complete', items.length > 0 && n === items.length);
     if (entry.sideRow) entry.sideRow();
+    paintSend();
     syncDiffs();
     updateOverall();
   }
@@ -1038,10 +1158,43 @@ function renderChecklist(b, parent) {
   return root;
 }
 function resetChecklist(c) {
-  c.items.forEach(x => { store.del(itemKey(c.b.id, x.it.id)); x.cb.checked = !!x.it.done; x.li.classList.toggle('done', x.cb.checked); });
+  c.items.forEach(x => x.reset());
   CHECKLISTS.filter(n => n.parent && n.parent.cid === c.b.id).forEach(resetChecklist);
   c.update();
 }
+// The options of a choice item as a radio group of pills. The same item can have several groups
+// (its row, its comment card in a diff); every group repaints from the item's current choice.
+function choicePills(x, compact) {
+  const name = String(x.it.text || '').replace(/[`*]/g, '');
+  const el = h('div', { class: 'bp-cl-choices' + (compact ? ' compact' : ''), role: 'radiogroup', 'aria-label': 'Decision: ' + name });
+  const btns = x.choices.map(c => {
+    const rec = c.id === x.it.recommend;
+    const b = h('button', { type: 'button', role: 'radio', class: 'bp-choice' + (rec ? ' rec' : ''), 'data-id': c.id,
+      title: (rec ? 'Recommended. ' : '') + (c.md ? String(c.md).replace(/[`*]/g, '') : c.label),
+      onclick: () => x.setChoice(x.choice === c.id ? null : c.id) },
+      rec && ic('star'), h('span', { html: inline(c.label) }), rec && h('span', { class: 'sr' }, ' (recommended)'));
+    return b;
+  });
+  el.append(...btns);
+  el.addEventListener('keydown', e => {
+    const i = btns.indexOf(document.activeElement); if (i < 0) return;
+    const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
+    if (step) { e.preventDefault(); btns[(i + step + btns.length) % btns.length].focus(); }
+  });
+  const paint = () => {
+    const cur = x.choice;
+    btns.forEach((b, i) => {
+      const on = b.dataset.id === cur;
+      b.setAttribute('aria-checked', String(on));
+      b.tabIndex = on || (!cur && i === 0) ? 0 : -1;
+    });
+    el.classList.toggle('answered', !!cur);
+    el.classList.toggle('off-rec', !!cur && !!x.it.recommend && cur !== x.it.recommend);
+  };
+  paint();
+  return { el, paint };
+}
+const choiceLabel = (x, id) => { const c = x.choices && x.choices.find(c => c.id === id); return c ? c.label.replace(/[`*]/g, '') : id; };
 function openItem(x) {
   // open the item and every collapsed item it sits inside
   for (let el = x.li; el; el = el.parentElement && el.parentElement.closest('.bp-cl-item')) {
@@ -1053,14 +1206,119 @@ function openItem(x) {
 function checklistMd(c, indent = '') {
   const lines = c.items.map(x => {
     const sub = CHECKLISTS.filter(n => n.parent && n.parent.cid === c.b.id && n.parent.iid === x.it.id);
-    return `${indent}- [${x.cb.checked ? 'x' : ' '}] ${x.it.text}` + sub.map(n => '\n' + checklistMd(n, indent + '  ').trimEnd()).join('');
+    let line = `${indent}- [${x.cb.checked ? 'x' : ' '}] ${x.it.text}`;
+    if (x.choices) {
+      const rec = x.it.recommend && choiceLabel(x, x.it.recommend);
+      if (x.choice) line += ` → **${choiceLabel(x, x.choice)}**` + (rec && x.choice !== x.it.recommend ? ` (recommended: ${rec})` : '');
+      else line += rec ? ` (no decision; recommended: ${rec})` : ' (no decision)';
+    }
+    const quoted = x.note ? '\n' + x.note.trim().split('\n').map(l => `${indent}  > ${l}`).join('\n') : '';
+    return line + quoted + sub.map(n => '\n' + checklistMd(n, indent + '  ').trimEnd()).join('');
   });
   if (indent) return lines.join('\n') + '\n';
   const n = c.items.filter(x => x.cb.checked).length;
   return `## ${c.b.title || c.b.id} (${n}/${c.items.length})\n` + lines.join('\n') + '\n';
 }
 function allChecklistsMd() {
-  return `# ${DOC.title} — progress ${new Date().toISOString().slice(0, 10)}\n\n` + CHECKLISTS.filter(c => !c.parent).map(c => checklistMd(c)).join('\n');
+  const msg = store.get(MSG_KEY) || '';
+  return `# ${DOC.title} — progress ${new Date().toISOString().slice(0, 10)}\n\n` + (msg.trim() ? `${msg.trim()}\n\n` : '') + CHECKLISTS.filter(c => !c.parent).map(c => checklistMd(c)).join('\n');
+}
+
+/* ---------- replies: comments and answers back to the agent ---------- */
+const MSG_KEY = `bp:${docId}:__message`;
+// A comment box bound to one item. Rows and diff cards each get one; they stay in sync.
+function noteBox(x, compact) {
+  const ta = h('textarea', { class: 'bp-note-ta', rows: 1, placeholder: compact ? 'Comment for the agent…' : 'Comment for the agent (sent with your answers)…',
+    'aria-label': 'Comment for the agent on: ' + String(x.it.text || '').replace(/[`*]/g, '') });
+  const fit = () => { ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight + 2, 240) + 'px'; };
+  let t = 0;
+  const view = { el: h('div', { class: 'bp-note' + (compact ? ' compact' : '') }, ic('msg'), ta), paint: () => { if (document.activeElement !== ta && ta.value !== x.note) { ta.value = x.note; fit(); } } };
+  ta.addEventListener('input', () => { fit(); clearTimeout(t); t = setTimeout(() => x.setNote(ta.value, view), 250); });
+  ta.addEventListener('blur', () => { clearTimeout(t); if (ta.value !== x.note) x.setNote(ta.value, view); });
+  ta.addEventListener('keydown', e => e.stopPropagation());   // n/p and canvas keys must not fire while typing
+  ta.value = x.note;
+  requestAnimationFrame(fit);
+  return view;
+}
+function replyPayload() {
+  const all = Object.values(ITEMS);
+  return {
+    doc: docId, title: DOC.title || '', path: location.pathname, at: new Date().toISOString(),
+    message: (store.get(MSG_KEY) || '').trim(),
+    items: all.map(x => ({
+      checklist: x.cid, item: x.it.id, text: x.it.text,
+      ...(x.choices ? { choice: x.choice || null, recommend: x.it.recommend || null } : { done: x.cb.checked }),
+      ...(x.note ? { note: x.note.trim() } : {}),
+    })),
+    markdown: allChecklistsMd(),
+  };
+}
+// The page can send replies itself when it is served by scripts/serve.py; otherwise it copies them.
+const REPLY = { url: null, to: '' };
+if (/^https?:$/.test(location.protocol)) {
+  fetch('/__bluedoc/ping', { cache: 'no-store' }).then(r => r.ok ? r.json() : null).then(j => {
+    if (j && j.bluedoc) { REPLY.url = '/__bluedoc/reply'; REPLY.to = j.to || ''; paintSend(); }
+  }).catch(() => {});
+}
+const sendBtn = h('button', { type: 'button', class: 'bp-btn bd-send-btn', hidden: true, onclick: () => openSend() }, ic('send'), h('span', { class: 'l' }, 'Send to agent'));
+document.querySelector('.bd-bar-r')?.insertBefore(sendBtn, document.querySelector('.bd-bar-r .bd-toc-btn'));
+let sendDlg = null;
+function replyCounts() {
+  const all = Object.values(ITEMS), dec = all.filter(x => x.choices);
+  return { decisions: dec.length, decided: dec.filter(x => x.choice).length, steps: all.length - dec.length,
+    ticked: all.filter(x => !x.choices && x.cb.checked).length, notes: all.filter(x => x.note).length };
+}
+function paintSend() {
+  if (!sendBtn) return;
+  sendBtn.hidden = !CHECKLISTS.length;
+  const c = replyCounts();
+  sendBtn.classList.toggle('has', !!(c.decided || c.notes || c.ticked));
+  if (sendDlg && sendDlg.open) sendDlg._paint();
+}
+function openSend() {
+  if (!sendDlg) {
+    const msg = h('textarea', { class: 'bp-note-ta', rows: 3, placeholder: 'Anything else for the agent? (optional)' });
+    msg.value = store.get(MSG_KEY) || '';
+    msg.addEventListener('input', () => { if (msg.value.trim()) store.set(MSG_KEY, msg.value); else store.del(MSG_KEY); pre.textContent = allChecklistsMd(); });
+    msg.addEventListener('keydown', e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); doSend(); } });
+    const summary = h('p', { class: 'sum' });
+    const how = h('p', { class: 'how' });
+    const pre = h('pre', {});
+    const send = h('button', { type: 'button', class: 'bp-btn primary', onclick: () => doSend() }, ic('send'), 'Send');
+    const copy = h('button', { type: 'button', class: 'bp-btn', onclick: () => { copyText(allChecklistsMd(), 'Copied: paste it into the chat with the agent'); sendDlg.close(); } }, ic('copy'), 'Copy');
+    sendDlg = h('dialog', { class: 'bd-send', 'aria-labelledby': 'bd-send-h' },
+      h('div', { class: 'hd' }, h('h3', { id: 'bd-send-h' }, 'Send your answers to the agent'), h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Close', onclick: () => sendDlg.close() }, ic('x'))),
+      summary, msg, h('details', {}, h('summary', {}, 'Preview'), pre), how, h('div', { class: 'ft' }, copy, send));
+    document.body.append(sendDlg);
+    sendDlg.addEventListener('click', e => { if (e.target === sendDlg) sendDlg.close(); });
+    sendDlg._paint = () => {
+      const c = replyCounts();
+      const parts = [];
+      if (c.decisions) parts.push(`${c.decided} of ${c.decisions} decision${c.decisions === 1 ? '' : 's'} made`);
+      if (c.steps) parts.push(`${c.ticked} of ${c.steps} step${c.steps === 1 ? '' : 's'} ticked`);
+      parts.push(`${c.notes} comment${c.notes === 1 ? '' : 's'}`);
+      summary.textContent = parts.join(' · ');
+      send.hidden = !REPLY.url;
+      copy.classList.toggle('primary', !REPLY.url);
+      how.textContent = REPLY.url ? `Send delivers this to ${REPLY.to || 'the agent that opened this page'}. Copy gives you the same text to paste.`
+        : 'This page isn\'t connected to an agent. Copy the text and paste it into the chat. (Pages opened through serve.py can send directly.)';
+      pre.textContent = allChecklistsMd();
+    };
+  }
+  sendDlg._paint();
+  sendDlg.showModal();
+  sendDlg.querySelector('textarea').focus();
+}
+async function doSend() {
+  if (!REPLY.url) { copyText(allChecklistsMd(), 'Copied: paste it into the chat with the agent'); sendDlg && sendDlg.close(); return; }
+  try {
+    const r = await fetch(REPLY.url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Bluedoc': '1' }, body: JSON.stringify(replyPayload()) });
+    if (!r.ok) throw new Error(String(r.status));
+    sendDlg && sendDlg.close();
+    toast(`Sent to ${REPLY.to || 'the agent'}`);
+  } catch {
+    copyText(allChecklistsMd(), 'Couldn\'t reach the agent; copied instead, paste it into the chat');
+  }
 }
 function updateOverall() {
   if (!CHECKLISTS.length) return;
@@ -1247,6 +1505,12 @@ function renderDiff(b) {
         h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Next comment', title: 'Next comment (n)', onclick: () => stepComment(d, 1) }, ic('down'))],
         h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Full screen', title: 'Full screen', style: 'margin-left:6px', onclick: () => document.fullscreenElement ? document.exitFullscreen() : d.root.requestFullscreen?.() }, ic('full')))),
     h('div', { class: 'bd-diff-body' }, d.files_, d.pane));
+  let navRaf = 0;
+  const repaintNav = () => { if (!navRaf) navRaf = requestAnimationFrame(() => { navRaf = 0; d.fnav && d.fnav.paint(); }); };
+  d.pane.addEventListener('scroll', repaintNav, { passive: true });
+  addEventListener('scroll', repaintNav, { passive: true });
+  addEventListener('resize', repaintNav);
+  d.pane.addEventListener('toggle', repaintNav, true);   // a card's Details opening moves the ones below
   d.root.addEventListener('keydown', e => {
     if (e.target.closest('input, select, textarea') || e.metaKey || e.ctrlKey || e.altKey) return;
     if (e.key === 'n' || e.key === ']') { e.preventDefault(); stepComment(d, 1); }
@@ -1285,19 +1549,30 @@ function commentCard(d, c) {
   const title = c.title || (it && it.text) || '';
   const where = c.line ? (c.end && c.end !== c.line ? `Lines ${c.line}–${c.end}` : `Line ${c.line}`) + (c.side === 'old' ? ' (before)' : '') : c.file ? 'Whole file' : (c.label || 'Whole change');
   const card = h('article', { class: `bd-cm ${kind}${src ? '' : ' nott'}`, 'data-ci': c._i, tabindex: -1 });
-  let tick = null;
-  if (src) {
+  let tick = null, pills = null, dot = null;
+  if (src && src.choices) {
+    // a decision item: the card carries the same options as its row
+    pills = choicePills(src, true);
+    dot = h('span', { class: 'bp-cl-dot', 'aria-hidden': 'true' });
+    d.mirrors.push({ pills, src, card });
+  } else if (src) {
     tick = h('input', { type: 'checkbox', 'aria-label': 'Tick: ' + plainText(title) });
     tick.addEventListener('change', () => { src.cb.checked = tick.checked; src.cb.dispatchEvent(new Event('change')); });
     d.mirrors.push({ tick, src, card });
   }
   const detail = c.md || (it && it.detail);
   card.append(
-    h('div', { class: 'hd' }, tick ? h('label', { class: 'tk' }, tick) : ic('msg'), h('div', { class: 'tt', html: inline(title) }),
+    h('div', { class: 'hd' }, tick ? h('label', { class: 'tk' }, tick) : dot || ic('msg'), h('div', { class: 'tt', html: inline(title) }),
       ((it && it.state) || c.state) && h('span', { class: 'bp-chip ' + kind }, c.state || it.state)),
+    pills && pills.el,
     h('div', { class: 'mt' }, h('span', {}, where),
       src && h('a', { href: `#item-${src.cid}-${it.id}`, onclick: e => { e.preventDefault(); openItem(src); src.li.scrollIntoView({ behavior: REDUCE ? 'auto' : 'smooth', block: 'center' }); flash(src.li); } }, 'Checklist item', ic('chev'))),
     detail && h('details', {}, h('summary', {}, 'Details'), h('div', { class: 'bd', html: md(detail) })));
+  if (src) {
+    const nv = noteBox(src, true);
+    card.append(nv.el);
+    d.mirrors.push({ note: nv, src, card });
+  }
   return card;
 }
 function renderPane(d) {
@@ -1306,7 +1581,7 @@ function renderPane(d) {
   if (key === PR_KEY) {
     pane.replaceChildren(h('div', { class: 'bd-fh' }, h('div', { class: 'p' }, h('b', {}, 'Whole change'), ' · comments not tied to a line')),
       h('div', { class: 'bd-code' }, commentsIn(d, PR_KEY).map(c => h('div', { class: 'bd-cmw top' }, commentCard(d, c)))));
-    syncDiffs(); return;
+    fileNav(d); syncDiffs(); return;
   }
   const f = d.byPath[key]; if (!f) { pane.replaceChildren(h('div', { class: 'bd-omit' }, 'No file selected.')); return; }
   const i = f.path.lastIndexOf('/');
@@ -1344,10 +1619,65 @@ function renderPane(d) {
   const orphans = cs.filter(c => !shownIds.has(c._i));
   if (orphans.length) code.append(...orphans.map(c => h('div', { class: 'bd-cmw top' }, commentCard(d, c))));
   pane.replaceChildren(...[head, f.omitted && h('div', { class: 'bd-omit' }, `Diff not included: ${f.omitted}.`), code].filter(Boolean));
+  fileNav(d);
   syncDiffs();
 }
+/* Comments in the open file: a count in the file header, ‹ › to step through them, and pills that
+   say how many are above or below what you can see, so no comment hides off-screen unnoticed. */
+function fileNav(d) {
+  const pane = d.pane, head = pane.querySelector('.bd-fh');
+  const cards = [...pane.querySelectorAll('.bd-code .bd-cm')];
+  d.fnav = null;
+  if (!head || !cards.length) return;
+  const n = cards.length;
+  const lbl = h('span', { class: 'lbl', 'aria-live': 'polite' });
+  const go = target => {
+    const card = cards[target]; if (!card) return;
+    const c = d.comments.find(x => String(x._i) === card.dataset.ci);
+    if (c) { d.ci = c._o; paintNav(d); }
+    paneScrollTo(d, card); flash(card);
+  };
+  const prev = h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Previous comment in this file', title: 'Previous comment in this file' }, ic('up'));
+  const next = h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Next comment in this file', title: 'Next comment in this file' }, ic('down'));
+  const nav = h('span', { class: 'bd-fnav' + (n > 1 ? '' : ' one') },
+    h('span', { class: 'cnt', title: `${n} comment${n === 1 ? '' : 's'} in this file` }, ic('msg'), String(n)), n > 1 && prev, lbl, n > 1 && next);
+  head.insertBefore(nav, head.lastElementChild && head.lastElementChild.matches('button') ? head.lastElementChild : null);
+  const upTxt = h('span'), downTxt = h('span');
+  const up = h('button', { type: 'button', class: 'bd-pill' }, ic('up'), upTxt);
+  const down = h('button', { type: 'button', class: 'bd-pill' }, ic('down'), downTxt);
+  head.after(h('div', { class: 'bd-pill-wrap up' }, up));
+  pane.append(h('div', { class: 'bd-pill-wrap down' }, down));
+  pane.style.setProperty('--fh-h', head.offsetHeight + 'px');
+  const state = () => {
+    // what the reader can see: the pane when it scrolls itself, else the window under the app bar
+    const scrolls = pane.scrollHeight > pane.clientHeight + 2;
+    const pr = pane.getBoundingClientRect(), fh = head.getBoundingClientRect();
+    const top = Math.max(fh.bottom, scrolls ? pr.top : cssPx('--bar-h')), bottom = scrolls ? pr.bottom : innerHeight;
+    const above = [], below = []; let cur = -1;
+    cards.forEach((c, i) => { const r = c.getBoundingClientRect(); if (r.bottom < top + 6) above.push(i); else if (r.top > bottom - 6) below.push(i); else if (cur < 0) cur = i; });
+    return { above, below, cur };
+  };
+  const paint = () => {
+    const s = state();
+    const seen = s.cur >= 0 || s.above.length || s.below.length < n;
+    lbl.textContent = s.cur >= 0 && n > 1 ? `${s.cur + 1} of ${n}` : '';
+    lbl.hidden = !lbl.textContent;
+    prev.disabled = !s.above.length && s.cur <= 0;
+    next.disabled = !s.below.length && (s.cur < 0 || s.cur >= n - 1);
+    up.hidden = !s.above.length; down.hidden = !s.below.length;
+    upTxt.textContent = `${s.above.length} ${s.cur >= 0 || s.below.length ? 'more ' : ''}comment${s.above.length === 1 ? '' : 's'} above`;
+    downTxt.textContent = `${s.below.length} ${seen ? 'more ' : ''}comment${s.below.length === 1 ? '' : 's'} below`;
+  };
+  prev.onclick = () => { const s = state(); go(s.cur > 0 ? s.cur - 1 : s.above[s.above.length - 1]); };
+  next.onclick = () => { const s = state(); go(s.cur >= 0 && s.cur < n - 1 ? s.cur + 1 : s.below[0]); };
+  up.onclick = () => { const s = state(); go(s.above[s.above.length - 1]); };
+  down.onclick = () => { const s = state(); go(s.below[0]); };
+  d.fnav = { paint, state };
+  paint();
+  requestAnimationFrame(paint);   // after layout settles (code highlight, fonts)
+}
 function selectFile(d, key, keepScroll) {
-  if (d.sel !== key) { d.sel = key; renderPane(d); paintFiles(d); if (!keepScroll) d.pane.scrollTop = 0; }
+  if (d.sel !== key) { d.sel = key; renderPane(d); paintFiles(d); if (!keepScroll) d.pane.scrollTop = 0; d.fnav && d.fnav.paint(); }
   // keep the selected file visible in the list; scrollIntoView would also move the page
   const cur = d.files_.querySelector('[aria-current="true"]'), L = d.files_;
   if (cur && L.scrollHeight > L.clientHeight) {
@@ -1395,7 +1725,12 @@ function openCodeLink(s) {
 }
 function syncDiffs() {
   for (const d of Object.values(DIFFS)) {
-    for (const m of d.mirrors) { m.tick.checked = m.src.cb.checked; m.card.classList.toggle('done', m.src.cb.checked); }
+    for (const m of d.mirrors) {
+      if (m.tick) m.tick.checked = m.src.cb.checked;
+      if (m.pills) m.pills.paint();
+      if (m.note) m.note.paint();
+      m.card.classList.toggle('done', m.src.cb.checked);
+    }
     const linked = d.comments.filter(c => c.item && ITEMS[c.item]);
     if (linked.length && d.progTxt) {
       const n = linked.filter(c => ITEMS[c.item].cb.checked).length;
@@ -2031,6 +2366,9 @@ window.BP = {
   state: canvasId => { const cv = CANVASES[canvasId]; return cv && { k: cv.k, focus: cv.focusPath.map(n => n._key), revealed: cv.sysNodes.filter(n => n._reveal > 0.5).map(n => n._key), flow: cv.focusPlayer && cv.focusPlayer.flow && cv.focusPlayer.flow.id, step: cv.focusPlayer && cv.focusPlayer.si, tokens: [...cv.svg.querySelectorAll('.bp-tok')].filter(t => t.style.display !== 'none').length }; },
   progress: () => CHECKLISTS.map(c => ({ id: c.b.id, done: c.items.filter(x => x.cb.checked).length, total: c.items.length })),
   progressMarkdown: allChecklistsMd,
+  replyPayload,
+  choose: (key, choice) => { const x = ITEMS[key]; if (!x || !x.setChoice) return false; x.setChoice(choice); return true; },
+  setNote: (key, text) => { const x = ITEMS[key]; if (!x) return false; x.setNote(text || ''); return true; },
   openCode: (diffId, path, line) => openCode(diffId, path, line),
   openComment: (diffId, index) => { const d = DIFFS[diffId]; const c = d && d.order[index]; if (c) openComment(d, c, true); return !!c; },
   diffState: diffId => { const d = DIFFS[diffId]; if (!d) return null; const linked = d.comments.filter(c => c.item && ITEMS[c.item]);

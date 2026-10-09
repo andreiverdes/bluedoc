@@ -1,6 +1,6 @@
 ---
 name: bluedoc
-description: Generate self-contained HTML engineering docs (architecture pages, walkthroughs, runbooks, setup guides, change proposals, PR reviews) with zoomable blueprint canvases that open into each system's inner architecture and play animated data/control flows, checklists that persist as task trackers, and a code browser that pins review findings to the lines they are about. Use when asked for an HTML doc, architecture page, system walkthrough, runbook, onboarding guide, browsable PR review, or "a bluedoc".
+description: Generate self-contained HTML engineering docs (architecture pages, walkthroughs, runbooks, setup guides, change proposals, PR review findings) with zoomable blueprint canvases that open into each system's inner architecture and play animated data/control flows, checklists that persist as task trackers, and a code browser that pins review findings to the lines they are about. Use when asked for an HTML doc, architecture page, system walkthrough, runbook, onboarding guide, "peer review results", "review findings", "review comments in a bluedoc", "open threads", or "a bluedoc".
 ---
 
 # bluedoc
@@ -10,10 +10,12 @@ Write one JSON document, build it with `scripts/build.py`, verify it in a browse
 Files, relative to this skill's directory (`<skill>` in the commands below):
 - `scripts/build.py`: validates structure, lints CRISP slips, inlines the JSON into the template. Python 3.9+, stdlib only.
 - `scripts/gitdiff.py`: turns a git range plus `path:line` comments into a `diff` block and writes it into the JSON. Python 3.9+, stdlib only.
+- `scripts/ghthreads.py`: turns a GitHub PR's review threads into the `comments.json` list for `gitdiff.py` and checklist item stubs. Needs `gh` signed in.
+- `scripts/serve.py`: serves a built page on localhost so the reader's **Send to agent** reaches you. Python 3.9+, stdlib only.
 - `assets/template.html`: the runtime (canvas engine, checklists, layout, HorizonUI tokens). Never edit it per document.
 - `references/schema.md`: every field. Read it before writing the JSON.
 - `examples/acme-orders.bluedoc.json`: architecture + runbook (3-level canvas, flows per level, checklist linked to the drawing, troubleshooting). Built page: `examples/acme-orders.html`.
-- `examples/acme-pr-review.bluedoc.json`: PR review (verdicts, findings checklist, `diff` block with every finding on its lines). Built page: `examples/acme-pr-review.html`.
+- `examples/acme-review-findings.bluedoc.json`: review findings for two PRs, in the layout below. Built page: `examples/acme-review-findings.html`.
 
 ## Workflow
 
@@ -39,7 +41,7 @@ Order sections by what the reader needs first:
 | Walkthrough ("how X works") | TL;DR → canvas with one flow per scenario → step-by-step explanation per flow → edge cases |
 | Setup / runbook | TL;DR → prerequisites checklist → canvas (what you are building) → procedure checklists → verification → troubleshooting table → teardown checklist |
 | Change / proposal | TL;DR → canvas with `state` (`proposed`, `removed`) → what changes (table) → rollout checklist → risks |
-| Code review | TL;DR → verdicts (table) → per PR: summary → findings checklist → `diff` block with each finding as a comment → checks run (table) |
+| Review findings (default whenever review results go in a bluedoc) | TL;DR → Summary (table + provenance note) → one section per PR: findings checklist, then a `diff` of the commented files. See "Review findings" below. |
 
 Rules:
 - **One canvas per system boundary.** Put depth in `children`, not in more canvases. Root ≤ 9 nodes; each level ≤ 9 nodes; nest ≤ 3 levels.
@@ -48,8 +50,68 @@ Rules:
 - **Kinds carry meaning.** `data` for payloads, `control` for calls/starts, `async` for queues and events, `power` for hardware supply, `dep` for build/runtime dependencies. Shapes follow the node `kind` table in the schema.
 - **State is visible.** Use node `state` and doc `state` chips for anything not live or not verified. Never draw a proposed component as if it exists.
 - **Checklists are the task tracker.** Every procedure is a checklist, not a numbered text list. Each item collapses to two lines, so write them for scanning: `text` is the action in one line (imperative verb first, ≤ 90 characters), `sub` is one line of why or what it unblocks. Everything else goes in the open row: `detail`, `code` for the command, `verify` for the observable result, and `blocks` for tables or a sub-checklist. Link items to the drawing with `refs` so readers jump from a step to the part it touches.
-- **Findings sit on their code.** In a review, every finding with a `path:line` is a checklist item and a comment in that PR's `diff` block (`gitdiff.py --comments`). Diff the commits the reviewer read, not the current tip, and say which in `note`.
+- **Findings sit on their code.** In a review, every finding with a `path:line` is a checklist item and a comment in that PR's `diff` block. Follow "Review findings" below.
 - **Tables for comparisons, terms for vocabulary, callouts for risk.** `caution` before a step that can lose data or damage equipment; `warning` before a step that can hurt people or production; place it before the step it guards.
+
+## Review findings
+
+Use this layout, without being asked, whenever review results (peer review, agent review, open PR threads) go into a bluedoc. Each finding is a **decision item**: the reader picks one of its options (Fix in PR, Ticket, Decline, …), with your recommendation starred, can leave a comment on it, then sends the answers back to you (see "Reader replies"). The reply lists each pick (`→ **Ticket** (recommended: Fix in PR)`) and comment, and you act on them. `examples/acme-review-findings.bluedoc.json` is the reference.
+
+**Document**
+- `subtitle`: what the page holds, then "Pick what to do with each; my recommendation is starred."
+- `state`: counts per verdict, e.g. "11 review comments", "6 fix in the PR", "2 follow-up tickets", "2 decline", "1 resolves when a fix lands".
+- `links`: each PR, then related docs.
+- `tldr`: how many to fix, ticket and decline, and which findings are real bugs the change introduces.
+
+**Section 1, Summary**
+- `lead`: "Each finding has its options under it, with my recommendation starred. Pick one per finding, comment where you disagree, then press **Send to agent**."
+- A `table`: **PR | Finding | Size | Recommendation**, one row per finding. Size is `blocker`, `major`, `minor` or `nit`. Link each finding to its item: `[text](#item-<checklist>-<item>)`.
+- A `note` callout for provenance when it matters (who posted the comments, under which login, at which heads).
+
+**One section per PR**
+- `lead`: how many findings and of what kind, then the reviewed range: "Diff: `main` `<base>` → head `<head>`, limited to the commented files."
+- A `checklist`, `numbered: false`, one decision item per finding:
+  - `text`: the finding, stated as a fact in one line ("A retry can authorize the card twice"). Not an instruction: the options are the instructions.
+  - `sub`: `Recommend <option>: <one-line reason>.`
+  - `state` / `stateKind`: the size: `blocker` / `risk`, `major` / `warn`, `minor` / `info`, `nit` / `todo`.
+  - `choices`: `[{"id": "fix", "label": "Fix in PR"}, {"id": "ticket", "label": "Ticket"}, {"id": "decline", "label": "Decline"}]` by default. Use other options when the real decision differs: a finding that resolves itself once another lands gets `[{"id": "after", "label": "Resolve after <x>"}, {"id": "fix", "label": "…"}]`; a design question gets its actual alternatives. 2–6 options, labels ≤ 28 characters.
+  - `recommend`: the id of your recommended option. Never set `choice`: the reader decides.
+  - `detail`, in this order: **Reviewer:** the finding, restated faithfully, with the reviewer's evidence. **My reasoning:** why this recommendation, citing `path:line` and what you checked. **Fix:** the concrete change. **Verify:** the observable check. **Reply I'd post:** for declines and tickets.
+- A `diff` block right after the checklist, from `gitdiff.py`: `--paths` limited to the files that have findings; `--note` naming the head and the scope ("Only the commented files"); one comment per finding, `{"at": "path:line[-end]", "item": "<checklist>/<item>"}`. If a thread sits on a different line than the code that needs the fix, anchor it on the code and say so in `note`. Findings with no line become "Whole change" comments.
+
+**Rules**
+1. Every finding gets options, a recommendation and a reason. Never list a finding without a recommended option.
+2. Recommend from the code, not from the review. Check the claim (read the file, run the grep or test) before you agree or decline.
+3. Mark any assumption you did not verify as *unverified* in `detail`, and make its check required in **Verify**.
+4. The diff shows only the commented files, at the head the findings refer to. After a rebase, regenerate it and check every anchor still lands on the code it describes.
+5. Never pre-answer a decision (`choice`). Pre-tick (`done: true`) only plain checklist steps you finished and verified.
+
+Decision items work anywhere, not only in reviews: whenever you need the reader to choose ("Which account should DEV-02 use?", "Keep or drop the flag?"), give the options as `choices` instead of writing steps like "check if you agree".
+
+**From GitHub threads**
+```sh
+python3 <skill>/scripts/ghthreads.py --repo <owner>/<repo> --pr <n> --checklist t<n> \
+  --comments-out /tmp/c<n>.json > /tmp/items<n>.json
+python3 <skill>/scripts/gitdiff.py --repo <checkout> --base <base> --head <head> --id diff-<n> --title "<repo> #<n>" \
+  --paths <commented files> --comments /tmp/c<n>.json --note "Only the commented files. Head <head>." \
+  --into docs/<topic>/<name>.bluedoc.json --section pr-<n> --after-block 0
+```
+`ghthreads.py` prints the PR's base and head and one decision-item stub per open thread, with the standard options, the reviewer's text in `detail`, and `<<…>>` placeholders for the finding, size, recommendation and reasoning. The build fails while any `<<…>>` placeholder is left, so no finding ships without a recommendation.
+
+## Reader replies
+
+Every checklist item has a comment box for the reader, and decision items take a pick. **Send to agent** in the app bar opens a dialog with an overall message, a preview, **Copy** and, when the page is served by `serve.py`, **Send**. The reply is the **Copy progress** Markdown plus the message: picks, ticks, and each comment quoted under its item.
+
+When you need answers back (any doc with decision items, or a reader asked to review your plan), serve the page instead of handing over a file path:
+```sh
+python3 <skill>/scripts/serve.py docs/<topic>/<name>.html --to <your name> --once
+```
+Run it in the background. It prints `serving http://127.0.0.1:<port>/<name>.html`; give the reader that URL (or add `--open`). When the reader presses Send, it prints the reply Markdown between `--- bluedoc reply` and `--- end reply ---`, writes `<name>.reply.md` and `<name>.reply.json` next to the page, and exits (`--once`). Then:
+1. Act on each pick. A missing pick means "not decided": ask, don't assume your recommendation.
+2. Treat each comment as an instruction about that item; a comment can override the pick.
+3. Rebuild the doc with what changed (`done: true` on finished steps, new findings as items), and serve it again if you need another round.
+
+Without `serve.py` (a page opened from `file://`, or a reader elsewhere), the dialog offers Copy only and tells the reader to paste the text into the chat. `<name>.reply.*` files are the reader's answers: don't commit them unless asked.
 
 ## Writing (CRISP 3)
 
@@ -69,7 +131,7 @@ The linter flags filler words, vague words, sentences over 32 words, and checkli
 ## Output contract
 
 - One self-contained `.html` file: no network access at view time, works from `file://`, prints cleanly.
-- Ticks live in the reader's browser (`localStorage`, keyed by `doc.id`, checklist id, item id). Keep ids stable across edits; rename an id only to reset that progress on purpose. Changing an item's `done` in a new revision overrides any earlier reader tick on it, so set `done: true` when you verified a step yourself.
+- Ticks, picks and comments live in the reader's browser (`localStorage`, keyed by `doc.id`, checklist id, item id). Keep ids stable across edits; rename an id only to reset that progress on purpose. Changing an item's `done` in a new revision overrides any earlier reader tick on it, so set `done: true` when you verified a step yourself.
 - Accessible: every canvas has a text outline (`<details>` under it) listing parts, connections, and flow steps; keyboard: focus a canvas, then `+`/`-`/arrows/`0`/`Esc`, Enter on a node; `prefers-reduced-motion` starts flows paused.
 - Theme follows the reader's system setting; the moon/sun button in the app bar overrides it per browser (`localStorage` key `bluedoc:theme`).
 - A drawing explains; it does not prove. Say so in `state` when the reader could mistake it for runtime evidence.
