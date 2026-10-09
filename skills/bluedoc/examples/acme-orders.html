@@ -168,7 +168,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .bd-send .hd { display: flex; align-items: center; gap: 10px; margin: 0; padding: 16px 14px 4px 20px; }
 .bd-send .hd h3 { flex: 1; margin: 0; font-size: 16px; font-weight: 600; }
 .bd-send .sum { margin-top: 2px; margin-bottom: 12px; font-size: 13.5px; color: var(--fg-muted); }
-.bd-send textarea { width: 100%; min-height: 84px; }
+.bd-send textarea { display: block; box-sizing: border-box; width: calc(100% - 40px); min-height: 84px; }
 .bd-send details { margin-top: 10px; }
 .bd-send summary { cursor: pointer; font-size: 13px; font-weight: 500; color: var(--accent-fg); width: max-content; }
 .bd-send pre { margin: 8px 0 0; max-height: 220px; overflow: auto; padding: 10px 12px; border-radius: 10px; background: var(--inset); font: 12px/1.55 var(--mono); white-space: pre-wrap; }
@@ -179,13 +179,13 @@ button { font: inherit; color: inherit; cursor: pointer; }
 /* the reader's comment on an item */
 .bp-note { display: flex; align-items: flex-start; gap: 8px; }
 .bp-note > .bd-ic { flex: none; width: 15px; height: 15px; margin-top: 8px; color: var(--fg-subtle); }
-.bp-note-ta { flex: 1; min-width: 0; resize: none; overflow: hidden; padding: 6px 10px; border: 0; border-radius: 9px; font: 13.5px/1.5 var(--sans); color: var(--fg);
+.bp-note-ta { flex: 1; min-width: 0; min-height: 34px; resize: none; overflow: hidden; padding: 6px 10px; border: 0; border-radius: 9px; font: 13.5px/1.5 var(--sans); color: var(--fg);
   background: var(--inset); box-shadow: inset 0 0 0 1px var(--line); transition: box-shadow .12s; }
 .bp-note-ta::placeholder { color: var(--fg-subtle); }
 .bp-note-ta:focus { outline: none; background: var(--surface); box-shadow: var(--focus-ring); }
 .bp-note.compact { margin-top: 8px; padding-left: 28px; }
 .bp-note.compact > .bd-ic { display: none; }
-.bp-note.compact .bp-note-ta { font-size: 13px; padding: 5px 9px; }
+.bp-note.compact .bp-note-ta { font-size: 13px; padding: 5px 9px; min-height: 31px; }
 .bp-cl-noteic { display: none; flex: none; margin-top: 4px; color: var(--accent-fg); }
 .bp-cl-noteic .bd-ic { width: 15px; height: 15px; }
 .bp-cl-item.has-note > .bp-cl-row .bp-cl-noteic { display: inline-flex; }
@@ -1227,10 +1227,19 @@ function allChecklistsMd() {
 /* ---------- replies: comments and answers back to the agent ---------- */
 const MSG_KEY = `bp:${docId}:__message`;
 // A comment box bound to one item. Rows and diff cards each get one; they stay in sync.
+// Auto-height needs layout: a box inside a collapsed row measures 0, so fit waits until it is shown.
+const noteFit = 'ResizeObserver' in window ? new ResizeObserver(es => es.forEach(e => e.target._fit && e.target._fit())) : null;
 function noteBox(x, compact) {
   const ta = h('textarea', { class: 'bp-note-ta', rows: 1, placeholder: compact ? 'Comment for the agent…' : 'Comment for the agent (sent with your answers)…',
     'aria-label': 'Comment for the agent on: ' + String(x.it.text || '').replace(/[`*]/g, '') });
-  const fit = () => { ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight + 2, 240) + 'px'; };
+  const fit = () => {
+    if (!ta.offsetWidth) return;   // hidden: keep the CSS min-height, refit when shown
+    if (ta._w === ta.offsetWidth && ta._v === ta.value) return;   // ResizeObserver also fires on our own height change
+    ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight + 2, 240) + 'px';
+    ta._w = ta.offsetWidth; ta._v = ta.value;
+  };
+  ta._fit = fit;
+  if (noteFit) noteFit.observe(ta);
   let t = 0;
   const view = { el: h('div', { class: 'bp-note' + (compact ? ' compact' : '') }, ic('msg'), ta), paint: () => { if (document.activeElement !== ta && ta.value !== x.note) { ta.value = x.note; fit(); } } };
   ta.addEventListener('input', () => { fit(); clearTimeout(t); t = setTimeout(() => x.setNote(ta.value, view), 250); });
@@ -1659,12 +1668,14 @@ function fileNav(d) {
   };
   const paint = () => {
     const s = state();
-    lbl.textContent = n === 1 ? 'comment' : s.cur >= 0 ? `${s.cur + 1} of ${n}` : `${n} comments`;
+    const seen = s.cur >= 0 || s.above.length || s.below.length < n;
+    lbl.textContent = s.cur >= 0 && n > 1 ? `${s.cur + 1} of ${n}` : '';
+    lbl.hidden = !lbl.textContent;
     prev.disabled = !s.above.length && s.cur <= 0;
     next.disabled = !s.below.length && (s.cur < 0 || s.cur >= n - 1);
     up.hidden = !s.above.length; down.hidden = !s.below.length;
-    upTxt.textContent = `${s.above.length} more comment${s.above.length === 1 ? '' : 's'} above`;
-    downTxt.textContent = `${s.below.length} more comment${s.below.length === 1 ? '' : 's'} below`;
+    upTxt.textContent = `${s.above.length} ${s.cur >= 0 || s.below.length ? 'more ' : ''}comment${s.above.length === 1 ? '' : 's'} above`;
+    downTxt.textContent = `${s.below.length} ${seen ? 'more ' : ''}comment${s.below.length === 1 ? '' : 's'} below`;
   };
   prev.onclick = () => { const s = state(); go(s.cur > 0 ? s.cur - 1 : s.above[s.above.length - 1]); };
   next.onclick = () => { const s = state(); go(s.cur >= 0 && s.cur < n - 1 ? s.cur + 1 : s.below[0]); };
