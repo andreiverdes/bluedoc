@@ -94,15 +94,15 @@ Every item has a comment box at the bottom of its open body (and on its diff car
   > Ship it with the test first.
 ```
 
-**Send to agent** (app bar, shown when the page has a checklist) opens a dialog: a count of decisions, ticks and comments, an overall message (stored under `bp:<doc.id>:__message`, printed after the page title in the export), a Markdown preview, **Copy**, and **Send**. Send appears only when the page is served by `scripts/serve.py`: the page probes `GET /__bluedoc/ping` and posts the reply to `/__bluedoc/reply`. `serve.py` prints the Markdown and writes `<name>.reply.md` and `<name>.reply.json` next to the page. The JSON:
+**Send answers** (app bar, shown when the page has a checklist) opens a dialog: a count of decisions, ticks and comments, an overall message (stored under `bp:<doc.id>:__message`, printed after the page title in the export), a Markdown preview, **Copy**, and **Send**. Send appears only when the page is served by `scripts/serve.py` (the page probes `GET /__bluedoc/ping?path=…`); it posts to `/__bluedoc/reply`, and the server writes `<name>.reply.md` and `<name>.reply.json` next to the doc's JSON and queues it for `serve.py wait`. The JSON:
 
 ```json
-{ "doc": "<doc.id>", "rev": "<meta.rev>", "title": "…", "path": "/<name>.html", "at": "<ISO time>", "message": "…",
+{ "kind": "answers", "doc": "<doc.id>", "rev": "<meta.rev>", "title": "…", "path": "/<root>/<path>.bluedoc.json", "at": "<ISO time>", "message": "…",
   "items": [ { "checklist": "t412", "item": "tier-boundary", "text": "…", "choice": "ticket", "recommend": "fix", "note": "…" },
              { "checklist": "local", "item": "doctor", "text": "…", "done": true } ],
   "markdown": "<the Copy progress text>" }
 ```
-Decision items carry `choice` (null when undecided) and `recommend`; plain items carry `done`; `note` appears only when the reader wrote one.
+Decision items carry `choice` (null when undecided) and `recommend`; plain items carry `done`; `note` appears only when the reader wrote one. Change requests from the annotator are a separate message: see "Annotations" below.
 
 ## Diff
 
@@ -150,13 +150,13 @@ Diff the commits the reviewer actually read. If the branch was rebased since, ke
 
 ## Revisions
 
-`build.py doc.bluedoc.json -o doc.html` records the document in `doc.bluedoc.history.json` under its `meta.rev`: a new `rev` appends a revision, the same `rev` replaces the last one. A `rev` that is already an earlier revision is refused with a warning. No `meta.rev`: no history. The history file stores each revision's header and section fields once per revision and each block once across all revisions (by content hash); the page embeds the revisions other than the current one, with blocks the current one still has as references, so a page with ten small edits grows by roughly the edited blocks.
+Every `build.py doc.bluedoc.json` run and every server render records the document in `doc.bluedoc.history.json` under its `meta.rev`: a new `rev` appends a revision, the same `rev` replaces the last one. A `rev` that is already an earlier revision fails the build (and shows as an error page). No `meta.rev`: no history. The history file stores each revision's header and section fields once per revision and each block once across all revisions (by content hash); the page embeds the revisions other than the current one, with blocks the current one still has as references, so a page with ten small edits grows by roughly the edited blocks.
 
-| URL | Shows |
+| URL (the doc's server URL, or a `-o` file) | Shows |
 |---|---|
-| `doc.html` | The current revision. |
-| `doc.html?rev=B` | Revision B, read-only: ticks, picks and comments made there are not stored, and **Send to agent** is hidden. |
-| `doc.html?diff=B` | The current revision with everything that changed since B marked; `?rev=C&diff=B` compares B with C. |
+| `<url>` | The current revision. |
+| `<url>?rev=B` | Revision B, read-only: ticks, picks and comments made there are not stored; **Send answers** and the annotation toolbar are hidden. |
+| `<url>?diff=B` | The current revision with everything that changed since B marked; `?rev=C&diff=B` compares B with C. |
 
 The diff matches sections, checklist items and canvas nodes by `id`, blocks by type and `id` (or position), and table rows by content then first cell. Each change gets a **New** / **Changed** / **Removed** tag; changed things get a **What changed** box with a word-level diff of each changed field (title, subtitle, details, options, recommendation, cells, node labels, flow steps). Removed sections, blocks, items and rows are shown struck through where they were. Canvas parts that are new or changed glow in the drawing. A `diff` block reports range, files and comments that changed.
 
@@ -222,6 +222,30 @@ Lay out children in their own space starting near `col: 0, row: 0`; the runtime 
 
 Each scope (root and every `children`) has its own flows. A token travels each step's edge(s); the caption bar shows step dots, `Step n of m` and the step `label`; `payload` floats next to the token. The toolbar controls the flows of the scope you are looking at; other open scopes loop their first flow. The ‹ / › buttons step through manually. A canvas with no flows at any level hides the caption bar. `prefers-reduced-motion` starts paused. Write step labels as one sentence each: actor, action, object.
 
+## Annotations
+
+The floating toolbar at the bottom of the current revision has four modes: **View** (`V`, default), **Point** (`C`: pin a note on the element under the cursor), **Select** (`T`: note on a selected passage), **Draw** (`D`: freehand drawing with a note). `Esc` returns to View. Notes stay on the page per browser (`bp:<doc.id>:__ann`) until sent; **Request changes · N** opens a dialog with the list, an overall message, a preview, **Copy** and **Send**. Send posts to `/__bluedoc/changes`; the server writes `<name>.changes.md` / `.json` next to the doc and queues it for `serve.py wait`. Sent notes stay dimmed until the reader clears them. The toolbar is absent on `?rev=` and `?diff=`.
+
+```json
+{ "kind": "changes", "doc": "<doc.id>", "rev": "B", "title": "…", "path": "/<root>/<path>.bluedoc.json", "at": "<ISO time>", "message": "…",
+  "annotations": [ { "id": "c…", "type": "pin", "note": "Say which rounding mode.", "rev": "B", "at": "…",
+                     "target": { "key": "item:t412/float-cents", "label": "02 #412 · bulk discount tiers › Findings · #412 › 2. Tiered line totals…", "text": "Tiered line totals are fractional cents …" } },
+                   { "type": "text", "quote": "one-line fixes", "target": { "key": "tldr", … }, … },
+                   { "type": "draw", "target": { "key": "block:trouble/0", … }, "targets": [ { "key": "row:trouble/0/0", … }, { "key": "row:trouble/0/1", … } ], … } ],
+  "markdown": "# Change requests: <title> (rev B), <date>\n\n1. **<label>** (pin)\n   > <text>\n   Change: <note>\n" }
+```
+
+| Key | Points at (JSON) |
+|---|---|
+| `header`, `tldr`, `status` | `title`/`subtitle`, `tldr`, `state`/`links` |
+| `section:<id>`, `heading:<id>`, `lead:<id>` | a section, its `title`, its `lead` |
+| `block:<sectionId>/<i>` | `sections[id].blocks[i]` |
+| `block:<checklist>/<item>/<k>` | `blocks[k]` inside that checklist item |
+| `item:<checklist>/<item>` | a checklist item |
+| `row:<blockPath>/<r>`, `card:<blockPath>/<i>`, `para:<blockPath>/<i>` | a table row, a card, a paragraph or list item of that block |
+| `node:<canvasId>/<nodeKey>` | a canvas node (`nodeKey` nests with `/`) |
+| `line:<diffId>/<path>:<n>` (`o<n>` = removed line), `comment:<diffId>/<i>` | a diff line, a review comment |
+
 ## Automation API
 
 The built page exposes `window.BP`:
@@ -241,3 +265,7 @@ The built page exposes `window.BP`:
 | `BP.diffState('pr-412')` | `{file, comment, comments, cards, lines, ticked, linked}` |
 | `BP.revisions()` | `[{rev, date, current, shown, changes}]`, oldest first. |
 | `BP.compare()` | With `?diff=`: `{from, to, changes: [{kind: 'add'|'mod'|'del', label}]}` in page order; else `null`. |
+| `BP.annotations()` | The reader's annotations, sent and unsent. |
+| `BP.changesPayload()` | The change-request JSON that **Request changes → Send** posts (unsent annotations). |
+| `BP.annotate({type, key, note, quote?})` | Adds an annotation, as the toolbar would. `null` on `?rev=` / `?diff=`. |
+| `BP.setMode('view'|'point'|'select'|'draw')` | Switches the toolbar mode. |

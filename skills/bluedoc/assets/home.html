@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>All docs · bluedoc</title>
+<style>
+/*__BLUEDOC_CSS__*/
+/* home page: the template's tokens and components above, plus this layout */
+.hm { max-width: 1040px; margin: 0 auto; padding: 40px 20px 96px; }
+.hm-head h1 { margin: 0; font: 650 30px/1.2 var(--sans); letter-spacing: -.02em; }
+.hm-head .sub { margin: 6px 0 0; color: var(--fg-muted); font-size: 14.5px; }
+.hm-tools { position: sticky; top: var(--bar-h); z-index: 20; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 22px -20px 8px; padding: 10px 20px; background: var(--canvas); }
+.hm-search { flex: 1 1 320px; display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 12px; border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-1), inset 0 0 0 1px var(--line); }
+.hm-search:focus-within { box-shadow: var(--focus-ring); }
+.hm-search .bd-ic { color: var(--fg-subtle); }
+.hm-search input { flex: 1; min-width: 0; height: 100%; border: 0; outline: none; background: none; font: 15px var(--sans); color: var(--fg); }
+.hm-search kbd { font: 500 11px var(--mono); color: var(--fg-subtle); padding: 2px 6px; border-radius: 5px; box-shadow: inset 0 0 0 1px var(--line-strong); }
+.hm-filters { display: inline-flex; padding: 2px; gap: 2px; border-radius: 10px; background: var(--inset); box-shadow: inset 0 0 0 1px var(--line); }
+.hm-filters button { height: 30px; padding: 0 10px; border: 0; border-radius: 8px; background: none; font-size: 13px; font-weight: 500; color: var(--fg-muted); white-space: nowrap; }
+.hm-filters button:hover { color: var(--fg); }
+.hm-filters button[aria-pressed="true"] { background: linear-gradient(180deg, var(--key-top), var(--key-bot)); color: var(--fg); box-shadow: var(--shadow-key); }
+.hm-filters .n { margin-left: 5px; font: 500 11px var(--mono); color: var(--fg-subtle); }
+.hm-sort { height: 34px; border: 0; border-radius: 9px; padding: 0 8px; font: 500 13px var(--sans); color: var(--fg-muted); background: var(--inset); box-shadow: inset 0 0 0 1px var(--line); }
+.hm-root { margin-top: 30px; }
+.hm-root > h2 { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 10px; margin: 0 0 10px; font: 600 13px/1.4 var(--sans); letter-spacing: .06em; text-transform: uppercase; color: var(--fg-subtle); }
+.hm-root > h2 .p { font: 400 12px var(--mono); letter-spacing: 0; text-transform: none; overflow-wrap: anywhere; }
+.hm-dir { margin: 0 0 12px; background: var(--surface); border-radius: 14px; box-shadow: var(--shadow-1); overflow: hidden; }
+.hm-dir > summary { display: flex; align-items: center; gap: 8px; padding: 11px 14px; cursor: pointer; list-style: none; font: 600 14px var(--sans); }
+.hm-dir > summary::-webkit-details-marker { display: none; }
+.hm-dir > summary .bd-ic { color: var(--fg-subtle); }
+.hm-dir > summary .chev { transition: transform .15s var(--ease); }
+.hm-dir[open] > summary .chev { transform: rotate(90deg); }
+.hm-dir > summary .c { font: 500 12px var(--mono); color: var(--fg-subtle); }
+.hm-dir > summary .when { margin-left: auto; font-size: 12.5px; font-weight: 400; color: var(--fg-subtle); }
+.hm-list { margin: 0; padding: 0 0 4px; list-style: none; border-top: 1px solid var(--line-soft); }
+.hm-doc + .hm-doc { border-top: 1px solid var(--line-soft); }
+.hm-doc a { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 16px; padding: 11px 14px 11px 38px; color: inherit; text-decoration: none; }
+.hm-doc a:hover { background: var(--hover); }
+.hm-doc a:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); border-radius: 0; }
+.hm-doc .t { font: 600 15px/1.4 var(--sans); color: var(--fg); min-width: 0; }
+.hm-doc a:hover .t { color: var(--accent-fg); }
+.hm-doc .s { grid-column: 1; font-size: 13.5px; line-height: 1.5; color: var(--fg-muted); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.hm-doc .m { grid-column: 1; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin-top: 3px; font-size: 12.5px; color: var(--fg-subtle); }
+.hm-doc .m code { font-size: 11.5px; }
+.hm-doc .b { grid-column: 2; grid-row: 1 / span 3; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.hm-doc .prog { display: flex; align-items: center; gap: 8px; font: 500 12px var(--mono); color: var(--fg-muted); white-space: nowrap; }
+.hm-doc .prog .bp-bar { width: 64px; }
+.hm-doc mark { background: color-mix(in oklch, var(--warn) 30%, transparent); color: inherit; border-radius: 3px; padding: 0 1px; }
+.hm-empty { margin-top: 40px; padding: 28px; text-align: center; color: var(--fg-muted); background: var(--surface); border-radius: 14px; box-shadow: var(--shadow-1); }
+.hm-empty code { white-space: nowrap; }
+@media (max-width: 640px) {
+  .hm { padding-top: 24px; }
+  .hm-doc a { grid-template-columns: minmax(0, 1fr); padding-left: 14px; }
+  .hm-doc .b { grid-column: 1; grid-row: auto; flex-direction: row; flex-wrap: wrap; align-items: center; margin-top: 4px; }
+  .hm-dir > summary .when { display: none; }
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+(() => {
+'use strict';
+const $ = (q, r = document) => r.querySelector(q);
+function h(tag, attrs, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v == null || v === false) continue;
+    if (k === 'html') e.innerHTML = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else e.setAttribute(k, v === true ? '' : v);
+  }
+  for (const c of kids.flat(Infinity)) if (c != null && c !== false) e.append(c.nodeType ? c : document.createTextNode(c));
+  return e;
+}
+const ICONS = {
+  search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
+  folder: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/>',
+  chev: '<path d="m9 18 6-6-6-6"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M6.3 17.7l-1.4 1.4M19.1 4.9l-1.4 1.4"/>',
+  moon: '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
+};
+const ic = (n, cls) => h('span', { html: `<svg class="bd-ic ${cls || ''}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[n]}</svg>` }).firstChild;
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+// inline md for titles and subtitles: `code` and **bold**, nothing else
+const inline = s => esc(s).replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>').replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+const plain = s => String(s ?? '').replace(/[`*]/g, '').replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+function ago(t) {
+  const s = Date.now() / 1000 - t;
+  if (s < 60) return 'just now';
+  if (s < 3600) return `${Math.round(s / 60)} min ago`;
+  if (s < 86400) return `${Math.round(s / 3600)} h ago`;
+  if (s < 86400 * 30) return `${Math.round(s / 86400)} d ago`;
+  return new Date(t * 1000).toISOString().slice(0, 10);
+}
+
+/* theme: same key and behaviour as the doc pages */
+const THEME_KEY = 'bluedoc:theme', root = document.documentElement, darkMQ = matchMedia('(prefers-color-scheme: dark)');
+const store = { get: k => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch {} } };
+const setTheme = t => { if (t) root.dataset.theme = t; else delete root.dataset.theme; };
+setTheme(store.get(THEME_KEY));
+const isDark = () => (root.dataset.theme || (darkMQ.matches ? 'dark' : 'light')) === 'dark';
+const themeBtn = h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Switch light or dark theme', onclick: () => { const t = isDark() ? 'light' : 'dark'; setTheme(t); store.set(THEME_KEY, t); paintTheme(); } });
+const paintTheme = () => { themeBtn.textContent = ''; themeBtn.append(ic(isDark() ? 'sun' : 'moon')); };
+darkMQ.addEventListener?.('change', paintTheme); paintTheme();
+
+/* reader progress, read from the same localStorage the doc pages write (same origin) */
+function progress(d) {
+  let dec = 0, decided = 0, steps = 0, done = 0;
+  for (const [cl, id, isDec, author, choiceIds] of d.items || []) {
+    const s = store.get(`bp:${d.id || 'doc'}:${cl}:${id}`);
+    if (isDec) {
+      dec++;
+      let pick = author || '';
+      if (s != null && s.startsWith('=')) { const bar = s.indexOf('|'); const c = s.slice(1, bar); if (s.slice(bar + 1) === author && (!c || (choiceIds || []).includes(c))) pick = c; }
+      if (pick) decided++;
+    } else {
+      steps++;
+      let on = author === '1';
+      if (s != null && !s.startsWith('=') && (s.length === 2 ? s[1] === author : !(s === '0' && author === '1'))) on = s[0] === '1';
+      if (on) done++;
+    }
+  }
+  return { dec, decided, steps, done };
+}
+function status(d) {
+  const sent = Math.max(d.answers ? d.answers.at : 0, d.changes ? d.changes.at : 0);
+  const p = progress(d);
+  return { p, waitingAgent: sent > d.mtime, needsYou: !d.errors && sent <= d.mtime && p.dec > p.decided, errors: d.errors > 0 };
+}
+
+/* layout */
+const bar = h('header', { class: 'bd-bar' },
+  h('a', { class: 'bd-mark', href: '/', 'aria-label': 'bluedoc, all docs', html:
+    '<svg viewBox="0 0 22 22" aria-hidden="true"><rect width="22" height="22" rx="6" fill="#0b2a4f"/><path d="M0 7.5h22M0 14.5h22M7.5 0v22M14.5 0v22" stroke="#5fd4ff" stroke-opacity=".18"/>' +
+    '<rect x="4.5" y="5" width="7" height="5" rx="1.2" fill="none" stroke="#d6e9ff" stroke-width="1.3"/><rect x="10.5" y="12" width="7" height="5" rx="1.2" fill="none" stroke="#5fd4ff" stroke-width="1.3"/>' +
+    '<path d="M8 10v4.5h2.5" fill="none" stroke="#5fd4ff" stroke-width="1.3" stroke-linecap="round"/></svg><span>blue<b>doc</b></span>' }),
+  h('div', { class: 'bd-crumb' }, h('span', { class: 'sep' }, '/'), h('span', { class: 't' }, 'All docs')),
+  h('div', { class: 'bd-bar-r' }, themeBtn));
+const sub = h('p', { class: 'sub' });
+const input = h('input', { type: 'search', placeholder: 'Search titles, sections, findings, paths', 'aria-label': 'Search docs', autocomplete: 'off', spellcheck: 'false' });
+const FILTERS = [['all', 'All'], ['needs', 'Needs you'], ['waiting', 'Waiting on agent'], ['errors', "Doesn't build"]];
+const QP = new URLSearchParams(location.search);
+let filter = FILTERS.some(f => f[0] === QP.get('f')) ? QP.get('f') : 'all';
+let sort = QP.get('sort') === 'name' ? 'name' : 'recent';
+input.value = QP.get('q') || '';
+const filterBtns = FILTERS.map(([id, label]) => h('button', { type: 'button', 'data-f': id, 'aria-pressed': String(filter === id), onclick: () => { filter = id; paint(); } }, label, h('span', { class: 'n' })));
+const sortSel = h('select', { class: 'hm-sort', 'aria-label': 'Sort', onchange: e => { sort = e.target.value; paint(); } },
+  h('option', { value: 'recent', selected: sort === 'recent' }, 'Recent first'), h('option', { value: 'name', selected: sort === 'name' }, 'By name'));
+const list = h('div', { class: 'hm-roots' });
+document.getElementById('app').append(bar, h('main', { class: 'hm' },
+  h('div', { class: 'hm-head' }, h('h1', {}, 'bluedocs'), sub),
+  h('div', { class: 'hm-tools' }, h('label', { class: 'hm-search' }, ic('search'), input, h('kbd', {}, '/')), h('div', { class: 'hm-filters', role: 'group', 'aria-label': 'Filter' }, filterBtns), sortSel),
+  list));
+
+/* search: every term must match; title and path weigh more than body text */
+function match(d, terms) {
+  if (!terms.length) return { score: 0, snip: '' };
+  const fields = [[plain(d.title), 10], [d.path, 6], [plain(d.subtitle), 4], [(d.sections || []).join(' '), 3], [d.kind + ' ' + d.org, 2], [plain(d.tldr) + ' ' + plain(d.text), 1]];
+  let score = 0;
+  for (const t of terms) {
+    let hit = 0;
+    for (const [f, w] of fields) if (f && f.toLowerCase().includes(t)) hit += w;
+    if (!hit) return null;
+    score += hit;
+  }
+  // a snippet of body text around the first term the title doesn't already show
+  const body = plain(d.tldr) + ' ' + plain(d.text), low = body.toLowerCase();
+  const t = terms.find(t => !plain(d.title).toLowerCase().includes(t)) || terms[0];
+  const i = low.indexOf(t);
+  let snip = '';
+  if (i >= 0) {
+    const a = Math.max(0, body.lastIndexOf(' ', Math.max(0, i - 70)) + 1), b = Math.min(body.length, i + t.length + 110);
+    snip = (a > 0 ? '…' : '') + body.slice(a, b) + (b < body.length ? '…' : '');
+  }
+  return { score, snip };
+}
+const highlight = (html, terms) => terms.reduce((s, t) => s.replace(new RegExp(`(?![^<]*>)(${t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'), '<mark>$1</mark>'), html);
+
+let DATA = null, lastJson = '';
+function paint() {
+  if (!DATA) return;
+  const terms = input.value.toLowerCase().split(/\s+/).filter(Boolean);
+  const q = new URLSearchParams();
+  if (input.value) q.set('q', input.value);
+  if (filter !== 'all') q.set('f', filter);
+  if (sort !== 'recent') q.set('sort', sort);
+  history.replaceState(null, '', location.pathname + (q.toString() ? '?' + q : ''));
+  filterBtns.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.f === filter)));
+  const all = DATA.roots.flatMap(r => r.docs.map(d => ({ r, d, st: status(d) })));
+  const counts = { all: all.length, needs: all.filter(x => x.st.needsYou).length, waiting: all.filter(x => x.st.waitingAgent).length, errors: all.filter(x => x.st.errors).length };
+  filterBtns.forEach(b => { b.querySelector('.n').textContent = counts[b.dataset.f]; b.hidden = b.dataset.f === 'errors' && !counts.errors && filter !== 'errors'; });
+  const folders = new Set(all.map(x => x.r.slug + '/' + x.d.path.split('/').slice(0, -1).join('/')));
+  sub.textContent = `${all.length} doc${all.length === 1 ? '' : 's'} in ${folders.size} folder${folders.size === 1 ? '' : 's'}. Updates as agents write them.`;
+  list.textContent = '';
+  if (!DATA.roots.length) {
+    list.append(h('div', { class: 'hm-empty', html: 'No folders yet. An agent registers one when it runs <code>serve.py open &lt;doc&gt;.bluedoc.json</code>; add one yourself with <code>serve.py add &lt;folder&gt;</code>.' }));
+    return;
+  }
+  let shown = 0;
+  for (const r of DATA.roots) {
+    const rows = [];
+    for (const d of r.docs) {
+      const st = status(d);
+      if (filter === 'needs' && !st.needsYou || filter === 'waiting' && !st.waitingAgent || filter === 'errors' && !st.errors) continue;
+      const m = match(d, terms);
+      if (!m) continue;
+      rows.push({ d, st, m, dir: d.path.split('/').slice(0, -1).join('/') });
+    }
+    if (!rows.length) continue;
+    const byDir = new Map();
+    for (const x of rows) (byDir.get(x.dir) || byDir.set(x.dir, []).get(x.dir)).push(x);
+    const cmp = (a, b) => terms.length ? b.m.score - a.m.score : sort === 'name' ? plain(a.d.title).localeCompare(plain(b.d.title)) : b.d.mtime - a.d.mtime;
+    const dirs = [...byDir.entries()].map(([dir, xs]) => ({ dir, xs: xs.sort(cmp), top: Math.max(...xs.map(x => x.d.mtime)), best: Math.max(...xs.map(x => x.m.score)) }))
+      .sort((a, b) => terms.length ? b.best - a.best : sort === 'name' ? a.dir.localeCompare(b.dir) : b.top - a.top);
+    const sec = h('section', { class: 'hm-root' }, h('h2', {}, r.slug, h('span', { class: 'p' }, r.path)));
+    for (const { dir, xs, top } of dirs) {
+      const det = h('details', { class: 'hm-dir', open: true },
+        h('summary', {}, ic('chev', 'chev'), ic('folder'), h('span', {}, dir || '(top level)'), h('span', { class: 'c' }, String(xs.length)), h('span', { class: 'when' }, 'updated ' + ago(top))),
+        h('ul', { class: 'hm-list' }, xs.map(docRow(terms))));
+      sec.append(det);
+      shown += xs.length;
+    }
+    list.append(sec);
+  }
+  if (!shown) list.append(h('div', { class: 'hm-empty' }, terms.length ? `Nothing matches "${input.value}".` : 'No docs in this view.'));
+}
+const docRow = terms => ({ d, st, m }) => {
+  const p = st.p, badges = [];
+  if (d.errors) badges.push(h('span', { class: 'bp-chip risk', title: d.firstError }, "doesn't build"));
+  if (st.waitingAgent) badges.push(h('span', { class: 'bp-chip info' }, (d.changes && (!d.answers || d.changes.at >= d.answers.at)) ? 'changes requested' : 'answers sent'));
+  else if (st.needsYou) badges.push(h('span', { class: 'bp-chip warn' }, `${p.dec - p.decided} to decide`));
+  const total = p.dec + p.steps, did = p.decided + p.done;
+  const prog = total ? h('span', { class: 'prog', title: `${p.decided}/${p.dec} decided, ${p.done}/${p.steps} steps done` },
+    h('span', { class: 'bp-bar' + (did === total ? ' full' : '') }, h('i', { style: `width:${total ? did / total * 100 : 0}%` })), `${did}/${total}`) : null;
+  const subHtml = m.snip ? highlight(esc(m.snip), terms) : highlight(inline(d.subtitle || plain(d.tldr).slice(0, 220)), terms);
+  return h('li', { class: 'hm-doc' }, h('a', { href: d.url },
+    h('span', { class: 't', html: highlight(inline(d.title), terms) }),
+    h('span', { class: 's', html: subHtml }),
+    h('span', { class: 'm' }, [d.kind, d.rev && `Rev ${d.rev}${d.revs > 1 ? ` of ${d.revs}` : ''}`, d.date].filter(Boolean).join(' · '),
+      h('span', {}, 'edited ' + ago(d.mtime)), h('code', { html: highlight(esc(d.path.split('/').pop()), terms) })),
+    h('span', { class: 'b' }, badges, prog)));
+};
+
+async function load() {
+  try {
+    const r = await fetch('/__bluedoc/index.json', { cache: 'no-store' });
+    const txt = await r.text();
+    if (txt === lastJson) return;
+    lastJson = txt; DATA = JSON.parse(txt); paint();
+  } catch { /* server restarting: keep the last list */ }
+}
+let t = 0;
+input.addEventListener('input', () => { clearTimeout(t); t = setTimeout(paint, 80); });
+input.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { input.value = ''; paint(); }
+  else if (e.key === 'Enter') { const a = $('.hm-doc a'); if (a) location.href = a.href; }
+  else if (e.key === 'ArrowDown') { const a = $('.hm-doc a'); if (a) { e.preventDefault(); a.focus(); } }
+});
+list.addEventListener('keydown', e => {
+  if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+  const links = [...list.querySelectorAll('.hm-doc a')], i = links.indexOf(document.activeElement);
+  if (i < 0) return;
+  e.preventDefault();
+  if (e.key === 'ArrowUp' && i === 0) input.focus(); else links[Math.max(0, Math.min(links.length - 1, i + (e.key === 'ArrowDown' ? 1 : -1)))].focus();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === '/' && !/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) { e.preventDefault(); input.focus(); input.select(); }
+});
+// progress lives in this browser's storage: repaint when another tab changes it or this tab comes back
+addEventListener('storage', paint);
+addEventListener('pageshow', paint);
+load();
+setInterval(() => { if (document.visibilityState === 'visible') load(); }, 4000);
+})();
+</script>
+</body>
+</html>

@@ -1,16 +1,20 @@
 #!/usr/bin/env python3
-"""Build a bluedoc HTML page from a JSON document.
+"""Validate a bluedoc JSON document, record its revision, optionally write standalone HTML.
 
 Usage:
-  build.py doc.json -o out.html     validate, lint, record the revision, write HTML
+  build.py doc.json                 validate, lint, record the revision (view it with serve.py)
+  build.py doc.json -o out.html     same, plus a standalone HTML file for sharing offline
   build.py doc.json --check         validate and lint only
-  build.py doc.json -o out.html --strict   treat lint warnings as errors
+  build.py doc.json --strict        treat lint warnings as errors
   build.py doc.json --show-rev B    print revision B, rebuilt from the history, as JSON
 
-Revisions: every build that writes HTML records the document under its `meta.rev` in
+serve.py renders the JSON with assets/template.html on every request, so normal work needs no
+HTML file at all: write the JSON, run build.py, open the serve.py URL.
+
+Revisions: every build (and every serve.py render) records the document under its `meta.rev` in
 <doc>.history.json next to the JSON (doc.bluedoc.json -> doc.bluedoc.history.json). A new rev
-appends; rebuilding the same rev replaces that entry. The page embeds the history, so readers
-can switch revisions and compare two. --no-history builds without reading or writing it.
+appends; the same rev replaces that entry. The page embeds the history, so readers can switch
+revisions and compare two. --no-history skips reading and writing it.
 
 Exit codes: 0 ok, 1 validation errors (or warnings with --strict), 2 usage/IO error.
 Python 3.9+ standard library only.
@@ -555,11 +559,36 @@ def build(doc: dict, template: str, history: dict | None = None) -> str:
             .replace("__BLUEDOC_DOC__", _script_json(doc)))
 
 
+class HistoryError(Exception):
+    pass
+
+
+def sync_history(doc_path: Path, doc: dict) -> tuple[dict | None, str]:
+    """Record doc in its history file under meta.rev; returns (history or None, log line).
+    Raises HistoryError when meta.rev names an earlier revision or the file is unreadable."""
+    if not (doc.get("meta") or {}).get("rev"):
+        return None, "history: off (set meta.rev to keep revisions)"
+    hpath = history_path(doc_path)
+    try:
+        history = load_history(hpath)
+    except (OSError, ValueError, json.JSONDecodeError) as e:
+        raise HistoryError(f"cannot read {hpath}: {e}") from e
+    before = _canon(history)
+    log = record(history, doc)
+    if log.startswith("ERROR"):
+        raise HistoryError(log)
+    if _canon(history) != before:
+        tmp = hpath.with_name(hpath.name + ".tmp")
+        tmp.write_text(json.dumps(history, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+        tmp.replace(hpath)
+    return history, log
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("doc", type=Path)
-    ap.add_argument("-o", "--out", type=Path)
-    ap.add_argument("--check", action="store_true", help="validate and lint only")
+    ap.add_argument("-o", "--out", type=Path, help="also write a standalone HTML file (for sharing; serve.py renders the JSON directly)")
+    ap.add_argument("--check", action="store_true", help="validate and lint only; don't touch the history")
     ap.add_argument("--strict", action="store_true", help="fail on lint warnings")
     ap.add_argument("--template", type=Path, default=TEMPLATE)
     ap.add_argument("--no-history", action="store_true", help="don't read or write <doc>.history.json")
@@ -591,29 +620,20 @@ def main() -> int:
         return 1
     if a.check:
         return 0
-    if not a.out:
-        print("pass -o OUT.html or --check", file=sys.stderr)
-        return 2
     history = None
     if not a.no_history:
-        if not (doc.get("meta") or {}).get("rev"):
-            print("history: off (set meta.rev to keep revisions)", file=sys.stderr)
-        else:
-            try:
-                history = load_history(hpath)
-            except (OSError, ValueError, json.JSONDecodeError) as e:
-                print(f"cannot read {hpath}: {e}", file=sys.stderr)
-                return 2
-            before = _canon(history)
-            log = record(history, doc)
-            print(log, file=sys.stderr)
-            if log.startswith("ERROR"):
-                return 1
-            if _canon(history) != before:
-                hpath.write_text(json.dumps(history, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
-    a.out.parent.mkdir(parents=True, exist_ok=True)
-    a.out.write_text(build(doc, a.template.read_text(encoding="utf-8"), history), encoding="utf-8")
-    print(f"wrote {a.out} ({a.out.stat().st_size // 1024} KB)", file=sys.stderr)
+        try:
+            history, log = sync_history(a.doc, doc)
+        except HistoryError as e:
+            print(e, file=sys.stderr)
+            return 1
+        print(log, file=sys.stderr)
+    if a.out:
+        a.out.parent.mkdir(parents=True, exist_ok=True)
+        a.out.write_text(build(doc, a.template.read_text(encoding="utf-8"), history), encoding="utf-8")
+        print(f"wrote {a.out} ({a.out.stat().st_size // 1024} KB)", file=sys.stderr)
+    else:
+        print(f"view: python3 {HERE / 'serve.py'} open {a.doc}", file=sys.stderr)
     return 0
 
 

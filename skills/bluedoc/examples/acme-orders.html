@@ -420,6 +420,98 @@ td.bd-cell-mod { background: color-mix(in oklch, var(--warn-tint) 70%, transpare
 .bp-toast::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--ok); }
 .bp-toast.on { opacity: 1; transform: translate(-50%, 0); }
 
+/* change requests: bottom toolbar (Figma-style), marks, hover outline, popover, dialog */
+.bd-home { display: inline-flex; align-items: center; gap: 6px; flex: none; height: 28px; padding: 0 8px; margin-left: -4px; border-radius: 8px; font-size: 13px; font-weight: 500;
+  color: var(--fg-muted); text-decoration: none; }
+.bd-home:hover { background: var(--hover); color: var(--fg); }
+.bd-home .bd-ic { width: 15px; height: 15px; }
+@media (max-width: 900px) { .bd-home .l { display: none; } }
+.bd-anntb { position: fixed; left: 50%; bottom: 16px; z-index: 50; transform: translateX(-50%); display: flex; align-items: center; gap: 2px; padding: 5px; border-radius: 16px;
+  background: color-mix(in oklch, var(--surface) 92%, transparent); -webkit-backdrop-filter: saturate(1.5) blur(14px); backdrop-filter: saturate(1.5) blur(14px); box-shadow: var(--shadow-3); }
+.bd-anntb .m { display: inline-grid; place-items: center; width: 36px; height: 36px; padding: 0; border: 0; border-radius: 11px; background: none; color: var(--fg-muted); transition: background .12s, color .12s; }
+.bd-anntb .m:hover { color: var(--fg); background: var(--hover); }
+.bd-anntb .m[data-m][aria-pressed="true"] { color: var(--accent-fg); background: var(--accent-tint); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--accent) 30%, transparent); }
+.bd-anntb .m .bd-ic { width: 18px; height: 18px; }
+.bd-anntb .sw { display: inline-flex; align-items: center; gap: 4px; padding: 0 6px 0 4px; }
+.bd-anntb .sw[hidden] { display: none; }
+.bd-anntb .sw button { width: 18px; height: 18px; padding: 0; border: 0; border-radius: 50%; background: var(--pen); box-shadow: inset 0 0 0 1px oklch(0% 0 0 / .15); }
+.bd-anntb .sw button[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--surface), 0 0 0 3.5px var(--pen); }
+.bd-anntb .dv { width: 1px; height: 22px; margin: 0 5px; background: var(--line-strong); flex: none; }
+.bd-anntb .go { height: 36px; padding: 0 14px 0 12px; border-radius: 11px; font-size: 13px; }
+.bd-anntb .go .bd-ic { width: 16px; height: 16px; }
+.bd-anntb .go .n { font-variant-numeric: tabular-nums; }
+.bd-anntb .go:disabled, .bd-anntb .go:disabled:hover { cursor: default; color: var(--fg-subtle); background: var(--inset); box-shadow: inset 0 0 0 1px var(--line); }
+@media (max-width: 600px) { .bd-anntb { bottom: 10px; } .bd-anntb .go .l { display: none; } .bd-anntb .go { padding: 0 12px 0 10px; } }
+html.bd-ann-on .bd-shell { padding-bottom: 150px; }
+html.bd-ann-on .bp-toast { bottom: 80px; }
+@media (max-width: 600px) { html.bd-ann-on .bp-toast { bottom: 70px; } }
+.bd-pen-risk { --pen: var(--risk); } .bd-pen-accent { --pen: var(--accent); } .bd-pen-warn { --pen: var(--warn); } .bd-pen-ok { --pen: var(--ok); }
+html.bd-ann-m-point .bd-shell :not(.bp-side, .bp-side *), html.bd-ann-m-point .bd-shell { cursor: crosshair !important; }
+html.bd-ann-m-select .bd-shell :not(.bp-side, .bp-side *), html.bd-ann-m-select .bd-shell { cursor: text !important; }
+html.bd-ann-m-select .bp-cl-head { user-select: text; -webkit-user-select: text; }
+.bd-ann-layer { position: fixed; inset: 0; z-index: 35; overflow: hidden; pointer-events: none; }
+.bd-ann-layer[hidden], .bd-ann-cap[hidden], .bd-ann-hov[hidden], .bd-ann-pop[hidden] { display: none; }
+.bd-ann-pin { position: absolute; left: 0; top: -26px; display: grid; place-items: center; width: 26px; height: 26px; padding: 0; border: 0; border-radius: 13px 13px 13px 3px;
+  font: 650 12px/1 var(--sans); color: #fff; background: var(--pen, var(--accent)); box-shadow: 0 0 0 2px var(--surface), 0 2px 8px oklch(20% 0.05 255 / .3);
+  pointer-events: auto; cursor: pointer !important; }
+.bd-ann-pin[hidden] { display: none; }
+.bd-ann-pin.sent { background: var(--todo); opacity: .6; }
+.bd-ann-pin.away { color: var(--pen, var(--accent-fg)); background: var(--surface); box-shadow: inset 0 0 0 1.5px var(--pen, var(--accent)), 0 2px 8px oklch(20% 0.05 255 / .25); }
+.bd-ann-pin.sent.away { color: var(--fg-muted); box-shadow: inset 0 0 0 1.5px var(--todo); }
+.bd-ann-pin.old::after { content: ""; position: absolute; right: -3px; top: -3px; width: 9px; height: 9px; border-radius: 50%; background: var(--warn); box-shadow: 0 0 0 2px var(--surface); }
+.bd-ann-pin.on { box-shadow: 0 0 0 2px var(--surface), 0 0 0 5px color-mix(in oklch, var(--pen, var(--accent)) 40%, transparent); }
+.bd-ann-pin.flash { animation: bd-ann-flash 1.3s var(--ease); }
+@keyframes bd-ann-flash { 0%, 45% { box-shadow: 0 0 0 2px var(--surface), 0 0 0 11px color-mix(in oklch, var(--pen, var(--accent)) 45%, transparent); } }
+.bd-ann-ink { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
+.bd-ann-ink path, .bd-ann-cap path { fill: none; stroke: var(--pen, var(--risk)); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.bd-ann-ink.sent { opacity: .35; }
+.bd-ann-cap { position: fixed; inset: 0; z-index: 34; touch-action: none; cursor: crosshair; }
+.bd-ann-cap svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.bd-ann-hov { position: fixed; left: 0; top: 0; z-index: 36; pointer-events: none; border-radius: 8px; box-shadow: 0 0 0 2px var(--accent); background: color-mix(in oklch, var(--accent) 7%, transparent); }
+.bd-ann-hov b { position: absolute; left: -2px; bottom: calc(100% + 5px); max-width: min(340px, 80vw); padding: 3px 8px; border-radius: 6px; background: var(--accent); color: #fff;
+  font: 600 11.5px/1.5 var(--sans); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bd-ann-hov.in b { bottom: auto; top: 5px; left: 5px; }
+::highlight(bd-ann) { background-color: light-dark(oklch(91% 0.11 92), oklch(48% 0.09 85)); }
+::highlight(bd-ann-on) { background-color: light-dark(oklch(86% 0.08 254), oklch(45% 0.12 254)); }
+::highlight(bd-ann-sent) { background-color: light-dark(oklch(92% 0.01 264), oklch(32% 0.01 264)); }
+.bd-ann-pop { position: fixed; left: 0; top: 0; z-index: 56; width: min(320px, calc(100vw - 24px)); padding: 10px 10px 10px 12px; border-radius: 14px; background: var(--surface); color: var(--fg);
+  box-shadow: var(--shadow-3); font-size: 13.5px; }
+.bd-ann-pop .ph { display: flex; align-items: center; gap: 8px; min-width: 0; margin-bottom: 8px; }
+.bd-ann-pop .ph > .bd-ic { color: var(--fg-subtle); }
+.bd-ann-pop .ph .lb { flex: 1; min-width: 0; font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bd-ann-pop .ph .bd-ibtn { width: 26px; height: 26px; }
+.bd-ann-pop .pi { display: grid; gap: 4px; margin-bottom: 8px; font-size: 12.5px; color: var(--fg-muted); }
+.bd-ann-pop .pi:empty { display: none; }
+.bd-ann-pop q, .bd-chgs .cr q { display: block; quotes: none; padding-left: 8px; border-left: 2px solid var(--warn); color: var(--fg-muted); overflow-wrap: anywhere; }
+.bd-ann-pop .old, .bd-chgs .cr .old { color: var(--warn-fg); }
+.bd-ann-pop .bp-note-ta { display: block; width: 100%; min-height: 72px; resize: vertical; overflow: auto; }
+.bd-ann-pop .pf { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
+.bd-ann-pop .pf .sp, .bd-chgs .ft .sp { flex: 1; }
+.bd-ann-pop .pf .bp-btn { height: 28px; }
+.bd-ann-pop .bp-btn:disabled, .bd-chgs .ft .bp-btn:disabled { opacity: .5; cursor: default; }
+.bd-ann-num { display: inline-grid; place-items: center; flex: none; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 10px 10px 10px 3px; font: 650 11px/1 var(--sans);
+  color: #fff; background: var(--pen, var(--accent)); }
+.bd-chgs[open] { display: flex; flex-direction: column; }
+.bd-chgs[open] > * { flex: none; }
+.bd-chgs .cr-list { flex: 0 1 auto; min-height: 64px; list-style: none; margin: 0 20px 12px; padding: 0; overflow: auto; border-radius: 12px; box-shadow: inset 0 0 0 1px var(--line); }
+.bd-chgs pre { max-height: 160px; }
+.bd-chgs .cr { display: flex; align-items: flex-start; gap: 2px; padding: 3px 6px 3px 3px; border-top: 1px solid var(--line-soft); }
+.bd-chgs .cr:first-child, .bd-chgs .grp + .cr { border-top: 0; }
+.bd-chgs .cr-go { flex: 1; min-width: 0; display: grid; grid-template-columns: auto 16px minmax(0, 1fr); align-items: start; gap: 8px; padding: 8px; border: 0; border-radius: 9px; background: none; text-align: left; }
+.bd-chgs .cr-go:hover { background: var(--hover); }
+.bd-chgs .cr-go > .bd-ic { margin-top: 2px; color: var(--fg-subtle); }
+.bd-chgs .cr .tx { display: grid; gap: 3px; min-width: 0; font-size: 13.5px; line-height: 1.45; }
+.bd-chgs .cr .tx b { font-weight: 600; overflow-wrap: anywhere; }
+.bd-chgs .cr q { font-size: 12.5px; }
+.bd-chgs .cr .nt { white-space: pre-wrap; overflow-wrap: anywhere; }
+.bd-chgs .cr .mt { font-size: 12px; color: var(--fg-subtle); }
+.bd-chgs .cr > .bd-ibtn { margin-top: 6px; }
+.bd-chgs .cr.sent .cr-go { opacity: .6; }
+.bd-chgs .grp { padding: 10px 12px 4px; border-top: 1px solid var(--line); font: 600 11px/1.4 var(--sans); letter-spacing: .07em; text-transform: uppercase; color: var(--fg-subtle); }
+.bd-chgs .grp:first-child { border-top: 0; }
+.bd-chgs .empty { padding: 20px 16px; text-align: center; font-size: 13.5px; color: var(--fg-subtle); }
+@media print { .bd-anntb, .bd-ann-layer, .bd-ann-hov, .bd-ann-cap, .bd-ann-pop, .bd-home { display: none !important; } html.bd-ann-on .bd-shell { padding-bottom: 0; } }
+
 /* code review: diff block (HorizonUI DiffReview, ChangeTable, CodeBlock syntax tokens) */
 :root {
   --syn-keyword: light-dark(oklch(48% 0.19 285), oklch(76% 0.12 285));
@@ -873,6 +965,15 @@ const ICONS = {
   down: '<path d="m6 9 6 6 6-6"/>',
   star: '<path d="M11.5 2.8a.6.6 0 0 1 1 0l2.6 5.3 5.8.8a.6.6 0 0 1 .3 1l-4.2 4.1 1 5.8a.6.6 0 0 1-.8.6L12 17.7l-5.2 2.7a.6.6 0 0 1-.8-.6l1-5.8-4.2-4.1a.6.6 0 0 1 .3-1l5.8-.8Z"/>',
   send: '<path d="M14.5 21.7a.5.5 0 0 0 .9 0L22 3.5a.5.5 0 0 0-.6-.6L3.3 9.5a.5.5 0 0 0 0 .9l7.6 3a2 2 0 0 1 1.1 1.1zM21.9 2.1l-10.9 11"/>',
+  cursor: '<path d="M4.04 4.69a.5.5 0 0 1 .65-.65l16 6.5a.5.5 0 0 1-.06.95l-6.13 1.58a2 2 0 0 0-1.43 1.43l-1.58 6.13a.5.5 0 0 1-.95.06z"/>',
+  pin: '<path d="M20 10c0 5-5.54 10.19-7.4 11.8a1 1 0 0 1-1.2 0C9.54 20.19 4 15 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/>',
+  type: '<path d="M12 4v16M4 7V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2M9 20h6"/>',
+  pencil: '<path d="M21.17 6.81a1 1 0 0 0-3.99-3.99L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5zM15 5l4 4"/>',
+  edit: '<path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.38 2.63a1 1 0 0 1 3 3l-9.02 9.01a2 2 0 0 1-.85.5l-2.87.84a.5.5 0 0 1-.62-.62l.84-2.87a2 2 0 0 1 .5-.85z"/>',
+  eye: '<path d="M2.06 12.35a1 1 0 0 1 0-.7 10.75 10.75 0 0 1 19.88 0 1 1 0 0 1 0 .7 10.75 10.75 0 0 1-19.88 0"/><circle cx="12" cy="12" r="3"/>',
+  eyeoff: '<path d="M10.73 5.08a10.74 10.74 0 0 1 11.2 6.57 1 1 0 0 1 0 .7 10.75 10.75 0 0 1-1.44 2.49M14.08 14.16a3 3 0 0 1-4.24-4.24M17.48 17.5a10.75 10.75 0 0 1-15.42-5.15 1 1 0 0 1 0-.7 10.75 10.75 0 0 1 4.45-5.14M2 2l20 20"/>',
+  trash: '<path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+  grid: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>',
 };
 function ic(name, cls) {
   const s = document.createElementNS(NS, 'svg');
@@ -1348,7 +1449,7 @@ function noteBox(x, compact) {
 function replyPayload() {
   const all = Object.values(ITEMS);
   return {
-    doc: docId, rev: CUR.rev, title: DOC.title || '', path: location.pathname, at: new Date().toISOString(),
+    kind: 'answers', doc: docId, rev: CUR.rev, title: DOC.title || '', path: location.pathname, at: new Date().toISOString(),
     message: (store.get(MSG_KEY) || '').trim(),
     items: all.map(x => ({
       checklist: x.cid, item: x.it.id, text: x.it.text,
@@ -1359,13 +1460,23 @@ function replyPayload() {
   };
 }
 // The page can send replies itself when it is served by scripts/serve.py; otherwise it copies them.
-const REPLY = { url: null, to: '' };
+// Two kinds go back: answers (ticks, picks, item comments: Send answers) and change requests to the
+// document itself (pins, selections, drawings: the bottom toolbar's Request changes).
+const REPLY = { url: null, changes: null, to: '', home: '' };
 if (/^https?:$/.test(location.protocol)) {
-  fetch('/__bluedoc/ping', { cache: 'no-store' }).then(r => r.ok ? r.json() : null).then(j => {
-    if (j && j.bluedoc) { REPLY.url = '/__bluedoc/reply'; REPLY.to = j.to || ''; paintSend(); }
+  fetch('/__bluedoc/ping?path=' + encodeURIComponent(location.pathname), { cache: 'no-store' }).then(r => r.ok ? r.json() : null).then(j => {
+    if (!j || !j.bluedoc) return;
+    Object.assign(REPLY, { url: '/__bluedoc/reply', changes: '/__bluedoc/changes', to: j.to || '', home: j.home || '' });
+    if (REPLY.home) linkHome(REPLY.home);
+    paintSend(); MARKUP.paint();
   }).catch(() => {});
 }
-const sendBtn = h('button', { type: 'button', class: 'bp-btn bd-send-btn', hidden: true, onclick: () => openSend() }, ic('send'), h('span', { class: 'l' }, 'Send to agent'));
+// served with a dashboard: the brand mark and an "All docs" link lead to it
+function linkHome(href) {
+  mark.href = href; mark.title = 'All docs'; mark.setAttribute('aria-label', 'bluedoc: all docs');
+  if (!document.querySelector('.bd-home')) mark.after(h('a', { class: 'bd-home', href, title: 'All docs' }, ic('grid'), h('span', { class: 'l' }, 'All docs')));
+}
+const sendBtn = h('button', { type: 'button', class: 'bp-btn bd-send-btn', hidden: true, title: 'Send your answers to the agent', onclick: () => openSend() }, ic('send'), h('span', { class: 'l' }, 'Send answers'));
 document.querySelector('.bd-bar-r')?.insertBefore(sendBtn, document.querySelector('.bd-bar-r .bd-toc-btn'));
 let sendDlg = null;
 function replyCounts() {
@@ -2817,6 +2928,654 @@ if (REVS.length > 1) {
   if (bar) { const fit = () => root.style.setProperty('--rv-h', bar.offsetHeight + 'px'); fit(); addEventListener('resize', fit); }
 }
 
+/* ---------- change requests: pins, text selections and drawings on the page ---------- */
+// The bottom toolbar switches between View (the page as usual), Point (pin a note on an element),
+// Select (a note on selected text) and Draw (freehand strokes). A note anchors to the smallest
+// annotatable element, named by a key built from ids (see keyOf: `item:<checklist>/<item>`,
+// `row:<section>/<block>/<row>`, `line:<diff>/<path>:<n>`, ...), and keeps its ancestors' keys, so a
+// mark whose element is hidden (a collapsed row, another diff file, a closed system) sits on the
+// nearest visible ancestor. Positions are fractions of the element's box, so marks follow reflow,
+// width changes and canvas zoom. Notes belong to the current revision: no toolbar on earlier
+// revisions or in compare view. Send answers never carries these, and this never carries answers.
+const MARKUP = (() => {
+  const KEY = `bp:${docId}:__ann`, MSG = `bp:${docId}:__chgmsg`, PEN_KEY = 'bluedoc:pen';
+  let list = [];
+  try { const x = JSON.parse(store.get(KEY) || '[]'); if (Array.isArray(x)) list = x.filter(a => a && a.id && a.target && a.target.key); } catch { list = []; }
+  const save = () => { if (list.length) store.set(KEY, JSON.stringify(list)); else store.del(KEY); };
+  const unsent = () => list.filter(a => !a.sent);
+  const cut = (s, n) => { s = String(s ?? '').replace(/\s+/g, ' ').trim(); return s.length > n ? s.slice(0, n - 1).trimEnd() + '…' : s; };
+  const TYPE_IC = { pin: 'pin', text: 'type', draw: 'pencil' };
+  const TYPE_WORD = { pin: 'pin', text: 'text', draw: 'drawing' };
+  const excerpt = a => a.type === 'text' ? a.quote : a.type === 'draw' && a.targets && a.targets.length ? a.targets.map(t => t.text).filter(Boolean).join(' / ') : a.target.text;
+  const pub = a => ({ id: a.id, type: a.type, note: a.note, target: a.target, ...(a.type === 'draw' ? { targets: a.targets || [a.target] } : {}),
+    ...(a.type === 'text' ? { quote: a.quote } : {}), rev: a.rev, at: a.at });
+  function changesMd(items = unsent()) {
+    const msg = (store.get(MSG) || '').trim();
+    return `# Change requests: ${DOC.title || docId}${CUR.rev ? ` (rev ${CUR.rev})` : ''}, ${new Date().toISOString().slice(0, 10)}\n\n` + (msg ? msg + '\n\n' : '') +
+      items.map((a, i) => {
+        const ex = cut(excerpt(a), 200);
+        return [`${i + 1}. **${a.target.label}** (${TYPE_WORD[a.type]})`, ex && `   > ${ex}`,
+          `   Change: ${String(a.note || '').trim().split('\n').join('\n   ')}`].filter(Boolean).join('\n');
+      }).join('\n\n') + '\n';
+  }
+  function payload() {
+    const items = unsent();
+    return { kind: 'changes', doc: docId, rev: CUR.rev, title: DOC.title || '', path: location.pathname, at: new Date().toISOString(),
+      message: (store.get(MSG) || '').trim(), annotations: items.map(pub), markdown: changesMd(items) };
+  }
+  const api = { all: () => JSON.parse(JSON.stringify(list)), payload, annotate: () => null, setMode: () => false, paint: () => {} };
+  if (OLD || BASE) return api;
+
+  /* what can be annotated, and the key of each */
+  const shell = $('.bd-shell');
+  const SEL = { line: '.bd-ln', comment: '.bd-cm[data-ci]', row: 'tr[data-r]', node: '.bp-node[data-key]', card: '.bp-card', para: '.bp-text p, .bp-text li',
+    item: '.bp-cl-item[id]', block: '.bp-cl-block, .bp-block[data-bk]', heading: '.bp-sec > h2', lead: '.bp-sec > .bp-lead', section: 'section.bp-sec[id]',
+    tldr: '.bd-tldr-card', header: '.bd-head', status: '.bd-meta' };
+  const KIND = { line: 'Code line', comment: 'Review comment', row: 'Table row', node: 'Drawing part', card: 'Card', para: 'Paragraph', item: 'Checklist item',
+    block: 'Block', heading: 'Section title', lead: 'Section lead', section: 'Section', tldr: 'TL;DR', header: 'Header', status: 'Status', doc: 'Page' };
+  const TYPES = Object.keys(SEL), ANY = Object.values(SEL).join(', ');
+  const CLIPS = '.bd-pane, .bp-stage, .bp-table-wrap';   // inner scrollers that clip what they hold
+  const typeOf = el => el === shell ? 'doc' : TYPES.find(t => el.matches(SEL[t]));
+  const inDoc = t => !!t && t.nodeType === 1 && shell.contains(t) && !t.closest('.bp-side');
+  const targetAt = t => inDoc(t) ? t.closest(ANY) : null;
+  let itemKeys = null;
+  const itemKeyOf = li => (itemKeys ||= new Map(Object.entries(ITEMS).map(([k, x]) => [x.li, k]))).get(li);
+  const diffOf = el => DIFFS[el.closest('.bd-diff').id.slice(5)];
+  const canvasOf = el => CANVASES[el.closest('.bp-canvas').id.slice(3)];
+  const siblingIndex = el => [...el.parentElement.children].filter(c => c.classList.contains('bp-cl-block')).indexOf(el);
+  // the block an element sits in: "<section>/<block>" at the top level, "<checklist>/<item>/<k>" inside an item
+  function pathOf(el) {
+    const c = el.closest('.bp-cl-block, .bp-block[data-bk]');
+    if (!c) return '';
+    return c.dataset.bk || `${itemKeyOf(c.closest('.bp-cl-item'))}/${siblingIndex(c)}`;
+  }
+  function keyOf(el, t = typeOf(el)) {
+    switch (t) {
+      case 'line': { const d = diffOf(el); return `line:${d.id}/${d.sel}:${el.dataset.n ?? 'o' + el.dataset.o}`; }
+      case 'comment': return `comment:${diffOf(el).id}/${el.dataset.ci}`;
+      case 'row': return `row:${pathOf(el)}/${el.dataset.r}`;
+      case 'node': return `node:${canvasOf(el).id}/${el.dataset.key}`;
+      case 'card': return `card:${pathOf(el)}/${[...el.parentElement.children].indexOf(el)}`;
+      case 'para': { const t = el.closest('.bp-text'); return `para:${pathOf(t)}/${[...t.querySelectorAll('p, li')].indexOf(el)}`; }
+      case 'item': return 'item:' + itemKeyOf(el);
+      case 'block': return 'block:' + pathOf(el);
+      case 'heading': case 'lead': return `${t}:${el.parentElement.id}`;
+      case 'section': return 'section:' + el.id;
+      default: return t;   // header, tldr, status, doc
+    }
+  }
+  const splitKey = k => { const i = k.indexOf(':'); return i < 0 ? [k, ''] : [k.slice(0, i), k.slice(i + 1)]; };
+  function elOf(key) {
+    const [t, rest] = splitKey(key);
+    if (t === 'doc') return shell;
+    if (t === 'item') return ITEMS[rest]?.li || null;
+    if (t === 'section') return [...main.children].find(s => s.id === rest && s.matches(SEL.section)) || null;
+    if (t === 'node') { const i = rest.indexOf('/'); return CANVASES[rest.slice(0, i)]?.byKey?.[rest.slice(i + 1)]?._el || null; }
+    if (t === 'line') {
+      const i = rest.indexOf('/'), j = rest.lastIndexOf(':'), d = DIFFS[rest.slice(0, i)], n = rest.slice(j + 1);
+      if (!d || d.sel !== rest.slice(i + 1, j)) return null;   // another file is open
+      return d.pane.querySelector(n[0] === 'o' ? `.bd-ln[data-o="${CSS.escape(n.slice(1))}"]:not([data-n])` : `.bd-ln[data-n="${CSS.escape(n)}"]`);
+    }
+    if (!SEL[t]) return null;
+    if (!rest) return shell.querySelector(SEL[t]);
+    for (const el of shell.querySelectorAll(SEL[t])) if (keyOf(el, t) === key) return el;
+    return null;
+  }
+  // breadcrumb label: "04 Run the local stack › Local stack › 2. Start Postgres, Kafka…"
+  const sectionOf = id => (DOC.sections || []).find(s => s.id === id);
+  function blockOf(el) {
+    const bk = el.dataset.bk;
+    if (bk) return sectionOf(bk.slice(0, bk.lastIndexOf('/')))?.blocks?.[+bk.slice(bk.lastIndexOf('/') + 1)];
+    return (ITEMS[itemKeyOf(el.closest('.bp-cl-item'))]?.it.blocks || [])[siblingIndex(el)];
+  }
+  function crumb(el, t = typeOf(el)) {
+    switch (t) {
+      case 'section': return `${el.querySelector(':scope > h2 .n')?.textContent || ''} ${plain(sectionOf(el.id)?.title)}`.trim();
+      case 'heading': return 'Title';
+      case 'lead': return 'Lead';
+      case 'block': { const b = blockOf(el); return b ? plain(blockLabel(b)) : 'Block'; }
+      case 'item': { const x = ITEMS[itemKeyOf(el)], c = x && CHECKLISTS.find(c => c.items.includes(x)); return x ? `${c ? c.items.indexOf(x) + 1 + '. ' : ''}${cut(plain(x.it.text), 48)}` : 'Item'; }
+      case 'row': return `Row ${+el.dataset.r + 1}: ${cut([...el.cells].slice(0, 2).map(c => c.textContent.trim()).filter(Boolean).join(' · '), 48)}`;
+      case 'card': return cut(el.querySelector('h4 > span')?.textContent, 48) || 'Card';
+      case 'para': return `“${cut(el.textContent, 40)}”`;
+      case 'line': return `${baseName(diffOf(el).sel)}:${el.dataset.n ?? el.dataset.o}${el.dataset.n == null ? ' (before)' : ''}`;
+      case 'comment': return 'Comment: ' + cut(el.querySelector('.tt')?.textContent, 40);
+      case 'node': { const n = canvasOf(el)?.byKey[el.dataset.key]; return n ? n.label || n.id : 'Part'; }
+      case 'doc': return 'Whole page';
+      default: return KIND[t] || '';
+    }
+  }
+  function labelOf(el) {
+    const out = [];
+    for (let p = el; p; p = p === shell ? null : p.parentElement?.closest(ANY)) out.unshift(crumb(p));
+    return out.filter(Boolean).join(' › ');
+  }
+  // the element's own content, without UI chrome (option pills, comment boxes, buttons, change marks)
+  const CHROME = '.bp-cl-choices, .bp-note, button:not(.bp-cl-head), input, textarea, .bd-chg-tag, .bd-chgbox, .bp-cl-noteic, .bp-cl-num, .bp-code-h, .bp-cl-h .tools';
+  const BLOCKY = 'div, p, li, td, th, tr, dt, dd, h1, h2, h3, h4, pre, .bp-cl-text, .bp-cl-subt, .bp-chip';
+  const contentText = el => { const c = el.cloneNode(true); c.querySelectorAll(CHROME).forEach(x => x.remove()); c.querySelectorAll(BLOCKY).forEach(x => x.append(' ')); return c.textContent.replace(/\s+/g, ' ').trim(); };
+  const textOf = el => cut(el instanceof SVGElement ? [...el.querySelectorAll(':scope > .bp-cover > text:not(.bp-open)')].map(t => t.textContent).join(' ')
+    : el.matches('.bd-ln') ? el.querySelector('.c')?.textContent : el.matches('.bp-cl-item') ? contentText(el.querySelector('.bp-cl-row') || el) : contentText(el), 300);
+  const info = el => ({ key: keyOf(el), label: labelOf(el), text: textOf(el) });
+  function ups(el) { const out = []; for (let p = el.parentElement?.closest(ANY); p; p = p.parentElement?.closest(ANY)) out.push(keyOf(p)); return out; }
+  const newId = () => 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  const newAnn = (type, el) => ({ id: newId(), type, note: '', target: info(el), rev: CUR.rev, at: new Date().toISOString(), up: ups(el) });
+  const r4 = v => Math.round(v * 1e4) / 1e4;
+
+  /* geometry */
+  const shown = el => !!el && el.isConnected && (el.checkVisibility ? el.checkVisibility({ opacityProperty: true, visibilityProperty: true }) : el.getClientRects().length > 0);
+  function clipOf(el) {
+    let c = null;
+    for (let p = el.parentElement?.closest(CLIPS); p; p = p.parentElement?.closest(CLIPS)) {
+      const r = p.getBoundingClientRect();
+      c = c ? { l: Math.max(c.l, r.left), t: Math.max(c.t, r.top), r: Math.min(c.r, r.right), b: Math.min(c.b, r.bottom) } : { l: r.left, t: r.top, r: r.right, b: r.bottom };
+    }
+    return c;
+  }
+  const inClip = (p, c) => !c || (p.x >= c.l - 2 && p.x <= c.r + 2 && p.y >= c.t - 2 && p.y <= c.b + 2);
+  // every annotatable element on screen, with its box (not ones scrolled away inside an inner scroller)
+  function onScreen() {
+    const clips = new Map(), out = [];
+    for (const el of shell.querySelectorAll(ANY)) {
+      if (!shown(el)) continue;
+      const r = el.getBoundingClientRect(); if (!r.width || !r.height) continue;
+      const box = el.parentElement?.closest(CLIPS);
+      if (box) {
+        if (!clips.has(box)) clips.set(box, clipOf(el));
+        const c = clips.get(box);
+        if (r.right <= c.l || r.left >= c.r || r.bottom <= c.t || r.top >= c.b) continue;
+      }
+      out.push([el, r]);
+    }
+    return out;
+  }
+  // the smallest element that holds a box (client px), with a little slack for loose circles
+  function anchorFor(b, items) {
+    let best = shell, area = Infinity;
+    for (const [el, r] of items) {
+      const T = Math.min(24, r.width / 4, r.height / 4), a = r.width * r.height;
+      if (a < area && r.left - T <= b.l && r.right + T >= b.r && r.top - T <= b.t && r.bottom + T >= b.b) { best = el; area = a; }
+    }
+    return best;
+  }
+  // the leaf-most elements a box covers: most of their height, a fair part of their width
+  function covered(b, items) {
+    const hit = items.filter(([, r]) => {
+      const ox = Math.min(r.right, b.r) - Math.max(r.left, b.l), oy = Math.min(r.bottom, b.b) - Math.max(r.top, b.t);
+      const holds = r.left <= b.l && r.right >= b.r && r.top <= b.t && r.bottom >= b.b;
+      return !holds && ox > 0 && oy >= 0.5 * r.height && ox >= Math.min(0.5 * r.width, 60);
+    }).map(([el]) => el);
+    return hit.filter(el => !hit.some(o => o !== el && el.contains(o)));
+  }
+  const bounds = strokes => {
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const s of strokes) for (let i = 0; i + 1 < s.length; i += 2) { x0 = Math.min(x0, s[i]); x1 = Math.max(x1, s[i]); y0 = Math.min(y0, s[i + 1]); y1 = Math.max(y1, s[i + 1]); }
+    return { x0, y0, x1, y1 };
+  };
+  const pathD = s => { let d = ''; for (let i = 0; i + 1 < s.length; i += 2) d += (i ? 'L' : 'M') + s[i] + ' ' + s[i + 1]; return d; };
+  const ellipse = () => { const s = []; for (let i = 0; i <= 48; i++) { const t = i / 48 * Math.PI * 2; s.push(r4(.5 + .52 * Math.cos(t)), r4(.5 + .56 * Math.sin(t))); } return s; };
+  // text: the quote's place in its element's text (the concatenated text nodes), found again later
+  function offsetIn(el, node, off) { const r = document.createRange(); r.setStart(el, 0); r.setEnd(node, off); return r.toString().length; }
+  function rangeAt(el, s, e) {
+    const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT), r = document.createRange();
+    let pos = 0, n, started = false;
+    while ((n = w.nextNode())) {
+      const len = n.data.length;
+      if (!started && s <= pos + len) { r.setStart(n, s - pos); started = true; }
+      if (started && e <= pos + len) { r.setEnd(n, e - pos); return r; }
+      pos += len;
+    }
+    return null;
+  }
+  function findRange(a, el) {
+    const txt = el.textContent, raw = a.raw || a.quote || '';
+    if (!raw) return null;
+    let at = txt.substr(a.off, raw.length) === raw ? a.off : -1;
+    for (let i = txt.indexOf(raw); at < 0 && i >= 0; i = txt.indexOf(raw, i + 1)) at = i;   // moved: take the first
+    return at < 0 ? null : rangeAt(el, at, at + raw.length);
+  }
+
+  /* page furniture: marks layer, hover outline, drawing surface, popover, toolbar */
+  const layer = h('div', { class: 'bd-ann-layer bd-ann-ui' });
+  const hov = h('div', { class: 'bd-ann-hov', hidden: true, 'aria-hidden': 'true' }, h('b'));
+  const capG = sv('g');
+  const cap = h('div', { class: 'bd-ann-cap', hidden: true }, sv('svg', { 'aria-hidden': 'true' }, capG));
+  const pop = h('div', { class: 'bd-ann-pop bd-ann-ui', role: 'dialog', 'aria-label': 'Change request', hidden: true });
+  const popTa = h('textarea', { class: 'bp-note-ta', rows: 3, placeholder: 'What should change here?', 'aria-label': 'Requested change' });
+  const popHd = h('div', { class: 'ph' }), popInfo = h('div', { class: 'pi' }), popFt = h('div', { class: 'pf' });
+  const saveBtn = h('button', { type: 'button', class: 'bp-btn primary', title: 'Save (⌘/Ctrl + Enter)', onclick: () => commit() }, 'Save');
+  pop.append(popHd, popInfo, popTa, popFt);
+  const MODES = { view: ['cursor', 'View', 'V', 'View: use the page as usual'], point: ['pin', 'Point', 'C', 'Point: pin a change request on an element'],
+    select: ['type', 'Select', 'T', 'Select: request a change to some text'], draw: ['pencil', 'Draw', 'D', 'Draw: circle or mark what should change'] };
+  const PENS = { risk: 'Red', accent: 'Blue', warn: 'Amber', ok: 'Green' };
+  let mode = 'view', marksOff = false, pen = PENS[store.get(PEN_KEY)] ? store.get(PEN_KEY) : 'risk';
+  const modeBtns = Object.entries(MODES).map(([m, [icon, name, key, tip]]) => h('button', { type: 'button', class: 'm', 'data-m': m, 'aria-pressed': String(m === mode),
+    'aria-label': name, 'aria-keyshortcuts': key, title: `${tip} (${key})`, onclick: () => setMode(m) }, ic(icon)));
+  const swatches = h('span', { class: 'sw', role: 'group', 'aria-label': 'Pen colour', hidden: true }, Object.entries(PENS).map(([c, name]) =>
+    h('button', { type: 'button', class: 'bd-pen-' + c, 'data-pen': c, 'aria-label': name + ' pen', title: name + ' pen', onclick: () => { pen = c; store.set(PEN_KEY, c); paint(); } })));
+  const eye = h('button', { type: 'button', class: 'm', onclick: () => { marksOff = !marksOff; if (marksOff) closePop(true); paint(); schedule(true); } });
+  const goN = h('span', { class: 'n' });
+  const go = h('button', { type: 'button', class: 'bp-btn primary go', onclick: () => openDlg() }, ic('edit'), h('span', { class: 'l' }, 'Request changes ·'), goN);
+  const tb = h('div', { class: 'bd-anntb bd-ann-ui', role: 'toolbar', 'aria-label': 'Request changes to this doc' },
+    modeBtns, swatches, eye, h('span', { class: 'dv', 'aria-hidden': 'true' }), go);
+  let popA = null, popNew = false, page = null, swallow = false, press = null, ink = null, lastUp = 0, dlg = null, hovEl = null, hovFor = null, flashT = 0;
+
+  /* placing marks: on scroll only boxes move; after DOM or size changes keys resolve afresh */
+  const marks = new Map();   // id -> { a, pin, ink }
+  let raf = 0, dirty = true, els = new Map(), ranges = new Map();
+  const HL = typeof Highlight === 'function' && window.CSS && CSS.highlights;
+  const schedule = full => { if (full) dirty = true; if (!raf) raf = requestAnimationFrame(place); };
+  const cachedEl = k => { if (!els.has(k)) els.set(k, elOf(k)); return els.get(k); };
+  function rangeOf(a) {
+    if (!ranges.has(a.id)) { const el = cachedEl(a.target.key); ranges.set(a.id, el ? findRange(a, el) : null); }
+    return ranges.get(a.id);
+  }
+  // where a note's number goes: on its spot when the element shows, else on the nearest shown ancestor
+  function locate(a) {
+    const keys = [a.target.key, ...(a.up || [])];
+    for (let i = 0; i < keys.length; i++) {
+      const el = cachedEl(keys[i]);
+      if (!shown(el)) continue;
+      const r = el.getBoundingClientRect(); if (!r.width && !r.height) continue;
+      const clip = clipOf(el);
+      if (i === 0) {
+        let p = null;
+        if (a.type === 'pin') { const q = a.pos || { x: .5, y: .5 }; p = { x: r.left + q.x * r.width, y: r.top + q.y * r.height }; }
+        else if (a.type === 'draw') { const b = bounds(a.strokes || []); if (isFinite(b.x1)) p = { x: r.left + b.x1 * r.width - 6, y: r.top + b.y0 * r.height + 6 }; }
+        else { const rg = rangeOf(a), rs = rg && shown(rg.startContainer.parentElement) ? rg.getClientRects() : null, last = rs && rs[rs.length - 1]; if (last) p = { x: last.right, y: last.top + 2 }; }
+        // an element partly scrolled inside its scroller keeps its mark, pulled in to the visible edge
+        if (p && !inClip(p, clip) && r.right > clip.l && r.left < clip.r && r.bottom > clip.t && r.top < clip.b) {
+          p.x = clamp(p.x, Math.max(r.left, clip.l) + 2, Math.min(r.right, clip.r) - 28); p.y = clamp(p.y, Math.max(r.top, clip.t) + 28, Math.min(r.bottom, clip.b) - 2);
+        }
+        if (p && inClip(p, clip)) return { ...p, el, r, clip, exact: true };
+      }
+      const c = { x: r.right - 32, y: Math.min(r.top + 30, r.bottom) };
+      if (inClip(c, clip)) return { ...c, el, r, clip, exact: false };
+    }
+    return null;
+  }
+  function markFor(a) {
+    let m = marks.get(a.id);
+    if (!m) {
+      m = { a, ink: null, inkFor: null, flashUntil: 0 };
+      m.pin = h('button', { type: 'button', class: 'bd-ann-pin', onclick: e => { e.stopPropagation(); if (popA === m.a) closePop(true); else openPop(m.a, false); } });
+      layer.append(m.pin); marks.set(a.id, m);
+    }
+    m.a = a;
+    if (a.type === 'draw' && !m.ink) { m.ink = sv('svg', { class: 'bd-ann-ink', viewBox: '0 0 1 1', preserveAspectRatio: 'none', 'aria-hidden': 'true' }); layer.prepend(m.ink); }
+    return m;
+  }
+  function place() {
+    raf = 0;
+    const full = dirty; dirty = false;
+    if (full) { els = new Map(); ranges = new Map(); }
+    capG.setAttribute('transform', `translate(${-scrollX},${-scrollY})`);
+    const all = popA && popNew ? [...list, popA] : list, keep = new Set(), stacks = new Map(), hl = { on: [], sent: [], open: [] };
+    const vw = root.clientWidth, now = performance.now();
+    all.forEach((a, i) => {
+      const m = markFor(a); keep.add(a.id);
+      if (full && a.type === 'text' && !marksOff) { const rg = rangeOf(a); if (rg && shown(cachedEl(a.target.key))) (a === popA ? hl.open : a.sent ? hl.sent : hl.on).push(rg); }
+      const p = marksOff ? null : locate(a);
+      m.pin.hidden = !p;
+      if (m.ink) m.ink.style.display = p && p.exact ? '' : 'none';
+      if (!p) return;
+      const old = !a.sent && a.rev !== CUR.rev;
+      m.pin.className = 'bd-ann-pin' + (a.type === 'draw' ? ' bd-pen-' + (a.color || 'risk') : '') + (a.sent ? ' sent' : '') + (old ? ' old' : '') +
+        (p.exact ? '' : ' away') + (a === popA ? ' on' : '') + (m.flashUntil > now ? ' flash' : '');
+      m.pin.textContent = String(i + 1);
+      const tip = `${i + 1}. ${a.target.label}${a.note ? ': ' + cut(a.note, 90) : ''}${a.sent ? ' (sent)' : old ? ` (made on rev ${a.rev})` : ''}${p.exact ? '' : ' · hidden here, click to see it'}`;
+      if (m.pin.title !== tip) { m.pin.title = tip; m.pin.setAttribute('aria-label', 'Change request ' + tip); }
+      let x = p.x;
+      if (!p.exact) { const k = stacks.get(p.el) || 0; stacks.set(p.el, k + 1); x -= k * 30; }
+      x = Math.max(2, Math.min(x, vw - 30));
+      m.pin.style.transform = `translate(${Math.round(x)}px,${Math.round(p.y)}px)`;
+      if (m.ink && p.exact) {
+        const r = p.r, c = p.clip, st = m.ink.style;
+        st.transform = `translate(${r.left}px,${r.top}px)`; st.width = r.width + 'px'; st.height = r.height + 'px';
+        st.clipPath = c ? `inset(${c.t - r.top}px ${r.right - c.r}px ${r.bottom - c.b}px ${c.l - r.left}px)` : '';
+        if (m.inkFor !== a.strokes) { m.inkFor = a.strokes; m.ink.replaceChildren(...(a.strokes || []).map(s => sv('path', { d: pathD(s) }))); }
+        m.ink.setAttribute('class', `bd-ann-ink bd-pen-${a.color || 'risk'}${a.sent ? ' sent' : ''}`);
+      }
+      if (a === popA) placePop(x, p.y);
+    });
+    for (const [id, m] of marks) if (!keep.has(id)) { m.pin.remove(); m.ink?.remove(); marks.delete(id); }
+    if (full && HL) for (const [name, rs] of [['bd-ann', hl.on], ['bd-ann-sent', hl.sent], ['bd-ann-on', hl.open]]) {
+      if (rs.length) CSS.highlights.set(name, new Highlight(...rs)); else CSS.highlights.delete(name);
+    }
+    if (hovEl) showHover(hovEl);
+  }
+  function placePop(x, y) {   // the pin's corner is at (x, y); the popover sits beside it, else below or above
+    const w = pop.offsetWidth, ph = pop.offsetHeight, vw = root.clientWidth, low = innerHeight - tb.offsetHeight - 28;
+    let px = x + 34, py = y - 30;
+    if (px + w > vw - 12) { px = Math.max(12, Math.min(x - 8, vw - w - 12)); py = y + 10; }
+    if (py + ph > low) py = Math.max(8, Math.min(y - 34 - ph, low - ph));
+    pop.style.transform = `translate(${Math.round(px)}px,${Math.round(py)}px)`;
+  }
+  function showHover(el) {
+    hovEl = el;
+    if (!el || !shown(el)) { hov.hidden = true; return; }
+    const r = el.getBoundingClientRect();
+    hov.hidden = false;
+    hov.style.transform = `translate(${r.left - 3}px,${r.top - 3}px)`; hov.style.width = r.width + 6 + 'px'; hov.style.height = r.height + 6 + 'px';
+    if (hovFor !== el) {
+      hovFor = el;
+      const t = typeOf(el);
+      hov.firstChild.textContent = t === 'block' ? crumb(el, t) : KIND[t] + (['item', 'node', 'card', 'section', 'row', 'line'].includes(t) ? ' · ' + cut(crumb(el, t), 40) : '');
+    }
+    hov.classList.toggle('in', r.top < cssPx('--bar-h') + cssPx('--rv-h') + 30);
+  }
+  function outline(el) {   // show which element a note is about, for a moment
+    showHover(el); clearTimeout(flashT);
+    flashT = setTimeout(() => { if (mode !== 'point' || hovEl === el) showHover(null); }, 1400);
+  }
+
+  /* popover: one note, new or saved */
+  const fmtDate = iso => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }); };
+  const numChip = (a, n) => h('span', { class: 'bd-ann-num' + (a.type === 'draw' ? ' bd-pen-' + (a.color || 'risk') : '') }, String(n));
+  function openPop(a, isNew) {
+    if (popA && popA !== a) closePop(true);
+    popA = a; popNew = isNew;
+    popHd.replaceChildren(numChip(a, (isNew ? list.length : list.indexOf(a)) + 1), ic(TYPE_IC[a.type]), h('span', { class: 'lb', title: a.target.label }, a.target.label),
+      h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Close', title: 'Close (Esc)', onclick: () => closePop(true) }, ic('x')));
+    const notes = [];
+    if (a.type === 'text') notes.push(h('q', {}, cut(a.quote, 180)));
+    if (a.type === 'draw' && a.targets && a.targets.length > 1) notes.push(h('span', {}, 'Covers: ' + a.targets.map(t => t.label.split(' › ').pop()).join(' · ')));
+    if (a.sent) notes.push(h('span', {}, `Sent ${fmtDate(a.sent)}`));
+    else if (a.rev !== CUR.rev) notes.push(h('span', { class: 'old' }, `Made on rev ${a.rev}; the doc is now at rev ${CUR.rev}.`));
+    popInfo.replaceChildren(...notes);
+    popTa.value = a.note || ''; popTa.readOnly = !!a.sent;
+    saveBtn.disabled = !popTa.value.trim();
+    const del = h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => remove(a) }, ic('trash'), 'Delete');
+    popFt.replaceChildren(...(a.sent
+      ? [del, h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => clearSent() }, 'Clear all sent'), h('span', { class: 'sp' }), h('button', { type: 'button', class: 'bp-btn', onclick: () => closePop(false) }, 'Close')]
+      : [!isNew && del, h('span', { class: 'sp' }), h('button', { type: 'button', class: 'bp-btn', onclick: () => closePop(false) }, 'Cancel'), saveBtn].filter(Boolean)));
+    pop.hidden = false;
+    schedule(true);
+    requestAnimationFrame(() => requestAnimationFrame(() => { if (popA === a && !a.sent) popTa.focus({ preventScroll: true }); }));
+  }
+  function commit() {
+    const a = popA, v = popTa.value.trim();
+    if (!a || a.sent || !v) return;
+    a.note = v;
+    if (popNew) list.push(a);
+    save(); popNew = false; closePop(false);
+  }
+  // keep: an outside click or a mode switch keeps what was typed; Cancel and Esc drop it
+  function closePop(keep) {
+    const a = popA; if (!a) return;
+    const v = popTa.value.trim();
+    if (keep && !a.sent && v && v !== a.note) { a.note = v; if (popNew) list.push(a); save(); }
+    popA = null; popNew = false; page = null; pop.hidden = true;
+    if (document.activeElement === popTa) popTa.blur();
+    schedule(true); paint();
+  }
+  function remove(a) {
+    list = list.filter(x => x !== a); save();
+    if (popA === a) { popA = null; popNew = false; page = null; pop.hidden = true; }
+    schedule(true); paint();
+  }
+  function clearSent() {
+    if (popA && popA.sent) { popA = null; pop.hidden = true; }
+    list = list.filter(a => !a.sent); save(); schedule(true); paint();
+  }
+  popTa.addEventListener('input', () => { saveBtn.disabled = !popTa.value.trim(); });
+  popTa.addEventListener('keydown', e => {
+    e.stopPropagation();   // page keys (modes, n/p, canvas) must not fire while typing
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); commit(); }
+    else if (e.key === 'Escape') { e.preventDefault(); closePop(false); }
+  });
+  pop.addEventListener('keydown', e => { if (e.key === 'Escape') { e.stopPropagation(); closePop(false); } });
+
+  /* modes */
+  function setMode(m) {
+    if (!MODES[m]) return false;
+    if (m === mode) return true;
+    closePop(true);
+    root.classList.remove('bd-ann-m-' + mode);
+    mode = m;
+    if (m !== 'view') root.classList.add('bd-ann-m-' + m);
+    cap.hidden = m !== 'draw';
+    showHover(null);
+    if (m !== 'view' && marksOff) { marksOff = false; schedule(true); }   // marking with the marks hidden would hide the new one too
+    paint();
+    return true;
+  }
+  function paint() {
+    const n = unsent().length;
+    goN.textContent = String(n);
+    go.disabled = !n;
+    go.setAttribute('aria-label', `Request changes: ${n} unsent`);
+    go.title = n ? `Review and send ${n} change request${n === 1 ? '' : 's'}` : 'Point, select or draw on the page to request a change';
+    modeBtns.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.m === mode)));
+    swatches.hidden = mode !== 'draw';
+    swatches.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.pen === pen)));
+    eye.replaceChildren(ic(marksOff ? 'eyeoff' : 'eye'));
+    eye.title = marksOff ? 'Show change marks' : 'Hide change marks'; eye.setAttribute('aria-label', eye.title);
+    layer.hidden = marksOff;
+    if (dlg && dlg.open) dlg._paint();
+  }
+  // Point and Select keep the page inert where it's marked: no links, ticks, row toggles or canvas pans.
+  // A pin goes where the press was: after a small drag the click lands on a shared ancestor instead.
+  function onCapture(e) {
+    const t = e.target && e.target.nodeType === 1 ? e.target : null;
+    if (e.type === 'pointerdown') {
+      swallow = false; press = null;
+      if (popA && t && t !== cap && !t.closest('.bd-ann-pop, .bd-ann-pin, .bd-anntb')) { closePop(true); swallow = mode === 'point'; }
+    }
+    if (mode === 'select' && e.type === 'pointerup' && !(t && t.closest('.bd-ann-ui'))) setTimeout(fromSelection, 0);
+    if ((mode !== 'point' && mode !== 'select') || !inDoc(t)) return;
+    if (mode === 'select') {
+      if ((e.type === 'click' || e.type === 'dblclick') && t.closest('a, button, input, label, summary, select, textarea, .bp-node')) { e.preventDefault(); e.stopPropagation(); }
+      if (e.type === 'pointerdown' && t.closest('.bp-stage')) e.stopPropagation();   // no canvas pan
+      return;
+    }
+    e.preventDefault(); e.stopPropagation();
+    if (e.type === 'pointerdown' && e.button === 0) press = { el: targetAt(t), x: e.clientX, y: e.clientY };
+    if (e.type !== 'click' || e.button !== 0) return;
+    const p = press; press = null;
+    if (swallow) { swallow = false; return; }   // this click closed a popover
+    const el = p ? p.el : targetAt(t); if (!el) return;
+    const x = p ? p.x : e.clientX, y = p ? p.y : e.clientY;
+    const r = el.getBoundingClientRect(), a = newAnn('pin', el);
+    a.pos = { x: r4(clamp((x - r.left) / (r.width || 1), 0, 1)), y: r4(clamp((y - r.top) / (r.height || 1), 0, 1)) };
+    openPop(a, true);
+  }
+  function fromSelection() {
+    if (mode !== 'select' || popA) return;
+    const s = getSelection(); if (!s || !s.rangeCount || s.isCollapsed) return;
+    const rg = s.getRangeAt(0), q = s.toString().trim(); if (!q) return;
+    let c = rg.commonAncestorContainer; if (c.nodeType !== 1) c = c.parentElement;
+    const el = targetAt(c) || (inDoc(c) ? shell : null); if (!el) return;
+    const a = newAnn('text', el);
+    Object.assign(a, { quote: q.slice(0, 2000), raw: rg.toString(), off: offsetIn(el, rg.startContainer, rg.startOffset) });
+    s.removeAllRanges();
+    openPop(a, true);
+  }
+  // Draw: strokes in page px while drawing; one ending within 1.5 s of the last, or before anything
+  // is typed, joins the open drawing. The drawing anchors to the smallest element holding it.
+  function fitDrawing(a, strokes) {
+    let l = Infinity, t = Infinity, r = -Infinity, b = -Infinity;
+    for (const s of strokes) for (let i = 0; i < s.length; i += 2) { l = Math.min(l, s[i] - scrollX); r = Math.max(r, s[i] - scrollX); t = Math.min(t, s[i + 1] - scrollY); b = Math.max(b, s[i + 1] - scrollY); }
+    const box = { l, t, r, b }, items = onScreen(), el = anchorFor(box, items), er = el.getBoundingClientRect(), cov = covered(box, items);
+    Object.assign(a, { target: info(el), up: ups(el), targets: (cov.length ? cov : [el]).map(info),
+      strokes: strokes.map(s => s.map((v, i) => r4(i % 2 ? (v - scrollY - er.top) / (er.height || 1) : (v - scrollX - er.left) / (er.width || 1)))) });
+  }
+  cap.addEventListener('pointerdown', e => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    e.preventDefault();
+    const join = popA && popNew && popA.type === 'draw' && page && (e.timeStamp - lastUp < 1500 || !popTa.value.trim());
+    if (!join) { closePop(true); page = []; }
+    pop.hidden = true;
+    cap.setPointerCapture(e.pointerId);
+    ink = { id: e.pointerId, pts: [Math.round(e.clientX + scrollX), Math.round(e.clientY + scrollY)], el: sv('path', { class: 'bd-pen-' + pen }) };
+    capG.append(ink.el);
+  });
+  cap.addEventListener('pointermove', e => {
+    if (!ink || e.pointerId !== ink.id) return;
+    const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [];
+    for (const ev of evs.length ? evs : [e]) {
+      const x = Math.round(ev.clientX + scrollX), y = Math.round(ev.clientY + scrollY), n = ink.pts.length;
+      if (Math.hypot(x - ink.pts[n - 2], y - ink.pts[n - 1]) >= 2) ink.pts.push(x, y);
+    }
+    ink.el.setAttribute('d', pathD(ink.pts));
+  });
+  const endInk = e => {
+    if (!ink || e.pointerId !== ink.id) return;
+    const pts = ink.pts; ink.el.remove(); ink = null; lastUp = e.timeStamp;
+    if (pts.length < 6 || !page) { if (popA) pop.hidden = false; return; }   // a tap, not a stroke
+    page.push(pts);
+    const a = popA && popNew && popA.type === 'draw' ? popA : { id: newId(), type: 'draw', note: '', rev: CUR.rev, at: new Date().toISOString(), color: pen };
+    const strokes = page;
+    fitDrawing(a, strokes);
+    if (a !== popA) { openPop(a, true); page = strokes; }
+    else { pop.hidden = false; popHd.querySelector('.lb').textContent = a.target.label; schedule(true); popTa.focus({ preventScroll: true }); }
+  };
+  cap.addEventListener('pointerup', endInk); cap.addEventListener('pointercancel', endInk);
+
+  /* the dialog: every note, the overall message, Markdown, Copy and Send */
+  function row(a) {
+    const ex = excerpt(a);
+    return h('li', { class: 'cr' + (a.sent ? ' sent' : '') },
+      h('button', { type: 'button', class: 'cr-go', title: 'Show it on the page', onclick: () => { dlg.close(); reveal(a); } },
+        numChip(a, list.indexOf(a) + 1), ic(TYPE_IC[a.type]),
+        h('span', { class: 'tx' }, h('b', {}, a.target.label), ex && h('q', {}, cut(ex, 140)), h('span', { class: 'nt' }, a.note),
+          a.sent ? h('span', { class: 'mt' }, 'Sent ' + fmtDate(a.sent)) : a.rev !== CUR.rev && h('span', { class: 'mt old' }, `Made on rev ${a.rev}`))),
+      h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Delete this change request', title: 'Delete', onclick: () => remove(a) }, ic('trash')));
+  }
+  function openDlg() {
+    closePop(true);
+    if (!dlg) {
+      const listEl = h('ol', { class: 'cr-list' });
+      const msg = h('textarea', { class: 'bp-note-ta', rows: 2, placeholder: 'Anything else about these changes? (optional)', 'aria-label': 'Message with the change requests' });
+      const pre = h('pre', {});
+      msg.addEventListener('input', () => { if (msg.value.trim()) store.set(MSG, msg.value); else store.del(MSG); pre.textContent = changesMd(); });
+      msg.addEventListener('keydown', e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); sendChanges(); } });
+      const how = h('p', { class: 'how' });
+      const clear = h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => clearSent() }, ic('trash'), 'Clear sent');
+      const copy = h('button', { type: 'button', class: 'bp-btn', onclick: () => { copyText(changesMd(), 'Copied: paste it into the chat with the agent'); dlg.close(); } }, ic('copy'), 'Copy');
+      const send = h('button', { type: 'button', class: 'bp-btn primary', onclick: () => sendChanges() }, ic('send'), 'Send');
+      dlg = h('dialog', { class: 'bd-send bd-chgs', 'aria-labelledby': 'bd-chgs-h' },
+        h('div', { class: 'hd' }, h('h3', { id: 'bd-chgs-h' }, 'Request changes to this doc'), h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Close', onclick: () => dlg.close() }, ic('x'))),
+        h('p', { class: 'sum' }, 'Change requests ask the agent to edit the document. Your decisions and comments on items go with Send answers.'),
+        listEl, msg, h('details', {}, h('summary', {}, 'Preview'), pre), how, h('div', { class: 'ft' }, clear, h('span', { class: 'sp' }), copy, send));
+      document.body.append(dlg);
+      dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });
+      dlg._msg = msg;
+      dlg._paint = () => {
+        const open = unsent(), sent = list.filter(a => a.sent);
+        listEl.replaceChildren(...(list.length ? [] : [h('li', { class: 'empty' }, 'No change requests yet. Point, select or draw on the page to add one.')]),
+          ...open.map(row), ...(sent.length ? [h('li', { class: 'grp' }, `Sent · ${sent.length}`), ...sent.map(row)] : []));
+        clear.hidden = !sent.length;
+        send.hidden = !REPLY.changes; send.disabled = copy.disabled = !open.length;
+        copy.classList.toggle('primary', !REPLY.changes);
+        how.textContent = REPLY.changes ? `Send delivers this to ${REPLY.to || 'the agent that opened this page'}. Copy gives you the same text to paste.`
+          : 'This page isn\'t connected to an agent. Copy the text and paste it into the chat. (Pages opened through serve.py can send directly.)';
+        pre.textContent = changesMd();
+      };
+    }
+    dlg._msg.value = store.get(MSG) || '';
+    dlg._paint();
+    dlg.showModal();
+  }
+  async function sendChanges() {
+    const p = payload();
+    if (!p.annotations.length) return;
+    if (!REPLY.changes) { copyText(p.markdown, 'Copied: paste it into the chat with the agent'); dlg && dlg.close(); return; }
+    try {
+      const r = await fetch(REPLY.changes, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Bluedoc': '1' }, body: JSON.stringify(p) });
+      if (!r.ok) throw new Error(String(r.status));
+      const ids = new Set(p.annotations.map(x => x.id));
+      for (const a of list) if (ids.has(a.id)) a.sent = p.at;
+      save(); store.del(MSG);
+      if (dlg) { dlg._msg.value = ''; dlg.close(); }
+      schedule(true); paint();
+      toast(`Change request sent to ${REPLY.to || 'the agent'}`);
+    } catch {
+      copyText(p.markdown, 'Couldn\'t reach the agent; copied instead, paste it into the chat');
+    }
+  }
+  // bring a note's element into view: open the rows, diff file or system it sits in, then flash it
+  function openKey(k) {
+    const [t, rest] = splitKey(k);
+    if (t === 'item') { const x = ITEMS[rest]; if (x) openItem(x); }
+    else if (t === 'line' || t === 'comment') {
+      const i = rest.indexOf('/'), d = DIFFS[rest.slice(0, i)]; if (!d) return false;
+      const file = t === 'line' ? rest.slice(i + 1, rest.lastIndexOf(':')) : (d.comments[+rest.slice(i + 1)] || {}).file || PR_KEY;
+      if (file === PR_KEY || d.byPath[file]) selectFile(d, file);
+    } else if (t === 'node') {
+      const i = rest.indexOf('/'), cv = CANVASES[rest.slice(0, i)], n = cv && cv.byKey[rest.slice(i + 1)];
+      if (n && !shown(n._el)) { focusNode(`${cv.id}/${n._key}`); return true; }
+    }
+    return false;
+  }
+  function reveal(a) {
+    if (marksOff) { marksOff = false; paint(); }
+    let canvas = false;
+    for (const k of [a.target.key, ...(a.up || [])].reverse()) canvas = openKey(k) || canvas;
+    setTimeout(() => {
+      els = new Map();
+      const el = elOf(a.target.key), p = locate(a), tgt = shown(el) ? el : p && p.el;
+      if (tgt && !canvas) {
+        const d = tgt.closest('.bd-pane') && diffOf(tgt);
+        if (d) paneScrollTo(d, tgt); else tgt.scrollIntoView({ block: 'center', behavior: REDUCE ? 'auto' : 'smooth' });
+      }
+      setTimeout(() => {
+        const m = marks.get(a.id); if (m) m.flashUntil = performance.now() + 1300;
+        schedule(true); setTimeout(() => schedule(false), 1350);
+        if (tgt) outline(tgt);
+      }, REDUCE ? 30 : 450);
+    }, canvas ? 700 : 60);
+  }
+
+  /* tests and agents: BP.annotate({type, key, note, quote?, pos?, strokes?, color?}) */
+  function annotate(spec) {
+    if (!spec || !TYPE_IC[spec.type] || !spec.key) return null;
+    const el = elOf(String(spec.key)); if (!el) return null;
+    const a = newAnn(spec.type, el);
+    a.note = String(spec.note || '').trim();
+    if (spec.type === 'pin') a.pos = { x: r4(clamp(+(spec.pos?.x ?? .5), 0, 1)), y: r4(clamp(+(spec.pos?.y ?? .5), 0, 1)) };
+    else if (spec.type === 'text') {
+      const q = String(spec.quote || ''), off = q ? el.textContent.indexOf(q) : -1;
+      if (off < 0) return null;
+      Object.assign(a, { quote: q.trim(), raw: q, off });
+    } else {
+      a.color = PENS[spec.color] ? spec.color : pen;
+      a.strokes = Array.isArray(spec.strokes) && spec.strokes.length ? spec.strokes : [ellipse()];
+      const r = el.getBoundingClientRect(), b = bounds(a.strokes);
+      const cov = shown(el) ? covered({ l: r.left + b.x0 * r.width, t: r.top + b.y0 * r.height, r: r.left + b.x1 * r.width, b: r.top + b.y1 * r.height }, onScreen()) : [];
+      a.targets = (cov.length ? cov : [el]).map(info);
+    }
+    list.push(a); save(); schedule(true); paint();
+    return JSON.parse(JSON.stringify(a));
+  }
+
+  /* wiring */
+  document.body.append(layer, hov, cap, pop, tb);
+  root.classList.add('bd-ann-on');
+  for (const ty of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click', 'dblclick']) addEventListener(ty, onCapture, true);
+  addEventListener('pointermove', e => { if (mode === 'point') showHover(targetAt(e.target)); }, { capture: true, passive: true });
+  root.addEventListener('mouseleave', () => { if (mode === 'point') showHover(null); });
+  document.addEventListener('keydown', e => {
+    if (e.defaultPrevented || e.isComposing || e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
+    const t = e.target;
+    if (t.isContentEditable || (t.closest && t.closest('input, textarea, select, [contenteditable]')) || document.querySelector('dialog[open]')) return;
+    if (e.key === 'Escape') { if (popA) closePop(false); else if (mode !== 'view') setMode('view'); return; }
+    const m = { v: 'view', c: 'point', t: 'select', d: 'draw' }[e.key.toLowerCase()];
+    if (m) { e.preventDefault(); setMode(m); }
+  });
+  document.addEventListener('scroll', () => schedule(false), { capture: true, passive: true });
+  addEventListener('resize', () => schedule(true));
+  if ('ResizeObserver' in window) new ResizeObserver(() => schedule(true)).observe(main);
+  // DOM changes that can move or hide an anchor: rows opening, diff files switching, canvas pan and zoom.
+  // Flow animation (token moves, highlight classes on the drawing) changes nothing that anchors.
+  new MutationObserver(recs => {
+    if (recs.some(r => !(r.target.closest && r.target.closest('.bp-tokens')) && !(r.target instanceof SVGElement && r.attributeName === 'class'))) schedule(true);
+  }).observe(app, { subtree: true, childList: true, attributes: true, attributeFilter: ['class', 'hidden', 'open', 'transform', 'style'] });
+  document.fonts?.ready.then(() => schedule(true));
+  paint(); schedule(true);
+  return Object.assign(api, { annotate, setMode, paint });
+})();
+
 /* ---------- public API (for tests and agents) ---------- */
 window.BP = {
   doc: DOC,
@@ -2835,6 +3594,10 @@ window.BP = {
     return { file: d.sel === PR_KEY ? null : d.sel, comment: d.ci, comments: d.comments.length, cards: d.pane.querySelectorAll('.bd-cm').length, lines: d.pane.querySelectorAll('.bd-ln').length, ticked: linked.filter(c => ITEMS[c.item].cb.checked).length, linked: linked.length }; },
   revisions: () => REVS.map(r => ({ rev: r.rev, date: r.date, current: !!r.current, shown: r === VIEW, changes: r.doc.changes || [] })),
   compare: () => BASE && { from: BASE.rev, to: VIEW.rev, changes: CHG.map(c => ({ kind: c.kind, label: plain(c.label) })) },
+  annotations: () => MARKUP.all(),
+  changesPayload: () => MARKUP.payload(),
+  annotate: spec => MARKUP.annotate(spec),
+  setMode: name => MARKUP.setMode(name),
 };
 })();
 </script>

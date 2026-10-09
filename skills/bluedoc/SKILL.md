@@ -5,31 +5,36 @@ description: Generate self-contained HTML engineering docs (architecture pages, 
 
 # bluedoc
 
-Write one JSON document, build it with `scripts/build.py`, verify it in a browser. The output is one self-contained HTML page: HorizonUI styling, light and dark themes, blueprint canvases, checklists, code review. The template does the rendering; your job is the content and its structure.
+Write one JSON document; the bluedoc server renders it with the template on every request. You write only the JSON: never write, copy, read or diff HTML, and never read `assets/template.html` or a rendered page (that is where the tokens go). The page is HorizonUI styled, light and dark, with blueprint canvases, checklists, code review, revisions, and an annotator for the reader.
 
 Files, relative to this skill's directory (`<skill>` in the commands below):
-- `scripts/build.py`: validates structure, lints CRISP slips, inlines the JSON into the template. Python 3.9+, stdlib only.
-- `scripts/gitdiff.py`: turns a git range plus `path:line` comments into a `diff` block and writes it into the JSON. Python 3.9+, stdlib only.
+- `scripts/build.py`: validates structure, lints CRISP slips, records the revision. `-o out.html` also writes a standalone file, only when someone needs a file to send. Python 3.9+, stdlib only.
+- `scripts/serve.py`: the local server (`http://127.0.0.1:8740/`). Renders docs from their JSON, lists all of them on a searchable home page, and hands you the reader's answers and change requests (`serve.py wait`). Python 3.9+, stdlib only.
+- `scripts/gitdiff.py`: turns a git range plus `path:line` comments into a `diff` block and writes it into the JSON.
 - `scripts/ghthreads.py`: turns a GitHub PR's review threads into the `comments.json` list for `gitdiff.py` and checklist item stubs. Needs `gh` signed in.
-- `scripts/serve.py`: serves a built page on localhost so the reader's **Send to agent** reaches you. Python 3.9+, stdlib only.
-- `assets/template.html`: the runtime (canvas engine, checklists, layout, HorizonUI tokens). Never edit it per document.
+- `assets/template.html`, `assets/home.html`: the runtime. Never edit them per document, never read them.
 - `references/schema.md`: every field. Read it before writing the JSON.
-- `examples/acme-orders.bluedoc.json`: architecture + runbook (3-level canvas, flows per level, checklist linked to the drawing, troubleshooting). Built page: `examples/acme-orders.html`.
-- `examples/acme-review-findings.bluedoc.json`: review findings for two PRs, in the layout below. Built page: `examples/acme-review-findings.html`.
+- `examples/acme-orders.bluedoc.json`: architecture + runbook (3-level canvas, flows per level, checklist linked to the drawing, troubleshooting).
+- `examples/acme-review-findings.bluedoc.json`: review findings for two PRs, in the layout below, with two revisions.
 
 ## Workflow
 
 1. **Write in CRISP.** If the `crisp` skill is installed, read it and apply it at **CRISP 3** to every string you write: titles, tldr, leads, callouts, node `md`, flow step labels, checklist items. Otherwise apply the ten rules in "Writing" below.
 2. **Gather facts from the source.** Read the code, configs, and runs the document describes. Every node, edge, and step must map to something real: a file, a symbol, a queue, a command. Record anchors (`path:line`) for `refs`. Mark what you did not observe as `unverified`.
 3. **Plan the structure** (below) before writing JSON.
-4. **Write the JSON** next to its output: `docs/<topic>/<name>.bluedoc.json`. Keep the JSON in the repo; it is the source. Set `meta.rev` (start at `1` or `A`) and `meta.date`.
-5. **Build:**
+4. **Write the JSON**: `docs/<topic>/<name>.bluedoc.json`. Keep it in the repo; it is the source. Set `meta.rev` (start at `1` or `A`) and `meta.date`. No HTML file.
+5. **Validate:**
    ```sh
-   python3 <skill>/scripts/build.py docs/<topic>/<name>.bluedoc.json -o docs/<topic>/<name>.html
+   python3 <skill>/scripts/build.py docs/<topic>/<name>.bluedoc.json
    ```
-   Fix every `ERROR`. Fix every `WARN` unless it is a false positive you can name (e.g. a quoted log line).
-6. **Verify in a browser** at 390 px, 1280 px and 1920 px, in light and dark (`prefers-color-scheme`). Check: no console errors; no horizontal scroll; at 1280 px and 1920 px the content column has equal left and right margins (centred on the page) and both rails (Contents/Tracker left, Status/Related right) stay in view beside it while the page scrolls; the root drawing has no overlapping labels; for each system, `BP.zoomTo(canvas, key)` reveals its children and `BP.state(canvas).tokens > 0` while flows play; ticking a checklist item survives a reload. For each `diff` block: `BP.openComment(diff, i)` shows the card on its lines, and ticking the card ticks its checklist item. Look at screenshots of the root and of each opened system, and fix layout before reporting. If the browser cannot open `file://`, serve the folder with `python3 -m http.server` and open it over `http://127.0.0.1`.
-7. **Report** the file paths, what you verified, and what stays unverified. When the doc is a new revision, give the reader the compare link: `<name>.html?diff=<previous rev>`.
+   Fix every `ERROR`. Fix every `WARN` unless it is a false positive you can name (e.g. a quoted log line). This also records the revision.
+6. **Open it:**
+   ```sh
+   python3 <skill>/scripts/serve.py open docs/<topic>/<name>.bluedoc.json --to <your name>
+   ```
+   Starts the server if it isn't running, adds the doc's `docs` folder to the home page, prints the doc's URL. Editing the JSON is enough to update the page: the reader reloads.
+7. **Verify in a browser** at that URL, at 390 px, 1280 px and 1920 px, in light and dark (`prefers-color-scheme`). Check: no console errors; no horizontal scroll; at 1280 px and 1920 px the content column has equal left and right margins (centred on the page) and both rails (Contents/Tracker left, Status/Related right) stay in view beside it while the page scrolls; the root drawing has no overlapping labels; for each system, `BP.zoomTo(canvas, key)` reveals its children and `BP.state(canvas).tokens > 0` while flows play; ticking a checklist item survives a reload. For each `diff` block: `BP.openComment(diff, i)` shows the card on its lines, and ticking the card ticks its checklist item. Look at screenshots of the root and of each opened system, and fix layout before reporting. Judge the page by screenshots and `BP.*` calls, never by reading its HTML.
+8. **Report** the URL, what you verified, and what stays unverified. When the doc is a new revision, add the compare link: `<url>?diff=<previous rev>`. The reader finds every doc at `http://127.0.0.1:8740/`.
 
 ## Revisions
 
@@ -37,7 +42,7 @@ Readers can switch between revisions of a doc and compare any two, so they see w
 
 - **Bump `meta.rev` each time you hand the reader a changed doc** (after review comments, new findings, a rebase, a status change). Rebuilding with the same `rev` replaces that revision in place, which is right while you are still drafting it; once the reader has seen it, bump. The build prints `recorded rev C` or `rev C updated in place`.
 - **Write `changes`** (top level, next to `tldr`) on every revision after the first: 1–4 inline-md lines saying what changed and why, e.g. `"#412 tier-boundary: now Fix in PR; the spec says \"10 or more\"."`. The page shows them in the revision list and above the marked diff. Replace them on each bump; they describe this revision only.
-- `build.py` stores every revision in `<name>.bluedoc.history.json` next to the JSON (blocks are shared between revisions, so the file stays small). Keep it next to the JSON and commit it with it; deleting it deletes the history. `--no-history` builds without it; `--show-rev B` prints revision B as JSON.
+- `build.py` (and every server render) stores every revision in `<name>.bluedoc.history.json` next to the JSON (blocks are shared between revisions, so the file stays small). Keep it next to the JSON and commit it with it; deleting it deletes the history. `--no-history` skips it; `--show-rev B` prints revision B as JSON.
 - The page: a **Rev** button in the app bar opens the revision list (view any revision, compare any two). `?rev=B` shows revision B read-only; `?diff=B` marks what changed since B on the current page: new, changed and removed sections, blocks, checklist items, table rows and canvas parts, each with a word-level **What changed** box, and ↑ ↓ to step through them. A reader who opens a newer revision than last time gets an "Updated since you last opened it" strip with a link to the diff.
 - Keep section, block and item ids stable across revisions: the diff matches by id, so a renamed id shows as one removal plus one addition.
 
@@ -74,7 +79,7 @@ Use this layout, without being asked, whenever review results (peer review, agen
 - `tldr`: how many to fix, ticket and decline, and which findings are real bugs the change introduces.
 
 **Section 1, Summary**
-- `lead`: "Each finding has its options under it, with my recommendation starred. Pick one per finding, comment where you disagree, then press **Send to agent**."
+- `lead`: "Each finding has its options under it, with my recommendation starred. Pick one per finding, comment where you disagree, then press **Send answers**."
 - A `table`: **PR | Finding | Size | Recommendation**, one row per finding. Size is `blocker`, `major`, `minor` or `nit`. Link each finding to its item: `[text](#item-<checklist>-<item>)`.
 - A `note` callout for provenance when it matters (who posted the comments, under which login, at which heads).
 
@@ -108,20 +113,35 @@ python3 <skill>/scripts/gitdiff.py --repo <checkout> --base <base> --head <head>
 ```
 `ghthreads.py` prints the PR's base and head and one decision-item stub per open thread, with the standard options, the reviewer's text in `detail`, and `<<…>>` placeholders for the finding, size, recommendation and reasoning. The build fails while any `<<…>>` placeholder is left, so no finding ships without a recommendation.
 
-## Reader replies
+## Reader replies: answers and change requests
 
-Every checklist item has a comment box for the reader, and decision items take a pick. **Send to agent** in the app bar opens a dialog with an overall message, a preview, **Copy** and, when the page is served by `serve.py`, **Send**. The reply is the **Copy progress** Markdown plus the message: picks, ticks, and each comment quoted under its item.
+The reader sends two different things back, from two different places:
 
-When you need answers back (any doc with decision items, or a reader asked to review your plan), serve the page instead of handing over a file path:
+| | **Answers** | **Change requests** |
+|---|---|---|
+| What | Picks on decision items, ticks, a comment per item, an overall message | Annotations on the page: a pin on an element, a selected passage, a drawing, each with the change they want |
+| Where | **Send answers** in the app bar | The floating toolbar at the bottom: View, Point, Select, Draw, then **Request changes** |
+| Means | "Here are my decisions; go do the work" | "Edit this doc" |
+| Files | `<name>.reply.md` / `.json` | `<name>.changes.md` / `.json` |
+
+After `serve.py open`, wait for the reader in the background (no timeout, or a long one):
 ```sh
-python3 <skill>/scripts/serve.py docs/<topic>/<name>.html --to <your name> --once
+python3 <skill>/scripts/serve.py wait docs/<topic>/<name>.bluedoc.json            # either kind
+python3 <skill>/scripts/serve.py wait docs/<topic>/<name>.bluedoc.json --kind changes
 ```
-Run it in the background. It prints `serving http://127.0.0.1:<port>/<name>.html`; give the reader that URL (or add `--open`). When the reader presses Send, it prints the reply Markdown between `--- bluedoc reply` and `--- end reply ---`, writes `<name>.reply.md` and `<name>.reply.json` next to the page, and exits (`--once`). Then:
-1. Act on each pick. A missing pick means "not decided": ask, don't assume your recommendation.
-2. Treat each comment as an instruction about that item; a comment can override the pick.
-3. Rebuild the doc with what changed (`done: true` on finished steps, new findings as items), and serve it again if you need another round.
+It prints `--- bluedoc answers (…json) ---` or `--- bluedoc change request (…json) ---`, the Markdown, `--- end ---`, and exits 0 (3 on `--timeout`). Replies sent while nobody waits are queued; the next `wait` gets the oldest. Then:
 
-Without `serve.py` (a page opened from `file://`, or a reader elsewhere), the dialog offers Copy only and tells the reader to paste the text into the chat. `<name>.reply.*` files are the reader's answers: don't commit them unless asked.
+**Answers**
+1. Act on each pick. A missing pick means "not decided": ask, don't assume your recommendation.
+2. Treat each item comment as an instruction about that item; a comment can override the pick.
+3. Update the JSON with what changed (`done: true` on finished steps, `choice` carrying the reader's picks, new findings as items), bump `meta.rev`, write `changes`, validate, and tell the reader the `?diff=` link.
+
+**Change requests**
+1. Each annotation names its target (`label`, and `key` such as `item:t412/tier-boundary`, `block:<section>/<n>`, `row:…`, `node:<canvas>/<key>`, `line:<diff>/<path>:<n>`), the quoted or covered text, and the requested change. Edit exactly those places in the JSON.
+2. A request you can't or shouldn't do (it contradicts the source, or needs a decision): don't silently skip it; say so in `changes` or ask.
+3. Bump `meta.rev`, write `changes` listing what you changed per request, validate, give the `?diff=` link, and `wait` again.
+
+On `file://` (a standalone `-o` file) both dialogs offer **Copy** only; the reader pastes the text into the chat. `<name>.reply.*` and `<name>.changes.*` are the reader's messages: don't commit them unless asked.
 
 ## Writing (CRISP 3)
 
@@ -140,7 +160,7 @@ The linter flags filler words, vague words, sentences over 32 words, and checkli
 
 ## Output contract
 
-- One self-contained `.html` file: no network access at view time, works from `file://`, prints cleanly.
+- Every page is self-contained: no network access at view time beyond its own server, prints cleanly; a `-o` file also works from `file://`.
 - Ticks, picks and comments live in the reader's browser (`localStorage`, keyed by `doc.id`, checklist id, item id). Keep ids stable across edits; rename an id only to reset that progress on purpose. Changing an item's `done` in a new revision overrides any earlier reader tick on it, so set `done: true` when you verified a step yourself. Earlier revisions (`?rev=`) show the reader's current progress but never store changes.
 - Accessible: every canvas has a text outline (`<details>` under it) listing parts, connections, and flow steps; keyboard: focus a canvas, then `+`/`-`/arrows/`0`/`Esc`, Enter on a node; `prefers-reduced-motion` starts flows paused.
 - Theme follows the reader's system setting; the moon/sun button in the app bar overrides it per browser (`localStorage` key `bluedoc:theme`).
