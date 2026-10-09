@@ -84,7 +84,7 @@ Use this layout, without being asked, whenever review results (peer review, agen
 2. Recommend from the code, not from the review. Check the claim (read the file, run the grep or test) before you agree or decline.
 3. Mark any assumption you did not verify as *unverified* in `detail`, and make its check required in **Verify**.
 4. The diff shows only the commented files, at the head the findings refer to. After a rebase, regenerate it and check every anchor still lands on the code it describes.
-5. Never pre-answer a decision (`choice`). Pre-tick (`done: true`) only plain checklist steps you finished and verified.
+5. Never answer a decision yourself. Set `choice` only to carry over the reader's own answer from an earlier round (a reply, or a pick they told you), and say so in `detail` (`**Status:** picked <option> on <date>`). Pre-tick (`done: true`) only plain checklist steps you finished and verified.
 
 Decision items work anywhere, not only in reviews: whenever you need the reader to choose ("Which account should DEV-02 use?", "Keep or drop the flag?"), give the options as `choices` instead of writing steps like "check if you agree".
 
