@@ -494,9 +494,19 @@ td.bd-cell-mod { background: color-mix(in oklch, var(--warn-tint) 70%, transpare
 .bd-kbd { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 5px; font: 500 10.5px/1 var(--mono); color: var(--fg-muted);
   background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: var(--shadow-hk); }
 .bd-tip .bd-kbd { color: oklch(97% 0 0 / .78); background: oklch(100% 0 0 / .1); box-shadow: inset 0 0 0 1px oklch(100% 0 0 / .12), inset 0 -1px 0 oklch(0% 0 0 / .3); }
-html.bd-ann-on .bd-shell { padding-bottom: 150px; }
-html.bd-ann-on .bp-toast { bottom: 84px; }
-@media (max-width: 600px) { html.bd-ann-on .bp-toast { bottom: 70px; } }
+html.bd-tray-on .bd-shell { padding-bottom: 150px; }
+html.bd-tray-on .bp-toast { bottom: 84px; }
+@media (max-width: 600px) { html.bd-tray-on .bp-toast { bottom: 70px; } }
+/* the revision tray (compare view, earlier revisions): what is shown, ↑ n of N ↓, and the way out */
+.bd-revtb .lbl { display: inline-flex; align-items: center; gap: 7px; padding: 0 6px 0 8px; font-size: 13px; color: var(--fg-muted); white-space: nowrap; }
+.bd-revtb .lbl b { font: 650 13px var(--mono); color: var(--fg); }
+.bd-revtb .lbl .bd-ic { width: 16px; height: 16px; color: var(--fg-subtle); }
+.bd-revtb .pos { min-width: 4.6em; text-align: center; font: 500 12.5px var(--mono); color: var(--fg-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.bd-key.txt { display: inline-flex; align-items: center; width: auto; gap: 7px; padding: 0 13px 0 11px; font-size: 13px; font-weight: 600; white-space: nowrap; }
+.bd-key.txt .bd-ic { width: 16px; height: 16px; }
+.bd-key.go.txt { padding: 0 14px; }
+.bd-key:disabled:not(.go) { opacity: .45; cursor: default; transform: none; }
+@media (max-width: 600px) { .bd-revtb .lbl { padding: 0 2px 0 4px; } .bd-revtb .lbl .x, .bd-revtb .lbl .bd-ic, .bd-key.txt:not(.go) .t { display: none; } .bd-key.txt:not(.go) { padding: 0 9px; } .bd-key.go.txt { padding: 0 11px; } }
 .bd-pen-risk { --pen: var(--risk); } .bd-pen-accent { --pen: var(--accent); } .bd-pen-warn { --pen: var(--warn); } .bd-pen-ok { --pen: var(--ok); }
 html.bd-ann-m-point .bd-shell :not(.bp-side, .bp-side *), html.bd-ann-m-point .bd-shell { cursor: crosshair !important; }
 html.bd-ann-m-select .bd-shell :not(.bp-side, .bp-side *), html.bd-ann-m-select .bd-shell { cursor: text !important; }
@@ -647,11 +657,11 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .bd-cs-ft .row .primary .n { min-width: 20px; height: 20px; padding: 0 5px; border-radius: 7px; display: grid; place-items: center; font: 650 11.5px/1 var(--sans); background: oklch(100% 0 0 / .2); }
 .bd-cs-ft .row .primary:disabled { cursor: default; color: var(--fg-subtle); background: var(--inset); box-shadow: inset 0 0 0 1px var(--line); }
 .bd-cs-ft .row .primary:disabled .bd-ic { color: currentColor; }
-.bd-cs-btn { position: relative; }
-.bd-cs-btn[aria-pressed="true"] { color: var(--fg); background: var(--hk-down); box-shadow: var(--shadow-hk-down); }
-.bd-cs-btn .n { position: absolute; top: -5px; right: -6px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; display: grid; place-items: center;
+.bd-sp-btn { position: relative; }
+.bd-sp-btn[aria-pressed="true"] { color: var(--fg); background: var(--hk-down); box-shadow: var(--shadow-hk-down); }
+.bd-sp-btn .n { position: absolute; top: -5px; right: -6px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; display: grid; place-items: center;
   font: 650 10px/1 var(--sans); color: #fff; background: var(--accent-solid); box-shadow: 0 0 0 2px var(--canvas); }
-.bd-cs-btn .n[hidden] { display: none; }
+.bd-sp-btn .n[hidden] { display: none; }
 .bd-rev-btn[aria-pressed="true"] { background: var(--hk-down); box-shadow: var(--shadow-hk-down); }
 /* the Revisions section: in compare view the marked changes, then every revision, then the Compare picker */
 .bd-rv-l { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 0 12px 16px; scrollbar-width: thin; position: relative; box-shadow: inset 0 1px 0 var(--line-soft); }
@@ -714,7 +724,7 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .bd-chgs pre { max-height: 260px; }
 .bd-chgs .ft .sp { flex: 1; }
 .bd-chgs .ft .bp-btn:disabled { opacity: .5; cursor: default; }
-@media print { .bd-anntb, .bd-ann-layer, .bd-ann-hov, .bd-ann-cap, .bd-tip, .bd-sp, .bd-cmp, .bd-home { display: none !important; } html.bd-ann-on .bd-shell, :root.bd-sp-dock .bd-shell { padding: 0; } }
+@media print { .bd-anntb, .bd-ann-layer, .bd-ann-hov, .bd-ann-cap, .bd-tip, .bd-sp, .bd-cmp, .bd-home { display: none !important; } html.bd-tray-on .bd-shell, :root.bd-sp-dock .bd-shell { padding: 0; } }
 
 /* code review: diff block (HorizonUI DiffReview, ChangeTable, CodeBlock syntax tokens) */
 :root {
@@ -1164,6 +1174,8 @@ const ICONS = {
   chev: '<path d="m9 18 6-6-6-6"/>',
   code: '<path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/>',
   msg: '<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>',
+  panel: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M15 3v18"/>',
+  panelon: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4Z" fill="currentColor"/>',
   pr: '<circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7M6 9v12"/>',
   up: '<path d="m18 15-6-6-6 6"/>',
   down: '<path d="m6 9 6 6 6-6"/>',
@@ -3052,6 +3064,39 @@ function compareDiff(o, n) {
   return rows;
 }
 
+/* ---------- trays of keys and their tooltips (the annotation tray, the compare tray) ---------- */
+const MAC = /Mac|iP(hone|ad|od)/.test(navigator.platform || navigator.userAgent);
+// tooltips: HorizonUI Tooltip with Kbd chips; instant while the pointer moves from key to key.
+// Above the key, or below it when there is no room (the app bar).
+const tip = h('div', { class: 'bd-tip', role: 'tooltip', hidden: true });
+const kbd = k => h('kbd', { class: 'bd-kbd' }, k);
+let tipT = 0, tipWarm = -1e9;
+function showTip(el) {
+  clearTimeout(tipT);
+  if (!el) { if (!tip.hidden) tipWarm = performance.now(); tip.hidden = true; return; }
+  tipT = setTimeout(() => {
+    if (!el.isConnected || !el._tip) return;
+    tip.replaceChildren(h('span', {}, el._tip), ...(el._keys ? [h('span', { class: 'k' }, el._keys.map(kbd))] : []));
+    tip.hidden = false;
+    const r = el.getBoundingClientRect(), w = tip.offsetWidth, th = tip.offsetHeight;
+    tip.style.left = Math.round(clamp(r.left + r.width / 2 - w / 2, 8, root.clientWidth - w - 8)) + 'px';
+    tip.style.top = Math.round(r.top - th - 10 < 8 ? r.bottom + 10 : r.top - th - 10) + 'px';
+  }, performance.now() - tipWarm < 400 ? 0 : 450);
+}
+function tipped(el, keys) {
+  el._keys = keys;
+  el.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') showTip(el); });
+  el.addEventListener('pointerleave', () => showTip(null));
+  el.addEventListener('pointerdown', () => showTip(null));
+  el.addEventListener('focus', () => { if (el.matches(':focus-visible')) showTip(el); });
+  el.addEventListener('blur', () => showTip(null));
+  return el;
+}
+const keyBtn = (cls, icon, label, attrs, onclick, ...kids) =>
+  h('button', { type: 'button', class: 'bd-key' + (cls ? ' ' + cls : ''), 'aria-label': label, ...attrs, onclick }, ic(icon), kids);
+const groove = () => h('span', { class: 'bd-groove', role: 'separator', 'aria-orientation': 'vertical' });
+document.body.append(tip);
+
 /* ---------- right panel: Comments and Revisions ---------- */
 // One panel holds each section this page has: Comments (the current revision only, added by MARKUP)
 // and Revisions (docs with more than one). It docks beside the page on wide windows (applyWidth lays
@@ -3072,6 +3117,11 @@ const SIDE = (() => {
     h('div', { class: 'bd-sp-h' }, tabs, title, chip, h('span', { class: 'sp' }),
       h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Close the panel', title: 'Close', onclick: () => setOpen(false, true) }, ic('x'))));
   const sheet = () => innerWidth <= 900;
+  // the app bar's sidebar key: shows or hides the panel on the section last open; its badge counts pending comments
+  const togN = h('span', { class: 'n', 'aria-hidden': 'true', hidden: true });
+  const toggle = tipped(h('button', { type: 'button', class: 'bd-ibtn bd-sp-btn', 'aria-controls': 'bd-sp', 'aria-pressed': 'false', 'aria-keyshortcuts': ']',
+    onclick: () => setOpen(!panelOpen, true) }), [']']);
+  const badge = n => { togN.hidden = !n; togN.textContent = String(n || ''); };   // the caller repaints
   const as = () => panelOpen ? (sheet() ? 'sheet' : dockW() ? 'dock' : 'drawer') : null;
   const shows = id => panelOpen && section === id;
   const available = () => ORDER.filter(id => secs.has(id));
@@ -3135,25 +3185,33 @@ const SIDE = (() => {
     }
     if (one && cur) { title.textContent = cur.label; const c = cur.chip(); chip.hidden = !c; chip.textContent = c; } else chip.hidden = true;
     el.setAttribute('aria-label', cur ? cur.label : 'Side panel');
+    toggle.setAttribute('aria-pressed', String(panelOpen));
+    toggle._tip = panelOpen ? 'Hide sidebar' : 'Show sidebar';
+    toggle.setAttribute('aria-label', toggle._tip + (togN.hidden ? '' : ` (${togN.textContent} pending)`));
+    if (toggle._open !== panelOpen) { toggle._open = panelOpen; toggle.replaceChildren(ic(panelOpen ? 'panelon' : 'panel'), togN); }
     for (const s of secs.values()) { const v = shows(s.id); if (v !== s.shown) { s.shown = v; s.onToggle(v); } }
   }
-  // after every section is added: restore the panel, or open Revisions in compare view
+  // after every section is added: restore the panel (open by default where it docks, until the reader
+  // toggles it), or open Revisions in compare view
   function start() {
     if (!secs.size) return;
+    document.querySelector('.bd-bar-r')?.insertBefore(toggle, themeBtn);
     document.addEventListener('keydown', e => {
-      if (e.key !== 'Escape' || e.defaultPrevented || !panelOpen || dockW() || document.querySelector('dialog[open]')) return;
-      const t = e.target; if (t.closest && t.closest('input, textarea, select')) return;
-      e.preventDefault(); setOpen(false, true);
+      if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey || document.querySelector('dialog[open]')) return;
+      const t = e.target; if (t.closest && t.closest('input, textarea, select, [contenteditable]')) return;
+      if (e.key === ']') { e.preventDefault(); setOpen(!panelOpen, true); }
+      else if (e.key === 'Escape' && panelOpen && !dockW()) { e.preventDefault(); setOpen(false, true); }
     });
+    const pref = store.get(OPEN_KEY);
     if (BASE && secs.has('revisions') && !sheet()) show('revisions', { remember: false });
-    else if (store.get(OPEN_KEY) === '1' && !sheet()) setOpen(true, false);
+    else if (pref === '1' ? !sheet() : pref == null && innerWidth >= DOCK_MIN) setOpen(true, false);
     paint();
   }
   function api(o) {
     if (o && typeof o === 'object') { if (o.section && o.open !== false) show(o.section); else if ('open' in o) setOpen(o.open, true); }
     return { available: available(), open: panelOpen, section: section || (secs.has(store.get(SECTION_KEY)) ? store.get(SECTION_KEY) : available()[0] || null), as: as() };
   }
-  return { el, add, bind, show, shows, setOpen, paint, start, api, sheet, as };
+  return { el, add, bind, show, shows, setOpen, paint, start, api, sheet, as, badge };
 })();
 
 // URLs and UI
@@ -3218,6 +3276,10 @@ if (REVS.length > 1) {
   if (revDd) { const dd = revDd.nextElementSibling; dd.textContent = ''; dd.append(h('button', { type: 'button', class: 'bd-rev-link', onclick: () => SIDE.show('revisions', { toggle: true }) }, `${VIEW.rev} of ${REVS.length}`)); }
   if (OLD) document.title = `${revName(VIEW)} · ${document.title}`;
   const strip = (cls, ...kids) => { const s = h('div', { class: 'bd-revbar ' + cls, role: 'region', 'aria-label': 'Revision' }, h('div', { class: 'in' }, kids)); document.querySelector('.bd-bar').after(s); return s; };
+  // compare view and earlier revisions get their own tray of keys at the bottom, where the annotation
+  // tray is on the current revision: the one place to step through changes and to leave
+  const tray = (label, ...kids) => { document.body.append(h('div', { class: 'bd-anntb bd-revtb', role: 'toolbar', 'aria-label': label }, kids)); root.classList.add('bd-tray-on'); };
+  const textKey = (cls, icon, text, tipText, keys, href) => { const k = tipped(h('button', { type: 'button', class: 'bd-key txt ' + cls, 'aria-label': text, onclick: () => { location.href = href; } }, icon && ic(icon), h('span', { class: 't' }, text)), keys); k._tip = tipText; return k; };
   if (BASE) {
     // the author's notes for every revision after the base, up to the shown one, then the marked changes
     const a = REVS.indexOf(BASE), b = REVS.indexOf(VIEW);
@@ -3227,17 +3289,27 @@ if (REVS.length > 1) {
       h('ul', {}, notes.map(([r, t]) => h('li', {}, span.length > 1 && h('span', { class: 'r' }, r.rev), h('span', { html: inline(t) }))))));
     compareDocs(BASE.doc, VIEW.doc);
     const n = { add: 0, mod: 0, del: 0 }; CHG.forEach(c => n[c.kind]++);
-    revPos = h('span', { class: 'pos' }, CHG.length === 1 ? '1 change' : `${CHG.length} changes`);
+    revPos = h('span', { class: 'pos', 'aria-live': 'polite' }, CHG.length === 1 ? '1 change' : `${CHG.length} changes`);
     strip('cmp', ic('split'), h('span', { class: 't' }, h('b', {}, `${revName(BASE)} → ${VIEW.rev}`), ': ',
-      CHG.length ? [n.add > 0 && h('span', { class: 'k add' }, `${n.add} new`), n.mod > 0 && h('span', { class: 'k mod' }, `${n.mod} changed`), n.del > 0 && h('span', { class: 'k del' }, `${n.del} removed`)] : 'no differences'),
-      h('span', { class: 'sp' }),
-      CHG.length > 0 && h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Previous change', title: 'Previous change', onclick: () => gotoChg(-1) }, ic('up')),
-      CHG.length > 0 && revPos,
-      CHG.length > 0 && h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Next change', title: 'Next change', onclick: () => gotoChg(1) }, ic('down')),
-      h('a', { class: 'bp-btn ghost', href: revUrl(VIEW, null) }, 'Done'));
+      CHG.length ? [n.add > 0 && h('span', { class: 'k add' }, `${n.add} new`), n.mod > 0 && h('span', { class: 'k mod' }, `${n.mod} changed`), n.del > 0 && h('span', { class: 'k del' }, `${n.del} removed`)] : 'no differences'));
+    const step = (icon, label, d, keys) => { const k = tipped(keyBtn('', icon, label, { disabled: !CHG.length }, () => gotoChg(d)), keys); k._tip = label; return k; };
+    const doneUrl = revUrl(VIEW, null);
+    tray('Compare revisions', h('span', { class: 'lbl' }, ic('split'), h('b', {}, `${revName(BASE)} → ${VIEW.rev}`)),
+      step('up', 'Previous change', -1, ['K', '↑']), revPos, step('down', 'Next change', 1, ['J', '↓']), groove(),
+      textKey('go', null, 'Done', 'Leave compare view', ['Esc'], doneUrl));
+    // Esc leaves; j/↓ and k/↑ step, unless typing, on a focused drawing, or a drawer or sheet is open (Esc closes that first)
+    document.addEventListener('keydown', e => {
+      if (e.defaultPrevented || e.isComposing || e.metaKey || e.ctrlKey || e.altKey || document.querySelector('dialog[open]')) return;
+      const t = e.target; if (t.closest && t.closest('input, textarea, select, [contenteditable], .bp-stage, .bd-diff')) return;
+      if (e.key === 'Escape') { if (SIDE.as() === 'drawer' || SIDE.as() === 'sheet') return; e.preventDefault(); location.href = doneUrl; }
+      else if (e.key === 'j' || e.key === 'ArrowDown') { e.preventDefault(); gotoChg(1); }
+      else if (e.key === 'k' || e.key === 'ArrowUp') { e.preventDefault(); gotoChg(-1); }
+    });
   } else if (OLD) {
-    strip('old', ic('hist'), h('span', { class: 't' }, h('b', {}, revName(VIEW)), VIEW.date ? ` of ${VIEW.date}` : '', `: an earlier revision. The current one is ${CUR.rev}; nothing you change here is saved.`),
-      h('span', { class: 'sp' }), h('a', { class: 'bp-btn', href: revUrl(CUR, VIEW) }, ic('split'), `Changes since ${VIEW.rev}`), h('a', { class: 'bp-btn primary', href: revUrl(CUR, null) }, `Go to ${CUR.rev}`));
+    strip('old', ic('hist'), h('span', { class: 't' }, h('b', {}, revName(VIEW)), VIEW.date ? ` of ${VIEW.date}` : '', `: an earlier revision. The current one is ${CUR.rev}; nothing you change here is saved.`));
+    tray('Earlier revision', h('span', { class: 'lbl' }, ic('hist'), h('b', {}, revName(VIEW)), h('span', { class: 'x' }, '· read-only')),
+      textKey('', 'split', `Changes since ${VIEW.rev}`, `Compare ${VIEW.rev} with the current revision, ${CUR.rev}`, null, revUrl(CUR, VIEW)), groove(),
+      textKey('go', null, 'Go to current', `Open the current revision, ${CUR.rev}`, null, revUrl(CUR, null)));
   } else {
     // the current revision: tell returning readers it changed since their last visit
     const SEEN_KEY = `bp:${docId}:__seen`, seen = store.get(SEEN_KEY);
@@ -3278,7 +3350,7 @@ const MARKUP = (() => {
   const save = () => { if (list.length) store.set(KEY, JSON.stringify(list)); else store.del(KEY); };
   const pending = () => list.filter(a => a.status === 'pending');
   const cut = (s, n) => { s = String(s ?? '').replace(/\s+/g, ' ').trim(); return s.length > n ? s.slice(0, n - 1).trimEnd() + '…' : s; };
-  const TYPE_IC = { pin: 'pin', text: 'type', draw: 'pencil' };
+  const TYPE_IC = { pin: 'msg', text: 'type', draw: 'pencil' };
   const TYPE_WORD = { pin: 'pin', text: 'text', draw: 'drawing' };
   const excerpt = a => a.type === 'text' ? a.quote : a.type === 'draw' && a.targets && a.targets.length ? a.targets.map(t => t.text).filter(Boolean).join(' / ') : a.target.text;
   const pub = a => ({ id: a.id, type: a.type, note: a.note, target: a.target, ...(a.type === 'draw' ? { targets: a.targets || [a.target] } : {}),
@@ -3474,38 +3546,10 @@ const MARKUP = (() => {
   const hov = h('div', { class: 'bd-ann-hov', hidden: true, 'aria-hidden': 'true' }, h('b'));
   const capG = sv('g');
   const cap = h('div', { class: 'bd-ann-cap', hidden: true }, sv('svg', { 'aria-hidden': 'true' }, capG));
-  const MODES = { view: ['cursor', 'View', 'V', 'View: use the page as usual'], point: ['pin', 'Point', 'C', 'Point: pin a comment on an element'],
+  const MODES = { view: ['cursor', 'View', 'V', 'View: use the page as usual'], point: ['msg', 'Point', 'C', 'Point: pin a comment on an element'],
     select: ['type', 'Select', 'T', 'Select: comment on some text'], draw: ['pencil', 'Draw', 'D', 'Draw: circle or mark what should change'] };
   const PENS = { risk: 'Red', accent: 'Blue', warn: 'Amber', ok: 'Green' };
-  const MAC = /Mac|iP(hone|ad|od)/.test(navigator.platform || navigator.userAgent);
   let mode = 'view', marksOff = false, pen = PENS[store.get(PEN_KEY)] ? store.get(PEN_KEY) : 'risk';
-  // tooltips: HorizonUI Tooltip with Kbd chips; instant while the pointer moves from key to key
-  const tip = h('div', { class: 'bd-tip', role: 'tooltip', hidden: true });
-  const kbd = k => h('kbd', { class: 'bd-kbd' }, k);
-  let tipT = 0, tipWarm = -1e9;
-  function showTip(el) {
-    clearTimeout(tipT);
-    if (!el) { if (!tip.hidden) tipWarm = performance.now(); tip.hidden = true; return; }
-    tipT = setTimeout(() => {
-      if (!el.isConnected || !el._tip) return;
-      tip.replaceChildren(h('span', {}, el._tip), ...(el._keys ? [h('span', { class: 'k' }, el._keys.map(kbd))] : []));
-      tip.hidden = false;
-      const r = el.getBoundingClientRect(), w = tip.offsetWidth;
-      tip.style.left = Math.round(clamp(r.left + r.width / 2 - w / 2, 8, root.clientWidth - w - 8)) + 'px';
-      tip.style.top = Math.round(r.top - tip.offsetHeight - 10) + 'px';
-    }, performance.now() - tipWarm < 400 ? 0 : 450);
-  }
-  function tipped(el, keys) {
-    el._keys = keys;
-    el.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') showTip(el); });
-    el.addEventListener('pointerleave', () => showTip(null));
-    el.addEventListener('pointerdown', () => showTip(null));
-    el.addEventListener('focus', () => { if (el.matches(':focus-visible')) showTip(el); });
-    el.addEventListener('blur', () => showTip(null));
-    return el;
-  }
-  const keyBtn = (cls, icon, label, attrs, onclick, ...kids) =>
-    h('button', { type: 'button', class: 'bd-key' + (cls ? ' ' + cls : ''), 'aria-label': label, ...attrs, onclick }, ic(icon), kids);
   const modeBtns = Object.entries(MODES).map(([m, [icon, name, key, tipText]]) => {
     const b = tipped(keyBtn('', icon, name, { 'data-m': m, 'aria-pressed': String(m === mode), 'aria-keyshortcuts': key }, () => setMode(m)), [key]);
     b._tip = tipText;
@@ -3514,12 +3558,9 @@ const MARKUP = (() => {
   const swatches = h('span', { class: 'sw', role: 'group', 'aria-label': 'Pen colour', hidden: true }, Object.entries(PENS).map(([c, name]) =>
     h('button', { type: 'button', class: 'bd-pen-' + c, 'data-pen': c, 'aria-label': name + ' pen', title: name + ' pen', onclick: () => { pen = c; store.set(PEN_KEY, c); paint(); } })));
   const eye = tipped(keyBtn('eye', 'eye', 'Hide comment marks', {}, () => { marksOff = !marksOff; paint(); schedule(true); }));
-  const csKeyN = h('span', { class: 'b', 'aria-hidden': 'true', hidden: true });
-  const csKey = tipped(keyBtn('', 'msg', 'Comments', { 'aria-pressed': 'false' }, () => SIDE.show('comments', { toggle: true }), csKeyN));
   const goN = h('span', { class: 'n' });
   const go = tipped(keyBtn('go', 'edit', 'Request changes', {}, () => openDlg(), h('span', { class: 'l' }, 'Request changes'), goN));
-  const groove = () => h('span', { class: 'bd-groove', role: 'separator', 'aria-orientation': 'vertical' });
-  const tb = h('div', { class: 'bd-anntb bd-ann-ui', role: 'toolbar', 'aria-label': 'Comment on this doc' }, modeBtns, swatches, groove(), eye, csKey, groove(), go);
+  const tb = h('div', { class: 'bd-anntb bd-ann-ui', role: 'toolbar', 'aria-label': 'Comment on this doc' }, modeBtns, swatches, groove(), eye, go);
   let page = null, swallow = false, press = null, ink = null, lastUp = 0, dlg = null, hovEl = null, hovFor = null, flashT = 0;
   // the comment being written (on the page, in the composer; not in the list until saved), the one being
   // edited in its sidebar card, the selected one, the hovered one
@@ -3726,9 +3767,6 @@ const MARKUP = (() => {
     h('div', { class: 'bd-cs-f' }, h('div', { class: 'bd-sg', role: 'radiogroup', 'aria-label': 'Show' }, filterBtns), sortBtn),
     listBox,
     h('div', { class: 'bd-cs-ft' }, csMsg, h('div', { class: 'row' }, clearBtn, h('span', { class: 'sp' }), csGo)));
-  const barN = h('span', { class: 'n', 'aria-hidden': 'true', hidden: true });
-  const barBtn = h('button', { type: 'button', class: 'bd-ibtn bd-cs-btn', 'aria-label': 'Comments', title: 'Comments', 'aria-pressed': 'false',
-    onclick: () => SIDE.show('comments', { toggle: true }) }, ic('msg'), barN);
   function setMsg(v) { if (v.trim()) store.set(MSG, v); else store.del(MSG); }
   csMsg.addEventListener('input', () => { setMsg(csMsg.value); grow(csMsg); });
   csMsg.addEventListener('keydown', e => { e.stopPropagation(); if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); openDlg(); } });
@@ -3968,9 +4006,7 @@ const MARKUP = (() => {
     go.setAttribute('aria-label', `Request changes: ${n} pending`);
     go._tip = n ? `Review and send ${n} pending change request${n === 1 ? '' : 's'}` : 'Point, select or draw on the page to request a change';
     csGoN.textContent = String(n);
-    for (const el of [csKeyN, barN]) { el.hidden = !n; el.textContent = String(n); }
-    for (const el of [csKey, barBtn]) el.setAttribute('aria-label', `Comments: ${n} pending`);
-    csKey._tip = SIDE.shows('comments') ? 'Hide comments' : 'Show comments';
+    SIDE.badge(n);
     filterBtns.forEach(b => { const f = b.dataset.f; b.setAttribute('aria-checked', String(f === filter)); b.replaceChildren(FILTERS[f], h('i', {}, String(f === 'all' ? total : by(f)))); });
     sortBtn.replaceChildren(ic(sort === 'page' ? 'doc' : 'hist'));
     sortBtn.title = sort === 'page' ? 'In page order; click for newest first' : 'Newest first; click for page order'; sortBtn.setAttribute('aria-label', sortBtn.title);
@@ -4188,12 +4224,10 @@ const MARKUP = (() => {
   }
 
   /* wiring */
-  document.body.append(layer, hov, cap, cmp, tb, tip);
+  document.body.append(layer, hov, cap, cmp, tb);
   SIDE.add({ id: 'comments', label: 'Comments', body: csBody, count: () => pending().length || '', chip: () => pending().length ? `${pending().length} pending` : '',
     onToggle: shown => { if (!shown) endEdit(true); schedule(true); paint(); } });
-  SIDE.bind(csKey, 'comments'); SIDE.bind(barBtn, 'comments');
-  document.querySelector('.bd-bar-r')?.insertBefore(barBtn, themeBtn);
-  root.classList.add('bd-ann-on');
+  root.classList.add('bd-tray-on');
   for (const ty of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click', 'dblclick']) addEventListener(ty, onCapture, true);
   addEventListener('pointermove', e => { if (mode === 'point' && !(e.target.closest && e.target.closest('.bd-sp'))) showHover(targetAt(e.target)); }, { capture: true, passive: true });
   root.addEventListener('mouseleave', () => { if (mode === 'point') showHover(null); });
