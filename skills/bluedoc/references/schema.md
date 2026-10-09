@@ -68,7 +68,7 @@ Each item is a collapsed row: a tick, a one-line **title** (`text`), a one-line 
 | `done` | | Initial tick before the reader touches it (e.g. steps the author already verified). Not for decision items. |
 | `choices` | row, line 3 | Makes the item a **decision**: 2–6 options `{id, label, md?}` shown as pills instead of a tick. Label ≤ 28 characters; `md` is the tooltip. The reader picks one; picking it again clears it. A picked item counts as done. |
 | `recommend` | row, line 3 | The id of the recommended option, starred. |
-| `choice` | | The author's pre-picked option, like `done` for ticks. Leave it unset when the reader is meant to decide. |
+| `choice` | | A pre-picked option, like `done` for ticks. Use it only to carry over the reader's answer from an earlier round; leave it unset when the reader has not decided. Changing it in a new revision overrides the reader's stored pick. |
 
 ```json
 { "id": "double-auth", "text": "A retry can authorize the card twice", "sub": "Recommend fix in PR: a timeout after PayCo accepted becomes a second charge.",
