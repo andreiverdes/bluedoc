@@ -179,13 +179,13 @@ button { font: inherit; color: inherit; cursor: pointer; }
 /* the reader's comment on an item */
 .bp-note { display: flex; align-items: flex-start; gap: 8px; }
 .bp-note > .bd-ic { flex: none; width: 15px; height: 15px; margin-top: 8px; color: var(--fg-subtle); }
-.bp-note-ta { flex: 1; min-width: 0; resize: none; overflow: hidden; padding: 6px 10px; border: 0; border-radius: 9px; font: 13.5px/1.5 var(--sans); color: var(--fg);
+.bp-note-ta { flex: 1; min-width: 0; min-height: 34px; resize: none; overflow: hidden; padding: 6px 10px; border: 0; border-radius: 9px; font: 13.5px/1.5 var(--sans); color: var(--fg);
   background: var(--inset); box-shadow: inset 0 0 0 1px var(--line); transition: box-shadow .12s; }
 .bp-note-ta::placeholder { color: var(--fg-subtle); }
 .bp-note-ta:focus { outline: none; background: var(--surface); box-shadow: var(--focus-ring); }
 .bp-note.compact { margin-top: 8px; padding-left: 28px; }
 .bp-note.compact > .bd-ic { display: none; }
-.bp-note.compact .bp-note-ta { font-size: 13px; padding: 5px 9px; }
+.bp-note.compact .bp-note-ta { font-size: 13px; padding: 5px 9px; min-height: 31px; }
 .bp-cl-noteic { display: none; flex: none; margin-top: 4px; color: var(--accent-fg); }
 .bp-cl-noteic .bd-ic { width: 15px; height: 15px; }
 .bp-cl-item.has-note > .bp-cl-row .bp-cl-noteic { display: inline-flex; }
@@ -1227,10 +1227,19 @@ function allChecklistsMd() {
 /* ---------- replies: comments and answers back to the agent ---------- */
 const MSG_KEY = `bp:${docId}:__message`;
 // A comment box bound to one item. Rows and diff cards each get one; they stay in sync.
+// Auto-height needs layout: a box inside a collapsed row measures 0, so fit waits until it is shown.
+const noteFit = 'ResizeObserver' in window ? new ResizeObserver(es => es.forEach(e => e.target._fit && e.target._fit())) : null;
 function noteBox(x, compact) {
   const ta = h('textarea', { class: 'bp-note-ta', rows: 1, placeholder: compact ? 'Comment for the agent…' : 'Comment for the agent (sent with your answers)…',
     'aria-label': 'Comment for the agent on: ' + String(x.it.text || '').replace(/[`*]/g, '') });
-  const fit = () => { ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight + 2, 240) + 'px'; };
+  const fit = () => {
+    if (!ta.offsetWidth) return;   // hidden: keep the CSS min-height, refit when shown
+    if (ta._w === ta.offsetWidth && ta._v === ta.value) return;   // ResizeObserver also fires on our own height change
+    ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight + 2, 240) + 'px';
+    ta._w = ta.offsetWidth; ta._v = ta.value;
+  };
+  ta._fit = fit;
+  if (noteFit) noteFit.observe(ta);
   let t = 0;
   const view = { el: h('div', { class: 'bp-note' + (compact ? ' compact' : '') }, ic('msg'), ta), paint: () => { if (document.activeElement !== ta && ta.value !== x.note) { ta.value = x.note; fit(); } } };
   ta.addEventListener('input', () => { fit(); clearTimeout(t); t = setTimeout(() => x.setNote(ta.value, view), 250); });
