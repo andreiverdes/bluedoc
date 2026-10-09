@@ -22,14 +22,24 @@ Files, relative to this skill's directory (`<skill>` in the commands below):
 1. **Write in CRISP.** If the `crisp` skill is installed, read it and apply it at **CRISP 3** to every string you write: titles, tldr, leads, callouts, node `md`, flow step labels, checklist items. Otherwise apply the ten rules in "Writing" below.
 2. **Gather facts from the source.** Read the code, configs, and runs the document describes. Every node, edge, and step must map to something real: a file, a symbol, a queue, a command. Record anchors (`path:line`) for `refs`. Mark what you did not observe as `unverified`.
 3. **Plan the structure** (below) before writing JSON.
-4. **Write the JSON** next to its output: `docs/<topic>/<name>.bluedoc.json`. Keep the JSON in the repo; it is the source.
+4. **Write the JSON** next to its output: `docs/<topic>/<name>.bluedoc.json`. Keep the JSON in the repo; it is the source. Set `meta.rev` (start at `1` or `A`) and `meta.date`.
 5. **Build:**
    ```sh
    python3 <skill>/scripts/build.py docs/<topic>/<name>.bluedoc.json -o docs/<topic>/<name>.html
    ```
    Fix every `ERROR`. Fix every `WARN` unless it is a false positive you can name (e.g. a quoted log line).
 6. **Verify in a browser** at 390 px, 1280 px and 1920 px, in light and dark (`prefers-color-scheme`). Check: no console errors; no horizontal scroll; at 1280 px and 1920 px the content column has equal left and right margins (centred on the page) and both rails (Contents/Tracker left, Status/Related right) stay in view beside it while the page scrolls; the root drawing has no overlapping labels; for each system, `BP.zoomTo(canvas, key)` reveals its children and `BP.state(canvas).tokens > 0` while flows play; ticking a checklist item survives a reload. For each `diff` block: `BP.openComment(diff, i)` shows the card on its lines, and ticking the card ticks its checklist item. Look at screenshots of the root and of each opened system, and fix layout before reporting. If the browser cannot open `file://`, serve the folder with `python3 -m http.server` and open it over `http://127.0.0.1`.
-7. **Report** the file paths, what you verified, and what stays unverified.
+7. **Report** the file paths, what you verified, and what stays unverified. When the doc is a new revision, give the reader the compare link: `<name>.html?diff=<previous rev>`.
+
+## Revisions
+
+Readers can switch between revisions of a doc and compare any two, so they see what changed instead of rereading it. The build keeps the history; you decide when a revision starts.
+
+- **Bump `meta.rev` each time you hand the reader a changed doc** (after review comments, new findings, a rebase, a status change). Rebuilding with the same `rev` replaces that revision in place, which is right while you are still drafting it; once the reader has seen it, bump. The build prints `recorded rev C` or `rev C updated in place`.
+- **Write `changes`** (top level, next to `tldr`) on every revision after the first: 1–4 inline-md lines saying what changed and why, e.g. `"#412 tier-boundary: now Fix in PR; the spec says \"10 or more\"."`. The page shows them in the revision list and above the marked diff. Replace them on each bump; they describe this revision only.
+- `build.py` stores every revision in `<name>.bluedoc.history.json` next to the JSON (blocks are shared between revisions, so the file stays small). Keep it next to the JSON and commit it with it; deleting it deletes the history. `--no-history` builds without it; `--show-rev B` prints revision B as JSON.
+- The page: a **Rev** button in the app bar opens the revision list (view any revision, compare any two). `?rev=B` shows revision B read-only; `?diff=B` marks what changed since B on the current page: new, changed and removed sections, blocks, checklist items, table rows and canvas parts, each with a word-level **What changed** box, and ↑ ↓ to step through them. A reader who opens a newer revision than last time gets an "Updated since you last opened it" strip with a link to the diff.
+- Keep section, block and item ids stable across revisions: the diff matches by id, so a renamed id shows as one removal plus one addition.
 
 ## Structure
 
@@ -131,7 +141,7 @@ The linter flags filler words, vague words, sentences over 32 words, and checkli
 ## Output contract
 
 - One self-contained `.html` file: no network access at view time, works from `file://`, prints cleanly.
-- Ticks, picks and comments live in the reader's browser (`localStorage`, keyed by `doc.id`, checklist id, item id). Keep ids stable across edits; rename an id only to reset that progress on purpose. Changing an item's `done` in a new revision overrides any earlier reader tick on it, so set `done: true` when you verified a step yourself.
+- Ticks, picks and comments live in the reader's browser (`localStorage`, keyed by `doc.id`, checklist id, item id). Keep ids stable across edits; rename an id only to reset that progress on purpose. Changing an item's `done` in a new revision overrides any earlier reader tick on it, so set `done: true` when you verified a step yourself. Earlier revisions (`?rev=`) show the reader's current progress but never store changes.
 - Accessible: every canvas has a text outline (`<details>` under it) listing parts, connections, and flow steps; keyboard: focus a canvas, then `+`/`-`/arrows/`0`/`Esc`, Enter on a node; `prefers-reduced-motion` starts flows paused.
 - Theme follows the reader's system setting; the moon/sun button in the app bar overrides it per browser (`localStorage` key `bluedoc:theme`).
 - A drawing explains; it does not prove. Say so in `state` when the reader could mistake it for runtime evidence.

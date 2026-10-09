@@ -5,7 +5,7 @@
   "meta": {
     "org": "Acme Corp",
     "kind": "Review",
-    "rev": "A",
+    "rev": "B",
     "date": "2026-03-14"
   },
   "state": [
@@ -45,6 +45,9 @@
     }
   ],
   "tldr": "Fix 6 in the PRs, ticket 2, decline 2; 1 resolves itself. Two are real bugs these PRs introduce: #412 gives no discount at exactly 10 or 50 units, and #415 can authorize a card twice when PayCo times out after accepting. Both are one-line fixes; neither PR should merge before them.",
+  "changes": [
+    "`docs/pricing.md` is now a ticket, not a fix in #412: its order of operations needs a product decision from the PRICING-88 owner."
+  ],
   "sections": [
     {
       "id": "summary",

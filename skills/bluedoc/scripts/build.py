@@ -2,9 +2,15 @@
 """Build a bluedoc HTML page from a JSON document.
 
 Usage:
-  build.py doc.json -o out.html     validate, lint, write HTML
+  build.py doc.json -o out.html     validate, lint, record the revision, write HTML
   build.py doc.json --check         validate and lint only
   build.py doc.json -o out.html --strict   treat lint warnings as errors
+  build.py doc.json --show-rev B    print revision B, rebuilt from the history, as JSON
+
+Revisions: every build that writes HTML records the document under its `meta.rev` in
+<doc>.history.json next to the JSON (doc.bluedoc.json -> doc.bluedoc.history.json). A new rev
+appends; rebuilding the same rev replaces that entry. The page embeds the history, so readers
+can switch revisions and compare two. --no-history builds without reading or writing it.
 
 Exit codes: 0 ok, 1 validation errors (or warnings with --strict), 2 usage/IO error.
 Python 3.9+ standard library only.
@@ -12,6 +18,8 @@ Python 3.9+ standard library only.
 from __future__ import annotations
 
 import argparse
+import datetime as dt
+import hashlib
 import json
 import re
 import sys
@@ -19,6 +27,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 TEMPLATE = HERE.parent / "assets" / "template.html"
+HISTORY_VERSION = 1
 
 BLOCK_TYPES = {"text", "callout", "table", "code", "terms", "cards", "checklist", "canvas", "diff"}
 FILE_STATUSES = {"added", "modified", "deleted", "renamed", "context"}
@@ -226,6 +235,13 @@ def validate(doc: dict) -> Report:
         check_id(rep, "doc", doc["id"])
     lint_text(rep, "doc.subtitle", doc.get("subtitle"))
     lint_text(rep, "doc.tldr", doc.get("tldr"))
+    ch = doc.get("changes")
+    if ch is not None:
+        if not isinstance(ch, list) or not all(isinstance(x, str) and x.strip() for x in ch):
+            rep.err("doc.changes", "list of non-empty inline-md strings: what changed in this revision")
+        else:
+            for i, x in enumerate(ch):
+                lint_text(rep, f"doc.changes[{i}]", x)
     for i, s in enumerate(doc.get("state") or []):
         if s.get("kind") and s["kind"] not in STATE_KINDS:
             rep.err(f"doc.state[{i}]", f"kind '{s['kind']}' not in {sorted(STATE_KINDS)}")
@@ -423,13 +439,120 @@ def validate(doc: dict) -> Report:
     return rep
 
 
-def build(doc: dict, template: str) -> str:
-    payload = json.dumps(doc, ensure_ascii=False, separators=(",", ":"))
-    payload = payload.replace("</", "<\\/").replace("<!--", "<\\!--")
+def history_path(doc_path: Path) -> Path:
+    name = doc_path.name[:-5] if doc_path.name.endswith(".json") else doc_path.name
+    return doc_path.with_name(name + ".history.json")
+
+
+def _canon(x) -> str:
+    return json.dumps(x, ensure_ascii=False, separators=(",", ":"))
+
+
+def _hash(x) -> str:
+    return hashlib.sha1(json.dumps(x, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()).hexdigest()[:16]
+
+
+def load_history(path: Path) -> dict:
+    if not path.exists():
+        return {"bluedoc_history": HISTORY_VERSION, "revs": [], "blocks": {}}
+    h = json.loads(path.read_text(encoding="utf-8"))
+    if h.get("bluedoc_history") != HISTORY_VERSION or not isinstance(h.get("revs"), list):
+        raise ValueError(f"{path} is not a bluedoc history file")
+    h.setdefault("blocks", {})
+    return h
+
+
+def snapshot(doc: dict, pool: dict) -> dict:
+    """One revision: the document without section blocks, plus block hashes into the shared pool."""
+    head = {k: v for k, v in doc.items() if k != "sections"}
+    sections = []
+    for s in doc.get("sections") or []:
+        refs = []
+        for b in s.get("blocks") or []:
+            k = _hash(b)
+            pool[k] = b
+            refs.append(k)
+        sections.append({**{k: v for k, v in s.items() if k != "blocks"}, "blocks": refs})
+    return {"head": head, "sections": sections}
+
+
+def restore(h: dict, entry: dict) -> dict:
+    return {**entry["head"], "sections": [{**s, "blocks": [h["blocks"][r] for r in s["blocks"]]} for s in entry["sections"]]}
+
+
+def record(h: dict, doc: dict) -> str:
+    """Put doc into the history under its meta.rev. Returns what happened, for the build log."""
+    meta = doc.get("meta") or {}
+    rev = str(meta.get("rev") or "")
+    snap = snapshot(doc, h["blocks"])
+    entry = {"rev": rev, "date": meta.get("date") or "", "built": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"), **snap}
+    revs = h["revs"]
+    if revs and revs[-1]["rev"] == rev:
+        same = json.dumps(restore(h, revs[-1]), sort_keys=True) == json.dumps(doc, sort_keys=True)
+        if same:
+            msg = f"rev {rev} unchanged"
+        else:
+            revs[-1] = entry
+            msg = f"rev {rev} updated in place (bump meta.rev to keep the previous text as its own revision)"
+    elif any(r["rev"] == rev for r in revs):
+        return f"ERROR history: meta.rev {rev} is an earlier revision of this doc; bump it past {revs[-1]['rev']}"
+    else:
+        revs.append(entry)
+        msg = f"recorded rev {rev}"
+    # drop pool blocks no revision uses any more
+    used = {r for e in revs for s in e["sections"] for r in s["blocks"]}
+    h["blocks"] = {k: v for k, v in h["blocks"].items() if k in used}
+    out = f"history: {msg}; {len(revs)} revision(s)"
+    if len(revs) > 1:
+        prev = revs[-2]["head"].get("changes")
+        if not doc.get("changes"):
+            out += f"\nWARN  doc.changes: say what changed since rev {revs[-2]['rev']} (shown in the revision list and the diff)"
+        elif prev == doc.get("changes"):
+            out += f"\nWARN  doc.changes: same as rev {revs[-2]['rev']}; describe this revision"
+    return out
+
+
+def embed_history(h: dict | None, doc: dict) -> dict | None:
+    """The history as the page needs it: blocks the current doc also has become '@section/block'
+    references into the page's own document, so the page carries each block once."""
+    if not h or len(h["revs"]) < 2:
+        return None
+    here = {}
+    for i, s in enumerate(doc.get("sections") or []):
+        for j, b in enumerate(s.get("blocks") or []):
+            here.setdefault(_hash(b), f"@{i}/{j}")
+    cur_rev = str((doc.get("meta") or {}).get("rev") or "")
+    revs, blocks = [], {}
+    for idx, e in enumerate(h["revs"]):
+        out = {"rev": e["rev"], "date": e.get("date", ""), "built": e.get("built", "")}
+        if not (idx == len(h["revs"]) - 1 and e["rev"] == cur_rev):   # the current rev is the page's own doc
+            secs = []
+            for s in e["sections"]:
+                refs = []
+                for r in s["blocks"]:
+                    if r in here:
+                        refs.append(here[r])
+                    else:
+                        blocks[r] = h["blocks"][r]
+                        refs.append(r)
+                secs.append({**s, "blocks": refs})
+            out.update(head=e["head"], sections=secs)
+        revs.append(out)
+    return {"revs": revs, "blocks": blocks}
+
+
+def _script_json(x) -> str:
+    return _canon(x).replace("</", "<\\/").replace("<!--", "<\\!--")
+
+
+def build(doc: dict, template: str, history: dict | None = None) -> str:
     title = (doc.get("title") or "bluedoc").replace("&", "&amp;").replace("<", "&lt;")
     if "__BLUEDOC_DOC__" not in template:
         raise SystemExit("template is missing the __BLUEDOC_DOC__ placeholder")
-    return template.replace("__BLUEDOC_TITLE__", title).replace("__BLUEDOC_DOC__", payload)
+    hist = embed_history(history, doc)
+    return (template.replace("__BLUEDOC_TITLE__", title)
+            .replace("__BLUEDOC_HISTORY__", _script_json(hist) if hist else "null")
+            .replace("__BLUEDOC_DOC__", _script_json(doc)))
 
 
 def main() -> int:
@@ -439,7 +562,22 @@ def main() -> int:
     ap.add_argument("--check", action="store_true", help="validate and lint only")
     ap.add_argument("--strict", action="store_true", help="fail on lint warnings")
     ap.add_argument("--template", type=Path, default=TEMPLATE)
+    ap.add_argument("--no-history", action="store_true", help="don't read or write <doc>.history.json")
+    ap.add_argument("--show-rev", metavar="REV", help="print that revision from the history as JSON and exit")
     a = ap.parse_args()
+    hpath = history_path(a.doc)
+    if a.show_rev is not None:
+        try:
+            h = load_history(hpath)
+        except (OSError, ValueError, json.JSONDecodeError) as e:
+            print(f"cannot read {hpath}: {e}", file=sys.stderr)
+            return 2
+        entry = next((e for e in h["revs"] if e["rev"] == a.show_rev), None)
+        if not entry:
+            print(f"no rev {a.show_rev} in {hpath}; have: {', '.join(e['rev'] for e in h['revs']) or 'none'}", file=sys.stderr)
+            return 2
+        print(json.dumps(restore(h, entry), ensure_ascii=False, indent=2))
+        return 0
     try:
         doc = json.loads(a.doc.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as e:
@@ -456,8 +594,25 @@ def main() -> int:
     if not a.out:
         print("pass -o OUT.html or --check", file=sys.stderr)
         return 2
+    history = None
+    if not a.no_history:
+        if not (doc.get("meta") or {}).get("rev"):
+            print("history: off (set meta.rev to keep revisions)", file=sys.stderr)
+        else:
+            try:
+                history = load_history(hpath)
+            except (OSError, ValueError, json.JSONDecodeError) as e:
+                print(f"cannot read {hpath}: {e}", file=sys.stderr)
+                return 2
+            before = _canon(history)
+            log = record(history, doc)
+            print(log, file=sys.stderr)
+            if log.startswith("ERROR"):
+                return 1
+            if _canon(history) != before:
+                hpath.write_text(json.dumps(history, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
     a.out.parent.mkdir(parents=True, exist_ok=True)
-    a.out.write_text(build(doc, a.template.read_text(encoding="utf-8")), encoding="utf-8")
+    a.out.write_text(build(doc, a.template.read_text(encoding="utf-8"), history), encoding="utf-8")
     print(f"wrote {a.out} ({a.out.stat().st_size // 1024} KB)", file=sys.stderr)
     return 0
 

@@ -9,10 +9,11 @@ One JSON file describes one HTML document. `scripts/build.py` validates it and i
 | `id` | id | yes | Namespace for checklist progress in `localStorage`. Never change it after people start ticking. |
 | `title` | string | yes | Page `<h1>` and browser title (`<title> · bluedoc`). |
 | `subtitle` | inline md | no | One sentence under the title. |
-| `meta` | object | no | `org`, `kind` (Architecture, Walkthrough, Runbook, Setup, Change), `dwg` (drawing number), `rev`, `date`. `org · kind · date` form the line above the title; `dwg` and `rev` appear under **Document** in the status rail and in the canvas title blocks. |
+| `meta` | object | no | `org`, `kind` (Architecture, Walkthrough, Runbook, Setup, Change), `dwg` (drawing number), `rev`, `date`. `org · kind · date` form the line above the title; `dwg` and `rev` appear under **Document** in the status rail and in the canvas title blocks. `rev` names the revision: the build keeps one history entry per `rev` (see Revisions). |
 | `state` | `[{label, kind}]` | no | Provenance, listed under **Status** in the status rail as dots. `kind`: `ok` (green), `warn` (amber), `risk` (red), `info` (blue), `todo` (grey). Example: `{"label": "not live", "kind": "warn"}`. Keep each label under ~40 characters. |
 | `links` | `[{label, href}]` | no | Related documents, listed under **Related** in the status rail. |
 | `tldr` | md | no | The answer in 1–3 sentences. Required in practice for documents longer than 3 sections. |
+| `changes` | `[inline md]` | no | What changed in this revision and why, 1–4 lines. Shown in the revision list and above the marked diff. Rewrite it on each new `rev`. |
 | `sections` | `[section]` | yes | Rendered in order, numbered 01, 02, … |
 
 `id` everywhere = lowercase letters, digits, hyphens; starts with a letter or digit.
@@ -96,7 +97,7 @@ Every item has a comment box at the bottom of its open body (and on its diff car
 **Send to agent** (app bar, shown when the page has a checklist) opens a dialog: a count of decisions, ticks and comments, an overall message (stored under `bp:<doc.id>:__message`, printed after the page title in the export), a Markdown preview, **Copy**, and **Send**. Send appears only when the page is served by `scripts/serve.py`: the page probes `GET /__bluedoc/ping` and posts the reply to `/__bluedoc/reply`. `serve.py` prints the Markdown and writes `<name>.reply.md` and `<name>.reply.json` next to the page. The JSON:
 
 ```json
-{ "doc": "<doc.id>", "title": "…", "path": "/<name>.html", "at": "<ISO time>", "message": "…",
+{ "doc": "<doc.id>", "rev": "<meta.rev>", "title": "…", "path": "/<name>.html", "at": "<ISO time>", "message": "…",
   "items": [ { "checklist": "t412", "item": "tier-boundary", "text": "…", "choice": "ticket", "recommend": "fix", "note": "…" },
              { "checklist": "local", "item": "doctor", "text": "…", "done": true } ],
   "markdown": "<the Copy progress text>" }
@@ -146,6 +147,18 @@ python3 <skill>/scripts/gitdiff.py --repo ../acme-shop --base a1b2c3d --head e4f
 - writes the block into the section, replacing a block with the same `id`.
 
 Diff the commits the reviewer actually read. If the branch was rebased since, keep the reviewed range and say so in `note`: the line numbers in the findings belong to that range.
+
+## Revisions
+
+`build.py doc.bluedoc.json -o doc.html` records the document in `doc.bluedoc.history.json` under its `meta.rev`: a new `rev` appends a revision, the same `rev` replaces the last one. A `rev` that is already an earlier revision is refused with a warning. No `meta.rev`: no history. The history file stores each revision's header and section fields once per revision and each block once across all revisions (by content hash); the page embeds the revisions other than the current one, with blocks the current one still has as references, so a page with ten small edits grows by roughly the edited blocks.
+
+| URL | Shows |
+|---|---|
+| `doc.html` | The current revision. |
+| `doc.html?rev=B` | Revision B, read-only: ticks, picks and comments made there are not stored, and **Send to agent** is hidden. |
+| `doc.html?diff=B` | The current revision with everything that changed since B marked; `?rev=C&diff=B` compares B with C. |
+
+The diff matches sections, checklist items and canvas nodes by `id`, blocks by type and `id` (or position), and table rows by content then first cell. Each change gets a **New** / **Changed** / **Removed** tag; changed things get a **What changed** box with a word-level diff of each changed field (title, subtitle, details, options, recommendation, cells, node labels, flow steps). Removed sections, blocks, items and rows are shown struck through where they were. Canvas parts that are new or changed glow in the drawing. A `diff` block reports range, files and comments that changed.
 
 ## Page layout
 
@@ -226,3 +239,5 @@ The built page exposes `window.BP`:
 | `BP.openCode('pr-412', 'src/pricing/tiers.ts', 11)` | Scrolls to the diff, opens the file, jumps to the line. |
 | `BP.openComment('pr-412', 0)` | Opens the n-th comment, in file-list order. |
 | `BP.diffState('pr-412')` | `{file, comment, comments, cards, lines, ticked, linked}` |
+| `BP.revisions()` | `[{rev, date, current, shown, changes}]`, oldest first. |
+| `BP.compare()` | With `?diff=`: `{from, to, changes: [{kind: 'add'|'mod'|'del', label}]}` in page order; else `null`. |
