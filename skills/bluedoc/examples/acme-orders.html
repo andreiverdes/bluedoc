@@ -193,17 +193,6 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .bd-revbar .k { margin-left: 6px; font-weight: 600; }
 .bd-revbar .k.add { color: var(--ok-fg); } .bd-revbar .k.mod { color: var(--warn-fg); } .bd-revbar .k.del { color: var(--risk-fg); }
 .bd-revbar .bp-btn { height: 28px; }
-.bd-revs .rv-list { list-style: none; margin: 0 20px; padding: 0; max-height: 52vh; overflow: auto; }
-.bd-revs .rv { padding: 12px 0; border-top: 1px solid var(--line-soft); }
-.bd-revs .rv:first-child { border-top: 0; }
-.bd-revs .rv-h { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.bd-revs .rv-h b { font: 600 14px var(--mono); }
-.bd-revs .rv-h .d { color: var(--fg-muted); font-size: 13px; }
-.bd-revs .rv-notes { margin: 6px 0 0; padding-left: 18px; font-size: 13.5px; color: var(--fg-muted); }
-.bd-revs .rv-act { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-.bd-revs .rv-act .bp-btn { text-decoration: none; }
-.bd-revs .rv-cmp { flex-wrap: wrap; align-items: center; border-top: 1px solid var(--line); margin-top: 6px; }
-.bd-revs .rv-cmp label { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--fg-muted); }
 .rv-sel { height: 32px; border: 0; border-radius: 9px; padding: 0 8px; font: 500 12.5px var(--sans); color: var(--fg); background: var(--inset); box-shadow: inset 0 0 0 1px var(--line); }
 .bd-chg { --chg: var(--warn); }
 .bd-chg-add { --chg: var(--ok); } .bd-chg-del { --chg: var(--risk); }
@@ -433,7 +422,7 @@ td.bd-cell-mod { background: color-mix(in oklch, var(--warn-tint) 70%, transpare
   --groove: linear-gradient(90deg, oklch(23% 0.01 264 / 0.1) 50%, oklch(100% 0 0 / 0.9) 50%);
   --accent-solid: oklch(51% 0.19 254);
   --tip: oklch(22% 0.006 264);
-  --cs-w: 344px; --cs-sheet-h: min(52vh, 460px);
+  --sp-w: 344px; --sp-sheet-h: min(52vh, 460px);
 }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
   --hk-top: oklch(29% 0.004 264); --hk-bot: oklch(24.5% 0.004 264); --hk-ring: oklch(0% 0 0 / 0.55); --hk-down: oklch(16.5% 0.003 264);
@@ -543,27 +532,36 @@ html.bd-ann-m-select .bp-cl-head { user-select: text; -webkit-user-select: text;
   color: #fff; background: var(--pen, var(--accent)); }
 .bd-ann-num.sent { background: var(--todo); }
 
-/* comments sidebar: docked beside the page on wide windows (the page lays out in what is left), a drawer
-   over it below 1100 px, a bottom sheet below 900 px. JS sets html.bd-cs-open and html.bd-cs-dock. */
-.bd-cs { position: fixed; z-index: 42; top: var(--top-h); right: 0; bottom: 0; width: var(--cs-w); display: flex; flex-direction: column; min-height: 0;
+/* right panel: Comments and Revisions. Docked beside the page on wide windows (the page lays out in what
+   is left), a drawer over it below 1100 px, a bottom sheet below 900 px. JS sets html.bd-sp-open and
+   html.bd-sp-dock. */
+.bd-sp { position: fixed; z-index: 42; top: var(--top-h); right: 0; bottom: 0; width: var(--sp-w); display: flex; flex-direction: column; min-height: 0;
   background: var(--panel); box-shadow: inset 1px 0 0 var(--line); font-size: 13.5px;
   transform: translateX(100%); visibility: hidden; transition: transform .22s var(--ease), visibility 0s .22s; }
-html.bd-cs-open .bd-cs { transform: none; visibility: visible; transition: transform .22s var(--ease); }
-html.bd-cs-open:not(.bd-cs-dock) .bd-cs { background: var(--surface); box-shadow: var(--shadow-3); }
-.bd-cs-h { display: flex; align-items: center; gap: 8px; flex: none; padding: 12px 12px 8px 16px; }
-.bd-cs-h h2 { margin: 0; font: 650 15px/1.3 var(--sans); letter-spacing: -.01em; }
-.bd-cs-h .n { padding: 2px 7px; border-radius: 7px; font: 600 11.5px/1.4 var(--sans); font-variant-numeric: tabular-nums; color: var(--accent-fg); background: var(--accent-tint); }
-.bd-cs-h .n[hidden] { display: none; }
-.bd-cs-h .sp, .bd-cs-ft .sp, .bd-cs-c .ef .sp { flex: 1; }
-.bd-cs-h .bd-ibtn { width: 28px; height: 28px; }
-.bd-cs-h .srt { height: 28px; padding: 0 8px; font-size: 12px; }
-.bd-cs-f { flex: none; padding: 0 12px 10px 12px; box-shadow: inset 0 -1px 0 var(--line-soft); }
+html.bd-sp-open .bd-sp { transform: none; visibility: visible; transition: transform .22s var(--ease); }
+html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow: var(--shadow-3); }
+.bd-sp-h { display: flex; align-items: center; gap: 8px; flex: none; padding: 12px 12px 10px 16px; }
+.bd-sp-h:has(.bd-sp-tabs:not([hidden])) { padding-left: 12px; }
+.bd-sp-h h2 { margin: 0; font: 650 15px/1.3 var(--sans); letter-spacing: -.01em; }
+.bd-sp-h .n { padding: 2px 7px; border-radius: 7px; font: 600 11.5px/1.4 var(--sans); font-variant-numeric: tabular-nums; color: var(--accent-fg); background: var(--accent-tint); }
+.bd-sp-h h2[hidden], .bd-sp-h .n[hidden], .bd-sp-tabs[hidden] { display: none; }
+.bd-sp-h .sp { flex: 1; }
+.bd-sp-h .bd-ibtn { width: 28px; height: 28px; }
+.bd-sp-tabs { flex: 0 1 250px; }
+.bd-sp-tabs button { height: 28px; font-size: 13px; }
+.bd-sp-sec { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.bd-sp-sec[hidden] { display: none; }
+.bd-cs-ft .sp, .bd-cs-c .ef .sp { flex: 1; }
+.bd-cs-f { flex: none; display: flex; align-items: center; gap: 6px; padding: 0 12px 10px; box-shadow: inset 0 -1px 0 var(--line-soft); }
+.bd-cs-f .bd-seg { flex: 1; }
+.bd-cs-f .srt { flex: none; height: 28px; padding: 0 8px; font-size: 12px; }
 .bd-seg { display: flex; padding: 2px; border-radius: 10px; background: var(--inset); box-shadow: var(--shadow-well); }
 .bd-seg button { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 26px; padding: 0 8px; border: 0; border-radius: 8px; background: none;
   font-size: 12.5px; font-weight: 500; color: var(--fg-muted); transition: background .12s, color .12s; }
 .bd-seg button:hover { color: var(--fg); }
-.bd-seg button[aria-checked="true"] { color: var(--fg); background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: var(--shadow-hk); }
+.bd-seg button:is([aria-checked="true"], [aria-selected="true"]) { color: var(--fg); background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: var(--shadow-hk); }
 .bd-seg button i { font: 500 11px/1 var(--mono); font-style: normal; color: var(--fg-subtle); }
+.bd-seg button i:empty { display: none; }
 .bd-cs-l { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 10px 12px 16px; scrollbar-width: thin; position: relative; }
 .bd-cs-l ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .bd-cs-c { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 10px; padding: 10px 10px 10px 11px; border-radius: 12px; background: var(--surface);
@@ -625,21 +623,56 @@ html.bd-cs-open:not(.bd-cs-dock) .bd-cs { background: var(--surface); box-shadow
 .bd-cs-btn .n { position: absolute; top: -5px; right: -6px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; display: grid; place-items: center;
   font: 650 10px/1 var(--sans); color: #fff; background: var(--accent-solid); box-shadow: 0 0 0 2px var(--canvas); }
 .bd-cs-btn .n[hidden] { display: none; }
+.bd-rev-btn[aria-pressed="true"] { background: var(--hk-down); box-shadow: var(--shadow-hk-down); }
+/* the Revisions section: in compare view the marked changes, then every revision, then the Compare picker */
+.bd-rv-l { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 0 12px 16px; scrollbar-width: thin; position: relative; box-shadow: inset 0 1px 0 var(--line-soft); }
+.bd-sp-sub { display: flex; align-items: center; gap: 8px; margin: 14px 4px 8px; font: 600 11px/1.4 var(--sans); letter-spacing: .07em; text-transform: uppercase; color: var(--fg-subtle); }
+.bd-sp-sub .x { margin-left: auto; font: 500 12px/1.4 var(--sans); letter-spacing: 0; text-transform: none; }
+.bd-sp-sub .k.add { color: var(--ok-fg); } .bd-sp-sub .k.mod { color: var(--warn-fg); } .bd-sp-sub .k.del { color: var(--risk-fg); }
+.bd-sp-note { margin: -4px 4px 10px; font-size: 12.5px; line-height: 1.45; color: var(--fg-subtle); }
+.bd-chl { list-style: none; margin: 0; padding: 4px; display: grid; gap: 1px; border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-1); }
+.bd-chl button { display: flex; align-items: flex-start; gap: 8px; width: 100%; padding: 6px 8px; border: 0; border-radius: 8px; background: none; text-align: left;
+  font-size: 13px; line-height: 18px; color: var(--fg); scroll-margin: 8px; }
+.bd-chl button:hover { background: var(--hover); }
+.bd-chl button[aria-current="true"] { background: var(--selected); box-shadow: inset 2px 0 0 var(--accent); }
+.bd-chl .bd-chg-tag { height: 18px; padding: 0 6px; font-size: 10px; }
+.bd-chl .t { min-width: 0; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; }
+.bd-chl .none { padding: 8px; color: var(--fg-subtle); }
+.bd-rvs { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.bd-rv { padding: 10px 12px 12px; border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-1); }
+.bd-rv.on { box-shadow: 0 0 0 1.5px var(--accent), 0 4px 14px color-mix(in oklch, var(--accent) 14%, transparent); }
+.bd-rv.base { box-shadow: 0 0 0 1.5px var(--line-strong), var(--shadow-1); }
+.bd-rv .rv-h { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.bd-rv .rv-h b { font: 650 13.5px var(--mono); }
+.bd-rv .rv-h .d { font-size: 12.5px; color: var(--fg-subtle); }
+.bd-rv .rv-h .sp { flex: 1; }
+.bd-rv .rv-h .bp-chip { padding: 3px 7px; font-size: 11.5px; }
+.bd-rv .rv-notes { margin: 6px 0 0; padding-left: 16px; font-size: 13px; line-height: 1.5; color: var(--fg-muted); }
+.bd-rv .rv-notes li + li { margin-top: 2px; }
+.bd-rv .rv-act { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.bd-rv .rv-act .bp-btn { text-decoration: none; }
+.bd-rv .rv-act .bp-btn[aria-current] { color: var(--accent-fg); background: var(--accent-tint); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--accent) 30%, transparent); }
+.bd-rv .rv-act .bp-btn[aria-current] .bd-ic { color: currentColor; }
+.bd-rv-ft { flex: none; display: grid; gap: 8px; padding: 10px 12px 12px; box-shadow: inset 0 1px 0 var(--line); }
+.bd-rv-ft .row { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 6px; }
+.bd-rv-ft .row > .bd-ic { color: var(--fg-subtle); }
+.bd-rv-ft .rv-sel { width: 100%; min-width: 0; }
+.bd-rv-ft .bp-btn { justify-content: center; height: 32px; font-size: 13px; }
 @media (min-width: 901px) {
-  html.bd-cs-open .bd-anntb, html.bd-cs-open .bp-toast { left: calc((100% - var(--cs-w)) / 2); }
-  html.bd-cs-dock .bd-wchip { left: calc((100% - var(--cs-w)) / 2); }
-  :root.bd-cs-dock .bd-shell { padding-right: calc(20px + var(--cs-w)); }
+  html.bd-sp-open .bd-anntb, html.bd-sp-open .bp-toast { left: calc((100% - var(--sp-w)) / 2); }
+  html.bd-sp-dock .bd-wchip { left: calc((100% - var(--sp-w)) / 2); }
+  :root.bd-sp-dock .bd-shell { padding-right: calc(20px + var(--sp-w)); }
 }
 @media (max-width: 900px) {
-  .bd-cs { top: auto; left: 0; width: auto; height: var(--cs-sheet-h); border-radius: 18px 18px 0 0; transform: translateY(100%); }
-  .bd-cs::before { content: ""; position: absolute; left: 50%; top: 6px; width: 36px; height: 4px; margin-left: -18px; border-radius: 2px; background: var(--line-strong); }
-  .bd-cs-h { padding-top: 16px; }
+  .bd-sp { top: auto; left: 0; width: auto; height: var(--sp-sheet-h); border-radius: 18px 18px 0 0; transform: translateY(100%); }
+  .bd-sp::before { content: ""; position: absolute; left: 50%; top: 6px; width: 36px; height: 4px; margin-left: -18px; border-radius: 2px; background: var(--line-strong); }
+  .bd-sp-h { padding-top: 16px; }
   .bd-cs-ft { grid-template-columns: minmax(0, 1fr) auto; align-items: end; }
   .bd-cs-ft .row .bp-btn.ghost { display: none; }
-  html.bd-cs-open { scroll-padding-bottom: var(--cs-sheet-h); }
-  html.bd-cs-open .bd-anntb { bottom: calc(var(--cs-sheet-h) + 10px); }
-  html.bd-cs-open .bp-toast { bottom: calc(var(--cs-sheet-h) + 64px); }
-  html.bd-cs-open.bd-ann-on .bd-shell { padding-bottom: calc(var(--cs-sheet-h) + 90px); }
+  html.bd-sp-open { scroll-padding-bottom: var(--sp-sheet-h); }
+  html.bd-sp-open .bd-anntb { bottom: calc(var(--sp-sheet-h) + 10px); }
+  html.bd-sp-open .bp-toast { bottom: calc(var(--sp-sheet-h) + 64px); }
+  html.bd-sp-open .bd-shell { padding-bottom: calc(var(--sp-sheet-h) + 90px); }
 }
 
 /* Request changes dialog: message, preview, Copy and Send */
@@ -652,7 +685,7 @@ html.bd-cs-open:not(.bd-cs-dock) .bd-cs { background: var(--surface); box-shadow
 .bd-chgs pre { max-height: 260px; }
 .bd-chgs .ft .sp { flex: 1; }
 .bd-chgs .ft .bp-btn:disabled { opacity: .5; cursor: default; }
-@media print { .bd-anntb, .bd-ann-layer, .bd-ann-hov, .bd-ann-cap, .bd-tip, .bd-cs, .bd-home { display: none !important; } html.bd-ann-on .bd-shell, :root.bd-cs-dock .bd-shell { padding: 0; } }
+@media print { .bd-anntb, .bd-ann-layer, .bd-ann-hov, .bd-ann-cap, .bd-tip, .bd-sp, .bd-home { display: none !important; } html.bd-ann-on .bd-shell, :root.bd-sp-dock .bd-shell { padding: 0; } }
 
 /* code review: diff block (HorizonUI DiffReview, ChangeTable, CodeBlock syntax tokens) */
 :root {
@@ -1238,11 +1271,11 @@ const WIDTH_KEY = 'bluedoc:width', MIN_W = 520, PAGE_PAD = 20;   // PAGE_PAD = .
 const root = document.documentElement;
 let userW = +store.get(WIDTH_KEY) || 0;
 const cssPx = v => parseFloat(getComputedStyle(root).getPropertyValue(v)) || 0;
-// The comments sidebar (MARKUP below) docks on the right of a wide window; the page then lays out in
-// what is left, as if the window were that much narrower. Narrower windows get it as an overlay.
-let commentsOpen = false;
+// The right panel (SIDE below) docks on the right of a wide window; the page then lays out in what is
+// left, as if the window were that much narrower. Narrower windows get it as an overlay.
+let panelOpen = false;
 const DOCK_MIN = 1101;
-const dockW = () => commentsOpen && innerWidth >= DOCK_MIN ? cssPx('--cs-w') : 0;
+const dockW = () => panelOpen && innerWidth >= DOCK_MIN ? cssPx('--sp-w') : 0;
 const maxW = () => Math.max(MIN_W, innerWidth - dockW() - 2 * PAGE_PAD);
 function setDrawer(open) {
   side.classList.toggle('drawer', open);
@@ -1250,7 +1283,7 @@ function setDrawer(open) {
 }
 function applyWidth() {
   const dock = dockW(), avail = innerWidth - dock;
-  root.classList.toggle('bd-cs-dock', dock > 0);
+  root.classList.toggle('bd-sp-dock', dock > 0);
   if (userW) root.style.setProperty('--content-w', userW + 'px'); else root.style.removeProperty('--content-w');
   if (!userW && !dock) delete root.dataset.layout;
   else {
@@ -2990,6 +3023,110 @@ function compareDiff(o, n) {
   return rows;
 }
 
+/* ---------- right panel: Comments and Revisions ---------- */
+// One panel holds each section this page has: Comments (the current revision only, added by MARKUP)
+// and Revisions (docs with more than one). It docks beside the page on wide windows (applyWidth lays
+// the page out in what is left), is a drawer over it from 901 to 1100 px and a bottom sheet below.
+// A section's button opens the panel on it, or closes the panel when that section already shows.
+function scrollWithin(box, el) {   // scroll a panel list so `el` shows; `box` is el's offset parent
+  const top = el.offsetTop - 10, bottom = el.offsetTop + el.offsetHeight + 10;
+  if (top < box.scrollTop) box.scrollTo({ top, behavior: REDUCE ? 'auto' : 'smooth' });
+  else if (bottom > box.scrollTop + box.clientHeight) box.scrollTo({ top: Math.min(top, bottom - box.clientHeight), behavior: REDUCE ? 'auto' : 'smooth' });
+}
+const SIDE = (() => {
+  const OPEN_KEY = 'bluedoc:comments', SECTION_KEY = 'bluedoc:sidepanel', ORDER = ['comments', 'revisions'];
+  const secs = new Map();   // id -> { id, label, body, count, chip, onToggle, buttons, tab, shown }
+  let section = null;
+  const tabs = h('div', { class: 'bd-seg bd-sp-tabs', role: 'tablist', 'aria-label': 'Panel sections', hidden: true });
+  const title = h('h2', { hidden: true }), chip = h('span', { class: 'n', hidden: true });
+  const el = h('aside', { class: 'bd-sp', id: 'bd-sp', 'aria-label': 'Side panel', inert: true },
+    h('div', { class: 'bd-sp-h' }, tabs, title, chip, h('span', { class: 'sp' }),
+      h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Close the panel', title: 'Close', onclick: () => setOpen(false, true) }, ic('x'))));
+  const sheet = () => innerWidth <= 900;
+  const as = () => panelOpen ? (sheet() ? 'sheet' : dockW() ? 'dock' : 'drawer') : null;
+  const shows = id => panelOpen && section === id;
+  const available = () => ORDER.filter(id => secs.has(id));
+  // add({id, label, body, count?, chip?, onToggle?}): count is the tab's number, chip the header's when
+  // it is the only section; onToggle(shown) runs when the section starts or stops showing
+  function add(s) {
+    s.body.classList.add('bd-sp-sec'); s.body.id = 'bd-sp-' + s.id; s.body.hidden = true; s.body.setAttribute('role', 'tabpanel');
+    s.tab = h('button', { type: 'button', role: 'tab', 'aria-controls': s.body.id, onclick: () => pick(s.id, true) });
+    secs.set(s.id, { count: () => '', chip: () => '', onToggle: () => {}, buttons: [], shown: false, ...s });
+    const ids = available();
+    tabs.replaceChildren(...ids.map(id => secs.get(id).tab));
+    el.append(...ids.map(id => secs.get(id).body));
+    if (!el.isConnected) document.body.append(el);
+  }
+  const bind = (btn, id) => { secs.get(id)?.buttons.push(btn); btn.setAttribute('aria-controls', 'bd-sp'); };
+  function pick(id, remember) {
+    if (!secs.has(id)) return;
+    if (remember) store.set(SECTION_KEY, id);
+    if (section !== id) { section = id; for (const s of secs.values()) s.body.hidden = s.id !== id; }
+    paint();
+  }
+  // docking reflows the page: keep what the reader was looking at where it was
+  const PLACES = '.bd-head, .bd-tldr-card, main section.bp-sec > h2, main .bp-lead, main .bp-block[data-bk], main .bp-cl-item, main tr[data-r]';
+  function keepPlace(fn) {
+    const line = cssPx('--top-h') + 8;
+    let at = null, over = null;   // the first part below the bar, else the deepest one across it
+    for (const e of document.querySelectorAll('.bd-shell :is(' + PLACES + ')')) {
+      const r = e.getBoundingClientRect(); if (!r.height || r.bottom <= line) continue;
+      if (r.top < line) over = e; else { at = r.top < innerHeight / 2 || !over ? e : over; break; }
+    }
+    at ||= over;
+    const y = at && at.getBoundingClientRect().top;
+    fn();
+    if (at && scrollY > 0) { const d = at.getBoundingClientRect().top - y; if (Math.abs(d) > 1) scrollBy({ top: d, behavior: 'instant' }); }
+  }
+  function setOpen(v, remember) {
+    v = !!v && secs.size > 0;
+    if (remember) store.set(OPEN_KEY, v ? '1' : '0');
+    if (v && !section) pick(secs.has(store.get(SECTION_KEY)) ? store.get(SECTION_KEY) : available()[0], false);
+    if (v !== panelOpen) {
+      if (!v && el.contains(document.activeElement)) document.activeElement.blur();
+      keepPlace(() => { panelOpen = v; root.classList.toggle('bd-sp-open', v); el.inert = !v; applyWidth(); });
+    }
+    paint();
+  }
+  // open on a section; with toggle, that section's own button closes the panel when it already shows
+  function show(id, { toggle = false, remember = true } = {}) {
+    if (!secs.has(id)) return false;
+    if (toggle && shows(id)) { setOpen(false, remember); return true; }
+    pick(id, remember); setOpen(true, remember);
+    return true;
+  }
+  function paint() {
+    const ids = available(), one = ids.length < 2, cur = section && secs.get(section);
+    tabs.hidden = one; title.hidden = !one;
+    for (const id of ids) {
+      const s = secs.get(id), n = String(s.count() || '');
+      s.tab.setAttribute('aria-selected', String(id === section));
+      if (s.tab.textContent !== s.label + n) s.tab.replaceChildren(s.label, h('i', {}, n));
+      for (const b of s.buttons) b.setAttribute('aria-pressed', String(shows(id)));
+    }
+    if (one && cur) { title.textContent = cur.label; const c = cur.chip(); chip.hidden = !c; chip.textContent = c; } else chip.hidden = true;
+    el.setAttribute('aria-label', cur ? cur.label : 'Side panel');
+    for (const s of secs.values()) { const v = shows(s.id); if (v !== s.shown) { s.shown = v; s.onToggle(v); } }
+  }
+  // after every section is added: restore the panel, or open Revisions in compare view
+  function start() {
+    if (!secs.size) return;
+    document.addEventListener('keydown', e => {
+      if (e.key !== 'Escape' || e.defaultPrevented || !panelOpen || dockW() || document.querySelector('dialog[open]')) return;
+      const t = e.target; if (t.closest && t.closest('input, textarea, select')) return;
+      e.preventDefault(); setOpen(false, true);
+    });
+    if (BASE && secs.has('revisions') && !sheet()) show('revisions', { remember: false });
+    else if (store.get(OPEN_KEY) === '1' && !sheet()) setOpen(true, false);
+    paint();
+  }
+  function api(o) {
+    if (o && typeof o === 'object') { if (o.section && o.open !== false) show(o.section); else if ('open' in o) setOpen(o.open, true); }
+    return { available: available(), open: panelOpen, section: section || (secs.has(store.get(SECTION_KEY)) ? store.get(SECTION_KEY) : available()[0] || null), as: as() };
+  }
+  return { el, add, bind, show, shows, setOpen, paint, start, api, sheet, as };
+})();
+
 // URLs and UI
 function revUrl(view, base) {
   const q = new URLSearchParams();
@@ -2999,49 +3136,57 @@ function revUrl(view, base) {
   return location.pathname + (s ? '?' + s : '');
 }
 const revName = r => `Rev ${r.rev}`;
-let revDlg = null;
-function openRevs() {
-  if (!revDlg) {
-    const list = [...REVS].reverse().map(r => {
-      const i = REVS.indexOf(r), prev = REVS[i - 1];
-      const notes = (r.doc.changes || []);
-      return h('li', { class: 'rv' + (r === VIEW ? ' on' : '') },
-        h('div', { class: 'rv-h' }, h('b', {}, revName(r)), r.date && h('span', { class: 'd' }, r.date),
-          r.current && h('span', { class: 'bp-chip ok' }, 'current'), r === VIEW && h('span', { class: 'bp-chip info' }, 'shown')),
-        notes.length ? h('ul', { class: 'rv-notes' }, notes.map(t => h('li', { html: inline(t) }))) : null,
-        h('div', { class: 'rv-act' },
-          r !== VIEW && h('a', { class: 'bp-btn', href: revUrl(r, null) }, 'View'),
-          prev && h('a', { class: 'bp-btn', href: revUrl(r, prev) }, ic('split'), `Changes from ${prev.rev}`)));
-    });
-    const sel = (def) => h('select', { class: 'rv-sel' }, REVS.map(r => h('option', { value: r.rev, selected: r === def }, revName(r) + (r.date ? ` · ${r.date}` : ''))));
-    const from = sel(BASE || (OLD ? VIEW : REVS[REVS.length - 2])), to = sel(BASE ? VIEW : CUR);
-    const go = () => { const a = REVS.find(r => r.rev === from.value), b = REVS.find(r => r.rev === to.value); if (a && b && a !== b) location.href = revUrl(b, a); else toast('Pick two different revisions'); };
-    revDlg = h('dialog', { class: 'bd-send bd-revs', 'aria-labelledby': 'bd-revs-h' },
-      h('div', { class: 'hd' }, h('h3', { id: 'bd-revs-h' }, 'Revisions'), h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Close', onclick: () => revDlg.close() }, ic('x'))),
-      h('p', { class: 'sum' }, `${REVS.length} revisions of this document. Older ones are read-only: ticks, picks and comments made there aren't saved.`),
-      h('ol', { class: 'rv-list' }, list),
-      h('div', { class: 'ft rv-cmp' }, h('label', {}, 'Compare', from), h('label', {}, 'with', to), h('button', { type: 'button', class: 'bp-btn primary', onclick: go }, ic('split'), 'Compare')));
-    document.body.append(revDlg);
-    revDlg.addEventListener('click', e => { if (e.target === revDlg) revDlg.close(); });
-  }
-  revDlg.showModal();
-}
-let chgAt = -1;
-function gotoChg(step) {
+let chgAt = -1, revPos = null, chgBtns = [];
+// jump to change i (page order): scroll and flash it, and follow it in the strip and the panel list
+function showChg(i) {
   if (!CHG.length) return;
-  chgAt = (chgAt + step + CHG.length) % CHG.length;
+  chgAt = (i % CHG.length + CHG.length) % CHG.length;
   const c = CHG[chgAt];
   c.el.scrollIntoView({ behavior: REDUCE ? 'auto' : 'smooth', block: 'center' });
   c.el.classList.remove('bd-chg-flash'); void c.el.offsetWidth; c.el.classList.add('bd-chg-flash');
-  revPos && (revPos.textContent = `${chgAt + 1} of ${CHG.length}`);
+  if (revPos) revPos.textContent = `${chgAt + 1} of ${CHG.length}`;
+  chgBtns.forEach((b, k) => b.setAttribute('aria-current', String(k === chgAt)));
+  if (chgBtns[chgAt]) scrollWithin(chgBtns[chgAt].closest('.bd-rv-l'), chgBtns[chgAt]);
 }
-let revPos = null;
+const gotoChg = step => showChg(chgAt + step);
+// the Revisions section: in compare view the marked changes first, then every revision, newest first,
+// then the Compare picker
+function revisionsSection() {
+  const box = h('div', { class: 'bd-rv-l' });
+  if (BASE) {
+    const n = { add: 0, mod: 0, del: 0 }; CHG.forEach(c => n[c.kind]++);
+    const kinds = Object.keys(n).filter(k => n[k]).flatMap((k, i) => [i ? ' · ' : null, h('span', { class: 'k ' + k }, `${n[k]} ${{ add: 'new', mod: 'changed', del: 'removed' }[k]}`)]);
+    chgBtns = CHG.map((c, i) => h('button', { type: 'button', 'aria-current': 'false', onclick: () => showChg(i) }, chgTag(c.kind), h('span', { class: 't' }, plain(c.label))));
+    box.append(h('h3', { class: 'bd-sp-sub' }, `${revName(BASE)} → ${VIEW.rev}`, h('span', { class: 'x' }, kinds.length ? kinds : 'no differences')),
+      h('ol', { class: 'bd-chl', 'aria-label': 'Changes, in page order' }, chgBtns.length ? chgBtns.map(b => h('li', {}, b)) : h('li', { class: 'none' }, 'Nothing changed between these revisions.')));
+  }
+  const items = [...REVS].reverse().map(r => {
+    const prev = REVS[REVS.indexOf(r) - 1], notes = r.doc.changes || [], cmp = !!prev && BASE === prev && VIEW === r;
+    return h('li', { class: 'bd-rv' + (r === VIEW ? ' on' : '') + (r === BASE ? ' base' : '') },
+      h('div', { class: 'rv-h' }, h('b', {}, revName(r)), r.date && h('span', { class: 'd' }, r.date), h('span', { class: 'sp' }),
+        r.current && h('span', { class: 'bp-chip ok' }, 'current'), r === VIEW && h('span', { class: 'bp-chip info' }, 'shown'), r === BASE && h('span', { class: 'bp-chip todo' }, 'base')),
+      notes.length ? h('ul', { class: 'rv-notes' }, notes.map(t => h('li', { html: inline(t) }))) : null,
+      h('div', { class: 'rv-act' },
+        (r !== VIEW || BASE) && h('a', { class: 'bp-btn', href: revUrl(r, null) }, ic('eye'), 'View'),
+        prev && h('a', { class: 'bp-btn', href: revUrl(r, prev), 'aria-current': cmp ? 'page' : null }, ic('split'), `Changes from ${prev.rev}`)));
+  });
+  box.append(h('h3', { class: 'bd-sp-sub' }, 'All revisions'),
+    h('p', { class: 'bd-sp-note' }, 'Earlier revisions are read-only: ticks, picks and comments made there aren\'t saved.'),
+    h('ol', { class: 'bd-rvs' }, items));
+  // the list above has the full dates; the picker shows month and day so both fit side by side
+  const sel = (def, label) => h('select', { class: 'rv-sel', 'aria-label': label }, REVS.map(r => h('option', { value: r.rev, selected: r === def, title: r.date || null },
+    revName(r) + (r.date ? ` · ${/^\d{4}-\d\d-\d\d$/.test(r.date) ? r.date.slice(5) : r.date}` : ''))));
+  const from = sel(BASE || (OLD ? VIEW : REVS[REVS.length - 2]), 'Compare from'), to = sel(BASE ? VIEW : CUR, 'Compare with');
+  const go = () => { const a = REVS.find(r => r.rev === from.value), b = REVS.find(r => r.rev === to.value); if (a && b && a !== b) location.href = revUrl(b, a); else toast('Pick two different revisions'); };
+  return h('div', {}, box, h('div', { class: 'bd-rv-ft' }, h('div', { class: 'row' }, from, ic('next'), to),
+    h('button', { type: 'button', class: 'bp-btn primary', onclick: go }, ic('split'), 'Compare')));
+}
 if (REVS.length > 1) {
   const label = h('span', { class: 'l' }, revName(VIEW));
-  const btn = h('button', { type: 'button', class: 'bp-btn bd-rev-btn' + (OLD ? ' old' : ''), title: 'Revisions', onclick: openRevs }, ic('hist'), label);
+  const btn = h('button', { type: 'button', class: 'bp-btn bd-rev-btn' + (OLD ? ' old' : ''), title: 'Revisions', 'aria-pressed': 'false', onclick: () => SIDE.show('revisions', { toggle: true }) }, ic('hist'), label);
   document.querySelector('.bd-bar-r').prepend(btn);
   const revDd = [...document.querySelectorAll('.bd-props dt')].find(dt => dt.textContent === 'Revision');
-  if (revDd) { const dd = revDd.nextElementSibling; dd.textContent = ''; dd.append(h('button', { type: 'button', class: 'bd-rev-link', onclick: openRevs }, `${VIEW.rev} of ${REVS.length}`)); }
+  if (revDd) { const dd = revDd.nextElementSibling; dd.textContent = ''; dd.append(h('button', { type: 'button', class: 'bd-rev-link', onclick: () => SIDE.show('revisions', { toggle: true }) }, `${VIEW.rev} of ${REVS.length}`)); }
   if (OLD) document.title = `${revName(VIEW)} · ${document.title}`;
   const strip = (cls, ...kids) => { const s = h('div', { class: 'bd-revbar ' + cls, role: 'region', 'aria-label': 'Revision' }, h('div', { class: 'in' }, kids)); document.querySelector('.bd-bar').after(s); return s; };
   if (BASE) {
@@ -3077,6 +3222,8 @@ if (REVS.length > 1) {
   }
   const bar = document.querySelector('.bd-revbar');
   if (bar) { const fit = () => root.style.setProperty('--rv-h', bar.offsetHeight + 'px'); fit(); addEventListener('resize', fit); }
+  SIDE.add({ id: 'revisions', label: 'Revisions', body: revisionsSection(), count: () => REVS.length, chip: () => String(REVS.length) });
+  SIDE.bind(btn, 'revisions');
 }
 
 /* ---------- change requests: pins, text selections and drawings on the page ---------- */
@@ -3332,7 +3479,7 @@ const MARKUP = (() => {
     h('button', { type: 'button', class: 'bd-pen-' + c, 'data-pen': c, 'aria-label': name + ' pen', title: name + ' pen', onclick: () => { pen = c; store.set(PEN_KEY, c); paint(); } })));
   const eye = tipped(keyBtn('eye', 'eye', 'Hide comment marks', {}, () => { marksOff = !marksOff; paint(); schedule(true); }));
   const csKeyN = h('span', { class: 'b', 'aria-hidden': 'true', hidden: true });
-  const csKey = tipped(keyBtn('', 'msg', 'Comments', { 'aria-pressed': 'false', 'aria-controls': 'bd-cs' }, () => setOpen(!commentsOpen, true), csKeyN));
+  const csKey = tipped(keyBtn('', 'msg', 'Comments', { 'aria-pressed': 'false' }, () => SIDE.show('comments', { toggle: true }), csKeyN));
   const goN = h('span', { class: 'n' });
   const go = tipped(keyBtn('go', 'edit', 'Request changes', {}, () => openDlg(), h('span', { class: 'l' }, 'Request changes'), goN));
   const groove = () => h('span', { class: 'bd-groove', role: 'separator', 'aria-orientation': 'vertical' });
@@ -3413,7 +3560,7 @@ const MARKUP = (() => {
       let x = p.x;
       if (!p.exact) { const k = stacks.get(p.el) || 0; stacks.set(p.el, k + 1); x -= k * 30; }
       x = Math.max(2, Math.min(x, vw - 30));
-      m.pin.style.transform = `translate(${Math.round(x)}px,${Math.round(p.y)}px)`;
+      m.pin.style.translate = `${Math.round(x)}px ${Math.round(p.y)}px`;   // `translate`, not `transform`: the hover `scale` must not scale the offset
       if (m.ink && p.exact) {
         const r = p.r, c = p.clip, st = m.ink.style;
         st.transform = `translate(${r.left}px,${r.top}px)`; st.width = r.width + 'px'; st.height = r.height + 'px';
@@ -3448,10 +3595,8 @@ const MARKUP = (() => {
 
   /* comments sidebar: one card per note, in page order or newest first; the note is written and edited
      in its card. Hovering a card or a mark lights up the other; clicking one brings the other into view. */
-  const CS_KEY = 'bluedoc:comments';
   const FILTERS = { unsent: 'Unsent', sent: 'Sent', all: 'All' };
   let filter = 'all', sort = 'page';
-  const sheet = () => innerWidth <= 900;
   const fmtDay = iso => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleDateString([], { month: 'short', day: 'numeric' }); };
   function ago(iso) {
     const s = (Date.now() - new Date(iso)) / 1000;
@@ -3460,7 +3605,6 @@ const MARKUP = (() => {
   }
   const numChip = (a, n) => h('span', { class: 'bd-ann-num' + (a.type === 'draw' ? ' bd-pen-' + (a.color || 'risk') : '') + (a.sent ? ' sent' : '') }, String(n));
   const grow = ta => { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; };
-  const csN = h('span', { class: 'n', hidden: true });
   const sortBtn = h('button', { type: 'button', class: 'bp-btn ghost srt', onclick: () => { sort = sort === 'page' ? 'new' : 'page'; paint(); } });
   const filterBtns = Object.keys(FILTERS).map(f => h('button', { type: 'button', role: 'radio', 'data-f': f, onclick: () => { filter = f; paint(); } }));
   const listOl = h('ol', { 'aria-label': 'Comments' });
@@ -3470,43 +3614,13 @@ const MARKUP = (() => {
   const clearBtn = h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => clearSent() }, ic('trash'), 'Clear sent');
   const csGoN = h('span', { class: 'n' });
   const csGo = h('button', { type: 'button', class: 'bp-btn primary', onclick: () => openDlg() }, ic('send'), 'Request changes', csGoN);
-  const cs = h('aside', { class: 'bd-cs bd-ann-ui', id: 'bd-cs', 'aria-label': 'Comments', inert: true },
-    h('div', { class: 'bd-cs-h' }, h('h2', {}, 'Comments'), csN, h('span', { class: 'sp' }), sortBtn,
-      h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Close comments', title: 'Close', onclick: () => setOpen(false, true) }, ic('x'))),
-    h('div', { class: 'bd-cs-f' }, h('div', { class: 'bd-seg', role: 'radiogroup', 'aria-label': 'Show' }, filterBtns)),
+  const csBody = h('div', {},
+    h('div', { class: 'bd-cs-f' }, h('div', { class: 'bd-seg', role: 'radiogroup', 'aria-label': 'Show' }, filterBtns), sortBtn),
     listBox,
     h('div', { class: 'bd-cs-ft' }, csMsg, h('div', { class: 'row' }, clearBtn, h('span', { class: 'sp' }), csGo)));
   const barN = h('span', { class: 'n', 'aria-hidden': 'true', hidden: true });
-  const barBtn = h('button', { type: 'button', class: 'bd-ibtn bd-cs-btn', 'aria-label': 'Comments', title: 'Comments', 'aria-pressed': 'false', 'aria-controls': 'bd-cs',
-    onclick: () => setOpen(!commentsOpen, true) }, ic('msg'), barN);
-
-  // docking reflows the page: keep what the reader was looking at where it was
-  const PLACES = '.bd-head, .bd-tldr-card, main section.bp-sec > h2, main .bp-lead, main .bp-block[data-bk], main .bp-cl-item, main tr[data-r]';
-  function keepPlace(fn) {
-    const line = cssPx('--top-h') + 8;
-    let el = null, over = null;   // the first part below the bar, else the deepest one across it
-    for (const e of shell.querySelectorAll(PLACES)) {
-      const r = e.getBoundingClientRect(); if (!r.height || r.bottom <= line) continue;
-      if (r.top < line) over = e; else { el = r.top < innerHeight / 2 || !over ? e : over; break; }
-    }
-    el ||= over;
-    const y = el && el.getBoundingClientRect().top;
-    fn();
-    if (el && scrollY > 0) { const d = el.getBoundingClientRect().top - y; if (Math.abs(d) > 1) scrollBy({ top: d, behavior: 'instant' }); }
-  }
-  function setOpen(v, remember) {
-    v = !!v;
-    if (remember) store.set(CS_KEY, v ? '1' : '0');
-    if (v === commentsOpen) return;
-    if (!v) { endEdit(true); if (cs.contains(document.activeElement)) document.activeElement.blur(); }
-    keepPlace(() => {
-      commentsOpen = v;
-      root.classList.toggle('bd-cs-open', v);
-      cs.inert = !v;
-      applyWidth();
-    });
-    schedule(true); paint();
-  }
+  const barBtn = h('button', { type: 'button', class: 'bd-ibtn bd-cs-btn', 'aria-label': 'Comments', title: 'Comments', 'aria-pressed': 'false',
+    onclick: () => SIDE.show('comments', { toggle: true }) }, ic('msg'), barN);
   function setMsg(v) { if (v.trim()) store.set(MSG, v); else store.del(MSG); }
   csMsg.addEventListener('input', () => { setMsg(csMsg.value); grow(csMsg); });
   csMsg.addEventListener('keydown', e => { e.stopPropagation(); if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); openDlg(); } });
@@ -3600,11 +3714,7 @@ const MARKUP = (() => {
         h('span', {}, 'Pick a tool, then click, select or draw on the page. Each comment asks the agent to change that spot.'),
         h('span', { class: 'keys' }, ['point', 'select', 'draw'].map(m => h('span', {}, kbd(MODES[m][2]), MODES[m][1])))]));
   }
-  function scrollCard(li) {   // within the list only; the list box is the cards' offset parent
-    const top = li.offsetTop - 10, bottom = li.offsetTop + li.offsetHeight + 10, b = listBox;
-    if (top < b.scrollTop) b.scrollTo({ top, behavior: REDUCE ? 'auto' : 'smooth' });
-    else if (bottom > b.scrollTop + b.clientHeight) b.scrollTo({ top: Math.min(top, bottom - b.clientHeight), behavior: REDUCE ? 'auto' : 'smooth' });
-  }
+  const scrollCard = li => scrollWithin(listBox, li);
   function setHot(a, fromCard) {
     if (hotA === a) return;
     const prev = hotA; hotA = a; hlDirty = true;
@@ -3615,7 +3725,7 @@ const MARKUP = (() => {
   function select(a, { open = false, scroll = false } = {}) {
     if (editA && editA !== a) endEdit(true);
     selA = a; hlDirty = true;
-    if (a && open && !commentsOpen) setOpen(true, true);
+    if (a && open) SIDE.show('comments');
     if (a && filter !== 'all' && (filter === 'sent') !== !!a.sent) filter = 'all';
     paint(); schedule(false);
     const li = a && cards.get(a.id);
@@ -3628,7 +3738,7 @@ const MARKUP = (() => {
     if (a.sent) return;
     if (editA && editA !== a) endEdit(true);
     editA = a; selA = a; hlDirty = true;
-    if (!commentsOpen) setOpen(true, true);
+    SIDE.show('comments');
     if (a !== draft && filter === 'sent') filter = 'all';
     paint(); schedule(true);
     const li = cards.get(a.id); if (li) scrollCard(li);
@@ -3679,8 +3789,8 @@ const MARKUP = (() => {
     else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); (e.key === 'ArrowDown' ? li.nextElementSibling : li.previousElementSibling)?.focus(); }
   });
   listBox.addEventListener('pointerover', e => { const li = e.target.closest('.bd-cs-c'); setHot(li ? li._a : null, true); });
-  listBox.addEventListener('pointerleave', () => setHot(null, true));
-  cs.addEventListener('keydown', e => { if (e.key === 'Escape' && !e.defaultPrevented && commentsOpen && !dockW()) { e.preventDefault(); setOpen(false, true); barBtn.focus(); } });
+  // leaving the list (pointerleave can miss it when the card under the pointer re-renders): anywhere else clears it
+  document.addEventListener('pointerover', e => { if (hotA && !(e.target.closest && e.target.closest('.bd-cs-l, .bd-ann-pin'))) setHot(null, true); }, { passive: true });
 
   /* modes */
   function setMode(m) {
@@ -3693,7 +3803,7 @@ const MARKUP = (() => {
     cap.hidden = m !== 'draw';
     showHover(null);
     if (m !== 'view' && marksOff) { marksOff = false; schedule(true); }   // marking with the marks hidden would hide the new one too
-    if (m !== 'view' && !commentsOpen && !sheet()) setOpen(true, true);   // a bottom sheet would cover what you mark: it opens with the first note instead
+    if (m !== 'view' && !SIDE.shows('comments') && !SIDE.sheet()) SIDE.show('comments');   // a bottom sheet would cover what you mark: it opens with the first note instead
     paint();
     return true;
   }
@@ -3704,10 +3814,9 @@ const MARKUP = (() => {
     go.setAttribute('aria-label', `Request changes: ${n} unsent`);
     go._tip = n ? `Review and send ${n} change request${n === 1 ? '' : 's'}` : 'Point, select or draw on the page to request a change';
     csGoN.textContent = String(n);
-    csN.hidden = !n; csN.textContent = `${n} unsent`;
     for (const el of [csKeyN, barN]) { el.hidden = !total; el.textContent = String(total); }
-    for (const el of [csKey, barBtn]) { el.setAttribute('aria-pressed', String(commentsOpen)); el.setAttribute('aria-label', `Comments: ${total}`); }
-    csKey._tip = commentsOpen ? 'Hide comments' : 'Show comments';
+    for (const el of [csKey, barBtn]) el.setAttribute('aria-label', `Comments: ${total}`);
+    csKey._tip = SIDE.shows('comments') ? 'Hide comments' : 'Show comments';
     filterBtns.forEach(b => { const f = b.dataset.f; b.setAttribute('aria-checked', String(f === filter)); b.replaceChildren(FILTERS[f], h('i', {}, String(f === 'all' ? total : f === 'sent' ? sent : n))); });
     sortBtn.replaceChildren(ic(sort === 'page' ? 'doc' : 'hist'), sort === 'page' ? 'Page order' : 'Newest first');
     sortBtn.title = sort === 'page' ? 'In page order; click for newest first' : 'Newest first; click for page order';
@@ -3722,6 +3831,7 @@ const MARKUP = (() => {
     layer.hidden = marksOff;
     renderList();
     if (dlg && dlg.open) dlg._paint();
+    SIDE.paint();   // the tab's unsent count
   }
   // Point and Select keep the page inert where it's marked: no links, ticks, row toggles or canvas pans.
   // A pin goes where the press was: after a small drag the click lands on a shared ancestor instead.
@@ -3730,12 +3840,12 @@ const MARKUP = (() => {
     if (e.type === 'pointerdown') {
       swallow = false; press = null;
       // a press outside the sidebar ends the edit (keeping what was typed) and the selection
-      if (t && t !== cap && !t.closest('.bd-cs, .bd-anntb, .bd-ann-pin, dialog')) {
+      if (t && t !== cap && !t.closest('.bd-sp, .bd-anntb, .bd-ann-pin, dialog')) {
         if (editA) swallow = endEdit(true) && mode === 'point';   // this click saved a note; the next one pins
         if (selA) select(null);
       }
     }
-    if (mode === 'select' && e.type === 'pointerup' && !(t && t.closest('.bd-ann-ui'))) setTimeout(fromSelection, 0);
+    if (mode === 'select' && e.type === 'pointerup' && !(t && t.closest('.bd-ann-ui, .bd-sp'))) setTimeout(fromSelection, 0);
     if ((mode !== 'point' && mode !== 'select') || !inDoc(t)) return;
     if (mode === 'select') {
       if ((e.type === 'click' || e.type === 'dblclick') && t.closest('a, button, input, label, summary, select, textarea, .bp-node')) { e.preventDefault(); e.stopPropagation(); }
@@ -3879,7 +3989,7 @@ const MARKUP = (() => {
         const d = tgt.closest('.bd-pane') && diffOf(tgt);
         // a big anchor (the page, a section) centres the mark itself, in what the sheet leaves visible
         const big = tgt === shell || tgt.getBoundingClientRect().height > innerHeight / 2;
-        const bottom = commentsOpen && sheet() ? cs.getBoundingClientRect().top : innerHeight;
+        const bottom = SIDE.as() === 'sheet' ? SIDE.el.getBoundingClientRect().top : innerHeight;
         if (d) paneScrollTo(d, tgt);
         else if (big && p && p.exact) scrollBy({ top: p.y - (cssPx('--top-h') + bottom) / 2, behavior: REDUCE ? 'auto' : 'smooth' });
         else tgt.scrollIntoView({ block: 'center', behavior: REDUCE ? 'auto' : 'smooth' });
@@ -3914,24 +4024,28 @@ const MARKUP = (() => {
     return JSON.parse(JSON.stringify(a));
   }
   function comments(o) {
-    if (o && typeof o === 'object' && 'open' in o) setOpen(o.open, true);
-    return { available: true, open: commentsOpen, as: commentsOpen ? (sheet() ? 'sheet' : dockW() ? 'dock' : 'drawer') : null, count: list.length, unsent: unsent().length,
+    if (o && typeof o === 'object' && 'open' in o) { if (o.open) SIDE.show('comments'); else if (SIDE.shows('comments')) SIDE.setOpen(false, true); }
+    return { available: true, open: SIDE.shows('comments'), as: SIDE.shows('comments') ? SIDE.as() : null, count: list.length, unsent: unsent().length,
       filter, sort, cards: [...listOl.children].map(li => li.dataset.id), selected: selA && selA.id, editing: editA && editA.id };
   }
 
   /* wiring */
-  document.body.append(layer, hov, cap, cs, tb, tip);
+  document.body.append(layer, hov, cap, tb, tip);
+  SIDE.add({ id: 'comments', label: 'Comments', body: csBody, count: () => unsent().length || '', chip: () => unsent().length ? `${unsent().length} unsent` : '',
+    onToggle: shown => { if (!shown) endEdit(true); schedule(true); paint(); } });
+  SIDE.bind(csKey, 'comments'); SIDE.bind(barBtn, 'comments');
   document.querySelector('.bd-bar-r')?.insertBefore(barBtn, themeBtn);
   root.classList.add('bd-ann-on');
   for (const ty of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click', 'dblclick']) addEventListener(ty, onCapture, true);
-  addEventListener('pointermove', e => { if (mode === 'point' && !(e.target.closest && e.target.closest('.bd-cs'))) showHover(targetAt(e.target)); }, { capture: true, passive: true });
+  addEventListener('pointermove', e => { if (mode === 'point' && !(e.target.closest && e.target.closest('.bd-sp'))) showHover(targetAt(e.target)); }, { capture: true, passive: true });
   root.addEventListener('mouseleave', () => { if (mode === 'point') showHover(null); });
   document.addEventListener('keydown', e => {
     if (e.defaultPrevented || e.isComposing || e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
     const t = e.target;
     if (t.isContentEditable || (t.closest && t.closest('input, textarea, select, [contenteditable]')) || document.querySelector('dialog[open]')) return;
     if (e.key === 'Escape') {
-      if (editA) endEdit(false); else if (selA) select(null); else if (mode !== 'view') setMode('view'); else if (commentsOpen && !dockW()) setOpen(false, true);
+      if (editA) endEdit(false); else if (selA) select(null); else if (mode !== 'view') setMode('view'); else return;
+      e.preventDefault();   // handled here: the panel's own Escape (close the drawer or sheet) waits for the next press
       return;
     }
     const m = { v: 'view', c: 'point', t: 'select', d: 'draw' }[e.key.toLowerCase()];
@@ -3946,11 +4060,12 @@ const MARKUP = (() => {
     if (recs.some(r => !(r.target.closest && r.target.closest('.bp-tokens')) && !(r.target instanceof SVGElement && r.attributeName === 'class'))) schedule(true);
   }).observe(app, { subtree: true, childList: true, attributes: true, attributeFilter: ['class', 'hidden', 'open', 'transform', 'style'] });
   document.fonts?.ready.then(() => schedule(true));
-  setInterval(() => { if (commentsOpen) renderList(); }, 30000);   // "5 min ago"
-  if (store.get(CS_KEY) === '1' && !sheet()) setOpen(true, false);
+  setInterval(() => { if (SIDE.shows('comments')) renderList(); }, 30000);   // "5 min ago"
   paint(); schedule(true);
   return Object.assign(api, { annotate, setMode, paint, comments });
 })();
+
+SIDE.start();
 
 /* ---------- public API (for tests and agents) ---------- */
 window.BP = {
@@ -3975,6 +4090,7 @@ window.BP = {
   annotate: spec => MARKUP.annotate(spec),
   setMode: name => MARKUP.setMode(name),
   comments: opts => MARKUP.comments(opts),
+  sidebar: opts => SIDE.api(opts),
 };
 })();
 </script>

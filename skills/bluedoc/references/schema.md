@@ -269,3 +269,4 @@ The built page exposes `window.BP`:
 | `BP.changesPayload()` | The change-request JSON that **Request changes → Send** posts (unsent annotations). |
 | `BP.annotate({type, key, note, quote?})` | Adds an annotation, as the toolbar would. `null` on `?rev=` / `?diff=`. |
 | `BP.setMode('view'|'point'|'select'|'draw')` | Switches the toolbar mode. |
+| `BP.sidebar({open, section})` | Opens/closes the right sidebar on `'comments'` or `'revisions'`; returns `{available, open, section, as}`. |
