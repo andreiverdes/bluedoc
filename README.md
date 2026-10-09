@@ -10,10 +10,10 @@ An agent skill that writes engineering docs as one self-contained HTML page: a z
 - **Checklists as task trackers.** Every procedure is a checklist. Each item is a two-line row (the action, then why it matters) that opens to show details, commands, checks, tables or a sub-checklist. Ticks persist in the reader's browser; **Copy progress** exports Markdown for a PR or issue.
 - **Decisions, not "tick if you agree".** When the agent needs you to choose, an item shows its options as pills with the agent's recommendation starred. You pick one; the export says what you picked and what was recommended.
 - **Answers back to the agent.** Every item takes a comment. **Send answers** collects your picks, ticks and comments, plus an overall message, and sends them to the agent (or copies them for you to paste).
-- **Change requests on the page.** A floating toolbar at the bottom (View, Point, Select, Draw) lets you pin a comment on any element, comment on a selected passage, or draw on the page; **Request changes** sends them to the agent as edits to make. Answers and change requests are separate messages.
+- **Change requests on the page.** A tray of keys at the bottom (View, Point, Select, Draw) lets you pin a comment on any element, comment on a selected passage, or draw on the page; each becomes a card in the Comments sidebar on the right, and **Request changes** sends them to the agent as edits to make. Answers and change requests are separate messages.
 - **Code review.** A `diff` block shows a change with each finding as a comment on its lines, and its options on the card. A file with several comments says how many, steps between them, and tells you how many sit above or below what you can see. Generated from git by `gitdiff.py`; GitHub review threads come in through `ghthreads.py`.
 - **Revisions you can compare.** Each build keeps the doc's revision history. Switch to any earlier revision, or compare two: new, changed and removed sections, items, table rows and drawing parts are marked in place with a word-level diff, next to the author's note on what changed. Readers who come back to a newer revision get a link to what changed since their last visit.
-- **A local server, a home page, JSON only.** `serve.py` renders each doc from its JSON on every request, so agents write only the JSON, never the HTML. `http://127.0.0.1:8740/` lists every doc by folder, searchable, with what still needs your decision and what's waiting on the agent. `build.py -o` still writes a standalone HTML file when you need to send one.
+- **A local server, a home page, JSON only.** `serve.py` renders each doc from its JSON on every request, so agents write only the JSON, never the HTML. `http://127.0.0.1:8740/` is a HorizonUI dashboard: a search-first hero, a sidebar of projects with their folder trees, doc types and status, activity and decision charts, and every doc as a card with a generated preview, in a grid (2–6 columns), a list or a board. `build.py -o` still writes a standalone HTML file when you need to send one.
 - **Self-contained pages.** No network at view time beyond the local server, prints cleanly, light and dark theme, keyboard and screen-reader outline.
 - **Adjustable width.** Drag the handle on either side of the text to widen or narrow it; it stays centred and every bluedoc page in that browser remembers the width. Wide tables stop wrapping. Double-click a handle to reset.
 - **Linted writing.** The build flags filler, vague words, long sentences and checklist items that don't start with a verb.
@@ -125,7 +125,8 @@ skills/bluedoc/
   scripts/ghthreads.py   GitHub review threads -> findings + diff comments
   scripts/serve.py       local server: renders docs, home page, answers and change requests
   assets/template.html   the page runtime (styling, canvas, checklists, diff browser, annotator)
-  assets/home.html       the home page
+  assets/home.html       the home page (HorizonUI)
+  assets/vendor/         HorizonUI browser build (Apache-2.0, see its NOTICE)
   examples/              Acme examples (JSON and history; built HTML for GitHub readers)
 .claude-plugin/          Claude Code plugin and marketplace (omp reads it too)
 .agents/plugins/         Codex marketplace

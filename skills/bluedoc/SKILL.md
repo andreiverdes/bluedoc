@@ -22,7 +22,7 @@ Files, relative to this skill's directory (`<skill>` in the commands below):
 1. **Write in CRISP.** If the `crisp` skill is installed, read it and apply it at **CRISP 3** to every string you write: titles, tldr, leads, callouts, node `md`, flow step labels, checklist items. Otherwise apply the ten rules in "Writing" below.
 2. **Gather facts from the source.** Read the code, configs, and runs the document describes. Every node, edge, and step must map to something real: a file, a symbol, a queue, a command. Record anchors (`path:line`) for `refs`. Mark what you did not observe as `unverified`.
 3. **Plan the structure** (below) before writing JSON.
-4. **Write the JSON**: `docs/<topic>/<name>.bluedoc.json`. Keep it in the repo; it is the source. Set `meta.rev` (start at `1` or `A`) and `meta.date`. No HTML file.
+4. **Write the JSON**: `docs/<topic>/<name>.bluedoc.json`. Keep it in the repo; it is the source. Set `meta.rev` (start at `1` or `A`), `meta.date`, and `meta.kind`; set `meta.type` (`docs`, `review`, `other`) only when `kind` alone doesn't say it. No HTML file.
 5. **Validate:**
    ```sh
    python3 <skill>/scripts/build.py docs/<topic>/<name>.bluedoc.json
@@ -120,7 +120,7 @@ The reader sends two different things back, from two different places:
 | | **Answers** | **Change requests** |
 |---|---|---|
 | What | Picks on decision items, ticks, a comment per item, an overall message | Annotations on the page: a pin on an element, a selected passage, a drawing, each with the change they want |
-| Where | **Send answers** in the app bar | The floating toolbar at the bottom: View, Point, Select, Draw, then **Request changes** |
+| Where | **Send answers** in the app bar | The tray at the bottom (View, Point, Select, Draw) and the **Comments** sidebar on the right, then **Request changes** |
 | Means | "Here are my decisions; go do the work" | "Edit this doc" |
 | Files | `<name>.reply.md` / `.json` | `<name>.changes.md` / `.json` |
 

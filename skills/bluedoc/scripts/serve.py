@@ -16,9 +16,12 @@ One server per user, on 127.0.0.1 (default port 8740, env BLUEDOC_PORT). State l
 ~/.bluedoc (env BLUEDOC_HOME): roots.json (folders the home page scans) and server.json (pid, port).
 `open` registers the topmost ancestor folder named `docs`, else the doc's own folder.
 
-URLs: /                      home page: every doc under the registered folders, by folder, searchable
+URLs: /                      home page: every doc under the registered folders, searchable, filtered by
+                             project, folder, type and status
       /<root>/<path>.bluedoc.json      the doc, rendered from its JSON on each request
       /<root>/<path>.bluedoc.json?raw=1   the JSON itself
+      /__bluedoc/index.json  what the home page shows about every doc
+      /__bluedoc/vendor/<path>  files under assets/vendor (HorizonUI for the home page)
 Rendering validates the doc (errors show as a page) and records its meta.rev in the history file,
 exactly as build.py does, so the page always shows the current JSON and its revisions.
 
@@ -29,7 +32,9 @@ queued for `wait`, which returns the oldest unread one. Python 3.9+ standard lib
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import json
+import mimetypes
 import os
 import re
 import subprocess
@@ -48,13 +53,18 @@ sys.path.insert(0, str(HERE))
 import build  # noqa: E402
 
 HOME_HTML = HERE.parent / "assets" / "home.html"
+VENDOR = HERE.parent / "assets" / "vendor"
 STATE = Path(os.environ.get("BLUEDOC_HOME") or "~/.bluedoc").expanduser()
 ROOTS_FILE, SERVER_FILE = STATE / "roots.json", STATE / "server.json"
 DEFAULT_PORT = int(os.environ.get("BLUEDOC_PORT") or 8740)
 SUFFIXES = (".bluedoc.json", ".blueprint.json")
 SKIP_DIRS = {"node_modules", "build", "dist", "target", "out", "vendor", "Pods", "DerivedData", "__pycache__"}
-MAX_DEPTH, MAX_BODY, SEARCH_CHARS = 8, 4 * 1024 * 1024, 12000
+MAX_DEPTH, MAX_BODY, SEARCH_CHARS = 8, 4 * 1024 * 1024, 8000   # SEARCH_CHARS keeps index.json small (~10 KB a doc)
 KINDS = ("answers", "changes")
+# meta.kind words that make a doc type "docs" when meta.type is unset; a kind with "review" is a "review"
+DOCS_KINDS = {"architecture", "walkthrough", "runbook", "setup", "reference", "proposal", "change", "changes", "plan",
+              "status", "guide", "design", "spec", "rfc", "adr", "overview", "tutorial", "onboarding", "explainer", "playbook"}
+FINDING_SIZES = ("blocker", "major", "minor", "nit")
 
 
 # ---------- docs on disk ----------
@@ -158,7 +168,107 @@ def text_of(x, out: list[str], skip=("files", "code", "id", "href", "x", "y", "w
         out.append(x)
 
 
+def doc_type(meta: dict) -> str:
+    """docs | review | other: meta.type when set, else read from meta.kind."""
+    if meta.get("type") in build.DOC_TYPES:
+        return meta["type"]
+    words = set(re.findall(r"[a-z]+", str(meta.get("kind") or "").lower()))
+    if "review" in words:
+        return "review"
+    return "docs" if words & DOCS_KINDS else "other"
+
+
+def all_blocks(doc: dict):
+    """Every block, depth-first, including the blocks inside checklist items."""
+    def walk(blocks):
+        for b in blocks or []:
+            if isinstance(b, dict):
+                yield b
+                if b.get("type") == "checklist":
+                    for it in b.get("items") or []:
+                        if isinstance(it, dict):
+                            yield from walk(it.get("blocks"))
+    for s in doc.get("sections") or []:
+        yield from walk(s.get("blocks"))
+
+
+def preview(doc: dict, dtype: str) -> dict:
+    """The card picture's data: the root drawing of the first canvas, the size of a review's diff, or block counts.
+    Canvas nodes: x, y = top-left in canvas units, placed as the template does (centre = x/y, else col*250, row*160;
+    size w/h, else 180x80, or 240x140 for a node with children); c = child count; edges = [from, to, kind] by node index."""
+    blocks = list(all_blocks(doc))
+    canvas = next((b for b in blocks if b.get("type") == "canvas" and b.get("nodes")), None)
+    diffs = [b for b in blocks if b.get("type") == "diff"]
+    findings = {k: 0 for k in FINDING_SIZES}
+    for b in blocks:
+        if b.get("type") == "checklist":
+            for it in b.get("items") or []:
+                if isinstance(it, dict) and it.get("state") in findings:
+                    findings[it["state"]] += 1
+    out: dict = {"findings": findings} if any(findings.values()) else {}
+    if diffs and (dtype == "review" or not canvas):
+        files = [f for d in diffs for f in d.get("files") or [] if isinstance(f, dict) and f.get("status") != "context"]
+        bars = []
+        for f in files:
+            add, dele = f.get("add"), f.get("del")
+            if add is None or dele is None:
+                lines = [ln for hk in f.get("hunks") or [] if not hk.get("context") for ln in hk.get("lines") or []]
+                add, dele = sum(ln.startswith("+") for ln in lines), sum(ln.startswith("-") for ln in lines)
+            bars.append([int(add), int(dele)])
+        out.update(kind="diff", files=len(files), add=sum(a for a, _ in bars), dele=sum(d for _, d in bars),
+                   bars=sorted(bars, key=lambda x: -(x[0] + x[1]))[:12])
+    elif canvas:
+        nodes, at = [], {}
+        for n in canvas["nodes"]:
+            if not isinstance(n, dict) or "id" not in n:
+                continue
+            kids = len((n.get("children") or {}).get("nodes") or [])
+            w, h = n.get("w") or (240 if kids else 180), n.get("h") or (140 if kids else 80)
+            cx = n["x"] if n.get("x") is not None else (n.get("col") or 0) * 250
+            cy = n["y"] if n.get("y") is not None else (n.get("row") or 0) * 160
+            at[n["id"]] = len(nodes)
+            node = {"x": round(cx - w / 2), "y": round(cy - h / 2), "w": round(w), "h": round(h), "label": str(n.get("label") or "")[:40]}
+            node.update({k: n[k] for k in ("kind", "state") if n.get(k)})
+            if kids:
+                node["c"] = kids
+            nodes.append(node)
+        edges = [[at[e["from"]], at[e["to"]], e.get("kind") or ""] for e in canvas.get("edges") or []
+                 if isinstance(e, dict) and e.get("from") in at and e.get("to") in at]
+        out.update(kind="canvas", nodes=nodes, edges=edges)
+    else:
+        count = lambda t: sum(b.get("type") == t for b in blocks)  # noqa: E731
+        out.update(kind="counts", sections=len(doc.get("sections") or []), checklists=count("checklist"),
+                   tables=count("table"), code=count("code"), cards=count("cards"))
+    return out
+
+
 _cache: dict[str, tuple[float, dict]] = {}
+_hist_cache: dict[str, tuple[float, tuple[int, list[int]]]] = {}
+
+
+def history_info(p: Path) -> tuple[int, list[int]]:
+    """(revision count, when each revision was built as epoch seconds) from the doc's history file."""
+    hp = build.history_path(p)
+    try:
+        m = hp.stat().st_mtime
+    except OSError:
+        return 0, []
+    hit = _hist_cache.get(str(hp))
+    if hit and hit[0] == m:
+        return hit[1]
+    try:
+        revs = json.loads(hp.read_text(encoding="utf-8")).get("revs") or []
+        built = []
+        for r in revs:
+            try:
+                built.append(int(dt.datetime.fromisoformat(r["built"]).timestamp()))
+            except (KeyError, TypeError, ValueError):
+                pass
+        res = (len(revs), built)
+    except (OSError, ValueError, AttributeError):
+        res = (0, [])
+    _hist_cache[str(hp)] = (m, res)
+    return res
 
 
 def summarize(p: Path) -> dict:
@@ -173,6 +283,7 @@ def summarize(p: Path) -> dict:
             doc = json.loads(p.read_text(encoding="utf-8"))
             rep = build.validate(doc)
             meta = doc.get("meta") or {}
+            dtype = doc_type(meta)
             items = []
 
             def scan(blocks):
@@ -190,22 +301,18 @@ def summarize(p: Path) -> dict:
             text_of(doc, words)
             info.update({
                 "id": doc.get("id"), "title": doc.get("title") or stem(p), "subtitle": doc.get("subtitle") or "",
-                "tldr": doc.get("tldr") or "", "kind": meta.get("kind") or "", "org": meta.get("org") or "",
+                "tldr": doc.get("tldr") or "", "kind": meta.get("kind") or "", "type": dtype, "org": meta.get("org") or "",
                 "rev": str(meta.get("rev") or ""), "date": meta.get("date") or "",
                 "sections": [s.get("title") or "" for s in doc.get("sections") or []],
                 "items": items, "errors": len(rep.errors), "firstError": rep.errors[0] if rep.errors else "",
-                "text": " ".join(words)[:SEARCH_CHARS],
+                "text": " ".join(words)[:SEARCH_CHARS], "preview": preview(doc, dtype),
             })
-        except (OSError, ValueError) as e:
-            info.update({"errors": 1, "firstError": f"cannot read: {e}"})
+        except (OSError, ValueError, TypeError, AttributeError) as e:
+            info.update({"errors": 1, "firstError": f"cannot read: {e}", "type": "other"})
         _cache[str(p)] = (st.st_mtime, info)
         info = dict(info)
     info["mtime"] = st.st_mtime
-    hp = build.history_path(p)
-    try:
-        info["revs"] = len(json.loads(hp.read_text(encoding="utf-8")).get("revs") or []) if hp.exists() else 0
-    except (OSError, ValueError):
-        info["revs"] = 0
+    info["revs"], info["built"] = history_info(p)
     for kind in KINDS:
         f = reply_file(p, kind, "json")
         if f.exists():
@@ -229,7 +336,8 @@ def index() -> dict:
             d["path"] = p.relative_to(r).as_posix()
             d["url"] = f"/{quote(slug)}/{quote(d['path'])}"
             docs.append(d)
-        out.append({"slug": slug, "path": str(r), "docs": docs})
+        name = r.parent.name if r.name in ("docs", "doc") and r.parent.name else r.name
+        out.append({"slug": slug, "name": name, "path": str(r), "docs": docs})
     return {"roots": out}
 
 
@@ -246,6 +354,31 @@ def template_css() -> str:
     t = build.TEMPLATE.read_text(encoding="utf-8")
     m = re.search(r"<style>(.*?)</style>", t, re.S)
     return m.group(1) if m else ""
+
+
+def vendor_file(rel: str) -> Path | None:
+    base = VENDOR.resolve()
+    f = (base / unquote(rel)).resolve()
+    return f if base in f.parents and f.is_file() else None
+
+
+def vendor_type(f: Path) -> str:
+    ext = f.suffix.lower()
+    if ext in (".js", ".mjs"):
+        return "text/javascript; charset=utf-8"
+    if ext == ".css":
+        return "text/css; charset=utf-8"
+    if ext in ("", ".md", ".txt"):
+        return "text/plain; charset=utf-8"   # LICENSE, NOTICE, VERSION
+    return mimetypes.guess_type(f.name)[0] or "application/octet-stream"
+
+
+def vendor_version() -> str:
+    """Changes whenever a vendored file does, so the home page can cache them forever."""
+    try:
+        return str(int(max(f.stat().st_mtime for f in VENDOR.rglob("*") if f.is_file())))
+    except (OSError, ValueError):
+        return "0"
 
 
 def error_page(p: Path, lines: list[str]) -> str:
@@ -314,12 +447,13 @@ def make_handler(port: int, default_to: str):
         def log_message(self, *_):
             pass
 
-        def send(self, code: int, body: str | bytes, ctype: str = "text/html; charset=utf-8") -> None:
+        def send(self, code: int, body: str | bytes, ctype: str = "text/html; charset=utf-8", cache: str = "no-store") -> None:
             data = body.encode() if isinstance(body, str) else body
             self.send_response(code)
             self.send_header("Content-Type", ctype)
             self.send_header("Content-Length", str(len(data)))
-            self.send_header("Cache-Control", "no-store")
+            self.send_header("Cache-Control", cache)
+            self.send_header("X-Content-Type-Options", "nosniff")
             self.end_headers()
             if self.command != "HEAD":
                 self.wfile.write(data)
@@ -348,8 +482,14 @@ def make_handler(port: int, default_to: str):
             u = urlsplit(self.path)
             q = {k: v[0] for k, v in parse_qs(u.query).items()}
             if u.path == "/":
-                html = HOME_HTML.read_text(encoding="utf-8").replace("/*__BLUEDOC_CSS__*/", template_css())
+                html = HOME_HTML.read_text(encoding="utf-8").replace("__BLUEDOC_VENDOR_V__", vendor_version())
                 return self.send(200, html)
+            if u.path.startswith("/__bluedoc/vendor/"):
+                f = vendor_file(u.path[len("/__bluedoc/vendor/"):])
+                if not f:
+                    return self.json(404, {"error": "not found"})
+                # versioned URLs (?v=) are immutable: home.html changes v when the vendored files change
+                return self.send(200, f.read_bytes(), vendor_type(f), "public, max-age=31536000, immutable" if q.get("v") else "no-cache")
             if u.path == "/__bluedoc/index.json":
                 return self.json(200, index())
             if u.path == "/__bluedoc/ping":

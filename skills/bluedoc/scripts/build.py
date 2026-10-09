@@ -41,6 +41,7 @@ MAX_CHOICES, MAX_CHOICE_LABEL = 6, 28
 PLACEHOLDER = re.compile(r"<<[^<>\n]{1,120}>>")
 CALLOUT_KINDS = {"note", "caution", "warning", "risk", "decision"}
 STATE_KINDS = {"ok", "warn", "risk", "info", "todo"}
+DOC_TYPES = {"docs", "review", "other"}   # meta.type: the home page's grouping; unset = derived from meta.kind
 NODE_KINDS = {"service", "process", "function", "store", "db", "cache", "stream", "queue", "device", "hardware",
               "actor", "user", "person", "client", "app", "ui", "external", "cloud", "note", "port"}
 NODE_STATES = {"live", "local", "proposed", "unverified", "removed", "replaced"}
@@ -246,6 +247,9 @@ def validate(doc: dict) -> Report:
         else:
             for i, x in enumerate(ch):
                 lint_text(rep, f"doc.changes[{i}]", x)
+    dtype = (doc.get("meta") or {}).get("type")
+    if dtype is not None and dtype not in DOC_TYPES:
+        rep.err("doc.meta.type", f"'{dtype}' not in {sorted(DOC_TYPES)}")
     for i, s in enumerate(doc.get("state") or []):
         if s.get("kind") and s["kind"] not in STATE_KINDS:
             rep.err(f"doc.state[{i}]", f"kind '{s['kind']}' not in {sorted(STATE_KINDS)}")
