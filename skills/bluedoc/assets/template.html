@@ -420,51 +420,116 @@ td.bd-cell-mod { background: color-mix(in oklch, var(--warn-tint) 70%, transpare
 .bp-toast::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--ok); }
 .bp-toast.on { opacity: 1; transform: translate(-50%, 0); }
 
-/* change requests: bottom toolbar (Figma-style), marks, hover outline, popover, dialog */
+/* change requests: bottom toolbar (HorizonUI Tray of Keys with Grooves, Kbd tooltips), marks, hover outline,
+   comments sidebar, dialog. Tray, key, groove and fill values are HorizonUI's, light and dark. */
+:root {
+  --hk-top: oklch(100% 0 0); --hk-bot: oklch(97.2% 0.002 264); --hk-ring: oklch(23% 0.01 264 / 0.09); --hk-down: oklch(93.4% 0.003 264);
+  --tray-top: oklch(99.2% 0.001 264); --tray-bot: oklch(96.6% 0.002 264);
+  --shadow-hk: 0 0 0 1px var(--hk-ring), 0 1px 1px oklch(23% 0.01 264 / 0.06), 0 2px 5px oklch(23% 0.01 264 / 0.07), inset 0 1px 0 oklch(100% 0 0), inset 0 -1px 0 oklch(23% 0.01 264 / 0.05);
+  --shadow-hk-down: inset 0 1px 3px oklch(23% 0.01 264 / 0.16), inset 0 0 0 1px oklch(23% 0.01 264 / 0.08);
+  --shadow-tray: 0 0 0 1px oklch(23% 0.01 264 / 0.06), 0 10px 30px oklch(23% 0.01 264 / 0.08), inset 0 1px 0 oklch(100% 0 0);
+  --shadow-well: inset 0 1px 3px oklch(23% 0.01 264 / 0.12), inset 0 0 0 1px oklch(23% 0.01 264 / 0.05);
+  --shadow-fill: 0 0 0 1px oklch(0% 0 0 / 0.5), inset 0 1px 0 oklch(100% 0 0 / 0.18), 0 2px 5px oklch(0% 0 0 / 0.18);
+  --groove: linear-gradient(90deg, oklch(23% 0.01 264 / 0.1) 50%, oklch(100% 0 0 / 0.9) 50%);
+  --accent-solid: oklch(51% 0.19 254);
+  --tip: oklch(22% 0.006 264);
+  --cs-w: 344px; --cs-sheet-h: min(52vh, 460px);
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --hk-top: oklch(29% 0.004 264); --hk-bot: oklch(24.5% 0.004 264); --hk-ring: oklch(0% 0 0 / 0.55); --hk-down: oklch(16.5% 0.003 264);
+  --tray-top: oklch(24% 0.004 264); --tray-bot: oklch(21% 0.0035 264);
+  --shadow-hk: 0 0 0 1px var(--hk-ring), 0 1px 1px oklch(0% 0 0 / 0.35), 0 3px 6px oklch(0% 0 0 / 0.35), inset 0 1px 0 oklch(100% 0 0 / 0.09), inset 0 -1px 0 oklch(0% 0 0 / 0.25);
+  --shadow-hk-down: inset 0 1px 4px oklch(0% 0 0 / 0.6), inset 0 0 0 1px oklch(0% 0 0 / 0.5);
+  --shadow-tray: 0 0 0 1px oklch(0% 0 0 / 0.7), 0 16px 40px oklch(0% 0 0 / 0.45), inset 0 1px 0 oklch(100% 0 0 / 0.07);
+  --shadow-well: inset 0 1px 4px oklch(0% 0 0 / 0.6), inset 0 0 0 1px oklch(0% 0 0 / 0.45), 0 1px 0 oklch(100% 0 0 / 0.05);
+  --shadow-fill: 0 0 0 1px oklch(0% 0 0 / 0.5), inset 0 1px 0 oklch(100% 0 0 / 0.18), 0 2px 5px oklch(0% 0 0 / 0.4);
+  --groove: linear-gradient(90deg, oklch(0% 0 0 / 0.6) 50%, oklch(100% 0 0 / 0.07) 50%);
+  --tip: oklch(30% 0.005 264);
+} }
+:root[data-theme="dark"] {
+  --hk-top: oklch(29% 0.004 264); --hk-bot: oklch(24.5% 0.004 264); --hk-ring: oklch(0% 0 0 / 0.55); --hk-down: oklch(16.5% 0.003 264);
+  --tray-top: oklch(24% 0.004 264); --tray-bot: oklch(21% 0.0035 264);
+  --shadow-hk: 0 0 0 1px var(--hk-ring), 0 1px 1px oklch(0% 0 0 / 0.35), 0 3px 6px oklch(0% 0 0 / 0.35), inset 0 1px 0 oklch(100% 0 0 / 0.09), inset 0 -1px 0 oklch(0% 0 0 / 0.25);
+  --shadow-hk-down: inset 0 1px 4px oklch(0% 0 0 / 0.6), inset 0 0 0 1px oklch(0% 0 0 / 0.5);
+  --shadow-tray: 0 0 0 1px oklch(0% 0 0 / 0.7), 0 16px 40px oklch(0% 0 0 / 0.45), inset 0 1px 0 oklch(100% 0 0 / 0.07);
+  --shadow-well: inset 0 1px 4px oklch(0% 0 0 / 0.6), inset 0 0 0 1px oklch(0% 0 0 / 0.45), 0 1px 0 oklch(100% 0 0 / 0.05);
+  --shadow-fill: 0 0 0 1px oklch(0% 0 0 / 0.5), inset 0 1px 0 oklch(100% 0 0 / 0.18), 0 2px 5px oklch(0% 0 0 / 0.4);
+  --groove: linear-gradient(90deg, oklch(0% 0 0 / 0.6) 50%, oklch(100% 0 0 / 0.07) 50%);
+  --tip: oklch(30% 0.005 264);
+}
 .bd-home { display: inline-flex; align-items: center; gap: 6px; flex: none; height: 28px; padding: 0 8px; margin-left: -4px; border-radius: 8px; font-size: 13px; font-weight: 500;
   color: var(--fg-muted); text-decoration: none; }
 .bd-home:hover { background: var(--hover); color: var(--fg); }
 .bd-home .bd-ic { width: 15px; height: 15px; }
 @media (max-width: 900px) { .bd-home .l { display: none; } }
-.bd-anntb { position: fixed; left: 50%; bottom: 16px; z-index: 50; transform: translateX(-50%); display: flex; align-items: center; gap: 2px; padding: 5px; border-radius: 16px;
-  background: color-mix(in oklch, var(--surface) 92%, transparent); -webkit-backdrop-filter: saturate(1.5) blur(14px); backdrop-filter: saturate(1.5) blur(14px); box-shadow: var(--shadow-3); }
-.bd-anntb .m { display: inline-grid; place-items: center; width: 36px; height: 36px; padding: 0; border: 0; border-radius: 11px; background: none; color: var(--fg-muted); transition: background .12s, color .12s; }
-.bd-anntb .m:hover { color: var(--fg); background: var(--hover); }
-.bd-anntb .m[data-m][aria-pressed="true"] { color: var(--accent-fg); background: var(--accent-tint); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--accent) 30%, transparent); }
-.bd-anntb .m .bd-ic { width: 18px; height: 18px; }
-.bd-anntb .sw { display: inline-flex; align-items: center; gap: 4px; padding: 0 6px 0 4px; }
+/* the tray floats centred over the page, or over the part the docked sidebar leaves */
+.bd-anntb { position: fixed; left: 50%; bottom: 16px; z-index: 50; transform: translateX(-50%); display: flex; align-items: center; gap: 6px; padding: 7px; border-radius: 20px;
+  background: linear-gradient(180deg, var(--tray-top), var(--tray-bot)); box-shadow: var(--shadow-tray), 0 2px 6px oklch(23% 0.01 264 / 0.06); transition: left .22s var(--ease), bottom .22s var(--ease); }
+.bd-key { position: relative; display: inline-grid; place-items: center; flex: none; width: 38px; height: 38px; padding: 0; border: 0; border-radius: 12px; color: var(--fg-muted);
+  background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: var(--shadow-hk); transition: transform 90ms var(--ease), box-shadow .12s var(--ease), color .12s; }
+.bd-key:hover { color: var(--fg); background: linear-gradient(var(--hover), var(--hover)), linear-gradient(180deg, var(--hk-top), var(--hk-bot)); }
+.bd-key:active:not(:disabled), .bd-key[aria-pressed="true"] { transform: translateY(1px); color: var(--fg); background: var(--hk-down); box-shadow: var(--shadow-hk-down); }
+.bd-key:focus-visible { box-shadow: var(--shadow-hk), var(--focus-ring); }
+.bd-key[aria-pressed="true"]:focus-visible { box-shadow: var(--shadow-hk-down), var(--focus-ring); }
+.bd-key .bd-ic { width: 18px; height: 18px; }
+.bd-key > .b { position: absolute; top: -5px; right: -5px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 9px; display: grid; place-items: center;
+  font: 650 10.5px/1 var(--sans); font-variant-numeric: tabular-nums; color: #fff; background: var(--accent-solid); box-shadow: 0 0 0 2px var(--tray-top); pointer-events: none; }
+.bd-key > .b[hidden] { display: none; }
+.bd-key.go { display: inline-flex; align-items: center; width: auto; gap: 8px; padding: 0 8px 0 13px; font-size: 13px; font-weight: 600; color: #fff; white-space: nowrap;
+  background: var(--accent-solid) linear-gradient(180deg, color-mix(in oklch, var(--accent-solid), white 8%), var(--accent-solid)); box-shadow: var(--shadow-fill); }
+.bd-key.go:hover { color: #fff; filter: brightness(.95); background: var(--accent-solid) linear-gradient(180deg, color-mix(in oklch, var(--accent-solid), white 8%), var(--accent-solid)); }
+.bd-key.go:active:not(:disabled) { transform: translateY(1px) scale(.98); filter: brightness(.9); box-shadow: var(--shadow-fill); background: var(--accent-solid); }
+.bd-key.go .bd-ic { width: 16px; height: 16px; }
+.bd-key.go .n { min-width: 22px; height: 22px; padding: 0 6px; border-radius: 8px; display: grid; place-items: center; font: 650 12px/1 var(--sans); font-variant-numeric: tabular-nums;
+  background: oklch(100% 0 0 / .2); box-shadow: inset 0 1px 0 oklch(100% 0 0 / .12); }
+.bd-key.go:disabled { cursor: default; filter: none; color: var(--fg-subtle); background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: var(--shadow-hk); }
+.bd-key.go:disabled .n { background: var(--inset); box-shadow: var(--shadow-well); }
+.bd-groove { flex: none; width: 2px; height: 24px; margin: 0 2px; border-radius: 1px; background: var(--groove); }
+.bd-anntb .sw { display: inline-flex; align-items: center; gap: 5px; height: 38px; padding: 0 9px; border-radius: 12px; background: var(--hk-down); box-shadow: var(--shadow-well); }
 .bd-anntb .sw[hidden] { display: none; }
 .bd-anntb .sw button { width: 18px; height: 18px; padding: 0; border: 0; border-radius: 50%; background: var(--pen); box-shadow: inset 0 0 0 1px oklch(0% 0 0 / .15); }
-.bd-anntb .sw button[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--surface), 0 0 0 3.5px var(--pen); }
-.bd-anntb .dv { width: 1px; height: 22px; margin: 0 5px; background: var(--line-strong); flex: none; }
-.bd-anntb .go { height: 36px; padding: 0 14px 0 12px; border-radius: 11px; font-size: 13px; }
-.bd-anntb .go .bd-ic { width: 16px; height: 16px; }
-.bd-anntb .go .n { font-variant-numeric: tabular-nums; }
-.bd-anntb .go:disabled, .bd-anntb .go:disabled:hover { cursor: default; color: var(--fg-subtle); background: var(--inset); box-shadow: inset 0 0 0 1px var(--line); }
-@media (max-width: 600px) { .bd-anntb { bottom: 10px; } .bd-anntb .go .l { display: none; } .bd-anntb .go { padding: 0 12px 0 10px; } }
+.bd-anntb .sw button[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--hk-down), 0 0 0 3.5px var(--pen); }
+@media (max-width: 600px) {
+  .bd-anntb { bottom: 10px; gap: 4px; padding: 5px; border-radius: 17px; }
+  .bd-key { width: 34px; height: 34px; border-radius: 11px; }
+  .bd-key.go { padding: 0 6px 0 9px; gap: 6px; } .bd-key.go .l { display: none; }
+  .bd-anntb .sw { height: 34px; padding: 0 7px; gap: 4px; } .bd-anntb .sw button { width: 16px; height: 16px; }
+  .bd-anntb[data-m="draw"] .eye { display: none; }
+}
+/* HorizonUI Tooltip with Kbd chips */
+.bd-tip { position: fixed; left: 0; top: 0; z-index: 61; display: inline-flex; align-items: center; gap: 8px; max-width: min(300px, calc(100vw - 16px)); padding: 6px 8px 6px 10px; border-radius: 9px;
+  background: var(--tip); color: oklch(97% 0 0); font: 500 12.5px/1.35 var(--sans); box-shadow: var(--shadow-3); pointer-events: none; animation: bd-tip-in .12s var(--ease); }
+.bd-tip[hidden] { display: none; }
+.bd-tip .k { display: inline-flex; gap: 3px; flex: none; }
+@keyframes bd-tip-in { from { opacity: 0; transform: translateY(3px); } }
+.bd-kbd { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 5px; font: 500 10.5px/1 var(--mono); color: var(--fg-muted);
+  background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: var(--shadow-hk); }
+.bd-tip .bd-kbd { color: oklch(97% 0 0 / .78); background: oklch(100% 0 0 / .1); box-shadow: inset 0 0 0 1px oklch(100% 0 0 / .12), inset 0 -1px 0 oklch(0% 0 0 / .3); }
 html.bd-ann-on .bd-shell { padding-bottom: 150px; }
-html.bd-ann-on .bp-toast { bottom: 80px; }
+html.bd-ann-on .bp-toast { bottom: 84px; }
 @media (max-width: 600px) { html.bd-ann-on .bp-toast { bottom: 70px; } }
 .bd-pen-risk { --pen: var(--risk); } .bd-pen-accent { --pen: var(--accent); } .bd-pen-warn { --pen: var(--warn); } .bd-pen-ok { --pen: var(--ok); }
 html.bd-ann-m-point .bd-shell :not(.bp-side, .bp-side *), html.bd-ann-m-point .bd-shell { cursor: crosshair !important; }
 html.bd-ann-m-select .bd-shell :not(.bp-side, .bp-side *), html.bd-ann-m-select .bd-shell { cursor: text !important; }
 html.bd-ann-m-select .bp-cl-head { user-select: text; -webkit-user-select: text; }
 .bd-ann-layer { position: fixed; inset: 0; z-index: 35; overflow: hidden; pointer-events: none; }
-.bd-ann-layer[hidden], .bd-ann-cap[hidden], .bd-ann-hov[hidden], .bd-ann-pop[hidden] { display: none; }
+.bd-ann-layer[hidden], .bd-ann-cap[hidden], .bd-ann-hov[hidden] { display: none; }
 .bd-ann-pin { position: absolute; left: 0; top: -26px; display: grid; place-items: center; width: 26px; height: 26px; padding: 0; border: 0; border-radius: 13px 13px 13px 3px;
   font: 650 12px/1 var(--sans); color: #fff; background: var(--pen, var(--accent)); box-shadow: 0 0 0 2px var(--surface), 0 2px 8px oklch(20% 0.05 255 / .3);
-  pointer-events: auto; cursor: pointer !important; }
+  pointer-events: auto; cursor: pointer !important; transition: scale .12s var(--ease); transform-origin: 0 100%; }
 .bd-ann-pin[hidden] { display: none; }
 .bd-ann-pin.sent { background: var(--todo); opacity: .6; }
 .bd-ann-pin.away { color: var(--pen, var(--accent-fg)); background: var(--surface); box-shadow: inset 0 0 0 1.5px var(--pen, var(--accent)), 0 2px 8px oklch(20% 0.05 255 / .25); }
 .bd-ann-pin.sent.away { color: var(--fg-muted); box-shadow: inset 0 0 0 1.5px var(--todo); }
 .bd-ann-pin.old::after { content: ""; position: absolute; right: -3px; top: -3px; width: 9px; height: 9px; border-radius: 50%; background: var(--warn); box-shadow: 0 0 0 2px var(--surface); }
-.bd-ann-pin.on { box-shadow: 0 0 0 2px var(--surface), 0 0 0 5px color-mix(in oklch, var(--pen, var(--accent)) 40%, transparent); }
+.bd-ann-pin.on, .bd-ann-pin.hot { opacity: 1; box-shadow: 0 0 0 2px var(--surface), 0 0 0 5px color-mix(in oklch, var(--pen, var(--accent)) 40%, transparent); }
+.bd-ann-pin.hot { scale: 1.12; z-index: 1; }
 .bd-ann-pin.flash { animation: bd-ann-flash 1.3s var(--ease); }
 @keyframes bd-ann-flash { 0%, 45% { box-shadow: 0 0 0 2px var(--surface), 0 0 0 11px color-mix(in oklch, var(--pen, var(--accent)) 45%, transparent); } }
 .bd-ann-ink { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
 .bd-ann-ink path, .bd-ann-cap path { fill: none; stroke: var(--pen, var(--risk)); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
 .bd-ann-ink.sent { opacity: .35; }
+.bd-ann-ink.hot path { stroke-width: 5; }
 .bd-ann-cap { position: fixed; inset: 0; z-index: 34; touch-action: none; cursor: crosshair; }
 .bd-ann-cap svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
 .bd-ann-hov { position: fixed; left: 0; top: 0; z-index: 36; pointer-events: none; border-radius: 8px; box-shadow: 0 0 0 2px var(--accent); background: color-mix(in oklch, var(--accent) 7%, transparent); }
@@ -474,43 +539,120 @@ html.bd-ann-m-select .bp-cl-head { user-select: text; -webkit-user-select: text;
 ::highlight(bd-ann) { background-color: light-dark(oklch(91% 0.11 92), oklch(48% 0.09 85)); }
 ::highlight(bd-ann-on) { background-color: light-dark(oklch(86% 0.08 254), oklch(45% 0.12 254)); }
 ::highlight(bd-ann-sent) { background-color: light-dark(oklch(92% 0.01 264), oklch(32% 0.01 264)); }
-.bd-ann-pop { position: fixed; left: 0; top: 0; z-index: 56; width: min(320px, calc(100vw - 24px)); padding: 10px 10px 10px 12px; border-radius: 14px; background: var(--surface); color: var(--fg);
-  box-shadow: var(--shadow-3); font-size: 13.5px; }
-.bd-ann-pop .ph { display: flex; align-items: center; gap: 8px; min-width: 0; margin-bottom: 8px; }
-.bd-ann-pop .ph > .bd-ic { color: var(--fg-subtle); }
-.bd-ann-pop .ph .lb { flex: 1; min-width: 0; font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.bd-ann-pop .ph .bd-ibtn { width: 26px; height: 26px; }
-.bd-ann-pop .pi { display: grid; gap: 4px; margin-bottom: 8px; font-size: 12.5px; color: var(--fg-muted); }
-.bd-ann-pop .pi:empty { display: none; }
-.bd-ann-pop q, .bd-chgs .cr q { display: block; quotes: none; padding-left: 8px; border-left: 2px solid var(--warn); color: var(--fg-muted); overflow-wrap: anywhere; }
-.bd-ann-pop .old, .bd-chgs .cr .old { color: var(--warn-fg); }
-.bd-ann-pop .bp-note-ta { display: block; width: 100%; min-height: 72px; resize: vertical; overflow: auto; }
-.bd-ann-pop .pf { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
-.bd-ann-pop .pf .sp, .bd-chgs .ft .sp { flex: 1; }
-.bd-ann-pop .pf .bp-btn { height: 28px; }
-.bd-ann-pop .bp-btn:disabled, .bd-chgs .ft .bp-btn:disabled { opacity: .5; cursor: default; }
 .bd-ann-num { display: inline-grid; place-items: center; flex: none; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 10px 10px 10px 3px; font: 650 11px/1 var(--sans);
   color: #fff; background: var(--pen, var(--accent)); }
+.bd-ann-num.sent { background: var(--todo); }
+
+/* comments sidebar: docked beside the page on wide windows (the page lays out in what is left), a drawer
+   over it below 1100 px, a bottom sheet below 900 px. JS sets html.bd-cs-open and html.bd-cs-dock. */
+.bd-cs { position: fixed; z-index: 42; top: var(--top-h); right: 0; bottom: 0; width: var(--cs-w); display: flex; flex-direction: column; min-height: 0;
+  background: var(--panel); box-shadow: inset 1px 0 0 var(--line); font-size: 13.5px;
+  transform: translateX(100%); visibility: hidden; transition: transform .22s var(--ease), visibility 0s .22s; }
+html.bd-cs-open .bd-cs { transform: none; visibility: visible; transition: transform .22s var(--ease); }
+html.bd-cs-open:not(.bd-cs-dock) .bd-cs { background: var(--surface); box-shadow: var(--shadow-3); }
+.bd-cs-h { display: flex; align-items: center; gap: 8px; flex: none; padding: 12px 12px 8px 16px; }
+.bd-cs-h h2 { margin: 0; font: 650 15px/1.3 var(--sans); letter-spacing: -.01em; }
+.bd-cs-h .n { padding: 2px 7px; border-radius: 7px; font: 600 11.5px/1.4 var(--sans); font-variant-numeric: tabular-nums; color: var(--accent-fg); background: var(--accent-tint); }
+.bd-cs-h .n[hidden] { display: none; }
+.bd-cs-h .sp, .bd-cs-ft .sp, .bd-cs-c .ef .sp { flex: 1; }
+.bd-cs-h .bd-ibtn { width: 28px; height: 28px; }
+.bd-cs-h .srt { height: 28px; padding: 0 8px; font-size: 12px; }
+.bd-cs-f { flex: none; padding: 0 12px 10px 12px; box-shadow: inset 0 -1px 0 var(--line-soft); }
+.bd-seg { display: flex; padding: 2px; border-radius: 10px; background: var(--inset); box-shadow: var(--shadow-well); }
+.bd-seg button { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 26px; padding: 0 8px; border: 0; border-radius: 8px; background: none;
+  font-size: 12.5px; font-weight: 500; color: var(--fg-muted); transition: background .12s, color .12s; }
+.bd-seg button:hover { color: var(--fg); }
+.bd-seg button[aria-checked="true"] { color: var(--fg); background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: var(--shadow-hk); }
+.bd-seg button i { font: 500 11px/1 var(--mono); font-style: normal; color: var(--fg-subtle); }
+.bd-cs-l { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 10px 12px 16px; scrollbar-width: thin; position: relative; }
+.bd-cs-l ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.bd-cs-c { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 10px; padding: 10px 10px 10px 11px; border-radius: 12px; background: var(--surface);
+  box-shadow: var(--shadow-1); cursor: pointer; scroll-margin: 10px; transition: box-shadow .14s var(--ease), opacity .14s; }
+.bd-cs-c > .bd-ann-num { margin-top: 1px; }
+.bd-cs-c:focus-visible { box-shadow: var(--shadow-1), var(--focus-ring); }
+.bd-cs-c.hot { box-shadow: 0 0 0 1px color-mix(in oklch, var(--accent) 50%, transparent), var(--shadow-1); }
+.bd-cs-c.on, .bd-cs-c.edit { box-shadow: 0 0 0 1.5px var(--accent), 0 4px 14px color-mix(in oklch, var(--accent) 16%, transparent); }
+.bd-cs-c.edit { cursor: default; }
+.bd-cs-c.sent:not(.on, .hot) { opacity: .62; }
+.bd-cs-c.flash { animation: bd-cs-flash 1.2s var(--ease); }
+@keyframes bd-cs-flash { 0%, 40% { box-shadow: 0 0 0 1.5px var(--accent), 0 0 0 6px color-mix(in oklch, var(--accent) 22%, transparent); } }
+.bd-cs-c .cb { display: grid; gap: 4px; min-width: 0; }
+.bd-cs-c .ch { display: flex; align-items: center; gap: 6px; min-width: 0; height: 22px; }
+.bd-cs-c .ch > .bd-ic { width: 14px; height: 14px; color: var(--fg-subtle); }
+.bd-cs-c .lb { flex: 1; min-width: 0; font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bd-cs-c .ago { flex: none; font-size: 11.5px; color: var(--fg-subtle); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.bd-cs-c .acts { display: none; flex: none; gap: 1px; margin: -2px -4px -2px 0; }
+.bd-cs-c:is(:hover, :focus-within, .on, .edit) .acts { display: inline-flex; }
+.bd-cs-c:is(:hover, :focus-within, .on, .edit) .ago { display: none; }
+@media (hover: none) { .bd-cs-c .acts { display: inline-flex; } .bd-cs-c .ago { display: none; } }
+.bd-cs-ib { display: inline-grid; place-items: center; width: 26px; height: 26px; padding: 0; border: 0; border-radius: 7px; background: none; color: var(--fg-subtle); }
+.bd-cs-ib:hover { background: var(--hover); color: var(--fg); }
+.bd-cs-ib .bd-ic { width: 14px; height: 14px; }
+.bd-cs-c .path { margin-top: -3px; font-size: 11.5px; color: var(--fg-subtle); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bd-cs-c q { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; quotes: none; padding-left: 8px; border-left: 2px solid var(--line-strong);
+  font-size: 12.5px; line-height: 1.45; color: var(--fg-muted); overflow-wrap: anywhere; }
+.bd-cs-c q.tx { border-left-color: var(--warn); }
+.bd-cs-c .nt { margin: 0 -4px; padding: 1px 4px; border-radius: 6px; font-size: 13.5px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
+.bd-cs-c:not(.sent) .nt { cursor: text; }
+.bd-cs-c:not(.sent) .nt:hover { background: var(--hover); }
+.bd-cs-c .mt { display: flex; flex-wrap: wrap; gap: 2px 10px; font-size: 11.5px; color: var(--fg-subtle); }
+.bd-cs-c .mt:empty { display: none; }
+.bd-cs-c .mt .old { color: var(--warn-fg); }
+.bd-cs-c .ed { display: grid; gap: 6px; margin-top: 2px; }
+.bd-cs-c .ed .bp-note-ta { display: block; width: 100%; min-height: 60px; max-height: 240px; overflow: auto; }
+.bd-cs-c .ef { display: flex; align-items: center; gap: 6px; }
+.bd-cs-c .ef .hint { display: inline-flex; align-items: center; gap: 3px; font-size: 11.5px; color: var(--fg-subtle); white-space: nowrap; }
+.bd-cs-c .ef .bp-btn { height: 28px; }
+.bd-cs-c .ef .bp-btn:disabled { opacity: .5; cursor: default; }
+.bd-cs-e { display: grid; justify-items: center; gap: 10px; padding: 28px 12px; text-align: center; font-size: 13px; line-height: 1.5; color: var(--fg-subtle); }
+.bd-cs-e[hidden] { display: none; }
+.bd-cs-e .ico { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; color: var(--fg-muted); background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: var(--shadow-hk); }
+.bd-cs-e .ico .bd-ic { width: 18px; height: 18px; }
+.bd-cs-e b { color: var(--fg); font-weight: 600; font-size: 13.5px; }
+.bd-cs-e .keys { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 12px; }
+.bd-cs-e .keys span { display: inline-flex; align-items: center; gap: 5px; }
+.bd-cs-ft { flex: none; display: grid; gap: 8px; padding: 10px 12px 12px; box-shadow: inset 0 1px 0 var(--line); }
+.bd-cs-ft .bp-note-ta { display: block; width: 100%; min-height: 34px; max-height: 120px; resize: none; overflow: auto; }
+.bd-cs-ft .row { display: flex; align-items: center; gap: 6px; }
+.bd-cs-ft .row .bp-btn { height: 32px; font-size: 13px; }
+.bd-cs-ft .row .bp-btn[hidden] { display: none; }
+.bd-cs-ft .row .primary { padding: 0 8px 0 12px; font-weight: 600; background: var(--accent-solid) linear-gradient(180deg, color-mix(in oklch, var(--accent-solid), white 8%), var(--accent-solid)); box-shadow: var(--shadow-fill); }
+.bd-cs-ft .row .primary .n { min-width: 20px; height: 20px; padding: 0 5px; border-radius: 7px; display: grid; place-items: center; font: 650 11.5px/1 var(--sans); background: oklch(100% 0 0 / .2); }
+.bd-cs-ft .row .primary:disabled { cursor: default; color: var(--fg-subtle); background: var(--inset); box-shadow: inset 0 0 0 1px var(--line); }
+.bd-cs-ft .row .primary:disabled .bd-ic { color: currentColor; }
+.bd-cs-btn { position: relative; }
+.bd-cs-btn[aria-pressed="true"] { color: var(--fg); background: var(--hk-down); box-shadow: var(--shadow-hk-down); }
+.bd-cs-btn .n { position: absolute; top: -5px; right: -6px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; display: grid; place-items: center;
+  font: 650 10px/1 var(--sans); color: #fff; background: var(--accent-solid); box-shadow: 0 0 0 2px var(--canvas); }
+.bd-cs-btn .n[hidden] { display: none; }
+@media (min-width: 901px) {
+  html.bd-cs-open .bd-anntb, html.bd-cs-open .bp-toast { left: calc((100% - var(--cs-w)) / 2); }
+  html.bd-cs-dock .bd-wchip { left: calc((100% - var(--cs-w)) / 2); }
+  :root.bd-cs-dock .bd-shell { padding-right: calc(20px + var(--cs-w)); }
+}
+@media (max-width: 900px) {
+  .bd-cs { top: auto; left: 0; width: auto; height: var(--cs-sheet-h); border-radius: 18px 18px 0 0; transform: translateY(100%); }
+  .bd-cs::before { content: ""; position: absolute; left: 50%; top: 6px; width: 36px; height: 4px; margin-left: -18px; border-radius: 2px; background: var(--line-strong); }
+  .bd-cs-h { padding-top: 16px; }
+  .bd-cs-ft { grid-template-columns: minmax(0, 1fr) auto; align-items: end; }
+  .bd-cs-ft .row .bp-btn.ghost { display: none; }
+  html.bd-cs-open { scroll-padding-bottom: var(--cs-sheet-h); }
+  html.bd-cs-open .bd-anntb { bottom: calc(var(--cs-sheet-h) + 10px); }
+  html.bd-cs-open .bp-toast { bottom: calc(var(--cs-sheet-h) + 64px); }
+  html.bd-cs-open.bd-ann-on .bd-shell { padding-bottom: calc(var(--cs-sheet-h) + 90px); }
+}
+
+/* Request changes dialog: message, preview, Copy and Send */
 .bd-chgs[open] { display: flex; flex-direction: column; }
 .bd-chgs[open] > * { flex: none; }
-.bd-chgs .cr-list { flex: 0 1 auto; min-height: 64px; list-style: none; margin: 0 20px 12px; padding: 0; overflow: auto; border-radius: 12px; box-shadow: inset 0 0 0 1px var(--line); }
-.bd-chgs pre { max-height: 160px; }
-.bd-chgs .cr { display: flex; align-items: flex-start; gap: 2px; padding: 3px 6px 3px 3px; border-top: 1px solid var(--line-soft); }
-.bd-chgs .cr:first-child, .bd-chgs .grp + .cr { border-top: 0; }
-.bd-chgs .cr-go { flex: 1; min-width: 0; display: grid; grid-template-columns: auto 16px minmax(0, 1fr); align-items: start; gap: 8px; padding: 8px; border: 0; border-radius: 9px; background: none; text-align: left; }
-.bd-chgs .cr-go:hover { background: var(--hover); }
-.bd-chgs .cr-go > .bd-ic { margin-top: 2px; color: var(--fg-subtle); }
-.bd-chgs .cr .tx { display: grid; gap: 3px; min-width: 0; font-size: 13.5px; line-height: 1.45; }
-.bd-chgs .cr .tx b { font-weight: 600; overflow-wrap: anywhere; }
-.bd-chgs .cr q { font-size: 12.5px; }
-.bd-chgs .cr .nt { white-space: pre-wrap; overflow-wrap: anywhere; }
-.bd-chgs .cr .mt { font-size: 12px; color: var(--fg-subtle); }
-.bd-chgs .cr > .bd-ibtn { margin-top: 6px; }
-.bd-chgs .cr.sent .cr-go { opacity: .6; }
-.bd-chgs .grp { padding: 10px 12px 4px; border-top: 1px solid var(--line); font: 600 11px/1.4 var(--sans); letter-spacing: .07em; text-transform: uppercase; color: var(--fg-subtle); }
-.bd-chgs .grp:first-child { border-top: 0; }
-.bd-chgs .empty { padding: 20px 16px; text-align: center; font-size: 13.5px; color: var(--fg-subtle); }
-@media print { .bd-anntb, .bd-ann-layer, .bd-ann-hov, .bd-ann-cap, .bd-ann-pop, .bd-home { display: none !important; } html.bd-ann-on .bd-shell { padding-bottom: 0; } }
+.bd-chgs .cnt { margin-top: -4px; margin-bottom: 12px; font-size: 13.5px; }
+.bd-chgs .cnt .old { color: var(--warn-fg); }
+.bd-chgs details { margin-top: 10px; min-height: 0; }
+.bd-chgs details[open] { flex: 0 1 auto; display: flex; flex-direction: column; }
+.bd-chgs pre { max-height: 260px; }
+.bd-chgs .ft .sp { flex: 1; }
+.bd-chgs .ft .bp-btn:disabled { opacity: .5; cursor: default; }
+@media print { .bd-anntb, .bd-ann-layer, .bd-ann-hov, .bd-ann-cap, .bd-tip, .bd-cs, .bd-home { display: none !important; } html.bd-ann-on .bd-shell, :root.bd-cs-dock .bd-shell { padding: 0; } }
 
 /* code review: diff block (HorizonUI DiffReview, ChangeTable, CodeBlock syntax tokens) */
 :root {
@@ -1096,17 +1238,25 @@ const WIDTH_KEY = 'bluedoc:width', MIN_W = 520, PAGE_PAD = 20;   // PAGE_PAD = .
 const root = document.documentElement;
 let userW = +store.get(WIDTH_KEY) || 0;
 const cssPx = v => parseFloat(getComputedStyle(root).getPropertyValue(v)) || 0;
-const maxW = () => Math.max(MIN_W, innerWidth - 2 * PAGE_PAD);
+// The comments sidebar (MARKUP below) docks on the right of a wide window; the page then lays out in
+// what is left, as if the window were that much narrower. Narrower windows get it as an overlay.
+let commentsOpen = false;
+const DOCK_MIN = 1101;
+const dockW = () => commentsOpen && innerWidth >= DOCK_MIN ? cssPx('--cs-w') : 0;
+const maxW = () => Math.max(MIN_W, innerWidth - dockW() - 2 * PAGE_PAD);
 function setDrawer(open) {
   side.classList.toggle('drawer', open);
   document.querySelector('.bd-toc-btn')?.setAttribute('aria-expanded', String(open));
 }
 function applyWidth() {
-  if (!userW) { delete root.dataset.layout; root.style.removeProperty('--content-w'); }
+  const dock = dockW(), avail = innerWidth - dock;
+  root.classList.toggle('bd-cs-dock', dock > 0);
+  if (userW) root.style.setProperty('--content-w', userW + 'px'); else root.style.removeProperty('--content-w');
+  if (!userW && !dock) delete root.dataset.layout;
   else {
-    root.style.setProperty('--content-w', userW + 'px');
-    // both rails fit beside the column, or the column takes their space
-    const three = innerWidth >= Math.min(userW, maxW()) + 2 * (cssPx('--rail') + cssPx('--gap') + PAGE_PAD);
+    // both rails fit beside the column, or the column takes their space; docked with no chosen width,
+    // the rails stay beside it where the default layout keeps them (above 1240 px)
+    const three = userW ? avail >= Math.min(userW, maxW()) + 2 * (cssPx('--rail') + cssPx('--gap') + PAGE_PAD) : avail > 1240;
     root.dataset.layout = three ? 'three' : 'wide';
   }
   if (root.dataset.layout !== 'wide') setDrawer(false);
@@ -1124,7 +1274,8 @@ function placeHandles() {
   const r = main.getBoundingClientRect();
   if (!r.width) return;
   // in the gap beside the column when there is one, else on the column's edge
-  const off = root.dataset.layout === 'wide' || innerWidth - r.right < 2 * PAGE_PAD ? PAGE_PAD / 2 : Math.min(cssPx('--gap') / 2, (innerWidth - r.right) / 2);
+  const right = innerWidth - dockW() - r.right;
+  const off = root.dataset.layout === 'wide' || right < 2 * PAGE_PAD ? PAGE_PAD / 2 : Math.min(cssPx('--gap') / 2, right / 2);
   handles[0].style.left = (r.left - off) + 'px';
   handles[1].style.left = (r.right + off) + 'px';
   for (const el of handles) { el.setAttribute('aria-valuenow', Math.round(r.width)); el.setAttribute('aria-valuemax', maxW()); }
@@ -2963,7 +3114,7 @@ const MARKUP = (() => {
     return { kind: 'changes', doc: docId, rev: CUR.rev, title: DOC.title || '', path: location.pathname, at: new Date().toISOString(),
       message: (store.get(MSG) || '').trim(), annotations: items.map(pub), markdown: changesMd(items) };
   }
-  const api = { all: () => JSON.parse(JSON.stringify(list)), payload, annotate: () => null, setMode: () => false, paint: () => {} };
+  const api = { all: () => JSON.parse(JSON.stringify(list)), payload, annotate: () => null, setMode: () => false, paint: () => {}, comments: () => ({ open: false, available: false }) };
   if (OLD || BASE) return api;
 
   /* what can be annotated, and the key of each */
@@ -3135,34 +3286,64 @@ const MARKUP = (() => {
     return at < 0 ? null : rangeAt(el, at, at + raw.length);
   }
 
-  /* page furniture: marks layer, hover outline, drawing surface, popover, toolbar */
+  /* page furniture: marks layer, hover outline, drawing surface, toolbar (a HorizonUI tray of keys) */
   const layer = h('div', { class: 'bd-ann-layer bd-ann-ui' });
   const hov = h('div', { class: 'bd-ann-hov', hidden: true, 'aria-hidden': 'true' }, h('b'));
   const capG = sv('g');
   const cap = h('div', { class: 'bd-ann-cap', hidden: true }, sv('svg', { 'aria-hidden': 'true' }, capG));
-  const pop = h('div', { class: 'bd-ann-pop bd-ann-ui', role: 'dialog', 'aria-label': 'Change request', hidden: true });
-  const popTa = h('textarea', { class: 'bp-note-ta', rows: 3, placeholder: 'What should change here?', 'aria-label': 'Requested change' });
-  const popHd = h('div', { class: 'ph' }), popInfo = h('div', { class: 'pi' }), popFt = h('div', { class: 'pf' });
-  const saveBtn = h('button', { type: 'button', class: 'bp-btn primary', title: 'Save (⌘/Ctrl + Enter)', onclick: () => commit() }, 'Save');
-  pop.append(popHd, popInfo, popTa, popFt);
-  const MODES = { view: ['cursor', 'View', 'V', 'View: use the page as usual'], point: ['pin', 'Point', 'C', 'Point: pin a change request on an element'],
-    select: ['type', 'Select', 'T', 'Select: request a change to some text'], draw: ['pencil', 'Draw', 'D', 'Draw: circle or mark what should change'] };
+  const MODES = { view: ['cursor', 'View', 'V', 'View: use the page as usual'], point: ['pin', 'Point', 'C', 'Point: pin a comment on an element'],
+    select: ['type', 'Select', 'T', 'Select: comment on some text'], draw: ['pencil', 'Draw', 'D', 'Draw: circle or mark what should change'] };
   const PENS = { risk: 'Red', accent: 'Blue', warn: 'Amber', ok: 'Green' };
+  const MAC = /Mac|iP(hone|ad|od)/.test(navigator.platform || navigator.userAgent);
   let mode = 'view', marksOff = false, pen = PENS[store.get(PEN_KEY)] ? store.get(PEN_KEY) : 'risk';
-  const modeBtns = Object.entries(MODES).map(([m, [icon, name, key, tip]]) => h('button', { type: 'button', class: 'm', 'data-m': m, 'aria-pressed': String(m === mode),
-    'aria-label': name, 'aria-keyshortcuts': key, title: `${tip} (${key})`, onclick: () => setMode(m) }, ic(icon)));
+  // tooltips: HorizonUI Tooltip with Kbd chips; instant while the pointer moves from key to key
+  const tip = h('div', { class: 'bd-tip', role: 'tooltip', hidden: true });
+  const kbd = k => h('kbd', { class: 'bd-kbd' }, k);
+  let tipT = 0, tipWarm = -1e9;
+  function showTip(el) {
+    clearTimeout(tipT);
+    if (!el) { if (!tip.hidden) tipWarm = performance.now(); tip.hidden = true; return; }
+    tipT = setTimeout(() => {
+      if (!el.isConnected || !el._tip) return;
+      tip.replaceChildren(h('span', {}, el._tip), ...(el._keys ? [h('span', { class: 'k' }, el._keys.map(kbd))] : []));
+      tip.hidden = false;
+      const r = el.getBoundingClientRect(), w = tip.offsetWidth;
+      tip.style.left = Math.round(clamp(r.left + r.width / 2 - w / 2, 8, root.clientWidth - w - 8)) + 'px';
+      tip.style.top = Math.round(r.top - tip.offsetHeight - 10) + 'px';
+    }, performance.now() - tipWarm < 400 ? 0 : 450);
+  }
+  function tipped(el, keys) {
+    el._keys = keys;
+    el.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') showTip(el); });
+    el.addEventListener('pointerleave', () => showTip(null));
+    el.addEventListener('pointerdown', () => showTip(null));
+    el.addEventListener('focus', () => { if (el.matches(':focus-visible')) showTip(el); });
+    el.addEventListener('blur', () => showTip(null));
+    return el;
+  }
+  const keyBtn = (cls, icon, label, attrs, onclick, ...kids) =>
+    h('button', { type: 'button', class: 'bd-key' + (cls ? ' ' + cls : ''), 'aria-label': label, ...attrs, onclick }, ic(icon), kids);
+  const modeBtns = Object.entries(MODES).map(([m, [icon, name, key, tipText]]) => {
+    const b = tipped(keyBtn('', icon, name, { 'data-m': m, 'aria-pressed': String(m === mode), 'aria-keyshortcuts': key }, () => setMode(m)), [key]);
+    b._tip = tipText;
+    return b;
+  });
   const swatches = h('span', { class: 'sw', role: 'group', 'aria-label': 'Pen colour', hidden: true }, Object.entries(PENS).map(([c, name]) =>
     h('button', { type: 'button', class: 'bd-pen-' + c, 'data-pen': c, 'aria-label': name + ' pen', title: name + ' pen', onclick: () => { pen = c; store.set(PEN_KEY, c); paint(); } })));
-  const eye = h('button', { type: 'button', class: 'm', onclick: () => { marksOff = !marksOff; if (marksOff) closePop(true); paint(); schedule(true); } });
+  const eye = tipped(keyBtn('eye', 'eye', 'Hide comment marks', {}, () => { marksOff = !marksOff; paint(); schedule(true); }));
+  const csKeyN = h('span', { class: 'b', 'aria-hidden': 'true', hidden: true });
+  const csKey = tipped(keyBtn('', 'msg', 'Comments', { 'aria-pressed': 'false', 'aria-controls': 'bd-cs' }, () => setOpen(!commentsOpen, true), csKeyN));
   const goN = h('span', { class: 'n' });
-  const go = h('button', { type: 'button', class: 'bp-btn primary go', onclick: () => openDlg() }, ic('edit'), h('span', { class: 'l' }, 'Request changes ·'), goN);
-  const tb = h('div', { class: 'bd-anntb bd-ann-ui', role: 'toolbar', 'aria-label': 'Request changes to this doc' },
-    modeBtns, swatches, eye, h('span', { class: 'dv', 'aria-hidden': 'true' }), go);
-  let popA = null, popNew = false, page = null, swallow = false, press = null, ink = null, lastUp = 0, dlg = null, hovEl = null, hovFor = null, flashT = 0;
+  const go = tipped(keyBtn('go', 'edit', 'Request changes', {}, () => openDlg(), h('span', { class: 'l' }, 'Request changes'), goN));
+  const groove = () => h('span', { class: 'bd-groove', role: 'separator', 'aria-orientation': 'vertical' });
+  const tb = h('div', { class: 'bd-anntb bd-ann-ui', role: 'toolbar', 'aria-label': 'Comment on this doc' }, modeBtns, swatches, groove(), eye, csKey, groove(), go);
+  let page = null, swallow = false, press = null, ink = null, lastUp = 0, dlg = null, hovEl = null, hovFor = null, flashT = 0;
+  // the comment being written (not in the list until saved), the one being edited, the selected one, the hovered one
+  let draft = null, editA = null, editTa = null, selA = null, hotA = null;
 
   /* placing marks: on scroll only boxes move; after DOM or size changes keys resolve afresh */
   const marks = new Map();   // id -> { a, pin, ink }
-  let raf = 0, dirty = true, els = new Map(), ranges = new Map();
+  let raf = 0, dirty = true, hlDirty = true, els = new Map(), ranges = new Map();
   const HL = typeof Highlight === 'function' && window.CSS && CSS.highlights;
   const schedule = full => { if (full) dirty = true; if (!raf) raf = requestAnimationFrame(place); };
   const cachedEl = k => { if (!els.has(k)) els.set(k, elOf(k)); return els.get(k); };
@@ -3198,33 +3379,37 @@ const MARKUP = (() => {
     let m = marks.get(a.id);
     if (!m) {
       m = { a, ink: null, inkFor: null, flashUntil: 0 };
-      m.pin = h('button', { type: 'button', class: 'bd-ann-pin', onclick: e => { e.stopPropagation(); if (popA === m.a) closePop(true); else openPop(m.a, false); } });
+      m.pin = h('button', { type: 'button', class: 'bd-ann-pin', onclick: e => { e.stopPropagation(); select(m.a, { open: true, scroll: true }); } });
+      m.pin.addEventListener('pointerenter', () => setHot(m.a, false));
+      m.pin.addEventListener('pointerleave', () => setHot(null, false));
       layer.append(m.pin); marks.set(a.id, m);
     }
     m.a = a;
     if (a.type === 'draw' && !m.ink) { m.ink = sv('svg', { class: 'bd-ann-ink', viewBox: '0 0 1 1', preserveAspectRatio: 'none', 'aria-hidden': 'true' }); layer.prepend(m.ink); }
     return m;
   }
+  const isOn = a => a === selA || a === editA;
   function place() {
     raf = 0;
     const full = dirty; dirty = false;
+    const hlNow = HL && (full || hlDirty); hlDirty = false;
     if (full) { els = new Map(); ranges = new Map(); }
     capG.setAttribute('transform', `translate(${-scrollX},${-scrollY})`);
-    const all = popA && popNew ? [...list, popA] : list, keep = new Set(), stacks = new Map(), hl = { on: [], sent: [], open: [] };
-    const vw = root.clientWidth, now = performance.now();
+    const all = draft ? [...list, draft] : list, keep = new Set(), stacks = new Map(), hl = { on: [], sent: [], open: [] };
+    const vw = root.clientWidth - dockW(), now = performance.now();
     all.forEach((a, i) => {
       const m = markFor(a); keep.add(a.id);
-      if (full && a.type === 'text' && !marksOff) { const rg = rangeOf(a); if (rg && shown(cachedEl(a.target.key))) (a === popA ? hl.open : a.sent ? hl.sent : hl.on).push(rg); }
+      if (hlNow && a.type === 'text' && !marksOff) { const rg = rangeOf(a); if (rg && shown(cachedEl(a.target.key))) (isOn(a) || a === hotA ? hl.open : a.sent ? hl.sent : hl.on).push(rg); }
       const p = marksOff ? null : locate(a);
       m.pin.hidden = !p;
       if (m.ink) m.ink.style.display = p && p.exact ? '' : 'none';
       if (!p) return;
       const old = !a.sent && a.rev !== CUR.rev;
       m.pin.className = 'bd-ann-pin' + (a.type === 'draw' ? ' bd-pen-' + (a.color || 'risk') : '') + (a.sent ? ' sent' : '') + (old ? ' old' : '') +
-        (p.exact ? '' : ' away') + (a === popA ? ' on' : '') + (m.flashUntil > now ? ' flash' : '');
+        (p.exact ? '' : ' away') + (isOn(a) ? ' on' : '') + (a === hotA ? ' hot' : '') + (m.flashUntil > now ? ' flash' : '');
       m.pin.textContent = String(i + 1);
-      const tip = `${i + 1}. ${a.target.label}${a.note ? ': ' + cut(a.note, 90) : ''}${a.sent ? ' (sent)' : old ? ` (made on rev ${a.rev})` : ''}${p.exact ? '' : ' · hidden here, click to see it'}`;
-      if (m.pin.title !== tip) { m.pin.title = tip; m.pin.setAttribute('aria-label', 'Change request ' + tip); }
+      const label = `${i + 1}. ${a.target.label}${a.note ? ': ' + cut(a.note, 90) : ''}${a.sent ? ' (sent)' : old ? ` (made on rev ${a.rev})` : ''}${p.exact ? '' : ' · hidden here, click to see it'}`;
+      if (m.pin.title !== label) { m.pin.title = label; m.pin.setAttribute('aria-label', 'Comment ' + label); }
       let x = p.x;
       if (!p.exact) { const k = stacks.get(p.el) || 0; stacks.set(p.el, k + 1); x -= k * 30; }
       x = Math.max(2, Math.min(x, vw - 30));
@@ -3234,22 +3419,14 @@ const MARKUP = (() => {
         st.transform = `translate(${r.left}px,${r.top}px)`; st.width = r.width + 'px'; st.height = r.height + 'px';
         st.clipPath = c ? `inset(${c.t - r.top}px ${r.right - c.r}px ${r.bottom - c.b}px ${c.l - r.left}px)` : '';
         if (m.inkFor !== a.strokes) { m.inkFor = a.strokes; m.ink.replaceChildren(...(a.strokes || []).map(s => sv('path', { d: pathD(s) }))); }
-        m.ink.setAttribute('class', `bd-ann-ink bd-pen-${a.color || 'risk'}${a.sent ? ' sent' : ''}`);
+        m.ink.setAttribute('class', `bd-ann-ink bd-pen-${a.color || 'risk'}${a.sent ? ' sent' : ''}${a === hotA || isOn(a) ? ' hot' : ''}`);
       }
-      if (a === popA) placePop(x, p.y);
     });
     for (const [id, m] of marks) if (!keep.has(id)) { m.pin.remove(); m.ink?.remove(); marks.delete(id); }
-    if (full && HL) for (const [name, rs] of [['bd-ann', hl.on], ['bd-ann-sent', hl.sent], ['bd-ann-on', hl.open]]) {
+    if (hlNow) for (const [name, rs] of [['bd-ann', hl.on], ['bd-ann-sent', hl.sent], ['bd-ann-on', hl.open]]) {
       if (rs.length) CSS.highlights.set(name, new Highlight(...rs)); else CSS.highlights.delete(name);
     }
     if (hovEl) showHover(hovEl);
-  }
-  function placePop(x, y) {   // the pin's corner is at (x, y); the popover sits beside it, else below or above
-    const w = pop.offsetWidth, ph = pop.offsetHeight, vw = root.clientWidth, low = innerHeight - tb.offsetHeight - 28;
-    let px = x + 34, py = y - 30;
-    if (px + w > vw - 12) { px = Math.max(12, Math.min(x - 8, vw - w - 12)); py = y + 10; }
-    if (py + ph > low) py = Math.max(8, Math.min(y - 34 - ph, low - ph));
-    pop.style.transform = `translate(${Math.round(px)}px,${Math.round(py)}px)`;
   }
   function showHover(el) {
     hovEl = el;
@@ -3269,89 +3446,281 @@ const MARKUP = (() => {
     flashT = setTimeout(() => { if (mode !== 'point' || hovEl === el) showHover(null); }, 1400);
   }
 
-  /* popover: one note, new or saved */
-  const fmtDate = iso => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }); };
-  const numChip = (a, n) => h('span', { class: 'bd-ann-num' + (a.type === 'draw' ? ' bd-pen-' + (a.color || 'risk') : '') }, String(n));
-  function openPop(a, isNew) {
-    if (popA && popA !== a) closePop(true);
-    popA = a; popNew = isNew;
-    popHd.replaceChildren(numChip(a, (isNew ? list.length : list.indexOf(a)) + 1), ic(TYPE_IC[a.type]), h('span', { class: 'lb', title: a.target.label }, a.target.label),
-      h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Close', title: 'Close (Esc)', onclick: () => closePop(true) }, ic('x')));
-    const notes = [];
-    if (a.type === 'text') notes.push(h('q', {}, cut(a.quote, 180)));
-    if (a.type === 'draw' && a.targets && a.targets.length > 1) notes.push(h('span', {}, 'Covers: ' + a.targets.map(t => t.label.split(' › ').pop()).join(' · ')));
-    if (a.sent) notes.push(h('span', {}, `Sent ${fmtDate(a.sent)}`));
-    else if (a.rev !== CUR.rev) notes.push(h('span', { class: 'old' }, `Made on rev ${a.rev}; the doc is now at rev ${CUR.rev}.`));
-    popInfo.replaceChildren(...notes);
-    popTa.value = a.note || ''; popTa.readOnly = !!a.sent;
-    saveBtn.disabled = !popTa.value.trim();
-    const del = h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => remove(a) }, ic('trash'), 'Delete');
-    popFt.replaceChildren(...(a.sent
-      ? [del, h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => clearSent() }, 'Clear all sent'), h('span', { class: 'sp' }), h('button', { type: 'button', class: 'bp-btn', onclick: () => closePop(false) }, 'Close')]
-      : [!isNew && del, h('span', { class: 'sp' }), h('button', { type: 'button', class: 'bp-btn', onclick: () => closePop(false) }, 'Cancel'), saveBtn].filter(Boolean)));
-    pop.hidden = false;
-    schedule(true);
-    requestAnimationFrame(() => requestAnimationFrame(() => { if (popA === a && !a.sent) popTa.focus({ preventScroll: true }); }));
+  /* comments sidebar: one card per note, in page order or newest first; the note is written and edited
+     in its card. Hovering a card or a mark lights up the other; clicking one brings the other into view. */
+  const CS_KEY = 'bluedoc:comments';
+  const FILTERS = { unsent: 'Unsent', sent: 'Sent', all: 'All' };
+  let filter = 'all', sort = 'page';
+  const sheet = () => innerWidth <= 900;
+  const fmtDay = iso => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleDateString([], { month: 'short', day: 'numeric' }); };
+  function ago(iso) {
+    const s = (Date.now() - new Date(iso)) / 1000;
+    if (!(s >= -60)) return fmtDay(iso);
+    return s < 45 ? 'just now' : s < 3600 ? Math.max(1, Math.round(s / 60)) + ' min ago' : s < 86400 ? Math.round(s / 3600) + ' h ago' : s < 7 * 86400 ? Math.round(s / 86400) + ' d ago' : fmtDay(iso);
   }
-  function commit() {
-    const a = popA, v = popTa.value.trim();
-    if (!a || a.sent || !v) return;
-    a.note = v;
-    if (popNew) list.push(a);
-    save(); popNew = false; closePop(false);
+  const numChip = (a, n) => h('span', { class: 'bd-ann-num' + (a.type === 'draw' ? ' bd-pen-' + (a.color || 'risk') : '') + (a.sent ? ' sent' : '') }, String(n));
+  const grow = ta => { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; };
+  const csN = h('span', { class: 'n', hidden: true });
+  const sortBtn = h('button', { type: 'button', class: 'bp-btn ghost srt', onclick: () => { sort = sort === 'page' ? 'new' : 'page'; paint(); } });
+  const filterBtns = Object.keys(FILTERS).map(f => h('button', { type: 'button', role: 'radio', 'data-f': f, onclick: () => { filter = f; paint(); } }));
+  const listOl = h('ol', { 'aria-label': 'Comments' });
+  const emptyEl = h('div', { class: 'bd-cs-e', hidden: true });
+  const listBox = h('div', { class: 'bd-cs-l' }, listOl, emptyEl);
+  const csMsg = h('textarea', { class: 'bp-note-ta', rows: 1, placeholder: 'Overall message', 'aria-label': 'Overall message with the change requests (optional)' });
+  const clearBtn = h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => clearSent() }, ic('trash'), 'Clear sent');
+  const csGoN = h('span', { class: 'n' });
+  const csGo = h('button', { type: 'button', class: 'bp-btn primary', onclick: () => openDlg() }, ic('send'), 'Request changes', csGoN);
+  const cs = h('aside', { class: 'bd-cs bd-ann-ui', id: 'bd-cs', 'aria-label': 'Comments', inert: true },
+    h('div', { class: 'bd-cs-h' }, h('h2', {}, 'Comments'), csN, h('span', { class: 'sp' }), sortBtn,
+      h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Close comments', title: 'Close', onclick: () => setOpen(false, true) }, ic('x'))),
+    h('div', { class: 'bd-cs-f' }, h('div', { class: 'bd-seg', role: 'radiogroup', 'aria-label': 'Show' }, filterBtns)),
+    listBox,
+    h('div', { class: 'bd-cs-ft' }, csMsg, h('div', { class: 'row' }, clearBtn, h('span', { class: 'sp' }), csGo)));
+  const barN = h('span', { class: 'n', 'aria-hidden': 'true', hidden: true });
+  const barBtn = h('button', { type: 'button', class: 'bd-ibtn bd-cs-btn', 'aria-label': 'Comments', title: 'Comments', 'aria-pressed': 'false', 'aria-controls': 'bd-cs',
+    onclick: () => setOpen(!commentsOpen, true) }, ic('msg'), barN);
+
+  // docking reflows the page: keep what the reader was looking at where it was
+  const PLACES = '.bd-head, .bd-tldr-card, main section.bp-sec > h2, main .bp-lead, main .bp-block[data-bk], main .bp-cl-item, main tr[data-r]';
+  function keepPlace(fn) {
+    const line = cssPx('--top-h') + 8;
+    let el = null, over = null;   // the first part below the bar, else the deepest one across it
+    for (const e of shell.querySelectorAll(PLACES)) {
+      const r = e.getBoundingClientRect(); if (!r.height || r.bottom <= line) continue;
+      if (r.top < line) over = e; else { el = r.top < innerHeight / 2 || !over ? e : over; break; }
+    }
+    el ||= over;
+    const y = el && el.getBoundingClientRect().top;
+    fn();
+    if (el && scrollY > 0) { const d = el.getBoundingClientRect().top - y; if (Math.abs(d) > 1) scrollBy({ top: d, behavior: 'instant' }); }
   }
-  // keep: an outside click or a mode switch keeps what was typed; Cancel and Esc drop it
-  function closePop(keep) {
-    const a = popA; if (!a) return;
-    const v = popTa.value.trim();
-    if (keep && !a.sent && v && v !== a.note) { a.note = v; if (popNew) list.push(a); save(); }
-    popA = null; popNew = false; page = null; pop.hidden = true;
-    if (document.activeElement === popTa) popTa.blur();
+  function setOpen(v, remember) {
+    v = !!v;
+    if (remember) store.set(CS_KEY, v ? '1' : '0');
+    if (v === commentsOpen) return;
+    if (!v) { endEdit(true); if (cs.contains(document.activeElement)) document.activeElement.blur(); }
+    keepPlace(() => {
+      commentsOpen = v;
+      root.classList.toggle('bd-cs-open', v);
+      cs.inert = !v;
+      applyWidth();
+    });
     schedule(true); paint();
   }
+  function setMsg(v) { if (v.trim()) store.set(MSG, v); else store.del(MSG); }
+  csMsg.addEventListener('input', () => { setMsg(csMsg.value); grow(csMsg); });
+  csMsg.addEventListener('keydown', e => { e.stopPropagation(); if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); openDlg(); } });
+
+  // page order: by the anchor's place in the document, then by the spot inside it
+  function pageOrder(xs) {
+    const at = new Map(xs.map(a => {
+      let el = null;
+      for (const k of [a.target.key, ...(a.up || [])]) if ((el = cachedEl(k))) break;
+      const y = a.type === 'pin' ? a.pos?.y ?? .5 : a.type === 'draw' ? bounds(a.strokes || []).y0 : el ? (a.off || 0) / (el.textContent.length || 1) : 0;
+      return [a, { el, y }];
+    }));
+    const byTime = (a, b) => (a.at > b.at) - (a.at < b.at);
+    return xs.sort((a, b) => {
+      const p = at.get(a), q = at.get(b);
+      if (!p.el || !q.el) return (!p.el) - (!q.el) || byTime(a, b);
+      if (p.el !== q.el) { const c = p.el.compareDocumentPosition(q.el); if (c & Node.DOCUMENT_POSITION_FOLLOWING) return -1; if (c & Node.DOCUMENT_POSITION_PRECEDING) return 1; }
+      return p.y - q.y || byTime(a, b);
+    });
+  }
+  function shownList() {
+    const xs = list.filter(a => filter === 'all' || (filter === 'sent') === !!a.sent);
+    if (draft) xs.push(draft);
+    return sort === 'page' ? pageOrder(xs) : xs.sort((a, b) => (a.at < b.at) - (a.at > b.at));
+  }
+  const cards = new Map();   // id -> li
+  const cardCls = (li, a) => 'bd-cs-c' + (a.sent ? ' sent' : '') + (a === selA ? ' on' : '') + (a === hotA ? ' hot' : '') + (a === editA ? ' edit' : '') +
+    (li._flash > performance.now() ? ' flash' : '');
+  function card(a) {
+    let li = cards.get(a.id);
+    if (!li) { li = h('li', { class: 'bd-cs-c', tabindex: '0', 'data-id': a.id }); cards.set(a.id, li); }
+    li._a = a;
+    const n = a === draft ? list.length + 1 : list.indexOf(a) + 1, editing = a === editA;
+    const sig = [n, a.note, a.sent, a.rev, a.target.key, a.target.label, a.color, editing, (a.targets || []).length].join('\u0001');
+    if (li._sig !== sig) { li._sig = sig; fill(li, a, n, editing); }
+    li.className = cardCls(li, a);
+    li.querySelector('.ago').textContent = a === draft ? 'new' : ago(a.at);
+    const s = li.querySelector('.sago'); if (s) s.textContent = 'Sent ' + ago(a.sent);
+    li.setAttribute('aria-label', `Comment ${n} on ${a.target.label}`);
+    return li;
+  }
+  function fill(li, a, n, editing) {
+    const segs = a.target.label.split(' › '), last = segs.pop();
+    let ex = excerpt(a) || '';
+    if (a.type !== 'text' && (a.type === 'draw' && a.targets ? a.targets : [a.target]).every(t => t.key === 'doc')) ex = '';   // the whole page's text says nothing
+    else if (a.type !== 'text' && !last.endsWith('…')) {   // "TL;DR" + its text: drop the part the title already says
+      const lead = last.replace(/\s+/g, '');
+      if (lead && ex.replace(/\s+/g, '').startsWith(lead)) { let i = 0; for (let k = 0; i < ex.length && k < lead.length; i++) if (!/\s/.test(ex[i])) k++; ex = ex.slice(i).trim(); }
+    }
+    const ib = (icon, label, fn) => h('button', { type: 'button', class: 'bd-cs-ib', 'aria-label': label, title: label, onclick: fn }, ic(icon));
+    const mt = [];
+    if (a.type === 'draw' && a.targets && a.targets.length > 1) mt.push(h('span', {}, 'Covers ' + a.targets.map(t => t.label.split(' › ').pop()).join(' · ')));
+    if (a.sent) mt.push(h('span', { class: 'sago' }));
+    else if (a.rev !== CUR.rev) mt.push(h('span', { class: 'old' }, `Made on rev ${a.rev}`));
+    li.replaceChildren(numChip(a, n), h('div', { class: 'cb' },
+      h('div', { class: 'ch' }, ic(TYPE_IC[a.type]), h('span', { class: 'lb', title: a.target.label }, last), h('span', { class: 'ago' }),
+        h('span', { class: 'acts' }, ib('target', 'Show on the page', () => { select(a); reveal(a); }),
+          !a.sent && !editing && ib('pencil', 'Edit', () => startEdit(a)),
+          a !== draft && ib('trash', 'Delete', () => remove(a)))),
+      segs.length > 0 && h('div', { class: 'path', title: a.target.label }, segs.join(' › ')),
+      ex && h('q', { class: a.type === 'text' ? 'tx' : null }, cut(ex, 240)),
+      editing ? editor(a) : a.note ? h('p', { class: 'nt' }, a.note) : null,
+      h('div', { class: 'mt' }, mt)));
+  }
+  function editor(a) {
+    const ta = h('textarea', { class: 'bp-note-ta', rows: 2, placeholder: a.type === 'text' ? 'What should change in this text?' : 'What should change here?', 'aria-label': 'Requested change' });
+    ta.value = editTa && editA === a ? editTa.value : a.note || '';
+    const ok = h('button', { type: 'button', class: 'bp-btn primary', title: `Save (${MAC ? '⌘' : 'Ctrl'} + Enter)`, onclick: () => commitEdit() }, 'Save');
+    ok.disabled = !ta.value.trim();
+    ta.addEventListener('input', () => { ok.disabled = !ta.value.trim(); grow(ta); });
+    ta.addEventListener('keydown', e => {
+      e.stopPropagation();   // page keys (modes, n/p, canvas) must not fire while typing
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); commitEdit(); }
+      else if (e.key === 'Escape') { e.preventDefault(); endEdit(false); }
+    });
+    editTa = ta;
+    return h('div', { class: 'ed' }, ta, h('div', { class: 'ef' }, h('span', { class: 'hint', 'aria-hidden': 'true' }, kbd(MAC ? '⌘' : 'Ctrl'), kbd('↵'), ' save'),
+      h('span', { class: 'sp' }), h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => endEdit(false) }, 'Cancel'), ok));
+  }
+  function renderList() {
+    const xs = shownList(), ids = new Set(xs.map(a => a.id));
+    const caret = editTa && document.activeElement === editTa ? [editTa.selectionStart, editTa.selectionEnd] : null;
+    for (const [id, li] of cards) if (!ids.has(id)) { li.remove(); cards.delete(id); }
+    xs.forEach((a, i) => { const li = card(a); if (listOl.children[i] !== li) listOl.insertBefore(li, listOl.children[i] || null); });
+    if (caret && editTa && document.activeElement !== editTa) { editTa.focus({ preventScroll: true }); editTa.setSelectionRange(...caret); }
+    if (editTa) grow(editTa);
+    emptyEl.hidden = xs.length > 0;
+    if (!xs.length) emptyEl.replaceChildren(...(list.length
+      ? [h('span', {}, filter === 'sent' ? 'Nothing sent yet.' : 'Every comment has been sent. Sent ones are under Sent.')]
+      : [h('span', { class: 'ico' }, ic('msg')), h('b', {}, 'No comments yet'),
+        h('span', {}, 'Pick a tool, then click, select or draw on the page. Each comment asks the agent to change that spot.'),
+        h('span', { class: 'keys' }, ['point', 'select', 'draw'].map(m => h('span', {}, kbd(MODES[m][2]), MODES[m][1])))]));
+  }
+  function scrollCard(li) {   // within the list only; the list box is the cards' offset parent
+    const top = li.offsetTop - 10, bottom = li.offsetTop + li.offsetHeight + 10, b = listBox;
+    if (top < b.scrollTop) b.scrollTo({ top, behavior: REDUCE ? 'auto' : 'smooth' });
+    else if (bottom > b.scrollTop + b.clientHeight) b.scrollTo({ top: Math.min(top, bottom - b.clientHeight), behavior: REDUCE ? 'auto' : 'smooth' });
+  }
+  function setHot(a, fromCard) {
+    if (hotA === a) return;
+    const prev = hotA; hotA = a; hlDirty = true;
+    for (const x of [prev, a]) { const li = x && cards.get(x.id); if (li) li.classList.toggle('hot', x === a); }
+    if (fromCard) { const el = a && a.type !== 'draw' && cachedEl(a.target.key); showHover(el && el !== shell && shown(el) ? el : null); }
+    schedule(false);
+  }
+  function select(a, { open = false, scroll = false } = {}) {
+    if (editA && editA !== a) endEdit(true);
+    selA = a; hlDirty = true;
+    if (a && open && !commentsOpen) setOpen(true, true);
+    if (a && filter !== 'all' && (filter === 'sent') !== !!a.sent) filter = 'all';
+    paint(); schedule(false);
+    const li = a && cards.get(a.id);
+    if (li && scroll) {
+      li._flash = performance.now() + 1200; li.classList.remove('flash'); void li.offsetWidth; li.classList.add('flash');
+      scrollCard(li); li.focus({ preventScroll: true });
+    }
+  }
+  function startEdit(a) {
+    if (a.sent) return;
+    if (editA && editA !== a) endEdit(true);
+    editA = a; selA = a; hlDirty = true;
+    if (!commentsOpen) setOpen(true, true);
+    if (a !== draft && filter === 'sent') filter = 'all';
+    paint(); schedule(true);
+    const li = cards.get(a.id); if (li) scrollCard(li);
+    requestAnimationFrame(() => { if (editA === a && editTa) { editTa.focus({ preventScroll: true }); const n = editTa.value.length; editTa.setSelectionRange(n, n); grow(editTa); } });
+  }
+  function startDraft(a) {
+    if (editA) endEdit(true);
+    draft = a;
+    if (filter === 'sent') filter = 'all';
+    startEdit(a);
+  }
+  // keep: what was typed is saved (Save, an outside click, a mode switch); else it's dropped (Cancel, Esc).
+  // A new comment with nothing typed is dropped either way. Returns whether something was saved.
+  function endEdit(keep) {
+    const a = editA; if (!a) return false;
+    const v = editTa ? editTa.value.trim() : '', saved = keep && !!v;
+    if (saved) { a.note = v; if (a === draft) { list.push(a); draft = null; page = null; } save(); }
+    else if (a === draft) { draft = null; page = null; if (selA === a) selA = null; }
+    const back = !!editTa && document.activeElement === editTa;
+    editA = null; editTa = null; hlDirty = true;
+    schedule(true); paint();
+    if (back) cards.get(a.id)?.focus({ preventScroll: true });
+    return saved;
+  }
+  const commitEdit = () => { if (editTa && editTa.value.trim()) endEdit(true); };
   function remove(a) {
-    list = list.filter(x => x !== a); save();
-    if (popA === a) { popA = null; popNew = false; page = null; pop.hidden = true; }
+    if (a === editA) { editA = null; editTa = null; }
+    if (a === draft) { draft = null; page = null; }
+    if (a === selA) selA = null;
+    if (a === hotA) setHot(null, true);
+    list = list.filter(x => x !== a); save(); hlDirty = true;
     schedule(true); paint();
   }
   function clearSent() {
-    if (popA && popA.sent) { popA = null; pop.hidden = true; }
+    if (selA && selA.sent) selA = null;
     list = list.filter(a => !a.sent); save(); schedule(true); paint();
   }
-  popTa.addEventListener('input', () => { saveBtn.disabled = !popTa.value.trim(); });
-  popTa.addEventListener('keydown', e => {
-    e.stopPropagation();   // page keys (modes, n/p, canvas) must not fire while typing
-    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); commit(); }
-    else if (e.key === 'Escape') { e.preventDefault(); closePop(false); }
+  listBox.addEventListener('click', e => {
+    const li = e.target.closest('.bd-cs-c'); if (!li || e.target.closest('button, textarea, a')) return;
+    const a = li._a; if (a === editA) return;
+    if (!a.sent && e.target.closest('.nt') && !getSelection().toString()) { startEdit(a); return; }
+    select(a); reveal(a);
   });
-  pop.addEventListener('keydown', e => { if (e.key === 'Escape') { e.stopPropagation(); closePop(false); } });
+  listBox.addEventListener('keydown', e => {
+    const li = e.target; if (!li.matches || !li.matches('.bd-cs-c')) return;
+    if (e.key === 'Enter') { e.preventDefault(); select(li._a); reveal(li._a); }
+    else if (e.key === 'Delete') { e.preventDefault(); const nx = li.nextElementSibling || li.previousElementSibling; remove(li._a); nx?.focus(); }
+    else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); (e.key === 'ArrowDown' ? li.nextElementSibling : li.previousElementSibling)?.focus(); }
+  });
+  listBox.addEventListener('pointerover', e => { const li = e.target.closest('.bd-cs-c'); setHot(li ? li._a : null, true); });
+  listBox.addEventListener('pointerleave', () => setHot(null, true));
+  cs.addEventListener('keydown', e => { if (e.key === 'Escape' && !e.defaultPrevented && commentsOpen && !dockW()) { e.preventDefault(); setOpen(false, true); barBtn.focus(); } });
 
   /* modes */
   function setMode(m) {
     if (!MODES[m]) return false;
     if (m === mode) return true;
-    closePop(true);
+    endEdit(true);
     root.classList.remove('bd-ann-m-' + mode);
     mode = m;
     if (m !== 'view') root.classList.add('bd-ann-m-' + m);
     cap.hidden = m !== 'draw';
     showHover(null);
     if (m !== 'view' && marksOff) { marksOff = false; schedule(true); }   // marking with the marks hidden would hide the new one too
+    if (m !== 'view' && !commentsOpen && !sheet()) setOpen(true, true);   // a bottom sheet would cover what you mark: it opens with the first note instead
     paint();
     return true;
   }
   function paint() {
-    const n = unsent().length;
+    const n = unsent().length, total = list.length, sent = total - n;
     goN.textContent = String(n);
-    go.disabled = !n;
+    go.disabled = csGo.disabled = !n;
     go.setAttribute('aria-label', `Request changes: ${n} unsent`);
-    go.title = n ? `Review and send ${n} change request${n === 1 ? '' : 's'}` : 'Point, select or draw on the page to request a change';
+    go._tip = n ? `Review and send ${n} change request${n === 1 ? '' : 's'}` : 'Point, select or draw on the page to request a change';
+    csGoN.textContent = String(n);
+    csN.hidden = !n; csN.textContent = `${n} unsent`;
+    for (const el of [csKeyN, barN]) { el.hidden = !total; el.textContent = String(total); }
+    for (const el of [csKey, barBtn]) { el.setAttribute('aria-pressed', String(commentsOpen)); el.setAttribute('aria-label', `Comments: ${total}`); }
+    csKey._tip = commentsOpen ? 'Hide comments' : 'Show comments';
+    filterBtns.forEach(b => { const f = b.dataset.f; b.setAttribute('aria-checked', String(f === filter)); b.replaceChildren(FILTERS[f], h('i', {}, String(f === 'all' ? total : f === 'sent' ? sent : n))); });
+    sortBtn.replaceChildren(ic(sort === 'page' ? 'doc' : 'hist'), sort === 'page' ? 'Page order' : 'Newest first');
+    sortBtn.title = sort === 'page' ? 'In page order; click for newest first' : 'Newest first; click for page order';
+    clearBtn.hidden = !sent;
+    if (document.activeElement !== csMsg) { const v = store.get(MSG) || ''; if (csMsg.value !== v) { csMsg.value = v; grow(csMsg); } }
+    tb.dataset.m = mode;
     modeBtns.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.m === mode)));
     swatches.hidden = mode !== 'draw';
     swatches.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.pen === pen)));
     eye.replaceChildren(ic(marksOff ? 'eyeoff' : 'eye'));
-    eye.title = marksOff ? 'Show change marks' : 'Hide change marks'; eye.setAttribute('aria-label', eye.title);
+    eye._tip = marksOff ? 'Show comment marks' : 'Hide comment marks'; eye.setAttribute('aria-label', eye._tip);
     layer.hidden = marksOff;
+    renderList();
     if (dlg && dlg.open) dlg._paint();
   }
   // Point and Select keep the page inert where it's marked: no links, ticks, row toggles or canvas pans.
@@ -3360,7 +3729,11 @@ const MARKUP = (() => {
     const t = e.target && e.target.nodeType === 1 ? e.target : null;
     if (e.type === 'pointerdown') {
       swallow = false; press = null;
-      if (popA && t && t !== cap && !t.closest('.bd-ann-pop, .bd-ann-pin, .bd-anntb')) { closePop(true); swallow = mode === 'point'; }
+      // a press outside the sidebar ends the edit (keeping what was typed) and the selection
+      if (t && t !== cap && !t.closest('.bd-cs, .bd-anntb, .bd-ann-pin, dialog')) {
+        if (editA) swallow = endEdit(true) && mode === 'point';   // this click saved a note; the next one pins
+        if (selA) select(null);
+      }
     }
     if (mode === 'select' && e.type === 'pointerup' && !(t && t.closest('.bd-ann-ui'))) setTimeout(fromSelection, 0);
     if ((mode !== 'point' && mode !== 'select') || !inDoc(t)) return;
@@ -3373,15 +3746,15 @@ const MARKUP = (() => {
     if (e.type === 'pointerdown' && e.button === 0) press = { el: targetAt(t), x: e.clientX, y: e.clientY };
     if (e.type !== 'click' || e.button !== 0) return;
     const p = press; press = null;
-    if (swallow) { swallow = false; return; }   // this click closed a popover
+    if (swallow) { swallow = false; return; }
     const el = p ? p.el : targetAt(t); if (!el) return;
     const x = p ? p.x : e.clientX, y = p ? p.y : e.clientY;
     const r = el.getBoundingClientRect(), a = newAnn('pin', el);
     a.pos = { x: r4(clamp((x - r.left) / (r.width || 1), 0, 1)), y: r4(clamp((y - r.top) / (r.height || 1), 0, 1)) };
-    openPop(a, true);
+    startDraft(a);
   }
   function fromSelection() {
-    if (mode !== 'select' || popA) return;
+    if (mode !== 'select') return;
     const s = getSelection(); if (!s || !s.rangeCount || s.isCollapsed) return;
     const rg = s.getRangeAt(0), q = s.toString().trim(); if (!q) return;
     let c = rg.commonAncestorContainer; if (c.nodeType !== 1) c = c.parentElement;
@@ -3389,7 +3762,7 @@ const MARKUP = (() => {
     const a = newAnn('text', el);
     Object.assign(a, { quote: q.slice(0, 2000), raw: rg.toString(), off: offsetIn(el, rg.startContainer, rg.startOffset) });
     s.removeAllRanges();
-    openPop(a, true);
+    startDraft(a);
   }
   // Draw: strokes in page px while drawing; one ending within 1.5 s of the last, or before anything
   // is typed, joins the open drawing. The drawing anchors to the smallest element holding it.
@@ -3403,9 +3776,8 @@ const MARKUP = (() => {
   cap.addEventListener('pointerdown', e => {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
     e.preventDefault();
-    const join = popA && popNew && popA.type === 'draw' && page && (e.timeStamp - lastUp < 1500 || !popTa.value.trim());
-    if (!join) { closePop(true); page = []; }
-    pop.hidden = true;
+    const join = draft && draft.type === 'draw' && page && (e.timeStamp - lastUp < 1500 || !(editTa && editTa.value.trim()));
+    if (!join) { endEdit(true); page = []; }
     cap.setPointerCapture(e.pointerId);
     ink = { id: e.pointerId, pts: [Math.round(e.clientX + scrollX), Math.round(e.clientY + scrollY)], el: sv('path', { class: 'bd-pen-' + pen }) };
     capG.append(ink.el);
@@ -3422,50 +3794,37 @@ const MARKUP = (() => {
   const endInk = e => {
     if (!ink || e.pointerId !== ink.id) return;
     const pts = ink.pts; ink.el.remove(); ink = null; lastUp = e.timeStamp;
-    if (pts.length < 6 || !page) { if (popA) pop.hidden = false; return; }   // a tap, not a stroke
+    if (pts.length < 6 || !page) return;   // a tap, not a stroke
     page.push(pts);
-    const a = popA && popNew && popA.type === 'draw' ? popA : { id: newId(), type: 'draw', note: '', rev: CUR.rev, at: new Date().toISOString(), color: pen };
-    const strokes = page;
+    const strokes = page, a = draft && draft.type === 'draw' ? draft : { id: newId(), type: 'draw', note: '', rev: CUR.rev, at: new Date().toISOString(), color: pen };
     fitDrawing(a, strokes);
-    if (a !== popA) { openPop(a, true); page = strokes; }
-    else { pop.hidden = false; popHd.querySelector('.lb').textContent = a.target.label; schedule(true); popTa.focus({ preventScroll: true }); }
+    if (a !== draft) { startDraft(a); page = strokes; }
+    else { schedule(true); paint(); editTa?.focus({ preventScroll: true }); }
   };
   cap.addEventListener('pointerup', endInk); cap.addEventListener('pointercancel', endInk);
 
-  /* the dialog: every note, the overall message, Markdown, Copy and Send */
-  function row(a) {
-    const ex = excerpt(a);
-    return h('li', { class: 'cr' + (a.sent ? ' sent' : '') },
-      h('button', { type: 'button', class: 'cr-go', title: 'Show it on the page', onclick: () => { dlg.close(); reveal(a); } },
-        numChip(a, list.indexOf(a) + 1), ic(TYPE_IC[a.type]),
-        h('span', { class: 'tx' }, h('b', {}, a.target.label), ex && h('q', {}, cut(ex, 140)), h('span', { class: 'nt' }, a.note),
-          a.sent ? h('span', { class: 'mt' }, 'Sent ' + fmtDate(a.sent)) : a.rev !== CUR.rev && h('span', { class: 'mt old' }, `Made on rev ${a.rev}`))),
-      h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Delete this change request', title: 'Delete', onclick: () => remove(a) }, ic('trash')));
-  }
+  /* the dialog: the overall message, the Markdown that goes, Copy and Send (the notes themselves are in the sidebar) */
   function openDlg() {
-    closePop(true);
+    endEdit(true);
+    if (!unsent().length) return;
     if (!dlg) {
-      const listEl = h('ol', { class: 'cr-list' });
       const msg = h('textarea', { class: 'bp-note-ta', rows: 2, placeholder: 'Anything else about these changes? (optional)', 'aria-label': 'Message with the change requests' });
-      const pre = h('pre', {});
-      msg.addEventListener('input', () => { if (msg.value.trim()) store.set(MSG, msg.value); else store.del(MSG); pre.textContent = changesMd(); });
+      const pre = h('pre', {}), cnt = h('p', { class: 'cnt' }), how = h('p', { class: 'how' });
+      msg.addEventListener('input', () => { setMsg(msg.value); csMsg.value = msg.value; grow(csMsg); pre.textContent = changesMd(); });
       msg.addEventListener('keydown', e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); sendChanges(); } });
-      const how = h('p', { class: 'how' });
-      const clear = h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => clearSent() }, ic('trash'), 'Clear sent');
       const copy = h('button', { type: 'button', class: 'bp-btn', onclick: () => { copyText(changesMd(), 'Copied: paste it into the chat with the agent'); dlg.close(); } }, ic('copy'), 'Copy');
       const send = h('button', { type: 'button', class: 'bp-btn primary', onclick: () => sendChanges() }, ic('send'), 'Send');
       dlg = h('dialog', { class: 'bd-send bd-chgs', 'aria-labelledby': 'bd-chgs-h' },
         h('div', { class: 'hd' }, h('h3', { id: 'bd-chgs-h' }, 'Request changes to this doc'), h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Close', onclick: () => dlg.close() }, ic('x'))),
         h('p', { class: 'sum' }, 'Change requests ask the agent to edit the document. Your decisions and comments on items go with Send answers.'),
-        listEl, msg, h('details', {}, h('summary', {}, 'Preview'), pre), how, h('div', { class: 'ft' }, clear, h('span', { class: 'sp' }), copy, send));
+        cnt, msg, h('details', { open: true }, h('summary', {}, 'Preview'), pre), how, h('div', { class: 'ft' }, copy, send));
       document.body.append(dlg);
       dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });
       dlg._msg = msg;
       dlg._paint = () => {
-        const open = unsent(), sent = list.filter(a => a.sent);
-        listEl.replaceChildren(...(list.length ? [] : [h('li', { class: 'empty' }, 'No change requests yet. Point, select or draw on the page to add one.')]),
-          ...open.map(row), ...(sent.length ? [h('li', { class: 'grp' }, `Sent · ${sent.length}`), ...sent.map(row)] : []));
-        clear.hidden = !sent.length;
+        const open = unsent(), old = open.filter(a => a.rev !== CUR.rev).length;
+        cnt.replaceChildren(h('b', {}, `${open.length} comment${open.length === 1 ? '' : 's'}`), ' go with this request',
+          ...(old ? [' (', h('span', { class: 'old' }, `${old} made on an earlier revision`), ')'] : []), '. Edit or delete them in the Comments sidebar.');
         send.hidden = !REPLY.changes; send.disabled = copy.disabled = !open.length;
         copy.classList.toggle('primary', !REPLY.changes);
         how.textContent = REPLY.changes ? `Send delivers this to ${REPLY.to || 'the agent that opened this page'}. Copy gives you the same text to paste.`
@@ -3487,8 +3846,9 @@ const MARKUP = (() => {
       const ids = new Set(p.annotations.map(x => x.id));
       for (const a of list) if (ids.has(a.id)) a.sent = p.at;
       save(); store.del(MSG);
+      csMsg.value = ''; grow(csMsg);
       if (dlg) { dlg._msg.value = ''; dlg.close(); }
-      schedule(true); paint();
+      hlDirty = true; schedule(true); paint();
       toast(`Change request sent to ${REPLY.to || 'the agent'}`);
     } catch {
       copyText(p.markdown, 'Couldn\'t reach the agent; copied instead, paste it into the chat');
@@ -3517,17 +3877,22 @@ const MARKUP = (() => {
       const el = elOf(a.target.key), p = locate(a), tgt = shown(el) ? el : p && p.el;
       if (tgt && !canvas) {
         const d = tgt.closest('.bd-pane') && diffOf(tgt);
-        if (d) paneScrollTo(d, tgt); else tgt.scrollIntoView({ block: 'center', behavior: REDUCE ? 'auto' : 'smooth' });
+        // a big anchor (the page, a section) centres the mark itself, in what the sheet leaves visible
+        const big = tgt === shell || tgt.getBoundingClientRect().height > innerHeight / 2;
+        const bottom = commentsOpen && sheet() ? cs.getBoundingClientRect().top : innerHeight;
+        if (d) paneScrollTo(d, tgt);
+        else if (big && p && p.exact) scrollBy({ top: p.y - (cssPx('--top-h') + bottom) / 2, behavior: REDUCE ? 'auto' : 'smooth' });
+        else tgt.scrollIntoView({ block: 'center', behavior: REDUCE ? 'auto' : 'smooth' });
       }
       setTimeout(() => {
         const m = marks.get(a.id); if (m) m.flashUntil = performance.now() + 1300;
         schedule(true); setTimeout(() => schedule(false), 1350);
-        if (tgt) outline(tgt);
+        if (tgt && tgt !== shell) outline(tgt);
       }, REDUCE ? 30 : 450);
     }, canvas ? 700 : 60);
   }
 
-  /* tests and agents: BP.annotate({type, key, note, quote?, pos?, strokes?, color?}) */
+  /* tests and agents: BP.annotate({type, key, note, quote?, pos?, strokes?, color?}), BP.comments({open}) */
   function annotate(spec) {
     if (!spec || !TYPE_IC[spec.type] || !spec.key) return null;
     const el = elOf(String(spec.key)); if (!el) return null;
@@ -3545,21 +3910,30 @@ const MARKUP = (() => {
       const cov = shown(el) ? covered({ l: r.left + b.x0 * r.width, t: r.top + b.y0 * r.height, r: r.left + b.x1 * r.width, b: r.top + b.y1 * r.height }, onScreen()) : [];
       a.targets = (cov.length ? cov : [el]).map(info);
     }
-    list.push(a); save(); schedule(true); paint();
+    list.push(a); save(); hlDirty = true; schedule(true); paint();
     return JSON.parse(JSON.stringify(a));
+  }
+  function comments(o) {
+    if (o && typeof o === 'object' && 'open' in o) setOpen(o.open, true);
+    return { available: true, open: commentsOpen, as: commentsOpen ? (sheet() ? 'sheet' : dockW() ? 'dock' : 'drawer') : null, count: list.length, unsent: unsent().length,
+      filter, sort, cards: [...listOl.children].map(li => li.dataset.id), selected: selA && selA.id, editing: editA && editA.id };
   }
 
   /* wiring */
-  document.body.append(layer, hov, cap, pop, tb);
+  document.body.append(layer, hov, cap, cs, tb, tip);
+  document.querySelector('.bd-bar-r')?.insertBefore(barBtn, themeBtn);
   root.classList.add('bd-ann-on');
   for (const ty of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click', 'dblclick']) addEventListener(ty, onCapture, true);
-  addEventListener('pointermove', e => { if (mode === 'point') showHover(targetAt(e.target)); }, { capture: true, passive: true });
+  addEventListener('pointermove', e => { if (mode === 'point' && !(e.target.closest && e.target.closest('.bd-cs'))) showHover(targetAt(e.target)); }, { capture: true, passive: true });
   root.addEventListener('mouseleave', () => { if (mode === 'point') showHover(null); });
   document.addEventListener('keydown', e => {
     if (e.defaultPrevented || e.isComposing || e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
     const t = e.target;
     if (t.isContentEditable || (t.closest && t.closest('input, textarea, select, [contenteditable]')) || document.querySelector('dialog[open]')) return;
-    if (e.key === 'Escape') { if (popA) closePop(false); else if (mode !== 'view') setMode('view'); return; }
+    if (e.key === 'Escape') {
+      if (editA) endEdit(false); else if (selA) select(null); else if (mode !== 'view') setMode('view'); else if (commentsOpen && !dockW()) setOpen(false, true);
+      return;
+    }
     const m = { v: 'view', c: 'point', t: 'select', d: 'draw' }[e.key.toLowerCase()];
     if (m) { e.preventDefault(); setMode(m); }
   });
@@ -3572,8 +3946,10 @@ const MARKUP = (() => {
     if (recs.some(r => !(r.target.closest && r.target.closest('.bp-tokens')) && !(r.target instanceof SVGElement && r.attributeName === 'class'))) schedule(true);
   }).observe(app, { subtree: true, childList: true, attributes: true, attributeFilter: ['class', 'hidden', 'open', 'transform', 'style'] });
   document.fonts?.ready.then(() => schedule(true));
+  setInterval(() => { if (commentsOpen) renderList(); }, 30000);   // "5 min ago"
+  if (store.get(CS_KEY) === '1' && !sheet()) setOpen(true, false);
   paint(); schedule(true);
-  return Object.assign(api, { annotate, setMode, paint });
+  return Object.assign(api, { annotate, setMode, paint, comments });
 })();
 
 /* ---------- public API (for tests and agents) ---------- */
@@ -3598,6 +3974,7 @@ window.BP = {
   changesPayload: () => MARKUP.payload(),
   annotate: spec => MARKUP.annotate(spec),
   setMode: name => MARKUP.setMode(name),
+  comments: opts => MARKUP.comments(opts),
 };
 })();
 </script>

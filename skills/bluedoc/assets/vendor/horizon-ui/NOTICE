@@ -1,0 +1,12 @@
+HorizonUI (@horizonloop/ui)
+Copyright 2026 HorizonLoop SRL
+
+This product includes software developed by HorizonLoop SRL.
+
+Licensed under the Apache License, Version 2.0 (see LICENSE). Under section 4(d) of
+the License, any redistribution of this work or a derivative work must carry a
+readable copy of this NOTICE, crediting HorizonLoop SRL as the author.
+
+Third-party software bundled with or required by HorizonUI, and the fonts
+redistributed inside dist/horizon-ui.css, are listed with their licences in
+THIRD_PARTY_NOTICES.md; full licence texts are in the licenses/ folder.
