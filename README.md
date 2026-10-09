@@ -9,10 +9,12 @@ An agent skill that writes engineering docs as one self-contained HTML page: a z
 - **Blueprint canvas.** Open a system to see its parts; each level plays its own animated flow (request, event, data). Nests 3 levels deep.
 - **Checklists as task trackers.** Every procedure is a checklist. Each item is a two-line row (the action, then why it matters) that opens to show details, commands, checks, tables or a sub-checklist. Ticks persist in the reader's browser; **Copy progress** exports Markdown for a PR or issue.
 - **Decisions, not "tick if you agree".** When the agent needs you to choose, an item shows its options as pills with the agent's recommendation starred. You pick one; the export says what you picked and what was recommended.
-- **Answers back to the agent.** Every item takes a comment. **Send to agent** collects your picks, ticks and comments, plus an overall message, and either sends them to the agent (when it served the page with `serve.py`) or copies them for you to paste.
+- **Answers back to the agent.** Every item takes a comment. **Send answers** collects your picks, ticks and comments, plus an overall message, and sends them to the agent (or copies them for you to paste).
+- **Change requests on the page.** A floating toolbar at the bottom (View, Point, Select, Draw) lets you pin a comment on any element, comment on a selected passage, or draw on the page; **Request changes** sends them to the agent as edits to make. Answers and change requests are separate messages.
 - **Code review.** A `diff` block shows a change with each finding as a comment on its lines, and its options on the card. A file with several comments says how many, steps between them, and tells you how many sit above or below what you can see. Generated from git by `gitdiff.py`; GitHub review threads come in through `ghthreads.py`.
 - **Revisions you can compare.** Each build keeps the doc's revision history. Switch to any earlier revision, or compare two: new, changed and removed sections, items, table rows and drawing parts are marked in place with a word-level diff, next to the author's note on what changed. Readers who come back to a newer revision get a link to what changed since their last visit.
-- **One file.** No network at view time, works from `file://`, prints cleanly, light and dark theme, keyboard and screen-reader outline.
+- **A local server, a home page, JSON only.** `serve.py` renders each doc from its JSON on every request, so agents write only the JSON, never the HTML. `http://127.0.0.1:8740/` lists every doc by folder, searchable, with what still needs your decision and what's waiting on the agent. `build.py -o` still writes a standalone HTML file when you need to send one.
+- **Self-contained pages.** No network at view time beyond the local server, prints cleanly, light and dark theme, keyboard and screen-reader outline.
 - **Adjustable width.** Drag the handle on either side of the text to widen or narrow it; it stays centred and every bluedoc page in that browser remembers the width. Wide tables stop wrapping. Double-click a handle to reset.
 - **Linted writing.** The build flags filler, vague words, long sentences and checklist items that don't start with a verb.
 
@@ -91,11 +93,14 @@ Ask in plain words. The skill triggers on requests for HTML docs, architecture p
 - "Review PR 412 and give me a bluedoc where each finding sits on its code."
 - "Put the open review threads on PR 412 in a bluedoc so I can decide what to do with each."
 
-The agent writes `docs/<topic>/<name>.bluedoc.json`, builds `docs/<topic>/<name>.html` next to it, and keeps the JSON as the source. To rebuild after editing the JSON by hand:
+The agent writes `docs/<topic>/<name>.bluedoc.json` (the only file it writes), validates it, and opens it on the local server:
 
 ```sh
-python3 <skill>/scripts/build.py docs/<topic>/<name>.bluedoc.json -o docs/<topic>/<name>.html
+python3 <skill>/scripts/build.py docs/<topic>/<name>.bluedoc.json        # validate, record the revision
+python3 <skill>/scripts/serve.py open docs/<topic>/<name>.bluedoc.json   # start the server, print the URL
 ```
+
+Every doc the server knows is listed at `http://127.0.0.1:8740/`. Edit the JSON and reload; there is no build output to keep in sync. For a file you can send to someone, add `-o <name>.html` to the build command.
 
 `<skill>` is the installed skill folder, for example `~/.agents/skills/bluedoc`.
 
@@ -118,9 +123,10 @@ skills/bluedoc/
   scripts/build.py       validate, lint, build the HTML
   scripts/gitdiff.py     git range + findings -> diff block
   scripts/ghthreads.py   GitHub review threads -> findings + diff comments
-  scripts/serve.py       serve a page so Send to agent reaches the agent
-  assets/template.html   the page runtime (styling, canvas, checklists, diff browser)
-  examples/              Acme examples, JSON and built HTML
+  scripts/serve.py       local server: renders docs, home page, answers and change requests
+  assets/template.html   the page runtime (styling, canvas, checklists, diff browser, annotator)
+  assets/home.html       the home page
+  examples/              Acme examples (JSON and history; built HTML for GitHub readers)
 .claude-plugin/          Claude Code plugin and marketplace (omp reads it too)
 .agents/plugins/         Codex marketplace
 plugin.json              Agent Plugins manifest (Codex, omp)

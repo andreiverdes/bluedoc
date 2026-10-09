@@ -52,7 +52,7 @@
     {
       "id": "summary",
       "title": "Summary",
-      "lead": "Each finding has its options under it, with my recommendation starred. Pick one per finding, comment where you disagree, then press **Send to agent**.",
+      "lead": "Each finding has its options under it, with my recommendation starred. Pick one per finding, comment where you disagree, then press **Send answers**.",
       "blocks": [
         {
           "type": "table",

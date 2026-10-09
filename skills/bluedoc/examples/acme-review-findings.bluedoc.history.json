@@ -86,7 +86,7 @@
   {
    "rev": "B",
    "date": "2026-03-14",
-   "built": "2026-10-09T16:31:19+00:00",
+   "built": "2026-10-09T17:37:57+00:00",
    "head": {
     "id": "acme-review-findings-2026-03",
     "title": "Review findings: acme-shop #412 and #415",
@@ -142,7 +142,7 @@
     {
      "id": "summary",
      "title": "Summary",
-     "lead": "Each finding has its options under it, with my recommendation starred. Pick one per finding, comment where you disagree, then press **Send to agent**.",
+     "lead": "Each finding has its options under it, with my recommendation starred. Pick one per finding, comment where you disagree, then press **Send answers**.",
      "blocks": [
       "0f334205a8047b08",
       "62f145411f332db8"
