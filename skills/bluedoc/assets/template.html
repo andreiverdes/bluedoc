@@ -1379,7 +1379,6 @@ html.bd-resizing .bd-boardblk { transition: none; }
 .bd-rh-left { left: var(--lp-w); }
 .bd-rh-right { left: calc(100% - var(--sp-w)); }
 html:not(.bd-lp-open) .bd-rh-left, html:not(.bd-sp-dock) .bd-rh-right { display: none; }
-:root[data-layout="board"] .bd-wchip { top: calc(var(--top-h) + 64px); }
 .bd-board-ph { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 10px; background: var(--inset); color: var(--fg-subtle); font-size: 13px; }
 .bd-board-ph .bd-ic { width: 16px; height: 16px; flex: none; }
 /* a board outside a design doc stays a block in the column */
@@ -1478,7 +1477,7 @@ i.warn[hidden] { display: none; }
 .bd-rqe .ft { display: flex; justify-content: flex-end; gap: 6px; }
 .bd-rqe .ft .bp-btn:disabled { opacity: .5; cursor: default; }
 /* the board's toolbar, centred in the board: panel, Fit · zoom · Focus, Present, Variants, fidelity, theme, motion */
-.bd-btb { position: absolute; z-index: 3; left: 12px; right: 12px; top: 12px; width: fit-content; margin: 0 auto; display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 5px; border-radius: 14px;
+.bd-btb { position: absolute; z-index: 3; left: 12px; right: 12px; top: 12px; width: fit-content; margin: 0 auto; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 4px; padding: 5px; border-radius: 14px;
   background: linear-gradient(180deg, var(--tray-top), var(--tray-bot)); box-shadow: var(--shadow-tray), 0 2px 6px oklch(23% 0.01 264 / 0.06); font-size: 12.5px; }
 .bd-tbtn { display: inline-grid; place-items: center; height: 30px; min-width: 30px; padding: 0 6px; border: 0; border-radius: 9px; background: none; color: var(--fg-muted); font: 500 12.5px var(--sans); cursor: pointer; }
 .bd-tbtn:hover:not(:disabled) { color: var(--fg); background: var(--hover); }
@@ -2102,10 +2101,11 @@ function placeHandles() {
   for (const el of handles) { el.setAttribute('aria-valuenow', Math.round(r.width)); el.setAttribute('aria-valuemax', maxW()); }
 }
 let chipT = 0;
-// the width being set, centred at x (default: over the column)
-function showChip(px, x) {
+// the width being set, centred at x (default: over the column), its top at y (default: under the app bar)
+function showChip(px, x, y) {
   wchip.innerHTML = `<b>${Math.round(px)} px</b> · double-click a handle to reset`;
   wchip.style.left = x == null ? '' : x + 'px';
+  wchip.style.top = y == null ? '' : y + 'px';
   wchip.classList.add('on'); clearTimeout(chipT); chipT = setTimeout(() => wchip.classList.remove('on'), 1200);
 }
 function setWidth(w, save) {
@@ -2128,8 +2128,9 @@ for (const p of PANELS) {
   p.el = resizeHandle({ label: p.label, title: 'Drag to change the panel width · double-click to reset', dir: p.dir, width: () => p.w,
     set: (w, save) => {
       p.user = Math.round(w); fitPanels();
-      const r = $('.bd-boardblk')?.getBoundingClientRect();
-      showChip(p.w, r ? r.left + r.width / 2 : null);
+      // over the board, under its toolbar (one row or more)
+      const r = $('.bd-boardblk')?.getBoundingClientRect(), tb = $('.bd-btb')?.getBoundingClientRect();
+      showChip(p.w, r ? r.left + r.width / 2 : null, tb ? tb.bottom + 12 : null);
       if (save) { p.user = p.w; store.set(p.key, String(p.w)); }
     },
     reset: () => { p.user = 0; store.del(p.key); fitPanels(); toast('Panel width reset'); } });

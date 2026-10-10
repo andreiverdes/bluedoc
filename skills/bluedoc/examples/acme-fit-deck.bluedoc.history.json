@@ -1,0 +1,181 @@
+{
+ "bluedoc_history": 1,
+ "revs": [
+  {
+   "rev": "A",
+   "date": "2026-10-10",
+   "built": "2026-10-10T18:22:49+00:00",
+   "head": {
+    "id": "acme-fit-deck",
+    "title": "Acme Fit: Q3 launch review deck",
+    "subtitle": "Five slides for the Q3 launch review of the Acme Fit apps, with speaker notes. Comment on any slide, press Present to rehearse, then approve the deck or request changes.",
+    "meta": {
+     "org": "Acme Corp",
+     "kind": "Design",
+     "type": "design",
+     "dwg": "ACME-FIT-Q3",
+     "rev": "A",
+     "date": "2026-10-10"
+    },
+    "tldr": "A five-slide hi-fi deck in the plain kit and the Indigo theme: the title, what shipped and what moved, weekly actives, a member quote and the Q4 ask. Four slides carry speaker notes; Present plays them in order."
+   },
+   "sections": [
+    {
+     "id": "brief",
+     "title": "Brief",
+     "lead": "The product lead presents the Q3 launch of Acme Fit to the leadership team in twenty minutes.",
+     "blocks": [
+      "03f05d7bc03d32bb",
+      "c8fc55d99bce57f3"
+     ]
+    },
+    {
+     "id": "screens",
+     "title": "Slides",
+     "lead": "Five 16:9 slides in one row, in the order Present plays them.",
+     "blocks": [
+      "857fe68ac163ccb0"
+     ]
+    }
+   ],
+   "screens": {
+    "title": "3707e89e0ae2fba5",
+    "shipped": "30f732bb30f20541",
+    "actives": "853d40388c2e2788",
+    "quote": "9687f612f94d727d",
+    "ask": "5472d32abc104709"
+   }
+  }
+ ],
+ "blocks": {
+  "03f05d7bc03d32bb": {
+   "type": "text",
+   "md": "- **Audience:** the Acme leadership team, on the boardroom screen and on laptops afterwards.\n- **Story:** what shipped, what it moved, one member's voice, then the Q4 ask.\n- **One point per slide,** large enough to read from the back of the room."
+  },
+  "c8fc55d99bce57f3": {
+   "type": "checklist",
+   "id": "brief",
+   "title": "Picks",
+   "numbered": false,
+   "items": [
+    {
+     "id": "framework",
+     "text": "Which framework do the slides use?",
+     "sub": "Recommend the plain kit: its slide classes ship with bluedoc, so the deck needs nothing installed.",
+     "recommend": "plain",
+     "choice": "plain",
+     "choices": [
+      {
+       "id": "plain",
+       "label": "Plain kit"
+      },
+      {
+       "id": "horizon",
+       "label": "HorizonUI"
+      }
+     ]
+    },
+    {
+     "id": "theme",
+     "text": "Which theme?",
+     "sub": "Recommend Indigo: it matches the Acme Fit apps the deck reports on.",
+     "recommend": "indigo",
+     "choice": "indigo",
+     "choices": [
+      {
+       "id": "indigo",
+       "label": "Indigo"
+      },
+      {
+       "id": "forest",
+       "label": "Forest"
+      }
+     ]
+    }
+   ]
+  },
+  "857fe68ac163ccb0": {
+   "type": "board",
+   "id": "main",
+   "targets": [
+    "presentation"
+   ],
+   "framework": "plain",
+   "themes": [
+    {
+     "id": "indigo",
+     "label": "Indigo",
+     "tokens": {
+      "accent": "#4f46e5",
+      "bg": "#f8fafc",
+      "surface": "#ffffff",
+      "fg": "#0f172a",
+      "muted": "#64748b",
+      "border": "#e2e8f0"
+     }
+    },
+    {
+     "id": "forest",
+     "label": "Forest",
+     "tokens": {
+      "accent": "#15803d",
+      "bg": "#f7faf7",
+      "surface": "#ffffff",
+      "fg": "#14201a",
+      "muted": "#5b6b62",
+      "border": "#dfe8e2"
+     }
+    }
+   ],
+   "motion": {
+    "fast": "120ms",
+    "base": "200ms",
+    "slow": "320ms",
+    "ease": "cubic-bezier(.2,0,0,1)"
+   },
+   "artboards": [
+    {
+     "id": "title",
+     "title": "Title: Acme Fit, Q3 launch review",
+     "device": "slide",
+     "fidelity": "hifi",
+     "notes": "Welcome everyone. In twenty minutes: what we shipped in Q3, what it moved, and what we need for Q4.\n\nQuestions at the end, please; the numbers are in the appendix we send afterwards."
+    },
+    {
+     "id": "shipped",
+     "title": "What shipped and what moved",
+     "device": "slide",
+     "fidelity": "hifi",
+     "notes": "Three launches this quarter: the watch app, passkey sign-in and weekly streaks.\n\n- Passkeys halved the time to sign in.\n- Streaks are the reason members come back in week 4."
+    },
+    {
+     "id": "actives",
+     "title": "Weekly actives",
+     "device": "slide",
+     "fidelity": "hifi",
+     "notes": "This is the number to remember: **41,800** members active every week, up from 19,900 in June. The watch app accounts for most of the jump."
+    },
+    {
+     "id": "quote",
+     "title": "A member's voice",
+     "device": "slide",
+     "fidelity": "hifi"
+    },
+    {
+     "id": "ask",
+     "title": "The Q4 ask",
+     "device": "slide",
+     "fidelity": "hifi",
+     "notes": "The ask: two engineers for Android Wear and a coach dashboard by December. Decide today and we start on the 20th."
+    }
+   ]
+  }
+ },
+ "html": {
+  "3707e89e0ae2fba5": "<section class=\"slide center\" data-bd=\"title\">\n  <p class=\"slide-kicker\" data-bd=\"kicker\">Acme Fit · Q3 2026</p>\n  <h1 class=\"slide-title\" data-bd=\"headline\">Q3 launch review</h1>\n  <p class=\"slide-body muted\" data-bd=\"presenter\">Product team · 14 October 2026</p>\n</section>\n",
+  "30f732bb30f20541": "<section class=\"slide\" data-bd=\"shipped\">\n  <p class=\"slide-kicker\" data-bd=\"kicker\">Q3 in review</p>\n  <h2 class=\"slide-title\" data-bd=\"headline\">Three launches, three numbers up</h2>\n  <div class=\"slide-cols grow\" data-bd=\"body\">\n    <div class=\"stack gap-4\" data-bd=\"shipped-list\">\n      <p class=\"slide-kicker\" style=\"color:var(--muted)\">What shipped</p>\n      <ul class=\"slide-body\">\n        <li>The Acme Fit watch app</li>\n        <li>Passkey sign-in</li>\n        <li>Weekly streaks</li>\n      </ul>\n    </div>\n    <div class=\"stack gap-4\" data-bd=\"moved-list\">\n      <p class=\"slide-kicker\" style=\"color:var(--muted)\">What moved</p>\n      <ul class=\"slide-body\">\n        <li>Weekly actives 2.1×</li>\n        <li>Sign-in time 9 s → 4 s</li>\n        <li>Week-4 retention 61 %</li>\n      </ul>\n    </div>\n  </div>\n  <footer class=\"slide-foot\" data-n=\"2\" data-bd=\"foot\">Acme Fit · Q3 launch review</footer>\n</section>\n",
+  "853d40388c2e2788": "<section class=\"slide center\" data-bd=\"actives\">\n  <p class=\"slide-kicker\" data-bd=\"kicker\">Weekly active members</p>\n  <p class=\"slide-big\" data-bd=\"stat\">41,800</p>\n  <p class=\"slide-body muted\" data-bd=\"context\">Up from 19,900 in June, most of it from the watch app.</p>\n  <footer class=\"slide-foot\" data-n=\"3\" data-bd=\"foot\">Acme Fit · Q3 launch review</footer>\n</section>\n",
+  "9687f612f94d727d": "<section class=\"slide\" data-bd=\"quote\">\n  <p class=\"slide-kicker\" data-bd=\"kicker\">From a member</p>\n  <div class=\"grow stack\" style=\"justify-content:center\" data-bd=\"body\">\n    <p class=\"slide-quote\" data-bd=\"words\">“The streak on my wrist is why I walked home instead of taking the bus, every day for six weeks.”</p>\n  </div>\n  <p class=\"slide-body muted\" data-bd=\"who\">An Acme Fit member since July</p>\n  <footer class=\"slide-foot\" data-n=\"4\" data-bd=\"foot\">Acme Fit · Q3 launch review</footer>\n</section>\n",
+  "5472d32abc104709": "<section class=\"slide center\" data-bd=\"ask\">\n  <p class=\"slide-kicker\" data-bd=\"kicker\">For Q4</p>\n  <h2 class=\"slide-title\" data-bd=\"headline\">Two engineers, one coach dashboard</h2>\n  <p class=\"slide-body muted\" data-bd=\"next\">Approve today and Android Wear work starts on 20 October; the coach dashboard ships in December.</p>\n  <footer class=\"slide-foot\" data-n=\"5\" data-bd=\"foot\">Acme Fit · Q3 launch review</footer>\n</section>\n"
+ }
+}

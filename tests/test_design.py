@@ -6,6 +6,7 @@ wants exactly one board with an artboard; the board's ids, devices, fidelity, va
 checked. Each banned construct in a screen file is one ERROR. An edit to a screen file under the same rev is an edit
 in place that changes the approval hash, and the old rev's HTML stays readable. `new design --target presentation`
 writes a three-slide deck in one row that builds clean once filled in; speaker notes over 2 KB are an ERROR. The
+bundled deck, acme-fit-deck, builds clean: five hi-fi plain-kit slides in one row with notes, one revision. The
 server serves only screens and declared framework files, and wraps a screen whose framework is missing in the plain
 kit with a notice."""
 from __future__ import annotations
@@ -294,6 +295,39 @@ class PresentationTarget(unittest.TestCase):
         board_of(d)["artboards"][1]["notes"] = "Acme Fit doubled weekly actives."
         self.assertEqual(errors(self.check(d).stderr), [])
 
+
+class DeckExample(unittest.TestCase):
+    """The bundled deck, acme-fit-deck: five hi-fi plain-kit slides in one row, notes on some, one revision."""
+
+    STEM = "acme-fit-deck"
+
+    def test_the_deck_builds_clean(self) -> None:
+        tmp = TempHome()
+        self.addCleanup(tmp.cleanup)
+        docs = tmp.copy_examples()
+        r = tmp.run("build.py", docs / f"{self.STEM}.bluedoc.json")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("0 error(s), 0 warning(s)", r.stderr)
+
+    def test_deck_shape(self) -> None:
+        doc_path = EXAMPLES / f"{self.STEM}.bluedoc.json"
+        doc = load_json(doc_path)
+        board = board_of(doc)
+        self.assertEqual(board["targets"], ["presentation"])
+        self.assertFalse(board.get("frameworks"), "the deck must need nothing the reader provides")
+        arts = board["artboards"]
+        self.assertEqual([a["id"] for a in arts], ["title", "shipped", "actives", "quote", "ask"])
+        self.assertEqual({(a["device"], a["fidelity"], a.get("framework", board["framework"])) for a in arts},
+                         {("slide", "hifi", "plain")})
+        self.assertGreaterEqual(sum(bool(a.get("notes")) for a in arts), 2)
+        layout = build.board_layout(board)
+        self.assertEqual({layout[a["id"]][1] for a in arts}, {0}, "the deck lays out in one row")
+        html = "".join((EXAMPLES / f"{self.STEM}.design" / f"{a['id']}.html").read_text(encoding="utf-8") for a in arts)
+        for cls in ("slide-cols", "slide-big", "slide-quote"):
+            self.assertIn(cls, html)
+        h = load_json(EXAMPLES / f"{self.STEM}.bluedoc.history.json")
+        self.assertEqual([r["rev"] for r in h["revs"]], ["A"])
+        self.assertEqual(h["revs"][0]["screens"], build.screen_hashes(doc, doc_path))
 
 
 class FrameworkFallback(unittest.TestCase):
