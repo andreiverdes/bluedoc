@@ -690,8 +690,10 @@ html.bd-tray-on .bp-toast { bottom: 84px; }
 .bd-key.acc:disabled { padding-right: 13px; }
 @media (max-width: 600px) { .bd-key.acc { gap: 5px; padding: 0 6px 0 9px; } .bd-key.acc:disabled { padding: 0 9px; } }
 .bd-pen-risk { --pen: var(--risk); } .bd-pen-accent { --pen: var(--accent); } .bd-pen-warn { --pen: var(--warn); } .bd-pen-ok { --pen: var(--ok); }
-html.bd-ann-m-point .bd-shell :not(.bp-side, .bp-side :not(.bd-meta, .bd-meta *), .bd-rvr, .bd-rvr *), html.bd-ann-m-point .bd-shell { cursor: crosshair !important; }
-html.bd-ann-m-select .bd-shell :not(.bp-side, .bp-side :not(.bd-meta, .bd-meta *), .bd-rvr, .bd-rvr *), html.bd-ann-m-select .bd-shell { cursor: text !important; }
+/* the cursor rule excludes what `inDoc` excludes: the rails, a design's panel tabs, Screens list and board toolbar keep their own cursors */
+html.bd-ann-m-point .bd-shell :not(.bp-side, .bp-side :not(.bd-meta, .bd-meta *), .bd-rvr, .bd-rvr *, .bd-lp-ui, .bd-lp-ui *, .bd-btb, .bd-btb *), html.bd-ann-m-point .bd-shell { cursor: crosshair !important; }
+html.bd-ann-m-select .bd-shell :not(.bp-side, .bp-side :not(.bd-meta, .bd-meta *), .bd-rvr, .bd-rvr *, .bd-lp-ui, .bd-lp-ui *, .bd-btb, .bd-btb *), html.bd-ann-m-select .bd-shell { cursor: text !important; }
+html:is(.bd-ann-m-point, .bd-ann-m-select) .bd-shell :is(.bp-side, .bd-rvr, .bd-lp-ui, .bd-btb) { cursor: default; }
 html:is(.bd-ann-m-point, .bd-ann-m-select) .bd-shell .bp-note .bp-note-ta { cursor: text !important; }
 html:is(.bd-ann-m-point, .bd-ann-m-select) .bd-shell .bp-note button { cursor: default !important; }
 html.bd-ann-m-select .bp-cl-head { user-select: text; -webkit-user-select: text; }
