@@ -17,6 +17,7 @@ Headings: `## Document` (incl. `hero`) · `## Contracts` · `## Section` · `## 
 | `hero` | `{icon, value, label}` | no | The home card's stat, for `other` docs and for `docs` without a canvas. `icon`: `chart`, `doc`, `flag`, `bolt`, `clock`, `users`, `bug`, `box`, `check`, `globe`, `lock` or `list`. `value` ≤ 8 characters (`"99.95%"`); `label` ≤ 28 (`"uptime, last 30 days"`). Without it an `other` card shows the `doc` icon and the section count. |
 | `tldr` | md | no | The answer in 1–3 sentences. Required in practice for documents longer than 3 sections. |
 | `changes` | `[inline md]` | no | What changed in this revision and why, 1–4 lines. Shown in the revision list and above the marked diff. Rewrite it on each new `rev`. |
+| `resolves` | `[comment id]` | no | The reader's comments this revision addresses, by the id the reply Markdown shows after each key (`c…`). On load, an **Open** comment listed by a revision newer than its own becomes **Resolved** ("Resolved by the agent in rev X"); see [Annotations](#annotations). Rewrite it on each new `rev`, like `changes`. |
 | `sections` | `[section]` | yes | Rendered in order, numbered 01, 02, … |
 
 `id` everywhere = lowercase letters, digits, hyphens; starts with a letter or digit.
@@ -417,7 +418,7 @@ Each scope (root and every `children`) has its own flows. A token travels each s
 
 ## Annotations
 
-The tray of keys at the bottom of the current revision has four modes: **View** (`V`, default), **Point** (`C`: pin a note on the element under the cursor), **Select** (`T`: note on a selected passage), **Draw** (`D`: freehand drawing with a note). `Esc` returns to View. A new note is written in a small composer next to its mark; once saved it becomes a card in the **Comments** sidebar on the right (open by default and docked beside the content on wide screens, a drawer or bottom sheet on narrow ones; the sidebar button in the app bar or `]` shows and hides it). Comments are **Pending** (saved, not sent), **Open** (sent with Request changes) or **Resolved** (marked by the reader); the sidebar filters Pending · Open · Resolved · All. Each is stored under its own key, `bp:<doc.id>:__ann:<id>`, so two browsers adding notes don't overwrite each other. The sidebar footer has a **General comment** field for notes about the whole doc (`type: "general"`, `target.key: "doc"`, no page mark); they follow the same states. **Request changes · N** in the bottom tray sends the pending ones, through a dialog with a preview, **Copy** and **Send**; `message` repeats the general notes joined with blank lines, and the Markdown lists them first under `## General`. Send posts to `/__bluedoc/changes`; the server stores it in `state.db` and queues it for `serve.py wait`. Sent notes stay dimmed until the reader clears them. The toolbar is absent on `?rev=` and `?diff=`.
+The tray of keys at the bottom of the current revision has four modes: **View** (`V`, default), **Point** (`C`: pin a note on the element under the cursor), **Select** (`T`: note on a selected passage), **Draw** (`D`: freehand drawing with a note). `Esc` returns to View. A new note is written in a small composer next to its mark; once saved it becomes a card in the **Comments** sidebar on the right (open by default and docked beside the content on wide screens, a drawer or bottom sheet on narrow ones; the sidebar button in the app bar or `]` shows and hides it). Comments are **Pending** (saved, not sent), **Open** (sent with Request changes) or **Resolved** (marked by the reader, or by a revision's `resolves`: see below); the sidebar filters Pending · Open · Resolved · All. Each is stored under its own key, `bp:<doc.id>:__ann:<id>`, so two browsers adding notes don't overwrite each other. The sidebar footer has a **General comment** field for notes about the whole doc (`type: "general"`, `target.key: "doc"`, no page mark); they follow the same states. **Request changes · N** in the bottom tray sends the pending ones, through a dialog with a preview, **Copy** and **Send**; `message` repeats the general notes joined with blank lines, and the Markdown lists them first under `## General`. Send posts to `/__bluedoc/changes`; the server stores it in `state.db` and queues it for `serve.py wait`. Sent notes stay dimmed until the reader clears them. The toolbar is absent on `?rev=` and `?diff=`.
 
 ```json
 { "kind": "changes", "doc": "<doc.id>", "rev": "B", "title": "…", "path": "/<root>/<path>.bluedoc.json", "at": "<ISO time>", "message": "…",
@@ -425,8 +426,10 @@ The tray of keys at the bottom of the current revision has four modes: **View** 
                      "target": { "key": "item:t412/float-cents", "label": "02 #412 · bulk discount tiers › Findings · #412 › 2. Tiered line totals…", "text": "Tiered line totals are fractional cents …" } },
                    { "type": "text", "quote": "one-line fixes", "target": { "key": "tldr", … }, … },
                    { "type": "draw", "target": { "key": "block:trouble/0", … }, "targets": [ { "key": "row:trouble/0/0", … }, { "key": "row:trouble/0/1", … } ], … } ],
-  "markdown": "# Change requests: <title> (rev B), <date>\n\n1. **<label>** (pin)\n   > <text>\n   Change: <note>\n" }
+  "markdown": "# Change requests: <title> (rev B), <date>\n\n1. **<label>** (pin) `<key>` (<id>)\n   > <text>\n   Change: <note>\n" }
 ```
+
+Each comment in the Markdown carries its `id` after its key (a general one: `- (<id>) <note>`). Once a revision addresses it, list the id in that revision's `resolves` (`build.py patch … --resolves <id>`). When the page loads, each **Open** comment whose id is in the `resolves` of a revision newer than the comment's `rev` (up to the current one) becomes **Resolved** with `resolvedBy: "agent"`, `resolvedRev` (the newest such revision) and `resolvedAt`, saved like any reader change; its card reads "Resolved by the agent in rev X" and keeps **Reopen**. A reopened comment keeps `resolvedRev`, so only a revision after that one resolves it again. Pending comments are never resolved this way, and ids that match no comment are ignored. The revision list shows "Resolves N comments" under a revision that has `resolves`.
 
 The key grammar. This table is the one list of keys: the annotator writes them into change requests and `build.py patch` takes them as is.
 
@@ -499,7 +502,7 @@ A status chip sits next to the eyebrow:
   > <the reader's comment on the item>
 
 ## Notes with the approval
-1. **<label>** (pin|text|drawing|general)
+1. **<label>** (pin|text|drawing|general) `<key>` (<id>)
    > <excerpt>
    Note: <note>
 ```
@@ -529,7 +532,7 @@ The linter warns on: filler and ceremony words; vague words; sentences over 32 w
 
 ### patch
 
-`build.py patch <doc> <key> [--set field=value …] [--json '{…}'] [--append '{…}'] [--delete] [--html FILE|-] [--change "line" …] [--no-bump]`
+`build.py patch <doc> <key> [--set field=value …] [--json '{…}'] [--append '{…}'] [--delete] [--html FILE|-] [--change "line" …] [--resolves ID …] [--no-bump]`
 
 | Option | Effect |
 |---|---|
@@ -539,9 +542,10 @@ The linter warns on: filler and ceremony words; vague words; sentences over 32 w
 | `--delete` | Removes the target. An artboard's screen file stays (the history keeps its text); delete it yourself. |
 | `--html FILE` | `artboard:` and `el:` keys: replaces the screen file with FILE's text (`-` reads stdin). The build lints it first; on an error the file is put back. |
 | `--change "line"` | One `changes` line; repeatable. |
+| `--resolves ID` | One comment id for `resolves` (the id after the key in the reply Markdown, with or without its parentheses); repeatable. |
 | `--no-bump` | Keeps `meta.rev`: only while the reader hasn't seen this rev. |
 
-By default the rev bumps (1→2, A→B, v1→v2), `meta.date` becomes today, and `changes` becomes the `--change` lines (default "Updated `<key>`."); with `--no-bump` the lines are appended. Patch refuses to write when validation fails, keeps the file's indent, records the history, and prints `rev X → Y; <key> updated`.
+By default the rev bumps (1→2, A→B, v1→v2), `meta.date` becomes today, `changes` becomes the `--change` lines (default "Updated `<key>`.") and `resolves` the `--resolves` ids (removed when there are none); with `--no-bump` both are appended. Patch refuses to write when validation fails, keeps the file's indent, records the history, and prints `rev X → Y; <key> updated`.
 
 `<key>` is any key in the table under [Annotations](#annotations), so a change request's `key` works as is, with or without the backticks the reply Markdown puts around it.
 

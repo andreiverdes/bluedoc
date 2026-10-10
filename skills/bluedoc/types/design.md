@@ -53,7 +53,7 @@ A framework that isn't on disk yet is still an option: put the `add-framework` c
 - **Rev A is wireframes:** `fidelity: "wireframe"`, kit wireframe classes, real labels. Write hi-fi (`fidelity: "hifi"`) after the reader picks the framework and theme.
 - A variant: a new artboard with `variantOf: "<id>"` and its own file. The board places it right of its source.
 - Without `x`/`y` the board lays artboards out left to right, and slides top to bottom in one column right of them; set both only to start a new row (e.g. `"x": 0, "y": 1000` for the web screens).
-- **Edit screen files in place**, the lines the comment names; never rewrite a whole file for one change. Then record it: `build.py patch <doc> artboard:<id> --change "Sign in: passkey first."`.
+- **Edit screen files in place**, the lines the comment names; never rewrite a whole file for one change. Then record it: `build.py patch <doc> artboard:<id> --change "Sign in: passkey first." --resolves <comment id>`.
 - Every build records each screen's text in the history file under `meta.rev`. Once the reader has seen a rev, never edit it in place: bump it (patch does). An edit to any screen file asks for approval again.
 
 ## Change requests
