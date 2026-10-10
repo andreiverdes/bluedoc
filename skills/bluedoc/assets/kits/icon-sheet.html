@@ -1,0 +1,111 @@
+<!-- bluedoc icon sheet: the body of an `icons` artboard's screen, filled by serve.py icon_fragment: the layers as CSS
+     variables (data: URIs), which layers exist as classes, the title and checks. icon-sheet.css draws every tile
+     from those variables; each tile's data-bd is its comment target (el:<artboard>/<tile>). The script at the end
+     checks fg's pixels against the 66 dp safe circle. -->
+<style>.ics { {{vars}} }</style>
+<main class="ics {{cls}}" data-bd="sheet">
+  <header class="ics-h">
+    <div><h1>{{title}}</h1><p>{{built}}</p></div>
+  </header>
+
+  <section class="ics-p ios" data-bd="ios">
+    <h2>iOS</h2>
+    <div class="ios-body">
+      <figure class="master" data-bd="ios-master">
+        <div class="frame"><i class="ic full sq" style="--s: 200px"></i></div>
+        <figcaption>1024 × 1024 master under the squircle mask<small>dashed: the square you export; iOS masks it</small></figcaption>
+      </figure>
+      <div class="ios-side">
+        <div class="looks">
+          <figure class="look on-light" data-bd="ios-light"><div class="card"><i class="ic full sq" style="--s: 76px"></i></div><figcaption>Light</figcaption></figure>
+          <figure class="look on-dark" data-bd="ios-dark"><div class="card"><i class="ic dark sq" style="--s: 76px"></i></div><figcaption>Dark</figcaption></figure>
+          <figure class="look on-dark" data-bd="ios-tinted"><div class="card"><i class="ic tinted sq" style="--s: 76px"></i></div><figcaption>Tinted</figcaption></figure>
+        </div>
+        <figure class="sizes" data-bd="ios-sizes">
+          <div class="row"><i class="ic full sq" style="--s: 60px"></i><i class="ic full sq" style="--s: 40px"></i><i class="ic full sq" style="--s: 29px"></i></div>
+          <figcaption>60 pt home · 40 pt Spotlight · 29 pt Settings<small>real sizes: 1 pt = 1 CSS px</small></figcaption>
+        </figure>
+      </div>
+    </div>
+    <ul class="checks">{{ios_checks}}</ul>
+  </section>
+
+  <section class="ics-p android" data-bd="android">
+    <h2>Android</h2>
+    <div class="and-body">
+      <figure class="layers" data-bd="android-layers">
+        <div class="layer108"><i class="ic full" style="--s: 200px"></i><i class="g72"></i><canvas class="spill" width="216" height="216"></canvas><i class="g66"></i></div>
+        <figcaption>108 dp layers: {{layer_names}}<small>grey: 72 dp a mask can show · orange: 66 dp safe circle</small></figcaption>
+      </figure>
+      <div class="and-side">
+        <div class="masks">
+          <figure data-bd="android-circle"><i class="ic mid m-circle" style="--s: 64px"></i><figcaption>Circle</figcaption></figure>
+          <figure data-bd="android-squircle"><i class="ic mid m-squircle" style="--s: 64px"></i><figcaption>Squircle</figcaption></figure>
+          <figure data-bd="android-rounded"><i class="ic mid m-rounded" style="--s: 64px"></i><figcaption>Rounded</figcaption></figure>
+          <figure data-bd="android-teardrop"><i class="ic mid m-teardrop" style="--s: 64px"></i><figcaption>Teardrop</figcaption></figure>
+        </div>
+        <div class="extras">
+          <figure class="themed" data-bd="android-themed"><div class="row"><i class="ic themed th-light m-circle" style="--s: 64px"></i><i class="ic themed th-dark m-circle" style="--s: 64px"></i></div><figcaption>Themed (monochrome)</figcaption></figure>
+          <figure class="play" data-bd="play"><i class="ic mid play" style="--s: 96px"></i><figcaption>Play Store 512 × 512</figcaption></figure>
+        </div>
+      </div>
+    </div>
+    <ul class="checks">{{android_checks}}<li id="chk-safe" class="wait">checking fg against the safe circle…</li></ul>
+  </section>
+
+  <section class="ics-p home" data-bd="home">
+    <h2>Home screen, real size</h2>
+    <div class="phones">
+      <figure data-bd="home-ios-light"><div class="hs ios lt"><div class="sb"><b>9:41</b></div><div class="apps">
+        <i class="ph"></i><i class="ph"></i><i class="ph"></i><i class="ph"></i>
+        <i class="ph"></i><span class="app"><i class="ic full sq" style="--s: 60px"></i><b>{{name}}</b></span><i class="ph"></i><i class="ph"></i>
+        <i class="ph"></i><i class="ph"></i><i class="ph"></i><i class="ph"></i></div></div><figcaption>iOS light</figcaption></figure>
+      <figure data-bd="home-ios-dark"><div class="hs ios dk"><div class="sb"><b>9:41</b></div><div class="apps">
+        <i class="ph"></i><i class="ph"></i><i class="ph"></i><i class="ph"></i>
+        <i class="ph"></i><span class="app"><i class="ic dark sq" style="--s: 60px"></i><b>{{name}}</b></span><i class="ph"></i><i class="ph"></i>
+        <i class="ph"></i><i class="ph"></i><i class="ph"></i><i class="ph"></i></div></div><figcaption>iOS dark</figcaption></figure>
+      <figure data-bd="home-android-light"><div class="hs and lt"><div class="sb"><b>12:30</b></div><div class="apps">
+        <i class="ph"></i><i class="ph"></i><i class="ph"></i><i class="ph"></i><i class="ph"></i>
+        <i class="ph"></i><span class="app"><i class="ic mid m-circle" style="--s: 48px"></i><b>{{name}}</b></span><i class="ph"></i><i class="ph"></i><i class="ph"></i>
+        <i class="ph"></i><i class="ph"></i><i class="ph"></i><i class="ph"></i><i class="ph"></i></div></div><figcaption>Android light</figcaption></figure>
+      <figure data-bd="home-android-dark"><div class="hs and dk"><div class="sb"><b>12:30</b></div><div class="apps">
+        <i class="ph"></i><i class="ph"></i><i class="ph"></i><i class="ph"></i><i class="ph"></i>
+        <i class="ph"></i><span class="app"><i class="ic themed th-dark m-circle" style="--s: 48px"></i><b>{{name}}</b></span><i class="ph"></i><i class="ph"></i><i class="ph"></i>
+        <i class="ph"></i><i class="ph"></i><i class="ph"></i><i class="ph"></i><i class="ph"></i></div></div><figcaption>Android dark, themed</figcaption></figure>
+    </div>
+  </section>
+</main>
+<script type="application/json" id="bd-icon">{{json}}</script>
+<script>
+(() => {
+  // fg drawn at 2 px per dp; a pixel past the 66 dp circle (with half a pixel for antialiasing) is painted red on
+  // the 108 dp tile, and the check line says how much spills
+  const out = document.getElementById('chk-safe'), spill = document.querySelector('.ics canvas.spill'), root = document.querySelector('.ics');
+  const say = (state, text) => { out.className = state; out.textContent = text; root.dataset.safe = state; };
+  let fg;
+  try { fg = JSON.parse(document.getElementById('bd-icon').textContent).layers.fg; } catch { fg = null; }
+  const m = /^data:image\/svg\+xml;base64,([A-Za-z0-9+/=]+)$/.exec(fg || '');
+  if (!m) return say('warn', 'fg.svg is not an SVG: no safe-circle check');
+  const S = 216, svg = new DOMParser().parseFromString(new TextDecoder().decode(Uint8Array.from(atob(m[1]), c => c.charCodeAt(0))), 'image/svg+xml').documentElement;
+  svg.setAttribute('width', S); svg.setAttribute('height', S);
+  const bytes = new TextEncoder().encode(new XMLSerializer().serializeToString(svg));
+  let bin = ''; for (const b of bytes) bin += String.fromCharCode(b);
+  const im = new Image();
+  im.onload = () => {
+    const c = document.createElement('canvas'); c.width = c.height = S;
+    const x = c.getContext('2d'); x.drawImage(im, 0, 0, S, S);
+    let px;
+    try { px = x.getImageData(0, 0, S, S).data; } catch { return say('warn', 'this browser can\'t read the layer\'s pixels: the orange guide shows the safe circle'); }
+    const r = 33 / 108 * S + 0.5, k = spill.getContext('2d'), mark = k.createImageData(S, S);
+    let n = 0;
+    for (let y = 0; y < S; y++) for (let x0 = 0; x0 < S; x0++) {
+      const i = (y * S + x0) * 4;
+      if (px[i + 3] > 24 && Math.hypot(x0 + 0.5 - S / 2, y + 0.5 - S / 2) > r) { n++; mark.data[i] = 239; mark.data[i + 1] = 68; mark.data[i + 2] = 68; mark.data[i + 3] = 255; }
+    }
+    k.putImageData(mark, 0, 0);
+    say(n ? 'warn' : 'ok', n ? `fg reaches past the 66 dp safe circle: ${(n / 4).toFixed(0)} dp² outside, red on the 108 dp tile` : 'fg inside the safe circle');
+  };
+  im.onerror = () => say('warn', 'fg.svg did not load: no safe-circle check');
+  im.src = 'data:image/svg+xml;base64,' + btoa(bin);
+})();
+</script>

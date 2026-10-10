@@ -298,6 +298,91 @@ class ScreenEscape(unittest.TestCase):
         self.assert_server_stored_nothing()
 
 
+# A screen with one real link (its "go" button pushes Today) that, once the page puts it in interact mode, forges
+# `nav` messages for 1.5 s: other screens' element names, junk names and a malformed message. Then it reports a tap
+# on "go". The page follows only this screen's own links, so the forgeries move nothing and "go" opens Today.
+FORGED_NAMES = ["start-workout", "tab-workouts", "tab-activity", "tab-profile", "submit", "passkey", "workout-run",
+                "open-settings", "back", "../today", "a b", "x" * 300, "", None, 7]
+FORGER_SCREEN = """<main class="screen safe stack gap-4" data-bd="forger"><h1 class="title">Acme forged taps</h1>
+<button class="btn primary" data-bd="go" data-nav="today" data-nav-label="Tap Go">Go</button></main>
+<script>
+let started = false;
+addEventListener('message', e => {
+  if (started || !e.data || e.data.bd !== 'mode' || e.data.mode !== 'interact') return;
+  started = true;
+  const t0 = Date.now(), forged = %s;
+  const tick = setInterval(() => {
+    for (const n of forged) parent.postMessage({ bd: 'nav', names: [n] }, '*');
+    parent.postMessage({ bd: 'nav', names: forged }, '*');
+    parent.postMessage({ bd: 'nav', name: 'tab-workouts' }, '*');
+    parent.postMessage({ bd: 'nav', names: 'start-workout' }, '*');
+    if (Date.now() - t0 > 1500) { clearInterval(tick); parent.postMessage({ bd: 'nav', names: ['go'] }, '*'); }
+  }, 100);
+});
+</script>
+""" % json.dumps(FORGED_NAMES)
+
+
+@unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")
+class ForgedNav(unittest.TestCase):
+    """A screen posting `nav` messages for names that aren't its links moves neither Present nor the board."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.profile = Path(tempfile.mkdtemp(prefix="bluedoc-chrome-"))
+        cls.browser = Browser(cls.profile)
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        cls.browser.close()
+        shutil.rmtree(cls.profile, ignore_errors=True)
+
+    def setUp(self) -> None:
+        self.tmp = TempHome()
+        self.addCleanup(self.tmp.cleanup)
+        docs = self.tmp.copy_examples()
+        doc = docs / "acme-fit-design.bluedoc.json"
+        data = json.loads(doc.read_text(encoding="utf-8"))
+        board = next(b for b in build.all_blocks(data) if b.get("type") == "board")
+        board["artboards"].insert(0, {"id": "forger", "title": "Forged taps", "device": "phone", "fidelity": "wireframe"})
+        doc.write_text(json.dumps(data, indent=1) + "\n", encoding="utf-8")
+        (docs / "acme-fit-design.design" / "forger.html").write_text(FORGER_SCREEN, encoding="utf-8")
+        self.assertEqual(self.tmp.run("serve.py", "add", docs).returncode, 0)
+        self.server = Server(self.tmp)
+        self.server.start()
+        self.addCleanup(self.server.stop)
+        status, raw = self.server.req("POST", "/__bluedoc/unlock", b"{}", {"Content-Type": "application/json", "X-Bluedoc": "1"})
+        self.assertEqual(status, 200, raw)
+        self.browser.errors.clear()
+        self.t = Tab(self.browser)
+        self.t.go(f"http://{self.server.host}{self.server.url_for(doc)}?key={json.loads(raw)['token']}")
+        self.t.wait_for("BP.board().links.some(l => l.key === 'link:forger/go')", 15)
+
+    def test_present_follows_only_the_screens_own_links(self) -> None:
+        t = self.t
+        self.assertEqual(t.ev("BP.board({present: 'forger'}).presented"), {"screen": "forger", "stack": ["forger"]})
+        t.wait_for("!!document.querySelector('.bd-pres iframe')")
+        # the screen forges for 1.5 s once its frame is in interact mode; halfway, nothing has moved
+        time.sleep(1.0)
+        self.assertEqual(t.ev("BP.board().presented"), {"screen": "forger", "stack": ["forger"]})
+        # its real link still works, from the screen it never left
+        t.wait_for("BP.board().presented.screen === 'today'", 10)
+        self.assertEqual(t.ev("BP.board().presented"), {"screen": "today", "stack": ["forger", "today"]})
+        self.assertEqual(self.browser.errors, [])
+
+    def test_interact_pans_only_through_the_screens_own_links(self) -> None:
+        t = self.t
+        t.ev("BP.board({focus: 'forger'})")
+        t.wait_for("BP.board().artboards.find(a => a.id === 'forger').ready", 15)
+        t.ev("document.dispatchEvent(new KeyboardEvent('keydown', {key: 'i', bubbles: true}))")
+        self.assertEqual(t.ev("BP.board().mode"), "interact")
+        time.sleep(1.0)
+        self.assertEqual(t.ev("BP.board().selected"), "forger")
+        t.wait_for("BP.board().selected === 'today'", 10)
+        self.assertFalse(t.ev("BP.board().present"))
+        self.assertEqual(self.browser.errors, [])
+
+
 def settled(t: Tab, expr: str):
     """expr in the tab, or None while a navigation has no document to evaluate it in yet."""
     try:

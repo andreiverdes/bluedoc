@@ -2,7 +2,7 @@
 
 Lookup reference for every field and command. Grep for a heading, never read the file whole: `grep -n -A25 '^## Diff' references/schema.md`. How to lay out each doc type lives in `types/<type>.md`.
 
-Headings: `## Document` (incl. `hero`) · `## Contracts` · `## Section` · `## Blocks` (`### Inline markdown`) · `## Checklist` (`### Reader comments and replies`) · `## Diff` (`### Diff reference`, `### Embedded diff`, `### gitdiff.py`) · `## Plan blocks` (`### Steps`, `### Files`, `### Media`, `### Compare`) · `## Board` (`### Artboard`, `### Devices`, `### Screen files`) · `## Revisions` · `## Page layout` · `## Canvas` (`### Node`, `### Semantic zoom`, `### Edge`, `### Flow`) · `## Annotations` (the key grammar; `### Bottom tray`) · `## Plans` (its approval Markdown has `## Decisions` and `## Notes with the approval`) · `## build.py` (`### patch`) · `## serve.py` (`### Reader state`) · `## Automation API`
+Headings: `## Document` (incl. `hero`) · `## Contracts` · `## Section` · `## Blocks` (`### Inline markdown`) · `## Checklist` (`### Reader comments and replies`) · `## Diff` (`### Diff reference`, `### Embedded diff`, `### gitdiff.py`) · `## Plan blocks` (`### Steps`, `### Files`, `### Media`, `### Compare`) · `## Board` (`### Artboard`, `### Devices`, `### Screen files`, `### Links`, `### Icons`) · `## Revisions` · `## Page layout` · `## Canvas` (`### Node`, `### Semantic zoom`, `### Edge`, `### Flow`) · `## Annotations` (the key grammar; `### Bottom tray`) · `## Plans` (its approval Markdown has `## Decisions` and `## Notes with the approval`) · `## build.py` (`### patch`) · `## serve.py` (`### Reader state`) · `## Automation API`
 
 ## Document
 
@@ -288,7 +288,7 @@ Each side needs one of `md`, `code` or `src` and shows whichever is present. The
 A design doc (`meta.type: "design"`) has a brief section and one `board` block. The page shows the board full width, the brief in its left panel.
 
 ```json
-{ "type": "board", "id": "main", "targets": ["watch", "mobile", "web"], "framework": "plain",
+{ "type": "board", "id": "main", "targets": ["watch", "mobile", "web"], "framework": "plain", "entry": ["login"], "layout": "flow",
   "frameworks": [ { "id": "acme-web", "label": "Acme web CSS", "files": ["../../web/dist/app.css"] },
                   { "id": "tailwind-heroui", "label": "Tailwind + HeroUI", "store": "tailwind-heroui" } ],
   "themes": [ { "id": "indigo", "label": "Indigo", "tokens": { "accent": "#4f46e5", "bg": "#f8fafc", "fg": "#0f172a" } } ],
@@ -305,6 +305,8 @@ A design doc (`meta.type: "design"`) has a brief section and one `board` block. 
 | `frameworks[]` | The reader's own: `{id, label, files}` with `.css`/`.js`/`.mjs` paths relative to the doc's folder (no URLs), or `{id, label, store}` naming a copy made by `serve.py add-framework <store> <path\|url>` in `~/.bluedoc/frameworks/<store>/`. A missing file or store is a build warning: those screens show the plain kit with a notice. |
 | `themes[]` | `{id, label, tokens}`. Each token `k` (`^[a-z][a-z0-9-]*$`) becomes the CSS variable `--k` in every frame; values are CSS strings without `; { } < > \` or `url()`. |
 | `motion` | `fast`, `base`, `slow`, `ease`: the CSS variables `--dur-fast`, `--dur-base`, `--dur-slow`, `--ease`. |
+| `entry` | Artboard ids a flow starts from: where **Present** starts with nothing selected, and what [reach](#links) is counted from. |
+| `layout` | `rows` (default) or `flow`: unplaced screens the entries reach go in columns by link depth (see `x`, `y`). |
 
 **The brief** is a section with the checklist `brief`. Its decision item `framework` offers framework ids (`plain`, `horizon`, `frameworks[].id`); its item `theme` offers exactly the `themes[].id`s. The build checks both. Other items (targets, motion, scope) are free.
 
@@ -316,11 +318,12 @@ A design doc (`meta.type: "design"`) has a brief section and one `board` block. 
 | `title` | Required. Shown above the frame. |
 | `fidelity` | Required. `sketch`, `wireframe` or `hifi`. |
 | `device` | One of the [devices](#devices); or leave it out and give `w` and `h` (CSS px, no frame). |
-| `x`, `y` | Board px, both or neither. Without them the board places it: a `slide` goes 280 px below the previous unplaced slide, in one column (x 0 on a board of only slides, else 80 px right of every other artboard); any other artboard's row is its `variantOf` source's `y` (if listed before it), else 0, and it goes 80 px right of the rightmost artboard already in that row. |
+| `x`, `y` | Board px, both or neither. Without them the board places it: a `slide` goes 280 px below the previous unplaced slide, in one column (x 0 on a board of only slides, else 80 px right of every other artboard); any other artboard's row is its `variantOf` source's `y` (if listed before it), else 0, and it goes 80 px right of the rightmost artboard already in that row. With `layout: "flow"`, the unplaced screens the entries reach come first: breadth-first from `entry` over every link but `back` (a variant joins its source, right under it), in columns by depth 200 px apart, stacked 120 px apart from y 0; row 0 of the rest moves 120 px below the lowest of them. |
 | `variantOf` | Another artboard's id: a variant of that screen. |
 | `framework` | Overrides the board's `framework`. |
 | `src` | The screen file, relative to the doc: an `.html` file in a `<name>.design/` folder. Default `<stem>.design/<id>.html`; leave it out. |
 | `notes` | md, at most 2 KB (an error above): the speaker notes of a slide. **Present** shows them under it (`N` toggles). |
+| `icon` | `device: "icons"` only: `{bg, name}`. `bg`: the background colour, `#rgb` or `#rrggbb` (else a `bg.svg` layer); `name`: the label under the icon on the home screens, ≤ 30 characters. See [Icons](#icons). |
 
 ### Devices
 
@@ -333,6 +336,7 @@ A design doc (`meta.type: "design"`) has a brief section and one `board` block. 
 | `desktop` | 1280 × 800 | 32, 0, 0, 0 (title bar) |
 | `browser` | 1440 × 900 | 72, 0, 0, 0 (tab strip, address bar) |
 | `slide` | 1920 × 1080 | none; a thin frame, no device chrome. Other aspect ratios: `w` and `h` |
+| `icons` | 1280 × 860 | none; the [icon sheet](#icons), built from layers instead of a screen file |
 
 A board with `slide` artboards is a deck: **Present** shows them full-window, scaled to fit, in reading order (rows top to bottom, each left to right, as the board places them); ← → step, `Esc` leaves. Kit slide classes: `references/kits.md` `## Slides`.
 
@@ -342,11 +346,48 @@ Each artboard's HTML is a **body fragment** in `<stem>.design/<id>.html` beside 
 
 The build checks every screen file. **Errors:** a missing file; a network URL (`http:`, `https:`, `ws:`, `ftp:` or `//host` in a URL attribute, a `style`, an `on…` handler, a `<style>` or a `<script>`); `<base>`, `<iframe>`, `<frame>`, `<object>`, `<embed>`, `<meta http-equiv>`, `<form action>`; a whole document (`<!doctype>`, `<html>`, `<head>`, `<body>`). **Warnings:** a file over 24 KB; a file without any `data-bd`. Text content and `placeholder`s may show URLs.
 
-An approval covers the screen files too: editing one changes the doc's hash, so the page asks for approval again.
+An approval covers the screen files and icon layers too: editing one changes the doc's hash, so the page asks for approval again.
+
+### Links
+
+A link is an element's `data-nav`: tapping it leads to another artboard. The build reads every screen's links into one list, `[{from, el, to, kind, label?, edge?}]` (`el`: the element's `data-bd`; `to`: null for `back`; `edge`: a gesture link), in board then document order. Each revision records it; the board draws its arrows, **Present** follows its taps, compare marks its changes.
+
+```html
+<button data-bd="tab-activity" data-nav="tab:activity">Activity</button>
+<button data-bd="start" data-nav="workout" data-nav-label="Tap Start workout">Start workout</button>
+<i hidden data-bd="swipe-left" data-nav="tab:activity" data-nav-label="Swipe left"></i>
+```
+
+| `data-nav` | Arrow | In Present, a tap… |
+|---|---|---|
+| `workout` or `push:workout` | solid | slides the target in; Back returns |
+| `modal:settings` | dashed | raises the target from the bottom; Back closes it |
+| `tab:activity` | dotted | swaps in place; the back stack restarts at that tab |
+| `replace:today` | solid, a bar at its start | swaps in place and clears the stack (sign-in, onboarding) |
+| `back` | thin, the selected screen's only | pops the stack |
+
+`data-nav-label` names the action ("Tap Start workout", "After 2 s"): a pill on the arrow, a hint in Present. A **gesture link** has nothing to tap: a `hidden` named element with a label; its arrow starts at the screen's border. A tab bar's current tab has no `data-nav`.
+
+**Errors:** a `data-nav` that names no artboard; an unknown kind or `back:<target>`; `data-nav` on an element without a `data-bd` unique in its file; `data-nav-label` without `data-nav`; an `entry` that names no artboard; a `layout` other than `rows` or `flow`. **Warnings:** a link to its own screen; a hidden link without a label; a label over 40 characters; links but no `entry`; a screen no entry reaches (breadth-first over every kind but `back`). Reach skips entries, variants, slides, icons and devices with no links.
+
+### Icons
+
+An artboard with `device: "icons"` is an app icon: SVG layers in `<stem>.design/<id>/` instead of a screen file. The server composes them into the icon sheet (every platform's mask, variant and real size); the page exports the iOS and Android PNG sets to `<stem>.icons/<id>/`. `build.py new design --icons` scaffolds one.
+
+| Layer | Meaning |
+|---|---|
+| `fg.svg` | Required. The logo on a transparent 108 × 108 layer (`viewBox="0 0 108 108"`; any square works); keep it inside the middle 66 dp circle. |
+| `bg.svg` | The background, when `icon.bg` (one colour) isn't enough. |
+| `mono.svg` | The mark in one colour: Android 13 themed and iOS tinted icons. |
+| `ios-dark.svg`, `ios-tinted.svg`, `play.svg` | Optional overrides of the iOS dark and tinted icons and the Play Store icon. |
+
+**Errors:** no `fg.svg`; a layer that isn't XML, has a DOCTYPE, or has no square `viewBox`; `<script>`, `<foreignObject>`, an `on…` attribute or a network URL in a layer; `icon` on another device; an `icon.bg` that isn't a hex colour. **Warnings:** `fg.svg` drawn outside the 66 dp safe circle (checked on shape extremes and path points, transforms applied; keep a margin); no `mono.svg`; no background (`icon.bg` or `bg.svg`); `<text>` (fonts don't load in an image: convert to paths). Each layer joins the revision as `<id>/<file>`, so editing one marks the icon Changed and asks for approval again. `patch el:<id>/<tile>` (a sheet tile, e.g. `ios-dark`) and `artboard:<id>` print the layer folder and its layers.
 
 ## Revisions
 
 Every `build.py doc.bluedoc.json` run records the document in `doc.bluedoc.history.json` under its `meta.rev`: a new `rev` appends a revision, the same `rev` replaces the last one. A server render shows the doc as the latest revision without writing the history file. A `rev` that is already an earlier revision fails the build (and shows as an error page). No `meta.rev`: no history. The history file stores each revision's header and section fields once per revision and each block once across all revisions (by content hash); the page embeds the revisions other than the current one, with blocks the current one still has as references, so a page with ten small edits grows by roughly the edited blocks. A design doc's revision also maps each artboard to its screen file's hash (`screens`), and the file's text sits once in the history's `html` pool; editing a screen under the same `rev` is an edit in place. The page gets only the hashes and loads an old screen from the server with `?rev=`.
+
+A design revision also lists the board's links (`links`, see [Links](#links); none: no key) and holds each icon layer in `screens` as `<id>/<file>`. The page gets every revision's links, the current one's read fresh from the files, so an old revision draws its arrows without its HTML and `?diff=` marks links New, Removed or Changed.
 
 | URL (the doc's server URL, or a `-o` file) | Shows |
 |---|---|
@@ -433,6 +474,8 @@ The tray of keys at the bottom of the current revision has four modes: **View** 
 
 Each comment in the Markdown carries its `id` after its key (a general one: `- (<id>) <note>`). Once a revision addresses it, list the id in that revision's `resolves` (`build.py patch … --resolves <id>`). When the page loads, each **Open** comment whose id is in the `resolves` of a revision newer than the comment's `rev` (up to the current one) becomes **Resolved** with `resolvedBy: "agent"`, `resolvedRev` (the newest such revision) and `resolvedAt`, saved like any reader change; its card reads "Resolved by the agent in rev X" and keeps **Reopen**. A reopened comment keeps `resolvedRev`, so only a revision after that one resolves it again. Pending comments are never resolved this way, and ids that match no comment are ignored. The revision list shows "Resolves N comments" under a revision that has `resolves`.
 
+**Board drafts** (design pages): a link edit (Link mode, `L`, or an arrow's menu) is an annotation of type `link` with `link: {op: add|set|move|delete, from, el, to, kind, label?, edge?, base}` (`base`: the link as the rev has it, or null), keyed `link:<screen>/<el>`; moving screens or **Tidy up** is one annotation of type `layout` with `layout: {positions: {"<artboard>": [x, y]}}`, keyed `layout:<board>`. Drafts live in reader state, so they survive reloads, and the board and **Present** follow them at once. The reply Markdown lists them under `## Board drafts`, then one `sh` block with a ready `build.py patch` command each (the first bumps, the rest `--no-bump`; a moved link is a `--delete` on the old key, then `--set` on the new). Run them as they are. On load, a draft the current rev's links or positions already match becomes **Resolved** ("Applied in rev X"), as does one a rev lists in `resolves`; one a newer rev changed some other way is **Stale**.
+
 The key grammar. This table is the one list of keys: the annotator writes them into change requests and `build.py patch` takes them as is.
 
 | Key | Points at (JSON) |
@@ -455,6 +498,8 @@ The key grammar. This table is the one list of keys: the annotator writes them i
 | `artboard:<id>` | an artboard of the `board` (its screen file is `<stem>.design/<id>.html`) |
 | `el:<id>/<path>` | an element in that artboard's screen file: `<path>` is `data-bd` names joined by `/` (`el:login/form/submit`), else a CSS path (`el:login/[data-bd="login"]>h1:nth-of-type(1)`). `patch` prints the file and the selector |
 | `frame:<device>@<x>,<y>` | a requested empty frame at board px `x`,`y`; `<device>` is a device or `<w>x<h>`. `patch` appends an artboard there (`frame-<n>`, or `--set id=…`) and writes a wireframe stub screen file |
+| `link:<id>/<element>` | the link on an element of that artboard's screen file: `<element>` is its `data-bd` name (the link list's `el`) or a CSS path as for `el:`; a name no element has (or none: `link:<id>/`) is a new gesture link. Without an option `patch` prints the file, the selector and the current `data-nav` and label; `--set to=… kind=… label=…` or `--delete` rewrite that start tag in place |
+| `layout:<boardId>` | the board's artboard positions: `patch layout:main --json '{"<artboard>": [x, y], …}'` sets `x`, `y` (`null` unsets: the board places it). The page sends moves and **Tidy up** as one `layout:` draft with this command |
 
 `<blockPath>` is `<sectionId>/<i>`, or `<checklist>/<item>/<k>` for a block inside a checklist item, as in `block:` and `row:`. `<i>`, `<k>` and `<r>` are 0-based.
 
@@ -553,6 +598,8 @@ By default the rev bumps (1→2, A→B, v1→v2), `meta.date` becomes today, `ch
 
 Screen keys: `artboard:<id>` or `el:<id>/<path>` with no `--set`, `--json` or `--html` prints the screen file and the element's selector and writes nothing. After you edit that file, the same key with only `--change` records it as the next rev; the history keeps the old text under the old rev. `frame:` needs no option.
 
+Link keys: `link:<id>/<element>` takes `--set to=<artboard>`, `--set kind=push|modal|tab|replace|back` and `--set label="<text>"` (empty or `null` removes the label), or `--delete`. Each rewrites only that element's start tag (located by `html.parser` offsets): every other byte of the file stays. A new link needs `to=` (or `kind=back`); an element without `data-bd` is named first, from the label, else its text; a name no element has appends `<i hidden data-bd=… data-nav=… data-nav-label=…></i>` inside the screen's root; `--delete` on such a hidden, empty element removes it. The build lints the result and puts the file back on an error.
+
 ```sh
 build.py patch doc.json item:t412/tier-boundary --set choice=fix --change "#412 tier-boundary: Fix in PR, as picked."
 build.py patch doc.json step:steps/0/table --set status=done --no-bump
@@ -560,6 +607,10 @@ build.py patch doc.json block:risks/0 --append '["Cache stampede", "Low", "High"
 build.py patch doc.json el:login/submit                                  # prints acme-fit-design.design/login.html  [data-bd="submit"]
 build.py patch doc.json el:login/submit --change "Sign in: the button says Continue."
 build.py patch doc.json 'frame:phone@2400,0' --set id=settings --set title=Settings
+build.py patch doc.json link:today/tab-workouts                          # prints today.html  [data-bd="tab-workouts"]  data-nav="tab:workouts"
+build.py patch doc.json link:workout/gear --set to=settings --set kind=modal --set label="Tap the gear" --resolves c8a1 --change "Settings opens from the gear."
+build.py patch doc.json link:profile/settings --delete --resolves c8a2 --no-bump
+build.py patch doc.json layout:main --json '{"settings": [1800, 0], "app-icon": [1180, 1100]}' --resolves c8a3 --no-bump
 ```
 
 ## serve.py

@@ -1,0 +1,102 @@
+/* bluedoc icon sheet: an `icons` artboard (1280 x 860) drawn from its layers. icon-sheet.html sets on .ics:
+   --fg, --bgl (bg.svg or none), --bgc (icon.bg or transparent), --dark (ios-dark.svg or fg), --mono (mono.svg or fg),
+   --tint (ios-tinted.svg or fg) and --play (play.svg or none), each a url(data:…); and the classes no-mono, tint-art
+   (tinted drawn from art in gray, not from mono's shape) and has-play. A tile is an .ic of size --s; its mask is a
+   class. The masks are review approximations, not the systems' exact paths. */
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { background: #eef1f6; color: #1d2433; font: 13px/1.35 system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased; }
+h1, h2, p, figure, ul { margin: 0; padding: 0; }
+ul { list-style: none; }
+
+.ics { --dk: linear-gradient(160deg, #3b3d44, #141519); --line: #dde2ea; --sub: #6b7385;
+  width: var(--screen-w, 1280px); height: var(--screen-h, 860px); padding: 22px 24px 24px; overflow: hidden;
+  display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: auto 392px 1fr; gap: 16px; }
+.ics-h { grid-column: 1 / -1; display: flex; align-items: flex-end; justify-content: space-between; }
+.ics-h h1 { font-size: 22px; line-height: 1.2; font-weight: 700; letter-spacing: -.01em; }
+.ics-h p { margin-top: 4px; color: var(--sub); }
+.ics-h code { font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; color: #3b4458; }
+.ics-p { position: relative; background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 16px 20px; min-height: 0; }
+.ics-p h2 { font-size: 15px; font-weight: 650; margin-bottom: 14px; }
+.ics-p.home { grid-column: 1 / -1; }
+figure { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; }
+figcaption { font-size: 12px; color: #4a5263; }
+figcaption small { display: block; margin-top: 2px; font-size: 11px; color: var(--sub); }
+.row { display: flex; align-items: flex-end; gap: 16px; }
+.checks { position: absolute; left: 20px; right: 20px; bottom: 14px; display: flex; flex-wrap: wrap; gap: 4px 14px; font-weight: 600; font-size: 12.5px; }
+.checks li::before { content: "✓ "; }
+.checks li.ok { color: #16833f; }
+.checks li.warn { color: #b45309; }
+.checks li.warn::before { content: "⚠ "; }
+.checks li.wait { color: var(--sub); font-weight: 500; }
+.checks li.wait::before { content: ""; }
+
+/* ---------- tiles: a layer stack at size --s ---------- */
+.ic { position: relative; display: block; flex: none; width: var(--s); height: var(--s); overflow: hidden; }
+.ic.full { background: var(--fg) center / 100% 100% no-repeat, var(--bgl) center / 100% 100% no-repeat, var(--bgc); }
+.ic.mid { background: var(--fg) center / 150% 150% no-repeat, var(--bgl) center / 150% 150% no-repeat, var(--bgc); }   /* the middle 72 of 108 dp */
+.ic.dark { background: var(--dark) center / 100% 100% no-repeat, var(--dk); }
+.ic.tinted { background: var(--dk); }
+.ic.tinted::after, .ic.themed::after { content: ""; position: absolute; inset: 0; }
+.ic.tinted::after { background: #c9cacf; -webkit-mask: var(--mono) center / 100% 100% no-repeat; mask: var(--mono) center / 100% 100% no-repeat; }
+.ics.tint-art .ic.tinted::after { -webkit-mask: none; mask: none; background: var(--tint) center / 100% 100% no-repeat; filter: grayscale(1) brightness(1.15); }
+.ic.themed.th-light { background: #d7e8e3; }
+.ic.themed.th-dark { background: #1d2a27; }
+.ic.themed::after { -webkit-mask: var(--mono) center / 150% 150% no-repeat; mask: var(--mono) center / 150% 150% no-repeat; }
+.ic.themed.th-light::after { background: #1f4a42; }
+.ic.themed.th-dark::after { background: #bfe3d9; }
+.ics.no-mono .ic.themed { background: var(--fg) center / 150% 150% no-repeat, var(--bgl) center / 150% 150% no-repeat, var(--bgc); }   /* Android shows the colour icon */
+.ics.no-mono .ic.themed::after { content: none; }
+.ics.has-play .ic.play { background: var(--play) center / 100% 100% no-repeat; }
+.ic.play { border-radius: 20%; }   /* Play rounds the square it gets */
+
+/* masks */
+.sq { border-radius: 22.4%; }   /* iOS's continuous corner, approximately */
+.m-circle { border-radius: 50%; }
+.m-squircle { border-radius: 38%; }
+.m-rounded { border-radius: 18%; }
+.m-teardrop { border-radius: 50% 50% 18% 50%; }
+
+/* ---------- iOS ---------- */
+.ios-body { display: flex; gap: 22px; align-items: flex-start; }
+.master .frame { padding: 0; outline: 1.5px dashed #b8c0cc; outline-offset: 0; }
+.ios-side { display: flex; flex-direction: column; gap: 22px; }
+.looks { display: flex; }
+.look .card { display: grid; place-items: center; width: 100px; height: 100px; }
+.look.on-light .card { background: #dce4ee; border-radius: 12px 0 0 12px; }
+.look.on-dark .card { background: #1c1d22; }
+.look[data-bd="ios-tinted"] .card { border-radius: 0 12px 12px 0; }
+.sizes { align-items: flex-start; text-align: left; }
+
+/* ---------- Android ---------- */
+.and-body { display: flex; gap: 24px; align-items: flex-start; }
+.layer108 { position: relative; width: 200px; height: 200px; }
+.layer108 > * { position: absolute; }
+.layer108 .g72 { inset: 16.667%; border: 1.5px dashed #c3c8d1; }
+.layer108 .g66 { inset: 19.444%; border: 2px dashed #f2711c; border-radius: 50%; }
+.layer108 .spill { inset: 0; width: 100%; height: 100%; }
+.layers { align-items: flex-start; text-align: left; }
+.and-side { display: flex; flex-direction: column; gap: 18px; }
+.masks { display: flex; gap: 12px; }
+.masks figure { width: 72px; }
+.extras { display: flex; gap: 22px; align-items: flex-end; }
+
+/* ---------- home screens: icons at their real sizes, so a phone shows its top-left part ---------- */
+.phones { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; justify-items: center; }
+.hs { position: relative; width: 272px; height: 246px; overflow: hidden; border: 1.5px solid #c9d0da; border-bottom: 0; border-radius: 30px 30px 0 0; }
+.hs::after { content: ""; position: absolute; inset: auto 0 0 0; height: 40px; background: linear-gradient(transparent, var(--hs-bg)); }   /* the screen goes on */
+.hs.ios.lt { --hs-bg: #cbd6e4; --ph: #a7b1bd; --tx: #1d2433; background: var(--hs-bg); }
+.hs.ios.dk { --hs-bg: #101114; --ph: #3c3f46; --tx: #e8e9ec; background: var(--hs-bg); }
+.hs.and.lt { --hs-bg: #e3ece8; --ph: #b9c3bf; --tx: #1d2a27; background: var(--hs-bg); }
+.hs.and.dk { --hs-bg: #141a18; --ph: #3a4441; --tx: #dfe8e4; background: var(--hs-bg); }
+.hs .sb { height: 44px; padding: 14px 26px 0; font-size: 13px; color: var(--tx); }
+.hs .apps { display: grid; justify-content: start; }
+.hs.ios .apps { grid-template-columns: repeat(4, 60px); gap: 26px 27px; padding: 6px 0 0 27px; }   /* 390 pt wide: 4 icons, 27 pt apart */
+.hs.and .apps { grid-template-columns: repeat(5, 48px); gap: 30px 32px; padding: 8px 0 0 22px; }   /* 412 dp wide: 5 icons */
+.hs .ph { display: block; background: var(--ph); }
+.hs.ios .ph { width: 60px; height: 60px; border-radius: 22.4%; }
+.hs.and .ph { width: 48px; height: 48px; border-radius: 50%; }
+.hs .app { position: relative; display: block; }
+.hs .app b { position: absolute; left: 50%; top: 100%; margin-top: 4px; transform: translateX(-50%); max-width: 80px; overflow: hidden;
+  font-size: 11px; font-weight: 500; color: var(--tx); white-space: nowrap; text-overflow: ellipsis; }

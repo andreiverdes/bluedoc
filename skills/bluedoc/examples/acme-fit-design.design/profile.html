@@ -1,0 +1,32 @@
+<style>
+  .pro-avatar { width: 72px; height: 72px; font-size: 26px; }
+</style>
+<main class="screen safe stack gap-4" data-bd="profile">
+  <header class="row between" data-bd="head">
+    <h1 class="title">Profile</h1>
+    <button class="btn ghost icon" data-bd="open-settings" data-nav="modal:settings" data-nav-label="Tap the gear" aria-label="Settings"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg></button>
+  </header>
+  <section class="row gap-4" data-bd="who">
+    <span class="avatar pro-avatar">AF</span>
+    <div class="stack gap-1">
+      <strong class="headline">Acme Fit member</strong>
+      <span class="caption muted">you@acme.test · since March</span>
+    </div>
+  </section>
+  <section class="grid cols-3 gap-3" data-bd="totals">
+    <div class="card kpi"><span class="label">Workouts</span><span class="num">128</span></div>
+    <div class="card kpi"><span class="label">Streak</span><span class="num">12 d</span></div>
+    <div class="card kpi"><span class="label">Best day</span><span class="num">14.2k</span></div>
+  </section>
+  <section class="card list" data-bd="more">
+    <div class="item between" data-bd="goals"><span>Daily goal</span><span class="muted">10,000 steps ›</span></div>
+    <div class="item between" data-bd="devices"><span>Devices</span><span class="muted">Acme Watch ›</span></div>
+    <div class="item between" data-bd="friends"><span>Friends</span><span class="muted">8 ›</span></div>
+  </section>
+  <nav class="tabbar" data-bd="tabs">
+    <a class="tab" data-bd="tab-today" data-nav="tab:today"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/></svg>Today</a>
+    <a class="tab" data-bd="tab-activity" data-nav="tab:activity"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 19v-8M12 19V5M19 19v-6"/></svg>Activity</a>
+    <a class="tab" data-bd="tab-workouts" data-nav="tab:workouts"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 9v6M8 7v10M16 7v10M20 9v6M8 12h8"/></svg>Workouts</a>
+    <a class="tab active" data-bd="tab-profile"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>Profile</a>
+  </nav>
+</main>

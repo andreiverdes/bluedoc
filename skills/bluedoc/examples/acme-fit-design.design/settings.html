@@ -1,0 +1,26 @@
+<main class="screen safe stack gap-4" data-bd="settings">
+  <header class="row between" data-bd="head">
+    <h1 class="title">Settings</h1>
+    <button class="btn ghost sm" data-bd="done" data-nav="back" data-nav-label="Tap Done">Done</button>
+  </header>
+  <section class="stack gap-2" data-bd="notifications">
+    <span class="label">Notifications</span>
+    <div class="card list">
+      <label class="item between" data-bd="reminders"><span>Goal reminders</span><input class="switch" type="checkbox" checked></label>
+      <label class="item between" data-bd="heart-alerts"><span>Heart rate alerts</span><input class="switch" type="checkbox" checked></label>
+      <label class="item between" data-bd="weekly"><span>Weekly summary</span><input class="switch" type="checkbox"></label>
+    </div>
+  </section>
+  <section class="stack gap-2" data-bd="units">
+    <span class="label">Units</span>
+    <div class="row gap-2"><span class="chip active">Kilometres</span><span class="chip">Miles</span></div>
+  </section>
+  <section class="stack gap-2" data-bd="account">
+    <span class="label">Account</span>
+    <div class="card list">
+      <div class="item between" data-bd="passkeys"><span>Passkeys</span><span class="muted">1 ›</span></div>
+      <div class="item between" data-bd="privacy"><span>Privacy</span><span class="muted">›</span></div>
+    </div>
+  </section>
+  <button class="btn danger block" data-bd="sign-out">Sign out</button>
+</main>
