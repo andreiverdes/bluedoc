@@ -1384,6 +1384,10 @@ html:not(.bd-lp-open) .bd-rh-left, html:not(.bd-sp-dock) .bd-rh-right { display:
 .bd-ab-t .cmp { display: inline-grid; place-items: center; width: 1.9em; height: 1.9em; padding: 0; border: 0; border-radius: .5em; color: var(--accent-fg); background: var(--accent-tint); cursor: pointer; }
 .bd-ab-t .cmp[hidden] { display: none; }
 .bd-ab-t .cmp .bd-ic { width: 1.1em; height: 1.1em; }
+/* ---- icon export (IconKit) ---- */
+.bd-ab-t .ixp { height: 1.9em; padding: 0 .75em; border: 0; border-radius: .5em; font: inherit; font-weight: 600; color: var(--accent-fg); background: var(--accent-tint); cursor: pointer; }
+.bd-ab-t .ixp:disabled { cursor: progress; opacity: .7; }
+/* ---- end icon export ---- */
 i.warn { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--warn); box-shadow: 0 0 0 3px color-mix(in oklch, var(--warn) 25%, transparent); }
 .bd-ab-t i.warn { width: .65em; height: .65em; }
 i.warn[hidden] { display: none; }
@@ -1403,7 +1407,43 @@ i.warn[hidden] { display: none; }
 .bd-ab.ghost { opacity: .6; }
 .bd-ab.ghost .bd-ab-scr { outline: calc(2px / var(--k)) dashed var(--risk); }
 .bd-ab-fr { position: absolute; left: 0; top: 0; display: block; border: 0; background: #fff; pointer-events: none; }
-.bd-board:is([data-m="interact"], [data-m="point"], [data-m="select"]) .bd-ab-fr, :is(.bd-pres, .bd-cmpv) .bd-ab-fr { pointer-events: auto; }
+.bd-board:is([data-m="interact"], [data-m="point"], [data-m="select"], [data-m="link"]) .bd-ab-fr, :is(.bd-pres, .bd-cmpv) .bd-ab-fr { pointer-events: auto; }
+/* links: connectors over the board, faint at rest; the selected (or hovered) screen's reach at full strength, the
+   other screens dimmed. Widths are in screen px (÷ --k), so arrows read the same at every zoom. */
+.bd-ab { transition: opacity .15s var(--ease); }
+.bd-ab.dim { opacity: .35; }
+.bd-ab.tgt .bd-ab-scr { outline: calc(2px / var(--k)) solid var(--accent); outline-offset: calc(var(--bz, 0px) + 4px / var(--k)); }
+.bd-ab-t .lk { font-weight: 500; color: var(--accent-fg); }
+.bd-ab-t .rch { padding: 0 .5em; border-radius: .45em; background: var(--accent-tint); color: var(--accent-fg); font-variant-numeric: tabular-nums; }
+.bd-ab-was { position: absolute; border: calc(1.5px / var(--k)) dashed var(--warn); border-radius: 6px; pointer-events: none; }
+.bd-lnks { position: absolute; left: 0; top: 0; width: 1px; height: 1px; overflow: visible; pointer-events: none; }
+.bd-lnks.off, .bd-lnk-lbls.off { display: none; }
+.bd-lnk .ln { fill: none; stroke: var(--fg-subtle); stroke-width: calc(1.5px / var(--k)); stroke-linejoin: round; opacity: .45; }
+.bd-lnk .hit { fill: none; stroke: transparent; stroke-width: calc(14px / var(--k)); pointer-events: stroke; cursor: pointer; }
+.bd-board:is([data-m="interact"], [data-m="select"], [data-m="draw"], [data-m="frame"]) .bd-lnk :is(.hit, .bd-lnk-dot) { pointer-events: none; }
+.bd-lnk.k-modal .ln { stroke-dasharray: calc(7px / var(--k)) calc(4px / var(--k)); }
+.bd-lnk.k-tab .ln { stroke-dasharray: 0 calc(5px / var(--k)); stroke-linecap: round; }
+.bd-lnk.dim .ln { opacity: .2; }
+.bd-lnk:is(.out, .sel, .hov) .ln { stroke: var(--accent); stroke-width: calc(2px / var(--k)); opacity: 1; }
+.bd-lnk:is(.sel, .hov) .ln { stroke-width: calc(3px / var(--k)); }
+.bd-lnk.k-tab:is(.out, .sel, .hov) .ln { stroke-width: calc(2.5px / var(--k)); }
+.bd-lnk.k-back .ln { stroke-width: calc(1px / var(--k)); }
+.bd-lnk.draft .ln { stroke: var(--warn); opacity: 1; }
+.bd-lnk.del .ln { stroke: var(--warn); opacity: .5; stroke-dasharray: calc(5px / var(--k)) calc(4px / var(--k)); }
+.bd-lnk.bd-chg-add .ln { stroke: var(--ok); opacity: 1; }
+.bd-lnk.bd-chg-mod .ln { stroke: var(--warn); opacity: 1; }
+.bd-lnk.bd-chg-del .ln { stroke: var(--risk); opacity: .7; stroke-dasharray: calc(6px / var(--k)) calc(4px / var(--k)); }
+.bd-lnk-dot { display: none; fill: none; stroke: var(--accent); stroke-width: calc(10px / var(--k)); stroke-linecap: round; pointer-events: stroke; cursor: grab; }
+.bd-lnk:is(.hov, .sel) .bd-lnk-dot { display: inline; }
+.bd-lnk.draft .bd-lnk-dot { stroke: var(--warn); }
+.bd-mk path { fill: var(--fg-subtle); }
+.bd-mk.out path { fill: var(--accent); } .bd-mk.draft path, .bd-mk.mod path { fill: var(--warn); } .bd-mk.add path { fill: var(--ok); } .bd-mk.del path { fill: var(--risk); }
+.bd-lnk-lbls { position: absolute; left: 0; top: 0; pointer-events: none; }
+.bd-lnk-lbl { position: absolute; display: none; transform: translate(-50%, -50%); padding: calc(2px / var(--k)) calc(7px / var(--k)); border-radius: calc(10px / var(--k));
+  background: var(--surface); box-shadow: 0 0 0 calc(1px / var(--k)) var(--line); color: var(--fg); font: 500 calc(11px / var(--k))/1.3 var(--sans); white-space: nowrap; }
+.bd-lnk-lbl.on { display: block; }
+.bd-lnk-lbl.draft { color: var(--warn-fg); box-shadow: 0 0 0 calc(1px / var(--k)) var(--warn); }
+.bd-lnk-lbl b { margin-right: .4em; font-size: .85em; font-weight: 700; text-transform: uppercase; }
 .bd-ab-ph { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 16px; text-align: center;
   background: repeating-linear-gradient(135deg, var(--panel) 0 14px, var(--surface) 14px 28px); color: var(--fg-muted); font: 500 14px/1.4 var(--sans); }
 .bd-ab-ph[hidden] { display: none; }
@@ -1456,17 +1496,52 @@ i.warn[hidden] { display: none; }
 .bd-rqe .hint { margin: 0; font-size: 12px; color: var(--fg-subtle); }
 .bd-rqe .ft { display: flex; justify-content: flex-end; gap: 6px; }
 .bd-rqe .ft .bp-btn:disabled { opacity: .5; cursor: default; }
-/* the board's toolbar, centred in the board: panel, Fit · zoom · Focus, Present, Variants, fidelity, theme, motion */
-.bd-btb { position: absolute; z-index: 3; left: 12px; right: 12px; top: 12px; width: fit-content; margin: 0 auto; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 4px; padding: 5px; border-radius: 14px;
+/* board edits (boardEdits): + knobs in Link mode, a dragged arrow and its landing ring, move guides and the position
+   chip, the marquee, several selected or overlapping screens, the arrow's menu, the drafts count */
+.bd-knob { position: absolute; z-index: 4; display: none; width: calc(22px / var(--k)); height: calc(22px / var(--k)); margin: calc(-11px / var(--k)) 0 0 calc(-11px / var(--k)); padding: 0; border: 0;
+  border-radius: 50%; background: var(--warn); color: #fff; font: 700 calc(15px / var(--k))/1 var(--sans); cursor: crosshair; box-shadow: 0 0 0 calc(2px / var(--k)) var(--surface); }
+.bd-knob[data-side="top"] { left: 50%; top: 0; } .bd-knob[data-side="right"] { left: 100%; top: 50%; }
+.bd-knob[data-side="bottom"] { left: 50%; top: 100%; } .bd-knob[data-side="left"] { left: 0; top: 50%; }
+.bd-board.bd-linkm .bd-ab:not(.off) .bd-knob { display: grid; place-items: center; }
+.bd-board.bd-wiring { cursor: crosshair; }
+.bd-board.bd-wiring .bd-ab-fr { pointer-events: none; }
+.bd-ab:is(.bd-land, .msel, .bd-ovl) .bd-ab-scr { outline: calc(2px / var(--k)) solid var(--accent); outline-offset: calc(var(--bz, 0px) + 4px / var(--k)); }
+.bd-ab.bd-ovl .bd-ab-scr { outline-color: var(--risk); }
+.bd-ab.bd-land .bd-ab-scr { outline: calc(3px / var(--k)) solid var(--warn); }
+.bd-edit-ov { position: absolute; left: 0; top: 0; z-index: 5; width: 1px; height: 1px; overflow: visible; pointer-events: none; }
+.bd-edit-wire { fill: none; stroke: var(--warn); stroke-width: calc(2px / var(--k)); stroke-dasharray: calc(6px / var(--k)) calc(4px / var(--k)); }
+.bd-edit-dot { fill: var(--warn); }
+.bd-edit-el { fill: color-mix(in oklch, var(--warn) 12%, transparent); stroke: var(--warn); stroke-width: calc(2px / var(--k)); }
+.bd-guide { fill: none; stroke: oklch(63% 0.25 350); stroke-width: calc(1px / var(--k)); }
+.bd-pchip { position: fixed; left: 0; top: 0; z-index: 60; padding: 2px 7px; border-radius: 6px; background: oklch(63% 0.25 350); color: #fff; font: 600 11px/1.4 var(--mono); pointer-events: none; }
+.bd-marq { position: absolute; pointer-events: none; border: calc(1px / var(--k)) solid var(--accent); background: color-mix(in oklch, var(--accent) 10%, transparent); }
+.bd-lpop { position: fixed; left: 0; top: 0; z-index: 57; width: 290px; display: grid; gap: 8px; padding: 10px 12px; border-radius: 12px; background: var(--surface); color: var(--fg); box-shadow: var(--shadow-3); font-size: 13px; }
+.bd-lpop[hidden], .bd-dcount[hidden] { display: none; }
+.bd-lpop .hd { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; color: var(--fg-muted); }
+.bd-lpop .hd b { color: var(--fg); }
+.bd-lpop .tg { margin-left: auto; padding: 0 6px; border-radius: 6px; font-size: 11px; font-weight: 600; color: var(--warn-fg); background: var(--warn-tint); }
+.bd-lpop .tg.sent { color: var(--accent-fg); background: var(--accent-tint); }
+.bd-lpop .row { display: flex; align-items: center; gap: 6px; }
+.bd-lpop .row label { display: flex; align-items: center; gap: 6px; margin-right: auto; font-size: 12.5px; color: var(--fg-muted); }
+.bd-lpop select { height: 28px; border: 0; border-radius: 8px; padding: 0 6px; font: 500 12.5px var(--sans); color: var(--fg); background: var(--inset); box-shadow: inset 0 0 0 1px var(--line); }
+.bd-lpop .bp-btn.risk { color: var(--risk-fg); }
+.bd-lpop :is(.lbl, .hint) { margin: 0; } .bd-lpop .hint { font-size: 12px; color: var(--fg-subtle); }
+.bd-lpop input { min-height: 30px; padding: 4px 8px; }
+.bd-lpop .ft { display: flex; justify-content: flex-end; gap: 6px; } .bd-lpop .ft.col { flex-direction: column; align-items: stretch; }
+.bd-dcount { color: var(--warn-fg); }
+/* the board's toolbar, centred in the board: panel, Fit · zoom · Focus · Tidy up, Present, Variants, Flows, fidelity, theme,
+   motion. Tight enough for one row on a 1440 px window with both panels open; narrower, it wraps in centred rows */
+.bd-btb { position: absolute; z-index: 3; left: 12px; right: 12px; top: 12px; width: fit-content; margin: 0 auto; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 2px; padding: 4px; border-radius: 14px;
   background: linear-gradient(180deg, var(--tray-top), var(--tray-bot)); box-shadow: var(--shadow-tray), 0 2px 6px oklch(23% 0.01 264 / 0.06); font-size: 12.5px; }
 .bd-tbtn { display: inline-grid; place-items: center; height: 30px; min-width: 30px; padding: 0 6px; border: 0; border-radius: 9px; background: none; color: var(--fg-muted); font: 500 12.5px var(--sans); cursor: pointer; }
 .bd-tbtn:hover:not(:disabled) { color: var(--fg); background: var(--hover); }
 .bd-tbtn[aria-pressed="true"] { color: var(--fg); background: var(--hk-down); box-shadow: var(--shadow-hk-down); }
 .bd-tbtn:disabled { opacity: .4; cursor: default; }
 .bd-tbtn .bd-ic { width: 17px; height: 17px; }
-.bd-btb .zl { min-width: 44px; text-align: center; font: 500 12px var(--mono); font-variant-numeric: tabular-nums; color: var(--fg-muted); }
-.bd-btb .bd-groove { height: 20px; }
-.bd-btb .bd-sg button { height: 24px; padding: 0 9px; }
+.bd-btb .bd-tbtn { min-width: 28px; padding: 0 5px; }
+.bd-btb .zl { min-width: 38px; text-align: center; font: 500 12px var(--mono); font-variant-numeric: tabular-nums; color: var(--fg-muted); }
+.bd-btb .bd-groove { height: 20px; margin: 0 1px; }
+.bd-btb .bd-sg button { height: 24px; padding: 0 8px; }
 .bd-btb .th { display: inline-flex; align-items: center; gap: 6px; padding: 0 2px 0 6px; color: var(--fg-subtle); }
 .bd-btb .th .bd-ic { width: 16px; height: 16px; }
 /* the left panel: the doc's header, then Screens (the artboards) or Brief (TL;DR, the sections, status) */
@@ -1498,6 +1573,8 @@ html.bd-lp-open .bd-lp { transform: none; visibility: visible; transition: trans
 .bd-scr-l .t span { font-size: 12px; color: var(--fg-subtle); }
 .bd-scr-l .gone b { color: var(--risk-fg); text-decoration: line-through; }
 .bd-scr-l .bd-chg-tag { height: 18px; padding: 0 6px; font-size: 10px; }
+.bd-scr-l .rc { flex: none; font-size: 11.5px; color: var(--fg-subtle); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.bd-scr-l .rc:empty { display: none; }
 /* a revision's extra lines: the screens it changed (designs), the comments it resolves */
 .bd-rv .rv-scr { margin: 6px 0 0; font-size: 12px; line-height: 1.45; color: var(--fg-muted); }
 .bd-rv .rv-scr b { font-weight: 600; color: var(--fg); }
@@ -1509,6 +1586,14 @@ html.bd-lp-open .bd-lp { transform: none; visibility: visible; transition: trans
 .bd-pres .bar .bd-tbtn:hover { color: #fff; background: oklch(32% 0.01 264); }
 .bd-pres .cap { min-width: 220px; text-align: center; font-size: 13.5px; color: oklch(78% 0 0); }
 .bd-pres .cap b { color: #fff; }
+.bd-pres .bar .bd-tbtn:disabled { opacity: .4; cursor: default; }
+/* the presented screen's labelled links; gesture links (nothing to tap) are buttons */
+.bd-pres .hints { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; max-width: 90vw; margin-top: 10px; }
+.bd-pres .hints[hidden] { display: none; }
+.bd-pres .hint { padding: 4px 10px; border: 0; border-radius: 999px; background: oklch(24% 0.01 264); color: oklch(90% 0 0); font: 500 12.5px/1.3 var(--sans); }
+.bd-pres .hint .to { color: oklch(70% 0 0); }
+.bd-pres button.hint { box-shadow: inset 0 0 0 1px oklch(42% 0.01 264); cursor: pointer; }
+.bd-pres button.hint:hover { background: oklch(32% 0.01 264); }
 html.bd-presenting :is(.bd-anntb, .bd-ann-layer, .bd-cmp) { display: none !important; }
 .bd-psz { position: relative; flex: none; }
 .bd-pdev { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
@@ -1570,11 +1655,12 @@ const REVS = (() => {
   const cur = { rev: String(m.rev || ''), date: m.date || '', current: true, doc: PRISTINE };
   if (!HIST) return [cur];
   const blk = ref => ref[0] === '@' ? (([i, j]) => PRISTINE.sections[i].blocks[j])(ref.slice(1).split('/').map(Number)) : HIST.blocks[ref];
-  // a design's revisions also carry `screens`: {artboard id: hash of its screen file}
-  const out = HIST.revs.map(r => r.head ? { rev: r.rev, date: r.date, built: r.built, screens: r.screens || null,
+  // a design's revisions also carry `screens` ({artboard id: hash of its screen file; "<id>/<file>": an icon
+  // layer's}) and `links` (the board's links as build.py read them: [{from, el, to, kind, label?, edge?}])
+  const out = HIST.revs.map(r => r.head ? { rev: r.rev, date: r.date, built: r.built, screens: r.screens || null, links: r.links || [],
     get doc() { return this._d ||= { ...r.head, sections: r.sections.map(s => ({ ...s, blocks: s.blocks.map(blk) })) }; } } : null).filter(Boolean);
   const curH = HIST.revs.find(r => !r.head) || {};
-  cur.built = curH.built || ''; cur.screens = curH.screens || null;
+  cur.built = curH.built || ''; cur.screens = curH.screens || null; cur.links = curH.links || [];
   out.push(cur);
   return out;
 })();
@@ -3861,6 +3947,9 @@ function outlineOf(spec, root) {
       flows.length ? [h('p', {}, h('b', {}, 'Flows')), h('ul', {}, flows)] : null));
 }
 
+// board-geo.js (the connector router and Tidy up's layout: `const BoardGeo`), filled in by build.py on pages with a board
+/*__BOARD_GEO__*/
+
 /* ======================================================================
    Design board: each screen in its device frame on one pan/zoom surface
    ====================================================================== */
@@ -3868,47 +3957,25 @@ function outlineOf(spec, root) {
 // file in its kit (the screen route); a `-o` export carries the wrapped documents in bp-screens instead.
 // Frames are sandboxed to scripts alone, so each has an opaque origin: no access to this page, its state
 // or its cookies. Page and frame talk through postMessage only (the inspector protocol): page → frame
-// `mode`, `tokens`, `view`, `locate`; frame → page `ready`, `hover`, `pick`, taken from known frames only,
-// strings capped at 200 characters and shown as text.
-const DEVICES = { 'watch-round': [240, 240], 'watch-square': [198, 242], phone: [390, 844], tablet: [820, 1180], desktop: [1280, 800], browser: [1440, 900], slide: [1920, 1080] };
-const DEVICE_NAME = { 'watch-round': 'Round watch', 'watch-square': 'Square watch', phone: 'Phone', tablet: 'Tablet', desktop: 'Desktop app', browser: 'Browser', slide: 'Slide' };
-const DEVICE_IC = { 'watch-round': 'watch', 'watch-square': 'watch', phone: 'phone', tablet: 'tablet', desktop: 'monitor', browser: 'globe', slide: 'present', custom: 'frame' };
+// `mode`, `tokens`, `view`, `locate`; frame → page `ready`, `hover`, `pick`, `nav`, taken from known frames only,
+// strings capped at 200 characters and shown as text. A `nav` names an element; the page follows it only through
+// the build's link list for that screen, so a screen can't move Present anywhere its links don't go.
+const DEVICES = { 'watch-round': [240, 240], 'watch-square': [198, 242], phone: [390, 844], tablet: [820, 1180], desktop: [1280, 800], browser: [1440, 900], slide: [1920, 1080], icons: [1280, 860] };
+const DEVICE_NAME = { 'watch-round': 'Round watch', 'watch-square': 'Square watch', phone: 'Phone', tablet: 'Tablet', desktop: 'Desktop app', browser: 'Browser', slide: 'Slide', icons: 'App icon' };
+const DEVICE_IC = { 'watch-round': 'watch', 'watch-square': 'watch', phone: 'phone', tablet: 'tablet', desktop: 'monitor', browser: 'globe', slide: 'present', icons: 'image', custom: 'frame' };
 const BEZEL = { 'watch-round': 12, 'watch-square': 10, phone: 12, tablet: 14 };   // CSS px drawn around the screen
 const FIDELITY = { sketch: 'Sketch', wireframe: 'Wireframe', hifi: 'Hi-fi' };
-const AB_GAP = 80, SLIDE_GAP = 280, LIVE_MAX = 12, BK_MIN = 0.02, BK_MAX = 4;
+const AB_GAP = 80, LIVE_MAX = 12, BK_MIN = 0.02, BK_MAX = 4;
 const SCREENS = (() => { try { const x = JSON.parse(document.getElementById('bp-screens').textContent); return x && typeof x === 'object' && !Array.isArray(x) ? x : null; } catch { return null; } })();
 const SERVED = !SCREENS && /^https?:$/.test(location.protocol);
 const abSize = a => DEVICES[a.device] ? DEVICES[a.device].slice() : [Math.max(1, Math.round(+a.w) || 1), Math.max(1, Math.round(+a.h) || 1)];
 const devOf = a => DEVICES[a && a.device] ? a.device : 'custom';
 const boardOf = d => { for (const s of (d && d.sections) || []) for (const b of s.blocks || []) if (b && b.type === 'board') return b; return null; };
 const boardAbs = b => (b && Array.isArray(b.artboards) ? b.artboards : []).filter(a => a && typeof a.id === 'string');
-// where each artboard sits (board px, its screen's top left), as build.py's board_layout places it: its own
-// x,y; else an unplaced slide goes in the slide column, 280 px below the previous one (the column's x: 0 on a board
-// of only slides, else 80 px right of every other artboard); any other goes 80 px right of the row it joins (its
-// variantOf source's row once that is placed, else row 0)
-function boardLayout(abs) {
-  const at = new Map(), column = [];
-  let onlySlides = true;
-  for (const a of abs) {
-    if (at.has(a.id) || column.some(c => c.a.id === a.id)) continue;
-    const [w, hh] = abSize(a);
-    onlySlides = onlySlides && devOf(a) === 'slide';
-    let x, y;
-    if (Number.isFinite(a.x) && Number.isFinite(a.y)) { x = a.x; y = a.y; }
-    else if (devOf(a) === 'slide') { column.push({ a, w, h: hh }); continue; }
-    else {
-      const src = a.variantOf && at.get(a.variantOf);
-      y = src ? src.y : 0;
-      const row = [...at.values()].filter(p => p.y === y);
-      x = row.length ? Math.max(...row.map(p => p.x + p.w)) + AB_GAP : 0;
-    }
-    at.set(a.id, { x, y, w, h: hh });
-  }
-  const cx = onlySlides ? 0 : Math.max(...[...at.values()].map(p => p.x + p.w)) + AB_GAP;
-  let cy = 0;
-  for (const c of column) { at.set(c.a.id, { x: cx, y: cy, w: c.w, h: c.h }); cy += c.h + SLIDE_GAP; }
-  return at;
-}
+// where each artboard sits (board px, its screen's top left): build.py's board_layout, through board-geo.js's copy
+// (test_board_layout.py holds the two alike). links: that revision's links, as the build read them (never drafts),
+// for a `layout: "flow"` board
+function boardLayout(b, links) { return BoardGeo.boardLayout(b, links, abSize); }
 // the screen route beside the doc: <stem>.design/<id>.html, or the artboard's own src (relative to the doc)
 function screenUrl(a, rev, theme) {
   const p = location.pathname, dir = p.slice(0, p.lastIndexOf('/') + 1), stem = p.slice(p.lastIndexOf('/') + 1).replace(/\.bluedoc\.json$/i, '').replace(/\.html?$/i, '');
@@ -3936,6 +4003,132 @@ function deviceBox(a, fr, why) {
   return { sz, fit, w, hh };
 }
 
+/* ---- icon export (IconKit) ---- */
+// An `icons` artboard's Export key on its title bar. The page draws both platforms' PNG sets on a canvas from the
+// layers the sheet carries (its #bd-icon JSON: {bg, layers: {name: data: URI}}; data: images don't taint a canvas),
+// then saves them through POST /__bluedoc/icons into <stem>.icons/<artboard>/, or offers them as a zip (an -o file,
+// a browser without the key, no server). What each file is built from: schema.md › Icons.
+const ICON_DENS = [['mdpi', 1], ['hdpi', 1.5], ['xhdpi', 2], ['xxhdpi', 3], ['xxxhdpi', 4]];
+function iconExportKey(a) {
+  const b = h('button', { type: 'button', class: 'ixp', title: 'Export the PNG sets for iOS, Android and Google Play',
+    onclick: e => { e.stopPropagation(); if (!b.disabled) iconExport(a, b); } }, 'Export PNG sets');
+  return b;
+}
+async function iconSheet(a) {
+  const html = SCREENS ? SCREENS[a.id] : SERVED ? await fetch(screenUrl(a), { cache: 'no-store' }).then(r => r.ok ? r.text() : null, () => null) : null;
+  const el = typeof html === 'string' ? new DOMParser().parseFromString(html, 'text/html').getElementById('bd-icon') : null;
+  try { const j = el && JSON.parse(el.textContent); return j && j.layers && typeof j.layers.fg === 'string' ? j : null; } catch { return null; }
+}
+const b64Of = u8 => { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
+// a layer drawn at px: its SVG with width and height set, so every browser rasterizes it at that size
+function layerAt(uri, px) {
+  const m = /^data:image\/svg\+xml;base64,([A-Za-z0-9+/=]+)$/.exec(uri || '');
+  if (!m) return Promise.reject(new Error('a layer is not an SVG'));
+  const svg = new DOMParser().parseFromString(new TextDecoder().decode(Uint8Array.from(atob(m[1]), c => c.charCodeAt(0))), 'image/svg+xml').documentElement;
+  svg.setAttribute('width', px); svg.setAttribute('height', px);
+  const im = new Image();
+  return new Promise((res, rej) => { im.onload = () => res(im); im.onerror = () => rej(new Error('a layer did not load')); im.src = 'data:image/svg+xml;base64,' + b64Of(new TextEncoder().encode(new XMLSerializer().serializeToString(svg))); });
+}
+// every file of the export as [path, Uint8Array], paths as POST /__bluedoc/icons takes them
+async function iconFiles(ic) {
+  const L = ic.layers, bgColour = typeof ic.bg === 'string' ? ic.bg : null, out = [];
+  const canvas = S => { const c = h('canvas', { width: S, height: S }); return [c, c.getContext('2d')]; };
+  const png = c => new Promise((res, rej) => c.toBlob(b => b ? b.arrayBuffer().then(x => res(new Uint8Array(x)), rej) : rej(new Error('toBlob failed')), 'image/png'));
+  // name drawn at S; mid: only the middle 72 of its 108 units (what a mask shows)
+  const draw = async (ctx, name, S, mid) => { const k = mid ? 1.5 : 1, im = await layerAt(L[name], Math.round(S * k)); ctx.drawImage(im, -(S * k - S) / 2, -(S * k - S) / 2, S * k, S * k); };
+  const bg = async (ctx, S, mid) => { if (bgColour) { ctx.fillStyle = bgColour; ctx.fillRect(0, 0, S, S); } if (L.bg) await draw(ctx, 'bg', S, mid); };
+  // name as one colour (mono's shape, whatever its own colours)
+  const solid = async (ctx, name, S, colour) => { const [c, x] = canvas(S); await draw(x, name, S, false); x.globalCompositeOperation = 'source-in'; x.fillStyle = colour; x.fillRect(0, 0, S, S); ctx.drawImage(c, 0, 0); };
+  const gray = (ctx, S) => { const d = ctx.getImageData(0, 0, S, S), p = d.data; for (let i = 0; i < p.length; i += 4) { const y = Math.round(0.2126 * p[i] + 0.7152 * p[i + 1] + 0.0722 * p[i + 2]); p[i] = p[i + 1] = p[i + 2] = y; } ctx.putImageData(d, 0, 0); };
+  // opaque: an RGB PNG without an alpha channel (App Store Connect refuses an icon with one); else the canvas's own
+  const add = async (path, S, paint, opaque) => { const [c, ctx] = canvas(S); await paint(ctx, S); out.push([path, opaque ? await rgbPng(ctx, S) : await png(c)]); };
+  const ios = 'ios/AppIcon.appiconset/';
+  await add(ios + 'AppIcon.png', 1024, async (x, S) => { await bg(x, S, false); await draw(x, 'fg', S, false); }, !!(bgColour || L.bg));
+  await add(ios + 'AppIcon-dark.png', 1024, (x, S) => draw(x, L['ios-dark'] ? 'ios-dark' : 'fg', S, false));
+  await add(ios + 'AppIcon-tinted.png', 1024, async (x, S) => {
+    x.fillStyle = '#000'; x.fillRect(0, 0, S, S);
+    if (L['ios-tinted']) await draw(x, 'ios-tinted', S, false); else if (L.mono) await solid(x, 'mono', S, '#fff'); else await draw(x, 'fg', S, false);
+    gray(x, S);
+  }, true);
+  const look = (app, appearance) => ({ ...(appearance ? { appearances: [{ appearance: 'luminosity', value: appearance }] } : {}), filename: app, idiom: 'universal', platform: 'ios', size: '1024x1024' });
+  out.push([ios + 'Contents.json', new TextEncoder().encode(JSON.stringify({ images: [look('AppIcon.png'), look('AppIcon-dark.png', 'dark'), look('AppIcon-tinted.png', 'tinted')], info: { author: 'xcode', version: 1 } }, null, 2) + '\n')]);
+  const xml = new TextEncoder().encode('<?xml version="1.0" encoding="utf-8"?>\n<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">\n'
+    + '    <background android:drawable="@mipmap/ic_launcher_background"/>\n    <foreground android:drawable="@mipmap/ic_launcher_foreground"/>\n'
+    + (L.mono ? '    <monochrome android:drawable="@mipmap/ic_launcher_monochrome"/>\n' : '') + '</adaptive-icon>\n');
+  out.push(['android/res/mipmap-anydpi-v26/ic_launcher.xml', xml], ['android/res/mipmap-anydpi-v26/ic_launcher_round.xml', xml]);
+  for (const [d, s] of ICON_DENS) {
+    const dir = `android/res/mipmap-${d}/`, A = Math.round(108 * s), M = Math.round(48 * s);
+    const legacy = round => async (x, S) => {
+      x.beginPath(); if (round) x.arc(S / 2, S / 2, S / 2, 0, 2 * Math.PI); else x.roundRect(0, 0, S, S, S * 0.16); x.clip();
+      await bg(x, S, true); await draw(x, 'fg', S, true);
+    };
+    await add(dir + 'ic_launcher.png', M, legacy(false));
+    await add(dir + 'ic_launcher_round.png', M, legacy(true));
+    await add(dir + 'ic_launcher_foreground.png', A, (x, S) => draw(x, 'fg', S, false));
+    await add(dir + 'ic_launcher_background.png', A, (x, S) => bg(x, S, false));
+    if (L.mono) await add(dir + 'ic_launcher_monochrome.png', A, (x, S) => solid(x, 'mono', S, '#fff'));
+  }
+  await add('play/icon-512.png', 512, async (x, S) => { if (L.play) await draw(x, 'play', S, false); else { await bg(x, S, true); await draw(x, 'fg', S, true); } });
+  return out;
+}
+const crc32 = u8 => {
+  const T = crc32.t || (crc32.t = Array.from({ length: 256 }, (_, n) => { for (let k = 0; k < 8; k++) n = n & 1 ? 0xEDB88320 ^ (n >>> 1) : n >>> 1; return n >>> 0; }));
+  let c = 0xFFFFFFFF; for (const b of u8) c = T[(c ^ b) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0;
+};
+// a canvas's pixels as an RGB PNG: 8-bit truecolour, no filter, zlib through CompressionStream
+async function rgbPng(ctx, S) {
+  const px = ctx.getImageData(0, 0, S, S).data, raw = new Uint8Array(S * (3 * S + 1));
+  for (let y = 0, o = 0; y < S; y++) { o++; for (let i = y * S * 4, e = i + S * 4; i < e; i += 4) { raw[o++] = px[i]; raw[o++] = px[i + 1]; raw[o++] = px[i + 2]; } }
+  const z = new Uint8Array(await new Response(new Blob([raw]).stream().pipeThrough(new CompressionStream('deflate'))).arrayBuffer());
+  const chunk = (type, data) => { const b = new Uint8Array(12 + data.length), v = new DataView(b.buffer); v.setUint32(0, data.length); b.set(new TextEncoder().encode(type), 4); b.set(data, 8); v.setUint32(8 + data.length, crc32(b.subarray(4, 8 + data.length))); return b; };
+  const ihdr = new Uint8Array(13), v = new DataView(ihdr.buffer); v.setUint32(0, S); v.setUint32(4, S); ihdr.set([8, 2, 0, 0, 0], 8);
+  return new Uint8Array(await new Blob([new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', ihdr), chunk('IDAT', z), chunk('IEND', new Uint8Array(0))]).arrayBuffer());
+}
+// a zip of files, each stored (no compression), with CRC-32s: the Download when the page can't save
+function zipStored(files) {
+  const parts = [], cen = []; let off = 0;
+  for (const [path, data] of files) {
+    const name = new TextEncoder().encode(path), c = crc32(data);
+    const loc = new DataView(new ArrayBuffer(30)), dir = new DataView(new ArrayBuffer(46));
+    // local header: signature, version 2.0, UTF-8 names, stored, 1980-01-01 00:00, CRC, sizes, name length
+    [[0, 0x04034b50, 4], [4, 20, 2], [6, 0x800, 2], [12, 33, 2], [14, c, 4], [18, data.length, 4], [22, data.length, 4], [26, name.length, 2]]
+      .forEach(([at, v, n]) => n === 4 ? loc.setUint32(at, v, true) : loc.setUint16(at, v, true));
+    [[0, 0x02014b50, 4], [4, 20, 2], [6, 20, 2], [8, 0x800, 2], [14, 33, 2], [16, c, 4], [20, data.length, 4], [24, data.length, 4], [28, name.length, 2], [42, off, 4]]
+      .forEach(([at, v, n]) => n === 4 ? dir.setUint32(at, v, true) : dir.setUint16(at, v, true));
+    parts.push(loc, name, data); cen.push(dir, name);
+    off += 30 + name.length + data.length;
+  }
+  const size = cen.reduce((n, p) => n + p.byteLength, 0), end = new DataView(new ArrayBuffer(22));
+  [[0, 0x06054b50, 4], [8, files.length, 2], [10, files.length, 2], [12, size, 4], [16, off, 4]].forEach(([at, v, n]) => n === 4 ? end.setUint32(at, v, true) : end.setUint16(at, v, true));
+  return new Blob([...parts, ...cen, end], { type: 'application/zip' });
+}
+function downloadZip(a, files) {
+  const url = URL.createObjectURL(zipStored(files.map(([p, d]) => [`${a.id}/${p}`, d])));
+  const link = h('a', { href: url, download: `${a.id}-icon-sets.zip`, style: 'display:none' });
+  document.body.append(link); link.click(); link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
+async function iconExport(a, btn) {
+  btn.disabled = true; btn.textContent = 'Exporting…';
+  try {
+    const ic = await iconSheet(a);
+    if (!ic) return toast('Couldn\'t read the icon\'s layers: build the doc and check its lint');
+    const files = await iconFiles(ic);
+    if (!SERVED) { downloadZip(a, files); return toast(`Downloaded ${a.id}-icon-sets.zip: ${files.length} files`); }
+    try {
+      const r = await postReply('/__bluedoc/icons', { path: location.pathname, artboard: a.id, files: Object.fromEntries(files.map(([p, d]) => [p, b64Of(d)])) });
+      const j = await r.json();
+      toast(`Saved ${j.files.length} files to ${j.dir}`, { label: 'Download zip', run: () => downloadZip(a, files) });
+    } catch (e) {
+      downloadZip(a, files);
+      toast(e && e.key ? 'This browser can\'t save here yet (run `serve.py unlock`): downloaded a zip instead' : 'Couldn\'t save beside the doc: downloaded a zip instead');
+    }
+  } catch (e) {
+    toast('Export failed: ' + (e && e.message || e));
+  } finally { btn.disabled = false; btn.textContent = 'Export PNG sets'; }
+}
+/* ---- end icon export ---- */
+
 function renderBoard(b) {
   const abs = boardAbs(b), themes = (Array.isArray(b.themes) ? b.themes : []).filter(t => t && typeof t.id === 'string');
   const B = BOARD = { b, abs, k: 1, tx: 0, ty: 0, mode: 'view', sel: null, sketch: false, reduced: REDUCE, paused: false, theme: null, touched: false, lp: false,
@@ -3953,26 +4146,28 @@ function renderBoard(b) {
     const warn = h('i', { class: 'warn', hidden: true }), tag = h('span', { class: 'tg' });
     const cmpBtn = h('button', { type: 'button', class: 'cmp', hidden: true, 'aria-label': 'Compare this screen across the two revisions', title: 'Compare this screen across the two revisions',
       onclick: e => { e.stopPropagation(); openCompare(id); } }, ic('split'));
-    const t = h('div', { class: 'bd-ab-t' }, warn, h('span', { class: 'n' }, a.title || id),
-      h('span', { class: 'd' }, [DEVICE_NAME[dev] || `${p.w} × ${p.h}`, FIDELITY[a.fidelity]].filter(Boolean).join(' · ')), tag, cmpBtn);
+    const lk = h('span', { class: 'lk', hidden: true }), rch = h('span', { class: 'rch', hidden: true });
+    const t = h('div', { class: 'bd-ab-t' }, warn, h('span', { class: 'n' }, a.title || id), lk, rch,
+      h('span', { class: 'd' }, [DEVICE_NAME[dev] || `${p.w} × ${p.h}`, FIDELITY[a.fidelity]].filter(Boolean).join(' · ')), tag, cmpBtn, dev === 'icons' && !ghost && iconExportKey(a));
     const ph = h('div', { class: 'bd-ab-ph' }, ic(DEVICE_IC[dev]), h('b', {}, a.title || id),
       h('span', { class: 'why' }, ghost ? `Removed in ${VIEW.rev ? 'rev ' + VIEW.rev : 'this revision'}` : SCREENS ? (OLD ? 'An export shows the current revision\'s screens only.' : '') : SERVED ? '' : 'Open this page through serve.py to see the screen.'));
     const hov = h('div', { class: 'bd-ab-hov', hidden: true }, h('b'));
     const scr = h('div', { class: 'bd-ab-scr' }, ph, chromeFor(dev, a), hov);
     const el = h('div', { class: `bd-ab dev-${dev} fid-${FIDELITY[a.fidelity] ? a.fidelity : 'hifi'}${ghost ? ' ghost' : ''}`, 'data-ab': ghost ? null : id, 'data-ghost': ghost ? id : null },
       t, BEZEL[dev] && h('div', { class: 'bd-ab-dev', 'aria-hidden': 'true' }), scr);
-    const x = { a, p, el, scr, ph, hov, warn, tag, cmpBtn, ghost, fr: null, ready: false, fallback: null, rects: {}, allow: 0, navs: 0, locSig: '', home: null, chg: null, li: null };
+    const x = { a, p, el, scr, ph, hov, warn, tag, cmpBtn, lk, rch, ghost, fr: null, ready: false, fallback: null, rects: {}, navAt: null, named: null, allow: 0, navs: 0, locSig: '', home: null, chg: null, li: null };
     placeAb(x);
+    if (!ghost) { el.addEventListener('pointerenter', () => hoverAb(id)); el.addEventListener('pointerleave', () => hoverAb(null)); }
     return x;
   }
   const placeAb = x => Object.assign(x.el.style, { left: x.p.x + 'px', top: x.p.y + 'px', width: x.p.w + 'px', height: x.p.h + 'px' });
-  const pos = boardLayout(abs);
+  const pos = boardLayout(b, VIEW.links);
   for (const a of abs) { const x = makeAb(a, pos.get(a.id), false); B.frames.set(a.id, x); vp.append(x.el); }
   // a deck's slides in reading order: by row (top first), left to right in a row, ties in the doc's order
   const deck = abs.filter(a => devOf(a) === 'slide').sort((a, c) => pos.get(a.id).y - pos.get(c.id).y || pos.get(a.id).x - pos.get(c.id).x);
 
   /* frames: at most LIVE_MAX at a time, the screens nearest the middle of the view; the others show their outline */
-  const frameMode = () => ['interact', 'point', 'select', 'draw'].includes(B.mode) ? B.mode : 'view';
+  const frameMode = () => B.mode === 'link' ? 'point' : ['interact', 'point', 'select', 'draw'].includes(B.mode) ? B.mode : 'view';
   const themeOf = id => themes.find(t => t.id === id) || null;
   const tokensMsg = () => { const t = themeOf(B.theme); return { bd: 'tokens', theme: t && t.tokens && typeof t.tokens === 'object' ? t.tokens : null, motion: b.motion && typeof b.motion === 'object' ? b.motion : null }; };
   const viewMsg = x => ({ bd: 'view', sketch: B.sketch || x.a.fidelity === 'sketch', reduced: B.reduced, paused: B.paused });
@@ -4045,17 +4240,29 @@ function renderBoard(b) {
     let x = null;
     for (const y of B.live) if (y.fr && e.source === y.fr.contentWindow) { x = y; break; }
     const d = e.data;
-    if (!x || !d || typeof d !== 'object' || !['ready', 'hover', 'pick'].includes(d.bd)) return;
+    if (!x || !d || typeof d !== 'object' || !['ready', 'hover', 'pick', 'nav'].includes(d.bd)) return;
     if (d.bd === 'ready') {
       x.ready = true;
+      if (x.role !== 'cmp') takeNavs(B.frames.get(x.a.id), d);
       if (x.role) return;
       x.fallback = str(d.fallback, 80) || null; paintWarn(x);
       if (d.rects && typeof d.rects === 'object') for (const [s, r] of Object.entries(d.rects).slice(0, 100)) x.rects[str(s)] = rectOf(r);
       locate(x); MARKUP.relayout();
       return;
     }
+    // a tap in a screen: its named elements, innermost first, followed only through this screen's links (drafts
+    // included), so a forged name moves nothing
+    if (d.bd === 'nav') {
+      let l = null;
+      for (const n of Array.isArray(d.names) ? d.names.slice(0, 8) : []) if (typeof n === 'string' && NAME_RE.test(n) && (l = linkFor(x.a.id, n))) break;
+      if (!l) return;
+      if (x.role === 'pres') { if (pres) pres.tap(x, l); }
+      else if (!x.role && B.mode === 'interact' && l.to) { select(l.to); panTo(l.to); }
+      return;
+    }
     if (x.role) return;
     if (d.bd === 'hover') { showHov(x, d.sel == null ? null : { rect: rectOf(d.rect), what: str(d.name, 60) || str(d.tag, 30) }); return; }
+    if (B.mode === 'link') { if (B.onLinkPick) B.onLinkPick(x, d); return; }
     if (B.mode !== 'point' && B.mode !== 'select') return;
     // a pick on the screen's body (no element under it) is about the whole screen: `artboard:<id>`
     const sel = str(d.sel), r = rectOf(d.rect);
@@ -4113,29 +4320,227 @@ function renderBoard(b) {
     if (x) focus(x.a.id);
   }
   function select(id) {
+    const was = B.sel;
     B.sel = id || null;
     for (const x of [...B.frames.values(), ...B.ghosts.values()]) { const on = x.a.id === B.sel; x.el.classList.toggle('sel', on); if (x.li) x.li.setAttribute('aria-current', String(on)); }
     paintTools();
+    // a back link is drawn for the selected screen only
+    if (was !== B.sel && (hasBack(was) || hasBack(B.sel))) relink(); else paintReach();
   }
   let lastTap = { t: 0, id: null };
   const pz = panZoom(stage, B, apply, {
     kMin: () => BK_MIN, kMax: () => BK_MAX,
-    down: e => { if (B.mode === 'frame' || (e.target.closest && e.target.closest('.bd-ab-t button'))) return false; cancelAnimationFrame(anim); B.touched = true; },
+    down: e => {
+      if (B.onBoardDown && B.onBoardDown(e)) return false;
+      if (B.mode === 'frame' || (e.target.closest && e.target.closest('.bd-ab-t button'))) return false; cancelAnimationFrame(anim); B.touched = true;
+    },
     tap: (e, at) => {
+      const lg = at && at.closest && at.closest('.bd-lnk[data-link]');
+      if (lg) { selectLink(lg.getAttribute('data-link')); return; }
       const el = at && at.closest && at.closest('.bd-ab'), id = el ? el.dataset.ab || el.dataset.ghost : null, now = performance.now();
+      selectLink(null);
       if (id && lastTap.id === id && now - lastTap.t < 320) { focus(id); lastTap = { t: 0, id: null }; }
       else { lastTap = { t: now, id }; select(id); }
     },
     wheel: e => { B.touched = true; cancelAnimationFrame(anim); return e.ctrlKey || e.metaKey ? 'zoom' : 'pan'; },
   });
   const zoomBy = f => { B.touched = true; pz.zoomAt(stage.clientWidth / 2, stage.clientHeight / 2, f); };
+  // pan (keeping the zoom) so a screen that is partly off the view shows whole, in the middle
+  function panTo(id) {
+    const x = B.frames.get(id); if (!x) return;
+    const W = stage.clientWidth, H = stage.clientHeight, b0 = boxOf([x]), l = B.tx + b0.x * B.k, t = B.ty + b0.y * B.k;
+    if (l >= 0 && t >= 0 && l + b0.w * B.k <= W && t + b0.h * B.k <= H) return;
+    B.touched = true; go(B.k, W / 2 - (b0.x + b0.w / 2) * B.k, H / 2 - (b0.y + b0.h / 2) * B.k, true);
+  }
 
-  /* toolbar: panel, Fit · zoom · Focus, Present, Variants, fidelity, theme, motion */
+  /* links: one connector per link of the effective list (the shown revision's links, merged with the reader's
+     drafts by B.mergeLinks), routed by board-geo.js around the other screens. Faint at rest; selecting or hovering a
+     screen shows its reach: its arrows at full strength, its targets ringed with their kind, the other screens dimmed. */
+  const GEO = typeof BoardGeo === 'object' ? BoardGeo : null;   // build.py inlines it into pages with a board
+  const KINDS = ['push', 'modal', 'tab', 'replace', 'back'], NAME_RE = /^[A-Za-z0-9_-]+$/, FLOWS_KEY = 'bluedoc:design-flows', TITLE_H = 24;
+  const linkKey = l => `link:${l.from}/${l.el}`;
+  const cleanLinks = list => (Array.isArray(list) ? list : []).filter(l => l && typeof l === 'object' && typeof l.from === 'string' && typeof l.el === 'string' && l.el &&
+    KINDS.includes(l.kind) && (l.kind === 'back' || typeof l.to === 'string')).slice(0, 500)
+    .map(l => ({ from: l.from, el: l.el.slice(0, 200), to: l.kind === 'back' ? null : l.to, kind: l.kind, label: str(l.label, 80), ...(l.edge === true ? { edge: true } : {}) }));
+  const REV_LINKS = cleanLinks(VIEW.links);
+  let LINKS = [], GONE = [], routes = {}, hovId = null;   // GONE: compare's removed links (ghosts)
+  const gEls = new Map();   // route id -> {g, ln, hit, d0, d1, pill, l, hov}
+  const live = () => LINKS.filter(l => !l.del);
+  const linkFor = (from, el) => live().find(l => l.from === from && l.el === el) || null;
+  const hasBack = id => !!id && live().some(l => l.from === id && l.kind === 'back');
+  const titleOf = id => { const x = B.frames.get(id) || B.ghosts.get(id); return x ? x.a.title || id : id; };
+  B.flows = store.get(FLOWS_KEY) !== '0';
+  B.selLink = null;
+  B.revLinks = () => REV_LINKS.map(l => ({ ...l }));
+  B.mergeLinks = null;   // NavEdit's drafts: (rev links) -> effective list, entries may carry draft (an id), del, stale
+  B.links = withDel => (withDel ? LINKS : live()).map(l => ({ ...l }));
+  const mergeLinks = () => { LINKS = (B.mergeLinks ? B.mergeLinks(B.revLinks()) : B.revLinks()).map(l => ({ ...l, key: l.key || linkKey(l) })); };
+  // the inspector's rects of a screen's [data-nav] and named elements (frame px), kept after its frame unmounts
+  function takeNavs(x, d) {
+    if (!x) return;
+    const rects = (o, n) => { const out = {}; if (o && typeof o === 'object') for (const [k, r] of Object.entries(o).slice(0, n)) if (NAME_RE.test(k)) out[k] = r === null ? null : rectOf(r); return out; };
+    const navAt = rects(d.navs, 50), sig = JSON.stringify(navAt), was = JSON.stringify(x.navAt);
+    x.navAt = navAt; x.named = rects(d.named, 100);
+    if (sig !== was && LINKS.some(l => l.from === x.a.id)) relinkSoon();
+  }
+  B.navRects = id => { const x = B.frames.get(id); return x && x.navAt ? { ...x.navAt } : {}; };
+  B.namedRects = id => { const x = B.frames.get(id); return x && x.named ? { ...x.named } : {}; };
+  // an element's rect in board px, clipped to its screen; null when it is unknown, hidden or scrolled out of the screen
+  function navRect(id, el) {
+    const x = B.frames.get(id) || B.ghosts.get(id), r = x && ((x.navAt && x.navAt[el]) || (x.named && x.named[el]));
+    if (!r || r.x + r.w <= 0 || r.y + r.h <= 0 || r.x >= x.p.w || r.y >= x.p.h) return null;
+    const x0 = Math.max(0, r.x), y0 = Math.max(0, r.y);
+    return { x: x.p.x + x0, y: x.p.y + y0, w: Math.min(x.p.w, r.x + r.w) - x0, h: Math.min(x.p.h, r.y + r.h) - y0 };
+  }
+  B.navRect = navRect;
+  // a gesture link has nothing to tap: its element is hidden, so the arrow starts on the screen's border
+  const gesture = l => !!l.edge || (() => { const x = B.frames.get(l.from); return !!(x && x.navAt && x.navAt[l.el] === null); })();
+  B.boxes = () => { const out = {}; for (const x of B.frames.values()) out[x.a.id] = { ...x.p }; return out; };
+  // what the router avoids: every shown screen with its bezel and title bar
+  function obstacles() {
+    const out = {};
+    for (const x of [...B.frames.values(), ...B.ghosts.values()]) {
+      if (x.el.classList.contains('off')) continue;
+      const bz = BEZEL[devOf(x.a)] || 0;
+      out[x.a.id] = { x: x.p.x - bz, y: x.p.y - bz - TITLE_H, w: x.p.w + 2 * bz, h: x.p.h + 2 * bz + TITLE_H };
+    }
+    return out;
+  }
+  // the router's input: every link with both ends shown; a back link, for the selected screen only, goes back to
+  // each screen that pushes or raises it
+  function geoInput() {
+    const bx = obstacles(), out = [];
+    const add = (l, id, to, kind) => { if (bx[l.from] && bx[to] && to !== l.from) out.push({ id, from: l.from, el: l.el, to, kind, src: gesture(l) ? null : navRect(l.from, l.el) }); };
+    for (const l of [...LINKS, ...GONE]) if (l.to) add(l, l.key, l.to, l.kind);
+    if (B.sel) for (const l of live()) if (l.kind === 'back' && l.from === B.sel)
+      for (const s of new Set(live().filter(m => m.to === B.sel && (m.kind === 'push' || m.kind === 'modal')).map(m => m.from))) add(l, l.key + '\n' + s, s, 'back');
+    return { bx, out };
+  }
+  function relink() { routes = {}; if (GEO) { const { bx, out } = geoInput(); routes = GEO.routeLinks(bx, out); } drawLinks(); }
+  let relinkT = 0;
+  const relinkSoon = () => { if (!relinkT) relinkT = requestAnimationFrame(() => { relinkT = 0; relink(); MARKUP.relayout(); }); };
+  B.refreshLinks = () => { mergeLinks(); relink(); paintScreenList(); paintTools(); if (pres) pres.hints(); };
+  B.reroute = ids => { if (!GEO) return; const { bx, out } = geoInput(); routes = ids ? GEO.reroute(routes, bx, out, ids) : GEO.routeLinks(bx, out); drawLinks(); };
+  B.setPositions = map => {
+    const moved = [];
+    for (const [id, v] of Object.entries(map || {})) {
+      const x = B.frames.get(id);
+      if (!x || !Array.isArray(v) || !Number.isFinite(v[0]) || !Number.isFinite(v[1])) continue;
+      x.p = { ...x.p, x: v[0], y: v[1] }; placeAb(x); moved.push(id);
+    }
+    if (moved.length) { B.reroute(moved); MARKUP.relayout(); }
+    return moved;
+  };
+  B.linkPath = key => { for (const o of gEls.values()) if (o.l.key === key && o.id === key) return { points: o.r.points.map(p => p.slice()), d: o.r.d }; return null; };
+  B.toBoard = e => toBoard(e);
+
+  const lsvg = sv('svg', { class: 'bd-lnks' }), lbls = h('div', { class: 'bd-lnk-lbls', 'aria-hidden': 'true' });
+  const marker = (id, w, path, refX) => sv('marker', { id: 'bd-mk-' + id, class: 'bd-mk ' + id, viewBox: `0 0 ${w} 10`, refX, refY: 5, markerWidth: w / 2, markerHeight: 5, orient: 'auto', markerUnits: 'strokeWidth' }, sv('path', { d: path }));
+  lsvg.append(sv('defs', {}, ['rest', 'out', 'draft', 'add', 'mod', 'del'].map(c => marker(c, 10, 'M1 1L9 5L1 9z', 8)), marker('bar', 4, 'M0 0h4v10H0z', 2)));
+  B.svg = lsvg; B.stage = stage; B.vp = vp;
+  vp.append(lsvg, lbls);   // over the screens; compare's ghosts go in before it, requested frames and editors after
+  // a zero-length path with round caps draws a dot that keeps its screen size (its stroke width follows the zoom)
+  const dotD = p => `M${p[0]} ${p[1]}h0.01`;
+  function linkEl() {
+    const o = { hit: sv('path', { class: 'hit' }), ln: sv('path', { class: 'ln' }), d0: sv('path', { class: 'bd-lnk-dot', 'data-end': 'start' }), d1: sv('path', { class: 'bd-lnk-dot', 'data-end': 'end' }),
+      pill: h('div', { class: 'bd-lnk-lbl' }), hov: false };
+    o.g = sv('g', { class: 'bd-lnk' }, o.hit, o.ln, o.d0, o.d1);
+    o.g.addEventListener('pointerenter', () => { o.hov = true; paintLink(o, curReach()); });
+    o.g.addEventListener('pointerleave', () => { o.hov = false; paintLink(o, curReach()); });
+    return o;
+  }
+  function drawLinks() {
+    const byKey = new Map([...LINKS, ...GONE].map(l => [l.key, l])), keep = new Set();
+    for (const [id, r] of Object.entries(routes)) {
+      const l = byKey.get(id.split('\n')[0]);
+      if (!l || !r || !Array.isArray(r.points) || r.points.length < 2) continue;
+      keep.add(id);
+      let o = gEls.get(id);
+      if (!o) { o = linkEl(); gEls.set(id, o); lsvg.append(o.g); lbls.append(o.pill); }
+      const kind = id.includes('\n') ? 'back' : l.kind;
+      Object.assign(o, { id, l, r, kind });
+      for (const c of [...o.g.classList]) if (c.startsWith('k-')) o.g.classList.remove(c);
+      o.g.classList.add('k-' + kind);
+      o.g.classList.toggle('draft', !!l.draft && !l.del); o.g.classList.toggle('del', !!l.del); o.g.classList.toggle('gone', GONE.includes(l));
+      o.g.setAttribute('data-link', l.key);
+      o.g.setAttribute('data-label', l.label || '');
+      o.g.setAttribute('aria-label', `Link ${titleOf(l.from)} › ${kind === 'back' ? 'Back' : titleOf(l.to)}`);
+      for (const p of [o.hit, o.ln]) p.setAttribute('d', r.d);
+      o.d0.setAttribute('d', dotD(r.points[0])); o.d1.setAttribute('d', dotD(r.points[r.points.length - 1]));
+      o.ln.setAttribute('marker-start', l.kind === 'replace' ? 'url(#bd-mk-bar)' : 'none');
+      const lp = r.label || { x: r.points[0][0], y: r.points[0][1] };
+      Object.assign(o.pill.style, { left: lp.x + 'px', top: lp.y + 'px' });
+      o.pill.replaceChildren(...(l.del ? ['×'] : l.draft ? [h('b', {}, 'draft'), l.label ? ' ' + l.label : ''] : [l.label || '']));
+    }
+    for (const [id, o] of gEls) if (!keep.has(id)) { o.g.remove(); o.pill.remove(); gEls.delete(id); }
+    paintReach();
+  }
+  // the reach of the hovered, else the selected, screen: its distinct targets (with their kinds) and sources
+  function curReach() {
+    const f = hovId || B.sel;
+    if (!f || !LINKS.length) return null;
+    const tg = new Map(), src = new Set();
+    for (const l of live()) {
+      if (l.from === f && l.to && l.to !== f) { if (!tg.has(l.to)) tg.set(l.to, new Set()); tg.get(l.to).add(l.kind); }
+      if (l.to === f && l.from !== f) src.add(l.from);
+    }
+    return { f, tg, src };
+  }
+  function paintLink(o, R) {
+    const out = !!R && o.l.from === R.f, sel = o.l.key === B.selLink, c = o.g.classList;
+    c.toggle('out', out); c.toggle('sel', sel); c.toggle('hov', o.hov); c.toggle('dim', !!R && !out);
+    o.pill.classList.toggle('on', !!(o.pill.textContent && (out || sel || o.hov || o.l.draft || o.l.del)));
+    o.pill.classList.toggle('draft', !!(o.l.draft || o.l.del));
+    const mk = c.contains('bd-chg-add') ? 'add' : c.contains('bd-chg-del') ? 'del' : c.contains('bd-chg-mod') ? 'mod' : o.l.draft || o.l.del ? 'draft' : out || sel || o.hov ? 'out' : 'rest';
+    o.ln.setAttribute('marker-end', `url(#bd-mk-${mk})`);
+  }
+  function paintReach() {
+    const R = curReach();
+    for (const x of B.frames.values()) {
+      const id = x.a.id, kinds = R && R.tg.get(id), me = !!R && id === R.f;
+      x.el.classList.toggle('tgt', !!kinds); x.el.classList.toggle('dim', !!R && !me && !kinds);
+      x.lk.hidden = !kinds; x.lk.textContent = kinds ? '· ' + [...kinds].join(' · ') : '';
+      x.rch.hidden = !me; x.rch.textContent = me ? `→ ${R.tg.size} · ← ${R.src.size}` : '';
+    }
+    for (const o of gEls.values()) paintLink(o, R);
+    lsvg.classList.toggle('off', !B.flows); lbls.classList.toggle('off', !B.flows);
+  }
+  function hoverAb(id) { if (hovId !== id) { hovId = id; paintReach(); } }
+  function selectLink(key) { B.selLink = key || null; paintReach(); }
+  B.selectLink = selectLink; B.select = id => select(id); B.focus = id => focus(id);
+  function setFlows(on) { B.flows = !!on; store.set(FLOWS_KEY, B.flows ? '1' : '0'); paintReach(); paintTools(); }
+  // a link's part under a press (NavEdit's editing): the start or end dot, else the line
+  lsvg.addEventListener('pointerdown', e => {
+    const g = e.target.closest && e.target.closest('.bd-lnk[data-link]'); if (!g || !B.onLink || (B.mode !== 'view' && B.mode !== 'link')) return;
+    const o = [...gEls.values()].find(o => o.g === g); if (!o) return;
+    if (B.onLink(e, { ...o.l }, e.target.classList.contains('bd-lnk-dot') ? e.target.getAttribute('data-end') : 'line')) e.stopPropagation();
+  });
+  B.onLink = null;
+  // the Screens list: each row's distinct targets, and `entry` on the entries
+  const ENTRY = new Set(Array.isArray(b.entry) ? b.entry.filter(e => typeof e === 'string') : []);
+  function paintScreenList() {
+    for (const x of B.frames.values()) {
+      if (!x.liReach) continue;
+      const n = new Set(live().filter(l => l.from === x.a.id && l.to && l.to !== x.a.id).map(l => l.to)).size;
+      x.liReach.textContent = [ENTRY.has(x.a.id) && 'entry', n && `→ ${n}`].filter(Boolean).join(' · ');
+    }
+  }
+  // a link pin's spot: the middle of its label segment, as a fraction of the arrow's box
+  const linkPinPos = key => {
+    const o = gEls.get(key); if (!o) return null;
+    const xs = o.r.points.map(p => p[0]), ys = o.r.points.map(p => p[1]), x0 = Math.min(...xs), y0 = Math.min(...ys), w = Math.max(...xs) - x0, hh = Math.max(...ys) - y0;
+    const lp = o.r.label || { x: x0, y: y0 };
+    return { x: w ? clamp((lp.x - x0) / w, 0, 1) : .5, y: hh ? clamp((lp.y - y0) / hh, 0, 1) : .5 };
+  };
+  mergeLinks();
+
+  /* toolbar: panel, Fit · zoom · Focus, Present, Variants, Flows, fidelity, theme, motion */
   const tbtn = (icon, label, fn, extra) => h('button', { type: 'button', class: 'bd-tbtn', 'aria-label': label, title: label, onclick: fn, ...extra }, ic(icon));
   const sep = () => h('span', { class: 'bd-groove', role: 'separator', 'aria-orientation': 'vertical' });
   const lpBtn = tbtn('panelleft', 'Screens and brief ([)', () => setLp(!B.lp, true), { 'aria-pressed': 'false' });
   zoomLbl = h('span', { class: 'zl' }, '100%');
   const varBtn = tbtn('variants', 'Variants: line up the selected screen and its variants', () => toggleVariants(), { 'aria-pressed': 'false' });
+  const flowsBtn = h('button', { type: 'button', class: 'bd-tbtn txt', 'aria-pressed': 'false', title: 'Flows: every link as an arrow (off: only the selected screen\'s reach)', onclick: () => setFlows(!B.flows) }, 'Flows');
   const fidSeg = h('div', { class: 'bd-sg', role: 'radiogroup', 'aria-label': 'Fidelity' }, [['drawn', 'As drawn', 'Each screen at the fidelity it was drawn in'], ['sketch', 'Sketch', 'Every screen hand-drawn: wobbly lines, hand font']].map(([v, l, t]) =>
     h('button', { type: 'button', role: 'radio', 'data-v': v, title: t, onclick: () => { B.sketch = v === 'sketch'; sendAll(viewMsg); paintTools(); } }, l)));
   const themeSel = themes.length ? h('select', { 'aria-label': 'Theme', title: 'Theme: the brief\'s pick; changing it here picks it there' }, themes.map(t => h('option', { value: t.id }, t.label || t.id))) : null;
@@ -4144,7 +4549,7 @@ function renderBoard(b) {
   const tb = h('div', { class: 'bd-btb', role: 'toolbar', 'aria-label': 'Board' }, lpBtn, sep(),
     tbtn('fit', 'Fit all screens (0)', () => fit(true)), tbtn('minus', 'Zoom out (−)', () => zoomBy(1 / 1.4)), zoomLbl, tbtn('plus', 'Zoom in (+)', () => zoomBy(1.4)),
     tbtn('target', 'Focus the selected screen (F, or double-click it)', () => focusSel()), sep(),
-    tbtn('present', deck.length ? 'Present the slides (← →, N: notes, Esc leaves)' : 'Present: one screen at a time (← →, Esc leaves)', () => present(B.sel)), varBtn, sep(), fidSeg,
+    tbtn('present', deck.length ? 'Present the slides (← →, N: notes, Esc leaves)' : 'Present: one screen at a time (a tap follows its link; Backspace goes back; ← →, Esc leaves)', () => present(B.sel)), varBtn, flowsBtn, sep(), fidSeg,
     themeSel && [sep(), h('label', { class: 'th' }, ic('palette'), themeSel)], sep(), motBtn, redBtn);
   if (themeSel) themeSel.addEventListener('change', () => { const x = ITEMS['brief/theme']; if (x && x.setChoice && !OLD) x.setChoice(themeSel.value); else { B.theme = themeSel.value; paintTokens(); } });
   function paintTools() {
@@ -4153,6 +4558,7 @@ function renderBoard(b) {
     motBtn.replaceChildren(ic(B.paused ? 'play' : 'pause')); motBtn.title = B.paused ? 'Play animations' : 'Pause animations'; motBtn.setAttribute('aria-label', motBtn.title); motBtn.setAttribute('aria-pressed', String(B.paused));
     redBtn.setAttribute('aria-pressed', String(B.reduced));
     varBtn.disabled = !B.variants && !variantGroup(B.sel).length; varBtn.setAttribute('aria-pressed', String(!!B.variants));
+    flowsBtn.hidden = !LINKS.length && !GONE.length; flowsBtn.setAttribute('aria-pressed', String(B.flows));
     if (themeSel && B.theme) themeSel.value = B.theme;
   }
   // the theme is the brief's pick (the reader's, else the recommendation): picking a pill re-skins every frame
@@ -4179,34 +4585,58 @@ function renderBoard(b) {
       for (const x of [...B.frames.values(), ...B.ghosts.values()]) { if (x.home) { x.p = x.home; x.home = null; placeAb(x); } x.el.classList.remove('off'); }
       fit(true);
     }
-    paintTools(); MARKUP.relayout();
+    relink(); paintTools(); MARKUP.relayout();
   }
 
   /* Present: one screen at a time at its own size on a dark stage, interactive; ← → step in board order, Esc leaves.
+     A tap follows the screen's link (drafts included) with its kind's transition and keeps a back stack: push and
+     modal grow it, a tab swaps the screen above the stack's root, replace starts it again, back (or Backspace) pops it.
      A deck (a doc with slides) presents its slides instead, in reading order, each as large as the window allows,
      with its speaker notes under it (N shows or hides them). */
   let pres = null, presNotes = true;
+  // the board's motion tokens for the transitions: `base` (e.g. "240ms") and `ease`
+  const presMotion = () => {
+    const m = b.motion && typeof b.motion === 'object' ? b.motion : {}, t = /^(\d+(?:\.\d+)?)(ms|s)$/.exec(String(m.base || '').trim());
+    const ez = String(m.ease || '').trim();
+    return { duration: t ? clamp(+t[1] * (t[2] === 's' ? 1000 : 1), 0, 1000) : 240, easing: /^(ease(-in|-out|-in-out)?|linear|cubic-bezier\(\s*[-\d.]+\s*(,\s*[-\d.]+\s*){3}\))$/.test(ez) ? ez : 'cubic-bezier(.2,0,0,1)' };
+  };
+  const PRES_FX = { push: [{ transform: 'translateX(48px)', opacity: 0 }, { transform: 'none', opacity: 1 }], back: [{ transform: 'translateX(-48px)', opacity: 0 }, { transform: 'none', opacity: 1 }],
+    modal: [{ transform: 'translateY(80px)', opacity: 0 }, { transform: 'none', opacity: 1 }], tab: [{ opacity: 0 }, { opacity: 1 }], replace: [{ opacity: 0 }, { opacity: 1 }] };
   function present(id) {
     if (pres) return;
     const slides = deck.length > 0, order = slides ? deck : abs.filter(a => B.frames.has(a.id)), what = slides ? 'slide' : 'screen';
     if (!order.length) return;
-    let i = Math.max(0, order.findIndex(a => a.id === id));
+    const entry = slides ? null : [...ENTRY].find(e => order.some(a => a.id === e));
+    let i = Math.max(0, order.findIndex(a => a.id === (id || entry)));
+    let stack = [order[i].id];
     const box = h('div', { class: 'box' }), cap = h('div', { class: 'cap', 'aria-live': 'polite' });
     const notes = h('div', { class: 'notes', role: 'note', 'aria-label': 'Speaker notes' });
+    const hints = h('div', { class: 'hints', 'aria-label': 'Links on this screen', hidden: true });
     const notesBtn = h('button', { type: 'button', class: 'bd-tbtn txt', 'aria-pressed': 'false', title: 'Speaker notes (N)', onclick: () => toggleNotes() }, 'Notes');
+    const backBtn = h('button', { type: 'button', class: 'bd-tbtn txt', title: 'Back (Backspace)', onclick: () => back() }, 'Back');
     const close = tbtn('x', 'Leave (Esc)', () => end());
-    const el = h('div', { class: 'bd-pres' + (slides ? ' slides' : ''), role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Present' }, box, slides && notes,
-      h('div', { class: 'bar' }, tbtn('prev', `Previous ${what} (←)`, () => step(-1)), cap, tbtn('next', `Next ${what} (→)`, () => step(1)), slides && notesBtn, close));
+    const el = h('div', { class: 'bd-pres' + (slides ? ' slides' : ''), role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Present' }, box, slides ? notes : hints,
+      h('div', { class: 'bar' }, !slides && backBtn, tbtn('prev', `Previous ${what} (←)`, () => step(-1)), cap, tbtn('next', `Next ${what} (→)`, () => step(1)), slides && notesBtn, close));
     let rec = null, dev = null;
     // a slide takes the room the notes and the bar leave (box padding: 16px at the sides and top)
-    const lay = () => dev && (slides ? dev.fit(box.clientWidth - 32, box.clientHeight - 16, true) : dev.fit(innerWidth - 96, innerHeight - 120));
+    const lay = () => dev && (slides ? dev.fit(box.clientWidth - 32, box.clientHeight - 16, true) : dev.fit(innerWidth - 96, innerHeight - 120 - hints.offsetHeight));
     function paintNotes() {
       const has = !!notes.firstChild;
       notesBtn.hidden = !has; notesBtn.setAttribute('aria-pressed', String(presNotes)); notes.hidden = !has || !presNotes;
       lay();
     }
     function toggleNotes() { presNotes = !presNotes; paintNotes(); }
-    function showI() {
+    // the screen's labelled links ("Tap Start workout → Workout"); a gesture link has nothing to tap, so it is a button
+    function paintHints() {
+      if (slides) return;
+      const a = order[i], ls = live().filter(l => l.from === a.id && (l.label || gesture(l)) && (l.kind === 'back' ? stack.length > 1 : B.frames.has(l.to)));
+      hints.replaceChildren(...ls.map(l => {
+        const txt = [l.label || 'Gesture', h('span', { class: 'to' }, ' → ', l.kind === 'back' ? 'Back' : titleOf(l.to))];
+        return gesture(l) ? h('button', { type: 'button', class: 'hint', onclick: () => follow(l) }, ...txt) : h('span', { class: 'hint' }, ...txt);
+      }));
+      hints.hidden = !ls.length;
+    }
+    function showI(kind) {
       if (rec) B.live.delete(rec);
       const a = order[i]; rec = { a, role: 'pres', fr: null };
       dev = deviceBox(a, frameEl(rec, OLD ? VIEW.rev : null), SERVED || SCREENS ? '' : `Open this page through serve.py to see the ${what}.`);
@@ -4216,14 +4646,29 @@ function renderBoard(b) {
         cap.replaceChildren(h('b', {}, `${i + 1} / ${order.length}`), ' · ', a.title || a.id);
         paintNotes();
       } else {
-        lay();
-        cap.replaceChildren(h('b', {}, a.title || a.id), ` · ${i + 1} of ${order.length}`);
+        paintHints(); lay();
+        cap.replaceChildren(h('b', { class: 'crumbs' }, stack.map(titleOf).join(' › ')), ` · ${i + 1} of ${order.length}`);
+        backBtn.disabled = stack.length < 2;
+        if (kind && PRES_FX[kind] && !B.reduced && !REDUCE) dev.sz.animate(PRES_FX[kind], presMotion());
       }
       select(a.id);
     }
-    function step(d) { i = (i + d + order.length) % order.length; showI(); }
+    function go2(id, kind) { const j = order.findIndex(a => a.id === id); if (j < 0) return; i = j; showI(kind); }
+    function follow(l) {
+      if (l.kind === 'back') { if (stack.length < 2) return; stack.pop(); go2(stack[stack.length - 1], 'back'); return; }
+      if (!order.some(a => a.id === l.to)) return;
+      if (l.kind === 'replace') stack = [l.to];
+      else if (l.kind === 'tab') stack = l.to === stack[0] ? [stack[0]] : [stack[0], l.to];
+      else stack.push(l.to);
+      go2(l.to, l.kind);
+    }
+    function back() { if (stack.length > 1) { stack.pop(); go2(stack[stack.length - 1], 'back'); } }
+    function step(d) { i = (i + d + order.length) % order.length; stack = [order[i].id]; showI(); }
     function end() { if (rec) B.live.delete(rec); removeEventListener('resize', lay); el.remove(); pres = null; root.classList.remove('bd-presenting'); focus(order[i].id, false); }
-    pres = { step, end, el, notes: slides ? toggleNotes : null };
+    // a tap the presented screen's frame reported, already mapped through its links
+    const tap = (x, l) => { if (x === rec && l.from === order[i].id) follow(l); };
+    pres = { step, end, el, back: slides ? null : back, tap, hints: paintHints, notes: slides ? toggleNotes : null,
+      state: () => ({ screen: order[i].id, stack: stack.slice() }), follow: name => { const l = !slides && linkFor(order[i].id, name); if (l) follow(l); return !!l; } };
     document.body.append(el); root.classList.add('bd-presenting'); addEventListener('resize', lay);
     showI(); close.focus();
   }
@@ -4302,7 +4747,7 @@ function renderBoard(b) {
     cancelRq();
     const el = h('div', { class: 'bd-rq draft' }, h('div', { class: 'bd-rq-t' }));
     vp.append(el);
-    const sel = h('select', { 'aria-label': 'Device' }, Object.keys(DEVICES).map(d => h('option', { value: d }, `${DEVICE_NAME[d]} · ${DEVICES[d].join(' × ')}`)), h('option', { value: 'custom' }, `As drawn · ${r.w} × ${r.h}`));
+    const sel = h('select', { 'aria-label': 'Device' }, Object.keys(DEVICES).filter(d => d !== 'icons').map(d => h('option', { value: d }, `${DEVICE_NAME[d]} · ${DEVICES[d].join(' × ')}`)), h('option', { value: 'custom' }, `As drawn · ${r.w} × ${r.h}`));
     const ta = h('textarea', { class: 'bp-note-ta', rows: 3, placeholder: 'What should this screen show?', 'aria-label': 'What the new screen should show' });
     const list = h('ol', { class: 'bxs' });
     const save = h('button', { type: 'button', class: 'bp-btn primary', disabled: true, onclick: () => saveRq() }, 'Save');
@@ -4384,9 +4829,12 @@ function renderBoard(b) {
     for (const x of B.live) post(x, modeMsg(x));
     for (const x of B.frames.values()) x.hov.hidden = true;
     if (m !== 'frame') cancelRq();
+    if (B.onMode) B.onMode(m);
   };
-  // an `el:` pin's spot from where its frame last reported the element, as a fraction of the artboard
+  // an `el:` pin's spot from where its frame last reported the element, as a fraction of the artboard; a `link:`
+  // pin's, on its arrow's label segment
   B.pinPos = key => {
+    if (key.startsWith('link:')) return linkPinPos(key);
     if (!key.startsWith('el:')) return null;
     const i = key.indexOf('/'), x = i > 3 && B.frames.get(key.slice(3, i));
     return x ? pickPos(x, x.rects[key.slice(i + 1)]) : null;
@@ -4396,30 +4844,54 @@ function renderBoard(b) {
   B.focusKey = key => {
     const m = /^(?:artboard|el):([^/]+)/.exec(key);
     if (m) return focus(m[1]);
+    const l = key.startsWith('link:') && LINKS.concat(GONE).find(l => l.key === key);
+    if (l) { if (!B.flows) setFlows(true); focus(l.from); selectLink(key); return true; }
     const el = [...B.rqs.values()].find(e => e.dataset.key === key);
     if (el) { showBox(boxOf([{ a: {}, p: el._box }]), true, 2); return true; }
     return false;
   };
 
-  /* compare view: artboards badged New, Changed (its JSON or its screen's hash) or Removed (a ghost at its old place) */
+  /* compare view: artboards badged New, Changed (its JSON or its screen's hash), Moved (only its x, y: its old place
+     outlined) or Removed (a ghost at its old place); links New, Changed (target, kind or label) or Removed (a ghost arrow) */
   B.compare = o => {
     const was = new Map(boardAbs(boardOf(o)).map(a => [a.id, a])), hs = BASE.screens || {}, hv = VIEW.screens || {};
-    const mark = (x, kind) => {
-      x.chg = kind; x.tag.replaceChildren(chgTag(kind)); if (x.liTag) x.liTag.replaceChildren(chgTag(kind)); x.cmpBtn.hidden = false;
+    // a screen's hashes: its screen file, or an icon artboard's layers ("<id>/<file>")
+    const hashOf = (hx, id) => canon(Object.keys(hx).filter(k => k === id || k.startsWith(id + '/')).sort().map(k => [k, hx[k]]));
+    const noPos = a => ({ ...a, x: undefined, y: undefined });
+    const mark = (x, kind, word) => {
+      const tg = () => word ? h('span', { class: 'bd-chg-tag ' + kind }, word) : chgTag(kind);
+      x.chg = word ? word.toLowerCase() : kind; x.tag.replaceChildren(tg()); if (x.liTag) x.liTag.replaceChildren(tg()); x.cmpBtn.hidden = !!word;
       markChg(x.el, kind, x.a.title || x.a.id);
-      CHG[CHG.length - 1].show = () => { focus(x.a.id); if (cmpv) openCompare(x.a.id); };
+      CHG[CHG.length - 1].show = () => { focus(x.a.id); if (cmpv && !word) openCompare(x.a.id); };
     };
+    const oldAt = boardLayout(boardOf(o), BASE.links);
     for (const x of B.frames.values()) {
       const id = x.a.id, a = was.get(id);
-      const kind = !a ? 'add' : canon(a) !== canon(x.a) || (hs[id] ?? null) !== (hv[id] ?? null) ? 'mod' : null;
-      if (kind) mark(x, kind);
+      if (!a) mark(x, 'add');
+      else if (canon(noPos(a)) !== canon(noPos(x.a)) || hashOf(hs, id) !== hashOf(hv, id)) mark(x, 'mod');
+      else if (canon(a) !== canon(x.a)) {
+        mark(x, 'mod', 'Moved');
+        const p = oldAt.get(id);
+        if (p) vp.prepend(h('div', { class: 'bd-ab-was', 'data-was': id, style: `left:${p.x}px;top:${p.y}px;width:${p.w}px;height:${p.h}px` }));
+      }
     }
-    const oldAt = boardLayout([...was.values()]);
     for (const [id, a] of was) if (!B.frames.has(id)) {
-      const g = makeAb(a, oldAt.get(id), true); B.ghosts.set(id, g); vp.append(g.el);
+      const g = makeAb(a, oldAt.get(id), true); B.ghosts.set(id, g); lsvg.before(g.el);
       if (lpList) lpList.append(h('li', {}, g.li = h('button', { type: 'button', class: 'gone', onclick: () => focus(id) }, ic(DEVICE_IC[devOf(a)]), h('span', { class: 't' }, h('b', {}, a.title || id), h('span', {}, 'Removed')), g.liTag = h('span', { class: 'tg' }))));
       mark(g, 'del');
     }
+    // links, by key (`link:<screen>/<element>`); a removed one stays as a ghost arrow
+    const before = new Map(cleanLinks(BASE.links).map(l => [linkKey(l), l])), now = new Map(REV_LINKS.map(l => [linkKey(l), l]));
+    GONE = [...before].filter(([k]) => !now.has(k)).map(([key, l]) => ({ ...l, key }));
+    relink();
+    const markLink = (key, kind, l) => {
+      const o = gEls.get(key); if (!o) return;
+      markChg(o.g, kind, `Link ${titleOf(l.from)} › ${titleOf(l.to)}`);
+      CHG[CHG.length - 1].show = () => { if (!B.flows) setFlows(true); focus(l.from); selectLink(key); };
+    };
+    for (const [k, l] of now) { const p = before.get(k); if (!p) markLink(k, 'add', l); else if (p.to !== l.to || p.kind !== l.kind || p.label !== l.label) markLink(k, 'mod', l); }
+    for (const l of GONE) markLink(l.key, 'del', l);
+    paintReach(); paintTools();
   };
 
   /* the page around the board: the left panel (Screens, Brief) and the keys. Runs once the document is drawn. */
@@ -4448,7 +4920,7 @@ function renderBoard(b) {
       const x = B.frames.get(a.id), dev = devOf(a);
       x.li = h('button', { type: 'button', 'data-ab': a.id, 'aria-current': 'false', onclick: () => focus(a.id) }, ic(DEVICE_IC[dev]),
         h('span', { class: 't' }, h('b', {}, a.title || a.id), h('span', {}, [DEVICE_NAME[dev] || `${x.p.w} × ${x.p.h}`, FIDELITY[a.fidelity], a.variantOf && 'variant'].filter(Boolean).join(' · '))),
-        x.liWarn = h('i', { class: 'warn', hidden: true }), x.liTag = h('span', { class: 'tg' }));
+        x.liWarn = h('i', { class: 'warn', hidden: true }), x.liReach = h('span', { class: 'rc' }), x.liTag = h('span', { class: 'tg' }));
       return h('li', {}, x.li);
     }));
     lpTabs = h('div', { class: 'bd-sg', role: 'radiogroup', 'aria-label': 'Panel' }, [['screens', 'Screens'], ['brief', 'Brief']].map(([v, l]) =>
@@ -4465,17 +4937,17 @@ function renderBoard(b) {
     const tx = ITEMS['brief/theme'];
     if (tx) tx.onChoice = () => { const t = themePick(); if (t !== B.theme) { B.theme = t; paintTokens(); } else paintTools(); };
     B.theme = themePick();
-    paintTools();
+    paintTools(); paintScreenList();
     document.addEventListener('keydown', e => {
       if (e.defaultPrevented || e.isComposing || e.metaKey || e.ctrlKey || e.altKey || document.querySelector('dialog[open]')) return;
       const t = e.target; if (t.isContentEditable || (t.closest && t.closest('input, textarea, select, [contenteditable]'))) return;
       const k = e.key;
       if (pres) {
         if (k === 'Escape') pres.end(); else if (k === 'ArrowLeft' || k === 'ArrowRight') pres.step(k === 'ArrowLeft' ? -1 : 1);
-        else if ((k === 'n' || k === 'N') && pres.notes) pres.notes(); else return;
+        else if ((k === 'n' || k === 'N') && pres.notes) pres.notes(); else if (k === 'Backspace' && pres.back) pres.back(); else return;
         e.preventDefault(); return;
       }
-      if (k === 'Escape') { if (cmpv) closeCompare(); else if (B.rq) cancelRq(); else if (B.variants) toggleVariants(false); else return; }
+      if (k === 'Escape') { if (cmpv) closeCompare(); else if (B.rq) cancelRq(); else if (B.variants) toggleVariants(false); else if (B.selLink || B.sel) { selectLink(null); select(null); } else return; }
       else if (k === '[') setLp(!B.lp, true);
       else if (k === '0') fit(true);
       else if (k === 'f' || k === 'F') focusSel();
@@ -4487,21 +4959,33 @@ function renderBoard(b) {
     if ('ResizeObserver' in window) new ResizeObserver(() => { if (!B.touched) fit(false); else apply(); if (cmpv) cmpv.lay(); MARKUP.relayout(); }).observe(stage);
     requestAnimationFrame(() => fit(false));
   };
-  // tests and agents: BP.board({focus, fit, sketch, present, compare, variants})
+  // tests and agents: BP.board({focus, fit, sketch, present, compare, variants, flows, tap}); tap follows the presented
+  // screen's link from that element, as a tap in its frame does
   B.api = o => {
     if (o && typeof o === 'object') {
       if (o.fit) fit(false);
       if (o.focus) focus(String(o.focus), false);
       if ('sketch' in o) { B.sketch = !!o.sketch; sendAll(viewMsg); paintTools(); }
       if ('variants' in o) toggleVariants(!!o.variants);
+      if ('flows' in o) setFlows(!!o.flows);
       if (o.present) present(String(o.present)); else if (o.present === false && pres) pres.end();
+      if (o.tap && pres) pres.follow(String(o.tap));
+      if (o.back && pres && pres.back) pres.back();
       if (o.compare) openCompare(String(o.compare)); else if (o.compare === false) closeCompare();
     }
+    const R = curReach();
     return { k: B.k, mode: B.mode, selected: B.sel, panel: B.lp, theme: B.theme, sketch: B.sketch, variants: B.variants, present: !!pres, compare: !!cmpv,
+      presented: pres && pres.state ? pres.state() : null, flows: B.flows, selectedLink: B.selLink,
+      reach: R ? { screen: R.f, out: R.tg.size, in: R.src.size, targets: Object.fromEntries([...R.tg].map(([k, v]) => [k, [...v]])) } : null,
+      links: LINKS.concat(GONE).map(l => ({ key: l.key, from: l.from, el: l.el, to: l.to, kind: l.kind, label: l.label, draft: l.draft || null, del: !!l.del, gone: GONE.includes(l),
+        routed: gEls.has(l.key), change: gEls.has(l.key) ? ['add', 'mod', 'del'].find(c => gEls.get(l.key).g.classList.contains('bd-chg-' + c)) || null : null })),
       live: boardFrames().length, requested: [...B.rqs.values()].map(el => el.dataset.key),
-      artboards: [...B.frames.values()].map(x => ({ id: x.a.id, x: x.p.x, y: x.p.y, w: x.p.w, h: x.p.h, live: !!x.fr, ready: x.ready, fallback: x.fallback, navigated: x.navs, change: x.chg })) };
+      artboards: [...B.frames.values()].map(x => ({ id: x.a.id, x: x.p.x, y: x.p.y, w: x.p.w, h: x.p.h, live: !!x.fr, ready: x.ready, fallback: x.fallback, navigated: x.navs, change: x.chg,
+        navs: x.navAt ? { ...x.navAt } : null })) };
   };
   const wrap = h('div', { class: 'bd-bwrap' }, stage, tb);
+  B.tb = tb;
+  relink();
   return wrap;
 }
 
@@ -5271,12 +5755,16 @@ const MARKUP = (() => {
   const parse = s => { try { return JSON.parse(s); } catch { return null; } };
   // a stored value the page can't draw (state.db keeps whatever an import or another version wrote) is
   // skipped and logged, so one bad comment can't stop the page; the next save of the comments removes it
-  const ANN_TYPES = ['pin', 'text', 'draw', 'general'];
+  // `link` and `layout`: a design board's drafts (boardEdits), a link edit or the screens' moved places
+  const ANN_TYPES = ['pin', 'text', 'draw', 'general', 'link', 'layout'];
+  const DRAFT_TYPES = ['link', 'layout'], isDraft = a => DRAFT_TYPES.includes(a.type);
   const isTarget = t => !!t && typeof t === 'object' && typeof t.key === 'string' && !!t.key && typeof t.label === 'string' && (t.text == null || typeof t.text === 'string');
   const valid = a => !!a && typeof a === 'object' && typeof a.id === 'string' && ANN_TYPES.includes(a.type) && isTarget(a.target)
     && (a.targets == null || Array.isArray(a.targets) && a.targets.every(isTarget)) && (a.type !== 'text' || typeof a.quote === 'string')
     && (a.note == null || typeof a.note === 'string') && (a.up == null || Array.isArray(a.up))
-    && (a.strokes == null || Array.isArray(a.strokes)) && (a.pos == null || typeof a.pos === 'object');
+    && (a.strokes == null || Array.isArray(a.strokes)) && (a.pos == null || typeof a.pos === 'object')
+    && (a.type !== 'link' || !!a.link && typeof a.link === 'object' && typeof a.link.op === 'string' && typeof a.link.from === 'string' && typeof a.link.el === 'string')
+    && (a.type !== 'layout' || !!a.layout && typeof a.layout === 'object' && !!a.layout.positions && typeof a.layout.positions === 'object');
   const skipBad = (where, v) => { console.warn(`bluedoc: skipped a stored comment the page can't show (${where})`, v); return false; };
   let saved = store.keys(KEY + ':').map(k => k.slice(KEY.length + 1));
   let list = saved.map(id => [id, store.get(annKey(id))]).map(([id, s]) => [id, s, parse(s)])
@@ -5324,11 +5812,11 @@ const MARKUP = (() => {
   const pending = () => list.filter(a => a.status === 'pending');
   const onPage = () => list.filter(a => !isGeneral(a));
   const cut = (s, n) => { s = String(s ?? '').replace(/\s+/g, ' ').trim(); return s.length > n ? s.slice(0, n - 1).trimEnd() + '…' : s; };
-  const TYPE_IC = { pin: 'msg', text: 'type', draw: 'pencil', general: 'msgsq' };
-  const TYPE_WORD = { pin: 'pin', text: 'text', draw: 'drawing', general: 'general' };
+  const TYPE_IC = { pin: 'msg', text: 'type', draw: 'pencil', general: 'msgsq', link: 'route', layout: 'grid' };
+  const TYPE_WORD = { pin: 'pin', text: 'text', draw: 'drawing', general: 'general', link: 'link draft', layout: 'layout draft' };
   const excerpt = a => a.type === 'text' ? a.quote : a.type === 'draw' && a.targets && a.targets.length ? a.targets.map(t => t.text).filter(Boolean).join(' / ') : a.target.text;
   const pub = a => ({ id: a.id, type: a.type, note: a.note, target: a.target, ...(a.type === 'draw' ? { targets: a.targets || [a.target] } : {}),
-    ...(a.type === 'text' ? { quote: a.quote } : {}), rev: a.rev, at: a.at });
+    ...(a.type === 'text' ? { quote: a.quote } : {}), ...(a.type === 'link' ? { link: a.link } : {}), ...(a.type === 'layout' ? { layout: a.layout } : {}), rev: a.rev, at: a.at });
   const noteText = a => String(a.note || '').trim();
   // the key `patch` takes, as changes.json has it; a drawing over several parts names each part's key
   const keysMd = a => [...new Set((a.type === 'draw' && a.targets && a.targets.length ? a.targets : [a.target]).map(t => t.key))].map(k => `\`${k}\``).join(' ');
@@ -5336,7 +5824,7 @@ const MARKUP = (() => {
   const headMd = (a, i) => `${i + 1}. **${a.target.label}** (${TYPE_WORD[a.type]}) ${keysMd(a)} (${a.id})`;
   // general comments first, under General; then the page comments, numbered
   function changesMd(items = pending()) {
-    const gen = items.filter(isGeneral), pg = items.filter(a => !isGeneral(a)), parts = [];
+    const gen = items.filter(isGeneral), pg = items.filter(a => !isGeneral(a) && !isDraft(a)), dr = items.filter(isDraft), parts = [];
     if (gen.length) parts.push('## General\n\n' + gen.map(a => `- (${a.id}) ` + noteText(a).split('\n').join('\n  ')).join('\n'));
     if (gen.length && pg.length) parts.push('## On the page');
     if (pg.length) parts.push(pg.map((a, i) => {
@@ -5344,6 +5832,9 @@ const MARKUP = (() => {
       return [headMd(a, i), ex && `   > ${ex}`,
         `   Change: ${noteText(a).split('\n').join('\n   ')}`].filter(Boolean).join('\n');
     }).join('\n\n'));
+    // a board's drafts: one line each, then the `patch` commands that make them (BOARD.draftCommands)
+    if (dr.length) parts.push('## Board drafts\n\n' + dr.map(a => `- (${a.id}) ${keysMd(a)} ${noteText(a)}`).join('\n')
+      + (BOARD && BOARD.draftCommands ? '\n\n```sh\n' + BOARD.draftCommands(dr) + '\n```' : ''));
     const dec = APPROVABLE ? decisionsMd() : decisionsMd(itemsPending());
     if (dec) parts.push('## Decisions\n\n' + dec);
     return `# Change requests: ${DOC.title || docId}${CUR.rev ? ` (rev ${CUR.rev})` : ''}, ${new Date().toISOString().slice(0, 10)}\n\n` + parts.join('\n\n') + '\n';
@@ -5369,14 +5860,15 @@ const MARKUP = (() => {
 
   /* what can be annotated, and the key of each */
   const shell = $('.bd-shell');
-  // a design's board adds two: an artboard (`artboard:<id>`) and a requested frame (`frame:<device>@<x>,<y>`).
-  // Elements inside a screen's frame come from its inspector as `el:<id>/<path>` (pinFrame), not from here.
+  // a design's board adds three: an artboard (`artboard:<id>`), a requested frame (`frame:<device>@<x>,<y>`) and a
+  // link's arrow (`link:<screen>/<element>`). Elements inside a screen's frame come from its inspector as
+  // `el:<id>/<path>` (pinFrame), not from here.
   const SEL = { line: '.bd-ln', comment: '.bd-cm[data-ci]', row: 'tr[data-r]', node: '.bp-node[data-key]', step: '.bp-step[data-step]', file: '.bp-frow[data-path]',
-    media: '.bp-media', compare: '.bp-cmpr-side[data-side]', card: '.bp-card', para: '.bp-text p, .bp-text li', artboard: '.bd-ab[data-ab]', frame: '.bd-rq[data-key]',
+    media: '.bp-media', compare: '.bp-cmpr-side[data-side]', card: '.bp-card', para: '.bp-text p, .bp-text li', artboard: '.bd-ab[data-ab]', frame: '.bd-rq[data-key]', link: '.bd-lnk[data-link]',
     item: '.bp-cl-item[id]', block: '.bp-cl-block, .bp-block[data-bk]', heading: '.bp-sec > h2', lead: '.bp-sec > .bp-lead', section: 'section.bp-sec[id]',
     tldr: '.bd-tldr-card', header: '.bd-head', status: '.bd-meta' };
   const KIND = { line: 'Code line', comment: 'Review comment', row: 'Table row', node: 'Drawing part', step: 'Plan step', file: 'File', media: 'Media', compare: 'Compare side',
-    card: 'Card', para: 'Paragraph', artboard: 'Screen', frame: 'Requested frame', item: 'Checklist item', block: 'Block', heading: 'Section title', lead: 'Section lead', section: 'Section',
+    card: 'Card', para: 'Paragraph', artboard: 'Screen', frame: 'Requested frame', link: 'Link', item: 'Checklist item', block: 'Block', heading: 'Section title', lead: 'Section lead', section: 'Section',
     tldr: 'TL;DR', header: 'Header', status: 'Status', doc: 'Page' };
   const TYPES = Object.keys(SEL), ANY = Object.values(SEL).join(', ');
   const CLIPS = '.bd-pane, .bp-stage, .bp-table-wrap, .bp-side, .bd-board, .bd-lp-pane';   // inner scrollers that clip what they hold
@@ -5408,6 +5900,7 @@ const MARKUP = (() => {
       case 'compare': return `compare:${pathOf(el)}/${el.dataset.side}`;
       case 'artboard': return 'artboard:' + el.dataset.ab;
       case 'frame': return el.dataset.key;
+      case 'link': return el.getAttribute('data-link');
       case 'card': return `card:${pathOf(el)}/${[...el.parentElement.children].indexOf(el)}`;
       case 'para': { const t = el.closest('.bp-text'); return `para:${pathOf(t)}/${[...t.querySelectorAll('p, li')].indexOf(el)}`; }
       case 'item': return 'item:' + itemKeyOf(el);
@@ -5455,6 +5948,7 @@ const MARKUP = (() => {
       case 'compare': return cut(el.querySelector('.bp-cmpr-h .l')?.textContent, 40) || (el.dataset.side === 'before' ? 'Before' : 'After');
       case 'artboard': return cut(el.querySelector('.bd-ab-t .n')?.textContent, 48) || 'Screen';
       case 'frame': return cut(el.querySelector('.bd-rq-t')?.textContent, 48) || 'Requested frame';
+      case 'link': return cut(el.getAttribute('aria-label'), 60) || 'Link';
       case 'row': return `Row ${+el.dataset.r + 1}: ${cut([...el.cells].slice(0, 2).map(c => c.textContent.trim()).filter(Boolean).join(' · '), 48)}`;
       case 'card': return cut(el.querySelector('h4 > span')?.textContent, 48) || 'Card';
       case 'para': return `“${cut(el.textContent, 40)}”`;
@@ -5475,7 +5969,7 @@ const MARKUP = (() => {
   const BLOCKY = 'div, p, li, td, th, tr, dt, dd, h1, h2, h3, h4, pre, .bp-cl-text, .bp-cl-subt, .bp-chip, .bp-fmain > span';
   const contentText = el => { const c = el.cloneNode(true); c.querySelectorAll(CHROME).forEach(x => x.remove()); c.querySelectorAll(BLOCKY).forEach(x => x.append(' ')); return c.textContent.replace(/\s+/g, ' ').trim(); };
   const mediaText = el => contentText(el) || el.querySelector('img')?.alt || el.querySelector('video')?.getAttribute('aria-label') || '';
-  const textOf = el => cut(el instanceof SVGElement ? [...el.querySelectorAll(':scope > .bp-cover > text:not(.bp-open)')].map(t => t.textContent).join(' ')
+  const textOf = el => cut(el.matches('.bd-lnk') ? el.getAttribute('data-label') : el instanceof SVGElement ? [...el.querySelectorAll(':scope > .bp-cover > text:not(.bp-open)')].map(t => t.textContent).join(' ')
     : el.matches('.bd-ln') ? el.querySelector('.c')?.textContent : el.matches('.bp-cl-item') ? contentText(el.querySelector('.bp-cl-row') || el)
     : el.matches('.bp-step') ? contentText(el.querySelector('.bp-step-t')) : el.matches('.bp-media') ? mediaText(el)
     : el.matches('.bd-ab') ? el.querySelector('.bd-ab-t .n')?.textContent : el.matches('.bd-rq') ? el.querySelector('.pr')?.textContent
@@ -5498,6 +5992,43 @@ const MARKUP = (() => {
     hlDirty = true; paint(); schedule(true);
     return a;
   }
+  // a design board's drafts (boardEdits): put creates one or updates it (an edit makes a sent one pending again),
+  // restore puts back a copy (undo), drop deletes one, resolve marks it applied by the current rev, mark sets flags (stale)
+  const draftSaved = () => { save(); hlDirty = true; schedule(true); paint(); };
+  const draftOf = id => list.find(x => x.id === id && isDraft(x)) || null;
+  const drafts = {
+    all: () => JSON.parse(JSON.stringify(list.filter(isDraft))),
+    put(o) {
+      const host = $('.bd-boardblk'), label = (host ? labelOf(host) + ' › ' : '') + o.label;
+      let a = o.id ? draftOf(o.id) : null;
+      if (!a) {
+        a = { id: newId(), type: o.type, status: 'pending', note: '', target: { key: o.key, label, text: '' }, up: host ? [keyOf(host), ...ups(host)] : [], rev: CUR.rev, at: new Date().toISOString() };
+        list.push(a);
+        if (!matches(a)) setFilter('pending', false);
+      } else {
+        for (const k of ['sentAt', 'stale', 'resolvedBy', 'resolvedRev', 'resolvedAt', 'link', 'layout']) delete a[k];
+        Object.assign(a, { status: 'pending', rev: CUR.rev, target: { ...a.target, key: o.key, label } });
+      }
+      a.note = o.note; a[o.type] = o[o.type];
+      draftSaved();
+      return a.id;
+    },
+    restore(c) {
+      if (!valid(c) || !isDraft(c)) return;
+      const i = list.findIndex(x => x.id === c.id);
+      if (i >= 0 && list[i] === selA) selA = null;
+      if (i >= 0 && list[i] === hotA) hotA = null;
+      if (i < 0) list.push(c); else list[i] = c;
+      draftSaved();
+    },
+    drop(id) { const a = draftOf(id); if (a) remove(a); },
+    resolve(id) {
+      const a = draftOf(id); if (!a) return;
+      Object.assign(a, { status: 'resolved', resolvedBy: 'rev', resolvedRev: CUR.rev, resolvedAt: new Date().toISOString() }); delete a.stale;
+      draftSaved();
+    },
+    mark(id, o) { const a = draftOf(id); if (!a) return; for (const [k, v] of Object.entries(o)) if (v) a[k] = v; else delete a[k]; draftSaved(); },
+  };
   const info = el => ({ key: keyOf(el), label: labelOf(el), text: textOf(el) });
   function ups(el) { const out = []; for (let p = el.parentElement?.closest(ANY); p; p = p.parentElement?.closest(ANY)) out.push(keyOf(p)); return out; }
   const newAnn = (type, el) => ({ id: newId(), type, status: 'pending', note: '', target: info(el), rev: CUR.rev, at: new Date().toISOString(), up: ups(el) });
@@ -5584,8 +6115,9 @@ const MARKUP = (() => {
   const VIEW_M = ['cursor', 'View', 'V', IS_DESIGN ? 'View: drag to pan the board; the screens ignore the pointer' : 'View: use the page as usual'];
   const MARK_M = { point: ['msg', 'Point', 'C', IS_DESIGN ? 'Point: pin a comment on an element, inside a screen too' : 'Point: pin a comment on an element'],
     select: ['type', 'Select', 'T', 'Select: comment on some text'], draw: ['pencil', 'Draw', 'D', 'Draw: circle or mark what should change'] };
-  // a design's tray also has Interact (clicks go to the screens) and Frame (request a new screen)
+  // a design's tray also has Interact (clicks go to the screens), Link (edit the arrows) and Frame (request a new screen)
   const MODES = IS_DESIGN ? { view: VIEW_M, interact: ['hand', 'Interact', 'I', 'Interact: click inside the screens (tabs, toggles)'], ...MARK_M,
+    link: ['route', 'Link', 'L', 'Link: click an element, then a screen, to add an arrow; drag a + knob for a gesture; drag an arrow\'s dots to change it'],
     frame: ['frame', 'Frame', 'R', 'Frame: drag an empty frame for a new screen, then labelled boxes inside it'] } : { view: VIEW_M, ...MARK_M };
   const PENS = { risk: 'Red', accent: 'Blue', warn: 'Amber', ok: 'Green' };
   let mode = 'view', marksOff = false, pen = PENS[store.get(PEN_KEY)] ? store.get(PEN_KEY) : 'risk';
@@ -5634,7 +6166,7 @@ const MARKUP = (() => {
       if (i === 0) {
         let p = null;
         // a pin inside a screen sits where its frame last reported the element
-        if (a.type === 'pin') { const q = (BOARD && BOARD.pinPos && BOARD.pinPos(a.target.key)) || a.pos || { x: .5, y: .5 }; p = { x: r.left + q.x * r.width, y: r.top + q.y * r.height }; }
+        if (a.type === 'pin' || isDraft(a)) { const q = (BOARD && BOARD.pinPos && BOARD.pinPos(a.target.key)) || a.pos || { x: .5, y: .5 }; p = { x: r.left + q.x * r.width, y: r.top + q.y * r.height }; }
         else if (a.type === 'draw') { const b = bounds(a.strokes || []); if (isFinite(b.x1)) p = { x: r.left + b.x1 * r.width - 6, y: r.top + b.y0 * r.height + 6 }; }
         else { const rg = rangeOf(a), rs = rg && shown(rg.startContainer.parentElement) ? rg.getClientRects() : null, last = rs && rs[rs.length - 1]; if (last) p = { x: last.right, y: last.top + 2 }; }
         // an element partly scrolled inside its scroller keeps its mark, pulled in to the visible edge
@@ -5869,12 +6401,13 @@ const MARKUP = (() => {
     if (!li) { li = h('li', { class: 'bd-cs-c', tabindex: '0', 'data-id': a.id }); cards.set(a.id, li); }
     li._a = a;
     const n = isGeneral(a) ? 0 : onPage().indexOf(a) + 1, editing = a === editA;
-    const sig = [n, a.note, a.status, a.rev, a.target.key, a.target.label, a.color, editing, (a.targets || []).length].join('\u0001');
+    const sig = [n, a.note, a.status, a.rev, a.target.key, a.target.label, a.color, editing, (a.targets || []).length, !!a.stale].join('\u0001');
     if (li._sig !== sig) { li._sig = sig; fill(li, a, n, editing); }
     li.className = cardCls(li, a);
     li.querySelector('.ago').textContent = ago(a.at);
     const s = li.querySelector('.sago');
-    if (s) s.textContent = a.status === 'open' ? 'Sent ' + ago(a.sentAt) : a.resolvedBy === 'agent' ? `Resolved by the agent in rev ${a.resolvedRev}` : 'Resolved ' + ago(a.resolvedAt);
+    if (s) s.textContent = a.status === 'open' ? 'Sent ' + ago(a.sentAt) : a.resolvedBy === 'agent' ? `Resolved by the agent in rev ${a.resolvedRev}`
+      : a.resolvedBy === 'rev' ? `Applied in rev ${a.resolvedRev}` : 'Resolved ' + ago(a.resolvedAt);
     li.setAttribute('aria-label', isGeneral(a) ? 'General comment' : `Comment ${n} on ${a.target.label}`);
     return li;
   }
@@ -5891,10 +6424,14 @@ const MARKUP = (() => {
     if (a.type === 'draw' && a.targets && a.targets.length > 1) mt.push(h('span', {}, 'Covers ' + a.targets.map(t => t.label.split(' › ').pop()).join(' · ')));
     if (a.status !== 'pending') mt.push(h('span', { class: 'sago' }));
     else if (a.rev !== CUR.rev) mt.push(h('span', { class: 'old' }, `Made on rev ${a.rev}`));
+    // a board draft whose link a newer rev changed some other way: the board follows the rev until it is re-applied
+    if (a.stale && a.status !== 'resolved') mt.push(h('span', { class: 'old' }, 'Stale: a newer rev changed this link'),
+      h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => BOARD && BOARD.reapply && BOARD.reapply(a.id) }, 'Re-apply'),
+      h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => remove(a) }, 'Discard'));
     li.replaceChildren(numChip(a, n), h('div', { class: 'cb' },
       h('div', { class: 'ch' }, !isGeneral(a) && ic(TYPE_IC[a.type]), h('span', { class: 'lb', title: a.target.label }, isGeneral(a) ? 'General' : last), h('span', { class: 'ago' }),
         h('span', { class: 'acts' }, !isGeneral(a) && ib('target', 'Show on the page', () => { select(a); reveal(a); }),
-          a.status === 'pending' && !editing && ib('pencil', 'Edit', () => startEdit(a)),
+          a.status === 'pending' && !editing && !isDraft(a) && ib('pencil', 'Edit', () => startEdit(a)),
           a.status === 'open' && ib('check', 'Resolve', () => setStatus(a, 'resolved')),
           a.status === 'resolved' && ib('reset', 'Reopen', () => setStatus(a, 'open')),
           ib('trash', 'Delete', () => remove(a)))),
@@ -6052,7 +6589,7 @@ const MARKUP = (() => {
   listBox.addEventListener('click', e => {
     const li = e.target.closest('.bd-cs-c'); if (!li || e.target.closest('button, textarea, a')) return;
     const a = li._a; if (a === editA) return;
-    if (a.status === 'pending' && e.target.closest('.nt') && !getSelection().toString()) { startEdit(a); return; }
+    if (a.status === 'pending' && !isDraft(a) && e.target.closest('.nt') && !getSelection().toString()) { startEdit(a); return; }
     select(a); reveal(a);
   });
   listBox.addEventListener('keydown', e => {
@@ -6099,6 +6636,7 @@ const MARKUP = (() => {
     eye._tip = marksOff ? 'Show comment marks' : 'Hide comment marks'; eye.setAttribute('aria-label', eye._tip);
     layer.hidden = marksOff;
     if (BOARD && BOARD.paintFrames) BOARD.paintFrames(list);   // a design's requested frames
+    if (BOARD && BOARD.paintDrafts) BOARD.paintDrafts();   // and its link drafts and moves (boardEdits)
     renderList();
     if (dlg && dlg.open) dlg._paint();
     SIDE.paint();   // the tab's pending count
@@ -6340,7 +6878,7 @@ const MARKUP = (() => {
       e.preventDefault();   // handled here: the panel's own Escape (close the drawer or sheet) waits for the next press
       return;
     }
-    const m = { v: 'view', c: 'point', t: 'select', d: 'draw', ...(IS_DESIGN ? { i: 'interact', r: 'frame' } : {}) }[e.key.toLowerCase()];
+    const m = { v: 'view', c: 'point', t: 'select', d: 'draw', ...(IS_DESIGN ? { i: 'interact', l: 'link', r: 'frame' } : {}) }[e.key.toLowerCase()];
     if (m) { e.preventDefault(); setMode(m); }
   });
   document.addEventListener('scroll', () => schedule(false), { capture: true, passive: true });
@@ -6354,8 +6892,641 @@ const MARKUP = (() => {
   document.fonts?.ready.then(() => schedule(true));
   setInterval(() => { if (SIDE.shows('comments')) renderList(); }, 30000);   // "5 min ago"
   paint(); schedule(true);
-  return Object.assign(api, { annotate, setMode, paint, comments, flush, markSent, pinFrame, addFrame, relayout: () => schedule(true) });
+  return Object.assign(api, { annotate, setMode, paint, comments, flush, markSent, pinFrame, addFrame, drafts, relayout: () => schedule(true) });
 })();
+
+/* ---------- board edits (design pages): link drafts, moving screens, Tidy up ---------- */
+// Every edit on a design's board is a draft in the reader's synced state (MARKUP.drafts), never a write to the doc:
+// - a link edit is an annotation of type `link` keyed `link:<screen>/<element>`, payload {op, from, el, to, kind, label,
+//   edge, base}; `base` is the link as the rev has it (null for an add). A second edit of that link folds into it.
+// - every moved screen sits in the one annotation of type `layout` keyed `layout:<board>`, payload {positions: {id: [x, y]}}.
+// The board, its counts, Present and Tidy up follow them at once (B.mergeLinks, B.setPositions). Request changes sends
+// them with a ready `build.py patch` command each (B.draftCommands). On load a draft the current rev already has becomes
+// Resolved ("Applied in rev X"); one whose link a newer rev changed some other way is Stale: the board follows the rev
+// until it is re-applied or discarded. Ctrl/Cmd+Z steps back through this session's drafts, moves and Tidy up.
+function boardEdits(B) {
+  const D = MARKUP.drafts; if (!D) return;
+  const KINDS = ['push', 'modal', 'tab', 'replace', 'back'];
+  const GRID = 24, SNAP_PX = 6, LAND_PX = 48, MOVE_PX = 4;
+  const LAYOUT_KEY = 'layout:' + (typeof B.b.id === 'string' && B.b.id ? B.b.id : 'main');
+  const stage = B.stage;
+  const isAb = id => typeof id === 'string' && B.frames.has(id);
+  const T = id => isAb(id) ? B.frames.get(id).a.title || id : String(id || '').startsWith('frame:') ? 'a requested screen' : String(id || '');
+  const lkey = l => `link:${l.from}/${l.el}`;
+  const lab = l => l && l.label ? String(l.label) : '';
+  const linkOf = l => l && { from: l.from, el: l.el, to: l.to ?? null, kind: KINDS.includes(l.kind) ? l.kind : 'push', ...(lab(l) ? { label: lab(l) } : {}), ...(l.edge ? { edge: true } : {}) };
+  const same = (a, b) => !a || !b ? !a && !b : a.from === b.from && a.el === b.el && (a.to ?? null) === (b.to ?? null) && a.kind === b.kind && lab(a) === lab(b);
+  const revMap = () => new Map(B.revLinks().map(l => [lkey(l), linkOf(l)]));
+  const resultOf = L => L.op === 'delete' ? null : linkOf(L);
+  const baseKey = L => L.base ? lkey(L.base) : null;
+  const live = a => a.status !== 'resolved' && !a.stale;
+  const linkDrafts = () => D.all().filter(a => a.type === 'link');
+  const layoutDraft = () => D.all().find(a => a.type === 'layout' && a.target.key === LAYOUT_KEY && a.status !== 'resolved') || null;
+  const shownIds = () => [...B.frames.values()].filter(x => !x.el.classList.contains('off')).map(x => x.a.id);
+  // the rev's places (the doc's x, y, else the board's layout), before any draft moved them
+  const home = {};
+  for (const [id, b] of Object.entries(B.boxes())) home[id] = { x: Math.round(b.x), y: Math.round(b.y) };
+  const posOf = a => {
+    const P = a && a.layout && a.layout.positions && typeof a.layout.positions === 'object' ? a.layout.positions : {}, out = {};
+    for (const [id, p] of Object.entries(P)) if (home[id] && Array.isArray(p) && p.length === 2 && p.every(Number.isFinite)) out[id] = [Math.round(p[0]), Math.round(p[1])];
+    return out;
+  };
+
+  /* the effective link list: the rev's links with the live drafts over them */
+  B.mergeLinks = rev => {
+    const out = rev.map(l => ({ ...l })), at = new Map(out.map(l => [lkey(l), l]));
+    for (const a of linkDrafts()) {
+      if (!live(a)) continue;
+      const L = a.link, bk = baseKey(L), r = resultOf(L), old = bk && at.get(bk);
+      if (old && (!r || lkey(r) !== bk)) Object.assign(old, { del: true, draft: a.id });
+      // a link to a requested frame has no screen to end on yet: its frame shows it
+      if (!r || !isAb(r.from) || (r.to != null && !isAb(r.to))) continue;
+      const cur = at.get(lkey(r));
+      if (cur) { delete cur.label; delete cur.edge; delete cur.del; Object.assign(cur, r, { draft: a.id }); }
+      else { const n = { ...r, draft: a.id }; out.push(n); at.set(lkey(r), n); }
+    }
+    return out;
+  };
+
+  /* drafts: commit (with undo), settle on load, the commands that go with Request changes */
+  const undo = [];
+  function commit(prev, spec) {
+    const before = prev ? JSON.parse(JSON.stringify(prev)) : null;
+    if (!spec) { if (!prev) return null; D.drop(prev.id); undo.push({ before, id: prev.id }); return null; }
+    const id = D.put({ id: prev ? prev.id : null, type: spec.type, key: spec.key, label: spec.label, note: spec.note, [spec.type]: spec[spec.type] });
+    undo.push({ before, id });
+    return id;
+  }
+  function undoLast() {
+    const u = undo.pop(); if (!u) return false;
+    if (u.before) D.restore(u.before); else D.drop(u.id);
+    moved = true;
+    return true;
+  }
+  function describe(L) {
+    const b = L.base, arrow = l => `${T(l.from)} › ${l.kind === 'back' ? 'back' : T(l.to)}`, ch = [];
+    if (b && (L.to ?? null) !== (b.to ?? null)) ch.push(`to ${L.kind === 'back' ? 'back' : T(L.to)}`);
+    if (b && L.kind !== b.kind) ch.push(`kind ${L.kind}`);
+    if (b && lab(L) !== lab(b)) ch.push(lab(L) ? `label "${lab(L)}"` : 'no label');
+    if (L.op === 'add') return `Add link ${arrow(L)} (${L.kind})${lab(L) ? `, "${lab(L)}"` : ''}${L.edge ? ', a gesture from the screen\'s edge' : ''}`;
+    if (L.op === 'delete') return `Delete link ${arrow(b)}`;
+    if (L.op === 'move') return `Move the start of ${arrow(b)} from ${b.el} to ${L.from !== b.from ? T(L.from) + ' › ' : ''}${L.edge ? `the screen's edge (${L.el})` : L.el}${ch.length ? '; ' + ch.join(', ') : ''}`;
+    return `Change link ${arrow(b)}: ${ch.join(', ')}`;
+  }
+  // one draft per link: an edit of a link a draft already changed folds into that draft; back to the rev's link drops it
+  function editLink(curKey, next) {
+    const rev = revMap(), ds = linkDrafts().filter(live);
+    const d = ds.find(a => { const r = resultOf(a.link); return r ? lkey(r) === curKey : baseKey(a.link) === curKey; }) || null;
+    const base = d ? linkOf(d.link.base) : rev.get(curKey) || null;
+    next = linkOf(next);
+    if (next && lkey(next) !== curKey && lkey(next) !== (base && lkey(base))
+      && (rev.has(lkey(next)) || ds.some(a => a !== d && resultOf(a.link) && lkey(resultOf(a.link)) === lkey(next)))) {
+      toast(`${T(next.from)} › ${next.el} already has a link: change that one`);
+      return false;
+    }
+    if (same(base, next)) { commit(d, null); return true; }
+    const op = !base ? 'add' : !next ? 'delete' : lkey(base) !== lkey(next) ? 'move' : 'set';
+    const L = { op, ...(next || base), base };
+    commit(d, { type: 'link', key: lkey(next || base), label: `${T(L.from)} › ${L.el}`, note: describe(L), link: L });
+    return true;
+  }
+  function writeLayout(m) {
+    const a = layoutDraft(), P = posOf(a);
+    for (const [id, p] of Object.entries(m)) {
+      if (!home[id]) continue;
+      const r = [Math.round(p[0]), Math.round(p[1])];
+      if (r[0] === home[id].x && r[1] === home[id].y) delete P[id]; else P[id] = r;
+    }
+    const ids = Object.keys(P);
+    if (a && JSON.stringify(P) === JSON.stringify(posOf(a))) return;
+    commit(a, ids.length ? { type: 'layout', key: LAYOUT_KEY, label: 'Screen positions',
+      note: `Move ${ids.length} screen${ids.length === 1 ? '' : 's'}: ${ids.map(T).join(', ')}`, layout: { positions: P } } : null);
+  }
+  // A draft the current rev already has is applied; one whose link the rev changed some other way is stale
+  function settle() {
+    const rev = revMap();
+    for (const a of linkDrafts()) {
+      if (a.status === 'resolved') continue;
+      const L = a.link, r = resultOf(L), bk = baseKey(L);
+      if ((r ? same(rev.get(lkey(r)), r) : !rev.has(bk)) && (L.op !== 'move' || !rev.has(bk))) { D.resolve(a.id); continue; }
+      const now = (bk ? rev.get(bk) : r && rev.get(lkey(r))) || null, stale = !same(now, linkOf(L.base));
+      if (!!a.stale !== stale) D.mark(a.id, { stale });
+    }
+    const a = layoutDraft(), P = posOf(a);
+    if (a && Object.entries(P).every(([id, p]) => home[id].x === p[0] && home[id].y === p[1])) D.resolve(a.id);
+  }
+  // Re-apply a stale draft: the same result, over the link as the rev has it now
+  B.reapply = id => {
+    const a = linkDrafts().find(x => x.id === id); if (!a) return false;
+    const L = a.link, r = resultOf(L), rev = revMap(), now = (L.base ? rev.get(lkey(L.base)) : r && rev.get(lkey(r))) || null;
+    if (same(now, r)) { D.resolve(a.id); return true; }
+    const op = !now ? 'add' : !r ? 'delete' : lkey(now) !== lkey(r) ? 'move' : 'set', L2 = { op, ...(r || now), base: now };
+    commit(a, { type: 'link', key: lkey(r || now), label: `${T(L2.from)} › ${L2.el}`, note: describe(L2), link: L2 });
+    return true;
+  };
+  // the `patch` commands for these drafts: the first bumps the rev, the rest add to it
+  const docFile = () => {
+    const p = decodeURIComponent(location.pathname.split('/').pop() || '');
+    return /\.json$/i.test(p) ? p : (p.replace(/\.html?$/i, '') || 'doc') + '.bluedoc.json';
+  };
+  const sh = s => /^[\w@%+=:,./-]+$/.test(s) ? s : `'${s.replace(/'/g, `'\\''`)}'`;
+  const parses = v => { try { JSON.parse(v); return true; } catch { return false; } };
+  const setArg = (k, v) => '--set ' + sh(`${k}=${v == null || v === '' ? 'null' : k === 'label' || parses(v) ? JSON.stringify(v) : v}`);
+  B.draftCommands = ds => {
+    const doc = sh(docFile()), out = [];
+    let first = true;
+    const cmd = (key, args, a, last, change) => {
+      out.push(['build.py patch', doc, sh(key), ...args, change && '--change ' + sh(change), last && '--resolves ' + a.id, !first && '--no-bump'].filter(Boolean).join(' '));
+      first = false;
+    };
+    for (const a of ds) {
+      if (a.type === 'layout') { cmd(a.target.key, ['--json ' + sh(JSON.stringify(posOf(a)))], a, true, a.note + '.'); continue; }
+      const L = a.link, toFrame = L.op !== 'delete' && String(L.to || '').startsWith('frame:');
+      if (toFrame) out.push(`# (${a.id}) add the requested screen \`${L.to}\` first, then put its id in to=`);
+      if (L.op === 'move') cmd(lkey(L.base), ['--delete'], a, false, a.note + '.');
+      if (L.op === 'delete') cmd(lkey(L), ['--delete'], a, true, a.note + '.');
+      else cmd(lkey(L), [setArg('to', toFrame ? '<new screen id>' : L.kind === 'back' ? null : L.to), setArg('kind', L.kind), (lab(L) || lab(L.base)) && setArg('label', lab(L))], a, true, L.op === 'move' ? null : a.note + '.');
+    }
+    return out.join('\n');
+  };
+
+  /* the board follows the drafts: the merged links, the drafted places */
+  let sig = '', moved = false;
+  const overlaps = new Set();
+  function placeAll() {
+    if (B.variants || drag) return;
+    const want = { ...Object.fromEntries(Object.entries(home).map(([id, p]) => [id, [p.x, p.y]])), ...posOf(layoutDraft()) }, now = B.boxes(), m = {};
+    for (const [id, p] of Object.entries(want)) if (now[id] && (Math.round(now[id].x) !== p[0] || Math.round(now[id].y) !== p[1])) m[id] = p;
+    if (Object.keys(m).length) B.setPositions(m);
+    if (moved) paintOverlaps();
+  }
+  // after a move, screens that overlap another get a red outline until they move apart; nothing is pushed aside
+  function paintOverlaps() {
+    const bx = Object.entries(B.boxes()).filter(([id]) => shownIds().includes(id));
+    overlaps.clear();
+    for (let i = 0; i < bx.length; i++) for (let j = i + 1; j < bx.length; j++) {
+      const [p, a] = bx[i], [q, c] = bx[j];
+      if (a.x < c.x + c.w && c.x < a.x + a.w && a.y < c.y + c.h && c.y < a.y + a.h) { overlaps.add(p); overlaps.add(q); }
+    }
+    for (const [id, x] of B.frames) x.el.classList.toggle('bd-ovl', overlaps.has(id));
+  }
+  B.paintDrafts = () => {
+    const ds = D.all().filter(live);
+    const s = JSON.stringify(ds.map(a => [a.id, a.link || a.layout]));
+    paintCount(ds.length);
+    if (s === sig) return;
+    sig = s;
+    B.refreshLinks();
+    placeAll();
+  };
+
+  /* the toolbar: Tidy up and the drafts count, in the layout group after Fit · zoom · Focus */
+  const tidyTip = 'Tidy up: screens in columns by depth from the entry, without overlaps (Ctrl/⌘ Z undoes it)';
+  const tidyBtn = h('button', { type: 'button', class: 'bd-tbtn', 'aria-label': tidyTip, title: tidyTip, onclick: () => tidyUp() }, ic('grid'));
+  const countBtn = h('button', { type: 'button', class: 'bd-tbtn txt bd-dcount', hidden: true, title: 'Board drafts: link edits and moves not yet in the doc. They go with Request changes.', onclick: () => MARKUP.comments({ open: true }) });
+  function paintCount(n) { countBtn.hidden = !n; countBtn.textContent = n === 1 ? '1 draft' : `${n} drafts`; }
+  B.tb.querySelector('[aria-label^="Focus the selected screen"]').after(tidyBtn, countBtn);
+
+  /* Tidy up: BoardGeo's layered layout, animated, saved as one layout draft */
+  let tween = 0;
+  function tidyUp() {
+    if (typeof BoardGeo === 'undefined' || !BoardGeo.tidy || B.variants) return null;
+    const screens = B.abs.filter(a => isAb(a.id)).map(a => { const b = B.boxes()[a.id]; return { id: a.id, w: b.w, h: b.h, device: devOf(a), variantOf: a.variantOf || null }; });
+    const to = BoardGeo.tidy(screens, B.links(), Array.isArray(B.b.entry) ? B.b.entry : []) || {};
+    const from = B.boxes(), ids = Object.keys(to).filter(id => from[id] && Array.isArray(to[id]));
+    if (!ids.length) return 0;
+    const done = () => { tween = 0; moved = true; writeLayout(Object.fromEntries(ids.map(id => [id, to[id]]))); placeAll(); B.reroute(); toast(`Tidied ${ids.length} screens`, { label: 'Undo', run: () => undoLast() }); };
+    cancelAnimationFrame(tween);
+    if (REDUCE || B.reduced) { B.setPositions(Object.fromEntries(ids.map(id => [id, to[id]]))); done(); return ids.length; }
+    const t0 = performance.now();
+    const step = now => {
+      const p = Math.min(1, (now - t0) / 280), e = ease(p);
+      B.setPositions(Object.fromEntries(ids.map(id => [id, [from[id].x + (to[id][0] - from[id].x) * e, from[id].y + (to[id][1] - from[id].y) * e]])));
+      if (p < 1) tween = requestAnimationFrame(step); else done();
+    };
+    tween = requestAnimationFrame(step);
+    return ids.length;
+  }
+
+  /* overlays over the screens, in board px: the dragged arrow, the start's element, move guides and gap marks */
+  const ov = sv('svg', { class: 'bd-edit-ov', 'aria-hidden': 'true' });
+  const ovAdd = (tag, attrs) => { const e = sv(tag, attrs); ov.append(e); return e; };
+  const ovClear = () => ov.replaceChildren();
+  const ensureOv = () => { if (B.vp.lastElementChild !== ov) B.vp.append(ov); };
+  const chip = h('div', { class: 'bd-pchip', hidden: true, 'aria-hidden': 'true' });
+  document.body.append(chip);
+  const showChip = (e, text) => { chip.hidden = false; chip.textContent = text; chip.style.translate = `${Math.round(e.clientX + 14)}px ${Math.round(e.clientY + 16)}px`; };
+  let landEl = null;
+  const ring = id => { const el = id ? B.frames.get(id).el : null; if (landEl !== el) { landEl?.classList.remove('bd-land'); el?.classList.add('bd-land'); landEl = el; } };
+
+  /* the popover: an arrow's menu, the release menu, the label field */
+  const pop = h('div', { class: 'bd-lpop', role: 'dialog', hidden: true });
+  document.body.append(pop);
+  let popDone = null;
+  function openPop(at, label, kids) {
+    closePop();
+    pop.setAttribute('aria-label', label); pop.replaceChildren(...kids.flat().filter(Boolean)); pop.hidden = false;
+    const w = pop.offsetWidth, hh = pop.offsetHeight;
+    pop.style.translate = `${Math.round(clamp(at.x + 10, 8, innerWidth - w - 8))}px ${Math.round(clamp(at.y + 10, 8, innerHeight - hh - 8))}px`;
+  }
+  function closePop() { if (pop.hidden) return; pop.hidden = true; pop.replaceChildren(); const f = popDone; popDone = null; if (f) f(null); }
+  pop.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Escape') { e.preventDefault(); closePop(); stage.focus({ preventScroll: true }); } });
+  addEventListener('pointerdown', e => { if (!pop.hidden && !pop.contains(e.target)) closePop(); }, true);
+  const btn = (text, run, cls = '') => h('button', { type: 'button', class: 'bp-btn ' + cls, onclick: run }, text);
+  // a label, typed in the popover: resolves to the text ('' clears it), or null on Cancel or Esc
+  function askLabel(at, title, init) {
+    return new Promise(done => {
+      const inp = h('input', { class: 'bp-note-ta', value: init || '', placeholder: 'e.g. Tap Start workout, Swipe left', 'aria-label': 'Action label', maxlength: 80 });
+      const ok = () => { const v = inp.value.trim(); popDone = null; closePop(); done(v); };
+      inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); ok(); } });
+      openPop(at, title, [h('div', { class: 'hd' }, h('b', {}, title)), inp, h('div', { class: 'ft' }, btn('Cancel', () => closePop(), 'ghost'), btn('Save', ok, 'primary'))]);
+      popDone = done;
+      requestAnimationFrame(() => { inp.focus(); inp.select(); });
+    });
+  }
+  const at = e => ({ x: e.clientX, y: e.clientY });
+  const tagOf = l => { const a = l.draft && linkDrafts().find(x => x.id === l.draft); return a ? h('span', { class: 'tg ' + (a.status === 'open' ? 'sent' : 'draft') }, a.status === 'open' ? 'sent draft' : 'draft') : null; };
+  // the arrow's menu: kind, label, delete (or, for a deleted one, restore)
+  function linkMenu(e, l) {
+    const key = lkey(l), name = `${T(l.from)} › ${l.el}`;
+    if (l.del) {
+      openPop(at(e), 'Deleted link', [h('div', { class: 'hd' }, h('b', {}, name), ' → ', T(l.to), tagOf(l)), h('p', { class: 'hint' }, 'Deleted in a draft: it goes with Request changes.'),
+        h('div', { class: 'ft' }, btn('Restore', () => { closePop(); editLink(key, l); }, 'primary'))]);
+      return;
+    }
+    const kind = h('select', { 'aria-label': 'Kind' }, KINDS.map(k => h('option', { value: k }, k)));
+    kind.value = l.kind;
+    kind.addEventListener('change', () => {
+      const k = kind.value, to = k === 'back' ? null : l.to ?? null;
+      if (k !== 'back' && to == null) { toast('Drag the end dot onto a screen to give this link a target'); kind.value = l.kind; return; }
+      closePop(); editLink(key, { ...l, kind: k, to });
+    });
+    openPop(at(e), 'Link', [h('div', { class: 'hd' }, h('b', {}, name), ' → ', l.kind === 'back' ? 'back' : T(l.to), tagOf(l)),
+      lab(l) && h('p', { class: 'lbl' }, `“${lab(l)}”`),
+      h('div', { class: 'row' }, h('label', {}, h('span', {}, 'Kind'), kind), btn('Label', () => editLabel(e, l)), btn('Delete', () => { closePop(); editLink(key, null); }, 'risk')),
+      h('p', { class: 'hint' }, 'Drag the end dot to retarget, the start dot to move the start. Del deletes, Enter labels.')]);
+  }
+  async function editLabel(e, l) {
+    const v = await askLabel(at(e), 'Action label', lab(l));
+    if (v != null) editLink(lkey(l), { ...l, label: v });
+  }
+  const effective = key => B.links(true).find(l => lkey(l) === key) || null;
+
+  /* dragging an arrow's end (retarget), its start (move the start), or a new arrow (Link mode) */
+  let wire = null, lastLine = { key: null, t: 0 };
+  const boxesNow = () => { const bx = B.boxes(), out = {}; for (const id of shownIds()) if (bx[id]) out[id] = bx[id]; return out; };
+  function borderPt(b, p) {
+    const dl = p.x - b.x, dr = b.x + b.w - p.x, dt = p.y - b.y, db = b.y + b.h - p.y, m = Math.min(dl, dr, dt, db);
+    return m === dl ? { x: b.x, y: p.y } : m === dr ? { x: b.x + b.w, y: p.y } : m === dt ? { x: p.x, y: b.y } : { x: p.x, y: b.y + b.h };
+  }
+  // the screen within 48 px of p (0 inside it) and the nearest point on its border
+  function landAt(p, skip) {
+    const lim = LAND_PX / B.k; let best = null;
+    for (const [id, b] of Object.entries(boxesNow())) {
+      if (id === skip) continue;
+      const cx = clamp(p.x, b.x, b.x + b.w), cy = clamp(p.y, b.y, b.y + b.h), inside = cx === p.x && cy === p.y, d = inside ? 0 : Math.hypot(p.x - cx, p.y - cy);
+      if (d <= lim && (!best || d < best.d)) best = { id, d, pt: inside ? borderPt(b, p) : { x: cx, y: cy } };
+    }
+    return best;
+  }
+  // a start: the smallest named element under p (frames report them), else a screen's border
+  function startAt(p) {
+    for (const [id, b] of Object.entries(boxesNow())) {
+      if (p.x < b.x || p.y < b.y || p.x > b.x + b.w || p.y > b.y + b.h) continue;
+      let best = null;
+      for (const [name, r] of Object.entries((B.namedRects && B.namedRects(id)) || {})) {
+        if (!r || !/^[A-Za-z0-9_-]+$/.test(name)) continue;
+        const q = { x: b.x + r.x, y: b.y + r.y, w: r.w, h: r.h };
+        if (p.x >= q.x && p.y >= q.y && p.x <= q.x + q.w && p.y <= q.y + q.h && (!best || q.w * q.h < best.r.w * best.r.h)) best = { name, r: q };
+      }
+      if (best) return { id, el: best.name, rect: best.r, pt: { x: best.r.x + best.r.w / 2, y: best.r.y + best.r.h / 2 } };
+    }
+    const l = landAt(p, null);
+    return l ? { id: l.id, edge: true, pt: l.pt } : null;
+  }
+  function paintWire(e) {
+    const p = B.toBoard(e), free = e.metaKey || e.ctrlKey;
+    ensureOv(); ovClear();
+    let a = wire.fix, c = p;
+    if (wire.part === 'start') {
+      const s = free ? null : startAt(p);
+      wire.hit = s; c = s ? s.pt : p;
+      if (s && s.rect) ovAdd('rect', { class: 'bd-edit-el', x: s.rect.x, y: s.rect.y, width: s.rect.w, height: s.rect.h });
+      ring(s && s.edge ? s.id : null);
+      [a, c] = [c, a];
+    } else {
+      // a link to its own screen is never what a drag means: the source screen doesn't take the end
+      const l = free ? null : landAt(p, (wire.part === 'end' ? wire.link : wire.src).from);
+      wire.hit = l; c = l ? l.pt : p;
+      ring(l ? l.id : null);
+    }
+    ovAdd('path', { class: 'bd-edit-wire', d: `M${a.x} ${a.y}L${c.x} ${c.y}` });
+    ovAdd('circle', { class: 'bd-edit-dot', cx: c.x, cy: c.y, r: 5 / B.k });
+    if (wire.part === 'start') ovAdd('circle', { class: 'bd-edit-dot', cx: a.x, cy: a.y, r: 5 / B.k });
+  }
+  function startWire(e, o) {
+    closePop();
+    wire = { ...o, pid: e.pointerId, hit: null };
+    stage.classList.add('bd-wiring');
+    if (!o.click) try { stage.setPointerCapture(e.pointerId); } catch { /* the pointer is gone */ }
+    paintWire(e);
+  }
+  function endWire() { if (!wire) return; wire = null; ovClear(); ring(null); stage.classList.remove('bd-wiring'); }
+  const nameFree = (id, name) => !Object.keys((B.namedRects && B.namedRects(id)) || {}).includes(name) && !B.links(true).some(l => l.from === id && l.el === name);
+  function gestureName(id, label) {
+    const base = (String(label).toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40)) || 'gesture';
+    let n = base;
+    for (let i = 2; !nameFree(id, n); i++) n = `${base}-${i}`;
+    return n;
+  }
+  async function dropWire(e) {
+    const w = wire; endWire();
+    const hit = w.hit, cl = at(e);
+    if (w.part === 'start') {
+      if (!hit) return;
+      const l = w.link;
+      if (hit.edge) {
+        const v = await askLabel(cl, 'Gesture label', lab(l));
+        if (!v) { if (v === '') toast('A gesture link needs a label, e.g. Swipe left'); return; }
+        editLink(lkey(l), { ...l, from: hit.id, el: gestureName(hit.id, v), label: v, edge: true });
+      } else if (hit.id !== l.from || hit.el !== l.el) editLink(lkey(l), { ...l, from: hit.id, el: hit.el, edge: false });
+      return;
+    }
+    // the end: retarget an arrow, or the target of a new one
+    const src = w.part === 'end' ? w.link : w.src;
+    if (!hit) { releaseMenu(cl, B.toBoard(e), w); return; }
+    if (w.part === 'end') { if (hit.id !== src.to || src.kind === 'back') editLink(lkey(src), { ...src, to: hit.id, kind: src.kind === 'back' ? 'push' : src.kind }); return; }
+    if (src.edge) {
+      const v = await askLabel(cl, 'Gesture label', '');
+      if (!v) { if (v === '') toast('A gesture link needs a label, e.g. Swipe left'); return; }
+      editLink(`link:${src.from}/`, { from: src.from, el: gestureName(src.from, v), to: hit.id, kind: 'push', label: v, edge: true });
+    } else editLink(lkey(src), { from: src.from, el: src.el, to: hit.id, kind: 'push' });
+  }
+  // a release on the empty board: Cancel, or ask for a new screen there with the link to it
+  function releaseMenu(cl, p, w) {
+    const src = w.part === 'end' ? w.link : w.src;
+    const dev = DEVICES[devOf(B.frames.get(src.from).a)] ? devOf(B.frames.get(src.from).a) : 'phone', [fw, fh] = DEVICES[dev];
+    const ask = async () => {
+      closePop();
+      let l = w.part === 'end' ? { ...src } : { from: src.from, el: src.el, kind: 'push' };
+      if (src.edge && w.part !== 'end') {
+        const v = await askLabel(cl, 'Gesture label', ''); if (!v) return;
+        l = { ...l, el: gestureName(src.from, v), label: v, edge: true };
+      }
+      const x = Math.round(p.x / GRID) * GRID, y = Math.round(p.y / GRID) * GRID, key = `frame:${dev}@${x},${y}`;
+      MARKUP.addFrame({ key, label: 'Requested frame: ' + (DEVICE_NAME[dev] || dev), text: `Opens from ${T(l.from)} › ${l.el}`,
+        note: `A new screen that ${T(l.from)} › ${l.el} opens (${l.kind === 'back' ? 'push' : l.kind}).`, frame: { device: dev, x, y, w: fw, h: fh, boxes: [] } });
+      editLink(w.part === 'end' ? lkey(src) : `link:${l.from}/${l.el}`, { ...l, to: key, kind: l.kind === 'back' ? 'push' : l.kind });
+    };
+    openPop(cl, 'Link to nothing', [h('div', { class: 'ft col' }, btn('Cancel', () => closePop(), 'primary'), btn('Request a screen here', ask))]);
+    requestAnimationFrame(() => pop.querySelector('button')?.focus());
+  }
+  B.onLink = (e, l, part) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return false;
+    if (wire) { if (wire.click) { paintWire(e); dropWire(e); } return true; }
+    const key = lkey(l);
+    if (part === 'line' || l.del) {
+      const now = performance.now(), dbl = lastLine.key === key && now - lastLine.t < 320;
+      lastLine = { key, t: now };
+      B.selectLink(key);
+      if (dbl && !l.del) editLabel(e, l); else linkMenu(e, l);
+      return true;
+    }
+    const path = B.linkPath(key), pts = path && path.points; if (!pts || pts.length < 2) return false;
+    B.selectLink(key);
+    const [sx, sy] = pts[0], [ex, ey] = pts[pts.length - 1];
+    startWire(e, part === 'end' ? { part: 'end', link: l, fix: { x: sx, y: sy } } : { part: 'start', link: l, fix: { x: ex, y: ey } });
+    return true;
+  };
+  // Link mode: a click on an element in a screen starts an arrow from it; the next click lands it
+  B.onLinkPick = (x, d) => {
+    if (B.mode !== 'link' || wire) return;
+    const sel = typeof d.sel === 'string' ? d.sel.slice(0, 200) : '';
+    if (!sel) { toast('Click an element to link it, or drag a + knob on a screen\'s edge for a gesture'); return; }
+    const b = B.boxes()[x.a.id], r = d.rect && [d.rect.x, d.rect.y, d.rect.w, d.rect.h].every(Number.isFinite) ? d.rect : null;
+    const fix = r ? { x: b.x + r.x + r.w / 2, y: b.y + r.y + r.h / 2 } : { x: b.x + b.w / 2, y: b.y + b.h / 2 };
+    const cur = B.links(true).find(l => l.from === x.a.id && l.el === sel);
+    const sx = stage.getBoundingClientRect(), ev = { pointerId: -1, clientX: sx.left + B.tx + fix.x * B.k, clientY: sx.top + B.ty + fix.y * B.k };
+    if (cur && !cur.del) startWire(ev, { part: 'end', link: cur, fix, click: true });
+    else startWire(ev, { part: 'new', src: { from: x.a.id, el: sel }, fix, click: true });
+  };
+  // the + knobs on each screen's border in Link mode: drag one for a gesture link from that edge
+  function knobs() {
+    for (const x of B.frames.values()) {
+      if (x.knobs) continue;
+      x.knobs = ['top', 'right', 'bottom', 'left'].map(s => h('button', { type: 'button', class: 'bd-knob', 'data-side': s, tabindex: '-1', 'aria-label': `Add a gesture link from ${x.a.title || x.a.id}'s ${s} edge`, title: 'Drag onto a screen: a gesture link from this edge' }, '+'));
+      x.el.append(...x.knobs);
+    }
+  }
+  B.onMode = m => {
+    closePop(); endWire(); B.selectLink(null);
+    stage.classList.toggle('bd-linkm', m === 'link');
+    if (m === 'link') knobs();
+  };
+
+  /* moving screens: drag (Shift locks the axis, Alt turns snapping off), Shift-click and Shift-drag to select several */
+  const sel = new Set();
+  let drag = null, space = false, raf = 0, lastTap = { id: null, t: 0 };
+  function selection() {
+    if (!B.sel) sel.clear(); else if (!sel.has(B.sel)) { sel.clear(); sel.add(B.sel); }
+    paintSel();
+    return [...sel].filter(isAb);
+  }
+  function paintSel() { for (const [id, x] of B.frames) x.el.classList.toggle('msel', sel.size > 1 && sel.has(id)); }
+  const canMove = () => !B.variants && !(B.api && B.api().present) && !B.rq;
+  B.onBoardDown = e => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return false;
+    if (wire) { if (wire.click) { if (e.target.closest('.bd-lpop')) return true; paintWire(e); dropWire(e); } return true; }
+    const t = e.target, knob = t.closest('.bd-knob');
+    if (knob && B.mode === 'link') {
+      const id = knob.closest('.bd-ab').dataset.ab, b = B.boxes()[id], s = knob.dataset.side;
+      const fix = s === 'top' ? { x: b.x + b.w / 2, y: b.y } : s === 'bottom' ? { x: b.x + b.w / 2, y: b.y + b.h } : s === 'left' ? { x: b.x, y: b.y + b.h / 2 } : { x: b.x + b.w, y: b.y + b.h / 2 };
+      startWire(e, { part: 'new', src: { from: id, edge: true }, fix });
+      return true;
+    }
+    if (space || !canMove() || B.mode === 'frame' || t.closest('button, select, input, .bd-lnk')) return false;
+    const ab = t.closest('.bd-ab[data-ab]');
+    if (ab && (t.closest('.bd-ab-t') || B.mode === 'view' || B.mode === 'link')) { startMove(e, ab.dataset.ab); return true; }
+    if (!ab && e.shiftKey && (B.mode === 'view' || B.mode === 'link')) { startMarquee(e); return true; }
+    return false;
+  };
+  function startMove(e, id) {
+    closePop();
+    try { stage.setPointerCapture(e.pointerId); } catch { /* gone */ }
+    drag = { kind: 'move', pid: e.pointerId, id, c0: at(e), p0: B.toBoard(e), moving: false, ids: null, start: null };
+  }
+  function startMarquee(e) {
+    closePop();
+    try { stage.setPointerCapture(e.pointerId); } catch { /* gone */ }
+    drag = { kind: 'marquee', pid: e.pointerId, c0: at(e), p0: B.toBoard(e), moving: false };
+  }
+  // where the moved group goes: Shift locks it to one axis; it snaps to other screens' edges and centres within
+  // 6 screen px (pink guides), to an equal gap between two neighbours (gap marks), else to the 24 px grid
+  function snapGroup(g, dx, dy, e) {
+    if (e.shiftKey) { if (Math.abs(dx) >= Math.abs(dy)) dy = 0; else dx = 0; }
+    const guides = [];
+    if (!e.altKey) {
+      const lim = SNAP_PX / B.k, others = Object.entries(boxesNow()).filter(([id]) => !drag.ids.includes(id)).map(([, b]) => b);
+      const axis = (lo, size, d, X) => {   // X: true for x
+        const pos = lo + d, mine = [pos, pos + size / 2, pos + size];
+        let best = null;
+        for (const b of others) for (const v of X ? [b.x, b.x + b.w / 2, b.x + b.w] : [b.y, b.y + b.h / 2, b.y + b.h]) for (const m of mine) {
+          const s = v - m; if (Math.abs(s) <= lim && (!best || Math.abs(s) < Math.abs(best.s))) best = { s, v, b };
+        }
+        if (best) return { d: d + best.s, line: best };
+        // equal gaps: between the nearest neighbours on both sides that share the other axis
+        const span = b => X ? b.y < g.y + dy + g.h && g.y + dy < b.y + b.h : b.x < g.x + dx + g.w && g.x + dx < b.x + b.w;
+        const lo2 = X ? b => b.x + b.w : b => b.y + b.h, hi2 = X ? b => b.x : b => b.y;
+        const L = others.filter(b => span(b) && lo2(b) <= pos + lim).sort((p, q) => lo2(q) - lo2(p))[0];
+        const R = others.filter(b => span(b) && hi2(b) >= pos + size - lim).sort((p, q) => hi2(p) - hi2(q))[0];
+        if (L && R) { const want = (lo2(L) + hi2(R) - size) / 2; if (want >= lo2(L) && Math.abs(want - pos) <= lim) return { d: d + want - pos, gap: [lo2(L), want, want + size, hi2(R)], other: [L, R] }; }
+        return { d: d + Math.round(pos / GRID) * GRID - pos };
+      };
+      const lock = e.shiftKey ? (dy === 0 ? 'y' : 'x') : '';
+      if (lock !== 'x') { const r = axis(g.x, g.w, dx, true); dx = r.d; guides.push(['x', r]); }
+      if (lock !== 'y') { const r = axis(g.y, g.h, dy, false); dy = r.d; guides.push(['y', r]); }
+    }
+    return { dx, dy, guides };
+  }
+  function paintGuides(g, guides) {
+    ensureOv(); ovClear();
+    const sw = 1 / B.k;
+    for (const [ax, r] of guides) {
+      if (r.line) {
+        const b = r.line.b, v = r.line.v;
+        if (ax === 'x') ovAdd('line', { class: 'bd-guide', x1: v, x2: v, y1: Math.min(g.y, b.y) - 12 * sw, y2: Math.max(g.y + g.h, b.y + b.h) + 12 * sw });
+        else ovAdd('line', { class: 'bd-guide', y1: v, y2: v, x1: Math.min(g.x, b.x) - 12 * sw, x2: Math.max(g.x + g.w, b.x + b.w) + 12 * sw });
+      } else if (r.gap) {
+        const [a0, a1, b0, b1] = r.gap, m = ax === 'x' ? g.y + g.h / 2 : g.x + g.w / 2;
+        for (const [p, q] of [[a0, a1], [b0, b1]]) {
+          if (ax === 'x') ovAdd('path', { class: 'bd-guide gap', d: `M${p} ${m}H${q}M${p} ${m - 6 * sw}v${12 * sw}M${q} ${m - 6 * sw}v${12 * sw}` });
+          else ovAdd('path', { class: 'bd-guide gap', d: `M${m} ${p}V${q}M${m - 6 * sw} ${p}h${12 * sw}M${m - 6 * sw} ${q}h${12 * sw}` });
+        }
+      }
+    }
+  }
+  stage.addEventListener('pointermove', e => {
+    if (wire && (wire.click || e.pointerId === wire.pid)) { paintWire(e); return; }
+    if (!drag || e.pointerId !== drag.pid) return;
+    const c = at(e);
+    if (!drag.moving) {
+      if (Math.hypot(c.x - drag.c0.x, c.y - drag.c0.y) <= MOVE_PX) return;
+      drag.moving = true; stage.classList.add('dragging');
+      if (drag.kind === 'move') {
+        const ids = selection();
+        if (!ids.includes(drag.id)) { if (e.shiftKey) sel.add(drag.id); else { sel.clear(); sel.add(drag.id); } B.select(drag.id); }
+        drag.ids = selection(); const bx = B.boxes();
+        drag.start = Object.fromEntries(drag.ids.map(id => [id, { x: bx[id].x, y: bx[id].y, w: bx[id].w, h: bx[id].h }]));
+      } else drag.box = h('div', { class: 'bd-marq' }), B.vp.append(drag.box);
+    }
+    drag.e = e;
+    if (!raf) raf = requestAnimationFrame(frame);
+  });
+  function frame() {
+    raf = 0;
+    const d = drag; if (!d || !d.moving || !d.e) return;
+    const p = B.toBoard(d.e);
+    if (d.kind === 'marquee') {
+      const x = Math.min(p.x, d.p0.x), y = Math.min(p.y, d.p0.y), w = Math.abs(p.x - d.p0.x), hh = Math.abs(p.y - d.p0.y);
+      Object.assign(d.box.style, { left: x + 'px', top: y + 'px', width: w + 'px', height: hh + 'px' });
+      d.rect = { x, y, w, h: hh };
+      return;
+    }
+    const S = Object.values(d.start), g = { x: Math.min(...S.map(b => b.x)), y: Math.min(...S.map(b => b.y)) };
+    g.w = Math.max(...S.map(b => b.x + b.w)) - g.x; g.h = Math.max(...S.map(b => b.y + b.h)) - g.y;
+    const r = snapGroup(g, p.x - d.p0.x, p.y - d.p0.y, d.e);
+    d.to = Object.fromEntries(d.ids.map(id => [id, [Math.round(d.start[id].x + r.dx), Math.round(d.start[id].y + r.dy)]]));
+    B.setPositions(d.to);
+    paintGuides({ x: g.x + r.dx, y: g.y + r.dy, w: g.w, h: g.h }, r.guides);
+    const q = d.to[d.id] || Object.values(d.to)[0];
+    showChip(d.e, `${q[0]} · ${q[1]}`);
+  }
+  const endDrag = e => {
+    if (wire && !wire.click && e.pointerId === wire.pid) { if (e.type === 'pointercancel') endWire(); else { paintWire(e); dropWire(e); } return; }
+    if (!drag || e.pointerId !== drag.pid) return;
+    const d = drag;
+    if (d.moving && e.type !== 'pointercancel') { d.e = e; cancelAnimationFrame(raf); raf = 0; frame(); }
+    drag = null; stage.classList.remove('dragging'); chip.hidden = true; ovClear(); if (d.box) d.box.remove();
+    if (e.type === 'pointercancel') { placeAll(); return; }
+    if (d.kind === 'marquee') {
+      if (!d.rect) return;
+      const r = d.rect, bx = boxesNow(), hit = Object.keys(bx).filter(id => { const b = bx[id]; return b.x < r.x + r.w && r.x < b.x + b.w && b.y < r.y + r.h && r.y < b.y + b.h; });
+      const keep = selection();
+      if (hit.length) { B.select(B.sel || hit[0]); sel.clear(); for (const id of [...keep, ...hit]) sel.add(id); paintSel(); }
+      return;
+    }
+    if (!d.moving) {   // a tap: select (Shift adds or removes), double-tap focuses
+      const now = performance.now();
+      if (e.shiftKey) {
+        selection();
+        if (sel.has(d.id)) sel.delete(d.id); else sel.add(d.id);
+        const keep = [...sel]; B.select(keep.includes(B.sel) ? B.sel : keep[keep.length - 1] || null);
+        sel.clear(); keep.forEach(id => sel.add(id)); paintSel();
+      } else if (lastTap.id === d.id && now - lastTap.t < 320) { B.focus(d.id); lastTap = { id: null, t: 0 }; }
+      else { lastTap = { id: d.id, t: now }; sel.clear(); B.select(d.id); paintSel(); }
+      return;
+    }
+    moved = true;
+    if (d.to) writeLayout(d.to);
+    placeAll(); paintOverlaps();
+  };
+  stage.addEventListener('pointerup', endDrag); stage.addEventListener('pointercancel', endDrag);
+  function nudge(dx, dy) {
+    const ids = selection(); if (!ids.length || !canMove()) return false;
+    const bx = B.boxes(), m = Object.fromEntries(ids.map(id => [id, [Math.round(bx[id].x + dx), Math.round(bx[id].y + dy)]]));
+    moved = true; B.setPositions(m); writeLayout(m); paintOverlaps();
+    return true;
+  }
+
+  /* keys (capture, so they go before the board's and the tray's): Esc, Del, Enter on an arrow; arrows nudge; Ctrl/⌘ Z */
+  document.addEventListener('keyup', e => { if (e.key === ' ') space = false; });
+  addEventListener('blur', () => { space = false; });
+  document.addEventListener('keydown', e => {
+    if (e.defaultPrevented || e.isComposing) return;
+    const t = e.target;
+    if (t.isContentEditable || (t.closest && t.closest('input, textarea, select, [contenteditable]')) || document.querySelector('dialog[open]') || (B.api && B.api().present)) return;
+    if (e.key === ' ' && !e.repeat && t.closest && !t.closest('button, a')) { space = true; return; }
+    if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'z') { if (undoLast()) e.preventDefault(); return; }
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.key === 'Escape') {
+      if (wire) endWire(); else if (!pop.hidden) closePop(); else if (drag) { drag = null; stage.classList.remove('dragging'); chip.hidden = true; ovClear(); placeAll(); }
+      else if (B.selLink) B.selectLink(null); else return;
+      e.preventDefault(); e.stopPropagation(); return;
+    }
+    if (B.selLink && (e.key === 'Delete' || e.key === 'Backspace' || e.key === 'Enter')) {
+      const l = effective(B.selLink); if (!l) return;
+      e.preventDefault(); e.stopPropagation();
+      if (e.key === 'Enter') { const r = stage.getBoundingClientRect(), lp = B.linkPath(lkey(l)), q = lp && lp.label ? lp.label : { x: 0, y: 0 }; editLabel({ clientX: r.left + B.tx + q.x * B.k, clientY: r.top + B.ty + q.y * B.k }, l); }
+      else if (!l.del) { B.selectLink(null); editLink(lkey(l), null); }
+      return;
+    }
+    const arrows = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
+    if (arrows && (B.mode === 'view' || B.mode === 'link') && !B.selLink) {
+      const s = e.shiftKey ? GRID : 1;
+      if (nudge(arrows[0] * s, arrows[1] * s)) { e.preventDefault(); e.stopPropagation(); }
+    }
+  }, true);
+
+  /* tests and agents: BP.boardEdit({link: {key, to?, kind?, label?, from?, el?, edge?} | {key, delete: true}, move: {id: [x, y]}, tidy, undo}) */
+  B.edit = o => {
+    if (o && typeof o === 'object') {
+      if (o.link && typeof o.link.key === 'string') {
+        const cur = effective(o.link.key), m = /^link:([^/]+)\/(.*)$/.exec(o.link.key);
+        if (o.link.delete) { if (cur) editLink(o.link.key, null); }
+        else if (m) { const { key, ...rest } = o.link; editLink(key, { ...(cur || { from: m[1], el: m[2], kind: 'push' }), ...rest }); }
+      }
+      if (o.move && typeof o.move === 'object') { const m = Object.fromEntries(Object.entries(o.move).filter(([id, p]) => home[id] && Array.isArray(p) && p.every(Number.isFinite))); moved = true; writeLayout(m); placeAll(); }
+      if (o.tidy) tidyUp();
+      if (o.undo) undoLast();
+    }
+    return { drafts: D.all().map(a => ({ id: a.id, type: a.type, key: a.target.key, status: a.status, stale: !!a.stale, note: a.note, ...(a.link ? { link: a.link } : { positions: posOf(a) }) })),
+      positions: Object.fromEntries(Object.entries(B.boxes()).map(([id, b]) => [id, [Math.round(b.x), Math.round(b.y)]])), undo: undo.length, overlaps: [...overlaps], selected: selection() };
+  };
+
+  settle();
+  B.paintDrafts();
+}
+if (BOARD && IS_DESIGN && !OLD && !BASE && BOARD.stage) boardEdits(BOARD);
 
 SIDE.start();
 
@@ -6398,6 +7569,8 @@ window.BP = {
   revisionsRail: opts => revisionsRail(opts),
   // a design's board: {artboards: [{id, live, ready, fallback, …}], k, mode, …}; opts: {focus, fit, sketch, variants, present, compare}
   board: opts => BOARD && BOARD.api ? BOARD.api(opts) : null,
+  // a design's board drafts: {drafts, positions, undo, overlaps, selected}; opts: {link: {key, to?, kind?, label?, delete?}, move: {id: [x, y]}, tidy, undo}
+  boardEdit: opts => BOARD && BOARD.edit ? BOARD.edit(opts) : null,
 };
 })();
 </script>

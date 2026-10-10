@@ -1,0 +1,34 @@
+<main class="screen safe stack gap-4" data-bd="workouts">
+  <h1 class="title">Workouts</h1>
+  <div class="row gap-2 wrap" data-bd="filters">
+    <span class="chip active">All</span><span class="chip">Run</span><span class="chip">Strength</span><span class="chip">Ride</span>
+  </div>
+  <section class="card list" data-bd="recent">
+    <div class="item" data-bd="workout-run" data-nav="workout" data-nav-label="Tap a workout">
+      <span class="avatar">R</span>
+      <span class="stack grow"><strong>Morning run</strong><span class="caption muted">Today · 5.2 km · 28 min</span></span>
+      <span class="muted">›</span>
+    </div>
+    <div class="item" data-bd="workout-strength">
+      <span class="avatar">S</span>
+      <span class="stack grow"><strong>Strength</strong><span class="caption muted">Thu · 6 sets · 41 min</span></span>
+      <span class="muted">›</span>
+    </div>
+    <div class="item" data-bd="workout-walk">
+      <span class="avatar">W</span>
+      <span class="stack grow"><strong>Evening walk</strong><span class="caption muted">Wed · 3.1 km · 35 min</span></span>
+      <span class="muted">›</span>
+    </div>
+    <div class="item" data-bd="workout-ride">
+      <span class="avatar">C</span>
+      <span class="stack grow"><strong>Cycling</strong><span class="caption muted">Mon · 18.4 km · 52 min</span></span>
+      <span class="muted">›</span>
+    </div>
+  </section>
+  <nav class="tabbar" data-bd="tabs">
+    <a class="tab" data-bd="tab-today" data-nav="tab:today"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/></svg>Today</a>
+    <a class="tab" data-bd="tab-activity" data-nav="tab:activity"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 19v-8M12 19V5M19 19v-6"/></svg>Activity</a>
+    <a class="tab active" data-bd="tab-workouts"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 9v6M8 7v10M16 7v10M20 9v6M8 12h8"/></svg>Workouts</a>
+    <a class="tab" data-bd="tab-profile" data-nav="tab:profile"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>Profile</a>
+  </nav>
+</main>

@@ -49,11 +49,17 @@ URLs: /                      home page: every doc under the registered folders, 
       /<root>/<dir>/<stem>.design/<artboard>.html[?rev=B&theme=T]   a design doc's screen: the artboard's fragment
                              (or revision B's, from the history) wrapped in kits/shell.html with its framework,
                              theme tokens and the inspector. Its own CSP: no network, `sandbox allow-scripts`,
-                             framable by this server's pages only (no X-Frame-Options)
+                             framable by this server's pages only (no X-Frame-Options). An `icons` artboard's
+                             screen is the icon sheet (kits/icon-sheet.html and .css) built from its layers in
+                             <stem>.design/<artboard>/ (or rev B's, from the history), each layer a data: URI
       /__bluedoc/kit/<file>  the plain kit and inspector (assets/kits)
       /__bluedoc/fw/<name>/<path>   a framework add-framework copied
       /<root>/<path>.<css|js|mjs|font>   a project file a design board declares (frameworks[].files), and the
                              files its declared CSS names with url(); nothing else
+      POST /__bluedoc/icons  {path, artboard, files: {name: base64}}: an icons artboard's PNG sets, which the page
+                             draws, into <stem>.icons/<artboard>/ beside the doc. Only the export's own file names
+                             (ios/AppIcon.appiconset/…, android/res/mipmap-*/…, play/icon-512.png), PNGs of their
+                             exact size under 4 MB, Contents.json and the adaptive-icon XML; no link on the way.
 Rendering validates the doc (errors show as a page), shows its meta.rev as the latest revision of the history file
 without writing it (build.py records revisions), and fills each `diff` block that references a git range
 (diffref.py: its cache, local git, then `gh pr diff`), so the page always shows the current JSON.
@@ -169,8 +175,9 @@ _doc_info: dict[str, tuple[tuple, list[Path], str | None, str | None, str]] = {}
 
 
 def doc_info(p: Path) -> tuple[str | None, str | None, str]:
-    """(build.approval_hash, doc.id, meta.rev as a string) of the doc, cached by the mtimes of the doc and its screen
-    files; (None, None, '') if unreadable."""
+    """(build.approval_hash, doc.id, meta.rev as a string) of the doc, cached by the mtimes of the doc, its screen
+    files and its icons artboards' layer folders (a layer added later changes its folder's); (None, None, '') if
+    unreadable."""
     m = mtime(p)
     if not m:
         return None, None, ""
@@ -181,6 +188,9 @@ def doc_info(p: Path) -> tuple[str | None, str | None, str]:
     try:
         doc = json.loads(p.read_text(encoding="utf-8"))
         screens = list(build.screen_paths(doc, p).values()) if isinstance(doc, dict) else []
+        board = build.board_of(doc) if isinstance(doc, dict) else None
+        screens += [build.icon_dir(p, a) for a in (board or {}).get("artboards") or []
+                    if build.is_icons(a) and isinstance(a.get("id"), str) and build.ID_RE.match(a["id"])]
         h = build.approval_hash(doc, p)
         did = (str(doc.get("id") or "") or None) if isinstance(doc, dict) else None
         rev = str(((doc.get("meta") or {}) if isinstance(doc, dict) else {}).get("rev") or "")
@@ -195,7 +205,7 @@ def doc_hash(p: Path) -> str | None:
 
 
 def info_key(p: Path) -> tuple:
-    """The mtimes doc_info's cache keys on: the doc's and its screen files'."""
+    """The mtimes doc_info's cache keys on: the doc's, its screen files' and its layer folders'."""
     doc_info(p)
     hit = _doc_info.get(str(p))
     return hit[0] if hit else ()
@@ -414,7 +424,8 @@ def card(doc: dict, dtype: str, doc_path: Path) -> dict:
     as the template does (centre = x/y, else col*250, row*160; size w/h, else 180x80, or 240x140 for a node with
     children), c = child count; edges = [from, to, kind] by node index; play = the edges the first root flow walks.
     design: count = artboards, artboards = the first 12 as {x, y, w, h, device, fidelity}, placed by
-    build.board_layout and shifted so the board's top-left is 0, 0.
+    build.board_layout (with the board's links, for `layout: "flow"`) and shifted so the board's top-left is 0, 0;
+    links = [i, j] by artboard index, one per pair of those 12 that a link joins (at most 24; none for `back`).
     A doc whose type has none of that: its `hero`, else {icon: 'doc', sections: N}."""
     blocks = list(build.all_blocks(doc))
     if dtype == "review":
@@ -463,16 +474,26 @@ def card(doc: dict, dtype: str, doc_path: Path) -> dict:
             return {"kind": str((doc.get("meta") or {}).get("kind") or ""), **canvas_card(canvas)}
     elif dtype == "design":
         board = build.board_of(doc)
-        layout = build.board_layout(board) if board else {}
+        links = build.board_links(doc, doc_path) if board else []
+        layout = build.board_layout(board, links) if board else {}
         if layout:
             x0, y0 = min(v[0] for v in layout.values()), min(v[1] for v in layout.values())
             info = {a["id"]: a for a in board.get("artboards") or [] if isinstance(a, dict)}
-            arts = []
+            arts, at = [], {}
             for aid, (x, y, w, h) in list(layout.items())[:12]:
                 a = info.get(aid) or {}
+                at[aid] = len(arts)
                 arts.append({"x": round(x - x0), "y": round(y - y0), "w": round(w), "h": round(h),
                              "device": str(a.get("device") or ""), "fidelity": str(a.get("fidelity") or "")})
-            return {"count": len(layout), "artboards": arts}
+            pairs: dict[frozenset, list[int]] = {}   # one line per pair of screens, whichever way and however many links
+            for ln in links:
+                i, j = at.get(ln.get("from")), at.get(ln.get("to"))
+                if i is not None and j is not None and i != j:
+                    pairs.setdefault(frozenset((i, j)), [i, j])
+            out = {"count": len(layout), "artboards": arts}
+            if pairs:
+                out["links"] = list(pairs.values())[:24]
+            return out
     hero = doc.get("hero")
     if isinstance(hero, dict) and hero.get("value") is not None:
         return {"hero": {k: str(hero[k]) for k in ("icon", "value", "label") if hero.get(k) is not None}}
@@ -947,8 +968,12 @@ def wrap_screen(doc: dict, doc_path: Path, artboard_id: str, fragment: str, *, i
     if a is None:
         raise KeyError(artboard_id)
     fidelity = a.get("fidelity") if a.get("fidelity") in build.FIDELITIES else "hifi"
-    fw_id = str(a.get("framework") or board.get("framework") or "plain")
-    assets, sources, missing = framework_assets(board, fw_id, Path(doc_path), fidelity)
+    if a.get("device") == "icons":   # an icon sheet (icon_fragment) brings its own kit
+        sheet = KITS / "icon-sheet.css"
+        assets, sources, missing = [("css", sheet, f"/__bluedoc/kit/{sheet.name}?v={kit_version()}")], None, None
+    else:
+        fw_id = str(a.get("framework") or board.get("framework") or "plain")
+        assets, sources, missing = framework_assets(board, fw_id, Path(doc_path), fidelity)
     head = [asset_tag(kind, f, url, inline) for kind, f, url in assets]
     if sources is not None:
         text = "\n".join(f.read_text(encoding="utf-8", errors="replace") for f in sources)
@@ -1001,16 +1026,203 @@ def screen_for_url(path: str, rev: str | None) -> tuple[Path, dict, str, str] | 
                 fragment = f.read_text(encoding="utf-8")
             except (OSError, UnicodeDecodeError):
                 pass
+    if isinstance(doc, dict) and icon_artboard(doc, aid):   # no screen file: the sheet, built from the layers
+        fragment = icon_fragment(doc, doc_path, aid, rev, None if rev else load_roots())
     board = build.board_of(doc) if isinstance(doc, dict) else None
     if fragment is None or not board or not any(isinstance(a, dict) and a.get("id") == aid for a in board.get("artboards") or []):
         return None
     return doc_path, doc, aid, fragment
 
 
+# ---------- app icons ----------
+
+# what POST /__bluedoc/icons may write under <stem>.icons/<artboard>/: {path: a PNG's width and height in px, None for
+# a text file}. iOS: one 1024 icon per appearance; Android: 48 dp launcher icons and 108 dp adaptive layers per density
+# (mdpi 1x .. xxxhdpi 4x); Play: 512. The page builds them (template.html iconFiles).
+ICON_IOS = "ios/AppIcon.appiconset/"
+ICON_ANYDPI = "android/res/mipmap-anydpi-v26/"
+ICON_DENSITIES = {"mdpi": 1, "hdpi": 1.5, "xhdpi": 2, "xxhdpi": 3, "xxxhdpi": 4}
+ICON_FILES: dict[str, int | None] = {
+    ICON_IOS + "Contents.json": None, ICON_IOS + "AppIcon.png": 1024, ICON_IOS + "AppIcon-dark.png": 1024,
+    ICON_IOS + "AppIcon-tinted.png": 1024, ICON_ANYDPI + "ic_launcher.xml": None, ICON_ANYDPI + "ic_launcher_round.xml": None,
+    **{f"android/res/mipmap-{d}/{name}.png": int(dp * s) for d, s in ICON_DENSITIES.items()
+       for name, dp in (("ic_launcher", 48), ("ic_launcher_round", 48), ("ic_launcher_foreground", 108),
+                        ("ic_launcher_background", 108), ("ic_launcher_monochrome", 108))},
+    "play/icon-512.png": 512}
+ICON_MAX_PNG, ICON_MAX_TEXT, ICON_MAX_BODY = 4 * 1024 * 1024, 64 * 1024, 48 * 1024 * 1024
+PNG_SIG = b"\x89PNG\r\n\x1a\n"
+
+ICON_BG = re.compile(r"^#(?:[0-9a-fA-F]{3}){1,2}$")
+
+
+def icon_artboard(doc: dict, aid: str) -> dict | None:
+    """The doc's `icons` artboard aid, or None."""
+    board = build.board_of(doc) or {}
+    return next((a for a in board.get("artboards") or [] if isinstance(a, dict) and a.get("id") == aid
+                 and a.get("device") == "icons"), None)
+
+
+def icon_layer_texts(doc: dict, doc_path: Path, aid: str, rev: str | None = None,
+                     roots: list[Path] | None = None) -> dict[str, str] | None:
+    """{layer file name: its SVG text} of an icons artboard: the files now, or what the history recorded for rev.
+    None without a readable fg.svg. roots (the server's folders): a layer file must resolve inside one of them, in
+    its own <stem>.design/<id>/ folder."""
+    doc_path = Path(doc_path)
+    out: dict[str, str] = {}
+    if rev:
+        try:
+            h = build.load_history(build.history_path(doc_path))
+        except (OSError, ValueError):
+            return None
+        entry = next((e for e in h["revs"] if isinstance(e, dict) and e.get("rev") == rev), None) or {}
+        pool, keys = h.get("html") or {}, entry.get("screens") or {}
+        for name in build.ICON_LAYERS:
+            text = pool.get(keys.get(f"{aid}/{name}") or "")
+            if isinstance(text, str):
+                out[name] = text
+    else:
+        for name, f in build.icon_layers(doc, doc_path).get(aid, {}).items():
+            r = f.resolve()
+            if roots is not None and not (under_roots(r, roots) and r.parent.name == aid and r.parent.parent.name.endswith(".design")):
+                continue
+            try:
+                if r.stat().st_size <= build.MAX_MEDIA_BYTES:
+                    out[name] = r.read_text(encoding="utf-8")
+            except (OSError, UnicodeDecodeError):
+                pass
+    return out if "fg.svg" in out else None
+
+
+def icon_fragment(doc: dict, doc_path: Path, aid: str, rev: str | None = None, roots: list[Path] | None = None) -> str | None:
+    """An icons artboard's screen fragment: kits/icon-sheet.html filled with its layers as data: URIs (they draw on
+    a canvas without tainting it, from the server and in an -o file alike), which layers exist, and the checks that
+    follow from that; the sheet's script adds the safe-circle pixel check. None: no such artboard, or no fg.svg."""
+    a = icon_artboard(doc, aid)
+    texts = icon_layer_texts(doc, doc_path, aid, rev, roots) if a else None
+    if not texts:
+        return None
+    icon = a.get("icon") if isinstance(a.get("icon"), dict) else {}
+    bg = icon["bg"] if isinstance(icon.get("bg"), str) and ICON_BG.match(icon["bg"]) else None
+    uri = {n[:-4]: "data:image/svg+xml;base64," + base64.b64encode(t.encode("utf-8")).decode() for n, t in texts.items()}
+    has = uri.keys()
+    url = lambda n: f'url("{uri[n]}")'  # noqa: E731
+    vars_ = {"--fg": url("fg"), "--bgl": url("bg") if "bg" in has else "none", "--bgc": bg or "transparent",
+             "--dark": url("ios-dark") if "ios-dark" in has else "var(--fg)", "--mono": url("mono") if "mono" in has else "var(--fg)",
+             "--tint": url("ios-tinted") if "ios-tinted" in has else "var(--fg)", "--play": url("play") if "play" in has else "none"}
+    cls = [c for c, on in (("no-mono", "mono" not in has), ("tint-art", "ios-tinted" in has or "mono" not in has),
+                           ("has-play", "play" in has)) if on]
+    name = str(icon.get("name") or "")[:30]
+    code = lambda s: f"<code>{esc(s)}</code>"  # noqa: E731
+    files = [code(f"{aid}/{n}") for n in texts]
+    built = ", ".join(files[:-1]) + (" and " if len(files) > 1 else "") + files[-1] + (f" and bg {code(bg)}" if bg else "")
+    li = lambda ok, text: f'<li class="{"ok" if ok else "warn"}">{text}</li>'  # noqa: E731
+    ios = [li(bool(bg or "bg" in has), "opaque light icon" if bg or "bg" in has
+              else "no background (<code>icon.bg</code> or bg.svg): the light icon has alpha, which App Store Connect rejects"),
+           li(True, f"dark (from {'ios-dark.svg' if 'ios-dark' in has else 'fg.svg'})"),
+           li("ios-tinted" in has or "mono" in has, f"tinted (from {'ios-tinted.svg' if 'ios-tinted' in has else 'mono.svg'})"
+              if "ios-tinted" in has or "mono" in has else "tinted: a grayscale of fg.svg (no mono.svg)")]
+    android = [li("mono" in has, "monochrome" if "mono" in has else "no mono.svg: themed icons show the colour icon"),
+               li(True, "Play icon (from play.svg)" if "play" in has else "Play icon (bg + fg)")]
+    slots = {
+        "vars": " ".join(f"{k}: {v};" for k, v in vars_.items()), "cls": " ".join(cls),
+        "title": esc(" · ".join(x for x in (str(a.get("title") or "App icon"), name) if x)),
+        "built": f"Built from {built}. Each tile is a comment target: {code(f'el:{aid}/ios-dark')}.",
+        "layer_names": "bg + fg" if bg or "bg" in has else "fg", "name": esc(name or str(a.get("title") or aid)[:30]),
+        "ios_checks": "".join(ios), "android_checks": "".join(android),
+        "json": json.dumps({"bg": bg, "layers": uri}).replace("</", "<\\/"),
+    }
+    sheet = (KITS / "icon-sheet.html").read_text(encoding="utf-8")
+    return re.sub(r"\{\{(\w+)\}\}", lambda m: slots[m[1]], sheet)
+
+
+
+def icon_file_ok(rel: str, data: bytes) -> str | None:
+    """Why data can't be the export file rel, or None: a PNG of its exact size under the cap, Contents.json as a JSON
+    object with images, an adaptive-icon XML."""
+    size = ICON_FILES[rel]
+    if size is not None:
+        if len(data) > ICON_MAX_PNG:
+            return "over 4 MB"
+        if data[:8] != PNG_SIG or data[12:16] != b"IHDR" or len(data) < 24:
+            return "not a PNG"
+        w, h = int.from_bytes(data[16:20], "big"), int.from_bytes(data[20:24], "big")
+        return None if (w, h) == (size, size) else f"{w} x {h}, want {size} x {size}"
+    if len(data) > ICON_MAX_TEXT:
+        return "over 64 KB"
+    try:
+        if rel.endswith(".json"):
+            j = json.loads(data.decode("utf-8"))
+            return None if isinstance(j, dict) and isinstance(j.get("images"), list) else "not an asset catalog Contents.json"
+        import xml.etree.ElementTree as ET   # noqa: PLC0415 (only this route parses XML)
+        root = ET.fromstring(data.decode("utf-8"))
+    except (ValueError, SyntaxError) as e:   # ET.ParseError is a SyntaxError
+        return f"unreadable: {e}"
+    return None if root.tag == "adaptive-icon" else "not an <adaptive-icon>"
+
+
+def icons_dir(doc: Path, aid: str) -> Path:
+    """Where an icons artboard's export goes: <stem>.icons/<artboard>/ beside the doc."""
+    return doc.parent / f"{build.doc_stem(doc)}.icons" / aid
+
+
+def save_icons(doc: Path, aid, files) -> tuple[int, dict]:
+    """(status, answer) of POST /__bluedoc/icons: files {path in ICON_FILES: base64} written into icons_dir(doc, aid)
+    when aid is an `icons` artboard of the design doc. Every file is checked before any is written; each is replaced
+    atomically. Nothing outside that folder: no other name, no symlink on the way."""
+    try:
+        doc_json = json.loads(doc.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as e:
+        return 500, {"error": f"cannot read the doc: {e}"}
+    if not (isinstance(aid, str) and isinstance(doc_json, dict) and icon_artboard(doc_json, aid)):
+        return 404, {"error": "no icons artboard by that id in the doc"}
+    if not isinstance(files, dict) or not files:
+        return 400, {"error": "files: want {path: base64}"}
+    decoded: dict[str, bytes] = {}
+    for rel, b64 in files.items():
+        if rel not in ICON_FILES:
+            return 400, {"error": f"{rel!r} is not a file of an icon export"}
+        try:
+            if not isinstance(b64, str) or len(b64) > ICON_MAX_PNG * 4 // 3 + 4:
+                raise ValueError
+            data = base64.b64decode(b64, validate=True)
+        except ValueError:
+            return 400, {"error": f"{rel}: not base64 under the cap"}
+        why = icon_file_ok(rel, data)
+        if why:
+            return 400, {"error": f"{rel}: {why}"}
+        decoded[rel] = data
+    out = icons_dir(doc, aid)
+    want = doc.parent.resolve() / out.parent.name / aid
+    for rel in decoded:   # every folder on the way and the file itself: none a link, before anything is written
+        p = out.parent
+        for part in (aid, *rel.split("/")):
+            p = p / part
+            if p.is_symlink():
+                return 409, {"error": f"{rel}: a link on the way out of {out.parent.name}/{aid}"}
+    if out.parent.is_symlink():
+        return 409, {"error": f"{out.parent.name} is a link"}
+    try:
+        for rel, data in decoded.items():
+            target = out / rel
+            target.parent.mkdir(parents=True, exist_ok=True)
+            if target.parent.resolve() != (want / rel).parent:
+                return 409, {"error": f"{rel}: a link on the way out of {out.parent.name}/{aid}"}
+            fd, tmp = tempfile.mkstemp(dir=target.parent, prefix=".bd-", suffix=".tmp")
+            try:
+                with os.fdopen(fd, "wb") as f:
+                    f.write(data)
+                os.chmod(tmp, 0o644)
+                os.replace(tmp, target)
+            finally:
+                Path(tmp).unlink(missing_ok=True)
+    except OSError as e:
+        return 500, {"error": f"cannot write the export: {e}"}
+    return 200, {"ok": True, "dir": f"{out.parent.name}/{aid}", "files": sorted(decoded)}
+
 
 # ---------- reader state ----------
 
-ANN_TYPES = ("pin", "text", "draw", "general")
+ANN_TYPES = ("pin", "text", "draw", "general", "link", "layout")   # link, layout: the board's drafts (template.html)
 _skipped: set[tuple[str, str]] = set()   # (doc, key) of stored values page_state left out and logged
 
 
@@ -1033,7 +1245,10 @@ def value_ok(key: str, value: str) -> bool:
             and (a.get("type") != "text" or isinstance(a.get("quote"), str))
             and (a.get("note") is None or isinstance(a["note"], str)) and (a.get("up") is None or isinstance(a["up"], list))
             and (a.get("strokes") is None or isinstance(a["strokes"], list))
-            and (a.get("pos") is None or isinstance(a["pos"], dict)))
+            and (a.get("pos") is None or isinstance(a["pos"], dict))
+            and (a.get("type") != "link" or isinstance(a.get("link"), dict)
+                 and all(isinstance(a["link"].get(k), str) for k in ("op", "from", "el")))
+            and (a.get("type") != "layout" or isinstance(a.get("layout"), dict) and isinstance(a["layout"].get("positions"), dict)))
 
 
 def page_state(p: Path) -> dict | None:
@@ -1399,9 +1614,17 @@ def make_handler(port: int, default_to: str):
             if not self.guard():
                 return
             path = urlsplit(self.path).path
-            data = self.body(MAX_BODY)
+            data = self.body(ICON_MAX_BODY if path == "/__bluedoc/icons" else MAX_BODY)
             if data is None:
                 return
+            if path == "/__bluedoc/icons":
+                doc = doc_for_url(str(data.get("path") or ""))
+                if not doc:
+                    return self.json(404, {"error": "the page's doc is not under a registered folder"})
+                code, answer = save_icons(doc, data.get("artboard"), data.get("files"))
+                if code == 200:
+                    print(f"icons for {doc}: {len(answer['files'])} file(s) in {answer['dir']}", flush=True)
+                return self.json(code, answer)
             if path == "/__bluedoc/register":
                 doc = Path(str(data.get("doc") or "")).resolve()
                 INBOX.names[str(doc)] = str(data.get("to") or "")

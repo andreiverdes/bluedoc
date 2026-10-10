@@ -1,9 +1,14 @@
 /* bluedoc inspector: runs inside every design screen frame (opaque-origin sandbox) and talks to the design page.
    Page -> frame: {bd:'mode', mode}, {bd:'tokens', theme, motion}, {bd:'view', sketch, reduced, paused}, {bd:'locate', sels}.
-   Frame -> page, exactly 3 types, strings capped at 200 chars:
-     {bd:'ready', w, h, fallback, rects}   on load, on resize, after each locate
+   Frame -> page, exactly 4 types, strings capped at 200 chars:
+     {bd:'ready', w, h, fallback, rects, navs, named}   on load, on resize, after each locate; navs: {name: rect | null}
+                                       for up to 50 [data-nav] elements (null: hidden, a gesture link); named: the same
+                                       for up to 100 [data-bd] elements
      {bd:'hover', sel, name, tag, text, rect} | {bd:'hover', sel: null}
      {bd:'pick',  sel, name, tag, text, rect, shift}   sel null = the whole artboard
+     {bd:'nav',   names}   in interact mode, a click: the data-bd names of the clicked element and its named ancestors,
+                           innermost first (at most 8). The click itself still runs. The page follows the first name
+                           that has a link from this screen (its links, drafts included), so a forged name moves nothing.
    sel: the shortest unique chain of data-bd names ('submit', 'form/submit'), else a CSS path with '>' and no spaces
    from the nearest uniquely named ancestor ('[data-bd="login"]>h1:nth-of-type(1)') or from body. */
 (() => {
@@ -62,9 +67,23 @@
     return { sel: selOf(el), name: cap(name), tag: el.tagName.toLowerCase().slice(0, 20), text: cap(t), rect: rectOf(rect || el.getBoundingClientRect()) };
   }
 
+  // name -> rect for the first `max` elements matching sel that have a data-bd name; hidden ones map to null
+  function namedRects(sel, max) {
+    const out = {};
+    let n = 0;
+    for (const el of doc.querySelectorAll(sel)) {
+      const name = nameOf(el);
+      if (!name || name in out) continue;
+      if (++n > max) break;
+      const r = el.getBoundingClientRect();
+      out[name] = el.hidden || r.width + r.height === 0 ? null : rectOf(r);
+    }
+    return out;
+  }
+
   function ready(rects) {
     post({ bd: 'ready', w: Math.max(root.scrollWidth, doc.body ? doc.body.scrollWidth : 0), h: Math.max(root.scrollHeight, doc.body ? doc.body.scrollHeight : 0),
-      fallback: cap(root.getAttribute('data-bd-fallback')) || null, rects: rects || {} });
+      fallback: cap(root.getAttribute('data-bd-fallback')) || null, rects: rects || {}, navs: namedRects('[data-nav]', 50), named: namedRects('[data-bd]', 100) });
   }
 
   function showOutline(el) {
@@ -103,6 +122,12 @@
   }
   function onDown(e) { if (mode === 'point') swallow(e); else if (mode === 'select') e.stopPropagation(); }
   function onClick(e) {
+    if (mode === 'interact') {
+      const names = [];
+      for (let n = e.target; n && n.nodeType === 1 && names.length < 8; n = n.parentElement) { const nm = nameOf(n); if (nm) names.push(nm); }
+      if (names.length) post({ bd: 'nav', names });
+      return;
+    }
     if (!active()) return;
     swallow(e);
     if (mode === 'select' && String(getSelection() || '').trim()) return;   // the mouseup reported the selection

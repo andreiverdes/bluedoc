@@ -3,9 +3,10 @@
 
 keyOf (template.html) builds keys from the rendered page; `keys_of` below lists the same keys from the doc
 JSON, one rule per keyOf case. KeyOfForms pins that case list to the template, so a new key form fails here
-until keys_of, resolve_key and the docs learn it. Design keys: `artboard:` and `frame:` come from keyOf on the
-Acme Fit example; `el:<artboard>/<data-bd name or CSS path>` comes from the inspector inside a screen frame, and
-patch names the screen file and the selector."""
+until keys_of, resolve_key and the docs learn it. Design keys: `artboard:`, `frame:` and `link:` come from keyOf on
+the Acme Fit example; `el:<artboard>/<data-bd name or CSS path>` comes from the inspector inside a screen frame, and
+patch names the screen file and the selector. LinkKeys runs every `link:` op and `layout:` through `build.py patch`:
+each rewrites one start tag (or adds or drops one hidden element) and leaves every other byte."""
 from __future__ import annotations
 
 import copy
@@ -90,8 +91,9 @@ def md_parts(src: str) -> int:
     return n
 
 
-def keys_of(doc: dict, expanded: dict) -> dict[str, list[str]]:
-    """form -> the keys keyOf emits for doc. expanded is doc with its diff refs filled (the page shows those)."""
+def keys_of(doc: dict, expanded: dict, doc_path=None) -> dict[str, list[str]]:
+    """form -> the keys keyOf emits for doc. expanded is doc with its diff refs filled (the page shows those); doc_path
+    lets a design's links be read from its screen files (Point on an arrow: link:<screen>/<element>)."""
     out: dict[str, list[str]] = {f: [] for f in ("doc", "header", "status")}
     add = lambda form, key: out.setdefault(form, []).append(key)
     add("doc", "doc"); add("header", "header"); add("status", "status")
@@ -140,6 +142,8 @@ def keys_of(doc: dict, expanded: dict) -> dict[str, list[str]]:
             # Frame mode drops a requested frame anywhere on the board: one key per device, at a free spot
             add("frame", "frame:phone@0,2000")
             add("frame", "frame:390x844@-400,-120")
+            for ln in build.board_links(doc, doc_path) if doc_path else []:
+                add("link", f"link:{ln['from']}/{ln['el']}")
     for _, b in blocks_with_paths(expanded):
         if b.get("type") == "diff":
             for key, *_ in diff_line_keys(b):
@@ -161,7 +165,7 @@ class KeyOfForms(unittest.TestCase):
     def test_keyof_forms_are_the_known_ones(self) -> None:
         cased, bare = keyof_forms()
         self.assertEqual(cased, {"line", "comment", "row", "node", "step", "file", "media", "compare", "card", "para",
-                                 "item", "block", "heading", "lead", "section", "artboard", "frame"},
+                                 "item", "block", "heading", "lead", "section", "artboard", "frame", "link"},
                          "keyOf's cases changed: teach keys_of (this file), build.resolve_key and the docs the new form")
         self.assertEqual(bare, {"header", "tldr", "status", "doc"})
 
@@ -190,7 +194,7 @@ class KeyRoundTrip(unittest.TestCase):
             problems = diffref.expand_doc(expanded, p, write_cache=False, allow_remote=False)
             self.assertEqual([x for x in problems if x.startswith("ERROR")], [], stem)
             self.raw[stem] = doc
-            self.keys[stem] = keys_of(doc, expanded)
+            self.keys[stem] = keys_of(doc, expanded, p)
             raw_diffs = {b["id"]: b for _, b in blocks_with_paths(doc) if b.get("type") == "diff"}
             self.lines[stem] = [(key, covering_comments(raw_diffs[b["id"]], path, side, n))
                                 for _, b in blocks_with_paths(expanded) if b.get("type") == "diff"
@@ -253,7 +257,13 @@ class KeyRoundTrip(unittest.TestCase):
                 except build.PatchError as e:
                     self.fail(f"patch {key}: {e}")
                 value = json.dumps(target.obj) if isinstance(target.obj, list) else "{}"
-                r = self.tmp.run("build.py", "patch", self.docs / f"{stem}.bluedoc.json", key, "--json", value, "--no-bump")
+                if form == "link":   # a link takes --set: set its kind to the one it has
+                    ln = next(l for l in build.board_links(self.raw[stem], self.docs / f"{stem}.bluedoc.json")
+                              if key == f"link:{l['from']}/{l['el']}")
+                    op = ["--set", f"kind={ln['kind']}"]
+                else:
+                    op = ["--json", value]
+                r = self.tmp.run("build.py", "patch", self.docs / f"{stem}.bluedoc.json", key, *op, "--no-bump")
                 self.assertEqual(r.returncode, 0, r.stderr)
 
     def test_bare_line_key_cli_message(self) -> None:
@@ -280,6 +290,8 @@ def el_keys(doc_path) -> list[tuple[str, str, str]]:
     posts for a pick on that element (its shortest unique chain is the name itself)."""
     out = []
     for a in next(b for b in build.all_blocks(load_json(doc_path)) if b.get("type") == "board")["artboards"]:
+        if a.get("device") == "icons":   # layers, no screen file
+            continue
         f = doc_path.parent / f"{DESIGN}.design" / f"{a['id']}.html"
         p = _Names()
         p.feed(f.read_text(encoding="utf-8"))
@@ -321,6 +333,134 @@ class ElementKeys(unittest.TestCase):
     def test_an_unknown_artboard_is_refused(self) -> None:
         with self.assertRaises(build.PatchError):
             build.resolve_key(load_json(self.doc_path), "el:nowhere/submit")
+
+
+class LinkKeys(unittest.TestCase):
+    """link:<screen>/<element> and layout:<board> through `build.py patch` on a copy of Acme Fit."""
+
+    def setUp(self) -> None:
+        self.tmp = TempHome()
+        self.addCleanup(self.tmp.cleanup)
+        self.docs = self.tmp.copy_examples()
+        self.doc_path = self.docs / f"{DESIGN}.bluedoc.json"
+        self.screens = self.docs / f"{DESIGN}.design"
+
+    def patch(self, key: str, *args: str, code: int = 0):
+        r = self.tmp.run("build.py", "patch", self.doc_path, key, *args)
+        self.assertEqual(r.returncode, code, r.stdout + r.stderr)
+        return r
+
+    def changed(self, screen: str, before: str) -> tuple[list[str], list[str]]:
+        """(lines only before has, lines only the file has now)."""
+        a, b = before.splitlines(), (self.screens / screen).read_text(encoding="utf-8").splitlines()
+        return [l for l in a if l not in b], [l for l in b if l not in a]
+
+    def link(self, screen: str, el: str) -> dict | None:
+        return next((l for l in build.board_links(load_json(self.doc_path), self.doc_path)
+                     if l["from"] == screen and l["el"] == el), None)
+
+    def add_to_root(self, screen: str, html: str) -> tuple[str, str]:
+        """Put html at the end of the screen's root element; returns (the root's data-bd name, the new text)."""
+        f = self.screens / screen
+        text = f.read_text(encoding="utf-8")
+        tree = build._ScreenTree(text)
+        root = next(e for e in tree.els if e["parent"] is None and e["tag"] not in ("style", "script"))
+        text = text[:root["close"]] + html + text[root["close"]:]
+        f.write_text(text, encoding="utf-8")
+        return root["attrs"]["data-bd"], text
+
+    def test_no_op_names_the_file_the_selector_and_the_link(self) -> None:
+        out = self.patch("link:today/tab-workouts").stdout
+        self.assertIn("today.html", out)
+        self.assertIn('[data-bd="tab-workouts"]', out)
+        self.assertIn('data-nav="tab:workouts"', out)
+
+    def test_retarget_kind_and_label_rewrite_one_start_tag(self) -> None:
+        before = (self.screens / "today.html").read_text(encoding="utf-8")
+        self.patch("link:today/tab-workouts", "--set", "to=activity", "--set", "kind=modal", "--set", "label=Tap Workouts",
+                   "--change", "Workouts opens Activity.")
+        gone, new = self.changed("today.html", before)
+        self.assertEqual(len(gone), 1)
+        self.assertEqual([gone[0].replace('data-nav="tab:workouts"',
+                                          'data-nav="modal:activity" data-nav-label="Tap Workouts"')], new)
+        ln = self.link("today", "tab-workouts")
+        self.assertEqual((ln["to"], ln["kind"], ln["label"]), ("activity", "modal", "Tap Workouts"))
+        h = build.load_history(build.history_path(self.doc_path))
+        self.assertEqual(h["revs"][-1]["rev"], load_json(self.doc_path)["meta"]["rev"])
+        self.assertIn(ln, h["revs"][-1]["links"], "the new rev records the changed link")
+        self.assertNotIn(ln, h["revs"][-2]["links"], "the rev it replaces keeps the old one")
+
+    def test_a_label_alone_and_its_removal(self) -> None:
+        self.patch("link:today/tab-activity", "--set", "label=Tap Activity", "--no-bump")
+        ln = self.link("today", "tab-activity")
+        self.assertEqual((ln["to"], ln["kind"], ln.get("label")), ("activity", "tab", "Tap Activity"))
+        self.patch("link:today/tab-activity", "--set", "label=", "--no-bump")
+        self.assertNotIn("label", self.link("today", "tab-activity"))
+
+    def test_delete_drops_the_attributes_and_a_gesture_element_whole(self) -> None:
+        before = (self.screens / "profile.html").read_text(encoding="utf-8")
+        self.patch("link:profile/open-settings", "--delete", "--no-bump")
+        gone, new = self.changed("profile.html", before)
+        self.assertEqual([g.replace(' data-nav="modal:settings" data-nav-label="Tap the gear"', "") for g in gone], new)
+        self.assertIsNone(self.link("profile", "open-settings"))
+        before = (self.screens / "workout.html").read_text(encoding="utf-8")
+        self.patch("link:workout/edge-back", "--delete", "--no-bump")
+        gone, new = self.changed("workout.html", before)
+        self.assertEqual((len(gone), new), (1, []), "the hidden gesture element goes, line and all")
+        self.assertIn('data-bd="edge-back"', gone[0])
+
+    def test_a_new_gesture_link_goes_inside_the_root(self) -> None:
+        before = (self.screens / "workout.html").read_text(encoding="utf-8")
+        self.patch("link:workout/", "--set", "to=settings", "--set", "kind=modal", "--set", "label=Swipe up", "--no-bump")
+        gone, new = self.changed("workout.html", before)
+        self.assertEqual(gone, [])
+        self.assertEqual([l.strip() for l in new],
+                         ['<i hidden data-bd="swipe-up" data-nav="modal:settings" data-nav-label="Swipe up"></i>'])
+        ln = self.link("workout", "swipe-up")
+        self.assertEqual((ln["to"], ln["kind"], ln.get("edge")), ("settings", "modal", True))
+
+    def test_an_unnamed_element_is_named_first(self) -> None:
+        root, text = self.add_to_root("settings.html", "<button>See plans</button>")
+        self.patch("artboard:settings", "--change", "A plans button.", "--no-bump")
+        tree = build._ScreenTree(text)
+        top = tree.named(root)[0]
+        n = sum(1 for i in tree.children(top) if tree.els[i]["tag"] == "button")
+        self.patch(f'link:settings/[data-bd="{root}"]>button:nth-of-type({n})', "--set", "to=today", "--set",
+                   "label=Tap See plans", "--no-bump")
+        self.assertEqual(self.link("settings", "tap-see-plans")["to"], "today")
+
+    def test_a_bad_target_or_kind_writes_nothing(self) -> None:
+        before = {p.name: p.read_text(encoding="utf-8") for p in self.screens.glob("*.html")}
+        raw = self.doc_path.read_text(encoding="utf-8")
+        self.patch("link:today/tab-workouts", "--set", "to=nowhere", code=2)
+        self.patch("link:today/tab-workouts", "--set", "kind=jump", code=2)
+        self.patch("link:today/tab-workouts", "--set", "colour=red", code=2)
+        self.patch("link:today/tab-workouts", "--json", "{}", code=2)
+        self.patch("link:today/nothing-here", "--delete", code=2)
+        self.patch("link:app-icon/x", "--set", "to=today", code=2)
+        self.assertEqual({p.name: p.read_text(encoding="utf-8") for p in self.screens.glob("*.html")}, before)
+        self.assertEqual(self.doc_path.read_text(encoding="utf-8"), raw)
+
+    def test_a_patch_the_lint_refuses_is_put_back(self) -> None:
+        root, text = self.add_to_root("today.html", '<b data-bd="dup">1</b><b data-bd="dup">2</b>')
+        r = self.patch(f'link:today/[data-bd="{root}"]>b:nth-of-type(1)', "--set", "to=activity", code=1)
+        self.assertIn("not unique", r.stderr)
+        self.assertEqual((self.screens / "today.html").read_text(encoding="utf-8"), text)
+
+    def test_layout_sets_positions(self) -> None:
+        self.patch("layout:main", "--json", '{"today": [600, 0], "login-b": [0, 960.5]}', "--resolves", "c1",
+                   "--change", "Moved two screens.")
+        arts = {a["id"]: a for a in build.board_of(load_json(self.doc_path))["artboards"]}
+        self.assertEqual((arts["today"]["x"], arts["today"]["y"]), (600, 0))
+        self.assertEqual((arts["login-b"]["x"], arts["login-b"]["y"]), (0, 960.5))
+        self.assertEqual(load_json(self.doc_path)["resolves"], ["c1"])
+        self.patch("layout:main", "--json", '{"today": null}', "--no-bump")
+        today = next(a for a in build.board_of(load_json(self.doc_path))["artboards"] if a["id"] == "today")
+        self.assertNotIn("x", today)
+        for bad in ('{"nowhere": [0, 0]}', '{"today": [0]}', '{"today": ["a", 1]}', "[1, 2]", '{"today": [1e9, 0]}'):
+            with self.subTest(json=bad):
+                self.patch("layout:main", "--json", bad, "--no-bump", code=2)
+        self.patch("layout:other", "--json", '{"today": [0, 0]}', code=2)
 
 
 if __name__ == "__main__":

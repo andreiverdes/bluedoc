@@ -4,7 +4,9 @@ Two docs with one doc.id each keep their own outbox (st/shared-outbox). A wider 
 and a write the server answers with 404 stays in the outbox and reaches the server once the URL answers again
 (st/url-move). Approve on a page whose doc was edited in place after it loaded is refused, and the page offers
 Reload (st/approval-unseen). A doc that quotes an HTML comment opener renders (bld/comment-escape). A plan's item
-comments and every page's "Need more details" items count toward Request changes and go with it (rc/items).
+comments and every page's "Need more details" items count toward Request changes and go with it (rc/items). A design
+board's link edits and moved screens are drafts in reader state that go with Request changes with a `patch` command each
+and are resolved once the doc has them, or marked stale when a newer rev changed the link (bd/link-edit, bd/move).
 
 The browser tests run only with BLUEDOC_BROWSER_TESTS=1 and Chrome installed (BLUEDOC_CHROME names it when it isn't
 in a usual place); each starts Chrome with a temp profile and the server on a free port. The URL check needs no browser."""
@@ -77,6 +79,8 @@ class Browser:
             raise RuntimeError(f"DevTools refused the WebSocket: {head[:200]!r}")
 
     def close(self) -> None:
+        if getattr(self, "sock", None):
+            self.sock.close()
         self.proc.terminate()
         try:
             self.proc.wait(timeout=5)
@@ -205,6 +209,19 @@ class ChromePage(unittest.TestCase):
         return tab.wait_for(f"(t => t && t.classList.contains('on') && t.textContent.toLowerCase().includes({json.dumps(has)}) && t.textContent)"
                             "(document.querySelector('#bp-toast'))")
 
+    def send_changes(self, tab: Tab, says: str) -> None:
+        """Request changes through the dialog; its count line says `says`."""
+        tab.ev(f"{GO}.click()")
+        tab.wait_for("(d => !!d && !d.querySelector('.ft .bp-btn:last-child').hidden)(document.querySelector('.bd-chgs[open]'))")
+        self.assertIn(says, tab.ev("document.querySelector('.bd-chgs[open] .cnt').textContent"))
+        tab.ev("document.querySelector('.bd-chgs[open] .ft .bp-btn:last-child').click()")
+        self.toast(tab, "change request sent")
+
+    def reply(self, doc: Path, *flags: str) -> str:
+        r = self.tmp.run("serve.py", "reply", doc, "--kind", "changes", *flags)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        return r.stdout
+
 
 @unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")
 class PageSync(ChromePage):
@@ -279,18 +296,6 @@ class ItemRequests(ChromePage):
         """[disabled, the number on the key]"""
         return tab.ev(f"(b => [b.disabled, b.querySelector('.n').textContent])({GO})")
 
-    def send_changes(self, tab: Tab, says: str) -> None:
-        tab.ev(f"{GO}.click()")
-        tab.wait_for("(d => !!d && !d.querySelector('.ft .bp-btn:last-child').hidden)(document.querySelector('.bd-chgs[open]'))")
-        self.assertIn(says, tab.ev("document.querySelector('.bd-chgs[open] .cnt').textContent"))
-        tab.ev("document.querySelector('.bd-chgs[open] .ft .bp-btn:last-child').click()")
-        self.toast(tab, "change request sent")
-
-    def reply(self, doc: Path, *flags: str) -> str:
-        r = self.tmp.run("serve.py", "reply", doc, "--kind", "changes", *flags)
-        self.assertEqual(r.returncode, 0, r.stderr)
-        return r.stdout
-
     def test_a_comment_on_a_plan_item_is_a_change_request(self) -> None:
         url = self.server.url_for(self.plan)
         a = self.open(url)
@@ -354,6 +359,128 @@ class ItemRequests(ChromePage):
         self.send_changes(a, "1 request for more details")
         self.assertIn("→ **Need more details**", self.reply(self.docs / "acme-review-findings.bluedoc.json"))
         self.assertEqual(self.count(a), [True, "0"])
+
+
+FIT = "acme-fit-design.bluedoc.json"   # the design example: a phone flow with links, board id `main`
+
+
+@unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")
+class BoardDrafts(ChromePage):
+    """A design board's edits are drafts in reader state (bd/link-edit, bd/move): a link edit or a moved screen shows at
+    once, stays in state.db (a reload, cleared site data, another browser profile), goes with Request changes as a
+    `link:` or `layout:main` item with a ready `build.py patch` command, and is resolved once the doc has it. A draft
+    whose link a newer rev changed some other way is stale, and the board follows the rev."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.doc = self.docs / FIT
+        self.url = self.server.url_for(self.doc)
+
+    def edits(self, tab: Tab, opts: dict | None = None) -> dict:
+        tab.wait_for("!!BP.boardEdit()")
+        return tab.ev(f"BP.boardEdit({json.dumps(opts) if opts else ''})")
+
+    def stored_drafts(self) -> list:
+        out = [json.loads(v) for k, v in self.state(self.url).items() if k.startswith("__ann:")]
+        return [a for a in out if a.get("type") in ("link", "layout")]
+
+    def drag(self, tab: Tab, sel: str, dx: float, dy: float) -> None:
+        """A mouse drag from the left of sel's box, dx, dy CSS px, in 8 moves."""
+        x, y = tab.ev(f"(r => [r.left + 12, r.top + r.height / 2])(document.querySelector({json.dumps(sel)}).getBoundingClientRect())")
+        def mouse(kind: str, mx: float, my: float, buttons: int) -> None:
+            tab.browser.call("Input.dispatchMouseEvent", {"type": kind, "x": mx, "y": my, "button": "left", "buttons": buttons, "clickCount": 1},
+                             tab.session)
+        mouse("mousePressed", x, y, 1)
+        for i in range(1, 9):
+            mouse("mouseMoved", x + dx * i / 8, y + dy * i / 8, 1)
+            time.sleep(0.03)
+        mouse("mouseReleased", x + dx, y + dy, 0)
+
+    def test_a_moved_screen_is_a_layout_draft_until_the_doc_has_it(self) -> None:
+        a = self.open(self.url)
+        was, src = self.edits(a)["positions"]["login"], self.doc.read_bytes()
+        a.ev("BP.board({fit: true})")
+        self.drag(a, ".bd-ab[data-ab=login] .bd-ab-t", 40, 30)
+        now = a.wait_for(f"(p => (p[0] !== {was[0]} || p[1] !== {was[1]}) && p)(BP.boardEdit().positions.login)")
+        drafts = self.edits(a)["drafts"]
+        self.assertEqual([(d["key"], d["status"], d["positions"]) for d in drafts], [("layout:main", "pending", {"login": now})])
+        # reader state, not the doc: kept across a reload, cleared site data and another browser profile
+        self.assertTrue(until(self.stored_drafts), "the move never reached state.db")
+        self.assertEqual(self.doc.read_bytes(), src, "a move wrote the doc")
+        a.go(self.base + self.url)
+        self.assertEqual(self.edits(a)["positions"]["login"], now)
+        a.ev("localStorage.clear()")
+        a.go(self.base + self.url)
+        self.assertEqual(self.edits(a)["positions"]["login"], now)
+        profile = Path(tempfile.mkdtemp(prefix="bluedoc-chrome-"))
+        other = Browser(profile)
+        try:
+            b = Tab(other)
+            b.go(self.base + self.url)
+            self.assertEqual(self.edits(b)["positions"]["login"], now)
+        finally:
+            other.close()
+            shutil.rmtree(profile, ignore_errors=True)
+        # Request changes: one `layout:main` item with the command that writes it
+        self.send_changes(a, "1 pending comment")
+        md = self.reply(self.doc)
+        self.assertIn(f"- ({drafts[0]['id']}) `layout:main` Move 1 screen: ", md)
+        self.assertIn(f"build.py patch {FIT} layout:main --json '{json.dumps({'login': now}, separators=(',', ':'))}'", md)
+        # the agent writes the place: on the next load the draft is resolved, applied in the new rev, and nothing moves
+        r = self.tmp.run("build.py", "patch", self.doc, "layout:main", "--json", json.dumps({"login": now}))
+        self.assertEqual(r.returncode, 0, r.stderr)
+        a.go(self.base + self.url)
+        st = self.edits(a)
+        self.assertEqual(st["positions"]["login"], now)
+        mine = [x for x in a.ev("BP.annotations()") if x["id"] == drafts[0]["id"]]
+        self.assertEqual([(x["status"], x.get("resolvedBy")) for x in mine], [("resolved", "rev")])
+
+    def test_a_link_draft_shows_in_present_and_clears_once_a_rev_has_it(self) -> None:
+        a = self.open(self.url)
+        self.edits(a)
+        link = a.ev("BP.board().links.find(l => l.from === 'today' && l.kind === 'push' && l.to !== 'settings')")
+        key = f"link:today/{link['el']}"
+        drafts = self.edits(a, {"link": {"key": key, "to": "settings", "kind": "modal"}})["drafts"]
+        self.assertEqual([(d["key"], d["link"]["op"], d["link"]["to"], d["link"]["kind"], d["link"]["base"]["to"]) for d in drafts],
+                         [(key, "set", "settings", "modal", link["to"])])
+        shown = a.ev(f"BP.board().links.find(l => l.key === {json.dumps(key)})")
+        self.assertEqual((shown["to"], shown["kind"], shown["draft"]), ("settings", "modal", drafts[0]["id"]))
+        # Present follows the draft at once
+        a.ev("BP.board({present: 'today'})")
+        a.ev(f"BP.board({{tap: {json.dumps(link['el'])}}})")
+        self.assertEqual(a.wait_for("(p => p && p.screen !== 'today' && p.screen)(BP.board().presented)"), "settings")
+        a.ev("BP.board({present: false})")
+        # kept across a reload; the reply's command makes it
+        self.assertTrue(until(self.stored_drafts), "the link draft never reached state.db")
+        a.go(self.base + self.url)
+        self.assertEqual(a.ev(f"BP.board().links.find(l => l.key === {json.dumps(key)}).draft"), drafts[0]["id"])
+        md = a.ev("BP.changesPayload().markdown")
+        self.assertIn(f"- ({drafts[0]['id']}) `{key}` Change link Today › ", md)
+        self.assertIn(f"build.py patch {FIT} {key} --set to=settings --set kind=modal", md)
+        # the agent's rev has the link: the draft is resolved and the board shows the rev's link
+        r = self.tmp.run("build.py", "patch", self.doc, key, "--set", "to=settings", "--set", "kind=modal")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        a.go(self.base + self.url)
+        shown = a.ev(f"BP.board().links.find(l => l.key === {json.dumps(key)})")
+        self.assertEqual((shown["to"], shown["kind"], shown["draft"]), ("settings", "modal", None))
+        mine = [x for x in a.ev("BP.annotations()") if x["id"] == drafts[0]["id"]]
+        self.assertEqual([(x["status"], x.get("resolvedBy")) for x in mine], [("resolved", "rev")])
+
+    def test_a_draft_whose_link_a_newer_rev_changed_is_stale(self) -> None:
+        a = self.open(self.url)
+        self.edits(a)
+        link = a.ev("BP.board().links.find(l => l.from === 'today' && l.kind === 'push' && l.to !== 'settings' && l.to !== 'profile')")
+        key = f"link:today/{link['el']}"
+        did = self.edits(a, {"link": {"key": key, "to": "settings"}})["drafts"][0]["id"]
+        self.assertTrue(until(self.stored_drafts))
+        r = self.tmp.run("build.py", "patch", self.doc, key, "--set", "to=profile")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        a.go(self.base + self.url)
+        self.assertEqual([(d["id"], d["status"], d["stale"]) for d in self.edits(a)["drafts"]], [(did, "pending", True)])
+        shown = a.ev(f"BP.board().links.find(l => l.key === {json.dumps(key)})")
+        self.assertEqual((shown["to"], shown["draft"]), ("profile", None), "the board follows the rev, not the stale draft")
+        a.ev(f"BP.comments({{open: true}})")
+        self.assertIn("Stale", a.wait_for(f"document.querySelector('.bd-cs-c[data-id={did}]')?.textContent"))
 
 
 class UrlKeptByAWiderFolder(unittest.TestCase):

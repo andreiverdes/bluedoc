@@ -8,10 +8,11 @@ Usage:
   build.py doc.json --strict        treat lint warnings as errors
   build.py doc.json --show-rev B    print revision B, rebuilt from the history, as JSON
   build.py new TYPE out.bluedoc.json [--title T] [--kind K] [--shape pr|area] [--target T,…] [--framework F]
+                                    [--icons]
                                     write the fill-in skeleton of a docs|review|plan|design|other doc
                                     (--shape area: a review by area of a codebase, not by PR; design: one
                                     wireframe screen file per --target watch|mobile|tablet|desktop|web, three
-                                    slides for presentation)
+                                    slides for presentation; --icons adds an app icon with stub layers)
   build.py patch doc.json KEY [--set f=v ...] [--json OBJ] [--append OBJ] [--delete] [--html FILE|-]
                               [--change LINE ...] [--no-bump]
                                     change one object by its annotator key, bump meta.rev, validate, record
@@ -21,9 +22,10 @@ HTML file at all: write the JSON, run build.py, open the serve.py URL.
 
 Revisions: every build (and every patch) records the document under its `meta.rev` in
 <doc>.history.json next to the JSON (doc.bluedoc.json -> doc.bluedoc.history.json). A new rev
-appends; the same rev replaces that entry. A design doc's screen files join the revision: their text
-sits in the history's `html` pool by hash. The page embeds the history (screens as hashes only), so
-readers can switch revisions and compare two. --no-history skips reading and writing it.
+appends; the same rev replaces that entry. A design doc's screen files and icon layers join the revision:
+their text sits in the history's `html` pool by hash, and the entry lists the board's links. The page
+embeds the history (screens as hashes only, links as they are), so readers can switch revisions and
+compare two. --no-history skips reading and writing it.
 
 Type contracts: each meta.type needs its data (review: a diff and sized findings; plan: steps and
 files blocks; docs: a canvas or a hero; design: one board with an artboard). Missing data is an error on
@@ -33,6 +35,9 @@ warning only while the doc is exactly the revision its history recorded, so old 
 Screens (design docs): each artboard's HTML is a body fragment in <stem>.design/<id>.html. The build
 fails on a missing file, a network URL, <base>, <iframe>, <object>, <embed>, <meta http-equiv>,
 <form action> or a whole document; it warns above 24 KB and when no element has a data-bd name.
+An element's data-nav ("[kind:]artboard" or "back") is a link; the build checks its target and name,
+and the screens no board.entry reaches. An `icons` artboard has SVG layers in <stem>.design/<id>/
+instead (fg.svg required), checked for a square viewBox, the safe circle and what a canvas can't draw.
 
 Diff refs: a diff block with base and head and no files is expanded from git (cache file
 <name>.diffcache.json, then `git diff`, then `gh pr diff`) by scripts/diffref.py when validating,
@@ -49,9 +54,12 @@ patch keys: doc, meta, header, tldr, status, section:<sec>, heading:<sec>, lead:
   reply Markdown puts around it.
   Design keys: artboard:<id> (the artboard; --html FILE replaces its screen file), el:<id>/<path>
   (an element: data-bd names joined by '/', else a CSS path), frame:<device or WxH>@<x>,<y> (appends
-  an artboard there and writes a stub screen file). artboard: and el: with no --set/--json/--html
-  print the screen file and the element's selector; with only --change they record a hand edit of
-  the screen file as the next rev.
+  an artboard there and writes a stub screen file), link:<id>/<element> (the element's link: --set
+  to=<artboard> kind=<push|modal|tab|replace|back> label=<text>, or --delete, rewrite its start tag in
+  place; an element no name finds becomes a hidden gesture link), layout:<board> (--json
+  '{"<artboard>": [x, y]}' sets positions). artboard:, el: and link: with no --set/--json/--html
+  print the screen file and the element's selector (link: also its data-nav); with only --change
+  they record a hand edit of the screen file as the next rev.
   <blockPath> is <section>/<index> or <checklist>/<item>/<index>. header, tldr and status address
   the doc's top level. --set and --json values parse as JSON when they can; null deletes the field.
   --append adds to the target's list (doc: sections, section and item: blocks, table: rows,
@@ -71,10 +79,12 @@ import copy
 import datetime as dt
 import hashlib
 import json
+import math
 import os
 import re
 import shlex
 import sys
+from html import escape as escape_html
 from html.parser import HTMLParser
 from pathlib import Path
 
@@ -129,7 +139,7 @@ ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 DEVICES = {"watch-round": {"w": 240, "h": 240, "safe": [0, 0, 0, 0]}, "watch-square": {"w": 198, "h": 242, "safe": [8, 8, 8, 8]},
            "phone": {"w": 390, "h": 844, "safe": [47, 0, 34, 0]}, "tablet": {"w": 820, "h": 1180, "safe": [24, 0, 20, 0]},
            "desktop": {"w": 1280, "h": 800, "safe": [32, 0, 0, 0]}, "browser": {"w": 1440, "h": 900, "safe": [72, 0, 0, 0]},
-           "slide": {"w": 1920, "h": 1080, "safe": [0, 0, 0, 0]}}
+           "slide": {"w": 1920, "h": 1080, "safe": [0, 0, 0, 0]}, "icons": {"w": 1280, "h": 860, "safe": [0, 0, 0, 0]}}
 TARGET_DEVICES = {"watch": "watch-round", "mobile": "phone", "tablet": "tablet", "desktop": "desktop", "web": "browser",
                   "presentation": "slide"}
 # `build.py new design --target presentation`: the stub deck, one slide artboard each, in deck order
@@ -145,6 +155,16 @@ SHIPPED_PRESETS = ("heroui", "tailwind")
 FRAMEWORK_EXTS = {".css", ".js", ".mjs"}
 BOARD_GAP = 80                    # px between artboards placed without x/y
 SLIDE_GAP = 280                   # px between slides in the slide column: clears their labels down to ~10% zoom
+FLOW_GAP_X, FLOW_GAP_Y = 200, 120  # layout "flow": px between depth columns, and between screens in a column
+BOARD_LAYOUTS = ("rows", "flow")
+# links: an element's data-nav is "[kind:]artboard" (no kind: push) or "back"; data-nav-label names the action
+NAV_KINDS = ("push", "modal", "tab", "replace", "back")
+MAX_NAV_LABEL = 40                # characters a label pill on an arrow fits
+# an `icons` artboard: SVG layers in <stem>.design/<id>/ instead of a screen file; fg.svg is required
+ICON_LAYERS = ("fg.svg", "bg.svg", "mono.svg", "ios-dark.svg", "ios-tinted.svg", "play.svg")
+ICON_SIZE, ICON_SAFE_R = 108, 33  # Android's adaptive layer (dp) and the safe circle every launcher mask shows
+MAX_ICON_NAME = 30
+HEX_COLOR = re.compile(r"^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$")
 MAX_SCREEN_BYTES = 24 * 1024      # a screen file above this is a warning: edit fragments in place, don't regrow them
 TOKEN_KEY = re.compile(r"^[a-z][a-z0-9-]*$")
 TOKEN_VALUE = re.compile(r"^[^;{}<>\\]*$")
@@ -269,11 +289,12 @@ BLOCK_SHAPES = {
              "comments": [{"file": str, "item": str}]},
     "steps": {"id": str, "items": [{"id": str, "title": str, "status": str, "effort": str, "refs": [str]}]},
     "files": {"items": [{"path": str, "action": str, "step": str}]},
-    "board": {"id": str, "targets": [str], "framework": str,
+    "board": {"id": str, "targets": [str], "framework": str, "entry": [str], "layout": str,
               "frameworks": [{"id": str, "label": str, "files": [str], "store": str}],
               "themes": [{"id": str, "label": str, "tokens": dict}], "motion": dict,
               "artboards": [{"id": str, "title": str, "device": str, "fidelity": str, "x": NUMBER, "y": NUMBER,
-                             "w": NUMBER, "h": NUMBER, "variantOf": str, "framework": str, "src": str, "notes": str}]},
+                             "w": NUMBER, "h": NUMBER, "variantOf": str, "framework": str, "src": str, "notes": str,
+                             "icon": {"bg": str, "name": str}}]},
 }
 DOC_SHAPE = {"title": str, "meta": {"type": str}, "state": [{"kind": str}],
              "sections": [{"id": str, "title": str, "blocks": [BLOCK]}]}
@@ -533,15 +554,70 @@ def screen_rel(doc_path: Path, a: dict) -> str:
     return a["src"] if _screen_src_ok(a.get("src")) else f"{doc_stem(Path(doc_path))}.design/{a['id']}.html"
 
 
-def screen_paths(doc: dict, doc_path: Path) -> dict[str, Path]:
-    """{artboard id: its screen file}; {} for a doc without a board."""
+def is_icons(a) -> bool:
+    return isinstance(a, dict) and a.get("device") == "icons"
+
+
+def icon_dir(doc_path: Path, a: dict) -> Path:
+    """An icons artboard's layer folder: <stem>.design/<id>/ beside the doc."""
+    return Path(doc_path).parent / f"{doc_stem(Path(doc_path))}.design" / a["id"]
+
+
+def _artboards(doc: dict) -> list[dict]:
+    """The board's artboards with a valid id; [] for a doc without a board."""
     b = board_of(doc)
     arts = b.get("artboards") if isinstance(b, dict) else None
-    if not isinstance(arts, list):
-        return {}
-    folder = Path(doc_path).parent
-    return {a["id"]: folder / screen_rel(doc_path, a)
-            for a in arts if isinstance(a, dict) and isinstance(a.get("id"), str) and ID_RE.match(a["id"])}
+    return [a for a in arts if isinstance(a, dict) and isinstance(a.get("id"), str) and ID_RE.match(a["id"])] \
+        if isinstance(arts, list) else []
+
+
+def icon_layers(doc: dict, doc_path: Path) -> dict[str, dict[str, Path]]:
+    """{icons artboard id: {layer file name: its path}} in ICON_LAYERS order: the layers that exist, and fg.svg always
+    (it is required; validate reports it missing)."""
+    out = {}
+    for a in _artboards(doc):
+        if is_icons(a):
+            folder = icon_dir(doc_path, a)
+            out[a["id"]] = {n: folder / n for n in ICON_LAYERS if n == "fg.svg" or (folder / n).is_file()}
+    return out
+
+
+# the icon sheet's tiles (their data-bd names) -> the layers each is drawn from, in order of preference: the first
+# that exists wins; "bg" is bg.svg and/or icon.bg. A panel (sheet, ios, android, home) shows every layer.
+_FULL = (("fg.svg",), ("bg",))
+ICON_TILES = {**{t: _FULL for t in ("ios-master", "ios-light", "ios-sizes", "home-ios-light", "android-layers",
+                                    "android-circle", "android-squircle", "android-rounded", "android-teardrop",
+                                    "home-android-light")},
+              **{t: (("ios-dark.svg", "fg.svg"),) for t in ("ios-dark", "home-ios-dark")},
+              "ios-tinted": (("ios-tinted.svg", "mono.svg", "fg.svg"),),
+              **{t: (("mono.svg", "fg.svg"),) for t in ("android-themed", "home-android-dark")},
+              "play": (("play.svg", "fg.svg"), ("bg",))}
+
+
+def icon_tile_layers(tile: str, layers: dict[str, Path], a: dict) -> list[str]:
+    """The layer files (and `icon.bg`) a sheet tile is drawn from; every layer for a panel or an unknown name.
+    Android's themed tiles fall back to fg + the background when there is no mono.svg."""
+    bg = [n for n in ("bg.svg",) if n in layers] + (["icon.bg"] if (a.get("icon") or {}).get("bg") else [])
+    if tile not in ICON_TILES:
+        return list(layers) + [n for n in bg if n not in layers]
+    out: list[str] = []
+    for options in ICON_TILES[tile]:
+        pick = bg if options == ("bg",) else [next((n for n in options if n in layers), options[-1])]
+        out += pick + (bg if options[0] == "mono.svg" and pick == ["fg.svg"] else [])
+    return out
+
+
+def screen_paths(doc: dict, doc_path: Path) -> dict[str, Path]:
+    """{artboard id: its screen file}, and for an icons artboard {"<id>/<layer>": its layer file} instead: every file
+    whose text belongs to the revision. {} for a doc without a board."""
+    folder, out = Path(doc_path).parent, {}
+    layers = icon_layers(doc, doc_path)
+    for a in _artboards(doc):
+        if a["id"] in layers:
+            out.update({f"{a['id']}/{n}": f for n, f in layers[a["id"]].items()})
+        else:
+            out[a["id"]] = folder / screen_rel(doc_path, a)
+    return out
 
 
 def _read_text(f: Path) -> str | None:
@@ -552,18 +628,19 @@ def _read_text(f: Path) -> str | None:
 
 
 def read_screens(doc: dict, doc_path: Path) -> dict[str, str | None]:
-    """{artboard id: its screen file's text, None when unreadable}; {} for a doc without a board."""
+    """{artboard id or "<id>/<layer>": the file's text, None when unreadable}; {} for a doc without a board."""
     return {aid: _read_text(f) for aid, f in screen_paths(doc, doc_path).items()}
 
 
 def screen_hashes(doc: dict, doc_path: Path) -> dict[str, str | None]:
-    """{artboard id: _hash of its screen file's text, None when unreadable}: the keys of the history's html pool."""
+    """{artboard id or "<id>/<layer>": _hash of the file's text, None when unreadable}: the keys of the history's
+    html pool."""
     return {aid: None if text is None else _hash(text) for aid, text in read_screens(doc, doc_path).items()}
 
 
 def approval_hash(doc, doc_path: Path | None = None) -> str:
     """The docHash an approval carries: sha256 of the doc's canonical JSON (sorted keys, no spaces), and for a doc
-    with a board also of its screen hashes, so editing a screen file asks for approval again."""
+    with a board also of its screen and icon layer hashes, so editing a screen or a layer asks for approval again."""
     canon = json.dumps(doc, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     screens = screen_hashes(doc, doc_path) if doc_path is not None and isinstance(doc, dict) else {}
     if screens:
@@ -601,12 +678,78 @@ def artboard_size(a: dict) -> tuple[float, float] | None:
     return (w, h) if ok and "device" not in a else None
 
 
-def board_layout(board: dict) -> dict[str, tuple[float, float, float, float]]:
-    """{artboard id: (x, y, w, h)} in board order. An artboard with x and y sits there. An unplaced `slide`
+def _placed(a: dict) -> bool:
+    return all(isinstance(a.get(k), (int, float)) and not isinstance(a.get(k), bool) for k in ("x", "y"))
+
+
+def flow_places(board: dict, links: list[dict] | None) -> dict[str, tuple[float, float, float, float]]:
+    """layout "flow": {artboard id: (x, y, w, h)} for the unplaced screens the entries reach; {} on other boards. Breadth-
+    first from board.entry (in its order) over links of every kind but back, in link order; a screen reached first
+    brings its unvisited variants (board order, recursively) along at its depth, so each sits right under its source.
+    Slides take no part. The reached, unplaced screens go in columns by depth (empty depths dropped), FLOW_GAP_X
+    apart from x 0, each column as wide as its widest; in a column they stack in visit order from y 0, FLOW_GAP_Y
+    apart. template.html places them by the same rule."""
+    if board.get("layout") != "flow":
+        return {}
+    arts: dict[str, dict] = {}
+    for a in board.get("artboards") or []:
+        if isinstance(a, dict) and isinstance(a.get("id"), str) and a["id"] not in arts and artboard_size(a):
+            arts[a["id"]] = a
+    ok = {aid for aid, a in arts.items() if a.get("device") != "slide"}
+    variants: dict[str, list[str]] = {}
+    for aid in arts:
+        if aid in ok and isinstance(arts[aid].get("variantOf"), str):
+            variants.setdefault(arts[aid]["variantOf"], []).append(aid)
+    out_links: dict[str, list[str]] = {}
+    for ln in links or []:
+        if ln.get("kind") != "back" and ln.get("to") in ok:
+            out_links.setdefault(ln.get("from"), []).append(ln["to"])
+    depth: dict[str, int] = {}
+    visit: list[str] = []
+    queue: list[str] = []
+
+    def reach(aid: str, d: int) -> None:
+        depth[aid] = d
+        visit.append(aid)
+        queue.append(aid)
+        for v in variants.get(aid, []):
+            if v not in depth:
+                reach(v, d)
+
+    for e in board.get("entry") or []:
+        if e in ok and e not in depth:
+            reach(e, 0)
+    i = 0
+    while i < len(queue):
+        u = queue[i]
+        i += 1
+        for t in out_links.get(u, []):
+            if t not in depth:
+                reach(t, depth[u] + 1)
+    flow = [aid for aid in visit if not _placed(arts[aid])]
+    out: dict[str, tuple[float, float, float, float]] = {}
+    x = 0
+    for d in sorted({depth[aid] for aid in flow}):
+        col = [aid for aid in flow if depth[aid] == d]
+        y = 0
+        for aid in col:
+            w, h = artboard_size(arts[aid])
+            out[aid] = (x, y, w, h)
+            y += h + FLOW_GAP_Y
+        x += max(out[aid][2] for aid in col) + FLOW_GAP_X
+    return out
+
+
+def board_layout(board: dict, links: list[dict] | None = None) -> dict[str, tuple[float, float, float, float]]:
+    """{artboard id: (x, y, w, h)} in board order. An artboard with x and y sits there. On a `layout: "flow"` board
+    the unplaced screens the entries reach through links go where flow_places puts them. An unplaced `slide`
     artboard goes in the slide column, y 0 for the first and SLIDE_GAP below the previous one after that; the
     column's x is 0 on a board of only slides, else BOARD_GAP right of the rightmost artboard outside it. Any other
-    unplaced artboard's row is its variantOf source's y (when placed before it), else 0, and it goes BOARD_GAP right
-    of the rightmost artboard already in that row (x 0 in an empty row). template.html places them by the same rule."""
+    unplaced artboard's row is its variantOf source's y (when placed before it), else row 0, and it goes BOARD_GAP
+    right of the rightmost artboard already in that row (x 0 in an empty row). Row 0 is y 0, or FLOW_GAP_Y below
+    the flow's lowest screen when flow placed any. links: board_links(); template.html places them by the same rule."""
+    flow = flow_places(board, links)
+    y0 = max((fy + fh for _, fy, _, fh in flow.values()), default=-FLOW_GAP_Y) + FLOW_GAP_Y
     at: dict[str, tuple[float, float, float, float]] = {}
     order: list[str] = []
     column: list[tuple[str, tuple[float, float]]] = []
@@ -620,12 +763,14 @@ def board_layout(board: dict) -> dict[str, tuple[float, float, float, float]]:
         order.append(a["id"])
         only_slides = only_slides and a.get("device") == "slide"
         x, y = a.get("x"), a.get("y")
-        if not all(isinstance(v, (int, float)) and not isinstance(v, bool) for v in (x, y)):
+        if a["id"] in flow:
+            x, y = flow[a["id"]][:2]
+        elif not _placed(a):
             if a.get("device") == "slide":
                 column.append((a["id"], size))
                 continue
             src = at.get(a.get("variantOf")) if isinstance(a.get("variantOf"), str) else None
-            y = src[1] if src else 0
+            y = src[1] if src else y0
             row = [bx + bw for bx, by, bw, _ in at.values() if by == y]
             x = max(row) + BOARD_GAP if row else 0
         at[a["id"]] = (x, y, *size)
@@ -654,12 +799,15 @@ DOC_TAGS = {"html", "head", "body"}
 
 
 class _ScreenLint(HTMLParser):
-    """A screen fragment's problems, one per construct, as (line, message); and whether any data-bd is set."""
+    """A screen fragment's problems, one per construct, as (line, message); whether any data-bd is set; how often
+    each data-bd name occurs; and every element with data-nav or data-nav-label (navs, in document order)."""
     def __init__(self) -> None:
         super().__init__(convert_charrefs=True)
         self.errors: list[tuple[int, str]] = []
         self.whole_doc = False
         self.has_bd = False
+        self.bd_count: dict[str, int] = {}
+        self.navs: list[dict] = []   # {line, bd, nav, label, hidden}; nav or label None when the attribute is absent
         self._raw: str | None = None   # "style" or "script" while inside one
 
     def _doc(self) -> None:
@@ -676,6 +824,13 @@ class _ScreenLint(HTMLParser):
         names = {k for k, _ in attrs}
         if "data-bd" in names:
             self.has_bd = True
+            bd = dict(attrs)["data-bd"] or ""
+            self.bd_count[bd] = self.bd_count.get(bd, 0) + 1
+        if "data-nav" in names or "data-nav-label" in names:
+            at = dict(attrs)
+            self.navs.append({"line": self.getpos()[0], "bd": at.get("data-bd"), "hidden": "hidden" in names,
+                              "nav": (at["data-nav"] or "") if "data-nav" in at else None,
+                              "label": (at["data-nav-label"] or "") if "data-nav-label" in at else None})
         if tag in ("style", "script"):
             self._raw = tag
         line = self.getpos()[0]
@@ -706,24 +861,397 @@ class _ScreenLint(HTMLParser):
             self.errors.append((self.getpos()[0], f"<{self._raw}>: a network URL; screens load nothing from the network"))
 
 
-def lint_screen(rep: Report, where: str, f: Path, shown: str) -> None:
+def parse_screen(text: str) -> _ScreenLint:
+    p = _ScreenLint()
+    p.feed(text)
+    p.close()
+    return p
+
+
+def lint_screen(rep: Report, where: str, f: Path, shown: str) -> _ScreenLint | None:
     """A screen file: an ERROR when it is missing or holds a network URL, a banned tag or a whole document; a WARN
-    above MAX_SCREEN_BYTES or without any data-bd (the annotator's element names)."""
+    above MAX_SCREEN_BYTES or without any data-bd (the annotator's element names). Returns the parsed file (its
+    links go through lint_links), None when it is unreadable."""
     text = _read_text(f)
     if text is None:
         rep.err(where, f"screen file {shown} is missing or unreadable: write the artboard's HTML fragment there")
-        return
+        return None
     size = len(text.encode("utf-8"))
     if size > MAX_SCREEN_BYTES:
         rep.warn(where, f"{shown} is {size // 1024} KB (> {MAX_SCREEN_BYTES // 1024} KB): use kit classes, split it into "
                  "artboards, and edit it in place rather than rewriting it")
-    p = _ScreenLint()
-    p.feed(text)
-    p.close()
+    p = parse_screen(text)
     for line, msg in p.errors:
         rep.err(f"{where} {shown}:{line}", msg)
     if not p.has_bd:
         rep.warn(where, f"{shown} has no data-bd: name the elements a reader may point at (data-bd=\"submit\")")
+    return p
+
+
+BD_NAME = re.compile(r"^[A-Za-z0-9_-]+$")   # a data-bd name the inspector reports (its link key and Present's tap)
+
+
+def parse_nav(value: str) -> tuple[str, str | None] | str:
+    """A data-nav value as (kind, target artboard; None for back), else the reason it is malformed."""
+    v = value.strip()
+    if v == "back":
+        return "back", None
+    kind, colon, to = v.partition(":")
+    if not colon:
+        kind, to = "push", v
+    if kind == "back":
+        return "`back` takes no target: write data-nav=\"back\""
+    if kind not in NAV_KINDS or not to.strip():
+        return f"write [kind:]artboard or back; kinds {', '.join(k for k in NAV_KINDS if k != 'back')} (none: push)"
+    return kind, to.strip()
+
+
+def screen_links(p: _ScreenLint, aid: str, art_ids: set[str]) -> tuple[list[dict], list[tuple[str, int, str]]]:
+    """One screen's links ({from, el, to, kind, label?, edge?} in document order; only valid ones) and its link
+    problems as (ERROR|WARN, line, message), per *Navigation › Lint* in references/schema.md."""
+    links, probs = [], []
+    for n in p.navs:
+        line, nav, label = n["line"], n["nav"], n["label"]
+        if nav is None:
+            probs.append(("ERROR", line, "data-nav-label without data-nav: a label names a link; add data-nav or drop it"))
+            continue
+        parsed = parse_nav(nav)
+        if isinstance(parsed, str):
+            probs.append(("ERROR", line, f"data-nav=\"{nav}\": {parsed}"))
+            continue
+        kind, to = parsed
+        if to is not None and to not in art_ids:
+            probs.append(("ERROR", line, f"data-nav=\"{nav}\": no artboard '{to}' on this board"))
+            continue
+        bd = n["bd"]
+        if not bd or not BD_NAME.match(bd) or p.bd_count.get(bd, 0) != 1:
+            why = "has no data-bd" if not bd else f"data-bd \"{bd}\" is {'not unique in this file' if BD_NAME.match(bd) else 'not letters, digits, - and _'}"
+            probs.append(("ERROR", line, f"data-nav=\"{nav}\" {why}: name the element uniquely (data-bd=\"start\"); the "
+                          "link's key and Present's tap use the name"))
+            continue
+        if to == aid:
+            probs.append(("WARN", line, f"data-nav=\"{nav}\" leads to its own screen: a typo? (a tab bar's current tab has "
+                          "no data-nav)"))
+        if n["hidden"] and not label:
+            probs.append(("WARN", line, f"hidden link \"{bd}\" has no data-nav-label: Present shows a gesture link by its "
+                          "label (\"Swipe left\")"))
+        if label and len(label) > MAX_NAV_LABEL:
+            probs.append(("WARN", line, f"data-nav-label is {len(label)} characters (> {MAX_NAV_LABEL}): a label pill on "
+                          "an arrow fits about 40"))
+        ln = {"from": aid, "el": bd, "to": to, "kind": kind}
+        if label:
+            ln["label"] = label
+        if n["hidden"]:
+            ln["edge"] = True
+        links.append(ln)
+    return links, probs
+
+
+def links_of(board: dict, texts: dict[str, str | None]) -> list[dict]:
+    """The board's links from its screens' text ({artboard id: text}, read_screens' shape), in board order then
+    document order: [{from, el, to, kind, label?, edge?}]. to is None for back; label is data-nav-label; edge marks a
+    gesture link (a hidden element: its arrow starts at the screen's border)."""
+    arts = [a for a in (board or {}).get("artboards") or [] if isinstance(a, dict) and isinstance(a.get("id"), str)]
+    art_ids = {a["id"] for a in arts}
+    out, seen = [], set()
+    for a in arts:
+        text = texts.get(a["id"]) if not is_icons(a) and a["id"] not in seen else None
+        seen.add(a["id"])
+        if text and "data-nav" in text:
+            out += screen_links(parse_screen(text), a["id"], art_ids)[0]
+    return out
+
+
+def board_links(doc: dict, doc_path: Path) -> list[dict]:
+    """The design doc's links as its screen files have them now (links_of); [] for a doc without a board."""
+    b = board_of(doc)
+    return links_of(b, read_screens(doc, doc_path)) if b else []
+
+
+def lint_links(rep: Report, bw: str, b: dict, parsed: dict[str, tuple[str, str, _ScreenLint]]) -> None:
+    """The board's links: each screen's link problems (screen_links), board.entry and board.layout, and the screens
+    no entry reaches. parsed: {artboard id: (where, shown file, its parse)} for the readable screens."""
+    arts = {a["id"]: a for a in b["artboards"] if isinstance(a, dict) and isinstance(a.get("id"), str)}
+    links = []
+    for aid, (where, shown, p) in parsed.items():
+        found, probs = screen_links(p, aid, set(arts))
+        links += found
+        for level, line, msg in probs:
+            (rep.err if level == "ERROR" else rep.warn)(f"{where} {shown}:{line}", msg)
+    if b.get("layout") is not None and b["layout"] not in BOARD_LAYOUTS:
+        rep.err(bw + ".layout", f"'{b['layout']}' not in {list(BOARD_LAYOUTS)}")
+    entry = b.get("entry") or []
+    for i, e in enumerate(entry):
+        if e not in arts:
+            rep.err(f"{bw}.entry[{i}]", f"'{e}' is no artboard in this board: reach is counted from the entries")
+    if not links:
+        return
+    if not entry:
+        rep.warn(bw, "the screens link to each other but the board has no entry: list the screens a flow starts from "
+                 "(\"entry\": [\"login\"])")
+        return
+    nexts: dict[str, list[str]] = {}
+    for ln in links:
+        if ln["kind"] != "back":
+            nexts.setdefault(ln["from"], []).append(ln["to"])
+    reached, queue = set(), [e for e in entry if e in arts]
+    while queue:
+        u = queue.pop()
+        if u not in reached:
+            reached.add(u)
+            queue += nexts.get(u, [])
+    linked_devices = {arts[ln[k]].get("device") for ln in links for k in ("from", "to") if ln[k]}
+    for aid, a in arts.items():
+        if (aid in reached or a.get("variantOf") is not None or a.get("device") in ("slide", "icons")
+                or a.get("device") not in linked_devices):
+            continue
+        rep.warn(f"{bw} artboard '{aid}'", f"no entry reaches it ({', '.join(entry)}): link to it with data-nav, add it to "
+                 "entry, or drop it")
+
+
+# icon layers: what an SVG drawn as an <img> or on a canvas can't use, and the drawing elements the safe-circle
+# check reads (subtrees of SVG_UNDRAWN are definitions, not drawing)
+SVG_UNDRAWN = {"defs", "clipPath", "mask", "symbol", "pattern", "marker", "linearGradient", "radialGradient", "filter",
+               "metadata", "title", "desc", "style"}
+SVG_NUMBER = re.compile(r"[-+]?(?:\d*\.\d+|\d+\.?)(?:[eE][-+]?\d+)?")
+SVG_TRANSFORM = re.compile(r"(matrix|translate|scale|rotate|skewX|skewY)\s*\(([^)]*)\)")
+SVG_PATH_TOKEN = re.compile(r"[MmZzLlHhVvCcSsQqTtAa]|[-+]?(?:\d*\.\d+|\d+\.?)(?:[eE][-+]?\d+)?")
+
+
+def _svg_tree(text: str):
+    """An SVG layer as nested (tag, attrs, line, children), tags and attributes without namespace processing (svg,
+    xlink:href); or the reason it isn't usable XML. A DOCTYPE or an entity is refused: layers need neither."""
+    import xml.parsers.expat
+    root: list = []
+    stack: list = []
+    texts: list[str] = []
+    p = xml.parsers.expat.ParserCreate()
+
+    def start(tag, attrs):
+        node = (tag, attrs, p.CurrentLineNumber, [])
+        (stack[-1][3] if stack else root).append(node)
+        stack.append(node)
+
+    def doctype(*_):
+        raise ValueError(f"line {p.CurrentLineNumber}: a DOCTYPE; drop it (a layer needs no DTD or entities)")
+
+    p.StartElementHandler = start
+    p.EndElementHandler = lambda tag: stack.pop()
+    p.StartDoctypeDeclHandler = doctype
+    p.EntityDeclHandler = doctype
+    p.CharacterDataHandler = lambda d: texts.append(d) if stack and stack[-1][0].split(":")[-1] == "style" else None
+    try:
+        p.Parse(text, True)
+    except xml.parsers.expat.ExpatError as e:
+        return f"not XML: {e}"
+    except ValueError as e:
+        return str(e)
+    return root[0], "".join(texts)
+
+
+def _mul(m, n):
+    a, b, c, d, e, f = m
+    a2, b2, c2, d2, e2, f2 = n
+    return (a * a2 + c * b2, b * a2 + d * b2, a * c2 + c * d2, b * c2 + d * d2, a * e2 + c * f2 + e, b * e2 + d * f2 + f)
+
+
+def _transform(s: str | None):
+    """An SVG transform attribute as a matrix (a, b, c, d, e, f)."""
+    m = (1.0, 0.0, 0.0, 1.0, 0.0, 0.0)
+    for name, args in SVG_TRANSFORM.findall(s or ""):
+        v = [float(x) for x in SVG_NUMBER.findall(args)]
+        if name == "matrix" and len(v) == 6:
+            t = tuple(v)
+        elif name == "translate" and v:
+            t = (1, 0, 0, 1, v[0], v[1] if len(v) > 1 else 0)
+        elif name == "scale" and v:
+            t = (v[0], 0, 0, v[1] if len(v) > 1 else v[0], 0, 0)
+        elif name == "rotate" and v:
+            r = math.radians(v[0])
+            t = (math.cos(r), math.sin(r), -math.sin(r), math.cos(r), 0, 0)
+            if len(v) == 3:
+                t = _mul(_mul((1, 0, 0, 1, v[1], v[2]), t), (1, 0, 0, 1, -v[1], -v[2]))
+        elif name in ("skewX", "skewY") and v:
+            k = math.tan(math.radians(v[0]))
+            t = (1, 0, k, 1, 0, 0) if name == "skewX" else (1, k, 0, 1, 0, 0)
+        else:
+            continue
+        m = _mul(m, t)
+    return m
+
+
+def _num(attrs: dict, k: str) -> float:
+    m = SVG_NUMBER.match((attrs.get(k) or "0").strip())
+    return float(m.group(0)) if m else 0.0
+
+
+def _path_points(d: str) -> list[tuple[float, float]]:
+    """The points a path's outline passes through: every segment's end, and three points along each curve (an
+    arc: its ends only). Stops at the first token it can't read."""
+    toks = SVG_PATH_TOKEN.findall(d or "")
+    pts, i, cmd = [], 0, None
+    x = y = sx = sy = 0.0
+    prev_ctrl = None
+    arity = {"M": 2, "L": 2, "H": 1, "V": 1, "C": 6, "S": 4, "Q": 4, "T": 2, "A": 7, "Z": 0}
+
+    def bez(p0, ctrl, p3):
+        for t in (0.25, 0.5, 0.75):
+            ps = [p0, *ctrl, p3]
+            while len(ps) > 1:
+                ps = [((1 - t) * a[0] + t * b[0], (1 - t) * a[1] + t * b[1]) for a, b in zip(ps, ps[1:])]
+            pts.append(ps[0])
+
+    while i < len(toks):
+        if toks[i].isalpha():
+            cmd = toks[i]
+            i += 1
+            if cmd in "Zz":
+                x, y = sx, sy
+                pts.append((x, y))
+                continue
+        if cmd is None or cmd in "Zz":
+            break
+        n = arity[cmd.upper()]
+        try:
+            v = [float(t) for t in toks[i:i + n]]
+        except ValueError:
+            break
+        if len(v) < n:
+            break
+        i += n
+        rel = cmd.islower()
+        ox, oy = (x, y) if rel else (0.0, 0.0)
+        C = cmd.upper()
+        if C == "H":
+            x = v[0] + (x if rel else 0)
+        elif C == "V":
+            y = v[0] + (y if rel else 0)
+        elif C == "A":
+            x, y = v[5] + ox, v[6] + oy
+        else:
+            xy = [(v[k] + ox, v[k + 1] + oy) for k in range(0, n, 2)]
+            if C == "S":
+                xy.insert(0, prev_ctrl or (x, y))
+            elif C == "T":
+                xy.insert(0, prev_ctrl or (x, y))
+            if C in ("C", "S", "Q", "T"):
+                bez((x, y), xy[:-1], xy[-1])
+                c = xy[-2]
+                prev_ctrl = (2 * xy[-1][0] - c[0], 2 * xy[-1][1] - c[1])
+            x, y = xy[-1]
+        if C not in ("C", "S", "Q", "T"):
+            prev_ctrl = None
+        if C == "M":
+            sx, sy = x, y
+            cmd = "l" if rel else "L"   # further pairs after a moveto are linetos
+        pts.append((x, y))
+    return pts
+
+
+def _shape_points(tag: str, at: dict) -> list[tuple[float, float]]:
+    """The points that bound one drawing element, in its own coordinates."""
+    if tag in ("rect", "image", "use", "foreignObject"):
+        x, y, w, h = _num(at, "x"), _num(at, "y"), _num(at, "width"), _num(at, "height")
+        return [(x, y), (x + w, y), (x, y + h), (x + w, y + h)] if w > 0 and h > 0 else []
+    if tag in ("circle", "ellipse"):
+        cx, cy = _num(at, "cx"), _num(at, "cy")
+        rx = _num(at, "r") if tag == "circle" else _num(at, "rx")
+        ry = rx if tag == "circle" else _num(at, "ry")
+        return [(cx + rx * math.cos(k * math.pi / 16), cy + ry * math.sin(k * math.pi / 16)) for k in range(32)]
+    if tag == "line":
+        return [(_num(at, "x1"), _num(at, "y1")), (_num(at, "x2"), _num(at, "y2"))]
+    if tag in ("polyline", "polygon"):
+        v = [float(t) for t in SVG_NUMBER.findall(at.get("points") or "")]
+        return list(zip(v[0::2], v[1::2]))
+    if tag == "path":
+        return _path_points(at.get("d") or "")
+    return []
+
+
+def _view_box(at: dict) -> tuple[float, float, float] | str:
+    """(min x, min y, size) of a square viewBox, else why it doesn't do."""
+    v = [float(t) for t in SVG_NUMBER.findall(at.get("viewBox") or "")]
+    if len(v) != 4:
+        return "no viewBox: give it a square one, viewBox=\"0 0 108 108\""
+    if v[2] <= 0 or v[2] != v[3]:
+        return f"viewBox \"{at.get('viewBox')}\" is not square: every output is a square render (0 0 108 108)"
+    return v[0], v[1], v[2]
+
+
+def lint_icon(rep: Report, where: str, a: dict, doc_path: Path) -> None:
+    """An icons artboard's layers (*App icons › Lint* in references/schema.md): fg.svg is required; every layer is
+    XML with a square viewBox and nothing a canvas can't draw or that reaches the network; fg stays in the safe
+    circle; mono.svg and a background are expected; text should be paths."""
+    folder = icon_dir(doc_path, a)
+    rel = f"{doc_stem(Path(doc_path))}.design/{a['id']}/"
+    icon = a.get("icon") or {}
+    for name in ICON_LAYERS:
+        f = folder / name
+        if not f.is_file():
+            if name == "fg.svg":
+                rep.err(where, f"{rel}fg.svg is missing: write the logo layer there (an SVG, viewBox 0 0 108 108)")
+            continue
+        shown = rel + name
+        text = _read_text(f)
+        tree = _svg_tree(text) if text is not None else "unreadable as UTF-8 text"
+        if isinstance(tree, str):
+            rep.err(f"{where} {shown}", tree)
+            continue
+        (tag, at, line, kids), style = tree
+        if tag.split(":")[-1] != "svg":
+            rep.err(f"{where} {shown}:{line}", f"the root is <{tag}>, not <svg>")
+            continue
+        vb = _view_box(at)
+        if isinstance(vb, str):
+            rep.err(f"{where} {shown}:{line}", vb)
+        if NET_URL.search(style):
+            rep.err(f"{where} {shown}", "<style>: a network URL; a layer loads nothing")
+        text_line, far = None, None   # far: (distance from the centre in dp, line, tag)
+        scale = ICON_SIZE / vb[2] if not isinstance(vb, str) else None
+        root_m = (scale, 0.0, 0.0, scale, -vb[0] * scale, -vb[1] * scale) if scale else None
+
+        def walk(node, m, drawn: bool) -> None:
+            nonlocal text_line, far
+            ntag, nat, nline, nkids = node
+            local = ntag.split(":")[-1]
+            if local in ("script", "foreignObject"):
+                rep.err(f"{where} {shown}:{nline}", f"<{local}>: not allowed in a layer (an image runs no script and draws "
+                        "no HTML)")
+            bad = next((k for k in nat if k.lower().startswith("on")), None)
+            if bad:
+                rep.err(f"{where} {shown}:{nline}", f"<{local} {bad}>: no event handlers in a layer")
+            net = next((k for k, v in nat.items() if NET_URL.search(v)), None)
+            if net:
+                rep.err(f"{where} {shown}:{nline}", f"<{local} {net}>: a network URL; a layer loads nothing (inline it)")
+            if local == "text" and text_line is None:
+                text_line = nline
+            drawn = drawn and local not in SVG_UNDRAWN and nat.get("display") != "none"
+            if m is not None and drawn:
+                m = _mul(m, _transform(nat.get("transform")))
+                for px, py in _shape_points(local, nat):
+                    gx, gy = m[0] * px + m[2] * py + m[4], m[1] * px + m[3] * py + m[5]
+                    dist = math.hypot(gx - ICON_SIZE / 2, gy - ICON_SIZE / 2)
+                    if far is None or dist > far[0]:
+                        far = (dist, nline, local)
+            for k in nkids:
+                walk(k, m, drawn)
+
+        for k in kids:
+            walk(k, root_m if name == "fg.svg" else None, True)
+        if text_line is not None:
+            rep.warn(f"{where} {shown}:{text_line}", "<text>: fonts don't load in an image or a canvas; convert the text "
+                     "to paths")
+        if far and far[0] > ICON_SAFE_R + 0.5:
+            rep.warn(f"{where} {shown}:{far[1]}", f"<{far[2]}> reaches {far[0]:.1f} dp from the centre, outside the "
+                     f"{2 * ICON_SAFE_R} dp safe circle (r {ICON_SAFE_R} of {ICON_SIZE}): launcher masks cut it; keep "
+                     "the logo inside, with a margin")
+    if not (folder / "mono.svg").is_file():
+        rep.warn(where, f"no {rel}mono.svg: Android 13 themed icons fall back to the full-colour icon; draw the mark in "
+                 "one colour there")
+    if not icon.get("bg") and not (folder / "bg.svg").is_file():
+        rep.warn(where, f"no background (icon.bg or {rel}bg.svg): the iOS light icon would have alpha, which App Store "
+                 "Connect rejects")
+
 
 
 def validate_board(rep: Report, bw: str, b: dict, doc: dict, doc_path: Path | None) -> None:
@@ -791,6 +1319,7 @@ def validate_board(rep: Report, bw: str, b: dict, doc: dict, doc_path: Path | No
         rep.err(bw + ".artboards", "a board needs at least one artboard")
     art_ids: set[str] = set()
     variants: list[tuple[str, str, str]] = []
+    parsed: dict[str, tuple[str, str, _ScreenLint]] = {}
     for i, a in enumerate(b["artboards"]):
         aw = f"{bw}.artboards[{i}]"
         if not isinstance(a, dict) or not need(rep, aw, a, "id", "title", "fidelity"):
@@ -823,12 +1352,29 @@ def validate_board(rep: Report, bw: str, b: dict, doc: dict, doc_path: Path | No
             variants.append((aw + ".variantOf", a["id"], a["variantOf"]))
         if "src" in a and not _screen_src_ok(a["src"]):
             rep.err(aw + ".src", f"'{a['src']}': a relative path to an .html file in a <name>.design/ folder, no '..'")
+        if is_icons(a):
+            if "src" in a:
+                rep.err(aw + ".src", "an icons artboard has no screen file: its layers sit in <stem>.design/<id>/")
+            bg = (a.get("icon") or {}).get("bg")
+            if bg is not None and not HEX_COLOR.match(bg):
+                rep.err(aw + ".icon.bg", f"{_shown(bg)}: a hex colour, #rgb or #rrggbb")
+            name = (a.get("icon") or {}).get("name")
+            if isinstance(name, str) and len(name) > MAX_ICON_NAME:
+                rep.warn(aw + ".icon.name", f"{len(name)} characters (> {MAX_ICON_NAME}): a home screen shows about 12")
+        elif "icon" in a:
+            rep.err(aw + ".icon", "only an artboard with device \"icons\" has an icon")
         if doc_path is not None and ID_RE.match(a["id"]):
-            rel = screen_rel(doc_path, a)
-            lint_screen(rep, aw, Path(doc_path).parent / rel, rel)
+            if is_icons(a):
+                lint_icon(rep, aw, a, doc_path)
+            else:
+                rel = screen_rel(doc_path, a)
+                p = lint_screen(rep, aw, Path(doc_path).parent / rel, rel)
+                if p is not None:
+                    parsed.setdefault(a["id"], (aw, rel, p))
     for where, aid, src in variants:
         if src == aid or src not in art_ids:
             rep.err(where, f"'{src}' is {'the artboard itself' if src == aid else 'no artboard in this board'}")
+    lint_links(rep, bw, b, parsed)
     brief = next((c for c in all_blocks(doc) if c.get("type") == "checklist" and c.get("id") == "brief"), None)
     for it in (brief or {}).get("items") or []:
         if not isinstance(it, dict) or not isinstance(it.get("choices"), list):
@@ -1378,9 +1924,10 @@ def restore(h: dict, entry: dict) -> dict:
 def record(h: dict, doc: dict, doc_path: Path | None = None, *, keep_screens: bool = False,
            texts: dict[str, str | None] | None = None) -> str:
     """Put doc into the history under its meta.rev. Returns what happened, for the build log. With doc_path, a
-    design doc's screen files join the revision: their text goes into the history's html pool, by _hash, and the
-    entry maps artboard ids to those hashes (screens). texts ({artboard id: text}) stands in for the files.
-    keep_screens keeps the screens the history already holds for this rev: cmd_patch records the version a
+    design doc's screen files and icon layers join the revision: their text goes into the history's html pool, by
+    _hash, and the entry maps artboard ids (a layer: "<id>/<file>") to those hashes (screens) and lists the board's
+    links (links_of; no key when there are none). texts ({artboard id: text}) stands in for the files.
+    keep_screens keeps the screens and links the history already holds for this rev: cmd_patch records the version a
     patch replaces, whose files the reader's change may already have rewritten."""
     meta = doc.get("meta") or {}
     rev = str(meta.get("rev") or "")
@@ -1390,6 +1937,8 @@ def record(h: dict, doc: dict, doc_path: Path | None = None, *, keep_screens: bo
     last = revs[-1] if revs and revs[-1]["rev"] == rev else None
     if keep_screens and last and "screens" in last:
         entry["screens"] = last["screens"]
+        if last.get("links"):
+            entry["links"] = last["links"]
     else:
         if texts is None:
             texts = read_screens(doc, doc_path) if doc_path is not None else {}
@@ -1400,12 +1949,18 @@ def record(h: dict, doc: dict, doc_path: Path | None = None, *, keep_screens: bo
                 entry["screens"][aid] = None if text is None else _hash(text)
                 if text is not None:
                     pool[entry["screens"][aid]] = text
+            links = links_of(board_of(doc), texts)
+            if links:
+                entry["links"] = links
     if last:
         same = json.dumps(restore(h, last), sort_keys=True) == json.dumps(doc, sort_keys=True)
         moved = sorted(a for a in set(last.get("screens") or {}) | set(entry.get("screens") or {})
                        if (last.get("screens") or {}).get(a) != (entry.get("screens") or {}).get(a))
         if same and not moved:
             msg = f"rev {rev} unchanged"
+            if last.get("links") != entry.get("links"):   # recorded before links were: add them, keep the rest
+                last.pop("links", None)
+                last.update({"links": entry["links"]} if "links" in entry else {})
         else:
             revs[-1] = entry
             what = f"screens {', '.join(moved)}" if same else "text"
@@ -1433,21 +1988,27 @@ def record(h: dict, doc: dict, doc_path: Path | None = None, *, keep_screens: bo
     return out
 
 
-def embed_history(h: dict | None, doc: dict) -> dict | None:
+def embed_history(h: dict | None, doc: dict, links: list[dict] | None = None) -> dict | None:
     """The history as the page needs it: blocks the current doc also has become '@section/block'
-    references into the page's own document, so the page carries each block once."""
+    references into the page's own document, so the page carries each block once. Each revision carries its
+    `links`; links, when given, are the current revision's (read from the files now). A doc with one revision
+    gets None, or with links only its current entry, {rev, links}, so the page reads every revision's links alike."""
+    cur_rev = str((doc.get("meta") or {}).get("rev") or "")
     if not h or len(h["revs"]) < 2:
-        return None
+        if links is None and h and h["revs"] and h["revs"][-1]["rev"] == cur_rev:
+            links = h["revs"][-1].get("links")
+        return {"revs": [{"rev": cur_rev, "links": links}], "blocks": {}} if links else None
     here = {}
     for i, s in enumerate(doc.get("sections") or []):
         for j, b in enumerate(s.get("blocks") or []):
             here.setdefault(_hash(b), f"@{i}/{j}")
-    cur_rev = str((doc.get("meta") or {}).get("rev") or "")
     revs, blocks = [], {}
     for idx, e in enumerate(h["revs"]):
         out = {"rev": e["rev"], "date": e.get("date", ""), "built": e.get("built", "")}
         if "screens" in e:   # a design's {artboard id: screen hash}; the HTML stays in the history file (?rev=)
             out["screens"] = e["screens"]
+        if e.get("links"):
+            out["links"] = e["links"]
         if not (idx == len(h["revs"]) - 1 and e["rev"] == cur_rev):   # the current rev is the page's own doc
             secs = []
             for s in e["sections"]:
@@ -1460,7 +2021,11 @@ def embed_history(h: dict | None, doc: dict) -> dict | None:
                         refs.append(r)
                 secs.append({**s, "blocks": refs})
             out.update(head=e["head"], sections=secs)
+        elif links is not None:
+            out["links"] = links
         revs.append(out)
+    if links is not None and not any("head" not in r for r in revs):   # no entry for this rev: links only
+        revs.append({"rev": cur_rev, "links": links})
     return {"revs": revs, "blocks": blocks}
 
 
@@ -1548,7 +2113,8 @@ MAX_STANDALONE_BYTES = 10 * 1024 * 1024
 
 def standalone_screens(doc: dict, doc_path: Path) -> dict[str, str] | None:
     """{artboard id: its screen as a whole document with the kit inlined} for an -o file; None for a doc without
-    a board. serve.py's wrap_screen fills the shell; unreadable screens are left out (validate reported them)."""
+    a board. serve.py's wrap_screen fills the shell (an icons artboard: with serve.icon_fragment, the sheet with its
+    layers inline); unreadable screens are left out (validate reported them)."""
     texts = read_screens(doc, doc_path)
     if not texts:
         return None
@@ -1557,26 +2123,41 @@ def standalone_screens(doc: dict, doc_path: Path) -> dict[str, str] | None:
     import serve
     meta = f'<meta http-equiv="Content-Security-Policy" content="{STANDALONE_SCREEN_CSP}">'
     out = {}
-    for aid, text in texts.items():
-        if text is not None:
+    for a in _artboards(doc):
+        aid = a["id"]
+        text = serve.icon_fragment(doc, Path(doc_path), aid) if is_icons(a) else texts.get(aid)
+        if text is not None and aid not in out:
             page = serve.wrap_screen(doc, Path(doc_path), aid, text, inline=True)
             out[aid] = re.sub(r"(?i)<head[^>]*>", lambda m: m.group(0) + meta, page, count=1)
     return out
+
+
+BOARD_GEO = HERE.parent / "assets" / "board-geo.js"   # the board's router and layouts, inlined into design pages
+BOARD_GEO_SLOT = "/*__BOARD_GEO__*/"
 
 
 def build(doc: dict, template: str, history: dict | None = None, media_base: Path | None = None,
           diff_path: Path | None = None, problems: list[str] | None = None, state: dict | None = None,
           screens: dict[str, str] | None = None) -> str:
     """The page. media_base (the doc's folder) makes it standalone: media files become data: URIs.
-    diff_path (the doc's JSON file) fills its diff refs, in the doc and in earlier revisions; their
-    problems go into problems, or to stderr when it is None. state is the reader state serve.py seeds the
-    page with ({version, state}); None (an -o file) leaves the page on localStorage. screens ({artboard id:
-    a whole screen document}, from standalone_screens) makes a design page draw its frames from srcdoc;
-    None (serve.py) loads them from the screen route."""
+    diff_path (the doc's JSON file) fills its diff refs, in the doc and in earlier revisions, and gives the current
+    revision its links from the screen files; their problems go into problems, or to stderr when it is None. state is
+    the reader state serve.py seeds the page with ({version, state}); None (an -o file) leaves the page on
+    localStorage. screens ({artboard id: a whole screen document}, from standalone_screens) makes a design page draw
+    its frames from srcdoc; None (serve.py) loads them from the screen route. A design page gets assets/board-geo.js
+    at the template's BOARD_GEO_SLOT; other pages get nothing there."""
     title = (doc.get("title") or "bluedoc").replace("&", "&amp;").replace("<", "&lt;")
     if "__BLUEDOC_DOC__" not in template:
         raise SystemExit("template is missing the __BLUEDOC_DOC__ placeholder")
-    hist = embed_history(history, doc)   # before expanding and inlining: it matches blocks by their JSON
+    board = board_of(doc)
+    geo = ""
+    if board is not None and BOARD_GEO_SLOT in template:
+        geo = _read_text(BOARD_GEO)
+        if geo is None:
+            raise SystemExit(f"cannot read {BOARD_GEO}: design pages need it")
+        geo = re.sub(r"(?i)</(script)", r"<\\/\1", geo)
+    links = board_links(doc, Path(diff_path)) if board is not None and diff_path is not None else None
+    hist = embed_history(history, doc, links)   # before expanding and inlining: it matches blocks by their JSON
     if diff_path is not None:
         found: list[str] = []
         doc, hist = expand_diff_refs(doc, hist, Path(diff_path), found)
@@ -1595,8 +2176,8 @@ def build(doc: dict, template: str, history: dict | None = None, media_base: Pat
     # one pass, so a placeholder's name inside a filled value (a doc's text, a reader's note) stays text
     fill = {"__BLUEDOC_TITLE__": title, "__BLUEDOC_HISTORY__": _script_json(hist) if hist else "null",
             "__BLUEDOC_STATE__": _script_json(state) if state is not None else "null", "__BLUEDOC_DOC__": _script_json(doc),
-            "__BLUEDOC_SCREENS__": _script_json(screens) if screens is not None else "null"}
-    return re.sub("|".join(fill), lambda m: fill[m.group(0)], template)
+            "__BLUEDOC_SCREENS__": _script_json(screens) if screens is not None else "null", BOARD_GEO_SLOT: geo}
+    return re.sub("|".join(map(re.escape, fill)), lambda m: fill[m.group(0)], template)
 
 
 class HistoryError(Exception):
@@ -1657,11 +2238,13 @@ def cmd_new(argv: list[str]) -> int:
                     "and wireframe screen file each, three slides for presentation (default mobile)")
     ap.add_argument("--framework", help="design only: plain | horizon | heroui | tailwind | <a `serve.py add-framework` "
                     "name> | auto (default: you fill the brief's framework pick from the project's files; see types/design.md)")
+    ap.add_argument("--icons", action="store_true", help="design only: add an `app-icon` artboard (device icons) with stub "
+                    "fg.svg and mono.svg layers")
     a = ap.parse_args(argv)
     if a.shape != "pr" and a.type != "review":
         ap.error("--shape is for review docs")
-    if (a.target or a.framework) and a.type != "design":
-        ap.error("--target and --framework are for design docs")
+    if (a.target or a.framework or a.icons) and a.type != "design":
+        ap.error("--target, --framework and --icons are for design docs")
     targets = [t.strip() for t in (a.target or "mobile").split(",") if t.strip()]
     bad = [t for t in targets if t not in TARGET_DEVICES]
     if bad or not targets or len(set(targets)) != len(targets):
@@ -1687,7 +2270,7 @@ def cmd_new(argv: list[str]) -> int:
     meta.update(rev="1", date=dt.date.today().isoformat(), type=a.type)
     if a.kind:
         meta["kind"] = a.kind
-    stubs = scaffold_design(doc, a.out, targets, a.framework or "auto") if a.type == "design" else {}
+    stubs = scaffold_design(doc, a.out, targets, a.framework or "auto", a.icons) if a.type == "design" else {}
     for f in stubs:
         if f.exists():
             print(f"{f} exists; not overwriting it", file=sys.stderr)
@@ -1697,7 +2280,7 @@ def cmd_new(argv: list[str]) -> int:
     for f, text in stubs.items():
         f.parent.mkdir(parents=True, exist_ok=True)
         f.write_text(text, encoding="utf-8")
-        print(f"wrote {f} (a wireframe stub)")
+        print(f"wrote {f} (a {'layer' if f.suffix == '.svg' else 'wireframe'} stub)")
     print(f"wrote {a.out} ({a.type}): replace every <<…>>; `build.py {a.out} --check` lists the ones left")
     print(f"then: python3 {HERE / 'build.py'} {a.out} && python3 {HERE / 'serve.py'} open {a.out}")
     return 0
@@ -1762,11 +2345,18 @@ def stub_screen(a: dict) -> str:
             '</main>\n')
 
 
-def scaffold_design(doc: dict, out: Path, targets: list[str], framework: str) -> dict[Path, str]:
+STUB_ICON_LAYER = ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108">\n'
+                   '  <circle cx="54" cy="54" r="24" fill="{fill}"/>\n</svg>\n')   # inside the 66 dp safe circle
+
+
+def scaffold_design(doc: dict, out: Path, targets: list[str], framework: str, icons: bool = False) -> dict[Path, str]:
     """Fill a design skeleton for `build.py new design`: one wireframe artboard per target (presentation: the stub
-    deck's slides) and the framework pick. Returns {screen file: stub text} to write beside the doc."""
+    deck's slides), the framework pick, and with icons an `app-icon` artboard with stub layers. A mobile target
+    makes its screen the entry of a flow layout. Returns {file: stub text} to write beside the doc."""
     board = board_of(doc)
     board["targets"] = targets
+    if "mobile" in targets:
+        board["entry"], board["layout"] = ["mobile"], "flow"
     board["artboards"], stubs = [], {}
     for t in targets:
         if t == "presentation":
@@ -1780,6 +2370,13 @@ def scaffold_design(doc: dict, out: Path, targets: list[str], framework: str) ->
                  "fidelity": "wireframe"}
             board["artboards"].append(a)
             stubs[out.parent / screen_rel(out, a)] = stub_screen(a)
+    if icons:
+        a = {"id": "app-icon", "title": "App icon", "device": "icons", "fidelity": "wireframe",
+             "icon": {"name": "<<App name>>", "bg": "#2563eb"}}
+        board["artboards"].append(a)
+        folder = icon_dir(out, a)
+        stubs[folder / "fg.svg"] = STUB_ICON_LAYER.format(fill="#ffffff")
+        stubs[folder / "mono.svg"] = STUB_ICON_LAYER.format(fill="#000000")
     if framework != "auto":
         item = _item(doc, "brief", "framework").obj
         if framework not in BUILTIN_FRAMEWORKS:
@@ -1945,6 +2542,18 @@ def resolve_key(doc: dict, key: str) -> Target:
             return Target(a, arts, i, "artboard")
         names = sel.split("/") if EL_NAMES.match(sel) else None
         return Target(a, arts, i, "element", " ".join(f'[data-bd="{n}"]' for n in names) if names else sel)
+    if kind == "link" and parts and parts[0]:
+        aid, _, sel = path.partition("/")
+        arts = _board_artboards(doc)
+        a, i = _find(arts, lambda x: x.get("id") == aid, f"artboard '{aid}'")
+        if is_icons(a):
+            raise PatchError(f"'{aid}' is an icons artboard: it has no links")
+        return Target(a, arts, i, "link", sel)
+    if kind == "layout" and len(parts) == 1:
+        b = board_of(doc)
+        if not b or b.get("id") != path:
+            raise PatchError(f"no board '{path}'" + (f" (this doc's board is '{b.get('id')}')" if b else ""))
+        return Target(b, None, None, "layout")
     if kind == "frame":
         m = FRAME_KEY.match(path)
         if not m:
@@ -1973,6 +2582,221 @@ def _board_artboards(doc: dict) -> list:
     if not b or not isinstance(b.get("artboards"), list):
         raise PatchError("no board block with artboards in this doc")
     return b["artboards"]
+
+
+VOID_TAGS = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"}
+CSS_STEP = re.compile(r"^([a-z][a-z0-9-]*):nth-of-type\((\d+)\)$")
+
+
+class _ScreenTree(HTMLParser):
+    """A screen fragment's elements with their source offsets, for rewriting one start tag in place. Each element:
+    {tag, attrs, start, tag_end (offset after its start tag), close, close_end (its end tag's span; None without
+    one), parent (index or None), text}."""
+    def __init__(self, text: str) -> None:
+        super().__init__(convert_charrefs=True)
+        self.src = text
+        self.lines = [0] + [m.end() for m in re.finditer("\n", text)]
+        self.els: list[dict] = []
+        self._open: list[int] = []
+        self.feed(text)
+        self.close()
+
+    def _off(self) -> int:
+        line, col = self.getpos()
+        return self.lines[line - 1] + col
+
+    def handle_starttag(self, tag: str, attrs, void: bool = False) -> None:
+        start = self._off()
+        raw = self.get_starttag_text() or ""
+        self.els.append({"tag": tag, "attrs": dict(attrs), "start": start, "tag_end": start + len(raw), "close": None,
+                         "close_end": None, "parent": self._open[-1] if self._open else None, "text": ""})
+        if not void and tag not in VOID_TAGS:
+            self._open.append(len(self.els) - 1)
+
+    def handle_startendtag(self, tag: str, attrs) -> None:
+        self.handle_starttag(tag, attrs, void=True)
+
+    def handle_endtag(self, tag: str) -> None:
+        for k in range(len(self._open) - 1, -1, -1):
+            if self.els[self._open[k]]["tag"] == tag:
+                el = self.els[self._open[k]]
+                el["close"] = self._off()
+                el["close_end"] = self.src.find(">", el["close"]) + 1
+                del self._open[k:]
+                return
+
+    def handle_data(self, data: str) -> None:
+        for k in self._open:
+            self.els[k]["text"] += data
+
+    def children(self, parent: int | None) -> list[int]:
+        return [i for i, e in enumerate(self.els) if e["parent"] == parent]
+
+    def named(self, name: str) -> list[int]:
+        return [i for i, e in enumerate(self.els) if e["attrs"].get("data-bd") == name]
+
+    def find(self, sel: str) -> int | None:
+        """The one element sel names: data-bd names joined by '/' (each inside the one before), or the inspector's
+        CSS path from body or a named element ('[data-bd="x"]>li:nth-of-type(2)'). None when it names none or several."""
+        if EL_NAMES.match(sel):
+            names = sel.split("/")
+            hits = []
+            for i in self.named(names[-1]):
+                want, p = names[:-1], self.els[i]["parent"]
+                while want and p is not None:
+                    if self.els[p]["attrs"].get("data-bd") == want[-1]:
+                        want.pop()
+                    p = self.els[p]["parent"]
+                if not want:
+                    hits.append(i)
+            return hits[0] if len(hits) == 1 else None
+        anchor, *steps = sel.split(">")
+        m = re.fullmatch(r'\[data-bd="([A-Za-z0-9_-]+)"\]', anchor)
+        if anchor == "body":
+            cur = None
+        elif m and len(self.named(m.group(1))) == 1:
+            cur = self.named(m.group(1))[0]
+        else:
+            return None
+        for step in steps:
+            s = CSS_STEP.match(step)
+            same = [i for i in self.children(cur) if s and self.els[i]["tag"] == s.group(1)]
+            if not s or int(s.group(2)) > len(same) or int(s.group(2)) < 1:
+                return None
+            cur = same[int(s.group(2)) - 1]
+        return cur
+
+
+ATTR_SPAN = re.compile(r"""(\s+)([^\s"'>/=]+)(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s"'=<>`]+))?""")
+
+
+def _set_attr(tag_text: str, name: str, value: str | None) -> str:
+    """A start tag's text with one attribute set (value None: removed); the rest stays byte for byte."""
+    head = re.match(r"<[^\s/>]+", tag_text).end()
+    pos, spans = head, []
+    while True:
+        m = ATTR_SPAN.match(tag_text, pos)
+        if not m:
+            break
+        spans.append((m.group(2).lower(), m.start(), m.end()))
+        pos = m.end()
+    new = "" if value is None else f' {name}="{escape_html(value, quote=True)}"'
+    hit = next((s for s in spans if s[0] == name), None)
+    if hit:
+        return tag_text[:hit[1]] + new + tag_text[hit[2]:]
+    end = len(tag_text) - (2 if tag_text.endswith("/>") else 1)
+    body = tag_text[:end]
+    return body.rstrip() + new + body[len(body.rstrip()):] + tag_text[end:]
+
+
+def _slug(s: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "-", (s or "").lower()).strip("-")[:32].strip("-")
+
+
+def _free_name(tree: _ScreenTree, base: str) -> str:
+    name, n = base, 2
+    while tree.named(name):
+        name, n = f"{base}-{n}", n + 1
+    return name
+
+
+def nav_value(kind: str, to: str | None) -> str:
+    return "back" if kind == "back" else to if kind == "push" else f"{kind}:{to}"
+
+
+def link_patch(text: str, sel: str, sets: list[str], delete: bool, art_ids: set[str]) -> tuple[str, str]:
+    """A screen's text with one link changed in place: the element sel names gets data-nav and data-nav-label as
+    --set to=, kind=, label= say (label null or empty: removed), or loses both (delete; a hidden, empty gesture
+    element goes whole). An element without data-bd is named first, from the label, else its text. A name no element
+    has, or no name, adds a hidden gesture element inside the screen's root (named from the label). Returns (text,
+    the element's data-bd name)."""
+    fields: dict[str, str | None] = {}
+    for s in sets:
+        k, eq, v = s.partition("=")
+        if not eq or k not in ("to", "kind", "label"):
+            raise PatchError(f"--set '{s}': a link takes to=<artboard>, kind=<{'|'.join(NAV_KINDS)}> and label=<text>")
+        p = _value(v.strip())   # a JSON string ('label="Tap Start"') reads as its text; any other value as written
+        fields[k] = None if p in (None, "") else p.strip() if isinstance(p, str) else v.strip()
+    tree = _ScreenTree(text)
+    i = tree.find(sel) if sel else None
+    if i is None and sel and not BD_NAME.match(sel):
+        raise PatchError(f"no element '{sel}' in the screen (a data-bd name, names joined by '/', or a CSS path)")
+    if i is None and sel and tree.named(sel.split("/")[-1]):
+        raise PatchError(f"'{sel}' names no single element: use the inspector's CSS path")
+    el = tree.els[i] if i is not None else None
+    cur = parse_nav(el["attrs"].get("data-nav") or "") if el and "data-nav" in el["attrs"] else None
+    cur = cur if isinstance(cur, tuple) else None
+    if delete:
+        if not el or "data-nav" not in el["attrs"]:
+            raise PatchError(f"no link on '{sel}' to delete")
+        if "hidden" in el["attrs"] and el["close"] is not None and not el["text"].strip() and \
+                tree.children(i) == []:
+            start, end = el["start"], el["close_end"]
+            ls = text.rfind("\n", 0, start) + 1
+            if not text[ls:start].strip() and text[end:].startswith("\n"):
+                start, end = ls, end + 1
+            return text[:start] + text[end:], el["attrs"].get("data-bd") or ""
+        tag = _set_attr(_set_attr(text[el["start"]:el["tag_end"]], "data-nav", None), "data-nav-label", None)
+        return text[:el["start"]] + tag + text[el["tag_end"]:], el["attrs"].get("data-bd") or ""
+    if not fields:
+        raise PatchError("give --set to=, kind= or label=, or --delete")
+    kind = fields.get("kind") or (cur[0] if cur and not (cur[0] == "back" and fields.get("to")) else "push")
+    if kind not in NAV_KINDS:
+        raise PatchError(f"kind '{kind}' not in {', '.join(NAV_KINDS)}")
+    to = None if kind == "back" else fields.get("to") or (cur[1] if cur else None)
+    if kind != "back" and not to:
+        raise PatchError("a new link needs its target: --set to=<artboard>")
+    if to is not None and to not in art_ids:
+        raise PatchError(f"no artboard '{to}' on this board")
+    label = fields["label"] if "label" in fields else (el["attrs"].get("data-nav-label") if el else None)
+    if el is None:   # a gesture link: a hidden named element inside the root
+        name = _free_name(tree, sel or _slug(label or "") or "gesture")
+        node = f'<i hidden data-bd="{name}" data-nav="{nav_value(kind, to)}"' + \
+               (f' data-nav-label="{escape_html(label, quote=True)}"' if label else "") + "></i>"
+        root = next((e for e in tree.els if e["parent"] is None and e["close"] is not None
+                     and e["tag"] not in ("style", "script", "template")), None)
+        if root is None:
+            return text + ("" if text.endswith("\n") or not text else "\n") + node + "\n", name
+        ls = text.rfind("\n", 0, root["close"]) + 1
+        indent = re.match(r"[ \t]*", text[ls:]).group(0)
+        if text[ls:root["close"]].strip():   # the end tag shares its line: put the element just before it
+            return text[:root["close"]] + node + text[root["close"]:], name
+        kids = tree.children(tree.els.index(root))
+        inner = indent + "  "
+        if kids:
+            ks = text.rfind("\n", 0, tree.els[kids[0]]["start"]) + 1
+            inner = re.match(r"[ \t]*", text[ks:]).group(0) or inner
+        return text[:ls] + inner + node + "\n" + text[ls:], name
+    tag = text[el["start"]:el["tag_end"]]
+    name = el["attrs"].get("data-bd")
+    if not name:
+        name = _free_name(tree, _slug(label or "") or _slug(el["text"]) or el["tag"])
+        tag = _set_attr(tag, "data-bd", name)
+    tag = _set_attr(tag, "data-nav", nav_value(kind, to))
+    if label != el["attrs"].get("data-nav-label"):
+        tag = _set_attr(tag, "data-nav-label", label)
+    return text[:el["start"]] + tag + text[el["tag_end"]:], name
+
+
+def set_positions(board: dict, fields) -> list[str]:
+    """Set x, y on the artboards {artboard id: [x, y] (null: unset, the board places it)} names; the ids changed."""
+    if not isinstance(fields, dict) or not fields:
+        raise PatchError("layout: --json takes {\"<artboard>\": [x, y], …}")
+    arts = {a.get("id"): a for a in board.get("artboards") or [] if isinstance(a, dict)}
+    for aid, v in fields.items():
+        if aid not in arts:
+            raise PatchError(f"no artboard '{aid}' on board '{board.get('id')}'")
+        ok = isinstance(v, list) and len(v) == 2 and all(isinstance(n, (int, float)) and not isinstance(n, bool)
+                                                         and math.isfinite(n) and abs(n) <= 100000 for n in v)
+        if v is not None and not ok:
+            raise PatchError(f"'{aid}': {_shown(v)} is no [x, y] of numbers within ±100000 (null unsets)")
+    for aid, v in fields.items():
+        if v is None:
+            arts[aid].pop("x", None)
+            arts[aid].pop("y", None)
+        else:
+            arts[aid]["x"], arts[aid]["y"] = (int(n) if float(n).is_integer() else n for n in v)
+    return list(fields)
 
 
 # the list --append adds to, per target kind (blocks: per block type)
@@ -2090,14 +2914,39 @@ def cmd_patch(argv: list[str]) -> int:
     except PatchError as e:
         print(f"patch: {e}", file=sys.stderr)
         return 2
-    on_screen = t.kind in ("artboard", "element")
-    if a.html is not None and not on_screen:
+    on_screen = t.kind in ("artboard", "element", "link")
+    if a.html is not None and t.kind not in ("artboard", "element"):
         ap.error("--html takes an artboard: or el: key")
+    if t.kind == "link" and (a.json is not None or a.append is not None):
+        ap.error("a link: key takes --set to=<artboard> / kind=<kind> / label=<text>, or --delete")
+    if t.kind == "layout" and (a.set or a.append is not None or a.delete or a.json is None):
+        ap.error("a layout: key takes --json '{\"<artboard>\": [x, y], …}'")
+    if a.html is not None and is_icons(t.obj):
+        ap.error("an icons artboard has no screen file: edit its layers in place, then patch it with --change")
     if not ops and t.kind != "frame" and not (on_screen and a.change):
         if not on_screen:
             ap.error("give --set, --json, --append or --delete")
-        # where to make the change: the screen file, and the element in it
-        print(f"{a.doc.parent / screen_rel(a.doc, t.obj)}" + (f"  {t.selector}" if t.selector else ""))
+        # where to make the change: the screen file (an icon: its layers), and the element in it
+        if is_icons(t.obj):
+            layers = icon_layers(doc, a.doc).get(t.obj["id"], {})
+            tile = a.key.partition("/")[2].split("/")[-1] if t.kind == "element" else ""
+            used = icon_tile_layers(tile, layers, t.obj)
+            print(f"{icon_dir(a.doc, t.obj)}/  layers: {', '.join(used)}" + (f"  (what tile {tile} is built from)"
+                                                                            if tile in ICON_TILES else ""))
+        else:
+            sel = " ".join(f'[data-bd="{n}"]' for n in t.selector.split("/")) if t.kind == "link" and \
+                EL_NAMES.match(t.selector or "") else t.selector
+            print(f"{a.doc.parent / screen_rel(a.doc, t.obj)}" + (f"  {sel}" if sel else ""))
+        if t.kind == "link":
+            tree = _ScreenTree(_read_text(a.doc.parent / screen_rel(a.doc, t.obj)) or "")
+            i = tree.find(t.selector) if t.selector else None
+            at = tree.els[i]["attrs"] if i is not None else None
+            print(" ".join(f'{k}="{at[k]}"' for k in ("data-nav", "data-nav-label") if k in at)
+                  if at and "data-nav" in at else "no link there yet" if at is not None
+                  else "no such element: --set adds a hidden gesture link")
+            print(f"change it: build.py patch {a.doc} {shlex.quote(a.key)} --set to=<artboard> --set kind=<kind> "
+                  "--set label=<text>, or --delete")
+            return 0
         print(f"edit it in place, then: build.py patch {a.doc} {shlex.quote(a.key)} --change '<what changed>'")
         return 0
     html = None
@@ -2107,8 +2956,19 @@ def cmd_patch(argv: list[str]) -> int:
         except (OSError, UnicodeDecodeError) as e:
             print(f"cannot read {a.html}: {e}", file=sys.stderr)
             return 2
+    link_text = None   # a link: key's new screen text
     try:
-        apply_patch(t, a.set, a.json, a.append, a.delete)
+        if t.kind == "link" and (a.set or a.delete):
+            old_text = _read_text(a.doc.parent / screen_rel(a.doc, t.obj))
+            if old_text is None:
+                raise PatchError(f"cannot read {a.doc.parent / screen_rel(a.doc, t.obj)}")
+            link_text, name = link_patch(old_text, t.selector, a.set, a.delete,
+                                         {x.get("id") for x in _board_artboards(doc) if isinstance(x, dict)})
+            t.selector = f'[data-bd="{name}"]' if name else t.selector
+        elif t.kind == "layout":
+            set_positions(t.obj, _value(a.json))
+        elif t.kind != "link":
+            apply_patch(t, a.set, a.json, a.append, a.delete)
         meta = doc.setdefault("meta", {})
         rev0 = str(meta.get("rev") or "")
         rev1 = rev0 if a.no_bump else next_rev(rev0)
@@ -2130,11 +2990,14 @@ def cmd_patch(argv: list[str]) -> int:
             doc.pop("resolves", None)
     # screen files change before validate, which lints them; undone when the patch fails
     written: list[tuple[Path, str | None]] = []
-    screen = a.doc.parent / screen_rel(a.doc, t.obj) if t.kind in ("artboard", "element", "frame") and not a.delete else None
-    if screen and (html is not None or (t.kind == "frame" and not screen.exists())):
+    screen = None
+    if t.kind in ("artboard", "element", "frame", "link") and not (a.delete and t.kind != "link") and not is_icons(t.obj):
+        screen = a.doc.parent / screen_rel(a.doc, t.obj)
+    if screen and (html is not None or link_text is not None or (t.kind == "frame" and not screen.exists())):
         written.append((screen, _read_text(screen) if screen.exists() else None))
         screen.parent.mkdir(parents=True, exist_ok=True)
-        screen.write_text(html if html is not None else stub_screen(t.obj), encoding="utf-8")
+        screen.write_text(html if html is not None else link_text if link_text is not None else stub_screen(t.obj),
+                          encoding="utf-8")
 
     def undo() -> None:
         for f, old in written:
@@ -2174,7 +3037,8 @@ def cmd_patch(argv: list[str]) -> int:
         print(f"screen: {screen}" + (f"  {t.selector}" if t.selector else "")
               + ("  (a stub: write the requested screen there)" if t.kind == "frame" and written else ""))
     elif a.delete and t.kind in ("artboard", "element"):
-        print(f"left {a.doc.parent / screen_rel(a.doc, t.obj)}: delete it if nothing uses it (the history keeps its text)")
+        left = f"{icon_dir(a.doc, t.obj)}/" if is_icons(t.obj) else a.doc.parent / screen_rel(a.doc, t.obj)
+        print(f"left {left}: delete it if nothing uses it (the history keeps its text)")
     if rev0 and rev0 != rev1:
         try:   # the link the reader needs, when the doc is under a registered folder
             import serve

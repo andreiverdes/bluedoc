@@ -90,6 +90,193 @@
     "login-b": "3db4ecdeb791aef6",
     "dashboard": "f19cba082608b7af"
    }
+  },
+  {
+   "rev": "C",
+   "date": "2026-10-11",
+   "built": "2026-10-10T21:07:01+00:00",
+   "head": {
+    "id": "acme-fit-design",
+    "title": "Acme Fit: watch, phone and web mockups",
+    "subtitle": "Mockups of the Acme Fit activity tracker on a round watch, a phone and the web. Comment on any screen, then approve the design or request changes.",
+    "meta": {
+     "org": "Acme Corp",
+     "kind": "Design",
+     "type": "design",
+     "dwg": "ACME-FIT",
+     "rev": "C",
+     "date": "2026-10-11"
+    },
+    "changes": [
+     "New: the phone app after sign-in. *Today* is the hub; its tab bar reaches *Activity*, *Workouts* and *Profile*, and **Start workout** opens *Workout*. *Profile* opens *Settings* as a sheet.",
+     "The screens are linked: the board draws each tap as an arrow, and **Present** follows them. Both sign-ins land on *Today* and clear the back stack.",
+     "New: the *App icon*, the Acme Fit mark (a step ring around a pulse) on teal, with its one-colour layer for tinted and themed icons."
+    ],
+    "tldr": "Acme Fit on a round watch, a linked seven-screen phone app and the web dashboard, plus its app icon. Press Present to tap through the phone flow from sign-in, comment on any screen or arrow, then approve."
+   },
+   "sections": [
+    {
+     "id": "brief",
+     "title": "Brief",
+     "lead": "Acme Fit tracks steps, workouts and heart rate; these screens set its look before the apps are built.",
+     "blocks": [
+      "c7543ef86800341c",
+      "2ce3b09392f69019"
+     ]
+    },
+    {
+     "id": "screens",
+     "title": "Screens",
+     "blocks": [
+      "9d84bd95d4cdbfb3"
+     ]
+    }
+   ],
+   "screens": {
+    "watch-face": "6ff2fbecf4147f32",
+    "login": "ad949599a21b96f3",
+    "login-b": "b2994d07710b481f",
+    "today": "b8e13ef3f377fdae",
+    "activity": "e2c332cfaf49c704",
+    "workouts": "7939b5926912556d",
+    "workout": "6d2b5b497bb6d5e5",
+    "profile": "e5f164ece313a6a9",
+    "settings": "3669ec401091fc2a",
+    "app-icon/fg.svg": "ac3c32f6d2088648",
+    "app-icon/mono.svg": "8c551148c2f67655",
+    "dashboard": "f19cba082608b7af"
+   },
+   "links": [
+    {
+     "from": "login",
+     "el": "submit",
+     "to": "today",
+     "kind": "replace",
+     "label": "Tap Sign in"
+    },
+    {
+     "from": "login-b",
+     "el": "passkey",
+     "to": "today",
+     "kind": "replace",
+     "label": "Tap Sign in with a passkey"
+    },
+    {
+     "from": "today",
+     "el": "start-workout",
+     "to": "workout",
+     "kind": "push",
+     "label": "Tap Start workout"
+    },
+    {
+     "from": "today",
+     "el": "tab-activity",
+     "to": "activity",
+     "kind": "tab"
+    },
+    {
+     "from": "today",
+     "el": "tab-workouts",
+     "to": "workouts",
+     "kind": "tab"
+    },
+    {
+     "from": "today",
+     "el": "tab-profile",
+     "to": "profile",
+     "kind": "tab"
+    },
+    {
+     "from": "activity",
+     "el": "tab-today",
+     "to": "today",
+     "kind": "tab"
+    },
+    {
+     "from": "activity",
+     "el": "tab-workouts",
+     "to": "workouts",
+     "kind": "tab"
+    },
+    {
+     "from": "activity",
+     "el": "tab-profile",
+     "to": "profile",
+     "kind": "tab"
+    },
+    {
+     "from": "workouts",
+     "el": "workout-run",
+     "to": "workout",
+     "kind": "push",
+     "label": "Tap a workout"
+    },
+    {
+     "from": "workouts",
+     "el": "tab-today",
+     "to": "today",
+     "kind": "tab"
+    },
+    {
+     "from": "workouts",
+     "el": "tab-activity",
+     "to": "activity",
+     "kind": "tab"
+    },
+    {
+     "from": "workouts",
+     "el": "tab-profile",
+     "to": "profile",
+     "kind": "tab"
+    },
+    {
+     "from": "workout",
+     "el": "back",
+     "to": null,
+     "kind": "back",
+     "label": "Tap Back"
+    },
+    {
+     "from": "workout",
+     "el": "edge-back",
+     "to": null,
+     "kind": "back",
+     "label": "Swipe from the left edge",
+     "edge": true
+    },
+    {
+     "from": "profile",
+     "el": "open-settings",
+     "to": "settings",
+     "kind": "modal",
+     "label": "Tap the gear"
+    },
+    {
+     "from": "profile",
+     "el": "tab-today",
+     "to": "today",
+     "kind": "tab"
+    },
+    {
+     "from": "profile",
+     "el": "tab-activity",
+     "to": "activity",
+     "kind": "tab"
+    },
+    {
+     "from": "profile",
+     "el": "tab-workouts",
+     "to": "workouts",
+     "kind": "tab"
+    },
+    {
+     "from": "settings",
+     "el": "done",
+     "to": null,
+     "kind": "back",
+     "label": "Tap Done"
+    }
+   ]
   }
  ],
  "blocks": {
@@ -324,6 +511,148 @@
      "y": 980
     }
    ]
+  },
+  "c7543ef86800341c": {
+   "type": "text",
+   "md": "- **Watch:** a round face readable at a glance, on a black background to save power.\n- **Phone:** sign-in, then the daily hub and its tabs: the screens every member opens.\n- **Web:** the weekly dashboard coaches and members open on a laptop.\n- **App icon:** one mark for the home screens of iOS and Android."
+  },
+  "9d84bd95d4cdbfb3": {
+   "type": "board",
+   "id": "main",
+   "targets": [
+    "watch",
+    "mobile",
+    "web"
+   ],
+   "framework": "plain",
+   "themes": [
+    {
+     "id": "indigo",
+     "label": "Indigo",
+     "tokens": {
+      "accent": "#4f46e5",
+      "bg": "#f8fafc",
+      "fg": "#0f172a",
+      "radius": "12px"
+     }
+    },
+    {
+     "id": "forest",
+     "label": "Forest",
+     "tokens": {
+      "accent": "#15803d",
+      "bg": "#f7faf7",
+      "fg": "#14201a",
+      "radius": "8px"
+     }
+    }
+   ],
+   "motion": {
+    "fast": "160ms",
+    "base": "240ms",
+    "slow": "400ms",
+    "ease": "cubic-bezier(.2,0,0,1)"
+   },
+   "entry": [
+    "login"
+   ],
+   "layout": "flow",
+   "artboards": [
+    {
+     "id": "watch-face",
+     "title": "Watch face",
+     "device": "watch-round",
+     "fidelity": "hifi",
+     "x": 0,
+     "y": 3736
+    },
+    {
+     "id": "login",
+     "title": "Sign in",
+     "device": "phone",
+     "fidelity": "hifi",
+     "x": 0,
+     "y": 924
+    },
+    {
+     "id": "login-b",
+     "title": "Sign in, passkey first",
+     "device": "phone",
+     "variantOf": "login",
+     "fidelity": "wireframe",
+     "x": 0,
+     "y": 1848
+    },
+    {
+     "id": "today",
+     "title": "Today",
+     "device": "phone",
+     "fidelity": "hifi",
+     "x": 590,
+     "y": 1386
+    },
+    {
+     "id": "activity",
+     "title": "Activity",
+     "device": "phone",
+     "fidelity": "hifi",
+     "x": 1180,
+     "y": 1848
+    },
+    {
+     "id": "workouts",
+     "title": "Workouts",
+     "device": "phone",
+     "fidelity": "hifi",
+     "x": 1180,
+     "y": 924
+    },
+    {
+     "id": "workout",
+     "title": "Workout",
+     "device": "phone",
+     "fidelity": "hifi",
+     "x": 1180,
+     "y": 0
+    },
+    {
+     "id": "profile",
+     "title": "Profile",
+     "device": "phone",
+     "fidelity": "hifi",
+     "x": 1180,
+     "y": 2772
+    },
+    {
+     "id": "settings",
+     "title": "Settings",
+     "device": "phone",
+     "fidelity": "hifi",
+     "x": 1770,
+     "y": 2772
+    },
+    {
+     "id": "app-icon",
+     "title": "App icon",
+     "device": "icons",
+     "fidelity": "hifi",
+     "icon": {
+      "bg": "#0f766e",
+      "name": "Acme Fit"
+     },
+     "x": 0,
+     "y": 4096
+    },
+    {
+     "id": "dashboard",
+     "title": "Dashboard",
+     "device": "browser",
+     "fidelity": "hifi",
+     "framework": "horizon",
+     "x": 0,
+     "y": 5076
+    }
+   ]
   }
  },
  "html": {
@@ -333,6 +662,16 @@
   "6ff2fbecf4147f32": "<style>\n  .face { --bg: #000; --fg: #fff; --muted: #9ca3af; --border: #1f2937; }\n  .face .ring { --size: 224px; --thick: 10px; }\n  .face .display { font-size: 52px; }\n</style>\n<main class=\"screen round stack center face\" data-bd=\"face\">\n  <div class=\"ring\" style=\"--v:.72\" data-bd=\"steps-ring\">\n    <div class=\"stack center gap-1\">\n      <div class=\"display num\" data-bd=\"time\">10:09</div>\n      <div class=\"caption muted\" data-bd=\"date\">Sat 10 Oct</div>\n      <div class=\"row gap-4\">\n        <div class=\"stack center\" data-bd=\"steps\"><span class=\"num\">7,214</span><span class=\"caption muted\">steps</span></div>\n        <div class=\"stack center\" data-bd=\"heart\"><span class=\"num\">68</span><span class=\"caption muted\">bpm</span></div>\n      </div>\n    </div>\n  </div>\n</main>\n",
   "80b7002f2be41ec0": "<main class=\"screen safe stack gap-4\" data-bd=\"login\">\n  <div class=\"stack gap-2\" data-bd=\"brand\">\n    <span class=\"badge\">Acme Fit</span>\n    <h1 class=\"title\">Welcome back</h1>\n    <p class=\"body muted\">Sign in to sync today's steps and workouts.</p>\n  </div>\n  <label class=\"stack gap-1\"><span class=\"label\">Email</span>\n    <input class=\"field\" type=\"email\" placeholder=\"you@acme.test\" data-bd=\"email\">\n  </label>\n  <label class=\"stack gap-1\"><span class=\"label\">Password</span>\n    <input class=\"field\" type=\"password\" placeholder=\"••••••••\" data-bd=\"password\">\n  </label>\n  <button class=\"btn primary block\" data-bd=\"submit\">Sign in</button>\n  <button class=\"btn block\" data-bd=\"passkey\">Use a passkey</button>\n  <button class=\"btn ghost sm\" data-bd=\"forgot\">Forgot your password?</button>\n</main>\n",
   "3db4ecdeb791aef6": "<main class=\"screen safe stack gap-4\" data-bd=\"login\">\n  <div class=\"wf-circle\" data-label=\"Logo\" data-bd=\"logo\"></div>\n  <div class=\"wf-text\" style=\"--lines:2\" data-bd=\"headline\"></div>\n  <button class=\"btn primary block\" data-bd=\"passkey\">Sign in with a passkey</button>\n  <div class=\"wf-line\" data-bd=\"divider\"></div>\n  <div class=\"wf-box\" data-label=\"Email field\" data-bd=\"email\"></div>\n  <button class=\"btn block\" data-bd=\"submit\">Use email instead</button>\n</main>\n",
-  "f19cba082608b7af": "<div id=\"root\" data-bd=\"dashboard\"></div>\n<script>\nconst e = React.createElement, { HorizonProvider, Card, Stat, ProgressRing, Tag, Button } = HorizonUI;\nconst days = [\"Mon\", \"Tue\", \"Wed\", \"Thu\", \"Fri\", \"Sat\", \"Sun\"];\nconst week = [6200, 8100, 7400, 9900, 5300, 11200, 7214];\nconst workouts = [[\"Morning run\", \"5.2 km\", \"28 min\"], [\"Strength\", \"6 sets\", \"41 min\"], [\"Evening walk\", \"3.1 km\", \"35 min\"],\n  [\"Cycling\", \"18.4 km\", \"52 min\"], [\"Yoga\", \"1 class\", \"30 min\"]];\nconst named = (bd, ...kids) => e('div', { 'data-bd': bd }, ...kids);\nconst bars = e('div', { className: 'acme-bars' }, week.map((v, i) => e('div', { key: days[i], className: 'acme-bar' },\n  e('span', { style: { height: `${Math.round(v / 120)}px` } }), e('small', null, days[i]))));\nReactDOM.createRoot(document.getElementById('root')).render(\n  e(HorizonProvider, { theme: 'light', className: 'acme-dash' },\n    e('header', { className: 'acme-top', 'data-bd': 'top' },\n      e('strong', null, 'Acme Fit'), e(Tag, null, 'Week 41'), e('span', { className: 'acme-grow' }),\n      named('export', e(Button, { variant: 'secondary' }, 'Export CSV'))),\n    e('section', { className: 'acme-stats', 'data-bd': 'kpis' },\n      named('steps', e(Card, null, e(Stat, { label: 'Steps today', value: '7,214', delta: 4.2, spark: week }))),\n      named('active', e(Card, null, e(Stat, { label: 'Active minutes', value: '104', unit: 'min', delta: 12.5 }))),\n      named('heart', e(Card, null, e(Stat, { label: 'Resting heart rate', value: '58', unit: 'bpm', delta: -1.7, tone: 'success' }))),\n      named('goal', e(Card, null, e('div', { className: 'acme-goal' }, e(ProgressRing, { value: 72, size: 64, stroke: 6 }),\n        e('div', null, e('strong', null, 'Weekly goal'), e('p', null, '50,500 of 70,000 steps')))))),\n    e('section', { className: 'acme-split' },\n      named('week', e(Card, { title: 'Steps this week' }, bars)),\n      named('workouts', e(Card, { title: 'Recent workouts' },\n        e('table', { className: 'acme-table' }, e('tbody', null,\n          workouts.map(([name, dist, time]) => e('tr', { key: name }, e('td', null, name), e('td', null, dist), e('td', null, time))))))))));\n</script>\n<style>\n  .acme-dash { min-height: 100vh; padding: 24px; display: grid; gap: 20px; align-content: start; }\n  .acme-top { display: flex; align-items: center; gap: 12px; font-size: 18px; }\n  .acme-grow { flex: 1; }\n  .acme-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }\n  .acme-stats > div > * { height: 100%; }\n  .acme-goal { display: flex; align-items: center; gap: 16px; }\n  .acme-goal p { margin: 4px 0 0; color: var(--hz-fg-muted, #6b7280); font-size: 13px; }\n  .acme-split { display: grid; grid-template-columns: 3fr 2fr; gap: 16px; }\n  .acme-split > div > * { height: 100%; }\n  .acme-bars { display: flex; align-items: flex-end; gap: 16px; height: 140px; padding-top: 12px; }\n  .acme-bar { flex: 1; display: grid; justify-items: center; gap: 6px; }\n  .acme-bar span { width: 100%; max-width: 48px; border-radius: 6px 6px 2px 2px; background: var(--accent, #4f46e5); }\n  .acme-bar small { color: var(--hz-fg-muted, #6b7280); font-size: 12px; }\n  .acme-table { width: 100%; border-collapse: collapse; }\n  .acme-table td { padding: 10px 0; border-top: 1px solid var(--hz-border, #e5e7eb); }\n  .acme-table td + td { text-align: right; color: var(--hz-fg-muted, #6b7280); }\n</style>\n"
+  "f19cba082608b7af": "<div id=\"root\" data-bd=\"dashboard\"></div>\n<script>\nconst e = React.createElement, { HorizonProvider, Card, Stat, ProgressRing, Tag, Button } = HorizonUI;\nconst days = [\"Mon\", \"Tue\", \"Wed\", \"Thu\", \"Fri\", \"Sat\", \"Sun\"];\nconst week = [6200, 8100, 7400, 9900, 5300, 11200, 7214];\nconst workouts = [[\"Morning run\", \"5.2 km\", \"28 min\"], [\"Strength\", \"6 sets\", \"41 min\"], [\"Evening walk\", \"3.1 km\", \"35 min\"],\n  [\"Cycling\", \"18.4 km\", \"52 min\"], [\"Yoga\", \"1 class\", \"30 min\"]];\nconst named = (bd, ...kids) => e('div', { 'data-bd': bd }, ...kids);\nconst bars = e('div', { className: 'acme-bars' }, week.map((v, i) => e('div', { key: days[i], className: 'acme-bar' },\n  e('span', { style: { height: `${Math.round(v / 120)}px` } }), e('small', null, days[i]))));\nReactDOM.createRoot(document.getElementById('root')).render(\n  e(HorizonProvider, { theme: 'light', className: 'acme-dash' },\n    e('header', { className: 'acme-top', 'data-bd': 'top' },\n      e('strong', null, 'Acme Fit'), e(Tag, null, 'Week 41'), e('span', { className: 'acme-grow' }),\n      named('export', e(Button, { variant: 'secondary' }, 'Export CSV'))),\n    e('section', { className: 'acme-stats', 'data-bd': 'kpis' },\n      named('steps', e(Card, null, e(Stat, { label: 'Steps today', value: '7,214', delta: 4.2, spark: week }))),\n      named('active', e(Card, null, e(Stat, { label: 'Active minutes', value: '104', unit: 'min', delta: 12.5 }))),\n      named('heart', e(Card, null, e(Stat, { label: 'Resting heart rate', value: '58', unit: 'bpm', delta: -1.7, tone: 'success' }))),\n      named('goal', e(Card, null, e('div', { className: 'acme-goal' }, e(ProgressRing, { value: 72, size: 64, stroke: 6 }),\n        e('div', null, e('strong', null, 'Weekly goal'), e('p', null, '50,500 of 70,000 steps')))))),\n    e('section', { className: 'acme-split' },\n      named('week', e(Card, { title: 'Steps this week' }, bars)),\n      named('workouts', e(Card, { title: 'Recent workouts' },\n        e('table', { className: 'acme-table' }, e('tbody', null,\n          workouts.map(([name, dist, time]) => e('tr', { key: name }, e('td', null, name), e('td', null, dist), e('td', null, time))))))))));\n</script>\n<style>\n  .acme-dash { min-height: 100vh; padding: 24px; display: grid; gap: 20px; align-content: start; }\n  .acme-top { display: flex; align-items: center; gap: 12px; font-size: 18px; }\n  .acme-grow { flex: 1; }\n  .acme-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }\n  .acme-stats > div > * { height: 100%; }\n  .acme-goal { display: flex; align-items: center; gap: 16px; }\n  .acme-goal p { margin: 4px 0 0; color: var(--hz-fg-muted, #6b7280); font-size: 13px; }\n  .acme-split { display: grid; grid-template-columns: 3fr 2fr; gap: 16px; }\n  .acme-split > div > * { height: 100%; }\n  .acme-bars { display: flex; align-items: flex-end; gap: 16px; height: 140px; padding-top: 12px; }\n  .acme-bar { flex: 1; display: grid; justify-items: center; gap: 6px; }\n  .acme-bar span { width: 100%; max-width: 48px; border-radius: 6px 6px 2px 2px; background: var(--accent, #4f46e5); }\n  .acme-bar small { color: var(--hz-fg-muted, #6b7280); font-size: 12px; }\n  .acme-table { width: 100%; border-collapse: collapse; }\n  .acme-table td { padding: 10px 0; border-top: 1px solid var(--hz-border, #e5e7eb); }\n  .acme-table td + td { text-align: right; color: var(--hz-fg-muted, #6b7280); }\n</style>\n",
+  "ad949599a21b96f3": "<main class=\"screen safe stack gap-4\" data-bd=\"login\">\n  <div class=\"stack gap-2\" data-bd=\"brand\">\n    <span class=\"badge\">Acme Fit</span>\n    <h1 class=\"title\">Welcome back</h1>\n    <p class=\"body muted\">Sign in to sync today's steps and workouts.</p>\n  </div>\n  <label class=\"stack gap-1\"><span class=\"label\">Email</span>\n    <input class=\"field\" type=\"email\" placeholder=\"you@acme.test\" data-bd=\"email\">\n  </label>\n  <label class=\"stack gap-1\"><span class=\"label\">Password</span>\n    <input class=\"field\" type=\"password\" placeholder=\"••••••••\" data-bd=\"password\">\n  </label>\n  <button class=\"btn primary block\" data-bd=\"submit\" data-nav=\"replace:today\" data-nav-label=\"Tap Sign in\">Sign in</button>\n  <button class=\"btn block\" data-bd=\"passkey\">Use a passkey</button>\n  <button class=\"btn ghost sm\" data-bd=\"forgot\">Forgot your password?</button>\n</main>\n",
+  "b2994d07710b481f": "<main class=\"screen safe stack gap-4\" data-bd=\"login\">\n  <div class=\"wf-circle\" data-label=\"Logo\" data-bd=\"logo\"></div>\n  <div class=\"wf-text\" style=\"--lines:2\" data-bd=\"headline\"></div>\n  <button class=\"btn primary block\" data-bd=\"passkey\" data-nav=\"replace:today\" data-nav-label=\"Tap Sign in with a passkey\">Sign in with a passkey</button>\n  <div class=\"wf-line\" data-bd=\"divider\"></div>\n  <div class=\"wf-box\" data-label=\"Email field\" data-bd=\"email\"></div>\n  <button class=\"btn block\" data-bd=\"submit\">Use email instead</button>\n</main>\n",
+  "b8e13ef3f377fdae": "<style>\n  .today-ring { --size: 176px; --thick: 14px; }\n  .today-ring .num { font-size: 36px; line-height: 1.1; }\n</style>\n<main class=\"screen safe stack gap-4\" data-bd=\"today\">\n  <header class=\"row between\" data-bd=\"greeting\">\n    <div class=\"stack gap-1\">\n      <span class=\"caption muted\">Saturday 10 October</span>\n      <h1 class=\"title\">Today</h1>\n    </div>\n    <span class=\"avatar\" data-bd=\"avatar\">AF</span>\n  </header>\n  <section class=\"card stack center gap-3\" data-bd=\"steps\">\n    <div class=\"ring today-ring\" style=\"--v:.72\">\n      <div class=\"stack center\">\n        <span class=\"num\">7,214</span>\n        <span class=\"caption muted\">of 10,000 steps</span>\n      </div>\n    </div>\n    <span class=\"badge ok\">72% of your goal</span>\n  </section>\n  <section class=\"grid cols-3 gap-3\" data-bd=\"stats\">\n    <div class=\"card kpi\" data-bd=\"active\"><span class=\"label\">Active</span><span class=\"num\">42</span><span class=\"caption muted\">min</span></div>\n    <div class=\"card kpi\" data-bd=\"heart\"><span class=\"label\">Heart</span><span class=\"num\">68</span><span class=\"caption muted\">bpm</span></div>\n    <div class=\"card kpi\" data-bd=\"distance\"><span class=\"label\">Distance</span><span class=\"num\">5.4</span><span class=\"caption muted\">km</span></div>\n  </section>\n  <button class=\"btn primary block\" data-bd=\"start-workout\" data-nav=\"workout\" data-nav-label=\"Tap Start workout\">Start workout</button>\n  <nav class=\"tabbar\" data-bd=\"tabs\">\n    <a class=\"tab active\" data-bd=\"tab-today\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"8\"/></svg>Today</a>\n    <a class=\"tab\" data-bd=\"tab-activity\" data-nav=\"tab:activity\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" aria-hidden=\"true\"><path d=\"M5 19v-8M12 19V5M19 19v-6\"/></svg>Activity</a>\n    <a class=\"tab\" data-bd=\"tab-workouts\" data-nav=\"tab:workouts\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" aria-hidden=\"true\"><path d=\"M4 9v6M8 7v10M16 7v10M20 9v6M8 12h8\"/></svg>Workouts</a>\n    <a class=\"tab\" data-bd=\"tab-profile\" data-nav=\"tab:profile\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"8\" r=\"4\"/><path d=\"M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6\"/></svg>Profile</a>\n  </nav>\n</main>\n",
+  "e2c332cfaf49c704": "<style>\n  .act-bars { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; align-items: end; height: 148px; }\n  .act-bars > div { display: flex; flex-direction: column; align-items: center; gap: 6px; }\n  .act-bars span { display: block; width: 100%; border-radius: 6px 6px 2px 2px; background: color-mix(in srgb, var(--accent) 35%, var(--surface)); }\n  .act-bars .now span { background: var(--accent); }\n</style>\n<main class=\"screen safe stack gap-4\" data-bd=\"activity\">\n  <h1 class=\"title\">Activity</h1>\n  <div class=\"row gap-2\" data-bd=\"range\">\n    <span class=\"chip\">Day</span><span class=\"chip active\">Week</span><span class=\"chip\">Month</span>\n  </div>\n  <section class=\"card stack gap-3\" data-bd=\"week\">\n    <div class=\"row between\"><span class=\"headline\">Steps this week</span><span class=\"num\">55,314</span></div>\n    <div class=\"act-bars\">\n      <div><span style=\"height:78px\"></span><small class=\"caption muted\">M</small></div>\n      <div><span style=\"height:101px\"></span><small class=\"caption muted\">T</small></div>\n      <div><span style=\"height:92px\"></span><small class=\"caption muted\">W</small></div>\n      <div><span style=\"height:124px\"></span><small class=\"caption muted\">T</small></div>\n      <div><span style=\"height:66px\"></span><small class=\"caption muted\">F</small></div>\n      <div class=\"now\"><span style=\"height:90px\"></span><small class=\"caption muted\">S</small></div>\n      <div><span style=\"height:4px\"></span><small class=\"caption muted\">S</small></div>\n    </div>\n  </section>\n  <section class=\"card list\" data-bd=\"totals\">\n    <div class=\"item between\"><span>Active minutes</span><span class=\"num\">286</span></div>\n    <div class=\"item between\"><span>Distance</span><span class=\"num\">38.2 km</span></div>\n    <div class=\"item between\"><span>Resting heart rate</span><span class=\"num\">58 bpm</span></div>\n  </section>\n  <nav class=\"tabbar\" data-bd=\"tabs\">\n    <a class=\"tab\" data-bd=\"tab-today\" data-nav=\"tab:today\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"8\"/></svg>Today</a>\n    <a class=\"tab active\" data-bd=\"tab-activity\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" aria-hidden=\"true\"><path d=\"M5 19v-8M12 19V5M19 19v-6\"/></svg>Activity</a>\n    <a class=\"tab\" data-bd=\"tab-workouts\" data-nav=\"tab:workouts\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" aria-hidden=\"true\"><path d=\"M4 9v6M8 7v10M16 7v10M20 9v6M8 12h8\"/></svg>Workouts</a>\n    <a class=\"tab\" data-bd=\"tab-profile\" data-nav=\"tab:profile\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"8\" r=\"4\"/><path d=\"M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6\"/></svg>Profile</a>\n  </nav>\n</main>\n",
+  "6d2b5b497bb6d5e5": "<style>\n  .wo-time { font-size: 64px; line-height: 1; font-weight: 700; letter-spacing: -.02em; }\n</style>\n<main class=\"screen stack\" data-bd=\"workout\">\n  <header class=\"topbar\" data-bd=\"bar\">\n    <button class=\"btn ghost icon\" data-bd=\"back\" data-nav=\"back\" data-nav-label=\"Tap Back\" aria-label=\"Back\">‹</button>\n    <span class=\"headline grow\">Morning run</span>\n    <span class=\"badge ok\">Live</span>\n  </header>\n  <div class=\"stack gap-5 p-6\">\n    <section class=\"stack center gap-2\" data-bd=\"timer\">\n      <span class=\"label\">Elapsed</span>\n      <span class=\"wo-time num\">28:14</span>\n      <span class=\"caption muted\">Started 07:12</span>\n    </section>\n    <section class=\"grid cols-3 gap-3\" data-bd=\"stats\">\n      <div class=\"card kpi\" data-bd=\"distance\"><span class=\"label\">Distance</span><span class=\"num\">5.2</span><span class=\"caption muted\">km</span></div>\n      <div class=\"card kpi\" data-bd=\"pace\"><span class=\"label\">Pace</span><span class=\"num\">5:26</span><span class=\"caption muted\">/km</span></div>\n      <div class=\"card kpi\" data-bd=\"heart\"><span class=\"label\">Heart</span><span class=\"num\">146</span><span class=\"caption muted\">bpm</span></div>\n    </section>\n    <section class=\"stack gap-2\" data-bd=\"goal\">\n      <div class=\"row between\"><span class=\"body\">Goal 6 km</span><span class=\"num\">87%</span></div>\n      <div class=\"progress\"><span style=\"--v:.87\"></span></div>\n    </section>\n    <div class=\"row gap-3\" data-bd=\"controls\">\n      <button class=\"btn grow\" data-bd=\"pause\">Pause</button>\n      <button class=\"btn danger grow\" data-bd=\"end\">End workout</button>\n    </div>\n  </div>\n  <i hidden data-bd=\"edge-back\" data-nav=\"back\" data-nav-label=\"Swipe from the left edge\"></i>\n</main>\n",
+  "e5f164ece313a6a9": "<style>\n  .pro-avatar { width: 72px; height: 72px; font-size: 26px; }\n</style>\n<main class=\"screen safe stack gap-4\" data-bd=\"profile\">\n  <header class=\"row between\" data-bd=\"head\">\n    <h1 class=\"title\">Profile</h1>\n    <button class=\"btn ghost icon\" data-bd=\"open-settings\" data-nav=\"modal:settings\" data-nav-label=\"Tap the gear\" aria-label=\"Settings\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"3\"/><path d=\"M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1\"/></svg></button>\n  </header>\n  <section class=\"row gap-4\" data-bd=\"who\">\n    <span class=\"avatar pro-avatar\">AF</span>\n    <div class=\"stack gap-1\">\n      <strong class=\"headline\">Acme Fit member</strong>\n      <span class=\"caption muted\">you@acme.test · since March</span>\n    </div>\n  </section>\n  <section class=\"grid cols-3 gap-3\" data-bd=\"totals\">\n    <div class=\"card kpi\"><span class=\"label\">Workouts</span><span class=\"num\">128</span></div>\n    <div class=\"card kpi\"><span class=\"label\">Streak</span><span class=\"num\">12 d</span></div>\n    <div class=\"card kpi\"><span class=\"label\">Best day</span><span class=\"num\">14.2k</span></div>\n  </section>\n  <section class=\"card list\" data-bd=\"more\">\n    <div class=\"item between\" data-bd=\"goals\"><span>Daily goal</span><span class=\"muted\">10,000 steps ›</span></div>\n    <div class=\"item between\" data-bd=\"devices\"><span>Devices</span><span class=\"muted\">Acme Watch ›</span></div>\n    <div class=\"item between\" data-bd=\"friends\"><span>Friends</span><span class=\"muted\">8 ›</span></div>\n  </section>\n  <nav class=\"tabbar\" data-bd=\"tabs\">\n    <a class=\"tab\" data-bd=\"tab-today\" data-nav=\"tab:today\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"8\"/></svg>Today</a>\n    <a class=\"tab\" data-bd=\"tab-activity\" data-nav=\"tab:activity\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" aria-hidden=\"true\"><path d=\"M5 19v-8M12 19V5M19 19v-6\"/></svg>Activity</a>\n    <a class=\"tab\" data-bd=\"tab-workouts\" data-nav=\"tab:workouts\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" aria-hidden=\"true\"><path d=\"M4 9v6M8 7v10M16 7v10M20 9v6M8 12h8\"/></svg>Workouts</a>\n    <a class=\"tab active\" data-bd=\"tab-profile\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"8\" r=\"4\"/><path d=\"M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6\"/></svg>Profile</a>\n  </nav>\n</main>\n",
+  "3669ec401091fc2a": "<main class=\"screen safe stack gap-4\" data-bd=\"settings\">\n  <header class=\"row between\" data-bd=\"head\">\n    <h1 class=\"title\">Settings</h1>\n    <button class=\"btn ghost sm\" data-bd=\"done\" data-nav=\"back\" data-nav-label=\"Tap Done\">Done</button>\n  </header>\n  <section class=\"stack gap-2\" data-bd=\"notifications\">\n    <span class=\"label\">Notifications</span>\n    <div class=\"card list\">\n      <label class=\"item between\" data-bd=\"reminders\"><span>Goal reminders</span><input class=\"switch\" type=\"checkbox\" checked></label>\n      <label class=\"item between\" data-bd=\"heart-alerts\"><span>Heart rate alerts</span><input class=\"switch\" type=\"checkbox\" checked></label>\n      <label class=\"item between\" data-bd=\"weekly\"><span>Weekly summary</span><input class=\"switch\" type=\"checkbox\"></label>\n    </div>\n  </section>\n  <section class=\"stack gap-2\" data-bd=\"units\">\n    <span class=\"label\">Units</span>\n    <div class=\"row gap-2\"><span class=\"chip active\">Kilometres</span><span class=\"chip\">Miles</span></div>\n  </section>\n  <section class=\"stack gap-2\" data-bd=\"account\">\n    <span class=\"label\">Account</span>\n    <div class=\"card list\">\n      <div class=\"item between\" data-bd=\"passkeys\"><span>Passkeys</span><span class=\"muted\">1 ›</span></div>\n      <div class=\"item between\" data-bd=\"privacy\"><span>Privacy</span><span class=\"muted\">›</span></div>\n    </div>\n  </section>\n  <button class=\"btn danger block\" data-bd=\"sign-out\">Sign out</button>\n</main>\n",
+  "ac3c32f6d2088648": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 108 108\">\n  <circle cx=\"54\" cy=\"54\" r=\"25\" fill=\"none\" stroke=\"#ffffff\" stroke-opacity=\".35\" stroke-width=\"7\"/>\n  <path d=\"M54 29A25 25 0 1 1 31.4 64.7\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"7\" stroke-linecap=\"round\"/>\n  <path d=\"M38 55H45L49.5 45L57 64L61.5 55H70\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"4.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>\n</svg>\n",
+  "8c551148c2f67655": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 108 108\">\n  <path d=\"M54 29A25 25 0 1 1 31.4 64.7\" fill=\"none\" stroke=\"#000000\" stroke-width=\"7\" stroke-linecap=\"round\"/>\n  <path d=\"M38 55H45L49.5 45L57 64L61.5 55H70\" fill=\"none\" stroke=\"#000000\" stroke-width=\"4.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>\n</svg>\n",
+  "7939b5926912556d": "<main class=\"screen safe stack gap-4\" data-bd=\"workouts\">\n  <h1 class=\"title\">Workouts</h1>\n  <div class=\"row gap-2 wrap\" data-bd=\"filters\">\n    <span class=\"chip active\">All</span><span class=\"chip\">Run</span><span class=\"chip\">Strength</span><span class=\"chip\">Ride</span>\n  </div>\n  <section class=\"card list\" data-bd=\"recent\">\n    <div class=\"item\" data-bd=\"workout-run\" data-nav=\"workout\" data-nav-label=\"Tap a workout\">\n      <span class=\"avatar\">R</span>\n      <span class=\"stack grow\"><strong>Morning run</strong><span class=\"caption muted\">Today · 5.2 km · 28 min</span></span>\n      <span class=\"muted\">›</span>\n    </div>\n    <div class=\"item\" data-bd=\"workout-strength\">\n      <span class=\"avatar\">S</span>\n      <span class=\"stack grow\"><strong>Strength</strong><span class=\"caption muted\">Thu · 6 sets · 41 min</span></span>\n      <span class=\"muted\">›</span>\n    </div>\n    <div class=\"item\" data-bd=\"workout-walk\">\n      <span class=\"avatar\">W</span>\n      <span class=\"stack grow\"><strong>Evening walk</strong><span class=\"caption muted\">Wed · 3.1 km · 35 min</span></span>\n      <span class=\"muted\">›</span>\n    </div>\n    <div class=\"item\" data-bd=\"workout-ride\">\n      <span class=\"avatar\">C</span>\n      <span class=\"stack grow\"><strong>Cycling</strong><span class=\"caption muted\">Mon · 18.4 km · 52 min</span></span>\n      <span class=\"muted\">›</span>\n    </div>\n  </section>\n  <nav class=\"tabbar\" data-bd=\"tabs\">\n    <a class=\"tab\" data-bd=\"tab-today\" data-nav=\"tab:today\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"8\"/></svg>Today</a>\n    <a class=\"tab\" data-bd=\"tab-activity\" data-nav=\"tab:activity\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" aria-hidden=\"true\"><path d=\"M5 19v-8M12 19V5M19 19v-6\"/></svg>Activity</a>\n    <a class=\"tab active\" data-bd=\"tab-workouts\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" aria-hidden=\"true\"><path d=\"M4 9v6M8 7v10M16 7v10M20 9v6M8 12h8\"/></svg>Workouts</a>\n    <a class=\"tab\" data-bd=\"tab-profile\" data-nav=\"tab:profile\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"8\" r=\"4\"/><path d=\"M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6\"/></svg>Profile</a>\n  </nav>\n</main>\n"
  }
 }

@@ -1,0 +1,31 @@
+<style>
+  .wo-time { font-size: 64px; line-height: 1; font-weight: 700; letter-spacing: -.02em; }
+</style>
+<main class="screen stack" data-bd="workout">
+  <header class="topbar" data-bd="bar">
+    <button class="btn ghost icon" data-bd="back" data-nav="back" data-nav-label="Tap Back" aria-label="Back">‹</button>
+    <span class="headline grow">Morning run</span>
+    <span class="badge ok">Live</span>
+  </header>
+  <div class="stack gap-5 p-6">
+    <section class="stack center gap-2" data-bd="timer">
+      <span class="label">Elapsed</span>
+      <span class="wo-time num">28:14</span>
+      <span class="caption muted">Started 07:12</span>
+    </section>
+    <section class="grid cols-3 gap-3" data-bd="stats">
+      <div class="card kpi" data-bd="distance"><span class="label">Distance</span><span class="num">5.2</span><span class="caption muted">km</span></div>
+      <div class="card kpi" data-bd="pace"><span class="label">Pace</span><span class="num">5:26</span><span class="caption muted">/km</span></div>
+      <div class="card kpi" data-bd="heart"><span class="label">Heart</span><span class="num">146</span><span class="caption muted">bpm</span></div>
+    </section>
+    <section class="stack gap-2" data-bd="goal">
+      <div class="row between"><span class="body">Goal 6 km</span><span class="num">87%</span></div>
+      <div class="progress"><span style="--v:.87"></span></div>
+    </section>
+    <div class="row gap-3" data-bd="controls">
+      <button class="btn grow" data-bd="pause">Pause</button>
+      <button class="btn danger grow" data-bd="end">End workout</button>
+    </div>
+  </div>
+  <i hidden data-bd="edge-back" data-nav="back" data-nav-label="Swipe from the left edge"></i>
+</main>

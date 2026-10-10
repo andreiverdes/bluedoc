@@ -117,3 +117,36 @@ shipped copy.
 When the project has its own framework (`package.json`, built CSS), declare those files. Else recommend: web,
 desktop and mobile `heroui`, watch and presentation the plain kit.
 A missing file or store copy renders the plain kit with a notice bar; the build warns with the path.
+
+## Navigation
+
+A link is `data-nav` on the element a tap follows; the element needs a unique `data-bd`. The board draws an arrow
+from it, **Present** follows the tap. `data-nav-label` names the action for the arrow and Present's hints.
+
+```html
+<nav class="tabbar" data-bd="tabs">
+  <button data-bd="tab-today" aria-current="page">Today</button>
+  <button data-bd="tab-activity" data-nav="tab:activity">Activity</button>
+</nav>
+<button class="btn primary" data-bd="start" data-nav="workout" data-nav-label="Tap Start workout">Start</button>
+<button data-bd="back" data-nav="back">Back</button>
+<i hidden data-bd="swipe-left" data-nav="tab:activity" data-nav-label="Swipe left"></i>
+```
+
+Kinds: `workout` (push), `modal:`, `tab:` (tab bars; the current tab has none), `replace:` (sign-in, onboarding:
+clears the stack), `back`. A gesture is a hidden element with a label. Set `board.entry` to the first screen; with
+`"layout": "flow"` unplaced screens line up by depth. The build errors on an unknown target and warns on a screen
+no entry reaches. A reader's link edit arrives as `link:<screen>/<name>` with its `patch` command.
+
+## App icons
+
+`build.py new design … --icons` adds `{"id": "app-icon", "device": "icons", "icon": {"bg": "#2563eb", "name": "…"}}`
+and stub layers in `<stem>.design/app-icon/`. Draw on a 108 × 108 viewBox:
+
+- `fg.svg` (required): the mark, transparent around it, inside the centre circle r 33 (54, 54); leave a margin.
+- `mono.svg`: the same mark in one colour (themed and tinted icons).
+- background: `icon.bg`, or `bg.svg` for a gradient; optional `ios-dark.svg`, `ios-tinted.svg`, `play.svg`.
+
+Shapes and paths only: no `<text>` (convert to paths), `<image>` links, scripts or `<foreignObject>`. The board
+shows every mask, variant and size; Export writes the iOS and Android PNG sets. A comment on a tile arrives as
+`el:app-icon/<tile>`: `patch` prints the layers it is drawn from.

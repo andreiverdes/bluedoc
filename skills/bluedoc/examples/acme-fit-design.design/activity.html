@@ -1,0 +1,35 @@
+<style>
+  .act-bars { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; align-items: end; height: 148px; }
+  .act-bars > div { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .act-bars span { display: block; width: 100%; border-radius: 6px 6px 2px 2px; background: color-mix(in srgb, var(--accent) 35%, var(--surface)); }
+  .act-bars .now span { background: var(--accent); }
+</style>
+<main class="screen safe stack gap-4" data-bd="activity">
+  <h1 class="title">Activity</h1>
+  <div class="row gap-2" data-bd="range">
+    <span class="chip">Day</span><span class="chip active">Week</span><span class="chip">Month</span>
+  </div>
+  <section class="card stack gap-3" data-bd="week">
+    <div class="row between"><span class="headline">Steps this week</span><span class="num">55,314</span></div>
+    <div class="act-bars">
+      <div><span style="height:78px"></span><small class="caption muted">M</small></div>
+      <div><span style="height:101px"></span><small class="caption muted">T</small></div>
+      <div><span style="height:92px"></span><small class="caption muted">W</small></div>
+      <div><span style="height:124px"></span><small class="caption muted">T</small></div>
+      <div><span style="height:66px"></span><small class="caption muted">F</small></div>
+      <div class="now"><span style="height:90px"></span><small class="caption muted">S</small></div>
+      <div><span style="height:4px"></span><small class="caption muted">S</small></div>
+    </div>
+  </section>
+  <section class="card list" data-bd="totals">
+    <div class="item between"><span>Active minutes</span><span class="num">286</span></div>
+    <div class="item between"><span>Distance</span><span class="num">38.2 km</span></div>
+    <div class="item between"><span>Resting heart rate</span><span class="num">58 bpm</span></div>
+  </section>
+  <nav class="tabbar" data-bd="tabs">
+    <a class="tab" data-bd="tab-today" data-nav="tab:today"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/></svg>Today</a>
+    <a class="tab active" data-bd="tab-activity"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 19v-8M12 19V5M19 19v-6"/></svg>Activity</a>
+    <a class="tab" data-bd="tab-workouts" data-nav="tab:workouts"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 9v6M8 7v10M16 7v10M20 9v6M8 12h8"/></svg>Workouts</a>
+    <a class="tab" data-bd="tab-profile" data-nav="tab:profile"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>Profile</a>
+  </nav>
+</main>

@@ -272,6 +272,7 @@ body { font-family: var(--font-hz-sans, Inter, system-ui, sans-serif); -webkit-f
 .bd-art .dsn .ab.lo { stroke: var(--bp-amber); stroke-dasharray: 5 3; }
 .bd-art .dsn .bar { stroke: var(--bp-ice); stroke-opacity: .45; stroke-width: 1px; }
 .bd-art .dsn .ln { fill: rgba(95, 212, 255, .22); }
+.bd-art .dsn .lk { fill: none; stroke: var(--bp-ice); stroke-opacity: .45; stroke-width: 1px; }
 .bd-art .dsn g.abs { filter: drop-shadow(0 0 5px rgba(95, 212, 255, .28)); }
 /* docs with a hero, other docs, and every doc whose type has no data yet: an icon and one big stat */
 .bd-stat { flex-direction: row; align-items: center; justify-content: flex-start; gap: 7cqw; left: 11%; }
@@ -596,16 +597,35 @@ function DrawingEl({ c }) {
   return e(F, null, e('div', { className: 'bd-drw' + (cap ? ' capd' : '') }, e(CanvasArt, { c })), cap && e('div', { className: 'bd-el-cap' }, cap));
 }
 // design: the board's outline, as serve.py card() places the first 12 artboards (top-left 0, 0, board px); a slide
-// is its 16:9 rectangle with left-aligned text lines
-const DEVICE_WORD = { 'watch-round': 'watch', 'watch-square': 'watch', phone: 'phone', tablet: 'tablet', desktop: 'desktop', browser: 'web', slide: 'presentation' };
+// is its 16:9 rectangle with left-aligned text lines. Links between them are thin right-angle lines under the outlines.
+const DEVICE_WORD = { 'watch-round': 'watch', 'watch-square': 'watch', phone: 'phone', tablet: 'tablet', desktop: 'desktop', browser: 'web', slide: 'presentation', icons: 'app icon' };
 const DEVICE_RX = { 'watch-square': 44, phone: 48, tablet: 28, desktop: 10, browser: 10, slide: 4 };
 const DEVICE_BAR = { desktop: 32, browser: 72 };
+// a link line between two outlines' facing sides: straight where they overlap across the gap, else out of a's side
+// toward b and one bend into b's top or bottom; null when the outlines overlap
+function linkPath(a, b) {
+  const ax2 = a.x + a.w, ay2 = a.y + a.h, bx2 = b.x + b.w, by2 = b.y + b.h;
+  const lo = (p, q, r, s) => [Math.max(p, r), Math.min(q, s)];
+  if (b.x >= ax2 || a.x >= bx2) {
+    const right = b.x >= ax2, sx = right ? ax2 : a.x, ex = right ? b.x : bx2, [o1, o2] = lo(a.y, ay2, b.y, by2);
+    if (o2 > o1) return `M${sx} ${(o1 + o2) / 2}H${ex}`;
+    const y = a.y + a.h / 2, x = b.x + b.w / 2;
+    return `M${sx} ${y}H${x}V${b.y >= ay2 ? b.y : by2}`;
+  }
+  if (b.y >= ay2 || a.y >= by2) {
+    const [o1, o2] = lo(a.x, ax2, b.x, bx2);
+    return `M${(o1 + o2) / 2} ${b.y >= ay2 ? ay2 : a.y}V${b.y >= ay2 ? b.y : by2}`;
+  }
+  return null;
+}
 function DesignArt({ c }) {
   const abs = c.artboards, ns = 'non-scaling-stroke';
   let x1 = 0, y1 = 0;
   for (const a of abs) { x1 = Math.max(x1, a.x + a.w); y1 = Math.max(y1, a.y + a.h); }
   const pad = Math.max(40, x1 * 0.04);
+  const lines = (c.links || []).slice(0, 24).map(([i, j]) => abs[i] && abs[j] ? linkPath(abs[i], abs[j]) : null);
   return e('svg', { className: 'cv dsn', viewBox: [-pad, -pad, x1 + 2 * pad, y1 + 2 * pad].join(' '), preserveAspectRatio: 'xMidYMid meet', 'aria-hidden': true },
+    lines.some(Boolean) && e('g', { className: 'lks' }, lines.map((d, i) => d && e('path', { key: i, className: 'lk', vectorEffect: ns, d }))),
     e('g', { className: 'abs' }, abs.map((a, i) => {
       const cls = 'ab' + (a.fidelity === 'hifi' ? '' : ' lo'), round = a.device === 'watch-round', slide = a.device === 'slide';
       const bar = DEVICE_BAR[a.device], lh = Math.max(8, Math.min(a.w, a.h) * 0.05), top = (bar || 0) + a.h * (round ? 0.38 : slide ? 0.16 : 0.1);

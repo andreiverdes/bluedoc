@@ -44,6 +44,8 @@ A framework that isn't on disk yet is still an option: put the `add-framework` c
 - One file per artboard, `<stem>.design/<artboard id>.html`: a **body fragment**. No `<!doctype>`, `<html>`, `<head>`, `<body>`, `<base>`, `<iframe>`, `<object>`, `<embed>`, `<meta http-equiv>` or `<form action>`; the server adds the shell, kit, safe areas and tokens.
 - **No network:** no `http:`, `https:` or `//` URLs in attributes, CSS or scripts. Images go beside the screen or in `data:` URIs; the build fails otherwise. Text may show a URL.
 - **Name what a reader may point at:** `data-bd="submit"` on buttons, fields, cards, list rows, nav items. The reader's comments come back as `el:<artboard>/<name>`. Names are unique within a screen.
+- **Links:** `data-nav="workout"` on what a tap follows (`modal:`, `tab:`, `replace:`, `back`), `data-nav-label="Tap Start"`; list start screens in `board.entry`. Grep `## Navigation` in kits.md.
+- **App icon:** `new … --icons` adds `app-icon` (`device: "icons"`): draw `fg.svg` and `mono.svg` in `<stem>.design/app-icon/`. Grep `## App icons` in kits.md.
 - **Use kit classes**, not long inline CSS: grep the section you need, e.g. `grep -n -A30 '^## Plain kit' <skill>/references/kits.md` (also `## Wireframe`, `## HorizonUI`, `## HeroUI`, `## data-bd`, `## Frameworks`). Colours come from the theme tokens as CSS variables (`var(--accent)`), so the theme pills re-skin every screen.
 - ≤ 24 KB per file (a warning above). A screen that needs more is two artboards.
 - Scripts may run (tabs, toggles, a carousel) inside the sandbox; they reach neither the page nor the network.
