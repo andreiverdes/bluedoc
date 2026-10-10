@@ -59,7 +59,7 @@
   --sans: "Inter Variable", Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --mono: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   --ease: cubic-bezier(0.23, 1, 0.32, 1);
-  --rail: 204px; --content-w: 920px; --gap: 32px; --bar-h: 52px;
+  --rail: 248px; --content-w: 920px; --gap: 32px; --bar-h: 52px;
   --top-h: calc(var(--bar-h) + var(--rv-h, 0px));   /* app bar plus the revision strip, when shown */
 }
 :root[data-theme="light"] { color-scheme: light; }
@@ -869,18 +869,33 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .bd-chl .bd-chg-tag { height: 18px; padding: 0 6px; font-size: 10px; }
 .bd-chl .t { min-width: 0; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; }
 .bd-chl .none { padding: 8px; color: var(--fg-subtle); }
-.bd-rvs { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
-.bd-rv { padding: 9px 10px 10px; border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-1); }
+.bd-rvs { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+.bd-rv { min-width: 0; padding: 9px 10px 10px; border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-1); }
+.bd-rvr, .bd-rvr-body, .bd-rvr .bd-rail-sec { min-width: 0; }
+.bd-rvr { overflow-x: hidden; }
 .bd-rv.on { box-shadow: 0 0 0 1.5px var(--accent), 0 4px 14px color-mix(in oklch, var(--accent) 14%, transparent); }
 .bd-rv.base { box-shadow: 0 0 0 1.5px var(--line-strong), var(--shadow-1); }
-.bd-rv .rv-h { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-.bd-rv .rv-h b { font: 650 13.5px var(--mono); }
-.bd-rv .rv-h .d { font-size: 12.5px; color: var(--fg-subtle); }
-.bd-rv .rv-h .sp { flex: 1; }
-.bd-rv .rv-h .bp-chip { padding: 3px 7px; font-size: 11.5px; }
+/* collapsed: [number tile] Revision N / first change note on one line, ellipsized; buttons below.
+   Expanded: date, chips and every change note. */
+.bd-rv .rv-h { display: flex; align-items: center; gap: 10px; width: 100%; padding: 0; border: 0; background: none; text-align: left; color: inherit; font: inherit; cursor: pointer; }
+.bd-rv .rv-n { flex: none; display: inline-grid; place-items: center; min-width: 30px; height: 30px; padding: 0 5px; border-radius: 8px; font: 650 12.5px var(--mono); color: var(--fg-muted);
+  background: linear-gradient(180deg, var(--key-top), var(--key-bot)); box-shadow: var(--shadow-key); }
+.bd-rv.on .rv-n { color: #fff; background: var(--accent); box-shadow: none; }
+.bd-rv .rv-tt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.bd-rv .rv-tt b { font-size: 13.5px; font-weight: 600; line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bd-rv .rv-tt .s { font-size: 12.5px; line-height: 1.4; color: var(--fg-subtle); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bd-rv .rv-tt .s code { font-size: .9em; }
+.bd-rv .rv-h .chev { flex: none; width: 14px; height: 14px; color: var(--fg-subtle); transition: transform .15s var(--ease); }
+.bd-rv.open .rv-h .chev { transform: rotate(90deg); }
+.bd-rv .rv-more { display: none; margin: 8px 0 0 40px; }
+.bd-rv.open .rv-more { display: block; }
+.bd-rv .rv-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 12.5px; color: var(--fg-subtle); }
+.bd-rv .rv-meta .bp-chip { padding: 3px 7px; font-size: 11.5px; }
 .bd-rv .rv-notes { margin: 6px 0 0; padding-left: 16px; font-size: 13px; line-height: 1.5; color: var(--fg-muted); }
 .bd-rv .rv-notes li + li { margin-top: 2px; }
-.bd-rv .rv-act { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.bd-rv .rv-act { margin-left: 40px; }
+.bd-rv .rv-act { display: flex; flex-wrap: nowrap; gap: 6px; margin-top: 8px; }
+.bd-rv .rv-act .bp-btn { flex: 0 1 auto; min-width: 0; padding: 0 8px; }
 .bd-rv .rv-act .bp-btn { text-decoration: none; }
 .bd-rv .rv-act .bp-btn[aria-current] { color: var(--accent-fg); background: var(--accent-tint); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--accent) 30%, transparent); }
 .bd-rv .rv-act .bp-btn[aria-current] .bd-ic { color: currentColor; }
@@ -1604,7 +1619,8 @@ function applyWidth() {
   // the layouts are described with their CSS (data-layout, data-rev); with no chosen width the column
   // may narrow down to MIN_W beside the rails before a rail becomes a drawer
   const colW = userW ? Math.min(userW, maxW()) : cssPx('--content-w'), rail = cssPx('--rail') + cssPx('--gap'), minCol = userW ? colW : MIN_W;
-  const centred = room >= colW + 2 * rail, revFits = centred || room >= minCol + (revRail ? 2 : 1) * rail;
+  // with both rails the column may narrow to 480 px before the Revisions rail becomes a drawer
+  const centred = room >= colW + 2 * rail, revFits = centred || room >= Math.min(minCol, 480) + (revRail ? 2 : 1) * rail;
   root.dataset.layout = centred ? 'centred' : room >= minCol + rail ? 'two' : 'wide';
   if (revRail) {
     root.dataset.rev = PHONE.matches ? 'card' : revFits ? 'rail' : 'drawer';
@@ -3831,23 +3847,33 @@ function buildRevRail() {
   }
   const items = [...REVS].reverse().map(r => {
     const prev = REVS[REVS.indexOf(r) - 1], notes = r.doc.changes || [], cmp = !!prev && BASE === prev && VIEW === r;
-    return h('li', { class: 'bd-rv' + (r === VIEW ? ' on' : '') + (r === BASE ? ' base' : '') },
-      h('div', { class: 'rv-h' }, h('b', {}, revName(r)), r.date && h('span', { class: 'd' }, r.date), h('span', { class: 'sp' }),
-        r.current && h('span', { class: 'bp-chip ok' }, 'current'), r === VIEW && h('span', { class: 'bp-chip info' }, 'shown'), r === BASE && h('span', { class: 'bp-chip todo' }, 'base')),
-      notes.length ? h('ul', { class: 'rv-notes' }, notes.map(t => h('li', { html: inline(t) }))) : null,
+    const sub = notes[0] ? plain(notes[0]) : (r.date || (prev ? '' : 'First revision'));
+    const li = h('li', { class: 'bd-rv' + (r === VIEW ? ' on' : '') + (r === BASE ? ' base' : '') });
+    const head = h('button', { type: 'button', class: 'rv-h', 'aria-expanded': 'false', title: notes.map(plain).join('\n') || null,
+      onclick: () => { const o = li.classList.toggle('open'); head.setAttribute('aria-expanded', String(o)); } },
+      h('span', { class: 'rv-n', 'aria-hidden': 'true' }, r.rev),
+      h('span', { class: 'rv-tt' }, h('b', {}, `Revision ${r.rev}`), h('span', { class: 's', html: notes[0] ? inline(notes[0]) : esc(sub) })),
+      ic('chev', 'chev'));
+    li.append(head,
+      h('div', { class: 'rv-more' },
+        h('div', { class: 'rv-meta' }, r.date && h('span', {}, r.date), r.built && h('span', {}, '· built ' + String(r.built).slice(0, 16).replace('T', ' ')),
+          r.current && h('span', { class: 'bp-chip ok' }, 'current'), r === VIEW && h('span', { class: 'bp-chip info' }, 'shown'), r === BASE && h('span', { class: 'bp-chip todo' }, 'base')),
+        notes.length ? h('ul', { class: 'rv-notes' }, notes.map(t => h('li', { html: inline(t) }))) : h('p', { class: 'rv-meta' }, 'No notes for this revision.')),
       h('div', { class: 'rv-act' },
         (r !== VIEW || BASE) && h('a', { class: 'bp-btn', href: revUrl(r, null) }, ic('eye'), 'View'),
         prev && h('a', { class: 'bp-btn', href: revUrl(r, prev), 'aria-current': cmp ? 'page' : null }, ic('split'), `Changes from ${prev.rev}`)));
+    return li;
   });
-  body.append(sec('Revisions', h('p', { class: 'bd-rvr-note' }, 'Earlier revisions are read-only: ticks, picks and comments made there aren\'t saved.'),
-    h('ol', { class: 'bd-rvs' }, items)));
-  // the list above has the full dates; the picker shows month and day
+  // the Compare picker first, then every revision; the list has full dates, the picker month and day
   const sel = (def, label) => h('select', { class: 'rv-sel', 'aria-label': label }, REVS.map(r => h('option', { value: r.rev, selected: r === def, title: r.date || null },
     revName(r) + (r.date ? ` · ${/^\d{4}-\d\d-\d\d$/.test(r.date) ? r.date.slice(5) : r.date}` : ''))));
   const from = sel(BASE || (OLD ? VIEW : REVS[REVS.length - 2]), 'Compare from'), to = sel(BASE ? VIEW : CUR, 'Compare with');
   const go = () => { const a = REVS.find(r => r.rev === from.value), b = REVS.find(r => r.rev === to.value); if (a && b && a !== b) location.href = revUrl(b, a); else toast('Pick two different revisions'); };
-  body.append(sec('Compare', h('div', { class: 'bd-rv-ft' }, h('div', { class: 'row' }, from, ic('next'), to),
-    h('button', { type: 'button', class: 'bp-btn primary', onclick: go }, ic('split'), 'Compare'))));
+  const cmpSec = sec('Compare', h('div', { class: 'bd-rv-ft' }, h('div', { class: 'row' }, from, ic('next'), to),
+    h('button', { type: 'button', class: 'bp-btn primary', onclick: go }, ic('split'), 'Compare')));
+  body.prepend(cmpSec);
+  body.append(sec('Revisions', h('p', { class: 'bd-rvr-note' }, 'Earlier revisions are read-only: ticks, picks and comments made there aren\'t saved.'),
+    h('ol', { class: 'bd-rvs' }, items)));
   const toggle = h('button', { type: 'button', class: 'bp-btn bp-side-toggle', 'aria-expanded': 'false', 'aria-controls': 'bd-rvr-body', onclick: () => setRevCard(!revRail.classList.contains('open')) },
     h('span', {}, 'Revisions'), ic('chev', 'chev'));
   body.id = 'bd-rvr-body';

@@ -1041,7 +1041,7 @@ def cmd_new(argv: list[str]) -> int:
     if a.title:
         doc["title"] = a.title
     meta = doc.setdefault("meta", {})
-    meta.update(rev="A", date=dt.date.today().isoformat(), type=a.type)
+    meta.update(rev="1", date=dt.date.today().isoformat(), type=a.type)
     if a.kind:
         meta["kind"] = a.kind
     a.out.parent.mkdir(parents=True, exist_ok=True)

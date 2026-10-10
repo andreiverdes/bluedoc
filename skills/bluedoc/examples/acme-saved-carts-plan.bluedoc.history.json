@@ -2,7 +2,7 @@
  "bluedoc_history": 1,
  "revs": [
   {
-   "rev": "A",
+   "rev": "1",
    "date": "2026-10-10",
    "built": "2026-10-10T01:22:20+00:00",
    "head": {
@@ -14,7 +14,7 @@
      "kind": "Plan",
      "type": "plan",
      "dwg": "ACME-CART",
-     "rev": "A",
+     "rev": "1",
      "date": "2026-10-10"
     },
     "state": [

@@ -2,7 +2,7 @@
   "id": "docs-skeleton",
   "title": "<<System or task name>>",
   "subtitle": "<<One sentence: what the reader can do after reading.>>",
-  "meta": { "org": "<<Org>>", "kind": "<<Architecture, Walkthrough, Runbook, Setup or Change>>", "type": "docs", "rev": "A", "date": "<<YYYY-MM-DD>>" },
+  "meta": { "org": "<<Org>>", "kind": "<<Architecture, Walkthrough, Runbook, Setup or Change>>", "type": "docs", "rev": "1", "date": "<<YYYY-MM-DD>>" },
   "state": [
     { "label": "<<provenance, e.g. read from main at SHA>>", "kind": "info" }
   ],
