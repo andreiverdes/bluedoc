@@ -2,7 +2,7 @@
   "id": "other-skeleton",
   "title": "<<Page title>>",
   "subtitle": "<<One sentence: what the page holds.>>",
-  "meta": { "org": "<<Org>>", "kind": "<<Status, Report or Notes>>", "type": "other", "rev": "A", "date": "<<YYYY-MM-DD>>" },
+  "meta": { "org": "<<Org>>", "kind": "<<Status, Report or Notes>>", "type": "other", "rev": "1", "date": "<<YYYY-MM-DD>>" },
   "hero": { "icon": "chart", "value": "<<stat>>", "label": "<<what the stat counts>>" },
   "tldr": "<<The answer in 1 to 3 sentences; it agrees with the hero stat.>>",
   "sections": [

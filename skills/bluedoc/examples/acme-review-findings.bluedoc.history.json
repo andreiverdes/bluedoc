@@ -2,7 +2,7 @@
  "bluedoc_history": 1,
  "revs": [
   {
-   "rev": "A",
+   "rev": "1",
    "date": "2026-03-13",
    "built": "2026-10-09T16:31:19+00:00",
    "head": {
@@ -12,7 +12,7 @@
     "meta": {
      "org": "Acme Corp",
      "kind": "Review",
-     "rev": "A",
+     "rev": "1",
      "date": "2026-03-13"
     },
     "state": [
@@ -84,7 +84,7 @@
    ]
   },
   {
-   "rev": "B",
+   "rev": "2",
    "date": "2026-03-14",
    "built": "2026-10-10T10:36:28+00:00",
    "head": {
@@ -94,7 +94,7 @@
     "meta": {
      "org": "Acme Corp",
      "kind": "Review",
-     "rev": "B",
+     "rev": "2",
      "date": "2026-03-14"
     },
     "state": [

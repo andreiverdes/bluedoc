@@ -2,7 +2,7 @@
   "id": "plan-skeleton",
   "title": "<<What ships>>",
   "subtitle": "<<One sentence: the change and who it is for.>>",
-  "meta": { "org": "<<Org>>", "kind": "Plan", "type": "plan", "rev": "A", "date": "<<YYYY-MM-DD>>" },
+  "meta": { "org": "<<Org>>", "kind": "Plan", "type": "plan", "rev": "1", "date": "<<YYYY-MM-DD>>" },
   "state": [
     { "label": "proposal: nothing built yet", "kind": "warn" }
   ],

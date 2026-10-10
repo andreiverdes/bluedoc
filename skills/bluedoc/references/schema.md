@@ -407,7 +407,7 @@ A status chip sits next to the eyebrow:
 **Approve plan** opens a dialog titled "Approve this plan (rev X)": an optional note, a summary ("N pending comments go with it as notes", and "M open questions have no pick; the agent will use its recommendation" when some decision items are unpicked), a preview of the decisions, **Copy**, and a green **Approve**. Approve posts `POST /__bluedoc/approve` with the header `X-Bluedoc: 1`:
 
 ```json
-{ "kind": "approval", "decision": "approved", "doc": "<doc.id>", "rev": "A", "title": "…", "path": "/<root>/<path>.bluedoc.json",
+{ "kind": "approval", "decision": "approved", "doc": "<doc.id>", "rev": "1", "title": "…", "path": "/<root>/<path>.bluedoc.json",
   "at": "<ISO time>", "note": "Ship the API first.",
   "answers": [ { "checklist": "decisions", "item": "retention", "text": "…", "choice": "d180", "recommend": "d180" } ],
   "annotations": [ { "id": "c…", "type": "pin", "note": "…", "target": { "key": "step:steps/0/cutover", "label": "…", "text": "…" } } ],
@@ -447,7 +447,7 @@ The server writes `<name>.approval.md` and `<name>.approval.json` next to the do
 
 | Command | Does |
 |---|---|
-| `new <type> <out.bluedoc.json> [--title "…"] [--kind "…"]` | Copies `assets/skeletons/<type>.json`; sets `id` from the file name, `meta.rev` `A`, `meta.date` today, `meta.type`, and the title and kind when given. Refuses to overwrite; prints the next steps. The build fails until every `<<…>>` is filled. |
+| `new <type> <out.bluedoc.json> [--title "…"] [--kind "…"]` | Copies `assets/skeletons/<type>.json`; sets `id` from the file name, `meta.rev` `1`, `meta.date` today, `meta.type`, and the title and kind when given. Refuses to overwrite; prints the next steps. The build fails until every `<<…>>` is filled. |
 | `<doc>` | Validates (structure, ids, refs, links, media, diff anchors against the expanded diff, the [contract](#contracts)), lints the writing, records the revision. |
 | `<doc> -o out.html` | Also writes a standalone page with expanded diffs and media inlined. It works from `file://`, where the reply dialogs offer **Copy** only. |
 | `<doc> --check` | Validates and lints only. `--strict` fails on warnings; `--no-history` doesn't read or write the history file. |
@@ -469,7 +469,7 @@ The linter warns on: filler and ceremony words; vague words; sentences over 32 w
 | `--change "line"` | One `changes` line; repeatable. |
 | `--no-bump` | Keeps `meta.rev`: only while the reader hasn't seen this rev. |
 
-By default the rev bumps (A→B, 3→4, v1→v2), `meta.date` becomes today, and `changes` becomes the `--change` lines (default "Updated `<key>`."); with `--no-bump` the lines are appended. Patch refuses to write when validation fails, keeps the file's indent, records the history, and prints `rev X → Y; <key> updated`.
+By default the rev bumps (1→2, A→B, v1→v2), `meta.date` becomes today, and `changes` becomes the `--change` lines (default "Updated `<key>`."); with `--no-bump` the lines are appended. Patch refuses to write when validation fails, keeps the file's indent, records the history, and prints `rev X → Y; <key> updated`.
 
 Keys are the annotator's (see [Annotations](#annotations)), so a change request's `key` works as is: `doc`, `meta`, `header`, `tldr`, `status` (the last three address the top level), `section:<id>` (`heading:`, `lead:` too), `block:<blockPath>`, `item:<checklist>/<item>`, `row:<blockPath>/<r>`, `card:<blockPath>/<i>`, `para:<blockPath>/<i>`, `media:<blockPath>`, `compare:<blockPath>/<before|after>`, `step:<blockPath>/<stepId>`, `file:<blockPath>/<path>`, `node:<canvasId>/<nodeKey>`, `comment:<diffId>/<i>`. `<blockPath>` is `<sectionId>/<index>`, or `<checklist>/<item>/<index>` inside a checklist item.
 

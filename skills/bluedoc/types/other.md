@@ -23,7 +23,7 @@ Pick the number the reader would ask for first, and make the `tldr` agree with i
 
 ```json
 { "id": "acme-checkout-uptime", "title": "Checkout uptime, September",
-  "meta": { "org": "Acme Corp", "kind": "Status", "type": "other", "rev": "A", "date": "2026-10-01" },
+  "meta": { "org": "Acme Corp", "kind": "Status", "type": "other", "rev": "1", "date": "2026-10-01" },
   "hero": { "icon": "chart", "value": "99.95%", "label": "uptime, last 30 days" },
   "tldr": "Checkout met its 99.9% target; the one 21-minute outage came from an expired PayCo certificate.",
   "sections": [ { "id": "outages", "title": "Outages", "lead": "One outage, 21 minutes, on 14 September.",
