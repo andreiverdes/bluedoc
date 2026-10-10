@@ -237,16 +237,33 @@ td.bd-cell-mod { background: color-mix(in oklch, var(--warn-tint) 70%, transpare
 @media (max-width: 900px) { .bd-rev-btn .l { display: none; } .bd-rev-btn { padding: 0 8px; } }
 @media (max-width: 600px) { .bd-revbar .in { padding: 6px 12px; gap: 2px 6px; font-size: 13px; } .bd-revbar .in > .bd-ic { display: none; } .bd-revbar .t { flex: 1 1 100%; } }
 @media print { .bd-revbar .bd-ibtn, .bd-revbar .bp-btn, .bd-rev-btn { display: none !important; } .bd-revbar { position: static; } }
-/* the reader's comment on an item */
+/* the reader's comment on an item: a draft until Save (⌘/Ctrl+Enter); Cancel (Esc) restores the saved text */
 .bp-note { display: flex; align-items: flex-start; gap: 8px; }
 .bp-note > .bd-ic { flex: none; width: 15px; height: 15px; margin-top: 8px; color: var(--fg-subtle); }
+.bp-note .f { flex: 1; min-width: 0; display: grid; gap: 6px; }
 .bp-note-ta { flex: 1; min-width: 0; min-height: 34px; resize: none; overflow: hidden; padding: 6px 10px; border: 0; border-radius: 9px; font: 13.5px/1.5 var(--sans); color: var(--fg);
   background: var(--inset); box-shadow: inset 0 0 0 1px var(--line); transition: box-shadow .12s; }
 .bp-note-ta::placeholder { color: var(--fg-subtle); }
 .bp-note-ta:focus { outline: none; background: var(--surface); box-shadow: var(--focus-ring); }
+.bp-note .f > .bp-note-ta { display: block; width: 100%; overflow-y: auto; scrollbar-width: thin; }
+.bp-note .f > .bp-note-ta::placeholder { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bp-note.dirty .bp-note-ta:not(:focus) { box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--accent) 55%, transparent); }
+.bp-note .ft { display: flex; align-items: center; gap: 6px; min-height: 26px; }
+.bp-note .ft[hidden], .bp-note .acts[hidden], .bp-note .saved[hidden] { display: none; }
+.bp-note .acts { display: inline-flex; gap: 4px; margin-left: auto; }
+.bp-note .acts .bp-btn { height: 26px; font-size: 12.5px; }
+.bp-note .saved { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--ok-fg); animation: bd-tip-in .12s var(--ease); }
+.bp-note .saved .bd-ic { width: 13px; height: 13px; stroke-width: 2.4; }
 .bp-note.compact { margin-top: 8px; padding-left: 28px; }
 .bp-note.compact > .bd-ic { display: none; }
 .bp-note.compact .bp-note-ta { font-size: 13px; padding: 5px 9px; min-height: 31px; }
+/* on the row: under the title and pills, in the title column, half the row wide; drag to make it taller */
+.bp-cl-item > .bp-note { padding: 0 16px 12px calc(16px + var(--ind)); margin-top: -2px; }
+.bp-cl-item > .bp-note > .bd-ic { display: none; }
+.bp-cl-item > .bp-note .f { flex: 0 1 auto; width: 50%; min-width: min(260px, 100%); }
+.bp-cl-item > .bp-note .bp-note-ta { resize: vertical; }
+.bp-cl-item > .bp-cl-choices { padding-bottom: 8px; }
+@media (max-width: 600px) { .bp-cl-item > .bp-note .f { width: 100%; } }
 .bp-cl-noteic { display: none; flex: none; margin-top: 4px; color: var(--accent-fg); }
 .bp-cl-noteic .bd-ic { width: 15px; height: 15px; }
 .bp-cl-item.has-note > .bp-cl-row .bp-cl-noteic { display: inline-flex; }
@@ -329,7 +346,8 @@ td.bd-cell-mod { background: color-mix(in oklch, var(--warn-tint) 70%, transpare
 .bp-cl-h h3 { margin: 0; font-size: 15px; font-weight: 600; letter-spacing: -.005em; flex: 1 1 180px; line-height: 1.4; }
 .bp-cl-count { font: 500 12px var(--mono); color: var(--fg-subtle); white-space: nowrap; }
 .bp-cl.complete .bp-cl-count { color: var(--ok-fg); }
-.bp-cl-h .tools { display: flex; gap: 2px; }
+.bp-cl-h .tools { display: flex; flex-wrap: wrap; gap: 2px; }
+.bp-cl-h .tools .bp-btn[hidden] { display: none; }
 .bp-cl > .bp-bar { height: 2px; border-radius: 0; margin: 0 16px; }
 .bp-bar { height: 4px; background: var(--line); border-radius: 99px; overflow: hidden; }
 .bp-bar i { display: block; height: 100%; width: 0; background: var(--accent); border-radius: inherit; transition: width .3s var(--ease); }
@@ -360,7 +378,7 @@ td.bd-cell-mod { background: color-mix(in oklch, var(--warn-tint) 70%, transpare
 .bp-cl-chev { width: 16px; height: 16px; flex: none; margin-top: 4px; color: var(--fg-subtle); transition: transform .18s var(--ease); }
 .bp-cl-item.open .bp-cl-chev { transform: rotate(90deg); }
 .bp-cl-item.empty .bp-cl-chev { visibility: hidden; }
-@media print { .bp-note:not(:has(.bp-note-ta:not(:placeholder-shown))) { display: none; } }
+@media print { .bp-note:not(:has(.bp-note-ta:not(:placeholder-shown))) { display: none; } .bp-note .ft { display: none !important; } .bp-note-ta { resize: none !important; } }
 /* expanded body, aligned with the title */
 .bp-cl-body { padding: 0 16px 14px calc(16px + var(--ind)); font-size: 14px; }
 .bp-cl-body[hidden] { display: none; }
@@ -387,7 +405,8 @@ td.bd-cell-mod { background: color-mix(in oklch, var(--warn-tint) 70%, transpare
 .bp-cl-item.done .bp-cl-dot, .bd-cm.done .bp-cl-dot { background: var(--ok) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / 11px no-repeat; box-shadow: none; }
 .bd-cm .hd > .bp-cl-dot { margin-top: 2px; }
 .bp-cl-choices { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 16px 12px calc(16px + var(--ind)); margin-top: -2px; }
-.bp-cl.nested .bp-cl-choices { padding-left: calc(14px + var(--ind)); }
+.bp-cl.nested .bp-cl-choices, .bp-cl.nested .bp-cl-item > .bp-note { padding-left: calc(14px + var(--ind)); }
+.bp-cl.nested .bp-cl-item > .bp-note { padding-right: 14px; }
 .bp-cl-choices.compact { padding: 8px 0 0 28px; margin: 0; }
 .bp-choice { display: inline-flex; align-items: center; gap: 5px; height: 28px; padding: 0 12px; border: 0; border-radius: 999px; font: 500 12.5px var(--sans); color: var(--fg-muted);
   background: var(--surface); box-shadow: inset 0 0 0 1px var(--line-strong); transition: background .12s, color .12s, box-shadow .12s; }
@@ -548,6 +567,11 @@ img.bp-cmpr-img { cursor: zoom-in; }
   box-shadow: var(--shadow-3); opacity: 0; pointer-events: none; transition: opacity .2s var(--ease), transform .2s var(--ease); z-index: 60; }
 .bp-toast::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--ok); }
 .bp-toast.on { opacity: 1; transform: translate(-50%, 0); }
+/* its action (Accept recommended's Undo) */
+.bp-toast.on.act { pointer-events: auto; padding-right: 6px; }
+.bp-toast button { height: 26px; padding: 0 10px; border: 0; border-radius: 7px; font: inherit; font-weight: 600; color: inherit; background: oklch(100% 0 0 / .14); cursor: pointer; }
+.bp-toast button:hover { background: oklch(100% 0 0 / .22); }
+.bp-toast button:focus-visible { outline: 2px solid oklch(100% 0 0 / .7); outline-offset: 1px; }
 
 /* change requests: bottom toolbar (HorizonUI Tray of Keys with Grooves, Kbd tooltips), marks, hover outline,
    comments sidebar, dialog. Tray, key, groove and fill values are HorizonUI's, light and dark. */
@@ -655,9 +679,18 @@ html.bd-tray-on .bp-toast { bottom: 84px; }
 .bd-key:is(.approve, .send.has):focus-visible { box-shadow: var(--shadow-fill), var(--focus-ring); }
 .bd-key.approve.done:disabled { opacity: 1; cursor: default; filter: none; transform: none; color: var(--ok-fg); background: var(--ok-tint); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--ok) 38%, transparent); }
 .bd-key.approve .bd-ic { stroke-width: 2.1; }
+/* Accept recommended: a plain key with its count of open decisions in a well; disabled (count hidden) when none is open */
+.bd-key.acc .n { min-width: 22px; height: 22px; padding: 0 6px; border-radius: 8px; display: grid; place-items: center; font: 650 12px/1 var(--sans); font-variant-numeric: tabular-nums;
+  color: var(--fg); background: var(--inset); box-shadow: var(--shadow-well); }
+.bd-key.acc { padding-right: 8px; }
+.bd-key.acc .n[hidden] { display: none; }
+.bd-key.acc:disabled { padding-right: 13px; }
+@media (max-width: 600px) { .bd-key.acc { gap: 5px; padding: 0 6px 0 9px; } .bd-key.acc:disabled { padding: 0 9px; } }
 .bd-pen-risk { --pen: var(--risk); } .bd-pen-accent { --pen: var(--accent); } .bd-pen-warn { --pen: var(--warn); } .bd-pen-ok { --pen: var(--ok); }
 html.bd-ann-m-point .bd-shell :not(.bp-side, .bp-side *), html.bd-ann-m-point .bd-shell { cursor: crosshair !important; }
 html.bd-ann-m-select .bd-shell :not(.bp-side, .bp-side *), html.bd-ann-m-select .bd-shell { cursor: text !important; }
+html:is(.bd-ann-m-point, .bd-ann-m-select) .bd-shell .bp-note .bp-note-ta { cursor: text !important; }
+html:is(.bd-ann-m-point, .bd-ann-m-select) .bd-shell .bp-note button { cursor: default !important; }
 html.bd-ann-m-select .bp-cl-head { user-select: text; -webkit-user-select: text; }
 .bd-ann-layer { position: fixed; inset: 0; z-index: 35; overflow: hidden; pointer-events: none; }
 .bd-ann-layer[hidden], .bd-ann-cap[hidden], .bd-ann-hov[hidden] { display: none; }
@@ -1196,7 +1229,7 @@ svg.anim .bp-edge.k-async { animation: bp-march 1.6s linear infinite; }
   .bp-cl { --ind: 28px; }
   .bp-cl-row { padding: 0 4px 0 12px; }
   .bp-cl-body { padding: 0 12px 12px 12px; }
-  .bp-cl-choices { padding: 0 12px 12px 40px; }
+  .bp-cl-choices, .bp-cl-item > .bp-note { padding: 0 12px 12px 40px; }
   .bp-cl-num { display: none; }
   .bp-cl-head { flex-wrap: wrap; row-gap: 4px; }
   .bp-cl-main { flex: 1 1 calc(100% - 30px); }
@@ -1307,6 +1340,7 @@ const OLD = VIEW !== CUR;   // an earlier revision: read-only, nothing is stored
 const DOC = OLD ? JSON.parse(JSON.stringify(VIEW.doc)) : JSON.parse(DOC_SRC);
 const NS = 'http://www.w3.org/2000/svg';
 const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const MAC = /Mac|iP(hone|ad|od)/.test(navigator.platform || navigator.userAgent);
 const $ = (q, r = document) => r.querySelector(q);
 
 function h(tag, attrs, ...kids) {
@@ -1382,6 +1416,7 @@ const ICONS = {
   route: '<circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/>',
   image: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/>',
   tick: '<path d="M20 6 9 17l-5-5"/>',
+  checks: '<path d="M18 6 7 17l-5-5"/><path d="m22 10-7.5 7.5L13 16"/>',
   arrowr: '<path d="M5 12h14M12 5l7 7-7 7"/>',
 };
 function ic(name, cls) {
@@ -1433,9 +1468,13 @@ const store = (() => {
 })();
 const docId = DOC.id || 'doc';
 
-function toast(msg) {
-  const t = $('#bp-toast'); t.textContent = msg; t.classList.add('on');
-  clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('on'), 2200);
+// `act` adds an action button ({label, run, ms}); the toast then stays `ms` (default 8 s) so it can be pressed
+function toast(msg, act) {
+  const t = $('#bp-toast');
+  const done = () => t.classList.remove('on', 'act');
+  t.replaceChildren(msg, ...(act ? [h('button', { type: 'button', onclick: () => { clearTimeout(toast._t); done(); act.run(); } }, act.label)] : []));
+  t.classList.toggle('act', !!act); t.classList.add('on');
+  clearTimeout(toast._t); toast._t = setTimeout(done, act ? act.ms || 8000 : 2200);
 }
 async function copyText(text, msg) {
   try { await navigator.clipboard.writeText(text); toast(msg); }
@@ -1887,7 +1926,7 @@ function renderChecklist(b, parent) {
       entryItem.pills = choicePills(entryItem);
       li.append(entryItem.pills.el);
     }
-    body.append(entryItem.noteView.el);
+    li.append(entryItem.noteView.el);   // on the row, open or not: under the title and the pills
     li.append(body);
     entryItem.setOpen = open => {
       li.classList.toggle('open', open); head.setAttribute('aria-expanded', String(open));
@@ -1937,13 +1976,17 @@ function renderChecklist(b, parent) {
     expandBtn.hidden = !all.length;
   };
   list.addEventListener('click', e => { if (e.target.closest('.bp-cl-head')) paintExpand(); });
+  // Accept recommended (N): the open decisions in this checklist and the ones nested in it (paintAccept);
+  // not on earlier revisions or in compare view
+  const acceptBtn = !OLD && !BASE ? h('button', { type: 'button', class: 'bp-btn ghost', hidden: true, title: 'Pick the starred option on every open decision in this checklist',
+    onclick: () => acceptRecs(checklistScope(entry)) }) : null;
   root.append(h('div', { class: 'bp-cl-h' },
     ic('list'), h(parent ? 'h4' : 'h3', {}, b.title || 'Checklist'), count,
-    h('span', { class: 'tools' }, expandBtn,
+    h('span', { class: 'tools' }, acceptBtn, expandBtn,
       !parent && h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => copyText(checklistMd(entry), 'Copied checklist as Markdown') }, ic('copy'), 'Copy'),
       !parent && h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => { if (!confirm('Reset this checklist?')) return; resetChecklist(entry); } }, ic('reset'), 'Reset'))),
     bar, list);
-  const entry = { b, items, root, count, bar, sideRow: null, parent, paintExpand };
+  const entry = { b, items, root, count, bar, sideRow: null, parent, paintExpand, acceptBtn };
   function update() {
     const n = items.filter(x => x.cb.checked).length;
     count.textContent = `${n} of ${items.length}`;
@@ -1951,6 +1994,7 @@ function renderChecklist(b, parent) {
     root.classList.toggle('complete', items.length > 0 && n === items.length);
     if (entry.sideRow) entry.sideRow();
     paintSend();
+    paintAccept();
     syncDiffs();
     updateOverall();
   }
@@ -1962,6 +2006,29 @@ function resetChecklist(c) {
   c.items.forEach(x => x.reset());
   CHECKLISTS.filter(n => n.parent && n.parent.cid === c.b.id).forEach(resetChecklist);
   c.update();
+}
+// Accept recommended (the tray key, each checklist's header button, BP.acceptRecommended): an open
+// decision has a recommended option and no pick. Accepting picks the recommendation on each, as its
+// starred pill would; a pick the reader made is never touched. Undo clears the picks it made.
+function checklistScope(c) { return [c, ...CHECKLISTS.filter(n => n.parent && n.parent.cid === c.b.id).flatMap(checklistScope)]; }
+const openRecs = cls => cls.flatMap(c => c.items).filter(x => x.choices && !x.choice && x.choices.some(o => o.id === x.it.recommend));
+function acceptRecs(cls) {
+  const xs = openRecs(cls);
+  xs.forEach(x => x.setChoice(x.it.recommend));
+  if (xs.length) toast(`Accepted ${xs.length} recommendation${xs.length === 1 ? '' : 's'}`, { label: 'Undo', ms: 8000,
+    run: () => xs.forEach(x => { if (x.choice === x.it.recommend) x.setChoice(null); }) });
+  return xs.length;
+}
+function paintAccept() {
+  for (const c of CHECKLISTS) if (c.acceptBtn) {
+    const n = openRecs(checklistScope(c)).length;
+    c.acceptBtn.hidden = !n;
+    if (n) c.acceptBtn.replaceChildren(ic('checks'), `Accept recommended (${n})`);
+  }
+  if (!accKey) return;
+  const n = openRecs(CHECKLISTS).length;
+  accKey.disabled = !n; accKey._n.hidden = !n; accKey._n.textContent = String(n);
+  accKey.setAttribute('aria-label', n ? `Accept recommended: ${n} open decision${n === 1 ? '' : 's'}` : 'Accept recommended: no open decisions');
 }
 // The options of a choice item as a radio group of pills. The same item can have several groups
 // (its row, its comment card in a diff); every group repaints from the item's current choice.
@@ -2027,8 +2094,9 @@ function allChecklistsMd() {
 
 /* ---------- replies: comments and answers back to the agent ---------- */
 const MSG_KEY = `bp:${docId}:__message`;
-// A comment box bound to one item. Rows and diff cards each get one; they stay in sync.
-// Auto-height needs layout: a box inside a collapsed row measures 0, so fit waits until it is shown.
+// A comment box bound to one item: on its row (under the title and pills, open or not) and on its diff
+// comment cards; they stay in sync on Save. Auto-height needs layout: a box that is not shown (in a
+// collapsed parent item, another diff file) measures 0, so fit waits until it is.
 const noteFit = 'ResizeObserver' in window ? new ResizeObserver(es => es.forEach(e => e.target._fit && e.target._fit())) : null;
 function noteBox(x, compact) {
   const ta = h('textarea', { class: 'bp-note-ta', rows: 1, placeholder: compact ? 'Comment for the agent…' : 'Comment for the agent (sent with your answers)…',
@@ -2036,17 +2104,42 @@ function noteBox(x, compact) {
   const fit = () => {
     if (!ta.offsetWidth) return;   // hidden: keep the CSS min-height, refit when shown
     if (ta._w === ta.offsetWidth && ta._v === ta.value) return;   // ResizeObserver also fires on our own height change
-    ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight + 2, 240) + 'px';
+    ta.style.height = 'auto';   // one line while it fits (or is empty: the placeholder is cut short, it does not wrap)
+    ta.style.height = ta.value && ta.scrollHeight > ta.clientHeight ? Math.min(ta.scrollHeight + 2, 240) + 'px' : '';
     ta._w = ta.offsetWidth; ta._v = ta.value;
   };
   ta._fit = fit;
   if (noteFit) noteFit.observe(ta);
-  let t = 0;
-  const view = { el: h('div', { class: 'bp-note' + (compact ? ' compact' : '') }, ic('msg'), ta), paint: () => { if (document.activeElement !== ta && ta.value !== x.note) { ta.value = x.note; fit(); } } };
-  ta.addEventListener('input', () => { fit(); clearTimeout(t); t = setTimeout(() => x.setNote(ta.value, view), 250); });
-  ta.addEventListener('blur', () => { clearTimeout(t); if (ta.value !== x.note) x.setNote(ta.value, view); });
-  ta.addEventListener('keydown', e => e.stopPropagation());   // n/p and canvas keys must not fire while typing
+  // a draft until saved: typing shows Save and Cancel; blur keeps the draft. Saving updates the item
+  // (its comment icon, Send answers, the other boxes for it); Cancel puts the saved text back.
+  let draft = false, savedT = 0;
+  const saveBtn = h('button', { type: 'button', class: 'bp-btn primary', title: `Save (${MAC ? '⌘' : 'Ctrl'} + Enter)`, onclick: () => save() }, 'Save');
+  const cancelBtn = h('button', { type: 'button', class: 'bp-btn ghost', title: 'Cancel (Esc): back to the saved comment', onclick: () => cancel() }, 'Cancel');
+  const acts = h('span', { class: 'acts' }, cancelBtn, saveBtn);
+  const saved = h('span', { class: 'saved', role: 'status', hidden: true }, ic('tick'), 'Saved');
+  const ft = h('div', { class: 'ft' }, saved, acts);
+  const el = h('div', { class: 'bp-note' + (compact ? ' compact' : '') }, ic('msg'), h('div', { class: 'f' }, ta, ft));
+  const paintFt = () => {
+    if (draft && ta.value === x.note) draft = false;
+    el.classList.toggle('dirty', draft); acts.hidden = !draft; ft.hidden = acts.hidden && saved.hidden;
+  };
+  function save() {
+    x.setNote(ta.value, view);
+    draft = false; ta.value = x.note; fit();
+    saved.hidden = false; clearTimeout(savedT); savedT = setTimeout(() => { saved.hidden = true; paintFt(); }, 2000);
+    paintFt();
+  }
+  function cancel() { draft = false; ta.value = x.note; fit(); paintFt(); }
+  // another box for the item saved: show it, unless this one holds a draft
+  const view = { el, paint: () => { if (!draft && ta.value !== x.note) { ta.value = x.note; fit(); } paintFt(); } };
+  ta.addEventListener('input', () => { fit(); draft = true; saved.hidden = true; paintFt(); });
+  ta.addEventListener('keydown', e => {
+    e.stopPropagation();   // page keys (modes, n/p, canvas) must not fire while typing
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); if (draft) save(); }
+    else if (e.key === 'Escape') { e.preventDefault(); cancel(); }
+  });
   ta.value = x.note;
+  paintFt();
   requestAnimationFrame(fit);
   return view;
 }
@@ -2093,10 +2186,11 @@ function linkHome(href) {
   mark.href = href; mark.title = 'All docs'; mark.setAttribute('aria-label', 'bluedoc: all docs');
   if (!document.querySelector('.bd-home')) mark.after(h('a', { class: 'bd-home', href, title: 'All docs' }, ic('grid'), h('span', { class: 'l' }, 'All docs')));
 }
-// Send answers (pages with checklists) and Approve plan (plan pages) end the bottom tray: TRAY_END,
-// filled where the tray's keys are made, below. Plans have no Send answers; their picks go with Approve.
+// Accept recommended (docs with recommended decisions), then Send answers (pages with checklists) or
+// Approve plan (plan pages), end the bottom tray: TRAY_END, filled where the tray's keys are made, below.
+// Plans have no Send answers; their picks go with Approve.
 const TRAY_END = [];
-let sendBtn = null, sendDlg = null, approveDlg = null;
+let sendBtn = null, accKey = null, sendDlg = null, approveDlg = null;
 const PLAN_KEY = `bp:${docId}:__planstate`;
 function replyCounts() {
   const all = Object.values(ITEMS), dec = all.filter(x => x.choices);
@@ -3532,7 +3626,6 @@ function compareDiff(o, n) {
 }
 
 /* ---------- trays of keys and their tooltips (the annotation tray, the compare tray) ---------- */
-const MAC = /Mac|iP(hone|ad|od)/.test(navigator.platform || navigator.userAgent);
 // tooltips: HorizonUI Tooltip with Kbd chips; instant while the pointer moves from key to key.
 // Above the key, or below it when there is no room (the app bar).
 const tip = h('div', { class: 'bd-tip', role: 'tooltip', hidden: true });
@@ -3888,6 +3981,12 @@ async function doApprove() {
 // after a plan's Request changes, the header says so for this revision
 function changesSent(p) { if (IS_PLAN) { store.set(PLAN_KEY, JSON.stringify({ rev: p.rev, state: 'changes', at: p.at })); paintPlan(); } }
 if (!OLD && !BASE) {
+  if (Object.values(ITEMS).some(x => x.choices && x.choices.some(o => o.id === x.it.recommend))) {
+    const n = h('span', { class: 'n' });
+    accKey = tipped(keyBtn('txt acc', 'checks', 'Accept recommended', {}, () => acceptRecs(CHECKLISTS), h('span', { class: 't' }, 'Accept recommended'), n));
+    accKey._n = n; accKey._tip = 'Pick the starred option on every open decision';
+    TRAY_END.push(accKey); paintAccept();
+  }
   if (IS_PLAN) TRAY_END.push(approveKey);
   else if (CHECKLISTS.length) { sendBtn = tipped(keyBtn('txt send', 'send', 'Send answers', {}, () => openSend(), h('span', { class: 't' }, 'Send answers'))); TRAY_END.push(sendBtn); paintSend(); }
 }
@@ -4667,6 +4766,7 @@ const MARKUP = (() => {
         if (selA) select(null);
       }
     }
+    if (t && t.closest('.bp-note')) return;   // an item's comment field is for typing in every mode: no pins, no selection notes
     if (mode === 'select' && e.type === 'pointerup' && !(t && t.closest('.bd-ann-ui, .bd-sp'))) setTimeout(fromSelection, 0);
     if ((mode !== 'point' && mode !== 'select') || !inDoc(t)) return;
     if (mode === 'select') {
@@ -4708,6 +4808,9 @@ const MARKUP = (() => {
   cap.addEventListener('pointerdown', e => {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
     e.preventDefault();
+    // a press on an item's comment field goes to the field, not into a drawing
+    const under = document.elementsFromPoint(e.clientX, e.clientY).find(el => el !== cap && !cap.contains(el)), note = under && under.closest('.bp-note');
+    if (note) { const b = under.closest('button'); if (b) b.click(); else setTimeout(() => note.querySelector('textarea').focus({ preventScroll: true })); return; }   // after the press's own focus change
     const join = draft && draft.type === 'draw' && page && (e.timeStamp - lastUp < 1500 || !cmpTa.value.trim());
     if (!join) { endEdit(true); finishDraft(true); page = []; }
     cmp.hidden = true;   // out of the way while drawing
@@ -4870,7 +4973,7 @@ const MARKUP = (() => {
     onToggle: shown => { if (!shown) endEdit(true); schedule(true); paint(); } });
   root.classList.add('bd-tray-on');
   for (const ty of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click', 'dblclick']) addEventListener(ty, onCapture, true);
-  addEventListener('pointermove', e => { if (mode === 'point' && !(e.target.closest && e.target.closest('.bd-sp'))) showHover(targetAt(e.target)); }, { capture: true, passive: true });
+  addEventListener('pointermove', e => { if (mode === 'point' && !(e.target.closest && e.target.closest('.bd-sp'))) showHover(e.target.closest && e.target.closest('.bp-note') ? null : targetAt(e.target)); }, { capture: true, passive: true });
   root.addEventListener('mouseleave', () => { if (mode === 'point') showHover(null); });
   document.addEventListener('keydown', e => {
     if (e.defaultPrevented || e.isComposing || e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
@@ -4914,6 +5017,13 @@ window.BP = {
   planState,
   docType: DOC_TYPE,
   choose: (key, choice) => { const x = ITEMS[key]; if (!x || !x.setChoice) return false; x.setChoice(choice); return true; },
+  // picks the recommendation on every open decision (in one checklist and its nested ones, if given); returns how many
+  acceptRecommended: checklistId => {
+    if (OLD || BASE) return 0;
+    if (checklistId == null) return acceptRecs(CHECKLISTS);
+    const c = CHECKLISTS.find(c => c.b.id === checklistId);
+    return c ? acceptRecs(checklistScope(c)) : 0;
+  },
   setNote: (key, text) => { const x = ITEMS[key]; if (!x) return false; x.setNote(text || ''); return true; },
   openCode: (diffId, path, line) => openCode(diffId, path, line),
   openComment: (diffId, index) => { const d = DIFFS[diffId]; const c = d && d.order[index]; if (c) openComment(d, c, true); return !!c; },

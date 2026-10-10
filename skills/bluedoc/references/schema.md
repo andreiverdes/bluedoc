@@ -514,6 +514,7 @@ The built page exposes `window.BP`:
 | `BP.changesPayload()` | The change-request JSON that **Request changes → Send** posts (unsent annotations). |
 | `BP.annotate({type, key, note, quote?})` | Adds an annotation, as the toolbar would. `null` on `?rev=` / `?diff=`. |
 | `BP.setMode('view'|'point'|'select'|'draw')` | Switches the toolbar mode. |
+| `BP.acceptRecommended(checklistId?)` | Picks the recommended option on every open decision (in that checklist and its nested ones, or the whole doc); returns how many. |
 | `BP.sidebar({open, section})` | Opens/closes the right sidebar on `'comments'` or `'revisions'`; returns `{available, open, section, as}`. |
 | `BP.docType` | Property: the page's type, `'docs'`, `'review'`, `'plan'` or `'other'`. |
 | `BP.planState()` | `{type, state, rev, approvedRev}`. `state` is `'awaiting'`, `'changes'` or `'approved'` on plan pages, `null` elsewhere; `approvedRev` is the rev of the approval the page knows (from the server's ping or this browser), else `null`. |
