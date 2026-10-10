@@ -103,7 +103,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .bd-tldr { grid-area: tldr; }
 .bd-shell > main { grid-area: main; }
 .bp-side { grid-area: side; position: sticky; top: calc(var(--top-h) + 20px); align-self: start;
-  margin-top: 60px; max-height: calc(100vh - var(--top-h) - 80px - var(--tray-room, 0px)); overflow: auto; font-size: 13.5px; scrollbar-width: thin; }
+  margin-top: 60px; max-height: calc(100vh - var(--top-h) - 20px); padding-bottom: calc(16px + var(--tray-room, 0px)); overflow: auto; font-size: 13.5px; scrollbar-width: thin; }
 .bd-meta { font-size: 13px; }
 .bp-side-toc + .bd-meta { margin-top: 24px; }
 
@@ -854,8 +854,8 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
    in compare view the marked changes first, then every revision, newest first, then the Compare picker.
    JS sets data-rev: "rail" beside the column, "drawer" (opened from the Rev button) when it does not
    fit, "card" (a collapsible card under the TL;DR) at 900 px and below. */
-.bd-rvr { position: sticky; top: calc(var(--top-h) + 20px); align-self: start; margin-top: 60px; max-height: calc(100vh - var(--top-h) - 80px - var(--tray-room, 0px));
-  overflow: auto; overscroll-behavior: contain; padding: 2px 3px 6px; font-size: 13px; scrollbar-width: thin; border-radius: 12px; }
+.bd-rvr { position: sticky; top: calc(var(--top-h) + 20px); align-self: start; margin-top: 60px; max-height: calc(100vh - var(--top-h) - 20px);
+  overflow: auto; overscroll-behavior: contain; padding: 2px 3px calc(16px + var(--tray-room, 0px)); font-size: 13px; scrollbar-width: thin; border-radius: 12px; }
 .bd-rvr.flash { animation: bd-cs-flash 1.2s var(--ease); }
 .bd-rvr-sum { display: flex; flex-wrap: wrap; gap: 2px 6px; margin: -4px 0 8px 10px; font-size: 12px; line-height: 1.45; color: var(--fg-subtle); }
 .bd-rvr-sum b { font: 600 12px/1.45 var(--mono); color: var(--fg); }
@@ -876,6 +876,7 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 /* the Revisions rail and the Comments list scroll without a visible scrollbar (wheel, trackpad, keys still work) */
 .bd-rvr, .bd-cs-l, .bp-side { scrollbar-width: none; -ms-overflow-style: none; }
 .bd-rvr::-webkit-scrollbar, .bd-cs-l::-webkit-scrollbar, .bp-side::-webkit-scrollbar { display: none; width: 0; height: 0; }
+@media (min-width: 901px) { .bd-rvr, .bp-side { -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent); } :root[data-rev="drawer"] .bd-rvr, :root[data-layout="wide"] .bp-side { -webkit-mask-image: none; mask-image: none; } }
 .bd-rvr { overflow-x: hidden; }
 .bd-rvs { list-style: none; margin: 0; padding: 0; border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-1); overflow: hidden; }
 .bd-rv { min-width: 0; padding: 9px 10px; }
