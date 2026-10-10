@@ -1,6 +1,6 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "bluedoc",
-  "version": "3.3.2",
+  "version": "3.3.3",
   "description": "Self-contained HTML engineering docs: zoomable blueprint canvases with animated flows, persistent checklists, and a code browser that pins PR review findings to their lines."
 }
