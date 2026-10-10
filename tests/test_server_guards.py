@@ -4,16 +4,12 @@ Path traversal is 404, a foreign or empty Host is 403, a POST without X-Bluedoc 
 a preflight is 501, and GET /__bluedoc/wait without X-Bluedoc is 403 and leaves the reply for the agent."""
 from __future__ import annotations
 
-import http.client
 import json
 import shutil
-import subprocess
-import sys
-import time
 import unittest
 from urllib.parse import quote
 
-from _support import SCRIPTS, TempHome, free_port
+from _support import Server, TempHome
 
 
 class ServerGuards(unittest.TestCase):
@@ -26,46 +22,16 @@ class ServerGuards(unittest.TestCase):
         shutil.copy(self.docs / "acme-orders.bluedoc.json", self.secret)
         r = self.tmp.run("serve.py", "add", self.docs)
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.port = free_port()
-        self.host = f"127.0.0.1:{self.port}"
-        self.log = open(self.tmp.dir / "server.log", "w")
-        self.proc = subprocess.Popen([sys.executable, str(SCRIPTS / "serve.py"), "run", "--port", str(self.port)],
-                                     env=self.tmp.env, cwd=self.tmp.dir, stdout=self.log, stderr=subprocess.STDOUT,
-                                     stdin=subprocess.DEVNULL)
-        deadline = time.monotonic() + 10
-        while True:
-            try:
-                if self.req("GET", "/__bluedoc/ping", headers={"X-Bluedoc": "1"})[0] == 200:
-                    break
-            except OSError:
-                pass
-            if self.proc.poll() is not None or time.monotonic() > deadline:
-                self.fail(f"server did not start: {(self.tmp.dir / 'server.log').read_text()}")
-            time.sleep(0.05)
-        status, body = self.req("GET", f"/__bluedoc/url?doc={quote(str(self.doc))}", headers={"X-Bluedoc": "1"})
-        self.url = json.loads(body)["url"]
+        self.server = Server(self.tmp)
+        self.server.start()
+        self.port, self.host, self.req = self.server.port, self.server.host, self.server.req
+        self.url = self.server.url_for(self.doc)
         self.assertTrue(self.url and self.url.endswith("/acme-saved-carts-plan.bluedoc.json"), self.url)
         self.slug = self.url.split("/")[1]
 
     def tearDown(self) -> None:
-        self.proc.terminate()
-        try:
-            self.proc.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            self.proc.kill()
-            self.proc.wait()
-        self.log.close()
+        self.server.stop()
         self.tmp.cleanup()
-
-    def req(self, method: str, path: str, body: bytes | None = None, headers: dict | None = None) -> tuple[int, bytes]:
-        """One request, path sent as is (no normalisation); Host defaults to the server's own."""
-        c = http.client.HTTPConnection("127.0.0.1", self.port, timeout=10)
-        try:
-            c.request(method, path, body=body, headers={"Host": self.host, **(headers or {})})
-            r = c.getresponse()
-            return r.status, r.read()
-        finally:
-            c.close()
 
     def test_doc_renders(self) -> None:
         self.assertEqual(self.req("GET", self.url)[0], 200)
@@ -100,7 +66,8 @@ class ServerGuards(unittest.TestCase):
                 self.assertEqual(status, want)
         self.assertEqual(self.req("OPTIONS", "/__bluedoc/changes", headers={"Origin": "http://evil.com",
                                   "Access-Control-Request-Method": "POST", "Access-Control-Request-Headers": "x-bluedoc"})[0], 501)
-        self.assertFalse(self.doc.with_name("acme-saved-carts-plan.changes.json").exists(), "a refused POST wrote a reply")
+        wait = f"/__bluedoc/wait?doc={quote(str(self.doc))}&kind=any&timeout=0"
+        self.assertEqual(self.req("GET", wait, headers={"X-Bluedoc": "1"})[0], 204, "a refused POST stored a reply")
         status, _ = self.req("POST", "/__bluedoc/changes", self.changes(), {"Content-Type": "application/json", "X-Bluedoc": "1", "Origin": own})
         self.assertEqual(status, 200)
 

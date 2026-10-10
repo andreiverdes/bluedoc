@@ -438,11 +438,17 @@ function prepare(data) {
   }
   return out;
 }
-// reader progress, read from the same localStorage the doc pages write (same origin)
+// Reader progress: served with state.db, index.json carries each doc's tick and pick values (`state`),
+// the same in every browser, and this browser's unsent writes (the doc's `__outbox`) go on top.
+// Otherwise it comes from the localStorage the doc pages write (same origin).
 function progress(d) {
   let dec = 0, decided = 0, steps = 0, done = 0;
+  const pre = `bp:${d.id || 'doc'}:`, served = d.state && typeof d.state === 'object' ? d.state : null;
+  let box = {};
+  if (served) try { const x = JSON.parse(store.get(pre + '__outbox') || '{}'); if (x && typeof x === 'object') box = x; } catch {}
+  const value = k => !served ? store.get(pre + k) : k in box ? box[k] : served[k] ?? null;
   for (const [cl, id, isDec, author, choiceIds] of d.items || []) {
-    const s = store.get(`bp:${d.id || 'doc'}:${cl}:${id}`);
+    const s = value(`${cl}:${id}`);
     if (isDec) {
       dec++;
       let pick = author || '';
@@ -856,7 +862,7 @@ function App() {
   useEffect(() => {
     const onSys = () => setSysTheme(systemTheme()), onReduce = () => setReduce(reduceMQ.matches);
     const bump = () => setTick(t => t + 1);
-    // progress lives in this browser's storage: repaint when another tab changes it or this tab comes back
+    // progress (or its unsent part) lives in this browser's storage: repaint when another tab changes it or this tab comes back
     const onStorage = ev => { if (ev.key === THEME_KEY) setThemePick(storedTheme()); bump(); };
     darkMQ.addEventListener('change', onSys); reduceMQ.addEventListener('change', onReduce);
     addEventListener('storage', onStorage); addEventListener('pageshow', bump);

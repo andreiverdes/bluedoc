@@ -1031,10 +1031,11 @@ def prune_diff_cache(doc: dict, history: dict | None, doc_path: Path) -> list[st
 
 
 def build(doc: dict, template: str, history: dict | None = None, media_base: Path | None = None,
-          diff_path: Path | None = None, problems: list[str] | None = None) -> str:
+          diff_path: Path | None = None, problems: list[str] | None = None, state: dict | None = None) -> str:
     """The page. media_base (the doc's folder) makes it standalone: media files become data: URIs.
     diff_path (the doc's JSON file) fills its diff refs, in the doc and in earlier revisions; their
-    problems go into problems, or to stderr when it is None."""
+    problems go into problems, or to stderr when it is None. state is the reader state serve.py seeds the
+    page with ({version, state}); None (an -o file) leaves the page on localStorage."""
     title = (doc.get("title") or "bluedoc").replace("&", "&amp;").replace("<", "&lt;")
     if "__BLUEDOC_DOC__" not in template:
         raise SystemExit("template is missing the __BLUEDOC_DOC__ placeholder")
@@ -1054,9 +1055,10 @@ def build(doc: dict, template: str, history: dict | None = None, media_base: Pat
         hist = inline_media(hist, media_base, missing, cache)
         for src in sorted(set(missing)):
             print(f"WARN  media '{src}': file not found, left as a relative path (it won't show from file://)", file=sys.stderr)
-    return (template.replace("__BLUEDOC_TITLE__", title)
-            .replace("__BLUEDOC_HISTORY__", _script_json(hist) if hist else "null")
-            .replace("__BLUEDOC_DOC__", _script_json(doc)))
+    # one pass, so a placeholder's name inside a filled value (a doc's text, a reader's note) stays text
+    fill = {"__BLUEDOC_TITLE__": title, "__BLUEDOC_HISTORY__": _script_json(hist) if hist else "null",
+            "__BLUEDOC_STATE__": _script_json(state) if state is not None else "null", "__BLUEDOC_DOC__": _script_json(doc)}
+    return re.sub("|".join(fill), lambda m: fill[m.group(0)], template)
 
 
 class HistoryError(Exception):

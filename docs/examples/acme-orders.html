@@ -1349,6 +1349,7 @@ html.bd-resizing, html.bd-resizing * { cursor: col-resize !important; user-selec
 <div class="bp-toast" id="bp-toast" role="status"></div>
 <script type="application/json" id="bp-doc">{"id":"acme-orders-arch","title":"Acme order path: checkout to pick ticket","subtitle":"How one order travels from the Acme Shop checkout to a warehouse pick ticket, and how to run the fulfilment half on your laptop.","meta":{"org":"Acme Corp","kind":"Architecture","dwg":"ACME-ORD","rev":"1","date":"2026-03-12"},"state":[{"label":"path read from source","kind":"ok"},{"label":"local stack verified","kind":"ok"},{"label":"PayCo internals unverified","kind":"warn"}],"links":[{"label":"Payments outage runbook","href":"https://example.com/acme/runbooks/payments"},{"label":"Order event schema","href":"https://example.com/acme/schemas/order-placed"}],"tldr":"An order is written once, in one Postgres transaction, together with an `order.placed` row in the outbox. The outbox relay publishes that row to the `order-events` topic, and the fulfilment worker turns it into a pick ticket in the warehouse system. If a ticket is missing, the order row exists but the event never left the outbox: check the relay first.","sections":[{"id":"path","title":"The order path","lead":"Open a system to see its parts. Each level plays its own flow.","blocks":[{"type":"canvas","id":"orders","title":"Checkout → pick ticket","rootLabel":"Order path","height":560,"caption":"Ports `@left`, `@right` and `@bottom` inside a system mark where data enters or leaves it.","nodes":[{"id":"shop","label":"Acme Shop web","sub":"React · checkout","kind":"client","x":0,"y":0,"md":"The browser app. The checkout form builds an order draft and posts it with an idempotency key.","refs":["`web/src/checkout/CheckoutForm.tsx`"],"children":{"nodes":[{"id":"cart","label":"Cart page","sub":"CartPage.tsx","kind":"ui","col":0,"row":0},{"id":"checkout","label":"Checkout form","sub":"CheckoutForm.tsx","kind":"ui","col":1,"row":0},{"id":"client","label":"API client","sub":"ordersApi.ts","col":1,"row":1,"w":200,"md":"Adds the `Idempotency-Key` header, so a double click creates one order."}],"edges":[{"from":"cart","to":"checkout","label":"cart"},{"from":"checkout","to":"client","label":"order draft"},{"id":"req","from":"client","to":"@right","label":"POST /orders"},{"id":"resp","from":"@right","to":"client","label":"201 Created","bend":18}],"flows":[{"id":"click","label":"Click to order","steps":[{"edge":"cart->checkout","label":"The cart page hands its lines to the checkout form.","payload":"cart"},{"edge":"checkout->client","label":"The form builds an order draft.","payload":"draft"},{"edge":"req","label":"The API client posts the draft with an idempotency key.","payload":"POST"},{"edge":"resp","label":"The orders API answers 201 with the order id.","payload":"201"}]}]}},{"id":"api","label":"orders-api","sub":"Node · Fastify","x":340,"y":0,"w":300,"h":150,"md":"Validates, prices and charges the order, then writes it and its outbox row in one transaction.","refs":["`services/orders-api/src/routes/createOrder.ts:18-96`"],"children":{"nodes":[{"id":"auth","label":"auth hook","sub":"JWT check","col":0,"row":0},{"id":"validate","label":"validate","sub":"zod schema","col":1,"row":0},{"id":"price","label":"pricing","sub":"rules + tax","col":2,"row":0,"w":220,"h":120,"children":{"nodes":[{"id":"rules","label":"discount rules","sub":"tiers.ts","col":0,"row":0,"w":230},{"id":"tax","label":"tax table","sub":"tax.ts","col":0,"row":1,"w":230}],"edges":[{"from":"@left","to":"rules","label":"cart"},{"from":"rules","to":"tax","label":"subtotal"},{"from":"tax","to":"@bottom","label":"total"}],"flows":[{"id":"price-cart","label":"Price a cart","steps":[{"edge":"@left->rules","label":"The discount rules read the cart lines."},{"edge":"rules->tax","label":"The tax table adds VAT to the subtotal.","payload":"subtotal"},{"edge":"tax->@bottom","label":"Pricing returns the total.","payload":"total"}]}]}},{"id":"relay","label":"outbox relay","sub":"every 500 ms","kind":"process","col":2,"row":1},{"id":"write","label":"write order","sub":"one transaction","col":0,"row":1},{"id":"charge","label":"charge","sub":"PayCo client","col":1,"row":1}],"edges":[{"from":"@left","to":"auth","label":"POST /orders"},{"from":"auth","to":"validate"},{"from":"validate","to":"price","label":"cart"},{"from":"price","to":"charge","label":"total"},{"from":"charge","to":"@bottom","label":"authorize","kind":"control"},{"from":"charge","to":"write","label":"auth id"},{"from":"write","to":"@bottom","label":"INSERT"},{"from":"@bottom","to":"relay","label":"outbox rows","kind":"async"},{"from":"relay","to":"@right","label":"order.placed","kind":"async"}],"flows":[{"id":"create","label":"Create one order","steps":[{"edge":"@left->auth","label":"The auth hook checks the JWT.","payload":"JWT"},{"edge":"auth->validate","label":"The schema rejects malformed drafts with 400."},{"edge":"validate->price","label":"Pricing computes the total.","payload":"cart"},{"edge":"price->charge","label":"The charge step asks PayCo to authorize the total.","payload":"total"},{"edge":"charge->@bottom","label":"PayCo returns an authorization id.","payload":"auth"},{"edge":"charge->write","label":"The order and its outbox row commit together."},{"edge":"write->@bottom","label":"Postgres stores both rows.","payload":"INSERT"},{"edge":"@bottom->relay","label":"The relay picks up unsent outbox rows."},{"edge":"relay->@right","label":"The relay publishes `order.placed`.","payload":"event"}]}]}},{"id":"bus","label":"order-events","sub":"Kafka topic · 6 partitions","kind":"queue","x":640,"y":0,"md":"Keyed by order id, so events for one order stay in order.","refs":["`infra/kafka/topics.yaml:12`"]},{"id":"fulfil","label":"fulfilment-worker","sub":"Go · consumer group","x":950,"y":0,"md":"Reserves stock and creates the pick ticket. Out-of-stock orders go to the dead-letter topic.","refs":["`services/fulfilment/internal/consume.go:40-118`"],"children":{"nodes":[{"id":"consume","label":"consume","sub":"commit after ticket","col":0,"row":0},{"id":"reserve","label":"reserve stock","sub":"SELECT … FOR UPDATE","col":1,"row":0,"w":200},{"id":"ticket","label":"create pick ticket","sub":"WMS client","col":2,"row":0,"w":200},{"id":"dlq","label":"dead-letter","sub":"order-events.dlq","kind":"queue","col":0,"row":1}],"edges":[{"from":"@left","to":"consume","label":"order.placed","kind":"async"},{"from":"consume","to":"reserve","label":"order"},{"from":"reserve","to":"ticket","label":"reserved lines"},{"from":"ticket","to":"@bottom","label":"pick ticket"},{"from":"reserve","to":"dlq","label":"out of stock","kind":"async"}],"flows":[{"id":"pick","label":"Event to pick ticket","steps":[{"edge":"@left->consume","label":"The worker reads `order.placed`.","payload":"event"},{"edge":"consume->reserve","label":"It locks the stock rows for each line."},{"edge":"reserve->ticket","label":"It sends the reserved lines to the WMS client.","payload":"lines"},{"edge":"ticket->@bottom","label":"The WMS returns a pick ticket id.","payload":"ticket"}]},{"id":"oos","label":"Out of stock","steps":[{"edge":"@left->consume","label":"The worker reads `order.placed`."},{"edge":"consume->reserve","label":"A line has no stock left."},{"edge":"reserve->dlq","label":"The worker parks the event on the dead-letter topic.","payload":"event"}]}]}},{"id":"pay","label":"PayCo","sub":"card authorization","kind":"external","state":"unverified","x":0,"y":270,"md":"Third-party payment provider. We see its API, not its internals."},{"id":"db","label":"orders DB","sub":"Postgres 16 · orders, outbox","kind":"db","x":340,"y":270,"refs":["`services/orders-api/migrations/0007_outbox.sql`"]},{"id":"seeder","label":"seed-orders.py","sub":"local only","state":"local","x":640,"y":270,"md":"Publishes synthetic `order.placed` events to a local Kafka. Never points at production.","refs":["`scripts/seed-orders.py`"]},{"id":"wms","label":"Warehouse WMS","sub":"REST · pick tickets","kind":"external","x":950,"y":270}],"edges":[{"from":"shop","to":"api","label":"HTTPS"},{"from":"api","to":"pay","label":"authorize","kind":"control"},{"from":"api","to":"db","label":"INSERT"},{"from":"api","to":"bus","label":"order.placed","kind":"async"},{"from":"bus","to":"fulfil","kind":"async"},{"from":"seeder","to":"bus","label":"events (local)","kind":"async"},{"from":"fulfil","to":"wms","label":"pick ticket"}],"flows":[{"id":"prod","label":"Production path","steps":[{"edge":"shop->api","label":"The shop posts the order draft.","payload":"draft"},{"edge":"api->pay","label":"orders-api authorizes the card with PayCo.","payload":"total"},{"edge":"api->db","label":"orders-api writes the order and its outbox row.","payload":"INSERT"},{"edge":"api->bus","label":"The outbox relay publishes `order.placed`.","payload":"event"},{"edge":"bus->fulfil","label":"The fulfilment worker consumes the event."},{"edge":"fulfil->wms","label":"The worker creates the pick ticket.","payload":"ticket"}]},{"id":"local","label":"Local stack path","steps":[{"edge":"seeder->bus","label":"The seeder publishes synthetic events.","payload":"event"},{"edge":"bus->fulfil","label":"The fulfilment worker consumes them."},{"edge":"fulfil->wms","label":"The worker calls the WMS stub.","payload":"ticket"}]}]}]},{"id":"terms","title":"Terms","blocks":[{"type":"terms","items":[{"term":"order","md":"One row in `orders`, created by `POST /orders`. Its id is the Kafka message key."},{"term":"outbox","md":"The `outbox` table. A row is written in the same transaction as its order and deleted after the relay publishes it."},{"term":"pick ticket","md":"The warehouse's work item for one order. The WMS returns its id; we store it on the order."},{"term":"idempotency key","md":"A UUID the shop sends in `Idempotency-Key`. A repeat with the same key returns the first order."}]}]},{"id":"options","title":"Ways to test fulfilment without a real checkout","lead":"Use the seeder unless you are changing orders-api itself.","blocks":[{"type":"cards","items":[{"title":"Seeder","tag":"recommended","kind":"ok","md":"Publish synthetic events with `scripts/seed-orders.py`. Exercises the worker and the WMS stub; skips PayCo and Postgres."},{"title":"Full local stack","tag":"slower","kind":"info","md":"Run orders-api against the PayCo sandbox. Exercises the outbox relay too. Needs a sandbox key from the payments team."},{"title":"Replay from staging","tag":"read-only data","kind":"warn","md":"Copy events from the staging topic with `kcat`. Real shapes, but customer data: never paste them into tickets."}]}]},{"id":"run","title":"Run the local stack","lead":"Your ticks stay in this browser. **Copy progress** exports them as Markdown.","blocks":[{"type":"callout","kind":"caution","md":"Check that `KAFKA_BROKERS` points at `localhost:9092` before you seed. The seeder publishes to whatever broker the variable names."},{"type":"checklist","id":"local","title":"Local stack","items":[{"id":"doctor","text":"Check the tools.","code":"make doctor","verify":"Last line: `doctor: all checks passed`.","sub":"Docker 24+, Python 3.11 and make on PATH"},{"id":"up","text":"Start Postgres, Kafka and the WMS stub.","code":"docker compose up -d postgres kafka wms-stub","verify":"`docker compose ps` shows 3 services `running`.","refs":["orders/db","orders/bus","orders/wms"],"sub":"The worker needs all three before it starts","blocks":[{"type":"table","columns":["Service","Port","Ready when"],"rows":[["postgres","5432","`pg_isready` exits 0"],["kafka","9092","log line `started (kafka.server.KafkaServer)`"],["wms-stub","8085","`GET /health` returns 200"]]}]},{"id":"worker","text":"Start the fulfilment worker.","code":"make run-fulfilment","verify":"Log line `joined group fulfilment, 6 partitions`.","refs":["orders/fulfil/consume"]},{"id":"seed","text":"Seed 20 orders.","code":"python3 scripts/seed-orders.py --count 20","refs":["orders/seeder"],"sub":"Synthetic orders; never point the seeder at staging","blocks":[{"type":"checklist","id":"local-seed-checks","title":"Before you seed","items":[{"id":"brokers","text":"Check `KAFKA_BROKERS` is `localhost:9092`"},{"id":"topic","text":"Create the `order-events` topic","code":"make topics","verify":"`kcat -L` lists `order-events` with 6 partitions."}]}]},{"id":"tickets","text":"Watch the pick tickets arrive.","code":"make tail-tickets","verify":"20 lines `ticket created`, one per order id.","refs":["orders/fulfil/ticket"]},{"id":"down","text":"Stop everything.","code":"docker compose down -v","verify":"No containers; ports 5432 and 9092 are free.","sub":"Removes the volumes too, so the next run starts clean"}]}]},{"id":"trouble","title":"Troubleshooting","blocks":[{"type":"table","columns":["Symptom","Cause","Fix"],"rows":[["Order exists, no pick ticket","The outbox relay stopped; rows pile up in `outbox`.","Run `SELECT count(*) FROM outbox;`. If it grows, restart orders-api and read the relay log."],["Worker log: `rebalancing` every few seconds","A handler takes longer than `max.poll.interval.ms` (300 s).","Find the slow WMS call; the worker commits only after the ticket exists."],["Two tickets for one order","The WMS stub ignores the `Idempotency-Key` header.","Use `wms-stub` 2.3 or later."],["`seed-orders.py` exits with `NoBrokersAvailable`","Kafka is not up yet.","Wait for `docker compose ps` to show `running`, then seed again."]]}]},{"id":"issues","title":"Known issues","blocks":[{"type":"callout","kind":"risk","title":"Relay lag hides failures","md":"The relay retries a failing publish forever. A broken broker shows up as a growing `outbox` table, not as an error. Alert on `outbox` row count above 1,000."},{"type":"callout","kind":"decision","md":"We keep the outbox instead of publishing from the request handler. A crash between commit and publish would otherwise lose the event."}]}]}</script>
 <script type="application/json" id="bp-hist">null</script>
+<script type="application/json" id="bp-state">null</script>
 <script>
 (() => {
 'use strict';
@@ -1494,19 +1495,141 @@ function md(src) {
 }
 
 /* ---------- storage ---------- */
+const docId = DOC.id || 'doc';
+// Reader state is every `bp:<doc.id>:` key: ticks, picks, comments, plan state, last-seen rev. Served
+// by serve.py with a seed in bp-state ({version, state}), the server's state.db holds it; localStorage is
+// then the cache every read uses, plus `__outbox`, the writes the server has not acknowledged. With no
+// seed (a `-o` export, file://, a server without sqlite3) localStorage is the only store. Layout prefs
+// (`bluedoc:*`) always stay in this browser.
 const store = (() => {
   let ok = true; const mem = {};
   try { localStorage.setItem('bp:probe', '1'); localStorage.removeItem('bp:probe'); } catch { ok = false; }
   // An earlier revision reads the reader's ticks, picks and comments but never writes them: its item
   // ids and `done` values differ from the current ones, and storing would clobber current progress.
   const local = k => !ok || (OLD && k.startsWith('bp:'));
+  const get = k => local(k) && k in mem ? mem[k] : ok ? localStorage.getItem(k) : null;
+  const put = (k, v) => { if (local(k)) mem[k] = v; else if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); };
+  const keys = pre => {
+    const out = new Set(Object.keys(mem).filter(k => k.startsWith(pre)));
+    if (ok) for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.startsWith(pre)) out.add(k); }
+    return [...out].filter(k => get(k) != null);
+  };
+  const PFX = `bp:${docId}:`, OUTBOX = PFX + '__outbox', IMPORTED = PFX + '__imported';
+  const SEED = (() => {
+    try { const x = JSON.parse(document.getElementById('bp-state').textContent); return x && Number.isInteger(x.version) && x.state && typeof x.state === 'object' ? x : null; } catch { return null; }
+  })();
+  const served = !!SEED && /^https?:$/.test(location.protocol), sync = served && !OLD;
+  // what the state API accepts: keys without the prefix, string values up to 64 KB, at most 1 MB and
+  // 2,000 ops a request. A value over the limit stays in the outbox, so the seed never overwrites it.
+  const KEY_RE = /^[a-z0-9_][a-z0-9:_-]*$/, enc = new TextEncoder();
+  const bytes = s => enc.encode(s).length;
+  const short = k => k.slice(PFX.length);
+  const syncable = k => k.startsWith(PFX) && k !== OUTBOX && k !== IMPORTED && KEY_RE.test(short(k));
+  const fits = v => v === null || (typeof v === 'string' && bytes(v) <= 65536);
+  const readBox = () => { try { const x = JSON.parse(get(OUTBOX) || '{}'); return x && typeof x === 'object' && !Array.isArray(x) ? x : {}; } catch { return {}; } };
+  const writeBox = box => put(OUTBOX, Object.keys(box).length ? JSON.stringify(box) : null);
+  let version = SEED ? SEED.version : 0, imports = null, timer = 0, backoff = 0, chain = Promise.resolve();
+
+  // Load: the seed replaces this doc's cached keys, then unsent writes go back on top. A browser that
+  // has never synced keeps its own keys and sends the ones the server lacks once (`import`); the
+  // server keeps its value where both have one.
+  if (served) {
+    const mine = keys(PFX).filter(syncable), fresh = get(IMPORTED) == null;
+    // the keys only: values are read when sent, after the page has rewritten old formats (one `__ann` list)
+    if (fresh && sync) imports = mine.filter(k => !(short(k) in SEED.state));
+    if (!fresh) for (const k of mine) if (!(short(k) in SEED.state)) put(k, null);
+    for (const [k, v] of Object.entries(SEED.state)) if (typeof v === 'string' && KEY_RE.test(k)) put(PFX + k, v);
+    for (const [k, v] of Object.entries(readBox())) if (KEY_RE.test(k)) put(PFX + k, v);
+    if (imports && !imports.length) { imports = null; put(IMPORTED, '1'); }
+  }
+
+  // One PUT per chunk of ops. A 4xx is final (the server will refuse the same ops again): they are
+  // dropped and the values stay in this browser; a network error or 5xx keeps them for a retry.
+  async function send(ops, imp, keepalive) {
+    const r = await fetch('/__bluedoc/state', { method: 'PUT', keepalive, headers: { 'Content-Type': 'application/json', 'X-Bluedoc': '1' },
+      body: JSON.stringify({ path: location.pathname, import: imp, ops }) });
+    if (!r.ok) throw Object.assign(new Error(String(r.status)), { final: r.status >= 400 && r.status < 500 });
+    const j = await r.json().catch(() => ({}));
+    // a version one past ours is this write alone; anything further is another browser's, which the
+    // focus check then reports
+    if (Number.isInteger(j.version) && (j.version === version || j.version === version + 1)) version = j.version;
+  }
+  function chunks(ops) {
+    const out = []; let cur = [], size = 0;
+    for (const op of ops) {
+      const n = bytes(JSON.stringify(op)) + 1;
+      if (cur.length && (cur.length >= 1000 || size + n > 900000)) { out.push(cur); cur = []; size = 0; }
+      cur.push(op); size += n;
+    }
+    if (cur.length) out.push(cur);
+    return out;
+  }
+  async function doFlush() {
+    clearTimeout(timer);
+    try {
+      if (imports) {
+        const ops = imports.map(k => [short(k), get(k)]).filter(([, v]) => v != null && fits(v));
+        try { for (const c of chunks(ops)) await send(c, true); } catch (e) { if (!e.final) throw e; }
+        imports = null; put(IMPORTED, '1');
+      }
+      const ops = Object.entries(readBox()).filter(([k, v]) => KEY_RE.test(k) && fits(v));
+      for (const c of chunks(ops)) {
+        try { await send(c, false); } catch (e) { if (!e.final) throw e; }
+        // drop what the server took (or refused for good), unless the page wrote that key again meanwhile
+        const box = readBox();
+        for (const [k, v] of c) if (k in box && box[k] === v) delete box[k];
+        writeBox(box);
+      }
+      backoff = 0;
+    } catch {
+      // the server is unreachable: try again, 5 s doubling to a minute, and on the next focus or write
+      backoff = Math.min(60000, backoff ? backoff * 2 : 5000);
+      clearTimeout(timer); timer = setTimeout(flush, backoff);
+    }
+  }
+  function flush() { return (chain = chain.then(doFlush)); }
+  function queue(k, v) {
+    if (!sync) {
+      // written without the server: send this browser's keys again on the next synced load
+      if (!OLD && k.startsWith(PFX) && k !== IMPORTED) put(IMPORTED, null);
+      return;
+    }
+    if (!syncable(k)) return;
+    const box = readBox(); box[short(k)] = v; writeBox(box);
+    clearTimeout(timer); timer = setTimeout(flush, 300);
+  }
+
+  if (sync) {
+    if (imports || Object.keys(readBox()).length) flush();
+    // Other browsers: when the tab comes back, send what is pending, then ask whether anything changed
+    let checking = false;
+    const check = async () => {
+      if (checking || document.visibilityState !== 'visible') return;
+      checking = true;
+      try {
+        await flush();
+        const r = await fetch(`/__bluedoc/state?path=${encodeURIComponent(location.pathname)}&since=${version}`, { cache: 'no-store', headers: { 'X-Bluedoc': '1' } });
+        const j = r.status === 200 ? await r.json() : null;
+        if (j && Number.isInteger(j.version) && j.version !== version)
+          toast('Changed in another tab or browser', { label: 'Reload', ms: 20000, run: () => location.reload() });
+      } catch { /* the server is away: the next focus asks again */ }
+      finally { checking = false; }
+    };
+    document.addEventListener('visibilitychange', check);
+    addEventListener('focus', check);
+    addEventListener('online', flush);
+    // leaving within the debounce: send what fits in a keepalive request; the outbox keeps it either way
+    addEventListener('pagehide', () => {
+      const ops = Object.entries(readBox()).filter(([k, v]) => KEY_RE.test(k) && fits(v));
+      if (ops.length && bytes(JSON.stringify(ops)) < 60000) send(ops, false, true).catch(() => {});
+    });
+  }
   return {
-    get: k => local(k) && k in mem ? mem[k] : ok ? localStorage.getItem(k) : null,
-    set: (k, v) => { if (local(k)) mem[k] = v; else localStorage.setItem(k, v); },
-    del: k => { if (local(k)) mem[k] = null; else localStorage.removeItem(k); },
+    get, keys,
+    set: (k, v) => { v = String(v); if (get(k) === v) return; put(k, v); queue(k, v); },
+    del: k => { if (get(k) == null) return; put(k, null); queue(k, null); },
   };
 })();
-const docId = DOC.id || 'doc';
 
 // `act` adds an action button ({label, run, ms}); the toast then stays `ms` (default 8 s) so it can be pressed
 function toast(msg, act) {
@@ -4092,8 +4215,16 @@ paintPlan();
 // plan, whose decision picks go with Request changes or Approve plan (there is no Send answers there).
 const MARKUP = (() => {
   const KEY = `bp:${docId}:__ann`, MSG = `bp:${docId}:__chgmsg`, PEN_KEY = 'bluedoc:pen';
-  let list = [];
-  try { const x = JSON.parse(store.get(KEY) || '[]'); if (Array.isArray(x)) list = x.filter(a => a && a.id && a.target && a.target.key); } catch { list = []; }
+  // one key per annotation, `__ann:<id>`, so two browsers adding notes don't overwrite each other
+  const annKey = id => `${KEY}:${id}`;
+  const parse = s => { try { return JSON.parse(s); } catch { return null; } };
+  const valid = a => a && typeof a.id === 'string' && a.target && a.target.key;
+  let saved = store.keys(KEY + ':').map(k => k.slice(KEY.length + 1));
+  let list = saved.map(id => parse(store.get(annKey(id)))).filter((a, i) => valid(a) && a.id === saved[i]);
+  // earlier versions kept every annotation in one list under `__ann`: split it once
+  const legacy = store.get(KEY);
+  if (legacy != null) { const x = parse(legacy); if (Array.isArray(x)) for (const a of x) if (valid(a) && !list.some(b => b.id === a.id)) list.push(a); }
+  list.sort((a, b) => String(a.at || '').localeCompare(String(b.at || '')));
   // A comment is pending (saved, not sent), open (sent with Request changes) or resolved (the reader
   // marked it done). Notes stored before statuses existed carry `sent: <time>` instead.
   const STATUSES = ['pending', 'open', 'resolved'];
@@ -4101,7 +4232,13 @@ const MARKUP = (() => {
     if (!STATUSES.includes(a.status)) a.status = a.sent ? 'open' : 'pending';
     if (a.sent) { a.sentAt ||= typeof a.sent === 'string' ? a.sent : a.at; delete a.sent; }
   }
-  const save = () => { if (list.length) store.set(KEY, JSON.stringify(list)); else store.del(KEY); };
+  const save = () => {
+    for (const a of list) store.set(annKey(a.id), JSON.stringify(a));
+    const ids = new Set(list.map(a => a.id));
+    for (const id of saved) if (!ids.has(id)) store.del(annKey(id));
+    saved = [...ids];
+  };
+  if (legacy != null) { save(); store.del(KEY); }
   const newId = () => 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   // a general comment is about the whole doc: no mark on the page, written in the sidebar's footer
   const isGeneral = a => a.type === 'general';

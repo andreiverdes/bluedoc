@@ -2,13 +2,13 @@
 
 Lookup reference for every field and command. Grep for a heading, never read the file whole: `grep -n -A25 '^## Diff' references/schema.md`. How to lay out each doc type lives in `types/<type>.md`.
 
-Headings: `## Document` (incl. `hero`) · `## Contracts` · `## Section` · `## Blocks` (`### Inline markdown`) · `## Checklist` (`### Reader comments and replies`) · `## Diff` (`### Diff reference`, `### Embedded diff`, `### gitdiff.py`) · `## Plan blocks` (`### Steps`, `### Files`, `### Media`, `### Compare`) · `## Revisions` · `## Page layout` · `## Canvas` (`### Node`, `### Semantic zoom`, `### Edge`, `### Flow`) · `## Annotations` (the key grammar; `### Bottom tray`) · `## Plans` (its approval Markdown has `## Decisions` and `## Notes with the approval`) · `## build.py` (`### patch`) · `## serve.py` · `## Automation API`
+Headings: `## Document` (incl. `hero`) · `## Contracts` · `## Section` · `## Blocks` (`### Inline markdown`) · `## Checklist` (`### Reader comments and replies`) · `## Diff` (`### Diff reference`, `### Embedded diff`, `### gitdiff.py`) · `## Plan blocks` (`### Steps`, `### Files`, `### Media`, `### Compare`) · `## Revisions` · `## Page layout` · `## Canvas` (`### Node`, `### Semantic zoom`, `### Edge`, `### Flow`) · `## Annotations` (the key grammar; `### Bottom tray`) · `## Plans` (its approval Markdown has `## Decisions` and `## Notes with the approval`) · `## build.py` (`### patch`) · `## serve.py` (`### Reader state`) · `## Automation API`
 
 ## Document
 
 | Field | Type | Required | Meaning |
 |---|---|---|---|
-| `id` | id | yes | Namespace for checklist progress in `localStorage`. Never change it after people start ticking. |
+| `id` | id | yes | Namespace for the reader's ticks, picks and comments (`bp:<id>:…` keys). Never change it after people start ticking. |
 | `title` | string | yes | Page `<h1>` and browser title (`<title> · bluedoc`). |
 | `subtitle` | inline md | no | One sentence under the title. |
 | `meta` | object | no | `org`, `kind` (Architecture, Walkthrough, Runbook, Setup, Change, Plan, Review, or a free label), `dwg` (drawing number), `rev`, `date`, `type`. `org · kind · date` form the line above the title; `dwg` and `rev` appear under **Document** in the status rail and in the canvas title blocks. `rev` names the revision: the build keeps one history entry per `rev` (see Revisions). `type` (`docs`, `review`, `plan`, `other`) picks the doc's [contract](#contracts), its home-page group and card, and the page's tray; `build.py new` sets it. Unset, it is derived from `kind`, case-insensitive: starts with `plan` or is `implementation plan` → `plan`; contains `review` → `review`; names a docs kind (Architecture, Walkthrough, Runbook, Setup, Reference, Proposal, Change, Status, Guide, Design, Spec, RFC, ADR, …) → `docs`; anything else → `other`. A `plan` doc is a **plan page**: see [Plans](#plans). |
@@ -101,20 +101,20 @@ A decision item's title states the finding or question, not an action. **Copy pr
 
 A row with nothing to open has no chevron; clicking it ticks it. **Expand** in the checklist header opens or closes every row. Links to `#item-<checklist>-<item>` (from a canvas node, a table cell or a shared URL) open the row, and its parents, before scrolling to it. Print shows every row open.
 
-Ticks persist per browser. The sidebar shows per-checklist progress; **Copy progress** exports all checklists as Markdown task lists (`- [x] …`) for PRs or issues.
+Ticks persist across browsers and reloads: see [Reader state](#reader-state). The sidebar shows per-checklist progress; **Copy progress** exports all checklists as Markdown task lists (`- [x] …`) for PRs or issues.
 
 A reader's tick is stored only when it differs from the item's `done`, together with the `done` it overrode. If the author later changes `done`, the author wins and the old tick is dropped, so marking a step done in a new revision shows as done for readers who unticked it earlier. Picks follow the same rule against `choice`, and a pick is dropped when its option no longer exists.
 
 ### Reader comments and replies
 
-Every item has a comment box at the bottom of its open body (and on its diff card); the two stay in sync. A row with a comment shows a speech-bubble icon. Comments are stored per browser under `bp:<doc.id>:<checklist>:<item>:note`; **Reset** clears ticks and picks, not comments. The export quotes each comment under its item:
+Every item has a comment box at the bottom of its open body (and on its diff card); the two stay in sync. A row with a comment shows a speech-bubble icon. Comments are stored under `bp:<doc.id>:<checklist>:<item>:note`; **Reset** clears ticks and picks, not comments. The export quotes each comment under its item:
 
 ```md
 - [x] `tierFor` gives no tier at exactly 10 or 50 units → **Ticket** (recommended: Fix in PR)
   > Ship it with the test first.
 ```
 
-**Send answers** (the last key of the bottom tray, on pages with a checklist; plan pages don't have it) opens a dialog: a count of decisions, ticks and comments, an overall message (stored under `bp:<doc.id>:__message`, printed after the page title in the export), a Markdown preview, **Copy**, and **Send**. The key is neutral until the reader picks, ticks or comments on something, then turns green. Send appears only when the page is served by `scripts/serve.py` (the page probes `GET /__bluedoc/ping?path=…`); it posts to `/__bluedoc/reply`, and the server writes `<name>.reply.md` and `<name>.reply.json` next to the doc's JSON and queues it for `serve.py wait`. The JSON:
+**Send answers** (the last key of the bottom tray, on pages with a checklist; plan pages don't have it) opens a dialog: a count of decisions, ticks and comments, an overall message (stored under `bp:<doc.id>:__message`, printed after the page title in the export), a Markdown preview, **Copy**, and **Send**. The key is neutral until the reader picks, ticks or comments on something, then turns green. Send appears only when the page is served by `scripts/serve.py` (the page probes `GET /__bluedoc/ping?path=…`); it posts to `/__bluedoc/reply`, and the server stores it in `state.db` and queues it for `serve.py wait`. The JSON:
 
 ```json
 { "kind": "answers", "doc": "<doc.id>", "rev": "<meta.rev>", "title": "…", "path": "/<root>/<path>.bluedoc.json", "at": "<ISO time>", "message": "…",
@@ -354,7 +354,7 @@ Each scope (root and every `children`) has its own flows. A token travels each s
 
 ## Annotations
 
-The tray of keys at the bottom of the current revision has four modes: **View** (`V`, default), **Point** (`C`: pin a note on the element under the cursor), **Select** (`T`: note on a selected passage), **Draw** (`D`: freehand drawing with a note). `Esc` returns to View. A new note is written in a small composer next to its mark; once saved it becomes a card in the **Comments** sidebar on the right (open by default and docked beside the content on wide screens, a drawer or bottom sheet on narrow ones; the sidebar button in the app bar or `]` shows and hides it). Comments are **Pending** (saved, not sent), **Open** (sent with Request changes) or **Resolved** (marked by the reader); the sidebar filters Pending · Open · Resolved · All. They are stored per browser (`bp:<doc.id>:__ann`). The sidebar footer has a **General comment** field for notes about the whole doc (`type: "general"`, `target.key: "doc"`, no page mark); they follow the same states. **Request changes · N** in the bottom tray sends the pending ones, through a dialog with a preview, **Copy** and **Send**; `message` repeats the general notes joined with blank lines, and the Markdown lists them first under `## General`. Send posts to `/__bluedoc/changes`; the server writes `<name>.changes.md` / `.json` next to the doc and queues it for `serve.py wait`. Sent notes stay dimmed until the reader clears them. The toolbar is absent on `?rev=` and `?diff=`.
+The tray of keys at the bottom of the current revision has four modes: **View** (`V`, default), **Point** (`C`: pin a note on the element under the cursor), **Select** (`T`: note on a selected passage), **Draw** (`D`: freehand drawing with a note). `Esc` returns to View. A new note is written in a small composer next to its mark; once saved it becomes a card in the **Comments** sidebar on the right (open by default and docked beside the content on wide screens, a drawer or bottom sheet on narrow ones; the sidebar button in the app bar or `]` shows and hides it). Comments are **Pending** (saved, not sent), **Open** (sent with Request changes) or **Resolved** (marked by the reader); the sidebar filters Pending · Open · Resolved · All. Each is stored under its own key, `bp:<doc.id>:__ann:<id>`, so two browsers adding notes don't overwrite each other. The sidebar footer has a **General comment** field for notes about the whole doc (`type: "general"`, `target.key: "doc"`, no page mark); they follow the same states. **Request changes · N** in the bottom tray sends the pending ones, through a dialog with a preview, **Copy** and **Send**; `message` repeats the general notes joined with blank lines, and the Markdown lists them first under `## General`. Send posts to `/__bluedoc/changes`; the server stores it in `state.db` and queues it for `serve.py wait`. Sent notes stay dimmed until the reader clears them. The toolbar is absent on `?rev=` and `?diff=`.
 
 ```json
 { "kind": "changes", "doc": "<doc.id>", "rev": "B", "title": "…", "path": "/<root>/<path>.bluedoc.json", "at": "<ISO time>", "message": "…",
@@ -406,7 +406,7 @@ A status chip sits next to the eyebrow:
 | Chip | When |
 |---|---|
 | **Plan · Awaiting approval** (amber) | No approval for the current `meta.rev`. |
-| **Changes requested** (blue) | The reader sent Request changes on the current `meta.rev`. Stored in the browser under `bp:<doc.id>:__planstate` as `{rev, state, at}`. |
+| **Changes requested** (blue) | The reader sent Request changes on the current `meta.rev`. Stored under `bp:<doc.id>:__planstate` as `{rev, state, at}`. |
 | **Approved · rev X** (green) | The saved approval is for the current `meta.rev`. |
 
 **Approve plan** opens a dialog titled "Approve this plan (rev X)": an optional note, a summary ("N pending comments go with it as notes", and "M open questions have no pick; the agent will use its recommendation" when some decision items are unpicked), a preview of the decisions, **Copy**, and a green **Approve**. Approve posts `POST /__bluedoc/approve` with the header `X-Bluedoc: 1`:
@@ -440,11 +440,11 @@ A status chip sits next to the eyebrow:
 
 A pick carries `(recommended: …)` only when it differs from the recommendation; an item with no `recommend` and no pick reads `(no pick)`. Plain items the reader commented on are listed too. General comments come first in the notes; `> <excerpt>` is left out when there is none, and `(rev <rev>)` when the doc has no `meta.rev`.
 
-The server writes `<name>.approval.md` and `<name>.approval.json` next to the doc (overwriting the last ones; the JSON gains `docHash`, the sha256 of the doc's canonical JSON), queues the message with kind `approval` for `serve.py wait`, and answers `{ok, saved}`. The key then reads **Approved · rev X** with a check, disabled. A new `meta.rev`, or any edit of the doc's JSON in place, resets it: the plan awaits approval again.
+The server stores the approval in `state.db` with `docHash`, the sha256 of the doc's canonical JSON, queues it with kind `approval` for `serve.py wait`, and answers `{ok, id}`. The key then reads **Approved · rev X** with a check, disabled. A new `meta.rev`, or any edit of the doc's JSON in place, resets it: the plan awaits approval again.
 
 - **Request changes** on a plan page also carries `answers` (the decision picks) when there are any, and its Markdown ends with the same `## Decisions` section. Plan pages have no Send answers.
-- `GET /__bluedoc/ping?path=<doc URL path>` returns `{bluedoc, home, version, code, to, approval}`. `version` is the plugin's, `code` a hash of the server, build and template code; `serve.py open` restarts a server whose `version` or `code` differs and prints one line saying so. `approval` is the doc's saved approval as `{rev, at}` while the doc's JSON still matches its `docHash`, else `null`. The page counts the plan approved only when `approval.rev === meta.rev`.
-- `serve.py wait DOC --kind answers|changes|approval|any` (default `any`) returns the oldest queued message of that kind. An approval prints `--- bluedoc approval (…json) ---`, the Markdown, then `--- end ---`.
+- `GET /__bluedoc/ping?path=<doc URL path>` returns `{bluedoc, home, version, code, to, approval}`. `version` is the plugin's, `code` a hash of the server, build and template code; `serve.py open` restarts a server whose `version` or `code` differs and prints one line saying so. `approval` is the doc's newest approval as `{rev, at}` while the doc's JSON still matches its `docHash`, else `null`. The page counts the plan approved only when `approval.rev === meta.rev`.
+- `serve.py wait DOC --kind answers|changes|approval|any` (default `any`) returns the oldest queued message of that kind. An approval prints `--- bluedoc approval (reply <id>, rev <rev>, <time>) ---`, the Markdown, then `--- end ---`.
 
 ## build.py
 
@@ -486,15 +486,26 @@ build.py patch doc.json block:risks/0 --append '["Cache stampede", "Low", "High"
 
 ## serve.py
 
-`python3 <skill>/scripts/serve.py …`. One server per user on `127.0.0.1` (port 8740, env `BLUEDOC_PORT`); state in `~/.bluedoc` (env `BLUEDOC_HOME`): `roots.json`, `server.json`, and `inbox.json`, which records the replies `wait` delivered so a restarted server queues the rest again. `GET /__bluedoc/wait` requires the header `X-Bluedoc: 1` (`serve.py wait` sends it). HTML pages carry a Content-Security-Policy (hashes of their inline scripts, `frame-ancestors 'none'`) and `X-Frame-Options: DENY`.
+`python3 <skill>/scripts/serve.py …`. One server per user on `127.0.0.1` (port 8740, env `BLUEDOC_PORT`); state in `~/.bluedoc` (env `BLUEDOC_HOME`): `roots.json`, `server.json`, and `state.db` (see [Reader state](#reader-state)). `GET /__bluedoc/wait` requires the header `X-Bluedoc: 1` (`serve.py wait` sends it). HTML pages carry a Content-Security-Policy (hashes of their inline scripts, `frame-ancestors 'none'`) and `X-Frame-Options: DENY`.
 
 | Command | Does |
 |---|---|
 | `open <doc> [--to NAME] [--root DIR] [--browser]` | Starts the server if needed, registers the topmost ancestor folder named `docs` (else the doc's folder, or `--root`) on the home page, prints the doc's URL. `--to` names who reads the replies. |
-| `wait <doc> [--kind answers\|changes\|approval\|any] [--timeout SEC]` | Blocks until the reader sends that kind (default `any`). Prints `--- bluedoc answers (…json) ---`, `--- bluedoc change request (…json) ---` or `--- bluedoc approval (…json) ---`, the Markdown, `--- end ---`; exits 0, or 3 on timeout (`0` waits forever). Replies sent while nobody waits are queued; each `wait` returns the oldest unread one. |
+| `wait <doc> [--kind answers\|changes\|approval\|any] [--timeout SEC]` | Blocks until the reader sends that kind (default `any`). Prints `--- bluedoc answers (reply <id>, rev <rev>, <time>) ---` (or `change request`, `approval`), the Markdown, `--- end ---`; exits 0, or 3 on timeout (`0` waits forever). Replies sent while nobody waits are queued, across restarts; each `wait` returns the oldest unread one. |
+| `reply <id> \| <doc> [--kind K] [--json]` | Prints a stored reply as `wait` did: by the id `wait` printed, or the doc's newest (of kind `K`). `--json` prints the JSON the page posted. Exits 1 when there is none. |
 | `start`, `stop`, `status`, `add DIR`, `roots`, `run [--port N]` | Manage the background server and the home page's folders. |
 
-Each render validates the doc (errors show as a page), shows its rev as the latest without writing the history (only `build.py` records), and expands diff references. Replies are saved next to the doc, overwritten each time: `<name>.reply.md/.json` (answers), `<name>.changes.md/.json`, `<name>.approval.md/.json`. They are the reader's messages: don't commit them.
+Each render validates the doc (errors show as a page), shows its rev as the latest without writing the history (only `build.py` records), expands diff references, and puts the doc's reader state in the page.
+
+### Reader state
+
+The reader's ticks, picks, item comments, annotations with their statuses, the general comment, the Send answers message, the plan state and the last-seen rev live in `~/.bluedoc/state.db` (SQLite, mode 0600), so clearing browsing data or opening another browser loses nothing. The page keeps a copy in `localStorage` and writes through to the server; unsent writes wait in `bp:<doc.id>:__outbox` until the server answers. A standalone `-o` file or a page without a server uses `localStorage` alone. Theme, content width, the Comments panel and its filter, and the pen colour (`bluedoc:*`) stay in each browser. Replies are rows in the same file, every one kept. A doc's state follows its path; a doc moved to a new path keeps it when exactly one stored path with the same `id` no longer exists. The first start with a new `state.db` imports the `<name>.reply/.changes/.approval` files and `inbox.json` of earlier versions and leaves them in place. Copying `state.db` with the server stopped is a full backup.
+
+Keys are the page's `bp:<doc.id>:` keys without that prefix: `<checklist>:<item>`, `<checklist>:<item>:note`, `__ann:<id>`, `__message`, `__planstate`, `__seen`. Both routes need `X-Bluedoc: 1`, the server's own `Host`, and no foreign `Origin`, else 403; `path` must be a doc under a registered folder, else 404.
+
+- `GET /__bluedoc/state?path=<doc URL path>[&since=<n>]` returns `{version, state: {key: value}}`, or 204 when `n` is the current version. The version rises by one with each PUT that changes a row.
+- `PUT /__bluedoc/state` with `{path, import, ops: [[key, value], …]}` applies the ops in one transaction and returns `{ok, version}`. A `null` value deletes the key. `import: true` (each browser's one-time migration of its older `localStorage`) adds only keys the server lacks and drops item keys the doc doesn't have. Limits: 1 MB body (413), 2,000 ops, keys matching `^[a-z0-9_][a-z0-9:_-]*$`, string values up to 64 KB (400).
+- A Python without `sqlite3`: the server prints one warning, pages carry no state, the state routes and reply POSTs answer 503, and Copy still works.
 
 ## Automation API
 
