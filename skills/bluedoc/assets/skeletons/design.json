@@ -1,0 +1,70 @@
+{
+  "id": "design-skeleton",
+  "title": "<<Product: the screens this design shows>>",
+  "subtitle": "<<One sentence: what the screens are for and who uses them.>>",
+  "meta": { "org": "<<Org>>", "kind": "Design", "type": "design", "rev": "1", "date": "<<YYYY-MM-DD>>" },
+  "state": [
+    { "label": "wireframes: hi-fi after your picks", "kind": "warn" }
+  ],
+  "tldr": "<<What the screens show, on which devices, and which picks the reader makes.>>",
+  "sections": [
+    {
+      "id": "brief",
+      "title": "Brief",
+      "lead": "<<The job these screens do, in one line.>>",
+      "blocks": [
+        { "type": "text", "md": "<<Who uses it, on which devices, and what each screen must let them do.>>" },
+        {
+          "type": "checklist",
+          "id": "brief",
+          "title": "Picks",
+          "numbered": false,
+          "items": [
+            {
+              "id": "framework",
+              "text": "Which framework do the screens use?",
+              "sub": "Recommend <<the project's own framework, else the default for the target>>: <<why>>.",
+              "recommend": "plain",
+              "choices": [
+                { "id": "plain", "label": "Plain kit" },
+                { "id": "horizon", "label": "HorizonUI" }
+              ],
+              "detail": "<<Each option's look and cost; for a framework not on disk, the serve.py add-framework command to run.>>"
+            },
+            {
+              "id": "theme",
+              "text": "Which theme?",
+              "sub": "Recommend <<theme>>: <<why>>.",
+              "recommend": "light",
+              "choices": [
+                { "id": "light", "label": "Light" },
+                { "id": "dark", "label": "Dark" }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "screens",
+      "title": "Screens",
+      "lead": "<<N screens on N devices, and what this revision changed.>>",
+      "blocks": [
+        {
+          "type": "board",
+          "id": "main",
+          "targets": ["mobile"],
+          "framework": "plain",
+          "themes": [
+            { "id": "light", "label": "Light", "tokens": { "accent": "#4f46e5", "bg": "#f8fafc", "surface": "#ffffff", "fg": "#0f172a", "muted": "#64748b", "border": "#e2e8f0" } },
+            { "id": "dark", "label": "Dark", "tokens": { "accent": "#818cf8", "bg": "#0b1020", "surface": "#151b2e", "fg": "#e2e8f0", "muted": "#94a3b8", "border": "#27304a" } }
+          ],
+          "motion": { "fast": "120ms", "base": "200ms", "slow": "320ms", "ease": "cubic-bezier(.2,0,0,1)" },
+          "artboards": [
+            { "id": "mobile", "title": "<<Mobile screen: what it shows>>", "device": "phone", "fidelity": "wireframe" }
+          ]
+        }
+      ]
+    }
+  ]
+}

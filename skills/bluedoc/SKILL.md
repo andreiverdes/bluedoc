@@ -1,6 +1,6 @@
 ---
 name: bluedoc
-description: Generate self-contained HTML engineering docs (architecture pages, walkthroughs, runbooks, setup guides, change proposals, implementation plans, PR review findings) with zoomable blueprint canvases that open into each system's inner architecture and play animated data/control flows, checklists that persist as task trackers, plans the reader approves or sends back from the page, and a code browser that pins review findings to the lines they are about. Use when asked for an HTML doc, architecture page, system walkthrough, runbook, onboarding guide, a plan, an implementation plan, a design doc, "plan mode", "make a plan", "propose a plan", "peer review results", "review findings", "review comments in a bluedoc", "open threads", or "a bluedoc".
+description: Generate self-contained HTML engineering docs (architecture pages, walkthroughs, runbooks, setup guides, change proposals, implementation plans, PR review findings, UI mockups) with zoomable blueprint canvases that open into each system's inner architecture and play animated data/control flows, checklists that persist as task trackers, plans and designs the reader approves or sends back from the page, a board of sandboxed HTML screens for watch, phone, desktop and web, and a code browser that pins review findings to the lines they are about. Use when asked for an HTML doc, architecture page, system walkthrough, runbook, onboarding guide, a plan, an implementation plan, a design doc, UI mockups, wireframes, screen designs, "plan mode", "make a plan", "propose a plan", "peer review results", "review findings", "review comments in a bluedoc", "open threads", or "a bluedoc".
 ---
 
 # bluedoc
@@ -10,7 +10,7 @@ You write one `*.bluedoc.json`; the local server renders it as a page (blueprint
 ## Workflow
 
 1. **Gather facts from the source.** Read the code, configs and runs the doc describes. Every node, step and finding maps to a file, symbol, queue or command; keep `path:line` anchors for `refs`. Mark what you did not observe `unverified`.
-2. **Scaffold:** `python3 <skill>/scripts/build.py new <type> docs/<topic>/<name>.bluedoc.json --title "…" [--kind Runbook]`. Plans go in `docs/plans/<topic>.bluedoc.json`; a codebase review by area, not by PR, adds `--shape area`. Then read the type's guide (table below), once.
+2. **Scaffold:** `python3 <skill>/scripts/build.py new <type> docs/<topic>/<name>.bluedoc.json --title "…" [--kind Runbook]`. Plans go in `docs/plans/<topic>.bluedoc.json`; a codebase review by area, not by PR, adds `--shape area`; a design adds `--target watch,mobile,desktop,web --framework …`. Then read the type's guide (table below), once.
 3. **Fill every `<<…>>`**; add or drop blocks as the guide says. Images and videos go next to the JSON (`media/…`), referenced by relative path.
 4. **Validate:** `python3 <skill>/scripts/build.py <doc>`. Fix every `ERROR`; fix every `WARN` unless it is a false positive you can name. This records the revision. A passing build is the whole verification: no browser check.
 5. **Open:** `python3 <skill>/scripts/serve.py open <doc> --to <your name>` starts the server if needed and prints the URL with a one-time `?key=` token; later edits show on reload. Give the reader that exact link (it lets their browser save) and what stays unverified. A page that says "This browser can't save yet": run `serve.py unlock` and send its link.
@@ -18,7 +18,8 @@ You write one `*.bluedoc.json`; the local server renders it as a page (blueprint
 
 | Type | Guide | When |
 |---|---|---|
-| `plan` | `types/plan.md` | Anything you'd hand over before implementing: plan mode, "make/propose a plan", a design doc. |
+| `plan` | `types/plan.md` | Anything you'd hand over before implementing: plan mode, "make/propose a plan", a technical design doc. |
+| `design` | `types/design.md` | UI mockups: screens for watch, phone, tablet, desktop or web, as HTML on a board. |
 | `review` | `types/review.md` | Review results (peer, agent, open PR threads), always, without being asked. |
 | `docs` | `types/docs.md` | Architecture, walkthrough, runbook, setup guide, change proposal. |
 | `other` | `types/other.md` | Anything else: status page, report, inventory. |
@@ -26,8 +27,8 @@ You write one `*.bluedoc.json`; the local server renders it as a page (blueprint
 ## Replies
 
 - **Answers** (picks, ticks, comments): act on each pick; no pick means undecided, so ask. An item comment is an instruction about that item and can override its pick.
-- **Change requests**: each annotation names a `key`; pass it to `patch` as is. The annotator writes `doc` (general notes: apply across the doc), `header`, `tldr`, `status`, `section:`, `heading:`, `lead:`, `block:`, `item:`, `row:`, `card:`, `para:`, `step:`, `file:`, `media:`, `compare:`, `node:`, `comment:` and `line:` keys; their grammar is the table under `## Annotations` in `references/schema.md`. A `line:` key patches the review comment covering that line; with none, change the code or patch the finding. One you can't or shouldn't do: say so in `changes` or ask, never skip it silently.
-- **Approval** (plans): implement exactly the approved rev, as `types/plan.md` says.
+- **Change requests**: each annotation names a `key`; pass it to `patch` as is. The annotator writes `doc` (general notes: apply across the doc), `header`, `tldr`, `status`, `section:`, `heading:`, `lead:`, `block:`, `item:`, `row:`, `card:`, `para:`, `step:`, `file:`, `media:`, `compare:`, `node:`, `comment:` and `line:` keys, and on design pages `artboard:`, `el:` and `frame:`; their grammar is the table under `## Annotations` in `references/schema.md`. A `line:` key patches the review comment covering that line; with none, change the code or patch the finding. An `el:` key: `patch` prints the screen file and selector; edit there. One you can't or shouldn't do: say so in `changes` or ask, never skip it silently.
+- **Approval** (plans, designs): implement exactly the approved rev, as `types/plan.md` and `types/design.md` say.
 - **Revise** per target: `build.py patch <doc> <key> --set field=value --change "what changed and why"` (`--json`, `--append`, `--delete` for more). It validates, bumps `meta.rev`, replaces `changes`, records history and prints the `?diff=` link to send. Several patches for one reply: bump on the first, `--no-bump` on the rest. Once you have sent the reader a rev's URL, never edit it in place. Hand edits: bump `meta.rev` and rewrite `changes` (1–4 lines) yourself, then run `build.py <doc>`: only the build records the revision.
 - Record the reader's picks as `choice` and finished, verified steps as `done: true`. Send the `?diff=` link, then `wait` again.
 - Commit `<name>.bluedoc.history.json` with the JSON.
@@ -49,6 +50,6 @@ The linter warns on filler, vague words, sentences over 32 words, titles over 90
 
 ## Never
 
-- Read or write HTML, `assets/` (template, home page) or `examples/`. `build.py <doc> -o out.html` writes a file only when someone needs one to send.
+- Read or write HTML, `assets/` (template, home page, kits) or `examples/`; a design's own screen files (`<name>.design/*.html`) are the one exception. `build.py <doc> -o out.html` writes a file only when someone needs one to send.
 - Read `references/schema.md` whole: grep it for a heading, e.g. `grep -n -A25 '^## Diff' <skill>/references/schema.md`. Its first lines list the headings.
 - Rename ids across revisions: they key the reader's ticks and the revision diff.

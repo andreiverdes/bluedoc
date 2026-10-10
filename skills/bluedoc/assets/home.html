@@ -17,7 +17,7 @@
   --bp-navy-0: #04101f; --bp-navy-1: #071a33; --bp-navy-2: #0b2a4f; --bp-cyan: #5fd4ff; --bp-ice: #d6e9ff; --bp-dim: #6f93bd;
   --bp-amber: #ffc46b; --bp-green: #6fe3a1; --bp-red: #ff7a85; --bp-violet: #b9a2ff;
   --bd-folder: oklch(70% 0.14 248); --bd-folder-back: oklch(56% 0.16 252);
-  --bd-t-docs: oklch(64% 0.16 252); --bd-t-review: oklch(68% 0.13 172); --bd-t-plan: oklch(68% 0.15 300); --bd-t-other: oklch(66% 0.035 260);
+  --bd-t-docs: oklch(64% 0.16 252); --bd-t-review: oklch(68% 0.13 172); --bd-t-plan: oklch(68% 0.15 300); --bd-t-design: oklch(70% 0.15 20); --bd-t-other: oklch(66% 0.035 260);
   --bd-f-blocker: var(--color-hz-danger); --bd-f-major: var(--color-hz-warning); --bd-f-minor: var(--color-hz-info); --bd-f-nit: var(--color-hz-fg-subtle);
   --bd-top-h: 56px;
 }
@@ -161,8 +161,8 @@ body { font-family: var(--font-hz-sans, Inter, system-ui, sans-serif); -webkit-f
 .bd-stack { display: flex; height: 10px; gap: 3px; margin-top: 14px; border-radius: 6px; overflow: hidden; }
 .bd-stack i { display: block; min-width: 4px; }
 .bd-dot { display: inline-block; flex: none; width: 8px; height: 8px; border-radius: 50%; }
-.t-docs { --t: var(--bd-t-docs); } .t-review { --t: var(--bd-t-review); } .t-plan { --t: var(--bd-t-plan); } .t-other { --t: var(--bd-t-other); }
-.bd-dot.t-docs, .bd-dot.t-review, .bd-dot.t-plan, .bd-dot.t-other, .bd-stack i { background: var(--t); }
+.t-docs { --t: var(--bd-t-docs); } .t-review { --t: var(--bd-t-review); } .t-plan { --t: var(--bd-t-plan); } .t-design { --t: var(--bd-t-design); } .t-other { --t: var(--bd-t-other); }
+.bd-dot.t-docs, .bd-dot.t-review, .bd-dot.t-plan, .bd-dot.t-design, .bd-dot.t-other, .bd-stack i { background: var(--t); }
 .bd-finds { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--color-hz-line-soft); font-size: 12px; color: var(--color-hz-fg-muted); }
 .bd-finds span { display: inline-flex; align-items: center; gap: 6px; }
 .bd-finds b { font: 600 12px var(--font-hz-mono); color: var(--color-hz-fg); }
@@ -197,7 +197,7 @@ body { font-family: var(--font-hz-sans, Inter, system-ui, sans-serif); -webkit-f
 .bd-card-f .bd-prog { margin-left: auto; }
 
 /* the card hero: one navy frame for every type (status pill top-left, type pill top-right); each type draws its own
-   element in it: review ±lines, plan step timeline, docs root drawing, or an icon and one stat */
+   element in it: review ±lines, plan step timeline, docs root drawing, design board outline, or an icon and one stat */
 .bd-art { --pt: calc(12px + 22px + 4cqw); position: relative; flex: none; aspect-ratio: 16 / 10; overflow: hidden; container-type: inline-size; color: var(--bp-ice);
   background-color: #0b2648;
   background-image: linear-gradient(rgba(95, 212, 255, .12) 1px, transparent 1px), linear-gradient(90deg, rgba(95, 212, 255, .12) 1px, transparent 1px), linear-gradient(180deg, #0d2b52, #0a2140);
@@ -213,7 +213,7 @@ body { font-family: var(--font-hz-sans, Inter, system-ui, sans-serif); -webkit-f
 .bd-pill.st { left: 12px; max-width: calc(100% - 100px); }
 .bd-pill.type { right: 12px; }
 .bd-pill.t-review { --pb: #0b3a2a; --pc: #74e6ab; } .bd-pill.t-plan { --pb: #2d2350; --pc: #c3a6ff; }
-.bd-pill.t-docs { --pb: #0b2f52; --pc: #5fd4ff; } .bd-pill.t-other { --pb: #2a2f38; --pc: #c9d2de; }
+.bd-pill.t-docs { --pb: #0b2f52; --pc: #5fd4ff; } .bd-pill.t-other { --pb: #2a2f38; --pc: #c9d2de; } .bd-pill.t-design { --pb: #4a1f2a; --pc: #ffa8b8; }
 .bd-pill.warn { --pb: #5b3b00; --pc: #ffc35a; } .bd-pill.info { --pb: #0b2f52; --pc: #5fd4ff; }
 .bd-pill.risk { --pb: #4d1620; --pc: #ff8a7a; } .bd-pill.ok { --pb: #0b3a2a; --pc: #74e6ab; }
 .bd-el { position: absolute; inset: var(--pt) 8% 8%; display: flex; flex-direction: column; justify-content: center; min-width: 0; }
@@ -267,6 +267,12 @@ body { font-family: var(--font-hz-sans, Inter, system-ui, sans-serif); -webkit-f
 @keyframes bd-flow-s { to { stroke-dashoffset: -14; } }
 .bd-art .cv text { font-family: var(--font-hz-mono); fill: var(--bp-ice); }
 .bd-art .cv g.nodes { filter: drop-shadow(0 0 5px rgba(95, 212, 255, .28)); }
+/* design: the board's outline, one shape per artboard (round watch, phone, window), dashed below hi-fi */
+.bd-art .dsn .ab { fill: rgba(16, 52, 96, .78); stroke: var(--bp-ice); stroke-opacity: .85; stroke-width: 1.1px; }
+.bd-art .dsn .ab.lo { stroke: var(--bp-amber); stroke-dasharray: 5 3; }
+.bd-art .dsn .bar { stroke: var(--bp-ice); stroke-opacity: .45; stroke-width: 1px; }
+.bd-art .dsn .ln { fill: rgba(95, 212, 255, .22); }
+.bd-art .dsn g.abs { filter: drop-shadow(0 0 5px rgba(95, 212, 255, .28)); }
 /* docs with a hero, other docs, and every doc whose type has no data yet: an icon and one big stat */
 .bd-stat { flex-direction: row; align-items: center; justify-content: flex-start; gap: 7cqw; left: 11%; }
 .bd-stat .ic { flex: none; width: 19.5cqw; height: 19.5cqw; color: #5fd4ff; }
@@ -422,12 +428,13 @@ function ago(t) {
 const plural = (n, one, many) => `${n} ${n === 1 ? one : (many || one + 's')}`;
 
 /* ---------- docs, reader progress, status ---------- */
-const TYPES = [['docs', 'Docs', Icons.FileText], ['review', 'Reviews', Icons.GitPullRequest], ['plan', 'Plans', Icons.ListChecks], ['other', 'Other', Icons.StickyNote]];
-const TYPE_ONE = { docs: 'Docs', review: 'Review', plan: 'Plan', other: 'Other' };
+const TYPES = [['docs', 'Docs', Icons.FileText], ['review', 'Reviews', Icons.GitPullRequest], ['plan', 'Plans', Icons.ListChecks], ['design', 'Designs', Icons.Palette], ['other', 'Other', Icons.StickyNote]];
+const TYPE_ONE = { docs: 'Docs', review: 'Review', plan: 'Plan', design: 'Design', other: 'Other' };
+const APPROVABLE = new Set(['plan', 'design']);   // types the reader approves as a whole (Approve plan / Approve design)
 const TYPE_ICON = Object.fromEntries(TYPES.map(([id, , I]) => [id, I]));
 const STATUSES = [['needs', 'Needs you', Icons.Flag], ['awaiting', 'Awaiting approval', Icons.Clipboard], ['waiting', 'Waiting on agent', Icons.Clock],
   ['approved', 'Approved', Icons.Success], ['errors', "Doesn't build", Icons.Error]];
-const PLAN_STATUSES = new Set(['awaiting', 'approved']);   // listed only where there are plans
+const APPROVAL_STATUSES = new Set(['awaiting', 'approved']);   // listed only where there are plans or designs
 const BOARD = [['needs', 'Needs you', 'warning'], ['waiting', 'Waiting on agent', 'ai'], ['progress', 'In progress', 'running'], ['done', 'Done', 'success'], ['errors', "Doesn't build", 'error']];
 
 function prepare(data) {
@@ -464,14 +471,14 @@ function progress(d) {
   return { dec, decided, steps, done };
 }
 function statusOf(d) {
-  const plan = d.type === 'plan', errors = d.errors > 0;
-  // a plan is approved only for the rev the reader approved; a new rev asks again
-  const approved = plan && !errors && !!d.approval && String(d.approval.rev ?? '') === String(d.rev ?? '');
+  const approvable = APPROVABLE.has(d.type), errors = d.errors > 0;
+  // a plan or design is approved only for the rev the reader approved; a new rev asks again
+  const approved = approvable && !errors && !!d.approval && String(d.approval.rev ?? '') === String(d.rev ?? '');
   const sent = Math.max(d.answers ? d.answers.at : 0, d.changes ? d.changes.at : 0);
   const waiting = !approved && sent > d.mtime;
   let p = progress(d);
   if (approved) p = { ...p, decided: p.dec };   // approving settles every open pick: the agent uses its recommendation
-  const awaiting = plan && !errors && !waiting && !approved;
+  const awaiting = approvable && !errors && !waiting && !approved;
   const needs = !errors && !waiting && (awaiting || p.dec > p.decided);
   const total = p.dec + p.steps, did = p.decided + p.done;
   // board column: in progress = partly done; done = all done, approved, or nothing left to decide
@@ -588,6 +595,31 @@ function DrawingEl({ c }) {
   const cap = [c.kind, c.levels && plural(c.levels, 'level'), c.flows && plural(c.flows, 'flow')].filter(Boolean).join(' · ');
   return e(F, null, e('div', { className: 'bd-drw' + (cap ? ' capd' : '') }, e(CanvasArt, { c })), cap && e('div', { className: 'bd-el-cap' }, cap));
 }
+// design: the board's outline, as serve.py card() places the first 12 artboards (top-left 0, 0, board px)
+const DEVICE_WORD = { 'watch-round': 'watch', 'watch-square': 'watch', phone: 'phone', tablet: 'tablet', desktop: 'desktop', browser: 'web' };
+const DEVICE_RX = { 'watch-square': 44, phone: 48, tablet: 28, desktop: 10, browser: 10 };
+const DEVICE_BAR = { desktop: 32, browser: 72 };
+function DesignArt({ c }) {
+  const abs = c.artboards, ns = 'non-scaling-stroke';
+  let x1 = 0, y1 = 0;
+  for (const a of abs) { x1 = Math.max(x1, a.x + a.w); y1 = Math.max(y1, a.y + a.h); }
+  const pad = Math.max(40, x1 * 0.04);
+  return e('svg', { className: 'cv dsn', viewBox: [-pad, -pad, x1 + 2 * pad, y1 + 2 * pad].join(' '), preserveAspectRatio: 'xMidYMid meet', 'aria-hidden': true },
+    e('g', { className: 'abs' }, abs.map((a, i) => {
+      const cls = 'ab' + (a.fidelity === 'hifi' ? '' : ' lo'), round = a.device === 'watch-round';
+      const bar = DEVICE_BAR[a.device], lh = Math.max(8, Math.min(a.w, a.h) * 0.05), top = (bar || 0) + a.h * (round ? 0.38 : 0.1);
+      return e('g', { key: i, transform: `translate(${a.x},${a.y})` },
+        round ? e('ellipse', { className: cls, vectorEffect: ns, cx: a.w / 2, cy: a.h / 2, rx: a.w / 2, ry: a.h / 2 })
+          : e('rect', { className: cls, vectorEffect: ns, width: a.w, height: a.h, rx: DEVICE_RX[a.device] ?? 6 }),
+        bar && e('line', { className: 'bar', vectorEffect: ns, x1: 0, y1: bar, x2: a.w, y2: bar }),
+        [1, 1, 0.6].map((f, j) => e('rect', { key: j, className: 'ln', x: a.w * 0.15, y: top + j * lh * 2.2, width: a.w * 0.7 * f, height: lh, rx: lh / 2 })));
+    })));
+}
+function DesignEl({ c }) {
+  const words = [...new Set(c.artboards.map(a => DEVICE_WORD[a.device] || 'custom'))];
+  return e(F, null, e('div', { className: 'bd-drw capd' }, e(DesignArt, { c })),
+    e('div', { className: 'bd-el-cap' }, [plural(c.count, 'screen'), ...words].join(' · ')));
+}
 const SIZES = ['blocker', 'major', 'minor', 'nit'];
 function ReviewEl({ c }) {
   const f = c.findings || {}, add = `+${c.add || 0}`, del = `−${c.del || 0}`, dots = [];
@@ -625,6 +657,7 @@ function heroElement(d) {
   if (d.errors) return e(ErrorEl, { d });
   if (c.nodes && c.nodes.length) return e(DrawingEl, { c });
   if (c.steps) return e(PlanEl, { c });
+  if (c.artboards && c.artboards.length) return e(DesignEl, { c });
   if ('add' in c) return e(ReviewEl, { c });
   if (c.hero) return e(StatEl, { icon: c.hero.icon, value: c.hero.value, label: c.hero.label });
   return e(StatEl, { icon: c.icon, value: String(c.sections || 0), label: (c.sections === 1 ? 'section' : 'sections') });
@@ -745,7 +778,7 @@ function Decisions({ docs, sts }) {
       : e('div', { className: 'bd-w-empty' }, dec ? 'Every decision here is made.' : 'No decisions in these docs.'));
 }
 function ByType({ docs, sts, onType }) {
-  const n = { docs: 0, review: 0, plan: 0, other: 0 }, f = { blocker: 0, major: 0, minor: 0, nit: 0 };
+  const n = { docs: 0, review: 0, plan: 0, design: 0, other: 0 }, f = { blocker: 0, major: 0, minor: 0, nit: 0 };
   for (const d of docs) { n[d.type]++; const cf = (d.card || {}).findings; if (cf) for (const k in f) f[k] += cf[k] || 0; }
   const total = docs.length || 1, anyF = Object.values(f).some(Boolean);
   return e(Card, { title: null, description: null, className: 'bd-w' },
@@ -912,13 +945,13 @@ function App() {
   const sts = useMemo(() => new Map(docs.map(d => [d.key, statusOf(d)])), [docs, tick]);
   const roots = data ? data.roots : [];
   const scoped = docs.filter(d => inScope(d, filters.scope));
-  const typeN = { docs: 0, review: 0, plan: 0, other: 0 };
+  const typeN = { docs: 0, review: 0, plan: 0, design: 0, other: 0 };
   for (const d of scoped) typeN[d.type]++;
   const typed = filters.type ? scoped.filter(d => d.type === filters.type) : scoped;
   const statusN = Object.fromEntries(STATUSES.map(([id]) => [id, 0]));
   for (const d of typed) { const st = sts.get(d.key); for (const k in statusN) if (statusIs(st, k)) statusN[k]++; }
-  const anyPlans = typed.some(d => d.type === 'plan');
-  const listStatus = id => filters.status === id || (id === 'errors' ? statusN.errors > 0 : !PLAN_STATUSES.has(id) || anyPlans);
+  const anyApprovable = typed.some(d => APPROVABLE.has(d.type));
+  const listStatus = id => filters.status === id || (id === 'errors' ? statusN.errors > 0 : !APPROVAL_STATUSES.has(id) || anyApprovable);
   const filtered = filters.status ? typed.filter(d => statusIs(sts.get(d.key), filters.status)) : typed;
   const terms = dq.toLowerCase().split(/\s+/).filter(Boolean);
   const rows = [];

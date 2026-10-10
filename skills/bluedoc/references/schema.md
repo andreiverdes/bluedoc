@@ -2,7 +2,7 @@
 
 Lookup reference for every field and command. Grep for a heading, never read the file whole: `grep -n -A25 '^## Diff' references/schema.md`. How to lay out each doc type lives in `types/<type>.md`.
 
-Headings: `## Document` (incl. `hero`) · `## Contracts` · `## Section` · `## Blocks` (`### Inline markdown`) · `## Checklist` (`### Reader comments and replies`) · `## Diff` (`### Diff reference`, `### Embedded diff`, `### gitdiff.py`) · `## Plan blocks` (`### Steps`, `### Files`, `### Media`, `### Compare`) · `## Revisions` · `## Page layout` · `## Canvas` (`### Node`, `### Semantic zoom`, `### Edge`, `### Flow`) · `## Annotations` (the key grammar; `### Bottom tray`) · `## Plans` (its approval Markdown has `## Decisions` and `## Notes with the approval`) · `## build.py` (`### patch`) · `## serve.py` (`### Reader state`) · `## Automation API`
+Headings: `## Document` (incl. `hero`) · `## Contracts` · `## Section` · `## Blocks` (`### Inline markdown`) · `## Checklist` (`### Reader comments and replies`) · `## Diff` (`### Diff reference`, `### Embedded diff`, `### gitdiff.py`) · `## Plan blocks` (`### Steps`, `### Files`, `### Media`, `### Compare`) · `## Board` (`### Artboard`, `### Devices`, `### Screen files`) · `## Revisions` · `## Page layout` · `## Canvas` (`### Node`, `### Semantic zoom`, `### Edge`, `### Flow`) · `## Annotations` (the key grammar; `### Bottom tray`) · `## Plans` (its approval Markdown has `## Decisions` and `## Notes with the approval`) · `## build.py` (`### patch`) · `## serve.py` (`### Reader state`) · `## Automation API`
 
 ## Document
 
@@ -11,7 +11,7 @@ Headings: `## Document` (incl. `hero`) · `## Contracts` · `## Section` · `## 
 | `id` | id | yes | Namespace for the reader's ticks, picks and comments (`bp:<id>:…` keys). Never change it after people start ticking. |
 | `title` | string | yes | Page `<h1>` and browser title (`<title> · bluedoc`). |
 | `subtitle` | inline md | no | One sentence under the title. |
-| `meta` | object | no | `org`, `kind` (Architecture, Walkthrough, Runbook, Setup, Change, Plan, Review, or a free label), `dwg` (drawing number), `rev`, `date`, `type`. `org · kind · date` form the line above the title; `dwg` and `rev` appear under **Document** in the status rail and in the canvas title blocks. `rev` names the revision: the build keeps one history entry per `rev` (see Revisions). `type` (`docs`, `review`, `plan`, `other`) picks the doc's [contract](#contracts), its home-page group and card, and the page's tray; `build.py new` sets it. Unset, it is derived from `kind`, case-insensitive: starts with `plan` or is `implementation plan` → `plan`; contains `review` → `review`; names a docs kind (Architecture, Walkthrough, Runbook, Setup, Reference, Proposal, Change, Status, Guide, Design, Spec, RFC, ADR, …) → `docs`; anything else → `other`. A `plan` doc is a **plan page**: see [Plans](#plans). |
+| `meta` | object | no | `org`, `kind` (Architecture, Walkthrough, Runbook, Setup, Change, Plan, Review, or a free label), `dwg` (drawing number), `rev`, `date`, `type`. `org · kind · date` form the line above the title; `dwg` and `rev` appear under **Document** in the status rail and in the canvas title blocks. `rev` names the revision: the build keeps one history entry per `rev` (see Revisions). `type` (`docs`, `review`, `plan`, `design`, `other`) picks the doc's [contract](#contracts), its home-page group and card, and the page's tray; `build.py new` sets it. Unset, it is derived from `kind`, case-insensitive: starts with `plan` or is `implementation plan` → `plan`; contains `review` → `review`; names a docs kind (Architecture, Walkthrough, Runbook, Setup, Reference, Proposal, Change, Status, Guide, Design, Spec, RFC, ADR, …) → `docs`; anything else → `other`. `design` is never derived: only `"type": "design"` makes a [board](#board) page. A `plan` doc is a **plan page**: see [Plans](#plans). |
 | `state` | `[{label, kind}]` | no | Provenance, listed under **Status** in the status rail as dots. `kind`: `ok` (green), `warn` (amber), `risk` (red), `info` (blue), `todo` (grey). Example: `{"label": "not live", "kind": "warn"}`. Keep each label under ~40 characters. |
 | `links` | `[{label, href}]` | no | Related documents, listed under **Related** in the status rail. |
 | `hero` | `{icon, value, label}` | no | The home card's stat, for `other` docs and for `docs` without a canvas. `icon`: `chart`, `doc`, `flag`, `bolt`, `clock`, `users`, `bug`, `box`, `check`, `globe`, `lock` or `list`. `value` ≤ 8 characters (`"99.95%"`); `label` ≤ 28 (`"uptime, last 30 days"`). Without it an `other` card shows the `doc` icon and the section count. |
@@ -31,6 +31,7 @@ Each type's home card draws one element, so the build requires that element's da
 | `plan` | a `steps` block and a `files` block | step timeline (status dot, effort bar), A/M/D/R file counts |
 | `docs` | a `canvas` block, or `hero` | the root drawing with a flow on hover, the kind, the level count |
 | `other` | nothing | `hero`; else the `doc` icon and the section count |
+| `design` | exactly one `board` block with ≥ 1 artboard | the board's outline: each artboard's device frame at its place |
 
 A missing requirement is an **error** on the doc being built: a new `meta.rev` (not yet in its history file), or a recorded rev whose content changed (an edit in place). It is a **warning** only while the doc is exactly the revision its history recorded, so recorded revisions keep rendering. `build.py` and every server render apply the same rule. `build.py new <type>` writes a skeleton that meets the contract.
 
@@ -55,6 +56,7 @@ A missing requirement is an **error** on the doc being built: a new `meta.rev` (
 | `files` | `items`, `title`? | The files a plan touches, grouped by folder, each with an action badge. |
 | `media` | `src`, `alt`, `caption`?, `width`? | An image (opens full size on click) or a video, from a file next to the doc. |
 | `compare` | `before`, `after`, `title`? | Two panes side by side: before and after code, text or images. |
+| `board` | see [Board](#board) | A design doc's UI mockups: artboards on a pan/zoom board, each an HTML screen file. Design docs only; not inside checklist items. |
 
 ### Inline markdown
 
@@ -278,9 +280,66 @@ Rows are grouped by folder, each with a file-type icon, the badge, the path and 
 
 Each side needs one of `md`, `code` or `src` and shows whichever is present. The panes sit side by side and stack at ≤ 900 px.
 
+## Board
+
+A design doc (`meta.type: "design"`) has a brief section and one `board` block. The page shows the board full width, the brief in its left panel.
+
+```json
+{ "type": "board", "id": "main", "targets": ["watch", "mobile", "web"], "framework": "plain",
+  "frameworks": [ { "id": "acme-web", "label": "Acme web CSS", "files": ["../../web/dist/app.css"] },
+                  { "id": "tailwind-heroui", "label": "Tailwind + HeroUI", "store": "tailwind-heroui" } ],
+  "themes": [ { "id": "indigo", "label": "Indigo", "tokens": { "accent": "#4f46e5", "bg": "#f8fafc", "fg": "#0f172a" } } ],
+  "motion": { "fast": "160ms", "base": "240ms", "slow": "400ms", "ease": "cubic-bezier(.2,0,0,1)" },
+  "artboards": [ { "id": "login", "title": "Sign in", "device": "phone", "fidelity": "hifi" },
+                 { "id": "login-b", "title": "Sign in, passkey first", "device": "phone", "fidelity": "wireframe", "variantOf": "login" } ] }
+```
+
+| Field | Meaning |
+|---|---|
+| `id`, `artboards` | Required. |
+| `targets` | `watch`, `mobile`, `tablet`, `desktop`, `web`: what the design is for. |
+| `framework` | The default for every artboard: `plain` (the kit that ships), `horizon` (HorizonUI, ships) or a `frameworks[].id`. Default `plain`. |
+| `frameworks[]` | The reader's own: `{id, label, files}` with `.css`/`.js`/`.mjs` paths relative to the doc's folder (no URLs), or `{id, label, store}` naming a copy made by `serve.py add-framework <store> <path\|url>` in `~/.bluedoc/frameworks/<store>/`. A missing file or store is a build warning: those screens show the plain kit with a notice. |
+| `themes[]` | `{id, label, tokens}`. Each token `k` (`^[a-z][a-z0-9-]*$`) becomes the CSS variable `--k` in every frame; values are CSS strings without `; { } < > \` or `url()`. |
+| `motion` | `fast`, `base`, `slow`, `ease`: the CSS variables `--dur-fast`, `--dur-base`, `--dur-slow`, `--ease`. |
+
+**The brief** is a section with the checklist `brief`. Its decision item `framework` offers framework ids (`plain`, `horizon`, `frameworks[].id`); its item `theme` offers exactly the `themes[].id`s. The build checks both. Other items (targets, motion, scope) are free.
+
+### Artboard
+
+| Field | Meaning |
+|---|---|
+| `id` | Required. Unique in the board; names the screen file and the keys `artboard:<id>`, `el:<id>/…`. |
+| `title` | Required. Shown above the frame. |
+| `fidelity` | Required. `sketch`, `wireframe` or `hifi`. |
+| `device` | One of the [devices](#devices); or leave it out and give `w` and `h` (CSS px, no frame). |
+| `x`, `y` | Board px, both or neither. Without them the board places it: an artboard's row is its `variantOf` source's `y` (if listed before it), else 0, and it goes 80 px right of the rightmost artboard already in that row. |
+| `variantOf` | Another artboard's id: a variant of that screen. |
+| `framework` | Overrides the board's `framework`. |
+| `src` | The screen file, relative to the doc: an `.html` file in a `<name>.design/` folder. Default `<stem>.design/<id>.html`; leave it out. |
+
+### Devices
+
+| `device` | Size (CSS px) | Safe area (top, right, bottom, left) |
+|---|---|---|
+| `watch-round` | 240 × 240 | the inscribed square (`--safe-inset`) |
+| `watch-square` | 198 × 242 | 8, 8, 8, 8 |
+| `phone` | 390 × 844 | 47, 0, 34, 0 |
+| `tablet` | 820 × 1180 | 24, 0, 20, 0 |
+| `desktop` | 1280 × 800 | 32, 0, 0, 0 (title bar) |
+| `browser` | 1440 × 900 | 72, 0, 0, 0 (tab strip, address bar) |
+
+### Screen files
+
+Each artboard's HTML is a **body fragment** in `<stem>.design/<id>.html` beside the doc (`acme-fit-design.bluedoc.json` → `acme-fit-design.design/login.html`). The server wraps it in the kit (doctype, viewport, safe areas, framework files, theme and motion tokens, inspector) and serves it in a sandboxed frame with no network. Put `data-bd="<name>"` on every element a reader may point at; the annotator names elements by them. Kit classes: `references/kits.md`.
+
+The build checks every screen file. **Errors:** a missing file; a network URL (`http:`, `https:`, `ws:`, `ftp:` or `//host` in a URL attribute, a `style`, an `on…` handler, a `<style>` or a `<script>`); `<base>`, `<iframe>`, `<frame>`, `<object>`, `<embed>`, `<meta http-equiv>`, `<form action>`; a whole document (`<!doctype>`, `<html>`, `<head>`, `<body>`). **Warnings:** a file over 24 KB; a file without any `data-bd`. Text content and `placeholder`s may show URLs.
+
+An approval covers the screen files too: editing one changes the doc's hash, so the page asks for approval again.
+
 ## Revisions
 
-Every `build.py doc.bluedoc.json` run records the document in `doc.bluedoc.history.json` under its `meta.rev`: a new `rev` appends a revision, the same `rev` replaces the last one. A server render shows the doc as the latest revision without writing the history file. A `rev` that is already an earlier revision fails the build (and shows as an error page). No `meta.rev`: no history. The history file stores each revision's header and section fields once per revision and each block once across all revisions (by content hash); the page embeds the revisions other than the current one, with blocks the current one still has as references, so a page with ten small edits grows by roughly the edited blocks.
+Every `build.py doc.bluedoc.json` run records the document in `doc.bluedoc.history.json` under its `meta.rev`: a new `rev` appends a revision, the same `rev` replaces the last one. A server render shows the doc as the latest revision without writing the history file. A `rev` that is already an earlier revision fails the build (and shows as an error page). No `meta.rev`: no history. The history file stores each revision's header and section fields once per revision and each block once across all revisions (by content hash); the page embeds the revisions other than the current one, with blocks the current one still has as references, so a page with ten small edits grows by roughly the edited blocks. A design doc's revision also maps each artboard to its screen file's hash (`screens`), and the file's text sits once in the history's `html` pool; editing a screen under the same `rev` is an edit in place. The page gets only the hashes and loads an old screen from the server with `?rev=`.
 
 | URL (the doc's server URL, or a `-o` file) | Shows |
 |---|---|
@@ -384,6 +443,9 @@ The key grammar. This table is the one list of keys: the annotator writes them i
 | `file:<blockPath>/<path>` | a row of a `files` block (`path` as written) |
 | `media:<blockPath>` | a `media` block |
 | `compare:<blockPath>/before`, `compare:<blockPath>/after` | one pane of a `compare` block |
+| `artboard:<id>` | an artboard of the `board` (its screen file is `<stem>.design/<id>.html`) |
+| `el:<id>/<path>` | an element in that artboard's screen file: `<path>` is `data-bd` names joined by `/` (`el:login/form/submit`), else a CSS path (`el:login/[data-bd="login"]>h1:nth-of-type(1)`). `patch` prints the file and the selector |
+| `frame:<device>@<x>,<y>` | a requested empty frame at board px `x`,`y`; `<device>` is a device or `<w>x<h>`. `patch` appends an artboard there (`frame-<n>`, or `--set id=…`) and writes a wireframe stub screen file |
 
 `<blockPath>` is `<sectionId>/<i>`, or `<checklist>/<item>/<k>` for a block inside a checklist item, as in `block:` and `row:`. `<i>`, `<k>` and `<r>` are 0-based.
 
@@ -452,9 +514,9 @@ The server stores the approval in `state.db` with `docHash`, the sha256 of the d
 
 | Command | Does |
 |---|---|
-| `new <type> <out.bluedoc.json> [--title "…"] [--kind "…"] [--shape pr\|area]` | Copies `assets/skeletons/<type>.json`; sets `id` from the file name, `meta.rev` `1`, `meta.date` today, `meta.type`, and the title and kind when given. `--shape area` (reviews only) copies `review-area.json`: a review by area of a codebase, diffed from the last release you reviewed to head. Refuses to overwrite; prints the next steps. The build fails until every `<<…>>` is filled; shell shifts and heredocs (`<<EOF`) in code don't count, and inside backticks only a span that is exactly `<<x>>` does. |
+| `new <type> <out.bluedoc.json> [--title "…"] [--kind "…"] [--shape pr\|area] [--target T,…] [--framework F]` | Copies `assets/skeletons/<type>.json`; sets `id` from the file name, `meta.rev` `1`, `meta.date` today, `meta.type`, and the title and kind when given. `--shape area` (reviews only) copies `review-area.json`: a review by area of a codebase, diffed from the last release you reviewed to head. `design` only: `--target watch,mobile,tablet,desktop,web` (default `mobile`) writes one wireframe artboard and stub screen file per target; `--framework plain\|horizon\|<store name>\|auto` sets the board's framework and the brief's recommendation (`auto`, the default, leaves the pick to you: see `types/design.md`). Refuses to overwrite; prints the next steps. The build fails until every `<<…>>` is filled; shell shifts and heredocs (`<<EOF`) in code don't count, and inside backticks only a span that is exactly `<<x>>` does. |
 | `<doc>` | Validates (structure, field types, ids, refs, links, media, diff anchors against the expanded diff, the [contract](#contracts)), lints the writing, records the revision. A field of the wrong JSON type is an error naming its path (`ERROR sections[0].blocks[2].items[1].text: 404 is a number: must be a string`), never a traceback. |
-| `<doc> -o out.html` | Also writes a standalone page with expanded diffs and media inlined. It works from `file://`, where the reply dialogs offer **Copy** only. |
+| `<doc> -o out.html` | Also writes a standalone page with expanded diffs and media inlined; a design's screens become `srcdoc` frames with their kit inlined (warns above 10 MB). It works from `file://`, where the reply dialogs offer **Copy** only. |
 | `<doc> --check` | Validates and lints only; writes nothing (no history, no diff cache). `--strict` fails on warnings; `--no-history` doesn't read or write the history file. |
 | `<doc> --show-rev B` | Prints revision B, rebuilt from the history, as JSON. |
 | `patch <doc> <key> …` | Changes one object by key, bumps the rev, validates, records. See below. |
@@ -463,14 +525,15 @@ The linter warns on: filler and ceremony words; vague words; sentences over 32 w
 
 ### patch
 
-`build.py patch <doc> <key> [--set field=value …] [--json '{…}'] [--append '{…}'] [--delete] [--change "line" …] [--no-bump]`
+`build.py patch <doc> <key> [--set field=value …] [--json '{…}'] [--append '{…}'] [--delete] [--html FILE|-] [--change "line" …] [--no-bump]`
 
 | Option | Effect |
 |---|---|
 | `--set field=value` | Sets one field of the target; `value` is parsed as JSON when it parses, else used as a string. `null` deletes the field. A text that parses as JSON (`404`, `true`) needs JSON quotes: `--set 'text="404"'`. |
 | `--json '{…}'` | Merges the object into the target (`null` deletes). |
-| `--append '{…}'` | Appends to the target's list: doc → `sections`; section or item → `blocks`; table → `rows`; canvas → `nodes`; diff → `comments`; other blocks → `items`. |
-| `--delete` | Removes the target. |
+| `--append '{…}'` | Appends to the target's list: doc → `sections`; section or item → `blocks`; table → `rows`; canvas → `nodes`; diff → `comments`; board → `artboards`; other blocks → `items`. |
+| `--delete` | Removes the target. An artboard's screen file stays (the history keeps its text); delete it yourself. |
+| `--html FILE` | `artboard:` and `el:` keys: replaces the screen file with FILE's text (`-` reads stdin). The build lints it first; on an error the file is put back. |
 | `--change "line"` | One `changes` line; repeatable. |
 | `--no-bump` | Keeps `meta.rev`: only while the reader hasn't seen this rev. |
 
@@ -478,10 +541,15 @@ By default the rev bumps (1→2, A→B, v1→v2), `meta.date` becomes today, and
 
 `<key>` is any key in the table under [Annotations](#annotations), so a change request's `key` works as is, with or without the backticks the reply Markdown puts around it.
 
+Screen keys: `artboard:<id>` or `el:<id>/<path>` with no `--set`, `--json` or `--html` prints the screen file and the element's selector and writes nothing. After you edit that file, the same key with only `--change` records it as the next rev; the history keeps the old text under the old rev. `frame:` needs no option.
+
 ```sh
 build.py patch doc.json item:t412/tier-boundary --set choice=fix --change "#412 tier-boundary: Fix in PR, as picked."
 build.py patch doc.json step:steps/0/table --set status=done --no-bump
 build.py patch doc.json block:risks/0 --append '["Cache stampede", "Low", "High", "Jittered TTL"]'
+build.py patch doc.json el:login/submit                                  # prints acme-fit-design.design/login.html  [data-bd="submit"]
+build.py patch doc.json el:login/submit --change "Sign in: the button says Continue."
+build.py patch doc.json 'frame:phone@2400,0' --set id=settings --set title=Settings
 ```
 
 ## serve.py

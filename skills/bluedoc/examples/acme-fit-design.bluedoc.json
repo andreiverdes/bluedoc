@@ -1,0 +1,96 @@
+{
+ "id": "acme-fit-design",
+ "title": "Acme Fit: watch, phone and web mockups",
+ "subtitle": "Mockups of the Acme Fit activity tracker on a round watch, a phone and the web. Comment on any screen, then approve the design or request changes.",
+ "meta": {
+  "org": "Acme Corp",
+  "kind": "Design",
+  "type": "design",
+  "dwg": "ACME-FIT",
+  "rev": "B",
+  "date": "2026-10-10"
+ },
+ "changes": [
+  "Hi-fi after your picks: the watch and the phone in the plain kit, the dashboard in HorizonUI with a steps-this-week chart, all in Indigo.",
+  "Sign in: a **Use a passkey** button under **Sign in**, as you asked.",
+  "New: *Sign in, passkey first*, a wireframe variant beside it to compare."
+ ],
+ "tldr": "Three hi-fi screens for Acme Fit: the watch face shows the time and today's steps, the phone signs in, the web dashboard sums the week. A passkey-first sign-in sits beside the current one: pick one, then approve.",
+ "sections": [
+  {
+   "id": "brief",
+   "title": "Brief",
+   "lead": "Acme Fit tracks steps, workouts and heart rate; these screens set its look before the apps are built.",
+   "blocks": [
+    {
+     "type": "text",
+     "md": "- **Watch:** a round face readable at a glance, on a black background to save power.\n- **Phone:** sign-in, the first screen every new user sees.\n- **Web:** the weekly dashboard coaches and members open on a laptop."
+    },
+    {
+     "type": "checklist",
+     "id": "brief",
+     "title": "Choices",
+     "numbered": false,
+     "items": [
+      {
+       "id": "framework",
+       "text": "Pick the framework for the web dashboard",
+       "sub": "Recommend HorizonUI: it ships with bluedoc, so the dashboard renders with nothing to install.",
+       "recommend": "horizon",
+       "choice": "horizon",
+       "choices": [
+        { "id": "horizon", "label": "HorizonUI" },
+        { "id": "plain", "label": "Plain kit" }
+       ],
+       "detail": "Acme Fit has no web or app code yet, so there is no framework of its own to match. For a new product the usual pick is Tailwind with HeroUI, on the web and on the phone. To mock up with it, run `serve.py add-framework heroui` once and ask me to switch the screens to it."
+      },
+      {
+       "id": "theme",
+       "text": "Pick the theme",
+       "sub": "Recommend Indigo: its accent reads on the watch's black and on the dashboard's white.",
+       "recommend": "indigo",
+       "choice": "indigo",
+       "choices": [
+        { "id": "indigo", "label": "Indigo" },
+        { "id": "forest", "label": "Forest" }
+       ]
+      },
+      {
+       "id": "sign-in",
+       "text": "Pick the sign-in to build",
+       "sub": "Recommend passkey first: one tap on a phone that already has a passkey, email stays one step away.",
+       "recommend": "passkey",
+       "choices": [
+        { "id": "password", "label": "Email and password" },
+        { "id": "passkey", "label": "Passkey first" }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "screens",
+   "title": "Screens",
+   "blocks": [
+    {
+     "type": "board",
+     "id": "main",
+     "targets": ["watch", "mobile", "web"],
+     "framework": "plain",
+     "themes": [
+      { "id": "indigo", "label": "Indigo", "tokens": { "accent": "#4f46e5", "bg": "#f8fafc", "fg": "#0f172a", "radius": "12px" } },
+      { "id": "forest", "label": "Forest", "tokens": { "accent": "#15803d", "bg": "#f7faf7", "fg": "#14201a", "radius": "8px" } }
+     ],
+     "motion": { "fast": "160ms", "base": "240ms", "slow": "400ms", "ease": "cubic-bezier(.2,0,0,1)" },
+     "artboards": [
+      { "id": "watch-face", "title": "Watch face", "device": "watch-round", "fidelity": "hifi" },
+      { "id": "login", "title": "Sign in", "device": "phone", "fidelity": "hifi" },
+      { "id": "login-b", "title": "Sign in, passkey first", "device": "phone", "variantOf": "login", "fidelity": "wireframe" },
+      { "id": "dashboard", "title": "Dashboard", "device": "browser", "fidelity": "hifi", "framework": "horizon", "x": 0, "y": 980 }
+     ]
+    }
+   ]
+  }
+ ]
+}

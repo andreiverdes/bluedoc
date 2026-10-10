@@ -771,6 +771,10 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .bd-cs-c.res:not(.on, .hot) { opacity: .5; }
 .bd-cs-c .acts .bd-cs-ib[aria-label="Resolve"]:hover { color: var(--ok-fg); background: var(--ok-tint); }
 .bd-sp-sec { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.bd-sp-sec[hidden], .bd-sp-h h2[hidden], .bd-sp-tabs[hidden] { display: none !important; }
+/* two sections (a design's Comments and Revisions) show as tabs in the header */
+.bd-sp-tabs { flex: 0 1 auto; min-width: 0; }
+.bd-sp-tabs button { padding: 0 12px; font-size: 12.5px; }
 .bd-gc .gf .sp, .bd-cs-c .ef .sp { flex: 1; }
 .bd-cs-f { flex: none; display: flex; align-items: center; gap: 6px; padding: 0 12px 10px; box-shadow: inset 0 -1px 0 var(--line-soft); }
 .bd-cs-f .bd-sg { flex: 1; min-width: 0; }
@@ -779,7 +783,7 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .bd-sg button { flex: 1 1 auto; min-width: 0; display: inline-flex; align-items: center; justify-content: center; gap: 5px; height: 26px; padding: 0 6px; border: 0; border-radius: 8px; background: none;
   font-size: 12px; font-weight: 500; color: var(--fg-muted); white-space: nowrap; transition: background .12s, color .12s; }
 .bd-sg button:hover { color: var(--fg); }
-.bd-sg button[aria-checked="true"] { color: var(--fg); background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: var(--shadow-hk); }
+.bd-sg button:is([aria-checked="true"], [aria-selected="true"]) { color: var(--fg); background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: var(--shadow-hk); }
 .bd-sg button i { font: 500 11px/1 var(--mono); font-style: normal; color: var(--fg-subtle); }
 .bd-sg button i:empty { display: none; }
 .bd-cs-l { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 10px 12px 16px; scrollbar-width: thin; position: relative; }
@@ -1359,6 +1363,195 @@ html.bd-resizing, html.bd-resizing * { cursor: col-resize !important; user-selec
   .bp-choice[aria-checked="true"] { color: #000; background: none; box-shadow: inset 0 0 0 2px #000; font-weight: 700; }
   .bp-cl-text, .bp-cl-subt > span { white-space: normal !important; overflow: visible !important; }
 }
+
+/* design page: the board fills the window under the app bar, between the left panel (Screens, Brief)
+   and the right one (Comments, Revisions). JS sets data-layout="board", html.bd-lp-open and html.bd-sp-dock. */
+:root[data-layout="board"] { --lp-w: 320px; }
+:root[data-layout="board"], :root[data-layout="board"] body { height: 100%; overflow: hidden; }
+:root[data-layout="board"] .bd-shell { display: block; padding: 0; }
+:root[data-layout="board"] :is(.bp-side, .bd-rh, .bd-wchip, .bd-toc-btn) { display: none !important; }
+.bd-boardblk { position: fixed; z-index: 1; top: var(--top-h); left: 0; right: 0; bottom: 0; transition: left .22s var(--ease), right .22s var(--ease); }
+html.bd-lp-open .bd-boardblk { left: var(--lp-w); }
+html.bd-sp-dock .bd-boardblk { right: var(--sp-w); }
+.bd-board-ph { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 10px; background: var(--inset); color: var(--fg-subtle); font-size: 13px; }
+.bd-board-ph .bd-ic { width: 16px; height: 16px; flex: none; }
+/* a board outside a design doc stays a block in the column */
+.bd-bwrap { position: relative; height: 560px; overflow: hidden; border-radius: 14px; box-shadow: var(--shadow-1); }
+.bd-boardblk .bd-bwrap { height: 100%; border-radius: 0; box-shadow: none; }
+.bd-board { position: absolute; inset: 0; overflow: hidden; outline: none; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none;
+  background-color: var(--canvas); background-image: radial-gradient(circle, color-mix(in oklch, var(--fg) 18%, transparent) 1px, transparent 1.3px); }
+.bd-board.dragging { cursor: grabbing; }
+.bd-board[data-m="frame"] { cursor: crosshair; }
+.bd-board:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); }
+.bd-bvp { position: absolute; left: 0; top: 0; transform-origin: 0 0; --k: 1; }
+/* artboards: title above, device bezel around, the screen at its native size (the layer scales it) */
+.bd-ab { position: absolute; }
+.bd-ab.off, .bd-bvp.variants .bd-rq { display: none; }
+.bd-ab-t { position: absolute; left: 0; bottom: 100%; display: flex; align-items: center; gap: .5em; max-width: 100%; overflow: hidden; margin-bottom: calc(6px / var(--k) + var(--bz, 0px));
+  font: 600 calc(12px / var(--k))/1.3 var(--sans); color: var(--fg-muted); white-space: nowrap; }
+.bd-ab-t > * { flex: none; }
+.bd-ab-t .n { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--fg); }
+.bd-ab-t .d { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; font-weight: 450; color: var(--fg-subtle); }
+.bd-ab.bd-chg .bd-ab-t .d { display: none; }   /* compare view: the badge and Compare take its place */
+.bd-ab.sel .bd-ab-t .n { color: var(--accent-fg); }
+.bd-ab-t .bd-chg-tag { height: 1.7em; padding: 0 .55em; font-size: .85em; border-radius: .45em; }
+.bd-ab-t .cmp { display: inline-grid; place-items: center; width: 1.9em; height: 1.9em; padding: 0; border: 0; border-radius: .5em; color: var(--accent-fg); background: var(--accent-tint); cursor: pointer; }
+.bd-ab-t .cmp[hidden] { display: none; }
+.bd-ab-t .cmp .bd-ic { width: 1.1em; height: 1.1em; }
+i.warn { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--warn); box-shadow: 0 0 0 3px color-mix(in oklch, var(--warn) 25%, transparent); }
+.bd-ab-t i.warn { width: .65em; height: .65em; }
+i.warn[hidden] { display: none; }
+.bd-ab-scr { position: absolute; inset: 0; overflow: hidden; border-radius: var(--r, 0); background: #fff; box-shadow: 0 0 0 1px var(--line), 0 10px 32px oklch(20% 0.02 264 / .16); }
+.bd-ab-dev { position: absolute; inset: calc(-1 * var(--bz)); border-radius: var(--rb); background: linear-gradient(145deg, #30343b, #121418); box-shadow: 0 0 0 1px #000, 0 14px 36px oklch(0% 0 0 / .28); }
+.bd-ab-dev ~ .bd-ab-scr { box-shadow: none; }
+.dev-watch-round { --bz: 12px; --r: 50%; --rb: 50%; }
+.dev-watch-square { --bz: 10px; --r: 40px; --rb: 50px; }
+.dev-phone { --bz: 12px; --r: 44px; --rb: 56px; }
+.dev-tablet { --bz: 14px; --r: 20px; --rb: 34px; }
+.dev-desktop, .dev-browser { --r: 10px; }
+:is(.dev-watch-round, .dev-watch-square) .bd-ab-dev::after { content: ""; position: absolute; right: -7px; top: 50%; width: 8px; height: 30px; margin-top: -15px; border-radius: 3px; background: linear-gradient(90deg, #3a3f47, #1b1e23); }
+.bd-ab.sel .bd-ab-scr, .bd-ab.bd-chg .bd-ab-scr { outline: calc(2px / var(--k)) solid var(--accent); outline-offset: calc(var(--bz, 0px) + 4px / var(--k)); }
+.bd-ab.bd-chg .bd-ab-scr { outline-color: var(--chg); }
+.bd-ab.ghost { opacity: .6; }
+.bd-ab.ghost .bd-ab-scr { outline: calc(2px / var(--k)) dashed var(--risk); }
+.bd-ab-fr { position: absolute; left: 0; top: 0; display: block; border: 0; background: #fff; pointer-events: none; }
+.bd-board:is([data-m="interact"], [data-m="point"], [data-m="select"]) .bd-ab-fr, :is(.bd-pres, .bd-cmpv) .bd-ab-fr { pointer-events: auto; }
+.bd-ab-ph { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 16px; text-align: center;
+  background: repeating-linear-gradient(135deg, var(--panel) 0 14px, var(--surface) 14px 28px); color: var(--fg-muted); font: 500 14px/1.4 var(--sans); }
+.bd-ab-ph[hidden] { display: none; }
+.bd-ab-ph .bd-ic { width: 32px; height: 32px; opacity: .6; }
+.bd-ab-ph b { font-size: 16px; color: var(--fg); }
+.bd-ab-ph .why { max-width: 280px; font-size: 13px; color: var(--fg-subtle); }
+.bd-ab-hov { position: absolute; z-index: 2; pointer-events: none; border-radius: 2px; box-shadow: 0 0 0 calc(1.5px / var(--k)) var(--accent); }
+.bd-ab-hov[hidden] { display: none; }
+.bd-ab-hov b { position: absolute; left: 0; bottom: 100%; margin-bottom: calc(3px / var(--k)); padding: 0 calc(5px / var(--k)); border-radius: calc(4px / var(--k)); font: 600 calc(11px / var(--k))/1.6 var(--sans); color: #fff; background: var(--accent-solid); white-space: nowrap; }
+/* device chrome over the screen's safe areas */
+.bd-ch { position: absolute; inset: 0; z-index: 1; pointer-events: none; font: 600 15px/1 var(--sans); color: #111; }
+.bd-ch .tm { position: absolute; left: 32px; top: 17px; }
+.dev-tablet .bd-ch .tm { left: 20px; top: 6px; font-size: 12px; }
+.bd-ch .notch { position: absolute; left: 50%; top: 11px; width: 120px; height: 34px; margin-left: -60px; border-radius: 20px; background: #000; }
+.bd-ch .home { position: absolute; left: 50%; bottom: 8px; width: 134px; height: 5px; margin-left: -67px; border-radius: 3px; background: #111; opacity: .8; }
+.dev-tablet .bd-ch .home { bottom: 7px; width: 180px; margin-left: -90px; }
+.bd-ch .dots { display: inline-flex; gap: 7px; }
+.bd-ch .dots i { width: 12px; height: 12px; border-radius: 50%; background: #ff5f57; }
+.bd-ch .dots i:nth-child(2) { background: #febc2e; } .bd-ch .dots i:nth-child(3) { background: #28c840; }
+.dev-desktop .bd-ch { bottom: auto; height: 32px; display: flex; align-items: center; padding: 0 12px; background: linear-gradient(#f4f5f7, #e9ebee); border-bottom: 1px solid #d5d8dd; font: 500 12.5px var(--sans); color: #444; }
+.dev-desktop .bd-ch .tt { position: absolute; left: 90px; right: 90px; overflow: hidden; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
+.dev-browser .bd-ch { bottom: auto; height: 72px; background: #e8eaed; border-bottom: 1px solid #d0d3d8; font: 500 12.5px var(--sans); color: #333; }
+.dev-browser .bd-ch .tabs { height: 36px; display: flex; align-items: flex-end; gap: 16px; padding: 0 12px; }
+.dev-browser .bd-ch .tabs .dots { align-self: center; }
+.dev-browser .bd-ch .tab { height: 30px; min-width: 180px; max-width: 260px; display: flex; align-items: center; padding: 0 16px; overflow: hidden; border-radius: 9px 9px 0 0; background: #fff; white-space: nowrap; text-overflow: ellipsis; }
+.dev-browser .bd-ch .url { height: 36px; display: flex; align-items: center; padding: 0 12px; background: #fff; }
+.dev-browser .bd-ch .url span { flex: 1; height: 26px; display: flex; align-items: center; gap: 8px; padding: 0 12px; border-radius: 13px; background: #f1f3f4; color: #5f6368; }
+.dev-browser .bd-ch .url .bd-ic { width: 14px; height: 14px; }
+/* requested frames (Frame mode): dashed, with their labelled boxes; the one being drawn is amber */
+.bd-rq { position: absolute; border: calc(2px / var(--k)) dashed var(--accent); border-radius: 6px; background: color-mix(in oklch, var(--accent) 6%, transparent); }
+.bd-rq.draft { border-color: var(--warn); background: color-mix(in oklch, var(--warn) 8%, transparent); }
+.bd-rq-t { position: absolute; left: 0; bottom: 100%; margin-bottom: calc(6px / var(--k)); font: 600 calc(12px / var(--k))/1.3 var(--sans); color: var(--accent-fg); white-space: nowrap; }
+.bd-rq.draft .bd-rq-t { color: var(--warn-fg); }
+.bd-rq .pr { position: absolute; left: 8%; right: 8%; top: 50%; margin: 0; transform: translateY(-50%); text-align: center; font: 500 calc(13px / var(--k))/1.4 var(--sans); color: var(--fg-muted); }
+.bd-rq-b { position: absolute; overflow: hidden; border: calc(1.5px / var(--k)) solid var(--accent); border-radius: 4px; background: color-mix(in oklch, var(--accent) 10%, var(--surface)); }
+.bd-rq-b span { position: absolute; left: 4px; top: 2px; font: 600 calc(11px / var(--k))/1.3 var(--sans); color: var(--accent-fg); white-space: nowrap; }
+.bd-rq-drag { position: absolute; pointer-events: none; border: calc(1.5px / var(--k)) dashed var(--accent); background: color-mix(in oklch, var(--accent) 10%, transparent); }
+.bd-rqe { position: fixed; left: 0; top: 0; z-index: 56; width: 300px; display: grid; gap: 8px; padding: 12px; border-radius: 12px; background: var(--surface); color: var(--fg); box-shadow: var(--shadow-3); font-size: 13.5px; }
+.bd-rqe .hd { display: flex; align-items: center; gap: 8px; }
+.bd-rqe .hd .bd-ic { width: 16px; height: 16px; color: var(--accent-fg); }
+.bd-rqe .dv { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--fg-muted); }
+.bd-rqe select, .bd-btb select { height: 28px; border: 0; border-radius: 8px; padding: 0 6px; font: 500 12.5px var(--sans); color: var(--fg); background: var(--inset); box-shadow: inset 0 0 0 1px var(--line); }
+.bd-rqe .dv select { flex: 1; min-width: 0; }
+.bd-rqe .bxs { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.bd-rqe .bxs:empty { display: none; }
+.bd-rqe .bxs li { display: flex; align-items: center; gap: 6px; }
+.bd-rqe .bxs .n { min-width: 18px; font: 600 11.5px var(--mono); color: var(--fg-subtle); }
+.bd-rqe .bxs input { flex: 1; min-width: 0; min-height: 30px; padding: 4px 8px; }
+.bd-rqe .bxs .bd-ibtn { width: 26px; height: 26px; }
+.bd-rqe .hint { margin: 0; font-size: 12px; color: var(--fg-subtle); }
+.bd-rqe .ft { display: flex; justify-content: flex-end; gap: 6px; }
+.bd-rqe .ft .bp-btn:disabled { opacity: .5; cursor: default; }
+/* the board's toolbar: panel, Fit · zoom · Focus, Present, Variants, fidelity, theme, motion */
+.bd-btb { position: absolute; z-index: 3; left: 12px; top: 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px; max-width: calc(100% - 24px); padding: 5px; border-radius: 14px;
+  background: linear-gradient(180deg, var(--tray-top), var(--tray-bot)); box-shadow: var(--shadow-tray), 0 2px 6px oklch(23% 0.01 264 / 0.06); font-size: 12.5px; }
+.bd-tbtn { display: inline-grid; place-items: center; height: 30px; min-width: 30px; padding: 0 6px; border: 0; border-radius: 9px; background: none; color: var(--fg-muted); font: 500 12.5px var(--sans); cursor: pointer; }
+.bd-tbtn:hover:not(:disabled) { color: var(--fg); background: var(--hover); }
+.bd-tbtn[aria-pressed="true"] { color: var(--fg); background: var(--hk-down); box-shadow: var(--shadow-hk-down); }
+.bd-tbtn:disabled { opacity: .4; cursor: default; }
+.bd-tbtn .bd-ic { width: 17px; height: 17px; }
+.bd-btb .zl { min-width: 44px; text-align: center; font: 500 12px var(--mono); font-variant-numeric: tabular-nums; color: var(--fg-muted); }
+.bd-btb .bd-groove { height: 20px; }
+.bd-btb .bd-sg button { height: 24px; padding: 0 9px; }
+.bd-btb .th { display: inline-flex; align-items: center; gap: 6px; padding: 0 2px 0 6px; color: var(--fg-subtle); }
+.bd-btb .th .bd-ic { width: 16px; height: 16px; }
+/* the left panel: the doc's header, then Screens (the artboards) or Brief (TL;DR, the sections, status) */
+.bd-lp { position: fixed; z-index: 41; top: var(--top-h); left: 0; bottom: 0; width: var(--lp-w); display: flex; flex-direction: column; min-height: 0;
+  background: var(--panel); box-shadow: inset -1px 0 0 var(--line); transform: translateX(-100%); visibility: hidden; transition: transform .22s var(--ease), visibility 0s .22s; }
+html.bd-lp-open .bd-lp { transform: none; visibility: visible; transition: transform .22s var(--ease); }
+.bd-lp > .bd-head { flex: none; max-width: none; padding: 14px 16px 4px; }
+.bd-lp > .bd-head h1 { margin: 6px 0 0; font-size: 17px; line-height: 1.3; letter-spacing: -.01em; }
+.bd-lp > .bd-head .bd-sub { margin: 4px 0 0; font-size: 13px; }
+.bd-lp-tabs { flex: none; padding: 8px 12px 10px; box-shadow: inset 0 -1px 0 var(--line-soft); }
+.bd-lp-pane { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 10px 12px calc(16px + var(--tray-room, 0px)); scrollbar-width: thin; }
+.bd-lp-pane[hidden] { display: none; }
+.bd-lp-pane .hint { margin: 12px 10px 0; font-size: 12px; line-height: 1.45; color: var(--fg-subtle); }
+#bd-lp-brief { font-size: 14px; }
+#bd-lp-brief :is(.bd-tldr, main) { width: auto; max-width: none; }
+#bd-lp-brief .bd-tldr-card { margin-top: 2px; padding: 12px 14px; grid-template-columns: minmax(0, 1fr); }
+#bd-lp-brief .bd-tldr-card .ico { display: none; }
+#bd-lp-brief .bp-sec { padding-top: 18px; }
+#bd-lp-brief .bp-sec + .bp-sec { margin-top: 18px; }
+#bd-lp-brief .bp-sec > h2 { font-size: 16px; }
+#bd-lp-brief .bd-meta { margin-top: 20px; }
+.bd-scr-l { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.bd-scr-l button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; border: 0; border-radius: 10px; background: none; text-align: left; font: inherit; font-size: 13.5px; color: var(--fg); cursor: pointer; }
+.bd-scr-l button:hover { background: var(--hover); }
+.bd-scr-l button[aria-current="true"] { background: var(--selected); box-shadow: inset 2px 0 0 var(--accent); }
+.bd-scr-l .bd-ic { flex: none; width: 18px; height: 18px; color: var(--fg-subtle); }
+.bd-scr-l .t { flex: 1; min-width: 0; display: grid; }
+.bd-scr-l .t b { overflow: hidden; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.bd-scr-l .t span { font-size: 12px; color: var(--fg-subtle); }
+.bd-scr-l .gone b { color: var(--risk-fg); text-decoration: line-through; }
+.bd-scr-l .bd-chg-tag { height: 18px; padding: 0 6px; font-size: 10px; }
+/* the Revisions tab: the rail's sections in the right pane; each revision names the screens it changed */
+.bd-rvr.tab { position: static; display: block; align-self: stretch; flex: 1; min-height: 0; max-height: none; margin: 0; padding: 4px 12px calc(16px + var(--tray-room, 0px)); overflow: auto; border-radius: 0; background: none; box-shadow: none; -webkit-mask-image: none; mask-image: none; }
+.bd-rvr.tab > .bp-side-toggle { display: none !important; }
+.bd-rvr.tab .bd-rvr-body { display: block !important; position: static; width: auto; max-height: none; padding: 0; overflow: visible; background: none; box-shadow: none; }
+.bd-rv .rv-scr { margin: 6px 0 0; font-size: 12px; line-height: 1.45; color: var(--fg-muted); }
+.bd-rv .rv-scr b { font-weight: 600; color: var(--fg); }
+/* Present: one screen on a dark stage */
+.bd-pres { position: fixed; inset: 0; z-index: 70; display: flex; flex-direction: column; align-items: center; background: oklch(14% 0.01 264); color: oklch(96% 0 0); }
+.bd-pres .box { flex: 1; min-height: 0; width: 100%; display: grid; place-items: center; padding-top: 28px; }
+.bd-pres .bar { display: flex; align-items: center; gap: 8px; margin: 12px 0 20px; padding: 6px 8px; border-radius: 14px; background: oklch(24% 0.01 264); }
+.bd-pres .bar .bd-tbtn { color: oklch(88% 0 0); }
+.bd-pres .bar .bd-tbtn:hover { color: #fff; background: oklch(32% 0.01 264); }
+.bd-pres .cap { min-width: 220px; text-align: center; font-size: 13.5px; color: oklch(78% 0 0); }
+.bd-pres .cap b { color: #fff; }
+html.bd-presenting :is(.bd-anntb, .bd-ann-layer, .bd-cmp) { display: none !important; }
+.bd-psz { position: relative; flex: none; }
+.bd-pdev { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+/* compare a screen across two revisions: side by side, or the shown one over the base (onion skin) */
+.bd-cmpv { position: absolute; inset: 0; z-index: 4; display: flex; flex-direction: column; background: color-mix(in oklch, var(--canvas) 97%, transparent); }
+.bd-cmpv .hd { flex: none; display: flex; align-items: center; gap: 10px; padding: 10px 12px 10px 16px; border-bottom: 1px solid var(--line); font-size: 13.5px; }
+.bd-cmpv .hd > .bd-ic { width: 16px; height: 16px; color: var(--fg-subtle); }
+.bd-cmpv .hd .r { font: 500 12px var(--mono); color: var(--fg-muted); }
+.bd-cmpv .hd .sp { flex: 1; }
+.bd-cmpv .hd input[hidden] { display: none; }
+.bd-cmpv .bd-sg button .bd-ic { width: 14px; height: 14px; }
+.bd-cmpv-b { flex: 1; min-height: 0; display: flex; align-items: flex-start; justify-content: center; gap: 32px; padding: 20px; overflow: auto; }
+.bd-cmpv-p { display: grid; justify-items: center; align-content: start; gap: 10px; }
+.bd-cmpv-p .lb { font-size: 12.5px; color: var(--fg-muted); }
+.bd-cmpv-p .lb b { font: 600 12.5px var(--mono); color: var(--fg); }
+.bd-cmpv-p .msg { width: 280px; height: 200px; display: grid; place-items: center; padding: 16px; border: 1.5px dashed var(--line-strong); border-radius: 12px; text-align: center; font-size: 13px; color: var(--fg-subtle); }
+.bd-cmpv[data-how="onion"] .bd-cmpv-b { display: grid; justify-content: center; }
+.bd-cmpv[data-how="onion"] .bd-cmpv-p { grid-area: 1 / 1; justify-items: stretch; }
+.bd-cmpv[data-how="onion"] .bd-cmpv-p > :not(.lb) { justify-self: center; }
+.bd-cmpv[data-how="onion"] .bd-cmpv-p .lb { justify-self: start; }
+.bd-cmpv[data-how="onion"] .bd-cmpv-p + .bd-cmpv-p .lb { justify-self: end; }
+.bd-cmpv[data-how="onion"] .bd-cmpv-p + .bd-cmpv-p > :not(.lb) { opacity: var(--op, .5); }
+/* the tray centres in the board, between the panels */
+@media (min-width: 901px) { html.bd-lp-open :is(.bd-anntb, .bp-toast) { left: calc(var(--lp-w) + (100% - var(--lp-w)) / 2); } }
+@media (min-width: 1101px) { html.bd-lp-open.bd-sp-open :is(.bd-anntb, .bp-toast) { left: calc(var(--lp-w) + (100% - var(--lp-w) - var(--sp-w)) / 2); } }
+@media (max-width: 900px) { html.bd-lp-open .bd-boardblk { left: 0; } .bd-lp { width: min(var(--lp-w), 86vw); box-shadow: var(--shadow-3); } .bd-btb .th, .bd-btb .bd-sg { display: none; } }
+/* the tray must fit the board: Accept recommended keeps its count, not its words */
+:root[data-layout="board"] .bd-key.acc .t { display: none; }
 </style>
 </head>
 <body>
@@ -1366,6 +1559,7 @@ html.bd-resizing, html.bd-resizing * { cursor: col-resize !important; user-selec
 <div class="bp-toast" id="bp-toast" role="status"></div>
 <script type="application/json" id="bp-doc">{"id":"acme-review-findings-2026-03","title":"Review findings: acme-shop #412 and #415","subtitle":"The 11 review comments on two open PRs, each next to its code. Pick what to do with each; my recommendation is starred.","meta":{"org":"Acme Corp","kind":"Review","rev":"2","date":"2026-03-14"},"state":[{"label":"11 review comments","kind":"warn"},{"label":"6 fix in the PR","kind":"warn"},{"label":"2 follow-up tickets","kind":"info"},{"label":"2 decline","kind":"todo"},{"label":"1 resolves when a fix lands","kind":"info"}],"links":[{"label":"acme-shop #412 (bulk tiers)","href":"https://github.com/acme/acme-shop/pull/412"},{"label":"acme-shop #415 (PayCo retry)","href":"https://github.com/acme/acme-shop/pull/415"},{"label":"PRICING-88 spec","href":"https://example.com/acme/tickets/PRICING-88"}],"tldr":"Fix 6 in the PRs, ticket 2, decline 2; 1 resolves itself. Two are real bugs these PRs introduce: #412 gives no discount at exactly 10 or 50 units, and #415 can authorize a card twice when PayCo times out after accepting. Both are one-line fixes; neither PR should merge before them.","changes":["`docs/pricing.md` is now a ticket, not a fix in #412: its order of operations needs a product decision from the PRICING-88 owner."],"sections":[{"id":"summary","title":"Summary","lead":"Each finding has its options under it, with my recommendation starred. Pick one per finding, comment where you disagree, then press **Send answers**.","blocks":[{"type":"table","columns":["PR","Finding","Size","Recommendation"],"rows":[["#412","[`tierFor` gives no tier at exactly 10 or 50 units](#item-t412-tier-boundary)","blocker","Fix in PR (1 line)"],["#412","[Tiered line totals are fractional cents](#item-t412-float-cents)","major","Fix in PR (1 line)"],["#412","[`bulkSavingsCents` also counts the coupon](#item-t412-savings-coupon)","major","Fix in PR"],["#412","[Tier tests stop short of both thresholds](#item-t412-boundary-tests)","minor","Fix in PR (4 cases)"],["#412","[`docs/pricing.md` still says there are no bulk discounts](#item-t412-docs-stale)","minor","Ticket"],["#412","[Turn `TIERS` into a `Map`](#item-t412-tiers-map)","nit","Decline"],["#412","[PR description says every tier is tested](#item-t412-pr-claims)","nit","After the boundary tests"],["#415","[A retry can authorize the card twice](#item-t415-double-auth)","blocker","Fix in PR (1 header)"],["#415","[Card declines are retried too](#item-t415-retry-4xx)","major","Fix in PR"],["#415","[Worst case blocks checkout for 31.5 s](#item-t415-latency)","minor","Ticket"],["#415","[Name the 250 ms backoff](#item-t415-backoff-const)","nit","Decline"]]},{"type":"callout","kind":"note","md":"Two review agents read the PRs at the heads below and posted with your `gh` login, so every comment on GitHub reads as yours. I checked each finding against the code before recommending."}]},{"id":"pr-412","title":"#412 · bulk discount tiers","lead":"3 bugs this PR introduces, 1 test gap, 3 smaller comments. Diff: `main` `89efd8e` → head `62ccc86`, limited to the commented files.","blocks":[{"type":"checklist","id":"t412","title":"Findings · #412","numbered":false,"items":[{"id":"tier-boundary","text":"`tierFor` gives no tier at exactly 10 or 50 units","sub":"Recommend fix in PR: The spec says \"10 or more\"; `>` drops both thresholds. One character.","state":"blocker","stateKind":"risk","detail":"**Reviewer:** `TIERS.find((t) => qty > t.minQty)` excludes the threshold, so 10 units get no discount and 50 units get 5 % instead of 10 %.\n\n**My reasoning:** the file header (`src/pricing/tiers.ts:2`) quotes PRICING-88 as \"10 or more … 50 or more\". `lineTotal({qty: 10, unitCents: 100})` returns 1000, the undiscounted price. The fix is one character in a file this PR adds.\n\n**Fix:** `TIERS.find((t) => qty >= t.minQty)` at `src/pricing/tiers.ts:17`.\n\n**Verify:** `tierFor(10)?.percent === 5` and `tierFor(50)?.percent === 10` (the boundary tests below).","choices":[{"id":"fix","label":"Fix in PR"},{"id":"ticket","label":"Ticket"},{"id":"decline","label":"Decline"}],"recommend":"fix"},{"id":"float-cents","text":"Tiered line totals are fractional cents","sub":"Recommend fix in PR: Without a coupon the fraction reaches VAT and the payment request.","state":"major","stateKind":"warn","detail":"**Reviewer:** `gross * (1 - tier.percent / 100)` returns 3163.5 for 3 × 1110 cents at 5 %.\n\n**My reasoning:** `applyCoupon` rounds only when a coupon is present (`src/pricing/discounts.ts:14`). Without one, the subtotal stays fractional and `addTax` rounds once more, so line and order totals can disagree by a cent. Every other money path in the repo uses integer cents (`docs/pricing.md:3`).\n\n**Fix:** `Math.round(gross * (100 - tier.percent) / 100)`, the form `applyCoupon` already uses.\n\n**Verify:** `Number.isInteger(lineTotal({qty: 3, unitCents: 1110}))`.","choices":[{"id":"fix","label":"Fix in PR"},{"id":"ticket","label":"Ticket"},{"id":"decline","label":"Decline"}],"recommend":"fix"},{"id":"savings-coupon","text":"`bulkSavingsCents` also counts the coupon","sub":"Recommend fix in PR: A 15 % coupon would show on the receipt as a bulk saving.","state":"major","stateKind":"warn","detail":"**Reviewer:** savings are gross-with-tax minus the final total, so the coupon counts as a bulk saving.\n\n**My reasoning:** `src/orders/createOrder.ts:16` subtracts `totalCents`, which already includes the coupon. The field name promises the tier saving, so every caller will read it that way; with a coupon it isn't.\n\n**Fix:** `addTax(gross) - addTax(sum of lineTotal)`, before the coupon.\n\n**Verify:** a 20-unit order with a 15 % coupon reports savings equal to 5 % of gross plus VAT.","choices":[{"id":"fix","label":"Fix in PR"},{"id":"ticket","label":"Ticket"},{"id":"decline","label":"Decline"}],"recommend":"fix"},{"id":"boundary-tests","text":"Tier tests stop short of both thresholds","sub":"Recommend fix in PR: The cases use 5 and 60 units, so they pass with the off-by-one.","state":"minor","stateKind":"info","detail":"**Reviewer:** the tests never touch a threshold.\n\n**My reasoning:** the three cases (`test/tiers.test.ts:5-15`) use 5 and 60 units. Neither sits on a threshold, so all three pass with the `>` bug present.\n\n**Fix:** four `it` cases in `test/tiers.test.ts`: 9 → none, 10 → 5 %, 49 → 5 %, 50 → 10 %.\n\n**Verify:** the 10 and 50 cases fail on the current head and pass after the `>=` fix.","choices":[{"id":"fix","label":"Fix in PR"},{"id":"ticket","label":"Ticket"},{"id":"decline","label":"Decline"}],"recommend":"fix"},{"id":"docs-stale","text":"`docs/pricing.md` still says there are no bulk discounts","sub":"Recommend ticket: The pricing spec needs a tier step; the PR is right without it.","state":"minor","stateKind":"info","detail":"**Reviewer:** `docs/pricing.md:11` still says \"There are no bulk discounts\".\n\n**My reasoning:** the doc is the pricing spec for every flow, and its order of operations (lines 5-9) needs a tier step, which is a product decision for PRICING-88's owner. This PR doesn't touch the file, and the code is right without it.\n\n**Fix:** a ticket for the PRICING-88 owner: add tiers to the order of operations (sum lines, apply tiers, apply coupon, add VAT).\n\n**Reply I'd post:** \"Agreed; ticketed (PRICING-91) so the spec change gets its own review.\"","choices":[{"id":"fix","label":"Fix in PR"},{"id":"ticket","label":"Ticket"},{"id":"decline","label":"Decline"}],"recommend":"ticket"},{"id":"tiers-map","text":"Turn `TIERS` into a `Map`","sub":"Recommend decline: It's a range lookup over 2 sorted tiers; a Map wouldn't remove the scan.","state":"nit","stateKind":"todo","detail":"**Reviewer:** a `Map` would make the lookup O(1).\n\n**My reasoning:** the lookup is a range match, not a key match: `tierFor(37)` needs the highest tier at or below 37, which a `Map` can't answer without the same scan. With 2 tiers the scan is free, and the array's order is the rule.\n\n**Reply I'd post:** \"Not taken: it's a range lookup over 2 sorted tiers, so a Map wouldn't remove the scan.\"","choices":[{"id":"fix","label":"Fix in PR"},{"id":"ticket","label":"Ticket"},{"id":"decline","label":"Decline"}],"recommend":"decline"},{"id":"pr-claims","text":"PR description says every tier is tested","sub":"Recommend resolve after the tests: The boundary tests make the sentence true; nothing else to change.","state":"nit","stateKind":"todo","detail":"**Reviewer:** the description says \"tests cover every tier\"; only the 10 % tier has a positive test.\n\n**My reasoning:** with the boundary tests, every tier and both thresholds are covered, so the sentence becomes accurate.\n\n**Reply I'd post:** \"Covered by the boundary tests in \u003csha>.\"","choices":[{"id":"after","label":"Resolve after the tests"},{"id":"fix","label":"Edit the description"}],"recommend":"after"}]},{"type":"diff","id":"diff-412","title":"acme-shop #412","repo":"acme-shop","base":"89efd8e","head":"62ccc86","paths":["src/orders/createOrder.ts","src/pricing/tiers.ts","test/tiers.test.ts"],"url":"https://github.com/acme/acme-shop/pull/412/files","note":"Only the commented files. Head `62ccc86`; `docs/pricing.md` is unchanged and shown for its comment.","comments":[{"item":"t412/tier-boundary","file":"src/pricing/tiers.ts","line":17},{"item":"t412/float-cents","file":"src/pricing/tiers.ts","line":25},{"item":"t412/savings-coupon","file":"src/orders/createOrder.ts","line":16},{"item":"t412/boundary-tests","file":"test/tiers.test.ts","line":5,"end":15},{"item":"t412/docs-stale","file":"docs/pricing.md","line":11},{"item":"t412/tiers-map","file":"src/pricing/tiers.ts","line":10,"end":13},{"label":"PR description","item":"t412/pr-claims"}],"files":[{"path":"docs/pricing.md","status":"context","add":0,"del":0,"hunks":[{"old":6,"new":6,"context":true,"lines":[" "," 1. Sum the cart lines."," 2. Apply the coupon, if any."," 3. Add VAT."," "," There are no bulk discounts: every unit costs the same."]}]},{"path":"src/orders/createOrder.ts","status":"modified","add":4,"del":1,"hunks":[{"old":6,"new":6,"lines":["   customerId: string;","   subtotalCents: number;","   totalCents: number;","+  bulkSavingsCents: number;"," }"," "," export function priceOrder(draft: OrderDraft, coupon?: Discount): PricedOrder {","+  const gross = draft.lines.reduce((sum, l) => sum + l.unitCents * l.qty, 0);","   const subtotalCents = applyCoupon(draft.lines, coupon);","   const totalCents = addTax(subtotalCents);","-  return { customerId: draft.customerId, subtotalCents, totalCents };","+  const bulkSavingsCents = addTax(gross) - totalCents;","+  return { customerId: draft.customerId, subtotalCents, totalCents, bulkSavingsCents };"," }"],"header":"export interface PricedOrder {"}]},{"path":"src/pricing/tiers.ts","status":"added","add":26,"del":0,"hunks":[{"old":0,"new":1,"lines":["+// Bulk discount tiers (PRICING-88).","+// Spec: 10 or more units of one SKU get 5 %, 50 or more get 10 %.","+import type { CartLine } from \"../orders/types\";","+","+export interface Tier {","+  minQty: number;","+  percent: number;","+}","+","+export const TIERS: Tier[] = [","+  { minQty: 50, percent: 10 },","+  { minQty: 10, percent: 5 },","+];","+","+/** The tier a line qualifies for, or undefined. */","+export function tierFor(qty: number): Tier | undefined {","+  return TIERS.find((t) => qty > t.minQty);","+}","+","+/** Line total in cents after its bulk tier. */","+export function lineTotal(line: CartLine): number {","+  const tier = tierFor(line.qty);","+  const gross = line.unitCents * line.qty;","+  if (!tier) return gross;","+  return gross * (1 - tier.percent / 100);","+}"]}]},{"path":"test/tiers.test.ts","status":"added","add":16,"del":0,"hunks":[{"old":0,"new":1,"lines":["+import { describe, expect, it } from \"vitest\";","+import { lineTotal, tierFor } from \"../src/pricing/tiers\";","+","+describe(\"bulk tiers\", () => {","+  it(\"gives no tier below 10 units\", () => {","+    expect(tierFor(5)).toBeUndefined();","+  });","+","+  it(\"gives 10 % at 60 units\", () => {","+    expect(tierFor(60)?.percent).toBe(10);","+  });","+","+  it(\"discounts the line total\", () => {","+    expect(lineTotal({ sku: \"A\", qty: 60, unitCents: 100 })).toBe(5400);","+  });","+});"]}]}]}]},{"id":"pr-415","title":"#415 · retry PayCo authorization","lead":"1 bug this PR introduces, 1 behaviour gap, 2 smaller comments. Diff: `main` `89efd8e` → head `0a46a97`, limited to the two commented files.","blocks":[{"type":"checklist","id":"t415","title":"Findings · #415","numbered":false,"items":[{"id":"double-auth","text":"A retry can authorize the card twice","sub":"Recommend fix in PR: A timeout after PayCo accepted the call becomes a second authorization.","state":"blocker","stateKind":"risk","detail":"**Reviewer:** the retry re-POSTs `/v2/authorizations` with no idempotency key. If the first call succeeds but the response times out, the retry authorizes the card again.\n\n**My reasoning:** `src/orders/charge.ts:17-21` sends only amount, currency and reference; `src/payments/paycoClient.ts` sets no default header. The 10 s client timeout makes \"accepted but timed out\" a realistic case. *Unverified:* that PayCo deduplicates on `Idempotency-Key`; their public docs say so, but I haven't seen it in the sandbox.\n\n**Fix:** pass `{ headers: { \"Idempotency-Key\": orderId } }` as the third argument to `payco.post`.\n\n**Verify (required):** in the PayCo sandbox, two calls with the same key return the same authorization id; the unit test asserts both attempts carry the same key.","choices":[{"id":"fix","label":"Fix in PR"},{"id":"ticket","label":"Ticket"},{"id":"decline","label":"Decline"}],"recommend":"fix"},{"id":"retry-4xx","text":"Card declines are retried too","sub":"Recommend fix in PR: The doc comment says network errors and 5xx; the `catch` retries everything.","state":"major","stateKind":"warn","detail":"**Reviewer:** a 402 decline is retried twice more, adding 750 ms before the customer sees it.\n\n**My reasoning:** the comment at `src/orders/charge.ts:12` promises \"network errors and 5xx\"; the `catch` at line 23 doesn't look at the status.\n\n**Fix:** in the `catch`, rethrow when `err.response?.status` is below 500.\n\n**Verify:** a test where the first call rejects with status 402 expects one call and a thrown error.","choices":[{"id":"fix","label":"Fix in PR"},{"id":"ticket","label":"Ticket"},{"id":"decline","label":"Decline"}],"recommend":"fix"},{"id":"latency","text":"Worst case blocks checkout for 31.5 s","sub":"Recommend ticket: Real, but the timeout budget is a checkout decision, not this PR's.","state":"minor","stateKind":"info","detail":"**Reviewer:** 3 attempts × 10 s timeout plus backoff is 31.5 s worst case, past checkout's 15 s gateway timeout.\n\n**My reasoning:** `src/payments/paycoClient.ts:5` sets 10 s for every PayCo call, including refunds. Lowering it here changes those too. The fix needs a budget from the checkout owners: per-attempt timeout, attempts, and what the customer sees when it runs out.\n\n**Reply I'd post:** \"Agreed it's too long; ticketed (PAY-34) so checkout can set the budget.\"","choices":[{"id":"fix","label":"Fix in PR"},{"id":"ticket","label":"Ticket"},{"id":"decline","label":"Decline"}],"recommend":"ticket"},{"id":"backoff-const","text":"Name the 250 ms backoff","sub":"Recommend decline: Used once, inside the loop it controls.","state":"nit","stateKind":"todo","detail":"**Reviewer:** `250 * attempt` is a magic number; make it a constant.\n\n**My reasoning:** the number appears once, inside the retry loop it controls (`src/orders/charge.ts:25`), and nothing else reads it. A constant would move it away from the only place it means anything.\n\n**Reply I'd post:** \"Not taken: it's used once, inside the loop it controls.\"","choices":[{"id":"fix","label":"Fix in PR"},{"id":"ticket","label":"Ticket"},{"id":"decline","label":"Decline"}],"recommend":"decline"}]},{"type":"diff","id":"diff-415","title":"acme-shop #415","repo":"acme-shop","base":"89efd8e","head":"0a46a97","paths":["src/orders/charge.ts","src/payments/paycoClient.ts"],"url":"https://github.com/acme/acme-shop/pull/415/files","note":"Only the two commented files; the new test is left out. Head `0a46a97`.","comments":[{"item":"t415/double-auth","file":"src/orders/charge.ts","line":17,"end":21},{"item":"t415/retry-4xx","file":"src/orders/charge.ts","line":23,"end":25},{"item":"t415/latency","file":"src/payments/paycoClient.ts","line":5},{"item":"t415/backoff-const","file":"src/orders/charge.ts","line":25}],"files":[{"path":"src/orders/charge.ts","status":"added","add":29,"del":0,"hunks":[{"old":0,"new":1,"lines":["+// Card authorization through PayCo, with retries (PAY-31).","+import { payco } from \"../payments/paycoClient\";","+import type { PricedOrder } from \"./createOrder\";","+","+export interface Authorization {","+  id: string;","+  amountCents: number;","+}","+","+const MAX_ATTEMPTS = 3;","+","+/** Authorizes the order total. Retries on network errors and 5xx. */","+export async function authorize(order: PricedOrder, orderId: string): Promise\u003cAuthorization> {","+  let lastError: unknown;","+  for (let attempt = 1; attempt \u003c= MAX_ATTEMPTS; attempt++) {","+    try {","+      const res = await payco.post(\"/v2/authorizations\", {","+        amount: order.totalCents,","+        currency: \"EUR\",","+        reference: orderId,","+      });","+      return { id: res.data.id, amountCents: order.totalCents };","+    } catch (err) {","+      lastError = err;","+      await new Promise((r) => setTimeout(r, 250 * attempt));","+    }","+  }","+  throw lastError;","+}"]}]},{"path":"src/payments/paycoClient.ts","status":"added","add":7,"del":0,"hunks":[{"old":0,"new":1,"lines":["+import axios from \"axios\";","+","+export const payco = axios.create({","+  baseURL: process.env.PAYCO_URL,","+  timeout: 10_000,","+  headers: { Authorization: `Bearer ${process.env.PAYCO_KEY}` },","+});"]}]}]}]}]}</script>
 <script type="application/json" id="bp-hist">{"revs":[{"rev":"1","date":"2026-03-13","built":"2026-10-09T16:31:19+00:00","head":{"id":"acme-review-findings-2026-03","title":"Review findings: acme-shop #412 and #415","subtitle":"The 11 review comments on two open PRs, each next to its code. Pick what to do with each; my recommendation is starred.","meta":{"org":"Acme Corp","kind":"Review","rev":"1","date":"2026-03-13"},"state":[{"label":"11 review comments","kind":"warn"},{"label":"7 fix in the PR","kind":"warn"},{"label":"1 follow-up ticket","kind":"info"},{"label":"2 decline","kind":"todo"},{"label":"1 resolves when a fix lands","kind":"info"}],"links":[{"label":"acme-shop #412 (bulk tiers)","href":"https://github.com/acme/acme-shop/pull/412"},{"label":"acme-shop #415 (PayCo retry)","href":"https://github.com/acme/acme-shop/pull/415"},{"label":"PRICING-88 spec","href":"https://example.com/acme/tickets/PRICING-88"}],"tldr":"Fix 7 in the PRs, ticket 1, decline 2; 1 resolves itself. Two are real bugs these PRs introduce: #412 gives no discount at exactly 10 or 50 units, and #415 can authorize a card twice when PayCo times out after accepting. Both are one-line fixes; neither PR should merge before them."},"sections":[{"id":"summary","title":"Summary","lead":"Each finding has its options under it, with my recommendation starred. Pick one per finding, comment where you disagree, then press **Send to agent**.","blocks":["91fdf7f28efc49b0","@0/1"]},{"id":"pr-412","title":"#412 · bulk discount tiers","lead":"3 bugs this PR introduces, 1 test gap, 3 smaller comments. Diff: `main` `89efd8e` → head `62ccc86`, limited to the commented files.","blocks":["f83072cdb3f0b5c5","c3b342ba72c4bfb4"]},{"id":"pr-415","title":"#415 · retry PayCo authorization","lead":"1 bug this PR introduces, 1 behaviour gap, 2 smaller comments. Diff: `main` `89efd8e` → head `0a46a97`, limited to the two commented files.","blocks":["@2/0","fe547b0494295445"]}]},{"rev":"2","date":"2026-03-14","built":"2026-10-10T10:36:28+00:00"}],"blocks":{"91fdf7f28efc49b0":{"type":"table","columns":["PR","Finding","Size","Recommendation"],"rows":[["#412","[`tierFor` gives no tier at exactly 10 or 50 units](#item-t412-tier-boundary)","blocker","Fix in PR (1 line)"],["#412","[Tiered line totals are fractional cents](#item-t412-float-cents)","major","Fix in PR (1 line)"],["#412","[`bulkSavingsCents` also counts the coupon](#item-t412-savings-coupon)","major","Fix in PR"],["#412","[Tier tests stop short of both thresholds](#item-t412-boundary-tests)","minor","Fix in PR (4 cases)"],["#412","[`docs/pricing.md` still says there are no bulk discounts](#item-t412-docs-stale)","minor","Fix in PR"],["#412","[Turn `TIERS` into a `Map`](#item-t412-tiers-map)","nit","Decline"],["#412","[PR description says every tier is tested](#item-t412-pr-claims)","nit","After the boundary tests"],["#415","[A retry can authorize the card twice](#item-t415-double-auth)","blocker","Fix in PR (1 header)"],["#415","[Card declines are retried too](#item-t415-retry-4xx)","major","Fix in PR"],["#415","[Worst case blocks checkout for 31.5 s](#item-t415-latency)","minor","Ticket"],["#415","[Name the 250 ms backoff](#item-t415-backoff-const)","nit","Decline"]]},"f83072cdb3f0b5c5":{"type":"checklist","id":"t412","title":"Findings · #412","numbered":false,"items":[{"id":"tier-boundary","text":"`tierFor` gives no tier at exactly 10 or 50 units","sub":"Recommend fix in PR: The spec says \"10 or more\"; `>` drops both thresholds. One character.","state":"blocker","stateKind":"risk","detail":"**Reviewer:** `TIERS.find((t) => qty > t.minQty)` excludes the threshold, so 10 units get no discount and 50 units get 5 % instead of 10 %.\n\n**My reasoning:** the file header (`src/pricing/tiers.ts:2`) quotes PRICING-88 as \"10 or more … 50 or more\". `lineTotal({qty: 10, unitCents: 100})` returns 1000, the undiscounted price. The fix is one character in a file this PR adds.\n\n**Fix:** `TIERS.find((t) => qty >= t.minQty)` at `src/pricing/tiers.ts:17`.\n\n**Verify:** `tierFor(10)?.percent === 5` and `tierFor(50)?.percent === 10` (the boundary tests below).","choices":[{"id":"fix","label":"Fix in PR"},{"id":"ticket","label":"Ticket"},{"id":"decline","label":"Decline"}],"recommend":"fix"},{"id":"float-cents","text":"Tiered line totals are fractional cents","sub":"Recommend fix in PR: Without a coupon the fraction reaches VAT and the payment request.","state":"major","stateKind":"warn","detail":"**Reviewer:** `gross * (1 - tier.percent / 100)` returns 3163.5 for 3 × 1110 cents at 5 %.\n\n**My reasoning:** `applyCoupon` rounds only when a coupon is present (`src/pricing/discounts.ts:14`). Without one, the subtotal stays fractional and `addTax` rounds once more, so line and order totals can disagree by a cent. Every other money path in the repo uses integer cents (`docs/pricing.md:3`).\n\n**Fix:** `Math.round(gross * (100 - tier.percent) / 100)`, the form `applyCoupon` already uses.\n\n**Verify:** `Number.isInteger(lineTotal({qty: 3, unitCents: 1110}))`.","choices":[{"id":"fix","label":"Fix in PR"},{"id":"ticket","label":"Ticket"},{"id":"decline","label":"Decline"}],"recommend":"fix"},{"id":"savings-coupon","text":"`bulkSavingsCents` also counts the coupon","sub":"Recommend fix in PR: A 15 % coupon would show on the receipt as a bulk saving.","state":"major","stateKind":"warn","detail":"**Reviewer:** savings are gross-with-tax minus the final total, so the coupon counts as a bulk saving.\n\n**My reasoning:** `src/orders/createOrder.ts:16` subtracts `totalCents`, which already includes the coupon. The field name promises the tier saving, so every caller will read it that way; with a coupon it isn't.\n\n**Fix:** `addTax(gross) - addTax(sum of lineTotal)`, before the coupon.\n\n**Verify:** a 20-unit order with a 15 % coupon reports savings equal to 5 % of gross plus VAT.","choices":[{"id":"fix","label":"Fix in PR"},{"id":"ticket","label":"Ticket"},{"id":"decline","label":"Decline"}],"recommend":"fix"},{"id":"boundary-tests","text":"Tier tests stop short of both thresholds","sub":"Recommend fix in PR: The cases use 5 and 60 units, so they pass with the off-by-one.","state":"minor","stateKind":"info","detail":"**Reviewer:** the tests never touch a threshold.\n\n**My reasoning:** the three cases (`test/tiers.test.ts:5-15`) use 5 and 60 units. Neither sits on a threshold, so all three pass with the `>` bug present.\n\n**Fix:** four `it` cases in `test/tiers.test.ts`: 9 → none, 10 → 5 %, 49 → 5 %, 50 → 10 %.\n\n**Verify:** the 10 and 50 cases fail on the current head and pass after the `>=` fix.","choices":[{"id":"fix","label":"Fix in PR"},{"id":"ticket","label":"Ticket"},{"id":"decline","label":"Decline"}],"recommend":"fix"},{"id":"docs-stale","text":"`docs/pricing.md` still says there are no bulk discounts","sub":"Recommend fix in PR: one sentence in a doc this PR makes wrong.","state":"minor","stateKind":"info","detail":"**Reviewer:** `docs/pricing.md:11` still says \"There are no bulk discounts\".\n\n**My reasoning:** the sentence is false once this PR merges, and the fix is one line.\n\n**Fix:** replace line 11 with \"10 or more units of one SKU get 5 %, 50 or more get 10 %\".\n\n**Verify:** `grep -n 'bulk' docs/pricing.md` shows the new sentence.","choices":[{"id":"fix","label":"Fix in PR"},{"id":"ticket","label":"Ticket"},{"id":"decline","label":"Decline"}],"recommend":"fix"},{"id":"tiers-map","text":"Turn `TIERS` into a `Map`","sub":"Recommend decline: It's a range lookup over 2 sorted tiers; a Map wouldn't remove the scan.","state":"nit","stateKind":"todo","detail":"**Reviewer:** a `Map` would make the lookup O(1).\n\n**My reasoning:** the lookup is a range match, not a key match: `tierFor(37)` needs the highest tier at or below 37, which a `Map` can't answer without the same scan. With 2 tiers the scan is free, and the array's order is the rule.\n\n**Reply I'd post:** \"Not taken: it's a range lookup over 2 sorted tiers, so a Map wouldn't remove the scan.\"","choices":[{"id":"fix","label":"Fix in PR"},{"id":"ticket","label":"Ticket"},{"id":"decline","label":"Decline"}],"recommend":"decline"},{"id":"pr-claims","text":"PR description says every tier is tested","sub":"Recommend resolve after the tests: The boundary tests make the sentence true; nothing else to change.","state":"nit","stateKind":"todo","detail":"**Reviewer:** the description says \"tests cover every tier\"; only the 10 % tier has a positive test.\n\n**My reasoning:** with the boundary tests, every tier and both thresholds are covered, so the sentence becomes accurate.\n\n**Reply I'd post:** \"Covered by the boundary tests in \u003csha>.\"","choices":[{"id":"after","label":"Resolve after the tests"},{"id":"fix","label":"Edit the description"}],"recommend":"after"}]},"c3b342ba72c4bfb4":{"type":"diff","id":"diff-412","title":"acme-shop #412","repo":"acme-shop","base":"89efd8e","head":"62ccc86","url":"https://github.com/acme/acme-shop/pull/412/files","note":"Only the commented files. Head `62ccc86`; `docs/pricing.md` is unchanged and shown for its comment.","files":[{"path":"docs/pricing.md","status":"context","add":0,"del":0,"hunks":[{"old":6,"new":6,"context":true,"lines":[" "," 1. Sum the cart lines."," 2. Apply the coupon, if any."," 3. Add VAT."," "," There are no bulk discounts: every unit costs the same."]}]},{"path":"src/orders/createOrder.ts","status":"modified","add":4,"del":1,"hunks":[{"old":6,"new":6,"lines":["   customerId: string;","   subtotalCents: number;","   totalCents: number;","+  bulkSavingsCents: number;"," }"," "," export function priceOrder(draft: OrderDraft, coupon?: Discount): PricedOrder {","+  const gross = draft.lines.reduce((sum, l) => sum + l.unitCents * l.qty, 0);","   const subtotalCents = applyCoupon(draft.lines, coupon);","   const totalCents = addTax(subtotalCents);","-  return { customerId: draft.customerId, subtotalCents, totalCents };","+  const bulkSavingsCents = addTax(gross) - totalCents;","+  return { customerId: draft.customerId, subtotalCents, totalCents, bulkSavingsCents };"," }"],"header":"export interface PricedOrder {"}]},{"path":"src/pricing/tiers.ts","status":"added","add":26,"del":0,"hunks":[{"old":0,"new":1,"lines":["+// Bulk discount tiers (PRICING-88).","+// Spec: 10 or more units of one SKU get 5 %, 50 or more get 10 %.","+import type { CartLine } from \"../orders/types\";","+","+export interface Tier {","+  minQty: number;","+  percent: number;","+}","+","+export const TIERS: Tier[] = [","+  { minQty: 50, percent: 10 },","+  { minQty: 10, percent: 5 },","+];","+","+/** The tier a line qualifies for, or undefined. */","+export function tierFor(qty: number): Tier | undefined {","+  return TIERS.find((t) => qty > t.minQty);","+}","+","+/** Line total in cents after its bulk tier. */","+export function lineTotal(line: CartLine): number {","+  const tier = tierFor(line.qty);","+  const gross = line.unitCents * line.qty;","+  if (!tier) return gross;","+  return gross * (1 - tier.percent / 100);","+}"]}]},{"path":"test/tiers.test.ts","status":"added","add":16,"del":0,"hunks":[{"old":0,"new":1,"lines":["+import { describe, expect, it } from \"vitest\";","+import { lineTotal, tierFor } from \"../src/pricing/tiers\";","+","+describe(\"bulk tiers\", () => {","+  it(\"gives no tier below 10 units\", () => {","+    expect(tierFor(5)).toBeUndefined();","+  });","+","+  it(\"gives 10 % at 60 units\", () => {","+    expect(tierFor(60)?.percent).toBe(10);","+  });","+","+  it(\"discounts the line total\", () => {","+    expect(lineTotal({ sku: \"A\", qty: 60, unitCents: 100 })).toBe(5400);","+  });","+});"]}]}],"comments":[{"item":"t412/tier-boundary","file":"src/pricing/tiers.ts","line":17},{"item":"t412/float-cents","file":"src/pricing/tiers.ts","line":25},{"item":"t412/savings-coupon","file":"src/orders/createOrder.ts","line":16},{"item":"t412/boundary-tests","file":"test/tiers.test.ts","line":5,"end":15},{"item":"t412/docs-stale","file":"docs/pricing.md","line":11},{"item":"t412/tiers-map","file":"src/pricing/tiers.ts","line":10,"end":13},{"label":"PR description","item":"t412/pr-claims"}]},"fe547b0494295445":{"type":"diff","id":"diff-415","title":"acme-shop #415","repo":"acme-shop","base":"89efd8e","head":"0a46a97","url":"https://github.com/acme/acme-shop/pull/415/files","note":"Only the two commented files; the new test is left out. Head `0a46a97`.","files":[{"path":"src/orders/charge.ts","status":"added","add":29,"del":0,"hunks":[{"old":0,"new":1,"lines":["+// Card authorization through PayCo, with retries (PAY-31).","+import { payco } from \"../payments/paycoClient\";","+import type { PricedOrder } from \"./createOrder\";","+","+export interface Authorization {","+  id: string;","+  amountCents: number;","+}","+","+const MAX_ATTEMPTS = 3;","+","+/** Authorizes the order total. Retries on network errors and 5xx. */","+export async function authorize(order: PricedOrder, orderId: string): Promise\u003cAuthorization> {","+  let lastError: unknown;","+  for (let attempt = 1; attempt \u003c= MAX_ATTEMPTS; attempt++) {","+    try {","+      const res = await payco.post(\"/v2/authorizations\", {","+        amount: order.totalCents,","+        currency: \"EUR\",","+        reference: orderId,","+      });","+      return { id: res.data.id, amountCents: order.totalCents };","+    } catch (err) {","+      lastError = err;","+      await new Promise((r) => setTimeout(r, 250 * attempt));","+    }","+  }","+  throw lastError;","+}"]}]},{"path":"src/payments/paycoClient.ts","status":"added","add":7,"del":0,"hunks":[{"old":0,"new":1,"lines":["+import axios from \"axios\";","+","+export const payco = axios.create({","+  baseURL: process.env.PAYCO_URL,","+  timeout: 10_000,","+  headers: { Authorization: `Bearer ${process.env.PAYCO_KEY}` },","+});"]}]}],"comments":[{"item":"t415/double-auth","file":"src/orders/charge.ts","line":17,"end":21},{"item":"t415/retry-4xx","file":"src/orders/charge.ts","line":23,"end":25},{"item":"t415/latency","file":"src/payments/paycoClient.ts","line":5},{"item":"t415/backoff-const","file":"src/orders/charge.ts","line":25}]}}}</script>
+<script type="application/json" id="bp-screens">null</script>
 <script type="application/json" id="bp-state">null</script>
 <script>
 (() => {
@@ -1382,9 +1576,11 @@ const REVS = (() => {
   const cur = { rev: String(m.rev || ''), date: m.date || '', current: true, doc: PRISTINE };
   if (!HIST) return [cur];
   const blk = ref => ref[0] === '@' ? (([i, j]) => PRISTINE.sections[i].blocks[j])(ref.slice(1).split('/').map(Number)) : HIST.blocks[ref];
-  const out = HIST.revs.map(r => r.head ? { rev: r.rev, date: r.date, built: r.built,
+  // a design's revisions also carry `screens`: {artboard id: hash of its screen file}
+  const out = HIST.revs.map(r => r.head ? { rev: r.rev, date: r.date, built: r.built, screens: r.screens || null,
     get doc() { return this._d ||= { ...r.head, sections: r.sections.map(s => ({ ...s, blocks: s.blocks.map(blk) })) }; } } : null).filter(Boolean);
-  cur.built = (HIST.revs.find(r => !r.head) || {}).built || '';
+  const curH = HIST.revs.find(r => !r.head) || {};
+  cur.built = curH.built || ''; cur.screens = curH.screens || null;
   out.push(cur);
   return out;
 })();
@@ -1474,6 +1670,20 @@ const ICONS = {
   tick: '<path d="M20 6 9 17l-5-5"/>',
   checks: '<path d="M18 6 7 17l-5-5"/><path d="m22 10-7.5 7.5L13 16"/>',
   arrowr: '<path d="M5 12h14M12 5l7 7-7 7"/>',
+  // design boards: devices, modes and the board's toolbar
+  watch: '<circle cx="12" cy="12" r="6"/><path d="M12 10v2l1 1M16.13 7.66l-.81-4.05a2 2 0 0 0-2-1.61h-2.68a2 2 0 0 0-2 1.61l-.78 4.05M7.88 16.36l.8 4a2 2 0 0 0 2 1.61h2.72a2 2 0 0 0 2-1.61l.81-4.05"/>',
+  phone: '<rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/>',
+  tablet: '<rect x="4" y="2" width="16" height="20" rx="2"/><path d="M12 18h.01"/>',
+  monitor: '<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>',
+  globe: '<circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20M2 12h20"/>',
+  frame: '<path d="M22 6H2M22 18H2M6 2v20M18 2v20"/>',
+  hand: '<path d="M18 11V6a2 2 0 0 0-4 0M14 10V4a2 2 0 0 0-4 0v2M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-6-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/>',
+  present: '<path d="M2 3h20M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3M7 21l5-5 5 5"/>',
+  variants: '<path d="M2 3v18M22 3v18"/><rect x="6" y="3" width="12" height="18" rx="2"/>',
+  palette: '<path d="M12 22a10 10 0 1 1 10-10c0 2.8-2.2 4-4 4h-1.8a1.7 1.7 0 0 0-1.2 2.9 1.7 1.7 0 0 1-1.2 2.9Z"/><circle cx="7.5" cy="10.5" r="1"/><circle cx="10.5" cy="6.5" r="1"/><circle cx="15.5" cy="7.5" r="1"/>',
+  panelleft: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/>',
+  columns: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 3v18"/>',
+  layers: '<path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65M22 12.65l-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/>',
 };
 function ic(name, cls) {
   const s = document.createElementNS(NS, 'svg');
@@ -1715,13 +1925,16 @@ const meta = DOC.meta || {};
 const DOCS_KINDS = new Set(['architecture', 'walkthrough', 'runbook', 'setup', 'reference', 'proposal', 'change', 'changes', 'plan', 'status', 'guide',
   'design', 'spec', 'rfc', 'adr', 'overview', 'tutorial', 'onboarding', 'explainer', 'playbook']);
 function docTypeOf(m) {
-  if (['docs', 'review', 'plan', 'other'].includes(m.type)) return m.type;
+  if (['docs', 'review', 'plan', 'design', 'other'].includes(m.type)) return m.type;
   const k = String(m.kind || '').trim().toLowerCase();
   if (k.startsWith('plan') || k === 'implementation plan') return 'plan';
   if (k.includes('review')) return 'review';
   return (k.match(/[a-z]+/g) || []).some(w => DOCS_KINDS.has(w)) ? 'docs' : 'other';
 }
-const DOC_TYPE = docTypeOf(meta), IS_PLAN = DOC_TYPE === 'plan';
+// plans and designs are approvable: Approve plan / Approve design, Request changes with the decision picks
+const DOC_TYPE = docTypeOf(meta), IS_PLAN = DOC_TYPE === 'plan', IS_DESIGN = DOC_TYPE === 'design', APPROVABLE = IS_PLAN || IS_DESIGN;
+const AP_NOUN = IS_DESIGN ? 'design' : 'plan', AP_TITLE = IS_DESIGN ? 'Design' : 'Plan';
+let BOARD = null;   // a design doc's board (renderBoard), once drawn
 const overallBar = h('div', { class: 'bp-bar' }, h('i'));
 const overallTxt = h('span');
 const overall = h('div', { class: 'bd-overall', hidden: true, title: 'Checklist progress across this document' }, overallBar, overallTxt);
@@ -1742,8 +1955,8 @@ app.append(h('header', { class: 'bd-bar' }, mark,
     themeBtn)));
 
 const eyebrow = [meta.org, meta.kind, meta.date].filter(Boolean);
-// a plan's status beside the eyebrow: awaiting approval, changes requested or approved (paintPlan)
-const planChip = IS_PLAN && !OLD ? h('span', { class: 'bd-planchip', role: 'status' }) : null;
+// a plan's or design's status beside the eyebrow: awaiting approval, changes requested or approved (paintPlan)
+const planChip = APPROVABLE && !OLD ? h('span', { class: 'bd-planchip', role: 'status' }) : null;
 const head = h('header', { class: 'bd-head', id: 'top' },
   (eyebrow.length || planChip) && h('div', { class: 'bd-eyebrow' }, planChip, eyebrow.map((t, i) => [i ? h('span', { class: 'dot' }) : null, h('span', {}, t)])),
   h('h1', {}, DOC.title || ''),
@@ -1769,6 +1982,8 @@ app.append(h('div', { class: 'bd-shell' }, head, tldr, side, main));
 const PHONE = matchMedia('(max-width: 900px)');
 function placeMeta() {
   if (!metaRail.childNodes.length) return;
+  // a design page has no rail: they close its left panel's Brief tab
+  if (IS_DESIGN) { const b = document.getElementById('bd-lp-brief'); if (b) b.append(metaRail); return; }
   if (PHONE.matches) tldr.after(metaRail); else side.append(metaRail);
 }
 PHONE.addEventListener('change', placeMeta);
@@ -1800,6 +2015,8 @@ function setRevDrawer(open) {
 function applyWidth() {
   const dock = dockW(), room = innerWidth - dock - 2 * PAGE_PAD;
   root.classList.toggle('bd-sp-dock', dock > 0);
+  // a design page is its board, full-bleed between the left panel and the right one: no column, no rails
+  if (IS_DESIGN) { root.dataset.layout = 'board'; return; }
   if (userW) root.style.setProperty('--content-w', userW + 'px'); else root.style.removeProperty('--content-w');
   // the layouts are described with their CSS (data-layout, data-rev); with no chosen width the column
   // may narrow down to MIN_W beside the rails before a rail becomes a drawer
@@ -1919,6 +2136,7 @@ const RENDER = {
   files: b => renderFiles(b),
   media: b => renderMedia(b),
   compare: b => renderCompare(b),
+  board: b => renderBoard(b),
 };
 function codeBlock(code, lang, title) {
   const pre = h('pre', {}, h('code', {}, code || ''));
@@ -2164,6 +2382,7 @@ function renderChecklist(b, parent) {
         choice = id || null; cb.checked = !!choice;
         if ((choice || '') === authorChoice) store.del(key); else store.set(key, `=${choice || ''}|${authorChoice}`);
         li.classList.toggle('done', cb.checked); entryItem.pills.paint(); update();
+        if (entryItem.onChoice) entryItem.onChoice(choice);   // a design's theme pick re-skins its screens
       };
       entryItem.pills = choicePills(entryItem);
       li.append(entryItem.pills.el);
@@ -2425,8 +2644,12 @@ if (/^https?:$/.test(location.protocol)) {
     if (REPLY.home) linkHome(REPLY.home);
     paintSend(); paintPlan(); MARKUP.paint();
     // the server takes writes only from a browser that opened a `serve.py open` or `serve.py unlock` link
-    if (j.unlocked === false && !OLD) document.querySelector('.bd-bar').after(h('div', { class: 'bd-revbar old bd-lockbar', role: 'status' }, h('div', { class: 'in' }, ic('alert'),
-      h('span', { class: 't', html: 'This browser can\'t save yet. Run <code>serve.py open &lt;doc&gt;</code> or <code>serve.py unlock</code> and open the link it prints.' }))));
+    if (j.unlocked === false && !OLD) {
+      document.querySelector('.bd-bar').after(h('div', { class: 'bd-revbar old bd-lockbar', role: 'status' }, h('div', { class: 'in' }, ic('alert'),
+        h('span', { class: 't', html: 'This browser can\'t save yet. Run <code>serve.py open &lt;doc&gt;</code> or <code>serve.py unlock</code> and open the link it prints.' }))));
+      // a design page doesn't scroll: its board and panels start under every strip
+      if (IS_DESIGN) { const fit = () => root.style.setProperty('--rv-h', [...document.querySelectorAll('.bd-revbar')].reduce((n, e) => n + e.offsetHeight, 0) + 'px'); fit(); addEventListener('resize', fit); }
+    }
   }).catch(() => {});
 }
 // served with a dashboard: the brand mark and an "All docs" link lead to it
@@ -3062,6 +3285,59 @@ function edgeGeom(a, b, offset) {
   return { d: `M${p0.x},${p0.y} C${c1.x},${c1.y} ${c2.x},${c2.y} ${p3.x},${p3.y}`, mid };
 }
 
+/* ---------- pan and zoom: the blueprint canvas and the design board share it ---------- */
+// `v` is the view ({k, tx, ty}: the content drawn at tx,ty scaled by k, stage px) and apply() repaints it.
+// o.kMin(), o.kMax() bound the zoom; o.down(e) sees a press first (false: not this stage's); o.press(e) a
+// press that may pan; o.tap(e, at) a press that ended without moving (at: the element pressed); o.wheel(e)
+// answers 'zoom', 'pan' or nothing (the page scrolls). Drag pans, two pointers pinch.
+function panZoom(stage, v, apply, o) {
+  const rel = e => { const r = stage.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
+  const zoomAt = (px, py, f) => {
+    const k2 = clamp(v.k * f, o.kMin(), o.kMax()), r = k2 / v.k;
+    v.tx = px - (px - v.tx) * r; v.ty = py - (py - v.ty) * r; v.k = k2; apply();
+  };
+  const ptrs = new Map(); let pan = null, pinch = null, moved = false, at = null;
+  stage.addEventListener('pointerdown', e => {
+    if (o.down && o.down(e) === false) return;
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    if (o.press) o.press(e);
+    stage.setPointerCapture(e.pointerId);
+    ptrs.set(e.pointerId, rel(e)); moved = false; at = e.target;
+    if (ptrs.size === 1) pan = { ...rel(e), tx: v.tx, ty: v.ty };
+    if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), k: v.k, tx: v.tx, ty: v.ty, mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 }; pan = null; }
+  });
+  stage.addEventListener('pointermove', e => {
+    if (!ptrs.has(e.pointerId)) return;
+    ptrs.set(e.pointerId, rel(e));
+    if (pinch && ptrs.size >= 2) {
+      const [a, b] = [...ptrs.values()]; const d = Math.hypot(a.x - b.x, a.y - b.y);
+      const k2 = clamp(pinch.k * d / pinch.d, o.kMin(), o.kMax()); const r = k2 / pinch.k;
+      const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+      v.k = k2; v.tx = mx - (pinch.mx - pinch.tx) * r; v.ty = my - (pinch.my - pinch.ty) * r; moved = true; apply();
+    } else if (pan) {
+      const p = rel(e); const dx = p.x - pan.x, dy = p.y - pan.y;
+      if (!moved && Math.hypot(dx, dy) > 4) { moved = true; stage.classList.add('dragging'); }
+      if (moved) { v.tx = pan.tx + dx; v.ty = pan.ty + dy; apply(); }
+    }
+  });
+  const up = e => {
+    if (!ptrs.has(e.pointerId)) return;
+    ptrs.delete(e.pointerId);
+    if (ptrs.size < 2) pinch = null;
+    if (ptrs.size === 1) { const p = [...ptrs.values()][0]; pan = { ...p, tx: v.tx, ty: v.ty }; return; }
+    stage.classList.remove('dragging'); pan = null;
+    if (!moved && e.type === 'pointerup' && o.tap) o.tap(e, at);
+  };
+  stage.addEventListener('pointerup', up); stage.addEventListener('pointercancel', up);
+  stage.addEventListener('wheel', e => {
+    const how = o.wheel(e); if (!how) return;
+    e.preventDefault();
+    if (how === 'pan') { v.tx -= e.deltaX; v.ty -= e.deltaY; apply(); return; }
+    const p = rel(e); zoomAt(p.x, p.y, Math.exp(-e.deltaY * (e.ctrlKey ? 0.012 : 0.0022)));
+  }, { passive: false });
+  return { zoomAt, rel };
+}
+
 let uid = 0;
 function renderCanvas(spec) {
   const cv = { spec, id: spec.id, k: 1, tx: 0, ty: 0, active: false, touched: false, animOn: !REDUCE, players: [], sysNodes: [], allNodes: [], onscreen: true, focusPath: [] };
@@ -3144,10 +3420,6 @@ function renderCanvas(spec) {
   const minAbs = Math.min(1, ...cv.sysNodes.map(n => n._childAbs.s));
   cv.kMax = () => Math.max(4, 3.2 / minAbs);
   cv.kMin = () => Math.min(cv.fitK * 0.5, 0.5);
-  cv.zoomAt = (px, py, f) => {
-    const k2 = clamp(cv.k * f, cv.kMin(), cv.kMax()); const r = k2 / cv.k;
-    cv.tx = px - (px - cv.tx) * r; cv.ty = py - (py - cv.ty) * r; cv.k = k2; cv.apply();
-  };
 
   // ---- toolbar
   const touch = () => { if (!cv.touched) { cv.touched = true; hint.classList.add('off'); } };
@@ -3165,53 +3437,23 @@ function renderCanvas(spec) {
   nextBtn.onclick = () => cv.focusPlayer && cv.focusPlayer.stepBy(1);
   flowSel.onchange = () => { if (cv.focusPlayer) { cv.focusPlayer.fi = +flowSel.value; cv.focusPlayer.restart(performance.now(), cv.animOn); } };
 
-  // ---- pointer
-  const ptrs = new Map(); let pan = null, pinch = null, moved = false, downNode = null, lastTap = { t: 0, id: null };
-  const rel = e => { const r = stage.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
-  stage.addEventListener('pointerdown', e => {
-    if (e.target.closest && e.target.closest('.bp-crumbs button')) return;
-    touch(); cancelAnim(cv);
-    if (e.pointerType === 'mouse' && e.button !== 0) return;
-    setActive(cv, true);
-    stage.setPointerCapture(e.pointerId);
-    ptrs.set(e.pointerId, rel(e)); moved = false;
-    downNode = e.target.closest && e.target.closest('.bp-node');
-    if (ptrs.size === 1) pan = { ...rel(e), tx: cv.tx, ty: cv.ty };
-    if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), k: cv.k, tx: cv.tx, ty: cv.ty, mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 }; pan = null; }
-  });
-  stage.addEventListener('pointermove', e => {
-    if (!ptrs.has(e.pointerId)) return;
-    ptrs.set(e.pointerId, rel(e));
-    if (pinch && ptrs.size >= 2) {
-      const [a, b] = [...ptrs.values()]; const d = Math.hypot(a.x - b.x, a.y - b.y);
-      const k2 = clamp(pinch.k * d / pinch.d, cv.kMin(), cv.kMax()); const r = k2 / pinch.k;
-      const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
-      cv.k = k2; cv.tx = mx - (pinch.mx - pinch.tx) * r; cv.ty = my - (pinch.my - pinch.ty) * r; moved = true; cv.apply();
-    } else if (pan) {
-      const p = rel(e); const dx = p.x - pan.x, dy = p.y - pan.y;
-      if (!moved && Math.hypot(dx, dy) > 4) { moved = true; stage.classList.add('dragging'); }
-      if (moved) { cv.tx = pan.tx + dx; cv.ty = pan.ty + dy; cv.apply(); }
-    }
-  });
-  const up = e => {
-    if (!ptrs.has(e.pointerId)) return;
-    ptrs.delete(e.pointerId);
-    if (ptrs.size < 2) pinch = null;
-    if (ptrs.size === 1) { const p = [...ptrs.values()][0]; pan = { ...p, tx: cv.tx, ty: cv.ty }; return; }
-    stage.classList.remove('dragging'); pan = null;
-    if (!moved && e.type === 'pointerup') {
+  // ---- pointer: pan, pinch and wheel zoom; a tap selects a node, a double tap opens a system
+  let lastTap = { t: 0, id: null };
+  cv.zoomAt = panZoom(stage, cv, cv.apply, {
+    kMin: cv.kMin, kMax: cv.kMax,
+    down: e => { if (e.target.closest && e.target.closest('.bp-crumbs button')) return false; touch(); cancelAnim(cv); },
+    press: () => setActive(cv, true),
+    tap: (e, at) => {
+      const downNode = at && at.closest && at.closest('.bp-node');
       const now = performance.now(); const id = downNode ? downNode.dataset.key : null;
       if (id && lastTap.id === id && now - lastTap.t < 320) { const n = cv.byKey[id]; if (n && n._sys) openNode(cv, n); lastTap = { t: 0, id: null }; }
       else { lastTap = { t: now, id }; select(cv, id ? cv.byKey[id] : null); }
-    }
-  };
-  stage.addEventListener('pointerup', up); stage.addEventListener('pointercancel', up);
-  stage.addEventListener('wheel', e => {
-    if (!(e.ctrlKey || e.metaKey || cv.active)) { hint.classList.remove('off'); clearTimeout(cv._ht); cv._ht = setTimeout(() => hint.classList.add('off'), 1600); return; }
-    e.preventDefault(); touch(); cancelAnim(cv);
-    const p = rel(e); const f = Math.exp(-e.deltaY * (e.ctrlKey ? 0.012 : 0.0022));
-    cv.zoomAt(p.x, p.y, f);
-  }, { passive: false });
+    },
+    wheel: e => {
+      if (!(e.ctrlKey || e.metaKey || cv.active)) { hint.classList.remove('off'); clearTimeout(cv._ht); cv._ht = setTimeout(() => hint.classList.add('off'), 1600); return null; }
+      touch(); cancelAnim(cv); return 'zoom';
+    },
+  }).zoomAt;
   fig.addEventListener('keydown', e => {
     if (e.target.closest('select')) return;
     if (e.target.closest('button') && (e.key === 'Enter' || e.key === ' ')) return;
@@ -3546,7 +3788,618 @@ function outlineOf(spec, root) {
       flows.length ? [h('p', {}, h('b', {}, 'Flows')), h('ul', {}, flows)] : null));
 }
 
+/* ======================================================================
+   Design board: each screen in its device frame on one pan/zoom surface
+   ====================================================================== */
+// A design doc has one board block; each artboard shows its screen file in a frame. The server wraps the
+// file in its kit (the screen route); a `-o` export carries the wrapped documents in bp-screens instead.
+// Frames are sandboxed to scripts alone, so each has an opaque origin: no access to this page, its state
+// or its cookies. Page and frame talk through postMessage only (the inspector protocol): page → frame
+// `mode`, `tokens`, `view`, `locate`; frame → page `ready`, `hover`, `pick`, taken from known frames only,
+// strings capped at 200 characters and shown as text.
+const DEVICES = { 'watch-round': [240, 240], 'watch-square': [198, 242], phone: [390, 844], tablet: [820, 1180], desktop: [1280, 800], browser: [1440, 900] };
+const DEVICE_NAME = { 'watch-round': 'Round watch', 'watch-square': 'Square watch', phone: 'Phone', tablet: 'Tablet', desktop: 'Desktop app', browser: 'Browser' };
+const DEVICE_IC = { 'watch-round': 'watch', 'watch-square': 'watch', phone: 'phone', tablet: 'tablet', desktop: 'monitor', browser: 'globe', custom: 'frame' };
+const BEZEL = { 'watch-round': 12, 'watch-square': 10, phone: 12, tablet: 14 };   // CSS px drawn around the screen
+const FIDELITY = { sketch: 'Sketch', wireframe: 'Wireframe', hifi: 'Hi-fi' };
+const AB_GAP = 80, LIVE_MAX = 12, BK_MIN = 0.02, BK_MAX = 4;
+const SCREENS = (() => { try { const x = JSON.parse(document.getElementById('bp-screens').textContent); return x && typeof x === 'object' && !Array.isArray(x) ? x : null; } catch { return null; } })();
+const SERVED = !SCREENS && /^https?:$/.test(location.protocol);
+const abSize = a => DEVICES[a.device] ? DEVICES[a.device].slice() : [Math.max(1, Math.round(+a.w) || 1), Math.max(1, Math.round(+a.h) || 1)];
+const devOf = a => DEVICES[a && a.device] ? a.device : 'custom';
+const boardOf = d => { for (const s of (d && d.sections) || []) for (const b of s.blocks || []) if (b && b.type === 'board') return b; return null; };
+const boardAbs = b => (b && Array.isArray(b.artboards) ? b.artboards : []).filter(a => a && typeof a.id === 'string');
+// where each artboard sits (board px, its screen's top left), as build.py's board_layout places it: its own
+// x,y; else right of the row it joins (its variantOf source's row once that is placed, else row 0), 80 px on
+function boardLayout(abs) {
+  const at = new Map();
+  for (const a of abs) {
+    const [w, hh] = abSize(a);
+    let x, y;
+    if (Number.isFinite(a.x) && Number.isFinite(a.y)) { x = a.x; y = a.y; }
+    else {
+      const src = a.variantOf && at.get(a.variantOf);
+      y = src ? src.y : 0;
+      const row = [...at.values()].filter(p => p.y === y);
+      x = row.length ? Math.max(...row.map(p => p.x + p.w)) + AB_GAP : 0;
+    }
+    at.set(a.id, { x, y, w, h: hh });
+  }
+  return at;
+}
+// the screen route beside the doc: <stem>.design/<id>.html, or the artboard's own src (relative to the doc)
+function screenUrl(a, rev, theme) {
+  const p = location.pathname, dir = p.slice(0, p.lastIndexOf('/') + 1), stem = p.slice(p.lastIndexOf('/') + 1).replace(/\.bluedoc\.json$/i, '').replace(/\.html?$/i, '');
+  const rel = typeof a.src === 'string' && a.src ? a.src : `${stem}.design/${a.id}.html`;
+  const q = new URLSearchParams(); if (rev) q.set('rev', rev); if (theme) q.set('theme', theme);
+  const s = q.toString();
+  return dir + rel.split('/').map(encodeURIComponent).join('/') + (s ? '?' + s : '');
+}
+// what each device draws over the top and bottom of its screen (the kit pads content with --safe-*)
+function chromeFor(dev, a) {
+  const t = a.title || a.id, dots = () => h('span', { class: 'dots' }, h('i'), h('i'), h('i'));
+  if (dev === 'phone' || dev === 'tablet') return h('div', { class: 'bd-ch', 'aria-hidden': 'true' }, h('span', { class: 'tm' }, '9:41'), dev === 'phone' && h('i', { class: 'notch' }), h('i', { class: 'home' }));
+  if (dev === 'desktop') return h('div', { class: 'bd-ch', 'aria-hidden': 'true' }, dots(), h('span', { class: 'tt' }, t));
+  if (dev === 'browser') return h('div', { class: 'bd-ch', 'aria-hidden': 'true' }, h('div', { class: 'tabs' }, dots(), h('span', { class: 'tab' }, t)), h('div', { class: 'url' }, h('span', {}, ic('globe'), a.id)));
+  return null;
+}
+// the device around a screen at its native size (present and compare views): bezel, screen, chrome
+function deviceBox(a, fr, why) {
+  const [w, hh] = abSize(a), dev = devOf(a), bz = BEZEL[dev] || 0;
+  const dv = h('div', { class: `bd-pdev dev-${dev}`, style: `width:${w}px;height:${hh}px` }, bz && h('div', { class: 'bd-ab-dev' }),
+    h('div', { class: 'bd-ab-scr' }, fr || h('div', { class: 'bd-ab-ph' }, ic(DEVICE_IC[dev]), h('b', {}, a.title || a.id), h('span', { class: 'why' }, why)), chromeFor(dev, a)));
+  const sz = h('div', { class: 'bd-psz' }, dv);
+  // fit into W × H, at most native size
+  const fit = (W, H) => { const s = Math.min(1, W / (w + 2 * bz), H / (hh + 2 * bz)); dv.style.transform = `translate(${bz * s}px,${bz * s}px) scale(${s})`; sz.style.width = (w + 2 * bz) * s + 'px'; sz.style.height = (hh + 2 * bz) * s + 'px'; };
+  return { sz, fit, w, hh };
+}
+
+function renderBoard(b) {
+  const abs = boardAbs(b), themes = (Array.isArray(b.themes) ? b.themes : []).filter(t => t && typeof t.id === 'string');
+  const B = BOARD = { b, abs, k: 1, tx: 0, ty: 0, mode: 'view', sel: null, sketch: false, reduced: REDUCE, paused: false, theme: null, touched: false, lp: false,
+    frames: new Map(), ghosts: new Map(), live: new Set(), rqs: new Map(), rq: null, variants: null };
+  const vp = h('div', { class: 'bd-bvp' });
+  const stage = h('div', { class: 'bd-board', tabindex: 0, role: 'region', 'data-m': 'view',
+    'aria-label': (b.title || 'Design board') + '. Drag to pan; pinch or Ctrl + scroll to zoom; F focuses the selected screen, 0 fits them all.' }, vp);
+  const str = (v, n = 200) => typeof v === 'string' ? v.slice(0, n) : '';
+  const rectOf = r => r && typeof r === 'object' && [r.x, r.y, r.w, r.h].every(Number.isFinite) ? { x: r.x, y: r.y, w: Math.max(0, r.w), h: Math.max(0, r.h) } : null;
+  const post = (x, m) => { try { x.fr && x.fr.contentWindow && x.fr.contentWindow.postMessage(m, '*'); } catch { /* the frame is gone */ } };
+
+  /* artboards */
+  function makeAb(a, p, ghost) {
+    const dev = devOf(a), id = a.id;
+    const warn = h('i', { class: 'warn', hidden: true }), tag = h('span', { class: 'tg' });
+    const cmpBtn = h('button', { type: 'button', class: 'cmp', hidden: true, 'aria-label': 'Compare this screen across the two revisions', title: 'Compare this screen across the two revisions',
+      onclick: e => { e.stopPropagation(); openCompare(id); } }, ic('split'));
+    const t = h('div', { class: 'bd-ab-t' }, warn, h('span', { class: 'n' }, a.title || id),
+      h('span', { class: 'd' }, [DEVICE_NAME[dev] || `${p.w} × ${p.h}`, FIDELITY[a.fidelity]].filter(Boolean).join(' · ')), tag, cmpBtn);
+    const ph = h('div', { class: 'bd-ab-ph' }, ic(DEVICE_IC[dev]), h('b', {}, a.title || id),
+      h('span', { class: 'why' }, ghost ? `Removed in ${VIEW.rev ? 'rev ' + VIEW.rev : 'this revision'}` : SCREENS ? (OLD ? 'An export shows the current revision\'s screens only.' : '') : SERVED ? '' : 'Open this page through serve.py to see the screen.'));
+    const hov = h('div', { class: 'bd-ab-hov', hidden: true }, h('b'));
+    const scr = h('div', { class: 'bd-ab-scr' }, ph, chromeFor(dev, a), hov);
+    const el = h('div', { class: `bd-ab dev-${dev} fid-${FIDELITY[a.fidelity] ? a.fidelity : 'hifi'}${ghost ? ' ghost' : ''}`, 'data-ab': ghost ? null : id, 'data-ghost': ghost ? id : null },
+      t, BEZEL[dev] && h('div', { class: 'bd-ab-dev', 'aria-hidden': 'true' }), scr);
+    const x = { a, p, el, scr, ph, hov, warn, tag, cmpBtn, ghost, fr: null, ready: false, fallback: null, rects: {}, allow: 0, navs: 0, locSig: '', home: null, chg: null, li: null };
+    placeAb(x);
+    return x;
+  }
+  const placeAb = x => Object.assign(x.el.style, { left: x.p.x + 'px', top: x.p.y + 'px', width: x.p.w + 'px', height: x.p.h + 'px' });
+  const pos = boardLayout(abs);
+  for (const a of abs) { const x = makeAb(a, pos.get(a.id), false); B.frames.set(a.id, x); vp.append(x.el); }
+
+  /* frames: at most LIVE_MAX at a time, the screens nearest the middle of the view; the others show their outline */
+  const frameMode = () => ['interact', 'point', 'select', 'draw'].includes(B.mode) ? B.mode : 'view';
+  const themeOf = id => themes.find(t => t.id === id) || null;
+  const tokensMsg = () => { const t = themeOf(B.theme); return { bd: 'tokens', theme: t && t.tokens && typeof t.tokens === 'object' ? t.tokens : null, motion: b.motion && typeof b.motion === 'object' ? b.motion : null }; };
+  const viewMsg = x => ({ bd: 'view', sketch: B.sketch || x.a.fidelity === 'sketch', reduced: B.reduced, paused: B.paused });
+  const modeMsg = x => ({ bd: 'mode', mode: x.role === 'pres' ? 'interact' : x.role === 'cmp' ? 'view' : frameMode() });
+  // an iframe for record x (an artboard, or the present or compare view's copy) at revision rev (null: current)
+  function frameEl(x, rev) {
+    const attrs = SCREENS ? (rev == null && typeof SCREENS[x.a.id] === 'string' ? { srcdoc: SCREENS[x.a.id] } : null) : SERVED ? { src: screenUrl(x.a, rev, B.theme) } : null;
+    if (!attrs) return null;
+    const [w, hh] = abSize(x.a);
+    const fr = h('iframe', { sandbox: 'allow-scripts', class: 'bd-ab-fr', 'data-ab': x.a.id, title: 'Screen: ' + (x.a.title || x.a.id), tabindex: '-1', width: w, height: hh, ...attrs });
+    Object.assign(x, { fr, attrs, allow: 1, ready: false, locSig: '' });
+    fr.addEventListener('load', () => loaded(x, fr));
+    B.live.add(x);
+    return fr;
+  }
+  function loaded(x, fr) {
+    if (x.fr !== fr) return;
+    if (x.allow > 0) { x.allow--; for (const m of [modeMsg(x), tokensMsg(), viewMsg(x)]) post(x, m); return; }
+    // a load the page didn't start: the screen navigated its own frame. Load it again and flag it; a
+    // screen that keeps doing it stops showing.
+    x.navs++;
+    if (x.el) { x.el.classList.add('navd'); paintWarn(x); }
+    toast(`“${x.a.title || x.a.id}” tried to leave its frame${x.navs > 2 ? ', so it no longer shows' : ' and was loaded again'}`);
+    if (x.navs > 2) { x.blocked = true; dropFrame(x); return; }
+    x.allow = 1;
+    if (x.attrs.src) fr.src = x.attrs.src; else fr.srcdoc = x.attrs.srcdoc;
+  }
+  function dropFrame(x) {
+    B.live.delete(x);
+    if (x.fr) { x.fr.remove(); x.fr = null; }
+    x.ready = false;
+    if (x.el) { x.ph.hidden = false; x.el.classList.remove('live'); x.hov.hidden = true; if (x.blocked) x.ph.querySelector('.why').textContent = 'This screen navigates away from its frame, so it isn\'t shown.'; }
+  }
+  function mount(x) {
+    if (x.fr || x.blocked) return;
+    const fr = frameEl(x, OLD ? VIEW.rev : null); if (!fr) return;
+    x.scr.prepend(fr); x.ph.hidden = true; x.el.classList.add('live');
+  }
+  function relive() {
+    const W = stage.clientWidth, H = stage.clientHeight; if (!W || !H) return;
+    const mx = W / 4, my = H / 4, near = [];
+    for (const x of B.frames.values()) {
+      const p = x.p, l = B.tx + p.x * B.k, t = B.ty + p.y * B.k, w = p.w * B.k, hh = p.h * B.k;
+      if (!x.el.classList.contains('off') && w >= 24 && l < W + mx && l + w > -mx && t < H + my && t + hh > -my) near.push([Math.hypot(l + w / 2 - W / 2, t + hh / 2 - H / 2), x]);
+      else dropFrame(x);
+    }
+    near.sort((a, c) => a[0] - c[0]).forEach(([, x], i) => i < LIVE_MAX ? mount(x) : dropFrame(x));
+  }
+  const boardFrames = () => [...B.live].filter(x => !x.role);
+  const sendAll = fn => { for (const x of B.live) post(x, fn(x)); };
+  function paintWarn(x) {
+    const why = [x.fallback && `${x.fallback} not found: showing the plain kit`, x.navs && 'This screen tried to navigate away from its frame'].filter(Boolean).join('. ');
+    for (const w of [x.warn, x.liWarn]) if (w) { w.hidden = !why; w.title = why; }
+  }
+  function showHov(x, o) {
+    if (!o || !o.rect) { x.hov.hidden = true; return; }
+    Object.assign(x.hov.style, { left: o.rect.x + 'px', top: o.rect.y + 'px', width: o.rect.w + 'px', height: o.rect.h + 'px' });
+    x.hov.firstChild.textContent = o.what; x.hov.hidden = false;
+  }
+  // the `el:` keys pinned on a screen, so its frame reports where those elements are now
+  function locate(x) {
+    const pre = `el:${x.a.id}/`;
+    const sels = [...new Set(MARKUP.all().map(a => a.target.key).filter(k => k.startsWith(pre)).map(k => k.slice(pre.length)))].slice(0, 100);
+    const sig = sels.join('\n');
+    if (!sels.length || sig === x.locSig) return;
+    x.locSig = sig; post(x, { bd: 'locate', sels });
+  }
+  const pickPos = (x, r) => r ? { x: clamp((r.x + r.w) / x.p.w, 0, 1), y: clamp(r.y / x.p.h, 0, 1) } : null;
+  addEventListener('message', e => {
+    let x = null;
+    for (const y of B.live) if (y.fr && e.source === y.fr.contentWindow) { x = y; break; }
+    const d = e.data;
+    if (!x || !d || typeof d !== 'object' || !['ready', 'hover', 'pick'].includes(d.bd)) return;
+    if (d.bd === 'ready') {
+      x.ready = true;
+      if (x.role) return;
+      x.fallback = str(d.fallback, 80) || null; paintWarn(x);
+      if (d.rects && typeof d.rects === 'object') for (const [s, r] of Object.entries(d.rects).slice(0, 100)) x.rects[str(s)] = rectOf(r);
+      locate(x); MARKUP.relayout();
+      return;
+    }
+    if (x.role) return;
+    if (d.bd === 'hover') { showHov(x, d.sel == null ? null : { rect: rectOf(d.rect), what: str(d.name, 60) || str(d.tag, 30) }); return; }
+    if (B.mode !== 'point' && B.mode !== 'select') return;
+    // a pick on the screen's body (no element under it) is about the whole screen: `artboard:<id>`
+    const sel = str(d.sel), r = rectOf(d.rect);
+    if (!sel) { MARKUP.pinFrame({ el: x.el, key: 'artboard:' + x.a.id, what: '', text: str(d.text), pos: r ? { x: clamp((r.x + r.w / 2) / x.p.w, 0, 1), y: clamp((r.y + r.h / 2) / x.p.h, 0, 1) } : { x: .5, y: .5 } }); return; }
+    if (r) x.rects[sel] = r;
+    MARKUP.pinFrame({ el: x.el, key: `el:${x.a.id}/${sel}`, what: str(d.name, 60) || str(d.tag, 30) || sel.slice(0, 60), text: str(d.text), pos: pickPos(x, r) || { x: .5, y: .5 } });
+  });
+
+  /* view: pan, zoom, fit, focus */
+  let raf = 0, anim = 0, liveT = 0, zoomLbl = null;
+  const apply = () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; paintView(); }); };
+  function paintView() {
+    vp.style.transform = `translate(${B.tx}px,${B.ty}px) scale(${B.k})`;
+    vp.style.setProperty('--k', B.k);
+    const g = 24 * B.k; stage.style.backgroundSize = `${g}px ${g}px`; stage.style.backgroundPosition = `${B.tx}px ${B.ty}px`;
+    if (zoomLbl) zoomLbl.textContent = Math.round(B.k * 100) + '%';
+    if (B.rq) placeRqe();
+    clearTimeout(liveT); liveT = setTimeout(relive, 140);
+  }
+  function go(k, tx, ty, animate) {
+    cancelAnimationFrame(anim); anim = 0;
+    if (!animate || REDUCE) { Object.assign(B, { k, tx, ty }); apply(); return; }
+    const a = { k: B.k, tx: B.tx, ty: B.ty }, t0 = performance.now();
+    const step = now => {
+      const p = Math.min(1, (now - t0) / 280), e = ease(p);
+      B.k = a.k + (k - a.k) * e; B.tx = a.tx + (tx - a.tx) * e; B.ty = a.ty + (ty - a.ty) * e; paintView();
+      anim = p < 1 ? requestAnimationFrame(step) : 0;
+    };
+    anim = requestAnimationFrame(step);
+  }
+  const shownXs = () => [...B.frames.values(), ...B.ghosts.values()].filter(x => !x.el.classList.contains('off'));
+  function boxOf(xs) {
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const x of xs) { const bz = BEZEL[devOf(x.a)] || 0; x0 = Math.min(x0, x.p.x - bz); y0 = Math.min(y0, x.p.y - bz - 30); x1 = Math.max(x1, x.p.x + x.p.w + bz); y1 = Math.max(y1, x.p.y + x.p.h + bz); }
+    return isFinite(x0) ? { x: x0, y: y0, w: Math.max(1, x1 - x0), h: Math.max(1, y1 - y0) } : { x: 0, y: 0, w: 1, h: 1 };
+  }
+  function showBox(box, animate, maxK) {
+    // room for the toolbar above and the tray below (on a design page)
+    const W = stage.clientWidth || 800, H = stage.clientHeight || 600, m = 40, top = 64, bot = root.classList.contains('bd-tray-on') ? 84 : m;
+    const k = clamp(Math.min((W - 2 * m) / box.w, (H - top - bot) / box.h), BK_MIN, maxK);
+    go(k, W / 2 - (box.x + box.w / 2) * k, top + (H - top - bot) / 2 - (box.y + box.h / 2) * k, animate);
+  }
+  const rqXs = () => B.variants ? [] : [...B.rqs.values()].map(el => ({ a: {}, p: el._box }));
+  const fit = animate => showBox(boxOf([...shownXs(), ...rqXs()]), animate, 1);
+  function focus(id, animate = true) {
+    const x = B.frames.get(id) || B.ghosts.get(id); if (!x) return false;
+    showBox(boxOf([x]), animate, 2); select(id); B.touched = true;
+    return true;
+  }
+  // F: the selected screen, else the one nearest the middle of the view
+  function focusSel() {
+    if (B.sel && focus(B.sel)) return;
+    const W = stage.clientWidth, H = stage.clientHeight, c = (W / 2 - B.tx) / B.k, m = (H / 2 - B.ty) / B.k;
+    const x = shownXs().sort((p, q) => Math.hypot(p.p.x + p.p.w / 2 - c, p.p.y + p.p.h / 2 - m) - Math.hypot(q.p.x + q.p.w / 2 - c, q.p.y + q.p.h / 2 - m))[0];
+    if (x) focus(x.a.id);
+  }
+  function select(id) {
+    B.sel = id || null;
+    for (const x of [...B.frames.values(), ...B.ghosts.values()]) { const on = x.a.id === B.sel; x.el.classList.toggle('sel', on); if (x.li) x.li.setAttribute('aria-current', String(on)); }
+    paintTools();
+  }
+  let lastTap = { t: 0, id: null };
+  const pz = panZoom(stage, B, apply, {
+    kMin: () => BK_MIN, kMax: () => BK_MAX,
+    down: e => { if (B.mode === 'frame' || (e.target.closest && e.target.closest('.bd-ab-t button'))) return false; cancelAnimationFrame(anim); B.touched = true; },
+    tap: (e, at) => {
+      const el = at && at.closest && at.closest('.bd-ab'), id = el ? el.dataset.ab || el.dataset.ghost : null, now = performance.now();
+      if (id && lastTap.id === id && now - lastTap.t < 320) { focus(id); lastTap = { t: 0, id: null }; }
+      else { lastTap = { t: now, id }; select(id); }
+    },
+    wheel: e => { B.touched = true; cancelAnimationFrame(anim); return e.ctrlKey || e.metaKey ? 'zoom' : 'pan'; },
+  });
+  const zoomBy = f => { B.touched = true; pz.zoomAt(stage.clientWidth / 2, stage.clientHeight / 2, f); };
+
+  /* toolbar: panel, Fit · zoom · Focus, Present, Variants, fidelity, theme, motion */
+  const tbtn = (icon, label, fn, extra) => h('button', { type: 'button', class: 'bd-tbtn', 'aria-label': label, title: label, onclick: fn, ...extra }, ic(icon));
+  const sep = () => h('span', { class: 'bd-groove', role: 'separator', 'aria-orientation': 'vertical' });
+  const lpBtn = tbtn('panelleft', 'Screens and brief ([)', () => setLp(!B.lp, true), { 'aria-pressed': 'false' });
+  zoomLbl = h('span', { class: 'zl' }, '100%');
+  const varBtn = tbtn('variants', 'Variants: line up the selected screen and its variants', () => toggleVariants(), { 'aria-pressed': 'false' });
+  const fidSeg = h('div', { class: 'bd-sg', role: 'radiogroup', 'aria-label': 'Fidelity' }, [['drawn', 'As drawn', 'Each screen at the fidelity it was drawn in'], ['sketch', 'Sketch', 'Every screen hand-drawn: wobbly lines, hand font']].map(([v, l, t]) =>
+    h('button', { type: 'button', role: 'radio', 'data-v': v, title: t, onclick: () => { B.sketch = v === 'sketch'; sendAll(viewMsg); paintTools(); } }, l)));
+  const themeSel = themes.length ? h('select', { 'aria-label': 'Theme', title: 'Theme: the brief\'s pick; changing it here picks it there' }, themes.map(t => h('option', { value: t.id }, t.label || t.id))) : null;
+  const motBtn = tbtn('pause', 'Pause animations', () => { B.paused = !B.paused; sendAll(viewMsg); paintTools(); }, { 'aria-pressed': 'false' });
+  const redBtn = h('button', { type: 'button', class: 'bd-tbtn txt', 'aria-pressed': 'false', title: 'Reduced motion in every screen', onclick: () => { B.reduced = !B.reduced; sendAll(viewMsg); paintTools(); } }, 'Reduced');
+  const tb = h('div', { class: 'bd-btb', role: 'toolbar', 'aria-label': 'Board' }, lpBtn, sep(),
+    tbtn('fit', 'Fit all screens (0)', () => fit(true)), tbtn('minus', 'Zoom out (−)', () => zoomBy(1 / 1.4)), zoomLbl, tbtn('plus', 'Zoom in (+)', () => zoomBy(1.4)),
+    tbtn('target', 'Focus the selected screen (F, or double-click it)', () => focusSel()), sep(),
+    tbtn('present', 'Present: one screen at a time (← →, Esc leaves)', () => present(B.sel)), varBtn, sep(), fidSeg,
+    themeSel && [sep(), h('label', { class: 'th' }, ic('palette'), themeSel)], sep(), motBtn, redBtn);
+  if (themeSel) themeSel.addEventListener('change', () => { const x = ITEMS['brief/theme']; if (x && x.setChoice && !OLD) x.setChoice(themeSel.value); else { B.theme = themeSel.value; paintTokens(); } });
+  function paintTools() {
+    lpBtn.setAttribute('aria-pressed', String(B.lp));
+    fidSeg.querySelectorAll('button').forEach(bt => bt.setAttribute('aria-checked', String((bt.dataset.v === 'sketch') === B.sketch)));
+    motBtn.replaceChildren(ic(B.paused ? 'play' : 'pause')); motBtn.title = B.paused ? 'Play animations' : 'Pause animations'; motBtn.setAttribute('aria-label', motBtn.title); motBtn.setAttribute('aria-pressed', String(B.paused));
+    redBtn.setAttribute('aria-pressed', String(B.reduced));
+    varBtn.disabled = !B.variants && !variantGroup(B.sel).length; varBtn.setAttribute('aria-pressed', String(!!B.variants));
+    if (themeSel && B.theme) themeSel.value = B.theme;
+  }
+  // the theme is the brief's pick (the reader's, else the recommendation): picking a pill re-skins every frame
+  const themePick = () => { const x = ITEMS['brief/theme']; const id = x ? x.choice || x.it.recommend : null; return themeOf(id) ? id : B.theme || (themes[0] ? themes[0].id : null); };
+  function paintTokens() { sendAll(tokensMsg); paintTools(); }
+
+  /* Variants: the selected screen and its variantOf siblings, in one row at one zoom; Esc or the key again ends it */
+  function variantGroup(id) {
+    const x = id && B.frames.get(id); if (!x) return [];
+    const src = x.a.variantOf && B.frames.has(x.a.variantOf) ? x.a.variantOf : id;
+    const g = abs.filter(a => a.id === src || a.variantOf === src).map(a => B.frames.get(a.id));
+    return g.length > 1 ? g : [];
+  }
+  function toggleVariants(on = !B.variants) {
+    if (on) {
+      const g = variantGroup(B.sel); if (!g.length) { toast('Select a screen that has variants'); return; }
+      B.variants = g[0].a.id; vp.classList.add('variants');
+      for (const x of [...B.frames.values(), ...B.ghosts.values()]) x.el.classList.toggle('off', !g.includes(x));
+      let cx = g[0].p.x;
+      for (const x of g) { x.home = x.p; x.p = { ...x.p, x: cx, y: g[0].p.y }; cx += x.p.w + AB_GAP; placeAb(x); }
+      showBox(boxOf(g), true, 1);
+    } else {
+      B.variants = null; vp.classList.remove('variants');
+      for (const x of [...B.frames.values(), ...B.ghosts.values()]) { if (x.home) { x.p = x.home; x.home = null; placeAb(x); } x.el.classList.remove('off'); }
+      fit(true);
+    }
+    paintTools(); MARKUP.relayout();
+  }
+
+  /* Present: one screen at a time at its own size on a dark stage, interactive; ← → step in board order, Esc leaves */
+  let pres = null;
+  function present(id) {
+    if (pres) return;
+    const order = abs.filter(a => B.frames.has(a.id));
+    if (!order.length) return;
+    let i = Math.max(0, order.findIndex(a => a.id === id));
+    const box = h('div', { class: 'box' }), cap = h('div', { class: 'cap', 'aria-live': 'polite' });
+    const close = tbtn('x', 'Leave (Esc)', () => end());
+    const el = h('div', { class: 'bd-pres', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Present' }, box,
+      h('div', { class: 'bar' }, tbtn('prev', 'Previous screen (←)', () => step(-1)), cap, tbtn('next', 'Next screen (→)', () => step(1)), close));
+    let rec = null, dev = null;
+    const lay = () => dev && dev.fit(innerWidth - 96, innerHeight - 120);
+    function showI() {
+      if (rec) B.live.delete(rec);
+      const a = order[i]; rec = { a, role: 'pres', fr: null };
+      dev = deviceBox(a, frameEl(rec, OLD ? VIEW.rev : null), SERVED || SCREENS ? '' : 'Open this page through serve.py to see the screen.');
+      box.replaceChildren(dev.sz); lay();
+      cap.replaceChildren(h('b', {}, a.title || a.id), ` · ${i + 1} of ${order.length}`);
+      select(a.id);
+    }
+    function step(d) { i = (i + d + order.length) % order.length; showI(); }
+    function end() { if (rec) B.live.delete(rec); removeEventListener('resize', lay); el.remove(); pres = null; root.classList.remove('bd-presenting'); focus(order[i].id, false); }
+    pres = { step, end, el };
+    document.body.append(el); root.classList.add('bd-presenting'); addEventListener('resize', lay);
+    showI(); close.focus();
+  }
+
+  /* compare view (?diff=): a screen at both revisions, side by side or stacked with an opacity slider */
+  const CMP_KEY = 'bluedoc:design-compare';
+  let cmpv = null;
+  function closeCompare() { if (!cmpv) return; for (const p of cmpv.P) if (p.rec) B.live.delete(p.rec); cmpv.el.remove(); cmpv = null; }
+  function openCompare(id) {
+    if (!BASE) return;
+    closeCompare();
+    const L = { a: boardAbs(boardOf(BASE.doc)).find(a => a.id === id), r: BASE }, R = { a: abs.find(a => a.id === id), r: VIEW };
+    let how = store.get(CMP_KEY) === 'onion' ? 'onion' : 'side';
+    const seg = h('div', { class: 'bd-sg', role: 'radiogroup', 'aria-label': 'Compare as' }, [['side', 'Side by side', 'columns'], ['onion', 'Onion skin', 'layers']].map(([v, l, i]) =>
+      h('button', { type: 'button', role: 'radio', 'data-v': v, onclick: () => { how = v; store.set(CMP_KEY, v); lay(); } }, ic(i), l)));
+    const op = h('input', { type: 'range', min: 0, max: 100, value: 50, 'aria-label': `Opacity of ${revName(VIEW)} over ${revName(BASE)}` });
+    const pane = s => {
+      const lb = h('div', { class: 'lb' }, h('b', {}, revName(s.r)), s.r === VIEW ? ' · shown' : '');
+      if (!s.a) return { el: h('div', { class: 'bd-cmpv-p none' }, lb, h('div', { class: 'msg' }, s.r === BASE ? `Not in ${revName(BASE)}: new in ${VIEW.rev}` : `Removed in ${revName(VIEW)}`)) };
+      const rec = { a: s.a, role: 'cmp', fr: null };
+      const dev = deviceBox(s.a, frameEl(rec, s.r === CUR ? null : s.r.rev), SCREENS ? 'An export shows the current revision\'s screens only.' : 'Open this page through serve.py to compare screens.');
+      return { el: h('div', { class: 'bd-cmpv-p' }, lb, dev.sz), dev, rec };
+    };
+    const P = [pane(L), pane(R)], name = (R.a || L.a || { id }).title || id;
+    const body = h('div', { class: 'bd-cmpv-b' }, P[0].el, P[1].el);
+    const el = h('div', { class: 'bd-cmpv', role: 'dialog', 'aria-label': 'Compare ' + name },
+      h('div', { class: 'hd' }, ic('split'), h('b', {}, name), h('span', { class: 'r' }, `${revName(BASE)} → ${VIEW.rev}`), h('span', { class: 'sp' }), op, seg, tbtn('x', 'Close (Esc)', () => closeCompare())), body);
+    op.addEventListener('input', () => P[1].el.style.setProperty('--op', op.value / 100));
+    function lay() {
+      el.dataset.how = how; op.hidden = how !== 'onion';
+      seg.querySelectorAll('button').forEach(bt => bt.setAttribute('aria-checked', String(bt.dataset.v === how)));
+      P[1].el.style.setProperty('--op', how === 'onion' ? op.value / 100 : 1);
+      const W = body.clientWidth - 40, H = body.clientHeight - 64;
+      for (const p of P) if (p.dev) p.dev.fit(how === 'side' ? (W - 32) / 2 : W, H);
+    }
+    cmpv = { el, lay, P };
+    wrap.append(el); lay();
+  }
+
+  /* Frame mode: drag an empty frame on the board (a click places a phone), then drag inside it for labelled
+     boxes; the device, a prompt and the boxes' labels go in its editor. Saved, it is a pending comment
+     keyed `frame:<device>@<x>,<y>` whose note lists the boxes as text. */
+  const toBoard = e => { const r = stage.getBoundingClientRect(); return { x: (e.clientX - r.left - B.tx) / B.k, y: (e.clientY - r.top - B.ty) / B.k }; };
+  const rectFrom = (a, c) => ({ x: Math.round(Math.min(a.x, c.x)), y: Math.round(Math.min(a.y, c.y)), w: Math.round(Math.abs(c.x - a.x)), h: Math.round(Math.abs(c.y - a.y)) });
+  const devName = d => DEVICE_NAME[d] || String(d).replace('x', ' × ');
+  let drag = null;
+  stage.addEventListener('pointerdown', e => {
+    if (B.mode !== 'frame' || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    e.preventDefault(); stage.setPointerCapture(e.pointerId);
+    const p = toBoard(e), q = B.rq, inRq = !!q && p.x >= q.x && p.y >= q.y && p.x <= q.x + q.w && p.y <= q.y + q.h;
+    if (q && !inRq) { if (q.boxes.length || q.ta.value.trim()) { q.ed.classList.remove('bd-flash'); void q.ed.offsetWidth; q.ed.classList.add('bd-flash'); return; } cancelRq(); }
+    const ghost = h('div', { class: 'bd-rq-drag' });
+    (inRq ? q.el : vp).append(ghost);
+    drag = { id: e.pointerId, p0: p, inRq, ghost };
+  });
+  stage.addEventListener('pointermove', e => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const r = rectFrom(drag.p0, toBoard(e)), o = drag.inRq ? B.rq : { x: 0, y: 0 };
+    Object.assign(drag.ghost.style, { left: r.x - o.x + 'px', top: r.y - o.y + 'px', width: r.w + 'px', height: r.h + 'px' });
+  });
+  const endDrag = e => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const d = drag; drag = null; d.ghost.remove();
+    if (e.type === 'pointercancel') return;
+    const r = rectFrom(d.p0, toBoard(e));
+    if (d.inRq) {
+      const q = B.rq, x = clamp(r.x - q.x, 0, q.w), y = clamp(r.y - q.y, 0, q.h), w = Math.min(r.w, q.w - x), hh = Math.min(r.h, q.h - y);
+      if (w >= 8 && hh >= 8) addBox({ x, y, w, h: hh });
+      return;
+    }
+    if (r.w < 16 || r.h < 16) startRq({ x: Math.round(d.p0.x), y: Math.round(d.p0.y), w: DEVICES.phone[0], h: DEVICES.phone[1] }, 'phone');
+    else startRq(r, 'custom');
+  };
+  stage.addEventListener('pointerup', endDrag); stage.addEventListener('pointercancel', endDrag);
+  function startRq(r, device) {
+    cancelRq();
+    const el = h('div', { class: 'bd-rq draft' }, h('div', { class: 'bd-rq-t' }));
+    vp.append(el);
+    const sel = h('select', { 'aria-label': 'Device' }, Object.keys(DEVICES).map(d => h('option', { value: d }, `${DEVICE_NAME[d]} · ${DEVICES[d].join(' × ')}`)), h('option', { value: 'custom' }, `As drawn · ${r.w} × ${r.h}`));
+    const ta = h('textarea', { class: 'bp-note-ta', rows: 3, placeholder: 'What should this screen show?', 'aria-label': 'What the new screen should show' });
+    const list = h('ol', { class: 'bxs' });
+    const save = h('button', { type: 'button', class: 'bp-btn primary', disabled: true, onclick: () => saveRq() }, 'Save');
+    const ed = h('div', { class: 'bd-rqe', role: 'dialog', 'aria-label': 'Requested frame' },
+      h('div', { class: 'hd' }, ic('frame'), h('b', {}, 'Requested frame')), h('label', { class: 'dv' }, h('span', {}, 'Device'), sel), ta, list,
+      h('p', { class: 'hint' }, 'Drag inside the frame to add a labelled box.'),
+      h('div', { class: 'ft' }, h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => cancelRq() }, 'Cancel'), save));
+    document.body.append(ed);
+    B.rq = { ...r, dw: r.w, dh: r.h, device, boxes: [], el, ed, ta, sel, list, save };
+    sel.value = device;
+    sel.addEventListener('change', () => { const q = B.rq; q.device = sel.value; [q.w, q.h] = q.device === 'custom' ? [q.dw, q.dh] : DEVICES[q.device]; paintRq(); });
+    ta.addEventListener('input', paintRq);
+    ed.addEventListener('keydown', e => {
+      e.stopPropagation();   // mode keys must not fire while typing
+      if (e.key === 'Escape') { e.preventDefault(); cancelRq(); }
+      else if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); saveRq(); }
+    });
+    paintRq(); requestAnimationFrame(() => ta.focus({ preventScroll: true }));
+  }
+  function addBox(r) {
+    const q = B.rq, inp = h('input', { class: 'bp-note-ta', placeholder: 'Label, e.g. Header', 'aria-label': `Label of box ${q.boxes.length + 1}` });
+    const bx = { ...r, inp };
+    bx.li = h('li', {}, h('span', { class: 'n' }, String(q.boxes.length + 1)), inp,
+      h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Remove this box', onclick: () => { q.boxes.splice(q.boxes.indexOf(bx), 1); bx.li.remove(); paintRq(); } }, ic('x')));
+    inp.addEventListener('input', paintRq);
+    q.boxes.push(bx); q.list.append(bx.li); paintRq(); inp.focus();
+  }
+  function paintRq() {
+    const q = B.rq; if (!q) return;
+    Object.assign(q.el.style, { left: q.x + 'px', top: q.y + 'px', width: q.w + 'px', height: q.h + 'px' });
+    q.el.firstChild.textContent = 'Requested · ' + devName(q.device === 'custom' ? `${q.w}x${q.h}` : q.device);
+    q.el.querySelectorAll('.bd-rq-b').forEach(x => x.remove());
+    q.boxes.forEach((bx, i) => { bx.li.firstChild.textContent = String(i + 1); q.el.append(h('div', { class: 'bd-rq-b', style: `left:${bx.x}px;top:${bx.y}px;width:${bx.w}px;height:${bx.h}px` }, h('span', {}, `${i + 1}. ${bx.inp.value.trim() || 'Box'}`))); });
+    q.save.disabled = !(q.ta.value.trim() || q.boxes.length);
+    placeRqe();
+  }
+  // the editor beside the frame, in the window
+  function placeRqe() {
+    const q = B.rq; if (!q) return;
+    const r = q.el.getBoundingClientRect(), w = q.ed.offsetWidth, hh = q.ed.offsetHeight, s = stage.getBoundingClientRect();
+    let x = r.right + 12 + w <= s.right - 8 ? r.right + 12 : r.left - 12 - w >= s.left + 8 ? r.left - 12 - w : s.right - w - 12;
+    const y = clamp(r.top, s.top + 60, Math.max(s.top + 60, s.bottom - hh - 12));
+    q.ed.style.translate = `${Math.round(x)}px ${Math.round(y)}px`;
+  }
+  function cancelRq() { const q = B.rq; if (!q) return; q.el.remove(); q.ed.remove(); B.rq = null; }
+  function saveRq() {
+    const q = B.rq; if (!q || q.save.disabled) return;
+    const dev = q.device === 'custom' ? `${q.w}x${q.h}` : q.device, prompt = q.ta.value.trim();
+    const boxes = q.boxes.map(bx => ({ x: bx.x, y: bx.y, w: Math.min(bx.w, q.w - bx.x), h: Math.min(bx.h, q.h - bx.y), label: bx.inp.value.trim() || 'Box' })).filter(bx => bx.w > 0 && bx.h > 0);
+    const note = [prompt, boxes.length && 'Labelled boxes (x, y, w × h inside the frame, CSS px):\n' + boxes.map((bx, i) => `${i + 1}. ${bx.label}: ${bx.x}, ${bx.y}, ${bx.w} × ${bx.h}`).join('\n')].filter(Boolean).join('\n\n');
+    MARKUP.addFrame({ key: `frame:${dev}@${q.x},${q.y}`, label: 'Requested frame: ' + devName(dev), text: prompt.slice(0, 300), note, frame: { device: dev, x: q.x, y: q.y, w: q.w, h: q.h, boxes } });
+    cancelRq();
+  }
+  // the saved requests: dashed frames with their boxes, one per pending or open `frame:` comment
+  function rqEl(a) {
+    const f = a.frame, n = v => Number.isFinite(+v) ? Math.round(+v) : 0;
+    const box = { x: n(f.x), y: n(f.y), w: Math.max(8, n(f.w)), h: Math.max(8, n(f.h)) };
+    const el = h('div', { class: 'bd-rq', 'data-key': a.target.key, style: `left:${box.x}px;top:${box.y}px;width:${box.w}px;height:${box.h}px` },
+      h('div', { class: 'bd-rq-t' }, 'Requested · ' + devName(String(f.device || ''))), a.target.text && h('p', { class: 'pr' }, a.target.text),
+      (Array.isArray(f.boxes) ? f.boxes : []).slice(0, 50).map((bx, i) => h('div', { class: 'bd-rq-b', style: `left:${n(bx.x)}px;top:${n(bx.y)}px;width:${n(bx.w)}px;height:${n(bx.h)}px` }, h('span', {}, `${i + 1}. ${String(bx.label || 'Box')}`))));
+    el._box = box;
+    return el;
+  }
+  B.paintFrames = list => {
+    const keep = new Set();
+    for (const a of list) {
+      if (!a.frame || typeof a.frame !== 'object' || a.status === 'resolved' || !a.target.key.startsWith('frame:')) continue;
+      keep.add(a.id);
+      const sig = a.target.key + JSON.stringify(a.frame) + a.target.text;
+      let el = B.rqs.get(a.id);
+      if (!el || el._sig !== sig) { if (el) el.remove(); el = rqEl(a); el._sig = sig; B.rqs.set(a.id, el); vp.append(el); }
+    }
+    for (const [id, el] of B.rqs) if (!keep.has(id)) { el.remove(); B.rqs.delete(id); }
+  };
+
+  /* modes (the tray's): frames take the pointer in Interact, Point and Select; elsewhere a drag pans */
+  B.setMode = m => {
+    B.mode = m; stage.dataset.m = m;
+    for (const x of B.live) post(x, modeMsg(x));
+    for (const x of B.frames.values()) x.hov.hidden = true;
+    if (m !== 'frame') cancelRq();
+  };
+  // an `el:` pin's spot from where its frame last reported the element, as a fraction of the artboard
+  B.pinPos = key => {
+    if (!key.startsWith('el:')) return null;
+    const i = key.indexOf('/'), x = i > 3 && B.frames.get(key.slice(3, i));
+    return x ? pickPos(x, x.rects[key.slice(i + 1)]) : null;
+  };
+  // the artboard a key names (artboard:, el:), else null
+  B.abFor = key => { const m = /^(?:artboard|el):([^/]+)/.exec(key); const x = m && B.frames.get(m[1]); return x ? x.el : null; };
+  B.focusKey = key => {
+    const m = /^(?:artboard|el):([^/]+)/.exec(key);
+    if (m) return focus(m[1]);
+    const el = [...B.rqs.values()].find(e => e.dataset.key === key);
+    if (el) { showBox(boxOf([{ a: {}, p: el._box }]), true, 2); return true; }
+    return false;
+  };
+
+  /* compare view: artboards badged New, Changed (its JSON or its screen's hash) or Removed (a ghost at its old place) */
+  B.compare = o => {
+    const was = new Map(boardAbs(boardOf(o)).map(a => [a.id, a])), hs = BASE.screens || {}, hv = VIEW.screens || {};
+    const mark = (x, kind) => {
+      x.chg = kind; x.tag.replaceChildren(chgTag(kind)); if (x.liTag) x.liTag.replaceChildren(chgTag(kind)); x.cmpBtn.hidden = false;
+      markChg(x.el, kind, x.a.title || x.a.id);
+      CHG[CHG.length - 1].show = () => { focus(x.a.id); if (cmpv) openCompare(x.a.id); };
+    };
+    for (const x of B.frames.values()) {
+      const id = x.a.id, a = was.get(id);
+      const kind = !a ? 'add' : canon(a) !== canon(x.a) || (hs[id] ?? null) !== (hv[id] ?? null) ? 'mod' : null;
+      if (kind) mark(x, kind);
+    }
+    const oldAt = boardLayout([...was.values()]);
+    for (const [id, a] of was) if (!B.frames.has(id)) {
+      const g = makeAb(a, oldAt.get(id), true); B.ghosts.set(id, g); vp.append(g.el);
+      if (lpList) lpList.append(h('li', {}, g.li = h('button', { type: 'button', class: 'gone', onclick: () => focus(id) }, ic(DEVICE_IC[devOf(a)]), h('span', { class: 't' }, h('b', {}, a.title || id), h('span', {}, 'Removed')), g.liTag = h('span', { class: 'tg' }))));
+      mark(g, 'del');
+    }
+  };
+
+  /* the page around the board: the left panel (Screens, Brief) and the keys. Runs once the document is drawn. */
+  const LP_KEY = 'bluedoc:design-panel', LP_TAB = 'bluedoc:design-tab';
+  let lp = null, lpList = null, lpTabs = null;
+  function setLp(open, remember) {
+    B.lp = !!open; root.classList.toggle('bd-lp-open', B.lp); if (lp) lp.inert = !B.lp;
+    if (remember) store.set(LP_KEY, B.lp ? '1' : '0');
+    paintTools(); setTimeout(() => MARKUP.relayout(), 260);
+  }
+  function setTab(t, remember) {
+    if (!lp) return;
+    if (remember) store.set(LP_TAB, t);
+    for (const bt of lpTabs.querySelectorAll('button')) { const on = bt.dataset.v === t; bt.setAttribute('aria-checked', String(on)); $('#' + bt.getAttribute('aria-controls')).hidden = !on; }
+  }
+  // a change mark in the brief: show the Brief tab first
+  B.reveal = el => { if (lp && $('#bd-lp-brief').contains(el)) { setLp(true, false); setTab('brief', false); } };
+  B.start = () => {
+    const blk = wrap.closest('.bp-block'), shell = $('.bd-shell');
+    if (!blk || !shell) return;
+    // the board leaves its section for the full-bleed layer; a stand-in keeps the section's block order
+    blk.replaceWith(h('div', { class: 'bp-block bd-board-ph' }, ic('frame'), h('span', {}, 'The screens of this section are on the board.')));
+    blk.classList.add('bd-boardblk'); shell.append(blk);
+    lpList = h('ol', { class: 'bd-scr-l', 'aria-label': 'Screens' }, abs.map(a => {
+      const x = B.frames.get(a.id), dev = devOf(a);
+      x.li = h('button', { type: 'button', 'data-ab': a.id, 'aria-current': 'false', onclick: () => focus(a.id) }, ic(DEVICE_IC[dev]),
+        h('span', { class: 't' }, h('b', {}, a.title || a.id), h('span', {}, [DEVICE_NAME[dev] || `${x.p.w} × ${x.p.h}`, FIDELITY[a.fidelity], a.variantOf && 'variant'].filter(Boolean).join(' · '))),
+        x.liWarn = h('i', { class: 'warn', hidden: true }), x.liTag = h('span', { class: 'tg' }));
+      return h('li', {}, x.li);
+    }));
+    lpTabs = h('div', { class: 'bd-sg', role: 'radiogroup', 'aria-label': 'Panel' }, [['screens', 'Screens'], ['brief', 'Brief']].map(([v, l]) =>
+      h('button', { type: 'button', role: 'radio', 'data-v': v, 'aria-controls': 'bd-lp-' + v, onclick: () => setTab(v, true) }, l)));
+    lp = h('aside', { class: 'bd-lp', 'aria-label': 'Screens and brief', inert: true }, head, h('div', { class: 'bd-lp-tabs bd-lp-ui' }, lpTabs),
+      h('div', { class: 'bd-lp-pane bd-lp-ui', id: 'bd-lp-screens' }, lpList, h('p', { class: 'hint' }, 'Click a screen to focus it. Double-click one on the board, or press F, to do the same.')),
+      h('div', { class: 'bd-lp-pane', id: 'bd-lp-brief', hidden: true }, tldr, main));
+    shell.prepend(lp);
+    placeMeta();
+    setTab(store.get(LP_TAB) === 'brief' ? 'brief' : 'screens', false);
+    const pref = store.get(LP_KEY);
+    setLp(pref ? pref === '1' : innerWidth > 900, false);
+    // the theme follows the brief's pick
+    const tx = ITEMS['brief/theme'];
+    if (tx) tx.onChoice = () => { const t = themePick(); if (t !== B.theme) { B.theme = t; paintTokens(); } else paintTools(); };
+    B.theme = themePick();
+    paintTools();
+    document.addEventListener('keydown', e => {
+      if (e.defaultPrevented || e.isComposing || e.metaKey || e.ctrlKey || e.altKey || document.querySelector('dialog[open]')) return;
+      const t = e.target; if (t.isContentEditable || (t.closest && t.closest('input, textarea, select, [contenteditable]'))) return;
+      const k = e.key;
+      if (pres) { if (k === 'Escape') pres.end(); else if (k === 'ArrowLeft' || k === 'ArrowRight') pres.step(k === 'ArrowLeft' ? -1 : 1); else return; e.preventDefault(); return; }
+      if (k === 'Escape') { if (cmpv) closeCompare(); else if (B.rq) cancelRq(); else if (B.variants) toggleVariants(false); else return; }
+      else if (k === '[') setLp(!B.lp, true);
+      else if (k === '0') fit(true);
+      else if (k === 'f' || k === 'F') focusSel();
+      else if (k === '+' || k === '=') zoomBy(1.25);
+      else if (k === '-' || k === '_') zoomBy(0.8);
+      else return;
+      e.preventDefault();
+    });
+    if ('ResizeObserver' in window) new ResizeObserver(() => { if (!B.touched) fit(false); else apply(); if (cmpv) cmpv.lay(); MARKUP.relayout(); }).observe(stage);
+    requestAnimationFrame(() => fit(false));
+  };
+  // tests and agents: BP.board({focus, fit, sketch, present, compare, variants})
+  B.api = o => {
+    if (o && typeof o === 'object') {
+      if (o.fit) fit(false);
+      if (o.focus) focus(String(o.focus), false);
+      if ('sketch' in o) { B.sketch = !!o.sketch; sendAll(viewMsg); paintTools(); }
+      if ('variants' in o) toggleVariants(!!o.variants);
+      if (o.present) present(String(o.present)); else if (o.present === false && pres) pres.end();
+      if (o.compare) openCompare(String(o.compare)); else if (o.compare === false) closeCompare();
+    }
+    return { k: B.k, mode: B.mode, selected: B.sel, panel: B.lp, theme: B.theme, sketch: B.sketch, variants: B.variants, present: !!pres, compare: !!cmpv,
+      live: boardFrames().length, requested: [...B.rqs.values()].map(el => el.dataset.key),
+      artboards: [...B.frames.values()].map(x => ({ id: x.a.id, x: x.p.x, y: x.p.y, w: x.p.w, h: x.p.h, live: !!x.fr, ready: x.ready, fallback: x.fallback, navigated: x.navs, change: x.chg })) };
+  };
+  const wrap = h('div', { class: 'bd-bwrap' }, stage, tb);
+  return wrap;
+}
+
 renderDocument();
+if (BOARD && IS_DESIGN) BOARD.start();   // elsewhere a board stays a block in the column
 
 /* ---------- revisions: switch between them, compare two ---------- */
 // ?rev=B shows revision B (read-only); ?diff=A marks what changed from A to the shown revision.
@@ -3635,13 +4488,14 @@ function blockText(b) {
     case 'files': return [b.title, ...(b.items || []).map(f => `${(FILE_ACTION[f.action] || FILE_ACTION.edit)[0]} ${f.path}${f.from ? ` (from ${f.from})` : ''}${f.why ? `: ${f.why}` : ''}`)].filter(Boolean).join('\n');
     case 'media': return [b.caption, b.alt, b.src].filter(Boolean).join('\n');
     case 'compare': { const side = (s, d) => s ? [s.label || d, s.md, s.code, s.src].filter(Boolean).join('\n') : ''; return [b.title, side(b.before, 'Before'), side(b.after, 'After')].filter(Boolean).join('\n\n'); }
+    case 'board': return [b.title, ...boardAbs(b).map(a => `- ${a.title || a.id} (${a.device || `${a.w} × ${a.h}`}, ${a.fidelity || ''})`)].filter(Boolean).join('\n');
     default: return canon(b);
   }
 }
 const mediaLabel = b => { const t = plain(b.caption || b.alt).replace(/\s+/g, ' ').trim(); return t.length > 48 ? t.slice(0, 47).trimEnd() + '…' : t || 'Media'; };
 const blockLabel = b => ({ text: 'Text', callout: b.title || `${(b.kind || 'note')[0].toUpperCase()}${(b.kind || 'note').slice(1)} callout`, table: 'Table',
   code: b.title || 'Code', terms: 'Terms', cards: 'Cards', checklist: b.title || 'Checklist', canvas: b.title || 'Drawing', diff: b.title || 'Code change',
-  steps: b.title || 'Steps', files: b.title || 'Files', media: b.type === 'media' ? mediaLabel(b) : '', compare: b.title || 'Compare' }[b.type] || b.type);
+  steps: b.title || 'Steps', files: b.title || 'Files', media: b.type === 'media' ? mediaLabel(b) : '', compare: b.title || 'Compare', board: b.title || 'Board' }[b.type] || b.type);
 
 const CHG = [];   // every marked change, in page order once sorted
 const CHG_WORD = { add: 'New', mod: 'Changed', del: 'Removed' };
@@ -3683,13 +4537,15 @@ function compareDocs(base, view) {
     if (prev) prev.after(ghost); else main.prepend(ghost);
     markChg(ghost, 'del', o.title);
   });
+  // a design's board: its artboards, by screen hash too (the JSON can stay the same while a screen changes)
+  if (BOARD && BOARD.compare && boardOf(view)) BOARD.compare(base);
   // page order, so next/previous walk down the page
   CHG.sort((a, b) => a.el.compareDocumentPosition(b.el) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1);
 }
 function compareBlocks(ob, nb, secElm) {
   const els = [...secElm.querySelectorAll(':scope > .bp-block')];
   for (const op of alignSeq(ob, nb, b => b.type + ':' + (b.id || ''))) {
-    if (op.op === 'same') continue;
+    if (op.op === 'same' || (op.op === 'del' ? ob[op.a] : nb[op.b]).type === 'board') continue;   // boards: BOARD.compare
     if (op.op === 'del') {
       const b = ob[op.a];
       const ghost = h('div', { class: 'bp-block bd-ghost' }, chgHead('del', blockLabel(b)), h('div', { class: 'bd-wd', html: `<del>${esc(blockText(b))}</del>` }));
@@ -3918,11 +4774,14 @@ function scrollWithin(box, el) {   // scroll a panel list so `el` shows; `box` i
   else if (bottom > box.scrollTop + box.clientHeight) box.scrollTo({ top: Math.min(top, bottom - box.clientHeight), behavior: REDUCE ? 'auto' : 'smooth' });
 }
 const SIDE = (() => {
-  const OPEN_KEY = 'bluedoc:comments';
-  let sec = null;   // { id, label, body, chip, onToggle, shown }
+  const OPEN_KEY = 'bluedoc:comments', TAB_KEY = 'bluedoc:sp-tab';
+  // every section ({ id, label, body, at, chip, onToggle, shown, tab }) in tab order, and the one shown. One
+  // section shows its title; two or more (a design's Comments and Revisions) show as tabs.
+  const secs = []; let sec = null;
   const title = h('h2'), chip = h('span', { class: 'n', hidden: true });
+  const tabs = h('div', { class: 'bd-sg bd-sp-tabs', role: 'tablist', 'aria-label': 'Side panel', hidden: true });
   const el = h('aside', { class: 'bd-sp', id: 'bd-sp', 'aria-label': 'Side panel', inert: true },
-    h('div', { class: 'bd-sp-h' }, title, chip, h('span', { class: 'sp' }),
+    h('div', { class: 'bd-sp-h' }, title, tabs, chip, h('span', { class: 'sp' }),
       h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Close the panel', title: 'Close', onclick: () => setOpen(false, true) }, ic('x'))));
   const sheet = () => innerWidth <= 900;
   // the app bar's sidebar key: shows or hides the panel; its badge counts pending comments
@@ -3932,13 +4791,33 @@ const SIDE = (() => {
   const badge = n => { togN.hidden = !n; togN.textContent = String(n || ''); };   // the caller repaints
   const as = () => panelOpen ? (sheet() ? 'sheet' : dockW() ? 'dock' : 'drawer') : null;
   const shows = id => panelOpen && !!sec && sec.id === id;
-  // add({id, label, body, chip?, onToggle?}): chip is the header's count; onToggle(shown) runs when the
-  // section starts or stops showing
+  // add({id, label, body, at?, chip?, onToggle?}): at orders the tabs (default 0); chip is the header's
+  // count; onToggle(shown) runs when the section starts or stops showing
   function add(s) {
-    sec = { chip: () => '', onToggle: () => {}, shown: false, ...s };
+    const x = { at: 0, chip: () => '', onToggle: () => {}, shown: false, ...s };
     s.body.classList.add('bd-sp-sec'); s.body.id = 'bd-sp-' + s.id;
-    title.textContent = s.label; el.setAttribute('aria-label', s.label);
-    el.append(s.body); document.body.append(el);
+    x.tab = h('button', { type: 'button', role: 'tab', 'aria-controls': s.body.id, 'data-f': s.id, onclick: () => { pick(x.id, true); paint(); } }, s.label);
+    secs.push(x); secs.sort((a, b) => a.at - b.at);
+    tabs.replaceChildren(...secs.map(y => y.tab));
+    el.append(s.body); if (!el.isConnected) document.body.append(el);
+    sec = secs[0]; layout();
+  }
+  tabs.addEventListener('keydown', e => {
+    const step = { ArrowRight: 1, ArrowLeft: -1 }[e.key]; if (!step || !sec) return;
+    e.preventDefault(); const x = secs[(secs.indexOf(sec) + step + secs.length) % secs.length];
+    pick(x.id, true); paint(); x.tab.focus();
+  });
+  function pick(id, remember) {
+    const x = secs.find(y => y.id === id); if (!x) return false;
+    if (remember) store.set(TAB_KEY, id);
+    if (x !== sec) { sec = x; layout(); }
+    return true;
+  }
+  function layout() {
+    const many = secs.length > 1;
+    tabs.hidden = !many; title.hidden = many;
+    title.textContent = sec.label; el.setAttribute('aria-label', many ? 'Side panel' : sec.label);
+    for (const x of secs) { const on = x === sec; x.body.hidden = !on; x.tab.setAttribute('aria-selected', String(on)); x.tab.tabIndex = on ? 0 : -1; }
   }
   // docking reflows the page: keep what the reader was looking at where it was
   const PLACES = '.bd-head, .bd-tldr-card, main section.bp-sec > h2, main .bp-lead, main .bp-block[data-bk], main .bp-cl-item, main tr[data-r]';
@@ -3965,8 +4844,9 @@ const SIDE = (() => {
   }
   // open on the section; with toggle, close the panel when it already shows
   function show(id, { toggle = false, remember = true } = {}) {
-    if (!sec || sec.id !== id) return false;
-    setOpen(!(toggle && shows(id)), remember);
+    if (toggle && shows(id)) { setOpen(false, remember); return true; }
+    if (!pick(id, remember)) return false;
+    setOpen(true, remember);
     return true;
   }
   function paint() {
@@ -3975,11 +4855,12 @@ const SIDE = (() => {
     toggle._tip = panelOpen ? 'Hide sidebar' : 'Show sidebar';
     toggle.setAttribute('aria-label', toggle._tip + (togN.hidden ? '' : ` (${togN.textContent} pending)`));
     if (toggle._open !== panelOpen) { toggle._open = panelOpen; toggle.replaceChildren(ic(panelOpen ? 'panelon' : 'panel'), togN); }
-    if (sec) { const v = shows(sec.id); if (v !== sec.shown) { sec.shown = v; sec.onToggle(v); } }
+    for (const x of secs) { const v = shows(x.id); if (v !== x.shown) { x.shown = v; x.onToggle(v); } }
   }
   // after the section is added: restore the panel (open by default where it docks, until the reader toggles it)
   function start() {
     if (!sec) return;
+    pick(store.get(TAB_KEY), false);
     document.querySelector('.bd-bar-r')?.insertBefore(toggle, themeBtn);
     document.addEventListener('keydown', e => {
       if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey || document.querySelector('dialog[open]')) return;
@@ -3993,7 +4874,7 @@ const SIDE = (() => {
   }
   function api(o) {
     if (o && typeof o === 'object') { if (o.section && o.open !== false) show(o.section); else if ('open' in o) setOpen(o.open, true); }
-    return { available: sec ? [sec.id] : [], open: panelOpen, section: sec ? sec.id : null, as: as() };
+    return { available: secs.map(x => x.id), open: panelOpen, section: sec ? sec.id : null, as: as() };
   }
   return { el, add, show, shows, setOpen, paint, start, api, sheet, as, badge };
 })();
@@ -4020,13 +4901,22 @@ function showChg(i) {
   if (!CHG.length) return;
   chgAt = (i % CHG.length + CHG.length) % CHG.length;
   const c = CHG[chgAt];
-  c.el.scrollIntoView({ behavior: REDUCE ? 'auto' : 'smooth', block: 'center' });
+  // an artboard: focus it on the board; else scroll to the mark (in a design's Brief tab, once it shows)
+  if (c.show) c.show();
+  else { if (BOARD && BOARD.reveal) BOARD.reveal(c.el); c.el.scrollIntoView({ behavior: REDUCE ? 'auto' : 'smooth', block: 'center' }); }
   c.el.classList.remove('bd-chg-flash'); void c.el.offsetWidth; c.el.classList.add('bd-chg-flash');
   if (revPos) revPos.textContent = `${chgAt + 1} of ${CHG.length}`;
   chgBtns.forEach((b, k) => b.setAttribute('aria-current', String(k === chgAt)));
   if (chgBtns[chgAt]) railScrollTo(chgBtns[chgAt]);
 }
 const gotoChg = step => showChg(chgAt + step);
+// a design's revision: the titles of the screens it added, changed (JSON or screen hash) or removed since prev
+function screensChanged(prev, r) {
+  const a = new Map(boardAbs(boardOf(prev.doc)).map(x => [x.id, x])), b = boardAbs(boardOf(r.doc)), ha = prev.screens || {}, hb = r.screens || {};
+  const out = b.filter(x => !a.has(x.id) || canon(a.get(x.id)) !== canon(x) || (ha[x.id] ?? null) !== (hb[x.id] ?? null)).map(x => x.title || x.id);
+  for (const [id, x] of a) if (!b.some(y => y.id === id)) out.push(`${x.title || id} (removed)`);
+  return out;
+}
 // the Revisions rail: in compare view the marked changes first, then every revision, newest first, then
 // the Compare picker. As a card (900 px and below), and on a doc with one revision ("slim": its header,
 // "Revisions · 1", over the top right of the column), it opens from its header.
@@ -4042,6 +4932,7 @@ function buildRevRail() {
   }
   const items = [...REVS].reverse().map(r => {
     const prev = REVS[REVS.indexOf(r) - 1], notes = r.doc.changes || [], cmp = !!prev && BASE === prev && VIEW === r;
+    const scr = IS_DESIGN && prev ? screensChanged(prev, r) : [];
     const sub = notes[0] ? plain(notes[0]) : (r.date || (prev ? '' : 'First revision'));
     const li = h('li', { class: 'bd-rv' + (r === VIEW ? ' on' : '') + (r === BASE ? ' base' : '') });
     const head = h('button', { type: 'button', class: 'rv-h', 'aria-expanded': 'false', title: notes.map(plain).join('\n') || null,
@@ -4053,7 +4944,8 @@ function buildRevRail() {
       h('div', { class: 'rv-more' },
         h('div', { class: 'rv-meta' }, r.date && h('span', {}, r.date), r.built && h('span', {}, 'built ' + String(r.built).slice(0, 16).replace('T', ' ')),
           r.current && h('span', { class: 'bp-chip ok' }, 'current'), r === VIEW && h('span', { class: 'bp-chip info' }, 'shown'), r === BASE && h('span', { class: 'bp-chip todo' }, 'base')),
-        notes.length ? h('ul', { class: 'rv-notes' }, notes.map(t => h('li', { html: inline(t) }))) : h('p', { class: 'rv-meta' }, 'No notes for this revision.')),
+        notes.length ? h('ul', { class: 'rv-notes' }, notes.map(t => h('li', { html: inline(t) }))) : h('p', { class: 'rv-meta' }, 'No notes for this revision.'),
+        scr.length > 0 && h('p', { class: 'rv-scr' }, h('b', {}, 'Screens changed: '), scr.join(', '))),
       h('div', { class: 'rv-act' },
         (r !== VIEW || BASE) && h('a', { class: 'bp-btn', href: revUrl(r, null) }, ic('eye'), 'View'),
         prev && h('a', { class: 'bp-btn', href: revUrl(r, prev), 'aria-current': cmp ? 'page' : null }, ic('split'), `Changes from ${prev.rev}`)));
@@ -4082,6 +4974,7 @@ function setRevCard(open) {
 }
 // the Rev button and the "B of 2" link: open the drawer or the card, or point at the rail beside the column
 function revealRevs() {
+  if (IS_DESIGN) { SIDE.show('revisions', { toggle: true }); return; }   // a design's Revisions tab, beside Comments
   const as = root.dataset.rev;
   if (as === 'drawer') { setDrawer(false); setRevDrawer(!revRail.classList.contains('drawer')); return; }
   if (as === 'card' || as === 'slim') { setRevCard(true); revRail.scrollIntoView({ block: as === 'slim' ? 'nearest' : 'start', behavior: REDUCE ? 'auto' : 'smooth' }); }
@@ -4095,6 +4988,10 @@ document.addEventListener('pointerdown', e => {
 // tests and agents: BP.revisionsRail({open})
 function revisionsRail(o) {
   if (!revRail) return { available: false, open: false, as: null };
+  if (IS_DESIGN) {
+    if (o && typeof o === 'object' && 'open' in o) { if (o.open) SIDE.show('revisions'); else if (SIDE.shows('revisions')) SIDE.setOpen(false, true); }
+    return { available: true, as: 'tab', open: SIDE.shows('revisions') };
+  }
   const as = root.dataset.rev, card = as === 'card' || as === 'slim';
   if (o && typeof o === 'object' && 'open' in o) { if (as === 'drawer') setRevDrawer(!!o.open); else if (card) setRevCard(!!o.open); }
   return { available: true, as, open: as === 'drawer' ? revRail.classList.contains('drawer') : card ? revRail.classList.contains('open') : true };
@@ -4155,10 +5052,17 @@ if (REVS.length >= 1 && REVS[0].rev) {
   const bar = document.querySelector('.bd-revbar');
   if (bar) { const fit = () => root.style.setProperty('--rv-h', bar.offsetHeight + 'px'); fit(); addEventListener('resize', fit); }
   revRail = buildRevRail();
-  main.after(revRail);
-  applyWidth();
-  // on an earlier revision or in compare view the rail shows from the start, also as a drawer or card
-  if (BASE || OLD) { if (root.dataset.rev === 'drawer') setRevDrawer(true); else if (root.dataset.rev === 'card') setRevCard(true); }
+  if (IS_DESIGN) {
+    // a design's Revisions are a tab of the right pane, beside Comments; earlier revisions and compare view open on it
+    revRail.classList.add('tab');
+    SIDE.add({ id: 'revisions', label: 'Revisions', at: 1, body: revRail, chip: () => BASE ? `${CHG.length} change${CHG.length === 1 ? '' : 's'}` : '' });
+    if (BASE || OLD) SIDE.show('revisions', { remember: false });
+  } else {
+    main.after(revRail);
+    applyWidth();
+    // on an earlier revision or in compare view the rail shows from the start, also as a drawer or card
+    if (BASE || OLD) { if (root.dataset.rev === 'drawer') setRevDrawer(true); else if (root.dataset.rev === 'card') setRevCard(true); }
+  }
 }
 
 /* ---------- plans: Approve plan; other pages with checklists: Send answers. The keys that end the tray ---------- */
@@ -4167,7 +5071,7 @@ if (REVS.length >= 1 && REVS[0].rev) {
 // is the page's); otherwise what this browser stored in PLAN_KEY, which also remembers "changes requested".
 function planLocal() { try { const x = JSON.parse(store.get(PLAN_KEY) || 'null'); return x && typeof x === 'object' ? x : null; } catch { return null; } }
 function planState() {
-  if (!IS_PLAN) return { type: DOC_TYPE, state: null, rev: CUR.rev, approvedRev: null };
+  if (!APPROVABLE) return { type: DOC_TYPE, state: null, rev: CUR.rev, approvedRev: null };
   const loc = planLocal(), ap = REPLY.connected ? REPLY.approval : loc && loc.state === 'approved' ? loc : null;
   const approvedRev = ap ? String(ap.rev ?? '') : null;
   const state = approvedRev === CUR.rev ? 'approved' : loc && loc.state === 'changes' && String(loc.rev) === CUR.rev ? 'changes' : 'awaiting';
@@ -4177,22 +5081,22 @@ const revWord = CUR.rev ? ` (rev ${CUR.rev})` : '';
 function approvePayload(note) {
   note = String(note || '').trim();
   const at = new Date().toISOString(), dec = decisionsMd(), { annotations, notes } = MARKUP.approvalNotes();
-  const markdown = [`# Plan approved: ${DOC.title || docId}${revWord}, ${at.slice(0, 10)}`, note, dec && '## Decisions\n\n' + dec, notes && '## Notes with the approval\n\n' + notes].filter(Boolean).join('\n\n') + '\n';
+  const markdown = [`# ${AP_TITLE} approved: ${DOC.title || docId}${revWord}, ${at.slice(0, 10)}`, note, dec && '## Decisions\n\n' + dec, notes && '## Notes with the approval\n\n' + notes].filter(Boolean).join('\n\n') + '\n';
   // docHash: the JSON this page rendered; the server refuses the approval (409) when the file differs now
   return { kind: 'approval', decision: 'approved', doc: docId, rev: CUR.rev, docHash: store.docHash, title: DOC.title || '', path: location.pathname, at, note, answers: answerItems(), annotations, markdown };
 }
-const approveKey = IS_PLAN ? tipped(keyBtn('txt approve', 'check', 'Approve plan', {}, () => openApprove())) : null;
+const approveKey = APPROVABLE ? tipped(keyBtn('txt approve', 'check', `Approve ${AP_NOUN}`, {}, () => openApprove())) : null;
 function paintPlan() {
-  if (!IS_PLAN || OLD) return;
+  if (!APPROVABLE || OLD) return;
   const p = planState(), done = p.state === 'approved', revTxt = CUR.rev ? ` · rev ${CUR.rev}` : '';
   if (planChip) {
     planChip.className = 'bd-planchip ' + p.state;
-    planChip.replaceChildren(...(done ? [ic('tick'), 'Approved' + revTxt] : p.state === 'changes' ? [ic('edit'), 'Changes requested'] : [h('i'), 'Plan · Awaiting approval']));
+    planChip.replaceChildren(...(done ? [ic('tick'), 'Approved' + revTxt] : p.state === 'changes' ? [ic('edit'), 'Changes requested'] : [h('i'), `${AP_TITLE} · Awaiting approval`]));
   }
   approveKey.disabled = done; approveKey.classList.toggle('done', done);
-  approveKey.replaceChildren(ic(done ? 'tick' : 'check'), h('span', { class: 't' }, done ? 'Approved' + revTxt : 'Approve plan'));
-  approveKey.setAttribute('aria-label', done ? 'Approved' + revTxt : 'Approve plan');
-  approveKey._tip = `Approve this plan${revWord}: the agent goes ahead with it and your picks`;
+  approveKey.replaceChildren(ic(done ? 'tick' : 'check'), h('span', { class: 't' }, done ? 'Approved' + revTxt : `Approve ${AP_NOUN}`));
+  approveKey.setAttribute('aria-label', done ? 'Approved' + revTxt : `Approve ${AP_NOUN}`);
+  approveKey._tip = IS_DESIGN ? `Approve this design${revWord}, every screen in it: the agent builds it with your picks` : `Approve this plan${revWord}: the agent goes ahead with it and your picks`;
   if (done && approveDlg && approveDlg.open) approveDlg.close();
 }
 function openApprove() {
@@ -4205,8 +5109,8 @@ function openApprove() {
     const copy = h('button', { type: 'button', class: 'bp-btn', onclick: () => copyText(approvePayload(note.value).markdown, 'Copied: paste it into the chat with the agent') }, ic('copy'), 'Copy');
     const ok = h('button', { type: 'button', class: 'bp-btn ok', onclick: () => doApprove() }, ic('tick'), 'Approve');
     approveDlg = h('dialog', { class: 'bd-send bd-approve', 'aria-labelledby': 'bd-ap-h' },
-      h('div', { class: 'hd' }, h('h3', { id: 'bd-ap-h' }, `Approve this plan${revWord}`), h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Close', onclick: () => approveDlg.close() }, ic('x'))),
-      h('p', { class: 'sum' }, 'The agent goes ahead with the plan as written and the decisions below.'), note, sum, decBox, how, h('div', { class: 'ft' }, copy, ok));
+      h('div', { class: 'hd' }, h('h3', { id: 'bd-ap-h' }, `Approve this ${AP_NOUN}${revWord}`), h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Close', onclick: () => approveDlg.close() }, ic('x'))),
+      h('p', { class: 'sum' }, IS_DESIGN ? 'The agent builds the design as drawn, every screen at this revision, with the decisions below.' : 'The agent goes ahead with the plan as written and the decisions below.'), note, sum, decBox, how, h('div', { class: 'ft' }, copy, ok));
     document.body.append(approveDlg);
     approveDlg.addEventListener('click', e => { if (e.target === approveDlg) approveDlg.close(); });
     Object.assign(approveDlg, { _note: note, _ok: ok });
@@ -4247,15 +5151,15 @@ async function doApprove() {
   try {
     await postReply(REPLY.approve, p);
     done();
-    toast(`Plan approved; sent to ${REPLY.to || 'the agent'}`);
+    toast(`${AP_TITLE} approved; sent to ${REPLY.to || 'the agent'}`);
   } catch (e) {
-    // the plan changed after this page loaded: approving it would cover text the reader hasn't seen
-    if (e.reload) { if (dlg) dlg.close(); toast('This plan changed since you opened it. Reload to read the current version, then approve.', { label: 'Reload', ms: 60000, run: () => location.reload() }); return; }
+    // the doc (or a design's screen) changed after this page loaded: approving it would cover what the reader hasn't seen
+    if (e.reload) { if (dlg) dlg.close(); toast(`This ${AP_NOUN} changed since you opened it. Reload to read the current version, then approve.`, { label: 'Reload', ms: 60000, run: () => location.reload() }); return; }
     copyText(p.markdown, replyFailed(e));
   } finally { if (dlg) dlg._ok.disabled = false; }
 }
-// after a plan's Request changes, the header says so for this revision
-function changesSent(p) { if (IS_PLAN) { store.set(PLAN_KEY, JSON.stringify({ rev: p.rev, state: 'changes', at: p.at })); paintPlan(); } }
+// after a plan's or design's Request changes, the header says so for this revision
+function changesSent(p) { if (APPROVABLE) { store.set(PLAN_KEY, JSON.stringify({ rev: p.rev, state: 'changes', at: p.at })); paintPlan(); } }
 if (!OLD && !BASE) {
   if (Object.values(ITEMS).some(x => x.choices && x.choices.some(o => o.id === x.it.recommend))) {
     const n = h('span', { class: 'n' });
@@ -4263,7 +5167,7 @@ if (!OLD && !BASE) {
     accKey._n = n; accKey._tip = 'Pick the starred option on every open decision';
     TRAY_END.push(accKey); paintAccept();
   }
-  if (IS_PLAN) TRAY_END.push(approveKey);
+  if (APPROVABLE) TRAY_END.push(approveKey);
   else if (CHECKLISTS.length) { sendBtn = tipped(keyBtn('txt send', 'send', 'Send answers', {}, () => openSend(), h('span', { class: 't' }, 'Send answers'))); TRAY_END.push(sendBtn); paintSend(); }
 }
 paintPlan();
@@ -4343,13 +5247,13 @@ const MARKUP = (() => {
       return [headMd(a, i), ex && `   > ${ex}`,
         `   Change: ${noteText(a).split('\n').join('\n   ')}`].filter(Boolean).join('\n');
     }).join('\n\n'));
-    const dec = IS_PLAN && decisionsMd();
+    const dec = APPROVABLE && decisionsMd();
     if (dec) parts.push('## Decisions\n\n' + dec);
     return `# Change requests: ${DOC.title || docId}${CUR.rev ? ` (rev ${CUR.rev})` : ''}, ${new Date().toISOString().slice(0, 10)}\n\n` + parts.join('\n\n') + '\n';
   }
   // `message` repeats the general comments for agents that read only it; a plan's decision picks go along as `answers`
   function payload() {
-    const items = pending(), answers = IS_PLAN ? answerItems() : [];
+    const items = pending(), answers = APPROVABLE ? answerItems() : [];
     return { kind: 'changes', doc: docId, rev: CUR.rev, title: DOC.title || '', path: location.pathname, at: new Date().toISOString(),
       message: items.filter(isGeneral).map(noteText).join('\n\n'), annotations: items.map(pub), ...(answers.length ? { answers } : {}), markdown: changesMd(items) };
   }
@@ -4362,22 +5266,26 @@ const MARKUP = (() => {
     }).join('\n\n') };
   }
   const api = { all: () => JSON.parse(JSON.stringify(list)), payload, approvalNotes, annotate: () => null, setMode: () => false, paint: () => {}, flush: () => {}, markSent: () => {},
-    comments: () => ({ open: false, available: false }) };
+    comments: () => ({ open: false, available: false }), pinFrame: () => null, addFrame: () => null, relayout: () => {} };
   if (OLD || BASE) return api;
 
   /* what can be annotated, and the key of each */
   const shell = $('.bd-shell');
+  // a design's board adds two: an artboard (`artboard:<id>`) and a requested frame (`frame:<device>@<x>,<y>`).
+  // Elements inside a screen's frame come from its inspector as `el:<id>/<path>` (pinFrame), not from here.
   const SEL = { line: '.bd-ln', comment: '.bd-cm[data-ci]', row: 'tr[data-r]', node: '.bp-node[data-key]', step: '.bp-step[data-step]', file: '.bp-frow[data-path]',
-    media: '.bp-media', compare: '.bp-cmpr-side[data-side]', card: '.bp-card', para: '.bp-text p, .bp-text li',
+    media: '.bp-media', compare: '.bp-cmpr-side[data-side]', card: '.bp-card', para: '.bp-text p, .bp-text li', artboard: '.bd-ab[data-ab]', frame: '.bd-rq[data-key]',
     item: '.bp-cl-item[id]', block: '.bp-cl-block, .bp-block[data-bk]', heading: '.bp-sec > h2', lead: '.bp-sec > .bp-lead', section: 'section.bp-sec[id]',
     tldr: '.bd-tldr-card', header: '.bd-head', status: '.bd-meta' };
   const KIND = { line: 'Code line', comment: 'Review comment', row: 'Table row', node: 'Drawing part', step: 'Plan step', file: 'File', media: 'Media', compare: 'Compare side',
-    card: 'Card', para: 'Paragraph', item: 'Checklist item', block: 'Block', heading: 'Section title', lead: 'Section lead', section: 'Section', tldr: 'TL;DR', header: 'Header', status: 'Status', doc: 'Page' };
+    card: 'Card', para: 'Paragraph', artboard: 'Screen', frame: 'Requested frame', item: 'Checklist item', block: 'Block', heading: 'Section title', lead: 'Section lead', section: 'Section',
+    tldr: 'TL;DR', header: 'Header', status: 'Status', doc: 'Page' };
   const TYPES = Object.keys(SEL), ANY = Object.values(SEL).join(', ');
-  const CLIPS = '.bd-pane, .bp-stage, .bp-table-wrap, .bp-side';   // inner scrollers that clip what they hold
+  const CLIPS = '.bd-pane, .bp-stage, .bp-table-wrap, .bp-side, .bd-board, .bd-lp-pane';   // inner scrollers that clip what they hold
   const typeOf = el => el === shell ? 'doc' : TYPES.find(t => el.matches(SEL[t]));
-  // the rails are page furniture, except the left rail's document sections (Status, Document, Related)
-  const inDoc = t => !!t && t.nodeType === 1 && shell.contains(t) && !t.closest('.bd-rvr') && (!t.closest('.bp-side') || !!t.closest('.bd-meta'));
+  // the rails are page furniture, except the left rail's document sections (Status, Document, Related); so
+  // are a design's panel tabs, Screens list and board toolbar
+  const inDoc = t => !!t && t.nodeType === 1 && shell.contains(t) && !t.closest('.bd-rvr, .bd-lp-ui, .bd-btb') && (!t.closest('.bp-side') || !!t.closest('.bd-meta'));
   const targetAt = t => inDoc(t) ? t.closest(ANY) : null;
   let itemKeys = null;
   const itemKeyOf = li => (itemKeys ||= new Map(Object.entries(ITEMS).map(([k, x]) => [x.li, k]))).get(li);
@@ -4400,6 +5308,8 @@ const MARKUP = (() => {
       case 'file': return `file:${pathOf(el)}/${el.dataset.path}`;
       case 'media': return 'media:' + pathOf(el);
       case 'compare': return `compare:${pathOf(el)}/${el.dataset.side}`;
+      case 'artboard': return 'artboard:' + el.dataset.ab;
+      case 'frame': return el.dataset.key;
       case 'card': return `card:${pathOf(el)}/${[...el.parentElement.children].indexOf(el)}`;
       case 'para': { const t = el.closest('.bp-text'); return `para:${pathOf(t)}/${[...t.querySelectorAll('p, li')].indexOf(el)}`; }
       case 'item': return 'item:' + itemKeyOf(el);
@@ -4413,6 +5323,7 @@ const MARKUP = (() => {
   function elOf(key) {
     const [t, rest] = splitKey(key);
     if (t === 'doc') return shell;
+    if (t === 'el') return BOARD ? BOARD.abFor(key) : null;   // drawn on its artboard
     if (t === 'item') return ITEMS[rest]?.li || null;
     if (t === 'section') return [...main.children].find(s => s.id === rest && s.matches(SEL.section)) || null;
     if (t === 'node') { const i = rest.indexOf('/'); return CANVASES[rest.slice(0, i)]?.byKey?.[rest.slice(i + 1)]?._el || null; }
@@ -4444,6 +5355,8 @@ const MARKUP = (() => {
       case 'file': return cut(el.dataset.path, 60);
       case 'media': return '';   // the block's label (caption or alt) already names it
       case 'compare': return cut(el.querySelector('.bp-cmpr-h .l')?.textContent, 40) || (el.dataset.side === 'before' ? 'Before' : 'After');
+      case 'artboard': return cut(el.querySelector('.bd-ab-t .n')?.textContent, 48) || 'Screen';
+      case 'frame': return cut(el.querySelector('.bd-rq-t')?.textContent, 48) || 'Requested frame';
       case 'row': return `Row ${+el.dataset.r + 1}: ${cut([...el.cells].slice(0, 2).map(c => c.textContent.trim()).filter(Boolean).join(' · '), 48)}`;
       case 'card': return cut(el.querySelector('h4 > span')?.textContent, 48) || 'Card';
       case 'para': return `“${cut(el.textContent, 40)}”`;
@@ -4466,7 +5379,27 @@ const MARKUP = (() => {
   const mediaText = el => contentText(el) || el.querySelector('img')?.alt || el.querySelector('video')?.getAttribute('aria-label') || '';
   const textOf = el => cut(el instanceof SVGElement ? [...el.querySelectorAll(':scope > .bp-cover > text:not(.bp-open)')].map(t => t.textContent).join(' ')
     : el.matches('.bd-ln') ? el.querySelector('.c')?.textContent : el.matches('.bp-cl-item') ? contentText(el.querySelector('.bp-cl-row') || el)
-    : el.matches('.bp-step') ? contentText(el.querySelector('.bp-step-t')) : el.matches('.bp-media') ? mediaText(el) : contentText(el), 300);
+    : el.matches('.bp-step') ? contentText(el.querySelector('.bp-step-t')) : el.matches('.bp-media') ? mediaText(el)
+    : el.matches('.bd-ab') ? el.querySelector('.bd-ab-t .n')?.textContent : el.matches('.bd-rq') ? el.querySelector('.pr')?.textContent
+    : el.matches('.bd-boardblk') ? [...el.querySelectorAll('.bd-ab-t .n')].map(n => n.textContent).join(' · ') : contentText(el), 300);
+  // a pin a screen's inspector picked (`el:` or `artboard:`) or a requested frame: a draft beside it, or a pending comment
+  function pinFrame(o) {
+    const a = newAnn('pin', o.el);
+    if (o.key !== a.target.key) { a.up = [a.target.key, ...a.up]; a.target = { key: o.key, label: a.target.label + (o.what ? ' › ' + o.what : ''), text: cut(o.text || '', 300) }; }
+    else if (o.text) a.target.text = cut(o.text, 300);
+    a.pos = { x: r4(clamp(+o.pos.x, 0, 1)), y: r4(clamp(+o.pos.y, 0, 1)) };
+    startDraft(a);
+    return a;
+  }
+  function addFrame(o) {
+    const host = $('.bd-boardblk'); if (!host) return null;
+    const a = { id: newId(), type: 'pin', status: 'pending', note: o.note, target: { key: o.key, label: labelOf(host) + ' › ' + o.label, text: o.text }, up: [keyOf(host), ...ups(host)],
+      rev: CUR.rev, at: new Date().toISOString(), pos: { x: 1, y: 0 }, frame: o.frame };
+    list.push(a); save();
+    if (!matches(a)) setFilter('pending', false);
+    hlDirty = true; paint(); schedule(true);
+    return a;
+  }
   const info = el => ({ key: keyOf(el), label: labelOf(el), text: textOf(el) });
   function ups(el) { const out = []; for (let p = el.parentElement?.closest(ANY); p; p = p.parentElement?.closest(ANY)) out.push(keyOf(p)); return out; }
   const newAnn = (type, el) => ({ id: newId(), type, status: 'pending', note: '', target: info(el), rev: CUR.rev, at: new Date().toISOString(), up: ups(el) });
@@ -4550,8 +5483,12 @@ const MARKUP = (() => {
   const hov = h('div', { class: 'bd-ann-hov', hidden: true, 'aria-hidden': 'true' }, h('b'));
   const capG = sv('g');
   const cap = h('div', { class: 'bd-ann-cap', hidden: true }, sv('svg', { 'aria-hidden': 'true' }, capG));
-  const MODES = { view: ['cursor', 'View', 'V', 'View: use the page as usual'], point: ['msg', 'Point', 'C', 'Point: pin a comment on an element'],
+  const VIEW_M = ['cursor', 'View', 'V', IS_DESIGN ? 'View: drag to pan the board; the screens ignore the pointer' : 'View: use the page as usual'];
+  const MARK_M = { point: ['msg', 'Point', 'C', IS_DESIGN ? 'Point: pin a comment on an element, inside a screen too' : 'Point: pin a comment on an element'],
     select: ['type', 'Select', 'T', 'Select: comment on some text'], draw: ['pencil', 'Draw', 'D', 'Draw: circle or mark what should change'] };
+  // a design's tray also has Interact (clicks go to the screens) and Frame (request a new screen)
+  const MODES = IS_DESIGN ? { view: VIEW_M, interact: ['hand', 'Interact', 'I', 'Interact: click inside the screens (tabs, toggles)'], ...MARK_M,
+    frame: ['frame', 'Frame', 'R', 'Frame: drag an empty frame for a new screen, then labelled boxes inside it'] } : { view: VIEW_M, ...MARK_M };
   const PENS = { risk: 'Red', accent: 'Blue', warn: 'Amber', ok: 'Green' };
   let mode = 'view', marksOff = false, pen = PENS[store.get(PEN_KEY)] ? store.get(PEN_KEY) : 'risk';
   const modeBtns = Object.entries(MODES).map(([m, [icon, name, key, tipText]]) => {
@@ -4598,7 +5535,8 @@ const MARKUP = (() => {
       const clip = clipOf(el);
       if (i === 0) {
         let p = null;
-        if (a.type === 'pin') { const q = a.pos || { x: .5, y: .5 }; p = { x: r.left + q.x * r.width, y: r.top + q.y * r.height }; }
+        // a pin inside a screen sits where its frame last reported the element
+        if (a.type === 'pin') { const q = (BOARD && BOARD.pinPos && BOARD.pinPos(a.target.key)) || a.pos || { x: .5, y: .5 }; p = { x: r.left + q.x * r.width, y: r.top + q.y * r.height }; }
         else if (a.type === 'draw') { const b = bounds(a.strokes || []); if (isFinite(b.x1)) p = { x: r.left + b.x1 * r.width - 6, y: r.top + b.y0 * r.height + 6 }; }
         else { const rg = rangeOf(a), rs = rg && shown(rg.startContainer.parentElement) ? rg.getClientRects() : null, last = rs && rs[rs.length - 1]; if (last) p = { x: last.right, y: last.top + 2 }; }
         // an element partly scrolled inside its scroller keeps its mark, pulled in to the visible edge
@@ -5036,6 +5974,7 @@ const MARKUP = (() => {
     mode = m;
     if (m !== 'view') root.classList.add('bd-ann-m-' + m);
     cap.hidden = m !== 'draw';
+    if (BOARD && BOARD.setMode) BOARD.setMode(m);
     showHover(null);
     if (m !== 'view' && marksOff) { marksOff = false; schedule(true); }   // marking with the marks hidden would hide the new one too
     paint();
@@ -5059,6 +5998,7 @@ const MARKUP = (() => {
     eye.replaceChildren(ic(marksOff ? 'eyeoff' : 'eye'));
     eye._tip = marksOff ? 'Show comment marks' : 'Hide comment marks'; eye.setAttribute('aria-label', eye._tip);
     layer.hidden = marksOff;
+    if (BOARD && BOARD.paintFrames) BOARD.paintFrames(list);   // a design's requested frames
     renderList();
     if (dlg && dlg.open) dlg._paint();
     SIDE.paint();   // the tab's pending count
@@ -5158,8 +6098,8 @@ const MARKUP = (() => {
       const copy = h('button', { type: 'button', class: 'bp-btn', onclick: () => { copyText(changesMd(), 'Copied: paste it into the chat with the agent'); dlg.close(); } }, ic('copy'), 'Copy');
       const send = h('button', { type: 'button', class: 'bp-btn primary', onclick: () => sendChanges() }, ic('send'), 'Send');
       dlg = h('dialog', { class: 'bd-send bd-chgs', 'aria-labelledby': 'bd-chgs-h' },
-        h('div', { class: 'hd' }, h('h3', { id: 'bd-chgs-h' }, IS_PLAN ? 'Request changes to this plan' : 'Request changes to this doc'), h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Close', onclick: () => dlg.close() }, ic('x'))),
-        h('p', { class: 'sum' }, IS_PLAN ? 'Change requests ask the agent to revise the plan. Your decision picks go with them.'
+        h('div', { class: 'hd' }, h('h3', { id: 'bd-chgs-h' }, APPROVABLE ? `Request changes to this ${AP_NOUN}` : 'Request changes to this doc'), h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Close', onclick: () => dlg.close() }, ic('x'))),
+        h('p', { class: 'sum' }, APPROVABLE ? `Change requests ask the agent to revise the ${AP_NOUN}. Your decision picks go with them.`
           : 'Change requests ask the agent to edit the document. Your decisions and comments on items go with Send answers.'),
         cnt, h('details', { open: true }, h('summary', {}, 'Preview'), pre), how, h('div', { class: 'ft' }, copy, send));
       document.body.append(dlg);
@@ -5204,6 +6144,9 @@ const MARKUP = (() => {
   // bring a note's element into view: open the rows, diff file or system it sits in, then flash it
   function openKey(k) {
     const [t, rest] = splitKey(k);
+    // a design: artboards and requested frames are on the board; anything else may be in the Brief tab
+    if (BOARD && BOARD.focusKey && (t === 'artboard' || t === 'el' || t === 'frame')) return BOARD.focusKey(k);
+    if (BOARD && BOARD.reveal) { const el = elOf(k); if (el) BOARD.reveal(el); }
     if (t === 'item') { const x = ITEMS[rest]; if (x) openItem(x); }
     else if (t === 'line' || t === 'comment') {
       const i = rest.indexOf('/'), d = DIFFS[rest.slice(0, i)]; if (!d) return false;
@@ -5293,7 +6236,7 @@ const MARKUP = (() => {
       e.preventDefault();   // handled here: the panel's own Escape (close the drawer or sheet) waits for the next press
       return;
     }
-    const m = { v: 'view', c: 'point', t: 'select', d: 'draw' }[e.key.toLowerCase()];
+    const m = { v: 'view', c: 'point', t: 'select', d: 'draw', ...(IS_DESIGN ? { i: 'interact', r: 'frame' } : {}) }[e.key.toLowerCase()];
     if (m) { e.preventDefault(); setMode(m); }
   });
   document.addEventListener('scroll', () => schedule(false), { capture: true, passive: true });
@@ -5307,7 +6250,7 @@ const MARKUP = (() => {
   document.fonts?.ready.then(() => schedule(true));
   setInterval(() => { if (SIDE.shows('comments')) renderList(); }, 30000);   // "5 min ago"
   paint(); schedule(true);
-  return Object.assign(api, { annotate, setMode, paint, comments, flush, markSent });
+  return Object.assign(api, { annotate, setMode, paint, comments, flush, markSent, pinFrame, addFrame, relayout: () => schedule(true) });
 })();
 
 SIDE.start();
@@ -5347,6 +6290,8 @@ window.BP = {
   comments: opts => MARKUP.comments(opts),
   sidebar: opts => SIDE.api(opts),
   revisionsRail: opts => revisionsRail(opts),
+  // a design's board: {artboards: [{id, live, ready, fallback, …}], k, mode, …}; opts: {focus, fit, sketch, variants, present, compare}
+  board: opts => BOARD && BOARD.api ? BOARD.api(opts) : null,
 };
 })();
 </script>

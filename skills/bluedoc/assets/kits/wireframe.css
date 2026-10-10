@@ -1,0 +1,24 @@
+/* bluedoc wireframe kit: low-fidelity placeholders, and the grey look of `wireframe` and `sketch` artboards.
+   Loaded with the plain kit and for every wireframe or sketch artboard; html.fid-wireframe / html.fid-sketch is set
+   by the shell from the artboard's fidelity. Class reference: references/kits.md. */
+.wf-box { position: relative; display: grid; place-items: center; min-height: 48px; border: 1.5px dashed #94a3b8;
+  border-radius: 8px; color: #64748b; font-size: 12px; background: rgba(148, 163, 184, .06); }
+.wf-box[data-label]::before { content: attr(data-label); padding: 0 6px; text-align: center; }
+.wf-img { position: relative; min-height: 80px; border: 1.5px solid #94a3b8; border-radius: 6px; background:
+  linear-gradient(to top right, transparent calc(50% - .75px), #94a3b8 calc(50% - .75px), #94a3b8 calc(50% + .75px), transparent calc(50% + .75px)),
+  linear-gradient(to bottom right, transparent calc(50% - .75px), #94a3b8 calc(50% - .75px), #94a3b8 calc(50% + .75px), transparent calc(50% + .75px)),
+  #f1f5f9; }
+.wf-text { --lines: 3; height: calc(var(--lines) * 16px - 6px); background:
+  repeating-linear-gradient(to bottom, #cbd5e1 0 10px, transparent 10px 16px);
+  -webkit-mask: linear-gradient(to right, #000 0 100%) top / 100% calc(100% - 16px) no-repeat, linear-gradient(to right, #000 0 62%, transparent 62%) bottom / 100% 10px no-repeat;
+          mask: linear-gradient(to right, #000 0 100%) top / 100% calc(100% - 16px) no-repeat, linear-gradient(to right, #000 0 62%, transparent 62%) bottom / 100% 10px no-repeat; }
+.wf-text[style*="--lines:1"], .wf-text[style*="--lines: 1"] { -webkit-mask: none; mask: none; width: 62%; }
+.wf-line { height: 10px; width: 100%; border-radius: 5px; background: #cbd5e1; }
+.wf-circle { width: 48px; height: 48px; flex: none; border-radius: 50%; border: 1.5px solid #94a3b8; background: #f1f5f9; }
+.wf-icon { width: 24px; height: 24px; flex: none; border-radius: 6px; border: 1.5px solid #94a3b8; }
+
+/* the plain kit, greyed: structure without colour decisions (beats the theme tokens on html:root) */
+html.fid-wireframe:root, html.fid-sketch:root {
+  --accent: #475569; --accent-fg: #ffffff; --bg: #ffffff; --surface: #ffffff; --fg: #1e293b; --muted: #94a3b8;
+  --border: #cbd5e1; --ok: #475569; --warn: #475569; --risk: #475569; }
+html.fid-wireframe img, html.fid-sketch img { filter: grayscale(1); }
