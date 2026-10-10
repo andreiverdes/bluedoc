@@ -93,19 +93,19 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .bd-ibtn:hover { color: var(--fg); }
 .bd-ibtn:active { transform: translateY(.5px); }
 
-/* shell: three columns; the content column is centred on the page, Contents floats in the left
-   margin and the document rail (status, links, drawing) in the right one. Both margins are at least
-   one rail wide, so the content narrows before either rail can touch it. */
-.bd-shell { display: grid; grid-template-columns: minmax(var(--rail), 1fr) minmax(0, var(--content-w)) minmax(var(--rail), 1fr);
-  grid-template-areas: "side head meta" "side tldr meta" "side main meta"; grid-template-rows: auto auto 1fr;
-  column-gap: var(--gap); padding: 0 20px 120px; }
-.bd-head { grid-area: head; padding-top: 56px; min-width: 0; }
-.bd-tldr { grid-area: tldr; min-width: 0; }
-.bd-shell > main { grid-area: main; min-width: 0; }
-.bp-side { grid-area: side; justify-self: end; width: var(--rail); position: sticky; top: calc(var(--top-h) + 20px); align-self: start;
-  margin-top: 60px; max-height: calc(100vh - var(--bar-h) - 40px); overflow: auto; font-size: 13.5px; scrollbar-width: thin; }
-.bd-meta { grid-area: meta; justify-self: start; width: var(--rail); position: sticky; top: calc(var(--top-h) + 20px); align-self: start;
-  margin-top: 60px; max-height: calc(100vh - var(--bar-h) - 40px); overflow: auto; font-size: 13px; scrollbar-width: thin; }
+/* shell: the rail (Contents, Tracker, Status, Document, Related) on the left, in view while the page
+   scrolls, and the content column (at most --content-w) centred right of it, in the room the docked
+   right panel leaves. Wider windows centre the column itself ("centred" layout below). */
+.bd-shell { display: grid; grid-template-columns: var(--rail) minmax(0, 1fr); grid-template-areas: "side head" "side tldr" "side main";
+  grid-template-rows: auto auto 1fr; column-gap: var(--gap); padding: 0 20px 120px; }
+.bd-head, .bd-tldr, .bd-shell > main { justify-self: center; width: 100%; max-width: var(--content-w); min-width: 0; }
+.bd-head { grid-area: head; padding-top: 56px; }
+.bd-tldr { grid-area: tldr; }
+.bd-shell > main { grid-area: main; }
+.bp-side { grid-area: side; position: sticky; top: calc(var(--top-h) + 20px); align-self: start;
+  margin-top: 60px; max-height: calc(100vh - var(--top-h) - 80px - var(--tray-room, 0px)); overflow: auto; font-size: 13.5px; scrollbar-width: thin; }
+.bd-meta { font-size: 13px; }
+.bp-side-toc + .bd-meta { margin-top: 24px; }
 
 /* header */
 .bd-eyebrow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: 13px; color: var(--fg-subtle); }
@@ -144,12 +144,12 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .bd-props dt { color: var(--fg-subtle); }
 .bd-props dd { margin: 0; font: 500 12px/1.65 var(--mono); color: var(--fg-muted); overflow-wrap: anywhere; }
 
-/* sidebar: contents + tracker */
-.bp-side ol { list-style: none; margin: 0 0 26px; padding: 0; }
-.bp-side li a { display: flex; gap: 10px; padding: 6px 10px; border-radius: 8px; color: var(--fg-muted); text-decoration: none; line-height: 1.4; transition: background .12s, color .12s; }
-.bp-side li a:hover { background: var(--hover); color: var(--fg); }
-.bp-side li a.on { background: var(--selected); color: var(--fg); font-weight: 550; box-shadow: inset 2px 0 0 var(--accent); border-radius: 2px 8px 8px 2px; }
-.bp-side li a span.n { font: 500 11px/1.9 var(--mono); color: var(--fg-subtle); min-width: 16px; flex: none; }
+/* sidebar: contents + tracker; Status, Document and Related (.bd-meta, styled above) follow them */
+.bp-side-toc ol { list-style: none; margin: 0 0 26px; padding: 0; }
+.bp-side-toc li a { display: flex; gap: 10px; padding: 6px 10px; border-radius: 8px; color: var(--fg-muted); text-decoration: none; line-height: 1.4; transition: background .12s, color .12s; }
+.bp-side-toc li a:hover { background: var(--hover); color: var(--fg); }
+.bp-side-toc li a.on { background: var(--selected); color: var(--fg); font-weight: 550; box-shadow: inset 2px 0 0 var(--accent); border-radius: 2px 8px 8px 2px; }
+.bp-side-toc li a span.n { font: 500 11px/1.9 var(--mono); color: var(--fg-subtle); min-width: 16px; flex: none; }
 .bp-prog { background: var(--surface); border-radius: 12px; box-shadow: var(--shadow-1); padding: 6px; }
 .bp-side .bp-prog-row { display: block; padding: 7px 8px; border-radius: 8px; color: var(--fg); text-decoration: none; }
 .bp-side .bp-prog-row:hover { background: var(--hover); }
@@ -660,6 +660,7 @@ img.bp-cmpr-img { cursor: zoom-in; }
   background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: var(--shadow-hk); }
 .bd-tip .bd-kbd { color: oklch(97% 0 0 / .78); background: oklch(100% 0 0 / .1); box-shadow: inset 0 0 0 1px oklch(100% 0 0 / .12), inset 0 -1px 0 oklch(0% 0 0 / .3); }
 html.bd-tray-on .bd-shell { padding-bottom: 150px; }
+html.bd-tray-on { --tray-room: 64px; }   /* the rail and its drawer end above the tray */
 html.bd-tray-on .bp-toast { bottom: 84px; }
 @media (max-width: 600px) { html.bd-tray-on .bp-toast { bottom: 70px; } }
 /* the revision tray (compare view, earlier revisions): what is shown, ↑ n of N ↓, and the way out */
@@ -687,8 +688,8 @@ html.bd-tray-on .bp-toast { bottom: 84px; }
 .bd-key.acc:disabled { padding-right: 13px; }
 @media (max-width: 600px) { .bd-key.acc { gap: 5px; padding: 0 6px 0 9px; } .bd-key.acc:disabled { padding: 0 9px; } }
 .bd-pen-risk { --pen: var(--risk); } .bd-pen-accent { --pen: var(--accent); } .bd-pen-warn { --pen: var(--warn); } .bd-pen-ok { --pen: var(--ok); }
-html.bd-ann-m-point .bd-shell :not(.bp-side, .bp-side *), html.bd-ann-m-point .bd-shell { cursor: crosshair !important; }
-html.bd-ann-m-select .bd-shell :not(.bp-side, .bp-side *), html.bd-ann-m-select .bd-shell { cursor: text !important; }
+html.bd-ann-m-point .bd-shell :not(.bp-side, .bp-side :not(.bd-meta, .bd-meta *), .bd-rvr, .bd-rvr *), html.bd-ann-m-point .bd-shell { cursor: crosshair !important; }
+html.bd-ann-m-select .bd-shell :not(.bp-side, .bp-side :not(.bd-meta, .bd-meta *), .bd-rvr, .bd-rvr *), html.bd-ann-m-select .bd-shell { cursor: text !important; }
 html:is(.bd-ann-m-point, .bd-ann-m-select) .bd-shell .bp-note .bp-note-ta { cursor: text !important; }
 html:is(.bd-ann-m-point, .bd-ann-m-select) .bd-shell .bp-note button { cursor: default !important; }
 html.bd-ann-m-select .bp-cl-head { user-select: text; -webkit-user-select: text; }
@@ -752,27 +753,22 @@ html.bd-ann-m-select .bp-cl-head { user-select: text; -webkit-user-select: text;
 .bd-cmp.dock .bp-note-ta { min-height: 44px; max-height: 96px; }
 .bd-cmp.dock .ft .hint { display: none; }
 
-/* right panel: Comments and Revisions. Docked beside the page on wide windows (the page lays out in what
-   is left), a drawer over it below 1100 px, a bottom sheet below 900 px. JS sets html.bd-sp-open and
-   html.bd-sp-dock. */
+/* right panel: Comments. Docked beside the page on wide windows (the page lays out in what is left), a
+   drawer over it below 1100 px, a bottom sheet below 900 px. JS sets html.bd-sp-open and html.bd-sp-dock. */
 .bd-sp { position: fixed; z-index: 42; top: var(--top-h); right: 0; bottom: 0; width: var(--sp-w); display: flex; flex-direction: column; min-height: 0;
   background: var(--panel); box-shadow: inset 1px 0 0 var(--line); font-size: 13.5px;
   transform: translateX(100%); visibility: hidden; transition: transform .22s var(--ease), visibility 0s .22s; }
 html.bd-sp-open .bd-sp { transform: none; visibility: visible; transition: transform .22s var(--ease); }
 html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow: var(--shadow-3); }
 .bd-sp-h { display: flex; align-items: center; gap: 8px; flex: none; padding: 12px 12px 10px 16px; }
-.bd-sp-h:has(.bd-sp-tabs:not([hidden])) { padding-left: 12px; }
 .bd-sp-h h2 { margin: 0; font: 650 15px/1.3 var(--sans); letter-spacing: -.01em; }
 .bd-sp-h .n { padding: 2px 7px; border-radius: 7px; font: 600 11.5px/1.4 var(--sans); font-variant-numeric: tabular-nums; color: var(--accent-fg); background: var(--accent-tint); }
-.bd-sp-h h2[hidden], .bd-sp-h .n[hidden], .bd-sp-tabs[hidden] { display: none; }
+.bd-sp-h .n[hidden] { display: none; }
 .bd-sp-h .sp { flex: 1; }
 .bd-sp-h .bd-ibtn { width: 28px; height: 28px; }
-.bd-sp-tabs { flex: 0 1 250px; }
-.bd-sp-tabs button { height: 28px; font-size: 13px; }
 .bd-cs-c.res:not(.on, .hot) { opacity: .5; }
 .bd-cs-c .acts .bd-cs-ib[aria-label="Resolve"]:hover { color: var(--ok-fg); background: var(--ok-tint); }
 .bd-sp-sec { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-.bd-sp-sec[hidden] { display: none; }
 .bd-gc .gf .sp, .bd-cs-c .ef .sp { flex: 1; }
 .bd-cs-f { flex: none; display: flex; align-items: center; gap: 6px; padding: 0 12px 10px; box-shadow: inset 0 -1px 0 var(--line-soft); }
 .bd-cs-f .bd-sg { flex: 1; min-width: 0; }
@@ -781,7 +777,7 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .bd-sg button { flex: 1 1 auto; min-width: 0; display: inline-flex; align-items: center; justify-content: center; gap: 5px; height: 26px; padding: 0 6px; border: 0; border-radius: 8px; background: none;
   font-size: 12px; font-weight: 500; color: var(--fg-muted); white-space: nowrap; transition: background .12s, color .12s; }
 .bd-sg button:hover { color: var(--fg); }
-.bd-sg button:is([aria-checked="true"], [aria-selected="true"]) { color: var(--fg); background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: var(--shadow-hk); }
+.bd-sg button[aria-checked="true"] { color: var(--fg); background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: var(--shadow-hk); }
 .bd-sg button i { font: 500 11px/1 var(--mono); font-style: normal; color: var(--fg-subtle); }
 .bd-sg button i:empty { display: none; }
 .bd-cs-l { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 10px 12px 16px; scrollbar-width: thin; position: relative; }
@@ -853,13 +849,18 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .bd-sp-btn .n { position: absolute; top: -5px; right: -6px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; display: grid; place-items: center;
   font: 650 10px/1 var(--sans); color: #fff; background: var(--accent-solid); box-shadow: 0 0 0 2px var(--canvas); }
 .bd-sp-btn .n[hidden] { display: none; }
-.bd-rev-btn[aria-pressed="true"] { background: var(--hk-down); box-shadow: var(--shadow-hk-down); }
-/* the Revisions section: in compare view the marked changes, then every revision, then the Compare picker */
-.bd-rv-l { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 0 12px 16px; scrollbar-width: thin; position: relative; box-shadow: inset 0 1px 0 var(--line-soft); }
-.bd-sp-sub { display: flex; align-items: center; gap: 8px; margin: 14px 4px 8px; font: 600 11px/1.4 var(--sans); letter-spacing: .07em; text-transform: uppercase; color: var(--fg-subtle); }
-.bd-sp-sub .x { margin-left: auto; font: 500 12px/1.4 var(--sans); letter-spacing: 0; text-transform: none; }
-.bd-sp-sub .k.add { color: var(--ok-fg); } .bd-sp-sub .k.mod { color: var(--warn-fg); } .bd-sp-sub .k.del { color: var(--risk-fg); }
-.bd-sp-note { margin: -4px 4px 10px; font-size: 12.5px; line-height: 1.45; color: var(--fg-subtle); }
+.bd-rev-btn[aria-expanded="true"] { background: var(--hk-down); box-shadow: var(--shadow-hk-down); }
+/* the Revisions rail (docs with 2+ revisions), right of the content column and sticky like the left rail:
+   in compare view the marked changes first, then every revision, newest first, then the Compare picker.
+   JS sets data-rev: "rail" beside the column, "drawer" (opened from the Rev button) when it does not
+   fit, "card" (a collapsible card under the TL;DR) at 900 px and below. */
+.bd-rvr { position: sticky; top: calc(var(--top-h) + 20px); align-self: start; margin-top: 60px; max-height: calc(100vh - var(--top-h) - 80px - var(--tray-room, 0px));
+  overflow: auto; overscroll-behavior: contain; padding: 2px 3px 6px; font-size: 13px; scrollbar-width: thin; border-radius: 12px; }
+.bd-rvr.flash { animation: bd-cs-flash 1.2s var(--ease); }
+.bd-rvr-sum { display: flex; flex-wrap: wrap; gap: 2px 6px; margin: -4px 0 8px 10px; font-size: 12px; line-height: 1.45; color: var(--fg-subtle); }
+.bd-rvr-sum b { font: 600 12px/1.45 var(--mono); color: var(--fg); }
+.bd-rvr-sum .k.add { color: var(--ok-fg); } .bd-rvr-sum .k.mod { color: var(--warn-fg); } .bd-rvr-sum .k.del { color: var(--risk-fg); }
+.bd-rvr-note { margin: -4px 0 8px 10px; font-size: 12px; line-height: 1.45; color: var(--fg-subtle); }
 .bd-chl { list-style: none; margin: 0; padding: 4px; display: grid; gap: 1px; border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-1); }
 .bd-chl button { display: flex; align-items: flex-start; gap: 8px; width: 100%; padding: 6px 8px; border: 0; border-radius: 8px; background: none; text-align: left;
   font-size: 13px; line-height: 18px; color: var(--fg); scroll-margin: 8px; }
@@ -869,7 +870,7 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .bd-chl .t { min-width: 0; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; }
 .bd-chl .none { padding: 8px; color: var(--fg-subtle); }
 .bd-rvs { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
-.bd-rv { padding: 10px 12px 12px; border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-1); }
+.bd-rv { padding: 9px 10px 10px; border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-1); }
 .bd-rv.on { box-shadow: 0 0 0 1.5px var(--accent), 0 4px 14px color-mix(in oklch, var(--accent) 14%, transparent); }
 .bd-rv.base { box-shadow: 0 0 0 1.5px var(--line-strong), var(--shadow-1); }
 .bd-rv .rv-h { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
@@ -879,13 +880,14 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .bd-rv .rv-h .bp-chip { padding: 3px 7px; font-size: 11.5px; }
 .bd-rv .rv-notes { margin: 6px 0 0; padding-left: 16px; font-size: 13px; line-height: 1.5; color: var(--fg-muted); }
 .bd-rv .rv-notes li + li { margin-top: 2px; }
-.bd-rv .rv-act { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.bd-rv .rv-act { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .bd-rv .rv-act .bp-btn { text-decoration: none; }
 .bd-rv .rv-act .bp-btn[aria-current] { color: var(--accent-fg); background: var(--accent-tint); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--accent) 30%, transparent); }
 .bd-rv .rv-act .bp-btn[aria-current] .bd-ic { color: currentColor; }
-.bd-rv-ft { flex: none; display: grid; gap: 8px; padding: 10px 12px 12px; box-shadow: inset 0 1px 0 var(--line); }
-.bd-rv-ft .row { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 6px; }
-.bd-rv-ft .row > .bd-ic { color: var(--fg-subtle); }
+/* the Compare picker: from above with, as the rail is narrow; side by side in the card */
+.bd-rv-ft { display: grid; gap: 6px; padding: 0 2px; }
+.bd-rv-ft .row { display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; align-items: center; gap: 4px; }
+.bd-rv-ft .row > .bd-ic { color: var(--fg-subtle); transform: rotate(90deg); }
 .bd-rv-ft .rv-sel { width: 100%; min-width: 0; }
 .bd-rv-ft .bp-btn { justify-content: center; height: 32px; font-size: 13px; }
 @media (min-width: 901px) {
@@ -1187,29 +1189,31 @@ svg.anim .bp-edge.k-async { animation: bp-march 1.6s linear infinite; }
 .bp-tok text { font: 600 10.5px var(--sans); fill: #fff; paint-order: stroke; stroke: var(--bp-bg); stroke-width: 3px; }
 .bp-dim-t { fill: var(--bp-dim); font: 10px var(--mono); }
 
-/* responsive: below 1240 px the document rail joins the content column; below 900 px Contents
-   becomes a collapsible card above the sections */
-@media (max-width: 1240px) {
-  .bd-shell { grid-template-columns: minmax(200px, 232px) minmax(0, 1fr); grid-template-areas: "side head" "side tldr" "side meta" "side main"; grid-template-rows: auto auto auto 1fr; column-gap: 32px; max-width: 1180px; margin: 0 auto; }
-  .bp-side { justify-self: stretch; width: auto; }
-  .bd-meta { position: static; width: auto; max-height: none; overflow: visible; margin-top: 20px; justify-self: stretch;
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px 24px; padding: 16px 8px 14px; border-radius: 14px; background: var(--panel); box-shadow: inset 0 0 0 1px var(--line); }
-  .bd-rail-sec + .bd-rail-sec { margin-top: 0; }
-}
+/* responsive: below 900 px one column; Status, Document and Related leave the rail for a card under
+   the TL;DR (JS moves .bd-meta) and Contents becomes a collapsible card above the sections */
 @media (max-width: 900px) {
   :root { --bar-h: 48px; }
   body { font-size: 15px; }
   .bd-bar { padding: 0 14px; }
   .bd-crumb { display: none; }
   .bd-shell { display: flex; flex-direction: column; padding: 0 16px 80px; }
-  .bd-head { order: 1; padding-top: 30px; } .bd-tldr { order: 2; } .bd-meta { order: 3; align-self: stretch; } .bp-side { order: 4; align-self: stretch; } .bd-shell > main { order: 5; }
+  .bd-head, .bd-tldr, .bd-shell > main { max-width: none; }
+  .bd-head { order: 1; padding-top: 30px; } .bd-tldr { order: 2; } .bd-shell > .bd-meta, .bd-rvr { order: 3; align-self: stretch; } .bp-side { order: 4; align-self: stretch; } .bd-shell > main { order: 5; }
+  .bd-rvr { position: static; max-height: none; overflow: visible; margin-top: 16px; padding: 6px; border-radius: 14px; background: var(--surface); box-shadow: var(--shadow-1); }
+  .bd-rvr-body { display: none; padding: 6px 4px 8px; }
+  .bd-rvr.open .bd-rvr-body { display: block; }
+  .bd-rv-ft .row { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); }
+  .bd-rv-ft .row > .bd-ic { transform: none; }
+  .bd-shell > .bd-meta { margin-top: 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px 24px; padding: 16px 8px 14px;
+    border-radius: 14px; background: var(--panel); box-shadow: inset 0 0 0 1px var(--line); }
+  .bd-shell > .bd-meta .bd-rail-sec + .bd-rail-sec { margin-top: 0; }
   .bd-sub { font-size: 16px; }
   .bd-tldr-card { margin-top: 22px; padding: 14px 16px; grid-template-columns: minmax(0, 1fr); }
   .bd-tldr-card .ico { display: none; }
   .bp-side { position: static; width: auto; max-height: none; margin-top: 16px; background: var(--surface); border-radius: 14px; box-shadow: var(--shadow-1); padding: 6px; overflow: visible; }
   .bp-side-toggle { display: flex !important; width: 100%; justify-content: space-between; height: 38px; background: none; box-shadow: none; font-size: 14px; font-weight: 600; }
   .bp-side-toggle .chev { transition: transform .2s; }
-  .bp-side.open .bp-side-toggle .chev { transform: rotate(90deg); }
+  .bp-side.open .bp-side-toggle .chev, .bd-rvr.open .bp-side-toggle .chev { transform: rotate(90deg); }
   .bp-side-toc { display: none; padding: 6px 4px 8px; }
   .bp-side.open .bp-side-toc { display: block; }
   .bp-side-toc > .bd-rail-sec:first-child > .bd-rail-h { display: none; }
@@ -1254,10 +1258,14 @@ svg.anim .bp-edge.k-async { animation: bp-march 1.6s linear infinite; }
   .bd-cm .mt, .bd-cm details { margin-left: 0; }
 }
 
-/* reader-chosen content width (drag handles). With no choice the layouts above apply. Once the reader
-   picks a width, the column stays centred at that width: "three" keeps both rails beside it when they
-   fit, "wide" gives the rails' space to the content, puts the status rail under the TL;DR and turns
-   Contents into a drawer opened from the app bar. JS sets data-layout from the width and the window. */
+/* layouts above 900 px. JS picks one from the room the docked right panel leaves and the column width
+   (the reader's, set with the drag handles, else --content-w):
+   "centred": the full column is centred in that room, the rail in its left margin (and the Revisions
+     rail, when there is one, in its right margin); both margins are at least a rail and gap wide.
+   "two" (the base grid): the rail and the column side by side, the column centred right of the rail
+     (and left of the Revisions rail, while that fits too; else it becomes a drawer, data-rev).
+   "wide": not even that fits; the column takes the whole width and the rail (Status, Document and
+     Related included) becomes a drawer opened from the app bar, the Revisions rail one from Rev. */
 .bd-rh { position: fixed; top: var(--bar-h); bottom: 0; z-index: 30; width: 16px; margin-left: -8px; cursor: col-resize; touch-action: none; display: none; }
 .bd-rh::before { content: ""; position: absolute; top: 0; bottom: 0; left: 7.5px; width: 1px; background: var(--accent); opacity: 0; transition: opacity .15s; }
 .bd-rh i { position: absolute; left: 5px; top: 50%; width: 6px; height: 44px; margin-top: -22px; border-radius: 3px; background: var(--line-strong);
@@ -1274,18 +1282,20 @@ html.bd-resizing, html.bd-resizing * { cursor: col-resize !important; user-selec
 .bd-toc-btn { display: none !important; }
 @media (min-width: 901px) {
   .bd-rh { display: block; }
-  :root[data-layout="three"] .bd-shell { grid-template-columns: minmax(var(--rail), 1fr) minmax(0, var(--content-w)) minmax(var(--rail), 1fr);
-    grid-template-areas: "side head meta" "side tldr meta" "side main meta"; grid-template-rows: auto auto 1fr; column-gap: var(--gap); max-width: none; margin: 0; }
-  :root[data-layout="three"] .bp-side { justify-self: end; width: var(--rail); }
-  :root[data-layout="three"] .bd-meta { position: sticky; width: var(--rail); max-height: calc(100vh - var(--bar-h) - 40px); overflow: auto; margin-top: 60px; justify-self: start;
-    display: block; padding: 0; border-radius: 0; background: none; box-shadow: none; }
-  :root[data-layout="three"] .bd-rail-sec + .bd-rail-sec { margin-top: 24px; }
-  :root[data-layout="wide"] .bd-shell { grid-template-columns: 1fr minmax(0, var(--content-w)) 1fr; grid-template-areas: ". head ." ". tldr ." ". meta ." ". main .";
-    grid-template-rows: auto auto auto 1fr; column-gap: 0; max-width: none; margin: 0; }
-  :root[data-layout="wide"] .bd-meta { position: static; width: auto; max-height: none; overflow: visible; margin-top: 20px; justify-self: stretch;
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px 24px; padding: 16px 8px 14px; border-radius: 14px; background: var(--panel); box-shadow: inset 0 0 0 1px var(--line); }
-  :root[data-layout="wide"] .bd-rail-sec + .bd-rail-sec { margin-top: 0; }
-  :root[data-layout="wide"] .bp-side { position: fixed; z-index: 45; top: calc(var(--top-h) + 10px); left: 12px; width: 268px; max-height: calc(100vh - var(--bar-h) - 24px);
+  :root[data-layout="centred"] .bd-shell { grid-template-columns: minmax(var(--rail), 1fr) minmax(0, var(--content-w)) minmax(var(--rail), 1fr);
+    grid-template-areas: "side head ." "side tldr ." "side main ."; }
+  :root[data-layout="centred"] .bp-side { justify-self: end; width: var(--rail); }
+  /* the Revisions rail in the right column: beside the column in "two", in the right margin in "centred" */
+  :root[data-rev="rail"] .bd-shell { grid-template-columns: var(--rail) minmax(0, 1fr) var(--rail); grid-template-areas: "side head rev" "side tldr rev" "side main rev"; }
+  :root[data-rev="rail"][data-layout="centred"] .bd-shell { grid-template-columns: minmax(var(--rail), 1fr) minmax(0, var(--content-w)) minmax(var(--rail), 1fr); }
+  :root[data-rev="rail"] .bd-rvr { grid-area: rev; justify-self: start; width: var(--rail); }
+  :root[data-rev="drawer"] .bd-rvr { position: fixed; z-index: 45; top: calc(var(--top-h) + 10px); right: 12px; width: 268px; max-height: calc(100vh - var(--top-h) - 24px - var(--tray-room, 0px));
+    margin: 0; padding: 14px 8px 8px; border-radius: 14px; background: var(--surface); box-shadow: var(--shadow-3);
+    visibility: hidden; opacity: 0; transform: translateX(10px); transition: opacity .16s var(--ease), transform .16s var(--ease), visibility 0s .16s; }
+  :root.bd-sp-dock[data-rev="drawer"] .bd-rvr { right: calc(var(--sp-w) + 12px); }
+  :root[data-rev="drawer"] .bd-rvr.drawer { visibility: visible; opacity: 1; transform: none; transition: opacity .16s var(--ease), transform .16s var(--ease); }
+  :root[data-layout="wide"] .bd-shell { grid-template-columns: minmax(0, 1fr); grid-template-areas: "head" "tldr" "main"; column-gap: 0; }
+  :root[data-layout="wide"] .bp-side { position: fixed; z-index: 45; top: calc(var(--top-h) + 10px); left: 12px; width: 268px; max-height: calc(100vh - var(--top-h) - 24px - var(--tray-room, 0px));
     margin: 0; padding: 14px 8px 8px; border-radius: 14px; background: var(--surface); box-shadow: var(--shadow-3);
     visibility: hidden; opacity: 0; transform: translateX(-10px); transition: opacity .16s var(--ease), transform .16s var(--ease), visibility 0s .16s; }
   :root[data-layout="wide"] .bp-side.drawer { visibility: visible; opacity: 1; transform: none; transition: opacity .16s var(--ease), transform .16s var(--ease); }
@@ -1294,9 +1304,15 @@ html.bd-resizing, html.bd-resizing * { cursor: col-resize !important; user-selec
 @media print {
   :root { color-scheme: light; }
   body { background: #fff; font-size: 12pt; }
-  .bd-bar, .bp-side, .bp-tb, .bp-hint, .bp-cl-h .tools, .bp-code-h button, .bd-rh, .bd-wchip { display: none !important; }
+  .bd-bar, .bp-side-toggle, .bp-side-toc, .bd-rvr, .bp-tb, .bp-hint, .bp-cl-h .tools, .bp-code-h button, .bd-rh, .bd-wchip { display: none !important; }
   .bd-shell { display: block; padding: 0; }
-  .bd-meta { position: static; width: auto; max-height: none; margin-top: 16px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .bd-head, .bd-tldr, .bd-shell > main { max-width: none; }
+  /* the rail prints only its document sections, inline under the TL;DR (it follows the TL;DR in the DOM) */
+  .bp-side:not(:has(> .bd-meta)) { display: none !important; }
+  .bp-side { position: static !important; width: auto !important; max-height: none !important; overflow: visible !important; margin: 0 !important; padding: 0 !important;
+    border-radius: 0 !important; background: none !important; box-shadow: none !important; visibility: visible !important; opacity: 1 !important; transform: none !important; }
+  .bp-side > .bd-meta, .bd-shell > .bd-meta { margin-top: 16px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 0; border-radius: 0; background: none; box-shadow: none; }
+  .bd-meta .bd-rail-sec + .bd-rail-sec { margin-top: 0; }
   .bp-sec { break-inside: avoid-page; }
   .bp-table-wrap, .bp-card, .bp-cl, .bp-code, .bp-terms, .bd-tldr-card, .bd-diff { box-shadow: 0 0 0 1px #ccd; }
   .bd-diff-body { display: block; height: auto; } .bd-files, .bd-diff-tb { display: none; } .bd-pane { overflow: visible; }
@@ -1535,8 +1551,8 @@ const head = h('header', { class: 'bd-head', id: 'top' },
 const tldr = h('div', { class: 'bd-tldr' }, DOC.tldr && h('div', { class: 'bd-tldr-card' },
   h('span', { class: 'ico' }, ic('zap')), h('span', { class: 'lbl' }, 'TL;DR'), h('div', { class: 'body', html: md(DOC.tldr) })));
 
-// document rail: status, document properties, links
-// org, kind and date already sit in the eyebrow; the rail adds only the drawing identity
+// document sections of the rail: status, document properties, links. They follow Contents and Tracker
+// in the rail (placeMeta); org, kind and date already sit in the eyebrow, so only the drawing identity is added
 const props = [['Drawing', meta.dwg], ['Revision', meta.rev]].filter(p => p[1]);
 const metaRail = h('aside', { class: 'bd-meta', 'aria-label': 'Document status' },
   DOC.state && DOC.state.length && h('div', { class: 'bd-rail-sec' }, h('h4', { class: 'bd-rail-h' }, 'Status'),
@@ -1548,7 +1564,14 @@ const metaRail = h('aside', { class: 'bd-meta', 'aria-label': 'Document status' 
 
 const side = h('aside', { class: 'bp-side', 'aria-label': 'Contents' });
 const main = h('main');
-app.append(h('div', { class: 'bd-shell' }, head, tldr, metaRail.childNodes.length ? metaRail : null, side, main));
+app.append(h('div', { class: 'bd-shell' }, head, tldr, side, main));
+// on phones (one column) they leave the rail for a card under the TL;DR, where Contents folds away
+const PHONE = matchMedia('(max-width: 900px)');
+function placeMeta() {
+  if (!metaRail.childNodes.length) return;
+  if (PHONE.matches) tldr.after(metaRail); else side.append(metaRail);
+}
+PHONE.addEventListener('change', placeMeta);
 
 /* ---------- content width: drag either edge; the column stays centred ---------- */
 // The width is a reader preference, shared by every bluedoc page in this browser. No stored width
@@ -1567,16 +1590,25 @@ function setDrawer(open) {
   side.classList.toggle('drawer', open);
   document.querySelector('.bd-toc-btn')?.setAttribute('aria-expanded', String(open));
 }
+// the Revisions rail (set up with the revisions below, on docs with 2+ of them) opens as a drawer too
+let revRail = null;
+function setRevDrawer(open) {
+  if (!revRail) return;
+  revRail.classList.toggle('drawer', open);
+  document.querySelector('.bd-rev-btn')?.setAttribute('aria-expanded', String(open));
+}
 function applyWidth() {
-  const dock = dockW(), avail = innerWidth - dock;
+  const dock = dockW(), room = innerWidth - dock - 2 * PAGE_PAD;
   root.classList.toggle('bd-sp-dock', dock > 0);
   if (userW) root.style.setProperty('--content-w', userW + 'px'); else root.style.removeProperty('--content-w');
-  if (!userW && !dock) delete root.dataset.layout;
-  else {
-    // both rails fit beside the column, or the column takes their space; docked with no chosen width,
-    // the rails stay beside it where the default layout keeps them (above 1240 px)
-    const three = userW ? avail >= Math.min(userW, maxW()) + 2 * (cssPx('--rail') + cssPx('--gap') + PAGE_PAD) : avail > 1240;
-    root.dataset.layout = three ? 'three' : 'wide';
+  // the layouts are described with their CSS (data-layout, data-rev); with no chosen width the column
+  // may narrow down to MIN_W beside the rails before a rail becomes a drawer
+  const colW = userW ? Math.min(userW, maxW()) : cssPx('--content-w'), rail = cssPx('--rail') + cssPx('--gap'), minCol = userW ? colW : MIN_W;
+  const centred = room >= colW + 2 * rail, revFits = centred || room >= minCol + (revRail ? 2 : 1) * rail;
+  root.dataset.layout = centred ? 'centred' : room >= minCol + rail ? 'two' : 'wide';
+  if (revRail) {
+    root.dataset.rev = PHONE.matches ? 'card' : revFits ? 'rail' : 'drawer';
+    if (root.dataset.rev !== 'drawer') setRevDrawer(false);
   }
   if (root.dataset.layout !== 'wide') setDrawer(false);
   placeHandles();
@@ -1642,8 +1674,16 @@ for (const el of handles) {
 }
 addEventListener('resize', applyWidth);
 if ('ResizeObserver' in window) new ResizeObserver(placeHandles).observe(main);
-document.addEventListener('pointerdown', e => { if (side.classList.contains('drawer') && !side.contains(e.target) && !e.target.closest('.bd-toc-btn')) setDrawer(false); });
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && side.classList.contains('drawer')) setDrawer(false); });
+document.addEventListener('pointerdown', e => {
+  if (side.classList.contains('drawer') && !side.contains(e.target) && !e.target.closest('.bd-toc-btn')) setDrawer(false);
+  if (revRail?.classList.contains('drawer') && !revRail.contains(e.target) && !e.target.closest('.bd-rev-btn, .bd-rev-link')) setRevDrawer(false);
+});
+// Esc closes an open drawer first (compare view's Esc, which leaves it, sees the key as handled)
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if (revRail?.classList.contains('drawer')) { e.preventDefault(); setRevDrawer(false); }
+  else if (side.classList.contains('drawer')) { e.preventDefault(); setDrawer(false); }
+});
 side.addEventListener('click', e => { if (e.target.closest('a') && root.dataset.layout === 'wide') setDrawer(false); });
 applyWidth();
 
@@ -2283,6 +2323,7 @@ const toggle = h('button', { type: 'button', class: 'bp-btn bp-side-toggle', 'ar
   h('span', {}, 'Contents'), ic('chev', 'chev'));
 const tocWrap = h('div', { class: 'bp-side-toc' }, h('div', { class: 'bd-rail-sec' }, h('h4', { class: 'bd-rail-h' }, 'Contents'), h('ol', {}, tocLinks.map(a => h('li', {}, a)))));
 side.append(toggle, tocWrap);
+placeMeta();
 if (CHECKLISTS.length) {
   const rows = CHECKLISTS.filter(c => !c.parent).map(c => {
     const cnt = h('span', { class: 'c' }); const bar = h('div', { class: 'bp-bar' }, h('i'));
@@ -3657,51 +3698,37 @@ const keyBtn = (cls, icon, label, attrs, onclick, ...kids) =>
 const groove = () => h('span', { class: 'bd-groove', role: 'separator', 'aria-orientation': 'vertical' });
 document.body.append(tip);
 
-/* ---------- right panel: Comments and Revisions ---------- */
-// One panel holds each section this page has: Comments (the current revision only, added by MARKUP)
-// and Revisions (docs with more than one). It docks beside the page on wide windows (applyWidth lays
-// the page out in what is left), is a drawer over it from 901 to 1100 px and a bottom sheet below.
-// A section's button opens the panel on it, or closes the panel when that section already shows.
+/* ---------- right panel: Comments ---------- */
+// The panel holds Comments (the current revision only, added by MARKUP; revisions have their own rail).
+// It docks beside the page on wide windows (applyWidth lays the page out in what is left), is a drawer
+// over it from 901 to 1100 px and a bottom sheet below.
 function scrollWithin(box, el) {   // scroll a panel list so `el` shows; `box` is el's offset parent
   const top = el.offsetTop - 10, bottom = el.offsetTop + el.offsetHeight + 10;
   if (top < box.scrollTop) box.scrollTo({ top, behavior: REDUCE ? 'auto' : 'smooth' });
   else if (bottom > box.scrollTop + box.clientHeight) box.scrollTo({ top: Math.min(top, bottom - box.clientHeight), behavior: REDUCE ? 'auto' : 'smooth' });
 }
 const SIDE = (() => {
-  const OPEN_KEY = 'bluedoc:comments', SECTION_KEY = 'bluedoc:sidepanel', ORDER = ['comments', 'revisions'];
-  const secs = new Map();   // id -> { id, label, body, count, chip, onToggle, buttons, tab, shown }
-  let section = null;
-  const tabs = h('div', { class: 'bd-sg bd-sp-tabs', role: 'tablist', 'aria-label': 'Panel sections', hidden: true });
-  const title = h('h2', { hidden: true }), chip = h('span', { class: 'n', hidden: true });
+  const OPEN_KEY = 'bluedoc:comments';
+  let sec = null;   // { id, label, body, chip, onToggle, shown }
+  const title = h('h2'), chip = h('span', { class: 'n', hidden: true });
   const el = h('aside', { class: 'bd-sp', id: 'bd-sp', 'aria-label': 'Side panel', inert: true },
-    h('div', { class: 'bd-sp-h' }, tabs, title, chip, h('span', { class: 'sp' }),
+    h('div', { class: 'bd-sp-h' }, title, chip, h('span', { class: 'sp' }),
       h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Close the panel', title: 'Close', onclick: () => setOpen(false, true) }, ic('x'))));
   const sheet = () => innerWidth <= 900;
-  // the app bar's sidebar key: shows or hides the panel on the section last open; its badge counts pending comments
+  // the app bar's sidebar key: shows or hides the panel; its badge counts pending comments
   const togN = h('span', { class: 'n', 'aria-hidden': 'true', hidden: true });
   const toggle = tipped(h('button', { type: 'button', class: 'bd-ibtn bd-sp-btn', 'aria-controls': 'bd-sp', 'aria-pressed': 'false', 'aria-keyshortcuts': ']',
     onclick: () => setOpen(!panelOpen, true) }), [']']);
   const badge = n => { togN.hidden = !n; togN.textContent = String(n || ''); };   // the caller repaints
   const as = () => panelOpen ? (sheet() ? 'sheet' : dockW() ? 'dock' : 'drawer') : null;
-  const shows = id => panelOpen && section === id;
-  const available = () => ORDER.filter(id => secs.has(id));
-  // add({id, label, body, count?, chip?, onToggle?}): count is the tab's number, chip the header's when
-  // it is the only section; onToggle(shown) runs when the section starts or stops showing
+  const shows = id => panelOpen && !!sec && sec.id === id;
+  // add({id, label, body, chip?, onToggle?}): chip is the header's count; onToggle(shown) runs when the
+  // section starts or stops showing
   function add(s) {
-    s.body.classList.add('bd-sp-sec'); s.body.id = 'bd-sp-' + s.id; s.body.hidden = true; s.body.setAttribute('role', 'tabpanel');
-    s.tab = h('button', { type: 'button', role: 'tab', 'aria-controls': s.body.id, onclick: () => pick(s.id, true) });
-    secs.set(s.id, { count: () => '', chip: () => '', onToggle: () => {}, buttons: [], shown: false, ...s });
-    const ids = available();
-    tabs.replaceChildren(...ids.map(id => secs.get(id).tab));
-    el.append(...ids.map(id => secs.get(id).body));
-    if (!el.isConnected) document.body.append(el);
-  }
-  const bind = (btn, id) => { secs.get(id)?.buttons.push(btn); btn.setAttribute('aria-controls', 'bd-sp'); };
-  function pick(id, remember) {
-    if (!secs.has(id)) return;
-    if (remember) store.set(SECTION_KEY, id);
-    if (section !== id) { section = id; for (const s of secs.values()) s.body.hidden = s.id !== id; }
-    paint();
+    sec = { chip: () => '', onToggle: () => {}, shown: false, ...s };
+    s.body.classList.add('bd-sp-sec'); s.body.id = 'bd-sp-' + s.id;
+    title.textContent = s.label; el.setAttribute('aria-label', s.label);
+    el.append(s.body); document.body.append(el);
   }
   // docking reflows the page: keep what the reader was looking at where it was
   const PLACES = '.bd-head, .bd-tldr-card, main section.bp-sec > h2, main .bp-lead, main .bp-block[data-bk], main .bp-cl-item, main tr[data-r]';
@@ -3718,43 +3745,31 @@ const SIDE = (() => {
     if (at && scrollY > 0) { const d = at.getBoundingClientRect().top - y; if (Math.abs(d) > 1) scrollBy({ top: d, behavior: 'instant' }); }
   }
   function setOpen(v, remember) {
-    v = !!v && secs.size > 0;
+    v = !!v && !!sec;
     if (remember) store.set(OPEN_KEY, v ? '1' : '0');
-    if (v && !section) pick(secs.has(store.get(SECTION_KEY)) ? store.get(SECTION_KEY) : available()[0], false);
     if (v !== panelOpen) {
       if (!v && el.contains(document.activeElement)) document.activeElement.blur();
       keepPlace(() => { panelOpen = v; root.classList.toggle('bd-sp-open', v); el.inert = !v; applyWidth(); });
     }
     paint();
   }
-  // open on a section; with toggle, that section's own button closes the panel when it already shows
+  // open on the section; with toggle, close the panel when it already shows
   function show(id, { toggle = false, remember = true } = {}) {
-    if (!secs.has(id)) return false;
-    if (toggle && shows(id)) { setOpen(false, remember); return true; }
-    pick(id, remember); setOpen(true, remember);
+    if (!sec || sec.id !== id) return false;
+    setOpen(!(toggle && shows(id)), remember);
     return true;
   }
   function paint() {
-    const ids = available(), one = ids.length < 2, cur = section && secs.get(section);
-    tabs.hidden = one; title.hidden = !one;
-    for (const id of ids) {
-      const s = secs.get(id), n = String(s.count() || '');
-      s.tab.setAttribute('aria-selected', String(id === section));
-      if (s.tab.textContent !== s.label + n) s.tab.replaceChildren(s.label, h('i', {}, n));
-      for (const b of s.buttons) b.setAttribute('aria-pressed', String(shows(id)));
-    }
-    if (one && cur) { title.textContent = cur.label; const c = cur.chip(); chip.hidden = !c; chip.textContent = c; } else chip.hidden = true;
-    el.setAttribute('aria-label', cur ? cur.label : 'Side panel');
+    const c = sec ? sec.chip() : ''; chip.hidden = !c; chip.textContent = c;
     toggle.setAttribute('aria-pressed', String(panelOpen));
     toggle._tip = panelOpen ? 'Hide sidebar' : 'Show sidebar';
     toggle.setAttribute('aria-label', toggle._tip + (togN.hidden ? '' : ` (${togN.textContent} pending)`));
     if (toggle._open !== panelOpen) { toggle._open = panelOpen; toggle.replaceChildren(ic(panelOpen ? 'panelon' : 'panel'), togN); }
-    for (const s of secs.values()) { const v = shows(s.id); if (v !== s.shown) { s.shown = v; s.onToggle(v); } }
+    if (sec) { const v = shows(sec.id); if (v !== sec.shown) { sec.shown = v; sec.onToggle(v); } }
   }
-  // after every section is added: restore the panel (open by default where it docks, until the reader
-  // toggles it), or open Revisions in compare view
+  // after the section is added: restore the panel (open by default where it docks, until the reader toggles it)
   function start() {
-    if (!secs.size) return;
+    if (!sec) return;
     document.querySelector('.bd-bar-r')?.insertBefore(toggle, themeBtn);
     document.addEventListener('keydown', e => {
       if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey || document.querySelector('dialog[open]')) return;
@@ -3763,15 +3778,14 @@ const SIDE = (() => {
       else if (e.key === 'Escape' && panelOpen && !dockW()) { e.preventDefault(); setOpen(false, true); }
     });
     const pref = store.get(OPEN_KEY);
-    if (BASE && secs.has('revisions') && !sheet()) show('revisions', { remember: false });
-    else if (pref === '1' ? !sheet() : pref == null && innerWidth >= DOCK_MIN) setOpen(true, false);
+    if (pref === '1' ? !sheet() : pref == null && innerWidth >= DOCK_MIN) setOpen(true, false);
     paint();
   }
   function api(o) {
     if (o && typeof o === 'object') { if (o.section && o.open !== false) show(o.section); else if ('open' in o) setOpen(o.open, true); }
-    return { available: available(), open: panelOpen, section: section || (secs.has(store.get(SECTION_KEY)) ? store.get(SECTION_KEY) : available()[0] || null), as: as() };
+    return { available: sec ? [sec.id] : [], open: panelOpen, section: sec ? sec.id : null, as: as() };
   }
-  return { el, add, bind, show, shows, setOpen, paint, start, api, sheet, as, badge };
+  return { el, add, show, shows, setOpen, paint, start, api, sheet, as, badge };
 })();
 
 // URLs and UI
@@ -3784,7 +3798,14 @@ function revUrl(view, base) {
 }
 const revName = r => `Rev ${r.rev}`;
 let chgAt = -1, revPos = null, chgBtns = [];
-// jump to change i (page order): scroll and flash it, and follow it in the strip and the panel list
+// scroll the Revisions rail, where it scrolls on its own (rail, drawer), so `el` shows
+function railScrollTo(el) {
+  if (revRail.scrollHeight <= revRail.clientHeight) return;
+  const box = revRail.getBoundingClientRect(), r = el.getBoundingClientRect();
+  const d = r.top < box.top + 10 ? r.top - box.top - 10 : r.bottom > box.bottom - 10 ? Math.min(r.bottom - box.bottom + 10, r.top - box.top - 10) : 0;
+  if (d) revRail.scrollBy({ top: d, behavior: REDUCE ? 'auto' : 'smooth' });
+}
+// jump to change i (page order): scroll and flash it, and follow it in the tray and the rail's list
 function showChg(i) {
   if (!CHG.length) return;
   chgAt = (i % CHG.length + CHG.length) % CHG.length;
@@ -3793,19 +3814,20 @@ function showChg(i) {
   c.el.classList.remove('bd-chg-flash'); void c.el.offsetWidth; c.el.classList.add('bd-chg-flash');
   if (revPos) revPos.textContent = `${chgAt + 1} of ${CHG.length}`;
   chgBtns.forEach((b, k) => b.setAttribute('aria-current', String(k === chgAt)));
-  if (chgBtns[chgAt]) scrollWithin(chgBtns[chgAt].closest('.bd-rv-l'), chgBtns[chgAt]);
+  if (chgBtns[chgAt]) railScrollTo(chgBtns[chgAt]);
 }
 const gotoChg = step => showChg(chgAt + step);
-// the Revisions section: in compare view the marked changes first, then every revision, newest first,
-// then the Compare picker
-function revisionsSection() {
-  const box = h('div', { class: 'bd-rv-l' });
+// the Revisions rail: in compare view the marked changes first, then every revision, newest first, then
+// the Compare picker. As a card (900 px and below) it opens from its header.
+function buildRevRail() {
+  const sec = (title, ...kids) => h('div', { class: 'bd-rail-sec' }, h('h4', { class: 'bd-rail-h' }, title), kids);
+  const body = h('div', { class: 'bd-rvr-body' });
   if (BASE) {
     const n = { add: 0, mod: 0, del: 0 }; CHG.forEach(c => n[c.kind]++);
     const kinds = Object.keys(n).filter(k => n[k]).flatMap((k, i) => [i ? ' · ' : null, h('span', { class: 'k ' + k }, `${n[k]} ${{ add: 'new', mod: 'changed', del: 'removed' }[k]}`)]);
     chgBtns = CHG.map((c, i) => h('button', { type: 'button', 'aria-current': 'false', onclick: () => showChg(i) }, chgTag(c.kind), h('span', { class: 't' }, plain(c.label))));
-    box.append(h('h3', { class: 'bd-sp-sub' }, `${revName(BASE)} → ${VIEW.rev}`, h('span', { class: 'x' }, kinds.length ? kinds : 'no differences')),
-      h('ol', { class: 'bd-chl', 'aria-label': 'Changes, in page order' }, chgBtns.length ? chgBtns.map(b => h('li', {}, b)) : h('li', { class: 'none' }, 'Nothing changed between these revisions.')));
+    body.append(sec('Changes', h('p', { class: 'bd-rvr-sum' }, h('b', {}, `${BASE.rev} → ${VIEW.rev}`), h('span', {}, kinds.length ? kinds : 'no differences')),
+      h('ol', { class: 'bd-chl', 'aria-label': 'Changes, in page order' }, chgBtns.length ? chgBtns.map(b => h('li', {}, b)) : h('li', { class: 'none' }, 'Nothing changed between these revisions.'))));
   }
   const items = [...REVS].reverse().map(r => {
     const prev = REVS[REVS.indexOf(r) - 1], notes = r.doc.changes || [], cmp = !!prev && BASE === prev && VIEW === r;
@@ -3817,23 +3839,45 @@ function revisionsSection() {
         (r !== VIEW || BASE) && h('a', { class: 'bp-btn', href: revUrl(r, null) }, ic('eye'), 'View'),
         prev && h('a', { class: 'bp-btn', href: revUrl(r, prev), 'aria-current': cmp ? 'page' : null }, ic('split'), `Changes from ${prev.rev}`)));
   });
-  box.append(h('h3', { class: 'bd-sp-sub' }, 'All revisions'),
-    h('p', { class: 'bd-sp-note' }, 'Earlier revisions are read-only: ticks, picks and comments made there aren\'t saved.'),
-    h('ol', { class: 'bd-rvs' }, items));
-  // the list above has the full dates; the picker shows month and day so both fit side by side
+  body.append(sec('Revisions', h('p', { class: 'bd-rvr-note' }, 'Earlier revisions are read-only: ticks, picks and comments made there aren\'t saved.'),
+    h('ol', { class: 'bd-rvs' }, items)));
+  // the list above has the full dates; the picker shows month and day
   const sel = (def, label) => h('select', { class: 'rv-sel', 'aria-label': label }, REVS.map(r => h('option', { value: r.rev, selected: r === def, title: r.date || null },
     revName(r) + (r.date ? ` · ${/^\d{4}-\d\d-\d\d$/.test(r.date) ? r.date.slice(5) : r.date}` : ''))));
   const from = sel(BASE || (OLD ? VIEW : REVS[REVS.length - 2]), 'Compare from'), to = sel(BASE ? VIEW : CUR, 'Compare with');
   const go = () => { const a = REVS.find(r => r.rev === from.value), b = REVS.find(r => r.rev === to.value); if (a && b && a !== b) location.href = revUrl(b, a); else toast('Pick two different revisions'); };
-  return h('div', {}, box, h('div', { class: 'bd-rv-ft' }, h('div', { class: 'row' }, from, ic('next'), to),
-    h('button', { type: 'button', class: 'bp-btn primary', onclick: go }, ic('split'), 'Compare')));
+  body.append(sec('Compare', h('div', { class: 'bd-rv-ft' }, h('div', { class: 'row' }, from, ic('next'), to),
+    h('button', { type: 'button', class: 'bp-btn primary', onclick: go }, ic('split'), 'Compare'))));
+  const toggle = h('button', { type: 'button', class: 'bp-btn bp-side-toggle', 'aria-expanded': 'false', 'aria-controls': 'bd-rvr-body', onclick: () => setRevCard(!revRail.classList.contains('open')) },
+    h('span', {}, 'Revisions'), ic('chev', 'chev'));
+  body.id = 'bd-rvr-body';
+  return h('aside', { class: 'bd-rvr', id: 'bd-rvr', 'aria-label': 'Revisions' }, toggle, body);
+}
+function setRevCard(open) {
+  revRail.classList.toggle('open', open);
+  revRail.querySelector('.bp-side-toggle').setAttribute('aria-expanded', String(open));
+}
+// the Rev button and the "B of 2" link: open the drawer or the card, or point at the rail beside the column
+function revealRevs() {
+  const as = root.dataset.rev;
+  if (as === 'drawer') { setDrawer(false); setRevDrawer(!revRail.classList.contains('drawer')); return; }
+  if (as === 'card') { setRevCard(true); revRail.scrollIntoView({ block: 'start', behavior: REDUCE ? 'auto' : 'smooth' }); }
+  else railScrollTo(revRail.querySelector('.bd-rv.on') || revRail.firstChild);
+  revRail.classList.remove('flash'); void revRail.offsetWidth; revRail.classList.add('flash');
+}
+// tests and agents: BP.revisionsRail({open})
+function revisionsRail(o) {
+  if (!revRail) return { available: false, open: false, as: null };
+  const as = root.dataset.rev;
+  if (o && typeof o === 'object' && 'open' in o) { if (as === 'drawer') setRevDrawer(!!o.open); else if (as === 'card') setRevCard(!!o.open); }
+  return { available: true, as, open: as === 'drawer' ? revRail.classList.contains('drawer') : as === 'card' ? revRail.classList.contains('open') : true };
 }
 if (REVS.length > 1) {
   const label = h('span', { class: 'l' }, revName(VIEW));
-  const btn = h('button', { type: 'button', class: 'bp-btn bd-rev-btn' + (OLD ? ' old' : ''), title: 'Revisions', 'aria-pressed': 'false', onclick: () => SIDE.show('revisions', { toggle: true }) }, ic('hist'), label);
+  const btn = h('button', { type: 'button', class: 'bp-btn bd-rev-btn' + (OLD ? ' old' : ''), title: 'Revisions', 'aria-controls': 'bd-rvr', onclick: revealRevs }, ic('hist'), label);
   document.querySelector('.bd-bar-r').prepend(btn);
   const revDd = [...document.querySelectorAll('.bd-props dt')].find(dt => dt.textContent === 'Revision');
-  if (revDd) { const dd = revDd.nextElementSibling; dd.textContent = ''; dd.append(h('button', { type: 'button', class: 'bd-rev-link', onclick: () => SIDE.show('revisions', { toggle: true }) }, `${VIEW.rev} of ${REVS.length}`)); }
+  if (revDd) { const dd = revDd.nextElementSibling; dd.textContent = ''; dd.append(h('button', { type: 'button', class: 'bd-rev-link', 'aria-controls': 'bd-rvr', onclick: revealRevs }, `${VIEW.rev} of ${REVS.length}`)); }
   if (OLD) document.title = `${revName(VIEW)} · ${document.title}`;
   const strip = (cls, ...kids) => { const s = h('div', { class: 'bd-revbar ' + cls, role: 'region', 'aria-label': 'Revision' }, h('div', { class: 'in' }, kids)); document.querySelector('.bd-bar').after(s); return s; };
   // compare view and earlier revisions get their own tray of keys at the bottom, where the annotation
@@ -3861,7 +3905,7 @@ if (REVS.length > 1) {
     document.addEventListener('keydown', e => {
       if (e.defaultPrevented || e.isComposing || e.metaKey || e.ctrlKey || e.altKey || document.querySelector('dialog[open]')) return;
       const t = e.target; if (t.closest && t.closest('input, textarea, select, [contenteditable], .bp-stage, .bd-diff')) return;
-      if (e.key === 'Escape') { if (SIDE.as() === 'drawer' || SIDE.as() === 'sheet') return; e.preventDefault(); location.href = doneUrl; }
+      if (e.key === 'Escape') { e.preventDefault(); location.href = doneUrl; }
       else if (e.key === 'j' || e.key === 'ArrowDown') { e.preventDefault(); gotoChg(1); }
       else if (e.key === 'k' || e.key === 'ArrowUp') { e.preventDefault(); gotoChg(-1); }
     });
@@ -3883,8 +3927,11 @@ if (REVS.length > 1) {
   }
   const bar = document.querySelector('.bd-revbar');
   if (bar) { const fit = () => root.style.setProperty('--rv-h', bar.offsetHeight + 'px'); fit(); addEventListener('resize', fit); }
-  SIDE.add({ id: 'revisions', label: 'Revisions', body: revisionsSection(), count: () => REVS.length, chip: () => String(REVS.length) });
-  SIDE.bind(btn, 'revisions');
+  revRail = buildRevRail();
+  main.after(revRail);
+  applyWidth();
+  // on an earlier revision or in compare view the rail shows from the start, also as a drawer or card
+  if (BASE || OLD) { if (root.dataset.rev === 'drawer') setRevDrawer(true); else if (root.dataset.rev === 'card') setRevCard(true); }
 }
 
 /* ---------- plans: Approve plan; other pages with checklists: Send answers. The keys that end the tray ---------- */
@@ -4072,9 +4119,10 @@ const MARKUP = (() => {
   const KIND = { line: 'Code line', comment: 'Review comment', row: 'Table row', node: 'Drawing part', step: 'Plan step', file: 'File', media: 'Media', compare: 'Compare side',
     card: 'Card', para: 'Paragraph', item: 'Checklist item', block: 'Block', heading: 'Section title', lead: 'Section lead', section: 'Section', tldr: 'TL;DR', header: 'Header', status: 'Status', doc: 'Page' };
   const TYPES = Object.keys(SEL), ANY = Object.values(SEL).join(', ');
-  const CLIPS = '.bd-pane, .bp-stage, .bp-table-wrap';   // inner scrollers that clip what they hold
+  const CLIPS = '.bd-pane, .bp-stage, .bp-table-wrap, .bp-side';   // inner scrollers that clip what they hold
   const typeOf = el => el === shell ? 'doc' : TYPES.find(t => el.matches(SEL[t]));
-  const inDoc = t => !!t && t.nodeType === 1 && shell.contains(t) && !t.closest('.bp-side');
+  // the rails are page furniture, except the left rail's document sections (Status, Document, Related)
+  const inDoc = t => !!t && t.nodeType === 1 && shell.contains(t) && !t.closest('.bd-rvr') && (!t.closest('.bp-side') || !!t.closest('.bd-meta'));
   const targetAt = t => inDoc(t) ? t.closest(ANY) : null;
   let itemKeys = null;
   const itemKeyOf = li => (itemKeys ||= new Map(Object.entries(ITEMS).map(([k, x]) => [x.li, k]))).get(li);
@@ -4969,7 +5017,7 @@ const MARKUP = (() => {
 
   /* wiring */
   document.body.append(layer, hov, cap, cmp, tb);
-  SIDE.add({ id: 'comments', label: 'Comments', body: csBody, count: () => pending().length || '', chip: () => pending().length ? `${pending().length} pending` : '',
+  SIDE.add({ id: 'comments', label: 'Comments', body: csBody, chip: () => pending().length ? `${pending().length} pending` : '',
     onToggle: shown => { if (!shown) endEdit(true); schedule(true); paint(); } });
   root.classList.add('bd-tray-on');
   for (const ty of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click', 'dblclick']) addEventListener(ty, onCapture, true);
@@ -5037,6 +5085,7 @@ window.BP = {
   setMode: name => MARKUP.setMode(name),
   comments: opts => MARKUP.comments(opts),
   sidebar: opts => SIDE.api(opts),
+  revisionsRail: opts => revisionsRail(opts),
 };
 })();
 </script>
