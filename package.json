@@ -1,6 +1,6 @@
 {
   "name": "bluedoc",
-  "version": "3.6.0",
+  "version": "3.7.0",
   "private": true,
   "description": "Engineering docs, plans and code reviews an agent writes as JSON and a local server renders, with a home page: zoomable blueprint canvases, persistent checklists, plans you approve on the page, review findings pinned to their lines from git, and revisions you can compare.",
   "keywords": ["pi-package", "skill", "documentation", "architecture", "code-review"],

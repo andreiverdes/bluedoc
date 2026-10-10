@@ -10,7 +10,8 @@ Usage:
   build.py new TYPE out.bluedoc.json [--title T] [--kind K] [--shape pr|area] [--target T,…] [--framework F]
                                     write the fill-in skeleton of a docs|review|plan|design|other doc
                                     (--shape area: a review by area of a codebase, not by PR; design: one
-                                    wireframe screen file per --target watch|mobile|tablet|desktop|web)
+                                    wireframe screen file per --target watch|mobile|tablet|desktop|web, three
+                                    slides for presentation)
   build.py patch doc.json KEY [--set f=v ...] [--json OBJ] [--append OBJ] [--delete] [--html FILE|-]
                               [--change LINE ...] [--no-bump]
                                     change one object by its annotator key, bump meta.rev, validate, record
@@ -125,8 +126,14 @@ ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 # table (watch-round: the kit derives --safe-inset, the inscribed square, from the diameter)
 DEVICES = {"watch-round": {"w": 240, "h": 240, "safe": [0, 0, 0, 0]}, "watch-square": {"w": 198, "h": 242, "safe": [8, 8, 8, 8]},
            "phone": {"w": 390, "h": 844, "safe": [47, 0, 34, 0]}, "tablet": {"w": 820, "h": 1180, "safe": [24, 0, 20, 0]},
-           "desktop": {"w": 1280, "h": 800, "safe": [32, 0, 0, 0]}, "browser": {"w": 1440, "h": 900, "safe": [72, 0, 0, 0]}}
-TARGET_DEVICES = {"watch": "watch-round", "mobile": "phone", "tablet": "tablet", "desktop": "desktop", "web": "browser"}
+           "desktop": {"w": 1280, "h": 800, "safe": [32, 0, 0, 0]}, "browser": {"w": 1440, "h": 900, "safe": [72, 0, 0, 0]},
+           "slide": {"w": 1920, "h": 1080, "safe": [0, 0, 0, 0]}}
+TARGET_DEVICES = {"watch": "watch-round", "mobile": "phone", "tablet": "tablet", "desktop": "desktop", "web": "browser",
+                  "presentation": "slide"}
+# `build.py new design --target presentation`: the stub deck, one slide artboard each, in deck order
+STUB_SLIDES = (("title", "Title slide: the deck's title and who presents it"), ("content", "Content slide: its one point"),
+               ("closing", "Closing slide: the ask or next step"))
+MAX_NOTES_BYTES = 2 * 1024        # an artboard's speaker notes, shown under the slide in Present
 FIDELITIES = ("sketch", "wireframe", "hifi")
 BUILTIN_FRAMEWORKS = ("plain", "horizon")
 FRAMEWORK_EXTS = {".css", ".js", ".mjs"}
@@ -259,7 +266,7 @@ BLOCK_SHAPES = {
               "frameworks": [{"id": str, "label": str, "files": [str], "store": str}],
               "themes": [{"id": str, "label": str, "tokens": dict}], "motion": dict,
               "artboards": [{"id": str, "title": str, "device": str, "fidelity": str, "x": NUMBER, "y": NUMBER,
-                             "w": NUMBER, "h": NUMBER, "variantOf": str, "framework": str, "src": str}]},
+                             "w": NUMBER, "h": NUMBER, "variantOf": str, "framework": str, "src": str, "notes": str}]},
 }
 DOC_SHAPE = {"title": str, "meta": {"type": str}, "state": [{"kind": str}],
              "sections": [{"id": str, "title": str, "blocks": [BLOCK]}]}
@@ -770,6 +777,12 @@ def validate_board(rep: Report, bw: str, b: dict, doc: dict, doc_path: Path | No
             rep.err(aw, f"duplicate artboard id '{a['id']}'")
         art_ids.add(a["id"])
         lint_text(rep, aw + ".title", a["title"])
+        if isinstance(a.get("notes"), str):
+            size = len(a["notes"].encode("utf-8"))
+            if size > MAX_NOTES_BYTES:
+                rep.err(aw + ".notes", f"{size} bytes (at most {MAX_NOTES_BYTES}): speaker notes are a few talking "
+                        "points; put the rest in the slide or the brief")
+            lint_text(rep, aw + ".notes", a["notes"])
         if "device" in a:
             if a["device"] not in DEVICES:
                 rep.err(aw + ".device", f"'{a['device']}' not in {sorted(DEVICES)}; or drop it and give w and h")
@@ -1613,7 +1626,7 @@ def cmd_new(argv: list[str]) -> int:
     ap.add_argument("--shape", choices=("pr", "area"), default="pr",
                     help="review only: one section per PR (pr), or per area of a codebase review (area)")
     ap.add_argument("--target", help=f"design only: comma list of {','.join(TARGET_DEVICES)}; one starter artboard "
-                    "and wireframe screen file each (default mobile)")
+                    "and wireframe screen file each, three slides for presentation (default mobile)")
     ap.add_argument("--framework", help="design only: plain | horizon | <a `serve.py add-framework` name> | auto "
                     "(default: you fill the brief's framework pick from the project's files; see types/design.md)")
     a = ap.parse_args(argv)
@@ -1662,9 +1675,36 @@ def cmd_new(argv: list[str]) -> int:
     return 0
 
 
+def stub_slide(aid: str, kind: str, n: int | None) -> str:
+    """A wireframe starter slide (`title`, `content` or `closing`) in the kit's slide classes; n: its page number."""
+    num = f' data-n="{n}"' if n else ""
+    foot = f'  <footer class="slide-foot"{num} data-bd="foot">Deck title</footer>\n'
+    if kind == "title":
+        return (f'<section class="slide center" data-bd="{aid}">\n'
+                '  <p class="slide-kicker" data-bd="kicker">Team · date</p>\n'
+                '  <h1 class="slide-title" data-bd="headline">Deck title</h1>\n'
+                '  <div class="wf-text" style="--lines:1" data-bd="presenter"></div>\n'
+                '</section>\n')
+    if kind == "closing":
+        return (f'<section class="slide center" data-bd="{aid}">\n'
+                '  <h2 class="slide-title" data-bd="ask">The ask</h2>\n'
+                '  <div class="wf-text" style="--lines:2" data-bd="next"></div>\n'
+                + foot + '</section>\n')
+    return (f'<section class="slide" data-bd="{aid}">\n'
+            '  <p class="slide-kicker" data-bd="kicker">Section</p>\n'
+            '  <h2 class="slide-title" data-bd="headline">One point per slide</h2>\n'
+            '  <div class="slide-cols grow" data-bd="body">\n'
+            '    <div class="wf-text" style="--lines:5" data-bd="points"></div>\n'
+            '    <div class="wf-img" data-bd="visual"></div>\n'
+            '  </div>\n'
+            + foot + '</section>\n')
+
+
 def stub_screen(a: dict) -> str:
     """A wireframe starter for an artboard, in plain-kit classes (references/kits.md): the agent's rev A."""
     aid, dev = a["id"], a.get("device")
+    if dev == "slide":
+        return stub_slide(aid, "content", None)
     if dev in ("watch-round", "watch-square"):
         return (f'<main class="screen {"round " if dev == "watch-round" else ""}safe stack gap-2 center" data-bd="{aid}">\n'
                 '  <div class="wf-circle" data-bd="glance"></div>\n'
@@ -1695,12 +1735,23 @@ def stub_screen(a: dict) -> str:
 
 
 def scaffold_design(doc: dict, out: Path, targets: list[str], framework: str) -> dict[Path, str]:
-    """Fill a design skeleton for `build.py new design`: one wireframe artboard per target and the framework pick.
-    Returns {screen file: stub text} to write beside the doc."""
+    """Fill a design skeleton for `build.py new design`: one wireframe artboard per target (presentation: the stub
+    deck's slides) and the framework pick. Returns {screen file: stub text} to write beside the doc."""
     board = board_of(doc)
     board["targets"] = targets
-    board["artboards"] = [{"id": t, "title": f"<<{t.capitalize()} screen: what it shows>>", "device": TARGET_DEVICES[t],
-                           "fidelity": "wireframe"} for t in targets]
+    board["artboards"], stubs = [], {}
+    for t in targets:
+        if t == "presentation":
+            for n, (kind, title) in enumerate(STUB_SLIDES, 1):
+                a = {"id": kind, "title": f"<<{title}>>", "device": "slide", "fidelity": "wireframe",
+                     "notes": "<<What you say on this slide, or drop notes>>"}
+                board["artboards"].append(a)
+                stubs[out.parent / screen_rel(out, a)] = stub_slide(kind, kind, n)
+        else:
+            a = {"id": t, "title": f"<<{t.capitalize()} screen: what it shows>>", "device": TARGET_DEVICES[t],
+                 "fidelity": "wireframe"}
+            board["artboards"].append(a)
+            stubs[out.parent / screen_rel(out, a)] = stub_screen(a)
     if framework != "auto":
         item = _item(doc, "brief", "framework").obj
         if framework not in BUILTIN_FRAMEWORKS:
@@ -1715,7 +1766,7 @@ def scaffold_design(doc: dict, out: Path, targets: list[str], framework: str) ->
         item["recommend"] = framework
         label = next(c["label"] for c in item["choices"] if c["id"] == framework)
         item["sub"] = f"Recommend {label}: <<why it fits these screens>>."
-    return {out.parent / screen_rel(out, a): stub_screen(a) for a in board["artboards"]}
+    return stubs
 
 
 class PatchError(Exception):

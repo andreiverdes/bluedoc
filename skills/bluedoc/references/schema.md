@@ -297,7 +297,7 @@ A design doc (`meta.type: "design"`) has a brief section and one `board` block. 
 | Field | Meaning |
 |---|---|
 | `id`, `artboards` | Required. |
-| `targets` | `watch`, `mobile`, `tablet`, `desktop`, `web`: what the design is for. |
+| `targets` | `watch`, `mobile`, `tablet`, `desktop`, `web`, `presentation`: what the design is for. |
 | `framework` | The default for every artboard: `plain` (the kit that ships), `horizon` (HorizonUI, ships) or a `frameworks[].id`. Default `plain`. |
 | `frameworks[]` | The reader's own: `{id, label, files}` with `.css`/`.js`/`.mjs` paths relative to the doc's folder (no URLs), or `{id, label, store}` naming a copy made by `serve.py add-framework <store> <path\|url>` in `~/.bluedoc/frameworks/<store>/`. A missing file or store is a build warning: those screens show the plain kit with a notice. |
 | `themes[]` | `{id, label, tokens}`. Each token `k` (`^[a-z][a-z0-9-]*$`) becomes the CSS variable `--k` in every frame; values are CSS strings without `; { } < > \` or `url()`. |
@@ -317,6 +317,7 @@ A design doc (`meta.type: "design"`) has a brief section and one `board` block. 
 | `variantOf` | Another artboard's id: a variant of that screen. |
 | `framework` | Overrides the board's `framework`. |
 | `src` | The screen file, relative to the doc: an `.html` file in a `<name>.design/` folder. Default `<stem>.design/<id>.html`; leave it out. |
+| `notes` | md, at most 2 KB (an error above): the speaker notes of a slide. **Present** shows them under it (`N` toggles). |
 
 ### Devices
 
@@ -328,6 +329,9 @@ A design doc (`meta.type: "design"`) has a brief section and one `board` block. 
 | `tablet` | 820 × 1180 | 24, 0, 20, 0 |
 | `desktop` | 1280 × 800 | 32, 0, 0, 0 (title bar) |
 | `browser` | 1440 × 900 | 72, 0, 0, 0 (tab strip, address bar) |
+| `slide` | 1920 × 1080 | none; a thin frame, no device chrome. Other aspect ratios: `w` and `h` |
+
+A board with `slide` artboards is a deck: **Present** shows them full-window, scaled to fit, in reading order (rows top to bottom, each left to right, as the board places them); ← → step, `Esc` leaves. Kit slide classes: `references/kits.md` `## Slides`.
 
 ### Screen files
 
