@@ -197,6 +197,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .bd-revbar .k { margin-left: 6px; font-weight: 600; }
 .bd-revbar .k.add { color: var(--ok-fg); } .bd-revbar .k.mod { color: var(--warn-fg); } .bd-revbar .k.del { color: var(--risk-fg); }
 .bd-revbar .bp-btn { height: 28px; }
+.bd-revbar.bd-lockbar { position: static; }
+.bd-lockbar code { font: 500 12.5px var(--mono); }
 .rv-sel { height: 32px; border: 0; border-radius: 9px; padding: 0 8px; font: 500 12.5px var(--sans); color: var(--fg); background: var(--inset); box-shadow: inset 0 0 0 1px var(--line); }
 .bd-chg { --chg: var(--warn); }
 .bd-chg-add { --chg: var(--ok); } .bd-chg-del { --chg: var(--risk); }
@@ -850,10 +852,11 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
   font: 650 10px/1 var(--sans); color: #fff; background: var(--accent-solid); box-shadow: 0 0 0 2px var(--canvas); }
 .bd-sp-btn .n[hidden] { display: none; }
 .bd-rev-btn[aria-expanded="true"] { background: var(--hk-down); box-shadow: var(--shadow-hk-down); }
-/* the Revisions rail (docs with 2+ revisions), right of the content column and sticky like the left rail:
+/* the Revisions rail, right of the content column and sticky like the left rail:
    in compare view the marked changes first, then every revision, newest first, then the Compare picker.
    JS sets data-rev: "rail" beside the column, "drawer" (opened from the Rev button) when it does not
-   fit, "card" (a collapsible card under the TL;DR) at 900 px and below. */
+   fit, "card" (a collapsible card under the TL;DR) at 900 px and below, "slim" on a doc with one
+   revision: the rail's header alone, "Revisions · 1", which opens on click and takes no width. */
 .bd-rvr { position: sticky; top: calc(var(--top-h) + 20px); align-self: start; margin-top: 60px; max-height: calc(100vh - var(--top-h) - 20px);
   overflow: auto; overscroll-behavior: contain; padding: 2px 3px calc(16px + var(--tray-room, 0px)); font-size: 13px; scrollbar-width: thin; border-radius: 12px; }
 .bd-rvr.flash { animation: bd-cs-flash 1.2s var(--ease); }
@@ -1322,6 +1325,20 @@ html.bd-resizing, html.bd-resizing * { cursor: col-resize !important; user-selec
     visibility: hidden; opacity: 0; transform: translateX(-10px); transition: opacity .16s var(--ease), transform .16s var(--ease), visibility 0s .16s; }
   :root[data-layout="wide"] .bp-side.drawer { visibility: visible; opacity: 1; transform: none; transition: opacity .16s var(--ease), transform .16s var(--ease); }
   :root[data-layout="wide"] .bd-toc-btn { display: inline-grid !important; }
+  /* "slim": at the top right of the column, beside the eyebrow, the panel opening over the page below it;
+     in the right margin, sticky, when the column is centred and the margin has room */
+  :root[data-rev="slim"] .bd-rvr { grid-area: head; justify-self: end; align-self: start; position: relative; top: 0; z-index: 20; max-height: none; overflow: visible;
+    margin-top: 52px; padding: 0; scroll-margin-top: calc(var(--top-h) + 12px); -webkit-mask-image: none; mask-image: none; }
+  :root[data-rev="slim"] .bd-rvr > .bp-side-toggle { display: inline-flex !important; gap: 6px; height: 30px; padding: 0 8px 0 12px; font-size: 12.5px; font-weight: 600; }
+  :root[data-rev="slim"] .bd-rvr .chev { transition: transform .2s; }
+  :root[data-rev="slim"] .bd-rvr.open .chev { transform: rotate(90deg); }
+  :root[data-rev="slim"] .bd-rvr-body { display: none; position: absolute; top: calc(100% + 6px); right: 0; width: 268px; max-height: calc(100vh - var(--top-h) - 140px);
+    overflow: auto; padding: 12px 8px 8px; border-radius: 14px; background: var(--surface); box-shadow: var(--shadow-3); }
+  :root[data-rev="slim"] .bd-rvr.open .bd-rvr-body { display: block; }
+  :root[data-rev="slim"] .bd-rvr-body > .bd-rail-sec:last-child > .bd-rail-h { display: none; }
+  :root[data-rev="slim"]:not([data-layout="centred"]) .bd-head > :first-child { margin-right: 150px; }
+  :root[data-rev="slim"][data-layout="centred"] .bd-rvr { grid-area: auto; grid-column: 3; grid-row: 1 / -1; justify-self: start; position: sticky; top: calc(var(--top-h) + 20px); margin-top: 52px; }
+  :root[data-rev="slim"][data-layout="centred"] .bd-rvr-body { position: static; width: var(--rail); margin-top: 6px; }
 }
 @media print {
   :root { color-scheme: light; }
@@ -1497,10 +1514,11 @@ function md(src) {
 /* ---------- storage ---------- */
 const docId = DOC.id || 'doc';
 // Reader state is every `bp:<doc.id>:` key: ticks, picks, comments, plan state, last-seen rev. Served
-// by serve.py with a seed in bp-state ({version, state}), the server's state.db holds it; localStorage is
-// then the cache every read uses, plus `__outbox`, the writes the server has not acknowledged. With no
-// seed (a `-o` export, file://, a server without sqlite3) localStorage is the only store. Layout prefs
-// (`bluedoc:*`) always stay in this browser.
+// by serve.py with a seed in bp-state ({version, state, docHash}), the server's state.db holds it; localStorage
+// is then the cache every read uses, plus `__outbox:<URL path>`, the writes the server has not acknowledged.
+// The outbox is the doc's URL path's, as the server keys state by file: two docs with one id (a copy, a git
+// worktree) each send only their own writes. With no seed (a `-o` export, file://, a server without sqlite3)
+// localStorage is the only store. Layout prefs (`bluedoc:*`) always stay in this browser.
 const store = (() => {
   let ok = true; const mem = {};
   try { localStorage.setItem('bp:probe', '1'); localStorage.removeItem('bp:probe'); } catch { ok = false; }
@@ -1514,7 +1532,8 @@ const store = (() => {
     if (ok) for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.startsWith(pre)) out.add(k); }
     return [...out].filter(k => get(k) != null);
   };
-  const PFX = `bp:${docId}:`, OUTBOX = PFX + '__outbox', IMPORTED = PFX + '__imported';
+  // `__imported` stays per id: a copy opened for the first time must not import the other path's cached keys
+  const PFX = `bp:${docId}:`, OUTBOX = PFX + '__outbox:' + location.pathname, IMPORTED = PFX + '__imported';
   const SEED = (() => {
     try { const x = JSON.parse(document.getElementById('bp-state').textContent); return x && Number.isInteger(x.version) && x.state && typeof x.state === 'object' ? x : null; } catch { return null; }
   })();
@@ -1524,10 +1543,14 @@ const store = (() => {
   const KEY_RE = /^[a-z0-9_][a-z0-9:_-]*$/, enc = new TextEncoder();
   const bytes = s => enc.encode(s).length;
   const short = k => k.slice(PFX.length);
-  const syncable = k => k.startsWith(PFX) && k !== OUTBOX && k !== IMPORTED && KEY_RE.test(short(k));
+  const syncable = k => k.startsWith(PFX) && !short(k).startsWith('__outbox') && k !== IMPORTED && KEY_RE.test(short(k));
   const fits = v => v === null || (typeof v === 'string' && bytes(v) <= 65536);
-  const readBox = () => { try { const x = JSON.parse(get(OUTBOX) || '{}'); return x && typeof x === 'object' && !Array.isArray(x) ? x : {}; } catch { return {}; } };
+  const parseBox = s => { try { const x = JSON.parse(s || '{}'); return x && typeof x === 'object' && !Array.isArray(x) ? x : {}; } catch { return {}; } };
+  const readBox = () => parseBox(get(OUTBOX));
   const writeBox = box => put(OUTBOX, Object.keys(box).length ? JSON.stringify(box) : null);
+  // before 3.5.2 the outbox was the doc id's (`__outbox`): the first synced page of that id takes it over,
+  // its own newer writes winning
+  if (sync && get(PFX + '__outbox') != null) { writeBox({ ...parseBox(get(PFX + '__outbox')), ...readBox() }); put(PFX + '__outbox', null); }
   let version = SEED ? SEED.version : 0, imports = null, timer = 0, backoff = 0, chain = Promise.resolve();
 
   // Load: the seed replaces this doc's cached keys, then unsent writes go back on top. A browser that
@@ -1543,12 +1566,29 @@ const store = (() => {
     if (imports && !imports.length) { imports = null; put(IMPORTED, '1'); }
   }
 
-  // One PUT per chunk of ops. A 4xx is final (the server will refuse the same ops again): they are
+  // A write the server can't take here and now: this browser isn't unlocked (403 with `key`: it has no
+  // cookie from a `serve.py open` or `serve.py unlock` link), or no doc at this address (404: its folder is
+  // gone). The ops stay in the outbox and go on the next focus or write once that changes; the reader is
+  // told once, not on every retry.
+  let stuck = '';
+  const STUCK = {
+    key: 'Not saved to the server: this browser can\'t save yet. Run `serve.py unlock` and open the link it prints; your edits wait here.',
+    gone: 'Not saved to the server: it no longer serves this doc at this address. Your edits wait in this browser.',
+  };
+  const blocked = why => { if (stuck !== why) toast(STUCK[why], { label: 'OK', ms: 30000, run: () => {} }); stuck = why; return Object.assign(new Error(why), { final: false }); };
+
+  // One PUT per chunk of ops. Another 4xx is final (the server will refuse the same ops again): they are
   // dropped and the values stay in this browser; a network error or 5xx keeps them for a retry.
   async function send(ops, imp, keepalive) {
     const r = await fetch('/__bluedoc/state', { method: 'PUT', keepalive, headers: { 'Content-Type': 'application/json', 'X-Bluedoc': '1' },
       body: JSON.stringify({ path: location.pathname, import: imp, ops }) });
-    if (!r.ok) throw Object.assign(new Error(String(r.status)), { final: r.status >= 400 && r.status < 500 });
+    if (!r.ok) {
+      const j = await r.json().catch(() => ({}));
+      if (r.status === 403 && j && j.key) throw blocked('key');
+      if (r.status === 404) throw blocked('gone');
+      throw Object.assign(new Error(String(r.status)), { final: r.status >= 400 && r.status < 500 });
+    }
+    stuck = '';
     const j = await r.json().catch(() => ({}));
     // a version one past ours is this write alone; anything further is another browser's, which the
     // focus check then reports
@@ -1626,10 +1666,23 @@ const store = (() => {
   }
   return {
     get, keys,
+    // the hash of the doc's JSON this page shows: an approval names it, so it can't cover edits made since
+    docHash: SEED && typeof SEED.docHash === 'string' ? SEED.docHash : null,
     set: (k, v) => { v = String(v); if (get(k) === v) return; put(k, v); queue(k, v); },
     del: k => { if (get(k) == null) return; put(k, null); queue(k, null); },
   };
 })();
+
+// Send answers, Request changes and Approve post through this. It throws on a failed request; `key` marks a
+// browser the server doesn't take writes from yet, `reload` a doc that changed since this page loaded.
+async function postReply(url, body) {
+  const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Bluedoc': '1' }, body: JSON.stringify(body) });
+  if (r.ok) return r;
+  const j = await r.json().catch(() => ({}));
+  throw Object.assign(new Error(String(r.status)), { key: r.status === 403 && !!(j && j.key), reload: r.status === 409 && !!(j && j.reload) });
+}
+const replyFailed = e => e && e.key ? 'This browser can\'t send yet (run `serve.py unlock` and open its link); copied instead, paste it into the chat'
+  : 'Couldn\'t reach the agent; copied instead, paste it into the chat';
 
 // `act` adds an action button ({label, run, ms}); the toast then stays `ms` (default 8 s) so it can be pressed
 function toast(msg, act) {
@@ -1751,11 +1804,12 @@ function applyWidth() {
   // the layouts are described with their CSS (data-layout, data-rev); with no chosen width the column
   // may narrow down to MIN_W beside the rails before a rail becomes a drawer
   const colW = userW ? Math.min(userW, maxW()) : cssPx('--content-w'), rail = cssPx('--rail') + cssPx('--gap'), minCol = userW ? colW : MIN_W;
-  // with both rails the column may narrow to 480 px before the Revisions rail becomes a drawer
-  const centred = room >= colW + 2 * rail, revFits = centred || room >= Math.min(minCol, 480) + (revRail ? 2 : 1) * rail;
+  // with both rails the column may narrow to 480 px before the Revisions rail becomes a drawer. A doc with
+  // one revision gets that rail as its header alone ("slim"), which takes no width from the column.
+  const centred = room >= colW + 2 * rail, revFits = centred || room >= Math.min(minCol, 480) + (revRail ? 2 : 1) * rail, slimRev = REVS.length === 1;
   root.dataset.layout = centred ? 'centred' : room >= minCol + rail ? 'two' : 'wide';
   if (revRail) {
-    root.dataset.rev = PHONE.matches ? 'card' : revFits ? 'rail' : 'drawer';
+    root.dataset.rev = PHONE.matches ? 'card' : slimRev ? 'slim' : revFits ? 'rail' : 'drawer';
     if (root.dataset.rev !== 'drawer') setRevDrawer(false);
   }
   if (root.dataset.layout !== 'wide') setDrawer(false);
@@ -2370,6 +2424,9 @@ if (/^https?:$/.test(location.protocol)) {
       connected: true, to: j.to || '', home: j.home || '' });
     if (REPLY.home) linkHome(REPLY.home);
     paintSend(); paintPlan(); MARKUP.paint();
+    // the server takes writes only from a browser that opened a `serve.py open` or `serve.py unlock` link
+    if (j.unlocked === false && !OLD) document.querySelector('.bd-bar').after(h('div', { class: 'bd-revbar old bd-lockbar', role: 'status' }, h('div', { class: 'in' }, ic('alert'),
+      h('span', { class: 't', html: 'This browser can\'t save yet. Run <code>serve.py open &lt;doc&gt;</code> or <code>serve.py unlock</code> and open the link it prints.' }))));
   }).catch(() => {});
 }
 // served with a dashboard: the brand mark and an "All docs" link lead to it
@@ -2435,12 +2492,11 @@ function openSend() {
 async function doSend() {
   if (!REPLY.url) { copyText(allChecklistsMd(), 'Copied: paste it into the chat with the agent'); sendDlg && sendDlg.close(); return; }
   try {
-    const r = await fetch(REPLY.url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Bluedoc': '1' }, body: JSON.stringify(replyPayload()) });
-    if (!r.ok) throw new Error(String(r.status));
+    await postReply(REPLY.url, replyPayload());
     sendDlg && sendDlg.close();
     toast(`Sent to ${REPLY.to || 'the agent'}`);
-  } catch {
-    copyText(allChecklistsMd(), 'Couldn\'t reach the agent; copied instead, paste it into the chat');
+  } catch (e) {
+    copyText(allChecklistsMd(), replyFailed(e));
   }
 }
 function updateOverall() {
@@ -3972,7 +4028,8 @@ function showChg(i) {
 }
 const gotoChg = step => showChg(chgAt + step);
 // the Revisions rail: in compare view the marked changes first, then every revision, newest first, then
-// the Compare picker. As a card (900 px and below) it opens from its header.
+// the Compare picker. As a card (900 px and below), and on a doc with one revision ("slim": its header,
+// "Revisions · 1", over the top right of the column), it opens from its header.
 function buildRevRail() {
   const sec = (title, ...kids) => h('div', { class: 'bd-rail-sec' }, h('h4', { class: 'bd-rail-h' }, title), kids);
   const body = h('div', { class: 'bd-rvr-body' });
@@ -4015,7 +4072,7 @@ function buildRevRail() {
     : 'Only one revision so far. When the agent revises this doc, earlier revisions and Compare appear here.'),
     h('ol', { class: 'bd-rvs' }, items)));
   const toggle = h('button', { type: 'button', class: 'bp-btn bp-side-toggle', 'aria-expanded': 'false', 'aria-controls': 'bd-rvr-body', onclick: () => setRevCard(!revRail.classList.contains('open')) },
-    h('span', {}, 'Revisions'), ic('chev', 'chev'));
+    h('span', {}, `Revisions · ${REVS.length}`), ic('chev', 'chev'));
   body.id = 'bd-rvr-body';
   return h('aside', { class: 'bd-rvr', id: 'bd-rvr', 'aria-label': 'Revisions' }, toggle, body);
 }
@@ -4027,16 +4084,20 @@ function setRevCard(open) {
 function revealRevs() {
   const as = root.dataset.rev;
   if (as === 'drawer') { setDrawer(false); setRevDrawer(!revRail.classList.contains('drawer')); return; }
-  if (as === 'card') { setRevCard(true); revRail.scrollIntoView({ block: 'start', behavior: REDUCE ? 'auto' : 'smooth' }); }
+  if (as === 'card' || as === 'slim') { setRevCard(true); revRail.scrollIntoView({ block: as === 'slim' ? 'nearest' : 'start', behavior: REDUCE ? 'auto' : 'smooth' }); }
   else railScrollTo(revRail.querySelector('.bd-rv.on') || revRail.firstChild);
   revRail.classList.remove('flash'); void revRail.offsetWidth; revRail.classList.add('flash');
 }
+// the slim rail's panel closes on a click elsewhere, as a menu does
+document.addEventListener('pointerdown', e => {
+  if (revRail && root.dataset.rev === 'slim' && revRail.classList.contains('open') && !revRail.contains(e.target) && !e.target.closest?.('.bd-rev-btn, .bd-rev-link')) setRevCard(false);
+});
 // tests and agents: BP.revisionsRail({open})
 function revisionsRail(o) {
   if (!revRail) return { available: false, open: false, as: null };
-  const as = root.dataset.rev;
-  if (o && typeof o === 'object' && 'open' in o) { if (as === 'drawer') setRevDrawer(!!o.open); else if (as === 'card') setRevCard(!!o.open); }
-  return { available: true, as, open: as === 'drawer' ? revRail.classList.contains('drawer') : as === 'card' ? revRail.classList.contains('open') : true };
+  const as = root.dataset.rev, card = as === 'card' || as === 'slim';
+  if (o && typeof o === 'object' && 'open' in o) { if (as === 'drawer') setRevDrawer(!!o.open); else if (card) setRevCard(!!o.open); }
+  return { available: true, as, open: as === 'drawer' ? revRail.classList.contains('drawer') : card ? revRail.classList.contains('open') : true };
 }
 if (REVS.length >= 1 && REVS[0].rev) {
   const label = h('span', { class: 'l' }, revName(VIEW));
@@ -4117,7 +4178,8 @@ function approvePayload(note) {
   note = String(note || '').trim();
   const at = new Date().toISOString(), dec = decisionsMd(), { annotations, notes } = MARKUP.approvalNotes();
   const markdown = [`# Plan approved: ${DOC.title || docId}${revWord}, ${at.slice(0, 10)}`, note, dec && '## Decisions\n\n' + dec, notes && '## Notes with the approval\n\n' + notes].filter(Boolean).join('\n\n') + '\n';
-  return { kind: 'approval', decision: 'approved', doc: docId, rev: CUR.rev, title: DOC.title || '', path: location.pathname, at, note, answers: answerItems(), annotations, markdown };
+  // docHash: the JSON this page rendered; the server refuses the approval (409) when the file differs now
+  return { kind: 'approval', decision: 'approved', doc: docId, rev: CUR.rev, docHash: store.docHash, title: DOC.title || '', path: location.pathname, at, note, answers: answerItems(), annotations, markdown };
 }
 const approveKey = IS_PLAN ? tipped(keyBtn('txt approve', 'check', 'Approve plan', {}, () => openApprove())) : null;
 function paintPlan() {
@@ -4183,12 +4245,13 @@ async function doApprove() {
   if (!REPLY.approve) { copyText(p.markdown, 'Approved and copied: paste it into the chat with the agent'); done(); return; }
   if (dlg) dlg._ok.disabled = true;
   try {
-    const r = await fetch(REPLY.approve, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Bluedoc': '1' }, body: JSON.stringify(p) });
-    if (!r.ok) throw new Error(String(r.status));
+    await postReply(REPLY.approve, p);
     done();
     toast(`Plan approved; sent to ${REPLY.to || 'the agent'}`);
-  } catch {
-    copyText(p.markdown, 'Couldn\'t reach the agent; copied instead, paste it into the chat');
+  } catch (e) {
+    // the plan changed after this page loaded: approving it would cover text the reader hasn't seen
+    if (e.reload) { if (dlg) dlg.close(); toast('This plan changed since you opened it. Reload to read the current version, then approve.', { label: 'Reload', ms: 60000, run: () => location.reload() }); return; }
+    copyText(p.markdown, replyFailed(e));
   } finally { if (dlg) dlg._ok.disabled = false; }
 }
 // after a plan's Request changes, the header says so for this revision
@@ -4220,12 +4283,21 @@ const MARKUP = (() => {
   // one key per annotation, `__ann:<id>`, so two browsers adding notes don't overwrite each other
   const annKey = id => `${KEY}:${id}`;
   const parse = s => { try { return JSON.parse(s); } catch { return null; } };
-  const valid = a => a && typeof a.id === 'string' && a.target && a.target.key;
+  // a stored value the page can't draw (state.db keeps whatever an import or another version wrote) is
+  // skipped and logged, so one bad comment can't stop the page; the next save of the comments removes it
+  const ANN_TYPES = ['pin', 'text', 'draw', 'general'];
+  const isTarget = t => !!t && typeof t === 'object' && typeof t.key === 'string' && !!t.key && typeof t.label === 'string' && (t.text == null || typeof t.text === 'string');
+  const valid = a => !!a && typeof a === 'object' && typeof a.id === 'string' && ANN_TYPES.includes(a.type) && isTarget(a.target)
+    && (a.targets == null || Array.isArray(a.targets) && a.targets.every(isTarget)) && (a.type !== 'text' || typeof a.quote === 'string')
+    && (a.note == null || typeof a.note === 'string') && (a.up == null || Array.isArray(a.up))
+    && (a.strokes == null || Array.isArray(a.strokes)) && (a.pos == null || typeof a.pos === 'object');
+  const skipBad = (where, v) => { console.warn(`bluedoc: skipped a stored comment the page can't show (${where})`, v); return false; };
   let saved = store.keys(KEY + ':').map(k => k.slice(KEY.length + 1));
-  let list = saved.map(id => parse(store.get(annKey(id)))).filter((a, i) => valid(a) && a.id === saved[i]);
+  let list = saved.map(id => [id, store.get(annKey(id))]).map(([id, s]) => [id, s, parse(s)])
+    .filter(([id, s, a]) => valid(a) && a.id === id || skipBad(annKey(id), s)).map(x => x[2]);
   // earlier versions kept every annotation in one list under `__ann`: split it once
   const legacy = store.get(KEY);
-  if (legacy != null) { const x = parse(legacy); if (Array.isArray(x)) for (const a of x) if (valid(a) && !list.some(b => b.id === a.id)) list.push(a); }
+  if (legacy != null) { const x = parse(legacy); if (Array.isArray(x)) for (const a of x) if (!valid(a) ? skipBad(KEY, a) : !list.some(b => b.id === a.id)) list.push(a); }
   list.sort((a, b) => String(a.at || '').localeCompare(String(b.at || '')));
   // A comment is pending (saved, not sent), open (sent with Request changes) or resolved (the reader
   // marked it done). Notes stored before statuses existed carry `sent: <time>` instead.
@@ -4814,7 +4886,14 @@ const MARKUP = (() => {
     const xs = shownList(), ids = new Set(xs.map(a => a.id));
     const caret = editTa && document.activeElement === editTa ? [editTa.selectionStart, editTa.selectionEnd] : null;
     for (const [id, li] of cards) if (!ids.has(id)) { li.remove(); cards.delete(id); }
-    xs.forEach((a, i) => { const li = card(a); if (listOl.children[i] !== li) listOl.insertBefore(li, listOl.children[i] || null); });
+    let i = 0;
+    for (const a of xs) {
+      let li;
+      // one card that fails to draw is left out and logged; the others and the page carry on
+      try { li = card(a); } catch (e) { console.warn(`bluedoc: skipped comment ${a.id}: it can't be shown`, e, a); cards.get(a.id)?.remove(); cards.delete(a.id); continue; }
+      if (listOl.children[i] !== li) listOl.insertBefore(li, listOl.children[i] || null);
+      i++;
+    }
     if (caret && editTa && document.activeElement !== editTa) { editTa.focus({ preventScroll: true }); editTa.setSelectionRange(...caret); }
     if (editTa) grow(editTa);
     emptyEl.hidden = xs.length > 0;
@@ -5104,14 +5183,13 @@ const MARKUP = (() => {
     if (!p.annotations.length) return;
     if (!REPLY.changes) { copyText(p.markdown, 'Copied: paste it into the chat with the agent'); dlg && dlg.close(); return; }
     try {
-      const r = await fetch(REPLY.changes, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Bluedoc': '1' }, body: JSON.stringify(p) });
-      if (!r.ok) throw new Error(String(r.status));
+      await postReply(REPLY.changes, p);
       markSent(p.annotations.map(x => x.id), p.at);
       if (dlg) dlg.close();
       changesSent(p);
       toast(`Change request sent to ${REPLY.to || 'the agent'}`);
-    } catch {
-      copyText(p.markdown, 'Couldn\'t reach the agent; copied instead, paste it into the chat');
+    } catch (e) {
+      copyText(p.markdown, replyFailed(e));
     }
   }
   // notes that went to the agent (Request changes, a plan's Approve) are open from now on

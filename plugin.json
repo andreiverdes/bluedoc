@@ -1,6 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "bluedoc",
-  "version": "3.5.1",
-  "description": "Engineering docs, plans and code reviews an agent writes as JSON and a local server renders, with a home page: zoomable blueprint canvases, persistent checklists, plans you approve on the page, review findings pinned to their lines from git, and revisions you can compare."
+  "version": "3.5.2",
+  "description": "Engineering docs, plans and code reviews an agent writes as JSON and a local server renders, with a home page: zoomable blueprint canvases, persistent checklists, plans you approve on the page, review findings pinned to their lines from git, and revisions you can compare.",
+  "license": "MIT AND Apache-2.0 AND OFL-1.1"
 }

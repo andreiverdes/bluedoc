@@ -7,8 +7,9 @@ Usage:
   build.py doc.json --check         validate and lint only; writes nothing (no history, no diff cache)
   build.py doc.json --strict        treat lint warnings as errors
   build.py doc.json --show-rev B    print revision B, rebuilt from the history, as JSON
-  build.py new TYPE out.bluedoc.json [--title T] [--kind K]
+  build.py new TYPE out.bluedoc.json [--title T] [--kind K] [--shape pr|area]
                                     write the fill-in skeleton of a docs|review|plan|other doc
+                                    (--shape area: a review by area of a codebase, not by PR)
   build.py patch doc.json KEY [--set f=v ...] [--json OBJ] [--append OBJ] [--delete] [--change LINE ...] [--no-bump]
                                     change one object by its annotator key, bump meta.rev, validate, record
 
@@ -155,6 +156,10 @@ def check_url(rep: Report, where: str, url) -> None:
 
 
 def lint_text(rep: Report, where: str, text: str | None, *, imperative: bool = False) -> None:
+    if not isinstance(text, str):
+        if text is not None:
+            rep.err(where, f"{_shown(text)} is {_json_type(text)}: must be a string")
+        return
     if not text:
         return
     plain = re.sub(r"`[^`]*`", "", text)
@@ -197,6 +202,69 @@ def need(rep: Report, where: str, obj: dict, *keys: str) -> bool:
 def check_id(rep: Report, where: str, value) -> None:
     if not isinstance(value, str) or not ID_RE.match(value):
         rep.err(where, f"id {value!r} must match {ID_RE.pattern} (stable ids keep checklist progress)")
+
+
+# The JSON type of every field validate() reads as more than text (a key, a number, a list it walks).
+# check_shape reports each mismatch at its path before anything reads it, so a wrong type is an ERROR
+# line, not a traceback. NUMBER: an int or float, not true/false; SCOPE: a canvas level, recursively
+# through node children; BLOCK: a block, checked against BLOCK_SHAPES[its type].
+NUMBER, SCOPE, BLOCK = "number", "scope", "block"
+SCOPE_SHAPE = {"nodes": [{"id": str, "label": str, "kind": str, "state": str, "x": NUMBER, "y": NUMBER,
+                          "col": NUMBER, "row": NUMBER, "w": NUMBER, "h": NUMBER, "children": SCOPE}],
+               "edges": [{"id": str, "from": str, "to": str, "kind": str, "label": str}],
+               "flows": [{"steps": [{"edge": str, "edges": [str]}]}]}
+ITEM_SHAPE = {"id": str, "text": str, "sub": str, "recommend": str, "choice": str, "refs": [str], "blocks": [BLOCK],
+              "choices": [{"id": str, "label": str}]}
+BLOCK_SHAPES = {
+    "text": {"md": str}, "callout": {"md": str, "kind": str}, "code": {"code": str},
+    "table": {"columns": list, "rows": [list]}, "terms": {"items": [dict]}, "cards": {"items": [dict]},
+    "checklist": {"id": str, "items": [ITEM_SHAPE]}, "canvas": {"id": str, **SCOPE_SHAPE},
+    "diff": {"id": str, "base": str, "head": str, "files": [{"path": str, "status": str}],
+             "comments": [{"file": str, "item": str}]},
+    "steps": {"id": str, "items": [{"id": str, "title": str, "status": str, "effort": str, "refs": [str]}]},
+    "files": {"items": [{"path": str, "action": str, "step": str}]},
+}
+DOC_SHAPE = {"title": str, "meta": {"type": str}, "state": [{"kind": str}],
+             "sections": [{"id": str, "title": str, "blocks": [BLOCK]}]}
+JSON_TYPES = {dict: "an object", list: "a list", str: "a string", NUMBER: "a number"}
+
+
+def _json_type(v) -> str:
+    if v is None:
+        return "null"
+    if isinstance(v, bool):
+        return "true/false"
+    return next((name for t, name in JSON_TYPES.items() if t != NUMBER and isinstance(v, t)), "a number")
+
+
+def _shown(v) -> str:
+    s = json.dumps(v, ensure_ascii=False)
+    return s if len(s) <= 40 else s[:39] + "…"
+
+
+def check_shape(rep: Report, where: str, value, spec) -> None:
+    """Report every field of value whose JSON type isn't the one spec names (DOC_SHAPE's notation).
+    A null field counts as absent, except a NUMBER: validate() reads positions when the key is there."""
+    if spec == SCOPE:
+        spec = SCOPE_SHAPE
+    elif spec == BLOCK:
+        t = value.get("type") if isinstance(value, dict) else None
+        spec = {"type": str, **(BLOCK_SHAPES.get(t, {}) if isinstance(t, str) else {})}
+    if isinstance(spec, dict):
+        if not isinstance(value, dict):
+            rep.err(where, f"{_shown(value)} is {_json_type(value)}: must be an object")
+            return
+        for k, sub in spec.items():
+            if k in value and (value[k] is not None or sub == NUMBER):
+                check_shape(rep, f"{where}.{k}", value[k], sub)
+    elif isinstance(spec, list):
+        if not isinstance(value, list):
+            rep.err(where, f"{_shown(value)} is {_json_type(value)}: must be a list")
+            return
+        for i, v in enumerate(value):
+            check_shape(rep, f"{where}[{i}]", v, spec[0])
+    elif not (isinstance(value, (int, float)) and not isinstance(value, bool) if spec == NUMBER else isinstance(value, spec)):
+        rep.err(where, f"{_shown(value)} is {_json_type(value)}: must be {JSON_TYPES[spec]}")
 
 
 def validate_scope(rep: Report, where: str, scope: dict, depth: int, node_keys: set[str], prefix: str,
@@ -457,8 +525,24 @@ def validate(doc: dict, doc_path: Path | None = None, *, allow_remote: bool = Fa
     """doc_path, when given, is the doc's JSON file: media srcs are checked against its folder, diff refs
     expand relative to it and the type contract is a warning only while the doc is the revision its history
     recorded. allow_remote lets a diff ref whose repo is missing fall back to `gh pr diff`; write_cache=False
-    leaves <name>.diffcache.json as it is."""
+    leaves <name>.diffcache.json as it is. Never raises: a wrong-typed field is an ERROR with its path."""
     rep = Report()
+    if not isinstance(doc, dict):
+        rep.err("doc", f"{_shown(doc)} is {_json_type(doc)}: a doc is an object")
+        return rep
+    for k, spec in DOC_SHAPE.items():
+        if k in doc and doc[k] is not None:
+            check_shape(rep, k if k == "sections" else f"doc.{k}", doc[k], spec)
+    if rep.errors:
+        return rep   # the checks below read these fields as the types DOC_SHAPE names
+    try:
+        _validate(rep, doc, doc_path, allow_remote=allow_remote, write_cache=write_cache)
+    except Exception as e:   # a field DOC_SHAPE doesn't describe: still an ERROR line, not a crash
+        rep.err("doc", f"stopped validating at a wrong-typed field ({type(e).__name__}: {e}); see references/schema.md")
+    return rep
+
+
+def _validate(rep: Report, doc: dict, doc_path: Path | None, *, allow_remote: bool, write_cache: bool) -> None:
     base = Path(doc_path).resolve().parent if doc_path else None
     need(rep, "doc", doc, "id", "title", "sections")
     if "id" in doc:
@@ -852,7 +936,6 @@ def validate(doc: dict, doc_path: Path | None = None, *, allow_remote: bool = Fa
         else:
             for m in gaps:
                 rep.warn(where, m + " (an error as soon as the doc changes)")
-    return rep
 
 
 def history_path(doc_path: Path) -> Path:
@@ -958,7 +1041,9 @@ def embed_history(h: dict | None, doc: dict) -> dict | None:
 
 
 def _script_json(x) -> str:
-    return _canon(x).replace("</", "<\\/").replace("<!--", "<\\!--")
+    """x as JSON the page's <script type="application/json"> blocks hold: every '<' becomes \\u003c, which
+    JSON.parse reads back, so no '</script' or '<!--' in a doc's text reaches the HTML parser."""
+    return _canon(x).replace("<", "\\u003c")
 
 
 def inline_media(x, base: Path, missing: list[str], cache: dict[str, str] | None = None):
@@ -1086,7 +1171,8 @@ def sync_history(doc_path: Path, doc: dict) -> tuple[dict | None, str]:
     return history, log
 
 
-DOC_SUFFIXES = (".bluedoc.json", ".blueprint.json")   # the files serve.py lists and renders
+# a doc file's suffixes, the one list: serve.py lists and renders these, diffref.py and migrate.py import it
+DOC_SUFFIXES = (".bluedoc.json", ".blueprint.json")
 
 
 def doc_stem(path: Path) -> str:
@@ -1111,13 +1197,17 @@ def cmd_new(argv: list[str]) -> int:
     ap.add_argument("out", type=Path, help="the new <name>.bluedoc.json; its name becomes the doc id")
     ap.add_argument("--title", help="the doc's title")
     ap.add_argument("--kind", help="meta.kind, the eyebrow word (e.g. Architecture, Runbook)")
+    ap.add_argument("--shape", choices=("pr", "area"), default="pr",
+                    help="review only: one section per PR (pr), or per area of a codebase review (area)")
     a = ap.parse_args(argv)
+    if a.shape != "pr" and a.type != "review":
+        ap.error("--shape is for review docs")
     if not a.out.name.endswith(DOC_SUFFIXES):
         ap.error(f"name it <name>{DOC_SUFFIXES[0]}: serve.py lists those files")
     if a.out.exists():
         print(f"{a.out} exists; not overwriting it (edit it, or change it with build.py patch)", file=sys.stderr)
         return 2
-    skel = SKELETONS / f"{a.type}.json"
+    skel = SKELETONS / (f"{a.type}.json" if a.shape == "pr" else f"{a.type}-{a.shape}.json")
     try:
         raw = skel.read_text(encoding="utf-8")
         doc = json.loads(raw)

@@ -93,10 +93,15 @@ class Server:
         self.log.close()
 
     def req(self, method: str, path: str, body: bytes | None = None, headers: dict | None = None) -> tuple[int, bytes]:
-        """One request, path sent as is (no normalisation); Host defaults to the server's own."""
+        """One request, path sent as is (no normalisation); Host defaults to the server's own. A request that sends
+        X-Bluedoc also sends the server's key (BLUEDOC_HOME/key), as the page does, unless it sets X-Bluedoc-Key."""
+        headers = {"Host": self.host, **(headers or {})}
+        key = self.tmp.home / "key"
+        if "X-Bluedoc" in headers and "X-Bluedoc-Key" not in headers and key.is_file():
+            headers["X-Bluedoc-Key"] = key.read_text(encoding="utf-8").strip()
         c = http.client.HTTPConnection("127.0.0.1", self.port, timeout=10)
         try:
-            c.request(method, path, body=body, headers={"Host": self.host, **(headers or {})})
+            c.request(method, path, body=body, headers=headers)
             r = c.getresponse()
             return r.status, r.read()
         finally:

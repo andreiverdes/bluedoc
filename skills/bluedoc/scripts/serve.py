@@ -10,15 +10,23 @@ Usage:
                                                    request or a plan approval for DOC; print it as Markdown
   serve.py reply ID | DOC.json [--kind K] [--json] print a stored reply: by the id `wait` printed, or DOC's
                                                    newest (of kind K); --json prints what the page posted
+  serve.py unlock                                  print a home page link that lets a browser save here
   serve.py start | stop | status                   manage the background server
   serve.py add DIR | roots                         add a folder to the home page / list folders
   serve.py run [--port N]                          run in the foreground
 
 One server per user, on 127.0.0.1 (default port 8740, env BLUEDOC_PORT). State lives in
-~/.bluedoc (env BLUEDOC_HOME): roots.json (folders the home page scans), server.json (pid, port) and state.db
-(SQLite, mode 0600: the reader's ticks, picks, comments and plan state per doc, and every reply; statedb.py).
+~/.bluedoc (env BLUEDOC_HOME): roots.json (folders the home page scans), server.json (pid, port), key (mode 0600: the
+secret that writes need) and state.db (SQLite, mode 0600: the reader's ticks, picks, comments and plan state per doc,
+and every reply; statedb.py).
 `open` registers the topmost ancestor folder named `docs`, else the doc's own folder, and restarts a running server
-whose version or code differs from its own.
+whose version or code differs from its own. A folder inside a registered one is not added; a wider one is added
+next to the narrower ones, which keep their URLs (a doc's URL uses its deepest registered folder).
+
+Writes need the key: in the X-Bluedoc-Key header (the CLI reads the key file) or in the bluedoc_key_<port> cookie
+(HttpOnly, SameSite=Strict). `open` and `unlock` print a link with a one-time ?key= token (good for a day); visiting
+it sets the cookie and redirects to the same URL without the token. ping and index.json say whether the browser
+has the cookie (`unlocked`), so a page can tell the reader it can't save yet.
 
 URLs: /                      home page: every doc under the registered folders, searchable, filtered by
                              project, folder, type and status
@@ -26,23 +34,27 @@ URLs: /                      home page: every doc under the registered folders, 
       /<root>/<path>.bluedoc.json?raw=1   the JSON itself
       /<root>/<path>.<png|jpg|jpeg|gif|webp|svg|mp4|webm>   media files under the folder, for `media` blocks
       /__bluedoc/index.json  what the home page shows about every doc
-      /__bluedoc/ping?path=  server check (version, code hash); with a doc's URL path, also who reads replies and
-                             its saved approval
+      /__bluedoc/ping?path=  server check (version, code hash, unlocked); with a doc's URL path, also who reads
+                             replies and its saved approval
       /__bluedoc/state?path=<doc URL path>[&since=N]   GET the doc's reader state {version, state}; 204 when N is
                              the current version. PUT {path, import, ops: [[key, value or null]]} writes it: null
-                             deletes, an import adds only keys the server lacks. Both need the X-Bluedoc header.
+                             deletes, an import adds only keys the server lacks. Both need the X-Bluedoc header, the
+                             PUT also the key. An `__ann:<id>` value the page can't draw is dropped from a PUT and
+                             left out of a read.
       /__bluedoc/vendor/<path>  files under assets/vendor (HorizonUI for the home page)
 Rendering validates the doc (errors show as a page), shows its meta.rev as the latest revision of the history file
 without writing it (build.py records revisions), and fills each `diff` block that references a git range
 (diffref.py: its cache, local git, then `gh pr diff`), so the page always shows the current JSON.
 HTML pages carry a Content-Security-Policy (hashes of their inline scripts, no framing), and a doc page carries its
-reader state in its bp-state element (null without sqlite3).
+reader state and the hash of the JSON it shows in its bp-state element ({version, state, docHash}; null without
+sqlite3).
 
 Replies: Send answers posts to /__bluedoc/reply, Request changes to /__bluedoc/changes, Approve plan to
 /__bluedoc/approve. Each becomes a row in state.db, queued for `wait`, which returns the oldest unread one
-(GET /__bluedoc/wait needs the X-Bluedoc header) and marks it delivered; a restart keeps the queue. The first start
-with a new state.db imports the <name>.reply/.changes/.approval files of earlier versions and inbox.json's delivered
-marks, and leaves the files. An approval holds a hash of the doc's JSON and counts only while the doc is unchanged.
+(GET /__bluedoc/wait needs the X-Bluedoc header and the key) and marks it delivered; a restart keeps the queue. The
+first start with a new state.db imports the <name>.reply/.changes/.approval files of earlier versions and
+inbox.json's delivered marks, and leaves the files. An approval posts the docHash and rev the page showed: the server
+answers 409 when either differs from the doc's current JSON and meta.rev. It counts only while the doc is unchanged.
 Python 3.9+ standard library only.
 """
 from __future__ import annotations
@@ -51,10 +63,13 @@ import argparse
 import base64
 import datetime as dt
 import hashlib
+import hmac
 import json
+import math
 import mimetypes
 import os
 import re
+import secrets
 import subprocess
 import sys
 import threading
@@ -62,9 +77,10 @@ import time
 import urllib.error
 import urllib.request
 import webbrowser
+from http.cookies import CookieError, SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import parse_qs, quote, unquote, urlsplit
+from urllib.parse import parse_qs, parse_qsl, quote, unquote, urlencode, urlsplit
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
@@ -78,10 +94,11 @@ except ImportError:   # a Python built without sqlite3: pages render without rea
 HOME_HTML = HERE.parent / "assets" / "home.html"
 VENDOR = HERE.parent / "assets" / "vendor"
 STATE = Path(os.environ.get("BLUEDOC_HOME") or "~/.bluedoc").expanduser()
-ROOTS_FILE, SERVER_FILE, STATE_DB = STATE / "roots.json", STATE / "server.json", STATE / "state.db"
+ROOTS_FILE, SERVER_FILE, STATE_DB, KEY_FILE = STATE / "roots.json", STATE / "server.json", STATE / "state.db", STATE / "key"
 INBOX_FILE = STATE / "inbox.json"   # before state.db: which reply files `wait` delivered; read once, by the import
 DEFAULT_PORT = int(os.environ.get("BLUEDOC_PORT") or 8740)
-SUFFIXES = (".bluedoc.json", ".blueprint.json")
+UNLOCK_TTL = 24 * 3600   # seconds a one-time ?key= token stays good
+COOKIE_AGE = 400 * 86400   # the key cookie's Max-Age: the most browsers keep; each page view renews it
 SKIP_DIRS = {"node_modules", "build", "dist", "target", "out", "vendor", "Pods", "DerivedData", "__pycache__"}
 MAX_DEPTH, MAX_BODY, SEARCH_CHARS = 8, 4 * 1024 * 1024, 8000   # SEARCH_CHARS keeps index.json small (~10 KB a doc)
 KINDS = ("answers", "changes", "approval")
@@ -91,23 +108,22 @@ STATE_MAX_BODY, STATE_MAX_OPS, STATE_MAX_VALUE = 1024 * 1024, 2000, 64 * 1024
 STATE_KEY = re.compile(r"^[a-z0-9_][a-z0-9:_-]*$")
 LOCAL_KEYS = {"__outbox", "__imported"}   # the page's own bookkeeping: never sent, refused if it is
 DB: "statedb.StateDB | None" = None   # opened by run()
+SECRET = ""   # the key writes need, read by run()
+TOKENS: dict[str, float] = {}   # one-time ?key= tokens: expiry (monotonic)
+TOKENS_LOCK = threading.Lock()
 
 
 # ---------- docs on disk ----------
 
 def is_doc(p: Path) -> bool:
-    return p.name.endswith(SUFFIXES)
+    return p.name.endswith(build.DOC_SUFFIXES)
 
 
-def stem(p: Path) -> str:
-    for s in SUFFIXES:
-        if p.name.endswith(s):
-            return p.name[: -len(s)]
-    return p.stem
+DOC_FILES = " / ".join("*" + s for s in build.DOC_SUFFIXES)   # for messages
 
 
 def reply_file(doc: Path, kind: str, ext: str) -> Path:
-    return doc.with_name(f"{stem(doc)}.{REPLY_SUFFIX[kind]}.{ext}")
+    return doc.with_name(f"{build.doc_stem(doc)}.{REPLY_SUFFIX[kind]}.{ext}")
 
 
 def skill_version() -> str:
@@ -130,26 +146,32 @@ def code_hash() -> str:
 
 
 VERSION, CODE_HASH = skill_version(), code_hash()
-_doc_info: dict[str, tuple[float, str | None, str | None]] = {}
+_doc_info: dict[str, tuple[float, str | None, str | None, str]] = {}
 
 
-def doc_info(p: Path) -> tuple[str | None, str | None]:
-    """(sha256 of the doc's canonical JSON (sorted keys, no spaces), its doc.id), cached by mtime; Nones if unreadable."""
+def canonical_hash(doc) -> str:
+    """sha256 of the doc's canonical JSON (sorted keys, no spaces): the docHash an approval carries."""
+    return hashlib.sha256(json.dumps(doc, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+
+
+def doc_info(p: Path) -> tuple[str | None, str | None, str]:
+    """(canonical_hash, doc.id, meta.rev as a string) of the doc, cached by mtime; (None, None, '') if unreadable."""
     try:
         m = p.stat().st_mtime
     except OSError:
-        return None, None
+        return None, None, ""
     hit = _doc_info.get(str(p))
     if hit and hit[0] == m:
-        return hit[1], hit[2]
+        return hit[1:]
     try:
         doc = json.loads(p.read_text(encoding="utf-8"))
-        h = hashlib.sha256(json.dumps(doc, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+        h = canonical_hash(doc)
         did = (str(doc.get("id") or "") or None) if isinstance(doc, dict) else None
-    except (OSError, ValueError):
-        h = did = None
-    _doc_info[str(p)] = (m, h, did)
-    return h, did
+        rev = str(((doc.get("meta") or {}) if isinstance(doc, dict) else {}).get("rev") or "")
+    except (OSError, ValueError, AttributeError):
+        h, did, rev = None, None, ""
+    _doc_info[str(p)] = (m, h, did, rev)
+    return h, did, rev
 
 
 def doc_hash(p: Path) -> str | None:
@@ -163,7 +185,7 @@ def doc_id(p: Path) -> str | None:
 def saved_approval(doc: Path) -> dict | None:
     """The doc's newest plan approval as {rev, at} (both as the page posted them), or None. It counts only while the
     doc's JSON is the one approved: an edit in place, even under the same meta.rev, asks for approval again."""
-    row = DB.approval(str(doc.resolve()), doc_id(doc)) if DB else None
+    row = DB.approval(str(doc.resolve())) if DB else None
     if not row or not row["doc_hash"] or row["doc_hash"] != doc_hash(doc):
         return None
     try:
@@ -171,6 +193,43 @@ def saved_approval(doc: Path) -> dict | None:
     except ValueError:
         posted = {}
     return {"rev": posted.get("rev", row["rev"]), "at": posted.get("at", row["at"])}
+
+
+# ---------- the key writes need ----------
+
+def load_key(create: bool = False) -> str:
+    """The server's key from KEY_FILE ('' without one); create makes it (mode 0600) when missing."""
+    try:
+        return KEY_FILE.read_text(encoding="utf-8").strip()
+    except OSError:
+        if not create:
+            return ""
+    STATE.mkdir(parents=True, exist_ok=True)
+    key = secrets.token_urlsafe(32)
+    try:
+        fd = os.open(KEY_FILE, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+    except FileExistsError:   # another process made it first
+        return KEY_FILE.read_text(encoding="utf-8").strip()
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
+        f.write(key + "\n")
+    return key
+
+
+def mint_token() -> str:
+    """A one-time ?key= token that sets the key cookie, good for UNLOCK_TTL seconds."""
+    token, now = secrets.token_urlsafe(24), time.monotonic()
+    with TOKENS_LOCK:
+        for t in [t for t, end in TOKENS.items() if end < now]:
+            del TOKENS[t]
+        TOKENS[token] = now + UNLOCK_TTL
+    return token
+
+
+def take_token(token: str) -> bool:
+    """Whether token is a live one-time token; it is used up either way."""
+    with TOKENS_LOCK:
+        end = TOKENS.pop(token, None)
+    return end is not None and end >= time.monotonic()
 
 
 def load_roots() -> list[Path]:
@@ -187,11 +246,12 @@ def save_roots(roots: list[Path]) -> None:
 
 
 def add_root(d: Path) -> Path:
+    """Register d unless it is, or is inside, a registered folder. A wider folder is added next to the narrower ones,
+    which keep their slugs and so their URLs."""
     d = d.resolve()
     roots = load_roots()
     if not any(d == r or r in d.parents for r in roots):
-        roots = [r for r in roots if d not in r.parents] + [d]   # a wider root replaces narrower ones
-        save_roots(roots)
+        save_roots(roots + [d])
     return d
 
 
@@ -214,22 +274,30 @@ def slugs(roots: list[Path]) -> dict[str, Path]:
     return out
 
 
-def walk_docs(root: Path):
+def walk_docs(root: Path, skip: set[Path] | frozenset = frozenset()):
+    """The docs under root, but not under the folders in skip (registered folders inside root, which list their own)."""
     root_depth = len(root.parts)
     for dirpath, dirnames, filenames in os.walk(root):
         dirnames[:] = sorted(d for d in dirnames if not d.startswith(".") and d not in SKIP_DIRS
-                             and len(Path(dirpath, d).parts) - root_depth <= MAX_DEPTH)
+                             and len(Path(dirpath, d).parts) - root_depth <= MAX_DEPTH and Path(dirpath, d) not in skip)
         for f in sorted(filenames):
-            if f.endswith(SUFFIXES):
+            if f.endswith(build.DOC_SUFFIXES):
                 yield Path(dirpath, f)
 
 
+def inner_roots(r: Path, roots) -> set[Path]:
+    """The registered folders inside r."""
+    return {o for o in roots if r in o.parents}
+
+
 def url_for(doc: Path) -> str | None:
+    """The doc's URL under the deepest registered folder that holds it."""
     doc = doc.resolve()
-    for slug, r in slugs(load_roots()).items():
-        if r == doc.parent or r in doc.parents:
-            return f"/{quote(slug)}/{quote(doc.relative_to(r).as_posix())}"
-    return None
+    found = [(len(r.parts), slug, r) for slug, r in slugs(load_roots()).items() if r in doc.parents]
+    if not found:
+        return None
+    _, slug, r = max(found)
+    return f"/{quote(slug)}/{quote(doc.relative_to(r).as_posix())}"
 
 
 def file_for_url(path: str) -> Path | None:
@@ -421,7 +489,7 @@ def summarize(p: Path) -> dict:
     if hit and hit[0] == key:
         info = dict(hit[1])
     else:
-        info = {"title": stem(p), "errors": 0}
+        info = {"title": build.doc_stem(p), "errors": 0}
         try:
             doc = json.loads(p.read_text(encoding="utf-8"))
             rep = build.validate(doc, p)
@@ -443,7 +511,7 @@ def summarize(p: Path) -> dict:
             words: list[str] = []
             text_of(doc, words)
             info.update({
-                "id": doc.get("id"), "title": doc.get("title") or stem(p), "subtitle": doc.get("subtitle") or "",
+                "id": doc.get("id"), "title": doc.get("title") or build.doc_stem(p), "subtitle": doc.get("subtitle") or "",
                 "tldr": doc.get("tldr") or "", "kind": meta.get("kind") or "", "type": dtype, "org": meta.get("org") or "",
                 "rev": str(meta.get("rev") or ""), "date": meta.get("date") or "",
                 "sections": [s.get("title") or "" for s in doc.get("sections") or []],
@@ -458,21 +526,22 @@ def summarize(p: Path) -> dict:
     info["mtime"] = st.st_mtime
     info["revs"], info["built"] = history_info(p)
     if DB:
-        path, did = str(p.resolve()), info.get("id") or doc_id(p)
-        for kind, row in DB.latest(path, did).items():
+        path = str(p.resolve())
+        for kind, row in DB.latest(path).items():
             if kind == "approval" and saved_approval(p) is None:   # approved other content of this doc: awaiting again
                 continue
             info[kind] = {"at": dt.datetime.fromisoformat(row["at"]).timestamp(), "rev": row["rev"]}
         # the home card's progress: the reader's tick and pick values (<checklist>:<item>), {} when there are none
-        info["state"] = {k: v for k, v in DB.state(path, did)[1].items() if k.count(":") == 1 and not k.startswith("__")}
+        info["state"] = {k: v for k, v in DB.state(path)[1].items() if k.count(":") == 1 and not k.startswith("__")}
     return info
 
 
 def index() -> dict:
     out = []
-    for slug, r in slugs(load_roots()).items():
+    roots = slugs(load_roots())
+    for slug, r in roots.items():
         docs = []
-        for p in walk_docs(r):
+        for p in walk_docs(r, inner_roots(r, roots.values())):
             try:
                 d = summarize(p)
             except OSError:
@@ -546,10 +615,19 @@ def page_csp(html: str) -> str:
 
 
 def render(p: Path) -> tuple[int, str]:
+    """(status, HTML) of the doc's page; any failure, even on JSON of the wrong shape, comes back as an error page."""
+    try:
+        return _render(p)
+    except Exception as e:   # noqa: BLE001 — the page names the problem instead of the connection dropping
+        return 422, error_page(p, [f"cannot render: {type(e).__name__}: {e}"])
+
+
+def _render(p: Path) -> tuple[int, str]:
     try:
         doc = json.loads(p.read_text(encoding="utf-8"))
     except (OSError, ValueError) as e:
         return 500, error_page(p, [f"cannot read: {e}"])
+    shown = canonical_hash(doc)   # the JSON this page shows, which an approval from it must match
     # validate expands diff refs on a copy (cache, local git, then gh) and so warms the cache build.build reads;
     # it also applies the type contract, as errors only while meta.rev is new
     rep = build.validate(doc, p, allow_remote=True)
@@ -567,17 +645,51 @@ def render(p: Path) -> tuple[int, str]:
             return 422, error_page(p, [log])
     # the history keeps refs; build expands them in the page's doc and in older revisions. validate already showed
     # the doc's own expansion errors; an older revision whose range is gone shows an empty diff
+    state = page_state(p)
     return 200, build.build(doc, build.TEMPLATE.read_text(encoding="utf-8"), history, diff_path=p, problems=[],
-                            state=page_state(p, doc.get("id")))
+                            state=state and {**state, "docHash": shown})
 
 
 # ---------- reader state ----------
 
-def page_state(p: Path, did) -> dict | None:
-    """The seed a doc page carries in bp-state: {version, state}, or None without sqlite3."""
+ANN_TYPES = ("pin", "text", "draw", "general")
+_skipped: set[tuple[str, str]] = set()   # (doc, key) of stored values page_state left out and logged
+
+
+def _target_ok(t) -> bool:
+    return (isinstance(t, dict) and isinstance(t.get("key"), str) and bool(t["key"]) and isinstance(t.get("label"), str)
+            and (t.get("text") is None or isinstance(t["text"], str)))
+
+
+def value_ok(key: str, value: str) -> bool:
+    """False for an `__ann:<id>` value the page can't draw (template.html's MARKUP `valid`); True for any other key."""
+    if not key.startswith("__ann:"):
+        return True
+    try:
+        a = json.loads(value)
+    except ValueError:
+        return False
+    return (isinstance(a, dict) and a.get("id") == key[len("__ann:"):] and a.get("type") in ANN_TYPES
+            and _target_ok(a.get("target"))
+            and (a.get("targets") is None or isinstance(a["targets"], list) and all(map(_target_ok, a["targets"])))
+            and (a.get("type") != "text" or isinstance(a.get("quote"), str))
+            and (a.get("note") is None or isinstance(a["note"], str)) and (a.get("up") is None or isinstance(a["up"], list))
+            and (a.get("strokes") is None or isinstance(a["strokes"], list))
+            and (a.get("pos") is None or isinstance(a["pos"], dict)))
+
+
+def page_state(p: Path) -> dict | None:
+    """The doc's reader state {version, state}, or None without sqlite3. A stored value the page can't use (one an
+    earlier version let in) is left out, and logged once, so it can't stop the page on every load."""
     if not DB:
         return None
-    version, state = DB.state(str(p.resolve()), str(did or "") or None)
+    path = str(p.resolve())
+    version, state = DB.state(path)
+    for k in [k for k, v in state.items() if not value_ok(k, v)]:
+        del state[k]
+        if (path, k) not in _skipped:
+            _skipped.add((path, k))
+            print(f"left out the stored value {k} of {p}: the page can't use it", flush=True)
     return {"version": version, "state": state}
 
 
@@ -623,7 +735,7 @@ def import_reply_files(roots: list[Path]) -> int:
         seen = None
     found = []
     for r in roots:
-        for doc in walk_docs(r):
+        for doc in walk_docs(r, inner_roots(r, roots)):
             for kind in KINDS:
                 f = reply_file(doc, kind, "json")
                 if f.is_file():
@@ -683,6 +795,8 @@ INBOX = Inbox()
 
 def make_handler(port: int, default_to: str):
     hosts = {f"127.0.0.1:{port}", f"localhost:{port}"}
+    cookie = f"bluedoc_key_{port}"   # cookies ignore the port: name it so servers on other ports keep their own
+    set_cookie = lambda: f"{cookie}={SECRET}; Path=/; Max-Age={COOKIE_AGE}; HttpOnly; SameSite=Strict"  # noqa: E731
 
     class H(BaseHTTPRequestHandler):
         server_version = "bluedoc"
@@ -695,6 +809,8 @@ def make_handler(port: int, default_to: str):
             data = body.encode() if isinstance(body, str) else body
             if ctype.startswith("text/html"):
                 headers = {"Content-Security-Policy": page_csp(data.decode("utf-8", "replace")), "X-Frame-Options": "DENY", **(headers or {})}
+                if self.cookie_key() and self.has_key():   # each page view keeps the cookie alive another COOKIE_AGE
+                    headers["Set-Cookie"] = set_cookie()
             self.send_response(code)
             self.send_header("Content-Type", ctype)
             self.send_header("Content-Length", str(len(data)))
@@ -723,8 +839,21 @@ def make_handler(port: int, default_to: str):
         def json(self, code: int, obj) -> None:
             self.send(code, json.dumps(obj, ensure_ascii=False), "application/json; charset=utf-8")
 
+        def cookie_key(self) -> str:
+            try:
+                c = SimpleCookie(self.headers.get("Cookie") or "")
+            except CookieError:
+                return ""
+            return c[cookie].value if cookie in c else ""
+
+        def has_key(self) -> bool:
+            """Whether the request carries the server's key: in X-Bluedoc-Key (the CLI) or in the cookie (a browser
+            that opened an `open`/`unlock` link)."""
+            given = self.headers.get("X-Bluedoc-Key") or self.cookie_key()
+            return bool(SECRET and given) and hmac.compare_digest(given.encode(), SECRET.encode())
+
         def guard(self) -> bool:
-            # DNS rebinding: only our own host names; writes also need our header and origin
+            # DNS rebinding: only our own host names; writes also need our header and origin, and the key
             if self.headers.get("Host") not in hosts:
                 self.json(403, {"error": "bad host"})
                 return False
@@ -734,11 +863,36 @@ def make_handler(port: int, default_to: str):
                 if self.headers.get("X-Bluedoc") != "1" or (origin and urlsplit(origin).netloc not in hosts):
                     self.json(403, {"error": "missing X-Bluedoc header or cross-origin"})
                     return False
+            if self.command in ("POST", "PUT") and not self.has_key():
+                self.no_key()
+                return False
             return True
+
+        def no_key(self) -> None:
+            self.json(403, {"error": "this browser can't save here yet: run `serve.py unlock` (or `serve.py open DOC`) "
+                                     "and open the link it prints", "key": True})
+
+        def unlock(self, u) -> None:
+            """A ?key= link: a live one-time token sets the key cookie; either way, go to the URL without it."""
+            ok = take_token(parse_qs(u.query).get("key", [""])[0])
+            rest = urlencode([(k, v) for k, v in parse_qsl(u.query, keep_blank_values=True) if k != "key"])
+            self.send_response(303)
+            self.send_header("Location", u.path + ("?" + rest if rest else ""))
+            if ok:
+                self.send_header("Set-Cookie", set_cookie())
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("Content-Length", "0")
+            self.end_headers()
 
         def body(self, limit: int) -> dict | None:
             """The request's JSON object, or None after answering 413 or 400."""
-            n = int(self.headers.get("Content-Length") or 0)
+            try:
+                n = int(self.headers.get("Content-Length") or 0)
+                if n < 0:
+                    raise ValueError
+            except ValueError:
+                self.json(400, {"error": "bad Content-Length"})
+                return None
             if not 0 < n <= limit:
                 self.json(413, {"error": "empty or too large"})
                 return None
@@ -759,6 +913,8 @@ def make_handler(port: int, default_to: str):
                 return
             u = urlsplit(self.path)
             q = {k: v[0] for k, v in parse_qs(u.query).items()}
+            if "key" in q and not u.path.startswith("/__bluedoc/"):
+                return self.unlock(u)
             if u.path == "/":
                 html = HOME_HTML.read_text(encoding="utf-8").replace("__BLUEDOC_VENDOR_V__", vendor_version())
                 return self.send(200, html)
@@ -769,10 +925,11 @@ def make_handler(port: int, default_to: str):
                 # versioned URLs (?v=) are immutable: home.html changes v when the vendored files change
                 return self.send(200, f.read_bytes(), vendor_type(f), "public, max-age=31536000, immutable" if q.get("v") else "no-cache")
             if u.path == "/__bluedoc/index.json":
-                return self.json(200, index())
+                return self.json(200, {**index(), "unlocked": self.has_key()})
             if u.path == "/__bluedoc/ping":
                 doc = doc_for_url(q.get("path", ""))
                 return self.json(200, {"bluedoc": True, "home": "/", "version": VERSION, "code": CODE_HASH,
+                                       "unlocked": self.has_key(),
                                        "to": INBOX.names.get(str(doc), default_to) if doc else default_to,
                                        "approval": saved_approval(doc) if doc else None})
             if u.path == "/__bluedoc/url":
@@ -781,7 +938,7 @@ def make_handler(port: int, default_to: str):
                 doc = doc_for_url(q.get("path", ""))
                 if not doc:
                     return self.json(404, {"error": "not a doc under a registered folder"})
-                seed = page_state(doc, doc_id(doc))
+                seed = page_state(doc)
                 if seed is None:
                     return self.json(503, {"error": "this server's Python has no sqlite3: reader state stays in the browser"})
                 if q.get("since") == str(seed["version"]):
@@ -791,7 +948,15 @@ def make_handler(port: int, default_to: str):
                 # it consumes a reply: like the POSTs, only our own clients (a cross-site <img> or fetch can't set it)
                 if self.headers.get("X-Bluedoc") != "1":
                     return self.json(403, {"error": "missing X-Bluedoc header"})
-                m = INBOX.take(str(Path(q.get("doc", "")).resolve()), q.get("kind", "any"), min(float(q.get("timeout", 25)), 60))
+                if not self.has_key():
+                    return self.no_key()
+                try:
+                    timeout = float(q.get("timeout", 25))
+                    if not (math.isfinite(timeout) and timeout >= 0):
+                        raise ValueError
+                except ValueError:
+                    return self.json(400, {"error": "bad timeout: want seconds, 0 or more"})
+                m = INBOX.take(str(Path(q.get("doc", "")).resolve()), q.get("kind", "any"), min(timeout, 60))
                 return self.json(200, {"message": m}) if m else self.send(204, b"")
             if u.path.startswith("/__bluedoc/"):
                 return self.json(404, {"error": "not found"})
@@ -802,7 +967,7 @@ def make_handler(port: int, default_to: str):
                     return self.send_media(media)
                 # an old link to a rendered <stem>.html: send it to the doc that replaced it
                 if u.path.endswith(".html"):
-                    for suffix in SUFFIXES:
+                    for suffix in build.DOC_SUFFIXES:
                         target = u.path[: -len(".html")] + suffix
                         if doc_for_url(target):
                             self.send_response(302)
@@ -840,7 +1005,10 @@ def make_handler(port: int, default_to: str):
                 except (OSError, ValueError, AttributeError) as e:
                     return self.json(500, {"error": f"cannot read the doc: {e}"})
                 ops = [(k, v) for k, v in ops if k.startswith("__") or ":".join(k.split(":")[:2]) in items]
-            return self.json(200, {"ok": True, "version": DB.apply(str(doc), doc_id(doc), ops, imported)})
+            dropped = [k for k, v in ops if v is not None and not value_ok(k, v)]   # values the page could not draw
+            ops = [(k, v) for k, v in ops if v is None or value_ok(k, v)]
+            version = DB.apply(str(doc), doc_id(doc), ops, imported)
+            return self.json(200, {"ok": True, "version": version, **({"dropped": dropped} if dropped else {})})
 
         def do_POST(self):
             if not self.guard():
@@ -852,7 +1020,9 @@ def make_handler(port: int, default_to: str):
             if path == "/__bluedoc/register":
                 doc = Path(str(data.get("doc") or "")).resolve()
                 INBOX.names[str(doc)] = str(data.get("to") or "")
-                return self.json(200, {"ok": True, "url": url_for(doc)})
+                return self.json(200, {"ok": True, "url": url_for(doc), "token": mint_token()})
+            if path == "/__bluedoc/unlock":
+                return self.json(200, {"ok": True, "token": mint_token()})
             if path == "/__bluedoc/stop":
                 self.json(200, {"ok": True})
                 threading.Thread(target=self.server.shutdown, daemon=True).start()
@@ -873,7 +1043,11 @@ def make_handler(port: int, default_to: str):
                 return self.json(503, {"error": "this server's Python has no sqlite3, so it can't keep replies: use Copy"})
             data["kind"] = kind
             if kind == "approval":
-                data["docHash"] = doc_hash(doc)   # the approval counts only while the doc's JSON is this one
+                # the approval covers the JSON the page showed: refuse it when the doc changed since, or the rev isn't its
+                current, _, rev = doc_info(doc)
+                if not current or data.get("docHash") != current or str(data.get("rev") or "") != rev:
+                    return self.json(409, {"error": "the doc changed since this page loaded it: reload it and approve again",
+                                           "reload": True})
             rid = INBOX.put(doc, kind, data, str(data.get("markdown") or "").rstrip() + "\n")
             print(f"{kind} for {doc}: reply {rid}", flush=True)
             return self.json(200, {"ok": True, "id": rid})
@@ -897,8 +1071,10 @@ def open_db() -> int:
 
 
 def run(port: int, to: str) -> int:
+    global SECRET
     srv = ThreadingHTTPServer(("127.0.0.1", port), make_handler(port, to))
     STATE.mkdir(parents=True, exist_ok=True)
+    SECRET = load_key(create=True)   # kept across restarts, so a browser's cookie outlives an upgrade
     queued = open_db()
     SERVER_FILE.write_text(json.dumps({"pid": os.getpid(), "port": port}) + "\n", encoding="utf-8")
     print(f"bluedoc {VERSION or '(no version)'} (code {CODE_HASH}) on http://127.0.0.1:{port}/ "
@@ -929,8 +1105,13 @@ def base(port: int | None = None) -> str:
 
 
 def call(path: str, body: dict | None = None, timeout: float = 5):
+    """GET path (POST body when given) on the running server, with the X-Bluedoc header and the key."""
+    headers = {"X-Bluedoc": "1", "Content-Type": "application/json"}
+    key = load_key()
+    if key:
+        headers["X-Bluedoc-Key"] = key
     req = urllib.request.Request(base() + path, data=None if body is None else json.dumps(body).encode(),
-                                 headers={"X-Bluedoc": "1", "Content-Type": "application/json"}, method="GET" if body is None else "POST")
+                                 headers=headers, method="GET" if body is None else "POST")
     with urllib.request.urlopen(req, timeout=timeout) as r:
         raw = r.read()
         return r.status, (json.loads(raw) if raw else None)
@@ -949,6 +1130,17 @@ def alive() -> bool:
     return server_info() is not None
 
 
+def stop_server() -> bool:
+    """Ask the running server to stop; False (and why) when it refuses, as one whose key file was replaced does."""
+    try:
+        call("/__bluedoc/stop", {})
+    except urllib.error.HTTPError as e:
+        print(f"the bluedoc server refused to stop: {e.read().decode(errors='replace')} (its key isn't {KEY_FILE}; "
+              f"stop its process, pid in {SERVER_FILE})", file=sys.stderr)
+        return False
+    return True
+
+
 def ensure_started(port: int) -> bool:
     """Start the server unless one runs this very code; one that runs another version or code is replaced."""
     info = server_info()
@@ -957,7 +1149,8 @@ def ensure_started(port: int) -> bool:
     if info:
         print(f"restarting the bluedoc server: it ran {info.get('version') or 'an unknown version'} (code {info.get('code') or '?'}), "
               f"this is {VERSION or 'an unknown version'} (code {CODE_HASH})", file=sys.stderr)
-        call("/__bluedoc/stop", {})
+        if not stop_server():
+            return False
         for _ in range(50):
             time.sleep(0.1)
             if not alive():
@@ -1002,6 +1195,7 @@ def main() -> int:
         if name == "run":
             p.add_argument("--to", default="", help="default reader-facing agent name")
     sub.add_parser("stop")
+    sub.add_parser("unlock", help="print a home page link that lets a browser save here")
     sub.add_parser("status")
     p = sub.add_parser("add", help="add a folder to the home page")
     p.add_argument("dir", type=Path)
@@ -1019,7 +1213,8 @@ def main() -> int:
         if not alive():
             print("not running")
             return 0
-        call("/__bluedoc/stop", {})
+        if not stop_server():
+            return 1
         print("stopped")
         return 0
     if a.cmd == "status":
@@ -1039,16 +1234,23 @@ def main() -> int:
         return 0
     if a.cmd == "reply":
         return cmd_reply(a.target, a.kind, a.json)
+    if a.cmd == "unlock":
+        if not ensure_started(DEFAULT_PORT):
+            return 1
+        print(f"{base()}/?key={call('/__bluedoc/unlock', {})[1]['token']}")
+        return 0
 
     doc = a.doc.resolve()
     if not doc.is_file() or not is_doc(doc):
-        print(f"{a.doc}: not a *.bluedoc.json / *.blueprint.json file", file=sys.stderr)
+        print(f"{a.doc}: not a {DOC_FILES} file", file=sys.stderr)
         return 2
     if a.cmd == "open":
         add_root(a.root.resolve() if a.root else root_for(doc))
         if not ensure_started(DEFAULT_PORT):
             return 1
-        url = base() + call("/__bluedoc/register", {"doc": str(doc), "to": a.to})[1]["url"]
+        res = call("/__bluedoc/register", {"doc": str(doc), "to": a.to})[1]
+        # the one-time key lets this browser save; visiting it redirects to the plain URL
+        url = base() + res["url"] + (f"?key={res['token']}" if res.get("token") else "")
         print(url)
         if a.browser:
             webbrowser.open(url)
@@ -1066,6 +1268,11 @@ def main() -> int:
             return 3
         try:
             code, body = call(f"/__bluedoc/wait?doc={quote(str(doc))}&kind={a.kind}&timeout={left:.0f}", timeout=left + 10)
+        except urllib.error.HTTPError as e:
+            if e.code != 403:
+                raise
+            print(f"the bluedoc server refused {KEY_FILE}: {e.read().decode(errors='replace')}", file=sys.stderr)
+            return 1
         except (urllib.error.URLError, OSError):
             # `open` may be replacing the server with a newer one, which queues the reply again: give it 10 s
             if not any(time.sleep(0.5) or alive() for _ in range(20)):
@@ -1101,9 +1308,9 @@ def cmd_reply(target: str, kind: str, as_json: bool) -> int:
     else:
         doc = Path(target).resolve()
         if not doc.is_file() or not is_doc(doc):
-            print(f"{target}: not a reply id or a *.bluedoc.json / *.blueprint.json file", file=sys.stderr)
+            print(f"{target}: not a reply id or a {DOC_FILES} file", file=sys.stderr)
             return 2
-        rows = db.latest(str(doc), doc_id(doc))
+        rows = db.latest(str(doc))
         m = rows.get(kind) if kind != "any" else max(rows.values(), key=lambda r: r["id"], default=None)
         missing = f"no {kind if kind != 'any' else 'reply'} stored for {doc}"
     db.close()
