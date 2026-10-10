@@ -1,0 +1,293 @@
+{
+  "id": "acme-saved-carts-plan",
+  "title": "Acme Shop: saved carts",
+  "subtitle": "Plan to let signed-in shoppers save a cart by name and restore it on any device. Approve it, or request changes on the page.",
+  "meta": {
+    "org": "Acme Corp",
+    "kind": "Plan",
+    "type": "plan",
+    "dwg": "ACME-CART",
+    "rev": "A",
+    "date": "2026-10-10"
+  },
+  "state": [
+    { "label": "7 steps · 2 S, 3 M, 2 L", "kind": "info" },
+    { "label": "3 open questions", "kind": "todo" },
+    { "label": "current state read from source", "kind": "ok" }
+  ],
+  "links": [
+    { "label": "Acme order path", "href": "acme-orders.bluedoc.json" },
+    { "label": "Cart API reference", "href": "https://example.com/acme/api/cart" }
+  ],
+  "tldr": "orders-api gets a `saved_carts` table and four `/v1/saved-carts` routes; the cart page gets a **Saved carts** panel that restores a saved cart into the live cart. It replaces the browser-only *Save for later* list. 7 steps; 3 open questions need your pick before I start.",
+  "sections": [
+    {
+      "id": "context",
+      "title": "Context",
+      "lead": "Carts last 24 hours on one device; shoppers who plan a reorder lose them.",
+      "blocks": [
+        {
+          "type": "text",
+          "md": "Today a cart is a row in the `carts` table, keyed by the session cookie, deleted 24 hours after the last change (`services/orders-api/src/carts/expire.ts`). *Save for later* copies items into the browser's `localStorage` (`web/src/cart/saveForLater.ts`), so it doesn't follow the shopper to another device and vanishes when they clear the browser.\n\nSupport logged 41 tickets about lost carts in September. 63 % came from business accounts that reorder the same supplies each month."
+        }
+      ]
+    },
+    {
+      "id": "approach",
+      "title": "Approach",
+      "lead": "orders-api stores named carts per account; the web cart page lists them and restores one into the live cart.",
+      "blocks": [
+        {
+          "type": "canvas",
+          "id": "arch",
+          "title": "Proposed: saved carts",
+          "rootLabel": "Acme Shop",
+          "height": 560,
+          "caption": "Amber dashed parts are new. Open **orders-api** to see the new routes next to the pricing code they reuse.",
+          "nodes": [
+            { "id": "shopper", "label": "Shopper", "sub": "signed in", "kind": "actor", "x": 0, "y": 110, "w": 150 },
+            { "id": "web", "label": "Cart page", "sub": "React · web/src/cart", "kind": "client", "x": 300, "y": 0,
+              "md": "The existing cart page. It gets a **Save cart** button and hosts the Saved carts panel.",
+              "refs": ["`web/src/cart/CartPage.tsx`"] },
+            { "id": "panel", "label": "Saved carts panel", "sub": "list · restore · delete", "kind": "ui", "state": "proposed", "x": 300, "y": 230,
+              "md": "Lists the account's saved carts, newest first. **Restore** replaces the live cart after a confirm if it has items." },
+            { "id": "api", "label": "orders-api", "sub": "Node · Fastify", "x": 680, "y": 110, "w": 300, "h": 150,
+              "md": "Gets four new routes under `/v1/saved-carts`. They reuse the cart pricing code.",
+              "refs": ["`services/orders-api/src/server.ts`"],
+              "children": {
+                "nodes": [
+                  { "id": "cart", "label": "cart routes", "sub": "routes/cart.ts", "col": 0, "row": 0 },
+                  { "id": "saved", "label": "saved-cart routes", "sub": "routes/savedCarts.ts", "state": "proposed", "col": 0, "row": 1 },
+                  { "id": "pricing", "label": "pricing", "sub": "pricing/reprice.ts", "col": 1, "row": 0 },
+                  { "id": "repo", "label": "SavedCartRepo", "sub": "carts/savedCartRepo.ts", "state": "proposed", "col": 1, "row": 1 }
+                ],
+                "edges": [
+                  { "from": "@left", "to": "cart", "label": "GET /v1/cart" },
+                  { "from": "@left", "to": "saved", "label": "/v1/saved-carts" },
+                  { "from": "cart", "to": "pricing", "label": "price", "kind": "control" },
+                  { "from": "saved", "to": "pricing", "label": "reprice", "kind": "control" },
+                  { "from": "saved", "to": "repo", "label": "load" },
+                  { "from": "repo", "to": "@right", "label": "SQL" }
+                ],
+                "flows": [
+                  { "id": "restore-inside", "label": "Restore, inside orders-api", "steps": [
+                    { "edge": "@left->saved", "label": "The saved-cart route gets `POST /v1/saved-carts/:id/restore`.", "payload": "id" },
+                    { "edge": "saved->repo", "label": "The route loads the saved lines through SavedCartRepo.", "payload": "lines" },
+                    { "edge": "repo->@right", "label": "SavedCartRepo reads `saved_carts` for this account.", "payload": "SELECT" },
+                    { "edge": "saved->pricing", "label": "The route reprices every line at today's prices.", "payload": "prices" }
+                  ] }
+                ]
+              } },
+            { "id": "carts", "label": "carts", "sub": "Postgres · 24 h rows", "kind": "db", "x": 1060, "y": 0,
+              "refs": ["`services/orders-api/migrations/0004_carts.sql`"] },
+            { "id": "savedtbl", "label": "saved_carts", "sub": "Postgres · per account", "kind": "db", "state": "proposed", "x": 1060, "y": 230,
+              "md": "One row per saved cart: `account_id`, `name`, `lines jsonb`, `saved_total_cents`, `last_used_at`. Unique on `(account_id, name)`." },
+            { "id": "sweeper", "label": "saved-cart sweeper", "sub": "cron · nightly 03:10 UTC", "kind": "process", "state": "proposed", "x": 680, "y": 400,
+              "md": "Deletes saved carts whose `last_used_at` is older than the retention you pick in the open questions." }
+          ],
+          "edges": [
+            { "from": "shopper", "to": "web", "label": "edit cart" },
+            { "from": "shopper", "to": "panel", "label": "save · restore" },
+            { "from": "web", "to": "api", "label": "GET /v1/cart" },
+            { "from": "panel", "to": "api", "label": "/v1/saved-carts" },
+            { "from": "api", "to": "carts", "label": "cart rows" },
+            { "from": "api", "to": "savedtbl", "label": "INSERT · SELECT" },
+            { "from": "sweeper", "to": "savedtbl", "label": "DELETE stale", "kind": "control" }
+          ],
+          "flows": [
+            { "id": "save", "label": "Save a cart", "steps": [
+              { "edge": "shopper->panel", "label": "The shopper names the cart and presses Save.", "payload": "name" },
+              { "edge": "panel->api", "label": "The panel posts the cart id and name to `/v1/saved-carts`.", "payload": "POST" },
+              { "edge": "api->savedtbl", "label": "orders-api copies the cart lines into `saved_carts`.", "payload": "INSERT" }
+            ] },
+            { "id": "restore", "label": "Restore a cart", "steps": [
+              { "edge": "panel->api", "label": "The panel asks orders-api to restore a saved cart.", "payload": "restore" },
+              { "edge": "api->savedtbl", "label": "orders-api reads the saved lines and stamps `last_used_at`.", "payload": "SELECT" },
+              { "edge": "api->carts", "label": "orders-api writes the repriced lines into the live cart.", "payload": "lines" },
+              { "edge": "web->api", "label": "The cart page reloads the live cart with changed lines flagged.", "payload": "cart" }
+            ] }
+          ]
+        },
+        {
+          "type": "compare",
+          "title": "What the web app gets back",
+          "before": {
+            "label": "Today: `GET /v1/cart`",
+            "lang": "json",
+            "code": "{\n  \"id\": \"crt_8f2k\",\n  \"items\": [\n    { \"sku\": \"LB-460\", \"qty\": 4, \"unitCents\": 1790 }\n  ],\n  \"subtotalCents\": 7160,\n  \"expiresAt\": \"2026-10-11T09:14:00Z\"\n}"
+          },
+          "after": {
+            "label": "Proposed: `GET /v1/saved-carts`",
+            "lang": "json",
+            "code": "{\n  \"carts\": [\n    {\n      \"id\": \"svc_41ma\",\n      \"name\": \"Warehouse B monthly\",\n      \"itemCount\": 8,\n      \"savedTotalCents\": 64210,\n      \"pricesChanged\": true,\n      \"lastUsedAt\": \"2026-09-21T16:02:00Z\"\n    }\n  ],\n  \"limit\": 20\n}"
+          }
+        },
+        {
+          "type": "media",
+          "src": "media/acme-saved-carts.svg",
+          "alt": "Wireframe of the cart page: a Save cart popover under the cart, and a Saved carts panel on the right with three carts, one flagged Prices changed.",
+          "caption": "Wireframe. Dashed blue parts are new; the panel stacks under the cart below 900 px.",
+          "width": 960
+        }
+      ]
+    },
+    {
+      "id": "steps",
+      "title": "Steps",
+      "lead": "Seven steps, each one reviewable PR; the API lands before the UI.",
+      "blocks": [
+        {
+          "type": "steps",
+          "id": "plan",
+          "title": "Implementation order",
+          "items": [
+            { "id": "table", "title": "Add the `saved_carts` table", "effort": "S", "status": "todo",
+              "md": "New table only; no change to `carts`, so the migration takes no lock on live carts. Unique index on `(account_id, name)`; index on `last_used_at` for the sweeper.",
+              "files": ["services/orders-api/migrations/0012_saved_carts.sql"],
+              "refs": ["arch/savedtbl"] },
+            { "id": "repo", "title": "Write `SavedCartRepo` with the 20-cart limit", "effort": "M", "status": "todo",
+              "md": "`save`, `list`, `load`, `rename`, `delete`. Saving a 21st cart throws `SavedCartLimit`; saving under an existing name replaces that cart.",
+              "files": ["services/orders-api/src/carts/savedCartRepo.ts", "services/orders-api/src/carts/savedCartLimit.ts", "services/orders-api/src/carts/savedCartRepo.test.ts"],
+              "refs": ["arch/api/repo"] },
+            { "id": "routes", "title": "Add the four `/v1/saved-carts` routes", "effort": "M", "status": "todo",
+              "md": "`GET /v1/saved-carts`, `POST /v1/saved-carts`, `POST /v1/saved-carts/:id/restore`, `DELETE /v1/saved-carts/:id`. All need a signed-in account; a session-only shopper gets `401`. The limit maps to `409 saved_cart_limit`.",
+              "files": ["services/orders-api/src/routes/savedCarts.ts", "services/orders-api/src/server.ts", "services/orders-api/openapi.yaml"],
+              "refs": ["arch/api/saved"] },
+            { "id": "reprice", "title": "Reprice restored carts and flag changed lines", "effort": "M", "status": "todo",
+              "md": "`reprice()` takes saved lines and returns current prices plus `changed: true` on lines whose unit price moved. Discontinued SKUs are dropped and listed in `skipped`.",
+              "files": ["services/orders-api/src/pricing/reprice.ts", "services/orders-api/src/pricing/reprice.test.ts"],
+              "refs": ["arch/api/pricing"] },
+            { "id": "panel", "title": "Build the Saved carts panel and the Save cart popover", "effort": "L", "status": "todo",
+              "md": "Panel on the right of the cart at ≥ 900 px, under it below. The popover asks for a name, defaulting to the date. Restore asks before it replaces a non-empty cart.",
+              "files": ["web/src/cart/SavedCartsPanel.tsx", "web/src/cart/SaveCartPopover.tsx", "web/src/cart/CartPage.tsx", "web/src/api/savedCarts.ts"],
+              "refs": ["arch/panel", "arch/web"] },
+            { "id": "sweeper", "title": "Schedule the nightly sweeper", "effort": "S", "status": "todo",
+              "md": "Deletes carts unused for longer than the retention you pick. Runs at 03:10 UTC, in batches of 1,000 rows.",
+              "files": ["services/orders-api/src/jobs/sweepSavedCarts.ts", "infra/cron/orders-api.yaml"],
+              "refs": ["arch/sweeper"] },
+            { "id": "cutover", "title": "Replace *Save for later* and turn the flag on", "effort": "L", "status": "todo",
+              "md": "On first load with the `saved-carts` flag on, the web app offers to import the old `localStorage` list as a saved cart, then deletes it. Staff first for 3 days, then everyone.",
+              "files": ["web/src/cart/importSaveForLater.ts", "web/src/cart/saveForLater.ts", "web/src/cart/sessionCartStorage.ts", "infra/flags/web.yaml"],
+              "refs": ["arch/web"] }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "files",
+      "title": "Files",
+      "lead": "11 new files, 6 edited, 1 deleted, 1 renamed.",
+      "blocks": [
+        {
+          "type": "files",
+          "title": "Changed files",
+          "items": [
+            { "path": "services/orders-api/migrations/0012_saved_carts.sql", "action": "add", "why": "Creates `saved_carts` and its two indexes.", "step": "table" },
+            { "path": "services/orders-api/src/carts/savedCartRepo.ts", "action": "add", "why": "Reads and writes saved carts; enforces the 20-cart limit.", "step": "repo" },
+            { "path": "services/orders-api/src/carts/savedCartLimit.ts", "action": "add", "why": "The `SavedCartLimit` error and its `409` mapping.", "step": "repo" },
+            { "path": "services/orders-api/src/carts/savedCartRepo.test.ts", "action": "add", "why": "Covers the limit, name replace and per-account isolation.", "step": "repo" },
+            { "path": "services/orders-api/src/routes/savedCarts.ts", "action": "add", "why": "The four `/v1/saved-carts` routes.", "step": "routes" },
+            { "path": "services/orders-api/src/server.ts", "action": "edit", "why": "Registers the new routes.", "step": "routes" },
+            { "path": "services/orders-api/openapi.yaml", "action": "edit", "why": "Documents the routes and the `409 saved_cart_limit` error.", "step": "routes" },
+            { "path": "services/orders-api/src/pricing/reprice.ts", "action": "edit", "why": "Returns `changed` per line and `skipped` SKUs.", "step": "reprice" },
+            { "path": "services/orders-api/src/pricing/reprice.test.ts", "action": "add", "why": "Covers changed prices and discontinued SKUs.", "step": "reprice" },
+            { "path": "web/src/cart/SavedCartsPanel.tsx", "action": "add", "why": "Lists, restores and deletes saved carts.", "step": "panel" },
+            { "path": "web/src/cart/SaveCartPopover.tsx", "action": "add", "why": "Asks for the cart name.", "step": "panel" },
+            { "path": "web/src/cart/CartPage.tsx", "action": "edit", "why": "Adds the Save cart button and mounts the panel.", "step": "panel" },
+            { "path": "web/src/api/savedCarts.ts", "action": "add", "why": "Typed client for the new routes.", "step": "panel" },
+            { "path": "services/orders-api/src/jobs/sweepSavedCarts.ts", "action": "add", "why": "Deletes saved carts past retention.", "step": "sweeper" },
+            { "path": "infra/cron/orders-api.yaml", "action": "edit", "why": "Schedules the sweeper at 03:10 UTC.", "step": "sweeper" },
+            { "path": "web/src/cart/saveForLater.ts", "action": "delete", "why": "Replaced by saved carts after the import.", "step": "cutover" },
+            { "path": "web/src/cart/sessionCartStorage.ts", "action": "rename", "from": "web/src/cart/cartStorage.ts", "why": "Now holds only the session cart; the name says so.", "step": "cutover" },
+            { "path": "web/src/cart/importSaveForLater.ts", "action": "add", "why": "One-time import of the old `localStorage` list.", "step": "cutover" },
+            { "path": "infra/flags/web.yaml", "action": "edit", "why": "Adds the `saved-carts` flag, off by default.", "step": "cutover" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "questions",
+      "title": "Open questions",
+      "lead": "Pick one option per question; my recommendation is starred. Your picks go with **Approve plan** or **Request changes**.",
+      "blocks": [
+        {
+          "type": "checklist",
+          "id": "decisions",
+          "title": "Decisions",
+          "numbered": false,
+          "items": [
+            { "id": "retention", "text": "How long does a saved cart stay after its last use?",
+              "sub": "Recommend 180 days: covers half-yearly reorders; the table stays under 2 GB.",
+              "recommend": "d180",
+              "choices": [
+                { "id": "d90", "label": "90 days" },
+                { "id": "d180", "label": "180 days" },
+                { "id": "forever", "label": "Until deleted", "md": "No sweeper; the 20-cart limit is the only cap." }
+              ],
+              "detail": "**Why 180:** 70 % of business reorders in the last year came within 150 days of the previous order (orders DB, Sep 2025 to Sep 2026). At 1.2 M accounts and 1.4 saved carts per active account, 180 days keeps about 900,000 rows, about 1.8 GB. *Row size is an estimate; check it on staging in step 1.*" },
+            { "id": "prices", "text": "What does a restored cart charge when a price changed?",
+              "sub": "Recommend today's price with a notice: the saved price could undercut a price rise.",
+              "recommend": "notice",
+              "choices": [
+                { "id": "notice", "label": "Today's price + notice" },
+                { "id": "silent", "label": "Today's price, no notice" },
+                { "id": "keep", "label": "Saved price for 7 days", "md": "Needs a price lock in pricing and a new discount reason." }
+              ],
+              "detail": "**Notice:** the panel badge says *Prices changed*; the cart marks each changed line with the old price struck through. **Keep** adds a price-lock path to `pricing/reprice.ts` and a finance sign-off; I'd ticket it if you want it later." },
+            { "id": "guests", "text": "Who can save a cart?",
+              "sub": "Recommend signed-in accounts only: guests have no account to attach the cart to.",
+              "recommend": "accounts",
+              "choices": [
+                { "id": "accounts", "label": "Signed-in accounts only" },
+                { "id": "email", "label": "Guests too, by email link", "md": "Adds an email token flow and a mail template; about 3 more days." }
+              ],
+              "detail": "Guests are 22 % of carts but 6 % of repeat orders. A guest who presses Save cart gets the sign-in sheet, then the cart is saved." }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "risks",
+      "title": "Risks",
+      "lead": "The main risk is shoppers reading a repriced cart as a bug.",
+      "blocks": [
+        {
+          "type": "table",
+          "columns": ["Risk", "Likelihood", "Impact", "Mitigation"],
+          "rows": [
+            ["A restored total differs from the saved total; shoppers report it as a bug", "High", "Support tickets", "Flag each changed line (step 4) and show *Prices changed* on the cart, if you pick the notice in question 2."],
+            ["A saved cart holds a discontinued SKU", "Medium", "Restore fails", "Restore skips the SKU and lists it above the cart; it never fails the whole restore."],
+            ["The *Save for later* import runs twice on two tabs", "Low", "Duplicate saved cart", "Import is keyed by a hash of the list; a second import with the same hash is a no-op."],
+            ["`saved_carts` grows faster than estimated", "Low", "Storage cost", "The 20-cart limit plus the sweeper cap it; alert above 3 GB."]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "verify",
+      "title": "Verification",
+      "lead": "Done when these pass on staging with the flag on.",
+      "blocks": [
+        {
+          "type": "checklist",
+          "id": "checks",
+          "title": "Checks",
+          "items": [
+            { "id": "unit", "text": "Run the orders-api tests", "sub": "Covers the repo, the routes and reprice",
+              "code": "pnpm --filter orders-api test", "verify": "All tests pass, including `savedCartRepo.test.ts` and `reprice.test.ts`." },
+            { "id": "cross-device", "text": "Save a cart in one browser and restore it in another", "sub": "The point of the feature: carts follow the account",
+              "verify": "Same lines and quantities; the subtotal matches when no price changed.", "refs": ["arch/panel"] },
+            { "id": "price-change", "text": "Change one SKU's price on staging, then restore the cart", "sub": "Checks the notice path",
+              "verify": "The panel shows *Prices changed*; the line shows the old price struck through and the new one charged." },
+            { "id": "limit", "text": "Save a 21st cart on one account", "sub": "Checks the limit end to end",
+              "verify": "The API returns `409 saved_cart_limit`; the popover says *You have 20 saved carts. Delete one first.*" },
+            { "id": "sweep", "text": "Run the sweeper on a cart last used past retention", "sub": "Backdate `last_used_at` first",
+              "code": "pnpm --filter orders-api job sweep-saved-carts --dry-run=false", "verify": "The row is gone; the log shows `swept 1 saved carts`.", "refs": ["arch/sweeper"] },
+            { "id": "narrow", "text": "Open the cart page at 390 px", "sub": "The panel must stack, not squeeze",
+              "verify": "Saved carts sits under the cart; no horizontal scroll." }
+          ]
+        }
+      ]
+    }
+  ]
+}

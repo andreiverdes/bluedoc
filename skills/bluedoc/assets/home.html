@@ -17,7 +17,7 @@
   --bp-navy-0: #04101f; --bp-navy-1: #071a33; --bp-navy-2: #0b2a4f; --bp-cyan: #5fd4ff; --bp-ice: #d6e9ff; --bp-dim: #6f93bd;
   --bp-amber: #ffc46b; --bp-green: #6fe3a1; --bp-red: #ff7a85; --bp-violet: #b9a2ff;
   --bd-folder: oklch(70% 0.14 248); --bd-folder-back: oklch(56% 0.16 252);
-  --bd-t-docs: oklch(64% 0.16 252); --bd-t-review: oklch(68% 0.13 172); --bd-t-other: oklch(66% 0.035 260);
+  --bd-t-docs: oklch(64% 0.16 252); --bd-t-review: oklch(68% 0.13 172); --bd-t-plan: oklch(68% 0.15 300); --bd-t-other: oklch(66% 0.035 260);
   --bd-f-blocker: var(--color-hz-danger); --bd-f-major: var(--color-hz-warning); --bd-f-minor: var(--color-hz-info); --bd-f-nit: var(--color-hz-fg-subtle);
   --bd-top-h: 56px;
 }
@@ -161,8 +161,8 @@ body { font-family: var(--font-hz-sans, Inter, system-ui, sans-serif); -webkit-f
 .bd-stack { display: flex; height: 10px; gap: 3px; margin-top: 14px; border-radius: 6px; overflow: hidden; }
 .bd-stack i { display: block; min-width: 4px; }
 .bd-dot { display: inline-block; flex: none; width: 8px; height: 8px; border-radius: 50%; }
-.t-docs { --t: var(--bd-t-docs); } .t-review { --t: var(--bd-t-review); } .t-other { --t: var(--bd-t-other); }
-.bd-dot.t-docs, .bd-dot.t-review, .bd-dot.t-other, .bd-stack i { background: var(--t); }
+.t-docs { --t: var(--bd-t-docs); } .t-review { --t: var(--bd-t-review); } .t-plan { --t: var(--bd-t-plan); } .t-other { --t: var(--bd-t-other); }
+.bd-dot.t-docs, .bd-dot.t-review, .bd-dot.t-plan, .bd-dot.t-other, .bd-stack i { background: var(--t); }
 .bd-finds { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--color-hz-line-soft); font-size: 12px; color: var(--color-hz-fg-muted); }
 .bd-finds span { display: inline-flex; align-items: center; gap: 6px; }
 .bd-finds b { font: 600 12px var(--font-hz-mono); color: var(--color-hz-fg); }
@@ -241,6 +241,7 @@ body { font-family: var(--font-hz-sans, Inter, system-ui, sans-serif); -webkit-f
 .bd-pill.warn { background: rgba(255, 196, 107, .94); color: #2d1b00; box-shadow: 0 2px 10px rgba(255, 196, 107, .35); }
 .bd-pill.info { background: rgba(95, 212, 255, .92); color: #02253a; box-shadow: 0 2px 10px rgba(95, 212, 255, .3); }
 .bd-pill.risk { background: rgba(255, 122, 133, .94); color: #33030a; box-shadow: 0 2px 10px rgba(255, 122, 133, .35); }
+.bd-pill.ok { background: rgba(111, 227, 161, .94); color: #03301a; box-shadow: 0 2px 10px rgba(111, 227, 161, .35); }
 /* review picture: files as +/- bars, findings as dots */
 .bd-dif { position: absolute; inset: calc(10px + 22px + 4cqw) 7% 9%; display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 7cqw; align-items: center; }
 .bd-dif .rows { display: flex; flex-direction: column; gap: 1.5cqw; }
@@ -258,6 +259,32 @@ body { font-family: var(--font-hz-sans, Inter, system-ui, sans-serif); -webkit-f
 .bd-dif .dots .major { width: 2.8cqw; height: 2.8cqw; background: var(--bp-amber); box-shadow: 0 0 6px rgba(255, 196, 107, .7); }
 .bd-dif .dots .minor { width: 2.2cqw; height: 2.2cqw; background: var(--bp-cyan); }
 .bd-dif .dots .nit { width: 1.6cqw; height: 1.6cqw; background: var(--bp-dim); }
+/* plan picture: steps as a timeline (status dot, effort bar), files as A/M/D/R counts */
+.bd-plan { position: absolute; inset: calc(10px + 22px + 4cqw) 7% 9%; display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 6cqw; align-items: center; }
+.bd-plan.solo { grid-template-columns: minmax(0, 1fr); }
+.bd-plan .tl { position: relative; display: flex; flex-direction: column; gap: 2cqw; }
+.bd-plan .tl::before { content: ''; position: absolute; left: 1.6cqw; top: 1.9cqw; bottom: 1.9cqw; width: 1px; transform: translateX(-.5px); background: rgba(214, 233, 255, .3); }
+.bd-plan .ps { position: relative; display: flex; align-items: center; gap: 2cqw; height: 3.8cqw; }
+.bd-plan .pd { flex: none; box-sizing: border-box; width: 3.2cqw; height: 3.2cqw; border-radius: 50%; background: var(--bp-navy-2); border: max(1px, .4cqw) solid rgba(214, 233, 255, .5); }
+.bd-plan .pb { flex: none; height: 2.3cqw; border-radius: 1.2cqw; background: rgba(214, 233, 255, .2); }
+.bd-plan .pe { font: 600 2.6cqw/1 var(--font-hz-mono); color: #8fb6de; }
+.bd-plan .ps.done .pd { background: var(--bp-green); border-color: var(--bp-green); box-shadow: 0 0 7px rgba(111, 227, 161, .6); }
+.bd-plan .ps.done .pb { background: rgba(111, 227, 161, .55); }
+.bd-plan .ps.doing .pd { background: radial-gradient(circle, var(--bp-cyan) 0 36%, var(--bp-navy-2) 42%); border-color: var(--bp-cyan); box-shadow: 0 0 8px rgba(95, 212, 255, .7); }
+.bd-plan .ps.doing .pb { background: linear-gradient(90deg, var(--bp-cyan), rgba(95, 212, 255, .35)); box-shadow: 0 0 6px rgba(95, 212, 255, .4); }
+.bd-plan .ps.blocked .pd { background: var(--bp-red); border-color: var(--bp-red); box-shadow: 0 0 7px rgba(255, 122, 133, .6); }
+.bd-plan .ps.blocked .pb { background: repeating-linear-gradient(135deg, rgba(255, 122, 133, .65) 0 .8cqw, rgba(255, 122, 133, .22) .8cqw 1.6cqw); }
+.bd-plan .more { margin-top: 2cqw; padding-left: 5.2cqw; font: 500 2.7cqw/1 var(--font-hz-mono); color: #8fb6de; }
+.bd-plan .fc { display: flex; flex-direction: column; gap: 1.2cqw; }
+.bd-plan.solo .fc { flex-flow: row wrap; justify-content: center; gap: 2cqw 6cqw; }
+.bd-plan.solo .fc .cap { flex-basis: 100%; text-align: center; }
+.bd-plan .pn { display: flex; align-items: baseline; gap: 1.6cqw; font: 650 7cqw/1 var(--font-hz-mono); letter-spacing: -.03em; white-space: nowrap; }
+.bd-plan .pn i { font: 700 2.7cqw/1 var(--font-hz-mono); font-style: normal; letter-spacing: 0; padding: .5cqw .9cqw; border-radius: .8cqw; color: var(--bp-navy-0); transform: translateY(-.6cqw); }
+.bd-plan .pn.add { color: var(--bp-green); text-shadow: 0 0 18px rgba(111, 227, 161, .35); } .bd-plan .pn.add i { background: var(--bp-green); }
+.bd-plan .pn.edit { color: #8cb8ff; text-shadow: 0 0 18px rgba(140, 184, 255, .35); } .bd-plan .pn.edit i { background: #8cb8ff; }
+.bd-plan .pn.delete { color: var(--bp-red); text-shadow: 0 0 18px rgba(255, 122, 133, .35); } .bd-plan .pn.delete i { background: var(--bp-red); }
+.bd-plan .pn.rename { color: var(--bp-amber); text-shadow: 0 0 18px rgba(255, 196, 107, .35); } .bd-plan .pn.rename i { background: var(--bp-amber); }
+.bd-plan .cap { margin-top: 1.4cqw; font: 500 3.2cqw/1.3 var(--font-hz-mono); letter-spacing: .08em; text-transform: uppercase; color: #8fb6de; }
 /* other picture: a big type glyph and a title block */
 .bd-gly { position: absolute; inset: 0; display: grid; place-items: center; }
 .bd-gly .c1, .bd-gly .c2 { position: absolute; left: 50%; top: 46%; border-radius: 50%; transform: translate(-50%, -50%); border: 1px dashed rgba(214, 233, 255, .18); }
@@ -306,7 +333,7 @@ a.bd-row:hover .tx .t { color: var(--color-hz-accent-fg); }
 .bd-bcard .bd-art { aspect-ratio: auto; height: 84px; }
 .bd-bcard .bd-pill { top: auto; bottom: 8px; height: 20px; font-size: 10.5px; }
 .bd-bcard .bd-pill.type { right: 8px; }
-.bd-bcard .bd-dif { inset: 12% 7% 12%; }
+.bd-bcard .bd-dif, .bd-bcard .bd-plan { inset: 12% 7% 12%; }
 .bd-bcard .bd-tb { display: none; }
 .bd-bcard .b { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px 11px; }
 .bd-bcard .t { font: 600 13.5px/1.35 var(--font-hz-sans); color: var(--color-hz-fg); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
@@ -421,10 +448,12 @@ function ago(t) {
 const plural = (n, one, many) => `${n} ${n === 1 ? one : (many || one + 's')}`;
 
 /* ---------- docs, reader progress, status ---------- */
-const TYPES = [['docs', 'Docs', Icons.FileText], ['review', 'Reviews', Icons.GitPullRequest], ['other', 'Other', Icons.StickyNote]];
-const TYPE_ONE = { docs: 'Docs', review: 'Review', other: 'Other' };
+const TYPES = [['docs', 'Docs', Icons.FileText], ['review', 'Reviews', Icons.GitPullRequest], ['plan', 'Plans', Icons.ListChecks], ['other', 'Other', Icons.StickyNote]];
+const TYPE_ONE = { docs: 'Docs', review: 'Review', plan: 'Plan', other: 'Other' };
 const TYPE_ICON = Object.fromEntries(TYPES.map(([id, , I]) => [id, I]));
-const STATUSES = [['needs', 'Needs you', Icons.Flag], ['waiting', 'Waiting on agent', Icons.Clock], ['errors', "Doesn't build", Icons.Error]];
+const STATUSES = [['needs', 'Needs you', Icons.Flag], ['awaiting', 'Awaiting approval', Icons.Clipboard], ['waiting', 'Waiting on agent', Icons.Clock],
+  ['approved', 'Approved', Icons.Success], ['errors', "Doesn't build", Icons.Error]];
+const PLAN_STATUSES = new Set(['awaiting', 'approved']);   // listed only where there are plans
 const BOARD = [['needs', 'Needs you', 'warning'], ['waiting', 'Waiting on agent', 'ai'], ['progress', 'In progress', 'running'], ['done', 'Done', 'success'], ['errors', "Doesn't build", 'error']];
 
 function prepare(data) {
@@ -455,15 +484,21 @@ function progress(d) {
   return { dec, decided, steps, done };
 }
 function statusOf(d) {
+  const plan = d.type === 'plan', errors = d.errors > 0;
+  // a plan is approved only for the rev the reader approved; a new rev asks again
+  const approved = plan && !errors && !!d.approval && String(d.approval.rev ?? '') === String(d.rev ?? '');
   const sent = Math.max(d.answers ? d.answers.at : 0, d.changes ? d.changes.at : 0);
-  const p = progress(d), errors = d.errors > 0, waiting = sent > d.mtime;
-  const needs = !errors && !waiting && p.dec > p.decided;
+  const waiting = !approved && sent > d.mtime;
+  let p = progress(d);
+  if (approved) p = { ...p, decided: p.dec };   // approving settles every open pick: the agent uses its recommendation
+  const awaiting = plan && !errors && !waiting && !approved;
+  const needs = !errors && !waiting && (awaiting || p.dec > p.decided);
   const total = p.dec + p.steps, did = p.decided + p.done;
-  // board column: in progress = partly done; done = all done, or nothing left to decide
-  const col = errors ? 'errors' : waiting ? 'waiting' : needs ? 'needs' : did > 0 && did < total ? 'progress' : 'done';
-  return { p, total, did, errors, waiting, needs, col, sent, changesSent: !!(waiting && d.changes && (!d.answers || d.changes.at >= d.answers.at)) };
+  // board column: in progress = partly done; done = all done, approved, or nothing left to decide
+  const col = errors ? 'errors' : approved ? 'done' : waiting ? 'waiting' : needs ? 'needs' : did > 0 && did < total ? 'progress' : 'done';
+  return { p, total, did, errors, waiting, needs, awaiting, approved, col, sent, changesSent: !!(waiting && d.changes && (!d.answers || d.changes.at >= d.answers.at)) };
 }
-const statusIs = (st, s) => (s === 'needs' ? st.needs : s === 'waiting' ? st.waiting : st.errors);
+const statusIs = (st, s) => !!st[s];
 const inScope = (d, sc) => !sc || (d.root.slug === sc.slug && (!sc.dir || d.dir === sc.dir || d.dir.startsWith(sc.dir + '/')));
 const scopeLabel = (roots, sc) => { const r = roots.find(x => x.slug === sc.slug); return (r ? r.name : sc.slug) + (sc.dir ? ' / ' + sc.dir : ''); };
 
@@ -506,10 +541,12 @@ function Prog({ st }) {
     e('span', { className: 'tr' }, e('i', { style: { width: `${st.did / st.total * 100}%` } })), `${st.did}/${st.total}`);
 }
 const revText = d => (d.rev ? `Rev ${d.rev}${d.revs > 1 ? ` of ${d.revs}` : ''}` : '');
-const PILL_TONE = { risk: 'danger', info: 'info', warn: 'warning' };
-function statusPill(st) {
+const PILL_TONE = { risk: 'danger', info: 'info', warn: 'warning', ok: 'success' };
+function statusPill(st, d) {
   if (st.errors) return ['risk', Icons.Error, "Doesn't build"];
+  if (st.approved) return ['ok', Icons.Check, d.rev ? `Approved · rev ${d.rev}` : 'Approved'];
   if (st.waiting) return ['info', Icons.Clock, st.changesSent ? 'Changes requested' : 'Answers sent'];
+  if (st.awaiting) return ['warn', Icons.Clipboard, 'Awaiting approval'];
   if (st.needs) return ['warn', Icons.Flag, `${st.p.dec - st.p.decided} to decide`];
   return null;
 }
@@ -587,11 +624,31 @@ function GlyphArt({ d, p }) {
   return e(F, null, e('div', { className: 'bd-gly', 'aria-hidden': true }, e('span', { className: 'c2' }), e('span', { className: 'c1' }), e(Icon)),
     cells.length > 0 && e('div', { className: 'bd-tb', 'aria-hidden': true }, cells.map(([k, n]) => e('span', { key: k }, k, n != null && e('b', null, String(n).padStart(2, '0'))))));
 }
+const EFFORT_W = { S: 30, M: 54, L: 80 };
+const FILE_ACTS = [['add', 'A'], ['edit', 'M'], ['delete', 'D'], ['rename', 'R']];
+function PlanArt({ p, mini }) {
+  const steps = p.steps || [], fc = p.files || {}, dec = (p.decisions || {}).total || 0;
+  const max = mini ? 4 : 6, shown = steps.length > max ? steps.slice(0, max - 1) : steps;
+  const acts = FILE_ACTS.filter(([k]) => fc[k] || (k !== 'rename' && FILE_ACTS.some(([j]) => fc[j])));
+  const cap = [steps.length && plural(steps.length, 'step'), dec && plural(dec, 'decision')].filter(Boolean).join(' · ');
+  const capEl = !mini && cap && e('div', { className: 'cap' }, cap);
+  return e('div', { className: 'bd-plan' + (steps.length && acts.length ? '' : ' solo'), 'aria-hidden': true },
+    steps.length > 0 && e('div', null,
+      e('div', { className: 'tl' }, shown.map(([s, eff], i) => e('div', { key: i, className: 'ps ' + s },
+        e('span', { className: 'pd' }), e('span', { className: 'pb', style: { width: `${EFFORT_W[eff] || 42}%` } }), eff && e('span', { className: 'pe' }, eff)))),
+      shown.length < steps.length && e('div', { className: 'more' }, `+${steps.length - shown.length} more`),
+      !acts.length && capEl),
+    acts.length > 0 && e('div', { className: 'fc' },
+      acts.slice(0, mini ? 3 : 4).map(([k, l]) => e('div', { key: k, className: 'pn ' + k }, e('i', null, l), String(fc[k] || 0))),
+      capEl));
+}
 function Art({ d, st, mini }) {
   const p = d.preview || {};
-  const body = !d.errors && p.kind === 'canvas' && p.nodes && p.nodes.length ? e(CanvasArt, { p })
+  const planBody = p.kind === 'plan' && ((p.steps || []).length || Object.values(p.files || {}).some(Boolean));
+  const body = !d.errors && planBody ? e(PlanArt, { p, mini })
+    : !d.errors && p.kind === 'canvas' && p.nodes && p.nodes.length ? e(CanvasArt, { p })
     : !d.errors && p.kind === 'diff' ? e(DiffArt, { p, d }) : e(GlyphArt, { d, p });
-  const pill = !mini && statusPill(st);
+  const pill = !mini && statusPill(st, d);
   return e('div', { className: 'bd-art' + (d.errors ? ' err' : '') }, body,
     pill && e('span', { className: 'bd-pill st ' + pill[0], title: pill[2] }, e(pill[1]), e('span', { className: 'lb' }, pill[2])),
     e('span', { className: 'bd-pill type', title: TYPE_ONE[d.type] }, e('span', { className: 'bd-dot t-' + d.type }), e('span', { className: 'lb' }, TYPE_ONE[d.type])));
@@ -689,7 +746,7 @@ function Decisions({ docs, sts }) {
   const open = [];
   for (const d of docs) {
     const st = sts.get(d.key); dec += st.p.dec; decided += st.p.decided; steps += st.p.steps; done += st.p.done;
-    if (st.needs) open.push({ d, n: st.p.dec - st.p.decided });
+    if (st.needs) open.push({ d, n: st.p.dec - st.p.decided, awaiting: st.awaiting });
   }
   open.sort((a, b) => b.n - a.n || b.d.mtime - a.d.mtime);
   const pct = dec ? Math.round(decided / dec * 100) : 0;
@@ -698,13 +755,14 @@ function Decisions({ docs, sts }) {
     e('div', { className: 'bd-ring' },
       e(ProgressRing, { size: 68, stroke: 6, value: pct, tone: dec && decided === dec ? 'success' : 'accent', label: 'Decided' }),
       e('div', { className: 'tx' }, e('b', null, `${decided} of ${dec}`), e('span', null, 'decided'), steps > 0 && e('span', { style: { display: 'block' } }, `${done} of ${steps} steps done`))),
-    open.length ? e('ul', { className: 'bd-wl' }, open.slice(0, 3).map(({ d, n }) => e('li', { key: d.key },
-      e('a', { href: d.url }, e(Icons.Flag, { width: 14, height: 14, style: { color: 'var(--color-hz-warning-fg)', flex: 'none' } }),
-        e('span', { className: 'two' }, e('span', { className: 't' }, plain(d.title)), e('span', { className: 's' }, `${n} to decide · ${d.root.name}${d.dir ? '/' + d.dir : ''}`))))))
+    open.length ? e('ul', { className: 'bd-wl' }, open.slice(0, 3).map(({ d, n, awaiting }) => e('li', { key: d.key },
+      e('a', { href: d.url }, e(awaiting ? Icons.Clipboard : Icons.Flag, { width: 14, height: 14, style: { color: 'var(--color-hz-warning-fg)', flex: 'none' } }),
+        e('span', { className: 'two' }, e('span', { className: 't' }, plain(d.title)),
+          e('span', { className: 's' }, `${awaiting ? 'Awaiting approval' + (n ? `, ${n} open` : '') : `${n} to decide`} · ${d.root.name}${d.dir ? '/' + d.dir : ''}`))))))
       : e('div', { className: 'bd-w-empty' }, dec ? 'Every decision here is made.' : 'No decisions in these docs.'));
 }
 function ByType({ docs, sts, onType }) {
-  const n = { docs: 0, review: 0, other: 0 }, f = { blocker: 0, major: 0, minor: 0, nit: 0 };
+  const n = { docs: 0, review: 0, plan: 0, other: 0 }, f = { blocker: 0, major: 0, minor: 0, nit: 0 };
   for (const d of docs) { n[d.type]++; const pf = (d.preview || {}).findings; if (pf) for (const k in f) f[k] += pf[k] || 0; }
   const total = docs.length || 1, anyF = Object.values(f).some(Boolean);
   return e(Card, { title: null, description: null, className: 'bd-w' },
@@ -737,7 +795,7 @@ function DocCard({ d, st, m, terms }) {
       e('div', { className: 'bd-card-f' }, e(Loc, { d, terms }), d.rev && e('span', null, revText(d)), e('span', null, ago(d.mtime)), e(Prog, { st }))));
 }
 function DocRow({ d, st, m, terms }) {
-  const Icon = d.errors ? Icons.Error : TYPE_ICON[d.type], pill = statusPill(st);
+  const Icon = d.errors ? Icons.Error : TYPE_ICON[d.type], pill = statusPill(st, d);
   const [tone, label] = pill ? [PILL_TONE[pill[0]], pill[2]]
     : !st.total ? ['neutral', 'Nothing to do'] : st.did === st.total ? ['success', 'Done'] : st.did ? ['neutral', 'In progress'] : ['neutral', 'Not started'];
   return e('a', { className: 'bd-row', href: d.url, 'data-res': '' },
@@ -868,11 +926,13 @@ function App() {
   const sts = useMemo(() => new Map(docs.map(d => [d.key, statusOf(d)])), [docs, tick]);
   const roots = data ? data.roots : [];
   const scoped = docs.filter(d => inScope(d, filters.scope));
-  const typeN = { docs: 0, review: 0, other: 0 };
+  const typeN = { docs: 0, review: 0, plan: 0, other: 0 };
   for (const d of scoped) typeN[d.type]++;
   const typed = filters.type ? scoped.filter(d => d.type === filters.type) : scoped;
-  const statusN = { needs: 0, waiting: 0, errors: 0 };
+  const statusN = Object.fromEntries(STATUSES.map(([id]) => [id, 0]));
   for (const d of typed) { const st = sts.get(d.key); for (const k in statusN) if (statusIs(st, k)) statusN[k]++; }
+  const anyPlans = typed.some(d => d.type === 'plan');
+  const listStatus = id => filters.status === id || (id === 'errors' ? statusN.errors > 0 : !PLAN_STATUSES.has(id) || anyPlans);
   const filtered = filters.status ? typed.filter(d => statusIs(sts.get(d.key), filters.status)) : typed;
   const terms = dq.toLowerCase().split(/\s+/).filter(Boolean);
   const rows = [];
@@ -902,7 +962,7 @@ function App() {
     { id: 'projects', title: 'Projects', items: roots.map(r => ({ id: 'p:' + r.slug, label: r.name, icon: e(Icons.Package), badge: String(r.docs.length), defaultOpen: true,
       children: rail ? undefined : folderItems(r, docs.filter(d => d.root === r)) })) },
     { id: 'types', title: 'Types', items: TYPES.map(([id, label, I]) => ({ id: 't:' + id, label, icon: e(I), badge: String(typeN[id]) })) },
-    { id: 'status', title: 'Status', items: STATUSES.filter(([id]) => id !== 'errors' || statusN.errors || filters.status === 'errors').map(([id, label, I]) => ({ id: 's:' + id, label, icon: e(I), badge: String(statusN[id]) })) },
+    { id: 'status', title: 'Status', items: STATUSES.filter(([id]) => listStatus(id)).map(([id, label, I]) => ({ id: 's:' + id, label, icon: e(I), badge: String(statusN[id]) })) },
   ];
   const sidebar = inDrawer => {
     const collapsed = !inDrawer && settings.rail;
@@ -933,7 +993,7 @@ function App() {
   if (filters.scope) chips.push(e(Tag, { key: 'p', icon: e(Folder, { size: 14 }), onRemove: () => setFilters(f => ({ ...f, scope: null })) }, scopeLabel(roots, filters.scope)));
   if (filters.type) chips.push(e(Tag, { key: 't', icon: e(TYPE_ICON[filters.type]), onRemove: () => setFilters(f => ({ ...f, type: null })) }, TYPES.find(x => x[0] === filters.type)[1]));
   if (filters.status) chips.push(e(Tag, { key: 's', icon: e(STATUSES.find(x => x[0] === filters.status)[2]), onRemove: () => setFilters(f => ({ ...f, status: null })) }, STATUSES.find(x => x[0] === filters.status)[1]));
-  const suggestions = !anyFilter && data ? [...STATUSES.filter(([id]) => statusN[id]).map(([id, label, I]) => ({ id: 's:' + id, label, I, n: statusN[id] })),
+  const suggestions = !anyFilter && data ? [...STATUSES.filter(([id]) => statusN[id] && id !== 'approved').map(([id, label, I]) => ({ id: 's:' + id, label, I, n: statusN[id] })),
     ...TYPES.filter(([id]) => typeN[id] && typeN[id] < docs.length).map(([id, label, I]) => ({ id: 't:' + id, label, I, n: typeN[id] }))] : [];
   const countText = !data ? 'loading…' : rows.length === docs.length ? plural(docs.length, 'doc') : `${rows.length} of ${docs.length}`;
 

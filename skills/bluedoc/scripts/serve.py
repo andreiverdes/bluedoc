@@ -5,9 +5,9 @@ searchable home page, and passes the reader's answers and change requests back t
 Usage:
   serve.py open DOC.json [--to NAME] [--browser]   start the server if needed, register the doc's
                                                    folder, print the doc's URL
-  serve.py wait DOC.json [--kind answers|changes|any] [--timeout SEC]
-                                                   block until the reader sends answers or a change
-                                                   request for DOC; print it as Markdown
+  serve.py wait DOC.json [--kind answers|changes|approval|any] [--timeout SEC]
+                                                   block until the reader sends answers, a change
+                                                   request or a plan approval for DOC; print it as Markdown
   serve.py start | stop | status                   manage the background server
   serve.py add DIR | roots                         add a folder to the home page / list folders
   serve.py run [--port N]                          run in the foreground
@@ -20,14 +20,17 @@ URLs: /                      home page: every doc under the registered folders, 
                              project, folder, type and status
       /<root>/<path>.bluedoc.json      the doc, rendered from its JSON on each request
       /<root>/<path>.bluedoc.json?raw=1   the JSON itself
+      /<root>/<path>.<png|jpg|jpeg|gif|webp|svg|mp4|webm>   media files under the folder, for `media` blocks
       /__bluedoc/index.json  what the home page shows about every doc
+      /__bluedoc/ping?path=  server check; with a doc's URL path, also who reads replies and its saved approval
       /__bluedoc/vendor/<path>  files under assets/vendor (HorizonUI for the home page)
 Rendering validates the doc (errors show as a page) and records its meta.rev in the history file,
 exactly as build.py does, so the page always shows the current JSON and its revisions.
 
-Replies: Send answers posts to /__bluedoc/reply, Request changes to /__bluedoc/changes. Each is
-saved next to the doc (<name>.reply.md/.json, <name>.changes.md/.json, overwritten each time) and
-queued for `wait`, which returns the oldest unread one. Python 3.9+ standard library only.
+Replies: Send answers posts to /__bluedoc/reply, Request changes to /__bluedoc/changes, Approve plan to
+/__bluedoc/approve. Each is saved next to the doc (<name>.reply.md/.json, <name>.changes.md/.json,
+<name>.approval.md/.json, overwritten each time) and queued for `wait`, which returns the oldest unread
+one. Python 3.9+ standard library only.
 """
 from __future__ import annotations
 
@@ -60,8 +63,10 @@ DEFAULT_PORT = int(os.environ.get("BLUEDOC_PORT") or 8740)
 SUFFIXES = (".bluedoc.json", ".blueprint.json")
 SKIP_DIRS = {"node_modules", "build", "dist", "target", "out", "vendor", "Pods", "DerivedData", "__pycache__"}
 MAX_DEPTH, MAX_BODY, SEARCH_CHARS = 8, 4 * 1024 * 1024, 8000   # SEARCH_CHARS keeps index.json small (~10 KB a doc)
-KINDS = ("answers", "changes")
-# meta.kind words that make a doc type "docs" when meta.type is unset; a kind with "review" is a "review"
+KINDS = ("answers", "changes", "approval")
+REPLY_SUFFIX = {"answers": "reply", "changes": "changes", "approval": "approval"}   # <stem>.<suffix>.md/.json
+REPLY_ROUTES = {"/__bluedoc/reply": "answers", "/__bluedoc/changes": "changes", "/__bluedoc/approve": "approval"}
+# meta.kind words that make a doc type "docs" when meta.type is unset (after the plan and review rules)
 DOCS_KINDS = {"architecture", "walkthrough", "runbook", "setup", "reference", "proposal", "change", "changes", "plan",
               "status", "guide", "design", "spec", "rfc", "adr", "overview", "tutorial", "onboarding", "explainer", "playbook"}
 FINDING_SIZES = ("blocker", "major", "minor", "nit")
@@ -81,7 +86,16 @@ def stem(p: Path) -> str:
 
 
 def reply_file(doc: Path, kind: str, ext: str) -> Path:
-    return doc.with_name(f"{stem(doc)}.{'reply' if kind == 'answers' else 'changes'}.{ext}")
+    return doc.with_name(f"{stem(doc)}.{REPLY_SUFFIX[kind]}.{ext}")
+
+
+def saved_approval(doc: Path) -> dict | None:
+    """The doc's saved plan approval as {rev, at} (both as the page posted them), or None."""
+    try:
+        data = json.loads(reply_file(doc, "approval", "json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    return {"rev": data.get("rev"), "at": data.get("at")} if isinstance(data, dict) else None
 
 
 def load_roots() -> list[Path]:
@@ -143,20 +157,31 @@ def url_for(doc: Path) -> str | None:
     return None
 
 
-def doc_for_url(path: str) -> Path | None:
+def file_for_url(path: str) -> Path | None:
+    """The file a /<root>/<path> URL names, if it exists inside that registered folder (after resolving
+    .. and symlinks)."""
     parts = unquote(path).lstrip("/").split("/", 1)
-    if len(parts) != 2:
+    if len(parts) != 2 or "\0" in parts[1]:
         return None
     r = slugs(load_roots()).get(parts[0])
     if not r:
         return None
     p = (r / parts[1]).resolve()
-    if (r not in p.parents) or not is_doc(p) or not p.is_file():
-        return None
-    return p
+    return p if r in p.parents and p.is_file() else None
 
 
-def text_of(x, out: list[str], skip=("files", "code", "id", "href", "x", "y", "w", "h", "col", "row")) -> None:
+def doc_for_url(path: str) -> Path | None:
+    p = file_for_url(path)
+    return p if p and is_doc(p) else None
+
+
+def media_for_url(path: str) -> Path | None:
+    """A media file under a registered folder, for a doc's relative `media` src."""
+    p = file_for_url(path)
+    return p if p and p.suffix.lower() in build.MEDIA_TYPES else None
+
+
+def text_of(x, out: list[str], skip=("files", "code", "id", "href", "x", "y", "w", "h", "col", "row", "src")) -> None:
     if isinstance(x, dict):
         for k, v in x.items():
             if k not in skip:
@@ -169,13 +194,16 @@ def text_of(x, out: list[str], skip=("files", "code", "id", "href", "x", "y", "w
 
 
 def doc_type(meta: dict) -> str:
-    """docs | review | other: meta.type when set, else read from meta.kind."""
+    """docs | review | plan | other: meta.type when set, else read from meta.kind. template.html follows
+    the same rule; the home page reads the result from the index."""
     if meta.get("type") in build.DOC_TYPES:
         return meta["type"]
-    words = set(re.findall(r"[a-z]+", str(meta.get("kind") or "").lower()))
-    if "review" in words:
+    kind = str(meta.get("kind") or "").strip().lower()
+    if kind.startswith("plan") or kind == "implementation plan":
+        return "plan"
+    if "review" in kind:
         return "review"
-    return "docs" if words & DOCS_KINDS else "other"
+    return "docs" if set(re.findall(r"[a-z]+", kind)) & DOCS_KINDS else "other"
 
 
 def all_blocks(doc: dict):
@@ -193,7 +221,10 @@ def all_blocks(doc: dict):
 
 
 def preview(doc: dict, dtype: str) -> dict:
-    """The card picture's data: the root drawing of the first canvas, the size of a review's diff, or block counts.
+    """The card picture's data: a plan's steps and files, the root drawing of the first canvas, the size of a
+    review's diff, or block counts.
+    Plan: steps = [status, effort] per step (first 24); files = counts per action (move counts as rename);
+    decisions = {total, decided} over decision items, decided only when the author carried picks over.
     Canvas nodes: x, y = top-left in canvas units, placed as the template does (centre = x/y, else col*250, row*160;
     size w/h, else 180x80, or 240x140 for a node with children); c = child count; edges = [from, to, kind] by node index."""
     blocks = list(all_blocks(doc))
@@ -206,7 +237,24 @@ def preview(doc: dict, dtype: str) -> dict:
                 if isinstance(it, dict) and it.get("state") in findings:
                     findings[it["state"]] += 1
     out: dict = {"findings": findings} if any(findings.values()) else {}
-    if diffs and (dtype == "review" or not canvas):
+    if dtype == "plan":
+        steps = [[str(it.get("status") or "todo"), str(it.get("effort") or "")]
+                 for b in blocks if b.get("type") == "steps" for it in b.get("items") or [] if isinstance(it, dict)]
+        actions: dict[str, str] = {}
+        for b in blocks:
+            if b.get("type") == "files":
+                for f in b.get("items") or []:
+                    if isinstance(f, dict) and f.get("path"):
+                        actions[str(f["path"])] = "rename" if f.get("action") == "move" else str(f.get("action") or "")
+        decisions = [it for b in blocks if b.get("type") == "checklist" for it in b.get("items") or []
+                     if isinstance(it, dict) and it.get("choices")]
+        dec: dict = {"total": len(decisions)}
+        decided = sum(1 for it in decisions if it.get("choice"))
+        if decided:
+            dec["decided"] = decided
+        out.update(kind="plan", steps=steps[:24], files={k: sum(a == k for a in actions.values()) for k in ("add", "edit", "delete", "rename")},
+                   decisions=dec)
+    elif diffs and (dtype == "review" or not canvas):
         files = [f for d in diffs for f in d.get("files") or [] if isinstance(f, dict) and f.get("status") != "context"]
         bars = []
         for f in files:
@@ -281,7 +329,7 @@ def summarize(p: Path) -> dict:
         info = {"title": stem(p), "errors": 0}
         try:
             doc = json.loads(p.read_text(encoding="utf-8"))
-            rep = build.validate(doc)
+            rep = build.validate(doc, p)
             meta = doc.get("meta") or {}
             dtype = doc_type(meta)
             items = []
@@ -395,7 +443,7 @@ def render(p: Path) -> tuple[int, str]:
         doc = json.loads(p.read_text(encoding="utf-8"))
     except (OSError, ValueError) as e:
         return 500, error_page(p, [f"cannot read: {e}"])
-    rep = build.validate(doc)
+    rep = build.validate(doc, p)
     if rep.errors:
         return 422, error_page(p, rep.errors)
     try:
@@ -447,16 +495,33 @@ def make_handler(port: int, default_to: str):
         def log_message(self, *_):
             pass
 
-        def send(self, code: int, body: str | bytes, ctype: str = "text/html; charset=utf-8", cache: str = "no-store") -> None:
+        def send(self, code: int, body: str | bytes, ctype: str = "text/html; charset=utf-8", cache: str = "no-store",
+                 headers: dict[str, str] | None = None) -> None:
             data = body.encode() if isinstance(body, str) else body
             self.send_response(code)
             self.send_header("Content-Type", ctype)
             self.send_header("Content-Length", str(len(data)))
             self.send_header("Cache-Control", cache)
             self.send_header("X-Content-Type-Options", "nosniff")
+            for k, v in (headers or {}).items():
+                self.send_header(k, v)
             self.end_headers()
             if self.command != "HEAD":
                 self.wfile.write(data)
+
+        def send_media(self, f: Path) -> None:
+            # one byte range at most: enough for <video> seeking (Safari won't play video without it)
+            data, ctype = f.read_bytes(), build.MEDIA_TYPES[f.suffix.lower()]
+            # an SVG opened on its own must not run script on this origin
+            extra = {"Accept-Ranges": "bytes", "Content-Security-Policy": "default-src 'none'; img-src data:; style-src 'unsafe-inline'; sandbox"}
+            m = re.fullmatch(r"bytes=(\d*)-(\d*)", self.headers.get("Range") or "")
+            if not m or not (m[1] or m[2]):
+                return self.send(200, data, ctype, headers=extra)
+            size = len(data)
+            start, end = (int(m[1]), min(int(m[2]), size - 1) if m[2] else size - 1) if m[1] else (max(0, size - int(m[2])), size - 1)
+            if start > end:
+                return self.send(416, b"", ctype, headers={**extra, "Content-Range": f"bytes */{size}"})
+            return self.send(206, data[start:end + 1], ctype, headers={**extra, "Content-Range": f"bytes {start}-{end}/{size}"})
 
         def json(self, code: int, obj) -> None:
             self.send(code, json.dumps(obj, ensure_ascii=False), "application/json; charset=utf-8")
@@ -494,7 +559,8 @@ def make_handler(port: int, default_to: str):
                 return self.json(200, index())
             if u.path == "/__bluedoc/ping":
                 doc = doc_for_url(q.get("path", ""))
-                return self.json(200, {"bluedoc": True, "home": "/", "to": INBOX.names.get(str(doc), default_to) if doc else default_to})
+                return self.json(200, {"bluedoc": True, "home": "/", "to": INBOX.names.get(str(doc), default_to) if doc else default_to,
+                                       "approval": saved_approval(doc) if doc else None})
             if u.path == "/__bluedoc/url":
                 return self.json(200, {"url": url_for(Path(q.get("doc", "")))})
             if u.path == "/__bluedoc/wait":
@@ -504,6 +570,9 @@ def make_handler(port: int, default_to: str):
                 return self.json(404, {"error": "not found"})
             doc = doc_for_url(u.path)
             if not doc:
+                media = media_for_url(u.path)
+                if media:
+                    return self.send_media(media)
                 return self.send(404, "<!doctype html><title>Not found</title><p>No bluedoc at this address. <a href='/'>All docs</a></p>")
             if q.get("raw"):
                 return self.send(200, doc.read_bytes(), "application/json; charset=utf-8")
@@ -531,11 +600,14 @@ def make_handler(port: int, default_to: str):
                 self.json(200, {"ok": True})
                 threading.Thread(target=self.server.shutdown, daemon=True).start()
                 return
-            if path not in ("/__bluedoc/reply", "/__bluedoc/changes"):
+            kind = REPLY_ROUTES.get(path)
+            if not kind:
                 return self.json(404, {"error": "not found"})
-            kind = "answers" if path.endswith("reply") else "changes"
-            field = "items" if kind == "answers" else "annotations"
-            if not isinstance(data.get(field), list):
+            if kind == "approval":
+                ok = data.get("decision") == "approved" and all(isinstance(data.get(k, []), list) for k in ("answers", "annotations"))
+            else:
+                ok = isinstance(data.get("items" if kind == "answers" else "annotations"), list)
+            if not ok:
                 return self.json(400, {"error": f"not a bluedoc {kind} payload"})
             doc = doc_for_url(str(data.get("path") or ""))
             if not doc:
@@ -623,9 +695,9 @@ def main() -> int:
     p.add_argument("--to", default="", help="who reads the replies (shown in the page), e.g. your agent name")
     p.add_argument("--root", type=Path, help="folder to register instead of the default")
     p.add_argument("--browser", action="store_true", help="also open the URL in the default browser")
-    p = sub.add_parser("wait", help="block until the reader sends answers or a change request for DOC")
+    p = sub.add_parser("wait", help="block until the reader sends answers, a change request or a plan approval for DOC")
     p.add_argument("doc", type=Path)
-    p.add_argument("--kind", choices=("answers", "changes", "any"), default="any")
+    p.add_argument("--kind", choices=(*KINDS, "any"), default="any")
     p.add_argument("--timeout", type=float, default=0, help="seconds; 0 waits forever. Exit 3 on timeout")
     for name in ("start", "run"):
         p = sub.add_parser(name)
@@ -700,7 +772,7 @@ def main() -> int:
             return 1
         if code == 200 and body and body.get("message"):
             m = body["message"]
-            label = "answers" if m["kind"] == "answers" else "change request"
+            label = {"answers": "answers", "changes": "change request", "approval": "approval"}[m["kind"]]
             print(f"--- bluedoc {label} ({m['json_file']}) ---")
             print(m["markdown"], end="")
             print("--- end ---", flush=True)

@@ -1,28 +1,29 @@
 ---
 name: bluedoc
-description: Generate self-contained HTML engineering docs (architecture pages, walkthroughs, runbooks, setup guides, change proposals, PR review findings) with zoomable blueprint canvases that open into each system's inner architecture and play animated data/control flows, checklists that persist as task trackers, and a code browser that pins review findings to the lines they are about. Use when asked for an HTML doc, architecture page, system walkthrough, runbook, onboarding guide, "peer review results", "review findings", "review comments in a bluedoc", "open threads", or "a bluedoc".
+description: Generate self-contained HTML engineering docs (architecture pages, walkthroughs, runbooks, setup guides, change proposals, implementation plans, PR review findings) with zoomable blueprint canvases that open into each system's inner architecture and play animated data/control flows, checklists that persist as task trackers, plans the reader approves or sends back from the page, and a code browser that pins review findings to the lines they are about. Use when asked for an HTML doc, architecture page, system walkthrough, runbook, onboarding guide, a plan, an implementation plan, a design doc, "plan mode", "make a plan", "propose a plan", "peer review results", "review findings", "review comments in a bluedoc", "open threads", or "a bluedoc".
 ---
 
 # bluedoc
 
-Write one JSON document; the bluedoc server renders it with the template on every request. You write only the JSON: never write, copy, read or diff HTML, and never read `assets/template.html` or a rendered page (that is where the tokens go). The page is HorizonUI styled, light and dark, with blueprint canvases, checklists, code review, revisions, and an annotator for the reader.
+Write one JSON document; the bluedoc server renders it with the template on every request. You write only the JSON: never write, copy, read or diff HTML, and never read `assets/template.html` or a rendered page (that is where the tokens go). The page is HorizonUI styled, light and dark, with blueprint canvases, checklists, plans, code review, revisions, and an annotator for the reader.
 
 Files, relative to this skill's directory (`<skill>` in the commands below):
 - `scripts/build.py`: validates structure, lints CRISP slips, records the revision. `-o out.html` also writes a standalone file, only when someone needs a file to send. Python 3.9+, stdlib only.
-- `scripts/serve.py`: the local server (`http://127.0.0.1:8740/`). Renders docs from their JSON, lists all of them on a searchable home page, and hands you the reader's answers and change requests (`serve.py wait`). Python 3.9+, stdlib only.
+- `scripts/serve.py`: the local server (`http://127.0.0.1:8740/`). Renders docs from their JSON, lists all of them on a searchable home page, and hands you the reader's answers, change requests and plan approvals (`serve.py wait`). Python 3.9+, stdlib only.
 - `scripts/gitdiff.py`: turns a git range plus `path:line` comments into a `diff` block and writes it into the JSON.
 - `scripts/ghthreads.py`: turns a GitHub PR's review threads into the `comments.json` list for `gitdiff.py` and checklist item stubs. Needs `gh` signed in.
 - `assets/template.html`, `assets/home.html`: the runtime. Never edit them per document, never read them.
 - `references/schema.md`: every field. Read it before writing the JSON.
 - `examples/acme-orders.bluedoc.json`: architecture + runbook (3-level canvas, flows per level, checklist linked to the drawing, troubleshooting).
 - `examples/acme-review-findings.bluedoc.json`: review findings for two PRs, in the layout below, with two revisions.
+- `examples/acme-saved-carts-plan.bluedoc.json`: an implementation plan in the layout under "Plans" (proposed canvas, before/after, a wireframe in `examples/media/`, steps, files, open questions).
 
 ## Workflow
 
 1. **Write in CRISP.** If the `crisp` skill is installed, read it and apply it at **CRISP 3** to every string you write: titles, tldr, leads, callouts, node `md`, flow step labels, checklist items. Otherwise apply the ten rules in "Writing" below.
 2. **Gather facts from the source.** Read the code, configs, and runs the document describes. Every node, edge, and step must map to something real: a file, a symbol, a queue, a command. Record anchors (`path:line`) for `refs`. Mark what you did not observe as `unverified`.
 3. **Plan the structure** (below) before writing JSON.
-4. **Write the JSON**: `docs/<topic>/<name>.bluedoc.json`. Keep it in the repo; it is the source. Set `meta.rev` (start at `1` or `A`), `meta.date`, and `meta.kind`; set `meta.type` (`docs`, `review`, `other`) only when `kind` alone doesn't say it. No HTML file.
+4. **Write the JSON**: `docs/<topic>/<name>.bluedoc.json` (plans: `docs/plans/<topic>.bluedoc.json`). Keep it in the repo; it is the source. Set `meta.rev` (start at `1` or `A`), `meta.date`, and `meta.kind`; set `meta.type` (`docs`, `review`, `plan`, `other`) only when `kind` alone doesn't say it (`kind: "Plan"` is already a plan). No HTML file. Images and videos go next to the JSON (e.g. `docs/plans/media/`) and into `media` blocks by relative path.
 5. **Validate:**
    ```sh
    python3 <skill>/scripts/build.py docs/<topic>/<name>.bluedoc.json
@@ -56,6 +57,7 @@ Order sections by what the reader needs first:
 | Walkthrough ("how X works") | TL;DR → canvas with one flow per scenario → step-by-step explanation per flow → edge cases |
 | Setup / runbook | TL;DR → prerequisites checklist → canvas (what you are building) → procedure checklists → verification → troubleshooting table → teardown checklist |
 | Change / proposal | TL;DR → canvas with `state` (`proposed`, `removed`) → what changes (table) → rollout checklist → risks |
+| Plan (anything you'd hand over before implementing) | See "Plans" below. |
 | Review findings (default whenever review results go in a bluedoc) | TL;DR → Summary (table + provenance note) → one section per PR: findings checklist, then a `diff` of the commented files. See "Review findings" below. |
 
 Rules:
@@ -67,6 +69,32 @@ Rules:
 - **Checklists are the task tracker.** Every procedure is a checklist, not a numbered text list. Each item collapses to two lines, so write them for scanning: `text` is the action in one line (imperative verb first, ≤ 90 characters), `sub` is one line of why or what it unblocks. Everything else goes in the open row: `detail`, `code` for the command, `verify` for the observable result, and `blocks` for tables or a sub-checklist. Link items to the drawing with `refs` so readers jump from a step to the part it touches.
 - **Findings sit on their code.** In a review, every finding with a `path:line` is a checklist item and a comment in that PR's `diff` block. Follow "Review findings" below.
 - **Tables for comparisons, terms for vocabulary, callouts for risk.** `caution` before a step that can lose data or damage equipment; `warning` before a step that can hurt people or production; place it before the step it guards.
+
+## Plans
+
+Whenever you would hand the user a plan in Markdown before implementing (plan mode, "make a plan", "propose a plan", a design doc) and they can open a browser, write it as a bluedoc instead. Save it as `docs/plans/<topic>.bluedoc.json` unless the repo already keeps plans somewhere else. Set `meta.kind: "Plan"`: the page then shows a status chip (Awaiting approval, Changes requested, Approved · rev X) and an **Approve plan** key. `examples/acme-saved-carts-plan.bluedoc.json` is the reference.
+
+**Layout**
+
+| Section | Holds |
+|---|---|
+| Goal (`tldr`) | What ships, for whom, in how many steps, and how many questions need a pick. |
+| Context | The current state and why it has to change: a canvas of today's system, or short text with `path:line` anchors. |
+| Approach | The proposal: a canvas with new parts as `state: "proposed"` and removed ones as `removed`; a `compare` block for before/after (API response, schema, UI); `media` blocks for mockups or wireframes. |
+| Steps | One `steps` block in implementation order. Each step is one reviewable change: imperative title, `effort` S/M/L, `md` with the detail, `files` it touches, `refs` to the canvas. Leave `status: "todo"` until the work lands. |
+| Files | One `files` block: every path the plan adds, edits, deletes, renames or moves, with `why` and the `step` that touches it. Keep the paths identical to the steps' `files`. |
+| Open questions | A checklist of decision items (`choices` + `recommend`, `numbered: false`), one per choice the reader must make. The title is the question; `sub` is "Recommend <option>: <reason>." |
+| Risks | A table: risk, likelihood, impact, mitigation. |
+| Verification | A checklist of plain steps, each with `verify` (and `code` when there's a command): how you'll show the plan worked. |
+
+**Approval loop**
+1. Validate, then `serve.py open docs/plans/<topic>.bluedoc.json --to <your name>`, and give the user the URL.
+2. Run `serve.py wait docs/plans/<topic>.bluedoc.json --kind any` in the background.
+3. **Approval** (`--- bluedoc approval … ---`): implement exactly the approved rev. Use the reader's picks; an open question with no pick means your recommendation. The notes sent with the approval are binding instructions.
+4. **Change request**: revise the plan, bump `meta.rev`, write `changes`, validate, send the `<url>?diff=<previous rev>` link, and wait again. Picks sent with it are the reader's decisions so far: carry them over as `choice`.
+5. Never start implementing before an approval of the current rev.
+
+Plans have no Send answers: the picks travel with **Approve plan** or **Request changes**.
 
 ## Review findings
 
@@ -113,23 +141,23 @@ python3 <skill>/scripts/gitdiff.py --repo <checkout> --base <base> --head <head>
 ```
 `ghthreads.py` prints the PR's base and head and one decision-item stub per open thread, with the standard options, the reviewer's text in `detail`, and `<<…>>` placeholders for the finding, size, recommendation and reasoning. The build fails while any `<<…>>` placeholder is left, so no finding ships without a recommendation.
 
-## Reader replies: answers and change requests
+## Reader replies: answers, change requests and approvals
 
-The reader sends two different things back, from two different places:
+The reader sends three different things back, all from the bottom tray:
 
-| | **Answers** | **Change requests** |
-|---|---|---|
-| What | Picks on decision items, ticks, a comment per item, an overall message | Annotations on the page: a pin on an element, a selected passage, a drawing, each with the change they want |
-| Where | **Send answers** in the app bar | The tray at the bottom (View, Point, Select, Draw) and the **Comments** sidebar on the right, then **Request changes** |
-| Means | "Here are my decisions; go do the work" | "Edit this doc" |
-| Files | `<name>.reply.md` / `.json` | `<name>.changes.md` / `.json` |
+| | **Answers** | **Change requests** | **Approval** (plan pages) |
+|---|---|---|---|
+| What | Picks on decision items, ticks, a comment per item, an overall message | Annotations on the page: a pin on an element, a selected passage, a drawing, each with the change they want; on plan pages also the picks | "Implement this rev", with the picks, an optional note and any pending annotations as notes |
+| Where | **Send answers**, the last key of the tray (pages with a checklist, not plans); it turns green once there is something to send | The tray's View, Point, Select, Draw keys and the **Comments** sidebar on the right, then **Request changes** | **Approve plan**, the green last key of the tray |
+| Means | "Here are my decisions; go do the work" | "Edit this doc" | "Go ahead, exactly as written" |
+| Files | `<name>.reply.md` / `.json` | `<name>.changes.md` / `.json` | `<name>.approval.md` / `.json` |
 
 After `serve.py open`, wait for the reader in the background (no timeout, or a long one):
 ```sh
-python3 <skill>/scripts/serve.py wait docs/<topic>/<name>.bluedoc.json            # either kind
-python3 <skill>/scripts/serve.py wait docs/<topic>/<name>.bluedoc.json --kind changes
+python3 <skill>/scripts/serve.py wait docs/<topic>/<name>.bluedoc.json            # any kind
+python3 <skill>/scripts/serve.py wait docs/<topic>/<name>.bluedoc.json --kind changes   # answers | changes | approval | any
 ```
-It prints `--- bluedoc answers (…json) ---` or `--- bluedoc change request (…json) ---`, the Markdown, `--- end ---`, and exits 0 (3 on `--timeout`). Replies sent while nobody waits are queued; the next `wait` gets the oldest. Then:
+It prints `--- bluedoc answers (…json) ---`, `--- bluedoc change request (…json) ---` or `--- bluedoc approval (…json) ---`, the Markdown, `--- end ---`, and exits 0 (3 on `--timeout`). Replies sent while nobody waits are queued; the next `wait` gets the oldest. Then:
 
 **Answers**
 1. Act on each pick. A missing pick means "not decided": ask, don't assume your recommendation.
@@ -137,11 +165,13 @@ It prints `--- bluedoc answers (…json) ---` or `--- bluedoc change request (�
 3. Update the JSON with what changed (`done: true` on finished steps, `choice` carrying the reader's picks, new findings as items), bump `meta.rev`, write `changes`, validate, and tell the reader the `?diff=` link.
 
 **Change requests**
-1. `type: "general"` annotations are about the whole doc (target `doc`); apply them across it. Every other annotation names its target (`label`, and `key` such as `item:t412/tier-boundary`, `block:<section>/<n>`, `row:…`, `node:<canvas>/<key>`, `line:<diff>/<path>:<n>`), the quoted or covered text, and the requested change. Edit exactly those places in the JSON.
+1. `type: "general"` annotations are about the whole doc (target `doc`); apply them across it. Every other annotation names its target (`label`, and `key` such as `item:t412/tier-boundary`, `block:<section>/<n>`, `row:…`, `node:<canvas>/<key>`, `line:<diff>/<path>:<n>`, `step:<section>/<n>/<step>`, `file:<section>/<n>/<path>`, `media:<section>/<n>`, `compare:<section>/<n>/before`), the quoted or covered text, and the requested change. Edit exactly those places in the JSON.
 2. A request you can't or shouldn't do (it contradicts the source, or needs a decision): don't silently skip it; say so in `changes` or ask.
 3. Bump `meta.rev`, write `changes` listing what you changed per request, validate, give the `?diff=` link, and `wait` again.
 
-On `file://` (a standalone `-o` file) both dialogs offer **Copy** only; the reader pastes the text into the chat. `<name>.reply.*` and `<name>.changes.*` are the reader's messages: don't commit them unless asked.
+**Approvals**: follow "Plans" above. The Markdown lists each decision with its pick (or "no pick; recommended: …") and the notes that came with the approval.
+
+On `file://` (a standalone `-o` file) the dialogs offer **Copy** only; the reader pastes the text into the chat. `<name>.reply.*`, `<name>.changes.*` and `<name>.approval.*` are the reader's messages: don't commit them unless asked.
 
 ## Writing (CRISP 3)
 

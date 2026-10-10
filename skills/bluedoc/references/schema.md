@@ -1,6 +1,6 @@
 # bluedoc JSON schema
 
-One JSON file describes one HTML document. `scripts/build.py` validates it and inlines it into `assets/template.html`. Worked examples: `examples/acme-orders.bluedoc.json` (canvas, flows, checklists) and `examples/acme-review-findings.bluedoc.json` (review findings: decision items and diffs).
+One JSON file describes one HTML document. `scripts/build.py` validates it and inlines it into `assets/template.html`. Worked examples: `examples/acme-orders.bluedoc.json` (canvas, flows, checklists), `examples/acme-review-findings.bluedoc.json` (review findings: decision items and diffs) and `examples/acme-saved-carts-plan.bluedoc.json` (a plan: steps, files, media, compare, decisions).
 
 ## Document
 
@@ -9,7 +9,7 @@ One JSON file describes one HTML document. `scripts/build.py` validates it and i
 | `id` | id | yes | Namespace for checklist progress in `localStorage`. Never change it after people start ticking. |
 | `title` | string | yes | Page `<h1>` and browser title (`<title> · bluedoc`). |
 | `subtitle` | inline md | no | One sentence under the title. |
-| `meta` | object | no | `org`, `kind` (Architecture, Walkthrough, Runbook, Setup, Change), `dwg` (drawing number), `rev`, `date`. `org · kind · date` form the line above the title; `dwg` and `rev` appear under **Document** in the status rail and in the canvas title blocks. `rev` names the revision: the build keeps one history entry per `rev` (see Revisions). `type` (`docs`, `review`, `other`) groups the doc on the home page; unset, it is derived from `kind` (Review → review; Architecture, Walkthrough, Runbook, Setup, Reference, Proposal, Change, Plan, Status → docs). |
+| `meta` | object | no | `org`, `kind` (Architecture, Walkthrough, Runbook, Setup, Change, Plan), `dwg` (drawing number), `rev`, `date`, `type`. `org · kind · date` form the line above the title; `dwg` and `rev` appear under **Document** in the status rail and in the canvas title blocks. `rev` names the revision: the build keeps one history entry per `rev` (see Revisions). `type` (`docs`, `review`, `plan`, `other`) groups the doc on the home page and picks the page's tray. Unset, it is derived from `kind`, case-insensitive: starts with `plan` or is `implementation plan` → `plan`; contains `review` → `review`; names a docs kind (Architecture, Walkthrough, Runbook, Setup, Reference, Proposal, Change, Status, Guide, Design, Spec, RFC, ADR, …) → `docs`; anything else → `other`. A `plan` doc is a **plan page**: see [Plans](#plans). |
 | `state` | `[{label, kind}]` | no | Provenance, listed under **Status** in the status rail as dots. `kind`: `ok` (green), `warn` (amber), `risk` (red), `info` (blue), `todo` (grey). Example: `{"label": "not live", "kind": "warn"}`. Keep each label under ~40 characters. |
 | `links` | `[{label, href}]` | no | Related documents, listed under **Related** in the status rail. |
 | `tldr` | md | no | The answer in 1–3 sentences. Required in practice for documents longer than 3 sections. |
@@ -35,6 +35,10 @@ One JSON file describes one HTML document. `scripts/build.py` validates it and i
 | `checklist` | `id`, `title`, `items`, `numbered`? (default true) | Procedures and task tracking. See below. |
 | `canvas` | see below | Blueprint drawings. |
 | `diff` | see [Diff](#diff) | A code change with line comments: file list, unified diff, comment cards. Generate it with `scripts/gitdiff.py`. |
+| `steps` | `id`, `items`, `title`? | A plan's implementation order, as a numbered timeline. See [Plan blocks](#plan-blocks). |
+| `files` | `items`, `title`? | The files a plan touches, grouped by folder, each with an action badge. |
+| `media` | `src`, `alt`, `caption`?, `width`? | An image (opens full size on click) or a video, from a file next to the doc. |
+| `compare` | `before`, `after`, `title`? | Two panes side by side: before and after code, text or images. |
 
 ### Inline markdown
 
@@ -63,7 +67,7 @@ Each item is a collapsed row: a tick, a one-line **title** (`text`), a one-line 
 | `state`, `stateKind` | row, right | Chip such as `unverified` / `warn`. Keep it to 1–3 words. |
 | `detail` | open | Extra md: lists, paragraphs, links. |
 | `code`, `lang` | open | Command to run for this step, with a Copy button. |
-| `blocks` | open | Any of `text`, `callout`, `table`, `code`, `terms`, `cards`, `checklist`. A nested checklist ticks on its own, counts in the page total and exports indented under its parent; nested checklists can't nest again. |
+| `blocks` | open | Any of `text`, `callout`, `table`, `code`, `terms`, `cards`, `files`, `media`, `compare`, `checklist`. A nested checklist ticks on its own, counts in the page total and exports indented under its parent; nested checklists can't nest again. |
 | `verify` | open (or row line 2) | Observable success check (output, state, file). Required for steps whose failure is silent. Shown as **Check** when the row is open, unless it already fills line 2. |
 | `refs` | open | `"<canvasId>/<nodeKey>"`; renders buttons that open that node. Node keys nest with `/`: `arch/api/auth`. |
 | `done` | | Initial tick before the reader touches it (e.g. steps the author already verified). Not for decision items. |
@@ -94,7 +98,7 @@ Every item has a comment box at the bottom of its open body (and on its diff car
   > Ship it with the test first.
 ```
 
-**Send answers** (app bar, shown when the page has a checklist) opens a dialog: a count of decisions, ticks and comments, an overall message (stored under `bp:<doc.id>:__message`, printed after the page title in the export), a Markdown preview, **Copy**, and **Send**. Send appears only when the page is served by `scripts/serve.py` (the page probes `GET /__bluedoc/ping?path=…`); it posts to `/__bluedoc/reply`, and the server writes `<name>.reply.md` and `<name>.reply.json` next to the doc's JSON and queues it for `serve.py wait`. The JSON:
+**Send answers** (the last key of the bottom tray, on pages with a checklist; plan pages don't have it) opens a dialog: a count of decisions, ticks and comments, an overall message (stored under `bp:<doc.id>:__message`, printed after the page title in the export), a Markdown preview, **Copy**, and **Send**. The key is neutral until the reader picks, ticks or comments on something, then turns green. Send appears only when the page is served by `scripts/serve.py` (the page probes `GET /__bluedoc/ping?path=…`); it posts to `/__bluedoc/reply`, and the server writes `<name>.reply.md` and `<name>.reply.json` next to the doc's JSON and queues it for `serve.py wait`. The JSON:
 
 ```json
 { "kind": "answers", "doc": "<doc.id>", "rev": "<meta.rev>", "title": "…", "path": "/<root>/<path>.bluedoc.json", "at": "<ISO time>", "message": "…",
@@ -102,7 +106,7 @@ Every item has a comment box at the bottom of its open body (and on its diff car
              { "checklist": "local", "item": "doctor", "text": "…", "done": true } ],
   "markdown": "<the Copy progress text>" }
 ```
-Decision items carry `choice` (null when undecided) and `recommend`; plain items carry `done`; `note` appears only when the reader wrote one. Change requests from the annotator are a separate message: see "Annotations" below.
+Decision items carry `choice` (null when undecided) and `recommend`; plain items carry `done`; `note` appears only when the reader wrote one. Change requests from the annotator are a separate message: see "Annotations" below. On plan pages the picks travel with **Approve plan** or **Request changes** instead: see [Plans](#plans).
 
 ## Diff
 
@@ -148,6 +152,89 @@ python3 <skill>/scripts/gitdiff.py --repo ../acme-shop --base a1b2c3d --head e4f
 
 Diff the commits the reviewer actually read. If the branch was rebased since, keep the reviewed range and say so in `note`: the line numbers in the findings belong to that range.
 
+## Plan blocks
+
+Four block types made for plans. They work in any doc. Text fields are inline md unless marked md.
+
+### Steps
+
+```json
+{ "type": "steps", "id": "plan", "title": "Implementation order", "items": [
+  { "id": "table", "title": "Add the `saved_carts` table", "status": "todo", "effort": "S",
+    "md": "New table only, so the migration takes no lock on `carts`.",
+    "files": ["services/orders-api/migrations/0012_saved_carts.sql"], "refs": ["arch/savedtbl"] } ] }
+```
+
+| Field | Meaning |
+|---|---|
+| `id` | Required. Unique among the doc's steps blocks. |
+| `title` | The block's heading. |
+| `items[].id` | Required. Unique across the doc: `files` rows point to it. |
+| `items[].title` | Required. The step, imperative, one line (≤ 90 characters). Linted like a checklist item. |
+| `items[].md` | md, shown when the step is open. |
+| `items[].files` | Paths, shown as chips when the step is open. A chip scrolls to and flashes the matching row of a `files` block; when the doc has a `files` block, the build warns about a path it doesn't list. |
+| `items[].status` | `todo` (default), `doing`, `done`, `blocked`. |
+| `items[].effort` | `S`, `M` or `L`. |
+| `items[].refs` | `"<canvasId>/<nodeKey>"`: buttons that open that node. |
+
+The page draws a numbered vertical timeline. Steps are the proposal, not a tracker: the reader can't tick them. Change `status` in a new revision as work lands.
+
+### Files
+
+```json
+{ "type": "files", "title": "Changed files", "items": [
+  { "path": "services/orders-api/src/carts/savedCartRepo.ts", "action": "add", "why": "Reads and writes saved carts.", "step": "repo" },
+  { "path": "web/src/cart/sessionCartStorage.ts", "action": "rename", "from": "web/src/cart/cartStorage.ts", "why": "Holds only the session cart now.", "step": "cutover" } ] }
+```
+
+| Field | Meaning |
+|---|---|
+| `items[].path` | Required. Path from the repo root; a step's `files` chip matches it exactly. |
+| `items[].action` | Required. `add` (badge A, green), `edit` (M, blue), `delete` (D, red), `rename` or `move` (R, amber). |
+| `items[].from` | The old path; only for `rename` and `move`. |
+| `items[].why` | Required. One line on what changes in the file. |
+| `items[].step` | A step id. The row's step link jumps to that step; the build warns when no steps block has it. |
+
+Rows are grouped by folder, each with a file-type icon, the badge, the path and `why`.
+
+### Media
+
+```json
+{ "type": "media", "src": "media/acme-saved-carts.svg", "alt": "Wireframe of the cart page with the Saved carts panel.",
+  "caption": "Dashed blue parts are new.", "width": 960 }
+```
+
+| Field | Meaning |
+|---|---|
+| `src` | Required. A path relative to the folder of the doc's JSON (`media/mockup.svg`), or a `data:` URI. |
+| `alt` | Required. What the image or video shows. |
+| `caption` | Inline md under it. |
+| `width` | The most pixels wide it shows. |
+
+- `png`, `jpg`, `jpeg`, `gif`, `webp` and `svg` render as an image; clicking opens it full size in a lightbox. `mp4` and `webm` render as a video with controls, muted, `playsinline`.
+- `http(s)` and other URLs with a scheme, and absolute paths, are build errors: pages make no network calls. Save the file next to the doc.
+- The build checks that the file exists and warns above 2 MB.
+- On the server the page uses `src` as written. It resolves against the doc's URL `/<root>/<dir>/<name>.bluedoc.json`, and the server serves media files under its registered roots.
+- `build.py -o` inlines every media file as a `data:` URI, so the standalone file works offline.
+- Draw SVGs that read on light and dark pages: a neutral palette, or a `prefers-color-scheme` block inside the SVG (see `examples/media/acme-saved-carts.svg`).
+
+### Compare
+
+```json
+{ "type": "compare", "title": "What the web app gets back",
+  "before": { "label": "Today: `GET /v1/cart`", "lang": "json", "code": "{ \"items\": [] }" },
+  "after": { "label": "Proposed: `GET /v1/saved-carts`", "lang": "json", "code": "{ \"carts\": [], \"limit\": 20 }" } }
+```
+
+| Side field | Meaning |
+|---|---|
+| `label` | The pane's heading. Default `Before` / `After`. |
+| `md` | md text. |
+| `code`, `lang` | Code. |
+| `src`, `alt` | An image, with the same path rules as `media`. Give `alt` with every `src`; the build warns without it. |
+
+Each side needs one of `md`, `code` or `src` and shows whichever is present. The panes sit side by side and stack at ≤ 900 px.
+
 ## Revisions
 
 Every `build.py doc.bluedoc.json` run and every server render records the document in `doc.bluedoc.history.json` under its `meta.rev`: a new `rev` appends a revision, the same `rev` replaces the last one. A `rev` that is already an earlier revision fails the build (and shows as an error page). No `meta.rev`: no history. The history file stores each revision's header and section fields once per revision and each block once across all revisions (by content hash); the page embeds the revisions other than the current one, with blocks the current one still has as references, so a page with ten small edits grows by roughly the edited blocks.
@@ -155,7 +242,7 @@ Every `build.py doc.bluedoc.json` run and every server render records the docume
 | URL (the doc's server URL, or a `-o` file) | Shows |
 |---|---|
 | `<url>` | The current revision. |
-| `<url>?rev=B` | Revision B, read-only: ticks, picks and comments made there are not stored; **Send answers** and the annotation toolbar are hidden. |
+| `<url>?rev=B` | Revision B, read-only: ticks, picks and comments made there are not stored; the bottom tray (annotations, **Request changes**, **Send answers**, **Approve plan**) is hidden. |
 | `<url>?diff=B` | The current revision with everything that changed since B marked; `?rev=C&diff=B` compares B with C. A bottom tray steps through the changes (↑/↓, `j`/`k`) and **Done** (`Esc`) leaves compare view. |
 
 The diff matches sections, checklist items and canvas nodes by `id`, blocks by type and `id` (or position), and table rows by content then first cell. Each change gets a **New** / **Changed** / **Removed** tag; changed things get a **What changed** box with a word-level diff of each changed field (title, subtitle, details, options, recommendation, cells, node labels, flow steps). Removed sections, blocks, items and rows are shown struck through where they were. Canvas parts that are new or changed glow in the drawing. A `diff` block reports range, files and comments that changed.
@@ -245,6 +332,71 @@ The tray of keys at the bottom of the current revision has four modes: **View** 
 | `row:<blockPath>/<r>`, `card:<blockPath>/<i>`, `para:<blockPath>/<i>` | a table row, a card, a paragraph or list item of that block |
 | `node:<canvasId>/<nodeKey>` | a canvas node (`nodeKey` nests with `/`) |
 | `line:<diffId>/<path>:<n>` (`o<n>` = removed line), `comment:<diffId>/<i>` | a diff line, a review comment |
+| `step:<blockPath>/<stepId>` | a step of a `steps` block |
+| `file:<blockPath>/<path>` | a row of a `files` block (`path` as written) |
+| `media:<blockPath>` | a `media` block |
+| `compare:<blockPath>/before`, `compare:<blockPath>/after` | one pane of a `compare` block |
+
+`<blockPath>` is `<sectionId>/<i>`, or `<checklist>/<item>/<k>` for a block inside a checklist item, as in `block:` and `row:`.
+
+### Bottom tray
+
+On the current revision the tray's last keys depend on the page. The `?diff=` tray (compare view) and `?rev=` (no tray) don't change.
+
+| Page | Tray |
+|---|---|
+| Plan page | View · Point · Select · Draw │ eye (hide or show comment marks) │ **Request changes · N** · **Approve plan** (green) |
+| Other page with a checklist | View · Point · Select · Draw │ eye │ **Request changes · N** · **Send answers**: neutral with nothing to send, filled green once the reader picks, ticks or comments on something |
+| Page without a checklist | View · Point · Select · Draw │ eye │ **Request changes · N** |
+
+## Plans
+
+A doc whose type is `plan` (`meta.type`, or derived from `meta.kind`) is a **plan page**: a proposal the reader approves or sends back. SKILL.md "Plans" gives the layout; `examples/acme-saved-carts-plan.bluedoc.json` is the reference.
+
+A status chip sits next to the eyebrow:
+
+| Chip | When |
+|---|---|
+| **Plan · Awaiting approval** (amber) | No approval for the current `meta.rev`. |
+| **Changes requested** (blue) | The reader sent Request changes on the current `meta.rev`. Stored in the browser under `bp:<doc.id>:__planstate` as `{rev, state, at}`. |
+| **Approved · rev X** (green) | The saved approval is for the current `meta.rev`. |
+
+**Approve plan** opens a dialog titled "Approve this plan (rev X)": an optional note, a summary ("N pending comments go with it as notes", and "M open questions have no pick; the agent will use its recommendation" when some decision items are unpicked), a preview of the decisions, **Copy**, and a green **Approve**. Approve posts `POST /__bluedoc/approve` with the header `X-Bluedoc: 1`:
+
+```json
+{ "kind": "approval", "decision": "approved", "doc": "<doc.id>", "rev": "A", "title": "…", "path": "/<root>/<path>.bluedoc.json",
+  "at": "<ISO time>", "note": "Ship the API first.",
+  "answers": [ { "checklist": "decisions", "item": "retention", "text": "…", "choice": "d180", "recommend": "d180" } ],
+  "annotations": [ { "id": "c…", "type": "pin", "note": "…", "target": { "key": "step:steps/0/cutover", "label": "…", "text": "…" } } ],
+  "markdown": "…" }
+```
+
+`answers` holds the same item objects as the `items` of Send answers (`checklist`, `item`, `text`, `choice`, `recommend`, `done`, `note`). `annotations` holds the pending annotations, in the change-request shape; once sent they turn **Open**, as after Request changes. The Markdown, leaving out any section that would be empty:
+
+```md
+# Plan approved: <title> (rev <rev>), <YYYY-MM-DD>
+
+<note>
+
+## Decisions
+- <item text> → **<pick label>**
+- <item text> → **<pick label>** (recommended: <label>)
+- <item text> (no pick; recommended: <label>)
+  > <the reader's comment on the item>
+
+## Notes with the approval
+1. **<label>** (pin|text|drawing|general)
+   > <excerpt>
+   Note: <note>
+```
+
+A pick carries `(recommended: …)` only when it differs from the recommendation; an item with no `recommend` and no pick reads `(no pick)`. Plain items the reader commented on are listed too. General comments come first in the notes; `> <excerpt>` is left out when there is none, and `(rev <rev>)` when the doc has no `meta.rev`.
+
+The server writes `<name>.approval.md` and `<name>.approval.json` next to the doc (overwriting the last ones), queues the message with kind `approval` for `serve.py wait`, and answers `{ok, saved}`. The key then reads **Approved · rev X** with a check, disabled. A new `meta.rev` resets it: the plan awaits approval again.
+
+- **Request changes** on a plan page also carries `answers` (the decision picks) when there are any, and its Markdown ends with the same `## Decisions` section. Plan pages have no Send answers.
+- `GET /__bluedoc/ping?path=<doc URL path>` returns `{bluedoc, to, home, approval}`. `approval` is the doc's saved approval as `{rev, at}`, or `null`. The page counts the plan approved only when `approval.rev === meta.rev`.
+- `serve.py wait DOC --kind answers|changes|approval|any` (default `any`) returns the oldest queued message of that kind. An approval prints `--- bluedoc approval (…json) ---`, the Markdown, then `--- end ---`.
 
 ## Automation API
 
@@ -270,3 +422,6 @@ The built page exposes `window.BP`:
 | `BP.annotate({type, key, note, quote?})` | Adds an annotation, as the toolbar would. `null` on `?rev=` / `?diff=`. |
 | `BP.setMode('view'|'point'|'select'|'draw')` | Switches the toolbar mode. |
 | `BP.sidebar({open, section})` | Opens/closes the right sidebar on `'comments'` or `'revisions'`; returns `{available, open, section, as}`. |
+| `BP.docType` | Property: the page's type, `'docs'`, `'review'`, `'plan'` or `'other'`. |
+| `BP.planState()` | `{type, state, rev, approvedRev}`. `state` is `'awaiting'`, `'changes'` or `'approved'` on plan pages, `null` elsewhere; `approvedRev` is the rev of the approval the page knows (from the server's ping or this browser), else `null`. |
+| `BP.approvePayload(note?)` | The body **Approve** posts to `/__bluedoc/approve`. |

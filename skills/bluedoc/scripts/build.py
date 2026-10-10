@@ -3,7 +3,7 @@
 
 Usage:
   build.py doc.json                 validate, lint, record the revision (view it with serve.py)
-  build.py doc.json -o out.html     same, plus a standalone HTML file for sharing offline
+  build.py doc.json -o out.html     same, plus a standalone HTML file for sharing offline (media inlined)
   build.py doc.json --check         validate and lint only
   build.py doc.json --strict        treat lint warnings as errors
   build.py doc.json --show-rev B    print revision B, rebuilt from the history, as JSON
@@ -22,6 +22,7 @@ Python 3.9+ standard library only.
 from __future__ import annotations
 
 import argparse
+import base64
 import datetime as dt
 import hashlib
 import json
@@ -33,15 +34,22 @@ HERE = Path(__file__).resolve().parent
 TEMPLATE = HERE.parent / "assets" / "template.html"
 HISTORY_VERSION = 1
 
-BLOCK_TYPES = {"text", "callout", "table", "code", "terms", "cards", "checklist", "canvas", "diff"}
+BLOCK_TYPES = {"text", "callout", "table", "code", "terms", "cards", "checklist", "canvas", "diff", "steps", "files", "media", "compare"}
 FILE_STATUSES = {"added", "modified", "deleted", "renamed", "context"}
-ITEM_BLOCK_TYPES = {"text", "callout", "table", "code", "terms", "cards", "checklist"}
+ITEM_BLOCK_TYPES = {"text", "callout", "table", "code", "terms", "cards", "checklist", "files", "media", "compare"}
 MAX_TITLE, MAX_SUB = 90, 120   # characters that fit the collapsed checklist row
 MAX_CHOICES, MAX_CHOICE_LABEL = 6, 28
 PLACEHOLDER = re.compile(r"<<[^<>\n]{1,120}>>")
 CALLOUT_KINDS = {"note", "caution", "warning", "risk", "decision"}
 STATE_KINDS = {"ok", "warn", "risk", "info", "todo"}
-DOC_TYPES = {"docs", "review", "other"}   # meta.type: the home page's grouping; unset = derived from meta.kind
+DOC_TYPES = {"docs", "review", "plan", "other"}   # meta.type: the home page's grouping; unset = derived from meta.kind
+STEP_STATUSES = {"todo", "doing", "done", "blocked"}
+STEP_EFFORTS = {"S", "M", "L"}
+FILE_ACTIONS = {"add", "edit", "delete", "rename", "move"}
+# media a page may show: extension -> MIME type (serve.py serves these; -o inlines them as data URIs)
+MEDIA_TYPES = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif", ".webp": "image/webp",
+               ".svg": "image/svg+xml", ".mp4": "video/mp4", ".webm": "video/webm"}
+MAX_MEDIA_BYTES = 2 * 1024 * 1024
 NODE_KINDS = {"service", "process", "function", "store", "db", "cache", "stream", "queue", "device", "hardware",
               "actor", "user", "person", "client", "app", "ui", "external", "cloud", "note", "port"}
 NODE_STATES = {"live", "local", "proposed", "unverified", "removed", "replaced"}
@@ -233,8 +241,40 @@ def validate_diff(rep: Report, where: str, b: dict) -> dict[str, tuple[set[int],
     return files
 
 
-def validate(doc: dict) -> Report:
+def check_media_src(rep: Report, where: str, src, base: Path | None) -> None:
+    """A media src: a data: URI, or a path relative to the doc's folder with a known extension.
+    base is the doc's folder; without it the file itself isn't checked."""
+    if not isinstance(src, str) or not src.strip():
+        rep.err(where, "src must be a non-empty string: a path relative to the doc's folder, or a data: URI")
+        return
+    if src.startswith("data:"):
+        if not re.match(r"data:[\w.+-]+/[\w.+-]+[;,]", src):
+            rep.err(where, "data: URI needs a MIME type, e.g. data:image/png;base64,…")
+        return
+    if re.match(r"[a-zA-Z][a-zA-Z0-9+.-]*:", src) or src.startswith("//"):
+        what = "http(s) sources" if re.match(r"(https?:)?//", src, re.I) else "URLs with a scheme"
+        rep.err(where, f"{what} aren't allowed (pages make no network calls): save the file next to the doc and use a relative path")
+        return
+    if src.startswith("/"):
+        rep.err(where, f"src '{src}' is absolute: use a path relative to the doc's folder, e.g. media/{Path(src).name}")
+        return
+    path = src.split("?", 1)[0].split("#", 1)[0]
+    if Path(path).suffix.lower() not in MEDIA_TYPES:
+        rep.err(where, f"'{src}': extension not in {' '.join(sorted(MEDIA_TYPES))}")
+        return
+    if base is None:
+        return
+    f = base / path
+    if not f.is_file():
+        rep.err(where, f"'{src}' not found (looked for {f})")
+    elif f.stat().st_size > MAX_MEDIA_BYTES:
+        rep.warn(where, f"'{src}' is {f.stat().st_size / 1048576:.1f} MB (> {MAX_MEDIA_BYTES // 1048576} MB): compress or crop it; -o embeds it in the page")
+
+
+def validate(doc: dict, doc_path: Path | None = None) -> Report:
+    """doc_path, when given, is the doc's JSON file: media srcs are checked against its folder."""
     rep = Report()
+    base = Path(doc_path).resolve().parent if doc_path else None
     need(rep, "doc", doc, "id", "title", "sections")
     if "id" in doc:
         check_id(rep, "doc", doc["id"])
@@ -261,6 +301,11 @@ def validate(doc: dict) -> Report:
     checklist_items: dict[str, set[str]] = {}
     diffs: dict[str, dict[str, tuple[set[int], set[int]]]] = {}
     comments_to_check: list[tuple[str, str, dict]] = []
+    steps_blocks: set[str] = set()
+    step_ids: set[str] = set()
+    step_files: list[tuple[str, str]] = []     # (where, path) a step names in 'files'
+    file_rows: set[str] = set()                # paths listed by files blocks
+    file_steps: list[tuple[str, str]] = []     # (where, step id) a files row points to
 
     def check_block(bw: str, b: dict, depth: int) -> None:
         """depth 0 = section block, 1 = inside a checklist item, 2 = inside a nested checklist's item."""
@@ -369,6 +414,93 @@ def validate(doc: dict) -> Report:
             lint_text(rep, bw + ".note", b.get("note"))
             for ci, c in enumerate(b.get("comments") or []):
                 comments_to_check.append((f"{bw}.comments[{ci}]", b["id"], c))
+        elif t == "steps":
+            if not need(rep, bw, b, "id", "items"):
+                return
+            check_id(rep, bw, b["id"])
+            if b["id"] in steps_blocks:
+                rep.err(bw, f"duplicate steps id '{b['id']}'")
+            steps_blocks.add(b["id"])
+            lint_text(rep, bw + ".title", b.get("title"))
+            for ii, it in enumerate(b["items"]):
+                iw = f"{bw}.items[{ii}]"
+                if not isinstance(it, dict) or not need(rep, iw, it, "id", "title"):
+                    continue
+                check_id(rep, iw, it["id"])
+                if it["id"] in step_ids:
+                    rep.err(iw, f"duplicate step id '{it['id']}' (step ids are unique in the doc: files rows point to them)")
+                step_ids.add(it["id"])
+                if it.get("status", "todo") not in STEP_STATUSES:
+                    rep.err(iw + ".status", f"'{it.get('status')}' not in {sorted(STEP_STATUSES)}")
+                if it.get("effort") is not None and it["effort"] not in STEP_EFFORTS:
+                    rep.err(iw + ".effort", f"'{it['effort']}' not in {sorted(STEP_EFFORTS)}")
+                title = re.sub(r"`([^`]*)`", r"\1", it["title"])
+                if len(title) > MAX_TITLE:
+                    rep.warn(iw + ".title", f"{len(title)} characters: the step row shows one line (about {MAX_TITLE}); move the rest to 'md'")
+                lint_text(rep, iw + ".title", it["title"], imperative=True)
+                lint_text(rep, iw + ".md", it.get("md"))
+                files = it.get("files")
+                if files is not None and not (isinstance(files, list) and all(isinstance(f, str) and f for f in files)):
+                    rep.err(iw + ".files", "list of file paths")
+                else:
+                    step_files.extend((iw + ".files", f) for f in files or [])
+                refs = it.get("refs")
+                if refs is not None and not isinstance(refs, list):
+                    rep.err(iw + ".refs", "list of '<canvas>/<node>' refs")
+                else:
+                    refs_to_check.extend((iw, r) for r in refs or [])
+        elif t == "files":
+            if not need(rep, bw, b, "items"):
+                return
+            lint_text(rep, bw + ".title", b.get("title"))
+            seen: set[str] = set()
+            for fi, f in enumerate(b["items"]):
+                fw = f"{bw}.items[{fi}]"
+                if not isinstance(f, dict):
+                    rep.err(fw, "a row is an object {path, action, why}")
+                    continue
+                if isinstance(f.get("path"), str):
+                    file_rows.add(f["path"])   # even an incomplete row is a target for step chips
+                if not need(rep, fw, f, "path", "action", "why"):
+                    continue
+                if f["path"] in seen:
+                    rep.warn(fw, f"'{f['path']}' is listed twice in this block")
+                seen.add(f["path"])
+                act = f["action"]
+                if act not in FILE_ACTIONS:
+                    rep.err(fw + ".action", f"'{act}' not in {sorted(FILE_ACTIONS)}")
+                elif act in ("rename", "move") and not f.get("from"):
+                    rep.warn(fw, f"a {act} names the old path in 'from'")
+                elif act not in ("rename", "move") and f.get("from"):
+                    rep.err(fw + ".from", f"'from' is for rename and move, not {act}")
+                lint_text(rep, fw + ".why", f.get("why"))
+                if f.get("step"):
+                    file_steps.append((fw + ".step", f["step"]))
+        elif t == "media":
+            need(rep, bw, b, "src", "alt")
+            if "src" in b:
+                check_media_src(rep, bw + ".src", b["src"], base)
+            if b.get("width") is not None and not (isinstance(b["width"], (int, float)) and not isinstance(b["width"], bool) and b["width"] > 0):
+                rep.err(bw + ".width", "a positive number: the most pixels wide it shows")
+            lint_text(rep, bw + ".alt", b.get("alt"))
+            lint_text(rep, bw + ".caption", b.get("caption"))
+        elif t == "compare":
+            if not need(rep, bw, b, "before", "after"):
+                return
+            lint_text(rep, bw + ".title", b.get("title"))
+            for side in ("before", "after"):
+                sd, sw_ = b[side], f"{bw}.{side}"
+                if not isinstance(sd, dict):
+                    rep.err(sw_, "an object with 'md', 'code' or 'src'")
+                    continue
+                if not any(sd.get(k) for k in ("md", "code", "src")):
+                    rep.err(sw_, "give one of 'md', 'code' or 'src'")
+                if sd.get("src"):
+                    check_media_src(rep, sw_ + ".src", sd["src"], base)
+                    if not sd.get("alt"):
+                        rep.warn(sw_, "an image side needs 'alt'")
+                lint_text(rep, sw_ + ".md", sd.get("md"))
+                lint_text(rep, sw_ + ".label", sd.get("label"))
 
     for si, sec in enumerate(doc.get("sections") or []):
         sw = f"sections[{si}]"
@@ -394,6 +526,12 @@ def validate(doc: dict) -> Report:
             rep.err(where, f"ref '{r}': no canvas '{cid}'")
         elif key not in canvas_nodes[cid] and not any(k.split("/")[-1] == key for k in canvas_nodes[cid]):
             rep.err(where, f"ref '{r}': no node '{key}' in canvas '{cid}' (use 'canvas/parent/child' for inner nodes)")
+    for where, path in step_files:
+        if file_rows and path not in file_rows:
+            rep.warn(where, f"'{path}' is in no files block: its chip has no row to jump to")
+    for where, sid in file_steps:
+        if sid not in step_ids:
+            rep.warn(where, f"step '{sid}' is in no steps block")
     for where, did, c in comments_to_check:
         files = diffs[did]
         if c.get("item"):
@@ -553,11 +691,51 @@ def _script_json(x) -> str:
     return _canon(x).replace("</", "<\\/").replace("<!--", "<\\!--")
 
 
-def build(doc: dict, template: str, history: dict | None = None) -> str:
+def inline_media(x, base: Path, missing: list[str], cache: dict[str, str] | None = None):
+    """A copy of x (doc, or embedded history) with every relative media src (media blocks, compare sides)
+    replaced by a data: URI read from base, the doc's folder. Srcs whose file is gone go into missing."""
+    cache = {} if cache is None else cache
+
+    def uri(src):
+        if not isinstance(src, str) or src.startswith("data:") or re.match(r"[a-zA-Z][a-zA-Z0-9+.-]*:|/", src):
+            return src
+        path = src.split("?", 1)[0].split("#", 1)[0]
+        if path not in cache:
+            f, mime = base / path, MEDIA_TYPES.get(Path(path).suffix.lower())
+            if not mime or not f.is_file():
+                missing.append(src)
+                cache[path] = src
+            else:
+                cache[path] = f"data:{mime};base64," + base64.b64encode(f.read_bytes()).decode("ascii")
+        return cache[path]
+
+    if isinstance(x, list):
+        return [inline_media(v, base, missing, cache) for v in x]
+    if not isinstance(x, dict):
+        return x
+    out = {k: inline_media(v, base, missing, cache) for k, v in x.items()}
+    if out.get("type") == "media" and "src" in out:
+        out["src"] = uri(out["src"])
+    elif out.get("type") == "compare":
+        for side in ("before", "after"):
+            if isinstance(out.get(side), dict) and out[side].get("src"):
+                out[side] = {**out[side], "src": uri(out[side]["src"])}
+    return out
+
+
+def build(doc: dict, template: str, history: dict | None = None, media_base: Path | None = None) -> str:
+    """The page. media_base (the doc's folder) makes it standalone: media files become data: URIs."""
     title = (doc.get("title") or "bluedoc").replace("&", "&amp;").replace("<", "&lt;")
     if "__BLUEDOC_DOC__" not in template:
         raise SystemExit("template is missing the __BLUEDOC_DOC__ placeholder")
-    hist = embed_history(history, doc)
+    hist = embed_history(history, doc)   # before inlining: it matches blocks by their JSON
+    if media_base is not None:
+        missing: list[str] = []
+        cache: dict[str, str] = {}
+        doc = inline_media(doc, media_base, missing, cache)
+        hist = inline_media(hist, media_base, missing, cache)
+        for src in sorted(set(missing)):
+            print(f"WARN  media '{src}': file not found, left as a relative path (it won't show from file://)", file=sys.stderr)
     return (template.replace("__BLUEDOC_TITLE__", title)
             .replace("__BLUEDOC_HISTORY__", _script_json(hist) if hist else "null")
             .replace("__BLUEDOC_DOC__", _script_json(doc)))
@@ -616,7 +794,7 @@ def main() -> int:
     except (OSError, json.JSONDecodeError) as e:
         print(f"cannot read {a.doc}: {e}", file=sys.stderr)
         return 2
-    rep = validate(doc)
+    rep = validate(doc, a.doc)
     for line in rep.errors + rep.warnings:
         print(line, file=sys.stderr)
     print(f"{len(rep.errors)} error(s), {len(rep.warnings)} warning(s)", file=sys.stderr)
@@ -634,7 +812,7 @@ def main() -> int:
         print(log, file=sys.stderr)
     if a.out:
         a.out.parent.mkdir(parents=True, exist_ok=True)
-        a.out.write_text(build(doc, a.template.read_text(encoding="utf-8"), history), encoding="utf-8")
+        a.out.write_text(build(doc, a.template.read_text(encoding="utf-8"), history, a.doc.resolve().parent), encoding="utf-8")
         print(f"wrote {a.out} ({a.out.stat().st_size // 1024} KB)", file=sys.stderr)
     else:
         print(f"view: python3 {HERE / 'serve.py'} open {a.doc}", file=sys.stderr)
