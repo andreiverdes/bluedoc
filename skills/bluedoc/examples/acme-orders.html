@@ -873,7 +873,10 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
    Row: [number tile] Revision N / first change note, ellipsized [chevron]; under it, two small buttons.
    Expanded: date, chips and every change note. */
 .bd-rvr, .bd-rvr-body, .bd-rvr .bd-rail-sec { min-width: 0; }
-.bd-rvr { overflow-x: hidden; scrollbar-gutter: stable; }
+/* the Revisions rail and the Comments list scroll without a visible scrollbar (wheel, trackpad, keys still work) */
+.bd-rvr, .bd-cs-l, .bp-side { scrollbar-width: none; -ms-overflow-style: none; }
+.bd-rvr::-webkit-scrollbar, .bd-cs-l::-webkit-scrollbar, .bp-side::-webkit-scrollbar { display: none; width: 0; height: 0; }
+.bd-rvr { overflow-x: hidden; }
 .bd-rvs { list-style: none; margin: 0; padding: 0; border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-1); overflow: hidden; }
 .bd-rv { min-width: 0; padding: 9px 10px; }
 .bd-rv + .bd-rv { border-top: 1px solid var(--line-soft); }
