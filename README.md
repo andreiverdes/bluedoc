@@ -9,8 +9,9 @@ An agent skill that writes engineering docs as one self-contained HTML page: a z
 - **Blueprint canvas.** Open a system to see its parts; each level plays its own animated flow (request, event, data). Nests 3 levels deep.
 - **Checklists as task trackers.** Every procedure is a checklist. Each item is a two-line row (the action, then why it matters) that opens to show details, commands, checks, tables or a sub-checklist. Ticks persist in the reader's browser; **Copy progress** exports Markdown for a PR or issue.
 - **Decisions, not "tick if you agree".** When the agent needs you to choose, an item shows its options as pills with the agent's recommendation starred. You pick one; the export says what you picked and what was recommended.
-- **Answers back to the agent.** Every item takes a comment. **Send answers** collects your picks, ticks and comments, plus an overall message, and sends them to the agent (or copies them for you to paste).
+- **Answers back to the agent.** Every item takes a comment. **Send answers**, the last key in the bottom tray, collects your picks, ticks and comments, plus an overall message, and sends them to the agent (or copies them for you to paste). It turns green once there is something to send.
 - **Change requests on the page.** A tray of keys at the bottom (View, Point, Select, Draw) lets you pin a comment on any element, comment on a selected passage, or draw on the page; you write the note right next to the mark, and saved notes become cards in the Comments sidebar on the right (Pending, Open once sent, Resolved); a General comment field takes notes about the whole doc. **Request changes** sends the pending ones to the agent as edits to make. Answers and change requests are separate messages.
+- **Plans you approve on the page.** Instead of a Markdown plan, the agent writes a plan page: the goal, the proposed design on a canvas, before/after panes, mockups, a numbered timeline of steps, the files each step touches, open questions with its recommendation starred, risks and checks. Comment on any part, then **Request changes** or **Approve plan**; your picks and notes go with it, and the agent waits for your approval before it writes code.
 - **Code review.** A `diff` block shows a change with each finding as a comment on its lines, and its options on the card. A file with several comments says how many, steps between them, and tells you how many sit above or below what you can see. Generated from git by `gitdiff.py`; GitHub review threads come in through `ghthreads.py`.
 - **Revisions you can compare.** Each build keeps the doc's revision history. From the Revisions section of the right sidebar, switch to any earlier revision or compare two: new, changed and removed sections, items, table rows and drawing parts are marked in place with a word-level diff, next to the author's note on what changed. Readers who come back to a newer revision get a link to what changed since their last visit.
 - **A local server, a home page, JSON only.** `serve.py` renders each doc from its JSON on every request, so agents write only the JSON, never the HTML. `http://127.0.0.1:8740/` is a HorizonUI dashboard: a search-first hero, a sidebar of projects with their folder trees, doc types and status, activity and decision charts, and every doc as a card with a generated preview, in a grid (2–6 columns), a list or a board. `build.py -o` still writes a standalone HTML file when you need to send one.
@@ -86,14 +87,15 @@ ln -s "$PWD/bluedoc/skills/bluedoc" ~/.agents/skills/bluedoc
 
 ## Use
 
-Ask in plain words. The skill triggers on requests for HTML docs, architecture pages, walkthroughs, runbooks and browsable reviews.
+Ask in plain words. The skill triggers on requests for HTML docs, architecture pages, walkthroughs, runbooks, plans and browsable reviews.
 
 - "Write a bluedoc of how a request flows through this service."
 - "Make a runbook for setting up the local stack, as a bluedoc with checklists."
 - "Review PR 412 and give me a bluedoc where each finding sits on its code."
 - "Put the open review threads on PR 412 in a bluedoc so I can decide what to do with each."
+- "Plan saved carts as a bluedoc and wait for my approval."
 
-The agent writes `docs/<topic>/<name>.bluedoc.json` (the only file it writes), validates it, and opens it on the local server:
+The agent writes `docs/<topic>/<name>.bluedoc.json` (the only file it writes, plus any images the doc shows), validates it, and opens it on the local server:
 
 ```sh
 python3 <skill>/scripts/build.py docs/<topic>/<name>.bluedoc.json        # validate, record the revision
@@ -128,6 +130,7 @@ skills/bluedoc/
   assets/home.html       the home page (HorizonUI)
   assets/vendor/         HorizonUI browser build (Apache-2.0, see its NOTICE)
   examples/              Acme examples (JSON and history; built HTML for GitHub readers)
+  examples/media/        images the examples show (media blocks)
 .claude-plugin/          Claude Code plugin and marketplace (omp reads it too)
 .agents/plugins/         Codex marketplace
 plugin.json              Agent Plugins manifest (Codex, omp)

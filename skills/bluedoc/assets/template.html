@@ -110,6 +110,13 @@ button { font: inherit; color: inherit; cursor: pointer; }
 /* header */
 .bd-eyebrow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: 13px; color: var(--fg-subtle); }
 .bd-eyebrow .dot { width: 3px; height: 3px; border-radius: 50%; background: currentColor; opacity: .6; }
+/* a plan's status, first in the eyebrow (HorizonUI soft Badge with a dot) */
+.bd-planchip { --t: var(--warn); --tf: var(--warn-fg); --tt: var(--warn-tint); display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px 0 9px; margin-right: 4px; border-radius: 999px;
+  font: 600 12px/1 var(--sans); white-space: nowrap; color: var(--tf); background: var(--tt); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--t) 32%, transparent); }
+.bd-planchip > i { width: 7px; height: 7px; border-radius: 50%; background: var(--t); box-shadow: 0 0 0 3px color-mix(in oklch, var(--t) 22%, transparent); }
+.bd-planchip .bd-ic { width: 13px; height: 13px; stroke-width: 2.4; }
+.bd-planchip.approved { --t: var(--ok); --tf: var(--ok-fg); --tt: var(--ok-tint); }
+.bd-planchip.changes { --t: var(--accent); --tf: var(--accent-fg); --tt: var(--accent-tint); }
 .bd-head h1 { font: 680 clamp(28px, 3.4vw, 38px)/1.14 var(--sans); letter-spacing: -.024em; margin: 14px 0 0; text-wrap: balance; max-width: 22em; }
 .bd-sub { font-size: 17px; line-height: 1.55; color: var(--fg-muted); margin: 14px 0 0; max-width: 40em; text-wrap: pretty; }
 .bd-tldr-card { margin-top: 32px; background: var(--surface); border-radius: 14px; box-shadow: var(--shadow-1); padding: 18px 22px 18px 20px;
@@ -159,10 +166,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .bp-btn.primary { background: var(--accent); color: #fff; box-shadow: 0 1px 2px oklch(20% 0.05 255 / .25), inset 0 1px 0 oklch(100% 0 0 / .15); }
 .bp-btn.primary .bd-ic { color: currentColor; }
 .bp-btn.primary:hover { background: color-mix(in oklch, var(--accent), black 8%); }
-/* send to agent: app-bar button and dialog */
-.bd-send-btn { height: 30px; padding: 0 12px; }
-.bd-send-btn.has { background: var(--accent); color: #fff; box-shadow: 0 1px 2px oklch(20% 0.05 255 / .25); }
-.bd-send-btn.has .bd-ic { color: currentColor; }
+/* send to agent: dialog (Send answers, Request changes, Approve plan) */
 .bd-send { width: min(560px, calc(100vw - 32px)); max-height: calc(100vh - 64px); padding: 0; border: 0; border-radius: 16px; background: var(--surface); color: var(--fg); box-shadow: var(--shadow-3); }
 .bd-send::backdrop { background: oklch(15% 0.01 264 / .36); }
 .bd-send > * { margin: 0 20px; }
@@ -176,7 +180,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .bd-send .how { margin-top: 12px; font-size: 12.5px; color: var(--fg-subtle); }
 .bd-send .ft { display: flex; justify-content: flex-end; gap: 8px; margin: 0; padding: 14px 20px 18px; }
 .bd-send .ft .bp-btn { height: 32px; padding: 0 14px; font-size: 13px; }
-.bd-send .ft .bp-btn[hidden], .bd-send-btn[hidden] { display: none; }
+.bd-send .ft .bp-btn[hidden] { display: none; }
 /* revisions: app-bar button, strip under the bar, dialog, change marks */
 .bd-rev-btn { height: 30px; padding: 0 10px; font: 500 12.5px var(--mono); }
 .bd-rev-btn.old { color: var(--warn-fg); background: var(--warn-tint); box-shadow: none; }
@@ -356,8 +360,7 @@ td.bd-cell-mod { background: color-mix(in oklch, var(--warn-tint) 70%, transpare
 .bp-cl-chev { width: 16px; height: 16px; flex: none; margin-top: 4px; color: var(--fg-subtle); transition: transform .18s var(--ease); }
 .bp-cl-item.open .bp-cl-chev { transform: rotate(90deg); }
 .bp-cl-item.empty .bp-cl-chev { visibility: hidden; }
-@media (max-width: 900px) { .bd-send-btn .l { display: none; } .bd-send-btn { padding: 0 8px; } }
-@media print { .bp-note:not(:has(.bp-note-ta:not(:placeholder-shown))) { display: none; } .bd-send-btn { display: none !important; } }
+@media print { .bp-note:not(:has(.bp-note-ta:not(:placeholder-shown))) { display: none; } }
 /* expanded body, aligned with the title */
 .bp-cl-body { padding: 0 16px 14px calc(16px + var(--ind)); font-size: 14px; }
 .bp-cl-body[hidden] { display: none; }
@@ -401,6 +404,143 @@ td.bd-cell-mod { background: color-mix(in oklch, var(--warn-tint) 70%, transpare
 .bp-ref { display: inline-flex; align-items: center; gap: 5px; height: 24px; font: 500 12px var(--sans); border: 0; color: var(--fg-muted); background: var(--inset); box-shadow: inset 0 0 0 1px var(--line); border-radius: 7px; padding: 0 8px; transition: color .12s, box-shadow .12s; }
 .bp-ref .bd-ic { width: 13px; height: 13px; color: var(--accent-fg); }
 .bp-ref:hover { color: var(--accent-fg); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--accent) 45%, transparent); }
+.bp-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* plan blocks. steps: HorizonUI Timeline + ProgressSteps; files: ChangeTable rows by folder; media; compare */
+.bp-tl, .bp-files { background: var(--surface); border-radius: 14px; box-shadow: var(--shadow-1); overflow: hidden; scroll-margin-top: calc(var(--top-h) + 16px); }
+.bp-tl-h, .bp-files-h { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; padding: 12px 10px 10px 16px; }
+.bp-tl-h > .bd-ic, .bp-files-h > .bd-ic { color: var(--fg-subtle); }
+.bp-tl-h h3, .bp-files-h h3 { margin: 0; font-size: 15px; font-weight: 600; letter-spacing: -.005em; flex: 1 1 180px; line-height: 1.4; }
+.bp-tl-h .tools { display: flex; gap: 2px; }
+.bp-tl-bar { display: flex; gap: 3px; margin: 0 16px 2px; }
+.bp-tl-bar i { flex: 1; height: 4px; border-radius: 99px; background: var(--line); }
+.bp-tl-bar i.s-doing { background: var(--accent); } .bp-tl-bar i.s-done { background: var(--ok); } .bp-tl-bar i.s-blocked { background: var(--risk); }
+.bp-tl-l { list-style: none; margin: 0; padding: 6px 0 8px; }
+.bp-step { --dot: 26px; display: grid; grid-template-columns: var(--dot) minmax(0, 1fr); column-gap: 14px; padding: 0 8px 0 16px; scroll-margin-top: calc(var(--top-h) + 16px); }
+.bp-step-mk { position: relative; grid-row: 1 / span 2; display: flex; justify-content: center; padding-top: 9px; }
+.bp-step-mk::after { content: ""; position: absolute; top: calc(12px + var(--dot)); bottom: -6px; left: 50%; width: 2px; margin-left: -1px; border-radius: 1px; background: var(--line); }
+.bp-step:last-child .bp-step-mk::after { display: none; }
+.bp-step.s-done .bp-step-mk::after { background: color-mix(in oklch, var(--ok) 50%, var(--line)); }
+.bp-step-dot { position: relative; z-index: 1; display: grid; place-items: center; width: var(--dot); height: var(--dot); border-radius: 50%; font: 600 11.5px/1 var(--mono); color: var(--fg-muted);
+  background: var(--surface); box-shadow: inset 0 0 0 1.5px var(--line-strong); }
+.bp-step-dot .bd-ic { width: 14px; height: 14px; stroke-width: 2.8; }
+.s-doing .bp-step-dot { color: var(--accent-fg); background: var(--accent-tint); box-shadow: inset 0 0 0 1.5px var(--accent), 0 0 0 4px color-mix(in oklch, var(--accent) 14%, transparent); }
+.s-done .bp-step-dot { color: #fff; background: var(--ok); box-shadow: none; }
+.s-blocked .bp-step-dot { color: var(--risk-fg); background: var(--risk-tint); box-shadow: inset 0 0 0 1.5px var(--risk); font-weight: 750; }
+.bp-step-head { grid-column: 2; min-width: 0; display: flex; align-items: flex-start; gap: 10px; padding: 10px 4px 10px 0; border: 0; background: none; text-align: left; color: inherit; font: inherit; border-radius: 8px; }
+.bp-step-head:focus-visible { box-shadow: var(--focus-ring); }
+.bp-step:not(.empty) .bp-step-head:hover .bp-step-t { color: var(--accent-fg); }
+.bp-step.empty .bp-step-head { cursor: default; }
+.bp-step-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.bp-step-t { font-size: 14.5px; line-height: 1.5; font-weight: 550; margin-top: 2px; text-decoration-color: var(--risk); }
+.s-done .bp-step-t { color: var(--fg-muted); }
+.bp-step-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.bp-step-meta:empty { display: none; }
+.bp-step-meta .bp-chip { padding: 3px 8px; font-size: 11.5px; }
+.bp-step-fc { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--fg-subtle); }
+.bp-step-fc .bd-ic { width: 13px; height: 13px; }
+.bp-eff { display: inline-flex; align-items: center; gap: 5px; height: 20px; padding: 0 7px 0 6px; border-radius: 6px; font: 650 11px/1 var(--mono); color: var(--fg-muted); background: var(--inset); box-shadow: inset 0 0 0 1px var(--line); }
+.bp-eff > span[aria-hidden] { display: inline-flex; align-items: flex-end; gap: 1.5px; height: 10px; }
+.bp-eff i { width: 3px; height: 4px; border-radius: 1px; background: var(--line-strong); }
+.bp-eff i:nth-child(2) { height: 7px; } .bp-eff i:nth-child(3) { height: 10px; }
+.bp-eff.e-S i:nth-child(1), .bp-eff.e-M i:nth-child(-n+2), .bp-eff.e-L i { background: var(--fg-muted); }
+.bp-step .bp-cl-chev { margin-top: 5px; }
+.bp-step.open .bp-cl-chev { transform: rotate(90deg); }
+.bp-step.empty .bp-cl-chev { visibility: hidden; }
+.bp-step-body { grid-column: 2; padding: 0 12px 14px 0; font-size: 14px; }
+.bp-step-body[hidden] { display: none; }
+.bp-step-body > * + * { margin-top: 10px; }
+.bp-step-md { color: var(--fg-muted); max-width: 46em; }
+.bp-step-md > :first-child { margin-top: 0; } .bp-step-md > :last-child { margin-bottom: 0; }
+.bp-step-md p { margin: 6px 0; } .bp-step-md ul, .bp-step-md ol { margin: 6px 0; padding-left: 20px; }
+.bp-fchips { display: flex; flex-wrap: wrap; gap: 6px; }
+.bp-fchip { display: inline-flex; align-items: center; gap: 5px; height: 24px; max-width: 100%; padding: 0 8px; border: 0; border-radius: 7px; font: 500 12px var(--mono); color: var(--fg-muted);
+  background: var(--inset); box-shadow: inset 0 0 0 1px var(--line); transition: color .12s, box-shadow .12s; }
+.bp-fchip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bp-fchip .bd-ic { width: 13px; height: 13px; color: var(--accent-fg); }
+.bp-fchip:hover:not(:disabled) { color: var(--accent-fg); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--accent) 45%, transparent); }
+.bp-fchip:disabled { cursor: default; } .bp-fchip:disabled .bd-ic { color: var(--fg-subtle); }
+.bp-files-sum { display: inline-flex; flex-wrap: wrap; gap: 4px 10px; }
+.bp-fsum { display: inline-flex; align-items: center; gap: 5px; font: 500 12px var(--mono); color: var(--fg-muted); }
+.bp-fsum b, .bp-fbadge { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 5px; font: 700 10.5px/1 var(--mono); color: var(--accent-fg); background: var(--accent-tint); }
+.k-add :is(b, .bp-fbadge) { color: var(--ok-fg); background: var(--ok-tint); }
+.k-del :is(b, .bp-fbadge) { color: var(--risk-fg); background: var(--risk-tint); }
+.k-ren :is(b, .bp-fbadge) { color: var(--warn-fg); background: var(--warn-tint); }
+.bp-fgrp { padding-bottom: 4px; }
+.bp-fgrp + .bp-fgrp { border-top: 1px solid var(--line-soft); }
+.bp-fdir { display: flex; align-items: center; gap: 7px; padding: 9px 16px 3px; font: 500 12px/1.5 var(--mono); color: var(--fg-subtle); overflow-wrap: anywhere; }
+.bp-fdir .bd-ic { width: 14px; height: 14px; flex: none; }
+.bp-fgrp ul { list-style: none; margin: 0; padding: 0; }
+.bp-frow { display: grid; grid-template-columns: 20px 16px minmax(0, 1fr) auto; align-items: start; column-gap: 10px; padding: 7px 12px 7px 16px; scroll-margin-top: calc(var(--top-h) + 16px); transition: background .1s; }
+.bp-frow:hover { background: var(--hover); }
+.bp-frow > .bp-fbadge { width: 20px; height: 20px; border-radius: 6px; font-size: 11px; margin-top: 1px; }
+.bp-frow > .bp-fic { width: 16px; height: 16px; margin-top: 3px; color: var(--fg-subtle); }
+.bp-fmain { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.bp-fname { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 8px; font: 550 13px/1.65 var(--mono); color: var(--fg); overflow-wrap: anywhere; }
+.bp-frow.k-del .nm { color: var(--fg-muted); text-decoration: line-through; text-decoration-color: color-mix(in oklch, var(--risk) 60%, transparent); }
+.bp-fname .from { font: 400 12px var(--sans); color: var(--fg-subtle); }
+.bp-fname .from code { font-size: 11.5px; background: none; padding: 0; color: var(--fg-muted); }
+.bp-fwhy { font-size: 13.5px; line-height: 1.5; color: var(--fg-muted); }
+.bp-fstep { margin-top: 0; font-family: var(--mono); font-size: 11.5px; }
+.bp-fstep:disabled { opacity: .55; cursor: default; }
+.bp-frow.bd-chg { box-shadow: inset 3px 0 0 var(--chg); } .bp-frow.bd-chg-add { background: color-mix(in oklch, var(--ok-tint) 70%, transparent); }
+.bp-frow.bd-ghost .nm { text-decoration: line-through; color: var(--risk-fg); }
+.bp-step.bd-chg { box-shadow: inset 3px 0 0 var(--chg); }
+.bp-step-meta > .bd-chg-tag { order: -1; }
+.bp-media { margin: 0 auto; }
+.bp-media-fr { position: relative; border-radius: 14px; overflow: hidden; background: var(--inset); box-shadow: var(--shadow-1); }
+.bp-media-fr > img, .bp-media-fr > video { display: block; width: 100%; height: auto; }
+.bp-media-fr > img { cursor: zoom-in; }
+.bp-media-fr.vid { background: #000; }
+.bp-media-zoom { position: absolute; top: 10px; right: 10px; opacity: 0; transition: opacity .15s, color .12s; }
+.bp-media-fr:hover .bp-media-zoom, .bp-media-zoom:focus-visible { opacity: 1; }
+@media (hover: none) { .bp-media-zoom { opacity: 1; } }
+.bp-media > .bp-caption { text-align: center; margin-top: 10px; text-wrap: balance; }
+.bp-media-miss { display: flex; align-items: center; gap: 10px; padding: 20px 18px; font-size: 13.5px; color: var(--fg-subtle); overflow-wrap: anywhere; }
+.bp-media-miss .bd-ic { flex: none; width: 18px; height: 18px; }
+.bd-lb { width: 100vw; height: 100vh; max-width: none; max-height: none; margin: 0; padding: 0; border: 0; background: transparent; overflow: hidden; cursor: zoom-out; }
+.bd-lb[open] { display: grid; place-items: center; }
+.bd-lb::backdrop { background: oklch(14% 0.01 264 / .84); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+.bd-lb figure { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 12px; max-width: 94vw; }
+.bd-lb img { display: block; max-width: 94vw; max-height: calc(100vh - 120px); border-radius: 10px; background: var(--surface); box-shadow: var(--shadow-3); }
+.bd-lb figcaption { max-width: 60em; color: oklch(94% 0 0); font-size: 13.5px; text-align: center; text-wrap: balance; }
+.bd-lb figcaption[hidden] { display: none; }
+.bd-lb .x { position: fixed; top: 14px; right: 14px; }
+.bp-cmpr-t { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; color: var(--fg-subtle); }
+.bp-cmpr-t h3 { margin: 0; font-size: 15px; font-weight: 600; letter-spacing: -.005em; line-height: 1.4; color: var(--fg); }
+.bp-cmpr-g { display: grid; grid-template-columns: minmax(0, 1fr) 0 minmax(0, 1fr); column-gap: 14px; align-items: stretch; }
+.bp-cmpr-ar { position: relative; z-index: 1; display: grid; place-items: center; }
+.bp-cmpr-ar b { position: absolute; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; color: var(--fg-muted);
+  background: linear-gradient(180deg, var(--key-top), var(--key-bot)); box-shadow: var(--shadow-key), 0 0 0 4px var(--canvas); }
+.bp-cmpr-ar .bd-ic { width: 14px; height: 14px; }
+.bp-cmpr-side { min-width: 0; display: flex; flex-direction: column; background: var(--surface); border-radius: 14px; box-shadow: var(--shadow-1); overflow: hidden; }
+.bp-cmpr-h { display: flex; align-items: center; gap: 8px; min-height: 38px; padding: 0 6px 0 14px; border-bottom: 1px solid var(--line-soft); font: 600 11px/1.4 var(--sans); letter-spacing: .07em;
+  text-transform: uppercase; color: var(--fg-muted); }
+.bp-cmpr-h .d { flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--todo); box-shadow: 0 0 0 3px var(--todo-tint); }
+.bp-cmpr-side.after .bp-cmpr-h .d { background: var(--ok); box-shadow: 0 0 0 3px var(--ok-tint); }
+.bp-cmpr-h .l { flex: 1; min-width: 0; }
+.bp-cmpr-h .l code { text-transform: none; letter-spacing: 0; }
+.bp-cmpr-h .lg { font: 500 11px var(--mono); letter-spacing: 0; text-transform: none; color: var(--fg-subtle); }
+.bp-cmpr-h .bp-btn { height: 26px; padding: 0 6px; }
+.bp-cmpr-b { display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; font-size: 14px; }
+.bp-cmpr-md > :first-child { margin-top: 0; } .bp-cmpr-md > :last-child { margin-bottom: 0; }
+.bp-cmpr-md p { margin: 6px 0; } .bp-cmpr-md ul, .bp-cmpr-md ol { margin: 6px 0; padding-left: 20px; }
+.bp-cmpr-img { display: block; max-width: 100%; height: auto; margin: 0 auto; border-radius: 8px; box-shadow: 0 0 0 1px var(--line); }
+img.bp-cmpr-img { cursor: zoom-in; }
+.bp-cmpr-code { flex: 1; margin: 0; padding: 12px 14px; overflow-x: auto; color: var(--fg); font: 12.5px/1.65 var(--mono); background: var(--panel); }
+.bp-cmpr-code code { background: none; padding: 0; font-size: inherit; color: inherit; overflow-wrap: normal; }
+.bp-cmpr-b + .bp-cmpr-code { border-top: 1px solid var(--line-soft); }
+@media (max-width: 900px) {
+  .bp-cmpr-g { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 0 auto; row-gap: 14px; }
+  .bp-cmpr-ar b { transform: rotate(90deg); }
+  .bp-step { padding: 0 4px 0 12px; column-gap: 12px; }
+  .bp-frow { padding-left: 12px; padding-right: 10px; column-gap: 8px; }
+  .bp-fdir { padding-left: 12px; }
+}
+@media (max-width: 600px) {
+  .bp-frow { grid-template-columns: 20px minmax(0, 1fr) auto; }
+  .bp-frow > .bp-fic { display: none; }
+}
 
 /* toast: HorizonUI Toaster */
 .bp-toast { position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 8px); display: flex; align-items: center; gap: 8px;
@@ -421,6 +561,7 @@ td.bd-cell-mod { background: color-mix(in oklch, var(--warn-tint) 70%, transpare
   --shadow-fill: 0 0 0 1px oklch(0% 0 0 / 0.5), inset 0 1px 0 oklch(100% 0 0 / 0.18), 0 2px 5px oklch(0% 0 0 / 0.18);
   --groove: linear-gradient(90deg, oklch(23% 0.01 264 / 0.1) 50%, oklch(100% 0 0 / 0.9) 50%);
   --accent-solid: oklch(51% 0.19 254);
+  --ok-solid: oklch(53% 0.14 152);
   --tip: oklch(22% 0.006 264);
   --sp-w: 344px; --sp-sheet-h: min(52vh, 460px);
 }
@@ -507,6 +648,13 @@ html.bd-tray-on .bp-toast { bottom: 84px; }
 .bd-key.go.txt { padding: 0 14px; }
 .bd-key:disabled:not(.go) { opacity: .45; cursor: default; transform: none; }
 @media (max-width: 600px) { .bd-revtb .lbl { padding: 0 2px 0 4px; } .bd-revtb .lbl .x, .bd-revtb .lbl .bd-ic, .bd-key.txt:not(.go) .t { display: none; } .bd-key.txt:not(.go) { padding: 0 9px; } .bd-key.go.txt { padding: 0 11px; } }
+/* the tray's last key: Approve plan (green fill; once approved a settled green) or Send answers (green fill when there is something to send) */
+.bd-key:is(.approve, .send.has) { color: #fff; background: var(--ok-solid) linear-gradient(180deg, color-mix(in oklch, var(--ok-solid), white 9%), var(--ok-solid)); box-shadow: var(--shadow-fill); }
+.bd-key:is(.approve, .send.has):hover { color: #fff; filter: brightness(.95); background: var(--ok-solid) linear-gradient(180deg, color-mix(in oklch, var(--ok-solid), white 9%), var(--ok-solid)); }
+.bd-key:is(.approve, .send.has):active:not(:disabled) { transform: translateY(1px) scale(.98); filter: brightness(.9); box-shadow: var(--shadow-fill); background: var(--ok-solid); }
+.bd-key:is(.approve, .send.has):focus-visible { box-shadow: var(--shadow-fill), var(--focus-ring); }
+.bd-key.approve.done:disabled { opacity: 1; cursor: default; filter: none; transform: none; color: var(--ok-fg); background: var(--ok-tint); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--ok) 38%, transparent); }
+.bd-key.approve .bd-ic { stroke-width: 2.1; }
 .bd-pen-risk { --pen: var(--risk); } .bd-pen-accent { --pen: var(--accent); } .bd-pen-warn { --pen: var(--warn); } .bd-pen-ok { --pen: var(--ok); }
 html.bd-ann-m-point .bd-shell :not(.bp-side, .bp-side *), html.bd-ann-m-point .bd-shell { cursor: crosshair !important; }
 html.bd-ann-m-select .bd-shell :not(.bp-side, .bp-side *), html.bd-ann-m-select .bd-shell { cursor: text !important; }
@@ -733,6 +881,31 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .bd-chgs pre { max-height: 260px; }
 .bd-chgs .ft .sp { flex: 1; }
 .bd-chgs .ft .bp-btn:disabled { opacity: .5; cursor: default; }
+/* Approve plan dialog: note, what goes with it, the decisions, Copy and Approve */
+.bd-approve[open] { display: flex; flex-direction: column; }
+.bd-approve[open] > * { flex: none; }
+.bd-ap-sum { list-style: none; padding: 0; margin-top: 12px; display: grid; gap: 6px; font-size: 13.5px; color: var(--fg-muted); }
+.bd-ap-sum[hidden] { display: none; }
+.bd-ap-sum li { display: flex; gap: 8px; align-items: flex-start; line-height: 1.45; }
+.bd-ap-sum .bd-ic { width: 15px; height: 15px; margin-top: 1px; color: var(--fg-subtle); }
+.bd-ap-sum li.warn .bd-ic { color: var(--warn); }
+.bd-ap-dec { margin-top: 14px; min-height: 0; }
+.bd-approve[open] > .bd-ap-dec { flex: 0 1 auto; display: flex; flex-direction: column; }
+.bd-ap-dec[hidden] { display: none !important; }
+.bd-ap-dec h4 { margin: 0 0 4px; font: 600 11px/1.4 var(--sans); letter-spacing: .07em; text-transform: uppercase; color: var(--fg-subtle); }
+.bd-ap-dec ul { list-style: none; margin: 0; padding: 0 10px; overflow: auto; border-radius: 10px; background: var(--inset); max-height: 240px; }
+.bd-ap-dec li { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 2px 12px; padding: 8px 0; font-size: 13.5px; line-height: 1.45; }
+.bd-ap-dec li + li { border-top: 1px solid var(--line); }
+.bd-ap-dec .t { flex: 1 1 200px; min-width: 0; }
+.bd-ap-dec .pk { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 5px; font-weight: 600; color: var(--accent-fg); }
+.bd-ap-dec .pk .bd-ic { width: 13px; height: 13px; stroke-width: 2.4; }
+.bd-ap-dec .pk .rec { font-weight: 400; color: var(--fg-subtle); }
+.bd-ap-dec .pk.none { font-weight: 500; color: var(--fg-subtle); }
+.bd-ap-dec .pk.none .bd-ic { fill: currentColor; stroke: none; color: var(--warn); }
+.bd-approve .ft .bp-btn.ok { color: #fff; background: var(--ok-solid); box-shadow: 0 1px 2px oklch(20% 0.05 152 / .25), inset 0 1px 0 oklch(100% 0 0 / .15); }
+.bd-approve .ft .bp-btn.ok .bd-ic { color: currentColor; }
+.bd-approve .ft .bp-btn.ok:hover { background: color-mix(in oklch, var(--ok-solid), black 8%); }
+.bd-approve .ft .bp-btn:disabled { opacity: .6; cursor: default; }
 @media print { .bd-anntb, .bd-ann-layer, .bd-ann-hov, .bd-ann-cap, .bd-tip, .bd-sp, .bd-cmp, .bd-home { display: none !important; } html.bd-tray-on .bd-shell, :root.bd-sp-dock .bd-shell { padding: 0; } }
 
 /* code review: diff block (HorizonUI DiffReview, ChangeTable, CodeBlock syntax tokens) */
@@ -857,6 +1030,7 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 @keyframes bd-flash { 0%, 30% { box-shadow: var(--shadow-1), inset 3px 0 0 var(--t), 0 0 0 3px color-mix(in oklch, var(--accent) 45%, transparent); } 100% { box-shadow: var(--shadow-1), inset 3px 0 0 var(--t), 0 0 0 3px transparent; } }
 .bd-ln.bd-flash { animation: bd-flash-ln 1.4s var(--ease); }
 .bp-cl-item.bd-flash { animation: bd-flash-ln 1.4s var(--ease); }
+.bp-step.bd-flash, .bp-frow.bd-flash { animation: bd-flash-ln 1.4s var(--ease); }
 @keyframes bd-flash-ln { 0%, 30% { background: color-mix(in oklch, var(--accent) 28%, transparent); } }
 .bp-ref.code .bd-ic { color: var(--fg-subtle); }
 .bp-ref.code { font-family: var(--mono); font-size: 11.5px; }
@@ -1093,7 +1267,7 @@ html.bd-resizing, html.bd-resizing * { cursor: col-resize !important; user-selec
   .bp-sec { break-inside: avoid-page; }
   .bp-table-wrap, .bp-card, .bp-cl, .bp-code, .bp-terms, .bd-tldr-card, .bd-diff { box-shadow: 0 0 0 1px #ccd; }
   .bd-diff-body { display: block; height: auto; } .bd-files, .bd-diff-tb { display: none; } .bd-pane { overflow: visible; }
-  .bp-cl-body[hidden] { display: block !important; } .bp-cl-chev { display: none; }
+  .bp-cl-body[hidden], .bp-step-body[hidden] { display: block !important; } .bp-cl-chev { display: none; }
   .bp-choice[aria-checked="true"] { color: #000; background: none; box-shadow: inset 0 0 0 2px #000; font-weight: 700; }
   .bp-cl-text, .bp-cl-subt > span { white-space: normal !important; overflow: visible !important; }
 }
@@ -1200,6 +1374,15 @@ const ICONS = {
   eyeoff: '<path d="M10.73 5.08a10.74 10.74 0 0 1 11.2 6.57 1 1 0 0 1 0 .7 10.75 10.75 0 0 1-1.44 2.49M14.08 14.16a3 3 0 0 1-4.24-4.24M17.48 17.5a10.75 10.75 0 0 1-15.42-5.15 1 1 0 0 1 0-.7 10.75 10.75 0 0 1 4.45-5.14M2 2l20 20"/>',
   trash: '<path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
   grid: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>',
+  file: '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/>',
+  fcode: '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4M10 12.5 8 15l2 2.5M14 12.5l2 2.5-2 2.5"/>',
+  fimg: '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><circle cx="10" cy="12" r="2"/><path d="m20 17-1.1-1.1a2 2 0 0 0-2.8 0L10 22"/>',
+  fcfg: '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4M10 12a1 1 0 0 0-1 1v1a1 1 0 0 1-1 1 1 1 0 0 1 1 1v1a1 1 0 0 0 1 1M14 18a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1 1 1 0 0 1-1-1v-1a1 1 0 0 0-1-1"/>',
+  folder: '<path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>',
+  route: '<circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/>',
+  image: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/>',
+  tick: '<path d="M20 6 9 17l-5-5"/>',
+  arrowr: '<path d="M5 12h14M12 5l7 7-7 7"/>',
 };
 function ic(name, cls) {
   const s = document.createElementNS(NS, 'svg');
@@ -1273,6 +1456,17 @@ const isDark = () => (document.documentElement.dataset.theme || (darkMQ.matches 
 const app = $('#bp-app'); app.textContent = '';
 document.title = DOC.title ? DOC.title + ' · bluedoc' : 'bluedoc';
 const meta = DOC.meta || {};
+// the doc's type: meta.type, else read from meta.kind. serve.py and the home page use the same rule.
+const DOCS_KINDS = new Set(['architecture', 'walkthrough', 'runbook', 'setup', 'reference', 'proposal', 'change', 'changes', 'plan', 'status', 'guide',
+  'design', 'spec', 'rfc', 'adr', 'overview', 'tutorial', 'onboarding', 'explainer', 'playbook']);
+function docTypeOf(m) {
+  if (['docs', 'review', 'plan', 'other'].includes(m.type)) return m.type;
+  const k = String(m.kind || '').trim().toLowerCase();
+  if (k.startsWith('plan') || k === 'implementation plan') return 'plan';
+  if (k.includes('review')) return 'review';
+  return (k.match(/[a-z]+/g) || []).some(w => DOCS_KINDS.has(w)) ? 'docs' : 'other';
+}
+const DOC_TYPE = docTypeOf(meta), IS_PLAN = DOC_TYPE === 'plan';
 const overallBar = h('div', { class: 'bp-bar' }, h('i'));
 const overallTxt = h('span');
 const overall = h('div', { class: 'bd-overall', hidden: true, title: 'Checklist progress across this document' }, overallBar, overallTxt);
@@ -1293,8 +1487,10 @@ app.append(h('header', { class: 'bd-bar' }, mark,
     themeBtn)));
 
 const eyebrow = [meta.org, meta.kind, meta.date].filter(Boolean);
+// a plan's status beside the eyebrow: awaiting approval, changes requested or approved (paintPlan)
+const planChip = IS_PLAN && !OLD ? h('span', { class: 'bd-planchip', role: 'status' }) : null;
 const head = h('header', { class: 'bd-head', id: 'top' },
-  eyebrow.length && h('div', { class: 'bd-eyebrow' }, eyebrow.map((t, i) => [i ? h('span', { class: 'dot' }) : null, h('span', {}, t)])),
+  (eyebrow.length || planChip) && h('div', { class: 'bd-eyebrow' }, planChip, eyebrow.map((t, i) => [i ? h('span', { class: 'dot' }) : null, h('span', {}, t)])),
   h('h1', {}, DOC.title || ''),
   DOC.subtitle && h('p', { class: 'bd-sub', html: inline(DOC.subtitle) }));
 const tldr = h('div', { class: 'bd-tldr' }, DOC.tldr && h('div', { class: 'bd-tldr-card' },
@@ -1438,6 +1634,10 @@ const RENDER = {
   checklist: b => renderChecklist(b),
   diff: b => renderDiff(b),
   canvas: b => renderCanvas(b),
+  steps: b => renderSteps(b),
+  files: b => renderFiles(b),
+  media: b => renderMedia(b),
+  compare: b => renderCompare(b),
 };
 function codeBlock(code, lang, title) {
   const pre = h('pre', {}, h('code', {}, code || ''));
@@ -1445,6 +1645,175 @@ function codeBlock(code, lang, title) {
     h('div', { class: 'bp-code-h' }, h('span', {}, title || lang || 'code'),
       h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => copyText(code || '', 'Copied') }, ic('copy'), 'Copy')),
     pre);
+}
+
+/* ---------- plan blocks: steps, files, media, compare ---------- */
+// Meant mainly for plans, valid in any doc. Steps are the proposal's own timeline: their statuses are
+// the author's, never ticked by the reader. A step's file chips lead to the matching row of a files
+// block on the page, and a file row's step chip back to its step (linkPlanBlocks, after rendering).
+const STEPS = {};       // "<steps id>/<step id>" -> { s, n, li, head, body, meta, empty, setOpen, refresh }
+const STEP_REFS = {};   // "canvas/node" -> [step entry]
+const STEP_STATUS = { todo: 'To do', doing: 'In progress', done: 'Done', blocked: 'Blocked' };
+const STEP_CHIP = { doing: 'info', done: 'ok', blocked: 'risk' };
+const EFFORT = { S: 'Small', M: 'Medium', L: 'Large' };
+const FILE_ACTION = { add: ['A', 'Added', 'add'], edit: ['M', 'Changed', 'edit'], delete: ['D', 'Deleted', 'del'], rename: ['R', 'Renamed', 'ren'], move: ['R', 'Moved', 'ren'] };
+const fileRowSel = p => `.bp-frow[data-path="${CSS.escape(p)}"]`;
+const dirOf = p => { p = String(p || ''); const i = p.lastIndexOf('/'); return i < 0 ? '' : p.slice(0, i); };
+const stepFor = id => Object.values(STEPS).find(x => x.s.id === id) || null;
+function jumpTo(el) { el.scrollIntoView({ block: 'center', behavior: REDUCE ? 'auto' : 'smooth' }); flash(el); }
+function jumpFile(p) { const row = main.querySelector(fileRowSel(p)); if (row) jumpTo(row); return !!row; }
+function jumpStep(id) { const x = stepFor(id); if (x) { x.setOpen(true); jumpTo(x.li); } return !!x; }
+function fileIcon(p) {
+  const ext = ((String(p).match(/\.(\w+)$/) || [])[1] || '').toLowerCase();
+  return ic(/^(png|jpe?g|gif|webp|svg|ico|avif)$/.test(ext) ? 'fimg' : /^(json|ya?ml|toml|ini|env|lock|xml|plist|conf|cfg|properties)$/.test(ext) ? 'fcfg'
+    : /^(md|mdx|txt|rst|adoc)$/.test(ext) ? 'doc' : LANG_BY_EXT[ext] || /^(css|scss|sql|rb|php|c|h|cc|cpp|cs|vue|svelte|html?)$/.test(ext) ? 'fcode' : 'file', 'bp-fic');
+}
+function renderSteps(b) {
+  const bid = b.id || 'steps', items = Array.isArray(b.items) ? b.items : [], byId = new Map();
+  const list = h('ol', { class: 'bp-tl-l' });
+  items.forEach((s, i) => {
+    const st = STEP_STATUS[s.status] ? s.status : 'todo', files = Array.isArray(s.files) ? s.files : [], refs = Array.isArray(s.refs) ? s.refs : [];
+    const bodyId = `stepb-${bid}-${s.id}`;
+    const body = h('div', { class: 'bp-step-body', id: bodyId, role: 'region', 'aria-label': plainText(s.title) },
+      s.md && h('div', { class: 'bp-step-md', html: md(s.md) }),
+      files.length > 0 && h('div', { class: 'bp-fchips' }, files.map(p => h('button', { type: 'button', class: 'bp-fchip', 'data-path': p, title: p, onclick: () => jumpFile(p) }, fileIcon(p), h('span', {}, baseName(String(p)))))),
+      refs.length > 0 && h('div', { class: 'bp-refs' }, refs.map(r => h('button', { type: 'button', class: 'bp-ref', onclick: () => focusNode(r) }, ic('target'), refLabel(r)))));
+    const meta = h('span', { class: 'bp-step-meta' },
+      st !== 'todo' && h('span', { class: 'bp-chip ' + STEP_CHIP[st] }, STEP_STATUS[st]),
+      EFFORT[s.effort] && h('span', { class: 'bp-eff e-' + s.effort, title: 'Effort: ' + EFFORT[s.effort].toLowerCase() },
+        h('span', { 'aria-hidden': 'true' }, h('i'), h('i'), h('i')), h('span', { class: 'bp-sr' }, 'Effort '), s.effort),
+      files.length > 0 && h('span', { class: 'bp-step-fc' }, ic('file'), `${files.length} file${files.length === 1 ? '' : 's'}`));
+    const head = h('button', { type: 'button', class: 'bp-step-head', 'aria-expanded': 'false', 'aria-controls': bodyId },
+      h('span', { class: 'bp-step-main' }, h('span', { class: 'bp-sr' }, `Step ${i + 1}${st === 'todo' ? '' : ', ' + STEP_STATUS[st].toLowerCase()}: `),
+        h('span', { class: 'bp-step-t', html: inline(s.title) }), meta),
+      ic('chev', 'bp-cl-chev'));
+    const li = h('li', { class: `bp-step s-${st}`, id: `step-${bid}-${s.id}`, 'data-step': s.id },
+      h('span', { class: 'bp-step-mk', 'aria-hidden': 'true' }, h('span', { class: 'bp-step-dot' }, st === 'done' ? ic('tick') : st === 'blocked' ? '!' : String(i + 1))), head, body);
+    const x = { s, n: i + 1, li, head, body, meta, empty: false };
+    x.setOpen = open => {
+      if (x.empty) return;
+      li.classList.toggle('open', open); head.setAttribute('aria-expanded', String(open));
+      if (open) body.removeAttribute('hidden'); else body.hidden = 'until-found';
+      paintExpand();
+    };
+    // nothing to expand: the row is just its title
+    x.refresh = () => {
+      x.empty = !body.childElementCount; li.classList.toggle('empty', x.empty);
+      if (x.empty) { head.removeAttribute('aria-expanded'); head.removeAttribute('aria-controls'); head.tabIndex = -1; }
+      else { head.setAttribute('aria-expanded', String(li.classList.contains('open'))); head.setAttribute('aria-controls', bodyId); head.removeAttribute('tabindex'); }
+    };
+    body.hidden = 'until-found';
+    head.addEventListener('click', () => x.setOpen(!li.classList.contains('open')));
+    body.addEventListener('beforematch', () => x.setOpen(true));
+    x.refresh();
+    li._step = x;
+    byId.set(s.id, x); STEPS[`${bid}/${s.id}`] = x;
+    for (const r of refs) (STEP_REFS[r] ||= []).push(x);
+    list.append(li);
+  });
+  const all = [...byId.values()], done = items.filter(s => s.status === 'done').length, started = items.some(s => STEP_STATUS[s.status] && s.status !== 'todo');
+  const expandBtn = h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => { const open = !all.every(x => x.empty || x.li.classList.contains('open')); all.forEach(x => x.setOpen(open)); } });
+  const paintExpand = () => {
+    const can = all.filter(x => !x.empty), open = can.length && can.every(x => x.li.classList.contains('open'));
+    expandBtn.replaceChildren(ic(open ? 'up' : 'down'), open ? 'Collapse' : 'Expand');
+    expandBtn.hidden = !can.length;
+  };
+  paintExpand();
+  const root = h('div', { class: 'bp-tl', id: 'steps-' + bid },
+    h('div', { class: 'bp-tl-h' }, ic('route'), h('h3', { html: inline(b.title || 'Steps') }),
+      h('span', { class: 'bp-cl-count' }, started ? `${done} of ${items.length} done` : `${items.length} step${items.length === 1 ? '' : 's'}`),
+      h('span', { class: 'tools' }, expandBtn)),
+    started && all.length > 1 && h('div', { class: 'bp-tl-bar', 'aria-hidden': 'true' }, all.map(x => h('i', { class: 's-' + (STEP_STATUS[x.s.status] ? x.s.status : 'todo') }))),
+    list);
+  root._steps = byId;
+  return root;
+}
+function fileRow(f) {
+  const p = String(f.path || ''), [letter, word, k] = FILE_ACTION[f.action] || FILE_ACTION.edit;
+  return h('li', { class: 'bp-frow k-' + k, 'data-path': p },
+    h('span', { class: 'bp-fbadge', title: word }, h('span', { 'aria-hidden': 'true' }, letter), h('span', { class: 'bp-sr' }, word + ': ')),
+    fileIcon(p),
+    h('span', { class: 'bp-fmain' },
+      h('span', { class: 'bp-fname' }, h('span', { class: 'nm', title: p }, baseName(p)), f.from && h('span', { class: 'from' }, 'from ', h('code', {}, f.from))),
+      f.why && h('span', { class: 'bp-fwhy', html: inline(f.why) })),
+    f.step ? h('button', { type: 'button', class: 'bp-ref bp-fstep', 'data-step': f.step, onclick: () => jumpStep(f.step) }, ic('route'), h('span', {}, 'Step ' + f.step)) : h('span'));
+}
+const dirHead = dir => h('div', { class: 'bp-fdir' }, ic('folder'), h('span', {}, dir ? dir + '/' : './'));
+function renderFiles(b) {
+  const items = Array.isArray(b.items) ? b.items : [], groups = new Map(), n = { add: 0, edit: 0, del: 0, ren: 0 };
+  for (const f of items) { const d = dirOf(f.path); if (!groups.has(d)) groups.set(d, []); groups.get(d).push(f); n[(FILE_ACTION[f.action] || FILE_ACTION.edit)[2]]++; }
+  const SUM = [['add', 'A', 'added'], ['edit', 'M', 'changed'], ['del', 'D', 'deleted'], ['ren', 'R', 'renamed or moved']];
+  return h('div', { class: 'bp-files' },
+    h('div', { class: 'bp-files-h' }, ic('folder'), h('h3', { html: inline(b.title || 'Files') }),
+      h('span', { class: 'bp-files-sum' }, SUM.filter(([k]) => n[k]).map(([k, l, w]) => h('span', { class: 'bp-fsum k-' + k, title: `${n[k]} ${w}` }, h('b', { 'aria-hidden': 'true' }, l), String(n[k]), h('span', { class: 'bp-sr' }, ' ' + w))))),
+    [...groups].map(([d, fs]) => h('div', { class: 'bp-fgrp', 'data-dir': d }, dirHead(d), h('ul', {}, fs.map(fileRow)))));
+}
+// media: a path relative to the doc JSON's folder (served beside it) or a data: URI; never the network
+const MEDIA_IMG = /\.(png|jpe?g|gif|webp|svg)$/i, MEDIA_VID = /\.(mp4|webm)$/i;
+function mediaKind(src) {
+  const s = String(src || '').trim();
+  if (/^data:image\//i.test(s)) return 'img';
+  if (/^data:video\//i.test(s)) return 'video';
+  if (/^([a-z][\w+.-]*:|\/\/)/i.test(s)) return null;
+  const path = s.split(/[?#]/)[0];
+  return MEDIA_IMG.test(path) ? 'img' : MEDIA_VID.test(path) ? 'video' : null;
+}
+function mediaMiss(src, why) { return h('div', { class: 'bp-media-miss' }, ic('image'), h('span', {}, why, ' ', h('code', {}, String(src || '').slice(0, 120)))); }
+// the <img> (opens the lightbox) or <video> for a src, or null when it isn't one
+function mediaEl(src, alt, cls, caption) {
+  const k = mediaKind(src), s = String(src || '').trim();
+  if (k === 'video') { const v = h('video', { class: cls, src: s, controls: true, muted: true, playsinline: true, preload: 'metadata', 'aria-label': alt || null }); v.muted = true; return v; }
+  if (k !== 'img') return null;
+  const im = h('img', { class: cls, src: s, alt: alt || '', loading: 'lazy', decoding: 'async' });
+  im.addEventListener('click', () => lightbox(im, caption));
+  return im;
+}
+const missWhy = src => /^(https?:)?\/\//i.test(String(src || '').trim()) ? 'Not loaded: pages make no network calls.' : 'Not an image or video:';
+function renderMedia(b) {
+  const el = mediaEl(b.src, b.alt, null, b.caption), w = +b.width > 0 ? Math.round(+b.width) : 0;
+  const fr = h('div', { class: 'bp-media-fr' + (el && el.tagName === 'VIDEO' ? ' vid' : '') }, el || mediaMiss(b.src, missWhy(b.src)));
+  if (el) el.addEventListener('error', () => { fr.classList.remove('vid'); fr.replaceChildren(mediaMiss(b.src, 'Couldn\'t load')); }, { once: true });
+  if (el && el.tagName === 'IMG') fr.append(h('button', { type: 'button', class: 'bd-ibtn bp-media-zoom', 'aria-label': 'View full size', title: 'View full size', onclick: () => lightbox(el, b.caption) }, ic('full')));
+  return h('figure', { class: 'bp-media', style: w ? `max-width:${w}px` : null }, fr, b.caption && h('figcaption', { class: 'bp-caption', html: inline(b.caption) }));
+}
+let lbDlg = null;
+function lightbox(img, caption) {
+  if (!lbDlg) {
+    lbDlg = h('dialog', { class: 'bd-lb', 'aria-label': 'Image, full size' }, h('figure', {}, h('img', { alt: '' }), h('figcaption', {})),
+      h('button', { type: 'button', class: 'bd-ibtn x', 'aria-label': 'Close', title: 'Close (Esc)' }, ic('x')));
+    lbDlg.addEventListener('click', e => { if (!e.target.closest('figcaption a')) lbDlg.close(); });
+    document.body.append(lbDlg);
+  }
+  const im = lbDlg.querySelector('img'), cap = lbDlg.querySelector('figcaption');
+  im.src = img.currentSrc || img.src; im.alt = img.alt;
+  cap.innerHTML = caption ? inline(caption) : ''; cap.hidden = !caption;
+  lbDlg.showModal();
+}
+function renderCompare(b) {
+  const side = (s, which) => {
+    s = s && typeof s === 'object' ? s : {};
+    const label = s.label || (which === 'before' ? 'Before' : 'After');
+    const im = s.src && mediaEl(s.src, s.alt || plainText(label), 'bp-cmpr-img', label);
+    if (im) im.addEventListener('error', () => im.replaceWith(mediaMiss(s.src, 'Couldn\'t load')), { once: true });
+    return h('section', { class: 'bp-cmpr-side ' + which, 'data-side': which, 'aria-label': plainText(label) },
+      h('div', { class: 'bp-cmpr-h' }, h('i', { class: 'd' }), h('span', { class: 'l', html: inline(label) }), s.code && s.lang && h('span', { class: 'lg' }, s.lang),
+        s.code && h('button', { type: 'button', class: 'bp-btn ghost', 'aria-label': 'Copy code', title: 'Copy code', onclick: () => copyText(s.code, 'Copied') }, ic('copy'))),
+      (s.md || s.src) && h('div', { class: 'bp-cmpr-b' }, s.md && h('div', { class: 'bp-cmpr-md', html: md(s.md) }), s.src && (im || mediaMiss(s.src, missWhy(s.src)))),
+      s.code && h('pre', { class: 'bp-cmpr-code' }, h('code', {}, s.code)));
+  };
+  return h('div', { class: 'bp-cmpr' },
+    b.title && h('div', { class: 'bp-cmpr-t' }, ic('split'), h('h3', { html: inline(b.title) })),
+    h('div', { class: 'bp-cmpr-g' }, side(b.before, 'before'), h('span', { class: 'bp-cmpr-ar', 'aria-hidden': 'true' }, h('b', {}, ic('arrowr'))), side(b.after, 'after')));
+}
+// after the whole page is drawn: file chips with no row to go to, and step chips' numbers
+function linkPlanBlocks() {
+  for (const c of main.querySelectorAll('.bp-fchip[data-path]')) {
+    if (main.querySelector(fileRowSel(c.dataset.path))) c.title = `Show ${c.dataset.path} in the file list`; else c.disabled = true;
+  }
+  for (const c of main.querySelectorAll('.bp-fstep[data-step]')) {
+    const x = stepFor(c.dataset.step);
+    if (x) { c.lastChild.textContent = 'Step ' + x.n; c.title = `Step ${x.n}: ${plainText(x.s.title)}`; } else c.disabled = true;
+  }
 }
 
 /* ---------- checklists ---------- */
@@ -1681,29 +2050,42 @@ function noteBox(x, compact) {
   requestAnimationFrame(fit);
   return view;
 }
+// one entry per checklist item: its tick or pick and the reader's comment (Send answers, and a plan's Approve and Request changes)
+const answerItems = () => Object.values(ITEMS).map(x => ({
+  checklist: x.cid, item: x.it.id, text: x.it.text,
+  ...(x.choices ? { choice: x.choice || null, recommend: x.it.recommend || null } : { done: x.cb.checked }),
+  ...(x.note ? { note: x.note.trim() } : {}),
+}));
 function replyPayload() {
-  const all = Object.values(ITEMS);
   return {
     kind: 'answers', doc: docId, rev: CUR.rev, title: DOC.title || '', path: location.pathname, at: new Date().toISOString(),
     message: (store.get(MSG_KEY) || '').trim(),
-    items: all.map(x => ({
-      checklist: x.cid, item: x.it.id, text: x.it.text,
-      ...(x.choices ? { choice: x.choice || null, recommend: x.it.recommend || null } : { done: x.cb.checked }),
-      ...(x.note ? { note: x.note.trim() } : {}),
-    })),
+    items: answerItems(),
     markdown: allChecklistsMd(),
   };
+}
+// a plan's decisions (and comments on its other items) as Markdown, for Approve and Request changes
+function decisionsMd() {
+  return Object.values(ITEMS).filter(x => x.choices || x.note).map(x => {
+    let line = `- ${x.it.text}`;
+    if (x.choices) {
+      const rec = x.it.recommend && choiceLabel(x, x.it.recommend);
+      line += x.choice ? ` → **${choiceLabel(x, x.choice)}**` + (rec && x.choice !== x.it.recommend ? ` (recommended: ${rec})` : '') : rec ? ` (no pick; recommended: ${rec})` : ' (no pick)';
+    }
+    return line + (x.note ? '\n' + x.note.trim().split('\n').map(l => `  > ${l}`).join('\n') : '');
+  }).join('\n');
 }
 // The page can send replies itself when it is served by scripts/serve.py; otherwise it copies them.
 // Two kinds go back: answers (ticks, picks, item comments: Send answers) and change requests to the
 // document itself (pins, selections, drawings: the bottom toolbar's Request changes).
-const REPLY = { url: null, changes: null, to: '', home: '' };
+const REPLY = { url: null, changes: null, approve: null, approval: null, connected: false, to: '', home: '' };
 if (/^https?:$/.test(location.protocol)) {
   fetch('/__bluedoc/ping?path=' + encodeURIComponent(location.pathname), { cache: 'no-store' }).then(r => r.ok ? r.json() : null).then(j => {
     if (!j || !j.bluedoc) return;
-    Object.assign(REPLY, { url: '/__bluedoc/reply', changes: '/__bluedoc/changes', to: j.to || '', home: j.home || '' });
+    Object.assign(REPLY, { url: '/__bluedoc/reply', changes: '/__bluedoc/changes', approve: '/__bluedoc/approve', approval: j.approval && typeof j.approval === 'object' ? j.approval : null,
+      connected: true, to: j.to || '', home: j.home || '' });
     if (REPLY.home) linkHome(REPLY.home);
-    paintSend(); MARKUP.paint();
+    paintSend(); paintPlan(); MARKUP.paint();
   }).catch(() => {});
 }
 // served with a dashboard: the brand mark and an "All docs" link lead to it
@@ -1711,19 +2093,24 @@ function linkHome(href) {
   mark.href = href; mark.title = 'All docs'; mark.setAttribute('aria-label', 'bluedoc: all docs');
   if (!document.querySelector('.bd-home')) mark.after(h('a', { class: 'bd-home', href, title: 'All docs' }, ic('grid'), h('span', { class: 'l' }, 'All docs')));
 }
-const sendBtn = h('button', { type: 'button', class: 'bp-btn bd-send-btn', hidden: true, title: 'Send your answers to the agent', onclick: () => openSend() }, ic('send'), h('span', { class: 'l' }, 'Send answers'));
-document.querySelector('.bd-bar-r')?.insertBefore(sendBtn, document.querySelector('.bd-bar-r .bd-toc-btn'));
-let sendDlg = null;
+// Send answers (pages with checklists) and Approve plan (plan pages) end the bottom tray: TRAY_END,
+// filled where the tray's keys are made, below. Plans have no Send answers; their picks go with Approve.
+const TRAY_END = [];
+let sendBtn = null, sendDlg = null, approveDlg = null;
+const PLAN_KEY = `bp:${docId}:__planstate`;
 function replyCounts() {
   const all = Object.values(ITEMS), dec = all.filter(x => x.choices);
   return { decisions: dec.length, decided: dec.filter(x => x.choice).length, steps: all.length - dec.length,
-    ticked: all.filter(x => !x.choices && x.cb.checked).length, notes: all.filter(x => x.note).length };
+    ticked: all.filter(x => !x.choices && x.cb.checked).length, notes: all.filter(x => x.note).length,
+    // what the reader did: picks and ticks that differ from the author's
+    changed: all.filter(x => x.choices ? (x.choice || '') !== (x.it.choice || '') : x.cb.checked !== !!x.it.done).length };
 }
 function paintSend() {
+  if (approveDlg && approveDlg.open) approveDlg._paint();
   if (!sendBtn) return;
-  sendBtn.hidden = !CHECKLISTS.length || OLD;   // answers go with the current revision only
-  const c = replyCounts();
-  sendBtn.classList.toggle('has', !!(c.decided || c.notes || c.ticked));
+  const c = replyCounts(), has = !!(c.changed || c.notes);
+  sendBtn.classList.toggle('has', has);
+  sendBtn._tip = has ? 'Send your decisions, ticks and comments to the agent' : 'Send answers: pick, tick or comment on an item first';
   if (sendDlg && sendDlg.open) sendDlg._paint();
 }
 function openSend() {
@@ -1825,14 +2212,20 @@ if (CHECKLISTS.length) {
 }
 Object.values(DIFFS).forEach(initDiff);
 CHECKLISTS.forEach(c => c.paintExpand());   // after code-review links may have filled empty rows
+linkPlanBlocks();
 const codeHash = () => { if (location.hash.startsWith('#code:')) openCodeLink(decodeURIComponent(location.hash.slice(6))); };
 if (location.hash.startsWith('#code:')) { if ('scrollRestoration' in history) history.scrollRestoration = 'manual'; setTimeout(codeHash, 300); }
 addEventListener('hashchange', codeHash);
-// #item-<checklist>-<item> (from canvases, tables, shared links) opens that row before the browser scrolls to it
+// #item-<checklist>-<item> and #step-<steps>-<step> (from canvases, tables, shared links) open that row before the browser scrolls to it
 const itemFromHash = hash => { const el = hash.startsWith('#item-') && document.getElementById(decodeURIComponent(hash.slice(1))); return el && Object.values(ITEMS).find(x => x.li === el); };
-const openHashItem = () => { const x = itemFromHash(location.hash); if (x) { openItem(x); x.li.scrollIntoView({ block: 'center' }); flash(x.li); } };
+const stepFromHash = hash => { const el = hash.startsWith('#step-') && document.getElementById(decodeURIComponent(hash.slice(1))); return el && el._step; };
+const openHashItem = () => {
+  const x = itemFromHash(location.hash), s = !x && stepFromHash(location.hash);
+  if (x) { openItem(x); x.li.scrollIntoView({ block: 'center' }); flash(x.li); }
+  else if (s) { s.setOpen(true); s.li.scrollIntoView({ block: 'center' }); flash(s.li); }
+};
 addEventListener('hashchange', openHashItem);
-if (location.hash.startsWith('#item-')) setTimeout(openHashItem, 100);
+if (/^#(item|step)-/.test(location.hash)) setTimeout(openHashItem, 100);
 if ('IntersectionObserver' in window) {
   const io = new IntersectionObserver(es => {
     for (const e of es) if (e.isIntersecting) tocLinks.forEach(a => a.classList.toggle('on', a.getAttribute('href') === '#' + e.target.id));
@@ -2667,6 +3060,7 @@ function select(cv, n, quiet) {
   if (!n) { d.hidden = true; return; }
   d.textContent = '';
   const refs = NODE_REFS[`${cv.id}/${n.id}`] || NODE_REFS[`${cv.id}/${n._key}`] || [];
+  const srefs = STEP_REFS[`${cv.id}/${n.id}`] || STEP_REFS[`${cv.id}/${n._key}`] || [];
   d.append(...[
     h('button', { type: 'button', class: 'x', 'aria-label': 'Close details', onclick: () => select(cv, null) }, ic('x')),
     h('h4', {}, h('span', {}, n.label || n.id), n.kind && h('span', { class: 'bp-chip info' }, n.kind), n.state && h('span', { class: 'bp-chip ' + ({ live: 'ok', local: 'info', proposed: 'warn', unverified: 'warn', removed: 'risk', replaced: 'risk' }[n.state] || 'todo') }, n.state)),
@@ -2674,6 +3068,7 @@ function select(cv, n, quiet) {
     n.md && h('div', { html: md(n.md) }),
     n.refs && n.refs.length && h('div', {}, h('span', { class: 'k' }, 'Source'), h('ul', {}, n.refs.map(r => h('li', { html: inline(r) })))),
     refs.length && h('div', {}, h('span', { class: 'k' }, 'Checklist'), h('ul', {}, refs.map(r => h('li', {}, h('a', { href: `#item-${r.checklist.id}-${r.item.id}` }, r.item.text.replace(/[`*]/g, '')))))),
+    srefs.length && h('div', {}, h('span', { class: 'k' }, 'Plan steps'), h('ul', {}, srefs.map(x => h('li', {}, h('a', { href: '#' + x.li.id }, `${x.n}. ${plainText(x.s.title)}`))))),
     n._sys && h('button', { type: 'button', class: 'bp-btn', onclick: () => openNode(cv, n) }, ic('open'), 'Open inner architecture')].filter(Boolean));
   d.hidden = false;
 }
@@ -2890,11 +3285,18 @@ function blockText(b) {
     case 'checklist': return [b.title, ...(b.items || []).map(x => '- ' + x.text)].filter(Boolean).join('\n');
     case 'canvas': return [b.title, ...(b.nodes || []).map(n => '- ' + n.label)].filter(Boolean).join('\n');
     case 'diff': return [b.title, ...(b.files || []).map(f => '- ' + f.path)].filter(Boolean).join('\n');
+    case 'steps': return [b.title, ...(b.items || []).map((s, i) => [`${i + 1}. ${s.title}` + [s.status !== 'todo' && STEP_STATUS[s.status], EFFORT[s.effort] && 'effort ' + s.effort].filter(Boolean).map(x => ` [${x}]`).join(''),
+      s.md, (s.files || []).length && 'Files: ' + s.files.join(', ')].filter(Boolean).join('\n'))].filter(Boolean).join('\n');
+    case 'files': return [b.title, ...(b.items || []).map(f => `${(FILE_ACTION[f.action] || FILE_ACTION.edit)[0]} ${f.path}${f.from ? ` (from ${f.from})` : ''}${f.why ? `: ${f.why}` : ''}`)].filter(Boolean).join('\n');
+    case 'media': return [b.caption, b.alt, b.src].filter(Boolean).join('\n');
+    case 'compare': { const side = (s, d) => s ? [s.label || d, s.md, s.code, s.src].filter(Boolean).join('\n') : ''; return [b.title, side(b.before, 'Before'), side(b.after, 'After')].filter(Boolean).join('\n\n'); }
     default: return canon(b);
   }
 }
+const mediaLabel = b => { const t = plain(b.caption || b.alt).replace(/\s+/g, ' ').trim(); return t.length > 48 ? t.slice(0, 47).trimEnd() + '…' : t || 'Media'; };
 const blockLabel = b => ({ text: 'Text', callout: b.title || `${(b.kind || 'note')[0].toUpperCase()}${(b.kind || 'note').slice(1)} callout`, table: 'Table',
-  code: b.title || 'Code', terms: 'Terms', cards: 'Cards', checklist: b.title || 'Checklist', canvas: b.title || 'Drawing', diff: b.title || 'Code change' }[b.type] || b.type);
+  code: b.title || 'Code', terms: 'Terms', cards: 'Cards', checklist: b.title || 'Checklist', canvas: b.title || 'Drawing', diff: b.title || 'Code change',
+  steps: b.title || 'Steps', files: b.title || 'Files', media: b.type === 'media' ? mediaLabel(b) : '', compare: b.title || 'Compare' }[b.type] || b.type);
 
 const CHG = [];   // every marked change, in page order once sorted
 const CHG_WORD = { add: 'New', mod: 'Changed', del: 'Removed' };
@@ -2955,11 +3357,12 @@ function compareBlocks(ob, nb, secElm) {
     const o = ob[op.a];
     let summary = '';
     const before = CHG.length;
-    if (b.type === 'checklist') {
-      const n = compareChecklist(o, b); summary = countWords(n);
+    if (b.type === 'checklist' || b.type === 'steps' || b.type === 'files') {
+      const n = b.type === 'checklist' ? compareChecklist(o, b) : b.type === 'steps' ? compareSteps(o, b, el) : compareFiles(o, b, el);
+      summary = countWords(n);
       const rows = fieldRows([['Title', o.title, b.title]]);
       if (!rows.length && CHG.length === before) continue;
-      if (rows.length) el.querySelector('.bp-cl-h').after(chgBox(rows));
+      if (rows.length) el.querySelector('.bp-cl-h, .bp-tl-h, .bp-files-h').after(chgBox(rows));
     }
     else if (b.type === 'table') compareTable(o, b, el);
     else if (b.type === 'canvas') el.append(chgBox(compareCanvas(o, b)));
@@ -3013,6 +3416,60 @@ function compareChecklist(o, n) {
     if (prevId) prevId.li.after(ghost); else list.prepend(ghost);
     markChg(ghost, 'del', w.text);
   }
+  return cnt;
+}
+// steps and files: each changed step or file row carries its own mark, like checklist items
+function compareSteps(o, n, el) {
+  const cnt = { add: 0, mod: 0, del: 0 }, root = el.querySelector('.bp-tl'); if (!root) return cnt;
+  const byId = root._steps, was = new Map((o.items || []).map(s => [s.id, s])), now = new Set((n.items || []).map(s => s.id));
+  const status = s => STEP_STATUS[s.status] || STEP_STATUS.todo;
+  for (const s of n.items || []) {
+    const x = byId.get(s.id); if (!x) continue;
+    const w = was.get(s.id);
+    if (!w) { cnt.add++; x.meta.prepend(chgTag('add')); markChg(x.li, 'add', s.title); continue; }
+    if (canon(w) === canon(s)) continue;
+    const rows = fieldRows([['Title', w.title, s.title], ['Status', status(w), status(s)], ['Effort', w.effort, s.effort], ['Details', w.md, s.md], ['Files', w.files, s.files], ['Links', w.refs, s.refs]]);
+    if (!rows.length) continue;
+    cnt.mod++;
+    x.meta.prepend(chgTag('mod'));
+    x.body.prepend(chgBox(rows)); x.refresh(); x.setOpen(true);
+    markChg(x.li, 'mod', s.title);
+  }
+  const list = root.querySelector('.bp-tl-l');
+  (o.items || []).forEach((w, i) => {
+    if (now.has(w.id)) return;
+    cnt.del++;
+    const ghost = h('li', { class: 'bp-step s-todo empty bd-ghost' }, h('span', { class: 'bp-step-mk', 'aria-hidden': 'true' }, h('span', { class: 'bp-step-dot' }, '–')),
+      h('div', { class: 'bp-step-head' }, h('span', { class: 'bp-step-main' }, h('del', { class: 'bp-step-t', html: inline(w.title) }), h('span', { class: 'bp-step-meta' }, chgTag('del')))));
+    const prev = (o.items || []).slice(0, i).reverse().map(p => now.has(p.id) && byId.get(p.id)).find(Boolean);
+    if (prev) prev.li.after(ghost); else list.prepend(ghost);
+    markChg(ghost, 'del', w.title);
+  });
+  return cnt;
+}
+function compareFiles(o, n, el) {
+  const cnt = { add: 0, mod: 0, del: 0 }, root = el.querySelector('.bp-files'); if (!root) return cnt;
+  const was = new Map((o.items || []).map(f => [f.path, f])), now = new Set((n.items || []).map(f => f.path)), rows = [];
+  const act = f => (FILE_ACTION[f.action] || FILE_ACTION.edit)[1];
+  for (const f of n.items || []) {
+    const row = root.querySelector(fileRowSel(String(f.path || ''))); if (!row) continue;
+    const w = was.get(f.path);
+    if (!w) { cnt.add++; markChg(row, 'add', f.path); continue; }
+    if (canon(w) === canon(f)) continue;
+    cnt.mod++;
+    rows.push(...fieldRows([['Action', act(w), act(f)], ['From', w.from, f.from], ['Why', w.why, f.why], ['Step', w.step, f.step]]).map(([k, v]) => [`${baseName(String(f.path))} · ${k}`, v]));
+    markChg(row, 'mod', f.path);
+  }
+  for (const w of o.items || []) {
+    if (now.has(w.path)) continue;
+    cnt.del++;
+    const ghost = fileRow(w), dir = dirOf(w.path);
+    ghost.classList.add('bd-ghost'); ghost.removeAttribute('data-path'); ghost.lastChild.replaceWith(chgTag('del'));
+    const grp = [...root.querySelectorAll('.bp-fgrp')].find(g => g.dataset.dir === dir);
+    if (grp) grp.querySelector('ul').append(ghost); else root.append(h('div', { class: 'bp-fgrp', 'data-dir': dir }, dirHead(dir), h('ul', {}, ghost)));
+    markChg(ghost, 'del', w.path);
+  }
+  if (rows.length) el.append(chgBox(rows));
   return cnt;
 }
 function compareTable(o, n, el) {
@@ -3337,6 +3794,105 @@ if (REVS.length > 1) {
   SIDE.bind(btn, 'revisions');
 }
 
+/* ---------- plans: Approve plan; other pages with checklists: Send answers. The keys that end the tray ---------- */
+// Approve plan is the reader's go-ahead for this revision, with their decision picks and any pending
+// comments as notes. Approved is per revision: when served, the ping's `approval` (approved when its rev
+// is the page's); otherwise what this browser stored in PLAN_KEY, which also remembers "changes requested".
+function planLocal() { try { const x = JSON.parse(store.get(PLAN_KEY) || 'null'); return x && typeof x === 'object' ? x : null; } catch { return null; } }
+function planState() {
+  if (!IS_PLAN) return { type: DOC_TYPE, state: null, rev: CUR.rev, approvedRev: null };
+  const loc = planLocal(), ap = REPLY.connected ? REPLY.approval : loc && loc.state === 'approved' ? loc : null;
+  const approvedRev = ap ? String(ap.rev ?? '') : null;
+  const state = approvedRev === CUR.rev ? 'approved' : loc && loc.state === 'changes' && String(loc.rev) === CUR.rev ? 'changes' : 'awaiting';
+  return { type: DOC_TYPE, state, rev: CUR.rev, approvedRev };
+}
+const revWord = CUR.rev ? ` (rev ${CUR.rev})` : '';
+function approvePayload(note) {
+  note = String(note || '').trim();
+  const at = new Date().toISOString(), dec = decisionsMd(), { annotations, notes } = MARKUP.approvalNotes();
+  const markdown = [`# Plan approved: ${DOC.title || docId}${revWord}, ${at.slice(0, 10)}`, note, dec && '## Decisions\n\n' + dec, notes && '## Notes with the approval\n\n' + notes].filter(Boolean).join('\n\n') + '\n';
+  return { kind: 'approval', decision: 'approved', doc: docId, rev: CUR.rev, title: DOC.title || '', path: location.pathname, at, note, answers: answerItems(), annotations, markdown };
+}
+const approveKey = IS_PLAN ? tipped(keyBtn('txt approve', 'check', 'Approve plan', {}, () => openApprove())) : null;
+function paintPlan() {
+  if (!IS_PLAN || OLD) return;
+  const p = planState(), done = p.state === 'approved', revTxt = CUR.rev ? ` · rev ${CUR.rev}` : '';
+  if (planChip) {
+    planChip.className = 'bd-planchip ' + p.state;
+    planChip.replaceChildren(...(done ? [ic('tick'), 'Approved' + revTxt] : p.state === 'changes' ? [ic('edit'), 'Changes requested'] : [h('i'), 'Plan · Awaiting approval']));
+  }
+  approveKey.disabled = done; approveKey.classList.toggle('done', done);
+  approveKey.replaceChildren(ic(done ? 'tick' : 'check'), h('span', { class: 't' }, done ? 'Approved' + revTxt : 'Approve plan'));
+  approveKey.setAttribute('aria-label', done ? 'Approved' + revTxt : 'Approve plan');
+  approveKey._tip = `Approve this plan${revWord}: the agent goes ahead with it and your picks`;
+  if (done && approveDlg && approveDlg.open) approveDlg.close();
+}
+function openApprove() {
+  if (planState().state === 'approved') return;
+  MARKUP.flush();
+  if (!approveDlg) {
+    const note = h('textarea', { class: 'bp-note-ta', rows: 2, placeholder: 'A note for the agent (optional)', 'aria-label': 'Note with the approval' });
+    note.addEventListener('keydown', e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); doApprove(); } });
+    const sum = h('ul', { class: 'bd-ap-sum' }), decs = h('ul', {}), decBox = h('div', { class: 'bd-ap-dec' }, h('h4', {}, 'Decisions'), decs), how = h('p', { class: 'how' });
+    const copy = h('button', { type: 'button', class: 'bp-btn', onclick: () => copyText(approvePayload(note.value).markdown, 'Copied: paste it into the chat with the agent') }, ic('copy'), 'Copy');
+    const ok = h('button', { type: 'button', class: 'bp-btn ok', onclick: () => doApprove() }, ic('tick'), 'Approve');
+    approveDlg = h('dialog', { class: 'bd-send bd-approve', 'aria-labelledby': 'bd-ap-h' },
+      h('div', { class: 'hd' }, h('h3', { id: 'bd-ap-h' }, `Approve this plan${revWord}`), h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Close', onclick: () => approveDlg.close() }, ic('x'))),
+      h('p', { class: 'sum' }, 'The agent goes ahead with the plan as written and the decisions below.'), note, sum, decBox, how, h('div', { class: 'ft' }, copy, ok));
+    document.body.append(approveDlg);
+    approveDlg.addEventListener('click', e => { if (e.target === approveDlg) approveDlg.close(); });
+    Object.assign(approveDlg, { _note: note, _ok: ok });
+    approveDlg._paint = () => {
+      const pend = MARKUP.approvalNotes().annotations.length, dec = Object.values(ITEMS).filter(x => x.choices), open = dec.filter(x => !x.choice).length;
+      const line = (icon, cls, text) => h('li', { class: cls }, ic(icon), h('span', {}, text));
+      sum.replaceChildren(...[
+        pend && line('msg', '', pend === 1 ? '1 pending comment goes with it as a note' : `${pend} pending comments go with it as notes`),
+        open && line('alert', 'warn', `${open} open question${open === 1 ? ' has' : 's have'} no pick; the agent will use its recommendation`),
+      ].filter(Boolean));
+      sum.hidden = !sum.childElementCount;
+      decBox.hidden = !dec.length;
+      decs.replaceChildren(...dec.map(x => {
+        const rec = x.it.recommend && choiceLabel(x, x.it.recommend);
+        return h('li', {}, h('span', { class: 't', html: inline(x.it.text) }),
+          x.choice ? h('span', { class: 'pk' }, ic('tick'), choiceLabel(x, x.choice), rec && x.choice !== x.it.recommend && h('span', { class: 'rec' }, `recommended: ${rec}`))
+            : h('span', { class: 'pk none' }, rec ? [ic('star'), `No pick · ${rec}`] : 'No pick'));
+      }));
+      how.textContent = REPLY.approve ? `Approve sends this to ${REPLY.to || 'the agent that opened this page'}. Copy gives you the same text to paste.`
+        : 'This page isn\'t connected to an agent. Approve copies the approval for you to paste into the chat. (Pages opened through serve.py send it directly.)';
+    };
+  }
+  approveDlg._paint();
+  approveDlg.showModal();
+  approveDlg._note.focus();
+}
+async function doApprove() {
+  const dlg = approveDlg, p = approvePayload(dlg ? dlg._note.value : '');
+  const done = () => {
+    if (REPLY.connected) REPLY.approval = { rev: p.rev, at: p.at };
+    store.set(PLAN_KEY, JSON.stringify({ rev: p.rev, state: 'approved', at: p.at }));
+    MARKUP.markSent(p.annotations.map(a => a.id), p.at);
+    if (dlg) { dlg._note.value = ''; dlg.close(); }
+    paintPlan();
+  };
+  if (!REPLY.approve) { copyText(p.markdown, 'Approved and copied: paste it into the chat with the agent'); done(); return; }
+  if (dlg) dlg._ok.disabled = true;
+  try {
+    const r = await fetch(REPLY.approve, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Bluedoc': '1' }, body: JSON.stringify(p) });
+    if (!r.ok) throw new Error(String(r.status));
+    done();
+    toast(`Plan approved; sent to ${REPLY.to || 'the agent'}`);
+  } catch {
+    copyText(p.markdown, 'Couldn\'t reach the agent; copied instead, paste it into the chat');
+  } finally { if (dlg) dlg._ok.disabled = false; }
+}
+// after a plan's Request changes, the header says so for this revision
+function changesSent(p) { if (IS_PLAN) { store.set(PLAN_KEY, JSON.stringify({ rev: p.rev, state: 'changes', at: p.at })); paintPlan(); } }
+if (!OLD && !BASE) {
+  if (IS_PLAN) TRAY_END.push(approveKey);
+  else if (CHECKLISTS.length) { sendBtn = tipped(keyBtn('txt send', 'send', 'Send answers', {}, () => openSend(), h('span', { class: 't' }, 'Send answers'))); TRAY_END.push(sendBtn); paintSend(); }
+}
+paintPlan();
+
 /* ---------- change requests: pins, text selections and drawings on the page ---------- */
 // The bottom toolbar switches between View (the page as usual), Point (pin a note on an element),
 // Select (a note on selected text) and Draw (freehand strokes). A note anchors to the smallest
@@ -3345,7 +3901,8 @@ if (REVS.length > 1) {
 // mark whose element is hidden (a collapsed row, another diff file, a closed system) sits on the
 // nearest visible ancestor. Positions are fractions of the element's box, so marks follow reflow,
 // width changes and canvas zoom. Notes belong to the current revision: no toolbar on earlier
-// revisions or in compare view. Send answers never carries these, and this never carries answers.
+// revisions or in compare view. Send answers never carries these, and this carries answers only on a
+// plan, whose decision picks go with Request changes or Approve plan (there is no Send answers there).
 const MARKUP = (() => {
   const KEY = `bp:${docId}:__ann`, MSG = `bp:${docId}:__chgmsg`, PEN_KEY = 'bluedoc:pen';
   let list = [];
@@ -3385,24 +3942,36 @@ const MARKUP = (() => {
       return [`${i + 1}. **${a.target.label}** (${TYPE_WORD[a.type]})`, ex && `   > ${ex}`,
         `   Change: ${noteText(a).split('\n').join('\n   ')}`].filter(Boolean).join('\n');
     }).join('\n\n'));
+    const dec = IS_PLAN && decisionsMd();
+    if (dec) parts.push('## Decisions\n\n' + dec);
     return `# Change requests: ${DOC.title || docId}${CUR.rev ? ` (rev ${CUR.rev})` : ''}, ${new Date().toISOString().slice(0, 10)}\n\n` + parts.join('\n\n') + '\n';
   }
-  // `message` repeats the general comments for agents that read only it
+  // `message` repeats the general comments for agents that read only it; a plan's decision picks go along as `answers`
   function payload() {
-    const items = pending();
+    const items = pending(), answers = IS_PLAN ? answerItems() : [];
     return { kind: 'changes', doc: docId, rev: CUR.rev, title: DOC.title || '', path: location.pathname, at: new Date().toISOString(),
-      message: items.filter(isGeneral).map(noteText).join('\n\n'), annotations: items.map(pub), markdown: changesMd(items) };
+      message: items.filter(isGeneral).map(noteText).join('\n\n'), annotations: items.map(pub), ...(answers.length ? { answers } : {}), markdown: changesMd(items) };
   }
-  const api = { all: () => JSON.parse(JSON.stringify(list)), payload, annotate: () => null, setMode: () => false, paint: () => {}, comments: () => ({ open: false, available: false }) };
+  // the pending comments that go with a plan's approval, as notes: general ones first
+  function approvalNotes() {
+    const items = pending(), ord = [...items.filter(isGeneral), ...items.filter(a => !isGeneral(a))];
+    return { annotations: ord.map(pub), notes: ord.map((a, i) => {
+      const ex = cut(excerpt(a), 200);
+      return [`${i + 1}. **${a.target.label}** (${TYPE_WORD[a.type]})`, ex && `   > ${ex}`, `   Note: ${noteText(a).split('\n').join('\n   ')}`].filter(Boolean).join('\n');
+    }).join('\n\n') };
+  }
+  const api = { all: () => JSON.parse(JSON.stringify(list)), payload, approvalNotes, annotate: () => null, setMode: () => false, paint: () => {}, flush: () => {}, markSent: () => {},
+    comments: () => ({ open: false, available: false }) };
   if (OLD || BASE) return api;
 
   /* what can be annotated, and the key of each */
   const shell = $('.bd-shell');
-  const SEL = { line: '.bd-ln', comment: '.bd-cm[data-ci]', row: 'tr[data-r]', node: '.bp-node[data-key]', card: '.bp-card', para: '.bp-text p, .bp-text li',
+  const SEL = { line: '.bd-ln', comment: '.bd-cm[data-ci]', row: 'tr[data-r]', node: '.bp-node[data-key]', step: '.bp-step[data-step]', file: '.bp-frow[data-path]',
+    media: '.bp-media', compare: '.bp-cmpr-side[data-side]', card: '.bp-card', para: '.bp-text p, .bp-text li',
     item: '.bp-cl-item[id]', block: '.bp-cl-block, .bp-block[data-bk]', heading: '.bp-sec > h2', lead: '.bp-sec > .bp-lead', section: 'section.bp-sec[id]',
     tldr: '.bd-tldr-card', header: '.bd-head', status: '.bd-meta' };
-  const KIND = { line: 'Code line', comment: 'Review comment', row: 'Table row', node: 'Drawing part', card: 'Card', para: 'Paragraph', item: 'Checklist item',
-    block: 'Block', heading: 'Section title', lead: 'Section lead', section: 'Section', tldr: 'TL;DR', header: 'Header', status: 'Status', doc: 'Page' };
+  const KIND = { line: 'Code line', comment: 'Review comment', row: 'Table row', node: 'Drawing part', step: 'Plan step', file: 'File', media: 'Media', compare: 'Compare side',
+    card: 'Card', para: 'Paragraph', item: 'Checklist item', block: 'Block', heading: 'Section title', lead: 'Section lead', section: 'Section', tldr: 'TL;DR', header: 'Header', status: 'Status', doc: 'Page' };
   const TYPES = Object.keys(SEL), ANY = Object.values(SEL).join(', ');
   const CLIPS = '.bd-pane, .bp-stage, .bp-table-wrap';   // inner scrollers that clip what they hold
   const typeOf = el => el === shell ? 'doc' : TYPES.find(t => el.matches(SEL[t]));
@@ -3425,6 +3994,10 @@ const MARKUP = (() => {
       case 'comment': return `comment:${diffOf(el).id}/${el.dataset.ci}`;
       case 'row': return `row:${pathOf(el)}/${el.dataset.r}`;
       case 'node': return `node:${canvasOf(el).id}/${el.dataset.key}`;
+      case 'step': return `step:${pathOf(el)}/${el.dataset.step}`;
+      case 'file': return `file:${pathOf(el)}/${el.dataset.path}`;
+      case 'media': return 'media:' + pathOf(el);
+      case 'compare': return `compare:${pathOf(el)}/${el.dataset.side}`;
       case 'card': return `card:${pathOf(el)}/${[...el.parentElement.children].indexOf(el)}`;
       case 'para': { const t = el.closest('.bp-text'); return `para:${pathOf(t)}/${[...t.querySelectorAll('p, li')].indexOf(el)}`; }
       case 'item': return 'item:' + itemKeyOf(el);
@@ -3465,6 +4038,10 @@ const MARKUP = (() => {
       case 'lead': return 'Lead';
       case 'block': { const b = blockOf(el); return b ? plain(blockLabel(b)) : 'Block'; }
       case 'item': { const x = ITEMS[itemKeyOf(el)], c = x && CHECKLISTS.find(c => c.items.includes(x)); return x ? `${c ? c.items.indexOf(x) + 1 + '. ' : ''}${cut(plain(x.it.text), 48)}` : 'Item'; }
+      case 'step': { const x = el._step; return x ? `${x.n}. ${cut(plain(x.s.title), 48)}` : 'Step'; }
+      case 'file': return cut(el.dataset.path, 60);
+      case 'media': return '';   // the block's label (caption or alt) already names it
+      case 'compare': return cut(el.querySelector('.bp-cmpr-h .l')?.textContent, 40) || (el.dataset.side === 'before' ? 'Before' : 'After');
       case 'row': return `Row ${+el.dataset.r + 1}: ${cut([...el.cells].slice(0, 2).map(c => c.textContent.trim()).filter(Boolean).join(' · '), 48)}`;
       case 'card': return cut(el.querySelector('h4 > span')?.textContent, 48) || 'Card';
       case 'para': return `“${cut(el.textContent, 40)}”`;
@@ -3481,11 +4058,13 @@ const MARKUP = (() => {
     return out.filter(Boolean).join(' › ');
   }
   // the element's own content, without UI chrome (option pills, comment boxes, buttons, change marks)
-  const CHROME = '.bp-cl-choices, .bp-note, button:not(.bp-cl-head), input, textarea, .bd-chg-tag, .bd-chgbox, .bp-cl-noteic, .bp-cl-num, .bp-code-h, .bp-cl-h .tools';
-  const BLOCKY = 'div, p, li, td, th, tr, dt, dd, h1, h2, h3, h4, pre, .bp-cl-text, .bp-cl-subt, .bp-chip';
+  const CHROME = '.bp-cl-choices, .bp-note, button:not(.bp-cl-head, .bp-step-head), input, textarea, .bd-chg-tag, .bd-chgbox, .bp-cl-noteic, .bp-cl-num, .bp-code-h, .bp-cl-h .tools, .bd-planchip, .bp-sr, .bp-fbadge, .bp-cmpr-h .lg';
+  const BLOCKY = 'div, p, li, td, th, tr, dt, dd, h1, h2, h3, h4, pre, .bp-cl-text, .bp-cl-subt, .bp-chip, .bp-fmain > span';
   const contentText = el => { const c = el.cloneNode(true); c.querySelectorAll(CHROME).forEach(x => x.remove()); c.querySelectorAll(BLOCKY).forEach(x => x.append(' ')); return c.textContent.replace(/\s+/g, ' ').trim(); };
+  const mediaText = el => contentText(el) || el.querySelector('img')?.alt || el.querySelector('video')?.getAttribute('aria-label') || '';
   const textOf = el => cut(el instanceof SVGElement ? [...el.querySelectorAll(':scope > .bp-cover > text:not(.bp-open)')].map(t => t.textContent).join(' ')
-    : el.matches('.bd-ln') ? el.querySelector('.c')?.textContent : el.matches('.bp-cl-item') ? contentText(el.querySelector('.bp-cl-row') || el) : contentText(el), 300);
+    : el.matches('.bd-ln') ? el.querySelector('.c')?.textContent : el.matches('.bp-cl-item') ? contentText(el.querySelector('.bp-cl-row') || el)
+    : el.matches('.bp-step') ? contentText(el.querySelector('.bp-step-t')) : el.matches('.bp-media') ? mediaText(el) : contentText(el), 300);
   const info = el => ({ key: keyOf(el), label: labelOf(el), text: textOf(el) });
   function ups(el) { const out = []; for (let p = el.parentElement?.closest(ANY); p; p = p.parentElement?.closest(ANY)) out.push(keyOf(p)); return out; }
   const newAnn = (type, el) => ({ id: newId(), type, status: 'pending', note: '', target: info(el), rev: CUR.rev, at: new Date().toISOString(), up: ups(el) });
@@ -3583,7 +4162,7 @@ const MARKUP = (() => {
   const eye = tipped(keyBtn('eye', 'eye', 'Hide comment marks', {}, () => { marksOff = !marksOff; paint(); schedule(true); }));
   const goN = h('span', { class: 'n' });
   const go = tipped(keyBtn('go', 'edit', 'Request changes', {}, () => openDlg(), h('span', { class: 'l' }, 'Request changes'), goN));
-  const tb = h('div', { class: 'bd-anntb bd-ann-ui', role: 'toolbar', 'aria-label': 'Comment on this doc' }, modeBtns, swatches, groove(), eye, go);
+  const tb = h('div', { class: 'bd-anntb bd-ann-ui', role: 'toolbar', 'aria-label': 'Comment on this doc' }, modeBtns, swatches, groove(), eye, TRAY_END.length ? groove() : null, go, TRAY_END);
   let page = null, swallow = false, press = null, ink = null, lastUp = 0, dlg = null, hovEl = null, hovFor = null, flashT = 0;
   // the comment being written (on the page, in the composer; not in the list until saved), the one being
   // edited in its sidebar card, the selected one, the hovered one
@@ -3750,7 +4329,7 @@ const MARKUP = (() => {
     if (hovFor !== el) {
       hovFor = el;
       const t = typeOf(el);
-      hov.firstChild.textContent = t === 'block' ? crumb(el, t) : KIND[t] + (['item', 'node', 'card', 'section', 'row', 'line'].includes(t) ? ' · ' + cut(crumb(el, t), 40) : '');
+      hov.firstChild.textContent = t === 'block' ? crumb(el, t) : KIND[t] + (['item', 'node', 'card', 'section', 'row', 'line', 'step', 'file', 'compare'].includes(t) ? ' · ' + cut(crumb(el, t), 40) : '');
     }
     hov.classList.toggle('in', r.top < cssPx('--bar-h') + cssPx('--rv-h') + 30);
   }
@@ -4166,8 +4745,9 @@ const MARKUP = (() => {
       const copy = h('button', { type: 'button', class: 'bp-btn', onclick: () => { copyText(changesMd(), 'Copied: paste it into the chat with the agent'); dlg.close(); } }, ic('copy'), 'Copy');
       const send = h('button', { type: 'button', class: 'bp-btn primary', onclick: () => sendChanges() }, ic('send'), 'Send');
       dlg = h('dialog', { class: 'bd-send bd-chgs', 'aria-labelledby': 'bd-chgs-h' },
-        h('div', { class: 'hd' }, h('h3', { id: 'bd-chgs-h' }, 'Request changes to this doc'), h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Close', onclick: () => dlg.close() }, ic('x'))),
-        h('p', { class: 'sum' }, 'Change requests ask the agent to edit the document. Your decisions and comments on items go with Send answers.'),
+        h('div', { class: 'hd' }, h('h3', { id: 'bd-chgs-h' }, IS_PLAN ? 'Request changes to this plan' : 'Request changes to this doc'), h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Close', onclick: () => dlg.close() }, ic('x'))),
+        h('p', { class: 'sum' }, IS_PLAN ? 'Change requests ask the agent to revise the plan. Your decision picks go with them.'
+          : 'Change requests ask the agent to edit the document. Your decisions and comments on items go with Send answers.'),
         cnt, h('details', { open: true }, h('summary', {}, 'Preview'), pre), how, h('div', { class: 'ft' }, copy, send));
       document.body.append(dlg);
       dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });
@@ -4192,17 +4772,23 @@ const MARKUP = (() => {
     try {
       const r = await fetch(REPLY.changes, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Bluedoc': '1' }, body: JSON.stringify(p) });
       if (!r.ok) throw new Error(String(r.status));
-      const ids = new Set(p.annotations.map(x => x.id));
-      for (const a of list) if (ids.has(a.id)) { a.status = 'open'; a.sentAt = p.at; }
-      if (filter === 'pending') setFilter('open', false);   // what was just sent, not an empty list
-      save();
+      markSent(p.annotations.map(x => x.id), p.at);
       if (dlg) dlg.close();
-      hlDirty = true; schedule(true); paint();
+      changesSent(p);
       toast(`Change request sent to ${REPLY.to || 'the agent'}`);
     } catch {
       copyText(p.markdown, 'Couldn\'t reach the agent; copied instead, paste it into the chat');
     }
   }
+  // notes that went to the agent (Request changes, a plan's Approve) are open from now on
+  function markSent(ids, at) {
+    ids = new Set(ids); if (!ids.size) return;
+    for (const a of list) if (ids.has(a.id)) { a.status = 'open'; a.sentAt = at; }
+    if (filter === 'pending') setFilter('open', false);   // what was just sent, not an empty list
+    save(); hlDirty = true; schedule(true); paint();
+  }
+  // save what is being typed (a draft, an edit, a general comment) before something reads the pending notes
+  const flush = () => { endEdit(true); finishDraft(true); finishGeneral(true); };
   // bring a note's element into view: open the rows, diff file or system it sits in, then flash it
   function openKey(k) {
     const [t, rest] = splitKey(k);
@@ -4214,6 +4800,8 @@ const MARKUP = (() => {
     } else if (t === 'node') {
       const i = rest.indexOf('/'), cv = CANVASES[rest.slice(0, i)], n = cv && cv.byKey[rest.slice(i + 1)];
       if (n && !shown(n._el)) { focusNode(`${cv.id}/${n._key}`); return true; }
+    } else if (t === 'step') {
+      const x = elOf(k)?._step; if (x) x.setOpen(true);
     }
     return false;
   }
@@ -4307,7 +4895,7 @@ const MARKUP = (() => {
   document.fonts?.ready.then(() => schedule(true));
   setInterval(() => { if (SIDE.shows('comments')) renderList(); }, 30000);   // "5 min ago"
   paint(); schedule(true);
-  return Object.assign(api, { annotate, setMode, paint, comments });
+  return Object.assign(api, { annotate, setMode, paint, comments, flush, markSent });
 })();
 
 SIDE.start();
@@ -4322,6 +4910,9 @@ window.BP = {
   progress: () => CHECKLISTS.map(c => ({ id: c.b.id, done: c.items.filter(x => x.cb.checked).length, total: c.items.length })),
   progressMarkdown: allChecklistsMd,
   replyPayload,
+  approvePayload: note => approvePayload(note),
+  planState,
+  docType: DOC_TYPE,
   choose: (key, choice) => { const x = ITEMS[key]; if (!x || !x.setChoice) return false; x.setChoice(choice); return true; },
   setNote: (key, text) => { const x = ITEMS[key]; if (!x) return false; x.setNote(text || ''); return true; },
   openCode: (diffId, path, line) => openCode(diffId, path, line),
