@@ -4,7 +4,7 @@
 Usage:
   build.py doc.json                 validate, lint, record the revision (view it with serve.py)
   build.py doc.json -o out.html     same, plus a standalone HTML file for sharing offline (media and diffs inlined)
-  build.py doc.json --check         validate and lint only
+  build.py doc.json --check         validate and lint only; writes nothing (no history, no diff cache)
   build.py doc.json --strict        treat lint warnings as errors
   build.py doc.json --show-rev B    print revision B, rebuilt from the history, as JSON
   build.py new TYPE out.bluedoc.json [--title T] [--kind K]
@@ -15,23 +15,29 @@ Usage:
 serve.py renders the JSON with assets/template.html on every request, so normal work needs no
 HTML file at all: write the JSON, run build.py, open the serve.py URL.
 
-Revisions: every build (and every serve.py render) records the document under its `meta.rev` in
+Revisions: every build (and every patch) records the document under its `meta.rev` in
 <doc>.history.json next to the JSON (doc.bluedoc.json -> doc.bluedoc.history.json). A new rev
 appends; the same rev replaces that entry. The page embeds the history, so readers can switch
 revisions and compare two. --no-history skips reading and writing it.
 
 Type contracts: each meta.type needs its data (review: a diff and sized findings; plan: steps and
-files blocks; docs: a canvas or a hero). Missing data is an error on a new meta.rev and a warning
-on a rev the history already has, so old revisions keep rendering.
+files blocks; docs: a canvas or a hero). Missing data is an error on the doc being built: a new
+meta.rev, or a recorded rev whose text changed (an edit in place). It is a warning only while the
+doc is exactly the revision its history recorded, so old revisions keep rendering.
 
 Diff refs: a diff block with base and head and no files is expanded from git (cache file
 <name>.diffcache.json, then `git diff`, then `gh pr diff`) by scripts/diffref.py when validating,
-serving and writing -o.
+serving and writing -o. A build (not --check) drops the cache entries and source lines that no ref
+in the doc or its history reads.
 
 patch keys: doc, meta, header, tldr, status, section:<sec>, heading:<sec>, lead:<sec>,
   block:<blockPath>, item:<checklist>/<item>, row:<blockPath>/<r>, card:<blockPath>/<i>,
   step:<blockPath>/<step>, file:<blockPath>/<path>, node:<canvas>/<node>[/<child>…],
-  comment:<diff>/<i>, para:<blockPath>/<i>, media:<blockPath>, compare:<blockPath>/<before|after>.
+  comment:<diff>/<i>, para:<blockPath>/<i>, media:<blockPath>, compare:<blockPath>/<before|after>,
+  line:<diff>/<path>:<n> (o<n> for an old-side line): the diff comment on <path> whose lines cover n;
+  a diff ref's code comes from git, so with no such comment patch exits 2 (change the code, patch
+  the finding with item:<checklist>/<item>, or add a comment). A key may keep the backticks the
+  reply Markdown puts around it.
   <blockPath> is <section>/<index> or <checklist>/<item>/<index>. header, tldr and status address
   the doc's top level. --set and --json values parse as JSON when they can; null deletes the field.
   --append adds to the target's list (doc: sections, section and item: blocks, table: rows,
@@ -64,7 +70,16 @@ FILE_STATUSES = {"added", "modified", "deleted", "renamed", "context"}
 ITEM_BLOCK_TYPES = {"text", "callout", "table", "code", "terms", "cards", "checklist", "files", "media", "compare"}
 MAX_TITLE, MAX_SUB = 90, 120   # characters that fit the collapsed checklist row
 MAX_CHOICES, MAX_CHOICE_LABEL = 6, 28
-PLACEHOLDER = re.compile(r"<<[^<>\n]{1,120}>>")
+# a skeleton placeholder: <<words>>, with no space right inside the brackets and at least one letter or
+# digit, so C shifts (`x << 4 >> 2`) and heredocs (`cat <<EOF >> log`) don't count
+PLACEHOLDER = re.compile(r"<<(?=[^<>\n]*\w)[^<>\s](?:[^<>\n]{0,118}[^<>\s])?>>")
+CODE_SPAN = re.compile(r"`([^`\n]*)`")
+# what the page's safeUrl lets through: no scheme (relative paths, #fragments), http, https or mailto,
+# after dropping U+0000-U+0020 as browsers do
+URL_SCHEME = re.compile(r"^([a-z][a-z\d+.-]*):", re.I)
+SAFE_SCHEMES = re.compile(r"^(https?|mailto)$", re.I)
+# a markdown link as the page's inline() reads it; JavaScript's \s, not Python's (which also takes \x1c-\x1f)
+MD_LINK = re.compile("\\[([^\\]]+)\\]\\(([^)\t\n\v\f\r \u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]+)\\)")
 CALLOUT_KINDS = {"note", "caution", "warning", "risk", "decision"}
 STATE_KINDS = {"ok", "warn", "risk", "info", "todo"}
 DOC_TYPES = {"docs", "review", "plan", "other"}   # meta.type: the home page's grouping; unset = derived from meta.kind
@@ -117,6 +132,26 @@ class Report:
 
     def warn(self, where: str, msg: str) -> None:
         self.warnings.append(f"WARN  {where}: {msg}")
+
+
+def find_placeholders(text: str) -> list[str]:
+    """The <<placeholders>> left in text. Inline code counts only when the whole span is one placeholder
+    (skeletons write `<<path:line>>`), so a quoted shift or heredoc in backticks never does."""
+    spans = [m.group(1) for m in CODE_SPAN.finditer(text) if PLACEHOLDER.fullmatch(m.group(1))]
+    return spans + PLACEHOLDER.findall(CODE_SPAN.sub(" ", text))
+
+
+def unsafe_scheme(url: str) -> str | None:
+    """The scheme of a URL the page refuses to link (javascript:, data:, …), else None."""
+    m = URL_SCHEME.match(re.sub(r"[\x00-\x20]", "", url))
+    return m.group(1) if m and not SAFE_SCHEMES.match(m.group(1)) else None
+
+
+def check_url(rep: Report, where: str, url) -> None:
+    scheme = unsafe_scheme(url) if isinstance(url, str) else None
+    if scheme:
+        rep.err(where, f"URL {url!r} uses the scheme '{scheme}:': links take http, https, mailto, "
+                       "a relative path or a #fragment")
 
 
 def lint_text(rep: Report, where: str, text: str | None, *, imperative: bool = False) -> None:
@@ -267,7 +302,13 @@ def diff_lines(f: dict) -> tuple[set[int], set[int]]:
     return old, new
 
 
+def is_count(v) -> bool:
+    """A non-negative int; JSON true/false parse as bool, which Python counts as int."""
+    return isinstance(v, int) and not isinstance(v, bool) and v >= 0
+
+
 def validate_diff(rep: Report, where: str, b: dict) -> dict[str, tuple[set[int], set[int]]]:
+    """Every number the page draws into a diff must be an int: the template builds its rows as HTML."""
     files: dict[str, tuple[set[int], set[int]]] = {}
     for fi, f in enumerate(b.get("files") or []):
         fw = f"{where}.files[{fi}]"
@@ -277,10 +318,24 @@ def validate_diff(rep: Report, where: str, b: dict) -> dict[str, tuple[set[int],
             rep.err(fw, f"duplicate file '{f['path']}'")
         if f.get("status", "modified") not in FILE_STATUSES:
             rep.err(fw, f"status '{f.get('status')}' not in {sorted(FILE_STATUSES)}")
+        numbers_ok = True
+        for k in ("add", "del"):
+            if k in f and not is_count(f[k]):
+                rep.err(f"{fw}.{k}", f"{f[k]!r}: a count of lines, an integer 0 or more")
         for hi, h in enumerate(f.get("hunks") or []):
+            hw = f"{fw}.hunks[{hi}]"
+            if not isinstance(h, dict):
+                rep.err(hw, 'a hunk is an object {"old", "new", "lines"}')
+                numbers_ok = False
+                continue
+            for k in ("old", "new"):
+                if k in h and not is_count(h[k]):
+                    rep.err(f"{hw}.{k}", f"{h[k]!r}: a line number, an integer 0 or more")
+                    numbers_ok = False
             if not isinstance(h.get("lines"), list) or not all(isinstance(l, str) and l[:1] in ("+", "-", " ") for l in h["lines"]):
-                rep.err(f"{fw}.hunks[{hi}]", "every line must be a string starting with '+', '-' or ' '")
-        files[f["path"]] = diff_lines(f)
+                rep.err(hw, "every line must be a string starting with '+', '-' or ' '")
+                numbers_ok = False
+        files[f["path"]] = diff_lines(f) if numbers_ok else (set(), set())
     return files
 
 
@@ -294,11 +349,12 @@ def check_media_src(rep: Report, where: str, src, base: Path | None) -> None:
         if not re.match(r"data:[\w.+-]+/[\w.+-]+[;,]", src):
             rep.err(where, "data: URI needs a MIME type, e.g. data:image/png;base64,…")
         return
-    if re.match(r"[a-zA-Z][a-zA-Z0-9+.-]*:", src) or src.startswith("//"):
-        what = "http(s) sources" if re.match(r"(https?:)?//", src, re.I) else "URLs with a scheme"
+    bare = re.sub(r"[\x00-\x20]", "", src)   # what a browser reads the scheme from
+    if re.match(r"[a-zA-Z][a-zA-Z0-9+.-]*:", bare) or bare.startswith("//"):
+        what = "http(s) sources" if re.match(r"(https?:)?//", bare, re.I) else "URLs with a scheme"
         rep.err(where, f"{what} aren't allowed (pages make no network calls): save the file next to the doc and use a relative path")
         return
-    if src.startswith("/"):
+    if bare.startswith("/"):
         rep.err(where, f"src '{src}' is absolute: use a path relative to the doc's folder, e.g. media/{Path(src).name}")
         return
     path = src.split("?", 1)[0].split("#", 1)[0]
@@ -366,19 +422,22 @@ def check_contract(doc: dict) -> list[str]:
 
 
 def contract_level(doc: dict, doc_path: Path | None) -> str:
-    """'error' while the doc's meta.rev is new (not in its history file yet), 'warn' once the history
-    has it, so revisions written before a contract existed keep rendering. A doc without meta.rev
-    keeps no history and counts as recorded; without doc_path every rev counts as new."""
+    """'warn' only while the doc is exactly the revision its history recorded under meta.rev, so
+    revisions written before a contract existed keep rendering; 'error' on the doc being built: a new
+    meta.rev, or a recorded rev whose text changed in place. A doc without meta.rev keeps no history
+    and counts as recorded; without doc_path every rev counts as new."""
     rev = str((doc.get("meta") or {}).get("rev") or "")
     if not rev:
         return "warn"
     if doc_path is None:
         return "error"
     try:
-        revs = load_history(history_path(Path(doc_path)))["revs"]
-    except (OSError, ValueError, json.JSONDecodeError):
+        h = load_history(history_path(Path(doc_path)))
+        entry = next((r for r in h["revs"] if r.get("rev") == rev), None)
+        same = entry is not None and json.dumps(restore(h, entry), sort_keys=True) == json.dumps(doc, sort_keys=True)
+    except (OSError, ValueError, KeyError, TypeError):
         return "error"
-    return "warn" if any(r.get("rev") == rev for r in revs) else "error"
+    return "warn" if same else "error"
 
 
 def _diffref():
@@ -394,10 +453,11 @@ def _ref_candidates(doc: dict) -> list[dict]:
     return [b for b in all_blocks(doc) if b.get("type") == "diff" and "files" not in b]
 
 
-def validate(doc: dict, doc_path: Path | None = None, *, allow_remote: bool = False) -> Report:
+def validate(doc: dict, doc_path: Path | None = None, *, allow_remote: bool = False, write_cache: bool = True) -> Report:
     """doc_path, when given, is the doc's JSON file: media srcs are checked against its folder, diff refs
-    expand relative to it and the type contract is an error only while its meta.rev isn't in the history.
-    allow_remote lets a diff ref whose repo is missing fall back to `gh pr diff`."""
+    expand relative to it and the type contract is a warning only while the doc is the revision its history
+    recorded. allow_remote lets a diff ref whose repo is missing fall back to `gh pr diff`; write_cache=False
+    leaves <name>.diffcache.json as it is."""
     rep = Report()
     base = Path(doc_path).resolve().parent if doc_path else None
     need(rep, "doc", doc, "id", "title", "sections")
@@ -418,7 +478,7 @@ def validate(doc: dict, doc_path: Path | None = None, *, allow_remote: bool = Fa
                 v = hero.get(k)
                 if v is not None and not isinstance(v, str):
                     rep.err(f"doc.hero.{k}", "a string")
-                elif isinstance(v, str) and not PLACEHOLDER.search(v) and len(v) > most:
+                elif isinstance(v, str) and not find_placeholders(v) and len(v) > most:
                     rep.err(f"doc.hero.{k}", f"{len(v)} characters (at most {most}): the home card draws it large")
     # diff refs: check them against a filled-in copy, so the doc keeps only the reference
     ref_ids: set[int] = set()            # id() of the ref blocks
@@ -435,10 +495,11 @@ def validate(doc: dict, doc_path: Path | None = None, *, allow_remote: bool = Fa
         refs = [b for b in candidates if dr.is_ref(b)]
         ref_ids = {id(b) for b in refs}
         # a ref still holding a <<placeholder>> is reported as one, not expanded
-        live = [b for b in refs if not PLACEHOLDER.search(json.dumps(b, ensure_ascii=False))]
+        live = [b for b in refs if not find_placeholders(json.dumps(b, ensure_ascii=False))]
         if live:
             probe = {"sections": [{"id": "refs", "blocks": copy.deepcopy(live)}]}
-            for p in dr.expand_doc(probe, Path(doc_path) if doc_path else None, allow_remote=allow_remote):
+            for p in dr.expand_doc(probe, Path(doc_path) if doc_path else None, allow_remote=allow_remote,
+                                   write_cache=write_cache):
                 (rep.errors if p.startswith("ERROR") else rep.warnings).append(p)
             expanded = {id(b): e for b, e in zip(live, probe["sections"][0]["blocks"])}
     ch = doc.get("changes")
@@ -593,6 +654,7 @@ def validate(doc: dict, doc_path: Path | None = None, *, allow_remote: bool = Fa
                     unexpanded.add(b["id"])
             diffs[b["id"]] = validate_diff(rep, bw, src)
             lint_text(rep, bw + ".note", b.get("note"))
+            check_url(rep, bw + ".url", b.get("url"))
             for ci, c in enumerate(src.get("comments") or []):
                 comments_to_check.append((f"{bw}.comments[{ci}]", b["id"], c))
         elif t == "steps":
@@ -726,7 +788,10 @@ def validate(doc: dict, doc_path: Path | None = None, *, allow_remote: bool = Fa
         elif not (c.get("md") or c.get("title")):
             rep.err(where, "comment needs 'item', or 'title'/'md'")
         lint_text(rep, where + ".md", c.get("md"))
-        if did in unexpanded:
+        bad = [k for k in ("line", "end") if k in c and not (is_count(c[k]) and c[k] > 0)]
+        for k in bad:
+            rep.err(f"{where}.{k}", f"{c[k]!r}: a line number, an integer 1 or more")
+        if bad or did in unexpanded:
             continue
         if not c.get("file"):
             if c.get("line"):
@@ -757,21 +822,26 @@ def validate(doc: dict, doc_path: Path | None = None, *, allow_remote: bool = Fa
         if anchor not in item_anchors:
             rep.err("links", f"#{anchor} points to no checklist item (#item-<checklist>-<item>)")
 
-    def placeholders(node, where: str) -> None:
+    def texts(node, where: str) -> None:
         # skeletons (build.py new) and ghthreads.py stubs carry <<...>> where the author's text goes;
-        # code (diff files, code blocks) is quoted source and may legitimately contain << >>
+        # code (diff files, code blocks) is quoted source and may legitimately contain << >> or [x](y)
         if isinstance(node, dict):
             for k, v in node.items():
                 if k not in ("files", "code"):
-                    placeholders(v, f"{where}.{k}")
+                    texts(v, f"{where}.{k}")
         elif isinstance(node, list):
             for i, v in enumerate(node):
-                placeholders(v, f"{where}[{i}]")
+                texts(v, f"{where}[{i}]")
         elif isinstance(node, str):
-            for m in PLACEHOLDER.findall(node):
+            for m in find_placeholders(node):
                 rep.err(where, f"unfilled placeholder {m}: replace it with what it names")
+            for _, url in MD_LINK.findall(CODE_SPAN.sub(" ", node)):
+                check_url(rep, where, url)
     for k, v in doc.items():
-        placeholders(v, k if k == "sections" else f"doc.{k}")
+        texts(v, k if k == "sections" else f"doc.{k}")
+    for i, link in enumerate(doc.get("links") or []):
+        if isinstance(link, dict):
+            check_url(rep, f"doc.links[{i}].href", link.get("href"))
 
     gaps = check_contract(doc)
     if gaps:
@@ -781,7 +851,7 @@ def validate(doc: dict, doc_path: Path | None = None, *, allow_remote: bool = Fa
                 rep.err(where, m)
         else:
             for m in gaps:
-                rep.warn(where, m + " (an error from the next meta.rev)")
+                rep.warn(where, m + " (an error as soon as the doc changes)")
     return rep
 
 
@@ -945,6 +1015,21 @@ def expand_diff_refs(doc: dict, hist: dict | None, doc_path: Path, problems: lis
     return doc, hist
 
 
+def prune_diff_cache(doc: dict, history: dict | None, doc_path: Path) -> list[str]:
+    """Drop the <name>.diffcache.json entries and source lines that no diff ref in doc or its history
+    (load_history's shape) reads; refs validate has expanded come from the cache, not git."""
+    if not _ref_candidates(doc) and not (history or {}).get("blocks"):
+        return []
+    try:
+        dr = _diffref()
+    except ImportError:
+        return []
+    if not dr.cache_path(doc_path).exists():
+        return []
+    probe = copy.deepcopy({"doc": doc, "history": list(((history or {}).get("blocks") or {}).values())})
+    return [p for p in dr.expand_doc(probe, doc_path, allow_remote=False, prune=True) if p.startswith("WARN  diffcache")]
+
+
 def build(doc: dict, template: str, history: dict | None = None, media_base: Path | None = None,
           diff_path: Path | None = None, problems: list[str] | None = None) -> str:
     """The page. media_base (the doc's folder) makes it standalone: media files become data: URIs.
@@ -1098,8 +1183,40 @@ def _block(doc: dict, parts: list[str], rest: int | None) -> tuple[Target, list[
     raise PatchError(f"'{'/'.join(parts)}' doesn't start with a block path: <section>/<index> or <checklist>/<item>/<index>")
 
 
+def _line(doc: dict, key: str, path: str) -> Target:
+    """line:<diff>/<path>:<n> (o<n>: old side) names a code line, which comes from git or the embedded
+    hunks; the JSON object behind it is the diff's comment on <path> whose lines cover n."""
+    did, _, rest = path.partition("/")
+    fpath, _, num = rest.rpartition(":")
+    side = "old" if num.startswith("o") else "new"
+    n = num[1:] if side == "old" else num
+    if not did or not fpath or not n.isdigit():
+        raise PatchError(f"bad key '{key}': line:<diff>/<path>:<n>, or :o<n> for an old-side line")
+    d, _ = _find(list(all_blocks(doc)), lambda b: b.get("type") == "diff" and b.get("id") == did, f"diff '{did}'")
+    cs = d.get("comments") or []
+    parse = _diffref().parse_comment
+    whole = None
+    for i, raw in enumerate(cs):
+        c = parse(raw) if isinstance(raw, dict) else {}
+        if c.get("file") != fpath or c.get("side", "new") != side:
+            continue
+        line = c.get("line")
+        if line is None:
+            whole = i if whole is None else whole   # a comment on the whole file, if no range covers n
+        elif isinstance(line, int) and isinstance(c.get("end", line), int) and line <= int(n) <= c.get("end", line):
+            return Target(cs[i], cs, i, "comment")
+    if whole is not None:
+        return Target(cs[whole], cs, whole, "comment")
+    at = f'"at": "{fpath}:{n}"' if side == "new" else f'"file": "{fpath}", "line": {n}, "side": "old"'
+    raise PatchError(f"{key} names code from git, and no comment in diff '{did}' covers {fpath}:{num}: change the code, "
+                     f"patch the finding it belongs to (item:<checklist>/<item>), or add a comment with "
+                     f"block:<blockPath> --append '{{{at}, \"item\": \"<checklist>/<item>\"}}'")
+
+
 def resolve_key(doc: dict, key: str) -> Target:
-    """The object an annotator key names (see the patch keys in this module's docstring)."""
+    """The object an annotator key names (see the patch keys in this module's docstring). The key may
+    keep the backticks reply Markdown wraps it in."""
+    key = key.strip().strip("`").strip()
     kind, _, path = key.partition(":")
     parts = path.split("/") if path else []
     if kind in ("doc", "header", "tldr", "status") and not path:
@@ -1152,6 +1269,8 @@ def resolve_key(doc: dict, key: str) -> Target:
         cs = d.get("comments")
         i = _index(cs, parts[1], f"comment in diff '{parts[0]}':")
         return Target(cs[i], cs, i, "comment")
+    if kind == "line":
+        return _line(doc, key, path)
     raise PatchError(f"unknown key '{key}': see `build.py --help` for the key forms")
 
 
@@ -1261,6 +1380,7 @@ def cmd_patch(argv: list[str]) -> int:
         print(f"cannot read {a.doc}: {e}", file=sys.stderr)
         return 2
     before = copy.deepcopy(doc)
+    a.key = a.key.strip().strip("`").strip()
     try:
         apply_patch(resolve_key(doc, a.key), a.set, a.json, a.append, a.delete)
         meta = doc.setdefault("meta", {})
@@ -1285,12 +1405,14 @@ def cmd_patch(argv: list[str]) -> int:
         if rev0 and not a.no_bump:
             sync_history(a.doc, before)   # the text this patch replaces stays its own revision
         write_doc(a.doc, doc, raw)
-        sync_history(a.doc, doc)
+        history, _ = sync_history(a.doc, doc)
     except HistoryError as e:
         print(e, file=sys.stderr)
         return 1
+    for line in prune_diff_cache(doc, history, a.doc):
+        print(line, file=sys.stderr)
     # only the warnings this patch introduced
-    old = set(validate(before, a.doc).warnings)
+    old = set(validate(before, a.doc, write_cache=False).warnings)
     for line in rep.warnings:
         if line not in old:
             print(line, file=sys.stderr)
@@ -1315,7 +1437,7 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("doc", type=Path)
     ap.add_argument("-o", "--out", type=Path, help="also write a standalone HTML file (for sharing; serve.py renders the JSON directly)")
-    ap.add_argument("--check", action="store_true", help="validate and lint only; don't touch the history")
+    ap.add_argument("--check", action="store_true", help="validate and lint only; write nothing (history, diff cache)")
     ap.add_argument("--strict", action="store_true", help="fail on lint warnings")
     ap.add_argument("--template", type=Path, default=TEMPLATE)
     ap.add_argument("--no-history", action="store_true", help="don't read or write <doc>.history.json")
@@ -1339,7 +1461,7 @@ def main(argv: list[str] | None = None) -> int:
     except (OSError, json.JSONDecodeError) as e:
         print(f"cannot read {a.doc}: {e}", file=sys.stderr)
         return 2
-    rep = validate(doc, a.doc)
+    rep = validate(doc, a.doc, write_cache=not a.check)
     for line in rep.errors + rep.warnings:
         print(line, file=sys.stderr)
     print(f"{len(rep.errors)} error(s), {len(rep.warnings)} warning(s)", file=sys.stderr)
@@ -1355,6 +1477,8 @@ def main(argv: list[str] | None = None) -> int:
             print(e, file=sys.stderr)
             return 1
         print(log, file=sys.stderr)
+        for line in prune_diff_cache(doc, history, a.doc):
+            print(line, file=sys.stderr)
     if a.out:
         a.out.parent.mkdir(parents=True, exist_ok=True)
         a.out.write_text(build(doc, a.template.read_text(encoding="utf-8"), history, a.doc.resolve().parent, a.doc), encoding="utf-8")

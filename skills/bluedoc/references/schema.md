@@ -2,7 +2,7 @@
 
 Lookup reference for every field and command. Grep for a heading, never read the file whole: `grep -n -A25 '^## Diff' references/schema.md`. How to lay out each doc type lives in `types/<type>.md`.
 
-Headings: `## Document` (incl. `hero`) · `## Contracts` · `## Section` · `## Blocks` (`### Inline markdown`) · `## Checklist` (`### Reader comments and replies`) · `## Diff` (`### Diff reference`, `### Embedded diff`, `### gitdiff.py`) · `## Plan blocks` (`### Steps`, `### Files`, `### Media`, `### Compare`) · `## Revisions` · `## Page layout` · `## Canvas` (`### Node`, `### Semantic zoom`, `### Edge`, `### Flow`) · `## Annotations` (`### Bottom tray`) · `## Plans` · `## build.py` (`### patch`) · `## serve.py` · `## Automation API`
+Headings: `## Document` (incl. `hero`) · `## Contracts` · `## Section` · `## Blocks` (`### Inline markdown`) · `## Checklist` (`### Reader comments and replies`) · `## Diff` (`### Diff reference`, `### Embedded diff`, `### gitdiff.py`) · `## Plan blocks` (`### Steps`, `### Files`, `### Media`, `### Compare`) · `## Revisions` · `## Page layout` · `## Canvas` (`### Node`, `### Semantic zoom`, `### Edge`, `### Flow`) · `## Annotations` (the key grammar; `### Bottom tray`) · `## Plans` (its approval Markdown has `## Decisions` and `## Notes with the approval`) · `## build.py` (`### patch`) · `## serve.py` · `## Automation API`
 
 ## Document
 
@@ -32,7 +32,7 @@ Each type's home card draws one element, so the build requires that element's da
 | `docs` | a `canvas` block, or `hero` | the root drawing with a flow on hover, the kind, the level count |
 | `other` | nothing | `hero`; else the `doc` icon and the section count |
 
-A missing requirement is an **error** when the doc's `meta.rev` is new (not yet in its history file) and a **warning** on a rev the history already has, so recorded revisions keep rendering. `build.py` and every server render apply the same rule. `build.py new <type>` writes a skeleton that meets the contract.
+A missing requirement is an **error** on the doc being built: a new `meta.rev` (not yet in its history file), or a recorded rev whose content changed (an edit in place). It is a **warning** only while the doc is exactly the revision its history recorded, so recorded revisions keep rendering. `build.py` and every server render apply the same rule. `build.py new <type>` writes a skeleton that meets the contract.
 
 ## Section
 
@@ -58,7 +58,7 @@ A missing requirement is an **error** when the doc's `meta.rev` is new (not yet 
 
 ### Inline markdown
 
-`**bold**`, `*em*`, `` `code` ``, `[text](url)`. `[text](#node:<canvasId>/<nodeKey>)` scrolls to the canvas and opens that node. `[text](#code:<diffId>/<path>:<line>)` opens that file in a `diff` block and jumps to the line; `/<path>` and `:<line>` are optional. The same `#code:` URL works as a page link. No headings, images, or raw HTML (input is escaped).
+`**bold**`, `*em*`, `` `code` ``, `[text](url)`. `[text](#node:<canvasId>/<nodeKey>)` scrolls to the canvas and opens that node. `[text](#code:<diffId>/<path>:<line>)` opens that file in a `diff` block and jumps to the line; `/<path>` and `:<line>` are optional. The same `#code:` URL works as a page link. No headings, images, or raw HTML (input is escaped). A URL with a scheme other than `http`, `https` or `mailto` (checked after stripping control characters and spaces) is a build error, here and in `links[].href` and a diff's `url`; `#…` and relative URLs are fine.
 
 ## Checklist
 
@@ -141,14 +141,14 @@ A `diff` block shows one code change and the comments on it: each finding's card
 | Field | Meaning |
 |---|---|
 | `repo` | Required. The git checkout, relative to the doc's folder or absolute. |
-| `base`, `head` | Required. The reviewed range; `gitdiff.py` stores short SHAs. |
+| `base`, `head` | Required. The reviewed range; `gitdiff.py` stores short SHAs. A branch or tag name is resolved to its commit for the cache key. |
 | `paths` | Pathspecs that limit the diff. |
 | `pr` | `owner/repo#N` or the PR URL, for the `gh pr diff` fallback. Without it, a `github.com/…/pull/N` `url` is used. |
 | `url`, `note` | As in the embedded form. |
 | `exclude`, `context`, `excerpt`, `max_lines` | `gitdiff.py` options, stored only when not the default (3 context lines, ±5 excerpt lines, 800 max lines). |
 | `comments[]` | `{"at": "path:line[-end]", "item": "<checklist>/<item>"}`; `{"label": "…", "item": …}` for a whole-change comment; or the explicit fields of the embedded form. |
 
-Expansion, in order: the cache `<name>.diffcache.json` next to the doc (one entry per `repo|base|head|paths`), then `git -C <repo> diff <base> <head> -- <paths>`, then `gh pr diff <pr>` when the repo or the commits are missing (refused when the PR's head isn't `head`). When none works, the block renders empty and the build reports an error. Commit the cache with the doc: it keeps the diff after a rebase or a deleted branch. Agents never read it. While expanding:
+Expansion, in order: the cache `<name>.diffcache.json` next to the doc (one entry per `repo|base|head|paths`, holding the diff and only the source lines that comment excerpts show), then `git -C <repo> diff <base> <head> -- <paths>`, then `gh pr diff <pr>` when the repo or the commits are missing (refused when the PR's head isn't `head`). When none works, the block renders empty and the build reports an error. A build (not `--check`) and `patch` drop the cache entries and lines that no ref in the doc or its history reads. Diff line numbers must be integers. Commit the cache with the doc: it keeps the diff after a rebase or a deleted branch. Agents never read it. While expanding:
 - a comment on lines the diff doesn't show gets a context excerpt (± `excerpt` lines);
 - a comment on a file missing at `head` becomes a whole-change comment;
 - an uncommented file with more than `max_lines` changed lines lists without its hunks.
@@ -189,7 +189,7 @@ python3 <skill>/scripts/gitdiff.py --repo ../acme-shop --base 89efd8e --head 62c
 ```
 
 - `--comments` is a JSON list of `{"at": "path:12-20", "item": "checklist/item"}` (or the explicit fields above).
-- `--into DOC --section ID [--after-block N]` writes the block into that section, replacing a block with the same `id`; without `--into` it prints the block.
+- `--into DOC --section ID [--after-block N]` writes the block into that section, replacing a block with the same `id`; without `--into` it prints the block. A missing `--section` fails before anything is written.
 - `--embed` writes the embedded form instead of a reference.
 - Also: `--repo-name`, `--url`, `--strip-prefix` (repeatable), `--exclude` (repeatable glob), `--context` (3), `--excerpt` (5), `--max-lines` (800).
 
@@ -280,7 +280,7 @@ Each side needs one of `md`, `code` or `src` and shows whichever is present. The
 
 ## Revisions
 
-Every `build.py doc.bluedoc.json` run and every server render records the document in `doc.bluedoc.history.json` under its `meta.rev`: a new `rev` appends a revision, the same `rev` replaces the last one. A `rev` that is already an earlier revision fails the build (and shows as an error page). No `meta.rev`: no history. The history file stores each revision's header and section fields once per revision and each block once across all revisions (by content hash); the page embeds the revisions other than the current one, with blocks the current one still has as references, so a page with ten small edits grows by roughly the edited blocks.
+Every `build.py doc.bluedoc.json` run records the document in `doc.bluedoc.history.json` under its `meta.rev`: a new `rev` appends a revision, the same `rev` replaces the last one. A server render shows the doc as the latest revision without writing the history file. A `rev` that is already an earlier revision fails the build (and shows as an error page). No `meta.rev`: no history. The history file stores each revision's header and section fields once per revision and each block once across all revisions (by content hash); the page embeds the revisions other than the current one, with blocks the current one still has as references, so a page with ten small edits grows by roughly the edited blocks.
 
 | URL (the doc's server URL, or a `-o` file) | Shows |
 |---|---|
@@ -365,8 +365,12 @@ The tray of keys at the bottom of the current revision has four modes: **View** 
   "markdown": "# Change requests: <title> (rev B), <date>\n\n1. **<label>** (pin)\n   > <text>\n   Change: <note>\n" }
 ```
 
+The key grammar. This table is the one list of keys: the annotator writes them into change requests and `build.py patch` takes them as is.
+
 | Key | Points at (JSON) |
 |---|---|
+| `doc` | the whole doc (general comments; `patch` targets the top level) |
+| `meta` | `meta` (`patch` only; the annotator never writes it) |
 | `header`, `tldr`, `status` | `title`/`subtitle`, `tldr`, `state`/`links` |
 | `section:<id>`, `heading:<id>`, `lead:<id>` | a section, its `title`, its `lead` |
 | `block:<sectionId>/<i>` | `sections[id].blocks[i]` |
@@ -374,13 +378,14 @@ The tray of keys at the bottom of the current revision has four modes: **View** 
 | `item:<checklist>/<item>` | a checklist item |
 | `row:<blockPath>/<r>`, `card:<blockPath>/<i>`, `para:<blockPath>/<i>` | a table row, a card, a paragraph or list item of that block |
 | `node:<canvasId>/<nodeKey>` | a canvas node (`nodeKey` nests with `/`) |
-| `line:<diffId>/<path>:<n>` (`o<n>` = removed line), `comment:<diffId>/<i>` | a diff line, a review comment |
+| `comment:<diffId>/<i>` | a review comment of a `diff` block |
+| `line:<diffId>/<path>:<n>` (`o<n>` = removed line) | a diff line. The code comes from git, so `patch` resolves it to the diff's comment on `<path>` whose range covers that line (same target as `comment:`); with none it exits 2: change the code, patch the finding (`item:`), or add a comment (`block:<blockPath> --append '{"at": "<path>:<n>", …}'`) |
 | `step:<blockPath>/<stepId>` | a step of a `steps` block |
 | `file:<blockPath>/<path>` | a row of a `files` block (`path` as written) |
 | `media:<blockPath>` | a `media` block |
 | `compare:<blockPath>/before`, `compare:<blockPath>/after` | one pane of a `compare` block |
 
-`<blockPath>` is `<sectionId>/<i>`, or `<checklist>/<item>/<k>` for a block inside a checklist item, as in `block:` and `row:`.
+`<blockPath>` is `<sectionId>/<i>`, or `<checklist>/<item>/<k>` for a block inside a checklist item, as in `block:` and `row:`. `<i>`, `<k>` and `<r>` are 0-based.
 
 ### Bottom tray
 
@@ -435,10 +440,10 @@ A status chip sits next to the eyebrow:
 
 A pick carries `(recommended: …)` only when it differs from the recommendation; an item with no `recommend` and no pick reads `(no pick)`. Plain items the reader commented on are listed too. General comments come first in the notes; `> <excerpt>` is left out when there is none, and `(rev <rev>)` when the doc has no `meta.rev`.
 
-The server writes `<name>.approval.md` and `<name>.approval.json` next to the doc (overwriting the last ones), queues the message with kind `approval` for `serve.py wait`, and answers `{ok, saved}`. The key then reads **Approved · rev X** with a check, disabled. A new `meta.rev` resets it: the plan awaits approval again.
+The server writes `<name>.approval.md` and `<name>.approval.json` next to the doc (overwriting the last ones; the JSON gains `docHash`, the sha256 of the doc's canonical JSON), queues the message with kind `approval` for `serve.py wait`, and answers `{ok, saved}`. The key then reads **Approved · rev X** with a check, disabled. A new `meta.rev`, or any edit of the doc's JSON in place, resets it: the plan awaits approval again.
 
 - **Request changes** on a plan page also carries `answers` (the decision picks) when there are any, and its Markdown ends with the same `## Decisions` section. Plan pages have no Send answers.
-- `GET /__bluedoc/ping?path=<doc URL path>` returns `{bluedoc, to, home, approval}`. `approval` is the doc's saved approval as `{rev, at}`, or `null`. The page counts the plan approved only when `approval.rev === meta.rev`.
+- `GET /__bluedoc/ping?path=<doc URL path>` returns `{bluedoc, home, version, code, to, approval}`. `version` is the plugin's, `code` a hash of the server, build and template code; `serve.py open` restarts a server whose `version` or `code` differs and prints one line saying so. `approval` is the doc's saved approval as `{rev, at}` while the doc's JSON still matches its `docHash`, else `null`. The page counts the plan approved only when `approval.rev === meta.rev`.
 - `serve.py wait DOC --kind answers|changes|approval|any` (default `any`) returns the oldest queued message of that kind. An approval prints `--- bluedoc approval (…json) ---`, the Markdown, then `--- end ---`.
 
 ## build.py
@@ -447,10 +452,10 @@ The server writes `<name>.approval.md` and `<name>.approval.json` next to the do
 
 | Command | Does |
 |---|---|
-| `new <type> <out.bluedoc.json> [--title "…"] [--kind "…"]` | Copies `assets/skeletons/<type>.json`; sets `id` from the file name, `meta.rev` `1`, `meta.date` today, `meta.type`, and the title and kind when given. Refuses to overwrite; prints the next steps. The build fails until every `<<…>>` is filled. |
+| `new <type> <out.bluedoc.json> [--title "…"] [--kind "…"]` | Copies `assets/skeletons/<type>.json`; sets `id` from the file name, `meta.rev` `1`, `meta.date` today, `meta.type`, and the title and kind when given. Refuses to overwrite; prints the next steps. The build fails until every `<<…>>` is filled; shell shifts and heredocs (`<<EOF`) in code don't count, and inside backticks only a span that is exactly `<<x>>` does. |
 | `<doc>` | Validates (structure, ids, refs, links, media, diff anchors against the expanded diff, the [contract](#contracts)), lints the writing, records the revision. |
 | `<doc> -o out.html` | Also writes a standalone page with expanded diffs and media inlined. It works from `file://`, where the reply dialogs offer **Copy** only. |
-| `<doc> --check` | Validates and lints only. `--strict` fails on warnings; `--no-history` doesn't read or write the history file. |
+| `<doc> --check` | Validates and lints only; writes nothing (no history, no diff cache). `--strict` fails on warnings; `--no-history` doesn't read or write the history file. |
 | `<doc> --show-rev B` | Prints revision B, rebuilt from the history, as JSON. |
 | `patch <doc> <key> …` | Changes one object by key, bumps the rev, validates, records. See below. |
 
@@ -471,7 +476,7 @@ The linter warns on: filler and ceremony words; vague words; sentences over 32 w
 
 By default the rev bumps (1→2, A→B, v1→v2), `meta.date` becomes today, and `changes` becomes the `--change` lines (default "Updated `<key>`."); with `--no-bump` the lines are appended. Patch refuses to write when validation fails, keeps the file's indent, records the history, and prints `rev X → Y; <key> updated`.
 
-Keys are the annotator's (see [Annotations](#annotations)), so a change request's `key` works as is: `doc`, `meta`, `header`, `tldr`, `status` (the last three address the top level), `section:<id>` (`heading:`, `lead:` too), `block:<blockPath>`, `item:<checklist>/<item>`, `row:<blockPath>/<r>`, `card:<blockPath>/<i>`, `para:<blockPath>/<i>`, `media:<blockPath>`, `compare:<blockPath>/<before|after>`, `step:<blockPath>/<stepId>`, `file:<blockPath>/<path>`, `node:<canvasId>/<nodeKey>`, `comment:<diffId>/<i>`. `<blockPath>` is `<sectionId>/<index>`, or `<checklist>/<item>/<index>` inside a checklist item.
+`<key>` is any key in the table under [Annotations](#annotations), so a change request's `key` works as is, with or without the backticks the reply Markdown puts around it.
 
 ```sh
 build.py patch doc.json item:t412/tier-boundary --set choice=fix --change "#412 tier-boundary: Fix in PR, as picked."
@@ -481,7 +486,7 @@ build.py patch doc.json block:risks/0 --append '["Cache stampede", "Low", "High"
 
 ## serve.py
 
-`python3 <skill>/scripts/serve.py …`. One server per user on `127.0.0.1` (port 8740, env `BLUEDOC_PORT`); state in `~/.bluedoc` (env `BLUEDOC_HOME`).
+`python3 <skill>/scripts/serve.py …`. One server per user on `127.0.0.1` (port 8740, env `BLUEDOC_PORT`); state in `~/.bluedoc` (env `BLUEDOC_HOME`): `roots.json`, `server.json`, and `inbox.json`, which records the replies `wait` delivered so a restarted server queues the rest again. `GET /__bluedoc/wait` requires the header `X-Bluedoc: 1` (`serve.py wait` sends it). HTML pages carry a Content-Security-Policy (hashes of their inline scripts, `frame-ancestors 'none'`) and `X-Frame-Options: DENY`.
 
 | Command | Does |
 |---|---|
@@ -489,7 +494,7 @@ build.py patch doc.json block:risks/0 --append '["Cache stampede", "Low", "High"
 | `wait <doc> [--kind answers\|changes\|approval\|any] [--timeout SEC]` | Blocks until the reader sends that kind (default `any`). Prints `--- bluedoc answers (…json) ---`, `--- bluedoc change request (…json) ---` or `--- bluedoc approval (…json) ---`, the Markdown, `--- end ---`; exits 0, or 3 on timeout (`0` waits forever). Replies sent while nobody waits are queued; each `wait` returns the oldest unread one. |
 | `start`, `stop`, `status`, `add DIR`, `roots`, `run [--port N]` | Manage the background server and the home page's folders. |
 
-Each render validates the doc (errors show as a page), records its rev like `build.py`, and expands diff references. Replies are saved next to the doc, overwritten each time: `<name>.reply.md/.json` (answers), `<name>.changes.md/.json`, `<name>.approval.md/.json`. They are the reader's messages: don't commit them.
+Each render validates the doc (errors show as a page), shows its rev as the latest without writing the history (only `build.py` records), and expands diff references. Replies are saved next to the doc, overwritten each time: `<name>.reply.md/.json` (answers), `<name>.changes.md/.json`, `<name>.approval.md/.json`. They are the reader's messages: don't commit them.
 
 ## Automation API
 

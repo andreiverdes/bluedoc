@@ -7,8 +7,8 @@ Usage:
 For every *.bluedoc.json / *.blueprint.json under the folder, each diff block with `files`, `base` and `head`
 is converted to a reference (see diffref.py) when its repo is found with both commits: the block's `repo`
 relative to the doc, then a folder named after it under each --repo-root, then under the doc's ancestors.
-The reference is expanded from that repo and kept only when the expansion shows the same files and line
-numbers as the embedded hunks; the expansion goes to <name>.diffcache.json. Otherwise the block stays
+The reference is expanded from that repo and kept only when the expansion shows the same files, line
+numbers and line text as the embedded hunks; the expansion goes to <name>.diffcache.json. Otherwise the block stays
 embedded and the reason is printed. `repo` is stored relative to the doc when the repo sits beside one of
 the doc's ancestors, else as written. `meta.rev` is not bumped; files keep their indent.
 Python 3.9+ standard library only.
@@ -77,6 +77,10 @@ def shape(files: list[dict]) -> dict:
             for f in files}
 
 
+def hunk_text(files: list[dict]) -> dict:
+    return {f["path"]: [tuple(h.get("lines") or []) for h in f.get("hunks") or []] for f in files}
+
+
 def comment_shape(comments: list[dict]) -> list[tuple]:
     return [(c.get("file"), c.get("line"), c.get("end"), c.get("side", "new") if c.get("file") else None,
              c.get("label"), c.get("item")) for c in comments]
@@ -90,6 +94,10 @@ def mismatch(block: dict, got: dict) -> str:
     bad = [p for p in want if want[p] != have[p]]
     if bad:
         return f"hunks differ in {', '.join(bad[:3])}"
+    want, have = hunk_text(block["files"]), hunk_text(got["files"])
+    bad = [p for p in want if want[p] != have[p]]
+    if bad:   # same line numbers, other code: the embedded text is what the reader saw
+        return f"hunks differ in {', '.join(bad[:3])} (text)"
     if comment_shape(block.get("comments") or []) != comment_shape(got.get("comments") or []):
         return "comments differ"
     return ""
@@ -122,10 +130,11 @@ def convert(block: dict, doc_dir: Path, roots: list[Path], cache: dict) -> tuple
         why = errors[0].split(": ", 1)[-1] if errors else mismatch(block, probe)
         if not why:
             ref = to_ref(block, stored_repo(block, found, doc_dir), paths)
-            entry = entries[diffref.cache_key(probe)]
-            if diffref.cache_key(ref) in cache:  # another block of this doc reads the same range
-                entry["src"] = {**cache[diffref.cache_key(ref)].get("src", {}), **entry["src"]}
-            cache[diffref.cache_key(ref)] = entry
+            entry = entries[diffref.cache_key(probe, doc_dir)]
+            key = diffref.cache_key(ref, doc_dir)
+            if key in cache:  # another block of this doc reads the same range
+                entry["src"] = diffref.merge_src(cache[key].get("src", {}), entry["src"])
+            cache[key] = entry
             return ref, ""
         if errors or not why.startswith("files differ"):
             break

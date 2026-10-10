@@ -9,9 +9,10 @@ A diff block is a reference when it has `base` and `head` and no `files`:
 URL; a github.com pull `url` also works) enables the `gh pr diff` fallback. Optional, only when not the
 default: `exclude` (globs), `context` (3), `excerpt` (5), `max_lines` (800), as in gitdiff.py.
 
-Sources, in order: `<stem>.diffcache.json` next to the doc (keyed by repo|base|head|paths; commit it, so the
-diff survives a rebase or a deleted branch), local git, then `gh pr diff` when the repo or commits are
-missing (refused when the PR head is no longer `head`). Blocks with `files` are left as they are.
+Sources, in order: `<stem>.diffcache.json` next to the doc (keyed by repo|base|head|paths, with a branch or tag
+name resolved to its commit; commit the file, so the diff survives a rebase or a deleted branch), local git, then
+`gh pr diff` when the repo or commits are missing (refused when the PR head is no longer `head`). The cache keeps
+each diff and, per file, only the source lines its comment excerpts show. Blocks with `files` are left as they are.
 
 The example review's repo: git clone skills/bluedoc/examples/acme-shop.bundle skills/bluedoc/examples/acme-shop
 Python 3.9+ standard library only. Never prints; problems come back as "ERROR …" / "WARN  …" strings.
@@ -32,12 +33,13 @@ HUNK_RE = re.compile(r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@ ?(.*)$")
 AT_RE = re.compile(r"^(?P<path>[^:\s][^:]*?)(?::~?(?P<line>\d+)(?:-(?P<end>\d+))?(?:[,;].*)?)?$")
 GIT_RE = re.compile(r'^diff --git "?a/(.+?)"? "?b/(.+?)"?$')
 PR_URL_RE = re.compile(r"^https://github\.com/([^/\s]+/[^/\s]+)/pull/(\d+)")
-CACHE_VERSION = 1
+SHA_RE = re.compile(r"^[0-9a-f]{7,40}$")
+CACHE_VERSION = 2
 CONTEXT = 3
 EXCERPT = 5
 MAX_LINES = 800
 
-Source = Callable[[str], Optional[str]]
+Source = Callable[[str, int, int], Optional[dict]]
 
 
 # ---------------------------------------------------------------- unified diff -> files
@@ -120,11 +122,13 @@ def old_for_new(f: dict, line: int) -> int:
     return line - delta
 
 
-def add_excerpt(f: dict, src: list[str], start: int, end: int) -> None:
+def add_excerpt(f: dict, src: dict[int, str], start: int, end: int) -> None:
     covered = new_covered(f)
     seg: list[int] = []
     segs: list[list[int]] = []
-    for n in range(max(1, start), min(len(src), end) + 1):
+    for n in range(max(1, start), end + 1):
+        if n not in src:   # past the end of the file
+            continue
         if n in covered:
             if seg:
                 segs.append(seg)
@@ -138,7 +142,7 @@ def add_excerpt(f: dict, src: list[str], start: int, end: int) -> None:
         segs.append(seg)
     for s in segs:
         f["hunks"].append({"old": old_for_new(f, s[0]), "new": s[0], "context": True,
-                           "lines": [" " + src[n - 1] for n in s]})
+                           "lines": [" " + src[n] for n in s]})
     merge_hunks(f)
 
 
@@ -198,23 +202,17 @@ def compact_comment(c: dict) -> dict:
 def assemble(diff_text: str, raw_comments: list[dict], source: Source, *, exclude: list[str] | tuple = (),
              strip: list[str] | tuple = (), excerpt: int = EXCERPT, max_lines: int = MAX_LINES
              ) -> tuple[list[dict], list[dict], list[str]]:
-    """Files and normalised comments of one diff block. `source(path)` is the file's text at head, or None
-    when it is not there. Returns (files, comments, paths whose text could not be read)."""
+    """Files and normalised comments of one diff block. `source(path, lo, hi)` is lines lo..hi of the file at
+    head as {number: text}, cut at the end of the file (lo > hi only asks whether it exists), or None when the
+    file is not there. Returns (files, comments, paths whose text could not be read)."""
     files = [f for f in parse_diff(diff_text) if not any(fnmatch.fnmatch(f["path"], g) for g in exclude)]
     by_path = {f["path"]: f for f in files}
-    texts: dict[str, list[str] | None] = {}
     unread: list[str] = []
-
-    def src(path: str) -> list[str] | None:
-        if path not in texts:
-            t = source(path)
-            texts[path] = None if t is None else t.rstrip("\n").split("\n")
-        return texts[path]
 
     comments = []
     for c in (parse_comment(x, strip) for x in raw_comments):
         path = c.get("file")
-        if path and path not in by_path and src(path) is None:
+        if path and path not in by_path and source(path, 1, 0) is None:
             c["label"] = c.get("label") or (path + (f":{c['line']}" if c.get("line") else ""))
             for k in ("file", "line", "end", "side"):
                 c.pop(k, None)
@@ -225,7 +223,7 @@ def assemble(diff_text: str, raw_comments: list[dict], source: Source, *, exclud
             f = by_path[c["file"]]
             lo, hi = c["line"], c.get("end", c["line"])
             if any(n not in new_covered(f) for n in range(lo, hi + 1)):
-                lines = src(c["file"])
+                lines = source(c["file"], lo - excerpt, hi + excerpt)
                 if lines is None:
                     unread.append(c["file"])
                 else:
@@ -370,19 +368,82 @@ def cache_path(doc_path: Path) -> Path:
     return doc_path.with_name(name + ".diffcache.json")
 
 
-def cache_key(block: dict) -> str:
-    key = f"{block.get('repo', '')}|{block['base']}|{block['head']}|{','.join(block.get('paths') or [])}"
+def resolve_rev(block: dict, doc_dir: Path, rev: str) -> str:
+    """rev as a full commit hash when it is a branch or tag the block's local repo knows; else as written."""
+    if SHA_RE.match(rev) or not block.get("repo"):
+        return rev
+    repo = resolve_repo(block, doc_dir)
+    if not repo.is_dir():
+        return rev
+    code, out = _run(["git", "-C", str(repo), "rev-parse", "--verify", "-q", f"{rev}^{{commit}}"])
+    return out.strip() if code == 0 and out.strip() else rev
+
+
+def cache_key(block: dict, doc_dir: Path) -> str:
+    """repo|base|head|paths[|U<context>], with a branch or tag name in base or head resolved to its commit, so
+    a branch that moves misses the cache instead of showing the diff it had when first cached."""
+    base, head = (resolve_rev(block, doc_dir, str(block[k])) for k in ("base", "head"))
+    key = f"{block.get('repo', '')}|{base}|{head}|{','.join(block.get('paths') or [])}"
     ctx = block.get("context", CONTEXT)
     return key if ctx == CONTEXT else f"{key}|U{ctx}"
 
 
+# A cached source file: {"lines": its line count, "at": {"<first line number>": "text\ntext", ...}}, the runs of
+# lines comment excerpts show; null when the file is not there at head.
+
+def _runs(s: dict) -> dict[int, str]:
+    return {int(start) + i: t for start, text in s["at"].items() for i, t in enumerate(text.split("\n"))}
+
+
+def _stored(count: int, lines: dict[int, str]) -> dict:
+    runs: list[list] = []
+    for n in sorted(lines):
+        if runs and n == runs[-1][0] + len(runs[-1][1]):
+            runs[-1][1].append(lines[n])
+        else:
+            runs.append([n, [lines[n]]])
+    return {"lines": count, "at": {str(start): "\n".join(texts) for start, texts in runs}}
+
+
+def _window(s: dict, lo: int, hi: int) -> dict[int, str] | None:
+    """Lines lo..hi of a cached file, cut at its end; None when one of them is not cached."""
+    lo, hi = max(1, lo), min(s["lines"], hi)
+    have = _runs(s)
+    out = {n: have[n] for n in range(lo, hi + 1) if n in have}
+    return out if len(out) == max(0, hi - lo + 1) else None
+
+
+def merge_src(a: dict, b: dict) -> dict:
+    """Two entries' cached sources of the same range as one: the lines of both, per file."""
+    out = dict(a)
+    for p, s in b.items():
+        out[p] = s if s is None or not out.get(p) else _stored(s["lines"], {**_runs(out[p]), **_runs(s)})
+    return out
+
+
+def _pruned(entry: dict, used: dict[str, set[int]]) -> dict:
+    """entry with only the files and lines in `used` (path -> line numbers read)."""
+    src = {}
+    for p, ns in used.items():
+        s = entry["src"].get(p)
+        src[p] = None if s is None else _stored(s["lines"], {n: t for n, t in _runs(s).items() if n in ns})
+    return {**entry, "src": src}
+
+
 def load_cache(path: Path | None) -> tuple[dict, list[str]]:
+    """The cache's entries. A version 1 file, which held whole files, reads as runs of every line."""
     if path is None or not path.exists():
         return {}, []
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
-        return dict(data["entries"]), []
-    except (OSError, ValueError, KeyError, TypeError) as e:
+        entries = dict(data["entries"])
+        for e in entries.values():
+            for p, s in e["src"].items():
+                if isinstance(s, str):
+                    lines = s.rstrip("\n").split("\n")
+                    e["src"][p] = {"lines": len(lines), "at": {"1": "\n".join(lines)}}
+        return entries, []
+    except (OSError, ValueError, KeyError, TypeError, AttributeError) as e:
         return {}, [f"WARN  diffcache {path.name}: unreadable, ignored ({e})"]
 
 
@@ -418,10 +479,12 @@ def iter_refs(node):
 
 
 def expand_block(block: dict, doc_dir: Path, entries: dict, *, use_cache: bool = True,
-                 allow_remote: bool = True) -> tuple[bool, list[str]]:
-    """Fill one ref block in place. `entries` is the cache (read and updated); returns (entries changed, problems)."""
+                 allow_remote: bool = True, used: dict | None = None) -> tuple[bool, list[str]]:
+    """Fill one ref block in place. `entries` is the cache (read and updated); `used`, when given, collects
+    the cache key and source lines this block read (key -> path -> line numbers). Returns (entries changed,
+    problems)."""
     where = f"diff '{block.get('id', '?')}'"
-    key = cache_key(block)
+    key = cache_key(block, doc_dir)
     entry = entries.get(key) if use_cache else None
     paths = list(block.get("paths") or [])
     origin: list = []  # resolved once, on first need: [source or None, why]
@@ -444,19 +507,34 @@ def expand_block(block: dict, doc_dir: Path, entries: dict, *, use_cache: bool =
         entry = {"via": src.via, "diff": text, "src": {}}
         entries[key] = entry
         changed = True
+    reads = used.setdefault(key, {}) if used is not None else None
     unavailable: list[str] = []
+    texts: dict[str, list[str] | None] = {}   # whole files read from git or gh by this call
 
-    def source(path: str) -> str | None:
+    def source(path: str, lo: int, hi: int) -> dict[int, str] | None:
         nonlocal changed
-        if path in entry["src"]:
-            return entry["src"][path]
-        src = live()
-        if src is None:
-            unavailable.append(path)
-            return None
-        entry["src"][path] = src.source(path)
-        changed = True
-        return entry["src"][path]
+        s = entry["src"].get(path, False)
+        got = None if not s else _window(s, lo, hi)
+        if s is not None and got is None:
+            src = live()
+            if src is None:
+                unavailable.append(path)
+                if reads is not None and s:   # keep what the cache has; nothing can refill it
+                    reads.setdefault(path, set()).update(_runs(s))
+                return None
+            if path not in texts:
+                t = src.source(path)
+                texts[path] = None if t is None else t.rstrip("\n").split("\n")
+            lines = texts[path]
+            if lines is None:
+                s = entry["src"][path] = None
+            else:
+                got = {n: lines[n - 1] for n in range(max(1, lo), min(len(lines), hi) + 1)}
+                entry["src"][path] = _stored(len(lines), {**(_runs(s) if s else {}), **got})
+            changed = True
+        if reads is not None:
+            reads.setdefault(path, set()).update(got or ())
+        return None if s is None else got
 
     files, comments, unread = assemble(
         entry["diff"], raw_comments, source, exclude=block.get("exclude") or (),
@@ -472,22 +550,32 @@ def expand_block(block: dict, doc_dir: Path, entries: dict, *, use_cache: bool =
 
 
 def expand_doc(doc: dict, doc_path: Path | None, *, use_cache: bool = True, write_cache: bool = True,
-               allow_remote: bool = True) -> list[str]:
-    """Fill every ref diff block of `doc` in place with `files` and normalised `comments`."""
+               allow_remote: bool = True, prune: bool = False) -> list[str]:
+    """Fill every ref diff block of `doc` in place with `files` and normalised `comments`. With prune, `doc`
+    holds every ref the cache serves (the doc and its history): the cache keeps only the entries and source
+    lines they read, and is deleted when they read none."""
     refs = list(iter_refs(doc))
-    if not refs:
+    if not refs and not prune:
         return []
     doc_dir = doc_path.resolve().parent if doc_path else Path.cwd()
     cpath = cache_path(doc_path) if doc_path else None
     entries, problems = load_cache(cpath) if use_cache or write_cache else ({}, [])
+    used: dict | None = {} if prune else None
     dirty = False
     for b in refs:
-        changed, p = expand_block(b, doc_dir, entries, use_cache=use_cache, allow_remote=allow_remote)
+        changed, p = expand_block(b, doc_dir, entries, use_cache=use_cache, allow_remote=allow_remote, used=used)
         dirty |= changed
         problems += p
+    if used is not None:
+        kept = {k: _pruned(entries[k], used[k]) for k in used if k in entries}
+        dirty |= json.dumps(kept, sort_keys=True) != json.dumps(entries, sort_keys=True)
+        entries = kept
     if dirty and write_cache and cpath is not None:
         try:
-            save_cache(cpath, entries)
+            if entries or not prune:
+                save_cache(cpath, entries)
+            else:
+                cpath.unlink(missing_ok=True)
         except OSError as e:
             problems.append(f"WARN  diffcache {cpath.name}: not written ({e})")
     return problems

@@ -116,6 +116,13 @@ def main() -> int:
     a = ap.parse_args()
     if a.into and not a.section:
         ap.error("--into needs --section")
+    if a.into:   # before expanding: a bad --section must leave the cache as it is
+        path = Path(a.into)
+        raw_doc = path.read_text(encoding="utf-8")
+        doc = json.loads(raw_doc)
+        sec = next((s for s in doc.get("sections", []) if s.get("id") == a.section), None)
+        if sec is None:
+            raise SystemExit(f"no section '{a.section}' in {path}")
     ref = build_ref(a)
     if a.embed:
         block = embed(ref, a)
@@ -132,12 +139,6 @@ def main() -> int:
         json.dump(block, sys.stdout, ensure_ascii=False, indent=1)
         sys.stdout.write("\n")
         return 0
-    path = Path(a.into)
-    raw_doc = path.read_text(encoding="utf-8")
-    doc = json.loads(raw_doc)
-    sec = next((s for s in doc.get("sections", []) if s.get("id") == a.section), None)
-    if sec is None:
-        raise SystemExit(f"no section '{a.section}' in {path}")
     blocks = sec.setdefault("blocks", [])
     idx = next((i for i, b in enumerate(blocks) if b.get("type") == "diff" and b.get("id") == a.id), None)
     if idx is not None:
