@@ -3,7 +3,8 @@
 Two docs with one doc.id each keep their own outbox (st/shared-outbox). A wider folder leaves a doc's URL as it was,
 and a write the server answers with 404 stays in the outbox and reaches the server once the URL answers again
 (st/url-move). Approve on a page whose doc was edited in place after it loaded is refused, and the page offers
-Reload (st/approval-unseen). A doc that quotes an HTML comment opener renders (bld/comment-escape).
+Reload (st/approval-unseen). A doc that quotes an HTML comment opener renders (bld/comment-escape). A plan's item
+comments and every page's "Need more details" items count toward Request changes and go with it (rc/items).
 
 The browser tests run only with BLUEDOC_BROWSER_TESTS=1 and Chrome installed (BLUEDOC_CHROME names it when it isn't
 in a usual place); each starts Chrome with a temp profile and the server on a free port. The URL check needs no browser."""
@@ -162,8 +163,9 @@ class Tab:
         self.wait_for("!window.__bdLeft && document.readyState === 'complete' && !!window.BP")
 
 
-@unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")
-class PageSync(unittest.TestCase):
+class ChromePage(unittest.TestCase):
+    """Chrome for the class; for each test, the examples in a temp home and `serve.py run` on a free port."""
+
     @classmethod
     def setUpClass(cls) -> None:
         cls.profile = Path(tempfile.mkdtemp(prefix="bluedoc-chrome-"))
@@ -203,6 +205,9 @@ class PageSync(unittest.TestCase):
         return tab.wait_for(f"(t => t && t.classList.contains('on') && t.textContent.toLowerCase().includes({json.dumps(has)}) && t.textContent)"
                             "(document.querySelector('#bp-toast'))")
 
+
+@unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")
+class PageSync(ChromePage):
     def test_two_paths_with_one_doc_id_keep_their_own_outbox(self) -> None:
         copy = self.docs / "acme-saved-carts-copy.bluedoc.json"
         shutil.copy(self.plan, copy)
@@ -259,6 +264,88 @@ class PageSync(unittest.TestCase):
         path.write_text(json.dumps(doc), encoding="utf-8")
         a = self.open(self.server.url_for(path))
         self.assertEqual(a.ev("BP.doc.sections.at(-1).blocks[0].code"), quoted)
+
+
+GO = "document.querySelector('.bd-key.go')"   # the tray's Request changes key
+
+
+@unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")
+class ItemRequests(ChromePage):
+    """Request changes counts what goes with it beside the pending annotations (rc/items): on a plan, a comment on an
+    item written or changed since the last send; on every page, a decision item marked "Need more details", which shows
+    "Details requested" once sent and resets on a newer rev."""
+
+    def count(self, tab: Tab) -> list:
+        """[disabled, the number on the key]"""
+        return tab.ev(f"(b => [b.disabled, b.querySelector('.n').textContent])({GO})")
+
+    def send_changes(self, tab: Tab, says: str) -> None:
+        tab.ev(f"{GO}.click()")
+        tab.wait_for("(d => !!d && !d.querySelector('.ft .bp-btn:last-child').hidden)(document.querySelector('.bd-chgs[open]'))")
+        self.assertIn(says, tab.ev("document.querySelector('.bd-chgs[open] .cnt').textContent"))
+        tab.ev("document.querySelector('.bd-chgs[open] .ft .bp-btn:last-child').click()")
+        self.toast(tab, "change request sent")
+
+    def reply(self, doc: Path, *flags: str) -> str:
+        r = self.tmp.run("serve.py", "reply", doc, "--kind", "changes", *flags)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        return r.stdout
+
+    def test_a_comment_on_a_plan_item_is_a_change_request(self) -> None:
+        url = self.server.url_for(self.plan)
+        a = self.open(url)
+        self.assertEqual(self.count(a), [True, "0"])
+        a.ev("BP.setNote('decisions/retention', 'Say what 180 days costs in storage.')")
+        self.assertEqual(self.count(a), [False, "1"])
+        self.send_changes(a, "1 comment on items")
+        self.assertEqual(self.count(a), [True, "0"])
+        decisions = self.reply(self.plan).split("## Decisions", 1)[1]
+        self.assertIn("`item:decisions/retention`", decisions)
+        self.assertIn("  > Say what 180 days costs in storage.", decisions)
+        # sent stays sent across a reload; an edited comment is pending again
+        until(lambda: self.state(url).get("decisions:retention:note-sent"))
+        a.go(self.base + url)
+        self.assertEqual(self.count(a), [True, "0"])
+        a.ev("BP.setNote('decisions/retention', 'Say what 180 days costs a month.')")
+        self.assertEqual(self.count(a), [False, "1"])
+
+    def test_need_more_details_on_a_plan(self) -> None:
+        url = self.server.url_for(self.plan)
+        a = self.open(url)
+        row = "document.querySelector('#item-decisions-prices')"
+        a.ev(f"BP.choose('decisions/prices', 'notice'); {row}.querySelector('.bp-more').click()")
+        self.assertEqual(self.count(a), [False, "1"])
+        self.assertEqual(a.ev(f"[{row}.classList.contains('more'), {row}.querySelector('.bp-more').getAttribute('aria-pressed'),"
+                              f" document.activeElement === {row}.querySelector(':scope > .bp-note textarea')]"), [True, "true", True])
+        self.send_changes(a, "1 request for more details")
+        self.assertIn("`item:decisions/prices` → **Need more details**; picked **", self.reply(self.plan))
+        answers = json.loads(self.reply(self.plan, "--json"))["answers"]
+        self.assertEqual([(x["item"], x["choice"]) for x in answers if x.get("more")], [("prices", "notice")], "the toggle cleared the pick")
+        self.assertEqual(self.count(a), [True, "0"])
+        self.assertEqual(a.ev(f"{row}.querySelector('.bp-more').textContent"), "Details requested")
+        self.assertFalse(a.ev("BP.moreDetails('decisions/prices', false)"), "a sent request was taken back")
+        # the agent answers with a new rev: the toggle is back to off
+        self.assertTrue(until(lambda: self.state(url).get("decisions:prices:more", "").startswith("sent@")))
+        r = self.tmp.run("build.py", "patch", self.plan, "item:decisions/prices", "--set", "detail=Acme shows the saved price and the current one.")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        a.go(self.base + url)
+        self.assertEqual(a.ev(f"[{row}.classList.contains('more'), {row}.querySelector('.bp-more').textContent]"), [False, "Need more details"])
+        self.assertEqual(self.count(a), [True, "0"])
+
+    def test_need_more_details_on_a_review(self) -> None:
+        url = self.server.url_for(self.docs / "acme-review-findings.bluedoc.json")
+        a = self.open(url)
+        a.ev("BP.setNote('t412/float-cents', 'Fine as a ticket.')")   # a review's item comments go with Send answers
+        self.assertEqual(self.count(a), [True, "0"])
+        a.ev("document.querySelector('#item-t412-tier-boundary .bp-more').click()")
+        self.assertEqual(self.count(a), [False, "1"])
+        p = a.ev("BP.changesPayload()")
+        self.assertEqual([(x["item"], x.get("more")) for x in p["answers"]], [("tier-boundary", True)])
+        self.assertIn("`item:t412/tier-boundary` → **Need more details**", p["markdown"])
+        self.assertNotIn("float-cents", p["markdown"])
+        self.send_changes(a, "1 request for more details")
+        self.assertIn("→ **Need more details**", self.reply(self.docs / "acme-review-findings.bluedoc.json"))
+        self.assertEqual(self.count(a), [True, "0"])
 
 
 class UrlKeptByAWiderFolder(unittest.TestCase):

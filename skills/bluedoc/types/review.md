@@ -1,6 +1,6 @@
 # Review
 
-**When:** whenever review results (peer review, agent review, open PR threads) go into a bluedoc, without being asked. Each finding is a **decision item**: the reader picks an option (Fix in PR, Ticket, Decline, …) next to your starred recommendation, comments where they disagree, and presses **Send answers**. The reply lists each pick (`→ **Ticket** (recommended: Fix in PR)`) and comment; act on them.
+**When:** whenever review results (peer review, agent review, open PR threads) go into a bluedoc, without being asked. Each finding is a **decision item**: the reader picks an option (Fix in PR, Ticket, Decline, …) next to your starred recommendation, comments where they disagree, and presses **Send answers**. The reply lists each pick (`→ **Ticket** (recommended: Fix in PR)`) and comment; act on them. A finding sent with **Need more details** gets a fuller `detail` and options in the next rev, still unpicked.
 
 **Home card:** `+N / −N` lines in large type, the file and PR count, and one dot per finding coloured by size.
 **Required** (an error on a new rev, a warning on older ones): at least one `diff` block, and every item with `choices` has `state` set to `blocker`, `major`, `minor` or `nit`.

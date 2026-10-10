@@ -31,7 +31,7 @@
 1. Validate, `serve.py open <doc> --to <your name>`, give the user the URL.
 2. Run `serve.py wait <doc> --kind any` in the background.
 3. **Approval** (`--- bluedoc approval … ---`): implement exactly the approved rev. Use the reader's picks; an open question with no pick means your recommendation. The notes sent with the approval are binding instructions.
-4. **Change request**: revise the plan (`build.py patch`, which bumps `meta.rev` and writes `changes`; `--resolves <id>` per comment you addressed), send `<url>?diff=<previous rev>`, wait again. Picks sent with it are the reader's decisions so far: carry them over as `choice`.
+4. **Change request**: revise the plan (`build.py patch`, which bumps `meta.rev` and writes `changes`; `--resolves <id>` per comment you addressed), send `<url>?diff=<previous rev>`, wait again. Picks sent with it are the reader's decisions so far: carry them over as `choice`. A question marked **Need more details** gets a fuller `detail` and options, and stays unpicked.
 5. Never start implementing before an approval of the current rev. A new rev, or any edit of the JSON after the approval, resets it.
 
 ## Fragment

@@ -410,6 +410,7 @@ td.bd-cell-mod { background: color-mix(in oklch, var(--warn-tint) 70%, transpare
 .bp-cl.nested .bp-cl-choices, .bp-cl.nested .bp-cl-item > .bp-note { padding-left: calc(14px + var(--ind)); }
 .bp-cl.nested .bp-cl-item > .bp-note { padding-right: 14px; }
 .bp-cl-choices.compact { padding: 8px 0 0 28px; margin: 0; }
+.bp-cl-choices > [role="radiogroup"] { display: contents; }
 .bp-choice { display: inline-flex; align-items: center; gap: 5px; height: 28px; padding: 0 12px; border: 0; border-radius: 999px; font: 500 12.5px var(--sans); color: var(--fg-muted);
   background: var(--surface); box-shadow: inset 0 0 0 1px var(--line-strong); transition: background .12s, color .12s, box-shadow .12s; }
 .bp-choice:hover { color: var(--fg); box-shadow: inset 0 0 0 1px var(--fg-subtle); }
@@ -421,6 +422,16 @@ td.bd-cell-mod { background: color-mix(in oklch, var(--warn-tint) 70%, transpare
 .bp-cl-choices.answered .bp-choice[aria-checked="false"]:hover { opacity: 1; }
 .bp-choice .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .bp-choice code { font-size: .92em; background: none; padding: 0; color: inherit; }
+/* "Need more details": a toggle after the pills, not an option; on, the item's dot and the toggle turn amber.
+   Sent, it reads "Details requested" until a newer rev */
+.bp-more { display: inline-flex; align-items: center; gap: 5px; height: 28px; padding: 0 10px; margin-left: 2px; border: 0; border-radius: 999px; font: 500 12.5px var(--sans);
+  color: var(--fg-subtle); background: none; transition: background .12s, color .12s; }
+.bp-more .bd-ic { width: 14px; height: 14px; }
+.bp-more:hover { color: var(--fg); background: var(--inset); }
+.bp-more[aria-pressed="true"] { color: var(--warn-fg); background: var(--warn-tint); }
+.bp-more.sent { cursor: default; }
+@media print { .bp-more[aria-pressed="false"] { display: none; } }
+.bp-cl-item.more:not(.done) .bp-cl-dot, .bd-cm.more:not(.done) .bp-cl-dot { box-shadow: inset 0 0 0 1.5px var(--warn); background: var(--warn-tint); }
 .bp-cl-item.has-choices.done .bp-cl-text { color: var(--fg); }
 .bp-ref { display: inline-flex; align-items: center; gap: 5px; height: 24px; font: 500 12px var(--sans); border: 0; color: var(--fg-muted); background: var(--inset); box-shadow: inset 0 0 0 1px var(--line); border-radius: 7px; padding: 0 8px; transition: color .12s, box-shadow .12s; }
 .bp-ref .bd-ic { width: 13px; height: 13px; color: var(--accent-fg); }
@@ -690,10 +701,10 @@ html.bd-tray-on .bp-toast { bottom: 84px; }
 .bd-key.acc:disabled { padding-right: 13px; }
 @media (max-width: 600px) { .bd-key.acc { gap: 5px; padding: 0 6px 0 9px; } .bd-key.acc:disabled { padding: 0 9px; } }
 .bd-pen-risk { --pen: var(--risk); } .bd-pen-accent { --pen: var(--accent); } .bd-pen-warn { --pen: var(--warn); } .bd-pen-ok { --pen: var(--ok); }
-/* the cursor rule excludes what `inDoc` excludes: the rails, a design's panel tabs, Screens list and board toolbar keep their own cursors */
-html.bd-ann-m-point .bd-shell :not(.bp-side, .bp-side :not(.bd-meta, .bd-meta *), .bd-rvr, .bd-rvr *, .bd-lp-ui, .bd-lp-ui *, .bd-btb, .bd-btb *), html.bd-ann-m-point .bd-shell { cursor: crosshair !important; }
-html.bd-ann-m-select .bd-shell :not(.bp-side, .bp-side :not(.bd-meta, .bd-meta *), .bd-rvr, .bd-rvr *, .bd-lp-ui, .bd-lp-ui *, .bd-btb, .bd-btb *), html.bd-ann-m-select .bd-shell { cursor: text !important; }
-html:is(.bd-ann-m-point, .bd-ann-m-select) .bd-shell :is(.bp-side, .bd-rvr, .bd-lp-ui, .bd-btb) { cursor: default; }
+/* the cursor rule excludes what `inDoc` excludes: the rail, a design's panel tabs, Screens list and board toolbar keep their own cursors */
+html.bd-ann-m-point .bd-shell :not(.bp-side, .bp-side :not(.bd-meta, .bd-meta *), .bd-lp-ui, .bd-lp-ui *, .bd-btb, .bd-btb *), html.bd-ann-m-point .bd-shell { cursor: crosshair !important; }
+html.bd-ann-m-select .bd-shell :not(.bp-side, .bp-side :not(.bd-meta, .bd-meta *), .bd-lp-ui, .bd-lp-ui *, .bd-btb, .bd-btb *), html.bd-ann-m-select .bd-shell { cursor: text !important; }
+html:is(.bd-ann-m-point, .bd-ann-m-select) .bd-shell :is(.bp-side, .bd-lp-ui, .bd-btb) { cursor: default; }
 html:is(.bd-ann-m-point, .bd-ann-m-select) .bd-shell .bp-note .bp-note-ta { cursor: text !important; }
 html:is(.bd-ann-m-point, .bd-ann-m-select) .bd-shell .bp-note button { cursor: default !important; }
 html.bd-ann-m-select .bp-cl-head { user-select: text; -webkit-user-select: text; }
@@ -757,8 +768,9 @@ html.bd-ann-m-select .bp-cl-head { user-select: text; -webkit-user-select: text;
 .bd-cmp.dock .bp-note-ta { min-height: 44px; max-height: 96px; }
 .bd-cmp.dock .ft .hint { display: none; }
 
-/* right panel: Comments. Docked beside the page on wide windows (the page lays out in what is left), a
-   drawer over it below 1100 px, a bottom sheet below 900 px. JS sets html.bd-sp-open and html.bd-sp-dock. */
+/* right panel: Comments and Revisions, as tabs. Docked beside the page on wide windows (the page lays out
+   in what is left), a drawer over it below 1100 px, a bottom sheet below 900 px. JS sets html.bd-sp-open
+   and html.bd-sp-dock. */
 .bd-sp { position: fixed; z-index: 42; top: var(--top-h); right: 0; bottom: 0; width: var(--sp-w); display: flex; flex-direction: column; min-height: 0;
   background: var(--panel); box-shadow: inset 1px 0 0 var(--line); font-size: 13.5px;
   transform: translateX(100%); visibility: hidden; transition: transform .22s var(--ease), visibility 0s .22s; }
@@ -774,7 +786,7 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .bd-cs-c .acts .bd-cs-ib[aria-label="Resolve"]:hover { color: var(--ok-fg); background: var(--ok-tint); }
 .bd-sp-sec { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .bd-sp-sec[hidden], .bd-sp-h h2[hidden], .bd-sp-tabs[hidden] { display: none !important; }
-/* two sections (a design's Comments and Revisions) show as tabs in the header */
+/* two sections (Comments and Revisions) show as tabs in the header */
 .bd-sp-tabs { flex: 0 1 auto; min-width: 0; }
 .bd-sp-tabs button { padding: 0 12px; font-size: 12.5px; }
 .bd-gc .gf .sp, .bd-cs-c .ef .sp { flex: 1; }
@@ -857,15 +869,9 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .bd-sp-btn .n { position: absolute; top: -5px; right: -6px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; display: grid; place-items: center;
   font: 650 10px/1 var(--sans); color: #fff; background: var(--accent-solid); box-shadow: 0 0 0 2px var(--canvas); }
 .bd-sp-btn .n[hidden] { display: none; }
-.bd-rev-btn[aria-expanded="true"] { background: var(--hk-down); box-shadow: var(--shadow-hk-down); }
-/* the Revisions rail, right of the content column and sticky like the left rail:
-   in compare view the marked changes first, then every revision, newest first, then the Compare picker.
-   JS sets data-rev: "rail" beside the column, "drawer" (opened from the Rev button) when it does not
-   fit, "card" (a collapsible card under the TL;DR) at 900 px and below, "slim" on a doc with one
-   revision: the rail's header alone, "Revisions · 1", which opens on click and takes no width. */
-.bd-rvr { position: sticky; top: calc(var(--top-h) + 20px); align-self: start; margin-top: 60px; max-height: calc(100vh - var(--top-h) - 20px);
-  overflow: auto; overscroll-behavior: contain; padding: 2px 3px calc(16px + var(--tray-room, 0px)); font-size: 13px; scrollbar-width: thin; border-radius: 12px; }
-.bd-rvr.flash { animation: bd-cs-flash 1.2s var(--ease); }
+/* the Revisions tab of the right panel, beside Comments: the Compare picker (from the second revision),
+   in compare view the marked changes, then every revision, newest first */
+.bd-rvr { display: block; flex: 1; min-height: 0; padding: 4px 12px calc(16px + var(--tray-room, 0px)); overflow: auto; overflow-x: hidden; overscroll-behavior: contain; font-size: 13px; }
 .bd-rvr-sum { display: flex; flex-wrap: wrap; gap: 2px 6px; margin: -4px 0 8px 10px; font-size: 12px; line-height: 1.45; color: var(--fg-subtle); }
 .bd-rvr-sum b { font: 600 12px/1.45 var(--mono); color: var(--fg); }
 .bd-rvr-sum .k.add { color: var(--ok-fg); } .bd-rvr-sum .k.mod { color: var(--warn-fg); } .bd-rvr-sum .k.del { color: var(--risk-fg); }
@@ -881,12 +887,11 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 /* the revisions list: one panel, rows split by hairlines (no card per revision).
    Row: [number tile] Revision N / first change note, ellipsized [chevron]; under it, two small buttons.
    Expanded: date, chips and every change note. */
-.bd-rvr, .bd-rvr-body, .bd-rvr .bd-rail-sec { min-width: 0; }
-/* the Revisions rail, the Comments list and the left panels scroll without a visible scrollbar (wheel, trackpad, keys still work) */
+.bd-rvr, .bd-rvr .bd-rail-sec { min-width: 0; }
+/* the Revisions tab, the Comments list and the left panels scroll without a visible scrollbar (wheel, trackpad, keys still work) */
 .bd-rvr, .bd-cs-l, .bp-side, .bd-lp-pane { scrollbar-width: none; -ms-overflow-style: none; }
 .bd-rvr::-webkit-scrollbar, .bd-cs-l::-webkit-scrollbar, .bp-side::-webkit-scrollbar, .bd-lp-pane::-webkit-scrollbar { display: none; width: 0; height: 0; }
-@media (min-width: 901px) { .bd-rvr, .bp-side { -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent); } :root[data-rev="drawer"] .bd-rvr, :root[data-layout="wide"] .bp-side { -webkit-mask-image: none; mask-image: none; } }
-.bd-rvr { overflow-x: hidden; }
+@media (min-width: 901px) { .bp-side { -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent); } :root[data-layout="wide"] .bp-side { -webkit-mask-image: none; mask-image: none; } }
 .bd-rvs { list-style: none; margin: 0; padding: 0; border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-1); overflow: hidden; }
 .bd-rv { min-width: 0; padding: 9px 10px; }
 .bd-rv + .bd-rv { border-top: 1px solid var(--line-soft); }
@@ -1229,10 +1234,7 @@ svg.anim .bp-edge.k-async { animation: bp-march 1.6s linear infinite; }
   .bd-crumb { display: none; }
   .bd-shell { display: flex; flex-direction: column; padding: 0 16px 80px; }
   .bd-head, .bd-tldr, .bd-shell > main { max-width: none; }
-  .bd-head { order: 1; padding-top: 30px; } .bd-tldr { order: 2; } .bd-shell > .bd-meta, .bd-rvr { order: 3; align-self: stretch; } .bp-side { order: 4; align-self: stretch; } .bd-shell > main { order: 5; }
-  .bd-rvr { position: static; max-height: none; overflow: visible; margin-top: 16px; padding: 6px; border-radius: 14px; background: var(--surface); box-shadow: var(--shadow-1); }
-  .bd-rvr-body { display: none; padding: 6px 4px 8px; }
-  .bd-rvr.open .bd-rvr-body { display: block; }
+  .bd-head { order: 1; padding-top: 30px; } .bd-tldr { order: 2; } .bd-shell > .bd-meta { order: 3; align-self: stretch; } .bp-side { order: 4; align-self: stretch; } .bd-shell > main { order: 5; }
   .bd-rv-ft .row { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); }
   .bd-rv-ft .row > .bd-ic { transform: none; }
   .bd-shell > .bd-meta { margin-top: 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px 24px; padding: 16px 8px 14px;
@@ -1244,7 +1246,7 @@ svg.anim .bp-edge.k-async { animation: bp-march 1.6s linear infinite; }
   .bp-side { position: static; width: auto; max-height: none; margin-top: 16px; background: var(--surface); border-radius: 14px; box-shadow: var(--shadow-1); padding: 6px; overflow: visible; }
   .bp-side-toggle { display: flex !important; width: 100%; justify-content: space-between; height: 38px; background: none; box-shadow: none; font-size: 14px; font-weight: 600; }
   .bp-side-toggle .chev { transition: transform .2s; }
-  .bp-side.open .bp-side-toggle .chev, .bd-rvr.open .bp-side-toggle .chev { transform: rotate(90deg); }
+  .bp-side.open .bp-side-toggle .chev { transform: rotate(90deg); }
   .bp-side-toc { display: none; padding: 6px 4px 8px; }
   .bp-side.open .bp-side-toc { display: block; }
   .bp-side-toc > .bd-rail-sec:first-child > .bd-rail-h { display: none; }
@@ -1291,12 +1293,11 @@ svg.anim .bp-edge.k-async { animation: bp-march 1.6s linear infinite; }
 
 /* layouts above 900 px. JS picks one from the room the docked right panel leaves and the column width
    (the reader's, set with the drag handles, else --content-w):
-   "centred": the full column is centred in that room, the rail in its left margin (and the Revisions
-     rail, when there is one, in its right margin); both margins are at least a rail and gap wide.
-   "two" (the base grid): the rail and the column side by side, the column centred right of the rail
-     (and left of the Revisions rail, while that fits too; else it becomes a drawer, data-rev).
+   "centred": the full column is centred in that room, the rail in its left margin; both margins are at
+     least a rail and gap wide.
+   "two" (the base grid): the rail and the column side by side, the column centred right of the rail.
    "wide": not even that fits; the column takes the whole width and the rail (Status, Document and
-     Related included) becomes a drawer opened from the app bar, the Revisions rail one from Rev. */
+     Related included) becomes a drawer opened from the app bar. */
 .bd-rh { position: fixed; top: var(--bar-h); bottom: 0; z-index: 30; width: 16px; margin-left: -8px; cursor: col-resize; touch-action: none; display: none; }
 .bd-rh::before { content: ""; position: absolute; top: 0; bottom: 0; left: 7.5px; width: 1px; background: var(--accent); opacity: 0; transition: opacity .15s; }
 .bd-rh i { position: absolute; left: 5px; top: 50%; width: 6px; height: 44px; margin-top: -22px; border-radius: 3px; background: var(--line-strong);
@@ -1316,40 +1317,17 @@ html.bd-resizing, html.bd-resizing * { cursor: col-resize !important; user-selec
   :root[data-layout="centred"] .bd-shell { grid-template-columns: minmax(var(--rail), 1fr) minmax(0, var(--content-w)) minmax(var(--rail), 1fr);
     grid-template-areas: "side head ." "side tldr ." "side main ."; }
   :root[data-layout="centred"] .bp-side { justify-self: end; width: var(--rail); }
-  /* the Revisions rail in the right column: beside the column in "two", in the right margin in "centred" */
-  :root[data-rev="rail"] .bd-shell { grid-template-columns: var(--rail) minmax(0, 1fr) var(--rail); grid-template-areas: "side head rev" "side tldr rev" "side main rev"; }
-  :root[data-rev="rail"][data-layout="centred"] .bd-shell { grid-template-columns: minmax(var(--rail), 1fr) minmax(0, var(--content-w)) minmax(var(--rail), 1fr); }
-  :root[data-rev="rail"] .bd-rvr { grid-area: rev; justify-self: start; width: var(--rail); }
-  :root[data-rev="drawer"] .bd-rvr { position: fixed; z-index: 45; top: calc(var(--top-h) + 10px); right: 12px; width: 268px; max-height: calc(100vh - var(--top-h) - 24px - var(--tray-room, 0px));
-    margin: 0; padding: 14px 8px 8px; border-radius: 14px; background: var(--surface); box-shadow: var(--shadow-3);
-    visibility: hidden; opacity: 0; transform: translateX(10px); transition: opacity .16s var(--ease), transform .16s var(--ease), visibility 0s .16s; }
-  :root.bd-sp-dock[data-rev="drawer"] .bd-rvr { right: calc(var(--sp-w) + 12px); }
-  :root[data-rev="drawer"] .bd-rvr.drawer { visibility: visible; opacity: 1; transform: none; transition: opacity .16s var(--ease), transform .16s var(--ease); }
   :root[data-layout="wide"] .bd-shell { grid-template-columns: minmax(0, 1fr); grid-template-areas: "head" "tldr" "main"; column-gap: 0; }
   :root[data-layout="wide"] .bp-side { position: fixed; z-index: 45; top: calc(var(--top-h) + 10px); left: 12px; width: 268px; max-height: calc(100vh - var(--top-h) - 24px - var(--tray-room, 0px));
     margin: 0; padding: 14px 8px 8px; border-radius: 14px; background: var(--surface); box-shadow: var(--shadow-3);
     visibility: hidden; opacity: 0; transform: translateX(-10px); transition: opacity .16s var(--ease), transform .16s var(--ease), visibility 0s .16s; }
   :root[data-layout="wide"] .bp-side.drawer { visibility: visible; opacity: 1; transform: none; transition: opacity .16s var(--ease), transform .16s var(--ease); }
   :root[data-layout="wide"] .bd-toc-btn { display: inline-grid !important; }
-  /* "slim": at the top right of the column, beside the eyebrow, the panel opening over the page below it;
-     in the right margin, sticky, when the column is centred and the margin has room */
-  :root[data-rev="slim"] .bd-rvr { grid-area: head; justify-self: end; align-self: start; position: relative; top: 0; z-index: 20; max-height: none; overflow: visible;
-    margin-top: 52px; padding: 0; scroll-margin-top: calc(var(--top-h) + 12px); -webkit-mask-image: none; mask-image: none; }
-  :root[data-rev="slim"] .bd-rvr > .bp-side-toggle { display: inline-flex !important; gap: 6px; height: 30px; padding: 0 8px 0 12px; font-size: 12.5px; font-weight: 600; }
-  :root[data-rev="slim"] .bd-rvr .chev { transition: transform .2s; }
-  :root[data-rev="slim"] .bd-rvr.open .chev { transform: rotate(90deg); }
-  :root[data-rev="slim"] .bd-rvr-body { display: none; position: absolute; top: calc(100% + 6px); right: 0; width: 268px; max-height: calc(100vh - var(--top-h) - 140px);
-    overflow: auto; padding: 12px 8px 8px; border-radius: 14px; background: var(--surface); box-shadow: var(--shadow-3); }
-  :root[data-rev="slim"] .bd-rvr.open .bd-rvr-body { display: block; }
-  :root[data-rev="slim"] .bd-rvr-body > .bd-rail-sec:last-child > .bd-rail-h { display: none; }
-  :root[data-rev="slim"]:not([data-layout="centred"]) .bd-head > :first-child { margin-right: 150px; }
-  :root[data-rev="slim"][data-layout="centred"] .bd-rvr { grid-area: auto; grid-column: 3; grid-row: 1 / -1; justify-self: start; position: sticky; top: calc(var(--top-h) + 20px); margin-top: 52px; }
-  :root[data-rev="slim"][data-layout="centred"] .bd-rvr-body { position: static; width: var(--rail); margin-top: 6px; }
 }
 @media print {
   :root { color-scheme: light; }
   body { background: #fff; font-size: 12pt; }
-  .bd-bar, .bp-side-toggle, .bp-side-toc, .bd-rvr, .bp-tb, .bp-hint, .bp-cl-h .tools, .bp-code-h button, .bd-rh, .bd-wchip { display: none !important; }
+  .bd-bar, .bp-side-toggle, .bp-side-toc, .bp-tb, .bp-hint, .bp-cl-h .tools, .bp-code-h button, .bd-rh, .bd-wchip { display: none !important; }
   .bd-shell { display: block; padding: 0; }
   .bd-head, .bd-tldr, .bd-shell > main { max-width: none; }
   /* the rail prints only its document sections, inline under the TL;DR (it follows the TL;DR in the DOM) */
@@ -1520,10 +1498,7 @@ html.bd-lp-open .bd-lp { transform: none; visibility: visible; transition: trans
 .bd-scr-l .t span { font-size: 12px; color: var(--fg-subtle); }
 .bd-scr-l .gone b { color: var(--risk-fg); text-decoration: line-through; }
 .bd-scr-l .bd-chg-tag { height: 18px; padding: 0 6px; font-size: 10px; }
-/* the Revisions tab: the rail's sections in the right pane; each revision names the screens it changed */
-.bd-rvr.tab { position: static; display: block; align-self: stretch; flex: 1; min-height: 0; max-height: none; margin: 0; padding: 4px 12px calc(16px + var(--tray-room, 0px)); overflow: auto; border-radius: 0; background: none; box-shadow: none; -webkit-mask-image: none; mask-image: none; }
-.bd-rvr.tab > .bp-side-toggle { display: none !important; }
-.bd-rvr.tab .bd-rvr-body { display: block !important; position: static; width: auto; max-height: none; padding: 0; overflow: visible; background: none; box-shadow: none; }
+/* a revision's extra lines: the screens it changed (designs), the comments it resolves */
 .bd-rv .rv-scr { margin: 6px 0 0; font-size: 12px; line-height: 1.45; color: var(--fg-muted); }
 .bd-rv .rv-scr b { font-weight: 600; color: var(--fg); }
 /* Present: one screen on a dark stage */
@@ -1636,6 +1611,7 @@ const ICONS = {
   copy: '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
   reset: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>',
   info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>',
+  help: '<circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"/>',
   alert: '<path d="m21.7 18-8-14a2 2 0 0 0-3.4 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.7-3Z"/><path d="M12 9v4M12 17h.01"/>',
   octagon: '<path d="M7.9 2h8.2L22 7.9v8.2L16.1 22H7.9L2 16.1V7.9Z"/><path d="M12 8v4M12 16h.01"/>',
   flag: '<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7"/>',
@@ -2024,30 +2000,16 @@ function setDrawer(open) {
   side.classList.toggle('drawer', open);
   document.querySelector('.bd-toc-btn')?.setAttribute('aria-expanded', String(open));
 }
-// the Revisions rail (set up with the revisions below, on docs with 2+ of them) opens as a drawer too
-let revRail = null;
-function setRevDrawer(open) {
-  if (!revRail) return;
-  revRail.classList.toggle('drawer', open);
-  document.querySelector('.bd-rev-btn')?.setAttribute('aria-expanded', String(open));
-}
 function applyWidth() {
   const dock = dockW(), room = innerWidth - dock - 2 * PAGE_PAD;
   root.classList.toggle('bd-sp-dock', dock > 0);
   // a design page is its board, full-bleed between the left panel and the right one: no column, no rails
   if (IS_DESIGN) { root.dataset.layout = 'board'; fitPanels(); return; }
   if (userW) root.style.setProperty('--content-w', userW + 'px'); else root.style.removeProperty('--content-w');
-  // the layouts are described with their CSS (data-layout, data-rev); with no chosen width the column
-  // may narrow down to MIN_W beside the rails before a rail becomes a drawer
+  // the layouts are described with their CSS (data-layout); with no chosen width the column may narrow
+  // down to MIN_W beside the rail before the rail becomes a drawer
   const colW = userW ? Math.min(userW, maxW()) : cssPx('--content-w'), rail = cssPx('--rail') + cssPx('--gap'), minCol = userW ? colW : MIN_W;
-  // with both rails the column may narrow to 480 px before the Revisions rail becomes a drawer. A doc with
-  // one revision gets that rail as its header alone ("slim"), which takes no width from the column.
-  const centred = room >= colW + 2 * rail, revFits = centred || room >= Math.min(minCol, 480) + (revRail ? 2 : 1) * rail, slimRev = REVS.length === 1;
-  root.dataset.layout = centred ? 'centred' : room >= minCol + rail ? 'two' : 'wide';
-  if (revRail) {
-    root.dataset.rev = PHONE.matches ? 'card' : slimRev ? 'slim' : revFits ? 'rail' : 'drawer';
-    if (root.dataset.rev !== 'drawer') setRevDrawer(false);
-  }
+  root.dataset.layout = room >= colW + 2 * rail ? 'centred' : room >= minCol + rail ? 'two' : 'wide';
   if (root.dataset.layout !== 'wide') setDrawer(false);
   placeHandles();
 }
@@ -2153,13 +2115,11 @@ addEventListener('resize', applyWidth);
 if ('ResizeObserver' in window) new ResizeObserver(placeHandles).observe(main);
 document.addEventListener('pointerdown', e => {
   if (side.classList.contains('drawer') && !side.contains(e.target) && !e.target.closest('.bd-toc-btn')) setDrawer(false);
-  if (revRail?.classList.contains('drawer') && !revRail.contains(e.target) && !e.target.closest('.bd-rev-btn, .bd-rev-link')) setRevDrawer(false);
 });
 // Esc closes an open drawer first (compare view's Esc, which leaves it, sees the key as handled)
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
-  if (revRail?.classList.contains('drawer')) { e.preventDefault(); setRevDrawer(false); }
-  else if (side.classList.contains('drawer')) { e.preventDefault(); setDrawer(false); }
+  if (side.classList.contains('drawer')) { e.preventDefault(); setDrawer(false); }
 });
 side.addEventListener('click', e => { if (e.target.closest('a') && root.dataset.layout === 'wide') setDrawer(false); });
 applyWidth();
@@ -2411,9 +2371,15 @@ function renderChecklist(b, parent) {
       (it.blocks || []).map(kb => h('div', { class: 'bp-cl-block' }, kb.type === 'checklist' ? renderChecklist(kb, { cid, iid: it.id }) : (RENDER[kb.type] || RENDER.text)(kb))),
       it.verify && !subIsCheck && h('div', { class: 'bp-cl-verify' }, ic('check'), h('span', {}, h('b', {}, 'Check'), h('span', { html: inline(it.verify) }))),
       it.refs && it.refs.length && h('div', { class: 'bp-refs' }, it.refs.map(r => h('button', { type: 'button', class: 'bp-ref', onclick: () => focusNode(r) }, ic('target'), refLabel(r)))));
-    // the reader's comment for the agent: stored per item, exported with the answers
-    const noteKey = key + ':note';
+    // the reader's comment for the agent: stored per item, exported with the answers. On a plan or design,
+    // `:note-sent` holds the hash of the comment as Request changes or Approve last sent it: a new or
+    // edited comment is pending until the next one
+    const noteKey = key + ':note', noteSentKey = key + ':note-sent';
     let note = store.get(noteKey) || '';
+    // "Need more details" on a decision item: '1' until sent, then `sent@<rev>`; a newer rev drops it
+    const moreKey = key + ':more';
+    let more = store.get(moreKey);
+    if (more != null && (!choices || more !== '1' && more !== 'sent@' + CUR.rev)) { store.del(moreKey); more = null; }
     body.hidden = 'until-found';  // find-in-page still reaches collapsed content where supported
     const head = h('button', { type: 'button', class: 'bp-cl-head', 'aria-expanded': 'false', 'aria-controls': bodyId },
       numbered && h('span', { class: 'bp-cl-num' }, String(i + 1).padStart(2, '0')),
@@ -2425,16 +2391,30 @@ function renderChecklist(b, parent) {
       ic('chev', 'bp-cl-chev'));
     const dot = choices && h('span', { class: 'bp-cl-dot', 'aria-hidden': 'true' });
     const li = h('li', { class: 'bp-cl-item' + (choices ? ' has-choices' : ''), id: `item-${cid}-${it.id}` }, h('div', { class: 'bp-cl-row' }, cb, dot, head));
-    const entryItem = { it, cb, li, cid, body, head, choices, get choice() { return choice; }, get note() { return note; } };
+    const entryItem = { it, cb, li, cid, body, head, choices, get choice() { return choice; }, get note() { return note; },
+      get notePending() { return !!note && store.get(noteSentKey) !== noteHash(note); },
+      get more() { return more === '1' ? 'on' : more ? 'sent' : null; } };
     entryItem.setNote = (v, from) => {
       note = v.trim() ? v : '';
-      if (note) store.set(noteKey, note); else store.del(noteKey);
+      if (note) store.set(noteKey, note); else { store.del(noteKey); store.del(noteSentKey); }
       li.classList.toggle('has-note', !!note);
       if (from !== entryItem.noteView) entryItem.noteView.paint();
-      syncDiffs(); paintSend();
+      syncDiffs(); paintSend(); MARKUP.paint();
     };
     entryItem.noteView = noteBox(entryItem);
     li.classList.toggle('has-note', !!note);
+    li.classList.toggle('more', !!more);
+    const paintMore = () => { li.classList.toggle('more', !!more); entryItem.pills.paint(); entryItem.noteView.paint(); syncDiffs(); };
+    entryItem.setMore = on => {
+      more = on ? '1' : null;
+      if (more) store.set(moreKey, more); else store.del(moreKey);
+      paintMore(); paintSend(); MARKUP.paint();
+    };
+    // the item went to the agent (Request changes, Approve, Send answers): its request and comment are sent
+    entryItem.markSent = () => {
+      if (note) store.set(noteSentKey, noteHash(note));
+      if (more === '1') { more = 'sent@' + CUR.rev; store.set(moreKey, more); paintMore(); }
+    };
     if (choices) {
       entryItem.setChoice = id => {
         choice = id || null; cb.checked = !!choice;
@@ -2549,11 +2529,14 @@ function paintAccept() {
   accKey.disabled = !n; accKey._n.hidden = !n; accKey._n.textContent = String(n);
   accKey.setAttribute('aria-label', n ? `Accept recommended: ${n} open decision${n === 1 ? '' : 's'}` : 'Accept recommended: no open decisions');
 }
-// The options of a choice item as a radio group of pills. The same item can have several groups
-// (its row, its comment card in a diff); every group repaints from the item's current choice.
+// The options of a choice item as a radio group of pills, then the "Need more details" toggle (not an
+// option: it leaves the pick alone; not on earlier revisions or in compare view, which have no Request
+// changes). The same item can have several groups (its row, its comment card in a diff); every group
+// repaints from the item's current choice.
 function choicePills(x, compact) {
   const name = String(x.it.text || '').replace(/[`*]/g, '');
-  const el = h('div', { class: 'bp-cl-choices' + (compact ? ' compact' : ''), role: 'radiogroup', 'aria-label': 'Decision: ' + name });
+  const el = h('div', { class: 'bp-cl-choices' + (compact ? ' compact' : '') });
+  const grp = h('span', { role: 'radiogroup', 'aria-label': 'Decision: ' + name });
   const btns = x.choices.map(c => {
     const rec = c.id === x.it.recommend;
     const b = h('button', { type: 'button', role: 'radio', class: 'bp-choice' + (rec ? ' rec' : ''), 'data-id': c.id,
@@ -2562,12 +2545,19 @@ function choicePills(x, compact) {
       rec && ic('star'), h('span', { html: inline(c.label) }), rec && h('span', { class: 'sr' }, ' (recommended)'));
     return b;
   });
-  el.append(...btns);
-  el.addEventListener('keydown', e => {
+  grp.append(...btns);
+  grp.addEventListener('keydown', e => {
     const i = btns.indexOf(document.activeElement); if (i < 0) return;
     const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
     if (step) { e.preventDefault(); btns[(i + step + btns.length) % btns.length].focus(); }
   });
+  // on, the comment box beside the pills (the row's or the card's) takes focus: what is missing, optionally
+  const more = OLD || BASE ? null : h('button', { type: 'button', class: 'bp-more', onclick: () => {
+    if (x.more === 'sent') return;
+    x.setMore(!x.more);
+    if (x.more) el.parentElement?.querySelector(':scope > .bp-note textarea')?.focus({ preventScroll: true });
+  } });
+  el.append(grp); if (more) el.append(more);
   const paint = () => {
     const cur = x.choice;
     btns.forEach((b, i) => {
@@ -2577,6 +2567,12 @@ function choicePills(x, compact) {
     });
     el.classList.toggle('answered', !!cur);
     el.classList.toggle('off-rec', !!cur && !!x.it.recommend && cur !== x.it.recommend);
+    if (!more) return;
+    const m = x.more;
+    more.setAttribute('aria-pressed', String(!!m)); more.setAttribute('aria-disabled', String(m === 'sent')); more.classList.toggle('sent', m === 'sent');
+    more.replaceChildren(ic(m === 'sent' ? 'tick' : 'help'), m === 'sent' ? 'Details requested' : 'Need more details');
+    more.title = m === 'sent' ? 'Sent to the agent: it resets when the agent posts a new revision'
+      : m ? 'Goes with Request changes; click again to take it back' : 'Ask the agent to explain this item and its options in more detail';
   };
   paint();
   return { el, paint };
@@ -2597,7 +2593,8 @@ function checklistMd(c, indent = '') {
   const lines = c.items.map(x => {
     const sub = CHECKLISTS.filter(n => n.parent && n.parent.cid === c.b.id && n.parent.iid === x.it.id);
     let line = `${indent}- [${x.cb.checked ? 'x' : ' '}] ${x.it.text} ${itemKeyMd(x)}`;
-    if (x.choices) {
+    if (x.more) line += moreMd(x);
+    else if (x.choices) {
       const rec = x.it.recommend && choiceLabel(x, x.it.recommend);
       if (x.choice) line += ` → ${choiceMd(x)}` + (rec && x.choice !== x.it.recommend ? ` (recommended: ${rec})` : '');
       else line += rec ? ` (no decision; recommended: ${rec})` : ' (no decision)';
@@ -2621,7 +2618,8 @@ const MSG_KEY = `bp:${docId}:__message`;
 // collapsed parent item, another diff file) measures 0, so fit waits until it is.
 const noteFit = 'ResizeObserver' in window ? new ResizeObserver(es => es.forEach(e => e.target._fit && e.target._fit())) : null;
 function noteBox(x, compact) {
-  const ta = h('textarea', { class: 'bp-note-ta', rows: 1, placeholder: compact ? 'Comment for the agent…' : 'Comment for the agent (sent with your answers)…',
+  const ph = compact ? 'Comment for the agent…' : 'Comment for the agent (sent with your answers)…';
+  const ta = h('textarea', { class: 'bp-note-ta', rows: 1, placeholder: ph,
     'aria-label': 'Comment for the agent on: ' + String(x.it.text || '').replace(/[`*]/g, '') });
   const fit = () => {
     if (!ta.offsetWidth) return;   // hidden: keep the CSS min-height, refit when shown
@@ -2652,8 +2650,12 @@ function noteBox(x, compact) {
     paintFt();
   }
   function cancel() { draft = false; ta.value = x.note; fit(); paintFt(); }
-  // another box for the item saved: show it, unless this one holds a draft
-  const view = { el, paint: () => { if (!draft && ta.value !== x.note) { ta.value = x.note; fit(); } paintFt(); } };
+  // another box for the item saved: show it, unless this one holds a draft. "Need more details" on: ask what is missing
+  const view = { el, paint: () => {
+    if (!draft && ta.value !== x.note) { ta.value = x.note; fit(); }
+    ta.placeholder = x.more === 'on' ? 'What details do you need? (optional)' : ph;
+    paintFt();
+  } };
   ta.addEventListener('input', () => { fit(); draft = true; saved.hidden = true; paintFt(); });
   ta.addEventListener('keydown', e => {
     e.stopPropagation();   // page keys (modes, n/p, canvas) must not fire while typing
@@ -2661,14 +2663,16 @@ function noteBox(x, compact) {
     else if (e.key === 'Escape') { e.preventDefault(); cancel(); }
   });
   ta.value = x.note;
-  paintFt();
+  view.paint();
   requestAnimationFrame(fit);
   return view;
 }
-// one entry per checklist item: its tick or pick and the reader's comment (Send answers, and a plan's Approve and Request changes)
-const answerItems = () => Object.values(ITEMS).map(x => ({
+// one entry per checklist item: its tick or pick, "Need more details" and the reader's comment (Send answers,
+// a plan's Approve and Request changes, and the "Need more details" items Request changes carries elsewhere)
+const answerItems = (xs = Object.values(ITEMS)) => xs.map(x => ({
   checklist: x.cid, item: x.it.id, text: x.it.text,
   ...(x.choices ? { choice: x.choice || null, recommend: x.it.recommend || null } : { done: x.cb.checked }),
+  ...(x.more ? { more: true } : {}),
   ...(x.note ? { note: x.note.trim() } : {}),
 }));
 function replyPayload() {
@@ -2679,11 +2683,21 @@ function replyPayload() {
     markdown: allChecklistsMd(),
   };
 }
-// a plan's decisions (and comments on its other items) as Markdown, for Approve and Request changes
-function decisionsMd() {
-  return Object.values(ITEMS).filter(x => x.choices || x.note).map(x => {
+// What Request changes carries besides the pending annotations: decision items marked "Need more details"
+// and not sent yet (every page with the tray) and, on a plan or design, item comments new or edited since
+// the last Request changes or Approve
+const itemsPending = () => Object.values(ITEMS).filter(x => x.more === 'on' || APPROVABLE && x.notePending);
+// FNV-1a of a comment: what `:note-sent` keeps of the one that went
+const noteHash = s => { let n = 0x811c9dc5; for (let i = 0; i < s.length; i++) n = Math.imul(n ^ s.charCodeAt(i), 0x01000193); return (n >>> 0).toString(36); };
+// "Need more details" in the Markdown: the request, then the pick when there is one
+const moreMd = x => ' → **Need more details**' + (x.choice ? `; picked ${choiceMd(x)}` : '');
+// a plan's decisions (and comments on its other items) as Markdown, for Approve and Request changes; other
+// pages' Request changes passes only its "Need more details" items
+function decisionsMd(xs = Object.values(ITEMS).filter(x => x.choices || x.note)) {
+  return xs.map(x => {
     let line = `- ${x.it.text} ${itemKeyMd(x)}`;
-    if (x.choices) {
+    if (x.more) line += moreMd(x);
+    else if (x.choices) {
       const rec = x.it.recommend && choiceLabel(x, x.it.recommend);
       line += x.choice ? ` → ${choiceMd(x)}` + (rec && x.choice !== x.it.recommend ? ` (recommended: ${rec})` : '') : rec ? ` (no pick; recommended: ${rec})` : ' (no pick)';
     }
@@ -2774,6 +2788,7 @@ async function doSend() {
   if (!REPLY.url) { copyText(allChecklistsMd(), 'Copied: paste it into the chat with the agent'); sendDlg && sendDlg.close(); return; }
   try {
     await postReply(REPLY.url, replyPayload());
+    Object.values(ITEMS).forEach(x => x.markSent()); MARKUP.paint();
     sendDlg && sendDlg.close();
     toast(`Sent to ${REPLY.to || 'the agent'}`);
   } catch (e) {
@@ -3199,7 +3214,7 @@ function syncDiffs() {
       if (m.tick) m.tick.checked = m.src.cb.checked;
       if (m.pills) m.pills.paint();
       if (m.note) m.note.paint();
-      m.card.classList.toggle('done', m.src.cb.checked);
+      m.card.classList.toggle('done', m.src.cb.checked); m.card.classList.toggle('more', !!m.src.more);
     }
     const linked = d.comments.filter(c => c.item && ITEMS[c.item]);
     if (linked.length && d.progTxt) {
@@ -4857,9 +4872,9 @@ const groove = () => h('span', { class: 'bd-groove', role: 'separator', 'aria-or
 document.body.append(tip);
 
 /* ---------- right panel: Comments ---------- */
-// The panel holds Comments (the current revision only, added by MARKUP; revisions have their own rail).
-// It docks beside the page on wide windows (applyWidth lays the page out in what is left), is a drawer
-// over it from 901 to 1100 px and a bottom sheet below.
+// The panel holds Comments (the current revision only, added by MARKUP) and Revisions (every doc with a
+// meta.rev), as tabs. It docks beside the page on wide windows (applyWidth lays the page out in what is
+// left), is a drawer over it from 901 to 1100 px and a bottom sheet below.
 function scrollWithin(box, el) {   // scroll a panel list so `el` shows; `box` is el's offset parent
   const top = el.offsetTop - 10, bottom = el.offsetTop + el.offsetHeight + 10;
   if (top < box.scrollTop) box.scrollTo({ top, behavior: REDUCE ? 'auto' : 'smooth' });
@@ -4868,7 +4883,7 @@ function scrollWithin(box, el) {   // scroll a panel list so `el` shows; `box` i
 const SIDE = (() => {
   const OPEN_KEY = 'bluedoc:comments', TAB_KEY = 'bluedoc:sp-tab';
   // every section ({ id, label, body, at, chip, onToggle, shown, tab }) in tab order, and the one shown. One
-  // section shows its title; two or more (a design's Comments and Revisions) show as tabs.
+  // section shows its title (Revisions alone, on an earlier revision or in compare view); two or more show as tabs.
   const secs = []; let sec = null;
   const title = h('h2'), chip = h('span', { class: 'n', hidden: true });
   const tabs = h('div', { class: 'bd-sg bd-sp-tabs', role: 'tablist', 'aria-label': 'Side panel', hidden: true });
@@ -4980,15 +4995,15 @@ function revUrl(view, base) {
   return location.pathname + (s ? '?' + s : '');
 }
 const revName = r => `Rev ${r.rev}`;
-let chgAt = -1, revPos = null, chgBtns = [];
-// scroll the Revisions rail, where it scrolls on its own (rail, drawer), so `el` shows
-function railScrollTo(el) {
-  if (revRail.scrollHeight <= revRail.clientHeight) return;
-  const box = revRail.getBoundingClientRect(), r = el.getBoundingClientRect();
+let chgAt = -1, revPos = null, chgBtns = [], revTab = null;
+// scroll the Revisions tab so `el` shows
+function revTabScrollTo(el) {
+  if (revTab.scrollHeight <= revTab.clientHeight) return;
+  const box = revTab.getBoundingClientRect(), r = el.getBoundingClientRect();
   const d = r.top < box.top + 10 ? r.top - box.top - 10 : r.bottom > box.bottom - 10 ? Math.min(r.bottom - box.bottom + 10, r.top - box.top - 10) : 0;
-  if (d) revRail.scrollBy({ top: d, behavior: REDUCE ? 'auto' : 'smooth' });
+  if (d) revTab.scrollBy({ top: d, behavior: REDUCE ? 'auto' : 'smooth' });
 }
-// jump to change i (page order): scroll and flash it, and follow it in the tray and the rail's list
+// jump to change i (page order): scroll and flash it, and follow it in the tray and the Revisions tab's list
 function showChg(i) {
   if (!CHG.length) return;
   chgAt = (i % CHG.length + CHG.length) % CHG.length;
@@ -4999,7 +5014,7 @@ function showChg(i) {
   c.el.classList.remove('bd-chg-flash'); void c.el.offsetWidth; c.el.classList.add('bd-chg-flash');
   if (revPos) revPos.textContent = `${chgAt + 1} of ${CHG.length}`;
   chgBtns.forEach((b, k) => b.setAttribute('aria-current', String(k === chgAt)));
-  if (chgBtns[chgAt]) railScrollTo(chgBtns[chgAt]);
+  if (chgBtns[chgAt]) revTabScrollTo(chgBtns[chgAt]);
 }
 const gotoChg = step => showChg(chgAt + step);
 // a design's revision: the titles of the screens it added, changed (JSON or screen hash) or removed since prev
@@ -5009,12 +5024,11 @@ function screensChanged(prev, r) {
   for (const [id, x] of a) if (!b.some(y => y.id === id)) out.push(`${x.title || id} (removed)`);
   return out;
 }
-// the Revisions rail: in compare view the marked changes first, then every revision, newest first, then
-// the Compare picker. As a card (900 px and below), and on a doc with one revision ("slim": its header,
-// "Revisions · 1", over the top right of the column), it opens from its header.
-function buildRevRail() {
+// the Revisions tab of the right panel: the Compare picker (from the second revision), in compare view
+// the marked changes, then every revision, newest first
+function buildRevTab() {
   const sec = (title, ...kids) => h('div', { class: 'bd-rail-sec' }, h('h4', { class: 'bd-rail-h' }, title), kids);
-  const body = h('div', { class: 'bd-rvr-body' });
+  const body = h('div', { class: 'bd-rvr', 'aria-label': 'Revisions' });
   if (BASE) {
     const n = { add: 0, mod: 0, del: 0 }; CHG.forEach(c => n[c.kind]++);
     const kinds = Object.keys(n).filter(k => n[k]).flatMap((k, i) => [i ? ' · ' : null, h('span', { class: 'k ' + k }, `${n[k]} ${{ add: 'new', mod: 'changed', del: 'removed' }[k]}`)]);
@@ -5044,7 +5058,7 @@ function buildRevRail() {
         prev && h('a', { class: 'bp-btn', href: revUrl(r, prev), 'aria-current': cmp ? 'page' : null }, ic('split'), `Changes from ${prev.rev}`)));
     return li;
   });
-  // the Compare picker first, then every revision; the list has full dates, the picker month and day
+  // the list has full dates, the picker month and day
   const sel = (def, label) => h('select', { class: 'rv-sel', 'aria-label': label }, REVS.map(r => h('option', { value: r.rev, selected: r === def, title: r.date || null },
     revName(r) + (r.date ? ` · ${/^\d{4}-\d\d-\d\d$/.test(r.date) ? r.date.slice(5) : r.date}` : ''))));
   const from = sel(BASE || (OLD ? VIEW : REVS[REVS.length - 2]), 'Compare from'), to = sel(BASE ? VIEW : CUR, 'Compare with');
@@ -5056,45 +5070,23 @@ function buildRevRail() {
     ? 'Earlier revisions are read-only: ticks, picks and comments made there aren\'t saved.'
     : 'Only one revision so far. When the agent revises this doc, earlier revisions and Compare appear here.'),
     h('ol', { class: 'bd-rvs' }, items)));
-  const toggle = h('button', { type: 'button', class: 'bp-btn bp-side-toggle', 'aria-expanded': 'false', 'aria-controls': 'bd-rvr-body', onclick: () => setRevCard(!revRail.classList.contains('open')) },
-    h('span', {}, `Revisions · ${REVS.length}`), ic('chev', 'chev'));
-  body.id = 'bd-rvr-body';
-  return h('aside', { class: 'bd-rvr', id: 'bd-rvr', 'aria-label': 'Revisions' }, toggle, body);
+  return body;
 }
-function setRevCard(open) {
-  revRail.classList.toggle('open', open);
-  revRail.querySelector('.bp-side-toggle').setAttribute('aria-expanded', String(open));
-}
-// the Rev button and the "B of 2" link: open the drawer or the card, or point at the rail beside the column
-function revealRevs() {
-  if (IS_DESIGN) { SIDE.show('revisions', { toggle: true }); return; }   // a design's Revisions tab, beside Comments
-  const as = root.dataset.rev;
-  if (as === 'drawer') { setDrawer(false); setRevDrawer(!revRail.classList.contains('drawer')); return; }
-  if (as === 'card' || as === 'slim') { setRevCard(true); revRail.scrollIntoView({ block: as === 'slim' ? 'nearest' : 'start', behavior: REDUCE ? 'auto' : 'smooth' }); }
-  else railScrollTo(revRail.querySelector('.bd-rv.on') || revRail.firstChild);
-  revRail.classList.remove('flash'); void revRail.offsetWidth; revRail.classList.add('flash');
-}
-// the slim rail's panel closes on a click elsewhere, as a menu does
-document.addEventListener('pointerdown', e => {
-  if (revRail && root.dataset.rev === 'slim' && revRail.classList.contains('open') && !revRail.contains(e.target) && !e.target.closest?.('.bd-rev-btn, .bd-rev-link')) setRevCard(false);
-});
+// the Rev button and the "B of 2" link: show the Revisions tab, or hide the panel when it shows it
+function revealRevs() { SIDE.show('revisions', { toggle: true }); }
 // tests and agents: BP.revisionsRail({open})
 function revisionsRail(o) {
-  if (!revRail) return { available: false, open: false, as: null };
-  if (IS_DESIGN) {
-    if (o && typeof o === 'object' && 'open' in o) { if (o.open) SIDE.show('revisions'); else if (SIDE.shows('revisions')) SIDE.setOpen(false, true); }
-    return { available: true, as: 'tab', open: SIDE.shows('revisions') };
-  }
-  const as = root.dataset.rev, card = as === 'card' || as === 'slim';
-  if (o && typeof o === 'object' && 'open' in o) { if (as === 'drawer') setRevDrawer(!!o.open); else if (card) setRevCard(!!o.open); }
-  return { available: true, as, open: as === 'drawer' ? revRail.classList.contains('drawer') : card ? revRail.classList.contains('open') : true };
+  if (!revTab) return { available: false, open: false, as: null };
+  if (o && typeof o === 'object' && 'open' in o) { if (o.open) SIDE.show('revisions'); else if (SIDE.shows('revisions')) SIDE.setOpen(false, true); }
+  const open = SIDE.shows('revisions');
+  return { available: true, open, as: open ? SIDE.as() : null };
 }
 if (REVS.length >= 1 && REVS[0].rev) {
   const label = h('span', { class: 'l' }, revName(VIEW));
-  const btn = h('button', { type: 'button', class: 'bp-btn bd-rev-btn' + (OLD ? ' old' : ''), title: 'Revisions', 'aria-controls': 'bd-rvr', onclick: revealRevs }, ic('hist'), label);
+  const btn = h('button', { type: 'button', class: 'bp-btn bd-rev-btn' + (OLD ? ' old' : ''), title: 'Revisions', 'aria-controls': 'bd-sp', onclick: revealRevs }, ic('hist'), label);
   document.querySelector('.bd-bar-r').prepend(btn);
   const revDd = [...document.querySelectorAll('.bd-props dt')].find(dt => dt.textContent === 'Revision');
-  if (revDd) { const dd = revDd.nextElementSibling; dd.textContent = ''; dd.append(h('button', { type: 'button', class: 'bd-rev-link', 'aria-controls': 'bd-rvr', onclick: revealRevs }, `${VIEW.rev} of ${REVS.length}`)); }
+  if (revDd) { const dd = revDd.nextElementSibling; dd.textContent = ''; dd.append(h('button', { type: 'button', class: 'bd-rev-link', 'aria-controls': 'bd-sp', onclick: revealRevs }, `${VIEW.rev} of ${REVS.length}`)); }
   if (OLD) document.title = `${revName(VIEW)} · ${document.title}`;
   const strip = (cls, ...kids) => { const s = h('div', { class: 'bd-revbar ' + cls, role: 'region', 'aria-label': 'Revision' }, h('div', { class: 'in' }, kids)); document.querySelector('.bd-bar').after(s); return s; };
   // compare view and earlier revisions get their own tray of keys at the bottom, where the annotation
@@ -5122,7 +5114,7 @@ if (REVS.length >= 1 && REVS[0].rev) {
     document.addEventListener('keydown', e => {
       if (e.defaultPrevented || e.isComposing || e.metaKey || e.ctrlKey || e.altKey || document.querySelector('dialog[open]')) return;
       const t = e.target; if (t.closest && t.closest('input, textarea, select, [contenteditable], .bp-stage, .bd-diff')) return;
-      if (e.key === 'Escape') { e.preventDefault(); location.href = doneUrl; }
+      if (e.key === 'Escape') { if (SIDE.as() === 'drawer' || SIDE.as() === 'sheet') return; e.preventDefault(); location.href = doneUrl; }
       else if (e.key === 'j' || e.key === 'ArrowDown') { e.preventDefault(); gotoChg(1); }
       else if (e.key === 'k' || e.key === 'ArrowUp') { e.preventDefault(); gotoChg(-1); }
     });
@@ -5144,18 +5136,10 @@ if (REVS.length >= 1 && REVS[0].rev) {
   }
   const bar = document.querySelector('.bd-revbar');
   if (bar) { const fit = () => root.style.setProperty('--rv-h', bar.offsetHeight + 'px'); fit(); addEventListener('resize', fit); }
-  revRail = buildRevRail();
-  if (IS_DESIGN) {
-    // a design's Revisions are a tab of the right pane, beside Comments; earlier revisions and compare view open on it
-    revRail.classList.add('tab');
-    SIDE.add({ id: 'revisions', label: 'Revisions', at: 1, body: revRail, chip: () => BASE ? `${CHG.length} change${CHG.length === 1 ? '' : 's'}` : '' });
-    if (BASE || OLD) SIDE.show('revisions', { remember: false });
-  } else {
-    main.after(revRail);
-    applyWidth();
-    // on an earlier revision or in compare view the rail shows from the start, also as a drawer or card
-    if (BASE || OLD) { if (root.dataset.rev === 'drawer') setRevDrawer(true); else if (root.dataset.rev === 'card') setRevCard(true); }
-  }
+  // Revisions are a tab of the right panel, beside Comments; earlier revisions and compare view open on it
+  revTab = buildRevTab();
+  SIDE.add({ id: 'revisions', label: 'Revisions', at: 1, body: revTab, chip: () => BASE ? `${CHG.length} change${CHG.length === 1 ? '' : 's'}` : '' });
+  if (BASE || OLD) SIDE.show('revisions', { remember: false });
 }
 
 /* ---------- plans: Approve plan; other pages with checklists: Send answers. The keys that end the tray ---------- */
@@ -5236,6 +5220,7 @@ async function doApprove() {
     if (REPLY.connected) REPLY.approval = { rev: p.rev, at: p.at };
     store.set(PLAN_KEY, JSON.stringify({ rev: p.rev, state: 'approved', at: p.at }));
     MARKUP.markSent(p.annotations.map(a => a.id), p.at);
+    Object.values(ITEMS).forEach(x => x.markSent()); MARKUP.paint();
     if (dlg) { dlg._note.value = ''; dlg.close(); }
     paintPlan();
   };
@@ -5273,8 +5258,9 @@ paintPlan();
 // mark whose element is hidden (a collapsed row, another diff file, a closed system) sits on the
 // nearest visible ancestor. Positions are fractions of the element's box, so marks follow reflow,
 // width changes and canvas zoom. Notes belong to the current revision: no toolbar on earlier
-// revisions or in compare view. Send answers never carries these, and this carries answers only on a
-// plan, whose decision picks go with Request changes or Approve plan (there is no Send answers there).
+// revisions or in compare view. Send answers never carries these. This carries a plan's or design's
+// decision picks and item comments (there is no Send answers there; they also go with Approve), and on
+// other pages only the "Need more details" items (itemsPending counts what has not gone yet).
 const MARKUP = (() => {
   const KEY = `bp:${docId}:__ann`, MSG = `bp:${docId}:__chgmsg`, PEN_KEY = 'bluedoc:pen';
   // one key per annotation, `__ann:<id>`, so two browsers adding notes don't overwrite each other
@@ -5355,13 +5341,14 @@ const MARKUP = (() => {
       return [headMd(a, i), ex && `   > ${ex}`,
         `   Change: ${noteText(a).split('\n').join('\n   ')}`].filter(Boolean).join('\n');
     }).join('\n\n'));
-    const dec = APPROVABLE && decisionsMd();
+    const dec = APPROVABLE ? decisionsMd() : decisionsMd(itemsPending());
     if (dec) parts.push('## Decisions\n\n' + dec);
     return `# Change requests: ${DOC.title || docId}${CUR.rev ? ` (rev ${CUR.rev})` : ''}, ${new Date().toISOString().slice(0, 10)}\n\n` + parts.join('\n\n') + '\n';
   }
-  // `message` repeats the general comments for agents that read only it; a plan's decision picks go along as `answers`
+  // `message` repeats the general comments for agents that read only it. A plan's or design's decision picks
+  // go along as `answers`; elsewhere `answers` holds the "Need more details" items
   function payload() {
-    const items = pending(), answers = APPROVABLE ? answerItems() : [];
+    const items = pending(), answers = APPROVABLE ? answerItems() : answerItems(itemsPending());
     return { kind: 'changes', doc: docId, rev: CUR.rev, title: DOC.title || '', path: location.pathname, at: new Date().toISOString(),
       message: items.filter(isGeneral).map(noteText).join('\n\n'), annotations: items.map(pub), ...(answers.length ? { answers } : {}), markdown: changesMd(items) };
   }
@@ -5391,9 +5378,9 @@ const MARKUP = (() => {
   const TYPES = Object.keys(SEL), ANY = Object.values(SEL).join(', ');
   const CLIPS = '.bd-pane, .bp-stage, .bp-table-wrap, .bp-side, .bd-board, .bd-lp-pane';   // inner scrollers that clip what they hold
   const typeOf = el => el === shell ? 'doc' : TYPES.find(t => el.matches(SEL[t]));
-  // the rails are page furniture, except the left rail's document sections (Status, Document, Related); so
-  // are a design's panel tabs, Screens list and board toolbar
-  const inDoc = t => !!t && t.nodeType === 1 && shell.contains(t) && !t.closest('.bd-rvr, .bd-lp-ui, .bd-btb') && (!t.closest('.bp-side') || !!t.closest('.bd-meta'));
+  // the rail is page furniture, except its document sections (Status, Document, Related); so are a design's
+  // panel tabs, Screens list and board toolbar
+  const inDoc = t => !!t && t.nodeType === 1 && shell.contains(t) && !t.closest('.bd-lp-ui, .bd-btb') && (!t.closest('.bp-side') || !!t.closest('.bd-meta'));
   const targetAt = t => inDoc(t) ? t.closest(ANY) : null;
   let itemKeys = null;
   const itemKeyOf = li => (itemKeys ||= new Map(Object.entries(ITEMS).map(([k, x]) => [x.li, k]))).get(li);
@@ -6091,11 +6078,11 @@ const MARKUP = (() => {
     return true;
   }
   function paint() {
-    const n = pending().length, total = list.length, by = s => list.filter(a => a.status === s).length;
-    goN.textContent = String(n);
-    go.disabled = !n;
-    go.setAttribute('aria-label', `Request changes: ${n} pending`);
-    go._tip = n ? `Review and send ${n} pending change request${n === 1 ? '' : 's'}` : 'Point, select or draw on the page, or add a general comment, to request a change';
+    const n = pending().length, ni = itemsPending().length, all = n + ni, total = list.length, by = s => list.filter(a => a.status === s).length;
+    goN.textContent = String(all);
+    go.disabled = !all;
+    go.setAttribute('aria-label', `Request changes: ${all} pending`);
+    go._tip = all ? `Review and send ${all} pending change request${all === 1 ? '' : 's'}` : 'Point, select or draw on the page, or add a general comment, to request a change';
     SIDE.badge(n);
     filterBtns.forEach(b => { const f = b.dataset.f; b.setAttribute('aria-checked', String(f === filter)); b.replaceChildren(FILTERS[f], h('i', {}, String(f === 'all' ? total : by(f)))); });
     sortBtn.replaceChildren(ic(sort === 'page' ? 'doc' : 'hist'));
@@ -6202,23 +6189,26 @@ const MARKUP = (() => {
   /* the dialog: the count, the Markdown that goes, Copy and Send (the comments themselves are in the sidebar) */
   function openDlg() {
     endEdit(true); finishDraft(true); finishGeneral(true);
-    if (!pending().length) return;
+    if (!pending().length && !itemsPending().length) return;
     if (!dlg) {
       const pre = h('pre', {}), cnt = h('p', { class: 'cnt' }), how = h('p', { class: 'how' });
       const copy = h('button', { type: 'button', class: 'bp-btn', onclick: () => { copyText(changesMd(), 'Copied: paste it into the chat with the agent'); dlg.close(); } }, ic('copy'), 'Copy');
       const send = h('button', { type: 'button', class: 'bp-btn primary', onclick: () => sendChanges() }, ic('send'), 'Send');
       dlg = h('dialog', { class: 'bd-send bd-chgs', 'aria-labelledby': 'bd-chgs-h' },
         h('div', { class: 'hd' }, h('h3', { id: 'bd-chgs-h' }, APPROVABLE ? `Request changes to this ${AP_NOUN}` : 'Request changes to this doc'), h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Close', onclick: () => dlg.close() }, ic('x'))),
-        h('p', { class: 'sum' }, APPROVABLE ? `Change requests ask the agent to revise the ${AP_NOUN}. Your decision picks go with them.`
-          : 'Change requests ask the agent to edit the document. Your decisions and comments on items go with Send answers.'),
+        h('p', { class: 'sum' }, APPROVABLE ? `Change requests ask the agent to revise the ${AP_NOUN}. Your decision picks and comments on items go with them.`
+          : 'Change requests ask the agent to edit the document. "Need more details" requests go with them; your other decisions and comments on items go with Send answers.'),
         cnt, h('details', { open: true }, h('summary', {}, 'Preview'), pre), how, h('div', { class: 'ft' }, copy, send));
       document.body.append(dlg);
       dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });
       dlg._paint = () => {
-        const open = pending(), old = open.filter(a => a.rev !== CUR.rev).length, gn = open.filter(isGeneral).length;
-        cnt.replaceChildren(h('b', {}, `${open.length} pending comment${open.length === 1 ? '' : 's'}${gn ? `, ${gn} general` : ''}`), ' go with this request',
-          ...(old ? [' (', h('span', { class: 'old' }, `${old} made on an earlier revision`), ')'] : []), '. Edit or delete them in the Comments sidebar.');
-        send.hidden = !REPLY.changes; send.disabled = copy.disabled = !open.length;
+        const open = pending(), old = open.filter(a => a.rev !== CUR.rev).length, gn = open.filter(isGeneral).length, xs = itemsPending();
+        const nn = xs.filter(x => APPROVABLE && x.notePending).length, nm = xs.filter(x => x.more === 'on').length;
+        const what = [open.length && `${open.length} pending comment${open.length === 1 ? '' : 's'}${gn ? `, ${gn} general` : ''}`,
+          nn && `${nn} comment${nn === 1 ? '' : 's'} on items`, nm && `${nm} request${nm === 1 ? '' : 's'} for more details`].filter(Boolean).join(', ');
+        cnt.replaceChildren(h('b', {}, what), open.length + nn + nm === 1 ? ' goes with this request' : ' go with this request',
+          ...(old ? [' (', h('span', { class: 'old' }, `${old} made on an earlier revision`), ')'] : []), open.length ? '. Edit or delete them in the Comments sidebar.' : '.');
+        send.hidden = !REPLY.changes; send.disabled = copy.disabled = !open.length && !xs.length;
         copy.classList.toggle('primary', !REPLY.changes);
         how.textContent = REPLY.changes ? `Send delivers this to ${REPLY.to || 'the agent that opened this page'}. Copy gives you the same text to paste.`
           : 'This page isn\'t connected to an agent. Copy the text and paste it into the chat. (Pages opened through serve.py can send directly.)';
@@ -6229,12 +6219,13 @@ const MARKUP = (() => {
     dlg.showModal();
   }
   async function sendChanges() {
-    const p = payload();
-    if (!p.annotations.length) return;
+    const xs = itemsPending(), p = payload();
+    if (!p.annotations.length && !xs.length) return;
     if (!REPLY.changes) { copyText(p.markdown, 'Copied: paste it into the chat with the agent'); dlg && dlg.close(); return; }
     try {
       await postReply(REPLY.changes, p);
       markSent(p.annotations.map(x => x.id), p.at);
+      (APPROVABLE ? Object.values(ITEMS) : xs).forEach(x => x.markSent()); paint();
       if (dlg) dlg.close();
       changesSent(p);
       toast(`Change request sent to ${REPLY.to || 'the agent'}`);
@@ -6387,6 +6378,8 @@ window.BP = {
     return c ? acceptRecs(checklistScope(c)) : 0;
   },
   setNote: (key, text) => { const x = ITEMS[key]; if (!x) return false; x.setNote(text || ''); return true; },
+  // "Need more details" on a decision item, as its toggle would; false without choices, on ?rev=/?diff= or once sent
+  moreDetails: (key, on = true) => { const x = ITEMS[key]; if (!x || !x.choices || OLD || BASE || x.more === 'sent') return false; x.setMore(on); return true; },
   openCode: (diffId, path, line) => openCode(diffId, path, line),
   openComment: (diffId, index) => { const d = DIFFS[diffId]; const c = d && d.order[index]; if (c) openComment(d, c, true); return !!c; },
   diffState: diffId => { const d = DIFFS[diffId]; if (!d) return null; const linked = d.comments.filter(c => c.item && ITEMS[c.item]);
