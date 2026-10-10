@@ -869,34 +869,37 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .bd-chl .bd-chg-tag { height: 18px; padding: 0 6px; font-size: 10px; }
 .bd-chl .t { min-width: 0; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; }
 .bd-chl .none { padding: 8px; color: var(--fg-subtle); }
-.bd-rvs { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
-.bd-rv { min-width: 0; padding: 9px 10px 10px; border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-1); }
-.bd-rvr, .bd-rvr-body, .bd-rvr .bd-rail-sec { min-width: 0; }
-.bd-rvr { overflow-x: hidden; }
-.bd-rv.on { box-shadow: 0 0 0 1.5px var(--accent), 0 4px 14px color-mix(in oklch, var(--accent) 14%, transparent); }
-.bd-rv.base { box-shadow: 0 0 0 1.5px var(--line-strong), var(--shadow-1); }
-/* collapsed: [number tile] Revision N / first change note on one line, ellipsized; buttons below.
+/* the revisions list: one panel, rows split by hairlines (no card per revision).
+   Row: [number tile] Revision N / first change note, ellipsized [chevron]; under it, two small buttons.
    Expanded: date, chips and every change note. */
-.bd-rv .rv-h { display: flex; align-items: center; gap: 10px; width: 100%; padding: 0; border: 0; background: none; text-align: left; color: inherit; font: inherit; cursor: pointer; }
-.bd-rv .rv-n { flex: none; display: inline-grid; place-items: center; min-width: 30px; height: 30px; padding: 0 5px; border-radius: 8px; font: 650 12.5px var(--mono); color: var(--fg-muted);
-  background: linear-gradient(180deg, var(--key-top), var(--key-bot)); box-shadow: var(--shadow-key); }
+.bd-rvr, .bd-rvr-body, .bd-rvr .bd-rail-sec { min-width: 0; }
+.bd-rvr { overflow-x: hidden; scrollbar-gutter: stable; }
+.bd-rvs { list-style: none; margin: 0; padding: 0; border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-1); overflow: hidden; }
+.bd-rv { min-width: 0; padding: 9px 10px; }
+.bd-rv + .bd-rv { border-top: 1px solid var(--line-soft); }
+.bd-rv.on { background: color-mix(in oklch, var(--accent-tint) 70%, transparent); box-shadow: inset 2px 0 0 var(--accent); }
+.bd-rv.base { box-shadow: inset 2px 0 0 var(--line-strong); }
+.bd-rv .rv-h { display: flex; align-items: center; gap: 9px; width: 100%; padding: 0; border: 0; border-radius: 6px; background: none; text-align: left; color: inherit; font: inherit; cursor: pointer; }
+.bd-rv .rv-h:focus { outline: none; box-shadow: none; }
+.bd-rv .rv-h:focus-visible { box-shadow: var(--focus-ring); }
+.bd-rv .rv-n { flex: none; display: inline-grid; place-items: center; min-width: 26px; height: 26px; padding: 0 4px; border-radius: 7px; font: 650 11.5px var(--mono); color: var(--fg-muted);
+  background: var(--inset); box-shadow: inset 0 0 0 1px var(--line); }
 .bd-rv.on .rv-n { color: #fff; background: var(--accent); box-shadow: none; }
 .bd-rv .rv-tt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.bd-rv .rv-tt b { font-size: 13.5px; font-weight: 600; line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.bd-rv .rv-tt .s { font-size: 12.5px; line-height: 1.4; color: var(--fg-subtle); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.bd-rv .rv-tt .s code { font-size: .9em; }
-.bd-rv .rv-h .chev { flex: none; width: 14px; height: 14px; color: var(--fg-subtle); transition: transform .15s var(--ease); }
+.bd-rv .rv-tt b { font-size: 13px; font-weight: 600; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bd-rv .rv-tt .s { font-size: 12px; line-height: 1.35; color: var(--fg-subtle); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bd-rv .rv-tt .s code { font-size: .9em; padding: 0 .25em; }
+.bd-rv .rv-h .chev { flex: none; width: 13px; height: 13px; color: var(--fg-subtle); transition: transform .15s var(--ease); }
 .bd-rv.open .rv-h .chev { transform: rotate(90deg); }
-.bd-rv .rv-more { display: none; margin: 8px 0 0 40px; }
+.bd-rv .rv-more { display: none; margin: 7px 0 0 35px; }
 .bd-rv.open .rv-more { display: block; }
-.bd-rv .rv-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 12.5px; color: var(--fg-subtle); }
-.bd-rv .rv-meta .bp-chip { padding: 3px 7px; font-size: 11.5px; }
-.bd-rv .rv-notes { margin: 6px 0 0; padding-left: 16px; font-size: 13px; line-height: 1.5; color: var(--fg-muted); }
+.bd-rv .rv-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; font-size: 12px; color: var(--fg-subtle); }
+.bd-rv .rv-meta .bp-chip { padding: 2px 6px; font-size: 11px; }
+.bd-rv .rv-notes { margin: 5px 0 0; padding-left: 14px; font-size: 12.5px; line-height: 1.45; color: var(--fg-muted); }
 .bd-rv .rv-notes li + li { margin-top: 2px; }
-.bd-rv .rv-act { margin-left: 40px; }
-.bd-rv .rv-act { display: flex; flex-wrap: nowrap; gap: 6px; margin-top: 8px; }
-.bd-rv .rv-act .bp-btn { flex: 0 1 auto; min-width: 0; padding: 0 8px; }
-.bd-rv .rv-act .bp-btn { text-decoration: none; }
+.bd-rv .rv-act { display: flex; flex-wrap: nowrap; gap: 4px; margin: 7px 0 0; }
+.bd-rv .rv-act .bp-btn { flex: 0 0 auto; height: 24px; padding: 0 8px; gap: 4px; border-radius: 7px; font-size: 12px; text-decoration: none; white-space: nowrap; }
+.bd-rv .rv-act .bp-btn .bd-ic { width: 12px; height: 12px; }
 .bd-rv .rv-act .bp-btn[aria-current] { color: var(--accent-fg); background: var(--accent-tint); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--accent) 30%, transparent); }
 .bd-rv .rv-act .bp-btn[aria-current] .bd-ic { color: currentColor; }
 /* the Compare picker: from above with, as the rail is narrow; side by side in the card */
@@ -3856,7 +3859,7 @@ function buildRevRail() {
       ic('chev', 'chev'));
     li.append(head,
       h('div', { class: 'rv-more' },
-        h('div', { class: 'rv-meta' }, r.date && h('span', {}, r.date), r.built && h('span', {}, '· built ' + String(r.built).slice(0, 16).replace('T', ' ')),
+        h('div', { class: 'rv-meta' }, r.date && h('span', {}, r.date), r.built && h('span', {}, 'built ' + String(r.built).slice(0, 16).replace('T', ' ')),
           r.current && h('span', { class: 'bp-chip ok' }, 'current'), r === VIEW && h('span', { class: 'bp-chip info' }, 'shown'), r === BASE && h('span', { class: 'bp-chip todo' }, 'base')),
         notes.length ? h('ul', { class: 'rv-notes' }, notes.map(t => h('li', { html: inline(t) }))) : h('p', { class: 'rv-meta' }, 'No notes for this revision.')),
       h('div', { class: 'rv-act' },
