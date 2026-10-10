@@ -1,0 +1,45 @@
+<div id="root" data-bd="dashboard"></div>
+<script>
+const e = React.createElement, { HorizonProvider, Card, Stat, ProgressRing, Tag, Button } = HorizonUI;
+const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const week = [6200, 8100, 7400, 9900, 5300, 11200, 7214];
+const workouts = [["Morning run", "5.2 km", "28 min"], ["Strength", "6 sets", "41 min"], ["Evening walk", "3.1 km", "35 min"],
+  ["Cycling", "18.4 km", "52 min"], ["Yoga", "1 class", "30 min"]];
+const named = (bd, ...kids) => e('div', { 'data-bd': bd }, ...kids);
+const bars = e('div', { className: 'acme-bars' }, week.map((v, i) => e('div', { key: days[i], className: 'acme-bar' },
+  e('span', { style: { height: `${Math.round(v / 120)}px` } }), e('small', null, days[i]))));
+ReactDOM.createRoot(document.getElementById('root')).render(
+  e(HorizonProvider, { theme: 'light', className: 'acme-dash' },
+    e('header', { className: 'acme-top', 'data-bd': 'top' },
+      e('strong', null, 'Acme Fit'), e(Tag, null, 'Week 41'), e('span', { className: 'acme-grow' }),
+      named('export', e(Button, { variant: 'secondary' }, 'Export CSV'))),
+    e('section', { className: 'acme-stats', 'data-bd': 'kpis' },
+      named('steps', e(Card, null, e(Stat, { label: 'Steps today', value: '7,214', delta: 4.2, spark: week }))),
+      named('active', e(Card, null, e(Stat, { label: 'Active minutes', value: '104', unit: 'min', delta: 12.5 }))),
+      named('heart', e(Card, null, e(Stat, { label: 'Resting heart rate', value: '58', unit: 'bpm', delta: -1.7, tone: 'success' }))),
+      named('goal', e(Card, null, e('div', { className: 'acme-goal' }, e(ProgressRing, { value: 72, size: 64, stroke: 6 }),
+        e('div', null, e('strong', null, 'Weekly goal'), e('p', null, '50,500 of 70,000 steps')))))),
+    e('section', { className: 'acme-split' },
+      named('week', e(Card, { title: 'Steps this week' }, bars)),
+      named('workouts', e(Card, { title: 'Recent workouts' },
+        e('table', { className: 'acme-table' }, e('tbody', null,
+          workouts.map(([name, dist, time]) => e('tr', { key: name }, e('td', null, name), e('td', null, dist), e('td', null, time))))))))));
+</script>
+<style>
+  .acme-dash { min-height: 100vh; padding: 24px; display: grid; gap: 20px; align-content: start; }
+  .acme-top { display: flex; align-items: center; gap: 12px; font-size: 18px; }
+  .acme-grow { flex: 1; }
+  .acme-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .acme-stats > div > * { height: 100%; }
+  .acme-goal { display: flex; align-items: center; gap: 16px; }
+  .acme-goal p { margin: 4px 0 0; color: var(--hz-fg-muted, #6b7280); font-size: 13px; }
+  .acme-split { display: grid; grid-template-columns: 3fr 2fr; gap: 16px; }
+  .acme-split > div > * { height: 100%; }
+  .acme-bars { display: flex; align-items: flex-end; gap: 16px; height: 140px; padding-top: 12px; }
+  .acme-bar { flex: 1; display: grid; justify-items: center; gap: 6px; }
+  .acme-bar span { width: 100%; max-width: 48px; border-radius: 6px 6px 2px 2px; background: var(--accent, #4f46e5); }
+  .acme-bar small { color: var(--hz-fg-muted, #6b7280); font-size: 12px; }
+  .acme-table { width: 100%; border-collapse: collapse; }
+  .acme-table td { padding: 10px 0; border-top: 1px solid var(--hz-border, #e5e7eb); }
+  .acme-table td + td { text-align: right; color: var(--hz-fg-muted, #6b7280); }
+</style>

@@ -7,10 +7,12 @@ Usage:
   build.py doc.json --check         validate and lint only; writes nothing (no history, no diff cache)
   build.py doc.json --strict        treat lint warnings as errors
   build.py doc.json --show-rev B    print revision B, rebuilt from the history, as JSON
-  build.py new TYPE out.bluedoc.json [--title T] [--kind K] [--shape pr|area]
-                                    write the fill-in skeleton of a docs|review|plan|other doc
-                                    (--shape area: a review by area of a codebase, not by PR)
-  build.py patch doc.json KEY [--set f=v ...] [--json OBJ] [--append OBJ] [--delete] [--change LINE ...] [--no-bump]
+  build.py new TYPE out.bluedoc.json [--title T] [--kind K] [--shape pr|area] [--target T,…] [--framework F]
+                                    write the fill-in skeleton of a docs|review|plan|design|other doc
+                                    (--shape area: a review by area of a codebase, not by PR; design: one
+                                    wireframe screen file per --target watch|mobile|tablet|desktop|web)
+  build.py patch doc.json KEY [--set f=v ...] [--json OBJ] [--append OBJ] [--delete] [--html FILE|-]
+                              [--change LINE ...] [--no-bump]
                                     change one object by its annotator key, bump meta.rev, validate, record
 
 serve.py renders the JSON with assets/template.html on every request, so normal work needs no
@@ -18,13 +20,18 @@ HTML file at all: write the JSON, run build.py, open the serve.py URL.
 
 Revisions: every build (and every patch) records the document under its `meta.rev` in
 <doc>.history.json next to the JSON (doc.bluedoc.json -> doc.bluedoc.history.json). A new rev
-appends; the same rev replaces that entry. The page embeds the history, so readers can switch
-revisions and compare two. --no-history skips reading and writing it.
+appends; the same rev replaces that entry. A design doc's screen files join the revision: their text
+sits in the history's `html` pool by hash. The page embeds the history (screens as hashes only), so
+readers can switch revisions and compare two. --no-history skips reading and writing it.
 
 Type contracts: each meta.type needs its data (review: a diff and sized findings; plan: steps and
-files blocks; docs: a canvas or a hero). Missing data is an error on the doc being built: a new
-meta.rev, or a recorded rev whose text changed (an edit in place). It is a warning only while the
-doc is exactly the revision its history recorded, so old revisions keep rendering.
+files blocks; docs: a canvas or a hero; design: one board with an artboard). Missing data is an error on
+the doc being built: a new meta.rev, or a recorded rev whose text changed (an edit in place). It is a
+warning only while the doc is exactly the revision its history recorded, so old revisions keep rendering.
+
+Screens (design docs): each artboard's HTML is a body fragment in <stem>.design/<id>.html. The build
+fails on a missing file, a network URL, <base>, <iframe>, <object>, <embed>, <meta http-equiv>,
+<form action> or a whole document; it warns above 24 KB and when no element has a data-bd name.
 
 Diff refs: a diff block with base and head and no files is expanded from git (cache file
 <name>.diffcache.json, then `git diff`, then `gh pr diff`) by scripts/diffref.py when validating,
@@ -39,11 +46,16 @@ patch keys: doc, meta, header, tldr, status, section:<sec>, heading:<sec>, lead:
   a diff ref's code comes from git, so with no such comment patch exits 2 (change the code, patch
   the finding with item:<checklist>/<item>, or add a comment). A key may keep the backticks the
   reply Markdown puts around it.
+  Design keys: artboard:<id> (the artboard; --html FILE replaces its screen file), el:<id>/<path>
+  (an element: data-bd names joined by '/', else a CSS path), frame:<device or WxH>@<x>,<y> (appends
+  an artboard there and writes a stub screen file). artboard: and el: with no --set/--json/--html
+  print the screen file and the element's selector; with only --change they record a hand edit of
+  the screen file as the next rev.
   <blockPath> is <section>/<index> or <checklist>/<item>/<index>. header, tldr and status address
   the doc's top level. --set and --json values parse as JSON when they can; null deletes the field.
   --append adds to the target's list (doc: sections, section and item: blocks, table: rows,
-  canvas: nodes, diff: comments, other blocks: items). The rev bumps (A->B, 3->4, v1->v2) and
-  meta.date becomes today unless --no-bump; on a bump `changes` becomes the --change lines
+  canvas: nodes, diff: comments, board: artboards, other blocks: items). The rev bumps (A->B, 3->4,
+  v1->v2) and meta.date becomes today unless --no-bump; on a bump `changes` becomes the --change lines
   (default: "Updated `KEY`."), with --no-bump they are appended.
 
 Exit codes: 0 ok, 1 validation errors (or warnings with --strict), 2 usage/IO error.
@@ -57,8 +69,11 @@ import copy
 import datetime as dt
 import hashlib
 import json
+import os
 import re
+import shlex
 import sys
+from html.parser import HTMLParser
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -66,7 +81,8 @@ TEMPLATE = HERE.parent / "assets" / "template.html"
 SKELETONS = HERE.parent / "assets" / "skeletons"
 HISTORY_VERSION = 1
 
-BLOCK_TYPES = {"text", "callout", "table", "code", "terms", "cards", "checklist", "canvas", "diff", "steps", "files", "media", "compare"}
+BLOCK_TYPES = {"text", "callout", "table", "code", "terms", "cards", "checklist", "canvas", "diff", "steps", "files", "media", "compare",
+               "board"}
 FILE_STATUSES = {"added", "modified", "deleted", "renamed", "context"}
 ITEM_BLOCK_TYPES = {"text", "callout", "table", "code", "terms", "cards", "checklist", "files", "media", "compare"}
 MAX_TITLE, MAX_SUB = 90, 120   # characters that fit the collapsed checklist row
@@ -83,7 +99,7 @@ SAFE_SCHEMES = re.compile(r"^(https?|mailto)$", re.I)
 MD_LINK = re.compile("\\[([^\\]]+)\\]\\(([^)\t\n\v\f\r \u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]+)\\)")
 CALLOUT_KINDS = {"note", "caution", "warning", "risk", "decision"}
 STATE_KINDS = {"ok", "warn", "risk", "info", "todo"}
-DOC_TYPES = {"docs", "review", "plan", "other"}   # meta.type: the home page's grouping; unset = derived from meta.kind
+DOC_TYPES = {"docs", "review", "plan", "design", "other"}   # meta.type: the home page's grouping; unset = derived from meta.kind
 # meta.kind words that make a doc type "docs" when meta.type is unset (after the plan and review rules)
 DOCS_KINDS = {"architecture", "walkthrough", "runbook", "setup", "reference", "proposal", "change", "changes", "plan",
               "status", "guide", "design", "spec", "rfc", "adr", "overview", "tutorial", "onboarding", "explainer", "playbook"}
@@ -104,6 +120,22 @@ NODE_STATES = {"live", "local", "proposed", "unverified", "removed", "replaced"}
 EDGE_KINDS = {"data", "control", "async", "power", "dep", "replaced"}
 PORTS = {"@left", "@right", "@top", "@bottom"}
 ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
+# design docs: one board block of artboards; each artboard's HTML is a body fragment in <stem>.design/<id>.html
+# device -> CSS px size and the safe area the kit exposes [top, right, bottom, left]; serve.py and the page read this
+# table (watch-round: the kit derives --safe-inset, the inscribed square, from the diameter)
+DEVICES = {"watch-round": {"w": 240, "h": 240, "safe": [0, 0, 0, 0]}, "watch-square": {"w": 198, "h": 242, "safe": [8, 8, 8, 8]},
+           "phone": {"w": 390, "h": 844, "safe": [47, 0, 34, 0]}, "tablet": {"w": 820, "h": 1180, "safe": [24, 0, 20, 0]},
+           "desktop": {"w": 1280, "h": 800, "safe": [32, 0, 0, 0]}, "browser": {"w": 1440, "h": 900, "safe": [72, 0, 0, 0]}}
+TARGET_DEVICES = {"watch": "watch-round", "mobile": "phone", "tablet": "tablet", "desktop": "desktop", "web": "browser"}
+FIDELITIES = ("sketch", "wireframe", "hifi")
+BUILTIN_FRAMEWORKS = ("plain", "horizon")
+FRAMEWORK_EXTS = {".css", ".js", ".mjs"}
+BOARD_GAP = 80                    # px between artboards placed without x/y
+MAX_SCREEN_BYTES = 24 * 1024      # a screen file above this is a warning: edit fragments in place, don't regrow them
+TOKEN_KEY = re.compile(r"^[a-z][a-z0-9-]*$")
+TOKEN_VALUE = re.compile(r"^[^;{}<>\\]*$")
+MOTION_KEYS = ("fast", "base", "slow", "ease")
+SCREEN_SRC = re.compile(r"^(?:[\w.-]+/)*[\w.-]+\.design/[\w.-]+\.html$")
 
 # Mechanical CRISP checks. They catch common slips; they do not replace the CRISP pass.
 FILLER = ["very", "really", "just", "simply", "basically", "actually", "quite", "extremely", "incredibly",
@@ -223,6 +255,11 @@ BLOCK_SHAPES = {
              "comments": [{"file": str, "item": str}]},
     "steps": {"id": str, "items": [{"id": str, "title": str, "status": str, "effort": str, "refs": [str]}]},
     "files": {"items": [{"path": str, "action": str, "step": str}]},
+    "board": {"id": str, "targets": [str], "framework": str,
+              "frameworks": [{"id": str, "label": str, "files": [str], "store": str}],
+              "themes": [{"id": str, "label": str, "tokens": dict}], "motion": dict,
+              "artboards": [{"id": str, "title": str, "device": str, "fidelity": str, "x": NUMBER, "y": NUMBER,
+                             "w": NUMBER, "h": NUMBER, "variantOf": str, "framework": str, "src": str}]},
 }
 DOC_SHAPE = {"title": str, "meta": {"type": str}, "state": [{"kind": str}],
              "sections": [{"id": str, "title": str, "blocks": [BLOCK]}]}
@@ -439,8 +476,9 @@ def check_media_src(rep: Report, where: str, src, base: Path | None) -> None:
 
 
 def doc_type(meta: dict) -> str:
-    """docs | review | plan | other: meta.type when set, else read from meta.kind. template.html follows
-    the same rule; serve.py puts the result in the home page's index."""
+    """docs | review | plan | design | other: meta.type when set, else read from meta.kind (a design only by
+    meta.type: a kind like 'Design' stays docs). template.html follows the same rule; serve.py puts the result
+    in the home page's index."""
     if meta.get("type") in DOC_TYPES:
         return meta["type"]
     kind = str(meta.get("kind") or "").strip().lower()
@@ -466,6 +504,311 @@ def all_blocks(doc: dict):
             yield from walk(s.get("blocks"))
 
 
+def board_of(doc: dict) -> dict | None:
+    """The design doc's board block (the first, if a doc wrongly has more), or None."""
+    return next((b for b in all_blocks(doc) if b.get("type") == "board"), None) if isinstance(doc, dict) else None
+
+
+def _screen_src_ok(src) -> bool:
+    return isinstance(src, str) and bool(SCREEN_SRC.match(src)) and ".." not in src.split("/")
+
+
+def screen_rel(doc_path: Path, a: dict) -> str:
+    """An artboard's screen file relative to the doc's folder: its src, else <stem>.design/<id>.html. An invalid
+    src (validate reports it) falls back to the default."""
+    return a["src"] if _screen_src_ok(a.get("src")) else f"{doc_stem(Path(doc_path))}.design/{a['id']}.html"
+
+
+def screen_paths(doc: dict, doc_path: Path) -> dict[str, Path]:
+    """{artboard id: its screen file}; {} for a doc without a board."""
+    b = board_of(doc)
+    arts = b.get("artboards") if isinstance(b, dict) else None
+    if not isinstance(arts, list):
+        return {}
+    folder = Path(doc_path).parent
+    return {a["id"]: folder / screen_rel(doc_path, a)
+            for a in arts if isinstance(a, dict) and isinstance(a.get("id"), str) and ID_RE.match(a["id"])}
+
+
+def _read_text(f: Path) -> str | None:
+    try:
+        return f.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return None
+
+
+def read_screens(doc: dict, doc_path: Path) -> dict[str, str | None]:
+    """{artboard id: its screen file's text, None when unreadable}; {} for a doc without a board."""
+    return {aid: _read_text(f) for aid, f in screen_paths(doc, doc_path).items()}
+
+
+def screen_hashes(doc: dict, doc_path: Path) -> dict[str, str | None]:
+    """{artboard id: _hash of its screen file's text, None when unreadable}: the keys of the history's html pool."""
+    return {aid: None if text is None else _hash(text) for aid, text in read_screens(doc, doc_path).items()}
+
+
+def approval_hash(doc, doc_path: Path | None = None) -> str:
+    """The docHash an approval carries: sha256 of the doc's canonical JSON (sorted keys, no spaces), and for a doc
+    with a board also of its screen hashes, so editing a screen file asks for approval again."""
+    canon = json.dumps(doc, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    screens = screen_hashes(doc, doc_path) if doc_path is not None and isinstance(doc, dict) else {}
+    if screens:
+        canon += "\n" + json.dumps(screens, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(canon.encode()).hexdigest()
+
+
+def screen_source(doc_path: Path, artboard_id: str, rev: str | None = None) -> str | None:
+    """A screen's HTML fragment: the file as it is now, or the text the history recorded for revision rev.
+    None when the doc, the artboard, the revision or the text isn't there."""
+    doc_path = Path(doc_path)
+    if rev is None:
+        try:
+            doc = json.loads(doc_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return None
+        f = screen_paths(doc, doc_path).get(artboard_id)
+        return _read_text(f) if f else None
+    try:
+        h = load_history(history_path(doc_path))
+    except (OSError, ValueError):
+        return None
+    entry = next((e for e in h["revs"] if e.get("rev") == rev), None)
+    k = ((entry or {}).get("screens") or {}).get(artboard_id)
+    return (h.get("html") or {}).get(k) if k else None
+
+
+def artboard_size(a: dict) -> tuple[float, float] | None:
+    """(w, h) in CSS px: the device's, else the artboard's w and h; None when neither is valid."""
+    dev = DEVICES.get(a.get("device")) if isinstance(a.get("device"), str) else None
+    if dev:
+        return dev["w"], dev["h"]
+    w, h = a.get("w"), a.get("h")
+    ok = all(isinstance(v, (int, float)) and not isinstance(v, bool) and v > 0 for v in (w, h))
+    return (w, h) if ok and "device" not in a else None
+
+
+def board_layout(board: dict) -> dict[str, tuple[float, float, float, float]]:
+    """{artboard id: (x, y, w, h)} in board order. An artboard with x and y sits there; else its row is its
+    variantOf source's y (when placed before it), else 0, and it goes BOARD_GAP right of the rightmost
+    artboard already in that row (x 0 in an empty row). template.html places them by the same rule."""
+    out: dict[str, tuple[float, float, float, float]] = {}
+    for a in board.get("artboards") or []:
+        if not isinstance(a, dict) or not isinstance(a.get("id"), str) or a["id"] in out:
+            continue
+        size = artboard_size(a)
+        if not size:
+            continue
+        x, y = a.get("x"), a.get("y")
+        if not all(isinstance(v, (int, float)) and not isinstance(v, bool) for v in (x, y)):
+            src = out.get(a.get("variantOf")) if isinstance(a.get("variantOf"), str) else None
+            y = src[1] if src else 0
+            row = [bx + bw for bx, by, bw, _ in out.values() if by == y]
+            x = max(row) + BOARD_GAP if row else 0
+        out[a["id"]] = (x, y, *size)
+    return out
+
+
+def frameworks_dir() -> Path:
+    """Where `serve.py add-framework` copies frameworks: $BLUEDOC_HOME/frameworks, ~/.bluedoc by default."""
+    return Path(os.environ.get("BLUEDOC_HOME") or "~/.bluedoc").expanduser() / "frameworks"
+
+
+# a network URL in a URL attribute, CSS or an event handler: a scheme that fetches, or a scheme-relative //host
+NET_URL = re.compile(r"(?i)\b(?:https?|wss?|ftp):|(?:^|[\s'\"(=,])//[\w.-]")
+# in a <script>: a fetching scheme, or a quoted //host (a bare // starts a comment)
+SCRIPT_NET_URL = re.compile(r"(?i)\b(?:https?|wss?|ftp):|['\"`]//[\w.-]")
+URL_ATTRS = {"href", "src", "srcset", "imagesrcset", "action", "formaction", "poster", "data", "background", "cite",
+             "ping", "manifest", "xlink:href", "codebase", "longdesc", "lowsrc", "dynsrc", "icon", "archive", "profile"}
+BANNED_TAGS = {"base": "it re-points every relative URL", "iframe": "screens can't nest frames",
+               "frame": "screens can't nest frames", "object": "it loads external content", "embed": "it loads external content"}
+DOC_TAGS = {"html", "head", "body"}
+
+
+class _ScreenLint(HTMLParser):
+    """A screen fragment's problems, one per construct, as (line, message); and whether any data-bd is set."""
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.errors: list[tuple[int, str]] = []
+        self.whole_doc = False
+        self.has_bd = False
+        self._raw: str | None = None   # "style" or "script" while inside one
+
+    def _doc(self) -> None:
+        if not self.whole_doc:
+            self.whole_doc = True
+            self.errors.append((self.getpos()[0], "a whole document (<!doctype>, <html>, <head> or <body>): write only "
+                                "the body's content; the server adds the shell"))
+
+    def handle_decl(self, decl: str) -> None:
+        if decl.lower().startswith("doctype"):
+            self._doc()
+
+    def handle_starttag(self, tag: str, attrs) -> None:
+        names = {k for k, _ in attrs}
+        if "data-bd" in names:
+            self.has_bd = True
+        if tag in ("style", "script"):
+            self._raw = tag
+        line = self.getpos()[0]
+        if tag in DOC_TAGS:
+            self._doc()
+        elif tag in BANNED_TAGS:
+            self.errors.append((line, f"<{tag}>: {BANNED_TAGS[tag]}"))
+        elif tag == "meta" and "http-equiv" in names:
+            self.errors.append((line, "<meta http-equiv>: it can refresh or redirect the frame, which the CSP can't stop"))
+        elif tag == "form" and "action" in names:
+            self.errors.append((line, "<form action>: a screen posts nowhere; drop 'action'"))
+        else:
+            bad = next((k for k, v in attrs if v and (k in URL_ATTRS or k == "style" or k.startswith("on"))
+                        and NET_URL.search(v)), None)
+            if bad:
+                self.errors.append((line, f"<{tag} {bad}>: a network URL; screens load nothing from the network: "
+                                    "put the file beside the screen or use a data: URI"))
+
+    handle_startendtag = handle_starttag
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag == self._raw:
+            self._raw = None
+
+    def handle_data(self, data: str) -> None:
+        pattern = {"style": NET_URL, "script": SCRIPT_NET_URL}.get(self._raw or "")
+        if pattern and pattern.search(data):
+            self.errors.append((self.getpos()[0], f"<{self._raw}>: a network URL; screens load nothing from the network"))
+
+
+def lint_screen(rep: Report, where: str, f: Path, shown: str) -> None:
+    """A screen file: an ERROR when it is missing or holds a network URL, a banned tag or a whole document; a WARN
+    above MAX_SCREEN_BYTES or without any data-bd (the annotator's element names)."""
+    text = _read_text(f)
+    if text is None:
+        rep.err(where, f"screen file {shown} is missing or unreadable: write the artboard's HTML fragment there")
+        return
+    size = len(text.encode("utf-8"))
+    if size > MAX_SCREEN_BYTES:
+        rep.warn(where, f"{shown} is {size // 1024} KB (> {MAX_SCREEN_BYTES // 1024} KB): use kit classes, split it into "
+                 "artboards, and edit it in place rather than rewriting it")
+    p = _ScreenLint()
+    p.feed(text)
+    p.close()
+    for line, msg in p.errors:
+        rep.err(f"{where} {shown}:{line}", msg)
+    if not p.has_bd:
+        rep.warn(where, f"{shown} has no data-bd: name the elements a reader may point at (data-bd=\"submit\")")
+
+
+def validate_board(rep: Report, bw: str, b: dict, doc: dict, doc_path: Path | None) -> None:
+    """A board block: its frameworks, themes, motion and artboards, the brief's options against them, and the
+    screen files (when doc_path is known)."""
+    if not need(rep, bw, b, "id", "artboards"):
+        return
+    check_id(rep, bw, b["id"])
+    base = Path(doc_path).resolve().parent if doc_path else None
+    for i, t in enumerate(b.get("targets") or []):
+        if t not in TARGET_DEVICES:
+            rep.err(f"{bw}.targets[{i}]", f"'{t}' not in {sorted(TARGET_DEVICES)}")
+    fw_ids = set(BUILTIN_FRAMEWORKS)
+    for i, fw in enumerate(b.get("frameworks") or []):
+        fwh = f"{bw}.frameworks[{i}]"
+        if not need(rep, fwh, fw, "id", "label"):
+            continue
+        check_id(rep, fwh, fw["id"])
+        if fw["id"] in fw_ids:
+            rep.err(fwh, f"framework id '{fw['id']}' is {'built in' if fw['id'] in BUILTIN_FRAMEWORKS else 'a duplicate'}")
+        fw_ids.add(fw["id"])
+        if ("files" in fw) == ("store" in fw):
+            rep.err(fwh, "give 'files' (paths from the doc's folder) or 'store' (a `serve.py add-framework` name), not both")
+            continue
+        if "store" in fw:
+            check_id(rep, fwh + ".store", fw["store"])
+            man = frameworks_dir() / fw["store"] / "manifest.json"
+            if ID_RE.match(fw["store"]) and not man.is_file():
+                rep.warn(fwh + ".store", f"{man.parent} not found: its screens show the plain kit until the reader runs "
+                         f"`serve.py add-framework {fw['store']} <path|url>`")
+            continue
+        if not fw["files"]:
+            rep.err(fwh + ".files", "list the framework's .css/.js/.mjs files")
+        for j, path in enumerate(fw["files"]):
+            fp = f"{fwh}.files[{j}]"
+            if not path or URL_SCHEME.match(path) or path.startswith(("/", "\\")) or NET_URL.search(path):
+                rep.err(fp, f"'{path}': a path relative to the doc's folder, no URL")
+            elif Path(path).suffix.lower() not in FRAMEWORK_EXTS:
+                rep.err(fp, f"'{path}': a framework file is one of {sorted(FRAMEWORK_EXTS)}")
+            elif base is not None and not (base / path).is_file():
+                rep.warn(fp, f"'{path}' not found (from {base}): screens using '{fw['id']}' show the plain kit")
+    if b.get("framework") is not None and b["framework"] not in fw_ids:
+        rep.err(bw + ".framework", f"'{b['framework']}' not in {sorted(fw_ids)}")
+    theme_ids: set[str] = set()
+    for i, th in enumerate(b.get("themes") or []):
+        thw = f"{bw}.themes[{i}]"
+        if not need(rep, thw, th, "id", "label", "tokens"):
+            continue
+        check_id(rep, thw, th["id"])
+        if th["id"] in theme_ids:
+            rep.err(thw, f"duplicate theme id '{th['id']}'")
+        theme_ids.add(th["id"])
+        for k, v in th["tokens"].items():
+            if not TOKEN_KEY.match(k):
+                rep.err(f"{thw}.tokens", f"token '{k}' must match {TOKEN_KEY.pattern} (it becomes the CSS variable --{k})")
+            elif not isinstance(v, str) or not TOKEN_VALUE.match(v) or "url(" in v.lower():
+                rep.err(f"{thw}.tokens.{k}", f"{_shown(v)}: a CSS value as a string, without ; {{ }} < > \\ or url()")
+    for k, v in (b.get("motion") or {}).items():
+        if k not in MOTION_KEYS:
+            rep.err(f"{bw}.motion", f"'{k}' not in {list(MOTION_KEYS)}")
+        elif not isinstance(v, str) or not TOKEN_VALUE.match(v) or "url(" in v.lower():
+            rep.err(f"{bw}.motion.{k}", f"{_shown(v)}: a CSS time or easing as a string")
+    if not b["artboards"]:
+        rep.err(bw + ".artboards", "a board needs at least one artboard")
+    art_ids: set[str] = set()
+    variants: list[tuple[str, str, str]] = []
+    for i, a in enumerate(b["artboards"]):
+        aw = f"{bw}.artboards[{i}]"
+        if not isinstance(a, dict) or not need(rep, aw, a, "id", "title", "fidelity"):
+            continue
+        check_id(rep, aw, a["id"])
+        if a["id"] in art_ids:
+            rep.err(aw, f"duplicate artboard id '{a['id']}'")
+        art_ids.add(a["id"])
+        lint_text(rep, aw + ".title", a["title"])
+        if "device" in a:
+            if a["device"] not in DEVICES:
+                rep.err(aw + ".device", f"'{a['device']}' not in {sorted(DEVICES)}; or drop it and give w and h")
+            elif "w" in a or "h" in a:
+                rep.err(aw, "give 'device' or 'w' and 'h', not both")
+        elif artboard_size(a) is None:
+            rep.err(aw, f"give 'device' (one of {sorted(DEVICES)}) or 'w' and 'h', positive CSS px")
+        if a["fidelity"] not in FIDELITIES:
+            rep.err(aw + ".fidelity", f"'{a['fidelity']}' not in {list(FIDELITIES)}")
+        if ("x" in a) != ("y" in a):
+            rep.err(aw, "give both 'x' and 'y', or neither (the board places it)")
+        if a.get("framework") is not None and a["framework"] not in fw_ids:
+            rep.err(aw + ".framework", f"'{a['framework']}' not in {sorted(fw_ids)}")
+        if a.get("variantOf") is not None:
+            variants.append((aw + ".variantOf", a["id"], a["variantOf"]))
+        if "src" in a and not _screen_src_ok(a["src"]):
+            rep.err(aw + ".src", f"'{a['src']}': a relative path to an .html file in a <name>.design/ folder, no '..'")
+        if doc_path is not None and ID_RE.match(a["id"]):
+            rel = screen_rel(doc_path, a)
+            lint_screen(rep, aw, Path(doc_path).parent / rel, rel)
+    for where, aid, src in variants:
+        if src == aid or src not in art_ids:
+            rep.err(where, f"'{src}' is {'the artboard itself' if src == aid else 'no artboard in this board'}")
+    brief = next((c for c in all_blocks(doc) if c.get("type") == "checklist" and c.get("id") == "brief"), None)
+    for it in (brief or {}).get("items") or []:
+        if not isinstance(it, dict) or not isinstance(it.get("choices"), list):
+            continue
+        ids = {c.get("id") for c in it["choices"] if isinstance(c, dict)}
+        iw = f"item brief/{it.get('id')}"
+        if it.get("id") == "framework":
+            for c in sorted(ids - fw_ids, key=str):
+                rep.err(iw, f"option '{c}' is no framework: add it to {bw}.frameworks or use one of {sorted(fw_ids)}")
+        elif it.get("id") == "theme":
+            for c in sorted(ids - theme_ids, key=str):
+                rep.err(iw, f"option '{c}' has no theme in {bw}.themes: picking it couldn't re-skin the screens")
+            for t in sorted(theme_ids - ids):
+                rep.err(f"{bw}.themes", f"theme '{t}' is no option of {iw}: the reader couldn't pick it")
+
+
 def check_contract(doc: dict) -> list[str]:
     """The data the doc's type requires and the doc lacks: its home card and page draw from it."""
     t = doc_type(doc.get("meta") or {})
@@ -486,6 +829,12 @@ def check_contract(doc: dict) -> list[str]:
         out += [f"a plan needs a {bt} block" for bt in ("steps", "files") if bt not in types]
     elif t == "docs" and "canvas" not in types and not doc.get("hero"):
         out.append("a docs page needs a canvas block or a top-level hero")
+    elif t == "design":
+        boards = [b for b in blocks if b.get("type") == "board"]
+        if len(boards) != 1:
+            out.append(f"a design needs exactly one board block (it has {len(boards)})")
+        elif not boards[0].get("artboards"):
+            out.append("a design's board needs at least one artboard")
     return out
 
 
@@ -502,7 +851,8 @@ def contract_level(doc: dict, doc_path: Path | None) -> str:
     try:
         h = load_history(history_path(Path(doc_path)))
         entry = next((r for r in h["revs"] if r.get("rev") == rev), None)
-        same = entry is not None and json.dumps(restore(h, entry), sort_keys=True) == json.dumps(doc, sort_keys=True)
+        same = (entry is not None and json.dumps(restore(h, entry), sort_keys=True) == json.dumps(doc, sort_keys=True)
+                and entry.get("screens") == (screen_hashes(doc, doc_path) or None))
     except (OSError, ValueError, KeyError, TypeError):
         return "error"
     return "warn" if same else "error"
@@ -614,6 +964,7 @@ def _validate(rep: Report, doc: dict, doc_path: Path | None, *, allow_remote: bo
     step_files: list[tuple[str, str]] = []     # (where, path) a step names in 'files'
     file_rows: set[str] = set()                # paths listed by files blocks
     file_steps: list[tuple[str, str]] = []     # (where, step id) a files row points to
+    boards: list[tuple[str, dict]] = []        # (where, block): checked once the brief is known
 
     def check_block(bw: str, b: dict, depth: int) -> None:
         """depth 0 = section block, 1 = inside a checklist item, 2 = inside a nested checklist's item."""
@@ -828,6 +1179,10 @@ def _validate(rep: Report, doc: dict, doc_path: Path | None, *, allow_remote: bo
                         rep.warn(sw_, "an image side needs 'alt'")
                 lint_text(rep, sw_ + ".md", sd.get("md"))
                 lint_text(rep, sw_ + ".label", sd.get("label"))
+        elif t == "board":
+            if doc_type(doc.get("meta") or {}) != "design":
+                rep.err(bw, "a board block is for design docs: set meta.type to 'design'")
+            boards.append((bw, b))
 
     for si, sec in enumerate(doc.get("sections") or []):
         sw = f"sections[{si}]"
@@ -851,6 +1206,8 @@ def _validate(rep: Report, doc: dict, doc_path: Path | None, *, allow_remote: bo
     if len(secs) > 1 and str(secs[-1].get("title", "")).strip().lower() in CLOSING_TITLES:
         rep.warn(f"sections[{len(secs) - 1}]", f"a closing '{secs[-1]['title']}' repeats the page: cut it, the tldr is the summary")
 
+    for bw, b in boards:
+        validate_board(rep, bw, b, doc, doc_path)
     for where, r in refs_to_check:
         cid, _, key = r.partition("/")
         if cid not in canvas_nodes:
@@ -979,28 +1336,52 @@ def restore(h: dict, entry: dict) -> dict:
     return {**entry["head"], "sections": [{**s, "blocks": [h["blocks"][r] for r in s["blocks"]]} for s in entry["sections"]]}
 
 
-def record(h: dict, doc: dict) -> str:
-    """Put doc into the history under its meta.rev. Returns what happened, for the build log."""
+def record(h: dict, doc: dict, doc_path: Path | None = None, *, keep_screens: bool = False,
+           texts: dict[str, str | None] | None = None) -> str:
+    """Put doc into the history under its meta.rev. Returns what happened, for the build log. With doc_path, a
+    design doc's screen files join the revision: their text goes into the history's html pool, by _hash, and the
+    entry maps artboard ids to those hashes (screens). texts ({artboard id: text}) stands in for the files.
+    keep_screens keeps the screens the history already holds for this rev: cmd_patch records the version a
+    patch replaces, whose files the reader's change may already have rewritten."""
     meta = doc.get("meta") or {}
     rev = str(meta.get("rev") or "")
     snap = snapshot(doc, h["blocks"])
     entry = {"rev": rev, "date": meta.get("date") or "", "built": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"), **snap}
     revs = h["revs"]
-    if revs and revs[-1]["rev"] == rev:
-        same = json.dumps(restore(h, revs[-1]), sort_keys=True) == json.dumps(doc, sort_keys=True)
-        if same:
+    last = revs[-1] if revs and revs[-1]["rev"] == rev else None
+    if keep_screens and last and "screens" in last:
+        entry["screens"] = last["screens"]
+    else:
+        if texts is None:
+            texts = read_screens(doc, doc_path) if doc_path is not None else {}
+        if texts:
+            pool = h.setdefault("html", {})
+            entry["screens"] = {}
+            for aid, text in texts.items():
+                entry["screens"][aid] = None if text is None else _hash(text)
+                if text is not None:
+                    pool[entry["screens"][aid]] = text
+    if last:
+        same = json.dumps(restore(h, last), sort_keys=True) == json.dumps(doc, sort_keys=True)
+        moved = sorted(a for a in set(last.get("screens") or {}) | set(entry.get("screens") or {})
+                       if (last.get("screens") or {}).get(a) != (entry.get("screens") or {}).get(a))
+        if same and not moved:
             msg = f"rev {rev} unchanged"
         else:
             revs[-1] = entry
-            msg = f"rev {rev} updated in place (bump meta.rev to keep the previous text as its own revision)"
+            what = f"screens {', '.join(moved)}" if same else "text"
+            msg = f"rev {rev} updated in place ({what}; bump meta.rev to keep the previous version as its own revision)"
     elif any(r["rev"] == rev for r in revs):
         return f"ERROR history: meta.rev {rev} is an earlier revision of this doc; bump it past {revs[-1]['rev']}"
     else:
         revs.append(entry)
         msg = f"recorded rev {rev}"
-    # drop pool blocks no revision uses any more
+    # drop pool blocks and screen HTML no revision uses any more
     used = {r for e in revs for s in e["sections"] for r in s["blocks"]}
     h["blocks"] = {k: v for k, v in h["blocks"].items() if k in used}
+    if "html" in h:
+        used = {k for e in revs for k in (e.get("screens") or {}).values() if k}
+        h["html"] = {k: v for k, v in h["html"].items() if k in used}
     out = f"history: {msg}; {len(revs)} revision(s)"
     if len(revs) > 1:
         prev = revs[-2]["head"].get("changes")
@@ -1024,6 +1405,8 @@ def embed_history(h: dict | None, doc: dict) -> dict | None:
     revs, blocks = [], {}
     for idx, e in enumerate(h["revs"]):
         out = {"rev": e["rev"], "date": e.get("date", ""), "built": e.get("built", "")}
+        if "screens" in e:   # a design's {artboard id: screen hash}; the HTML stays in the history file (?rev=)
+            out["screens"] = e["screens"]
         if not (idx == len(h["revs"]) - 1 and e["rev"] == cur_rev):   # the current rev is the page's own doc
             secs = []
             for s in e["sections"]:
@@ -1115,12 +1498,40 @@ def prune_diff_cache(doc: dict, history: dict | None, doc_path: Path) -> list[st
     return [p for p in dr.expand_doc(probe, doc_path, allow_remote=False, prune=True) if p.startswith("WARN  diffcache")]
 
 
+# the screen route's CSP for a srcdoc frame in an -o file, as a <meta>: everything is inline there, so no 'self';
+# frame-ancestors and sandbox can't sit in a <meta> (the frame's sandbox attribute carries the sandbox)
+STANDALONE_SCREEN_CSP = ("default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; "
+                         "font-src data:; connect-src 'none'; form-action 'none'; base-uri 'none'")
+MAX_STANDALONE_BYTES = 10 * 1024 * 1024
+
+
+def standalone_screens(doc: dict, doc_path: Path) -> dict[str, str] | None:
+    """{artboard id: its screen as a whole document with the kit inlined} for an -o file; None for a doc without
+    a board. serve.py's wrap_screen fills the shell; unreadable screens are left out (validate reported them)."""
+    texts = read_screens(doc, doc_path)
+    if not texts:
+        return None
+    if str(HERE) not in sys.path:
+        sys.path.insert(0, str(HERE))
+    import serve
+    meta = f'<meta http-equiv="Content-Security-Policy" content="{STANDALONE_SCREEN_CSP}">'
+    out = {}
+    for aid, text in texts.items():
+        if text is not None:
+            page = serve.wrap_screen(doc, Path(doc_path), aid, text, inline=True)
+            out[aid] = re.sub(r"(?i)<head[^>]*>", lambda m: m.group(0) + meta, page, count=1)
+    return out
+
+
 def build(doc: dict, template: str, history: dict | None = None, media_base: Path | None = None,
-          diff_path: Path | None = None, problems: list[str] | None = None, state: dict | None = None) -> str:
+          diff_path: Path | None = None, problems: list[str] | None = None, state: dict | None = None,
+          screens: dict[str, str] | None = None) -> str:
     """The page. media_base (the doc's folder) makes it standalone: media files become data: URIs.
     diff_path (the doc's JSON file) fills its diff refs, in the doc and in earlier revisions; their
     problems go into problems, or to stderr when it is None. state is the reader state serve.py seeds the
-    page with ({version, state}); None (an -o file) leaves the page on localStorage."""
+    page with ({version, state}); None (an -o file) leaves the page on localStorage. screens ({artboard id:
+    a whole screen document}, from standalone_screens) makes a design page draw its frames from srcdoc;
+    None (serve.py) loads them from the screen route."""
     title = (doc.get("title") or "bluedoc").replace("&", "&amp;").replace("<", "&lt;")
     if "__BLUEDOC_DOC__" not in template:
         raise SystemExit("template is missing the __BLUEDOC_DOC__ placeholder")
@@ -1142,7 +1553,8 @@ def build(doc: dict, template: str, history: dict | None = None, media_base: Pat
             print(f"WARN  media '{src}': file not found, left as a relative path (it won't show from file://)", file=sys.stderr)
     # one pass, so a placeholder's name inside a filled value (a doc's text, a reader's note) stays text
     fill = {"__BLUEDOC_TITLE__": title, "__BLUEDOC_HISTORY__": _script_json(hist) if hist else "null",
-            "__BLUEDOC_STATE__": _script_json(state) if state is not None else "null", "__BLUEDOC_DOC__": _script_json(doc)}
+            "__BLUEDOC_STATE__": _script_json(state) if state is not None else "null", "__BLUEDOC_DOC__": _script_json(doc),
+            "__BLUEDOC_SCREENS__": _script_json(screens) if screens is not None else "null"}
     return re.sub("|".join(fill), lambda m: fill[m.group(0)], template)
 
 
@@ -1150,9 +1562,10 @@ class HistoryError(Exception):
     pass
 
 
-def sync_history(doc_path: Path, doc: dict) -> tuple[dict | None, str]:
-    """Record doc in its history file under meta.rev; returns (history or None, log line).
-    Raises HistoryError when meta.rev names an earlier revision or the file is unreadable."""
+def sync_history(doc_path: Path, doc: dict, *, keep_screens: bool = False,
+                 texts: dict[str, str | None] | None = None) -> tuple[dict | None, str]:
+    """Record doc in its history file under meta.rev (keep_screens, texts: see record); returns (history or
+    None, log line). Raises HistoryError when meta.rev names an earlier revision or the file is unreadable."""
     if not (doc.get("meta") or {}).get("rev"):
         return None, "history: off (set meta.rev to keep revisions)"
     hpath = history_path(doc_path)
@@ -1161,7 +1574,7 @@ def sync_history(doc_path: Path, doc: dict) -> tuple[dict | None, str]:
     except (OSError, ValueError, json.JSONDecodeError) as e:
         raise HistoryError(f"cannot read {hpath}: {e}") from e
     before = _canon(history)
-    log = record(history, doc)
+    log = record(history, doc, doc_path, keep_screens=keep_screens, texts=texts)
     if log.startswith("ERROR"):
         raise HistoryError(log)
     if _canon(history) != before:
@@ -1199,9 +1612,21 @@ def cmd_new(argv: list[str]) -> int:
     ap.add_argument("--kind", help="meta.kind, the eyebrow word (e.g. Architecture, Runbook)")
     ap.add_argument("--shape", choices=("pr", "area"), default="pr",
                     help="review only: one section per PR (pr), or per area of a codebase review (area)")
+    ap.add_argument("--target", help=f"design only: comma list of {','.join(TARGET_DEVICES)}; one starter artboard "
+                    "and wireframe screen file each (default mobile)")
+    ap.add_argument("--framework", help="design only: plain | horizon | <a `serve.py add-framework` name> | auto "
+                    "(default: you fill the brief's framework pick from the project's files; see types/design.md)")
     a = ap.parse_args(argv)
     if a.shape != "pr" and a.type != "review":
         ap.error("--shape is for review docs")
+    if (a.target or a.framework) and a.type != "design":
+        ap.error("--target and --framework are for design docs")
+    targets = [t.strip() for t in (a.target or "mobile").split(",") if t.strip()]
+    bad = [t for t in targets if t not in TARGET_DEVICES]
+    if bad or not targets or len(set(targets)) != len(targets):
+        ap.error(f"--target: a comma list of distinct {', '.join(TARGET_DEVICES)}")
+    if a.framework and a.framework != "auto" and not ID_RE.match(a.framework):
+        ap.error("--framework: plain, horizon, auto or a store name (lowercase letters, digits, -)")
     if not a.out.name.endswith(DOC_SUFFIXES):
         ap.error(f"name it <name>{DOC_SUFFIXES[0]}: serve.py lists those files")
     if a.out.exists():
@@ -1221,11 +1646,76 @@ def cmd_new(argv: list[str]) -> int:
     meta.update(rev="1", date=dt.date.today().isoformat(), type=a.type)
     if a.kind:
         meta["kind"] = a.kind
+    stubs = scaffold_design(doc, a.out, targets, a.framework or "auto") if a.type == "design" else {}
+    for f in stubs:
+        if f.exists():
+            print(f"{f} exists; not overwriting it", file=sys.stderr)
+            return 2
     a.out.parent.mkdir(parents=True, exist_ok=True)
     write_doc(a.out, doc, raw)
+    for f, text in stubs.items():
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_text(text, encoding="utf-8")
+        print(f"wrote {f} (a wireframe stub)")
     print(f"wrote {a.out} ({a.type}): replace every <<…>>; `build.py {a.out} --check` lists the ones left")
     print(f"then: python3 {HERE / 'build.py'} {a.out} && python3 {HERE / 'serve.py'} open {a.out}")
     return 0
+
+
+def stub_screen(a: dict) -> str:
+    """A wireframe starter for an artboard, in plain-kit classes (references/kits.md): the agent's rev A."""
+    aid, dev = a["id"], a.get("device")
+    if dev in ("watch-round", "watch-square"):
+        return (f'<main class="screen {"round " if dev == "watch-round" else ""}safe stack gap-2 center" data-bd="{aid}">\n'
+                '  <div class="wf-circle" data-bd="glance"></div>\n'
+                '  <div class="wf-line" data-bd="title"></div>\n'
+                '  <div class="wf-box" data-label="Action" data-bd="action"></div>\n'
+                '</main>\n')
+    if dev in ("desktop", "browser"):
+        return (f'<main class="screen safe row gap-4" data-bd="{aid}">\n'
+                '  <nav class="sidebar" data-bd="nav">\n'
+                '    <div class="wf-line"></div>\n    <div class="wf-line"></div>\n    <div class="wf-line"></div>\n'
+                '  </nav>\n'
+                '  <section class="stack gap-4 grow" data-bd="content">\n'
+                '    <div class="wf-line" data-bd="title"></div>\n'
+                '    <div class="grid cols-3 gap-4" data-bd="cards">\n'
+                '      <div class="wf-box" data-label="Card"></div>\n'
+                '      <div class="wf-box" data-label="Card"></div>\n'
+                '      <div class="wf-box" data-label="Card"></div>\n'
+                '    </div>\n'
+                '    <div class="wf-img" data-bd="main"></div>\n'
+                '  </section>\n'
+                '</main>\n')
+    return (f'<main class="screen safe stack gap-4" data-bd="{aid}">\n'
+            '  <div class="wf-line" data-bd="title"></div>\n'
+            '  <div class="wf-img" data-bd="hero"></div>\n'
+            '  <div class="wf-text" data-bd="body"></div>\n'
+            '  <div class="wf-box" data-label="Primary action" data-bd="action"></div>\n'
+            '</main>\n')
+
+
+def scaffold_design(doc: dict, out: Path, targets: list[str], framework: str) -> dict[Path, str]:
+    """Fill a design skeleton for `build.py new design`: one wireframe artboard per target and the framework pick.
+    Returns {screen file: stub text} to write beside the doc."""
+    board = board_of(doc)
+    board["targets"] = targets
+    board["artboards"] = [{"id": t, "title": f"<<{t.capitalize()} screen: what it shows>>", "device": TARGET_DEVICES[t],
+                           "fidelity": "wireframe"} for t in targets]
+    if framework != "auto":
+        item = _item(doc, "brief", "framework").obj
+        if framework not in BUILTIN_FRAMEWORKS:
+            try:   # the label `serve.py add-framework` wrote (e.g. "Tailwind + HeroUI"), else the name
+                label = str(json.loads((frameworks_dir() / framework / "manifest.json").read_text(encoding="utf-8"))
+                            .get("label") or framework)[:MAX_CHOICE_LABEL]
+            except (OSError, ValueError, AttributeError):
+                label = framework
+            board["frameworks"] = [{"id": framework, "label": label, "store": framework}]
+            item["choices"].insert(0, {"id": framework, "label": label})
+        board["framework"] = framework
+        item["recommend"] = framework
+        label = next(c["label"] for c in item["choices"] if c["id"] == framework)
+        item["sub"] = f"Recommend {label}: <<why it fits these screens>>."
+    return {out.parent / screen_rel(out, a): stub_screen(a) for a in board["artboards"]}
 
 
 class PatchError(Exception):
@@ -1233,9 +1723,10 @@ class PatchError(Exception):
 
 
 class Target:
-    """What a patch key names: obj, the place it sits (parent[key]), and its kind."""
-    def __init__(self, obj, parent, key, kind: str) -> None:
-        self.obj, self.parent, self.key, self.kind = obj, parent, key, kind
+    """What a patch key names: obj, the place it sits (parent[key]), and its kind. selector: the CSS selector of
+    an el: key's element in its screen file."""
+    def __init__(self, obj, parent, key, kind: str, selector: str = "") -> None:
+        self.obj, self.parent, self.key, self.kind, self.selector = obj, parent, key, kind, selector
 
 
 def _find(items, pred, what: str) -> tuple[dict, int]:
@@ -1363,13 +1854,50 @@ def resolve_key(doc: dict, key: str) -> Target:
         return Target(cs[i], cs, i, "comment")
     if kind == "line":
         return _line(doc, key, path)
+    if kind in ("artboard", "el") and parts:
+        aid, _, sel = path.partition("/")
+        if kind == "el" and not sel:
+            raise PatchError(f"bad key '{key}': el:<artboard>/<data-bd names joined by '/', or a CSS path>")
+        arts = _board_artboards(doc)
+        a, i = _find(arts, lambda x: x.get("id") == aid, f"artboard '{aid}'")
+        if kind == "artboard":
+            return Target(a, arts, i, "artboard")
+        names = sel.split("/") if EL_NAMES.match(sel) else None
+        return Target(a, arts, i, "element", " ".join(f'[data-bd="{n}"]' for n in names) if names else sel)
+    if kind == "frame":
+        m = FRAME_KEY.match(path)
+        if not m:
+            raise PatchError(f"bad key '{key}': frame:<device or WxH>@<x>,<y>, e.g. frame:phone@1200,0")
+        dev, x, y = m.group(1), int(m.group(2)), int(m.group(3))
+        size = re.fullmatch(r"(\d+)x(\d+)", dev)
+        if not size and dev not in DEVICES:
+            raise PatchError(f"bad key '{key}': '{dev}' is no device ({', '.join(sorted(DEVICES))}) and no <w>x<h>")
+        arts = _board_artboards(doc)
+        taken = {o.get("id") for o in arts if isinstance(o, dict)}
+        aid = next(f"frame-{n}" for n in range(1, len(arts) + 2) if f"frame-{n}" not in taken)
+        a = {"id": aid, "title": "Requested frame",
+             **({"w": int(size.group(1)), "h": int(size.group(2))} if size else {"device": dev}),
+             "fidelity": "wireframe", "x": x, "y": y}
+        arts.append(a)
+        return Target(a, arts, len(arts) - 1, "frame")
     raise PatchError(f"unknown key '{key}': see `build.py --help` for the key forms")
+
+
+EL_NAMES = re.compile(r"^[A-Za-z0-9_-]+(?:/[A-Za-z0-9_-]+)*$")   # an el: path of data-bd names, else a CSS path
+FRAME_KEY = re.compile(r"^([a-z0-9-]+|\d+x\d+)@(-?\d+),(-?\d+)$")
+
+
+def _board_artboards(doc: dict) -> list:
+    b = board_of(doc)
+    if not b or not isinstance(b.get("artboards"), list):
+        raise PatchError("no board block with artboards in this doc")
+    return b["artboards"]
 
 
 # the list --append adds to, per target kind (blocks: per block type)
 APPEND_FIELD = {"doc": "sections", "section": "blocks", "item": "blocks"}
 APPEND_BLOCK_FIELD = {"table": "rows", "canvas": "nodes", "diff": "comments", "checklist": "items", "steps": "items",
-                      "files": "items", "cards": "items", "terms": "items"}
+                      "files": "items", "cards": "items", "terms": "items", "board": "artboards"}
 
 
 def _value(s: str):
@@ -1453,17 +1981,17 @@ def cmd_patch(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(prog="build.py patch", description="Change one object by its annotator key, bump meta.rev, "
                                  "validate, write and record the revision. Key forms: see `build.py --help`.")
     ap.add_argument("doc", type=Path)
-    ap.add_argument("key", help="e.g. item:t412/tier-boundary, step:steps/0/s3, row:risks/0/2, meta, tldr")
+    ap.add_argument("key", help="e.g. item:t412/tier-boundary, step:steps/0/s3, row:risks/0/2, meta, tldr, artboard:login")
     ap.add_argument("--set", action="append", default=[], metavar="FIELD=VALUE", help="set one field (JSON value, else a string; null deletes)")
     ap.add_argument("--json", metavar="OBJ", help="merge these fields (null deletes one)")
-    ap.add_argument("--append", metavar="VALUE", help="append to the target's list (items, rows, nodes, blocks, comments)")
+    ap.add_argument("--append", metavar="VALUE", help="append to the target's list (items, rows, nodes, blocks, comments, artboards)")
     ap.add_argument("--delete", action="store_true", help="remove the target")
+    ap.add_argument("--html", metavar="FILE", help="artboard: and el: keys: replace the screen file with FILE's text (- reads stdin)")
     ap.add_argument("--change", action="append", default=[], metavar="LINE", help="a line for `changes` (repeat for more)")
     ap.add_argument("--no-bump", action="store_true", help="keep meta.rev: update the current revision in place")
     a = ap.parse_args(argv)
-    if not (a.set or a.json is not None or a.append is not None or a.delete):
-        ap.error("give --set, --json, --append or --delete")
-    if a.delete and (a.set or a.json is not None or a.append is not None):
+    ops = bool(a.set or a.json is not None or a.append is not None or a.delete or a.html is not None)
+    if a.delete and (a.set or a.json is not None or a.append is not None or a.html is not None):
         ap.error("--delete goes alone")
     try:
         raw = a.doc.read_text(encoding="utf-8")
@@ -1472,9 +2000,32 @@ def cmd_patch(argv: list[str]) -> int:
         print(f"cannot read {a.doc}: {e}", file=sys.stderr)
         return 2
     before = copy.deepcopy(doc)
+    before_screens = read_screens(before, a.doc)   # the screen text this patch may replace, read before it does
     a.key = a.key.strip().strip("`").strip()
     try:
-        apply_patch(resolve_key(doc, a.key), a.set, a.json, a.append, a.delete)
+        t = resolve_key(doc, a.key)
+    except PatchError as e:
+        print(f"patch: {e}", file=sys.stderr)
+        return 2
+    on_screen = t.kind in ("artboard", "element")
+    if a.html is not None and not on_screen:
+        ap.error("--html takes an artboard: or el: key")
+    if not ops and t.kind != "frame" and not (on_screen and a.change):
+        if not on_screen:
+            ap.error("give --set, --json, --append or --delete")
+        # where to make the change: the screen file, and the element in it
+        print(f"{a.doc.parent / screen_rel(a.doc, t.obj)}" + (f"  {t.selector}" if t.selector else ""))
+        print(f"edit it in place, then: build.py patch {a.doc} {shlex.quote(a.key)} --change '<what changed>'")
+        return 0
+    html = None
+    if a.html is not None:
+        try:
+            html = sys.stdin.read() if a.html == "-" else Path(a.html).read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError) as e:
+            print(f"cannot read {a.html}: {e}", file=sys.stderr)
+            return 2
+    try:
+        apply_patch(t, a.set, a.json, a.append, a.delete)
         meta = doc.setdefault("meta", {})
         rev0 = str(meta.get("rev") or "")
         rev1 = rev0 if a.no_bump else next_rev(rev0)
@@ -1487,16 +2038,36 @@ def cmd_patch(argv: list[str]) -> int:
     else:
         meta.update(rev=rev1, date=dt.date.today().isoformat())
         doc["changes"] = a.change or [f"Updated `{a.key}`."]
+    # screen files change before validate, which lints them; undone when the patch fails
+    written: list[tuple[Path, str | None]] = []
+    screen = a.doc.parent / screen_rel(a.doc, t.obj) if t.kind in ("artboard", "element", "frame") and not a.delete else None
+    if screen and (html is not None or (t.kind == "frame" and not screen.exists())):
+        written.append((screen, _read_text(screen) if screen.exists() else None))
+        screen.parent.mkdir(parents=True, exist_ok=True)
+        screen.write_text(html if html is not None else stub_screen(t.obj), encoding="utf-8")
+
+    def undo() -> None:
+        for f, old in written:
+            if old is None:
+                f.unlink(missing_ok=True)
+            else:
+                f.write_text(old, encoding="utf-8")
     rep = validate(doc, a.doc)
     if rep.errors:
+        undo()
         for line in rep.errors:
             print(line, file=sys.stderr)
         print(f"patch: {len(rep.errors)} error(s); {a.doc} not written", file=sys.stderr)
         return 1
     try:
-        if rev0 and not a.no_bump:
-            sync_history(a.doc, before)   # the text this patch replaces stays its own revision
-        write_doc(a.doc, doc, raw)
+        if rev0 and not a.no_bump:   # the version this patch replaces stays its own revision
+            sync_history(a.doc, before, keep_screens=True, texts=before_screens)
+    except HistoryError as e:
+        undo()
+        print(e, file=sys.stderr)
+        return 1
+    write_doc(a.doc, doc, raw)
+    try:
         history, _ = sync_history(a.doc, doc)
     except HistoryError as e:
         print(e, file=sys.stderr)
@@ -1508,7 +2079,12 @@ def cmd_patch(argv: list[str]) -> int:
     for line in rep.warnings:
         if line not in old:
             print(line, file=sys.stderr)
-    print(f"rev {rev0 or '-'} → {rev1}; {a.key} {'deleted' if a.delete else 'updated'}")
+    print(f"rev {rev0 or '-'} → {rev1}; {a.key} {'deleted' if a.delete else 'added' if t.kind == 'frame' else 'updated'}")
+    if screen:
+        print(f"screen: {screen}" + (f"  {t.selector}" if t.selector else "")
+              + ("  (a stub: write the requested screen there)" if t.kind == "frame" and written else ""))
+    elif a.delete and t.kind in ("artboard", "element"):
+        print(f"left {a.doc.parent / screen_rel(a.doc, t.obj)}: delete it if nothing uses it (the history keeps its text)")
     if rev0 and rev0 != rev1:
         try:   # the link the reader needs, when the doc is under a registered folder
             import serve
@@ -1573,8 +2149,14 @@ def main(argv: list[str] | None = None) -> int:
             print(line, file=sys.stderr)
     if a.out:
         a.out.parent.mkdir(parents=True, exist_ok=True)
-        a.out.write_text(build(doc, a.template.read_text(encoding="utf-8"), history, a.doc.resolve().parent, a.doc), encoding="utf-8")
-        print(f"wrote {a.out} ({a.out.stat().st_size // 1024} KB)", file=sys.stderr)
+        page = build(doc, a.template.read_text(encoding="utf-8"), history, a.doc.resolve().parent, a.doc,
+                     screens=standalone_screens(doc, a.doc))
+        a.out.write_text(page, encoding="utf-8")
+        size = a.out.stat().st_size
+        print(f"wrote {a.out} ({size // 1024} KB)", file=sys.stderr)
+        if size > MAX_STANDALONE_BYTES:
+            print(f"WARN  {a.out}: {size / 1048576:.1f} MB (> {MAX_STANDALONE_BYTES // 1048576} MB): each screen carries its "
+                  "kit inline; share the JSON and serve.py instead, or use fewer or plain-kit screens", file=sys.stderr)
     else:
         print(f"view: python3 {HERE / 'serve.py'} open {a.doc}", file=sys.stderr)
     return 0

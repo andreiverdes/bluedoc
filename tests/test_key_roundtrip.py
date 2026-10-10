@@ -3,18 +3,24 @@
 
 keyOf (template.html) builds keys from the rendered page; `keys_of` below lists the same keys from the doc
 JSON, one rule per keyOf case. KeyOfForms pins that case list to the template, so a new key form fails here
-until keys_of, resolve_key and the docs learn it."""
+until keys_of, resolve_key and the docs learn it. Design keys: `artboard:` and `frame:` come from keyOf on the
+Acme Fit example; `el:<artboard>/<data-bd name or CSS path>` comes from the inspector inside a screen frame, and
+patch names the screen file and the selector."""
 from __future__ import annotations
 
 import copy
 import json
 import re
 import unittest
+from html.parser import HTMLParser
 
 from _support import EXAMPLE_STEMS, SKILL, TempHome, load_json, template_text
 
 import build
 import diffref
+
+DESIGN = "acme-fit-design"
+STEMS = (*EXAMPLE_STEMS, DESIGN)   # the design example carries the artboard: and frame: forms
 
 
 def keyof_source() -> str:
@@ -128,6 +134,12 @@ def keys_of(doc: dict, expanded: dict) -> dict[str, list[str]]:
         elif t == "diff":
             for i, _ in enumerate(b.get("comments") or []):
                 add("comment", f"comment:{b['id']}/{i}")
+        elif t == "board":
+            for a in b.get("artboards") or []:
+                add("artboard", f"artboard:{a['id']}")
+            # Frame mode drops a requested frame anywhere on the board: one key per device, at a free spot
+            add("frame", "frame:phone@0,2000")
+            add("frame", "frame:390x844@-400,-120")
     for _, b in blocks_with_paths(expanded):
         if b.get("type") == "diff":
             for key, *_ in diff_line_keys(b):
@@ -149,7 +161,7 @@ class KeyOfForms(unittest.TestCase):
     def test_keyof_forms_are_the_known_ones(self) -> None:
         cased, bare = keyof_forms()
         self.assertEqual(cased, {"line", "comment", "row", "node", "step", "file", "media", "compare", "card", "para",
-                                 "item", "block", "heading", "lead", "section"},
+                                 "item", "block", "heading", "lead", "section", "artboard", "frame"},
                          "keyOf's cases changed: teach keys_of (this file), build.resolve_key and the docs the new form")
         self.assertEqual(bare, {"header", "tldr", "status", "doc"})
 
@@ -171,7 +183,7 @@ class KeyRoundTrip(unittest.TestCase):
         self.keys: dict[str, dict[str, list[str]]] = {}
         self.raw: dict[str, dict] = {}
         self.lines: dict[str, list[tuple[str, list[int]]]] = {}   # (line key, indexes of the comments covering it)
-        for stem in EXAMPLE_STEMS:
+        for stem in STEMS:
             p = self.docs / f"{stem}.bluedoc.json"
             doc = load_json(p)
             expanded = copy.deepcopy(doc)
@@ -250,6 +262,65 @@ class KeyRoundTrip(unittest.TestCase):
         self.assertEqual(r.returncode, 2, r.stderr)
         self.assertNotIn("unknown key", r.stderr)
         self.assertIn("line:", r.stderr)
+
+
+class _Names(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__()
+        self.names: list[str] = []
+
+    def handle_starttag(self, tag, attrs) -> None:
+        name = dict(attrs).get("data-bd")
+        if name:
+            self.names.append(name)
+
+
+def el_keys(doc_path) -> list[tuple[str, str, str]]:
+    """(key, screen file name, data-bd name) for every data-bd name used once in its screen file: the key the inspector
+    posts for a pick on that element (its shortest unique chain is the name itself)."""
+    out = []
+    for a in next(b for b in build.all_blocks(load_json(doc_path)) if b.get("type") == "board")["artboards"]:
+        f = doc_path.parent / f"{DESIGN}.design" / f"{a['id']}.html"
+        p = _Names()
+        p.feed(f.read_text(encoding="utf-8"))
+        out += [(f"el:{a['id']}/{n}", f.name, n) for n in p.names if p.names.count(n) == 1]
+    return out
+
+
+class ElementKeys(unittest.TestCase):
+    """el:<artboard>/<data-bd path> keys come from the inspector inside a screen frame, not from keyOf: each names a
+    screen file and a selector, which `build.py patch` prints for the agent to edit."""
+
+    def setUp(self) -> None:
+        self.tmp = TempHome()
+        self.addCleanup(self.tmp.cleanup)
+        self.docs = self.tmp.copy_examples()
+        self.doc_path = self.docs / f"{DESIGN}.bluedoc.json"
+        self.keys = el_keys(self.doc_path)
+
+    def test_every_named_element_resolves(self) -> None:
+        self.assertIn("el:login/submit", [k for k, *_ in self.keys])
+        doc = load_json(self.doc_path)
+        for key, *_ in self.keys:
+            with self.subTest(key=key):
+                try:
+                    build.resolve_key(copy.deepcopy(doc), key)
+                except build.PatchError as e:
+                    self.fail(f"patch {key}: {e}")
+
+    def test_patch_names_the_file_and_the_selector(self) -> None:
+        for key, file, name in (("el:login/submit", "login.html", "submit"),
+                                ('el:login/[data-bd="login"]>h1:nth-of-type(1)', "login.html", None)):
+            with self.subTest(key=key):
+                r = self.tmp.run("build.py", "patch", self.doc_path, key)
+                out = r.stdout + r.stderr
+                self.assertIn(file, out)
+                self.assertIn(f'[data-bd="{name}"]' if name else 'h1:nth-of-type(1)', out)
+                self.assertNotIn("unknown key", out)
+
+    def test_an_unknown_artboard_is_refused(self) -> None:
+        with self.assertRaises(build.PatchError):
+            build.resolve_key(load_json(self.doc_path), "el:nowhere/submit")
 
 
 if __name__ == "__main__":

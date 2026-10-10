@@ -13,6 +13,10 @@ Usage:
   serve.py unlock                                  print a home page link that lets a browser save here
   serve.py start | stop | status                   manage the background server
   serve.py add DIR | roots                         add a folder to the home page / list folders
+  serve.py add-framework NAME [PATH|URL] [--load F] [--source F] [--tailwind]
+                                                   copy a framework for design boards (`store: NAME`) into
+                                                   ~/.bluedoc/frameworks/NAME with a manifest (sizes, sha256);
+                                                   NAME alone fetches a pinned preset: tailwind, heroui, daisyui
   serve.py run [--port N]                          run in the foreground
 
 One server per user, on 127.0.0.1 (default port 8740, env BLUEDOC_PORT). State lives in
@@ -41,7 +45,15 @@ URLs: /                      home page: every doc under the registered folders, 
                              deletes, an import adds only keys the server lacks. Both need the X-Bluedoc header, the
                              PUT also the key. An `__ann:<id>` value the page can't draw is dropped from a PUT and
                              left out of a read.
-      /__bluedoc/vendor/<path>  files under assets/vendor (HorizonUI for the home page)
+      /__bluedoc/vendor/<path>  files under assets/vendor (HorizonUI, the Sketch font)
+      /<root>/<dir>/<stem>.design/<artboard>.html[?rev=B&theme=T]   a design doc's screen: the artboard's fragment
+                             (or revision B's, from the history) wrapped in kits/shell.html with its framework,
+                             theme tokens and the inspector. Its own CSP: no network, `sandbox allow-scripts`,
+                             framable by this server's pages only (no X-Frame-Options)
+      /__bluedoc/kit/<file>  the plain kit and inspector (assets/kits)
+      /__bluedoc/fw/<name>/<path>   a framework add-framework copied
+      /<root>/<path>.<css|js|mjs|font>   a project file a design board declares (frameworks[].files), and the
+                             files its declared CSS names with url(); nothing else
 Rendering validates the doc (errors show as a page), shows its meta.rev as the latest revision of the history file
 without writing it (build.py records revisions), and fills each `diff` block that references a git range
 (diffref.py: its cache, local git, then `gh pr diff`), so the page always shows the current JSON.
@@ -54,7 +66,8 @@ Replies: Send answers posts to /__bluedoc/reply, Request changes to /__bluedoc/c
 (GET /__bluedoc/wait needs the X-Bluedoc header and the key) and marks it delivered; a restart keeps the queue. The
 first start with a new state.db imports the <name>.reply/.changes/.approval files of earlier versions and
 inbox.json's delivered marks, and leaves the files. An approval posts the docHash and rev the page showed: the server
-answers 409 when either differs from the doc's current JSON and meta.rev. It counts only while the doc is unchanged.
+answers 409 when either differs from the doc's current JSON (and a design's screen files: build.approval_hash) and
+meta.rev. It counts only while the doc is unchanged.
 Python 3.9+ standard library only.
 """
 from __future__ import annotations
@@ -64,14 +77,18 @@ import base64
 import datetime as dt
 import hashlib
 import hmac
+import io
 import json
 import math
 import mimetypes
 import os
 import re
 import secrets
+import shutil
 import subprocess
 import sys
+import tarfile
+import tempfile
 import threading
 import time
 import urllib.error
@@ -93,6 +110,8 @@ except ImportError:   # a Python built without sqlite3: pages render without rea
 
 HOME_HTML = HERE.parent / "assets" / "home.html"
 VENDOR = HERE.parent / "assets" / "vendor"
+KITS = HERE.parent / "assets" / "kits"   # what a design screen is wrapped in: shell, plain kit, inspector
+HAND_FONT = VENDOR / "fonts" / "ArchitectsDaughter-Regular.woff2"   # Sketch's font (OFL)
 STATE = Path(os.environ.get("BLUEDOC_HOME") or "~/.bluedoc").expanduser()
 ROOTS_FILE, SERVER_FILE, STATE_DB, KEY_FILE = STATE / "roots.json", STATE / "server.json", STATE / "state.db", STATE / "key"
 INBOX_FILE = STATE / "inbox.json"   # before state.db: which reply files `wait` delivered; read once, by the import
@@ -146,36 +165,40 @@ def code_hash() -> str:
 
 
 VERSION, CODE_HASH = skill_version(), code_hash()
-_doc_info: dict[str, tuple[float, str | None, str | None, str]] = {}
-
-
-def canonical_hash(doc) -> str:
-    """sha256 of the doc's canonical JSON (sorted keys, no spaces): the docHash an approval carries."""
-    return hashlib.sha256(json.dumps(doc, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+_doc_info: dict[str, tuple[tuple, list[Path], str | None, str | None, str]] = {}
 
 
 def doc_info(p: Path) -> tuple[str | None, str | None, str]:
-    """(canonical_hash, doc.id, meta.rev as a string) of the doc, cached by mtime; (None, None, '') if unreadable."""
-    try:
-        m = p.stat().st_mtime
-    except OSError:
+    """(build.approval_hash, doc.id, meta.rev as a string) of the doc, cached by the mtimes of the doc and its screen
+    files; (None, None, '') if unreadable."""
+    m = mtime(p)
+    if not m:
         return None, None, ""
     hit = _doc_info.get(str(p))
-    if hit and hit[0] == m:
-        return hit[1:]
+    if hit and hit[0] == (m, *map(mtime, hit[1])):
+        return hit[2:]
+    screens: list[Path] = []
     try:
         doc = json.loads(p.read_text(encoding="utf-8"))
-        h = canonical_hash(doc)
+        screens = list(build.screen_paths(doc, p).values()) if isinstance(doc, dict) else []
+        h = build.approval_hash(doc, p)
         did = (str(doc.get("id") or "") or None) if isinstance(doc, dict) else None
         rev = str(((doc.get("meta") or {}) if isinstance(doc, dict) else {}).get("rev") or "")
     except (OSError, ValueError, AttributeError):
         h, did, rev = None, None, ""
-    _doc_info[str(p)] = (m, h, did, rev)
+    _doc_info[str(p)] = ((m, *map(mtime, screens)), screens, h, did, rev)
     return h, did, rev
 
 
 def doc_hash(p: Path) -> str | None:
     return doc_info(p)[0]
+
+
+def info_key(p: Path) -> tuple:
+    """The mtimes doc_info's cache keys on: the doc's and its screen files'."""
+    doc_info(p)
+    hit = _doc_info.get(str(p))
+    return hit[0] if hit else ()
 
 
 def doc_id(p: Path) -> str | None:
@@ -390,6 +413,8 @@ def card(doc: dict, dtype: str, doc_path: Path) -> dict:
     docs: kind, levels, flows and the first canvas's root drawing: nodes with x, y = top-left in canvas units, placed
     as the template does (centre = x/y, else col*250, row*160; size w/h, else 180x80, or 240x140 for a node with
     children), c = child count; edges = [from, to, kind] by node index; play = the edges the first root flow walks.
+    design: count = artboards, artboards = the first 12 as {x, y, w, h, device, fidelity}, placed by
+    build.board_layout and shifted so the board's top-left is 0, 0.
     A doc whose type has none of that: its `hero`, else {icon: 'doc', sections: N}."""
     blocks = list(build.all_blocks(doc))
     if dtype == "review":
@@ -436,13 +461,25 @@ def card(doc: dict, dtype: str, doc_path: Path) -> dict:
         canvas = next((b for b in blocks if b.get("type") == "canvas" and b.get("nodes")), None)
         if canvas:
             return {"kind": str((doc.get("meta") or {}).get("kind") or ""), **canvas_card(canvas)}
+    elif dtype == "design":
+        board = build.board_of(doc)
+        layout = build.board_layout(board) if board else {}
+        if layout:
+            x0, y0 = min(v[0] for v in layout.values()), min(v[1] for v in layout.values())
+            info = {a["id"]: a for a in board.get("artboards") or [] if isinstance(a, dict)}
+            arts = []
+            for aid, (x, y, w, h) in list(layout.items())[:12]:
+                a = info.get(aid) or {}
+                arts.append({"x": round(x - x0), "y": round(y - y0), "w": round(w), "h": round(h),
+                             "device": str(a.get("device") or ""), "fidelity": str(a.get("fidelity") or "")})
+            return {"count": len(layout), "artboards": arts}
     hero = doc.get("hero")
     if isinstance(hero, dict) and hero.get("value") is not None:
         return {"hero": {k: str(hero[k]) for k in ("icon", "value", "label") if hero.get(k) is not None}}
     return {"icon": "doc", "sections": len(doc.get("sections") or [])}
 
 
-_cache: dict[str, tuple[tuple[float, float, float], dict]] = {}
+_cache: dict[str, tuple[tuple, dict]] = {}
 _hist_cache: dict[str, tuple[float, tuple[int, list[int]]]] = {}
 
 
@@ -479,11 +516,12 @@ def mtime(p: Path) -> float:
 
 
 def summarize(p: Path) -> dict:
-    """What the home page needs about one doc, cached by the mtimes of the doc, its history (a contract problem is
-    an error only while meta.rev is new) and its diff cache (a review card's line counts)."""
+    """What the home page needs about one doc, cached by the mtimes of the doc, its screen files (a design's lint and
+    card), its history (a contract problem is an error only while meta.rev is new) and its diff cache (a review
+    card's line counts)."""
     import diffref   # noqa: PLC0415
     st = p.stat()
-    keyed = lambda: (st.st_mtime, mtime(build.history_path(p)), mtime(diffref.cache_path(p)))  # noqa: E731
+    keyed = lambda: (st.st_mtime, info_key(p), mtime(build.history_path(p)), mtime(diffref.cache_path(p)))  # noqa: E731
     key = keyed()
     hit = _cache.get(str(p))
     if hit and hit[0] == key:
@@ -627,7 +665,7 @@ def _render(p: Path) -> tuple[int, str]:
         doc = json.loads(p.read_text(encoding="utf-8"))
     except (OSError, ValueError) as e:
         return 500, error_page(p, [f"cannot read: {e}"])
-    shown = canonical_hash(doc)   # the JSON this page shows, which an approval from it must match
+    shown = build.approval_hash(doc, p)   # the JSON (and screen files) this page shows, which an approval must match
     # validate expands diff refs on a copy (cache, local git, then gh) and so warms the cache build.build reads;
     # it also applies the type contract, as errors only while meta.rev is new
     rep = build.validate(doc, p, allow_remote=True)
@@ -640,7 +678,7 @@ def _render(p: Path) -> tuple[int, str]:
             history = build.load_history(build.history_path(p))
         except (OSError, ValueError) as e:
             return 422, error_page(p, [f"cannot read {build.history_path(p)}: {e}"])
-        log = build.record(history, doc)
+        log = build.record(history, doc, p)
         if log.startswith("ERROR"):
             return 422, error_page(p, [log])
     # the history keeps refs; build expands them in the page's doc and in older revisions. validate already showed
@@ -648,6 +686,315 @@ def _render(p: Path) -> tuple[int, str]:
     state = page_state(p)
     return 200, build.build(doc, build.TEMPLATE.read_text(encoding="utf-8"), history, diff_path=p, problems=[],
                             state=state and {**state, "docHash": shown})
+
+
+# ---------- design screens ----------
+
+# /<root>/<dir>/<stem>.design/<artboard id>.html: one artboard's screen fragment wrapped in its kit
+SCREEN_URL = re.compile(r"^(/(?:[^/]+/)+)([^/]+)\.design/([a-z0-9][a-z0-9-]*)\.html$")
+# what kits, declared framework files, their url() targets and store copies may be: nothing that renders as a page
+ASSET_TYPES = {".css", ".js", ".mjs", ".woff", ".woff2", ".ttf", ".otf", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"}
+CORS_TYPES = {".mjs", ".woff", ".woff2", ".ttf", ".otf"}   # fetched in CORS mode: an opaque-origin frame needs ACAO *
+CSS_URL = re.compile(r"""url\(\s*(['"]?)([^'")]+)\1\s*\)""")
+EXTERNAL_REF = re.compile(r"(?i)^(?:data:|[a-z][a-z0-9+.-]*:|//|#)")
+PLAIN_KIT = ("base.css", "wireframe.css")
+HORIZON_KIT = ("horizon-ui/horizon-ui.css", "horizon-ui/react.js", "horizon-ui/horizon-ui.js")
+MOTION_VARS = {"fast": "--dur-fast", "base": "--dur-base", "slow": "--dur-slow", "ease": "--ease"}
+
+
+def screen_csp(host: str) -> str:
+    """A screen's Content-Security-Policy: no network, no forms, framed only by this server's pages, and sandboxed
+    even when opened on its own. The explicit origin backs 'self', which browsers read differently in an
+    opaque-origin document; host is one guard() accepted."""
+    o = f"http://{host}"
+    return (f"default-src 'none'; script-src 'self' {o} 'unsafe-inline'; style-src 'self' {o} 'unsafe-inline'; "
+            f"img-src 'self' {o} data: blob:; font-src 'self' {o} data:; connect-src 'none'; form-action 'none'; "
+            f"base-uri 'none'; frame-ancestors 'self' {o}; sandbox allow-scripts")
+
+
+def kit_version() -> str:
+    """Changes whenever a kit file does, so screens can cache kits forever."""
+    try:
+        return str(int(max(f.stat().st_mtime for f in KITS.iterdir() if f.is_file())))
+    except (OSError, ValueError):
+        return "0"
+
+
+def asset_kind(f: Path) -> str:
+    return {".css": "css", ".mjs": "mjs"}.get(f.suffix.lower(), "js")
+
+
+def kit_file(rel: str) -> Path | None:
+    """A kit file (CSS or JS) under assets/kits, for /__bluedoc/kit/."""
+    base = KITS.resolve()
+    f = (base / unquote(rel)).resolve()
+    return f if base in f.parents and f.is_file() and f.suffix.lower() in ASSET_TYPES else None
+
+
+def store_file(rel: str) -> Path | None:
+    """A file of a framework `add-framework` copied, for /__bluedoc/fw/<name>/<path>."""
+    base = build.frameworks_dir().resolve()
+    f = (base / unquote(rel)).resolve()
+    return (f if base in f.parents and len(f.relative_to(base).parts) > 1 and f.is_file() and f.suffix.lower() in ASSET_TYPES
+            else None)
+
+
+def store_manifest(name: str) -> dict | None:
+    """The store copy's manifest when every file it loads is there, else None (the screen falls back)."""
+    if not isinstance(name, str) or not build.ID_RE.match(name):
+        return None
+    d = build.frameworks_dir() / name
+    try:
+        m = json.loads((d / "manifest.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    files = [*(m.get("load") or []), *(m.get("sources") or [])] if isinstance(m, dict) else None
+    if not files or not all(isinstance(f, str) and store_file(f"{name}/{f}") for f in files):
+        return None
+    return m
+
+
+def under_roots(p: Path, roots: list[Path]) -> bool:
+    return any(r in p.parents for r in roots)
+
+
+def css_refs(css: Path, roots: list[Path]) -> set[Path]:
+    """The files a CSS file's relative url()s name, under a registered folder and of an asset type."""
+    try:
+        text = css.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return set()
+    out = set()
+    for m in CSS_URL.finditer(text):
+        ref = m[2].strip()
+        if EXTERNAL_REF.match(ref):
+            continue
+        p = (css.parent / unquote(ref.split("#")[0].split("?")[0])).resolve()
+        if p.suffix.lower() in ASSET_TYPES and under_roots(p, roots) and p.is_file():
+            out.add(p)
+    return out
+
+
+_declared: dict[str, tuple[tuple, list[Path], set[Path]]] = {}
+
+
+def declared_files(doc_path: Path) -> set[Path]:
+    """The project files a design doc's board declares (frameworks[].files) and the url() targets of its declared
+    CSS: what the server may send to its screens. Cached by the mtimes of the doc and of that CSS."""
+    m = mtime(doc_path)
+    hit = _declared.get(str(doc_path))
+    if hit and hit[0] == (m, *map(mtime, hit[1])):
+        return hit[2]
+    files: set[Path] = set()
+    css: list[Path] = []
+    try:
+        doc = json.loads(doc_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        doc = None
+    board = build.board_of(doc) if isinstance(doc, dict) else None
+    roots = load_roots()
+    for fw in (board or {}).get("frameworks") or []:
+        for f in (fw.get("files") or []) if isinstance(fw, dict) else []:
+            if not isinstance(f, str):
+                continue
+            p = (doc_path.parent / f).resolve()
+            if p.suffix.lower() in build.FRAMEWORK_EXTS and under_roots(p, roots) and p.is_file():
+                files.add(p)
+                if p.suffix.lower() == ".css":
+                    css.append(p)
+                    files |= css_refs(p, roots)
+    _declared[str(doc_path)] = ((m, *map(mtime, css)), css, files)
+    return files
+
+
+def declared_for_url(path: str) -> Path | None:
+    """A file under a registered folder that some design doc's board declares, for that doc's screens. Docs seen
+    before are checked first; a miss scans every doc under the registered folders."""
+    p = file_for_url(path)
+    if not p or p.suffix.lower() not in ASSET_TYPES:
+        return None
+    if any(p in declared_files(Path(d)) for d in list(_declared)):
+        return p
+    roots = slugs(load_roots())
+    for r in roots.values():
+        for d in walk_docs(r, inner_roots(r, roots.values())):
+            if str(d) not in _declared and p in declared_files(d):
+                return p
+    return None
+
+
+def framework_assets(board: dict, fw_id: str, doc_path: Path, fidelity: str) -> tuple[list, list[Path] | None, str | None]:
+    """(assets in load order, the Tailwind sources the frame compiles (None without the Tailwind compiler), the label
+    of a framework that's missing).
+    plain and horizon ship; a frameworks[] entry loads its declared files or its store copy. When any of that is
+    missing, the screen gets the plain kit and the label for its notice."""
+    kit = lambda name: (asset_kind(KITS / name), KITS / name, f"/__bluedoc/kit/{name}?v={kit_version()}")  # noqa: E731
+    plain = [kit(n) for n in PLAIN_KIT]
+    if fw_id == "plain":
+        return plain, None, None
+    wire = [kit("wireframe.css")] if fidelity in ("wireframe", "sketch") else []
+    if fw_id == "horizon":
+        v = vendor_version()
+        return [(asset_kind(VENDOR / r), VENDOR / r, f"/__bluedoc/vendor/{r}?v={v}") for r in HORIZON_KIT] + wire, None, None
+    entry = next((f for f in board.get("frameworks") or [] if isinstance(f, dict) and f.get("id") == fw_id), None)
+    label = str((entry or {}).get("label") or fw_id)
+    if entry and isinstance(entry.get("store"), str):
+        man = store_manifest(entry["store"])
+        if man:
+            d, v = build.frameworks_dir() / entry["store"], str(man.get("sha256") or "")[:12]
+            assets = [(asset_kind(d / f), d / f, f"/__bluedoc/fw/{quote(entry['store'])}/{quote(f)}?v={v}") for f in man["load"]]
+            sources = [d / f for f in man.get("sources") or []] if man.get("compiler") == "tailwind" else None
+            return assets + wire, sources, None
+    elif entry and isinstance(entry.get("files"), list) and entry["files"]:
+        roots, assets = load_roots(), []
+        for f in entry["files"]:
+            p = (doc_path.parent / f).resolve() if isinstance(f, str) else None
+            url = url_for(p) if p and p.suffix.lower() in build.FRAMEWORK_EXTS and under_roots(p, roots) and p.is_file() else None
+            if not url:
+                break
+            assets.append((asset_kind(p), p, f"{url}?v={int(mtime(p))}"))
+        else:
+            return assets + wire, None, None
+    return plain, None, label
+
+
+def token_ok(k, v) -> bool:
+    return (isinstance(k, str) and bool(build.TOKEN_KEY.match(k)) and isinstance(v, str) and len(v) <= 200
+            and bool(build.TOKEN_VALUE.match(v)) and "url(" not in v.lower())
+
+
+def brief_pick(doc: dict, item_id: str) -> str | None:
+    """The brief's pick for a decision item: its choice, else its recommendation."""
+    for b in build.all_blocks(doc):
+        if b.get("type") == "checklist":
+            for it in b.get("items") or []:
+                if isinstance(it, dict) and it.get("id") == item_id and it.get("choices"):
+                    return it.get("choice") or it.get("recommend")
+    return None
+
+
+def screen_vars(doc: dict, board: dict, a: dict, theme: str | None) -> str:
+    """The :root declarations a screen starts with: the device's size and safe area, the theme's tokens (theme, else
+    the brief's pick, else the first theme) and the board's motion tokens."""
+    dev = build.DEVICES.get(a.get("device")) if isinstance(a.get("device"), str) else None
+    w, h = build.artboard_size(a) or (0, 0)
+    top, right, bottom, left = dev["safe"] if dev else (0, 0, 0, 0)
+    out = {"--screen-w": f"{w:g}px", "--screen-h": f"{h:g}px", "--safe-top": f"{top}px", "--safe-right": f"{right}px",
+           "--safe-bottom": f"{bottom}px", "--safe-left": f"{left}px"}
+    if a.get("device") == "watch-round":   # the inscribed square's inset from the edge: d * (1 - 1/sqrt(2)) / 2
+        out["--safe-inset"] = f"{round(w * (1 - 0.5 ** 0.5) / 2)}px"
+    themes = {t["id"]: t for t in board.get("themes") or [] if isinstance(t, dict) and isinstance(t.get("id"), str)}
+    t = themes.get(theme or "") or themes.get(brief_pick(doc, "theme") or "") or next(iter(themes.values()), None)
+    tokens = (t or {}).get("tokens")
+    for k, v in (tokens.items() if isinstance(tokens, dict) else ()):
+        if token_ok(k, v):
+            out["--" + k] = v
+    motion = board.get("motion")
+    for k, v in (motion.items() if isinstance(motion, dict) else ()):
+        if k in MOTION_VARS and token_ok("x", v):
+            out[MOTION_VARS[k]] = v
+    return " ".join(f"{k}: {v};" for k, v in out.items())
+
+
+def data_uri(f: Path) -> str:
+    return f"data:{vendor_type(f).split(';')[0]};base64,{base64.b64encode(f.read_bytes()).decode()}"
+
+
+def inline_css(f: Path) -> str:
+    """A CSS file's text with its relative url()s as data: URIs, for a screen with its kit inlined."""
+    def sub(m):
+        ref = m[2].strip()
+        if EXTERNAL_REF.match(ref):
+            return m[0]
+        t = (f.parent / unquote(ref.split("#")[0].split("?")[0])).resolve()
+        ok = t.suffix.lower() in ASSET_TYPES and t.is_file() and t.stat().st_size <= build.MAX_MEDIA_BYTES
+        return f'url("{data_uri(t)}")' if ok else m[0]
+    return CSS_URL.sub(sub, f.read_text(encoding="utf-8", errors="replace"))
+
+
+def raw_text(text: str, tag: str) -> str:
+    """text made safe inside <style> or <script>: it can't close the element or open a comment there."""
+    return re.sub(rf"(?i)</({tag})", r"<\\/\1", text).replace("<!--", "<\\!--")
+
+
+def asset_tag(kind: str, f: Path, url: str, inline: bool) -> str:
+    if kind == "css":
+        return f"<style>{raw_text(inline_css(f), 'style')}</style>" if inline else f'<link rel="stylesheet" href="{esc(url)}">'
+    typ = ' type="module"' if kind == "mjs" else ""
+    if inline:
+        return f"<script{typ}>{raw_text(f.read_text(encoding='utf-8', errors='replace'), 'script')}</script>"
+    return f'<script{typ} src="{esc(url)}"></script>'
+
+
+def wrap_screen(doc: dict, doc_path: Path, artboard_id: str, fragment: str, *, inline: bool = False,
+                theme: str | None = None) -> str:
+    """A screen as a whole HTML document: kits/shell.html filled with the artboard's framework (or the plain kit and
+    a notice when it's missing), its fidelity, the device's and theme's variables, the inspector, then the fragment.
+    inline puts every file in the document (an -o file); else they load from this server. KeyError: no such artboard."""
+    board = build.board_of(doc) or {}
+    a = next((x for x in board.get("artboards") or [] if isinstance(x, dict) and x.get("id") == artboard_id), None)
+    if a is None:
+        raise KeyError(artboard_id)
+    fidelity = a.get("fidelity") if a.get("fidelity") in build.FIDELITIES else "hifi"
+    fw_id = str(a.get("framework") or board.get("framework") or "plain")
+    assets, sources, missing = framework_assets(board, fw_id, Path(doc_path), fidelity)
+    head = [asset_tag(kind, f, url, inline) for kind, f, url in assets]
+    if sources is not None:
+        text = "\n".join(f.read_text(encoding="utf-8", errors="replace") for f in sources)
+        if '@import "tailwindcss"' not in text:
+            text = '@import "tailwindcss";\n' + text
+        head.append(f'<style type="text/tailwindcss">{raw_text(text, "style")}</style>')
+    inspector = KITS / "inspector.js"
+    slots = {
+        "html_class": f"fid-{fidelity}", "artboard": esc(artboard_id), "fallback": esc(missing or ""),
+        "title": esc(str(a.get("title") or artboard_id)), "vars": screen_vars(doc, board, a, theme),
+        "hand_font": data_uri(HAND_FONT) if inline else f"/__bluedoc/vendor/fonts/{HAND_FONT.name}?v={vendor_version()}",
+        "inspector": asset_tag("js", inspector, f"/__bluedoc/kit/inspector.js?v={kit_version()}", inline),
+        "head": "\n".join(head),
+        "notice": f'<div id="bd-notice" role="status">{esc(missing)} not found: showing the plain kit</div>\n' if missing else "",
+        "body": fragment,
+    }
+    shell = (KITS / "shell.html").read_text(encoding="utf-8")
+    return re.sub(r"\{\{(\w+)\}\}", lambda m: slots[m[1]], shell)   # one pass: the fragment's own {{ }} stay as written
+
+
+def screen_for_url(path: str, rev: str | None) -> tuple[Path, dict, str, str] | None:
+    """(doc file, the doc as of rev, artboard id, fragment) for a screen URL; None unless the doc is a design doc
+    under a registered folder with that artboard and its screen file (or that revision's recorded HTML)."""
+    m = SCREEN_URL.match(path)
+    if not m:
+        return None
+    doc_path = next((d for d in (doc_for_url(m[1] + m[2] + s) for s in build.DOC_SUFFIXES) if d), None)
+    if not doc_path:
+        return None
+    try:
+        doc = json.loads(doc_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    aid = m[3]
+    if not isinstance(doc, dict):
+        return None
+    if rev:
+        try:
+            h = build.load_history(build.history_path(doc_path))
+            entry = next((e for e in h["revs"] if isinstance(e, dict) and e.get("rev") == rev), None)
+            doc = build.restore(h, entry) if entry else None
+        except (OSError, ValueError, KeyError, TypeError):
+            return None
+        fragment = build.screen_source(doc_path, aid, rev) if doc else None
+    else:
+        f = build.screen_paths(doc, doc_path).get(aid)
+        fragment = None
+        if f and f.resolve().parent.name.endswith(".design") and under_roots(f.resolve(), load_roots()):
+            try:
+                fragment = f.read_text(encoding="utf-8")
+            except (OSError, UnicodeDecodeError):
+                pass
+    board = build.board_of(doc) if isinstance(doc, dict) else None
+    if fragment is None or not board or not any(isinstance(a, dict) and a.get("id") == aid for a in board.get("artboards") or []):
+        return None
+    return doc_path, doc, aid, fragment
+
 
 
 # ---------- reader state ----------
@@ -805,9 +1152,10 @@ def make_handler(port: int, default_to: str):
             pass
 
         def send(self, code: int, body: str | bytes, ctype: str = "text/html; charset=utf-8", cache: str = "no-store",
-                 headers: dict[str, str] | None = None) -> None:
+                 headers: dict[str, str] | None = None, framed: bool = False) -> None:
+            """framed: a design screen, which brings its own CSP in headers and may be framed by our pages."""
             data = body.encode() if isinstance(body, str) else body
-            if ctype.startswith("text/html"):
+            if ctype.startswith("text/html") and not framed:
                 headers = {"Content-Security-Policy": page_csp(data.decode("utf-8", "replace")), "X-Frame-Options": "DENY", **(headers or {})}
                 if self.cookie_key() and self.has_key():   # each page view keeps the cookie alive another COOKIE_AGE
                     headers["Set-Cookie"] = set_cookie()
@@ -821,6 +1169,24 @@ def make_handler(port: int, default_to: str):
             self.end_headers()
             if self.command != "HEAD":
                 self.wfile.write(data)
+
+        def asset(self, f: Path, q: dict) -> None:
+            """A vendored, kit, store or declared framework file. Versioned URLs (?v=) are immutable: their v changes
+            with the files. Fonts and modules are CORS fetches, which a screen's opaque origin makes cross-origin."""
+            ext = f.suffix.lower()
+            extra = {"Access-Control-Allow-Origin": "*"} if ext in CORS_TYPES else {}
+            if ext == ".svg":   # opened on its own, it must not run script on this origin
+                extra["Content-Security-Policy"] = "default-src 'none'; img-src data:; style-src 'unsafe-inline'; sandbox"
+            self.send(200, f.read_bytes(), vendor_type(f), "public, max-age=31536000, immutable" if q.get("v") else "no-cache", extra)
+
+        def screen(self, path: str, q: dict) -> None:
+            """A design screen: its fragment wrapped in its kit, sandboxed by its CSP, framable by our pages only."""
+            found = screen_for_url(path, q.get("rev") or None)
+            if not found:
+                return self.send(404, "<!doctype html><title>Not found</title><p>No screen at this address. <a href='/'>All docs</a></p>")
+            doc_path, doc, aid, fragment = found
+            html = wrap_screen(doc, doc_path, aid, fragment, theme=q.get("theme") or None)
+            return self.send(200, html, headers={"Content-Security-Policy": screen_csp(self.headers.get("Host") or "")}, framed=True)
 
         def send_media(self, f: Path) -> None:
             # one byte range at most: enough for <video> seeking (Safari won't play video without it)
@@ -920,10 +1286,13 @@ def make_handler(port: int, default_to: str):
                 return self.send(200, html)
             if u.path.startswith("/__bluedoc/vendor/"):
                 f = vendor_file(u.path[len("/__bluedoc/vendor/"):])
-                if not f:
-                    return self.json(404, {"error": "not found"})
-                # versioned URLs (?v=) are immutable: home.html changes v when the vendored files change
-                return self.send(200, f.read_bytes(), vendor_type(f), "public, max-age=31536000, immutable" if q.get("v") else "no-cache")
+                return self.asset(f, q) if f else self.json(404, {"error": "not found"})
+            if u.path.startswith("/__bluedoc/kit/"):
+                f = kit_file(u.path[len("/__bluedoc/kit/"):])
+                return self.asset(f, q) if f else self.json(404, {"error": "not found"})
+            if u.path.startswith("/__bluedoc/fw/"):
+                f = store_file(u.path[len("/__bluedoc/fw/"):])
+                return self.asset(f, q) if f else self.json(404, {"error": "not found"})
             if u.path == "/__bluedoc/index.json":
                 return self.json(200, {**index(), "unlocked": self.has_key()})
             if u.path == "/__bluedoc/ping":
@@ -960,11 +1329,16 @@ def make_handler(port: int, default_to: str):
                 return self.json(200, {"message": m}) if m else self.send(204, b"")
             if u.path.startswith("/__bluedoc/"):
                 return self.json(404, {"error": "not found"})
+            if SCREEN_URL.match(u.path):   # before the old .html redirect below
+                return self.screen(u.path, q)
             doc = doc_for_url(u.path)
             if not doc:
                 media = media_for_url(u.path)
                 if media:
                     return self.send_media(media)
+                declared = declared_for_url(u.path)
+                if declared:
+                    return self.asset(declared, q)
                 # an old link to a rendered <stem>.html: send it to the doc that replaced it
                 if u.path.endswith(".html"):
                     for suffix in build.DOC_SUFFIXES:
@@ -1173,6 +1547,163 @@ def ensure_started(port: int) -> bool:
     return False
 
 
+# ---------- frameworks the reader adds ----------
+
+MAX_FRAMEWORK_BYTES = 64 * 1024 * 1024
+FRAMEWORK_LOAD_EXTS = (".css", ".js", ".mjs")
+_TW = ("https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js",
+       "a60c785630a06196808cbe79e6f7bdb4abcc8f4421a47b56f29338fc84805e3b", "tailwind.js")
+_TW_LICENSE = ("https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/LICENSE",
+               "60e0b68c0f35c078eef3a5d29419d0b03ff84ec1df9c3f9d6e39a519a5ae7985", "licenses/tailwindcss-LICENSE")
+# `add-framework <preset>`: pinned files (url, sha256, saved as), fetched once on the reader's command. Each compiles
+# Tailwind classes in the frame with Tailwind's browser build; HeroUI and daisyUI add their prebuilt component CSS.
+PRESETS = {
+    "tailwind": {"label": "Tailwind CSS", "fetch": (_TW, _TW_LICENSE), "load": ("tailwind.js",)},
+    "heroui": {"label": "Tailwind + HeroUI", "load": ("heroui.min.css", "tailwind.js"), "fetch": (
+        _TW, _TW_LICENSE,
+        ("https://cdn.jsdelivr.net/npm/@heroui/styles@3.2.6/dist/heroui.min.css",
+         "95ac190a78f5f7c2126f365096fdf08326cf206cd0c8fdf0e8532e7185f32a2e", "heroui.min.css"),
+        ("https://cdn.jsdelivr.net/npm/@heroui/styles@3.2.6/LICENSE",
+         "bd087c1ebd511adbab74705ec2b31d63d175e8d422f58c1af54754da02b1d329", "licenses/heroui-LICENSE"))},
+    "daisyui": {"label": "Tailwind + daisyUI", "load": ("daisyui.css", "tailwind.js"), "fetch": (
+        _TW, _TW_LICENSE,
+        ("https://cdn.jsdelivr.net/npm/daisyui@5.7.47/daisyui.css",
+         "d057842b420556c5f98a5a3c362b7a1eff194125bdce03e654835db1956e3d0c", "daisyui.css"),
+        ("https://cdn.jsdelivr.net/npm/daisyui@5.7.47/LICENSE",
+         "8709e3ac65c84637c422dc8082b893d9997fce093751c77b2f1983bf29dbf9ea", "licenses/daisyui-LICENSE"))},
+}
+
+
+def fetch_url(url: str, sha256: str | None = None) -> bytes:
+    """One GET of url, at most MAX_FRAMEWORK_BYTES; with sha256, the bytes must match it."""
+    req = urllib.request.Request(url, headers={"User-Agent": f"bluedoc/{VERSION or 'dev'}"})
+    with urllib.request.urlopen(req, timeout=60) as r:   # noqa: S310 (the reader's own command and URL)
+        data = r.read(MAX_FRAMEWORK_BYTES + 1)
+    if len(data) > MAX_FRAMEWORK_BYTES:
+        raise ValueError(f"{url}: larger than {MAX_FRAMEWORK_BYTES >> 20} MB")
+    if sha256 and hashlib.sha256(data).hexdigest() != sha256:
+        raise ValueError(f"{url}: its sha256 isn't the pinned one, so nothing was added")
+    return data
+
+
+def unpack_tgz(data: bytes, dest: Path) -> None:
+    """A .tgz's regular files into dest, without a top folder all of them share (npm's package/). Links, devices and
+    paths that would leave dest are skipped."""
+    with tarfile.open(fileobj=io.BytesIO(data), mode="r:*") as t:
+        members = [m for m in t.getmembers() if m.isfile()]
+        parts = [[x for x in m.name.split("/") if x not in ("", ".")] for m in members]
+        strip = 1 if parts and all(len(p) > 1 and p[0] == parts[0][0] for p in parts) else 0
+        for m, p in zip(members, parts):
+            rel = p[strip:]
+            if not rel or ".." in rel or m.name.startswith("/"):
+                continue
+            out = dest.joinpath(*rel)
+            out.parent.mkdir(parents=True, exist_ok=True)
+            src = t.extractfile(m)
+            if src:
+                out.write_bytes(src.read())
+
+
+def default_load(d: Path) -> list[str]:
+    """The files a copy loads when --load names none: its only file, else package.json's style/unpkg/jsdelivr/browser
+    files, else the CSS then JS files at its top level."""
+    files = sorted(f for f in d.rglob("*") if f.is_file())
+    if len(files) == 1 and files[0].suffix.lower() in FRAMEWORK_LOAD_EXTS:
+        return [files[0].relative_to(d).as_posix()]
+    try:
+        pkg = json.loads((d / "package.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        pkg = None
+    out: list[str] = []
+    for key in ("style", "unpkg", "jsdelivr", "browser"):
+        v = pkg.get(key) if isinstance(pkg, dict) else None
+        f = (d / v).resolve() if isinstance(v, str) else None
+        if f and d.resolve() in f.parents and f.is_file() and f.suffix.lower() in FRAMEWORK_LOAD_EXTS:
+            rel = f.relative_to(d.resolve()).as_posix()
+            if rel not in out:
+                out.append(rel)
+    if not out:
+        out = [f.name for f in files if f.parent == d and f.suffix.lower() in FRAMEWORK_LOAD_EXTS]
+    return sorted(out, key=lambda r: not r.endswith(".css"))
+
+
+def add_framework(name: str, source: str | None, load: list[str], sources: list[str], tailwind: bool,
+                  label: str | None) -> int:
+    """`serve.py add-framework`: copy a preset, a file, a folder or one URL (a file or .tgz) into
+    frameworks_dir()/<name>/ with a manifest of each file's size and sha256, and print it."""
+    if not build.ID_RE.match(name) or name in build.BUILTIN_FRAMEWORKS:
+        print(f"add-framework: {name!r} must be lowercase letters, digits and dashes, and not "
+              f"{' or '.join(build.BUILTIN_FRAMEWORKS)}", file=sys.stderr)
+        return 2
+    preset = PRESETS.get(name) if source is None else None
+    if source is None and not preset:
+        print(f"add-framework: no preset named {name}: give a path or URL (presets: {', '.join(PRESETS)})", file=sys.stderr)
+        return 2
+    base = build.frameworks_dir()
+    base.mkdir(parents=True, exist_ok=True)
+    tmp = Path(tempfile.mkdtemp(prefix=f".{name}-", dir=base))
+    try:
+        if preset:
+            for url, sha, save in preset["fetch"]:
+                print(f"fetching {url}", flush=True)
+                out = tmp / save
+                out.parent.mkdir(parents=True, exist_ok=True)
+                out.write_bytes(fetch_url(url, sha))
+            load, tailwind, label, origin = load or list(preset["load"]), True, label or preset["label"], f"preset {name}"
+        elif re.match(r"(?i)^https?://", source):
+            print(f"fetching {source}", flush=True)
+            data, fname = fetch_url(source), unquote(urlsplit(source).path.rsplit("/", 1)[-1])
+            if fname.endswith((".tgz", ".tar.gz")):
+                unpack_tgz(data, tmp)
+            else:
+                (tmp / (re.sub(r"[^\w.-]", "_", fname) or "file")).write_bytes(data)
+            origin = source
+        else:
+            src = Path(source).expanduser().resolve()
+            if src.is_dir():
+                shutil.copytree(src, tmp, dirs_exist_ok=True, ignore=shutil.ignore_patterns(".git"))
+            elif src.is_file() and src.name.endswith((".tgz", ".tar.gz")):
+                unpack_tgz(src.read_bytes(), tmp)
+            elif src.is_file():
+                shutil.copy2(src, tmp / src.name)
+            else:
+                raise ValueError(f"{source}: no such file or folder")
+            origin = str(src)
+        files = sorted(f for f in tmp.rglob("*") if f.is_file())
+        if sum(f.stat().st_size for f in files) > MAX_FRAMEWORK_BYTES:
+            raise ValueError(f"more than {MAX_FRAMEWORK_BYTES >> 20} MB: name the dist folder, not the package")
+        load = [Path(x).as_posix() for x in load] or default_load(tmp)
+        sources = [Path(x).as_posix() for x in sources]
+        if not load:
+            raise ValueError("no CSS or JS file to load at the top level: name them with --load")
+        for rel in load + sources:
+            f = (tmp / rel).resolve()
+            if tmp.resolve() not in f.parents or not f.is_file() or f.suffix.lower() not in FRAMEWORK_LOAD_EXTS:
+                raise ValueError(f"{rel}: not a .css, .js or .mjs file in the copy")
+        listed = [{"path": f.relative_to(tmp).as_posix(), "size": f.stat().st_size,
+                   "sha256": hashlib.sha256(f.read_bytes()).hexdigest()} for f in files]
+        manifest = {"name": name, "label": label or name, "source": origin,
+                    "added": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
+                    "load": load, "sources": sources, "compiler": "tailwind" if tailwind or sources else None,
+                    "files": listed, "sha256": hashlib.sha256(json.dumps(listed, sort_keys=True).encode()).hexdigest()}
+        (tmp / "manifest.json").write_text(json.dumps(manifest, indent=1) + "\n", encoding="utf-8")
+        dest = base / name
+        if dest.exists():
+            shutil.rmtree(dest)
+        tmp.rename(dest)
+    except (OSError, ValueError, urllib.error.URLError, tarfile.TarError) as e:
+        shutil.rmtree(tmp, ignore_errors=True)
+        print(f"add-framework: {e}", file=sys.stderr)
+        return 1
+    total = sum(f["size"] for f in listed)
+    print(f"added {manifest['label']} as {name} in {dest} ({len(listed)} files, {total / 1024:.0f} KB)")
+    for f in listed:
+        print(f"  {f['path']}  {f['size']} B  sha256 {f['sha256']}")
+    print(f"loads: {', '.join(load)}" + ("; compiles Tailwind classes in each screen" if manifest["compiler"] else ""))
+    print("board: " + json.dumps({"id": name, "label": manifest["label"], "store": name}))
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -1200,6 +1731,14 @@ def main() -> int:
     p = sub.add_parser("add", help="add a folder to the home page")
     p.add_argument("dir", type=Path)
     sub.add_parser("roots")
+    p = sub.add_parser("add-framework", help="copy a framework (a preset, a file, a folder or one URL) for design boards")
+    p.add_argument("name", help=f"the store name boards use (store: NAME); alone, a preset: {', '.join(PRESETS)}")
+    p.add_argument("source", nargs="?", help="a file, a folder, or one http(s) URL of a file or .tgz")
+    p.add_argument("--load", action="append", default=[], metavar="FILE", help="a CSS/JS file screens load, in order (repeatable)")
+    p.add_argument("--source", dest="sources", action="append", default=[], metavar="FILE",
+                   help="a Tailwind source CSS file the frame compiles (repeatable; implies --tailwind)")
+    p.add_argument("--tailwind", action="store_true", help="the copy holds Tailwind's browser build: compile classes in each screen")
+    p.add_argument("--label", help="the name the notice and the board show")
     a = ap.parse_args()
 
     if a.cmd == "run":
@@ -1234,6 +1773,8 @@ def main() -> int:
         return 0
     if a.cmd == "reply":
         return cmd_reply(a.target, a.kind, a.json)
+    if a.cmd == "add-framework":
+        return add_framework(a.name, a.source, a.load, a.sources, a.tailwind, a.label)
     if a.cmd == "unlock":
         if not ensure_started(DEFAULT_PORT):
             return 1
