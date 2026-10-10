@@ -315,162 +315,37 @@
           "repo": "acme-shop",
           "base": "89efd8e",
           "head": "62ccc86",
+          "paths": [
+            "src/orders/createOrder.ts",
+            "src/pricing/tiers.ts",
+            "test/tiers.test.ts"
+          ],
           "url": "https://github.com/acme/acme-shop/pull/412/files",
           "note": "Only the commented files. Head `62ccc86`; `docs/pricing.md` is unchanged and shown for its comment.",
-          "files": [
-            {
-              "path": "docs/pricing.md",
-              "status": "context",
-              "add": 0,
-              "del": 0,
-              "hunks": [
-                {
-                  "old": 6,
-                  "new": 6,
-                  "context": true,
-                  "lines": [
-                    " ",
-                    " 1. Sum the cart lines.",
-                    " 2. Apply the coupon, if any.",
-                    " 3. Add VAT.",
-                    " ",
-                    " There are no bulk discounts: every unit costs the same."
-                  ]
-                }
-              ]
-            },
-            {
-              "path": "src/orders/createOrder.ts",
-              "status": "modified",
-              "add": 4,
-              "del": 1,
-              "hunks": [
-                {
-                  "old": 6,
-                  "new": 6,
-                  "lines": [
-                    "   customerId: string;",
-                    "   subtotalCents: number;",
-                    "   totalCents: number;",
-                    "+  bulkSavingsCents: number;",
-                    " }",
-                    " ",
-                    " export function priceOrder(draft: OrderDraft, coupon?: Discount): PricedOrder {",
-                    "+  const gross = draft.lines.reduce((sum, l) => sum + l.unitCents * l.qty, 0);",
-                    "   const subtotalCents = applyCoupon(draft.lines, coupon);",
-                    "   const totalCents = addTax(subtotalCents);",
-                    "-  return { customerId: draft.customerId, subtotalCents, totalCents };",
-                    "+  const bulkSavingsCents = addTax(gross) - totalCents;",
-                    "+  return { customerId: draft.customerId, subtotalCents, totalCents, bulkSavingsCents };",
-                    " }"
-                  ],
-                  "header": "export interface PricedOrder {"
-                }
-              ]
-            },
-            {
-              "path": "src/pricing/tiers.ts",
-              "status": "added",
-              "add": 26,
-              "del": 0,
-              "hunks": [
-                {
-                  "old": 0,
-                  "new": 1,
-                  "lines": [
-                    "+// Bulk discount tiers (PRICING-88).",
-                    "+// Spec: 10 or more units of one SKU get 5 %, 50 or more get 10 %.",
-                    "+import type { CartLine } from \"../orders/types\";",
-                    "+",
-                    "+export interface Tier {",
-                    "+  minQty: number;",
-                    "+  percent: number;",
-                    "+}",
-                    "+",
-                    "+export const TIERS: Tier[] = [",
-                    "+  { minQty: 50, percent: 10 },",
-                    "+  { minQty: 10, percent: 5 },",
-                    "+];",
-                    "+",
-                    "+/** The tier a line qualifies for, or undefined. */",
-                    "+export function tierFor(qty: number): Tier | undefined {",
-                    "+  return TIERS.find((t) => qty > t.minQty);",
-                    "+}",
-                    "+",
-                    "+/** Line total in cents after its bulk tier. */",
-                    "+export function lineTotal(line: CartLine): number {",
-                    "+  const tier = tierFor(line.qty);",
-                    "+  const gross = line.unitCents * line.qty;",
-                    "+  if (!tier) return gross;",
-                    "+  return gross * (1 - tier.percent / 100);",
-                    "+}"
-                  ]
-                }
-              ]
-            },
-            {
-              "path": "test/tiers.test.ts",
-              "status": "added",
-              "add": 16,
-              "del": 0,
-              "hunks": [
-                {
-                  "old": 0,
-                  "new": 1,
-                  "lines": [
-                    "+import { describe, expect, it } from \"vitest\";",
-                    "+import { lineTotal, tierFor } from \"../src/pricing/tiers\";",
-                    "+",
-                    "+describe(\"bulk tiers\", () => {",
-                    "+  it(\"gives no tier below 10 units\", () => {",
-                    "+    expect(tierFor(5)).toBeUndefined();",
-                    "+  });",
-                    "+",
-                    "+  it(\"gives 10 % at 60 units\", () => {",
-                    "+    expect(tierFor(60)?.percent).toBe(10);",
-                    "+  });",
-                    "+",
-                    "+  it(\"discounts the line total\", () => {",
-                    "+    expect(lineTotal({ sku: \"A\", qty: 60, unitCents: 100 })).toBe(5400);",
-                    "+  });",
-                    "+});"
-                  ]
-                }
-              ]
-            }
-          ],
           "comments": [
             {
-              "item": "t412/tier-boundary",
-              "file": "src/pricing/tiers.ts",
-              "line": 17
+              "at": "src/pricing/tiers.ts:17",
+              "item": "t412/tier-boundary"
             },
             {
-              "item": "t412/float-cents",
-              "file": "src/pricing/tiers.ts",
-              "line": 25
+              "at": "src/pricing/tiers.ts:25",
+              "item": "t412/float-cents"
             },
             {
-              "item": "t412/savings-coupon",
-              "file": "src/orders/createOrder.ts",
-              "line": 16
+              "at": "src/orders/createOrder.ts:16",
+              "item": "t412/savings-coupon"
             },
             {
-              "item": "t412/boundary-tests",
-              "file": "test/tiers.test.ts",
-              "line": 5,
-              "end": 15
+              "at": "test/tiers.test.ts:5-15",
+              "item": "t412/boundary-tests"
             },
             {
-              "item": "t412/docs-stale",
-              "file": "docs/pricing.md",
-              "line": 11
+              "at": "docs/pricing.md:11",
+              "item": "t412/docs-stale"
             },
             {
-              "item": "t412/tiers-map",
-              "file": "src/pricing/tiers.ts",
-              "line": 10,
-              "end": 13
+              "at": "src/pricing/tiers.ts:10-13",
+              "item": "t412/tiers-map"
             },
             {
               "label": "PR description",
@@ -592,96 +467,28 @@
           "repo": "acme-shop",
           "base": "89efd8e",
           "head": "0a46a97",
+          "paths": [
+            "src/orders/charge.ts",
+            "src/payments/paycoClient.ts"
+          ],
           "url": "https://github.com/acme/acme-shop/pull/415/files",
           "note": "Only the two commented files; the new test is left out. Head `0a46a97`.",
-          "files": [
-            {
-              "path": "src/orders/charge.ts",
-              "status": "added",
-              "add": 29,
-              "del": 0,
-              "hunks": [
-                {
-                  "old": 0,
-                  "new": 1,
-                  "lines": [
-                    "+// Card authorization through PayCo, with retries (PAY-31).",
-                    "+import { payco } from \"../payments/paycoClient\";",
-                    "+import type { PricedOrder } from \"./createOrder\";",
-                    "+",
-                    "+export interface Authorization {",
-                    "+  id: string;",
-                    "+  amountCents: number;",
-                    "+}",
-                    "+",
-                    "+const MAX_ATTEMPTS = 3;",
-                    "+",
-                    "+/** Authorizes the order total. Retries on network errors and 5xx. */",
-                    "+export async function authorize(order: PricedOrder, orderId: string): Promise<Authorization> {",
-                    "+  let lastError: unknown;",
-                    "+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {",
-                    "+    try {",
-                    "+      const res = await payco.post(\"/v2/authorizations\", {",
-                    "+        amount: order.totalCents,",
-                    "+        currency: \"EUR\",",
-                    "+        reference: orderId,",
-                    "+      });",
-                    "+      return { id: res.data.id, amountCents: order.totalCents };",
-                    "+    } catch (err) {",
-                    "+      lastError = err;",
-                    "+      await new Promise((r) => setTimeout(r, 250 * attempt));",
-                    "+    }",
-                    "+  }",
-                    "+  throw lastError;",
-                    "+}"
-                  ]
-                }
-              ]
-            },
-            {
-              "path": "src/payments/paycoClient.ts",
-              "status": "added",
-              "add": 7,
-              "del": 0,
-              "hunks": [
-                {
-                  "old": 0,
-                  "new": 1,
-                  "lines": [
-                    "+import axios from \"axios\";",
-                    "+",
-                    "+export const payco = axios.create({",
-                    "+  baseURL: process.env.PAYCO_URL,",
-                    "+  timeout: 10_000,",
-                    "+  headers: { Authorization: `Bearer ${process.env.PAYCO_KEY}` },",
-                    "+});"
-                  ]
-                }
-              ]
-            }
-          ],
           "comments": [
             {
-              "item": "t415/double-auth",
-              "file": "src/orders/charge.ts",
-              "line": 17,
-              "end": 21
+              "at": "src/orders/charge.ts:17-21",
+              "item": "t415/double-auth"
             },
             {
-              "item": "t415/retry-4xx",
-              "file": "src/orders/charge.ts",
-              "line": 23,
-              "end": 25
+              "at": "src/orders/charge.ts:23-25",
+              "item": "t415/retry-4xx"
             },
             {
-              "item": "t415/latency",
-              "file": "src/payments/paycoClient.ts",
-              "line": 5
+              "at": "src/payments/paycoClient.ts:5",
+              "item": "t415/latency"
             },
             {
-              "item": "t415/backoff-const",
-              "file": "src/orders/charge.ts",
-              "line": 25
+              "at": "src/orders/charge.ts:25",
+              "item": "t415/backoff-const"
             }
           ]
         }

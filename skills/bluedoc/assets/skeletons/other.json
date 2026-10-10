@@ -1,0 +1,18 @@
+{
+  "id": "other-skeleton",
+  "title": "<<Page title>>",
+  "subtitle": "<<One sentence: what the page holds.>>",
+  "meta": { "org": "<<Org>>", "kind": "<<Status, Report or Notes>>", "type": "other", "rev": "A", "date": "<<YYYY-MM-DD>>" },
+  "hero": { "icon": "chart", "value": "<<stat>>", "label": "<<what the stat counts>>" },
+  "tldr": "<<The answer in 1 to 3 sentences; it agrees with the hero stat.>>",
+  "sections": [
+    {
+      "id": "main",
+      "title": "<<The first question the reader brings>>",
+      "lead": "<<The answer to it, in one line.>>",
+      "blocks": [
+        { "type": "text", "md": "<<The facts behind the answer; use a table, checklist or cards when the content has that shape.>>" }
+      ]
+    }
+  ]
+}

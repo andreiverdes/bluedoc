@@ -1,0 +1,167 @@
+{
+  "id": "plan-skeleton",
+  "title": "<<What ships>>",
+  "subtitle": "<<One sentence: the change and who it is for.>>",
+  "meta": { "org": "<<Org>>", "kind": "Plan", "type": "plan", "rev": "A", "date": "<<YYYY-MM-DD>>" },
+  "state": [
+    { "label": "proposal: nothing built yet", "kind": "warn" }
+  ],
+  "tldr": "<<What ships, for whom, in how many steps, and how many questions need a pick.>>",
+  "sections": [
+    {
+      "id": "context",
+      "title": "Context",
+      "lead": "<<The current state and why it has to change, in one line.>>",
+      "blocks": [
+        { "type": "text", "md": "<<Today's behaviour with path:line anchors, or replace this block with a canvas of today's system.>>" }
+      ]
+    },
+    {
+      "id": "approach",
+      "title": "Approach",
+      "lead": "<<The proposal in one line.>>",
+      "blocks": [
+        {
+          "type": "canvas",
+          "id": "arch",
+          "title": "<<Proposed design>>",
+          "rootLabel": "<<System>>",
+          "height": 420,
+          "nodes": [
+            { "id": "client", "label": "<<caller>>", "kind": "client", "col": 0, "row": 0 },
+            { "id": "service", "label": "<<existing part>>", "sub": "<<path or technology>>", "col": 1, "row": 0 },
+            { "id": "added", "label": "<<new part>>", "sub": "<<path>>", "state": "proposed", "col": 2, "row": 0 }
+          ],
+          "edges": [
+            { "from": "client", "to": "service", "kind": "data", "label": "<<request>>" },
+            { "from": "service", "to": "added", "kind": "data", "label": "<<what moves>>" }
+          ],
+          "flows": [
+            {
+              "id": "main",
+              "label": "<<The scenario this flow answers>>",
+              "steps": [
+                { "edge": "client->service", "label": "<<Actor, action, object.>>" },
+                { "edge": "service->added", "label": "<<Actor, action, object.>>" }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "compare",
+          "title": "<<What changes for the caller>>",
+          "before": { "label": "Today", "md": "<<Current API response, schema or UI; use code+lang or src+alt instead of md when that fits.>>" },
+          "after": { "label": "Proposed", "md": "<<The same thing after the change.>>" }
+        }
+      ]
+    },
+    {
+      "id": "steps",
+      "title": "Steps",
+      "lead": "<<N steps, each one reviewable change; the order and why.>>",
+      "blocks": [
+        {
+          "type": "steps",
+          "id": "plan",
+          "title": "Implementation order",
+          "items": [
+            {
+              "id": "step-1",
+              "title": "<<Add …: one reviewable change, imperative>>",
+              "status": "todo",
+              "effort": "S",
+              "md": "<<The detail a reviewer needs.>>",
+              "files": ["<<path/one>>"],
+              "refs": ["arch/added"]
+            },
+            {
+              "id": "step-2",
+              "title": "<<Switch …: the next change>>",
+              "status": "todo",
+              "effort": "M",
+              "md": "<<The detail a reviewer needs.>>",
+              "files": ["<<path/two>>"],
+              "refs": ["arch/service"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "files",
+      "title": "Files",
+      "lead": "<<N new files, N edited, N deleted.>>",
+      "blocks": [
+        {
+          "type": "files",
+          "title": "Changed files",
+          "items": [
+            { "path": "<<path/one>>", "action": "add", "why": "<<What the file does.>>", "step": "step-1" },
+            { "path": "<<path/two>>", "action": "edit", "why": "<<What changes in it.>>", "step": "step-2" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "questions",
+      "title": "Open questions",
+      "lead": "Pick one option per question; my recommendation is starred. Your picks go with **Approve plan** or **Request changes**.",
+      "blocks": [
+        {
+          "type": "checklist",
+          "id": "decisions",
+          "title": "Open questions",
+          "numbered": false,
+          "items": [
+            {
+              "id": "question-1",
+              "text": "<<The question the reader must decide>>",
+              "sub": "Recommend <<option>>: <<reason>>.",
+              "recommend": "option-a",
+              "choices": [
+                { "id": "option-a", "label": "<<Option A>>" },
+                { "id": "option-b", "label": "<<Option B>>" }
+              ],
+              "detail": "<<What each option costs and what it changes in the plan.>>"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "risks",
+      "title": "Risks",
+      "lead": "<<The main risk, in one line.>>",
+      "blocks": [
+        {
+          "type": "table",
+          "columns": ["Risk", "Likelihood", "Impact", "Mitigation"],
+          "rows": [
+            ["<<What can go wrong>>", "<<Low/Medium/High>>", "<<Who or what it hurts>>", "<<How the plan prevents or detects it>>"]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "verify",
+      "title": "Verification",
+      "lead": "<<Done when these pass, and where.>>",
+      "blocks": [
+        {
+          "type": "checklist",
+          "id": "verification",
+          "title": "Checks",
+          "items": [
+            {
+              "id": "check-1",
+              "text": "<<Run the check>>",
+              "sub": "<<What it proves.>>",
+              "code": "<<command>>",
+              "verify": "<<The observable result.>>"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

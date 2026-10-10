@@ -1,0 +1,97 @@
+{
+  "id": "review-skeleton",
+  "title": "<<repo>> #<<n>>: <<N>> review findings",
+  "subtitle": "<<What the page holds, in one clause>>. Pick what to do with each; my recommendation is starred.",
+  "meta": { "org": "<<Org>>", "kind": "Review", "type": "review", "rev": "A", "date": "<<YYYY-MM-DD>>" },
+  "state": [
+    { "label": "<<N review comments>>", "kind": "warn" },
+    { "label": "<<N fix in the PR>>", "kind": "warn" },
+    { "label": "<<N follow-up tickets>>", "kind": "info" },
+    { "label": "<<N decline>>", "kind": "todo" }
+  ],
+  "links": [
+    { "label": "<<repo>> #<<n>> (<<topic>>)", "href": "<<PR URL>>" }
+  ],
+  "tldr": "<<How many to fix, ticket and decline, and which findings are real bugs the change introduces.>>",
+  "sections": [
+    {
+      "id": "summary",
+      "title": "Summary",
+      "lead": "Each finding has its options under it, with my recommendation starred. Pick one per finding, comment where you disagree, then press **Send answers**.",
+      "blocks": [
+        {
+          "type": "table",
+          "columns": ["PR", "Finding", "Size", "Recommendation"],
+          "rows": [
+            ["#<<n>>", "[<<finding A, as in its item>>](#item-t1-finding-a)", "major", "<<Fix in PR>>"],
+            ["#<<n>>", "[<<finding B, as in its item>>](#item-t1-finding-b)", "minor", "<<Ticket>>"]
+          ]
+        },
+        {
+          "type": "callout",
+          "kind": "note",
+          "title": "Provenance",
+          "md": "<<Who posted the comments, under which login, at which heads. Delete this callout when provenance does not matter.>>"
+        }
+      ]
+    },
+    {
+      "id": "pr-1",
+      "title": "#<<n>> · <<PR title>>",
+      "lead": "<<N findings and their kind>>. Diff: `main` `<<base>>` → head `<<head>>`, limited to the commented files.",
+      "blocks": [
+        {
+          "type": "checklist",
+          "id": "t1",
+          "title": "Findings · #<<n>>",
+          "numbered": false,
+          "items": [
+            {
+              "id": "finding-a",
+              "text": "<<Finding A, stated as a fact in one line>>",
+              "sub": "Recommend Fix in PR: <<one-line reason>>.",
+              "state": "major",
+              "stateKind": "warn",
+              "recommend": "fix",
+              "choices": [
+                { "id": "fix", "label": "Fix in PR" },
+                { "id": "ticket", "label": "Ticket" },
+                { "id": "decline", "label": "Decline" }
+              ],
+              "detail": "**Reviewer:** <<the finding restated faithfully, with the reviewer's evidence>>\n\n**My reasoning:** <<why this recommendation, citing path:line and what you checked>>\n\n**Fix:** <<the concrete change>>\n\n**Verify:** <<the observable check>>"
+            },
+            {
+              "id": "finding-b",
+              "text": "<<Finding B, stated as a fact in one line>>",
+              "sub": "Recommend Ticket: <<one-line reason>>.",
+              "state": "minor",
+              "stateKind": "info",
+              "recommend": "ticket",
+              "choices": [
+                { "id": "fix", "label": "Fix in PR" },
+                { "id": "ticket", "label": "Ticket" },
+                { "id": "decline", "label": "Decline" }
+              ],
+              "detail": "**Reviewer:** <<the finding restated faithfully, with the reviewer's evidence>>\n\n**My reasoning:** <<why this recommendation, citing path:line and what you checked>>\n\n**Fix:** <<the change the ticket asks for>>\n\n**Verify:** <<the observable check>>\n\n**Reply I'd post:** <<the reply for the thread>>"
+            }
+          ]
+        },
+        {
+          "type": "diff",
+          "id": "diff-1",
+          "title": "<<repo>> #<<n>>",
+          "repo": "<<checkout path relative to this file; or let gitdiff.py --id diff-1 write this block>>",
+          "base": "<<base SHA>>",
+          "head": "<<head SHA>>",
+          "paths": ["<<path/with/findings.ts>>"],
+          "pr": "<<owner/repo#n>>",
+          "note": "Only the commented files. Head `<<head>>`.",
+          "comments": [
+            { "at": "<<path:line-end of finding A>>", "item": "t1/finding-a" },
+            { "at": "<<path:line of finding B>>", "item": "t1/finding-b" }
+          ]
+        }
+      ]
+    }
+  ]
+}

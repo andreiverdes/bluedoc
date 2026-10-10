@@ -1,0 +1,108 @@
+{
+  "id": "docs-skeleton",
+  "title": "<<System or task name>>",
+  "subtitle": "<<One sentence: what the reader can do after reading.>>",
+  "meta": { "org": "<<Org>>", "kind": "<<Architecture, Walkthrough, Runbook, Setup or Change>>", "type": "docs", "rev": "A", "date": "<<YYYY-MM-DD>>" },
+  "state": [
+    { "label": "<<provenance, e.g. read from main at SHA>>", "kind": "info" }
+  ],
+  "tldr": "<<The answer in 1 to 3 sentences.>>",
+  "sections": [
+    {
+      "id": "system",
+      "title": "<<The system>>",
+      "lead": "<<What the drawing shows, as a conclusion.>>",
+      "blocks": [
+        {
+          "type": "canvas",
+          "id": "arch",
+          "title": "<<Drawing title>>",
+          "rootLabel": "<<System>>",
+          "height": 480,
+          "nodes": [
+            { "id": "client", "label": "<<caller>>", "kind": "client", "col": 0, "row": 0 },
+            {
+              "id": "core",
+              "label": "<<main system>>",
+              "sub": "<<path or technology>>",
+              "col": 1,
+              "row": 0,
+              "refs": ["`<<path:line>>`"],
+              "children": {
+                "nodes": [
+                  { "id": "entry", "label": "<<inner part>>", "col": 0, "row": 0 },
+                  { "id": "worker", "label": "<<inner part>>", "kind": "function", "col": 1, "row": 0 }
+                ],
+                "edges": [
+                  { "from": "@left", "to": "entry", "kind": "data" },
+                  { "from": "entry", "to": "worker", "kind": "control", "label": "<<call>>" }
+                ],
+                "flows": [
+                  {
+                    "id": "inside",
+                    "label": "<<What happens inside>>",
+                    "steps": [
+                      { "edge": "@left->entry", "label": "<<Actor, action, object.>>" },
+                      { "edge": "entry->worker", "label": "<<Actor, action, object.>>" }
+                    ]
+                  }
+                ]
+              }
+            },
+            { "id": "store", "label": "<<data store>>", "kind": "db", "col": 2, "row": 0 }
+          ],
+          "edges": [
+            { "from": "client", "to": "core", "kind": "data", "label": "<<request>>" },
+            { "from": "core", "to": "store", "kind": "data", "label": "<<what moves>>" }
+          ],
+          "flows": [
+            {
+              "id": "main",
+              "label": "<<The question this flow answers>>",
+              "steps": [
+                { "edge": "client->core", "label": "<<Actor, action, object.>>", "payload": "<<payload>>" },
+                { "edge": "core->store", "label": "<<Actor, action, object.>>" }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "parts",
+      "title": "<<Components, Terms or Step by step, per the kind's layout>>",
+      "lead": "<<The conclusion of this section.>>",
+      "blocks": [
+        {
+          "type": "table",
+          "columns": ["Part", "What it does", "Source"],
+          "rows": [
+            ["<<part>>", "<<one line>>", "`<<path:line>>`"]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "procedure",
+      "title": "<<Procedure, Rollout or Verification>>",
+      "lead": "<<What the reader ends up with.>>",
+      "blocks": [
+        {
+          "type": "checklist",
+          "id": "procedure",
+          "title": "<<Checklist title>>",
+          "items": [
+            {
+              "id": "step-1",
+              "text": "<<Run the first action>>",
+              "sub": "<<Why, or what it unblocks.>>",
+              "code": "<<command>>",
+              "verify": "<<The observable result.>>",
+              "refs": ["arch/core"]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
