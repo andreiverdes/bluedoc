@@ -135,9 +135,14 @@ STUB_SLIDES = (("title", "Title slide: the deck's title and who presents it"), (
                ("closing", "Closing slide: the ask or next step"))
 MAX_NOTES_BYTES = 2 * 1024        # an artboard's speaker notes, shown under the slide in Present
 FIDELITIES = ("sketch", "wireframe", "hifi")
-BUILTIN_FRAMEWORKS = ("plain", "horizon")
+# what ships with bluedoc (assets/kits, assets/vendor), by id: its label in the brief
+BUILTIN_FRAMEWORKS = {"plain": "Plain kit", "horizon": "HorizonUI", "heroui": "Tailwind + HeroUI", "tailwind": "Tailwind CSS"}
+# were `serve.py add-framework` presets until they shipped: a board may still declare them in frameworks[] (its files
+# or store copy load instead), and a `store` of that name with no copy loads the shipped one
+SHIPPED_PRESETS = ("heroui", "tailwind")
 FRAMEWORK_EXTS = {".css", ".js", ".mjs"}
 BOARD_GAP = 80                    # px between artboards placed without x/y
+SLIDE_GAP = 280                   # px between slides in the slide column: clears their labels down to ~10% zoom
 MAX_SCREEN_BYTES = 24 * 1024      # a screen file above this is a warning: edit fragments in place, don't regrow them
 TOKEN_KEY = re.compile(r"^[a-z][a-z0-9-]*$")
 TOKEN_VALUE = re.compile(r"^[^;{}<>\\]*$")
@@ -595,24 +600,39 @@ def artboard_size(a: dict) -> tuple[float, float] | None:
 
 
 def board_layout(board: dict) -> dict[str, tuple[float, float, float, float]]:
-    """{artboard id: (x, y, w, h)} in board order. An artboard with x and y sits there; else its row is its
-    variantOf source's y (when placed before it), else 0, and it goes BOARD_GAP right of the rightmost
-    artboard already in that row (x 0 in an empty row). template.html places them by the same rule."""
-    out: dict[str, tuple[float, float, float, float]] = {}
+    """{artboard id: (x, y, w, h)} in board order. An artboard with x and y sits there. An unplaced `slide`
+    artboard goes in the slide column, y 0 for the first and SLIDE_GAP below the previous one after that; the
+    column's x is 0 on a board of only slides, else BOARD_GAP right of the rightmost artboard outside it. Any other
+    unplaced artboard's row is its variantOf source's y (when placed before it), else 0, and it goes BOARD_GAP right
+    of the rightmost artboard already in that row (x 0 in an empty row). template.html places them by the same rule."""
+    at: dict[str, tuple[float, float, float, float]] = {}
+    order: list[str] = []
+    column: list[tuple[str, tuple[float, float]]] = []
+    only_slides = True
     for a in board.get("artboards") or []:
-        if not isinstance(a, dict) or not isinstance(a.get("id"), str) or a["id"] in out:
+        if not isinstance(a, dict) or not isinstance(a.get("id"), str) or a["id"] in order:
             continue
         size = artboard_size(a)
         if not size:
             continue
+        order.append(a["id"])
+        only_slides = only_slides and a.get("device") == "slide"
         x, y = a.get("x"), a.get("y")
         if not all(isinstance(v, (int, float)) and not isinstance(v, bool) for v in (x, y)):
-            src = out.get(a.get("variantOf")) if isinstance(a.get("variantOf"), str) else None
+            if a.get("device") == "slide":
+                column.append((a["id"], size))
+                continue
+            src = at.get(a.get("variantOf")) if isinstance(a.get("variantOf"), str) else None
             y = src[1] if src else 0
-            row = [bx + bw for bx, by, bw, _ in out.values() if by == y]
+            row = [bx + bw for bx, by, bw, _ in at.values() if by == y]
             x = max(row) + BOARD_GAP if row else 0
-        out[a["id"]] = (x, y, *size)
-    return out
+        at[a["id"]] = (x, y, *size)
+    cx = 0 if only_slides else max(bx + bw for bx, _, bw, _ in at.values()) + BOARD_GAP
+    cy = 0
+    for aid, (w, h) in column:
+        at[aid] = (cx, cy, w, h)
+        cy += h + SLIDE_GAP
+    return {aid: at[aid] for aid in order}
 
 
 def frameworks_dir() -> Path:
@@ -714,14 +734,15 @@ def validate_board(rep: Report, bw: str, b: dict, doc: dict, doc_path: Path | No
     for i, t in enumerate(b.get("targets") or []):
         if t not in TARGET_DEVICES:
             rep.err(f"{bw}.targets[{i}]", f"'{t}' not in {sorted(TARGET_DEVICES)}")
-    fw_ids = set(BUILTIN_FRAMEWORKS)
+    fw_ids, declared = set(BUILTIN_FRAMEWORKS), set()
     for i, fw in enumerate(b.get("frameworks") or []):
         fwh = f"{bw}.frameworks[{i}]"
         if not need(rep, fwh, fw, "id", "label"):
             continue
         check_id(rep, fwh, fw["id"])
-        if fw["id"] in fw_ids:
-            rep.err(fwh, f"framework id '{fw['id']}' is {'built in' if fw['id'] in BUILTIN_FRAMEWORKS else 'a duplicate'}")
+        if fw["id"] in declared or (fw["id"] in BUILTIN_FRAMEWORKS and fw["id"] not in SHIPPED_PRESETS):
+            rep.err(fwh, f"framework id '{fw['id']}' is {'a duplicate' if fw['id'] in declared else 'built in'}")
+        declared.add(fw["id"])
         fw_ids.add(fw["id"])
         if ("files" in fw) == ("store" in fw):
             rep.err(fwh, "give 'files' (paths from the doc's folder) or 'store' (a `serve.py add-framework` name), not both")
@@ -729,7 +750,7 @@ def validate_board(rep: Report, bw: str, b: dict, doc: dict, doc_path: Path | No
         if "store" in fw:
             check_id(rep, fwh + ".store", fw["store"])
             man = frameworks_dir() / fw["store"] / "manifest.json"
-            if ID_RE.match(fw["store"]) and not man.is_file():
+            if ID_RE.match(fw["store"]) and not man.is_file() and fw["store"] not in SHIPPED_PRESETS:
                 rep.warn(fwh + ".store", f"{man.parent} not found: its screens show the plain kit until the reader runs "
                          f"`serve.py add-framework {fw['store']} <path|url>`")
             continue
@@ -1627,8 +1648,8 @@ def cmd_new(argv: list[str]) -> int:
                     help="review only: one section per PR (pr), or per area of a codebase review (area)")
     ap.add_argument("--target", help=f"design only: comma list of {','.join(TARGET_DEVICES)}; one starter artboard "
                     "and wireframe screen file each, three slides for presentation (default mobile)")
-    ap.add_argument("--framework", help="design only: plain | horizon | <a `serve.py add-framework` name> | auto "
-                    "(default: you fill the brief's framework pick from the project's files; see types/design.md)")
+    ap.add_argument("--framework", help="design only: plain | horizon | heroui | tailwind | <a `serve.py add-framework` "
+                    "name> | auto (default: you fill the brief's framework pick from the project's files; see types/design.md)")
     a = ap.parse_args(argv)
     if a.shape != "pr" and a.type != "review":
         ap.error("--shape is for review docs")
@@ -1639,7 +1660,7 @@ def cmd_new(argv: list[str]) -> int:
     if bad or not targets or len(set(targets)) != len(targets):
         ap.error(f"--target: a comma list of distinct {', '.join(TARGET_DEVICES)}")
     if a.framework and a.framework != "auto" and not ID_RE.match(a.framework):
-        ap.error("--framework: plain, horizon, auto or a store name (lowercase letters, digits, -)")
+        ap.error("--framework: plain, horizon, heroui, tailwind, auto or a store name (lowercase letters, digits, -)")
     if not a.out.name.endswith(DOC_SUFFIXES):
         ap.error(f"name it <name>{DOC_SUFFIXES[0]}: serve.py lists those files")
     if a.out.exists():
@@ -1755,13 +1776,15 @@ def scaffold_design(doc: dict, out: Path, targets: list[str], framework: str) ->
     if framework != "auto":
         item = _item(doc, "brief", "framework").obj
         if framework not in BUILTIN_FRAMEWORKS:
-            try:   # the label `serve.py add-framework` wrote (e.g. "Tailwind + HeroUI"), else the name
+            try:   # the label `serve.py add-framework` wrote (e.g. "Tailwind + daisyUI"), else the name
                 label = str(json.loads((frameworks_dir() / framework / "manifest.json").read_text(encoding="utf-8"))
                             .get("label") or framework)[:MAX_CHOICE_LABEL]
             except (OSError, ValueError, AttributeError):
                 label = framework
             board["frameworks"] = [{"id": framework, "label": label, "store": framework}]
             item["choices"].insert(0, {"id": framework, "label": label})
+        elif not any(c["id"] == framework for c in item["choices"]):
+            item["choices"].insert(0, {"id": framework, "label": BUILTIN_FRAMEWORKS[framework]})
         board["framework"] = framework
         item["recommend"] = framework
         label = next(c["label"] for c in item["choices"] if c["id"] == framework)

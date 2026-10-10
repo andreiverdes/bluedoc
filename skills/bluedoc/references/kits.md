@@ -71,6 +71,26 @@ ReactDOM.createRoot(document.getElementById('root')).render(
 </script>
 ```
 
+## HeroUI
+
+`framework: "heroui"` loads HeroUI's CSS (`@heroui/styles` 3.2.6) and Tailwind's browser build (4.3.3), which
+compiles the fragment's Tailwind utilities in the frame. Use HeroUI's classes, BEM style: `button button--primary`
+(`--secondary --tertiary --outline --ghost --danger --sm --lg --full-width`), `card` with `card__header card__title
+card__description card__content card__footer`, `input`, `label`, `chip chip--success`, `alert alert--warning`,
+`tabs`, `switch`, `separator`, `avatar`, `link`. Its React components don't run. The plain kit isn't loaded (no
+`screen`, `safe`): pad with the safe-area variables. The theme's `accent` token re-skins HeroUI's `--accent`; other
+tokens reach Tailwind as `bg-[var(--bg)]`. `framework: "tailwind"` loads Tailwind's browser build alone.
+
+```html
+<main class="min-h-screen flex flex-col gap-4 px-4 pb-4 pt-[calc(var(--safe-top)+16px)]" data-bd="home">
+  <div class="card" data-bd="today">
+    <div class="card__header"><h2 class="card__title">Today</h2></div>
+    <div class="card__content text-3xl font-semibold">8,412 steps</div>
+  </div>
+  <button class="button button--primary button--full-width" data-bd="start">Start workout</button>
+</main>
+```
+
 ## data-bd
 
 Name every element a reader may comment on: `data-bd="submit"` (letters, digits, `-`, `_`), unique in the screen.
@@ -80,19 +100,20 @@ an unnamed element gets a CSS path from the nearest named one (`el:login/[data-b
 
 ## Frameworks
 
-A board names its own in `frameworks[]`:
+A board names the ones it brings in `frameworks[]`:
 
 - `{"id": "acme-web", "label": "Acme web CSS", "files": ["../web/dist/app.css"]}`: files relative to the doc, under
   a registered folder, `.css`/`.js`/`.mjs`. The server sends only declared files and the files their CSS names with
   `url()` (fonts, icons).
-- `{"id": "heroui", "label": "Tailwind + HeroUI", "store": "heroui"}`: a copy the reader made once with
-  `serve.py add-framework <name> [path|url]`, kept in `~/.bluedoc/frameworks/<name>/`. Presets (pinned URLs, sha256
-  checked): `tailwind`, `heroui` (HeroUI's CSS classes, e.g. `button button--primary`, `card`, `input`, plus Tailwind
-  utilities; no React components), `daisyui` (`btn btn-primary`, `card`… plus Tailwind utilities). Any path or URL
-  works too; `--load FILE` picks the files screens load, `--source FILE --tailwind` compiles a Tailwind source in
-  the frame.
+- `{"id": "acme-tw", "label": "Acme Tailwind", "store": "acme-tw"}`: a copy the reader made once with
+  `serve.py add-framework <name> [path|url]`, kept in `~/.bluedoc/frameworks/<name>/`. Preset (pinned URLs, sha256
+  checked): `daisyui` (`btn btn-primary`, `card`… plus Tailwind utilities). Any path or URL works too; `--load FILE`
+  picks the files screens load, `--source FILE --tailwind` compiles a Tailwind source in the frame.
 
-When the project has its own framework (`package.json`, built CSS), declare those files. Else recommend: web and
-desktop `heroui`, mobile `heroui`, watch and presentation the plain kit, with the `add-framework` command in the
-brief item's detail.
+`plain`, `horizon`, `heroui` and `tailwind` ship with bluedoc: name them in `framework`, with no `frameworks[]` entry
+and no download. A doc from before HeroUI shipped may still carry `{"id": "heroui", "store": "heroui"}`: it loads the
+shipped copy.
+
+When the project has its own framework (`package.json`, built CSS), declare those files. Else recommend: web,
+desktop and mobile `heroui`, watch and presentation the plain kit.
 A missing file or store copy renders the plain kit with a notice bar; the build warns with the path.

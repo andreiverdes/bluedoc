@@ -3858,7 +3858,7 @@ const DEVICE_NAME = { 'watch-round': 'Round watch', 'watch-square': 'Square watc
 const DEVICE_IC = { 'watch-round': 'watch', 'watch-square': 'watch', phone: 'phone', tablet: 'tablet', desktop: 'monitor', browser: 'globe', slide: 'present', custom: 'frame' };
 const BEZEL = { 'watch-round': 12, 'watch-square': 10, phone: 12, tablet: 14 };   // CSS px drawn around the screen
 const FIDELITY = { sketch: 'Sketch', wireframe: 'Wireframe', hifi: 'Hi-fi' };
-const AB_GAP = 80, LIVE_MAX = 12, BK_MIN = 0.02, BK_MAX = 4;
+const AB_GAP = 80, SLIDE_GAP = 280, LIVE_MAX = 12, BK_MIN = 0.02, BK_MAX = 4;
 const SCREENS = (() => { try { const x = JSON.parse(document.getElementById('bp-screens').textContent); return x && typeof x === 'object' && !Array.isArray(x) ? x : null; } catch { return null; } })();
 const SERVED = !SCREENS && /^https?:$/.test(location.protocol);
 const abSize = a => DEVICES[a.device] ? DEVICES[a.device].slice() : [Math.max(1, Math.round(+a.w) || 1), Math.max(1, Math.round(+a.h) || 1)];
@@ -3866,13 +3866,19 @@ const devOf = a => DEVICES[a && a.device] ? a.device : 'custom';
 const boardOf = d => { for (const s of (d && d.sections) || []) for (const b of s.blocks || []) if (b && b.type === 'board') return b; return null; };
 const boardAbs = b => (b && Array.isArray(b.artboards) ? b.artboards : []).filter(a => a && typeof a.id === 'string');
 // where each artboard sits (board px, its screen's top left), as build.py's board_layout places it: its own
-// x,y; else right of the row it joins (its variantOf source's row once that is placed, else row 0), 80 px on
+// x,y; else an unplaced slide goes in the slide column, 280 px below the previous one (the column's x: 0 on a board
+// of only slides, else 80 px right of every other artboard); any other goes 80 px right of the row it joins (its
+// variantOf source's row once that is placed, else row 0)
 function boardLayout(abs) {
-  const at = new Map();
+  const at = new Map(), column = [];
+  let onlySlides = true;
   for (const a of abs) {
+    if (at.has(a.id) || column.some(c => c.a.id === a.id)) continue;
     const [w, hh] = abSize(a);
+    onlySlides = onlySlides && devOf(a) === 'slide';
     let x, y;
     if (Number.isFinite(a.x) && Number.isFinite(a.y)) { x = a.x; y = a.y; }
+    else if (devOf(a) === 'slide') { column.push({ a, w, h: hh }); continue; }
     else {
       const src = a.variantOf && at.get(a.variantOf);
       y = src ? src.y : 0;
@@ -3881,6 +3887,9 @@ function boardLayout(abs) {
     }
     at.set(a.id, { x, y, w, h: hh });
   }
+  const cx = onlySlides ? 0 : Math.max(...[...at.values()].map(p => p.x + p.w)) + AB_GAP;
+  let cy = 0;
+  for (const c of column) { at.set(c.a.id, { x: cx, y: cy, w: c.w, h: c.h }); cy += c.h + SLIDE_GAP; }
   return at;
 }
 // the screen route beside the doc: <stem>.design/<id>.html, or the artboard's own src (relative to the doc)

@@ -16,7 +16,7 @@ Usage:
   serve.py add-framework NAME [PATH|URL] [--load F] [--source F] [--tailwind]
                                                    copy a framework for design boards (`store: NAME`) into
                                                    ~/.bluedoc/frameworks/NAME with a manifest (sizes, sha256);
-                                                   NAME alone fetches a pinned preset: tailwind, heroui, daisyui
+                                                   NAME alone fetches a pinned preset: daisyui
   serve.py run [--port N]                          run in the foreground
 
 One server per user, on 127.0.0.1 (default port 8740, env BLUEDOC_PORT). State lives in
@@ -45,7 +45,7 @@ URLs: /                      home page: every doc under the registered folders, 
                              deletes, an import adds only keys the server lacks. Both need the X-Bluedoc header, the
                              PUT also the key. An `__ann:<id>` value the page can't draw is dropped from a PUT and
                              left out of a read.
-      /__bluedoc/vendor/<path>  files under assets/vendor (HorizonUI, the Sketch font)
+      /__bluedoc/vendor/<path>  files under assets/vendor (HorizonUI, HeroUI, Tailwind's browser build, the Sketch font)
       /<root>/<dir>/<stem>.design/<artboard>.html[?rev=B&theme=T]   a design doc's screen: the artboard's fragment
                              (or revision B's, from the history) wrapped in kits/shell.html with its framework,
                              theme tokens and the inspector. Its own CSP: no network, `sandbox allow-scripts`,
@@ -698,7 +698,11 @@ CORS_TYPES = {".mjs", ".woff", ".woff2", ".ttf", ".otf"}   # fetched in CORS mod
 CSS_URL = re.compile(r"""url\(\s*(['"]?)([^'")]+)\1\s*\)""")
 EXTERNAL_REF = re.compile(r"(?i)^(?:data:|[a-z][a-z0-9+.-]*:|//|#)")
 PLAIN_KIT = ("base.css", "wireframe.css")
-HORIZON_KIT = ("horizon-ui/horizon-ui.css", "horizon-ui/react.js", "horizon-ui/horizon-ui.js")
+# the built-in frameworks under assets/vendor: the files a screen loads, in order. The Tailwind ones also compile
+# the screen's Tailwind classes, in the frame, with Tailwind's browser build.
+VENDOR_KITS = {"horizon": ("horizon-ui/horizon-ui.css", "horizon-ui/react.js", "horizon-ui/horizon-ui.js"),
+               "heroui": ("heroui/heroui.min.css", "heroui/tailwind.js"), "tailwind": ("heroui/tailwind.js",)}
+TAILWIND_KITS = ("heroui", "tailwind")
 MOTION_VARS = {"fast": "--dur-fast", "base": "--dur-base", "slow": "--dur-slow", "ease": "--ease"}
 
 
@@ -826,17 +830,22 @@ def declared_for_url(path: str) -> Path | None:
 def framework_assets(board: dict, fw_id: str, doc_path: Path, fidelity: str) -> tuple[list, list[Path] | None, str | None]:
     """(assets in load order, the Tailwind sources the frame compiles (None without the Tailwind compiler), the label
     of a framework that's missing).
-    plain and horizon ship; a frameworks[] entry loads its declared files or its store copy. When any of that is
-    missing, the screen gets the plain kit and the label for its notice."""
+    plain, horizon, heroui and tailwind ship; a frameworks[] entry loads its declared files or its store copy, and a
+    store named heroui or tailwind with no copy loads the shipped one. When any of that is missing, the screen gets
+    the plain kit and the label for its notice."""
     kit = lambda name: (asset_kind(KITS / name), KITS / name, f"/__bluedoc/kit/{name}?v={kit_version()}")  # noqa: E731
     plain = [kit(n) for n in PLAIN_KIT]
     if fw_id == "plain":
         return plain, None, None
     wire = [kit("wireframe.css")] if fidelity in ("wireframe", "sketch") else []
-    if fw_id == "horizon":
+
+    def vendored(name: str) -> tuple[list, list[Path] | None, None]:
         v = vendor_version()
-        return [(asset_kind(VENDOR / r), VENDOR / r, f"/__bluedoc/vendor/{r}?v={v}") for r in HORIZON_KIT] + wire, None, None
+        return ([(asset_kind(VENDOR / r), VENDOR / r, f"/__bluedoc/vendor/{r}?v={v}") for r in VENDOR_KITS[name]] + wire,
+                [] if name in TAILWIND_KITS else None, None)
     entry = next((f for f in board.get("frameworks") or [] if isinstance(f, dict) and f.get("id") == fw_id), None)
+    if fw_id in VENDOR_KITS and (entry is None or fw_id not in build.SHIPPED_PRESETS):
+        return vendored(fw_id)
     label = str((entry or {}).get("label") or fw_id)
     if entry and isinstance(entry.get("store"), str):
         man = store_manifest(entry["store"])
@@ -845,6 +854,8 @@ def framework_assets(board: dict, fw_id: str, doc_path: Path, fidelity: str) -> 
             assets = [(asset_kind(d / f), d / f, f"/__bluedoc/fw/{quote(entry['store'])}/{quote(f)}?v={v}") for f in man["load"]]
             sources = [d / f for f in man.get("sources") or []] if man.get("compiler") == "tailwind" else None
             return assets + wire, sources, None
+        if entry["store"] in build.SHIPPED_PRESETS:
+            return vendored(entry["store"])
     elif entry and isinstance(entry.get("files"), list) and entry["files"]:
         roots, assets = load_roots(), []
         for f in entry["files"]:
@@ -1555,16 +1566,10 @@ _TW = ("https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.globa
        "a60c785630a06196808cbe79e6f7bdb4abcc8f4421a47b56f29338fc84805e3b", "tailwind.js")
 _TW_LICENSE = ("https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/LICENSE",
                "60e0b68c0f35c078eef3a5d29419d0b03ff84ec1df9c3f9d6e39a519a5ae7985", "licenses/tailwindcss-LICENSE")
-# `add-framework <preset>`: pinned files (url, sha256, saved as), fetched once on the reader's command. Each compiles
-# Tailwind classes in the frame with Tailwind's browser build; HeroUI and daisyUI add their prebuilt component CSS.
+# `add-framework <preset>`: pinned files (url, sha256, saved as), fetched once on the reader's command. daisyUI's
+# prebuilt component CSS, plus Tailwind's browser build to compile Tailwind classes in the frame. heroui and tailwind
+# were presets too; they ship now (assets/vendor/heroui).
 PRESETS = {
-    "tailwind": {"label": "Tailwind CSS", "fetch": (_TW, _TW_LICENSE), "load": ("tailwind.js",)},
-    "heroui": {"label": "Tailwind + HeroUI", "load": ("heroui.min.css", "tailwind.js"), "fetch": (
-        _TW, _TW_LICENSE,
-        ("https://cdn.jsdelivr.net/npm/@heroui/styles@3.2.6/dist/heroui.min.css",
-         "95ac190a78f5f7c2126f365096fdf08326cf206cd0c8fdf0e8532e7185f32a2e", "heroui.min.css"),
-        ("https://cdn.jsdelivr.net/npm/@heroui/styles@3.2.6/LICENSE",
-         "bd087c1ebd511adbab74705ec2b31d63d175e8d422f58c1af54754da02b1d329", "licenses/heroui-LICENSE"))},
     "daisyui": {"label": "Tailwind + daisyUI", "load": ("daisyui.css", "tailwind.js"), "fetch": (
         _TW, _TW_LICENSE,
         ("https://cdn.jsdelivr.net/npm/daisyui@5.7.47/daisyui.css",
@@ -1631,9 +1636,12 @@ def add_framework(name: str, source: str | None, load: list[str], sources: list[
                   label: str | None) -> int:
     """`serve.py add-framework`: copy a preset, a file, a folder or one URL (a file or .tgz) into
     frameworks_dir()/<name>/ with a manifest of each file's size and sha256, and print it."""
+    if source is None and name in build.SHIPPED_PRESETS:
+        print(f"{name} ships with bluedoc: boards use \"framework\": \"{name}\" with no add-framework")
+        return 0
     if not build.ID_RE.match(name) or name in build.BUILTIN_FRAMEWORKS:
         print(f"add-framework: {name!r} must be lowercase letters, digits and dashes, and not "
-              f"{' or '.join(build.BUILTIN_FRAMEWORKS)}", file=sys.stderr)
+              f"{', '.join(build.BUILTIN_FRAMEWORKS)} (they ship with bluedoc)", file=sys.stderr)
         return 2
     preset = PRESETS.get(name) if source is None else None
     if source is None and not preset:

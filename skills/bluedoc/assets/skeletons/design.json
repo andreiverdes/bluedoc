@@ -2,7 +2,7 @@
   "id": "design-skeleton",
   "title": "<<Product: the screens this design shows>>",
   "subtitle": "<<One sentence: what the screens are for and who uses them.>>",
-  "meta": { "org": "<<Org>>", "kind": "Design", "type": "design", "rev": "1", "date": "<<YYYY-MM-DD>>" },
+  "meta": { "org": "<<Org; ACME when the project names none>>", "kind": "Design", "type": "design", "rev": "1", "date": "<<YYYY-MM-DD>>" },
   "state": [
     { "label": "wireframes: hi-fi after your picks", "kind": "warn" }
   ],

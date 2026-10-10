@@ -1,0 +1,5 @@
+@heroui/styles 3.2.6: heroui.min.css = dist/heroui.min.css, sha256 95ac190a78f5f7c2126f365096fdf08326cf206cd0c8fdf0e8532e7185f32a2e
+  licenses/heroui-LICENSE = LICENSE, sha256 bd087c1ebd511adbab74705ec2b31d63d175e8d422f58c1af54754da02b1d329
+@tailwindcss/browser 4.3.3: tailwind.js = dist/index.global.js, sha256 a60c785630a06196808cbe79e6f7bdb4abcc8f4421a47b56f29338fc84805e3b
+  licenses/tailwindcss-LICENSE = LICENSE, sha256 60e0b68c0f35c078eef3a5d29419d0b03ff84ec1df9c3f9d6e39a519a5ae7985
+Fetched unchanged from cdn.jsdelivr.net/npm/<package>@<version>/<path>.
