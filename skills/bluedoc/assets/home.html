@@ -182,9 +182,12 @@ body { font-family: var(--font-hz-sans, Inter, system-ui, sans-serif); -webkit-f
 .bd-card-body { flex: 1; display: flex; flex-direction: column; gap: 6px; padding: 14px 16px 13px; min-width: 0; }
 .bd-card-t { font: 620 15.5px/1.35 var(--font-hz-sans); letter-spacing: -.01em; color: var(--color-hz-fg); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .bd-card:hover .bd-card-t { color: var(--color-hz-accent-fg); }
-.bd-card-s { font-size: 13.5px; line-height: 1.5; color: var(--color-hz-fg-muted); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-.bd-card-f { margin-top: auto; padding-top: 8px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; font-size: 12px; color: var(--color-hz-fg-subtle); }
-.bd-card-f .bd-loc { min-width: 0; max-width: 100%; }
+.bd-card-s { font-size: 13.5px; line-height: 1.5; color: var(--color-hz-fg-muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.bd-card-f { margin-top: auto; padding-top: 8px; display: flex; align-items: center; gap: 5px; min-width: 0; overflow: hidden; font-size: 11.5px; color: var(--color-hz-fg-subtle); white-space: nowrap; }
+.bd-card-f > * { flex: none; }
+.bd-card-f .sep { margin-right: 5px; opacity: .7; }
+.bd-card-f .bd-loc { flex: 0 1 auto; min-width: 44px; gap: 5px; }
+.bd-card-f .bd-prog .tr { width: 48px; }
 .bd-loc { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
 .bd-loc > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bd-prog { display: inline-flex; align-items: center; gap: 7px; font: 500 11.5px var(--font-hz-mono); color: var(--color-hz-fg-muted); white-space: nowrap; }
@@ -193,18 +196,59 @@ body { font-family: var(--font-hz-sans, Inter, system-ui, sans-serif); -webkit-f
 .bd-prog.full .tr i { background: var(--color-hz-success); }
 .bd-card-f .bd-prog { margin-left: auto; }
 
-/* the card picture: a generated blueprint */
-.bd-art { position: relative; flex: none; aspect-ratio: 16 / 10; overflow: hidden; container-type: inline-size; color: var(--bp-ice);
-  background-color: var(--bp-navy-2);
-  background-image: radial-gradient(120% 90% at 50% 0%, rgba(95, 212, 255, .14), transparent 62%),
-    linear-gradient(rgba(95, 212, 255, .14) 1px, transparent 1px), linear-gradient(90deg, rgba(95, 212, 255, .14) 1px, transparent 1px),
-    linear-gradient(rgba(95, 212, 255, .05) 1px, transparent 1px), linear-gradient(90deg, rgba(95, 212, 255, .05) 1px, transparent 1px);
-  background-size: auto, 60px 60px, 60px 60px, 12px 12px, 12px 12px; background-position: center; }
-.bd-art::after { content: ''; position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 -1px 0 rgba(255, 255, 255, .06), inset 0 0 40px rgba(2, 10, 24, .45); }
-.bd-art.err { background-color: #2a1220; background-image: radial-gradient(120% 90% at 50% 0%, rgba(255, 122, 133, .18), transparent 62%),
-    linear-gradient(rgba(255, 122, 133, .14) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 122, 133, .14) 1px, transparent 1px),
-    linear-gradient(rgba(255, 122, 133, .05) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 122, 133, .05) 1px, transparent 1px); }
-.bd-art > svg.cv { position: absolute; inset: 0; width: 100%; height: 100%; }
+/* the card hero: one navy frame for every type (status pill top-left, type pill top-right); each type draws its own
+   element in it: review ±lines, plan step timeline, docs root drawing, or an icon and one stat */
+.bd-art { --pt: calc(12px + 22px + 4cqw); position: relative; flex: none; aspect-ratio: 16 / 10; overflow: hidden; container-type: inline-size; color: var(--bp-ice);
+  background-color: #0b2648;
+  background-image: linear-gradient(rgba(95, 212, 255, .12) 1px, transparent 1px), linear-gradient(90deg, rgba(95, 212, 255, .12) 1px, transparent 1px), linear-gradient(180deg, #0d2b52, #0a2140);
+  background-size: 16px 16px, 16px 16px, auto; background-position: -1px -1px, -1px -1px, 0 0; }
+.bd-art.err { background-color: #2a1220;
+  background-image: linear-gradient(rgba(255, 138, 122, .12) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 138, 122, .12) 1px, transparent 1px), linear-gradient(180deg, #3a1624, #240d18); }
+.bd-art.thumb { --pt: 9cqw; width: 64px; border-radius: 8px; background-size: 8px 8px, 8px 8px, auto; box-shadow: inset 0 0 0 1px rgba(95, 212, 255, .2); }
+.bd-art.thumb :is(.cap, .lg, .more, .bd-el-cap) { display: none; }
+.bd-pill { position: absolute; top: 12px; z-index: 1; display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 10px; border-radius: 999px; box-sizing: border-box;
+  font: 600 11px/1 var(--font-hz-sans); white-space: nowrap; background: var(--pb); color: var(--pc); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pc) 20%, transparent); }
+.bd-pill .lb { overflow: hidden; text-overflow: ellipsis; }
+.bd-pill .dot { flex: none; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.bd-pill.st { left: 12px; max-width: calc(100% - 100px); }
+.bd-pill.type { right: 12px; }
+.bd-pill.t-review { --pb: #0b3a2a; --pc: #74e6ab; } .bd-pill.t-plan { --pb: #2d2350; --pc: #c3a6ff; }
+.bd-pill.t-docs { --pb: #0b2f52; --pc: #5fd4ff; } .bd-pill.t-other { --pb: #2a2f38; --pc: #c9d2de; }
+.bd-pill.warn { --pb: #5b3b00; --pc: #ffc35a; } .bd-pill.info { --pb: #0b2f52; --pc: #5fd4ff; }
+.bd-pill.risk { --pb: #4d1620; --pc: #ff8a7a; } .bd-pill.ok { --pb: #0b3a2a; --pc: #74e6ab; }
+.bd-el { position: absolute; inset: var(--pt) 8% 8%; display: flex; flex-direction: column; justify-content: center; min-width: 0; }
+.bd-el .cap, .bd-el-cap { font: 500 3.5cqw/1.3 var(--font-hz-mono); letter-spacing: .08em; text-transform: uppercase; color: #9fc6e8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* review: +N / −N, files and PRs, one dot per finding coloured by size */
+.bd-rev .loc { display: flex; align-items: baseline; gap: 0 7cqw; font: 700 min(12.6cqw, calc(128cqw / var(--n))) / 1 var(--font-hz-mono); letter-spacing: -.02em; white-space: nowrap; }
+.bd-rev .loc .a { color: #74e6ab; } .bd-rev .loc .d { color: #ff8a7a; }
+.bd-rev .cap { margin-top: 3.4cqw; }
+.bd-rev .fd { display: flex; flex-wrap: wrap; align-items: center; gap: 1.5cqw; margin-top: 4.4cqw; min-width: 0; }
+.bd-rev .fd i { flex: none; width: 3.7cqw; height: 3.7cqw; border-radius: 50%; }
+.bd-rev .fd .blocker { background: #ff8a7a; } .bd-rev .fd .major { background: #ffc35a; } .bd-rev .fd .minor { background: #5fd4ff; } .bd-rev .fd .nit { background: #8a94a3; }
+.bd-rev .lg { margin-left: 1.5cqw; min-width: 0; font: 500 3.7cqw/1.2 var(--font-hz-sans); color: #9fc6e8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bd-rev .fd.wrap .lg { flex-basis: 100%; margin: .6cqw 0 0; }
+/* plan: a dot per step (status) with a bar (effort), then A/M/D/R file counts */
+.bd-pl { flex-direction: row; align-items: center; justify-content: space-between; gap: 6cqw; }
+.bd-pl .tl { position: relative; flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5.2cqw; }
+.bd-pl .tl::before { content: ''; position: absolute; left: 1.85cqw; top: 1.85cqw; bottom: 1.85cqw; width: 1px; transform: translateX(-.5px); background: rgba(95, 212, 255, .35); }
+.bd-pl .ps { position: relative; display: flex; align-items: center; height: 3.7cqw; }
+.bd-pl .pd { flex: none; box-sizing: border-box; width: 3.7cqw; height: 3.7cqw; border-radius: 50%; background: #0b2648; border: max(1px, .37cqw) solid #9fc6e8; }
+.bd-pl .pb { flex: none; height: 2.2cqw; margin-left: 4.8cqw; border-radius: 1.1cqw; background: rgba(95, 212, 255, .3); }
+.bd-pl .pe { margin-left: 2.2cqw; font: 500 3.3cqw/1 var(--font-hz-mono); color: #9fc6e8; }
+.bd-pl .ps.done .pd { background: #74e6ab; border-color: #74e6ab; }
+.bd-pl .ps.doing .pd { background: #5fd4ff; border-color: #5fd4ff; }
+.bd-pl .ps.blocked .pd { background: #ff8a7a; border-color: #ff8a7a; }
+.bd-pl .ps:is(.done, .doing) .pb { background: rgba(95, 212, 255, .5); }
+.bd-pl .ps.blocked .pb { background: rgba(255, 138, 122, .5); }
+.bd-pl .more { padding-left: 8.5cqw; font: 500 3.3cqw/1 var(--font-hz-mono); color: #9fc6e8; }
+.bd-pl .fc { flex: none; display: flex; flex-direction: column; gap: 3.3cqw; font: 700 5.6cqw/1 var(--font-hz-mono); white-space: nowrap; }
+.bd-pl .pn.add { color: #74e6ab; } .bd-pl .pn.edit { color: #5fd4ff; } .bd-pl .pn.delete { color: #ff8a7a; } .bd-pl .pn.rename { color: #ffc35a; }
+.bd-pl .pn.zero { opacity: .4; }
+/* docs: the root drawing, its first flow running on hover, kind · levels · flows under it */
+.bd-drw { position: absolute; inset: var(--pt) 5% 7%; }
+.bd-drw.capd { bottom: calc(8% + 6cqw); }
+.bd-el-cap { position: absolute; left: 8%; right: 8%; bottom: 8%; }
+.bd-art svg.cv { display: block; width: 100%; height: 100%; }
 .bd-art .cv .n { fill: rgba(16, 52, 96, .78); stroke: var(--bp-ice); stroke-opacity: .8; stroke-width: 1.1px; }
 .bd-art .cv .n.live { stroke: var(--bp-green); stroke-opacity: 1; }
 .bd-art .cv .n.local { stroke: var(--bp-cyan); stroke-opacity: 1; }
@@ -212,91 +256,27 @@ body { font-family: var(--font-hz-sans, Inter, system-ui, sans-serif); -webkit-f
 .bd-art .cv .n.removed, .bd-art .cv .n.replaced { stroke: var(--bp-red); stroke-opacity: 1; stroke-dasharray: 5 3; }
 .bd-art .cv .n.ext { stroke-dasharray: 5 3; }
 .bd-art .cv .kid { fill: rgba(95, 212, 255, .10); stroke: var(--bp-cyan); stroke-opacity: .5; stroke-width: .8px; }
-.bd-art .cv .e { fill: none; stroke-width: 1.2px; stroke: var(--bp-cyan); stroke-opacity: .7; }
+.bd-art .cv .e { fill: none; stroke-width: 1.2px; stroke: var(--bp-cyan); stroke-opacity: .7; stroke-dasharray: 3 3; }
 .bd-art .cv .e.control { stroke: var(--bp-ice); stroke-opacity: .5; stroke-dasharray: 5 4; }
 .bd-art .cv .e.async { stroke: var(--bp-violet); stroke-dasharray: 2 3; }
 .bd-art .cv .e.power { stroke: var(--bp-amber); }
 .bd-art .cv .e.dep { stroke: var(--bp-dim); stroke-opacity: .6; stroke-dasharray: 3 3; }
 .bd-art .cv .e.replaced { stroke: var(--bp-red); stroke-dasharray: 5 3; }
 .bd-art .cv .fl { fill: none; stroke: var(--bp-cyan); stroke-width: 3px; stroke-linecap: round; stroke-dasharray: 0 14; opacity: 0; }
-.bd-card:hover .bd-art .cv .fl, .bd-card:focus-visible .bd-art .cv .fl { opacity: 1; animation: bd-flow-s 1s linear infinite; }
+:is(.bd-card, .bd-bcard, .bd-row):is(:hover, :focus-visible) .bd-art .cv .fl { opacity: 1; animation: bd-flow-s 1s linear infinite; }
 @keyframes bd-flow-s { to { stroke-dashoffset: -14; } }
 .bd-art .cv text { font-family: var(--font-hz-mono); fill: var(--bp-ice); }
 .bd-art .cv g.nodes { filter: drop-shadow(0 0 5px rgba(95, 212, 255, .28)); }
-.bd-pill { position: absolute; top: 10px; z-index: 1; display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 9px; border-radius: 999px; box-sizing: border-box;
-  font: 600 11px/1 var(--font-hz-sans); letter-spacing: .01em; white-space: nowrap; color: #eaf4ff;
-  background: rgba(6, 20, 42, .58); box-shadow: inset 0 0 0 1px rgba(170, 210, 255, .24); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
-.bd-pill svg { width: 12px; height: 12px; }
-.bd-pill.type { right: 10px; }
-.bd-pill.type .bd-dot { width: 7px; height: 7px; box-shadow: 0 0 6px var(--t); }
-.bd-pill.st { left: 10px; max-width: calc(100% - 104px); }
-.bd-pill.st .lb { overflow: hidden; text-overflow: ellipsis; }
-.bd-pill svg { flex: none; }
-@container (max-width: 250px) {
-  .bd-pill.type .lb { display: none; }
-  .bd-pill.type { padding: 0 7px; }
-  .bd-pill.st { max-width: calc(100% - 52px); }
-  .bd-tb { display: none; }
-}
-.bd-pill.warn { background: rgba(255, 196, 107, .94); color: #2d1b00; box-shadow: 0 2px 10px rgba(255, 196, 107, .35); }
-.bd-pill.info { background: rgba(95, 212, 255, .92); color: #02253a; box-shadow: 0 2px 10px rgba(95, 212, 255, .3); }
-.bd-pill.risk { background: rgba(255, 122, 133, .94); color: #33030a; box-shadow: 0 2px 10px rgba(255, 122, 133, .35); }
-.bd-pill.ok { background: rgba(111, 227, 161, .94); color: #03301a; box-shadow: 0 2px 10px rgba(111, 227, 161, .35); }
-/* review picture: files as +/- bars, findings as dots */
-.bd-dif { position: absolute; inset: calc(10px + 22px + 4cqw) 7% 9%; display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 7cqw; align-items: center; }
-.bd-dif .rows { display: flex; flex-direction: column; gap: 1.5cqw; }
-.bd-dif .row { display: flex; align-items: center; gap: .8cqw; height: 2.3cqw; }
-.bd-dif .row .stub { height: 100%; border-radius: 1cqw; background: rgba(214, 233, 255, .2); flex: none; }
-.bd-dif .row .a, .bd-dif .row .d { height: 100%; border-radius: 1cqw; flex: none; }
-.bd-dif .row .a { background: var(--bp-green); box-shadow: 0 0 6px rgba(111, 227, 161, .45); }
-.bd-dif .row .d { background: var(--bp-red); box-shadow: 0 0 6px rgba(255, 122, 133, .45); }
-.bd-dif .big { font: 650 8cqw/1 var(--font-hz-mono); letter-spacing: -.03em; color: var(--bp-green); white-space: nowrap; text-shadow: 0 0 18px rgba(111, 227, 161, .35); }
-.bd-dif .big.del { margin-top: 1.4cqw; color: var(--bp-red); text-shadow: 0 0 18px rgba(255, 122, 133, .35); }
-.bd-dif .cap { margin-top: 2.6cqw; font: 500 3.2cqw/1.3 var(--font-hz-mono); letter-spacing: .1em; text-transform: uppercase; color: #8fb6de; }
-.bd-dif .dots { display: flex; flex-wrap: wrap; align-items: center; gap: 1.3cqw; margin-top: 2.4cqw; }
-.bd-dif .dots i { display: block; border-radius: 50%; }
-.bd-dif .dots .blocker { width: 3.4cqw; height: 3.4cqw; background: var(--bp-red); box-shadow: 0 0 8px var(--bp-red); }
-.bd-dif .dots .major { width: 2.8cqw; height: 2.8cqw; background: var(--bp-amber); box-shadow: 0 0 6px rgba(255, 196, 107, .7); }
-.bd-dif .dots .minor { width: 2.2cqw; height: 2.2cqw; background: var(--bp-cyan); }
-.bd-dif .dots .nit { width: 1.6cqw; height: 1.6cqw; background: var(--bp-dim); }
-/* plan picture: steps as a timeline (status dot, effort bar), files as A/M/D/R counts */
-.bd-plan { position: absolute; inset: calc(10px + 22px + 4cqw) 7% 9%; display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 6cqw; align-items: center; }
-.bd-plan.solo { grid-template-columns: minmax(0, 1fr); }
-.bd-plan .tl { position: relative; display: flex; flex-direction: column; gap: 2cqw; }
-.bd-plan .tl::before { content: ''; position: absolute; left: 1.6cqw; top: 1.9cqw; bottom: 1.9cqw; width: 1px; transform: translateX(-.5px); background: rgba(214, 233, 255, .3); }
-.bd-plan .ps { position: relative; display: flex; align-items: center; gap: 2cqw; height: 3.8cqw; }
-.bd-plan .pd { flex: none; box-sizing: border-box; width: 3.2cqw; height: 3.2cqw; border-radius: 50%; background: var(--bp-navy-2); border: max(1px, .4cqw) solid rgba(214, 233, 255, .5); }
-.bd-plan .pb { flex: none; height: 2.3cqw; border-radius: 1.2cqw; background: rgba(214, 233, 255, .2); }
-.bd-plan .pe { font: 600 2.6cqw/1 var(--font-hz-mono); color: #8fb6de; }
-.bd-plan .ps.done .pd { background: var(--bp-green); border-color: var(--bp-green); box-shadow: 0 0 7px rgba(111, 227, 161, .6); }
-.bd-plan .ps.done .pb { background: rgba(111, 227, 161, .55); }
-.bd-plan .ps.doing .pd { background: radial-gradient(circle, var(--bp-cyan) 0 36%, var(--bp-navy-2) 42%); border-color: var(--bp-cyan); box-shadow: 0 0 8px rgba(95, 212, 255, .7); }
-.bd-plan .ps.doing .pb { background: linear-gradient(90deg, var(--bp-cyan), rgba(95, 212, 255, .35)); box-shadow: 0 0 6px rgba(95, 212, 255, .4); }
-.bd-plan .ps.blocked .pd { background: var(--bp-red); border-color: var(--bp-red); box-shadow: 0 0 7px rgba(255, 122, 133, .6); }
-.bd-plan .ps.blocked .pb { background: repeating-linear-gradient(135deg, rgba(255, 122, 133, .65) 0 .8cqw, rgba(255, 122, 133, .22) .8cqw 1.6cqw); }
-.bd-plan .more { margin-top: 2cqw; padding-left: 5.2cqw; font: 500 2.7cqw/1 var(--font-hz-mono); color: #8fb6de; }
-.bd-plan .fc { display: flex; flex-direction: column; gap: 1.2cqw; }
-.bd-plan.solo .fc { flex-flow: row wrap; justify-content: center; gap: 2cqw 6cqw; }
-.bd-plan.solo .fc .cap { flex-basis: 100%; text-align: center; }
-.bd-plan .pn { display: flex; align-items: baseline; gap: 1.6cqw; font: 650 7cqw/1 var(--font-hz-mono); letter-spacing: -.03em; white-space: nowrap; }
-.bd-plan .pn i { font: 700 2.7cqw/1 var(--font-hz-mono); font-style: normal; letter-spacing: 0; padding: .5cqw .9cqw; border-radius: .8cqw; color: var(--bp-navy-0); transform: translateY(-.6cqw); }
-.bd-plan .pn.add { color: var(--bp-green); text-shadow: 0 0 18px rgba(111, 227, 161, .35); } .bd-plan .pn.add i { background: var(--bp-green); }
-.bd-plan .pn.edit { color: #8cb8ff; text-shadow: 0 0 18px rgba(140, 184, 255, .35); } .bd-plan .pn.edit i { background: #8cb8ff; }
-.bd-plan .pn.delete { color: var(--bp-red); text-shadow: 0 0 18px rgba(255, 122, 133, .35); } .bd-plan .pn.delete i { background: var(--bp-red); }
-.bd-plan .pn.rename { color: var(--bp-amber); text-shadow: 0 0 18px rgba(255, 196, 107, .35); } .bd-plan .pn.rename i { background: var(--bp-amber); }
-.bd-plan .cap { margin-top: 1.4cqw; font: 500 3.2cqw/1.3 var(--font-hz-mono); letter-spacing: .08em; text-transform: uppercase; color: #8fb6de; }
-/* other picture: a big type glyph and a title block */
-.bd-gly { position: absolute; inset: 0; display: grid; place-items: center; }
-.bd-gly .c1, .bd-gly .c2 { position: absolute; left: 50%; top: 46%; border-radius: 50%; transform: translate(-50%, -50%); border: 1px dashed rgba(214, 233, 255, .18); }
-.bd-gly .c1 { width: 44cqw; height: 44cqw; } .bd-gly .c2 { width: 64cqw; height: 64cqw; border-color: rgba(214, 233, 255, .09); }
-.bd-gly svg { width: 22cqw; height: 22cqw; margin-top: -6%; color: var(--bp-cyan); stroke-width: 1.3; filter: drop-shadow(0 0 10px rgba(95, 212, 255, .55)); }
-.bd-art.err .bd-gly svg { color: var(--bp-red); filter: drop-shadow(0 0 10px rgba(255, 122, 133, .55)); }
-.bd-tb { position: absolute; right: 6%; bottom: 8%; display: grid; grid-auto-flow: column; border: 1px solid rgba(214, 233, 255, .4); font: 500 2.9cqw/1 var(--font-hz-mono); letter-spacing: .08em; text-transform: uppercase; color: #a9c8ea; background: rgba(6, 20, 42, .35); }
-.bd-tb span { padding: 1.4cqw 1.8cqw; white-space: nowrap; }
-.bd-tb span + span { border-left: 1px solid rgba(214, 233, 255, .3); }
-.bd-tb b { color: var(--bp-ice); font-weight: 600; margin-left: .8cqw; }
-.bd-art.err .bd-tb { left: 6%; right: 6%; grid-auto-flow: row; color: #ffc2c8; border-color: rgba(255, 122, 133, .45); }
-.bd-art.err .bd-tb span { overflow: hidden; text-overflow: ellipsis; text-transform: none; letter-spacing: 0; }
+/* docs with a hero, other docs, and every doc whose type has no data yet: an icon and one big stat */
+.bd-stat { flex-direction: row; align-items: center; justify-content: flex-start; gap: 7cqw; left: 11%; }
+.bd-stat .ic { flex: none; width: 19.5cqw; height: 19.5cqw; color: #5fd4ff; }
+.bd-stat .ic svg { width: 100%; height: 100%; stroke-width: 2; filter: drop-shadow(0 0 8px rgba(95, 212, 255, .45)); }
+.bd-stat .v { min-width: 0; }
+.bd-stat b { display: block; font: 700 min(12.6cqw, calc(80cqw / var(--n))) / 1 var(--font-hz-mono); letter-spacing: -.02em; color: #d6e9ff; white-space: nowrap; }
+.bd-stat .cap { margin-top: 2.6cqw; white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.bd-stat.err .ic { color: #ff8a7a; }
+.bd-stat.err .ic svg { filter: drop-shadow(0 0 8px rgba(255, 138, 122, .45)); }
+.bd-stat .msg { font: 500 3.9cqw/1.35 var(--font-hz-mono); color: #ffc2c8; word-break: break-word; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
 
 /* list */
 .bd-list { border-radius: var(--radius-hz-card); background: var(--color-hz-surface); box-shadow: var(--hz-shadow-1); }
@@ -314,11 +294,7 @@ a.bd-row:hover .tx .t { color: var(--color-hz-accent-fg); }
 .bd-row .c-folder, .bd-row .c-rev, .bd-row .c-edited { font-size: 12.5px; color: var(--color-hz-fg-muted); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bd-row .c-folder .bd-loc { max-width: 100%; }
 .bd-row .c-rev { font-family: var(--font-hz-mono); font-size: 12px; }
-.bd-ticon { flex: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 9px; color: var(--bp-cyan);
-  background: var(--bp-navy-2); background-image: linear-gradient(rgba(95, 212, 255, .16) 1px, transparent 1px), linear-gradient(90deg, rgba(95, 212, 255, .16) 1px, transparent 1px); background-size: 8px 8px; background-position: center;
-  box-shadow: inset 0 0 0 1px rgba(95, 212, 255, .25); }
-.bd-ticon svg { width: 16px; height: 16px; filter: drop-shadow(0 0 4px rgba(95, 212, 255, .6)); }
-.bd-ticon.err { color: var(--bp-red); }
+.bd-row .c-doc .bd-art { flex: none; }
 
 /* board */
 .bd-board { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(230px, 1fr); gap: 14px; align-items: start; overflow-x: auto; padding-bottom: 10px; scroll-snap-type: x proximity; }
@@ -330,15 +306,13 @@ a.bd-row:hover .tx .t { color: var(--color-hz-accent-fg); }
   transition: transform var(--hz-dur-2) var(--hz-ease-out), box-shadow var(--hz-dur-2) var(--hz-ease-out); }
 .bd-bcard:hover { transform: translateY(-2px); box-shadow: var(--hz-shadow-2); }
 .bd-bcard:focus-visible { box-shadow: var(--hz-shadow-focus), var(--hz-shadow-1); }
-.bd-bcard .bd-art { aspect-ratio: auto; height: 84px; }
-.bd-bcard .bd-pill { top: auto; bottom: 8px; height: 20px; font-size: 10.5px; }
-.bd-bcard .bd-pill.type { right: 8px; }
-.bd-bcard .bd-dif, .bd-bcard .bd-plan { inset: 12% 7% 12%; }
-.bd-bcard .bd-tb { display: none; }
+.bd-bcard .bd-pill { top: 10px; }
+.bd-bcard .bd-pill.type { right: 10px; }
 .bd-bcard .b { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px 11px; }
 .bd-bcard .t { font: 600 13.5px/1.35 var(--font-hz-sans); color: var(--color-hz-fg); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.bd-bcard .f { display: flex; align-items: center; gap: 10px; font-size: 11.5px; color: var(--color-hz-fg-subtle); }
-.bd-bcard .f .bd-loc { flex: 1; }
+.bd-bcard .bd-card-f { padding-top: 2px; font-size: 11.5px; }
+.bd-bcard .bd-card-f .rv { display: none; }   /* narrow column: folder, age and progress */
+.bd-bcard .bd-prog .tr { width: 40px; }
 
 /* groups by folder */
 .bd-group + .bd-group { margin-top: 28px; }
@@ -535,23 +509,24 @@ const LOGO = '<rect width="22" height="22" rx="6" fill="#0b2a4f"/><path d="M0 7.
 const Logo = ({ size = 22 }) => e('svg', { viewBox: '0 0 22 22', width: size, height: size, 'aria-hidden': true, dangerouslySetInnerHTML: { __html: LOGO } });
 const Brand = ({ mark }) => e('a', { className: 'bd-brand', href: '/', 'aria-label': 'bluedoc, all docs' }, e(Logo), !mark && e('span', null, 'blue', e('b', null, 'doc')));
 const Loc = ({ d, terms }) => e('span', { className: 'bd-loc', title: d.root.path + '/' + d.path }, e(Folder, { size: 14 }), e('span', null, ...hl(d.root.name + (d.dir ? '/' + d.dir : ''), terms)));
-function Prog({ st }) {
+function Prog({ st, bare }) {
   if (!st.total) return null;
   return e('span', { className: 'bd-prog' + (st.did === st.total ? ' full' : ''), title: `${st.p.decided}/${st.p.dec} decided, ${st.p.done}/${st.p.steps} steps done` },
-    e('span', { className: 'tr' }, e('i', { style: { width: `${st.did / st.total * 100}%` } })), `${st.did}/${st.total}`);
+    e('span', { className: 'tr' }, e('i', { style: { width: `${st.did / st.total * 100}%` } })), !bare && `${st.did}/${st.total}`);
 }
 const revText = d => (d.rev ? `Rev ${d.rev}${d.revs > 1 ? ` of ${d.revs}` : ''}` : '');
 const PILL_TONE = { risk: 'danger', info: 'info', warn: 'warning', ok: 'success' };
+// [tone, label] of the status pill, or null when nothing needs saying
 function statusPill(st, d) {
-  if (st.errors) return ['risk', Icons.Error, "Doesn't build"];
-  if (st.approved) return ['ok', Icons.Check, d.rev ? `Approved · rev ${d.rev}` : 'Approved'];
-  if (st.waiting) return ['info', Icons.Clock, st.changesSent ? 'Changes requested' : 'Answers sent'];
-  if (st.awaiting) return ['warn', Icons.Clipboard, 'Awaiting approval'];
-  if (st.needs) return ['warn', Icons.Flag, `${st.p.dec - st.p.decided} to decide`];
+  if (st.errors) return ['risk', "Doesn't build"];
+  if (st.approved) return ['ok', d.rev ? `Approved · rev ${d.rev}` : 'Approved'];
+  if (st.waiting) return ['info', st.changesSent ? 'Changes requested' : 'Answers sent'];
+  if (st.awaiting) return ['warn', 'Awaiting approval'];
+  if (st.needs) return ['warn', `${st.p.dec - st.p.decided} to decide`];
   return null;
 }
 
-/* ---------- card pictures ---------- */
+/* ---------- card hero: one frame, one element per type ---------- */
 const S = { live: 'live', local: 'local', proposed: 'proposed', unverified: 'unverified', removed: 'removed', replaced: 'replaced' };
 function edgePath(a, b) {
   const ax = a.x + a.w / 2, ay = a.y + a.h / 2, bx = b.x + b.w / 2, by = b.y + b.h / 2, dx = bx - ax, dy = by - ay;
@@ -581,16 +556,18 @@ function nodeShape(n, cls) {
     default: return e('rect', { className: cls, vectorEffect: ns, width: w, height: h, rx: 6 });
   }
 }
-function CanvasArt({ p }) {
-  const nodes = p.nodes;
+function CanvasArt({ c }) {
+  const nodes = c.nodes;
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
   for (const n of nodes) { x0 = Math.min(x0, n.x); y0 = Math.min(y0, n.y); x1 = Math.max(x1, n.x + n.w); y1 = Math.max(y1, n.y + n.h); }
-  const pad = Math.max(50, (x1 - x0) * 0.07), top = pad * 1.5;   // room for the pills
-  const vb = [x0 - pad, y0 - top, x1 - x0 + 2 * pad, y1 - y0 + pad + top];
-  const paths = p.edges.filter(([a, b]) => nodes[a] && nodes[b]).map(([a, b, k], i) => ({ i, k: k || 'data', d: edgePath(nodes[a], nodes[b]) }));
+  const pad = Math.max(30, (x1 - x0) * 0.04);
+  const vb = [x0 - pad, y0 - pad, x1 - x0 + 2 * pad, y1 - y0 + 2 * pad];
+  const paths = c.edges.filter(([a, b]) => nodes[a] && nodes[b]).map(([a, b, k], i) => ({ i, k: k || 'data', d: edgePath(nodes[a], nodes[b]) }));
+  // on hover the first root flow runs; a drawing without flows runs its data and async edges
+  const play = c.play ? new Set(c.play) : null;
   return e('svg', { className: 'cv', viewBox: vb.join(' '), preserveAspectRatio: 'xMidYMid meet', 'aria-hidden': true },
     e('g', null, paths.map(x => e('path', { key: x.i, className: 'e ' + x.k, vectorEffect: 'non-scaling-stroke', d: x.d }))),
-    e('g', null, paths.filter(x => x.k === 'data' || x.k === 'async').map(x => e('path', { key: x.i, className: 'fl', vectorEffect: 'non-scaling-stroke', d: x.d }))),
+    e('g', null, paths.filter(x => (play ? play.has(x.i) : x.k === 'data' || x.k === 'async')).map(x => e('path', { key: x.i, className: 'fl', vectorEffect: 'non-scaling-stroke', d: x.d }))),
     e('g', { className: 'nodes' }, nodes.map((n, i) => {
       const label = n.label || '', fs = Math.max(15, Math.min(n.h * 0.3, 30, (n.w - 18) / Math.max(1, label.length * 0.62)));
       const fit = Math.floor((n.w - 14) / (fs * 0.62)), text = label.length > fit ? label.slice(0, Math.max(1, fit - 1)) + '…' : label;
@@ -601,57 +578,57 @@ function CanvasArt({ p }) {
         e('text', { x: n.w / 2, y: kids ? n.h * 0.32 : n.h / 2, fontSize: fs, textAnchor: 'middle', dominantBaseline: 'central' }, text));
     })));
 }
-const hash = s => { let x = 7; for (const c of String(s)) x = (x * 31 + c.charCodeAt(0)) >>> 0; return x; };
-function DiffArt({ p, d }) {
-  const bars = (p.bars || []).slice(0, 7), max = Math.max(1, ...bars.map(([a, b]) => a + b)), f = p.findings || {};
-  const len = n => (n ? 4 + 46 * Math.log1p(n) / Math.log1p(max) : 0);
-  const dots = [];
-  for (const k of ['blocker', 'major', 'minor', 'nit']) for (let i = 0; i < Math.min(f[k] || 0, 12); i++) dots.push(e('i', { key: k + i, className: k }));
-  return e('div', { className: 'bd-dif', 'aria-hidden': true },
-    e('div', { className: 'rows' }, bars.map(([a, b], i) => e('div', { key: i, className: 'row' },
-      e('span', { className: 'stub', style: { width: `${10 + hash(d.key + i) % 22}%` } }),
-      a > 0 && e('span', { className: 'a', style: { width: `${len(a) * a / (a + b)}%` } }),
-      b > 0 && e('span', { className: 'd', style: { width: `${len(b) * b / (a + b) || 2}%` } })))),
-    e('div', null,
-      e('div', { className: 'big' }, `+${p.add || 0}`), e('div', { className: 'big del' }, `−${p.dele || 0}`),
-      e('div', { className: 'cap' }, plural(p.files || 0, 'file')),
-      dots.length > 0 && e('div', { className: 'dots' }, dots)));
+function DrawingEl({ c }) {
+  const cap = [c.kind, c.levels && plural(c.levels, 'level'), c.flows && plural(c.flows, 'flow')].filter(Boolean).join(' · ');
+  return e(F, null, e('div', { className: 'bd-drw' + (cap ? ' capd' : '') }, e(CanvasArt, { c })), cap && e('div', { className: 'bd-el-cap' }, cap));
 }
-function GlyphArt({ d, p }) {
-  const Icon = d.errors ? Icons.Error : TYPE_ICON[d.type];
-  const cells = d.errors ? [[d.firstError || "doesn't build"]]
-    : [['sect', p.sections], ['list', p.checklists], ['tbl', p.tables], ['code', p.code], ['card', p.cards]].filter(([, n]) => n).slice(0, 3);
-  return e(F, null, e('div', { className: 'bd-gly', 'aria-hidden': true }, e('span', { className: 'c2' }), e('span', { className: 'c1' }), e(Icon)),
-    cells.length > 0 && e('div', { className: 'bd-tb', 'aria-hidden': true }, cells.map(([k, n]) => e('span', { key: k }, k, n != null && e('b', null, String(n).padStart(2, '0'))))));
+const SIZES = ['blocker', 'major', 'minor', 'nit'];
+function ReviewEl({ c }) {
+  const f = c.findings || {}, add = `+${c.add || 0}`, del = `−${c.del || 0}`, dots = [];
+  for (const k of SIZES) for (let i = 0; i < (f[k] || 0) && dots.length < 12; i++) dots.push(e('i', { key: k + i, className: k }));
+  return e('div', { className: 'bd-el bd-rev' },
+    e('div', { className: 'loc', style: { '--n': add.length + del.length } }, e('b', { className: 'a' }, add), e('b', { className: 'd' }, del)),
+    e('div', { className: 'cap' }, `${plural(c.files || 0, 'file')} · ${plural(c.prs || 0, 'PR')}`),
+    dots.length > 0 && e(ReviewDots, { dots, legend: SIZES.filter(k => f[k]).map(k => `${f[k]} ${k}`).join(' · ') }));
 }
-const EFFORT_W = { S: 30, M: 54, L: 80 };
+// the legend follows the dots on one line when both fit (a dot ≈ 5.2cqw, a legend character ≈ 1.9cqw of 84), else goes under them
+function ReviewDots({ dots, legend }) {
+  return e('div', { className: 'fd' + (dots.length * 5.2 + legend.length * 1.9 > 82 ? ' wrap' : '') }, dots, e('span', { className: 'lg' }, legend));
+}
+const EFFORT_W = { S: 26, M: 38, L: 48 };   // bar length in cqw
 const FILE_ACTS = [['add', 'A'], ['edit', 'M'], ['delete', 'D'], ['rename', 'R']];
-function PlanArt({ p, mini }) {
-  const steps = p.steps || [], fc = p.files || {}, dec = (p.decisions || {}).total || 0;
-  const max = mini ? 4 : 6, shown = steps.length > max ? steps.slice(0, max - 1) : steps;
-  const acts = FILE_ACTS.filter(([k]) => fc[k] || (k !== 'rename' && FILE_ACTS.some(([j]) => fc[j])));
-  const cap = [steps.length && plural(steps.length, 'step'), dec && plural(dec, 'decision')].filter(Boolean).join(' · ');
-  const capEl = !mini && cap && e('div', { className: 'cap' }, cap);
-  return e('div', { className: 'bd-plan' + (steps.length && acts.length ? '' : ' solo'), 'aria-hidden': true },
-    steps.length > 0 && e('div', null,
-      e('div', { className: 'tl' }, shown.map(([s, eff], i) => e('div', { key: i, className: 'ps ' + s },
-        e('span', { className: 'pd' }), e('span', { className: 'pb', style: { width: `${EFFORT_W[eff] || 42}%` } }), eff && e('span', { className: 'pe' }, eff)))),
-      shown.length < steps.length && e('div', { className: 'more' }, `+${steps.length - shown.length} more`),
-      !acts.length && capEl),
-    acts.length > 0 && e('div', { className: 'fc' },
-      acts.slice(0, mini ? 3 : 4).map(([k, l]) => e('div', { key: k, className: 'pn ' + k }, e('i', null, l), String(fc[k] || 0))),
-      capEl));
+function PlanEl({ c }) {
+  const steps = c.steps || [], fc = c.files || {}, shown = steps.length > 5 ? steps.slice(0, 4) : steps;
+  return e('div', { className: 'bd-el bd-pl' },
+    steps.length > 0 && e('div', { className: 'tl' }, shown.map(([s, eff], i) => e('div', { key: i, className: 'ps ' + s },
+      e('i', { className: 'pd' }), e('i', { className: 'pb', style: { width: `${EFFORT_W[eff] || 32}cqw` } }), eff && e('span', { className: 'pe' }, eff))),
+      shown.length < steps.length && e('div', { className: 'more' }, `+${steps.length - shown.length} more`)),
+    e('div', { className: 'fc' }, FILE_ACTS.map(([k, l]) => e('div', { key: k, className: 'pn ' + k + (fc[k] ? '' : ' zero') }, `${l} ${fc[k] || 0}`))));
 }
-function Art({ d, st, mini }) {
-  const p = d.preview || {};
-  const planBody = p.kind === 'plan' && ((p.steps || []).length || Object.values(p.files || {}).some(Boolean));
-  const body = !d.errors && planBody ? e(PlanArt, { p, mini })
-    : !d.errors && p.kind === 'canvas' && p.nodes && p.nodes.length ? e(CanvasArt, { p })
-    : !d.errors && p.kind === 'diff' ? e(DiffArt, { p, d }) : e(GlyphArt, { d, p });
-  const pill = !mini && statusPill(st, d);
-  return e('div', { className: 'bd-art' + (d.errors ? ' err' : '') }, body,
-    pill && e('span', { className: 'bd-pill st ' + pill[0], title: pill[2] }, e(pill[1]), e('span', { className: 'lb' }, pill[2])),
-    e('span', { className: 'bd-pill type', title: TYPE_ONE[d.type] }, e('span', { className: 'bd-dot t-' + d.type }), e('span', { className: 'lb' }, TYPE_ONE[d.type])));
+const HERO_ICON = { chart: Icons.Chart, doc: Icons.FileText, flag: Icons.Flag, bolt: Icons.Zap, clock: Icons.Clock, users: Icons.Users, bug: Icons.Debug,
+  box: Icons.Box, check: Icons.Check, globe: Icons.Globe, lock: Icons.Lock, list: Icons.List };
+function StatEl({ icon, value, label }) {
+  return e('div', { className: 'bd-el bd-stat' }, e('span', { className: 'ic' }, e(HERO_ICON[icon] || Icons.FileText)),
+    e('div', { className: 'v' }, e('b', { style: { '--n': Math.max(2, value.length) } }, value), label && e('div', { className: 'cap' }, label)));
+}
+const ErrorEl = ({ d }) => e('div', { className: 'bd-el bd-stat err' }, e('span', { className: 'ic' }, e(Icons.Error)),
+  e('div', { className: 'v' }, e('div', { className: 'msg' }, d.firstError || "doesn't build")));
+// the index's card fields say which element the doc gets (serve.py card()); none of them is ever blank
+function heroElement(d) {
+  const c = d.card || {};
+  if (d.errors) return e(ErrorEl, { d });
+  if (c.nodes && c.nodes.length) return e(DrawingEl, { c });
+  if (c.steps) return e(PlanEl, { c });
+  if ('add' in c) return e(ReviewEl, { c });
+  if (c.hero) return e(StatEl, { icon: c.hero.icon, value: c.hero.value, label: c.hero.label });
+  return e(StatEl, { icon: c.icon, value: String(c.sections || 0), label: (c.sections === 1 ? 'section' : 'sections') });
+}
+// size: card (both pills), board (type pill; the column says the status), thumb (list row: element only)
+function CardHero({ d, st, size }) {
+  const pill = size === 'card' && statusPill(st, d);
+  return e('div', { className: `bd-art ${size}` + (d.errors ? ' err' : ''), 'aria-hidden': size === 'thumb' || undefined }, heroElement(d),
+    pill && e('span', { className: 'bd-pill st ' + pill[0], title: pill[1] }, e('span', { className: 'dot' }), e('span', { className: 'lb' }, pill[1])),
+    size !== 'thumb' && e('span', { className: 'bd-pill type t-' + d.type }, TYPE_ONE[d.type]));
 }
 
 /* ---------- hero drawing ---------- */
@@ -763,7 +740,7 @@ function Decisions({ docs, sts }) {
 }
 function ByType({ docs, sts, onType }) {
   const n = { docs: 0, review: 0, plan: 0, other: 0 }, f = { blocker: 0, major: 0, minor: 0, nit: 0 };
-  for (const d of docs) { n[d.type]++; const pf = (d.preview || {}).findings; if (pf) for (const k in f) f[k] += pf[k] || 0; }
+  for (const d of docs) { n[d.type]++; const cf = (d.card || {}).findings; if (cf) for (const k in f) f[k] += cf[k] || 0; }
   const total = docs.length || 1, anyF = Object.values(f).some(Boolean);
   return e(Card, { title: null, description: null, className: 'bd-w' },
     e('div', { className: 'bd-w-head' }, e(Icons.PieChart), 'By type', e('span', { className: 'r' }, plural(docs.length, 'doc'))),
@@ -786,22 +763,26 @@ function Waiting({ docs, sts }) {
 }
 
 /* ---------- doc views ---------- */
+// the pieces every view shares: CardHero, the summary lines and the footer
+const summary = (d, m, terms) => (m.snip ? hl(m.snip, terms) : md(d.subtitle || plain(d.tldr).slice(0, 260), terms));
+const Foot = ({ d, st, terms }) => e('div', { className: 'bd-card-f' }, e(Loc, { d, terms }),
+  ...[['rv', revText(d)], ['ago', ago(d.mtime)]].filter(([, t]) => t).map(([k, t]) => e('span', { key: k, className: k }, e('span', { className: 'sep' }, '·'), t)),
+  e(Prog, { st, bare: true }));
 function DocCard({ d, st, m, terms }) {
   return e('a', { className: 'bd-card', href: d.url, 'data-res': '' },
-    e(Art, { d, st }),
+    e(CardHero, { d, st, size: 'card' }),
     e('div', { className: 'bd-card-body' },
       e('div', { className: 'bd-card-t bd-md' }, ...md(d.title, terms)),
-      e('div', { className: 'bd-card-s bd-md' }, ...(m.snip ? hl(m.snip, terms) : md(d.subtitle || plain(d.tldr).slice(0, 260), terms))),
-      e('div', { className: 'bd-card-f' }, e(Loc, { d, terms }), d.rev && e('span', null, revText(d)), e('span', null, ago(d.mtime)), e(Prog, { st }))));
+      e('div', { className: 'bd-card-s bd-md' }, ...summary(d, m, terms)),
+      e(Foot, { d, st, terms })));
 }
 function DocRow({ d, st, m, terms }) {
-  const Icon = d.errors ? Icons.Error : TYPE_ICON[d.type], pill = statusPill(st, d);
-  const [tone, label] = pill ? [PILL_TONE[pill[0]], pill[2]]
+  const pill = statusPill(st, d);
+  const [tone, label] = pill ? [PILL_TONE[pill[0]], pill[1]]
     : !st.total ? ['neutral', 'Nothing to do'] : st.did === st.total ? ['success', 'Done'] : st.did ? ['neutral', 'In progress'] : ['neutral', 'Not started'];
   return e('a', { className: 'bd-row', href: d.url, 'data-res': '' },
-    e('span', { className: 'c-doc' }, e('span', { className: 'bd-ticon' + (d.errors ? ' err' : ''), title: TYPE_ONE[d.type] }, e(Icon)),
-      e('span', { className: 'tx' }, e('span', { className: 't bd-md' }, ...md(d.title, terms)),
-        e('span', { className: 's bd-md' }, ...(m.snip ? hl(m.snip, terms) : md(d.subtitle || plain(d.tldr).slice(0, 200), terms))))),
+    e('span', { className: 'c-doc', title: TYPE_ONE[d.type] }, e(CardHero, { d, st, size: 'thumb' }),
+      e('span', { className: 'tx' }, e('span', { className: 't bd-md' }, ...md(d.title, terms)), e('span', { className: 's bd-md' }, ...summary(d, m, terms)))),
     e('span', { className: 'c-folder' }, e(Loc, { d, terms })),
     e('span', { className: 'c-status' }, e(Badge, { tone, size: 'sm', variant: 'soft' }, label)),
     e('span', { className: 'c-prog' }, e(Prog, { st })),
@@ -809,10 +790,9 @@ function DocRow({ d, st, m, terms }) {
     e('span', { className: 'c-edited' }, ago(d.mtime)));
 }
 const ListHead = () => e('div', { className: 'bd-row head', 'aria-hidden': true }, ...['Doc', 'Folder', 'Status', 'Progress', 'Rev', 'Edited'].map(t => e('span', { key: t }, t)));
-function BoardCard({ d, st, m, terms }) {
-  return e('a', { className: 'bd-bcard', href: d.url, 'data-res': '' }, e(Art, { d, st, mini: true }),
-    e('div', { className: 'b' }, e('div', { className: 't bd-md' }, ...md(d.title, terms)),
-      e('div', { className: 'f' }, e(Loc, { d, terms }), e(Prog, { st }), !st.total && e('span', null, ago(d.mtime)))));
+function BoardCard({ d, st, terms }) {
+  return e('a', { className: 'bd-bcard', href: d.url, 'data-res': '' }, e(CardHero, { d, st, size: 'board' }),
+    e('div', { className: 'b' }, e('div', { className: 't bd-md' }, ...md(d.title, terms)), e(Foot, { d, st, terms })));
 }
 function Board({ rows, terms }) {
   return e('div', { className: 'bd-board' }, BOARD.map(([id, label, dot]) => {

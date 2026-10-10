@@ -24,8 +24,9 @@ URLs: /                      home page: every doc under the registered folders, 
       /__bluedoc/index.json  what the home page shows about every doc
       /__bluedoc/ping?path=  server check; with a doc's URL path, also who reads replies and its saved approval
       /__bluedoc/vendor/<path>  files under assets/vendor (HorizonUI for the home page)
-Rendering validates the doc (errors show as a page) and records its meta.rev in the history file,
-exactly as build.py does, so the page always shows the current JSON and its revisions.
+Rendering validates the doc (errors show as a page), records its meta.rev in the history file, exactly as build.py
+does, and fills each `diff` block that references a git range (diffref.py: its cache, local git, then `gh pr diff`),
+so the page always shows the current JSON and its revisions.
 
 Replies: Send answers posts to /__bluedoc/reply, Request changes to /__bluedoc/changes, Approve plan to
 /__bluedoc/approve. Each is saved next to the doc (<name>.reply.md/.json, <name>.changes.md/.json,
@@ -66,10 +67,6 @@ MAX_DEPTH, MAX_BODY, SEARCH_CHARS = 8, 4 * 1024 * 1024, 8000   # SEARCH_CHARS ke
 KINDS = ("answers", "changes", "approval")
 REPLY_SUFFIX = {"answers": "reply", "changes": "changes", "approval": "approval"}   # <stem>.<suffix>.md/.json
 REPLY_ROUTES = {"/__bluedoc/reply": "answers", "/__bluedoc/changes": "changes", "/__bluedoc/approve": "approval"}
-# meta.kind words that make a doc type "docs" when meta.type is unset (after the plan and review rules)
-DOCS_KINDS = {"architecture", "walkthrough", "runbook", "setup", "reference", "proposal", "change", "changes", "plan",
-              "status", "guide", "design", "spec", "rfc", "adr", "overview", "tutorial", "onboarding", "explainer", "playbook"}
-FINDING_SIZES = ("blocker", "major", "minor", "nit")
 
 
 # ---------- docs on disk ----------
@@ -193,51 +190,85 @@ def text_of(x, out: list[str], skip=("files", "code", "id", "href", "x", "y", "w
         out.append(x)
 
 
-def doc_type(meta: dict) -> str:
-    """docs | review | plan | other: meta.type when set, else read from meta.kind. template.html follows
-    the same rule; the home page reads the result from the index."""
-    if meta.get("type") in build.DOC_TYPES:
-        return meta["type"]
-    kind = str(meta.get("kind") or "").strip().lower()
-    if kind.startswith("plan") or kind == "implementation plan":
-        return "plan"
-    if "review" in kind:
-        return "review"
-    return "docs" if set(re.findall(r"[a-z]+", kind)) & DOCS_KINDS else "other"
+def scope_depth(scope: dict) -> int:
+    """Levels of a canvas scope: 1, plus the deepest `children` below it."""
+    kids = [n["children"] for n in scope.get("nodes") or [] if isinstance(n, dict) and isinstance(n.get("children"), dict)]
+    return 1 + max((scope_depth(k) for k in kids), default=0)
 
 
-def all_blocks(doc: dict):
-    """Every block, depth-first, including the blocks inside checklist items."""
-    def walk(blocks):
-        for b in blocks or []:
-            if isinstance(b, dict):
-                yield b
+def scope_flows(scope: dict) -> int:
+    """Flows in a canvas scope and every scope nested in it."""
+    kids = [n["children"] for n in scope.get("nodes") or [] if isinstance(n, dict) and isinstance(n.get("children"), dict)]
+    return len(scope.get("flows") or []) + sum(scope_flows(k) for k in kids)
+
+
+def canvas_card(canvas: dict) -> dict:
+    nodes, at = [], {}
+    for n in canvas["nodes"]:
+        if not isinstance(n, dict) or "id" not in n:
+            continue
+        kids = len((n.get("children") or {}).get("nodes") or [])
+        w, h = n.get("w") or (240 if kids else 180), n.get("h") or (140 if kids else 80)
+        cx = n["x"] if n.get("x") is not None else (n.get("col") or 0) * 250
+        cy = n["y"] if n.get("y") is not None else (n.get("row") or 0) * 160
+        at[n["id"]] = len(nodes)
+        node = {"x": round(cx - w / 2), "y": round(cy - h / 2), "w": round(w), "h": round(h), "label": str(n.get("label") or "")[:40]}
+        node.update({k: n[k] for k in ("kind", "state") if n.get(k)})
+        if kids:
+            node["c"] = kids
+        nodes.append(node)
+    edges, edge_at = [], {}
+    for e in canvas.get("edges") or []:
+        if isinstance(e, dict) and e.get("from") in at and e.get("to") in at:
+            edge_at[str(e.get("id") or f"{e['from']}->{e['to']}")] = len(edges)
+            edges.append([at[e["from"]], at[e["to"]], e.get("kind") or ""])
+    play: list[int] = []
+    flow = next((f for f in canvas.get("flows") or [] if isinstance(f, dict)), None)
+    for step in (flow or {}).get("steps") or []:
+        if isinstance(step, dict):
+            for eid in ([step["edge"]] if step.get("edge") else []) + list(step.get("edges") or []):
+                i = edge_at.get(str(eid))
+                if i is not None and i not in play:
+                    play.append(i)
+    out = {"nodes": nodes, "edges": edges, "levels": scope_depth(canvas), "flows": scope_flows(canvas)}
+    if play:
+        out["play"] = play
+    return out
+
+
+def card(doc: dict, dtype: str, doc_path: Path) -> dict:
+    """What the home card's hero draws, and nothing else, so the index stays small.
+    review: add, del, files, prs, findings = {blocker, major, minor, nit}, from the expanded diffs (cache and local
+    git only, never gh). plan: steps = [status, effort] per step (first 24); files = counts per action (move counts
+    as rename); decisions = {total, decided} over decision items, decided only when the author carried picks over.
+    docs: kind, levels, flows and the first canvas's root drawing: nodes with x, y = top-left in canvas units, placed
+    as the template does (centre = x/y, else col*250, row*160; size w/h, else 180x80, or 240x140 for a node with
+    children), c = child count; edges = [from, to, kind] by node index; play = the edges the first root flow walks.
+    A doc whose type has none of that: its `hero`, else {icon: 'doc', sections: N}."""
+    blocks = list(build.all_blocks(doc))
+    if dtype == "review":
+        diffs = [b for b in blocks if b.get("type") == "diff"]
+        if diffs:
+            import diffref   # noqa: PLC0415 (lazy: the index only needs it for reviews)
+            if any(diffref.is_ref(b) for b in diffs):
+                expanded, _ = diffref.expanded_copy(doc, doc_path, allow_remote=False)
+                diffs = [b for b in build.all_blocks(expanded) if b.get("type") == "diff"]
+            add = dele = files = 0
+            for f in (f for b in diffs for f in b.get("files") or [] if isinstance(f, dict) and f.get("status") != "context"):
+                n_add, n_del = f.get("add"), f.get("del")
+                if n_add is None or n_del is None:
+                    lines = [ln for hk in f.get("hunks") or [] if not hk.get("context") for ln in hk.get("lines") or []]
+                    n_add, n_del = sum(ln.startswith("+") for ln in lines), sum(ln.startswith("-") for ln in lines)
+                add, dele, files = add + int(n_add), dele + int(n_del), files + 1
+            findings = {k: 0 for k in build.FINDING_SIZES}
+            for b in blocks:
                 if b.get("type") == "checklist":
                     for it in b.get("items") or []:
-                        if isinstance(it, dict):
-                            yield from walk(it.get("blocks"))
-    for s in doc.get("sections") or []:
-        yield from walk(s.get("blocks"))
-
-
-def preview(doc: dict, dtype: str) -> dict:
-    """The card picture's data: a plan's steps and files, the root drawing of the first canvas, the size of a
-    review's diff, or block counts.
-    Plan: steps = [status, effort] per step (first 24); files = counts per action (move counts as rename);
-    decisions = {total, decided} over decision items, decided only when the author carried picks over.
-    Canvas nodes: x, y = top-left in canvas units, placed as the template does (centre = x/y, else col*250, row*160;
-    size w/h, else 180x80, or 240x140 for a node with children); c = child count; edges = [from, to, kind] by node index."""
-    blocks = list(all_blocks(doc))
-    canvas = next((b for b in blocks if b.get("type") == "canvas" and b.get("nodes")), None)
-    diffs = [b for b in blocks if b.get("type") == "diff"]
-    findings = {k: 0 for k in FINDING_SIZES}
-    for b in blocks:
-        if b.get("type") == "checklist":
-            for it in b.get("items") or []:
-                if isinstance(it, dict) and it.get("state") in findings:
-                    findings[it["state"]] += 1
-    out: dict = {"findings": findings} if any(findings.values()) else {}
-    if dtype == "plan":
+                        if isinstance(it, dict) and it.get("state") in findings:
+                            findings[it["state"]] += 1
+            prs = len({str(d.get("pr") or d.get("id") or i) for i, d in enumerate(diffs)})
+            return {"add": add, "del": dele, "files": files, "prs": prs, "findings": findings}
+    elif dtype == "plan":
         steps = [[str(it.get("status") or "todo"), str(it.get("effort") or "")]
                  for b in blocks if b.get("type") == "steps" for it in b.get("items") or [] if isinstance(it, dict)]
         actions: dict[str, str] = {}
@@ -246,51 +277,26 @@ def preview(doc: dict, dtype: str) -> dict:
                 for f in b.get("items") or []:
                     if isinstance(f, dict) and f.get("path"):
                         actions[str(f["path"])] = "rename" if f.get("action") == "move" else str(f.get("action") or "")
-        decisions = [it for b in blocks if b.get("type") == "checklist" for it in b.get("items") or []
-                     if isinstance(it, dict) and it.get("choices")]
-        dec: dict = {"total": len(decisions)}
-        decided = sum(1 for it in decisions if it.get("choice"))
-        if decided:
-            dec["decided"] = decided
-        out.update(kind="plan", steps=steps[:24], files={k: sum(a == k for a in actions.values()) for k in ("add", "edit", "delete", "rename")},
-                   decisions=dec)
-    elif diffs and (dtype == "review" or not canvas):
-        files = [f for d in diffs for f in d.get("files") or [] if isinstance(f, dict) and f.get("status") != "context"]
-        bars = []
-        for f in files:
-            add, dele = f.get("add"), f.get("del")
-            if add is None or dele is None:
-                lines = [ln for hk in f.get("hunks") or [] if not hk.get("context") for ln in hk.get("lines") or []]
-                add, dele = sum(ln.startswith("+") for ln in lines), sum(ln.startswith("-") for ln in lines)
-            bars.append([int(add), int(dele)])
-        out.update(kind="diff", files=len(files), add=sum(a for a, _ in bars), dele=sum(d for _, d in bars),
-                   bars=sorted(bars, key=lambda x: -(x[0] + x[1]))[:12])
-    elif canvas:
-        nodes, at = [], {}
-        for n in canvas["nodes"]:
-            if not isinstance(n, dict) or "id" not in n:
-                continue
-            kids = len((n.get("children") or {}).get("nodes") or [])
-            w, h = n.get("w") or (240 if kids else 180), n.get("h") or (140 if kids else 80)
-            cx = n["x"] if n.get("x") is not None else (n.get("col") or 0) * 250
-            cy = n["y"] if n.get("y") is not None else (n.get("row") or 0) * 160
-            at[n["id"]] = len(nodes)
-            node = {"x": round(cx - w / 2), "y": round(cy - h / 2), "w": round(w), "h": round(h), "label": str(n.get("label") or "")[:40]}
-            node.update({k: n[k] for k in ("kind", "state") if n.get(k)})
-            if kids:
-                node["c"] = kids
-            nodes.append(node)
-        edges = [[at[e["from"]], at[e["to"]], e.get("kind") or ""] for e in canvas.get("edges") or []
-                 if isinstance(e, dict) and e.get("from") in at and e.get("to") in at]
-        out.update(kind="canvas", nodes=nodes, edges=edges)
-    else:
-        count = lambda t: sum(b.get("type") == t for b in blocks)  # noqa: E731
-        out.update(kind="counts", sections=len(doc.get("sections") or []), checklists=count("checklist"),
-                   tables=count("table"), code=count("code"), cards=count("cards"))
-    return out
+        if steps or actions:
+            decisions = [it for b in blocks if b.get("type") == "checklist" for it in b.get("items") or []
+                         if isinstance(it, dict) and it.get("choices")]
+            dec: dict = {"total": len(decisions)}
+            decided = sum(1 for it in decisions if it.get("choice"))
+            if decided:
+                dec["decided"] = decided
+            return {"steps": steps[:24], "files": {k: sum(a == k for a in actions.values()) for k in ("add", "edit", "delete", "rename")},
+                    "decisions": dec}
+    elif dtype == "docs":
+        canvas = next((b for b in blocks if b.get("type") == "canvas" and b.get("nodes")), None)
+        if canvas:
+            return {"kind": str((doc.get("meta") or {}).get("kind") or ""), **canvas_card(canvas)}
+    hero = doc.get("hero")
+    if isinstance(hero, dict) and hero.get("value") is not None:
+        return {"hero": {k: str(hero[k]) for k in ("icon", "value", "label") if hero.get(k) is not None}}
+    return {"icon": "doc", "sections": len(doc.get("sections") or [])}
 
 
-_cache: dict[str, tuple[float, dict]] = {}
+_cache: dict[str, tuple[tuple[float, float, float], dict]] = {}
 _hist_cache: dict[str, tuple[float, tuple[int, list[int]]]] = {}
 
 
@@ -319,11 +325,22 @@ def history_info(p: Path) -> tuple[int, list[int]]:
     return res
 
 
+def mtime(p: Path) -> float:
+    try:
+        return p.stat().st_mtime
+    except OSError:
+        return 0.0
+
+
 def summarize(p: Path) -> dict:
-    """What the home page needs about one doc, cached by mtime."""
+    """What the home page needs about one doc, cached by the mtimes of the doc, its history (a contract problem is
+    an error only while meta.rev is new) and its diff cache (a review card's line counts)."""
+    import diffref   # noqa: PLC0415
     st = p.stat()
+    keyed = lambda: (st.st_mtime, mtime(build.history_path(p)), mtime(diffref.cache_path(p)))  # noqa: E731
+    key = keyed()
     hit = _cache.get(str(p))
-    if hit and hit[0] == st.st_mtime:
+    if hit and hit[0] == key:
         info = dict(hit[1])
     else:
         info = {"title": stem(p), "errors": 0}
@@ -331,7 +348,7 @@ def summarize(p: Path) -> dict:
             doc = json.loads(p.read_text(encoding="utf-8"))
             rep = build.validate(doc, p)
             meta = doc.get("meta") or {}
-            dtype = doc_type(meta)
+            dtype = build.doc_type(meta)
             items = []
 
             def scan(blocks):
@@ -353,11 +370,12 @@ def summarize(p: Path) -> dict:
                 "rev": str(meta.get("rev") or ""), "date": meta.get("date") or "",
                 "sections": [s.get("title") or "" for s in doc.get("sections") or []],
                 "items": items, "errors": len(rep.errors), "firstError": rep.errors[0] if rep.errors else "",
-                "text": " ".join(words)[:SEARCH_CHARS], "preview": preview(doc, dtype),
+                "text": " ".join(words)[:SEARCH_CHARS], "card": card(doc, dtype, p),
             })
         except (OSError, ValueError, TypeError, AttributeError) as e:
             info.update({"errors": 1, "firstError": f"cannot read: {e}", "type": "other"})
-        _cache[str(p)] = (st.st_mtime, info)
+        # the card may just have written the diff cache: key on the files as they are now
+        _cache[str(p)] = (keyed(), info)
         info = dict(info)
     info["mtime"] = st.st_mtime
     info["revs"], info["built"] = history_info(p)
@@ -443,7 +461,9 @@ def render(p: Path) -> tuple[int, str]:
         doc = json.loads(p.read_text(encoding="utf-8"))
     except (OSError, ValueError) as e:
         return 500, error_page(p, [f"cannot read: {e}"])
-    rep = build.validate(doc, p)
+    # validate expands diff refs on a copy (cache, local git, then gh) and so warms the cache build.build reads;
+    # it also applies the type contract, as errors only while meta.rev is new
+    rep = build.validate(doc, p, allow_remote=True)
     if rep.errors:
         return 422, error_page(p, rep.errors)
     try:
@@ -451,7 +471,9 @@ def render(p: Path) -> tuple[int, str]:
             history, _ = build.sync_history(p, doc)
     except build.HistoryError as e:
         return 422, error_page(p, [str(e)])
-    return 200, build.build(doc, build.TEMPLATE.read_text(encoding="utf-8"), history)
+    # the history keeps refs; build expands them in the page's doc and in older revisions. validate already showed
+    # the doc's own expansion errors; an older revision whose range is gone shows an empty diff
+    return 200, build.build(doc, build.TEMPLATE.read_text(encoding="utf-8"), history, diff_path=p, problems=[])
 
 
 # ---------- inbox: replies the agent waits for ----------
@@ -573,6 +595,16 @@ def make_handler(port: int, default_to: str):
                 media = media_for_url(u.path)
                 if media:
                     return self.send_media(media)
+                # an old link to a rendered <stem>.html: send it to the doc that replaced it
+                if u.path.endswith(".html"):
+                    for suffix in SUFFIXES:
+                        target = u.path[: -len(".html")] + suffix
+                        if doc_for_url(target):
+                            self.send_response(302)
+                            self.send_header("Location", target + (("#" + u.fragment) if u.fragment else ""))
+                            self.send_header("Content-Length", "0")
+                            self.end_headers()
+                            return
                 return self.send(404, "<!doctype html><title>Not found</title><p>No bluedoc at this address. <a href='/'>All docs</a></p>")
             if q.get("raw"):
                 return self.send(200, doc.read_bytes(), "application/json; charset=utf-8")

@@ -3,10 +3,14 @@
 
 Usage:
   build.py doc.json                 validate, lint, record the revision (view it with serve.py)
-  build.py doc.json -o out.html     same, plus a standalone HTML file for sharing offline (media inlined)
+  build.py doc.json -o out.html     same, plus a standalone HTML file for sharing offline (media and diffs inlined)
   build.py doc.json --check         validate and lint only
   build.py doc.json --strict        treat lint warnings as errors
   build.py doc.json --show-rev B    print revision B, rebuilt from the history, as JSON
+  build.py new TYPE out.bluedoc.json [--title T] [--kind K]
+                                    write the fill-in skeleton of a docs|review|plan|other doc
+  build.py patch doc.json KEY [--set f=v ...] [--json OBJ] [--append OBJ] [--delete] [--change LINE ...] [--no-bump]
+                                    change one object by its annotator key, bump meta.rev, validate, record
 
 serve.py renders the JSON with assets/template.html on every request, so normal work needs no
 HTML file at all: write the JSON, run build.py, open the serve.py URL.
@@ -16,6 +20,25 @@ Revisions: every build (and every serve.py render) records the document under it
 appends; the same rev replaces that entry. The page embeds the history, so readers can switch
 revisions and compare two. --no-history skips reading and writing it.
 
+Type contracts: each meta.type needs its data (review: a diff and sized findings; plan: steps and
+files blocks; docs: a canvas or a hero). Missing data is an error on a new meta.rev and a warning
+on a rev the history already has, so old revisions keep rendering.
+
+Diff refs: a diff block with base and head and no files is expanded from git (cache file
+<name>.diffcache.json, then `git diff`, then `gh pr diff`) by scripts/diffref.py when validating,
+serving and writing -o.
+
+patch keys: doc, meta, header, tldr, status, section:<sec>, heading:<sec>, lead:<sec>,
+  block:<blockPath>, item:<checklist>/<item>, row:<blockPath>/<r>, card:<blockPath>/<i>,
+  step:<blockPath>/<step>, file:<blockPath>/<path>, node:<canvas>/<node>[/<child>…],
+  comment:<diff>/<i>, para:<blockPath>/<i>, media:<blockPath>, compare:<blockPath>/<before|after>.
+  <blockPath> is <section>/<index> or <checklist>/<item>/<index>. header, tldr and status address
+  the doc's top level. --set and --json values parse as JSON when they can; null deletes the field.
+  --append adds to the target's list (doc: sections, section and item: blocks, table: rows,
+  canvas: nodes, diff: comments, other blocks: items). The rev bumps (A->B, 3->4, v1->v2) and
+  meta.date becomes today unless --no-bump; on a bump `changes` becomes the --change lines
+  (default: "Updated `KEY`."), with --no-bump they are appended.
+
 Exit codes: 0 ok, 1 validation errors (or warnings with --strict), 2 usage/IO error.
 Python 3.9+ standard library only.
 """
@@ -23,6 +46,7 @@ from __future__ import annotations
 
 import argparse
 import base64
+import copy
 import datetime as dt
 import hashlib
 import json
@@ -32,6 +56,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 TEMPLATE = HERE.parent / "assets" / "template.html"
+SKELETONS = HERE.parent / "assets" / "skeletons"
 HISTORY_VERSION = 1
 
 BLOCK_TYPES = {"text", "callout", "table", "code", "terms", "cards", "checklist", "canvas", "diff", "steps", "files", "media", "compare"}
@@ -43,6 +68,13 @@ PLACEHOLDER = re.compile(r"<<[^<>\n]{1,120}>>")
 CALLOUT_KINDS = {"note", "caution", "warning", "risk", "decision"}
 STATE_KINDS = {"ok", "warn", "risk", "info", "todo"}
 DOC_TYPES = {"docs", "review", "plan", "other"}   # meta.type: the home page's grouping; unset = derived from meta.kind
+# meta.kind words that make a doc type "docs" when meta.type is unset (after the plan and review rules)
+DOCS_KINDS = {"architecture", "walkthrough", "runbook", "setup", "reference", "proposal", "change", "changes", "plan",
+              "status", "guide", "design", "spec", "rfc", "adr", "overview", "tutorial", "onboarding", "explainer", "playbook"}
+FINDING_SIZES = ("blocker", "major", "minor", "nit")   # a review finding's state
+# hero: the home card's element for docs without a canvas and for other docs
+HERO_ICONS = ["chart", "doc", "flag", "bolt", "clock", "users", "bug", "box", "check", "globe", "lock", "list"]
+MAX_HERO_VALUE, MAX_HERO_LABEL = 8, 28
 STEP_STATUSES = {"todo", "doing", "done", "blocked"}
 STEP_EFFORTS = {"S", "M", "L"}
 FILE_ACTIONS = {"add", "edit", "delete", "rename", "move"}
@@ -67,6 +99,12 @@ VAGUE = ["soon", "usually", "often", "sometimes", "appropriate", "appropriately"
          "as needed", "if necessary", "etc", "and so on", "some time", "a while", "fast enough", "properly"]
 NON_IMPERATIVE_START = {"the", "a", "an", "this", "it", "you", "we", "there", "make sure", "ensure that", "should"}
 MAX_WORDS = 32
+# answer first: a tldr or lead states the conclusion, not what the text is about
+ABOUT_OPENING = re.compile(r"^\s*(in )?this (section|doc|document|page)\b", re.I)
+# no closing summary: the last section repeats nothing
+CLOSING_TITLES = {"summary", "conclusion", "conclusions", "wrap-up", "wrap up", "recap", "closing thoughts"}
+# the reader chooses through decision items, not by being asked to agree
+ASK_AGREE = re.compile(r"\b(if you agree|do you agree|confirm whether|check if you agree)\b", re.I)
 
 
 class Report:
@@ -105,6 +143,11 @@ def lint_text(rep: Report, where: str, text: str | None, *, imperative: bool = F
                 break
         if first.endswith("?"):
             rep.warn(where, "checklist item is a question: write one action")
+
+
+def lint_opening(rep: Report, where: str, text: str | None) -> None:
+    if isinstance(text, str) and ABOUT_OPENING.match(text):
+        rep.warn(where, "opens by saying what the text is about: state the conclusion first")
 
 
 def need(rep: Report, where: str, obj: dict, *keys: str) -> bool:
@@ -271,8 +314,90 @@ def check_media_src(rep: Report, where: str, src, base: Path | None) -> None:
         rep.warn(where, f"'{src}' is {f.stat().st_size / 1048576:.1f} MB (> {MAX_MEDIA_BYTES // 1048576} MB): compress or crop it; -o embeds it in the page")
 
 
-def validate(doc: dict, doc_path: Path | None = None) -> Report:
-    """doc_path, when given, is the doc's JSON file: media srcs are checked against its folder."""
+def doc_type(meta: dict) -> str:
+    """docs | review | plan | other: meta.type when set, else read from meta.kind. template.html follows
+    the same rule; serve.py puts the result in the home page's index."""
+    if meta.get("type") in DOC_TYPES:
+        return meta["type"]
+    kind = str(meta.get("kind") or "").strip().lower()
+    if kind.startswith("plan") or kind == "implementation plan":
+        return "plan"
+    if "review" in kind:
+        return "review"
+    return "docs" if set(re.findall(r"[a-z]+", kind)) & DOCS_KINDS else "other"
+
+
+def all_blocks(doc: dict):
+    """Every block, depth-first, including the blocks inside checklist items."""
+    def walk(blocks):
+        for b in blocks or []:
+            if isinstance(b, dict):
+                yield b
+                if b.get("type") == "checklist":
+                    for it in b.get("items") or []:
+                        if isinstance(it, dict):
+                            yield from walk(it.get("blocks"))
+    for s in doc.get("sections") or []:
+        if isinstance(s, dict):
+            yield from walk(s.get("blocks"))
+
+
+def check_contract(doc: dict) -> list[str]:
+    """The data the doc's type requires and the doc lacks: its home card and page draw from it."""
+    t = doc_type(doc.get("meta") or {})
+    blocks = list(all_blocks(doc))
+    types = {b.get("type") for b in blocks}
+    out: list[str] = []
+    if t == "review":
+        if "diff" not in types:
+            out.append("a review needs a diff block (gitdiff.py writes one)")
+        for b in blocks:
+            if b.get("type") != "checklist":
+                continue
+            for it in b.get("items") or []:
+                if isinstance(it, dict) and it.get("choices") and it.get("state") not in FINDING_SIZES:
+                    has = f"state {it['state']!r}" if it.get("state") else "no state"
+                    out.append(f"finding '{b.get('id')}/{it.get('id')}' has {has}: give it one of {'|'.join(FINDING_SIZES)}")
+    elif t == "plan":
+        out += [f"a plan needs a {bt} block" for bt in ("steps", "files") if bt not in types]
+    elif t == "docs" and "canvas" not in types and not doc.get("hero"):
+        out.append("a docs page needs a canvas block or a top-level hero")
+    return out
+
+
+def contract_level(doc: dict, doc_path: Path | None) -> str:
+    """'error' while the doc's meta.rev is new (not in its history file yet), 'warn' once the history
+    has it, so revisions written before a contract existed keep rendering. A doc without meta.rev
+    keeps no history and counts as recorded; without doc_path every rev counts as new."""
+    rev = str((doc.get("meta") or {}).get("rev") or "")
+    if not rev:
+        return "warn"
+    if doc_path is None:
+        return "error"
+    try:
+        revs = load_history(history_path(Path(doc_path)))["revs"]
+    except (OSError, ValueError, json.JSONDecodeError):
+        return "error"
+    return "warn" if any(r.get("rev") == rev for r in revs) else "error"
+
+
+def _diffref():
+    """scripts/diffref.py, imported on first use: docs without diff refs never load it."""
+    if str(HERE) not in sys.path:
+        sys.path.insert(0, str(HERE))
+    import diffref
+    return diffref
+
+
+def _ref_candidates(doc: dict) -> list[dict]:
+    """diff blocks without embedded files: the refs, plus malformed blocks validate reports."""
+    return [b for b in all_blocks(doc) if b.get("type") == "diff" and "files" not in b]
+
+
+def validate(doc: dict, doc_path: Path | None = None, *, allow_remote: bool = False) -> Report:
+    """doc_path, when given, is the doc's JSON file: media srcs are checked against its folder, diff refs
+    expand relative to it and the type contract is an error only while its meta.rev isn't in the history.
+    allow_remote lets a diff ref whose repo is missing fall back to `gh pr diff`."""
     rep = Report()
     base = Path(doc_path).resolve().parent if doc_path else None
     need(rep, "doc", doc, "id", "title", "sections")
@@ -280,6 +405,42 @@ def validate(doc: dict, doc_path: Path | None = None) -> Report:
         check_id(rep, "doc", doc["id"])
     lint_text(rep, "doc.subtitle", doc.get("subtitle"))
     lint_text(rep, "doc.tldr", doc.get("tldr"))
+    lint_opening(rep, "doc.tldr", doc.get("tldr"))
+    hero = doc.get("hero")
+    if hero is not None:
+        if not isinstance(hero, dict):
+            rep.err("doc.hero", 'an object {"icon", "value", "label"}')
+        else:
+            need(rep, "doc.hero", hero, "icon", "value", "label")
+            if hero.get("icon") is not None and hero["icon"] not in HERO_ICONS:
+                rep.err("doc.hero.icon", f"{hero['icon']!r} not in {HERO_ICONS}")
+            for k, most in (("value", MAX_HERO_VALUE), ("label", MAX_HERO_LABEL)):
+                v = hero.get(k)
+                if v is not None and not isinstance(v, str):
+                    rep.err(f"doc.hero.{k}", "a string")
+                elif isinstance(v, str) and not PLACEHOLDER.search(v) and len(v) > most:
+                    rep.err(f"doc.hero.{k}", f"{len(v)} characters (at most {most}): the home card draws it large")
+    # diff refs: check them against a filled-in copy, so the doc keeps only the reference
+    ref_ids: set[int] = set()            # id() of the ref blocks
+    expanded: dict[int, dict] = {}       # id() of a ref block -> its copy filled from git or the cache
+    candidates = _ref_candidates(doc)
+    dr = None
+    if candidates:
+        try:
+            dr = _diffref()
+        except ImportError:
+            for b in candidates:
+                rep.err(f"diff '{b.get('id')}'", "scripts/diffref.py is missing: it expands diff refs (base, head, no files)")
+    if dr:
+        refs = [b for b in candidates if dr.is_ref(b)]
+        ref_ids = {id(b) for b in refs}
+        # a ref still holding a <<placeholder>> is reported as one, not expanded
+        live = [b for b in refs if not PLACEHOLDER.search(json.dumps(b, ensure_ascii=False))]
+        if live:
+            probe = {"sections": [{"id": "refs", "blocks": copy.deepcopy(live)}]}
+            for p in dr.expand_doc(probe, Path(doc_path) if doc_path else None, allow_remote=allow_remote):
+                (rep.errors if p.startswith("ERROR") else rep.warnings).append(p)
+            expanded = {id(b): e for b, e in zip(live, probe["sections"][0]["blocks"])}
     ch = doc.get("changes")
     if ch is not None:
         if not isinstance(ch, list) or not all(isinstance(x, str) and x.strip() for x in ch):
@@ -300,6 +461,8 @@ def validate(doc: dict, doc_path: Path | None = None) -> Report:
     refs_to_check: list[tuple[str, str]] = []
     checklist_items: dict[str, set[str]] = {}
     diffs: dict[str, dict[str, tuple[set[int], set[int]]]] = {}
+    unexpanded: set[str] = set()               # diff refs with no files to check lines against
+    ref_diffs: set[str] = set()                # diff ids that are refs
     comments_to_check: list[tuple[str, str, dict]] = []
     steps_blocks: set[str] = set()
     step_ids: set[str] = set()
@@ -322,6 +485,8 @@ def validate(doc: dict, doc_path: Path | None = None) -> Report:
         if t in ("text", "callout"):
             need(rep, bw, b, "md")
             lint_text(rep, bw, b.get("md"))
+            if t == "text" and len(re.findall(r"^\s*\d+[.)]\s", b.get("md") or "", re.M)) >= 3:
+                rep.warn(bw, "a procedure as a numbered list: make it a checklist, one action per item")
             if t == "callout" and b.get("kind", "note") not in CALLOUT_KINDS:
                 rep.err(bw, f"callout kind '{b.get('kind')}' not in {sorted(CALLOUT_KINDS)}")
         elif t == "table":
@@ -390,6 +555,10 @@ def validate(doc: dict, doc_path: Path | None = None) -> Report:
                     rep.warn(iw + ".sub", f"the subtitle shows one line (about {MAX_SUB} characters); move the rest to 'detail'")
                 lint_text(rep, iw + ".sub", it.get("sub"))
                 lint_text(rep, iw + ".detail", it.get("detail"))
+                for field in ("text", "sub"):
+                    m = ASK_AGREE.search(it.get(field) or "")
+                    if m:
+                        rep.warn(f"{iw}.{field}", f"'{m.group(0)}': let the reader choose with 'choices' instead of asking for agreement")
                 for r in it.get("refs") or []:
                     refs_to_check.append((iw, r))
                 for ki, kb in enumerate(it.get("blocks") or []):
@@ -405,14 +574,26 @@ def validate(doc: dict, doc_path: Path | None = None) -> Report:
             canvas_nodes[b["id"]] = keys
             lint_text(rep, bw + ".caption", b.get("caption"))
         elif t == "diff":
-            if not need(rep, bw, b, "id", "title", "files"):
+            ref = id(b) in ref_ids
+            if not need(rep, bw, b, "id", "title", *(("base", "head") if ref else ("files",))):
                 return
             check_id(rep, bw, b["id"])
             if b["id"] in diffs:
                 rep.err(bw, f"duplicate diff id '{b['id']}'")
-            diffs[b["id"]] = validate_diff(rep, bw, b)
+            src = b
+            if ref:
+                if not (b.get("repo") or b.get("pr")):
+                    rep.err(bw, "a diff ref needs 'repo' (the repo's path from the doc's folder) or 'pr' (owner/repo#N, for gh)")
+                paths = b.get("paths")
+                if paths is not None and not (isinstance(paths, list) and all(isinstance(p, str) and p for p in paths)):
+                    rep.err(bw + ".paths", "a list of paths that limit the diff")
+                src = expanded.get(id(b)) or b
+                ref_diffs.add(b["id"])
+                if not src.get("files"):
+                    unexpanded.add(b["id"])
+            diffs[b["id"]] = validate_diff(rep, bw, src)
             lint_text(rep, bw + ".note", b.get("note"))
-            for ci, c in enumerate(b.get("comments") or []):
+            for ci, c in enumerate(src.get("comments") or []):
                 comments_to_check.append((f"{bw}.comments[{ci}]", b["id"], c))
         elif t == "steps":
             if not need(rep, bw, b, "id", "items"):
@@ -514,11 +695,15 @@ def validate(doc: dict, doc_path: Path | None = None) -> Report:
             rep.warn(sw, f"duplicate section title '{sec['title']}'")
         titles.add(sec["title"].lower())
         lint_text(rep, sw + ".lead", sec.get("lead"))
+        lint_opening(rep, sw + ".lead", sec.get("lead"))
         blocks = sec.get("blocks") or []
         if not blocks:
             rep.warn(sw, "section has no blocks")
         for bi, b in enumerate(blocks):
             check_block(f"{sw}.blocks[{bi}]", b, 0)
+    secs = [s for s in doc.get("sections") or [] if isinstance(s, dict)]
+    if len(secs) > 1 and str(secs[-1].get("title", "")).strip().lower() in CLOSING_TITLES:
+        rep.warn(f"sections[{len(secs) - 1}]", f"a closing '{secs[-1]['title']}' repeats the page: cut it, the tldr is the summary")
 
     for where, r in refs_to_check:
         cid, _, key = r.partition("/")
@@ -541,6 +726,8 @@ def validate(doc: dict, doc_path: Path | None = None) -> Report:
         elif not (c.get("md") or c.get("title")):
             rep.err(where, "comment needs 'item', or 'title'/'md'")
         lint_text(rep, where + ".md", c.get("md"))
+        if did in unexpanded:
+            continue
         if not c.get("file"):
             if c.get("line"):
                 rep.err(where, "a comment with 'line' needs 'file'")
@@ -553,11 +740,13 @@ def validate(doc: dict, doc_path: Path | None = None) -> Report:
             shown = files[c["file"]][0 if side == "old" else 1]
             end = c.get("end", c["line"])
             if end not in shown:
-                rep.err(where, f"line {end} ({side} side) of '{c['file']}' is not shown in the diff: add an excerpt hunk (gitdiff.py does)")
+                fix = ("check its 'at': the file at head has no such line" if did in ref_diffs
+                       else "add an excerpt hunk (gitdiff.py does)")
+                rep.err(where, f"line {end} ({side} side) of '{c['file']}' is not shown in the diff: {fix}")
     for did, path, line in re.findall(r"#code:([\w-]+)(?:/([^\s)\"]+?))?(?::(\d+))?(?=[)\"\s])", json.dumps(doc)):
         if did not in diffs:
             rep.err("links", f"#code:{did} points to no diff block")
-        elif path and path not in diffs[did]:
+        elif path and did not in unexpanded and path not in diffs[did]:
             rep.err("links", f"#code:{did}/{path} points to no file in that diff")
     md_links = re.findall(r"#node:([\w-]+)/([\w/-]+)", json.dumps(doc))
     for cid, key in md_links:
@@ -569,7 +758,7 @@ def validate(doc: dict, doc_path: Path | None = None) -> Report:
             rep.err("links", f"#{anchor} points to no checklist item (#item-<checklist>-<item>)")
 
     def placeholders(node, where: str) -> None:
-        # ghthreads.py stubs carry <<...>> where the author's verdict and reasoning go;
+        # skeletons (build.py new) and ghthreads.py stubs carry <<...>> where the author's text goes;
         # code (diff files, code blocks) is quoted source and may legitimately contain << >>
         if isinstance(node, dict):
             for k, v in node.items():
@@ -580,8 +769,19 @@ def validate(doc: dict, doc_path: Path | None = None) -> Report:
                 placeholders(v, f"{where}[{i}]")
         elif isinstance(node, str):
             for m in PLACEHOLDER.findall(node):
-                rep.err(where, f"unfilled placeholder {m}: write the verdict, reasoning, fix and check")
-    placeholders(doc.get("sections") or [], "sections")
+                rep.err(where, f"unfilled placeholder {m}: replace it with what it names")
+    for k, v in doc.items():
+        placeholders(v, k if k == "sections" else f"doc.{k}")
+
+    gaps = check_contract(doc)
+    if gaps:
+        where = f"contract ({doc_type(doc.get('meta') or {})})"
+        if contract_level(doc, doc_path) == "error":
+            for m in gaps:
+                rep.err(where, m)
+        else:
+            for m in gaps:
+                rep.warn(where, m + " (an error from the next meta.rev)")
     return rep
 
 
@@ -723,12 +923,45 @@ def inline_media(x, base: Path, missing: list[str], cache: dict[str, str] | None
     return out
 
 
-def build(doc: dict, template: str, history: dict | None = None, media_base: Path | None = None) -> str:
-    """The page. media_base (the doc's folder) makes it standalone: media files become data: URIs."""
+def expand_diff_refs(doc: dict, hist: dict | None, doc_path: Path, problems: list[str]) -> tuple[dict, dict | None]:
+    """Copies of the page's doc and embedded history (embed_history's shape) with every diff ref filled
+    from the cache, git or gh by diffref.py; the doc file keeps only the reference."""
+    pool = (hist or {}).get("blocks") or {}
+    old = [k for k, b in pool.items() if isinstance(b, dict) and b.get("type") == "diff" and "files" not in b]
+    if not old and not _ref_candidates(doc):
+        return doc, hist
+    try:
+        dr = _diffref()
+    except ImportError:
+        problems.append("ERROR diff refs: scripts/diffref.py is missing, so they show no files")
+        return doc, hist
+    doc, probs = dr.expanded_copy(doc, doc_path)
+    problems += probs
+    old = [k for k in old if dr.is_ref(pool[k])]
+    if old:
+        blocks = {**pool, **{k: copy.deepcopy(pool[k]) for k in old}}
+        problems += dr.expand_doc({"sections": [{"id": "history", "blocks": [blocks[k] for k in old]}]}, doc_path)
+        hist = {**hist, "blocks": blocks}
+    return doc, hist
+
+
+def build(doc: dict, template: str, history: dict | None = None, media_base: Path | None = None,
+          diff_path: Path | None = None, problems: list[str] | None = None) -> str:
+    """The page. media_base (the doc's folder) makes it standalone: media files become data: URIs.
+    diff_path (the doc's JSON file) fills its diff refs, in the doc and in earlier revisions; their
+    problems go into problems, or to stderr when it is None."""
     title = (doc.get("title") or "bluedoc").replace("&", "&amp;").replace("<", "&lt;")
     if "__BLUEDOC_DOC__" not in template:
         raise SystemExit("template is missing the __BLUEDOC_DOC__ placeholder")
-    hist = embed_history(history, doc)   # before inlining: it matches blocks by their JSON
+    hist = embed_history(history, doc)   # before expanding and inlining: it matches blocks by their JSON
+    if diff_path is not None:
+        found: list[str] = []
+        doc, hist = expand_diff_refs(doc, hist, Path(diff_path), found)
+        if problems is None:
+            for p in found:
+                print(p, file=sys.stderr)
+        else:
+            problems += found
     if media_base is not None:
         missing: list[str] = []
         cache: dict[str, str] = {}
@@ -766,7 +999,319 @@ def sync_history(doc_path: Path, doc: dict) -> tuple[dict | None, str]:
     return history, log
 
 
-def main() -> int:
+DOC_SUFFIXES = (".bluedoc.json", ".blueprint.json")   # the files serve.py lists and renders
+
+
+def doc_stem(path: Path) -> str:
+    """The doc's name without its suffix: acme-orders.bluedoc.json -> acme-orders."""
+    name = path.name
+    return next((name[:-len(s)] for s in DOC_SUFFIXES if name.endswith(s)), path.stem)
+
+
+def write_doc(path: Path, doc: dict, raw: str) -> None:
+    """Write doc atomically with the indent (none, 1, 2 or 4 spaces) and final newline raw had."""
+    indent = None if not raw.startswith("{\n") else next(
+        (n for n in (1, 2, 4) if raw.startswith("{\n" + " " * n + '"') and not raw.startswith("{\n" + " " * (n + 1))), 2)
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(json.dumps(doc, ensure_ascii=False, indent=indent) + ("\n" if raw.endswith("\n") else ""), encoding="utf-8")
+    tmp.replace(path)
+
+
+def cmd_new(argv: list[str]) -> int:
+    ap = argparse.ArgumentParser(prog="build.py new", description="Write the fill-in skeleton of a doc type. "
+                                 "Replace every <<…>>; the build fails while one is left.")
+    ap.add_argument("type", choices=sorted(DOC_TYPES))
+    ap.add_argument("out", type=Path, help="the new <name>.bluedoc.json; its name becomes the doc id")
+    ap.add_argument("--title", help="the doc's title")
+    ap.add_argument("--kind", help="meta.kind, the eyebrow word (e.g. Architecture, Runbook)")
+    a = ap.parse_args(argv)
+    if not a.out.name.endswith(DOC_SUFFIXES):
+        ap.error(f"name it <name>{DOC_SUFFIXES[0]}: serve.py lists those files")
+    if a.out.exists():
+        print(f"{a.out} exists; not overwriting it (edit it, or change it with build.py patch)", file=sys.stderr)
+        return 2
+    skel = SKELETONS / f"{a.type}.json"
+    try:
+        raw = skel.read_text(encoding="utf-8")
+        doc = json.loads(raw)
+    except (OSError, json.JSONDecodeError) as e:
+        print(f"cannot read skeleton {skel}: {e}", file=sys.stderr)
+        return 2
+    doc["id"] = re.sub(r"[^a-z0-9-]+", "-", doc_stem(a.out).lower()).strip("-") or "doc"
+    if a.title:
+        doc["title"] = a.title
+    meta = doc.setdefault("meta", {})
+    meta.update(rev="A", date=dt.date.today().isoformat(), type=a.type)
+    if a.kind:
+        meta["kind"] = a.kind
+    a.out.parent.mkdir(parents=True, exist_ok=True)
+    write_doc(a.out, doc, raw)
+    print(f"wrote {a.out} ({a.type}): replace every <<…>>; `build.py {a.out} --check` lists the ones left")
+    print(f"then: python3 {HERE / 'build.py'} {a.out} && python3 {HERE / 'serve.py'} open {a.out}")
+    return 0
+
+
+class PatchError(Exception):
+    pass
+
+
+class Target:
+    """What a patch key names: obj, the place it sits (parent[key]), and its kind."""
+    def __init__(self, obj, parent, key, kind: str) -> None:
+        self.obj, self.parent, self.key, self.kind = obj, parent, key, kind
+
+
+def _find(items, pred, what: str) -> tuple[dict, int]:
+    for i, x in enumerate(items or []):
+        if isinstance(x, dict) and pred(x):
+            return x, i
+    raise PatchError(f"no {what}")
+
+
+def _index(items, i: str, what: str) -> int:
+    if not i.isdigit() or int(i) >= len(items or []):
+        raise PatchError(f"no {what} {i} (there are {len(items or [])})")
+    return int(i)
+
+
+def _item(doc: dict, cid: str, iid: str) -> Target:
+    cl, _ = _find(list(all_blocks(doc)), lambda b: b.get("type") == "checklist" and b.get("id") == cid, f"checklist '{cid}'")
+    it, i = _find(cl.get("items"), lambda x: x.get("id") == iid, f"item '{iid}' in checklist '{cid}'")
+    return Target(it, cl["items"], i, "item")
+
+
+def _block(doc: dict, parts: list[str], rest: int | None) -> tuple[Target, list[str]]:
+    """The block a block path names: <section>/<index> or <checklist>/<item>/<index>, followed by
+    `rest` more parts (None: one or more, as a file path has). Returns it and the parts after it."""
+    def fits(n: int) -> bool:
+        return len(parts) - n == rest if rest is not None else len(parts) - n >= 1
+    secs = {s.get("id"): s for s in doc.get("sections") or [] if isinstance(s, dict)}
+    if fits(2) and parts[0] in secs and parts[1].isdigit():
+        blocks = secs[parts[0]].setdefault("blocks", [])
+        i = _index(blocks, parts[1], f"block in section '{parts[0]}':")
+        return Target(blocks[i], blocks, i, "block"), parts[2:]
+    if fits(3) and parts[2].isdigit():
+        it = _item(doc, parts[0], parts[1]).obj
+        blocks = it.setdefault("blocks", [])
+        i = _index(blocks, parts[2], f"block in item '{parts[0]}/{parts[1]}':")
+        return Target(blocks[i], blocks, i, "block"), parts[3:]
+    raise PatchError(f"'{'/'.join(parts)}' doesn't start with a block path: <section>/<index> or <checklist>/<item>/<index>")
+
+
+def resolve_key(doc: dict, key: str) -> Target:
+    """The object an annotator key names (see the patch keys in this module's docstring)."""
+    kind, _, path = key.partition(":")
+    parts = path.split("/") if path else []
+    if kind in ("doc", "header", "tldr", "status") and not path:
+        return Target(doc, None, None, "doc")
+    if kind == "meta" and not path:
+        return Target(doc.setdefault("meta", {}), doc, "meta", "meta")
+    if kind in ("section", "heading", "lead") and len(parts) == 1:
+        secs = doc.get("sections") or []
+        s, i = _find(secs, lambda x: x.get("id") == path, f"section '{path}'")
+        return Target(s, secs, i, "section")
+    if kind in ("block", "media") and parts:
+        return _block(doc, parts, 0)[0]
+    if kind == "para" and parts:
+        return _block(doc, parts, 1)[0]
+    if kind == "compare" and parts:
+        b, (side,) = _block(doc, parts, 1)
+        if side not in ("before", "after") or not isinstance(b.obj.get(side), dict):
+            raise PatchError(f"no compare side '{side}' (before or after)")
+        return Target(b.obj[side], b.obj, side, "side")
+    if kind == "item" and len(parts) == 2:
+        return _item(doc, *parts)
+    if kind in ("row", "card", "step") and parts:
+        b, (last,) = _block(doc, parts, 1)
+        if kind == "row":
+            rows = b.obj.get("rows")
+            i = _index(rows, last, "row")
+            return Target(rows[i], rows, i, "row")
+        items = b.obj.get("items")
+        if kind == "card":
+            i = _index(items, last, "card")
+            return Target(items[i], items, i, "card")
+        it, i = _find(items, lambda x: x.get("id") == last, f"step '{last}' in that block")
+        return Target(it, items, i, "step")
+    if kind == "file" and parts:
+        b, rest = _block(doc, parts, None)
+        fpath = "/".join(rest)
+        items = b.obj.get("items")
+        it, i = _find(items, lambda x: x.get("path") == fpath, f"file row '{fpath}' in that block")
+        return Target(it, items, i, "file")
+    if kind == "node" and len(parts) >= 2:
+        cv, _ = _find(list(all_blocks(doc)), lambda b: b.get("type") == "canvas" and b.get("id") == parts[0], f"canvas '{parts[0]}'")
+        nodes, t = cv.get("nodes"), None
+        for nid in parts[1:]:
+            n, i = _find(nodes, lambda x: x.get("id") == nid, f"node '{'/'.join(parts[1:])}' in canvas '{parts[0]}'")
+            t = Target(n, nodes, i, "node")
+            nodes = (n.get("children") or {}).get("nodes")
+        return t
+    if kind == "comment" and len(parts) == 2:
+        d, _ = _find(list(all_blocks(doc)), lambda b: b.get("type") == "diff" and b.get("id") == parts[0], f"diff '{parts[0]}'")
+        cs = d.get("comments")
+        i = _index(cs, parts[1], f"comment in diff '{parts[0]}':")
+        return Target(cs[i], cs, i, "comment")
+    raise PatchError(f"unknown key '{key}': see `build.py --help` for the key forms")
+
+
+# the list --append adds to, per target kind (blocks: per block type)
+APPEND_FIELD = {"doc": "sections", "section": "blocks", "item": "blocks"}
+APPEND_BLOCK_FIELD = {"table": "rows", "canvas": "nodes", "diff": "comments", "checklist": "items", "steps": "items",
+                      "files": "items", "cards": "items", "terms": "items"}
+
+
+def _value(s: str):
+    """A command-line value: JSON when it parses, else the string itself."""
+    try:
+        return json.loads(s)
+    except ValueError:
+        return s
+
+
+def _merge(obj: dict, fields: dict) -> None:
+    for k, v in fields.items():
+        if v is None:
+            obj.pop(k, None)
+        else:
+            obj[k] = v
+
+
+def apply_patch(t: Target, sets: list[str], merge: str | None, append: str | None, delete: bool) -> None:
+    if delete:
+        if t.kind in ("doc", "meta"):
+            raise PatchError(f"can't delete the {t.kind}")
+        del t.parent[t.key]
+        return
+    for s in sets:
+        field, eq, v = s.partition("=")
+        if not eq or not field:
+            raise PatchError(f"--set '{s}': write field=value")
+        if isinstance(t.obj, list):   # a table row: field is the cell index
+            t.obj[_index(t.obj, field, "cell")] = _value(v)
+        else:
+            _merge(t.obj, {field: _value(v)})
+    if merge is not None:
+        v = _value(merge)
+        if isinstance(t.obj, list) and isinstance(v, list):
+            t.obj[:] = v
+        elif isinstance(t.obj, dict) and isinstance(v, dict):
+            _merge(t.obj, v)
+        else:
+            raise PatchError("--json takes an object to merge (a list replaces a table row)")
+    if append is not None:
+        if isinstance(t.obj, list):
+            t.obj.append(_value(append))
+            return
+        if t.kind == "block":
+            field = APPEND_BLOCK_FIELD.get(t.obj.get("type"))
+        elif t.kind == "node":
+            t.obj.setdefault("children", {})
+            t.obj["children"].setdefault("nodes", []).append(_value(append))
+            return
+        else:
+            field = APPEND_FIELD.get(t.kind)
+        if not field:
+            raise PatchError(f"--append: a {t.obj.get('type') or t.kind} has no list to append to")
+        t.obj.setdefault(field, []).append(_value(append))
+
+
+def next_rev(rev: str) -> str:
+    """A -> B, Z -> AA, 3 -> 4, v1 -> v2, 09 -> 10; no rev yet -> A."""
+    if not rev:
+        return "A"
+    m = re.fullmatch(r"(.*?)(\d+)", rev)
+    if m:
+        return m.group(1) + str(int(m.group(2)) + 1).zfill(len(m.group(2)))
+    if re.fullmatch(r"[A-Za-z]+", rev):
+        chars = list(rev.upper())
+        i = len(chars) - 1
+        while i >= 0 and chars[i] == "Z":
+            chars[i] = "A"
+            i -= 1
+        if i < 0:
+            chars.insert(0, "A")
+        else:
+            chars[i] = chr(ord(chars[i]) + 1)
+        out = "".join(chars)
+        return out if rev[-1].isupper() else out.lower()
+    raise PatchError(f"can't bump rev '{rev}': set meta.rev yourself and pass --no-bump")
+
+
+def cmd_patch(argv: list[str]) -> int:
+    ap = argparse.ArgumentParser(prog="build.py patch", description="Change one object by its annotator key, bump meta.rev, "
+                                 "validate, write and record the revision. Key forms: see `build.py --help`.")
+    ap.add_argument("doc", type=Path)
+    ap.add_argument("key", help="e.g. item:t412/tier-boundary, step:steps/0/s3, row:risks/0/2, meta, tldr")
+    ap.add_argument("--set", action="append", default=[], metavar="FIELD=VALUE", help="set one field (JSON value, else a string; null deletes)")
+    ap.add_argument("--json", metavar="OBJ", help="merge these fields (null deletes one)")
+    ap.add_argument("--append", metavar="VALUE", help="append to the target's list (items, rows, nodes, blocks, comments)")
+    ap.add_argument("--delete", action="store_true", help="remove the target")
+    ap.add_argument("--change", action="append", default=[], metavar="LINE", help="a line for `changes` (repeat for more)")
+    ap.add_argument("--no-bump", action="store_true", help="keep meta.rev: update the current revision in place")
+    a = ap.parse_args(argv)
+    if not (a.set or a.json is not None or a.append is not None or a.delete):
+        ap.error("give --set, --json, --append or --delete")
+    if a.delete and (a.set or a.json is not None or a.append is not None):
+        ap.error("--delete goes alone")
+    try:
+        raw = a.doc.read_text(encoding="utf-8")
+        doc = json.loads(raw)
+    except (OSError, json.JSONDecodeError) as e:
+        print(f"cannot read {a.doc}: {e}", file=sys.stderr)
+        return 2
+    before = copy.deepcopy(doc)
+    try:
+        apply_patch(resolve_key(doc, a.key), a.set, a.json, a.append, a.delete)
+        meta = doc.setdefault("meta", {})
+        rev0 = str(meta.get("rev") or "")
+        rev1 = rev0 if a.no_bump else next_rev(rev0)
+    except PatchError as e:
+        print(f"patch: {e}", file=sys.stderr)
+        return 2
+    if a.no_bump:
+        if a.change:
+            doc["changes"] = list(doc.get("changes") or []) + a.change
+    else:
+        meta.update(rev=rev1, date=dt.date.today().isoformat())
+        doc["changes"] = a.change or [f"Updated `{a.key}`."]
+    rep = validate(doc, a.doc)
+    if rep.errors:
+        for line in rep.errors:
+            print(line, file=sys.stderr)
+        print(f"patch: {len(rep.errors)} error(s); {a.doc} not written", file=sys.stderr)
+        return 1
+    try:
+        if rev0 and not a.no_bump:
+            sync_history(a.doc, before)   # the text this patch replaces stays its own revision
+        write_doc(a.doc, doc, raw)
+        sync_history(a.doc, doc)
+    except HistoryError as e:
+        print(e, file=sys.stderr)
+        return 1
+    # only the warnings this patch introduced
+    old = set(validate(before, a.doc).warnings)
+    for line in rep.warnings:
+        if line not in old:
+            print(line, file=sys.stderr)
+    print(f"rev {rev0 or '-'} → {rev1}; {a.key} {'deleted' if a.delete else 'updated'}")
+    if rev0 and rev0 != rev1:
+        try:   # the link the reader needs, when the doc is under a registered folder
+            import serve
+            url = serve.url_for(Path(a.doc))
+            if url:
+                print(f"send the reader: {serve.base()}{url}?diff={rev0}")
+        except Exception:
+            pass
+    return 0
+
+
+def main(argv: list[str] | None = None) -> int:
+    argv = sys.argv[1:] if argv is None else argv
+    if argv[:1] == ["new"]:
+        return cmd_new(argv[1:])
+    if argv[:1] == ["patch"]:
+        return cmd_patch(argv[1:])
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("doc", type=Path)
     ap.add_argument("-o", "--out", type=Path, help="also write a standalone HTML file (for sharing; serve.py renders the JSON directly)")
@@ -775,7 +1320,7 @@ def main() -> int:
     ap.add_argument("--template", type=Path, default=TEMPLATE)
     ap.add_argument("--no-history", action="store_true", help="don't read or write <doc>.history.json")
     ap.add_argument("--show-rev", metavar="REV", help="print that revision from the history as JSON and exit")
-    a = ap.parse_args()
+    a = ap.parse_args(argv)
     hpath = history_path(a.doc)
     if a.show_rev is not None:
         try:
@@ -812,7 +1357,7 @@ def main() -> int:
         print(log, file=sys.stderr)
     if a.out:
         a.out.parent.mkdir(parents=True, exist_ok=True)
-        a.out.write_text(build(doc, a.template.read_text(encoding="utf-8"), history, a.doc.resolve().parent), encoding="utf-8")
+        a.out.write_text(build(doc, a.template.read_text(encoding="utf-8"), history, a.doc.resolve().parent, a.doc), encoding="utf-8")
         print(f"wrote {a.out} ({a.out.stat().st_size // 1024} KB)", file=sys.stderr)
     else:
         print(f"view: python3 {HERE / 'serve.py'} open {a.doc}", file=sys.stderr)

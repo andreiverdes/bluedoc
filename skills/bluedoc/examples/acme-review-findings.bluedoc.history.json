@@ -86,7 +86,7 @@
   {
    "rev": "B",
    "date": "2026-03-14",
-   "built": "2026-10-09T17:37:57+00:00",
+   "built": "2026-10-10T10:36:28+00:00",
    "head": {
     "id": "acme-review-findings-2026-03",
     "title": "Review findings: acme-shop #412 and #415",
@@ -154,7 +154,7 @@
      "lead": "3 bugs this PR introduces, 1 test gap, 3 smaller comments. Diff: `main` `89efd8e` → head `62ccc86`, limited to the commented files.",
      "blocks": [
       "dfa60c432210bf1e",
-      "c3b342ba72c4bfb4"
+      "a14020c66391e741"
      ]
     },
     {
@@ -163,7 +163,7 @@
      "lead": "1 bug this PR introduces, 1 behaviour gap, 2 smaller comments. Diff: `main` `89efd8e` → head `0a46a97`, limited to the two commented files.",
      "blocks": [
       "b180154e8eb0a159",
-      "fe547b0494295445"
+      "1159505000c89929"
      ]
     }
    ]
@@ -1026,6 +1026,83 @@
       }
      ],
      "recommend": "after"
+    }
+   ]
+  },
+  "a14020c66391e741": {
+   "type": "diff",
+   "id": "diff-412",
+   "title": "acme-shop #412",
+   "repo": "acme-shop",
+   "base": "89efd8e",
+   "head": "62ccc86",
+   "paths": [
+    "src/orders/createOrder.ts",
+    "src/pricing/tiers.ts",
+    "test/tiers.test.ts"
+   ],
+   "url": "https://github.com/acme/acme-shop/pull/412/files",
+   "note": "Only the commented files. Head `62ccc86`; `docs/pricing.md` is unchanged and shown for its comment.",
+   "comments": [
+    {
+     "at": "src/pricing/tiers.ts:17",
+     "item": "t412/tier-boundary"
+    },
+    {
+     "at": "src/pricing/tiers.ts:25",
+     "item": "t412/float-cents"
+    },
+    {
+     "at": "src/orders/createOrder.ts:16",
+     "item": "t412/savings-coupon"
+    },
+    {
+     "at": "test/tiers.test.ts:5-15",
+     "item": "t412/boundary-tests"
+    },
+    {
+     "at": "docs/pricing.md:11",
+     "item": "t412/docs-stale"
+    },
+    {
+     "at": "src/pricing/tiers.ts:10-13",
+     "item": "t412/tiers-map"
+    },
+    {
+     "label": "PR description",
+     "item": "t412/pr-claims"
+    }
+   ]
+  },
+  "1159505000c89929": {
+   "type": "diff",
+   "id": "diff-415",
+   "title": "acme-shop #415",
+   "repo": "acme-shop",
+   "base": "89efd8e",
+   "head": "0a46a97",
+   "paths": [
+    "src/orders/charge.ts",
+    "src/payments/paycoClient.ts"
+   ],
+   "url": "https://github.com/acme/acme-shop/pull/415/files",
+   "note": "Only the two commented files; the new test is left out. Head `0a46a97`.",
+   "comments": [
+    {
+     "at": "src/orders/charge.ts:17-21",
+     "item": "t415/double-auth"
+    },
+    {
+     "at": "src/orders/charge.ts:23-25",
+     "item": "t415/retry-4xx"
+    },
+    {
+     "at": "src/payments/paycoClient.ts:5",
+     "item": "t415/latency"
+    },
+    {
+     "at": "src/orders/charge.ts:25",
+     "item": "t415/backoff-const"
     }
    ]
   }

@@ -1,6 +1,8 @@
 # bluedoc JSON schema
 
-One JSON file describes one HTML document. `scripts/build.py` validates it and inlines it into `assets/template.html`. Worked examples: `examples/acme-orders.bluedoc.json` (canvas, flows, checklists), `examples/acme-review-findings.bluedoc.json` (review findings: decision items and diffs) and `examples/acme-saved-carts-plan.bluedoc.json` (a plan: steps, files, media, compare, decisions).
+Lookup reference for every field and command. Grep for a heading, never read the file whole: `grep -n -A25 '^## Diff' references/schema.md`. How to lay out each doc type lives in `types/<type>.md`.
+
+Headings: `## Document` (incl. `hero`) · `## Contracts` · `## Section` · `## Blocks` (`### Inline markdown`) · `## Checklist` (`### Reader comments and replies`) · `## Diff` (`### Diff reference`, `### Embedded diff`, `### gitdiff.py`) · `## Plan blocks` (`### Steps`, `### Files`, `### Media`, `### Compare`) · `## Revisions` · `## Page layout` · `## Canvas` (`### Node`, `### Semantic zoom`, `### Edge`, `### Flow`) · `## Annotations` (`### Bottom tray`) · `## Plans` · `## build.py` (`### patch`) · `## serve.py` · `## Automation API`
 
 ## Document
 
@@ -9,14 +11,28 @@ One JSON file describes one HTML document. `scripts/build.py` validates it and i
 | `id` | id | yes | Namespace for checklist progress in `localStorage`. Never change it after people start ticking. |
 | `title` | string | yes | Page `<h1>` and browser title (`<title> · bluedoc`). |
 | `subtitle` | inline md | no | One sentence under the title. |
-| `meta` | object | no | `org`, `kind` (Architecture, Walkthrough, Runbook, Setup, Change, Plan), `dwg` (drawing number), `rev`, `date`, `type`. `org · kind · date` form the line above the title; `dwg` and `rev` appear under **Document** in the status rail and in the canvas title blocks. `rev` names the revision: the build keeps one history entry per `rev` (see Revisions). `type` (`docs`, `review`, `plan`, `other`) groups the doc on the home page and picks the page's tray. Unset, it is derived from `kind`, case-insensitive: starts with `plan` or is `implementation plan` → `plan`; contains `review` → `review`; names a docs kind (Architecture, Walkthrough, Runbook, Setup, Reference, Proposal, Change, Status, Guide, Design, Spec, RFC, ADR, …) → `docs`; anything else → `other`. A `plan` doc is a **plan page**: see [Plans](#plans). |
+| `meta` | object | no | `org`, `kind` (Architecture, Walkthrough, Runbook, Setup, Change, Plan, Review, or a free label), `dwg` (drawing number), `rev`, `date`, `type`. `org · kind · date` form the line above the title; `dwg` and `rev` appear under **Document** in the status rail and in the canvas title blocks. `rev` names the revision: the build keeps one history entry per `rev` (see Revisions). `type` (`docs`, `review`, `plan`, `other`) picks the doc's [contract](#contracts), its home-page group and card, and the page's tray; `build.py new` sets it. Unset, it is derived from `kind`, case-insensitive: starts with `plan` or is `implementation plan` → `plan`; contains `review` → `review`; names a docs kind (Architecture, Walkthrough, Runbook, Setup, Reference, Proposal, Change, Status, Guide, Design, Spec, RFC, ADR, …) → `docs`; anything else → `other`. A `plan` doc is a **plan page**: see [Plans](#plans). |
 | `state` | `[{label, kind}]` | no | Provenance, listed under **Status** in the status rail as dots. `kind`: `ok` (green), `warn` (amber), `risk` (red), `info` (blue), `todo` (grey). Example: `{"label": "not live", "kind": "warn"}`. Keep each label under ~40 characters. |
 | `links` | `[{label, href}]` | no | Related documents, listed under **Related** in the status rail. |
+| `hero` | `{icon, value, label}` | no | The home card's stat, for `other` docs and for `docs` without a canvas. `icon`: `chart`, `doc`, `flag`, `bolt`, `clock`, `users`, `bug`, `box`, `check`, `globe`, `lock` or `list`. `value` ≤ 8 characters (`"99.95%"`); `label` ≤ 28 (`"uptime, last 30 days"`). Without it an `other` card shows the `doc` icon and the section count. |
 | `tldr` | md | no | The answer in 1–3 sentences. Required in practice for documents longer than 3 sections. |
 | `changes` | `[inline md]` | no | What changed in this revision and why, 1–4 lines. Shown in the revision list and above the marked diff. Rewrite it on each new `rev`. |
 | `sections` | `[section]` | yes | Rendered in order, numbered 01, 02, … |
 
 `id` everywhere = lowercase letters, digits, hyphens; starts with a letter or digit.
+
+## Contracts
+
+Each type's home card draws one element, so the build requires that element's data:
+
+| `meta.type` | Required | Home card element |
+|---|---|---|
+| `review` | ≥ 1 `diff` block (reference or embedded); every checklist item with `choices` has `state` `blocker`, `major`, `minor` or `nit` | `+N / −N` lines, file and PR count, one dot per finding coloured by size |
+| `plan` | a `steps` block and a `files` block | step timeline (status dot, effort bar), A/M/D/R file counts |
+| `docs` | a `canvas` block, or `hero` | the root drawing with a flow on hover, the kind, the level count |
+| `other` | nothing | `hero`; else the `doc` icon and the section count |
+
+A missing requirement is an **error** when the doc's `meta.rev` is new (not yet in its history file) and a **warning** on a rev the history already has, so recorded revisions keep rendering. `build.py` and every server render apply the same rule. `build.py new <type>` writes a skeleton that meets the contract.
 
 ## Section
 
@@ -81,7 +97,7 @@ Each item is a collapsed row: a tick, a one-line **title** (`text`), a one-line 
   "choices": [ { "id": "fix", "label": "Fix in PR" }, { "id": "ticket", "label": "Ticket" }, { "id": "decline", "label": "Decline" } ] }
 ```
 
-Use a decision item whenever the reader has to choose, instead of a step like "check if you agree". Its title states the finding or question, not an action. **Copy progress** writes the pick: `- [x] A retry can authorize the card twice → **Fix in PR**`, adds `(recommended: …)` when the pick differs, and `(no decision; recommended: …)` when there is none. In a `diff` block, the comment card for a decision item carries the same pills, kept in sync with the row.
+A decision item's title states the finding or question, not an action. **Copy progress** writes the pick: `- [x] A retry can authorize the card twice → **Fix in PR**`, adds `(recommended: …)` when the pick differs, and `(no decision; recommended: …)` when there is none. In a `diff` block, the comment card for a decision item carries the same pills, kept in sync with the row.
 
 A row with nothing to open has no chevron; clicking it ticks it. **Expand** in the checklist header opens or closes every row. Links to `#item-<checklist>-<item>` (from a canvas node, a table cell or a shared URL) open the row, and its parents, before scrolling to it. Print shows every row open.
 
@@ -110,7 +126,34 @@ Decision items carry `choice` (null when undecided) and `recommend`; plain items
 
 ## Diff
 
-A `diff` block shows one code change and the comments on it. Use it for PR reviews: each finding is a checklist item, and its comment sits on the lines it is about.
+A `diff` block shows one code change and the comments on it: each finding's card sits on the lines it is about. It has two forms. A **reference** (`base` and `head`, no `files`) is what `gitdiff.py` writes; the server and the build expand it from git. The **embedded** form (`files` with hunks) is what a reference expands to, what `gitdiff.py --embed` writes and what `build.py -o` inlines; blocks written that way keep working.
+
+### Diff reference
+
+```json
+{ "type": "diff", "id": "diff-412", "title": "acme-shop #412", "repo": "../acme-shop", "base": "89efd8e", "head": "62ccc86",
+  "paths": ["src/pricing/tiers.ts"], "pr": "acme/acme-shop#412", "url": "https://github.com/acme/acme-shop/pull/412/files",
+  "note": "Only the commented files. Head `62ccc86`.",
+  "comments": [ { "at": "src/pricing/tiers.ts:17-21", "item": "t412/tier-boundary" },
+                { "label": "PR description", "item": "t412/pr-claims" } ] }
+```
+
+| Field | Meaning |
+|---|---|
+| `repo` | Required. The git checkout, relative to the doc's folder or absolute. |
+| `base`, `head` | Required. The reviewed range; `gitdiff.py` stores short SHAs. |
+| `paths` | Pathspecs that limit the diff. |
+| `pr` | `owner/repo#N` or the PR URL, for the `gh pr diff` fallback. Without it, a `github.com/…/pull/N` `url` is used. |
+| `url`, `note` | As in the embedded form. |
+| `exclude`, `context`, `excerpt`, `max_lines` | `gitdiff.py` options, stored only when not the default (3 context lines, ±5 excerpt lines, 800 max lines). |
+| `comments[]` | `{"at": "path:line[-end]", "item": "<checklist>/<item>"}`; `{"label": "…", "item": …}` for a whole-change comment; or the explicit fields of the embedded form. |
+
+Expansion, in order: the cache `<name>.diffcache.json` next to the doc (one entry per `repo|base|head|paths`), then `git -C <repo> diff <base> <head> -- <paths>`, then `gh pr diff <pr>` when the repo or the commits are missing (refused when the PR's head isn't `head`). When none works, the block renders empty and the build reports an error. Commit the cache with the doc: it keeps the diff after a rebase or a deleted branch. Agents never read it. While expanding:
+- a comment on lines the diff doesn't show gets a context excerpt (± `excerpt` lines);
+- a comment on a file missing at `head` becomes a whole-change comment;
+- an uncommented file with more than `max_lines` changed lines lists without its hunks.
+
+### Embedded diff
 
 ```json
 { "type": "diff", "id": "pr-412", "title": "acme-shop#412", "repo": "acme-shop",
@@ -131,26 +174,26 @@ A `diff` block shows one code change and the comments on it. Use it for PR revie
 | `comments[].item` | `"<checklistId>/<itemId>"`. The card takes the item's text, chip, detail and tick; ticking either one ticks both, and the item gets a code button that opens the comment. |
 | `comments[].title`, `md`, `kind`, `state`, `label` | A comment with no `item`: its own title, body, colour (`ok`, `warn`, `risk`, `info`, `todo`) and chip. `label` names a whole-change anchor. |
 
-The validator checks that every anchored line is shown in the diff, every `item` exists, and every `#code:` link resolves.
+The validator checks, on the expanded diff, that every anchored line is shown, every `item` exists, and every `#code:` link resolves.
 
 In the page, a file header shows how many comments the file has and, with 2+, ‹ › buttons and "n of N" for the comment in view. While a file's comments sit outside the visible part of the code, a floating pill says "N more comments above/below"; clicking it scrolls to the nearest one.
 
-**Generate it from git**, never by hand:
+### gitdiff.py
+
+Generate diff blocks from git, never by hand:
 
 ```sh
-python3 <skill>/scripts/gitdiff.py --repo ../acme-shop --base a1b2c3d --head e4f5a6b \
-  --id pr-412 --title "acme-shop#412" --url https://github.com/acme/acme-shop/pull/412/files \
-  --comments comments.json --into docs/reviews/pr-412.bluedoc.json --section review --after-block 1
+python3 <skill>/scripts/gitdiff.py --repo ../acme-shop --base 89efd8e --head 62ccc86 --id diff-412 \
+  --title "acme-shop #412" --pr acme/acme-shop#412 --paths src/pricing/tiers.ts --comments comments.json \
+  --note "Only the commented files. Head 62ccc86." --into docs/reviews/acme-shop-412.bluedoc.json --section pr-412 --after-block 0
 ```
 
-`comments.json` is a list of `{"at": "path:12-20", "item": "checklist/item"}` (or the explicit fields above). The script:
-- reads `git diff base head`;
-- adds a context excerpt (±5 lines, `--excerpt`) for any comment on lines the diff does not show;
-- turns a comment on a file missing at `head` into a whole-change comment;
-- drops hunks of uncommented files over 800 changed lines (`--max-lines`);
-- writes the block into the section, replacing a block with the same `id`.
+- `--comments` is a JSON list of `{"at": "path:12-20", "item": "checklist/item"}` (or the explicit fields above).
+- `--into DOC --section ID [--after-block N]` writes the block into that section, replacing a block with the same `id`; without `--into` it prints the block.
+- `--embed` writes the embedded form instead of a reference.
+- Also: `--repo-name`, `--url`, `--strip-prefix` (repeatable), `--exclude` (repeatable glob), `--context` (3), `--excerpt` (5), `--max-lines` (800).
 
-Diff the commits the reviewer actually read. If the branch was rebased since, keep the reviewed range and say so in `note`: the line numbers in the findings belong to that range.
+`ghthreads.py --repo OWNER/NAME --pr N --checklist ID [--comments-out FILE] [--all]` reads a PR's review threads (needs `gh` signed in) and prints its base and head, one decision-item stub per open thread (`--all`: resolved ones too) with `<<…>>` placeholders, and writes the `--comments` list for `gitdiff.py`.
 
 ## Plan blocks
 
@@ -216,7 +259,7 @@ Rows are grouped by folder, each with a file-type icon, the badge, the path and 
 - The build checks that the file exists and warns above 2 MB.
 - On the server the page uses `src` as written. It resolves against the doc's URL `/<root>/<dir>/<name>.bluedoc.json`, and the server serves media files under its registered roots.
 - `build.py -o` inlines every media file as a `data:` URI, so the standalone file works offline.
-- Draw SVGs that read on light and dark pages: a neutral palette, or a `prefers-color-scheme` block inside the SVG (see `examples/media/acme-saved-carts.svg`).
+- Draw SVGs that read on light and dark pages: a neutral palette, or a `@media (prefers-color-scheme: dark)` style block inside the SVG.
 
 ### Compare
 
@@ -307,7 +350,7 @@ Lay out children in their own space starting near `col: 0, row: 0`; the runtime 
              { "edge": "api->client", "reverse": false, "label": "The API returns 200." } ] }
 ```
 
-Each scope (root and every `children`) has its own flows. A token travels each step's edge(s); the caption bar shows step dots, `Step n of m` and the step `label`; `payload` floats next to the token. The toolbar controls the flows of the scope you are looking at; other open scopes loop their first flow. The ‹ / › buttons step through manually. A canvas with no flows at any level hides the caption bar. `prefers-reduced-motion` starts paused. Write step labels as one sentence each: actor, action, object.
+Each scope (root and every `children`) has its own flows. A token travels each step's edge(s); the caption bar shows step dots, `Step n of m` and the step `label`; `payload` floats next to the token. The toolbar controls the flows of the scope you are looking at; other open scopes loop their first flow. The ‹ / › buttons step through manually. A canvas with no flows at any level hides the caption bar. `prefers-reduced-motion` starts paused.
 
 ## Annotations
 
@@ -351,7 +394,7 @@ On the current revision the tray's last keys depend on the page. The `?diff=` tr
 
 ## Plans
 
-A doc whose type is `plan` (`meta.type`, or derived from `meta.kind`) is a **plan page**: a proposal the reader approves or sends back. SKILL.md "Plans" gives the layout; `examples/acme-saved-carts-plan.bluedoc.json` is the reference.
+A doc whose type is `plan` (`meta.type`, or derived from `meta.kind`) is a **plan page**: a proposal the reader approves or sends back. `types/plan.md` gives the layout and the approval loop.
 
 A status chip sits next to the eyebrow:
 
@@ -397,6 +440,56 @@ The server writes `<name>.approval.md` and `<name>.approval.json` next to the do
 - **Request changes** on a plan page also carries `answers` (the decision picks) when there are any, and its Markdown ends with the same `## Decisions` section. Plan pages have no Send answers.
 - `GET /__bluedoc/ping?path=<doc URL path>` returns `{bluedoc, to, home, approval}`. `approval` is the doc's saved approval as `{rev, at}`, or `null`. The page counts the plan approved only when `approval.rev === meta.rev`.
 - `serve.py wait DOC --kind answers|changes|approval|any` (default `any`) returns the oldest queued message of that kind. An approval prints `--- bluedoc approval (…json) ---`, the Markdown, then `--- end ---`.
+
+## build.py
+
+`python3 <skill>/scripts/build.py …`. Exit codes: 0 ok, 1 validation errors (or warnings with `--strict`), 2 usage or I/O error.
+
+| Command | Does |
+|---|---|
+| `new <type> <out.bluedoc.json> [--title "…"] [--kind "…"]` | Copies `assets/skeletons/<type>.json`; sets `id` from the file name, `meta.rev` `A`, `meta.date` today, `meta.type`, and the title and kind when given. Refuses to overwrite; prints the next steps. The build fails until every `<<…>>` is filled. |
+| `<doc>` | Validates (structure, ids, refs, links, media, diff anchors against the expanded diff, the [contract](#contracts)), lints the writing, records the revision. |
+| `<doc> -o out.html` | Also writes a standalone page with expanded diffs and media inlined. It works from `file://`, where the reply dialogs offer **Copy** only. |
+| `<doc> --check` | Validates and lints only. `--strict` fails on warnings; `--no-history` doesn't read or write the history file. |
+| `<doc> --show-rev B` | Prints revision B, rebuilt from the history, as JSON. |
+| `patch <doc> <key> …` | Changes one object by key, bumps the rev, validates, records. See below. |
+
+The linter warns on: filler and ceremony words; vague words; sentences over 32 words; a `tldr` or `lead` opening with "This section/doc/document/page" or "In this …"; a last section (of 2+) titled Summary, Conclusion(s), Wrap-up, Recap or Closing thoughts; a text block with 3+ numbered lines (make it a checklist); checklist text or sub with "if you agree", "do you agree", "confirm whether"; checklist and step titles that don't start with a verb or end in `?`; titles over 90 characters, subtitles over 120, option labels over 28.
+
+### patch
+
+`build.py patch <doc> <key> [--set field=value …] [--json '{…}'] [--append '{…}'] [--delete] [--change "line" …] [--no-bump]`
+
+| Option | Effect |
+|---|---|
+| `--set field=value` | Sets one field of the target; `value` is parsed as JSON when it parses, else used as a string. `null` deletes the field. |
+| `--json '{…}'` | Merges the object into the target (`null` deletes). |
+| `--append '{…}'` | Appends to the target's list: doc → `sections`; section or item → `blocks`; table → `rows`; canvas → `nodes`; diff → `comments`; other blocks → `items`. |
+| `--delete` | Removes the target. |
+| `--change "line"` | One `changes` line; repeatable. |
+| `--no-bump` | Keeps `meta.rev`: only while the reader hasn't seen this rev. |
+
+By default the rev bumps (A→B, 3→4, v1→v2), `meta.date` becomes today, and `changes` becomes the `--change` lines (default "Updated `<key>`."); with `--no-bump` the lines are appended. Patch refuses to write when validation fails, keeps the file's indent, records the history, and prints `rev X → Y; <key> updated`.
+
+Keys are the annotator's (see [Annotations](#annotations)), so a change request's `key` works as is: `doc`, `meta`, `header`, `tldr`, `status` (the last three address the top level), `section:<id>` (`heading:`, `lead:` too), `block:<blockPath>`, `item:<checklist>/<item>`, `row:<blockPath>/<r>`, `card:<blockPath>/<i>`, `para:<blockPath>/<i>`, `media:<blockPath>`, `compare:<blockPath>/<before|after>`, `step:<blockPath>/<stepId>`, `file:<blockPath>/<path>`, `node:<canvasId>/<nodeKey>`, `comment:<diffId>/<i>`. `<blockPath>` is `<sectionId>/<index>`, or `<checklist>/<item>/<index>` inside a checklist item.
+
+```sh
+build.py patch doc.json item:t412/tier-boundary --set choice=fix --change "#412 tier-boundary: Fix in PR, as picked."
+build.py patch doc.json step:steps/0/table --set status=done --no-bump
+build.py patch doc.json block:risks/0 --append '["Cache stampede", "Low", "High", "Jittered TTL"]'
+```
+
+## serve.py
+
+`python3 <skill>/scripts/serve.py …`. One server per user on `127.0.0.1` (port 8740, env `BLUEDOC_PORT`); state in `~/.bluedoc` (env `BLUEDOC_HOME`).
+
+| Command | Does |
+|---|---|
+| `open <doc> [--to NAME] [--root DIR] [--browser]` | Starts the server if needed, registers the topmost ancestor folder named `docs` (else the doc's folder, or `--root`) on the home page, prints the doc's URL. `--to` names who reads the replies. |
+| `wait <doc> [--kind answers\|changes\|approval\|any] [--timeout SEC]` | Blocks until the reader sends that kind (default `any`). Prints `--- bluedoc answers (…json) ---`, `--- bluedoc change request (…json) ---` or `--- bluedoc approval (…json) ---`, the Markdown, `--- end ---`; exits 0, or 3 on timeout (`0` waits forever). Replies sent while nobody waits are queued; each `wait` returns the oldest unread one. |
+| `start`, `stop`, `status`, `add DIR`, `roots`, `run [--port N]` | Manage the background server and the home page's folders. |
+
+Each render validates the doc (errors show as a page), records its rev like `build.py`, and expands diff references. Replies are saved next to the doc, overwritten each time: `<name>.reply.md/.json` (answers), `<name>.changes.md/.json`, `<name>.approval.md/.json`. They are the reader's messages: don't commit them.
 
 ## Automation API
 
