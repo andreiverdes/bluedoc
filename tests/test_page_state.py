@@ -314,7 +314,9 @@ class ItemRequests(ChromePage):
         a = self.open(url)
         row = "document.querySelector('#item-decisions-prices')"
         a.ev(f"BP.choose('decisions/prices', 'notice'); {row}.querySelector('.bp-more').click()")
+        approve = "document.querySelector('.bd-key.approve').disabled"
         self.assertEqual(self.count(a), [False, "1"])
+        self.assertTrue(a.ev(approve), "Approve stays enabled while an item asks for more details")
         self.assertEqual(a.ev(f"[{row}.classList.contains('more'), {row}.querySelector('.bp-more').getAttribute('aria-pressed'),"
                               f" document.activeElement === {row}.querySelector(':scope > .bp-note textarea')]"), [True, "true", True])
         self.send_changes(a, "1 request for more details")
@@ -323,7 +325,12 @@ class ItemRequests(ChromePage):
         self.assertEqual([(x["item"], x["choice"]) for x in answers if x.get("more")], [("prices", "notice")], "the toggle cleared the pick")
         self.assertEqual(self.count(a), [True, "0"])
         self.assertEqual(a.ev(f"{row}.querySelector('.bp-more').textContent"), "Details requested")
-        self.assertFalse(a.ev("BP.moreDetails('decisions/prices', false)"), "a sent request was taken back")
+        # sent: Approve still waits on it; withdrawing it is the reader's way out
+        self.assertTrue(a.ev(approve), "Approve enabled while a sent details request is unanswered")
+        self.assertTrue(a.ev("BP.moreDetails('decisions/prices', false)"))
+        self.assertFalse(a.ev(approve), "withdrawing the request left Approve disabled")
+        a.ev(f"{row}.querySelector('.bp-more').click()")
+        self.send_changes(a, "1 request for more details")
         # the agent answers with a new rev: the toggle is back to off
         self.assertTrue(until(lambda: self.state(url).get("decisions:prices:more", "").startswith("sent@")))
         r = self.tmp.run("build.py", "patch", self.plan, "item:decisions/prices", "--set", "detail=Acme shows the saved price and the current one.")
@@ -331,6 +338,7 @@ class ItemRequests(ChromePage):
         a.go(self.base + url)
         self.assertEqual(a.ev(f"[{row}.classList.contains('more'), {row}.querySelector('.bp-more').textContent]"), [False, "Need more details"])
         self.assertEqual(self.count(a), [True, "0"])
+        self.assertFalse(a.ev(approve), "Approve still disabled after the agent's new rev answered the request")
 
     def test_need_more_details_on_a_review(self) -> None:
         url = self.server.url_for(self.docs / "acme-review-findings.bluedoc.json")

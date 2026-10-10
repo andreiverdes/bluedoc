@@ -1417,6 +1417,9 @@ def make_handler(port: int, default_to: str):
                 return self.json(404, {"error": "not found"})
             if kind == "approval":
                 ok = data.get("decision") == "approved" and all(isinstance(data.get(k, []), list) for k in ("answers", "annotations"))
+                # an item still asking for more details blocks approval (the page disables Approve; this backs it)
+                if ok and any(isinstance(a, dict) and a.get("more") for a in data.get("answers", [])):
+                    return self.json(409, {"error": "an item asks for more details: send that request or withdraw it, then approve"})
             else:
                 ok = isinstance(data.get("items" if kind == "answers" else "annotations"), list)
             if not ok:
