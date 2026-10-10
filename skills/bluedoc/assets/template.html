@@ -4009,8 +4009,10 @@ function buildRevRail() {
   const go = () => { const a = REVS.find(r => r.rev === from.value), b = REVS.find(r => r.rev === to.value); if (a && b && a !== b) location.href = revUrl(b, a); else toast('Pick two different revisions'); };
   const cmpSec = sec('Compare', h('div', { class: 'bd-rv-ft' }, h('div', { class: 'row' }, from, ic('next'), to),
     h('button', { type: 'button', class: 'bp-btn primary', onclick: go }, ic('split'), 'Compare')));
-  body.prepend(cmpSec);
-  body.append(sec('Revisions', h('p', { class: 'bd-rvr-note' }, 'Earlier revisions are read-only: ticks, picks and comments made there aren\'t saved.'),
+  if (REVS.length > 1) body.prepend(cmpSec);
+  body.append(sec('Revisions', h('p', { class: 'bd-rvr-note' }, REVS.length > 1
+    ? 'Earlier revisions are read-only: ticks, picks and comments made there aren\'t saved.'
+    : 'Only one revision so far. When the agent revises this doc, earlier revisions and Compare appear here.'),
     h('ol', { class: 'bd-rvs' }, items)));
   const toggle = h('button', { type: 'button', class: 'bp-btn bp-side-toggle', 'aria-expanded': 'false', 'aria-controls': 'bd-rvr-body', onclick: () => setRevCard(!revRail.classList.contains('open')) },
     h('span', {}, 'Revisions'), ic('chev', 'chev'));
@@ -4036,7 +4038,7 @@ function revisionsRail(o) {
   if (o && typeof o === 'object' && 'open' in o) { if (as === 'drawer') setRevDrawer(!!o.open); else if (as === 'card') setRevCard(!!o.open); }
   return { available: true, as, open: as === 'drawer' ? revRail.classList.contains('drawer') : as === 'card' ? revRail.classList.contains('open') : true };
 }
-if (REVS.length > 1) {
+if (REVS.length >= 1 && REVS[0].rev) {
   const label = h('span', { class: 'l' }, revName(VIEW));
   const btn = h('button', { type: 'button', class: 'bp-btn bd-rev-btn' + (OLD ? ' old' : ''), title: 'Revisions', 'aria-controls': 'bd-rvr', onclick: revealRevs }, ic('hist'), label);
   document.querySelector('.bd-bar-r').prepend(btn);
