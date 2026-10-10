@@ -880,9 +880,9 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
    Row: [number tile] Revision N / first change note, ellipsized [chevron]; under it, two small buttons.
    Expanded: date, chips and every change note. */
 .bd-rvr, .bd-rvr-body, .bd-rvr .bd-rail-sec { min-width: 0; }
-/* the Revisions rail and the Comments list scroll without a visible scrollbar (wheel, trackpad, keys still work) */
-.bd-rvr, .bd-cs-l, .bp-side { scrollbar-width: none; -ms-overflow-style: none; }
-.bd-rvr::-webkit-scrollbar, .bd-cs-l::-webkit-scrollbar, .bp-side::-webkit-scrollbar { display: none; width: 0; height: 0; }
+/* the Revisions rail, the Comments list and the left panels scroll without a visible scrollbar (wheel, trackpad, keys still work) */
+.bd-rvr, .bd-cs-l, .bp-side, .bd-lp-pane { scrollbar-width: none; -ms-overflow-style: none; }
+.bd-rvr::-webkit-scrollbar, .bd-cs-l::-webkit-scrollbar, .bp-side::-webkit-scrollbar, .bd-lp-pane::-webkit-scrollbar { display: none; width: 0; height: 0; }
 @media (min-width: 901px) { .bd-rvr, .bp-side { -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent); } :root[data-rev="drawer"] .bd-rvr, :root[data-layout="wide"] .bp-side { -webkit-mask-image: none; mask-image: none; } }
 .bd-rvr { overflow-x: hidden; }
 .bd-rvs { list-style: none; margin: 0; padding: 0; border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-1); overflow: hidden; }
@@ -1498,7 +1498,7 @@ html.bd-lp-open .bd-lp { transform: none; visibility: visible; transition: trans
 .bd-lp > .bd-head h1 { margin: 6px 0 0; font-size: 17px; line-height: 1.3; letter-spacing: -.01em; }
 .bd-lp > .bd-head .bd-sub { margin: 4px 0 0; font-size: 13px; }
 .bd-lp-tabs { flex: none; padding: 8px 12px 10px; box-shadow: inset 0 -1px 0 var(--line-soft); }
-.bd-lp-pane { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 10px 12px calc(16px + var(--tray-room, 0px)); scrollbar-width: thin; }
+.bd-lp-pane { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 10px 12px calc(16px + var(--tray-room, 0px)); }
 .bd-lp-pane[hidden] { display: none; }
 .bd-lp-pane .hint { margin: 12px 10px 0; font-size: 12px; line-height: 1.45; color: var(--fg-subtle); }
 #bd-lp-brief { font-size: 14px; }
