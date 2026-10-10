@@ -2,7 +2,8 @@
 
 The state routes refuse a request without X-Bluedoc, from another Origin or Host (403) and a path outside the
 registered folders (404). A PUT and GET round trip; state and queued replies survive a restart and `wait` takes a
-reply once; an import adds only missing keys; the seed is embedded as inert JSON; reply files of earlier versions are
+reply once; an import adds only missing keys; the seed is embedded as inert JSON; an approval counts only for the
+doc the page showed (its rev and docHash) and only while the doc is unchanged; reply files of earlier versions are
 imported once and left in place, and no reply files are written."""
 from __future__ import annotations
 
@@ -80,19 +81,17 @@ class State(unittest.TestCase):
 
     def test_round_trip(self) -> None:
         self.assertEqual(self.get(), (200, {"version": 0, "state": {}}))
-        note = '<img src=x onerror=alert(1)></script><script>alert(2)</script>'
+        note = '<!-- Acme --><img src=x onerror=alert(1)></script><script>alert(2)</script>'
         self.assertEqual(self.put([[self.item, "1"], [self.item + ":note", note], ["__seen", "A"]]), (200, {"ok": True, "version": 1}))
         self.assertEqual(self.put([[self.item, "1"]])[1]["version"], 1, "an unchanged value bumped the version")
         self.assertEqual(self.get(since=1)[0], 204)
         self.assertEqual(self.put([["__seen", None]])[1]["version"], 2)
         status, got = self.get(since=1)
         self.assertEqual((status, got), (200, {"version": 2, "state": {self.item: "1", self.item + ":note": note}}))
-        # the page carries the same state, as inert JSON: the note can't close its script element
-        html = self.req("GET", self.url)[1].decode()
-        seed = re.search(r'<script type="application/json" id="bp-state">(.*?)</script>', html, re.S)
-        self.assertIsNotNone(seed)
-        self.assertEqual(json.loads(seed.group(1).replace("<\\/", "</").replace("<\\!--", "<!--")), got)
-        self.assertNotIn("</script><script>alert(2)", html)
+        # the page carries the same state, as inert JSON that parses as served: the note can't close its script element
+        seed = self.seed(self.url)
+        self.assertEqual({"version": seed["version"], "state": seed["state"]}, got)
+        self.assertNotIn("</script><script>alert(2)", self.req("GET", self.url)[1].decode())
         # the home page's card progress: tick and pick values only
         index = json.loads(self.req("GET", "/__bluedoc/index.json")[1])
         cards = {d["path"]: d for r in index["roots"] for d in r["docs"]}
@@ -130,17 +129,33 @@ class State(unittest.TestCase):
         r = self.tmp.run("serve.py", "reply", self.plan, "--json")
         self.assertEqual(json.loads(r.stdout)["markdown"], answers["markdown"])
 
+    def seed(self, url: str) -> dict:
+        html = self.req("GET", url)[1].decode()
+        return json.loads(re.search(r'<script type="application/json" id="bp-state">(.*?)</script>', html, re.S).group(1))
+
     def test_approval_counts_while_the_doc_is_unchanged(self) -> None:
-        body = {"path": self.plan_url, "rev": "A", "decision": "approved", "answers": [], "annotations": [],
-                "at": "2026-01-01T00:00:00Z", "markdown": "# Plan approved: Acme\n"}
-        self.assertEqual(self.req("POST", "/__bluedoc/approve", json.dumps(body).encode(), JSON)[0], 200)
         ping = lambda: json.loads(self.req("GET", f"/__bluedoc/ping?path={quote(self.plan_url)}", headers={"X-Bluedoc": "1"})[1])  # noqa: E731
         card = lambda: next(d for r in json.loads(self.req("GET", "/__bluedoc/index.json")[1])["roots"] for d in r["docs"] if d["path"] == self.plan.name)  # noqa: E731
-        self.assertEqual(ping()["approval"], {"rev": "A", "at": "2026-01-01T00:00:00Z"})
-        self.assertEqual(card()["approval"]["rev"], "A")
-        doc = json.loads(self.plan.read_text(encoding="utf-8"))
-        doc["subtitle"] = doc.get("subtitle", "") + " Edited."
-        self.plan.write_text(json.dumps(doc, indent=2), encoding="utf-8")
+        approve = lambda body: self.req("POST", "/__bluedoc/approve", json.dumps(body).encode(), JSON)  # noqa: E731
+        edit = lambda text: self.plan.write_text(json.dumps({**json.loads(self.plan.read_text(encoding="utf-8")), "subtitle": text}), encoding="utf-8")  # noqa: E731
+        rev = json.loads(self.plan.read_text(encoding="utf-8"))["meta"]["rev"]
+        body = {"path": self.plan_url, "rev": rev, "docHash": self.seed(self.plan_url)["docHash"], "decision": "approved",
+                "answers": [], "annotations": [], "at": "2026-01-01T00:00:00Z", "markdown": "# Plan approved: Acme\n"}
+        # edited in place between the page load and the click: the reader approved a doc they didn't see
+        edit("Edited.")
+        status, raw = approve(body)
+        self.assertEqual((status, json.loads(raw).get("reload")), (409, True))
+        self.assertIsNone(ping()["approval"])
+        body["docHash"] = self.seed(self.plan_url)["docHash"]
+        for name, over in (("another rev", {"rev": rev + "0"}), ("no docHash", {"docHash": None})):
+            with self.subTest(name):
+                self.assertEqual(approve({**body, **over})[0], 409)
+        self.assertIsNone(ping()["approval"])
+        self.assertEqual(approve(body)[0], 200)
+        self.assertEqual(ping()["approval"], {"rev": rev, "at": "2026-01-01T00:00:00Z"})
+        self.assertEqual(card()["approval"]["rev"], rev)
+        # an edit after the approval resets it
+        edit("Edited again.")
         self.assertIsNone(ping()["approval"])
         self.assertNotIn("approval", card())
 

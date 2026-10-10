@@ -1,0 +1,90 @@
+{
+  "id": "review-skeleton",
+  "title": "<<repo>> review: <<N>> findings by area",
+  "subtitle": "<<What the page holds, in one clause>>. Pick what to do with each; my recommendation is starred.",
+  "meta": { "org": "<<Org>>", "kind": "Review", "type": "review", "rev": "1", "date": "<<YYYY-MM-DD>>" },
+  "state": [
+    { "label": "<<N findings>>", "kind": "warn" },
+    { "label": "<<N fix in the next release>>", "kind": "warn" },
+    { "label": "<<N follow-up tickets>>", "kind": "info" },
+    { "label": "<<N decline>>", "kind": "todo" }
+  ],
+  "links": [
+    { "label": "<<repo>> <<last release you reviewed>> → <<head>>", "href": "<<compare URL of that range>>" }
+  ],
+  "tldr": "<<How many to fix, ticket and decline, and which findings are real bugs.>>",
+  "sections": [
+    {
+      "id": "summary",
+      "title": "Summary",
+      "lead": "Each finding has its options under it, with my recommendation starred. Pick one per finding, comment where you disagree, then press **Send answers**.",
+      "blocks": [
+        {
+          "type": "table",
+          "columns": ["Area", "Finding", "Size", "Recommendation"],
+          "rows": [
+            ["<<area>>", "[<<finding A, as in its item>>](#item-a1-finding-a)", "major", "<<Fix in next release>>"],
+            ["<<area>>", "[<<finding B, as in its item>>](#item-a1-finding-b)", "minor", "<<Ticket>>"]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "area-1",
+      "title": "<<Area>>",
+      "lead": "<<N findings and their kind>>. Diff: `<<last release you reviewed>>` → head `<<head>>`, limited to this area's files.",
+      "blocks": [
+        {
+          "type": "checklist",
+          "id": "a1",
+          "title": "Findings · <<area>>",
+          "numbered": false,
+          "items": [
+            {
+              "id": "finding-a",
+              "text": "<<Finding A, stated as a fact in one line>>",
+              "sub": "Recommend Fix in <<release>>: <<one-line reason>>.",
+              "state": "major",
+              "stateKind": "warn",
+              "recommend": "fix",
+              "choices": [
+                { "id": "fix", "label": "Fix in <<release>>" },
+                { "id": "ticket", "label": "Ticket" },
+                { "id": "decline", "label": "Decline" }
+              ],
+              "detail": "**Evidence:** <<what you read or ran, with path:line>>\n\n**My reasoning:** <<why this recommendation and what you checked>>\n\n**Fix:** <<the concrete change>>\n\n**Verify:** <<the observable check>>"
+            },
+            {
+              "id": "finding-b",
+              "text": "<<Finding B, stated as a fact in one line>>",
+              "sub": "Recommend Ticket: <<one-line reason>>.",
+              "state": "minor",
+              "stateKind": "info",
+              "recommend": "ticket",
+              "choices": [
+                { "id": "fix", "label": "Fix in <<release>>" },
+                { "id": "ticket", "label": "Ticket" },
+                { "id": "decline", "label": "Decline" }
+              ],
+              "detail": "**Evidence:** <<what you read or ran, with path:line>>\n\n**My reasoning:** <<why this recommendation and what you checked>>\n\n**Fix:** <<the change the ticket asks for>>\n\n**Verify:** <<the observable check>>"
+            }
+          ]
+        },
+        {
+          "type": "diff",
+          "id": "diff-1",
+          "title": "<<repo>> · <<area>>",
+          "repo": "<<checkout path relative to this file; or let gitdiff.py --id diff-1 write this block>>",
+          "base": "<<SHA or tag of the last release you reviewed>>",
+          "head": "<<head SHA>>",
+          "paths": ["<<path/in/this/area.py>>"],
+          "note": "This area's files only. Head `<<head>>`.",
+          "comments": [
+            { "at": "<<path:line-end of finding A>>", "item": "a1/finding-a" },
+            { "at": "<<path:line of finding B>>", "item": "a1/finding-b" }
+          ]
+        }
+      ]
+    }
+  ]
+}

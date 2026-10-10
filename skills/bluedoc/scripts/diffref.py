@@ -26,8 +26,12 @@ import os
 import re
 import subprocess
 import tempfile
+import sys
 from pathlib import Path
 from typing import Callable, Optional
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from build import DOC_SUFFIXES  # noqa: E402
 
 HUNK_RE = re.compile(r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@ ?(.*)$")
 AT_RE = re.compile(r"^(?P<path>[^:\s][^:]*?)(?::~?(?P<line>\d+)(?:-(?P<end>\d+))?(?:[,;].*)?)?$")
@@ -40,6 +44,9 @@ EXCERPT = 5
 MAX_LINES = 800
 
 Source = Callable[[str, int, int], Optional[dict]]
+# every git call: a repo under a scanned folder can come from anyone (a cloned branch, an archive), so git must not
+# open a bare repo it finds by itself, run a textconv driver or ext diff its config names, or start an fsmonitor hook
+GIT = ("git", "-c", "safe.bareRepository=explicit", "-c", "core.fsmonitor=false")
 
 
 # ---------------------------------------------------------------- unified diff -> files
@@ -250,7 +257,7 @@ def _run(cmd: list[str], cwd: str | None = None) -> tuple[int, str]:
 
 
 def git_diff_args(base: str, head: str, paths: list[str], context: int = CONTEXT) -> list[str]:
-    return ["diff", "--no-color", "--no-ext-diff", f"-U{context}", "--find-renames", base, head, "--", *paths]
+    return ["diff", "--no-color", "--no-ext-diff", "--no-textconv", f"-U{context}", "--find-renames", base, head, "--", *paths]
 
 
 def path_matches(path: str, specs: list[str]) -> bool:
@@ -280,11 +287,11 @@ class LocalGit:
         self.repo, self.base, self.head = str(repo), base, head
 
     def diff(self, paths: list[str], context: int) -> tuple[str | None, str]:
-        code, out = _run(["git", "-C", self.repo, *git_diff_args(self.base, self.head, paths, context)])
+        code, out = _run([*GIT, "-C", self.repo, *git_diff_args(self.base, self.head, paths, context)])
         return (out, "") if code == 0 else (None, f"git diff failed: {out}")
 
     def source(self, path: str) -> str | None:
-        code, out = _run(["git", "-C", self.repo, "cat-file", "blob", f"{self.head}:{path}"])
+        code, out = _run([*GIT, "-C", self.repo, "cat-file", "blob", f"{self.head}:{path}"])
         return out if code == 0 else None
 
 
@@ -310,7 +317,7 @@ class GhPull:
 
 
 def has_commits(repo: Path, *revs: str) -> bool:
-    return repo.is_dir() and all(_run(["git", "-C", str(repo), "cat-file", "-e", f"{r}^{{commit}}"])[0] == 0 for r in revs)
+    return repo.is_dir() and all(_run([*GIT, "-C", str(repo), "cat-file", "-e", f"{r}^{{commit}}"])[0] == 0 for r in revs)
 
 
 def pr_spec(block: dict) -> tuple[str | None, str] | None:
@@ -361,7 +368,7 @@ def open_source(block: dict, doc_dir: Path, allow_remote: bool) -> tuple[LocalGi
 
 def cache_path(doc_path: Path) -> Path:
     name = doc_path.name
-    for suffix in (".bluedoc.json", ".blueprint.json", ".json"):
+    for suffix in (*DOC_SUFFIXES, ".json"):
         if name.endswith(suffix):
             name = name[: -len(suffix)]
             break
@@ -375,7 +382,7 @@ def resolve_rev(block: dict, doc_dir: Path, rev: str) -> str:
     repo = resolve_repo(block, doc_dir)
     if not repo.is_dir():
         return rev
-    code, out = _run(["git", "-C", str(repo), "rev-parse", "--verify", "-q", f"{rev}^{{commit}}"])
+    code, out = _run([*GIT, "-C", str(repo), "rev-parse", "--verify", "-q", f"{rev}^{{commit}}"])
     return out.strip() if code == 0 and out.strip() else rev
 
 

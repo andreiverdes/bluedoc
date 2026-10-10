@@ -4,8 +4,9 @@ docs     one row per doc file: its resolved path, its doc.id and a version that 
 state    the page's bp:<doc.id>:<key> values, one row per key (the key without the 'bp:<doc.id>:' prefix)
 replies  Send answers, Request changes and Approve plan, every one kept; delivered is NULL until `wait` returns it
 
-A doc is found by its path; a path with no row takes over the row of the one other path with the same doc.id
-whose file is gone (the doc moved). One connection behind a lock serves the threaded server; the file is mode 0600
+A doc is found by its path. A write (a state PUT or a reply) for a path with no row takes over the row of the one
+other path with the same doc.id whose folder is gone too (the doc moved with its folder); a read never moves a row.
+One connection behind a lock serves the threaded server; the file is mode 0600
 and in WAL mode. Python 3.9+ standard library only.
 """
 from __future__ import annotations
@@ -93,9 +94,10 @@ class StateDB:
     # ---------- docs ----------
 
     @staticmethod
-    def _doc(c: sqlite3.Connection, path: str, doc_id: str | None, create: bool) -> int | None:
-        """The docs row for path. A path with no row takes over the row of the one other path with this doc.id whose
-        file is gone; otherwise a row is inserted when create is set."""
+    def _doc(c: sqlite3.Connection, path: str, doc_id: str | None) -> int:
+        """The docs row a write uses for path, inserted when missing. A path with no row takes over the row of the one
+        other path with this doc.id whose folder is gone: a doc whose file alone is gone may come back (a branch
+        switch), and a same-id copy elsewhere (a worktree) must not take its state."""
         row = c.execute("SELECT id, doc_id FROM docs WHERE path = ?", (path,)).fetchone()
         if row:
             if doc_id and row[1] != doc_id:
@@ -103,23 +105,22 @@ class StateDB:
             return row[0]
         if doc_id:
             gone = [r[0] for r in c.execute("SELECT id, path FROM docs WHERE doc_id = ? AND path != ?", (doc_id, path)).fetchall()
-                    if not Path(r[1]).exists()]
+                    if not Path(r[1]).parent.exists()]
             if len(gone) == 1:
                 c.execute("UPDATE docs SET path = ? WHERE id = ?", (path, gone[0]))
                 return gone[0]
-        if not create:
-            return None
         return c.execute("INSERT INTO docs (path, doc_id) VALUES (?, ?)", (path, doc_id or "")).lastrowid
 
-    def _find(self, path: str, doc_id: str | None) -> int | None:
-        """The docs row a read uses, or None (a takeover writes, so this runs as a transaction)."""
-        return self._write(lambda c: self._doc(c, path, doc_id, create=False))
+    def _find(self, path: str) -> int | None:
+        """The docs row a read uses, or None: by path only."""
+        rows = self._read("SELECT id FROM docs WHERE path = ?", (path,))
+        return rows[0][0] if rows else None
 
     # ---------- reader state ----------
 
-    def state(self, path: str, doc_id: str | None) -> tuple[int, dict[str, str]]:
+    def state(self, path: str) -> tuple[int, dict[str, str]]:
         """(version, {key: value}) for the doc; (0, {}) when it has no row."""
-        doc = self._find(path, doc_id)
+        doc = self._find(path)
         if doc is None:
             return 0, {}
         with self.lock:
@@ -130,7 +131,7 @@ class StateDB:
         """Apply [(key, value, or None to delete)] in one transaction; the doc's version afterwards. An import only adds
         keys the doc lacks and skips deletes. The version goes up by one when at least one row changed."""
         def run(c: sqlite3.Connection) -> int:
-            doc = self._doc(c, path, doc_id, create=True)
+            doc = self._doc(c, path, doc_id)
             stamp, changed = now(), 0
             for key, value in ops:
                 if value is None:
@@ -155,7 +156,7 @@ class StateDB:
         """Store a reply; its id. It stays queued for `wait` (delivered NULL) unless delivered is given."""
         return self._write(lambda c: c.execute(
             "INSERT INTO replies (doc, kind, rev, at, doc_hash, payload, markdown, delivered) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            (self._doc(c, path, doc_id, create=True), kind, rev, at or now(), doc_hash, payload, markdown, delivered)).lastrowid)
+            (self._doc(c, path, doc_id), kind, rev, at or now(), doc_hash, payload, markdown, delivered)).lastrowid)
 
     def undelivered(self, path: str | None = None, kind: str = "any") -> list[dict]:
         """Queued replies, oldest first: one doc path's, or every doc's when path is None; kind 'any' takes all kinds."""
@@ -173,14 +174,14 @@ class StateDB:
         rows = self._read(REPLY_SELECT + " WHERE r.id = ?", (reply_id,))
         return dict(zip(REPLY_KEYS, rows[0])) if rows else None
 
-    def latest(self, path: str, doc_id: str | None) -> dict[str, dict]:
+    def latest(self, path: str) -> dict[str, dict]:
         """The doc's newest reply of each kind, by kind."""
-        doc = self._find(path, doc_id)
+        doc = self._find(path)
         if doc is None:
             return {}
         rows = self._read(REPLY_SELECT + " WHERE r.id IN (SELECT MAX(id) FROM replies WHERE doc = ? GROUP BY kind)", (doc,))
         return {r[2]: dict(zip(REPLY_KEYS, r)) for r in rows}
 
-    def approval(self, path: str, doc_id: str | None) -> dict | None:
+    def approval(self, path: str) -> dict | None:
         """The doc's newest approval, or None; the caller compares its doc_hash with the doc's own."""
-        return self.latest(path, doc_id).get("approval")
+        return self.latest(path).get("approval")

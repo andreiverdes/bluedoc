@@ -370,7 +370,7 @@ a.bd-row:hover .tx .t { color: var(--color-hz-accent-fg); }
 'use strict';
 const e = React.createElement, F = React.Fragment;
 const { useState, useEffect, useMemo, useRef, useDeferredValue } = React;
-const { HorizonProvider, Sidebar, SegmentedControl, Card, ProgressRing, EmptyState, SearchField, Tag, IconButton, Button, ToggleButton, StatusDot, Badge, Icons } = window.HorizonUI;
+const { HorizonProvider, Sidebar, SegmentedControl, Card, ProgressRing, EmptyState, SearchField, Tag, IconButton, Button, ToggleButton, StatusDot, Badge, Banner, Icons } = window.HorizonUI;
 
 /* ---------- storage, theme, settings ---------- */
 const store = { get: k => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch {} } };
@@ -1014,6 +1014,9 @@ function App() {
     e('div', { className: 'bd-shell' },
       e('div', { className: 'bd-side' }, data && sidebar(false)),
       e('div', { className: 'bd-main' },
+        // the server takes ticks, comments and replies only from a browser that opened a `serve.py open` or `serve.py unlock` link
+        data && data.unlocked === false && e(Banner, { tone: 'warning', className: 'bd-lock', title: 'This browser can\'t save yet.' },
+          'Run ', e('code', null, 'serve.py open <doc>'), ' or ', e('code', null, 'serve.py unlock'), ' and open the link it prints.'),
         e('div', { className: 'bd-top' + (heroOut ? ' on' : ''), inert: !heroOut },
           menuBtn, e(Brand, { mark: true }), e('span', { className: 'bd-top-t', style: { fontWeight: 600, fontSize: 14 } }, 'All docs'),
           e(SearchField, { ...searchProps, ref: topInput, size: 'md', className: 'bd-top-q', placeholder: 'Search docs', shortcut: finePointer ? ['/'] : undefined }),

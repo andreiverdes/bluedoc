@@ -23,6 +23,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import build  # noqa: E402
 import diffref  # noqa: E402
 from gitdiff import dump_like  # noqa: E402
 
@@ -141,15 +142,6 @@ def convert(block: dict, doc_dir: Path, roots: list[Path], cache: dict) -> tuple
     return None, why
 
 
-def contract_gaps(doc: dict) -> list[str] | None:
-    try:
-        import build
-    except ImportError:
-        return None
-    check = getattr(build, "check_contract", None)
-    return check(doc) if check else None
-
-
 def migrate(path: Path, roots: list[Path], dry_run: bool) -> dict:
     raw = path.read_text(encoding="utf-8")
     row = {"doc": path, "converted": 0, "kept": [], "before": len(raw.encode()), "after": len(raw.encode()), "gaps": None}
@@ -171,8 +163,7 @@ def migrate(path: Path, roots: list[Path], dry_run: bool) -> dict:
         block.clear()
         block.update(ref)
         row["converted"] += 1
-    gaps = contract_gaps(copy.deepcopy(doc))
-    row["gaps"] = gaps
+    row["gaps"] = build.check_contract(copy.deepcopy(doc))
     if row["converted"]:
         text = dump_like(raw, doc)
         row["after"] = len(text.encode())
@@ -189,7 +180,7 @@ def main() -> int:
     ap.add_argument("--repo-root", type=Path, action="append", default=[], help="folder holding repos (repeatable)")
     a = ap.parse_args()
     roots = [r.resolve() for r in a.repo_root]
-    docs = sorted(p for pat in ("*.bluedoc.json", "*.blueprint.json") for p in a.folder.rglob(pat))
+    docs = sorted(p for suffix in build.DOC_SUFFIXES for p in a.folder.rglob(f"*{suffix}"))
     rows = [migrate(p, roots, a.dry_run) for p in docs]
     names = [str(r["doc"].relative_to(a.folder)) for r in rows]
     w = max([len("doc"), *map(len, names)])

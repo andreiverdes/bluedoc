@@ -35,7 +35,7 @@ import diffref  # noqa: E402
 
 
 def git(repo: str, *args: str) -> str:
-    r = subprocess.run(["git", "-C", repo, *args], capture_output=True, text=True)
+    r = subprocess.run([*diffref.GIT, "-C", repo, *args], capture_output=True, text=True)
     if r.returncode:
         raise SystemExit(f"git {' '.join(args)} failed: {r.stderr.strip()}")
     return r.stdout

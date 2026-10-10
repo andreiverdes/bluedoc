@@ -10,10 +10,10 @@ You write one `*.bluedoc.json`; the local server renders it as a page (blueprint
 ## Workflow
 
 1. **Gather facts from the source.** Read the code, configs and runs the doc describes. Every node, step and finding maps to a file, symbol, queue or command; keep `path:line` anchors for `refs`. Mark what you did not observe `unverified`.
-2. **Scaffold:** `python3 <skill>/scripts/build.py new <type> docs/<topic>/<name>.bluedoc.json --title "…" [--kind Runbook]`. Plans go in `docs/plans/<topic>.bluedoc.json`. Then read the type's guide (table below), once.
+2. **Scaffold:** `python3 <skill>/scripts/build.py new <type> docs/<topic>/<name>.bluedoc.json --title "…" [--kind Runbook]`. Plans go in `docs/plans/<topic>.bluedoc.json`; a codebase review by area, not by PR, adds `--shape area`. Then read the type's guide (table below), once.
 3. **Fill every `<<…>>`**; add or drop blocks as the guide says. Images and videos go next to the JSON (`media/…`), referenced by relative path.
 4. **Validate:** `python3 <skill>/scripts/build.py <doc>`. Fix every `ERROR`; fix every `WARN` unless it is a false positive you can name. This records the revision. A passing build is the whole verification: no browser check.
-5. **Open:** `python3 <skill>/scripts/serve.py open <doc> --to <your name>` starts the server if needed and prints the URL; later edits show on reload. Give the reader the URL and what stays unverified.
+5. **Open:** `python3 <skill>/scripts/serve.py open <doc> --to <your name>` starts the server if needed and prints the URL with a one-time `?key=` token; later edits show on reload. Give the reader that exact link (it lets their browser save) and what stays unverified. A page that says "This browser can't save yet": run `serve.py unlock` and send its link.
 6. **Wait** in the background, no timeout: `python3 <skill>/scripts/serve.py wait <doc> --kind any`. It prints `--- bluedoc <kind> (reply <id>, …) ---`, the reader's Markdown, `--- end ---`. Replies sent while nobody waits are queued; `serve.py reply <id>` reprints one.
 
 | Type | Guide | When |

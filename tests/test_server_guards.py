@@ -1,11 +1,13 @@
 """Server guards: `serve.py run` on a free port with a temp BLUEDOC_HOME; the probes the review ran with curl.
 
 Path traversal is 404, a foreign or empty Host is 403, a POST without X-Bluedoc or from another origin is 403,
-a preflight is 501, and GET /__bluedoc/wait without X-Bluedoc is 403 and leaves the reply for the agent."""
+a preflight is 501, GET /__bluedoc/wait without X-Bluedoc is 403 and leaves the reply for the agent, and a
+Content-Length or wait timeout that isn't a finite number 0 or more is 400 at once, with no traceback."""
 from __future__ import annotations
 
 import json
 import shutil
+import time
 import unittest
 from urllib.parse import quote
 
@@ -79,6 +81,20 @@ class ServerGuards(unittest.TestCase):
         status, body = self.req("GET", wait, headers={"X-Bluedoc": "1"})
         self.assertEqual(status, 200, "the refused wait consumed the reply")
         self.assertEqual(json.loads(body)["message"]["kind"], "changes")
+
+    def test_bad_numbers_are_400(self) -> None:
+        own = f"http://{self.host}"
+        status, _ = self.req("PUT", "/__bluedoc/state", b"{}", {"Content-Type": "application/json", "X-Bluedoc": "1",
+                                                                "Origin": own, "Content-Length": "abc"})
+        self.assertEqual(status, 400, "Content-Length: abc")
+        for timeout in ("abc", "nan", "inf", "-1"):
+            with self.subTest(timeout=timeout):
+                t0 = time.monotonic()
+                status, _ = self.req("GET", f"/__bluedoc/wait?doc={quote(str(self.doc))}&kind=any&timeout={timeout}",
+                                     headers={"X-Bluedoc": "1"})
+                self.assertEqual(status, 400)
+                self.assertLess(time.monotonic() - t0, 2, "a bad timeout held the connection")
+        self.assertNotIn("Traceback", (self.tmp.dir / "server.log").read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":

@@ -15,7 +15,7 @@ An agent skill for engineering docs, plans and code reviews. The agent writes on
 - **Code review.** A `diff` block shows a change with each finding as a comment on its lines, and its options on the card. A file with several comments says how many, steps between them, and tells you how many sit above or below what you can see. The doc stores only the git range (`gitdiff.py` writes it); the server expands it from git on each render and caches the result next to the doc, falling back to `gh pr diff`. GitHub review threads come in through `ghthreads.py`.
 - **Revisions you can compare.** Each build keeps the doc's revision history. From the Revisions rail beside the content (shown on every doc), switch to any earlier revision or compare two: new, changed and removed sections, items, table rows and drawing parts are marked in place with a word-level diff, next to the author's note on what changed. Readers who come back to a newer revision get a link to what changed since their last visit.
 - **A local server, a home page, JSON only.** `serve.py` renders each doc from its JSON on every request, so agents write only the JSON, never the HTML. `http://127.0.0.1:8740/` is a HorizonUI dashboard: a search-first hero, a sidebar of projects with their folder trees, doc types and status, activity and decision charts, and every doc as a card whose hero is shared by its type and shows the type's own element (a review's +/− lines, a plan's step timeline, a doc's drawing), in a grid (2–6 columns), a list or a board. `build.py -o` still writes a standalone HTML file when you need to send one.
-- **Your input stays on your machine.** Ticks, picks, comments, annotations, the plan's state and every reply you send live in `~/.bluedoc/state.db`, a SQLite file the server owns, never in the repo. Each browser keeps a copy and catches up when the server is back; a standalone `-o` file keeps its input in the browser. Theme and width stay per browser.
+- **Your input stays on your machine.** Ticks, picks, comments, annotations, the plan's state and every reply you send live in `~/.bluedoc/state.db`, a SQLite file the server owns, never in the repo. Only a browser that opened a link from `serve.py open` or `serve.py unlock` (a one-time key that sets a cookie) can save, so a web page you visit can't write your answers. Each browser keeps a copy and catches up when the server is back; a standalone `-o` file keeps its input in the browser. Theme and width stay per browser.
 - **Self-contained pages.** No network at view time beyond the local server, prints cleanly, light and dark theme, keyboard and screen-reader outline.
 - **Adjustable width.** Drag the handle on either side of the text to widen or narrow it; it stays centred and every bluedoc page in that browser remembers the width. Wide tables stop wrapping. Double-click a handle to reset.
 - **Linted writing.** The build flags filler, vague words, long sentences and checklist items that don't start with a verb.
@@ -101,7 +101,7 @@ The agent scaffolds `docs/<topic>/<name>.bluedoc.json` from the type's skeleton 
 ```sh
 python3 <skill>/scripts/build.py new plan docs/plans/saved-carts.bluedoc.json --title "Saved carts"   # skeleton with <<…>> to fill
 python3 <skill>/scripts/build.py docs/plans/saved-carts.bluedoc.json        # validate, record the revision
-python3 <skill>/scripts/serve.py open docs/plans/saved-carts.bluedoc.json   # start the server, print the URL
+python3 <skill>/scripts/serve.py open docs/plans/saved-carts.bluedoc.json   # start the server, print the URL (with a one-time key)
 ```
 
 When you send comments back, the agent revises one object at a time, and the revision bumps itself:
@@ -134,7 +134,7 @@ skills/bluedoc/
   SKILL.md               the workflow card the agent reads first
   types/<type>.md        one guide per doc type: plan, review, docs, other
   references/schema.md   every JSON field and command, for lookup
-  assets/skeletons/      fill-in skeleton per doc type (build.py new)
+  assets/skeletons/      fill-in skeleton per doc type (build.py new), plus review-area.json (--shape area)
   scripts/build.py       new, validate, lint, patch, build the HTML
   scripts/gitdiff.py     git range + findings -> diff block (a git reference)
   scripts/diffref.py     expands diff references from the cache, git or gh
@@ -158,4 +158,4 @@ The examples describe Acme Corp, a fictional company.
 
 ## License
 
-MIT
+bluedoc's own code: MIT (`LICENSE`). The vendored HorizonUI build under `skills/bluedoc/assets/vendor/horizon-ui/` is Apache-2.0 (its `LICENSE` and `NOTICE`), and the Inter and JetBrains Mono fonts it ships are OFL-1.1 (its `THIRD_PARTY_NOTICES.md`). The manifests declare `MIT AND Apache-2.0 AND OFL-1.1`.
