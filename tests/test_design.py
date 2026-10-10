@@ -5,14 +5,16 @@ The example builds clean and its history holds both revisions with one HTML entr
 wants exactly one board with an artboard; the board's ids, devices, fidelity, variants, themes and frameworks are
 checked. Each banned construct in a screen file is one ERROR. An edit to a screen file under the same rev is an edit
 in place that changes the approval hash, and the old rev's HTML stays readable. `new design --target presentation`
-writes a three-slide deck in one row that builds clean once filled in; speaker notes over 2 KB are an ERROR. The
-bundled deck, acme-fit-deck, builds clean: five hi-fi plain-kit slides in one row with notes, one revision. The
+writes a three-slide deck in one column that builds clean once filled in; speaker notes over 2 KB are an ERROR. The
+bundled deck, acme-fit-deck, builds clean: five hi-fi plain-kit slides in one column with notes, one revision. The
 server serves only screens and declared framework files, and wraps a screen whose framework is missing in the plain
 kit with a notice."""
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
+import re
 import unittest
 
 from _support import EXAMPLES, Server, TempHome, load_json
@@ -271,14 +273,14 @@ class PresentationTarget(unittest.TestCase):
         self.doc_path.write_text(json.dumps(doc, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
         return self.tmp.run("build.py", self.doc_path, "--check")
 
-    def test_the_stub_deck_is_three_slides_in_a_row_and_builds_clean(self) -> None:
+    def test_the_stub_deck_is_three_slides_in_a_column_and_builds_clean(self) -> None:
         board = board_of(self.doc)
         self.assertEqual(board["targets"], ["presentation"])
         self.assertEqual([(a["id"], a["device"]) for a in board["artboards"]],
                          [("title", "slide"), ("content", "slide"), ("closing", "slide")])
         self.assertEqual(build.DEVICES["slide"], {"w": 1920, "h": 1080, "safe": [0, 0, 0, 0]})
         layout = build.board_layout(board)
-        self.assertEqual([layout[k][:2] for k in ("title", "content", "closing")], [(0, 0), (2000, 0), (4000, 0)])
+        self.assertEqual([layout[k][:2] for k in ("title", "content", "closing")], [(0, 0), (0, 1360), (0, 2720)])
         for a in board["artboards"]:
             html = (self.tmp.dir / "deck.design" / f"{a['id']}.html").read_text(encoding="utf-8")
             self.assertIn('class="slide', html)
@@ -295,9 +297,18 @@ class PresentationTarget(unittest.TestCase):
         board_of(d)["artboards"][1]["notes"] = "Acme Fit doubled weekly actives."
         self.assertEqual(errors(self.check(d).stderr), [])
 
+    def test_on_a_mixed_board_the_slide_column_sits_right_of_the_other_artboards(self) -> None:
+        board = {"artboards": [{"id": "title", "device": "slide"}, {"id": "home", "device": "phone"},
+                               {"id": "home-b", "device": "phone", "variantOf": "home"},
+                               {"id": "web", "device": "browser", "x": 0, "y": 1000}, {"id": "ask", "device": "slide"}]}
+        layout = build.board_layout(board)
+        self.assertEqual(list(layout), ["title", "home", "home-b", "web", "ask"])
+        self.assertEqual([layout[k][:2] for k in ("home", "home-b", "web")], [(0, 0), (470, 0), (0, 1000)])
+        self.assertEqual([layout[k][:2] for k in ("title", "ask")], [(1520, 0), (1520, 1360)])
+
 
 class DeckExample(unittest.TestCase):
-    """The bundled deck, acme-fit-deck: five hi-fi plain-kit slides in one row, notes on some, one revision."""
+    """The bundled deck, acme-fit-deck: five hi-fi plain-kit slides in one column, notes on some, one revision."""
 
     STEM = "acme-fit-deck"
 
@@ -321,7 +332,9 @@ class DeckExample(unittest.TestCase):
                          {("slide", "hifi", "plain")})
         self.assertGreaterEqual(sum(bool(a.get("notes")) for a in arts), 2)
         layout = build.board_layout(board)
-        self.assertEqual({layout[a["id"]][1] for a in arts}, {0}, "the deck lays out in one row")
+        self.assertEqual({layout[a["id"]][0] for a in arts}, {0}, "the deck lays out in one column")
+        ys = [layout[a["id"]][1] for a in arts]
+        self.assertEqual(ys, sorted(set(ys)), "slides stack top to bottom in deck order")
         html = "".join((EXAMPLES / f"{self.STEM}.design" / f"{a['id']}.html").read_text(encoding="utf-8") for a in arts)
         for cls in ("slide-cols", "slide-big", "slide-quote"):
             self.assertIn(cls, html)
@@ -380,6 +393,88 @@ class FrameworkFallback(unittest.TestCase):
         self.assertIn("Acme gone CSS not found: showing the plain kit", html)
         self.assertIn("/__bluedoc/kit/base.css", html, "the fallback must load the plain kit")
         self.assertNotIn("vendor/gone.css", html)
+
+
+class ShippedFrameworks(unittest.TestCase):
+    """heroui and tailwind ship in assets/vendor/heroui: `new design --framework heroui` builds with no warning in a
+    BLUEDOC_HOME with no frameworks folder, a doc naming the old heroui store still builds clean and loads the shipped
+    copy, and the screen route links the vendored files and Tailwind's compile step."""
+
+    PINNED = {"heroui/heroui.min.css": "95ac190a78f5f7c2126f365096fdf08326cf206cd0c8fdf0e8532e7185f32a2e",
+              "heroui/tailwind.js": "a60c785630a06196808cbe79e6f7bdb4abcc8f4421a47b56f29338fc84805e3b"}
+
+    def setUp(self) -> None:
+        self.tmp = TempHome()
+        self.addCleanup(self.tmp.cleanup)
+
+    def test_new_design_with_heroui_builds_with_no_warning(self) -> None:
+        doc_path = self.tmp.dir / "s.bluedoc.json"
+        r = self.tmp.run("build.py", "new", "design", doc_path, "--target", "mobile,web", "--framework", "heroui")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        doc_path.write_text(build.PLACEHOLDER.sub("Acme Fit", doc_path.read_text(encoding="utf-8")), encoding="utf-8")
+        doc = load_json(doc_path)
+        board = board_of(doc)
+        self.assertEqual(board["framework"], "heroui")
+        self.assertFalse(board.get("frameworks"), "a shipped framework needs no frameworks[] entry")
+        item = next(it for b in build.all_blocks(doc) if b.get("id") == "brief" and b.get("type") == "checklist"
+                    for it in b["items"] if it["id"] == "framework")
+        self.assertEqual((item["recommend"], item["choices"][0]), ("heroui", {"id": "heroui", "label": "Tailwind + HeroUI"}))
+        r = self.tmp.run("build.py", doc_path)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("0 error(s), 0 warning(s)", r.stderr)
+        self.assertFalse((self.tmp.home / "frameworks").exists())
+
+    def test_a_doc_naming_the_heroui_store_checks_clean(self) -> None:
+        docs = self.tmp.copy_examples()
+        doc_path = docs / f"{STEM}.bluedoc.json"
+        doc = load_json(doc_path)
+        board = board_of(doc)
+        legacy = {"id": "heroui", "label": "Tailwind + HeroUI", "store": "heroui"}
+        cases = {"legacy store": ([legacy], None), "builtin id": ([{**legacy, "id": "plain"}], "is built in"),
+                 "duplicate": ([legacy, legacy], "is a duplicate")}
+        for name, (fws, err) in cases.items():
+            with self.subTest(case=name):
+                board["frameworks"] = fws
+                board["artboards"][1]["framework"] = "heroui"
+                doc_path.write_text(json.dumps(doc, indent=1) + "\n", encoding="utf-8")
+                r = self.tmp.run("build.py", doc_path, "--check")
+                if err is None:
+                    self.assertEqual(errors(r.stderr) + warnings(r.stderr), [], r.stderr)
+                else:
+                    self.assertTrue(any(err in e for e in errors(r.stderr)), r.stderr)
+
+    def test_add_framework_heroui_needs_nothing(self) -> None:
+        r = self.tmp.run("serve.py", "add-framework", "heroui")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("ships with bluedoc", r.stdout)
+        self.assertFalse((self.tmp.home / "frameworks").exists())
+        self.assertEqual(self.tmp.run("serve.py", "add-framework", "plain").returncode, 2)
+
+    def test_the_screen_route_loads_the_vendored_files(self) -> None:
+        docs = self.tmp.copy_examples()
+        doc_path = docs / f"{STEM}.bluedoc.json"
+        doc = load_json(doc_path)
+        board = board_of(doc)
+        board["frameworks"] = [{"id": "hero-old", "label": "Tailwind + HeroUI", "store": "heroui"}]
+        arts = board["artboards"]
+        arts[0]["framework"], arts[1]["framework"], arts[2]["framework"] = "heroui", "tailwind", "hero-old"
+        doc_path.write_text(json.dumps(doc, indent=1) + "\n", encoding="utf-8")
+        self.assertEqual(self.tmp.run("serve.py", "add", docs).returncode, 0)
+        server = Server(self.tmp)
+        server.start()
+        self.addCleanup(server.stop)
+        base = server.url_for(doc_path).rsplit("/", 1)[0]
+        for a, files in ((arts[0], self.PINNED), (arts[1], ["heroui/tailwind.js"]), (arts[2], self.PINNED)):
+            with self.subTest(artboard=a["id"]):
+                status, body = server.req("GET", f"{base}/{STEM}.design/{a['id']}.html")
+                html = body.decode("utf-8", "replace")
+                self.assertEqual(status, 200)
+                self.assertNotIn('id="bd-notice"', html)
+                self.assertIn('<style type="text/tailwindcss">@import "tailwindcss";', html)
+                self.assertEqual(sorted(re.findall(r'/__bluedoc/vendor/(heroui/[^"?]+)', html)), sorted(files))
+        for rel, sha in self.PINNED.items():
+            status, body = server.req("GET", f"/__bluedoc/vendor/{rel}")
+            self.assertEqual((status, hashlib.sha256(body).hexdigest()), (200, sha), rel)
 
 
 if __name__ == "__main__":

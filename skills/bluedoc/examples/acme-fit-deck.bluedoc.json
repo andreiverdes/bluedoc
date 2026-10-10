@@ -56,7 +56,7 @@
   {
    "id": "screens",
    "title": "Slides",
-   "lead": "Five 16:9 slides in one row, in the order Present plays them.",
+   "lead": "Five 16:9 slides in one column, in the order Present plays them.",
    "blocks": [
     {
      "type": "board",

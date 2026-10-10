@@ -4,7 +4,7 @@
   {
    "rev": "A",
    "date": "2026-10-10",
-   "built": "2026-10-10T18:22:49+00:00",
+   "built": "2026-10-10T18:44:51+00:00",
    "head": {
     "id": "acme-fit-deck",
     "title": "Acme Fit: Q3 launch review deck",
@@ -32,7 +32,7 @@
     {
      "id": "screens",
      "title": "Slides",
-     "lead": "Five 16:9 slides in one row, in the order Present plays them.",
+     "lead": "Five 16:9 slides in one column, in the order Present plays them.",
      "blocks": [
       "857fe68ac163ccb0"
      ]

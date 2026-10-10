@@ -313,7 +313,7 @@ A design doc (`meta.type: "design"`) has a brief section and one `board` block. 
 | `title` | Required. Shown above the frame. |
 | `fidelity` | Required. `sketch`, `wireframe` or `hifi`. |
 | `device` | One of the [devices](#devices); or leave it out and give `w` and `h` (CSS px, no frame). |
-| `x`, `y` | Board px, both or neither. Without them the board places it: an artboard's row is its `variantOf` source's `y` (if listed before it), else 0, and it goes 80 px right of the rightmost artboard already in that row. |
+| `x`, `y` | Board px, both or neither. Without them the board places it: a `slide` goes 280 px below the previous unplaced slide, in one column (x 0 on a board of only slides, else 80 px right of every other artboard); any other artboard's row is its `variantOf` source's `y` (if listed before it), else 0, and it goes 80 px right of the rightmost artboard already in that row. |
 | `variantOf` | Another artboard's id: a variant of that screen. |
 | `framework` | Overrides the board's `framework`. |
 | `src` | The screen file, relative to the doc: an `.html` file in a `<name>.design/` folder. Default `<stem>.design/<id>.html`; leave it out. |

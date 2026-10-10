@@ -44,4 +44,6 @@ Measured on 2026-10-10 with a fresh agent per task: Claude Code 2.1.296 (claude-
 
 The walk-through these replace estimated ~7.6k for a new design (4 screens) and ~2.2k for the revision, at 4 bytes per token. The fresh agent's added context is 2.1× and 3.6× that. In every task it listed the skill folder and ran `build.py --help` or `patch -h`, which the steps don't prescribe, and this JSON, HTML and tool output runs ~2.4 bytes per token (39.5 KB of transcript for 16.2k tokens in task 1), not 4.
 
+Budget: revising one screen costs ≤ 7k tokens of added context. The measured ~8.0k is over it; the listing and `--help` calls above (~1.5k) are the first cut.
+
 Screens are body fragments in kit classes, so the agent never writes a `<head>`, framework links or tokens; the largest screen in the Acme Fit example, its hi-fi HorizonUI dashboard, is 3.4 KB, under the 24 KB lint warning. A revision reads and edits one screen file, not the doc: `el:` keys name the file and the `data-bd` selector.

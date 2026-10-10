@@ -15,7 +15,7 @@ This writes the brief, a board with one wireframe artboard per target, and one s
 | Section | Holds |
 |---|---|
 | Goal (`tldr`) | What the screens show, on which devices, and which picks the reader makes. |
-| Brief (`brief`) | A `text` block: who uses it, on which device, what each screen must let them do. The checklist `brief` (`numbered: false`): decision item `framework` (ids: `plain`, `horizon`, `frameworks[].id`), `theme` (ids = `themes[].id`), plus any open question (scope, navigation, motion). `sub` is "Recommend <option>: <reason>." |
+| Brief (`brief`) | A `text` block: who uses it, on which device, what each screen must let them do. The checklist `brief` (`numbered: false`): decision item `framework` (ids: `plain`, `horizon`, `heroui`, `tailwind`, `frameworks[].id`), `theme` (ids = `themes[].id`), plus any open question (scope, navigation, motion). `sub` is "Recommend <option>: <reason>." |
 | Screens | One `board` block: `targets`, `framework`, `frameworks`, `themes`, `motion`, `artboards`. |
 
 ## Pick the framework
@@ -23,28 +23,28 @@ This writes the brief, a board with one wireframe artboard per target, and one s
 1. **The project's own first.** Look in `package.json` (`tailwindcss`, `@heroui/*`, `daisyui`, `bootstrap`, `@mui/*`), the built CSS (`dist/*.css`, `public/*.css`) and the design tokens. Built CSS and JS files: declare them as `{"id", "label", "files": ["../../web/dist/app.css"]}`, paths from the doc's folder. A Tailwind source (`@import "tailwindcss"`, `@theme`) needs compiling: ask the reader to run `serve.py add-framework <name> <dir> --source app.css`, then use `{"id", "label", "store": "<name>"}`.
 2. **No framework in the project:** recommend the default for the target and offer up to 2 others, each with why.
 
-| Target | Default | Reader runs once |
-|---|---|---|
-| web (sites, dashboards, CRMs) | Tailwind + HeroUI | `serve.py add-framework heroui` |
-| desktop app | Tailwind + HeroUI | `serve.py add-framework heroui` |
-| mobile | Tailwind + HeroUI, touch sizes | `serve.py add-framework heroui` |
-| watch | the plain kit | nothing |
-| presentation (slides) | the plain kit, its slide classes | nothing |
+| Target | Default |
+|---|---|
+| web (sites, dashboards, CRMs) | `heroui` (Tailwind + HeroUI) |
+| desktop app | `heroui` |
+| mobile | `heroui`, touch sizes |
+| watch | `plain` |
+| presentation (slides) | `plain`, its slide classes |
 
-Konsta UI, the usual mobile kit, ships only React, Vue and Svelte components, nothing a static screen can load, so mobile uses HeroUI too. HeroUI runs as its CSS classes (`button button--primary`, `card`, `input`) plus Tailwind utilities, compiled inside the frame; its React components don't run. `serve.py add-framework daisyui` is the other Tailwind option. `horizon` (HorizonUI) and `plain` ship with bluedoc and need nothing.
+`plain`, `horizon` (HorizonUI), `heroui` and `tailwind` (Tailwind utilities alone) ship with bluedoc: no download, no `frameworks` entry. Konsta UI, the usual mobile kit, ships only React, Vue and Svelte components, nothing a static screen can load, so mobile uses HeroUI too. HeroUI runs as its CSS classes (`button button--primary`, `card`, `input`) plus Tailwind utilities, compiled inside the frame; its React components don't run. `serve.py add-framework daisyui` is the other Tailwind option.
 
 A framework that isn't on disk yet is still an option: put the `add-framework` command in the item's `detail`. Until the reader runs it, those screens show the plain kit with a notice and the build warns. Never fetch a framework yourself.
 
 ## Slides
 
-`device: "slide"` (1920 × 1080; another ratio: `w`, `h`), one file per slide in kit classes (`## Slides` in `references/kits.md`), speaker notes in the artboard's `notes` (md, ≤ 2 KB). Keep the deck in one row in slide order: **Present** plays slides in reading order, with the notes under them.
+`device: "slide"` (1920 × 1080; another ratio: `w`, `h`), one file per slide in kit classes (`## Slides` in `references/kits.md`), speaker notes in the artboard's `notes` (md, ≤ 2 KB). List the slides in deck order without `x`/`y`: the board stacks them in one column, and **Present** plays them top to bottom, with the notes under them.
 
 ## Screen files
 
 - One file per artboard, `<stem>.design/<artboard id>.html`: a **body fragment**. No `<!doctype>`, `<html>`, `<head>`, `<body>`, `<base>`, `<iframe>`, `<object>`, `<embed>`, `<meta http-equiv>` or `<form action>`; the server adds the shell, kit, safe areas and tokens.
 - **No network:** no `http:`, `https:` or `//` URLs in attributes, CSS or scripts. Images go beside the screen or in `data:` URIs; the build fails otherwise. Text may show a URL.
 - **Name what a reader may point at:** `data-bd="submit"` on buttons, fields, cards, list rows, nav items. The reader's comments come back as `el:<artboard>/<name>`. Names are unique within a screen.
-- **Use kit classes**, not long inline CSS: grep the section you need, e.g. `grep -n -A30 '^## Plain kit' <skill>/references/kits.md` (also `## Wireframe`, `## HorizonUI`, `## data-bd`, `## Frameworks`). Colours come from the theme tokens as CSS variables (`var(--accent)`), so the theme pills re-skin every screen.
+- **Use kit classes**, not long inline CSS: grep the section you need, e.g. `grep -n -A30 '^## Plain kit' <skill>/references/kits.md` (also `## Wireframe`, `## HorizonUI`, `## HeroUI`, `## data-bd`, `## Frameworks`). Colours come from the theme tokens as CSS variables (`var(--accent)`), so the theme pills re-skin every screen.
 - ≤ 24 KB per file (a warning above). A screen that needs more is two artboards.
 - Scripts may run (tabs, toggles, a carousel) inside the sandbox; they reach neither the page nor the network.
 
@@ -52,7 +52,7 @@ A framework that isn't on disk yet is still an option: put the `add-framework` c
 
 - **Rev A is wireframes:** `fidelity: "wireframe"`, kit wireframe classes, real labels. Write hi-fi (`fidelity: "hifi"`) after the reader picks the framework and theme.
 - A variant: a new artboard with `variantOf: "<id>"` and its own file. The board places it right of its source.
-- Without `x`/`y` the board lays artboards out left to right; set both only to start a new row (e.g. `"x": 0, "y": 1000` for the web screens).
+- Without `x`/`y` the board lays artboards out left to right, and slides top to bottom in one column right of them; set both only to start a new row (e.g. `"x": 0, "y": 1000` for the web screens).
 - **Edit screen files in place**, the lines the comment names; never rewrite a whole file for one change. Then record it: `build.py patch <doc> artboard:<id> --change "Sign in: passkey first."`.
 - Every build records each screen's text in the history file under `meta.rev`. Once the reader has seen a rev, never edit it in place: bump it (patch does). An edit to any screen file asks for approval again.
 
@@ -75,7 +75,7 @@ As in `types/plan.md`: `serve.py open`, `wait --kind any`, revise on change requ
 
 ```json
 { "type": "board", "id": "main", "targets": ["mobile", "web"], "framework": "plain",
-  "frameworks": [ { "id": "heroui", "label": "Tailwind + HeroUI", "store": "heroui" } ],
+  "frameworks": [ { "id": "acme-web", "label": "Acme web CSS", "files": ["../../web/dist/app.css"] } ],
   "themes": [ { "id": "indigo", "label": "Indigo", "tokens": { "accent": "#4f46e5", "bg": "#f8fafc", "fg": "#0f172a" } } ],
   "artboards": [
     { "id": "login", "title": "Sign in", "device": "phone", "fidelity": "hifi" },

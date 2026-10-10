@@ -2,7 +2,7 @@
   "id": "review-skeleton",
   "title": "<<repo>> review: <<N>> findings by area",
   "subtitle": "<<What the page holds, in one clause>>. Pick what to do with each; my recommendation is starred.",
-  "meta": { "org": "<<Org>>", "kind": "Review", "type": "review", "rev": "1", "date": "<<YYYY-MM-DD>>" },
+  "meta": { "org": "<<Org; ACME when the project names none>>", "kind": "Review", "type": "review", "rev": "1", "date": "<<YYYY-MM-DD>>" },
   "state": [
     { "label": "<<N findings>>", "kind": "warn" },
     { "label": "<<N fix in the next release>>", "kind": "warn" },
