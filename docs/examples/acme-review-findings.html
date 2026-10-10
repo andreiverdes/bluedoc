@@ -2404,7 +2404,7 @@ function renderChecklist(b, parent) {
     entryItem.noteView = noteBox(entryItem);
     li.classList.toggle('has-note', !!note);
     li.classList.toggle('more', !!more);
-    const paintMore = () => { li.classList.toggle('more', !!more); entryItem.pills.paint(); entryItem.noteView.paint(); syncDiffs(); };
+    const paintMore = () => { li.classList.toggle('more', !!more); entryItem.pills.paint(); entryItem.noteView.paint(); syncDiffs(); paintPlan(); };
     entryItem.setMore = on => {
       more = on ? '1' : null;
       if (more) store.set(moreKey, more); else store.del(moreKey);
@@ -2552,8 +2552,8 @@ function choicePills(x, compact) {
     if (step) { e.preventDefault(); btns[(i + step + btns.length) % btns.length].focus(); }
   });
   // on, the comment box beside the pills (the row's or the card's) takes focus: what is missing, optionally
+  // sent, a click withdraws it: the only way to approve before the agent's next rev (Approve waits on every request)
   const more = OLD || BASE ? null : h('button', { type: 'button', class: 'bp-more', onclick: () => {
-    if (x.more === 'sent') return;
     x.setMore(!x.more);
     if (x.more) el.parentElement?.querySelector(':scope > .bp-note textarea')?.focus({ preventScroll: true });
   } });
@@ -2569,9 +2569,9 @@ function choicePills(x, compact) {
     el.classList.toggle('off-rec', !!cur && !!x.it.recommend && cur !== x.it.recommend);
     if (!more) return;
     const m = x.more;
-    more.setAttribute('aria-pressed', String(!!m)); more.setAttribute('aria-disabled', String(m === 'sent')); more.classList.toggle('sent', m === 'sent');
+    more.setAttribute('aria-pressed', String(!!m)); more.classList.toggle('sent', m === 'sent');
     more.replaceChildren(ic(m === 'sent' ? 'tick' : 'help'), m === 'sent' ? 'Details requested' : 'Need more details');
-    more.title = m === 'sent' ? 'Sent to the agent: it resets when the agent posts a new revision'
+    more.title = m === 'sent' ? 'Sent to the agent; it resets when the agent posts a new revision. Click to withdraw it'
       : m ? 'Goes with Request changes; click again to take it back' : 'Ask the agent to explain this item and its options in more detail';
   };
   paint();
@@ -5170,14 +5170,17 @@ function paintPlan() {
     planChip.className = 'bd-planchip ' + p.state;
     planChip.replaceChildren(...(done ? [ic('tick'), 'Approved' + revTxt] : p.state === 'changes' ? [ic('edit'), 'Changes requested'] : [h('i'), `${AP_TITLE} · Awaiting approval`]));
   }
-  approveKey.disabled = done; approveKey.classList.toggle('done', done);
+  // a plan can't be approved while an item asks for more details: send it and wait for the agent's rev, or withdraw it
+  const asking = done ? [] : Object.values(ITEMS).filter(x => x.more);
+  approveKey.disabled = done || asking.length > 0; approveKey.classList.toggle('done', done);
   approveKey.replaceChildren(ic(done ? 'tick' : 'check'), h('span', { class: 't' }, done ? 'Approved' + revTxt : `Approve ${AP_NOUN}`));
   approveKey.setAttribute('aria-label', done ? 'Approved' + revTxt : `Approve ${AP_NOUN}`);
-  approveKey._tip = IS_DESIGN ? `Approve this design${revWord}, every screen in it: the agent builds it with your picks` : `Approve this plan${revWord}: the agent goes ahead with it and your picks`;
+  approveKey._tip = asking.length ? `${asking.length} item${asking.length === 1 ? ' asks' : 's ask'} for more details: ${asking.some(x => x.more === 'on') ? 'send it with Request changes and wait for the agent\'s next revision, or turn it off' : 'wait for the agent\'s next revision, or withdraw the request'}`
+    : IS_DESIGN ? `Approve this design${revWord}, every screen in it: the agent builds it with your picks` : `Approve this plan${revWord}: the agent goes ahead with it and your picks`;
   if (done && approveDlg && approveDlg.open) approveDlg.close();
 }
 function openApprove() {
-  if (planState().state === 'approved') return;
+  if (planState().state === 'approved' || Object.values(ITEMS).some(x => x.more)) return;
   MARKUP.flush();
   if (!approveDlg) {
     const note = h('textarea', { class: 'bp-note-ta', rows: 2, placeholder: 'A note for the agent (optional)', 'aria-label': 'Note with the approval' });
@@ -6379,7 +6382,7 @@ window.BP = {
   },
   setNote: (key, text) => { const x = ITEMS[key]; if (!x) return false; x.setNote(text || ''); return true; },
   // "Need more details" on a decision item, as its toggle would; false without choices, on ?rev=/?diff= or once sent
-  moreDetails: (key, on = true) => { const x = ITEMS[key]; if (!x || !x.choices || OLD || BASE || x.more === 'sent') return false; x.setMore(on); return true; },
+  moreDetails: (key, on = true) => { const x = ITEMS[key]; if (!x || !x.choices || OLD || BASE || on && x.more === 'sent') return false; x.setMore(on); return true; },
   openCode: (diffId, path, line) => openCode(diffId, path, line),
   openComment: (diffId, index) => { const d = DIFFS[diffId]; const c = d && d.order[index]; if (c) openComment(d, c, true); return !!c; },
   diffState: diffId => { const d = DIFFS[diffId]; if (!d) return null; const linked = d.comments.filter(c => c.item && ITEMS[c.item]);

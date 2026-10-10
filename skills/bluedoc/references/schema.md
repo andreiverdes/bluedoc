@@ -102,7 +102,7 @@ Each item is a collapsed row: a tick, a one-line **title** (`text`), a one-line 
 
 A decision item's title states the finding or question, not an action. **Copy progress** writes the pick: `- [x] A retry can authorize the card twice → **Fix in PR**`, adds `(recommended: …)` when the pick differs, and `(no decision; recommended: …)` when there is none. In a `diff` block, the comment card for a decision item carries the same pills, kept in sync with the row.
 
-Every decision item also gets a **Need more details** toggle after its pills; the doc never declares it. It is not an option: it leaves the pick alone. On, the item's dot turns amber and its comment box takes focus to say what is missing (optional). It counts toward **Request changes** on every page with the tray, and the Markdown reads `- <text> \`item:<checklist>/<item>\` → **Need more details**`, then `; picked **<label>** (\`<id>\`)` when there is a pick, then the comment as a quote; the item's JSON entry carries `more: true`. Once sent (with Request changes, Approve or Send answers) it reads **Details requested** until a newer `meta.rev`, which resets it. Stored under `bp:<doc.id>:<checklist>:<item>:more` as `1`, then `sent@<rev>`; not on `?rev=` or `?diff=`.
+Every decision item also gets a **Need more details** toggle after its pills; the doc never declares it. It is not an option: it leaves the pick alone. On, the item's dot turns amber and its comment box takes focus to say what is missing (optional). It counts toward **Request changes** on every page with the tray, and the Markdown reads `- <text> \`item:<checklist>/<item>\` → **Need more details**`, then `; picked **<label>** (\`<id>\`)` when there is a pick, then the comment as a quote; the item's JSON entry carries `more: true`. Once sent (with Request changes or Send answers) it reads **Details requested** until a newer `meta.rev`, which resets it; clicking it then withdraws the request. On a plan or design, **Approve** is disabled while any item asks for more details, sent or not, and the server refuses (409) an approval whose `answers` carry `more`. Stored under `bp:<doc.id>:<checklist>:<item>:more` as `1`, then `sent@<rev>`; not on `?rev=` or `?diff=`.
 
 A row with nothing to open has no chevron; clicking it ticks it. **Expand** in the checklist header opens or closes every row. Links to `#item-<checklist>-<item>` (from a canvas node, a table cell or a shared URL) open the row, and its parents, before scrolling to it. Print shows every row open.
 
@@ -501,7 +501,6 @@ A status chip sits next to the eyebrow:
 - <item text> → **<pick label>**
 - <item text> → **<pick label>** (recommended: <label>)
 - <item text> (no pick; recommended: <label>)
-- <item text> → **Need more details**; picked **<pick label>** (`<id>`)
   > <the reader's comment on the item>
 
 ## Notes with the approval
@@ -603,7 +602,7 @@ The built page exposes `window.BP`:
 | `BP.replyPayload()` | The reply JSON that **Send** posts. |
 | `BP.choose('t412/tier-boundary', 'fix')` | Picks an option, as a click would (`null` clears). `false` if the item has no choices. |
 | `BP.setNote('t412/tier-boundary', 'text')` | Sets the reader comment on an item (`''` clears). |
-| `BP.moreDetails('t412/tier-boundary', on?)` | Turns **Need more details** on (default) or off, as its toggle would. `false` if the item has no choices, on `?rev=` / `?diff=`, or once sent. |
+| `BP.moreDetails('t412/tier-boundary', on?)` | Turns **Need more details** on (default) or off, as its toggle would. `false` if the item has no choices, on `?rev=` / `?diff=`, or turning on one already sent; off withdraws a sent request. |
 | `BP.openCode('pr-412', 'src/pricing/tiers.ts', 11)` | Scrolls to the diff, opens the file, jumps to the line. |
 | `BP.openComment('pr-412', 0)` | Opens the n-th comment, in file-list order. |
 | `BP.diffState('pr-412')` | `{file, comment, comments, cards, lines, ticked, linked}` |
