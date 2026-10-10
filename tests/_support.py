@@ -1,6 +1,7 @@
 """Shared paths and helpers for the bluedoc tests (stdlib only)."""
 from __future__ import annotations
 
+import http.client
 import json
 import os
 import shutil
@@ -8,7 +9,9 @@ import socket
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
+from urllib.parse import quote
 
 sys.dont_write_bytecode = True   # importing the scripts must not write __pycache__ into the skill folder
 
@@ -51,6 +54,56 @@ def free_port() -> int:
     with socket.socket() as s:
         s.bind(("127.0.0.1", 0))
         return s.getsockname()[1]
+
+
+class Server:
+    """`serve.py run` on a free port with tmp's BLUEDOC_HOME; start() again after stop() is a restart."""
+
+    def __init__(self, tmp: TempHome) -> None:
+        self.tmp, self.port = tmp, free_port()
+        self.host = f"127.0.0.1:{self.port}"
+        self.proc: subprocess.Popen | None = None
+
+    def start(self) -> None:
+        self.log = open(self.tmp.dir / "server.log", "a")
+        self.proc = subprocess.Popen([sys.executable, str(SCRIPTS / "serve.py"), "run", "--port", str(self.port)],
+                                     env=self.tmp.env, cwd=self.tmp.dir, stdout=self.log, stderr=subprocess.STDOUT,
+                                     stdin=subprocess.DEVNULL)
+        deadline = time.monotonic() + 10
+        while True:
+            try:
+                if self.req("GET", "/__bluedoc/ping", headers={"X-Bluedoc": "1"})[0] == 200:
+                    return
+            except OSError:
+                pass
+            if self.proc.poll() is not None or time.monotonic() > deadline:
+                raise RuntimeError(f"server did not start: {(self.tmp.dir / 'server.log').read_text()}")
+            time.sleep(0.05)
+
+    def stop(self) -> None:
+        if self.proc is None:
+            return
+        self.proc.terminate()
+        try:
+            self.proc.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            self.proc.kill()
+            self.proc.wait()
+        self.proc = None
+        self.log.close()
+
+    def req(self, method: str, path: str, body: bytes | None = None, headers: dict | None = None) -> tuple[int, bytes]:
+        """One request, path sent as is (no normalisation); Host defaults to the server's own."""
+        c = http.client.HTTPConnection("127.0.0.1", self.port, timeout=10)
+        try:
+            c.request(method, path, body=body, headers={"Host": self.host, **(headers or {})})
+            r = c.getresponse()
+            return r.status, r.read()
+        finally:
+            c.close()
+
+    def url_for(self, doc: Path) -> str:
+        return json.loads(self.req("GET", f"/__bluedoc/url?doc={quote(str(doc))}", headers={"X-Bluedoc": "1"})[1])["url"]
 
 
 def load_json(p: Path):

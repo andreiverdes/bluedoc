@@ -14,7 +14,7 @@ You write one `*.bluedoc.json`; the local server renders it as a page (blueprint
 3. **Fill every `<<…>>`**; add or drop blocks as the guide says. Images and videos go next to the JSON (`media/…`), referenced by relative path.
 4. **Validate:** `python3 <skill>/scripts/build.py <doc>`. Fix every `ERROR`; fix every `WARN` unless it is a false positive you can name. This records the revision. A passing build is the whole verification: no browser check.
 5. **Open:** `python3 <skill>/scripts/serve.py open <doc> --to <your name>` starts the server if needed and prints the URL; later edits show on reload. Give the reader the URL and what stays unverified.
-6. **Wait** in the background, no timeout: `python3 <skill>/scripts/serve.py wait <doc> --kind any`. It prints `--- bluedoc <kind> (…json) ---`, the reader's Markdown, `--- end ---`. Replies sent while nobody waits are queued.
+6. **Wait** in the background, no timeout: `python3 <skill>/scripts/serve.py wait <doc> --kind any`. It prints `--- bluedoc <kind> (reply <id>, …) ---`, the reader's Markdown, `--- end ---`. Replies sent while nobody waits are queued; `serve.py reply <id>` reprints one.
 
 | Type | Guide | When |
 |---|---|---|
@@ -30,7 +30,7 @@ You write one `*.bluedoc.json`; the local server renders it as a page (blueprint
 - **Approval** (plans): implement exactly the approved rev, as `types/plan.md` says.
 - **Revise** per target: `build.py patch <doc> <key> --set field=value --change "what changed and why"` (`--json`, `--append`, `--delete` for more). It validates, bumps `meta.rev`, replaces `changes`, records history and prints the `?diff=` link to send. Several patches for one reply: bump on the first, `--no-bump` on the rest. Once you have sent the reader a rev's URL, never edit it in place. Hand edits: bump `meta.rev` and rewrite `changes` (1–4 lines) yourself, then run `build.py <doc>`: only the build records the revision.
 - Record the reader's picks as `choice` and finished, verified steps as `done: true`. Send the `?diff=` link, then `wait` again.
-- Commit `<name>.bluedoc.history.json` with the JSON; never commit `<name>.reply.*`, `.changes.*`, `.approval.*`.
+- Commit `<name>.bluedoc.history.json` with the JSON.
 
 ## Writing
 

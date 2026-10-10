@@ -8,14 +8,17 @@ Usage:
   serve.py wait DOC.json [--kind answers|changes|approval|any] [--timeout SEC]
                                                    block until the reader sends answers, a change
                                                    request or a plan approval for DOC; print it as Markdown
+  serve.py reply ID | DOC.json [--kind K] [--json] print a stored reply: by the id `wait` printed, or DOC's
+                                                   newest (of kind K); --json prints what the page posted
   serve.py start | stop | status                   manage the background server
   serve.py add DIR | roots                         add a folder to the home page / list folders
   serve.py run [--port N]                          run in the foreground
 
 One server per user, on 127.0.0.1 (default port 8740, env BLUEDOC_PORT). State lives in
-~/.bluedoc (env BLUEDOC_HOME): roots.json (folders the home page scans), server.json (pid, port) and inbox.json
-(which reply files `wait` has delivered). `open` registers the topmost ancestor folder named `docs`, else the doc's
-own folder, and restarts a running server whose version or code differs from its own.
+~/.bluedoc (env BLUEDOC_HOME): roots.json (folders the home page scans), server.json (pid, port) and state.db
+(SQLite, mode 0600: the reader's ticks, picks, comments and plan state per doc, and every reply; statedb.py).
+`open` registers the topmost ancestor folder named `docs`, else the doc's own folder, and restarts a running server
+whose version or code differs from its own.
 
 URLs: /                      home page: every doc under the registered folders, searchable, filtered by
                              project, folder, type and status
@@ -25,17 +28,21 @@ URLs: /                      home page: every doc under the registered folders, 
       /__bluedoc/index.json  what the home page shows about every doc
       /__bluedoc/ping?path=  server check (version, code hash); with a doc's URL path, also who reads replies and
                              its saved approval
+      /__bluedoc/state?path=<doc URL path>[&since=N]   GET the doc's reader state {version, state}; 204 when N is
+                             the current version. PUT {path, import, ops: [[key, value or null]]} writes it: null
+                             deletes, an import adds only keys the server lacks. Both need the X-Bluedoc header.
       /__bluedoc/vendor/<path>  files under assets/vendor (HorizonUI for the home page)
 Rendering validates the doc (errors show as a page), shows its meta.rev as the latest revision of the history file
 without writing it (build.py records revisions), and fills each `diff` block that references a git range
 (diffref.py: its cache, local git, then `gh pr diff`), so the page always shows the current JSON.
-HTML pages carry a Content-Security-Policy (hashes of their inline scripts, no framing).
+HTML pages carry a Content-Security-Policy (hashes of their inline scripts, no framing), and a doc page carries its
+reader state in its bp-state element (null without sqlite3).
 
 Replies: Send answers posts to /__bluedoc/reply, Request changes to /__bluedoc/changes, Approve plan to
-/__bluedoc/approve. Each is saved next to the doc (<name>.reply.md/.json, <name>.changes.md/.json,
-<name>.approval.md/.json, overwritten each time) and queued for `wait`, which returns the oldest unread
-one (GET /__bluedoc/wait needs the X-Bluedoc header). Replies `wait` has not returned are queued again when the
-server starts. An approval holds a hash of the doc's JSON and counts only while the doc is unchanged.
+/__bluedoc/approve. Each becomes a row in state.db, queued for `wait`, which returns the oldest unread one
+(GET /__bluedoc/wait needs the X-Bluedoc header) and marks it delivered; a restart keeps the queue. The first start
+with a new state.db imports the <name>.reply/.changes/.approval files of earlier versions and inbox.json's delivered
+marks, and leaves the files. An approval holds a hash of the doc's JSON and counts only while the doc is unchanged.
 Python 3.9+ standard library only.
 """
 from __future__ import annotations
@@ -63,17 +70,27 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import build  # noqa: E402
 
+try:
+    import statedb  # noqa: E402
+except ImportError:   # a Python built without sqlite3: pages render without reader state, replies are refused
+    statedb = None
+
 HOME_HTML = HERE.parent / "assets" / "home.html"
 VENDOR = HERE.parent / "assets" / "vendor"
 STATE = Path(os.environ.get("BLUEDOC_HOME") or "~/.bluedoc").expanduser()
-ROOTS_FILE, SERVER_FILE, INBOX_FILE = STATE / "roots.json", STATE / "server.json", STATE / "inbox.json"
+ROOTS_FILE, SERVER_FILE, STATE_DB = STATE / "roots.json", STATE / "server.json", STATE / "state.db"
+INBOX_FILE = STATE / "inbox.json"   # before state.db: which reply files `wait` delivered; read once, by the import
 DEFAULT_PORT = int(os.environ.get("BLUEDOC_PORT") or 8740)
 SUFFIXES = (".bluedoc.json", ".blueprint.json")
 SKIP_DIRS = {"node_modules", "build", "dist", "target", "out", "vendor", "Pods", "DerivedData", "__pycache__"}
 MAX_DEPTH, MAX_BODY, SEARCH_CHARS = 8, 4 * 1024 * 1024, 8000   # SEARCH_CHARS keeps index.json small (~10 KB a doc)
 KINDS = ("answers", "changes", "approval")
-REPLY_SUFFIX = {"answers": "reply", "changes": "changes", "approval": "approval"}   # <stem>.<suffix>.md/.json
+REPLY_SUFFIX = {"answers": "reply", "changes": "changes", "approval": "approval"}   # pre-state.db <stem>.<suffix>.md/.json
 REPLY_ROUTES = {"/__bluedoc/reply": "answers", "/__bluedoc/changes": "changes", "/__bluedoc/approve": "approval"}
+STATE_MAX_BODY, STATE_MAX_OPS, STATE_MAX_VALUE = 1024 * 1024, 2000, 64 * 1024
+STATE_KEY = re.compile(r"^[a-z0-9_][a-z0-9:_-]*$")
+LOCAL_KEYS = {"__outbox", "__imported"}   # the page's own bookkeeping: never sent, refused if it is
+DB: "statedb.StateDB | None" = None   # opened by run()
 
 
 # ---------- docs on disk ----------
@@ -105,45 +122,55 @@ def skill_version() -> str:
 
 
 def code_hash() -> str:
-    """Changes whenever the code a server renders with does: serve.py, build.py and the template."""
+    """Changes whenever the code a server renders with does: serve.py, statedb.py, build.py and the template."""
     h = hashlib.sha256()
-    for f in (Path(__file__).resolve(), HERE / "build.py", build.TEMPLATE):
+    for f in (Path(__file__).resolve(), HERE / "statedb.py", HERE / "build.py", build.TEMPLATE):
         h.update(f.read_bytes())
     return h.hexdigest()[:12]
 
 
 VERSION, CODE_HASH = skill_version(), code_hash()
-_doc_hashes: dict[str, tuple[float, str | None]] = {}
+_doc_info: dict[str, tuple[float, str | None, str | None]] = {}
 
 
-def doc_hash(p: Path) -> str | None:
-    """sha256 of the doc's canonical JSON (sorted keys, no spaces), cached by mtime; None if unreadable."""
+def doc_info(p: Path) -> tuple[str | None, str | None]:
+    """(sha256 of the doc's canonical JSON (sorted keys, no spaces), its doc.id), cached by mtime; Nones if unreadable."""
     try:
         m = p.stat().st_mtime
     except OSError:
-        return None
-    hit = _doc_hashes.get(str(p))
+        return None, None
+    hit = _doc_info.get(str(p))
     if hit and hit[0] == m:
-        return hit[1]
+        return hit[1], hit[2]
     try:
         doc = json.loads(p.read_text(encoding="utf-8"))
         h = hashlib.sha256(json.dumps(doc, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+        did = (str(doc.get("id") or "") or None) if isinstance(doc, dict) else None
     except (OSError, ValueError):
-        h = None
-    _doc_hashes[str(p)] = (m, h)
-    return h
+        h = did = None
+    _doc_info[str(p)] = (m, h, did)
+    return h, did
+
+
+def doc_hash(p: Path) -> str | None:
+    return doc_info(p)[0]
+
+
+def doc_id(p: Path) -> str | None:
+    return doc_info(p)[1]
 
 
 def saved_approval(doc: Path) -> dict | None:
-    """The doc's saved plan approval as {rev, at} (both as the page posted them), or None. It counts only while the
+    """The doc's newest plan approval as {rev, at} (both as the page posted them), or None. It counts only while the
     doc's JSON is the one approved: an edit in place, even under the same meta.rev, asks for approval again."""
+    row = DB.approval(str(doc.resolve()), doc_id(doc)) if DB else None
+    if not row or not row["doc_hash"] or row["doc_hash"] != doc_hash(doc):
+        return None
     try:
-        data = json.loads(reply_file(doc, "approval", "json").read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return None
-    if not isinstance(data, dict) or not data.get("docHash") or data["docHash"] != doc_hash(doc):
-        return None
-    return {"rev": data.get("rev"), "at": data.get("at")}
+        posted = json.loads(row["payload"])
+    except ValueError:
+        posted = {}
+    return {"rev": posted.get("rev", row["rev"]), "at": posted.get("at", row["at"])}
 
 
 def load_roots() -> list[Path]:
@@ -430,16 +457,14 @@ def summarize(p: Path) -> dict:
         info = dict(info)
     info["mtime"] = st.st_mtime
     info["revs"], info["built"] = history_info(p)
-    for kind in KINDS:
-        f = reply_file(p, kind, "json")
-        if f.exists():
+    if DB:
+        path, did = str(p.resolve()), info.get("id") or doc_id(p)
+        for kind, row in DB.latest(path, did).items():
             if kind == "approval" and saved_approval(p) is None:   # approved other content of this doc: awaiting again
                 continue
-            try:
-                rev = json.loads(f.read_text(encoding="utf-8")).get("rev")
-            except (OSError, ValueError):
-                rev = None
-            info[kind] = {"at": f.stat().st_mtime, "rev": rev}
+            info[kind] = {"at": dt.datetime.fromisoformat(row["at"]).timestamp(), "rev": row["rev"]}
+        # the home card's progress: the reader's tick and pick values (<checklist>:<item>), {} when there are none
+        info["state"] = {k: v for k, v in DB.state(path, did)[1].items() if k.count(":") == 1 and not k.startswith("__")}
     return info
 
 
@@ -542,78 +567,109 @@ def render(p: Path) -> tuple[int, str]:
             return 422, error_page(p, [log])
     # the history keeps refs; build expands them in the page's doc and in older revisions. validate already showed
     # the doc's own expansion errors; an older revision whose range is gone shows an empty diff
-    return 200, build.build(doc, build.TEMPLATE.read_text(encoding="utf-8"), history, diff_path=p, problems=[])
+    return 200, build.build(doc, build.TEMPLATE.read_text(encoding="utf-8"), history, diff_path=p, problems=[],
+                            state=page_state(p, doc.get("id")))
+
+
+# ---------- reader state ----------
+
+def page_state(p: Path, did) -> dict | None:
+    """The seed a doc page carries in bp-state: {version, state}, or None without sqlite3."""
+    if not DB:
+        return None
+    version, state = DB.state(str(p.resolve()), str(did or "") or None)
+    return {"version": version, "state": state}
+
+
+def checklist_items(doc: dict) -> set[str]:
+    """'<checklist>:<item>' for every checklist item in the doc: the keys an import may keep."""
+    return {f"{b.get('id')}:{it.get('id')}" for b in build.all_blocks(doc) if b.get("type") == "checklist"
+            for it in b.get("items") or [] if isinstance(it, dict)}
+
+
+def state_ops(data: dict) -> list[tuple[str, str | None]]:
+    """The PUT body's ops as [(key, value or None)]; ValueError names the first bad one."""
+    ops = data.get("ops")
+    if not isinstance(ops, list) or len(ops) > STATE_MAX_OPS:
+        raise ValueError(f"ops must be a list of at most {STATE_MAX_OPS} [key, value] pairs")
+    out = []
+    for op in ops:
+        if not (isinstance(op, list) and len(op) == 2 and isinstance(op[0], str)):
+            raise ValueError(f"bad op {str(op)[:80]!r}: want [key, value]")
+        key, value = op
+        if not STATE_KEY.match(key) or key in LOCAL_KEYS:
+            raise ValueError(f"bad key {key[:80]!r}")
+        if value is not None and (not isinstance(value, str) or len(value.encode("utf-8")) > STATE_MAX_VALUE):
+            raise ValueError(f"the value of {key!r} must be a string of at most {STATE_MAX_VALUE // 1024} KB, or null")
+        out.append((key, value))
+    return out
 
 
 # ---------- inbox: replies the agent waits for ----------
 
-def reply_message(doc: Path, kind: str) -> dict:
-    """What `wait` returns for the reply of this kind saved next to doc; `at` is its JSON file's mtime."""
-    md_path, json_path = reply_file(doc, kind, "md"), reply_file(doc, kind, "json")
-    md = md_path.read_text(encoding="utf-8") if md_path.exists() else ""
-    return {"kind": kind, "doc": str(doc), "markdown": md, "md_file": str(md_path), "json_file": str(json_path),
-            "at": json_path.stat().st_mtime}
+def reply_message(row: dict) -> dict:
+    """What `wait` returns for a replies row."""
+    return {k: row[k] for k in ("id", "kind", "doc", "rev", "at", "markdown")}
+
+
+def import_reply_files(roots: list[Path]) -> int:
+    """A new state.db takes in the reply files earlier versions wrote next to docs under roots, oldest first, and
+    leaves them in place; the count. inbox.json's marks say which ones `wait` delivered; without inbox.json every
+    one counts as delivered, as the first start of those versions took them."""
+    try:
+        seen = json.loads(INBOX_FILE.read_text(encoding="utf-8"))
+        seen = seen if isinstance(seen, dict) else None
+    except (OSError, ValueError):
+        seen = None
+    found = []
+    for r in roots:
+        for doc in walk_docs(r):
+            for kind in KINDS:
+                f = reply_file(doc, kind, "json")
+                if f.is_file():
+                    found.append((f.stat().st_mtime, str(doc), kind, f))
+    n = 0
+    for m, doc, kind, f in sorted(found):
+        try:
+            data = json.loads(f.read_text(encoding="utf-8"))
+            md_file = reply_file(Path(doc), kind, "md")
+            md = md_file.read_text(encoding="utf-8") if md_file.is_file() else ""
+        except (OSError, ValueError):
+            continue
+        if not isinstance(data, dict):
+            continue
+        at = dt.datetime.fromtimestamp(m).astimezone().isoformat(timespec="seconds")
+        mark = None if seen is None else seen.get(str(f), seen.get(str(f.resolve())))
+        delivered = at if seen is None or (isinstance(mark, (int, float)) and mark >= m) else None
+        DB.add_reply(str(Path(doc).resolve()), doc_id(Path(doc)), kind, str(data.get("rev") or ""),
+                     json.dumps(data, ensure_ascii=False), md or str(data.get("markdown") or ""),
+                     doc_hash=data.get("docHash") if kind == "approval" else None, at=at, delivered=delivered)
+        n += 1
+    return n
 
 
 class Inbox:
-    """Replies queued per doc until `wait` takes them. inbox.json keeps {reply JSON file: mtime `wait` delivered}, so
-    the replies nobody took are queued again when the server starts."""
+    """Replies `wait` takes: rows in state.db, queued until `wait` returns them, so a restart keeps the queue."""
     def __init__(self) -> None:
         self.cv = threading.Condition()
-        self.queue: dict[str, list[dict]] = {}
         self.names: dict[str, str] = {}
-        self.delivered: dict[str, float] = {}
 
-    def save(self) -> None:
-        STATE.mkdir(parents=True, exist_ok=True)
-        tmp = INBOX_FILE.with_name(INBOX_FILE.name + ".tmp")
-        tmp.write_text(json.dumps(self.delivered, indent=1) + "\n", encoding="utf-8")
-        tmp.replace(INBOX_FILE)
-
-    def load(self, roots: list[Path]) -> int:
-        """Queue every reply under roots that `wait` has not returned; the count. The first start (no inbox.json)
-        takes every reply already on disk as delivered."""
-        found = []
-        for r in roots:
-            for doc in walk_docs(r):
-                for kind in KINDS:
-                    f = reply_file(doc, kind, "json")
-                    if f.is_file():
-                        found.append((f.stat().st_mtime, doc.resolve(), kind, str(f)))
-        try:
-            seen = json.loads(INBOX_FILE.read_text(encoding="utf-8"))
-            first = not isinstance(seen, dict)
-        except (OSError, ValueError):
-            seen, first = {}, True
+    def put(self, doc: Path, kind: str, data: dict, markdown: str) -> int:
+        """Store a reply for doc; its id."""
         with self.cv:
-            if first:
-                self.delivered = {f: m for m, _, _, f in found}
-                self.save()
-                return 0
-            self.delivered = {f: m for f, m in seen.items() if Path(f).is_file()}
-            n = 0
-            for m, doc, kind, f in sorted(found):
-                if self.delivered.get(f, -1.0) < m:
-                    self.queue.setdefault(str(doc), []).append(reply_message(doc, kind))
-                    n += 1
-            return n
-
-    def put(self, doc: Path, msg: dict) -> None:
-        with self.cv:
-            self.queue.setdefault(str(doc), []).append(msg)
+            rid = DB.add_reply(str(doc), doc_id(doc), kind, str(data.get("rev") or ""), json.dumps(data, ensure_ascii=False),
+                               markdown, doc_hash=data.get("docHash") if kind == "approval" else None)
             self.cv.notify_all()
+            return rid
 
     def take(self, doc: str, kind: str, timeout: float) -> dict | None:
         end = time.monotonic() + timeout
         with self.cv:
             while True:
-                q = self.queue.get(doc, [])
-                for i, m in enumerate(q):
-                    if kind == "any" or m["kind"] == kind:
-                        msg = q.pop(i)
-                        self.delivered[msg["json_file"]] = max(self.delivered.get(msg["json_file"], 0.0), msg["at"])
-                        self.save()
-                        return msg
+                queued = DB.undelivered(doc, kind) if DB else []
+                if queued:
+                    DB.mark_delivered(queued[0]["id"])
+                    return reply_message(queued[0])
                 left = end - time.monotonic()
                 if left <= 0:
                     return None
@@ -672,12 +728,28 @@ def make_handler(port: int, default_to: str):
             if self.headers.get("Host") not in hosts:
                 self.json(403, {"error": "bad host"})
                 return False
-            if self.command == "POST":
+            # the state routes carry the reader's input: the GET is guarded like the writes, as /wait is
+            if self.command in ("POST", "PUT") or urlsplit(self.path).path == "/__bluedoc/state":
                 origin = self.headers.get("Origin")
                 if self.headers.get("X-Bluedoc") != "1" or (origin and urlsplit(origin).netloc not in hosts):
                     self.json(403, {"error": "missing X-Bluedoc header or cross-origin"})
                     return False
             return True
+
+        def body(self, limit: int) -> dict | None:
+            """The request's JSON object, or None after answering 413 or 400."""
+            n = int(self.headers.get("Content-Length") or 0)
+            if not 0 < n <= limit:
+                self.json(413, {"error": "empty or too large"})
+                return None
+            try:
+                data = json.loads(self.rfile.read(n))
+                if not isinstance(data, dict):
+                    raise ValueError("not an object")
+            except ValueError as e:
+                self.json(400, {"error": str(e)})
+                return None
+            return data
 
         def do_HEAD(self):
             self.do_GET()
@@ -705,6 +777,16 @@ def make_handler(port: int, default_to: str):
                                        "approval": saved_approval(doc) if doc else None})
             if u.path == "/__bluedoc/url":
                 return self.json(200, {"url": url_for(Path(q.get("doc", "")))})
+            if u.path == "/__bluedoc/state":
+                doc = doc_for_url(q.get("path", ""))
+                if not doc:
+                    return self.json(404, {"error": "not a doc under a registered folder"})
+                seed = page_state(doc, doc_id(doc))
+                if seed is None:
+                    return self.json(503, {"error": "this server's Python has no sqlite3: reader state stays in the browser"})
+                if q.get("since") == str(seed["version"]):
+                    return self.send(204, b"")
+                return self.json(200, seed)
             if u.path == "/__bluedoc/wait":
                 # it consumes a reply: like the POSTs, only our own clients (a cross-site <img> or fetch can't set it)
                 if self.headers.get("X-Bluedoc") != "1":
@@ -734,19 +816,39 @@ def make_handler(port: int, default_to: str):
             code, html = render(doc)
             return self.send(code, html)
 
+        def do_PUT(self):
+            if not self.guard():
+                return
+            if urlsplit(self.path).path != "/__bluedoc/state":
+                return self.json(404, {"error": "not found"})
+            data = self.body(STATE_MAX_BODY)
+            if data is None:
+                return
+            doc = doc_for_url(str(data.get("path") or ""))
+            if not doc:
+                return self.json(404, {"error": "the page's doc is not under a registered folder"})
+            try:
+                ops = state_ops(data)
+            except ValueError as e:
+                return self.json(400, {"error": str(e)})
+            if not DB:
+                return self.json(503, {"error": "this server's Python has no sqlite3: reader state stays in the browser"})
+            imported = data.get("import") is True
+            if imported:   # another doc's ticks under a shared doc.id: keep item keys this doc has
+                try:
+                    items = checklist_items(json.loads(doc.read_text(encoding="utf-8")))
+                except (OSError, ValueError, AttributeError) as e:
+                    return self.json(500, {"error": f"cannot read the doc: {e}"})
+                ops = [(k, v) for k, v in ops if k.startswith("__") or ":".join(k.split(":")[:2]) in items]
+            return self.json(200, {"ok": True, "version": DB.apply(str(doc), doc_id(doc), ops, imported)})
+
         def do_POST(self):
             if not self.guard():
                 return
             path = urlsplit(self.path).path
-            n = int(self.headers.get("Content-Length") or 0)
-            if not 0 < n <= MAX_BODY:
-                return self.json(413, {"error": "empty or too large"})
-            try:
-                data = json.loads(self.rfile.read(n))
-                if not isinstance(data, dict):
-                    raise ValueError("not an object")
-            except ValueError as e:
-                return self.json(400, {"error": str(e)})
+            data = self.body(MAX_BODY)
+            if data is None:
+                return
             if path == "/__bluedoc/register":
                 doc = Path(str(data.get("doc") or "")).resolve()
                 INBOX.names[str(doc)] = str(data.get("to") or "")
@@ -767,25 +869,38 @@ def make_handler(port: int, default_to: str):
             doc = doc_for_url(str(data.get("path") or ""))
             if not doc:
                 return self.json(404, {"error": "the page's doc is not under a registered folder"})
+            if not DB:
+                return self.json(503, {"error": "this server's Python has no sqlite3, so it can't keep replies: use Copy"})
             data["kind"] = kind
             if kind == "approval":
                 data["docHash"] = doc_hash(doc)   # the approval counts only while the doc's JSON is this one
-            md = str(data.get("markdown") or "").rstrip() + "\n"
-            md_path, json_path = reply_file(doc, kind, "md"), reply_file(doc, kind, "json")
-            md_path.write_text(md, encoding="utf-8")
-            json_path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-            INBOX.put(doc, reply_message(doc, kind))
-            print(f"{kind} for {doc}: {json_path}", flush=True)
-            return self.json(200, {"ok": True, "saved": str(json_path)})
+            rid = INBOX.put(doc, kind, data, str(data.get("markdown") or "").rstrip() + "\n")
+            print(f"{kind} for {doc}: reply {rid}", flush=True)
+            return self.json(200, {"ok": True, "id": rid})
 
     return H
+
+
+def open_db() -> int:
+    """Open state.db into DB; a new one first takes in the reply files of earlier versions. The queued reply count."""
+    global DB
+    if statedb is None:
+        print("warning: this Python has no sqlite3 module: pages render without reader state (it stays in each browser) "
+              "and replies are refused (Copy still works)", file=sys.stderr, flush=True)
+        return 0
+    DB = statedb.StateDB(STATE_DB)
+    if DB.created:
+        imported = import_reply_files(load_roots())
+        if imported:
+            print(f"imported {imported} reply file{'' if imported == 1 else 's'} into {STATE_DB} (the files stay)", flush=True)
+    return len(DB.undelivered())
 
 
 def run(port: int, to: str) -> int:
     srv = ThreadingHTTPServer(("127.0.0.1", port), make_handler(port, to))
     STATE.mkdir(parents=True, exist_ok=True)
+    queued = open_db()
     SERVER_FILE.write_text(json.dumps({"pid": os.getpid(), "port": port}) + "\n", encoding="utf-8")
-    queued = INBOX.load(load_roots())
     print(f"bluedoc {VERSION or '(no version)'} (code {CODE_HASH}) on http://127.0.0.1:{port}/ "
           f"(folders: {', '.join(map(str, load_roots())) or 'none yet'}; {queued} undelivered repl{'y' if queued == 1 else 'ies'} queued)", flush=True)
     try:
@@ -877,6 +992,10 @@ def main() -> int:
     p.add_argument("doc", type=Path)
     p.add_argument("--kind", choices=(*KINDS, "any"), default="any")
     p.add_argument("--timeout", type=float, default=0, help="seconds; 0 waits forever. Exit 3 on timeout")
+    p = sub.add_parser("reply", help="print a stored reply: by the id `wait` printed, or DOC's newest")
+    p.add_argument("target", help="a reply id, or a doc's JSON file")
+    p.add_argument("--kind", choices=(*KINDS, "any"), default="any", help="with DOC: the newest reply of this kind")
+    p.add_argument("--json", action="store_true", help="print the JSON the page posted instead of the Markdown")
     for name in ("start", "run"):
         p = sub.add_parser(name)
         p.add_argument("--port", type=int, default=DEFAULT_PORT)
@@ -918,6 +1037,8 @@ def main() -> int:
         for slug, r in slugs(load_roots()).items():
             print(f"/{slug}/  {r}")
         return 0
+    if a.cmd == "reply":
+        return cmd_reply(a.target, a.kind, a.json)
 
     doc = a.doc.resolve()
     if not doc.is_file() or not is_doc(doc):
@@ -952,12 +1073,48 @@ def main() -> int:
                 return 1
             continue
         if code == 200 and body and body.get("message"):
-            m = body["message"]
-            label = {"answers": "answers", "changes": "change request", "approval": "approval"}[m["kind"]]
-            print(f"--- bluedoc {label} ({m['json_file']}) ---")
-            print(m["markdown"], end="")
-            print("--- end ---", flush=True)
+            print_reply(body["message"])
             return 0
+
+
+def print_reply(m: dict) -> None:
+    """A reply as `wait` and `reply` print it: a header with its id, rev and time, then its Markdown."""
+    label = {"answers": "answers", "changes": "change request", "approval": "approval"}[m["kind"]]
+    at = dt.datetime.fromisoformat(m["at"]).isoformat(timespec="seconds")
+    print(f"--- bluedoc {label} (reply {m['id']}{', rev ' + m['rev'] if m.get('rev') else ''}, {at}) ---")
+    print(m["markdown"], end="")
+    print("--- end ---", flush=True)
+
+
+def cmd_reply(target: str, kind: str, as_json: bool) -> int:
+    if statedb is None:
+        print("this Python has no sqlite3 module, so no replies are stored", file=sys.stderr)
+        return 1
+    try:
+        db = statedb.StateDB(STATE_DB, create=False)
+    except FileNotFoundError:
+        print(f"no replies stored yet ({STATE_DB} doesn't exist)", file=sys.stderr)
+        return 1
+    if target.isdigit():
+        m = db.reply(int(target))
+        missing = f"no reply {target}"
+    else:
+        doc = Path(target).resolve()
+        if not doc.is_file() or not is_doc(doc):
+            print(f"{target}: not a reply id or a *.bluedoc.json / *.blueprint.json file", file=sys.stderr)
+            return 2
+        rows = db.latest(str(doc), doc_id(doc))
+        m = rows.get(kind) if kind != "any" else max(rows.values(), key=lambda r: r["id"], default=None)
+        missing = f"no {kind if kind != 'any' else 'reply'} stored for {doc}"
+    db.close()
+    if not m:
+        print(missing, file=sys.stderr)
+        return 1
+    if as_json:
+        print(json.dumps(json.loads(m["payload"]), indent=2, ensure_ascii=False))
+    else:
+        print_reply(m)
+    return 0
 
 
 if __name__ == "__main__":
