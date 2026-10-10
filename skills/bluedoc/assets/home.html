@@ -267,7 +267,7 @@ body { font-family: var(--font-hz-sans, Inter, system-ui, sans-serif); -webkit-f
 @keyframes bd-flow-s { to { stroke-dashoffset: -14; } }
 .bd-art .cv text { font-family: var(--font-hz-mono); fill: var(--bp-ice); }
 .bd-art .cv g.nodes { filter: drop-shadow(0 0 5px rgba(95, 212, 255, .28)); }
-/* design: the board's outline, one shape per artboard (round watch, phone, window), dashed below hi-fi */
+/* design: the board's outline, one shape per artboard (round watch, phone, window, 16:9 slide), dashed below hi-fi */
 .bd-art .dsn .ab { fill: rgba(16, 52, 96, .78); stroke: var(--bp-ice); stroke-opacity: .85; stroke-width: 1.1px; }
 .bd-art .dsn .ab.lo { stroke: var(--bp-amber); stroke-dasharray: 5 3; }
 .bd-art .dsn .bar { stroke: var(--bp-ice); stroke-opacity: .45; stroke-width: 1px; }
@@ -595,9 +595,10 @@ function DrawingEl({ c }) {
   const cap = [c.kind, c.levels && plural(c.levels, 'level'), c.flows && plural(c.flows, 'flow')].filter(Boolean).join(' · ');
   return e(F, null, e('div', { className: 'bd-drw' + (cap ? ' capd' : '') }, e(CanvasArt, { c })), cap && e('div', { className: 'bd-el-cap' }, cap));
 }
-// design: the board's outline, as serve.py card() places the first 12 artboards (top-left 0, 0, board px)
-const DEVICE_WORD = { 'watch-round': 'watch', 'watch-square': 'watch', phone: 'phone', tablet: 'tablet', desktop: 'desktop', browser: 'web' };
-const DEVICE_RX = { 'watch-square': 44, phone: 48, tablet: 28, desktop: 10, browser: 10 };
+// design: the board's outline, as serve.py card() places the first 12 artboards (top-left 0, 0, board px); a slide
+// is its 16:9 rectangle with left-aligned text lines
+const DEVICE_WORD = { 'watch-round': 'watch', 'watch-square': 'watch', phone: 'phone', tablet: 'tablet', desktop: 'desktop', browser: 'web', slide: 'presentation' };
+const DEVICE_RX = { 'watch-square': 44, phone: 48, tablet: 28, desktop: 10, browser: 10, slide: 4 };
 const DEVICE_BAR = { desktop: 32, browser: 72 };
 function DesignArt({ c }) {
   const abs = c.artboards, ns = 'non-scaling-stroke';
@@ -606,19 +607,21 @@ function DesignArt({ c }) {
   const pad = Math.max(40, x1 * 0.04);
   return e('svg', { className: 'cv dsn', viewBox: [-pad, -pad, x1 + 2 * pad, y1 + 2 * pad].join(' '), preserveAspectRatio: 'xMidYMid meet', 'aria-hidden': true },
     e('g', { className: 'abs' }, abs.map((a, i) => {
-      const cls = 'ab' + (a.fidelity === 'hifi' ? '' : ' lo'), round = a.device === 'watch-round';
-      const bar = DEVICE_BAR[a.device], lh = Math.max(8, Math.min(a.w, a.h) * 0.05), top = (bar || 0) + a.h * (round ? 0.38 : 0.1);
+      const cls = 'ab' + (a.fidelity === 'hifi' ? '' : ' lo'), round = a.device === 'watch-round', slide = a.device === 'slide';
+      const bar = DEVICE_BAR[a.device], lh = Math.max(8, Math.min(a.w, a.h) * 0.05), top = (bar || 0) + a.h * (round ? 0.38 : slide ? 0.16 : 0.1);
+      const lx = slide ? 0.08 : 0.15, lw = slide ? 0.84 : 0.7;
       return e('g', { key: i, transform: `translate(${a.x},${a.y})` },
         round ? e('ellipse', { className: cls, vectorEffect: ns, cx: a.w / 2, cy: a.h / 2, rx: a.w / 2, ry: a.h / 2 })
           : e('rect', { className: cls, vectorEffect: ns, width: a.w, height: a.h, rx: DEVICE_RX[a.device] ?? 6 }),
         bar && e('line', { className: 'bar', vectorEffect: ns, x1: 0, y1: bar, x2: a.w, y2: bar }),
-        [1, 1, 0.6].map((f, j) => e('rect', { key: j, className: 'ln', x: a.w * 0.15, y: top + j * lh * 2.2, width: a.w * 0.7 * f, height: lh, rx: lh / 2 })));
+        [1, 1, 0.6].map((f, j) => e('rect', { key: j, className: 'ln', x: a.w * lx, y: top + j * lh * 2.2, width: a.w * lw * f, height: lh, rx: lh / 2 })));
     })));
 }
 function DesignEl({ c }) {
   const words = [...new Set(c.artboards.map(a => DEVICE_WORD[a.device] || 'custom'))];
+  const noun = c.artboards.every(a => a.device === 'slide') ? 'slide' : 'screen';
   return e(F, null, e('div', { className: 'bd-drw capd' }, e(DesignArt, { c })),
-    e('div', { className: 'bd-el-cap' }, [plural(c.count, 'screen'), ...words].join(' · ')));
+    e('div', { className: 'bd-el-cap' }, [plural(c.count, noun), ...words].join(' · ')));
 }
 const SIZES = ['blocker', 'major', 'minor', 'nit'];
 function ReviewEl({ c }) {

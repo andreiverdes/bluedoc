@@ -1,11 +1,13 @@
-"""Design docs: the Acme Fit example, the board contract, screen-file lint, screen HTML in the history, and the
-screen route's framework fallback.
+"""Design docs: the Acme Fit example, the board contract, screen-file lint, screen HTML in the history, the
+presentation target, and the screen route's framework fallback.
 
 The example builds clean and its history holds both revisions with one HTML entry per screen version. The contract
 wants exactly one board with an artboard; the board's ids, devices, fidelity, variants, themes and frameworks are
 checked. Each banned construct in a screen file is one ERROR. An edit to a screen file under the same rev is an edit
-in place that changes the approval hash, and the old rev's HTML stays readable. The server serves only screens and
-declared framework files, and wraps a screen whose framework is missing in the plain kit with a notice."""
+in place that changes the approval hash, and the old rev's HTML stays readable. `new design --target presentation`
+writes a three-slide deck in one row that builds clean once filled in; speaker notes over 2 KB are an ERROR. The
+server serves only screens and declared framework files, and wraps a screen whose framework is missing in the plain
+kit with a notice."""
 from __future__ import annotations
 
 import copy
@@ -248,6 +250,50 @@ class ScreenHistory(DesignCase):
         h = build.load_history(build.history_path(plan))
         self.assertTrue(all("screens" not in r for r in h["revs"]))
         self.assertFalse(h.get("html"))
+
+
+class PresentationTarget(unittest.TestCase):
+    """`build.py new design --target presentation`: the stub deck, filled in, and its speaker notes."""
+
+    def setUp(self) -> None:
+        self.tmp = TempHome()
+        self.addCleanup(self.tmp.cleanup)
+        self.doc_path = self.tmp.dir / "deck.bluedoc.json"
+        r = self.tmp.run("build.py", "new", "design", self.doc_path, "--target", "presentation")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        # every <<placeholder>> filled, as the agent would
+        raw = build.PLACEHOLDER.sub("Acme Fit launch", self.doc_path.read_text(encoding="utf-8"))
+        self.doc_path.write_text(raw, encoding="utf-8")
+        self.doc = load_json(self.doc_path)
+
+    def check(self, doc: dict):
+        self.doc_path.write_text(json.dumps(doc, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        return self.tmp.run("build.py", self.doc_path, "--check")
+
+    def test_the_stub_deck_is_three_slides_in_a_row_and_builds_clean(self) -> None:
+        board = board_of(self.doc)
+        self.assertEqual(board["targets"], ["presentation"])
+        self.assertEqual([(a["id"], a["device"]) for a in board["artboards"]],
+                         [("title", "slide"), ("content", "slide"), ("closing", "slide")])
+        self.assertEqual(build.DEVICES["slide"], {"w": 1920, "h": 1080, "safe": [0, 0, 0, 0]})
+        layout = build.board_layout(board)
+        self.assertEqual([layout[k][:2] for k in ("title", "content", "closing")], [(0, 0), (2000, 0), (4000, 0)])
+        for a in board["artboards"]:
+            html = (self.tmp.dir / "deck.design" / f"{a['id']}.html").read_text(encoding="utf-8")
+            self.assertIn('class="slide', html)
+        r = self.tmp.run("build.py", self.doc_path)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("0 error(s), 0 warning(s)", r.stderr)
+
+    def test_notes_over_2_kb_are_an_error(self) -> None:
+        d = copy.deepcopy(self.doc)
+        board_of(d)["artboards"][1]["notes"] = "Acme Fit doubled weekly actives. " * 70
+        r = self.check(d)
+        self.assertEqual(r.returncode, 1, r.stderr)
+        self.assertTrue(any("artboards[1].notes" in e and "2048" in e for e in errors(r.stderr)), r.stderr)
+        board_of(d)["artboards"][1]["notes"] = "Acme Fit doubled weekly actives."
+        self.assertEqual(errors(self.check(d).stderr), [])
+
 
 
 class FrameworkFallback(unittest.TestCase):

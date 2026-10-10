@@ -1,12 +1,12 @@
 # Design
 
-**When:** the user wants UI mockups, wireframes or screen designs for a watch, phone, tablet, desktop app or website. A technical design doc is a `plan`. Save it as `docs/design/<topic>.bluedoc.json`.
+**When:** the user wants UI mockups, wireframes or screen designs for a watch, phone, tablet, desktop app or website, or slides for a presentation. A technical design doc is a `plan`. Save it as `docs/design/<topic>.bluedoc.json`.
 
 ```sh
 python3 <skill>/scripts/build.py new design docs/design/<topic>.bluedoc.json --title "…" --target watch,mobile,web [--framework heroui]
 ```
 
-This writes the brief, a board with one wireframe artboard per target, and one stub screen file each in `<topic>.design/<target>.html`. The page shows the board full width with the brief beside it, **Request changes** and **Approve design**, as on plans.
+This writes the brief, a board with one wireframe artboard per target, and one stub screen file each in `<topic>.design/<target>.html`; `presentation` writes three slides (`title`, `content`, `closing`). The page shows the board full width with the brief beside it, **Request changes** and **Approve design**, as on plans.
 
 **Home card:** the board's outline. **Required:** exactly one `board` block with at least one artboard.
 
@@ -29,10 +29,15 @@ This writes the brief, a board with one wireframe artboard per target, and one s
 | desktop app | Tailwind + HeroUI | `serve.py add-framework heroui` |
 | mobile | Tailwind + HeroUI, touch sizes | `serve.py add-framework heroui` |
 | watch | the plain kit | nothing |
+| presentation (slides) | the plain kit, its slide classes | nothing |
 
 Konsta UI, the usual mobile kit, ships only React, Vue and Svelte components, nothing a static screen can load, so mobile uses HeroUI too. HeroUI runs as its CSS classes (`button button--primary`, `card`, `input`) plus Tailwind utilities, compiled inside the frame; its React components don't run. `serve.py add-framework daisyui` is the other Tailwind option. `horizon` (HorizonUI) and `plain` ship with bluedoc and need nothing.
 
 A framework that isn't on disk yet is still an option: put the `add-framework` command in the item's `detail`. Until the reader runs it, those screens show the plain kit with a notice and the build warns. Never fetch a framework yourself.
+
+## Slides
+
+`device: "slide"` (1920 × 1080; another ratio: `w`, `h`), one file per slide in kit classes (`## Slides` in `references/kits.md`), speaker notes in the artboard's `notes` (md, ≤ 2 KB). Keep the deck in one row in slide order: **Present** plays slides in reading order, with the notes under them.
 
 ## Screen files
 

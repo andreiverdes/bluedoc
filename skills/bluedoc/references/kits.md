@@ -34,6 +34,27 @@ Loaded with the plain kit and for every `wireframe` or `sketch` artboard. Those 
 `.wf-box[data-label="Map"]` (dashed box, label inside) `.wf-img` (box with a cross) `.wf-text[style="--lines:3"]`
 (text bars) `.wf-line` `.wf-circle` `.wf-icon`. The toolbar's Sketch adds a hand font and a wobble over any screen:
 don't write a second low-fi file.
+Inside a `.slide` the placeholders grow to slide scale; wireframe and sketch slides dash the quote bar and the foot.
+
+## Slides
+
+Plain kit, for `device: "slide"` (1920 × 1080; another aspect ratio: `w` and `h`). One file per slide; speaker notes
+go in the artboard's `notes`, not the slide. Colours come from the theme tokens, so the theme pills and Sketch work.
+`.slide` (the canvas: column, 96/128 px padding; add `.center` for a title or closing slide) `.slide-kicker` (eyebrow)
+`.slide-title` `.slide-body` (36 px text; its `ul`/`ol` get accent bullets) `.slide-cols` (equal columns, one per
+child) `.slide-big` (a big number) `.slide-quote` `.slide-foot[data-n="2"]` (footer text, page number right).
+
+```html
+<section class="slide" data-bd="growth">
+  <p class="slide-kicker">Q3 review</p>
+  <h2 class="slide-title" data-bd="headline">Acme Fit doubled weekly actives</h2>
+  <div class="slide-cols grow">
+    <ul class="slide-body" data-bd="points"><li>Passkey sign-in: 2× faster</li><li>Streaks keep 61 % at week 4</li></ul>
+    <div class="stack gap-2" data-bd="kpi"><span class="slide-big">2.1×</span><span class="muted">weekly actives</span></div>
+  </div>
+  <footer class="slide-foot" data-n="2" data-bd="foot">Acme · Q3 review</footer>
+</section>
+```
 
 ## HorizonUI
 
@@ -72,5 +93,6 @@ A board names its own in `frameworks[]`:
   the frame.
 
 When the project has its own framework (`package.json`, built CSS), declare those files. Else recommend: web and
-desktop `heroui`, mobile `heroui`, watch the plain kit, with the `add-framework` command in the brief item's detail.
+desktop `heroui`, mobile `heroui`, watch and presentation the plain kit, with the `add-framework` command in the
+brief item's detail.
 A missing file or store copy renders the plain kit with a notice bar; the build warns with the path.

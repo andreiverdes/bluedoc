@@ -16,9 +16,19 @@
 .wf-line { height: 10px; width: 100%; border-radius: 5px; background: #cbd5e1; }
 .wf-circle { width: 48px; height: 48px; flex: none; border-radius: 50%; border: 1.5px solid #94a3b8; background: #f1f5f9; }
 .wf-icon { width: 24px; height: 24px; flex: none; border-radius: 6px; border: 1.5px solid #94a3b8; }
+/* placeholders at slide scale: a 1920 × 1080 slide is read at a fraction of its size */
+.slide .wf-box { min-height: 144px; border-width: 3px; border-radius: 16px; font-size: 28px; }
+.slide .wf-img { min-height: 240px; border-width: 3px; border-radius: 12px; }
+.slide .wf-text { height: calc(var(--lines) * 52px - 20px); background: repeating-linear-gradient(to bottom, #cbd5e1 0 32px, transparent 32px 52px);
+  -webkit-mask-size: 100% calc(100% - 52px), 100% 32px; mask-size: 100% calc(100% - 52px), 100% 32px; }
+.slide .wf-line { height: 32px; border-radius: 16px; }
+.slide .wf-circle { width: 144px; height: 144px; border-width: 3px; }
+.slide .wf-icon { width: 64px; height: 64px; border-width: 3px; border-radius: 14px; }
 
 /* the plain kit, greyed: structure without colour decisions (beats the theme tokens on html:root) */
 html.fid-wireframe:root, html.fid-sketch:root {
   --accent: #475569; --accent-fg: #ffffff; --bg: #ffffff; --surface: #ffffff; --fg: #1e293b; --muted: #94a3b8;
   --border: #cbd5e1; --ok: #475569; --warn: #475569; --risk: #475569; }
 html.fid-wireframe img, html.fid-sketch img { filter: grayscale(1); }
+html.fid-wireframe .slide-quote, html.fid-sketch .slide-quote { border-left-style: dashed; }
+html.fid-wireframe .slide-foot, html.fid-sketch .slide-foot { padding-top: 16px; border-top: 2px dashed var(--border); }

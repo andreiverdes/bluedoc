@@ -1,6 +1,6 @@
 ---
 name: bluedoc
-description: Generate self-contained HTML engineering docs (architecture pages, walkthroughs, runbooks, setup guides, change proposals, implementation plans, PR review findings, UI mockups) with zoomable blueprint canvases that open into each system's inner architecture and play animated data/control flows, checklists that persist as task trackers, plans and designs the reader approves or sends back from the page, a board of sandboxed HTML screens for watch, phone, desktop and web, and a code browser that pins review findings to the lines they are about. Use when asked for an HTML doc, architecture page, system walkthrough, runbook, onboarding guide, a plan, an implementation plan, a design doc, UI mockups, wireframes, screen designs, "plan mode", "make a plan", "propose a plan", "peer review results", "review findings", "review comments in a bluedoc", "open threads", or "a bluedoc".
+description: Generate self-contained HTML engineering docs (architecture pages, walkthroughs, runbooks, setup guides, change proposals, implementation plans, PR review findings, UI mockups) with zoomable blueprint canvases that open into each system's inner architecture and play animated data/control flows, checklists that persist as task trackers, plans and designs the reader approves or sends back from the page, a board of sandboxed HTML screens for watch, phone, desktop, web and presentation slides, and a code browser that pins review findings to the lines they are about. Use when asked for an HTML doc, architecture page, system walkthrough, runbook, onboarding guide, a plan, an implementation plan, a design doc, UI mockups, wireframes, screen designs, slide decks, "plan mode", "make a plan", "propose a plan", "peer review results", "review findings", "review comments in a bluedoc", "open threads", or "a bluedoc".
 ---
 
 # bluedoc
@@ -19,7 +19,7 @@ You write one `*.bluedoc.json`; the local server renders it as a page (blueprint
 | Type | Guide | When |
 |---|---|---|
 | `plan` | `types/plan.md` | Anything you'd hand over before implementing: plan mode, "make/propose a plan", a technical design doc. |
-| `design` | `types/design.md` | UI mockups: screens for watch, phone, tablet, desktop or web, as HTML on a board. |
+| `design` | `types/design.md` | UI mockups: screens for watch, phone, tablet, desktop or web, or presentation slides, as HTML on a board. |
 | `review` | `types/review.md` | Review results (peer, agent, open PR threads), always, without being asked. |
 | `docs` | `types/docs.md` | Architecture, walkthrough, runbook, setup guide, change proposal. |
 | `other` | `types/other.md` | Anything else: status page, report, inventory. |

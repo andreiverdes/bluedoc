@@ -1369,10 +1369,17 @@ html.bd-resizing, html.bd-resizing * { cursor: col-resize !important; user-selec
 :root[data-layout="board"] { --lp-w: 320px; }
 :root[data-layout="board"], :root[data-layout="board"] body { height: 100%; overflow: hidden; }
 :root[data-layout="board"] .bd-shell { display: block; padding: 0; }
-:root[data-layout="board"] :is(.bp-side, .bd-rh, .bd-wchip, .bd-toc-btn) { display: none !important; }
+:root[data-layout="board"] :is(.bp-side, .bd-rh:not(.bd-rh-p), .bd-toc-btn) { display: none !important; }
 .bd-boardblk { position: fixed; z-index: 1; top: var(--top-h); left: 0; right: 0; bottom: 0; transition: left .22s var(--ease), right .22s var(--ease); }
 html.bd-lp-open .bd-boardblk { left: var(--lp-w); }
 html.bd-sp-dock .bd-boardblk { right: var(--sp-w); }
+html.bd-resizing .bd-boardblk { transition: none; }
+/* the panels' edges on the board take the content width's drag handles; JS sets --lp-w and --sp-w */
+.bd-rh-p { top: var(--top-h); z-index: 43; }
+.bd-rh-left { left: var(--lp-w); }
+.bd-rh-right { left: calc(100% - var(--sp-w)); }
+html:not(.bd-lp-open) .bd-rh-left, html:not(.bd-sp-dock) .bd-rh-right { display: none; }
+:root[data-layout="board"] .bd-wchip { top: calc(var(--top-h) + 64px); }
 .bd-board-ph { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 10px; background: var(--inset); color: var(--fg-subtle); font-size: 13px; }
 .bd-board-ph .bd-ic { width: 16px; height: 16px; flex: none; }
 /* a board outside a design doc stays a block in the column */
@@ -1409,6 +1416,8 @@ i.warn[hidden] { display: none; }
 .dev-phone { --bz: 12px; --r: 44px; --rb: 56px; }
 .dev-tablet { --bz: 14px; --r: 20px; --rb: 34px; }
 .dev-desktop, .dev-browser { --r: 10px; }
+.dev-slide { --r: 2px; }
+.dev-slide .bd-ab-scr { box-shadow: 0 0 0 calc(1px / var(--k, 1)) var(--line-strong), 0 8px 28px oklch(20% 0.02 264 / .14); }   /* a thin frame, no device */
 :is(.dev-watch-round, .dev-watch-square) .bd-ab-dev::after { content: ""; position: absolute; right: -7px; top: 50%; width: 8px; height: 30px; margin-top: -15px; border-radius: 3px; background: linear-gradient(90deg, #3a3f47, #1b1e23); }
 .bd-ab.sel .bd-ab-scr, .bd-ab.bd-chg .bd-ab-scr { outline: calc(2px / var(--k)) solid var(--accent); outline-offset: calc(var(--bz, 0px) + 4px / var(--k)); }
 .bd-ab.bd-chg .bd-ab-scr { outline-color: var(--chg); }
@@ -1468,8 +1477,8 @@ i.warn[hidden] { display: none; }
 .bd-rqe .hint { margin: 0; font-size: 12px; color: var(--fg-subtle); }
 .bd-rqe .ft { display: flex; justify-content: flex-end; gap: 6px; }
 .bd-rqe .ft .bp-btn:disabled { opacity: .5; cursor: default; }
-/* the board's toolbar: panel, Fit · zoom · Focus, Present, Variants, fidelity, theme, motion */
-.bd-btb { position: absolute; z-index: 3; left: 12px; top: 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px; max-width: calc(100% - 24px); padding: 5px; border-radius: 14px;
+/* the board's toolbar, centred in the board: panel, Fit · zoom · Focus, Present, Variants, fidelity, theme, motion */
+.bd-btb { position: absolute; z-index: 3; left: 12px; right: 12px; top: 12px; width: fit-content; margin: 0 auto; display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 5px; border-radius: 14px;
   background: linear-gradient(180deg, var(--tray-top), var(--tray-bot)); box-shadow: var(--shadow-tray), 0 2px 6px oklch(23% 0.01 264 / 0.06); font-size: 12.5px; }
 .bd-tbtn { display: inline-grid; place-items: center; height: 30px; min-width: 30px; padding: 0 6px; border: 0; border-radius: 9px; background: none; color: var(--fg-muted); font: 500 12.5px var(--sans); cursor: pointer; }
 .bd-tbtn:hover:not(:disabled) { color: var(--fg); background: var(--hover); }
@@ -1527,6 +1536,15 @@ html.bd-lp-open .bd-lp { transform: none; visibility: visible; transition: trans
 html.bd-presenting :is(.bd-anntb, .bd-ann-layer, .bd-cmp) { display: none !important; }
 .bd-psz { position: relative; flex: none; }
 .bd-pdev { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+/* a deck: each slide as large as the window allows, its speaker notes under it (N shows or hides them) */
+.bd-pres.slides .box { padding: 16px 16px 0; }
+.bd-pres .notes { flex: none; box-sizing: border-box; width: min(960px, calc(100% - 32px)); max-height: 26vh; overflow: auto; margin-top: 12px; padding: 10px 16px; border-radius: 12px;
+  background: oklch(21% 0.01 264); color: oklch(86% 0 0); font: 15px/1.5 var(--sans); }
+.bd-pres .notes[hidden] { display: none; }
+.bd-pres .notes > * { margin: 0; }
+.bd-pres .notes > * + * { margin-top: .6em; }
+.bd-pres .bar .bd-tbtn[aria-pressed="true"] { color: #fff; background: oklch(32% 0.01 264); }
+.bd-pres .bar .bd-tbtn[hidden] { display: none; }
 /* compare a screen across two revisions: side by side, or the shown one over the base (onion skin) */
 .bd-cmpv { position: absolute; inset: 0; z-index: 4; display: flex; flex-direction: column; background: color-mix(in oklch, var(--canvas) 97%, transparent); }
 .bd-cmpv .hd { flex: none; display: flex; align-items: center; gap: 10px; padding: 10px 12px 10px 16px; border-bottom: 1px solid var(--line); font-size: 13.5px; }
@@ -2016,7 +2034,7 @@ function applyWidth() {
   const dock = dockW(), room = innerWidth - dock - 2 * PAGE_PAD;
   root.classList.toggle('bd-sp-dock', dock > 0);
   // a design page is its board, full-bleed between the left panel and the right one: no column, no rails
-  if (IS_DESIGN) { root.dataset.layout = 'board'; return; }
+  if (IS_DESIGN) { root.dataset.layout = 'board'; fitPanels(); return; }
   if (userW) root.style.setProperty('--content-w', userW + 'px'); else root.style.removeProperty('--content-w');
   // the layouts are described with their CSS (data-layout, data-rev); with no chosen width the column
   // may narrow down to MIN_W beside the rails before a rail becomes a drawer
@@ -2032,12 +2050,45 @@ function applyWidth() {
   if (root.dataset.layout !== 'wide') setDrawer(false);
   placeHandles();
 }
-const handles = ['left', 'right'].map(edge => {
-  const el = h('div', { class: 'bd-rh', role: 'separator', 'aria-orientation': 'vertical', tabindex: 0, 'aria-label': 'Content width',
-    'aria-valuemin': MIN_W, title: 'Drag to change the content width · double-click to reset' }, h('i'));
-  el.dataset.edge = edge;
+// a drag handle on the edge of a width the reader sets (.bd-rh): drag it, or press ← → on it (Shift: bigger
+// steps); double-click it, or press Home, to reset. o = {label, title, dir: px of width per px dragged right,
+// width(): now, set(w, save), reset()}
+function resizeHandle(o) {
+  const el = h('div', { class: 'bd-rh', role: 'separator', 'aria-orientation': 'vertical', tabindex: 0, 'aria-label': o.label, title: o.title }, h('i'));
+  let drag = null, raf = 0, lastDown = 0;
+  el.addEventListener('pointerdown', e => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    // a second press within 350 ms resets; pointer capture swallows the browser's own dblclick
+    if (e.timeStamp - lastDown < 350) { lastDown = 0; o.reset(); return; }
+    lastDown = e.timeStamp;
+    el.setPointerCapture(e.pointerId);
+    drag = { x: e.clientX, w: o.width(), to: null };
+    el.classList.add('on'); root.classList.add('bd-resizing');
+  });
+  el.addEventListener('pointermove', e => {
+    if (!drag) return;
+    drag.to = drag.w + o.dir * (e.clientX - drag.x);
+    if (!raf) raf = requestAnimationFrame(() => { raf = 0; if (drag && drag.to != null) o.set(drag.to, false); });
+  });
+  const end = () => {
+    if (!drag) return;
+    const to = drag.to;
+    drag = null; el.classList.remove('on'); root.classList.remove('bd-resizing');
+    if (to != null) o.set(to, true);
+  };
+  el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
+  el.addEventListener('keydown', e => {
+    const step = e.shiftKey ? 160 : 40;
+    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { e.preventDefault(); o.set(o.width() + (e.key === 'ArrowRight' ? 1 : -1) * Math.sign(o.dir) * step, true); }
+    else if (e.key === 'Home') { e.preventDefault(); o.reset(); }
+  });
   return el;
-});
+}
+// both edges of the column move as one is dragged: the column stays centred
+const handles = [-1, 1].map(dir => resizeHandle({ label: 'Content width', title: 'Drag to change the content width · double-click to reset', dir: 2 * dir,
+  width: () => main.getBoundingClientRect().width, set: setWidth, reset: resetWidth }));
+for (const el of handles) el.setAttribute('aria-valuemin', MIN_W);
 const wchip = h('div', { class: 'bd-wchip', 'aria-hidden': 'true' });
 document.body.append(...handles, wchip);
 function placeHandles() {
@@ -2051,45 +2102,49 @@ function placeHandles() {
   for (const el of handles) { el.setAttribute('aria-valuenow', Math.round(r.width)); el.setAttribute('aria-valuemax', maxW()); }
 }
 let chipT = 0;
-function showChip() {
-  wchip.innerHTML = `<b>${Math.round(main.getBoundingClientRect().width)} px</b> · double-click a handle to reset`;
+// the width being set, centred at x (default: over the column)
+function showChip(px, x) {
+  wchip.innerHTML = `<b>${Math.round(px)} px</b> · double-click a handle to reset`;
+  wchip.style.left = x == null ? '' : x + 'px';
   wchip.classList.add('on'); clearTimeout(chipT); chipT = setTimeout(() => wchip.classList.remove('on'), 1200);
 }
 function setWidth(w, save) {
   userW = Math.round(Math.min(Math.max(w, MIN_W), maxW()));
-  applyWidth(); showChip();
+  applyWidth(); showChip(main.getBoundingClientRect().width);
   if (save) store.set(WIDTH_KEY, String(userW));
 }
 function resetWidth() { userW = 0; store.del(WIDTH_KEY); applyWidth(); toast('Content width reset'); }
-for (const el of handles) {
-  const dir = el.dataset.edge === 'right' ? 1 : -1;
-  let drag = null, raf = 0, lastDown = 0;
-  el.addEventListener('pointerdown', e => {
-    if (e.button !== 0) return;
-    e.preventDefault();
-    // a second press within 350 ms resets; pointer capture swallows the browser's own dblclick
-    if (e.timeStamp - lastDown < 350) { lastDown = 0; resetWidth(); return; }
-    lastDown = e.timeStamp;
-    el.setPointerCapture(e.pointerId);
-    drag = { x: e.clientX, w: main.getBoundingClientRect().width };
-    el.classList.add('on'); root.classList.add('bd-resizing');
-  });
-  el.addEventListener('pointermove', e => {
-    if (!drag) return;
-    const w = drag.w + 2 * dir * (e.clientX - drag.x);   // both edges move: the column stays centred
-    if (!raf) raf = requestAnimationFrame(() => { raf = 0; setWidth(w, false); });
-  });
-  const end = () => {
-    if (!drag) return;
-    drag = null; el.classList.remove('on'); root.classList.remove('bd-resizing');
-    if (userW) store.set(WIDTH_KEY, String(userW));
-  };
-  el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
-  el.addEventListener('keydown', e => {
-    const step = e.shiftKey ? 160 : 40, cur = main.getBoundingClientRect().width;
-    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { e.preventDefault(); setWidth(cur + (e.key === 'ArrowRight' ? dir : -dir) * step, true); }
-    else if (e.key === 'Home') { e.preventDefault(); resetWidth(); }
-  });
+
+// A design page's panels take the same handles on the edge each shares with the board: Screens and Brief on
+// the left (while open), Comments and Revisions on the right (while docked). Their widths are reader prefs
+// too; each panel stays within its bounds and leaves the board at least BOARD_MIN wide.
+const BOARD_MIN = 480;
+const PANELS = IS_DESIGN ? [
+  { side: 'left', v: '--lp-w', key: 'bluedoc:design-left-w', min: 240, max: 560, dir: 1, label: 'Width of the screens and brief panel', on: () => root.classList.contains('bd-lp-open') && !PHONE.matches },
+  { side: 'right', v: '--sp-w', key: 'bluedoc:design-right-w', min: 280, max: 640, dir: -1, label: 'Width of the comments panel', on: () => dockW() > 0 },
+] : [];
+for (const p of PANELS) {
+  p.user = +store.get(p.key) || 0;
+  p.el = resizeHandle({ label: p.label, title: 'Drag to change the panel width · double-click to reset', dir: p.dir, width: () => p.w,
+    set: (w, save) => {
+      p.user = Math.round(w); fitPanels();
+      const r = $('.bd-boardblk')?.getBoundingClientRect();
+      showChip(p.w, r ? r.left + r.width / 2 : null);
+      if (save) { p.user = p.w; store.set(p.key, String(p.w)); }
+    },
+    reset: () => { p.user = 0; store.del(p.key); fitPanels(); toast('Panel width reset'); } });
+  p.el.classList.add('bd-rh-p', 'bd-rh-' + p.side); p.el.setAttribute('aria-valuemin', p.min);
+}
+document.body.append(...PANELS.map(p => p.el));
+// left first, then right: each at most what the other one (when shown) leaves beside BOARD_MIN; no chosen width is the CSS one
+function fitPanels() {
+  for (const p of PANELS) if (p.w == null) p.w = p.def = cssPx(p.v);
+  for (const p of PANELS) {
+    const q = PANELS.find(x => x !== p), max = Math.max(p.min, Math.min(p.max, innerWidth - BOARD_MIN - (q.on() ? q.w : 0)));
+    p.w = Math.round(Math.min(Math.max(p.user || p.def, p.min), max));
+    root.style.setProperty(p.v, p.w + 'px');
+    p.el.setAttribute('aria-valuenow', p.w); p.el.setAttribute('aria-valuemax', max);
+  }
 }
 addEventListener('resize', applyWidth);
 if ('ResizeObserver' in window) new ResizeObserver(placeHandles).observe(main);
@@ -3797,9 +3852,9 @@ function outlineOf(spec, root) {
 // or its cookies. Page and frame talk through postMessage only (the inspector protocol): page → frame
 // `mode`, `tokens`, `view`, `locate`; frame → page `ready`, `hover`, `pick`, taken from known frames only,
 // strings capped at 200 characters and shown as text.
-const DEVICES = { 'watch-round': [240, 240], 'watch-square': [198, 242], phone: [390, 844], tablet: [820, 1180], desktop: [1280, 800], browser: [1440, 900] };
-const DEVICE_NAME = { 'watch-round': 'Round watch', 'watch-square': 'Square watch', phone: 'Phone', tablet: 'Tablet', desktop: 'Desktop app', browser: 'Browser' };
-const DEVICE_IC = { 'watch-round': 'watch', 'watch-square': 'watch', phone: 'phone', tablet: 'tablet', desktop: 'monitor', browser: 'globe', custom: 'frame' };
+const DEVICES = { 'watch-round': [240, 240], 'watch-square': [198, 242], phone: [390, 844], tablet: [820, 1180], desktop: [1280, 800], browser: [1440, 900], slide: [1920, 1080] };
+const DEVICE_NAME = { 'watch-round': 'Round watch', 'watch-square': 'Square watch', phone: 'Phone', tablet: 'Tablet', desktop: 'Desktop app', browser: 'Browser', slide: 'Slide' };
+const DEVICE_IC = { 'watch-round': 'watch', 'watch-square': 'watch', phone: 'phone', tablet: 'tablet', desktop: 'monitor', browser: 'globe', slide: 'present', custom: 'frame' };
 const BEZEL = { 'watch-round': 12, 'watch-square': 10, phone: 12, tablet: 14 };   // CSS px drawn around the screen
 const FIDELITY = { sketch: 'Sketch', wireframe: 'Wireframe', hifi: 'Hi-fi' };
 const AB_GAP = 80, LIVE_MAX = 12, BK_MIN = 0.02, BK_MAX = 4;
@@ -3849,8 +3904,8 @@ function deviceBox(a, fr, why) {
   const dv = h('div', { class: `bd-pdev dev-${dev}`, style: `width:${w}px;height:${hh}px` }, bz && h('div', { class: 'bd-ab-dev' }),
     h('div', { class: 'bd-ab-scr' }, fr || h('div', { class: 'bd-ab-ph' }, ic(DEVICE_IC[dev]), h('b', {}, a.title || a.id), h('span', { class: 'why' }, why)), chromeFor(dev, a)));
   const sz = h('div', { class: 'bd-psz' }, dv);
-  // fit into W × H, at most native size
-  const fit = (W, H) => { const s = Math.min(1, W / (w + 2 * bz), H / (hh + 2 * bz)); dv.style.transform = `translate(${bz * s}px,${bz * s}px) scale(${s})`; sz.style.width = (w + 2 * bz) * s + 'px'; sz.style.height = (hh + 2 * bz) * s + 'px'; };
+  // fit into W × H, at most native size (up: as large as fits)
+  const fit = (W, H, up) => { const s = Math.min(up ? Infinity : 1, W / (w + 2 * bz), H / (hh + 2 * bz)); dv.style.transform = `translate(${bz * s}px,${bz * s}px) scale(${s})`; sz.style.width = (w + 2 * bz) * s + 'px'; sz.style.height = (hh + 2 * bz) * s + 'px'; };
   return { sz, fit, w, hh };
 }
 
@@ -3886,6 +3941,8 @@ function renderBoard(b) {
   const placeAb = x => Object.assign(x.el.style, { left: x.p.x + 'px', top: x.p.y + 'px', width: x.p.w + 'px', height: x.p.h + 'px' });
   const pos = boardLayout(abs);
   for (const a of abs) { const x = makeAb(a, pos.get(a.id), false); B.frames.set(a.id, x); vp.append(x.el); }
+  // a deck's slides in reading order: by row (top first), left to right in a row, ties in the doc's order
+  const deck = abs.filter(a => devOf(a) === 'slide').sort((a, c) => pos.get(a.id).y - pos.get(c.id).y || pos.get(a.id).x - pos.get(c.id).x);
 
   /* frames: at most LIVE_MAX at a time, the screens nearest the middle of the view; the others show their outline */
   const frameMode = () => ['interact', 'point', 'select', 'draw'].includes(B.mode) ? B.mode : 'view';
@@ -4060,7 +4117,7 @@ function renderBoard(b) {
   const tb = h('div', { class: 'bd-btb', role: 'toolbar', 'aria-label': 'Board' }, lpBtn, sep(),
     tbtn('fit', 'Fit all screens (0)', () => fit(true)), tbtn('minus', 'Zoom out (−)', () => zoomBy(1 / 1.4)), zoomLbl, tbtn('plus', 'Zoom in (+)', () => zoomBy(1.4)),
     tbtn('target', 'Focus the selected screen (F, or double-click it)', () => focusSel()), sep(),
-    tbtn('present', 'Present: one screen at a time (← →, Esc leaves)', () => present(B.sel)), varBtn, sep(), fidSeg,
+    tbtn('present', deck.length ? 'Present the slides (← →, N: notes, Esc leaves)' : 'Present: one screen at a time (← →, Esc leaves)', () => present(B.sel)), varBtn, sep(), fidSeg,
     themeSel && [sep(), h('label', { class: 'th' }, ic('palette'), themeSel)], sep(), motBtn, redBtn);
   if (themeSel) themeSel.addEventListener('change', () => { const x = ITEMS['brief/theme']; if (x && x.setChoice && !OLD) x.setChoice(themeSel.value); else { B.theme = themeSel.value; paintTokens(); } });
   function paintTools() {
@@ -4098,30 +4155,48 @@ function renderBoard(b) {
     paintTools(); MARKUP.relayout();
   }
 
-  /* Present: one screen at a time at its own size on a dark stage, interactive; ← → step in board order, Esc leaves */
-  let pres = null;
+  /* Present: one screen at a time at its own size on a dark stage, interactive; ← → step in board order, Esc leaves.
+     A deck (a doc with slides) presents its slides instead, in reading order, each as large as the window allows,
+     with its speaker notes under it (N shows or hides them). */
+  let pres = null, presNotes = true;
   function present(id) {
     if (pres) return;
-    const order = abs.filter(a => B.frames.has(a.id));
+    const slides = deck.length > 0, order = slides ? deck : abs.filter(a => B.frames.has(a.id)), what = slides ? 'slide' : 'screen';
     if (!order.length) return;
     let i = Math.max(0, order.findIndex(a => a.id === id));
     const box = h('div', { class: 'box' }), cap = h('div', { class: 'cap', 'aria-live': 'polite' });
+    const notes = h('div', { class: 'notes', role: 'note', 'aria-label': 'Speaker notes' });
+    const notesBtn = h('button', { type: 'button', class: 'bd-tbtn txt', 'aria-pressed': 'false', title: 'Speaker notes (N)', onclick: () => toggleNotes() }, 'Notes');
     const close = tbtn('x', 'Leave (Esc)', () => end());
-    const el = h('div', { class: 'bd-pres', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Present' }, box,
-      h('div', { class: 'bar' }, tbtn('prev', 'Previous screen (←)', () => step(-1)), cap, tbtn('next', 'Next screen (→)', () => step(1)), close));
+    const el = h('div', { class: 'bd-pres' + (slides ? ' slides' : ''), role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Present' }, box, slides && notes,
+      h('div', { class: 'bar' }, tbtn('prev', `Previous ${what} (←)`, () => step(-1)), cap, tbtn('next', `Next ${what} (→)`, () => step(1)), slides && notesBtn, close));
     let rec = null, dev = null;
-    const lay = () => dev && dev.fit(innerWidth - 96, innerHeight - 120);
+    // a slide takes the room the notes and the bar leave (box padding: 16px at the sides and top)
+    const lay = () => dev && (slides ? dev.fit(box.clientWidth - 32, box.clientHeight - 16, true) : dev.fit(innerWidth - 96, innerHeight - 120));
+    function paintNotes() {
+      const has = !!notes.firstChild;
+      notesBtn.hidden = !has; notesBtn.setAttribute('aria-pressed', String(presNotes)); notes.hidden = !has || !presNotes;
+      lay();
+    }
+    function toggleNotes() { presNotes = !presNotes; paintNotes(); }
     function showI() {
       if (rec) B.live.delete(rec);
       const a = order[i]; rec = { a, role: 'pres', fr: null };
-      dev = deviceBox(a, frameEl(rec, OLD ? VIEW.rev : null), SERVED || SCREENS ? '' : 'Open this page through serve.py to see the screen.');
-      box.replaceChildren(dev.sz); lay();
-      cap.replaceChildren(h('b', {}, a.title || a.id), ` · ${i + 1} of ${order.length}`);
+      dev = deviceBox(a, frameEl(rec, OLD ? VIEW.rev : null), SERVED || SCREENS ? '' : `Open this page through serve.py to see the ${what}.`);
+      box.replaceChildren(dev.sz);
+      if (slides) {
+        notes.innerHTML = md(typeof a.notes === 'string' ? a.notes : '');
+        cap.replaceChildren(h('b', {}, `${i + 1} / ${order.length}`), ' · ', a.title || a.id);
+        paintNotes();
+      } else {
+        lay();
+        cap.replaceChildren(h('b', {}, a.title || a.id), ` · ${i + 1} of ${order.length}`);
+      }
       select(a.id);
     }
     function step(d) { i = (i + d + order.length) % order.length; showI(); }
     function end() { if (rec) B.live.delete(rec); removeEventListener('resize', lay); el.remove(); pres = null; root.classList.remove('bd-presenting'); focus(order[i].id, false); }
-    pres = { step, end, el };
+    pres = { step, end, el, notes: slides ? toggleNotes : null };
     document.body.append(el); root.classList.add('bd-presenting'); addEventListener('resize', lay);
     showI(); close.focus();
   }
@@ -4325,6 +4400,7 @@ function renderBoard(b) {
   let lp = null, lpList = null, lpTabs = null;
   function setLp(open, remember) {
     B.lp = !!open; root.classList.toggle('bd-lp-open', B.lp); if (lp) lp.inert = !B.lp;
+    applyWidth();   // the right panel's room changes with it
     if (remember) store.set(LP_KEY, B.lp ? '1' : '0');
     paintTools(); setTimeout(() => MARKUP.relayout(), 260);
   }
@@ -4367,7 +4443,11 @@ function renderBoard(b) {
       if (e.defaultPrevented || e.isComposing || e.metaKey || e.ctrlKey || e.altKey || document.querySelector('dialog[open]')) return;
       const t = e.target; if (t.isContentEditable || (t.closest && t.closest('input, textarea, select, [contenteditable]'))) return;
       const k = e.key;
-      if (pres) { if (k === 'Escape') pres.end(); else if (k === 'ArrowLeft' || k === 'ArrowRight') pres.step(k === 'ArrowLeft' ? -1 : 1); else return; e.preventDefault(); return; }
+      if (pres) {
+        if (k === 'Escape') pres.end(); else if (k === 'ArrowLeft' || k === 'ArrowRight') pres.step(k === 'ArrowLeft' ? -1 : 1);
+        else if ((k === 'n' || k === 'N') && pres.notes) pres.notes(); else return;
+        e.preventDefault(); return;
+      }
       if (k === 'Escape') { if (cmpv) closeCompare(); else if (B.rq) cancelRq(); else if (B.variants) toggleVariants(false); else return; }
       else if (k === '[') setLp(!B.lp, true);
       else if (k === '0') fit(true);
