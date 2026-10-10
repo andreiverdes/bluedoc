@@ -5037,7 +5037,8 @@ function buildRevRail() {
         h('div', { class: 'rv-meta' }, r.date && h('span', {}, r.date), r.built && h('span', {}, 'built ' + String(r.built).slice(0, 16).replace('T', ' ')),
           r.current && h('span', { class: 'bp-chip ok' }, 'current'), r === VIEW && h('span', { class: 'bp-chip info' }, 'shown'), r === BASE && h('span', { class: 'bp-chip todo' }, 'base')),
         notes.length ? h('ul', { class: 'rv-notes' }, notes.map(t => h('li', { html: inline(t) }))) : h('p', { class: 'rv-meta' }, 'No notes for this revision.'),
-        scr.length > 0 && h('p', { class: 'rv-scr' }, h('b', {}, 'Screens changed: '), scr.join(', '))),
+        scr.length > 0 && h('p', { class: 'rv-scr' }, h('b', {}, 'Screens changed: '), scr.join(', ')),
+        Array.isArray(r.doc.resolves) && r.doc.resolves.length > 0 && h('p', { class: 'rv-scr' }, `Resolves ${r.doc.resolves.length} comment${r.doc.resolves.length > 1 ? 's' : ''}`)),
       h('div', { class: 'rv-act' },
         (r !== VIEW || BASE) && h('a', { class: 'bp-btn', href: revUrl(r, null) }, ic('eye'), 'View'),
         prev && h('a', { class: 'bp-btn', href: revUrl(r, prev), 'aria-current': cmp ? 'page' : null }, ic('split'), `Changes from ${prev.rev}`)));
@@ -5296,12 +5297,25 @@ const MARKUP = (() => {
   if (legacy != null) { const x = parse(legacy); if (Array.isArray(x)) for (const a of x) if (!valid(a) ? skipBad(KEY, a) : !list.some(b => b.id === a.id)) list.push(a); }
   list.sort((a, b) => String(a.at || '').localeCompare(String(b.at || '')));
   // A comment is pending (saved, not sent), open (sent with Request changes) or resolved (the reader
-  // marked it done). Notes stored before statuses existed carry `sent: <time>` instead.
+  // marked it done, or the agent listed its id in a newer revision's `resolves`: resolvedBy 'agent').
+  // Notes stored before statuses existed carry `sent: <time>` instead.
   const STATUSES = ['pending', 'open', 'resolved'];
   for (const a of list) {
     if (!STATUSES.includes(a.status)) a.status = a.sent ? 'open' : 'pending';
     if (a.sent) { a.sentAt ||= typeof a.sent === 'string' ? a.sent : a.at; delete a.sent; }
   }
+  // An open comment the agent says a later revision addresses becomes resolved, by the newest such revision.
+  // resolvedRev stays when the reader reopens it, so only a revision after that one resolves it again.
+  const agentResolve = () => {
+    const at = r => REVS.findIndex(x => x.rev === r), by = [];
+    for (const a of list) {
+      if (a.status !== 'open' || at(a.rev) < 0) continue;
+      const from = Math.max(at(a.rev), a.resolvedRev ? at(a.resolvedRev) : -1);
+      const r = REVS.slice(from + 1).reverse().find(x => Array.isArray(x.doc.resolves) && x.doc.resolves.includes(a.id));
+      if (r) { Object.assign(a, { status: 'resolved', resolvedBy: 'agent', resolvedRev: r.rev, resolvedAt: new Date().toISOString() }); by.push(a); }
+    }
+    return by.length;
+  };
   const save = () => {
     for (const a of list) store.set(annKey(a.id), JSON.stringify(a));
     const ids = new Set(list.map(a => a.id));
@@ -5309,6 +5323,7 @@ const MARKUP = (() => {
     saved = [...ids];
   };
   if (legacy != null) { save(); store.del(KEY); }
+  if (!OLD && agentResolve()) save();
   const newId = () => 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   // a general comment is about the whole doc: no mark on the page, written in the sidebar's footer
   const isGeneral = a => a.type === 'general';
@@ -5328,11 +5343,12 @@ const MARKUP = (() => {
   const noteText = a => String(a.note || '').trim();
   // the key `patch` takes, as changes.json has it; a drawing over several parts names each part's key
   const keysMd = a => [...new Set((a.type === 'draw' && a.targets && a.targets.length ? a.targets : [a.target]).map(t => t.key))].map(k => `\`${k}\``).join(' ');
-  const headMd = (a, i) => `${i + 1}. **${a.target.label}** (${TYPE_WORD[a.type]}) ${keysMd(a)}`;
+  // the comment's id goes after its key: the agent passes it to `patch --resolves` once the change is made
+  const headMd = (a, i) => `${i + 1}. **${a.target.label}** (${TYPE_WORD[a.type]}) ${keysMd(a)} (${a.id})`;
   // general comments first, under General; then the page comments, numbered
   function changesMd(items = pending()) {
     const gen = items.filter(isGeneral), pg = items.filter(a => !isGeneral(a)), parts = [];
-    if (gen.length) parts.push('## General\n\n' + gen.map(a => '- ' + noteText(a).split('\n').join('\n  ')).join('\n'));
+    if (gen.length) parts.push('## General\n\n' + gen.map(a => `- (${a.id}) ` + noteText(a).split('\n').join('\n  ')).join('\n'));
     if (gen.length && pg.length) parts.push('## On the page');
     if (pg.length) parts.push(pg.map((a, i) => {
       const ex = cut(excerpt(a), 200);
@@ -5867,7 +5883,8 @@ const MARKUP = (() => {
     if (li._sig !== sig) { li._sig = sig; fill(li, a, n, editing); }
     li.className = cardCls(li, a);
     li.querySelector('.ago').textContent = ago(a.at);
-    const s = li.querySelector('.sago'); if (s) s.textContent = a.status === 'open' ? 'Sent ' + ago(a.sentAt) : 'Resolved ' + ago(a.resolvedAt);
+    const s = li.querySelector('.sago');
+    if (s) s.textContent = a.status === 'open' ? 'Sent ' + ago(a.sentAt) : a.resolvedBy === 'agent' ? `Resolved by the agent in rev ${a.resolvedRev}` : 'Resolved ' + ago(a.resolvedAt);
     li.setAttribute('aria-label', isGeneral(a) ? 'General comment' : `Comment ${n} on ${a.target.label}`);
     return li;
   }
@@ -5987,9 +6004,10 @@ const MARKUP = (() => {
     if (selA && selA.status === 'resolved') selA = null;
     list = list.filter(a => a.status !== 'resolved'); save(); hlDirty = true; schedule(true); paint();
   }
-  // Resolve (open → resolved) and Reopen (resolved → open); sending makes pending notes open
+  // Resolve (open → resolved) and Reopen (resolved → open); sending makes pending notes open. resolvedRev, the
+  // revision whose `resolves` last resolved it, stays on a reopened comment (see agentResolve)
   function setStatus(a, s) {
-    a.status = s;
+    a.status = s; delete a.resolvedBy;
     if (s === 'resolved') a.resolvedAt = new Date().toISOString(); else delete a.resolvedAt;
     save(); hlDirty = true; schedule(true); paint();
   }

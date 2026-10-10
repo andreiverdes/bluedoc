@@ -57,7 +57,8 @@ patch keys: doc, meta, header, tldr, status, section:<sec>, heading:<sec>, lead:
   --append adds to the target's list (doc: sections, section and item: blocks, table: rows,
   canvas: nodes, diff: comments, board: artboards, other blocks: items). The rev bumps (A->B, 3->4,
   v1->v2) and meta.date becomes today unless --no-bump; on a bump `changes` becomes the --change lines
-  (default: "Updated `KEY`."), with --no-bump they are appended.
+  (default: "Updated `KEY`.") and `resolves` the --resolves ids (none: removed), with --no-bump both are
+  appended.
 
 Exit codes: 0 ok, 1 validation errors (or warnings with --strict), 2 usage/IO error.
 Python 3.9+ standard library only.
@@ -100,6 +101,7 @@ SAFE_SCHEMES = re.compile(r"^(https?|mailto)$", re.I)
 MD_LINK = re.compile("\\[([^\\]]+)\\]\\(([^)\t\n\v\f\r \u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]+)\\)")
 CALLOUT_KINDS = {"note", "caution", "warning", "risk", "decision"}
 STATE_KINDS = {"ok", "warn", "risk", "info", "todo"}
+RESOLVES_ID = re.compile(r"[A-Za-z0-9_-]{1,40}")   # a reader comment's id, as `resolves` lists it (the page writes c<base36>)
 DOC_TYPES = {"docs", "review", "plan", "design", "other"}   # meta.type: the home page's grouping; unset = derived from meta.kind
 # meta.kind words that make a doc type "docs" when meta.type is unset (after the plan and review rules)
 DOCS_KINDS = {"architecture", "walkthrough", "runbook", "setup", "reference", "proposal", "change", "changes", "plan",
@@ -977,6 +979,9 @@ def _validate(rep: Report, doc: dict, doc_path: Path | None, *, allow_remote: bo
         else:
             for i, x in enumerate(ch):
                 lint_text(rep, f"doc.changes[{i}]", x)
+    res = doc.get("resolves")
+    if res is not None and not (isinstance(res, list) and all(isinstance(x, str) and RESOLVES_ID.fullmatch(x) for x in res)):
+        rep.err("doc.resolves", "list of comment ids (as the reply Markdown shows them, e.g. c…): the comments this revision addresses")
     dtype = (doc.get("meta") or {}).get("type")
     if dtype is not None and dtype not in DOC_TYPES:
         rep.err("doc.meta.type", f"'{dtype}' not in {sorted(DOC_TYPES)}")
@@ -1423,6 +1428,8 @@ def record(h: dict, doc: dict, doc_path: Path | None = None, *, keep_screens: bo
             out += f"\nWARN  doc.changes: say what changed since rev {revs[-2]['rev']} (shown in the revision list and the diff)"
         elif prev == doc.get("changes"):
             out += f"\nWARN  doc.changes: same as rev {revs[-2]['rev']}; describe this revision"
+        if doc.get("resolves") and revs[-2]["head"].get("resolves") == doc.get("resolves"):
+            out += f"\nWARN  doc.resolves: same as rev {revs[-2]['rev']}; list only the comments this revision addresses"
     return out
 
 
@@ -2062,6 +2069,8 @@ def cmd_patch(argv: list[str]) -> int:
     ap.add_argument("--delete", action="store_true", help="remove the target")
     ap.add_argument("--html", metavar="FILE", help="artboard: and el: keys: replace the screen file with FILE's text (- reads stdin)")
     ap.add_argument("--change", action="append", default=[], metavar="LINE", help="a line for `changes` (repeat for more)")
+    ap.add_argument("--resolves", action="append", default=[], metavar="ID",
+                    help="a reader comment this revision addresses, by the id the reply shows (repeat for more)")
     ap.add_argument("--no-bump", action="store_true", help="keep meta.rev: update the current revision in place")
     a = ap.parse_args(argv)
     ops = bool(a.set or a.json is not None or a.append is not None or a.delete or a.html is not None)
@@ -2106,12 +2115,19 @@ def cmd_patch(argv: list[str]) -> int:
     except PatchError as e:
         print(f"patch: {e}", file=sys.stderr)
         return 2
+    resolves = [x.strip().strip("()`").strip() for x in a.resolves]
     if a.no_bump:
         if a.change:
             doc["changes"] = list(doc.get("changes") or []) + a.change
+        if resolves:
+            doc["resolves"] = list(dict.fromkeys(list(doc.get("resolves") or []) + resolves))
     else:
         meta.update(rev=rev1, date=dt.date.today().isoformat())
         doc["changes"] = a.change or [f"Updated `{a.key}`."]
+        if resolves:
+            doc["resolves"] = list(dict.fromkeys(resolves))
+        else:
+            doc.pop("resolves", None)
     # screen files change before validate, which lints them; undone when the patch fails
     written: list[tuple[Path, str | None]] = []
     screen = a.doc.parent / screen_rel(a.doc, t.obj) if t.kind in ("artboard", "element", "frame") and not a.delete else None
