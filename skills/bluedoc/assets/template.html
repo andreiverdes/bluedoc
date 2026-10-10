@@ -1467,7 +1467,9 @@ function ic(name, cls) {
 /* ---------- markdown-lite ---------- */
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ESC[c]);
-const safeUrl = u => /^\s*(javascript|data|vbscript):/i.test(u) ? '#' : u;
+// The URL parser drops spaces and C0 controls before it reads the scheme, so test without them; only
+// web and mail links, relative paths and #fragments pass
+const safeUrl = u => { const m = /^([a-z][a-z\d+.-]*):/i.exec(String(u ?? '').replace(/[\u0000-\u0020]/g, '')); return !m || /^(https?|mailto)$/i.test(m[1]) ? u : '#'; };
 function inline(src) {
   let t = esc(src);
   const codes = [];
@@ -2126,6 +2128,9 @@ function choicePills(x, compact) {
   return { el, paint };
 }
 const choiceLabel = (x, id) => { const c = x.choices && x.choices.find(c => c.id === id); return c ? c.label.replace(/[`*]/g, '') : id; };
+// the ids `patch` takes, beside the text the reader saw: `item:<checklist>/<item>` and the picked choice's id
+const itemKeyMd = x => `\`item:${x.cid}/${x.it.id}\``;
+const choiceMd = x => `**${choiceLabel(x, x.choice)}** (\`${x.choice}\`)`;
 function openItem(x) {
   // open the item and every collapsed item it sits inside
   for (let el = x.li; el; el = el.parentElement && el.parentElement.closest('.bp-cl-item')) {
@@ -2137,10 +2142,10 @@ function openItem(x) {
 function checklistMd(c, indent = '') {
   const lines = c.items.map(x => {
     const sub = CHECKLISTS.filter(n => n.parent && n.parent.cid === c.b.id && n.parent.iid === x.it.id);
-    let line = `${indent}- [${x.cb.checked ? 'x' : ' '}] ${x.it.text}`;
+    let line = `${indent}- [${x.cb.checked ? 'x' : ' '}] ${x.it.text} ${itemKeyMd(x)}`;
     if (x.choices) {
       const rec = x.it.recommend && choiceLabel(x, x.it.recommend);
-      if (x.choice) line += ` → **${choiceLabel(x, x.choice)}**` + (rec && x.choice !== x.it.recommend ? ` (recommended: ${rec})` : '');
+      if (x.choice) line += ` → ${choiceMd(x)}` + (rec && x.choice !== x.it.recommend ? ` (recommended: ${rec})` : '');
       else line += rec ? ` (no decision; recommended: ${rec})` : ' (no decision)';
     }
     const quoted = x.note ? '\n' + x.note.trim().split('\n').map(l => `${indent}  > ${l}`).join('\n') : '';
@@ -2223,10 +2228,10 @@ function replyPayload() {
 // a plan's decisions (and comments on its other items) as Markdown, for Approve and Request changes
 function decisionsMd() {
   return Object.values(ITEMS).filter(x => x.choices || x.note).map(x => {
-    let line = `- ${x.it.text}`;
+    let line = `- ${x.it.text} ${itemKeyMd(x)}`;
     if (x.choices) {
       const rec = x.it.recommend && choiceLabel(x, x.it.recommend);
-      line += x.choice ? ` → **${choiceLabel(x, x.choice)}**` + (rec && x.choice !== x.it.recommend ? ` (recommended: ${rec})` : '') : rec ? ` (no pick; recommended: ${rec})` : ' (no pick)';
+      line += x.choice ? ` → ${choiceMd(x)}` + (rec && x.choice !== x.it.recommend ? ` (recommended: ${rec})` : '') : rec ? ` (no pick; recommended: ${rec})` : ' (no pick)';
     }
     return line + (x.note ? '\n' + x.note.trim().split('\n').map(l => `  > ${l}`).join('\n') : '');
   }).join('\n');
@@ -2597,14 +2602,17 @@ function renderPane(d) {
   const hits = (o, n) => cs.some(c => c.line && (c.side === 'old' ? o != null && o >= c.line && o <= (c.end || c.line) : n != null && n >= c.line && n <= (c.end || c.line)));
   const lang = LANG_BY_EXT[(f.path.match(/\.([\w]+)$/) || [])[1]] || (/(^|\/)\.env|\.env\./.test(f.path) ? 'bash' : '');
   let html = '', prevNew = null; const slots = [];
+  // the hunk fields below go into an HTML string: make the numbers numbers and the lines strings first
+  const num = x => Number.isFinite(+x) ? Math.trunc(+x) : 0;
   const top = cs.filter(c => !c.line);
   for (const hk of f.hunks || []) {
-    if (prevNew != null && hk.new > prevNew + 1) html += `<div class="bd-gap">⋯ ${hk.new - prevNew - 1} unchanged line${hk.new - prevNew - 1 === 1 ? '' : 's'}</div>`;
-    const nOld = hk.lines.filter(l => l[0] !== '+').length, nNew = hk.lines.filter(l => l[0] !== '-').length;
-    html += hk.context ? `<div class="bd-hh ctx">Unchanged code, shown for a comment · lines ${hk.new}–${hk.new + nNew - 1}</div>`
-      : `<div class="bd-hh">@@ -${hk.old},${nOld} +${hk.new},${nNew} @@${hk.header ? ' ' + esc(hk.header) : ''}</div>`;
-    let o = hk.old, n = hk.new;
-    for (const l of hk.lines) {
+    const hOld = num(hk.old), hNew = num(hk.new), lines = Array.isArray(hk.lines) ? hk.lines.map(String) : [];
+    if (prevNew != null && hNew > prevNew + 1) html += `<div class="bd-gap">⋯ ${hNew - prevNew - 1} unchanged line${hNew - prevNew - 1 === 1 ? '' : 's'}</div>`;
+    const nOld = lines.filter(l => l[0] !== '+').length, nNew = lines.filter(l => l[0] !== '-').length;
+    html += hk.context ? `<div class="bd-hh ctx">Unchanged code, shown for a comment · lines ${hNew}–${hNew + nNew - 1}</div>`
+      : `<div class="bd-hh">@@ -${hOld},${nOld} +${hNew},${nNew} @@${hk.header ? ' ' + esc(hk.header) : ''}</div>`;
+    let o = hOld, n = hNew;
+    for (const l of lines) {
       const t = l[0]; const lo = t === '+' ? null : o, ln = t === '-' ? null : n;
       const cls = t === '+' ? 'add' : t === '-' ? 'del' : '';
       html += `<div class="bd-ln ${cls}${hits(lo, ln) ? ' hit' : ''}"${ln != null ? ` data-n="${ln}"` : ''}${lo != null ? ` data-o="${lo}"` : ''}><span class="o">${lo ?? ''}</span><span class="n">${ln ?? ''}</span><span class="s">${t === '+' ? '+' : t === '-' ? '−' : ''}</span><span class="c">${highlightLine(l.slice(1), lang) || ' '}</span></div>`;
@@ -2922,7 +2930,7 @@ function renderCanvas(spec) {
     h('div', { class: 'k' }, 'LEVEL'), tblockLvl);
   const coarse = matchMedia('(pointer: coarse)').matches;
   const hint = h('div', { class: 'bp-hint' }, spec.hint || (coarse ? 'Pinch to zoom · tap the drawing, then drag to pan · tap a system twice to open it' : 'Pinch or ⌘/Ctrl + scroll to zoom · drag to pan · double-click a system to open it'));
-  const stage = h('div', { class: 'bp-stage', tabindex: 0, style: `--h:${spec.height || 540}px`, 'aria-label': (spec.title || 'Canvas') + '. Focus, then use plus, minus, arrows, zero to fit, Escape to go up a level.' }, svg, crumbs, tblock, hint);
+  const stage = h('div', { class: 'bp-stage', tabindex: 0, style: `--h:${+spec.height > 0 ? Math.round(+spec.height) : 540}px`, 'aria-label': (spec.title || 'Canvas') + '. Focus, then use plus, minus, arrows, zero to fit, Escape to go up a level.' }, svg, crumbs, tblock, hint);
   const capLbl = h('span', { class: 'lbl' }, '');
   const capTxt = h('span', { class: 'txt', 'aria-live': 'polite' });
   const capbar = h('div', { class: 'bp-capbar' }, capLbl, capTxt);
@@ -4111,6 +4119,9 @@ const MARKUP = (() => {
   const pub = a => ({ id: a.id, type: a.type, note: a.note, target: a.target, ...(a.type === 'draw' ? { targets: a.targets || [a.target] } : {}),
     ...(a.type === 'text' ? { quote: a.quote } : {}), rev: a.rev, at: a.at });
   const noteText = a => String(a.note || '').trim();
+  // the key `patch` takes, as changes.json has it; a drawing over several parts names each part's key
+  const keysMd = a => [...new Set((a.type === 'draw' && a.targets && a.targets.length ? a.targets : [a.target]).map(t => t.key))].map(k => `\`${k}\``).join(' ');
+  const headMd = (a, i) => `${i + 1}. **${a.target.label}** (${TYPE_WORD[a.type]}) ${keysMd(a)}`;
   // general comments first, under General; then the page comments, numbered
   function changesMd(items = pending()) {
     const gen = items.filter(isGeneral), pg = items.filter(a => !isGeneral(a)), parts = [];
@@ -4118,7 +4129,7 @@ const MARKUP = (() => {
     if (gen.length && pg.length) parts.push('## On the page');
     if (pg.length) parts.push(pg.map((a, i) => {
       const ex = cut(excerpt(a), 200);
-      return [`${i + 1}. **${a.target.label}** (${TYPE_WORD[a.type]})`, ex && `   > ${ex}`,
+      return [headMd(a, i), ex && `   > ${ex}`,
         `   Change: ${noteText(a).split('\n').join('\n   ')}`].filter(Boolean).join('\n');
     }).join('\n\n'));
     const dec = IS_PLAN && decisionsMd();
@@ -4136,7 +4147,7 @@ const MARKUP = (() => {
     const items = pending(), ord = [...items.filter(isGeneral), ...items.filter(a => !isGeneral(a))];
     return { annotations: ord.map(pub), notes: ord.map((a, i) => {
       const ex = cut(excerpt(a), 200);
-      return [`${i + 1}. **${a.target.label}** (${TYPE_WORD[a.type]})`, ex && `   > ${ex}`, `   Note: ${noteText(a).split('\n').join('\n   ')}`].filter(Boolean).join('\n');
+      return [headMd(a, i), ex && `   > ${ex}`, `   Note: ${noteText(a).split('\n').join('\n   ')}`].filter(Boolean).join('\n');
     }).join('\n\n') };
   }
   const api = { all: () => JSON.parse(JSON.stringify(list)), payload, approvalNotes, annotate: () => null, setMode: () => false, paint: () => {}, flush: () => {}, markSent: () => {},

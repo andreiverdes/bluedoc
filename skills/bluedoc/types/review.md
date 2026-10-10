@@ -29,6 +29,13 @@
   - `detail`, in this order: **Reviewer:** the finding restated faithfully, with the reviewer's evidence. **My reasoning:** why this recommendation, citing `path:line` and what you checked. **Fix:** the concrete change. **Verify:** the observable check. **Reply I'd post:** for declines and tickets.
 - A `diff` block right after the checklist, from `gitdiff.py` (below): only the files with findings, a `note` naming the head and scope ("Only the commented files. Head `<head>`."), one comment per finding.
 
+**Your own review, by area** (no PR, or findings grouped by area or concern): the same page with these changes.
+- One section per area (`id` the area, e.g. `pricing`); its checklist `id` a short form of it (`pri`), titled "Findings · <area>". The `lead` gives the count and the range or head you read.
+- The summary table is **Area | Finding | Size | Recommendation**; `links` the repo or range, no PRs.
+- `detail` opens with **Evidence:** (what you read or ran, with `path:line`) in place of **Reviewer:**; no **Reply I'd post**. Option labels name the real target ("Fix now", "Fix in 3.0.1").
+- One `diff` block per section, right after its checklist: `paths` only that area's files, `--title "<repo> · <area>"`, no `--pr`. Its comments point at that section's items only.
+- A finding with no code line gets a label comment on the area: `{"label": "<area> (no line)", "item": "pri/<item>"}`.
+
 ## Rules
 
 1. Every finding gets options, a recommendation and a reason.

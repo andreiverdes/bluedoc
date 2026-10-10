@@ -2,7 +2,7 @@
 
 ![Zooming into the orders-api system, then into pricing inside it, then into fulfilment-worker, each level playing its own flow](docs/tour.gif)
 
-An agent skill that writes engineering docs as one self-contained HTML page: a zoomable blueprint of the system, checklists that remember your ticks, and a code browser that pins review findings to their lines. Works with Claude Code, Codex, pi and omp.
+An agent skill for engineering docs, plans and code reviews. The agent writes one JSON file; a local server renders it as a page with a zoomable blueprint of the system, checklists that remember your ticks, plans you approve or send back, and review findings pinned to their lines from git. Your picks, comments and approvals go back to the agent, and each revision can be compared with the last. Works with Claude Code, Codex, pi and omp.
 
 ## What you get
 
@@ -23,7 +23,7 @@ An agent skill that writes engineering docs as one self-contained HTML page: a z
 |---|---|
 | ![A bluedoc page: header, status rail, contents and the blueprint canvas](docs/header.png) | ![A diff block with a blocker comment under line 17](docs/review.png) |
 
-Open the examples in a browser to try them: [`acme-orders.html`](skills/bluedoc/examples/acme-orders.html) (architecture and runbook) and [`acme-review-findings.html`](skills/bluedoc/examples/acme-review-findings.html) (review findings for two PRs). Download the file, then open it; GitHub shows HTML as source.
+Open the examples in a browser to try them: [`acme-orders.html`](docs/examples/acme-orders.html) (architecture and runbook), [`acme-review-findings.html`](docs/examples/acme-review-findings.html) (review findings for two PRs) and [`acme-saved-carts-plan.html`](docs/examples/acme-saved-carts-plan.html) (a plan to approve). Download the file, then open it; GitHub shows HTML as source. Their JSON sources sit in `skills/bluedoc/examples/`; `build.py <json> -o <name>.html` rebuilds them.
 
 ## Install
 
@@ -95,7 +95,7 @@ Ask in plain words. The skill triggers on requests for HTML docs, architecture p
 - "Put the open review threads on PR 412 in a bluedoc so I can decide what to do with each."
 - "Plan saved carts as a bluedoc and wait for my approval."
 
-The agent scaffolds `docs/<topic>/<name>.bluedoc.json` from the type's skeleton (the only file it writes, plus any images the doc shows), fills it in, validates it and opens it on the local server:
+The agent scaffolds `docs/<topic>/<name>.bluedoc.json` from the type's skeleton (the only file it edits, plus any images the doc shows; the revision history `<name>.bluedoc.history.json` and a review's diff cache `<name>.diffcache.json` sit next to it), fills it in, validates it and opens it on the local server:
 
 ```sh
 python3 <skill>/scripts/build.py new plan docs/plans/saved-carts.bluedoc.json --title "Saved carts"   # skeleton with <<…>> to fill
@@ -143,8 +143,9 @@ skills/bluedoc/
   assets/template.html   the page runtime (styling, canvas, checklists, diff browser, annotator)
   assets/home.html       the home page (HorizonUI)
   assets/vendor/         HorizonUI browser build (Apache-2.0, see its NOTICE)
-  examples/              Acme examples (JSON and history; built HTML for GitHub readers)
+  examples/              Acme examples (JSON, history, diff cache, the review's git bundle)
   examples/media/        images the examples show (media blocks)
+docs/examples/           the examples built to HTML, for GitHub readers
 .claude-plugin/          Claude Code plugin and marketplace (omp reads it too)
 .agents/plugins/         Codex marketplace
 plugin.json              Agent Plugins manifest (Codex, omp)

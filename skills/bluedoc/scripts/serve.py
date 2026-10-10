@@ -13,8 +13,9 @@ Usage:
   serve.py run [--port N]                          run in the foreground
 
 One server per user, on 127.0.0.1 (default port 8740, env BLUEDOC_PORT). State lives in
-~/.bluedoc (env BLUEDOC_HOME): roots.json (folders the home page scans) and server.json (pid, port).
-`open` registers the topmost ancestor folder named `docs`, else the doc's own folder.
+~/.bluedoc (env BLUEDOC_HOME): roots.json (folders the home page scans), server.json (pid, port) and inbox.json
+(which reply files `wait` has delivered). `open` registers the topmost ancestor folder named `docs`, else the doc's
+own folder, and restarts a running server whose version or code differs from its own.
 
 URLs: /                      home page: every doc under the registered folders, searchable, filtered by
                              project, folder, type and status
@@ -22,21 +23,27 @@ URLs: /                      home page: every doc under the registered folders, 
       /<root>/<path>.bluedoc.json?raw=1   the JSON itself
       /<root>/<path>.<png|jpg|jpeg|gif|webp|svg|mp4|webm>   media files under the folder, for `media` blocks
       /__bluedoc/index.json  what the home page shows about every doc
-      /__bluedoc/ping?path=  server check; with a doc's URL path, also who reads replies and its saved approval
+      /__bluedoc/ping?path=  server check (version, code hash); with a doc's URL path, also who reads replies and
+                             its saved approval
       /__bluedoc/vendor/<path>  files under assets/vendor (HorizonUI for the home page)
-Rendering validates the doc (errors show as a page), records its meta.rev in the history file, exactly as build.py
-does, and fills each `diff` block that references a git range (diffref.py: its cache, local git, then `gh pr diff`),
-so the page always shows the current JSON and its revisions.
+Rendering validates the doc (errors show as a page), shows its meta.rev as the latest revision of the history file
+without writing it (build.py records revisions), and fills each `diff` block that references a git range
+(diffref.py: its cache, local git, then `gh pr diff`), so the page always shows the current JSON.
+HTML pages carry a Content-Security-Policy (hashes of their inline scripts, no framing).
 
 Replies: Send answers posts to /__bluedoc/reply, Request changes to /__bluedoc/changes, Approve plan to
 /__bluedoc/approve. Each is saved next to the doc (<name>.reply.md/.json, <name>.changes.md/.json,
 <name>.approval.md/.json, overwritten each time) and queued for `wait`, which returns the oldest unread
-one. Python 3.9+ standard library only.
+one (GET /__bluedoc/wait needs the X-Bluedoc header). Replies `wait` has not returned are queued again when the
+server starts. An approval holds a hash of the doc's JSON and counts only while the doc is unchanged.
+Python 3.9+ standard library only.
 """
 from __future__ import annotations
 
 import argparse
+import base64
 import datetime as dt
+import hashlib
 import json
 import mimetypes
 import os
@@ -59,7 +66,7 @@ import build  # noqa: E402
 HOME_HTML = HERE.parent / "assets" / "home.html"
 VENDOR = HERE.parent / "assets" / "vendor"
 STATE = Path(os.environ.get("BLUEDOC_HOME") or "~/.bluedoc").expanduser()
-ROOTS_FILE, SERVER_FILE = STATE / "roots.json", STATE / "server.json"
+ROOTS_FILE, SERVER_FILE, INBOX_FILE = STATE / "roots.json", STATE / "server.json", STATE / "inbox.json"
 DEFAULT_PORT = int(os.environ.get("BLUEDOC_PORT") or 8740)
 SUFFIXES = (".bluedoc.json", ".blueprint.json")
 SKIP_DIRS = {"node_modules", "build", "dist", "target", "out", "vendor", "Pods", "DerivedData", "__pycache__"}
@@ -86,13 +93,57 @@ def reply_file(doc: Path, kind: str, ext: str) -> Path:
     return doc.with_name(f"{stem(doc)}.{REPLY_SUFFIX[kind]}.{ext}")
 
 
+def skill_version() -> str:
+    """The plugin's version from its plugin.json, or '' for a skill installed without one."""
+    root = HERE.parent.parent.parent
+    for f in (root / ".claude-plugin" / "plugin.json", root / "plugin.json"):
+        try:
+            return str(json.loads(f.read_text(encoding="utf-8")).get("version") or "")
+        except (OSError, ValueError, AttributeError):
+            continue
+    return ""
+
+
+def code_hash() -> str:
+    """Changes whenever the code a server renders with does: serve.py, build.py and the template."""
+    h = hashlib.sha256()
+    for f in (Path(__file__).resolve(), HERE / "build.py", build.TEMPLATE):
+        h.update(f.read_bytes())
+    return h.hexdigest()[:12]
+
+
+VERSION, CODE_HASH = skill_version(), code_hash()
+_doc_hashes: dict[str, tuple[float, str | None]] = {}
+
+
+def doc_hash(p: Path) -> str | None:
+    """sha256 of the doc's canonical JSON (sorted keys, no spaces), cached by mtime; None if unreadable."""
+    try:
+        m = p.stat().st_mtime
+    except OSError:
+        return None
+    hit = _doc_hashes.get(str(p))
+    if hit and hit[0] == m:
+        return hit[1]
+    try:
+        doc = json.loads(p.read_text(encoding="utf-8"))
+        h = hashlib.sha256(json.dumps(doc, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    except (OSError, ValueError):
+        h = None
+    _doc_hashes[str(p)] = (m, h)
+    return h
+
+
 def saved_approval(doc: Path) -> dict | None:
-    """The doc's saved plan approval as {rev, at} (both as the page posted them), or None."""
+    """The doc's saved plan approval as {rev, at} (both as the page posted them), or None. It counts only while the
+    doc's JSON is the one approved: an edit in place, even under the same meta.rev, asks for approval again."""
     try:
         data = json.loads(reply_file(doc, "approval", "json").read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return None
-    return {"rev": data.get("rev"), "at": data.get("at")} if isinstance(data, dict) else None
+    if not isinstance(data, dict) or not data.get("docHash") or data["docHash"] != doc_hash(doc):
+        return None
+    return {"rev": data.get("rev"), "at": data.get("at")}
 
 
 def load_roots() -> list[Path]:
@@ -382,6 +433,8 @@ def summarize(p: Path) -> dict:
     for kind in KINDS:
         f = reply_file(p, kind, "json")
         if f.exists():
+            if kind == "approval" and saved_approval(p) is None:   # approved other content of this doc: awaiting again
+                continue
             try:
                 rev = json.loads(f.read_text(encoding="utf-8")).get("rev")
             except (OSError, ValueError):
@@ -408,9 +461,6 @@ def index() -> dict:
 
 
 # ---------- rendering ----------
-
-HISTORY_LOCK = threading.Lock()
-
 
 def esc(s: str) -> str:
     return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
@@ -456,6 +506,20 @@ def error_page(p: Path, lines: list[str]) -> str:
             f"<ul>{items}</ul></div></main></body></html>")
 
 
+INLINE_SCRIPT = re.compile(r"<script\b([^>]*)>(.*?)</script>", re.S | re.I)
+
+
+def page_csp(html: str) -> str:
+    """The page's Content-Security-Policy: its own inline scripts by hash (JSON data blocks don't run), same-origin
+    files, data: images, media and fonts, and no framing."""
+    hashes = sorted({"'sha256-" + base64.b64encode(hashlib.sha256(body.encode()).digest()).decode() + "'"
+                     for attrs, body in INLINE_SCRIPT.findall(html)
+                     if "src=" not in attrs and "application/json" not in attrs})
+    return ("default-src 'self'; script-src " + " ".join(["'self'", *hashes]) + "; style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' data:; media-src 'self' data:; font-src 'self' data:; connect-src 'self'; object-src 'none'; "
+            "base-uri 'none'; form-action 'self'; frame-ancestors 'none'")
+
+
 def render(p: Path) -> tuple[int, str]:
     try:
         doc = json.loads(p.read_text(encoding="utf-8"))
@@ -466,11 +530,16 @@ def render(p: Path) -> tuple[int, str]:
     rep = build.validate(doc, p, allow_remote=True)
     if rep.errors:
         return 422, error_page(p, rep.errors)
-    try:
-        with HISTORY_LOCK:
-            history, _ = build.sync_history(p, doc)
-    except build.HistoryError as e:
-        return 422, error_page(p, [str(e)])
+    history = None
+    if (doc.get("meta") or {}).get("rev"):
+        # the page shows the doc as the history's latest revision, in memory: only build.py writes the history file
+        try:
+            history = build.load_history(build.history_path(p))
+        except (OSError, ValueError) as e:
+            return 422, error_page(p, [f"cannot read {build.history_path(p)}: {e}"])
+        log = build.record(history, doc)
+        if log.startswith("ERROR"):
+            return 422, error_page(p, [log])
     # the history keeps refs; build expands them in the page's doc and in older revisions. validate already showed
     # the doc's own expansion errors; an older revision whose range is gone shows an empty diff
     return 200, build.build(doc, build.TEMPLATE.read_text(encoding="utf-8"), history, diff_path=p, problems=[])
@@ -478,11 +547,56 @@ def render(p: Path) -> tuple[int, str]:
 
 # ---------- inbox: replies the agent waits for ----------
 
+def reply_message(doc: Path, kind: str) -> dict:
+    """What `wait` returns for the reply of this kind saved next to doc; `at` is its JSON file's mtime."""
+    md_path, json_path = reply_file(doc, kind, "md"), reply_file(doc, kind, "json")
+    md = md_path.read_text(encoding="utf-8") if md_path.exists() else ""
+    return {"kind": kind, "doc": str(doc), "markdown": md, "md_file": str(md_path), "json_file": str(json_path),
+            "at": json_path.stat().st_mtime}
+
+
 class Inbox:
+    """Replies queued per doc until `wait` takes them. inbox.json keeps {reply JSON file: mtime `wait` delivered}, so
+    the replies nobody took are queued again when the server starts."""
     def __init__(self) -> None:
         self.cv = threading.Condition()
         self.queue: dict[str, list[dict]] = {}
         self.names: dict[str, str] = {}
+        self.delivered: dict[str, float] = {}
+
+    def save(self) -> None:
+        STATE.mkdir(parents=True, exist_ok=True)
+        tmp = INBOX_FILE.with_name(INBOX_FILE.name + ".tmp")
+        tmp.write_text(json.dumps(self.delivered, indent=1) + "\n", encoding="utf-8")
+        tmp.replace(INBOX_FILE)
+
+    def load(self, roots: list[Path]) -> int:
+        """Queue every reply under roots that `wait` has not returned; the count. The first start (no inbox.json)
+        takes every reply already on disk as delivered."""
+        found = []
+        for r in roots:
+            for doc in walk_docs(r):
+                for kind in KINDS:
+                    f = reply_file(doc, kind, "json")
+                    if f.is_file():
+                        found.append((f.stat().st_mtime, doc.resolve(), kind, str(f)))
+        try:
+            seen = json.loads(INBOX_FILE.read_text(encoding="utf-8"))
+            first = not isinstance(seen, dict)
+        except (OSError, ValueError):
+            seen, first = {}, True
+        with self.cv:
+            if first:
+                self.delivered = {f: m for m, _, _, f in found}
+                self.save()
+                return 0
+            self.delivered = {f: m for f, m in seen.items() if Path(f).is_file()}
+            n = 0
+            for m, doc, kind, f in sorted(found):
+                if self.delivered.get(f, -1.0) < m:
+                    self.queue.setdefault(str(doc), []).append(reply_message(doc, kind))
+                    n += 1
+            return n
 
     def put(self, doc: Path, msg: dict) -> None:
         with self.cv:
@@ -496,7 +610,10 @@ class Inbox:
                 q = self.queue.get(doc, [])
                 for i, m in enumerate(q):
                     if kind == "any" or m["kind"] == kind:
-                        return q.pop(i)
+                        msg = q.pop(i)
+                        self.delivered[msg["json_file"]] = max(self.delivered.get(msg["json_file"], 0.0), msg["at"])
+                        self.save()
+                        return msg
                 left = end - time.monotonic()
                 if left <= 0:
                     return None
@@ -520,6 +637,8 @@ def make_handler(port: int, default_to: str):
         def send(self, code: int, body: str | bytes, ctype: str = "text/html; charset=utf-8", cache: str = "no-store",
                  headers: dict[str, str] | None = None) -> None:
             data = body.encode() if isinstance(body, str) else body
+            if ctype.startswith("text/html"):
+                headers = {"Content-Security-Policy": page_csp(data.decode("utf-8", "replace")), "X-Frame-Options": "DENY", **(headers or {})}
             self.send_response(code)
             self.send_header("Content-Type", ctype)
             self.send_header("Content-Length", str(len(data)))
@@ -581,11 +700,15 @@ def make_handler(port: int, default_to: str):
                 return self.json(200, index())
             if u.path == "/__bluedoc/ping":
                 doc = doc_for_url(q.get("path", ""))
-                return self.json(200, {"bluedoc": True, "home": "/", "to": INBOX.names.get(str(doc), default_to) if doc else default_to,
+                return self.json(200, {"bluedoc": True, "home": "/", "version": VERSION, "code": CODE_HASH,
+                                       "to": INBOX.names.get(str(doc), default_to) if doc else default_to,
                                        "approval": saved_approval(doc) if doc else None})
             if u.path == "/__bluedoc/url":
                 return self.json(200, {"url": url_for(Path(q.get("doc", "")))})
             if u.path == "/__bluedoc/wait":
+                # it consumes a reply: like the POSTs, only our own clients (a cross-site <img> or fetch can't set it)
+                if self.headers.get("X-Bluedoc") != "1":
+                    return self.json(403, {"error": "missing X-Bluedoc header"})
                 m = INBOX.take(str(Path(q.get("doc", "")).resolve()), q.get("kind", "any"), min(float(q.get("timeout", 25)), 60))
                 return self.json(200, {"message": m}) if m else self.send(204, b"")
             if u.path.startswith("/__bluedoc/"):
@@ -645,11 +768,13 @@ def make_handler(port: int, default_to: str):
             if not doc:
                 return self.json(404, {"error": "the page's doc is not under a registered folder"})
             data["kind"] = kind
+            if kind == "approval":
+                data["docHash"] = doc_hash(doc)   # the approval counts only while the doc's JSON is this one
             md = str(data.get("markdown") or "").rstrip() + "\n"
             md_path, json_path = reply_file(doc, kind, "md"), reply_file(doc, kind, "json")
             md_path.write_text(md, encoding="utf-8")
             json_path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-            INBOX.put(doc, {"kind": kind, "doc": str(doc), "markdown": md, "md_file": str(md_path), "json_file": str(json_path), "at": time.time()})
+            INBOX.put(doc, reply_message(doc, kind))
             print(f"{kind} for {doc}: {json_path}", flush=True)
             return self.json(200, {"ok": True, "saved": str(json_path)})
 
@@ -660,7 +785,9 @@ def run(port: int, to: str) -> int:
     srv = ThreadingHTTPServer(("127.0.0.1", port), make_handler(port, to))
     STATE.mkdir(parents=True, exist_ok=True)
     SERVER_FILE.write_text(json.dumps({"pid": os.getpid(), "port": port}) + "\n", encoding="utf-8")
-    print(f"bluedoc server on http://127.0.0.1:{port}/ (folders: {', '.join(map(str, load_roots())) or 'none yet'})", flush=True)
+    queued = INBOX.load(load_roots())
+    print(f"bluedoc {VERSION or '(no version)'} (code {CODE_HASH}) on http://127.0.0.1:{port}/ "
+          f"(folders: {', '.join(map(str, load_roots())) or 'none yet'}; {queued} undelivered repl{'y' if queued == 1 else 'ies'} queued)", flush=True)
     try:
         srv.serve_forever()
     except KeyboardInterrupt:
@@ -694,16 +821,35 @@ def call(path: str, body: dict | None = None, timeout: float = 5):
         return r.status, (json.loads(raw) if raw else None)
 
 
-def alive() -> bool:
+def server_info() -> dict | None:
+    """The running server's ping, or None."""
     try:
-        return call("/__bluedoc/ping")[1].get("bluedoc") is True
-    except (OSError, ValueError, AttributeError):
-        return False
+        info = call("/__bluedoc/ping")[1]
+    except (OSError, ValueError):
+        return None
+    return info if isinstance(info, dict) and info.get("bluedoc") is True else None
+
+
+def alive() -> bool:
+    return server_info() is not None
 
 
 def ensure_started(port: int) -> bool:
-    if alive():
+    """Start the server unless one runs this very code; one that runs another version or code is replaced."""
+    info = server_info()
+    if info and (info.get("version"), info.get("code")) == (VERSION, CODE_HASH):
         return True
+    if info:
+        print(f"restarting the bluedoc server: it ran {info.get('version') or 'an unknown version'} (code {info.get('code') or '?'}), "
+              f"this is {VERSION or 'an unknown version'} (code {CODE_HASH})", file=sys.stderr)
+        call("/__bluedoc/stop", {})
+        for _ in range(50):
+            time.sleep(0.1)
+            if not alive():
+                break
+        else:
+            print("the old bluedoc server did not stop", file=sys.stderr)
+            return False
     STATE.mkdir(parents=True, exist_ok=True)
     log = open(STATE / "server.log", "a")
     subprocess.Popen([sys.executable, str(Path(__file__).resolve()), "run", "--port", str(port)],
@@ -800,8 +946,11 @@ def main() -> int:
         try:
             code, body = call(f"/__bluedoc/wait?doc={quote(str(doc))}&kind={a.kind}&timeout={left:.0f}", timeout=left + 10)
         except (urllib.error.URLError, OSError):
-            print("lost the bluedoc server", file=sys.stderr)
-            return 1
+            # `open` may be replacing the server with a newer one, which queues the reply again: give it 10 s
+            if not any(time.sleep(0.5) or alive() for _ in range(20)):
+                print("lost the bluedoc server", file=sys.stderr)
+                return 1
+            continue
         if code == 200 and body and body.get("message"):
             m = body["message"]
             label = {"answers": "answers", "changes": "change request", "approval": "approval"}[m["kind"]]
