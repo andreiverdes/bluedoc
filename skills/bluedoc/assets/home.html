@@ -64,7 +64,7 @@ body { font-family: var(--font-hz-sans, Inter, system-ui, sans-serif); -webkit-f
    no seam. The title sits where it dissolves: padding in % is of the hero's width, like the banner's height. */
 /* no overflow clip: the banner is a background inside its own box, and the search field's shadow reaches past the hero */
 .bd-hero { position: relative; isolation: isolate; display: flex; flex-direction: column; align-items: center;
-  padding: max(230px, 22%) 20px 30px; box-sizing: border-box; background: var(--color-hz-canvas); }
+  padding: max(170px, 15%) 20px 30px; box-sizing: border-box; background: var(--color-hz-canvas); }
 .bd-hero-pix { position: absolute; top: 0; left: 0; right: 0; z-index: -1; aspect-ratio: 1672 / 523; min-height: 320px; pointer-events: none;
   background: url(/__bluedoc/vendor/hero/hero-dark.webp?v=__BLUEDOC_VENDOR_V__) center top / cover no-repeat; }
 [data-hz-theme="light"] .bd-hero-pix { background-image: url(/__bluedoc/vendor/hero/hero-light.webp?v=__BLUEDOC_VENDOR_V__); }
@@ -74,7 +74,7 @@ body { font-family: var(--font-hz-sans, Inter, system-ui, sans-serif); -webkit-f
 .bd-hero h1 { margin: 0; text-align: center; text-wrap: balance; color: var(--color-hz-fg); font: 620 clamp(28px, 3.3vw, 44px)/1.12 var(--font-hz-sans); letter-spacing: -.03em;
   text-shadow: 0 0 18px var(--color-hz-canvas), 0 0 4px var(--color-hz-canvas); }
 .bd-hero .lede { margin: 10px 0 0; text-align: center; color: var(--color-hz-fg-muted); font-size: 14.5px; line-height: 1.5;
-  text-shadow: 0 0 10px var(--color-hz-canvas), 0 0 3px var(--color-hz-canvas), 0 0 2px var(--color-hz-canvas); }
+  text-shadow: 0 0 14px var(--color-hz-canvas), 0 0 6px var(--color-hz-canvas), 0 0 3px var(--color-hz-canvas), 0 0 2px var(--color-hz-canvas); }
 .bd-hero .lede b { color: var(--color-hz-warning-fg, var(--color-hz-warning)); font-weight: 600; }
 .bd-composer { width: min(740px, 100%); margin-top: 24px; padding: 8px; box-sizing: border-box; border-radius: 18px; background: var(--color-hz-surface);
   box-shadow: 0 0 0 1px var(--color-hz-line), 0 24px 60px -18px rgba(0, 8, 24, .65), var(--hz-shadow-3); }
@@ -334,7 +334,7 @@ a.bd-row:hover .tx .t { color: var(--color-hz-accent-fg); }
 @media (max-width: 620px) {
   .bd-grid, .bd-grid[data-cols="auto"] { grid-template-columns: minmax(0, 1fr); }
   .bd-hide-s { display: none !important; }
-  .bd-hero { padding-top: 230px; }
+  .bd-hero { padding-top: 170px; }
   .bd-hero .lede { font-size: 13.5px; }
   .bd-composer .bd-q { height: 48px; }
 }
