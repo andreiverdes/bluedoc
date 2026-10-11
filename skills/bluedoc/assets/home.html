@@ -62,7 +62,8 @@ body { font-family: var(--font-hz-sans, Inter, system-ui, sans-serif); -webkit-f
 /* the hero: a pixel-art banner (dark and light, one per theme; assets/vendor/hero, the source pixels and colours
    unchanged) at the top; its bottom dissolves through transparent dither cells, so it meets the page colour with
    no seam. The title sits where it dissolves: padding in % is of the hero's width, like the banner's height. */
-.bd-hero { position: relative; isolation: isolate; overflow: hidden; display: flex; flex-direction: column; align-items: center;
+/* no overflow clip: the banner is a background inside its own box, and the search field's shadow reaches past the hero */
+.bd-hero { position: relative; isolation: isolate; display: flex; flex-direction: column; align-items: center;
   padding: max(230px, 22%) 20px 30px; box-sizing: border-box; background: var(--color-hz-canvas); }
 .bd-hero-pix { position: absolute; top: 0; left: 0; right: 0; z-index: -1; aspect-ratio: 1672 / 523; min-height: 320px; pointer-events: none;
   background: url(/__bluedoc/vendor/hero/hero-dark.webp?v=__BLUEDOC_VENDOR_V__) center top / cover no-repeat; }
