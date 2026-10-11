@@ -1,0 +1,105 @@
+{
+  "id": "acme-status",
+  "title": "Acme shop status, week 41",
+  "subtitle": "Orders, uptime, incidents and open decisions for the Acme shop, 5 to 11 October 2026.",
+  "meta": {
+    "org": "Acme Corp",
+    "kind": "Status",
+    "type": "other",
+    "rev": "1",
+    "date": "2026-10-11"
+  },
+  "state": [
+    { "label": "numbers from the orders dashboard", "kind": "info" },
+    { "label": "1 incident, resolved", "kind": "ok" },
+    { "label": "1 decision open", "kind": "warn" }
+  ],
+  "links": [
+    { "label": "Orders architecture", "href": "acme-orders.bluedoc.json" },
+    { "label": "Saved carts plan", "href": "acme-saved-carts-plan.bluedoc.json" }
+  ],
+  "hero": {
+    "icon": "box",
+    "value": "18,420",
+    "label": "orders placed, week 41"
+  },
+  "tldr": "The shop took 18,420 orders, 6% more than week 40. Checkout stayed at 99.97% uptime; one 18-minute slowdown in pricing is fixed. One decision is open: when to start the saved carts rollout.",
+  "sections": [
+    {
+      "id": "numbers",
+      "title": "Numbers",
+      "lead": "Orders grew 6% on week 40; refunds held at 1.2%.",
+      "blocks": [
+        {
+          "type": "table",
+          "columns": ["Metric", "Week 40", "Week 41", "Change"],
+          "rows": [
+            ["Orders placed", "17,380", "18,420", "+6.0%"],
+            ["Checkout uptime", "99.99%", "99.97%", "−0.02 pt"],
+            ["p95 checkout latency", "410 ms", "430 ms", "+20 ms"],
+            ["Refund rate", "1.2%", "1.2%", "0"],
+            ["Orders shipped within 24 h", "96.1%", "97.4%", "+1.3 pt"]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "incidents",
+      "title": "Incidents",
+      "lead": "One incident: pricing answered slowly for 18 minutes on 8 October.",
+      "blocks": [
+        {
+          "type": "table",
+          "columns": ["Date", "Duration", "Impact", "Cause", "Fix"],
+          "rows": [
+            ["8 Oct, 14:02", "18 min", "p95 checkout latency 2.1 s", "A cold cache after the pricing deploy", "Warm the cache before traffic moves (`pricing` 4.2.1)"]
+          ]
+        },
+        {
+          "type": "callout",
+          "kind": "note",
+          "md": "No orders failed. 212 carts took longer than 2 s to price; the dashboard shows no drop in conversion."
+        }
+      ]
+    },
+    {
+      "id": "next",
+      "title": "Next week",
+      "lead": "Two releases are planned and one decision is open.",
+      "blocks": [
+        {
+          "type": "checklist",
+          "id": "next",
+          "title": "Week 42",
+          "numbered": false,
+          "items": [
+            {
+              "id": "fulfilment",
+              "text": "Release fulfilment-worker 2.8 with batched label printing",
+              "sub": "Cuts label time per order from 4 s to 1 s; owner: fulfilment team.",
+              "verify": "Labels per minute on the warehouse dashboard rise above 50."
+            },
+            {
+              "id": "payco",
+              "text": "Renew the PayCo client certificate before 20 October",
+              "sub": "It expires on 24 October; an expired certificate stops card payments.",
+              "verify": "`openssl x509 -enddate` on the new certificate shows 2027."
+            },
+            {
+              "id": "saved-carts",
+              "text": "When does the saved carts rollout start?",
+              "sub": "Recommend 19 October: the plan is approved and the migration is ready.",
+              "recommend": "oct19",
+              "choices": [
+                { "id": "oct19", "label": "19 October" },
+                { "id": "oct26", "label": "26 October" },
+                { "id": "after-sale", "label": "After the November sale" }
+              ],
+              "detail": "The table migration takes no lock on `carts`. Starting on 26 October leaves one week before the November sale freeze."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
