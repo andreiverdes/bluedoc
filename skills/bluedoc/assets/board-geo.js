@@ -11,8 +11,8 @@ const BoardGeo = (() => {
   const TIDY_GAP_X = 200, TIDY_GAP_Y = 80, TIDY_ROW_GAP = 120;
   // the router: clearance around screens, corner radius, spacing of parallel segments, the cost of a bend in px, the
   // extra cost per px of running along a screen's padded border, the cost of crossing another route, the least
-  // spacing of ends on one side
-  const PAD = 24, RADIUS = 12, GAP = 12, BEND = 48, HUG = 0.5, CROSS = 120, PORT_GAP = 24;
+  // spacing of ends on one side; reroute keeps a link's old route unless a new one costs under KEEP of it
+  const PAD = 24, RADIUS = 12, GAP = 12, BEND = 48, HUG = 0.5, CROSS = 120, PORT_GAP = 24, KEEP = 0.85;
   const num = v => typeof v === 'number' && Number.isFinite(v);
 
   /* ---------- boardLayout: build.py's board_layout, line for line ---------- */
@@ -134,7 +134,7 @@ const BoardGeo = (() => {
 
   // each routable link's ends: p0 (on the element, or the screen's border), p1 (p0 carried out past the padding),
   // e1 (in front of the end), e (on the target's border), the sides, and the directions out of p1 and into e
-  function portsOf(bm, links, pad, bias) {
+  function portsOf(bm, links, pad, bias, hold) {
     const ps = [], els = new Map();   // screen id -> the rects of its link elements
     (Array.isArray(links) ? links : []).forEach((l, i) => {
       if (!l || typeof l.from !== 'string' || typeof l.to !== 'string' || l.from === l.to) return;
@@ -188,7 +188,9 @@ const BoardGeo = (() => {
     // starts (fixed where they cross it). Each end wants the coordinate its start leaves from, each border start the
     // one its end arrives at. Sides are settled one after another from the latest values, a few rounds, so both
     // ends of a link come to one line where they can. With bias (from a first routing), a port whose route turns
-    // along the side goes to that end of it, the shallower turn outermost, so nested turns don't cross.
+    // along the side goes to that end of it, the shallower turn outermost, so nested turns don't cross. With hold
+    // (reroute's previous result), a port stays where it was on its side (a straight route's end follows its start),
+    // as far as the others allow.
     const mid = (r, s) => across(s) ? r.y + r.h / 2 : r.x + r.w / 2;
     const OPP = { l: 'r', r: 'l', t: 'b', b: 't' }, others = [...bm.values()];
     // can link p run straight across at coordinate c: facing sides that both reach c, no other screen in between
@@ -215,6 +217,11 @@ const BoardGeo = (() => {
           const far = it.start ? out(onSide(p.B, p.es, p.ec), p.es, pad) : out(onSide(p.A, p.ss, p.sc), p.ss, pad), k = across(s) ? 1 : 0;
           it.pref = far[k];
           it.tie = it.start ? 0 : -Math.abs(far[1 - k] - (k ? p.B.x : p.B.y));
+          const o = hold && hold[p.id];
+          if (o && o.start === p.ss && o.end === p.es && Array.isArray(o.ports) && Array.isArray(o.raw)) {
+            if (o.raw.length > 2 && num(o.ports[it.start ? 0 : 1])) { it.pref = lo + o.ports[it.start ? 0 : 1]; it.tie = 0; }
+            continue;
+          }
           // turning: to the side's end it turns to (see above), unless a straight line to its far end fits. Left and
           // top sides keep half a PORT_GAP further in, so ports on the facing sides of a channel don't meet on one line.
           if (turn && turn.dir && !straightAt(p, it.pref)) {
@@ -379,10 +386,12 @@ const BoardGeo = (() => {
   // between the nearest screens on either side; its segments spread around their mean, keeping pad / 2 clear of the
   // screens. The first and last segment of a route are tied to its ports and stay. The order is the one in which
   // no segment's turn at an end crosses the other.
-  function nudge(routes, rects, pad) {
+  // base: the routes before nudging (same corners); ties in the order of segments go by where they were routed, not
+  // by where earlier rounds moved them, so a small change in the input doesn't reorder a channel
+  function nudge(routes, rects, pad, base) {
     // a pass on one axis stretches the other axis' segments, so the axes take turns until nothing moves
     for (let round = 0; round < 8; round++) {
-      const v = nudgeAxis(routes, true, rects, pad), h = nudgeAxis(routes, false, rects, pad);
+      const v = nudgeAxis(routes, true, rects, pad, base), h = nudgeAxis(routes, false, rects, pad, base);
       if (!v && !h) break;
     }
     for (let round = 0; round < 4; round++) {
@@ -429,22 +438,26 @@ const BoardGeo = (() => {
     }
     return moved;
   }
-  function nudgeAxis(routes, vert, rects, pad) {
+  function nudgeAxis(routes, vert, rects, pad, base) {
     const A = vert ? 0 : 1, B = 1 - A, segs = [];
+    // which segments share a channel, and in what order, come from the routes as routed (base); only where each sits
+    // comes from the current routes. So the channels and orders don't shift as rounds or small input changes nudge
+    // the other axis' segments.
     routes.forEach((pts, li) => {
+      const raw = base[li];
       for (let k = 0; k + 1 < pts.length; k++) {
-        const a = pts[k], b = pts[k + 1];
+        const a = raw[k], b = raw[k + 1];
         if (a[A] !== b[A] || a[B] === b[B]) continue;
-        const c = a[A], lo = Math.min(a[B], b[B]), hi = Math.max(a[B], b[B]), loEnd = a[B] < b[B] ? k : k + 1;
+        const r = a[A], lo = Math.min(a[B], b[B]), hi = Math.max(a[B], b[B]), loEnd = a[B] < b[B] ? k : k + 1;
         // which way the route turns at an end: toward smaller (-1) or larger (1) coordinates
-        const turn = nb => { const q = pts[nb]; return q ? Math.sign(q[A] - c) : 0; };
+        const turn = nb => { const q = raw[nb]; return q ? Math.sign(q[A] - r) : 0; };
         let neg = -Infinity, pos = Infinity;
-        for (const r of rects) {
-          const r0 = vert ? r.x : r.y, r1 = vert ? r.x + r.w : r.y + r.h, s0 = vert ? r.y : r.x, s1 = vert ? r.y + r.h : r.x + r.w;
+        for (const o of rects) {
+          const r0 = vert ? o.x : o.y, r1 = vert ? o.x + o.w : o.y + o.h, s0 = vert ? o.y : o.x, s1 = vert ? o.y + o.h : o.x + o.w;
           if (s1 <= lo || s0 >= hi) continue;
-          if (r1 <= c) neg = Math.max(neg, r1); else if (r0 >= c) pos = Math.min(pos, r0);
+          if (r1 <= r) neg = Math.max(neg, r1); else if (r0 >= r) pos = Math.min(pos, r0);
         }
-        const seg = { li, k, c, lo, hi, neg, pos, fixed: k === 0 || k === pts.length - 2,
+        const seg = { li, k, c: pts[k][A], b: r, lo, hi, neg, pos, fixed: k === 0 || k === pts.length - 2,
           tLo: turn(loEnd === k ? k - 1 : k + 2), tHi: turn(loEnd === k ? k + 2 : k - 1) };
         segs.push(seg);
       }
@@ -456,29 +469,31 @@ const BoardGeo = (() => {
       for (const [x, tx] of [[a.lo, a.tLo], [a.hi, a.tHi]]) for (const [y, ty] of [[b.lo, b.tLo], [b.hi, b.tHi]]) if (x === y && tx < 0 && ty > 0) return true;
       return false;
     };
+    // by where they were routed, lines under a px apart taken as one, then by link (id order) and segment
+    const byBase = (a, b) => (Math.abs(a.b - b.b) >= 1 ? a.b - b.b : 0) || a.li - b.li || a.k - b.k;
     // two segments further apart than 2 GAP keep their order: swapping them would move them far
     const cmp = (a, b) => {
       if (forced(a, b)) return -1;
       if (forced(b, a)) return 1;
-      if (Math.abs(a.c - b.c) < 2 * GAP) {
+      if (Math.abs(a.b - b.b) < 2 * GAP) {
         if (a.lo !== b.lo) { const o = a.lo > b.lo ? a : b; if (o.tLo) return (o === b) === (o.tLo > 0) ? -1 : 1; }
         if (a.hi !== b.hi) { const o = a.hi < b.hi ? a : b; if (o.tHi) return (o === b) === (o.tHi > 0) ? -1 : 1; }
       }
-      return a.c - b.c || a.li - b.li;
+      return byBase(a, b);
     };
     // groups: segments whose extents overlap on one line, or in one channel (one open on a side: within pad of each other)
     const up = segs.map((_, k) => k), find = k => { while (up[k] !== k) k = up[k] = up[up[k]]; return k; };
     for (let p = 0; p < segs.length; p++) for (let q = p + 1; q < segs.length; q++) {
       const s = segs[p], t = segs[q];
       if (!(s.lo <= t.hi && t.lo <= s.hi)) continue;
-      if (Math.abs(s.c - t.c) < 0.01 || (s.neg === t.neg && s.pos === t.pos && (Number.isFinite(s.neg) && Number.isFinite(s.pos) || Math.abs(s.c - t.c) <= pad))) up[find(p)] = find(q);
+      if (Math.abs(s.b - t.b) < 0.01 || (s.neg === t.neg && s.pos === t.pos && (Number.isFinite(s.neg) && Number.isFinite(s.pos) || Math.abs(s.b - t.b) <= pad))) up[find(p)] = find(q);
     }
     const groups = new Map();
     segs.forEach((s, k) => { const r = find(k); if (!groups.has(r)) groups.set(r, []); groups.get(r).push(s); });
     let moved = false;
     for (const grp of groups.values()) {
       if (grp.length < 2 || grp.every(s => s.fixed) || new Set(grp.map(s => s.li)).size < 2) continue;
-      grp.sort((p, q) => p.c - q.c || p.li - q.li);
+      grp.sort(byBase);
       for (let m = 1; m < grp.length; m++) for (let q = m; q > 0 && cmp(grp[q - 1], grp[q]) > 0; q--) [grp[q - 1], grp[q]] = [grp[q], grp[q - 1]];
       // where two overlap and turn apart at a shared end, the order is forced: move the later one ahead
       for (let round = 0, again = true; again && round < grp.length; round++) {
@@ -545,57 +560,139 @@ const BoardGeo = (() => {
   // [{id?, from, to, kind, el, src?, edge?}]; id defaults to `from/el`; src is the element's rect in board px (null:
   // the link starts on the screen's border, as an `edge` link always does). points: the corners, from the element
   // (or border) to the target's border, the last segment square to it; d: the same with rounded corners; start,
-  // end: the sides used ('l', 'r', 't', 'b'); raw: the route before nudging, which reroute reuses.
+  // end: the sides used ('l', 'r', 't', 'b'); raw: the route before nudging, which reroute reuses. A pure function
+  // of boxes and links: the same input gives the same paths, in any order of links.
   function routeLinks(boxes, links, opts) { return reroute(null, boxes, links, null, opts); }
 
-  // routeLinks again after the boxes in `moved` (ids) moved, from the previous result: only links whose ends
-  // changed or whose route touches a moved box are routed anew; the rest keep their route. With no prev, all are.
+  // routeLinks again from the previous result, for drags and changed inputs, with hysteresis. Ports are placed as
+  // routeLinks places them. A link keeps its previous route, its ends carried to the new ports, while that is still
+  // clear of every screen; it is routed anew only when its old route no longer fits, and when its ends moved or its
+  // route passes near a box in `moved` (ids), the new route replaces the old one only if it costs under KEEP of it.
+  // So the same input given again changes nothing, and a drag doesn't flip a route back and forth.
   function reroute(prev, boxes, links, moved, opts) {
     const pad = opts && num(opts.pad) ? opts.pad : PAD;
     const bm = new Map();
     for (const [id, r] of boxes instanceof Map ? boxes : Object.entries(boxes || {})) { const b = rectOf(r); if (b) bm.set(id, b); }
-    const mv = new Set(moved || []), padded = [...bm.values()].map(b => grow(b, pad));
-    const hitsMoved = raw => [...mv].some(id => bm.has(id) && pathHits(raw.slice(1, -1), grow(bm.get(id), pad - 1)));
-    const same = (a, b) => a[0] === b[0] && a[1] === b[1];
-    // the raw route of each link: the old one (from `old`) while its ends hold and no moved box is in its way
-    const routeAll = (ps, old) => {
-      const todo = [], raws = new Map();
-      for (const p of ps) {
-        const o = old && old[p.id];
-        const keep = o && o.raw && o.start === p.ss && o.end === p.es && same(o.raw[0], p.p0) && same(o.raw[o.raw.length - 1], p.e)
-          && !mv.has(p.from) && !mv.has(p.to) && !hitsMoved(o.raw);
-        if (keep) raws.set(p.id, o.raw); else todo.push(p);
-      }
-      if (todo.length) {
-        const G = makeGrid(padded, todo.flatMap(p => [p.p1, p.e1]));
-        for (const p of ps) if (!todo.includes(p)) occupy(G, raws.get(p.id), 1);
-        for (const p of todo) { const r = routeOne(G, p, pad); raws.set(p.id, r); occupy(G, r, 1); }
-        // rip up and reroute: each once more, against all the others
-        for (const p of todo) { occupy(G, raws.get(p.id), -1); const r = routeOne(G, p, pad); raws.set(p.id, r); occupy(G, r, 1); }
-      }
+    // links in id order, so the input's order doesn't matter
+    const lid = l => l && (typeof l.id === 'string' ? l.id : `${l.from}/${l.el}`);
+    const ls = (Array.isArray(links) ? links : []).filter(l => l && typeof l === 'object')
+      .map((l, k) => [l, k]).sort((a, b) => (lid(a[0]) < lid(b[0]) ? -1 : lid(a[0]) > lid(b[0]) ? 1 : a[1] - b[1])).map(x => x[0]);
+    const padded = [...bm.values()].map(b => grow(b, pad));
+    // route every link of ps not in `keep` (id -> raw) through one grid: in order, then once more each against all
+    // the others (rip up and reroute, one pass)
+    const routeAll = (ps, keep) => {
+      const raws = new Map(keep), todo = ps.filter(p => !keep.has(p.id));
+      if (!todo.length) return raws;
+      const G = makeGrid(padded, todo.flatMap(p => [p.p1, p.e1]));
+      for (const r of keep.values()) occupy(G, r, 1);
+      for (const p of todo) { const r = routeOne(G, p, pad); raws.set(p.id, r); occupy(G, r, 1); }
+      for (const p of todo) { occupy(G, raws.get(p.id), -1); const r = routeOne(G, p, pad); raws.set(p.id, r); occupy(G, r, 1); }
       return raws;
     };
-    // ports placed knowing which way each route turns: from the previous result, else from a first routing
-    let ref = prev;
-    if (!ref) {
-      const ps0 = portsOf(bm, links, pad, null), raws0 = routeAll(ps0, null);
-      ref = {};
-      for (const p of ps0) ref[p.id] = { raw: raws0.get(p.id), start: p.ss, end: p.es };
+    // ports placed knowing which way each route turns, from a first routing of every link: never from prev
+    const ps0 = portsOf(bm, ls, pad, null), raws0 = routeAll(ps0, new Map()), ref = {};
+    for (const p of ps0) ref[p.id] = { raw: raws0.get(p.id), start: p.ss, end: p.es, from: p.from, to: p.to };
+    const ps = portsOf(bm, ls, pad, turnsOf(ref), prev);
+    let raws;
+    if (!prev) raws = routeAll(ps, new Map());
+    else {
+      const mv = [...new Set(moved || [])].filter(id => bm.has(id)).map(id => bm.get(id));
+      const keep = new Map(), weigh = new Map();   // weigh: id -> the old route, kept unless a new one is much cheaper
+      for (const p of ps) {
+        const o = prev[p.id];
+        let old = o && o.start === p.ss && o.end === p.es ? carry(o.raw, p) : null;
+        if (old && blocked(old, p, bm, pad)) old = repair(old, p, bm, pad);
+        if (!old) continue;
+        const same = Array.isArray(o.raw) && old.length === o.raw.length && old.every((q, k) => q[0] === o.raw[k][0] && q[1] === o.raw[k][1]);
+        if (same && !mv.some(b => pathHits(old, grow(b, 3 * pad)))) keep.set(p.id, old); else weigh.set(p.id, old);
+      }
+      raws = routeAll(ps, new Map([...keep, ...weigh]));
+      if (weigh.size) {
+        const G = makeGrid(padded, ps.filter(p => weigh.has(p.id)).flatMap(p => [p.p1, p.e1]));
+        for (const r of raws.values()) occupy(G, r, 1);
+        for (const p of ps) {
+          if (!weigh.has(p.id)) continue;
+          const old = raws.get(p.id);
+          occupy(G, old, -1);
+          const fresh = routeOne(G, p, pad), r = routeCost(fresh) < KEEP * routeCost(old) ? fresh : old;
+          raws.set(p.id, r); occupy(G, r, 1);
+        }
+      }
     }
-    const ps = portsOf(bm, links, pad, turnsOf(ref));
-    const raws = routeAll(ps, prev);
     const routes = ps.map(p => raws.get(p.id).map(q => q.slice()));
-    nudge(routes, [...bm.values()], pad);
+    nudge(routes, [...bm.values()], pad, ps.map(p => raws.get(p.id)));
     const res = {};
     ps.forEach((p, k) => {
       const pts = simplify(routes[k]);
-      res[p.id] = { d: pathD(pts), points: pts, label: labelAt(pts), start: p.ss, end: p.es, raw: raws.get(p.id) };
+      // ports: where the start and end sit along their sides, from each side's start (what reroute holds)
+      const ports = [p.sc - sideSpan(p.A, p.ss)[0], p.ec - sideSpan(p.B, p.es)[0]];
+      res[p.id] = { d: pathD(pts), points: pts, label: labelAt(pts), start: p.ss, end: p.es, ports, raw: raws.get(p.id) };
     });
     return res;
   }
 
-  // id -> [the turn after the start, the turn before the end] of each route in res ({id: {raw, start, end}}): the
-  // direction along its side it turns to (-1, 1; 0 straight on) and how far from the side
+  // what A* minimises, without the crossings: length plus BEND per bend
+  const routeCost = pts => { let c = BEND * Math.max(0, pts.length - 2); for (let k = 0; k + 1 < pts.length; k++) c += Math.abs(pts[k + 1][0] - pts[k][0]) + Math.abs(pts[k + 1][1] - pts[k][1]); return c; };
+
+  // an old raw route with its ends carried to p's ports: the corner next to each end slides along with it. null when
+  // the result isn't a route any more (a straight route whose ends no longer line up, a segment gone or reversed).
+  function carry(raw, p) {
+    if (!Array.isArray(raw) || raw.length < 2 || !raw.every(q => Array.isArray(q) && num(q[0]) && num(q[1]))) return null;
+    const pts = raw.map(q => [q[0], q[1]]), n = pts.length, ks = across(p.ss) ? 1 : 0, ke = across(p.es) ? 1 : 0;
+    pts[0] = p.p0.slice(); pts[n - 1] = p.e.slice();
+    if (n === 3 && ks === ke) return null;
+    if (n > 2) { pts[1][ks] = pts[0][ks]; pts[n - 2][ke] = pts[n - 1][ke]; }
+    return routeShape(pts, p) ? pts : null;
+  }
+
+  // is pts a route for p: every segment horizontal or vertical and not empty, a turn at every corner, leaving its
+  // start side outward and entering its end side from outside
+  function routeShape(pts, p) {
+    const n = pts.length;
+    for (let k = 0; k + 1 < n; k++) {
+      const a = pts[k], b = pts[k + 1];
+      if ((a[0] !== b[0]) === (a[1] !== b[1])) return false;   // a diagonal, or nothing
+      if (k && (pts[k - 1][0] === a[0]) === (a[0] === b[0])) return false;   // two segments one way: no longer a corner
+    }
+    const dot = (a, b, s) => (b[0] - a[0]) * SIDE[s][0] + (b[1] - a[1]) * SIDE[s][1];
+    return dot(pts[0], pts[1], p.ss) > 0 && dot(pts[n - 2], pts[n - 1], p.es) < 0;
+  }
+
+  // a blocked route pushed clear, its shape kept: each middle segment that runs through a padded screen slides
+  // across, out of it on the side nearer to where it ran (as a dragged screen pushes the lines in its way). null when
+  // that doesn't clear it, or bends it out of shape.
+  function repair(pts, p, bm, pad) {
+    pts = pts.map(q => q.slice());
+    for (let round = 0; round < 8; round++) {
+      let hit = null;
+      for (let k = 1; k + 2 < pts.length && !hit; k++) {
+        for (const b of bm.values()) if (pathHits([pts[k], pts[k + 1]], grow(b, pad - 1))) { hit = [k, b]; break; }
+      }
+      if (!hit) return routeShape(pts, p) && !blocked(pts, p, bm, pad) ? pts : null;
+      const [k, b] = hit, A = pts[k][0] === pts[k + 1][0] ? 0 : 1, lo = A ? b.y : b.x, hi = lo + (A ? b.h : b.w);
+      const c = pts[k][A] < (lo + hi) / 2 ? lo - pad : hi + pad;
+      pts[k][A] = c; pts[k + 1][A] = c;
+    }
+    return null;
+  }
+
+  // does the route run through a screen, or nearer it than the padding allows (its own ends' screens aside, where
+  // the first and last segment leave and enter them)
+  function blocked(pts, p, bm, pad) {
+    for (let k = 0; k + 1 < pts.length; k++) {
+      const seg = [pts[k], pts[k + 1]];
+      for (const b of bm.values()) {
+        if ((k === 0 && b === p.A) || (k === pts.length - 2 && b === p.B)) continue;
+        if (pathHits(seg, grow(b, pad - 1))) return true;
+      }
+    }
+    return false;
+  }
+
+  // id -> [the turn after the start, the turn before the end] of each route in res ({id: {raw, start, end, from,
+  // to}}): the direction along its side it turns to (-1, 1; 0 straight on) and how far from the side. A route that
+  // turns at both ends gets one depth for both, the one at the screen first by id: routes that run side by side
+  // between two screens then nest the same way at both, so they don't cross where they swap lanes.
   function turnsOf(res) {
     const turns = new Map();
     for (const [id, r] of Object.entries(res || {})) {
@@ -606,8 +703,9 @@ const BoardGeo = (() => {
         const k = across(side) ? 1 : 0;
         return { dir: Math.sign(next[k] - corner[k]), depth: Math.abs(corner[1 - k] - at[1 - k]) };
       };
-      const n = raw.length;
-      turns.set(id, [turn(r.start, raw[0], raw[1], raw[2]), turn(r.end, raw[n - 1], raw[n - 2], raw[n - 3])]);
+      const n = raw.length, s = turn(r.start, raw[0], raw[1], raw[2]), e = turn(r.end, raw[n - 1], raw[n - 2], raw[n - 3]);
+      if (s.dir && e.dir) { const d = String(r.from) <= String(r.to) ? s.depth : e.depth; s.depth = d; e.depth = d; }
+      turns.set(id, [s, e]);
     }
     return turns;
   }

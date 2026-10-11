@@ -20,11 +20,36 @@ GEO = SKILL / "assets" / "board-geo.js"
 PAD = 24          # board-geo.js: the clearance routes keep around screens
 PHONE = (390, 844)
 
-# calls: [[fn, ...args]]; "route" is routeLinks timed over `reps` runs (the median, in ms, after one warm-up run)
+# calls: [[fn, ...args]] run in one node process:
+# - "time": routeLinks timed over `reps` runs (the median, in ms, after one warm-up run)
+# - "settle": routeLinks, then reroute(previous, the same boxes, the same links, moved) n times; each run's points
+# - "drag": one box moved by (dx, dy) per step, `steps` times, each step rerouted from the last; per link, the
+#   topology of its path at every step (its sides, then the direction of each segment longer than 4 px, repeats
+#   merged: "rbRU" leaves the right side, enters the bottom one, runs right, then up)
 RUNNER = """
 const G = require(process.argv[1]);
 const calls = JSON.parse(require('fs').readFileSync(0, 'utf8'));
+const pts = r => Object.fromEntries(Object.entries(r).map(([k, v]) => [k, v.points]));
+const topo = r => r.start + r.end + r.points.slice(1).map((q, k) => { const p = r.points[k];
+  return Math.abs(q[0] - p[0]) + Math.abs(q[1] - p[1]) <= 4 ? '' : q[0] > p[0] ? 'R' : q[0] < p[0] ? 'L' : q[1] > p[1] ? 'D' : 'U'; }).join('').replace(/(.)\\1+/g, '$1');
 const out = calls.map(([fn, ...args]) => {
+  if (fn === 'settle') {
+    const [boxes, links, moved, n] = args, runs = [];
+    let r = G.routeLinks(boxes, links);
+    for (let k = 0; k < n; k++) { r = G.reroute(r, boxes, links, moved); runs.push(pts(r)); }
+    return runs;
+  }
+  if (fn === 'drag') {
+    const [boxes, links, id, dx, dy, steps] = args, hist = {}, b0 = boxes[id];
+    let r = null;
+    for (let s = 0; s <= steps; s++) {
+      const b = { ...b0, x: b0.x + dx * s, y: b0.y + dy * s }, bx = { ...boxes, [id]: b };
+      const ls = links.map(l => l.from === id && l.src ? { ...l, src: { ...l.src, x: l.src.x + dx * s, y: l.src.y + dy * s } } : l);
+      r = r ? G.reroute(r, bx, ls, [id]) : G.routeLinks(bx, ls);
+      for (const [k, v] of Object.entries(r)) (hist[k] = hist[k] || []).push(topo(v));
+    }
+    return hist;
+  }
   if (fn !== 'time') return fn === 'boardLayout' ? Object.fromEntries([...G.boardLayout(args[0], args[1], () => args[2])].map(([k, p]) => [k, [p.x, p.y]])) : G[fn](...args);
   const [boxes, links, reps] = args, ms = [];
   G.routeLinks(boxes, links);
@@ -202,12 +227,6 @@ class Router(unittest.TestCase):
         kept = [k for k in far if after[k]["raw"] == first[k]["raw"]]
         self.assertGreater(len(kept), len(far) // 2, "reroute routed most untouched links anew")
 
-    def test_deterministic(self) -> None:
-        boxes, links = grid_board(3)
-        a, b = geo(["routeLinks", boxes, links], ["routeLinks", boxes, links[::-1]])
-        self.assertEqual(a, geo(["routeLinks", boxes, links])[0])
-        self.assertEqual(set(a), set(b))
-
 
 def acme() -> tuple[dict, list, list]:
     p = EXAMPLES / "acme-fit-design.bluedoc.json"
@@ -218,6 +237,66 @@ def acme() -> tuple[dict, list, list]:
         w, h = build.artboard_size(a)
         screens.append({"id": a["id"], "w": w, "h": h, "device": a.get("device"), "variantOf": a.get("variantOf")})
     return board, screens, build.board_links(doc, p)
+
+
+BEZEL = {"watch-round": 12, "watch-square": 10, "phone": 12, "tablet": 14}   # template.html's, around each screen
+
+
+def acme_board() -> tuple[dict, list]:
+    """Acme Fit as the page routes it: each screen where the board puts it, with its bezel and 24 px title bar as
+    the obstacle; every link with a target, keyed as the page keys it, starting on the screen's border."""
+    board, screens, links = acme()
+    at, dev = build.board_layout(board, links), {a["id"]: a.get("device") for a in board["artboards"]}
+    boxes = {}
+    for aid, (x, y, w, h) in at.items():
+        bz = BEZEL.get(dev[aid], 0)
+        boxes[aid] = {"x": x - bz, "y": y - bz - 24, "w": w + 2 * bz, "h": h + 2 * bz + 24}
+    return boxes, [{"id": f"link:{ln['from']}/{ln['el']}", "from": ln["from"], "el": ln["el"], "to": ln["to"], "kind": ln["kind"]}
+                   for ln in links if ln.get("to")]
+
+
+@unittest.skipUnless(NODE, "node not installed")
+class Stable(unittest.TestCase):
+    """Connectors don't flicker: the same input gives the same paths, rerouting an unchanged board changes nothing,
+    and dragging a screen changes a connector's shape only a few times, never back and forth."""
+
+    def boards(self) -> list:
+        return [acme_board()] + [grid_board(seed) for seed in range(100, 120)]
+
+    def test_same_input_same_paths(self) -> None:
+        boards = self.boards()
+        calls = [c for b, ln in boards for c in (["routeLinks", b, ln], ["routeLinks", b, ln], ["routeLinks", b, ln[::-1]])]
+        out = geo(*calls)
+        for k in range(len(boards)):
+            a, b, rev = out[3 * k: 3 * k + 3]
+            self.assertTrue(a, f"board {k}: no routes")
+            self.assertEqual(a, b, f"board {k}: routeLinks gave two answers to one input")
+            self.assertEqual({i: r["points"] for i, r in rev.items()}, {i: r["points"] for i, r in a.items()},
+                             f"board {k}: the order of the links changed the paths")
+
+    def test_reroute_of_an_unchanged_board_changes_nothing(self) -> None:
+        boards = self.boards()
+        calls = [["settle", b, ln, moved, 10] for b, ln in boards for moved in ([], [next(iter(b))])]
+        first = geo(*[["routeLinks", b, ln] for b, ln in boards])
+        for k, runs in enumerate(geo(*calls)):
+            want = {i: r["points"] for i, r in first[k // 2].items()}
+            for n, got in enumerate(runs):
+                self.assertEqual(got, want, f"board {k // 2}: reroute #{n + 1} on the same input moved a path")
+
+    def test_drag_one_px_at_a_time(self) -> None:
+        """50 steps of 1 px: each connector switches shape at most 4 times, and never returns to a shape it just left."""
+        acme_boxes, acme_links = acme_board()
+        drags = [(acme_boxes, acme_links, aid, dx, dy) for aid in ("login", "today", "workouts", "profile")
+                 for dx, dy in ((1, 0), (0, 1), (-1, 1))]
+        for seed in range(1, 11):
+            boxes, links = grid_board(seed)
+            drags.append((boxes, links, f"s{seed % 30}", 1, 1 if seed % 2 else -1))
+        for (_, _, aid, dx, dy), hist in zip(drags, geo(*[["drag", b, ln, aid, dx, dy, 50] for b, ln, aid, dx, dy in drags])):
+            for lid, seq in hist.items():
+                runs = [t for n, t in enumerate(seq) if not n or t != seq[n - 1]]
+                where = f"dragging {aid} by ({dx}, {dy}): {lid} went {' → '.join(runs)}"
+                self.assertLessEqual(len(runs) - 1, 4, where)
+                self.assertFalse(any(runs[n] == runs[n - 2] for n in range(2, len(runs))), where)
 
 
 @unittest.skipUnless(NODE, "node not installed")

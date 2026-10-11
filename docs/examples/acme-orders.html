@@ -1408,12 +1408,8 @@ i.warn[hidden] { display: none; }
 .bd-ab.ghost .bd-ab-scr { outline: calc(2px / var(--k)) dashed var(--risk); }
 .bd-ab-fr { position: absolute; left: 0; top: 0; display: block; border: 0; background: #fff; pointer-events: none; }
 .bd-board:is([data-m="interact"], [data-m="point"], [data-m="select"], [data-m="link"]) .bd-ab-fr, :is(.bd-pres, .bd-cmpv) .bd-ab-fr { pointer-events: auto; }
-/* links: connectors over the board, faint at rest; the selected (or hovered) screen's reach at full strength, the
-   other screens dimmed. Widths are in screen px (÷ --k), so arrows read the same at every zoom. */
-.bd-ab { transition: opacity .15s var(--ease); }
-.bd-ab.dim { opacity: .35; }
-.bd-ab.tgt .bd-ab-scr { outline: calc(2px / var(--k)) solid var(--accent); outline-offset: calc(var(--bz, 0px) + 4px / var(--k)); }
-.bd-ab-t .lk { font-weight: 500; color: var(--accent-fg); }
+/* links: connectors over the board, faint at rest; the selected (or hovered) screen's arrows, in and out, at full
+   strength with their labels. Screens never dim. Widths are in screen px (÷ --k), so arrows read the same at every zoom. */
 .bd-ab-t .rch { padding: 0 .5em; border-radius: .45em; background: var(--accent-tint); color: var(--accent-fg); font-variant-numeric: tabular-nums; }
 .bd-ab-was { position: absolute; border: calc(1.5px / var(--k)) dashed var(--warn); border-radius: 6px; pointer-events: none; }
 .bd-lnks { position: absolute; left: 0; top: 0; width: 1px; height: 1px; overflow: visible; pointer-events: none; }
@@ -1423,10 +1419,9 @@ i.warn[hidden] { display: none; }
 .bd-board:is([data-m="interact"], [data-m="select"], [data-m="draw"], [data-m="frame"]) .bd-lnk :is(.hit, .bd-lnk-dot) { pointer-events: none; }
 .bd-lnk.k-modal .ln { stroke-dasharray: calc(7px / var(--k)) calc(4px / var(--k)); }
 .bd-lnk.k-tab .ln { stroke-dasharray: 0 calc(5px / var(--k)); stroke-linecap: round; }
-.bd-lnk.dim .ln { opacity: .2; }
-.bd-lnk:is(.out, .sel, .hov) .ln { stroke: var(--accent); stroke-width: calc(2px / var(--k)); opacity: 1; }
+.bd-lnk:is(.lit, .sel, .hov) .ln { stroke: var(--accent); stroke-width: calc(2px / var(--k)); opacity: 1; }
 .bd-lnk:is(.sel, .hov) .ln { stroke-width: calc(3px / var(--k)); }
-.bd-lnk.k-tab:is(.out, .sel, .hov) .ln { stroke-width: calc(2.5px / var(--k)); }
+.bd-lnk.k-tab:is(.lit, .sel, .hov) .ln { stroke-width: calc(2.5px / var(--k)); }
 .bd-lnk.k-back .ln { stroke-width: calc(1px / var(--k)); }
 .bd-lnk.draft .ln { stroke: var(--warn); opacity: 1; }
 .bd-lnk.del .ln { stroke: var(--warn); opacity: .5; stroke-dasharray: calc(5px / var(--k)) calc(4px / var(--k)); }
@@ -1437,7 +1432,7 @@ i.warn[hidden] { display: none; }
 .bd-lnk:is(.hov, .sel) .bd-lnk-dot { display: inline; }
 .bd-lnk.draft .bd-lnk-dot { stroke: var(--warn); }
 .bd-mk path { fill: var(--fg-subtle); }
-.bd-mk.out path { fill: var(--accent); } .bd-mk.draft path, .bd-mk.mod path { fill: var(--warn); } .bd-mk.add path { fill: var(--ok); } .bd-mk.del path { fill: var(--risk); }
+.bd-mk.lit path { fill: var(--accent); } .bd-mk.draft path, .bd-mk.mod path { fill: var(--warn); } .bd-mk.add path { fill: var(--ok); } .bd-mk.del path { fill: var(--risk); }
 .bd-lnk-lbls { position: absolute; left: 0; top: 0; pointer-events: none; }
 .bd-lnk-lbl { position: absolute; display: none; transform: translate(-50%, -50%); padding: calc(2px / var(--k)) calc(7px / var(--k)); border-radius: calc(10px / var(--k));
   background: var(--surface); box-shadow: 0 0 0 calc(1px / var(--k)) var(--line); color: var(--fg); font: 500 calc(11px / var(--k))/1.3 var(--sans); white-space: nowrap; }
@@ -4146,8 +4141,8 @@ function renderBoard(b) {
     const warn = h('i', { class: 'warn', hidden: true }), tag = h('span', { class: 'tg' });
     const cmpBtn = h('button', { type: 'button', class: 'cmp', hidden: true, 'aria-label': 'Compare this screen across the two revisions', title: 'Compare this screen across the two revisions',
       onclick: e => { e.stopPropagation(); openCompare(id); } }, ic('split'));
-    const lk = h('span', { class: 'lk', hidden: true }), rch = h('span', { class: 'rch', hidden: true });
-    const t = h('div', { class: 'bd-ab-t' }, warn, h('span', { class: 'n' }, a.title || id), lk, rch,
+    const rch = h('span', { class: 'rch', hidden: true });
+    const t = h('div', { class: 'bd-ab-t' }, warn, h('span', { class: 'n' }, a.title || id), rch,
       h('span', { class: 'd' }, [DEVICE_NAME[dev] || `${p.w} × ${p.h}`, FIDELITY[a.fidelity]].filter(Boolean).join(' · ')), tag, cmpBtn, dev === 'icons' && !ghost && iconExportKey(a));
     const ph = h('div', { class: 'bd-ab-ph' }, ic(DEVICE_IC[dev]), h('b', {}, a.title || id),
       h('span', { class: 'why' }, ghost ? `Removed in ${VIEW.rev ? 'rev ' + VIEW.rev : 'this revision'}` : SCREENS ? (OLD ? 'An export shows the current revision\'s screens only.' : '') : SERVED ? '' : 'Open this page through serve.py to see the screen.'));
@@ -4155,7 +4150,7 @@ function renderBoard(b) {
     const scr = h('div', { class: 'bd-ab-scr' }, ph, chromeFor(dev, a), hov);
     const el = h('div', { class: `bd-ab dev-${dev} fid-${FIDELITY[a.fidelity] ? a.fidelity : 'hifi'}${ghost ? ' ghost' : ''}`, 'data-ab': ghost ? null : id, 'data-ghost': ghost ? id : null },
       t, BEZEL[dev] && h('div', { class: 'bd-ab-dev', 'aria-hidden': 'true' }), scr);
-    const x = { a, p, el, scr, ph, hov, warn, tag, cmpBtn, lk, rch, ghost, fr: null, ready: false, fallback: null, rects: {}, navAt: null, named: null, allow: 0, navs: 0, locSig: '', home: null, chg: null, li: null };
+    const x = { a, p, el, scr, ph, hov, warn, tag, cmpBtn, rch, ghost, fr: null, ready: false, fallback: null, rects: {}, navAt: null, named: null, allow: 0, navs: 0, locSig: '', home: null, chg: null, li: null };
     placeAb(x);
     if (!ghost) { el.addEventListener('pointerenter', () => hoverAb(id)); el.addEventListener('pointerleave', () => hoverAb(null)); }
     return x;
@@ -4324,7 +4319,7 @@ function renderBoard(b) {
     B.sel = id || null;
     for (const x of [...B.frames.values(), ...B.ghosts.values()]) { const on = x.a.id === B.sel; x.el.classList.toggle('sel', on); if (x.li) x.li.setAttribute('aria-current', String(on)); }
     paintTools();
-    // a back link is drawn for the selected screen only
+    // the selected screen's back links are routed apart, so the other connectors keep their routes
     if (was !== B.sel && (hasBack(was) || hasBack(B.sel))) relink(); else paintReach();
   }
   let lastTap = { t: 0, id: null };
@@ -4355,7 +4350,8 @@ function renderBoard(b) {
 
   /* links: one connector per link of the effective list (the shown revision's links, merged with the reader's
      drafts by B.mergeLinks), routed by board-geo.js around the other screens. Faint at rest; selecting or hovering a
-     screen shows its reach: its arrows at full strength, its targets ringed with their kind, the other screens dimmed. */
+     screen brightens its arrows, in and out, and shows their labels. Screens never dim, and selection or hover never
+     reroutes: the router runs only when the geometry it routes (boxes, links, element rects) changes. */
   const GEO = typeof BoardGeo === 'object' ? BoardGeo : null;   // build.py inlines it into pages with a board
   const KINDS = ['push', 'modal', 'tab', 'replace', 'back'], NAME_RE = /^[A-Za-z0-9_-]+$/, FLOWS_KEY = 'bluedoc:design-flows', TITLE_H = 24;
   const linkKey = l => `link:${l.from}/${l.el}`;
@@ -4363,7 +4359,7 @@ function renderBoard(b) {
     KINDS.includes(l.kind) && (l.kind === 'back' || typeof l.to === 'string')).slice(0, 500)
     .map(l => ({ from: l.from, el: l.el.slice(0, 200), to: l.kind === 'back' ? null : l.to, kind: l.kind, label: str(l.label, 80), ...(l.edge === true ? { edge: true } : {}) }));
   const REV_LINKS = cleanLinks(VIEW.links);
-  let LINKS = [], GONE = [], routes = {}, hovId = null;   // GONE: compare's removed links (ghosts)
+  let LINKS = [], GONE = [], routes = {}, backRoutes = {}, geoKey = '', backKey = '', hovId = null;   // GONE: compare's removed links (ghosts)
   const gEls = new Map();   // route id -> {g, ln, hit, d0, d1, pill, l, hov}
   const live = () => LINKS.filter(l => !l.del);
   const linkFor = (from, el) => live().find(l => l.from === from && l.el === el) || null;
@@ -4375,13 +4371,17 @@ function renderBoard(b) {
   B.mergeLinks = null;   // NavEdit's drafts: (rev links) -> effective list, entries may carry draft (an id), del, stale
   B.links = withDel => (withDel ? LINKS : live()).map(l => ({ ...l }));
   const mergeLinks = () => { LINKS = (B.mergeLinks ? B.mergeLinks(B.revLinks()) : B.revLinks()).map(l => ({ ...l, key: l.key || linkKey(l) })); };
-  // the inspector's rects of a screen's [data-nav] and named elements (frame px), kept after its frame unmounts
+  // the inspector's rects of a screen's [data-nav] and named elements (frame px), kept after its frame unmounts. A rect
+  // within 1 px of the kept one is the same rect, so a frame that remounts or reports again doesn't move an arrow.
   function takeNavs(x, d) {
     if (!x) return;
     const rects = (o, n) => { const out = {}; if (o && typeof o === 'object') for (const [k, r] of Object.entries(o).slice(0, n)) if (NAME_RE.test(k)) out[k] = r === null ? null : rectOf(r); return out; };
-    const navAt = rects(d.navs, 50), sig = JSON.stringify(navAt), was = JSON.stringify(x.navAt);
-    x.navAt = navAt; x.named = rects(d.named, 100);
-    if (sig !== was && LINKS.some(l => l.from === x.a.id)) relinkSoon();
+    const near = (p, r) => !!p && !!r && ['x', 'y', 'w', 'h'].every(c => Math.abs(p[c] - r[c]) <= 1);
+    const settle = (kept, now) => { const out = {}; for (const [k, r] of Object.entries(now)) out[k] = kept && near(kept[k], r) ? kept[k] : r; return out; };
+    const navAt = settle(x.navAt, rects(d.navs, 50)), named = settle(x.named, rects(d.named, 100));
+    const changed = JSON.stringify([navAt, named]) !== JSON.stringify([x.navAt, x.named]);
+    x.navAt = navAt; x.named = named;
+    if (changed && LINKS.some(l => l.from === x.a.id)) relinkSoon();
   }
   B.navRects = id => { const x = B.frames.get(id); return x && x.navAt ? { ...x.navAt } : {}; };
   B.namedRects = id => { const x = B.frames.get(id); return x && x.named ? { ...x.named } : {}; };
@@ -4406,21 +4406,29 @@ function renderBoard(b) {
     }
     return out;
   }
-  // the router's input: every link with both ends shown; a back link, for the selected screen only, goes back to
-  // each screen that pushes or raises it
+  // the router's input: every link with both ends shown; apart, the selected screen's back links, each going back to
+  // every screen that pushes or raises it
   function geoInput() {
-    const bx = obstacles(), out = [];
-    const add = (l, id, to, kind) => { if (bx[l.from] && bx[to] && to !== l.from) out.push({ id, from: l.from, el: l.el, to, kind, src: gesture(l) ? null : navRect(l.from, l.el) }); };
-    for (const l of [...LINKS, ...GONE]) if (l.to) add(l, l.key, l.to, l.kind);
+    const bx = obstacles(), out = [], back = [];
+    const add = (into, l, id, to, kind) => { if (bx[l.from] && bx[to] && to !== l.from) into.push({ id, from: l.from, el: l.el, to, kind, src: gesture(l) ? null : navRect(l.from, l.el) }); };
+    for (const l of [...LINKS, ...GONE]) if (l.to) add(out, l, l.key, l.to, l.kind);
     if (B.sel) for (const l of live()) if (l.kind === 'back' && l.from === B.sel)
-      for (const s of new Set(live().filter(m => m.to === B.sel && (m.kind === 'push' || m.kind === 'modal')).map(m => m.from))) add(l, l.key + '\n' + s, s, 'back');
-    return { bx, out };
+      for (const s of new Set(live().filter(m => m.to === B.sel && (m.kind === 'push' || m.kind === 'modal')).map(m => m.from))) add(back, l, l.key + '\n' + s, s, 'back');
+    return { bx, out, back };
   }
-  function relink() { routes = {}; if (GEO) { const { bx, out } = geoInput(); routes = GEO.routeLinks(bx, out); } drawLinks(); }
+  // route only when the input changed: the same boxes, links and element rects keep their routes. Each pass starts from
+  // the last result, so links the change doesn't touch keep their shape; moved: the screens a drag moved
+  function route(moved) {
+    if (!GEO) return;
+    const { bx, out, back } = geoInput(), k = JSON.stringify([bx, out]), kb = back.length ? JSON.stringify([bx, back]) : '';
+    if (k !== geoKey) { routes = GEO.reroute(routes, bx, out, moved || []); geoKey = k; }
+    if (kb !== backKey) { backRoutes = kb ? GEO.reroute(backRoutes, bx, back, moved || []) : {}; backKey = kb; }
+  }
+  function relink() { route(); drawLinks(); }
   let relinkT = 0;
   const relinkSoon = () => { if (!relinkT) relinkT = requestAnimationFrame(() => { relinkT = 0; relink(); MARKUP.relayout(); }); };
   B.refreshLinks = () => { mergeLinks(); relink(); paintScreenList(); paintTools(); if (pres) pres.hints(); };
-  B.reroute = ids => { if (!GEO) return; const { bx, out } = geoInput(); routes = ids ? GEO.reroute(routes, bx, out, ids) : GEO.routeLinks(bx, out); drawLinks(); };
+  B.reroute = ids => { route(ids); drawLinks(); };
   B.setPositions = map => {
     const moved = [];
     for (const [id, v] of Object.entries(map || {})) {
@@ -4436,7 +4444,7 @@ function renderBoard(b) {
 
   const lsvg = sv('svg', { class: 'bd-lnks' }), lbls = h('div', { class: 'bd-lnk-lbls', 'aria-hidden': 'true' });
   const marker = (id, w, path, refX) => sv('marker', { id: 'bd-mk-' + id, class: 'bd-mk ' + id, viewBox: `0 0 ${w} 10`, refX, refY: 5, markerWidth: w / 2, markerHeight: 5, orient: 'auto', markerUnits: 'strokeWidth' }, sv('path', { d: path }));
-  lsvg.append(sv('defs', {}, ['rest', 'out', 'draft', 'add', 'mod', 'del'].map(c => marker(c, 10, 'M1 1L9 5L1 9z', 8)), marker('bar', 4, 'M0 0h4v10H0z', 2)));
+  lsvg.append(sv('defs', {}, ['rest', 'lit', 'draft', 'add', 'mod', 'del'].map(c => marker(c, 10, 'M1 1L9 5L1 9z', 8)), marker('bar', 4, 'M0 0h4v10H0z', 2)));
   B.svg = lsvg; B.stage = stage; B.vp = vp;
   vp.append(lsvg, lbls);   // over the screens; compare's ghosts go in before it, requested frames and editors after
   // a zero-length path with round caps draws a dot that keeps its screen size (its stroke width follows the zoom)
@@ -4451,7 +4459,7 @@ function renderBoard(b) {
   }
   function drawLinks() {
     const byKey = new Map([...LINKS, ...GONE].map(l => [l.key, l])), keep = new Set();
-    for (const [id, r] of Object.entries(routes)) {
+    for (const [id, r] of Object.entries({ ...routes, ...backRoutes })) {
       const l = byKey.get(id.split('\n')[0]);
       if (!l || !r || !Array.isArray(r.points) || r.points.length < 2) continue;
       keep.add(id);
@@ -4465,8 +4473,7 @@ function renderBoard(b) {
       o.g.setAttribute('data-link', l.key);
       o.g.setAttribute('data-label', l.label || '');
       o.g.setAttribute('aria-label', `Link ${titleOf(l.from)} › ${kind === 'back' ? 'Back' : titleOf(l.to)}`);
-      for (const p of [o.hit, o.ln]) p.setAttribute('d', r.d);
-      o.d0.setAttribute('d', dotD(r.points[0])); o.d1.setAttribute('d', dotD(r.points[r.points.length - 1]));
+      if (o.ln.getAttribute('d') !== r.d) { for (const p of [o.hit, o.ln]) p.setAttribute('d', r.d); o.d0.setAttribute('d', dotD(r.points[0])); o.d1.setAttribute('d', dotD(r.points[r.points.length - 1])); }
       o.ln.setAttribute('marker-start', l.kind === 'replace' ? 'url(#bd-mk-bar)' : 'none');
       const lp = r.label || { x: r.points[0][0], y: r.points[0][1] };
       Object.assign(o.pill.style, { left: lp.x + 'px', top: lp.y + 'px' });
@@ -4486,22 +4493,18 @@ function renderBoard(b) {
     }
     return { f, tg, src };
   }
+  // styling only, never routing: the reach's arrows (out of its screen and into it) bright with their labels
   function paintLink(o, R) {
-    const out = !!R && o.l.from === R.f, sel = o.l.key === B.selLink, c = o.g.classList;
-    c.toggle('out', out); c.toggle('sel', sel); c.toggle('hov', o.hov); c.toggle('dim', !!R && !out);
-    o.pill.classList.toggle('on', !!(o.pill.textContent && (out || sel || o.hov || o.l.draft || o.l.del)));
+    const lit = !!R && (o.l.from === R.f || o.l.to === R.f), sel = o.l.key === B.selLink, c = o.g.classList;
+    c.toggle('lit', lit); c.toggle('sel', sel); c.toggle('hov', o.hov);
+    o.pill.classList.toggle('on', !!(o.pill.textContent && (lit || sel || o.hov || o.l.draft || o.l.del)));
     o.pill.classList.toggle('draft', !!(o.l.draft || o.l.del));
-    const mk = c.contains('bd-chg-add') ? 'add' : c.contains('bd-chg-del') ? 'del' : c.contains('bd-chg-mod') ? 'mod' : o.l.draft || o.l.del ? 'draft' : out || sel || o.hov ? 'out' : 'rest';
+    const mk = c.contains('bd-chg-add') ? 'add' : c.contains('bd-chg-del') ? 'del' : c.contains('bd-chg-mod') ? 'mod' : o.l.draft || o.l.del ? 'draft' : lit || sel || o.hov ? 'lit' : 'rest';
     o.ln.setAttribute('marker-end', `url(#bd-mk-${mk})`);
   }
   function paintReach() {
     const R = curReach();
-    for (const x of B.frames.values()) {
-      const id = x.a.id, kinds = R && R.tg.get(id), me = !!R && id === R.f;
-      x.el.classList.toggle('tgt', !!kinds); x.el.classList.toggle('dim', !!R && !me && !kinds);
-      x.lk.hidden = !kinds; x.lk.textContent = kinds ? '· ' + [...kinds].join(' · ') : '';
-      x.rch.hidden = !me; x.rch.textContent = me ? `→ ${R.tg.size} · ← ${R.src.size}` : '';
-    }
+    for (const x of B.frames.values()) { const me = !!R && x.a.id === R.f; x.rch.hidden = !me; x.rch.textContent = me ? `→ ${R.tg.size} · ← ${R.src.size}` : ''; }
     for (const o of gEls.values()) paintLink(o, R);
     lsvg.classList.toggle('off', !B.flows); lbls.classList.toggle('off', !B.flows);
   }
