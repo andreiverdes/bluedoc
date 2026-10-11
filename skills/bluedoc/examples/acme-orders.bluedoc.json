@@ -108,8 +108,7 @@
                     "id": "resp",
                     "from": "@right",
                     "to": "client",
-                    "label": "201 Created",
-                    "bend": 18
+                    "label": "201 Created"
                   }
                 ],
                 "flows": [
@@ -367,7 +366,7 @@
               "label": "order-events",
               "sub": "Kafka topic · 6 partitions",
               "kind": "queue",
-              "x": 640,
+              "x": 690,
               "y": 0,
               "md": "Keyed by order id, so events for one order stay in order.",
               "refs": [
@@ -405,8 +404,8 @@
                     "id": "ticket",
                     "label": "create pick ticket",
                     "sub": "WMS client",
-                    "col": 2,
-                    "row": 0,
+                    "x": 570,
+                    "y": 0,
                     "w": 200
                   },
                   {
@@ -521,7 +520,7 @@
               "label": "seed-orders.py",
               "sub": "local only",
               "state": "local",
-              "x": 640,
+              "x": 690,
               "y": 270,
               "md": "Publishes synthetic `order.placed` events to a local Kafka. Never points at production.",
               "refs": [

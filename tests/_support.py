@@ -39,7 +39,7 @@ class TempHome:
 
     def copy_examples(self, dest: str = "docs") -> Path:
         out = self.dir / dest
-        shutil.copytree(EXAMPLES, out)
+        shutil.copytree(EXAMPLES, out, ignore=shutil.ignore_patterns("*.icons"))   # a reader's exported icon sets aren't examples
         return out
 
     def run(self, script: str, *args: str, timeout: float = 30) -> subprocess.CompletedProcess:

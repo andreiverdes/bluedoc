@@ -446,7 +446,8 @@ Lay out children in their own space starting near `col: 0, row: 0`; the runtime 
 | `label` | ≤ 28 chars: the thing that moves or the call. |
 | `kind` | `data` (cyan, animated), `control` (dashed), `async` (violet dotted, queues/events), `power` (amber), `dep` (dependency, dim), `replaced` (red). |
 | `dir` | `none` or `both` (default: arrow at `to`). |
-| `bend` | Perpendicular offset in units, to separate lines. |
+
+Edges route themselves, as a design board's links do: right angles with rounded corners, round the scope's other nodes, leaving each node on the side facing the other end. Parallel lines are spaced apart, and each label sits on its line clear of nodes and other labels. A frame port is a stretch of the frame's edge that edges cross square. `bend` is gone (the build warns that it is ignored).
 
 ### Flow
 

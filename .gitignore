@@ -2,3 +2,5 @@ __pycache__/
 *.pyc
 .DS_Store
 node_modules/
+# exported PNG icon sets (Export PNG sets writes <stem>.icons/ beside a design doc)
+*.icons/

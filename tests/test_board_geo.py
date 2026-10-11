@@ -2,6 +2,7 @@
 Router: every segment horizontal or vertical, clear of the screens it passes, no two connectors on one segment, each
 end square to its target's border, no curves; 30 screens and 60 links in under 50 ms. Tidy: no overlaps, the same
 input gives the same output, 0 crossings on Acme Fit, no more crossings than the flow layout on generated boards.
+Blueprint canvases: labels clear of nodes and of each other (least overlap where nothing is clear), frame ports.
 Skipped without node."""
 from __future__ import annotations
 
@@ -139,11 +140,12 @@ def overlaps(res: dict) -> list:
 
 @unittest.skipUnless(NODE, "node not installed")
 class Router(unittest.TestCase):
-    def assert_routes(self, boxes: dict, links: list, res: dict) -> None:
-        """Every property a route must have, for every link between two boxes."""
-        want = {f"{ln['from']}/{ln['el']}" for ln in links if ln.get("to") in boxes and ln["to"] != ln["from"]}
+    def assert_routes(self, boxes: dict, links: list, res: dict, pad: float = PAD) -> None:
+        """Every property a route must have, for every link between two boxes (pad: the clearance routed with)."""
+        lid_of = lambda ln: ln.get("id") or f"{ln['from']}/{ln['el']}"
+        want = {lid_of(ln) for ln in links if ln.get("to") in boxes and ln["to"] != ln["from"]}
         self.assertEqual(set(res), want, "a link has no route, or a route no link")
-        by_id = {f"{ln['from']}/{ln['el']}": ln for ln in links}
+        by_id = {lid_of(ln): ln for ln in links}
         for lid, r in res.items():
             ln, pts = by_id[lid], r["points"]
             A, B = boxes[ln["from"]], boxes[ln["to"]]
@@ -173,17 +175,18 @@ class Router(unittest.TestCase):
             for k, (a, b) in enumerate(segments(pts)):
                 end = k == 0 or k == len(pts) - 2
                 for bid, box in boxes.items():
-                    if end and bid in (ln["from"], ln["to"]):
+                    if (end and bid in (ln["from"], ln["to"])) or not (box["w"] and box["h"]):   # a frame port is no obstacle
                         continue
-                    self.assertFalse(hits(a, b, box, PAD / 2 - 1), f"{lid}: {a} → {b} runs through or beside {bid}")
+                    self.assertFalse(hits(a, b, box, pad / 2 - 1), f"{lid}: {a} → {b} runs through or beside {bid}")
             # no curves: only moves, lines and arcs (the rounded corners)
             self.assertRegex(r["d"], r"^M[-\d. ]+(?:[LA][-\d. ]+)*$", f"{lid}: d has other commands")
             self.assertEqual(r["d"].count("A"), len(pts) - 2, f"{lid}: one rounded corner per bend")
-            # the label sits on the longest segment
-            lx, ly = r["label"]["x"], r["label"]["y"]
-            longest = max(abs(b[0] - a[0]) + abs(b[1] - a[1]) for a, b in segments(pts))
-            self.assertTrue(any(abs(b[0] - a[0]) + abs(b[1] - a[1]) == longest and (lx, ly) == ((a[0] + b[0]) / 2, (a[1] + b[1]) / 2)
-                                for a, b in segments(pts)), f"{lid}: the label is not at the longest segment's middle")
+            # a label without a size sits at the middle of the longest segment (a sized one: CanvasEdges)
+            if not ln.get("labelBox"):
+                lx, ly = r["label"]["x"], r["label"]["y"]
+                longest = max(abs(b[0] - a[0]) + abs(b[1] - a[1]) for a, b in segments(pts))
+                self.assertTrue(any(abs(b[0] - a[0]) + abs(b[1] - a[1]) == longest and (lx, ly) == ((a[0] + b[0]) / 2, (a[1] + b[1]) / 2)
+                                    for a, b in segments(pts)), f"{lid}: the label is not at the longest segment's middle")
         self.assertEqual(overlaps(res), [], "two connectors share a segment")
 
     def test_generated_boards(self) -> None:
@@ -297,6 +300,127 @@ class Stable(unittest.TestCase):
                 where = f"dragging {aid} by ({dx}, {dy}): {lid} went {' → '.join(runs)}"
                 self.assertLessEqual(len(runs) - 1, 4, where)
                 self.assertFalse(any(runs[n] == runs[n - 2] for n in range(2, len(runs))), where)
+
+
+def canvas_scope(seed: int, links: int = 10) -> tuple[dict, list]:
+    """A blueprint scope: 9 nodes of 180 × 80 on a 300 × 220 grid, and random edges with labels up to 11 characters
+    (the page sizes a label 5.9 px a character + 14, 18 high)."""
+    rnd = random.Random(seed)
+    boxes = {f"n{k}": {"x": (k % 3) * 300 - 90, "y": (k // 3) * 220 - 40, "w": 180, "h": 80} for k in range(9)}
+    out = []
+    for k in range(links):
+        a = rnd.randrange(9)
+        b = (a + 1 + rnd.randrange(8)) % 9
+        out.append({"id": f"e{k}", "from": f"n{a}", "to": f"n{b}", "kind": "data", "labelBox": [(3 + rnd.randrange(9)) * 5.9 + 14, 18]})
+    return boxes, out
+
+
+def label_rect(r: dict, ln: dict) -> dict:
+    w, h = ln["labelBox"]
+    return {"x": r["label"]["x"] - w / 2, "y": r["label"]["y"] - h / 2, "w": w, "h": h}
+
+
+def overlap(a: dict, b: dict) -> float:
+    return max(0, min(a["x"] + a["w"], b["x"] + b["w"]) - max(a["x"], b["x"])) * max(0, min(a["y"] + a["h"], b["y"] + b["h"]) - max(a["y"], b["y"]))
+
+
+def on_path(pts: list, x: float, y: float, w: float, h: float) -> bool:
+    """Is a w × h label centred at x, y on a segment of pts: across it, or beside it and touching it."""
+    for a, b in segments(pts):
+        if a[1] == b[1] and min(a[0], b[0]) <= x <= max(a[0], b[0]) and abs(y - a[1]) <= h / 2 + 1:
+            return True
+        if a[0] == b[0] and min(a[1], b[1]) <= y <= max(a[1], b[1]) and abs(x - a[0]) <= w / 2 + 1:
+            return True
+    return False
+
+
+@unittest.skipUnless(NODE, "node not installed")
+class CanvasEdges(unittest.TestCase):
+    """What blueprint canvases ask of the router: labels placed clear of nodes and of each other, and frame ports."""
+
+    def test_labels_clear_of_nodes_and_each_other(self) -> None:
+        scopes = [canvas_scope(seed) for seed in range(1, 21)]
+        for (boxes, links), res in zip(scopes, geo(*[["routeLinks", b, ln, {"pad": 16}] for b, ln in scopes])):
+            by = {ln["id"]: ln for ln in links}
+            rects = {i: label_rect(r, by[i]) for i, r in res.items()}
+            for i, lr in rects.items():
+                self.assertTrue(on_path(res[i]["points"], res[i]["label"]["x"], res[i]["label"]["y"], lr["w"], lr["h"]), f"{i}'s label is off its line")
+                for nid, box in boxes.items():
+                    self.assertEqual(overlap(lr, box), 0, f"{i}'s label is on node {nid}")
+                for j, other in rects.items():
+                    if i < j:
+                        self.assertEqual(overlap(lr, other), 0, f"the labels of {i} and {j} overlap")
+            Router.assert_routes(self, boxes, links, res, 16)
+
+    def test_a_label_with_no_clear_spot_overlaps_least(self) -> None:
+        """Two nodes 60 px apart, a label 100 px wide on the line between them: it overlaps them, but no more than
+        it would anywhere else on the line."""
+        boxes = {"a": {"x": 0, "y": 0, "w": 180, "h": 80}, "b": {"x": 240, "y": 0, "w": 180, "h": 80}}
+        links = [{"id": "a->b", "from": "a", "to": "b", "labelBox": [100, 18]}]
+        r = geo(["routeLinks", boxes, links, {"pad": 16}])[0]["a->b"]
+        lr = label_rect(r, links[0])
+        here = sum(overlap(lr, b) for b in boxes.values())
+        (x0, y), (x1, _) = r["points"][0], r["points"][-1]
+        for x in range(int(x0), int(x1) + 1, 4):
+            there = sum(overlap({"x": x - 50, "y": y - 9, "w": 100, "h": 18}, b) for b in boxes.values())
+            self.assertLessEqual(here, there + 1e-6, f"a spot at x {x} overlaps less")
+
+    def test_frame_ports(self) -> None:
+        """Inside a system, @left/@right/@top/@bottom are stretches of the frame with no area: edges end on them
+        square from inside the frame, spread apart where several share one, and nothing routes round them."""
+        frame = {"x": -200, "y": -150, "w": 800, "h": 400}
+        boxes = {"client": {"x": 0, "y": 0, "w": 180, "h": 80}, "store": {"x": 300, "y": 120, "w": 180, "h": 80},
+                 "@left": {"x": -200, "y": -150, "w": 0, "h": 400}, "@right": {"x": 600, "y": -150, "w": 0, "h": 400},
+                 "@top": {"x": -200, "y": -150, "w": 800, "h": 0}, "@bottom": {"x": -200, "y": 250, "w": 800, "h": 0}}
+        side = {"@left": "r", "@right": "l", "@top": "b", "@bottom": "t"}
+        pairs = [("@left", "client", "cart"), ("client", "@right", "POST /orders"), ("@right", "client", "201 Created"),
+                 ("@top", "store", "rows"), ("store", "@bottom", "total"), ("client", "store", "draft")]
+        links = [{"id": f"{a}->{b}", "from": a, "to": b, "fromSide": side.get(a), "toSide": side.get(b), "labelBox": [len(t) * 5.9 + 14, 18]}
+                 for a, b, t in pairs]
+        res = geo(["routeLinks", boxes, links, {"pad": 16, "bounds": frame}])[0]
+        self.assertEqual(set(res), {ln["id"] for ln in links})
+        inside = lambda p: frame["x"] <= p[0] <= frame["x"] + frame["w"] and frame["y"] <= p[1] <= frame["y"] + frame["h"]
+        for ln in links:
+            pts = res[ln["id"]]["points"]
+            self.assertTrue(all(inside(p) for p in pts), f"{ln['id']} leaves the frame: {pts}")
+            for end, port, nxt in ((ln["from"], pts[0], pts[1]), (ln["to"], pts[-1], pts[-2])):
+                if end not in side:
+                    continue
+                box = boxes[end]
+                on = port[0] == box["x"] and box["y"] <= port[1] <= box["y"] + box["h"] if box["w"] == 0 else \
+                    port[1] == box["y"] and box["x"] <= port[0] <= box["x"] + box["w"]
+                self.assertTrue(on, f"{ln['id']} doesn't end on {end}: {port}")
+                square = nxt[1] == port[1] if box["w"] == 0 else nxt[0] == port[0]
+                self.assertTrue(square, f"{ln['id']} crosses {end} at a slant: {port} → {nxt}")
+            lr = label_rect(res[ln["id"]], ln)
+            self.assertTrue(inside((lr["x"], lr["y"])) and inside((lr["x"] + lr["w"], lr["y"] + lr["h"])), f"{ln['id']}'s label leaves the frame")
+            for nid in ("client", "store"):
+                self.assertEqual(overlap(lr, boxes[nid]), 0, f"{ln['id']}'s label is on {nid}")
+        right = sorted(res[i]["points"][-1 if i.endswith("@right") else 0][1] for i in ("client->@right", "@right->client"))
+        self.assertGreaterEqual(right[1] - right[0], 12, "two edges at @right meet the frame at one point")
+        Router.assert_routes(self, boxes, links, res, 16)
+
+
+class CanvasBuild(unittest.TestCase):
+    """build.py's side of routed canvas edges: the router goes into every page with a canvas, and `bend` is gone."""
+
+    def test_pages_with_a_canvas_get_the_router(self) -> None:
+        template = build.TEMPLATE.read_text(encoding="utf-8")
+        orders = load_json(EXAMPLES / "acme-orders.bluedoc.json")
+        self.assertIn("const BoardGeo = (", build.build(orders, template))
+        plain = {**orders, "sections": [{"id": "s", "title": "S", "blocks": [{"type": "text", "md": "Acme."}]}]}
+        self.assertNotIn("const BoardGeo = (", build.build(plain, template))
+
+    def test_bend_warns(self) -> None:
+        doc = load_json(EXAMPLES / "acme-orders.bluedoc.json")
+        canvas = next(b for b in build.all_blocks(doc) if b.get("type") == "canvas")
+        canvas["edges"][0]["bend"] = 18
+        rep = build.validate(doc)
+        bends = [w for w in rep.warnings if "bend" in w]
+        self.assertEqual(len(bends), 1, rep.warnings)
+        self.assertTrue(bends[0].endswith(".edges[0]: `bend` is ignored: edges route themselves"), bends[0])
+        self.assertEqual(rep.errors, [])
+
 
 
 @unittest.skipUnless(NODE, "node not installed")

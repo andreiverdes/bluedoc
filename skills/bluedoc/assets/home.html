@@ -542,14 +542,25 @@ function statusPill(st, d) {
 
 /* ---------- card hero: one frame, one element per type ---------- */
 const S = { live: 'live', local: 'local', proposed: 'proposed', unverified: 'unverified', removed: 'removed', replaced: 'replaced' };
+// a right-angle line between two node outlines, as the page routes canvas edges (here without the routing round
+// other nodes): out of a's side facing b, across at the middle of the gap, into b's facing side, corners rounded
 function edgePath(a, b) {
-  const ax = a.x + a.w / 2, ay = a.y + a.h / 2, bx = b.x + b.w / 2, by = b.y + b.h / 2, dx = bx - ax, dy = by - ay;
-  if (Math.abs(dx) >= Math.abs(dy) * 0.8) {
-    const s = Math.sign(dx) || 1, x0 = ax + s * a.w / 2, x3 = bx - s * b.w / 2, m = (x3 - x0) / 2;
-    return `M${x0},${ay} C${x0 + m},${ay} ${x3 - m},${by} ${x3},${by}`;
+  const gx = Math.max(b.x - a.x - a.w, a.x - b.x - b.w), gy = Math.max(b.y - a.y - a.h, a.y - b.y - b.h), across = gx >= gy;
+  const [U, V, W, H] = across ? ['x', 'y', 'w', 'h'] : ['y', 'x', 'h', 'w'];   // u runs from a to b, v across it
+  const s = Math.sign(b[U] + b[W] / 2 - a[U] - a[W] / 2) || 1;
+  // on the facing sides, level with each other where they overlap, else each at its middle
+  const lo = Math.max(a[V], b[V]), hi = Math.min(a[V] + a[H], b[V] + b[H]);
+  const v0 = hi > lo ? (lo + hi) / 2 : a[V] + a[H] / 2, v3 = hi > lo ? v0 : b[V] + b[H] / 2;
+  const u0 = s > 0 ? a[U] + a[W] : a[U], u3 = s > 0 ? b[U] : b[U] + b[W], m = (u0 + u3) / 2;
+  const pts = (v0 === v3 ? [[u0, v0], [u3, v3]] : [[u0, v0], [m, v0], [m, v3], [u3, v3]]).map(([u, v]) => across ? [u, v] : [v, u]);
+  let d = `M${pts[0][0]},${pts[0][1]}`;
+  for (let k = 1; k < pts.length - 1; k++) {
+    const [p, c, q] = [pts[k - 1], pts[k], pts[k + 1]];
+    const li = Math.abs(c[0] - p[0]) + Math.abs(c[1] - p[1]), lo2 = Math.abs(q[0] - c[0]) + Math.abs(q[1] - c[1]), r = Math.min(12, li / 2, lo2 / 2);
+    const ix = Math.sign(c[0] - p[0]), iy = Math.sign(c[1] - p[1]), ox = Math.sign(q[0] - c[0]), oy = Math.sign(q[1] - c[1]);
+    d += ` L${c[0] - ix * r},${c[1] - iy * r} A${r},${r} 0 0 ${ix * oy - iy * ox > 0 ? 1 : 0} ${c[0] + ox * r},${c[1] + oy * r}`;
   }
-  const s = Math.sign(dy) || 1, y0 = ay + s * a.h / 2, y3 = by - s * b.h / 2, m = (y3 - y0) / 2;
-  return `M${ax},${y0} C${ax},${y0 + m} ${bx},${y3 - m} ${bx},${y3}`;
+  return d + ` L${pts[pts.length - 1][0]},${pts[pts.length - 1][1]}`;
 }
 function nodeShape(n, cls) {
   const { w, h } = n, k = n.kind || 'service', ns = 'non-scaling-stroke';

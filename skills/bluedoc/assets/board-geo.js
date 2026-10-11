@@ -1,8 +1,9 @@
-/* board-geo.js: the design board's geometry. Pure functions over boxes and links, no DOM. build.py pastes this file
-   into design pages at template.html's board-geo slot; the tests run it under node (test_board_geo.py,
-   test_board_layout.py).
+/* board-geo.js: the geometry of design boards and blueprint canvases. Pure functions over boxes and links, no DOM.
+   build.py pastes this file into pages with a board or a canvas at template.html's board-geo slot; the tests run it
+   under node (test_board_geo.py, test_board_layout.py).
    - boardLayout(board, links, size): where each artboard sits; the page's copy of build.py's board_layout
-   - routeLinks(boxes, links, opts) / reroute(prev, boxes, links, moved, opts): orthogonal connectors around screens
+   - routeLinks(boxes, links, opts) / reroute(prev, boxes, links, moved, opts): orthogonal connectors around boxes
+     (a board's screens, a canvas scope's nodes), with their labels placed
    - tidy(screens, links, entry): the layered layout of Tidy up */
 const BoardGeo = (() => {
   // board_layout's spacing, as build.py has it
@@ -13,6 +14,8 @@ const BoardGeo = (() => {
   // extra cost per px of running along a screen's padded border, the cost of crossing another route, the least
   // spacing of ends on one side; reroute keeps a link's old route unless a new one costs under KEEP of it
   const PAD = 24, RADIUS = 12, GAP = 12, BEND = 48, HUG = 0.5, CROSS = 120, PORT_GAP = 24, KEEP = 0.85;
+  // labels: the space kept around each, the step between the spots tried along a segment, an arrowhead's length
+  const LABEL_GAP = 3, LABEL_STEP = 8, ARROW = 10;
   const num = v => typeof v === 'number' && Number.isFinite(v);
 
   /* ---------- boardLayout: build.py's board_layout, line for line ---------- */
@@ -147,8 +150,13 @@ const BoardGeo = (() => {
         if (!els.has(l.from)) els.set(l.from, []);
         els.get(l.from).push(el);
       }
-      const [fs, es] = facing(A, B);
-      ps.push({ i, id: typeof l.id === 'string' ? l.id : `${l.from}/${l.el}`, from: l.from, to: l.to, A, B, el, ss: fs, es });
+      // the facing sides, unless the link fixes one: fromSide / toSide ('l', 'r', 't', 'b'), for ends that must leave
+      // or enter one way (a port on a frame's edge)
+      let [fs, es] = facing(A, B);
+      if (SIDE[l.fromSide]) fs = l.fromSide;
+      if (SIDE[l.toSide]) es = l.toSide;
+      ps.push({ i, id: typeof l.id === 'string' ? l.id : `${l.from}/${l.el}`, from: l.from, to: l.to, A, B, el, ss: fs, es,
+        box: Array.isArray(l.labelBox) && num(l.labelBox[0]) && num(l.labelBox[1]) ? [Math.max(0, l.labelBox[0]), Math.max(0, l.labelBox[1])] : null });
     });
     // an element starts on its side that doesn't point away from the target, with the shortest stub to the screen's
     // border; a side other than the one facing the target costs a bend, a stub through another link's element more
@@ -192,7 +200,7 @@ const BoardGeo = (() => {
     // (reroute's previous result), a port stays where it was on its side (a straight route's end follows its start),
     // as far as the others allow.
     const mid = (r, s) => across(s) ? r.y + r.h / 2 : r.x + r.w / 2;
-    const OPP = { l: 'r', r: 'l', t: 'b', b: 't' }, others = [...bm.values()];
+    const OPP = { l: 'r', r: 'l', t: 'b', b: 't' }, others = [...bm.values()].filter(b => b.w > 0 && b.h > 0);
     // can link p run straight across at coordinate c: facing sides that both reach c, no other screen in between
     const straightAt = (p, c) => {
       if (p.es !== OPP[p.ss]) return false;
@@ -210,7 +218,7 @@ const BoardGeo = (() => {
     for (let round = 0; round < 4; round++) {
       for (const [key, items] of groups) {
         const p = items[0].p, box = items[0].start ? p.A : p.B, s = key.slice(key.lastIndexOf('\u0000') + 1);
-        const [lo, hi] = sideSpan(box, s), inset = Math.min(32, (hi - lo) / 2);
+        const [lo, hi] = sideSpan(box, s), inset = Math.min(32, (hi - lo) / 4);
         for (const it of items) {
           const p = it.p, turn = bias && bias.has(p.id) ? bias.get(p.id)[it.start ? 0 : 1] : null;
           if (it.fixed) { it.pref = p.sc; it.tie = 0; continue; }
@@ -365,7 +373,7 @@ const BoardGeo = (() => {
     const at = q => G.yi.get(q[1]) * G.nx + G.xi.get(q[0]);
     let mid = astar(G, at(p.p1), p.sd, at(p.e1), p.ed);
     if (!mid) {
-      const L = makeGrid([grow(p.A, pad), grow(p.B, pad)], [p.p1, p.e1]);
+      const L = makeGrid([p.A, p.B].filter(b => b.w > 0 && b.h > 0).map(b => grow(b, pad)), [p.p1, p.e1]);
       const at2 = q => L.yi.get(q[1]) * L.nx + L.xi.get(q[0]);
       mid = astar(L, at2(p.p1), p.sd, at2(p.e1), p.ed);
     }
@@ -530,14 +538,16 @@ const BoardGeo = (() => {
     return moved;
   }
 
-  // the path with rounded corners: radius RADIUS, less where a segment is short (half of it, all of an end one)
+  // the path with rounded corners: radius RADIUS, less where a segment is short (half of it; of an end one, as much
+  // as leaves an arrowhead's length straight at the end, or half)
   function pathD(pts) {
     const f = v => Math.round(v * 10) / 10, n = pts.length - 1;
     let d = `M${f(pts[0][0])} ${f(pts[0][1])}`;
     for (let k = 1; k < n; k++) {
       const a = pts[k - 1], c = pts[k], b = pts[k + 1];
       const li = Math.abs(c[0] - a[0]) + Math.abs(c[1] - a[1]), lo = Math.abs(b[0] - c[0]) + Math.abs(b[1] - c[1]);
-      const r = Math.min(RADIUS, k === 1 ? li : li / 2, k + 1 === n ? lo : lo / 2);
+      const end = s => Math.max(s - ARROW, s / 2);
+      const r = Math.min(RADIUS, k === 1 ? end(li) : li / 2, k + 1 === n ? end(lo) : lo / 2);
       if (!(r > 0)) { d += `L${f(c[0])} ${f(c[1])}`; continue; }
       const ix = Math.sign(c[0] - a[0]), iy = Math.sign(c[1] - a[1]), ox = Math.sign(b[0] - c[0]), oy = Math.sign(b[1] - c[1]);
       d += `L${f(c[0] - ix * r)} ${f(c[1] - iy * r)}A${f(r)} ${f(r)} 0 0 ${ix * oy - iy * ox > 0 ? 1 : 0} ${f(c[0] + ox * r)} ${f(c[1] + oy * r)}`;
@@ -545,7 +555,7 @@ const BoardGeo = (() => {
     return d + `L${f(pts[n][0])} ${f(pts[n][1])}`;
   }
 
-  // the middle of the longest segment: where the action label goes
+  // the middle of the longest segment: where a label without a size goes
   function labelAt(pts) {
     let best = -1, at = { x: pts[0][0], y: pts[0][1] };
     for (let k = 0; k + 1 < pts.length; k++) {
@@ -555,13 +565,82 @@ const BoardGeo = (() => {
     return at;
   }
 
+  // the spots a w × h label may take on the path pts, best first: centred on one of its segments, the longest
+  // first, at the segment's middle, then LABEL_STEP px either way, as far as the label stays on the segment (and off
+  // the arrowheads); then the same spots with the label beside the segment, touching it (above, then below; left,
+  // then right). [[x, y]]: the label's centre at each.
+  function labelSpots(pts, w, h) {
+    const segs = [], out = [];
+    for (let k = 0; k + 1 < pts.length; k++) {
+      const a = pts[k], b = pts[k + 1], len = Math.abs(b[0] - a[0]) + Math.abs(b[1] - a[1]);
+      if (len > 0) segs.push({ k, a, b, len });
+    }
+    segs.sort((p, q) => q.len - p.len || p.k - q.k);
+    for (const beside of [[0], [-1, 1]]) for (const s of segs) {
+      const across = s.a[1] === s.b[1], A = across ? 0 : 1, lo = Math.min(s.a[A], s.b[A]), hi = Math.max(s.a[A], s.b[A]);
+      // keep clear of the route's ends (an arrowhead, a port) on its first and last segment
+      const end = ARROW + LABEL_GAP, ext = (across ? w : h) / 2 + LABEL_GAP;
+      const from = lo + ext + (s.k === 0 && s.a[A] === lo || s.k === pts.length - 2 && s.b[A] === lo ? end : 0);
+      const to = hi - ext - (s.k === 0 && s.a[A] === hi || s.k === pts.length - 2 && s.b[A] === hi ? end : 0);
+      const mid = (lo + hi) / 2, at = [];
+      if (from > to) at.push(mid);
+      else for (let d = 0; mid - d >= from || mid + d <= to; d += LABEL_STEP) {
+        if (mid + d <= to) at.push(mid + d);
+        if (d && mid - d >= from) at.push(mid - d);
+      }
+      for (const side of beside) {
+        const c = s.a[1 - A] + side * ((across ? h : w) / 2 + 1);
+        for (const v of at) out.push(across ? [v, c] : [c, v]);
+      }
+    }
+    return out.length ? out : [[pts[0][0], pts[0][1]]];
+  }
+
+  // how much of a w × h label at x, y, LABEL_GAP bigger, overlaps the rects of avoid
+  function labelHit(x, y, w, h, avoid) {
+    let o = 0;
+    const x0 = x - w / 2 - LABEL_GAP, x1 = x + w / 2 + LABEL_GAP, y0 = y - h / 2 - LABEL_GAP, y1 = y + h / 2 + LABEL_GAP;
+    for (const r of avoid) o += Math.max(0, Math.min(x1, r.x + r.w) - Math.max(x0, r.x)) * Math.max(0, Math.min(y1, r.y + r.h) - Math.max(y0, r.y));
+    return o;
+  }
+
+  // place labels ([{id, pts, w, h}]) clear of the rects of avoid and of each other: the label with the fewest clear
+  // spots left goes first (ties in the given order), at its first clear spot; a label with none goes, once no
+  // other has one, at its spot with the least overlap. {id: {x, y}}: each label's centre.
+  function placeLabels(labels, avoid) {
+    const todo = labels.map(l => ({ ...l, spots: labelSpots(l.pts, l.w, l.h) })), at = {}, rects = avoid.slice();
+    while (todo.length) {
+      let pick = -1, fewest = Infinity, first = null;
+      todo.forEach((l, k) => {
+        let n = 0, f = null;
+        for (const s of l.spots) if (!labelHit(s[0], s[1], l.w, l.h, rects)) { n++; f = f || s; if (n >= fewest) break; }
+        if (n && n < fewest) { fewest = n; pick = k; first = f; }
+      });
+      if (pick < 0) {   // none has a clear spot: the least overlap, in order
+        pick = 0;
+        const l = todo[0];
+        let best = Infinity;
+        for (const s of l.spots) { const o = labelHit(s[0], s[1], l.w, l.h, rects); if (o < best) { best = o; first = s; } }
+      }
+      const l = todo.splice(pick, 1)[0];
+      at[l.id] = { x: first[0], y: first[1] };
+      rects.push({ x: first[0] - l.w / 2, y: first[1] - l.h / 2, w: l.w, h: l.h });
+    }
+    return at;
+  }
+
   // {link id: {d, points, label: {x, y}, start, end, raw}} for every link between two boxes (none for back links or
-  // a link to its own screen). boxes: Map or object, id -> {x, y, w, h} (what routes keep clear of). links:
-  // [{id?, from, to, kind, el, src?, edge?}]; id defaults to `from/el`; src is the element's rect in board px (null:
-  // the link starts on the screen's border, as an `edge` link always does). points: the corners, from the element
-  // (or border) to the target's border, the last segment square to it; d: the same with rounded corners; start,
-  // end: the sides used ('l', 'r', 't', 'b'); raw: the route before nudging, which reroute reuses. A pure function
-  // of boxes and links: the same input gives the same paths, in any order of links.
+  // a link to its own screen). boxes: Map or object, id -> {x, y, w, h}: what routes keep clear of; a box with no
+  // area (a port on a frame's edge) is only an end, its ports spread along it. links: [{id?, from, to, kind, el,
+  // src?, edge?, fromSide?, toSide?, labelBox?}]; id defaults to `from/el`; src is the element's rect in board px
+  // (null: the link starts on the box's border, as an `edge` link always does); fromSide, toSide fix the side an end
+  // leaves or enters by ('l', 'r', 't', 'b'; else the sides facing each other); labelBox [w, h] sizes its label.
+  // points: the corners, from the element (or border) to the target's border, the last segment square to it; d:
+  // the same with rounded corners (lines and arcs only); label: where the label's centre goes, clear of every box
+  // and every label placed before it where any spot on the path is (placeLabel), else the middle of the longest
+  // segment; start, end: the sides used; raw: the route before nudging, which reroute reuses. opts: {pad, the
+  // clearance round boxes (PAD); bounds, a rect labels stay inside}. A pure function of boxes, links and opts: the
+  // same input gives the same paths, in any order of links.
   function routeLinks(boxes, links, opts) { return reroute(null, boxes, links, null, opts); }
 
   // routeLinks again from the previous result, for drags and changed inputs, with hysteresis. Ports are placed as
@@ -577,7 +656,8 @@ const BoardGeo = (() => {
     const lid = l => l && (typeof l.id === 'string' ? l.id : `${l.from}/${l.el}`);
     const ls = (Array.isArray(links) ? links : []).filter(l => l && typeof l === 'object')
       .map((l, k) => [l, k]).sort((a, b) => (lid(a[0]) < lid(b[0]) ? -1 : lid(a[0]) > lid(b[0]) ? 1 : a[1] - b[1])).map(x => x[0]);
-    const padded = [...bm.values()].map(b => grow(b, pad));
+    // a box with no area (a port on a frame's edge) is an end, not an obstacle
+    const solid = [...bm.values()].filter(b => b.w > 0 && b.h > 0), padded = solid.map(b => grow(b, pad));
     // route every link of ps not in `keep` (id -> raw) through one grid: in order, then once more each against all
     // the others (rip up and reroute, one pass)
     const routeAll = (ps, keep) => {
@@ -621,12 +701,20 @@ const BoardGeo = (() => {
     }
     const routes = ps.map(p => raws.get(p.id).map(q => q.slice()));
     nudge(routes, [...bm.values()], pad, ps.map(p => raws.get(p.id)));
-    const res = {};
+    // labels also keep inside opts.bounds ({x, y, w, h}), when given: a system's frame
+    const res = {}, avoid = solid.slice(), bd = opts && rectOf(opts.bounds);
+    if (bd) {
+      const F = 1e6;
+      avoid.push({ x: bd.x - F, y: bd.y - F, w: 2 * F + bd.w, h: F }, { x: bd.x - F, y: bd.y + bd.h, w: 2 * F + bd.w, h: F },
+        { x: bd.x - F, y: bd.y, w: F, h: bd.h }, { x: bd.x + bd.w, y: bd.y, w: F, h: bd.h });
+    }
+    const pts = ps.map((p, k) => simplify(routes[k]));
+    // labels with a size (labelBox) go clear of the boxes and of each other (placeLabels); the rest at labelAt
+    const placed = placeLabels(ps.flatMap((p, k) => p.box ? [{ id: p.id, pts: pts[k], w: p.box[0], h: p.box[1] }] : []), avoid);
     ps.forEach((p, k) => {
-      const pts = simplify(routes[k]);
       // ports: where the start and end sit along their sides, from each side's start (what reroute holds)
       const ports = [p.sc - sideSpan(p.A, p.ss)[0], p.ec - sideSpan(p.B, p.es)[0]];
-      res[p.id] = { d: pathD(pts), points: pts, label: labelAt(pts), start: p.ss, end: p.es, ports, raw: raws.get(p.id) };
+      res[p.id] = { d: pathD(pts[k]), points: pts[k], label: placed[p.id] || labelAt(pts[k]), start: p.ss, end: p.es, ports, raw: raws.get(p.id) };
     });
     return res;
   }
@@ -666,7 +754,7 @@ const BoardGeo = (() => {
     for (let round = 0; round < 8; round++) {
       let hit = null;
       for (let k = 1; k + 2 < pts.length && !hit; k++) {
-        for (const b of bm.values()) if (pathHits([pts[k], pts[k + 1]], grow(b, pad - 1))) { hit = [k, b]; break; }
+        for (const b of bm.values()) if (b.w > 0 && b.h > 0 && pathHits([pts[k], pts[k + 1]], grow(b, pad - 1))) { hit = [k, b]; break; }
       }
       if (!hit) return routeShape(pts, p) && !blocked(pts, p, bm, pad) ? pts : null;
       const [k, b] = hit, A = pts[k][0] === pts[k + 1][0] ? 0 : 1, lo = A ? b.y : b.x, hi = lo + (A ? b.h : b.w);
@@ -682,7 +770,7 @@ const BoardGeo = (() => {
     for (let k = 0; k + 1 < pts.length; k++) {
       const seg = [pts[k], pts[k + 1]];
       for (const b of bm.values()) {
-        if ((k === 0 && b === p.A) || (k === pts.length - 2 && b === p.B)) continue;
+        if (!(b.w > 0 && b.h > 0) || (k === 0 && b === p.A) || (k === pts.length - 2 && b === p.B)) continue;
         if (pathHits(seg, grow(b, pad - 1))) return true;
       }
     }

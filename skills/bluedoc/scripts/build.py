@@ -409,6 +409,8 @@ def validate_scope(rep: Report, where: str, scope: dict, depth: int, node_keys: 
             rep.err(w, f"kind '{e['kind']}' not in {sorted(EDGE_KINDS)}")
         if e.get("label") and len(e["label"]) > 28:
             rep.warn(w, "edge label longer than 28 characters")
+        if "bend" in e:
+            rep.warn(w, "`bend` is ignored: edges route themselves")
     for i, f in enumerate(flows):
         w = f"{where}.flows[{i}]"
         if not need(rep, w, f, "id", "label", "steps"):
@@ -542,6 +544,12 @@ def all_blocks(doc: dict):
 def board_of(doc: dict) -> dict | None:
     """The design doc's board block (the first, if a doc wrongly has more), or None."""
     return next((b for b in all_blocks(doc) if b.get("type") == "board"), None) if isinstance(doc, dict) else None
+
+
+def has_canvas(doc: dict, hist: dict | None = None) -> bool:
+    """Whether the doc, or a revision of it the page carries (embed_history's blocks), has a canvas block."""
+    older = list(((hist or {}).get("blocks") or {}).values())
+    return any(b.get("type") == "canvas" for d in (doc, {"sections": [{"blocks": older}]}) for b in all_blocks(d))
 
 
 def _screen_src_ok(src) -> bool:
@@ -2144,20 +2152,21 @@ def build(doc: dict, template: str, history: dict | None = None, media_base: Pat
     revision its links from the screen files; their problems go into problems, or to stderr when it is None. state is
     the reader state serve.py seeds the page with ({version, state}); None (an -o file) leaves the page on
     localStorage. screens ({artboard id: a whole screen document}, from standalone_screens) makes a design page draw
-    its frames from srcdoc; None (serve.py) loads them from the screen route. A design page gets assets/board-geo.js
-    at the template's BOARD_GEO_SLOT; other pages get nothing there."""
+    its frames from srcdoc; None (serve.py) loads them from the screen route. A page with a board or a canvas (in
+    any revision it carries) gets assets/board-geo.js, the connector router, at the template's BOARD_GEO_SLOT; other
+    pages get nothing there."""
     title = (doc.get("title") or "bluedoc").replace("&", "&amp;").replace("<", "&lt;")
     if "__BLUEDOC_DOC__" not in template:
         raise SystemExit("template is missing the __BLUEDOC_DOC__ placeholder")
     board = board_of(doc)
-    geo = ""
-    if board is not None and BOARD_GEO_SLOT in template:
-        geo = _read_text(BOARD_GEO)
-        if geo is None:
-            raise SystemExit(f"cannot read {BOARD_GEO}: design pages need it")
-        geo = re.sub(r"(?i)</(script)", r"<\\/\1", geo)
     links = board_links(doc, Path(diff_path)) if board is not None and diff_path is not None else None
     hist = embed_history(history, doc, links)   # before expanding and inlining: it matches blocks by their JSON
+    geo = ""
+    if (board is not None or has_canvas(doc, hist)) and BOARD_GEO_SLOT in template:
+        geo = _read_text(BOARD_GEO)
+        if geo is None:
+            raise SystemExit(f"cannot read {BOARD_GEO}: pages with a board or a canvas need it")
+        geo = re.sub(r"(?i)</(script)", r"<\\/\1", geo)
     if diff_path is not None:
         found: list[str] = []
         doc, hist = expand_diff_refs(doc, hist, Path(diff_path), found)

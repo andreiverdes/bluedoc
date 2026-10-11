@@ -502,7 +502,7 @@ class LinksInTheHistoryAndThePage(Scratch):
         fresh = build.embed_history(h, doc, [{"from": "a", "el": "go", "to": "b", "kind": "tab"}])
         self.assertEqual(fresh["revs"][-1]["links"][0]["kind"], "tab", "the current rev's links come from the files")
 
-    def test_design_pages_inline_board_geo_and_other_pages_do_not(self) -> None:
+    def test_design_pages_inline_board_geo_and_pages_without_a_board_or_canvas_do_not(self) -> None:
         doc = scratch_doc([phone("a"), phone("b")], entry=["a"])
         self.write(doc, {"a": self.A, "b": self.B})
         template = ("<script>/*__BOARD_GEO__*/</script><script type=\"application/json\">__BLUEDOC_DOC__</script>"
@@ -513,7 +513,7 @@ class LinksInTheHistoryAndThePage(Scratch):
         self.assertNotIn("/*__BOARD_GEO__*/", page)
         self.assertNotIn("</script", page.split("<script>", 1)[1][:-len(page.split("</script>", 1)[1]) - 9])
         self.assertIn('"links":[{"from":"a"', page, "bp-hist carries the current links")
-        other = build.build(load_json(EXAMPLES / "acme-orders.bluedoc.json"), template, None, problems=[])
+        other = build.build(load_json(EXAMPLES / "acme-review-findings.bluedoc.json"), template, None, problems=[])
         self.assertIn("<script></script>", other)
 
     def test_the_flow_layout_of_a_scratch_board(self) -> None:
