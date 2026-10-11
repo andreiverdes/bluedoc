@@ -5494,7 +5494,8 @@ function renderBoard(b) {
     tbtn('fit', 'Fit all screens (0)', () => fit(true)), tbtn('minus', 'Zoom out (−)', () => zoomBy(1 / 1.4)), zoomLbl, tbtn('plus', 'Zoom in (+)', () => zoomBy(1.4)),
     tbtn('target', 'Focus the selected screen (F, or double-click it)', () => focusSel()), sep(),
     tbtn('present', deck.length ? 'Present the slides (← →, N: notes, Esc leaves)' : 'Present: one screen at a time (a tap follows its link; Backspace goes back; ← →, Esc leaves)', () => present(B.sel)), varBtn, flowsBtn, sep(), fidSeg,
-    themeSel && [sep(), h('label', { class: 'th' }, ic('palette'), themeSel)], sep(), motBtn, redBtn);
+    themeSel && [sep(), h('label', { class: 'th' }, ic('palette'), themeSel)]);
+  // the motion keys (pause animations, Reduced) are hidden for now: built and painted, not shown; screens play their motion
   if (themeSel) themeSel.addEventListener('change', () => { const x = ITEMS['brief/theme']; if (x && x.setChoice && !OLD) x.setChoice(themeSel.value); else { B.theme = themeSel.value; paintTokens(); } });
   function paintTools() {
     lpBtn.setAttribute('aria-pressed', String(B.lp));
