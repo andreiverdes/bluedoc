@@ -931,8 +931,7 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .bd-rv-ft .bp-btn { justify-content: center; height: 32px; font-size: 13px; }
 @media (min-width: 901px) {
   html.bd-sp-open .bd-anntb, html.bd-sp-open .bp-toast { left: calc((100% - var(--sp-w)) / 2); }
-  html.bd-sp-dock .bd-wchip { left: calc((100% - var(--sp-w)) / 2); }
-  :root.bd-sp-dock .bd-shell { padding-right: calc(20px + var(--sp-w)); }
+  html.bd-sp-dock[data-layout="board"] .bd-wchip { left: calc((100% - var(--sp-w)) / 2); }
 }
 @media (max-width: 900px) {
   .bd-sp { top: auto; left: 0; width: auto; height: var(--sp-sheet-h); border-radius: 18px 18px 0 0; transform: translateY(100%); }
@@ -1294,13 +1293,11 @@ svg.anim .bp-edge.k-async { animation: bp-march 1.6s linear infinite; }
   .bd-cm .mt, .bd-cm details { margin-left: 0; }
 }
 
-/* layouts above 900 px. JS picks one from the room the docked right panel leaves and the column width
-   (the reader's, set with the drag handles, else --content-w):
-   "centred": the full column is centred in that room, the rail in its left margin; both margins are at
-     least a rail and gap wide.
-   "two" (the base grid): the rail and the column side by side, the column centred right of the rail.
-   "wide": not even that fits; the column takes the whole width and the rail (Status, Document and
-     Related included) becomes a drawer opened from the app bar. */
+/* layouts above 900 px. The column is always centred on the window. JS picks one:
+   "centred": side columns at least --side-min (the rail, or the docked right panel's room) on both sides; the
+     column is the reader's width (drag handles) or --content-w, narrowed to fit.
+   "wide": not even MIN_W fits beside two side columns; the column takes the whole width and the rail (Status,
+     Document and Related included) becomes a drawer opened from the app bar. */
 .bd-rh { position: fixed; top: var(--bar-h); bottom: 0; z-index: 30; width: 16px; margin-left: -8px; cursor: col-resize; touch-action: none; display: none; }
 .bd-rh::before { content: ""; position: absolute; top: 0; bottom: 0; left: 7.5px; width: 1px; background: var(--accent); opacity: 0; transition: opacity .15s; }
 .bd-rh i { position: absolute; left: 5px; top: 50%; width: 6px; height: 44px; margin-top: -22px; border-radius: 3px; background: var(--line-strong);
@@ -1317,7 +1314,8 @@ html.bd-resizing, html.bd-resizing * { cursor: col-resize !important; user-selec
 .bd-toc-btn { display: none !important; }
 @media (min-width: 901px) {
   .bd-rh { display: block; }
-  :root[data-layout="centred"] .bd-shell { grid-template-columns: minmax(var(--rail), 1fr) minmax(0, var(--content-w)) minmax(var(--rail), 1fr);
+  /* --side-min: both side columns' minimum (JS sets it while the right panel is docked), so the column stays centred on the window */
+  :root[data-layout="centred"] .bd-shell { grid-template-columns: minmax(var(--side-min, var(--rail)), 1fr) minmax(0, var(--content-w)) minmax(var(--side-min, var(--rail)), 1fr);
     grid-template-areas: "side head ." "side tldr ." "side main ."; }
   :root[data-layout="centred"] .bp-side { justify-self: end; width: var(--rail); }
   :root[data-layout="wide"] .bd-shell { grid-template-columns: minmax(0, 1fr); grid-template-areas: "head" "tldr" "main"; column-gap: 0; }
@@ -2080,26 +2078,31 @@ const WIDTH_KEY = 'bluedoc:width', MIN_W = 520, PAGE_PAD = 20;   // PAGE_PAD = .
 const root = document.documentElement;
 let userW = +store.get(WIDTH_KEY) || 0;
 const cssPx = v => parseFloat(getComputedStyle(root).getPropertyValue(v)) || 0;
-// The right panel (SIDE below) docks on the right of a wide window; the page then lays out in what is
-// left, as if the window were that much narrower. Narrower windows get it as an overlay.
+// The column is always centred on the window. The centred grid's two side columns share one minimum: the rail, or
+// while the right panel (SIDE below) is docked, the room the panel needs. So docking never pushes the column over;
+// the column narrows instead. Where a docked panel would leave less than MIN_W, it opens as an overlay. A design
+// page's board sits between its panels (fitPanels).
 let panelOpen = false;
 const DOCK_MIN = 1101;
-const dockW = () => panelOpen && innerWidth >= DOCK_MIN ? cssPx('--sp-w') : 0;
-const maxW = () => Math.max(MIN_W, innerWidth - dockW() - 2 * PAGE_PAD);
+// a side column's minimum: the rail; docked, also the panel less the page padding, so a gap's width stays between column and panel
+const sideMin = docked => Math.max(cssPx('--rail'), docked ? cssPx('--sp-w') - PAGE_PAD : 0);
+const centredRoom = (docked = root.classList.contains('bd-sp-dock')) => root.clientWidth - 2 * PAGE_PAD - 2 * (sideMin(docked) + cssPx('--gap'));
+const dockW = () => panelOpen && innerWidth >= DOCK_MIN && (IS_DESIGN || centredRoom(true) >= MIN_W) ? cssPx('--sp-w') : 0;
+const maxW = () => Math.max(MIN_W, IS_DESIGN ? innerWidth - dockW() - 2 * PAGE_PAD : centredRoom(dockW() > 0));
 function setDrawer(open) {
   side.classList.toggle('drawer', open);
   document.querySelector('.bd-toc-btn')?.setAttribute('aria-expanded', String(open));
 }
 function applyWidth() {
-  const dock = dockW(), room = innerWidth - dock - 2 * PAGE_PAD;
+  const dock = dockW();
   root.classList.toggle('bd-sp-dock', dock > 0);
   // a design page is its board, full-bleed between the left panel and the right one: no column, no rails
   if (IS_DESIGN) { root.dataset.layout = 'board'; fitPanels(); return; }
-  if (userW) root.style.setProperty('--content-w', userW + 'px'); else root.style.removeProperty('--content-w');
-  // the layouts are described with their CSS (data-layout); with no chosen width the column may narrow
-  // down to MIN_W beside the rail before the rail becomes a drawer
-  const colW = userW ? Math.min(userW, maxW()) : cssPx('--content-w'), rail = cssPx('--rail') + cssPx('--gap'), minCol = userW ? colW : MIN_W;
-  root.dataset.layout = room >= colW + 2 * rail ? 'centred' : room >= minCol + rail ? 'two' : 'wide';
+  if (userW) root.style.setProperty('--content-w', Math.min(userW, maxW()) + 'px'); else root.style.removeProperty('--content-w');
+  // always centred: both side columns are the same minimum width, so the column (narrowed to fit) sits on the
+  // window's centre line, the right panel docked or not; below MIN_W the rail becomes a drawer instead
+  root.style.setProperty('--side-min', sideMin(dock > 0) + 'px');
+  root.dataset.layout = centredRoom(dock > 0) >= MIN_W ? 'centred' : 'wide';
   if (root.dataset.layout !== 'wide') setDrawer(false);
   placeHandles();
 }
