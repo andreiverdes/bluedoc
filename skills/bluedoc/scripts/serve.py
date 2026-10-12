@@ -27,10 +27,12 @@ and every reply; statedb.py).
 whose version or code differs from its own. A folder inside a registered one is not added; a wider one is added
 next to the narrower ones, which keep their URLs (a doc's URL uses its deepest registered folder).
 
-Writes need the key: in the X-Bluedoc-Key header (the CLI reads the key file) or in the bluedoc_key_<port> cookie
-(HttpOnly, SameSite=Strict). `open` and `unlock` print a link with a one-time ?key= token (good for a day); visiting
-it sets the cookie and redirects to the same URL without the token. ping and index.json say whether the browser
-has the cookie (`unlocked`), so a page can tell the reader it can't save yet.
+Writes need the key: in the X-Bluedoc-Key header (the CLI reads the key file; a page sends the copy it keeps in
+localStorage) or in the bluedoc_key_<port> cookie (HttpOnly, SameSite=Strict). `open` and `unlock` print a link with
+a ?key= token, good for an hour and any number of opens (a link preview or another browser opening it first doesn't
+use it up); visiting it sets the cookie and redirects to the same URL without the token. A page with the cookie
+fetches the key (GET /__bluedoc/key) and keeps it in localStorage, for browsers that drop cookies. ping and index.json
+say whether the request carries the key (`unlocked`), so a page can tell the reader it can't save yet.
 
 URLs: /                      home page: every doc under the registered folders, searchable, filtered by
                              project, folder, type and status
@@ -40,6 +42,7 @@ URLs: /                      home page: every doc under the registered folders, 
       /__bluedoc/index.json  what the home page shows about every doc
       /__bluedoc/ping?path=  server check (version, code hash, unlocked); with a doc's URL path, also who reads
                              replies and its saved approval
+      /__bluedoc/key         the key, for a page with the key cookie (same origin, X-Bluedoc header); else 403
       /__bluedoc/state?path=<doc URL path>[&since=N]   GET the doc's reader state {version, state}; 204 when N is
                              the current version. PUT {path, import, ops: [[key, value or null]]} writes it: null
                              deletes, an import adds only keys the server lacks. Both need the X-Bluedoc header, the
@@ -123,7 +126,7 @@ STATE = Path(os.environ.get("BLUEDOC_HOME") or "~/.bluedoc").expanduser()
 ROOTS_FILE, SERVER_FILE, STATE_DB, KEY_FILE = STATE / "roots.json", STATE / "server.json", STATE / "state.db", STATE / "key"
 INBOX_FILE = STATE / "inbox.json"   # before state.db: which reply files `wait` delivered; read once, by the import
 DEFAULT_PORT = int(os.environ.get("BLUEDOC_PORT") or 8740)
-UNLOCK_TTL = 24 * 3600   # seconds a one-time ?key= token stays good
+UNLOCK_TTL = 3600   # seconds a ?key= token stays good, for any number of opens
 COOKIE_AGE = 400 * 86400   # the key cookie's Max-Age: the most browsers keep; each page view renews it
 SKIP_DIRS = {"node_modules", "build", "dist", "target", "out", "vendor", "Pods", "DerivedData", "__pycache__"}
 MAX_DEPTH, MAX_BODY, SEARCH_CHARS = 8, 4 * 1024 * 1024, 8000   # SEARCH_CHARS keeps index.json small (~10 KB a doc)
@@ -135,7 +138,7 @@ STATE_KEY = re.compile(r"^[a-z0-9_][a-z0-9:_-]*$")
 LOCAL_KEYS = {"__outbox", "__imported"}   # the page's own bookkeeping: never sent, refused if it is
 DB: "statedb.StateDB | None" = None   # opened by run()
 SECRET = ""   # the key writes need, read by run()
-TOKENS: dict[str, float] = {}   # one-time ?key= tokens: expiry (monotonic)
+TOKENS: dict[str, float] = {}   # ?key= tokens: expiry (monotonic)
 TOKENS_LOCK = threading.Lock()
 
 
@@ -287,7 +290,8 @@ def load_key(create: bool = False) -> str:
 
 
 def mint_token() -> str:
-    """A one-time ?key= token that sets the key cookie, good for UNLOCK_TTL seconds."""
+    """A ?key= token that sets the key cookie, good for UNLOCK_TTL seconds and any number of uses: an earlier fetch
+    of the link (a link preview, an agent's fetch tool, another browser) doesn't use it up."""
     token, now = secrets.token_urlsafe(24), time.monotonic()
     with TOKENS_LOCK:
         for t in [t for t, end in TOKENS.items() if end < now]:
@@ -296,11 +300,16 @@ def mint_token() -> str:
     return token
 
 
-def take_token(token: str) -> bool:
-    """Whether token is a live one-time token; it is used up either way."""
+def unlock_token_live(token: str) -> bool:
+    """Whether token is a live ?key= token."""
     with TOKENS_LOCK:
-        end = TOKENS.pop(token, None)
+        end = TOKENS.get(token)
     return end is not None and end >= time.monotonic()
+
+
+def is_key(given: str | None) -> bool:
+    """Whether given is the server's key (constant-time)."""
+    return bool(SECRET and given) and hmac.compare_digest(given.encode(), SECRET.encode())
 
 
 def load_roots() -> list[Path]:
@@ -1490,10 +1499,9 @@ def make_handler(port: int, default_to: str):
             return c[cookie].value if cookie in c else ""
 
         def has_key(self) -> bool:
-            """Whether the request carries the server's key: in X-Bluedoc-Key (the CLI) or in the cookie (a browser
-            that opened an `open`/`unlock` link)."""
-            given = self.headers.get("X-Bluedoc-Key") or self.cookie_key()
-            return bool(SECRET and given) and hmac.compare_digest(given.encode(), SECRET.encode())
+            """Whether the request carries the server's key: in X-Bluedoc-Key (the CLI, or a page's localStorage copy)
+            or in the cookie (a browser that opened an `open`/`unlock` link). Either one is enough."""
+            return is_key(self.headers.get("X-Bluedoc-Key")) or is_key(self.cookie_key())
 
         def guard(self) -> bool:
             # DNS rebinding: only our own host names; writes also need our header and origin, and the key
@@ -1516,8 +1524,8 @@ def make_handler(port: int, default_to: str):
                                      "and open the link it prints", "key": True})
 
         def unlock(self, u) -> None:
-            """A ?key= link: a live one-time token sets the key cookie; either way, go to the URL without it."""
-            ok = take_token(parse_qs(u.query).get("key", [""])[0])
+            """A ?key= link: a live token sets the key cookie; either way, go to the URL without it."""
+            ok = unlock_token_live(parse_qs(u.query).get("key", [""])[0])
             rest = urlencode([(k, v) for k, v in parse_qsl(u.query, keep_blank_values=True) if k != "key"])
             self.send_response(303)
             self.send_header("Location", u.path + ("?" + rest if rest else ""))
@@ -1526,6 +1534,17 @@ def make_handler(port: int, default_to: str):
             self.send_header("Cache-Control", "no-store")
             self.send_header("Content-Length", "0")
             self.end_headers()
+
+        def page_key(self) -> None:
+            """GET /__bluedoc/key: the key, for the page to keep in localStorage and send as X-Bluedoc-Key, since some
+            browsers drop cookies (Tern's WKWebView keeps localStorage but no cookie jar). Only to our own page: it
+            needs the key cookie (SameSite=Strict), the X-Bluedoc header (a cross-origin fetch can't send it without
+            a preflight this server never answers) and no foreign Origin or Sec-Fetch-Site."""
+            origin, site = self.headers.get("Origin"), self.headers.get("Sec-Fetch-Site")
+            if (self.headers.get("X-Bluedoc") != "1" or (origin and urlsplit(origin).netloc not in hosts)
+                    or (site and site != "same-origin") or not is_key(self.cookie_key())):
+                return self.json(403, {"error": "the key goes only to this server's own page, with the key cookie"})
+            return self.json(200, {"key": SECRET})
 
         def body(self, limit: int) -> dict | None:
             """The request's JSON object, or None after answering 413 or 400."""
@@ -1578,6 +1597,8 @@ def make_handler(port: int, default_to: str):
                                        "unlocked": self.has_key(),
                                        "to": INBOX.names.get(str(doc), default_to) if doc else default_to,
                                        "approval": saved_approval(doc) if doc else None})
+            if u.path == "/__bluedoc/key":
+                return self.page_key()
             if u.path == "/__bluedoc/url":
                 return self.json(200, {"url": url_for(Path(q.get("doc", "")))})
             if u.path == "/__bluedoc/state":
@@ -2075,7 +2096,7 @@ def main() -> int:
         if not ensure_started(DEFAULT_PORT):
             return 1
         res = call("/__bluedoc/register", {"doc": str(doc), "to": a.to})[1]
-        # the one-time key lets this browser save; visiting it redirects to the plain URL
+        # the ?key= token (good for an hour) lets this browser save; visiting it redirects to the plain URL
         url = base() + res["url"] + (f"?key={res['token']}" if res.get("token") else "")
         print(url)
         if a.browser:

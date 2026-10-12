@@ -56,7 +56,10 @@ body { font-family: var(--font-hz-sans, Inter, system-ui, sans-serif); -webkit-f
   background: color-mix(in oklch, var(--color-hz-canvas) 84%, transparent); backdrop-filter: blur(16px) saturate(1.4); -webkit-backdrop-filter: blur(16px) saturate(1.4);
   box-shadow: 0 1px 0 var(--color-hz-line); transform: translateY(-100%); opacity: 0; pointer-events: none; transition: transform var(--hz-dur-3) var(--hz-ease-out), opacity var(--hz-dur-2); }
 .bd-top.on { transform: none; opacity: 1; pointer-events: auto; }
-.bd-top .bd-top-q { flex: 0 1 520px; margin: 0 auto; }
+/* the search field, then every active filter as a removable tag, so a reader scrolled past the composer can clear one */
+.bd-top .bd-top-s { flex: 0 1 auto; display: flex; align-items: center; gap: 8px; min-width: 0; margin: 0 auto; }
+.bd-top .bd-top-q { flex: 0 1 520px; min-width: 0; }
+.bd-top .bd-top-f { flex: none; display: flex; align-items: center; gap: 6px; max-width: 45vw; overflow-x: auto; }
 .bd-top .bd-top-n { font: 500 12px var(--font-hz-mono); color: var(--color-hz-fg-subtle); white-space: nowrap; }
 
 /* the hero: a pixel-art banner (dark and light, one per theme; assets/vendor/hero, the source pixels and colours
@@ -137,15 +140,23 @@ body { font-family: var(--font-hz-sans, Inter, system-ui, sans-serif); -webkit-f
 .bd-composer .bd-q { height: 52px; border-radius: 12px; padding-inline: 14px; }
 .bd-composer .bd-q input { font-size: 16.5px; }
 .bd-composer .bd-q svg { width: 18px; height: 18px; }
-.bd-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 9px 4px 2px; min-height: 28px; }
 .bd-q-n { font: 500 12px var(--font-hz-mono); color: var(--color-hz-fg-subtle); white-space: nowrap; }
-.bd-chips .lbl { font-size: 12px; color: var(--color-hz-fg-subtle); margin-right: 2px; }
-.bd-sug { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border: 0; border-radius: 999px; cursor: pointer;
-  background: var(--color-hz-inset); box-shadow: inset 0 0 0 1px var(--color-hz-line); color: var(--color-hz-fg-muted); font: 500 12.5px var(--font-hz-sans); }
-.bd-sug:hover { color: var(--color-hz-fg); background: var(--color-hz-hover); }
-.bd-sug:focus-visible { outline: none; box-shadow: var(--hz-shadow-focus); }
-.bd-sug svg { width: 13px; height: 13px; }
-.bd-sug .c { font: 500 11px var(--font-hz-mono); color: var(--color-hz-fg-subtle); }
+/* the filters under the search field: In (the project or folder scope), Type and Status, each row a label and then
+   chips that wrap; a chip toggles its filter and stays pressed (one type and one status at a time) */
+.bd-filters { display: flex; flex-direction: column; gap: 6px; padding: 10px 4px 2px 6px; }
+.bd-frow { display: flex; align-items: flex-start; gap: 6px; min-width: 0; }
+.bd-frow .lbl { flex: none; width: 42px; font-size: 12px; line-height: 26px; color: var(--color-hz-fg-subtle); }
+.bd-frow-x { flex: 1; display: flex; flex-wrap: wrap; align-items: center; gap: 5px; min-width: 0; min-height: 26px; }
+.bd-fc { display: inline-flex; flex: none; align-items: center; gap: 5px; height: 26px; padding: 0 9px; border: 0; border-radius: 999px; cursor: pointer;
+  background: var(--color-hz-inset); box-shadow: inset 0 0 0 1px var(--color-hz-line); color: var(--color-hz-fg-muted); font: 500 12.5px var(--font-hz-sans); white-space: nowrap; }
+.bd-fc:hover { color: var(--color-hz-fg); background: var(--color-hz-hover); }
+.bd-fc:focus-visible { outline: none; box-shadow: var(--hz-shadow-focus); }
+.bd-fc svg { width: 13px; height: 13px; color: var(--t, currentColor); }
+.bd-fc .c { font: 500 11px var(--font-hz-mono); color: var(--color-hz-fg-subtle); }
+.bd-fc[aria-pressed="true"] { color: var(--color-hz-accent-fg); background: color-mix(in oklch, var(--color-hz-accent) 15%, var(--color-hz-surface));
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--color-hz-accent) 55%, transparent); }
+.bd-fc[aria-pressed="true"] .c { color: inherit; }
+.bd-fc[aria-pressed="true"]:focus-visible { box-shadow: var(--hz-shadow-focus); }
 
 /* sections */
 .bd-sec-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 30px 0 14px; }
@@ -381,7 +392,8 @@ a.bd-row:hover .tx .t { color: var(--color-hz-accent-fg); }
   .bd-wrap { padding: 0 16px 80px; }
   .bd-top { padding: 0 12px; gap: 8px; }
   .bd-top .bd-top-t, .bd-top .bd-top-n, .bd-top .bd-brand { display: none; }
-  .bd-top .bd-top-q { flex: 1 1 auto; min-width: 0; }
+  .bd-top .bd-top-s { flex: 1 1 auto; }
+  .bd-top .bd-top-q { flex: 1 1 auto; }
 }
 @media (max-width: 700px) {
   .bd-row { grid-template-columns: minmax(0, 1fr) auto; gap: 10px; }
@@ -394,6 +406,8 @@ a.bd-row:hover .tx .t { color: var(--color-hz-accent-fg); }
   .bd-hero { padding-top: 170px; }
   .bd-hero .lede { font-size: 13.5px; }
   .bd-composer .bd-q { height: 48px; }
+  /* a row of filter chips scrolls sideways, out to the composer's edge (the margins keep focus rings unclipped) */
+  .bd-frow-x { flex-wrap: nowrap; overflow-x: auto; margin: -3px -12px -3px -3px; padding: 3px 12px 3px 3px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .bd-art .cv .fl, .bd-bars i { animation: none !important; }
@@ -415,6 +429,22 @@ const { HorizonProvider, Sidebar, SegmentedControl, Card, ProgressRing, EmptySta
 /* ---------- storage, theme, settings ---------- */
 const store = { get: k => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch {} } };
 const THEME_KEY = 'bluedoc:theme', HOME_KEY = 'bluedoc:home';
+// The server's key, kept as the doc pages keep it (template.html SERVER_KEY says why localStorage is safe enough), so
+// a browser that drops the key cookie still saves: sent with index.json, whose `unlocked` then counts it. While the
+// cookie lasts the key is kept (again); a copy the server refused is dropped. The key never goes in a URL.
+const SERVER_KEY_NAME = 'bluedoc:key:' + location.port;
+const serverKeyHeaders = () => { const k = store.get(SERVER_KEY_NAME); return k ? { 'X-Bluedoc-Key': k } : {}; };
+function keepServerKey(unlocked, sent) {
+  if (unlocked === true) fetch('/__bluedoc/key', { cache: 'no-store', headers: { 'X-Bluedoc': '1' } })
+    .then(r => r.ok ? r.json() : null).then(j => { if (j && typeof j.key === 'string' && j.key) store.set(SERVER_KEY_NAME, j.key); }, () => {});
+  else if (unlocked === false && sent['X-Bluedoc-Key'] && sent['X-Bluedoc-Key'] === store.get(SERVER_KEY_NAME)) try { localStorage.removeItem(SERVER_KEY_NAME); } catch {}
+}
+// the lock banner's action: the command that prints a link unlocking this browser
+function CopyUnlock() {
+  const [copied, setCopied] = useState(false);
+  return e(Button, { size: 'sm', variant: 'secondary', onClick: () => navigator.clipboard.writeText('serve.py unlock').then(() => setCopied(true), () => {}) },
+    copied ? 'Copied' : 'Copy unlock command');
+}
 const darkMQ = matchMedia('(prefers-color-scheme: dark)'), reduceMQ = matchMedia('(prefers-reduced-motion: reduce)');
 const finePointer = matchMedia('(pointer: fine)').matches, isMac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
 const storedTheme = () => { const t = store.get(THEME_KEY); return t === 'dark' || t === 'light' ? t : null; };
@@ -470,10 +500,8 @@ const TYPES = [['docs', 'Docs', Icons.FileText], ['review', 'Reviews', Icons.Git
   ['presentation', 'Presentations', PresentationIcon], ['other', 'Other', Icons.StickyNote]];
 const TYPE_ONE = { docs: 'Docs', review: 'Review', plan: 'Plan', design: 'Design', presentation: 'Presentation', other: 'Other' };
 const APPROVABLE = new Set(['plan', 'design', 'presentation']);   // types the reader approves as a whole (Approve plan / design / presentation)
-const TYPE_ICON = Object.fromEntries(TYPES.map(([id, , I]) => [id, I]));
 const STATUSES = [['needs', 'Needs you', Icons.Flag], ['awaiting', 'Awaiting approval', Icons.Clipboard], ['waiting', 'Waiting on agent', Icons.Clock],
   ['approved', 'Approved', Icons.Success], ['errors', "Doesn't build", Icons.Error]];
-const APPROVAL_STATUSES = new Set(['awaiting', 'approved']);   // listed only where there are plans, designs or presentations
 const BOARD = [['needs', 'Needs you', 'warning'], ['waiting', 'Waiting on agent', 'ai'], ['progress', 'In progress', 'running'], ['done', 'Done', 'success'], ['errors', "Doesn't build", 'error']];
 
 function prepare(data) {
@@ -895,6 +923,14 @@ function Items({ rows, view, cols, terms }) {
   return e('div', { className: 'bd-grid', 'data-cols': cols, style: cols === 'auto' ? null : { '--cols': cols } }, rows.map(r => e(DocCard, { key: r.d.key, ...r, terms })));
 }
 
+/* ---------- composer filters ---------- */
+// a row under the search field: its label, then its chips (or the scope tag)
+const FilterRow = ({ label, children }) => e('div', { className: 'bd-frow', role: 'group', 'aria-label': label },
+  e('span', { className: 'lbl', 'aria-hidden': true }, label), e('div', { className: 'bd-frow-x' }, children));
+// a chip that toggles one filter; pressed while it applies
+const FilterChip = ({ on, icon, label, n, className, onClick }) => e('button', { type: 'button', className: 'bd-fc' + (className ? ' ' + className : ''), 'aria-pressed': on, onClick },
+  icon, label, e('span', { className: 'c' }, n));
+
 /* ---------- sidebar data ---------- */
 function folderItems(r, docs) {
   const counts = new Map([['', 0]]);
@@ -931,7 +967,6 @@ function App() {
   const [q, setQ] = useState(() => new URLSearchParams(location.search).get('q') || '');
   const dq = useDeferredValue(q);
   const [filters, setFilters] = useState(readFilters);
-  const [lastPick, setLastPick] = useState(null);
   const [settings, setSettings] = useState(loadSettings);
   const [drawer, setDrawer] = useState(false);
   const [heroOut, setHeroOut] = useState(false);
@@ -955,9 +990,10 @@ function App() {
     let last = '', alive = true;
     const load = async () => {
       try {
-        const r = await fetch('/__bluedoc/index.json', { cache: 'no-store' });
+        const sent = serverKeyHeaders();
+        const r = await fetch('/__bluedoc/index.json', { cache: 'no-store', headers: sent });
         const txt = await r.text();
-        if (alive && txt !== last) { last = txt; setData(JSON.parse(txt)); }
+        if (alive && txt !== last) { last = txt; const d = JSON.parse(txt); setData(d); keepServerKey(d.unlocked, sent); }
       } catch { /* server restarting: keep the last list */ }
     };
     load();
@@ -998,8 +1034,6 @@ function App() {
   const typed = filters.type ? scoped.filter(d => d.type === filters.type) : scoped;
   const statusN = Object.fromEntries(STATUSES.map(([id]) => [id, 0]));
   for (const d of typed) { const st = sts.get(d.key); for (const k in statusN) if (statusIs(st, k)) statusN[k]++; }
-  const anyApprovable = typed.some(d => APPROVABLE.has(d.type));
-  const listStatus = id => filters.status === id || (id === 'errors' ? statusN.errors > 0 : !APPROVAL_STATUSES.has(id) || anyApprovable);
   const filtered = filters.status ? typed.filter(d => statusIs(sts.get(d.key), filters.status)) : typed;
   const terms = dq.toLowerCase().split(/\s+/).filter(Boolean);
   const rows = [];
@@ -1007,33 +1041,32 @@ function App() {
   const byName = (a, b) => plain(a.d.title).localeCompare(plain(b.d.title));
   rows.sort((a, b) => (terms.length ? b.m.score - a.m.score || b.d.mtime - a.d.mtime : settings.sort === 'name' ? byName(a, b) : b.d.mtime - a.d.mtime));
 
+  // the sidebar picks a project or folder ('all' clears every filter); the composer's chips toggle a type ('t:<id>') or
+  // a status ('s:<id>'), one of each at a time; 't:' and 's:' clear them
   const pick = id => {
-    setLastPick(id); setDrawer(false);
+    setDrawer(false);
     if (id === 'all') return setFilters({ scope: null, type: null, status: null });
     const [k, a, ...rest] = id.split(':');
     if (k === 'p') setFilters(f => ({ ...f, scope: { slug: a, dir: '' } }));
     else if (k === 'd') setFilters(f => ({ ...f, scope: { slug: a, dir: rest.join(':') } }));
-    else if (k === 't') setFilters(f => ({ ...f, type: f.type === a ? null : a }));
-    else if (k === 's') setFilters(f => ({ ...f, status: f.status === a ? null : a }));
+    else if (k === 't') setFilters(f => ({ ...f, type: !a || f.type === a ? null : a }));
+    else if (k === 's') setFilters(f => ({ ...f, status: !a || f.status === a ? null : a }));
   };
   const scopeId = filters.scope ? `d:${filters.scope.slug}:${filters.scope.dir}` : 'all';
-  const activeId = lastPick && ((lastPick[0] === 't' && lastPick === 't:' + filters.type) || (lastPick[0] === 's' && lastPick === 's:' + filters.status)) ? lastPick : scopeId;
   const anyFilter = !!(filters.scope || filters.type || filters.status);
   const toggleTheme = () => { const t = theme === 'dark' ? 'light' : 'dark'; store.set(THEME_KEY, t); setThemePick(t); };
   const themeBtn = e(IconButton, { size: 'sm', variant: 'ghost', label: theme === 'dark' ? 'Light theme' : 'Dark theme', icon: e(theme === 'dark' ? Icons.Sun : Icons.Moon), onClick: toggleTheme });
-  const menuBtn = e(IconButton, { size: 'sm', variant: 'ghost', className: 'bd-only-m', label: 'Folders and filters', icon: e(Icons.Menu), onClick: () => setDrawer(true) });
+  const menuBtn = e(IconButton, { size: 'sm', variant: 'ghost', className: 'bd-only-m', label: 'Projects and folders', icon: e(Icons.Menu), onClick: () => setDrawer(true) });
 
   // the rail shows icons only; HorizonUI's Sidebar would still lay out open children there, so they go
   const sectionsFor = rail => [
     { id: 'top', items: [{ id: 'all', label: 'All docs', icon: e(Icons.Home), badge: String(docs.length) }] },
     { id: 'projects', title: 'Projects', items: roots.map(r => ({ id: 'p:' + r.slug, label: r.name, icon: e(Icons.Package), badge: String(r.docs.length), defaultOpen: true,
       children: rail ? undefined : folderItems(r, docs.filter(d => d.root === r)) })) },
-    { id: 'types', title: 'Types', items: TYPES.map(([id, label, I]) => ({ id: 't:' + id, label, icon: e(I), badge: String(typeN[id]) })) },
-    { id: 'status', title: 'Status', items: STATUSES.filter(([id]) => listStatus(id)).map(([id, label, I]) => ({ id: 's:' + id, label, icon: e(I), badge: String(statusN[id]) })) },
   ];
   const sidebar = inDrawer => {
     const collapsed = !inDrawer && settings.rail;
-    const value = collapsed && activeId.startsWith('d:') ? 'p:' + filters.scope.slug : activeId;
+    const value = collapsed && filters.scope ? 'p:' + filters.scope.slug : scopeId;
     return e(Sidebar, { key: roots.map(r => r.slug).join('|'), className: collapsed ? 'bd-rail' : '', sections: sectionsFor(collapsed), value, onValueChange: pick,
       collapsed, onCollapsedChange: c => (inDrawer ? setDrawer(false) : set('rail', c)),
       header: e(Brand, { mark: collapsed }),
@@ -1056,12 +1089,17 @@ function App() {
   };
   const searchProps = { value: q, onChange: ev => setQ(ev.target.value), onKeyDown: onSearchKey, 'aria-label': 'Search docs', autoComplete: 'off', spellCheck: false };
 
-  const chips = [];
-  if (filters.scope) chips.push(e(Tag, { key: 'p', icon: e(Folder, { size: 14 }), onRemove: () => setFilters(f => ({ ...f, scope: null })) }, scopeLabel(roots, filters.scope)));
-  if (filters.type) chips.push(e(Tag, { key: 't', icon: e(TYPE_ICON[filters.type]), onRemove: () => setFilters(f => ({ ...f, type: null })) }, TYPES.find(x => x[0] === filters.type)[1]));
-  if (filters.status) chips.push(e(Tag, { key: 's', icon: e(STATUSES.find(x => x[0] === filters.status)[2]), onRemove: () => setFilters(f => ({ ...f, status: null })) }, STATUSES.find(x => x[0] === filters.status)[1]));
-  const suggestions = !anyFilter && data ? [...STATUSES.filter(([id]) => statusN[id] && id !== 'approved').map(([id, label, I]) => ({ id: 's:' + id, label, I, n: statusN[id] })),
-    ...TYPES.filter(([id]) => typeN[id] && typeN[id] < docs.length).map(([id, label, I]) => ({ id: 't:' + id, label, I, n: typeN[id] }))] : [];
+  // the composer's chips: one type and one status at a time, each chip toggling its filter; a count of 0 hides a chip unless it's picked
+  const typeChips = [e(FilterChip, { key: 'all', on: !filters.type, label: 'All', n: scoped.length, onClick: () => pick('t:') }),
+    ...TYPES.filter(([id]) => typeN[id] || filters.type === id).map(([id, label, I]) =>
+      e(FilterChip, { key: id, className: 't-' + id, on: filters.type === id, icon: e(I), label, n: typeN[id], onClick: () => pick('t:' + id) }))];
+  const statusChips = STATUSES.filter(([id]) => statusN[id] || filters.status === id).map(([id, label, I]) =>
+    e(FilterChip, { key: id, on: filters.status === id, icon: e(I), label, n: statusN[id], onClick: () => pick('s:' + id) }));
+  const typeDef = filters.type && TYPES.find(x => x[0] === filters.type), statusDef = filters.status && STATUSES.find(x => x[0] === filters.status);
+  const scopeTag = filters.scope && e(Tag, { key: 'p', icon: e(Folder, { size: 14 }), onRemove: () => setFilters(f => ({ ...f, scope: null })) }, scopeLabel(roots, filters.scope));
+  // the sticky bar repeats every active filter as a removable tag
+  const topTags = [scopeTag, typeDef && e(Tag, { key: 't', icon: e(typeDef[2]), onRemove: () => pick('t:') }, typeDef[1]),
+    statusDef && e(Tag, { key: 's', icon: e(statusDef[2]), onRemove: () => pick('s:') }, statusDef[1])].filter(Boolean);
   const countText = !data ? 'loading…' : rows.length === docs.length ? plural(docs.length, 'doc') : `${rows.length} of ${docs.length}`;
 
   const needsN = docs.filter(d => sts.get(d.key).needs).length;
@@ -1089,18 +1127,21 @@ function App() {
   } else body = e(Items, { rows, view: settings.view, cols: settings.cols, terms });
 
   const viewOpts = [{ value: 'grid', label: 'Grid', icon: e(Icons.Grid) }, { value: 'list', label: 'List', icon: e(Icons.List) }, { value: 'board', label: 'Board', icon: e(Icons.Layout) }];
-  const scopeText = anyFilter ? [filters.scope && scopeLabel(roots, filters.scope), filters.type && TYPES.find(x => x[0] === filters.type)[1], filters.status && STATUSES.find(x => x[0] === filters.status)[1]].filter(Boolean).join(' · ') : 'All projects';
+  const scopeText = anyFilter ? [filters.scope && scopeLabel(roots, filters.scope), typeDef && typeDef[1], statusDef && statusDef[1]].filter(Boolean).join(' · ') : 'All projects';
 
   return e(HorizonProvider, { theme, reducedMotion: reduce || undefined, className: 'bd-app' },
     e('div', { className: 'bd-shell' },
       e('div', { className: 'bd-side' }, data && sidebar(false)),
       e('div', { className: 'bd-main' },
-        // the server takes ticks, comments and replies only from a browser that opened a `serve.py open` or `serve.py unlock` link
-        data && data.unlocked === false && e(Banner, { tone: 'warning', className: 'bd-lock', title: 'This browser can\'t save yet.' },
-          'Run ', e('code', null, 'serve.py open <doc>'), ' or ', e('code', null, 'serve.py unlock'), ' and open the link it prints.'),
+        // the server takes ticks, comments and replies only from a browser with the key: the cookie from a `serve.py open`
+        // or `serve.py unlock` link, or the copy kept in localStorage
+        data && data.unlocked === false && e(Banner, { tone: 'warning', className: 'bd-lock', title: 'This browser can\'t save yet.', action: e(CopyUnlock) },
+          'Open the link from ', e('code', null, 'serve.py unlock'), ' here (it works for an hour, in any browser).'),
         e('div', { className: 'bd-top' + (heroOut ? ' on' : ''), inert: !heroOut },
           menuBtn, e(Brand, { mark: true }), e('span', { className: 'bd-top-t', style: { fontWeight: 600, fontSize: 14 } }, 'All docs'),
-          e(SearchField, { ...searchProps, ref: topInput, size: 'md', className: 'bd-top-q', placeholder: 'Search docs', shortcut: finePointer ? ['/'] : undefined }),
+          e('div', { className: 'bd-top-s' },
+            e(SearchField, { ...searchProps, ref: topInput, size: 'md', className: 'bd-top-q', placeholder: 'Search docs', shortcut: finePointer ? ['/'] : undefined }),
+            topTags.length > 0 && e('div', { className: 'bd-top-f', role: 'group', 'aria-label': 'Active filters' }, topTags)),
           e('span', { className: 'bd-top-n' }, countText), themeBtn),
         e('header', { className: 'bd-hero' },
           e('div', { className: 'bd-hero-pix', 'aria-hidden': true }, DZ),
@@ -1110,9 +1151,10 @@ function App() {
           e('div', { className: 'bd-composer', ref: composer },
             e(SearchField, { ...searchProps, ref: heroInput, size: 'lg', className: 'bd-q', placeholder: 'Search titles, sections, findings, paths', shortcut: finePointer ? [isMac ? '⌘' : 'Ctrl', 'K'] : undefined,
               trailing: data && (q || anyFilter) ? e('span', { className: 'bd-q-n' }, countText) : null }),
-            (chips.length > 0 || suggestions.length > 0) && e('div', { className: 'bd-chips' },
-              chips.length > 0 && e('span', { className: 'lbl' }, 'In'), chips,
-              suggestions.map(s => e('button', { key: s.id, type: 'button', className: 'bd-sug' + (s.id[0] === 't' ? ' bd-hide-s' : ''), onClick: () => pick(s.id) }, e(s.I), s.label, e('span', { className: 'c' }, s.n)))))),
+            data && docs.length > 0 && e('div', { className: 'bd-filters' },
+              scopeTag && e(FilterRow, { label: 'In' }, scopeTag),
+              e(FilterRow, { label: 'Type' }, typeChips),
+              statusChips.length > 0 && e(FilterRow, { label: 'Status' }, statusChips)))),
         e('div', { className: 'bd-wrap' },
           data && docs.length > 0 && e(F, null,
             e('div', { className: 'bd-sec-head' }, e('h2', null, 'Overview'), e('span', { className: 'sub' }, scopeText)),
@@ -1127,7 +1169,7 @@ function App() {
             e(SegmentedControl, { size: 'sm', 'aria-label': 'Sort', options: [{ value: 'recent', label: 'Recent', icon: e(Icons.Clock) }, { value: 'name', label: 'Name', icon: e(Icons.SortAsc) }], value: settings.sort, onValueChange: v => set('sort', v) }),
             settings.view !== 'board' && e(ToggleButton, { size: 'sm', pressed: settings.group, onPressedChange: v => set('group', v), leading: e(Icons.FolderTree) }, 'Folders')),
           e('div', { ref: results, onKeyDown: onResultsKey }, body)))),
-    drawer && data && e('div', { className: 'bd-drawer', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Folders and filters' },
+    drawer && data && e('div', { className: 'bd-drawer', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Projects and folders' },
       e('div', { className: 'scrim', onClick: () => setDrawer(false) }), e('div', { className: 'panel' }, sidebar(true))));
 }
 

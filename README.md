@@ -1,6 +1,6 @@
 # bluedoc
 
-![The bluedoc home page in dark mode: the pixel-art banner of a bay with a ringed planet behind the title and search field, the sidebar of projects, types and status, and the overview charts](docs/media/home-hero.webp)
+![The bluedoc home page in dark mode: the pixel-art banner of a bay with a ringed planet behind the title and the search field with its type and status filter chips, the sidebar of projects, and the overview charts](docs/media/home-hero.webp)
 
 An agent skill for engineering docs, plans, code reviews, UI designs, slide decks and app icons. The agent writes one JSON file, plus small HTML fragments for screens and SVG layers for icons; a local server renders it as a page. You tick checklists, pick options, comment on any element and approve or send back; your answers and change requests go to the agent, and each revision can be compared with the last. Works with Claude Code, Codex, pi and omp.
 
@@ -17,7 +17,7 @@ An agent skill for engineering docs, plans, code reviews, UI designs, slide deck
 
 ## What you get
 
-- **A home page.** `http://127.0.0.1:8740/` lists every doc the server knows. It opens on a pixel-art banner of a bay with a ringed planet, a night version for the dark theme and a day version for the light one, with the title and search field over it. A sidebar lists projects with their folder trees, doc types and status. Each doc is a card whose hero shows its type's own element (a review's +/− lines, a plan's step timeline, a doc's drawing), in a grid (2–6 columns), a list or a board.
+- **A home page.** `http://127.0.0.1:8740/` lists every doc the server knows. It opens on a pixel-art banner of a bay with a ringed planet, a night version for the dark theme and a day version for the light one, with the title and search field over it. Under the search field, chips filter by doc type and status, with a count on each; a sidebar lists projects with their folder trees. Each doc is a card whose hero shows its type's own element (a review's +/− lines, a plan's step timeline, a doc's drawing), in a grid (2–6 columns), a list or a board.
 - **Blueprint canvas.** Open a system to see its parts; each level plays its own animated flow (request, event, data). Nests 3 levels deep. Edges are routed at right angles around the nodes, with labels that don't overlap.
 - **Checklists as task trackers.** Each item is a two-line row (the action, then why it matters) that opens to show details, commands, checks, tables or a sub-checklist. Ticks persist on the local server; **Copy progress** exports Markdown for a PR or issue.
 - **Decisions.** When the agent needs you to choose, an item shows its options as pills with the agent's recommendation starred. Pick one, or press **Accept recommended** to take every starred option at once.
@@ -116,7 +116,7 @@ The agent scaffolds `docs/<topic>/<name>.bluedoc.json` from the type's skeleton 
 ```sh
 python3 <skill>/scripts/build.py new plan docs/plans/saved-carts.bluedoc.json --title "Saved carts"   # skeleton with <<…>> to fill
 python3 <skill>/scripts/build.py docs/plans/saved-carts.bluedoc.json        # validate, record the revision
-python3 <skill>/scripts/serve.py open docs/plans/saved-carts.bluedoc.json   # start the server, print the URL (with a one-time key)
+python3 <skill>/scripts/serve.py open docs/plans/saved-carts.bluedoc.json   # start the server, print the URL (with a key good for an hour)
 ```
 
 When you send comments back, the agent revises one object at a time, and the revision bumps itself:

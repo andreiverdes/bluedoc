@@ -2,13 +2,13 @@
 
 Code review findings, each pinned to its lines in the diff, with options to pick from and the agent's recommendation starred.
 
-![The acme-review-findings page: section #412 in its Diff view (the Checklist and Diff toggle in its title bar), tiers.ts open, with the findings on lines 10–13 and 17 as cards carrying their options](../media/review-hero.webp)
+![The acme-review-findings page, section #412 in Merged view: the [Merged][Checklist][Diff] bar stuck under the app bar, createOrder.ts lines 12–18 with the bulkSavingsCents finding's full row under them (Fix in PR picked), then tiers.ts lines 7–15 for the next finding](../media/review-hero.webp)
 
 ## Features
 
 - **Findings pinned to diff lines.** A `diff` block shows the change file by file; each finding is a card under the lines it is about, with its size (blocker, major, minor, nit). A file with several findings counts them and steps between them; a pill says how many sit above or below the view.
-- **Checklist or Diff.** A **[Checklist][Diff]** toggle in each PR's section bar shows the findings as a checklist or as the diff, one at a time; the browser remembers the pick, and a link to a finding or to a line opens the view it needs. Print shows both.
-- **The code under each finding.** Expanding a finding in the checklist shows its file, the lines around the comment and the comment card with the same options, plus **Open in Diff view**. Comments pinned on those lines are the diff's own.
+- **Merged, Checklist or Diff.** A **[Merged][Checklist][Diff]** bar under each PR's title, sticky while you scroll the section, picks how its findings show; the browser remembers the pick. **Merged**, the default, shows the findings and their code together in one column, in code order: whole-change findings, then per file each commented range (the lines around it, with **Show more lines**) with the finding's full row right under it, then any finding not tied to code. A pick, comment or **Need more details** in one view shows in the others. A link to a finding stays in Merged; a link to a line opens Diff. Print shows Merged.
+- **The code under each finding.** In Checklist, expanding a finding shows its file, the lines around the comment and the comment card with the same options, plus **Open in Diff view**. Comments pinned on those lines are the diff's own.
 - **Diffs come from git.** The doc stores only the repo and the commit range. The server runs `git diff` on each render and caches the result next to the doc, falling back to `gh pr diff`. Agents never write hunks by hand.
 - **GitHub threads.** `ghthreads.py` turns a PR's open review threads into findings and diff comments.
 - **One decision per finding.** Each finding offers options (Fix in PR, Ticket, Decline, or the real alternatives) with the recommendation starred and a reason. The same pills show on the card and in the checklist, kept in sync.

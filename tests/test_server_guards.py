@@ -10,7 +10,10 @@ without X-Frame-Options; anything else under it, traversal included, is 404, and
 
 POST /__bluedoc/icons writes an icon export only as the page's own (header, origin, key), only the export's file
 names, only PNGs of their size under 4 MB (and the two kinds of text file), only into <stem>.icons/<artboard>/:
-a bad file in a set writes none of it."""
+a bad file in a set writes none of it.
+
+A ?key= link sets the key cookie any number of times within UNLOCK_TTL and not after; GET /__bluedoc/key gives the key
+only to the page's own fetch with the cookie (no cookie, a foreign Origin or no X-Bluedoc header is 403)."""
 from __future__ import annotations
 
 import base64
@@ -22,9 +25,13 @@ import struct
 import time
 import unittest
 import zlib
+from types import SimpleNamespace
+from unittest import mock
 from urllib.parse import quote
 
 from _support import Server, TempHome
+
+import serve   # on sys.path through _support
 
 
 class ServerGuards(unittest.TestCase):
@@ -339,6 +346,78 @@ class IconSaveGuards(unittest.TestCase):
         os.symlink(elsewhere, self.out / "app-icon" / "play", target_is_directory=True)
         self.assertEqual(self.post(files)[0], 409)
         self.assertEqual(list(elsewhere.iterdir()), [])
+
+
+class UnlockTokens(unittest.TestCase):
+    """A ?key= token stays good for UNLOCK_TTL and any number of uses: a link preview opening it first doesn't use it up."""
+
+    def test_a_token_works_twice_within_its_ttl_and_not_after(self) -> None:
+        now = [1000.0]
+        with mock.patch.object(serve, "time", SimpleNamespace(monotonic=lambda: now[0])):
+            token = serve.mint_token()
+            self.assertTrue(serve.unlock_token_live(token))
+            now[0] += serve.UNLOCK_TTL - 1
+            self.assertTrue(serve.unlock_token_live(token), "a second use within the TTL was refused")
+            now[0] += 2
+            self.assertFalse(serve.unlock_token_live(token), "an expired token still unlocks")
+        self.assertFalse(serve.unlock_token_live("acme-not-a-token"))
+
+
+class UnlockLinkAndKey(unittest.TestCase):
+    def setUp(self) -> None:
+        self.tmp = TempHome()
+        self.addCleanup(self.tmp.cleanup)
+        self.server = Server(self.tmp)
+        self.server.start()
+        self.addCleanup(self.server.stop)
+        self.key = (self.tmp.home / "key").read_text(encoding="utf-8").strip()
+        self.cookie = f"bluedoc_key_{self.server.port}={self.key}"
+
+    def get(self, path: str, headers: dict | None = None) -> tuple[int, http.client.HTTPMessage, bytes]:
+        """GET with only these headers (no key header added, unlike Server.req)."""
+        c = http.client.HTTPConnection("127.0.0.1", self.server.port, timeout=10)
+        try:
+            c.request("GET", path, headers={"Host": self.server.host, **(headers or {})})
+            r = c.getresponse()
+            return r.status, r.headers, r.read()
+        finally:
+            c.close()
+
+    def test_an_unlock_link_sets_the_cookie_each_time_it_is_opened(self) -> None:
+        status, raw = self.server.req("POST", "/__bluedoc/unlock", b"{}", {"Content-Type": "application/json", "X-Bluedoc": "1"})
+        self.assertEqual(status, 200, raw)
+        token = json.loads(raw)["token"]
+        for visit in ("a link preview", "the reader's browser"):
+            with self.subTest(visit):
+                status, headers, _ = self.get(f"/?key={token}")
+                self.assertEqual((status, headers["Location"]), (303, "/"))
+                self.assertIn(self.cookie, headers.get("Set-Cookie") or "")
+        status, headers, _ = self.get("/?key=acme-not-a-token")
+        self.assertEqual(status, 303)
+        self.assertIsNone(headers.get("Set-Cookie"))
+
+    def test_the_key_goes_only_to_the_page_s_own_fetch_with_the_cookie(self) -> None:
+        own = {"X-Bluedoc": "1", "Cookie": self.cookie, "Origin": f"http://{self.server.host}", "Sec-Fetch-Site": "same-origin"}
+        status, headers, body = self.get("/__bluedoc/key", own)
+        self.assertEqual(status, 200, body)
+        self.assertEqual(json.loads(body), {"key": self.key})
+        self.assertEqual(headers["Cache-Control"], "no-store")
+        for name, h in (("no cookie", {k: v for k, v in own.items() if k != "Cookie"}),
+                        ("the key header instead of the cookie", {**{k: v for k, v in own.items() if k != "Cookie"}, "X-Bluedoc-Key": self.key}),
+                        ("a wrong cookie", {**own, "Cookie": f"bluedoc_key_{self.server.port}=nope"}),
+                        ("a foreign origin", {**own, "Origin": "http://evil.com"}),
+                        ("a cross-site fetch", {**own, "Sec-Fetch-Site": "cross-site"}),
+                        ("no X-Bluedoc header", {k: v for k, v in own.items() if k != "X-Bluedoc"})):
+            with self.subTest(name):
+                status, _, body = self.get("/__bluedoc/key", h)
+                self.assertEqual(status, 403, body)
+                self.assertNotIn(self.key.encode(), body)
+
+    def test_the_stored_key_unlocks_the_ping(self) -> None:
+        ping = lambda h: json.loads(self.get("/__bluedoc/ping", h)[2])["unlocked"]  # noqa: E731
+        self.assertEqual((ping({}), ping({"X-Bluedoc-Key": self.key}), ping({"Cookie": self.cookie})), (False, True, True))
+        # a stale stored key beside a good cookie still counts: either one is enough
+        self.assertTrue(ping({"X-Bluedoc-Key": "stale", "Cookie": self.cookie}))
 
 
 if __name__ == "__main__":

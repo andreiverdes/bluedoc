@@ -704,10 +704,10 @@ html.bd-tray-on .bp-toast { bottom: 84px; }
 .bd-key.acc:disabled { padding-right: 13px; }
 @media (max-width: 600px) { .bd-key.acc { gap: 5px; padding: 0 6px 0 9px; } .bd-key.acc:disabled { padding: 0 9px; } }
 .bd-pen-risk { --pen: var(--risk); } .bd-pen-accent { --pen: var(--accent); } .bd-pen-warn { --pen: var(--warn); } .bd-pen-ok { --pen: var(--ok); }
-/* the cursor rule excludes what `inDoc` excludes: the rail, a design's panel tabs, Screens list and board toolbar keep their own cursors */
-html.bd-ann-m-point .bd-shell :not(.bp-side, .bp-side :not(.bd-meta, .bd-meta *), .bd-lp-ui, .bd-lp-ui *, .bd-btb, .bd-btb *), html.bd-ann-m-point .bd-shell { cursor: crosshair !important; }
-html.bd-ann-m-select .bd-shell :not(.bp-side, .bp-side :not(.bd-meta, .bd-meta *), .bd-lp-ui, .bd-lp-ui *, .bd-btb, .bd-btb *), html.bd-ann-m-select .bd-shell { cursor: text !important; }
-html:is(.bd-ann-m-point, .bd-ann-m-select) .bd-shell :is(.bp-side, .bd-lp-ui, .bd-btb) { cursor: default; }
+/* the cursor rule excludes what `inDoc` excludes: the rail, a design's panel tabs, Screens list and board toolbar, and a findings section's view bar keep their own cursors */
+html.bd-ann-m-point .bd-shell :not(.bp-side, .bp-side :not(.bd-meta, .bd-meta *), .bd-lp-ui, .bd-lp-ui *, .bd-btb, .bd-btb *, .bd-fvbar, .bd-fvbar *), html.bd-ann-m-point .bd-shell { cursor: crosshair !important; }
+html.bd-ann-m-select .bd-shell :not(.bp-side, .bp-side :not(.bd-meta, .bd-meta *), .bd-lp-ui, .bd-lp-ui *, .bd-btb, .bd-btb *, .bd-fvbar, .bd-fvbar *), html.bd-ann-m-select .bd-shell { cursor: text !important; }
+html:is(.bd-ann-m-point, .bd-ann-m-select) .bd-shell :is(.bp-side, .bd-lp-ui, .bd-btb, .bd-fvbar) { cursor: default; }
 html:is(.bd-ann-m-point, .bd-ann-m-select) .bd-shell .bp-note .bp-note-ta { cursor: text !important; }
 html:is(.bd-ann-m-point, .bd-ann-m-select) .bd-shell .bp-note button { cursor: default !important; }
 html.bd-ann-m-select .bp-cl-head { user-select: text; -webkit-user-select: text; }
@@ -1100,14 +1100,68 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .bd-cm.done .tt { color: var(--fg-subtle); }
 .bd-cm.nott .mt, .bd-cm.nott details { margin-left: 26px; }
 .bd-omit { padding: 28px 16px; text-align: center; font-size: 13.5px; color: var(--fg-subtle); }
-/* a findings section: [Checklist][Diff] in its title bar shows its checklist or its diff (print: both); an open
-   finding shows its code: the file header, the lines around the comment and the comment card */
-.bp-sec > h2:has(> .bp-fv) { flex-wrap: wrap; row-gap: 8px; }
-.bp-fv { margin-left: auto; flex: none; font-family: var(--sans); letter-spacing: normal; }
-.bp-fv button { display: inline-flex; align-items: center; gap: 6px; }
-.bp-fv button .bd-ic { width: 14px; height: 14px; }
-@media screen { .bp-sec.fv-cl > .fv-d, .bp-sec.fv-diff > .fv-c { display: none; } }
-@media print { .bp-fv, .bd-xcs { display: none !important; } }
+/* a findings section: [Merged][Checklist][Diff] in a bar under its title and lead (sticky under the app bar while
+   the section is on screen) shows its findings with their code in one column, its checklist or its diff (print:
+   Merged). An open finding in Checklist shows its code: the file header, the lines around the comment and its card */
+.bp-sec.fv-on { --fvbar-h: 60px; }
+.bd-fvbar { position: sticky; top: var(--top-h); z-index: 20; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 0 -10px; padding: 8px 10px;
+  border-radius: 0 0 14px 14px; background: color-mix(in oklch, var(--canvas) 86%, transparent); -webkit-backdrop-filter: saturate(1.5) blur(14px); backdrop-filter: saturate(1.5) blur(14px); transition: box-shadow .15s; }
+.bd-fvbar.stuck { box-shadow: 0 1px 0 var(--line), 0 10px 18px -14px oklch(0% 0 0 / .5); }
+.bd-fvseg { display: inline-flex; gap: 3px; padding: 3px; border-radius: 14px; background: var(--hk-down); box-shadow: var(--shadow-well); }
+.bd-fvseg button { display: inline-flex; align-items: center; gap: 7px; height: 38px; padding: 0 15px 0 12px; border: 0; border-radius: 11px; background: none; font: 600 13px var(--sans); color: var(--fg-muted); white-space: nowrap; transition: color .12s; }
+.bd-fvseg button:hover { color: var(--fg); }
+.bd-fvseg button[aria-pressed="true"] { color: var(--fg); background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: var(--shadow-hk); }
+.bd-fvseg button:focus-visible { box-shadow: var(--focus-ring); }
+.bd-fvseg button[aria-pressed="true"]:focus-visible { box-shadow: var(--shadow-hk), var(--focus-ring); }
+.bd-fvseg button .bd-ic { width: 16px; height: 16px; }
+.bd-fvhint { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 11px 0 9px; border-radius: 999px; font: 500 12.5px var(--sans); color: var(--accent-fg);
+  background: var(--accent-tint); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--accent) 35%, transparent); animation: bd-fvhint .4s var(--ease) both; }
+.bd-fvhint .bd-ic { width: 14px; height: 14px; }
+@keyframes bd-fvhint { from { opacity: 0; transform: translateX(-6px); } }
+@media screen { .bp-sec.fv-merged > :is(.fv-c, .fv-d), .bp-sec.fv-cl > :is(.fv-d, .fv-m), .bp-sec.fv-diff > :is(.fv-c, .fv-m) { display: none; } }
+@media print { .bd-fvbar, .bd-xcs, .bp-sec.fv-on > :is(.fv-c, .fv-d), .bd-mmore, .bd-mdet, .bd-mv .bd-xgo { display: none !important; } .bp-sec.fv-on > .fv-m { display: grid !important; } .bd-mbody[hidden] { display: block !important; content-visibility: visible !important; } }
+.bp-sec.fv-on :is(.bd-diff, .bp-cl, .bd-mv) { scroll-margin-top: calc(var(--top-h) + var(--fvbar-h) + 12px); }
+/* Merged: whole-change findings, then each file's commented ranges in line order (the lines, then the full finding
+   row), then the findings not tied to code */
+.bd-mv { --ind: 28px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; margin: 18px 0; }
+.bd-mv-top { background: var(--surface); border-radius: 14px; box-shadow: var(--shadow-1); overflow: hidden; }
+.bd-mv-top > .bp-bar { height: 2px; border-radius: 0; margin: 0 16px 10px; }
+.bd-mv-top.complete .bp-cl-count { color: var(--ok-fg); }
+.bd-mg { border: 1px solid var(--line); border-radius: 12px; overflow: clip; background: var(--surface); }
+.bd-mg > .bd-fh { position: static; min-height: 36px; }
+.bd-mx + .bd-mx { border-top: 1px solid var(--line); }
+.bd-mx > .bd-code { padding-bottom: 0; }
+.bd-mlbl { padding: 8px 16px 0 calc(16px + var(--ind)); font: 500 12px var(--sans); color: var(--fg-subtle); }
+.bd-mmore { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; height: 26px; border: 0; border-bottom: 1px solid var(--line-soft); background: var(--panel); font: 500 12px var(--sans); color: var(--accent-fg); cursor: pointer; }
+.bd-mmore:hover { background: var(--hover); }
+.bd-mmore[hidden] { display: none; }
+.bd-mmore .bd-ic { width: 13px; height: 13px; }
+.bd-mrow { --t: var(--warn); padding-bottom: 2px; background: color-mix(in oklch, var(--panel) 55%, var(--surface)); box-shadow: inset 3px 0 0 var(--t); }
+.bd-mrow.risk { --t: var(--risk); } .bd-mrow.ok { --t: var(--ok); } .bd-mrow.info { --t: var(--accent); } .bd-mrow.todo { --t: var(--todo); }
+.bd-mrow.done { --t: var(--ok); }
+.bd-code + .bd-mrow, .bd-mlbl + .bd-mrow { border-top: 1px solid var(--line-soft); }
+.bd-mlbl + .bd-mrow { border-top: 0; }
+.bd-mg > .bd-mrow + .bd-mrow { border-top: 1px solid var(--line); }
+.bd-mhead { flex: 1; min-width: 0; display: flex; align-items: flex-start; gap: 10px; padding: 10px 4px 10px 0; }
+.bd-mhead > .bp-chip { margin-top: 2px; flex: none; }
+.bd-mrow :is(.bp-cl-text, .bp-cl-subt > span) { white-space: normal; overflow: visible; }
+.bd-mdet { display: inline-flex; align-items: center; gap: 4px; height: 26px; margin: 0 0 8px calc(10px + var(--ind)); padding: 0 8px 0 6px; border: 0; border-radius: 7px; background: none; font: 500 12.5px var(--sans); color: var(--accent-fg); cursor: pointer; }
+.bd-mdet:hover { background: var(--hover); }
+.bd-mdet .bd-ic { width: 14px; height: 14px; transition: transform .18s var(--ease); }
+.bd-mdet[aria-expanded="true"] .bd-ic { transform: rotate(90deg); }
+.bd-mbody { padding: 0 16px 14px calc(16px + var(--ind)); font-size: 14px; }
+.bd-mbody[hidden] { display: none; }
+.bd-mbody > * + * { margin-top: 10px; }
+@media (max-width: 900px) { .bp-sec.fv-on .bd-fh { top: calc(var(--top-h) + var(--fvbar-h)); } .bp-sec.fv-on .bd-diff { --fh-top: calc(var(--top-h) + var(--fvbar-h)); } .bd-mg > .bd-fh { position: static; } }
+/* narrow: one column; an excerpt's lines keep their length and scroll sideways inside its box */
+@media (max-width: 700px) {
+  .bd-fvbar { margin: 0 -6px; padding: 8px 6px; }
+  .bd-fvseg button { padding: 0 11px 0 9px; gap: 6px; }
+  .bd-mx > .bd-code { overflow-x: auto; scrollbar-width: thin; }
+  .bd-mlines { width: max-content; min-width: 100%; }
+  .bd-mlines .bd-ln > .c { white-space: pre; overflow-wrap: normal; }
+  .bd-mdet { margin-left: 34px; } .bd-mbody, .bd-mlbl { padding-left: 40px; }
+}
 .bd-xcs { display: grid; gap: 12px; margin-top: 12px; }
 .bd-xcs:empty { display: none; }
 .bd-xf { border: 1px solid var(--line); border-radius: 12px; overflow: clip; background: var(--surface); }
@@ -1786,6 +1840,7 @@ const ICONS = {
   panelleft: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/>',
   columns: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 3v18"/>',
   layers: '<path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65M22 12.65l-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/>',
+  unfold: '<path d="M12 22v-6M12 8V2M4 12H2M10 12H8M16 12h-2M22 12h-2M15 19l-3 3-3-3M15 5l-3-3-3 3"/>',
 };
 function ic(name, cls) {
   const s = document.createElementNS(NS, 'svg');
@@ -1824,6 +1879,28 @@ function md(src) {
 }
 
 /* ---------- storage ---------- */
+// The server's key. Writes need it: the HttpOnly cookie a `serve.py open`/`unlock` link sets, or X-Bluedoc-Key. Some
+// browsers drop cookies (Tern's WKWebView keeps localStorage but no cookie jar), so a page whose browser has the
+// cookie fetches the key (GET /__bluedoc/key) and keeps it in localStorage `bluedoc:key:<port>`; the ping and every
+// write send it. A 403 {key: true} to a request that carried it means the server's key changed: it is dropped.
+// Other origins can't read 127.0.0.1:<port>'s localStorage; a local process could, but it can as well read
+// ~/.bluedoc/key. HttpOnly was defense in depth against script injected into this page, which renders the agent's
+// JSON escaped: keep it that way, as such a script could now read the key. The key never goes in a URL.
+const SERVER_KEY = (() => {
+  const name = 'bluedoc:key:' + location.port;
+  const get = () => { try { return localStorage.getItem(name) || ''; } catch { return ''; } };
+  const put = v => { try { if (v) localStorage.setItem(name, v); else localStorage.removeItem(name); } catch { /* no storage: the cookie alone */ } };
+  return {
+    // the request headers plus the stored key, when there is one
+    headers: hs => { const k = get(); return k ? { ...hs, 'X-Bluedoc-Key': k } : hs; },
+    // the server refused a request sent with these headers: drop the key they carried, unless a newer one replaced it
+    refused: hs => { const k = hs['X-Bluedoc-Key']; if (k && k === get()) put(''); },
+    // keep the key the cookie unlocks (403 without the cookie: nothing to keep)
+    fetch: () => fetch('/__bluedoc/key', { cache: 'no-store', headers: { 'X-Bluedoc': '1' } })
+      .then(r => r.ok ? r.json() : null).then(j => { if (j && typeof j.key === 'string' && j.key) put(j.key); }, () => {}),
+  };
+})();
+
 const docId = DOC.id || 'doc';
 // Reader state is every `bp:<doc.id>:` key: ticks, picks, comments, plan state, last-seen rev. Served
 // by serve.py with a seed in bp-state ({version, state, docHash}), the server's state.db holds it; localStorage
@@ -1878,10 +1955,10 @@ const store = (() => {
     if (imports && !imports.length) { imports = null; put(IMPORTED, '1'); }
   }
 
-  // A write the server can't take here and now: this browser isn't unlocked (403 with `key`: it has no
-  // cookie from a `serve.py open` or `serve.py unlock` link), or no doc at this address (404: its folder is
-  // gone). The ops stay in the outbox and go on the next focus or write once that changes; the reader is
-  // told once, not on every retry.
+  // A write the server can't take here and now: this browser isn't unlocked (403 with `key`: it has neither the
+  // cookie from a `serve.py open` or `serve.py unlock` link nor the key kept in localStorage), or no doc at this
+  // address (404: its folder is gone). The ops stay in the outbox and go on the next focus or write once that
+  // changes; the reader is told once, not on every retry.
   let stuck = '';
   const STUCK = {
     key: 'Not saved to the server: this browser can\'t save yet. Run `serve.py unlock` and open the link it prints; your edits wait here.',
@@ -1892,11 +1969,12 @@ const store = (() => {
   // One PUT per chunk of ops. Another 4xx is final (the server will refuse the same ops again): they are
   // dropped and the values stay in this browser; a network error or 5xx keeps them for a retry.
   async function send(ops, imp, keepalive) {
-    const r = await fetch('/__bluedoc/state', { method: 'PUT', keepalive, headers: { 'Content-Type': 'application/json', 'X-Bluedoc': '1' },
+    const headers = SERVER_KEY.headers({ 'Content-Type': 'application/json', 'X-Bluedoc': '1' });
+    const r = await fetch('/__bluedoc/state', { method: 'PUT', keepalive, headers,
       body: JSON.stringify({ path: location.pathname, import: imp, ops }) });
     if (!r.ok) {
       const j = await r.json().catch(() => ({}));
-      if (r.status === 403 && j && j.key) throw blocked('key');
+      if (r.status === 403 && j && j.key) { SERVER_KEY.refused(headers); throw blocked('key'); }
       if (r.status === 404) throw blocked('gone');
       throw Object.assign(new Error(String(r.status)), { final: r.status >= 400 && r.status < 500 });
     }
@@ -1991,10 +2069,13 @@ const store = (() => {
 // Send answers, Request changes and Approve post through this. It throws on a failed request; `key` marks a
 // browser the server doesn't take writes from yet, `reload` a doc that changed since this page loaded.
 async function postReply(url, body) {
-  const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Bluedoc': '1' }, body: JSON.stringify(body) });
+  const headers = SERVER_KEY.headers({ 'Content-Type': 'application/json', 'X-Bluedoc': '1' });
+  const r = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) });
   if (r.ok) return r;
   const j = await r.json().catch(() => ({}));
-  throw Object.assign(new Error(String(r.status)), { key: r.status === 403 && !!(j && j.key), reload: r.status === 409 && !!(j && j.reload) });
+  const key = r.status === 403 && !!(j && j.key);
+  if (key) SERVER_KEY.refused(headers);
+  throw Object.assign(new Error(String(r.status)), { key, reload: r.status === 409 && !!(j && j.reload) });
 }
 const replyFailed = e => e && e.key ? 'This browser can\'t send yet (run `serve.py unlock` and open its link); copied instead, paste it into the chat'
   : 'Couldn\'t reach the agent; copied instead, paste it into the chat';
@@ -2717,14 +2798,17 @@ const choiceLabel = (x, id) => { const c = x.choices && x.choices.find(c => c.id
 // the ids `patch` takes, beside the text the reader saw: `item:<checklist>/<item>` and the picked choice's id
 const itemKeyMd = x => `\`item:${x.cid}/${x.it.id}\``;
 const choiceMd = x => `**${choiceLabel(x, x.choice)}** (\`${x.choice}\`)`;
+// opens an item's row (and every collapsed item it sits inside) and returns the row to scroll to: in a findings
+// section showing Merged, its first row there (the view stays); showing Diff, the checklist's row (Checklist shows)
 function openItem(x) {
-  revealFindings(x.li);   // a findings section showing its diff switches to its checklist
-  // open the item and every collapsed item it sits inside
+  const row = itemRow(x);
+  if (row === x.li) revealFindings(x.li);
   for (let el = x.li; el; el = el.parentElement && el.parentElement.closest('.bp-cl-item')) {
     const owner = Object.values(ITEMS).find(y => y.li === el);
     if (owner && !owner.li.classList.contains('empty')) owner.setOpen(true);
   }
   CHECKLISTS.forEach(c => c.paintExpand());
+  return row;
 }
 function checklistMd(c, indent = '') {
   const lines = c.items.map(x => {
@@ -2847,16 +2931,22 @@ function decisionsMd(xs = Object.values(ITEMS).filter(x => x.choices || x.note))
 // `approval` is the server's saved approval (the seed's, then the ping's): {rev, at, carried} (planState)
 const REPLY = { url: null, changes: null, approve: null, approval: store.approval || null, connected: false, to: '', home: '' };
 if (/^https?:$/.test(location.protocol)) {
-  fetch('/__bluedoc/ping?path=' + encodeURIComponent(location.pathname), { cache: 'no-store' }).then(r => r.ok ? r.json() : null).then(j => {
+  const pingHeaders = SERVER_KEY.headers({});
+  fetch('/__bluedoc/ping?path=' + encodeURIComponent(location.pathname), { cache: 'no-store', headers: pingHeaders }).then(r => r.ok ? r.json() : null).then(j => {
     if (!j || !j.bluedoc) return;
     Object.assign(REPLY, { url: '/__bluedoc/reply', changes: '/__bluedoc/changes', approve: '/__bluedoc/approve', approval: j.approval && typeof j.approval === 'object' ? j.approval : null,
       connected: true, to: j.to || '', home: j.home || '' });
     if (REPLY.home) linkHome(REPLY.home);
     paintSend(); paintPlan(); MARKUP.paint();
-    // the server takes writes only from a browser that opened a `serve.py open` or `serve.py unlock` link
+    // the server takes writes only from a browser with the key: the cookie from a `serve.py open` or `serve.py unlock`
+    // link, or the copy kept in localStorage. While the cookie lasts, keep the key (again); refused, drop the copy.
+    if (j.unlocked === true) SERVER_KEY.fetch();
+    else if (j.unlocked === false) SERVER_KEY.refused(pingHeaders);
     if (j.unlocked === false && !OLD) {
       document.querySelector('.bd-bar').after(h('div', { class: 'bd-revbar old bd-lockbar', role: 'status' }, h('div', { class: 'in' }, ic('alert'),
-        h('span', { class: 't', html: 'This browser can\'t save yet. Run <code>serve.py open &lt;doc&gt;</code> or <code>serve.py unlock</code> and open the link it prints.' }))));
+        h('span', { class: 't', html: 'This browser can\'t save yet. Open the link from <code>serve.py unlock</code> here (it works for an hour, in any browser).' }),
+        h('span', { class: 'sp' }),
+        h('button', { type: 'button', class: 'bp-btn', onclick: () => copyText('serve.py unlock', 'Copied: run it, then open the link it prints here') }, ic('copy'), 'Copy unlock command'))));
       // a design page doesn't scroll: its board and panels start under every strip
       if (IS_DESIGN) { const fit = () => root.style.setProperty('--rv-h', [...document.querySelectorAll('.bd-revbar')].reduce((n, e) => n + e.offsetHeight, 0) + 'px'); fit(); addEventListener('resize', fit); }
     }
@@ -2969,7 +3059,9 @@ placeMeta();
 if (CHECKLISTS.length) {
   const rows = CHECKLISTS.filter(c => !c.parent).map(c => {
     const cnt = h('span', { class: 'c' }); const bar = h('div', { class: 'bp-bar' }, h('i'));
-    const row = h('a', { class: 'bp-prog-row', href: '#cl-' + c.b.id, onclick: () => revealFindings(c.root) }, h('span', { class: 't' }, h('span', {}, c.b.title || c.b.id), cnt), bar);
+    // in a findings section showing Merged, the row leads to its Merged list; showing Diff, it shows the checklist
+    const go = e => { const v = fviewOf(c.root); if (v && v.view === 'merged') { e.preventDefault(); v.mv.scrollIntoView({ behavior: REDUCE ? 'auto' : 'smooth', block: 'start' }); } else revealFindings(c.root); };
+    const row = h('a', { class: 'bp-prog-row', href: '#cl-' + c.b.id, onclick: go }, h('span', { class: 't' }, h('span', {}, c.b.title || c.b.id), cnt), bar);
     c.sideRow = () => {
       const n = c.items.filter(x => x.cb.checked).length;
       cnt.textContent = `${n}/${c.items.length}`;
@@ -2998,7 +3090,7 @@ const itemFromHash = hash => { const el = hash.startsWith('#item-') && document.
 const stepFromHash = hash => { const el = hash.startsWith('#step-') && document.getElementById(decodeURIComponent(hash.slice(1))); return el && el._step; };
 const openHashItem = () => {
   const x = itemFromHash(location.hash), s = !x && stepFromHash(location.hash);
-  if (x) { openItem(x); x.li.scrollIntoView({ block: 'center' }); flash(x.li); }
+  if (x) { const row = openItem(x); row.scrollIntoView({ block: 'center' }); flash(row); }
   else if (s) { s.setOpen(true); s.li.scrollIntoView({ block: 'center' }); flash(s.li); }
 };
 addEventListener('hashchange', openHashItem);
@@ -3189,7 +3281,7 @@ function commentCard(d, c, mirrors = d.mirrors, inItem = false) {
       ((it && it.state) || c.state) && h('span', { class: 'bp-chip ' + kind }, c.state || it.state)),
     pills && pills.el,
     h('div', { class: 'mt' }, h('span', {}, where),
-      src && !inItem && h('a', { href: `#item-${src.cid}-${it.id}`, onclick: e => { e.preventDefault(); openItem(src); src.li.scrollIntoView({ behavior: REDUCE ? 'auto' : 'smooth', block: 'center' }); flash(src.li); } }, 'Checklist item', ic('chev'))),
+      src && !inItem && h('a', { href: `#item-${src.cid}-${it.id}`, onclick: e => { e.preventDefault(); const row = openItem(src); row.scrollIntoView({ behavior: REDUCE ? 'auto' : 'smooth', block: 'center' }); flash(row); } }, 'Checklist item', ic('chev'))),
     detail && h('details', {}, h('summary', {}, 'Details'), h('div', { class: 'bd', html: md(detail) })));
   if (src) {
     const nv = noteBox(src, true);
@@ -3384,6 +3476,13 @@ function syncDiffs() {
       btn.querySelector('.cnt')?.classList.toggle('all', cs.length > 0 && cs.every(c => ITEMS[c.item].cb.checked));
     });
   }
+  for (const m of MROWS) {
+    if (m.tick) m.tick.checked = m.x.cb.checked;
+    if (m.pills) m.pills.paint();
+    m.note.paint();
+    m.row.classList.toggle('done', m.x.cb.checked); m.row.classList.toggle('more', !!m.x.more);
+  }
+  FVIEWS.forEach(v => v.paint());
 }
 function initDiff(d) {
   // each checklist item a comment points at: in the same findings section, the comment's code under the open
@@ -3442,11 +3541,16 @@ function findingCode(d, c) {
     f && f.omitted && h('div', { class: 'bd-omit' }, `Diff not included: ${f.omitted}.`), code);
 }
 
-/* Findings sections: a section holding a checklist and a diff whose comments are that checklist's items shows one
-   at a time, picked by [Checklist][Diff] in its title bar. The pick is a layout pref that every such section
-   follows; a link into the hidden one (an item, a comment, a code line) shows it in that section only. Print shows both. */
-const FVIEW_KEY = 'bluedoc:findings-view';
-const FVIEWS = [];   // { el: section, seg, view, set(view) }
+/* Findings sections: a section holding a checklist and a diff whose comments are that checklist's items shows its
+   findings one way at a time, picked by [Merged][Checklist][Diff] in a bar under its title and lead, sticky under the
+   app bar while the section is on screen. The pick is a layout pref that every such section follows (Merged when
+   none is saved); a link into a hidden view (an item from Diff, a comment, a code line) shows it in that section
+   only, and an item link stays in Merged, which holds every finding. Print shows Merged. */
+const FVIEW_KEY = 'bluedoc:findings-view', FVIEW_HINT_KEY = 'bluedoc:findings-hint';
+const FVIEW_NAMES = ['merged', 'checklist', 'diff'];
+const FVIEWS = [];   // { el: section, bar, seg, mv: the Merged view, view, set(view), paint() }
+const MROWS = [];   // Merged's finding rows { x, row, tick, pills, note }, repainted by syncDiffs
+const MORE_LINES = 8;   // Show more lines: lines added either side of an excerpt
 function findingsView(sec, el, wraps) {
   const blocks = sec.blocks || [], owner = new Map();   // checklist id (nested ones too) -> its top checklist block's index
   const walk = (b, i) => { if (b.id) owner.set(b.id, i); for (const it of b.items || []) for (const kb of (it && it.blocks) || []) if (kb && kb.type === 'checklist') walk(kb, i); };
@@ -3460,30 +3564,171 @@ function findingsView(sec, el, wraps) {
   if (!diffs.length) return;
   cls.forEach(i => wraps[i].classList.add('fv-c'));
   diffs.forEach(i => wraps[i].classList.add('fv-d'));
+  const cids = new Set([...owner].filter(([, i]) => cls.has(i)).map(([id]) => id));
+  const mv = mergedView(CHECKLISTS.filter(c => cids.has(c.b.id)), diffs.map(i => DIFFS[blocks[i].id]).filter(Boolean));
+  wraps[Math.min(...cls, ...diffs)].before(mv.el);
   const btn = (view, icon, label) => h('button', { type: 'button', 'data-v': view, onclick: e => pickFindings(view, e.currentTarget) }, ic(icon), label);
-  const seg = h('span', { class: 'bd-seg bp-fv', role: 'group', 'aria-label': 'Show the findings as' }, btn('checklist', 'list', 'Checklist'), btn('diff', 'pr', 'Diff'));
-  el.querySelector(':scope > h2').append(seg);
-  const v = { el, seg, view: null, set: view => {
+  const seg = h('div', { class: 'bd-fvseg', role: 'group', 'aria-label': 'Show the findings as' },
+    btn('merged', 'layers', 'Merged'), btn('checklist', 'list', 'Checklist'), btn('diff', 'pr', 'Diff'));
+  const bar = h('div', { class: 'bd-fvbar' }, seg);
+  (el.querySelector(':scope > .bp-lead') || el.querySelector(':scope > h2')).after(bar);
+  el.classList.add('fv-on');
+  const v = { el, bar, seg, mv: mv.el, paint: mv.paint, view: null, set: view => {
     if (v.view === view) return;
     v.view = view;
-    el.classList.toggle('fv-diff', view === 'diff'); el.classList.toggle('fv-cl', view !== 'diff');
+    el.classList.toggle('fv-merged', view === 'merged'); el.classList.toggle('fv-cl', view === 'checklist'); el.classList.toggle('fv-diff', view === 'diff');
     for (const b of seg.children) b.setAttribute('aria-pressed', String(b.dataset.v === view));
     if (view === 'diff') diffs.forEach(i => paneShown(DIFFS[blocks[i].id]));
   } };
-  v.set(store.get(FVIEW_KEY) === 'diff' ? 'diff' : 'checklist');
+  const saved = store.get(FVIEW_KEY);
+  v.set(FVIEW_NAMES.includes(saved) ? saved : 'merged');
+  if (!FVIEWS.length) addEventListener('scroll', paintStuck, { passive: true });
   FVIEWS.push(v);
+  if (store.get(FVIEW_HINT_KEY) == null) fviewHint(v);
+}
+// "New: findings and code together" beside the toggle, until the reader's first click or key press anywhere
+let fvHints = null;
+function fviewHint(v) {
+  const el = h('span', { class: 'bd-fvhint', role: 'note' }, ic('zap'), 'New: findings and code together');
+  v.bar.append(el);
+  if (fvHints) { fvHints.push(el); return; }
+  fvHints = [el];
+  const off = () => {
+    store.set(FVIEW_HINT_KEY, '1');
+    fvHints.forEach(e => e.remove());
+    for (const t of ['pointerdown', 'keydown']) removeEventListener(t, off, true);
+  };
+  for (const t of ['pointerdown', 'keydown']) addEventListener(t, off, true);
+}
+// a bar stuck under the app bar gets a bottom edge
+let stuckRaf = 0;
+const fvStuck = v => v.bar.getBoundingClientRect().top - v.bar.previousElementSibling.getBoundingClientRect().bottom > 26;
+function paintStuck() {
+  if (!stuckRaf) stuckRaf = requestAnimationFrame(() => { stuckRaf = 0; FVIEWS.forEach(v => v.bar.classList.toggle('stuck', fvStuck(v))); });
 }
 function pickFindings(view, btn) {
-  const y = btn.getBoundingClientRect().top;
+  const v = FVIEWS.find(v => v.seg.contains(btn)), y = v.bar.getBoundingClientRect().top, stuck = fvStuck(v);
   store.set(FVIEW_KEY, view);
   FVIEWS.forEach(v => v.set(view));
-  scrollBy({ top: btn.getBoundingClientRect().top - y, behavior: 'instant' });   // sections above changed too: the toggle stays put
+  // sections above changed too: the bar stays put, and while it is stuck the new view starts right under it
+  const shown = [...v.el.children].find(c => c.matches('.fv-m, .fv-c, .fv-d') && c.getClientRects().length);
+  scrollBy({ top: stuck && shown ? shown.getBoundingClientRect().top - (y + v.bar.offsetHeight + 12) : v.bar.getBoundingClientRect().top - y, behavior: 'instant' });
+  paintStuck();
 }
-// the half of a findings section that node sits in, shown
+const fviewOf = node => { const s = node && node.closest('.bp-sec.fv-on'); return s ? FVIEWS.find(v => v.el === s) : null; };
+// where an item shows: its first Merged row while its section shows Merged, else its checklist row
+const itemRow = x => { const v = fviewOf(x.li); return v && v.view === 'merged' && x.mrows && x.mrows[0] || x.li; };
+// the checklist or diff of a findings section that node sits in, shown
 function revealFindings(node) {
   const w = node && node.closest('.fv-c, .fv-d'); if (!w) return;
   const v = FVIEWS.find(v => v.el === w.parentElement);
   if (v) v.set(w.classList.contains('fv-d') ? 'diff' : 'checklist');
+}
+
+/* Merged: the section's findings with their code, in one column, ordered by the code. First the findings on the
+   whole change, then per file (the diff's file order) each commented range in line order: the hunk lines around
+   it with the commented ones marked, a Show more lines control, and the full finding row under them; last, the
+   checklist's findings no comment points at. A finding with several comments has a row at each; every row and
+   the checklist's stay in sync (MROWS, syncDiffs). Lines and ranges carry the diff's keys (.bd-xf, .bd-mx). */
+function mergedView(scope, ds) {
+  const items = scope.flatMap(c => c.items), keys = new Set(items.map(x => `${x.cid}/${x.it.id}`));
+  const tied = new Set(), whole = [], files = [];
+  for (const d of ds) {
+    const byFile = new Map();
+    for (const c of d.order) {   // whole change, changed files, unchanged files; by line within a file
+      if (c.item && !keys.has(c.item)) continue;   // another section's finding: shown there
+      if (c.item) tied.add(c.item);
+      if (!c.file) { whole.push([d, c]); continue; }
+      let g = byFile.get(c.file);
+      if (!g) { byFile.set(c.file, g = { d, path: c.file, f: d.byPath[c.file], cs: [] }); files.push(g); }
+      g.cs.push(c);
+    }
+  }
+  const loose = items.filter(x => !tied.has(`${x.cid}/${x.it.id}`));
+  const groupHead = (name, extra) => h('div', { class: 'bd-fh' }, h('div', { class: 'p' }, h('b', {}, name), extra));
+  const count = h('span', { class: 'bp-cl-count' }), prog = h('div', { class: 'bp-bar' }, h('i'));
+  const acc = !OLD && !BASE ? h('button', { type: 'button', class: 'bp-btn ghost', hidden: true, title: 'Pick the starred option on every open decision in these findings', onclick: () => acceptRecs(scope) }) : null;
+  const top = h('div', { class: 'bd-mv-top' },
+    h('div', { class: 'bp-cl-h' }, ic('layers'), h('h3', {}, scope.filter(c => !c.parent).map(c => c.b.title || c.b.id).join(' · ') || 'Findings'), count, h('span', { class: 'tools' }, acc)), prog);
+  const el = h('div', { class: 'bd-mv fv-m', role: 'region', 'aria-label': 'Findings with their code' }, top,
+    whole.length > 0 && h('div', { class: 'bd-mg' }, groupHead('Whole change', ' · not tied to a line'), whole.map(([d, c]) => mergedExcerpt(d, c, null))),
+    files.map(g => h('div', { class: 'bd-mg bd-xf', 'data-diff': g.d.id, 'data-file': g.path },
+      h('div', { class: 'bd-fh' }, g.f ? filePathEl(g.f) : h('div', { class: 'p' }, h('b', {}, g.path)), g.f && fileStat(g.f),
+        h('button', { type: 'button', class: 'bd-xgo', title: 'Show this file in the Diff view', onclick: () => openComment(g.d, g.cs[0], true) }, ic('pr'), 'Open in Diff view')),
+      g.f && g.f.omitted && h('div', { class: 'bd-omit' }, `Diff not included: ${g.f.omitted}.`),
+      g.cs.map(c => mergedExcerpt(g.d, c, g.f)))),
+    loose.length > 0 && h('div', { class: 'bd-mg' }, groupHead('Not tied to code', ` · ${loose.length} finding${loose.length === 1 ? '' : 's'} with no comment on the diff`), loose.map(x => mergedRow(x))));
+  const paint = () => {
+    const n = items.filter(x => x.cb.checked).length;
+    count.textContent = `${n} of ${items.length}`;
+    prog.firstChild.style.width = (items.length ? n / items.length * 100 : 0) + '%';
+    top.classList.toggle('complete', items.length > 0 && n === items.length);
+    if (!acc) return;
+    const k = openRecs(scope).length;
+    acc.hidden = !k;
+    if (k) acc.replaceChildren(ic('checks'), `Accept recommended (${k})`);
+  };
+  return { el, paint };
+}
+// one commented range: its lines (FIND_CTX either side, more on Show more lines) and the finding row under them
+function mergedExcerpt(d, c, f) {
+  const x = c.item && ITEMS[c.item];
+  const ex = h('div', { class: 'bd-mx', 'data-diff': d.id, 'data-ci': c._i });
+  const rows = f && c.line ? (f.hunks || []).map(hunkRows).find(rs => rs.some(r => covers(c, r.lo, r.ln))) : null;
+  if (rows) {
+    const hit = rows.map(r => covers(c, r.lo, r.ln)), first = hit.indexOf(true), last = hit.lastIndexOf(true), lang = fileLang(f.path);
+    let ctx = FIND_CTX;
+    const lines = h('div', { class: 'bd-mlines' });
+    const more = h('button', { type: 'button', class: 'bd-mmore', title: `${MORE_LINES} more lines above and below`, onclick: () => { ctx += MORE_LINES; draw(); } }, ic('unfold'), 'Show more lines');
+    const draw = () => {
+      const a = Math.max(0, first - ctx), b = Math.min(rows.length - 1, last + ctx);
+      let html = '';
+      for (let i = a; i <= b; i++) html += lineHtml(rows[i], lang, hit[i]);
+      lines.innerHTML = html;
+      more.hidden = a === 0 && b === rows.length - 1;
+    };
+    draw();
+    ex.append(more, h('div', { class: 'bd-code' }, lines));
+  } else {
+    const where = !c.file ? c.label : c.line ? (c.end && c.end !== c.line ? `Lines ${c.line}–${c.end}` : `Line ${c.line}`) + ' · not in the diff' : 'Whole file';
+    if (where) ex.append(h('div', { class: 'bd-mlbl' }, where));
+  }
+  ex.append(x ? mergedRow(x, c.md) : h('div', { class: 'bd-cmw top' }, commentCard(d, c, [], true)));
+  return ex;
+}
+// a finding's full row: tick or decision dot, title, size, the options with the starred recommendation and Need
+// more details, the comment box, and Details (the reviewer's point, the reasoning, the fix and its check)
+function mergedRow(x, extra) {
+  const it = x.it, kind = it.stateKind || 'warn', subMd = it.sub || it.verify;
+  const row = h('div', { class: `bp-cl-item bd-mrow ${kind}` + (x.choices ? ' has-choices' : ''), 'data-item': `${x.cid}/${it.id}` });
+  let tick = null;
+  if (!x.choices) {
+    tick = h('input', { type: 'checkbox', 'aria-label': 'Done: ' + plainText(it.text) });
+    tick.addEventListener('change', () => { x.cb.checked = tick.checked; x.cb.dispatchEvent(new Event('change')); });
+  }
+  row.append(h('div', { class: 'bp-cl-row' }, tick, x.choices && h('span', { class: 'bp-cl-dot', 'aria-hidden': 'true' }),
+    h('div', { class: 'bd-mhead' },
+      h('span', { class: 'bp-cl-main' }, h('span', { class: 'bp-cl-text', html: inline(it.text) }),
+        subMd && h('span', { class: 'bp-cl-subt' + (it.sub ? '' : ' check') }, !it.sub && ic('check'), h('span', { html: inline(subMd) }))),
+      it.state && h('span', { class: 'bp-chip ' + kind }, it.state))));
+  const pills = x.choices ? choicePills(x) : null, note = noteBox(x);
+  if (pills) row.append(pills.el);
+  row.append(note.el);
+  const parts = [extra && h('div', { class: 'bp-cl-detail', html: md(extra) }), it.detail && h('div', { class: 'bp-cl-detail', html: md(it.detail) }),
+    it.code && codeBlock(it.code, it.lang || 'sh'),
+    it.verify && it.sub && h('div', { class: 'bp-cl-verify' }, ic('check'), h('span', {}, h('b', {}, 'Check'), h('span', { html: inline(it.verify) })))].filter(Boolean);
+  if (parts.length) {
+    const body = h('div', { class: 'bd-mbody', role: 'region', 'aria-label': 'Details: ' + plainText(it.text) }, parts);
+    const btn = h('button', { type: 'button', class: 'bd-mdet', 'aria-expanded': 'false' }, ic('chev'), 'Details');
+    const open = on => { btn.setAttribute('aria-expanded', String(on)); if (on) body.removeAttribute('hidden'); else body.hidden = 'until-found'; };
+    open(false);
+    btn.addEventListener('click', () => open(btn.getAttribute('aria-expanded') !== 'true'));
+    body.addEventListener('beforematch', () => open(true));
+    row.append(btn, body);
+  }
+  MROWS.push({ x, row, tick, pills, note });
+  (x.mrows ||= []).push(row);
+  return row;
 }
 // a diff drawn while hidden measured nothing: its file header's height and the comment pills, again
 function paneShown(d) {
@@ -5592,7 +5837,7 @@ const SIDE = (() => {
     for (const x of secs) { const on = x === sec; x.body.hidden = !on; x.tab.setAttribute('aria-selected', String(on)); x.tab.tabIndex = on ? 0 : -1; }
   }
   // docking reflows the page: keep what the reader was looking at where it was
-  const PLACES = '.bd-head, .bd-tldr-card, main section.bp-sec > h2, main .bp-lead, main .bp-block[data-bk], main .bp-cl-item, main tr[data-r]';
+  const PLACES = '.bd-head, .bd-tldr-card, main section.bp-sec > h2, main .bp-lead, main .bp-block[data-bk], main .bp-cl-item, main .bd-mx, main tr[data-r]';
   function keepPlace(fn) {
     const line = cssPx('--top-h') + 8;
     let at = null, over = null;   // the first part below the bar, else the deepest one across it
@@ -5675,7 +5920,7 @@ function showChg(i) {
   const c = CHG[chgAt];
   // an artboard: focus it on the board; else scroll to the mark (in a design's Brief tab, once it shows)
   if (c.show) c.show();
-  else { if (BOARD && BOARD.reveal) BOARD.reveal(c.el); c.el.scrollIntoView({ behavior: REDUCE ? 'auto' : 'smooth', block: 'center' }); }
+  else { if (BOARD && BOARD.reveal) BOARD.reveal(c.el); revealFindings(c.el); c.el.scrollIntoView({ behavior: REDUCE ? 'auto' : 'smooth', block: 'center' }); }
   c.el.classList.remove('bd-chg-flash'); void c.el.offsetWidth; c.el.classList.add('bd-chg-flash');
   if (revPos) revPos.textContent = `${chgAt + 1} of ${CHG.length}`;
   chgBtns.forEach((b, k) => b.setAttribute('aria-current', String(k === chgAt)));
@@ -6053,24 +6298,27 @@ const MARKUP = (() => {
   // a design's board adds three: an artboard (`artboard:<id>`), a requested frame (`frame:<device>@<x>,<y>`) and a
   // link's arrow (`link:<screen>/<element>`). Elements inside a screen's frame come from its inspector as
   // `el:<id>/<path>` (pinFrame), not from here.
-  const SEL = { line: '.bd-ln', comment: '.bd-cm[data-ci]', row: 'tr[data-r]', node: '.bp-node[data-key]', step: '.bp-step[data-step]', file: '.bp-frow[data-path]',
+  // a Merged excerpt (.bd-mx) is its comment's: `comment:` names it, and its lines are the diff's
+  const SEL = { line: '.bd-ln', comment: '.bd-cm[data-ci], .bd-mx[data-ci]', row: 'tr[data-r]', node: '.bp-node[data-key]', step: '.bp-step[data-step]', file: '.bp-frow[data-path]',
     media: '.bp-media', compare: '.bp-cmpr-side[data-side]', card: '.bp-card', para: '.bp-text p, .bp-text li', artboard: '.bd-ab[data-ab]', frame: '.bd-rq[data-key]', link: '.bd-lnk[data-link]',
-    item: '.bp-cl-item[id]', block: '.bp-cl-block, .bp-block[data-bk]', heading: '.bp-sec > h2', lead: '.bp-sec > .bp-lead', section: 'section.bp-sec[id]',
+    item: '.bp-cl-item[id], .bp-cl-item[data-item]', block: '.bp-cl-block, .bp-block[data-bk]', heading: '.bp-sec > h2', lead: '.bp-sec > .bp-lead', section: 'section.bp-sec[id]',
     tldr: '.bd-tldr-card', header: '.bd-head', status: '.bd-meta' };
   const KIND = { line: 'Code line', comment: 'Review comment', row: 'Table row', node: 'Drawing part', step: 'Plan step', file: 'File', media: 'Media', compare: 'Compare side',
     card: 'Card', para: 'Paragraph', artboard: 'Screen', frame: 'Requested frame', link: 'Link', item: 'Checklist item', block: 'Block', heading: 'Section title', lead: 'Section lead', section: 'Section',
     tldr: 'TL;DR', header: 'Header', status: 'Status', doc: 'Page' };
   const TYPES = Object.keys(SEL), ANY = Object.values(SEL).join(', ');
-  const CLIPS = '.bd-pane, .bp-stage, .bp-table-wrap, .bp-side, .bd-board, .bd-lp-pane';   // inner scrollers that clip what they hold
+  const CLIPS = '.bd-pane, .bp-stage, .bp-table-wrap, .bp-side, .bd-board, .bd-lp-pane, .bd-mx > .bd-code';   // inner scrollers that clip what they hold
   const typeOf = el => el === shell ? 'doc' : TYPES.find(t => el.matches(SEL[t]));
   // the rail is page furniture, except its document sections (Status, Document, Related); so are a design's
-  // panel tabs, Screens list and board toolbar
-  const inDoc = t => !!t && t.nodeType === 1 && shell.contains(t) && !t.closest('.bd-lp-ui, .bd-btb') && (!t.closest('.bp-side') || !!t.closest('.bd-meta'));
+  // panel tabs, Screens list and board toolbar, and a findings section's view bar
+  const inDoc = t => !!t && t.nodeType === 1 && shell.contains(t) && !t.closest('.bd-lp-ui, .bd-btb, .bd-fvbar') && (!t.closest('.bp-side') || !!t.closest('.bd-meta'));
   const targetAt = t => inDoc(t) ? t.closest(ANY) : null;
   let itemKeys = null;
-  const itemKeyOf = li => (itemKeys ||= new Map(Object.entries(ITEMS).map(([k, x]) => [x.li, k]))).get(li);
-  // a line or card of a diff block, or of the code under an open finding (.bd-xf names its diff and file): same keys
-  const diffOf = el => { const x = el.closest('.bd-xf, .bd-diff'); return DIFFS[x.matches('.bd-xf') ? x.dataset.diff : x.id.slice(5)]; };
+  // a checklist row, or a finding's row in Merged (data-item)
+  const itemKeyOf = li => li?.dataset.item || (itemKeys ||= new Map(Object.entries(ITEMS).map(([k, x]) => [x.li, k]))).get(li);
+  // a line or card of a diff block, of the code under an open finding or of a Merged file (.bd-xf names its diff and
+  // file) or range (.bd-mx): same keys
+  const diffOf = el => { const x = el.closest('.bd-xf, .bd-mx, .bd-diff'); return DIFFS[x.matches('.bd-diff') ? x.id.slice(5) : x.dataset.diff]; };
   const lineFile = el => el.closest('.bd-xf')?.dataset.file ?? diffOf(el).sel;
   const canvasOf = el => CANVASES[el.closest('.bp-canvas').id.slice(3)];
   const siblingIndex = el => [...el.parentElement.children].filter(c => c.classList.contains('bp-cl-block')).indexOf(el);
@@ -6107,7 +6355,7 @@ const MARKUP = (() => {
     const [t, rest] = splitKey(key);
     if (t === 'doc') return shell;
     if (t === 'el') return BOARD ? BOARD.abFor(key) : null;   // drawn on its artboard
-    if (t === 'item') return ITEMS[rest]?.li || null;
+    if (t === 'item') { const x = ITEMS[rest]; return !x ? null : shown(x.li) ? x.li : (x.mrows || []).find(shown) || x.li; }   // the row that shows
     if (t === 'section') return [...main.children].find(s => s.id === rest && s.matches(SEL.section)) || null;
     if (t === 'node') { const i = rest.indexOf('/'); return CANVASES[rest.slice(0, i)]?.byKey?.[rest.slice(i + 1)]?._el || null; }
     if (t === 'line') {
@@ -6151,7 +6399,7 @@ const MARKUP = (() => {
       case 'card': return cut(el.querySelector('h4 > span')?.textContent, 48) || 'Card';
       case 'para': return `“${cut(el.textContent, 40)}”`;
       case 'line': return `${baseName(lineFile(el))}:${el.dataset.n ?? el.dataset.o}${el.dataset.n == null ? ' (before)' : ''}`;
-      case 'comment': return 'Comment: ' + cut(el.querySelector('.tt')?.textContent, 40);
+      case 'comment': return 'Comment: ' + cut(el.querySelector('.tt, .bp-cl-text')?.textContent, 40);
       case 'node': { const n = canvasOf(el)?.byKey[el.dataset.key]; return n ? n.label || n.id : 'Part'; }
       case 'doc': return 'Whole page';
       default: return KIND[t] || '';
@@ -6991,7 +7239,8 @@ const MARKUP = (() => {
     else if (t === 'line' || t === 'comment') {
       const i = rest.indexOf('/'), d = DIFFS[rest.slice(0, i)]; if (!d) return false;
       const file = t === 'line' ? rest.slice(i + 1, rest.lastIndexOf(':')) : (d.comments[+rest.slice(i + 1)] || {}).file || PR_KEY;
-      revealFindings(d.root);   // a findings section showing its checklist switches to its diff
+      const el = elOf(k); if (el && shown(el) && el.closest('.bd-mv')) return false;   // Merged shows it: the view stays
+      revealFindings(d.root);   // a findings section showing its checklist (or Merged, without that line) switches to its diff
       if (file === PR_KEY || d.byPath[file]) selectFile(d, file);
     } else if (t === 'node') {
       const i = rest.indexOf('/'), cv = CANVASES[rest.slice(0, i)], n = cv && cv.byKey[rest.slice(i + 1)];
@@ -7758,10 +8007,10 @@ window.BP = {
   openComment: (diffId, index) => { const d = DIFFS[diffId]; const c = d && d.order[index]; if (c) openComment(d, c, true); return !!c; },
   diffState: diffId => { const d = DIFFS[diffId]; if (!d) return null; const linked = d.comments.filter(c => c.item && ITEMS[c.item]);
     return { file: d.sel === PR_KEY ? null : d.sel, comment: d.ci, comments: d.comments.length, cards: d.pane.querySelectorAll('.bd-cm').length, lines: d.pane.querySelectorAll('.bd-ln').length, ticked: linked.filter(c => ITEMS[c.item].cb.checked).length, linked: linked.length }; },
-  // a findings section's view, 'checklist' or 'diff' (null: not one); with view, picks it as its toggle would
+  // a findings section's view, 'merged', 'checklist' or 'diff' (null: not one); with view, picks it as its toggle would
   findingsView: (sectionId, view) => {
     const v = FVIEWS.find(v => v.el.id === sectionId); if (!v) return null;
-    if (view === 'checklist' || view === 'diff') v.seg.querySelector(`[data-v="${view}"]`).click();
+    if (FVIEW_NAMES.includes(view)) v.seg.querySelector(`[data-v="${view}"]`).click();
     return v.view;
   },
   revisions: () => REVS.map(r => ({ rev: r.rev, date: r.date, current: !!r.current, shown: r === VIEW, changes: r.doc.changes || [] })),

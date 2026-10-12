@@ -8,9 +8,12 @@ in rev 2) and not through a text edit (Changes since approved rev 1) (st/approva
 comment opener renders (bld/comment-escape). A plan's item comments and every page's "Need more details" items count
 toward Request changes and go with it (rc/items). A design board's link edits and moved screens are drafts in reader
 state that go with Request changes with a `patch` command each and are resolved once the doc has them, or marked stale
-when a newer rev changed the link (bd/link-edit, bd/move). A review's findings section shows its checklist or its diff,
-as [Checklist][Diff] in its title bar picks and the browser remembers, and links into the hidden one show it; an open
-finding shows its comment's file, lines and card, whose pick and pins are the diff's.
+when a newer rev changed the link (bd/link-edit, bd/move). A review's findings section shows Merged (each finding's
+full row under its lines, in code order), its checklist or its diff, as [Merged][Checklist][Diff] in a sticky bar under
+its title picks and the browser remembers; picks sync across the three, Merged keeps item and line keys and item
+links, and links into a hidden view show it; an open finding in Checklist shows its comment's file, lines and card,
+whose pick and pins are the diff's. A browser that loses the key
+cookie (Tern's WKWebView keeps none) still saves with the key the page kept in localStorage while it had the cookie.
 
 The browser tests run only with BLUEDOC_BROWSER_TESTS=1 and Chrome installed (BLUEDOC_CHROME names it when it isn't
 in a usual place); each starts Chrome with a temp profile and the server on a free port. The URL check needs no browser."""
@@ -198,7 +201,7 @@ class ChromePage(unittest.TestCase):
         self.browser.errors.clear()
 
     def open(self, url: str) -> Tab:
-        """A new tab on url, through a one-time ?key= link (what `serve.py open` prints), so the page may save."""
+        """A new tab on url, through a ?key= link (what `serve.py open` prints), so the page may save."""
         status, raw = self.server.req("POST", "/__bluedoc/unlock", b"{}", {"Content-Type": "application/json", "X-Bluedoc": "1"})
         self.assertEqual(status, 200, raw)
         t = Tab(self.browser)
@@ -306,6 +309,31 @@ class PageSync(ChromePage):
         a = self.open(self.server.url_for(path))
         self.assertEqual(a.ev("BP.doc.sections.at(-1).blocks[0].code"), quoted)
 
+    def test_a_browser_without_cookies_saves_with_the_key_it_kept(self) -> None:
+        url = self.server.url_for(self.plan)
+        a = self.open(url)
+        key = (self.tmp.home / "key").read_text(encoding="utf-8").strip()
+        self.assertEqual(a.wait_for("localStorage.getItem('bluedoc:key:' + location.port)"), key)
+        self.browser.call("Network.enable", session=a.session)
+        self.browser.call("Network.clearBrowserCookies", session=a.session)
+        cookies = lambda: self.browser.call("Network.getCookies", {"urls": [self.base]}, a.session)["cookies"]  # noqa: E731
+        self.assertEqual(cookies(), [])
+        # what the reloaded page's fetches get: the ping's `unlocked`, each state PUT's status
+        self.browser.call("Page.enable", session=a.session)
+        self.browser.call("Page.addScriptToEvaluateOnNewDocument", {"source": (
+            "(() => { window.__pings = []; window.__puts = []; const f = window.fetch;"
+            " window.fetch = (u, o) => f(u, o).then(r => { const s = String(u);"
+            " if (s.startsWith('/__bluedoc/ping')) r.clone().json().then(j => __pings.push(j.unlocked));"
+            " else if (s === '/__bluedoc/state' && o && o.method === 'PUT') __puts.push(r.status);"
+            " return r; }); })();")}, session=a.session)
+        a.go(self.base + url)
+        self.assertEqual(a.wait_for("__pings.length && __pings"), [True])
+        a.ev(f"BP.setNote('{NOTE_ITEM}', 'Acme: saved without the cookie')")
+        self.assertEqual(until(lambda: self.state(url).get(NOTE_KEY)), "Acme: saved without the cookie")
+        self.assertEqual(set(a.wait_for("__puts.length && __puts")), {200})
+        self.assertFalse(a.ev("!!document.querySelector('.bd-lockbar')"), "the page says it can't save")
+        self.assertEqual(cookies(), [], "the save came with the cookie, not the stored key")
+
 
 GO = "document.querySelector('.bd-key.go')"   # the tray's Request changes key
 
@@ -391,9 +419,12 @@ TIER_ROW = "document.querySelector('#item-t412-tier-boundary')"   # its comment 
 
 @unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")
 class FindingsView(ChromePage):
-    """A findings section (a checklist and the diff whose comments are its items) shows one of them, picked by
-    [Checklist][Diff] in its title bar and remembered per browser; a link into the hidden one shows it. An open
-    finding shows its comment's file, lines and card, whose pick, annotation keys and pins are the diff's."""
+    """A findings section (a checklist and the diff whose comments are its items) shows them as Merged (the default:
+    each commented range's lines with the full finding row under them, in code order), as its checklist or as its
+    diff, picked by [Merged][Checklist][Diff] in a bar under its title, sticky while the section is on screen, and
+    remembered per browser; a link into a hidden view shows it, and an item link stays in Merged. Picks sync across
+    the three. An open finding in Checklist shows its comment's file, lines and card, whose pick, annotation keys and
+    pins are the diff's."""
 
     def setUp(self) -> None:
         super().setUp()
@@ -404,23 +435,144 @@ class FindingsView(ChromePage):
 
     def test_the_toggle_swaps_the_views_and_survives_a_reload(self) -> None:
         a = self.open(self.url)
-        self.assertEqual(a.ev("[BP.findingsView('pr-412'), BP.findingsView('pr-415'), BP.findingsView('summary')]"), ["checklist", "checklist", None])
-        self.assertEqual(self.shows(a, "#cl-t412", "#diff-diff-412", "#pr-412 > h2 .bp-fv"), [True, False, True])
-        self.assertFalse(a.ev("!!document.querySelector('#summary > h2 .bp-fv')"), "a section without both got the toggle")
-        a.ev("document.querySelector('#pr-412 > h2 .bp-fv [data-v=diff]').click()")
-        self.assertEqual(self.shows(a, "#cl-t412", "#diff-diff-412", "#cl-t415", "#diff-diff-415"), [False, True, False, True])
-        self.assertEqual(a.ev("[...document.querySelectorAll('#pr-412 .bp-fv button')].map(b => b.getAttribute('aria-pressed'))"), ["false", "true"])
+        self.assertEqual(a.ev("[BP.findingsView('pr-412'), BP.findingsView('pr-415'), BP.findingsView('summary')]"), ["merged", "merged", None])
+        self.assertEqual(self.shows(a, "#pr-412 .bd-mv", "#cl-t412", "#diff-diff-412", "#pr-412 > .bd-fvbar"), [True, False, False, True])
+        self.assertTrue(a.ev("document.querySelector('#pr-412 > .bp-lead').nextElementSibling.matches('.bd-fvbar')"), "the bar is not right under the lead")
+        self.assertFalse(a.ev("!!document.querySelector('#summary .bd-fvbar')"), "a section without both got the bar")
+        self.assertEqual(a.ev("[...document.querySelectorAll('#pr-412 .bd-fvbar button')].map(b => [b.textContent, !!b.querySelector('.bd-ic'), b.offsetHeight])"),
+                         [["Merged", True, 38], ["Checklist", True, 38], ["Diff", True, 38]])
+        a.ev("document.querySelector('#pr-412 .bd-fvbar [data-v=diff]').click()")
+        self.assertEqual(self.shows(a, "#cl-t412", "#diff-diff-412", "#pr-415 .bd-mv", "#diff-diff-415"), [False, True, False, True])
+        self.assertEqual(a.ev("[...document.querySelectorAll('#pr-412 .bd-fvbar button')].map(b => b.getAttribute('aria-pressed'))"), ["false", "false", "true"])
         self.assertEqual(a.ev("BP.progress().map(c => c.total)"), [7, 4], "the tracker lost the hidden checklists")
         a.go(self.base + self.url)
         self.assertEqual(a.ev("[BP.findingsView('pr-412'), BP.findingsView('pr-415')]"), ["diff", "diff"])
-        self.assertEqual(self.shows(a, "#cl-t412", "#diff-diff-412"), [False, True])
         self.assertGreater(a.ev("BP.diffState('diff-412').lines"), 0)
-        self.assertEqual(a.ev("BP.findingsView('pr-412', 'checklist')"), "checklist")
+        a.ev("localStorage.setItem('bluedoc:findings-view', 'checklist')")   # a value saved before Merged existed
         a.go(self.base + self.url)
-        self.assertEqual(self.shows(a, "#cl-t412", "#diff-diff-412"), [True, False])
+        self.assertEqual(self.shows(a, "#cl-t412", "#diff-diff-412", "#pr-412 .bd-mv"), [True, False, False])
+        a.ev("localStorage.removeItem('bluedoc:findings-view')")
+        a.go(self.base + self.url)
+        self.assertEqual(a.ev("BP.findingsView('pr-412')"), "merged")
+
+    def test_the_new_view_hint_shows_once(self) -> None:
+        a = self.open(self.url)
+        self.assertEqual(a.ev("[...document.querySelectorAll('.bd-fvhint')].map(e => e.textContent)"), ["New: findings and code together"] * 2)
+        a.ev("document.dispatchEvent(new PointerEvent('pointerdown', {bubbles: true}))")
+        self.assertEqual(a.ev("document.querySelectorAll('.bd-fvhint').length"), 0)
+        a.go(self.base + self.url)
+        self.assertEqual(a.ev("document.querySelectorAll('.bd-fvhint').length"), 0, "the hint came back after it was dismissed")
+
+    def test_merged_orders_the_findings_by_code(self) -> None:
+        a = self.open(self.url)
+        mx = "[...document.querySelectorAll('#pr-412 .bd-mx')]"
+        self.assertEqual(a.ev(f"{mx}.map(e => [e.closest('.bd-xf')?.dataset.file || null, +(e.querySelector('.bd-ln.hit')?.dataset.n || 0), e.querySelector('.bd-mrow').dataset.item])"), [
+            [None, 0, "t412/pr-claims"],   # the whole change first, then the diff's files in its order, by line
+            ["src/orders/createOrder.ts", 16, "t412/savings-coupon"],
+            ["src/pricing/tiers.ts", 10, "t412/tiers-map"],
+            ["src/pricing/tiers.ts", 17, "t412/tier-boundary"],
+            ["src/pricing/tiers.ts", 25, "t412/float-cents"],
+            ["test/tiers.test.ts", 5, "t412/boundary-tests"],
+            ["docs/pricing.md", 11, "t412/docs-stale"]])
+        tier = "document.querySelector('#pr-412 .bd-mx[data-ci=\"0\"]')"
+        self.assertEqual(a.ev(f"[...{tier}.querySelectorAll('.bd-ln')].map(l => +l.dataset.n)"), list(range(14, 21)), "not ±3 lines around line 17")
+        self.assertEqual(a.ev(f"[...{tier}.querySelectorAll('.bd-ln.hit')].map(l => +l.dataset.n)"), [17])
+        # the full finding row: title, size, the options with the starred recommendation, Need more details, the
+        # comment box, and Details with the reviewer's point, the reasoning, the fix and its check
+        row = f"{tier}.querySelector('.bd-mrow')"
+        self.assertEqual(a.ev("(r => [r.querySelector('.bp-cl-text').textContent, r.querySelector('.bp-chip').textContent, [...r.querySelectorAll('.bp-choice')].map(b => b.dataset.id),"
+                              f" r.querySelector('.bp-choice.rec').dataset.id, !!r.querySelector('.bp-more'), !!r.querySelector('.bp-note textarea')])({row})"),
+                         ["tierFor gives no tier at exactly 10 or 50 units", "blocker", ["fix", "ticket", "decline"], "fix", True, True])
+        self.assertFalse(a.ev(f"{row}.querySelector('.bd-mbody').checkVisibility()"))
+        a.ev(f"{row}.querySelector('.bd-mdet').click()")
+        body = a.ev(f"{row}.querySelector('.bd-mbody').checkVisibility() && {row}.querySelector('.bd-mbody').textContent")
+        for part in ("Reviewer:", "My reasoning:", "Fix:", "Verify:"):
+            self.assertIn(part, body or "")
+        self.assertEqual(a.ev("document.querySelectorAll('#pr-412 .bd-mv .bd-cm').length"), 0, "Merged shows the reduced card, not the row")
+        self.assertEqual(a.ev("[...document.querySelectorAll('#pr-415 .bd-mx .bd-mrow')].map(r => r.dataset.item)"),
+                         ["t415/double-auth", "t415/retry-4xx", "t415/backoff-const", "t415/latency"])
+
+    def test_a_finding_with_no_comment_is_listed_last_as_not_tied_to_code(self) -> None:
+        doc = self.docs / REVIEW
+        d = json.loads(doc.read_text(encoding="utf-8"))
+        diff = next(b for s in d["sections"] if s["id"] == "pr-412" for b in s["blocks"] if b["type"] == "diff")
+        diff["comments"] = [c for c in diff["comments"] if c.get("item") != "t412/pr-claims"]
+        doc.write_text(json.dumps(d), encoding="utf-8")
+        a = self.open(self.url)
+        self.assertEqual(a.ev("(g => [g.querySelector('.bd-fh').textContent.startsWith('Not tied to code'), [...g.querySelectorAll('.bd-mrow')].map(r => r.dataset.item)])"
+                              "([...document.querySelectorAll('#pr-412 .bd-mv > .bd-mg')].at(-1))"), [True, ["t412/pr-claims"]])
+        self.assertEqual(a.ev("document.querySelector('#pr-412 .bd-mv > .bd-mg .bd-fh .p').textContent"), "src/orders/createOrder.ts", "a whole-change group with nothing in it")
+
+    def test_a_pick_in_merged_shows_in_checklist_and_diff(self) -> None:
+        a = self.open(self.url)
+        row = "document.querySelector('#pr-412 .bd-mx[data-ci=\"0\"] .bd-mrow')"
+        a.ev(f"{row}.querySelector('.bp-choice[data-id=ticket]').click()")
+        self.assertEqual(a.ev(f"{TIER_ROW}.querySelector(':scope > .bp-cl-choices [aria-checked=true]')?.dataset.id"), "ticket")
+        self.assertEqual(a.ev("[BP.progress()[0].done, document.querySelector('#pr-412 .bd-mv-top .bp-cl-count').textContent]"), [1, "1 of 7"])
+        self.assertTrue(a.ev(f"{row}.classList.contains('done')"))
+        self.assertEqual(a.ev("BP.findingsView('pr-412', 'diff')"), "diff")
+        self.assertEqual(a.ev("document.querySelector('#diff-diff-412 .bd-cm[data-ci=\"0\"] [aria-checked=true]')?.dataset.id"), "ticket")
+        # the other way: a pick in the checklist, Need more details and a comment show on the Merged row
+        a.ev("BP.findingsView('pr-412', 'checklist')")
+        a.ev(f"{TIER_ROW}.querySelector(':scope > .bp-cl-choices .bp-choice[data-id=decline]').click()")
+        a.ev("BP.moreDetails('t412/tier-boundary')")
+        a.ev("BP.setNote('t412/tier-boundary', 'Acme: the spec owner agrees')")
+        a.ev("BP.findingsView('pr-412', 'merged')")
+        self.assertEqual(a.ev(f"[{row}.querySelector('[aria-checked=true]')?.dataset.id, {row}.classList.contains('more'), {row}.querySelector('.bp-note textarea').value]"),
+                         ["decline", True, "Acme: the spec owner agrees"])
+        # Accept recommended in Merged picks the starred option on the open decisions there
+        acc = "document.querySelector('#pr-412 .bd-mv-top .tools .bp-btn')"
+        self.assertEqual(a.ev(f"{acc}.textContent"), "Accept recommended (6)")
+        a.ev(f"{acc}.click()")
+        self.assertEqual(a.ev(f"[BP.progress()[0].done, {acc}.hidden]"), [7, True])
+
+    def test_show_more_lines_grows_the_excerpt(self) -> None:
+        a = self.open(self.url)
+        ex = "document.querySelector('#pr-412 .bd-mx[data-ci=\"0\"]')"
+        lines = f"[...{ex}.querySelectorAll('.bd-ln')].map(l => +l.dataset.n)"
+        self.assertEqual(a.ev(lines), list(range(14, 21)))
+        a.ev(f"{ex}.querySelector('.bd-mmore').click()")
+        self.assertEqual(a.ev(lines), list(range(6, 27)), "not 8 more lines either side (the hunk ends at 26)")
+        a.ev(f"{ex}.querySelector('.bd-mmore').click()")
+        self.assertEqual(a.ev(f"[{lines}, {ex}.querySelector('.bd-mmore').hidden]"), [list(range(1, 27)), True], "the whole hunk shows, and the control goes")
+        self.assertEqual(a.ev(f"[...{ex}.querySelectorAll('.bd-ln.hit')].map(l => +l.dataset.n)"), [17])
+
+    def test_item_and_line_keys_resolve_in_merged(self) -> None:
+        a = self.open(self.url)
+        pin = "(p => !!p && !p.hidden && !p.classList.contains('away'))(document.querySelector('.bd-ann-pin'))"
+        on = "(r => { const p = document.querySelector('.bd-ann-pin').getBoundingClientRect(); return p.top >= r.top - 40 && p.top <= r.bottom; })"
+        made = a.ev("BP.annotate({type: 'pin', key: 'item:t412/tier-boundary', note: 'Acme: inclusive bound'})")
+        self.assertEqual(made["target"]["key"], "item:t412/tier-boundary")
+        self.assertEqual(a.ev("BP.findingsView('pr-412')"), "merged", "an item key left Merged")
+        a.wait_for(f"{pin} && {on}(document.querySelector('#pr-412 .bd-mx[data-ci=\"0\"] .bd-mrow').getBoundingClientRect())")
+        key = "line:diff-412/src/pricing/tiers.ts:17"
+        made = a.ev(f"BP.annotate({{type: 'pin', key: {json.dumps(key)}, note: 'Acme: inclusive bound'}})")
+        self.assertEqual(made["target"]["key"], key)
+        self.assertIn("comment:diff-412/0", made["up"], "pinned on a line outside its Merged range")
+        self.assertEqual(a.ev("BP.findingsView('pr-412')"), "merged", "a line key left Merged")
+        last = "[...document.querySelectorAll('.bd-ann-pin')].at(-1)"
+        a.wait_for(f"(p => !!p && !p.hidden && (r => {{ const q = p.getBoundingClientRect(); return q.top >= r.top - 40 && q.top <= r.bottom; }})"
+                   f"(document.querySelector('#pr-412 .bd-mx[data-ci=\"0\"] .bd-ln[data-n=\"17\"]').getBoundingClientRect()))({last})")
+
+    def test_the_bar_is_sticky_and_visible(self) -> None:
+        a = self.open(self.url)
+        bar = "document.querySelector('#pr-412 > .bd-fvbar')"
+        a.ev("scrollTo({top: document.querySelector('#pr-412 .bd-mx[data-ci=\"3\"]').getBoundingClientRect().top + scrollY - 400, behavior: 'instant'})")
+        a.wait_for(f"{bar}.classList.contains('stuck')")
+        top_h = a.ev("Math.round(parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--bar-h')))")
+        self.assertEqual(a.ev(f"(r => [Math.round(r.top), document.elementFromPoint(r.left + 40, r.top + r.height / 2)?.closest('.bd-fvbar') === {bar}])"
+                              f"({bar}.getBoundingClientRect())"), [top_h, True])
+        self.assertTrue(a.ev(f"{bar}.checkVisibility()"))
+        # a pick from the stuck bar keeps it there and starts the new view right under it
+        a.ev(f"{bar}.querySelector('[data-v=checklist]').click()")
+        self.assertEqual(a.ev(f"(r => [Math.round(r.top), document.querySelector('#cl-t412').getBoundingClientRect().top - r.bottom <= 14])({bar}.getBoundingClientRect())"), [top_h, True])
+        # past the section, its bar leaves with it
+        a.ev("document.querySelector('#pr-415').scrollIntoView({behavior: 'instant'})")
+        self.assertLess(a.ev(f"{bar}.getBoundingClientRect().bottom"), a.ev("document.querySelector('#pr-415').getBoundingClientRect().top + 1"))
 
     def test_an_open_finding_shows_its_code_and_card(self) -> None:
         a = self.open(self.url)
+        a.ev("BP.findingsView('pr-412', 'checklist')")
         self.assertEqual(a.ev(f"{TIER_ROW}.querySelectorAll('.bd-xf').length"), 0, "drawn before the row opened")
         a.ev(f"{TIER_ROW}.querySelector('.bp-cl-head').click()")
         xf = f"{TIER_ROW}.querySelector('.bd-xf')"
@@ -446,6 +598,7 @@ class FindingsView(ChromePage):
 
     def test_a_pin_in_the_finding_code_has_the_diff_key_and_shows_in_both(self) -> None:
         a = self.open(self.url)
+        a.ev("BP.findingsView('pr-412', 'checklist')")
         a.ev(f"{TIER_ROW}.querySelector('.bp-cl-head').click()")
         key = "line:diff-412/src/pricing/tiers.ts:17"
         made = a.ev(f"BP.annotate({{type: 'pin', key: {json.dumps(key)}, note: 'Acme: inclusive bound'}})")
@@ -459,14 +612,20 @@ class FindingsView(ChromePage):
         a.wait_for(f"{pin} && {on}(document.querySelector('#diff-diff-412 .bd-ln[data-n=\"17\"]').getBoundingClientRect())")
         a.ev("BP.findingsView('pr-412', 'checklist')")   # back: on the line under the open finding
         a.wait_for(f"{pin} && {on}({TIER_ROW}.querySelector('.bd-xf .bd-ln[data-n=\"17\"]').getBoundingClientRect())")
+        a.ev("BP.findingsView('pr-412', 'merged')")   # and on the same line in Merged
+        a.wait_for(f"{pin} && {on}(document.querySelector('#pr-412 .bd-mx[data-ci=\"0\"] .bd-ln[data-n=\"17\"]').getBoundingClientRect())")
 
     def test_links_into_the_hidden_view_show_it(self) -> None:
         a = self.open(self.url)
-        self.assertTrue(a.ev("BP.openComment('diff-412', 0)"))
-        self.assertEqual(a.ev("[BP.findingsView('pr-412'), BP.findingsView('pr-415')]"), ["diff", "checklist"])
-        self.assertEqual(self.shows(a, "#diff-diff-412 .bd-pane .bd-cm"), [True])
+        # in Merged, an item link scrolls to its row there and the view stays
         a.ev("location.hash = '#item-t412-float-cents'")
-        a.wait_for("BP.findingsView('pr-412') === 'checklist' && document.querySelector('#item-t412-float-cents').classList.contains('open')")
+        a.wait_for("(r => r.top > 0 && r.bottom < innerHeight)(document.querySelector('#pr-412 .bd-mrow[data-item=\"t412/float-cents\"]').getBoundingClientRect())")
+        self.assertEqual(a.ev("BP.findingsView('pr-412')"), "merged")
+        self.assertTrue(a.ev("BP.openComment('diff-412', 0)"))
+        self.assertEqual(a.ev("[BP.findingsView('pr-412'), BP.findingsView('pr-415')]"), ["diff", "merged"])
+        self.assertEqual(self.shows(a, "#diff-diff-412 .bd-pane .bd-cm"), [True])
+        a.ev("location.hash = '#item-t412-tier-boundary'")
+        a.wait_for("BP.findingsView('pr-412') === 'checklist' && document.querySelector('#item-t412-tier-boundary').classList.contains('open')")
         self.assertTrue(a.ev("BP.openCode('diff-415', 'src/orders/charge.ts', 17)"))
         self.assertEqual(a.ev("BP.findingsView('pr-415')"), "diff")
         self.assertIsNone(a.ev("localStorage.getItem('bluedoc:findings-view')"), "a link changed the remembered pick")
