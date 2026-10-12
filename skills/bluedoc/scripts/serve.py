@@ -74,6 +74,9 @@ any frame-ancestors, and gain frame-ancestors for this server's origins. The pag
 allow-scripts allow-same-origin`: the proxy's origin (another port) is not this server's, so the site keeps its
 storage and modules and reaches nothing of bluedoc's. A doc page names its proxies in its bp-live element ({dev
 server origin: proxy port}), and its CSP's frame-src allows exactly those. A dev server that isn't up answers 502.
+The proxy also pins viewport heights for the page's Full page view (pin_viewport_units): in HTML (<style> and style
+attributes), CSS and a dev server's CSS-as-JS modules, N vh (svh, lvh, dvh, vb) becomes calc(N * var(--bd-vh, 1vh)),
+which is the unit itself until the inspector sets --bd-vh.
 Rendering validates the doc (errors show as a page), shows its meta.rev as the latest revision of the history file
 without writing it (build.py records revisions), and fills each `diff` block that references a git range
 (diffref.py: its cache, local git, then `gh pr diff`), so the page always shows the current JSON.
@@ -1076,6 +1079,8 @@ def wrap_screen(doc: dict, doc_path: Path, artboard_id: str, fragment: str, *, i
         if '@import "tailwindcss"' not in text:
             text = '@import "tailwindcss";\n' + text
         head.append(f'<style type="text/tailwindcss">{raw_text(text, "style")}</style>')
+    if a.get("device") == "page":   # a website's mockup page: its viewport units pinned, as the proxy pins a live page's
+        fragment = pin_html_units(fragment)
     inspector = KITS / "inspector.js"
     slots = {
         "html_class": f"fid-{fidelity}", "artboard": esc(artboard_id), "fallback": esc(missing or ""),
@@ -1141,6 +1146,34 @@ LIVE_INSPECTOR = "/__bluedoc/inspector.js"   # on a proxy's origin: kits/inspect
 LIVE_INJECT = ('<script src="' + LIVE_INSPECTOR + '" data-parents="{parents}"></script>'
                '<style id="bd-live">astro-dev-toolbar, nextjs-portal {{ display: none !important; }}</style>')
 HEAD_TAGS = (re.compile(rb"<head\b[^>]*>", re.I), re.compile(rb"<html\b[^>]*>", re.I))   # inject after the first found
+
+# Full page: a website page's frame grows to its document, so a length that follows the viewport's height would grow
+# with it. A viewport unit in a declaration (never in an at-rule's prelude, where var() can't go: the lookahead) becomes
+# a multiple of --bd-vh, which the inspector sets to the design viewport's height / 100 in Full page and leaves unset in
+# Viewport, where the fallback is the unit itself (never rewritten again: the lookbehinds, so pinning is idempotent).
+# kits/inspector.js applies the same rewrite to what the proxy never sees (a screen's compiled Tailwind, styles set by
+# script); keep the two alike.
+VIEWPORT_UNIT = re.compile(r"(?<!--bd-vh)(?<!--bd-vh,)(^|[^\w.-])(-?)(\d*\.?\d+(?:e[+-]?\d+)?)[sld]?(vh|vb|vmin|vmax)\b(?![^{};]*\{)", re.I)
+STYLE_ELEMENT = re.compile(r"(<style\b[^>]*>)(.*?)(</style\s*>)", re.I | re.S)
+STYLE_ATTR = re.compile(r"""(\sstyle\s*=\s*)("[^"]*"|'[^']*')""", re.I)
+# a dev server's CSS served as a JS module (Vite: /src/x.css, an Astro component's ?astro&type=style&lang.css)
+CSS_MODULE = re.compile(r"\.(css|scss|sass|less|styl|pcss|postcss)$|[?&]type=style\b|[?&]lang\.(css|scss|sass|less|styl)\b", re.I)
+
+
+def pin_viewport_units(css: str) -> str:
+    """css with each viewport-height unit as a multiple of --bd-vh: 100vh -> calc(100 * var(--bd-vh, 1vh)); vmin and
+    vmax compare that with 1vw."""
+    def sub(m: re.Match) -> str:
+        unit = m[4].lower()
+        v = "var(--bd-vh, 1vh)" if unit in ("vh", "vb") else f"{unit[1:]}(1vw, var(--bd-vh, 1vh))"
+        return f"{m[1]}calc({m[2]}{m[3]} * {v})"
+    return VIEWPORT_UNIT.sub(sub, css)
+
+
+def pin_html_units(html: str) -> str:
+    """html with pin_viewport_units applied to its <style> elements and style attributes."""
+    html = STYLE_ELEMENT.sub(lambda m: m[1] + pin_viewport_units(m[2]) + m[3], html)
+    return STYLE_ATTR.sub(lambda m: m[1] + m[2][0] + pin_viewport_units(m[2][1:-1]) + m[2][-1], html)
 
 
 def live_origin(url: str) -> tuple[str, str, int] | None:
@@ -1278,7 +1311,13 @@ def make_live_handler(scheme: str, host: str, port: int, page_port: int):
                 conn.close()
 
         def relay(self, resp) -> None:
-            html = (resp.getheader("Content-Type") or "").lower().startswith("text/html")
+            # what the proxy rewrites (its body read whole): an HTML page (the inspector injected, viewport units pinned),
+            # CSS and CSS served as a module (units pinned); never a body still encoded
+            ctype, u = (resp.getheader("Content-Type") or "").lower(), urlsplit(self.path)
+            kind = ("html" if ctype.startswith("text/html") else "css" if ctype.startswith("text/css") or (
+                "javascript" in ctype and (CSS_MODULE.search(u.path) or CSS_MODULE.search("?" + u.query))) else None)
+            if (resp.getheader("Content-Encoding") or "identity").strip().lower() != "identity":
+                kind = None
             self.send_response(resp.status, resp.reason)
             for k, v in resp.getheaders():
                 lk = k.lower()
@@ -1293,10 +1332,13 @@ def make_live_handler(scheme: str, host: str, port: int, page_port: int):
                 self.send_header(k, v)
             self.send_header("Content-Security-Policy", ancestors)
             no_body = self.command == "HEAD" or resp.status in (204, 304) or 100 <= resp.status < 200
-            if html and not no_body:
-                data = resp.read()
-                m = next((m for m in (t.search(data) for t in HEAD_TAGS) if m), None)
-                data = data[:m.end()] + inject + data[m.end():] if m else inject + data
+            if kind and not no_body:
+                text = resp.read().decode("utf-8", "surrogateescape")   # any other bytes pass through as they came
+                text = pin_html_units(text) if kind == "html" else pin_viewport_units(text)
+                data = text.encode("utf-8", "surrogateescape")
+                if kind == "html":
+                    m = next((m for m in (t.search(data) for t in HEAD_TAGS) if m), None)
+                    data = data[:m.end()] + inject + data[m.end():] if m else inject + data
                 self.send_header("Content-Length", str(len(data)))
                 self.end_headers()
                 self.wfile.write(data)

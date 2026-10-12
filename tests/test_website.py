@@ -7,10 +7,12 @@ without credentials. Source hints are `path`, `path#symbol` or `path:line` insid
 missing file, a symbol the file never names and a line past its end are warnings. Variants need a brief decision and
 name its choices. The Acme example builds clean, and `patch` on its pages prints the page, the section and their
 source hints. The server's proxy for a dev server answers only its own Host, injects the inspector after <head>, drops
-X-Frame-Options and frame-ancestors for its own, strips bluedoc's key cookie, rewrites Host to the dev server and
-answers 502 when the dev server is down; the doc page's CSP frames exactly that proxy. In headless Chrome
-(BLUEDOC_BROWSER_TESTS=1), a pin on a live page carries its section's source hints and width into the change request,
-a variant pick edits the page in place, and a breakpoint resizes the page."""
+X-Frame-Options and frame-ancestors for its own, strips bluedoc's key cookie, rewrites Host to the dev server, pins
+viewport heights in CSS and HTML styles, and answers 502 when the dev server is down; the doc page's CSP frames exactly
+that proxy. In headless Chrome (BLUEDOC_BROWSER_TESTS=1), a pin on a live page carries its section's source hints and
+width into the change request, a variant pick edits the page in place, a breakpoint resizes the page, and Full page
+frames a page at its whole height with a 100vh hero 900 px tall, pins in board space, and falls back to Viewport for a
+page that grows with its frame."""
 from __future__ import annotations
 
 import copy
@@ -25,9 +27,10 @@ import unittest
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from _support import EXAMPLES, Server, TempHome, load_json
+from _support import EXAMPLES, SKILL, Server, TempHome, load_json
 
 import build
+import serve   # on sys.path through _support
 from test_page_state import CHROME, Browser, Tab
 
 STEM = "acme-site"
@@ -51,11 +54,29 @@ STUB_PAGE = """<!doctype html><html lang="en"><head><meta charset="utf-8"><title
 #hero-title { position: absolute; left: 100px; top: 100px; width: 600px; height: 80px; margin: 0; }</style></head>
 <body><header class="site-nav">Acme Fit</header><section class="hero"><h1 id="hero-title">Track everything</h1></section>
 <section id="faq"><h2>Questions</h2></section></body></html>"""
+# a long page whose hero is 100vh in its stylesheet: a 5svh nav (style attribute), the 900 px hero, a 10dvh band (style
+# element; an at-rule's 50vh stays), a 2000 px FAQ with #deep 1500 px down it. At 1440 px in Full page: 3035 px tall.
+TALL_PAGE = """<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Acme Fit</title>
+<link rel="stylesheet" href="/tall.css"><style>.band { height: 10dvh; } @media (min-height: 50vh) { .band { outline: 0; } }</style></head>
+<body><header class="site-nav" style="height: 5svh">Acme Fit</header><section class="hero"><h1 id="hero-title">Track everything</h1></section>
+<div class="band"></div><section id="faq"><h2 style="margin: 0">Questions</h2><p id="deep">Cancel any time</p></section></body></html>"""
+TALL_CSS = """body { margin: 0; font: 16px sans-serif; } .hero { position: relative; height: 100vh; }
+#hero-title { position: absolute; left: 100px; top: 100px; width: 600px; height: 80px; margin: 0; }
+#faq { position: relative; height: 2000px; } #deep { position: absolute; left: 200px; top: 1500px; width: 300px; height: 40px; margin: 0; }"""
+# a page that grows with its frame whatever the units: its hero is 100% of a 100% tall body, then 300 px more
+GROW_PAGE = """<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Acme Fit</title>
+<style>html, body { height: 100%; margin: 0; } .hero { height: 100%; }</style></head>
+<body><section class="hero">Track everything</section><section id="faq" style="height: 300px">Questions</section></body></html>"""
+STUB_FILES = {"/": (STUB_PAGE, "text/html; charset=utf-8"), "/tall": (TALL_PAGE, "text/html; charset=utf-8"),
+              "/tall.css": (TALL_CSS, "text/css; charset=utf-8"), "/grow": (GROW_PAGE, "text/html; charset=utf-8"),
+              "/src/hero.css": ('const css = ".hero { min-height: 100vh; }";\nexport default css;\n', "text/javascript"),
+              "/app.js": ('export const tall = "100vh";\n', "text/javascript")}
 
 
 class StubDevServer:
-    """A dev server on a free loopback port: / is STUB_PAGE, sent with X-Frame-Options and a CSP that forbids framing;
-    /echo answers the headers it got as JSON. seen holds each request's (path, headers)."""
+    """A dev server on a free loopback port: STUB_FILES by path (any other path: STUB_PAGE), each sent with
+    X-Frame-Options and a CSP that forbids framing; /echo answers the headers it got as JSON. seen holds each
+    request's (path, headers)."""
 
     def __init__(self) -> None:
         seen = self.seen = []
@@ -69,7 +90,8 @@ class StubDevServer:
                 if self.path == "/echo":
                     body, ctype = json.dumps(dict(self.headers.items())).encode(), "application/json"
                 else:
-                    body, ctype = STUB_PAGE.encode(), "text/html; charset=utf-8"
+                    text, ctype = STUB_FILES.get(self.path, STUB_FILES["/"])
+                    body = text.encode()
                 self.send_response(200)
                 self.send_header("Content-Type", ctype)
                 self.send_header("Content-Length", str(len(body)))
@@ -168,8 +190,9 @@ class Validation(WebsiteCase):
     def test_website_fields_belong_to_websites(self) -> None:
         d = copy.deepcopy(self.doc)
         d["meta"]["type"] = "design"
+        board_of(d)["viewport"] = {"1440": 900}
         errs = errors(self.check(d).stderr)
-        for field in ("breakpoints", "root"):
+        for field in ("breakpoints", "viewport", "root"):
             if field in board_of(d):
                 self.assertTrue(any(f".{field}:" in e and "only a website's board" in e for e in errs), (field, errs))
         for field in ("url", "source", "sections"):
@@ -182,6 +205,15 @@ class Validation(WebsiteCase):
             self.assertTrue(any(".breakpoints:" in e for e in errors(self.check(d).stderr)), bad)
         d = copy.deepcopy(self.doc)
         board_of(d)["breakpoints"] = [1920, 1024, 375]
+        self.assertEqual(errors(self.check(d).stderr), [])
+
+    def test_viewport_heights(self) -> None:
+        for bad in ([900], {"1440": "900"}, {"wide": 900}, {"1440": 100}, {"100": 900}, {"1440": True}):
+            d = copy.deepcopy(self.doc)
+            board_of(d)["viewport"] = bad
+            self.assertTrue(any(".viewport:" in e for e in errors(self.check(d).stderr)), bad)
+        d = copy.deepcopy(self.doc)
+        board_of(d)["viewport"] = {"1440": 1000, "390": 700}
         self.assertEqual(errors(self.check(d).stderr), [])
 
     def test_source_hints_are_checked_against_the_repo(self) -> None:
@@ -344,6 +376,38 @@ class Example(unittest.TestCase):
                                                  {"sections": 2, "live": True, "fidelity": "hifi"}]})
 
 
+class ViewportUnits(unittest.TestCase):
+    """Full page pins viewport heights: serve.py rewrites a live page's CSS and HTML styles, the inspector the sheets
+    the proxy never sees, with one regex."""
+
+    def test_heights_become_multiples_of_the_pinned_height(self) -> None:
+        pin = serve.pin_viewport_units
+        self.assertEqual(pin(".a{height:100vh}"), ".a{height:calc(100 * var(--bd-vh, 1vh))}")
+        self.assertEqual(pin(".b { min-height: 50svh; top: -30dvh; margin: 1.5lvh 0 .5VH }"),
+                         ".b { min-height: calc(50 * var(--bd-vh, 1vh)); top: calc(-30 * var(--bd-vh, 1vh)); "
+                         "margin: calc(1.5 * var(--bd-vh, 1vh)) 0 calc(.5 * var(--bd-vh, 1vh)) }")
+        self.assertEqual(pin(".c{width:20vmin;height:10svmax;padding:2vb}"),
+                         ".c{width:calc(20 * min(1vw, var(--bd-vh, 1vh)));height:calc(10 * max(1vw, var(--bd-vh, 1vh)));"
+                         "padding:calc(2 * var(--bd-vh, 1vh))}")
+        self.assertEqual(pin("@media (min-height: 50vh) { .d { height: 10vh } }"),
+                         "@media (min-height: 50vh) { .d { height: calc(10 * var(--bd-vh, 1vh)) } }", "a prelude stays")
+        same = ".e { --x-100vh: 1; background: url(a-100vh.png); width: 100vw; height: calc(100% - 2rem); }"
+        self.assertEqual(pin(same), same)
+        once = pin(".f{height:calc(100vh - 64px)}")
+        self.assertEqual(once, ".f{height:calc(calc(100 * var(--bd-vh, 1vh)) - 64px)}")
+        self.assertEqual(pin(once), once, "pinning twice changes nothing")
+
+    def test_html_styles_only(self) -> None:
+        html = '<style>.h { height: 100vh }</style><div style="height: 50vh" title="100vh"><p>100vh tall</p></div>'
+        self.assertEqual(serve.pin_html_units(html), '<style>.h { height: calc(100 * var(--bd-vh, 1vh)) }</style>'
+                         '<div style="height: calc(50 * var(--bd-vh, 1vh))" title="100vh"><p>100vh tall</p></div>')
+
+    def test_the_inspector_pins_alike(self) -> None:
+        js = (SKILL / "assets" / "kits" / "inspector.js").read_text(encoding="utf-8")
+        self.assertIn("const VU = /" + serve.VIEWPORT_UNIT.pattern + "/gi", js)
+        self.assertIn("'var(--bd-vh, 1vh)'", js)
+
+
 class LiveProxy(unittest.TestCase):
     """serve.py's proxy for a website's dev server, on the doc page's render."""
 
@@ -422,11 +486,23 @@ class LiveProxy(unittest.TestCase):
         self.assertEqual(status, 502)
         self.assertIn("isn't answering", body)
 
+    def test_viewport_units_are_pinned_in_css_html_and_css_modules(self) -> None:
+        _, headers, css = self.get("/tall.css")
+        self.assertIn(".hero { position: relative; height: calc(100 * var(--bd-vh, 1vh)); }", css)
+        self.assertEqual(int(headers["content-length"]), len(css.encode()))
+        _, _, html = self.get("/tall")
+        self.assertIn('<header class="site-nav" style="height: calc(5 * var(--bd-vh, 1vh))">', html)
+        self.assertIn(".band { height: calc(10 * var(--bd-vh, 1vh)); } @media (min-height: 50vh) {", html)
+        _, _, mod = self.get("/src/hero.css")
+        self.assertIn('".hero { min-height: calc(100 * var(--bd-vh, 1vh)); }"', mod)
+        _, _, js = self.get("/app.js")
+        self.assertEqual(js, 'export const tall = "100vh";\n', "only CSS is rewritten")
+
 
 @unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")
-class LivePageInChrome(unittest.TestCase):
-    """The live page in the board: a variant pick shows in place, a pin carries its section's source hints and width
-    into Request changes, and a breakpoint resizes the page."""
+class SiteInChrome(unittest.TestCase):
+    """A website doc of one live page, the stub dev server's PATH, open in headless Chrome (1440 × 900), unlocked."""
+    PATH = "/"
 
     @classmethod
     def setUpClass(cls) -> None:
@@ -443,7 +519,7 @@ class LivePageInChrome(unittest.TestCase):
         self.addCleanup(self.dev.stop)
         self.tmp = TempHome()
         self.addCleanup(self.tmp.cleanup)
-        self.doc_path = write_site(self.tmp.dir / "site", self.dev.origin + "/")
+        self.doc_path = write_site(self.tmp.dir / "site", self.dev.origin + self.PATH)
         self.assertEqual(self.tmp.run("serve.py", "add", self.doc_path.parent).returncode, 0)
         self.server = Server(self.tmp)
         self.server.start()
@@ -451,16 +527,21 @@ class LivePageInChrome(unittest.TestCase):
         self.browser.errors.clear()
         status, raw = self.server.req("POST", "/__bluedoc/unlock", b"{}", {"Content-Type": "application/json", "X-Bluedoc": "1"})
         self.assertEqual(status, 200, raw)
+        self.url = f"http://{self.server.host}{self.server.url_for(self.doc_path)}?key={json.loads(raw)['token']}"
         self.tab = Tab(self.browser)
-        self.tab.go(f"http://{self.server.host}{self.server.url_for(self.doc_path)}?key={json.loads(raw)['token']}")
+        self.tab.go(self.url)
         self.tab.wait_for("(b => b && b.artboards[0].ready)(BP.board())", 20)
 
-    def pin_title(self, note: str) -> dict:
-        """Point mode, a click on the hero title in the frame, the note saved: the new annotation."""
+    def on_frame(self, fx: float, fy: float) -> list[float]:
+        """The window point over frame px (fx, fy) of the page's frame, at the board's zoom."""
+        return self.tab.ev(f"(f => {{ const r = f.getBoundingClientRect(), k = r.width / f.width; return [r.left + {fx} * k, r.top + {fy} * k]; }})"
+                           "(document.querySelector('iframe.bd-ab-fr'))")
+
+    def pin_at(self, fx: float, fy: float, note: str) -> dict:
+        """Point mode, a click at frame px (fx, fy), the note saved: the new annotation."""
         t = self.tab
         t.ev("BP.setMode('point')")
-        x, y = t.ev("(f => { const r = f.getBoundingClientRect(), k = r.width / f.width; return [r.left + 400 * k, r.top + 140 * k]; })"
-                    "(document.querySelector('iframe.bd-ab-fr'))")
+        x, y = self.on_frame(fx, fy)
         for kind, buttons in (("mouseMoved", 0), ("mousePressed", 1), ("mouseReleased", 0)):
             self.browser.call("Input.dispatchMouseEvent", {"type": kind, "x": x, "y": y, "button": "left", "buttons": buttons, "clickCount": 1},
                               t.session)
@@ -469,6 +550,17 @@ class LivePageInChrome(unittest.TestCase):
         t.ev(f"(ta => {{ ta.value = {json.dumps(note)}; ta.dispatchEvent(new Event('input')); }})(document.querySelector('.bd-cmp textarea'))")
         t.ev("document.querySelector('.bd-cmp .bp-btn.primary').click()")
         return t.wait_for(f"BP.annotations().find(a => a.note === {json.dumps(note)})")
+
+    def page(self) -> dict:
+        return self.tab.ev("BP.board().artboards[0]")
+
+
+class LivePageInChrome(SiteInChrome):
+    """The live page in the board: a variant pick shows in place, a pin carries its section's source hints and width
+    into Request changes, and a breakpoint resizes the page."""
+
+    def pin_title(self, note: str) -> dict:
+        return self.pin_at(400, 140, note)
 
     def test_the_page_is_proxied(self) -> None:
         page = self.tab.ev("BP.board().artboards[0].page")
@@ -497,9 +589,78 @@ class LivePageInChrome(unittest.TestCase):
         self.assertIn("  Shown in: Home › Hero · Source: `src/content/site.ts#hero`, `src/components/Hero.astro`", md)
 
     def test_a_breakpoint_resizes_the_page(self) -> None:
+        # a page shorter than the 390 px viewport (844) takes the viewport's height
         self.tab.ev("BP.board({breakpoint: 390})")
         self.tab.wait_for("(a => a.w === 390 && a.h === 844 && a.ready)(BP.board().artboards[0])")
         self.assertEqual(self.tab.ev("document.querySelector('iframe.bd-ab-fr').width"), "390")
+
+
+class FullPageInChrome(SiteInChrome):
+    """Full page: the frame grows to the document with its viewport heights pinned (a 100vh hero stays 900 px tall),
+    stays that tall, carries pins in board space and pans the board to a section; Viewport is the old scrolling frame,
+    remembered per doc."""
+    PATH = "/tall"
+    TALL = 45 + 900 + 90 + 2000   # the 5svh nav, the 100vh hero, the 10dvh band, the FAQ
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.tab.wait_for(f"BP.board().artboards[0].h === {self.TALL}", 15)
+
+    def test_the_frame_is_as_tall_as_the_page_and_stays(self) -> None:
+        a = self.page()
+        self.assertEqual((a["w"], a["h"], a["page"]["view"], a["page"]["vh"]), (1440, self.TALL, "full", 900))
+        self.assertEqual(a["page"]["frame"], [1440, self.TALL])
+        time.sleep(3)
+        a = self.page()
+        self.assertEqual((a["h"], a["page"]["frame"], a["page"]["view"]), (self.TALL, [1440, self.TALL], "full"), "the page kept growing")
+        self.assertEqual(self.browser.errors, [])
+
+    def test_a_pin_sits_on_its_element_in_board_space(self) -> None:
+        a = self.pin_at(350, 2555, "Say when it renews")   # #deep: 300 × 40 at 200, 2535
+        self.assertEqual((a["target"]["key"], a["target"]["section"]), ("el:home/#deep", "faq"))
+
+        def off() -> list[float]:
+            want = self.on_frame(500, 2535)   # the element's top right, where its pin points
+            got = self.tab.ev("(r => [r.left, r.bottom])(document.querySelector('.bd-ann-pin:not([hidden])').getBoundingClientRect())")
+            return [abs(got[0] - want[0]), abs(got[1] - want[1])]
+        self.assertLessEqual(max(off()), 6, off())
+        self.tab.ev("BP.board({focus: 'home'})")   # another zoom and place: the pin follows without the frame scrolling
+        time.sleep(0.6)
+        self.assertLessEqual(max(off()), 6, off())
+
+    def test_a_section_pans_the_board_to_it(self) -> None:
+        self.tab.ev("BP.board({section: ['home', 'faq']})")
+        time.sleep(0.6)
+        b = self.tab.ev("BP.board()")
+        self.assertEqual((b["selected"], b["k"]), ("home", min(1, b["k"])))
+        top = self.on_frame(0, 45 + 900 + 90)[1]
+        stage = self.tab.ev("(r => [r.top, r.bottom])(document.querySelector('.bd-board').getBoundingClientRect())")
+        self.assertTrue(stage[0] <= top <= stage[1], (top, stage))
+
+    def test_viewport_mode_is_the_scrolling_frame_and_is_remembered(self) -> None:
+        self.tab.ev("BP.board({pageView: 'viewport'})")
+        self.tab.wait_for("(a => a.h === 900 && a.page.view === 'viewport' && a.page.frame[1] === 900)(BP.board().artboards[0])")
+        self.tab.go(self.url)
+        self.tab.wait_for("(b => b && b.artboards[0].ready)(BP.board())", 20)
+        time.sleep(1)
+        self.assertEqual((self.tab.ev("BP.board().pageView"), self.page()["h"]), ("viewport", 900))
+        self.tab.ev("BP.board({pageView: 'full'})")
+        self.tab.wait_for(f"BP.board().artboards[0].h === {self.TALL}", 15)
+
+    def test_a_breakpoint_pins_its_own_viewport(self) -> None:
+        self.tab.ev("BP.board({breakpoint: 390})")   # 844 px tall at 390: the nav 42.2, the hero 844, the band 84.4
+        self.tab.wait_for("(a => a.w === 390 && a.page.vh === 844 && Math.abs(a.h - (42.2 + 844 + 84.4 + 2000)) <= 1)(BP.board().artboards[0])", 15)
+
+
+class GrowingPageInChrome(SiteInChrome):
+    """A page that grows with its frame whatever the units (a 100% tall hero in a 100% tall body) falls back to
+    Viewport instead of growing to the cap."""
+    PATH = "/grow"
+
+    def test_it_falls_back_to_viewport(self) -> None:
+        self.tab.wait_for("(a => a.page.view === 'viewport' && a.h === 900 && a.page.frame[1] === 900)(BP.board().artboards[0])", 15)
+        self.assertEqual(self.tab.ev("BP.board().pageView"), "full", "the board's view stays Full page")
+        self.assertIn("keeps growing", self.tab.ev("document.getElementById('bp-toast').textContent"))
 
 
 if __name__ == "__main__":

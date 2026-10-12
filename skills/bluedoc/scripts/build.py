@@ -305,7 +305,7 @@ BLOCK_SHAPES = {
              "comments": [{"file": str, "item": str}]},
     "steps": {"id": str, "items": [{"id": str, "title": str, "status": str, "effort": str, "refs": [str]}]},
     "files": {"items": [{"path": str, "action": str, "step": str}]},
-    "board": {"id": str, "targets": [str], "framework": str, "entry": [str], "layout": str,
+    "board": {"id": str, "targets": [str], "framework": str, "entry": [str], "layout": str, "viewport": dict,
               "frameworks": [{"id": str, "label": str, "files": [str], "store": str}],
               "themes": [{"id": str, "label": str, "tokens": dict}], "motion": dict,
               "artboards": [{"id": str, "title": str, "device": str, "fidelity": str, "x": NUMBER, "y": NUMBER,
@@ -1377,8 +1377,8 @@ def lint_icon(rep: Report, where: str, a: dict, doc_path: Path) -> None:
 
 
 def validate_site_board(rep: Report, bw: str, b: dict, doc_path: Path | None) -> Path | None:
-    """A website board's breakpoints and root; returns the root folder when it exists (source hints are checked
-    against it), else None."""
+    """A website board's breakpoints, viewport heights and root; returns the root folder when it exists (source hints
+    are checked against it), else None."""
     bps = b.get("breakpoints")
     if bps is not None:
         ok = isinstance(bps, list) and 0 < len(bps) <= MAX_BREAKPOINTS and len(set(map(str, bps))) == len(bps) and all(
@@ -1386,6 +1386,12 @@ def validate_site_board(rep: Report, bw: str, b: dict, doc_path: Path | None) ->
         if not ok:
             rep.err(bw + ".breakpoints", f"1 to {MAX_BREAKPOINTS} distinct widths in CSS px, {MIN_BREAKPOINT} to "
                     f"{MAX_BREAKPOINT} (default {list(BREAKPOINTS)})")
+    vps = b.get("viewport")
+    if isinstance(vps, dict) and not all(re.fullmatch(r"[1-9]\d{2,3}", k) and MIN_BREAKPOINT <= int(k) <= MAX_BREAKPOINT
+                                         and isinstance(v, int) and not isinstance(v, bool)
+                                         and MIN_BREAKPOINT <= v <= MAX_BREAKPOINT for k, v in vps.items()):
+        rep.err(bw + ".viewport", f"{{\"<width>\": <height>}} in CSS px, both {MIN_BREAKPOINT} to {MAX_BREAKPOINT} "
+                f"(e.g. {{\"1440\": 900}}): each width's design viewport height")
     if "root" not in b:
         return None
     if not isinstance(b["root"], str) or not b["root"] or URL_SCHEME.match(b["root"]):
@@ -1570,7 +1576,7 @@ def validate_board(rep: Report, bw: str, b: dict, doc: dict, doc_path: Path | No
         decisions = {it.get("id"): it for it in (brief or {}).get("items") or []
                      if isinstance(it, dict) and isinstance(it.get("choices"), list)}
     else:
-        for k in ("breakpoints", "root"):
+        for k in ("breakpoints", "viewport", "root"):
             if k in b:
                 rep.err(f"{bw}.{k}", "only a website's board has it: set meta.type to 'website'")
     art_ids: set[str] = set()

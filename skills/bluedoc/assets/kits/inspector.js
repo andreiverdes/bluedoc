@@ -7,8 +7,16 @@
                              text or the HTML of the element its sel finds in its section (the section itself without
                              sel); the next list first puts back what the last one changed
      {bd:'reveal', sel}      scroll the element to the top of the frame
+     {bd:'page', full, vh}   a website page's view: full (Full page: the frame grows to the document and never scrolls)
+                             pins every viewport height to vh px, the design viewport's (--bd-vh, innerHeight,
+                             visualViewport.height, the root's clientHeight); else (Viewport) the frame's own. The
+                             frame's name ('bd-page full 900' | 'bd-page view 900') says the same before the page loads.
    Frame -> page, exactly 4 types, strings capped at 200 chars:
-     {bd:'ready', w, h, fallback, rects, navs, named}   on load, on resize, on scroll, after each locate; navs: {name: rect | null}
+     {bd:'ready', w, h, vw, vh, byFrame, fallback, rects, navs, named}   on load, on resize, on scroll, after each
+                                       locate and on any change of the document's size (fonts, images, DOM); vw: the
+                                       frame's width; vh: the pinned height (null: none). h: the document's height;
+                                       pinned, the height the frame should take (at least vh). byFrame: nothing in the
+                                       document changed since the last report, only the frame. navs: {name: rect | null}
                                        for up to 50 [data-nav] elements (null: hidden, a gesture link); named: the same
                                        for up to 100 [data-bd] elements; rects: the last locate's selectors, measured again
      {bd:'hover', sel, name, tag, text, rect, sec} | {bd:'hover', sel: null}
@@ -40,6 +48,91 @@
   const count = sel => { try { return doc.querySelectorAll(sel).length; } catch (e) { return 0; } };
   const chainSel = names => names.map(n => '[data-bd="' + n + '"]').join(' ');
   const own = el => { for (let n = el; n && n !== doc.body; n = n.parentElement) if (OWN.has(n.id)) return true; return false; };
+
+  /* Full page (a website page's view: {bd:'page'}, the frame's name): the frame grows to the document, so every height
+     that follows the viewport's is pinned to the design viewport's, pin px. Viewport units go through --bd-vh: serve.py's
+     proxy rewrote the site's HTML and CSS (pin_viewport_units, keep the two alike) and here the same rewrite reaches
+     what it never saw (a mockup's compiled Tailwind, styles a script adds or sets). innerHeight, visualViewport.height
+     and the root's clientHeight answer pin. pin 0: Viewport, every value the frame's own. */
+  let pin = 0, probed = -1, mo = null, reportT = 0, stirred = true;
+  const VU = /(?<!--bd-vh)(?<!--bd-vh,)(^|[^\w.-])(-?)(\d*\.?\d+(?:e[+-]?\d+)?)[sld]?(vh|vb|vmin|vmax)\b(?![^{};]*\{)/gi, HAS_VU = new RegExp(VU.source, 'i');
+  const pinUnits = s => s.replace(VU, (m, pre, sign, n, unit) => {
+    const u = unit.toLowerCase(), v = u === 'vh' || u === 'vb' ? 'var(--bd-vh, 1vh)' : u.slice(1) + '(1vw, var(--bd-vh, 1vh))';
+    return pre + 'calc(' + sign + n + ' * ' + v + ')';
+  });
+  function pinRules(rules) {
+    for (const r of rules) {
+      if (r.style && HAS_VU.test(r.style.cssText)) r.style.cssText = pinUnits(r.style.cssText);
+      if (r.cssRules) pinRules(r.cssRules);   // @media, @supports, @layer, @container, nested rules, @keyframes
+      if (r.styleSheet) { try { pinRules(r.styleSheet.cssRules); } catch (e) { /* another origin's */ } }   // @import
+    }
+  }
+  function pinSheets() {
+    for (const s of [...doc.styleSheets, ...(doc.adoptedStyleSheets || [])]) { let rs = null; try { rs = s.cssRules; } catch (e) { /* another origin's */ } if (rs) pinRules(rs); }
+  }
+  // through the CSSOM, which a site's CSP without 'unsafe-inline' still allows
+  const pinAttr = el => { const v = el.getAttribute && el.getAttribute('style'); if (v && HAS_VU.test(v) && el.style) el.style.cssText = pinUnits(v); };
+  const pinAttrs = n => { pinAttr(n); if (n.querySelectorAll) for (const el of n.querySelectorAll('[style]')) pinAttr(el); };
+  const VH_VAR = () => pin / 100 + 'px';
+  const realCH = Object.getOwnPropertyDescriptor(Element.prototype, 'clientHeight');
+  const frameH = () => realCH.get.call(root);
+  const shim = (o, prop, real) => {
+    try { if (real && real.get && real.configurable) Object.defineProperty(o, prop, { configurable: true, enumerable: true, get() { return pin || real.get.call(o); }, set: real.set }); } catch (e) { /* not ours to change */ }
+  };
+  shim(window, 'innerHeight', Object.getOwnPropertyDescriptor(window, 'innerHeight'));
+  if (window.visualViewport) shim(visualViewport, 'height', Object.getOwnPropertyDescriptor(Object.getPrototypeOf(visualViewport), 'height'));
+  shim(root, 'clientHeight', realCH);
+  // what the page adds later: its style elements and stylesheets, style attributes; the root's --bd-vh kept
+  function watch() {
+    if (mo || typeof MutationObserver !== 'function') return;
+    mo = new MutationObserver(recs => {
+      if (!pin) return;
+      let sheets = false;
+      stirred = true;
+      for (const r of recs) {
+        if (r.type === 'attributes') {
+          if (r.target === root && root.style.getPropertyValue('--bd-vh').trim() !== VH_VAR()) root.style.setProperty('--bd-vh', VH_VAR());
+          pinAttr(r.target);
+          continue;
+        }
+        if (r.target.nodeName === 'STYLE') sheets = true;
+        for (const n of r.addedNodes) if (n.nodeType === 1) { if (n.nodeName === 'STYLE' || n.nodeName === 'LINK') sheets = true; pinAttrs(n); }
+      }
+      if (sheets) pinSheets();
+    });
+    mo.observe(root, { childList: true, subtree: true, attributes: true, attributeFilter: ['style'] });
+  }
+  function setPin(v) {
+    v = Number.isInteger(v) && v >= 240 && v <= 3840 ? v : 0;
+    if (v === pin) return;
+    pin = v; probed = -1;
+    if (!pin) { root.style.removeProperty('--bd-vh'); return; }
+    root.style.setProperty('--bd-vh', VH_VAR());
+    watch(); pinSheets(); pinAttrs(root);
+  }
+  // Full page: the height the frame should take. The document's scroll height when that is taller than the frame; else
+  // its content's bottom (body's children, then body's padding and margin), at least pin. A shorter height is offered
+  // once per value, so a page whose overflow that misses doesn't bounce between the two.
+  function pageHeight() {
+    const H = frameH(), b = doc.body, sh = Math.max(root.scrollHeight, b ? b.scrollHeight : 0);
+    if (sh > H + 1 || !b) return Math.max(sh, pin);
+    const px = (cs, ...ks) => ks.reduce((t, k) => t + (parseFloat(cs[k]) || 0), 0);
+    let bottom = 0;
+    for (const el of b.children) {
+      if (OWN.has(el.id)) continue;
+      const cs = getComputedStyle(el);
+      if (cs.position !== 'fixed' && cs.display !== 'none') bottom = Math.max(bottom, el.getBoundingClientRect().bottom + px(cs, 'marginBottom'));
+    }
+    const h = Math.max(pin, Math.ceil(bottom + scrollY + px(getComputedStyle(b), 'paddingBottom', 'borderBottomWidth', 'marginBottom') + px(getComputedStyle(root), 'paddingBottom', 'borderBottomWidth')));
+    if (h >= H - 1 || h === probed) return H;
+    probed = h;
+    return h;
+  }
+  // stirred: the document changed (DOM, a load, fonts) since the last report; a report without it follows the frame alone
+  const report = () => { clearTimeout(reportT); reportT = setTimeout(() => ready(measure()), 120); };
+  const stir = () => { stirred = true; report(); };
+  const startView = /^bd-page (full|view) (\d{3,4})$/.exec(window.name || '');   // the page's view before it can say so
+  if (startView && startView[1] === 'full') setPin(+startView[2]);
 
   function selOf(el) {
     if (!el || el === doc.body || el === root || !doc.body.contains(el)) return null;
@@ -108,8 +201,9 @@
   }
 
   function ready(rects) {
-    post({ bd: 'ready', w: Math.max(root.scrollWidth, doc.body ? doc.body.scrollWidth : 0), h: Math.max(root.scrollHeight, doc.body ? doc.body.scrollHeight : 0),
-      fallback: cap(root.getAttribute('data-bd-fallback')) || null, rects: rects || {}, navs: namedRects('[data-nav]', 50), named: namedRects('[data-bd]', 100) });
+    post({ bd: 'ready', w: Math.max(root.scrollWidth, doc.body ? doc.body.scrollWidth : 0), h: pin ? pageHeight() : Math.max(root.scrollHeight, doc.body ? doc.body.scrollHeight : 0),
+      vw: innerWidth, vh: pin || null, byFrame: !stirred, fallback: cap(root.getAttribute('data-bd-fallback')) || null, rects: rects || {}, navs: namedRects('[data-nav]', 50), named: namedRects('[data-bd]', 100) });
+    stirred = false;
   }
 
   function showOutline(el) {
@@ -199,7 +293,7 @@
       root.classList.toggle('bd-reduced', !!m.reduced);
       root.classList.toggle('bd-paused', !!m.paused);
     } else if (m.bd === 'locate' && Array.isArray(m.sels)) {
-      located = m.sels.slice(0, 50).filter(sel => typeof sel === 'string' && sel.length <= 200);
+      located = m.sels.slice(0, 100).filter(sel => typeof sel === 'string' && sel.length <= 200);
       ready(measure());
     } else if (m.bd === 'sections' && Array.isArray(m.sels)) {
       sections = m.sels.slice(0, 50).map(s => (typeof s === 'string' && s.length <= 200 ? s : ':not(*)'));
@@ -208,6 +302,10 @@
     } else if (m.bd === 'reveal' && typeof m.sel === 'string') {
       const el = query(m.sel);
       if (el) el.scrollIntoView({ block: 'start' });
+    } else if (m.bd === 'page') {
+      setPin(m.full === true ? m.vh : 0);
+      stirred = true;
+      if (doc.readyState === 'complete') ready(measure());
     }
   });
   // the last locate's selectors, measured now ({sel: rect | null})
@@ -232,6 +330,7 @@
         else if (typeof e.html === 'string') el.innerHTML = e.html;
       }
     }
+    stirred = true;
     if (doc.readyState === 'complete') ready(measure());
   }
   addEventListener('mouseover', onMove, true);
@@ -244,10 +343,14 @@
   addEventListener('dblclick', swallow, true);
   addEventListener('submit', e => e.preventDefault(), true);
   addEventListener('load', () => {
+    if (pin) pinSheets();
     ready(measure());
-    let t = 0;
-    const again = () => { clearTimeout(t); t = setTimeout(() => ready(measure()), 120); };
-    if (typeof ResizeObserver === 'function') new ResizeObserver(again).observe(doc.body);
-    addEventListener('scroll', again, { capture: true, passive: true });   // a tall page scrolls in its frame: pins follow
+    if (typeof ResizeObserver === 'function') { const ro = new ResizeObserver(report); ro.observe(root); ro.observe(doc.body); }
+    addEventListener('scroll', report, { capture: true, passive: true });   // a page in Viewport scrolls in its frame: pins follow
+    addEventListener('resize', report);
+    if (doc.fonts) { doc.fonts.ready.then(stir); doc.fonts.addEventListener('loadingdone', stir); }
   });
+  // a stylesheet, image or font that loads after the page: its sheet pinned, the size reported again
+  doc.addEventListener('load', e => { if (e.target === doc) return; if (pin && e.target.nodeName === 'LINK') pinSheets(); if (doc.readyState === 'complete') stir(); }, true);
+  doc.addEventListener('DOMContentLoaded', () => { if (pin) { pinSheets(); pinAttrs(root); } });
 })();

@@ -21,7 +21,8 @@ python3 <skill>/scripts/build.py new website docs/site.bluedoc.json --title "…
 ## Pages
 
 - One artboard per page: `{id, title, device: "page", fidelity, url | (screen file), source, sections}`. A live page has `url` and no screen file. A mockup page needs one and may set `framework` like a design.
-- `breakpoints` (default `[1440, 768, 390]`): the widths the reader switches every page to. Check that each section holds at each width.
+- `breakpoints` (default `[1440, 768, 390]`): the widths the reader switches every page to. Check that each section holds at each width. `viewport` (`{"1440": 900}`) overrides a width's design viewport height (default 900, 1024, 844).
+- The board shows each page at its full height (**Full page**, the default), viewport heights pinned to the design viewport, so a `100vh` hero looks as in a real window. A height media query, or a height a script reads from somewhere else, still follows the tall frame; if a page keeps growing it falls back to **Viewport** (the scrolling frame). Sticky and fixed elements sit at the top in Full page; ask the reader to check them, and scroll effects, in Viewport.
 - `source`: where the page lives in the repo, as `path`, `path#symbol` or `path:line`, up to 3. With `root`, the build warns on a missing file, a symbol the file never names, a line past the end.
 - `sections`: `{id, title, sel, source}` per section, in page order. `sel` is a CSS selector that finds the section in the page (`section.hero`, `#faq`); read the page's components to get it right. `source` names the copy first (`src/content/site.ts#hero`), then the component.
 - Versions: a section with `decision: "<brief item id>"` and `variants: {<choice id>: [{sel?, text | html}]}`. Each edit replaces the text or the inner HTML of `sel` inside the section (the section itself without `sel`). The current version's list is `[]`. Offer 2 or 3. The page shows the pick in place, with A/B/C keys over the section.

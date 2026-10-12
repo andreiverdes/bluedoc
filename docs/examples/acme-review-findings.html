@@ -1559,18 +1559,24 @@ i.warn[hidden] { display: none; }
 .bd-ab-t .bps button:hover { color: var(--fg); }
 .bd-ab-t .bps button[aria-checked="true"] { color: var(--fg); background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: var(--shadow-hk); }
 .bd-ab-t .bps .bd-ic { width: 1.15em; height: 1.15em; }
-.bd-var { position: absolute; z-index: 3; display: flex; align-items: center; gap: .35em; max-width: calc(100% - 16px / var(--k)); margin: calc(8px / var(--k)) 0 0 calc(-8px / var(--k)); padding: .3em .35em .3em .7em;
-  transform: translateX(-100%); border-radius: .8em; font: 600 calc(12px / var(--k))/1.2 var(--sans); color: var(--fg); background: color-mix(in oklch, var(--surface) 92%, transparent);
-  box-shadow: var(--shadow-3), 0 0 0 calc(1px / var(--k)) var(--line); backdrop-filter: blur(6px); white-space: nowrap; }
-.bd-var[hidden] { display: none; }
-.bd-var .l { overflow: hidden; text-overflow: ellipsis; color: var(--fg-muted); }
+/* a section's versions picker: docked to the page's right edge at the section's top, opaque on an accent ring so it reads
+   over any page, with a bracket down the page's edge for the section's whole height; sizes in screen px (÷ --k) */
+.bd-var { position: absolute; z-index: 3; right: 0; display: flex; align-items: center; gap: .4em; max-width: calc(100% - 24px / var(--k)); margin: calc(10px / var(--k)) calc(12px / var(--k)) 0 0; padding: .35em .4em .35em .6em;
+  border-radius: .8em; font: 600 calc(13px / var(--k))/1.2 var(--sans); color: var(--fg); background: var(--surface);
+  box-shadow: 0 0 0 calc(1.5px / var(--k)) var(--accent-solid), var(--shadow-3); white-space: nowrap; }
+.bd-var[hidden], .bd-var-br[hidden] { display: none; }
+.bd-var > .bd-ic { flex: none; width: 1.1em; height: 1.1em; color: var(--accent-fg); }
+.bd-var .l { overflow: hidden; text-overflow: ellipsis; }
 .bd-var .ch { display: inline-flex; gap: .15em; padding: .15em; border-radius: .6em; background: var(--inset); }
 .bd-var button { display: inline-flex; align-items: center; gap: .25em; height: 1.85em; padding: 0 .6em; border: 0; border-radius: .45em; background: none; color: var(--fg-muted); font: inherit; cursor: pointer; }
 .bd-var button:hover:not(:disabled) { color: var(--fg); }
-.bd-var button[aria-checked="true"] { color: var(--accent-fg); background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: var(--shadow-hk); }
+.bd-var button[aria-checked="true"] { color: #fff; background: var(--accent-solid); box-shadow: var(--shadow-fill); }
 .bd-var button:disabled { cursor: default; }
 .bd-var button .bd-ic { width: 1em; height: 1em; color: var(--warn); }
+.bd-var button[aria-checked="true"] .bd-ic { color: #fff; }
 .bd-var .pk { overflow: hidden; text-overflow: ellipsis; max-width: calc(260px / var(--k)); font-weight: 500; color: var(--fg-muted); }
+.bd-var-br { position: absolute; z-index: 2; right: 0; width: calc(4px / var(--k)); border-radius: calc(2px / var(--k)) 0 0 calc(2px / var(--k)); background: var(--accent-solid); pointer-events: none; }
+.bd-ab[data-vz="s"] .bd-var .pk, .bd-ab[data-vz="xs"] .bd-var :is(.pk, .l) { display: none; }
 /* the Pages list: each page's sections under it, with where their source lives */
 .bd-sec-l { list-style: none; margin: 0 0 6px 38px; padding: 0; display: grid; gap: 1px; }
 .bd-scr-l .bd-sec-l button { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 1px 8px; padding: 5px 8px; border-radius: 8px; font-size: 12.5px; }
@@ -1883,6 +1889,8 @@ const ICONS = {
   columns: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 3v18"/>',
   layers: '<path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65M22 12.65l-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/>',
   unfold: '<path d="M12 22v-6M12 8V2M4 12H2M10 12H8M16 12h-2M22 12h-2M15 19l-3 3-3-3M15 5l-3-3-3 3"/>',
+  pagefull: '<rect x="6" y="2" width="12" height="20" rx="2"/><path d="M9 7h6M9 11h6M9 15h4"/>',
+  pageview: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 8h18M17.5 11v5"/>',
 };
 function ic(name, cls) {
   const s = document.createElementNS(NS, 'svg');
@@ -4450,9 +4458,10 @@ function liveUrl(a) {
   const u = new URL(a.url);
   return `http://${location.hostname}:${p}${u.pathname}${u.search}`;
 }
-// a website page's widths: board.breakpoints, else desktop, tablet, mobile; each one's viewport height
-const BREAKPOINTS = [1440, 768, 390], BP_H = { 1920: 1080, 1440: 900, 1280: 800, 1024: 768, 768: 1024, 390: 844, 375: 812, 360: 780 }, PAGE_BAR = 40;
-const pageDims = w => [w, BP_H[w] || (w >= 1024 ? Math.round(w * 0.625) : w >= 600 ? Math.round(w * 4 / 3) : Math.round(w * 2.164))];
+// a website page's widths: board.breakpoints, else desktop, tablet, mobile; each one's design viewport height (vp:
+// board.viewport, {"<width>": height}, first). Full page grows a page's frame to its document, at most PAGE_CAP px.
+const BREAKPOINTS = [1440, 768, 390], BP_H = { 1920: 1080, 1440: 900, 1280: 800, 1024: 768, 768: 1024, 390: 844, 375: 812, 360: 780 }, PAGE_BAR = 40, PAGE_CAP = 30000;
+const pageDims = (w, vp) => [w, (vp && Number.isInteger(vp[w]) && vp[w] >= 240 && vp[w] <= 3840 ? vp[w] : 0) || BP_H[w] || (w >= 1024 ? Math.round(w * 0.625) : w >= 600 ? Math.round(w * 4 / 3) : Math.round(w * 2.164))];
 const bpName = w => w >= 1024 ? 'Desktop' : w >= 600 ? 'Tablet' : 'Mobile';
 const bpIc = w => w >= 1024 ? 'monitor' : w >= 600 ? 'tablet' : 'phone';
 // a page's sections ({id, title, sel, source?, decision?, variants?}) and a page's or section's source hints
@@ -4464,8 +4473,8 @@ const boardOf = d => { for (const s of (d && d.sections) || []) for (const b of 
 const boardAbs = b => (b && Array.isArray(b.artboards) ? b.artboards : []).filter(a => a && typeof a.id === 'string');
 // where each artboard sits (board px, its screen's top left): build.py's board_layout, through board-geo.js's copy
 // (test_board_layout.py holds the two alike). links: that revision's links, as the build read them (never drafts),
-// for a `layout: "flow"` board
-function boardLayout(b, links) { return BoardGeo.boardLayout(b, links, abSize); }
+// for a `layout: "flow"` board; size(a): an artboard's [w, h] (a website page's: at its width and height on the board)
+function boardLayout(b, links, size = abSize) { return BoardGeo.boardLayout(b, links, size); }
 // the screen route beside the doc: <stem>.design/<id>.html, or the artboard's own src (relative to the doc)
 function screenUrl(a, rev, theme) {
   const p = location.pathname, dir = p.slice(0, p.lastIndexOf('/') + 1), stem = p.slice(p.lastIndexOf('/') + 1).replace(/\.bluedoc\.json$/i, '').replace(/\.html?$/i, '');
@@ -4640,18 +4649,36 @@ function renderBoard(b) {
   const post = (x, m) => { try { x.fr && x.fr.contentWindow && x.fr.contentWindow.postMessage(m, '*'); } catch { /* the frame is gone */ } };
 
   /* a website's pages: each at a width the reader picks (board.breakpoints, kept per doc in this browser), with its
-     sections (source hints, versions to pick in place) */
+     sections (source hints, versions to pick in place). Full page (the default; the reader's pick is kept per doc):
+     a page's frame is as tall as its document, which its inspector measures with every viewport height pinned to the
+     width's design viewport (board.viewport, else BP_H); the frame never scrolls, so pins sit in board space.
+     Viewport: the frame is that viewport and scrolls (sticky bars, scroll effects). Present and compare show Viewport.
+     Whenever a page's height or width changes the board lays its pages out again and reroutes its links. */
   const BPS = IS_SITE && Array.isArray(b.breakpoints) && b.breakpoints.some(Number.isInteger) ? b.breakpoints.filter(w => Number.isInteger(w) && w >= 240 && w <= 3840) : BREAKPOINTS;
-  const BP_KEY = `bluedoc:bp:${docId}`;
+  const BP_KEY = `bluedoc:bp:${docId}`, VIEW_KEY = `bluedoc:pageview:${docId}`;
+  const VP = IS_SITE && b.viewport && typeof b.viewport === 'object' && !Array.isArray(b.viewport) ? b.viewport : null;
   B.bpw = new Map((() => { try { return Object.entries(JSON.parse(localStorage.getItem(BP_KEY) || '{}')).filter(([, w]) => Number.isInteger(w) && w >= 240 && w <= 3840); } catch { return []; } })());
-  const pageSize = id => pageDims(B.bpw.get(id) || DEVICES.page[0]);
-  const sizeOf = a => devOf(a) === 'page' ? pageSize(a.id) : abSize(a);
+  B.pageView = store.get(VIEW_KEY) === 'viewport' ? 'viewport' : 'full';
+  const viewSize = a => pageDims(B.bpw.get(a.id) || DEVICES.page[0], VP);   // a page's width and design viewport height
+  const deviceSize = a => devOf(a) === 'page' ? viewSize(a) : abSize(a);   // what present and compare show
+  // a page in Full page: the board's view, unless the page fell back to Viewport (it kept growing with its frame)
+  const fullOf = x => IS_SITE && B.pageView === 'full' && !x.fullOff;
+  // an artboard's size on the board: a page in Full page as tall as its frame last measured
+  const sizeOf = a => {
+    if (devOf(a) !== 'page') return abSize(a);
+    const s = viewSize(a), x = B.frames.get(a.id);
+    return x && x.fullH && fullOf(x) ? [s[0], Math.max(s[1], x.fullH)] : s;
+  };
   const bpDesc = (a, w) => [isLive(a) && 'Live', `${w} px`, FIDELITY[a.fidelity]].filter(Boolean).join(' · ');   // the width's device: the checked icon before it
+  // what a page's frame is told: its view and its width's design viewport height (the name says it before it loads)
+  const pageMsg = x => ({ bd: 'page', full: !x.role && fullOf(x), vh: viewSize(x.a)[1] });
+  const frameName = x => `bd-page ${pageMsg(x).full ? 'full' : 'view'} ${viewSize(x.a)[1]}`;
+  const tellPage = x => { if (!x.fr || devOf(x.a) !== 'page') return; x.fr.name = frameName(x); post(x, pageMsg(x)); };
 
   /* artboards */
   function makeAb(a, p, ghost) {
     const dev = devOf(a), id = a.id, page = dev === 'page';
-    if (page && !ghost) { const [w, hh] = pageSize(id); p = { ...p, w, h: hh }; }
+    if (page && !ghost) { const [w, hh] = sizeOf(a); p = { ...p, w, h: hh }; }
     const warn = h('i', { class: 'warn', hidden: true }), tag = h('span', { class: 'tg' });
     const cmpBtn = h('button', { type: 'button', class: 'cmp', hidden: true, 'aria-label': `Compare this ${SCREEN} across the two revisions`, title: `Compare this ${SCREEN} across the two revisions`,
       onclick: e => { e.stopPropagation(); openCompare(id); } }, ic('split'));
@@ -4676,28 +4703,86 @@ function renderBoard(b) {
     if (!ghost) { el.addEventListener('pointerenter', () => hoverAb(id)); el.addEventListener('pointerleave', () => hoverAb(null)); }
     return x;
   }
-  const placeAb = x => Object.assign(x.el.style, { left: x.p.x + 'px', top: x.p.y + 'px', width: x.p.w + 'px', height: x.p.h + 'px' });
+  const placeAb = x => {
+    Object.assign(x.el.style, { left: x.p.x + 'px', top: x.p.y + 'px', width: x.p.w + 'px', height: x.p.h + 'px' });
+    if (x.fr && (+x.fr.width !== x.p.w || +x.fr.height !== x.p.h)) { x.fr.width = x.p.w; x.fr.height = x.p.h; }
+  };
   function paintBp(x) {
     if (!x.bps) return;
     for (const bt of x.bps.querySelectorAll('button')) bt.setAttribute('aria-checked', String(+bt.dataset.w === x.p.w));
     x.dl.textContent = bpDesc(x.a, x.p.w);
     x.bar.classList.toggle('small', x.p.w < 600);
   }
-  // a page at width w (the board keeps its place: x, y): its frame, title, arrows and pins follow
+  // a page at width w: its frame at that width and its viewport's height, measured again in Full page
   function setBp(id, w, quiet) {
     const x = B.frames.get(id); if (!x || devOf(x.a) !== 'page') return;
     w = clamp(Math.round(+w) || DEVICES.page[0], 240, 3840);
-    const [W, H] = pageDims(w);
-    B.bpw.set(id, W); x.p = { ...x.p, w: W, h: H }; if (x.home) x.home = { ...x.home, w: W, h: H };
-    placeAb(x); paintBp(x);
-    if (x.fr) { x.fr.width = W; x.fr.height = H; }
+    if (w === x.p.w && B.bpw.get(id) === w) return;
+    B.bpw.set(id, w); x.fullH = null; x.grew = []; x.rects = {};   // measured again at this width
+    const [W, H] = viewSize(x.a);
+    x.p = { ...x.p, w: W, h: H }; if (x.home) x.home = { ...x.home, w: W, h: H };
+    placeAb(x); paintBp(x); tellPage(x);
     if (!quiet) bpChanged();
   }
   function bpChanged() {
     try { localStorage.setItem(BP_KEY, JSON.stringify(Object.fromEntries(B.bpw))); } catch { /* no storage: this view only */ }
-    relink(); MARKUP.relayout(); paintTools();
+    relayout();
   }
   function setAllBp(w) { for (const x of B.frames.values()) setBp(x.a.id, w, true); bpChanged(); if (!B.touched) fit(true); }
+  function setPageView(v) {
+    v = v === 'viewport' ? 'viewport' : 'full'; if (v === B.pageView) return;
+    B.pageView = v; store.set(VIEW_KEY, v);
+    for (const x of B.frames.values()) if (devOf(x.a) === 'page') { x.fullH = null; x.fullOff = false; x.grew = []; paintWarn(x); }
+    relayout();
+    for (const x of B.frames.values()) tellPage(x);
+    if (!B.touched) fit(true);
+  }
+  // where every artboard sits at its size now: boardLayout over the real sizes; a placed page (x, y in the doc) moves
+  // down by what the pages above it in its column grew past their design viewport
+  function homes() {
+    const at = boardLayout(b, VIEW.links, sizeOf);
+    if (!IS_SITE) return at;
+    const nom = boardLayout(b, VIEW.links, deviceSize);
+    for (const a of abs) {
+      const p = at.get(a.id), n = nom.get(a.id);
+      if (!p || !n || !Number.isFinite(a.x) || !Number.isFinite(a.y)) continue;
+      for (const [id, q] of nom) if (id !== a.id && q.y + q.h <= n.y && q.x < n.x + n.w && n.x < q.x + q.w) p.y += at.get(id).h - q.h;
+    }
+    return at;
+  }
+  // the pages laid out again (a height or width changed): drafted places over the layout, links rerouted, pins moved
+  let layT = 0;
+  const relayoutSoon = () => { if (!layT) layT = requestAnimationFrame(() => { layT = 0; relayout(); }); };
+  function relayout() {
+    cancelAnimationFrame(layT); layT = 0;
+    const at = homes();
+    for (const x of B.frames.values()) {
+      const p = at.get(x.a.id); if (!p) continue;
+      if (x.home) { x.home = { ...p }; x.p = { ...x.p, w: p.w, h: p.h }; } else x.p = { ...p };   // Variants keeps its line-up
+      placeAb(x); paintVars(x);
+    }
+    if (B.onLayout) B.onLayout();
+    relink(); MARKUP.relayout(); paintTools();
+    if (!B.touched) fit(false);
+  }
+  // a page's height from its inspector in Full page, once the frame pinned this width's viewport, at most PAGE_CAP. A
+  // page that keeps growing with its frame (a viewport height the pinning missed) shows Viewport: five growths in a row
+  // with nothing changed in the document but the frame's height (byFrame), each as large as the last or more.
+  function takeHeight(x, d) {
+    const vh = viewSize(x.a)[1];
+    if (!fullOf(x) || d.vh !== vh || d.vw !== x.p.w || !Number.isFinite(d.h)) return;
+    const h = clamp(Math.round(d.h), vh, PAGE_CAP), cur = x.fullH || vh, capped = d.h > PAGE_CAP;
+    if (capped !== !!x.capped) { x.capped = capped; paintWarn(x); }
+    if (Math.abs(h - cur) < 2) return;
+    x.grew = h > cur && d.byFrame === true ? [...(x.grew || []), h - cur].slice(-5) : [];
+    if (x.grew.length === 5 && x.grew.every((s, i) => !i || s >= x.grew[i - 1] - 2)) {
+      x.fullOff = true; x.fullH = null; x.grew = [];
+      relayout(); tellPage(x); paintWarn(x);
+      toast(`“${x.a.title || x.a.id}” keeps growing with its frame (a viewport height bluedoc can't pin), so it shows in Viewport`);
+      return;
+    }
+    x.fullH = h; relayoutSoon();
+  }
   // a section's versions, shown in place: the brief item's pick, else its recommendation; [{sel, edits}] for the frame
   const varItem = s => s.decision ? ITEMS[`brief/${s.decision}`] : null;
   const varShown = it => it ? it.choice || it.it.recommend || null : null;
@@ -4705,16 +4790,18 @@ function renderBoard(b) {
     return secsOf(a).filter(s => varItem(s) && s.variants && typeof s.variants === 'object').map(s => ({ sel: s.sel, edits: Array.isArray(s.variants[varShown(varItem(s))]) ? s.variants[varShown(varItem(s))] : [] }));
   }
   const siteMsgs = x => devOf(x.a) === 'page' ? [{ bd: 'sections', sels: secsOf(x.a).map(s => s.sel) }, { bd: 'edits', list: editsOf(x.a) }] : [];
-  // the in-place pickers: one over each section that has versions, at its top right while it shows in the frame
+  // the in-place pickers: one per section that has versions, docked to the page's right edge at the section's top while
+  // the section shows in the frame, with a bracket down that edge for the section's visible height
   function makeVars(x) {
     for (const s of secsOf(x.a)) {
       const it = varItem(s); if (!it || !it.choices) continue;
       const pick = h('span', { class: 'pk' });
       const btns = it.choices.map((c, i) => h('button', { type: 'button', role: 'radio', 'data-id': c.id, disabled: OLD || !!BASE, title: c.label + (c.id === it.it.recommend ? ' (recommended)' : ''),
         onclick: e => { e.stopPropagation(); it.setChoice(c.id); } }, String.fromCharCode(65 + i), c.id === it.it.recommend && ic('star')));
-      const el = h('div', { class: 'bd-var', hidden: true, role: 'radiogroup', 'aria-label': `${s.title}: versions` }, h('span', { class: 'l' }, s.title), h('span', { class: 'ch' }, btns), pick);
-      x.el.append(el);
-      x.vars.push({ s, it, el, btns, pick });
+      const el = h('div', { class: 'bd-var', hidden: true, role: 'radiogroup', 'aria-label': `${s.title}: versions` }, ic('variants'), h('span', { class: 'l' }, s.title), h('span', { class: 'ch' }, btns), pick);
+      const br = h('div', { class: 'bd-var-br', hidden: true, 'aria-hidden': 'true' });
+      x.el.append(br, el);
+      x.vars.push({ s, it, el, br, btns, pick });
     }
     paintVars(x);
   }
@@ -4724,12 +4811,15 @@ function renderBoard(b) {
       const cur = varShown(v.it), r = x.rects[secKey(v.s)];
       v.btns.forEach(bt => bt.setAttribute('aria-checked', String(bt.dataset.id === cur)));
       v.pick.textContent = cur ? choiceLabel(v.it, cur) + (v.it.choice ? '' : ' (recommended)') : '';
-      v.el.hidden = !r || !x.fr || r.y + r.h < 40 || r.y > x.p.h - 40;
-      if (!v.el.hidden) Object.assign(v.el.style, { left: Math.min(r.x + r.w, x.p.w) + 'px', top: clamp(r.y, 0, x.p.h - 40) + 'px' });
+      v.el.hidden = v.br.hidden = !r || !x.fr || r.y + r.h < 40 || r.y > x.p.h - 40;
+      if (v.el.hidden) continue;
+      const top = clamp(r.y, 0, x.p.h - 40), bottom = clamp(r.y + r.h, top, x.p.h);
+      v.el.style.top = top + 'px';
+      Object.assign(v.br.style, { top: top + 'px', height: (bottom - top) + 'px' });
     }
   }
   B.paintVariants = () => { for (const x of B.frames.values()) paintVars(x); for (const x of B.live) for (const m of siteMsgs(x)) post(x, m); };
-  const pos = boardLayout(b, VIEW.links);
+  const pos = boardLayout(b, VIEW.links, sizeOf);
   for (const a of abs) { const x = makeAb(a, pos.get(a.id), false); B.frames.set(a.id, x); vp.append(x.el); }
   // a deck's slides in reading order: by row (top first), left to right in a row, ties in the doc's order
   const deck = abs.filter(a => devOf(a) === 'slide').sort((a, c) => pos.get(a.id).y - pos.get(c.id).y || pos.get(a.id).x - pos.get(c.id).x);
@@ -4747,9 +4837,9 @@ function renderBoard(b) {
     const attrs = live ? (liveUrl(x.a) ? { src: liveUrl(x.a), referrerpolicy: 'no-referrer' } : null)
       : SCREENS ? (rev == null && typeof SCREENS[x.a.id] === 'string' ? { srcdoc: SCREENS[x.a.id] } : null) : SERVED ? { src: screenUrl(x.a, rev, B.theme) } : null;
     if (!attrs) return null;
-    const [w, hh] = sizeOf(x.a);
+    const [w, hh] = x.role ? deviceSize(x.a) : sizeOf(x.a), page = devOf(x.a) === 'page';
     const fr = h('iframe', { sandbox: live ? LIVE_SANDBOX : SCREEN_SANDBOX, class: 'bd-ab-fr', 'data-ab': x.a.id, title: `${SCREEN[0].toUpperCase()}${SCREEN.slice(1)}: ` + (x.a.title || x.a.id),
-      tabindex: '-1', width: w, height: hh, ...attrs });
+      tabindex: '-1', width: w, height: hh, name: page ? frameName(x) : null, ...attrs });
     Object.assign(x, { fr, attrs, live, allow: 1, ready: false, locSig: '' });
     fr.addEventListener('load', () => loaded(x, fr));
     B.live.add(x);
@@ -4758,7 +4848,11 @@ function renderBoard(b) {
   function loaded(x, fr) {
     if (x.fr !== fr) return;
     // a live page reloads (the dev server's hot reload) and follows its own links: each load is a fresh page to set up
-    if (x.allow > 0 || x.live) { x.allow = 0; x.locSig = ''; for (const m of [modeMsg(x), tokensMsg(), viewMsg(x), ...siteMsgs(x)]) post(x, m); if (x.pendingReveal) post(x, { bd: 'reveal', sel: x.pendingReveal }); x.pendingReveal = null; return; }
+    if (x.allow > 0 || x.live) {
+      x.allow = 0; x.locSig = '';
+      for (const m of [modeMsg(x), tokensMsg(), viewMsg(x), ...siteMsgs(x), devOf(x.a) === 'page' && pageMsg(x)]) if (m) post(x, m);
+      if (x.pendingReveal) post(x, { bd: 'reveal', sel: x.pendingReveal }); x.pendingReveal = null; return;
+    }
     // a load the page didn't start: the screen navigated its own frame. Load it again and flag it; a
     // screen that keeps doing it stops showing.
     x.navs++;
@@ -4784,7 +4878,8 @@ function renderBoard(b) {
     const mx = W / 4, my = H / 4, near = [];
     for (const x of B.frames.values()) {
       const p = x.p, l = B.tx + p.x * B.k, t = B.ty + p.y * B.k, w = p.w * B.k, hh = p.h * B.k;
-      if (!x.el.classList.contains('off') && w >= 24 && l < W + mx && l + w > -mx && t < H + my && t + hh > -my) near.push([Math.hypot(l + w / 2 - W / 2, t + hh / 2 - H / 2), x]);
+      // a frame too small to read shows its outline; a tall page (Full page) counts by its longer side
+      if (!x.el.classList.contains('off') && Math.max(w, hh) >= 24 && l < W + mx && l + w > -mx && t < H + my && t + hh > -my) near.push([Math.hypot(l + w / 2 - W / 2, t + hh / 2 - H / 2), x]);
       else dropFrame(x);
     }
     near.sort((a, c) => a[0] - c[0]).forEach(([, x], i) => i < LIVE_MAX ? mount(x) : dropFrame(x));
@@ -4792,7 +4887,9 @@ function renderBoard(b) {
   const boardFrames = () => [...B.live].filter(x => !x.role);
   const sendAll = fn => { for (const x of B.live) post(x, fn(x)); };
   function paintWarn(x) {
-    const why = [x.fallback && `${x.fallback} not found: showing the plain kit`, x.navs && 'This screen tried to navigate away from its frame'].filter(Boolean).join('. ');
+    const why = [x.fallback && `${x.fallback} not found: showing the plain kit`, x.navs && 'This screen tried to navigate away from its frame',
+      x.fullOff && 'This page grows with its frame (a viewport height bluedoc can\'t pin), so it shows in Viewport',
+      x.capped && `Full page shows its first ${PAGE_CAP.toLocaleString('en')} px: Viewport scrolls through all of it`].filter(Boolean).join('. ');
     for (const w of [x.warn, x.liWarn]) if (w) { w.hidden = !why; w.title = why; }
   }
   function showHov(x, o) {
@@ -4800,10 +4897,10 @@ function renderBoard(b) {
     Object.assign(x.hov.style, { left: o.rect.x + 'px', top: o.rect.y + 'px', width: o.rect.w + 'px', height: o.rect.h + 'px' });
     x.hov.firstChild.textContent = o.what; x.hov.hidden = false;
   }
-  // the `el:` keys pinned on a screen, and a page's sections with versions, so its frame reports where they are now
+  // the `el:` keys pinned on a screen, and a page's sections, so its frame reports where they are now
   function locate(x) {
     const pre = `el:${x.a.id}/`;
-    const sels = [...new Set([...MARKUP.all().map(a => a.target.key).filter(k => k.startsWith(pre)).map(k => k.slice(pre.length)), ...x.vars.map(v => secKey(v.s))])].slice(0, 50);
+    const sels = [...new Set([...MARKUP.all().map(a => a.target.key).filter(k => k.startsWith(pre)).map(k => k.slice(pre.length)), ...secsOf(x.a).map(secKey)])].slice(0, 100);
     const sig = sels.join('\n');
     if (!sels.length || sig === x.locSig) return;
     x.locSig = sig; post(x, { bd: 'locate', sels });
@@ -4828,7 +4925,10 @@ function renderBoard(b) {
       if (x.role) return;
       x.fallback = str(d.fallback, 80) || null; paintWarn(x);
       if (d.rects && typeof d.rects === 'object') for (const [s, r] of Object.entries(d.rects).slice(0, 100)) x.rects[str(s)] = rectOf(r);
+      if (devOf(x.a) === 'page') takeHeight(x, d);
       locate(x); paintVars(x); MARKUP.relayout();
+      const s = x.pendingSec, r = s && x.rects[secKey(s)];
+      if (r) { x.pendingSec = null; showSection(x, r); }
       return;
     }
     // a tap in a screen: its named elements, innermost first, followed only through this screen's links (drafts
@@ -4859,6 +4959,8 @@ function renderBoard(b) {
   function paintView() {
     vp.style.transform = `translate(${B.tx}px,${B.ty}px) scale(${B.k})`;
     vp.style.setProperty('--k', B.k);
+    // a page narrower than 760 screen px shows its versions pickers without the pick's label, under 420 px as icon + keys
+    for (const x of B.frames.values()) if (x.vars.length) { const w = x.p.w * B.k, z = w < 420 ? 'xs' : w < 760 ? 's' : ''; if (x.el.dataset.vz !== z) x.el.dataset.vz = z; }
     const g = 24 * B.k; stage.style.backgroundSize = `${g}px ${g}px`; stage.style.backgroundPosition = `${B.tx}px ${B.ty}px`;
     if (zoomLbl) zoomLbl.textContent = Math.round(B.k * 100) + '%';
     if (B.rq) placeRqe();
@@ -4876,16 +4978,25 @@ function renderBoard(b) {
     anim = requestAnimationFrame(step);
   }
   const shownXs = () => [...B.frames.values(), ...B.ghosts.values()].filter(x => !x.el.classList.contains('off'));
+  // the box of xs on the board: their screens with bezels and page bars (titles sit above, in screen px: room().top)
   function boxOf(xs) {
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-    for (const x of xs) { const bz = BEZEL[devOf(x.a)] || 0, bar = devOf(x.a) === 'page' ? PAGE_BAR : 0; x0 = Math.min(x0, x.p.x - bz); y0 = Math.min(y0, x.p.y - bz - bar - 30); x1 = Math.max(x1, x.p.x + x.p.w + bz); y1 = Math.max(y1, x.p.y + x.p.h + bz); }
+    for (const x of xs) { const bz = BEZEL[devOf(x.a)] || 0, bar = devOf(x.a) === 'page' ? PAGE_BAR : 0; x0 = Math.min(x0, x.p.x - bz); y0 = Math.min(y0, x.p.y - bz - bar); x1 = Math.max(x1, x.p.x + x.p.w + bz); y1 = Math.max(y1, x.p.y + x.p.h + bz); }
     return isFinite(x0) ? { x: x0, y: y0, w: Math.max(1, x1 - x0), h: Math.max(1, y1 - y0) } : { x: 0, y: 0, w: 1, h: 1 };
   }
+  // the room the view leaves: the toolbar and a title bar above, the tray below (on a design page)
+  const room = () => { const W = stage.clientWidth || 800, H = stage.clientHeight || 600; return { W, H, m: 40, top: 64 + 26, bot: root.classList.contains('bd-tray-on') ? 84 : 40 }; };
   function showBox(box, animate, maxK) {
-    // room for the toolbar above and the tray below (on a design page)
-    const W = stage.clientWidth || 800, H = stage.clientHeight || 600, m = 40, top = 64, bot = root.classList.contains('bd-tray-on') ? 84 : m;
+    const { W, H, m, top, bot } = room();
     const k = clamp(Math.min((W - 2 * m) / box.w, (H - top - bot) / box.h), BK_MIN, maxK);
     go(k, W / 2 - (box.x + box.w / 2) * k, top + (H - top - bot) / 2 - (box.y + box.h / 2) * k, animate);
+  }
+  // a section of a page in Full page (r: its rect in the frame): the page's width across the view (at most 100%), the
+  // section in the middle, or its top at the top when it is taller than the view
+  function showSection(x, r) {
+    const { W, H, m, top, bot } = room(), k = clamp((W - 2 * m) / x.p.w, BK_MIN, 1), y = x.p.y + r.y, avail = H - top - bot;
+    select(x.a.id); B.touched = true;
+    go(k, W / 2 - (x.p.x + x.p.w / 2) * k, r.h * k <= avail ? top + avail / 2 - (y + r.h / 2) * k : top - y * k, true);
   }
   const rqXs = () => B.variants ? [] : [...B.rqs.values()].map(el => ({ a: {}, p: el._box }));
   const fit = animate => showBox(boxOf([...shownXs(), ...rqXs()]), animate, 1);
@@ -5147,10 +5258,16 @@ function renderBoard(b) {
       ic(bpIc(w)), bpWords.indexOf(bpWords[i]) === bpWords.lastIndexOf(bpWords[i]) ? bpWords[i] : String(w)))) : null;
   const bpIn = IS_SITE ? h('input', { class: 'bd-bpw', type: 'number', min: 240, max: 3840, step: 10, placeholder: 'px', 'aria-label': 'Custom width of every page, in px', title: 'Custom width of every page (px), then Enter' }) : null;
   if (bpIn) bpIn.addEventListener('change', () => { const w = Math.round(+bpIn.value); if (w >= 240 && w <= 3840) setAllBp(w); });
+  // a website: every page at its whole height (Full page) or in a window of its viewport's height that scrolls; icons
+  // only, so the toolbar keeps one row beside both panels
+  const viewSeg = IS_SITE ? h('div', { class: 'bd-sg', role: 'radiogroup', 'aria-label': 'Page height' }, [
+    ['full', 'pagefull', 'Full page', 'Full page: every page at its whole height, nothing scrolls inside it'],
+    ['viewport', 'pageview', 'Viewport', 'Viewport: every page in a window of its device\'s height that scrolls (sticky bars, scroll effects)']].map(([v, i, l, t]) =>
+    h('button', { type: 'button', role: 'radio', 'data-v': v, title: t, 'aria-label': l, onclick: () => setPageView(v) }, ic(i)))) : null;
   const tb = h('div', { class: 'bd-btb', role: 'toolbar', 'aria-label': 'Board' }, lpBtn, sep(),
     tbtn('fit', `Fit all ${SCREEN}s (0)`, () => fit(true)), tbtn('minus', 'Zoom out (−)', () => zoomBy(1 / 1.4)), zoomLbl, tbtn('plus', 'Zoom in (+)', () => zoomBy(1.4)),
     tbtn('target', `Focus the selected ${SCREEN} (F, or double-click it)`, () => focusSel()), sep(),
-    !IS_DECK && [presBtn, varBtn, flowsBtn, sep()], IS_SITE && [bpSeg, bpIn], (!IS_SITE || abs.some(a => !isLive(a))) && [IS_SITE && sep(), fidSeg],
+    !IS_DECK && [presBtn, varBtn, flowsBtn, sep()], IS_SITE && [bpSeg, bpIn, sep(), viewSeg], (!IS_SITE || abs.some(a => !isLive(a))) && [IS_SITE && sep(), fidSeg],
     themeSel && [sep(), h('label', { class: 'th' }, ic('palette'), themeSel)], IS_DECK && [sep(), presBtn]);
   // the motion keys (pause animations, Reduced) are hidden for now: built and painted, not shown; screens play their motion
   if (themeSel) themeSel.addEventListener('change', () => { const x = ITEMS['brief/theme']; if (x && x.setChoice && !OLD) x.setChoice(themeSel.value); else { B.theme = themeSel.value; paintTokens(); } });
@@ -5167,6 +5284,7 @@ function renderBoard(b) {
       bpSeg.querySelectorAll('button').forEach(bt => bt.setAttribute('aria-checked', String(+bt.dataset.w === one)));
       if (document.activeElement !== bpIn) bpIn.value = one && !BPS.includes(one) ? one : '';
     }
+    if (viewSeg) viewSeg.querySelectorAll('button').forEach(bt => bt.setAttribute('aria-checked', String(bt.dataset.v === B.pageView)));
   }
   // the theme is the brief's pick (the reader's, else the recommendation): picking a pill re-skins every frame
   const themePick = () => { const x = ITEMS['brief/theme']; const id = x ? x.choice || x.it.recommend : null; return themeOf(id) ? id : B.theme || (themes[0] ? themes[0].id : null); };
@@ -5246,7 +5364,7 @@ function renderBoard(b) {
     function showI(kind) {
       if (rec) B.live.delete(rec);
       const a = order[i]; rec = { a, role: 'pres', fr: null };
-      dev = deviceBox(a, frameEl(rec, OLD ? VIEW.rev : null), SERVED || SCREENS ? '' : `Open this page through serve.py to see the ${what}.`, sizeOf(a));
+      dev = deviceBox(a, frameEl(rec, OLD ? VIEW.rev : null), SERVED || SCREENS ? '' : `Open this page through serve.py to see the ${what}.`, deviceSize(a));
       box.replaceChildren(dev.sz);
       if (slides) {
         notes.innerHTML = md(typeof a.notes === 'string' ? a.notes : '');
@@ -5296,7 +5414,7 @@ function renderBoard(b) {
       const lb = h('div', { class: 'lb' }, h('b', {}, revName(s.r)), s.r === VIEW ? ' · shown' : '');
       if (!s.a) return { el: h('div', { class: 'bd-cmpv-p none' }, lb, h('div', { class: 'msg' }, s.r === BASE ? `Not in ${revName(BASE)}: new in ${VIEW.rev}` : `Removed in ${revName(VIEW)}`)) };
       const rec = { a: s.a, role: 'cmp', fr: null };
-      const dev = deviceBox(s.a, frameEl(rec, s.r === CUR ? null : s.r.rev), SCREENS ? 'An export shows the current revision\'s screens only.' : 'Open this page through serve.py to compare screens.', sizeOf(s.a));
+      const dev = deviceBox(s.a, frameEl(rec, s.r === CUR ? null : s.r.rev), SCREENS ? 'An export shows the current revision\'s screens only.' : 'Open this page through serve.py to compare screens.', deviceSize(s.a));
       return { el: h('div', { class: 'bd-cmpv-p' }, lb, dev.sz), dev, rec };
     };
     const P = [pane(L), pane(R)], name = (R.a || L.a || { id }).title || id;
@@ -5520,10 +5638,12 @@ function renderBoard(b) {
   }
   // a change mark in the brief: show the Brief tab first
   B.reveal = el => { if (lp && $('#bd-lp-brief').contains(el)) { setLp(true, false); setTab('brief', false); } };
-  // a section in the Pages list: its page in view, its frame scrolled to it (once the frame loads, if it hasn't)
+  // a section in the Pages list: in Full page the board pans to it, in Viewport its page shows and its frame scrolls
+  // there (either once the frame reports where it is, if it hasn't)
   function revealSection(id, s) {
-    focus(id);
     const x = B.frames.get(id); if (!x) return;
+    if (fullOf(x)) { const r = x.rects[secKey(s)]; if (r) showSection(x, r); else { focus(id); x.pendingSec = s; } return; }
+    focus(id);
     if (x.fr && x.ready) post(x, { bd: 'reveal', sel: s.sel }); else x.pendingReveal = s.sel;
   }
   B.start = () => {
@@ -5552,7 +5672,7 @@ function renderBoard(b) {
       h('button', { type: 'button', role: 'radio', 'data-v': v, 'aria-controls': 'bd-lp-' + v, onclick: () => setTab(v, true) }, l)));
     lp = h('aside', { class: 'bd-lp', 'aria-label': `${Screens} and brief`, inert: true }, head, h('div', { class: 'bd-lp-tabs bd-lp-ui' }, lpTabs),
       h('div', { class: 'bd-lp-pane bd-lp-ui', id: 'bd-lp-screens' }, lpList, h('p', { class: 'hint' }, IS_SITE
-        ? 'Click a page to focus it, a section to scroll its page there. Interact (I) scrolls and clicks inside the pages; Point (C) pins a comment on what you point at.'
+        ? 'Click a page to focus it, a section to go to it. Interact (I) scrolls and clicks inside the pages; Point (C) pins a comment on what you point at.'
         : `Click a ${SCREEN} to focus it. Double-click one on the board, or press F, to do the same.`)),
       h('div', { class: 'bd-lp-pane', id: 'bd-lp-brief', hidden: true }, tldr, main));
     shell.prepend(lp);
@@ -5586,7 +5706,7 @@ function renderBoard(b) {
     if ('ResizeObserver' in window) new ResizeObserver(() => { if (!B.touched) fit(false); else apply(); if (cmpv) cmpv.lay(); MARKUP.relayout(); }).observe(stage);
     requestAnimationFrame(() => fit(false));
   };
-  // tests and agents: BP.board({focus, fit, sketch, present, compare, variants, flows, tap}); tap follows the presented
+  // tests and agents: BP.board({focus, fit, sketch, present, compare, variants, flows, tap, breakpoint, section, pageView}); tap follows the presented
   // screen's link from that element, as a tap in its frame does
   B.api = o => {
     if (o && typeof o === 'object') {
@@ -5599,20 +5719,23 @@ function renderBoard(b) {
       if (o.tap && pres) pres.follow(String(o.tap));
       if (o.back && pres && pres.back) pres.back();
       if (o.compare) openCompare(String(o.compare)); else if (o.compare === false) closeCompare();
-      // a website: breakpoint (every page) or {<page id>: width}; section: [page id, section id] scrolls it into view
+      // a website: breakpoint (every page) or {<page id>: width}; section: [page id, section id] shows it; pageView: full | viewport
       if (Number.isFinite(o.breakpoint)) setAllBp(o.breakpoint);
       else if (o.breakpoint && typeof o.breakpoint === 'object') { for (const [id, w] of Object.entries(o.breakpoint)) setBp(id, w, true); bpChanged(); }
+      if (IS_SITE && (o.pageView === 'full' || o.pageView === 'viewport')) setPageView(o.pageView);
       if (Array.isArray(o.section)) { const s = secsOf((B.frames.get(String(o.section[0])) || {}).a).find(s => s.id === o.section[1]); if (s) revealSection(String(o.section[0]), s); }
     }
     const R = curReach();
     return { k: B.k, mode: B.mode, selected: B.sel, panel: B.lp, theme: B.theme, sketch: B.sketch, variants: B.variants, present: !!pres, compare: !!cmpv,
-      presented: pres && pres.state ? pres.state() : null, flows: B.flows, selectedLink: B.selLink,
+      presented: pres && pres.state ? pres.state() : null, flows: B.flows, selectedLink: B.selLink, pageView: IS_SITE ? B.pageView : null,
       reach: R ? { screen: R.f, out: R.tg.size, in: R.src.size, targets: Object.fromEntries([...R.tg].map(([k, v]) => [k, [...v]])) } : null,
       links: LINKS.concat(GONE).map(l => ({ key: l.key, from: l.from, el: l.el, to: l.to, kind: l.kind, label: l.label, draft: l.draft || null, del: !!l.del, gone: GONE.includes(l),
         routed: gEls.has(l.key), change: gEls.has(l.key) ? ['add', 'mod', 'del'].find(c => gEls.get(l.key).g.classList.contains('bd-chg-' + c)) || null : null })),
       live: boardFrames().length, requested: [...B.rqs.values()].map(el => el.dataset.key),
       artboards: [...B.frames.values()].map(x => ({ id: x.a.id, x: x.p.x, y: x.p.y, w: x.p.w, h: x.p.h, live: !!x.fr, ready: x.ready, fallback: x.fallback, navigated: x.navs, change: x.chg,
         navs: x.navAt ? { ...x.navAt } : null, ...(devOf(x.a) === 'page' ? { page: { proxied: !!(x.fr && x.live), src: x.fr ? x.fr.getAttribute('src') : null,
+          view: fullOf(x) ? 'full' : 'viewport', vh: viewSize(x.a)[1], frame: x.fr ? [+x.fr.width, +x.fr.height] : null, capped: !!x.capped,
+          sections: Object.fromEntries(secsOf(x.a).map(s => [s.id, x.rects[secKey(s)] || null])),
           variants: Object.fromEntries(x.vars.map(v => [v.s.id, { shown: varShown(v.it), visible: !v.el.hidden }])) } } : {}) })) };
   };
   const wrap = h('div', { class: 'bd-bwrap' }, stage, tb);
@@ -7720,6 +7843,9 @@ function boardEdits(B) {
     if (Object.keys(m).length) B.setPositions(m);
     if (moved) paintOverlaps();
   }
+  // the board laid its pages out again (a website page's height or width changed): that layout is the rev's places now,
+  // and the drafted places go over it
+  B.onLayout = () => { for (const [id, x] of B.frames) { const p = x.home || x.p; home[id] = { x: Math.round(p.x), y: Math.round(p.y) }; } placeAll(); };
   // after a move, screens that overlap another get a red outline until they move apart; nothing is pushed aside
   function paintOverlaps() {
     const bx = Object.entries(B.boxes()).filter(([id]) => shownIds().includes(id));

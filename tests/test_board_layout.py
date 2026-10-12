@@ -26,7 +26,7 @@ def page_layout(cases: list[tuple[dict, list | None]]) -> list[dict]:
     """The page's {id: [x, y, w, h]} for each (board, links), via template.html's own boardLayout."""
     t = template_text()
     parts = []
-    for pat in (r"^const DEVICES = [^\n]*;$", r"^const abSize = [^\n]*;$", r"^function boardLayout\(b, links\) \{[^\n]*\}$"):
+    for pat in (r"^const DEVICES = [^\n]*;$", r"^const abSize = [^\n]*;$", r"^function boardLayout\(b, links, size = abSize\) \{[^\n]*\}$"):
         m = re.search(pat, t, re.M)
         assert m, f"template.html has no line matching {pat!r}: update this test"
         parts.append(m.group(0))
