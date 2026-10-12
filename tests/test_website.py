@@ -11,8 +11,9 @@ X-Frame-Options and frame-ancestors for its own, strips bluedoc's key cookie, re
 viewport heights in CSS and HTML styles, and answers 502 when the dev server is down; the doc page's CSP frames exactly
 that proxy. In headless Chrome (BLUEDOC_BROWSER_TESTS=1), a pin on a live page carries its section's source hints and
 width into the change request, a variant pick edits the page in place from a picker in the gutter beside the page (clear
-of every page; pointing at it outlines the section), a breakpoint resizes the page, and Full page
-frames a page at its whole height with a 100vh hero 900 px tall, pins in board space, zooms without a reload, a
+of every page; pointing at it outlines the section), a breakpoint resizes the page, Open in new tab opens the selected
+page (a live page at its dev URL, a mockup at its screen route; a title bar's key its own page; none on a design), and
+Full page frames a page at its whole height with a 100vh hero 900 px tall, pins in board space, zooms without a reload, a
 re-layout or the page seeing a scroll, and falls back to Viewport for a page that grows with its frame."""
 from __future__ import annotations
 
@@ -677,6 +678,70 @@ class VersionsGutterInChrome(SiteInChrome):
         self.tab.wait_for(f"document.querySelector({hl}).hidden", 3)
         a = self.pin_at(400, 140, "Shorter")
         self.assertEqual(a["target"]["text"], "Build the habit, one week at a time.", "the frame doesn't show version B")
+
+
+class OpenInNewTabInChrome(SiteInChrome):
+    """Open in new tab: the toolbar's key opens the selected page, a live page at its dev server's own URL (not the
+    proxy) and a mockup at its screen route on this server; each page's title bar key opens that page."""
+    TOOLBAR_KEY = ".bd-btb button[aria-label='Open page in a new tab']"
+
+    def site(self, url: str) -> dict:
+        doc = site_doc(url)
+        board_of(doc)["artboards"].append({"id": "about", "title": "About", "device": "page", "fidelity": "hifi"})
+        screen = self.tmp.dir / "site" / "docs" / "site.design" / "about.html"
+        screen.parent.mkdir(parents=True, exist_ok=True)
+        screen.write_text("<main><h1>About Acme Fit</h1></main>\n", encoding="utf-8")
+        return doc
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.tab.ev("window.open = (...a) => { (window.opened ||= []).push(a); return null; }")
+
+    def click(self, sel: str) -> list:
+        """Click sel: what it passed window.open."""
+        self.tab.ev(f"(window.opened = [], document.querySelector({json.dumps(sel)}).click())")
+        return self.tab.ev("window.opened")
+
+    def about_route(self) -> str:
+        return self.tab.ev("location.origin + location.pathname.replace(/[^/]*$/, '')") + "site.design/about.html"
+
+    def test_the_toolbar_key_opens_the_live_page_at_its_dev_url(self) -> None:
+        self.tab.ev("BP.board({focus: 'home'})")
+        self.assertFalse(self.tab.ev(f"document.querySelector({json.dumps(self.TOOLBAR_KEY)}).disabled"))
+        self.assertEqual(self.click(self.TOOLBAR_KEY), [[self.dev.origin + "/", "_blank", "noopener"]])
+
+    def test_the_toolbar_key_opens_the_selected_page(self) -> None:
+        self.tab.ev("BP.board({focus: 'about'})")
+        self.assertEqual(self.click(self.TOOLBAR_KEY), [[self.about_route(), "_blank", "noopener"]])
+        self.tab.ev("BP.board({focus: 'home'})")
+        self.assertEqual(self.click(self.TOOLBAR_KEY), [[self.dev.origin + "/", "_blank", "noopener"]])
+
+    def test_a_title_bar_key_opens_its_own_page(self) -> None:
+        self.tab.ev("BP.board({focus: 'home'})")
+        self.assertEqual(self.click(".bd-ab[data-ab=about] .bd-ab-t button[aria-label='Open About in a new tab']"),
+                         [[self.about_route(), "_blank", "noopener"]])
+        self.assertEqual(self.click(".bd-ab[data-ab=home] .bd-ab-t button[aria-label='Open Home in a new tab']"),
+                         [[self.dev.origin + "/", "_blank", "noopener"]])
+        self.assertEqual(self.tab.ev("BP.board().selected"), "home", "the title bar key leaves the selection")
+
+
+class DesignBoardInChrome(SiteInChrome):
+    """A design doc's board has no Open in new tab key, in its toolbar or a title bar."""
+
+    def site(self, url: str) -> dict:
+        doc = site_doc(url)
+        doc["meta"]["type"] = "design"
+        b = board_of(doc)
+        del b["root"]
+        b["artboards"] = [{"id": "home", "title": "Home", "device": "browser", "fidelity": "hifi"}]
+        screen = self.tmp.dir / "site" / "docs" / "site.design" / "home.html"
+        screen.parent.mkdir(parents=True, exist_ok=True)
+        screen.write_text("<main><h1>Acme Fit</h1></main>\n", encoding="utf-8")
+        return doc
+
+    def test_no_open_in_new_tab_key(self) -> None:
+        self.assertTrue(self.tab.ev("!!document.querySelector('.bd-btb .bd-tbtn')"))
+        self.assertEqual(self.tab.ev("document.querySelectorAll(\".bd-btb button[aria-label='Open page in a new tab'], .bd-ab-t .opn\").length"), 0)
 
 
 class FullPageInChrome(SiteInChrome):

@@ -655,8 +655,14 @@ class BoardDrafts(ChromePage):
         return [a for a in out if a.get("type") in ("link", "layout")]
 
     def drag(self, tab: Tab, sel: str, dx: float, dy: float) -> None:
-        """A mouse drag from the left of sel's box, dx, dy CSS px, in 8 moves."""
-        x, y = tab.ev(f"(r => [r.left + 12, r.top + r.height / 2])(document.querySelector({json.dumps(sel)}).getBoundingClientRect())")
+        """A mouse drag from the left of sel's box, dx, dy CSS px, in 8 moves, once the board stops moving that box (it
+        fits itself again while the screens load, until the reader touches it)."""
+        at = f"(r => [r.left + 12, r.top + r.height / 2])(document.querySelector({json.dumps(sel)}).getBoundingClientRect())"
+        def still() -> list | None:
+            p = tab.ev(at)
+            time.sleep(0.25)
+            return p if tab.ev(at) == p else None
+        x, y = until(still)
         def mouse(kind: str, mx: float, my: float, buttons: int) -> None:
             tab.browser.call("Input.dispatchMouseEvent", {"type": kind, "x": mx, "y": my, "button": "left", "buttons": buttons, "clickCount": 1},
                              tab.session)

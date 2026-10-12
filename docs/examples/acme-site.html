@@ -1559,6 +1559,9 @@ i.warn[hidden] { display: none; }
 .bd-ab-t .bps button:hover { color: var(--fg); }
 .bd-ab-t .bps button[aria-checked="true"] { color: var(--fg); background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: var(--shadow-hk); }
 .bd-ab-t .bps .bd-ic { width: 1.15em; height: 1.15em; }
+.bd-ab-t .opn { display: inline-grid; place-items: center; width: 1.9em; height: 1.9em; padding: 0; border: 0; border-radius: .5em; background: none; color: var(--fg-subtle); cursor: pointer; }
+.bd-ab-t .opn:hover { color: var(--fg); background: var(--hover); }
+.bd-ab-t .opn .bd-ic { width: 1.1em; height: 1.1em; }
 /* a section's versions: editor chrome in the gutter right of the page (VAR_GUT, --gut, kept clear by the layout), never
    over it. A ] bracket 10 px off the page's edge spans the section; its picker docks at the bracket's top. Hovering or
    focusing either, or a pick, outlines the section on the page (.bd-var-hl) with its title in a tab. --gut narrower
@@ -5407,6 +5410,12 @@ function liveUrl(a) {
   const u = new URL(a.url);
   return `http://${location.hostname}:${p}${u.pathname}${u.search}`;
 }
+// a live page's own dev server URL, for a tab of its own: http(s) on a loopback host without credentials, as
+// build.live_url_problem allows (a doc can't send the reader anywhere else); null otherwise
+const isLoopback = host => host === 'localhost' || host === '[::1]' || /^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host);
+function devUrl(a) {
+  try { const u = new URL(a.url); return /^https?:$/.test(u.protocol) && !u.username && !u.password && isLoopback(u.hostname) ? u.href : null; } catch { return null; }
+}
 // a website page's widths: board.breakpoints, else desktop, tablet, mobile; each one's design viewport height (vp:
 // board.viewport, {"<width>": height}, first). Full page grows a page's frame to its document, at most PAGE_CAP px.
 const BREAKPOINTS = [1440, 768, 390], BP_H = { 1920: 1080, 1440: 900, 1280: 800, 1024: 768, 768: 1024, 390: 844, 375: 812, 360: 780 }, PAGE_BAR = 40, PAGE_CAP = 30000;
@@ -5623,6 +5632,24 @@ function renderBoard(b) {
   const pageMsg = x => ({ bd: 'page', full: !x.role && fullOf(x), vh: viewSize(x.a)[1] });
   const frameName = x => `bd-page ${pageMsg(x).full ? 'full' : 'view'} ${viewSize(x.a)[1]}`;
   const tellPage = x => { if (!x.fr || devOf(x.a) !== 'page') return; x.fr.name = frameName(x); post(x, pageMsg(x)); };
+  // a page in a tab of its own (Open in new tab, in the toolbar and a page's title bar): a live page's dev server itself
+  // (devUrl: HMR, devtools), never its proxy; a mockup's screen route on this server, as its frame loads it; null when
+  // neither (an export)
+  function tabUrl(a) {
+    if (isLive(a)) return devUrl(a);
+    if (!SERVED) return null;
+    const u = new URL(screenUrl(a, OLD ? VIEW.rev : null, B.theme), location.href);
+    return u.origin === location.origin ? u.href : null;
+  }
+  function openTab(a) { const u = tabUrl(a); if (u) window.open(u, '_blank', 'noopener'); }
+  // the toolbar's page: the selected page, else the page nearest the middle of the view that has a tab URL (the only
+  // one, when it is off the view)
+  function tabTarget() {
+    const sel = B.frames.get(B.sel);
+    if (sel && devOf(sel.a) === 'page') return tabUrl(sel.a) ? sel : null;
+    const xs = pageXs().filter(x => tabUrl(x.a));
+    return nearest(xs.filter(x => !x.el.classList.contains('off'))) || nearest(xs);
+  }
 
   /* artboards */
   function makeAb(a, p, ghost) {
@@ -5637,7 +5664,9 @@ function renderBoard(b) {
     const icons = BPS.map(bpIc), bps = page && !ghost ? h('span', { class: 'bps', role: 'radiogroup', 'aria-label': `Width of ${a.title || id}` }, BPS.map((w, i) =>
       h('button', { type: 'button', role: 'radio', 'data-w': w, title: `${bpName(w)}: ${w} px wide`, 'aria-label': `${bpName(w)}, ${w} px`, onclick: e => { e.stopPropagation(); setBp(id, w); } },
         icons.indexOf(icons[i]) === icons.lastIndexOf(icons[i]) ? ic(icons[i]) : String(w)))) : null;
-    const t = h('div', { class: 'bd-ab-t' }, warn, h('span', { class: 'n' }, a.title || id), rch, bps, dl, tag, cmpBtn, dev === 'icons' && !ghost && iconExportKey(a));
+    const opn = IS_SITE && page && !ghost && tabUrl(a) ? h('button', { type: 'button', class: 'opn', title: 'Open page in a new tab', 'aria-label': `Open ${a.title || id} in a new tab`,
+      onclick: e => { e.stopPropagation(); openTab(a); } }, ic('link')) : null;
+    const t = h('div', { class: 'bd-ab-t' }, warn, h('span', { class: 'n' }, a.title || id), rch, bps, opn, dl, tag, cmpBtn, dev === 'icons' && !ghost && iconExportKey(a));
     const why = ghost ? `Removed in ${VIEW.rev ? 'rev ' + VIEW.rev : 'this revision'}`
       : isLive(a) ? (liveUrl(a) ? '' : SERVED ? 'This revision\'s dev server has no proxy: open the current revision.' : 'A live page: open this doc through serve.py, with the dev server running.')
       : SCREENS ? (OLD ? 'An export shows the current revision\'s screens only.' : '') : SERVED ? '' : `Open this page through serve.py to see the ${SCREEN}.`;
@@ -5982,11 +6011,15 @@ function renderBoard(b) {
     showBox(boxOf([x]), animate, 2); select(id); B.touched = true;
     return true;
   }
+  // of xs, the one whose middle is nearest the middle of the view
+  function nearest(xs) {
+    const c = (stage.clientWidth / 2 - B.tx) / B.k, m = (stage.clientHeight / 2 - B.ty) / B.k, d = x => Math.hypot(x.p.x + x.p.w / 2 - c, x.p.y + x.p.h / 2 - m);
+    return xs.reduce((best, x) => !best || d(x) < d(best) ? x : best, null);
+  }
   // F: the selected screen, else the one nearest the middle of the view
   function focusSel() {
     if (B.sel && focus(B.sel)) return;
-    const W = stage.clientWidth, H = stage.clientHeight, c = (W / 2 - B.tx) / B.k, m = (H / 2 - B.ty) / B.k;
-    const x = shownXs().sort((p, q) => Math.hypot(p.p.x + p.p.w / 2 - c, p.p.y + p.p.h / 2 - m) - Math.hypot(q.p.x + q.p.w / 2 - c, q.p.y + q.p.h / 2 - m))[0];
+    const x = nearest(shownXs());
     if (x) focus(x.a.id);
   }
   function select(id) {
@@ -6241,11 +6274,13 @@ function renderBoard(b) {
     ['full', 'pagefull', 'Full page', 'Full page: every page at its whole height, nothing scrolls inside it'],
     ['viewport', 'pageview', 'Viewport', 'Viewport: every page in a window of its device\'s height that scrolls (sticky bars, scroll effects)']].map(([v, i, l, t]) =>
     h('button', { type: 'button', role: 'radio', 'data-v': v, title: t, 'aria-label': l, onclick: () => setPageView(v) }, ic(i)))) : null;
+  // a website: the selected page (else the one nearest the middle of the view) in a tab of its own, to try it for real
+  const tabBtn = IS_SITE ? tbtn('link', 'Open page in a new tab', () => { const x = tabTarget(); if (x) openTab(x.a); }) : null;
   const tb = h('div', { class: 'bd-btb', role: 'toolbar', 'aria-label': 'Board' }, lpBtn, sep(),
     tbtn('fit', `Fit all ${SCREEN}s (0)`, () => fit(true)), tbtn('minus', 'Zoom out (−)', () => zoomBy(1 / 1.4)), zoomLbl, tbtn('plus', 'Zoom in (+)', () => zoomBy(1.4)),
     tbtn('target', `Focus the selected ${SCREEN} (F, or double-click it)`, () => focusSel()), sep(),
     !IS_DECK && [presBtn, varBtn, flowsBtn, sep()], IS_SITE && [bpSeg, bpIn, sep(), viewSeg], (!IS_SITE || abs.some(a => !isLive(a))) && [IS_SITE && sep(), fidSeg],
-    themeSel && [sep(), h('label', { class: 'th' }, ic('palette'), themeSel)], IS_DECK && [sep(), presBtn]);
+    IS_SITE && [sep(), tabBtn], themeSel && [sep(), h('label', { class: 'th' }, ic('palette'), themeSel)], IS_DECK && [sep(), presBtn]);
   // the motion keys (pause animations, Reduced) are hidden for now: built and painted, not shown; screens play their motion
   if (themeSel) themeSel.addEventListener('change', () => { const x = ITEMS['brief/theme']; if (x && x.setChoice && !OLD) x.setChoice(themeSel.value); else { B.theme = themeSel.value; paintTokens(); } });
   function paintTools() {
@@ -6262,6 +6297,7 @@ function renderBoard(b) {
       if (document.activeElement !== bpIn) bpIn.value = one && !BPS.includes(one) ? one : '';
     }
     if (viewSeg) viewSeg.querySelectorAll('button').forEach(bt => bt.setAttribute('aria-checked', String(bt.dataset.v === B.pageView)));
+    if (tabBtn) tabBtn.disabled = !tabTarget();
   }
   // the theme is the brief's pick (the reader's, else the recommendation): picking a pill re-skins every frame
   const themePick = () => { const x = ITEMS['brief/theme']; const id = x ? x.choice || x.it.recommend : null; return themeOf(id) ? id : B.theme || (themes[0] ? themes[0].id : null); };
