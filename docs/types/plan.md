@@ -7,12 +7,12 @@ A plan the agent writes before it writes code; you approve it or send it back on
 ## Features
 
 - **One page per plan.** The goal, the current state, the proposed design on a canvas, before/after panes, mockups, a numbered timeline of steps with effort, the files each step touches, open questions, risks and checks.
-- **Status chip.** The header shows **Awaiting approval**, **Changes requested** or **Approved · rev X**.
+- **Status chip.** The header shows **Awaiting approval**, **Changes requested**, **Approved · rev X** or **Changes since approved rev X**. Steps the agent marks done after your approval keep it: the chip reads **Approved · rev X · progress in rev Y**.
 - **Open questions with a recommendation.** Each question shows its options as pills with the agent's recommendation starred. Pick one, or press **Accept recommended** to take every starred option.
 - **Need more details.** A toggle after each question's pills asks the agent to explain it further; the comment box says what is missing. Approval waits until no question asks for more details.
 - **Item comments.** Each step and question takes a comment. An item comment counts toward **Request changes**, so a comment alone is enough to send the plan back.
 - **Comments on any part.** Point at an element, select a passage or draw on the page. Notes collect in the **Comments** tab as Pending, then Open once sent. When the agent lists a comment's id in a revision's `resolves`, the comment turns Resolved.
-- **Request changes or Approve plan.** Both send your picks and notes to the agent. The agent revises on a change request and starts coding only after **Approve plan** on the current revision; any edit to the plan resets the approval.
+- **Request changes or Approve plan.** Both send your picks and notes to the agent. The agent revises on a change request and starts coding only after **Approve plan** on the current revision; any edit to the plan beyond marking progress resets the approval.
 - **Revisions.** The **Revisions** tab shows each revision with the agent's note on what changed. Compare two to see new, changed and removed steps, questions and rows marked in place.
 
 ## How an agent makes one

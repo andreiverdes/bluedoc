@@ -646,14 +646,66 @@ def screen_hashes(doc: dict, doc_path: Path) -> dict[str, str | None]:
     return {aid: None if text is None else _hash(text) for aid, text in read_screens(doc, doc_path).items()}
 
 
-def approval_hash(doc, doc_path: Path | None = None) -> str:
+def approval_hash(doc, doc_path: Path | None = None, screens: dict[str, str | None] | None = None) -> str:
     """The docHash an approval carries: sha256 of the doc's canonical JSON (sorted keys, no spaces), and for a doc
-    with a board also of its screen and icon layer hashes, so editing a screen or a layer asks for approval again."""
+    with a board also of its screen and icon layer hashes, so editing a screen or a layer asks for approval again.
+    screens (a history revision's) stands in for reading the files under doc_path."""
     canon = json.dumps(doc, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
-    screens = screen_hashes(doc, doc_path) if doc_path is not None and isinstance(doc, dict) else {}
+    if screens is None:
+        screens = screen_hashes(doc, doc_path) if doc_path is not None and isinstance(doc, dict) else {}
     if screens:
         canon += "\n" + json.dumps(screens, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(canon.encode()).hexdigest()
+
+
+PROGRESS_FIELDS, PROGRESS_META = ("changes", "resolves", "state"), ("rev", "date")
+
+
+def without_progress(doc: dict, picks: dict[str, str] | None = None, approved: dict[str, object] | None = None) -> dict:
+    """A copy of doc without what may change after an approval and keep it: meta.rev and meta.date, `changes`,
+    `resolves`, the `state` labels, steps' `status` and checklist items' `done`. With picks ({"<checklist>:<item>":
+    the reader's approved pick}) a decision's `choice` set to its pick reads as the approved doc's (approved:
+    {"<checklist>:<item>": that doc's item, for its `choice` or its absence})."""
+    d = copy.deepcopy(doc)
+    for k in PROGRESS_FIELDS:
+        d.pop(k, None)
+    if isinstance(d.get("meta"), dict):
+        for k in PROGRESS_META:
+            d["meta"].pop(k, None)
+    for b in all_blocks(d):
+        if b.get("type") not in ("steps", "checklist"):
+            continue
+        for it in b.get("items") or []:
+            if not isinstance(it, dict):
+                continue
+            if b["type"] == "steps":
+                it.pop("status", None)
+                continue
+            it.pop("done", None)
+            k = f"{b.get('id')}:{it.get('id')}"
+            if picks and it.get("choice") and it.get("choice") == picks.get(k):
+                was = (approved or {}).get(k) or {}
+                if "choice" in was:
+                    it["choice"] = was["choice"]
+                else:
+                    del it["choice"]
+    return d
+
+
+def approval_carries(h: dict, rev: str, approved_hash: str, doc: dict, doc_path: Path, picks: dict[str, str]) -> bool:
+    """Whether an approval of revision rev still holds for doc as it is now: the history's rev is the JSON and screens
+    the reader approved (approved_hash), and every change since is progress (without_progress; picks: the decisions
+    the approval carried). Any other change, a screen file or an icon layer included, asks for approval again."""
+    entry = next((e for e in h.get("revs") or [] if e.get("rev") == rev), None)
+    if entry is None:
+        return False
+    old, old_screens = restore(h, entry), entry.get("screens") or {}
+    if approval_hash(old, screens=old_screens) != approved_hash or old_screens != screen_hashes(doc, doc_path):
+        return False
+    items = {f"{b.get('id')}:{it.get('id')}": it for b in all_blocks(old) if b.get("type") == "checklist"
+             for it in b.get("items") or [] if isinstance(it, dict)}
+    canon = lambda d: json.dumps(d, ensure_ascii=False, sort_keys=True)  # noqa: E731
+    return canon(without_progress(old)) == canon(without_progress(doc, picks, items))
 
 
 def screen_source(doc_path: Path, artboard_id: str, rev: str | None = None) -> str | None:

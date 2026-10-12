@@ -73,7 +73,8 @@ Replies: Send answers posts to /__bluedoc/reply, Request changes to /__bluedoc/c
 first start with a new state.db imports the <name>.reply/.changes/.approval files of earlier versions and
 inbox.json's delivered marks, and leaves the files. An approval posts the docHash and rev the page showed: the server
 answers 409 when either differs from the doc's current JSON (and a design's screen files: build.approval_hash) and
-meta.rev. It counts only while the doc is unchanged.
+meta.rev. It holds while the doc is unchanged, or changed only by progress since (build.approval_carries: steps
+marked done, a pick carried over); the page, ping and index.json get it as {rev, at, carried}.
 Python 3.9+ standard library only.
 """
 from __future__ import annotations
@@ -215,17 +216,53 @@ def doc_id(p: Path) -> str | None:
     return doc_info(p)[1]
 
 
-def saved_approval(doc: Path) -> dict | None:
-    """The doc's newest plan approval as {rev, at} (both as the page posted them), or None. It counts only while the
-    doc's JSON is the one approved: an edit in place, even under the same meta.rev, asks for approval again."""
-    row = DB.approval(str(doc.resolve())) if DB else None
-    if not row or not row["doc_hash"] or row["doc_hash"] != doc_hash(doc):
+_carried: dict[str, tuple[tuple, bool]] = {}
+
+
+def approval_of(doc: Path, row: dict | None) -> dict | None:
+    """The approval row as {rev, at, carried} (rev and at as the page posted them), or None. It holds while the doc's
+    JSON and screen files are the ones approved (carried: false), or when every change since is progress
+    (build.approval_carries: carried: true), so marking steps done keeps a plan approved. An approval of an earlier rev
+    that no longer holds comes back with carried: false, so the page can say there are changes since; one of the
+    current rev that an edit in place changed is None: the doc awaits approval again."""
+    if not row or not row["doc_hash"]:
         return None
     try:
         posted = json.loads(row["payload"])
     except ValueError:
         posted = {}
-    return {"rev": posted.get("rev", row["rev"]), "at": posted.get("at", row["at"])}
+    posted = posted if isinstance(posted, dict) else {}
+    out = {"rev": str(posted.get("rev", row["rev"]) or ""), "at": posted.get("at", row["at"])}
+    current, _, rev = doc_info(doc)
+    if row["doc_hash"] == current:
+        return {**out, "carried": False}
+    if approval_carried(doc, row, out["rev"], posted):
+        return {**out, "carried": True}
+    return {**out, "carried": False} if out["rev"] != rev else None
+
+
+def approval_carried(doc: Path, row: dict, rev: str, posted: dict) -> bool:
+    """build.approval_carries for the doc on disk against its history, cached by the approval, the doc's hash and
+    the history file's mtime."""
+    hp = build.history_path(doc)
+    key = (row["id"], doc_hash(doc), mtime(hp))
+    hit = _carried.get(str(doc))
+    if hit and hit[0] == key:
+        return hit[1]
+    picks = {f"{a.get('checklist')}:{a.get('item')}": a["choice"] for a in posted.get("answers") or []
+             if isinstance(a, dict) and isinstance(a.get("choice"), str) and a["choice"]}
+    try:
+        d = json.loads(doc.read_text(encoding="utf-8"))
+        ok = isinstance(d, dict) and build.approval_carries(build.load_history(hp), rev, row["doc_hash"], d, doc, picks)
+    except (OSError, ValueError, KeyError, TypeError, AttributeError):
+        ok = False
+    _carried[str(doc)] = (key, ok)
+    return ok
+
+
+def saved_approval(doc: Path) -> dict | None:
+    """The doc's newest approval (approval_of), or None."""
+    return approval_of(doc, DB.approval(str(doc.resolve())) if DB else None)
 
 
 # ---------- the key writes need ----------
@@ -587,9 +624,11 @@ def summarize(p: Path) -> dict:
     if DB:
         path = str(p.resolve())
         for kind, row in DB.latest(path).items():
-            if kind == "approval" and saved_approval(p) is None:   # approved other content of this doc: awaiting again
-                continue
-            info[kind] = {"at": dt.datetime.fromisoformat(row["at"]).timestamp(), "rev": row["rev"]}
+            at = dt.datetime.fromisoformat(row["at"]).timestamp()
+            if kind != "approval":
+                info[kind] = {"at": at, "rev": row["rev"]}
+            elif ap := approval_of(p, row):   # None: approved other content of this rev, awaiting again
+                info[kind] = {"at": at, "rev": ap["rev"], "carried": ap["carried"]}
         # the home card's progress: the reader's tick and pick values (<checklist>:<item>), {} when there are none
         info["state"] = {k: v for k, v in DB.state(path)[1].items() if k.count(":") == 1 and not k.startswith("__")}
     return info
@@ -704,9 +743,10 @@ def _render(p: Path) -> tuple[int, str]:
             return 422, error_page(p, [log])
     # the history keeps refs; build expands them in the page's doc and in older revisions. validate already showed
     # the doc's own expansion errors; an older revision whose range is gone shows an empty diff
+    # the seed: the reader state, the hash of what this page shows (Approve posts it) and the saved approval
     state = page_state(p)
     return 200, build.build(doc, build.TEMPLATE.read_text(encoding="utf-8"), history, diff_path=p, problems=[],
-                            state=state and {**state, "docHash": shown})
+                            state=state and {**state, "docHash": shown, "approval": saved_approval(p)})
 
 
 # ---------- design screens ----------

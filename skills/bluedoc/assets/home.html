@@ -448,9 +448,11 @@ function progress(d) {
   return { dec, decided, steps, done };
 }
 function statusOf(d) {
-  const approvable = APPROVABLE.has(d.type), errors = d.errors > 0;
-  // a plan or design is approved only for the rev the reader approved; a new rev asks again
-  const approved = approvable && !errors && !!d.approval && String(d.approval.rev ?? '') === String(d.rev ?? '');
+  const approvable = APPROVABLE.has(d.type), errors = d.errors > 0, ap = approvable && !errors && d.approval ? d.approval : null;
+  // a plan or design is approved for the rev the reader approved, and for a later one whose changes are all progress
+  // (the server's `carried`: steps marked done, picks carried over); any other change asks again ("Changes since")
+  const approved = !!ap && (ap.carried === true || String(ap.rev ?? '') === String(d.rev ?? ''));
+  const staleRev = ap && !approved ? String(ap.rev ?? '') : null;
   const sent = Math.max(d.answers ? d.answers.at : 0, d.changes ? d.changes.at : 0);
   const waiting = !approved && sent > d.mtime;
   let p = progress(d);
@@ -460,7 +462,7 @@ function statusOf(d) {
   const total = p.dec + p.steps, did = p.decided + p.done;
   // board column: in progress = partly done; done = all done, approved, or nothing left to decide
   const col = errors ? 'errors' : approved ? 'done' : waiting ? 'waiting' : needs ? 'needs' : did > 0 && did < total ? 'progress' : 'done';
-  return { p, total, did, errors, waiting, needs, awaiting, approved, col, sent, changesSent: !!(waiting && d.changes && (!d.answers || d.changes.at >= d.answers.at)) };
+  return { p, total, did, errors, waiting, needs, awaiting, approved, staleRev, col, sent, changesSent: !!(waiting && d.changes && (!d.answers || d.changes.at >= d.answers.at)) };
 }
 const statusIs = (st, s) => !!st[s];
 const inScope = (d, sc) => !sc || (d.root.slug === sc.slug && (!sc.dir || d.dir === sc.dir || d.dir.startsWith(sc.dir + '/')));
@@ -515,9 +517,9 @@ const PILL_TONE = { risk: 'danger', info: 'info', warn: 'warning', ok: 'success'
 // [tone, label] of the status pill, or null when nothing needs saying
 function statusPill(st, d) {
   if (st.errors) return ['risk', "Doesn't build"];
-  if (st.approved) return ['ok', d.rev ? `Approved · rev ${d.rev}` : 'Approved'];
+  if (st.approved) return ['ok', d.approval.rev ? `Approved · rev ${d.approval.rev}` : 'Approved'];
   if (st.waiting) return ['info', st.changesSent ? 'Changes requested' : 'Answers sent'];
-  if (st.awaiting) return ['warn', 'Awaiting approval'];
+  if (st.awaiting) return ['warn', st.staleRev ? `Changes since approved rev ${st.staleRev}` : 'Awaiting approval'];
   if (st.needs) return ['warn', `${st.p.dec - st.p.decided} to decide`];
   return null;
 }

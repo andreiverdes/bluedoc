@@ -3,8 +3,10 @@
 The state routes refuse a request without X-Bluedoc, from another Origin or Host (403) and a path outside the
 registered folders (404). A PUT and GET round trip; state and queued replies survive a restart and `wait` takes a
 reply once; an import adds only missing keys; the seed is embedded as inert JSON; an approval counts only for the
-doc the page showed (its rev and docHash) and only while the doc is unchanged; reply files of earlier versions are
-imported once and left in place, and no reply files are written."""
+doc the page showed (its rev and docHash) and while the doc is unchanged, or changed only by progress since (a step
+done, the approved pick as the choice: carried), not after any other change; build.approval_carries on the plan and
+on a design's screen files; reply files of earlier versions are imported once and left in place, and no reply files
+are written."""
 from __future__ import annotations
 
 import json
@@ -14,7 +16,9 @@ import stat
 import unittest
 from urllib.parse import quote
 
-from _support import Server, TempHome
+from _support import EXAMPLES, Server, TempHome
+
+import build
 
 JSON = {"Content-Type": "application/json", "X-Bluedoc": "1"}
 
@@ -133,31 +137,111 @@ class State(unittest.TestCase):
         html = self.req("GET", url)[1].decode()
         return json.loads(re.search(r'<script type="application/json" id="bp-state">(.*?)</script>', html, re.S).group(1))
 
+    def approval(self) -> dict | None:
+        """The plan's approval as the ping reports it."""
+        return json.loads(self.req("GET", f"/__bluedoc/ping?path={quote(self.plan_url)}", headers={"X-Bluedoc": "1"})[1])["approval"]
+
+    def card(self) -> dict:
+        """The plan as index.json lists it."""
+        return next(d for r in json.loads(self.req("GET", "/__bluedoc/index.json")[1])["roots"] for d in r["docs"] if d["path"] == self.plan.name)
+
+    def approve(self, body: dict) -> tuple[int, bytes]:
+        return self.req("POST", "/__bluedoc/approve", json.dumps(body).encode(), JSON)
+
+    def approval_body(self, rev: str, answers: list | None = None) -> dict:
+        return {"path": self.plan_url, "rev": rev, "docHash": self.seed(self.plan_url)["docHash"], "decision": "approved",
+                "answers": answers or [], "annotations": [], "at": "2026-01-01T00:00:00Z", "markdown": "# Plan approved: Acme\n"}
+
+    def patch(self, key: str, *args: str) -> None:
+        r = self.tmp.run("build.py", "patch", self.plan, key, *args)
+        self.assertEqual(r.returncode, 0, r.stderr)
+
     def test_approval_counts_while_the_doc_is_unchanged(self) -> None:
-        ping = lambda: json.loads(self.req("GET", f"/__bluedoc/ping?path={quote(self.plan_url)}", headers={"X-Bluedoc": "1"})[1])  # noqa: E731
-        card = lambda: next(d for r in json.loads(self.req("GET", "/__bluedoc/index.json")[1])["roots"] for d in r["docs"] if d["path"] == self.plan.name)  # noqa: E731
-        approve = lambda body: self.req("POST", "/__bluedoc/approve", json.dumps(body).encode(), JSON)  # noqa: E731
         edit = lambda text: self.plan.write_text(json.dumps({**json.loads(self.plan.read_text(encoding="utf-8")), "subtitle": text}), encoding="utf-8")  # noqa: E731
         rev = json.loads(self.plan.read_text(encoding="utf-8"))["meta"]["rev"]
-        body = {"path": self.plan_url, "rev": rev, "docHash": self.seed(self.plan_url)["docHash"], "decision": "approved",
-                "answers": [], "annotations": [], "at": "2026-01-01T00:00:00Z", "markdown": "# Plan approved: Acme\n"}
+        body = self.approval_body(rev)
         # edited in place between the page load and the click: the reader approved a doc they didn't see
         edit("Edited.")
-        status, raw = approve(body)
+        status, raw = self.approve(body)
         self.assertEqual((status, json.loads(raw).get("reload")), (409, True))
-        self.assertIsNone(ping()["approval"])
+        self.assertIsNone(self.approval())
         body["docHash"] = self.seed(self.plan_url)["docHash"]
         for name, over in (("another rev", {"rev": rev + "0"}), ("no docHash", {"docHash": None})):
             with self.subTest(name):
-                self.assertEqual(approve({**body, **over})[0], 409)
-        self.assertIsNone(ping()["approval"])
-        self.assertEqual(approve(body)[0], 200)
-        self.assertEqual(ping()["approval"], {"rev": rev, "at": "2026-01-01T00:00:00Z"})
-        self.assertEqual(card()["approval"]["rev"], rev)
-        # an edit after the approval resets it
+                self.assertEqual(self.approve({**body, **over})[0], 409)
+        self.assertIsNone(self.approval())
+        self.assertEqual(self.approve(body)[0], 200)
+        self.assertEqual(self.approval(), {"rev": rev, "at": "2026-01-01T00:00:00Z", "carried": False})
+        self.assertEqual(self.seed(self.plan_url)["approval"], self.approval())
+        self.assertEqual((self.card()["approval"]["rev"], self.card()["approval"]["carried"]), (rev, False))
+        # an edit of the approved rev in place resets it
         edit("Edited again.")
-        self.assertIsNone(ping()["approval"])
-        self.assertNotIn("approval", card())
+        self.assertIsNone(self.approval())
+        self.assertNotIn("approval", self.card())
+
+    def test_progress_after_an_approval_keeps_it(self) -> None:
+        """An approval of rev 1 carries to later revs that only mark progress (a step done, the approved pick as the
+        item's choice); a text edit ends it, and the ping, the seed and the home card say so with carried: false."""
+        self.assertEqual(self.approve(self.approval_body("1", [{"checklist": "decisions", "item": "retention", "choice": "d180"}]))[0], 200)
+        self.patch("step:steps/0/table", "--set", "status=done", "--change", "Acme: the saved_carts table landed.")
+        self.assertEqual(self.approval(), {"rev": "1", "at": "2026-01-01T00:00:00Z", "carried": True})
+        self.patch("item:decisions/retention", "--set", "choice=d180", "--change", "Acme: retention as approved.")
+        self.assertEqual(self.approval()["carried"], True)
+        self.assertEqual(self.seed(self.plan_url)["approval"]["carried"], True)
+        card = self.card()
+        self.assertEqual((card["rev"], card["approval"]["rev"], card["approval"]["carried"]), ("3", "1", True))
+        # a pick the reader didn't approve, then a step's text: neither is progress
+        for key, field, rev in (("item:decisions/prices", "choice=silent", "4"), ("step:steps/0/repo", "title=Acme: a new repo step", "5")):
+            with self.subTest(key):
+                self.patch(key, "--set", field, "--change", f"Acme: {key} changed.")
+                self.assertEqual(self.approval(), {"rev": "1", "at": "2026-01-01T00:00:00Z", "carried": False})
+                self.assertEqual((self.card()["rev"], self.card()["approval"]["carried"]), (rev, False))
+
+
+class ApprovalCarries(unittest.TestCase):
+    """build.approval_carries on its own: which changes since the approved rev count as progress."""
+
+    def test_plan(self) -> None:
+        path = EXAMPLES / "acme-saved-carts-plan.bluedoc.json"
+        doc = json.loads(path.read_text(encoding="utf-8"))
+        h, approved = build.load_history(build.history_path(path)), build.approval_hash(doc, path)
+        picks = {"decisions:retention": "d180"}
+
+        def progress(d, step, pick, check):
+            step.update(status="done")
+            check.update(done=True)
+            pick.update(choice="d180")
+            d["meta"].update(rev="2", date="2026-10-12")
+            d.update(changes=["Acme: the table landed."], resolves=["c1"])
+            d["state"].append({"label": "1 step done", "kind": "ok"})
+        cases = (("unchanged", lambda d, s, p, c: None, True),
+                 ("progress", progress, True),
+                 ("a pick the reader didn't approve", lambda d, s, p, c: p.update(choice="forever"), False),
+                 ("a step's text", lambda d, s, p, c: s.update(title="Acme: another step"), False),
+                 ("a new option", lambda d, s, p, c: p["choices"].append({"id": "d30", "label": "30 days"}), False),
+                 ("a check's text", lambda d, s, p, c: c.update(text="Acme: another check"), False),
+                 ("the title", lambda d, s, p, c: d.update(title="Acme: another plan"), False))
+        for name, change, carries in cases:
+            with self.subTest(name):
+                d = json.loads(json.dumps(doc))
+                block = {b.get("id"): b for b in build.all_blocks(d)}
+                change(d, block["plan"]["items"][0], next(it for it in block["decisions"]["items"] if it["id"] == "retention"),
+                       block["checks"]["items"][0])
+                self.assertEqual(build.approval_carries(h, "1", approved, d, path, picks), carries)
+        self.assertFalse(build.approval_carries(h, "1", "0" * 64, doc, path, picks), "a docHash rev 1's snapshot doesn't have")
+        self.assertFalse(build.approval_carries(h, "9", approved, doc, path, picks), "a rev the history lacks")
+
+    def test_design_screens(self) -> None:
+        tmp = TempHome()
+        self.addCleanup(tmp.cleanup)
+        path = tmp.copy_examples() / "acme-fit-design.bluedoc.json"
+        doc = json.loads(path.read_text(encoding="utf-8"))
+        rev, h = str(doc["meta"]["rev"]), build.load_history(build.history_path(path))
+        approved = build.approval_hash(doc, path)
+        self.assertTrue(build.approval_carries(h, rev, approved, doc, path, {}))
+        screen = next(f for f in build.screen_paths(doc, path).values() if f.suffix == ".html")
+        screen.write_text(screen.read_text(encoding="utf-8") + "\n<p>Acme</p>\n", encoding="utf-8")
+        self.assertFalse(build.approval_carries(h, rev, approved, doc, path, {}), "a screen edit carried the approval")
 
 
 class ReplyFileImport(unittest.TestCase):

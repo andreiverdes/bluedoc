@@ -71,7 +71,7 @@ Several patches for one reply: bump on the first, `--no-bump` on the rest. Send 
 
 ## Approval loop
 
-As in `types/plan.md`: `serve.py open`, `wait --kind any`, revise on change requests, and build only the approved rev. The approval covers the JSON and every screen file: picks are binding; an unpicked item means your recommendation.
+As in `types/plan.md`: `serve.py open`, `wait --kind any`, revise on change requests, and build only the approved rev. The approval covers the JSON and every screen file: picks are binding; an unpicked item means your recommendation. Marking progress after the approval (checklist `done`, the approved picks as `choice`) keeps it approved; any other edit, a screen file or icon layer included, needs approval again.
 
 ## Fragment
 

@@ -183,5 +183,5 @@ class StateDB:
         return {r[2]: dict(zip(REPLY_KEYS, r)) for r in rows}
 
     def approval(self, path: str) -> dict | None:
-        """The doc's newest approval, or None; the caller compares its doc_hash with the doc's own."""
+        """The doc's newest approval, or None; the caller decides from its doc_hash whether it holds for the doc now."""
         return self.latest(path).get("approval")

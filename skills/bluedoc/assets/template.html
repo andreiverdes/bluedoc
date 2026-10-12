@@ -117,6 +117,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   font: 600 12px/1 var(--sans); white-space: nowrap; color: var(--tf); background: var(--tt); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--t) 32%, transparent); }
 .bd-planchip > i { width: 7px; height: 7px; border-radius: 50%; background: var(--t); box-shadow: 0 0 0 3px color-mix(in oklch, var(--t) 22%, transparent); }
 .bd-planchip .bd-ic { width: 13px; height: 13px; stroke-width: 2.4; }
+.bd-planchip .sub { font-weight: 500; opacity: .72; }
 .bd-planchip.approved { --t: var(--ok); --tf: var(--ok-fg); --tt: var(--ok-tint); }
 .bd-planchip.changes { --t: var(--accent); --tf: var(--accent-fg); --tt: var(--accent-tint); }
 .bd-head h1 { font: 680 clamp(28px, 3.4vw, 38px)/1.14 var(--sans); letter-spacing: -.024em; margin: 14px 0 0; text-wrap: balance; max-width: 22em; }
@@ -1956,6 +1957,9 @@ const store = (() => {
     get, keys,
     // the hash of the doc's JSON this page shows: an approval names it, so it can't cover edits made since
     docHash: SEED && typeof SEED.docHash === 'string' ? SEED.docHash : null,
+    // the server's saved approval {rev, at, carried} as the page loaded (null: none that holds or says what changed);
+    // undefined on a page the server didn't seed
+    approval: SEED && 'approval' in SEED ? (SEED.approval && typeof SEED.approval === 'object' ? SEED.approval : null) : undefined,
     set: (k, v) => { v = String(v); if (get(k) === v) return; put(k, v); queue(k, v); },
     del: k => { if (get(k) == null) return; put(k, null); queue(k, null); },
   };
@@ -2793,7 +2797,8 @@ function decisionsMd(xs = Object.values(ITEMS).filter(x => x.choices || x.note))
 // The page can send replies itself when it is served by scripts/serve.py; otherwise it copies them.
 // Two kinds go back: answers (ticks, picks, item comments: Send answers) and change requests to the
 // document itself (pins, selections, drawings: the bottom toolbar's Request changes).
-const REPLY = { url: null, changes: null, approve: null, approval: null, connected: false, to: '', home: '' };
+// `approval` is the server's saved approval (the seed's, then the ping's): {rev, at, carried} (planState)
+const REPLY = { url: null, changes: null, approve: null, approval: store.approval || null, connected: false, to: '', home: '' };
 if (/^https?:$/.test(location.protocol)) {
   fetch('/__bluedoc/ping?path=' + encodeURIComponent(location.pathname), { cache: 'no-store' }).then(r => r.ok ? r.json() : null).then(j => {
     if (!j || !j.bluedoc) return;
@@ -5646,15 +5651,18 @@ if (REVS.length >= 1 && REVS[0].rev) {
 
 /* ---------- plans: Approve plan; other pages with checklists: Send answers. The keys that end the tray ---------- */
 // Approve plan is the reader's go-ahead for this revision, with their decision picks and any pending
-// comments as notes. Approved is per revision: when served, the ping's `approval` (approved when its rev
-// is the page's); otherwise what this browser stored in PLAN_KEY, which also remembers "changes requested".
+// comments as notes. When served, the server's `approval` {rev, at, carried} (seed, then ping) decides:
+// approved when its rev is the page's, or when `carried` (every change since that rev is progress: steps
+// marked done, picks carried over); an older one that isn't carried reads "Changes since approved rev X".
+// Otherwise what this browser stored in PLAN_KEY, per rev, which also remembers "changes requested".
 function planLocal() { try { const x = JSON.parse(store.get(PLAN_KEY) || 'null'); return x && typeof x === 'object' ? x : null; } catch { return null; } }
 function planState() {
-  if (!APPROVABLE) return { type: DOC_TYPE, state: null, rev: CUR.rev, approvedRev: null };
-  const loc = planLocal(), ap = REPLY.connected ? REPLY.approval : loc && loc.state === 'approved' ? loc : null;
-  const approvedRev = ap ? String(ap.rev ?? '') : null;
-  const state = approvedRev === CUR.rev ? 'approved' : loc && loc.state === 'changes' && String(loc.rev) === CUR.rev ? 'changes' : 'awaiting';
-  return { type: DOC_TYPE, state, rev: CUR.rev, approvedRev };
+  if (!APPROVABLE) return { type: DOC_TYPE, state: null, rev: CUR.rev, approvedRev: null, carried: false };
+  const loc = planLocal(), server = REPLY.connected || store.approval !== undefined;
+  const ap = server ? REPLY.approval : loc && loc.state === 'approved' ? loc : null;
+  const approvedRev = ap ? String(ap.rev ?? '') : null, carried = !!(server && ap && ap.carried === true);
+  const state = approvedRev === CUR.rev || carried ? 'approved' : loc && loc.state === 'changes' && String(loc.rev) === CUR.rev ? 'changes' : ap ? 'stale' : 'awaiting';
+  return { type: DOC_TYPE, state, rev: CUR.rev, approvedRev, carried };
 }
 const revWord = CUR.rev ? ` (rev ${CUR.rev})` : '';
 function approvePayload(note) {
@@ -5667,10 +5675,14 @@ function approvePayload(note) {
 const approveKey = APPROVABLE ? tipped(keyBtn('txt approve', 'check', `Approve ${AP_NOUN}`, {}, () => openApprove())) : null;
 function paintPlan() {
   if (!APPROVABLE || OLD) return;
-  const p = planState(), done = p.state === 'approved', revTxt = CUR.rev ? ` · rev ${CUR.rev}` : '';
+  const p = planState(), done = p.state === 'approved', revTxt = p.approvedRev ? ` · rev ${p.approvedRev}` : '';
   if (planChip) {
     planChip.className = 'bd-planchip ' + p.state;
-    planChip.replaceChildren(...(done ? [ic('tick'), 'Approved' + revTxt] : p.state === 'changes' ? [ic('edit'), 'Changes requested'] : [h('i'), `${AP_TITLE} · Awaiting approval`]));
+    // carried: approved at an earlier rev, and the agent has only marked progress since
+    const since = done && p.approvedRev !== CUR.rev && CUR.rev ? h('span', { class: 'sub' }, `· progress in rev ${CUR.rev}`) : null;
+    planChip.replaceChildren(...(done ? [ic('tick'), 'Approved' + revTxt, since] : p.state === 'changes' ? [ic('edit'), 'Changes requested']
+      : p.state === 'stale' ? [h('i'), `Changes since approved rev ${p.approvedRev}`] : [h('i'), `${AP_TITLE} · Awaiting approval`]).filter(Boolean));
+    planChip.title = p.state === 'stale' ? `You approved rev ${p.approvedRev}; it has changed since, so this rev needs your approval again` : '';
   }
   // a plan can't be approved while an item asks for more details: send it and wait for the agent's rev, or withdraw it
   const asking = done ? [] : Object.values(ITEMS).filter(x => x.more);
@@ -5722,7 +5734,7 @@ function openApprove() {
 async function doApprove() {
   const dlg = approveDlg, p = approvePayload(dlg ? dlg._note.value : '');
   const done = () => {
-    if (REPLY.connected) REPLY.approval = { rev: p.rev, at: p.at };
+    REPLY.approval = { rev: p.rev, at: p.at, carried: false };
     store.set(PLAN_KEY, JSON.stringify({ rev: p.rev, state: 'approved', at: p.at }));
     MARKUP.markSent(p.annotations.map(a => a.id), p.at);
     Object.values(ITEMS).forEach(x => x.markSent()); MARKUP.paint();

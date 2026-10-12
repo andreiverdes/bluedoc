@@ -1,6 +1,6 @@
 # Plan
 
-**When:** whenever you would hand the user a plan before implementing (plan mode, "make a plan", "propose a plan", a design doc) and they can open a browser. Save it as `docs/plans/<topic>.bluedoc.json` unless the repo keeps plans elsewhere. `build.py new plan` sets `meta.kind: "Plan"`, so the page shows a status chip (Awaiting approval, Changes requested, Approved · rev X) and an **Approve plan** key. Plans have no Send answers: the reader's picks travel with **Approve plan** or **Request changes**.
+**When:** whenever you would hand the user a plan before implementing (plan mode, "make a plan", "propose a plan", a design doc) and they can open a browser. Save it as `docs/plans/<topic>.bluedoc.json` unless the repo keeps plans elsewhere. `build.py new plan` sets `meta.kind: "Plan"`, so the page shows a status chip (Awaiting approval, Changes requested, Approved · rev X, Changes since approved rev X) and an **Approve plan** key. Plans have no Send answers: the reader's picks travel with **Approve plan** or **Request changes**.
 
 **Home card:** a step timeline (a status dot and an effort bar per step) and the A/M/D/R file counts.
 **Required** (an error on a new rev, a warning on older ones): a `steps` block and a `files` block.
@@ -32,7 +32,7 @@
 2. Run `serve.py wait <doc> --kind any` in the background.
 3. **Approval** (`--- bluedoc approval … ---`): implement exactly the approved rev. Use the reader's picks; an open question with no pick means your recommendation. The notes sent with the approval are binding instructions.
 4. **Change request**: revise the plan (`build.py patch`, which bumps `meta.rev` and writes `changes`; `--resolves <id>` per comment you addressed), send `<url>?diff=<previous rev>`, wait again. Picks sent with it are the reader's decisions so far: carry them over as `choice`. A question marked **Need more details** gets a fuller `detail` and options, and stays unpicked.
-5. Never start implementing before an approval of the current rev. A new rev, or any edit of the JSON after the approval, resets it.
+5. Never start implementing before an approval of the current rev. Marking steps done after the approval (`patch step:… --set status=done`, which bumps past the approved rev; checklist `done`; the approved picks as `choice`) keeps it approved; any other edit needs approval again, and so does `--no-bump` on the approved rev itself, which rewrites what was approved.
 
 ## Fragment
 

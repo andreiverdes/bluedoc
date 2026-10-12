@@ -3,10 +3,12 @@
 Two docs with one doc.id each keep their own outbox (st/shared-outbox). A wider folder leaves a doc's URL as it was,
 and a write the server answers with 404 stays in the outbox and reaches the server once the URL answers again
 (st/url-move). Approve on a page whose doc was edited in place after it loaded is refused, and the page offers
-Reload (st/approval-unseen). A doc that quotes an HTML comment opener renders (bld/comment-escape). A plan's item
-comments and every page's "Need more details" items count toward Request changes and go with it (rc/items). A design
-board's link edits and moved screens are drafts in reader state that go with Request changes with a `patch` command each
-and are resolved once the doc has them, or marked stale when a newer rev changed the link (bd/link-edit, bd/move).
+Reload (st/approval-unseen). An approval holds through a rev that only marks a step done (Approved · rev 1 · progress
+in rev 2) and not through a text edit (Changes since approved rev 1) (st/approval-carry). A doc that quotes an HTML
+comment opener renders (bld/comment-escape). A plan's item comments and every page's "Need more details" items count
+toward Request changes and go with it (rc/items). A design board's link edits and moved screens are drafts in reader
+state that go with Request changes with a `patch` command each and are resolved once the doc has them, or marked stale
+when a newer rev changed the link (bd/link-edit, bd/move).
 
 The browser tests run only with BLUEDOC_BROWSER_TESTS=1 and Chrome installed (BLUEDOC_CHROME names it when it isn't
 in a usual place); each starts Chrome with a temp profile and the server on a free port. The URL check needs no browser."""
@@ -271,6 +273,26 @@ class PageSync(ChromePage):
         self.assertEqual(a.ev("document.querySelector('#bp-toast button')?.textContent"), "Reload")
         ping = json.loads(self.server.req("GET", f"/__bluedoc/ping?path={quote(url)}", headers={"X-Bluedoc": "1"})[1])
         self.assertIsNone(ping["approval"])
+
+    def test_marking_steps_done_keeps_an_approval(self) -> None:
+        url = self.server.url_for(self.plan)
+        a = self.open(url)
+        a.ev("document.querySelector('.bd-key.approve').click()")
+        a.wait_for("!!document.querySelector('.bd-approve[open] .bp-btn.ok')")
+        a.ev("document.querySelector('.bd-approve[open] .bp-btn.ok').click()")
+        self.toast(a, "approved")
+        chip = "[document.querySelector('.bd-planchip').textContent, document.querySelector('.bd-key.approve').disabled, BP.planState().state]"
+        self.assertEqual(a.ev(chip), ["Approved · rev 1", True, "approved"])
+        # rev 2 only marks a step done: still approved; rev 3 changes a step's text: approve again
+        for key, field, says, disabled, state in (
+                ("step:steps/0/table", "status=done", "Approved · rev 1· progress in rev 2", True, "approved"),
+                ("step:steps/0/repo", "title=Acme: a new repo step", "Changes since approved rev 1", False, "stale")):
+            with self.subTest(key):
+                r = self.tmp.run("build.py", "patch", self.plan, key, "--set", field, "--change", f"Acme: {key}.")
+                self.assertEqual(r.returncode, 0, r.stderr)
+                a.go(f"{self.base}{url}")
+                a.wait_for(f"document.querySelector('.bd-planchip').textContent === {json.dumps(says)}")
+                self.assertEqual(a.ev(chip), [says, disabled, state])
 
     def test_a_doc_quoting_a_comment_opener_renders(self) -> None:
         quoted = "<!-- Acme banner -->\n<h1>Acme</h1>"
