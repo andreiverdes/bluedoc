@@ -22,7 +22,7 @@ A website's pages on a board, live from its local dev server: you comment on sec
   ```
 
   `build.py patch <doc> <key>` prints the page, the selector and the source hints: the section's when the selector names it, else every section's.
-- **Versions in place.** A section tied to a brief decision shows **A B C** keys over it, the recommendation starred. Each version is a short list of text or HTML edits the page applies inside that section, so you compare headlines or pricing tables in the real layout. In **Request changes** and **Approve website**, each pick comes with a `Shown in: Home › Hero · Source: …` line.
+- **Versions in place.** A section tied to a brief decision gets a bracket in the board's margin beside the page, along the section, with **A B C** keys at its top, the recommendation starred; pointing at them outlines the section on the page. Each version is a short list of text or HTML edits the page applies inside that section, so you compare headlines or pricing tables in the real layout. In **Request changes** and **Approve website**, each pick comes with a `Shown in: Home › Hero · Source: …` line.
 - **Approve website.** As on plans and designs: the agent waits for **Approve website** on the current revision, then writes the picks into the source. The approval covers the doc and any mockup files; the live site keeps changing under hot reload.
 - **Isolation.** The proxy answers only requests addressed to itself (no DNS rebinding), drops bluedoc's key cookie before forwarding, and lets only this server's pages frame it. The live page runs on the proxy's origin, never the doc page's, so the site's scripts can't read the doc page or the key it keeps.
 

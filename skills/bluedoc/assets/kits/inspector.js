@@ -1,6 +1,7 @@
 /* bluedoc inspector: runs inside every design screen frame (opaque-origin sandbox) and talks to the design page. On a
    website's live page, serve.py's dev-server proxy injects it as <script src data-parents="<origin> …">: it posts to
-   those page origins and names elements from the nearest unique id as well.
+   those page origins, names elements from the nearest unique id as well, and roots the page's IntersectionObservers in
+   the frame's own viewport.
    Page -> frame: {bd:'mode', mode}, {bd:'tokens', theme, motion}, {bd:'view', sketch, reduced, paused}, {bd:'locate', sels},
      {bd:'sections', sels}   a website page's section selectors: hover and pick report the innermost one holding the element
      {bd:'edits', list}      list: [{sel, edits: [{sel?, text? | html?}]}]: the variants shown in place. Each edit sets the
@@ -131,6 +132,25 @@
   // stirred: the document changed (DOM, a load, fonts) since the last report; a report without it follows the frame alone
   const report = () => { clearTimeout(reportT); reportT = setTimeout(() => ready(measure()), 120); };
   const stir = () => { stirred = true; report(); };
+
+  /* A live page's IntersectionObserver without a root watches the frame's own viewport (root: document), not the part
+     of the frame the board shows: else zooming or panning the board reads to the page as a scroll (its nav turns to
+     glass, reveals fire), and a tall frame restyled at a new scale flashes blank. Percent margins are of the design
+     viewport's height and the frame's width, as in Full page the frame's viewport is the whole page. */
+  if (LIVE && typeof IntersectionObserver === 'function' && typeof Proxy === 'function') {
+    const pct = (v, size) => { const m = /^(-?\d*\.?\d+)%$/.exec(v); return m ? +m[1] * size / 100 + 'px' : v; };
+    const marginPx = rm => {
+      const v = String(rm).trim().split(/\s+/);
+      if (v.length > 4 || !v.every(s => /^-?\d*\.?\d+(px|%)?$/.test(s))) return rm;   // the browser's to refuse
+      const [t, r = t, b = t, l = r] = v, H = pin || innerHeight;
+      return [pct(t, H), pct(r, innerWidth), pct(b, H), pct(l, innerWidth)].join(' ');
+    };
+    window.IntersectionObserver = new Proxy(IntersectionObserver, { construct(IO, [cb, opts], nt) {
+      const o = opts && typeof opts === 'object' ? opts : {};
+      if (o.root != null) return Reflect.construct(IO, [cb, opts], nt);
+      return Reflect.construct(IO, [cb, { ...o, root: doc, ...('rootMargin' in o ? { rootMargin: marginPx(o.rootMargin) } : {}) }], nt);
+    } });
+  }
   const startView = /^bd-page (full|view) (\d{3,4})$/.exec(window.name || '');   // the page's view before it can say so
   if (startView && startView[1] === 'full') setPin(+startView[2]);
 

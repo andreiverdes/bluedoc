@@ -10,9 +10,10 @@ source hints. The server's proxy for a dev server answers only its own Host, inj
 X-Frame-Options and frame-ancestors for its own, strips bluedoc's key cookie, rewrites Host to the dev server, pins
 viewport heights in CSS and HTML styles, and answers 502 when the dev server is down; the doc page's CSP frames exactly
 that proxy. In headless Chrome (BLUEDOC_BROWSER_TESTS=1), a pin on a live page carries its section's source hints and
-width into the change request, a variant pick edits the page in place, a breakpoint resizes the page, and Full page
-frames a page at its whole height with a 100vh hero 900 px tall, pins in board space, and falls back to Viewport for a
-page that grows with its frame."""
+width into the change request, a variant pick edits the page in place from a picker in the gutter beside the page (clear
+of every page; pointing at it outlines the section), a breakpoint resizes the page, and Full page
+frames a page at its whole height with a 100vh hero 900 px tall, pins in board space, zooms without a reload, a
+re-layout or the page seeing a scroll, and falls back to Viewport for a page that grows with its frame."""
 from __future__ import annotations
 
 import copy
@@ -56,10 +57,16 @@ STUB_PAGE = """<!doctype html><html lang="en"><head><meta charset="utf-8"><title
 <section id="faq"><h2>Questions</h2></section></body></html>"""
 # a long page whose hero is 100vh in its stylesheet: a 5svh nav (style attribute), the 900 px hero, a 10dvh band (style
 # element; an at-rule's 50vh stays), a 2000 px FAQ with #deep 1500 px down it. At 1440 px in Full page: 3035 px tall.
+# Its script notes in body[data-seen] what its IntersectionObservers see: the nav (in or out of view) and #deep, fully
+# in view above the bottom 20 % of the viewport (180 px of the design viewport's 900).
 TALL_PAGE = """<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Acme Fit</title>
 <link rel="stylesheet" href="/tall.css"><style>.band { height: 10dvh; } @media (min-height: 50vh) { .band { outline: 0; } }</style></head>
 <body><header class="site-nav" style="height: 5svh">Acme Fit</header><section class="hero"><h1 id="hero-title">Track everything</h1></section>
-<div class="band"></div><section id="faq"><h2 style="margin: 0">Questions</h2><p id="deep">Cancel any time</p></section></body></html>"""
+<div class="band"></div><section id="faq"><h2 style="margin: 0">Questions</h2><p id="deep">Cancel any time</p></section>
+<script>const seen = s => { document.body.dataset.seen = (document.body.dataset.seen || '') + s + ' '; };
+new IntersectionObserver(([e]) => seen(e.isIntersecting ? 'nav' : 'nav-out')).observe(document.querySelector('.site-nav'));
+new IntersectionObserver(([e]) => { if (e.isIntersecting) seen('deep'); }, { rootMargin: '0px 0px -20%', threshold: 1 }).observe(document.getElementById('deep'));</script>
+</body></html>"""
 TALL_CSS = """body { margin: 0; font: 16px sans-serif; } .hero { position: relative; height: 100vh; }
 #hero-title { position: absolute; left: 100px; top: 100px; width: 600px; height: 80px; margin: 0; }
 #faq { position: relative; height: 2000px; } #deep { position: absolute; left: 200px; top: 1500px; width: 300px; height: 40px; margin: 0; }"""
@@ -133,17 +140,17 @@ def site_doc(url: str) -> dict:
                          {"id": "faq", "title": "FAQ", "sel": "#faq", "source": "src/components/Faq.astro:3"}]}]}]}]}
 
 
-def write_site(folder: Path, url: str) -> Path:
-    """The site's repo in folder: src/ files the source hints name, and docs/site.bluedoc.json."""
+def write_site(folder: Path, url: str, doc: dict | None = None) -> Path:
+    """The site's repo in folder: src/ files the source hints name, and docs/site.bluedoc.json (doc, else site_doc(url))."""
     for rel, text in {"src/pages/index.astro": "<Hero />\n", "src/content/site.ts": "export const hero = { headline: 'Track everything' };\n",
                       "src/components/Hero.astro": "<section class=\"hero\"></section>\n",
                       "src/components/Faq.astro": "---\n---\n<section id=\"faq\"></section>\n"}.items():
         (folder / rel).parent.mkdir(parents=True, exist_ok=True)
         (folder / rel).write_text(text, encoding="utf-8")
-    doc = folder / "docs" / "site.bluedoc.json"
-    doc.parent.mkdir(parents=True, exist_ok=True)
-    doc.write_text(json.dumps(site_doc(url), indent=1) + "\n", encoding="utf-8")
-    return doc
+    path = folder / "docs" / "site.bluedoc.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(doc or site_doc(url), indent=1) + "\n", encoding="utf-8")
+    return path
 
 
 class WebsiteCase(unittest.TestCase):
@@ -519,7 +526,7 @@ class SiteInChrome(unittest.TestCase):
         self.addCleanup(self.dev.stop)
         self.tmp = TempHome()
         self.addCleanup(self.tmp.cleanup)
-        self.doc_path = write_site(self.tmp.dir / "site", self.dev.origin + self.PATH)
+        self.doc_path = write_site(self.tmp.dir / "site", self.dev.origin + self.PATH, self.site(self.dev.origin + self.PATH))
         self.assertEqual(self.tmp.run("serve.py", "add", self.doc_path.parent).returncode, 0)
         self.server = Server(self.tmp)
         self.server.start()
@@ -550,6 +557,10 @@ class SiteInChrome(unittest.TestCase):
         t.ev(f"(ta => {{ ta.value = {json.dumps(note)}; ta.dispatchEvent(new Event('input')); }})(document.querySelector('.bd-cmp textarea'))")
         t.ev("document.querySelector('.bd-cmp .bp-btn.primary').click()")
         return t.wait_for(f"BP.annotations().find(a => a.note === {json.dumps(note)})")
+
+    def site(self, url: str) -> dict:
+        """The doc to serve, its page at url."""
+        return site_doc(url)
 
     def page(self) -> dict:
         return self.tab.ev("BP.board().artboards[0]")
@@ -595,10 +606,83 @@ class LivePageInChrome(SiteInChrome):
         self.assertEqual(self.tab.ev("document.querySelector('iframe.bd-ab-fr').width"), "390")
 
 
+class VersionsGutterInChrome(SiteInChrome):
+    """A section's versions are editor chrome in the gutter right of its page: the bracket along the hero and its picker
+    at the bracket's top lie outside the page and clear of the next page; pointing at the picker outlines the hero on
+    the page at any zoom, and a pick changes the page and outlines the hero for a moment."""
+
+    def site(self, url: str) -> dict:
+        doc = site_doc(url)
+        board_of(doc)["artboards"].append({"id": "about", "title": "About", "device": "page", "fidelity": "hifi", "url": url + "about"})
+        return doc
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.tab.wait_for("(b => b.artboards[1].ready && b.artboards[0].page.sections.hero)(BP.board())", 15)
+        self.tab.ev("BP.board({focus: 'home'})")   # fit shows both pages too small for the picker: the bracket alone
+        self.tab.wait_for("(e => e && !e.hidden && e.offsetWidth > 0)(document.querySelector('.bd-ab[data-ab=home] .bd-var'))")
+
+    def box(self, sel: str) -> list[float]:
+        return self.tab.ev(f"(r => [r.left, r.top, r.right, r.bottom])(document.querySelector({json.dumps(sel)}).getBoundingClientRect())")
+
+    def mouse(self, x: float, y: float, kinds=("mouseMoved",)) -> None:
+        for kind in kinds:
+            self.browser.call("Input.dispatchMouseEvent", {"type": kind, "x": x, "y": y, "button": "left", "buttons": int(kind == "mousePressed"), "clickCount": 1},
+                              self.tab.session)
+            time.sleep(0.05)
+
+    def section_box(self) -> list[float]:
+        """The hero's rect in the window, from the rect its frame reports."""
+        s = self.page()["page"]["sections"]["hero"]
+        f = self.box(".bd-ab[data-ab=home] iframe.bd-ab-fr")
+        k = (f[2] - f[0]) / 1440
+        return [f[0] + s["x"] * k, f[1] + s["y"] * k, f[0] + (s["x"] + s["w"]) * k, f[1] + (s["y"] + s["h"]) * k]
+
+    def test_the_bracket_and_picker_sit_outside_every_page(self) -> None:
+        home, about = self.box(".bd-ab[data-ab=home] .bd-ab-scr"), self.box(".bd-ab[data-ab=about] .bd-ab-scr")
+        about[1] -= 40 * (about[2] - about[0]) / 1440   # with its browser bar
+        for sel in (".bd-ab[data-ab=home] .bd-var", ".bd-ab[data-ab=home] .bd-var-br"):
+            b = self.box(sel)
+            self.assertGreaterEqual(b[0], home[2], f"{sel} {b} overlaps the page {home}")
+            self.assertFalse(b[0] < about[2] and about[0] < b[2] and b[1] < about[3] and about[1] < b[3], f"{sel} {b} overlaps the next page {about}")
+        hero = self.section_box()
+        bracket = self.box(".bd-ab[data-ab=home] .bd-var-br")
+        self.assertLessEqual(abs(bracket[1] - hero[1]) + abs(bracket[3] - hero[3]), 3, (bracket, hero))
+        self.assertEqual(self.tab.ev("document.querySelectorAll('.bd-ab[data-ab=about] :is(.bd-var, .bd-var-br)').length"), 0)
+
+    def test_pointing_at_the_picker_outlines_the_section(self) -> None:
+        hl = ".bd-ab[data-ab=home] .bd-var-hl"
+        for zoom in ("focus", "+"):
+            if zoom == "+":
+                k = self.tab.ev("BP.board().k")
+                self.tab.ev("document.body.dispatchEvent(new KeyboardEvent('keydown', { key: '+', bubbles: true }))")
+                self.tab.wait_for(f"BP.board().k > {k} * 1.2")
+                time.sleep(0.5)
+            self.assertTrue(self.tab.ev(f"document.querySelector({json.dumps(hl)}).hidden"), f"outlined at rest ({zoom})")
+            p = self.box(".bd-ab[data-ab=home] .bd-var")
+            self.mouse((p[0] + p[2]) / 2, (p[1] + p[3]) / 2)
+            self.tab.wait_for(f"!document.querySelector({json.dumps(hl)}).hidden")
+            got, want = self.box(hl), self.section_box()
+            self.assertLessEqual(max(abs(g - w) for g, w in zip(got, want)), 2, (zoom, got, want))
+            self.mouse(5, 450)
+            self.tab.wait_for(f"document.querySelector({json.dumps(hl)}).hidden")
+
+    def test_a_pick_changes_the_page_and_shows_the_section(self) -> None:
+        b = self.box(".bd-ab[data-ab=home] .bd-var button[data-id=b]")
+        self.mouse((b[0] + b[2]) / 2, (b[1] + b[3]) / 2, ("mouseMoved", "mousePressed", "mouseReleased"))
+        self.mouse(5, 450)
+        self.assertEqual(self.page()["page"]["variants"]["hero"]["shown"], "b")
+        hl = json.dumps(".bd-ab[data-ab=home] .bd-var-hl")
+        self.assertFalse(self.tab.ev(f"document.querySelector({hl}).hidden"), "no outline right after the pick")
+        self.tab.wait_for(f"document.querySelector({hl}).hidden", 3)
+        a = self.pin_at(400, 140, "Shorter")
+        self.assertEqual(a["target"]["text"], "Build the habit, one week at a time.", "the frame doesn't show version B")
+
+
 class FullPageInChrome(SiteInChrome):
     """Full page: the frame grows to the document with its viewport heights pinned (a 100vh hero stays 900 px tall),
-    stays that tall, carries pins in board space and pans the board to a section; Viewport is the old scrolling frame,
-    remembered per doc."""
+    stays that tall, carries pins in board space and pans the board to a section, and zooms without a reload, a
+    re-layout or the page seeing a scroll; Viewport is the old scrolling frame, remembered per doc."""
     PATH = "/tall"
     TALL = 45 + 900 + 90 + 2000   # the 5svh nav, the 100vh hero, the 10dvh band, the FAQ
 
@@ -650,6 +734,41 @@ class FullPageInChrome(SiteInChrome):
     def test_a_breakpoint_pins_its_own_viewport(self) -> None:
         self.tab.ev("BP.board({breakpoint: 390})")   # 844 px tall at 390: the nav 42.2, the hero 844, the band 84.4
         self.tab.wait_for("(a => a.w === 390 && a.page.vh === 844 && Math.abs(a.h - (42.2 + 844 + 84.4 + 2000)) <= 1)(BP.board().artboards[0])", 15)
+
+    def test_a_zoom_keeps_the_frame_and_the_page_still(self) -> None:
+        """Wheel zoom in and out, the + and − buttons and Fit: the frame never reloads or remounts, reports no height
+        and the board lays nothing out again; the page's IntersectionObservers watch the whole page, not the part the
+        board shows, so the nav never leaves their view (a nav turning to glass mid-zoom flashed the frame blank)."""
+        t, b = self.tab, self.browser
+        time.sleep(0.6)   # the fit after the page grew, and the frame's last report of its size
+        t.ev("""(() => { const m = window.__zoom = { loads: 0, mounts: 0, drops: 0, heights: 0, lays: 0, fr: document.querySelector('iframe.bd-ab-fr') };
+          document.addEventListener('load', e => { if (e.target.tagName === 'IFRAME') m.loads++; }, true);
+          new MutationObserver(rs => { for (const r of rs) {
+            for (const n of r.addedNodes) if (n.nodeName === 'IFRAME') m.mounts++;
+            for (const n of r.removedNodes) if (n.nodeName === 'IFRAME') m.drops++;
+            if (r.type === 'attributes' && r.target.classList.contains('bd-ab')) m.lays++; } })
+            .observe(document.querySelector('.bd-board'), { subtree: true, childList: true, attributes: true, attributeFilter: ['style'] });
+          addEventListener('message', e => { if (e.data && e.data.bd === 'ready') m.heights++; }); })()""")
+        frame = b.call("Page.getFrameTree", session=t.session)["frameTree"]["childFrames"][0]["frame"]["id"]
+        world = b.call("Page.createIsolatedWorld", {"frameId": frame, "worldName": "zoom-test"}, t.session)["executionContextId"]
+        seen = lambda: b.call("Runtime.evaluate", {"expression": "document.body.dataset.seen", "contextId": world, "returnByValue": True},
+                              t.session)["result"]["value"].split()
+        self.assertEqual(sorted(seen()), ["deep", "nav"], "the page's observers see the whole page, the % margin in design px")
+        x, y = self.on_frame(700, 400)
+        for dy in [-40] * 8 + [40] * 8:   # in to 400 %, the nav far above the view, and out
+            b.call("Input.dispatchMouseEvent", {"type": "mouseWheel", "x": x, "y": y, "deltaX": 0, "deltaY": dy, "modifiers": 2}, t.session)
+            time.sleep(0.03)
+        for label in ("Zoom in", "Zoom in", "Zoom out", "Fit all"):
+            t.ev(f"document.querySelector('[aria-label^=\"{label}\"]').click()")
+            time.sleep(0.1)
+        time.sleep(0.5)
+        self.assertEqual(sorted(seen()), ["deep", "nav"], "the page saw the zoom as a scroll")
+        z = t.ev("(m => ({ loads: m.loads, mounts: m.mounts, drops: m.drops, heights: m.heights, lays: m.lays, same: m.fr === document.querySelector('iframe.bd-ab-fr') }))(window.__zoom)")
+        self.assertEqual(z, {"loads": 0, "mounts": 0, "drops": 0, "heights": 0, "lays": 0, "same": True})
+        self.assertEqual((self.page()["h"], self.page()["page"]["frame"]), (self.TALL, [1440, self.TALL]))
+        t.ev("BP.board({breakpoint: {home: 1440}})")   # a re-layout at the same width: the probe sees one
+        self.assertGreater(t.ev("window.__zoom.lays"), 0, "the re-layout probe sees nothing")
+        self.assertEqual(self.browser.errors, [])
 
 
 class GrowingPageInChrome(SiteInChrome):

@@ -1559,24 +1559,40 @@ i.warn[hidden] { display: none; }
 .bd-ab-t .bps button:hover { color: var(--fg); }
 .bd-ab-t .bps button[aria-checked="true"] { color: var(--fg); background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: var(--shadow-hk); }
 .bd-ab-t .bps .bd-ic { width: 1.15em; height: 1.15em; }
-/* a section's versions picker: docked to the page's right edge at the section's top, opaque on an accent ring so it reads
-   over any page, with a bracket down the page's edge for the section's whole height; sizes in screen px (÷ --k) */
-.bd-var { position: absolute; z-index: 3; right: 0; display: flex; align-items: center; gap: .4em; max-width: calc(100% - 24px / var(--k)); margin: calc(10px / var(--k)) calc(12px / var(--k)) 0 0; padding: .35em .4em .35em .6em;
-  border-radius: .8em; font: 600 calc(13px / var(--k))/1.2 var(--sans); color: var(--fg); background: var(--surface);
+/* a section's versions: editor chrome in the gutter right of the page (VAR_GUT, --gut, kept clear by the layout), never
+   over it. A ] bracket 10 px off the page's edge spans the section; its picker docks at the bracket's top. Hovering or
+   focusing either, or a pick, outlines the section on the page (.bd-var-hl) with its title in a tab. --gut narrower
+   than the full picker on screen (data-vz on the board's layer): s drops the pick's label, xs is a rail of keys, br the
+   bracket alone, off nothing. Sizes in screen px (÷ --k) */
+.bd-var { position: absolute; z-index: 3; left: calc(100% + 20px / var(--k)); display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: .5em .4em;
+  box-sizing: border-box; width: max-content; max-width: calc(var(--gut) - 26px / var(--k)); padding: .45em; border-radius: .8em;
+  font: 600 calc(12.5px / var(--k))/1.2 var(--sans); color: var(--fg); background: var(--surface);
   box-shadow: 0 0 0 calc(1.5px / var(--k)) var(--accent-solid), var(--shadow-3); white-space: nowrap; }
-.bd-var[hidden], .bd-var-br[hidden] { display: none; }
-.bd-var > .bd-ic { flex: none; width: 1.1em; height: 1.1em; color: var(--accent-fg); }
-.bd-var .l { overflow: hidden; text-overflow: ellipsis; }
-.bd-var .ch { display: inline-flex; gap: .15em; padding: .15em; border-radius: .6em; background: var(--inset); }
-.bd-var button { display: inline-flex; align-items: center; gap: .25em; height: 1.85em; padding: 0 .6em; border: 0; border-radius: .45em; background: none; color: var(--fg-muted); font: inherit; cursor: pointer; }
+.bd-var[hidden], .bd-var-br[hidden], .bd-var-hl[hidden] { display: none; }
+.bd-var > .bd-ic { width: 1.1em; height: 1.1em; margin-left: .2em; color: var(--accent-fg); }
+.bd-var .l { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.bd-var .rw { grid-column: 1 / -1; display: flex; align-items: center; gap: .5em; min-width: 0; }
+.bd-var .ch { flex: none; display: inline-flex; gap: .15em; padding: .15em; border-radius: .6em; background: var(--inset); }
+.bd-var button { display: inline-flex; align-items: center; justify-content: center; gap: .25em; height: 1.85em; padding: 0 .6em; border: 0; border-radius: .45em; background: none; color: var(--fg-muted); font: inherit; cursor: pointer; }
 .bd-var button:hover:not(:disabled) { color: var(--fg); }
 .bd-var button[aria-checked="true"] { color: #fff; background: var(--accent-solid); box-shadow: var(--shadow-fill); }
 .bd-var button:disabled { cursor: default; }
 .bd-var button .bd-ic { width: 1em; height: 1em; color: var(--warn); }
 .bd-var button[aria-checked="true"] .bd-ic { color: #fff; }
-.bd-var .pk { overflow: hidden; text-overflow: ellipsis; max-width: calc(260px / var(--k)); font-weight: 500; color: var(--fg-muted); }
-.bd-var-br { position: absolute; z-index: 2; right: 0; width: calc(4px / var(--k)); border-radius: calc(2px / var(--k)) 0 0 calc(2px / var(--k)); background: var(--accent-solid); pointer-events: none; }
-.bd-ab[data-vz="s"] .bd-var .pk, .bd-ab[data-vz="xs"] .bd-var :is(.pk, .l) { display: none; }
+.bd-var .pk { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; font-weight: 500; color: var(--fg-muted); }
+.bd-var-br { position: absolute; z-index: 3; left: calc(100% + 4px / var(--k)); box-sizing: border-box; width: calc(8px / var(--k));
+  border: calc(2px / var(--k)) solid var(--accent-solid); border-left: 0; border-radius: 0 calc(3px / var(--k)) calc(3px / var(--k)) 0; }
+.bd-var-br::before { content: ""; position: absolute; inset: calc(-2px / var(--k)) calc(-8px / var(--k)) calc(-2px / var(--k)) calc(-4px / var(--k)); }
+.bd-var-hl { position: absolute; z-index: 3; box-sizing: border-box; border: calc(1.5px / var(--k)) dashed var(--accent-solid);
+  background: color-mix(in oklch, var(--accent) 7%, transparent); pointer-events: none; }
+.bd-var-hl b { position: absolute; left: calc(-1.5px / var(--k)); bottom: 100%; padding: 0 calc(6px / var(--k)); border-radius: calc(4px / var(--k)) calc(4px / var(--k)) 0 0;
+  font: 600 calc(11px / var(--k))/1.7 var(--sans); color: #fff; background: var(--accent-solid); white-space: nowrap; }
+.bd-var-hl.in b { left: 0; top: 0; bottom: auto; border-radius: 0 0 calc(4px / var(--k)) 0; }
+.bd-bvp[data-vz="s"] .bd-var .pk, .bd-bvp[data-vz="xs"] .bd-var :is(.l, .pk), .bd-bvp:is([data-vz="br"], [data-vz="off"]) .bd-var, .bd-bvp[data-vz="off"] .bd-var-br { display: none; }
+.bd-bvp[data-vz="xs"] .bd-var { grid-template-columns: auto; justify-items: center; padding: .35em .3em; }
+.bd-bvp[data-vz="xs"] .bd-var > .bd-ic { margin: .1em 0 0; }
+.bd-bvp[data-vz="xs"] .bd-var :is(.rw, .ch) { flex-direction: column; }
+.bd-bvp[data-vz="xs"] .bd-var button { width: 100%; padding: 0 .45em; }
 /* the Pages list: each page's sections under it, with where their source lives */
 .bd-sec-l { list-style: none; margin: 0 0 6px 38px; padding: 0; display: grid; gap: 1px; }
 .bd-scr-l .bd-sec-l button { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 1px 8px; padding: 5px 8px; border-radius: 8px; font-size: 12.5px; }
@@ -5377,6 +5393,7 @@ const DEVICE_IC = { 'watch-round': 'watch', 'watch-square': 'watch', phone: 'pho
 const BEZEL = { 'watch-round': 12, 'watch-square': 10, phone: 12, tablet: 14 };   // CSS px drawn around the screen
 const FIDELITY = { sketch: 'Sketch', wireframe: 'Wireframe', hifi: 'Hi-fi' };
 const AB_GAP = 80, LIVE_MAX = 12, BK_MIN = 0.02, BK_MAX = 4;
+const VAR_GUT = 256;   // board px kept clear right of a website page with versions, for its versions bracket and pickers
 const SCREENS = (() => { try { const x = JSON.parse(document.getElementById('bp-screens').textContent); return x && typeof x === 'object' && !Array.isArray(x) ? x : null; } catch { return null; } })();
 const SERVED = !SCREENS && /^https?:$/.test(location.protocol);
 const LIVE_PORTS = (() => { try { const x = JSON.parse(document.getElementById('bp-live').textContent); return x && typeof x === 'object' && !Array.isArray(x) ? x : null; } catch { return null; } })();
@@ -5573,7 +5590,7 @@ function renderBoard(b) {
   const abs = boardAbs(b), themes = (Array.isArray(b.themes) ? b.themes : []).filter(t => t && typeof t.id === 'string');
   const B = BOARD = { b, abs, k: 1, tx: 0, ty: 0, mode: 'view', sel: null, sketch: false, reduced: REDUCE, paused: false, theme: null, touched: false, lp: false,
     frames: new Map(), ghosts: new Map(), live: new Set(), rqs: new Map(), rq: null, variants: null };
-  const vp = h('div', { class: 'bd-bvp' });
+  const vp = h('div', { class: 'bd-bvp', style: `--gut: ${VAR_GUT}px` });
   const stage = h('div', { class: 'bd-board', tabindex: 0, role: 'region', 'data-m': 'view',
     'aria-label': (b.title || 'Design board') + '. Drag to pan; pinch or Ctrl + scroll to zoom; F focuses the selected screen, 0 fits them all.' }, vp);
   const str = (v, n = 200) => typeof v === 'string' ? v.slice(0, n) : '';
@@ -5672,9 +5689,9 @@ function renderBoard(b) {
   // where every artboard sits at its size now: boardLayout over the real sizes; a placed page (x, y in the doc) moves
   // down by what the pages above it in its column grew past their design viewport
   function homes() {
-    const at = boardLayout(b, VIEW.links, sizeOf);
+    const at = layoutOf(sizeOf);
     if (!IS_SITE) return at;
-    const nom = boardLayout(b, VIEW.links, deviceSize);
+    const nom = layoutOf(deviceSize);
     for (const a of abs) {
       const p = at.get(a.id), n = nom.get(a.id);
       if (!p || !n || !Number.isFinite(a.x) || !Number.isFinite(a.y)) continue;
@@ -5722,20 +5739,46 @@ function renderBoard(b) {
     return secsOf(a).filter(s => varItem(s) && s.variants && typeof s.variants === 'object').map(s => ({ sel: s.sel, edits: Array.isArray(s.variants[varShown(varItem(s))]) ? s.variants[varShown(varItem(s))] : [] }));
   }
   const siteMsgs = x => devOf(x.a) === 'page' ? [{ bd: 'sections', sels: secsOf(x.a).map(s => s.sel) }, { bd: 'edits', list: editsOf(x.a) }] : [];
-  // the in-place pickers: one per section that has versions, docked to the page's right edge at the section's top while
-  // the section shows in the frame, with a bracket down that edge for the section's visible height
+  // a page with versions keeps VAR_GUT clear right of it, in the layout, the fit and the links' routes
+  const gutOf = a => IS_SITE && devOf(a) === 'page' && secsOf(a).some(s => s.decision && s.variants && typeof s.variants === 'object') ? VAR_GUT : 0;
+  function layoutOf(size) {
+    const at = boardLayout(b, VIEW.links, a => { const s = size(a); return s && gutOf(a) ? [s[0] + gutOf(a), s[1]] : s; });
+    for (const a of abs) { const p = at.get(a.id); if (p) p.w -= gutOf(a); }
+    return at;
+  }
+  // the gutter's chrome on screen: the full picker, without the pick's label (s), a rail of keys (xs), the bracket alone
+  // (br), nothing (off)
+  const varZoom = () => { const r = VAR_GUT * B.k; return r >= 230 ? '' : r >= 150 ? 's' : r >= 84 ? 'xs' : r >= 12 ? 'br' : 'off'; };
+  // the versions, one per section that has them, while the section shows in the frame: a bracket in the gutter for the
+  // section's visible height, its picker docked at the bracket's top, and the section outlined on the page (hl) while
+  // either is hovered or keyboard-focused, and for a moment after a pick
   function makeVars(x) {
     for (const s of secsOf(x.a)) {
       const it = varItem(s); if (!it || !it.choices) continue;
-      const pick = h('span', { class: 'pk' });
-      const btns = it.choices.map((c, i) => h('button', { type: 'button', role: 'radio', 'data-id': c.id, disabled: OLD || !!BASE, title: c.label + (c.id === it.it.recommend ? ' (recommended)' : ''),
-        onclick: e => { e.stopPropagation(); it.setChoice(c.id); } }, String.fromCharCode(65 + i), c.id === it.it.recommend && ic('star')));
-      const el = h('div', { class: 'bd-var', hidden: true, role: 'radiogroup', 'aria-label': `${s.title}: versions` }, ic('variants'), h('span', { class: 'l' }, s.title), h('span', { class: 'ch' }, btns), pick);
-      const br = h('div', { class: 'bd-var-br', hidden: true, 'aria-hidden': 'true' });
-      x.el.append(br, el);
-      x.vars.push({ s, it, el, br, btns, pick });
+      const v = { s, it, r: null, pick: h('span', { class: 'pk' }), hot: { hover: false, focus: false, flash: 0 } };
+      v.btns = it.choices.map((c, i) => h('button', { type: 'button', role: 'radio', 'data-id': c.id, disabled: OLD || !!BASE, title: c.label + (c.id === it.it.recommend ? ' (recommended)' : ''),
+        onclick: e => { e.stopPropagation(); it.setChoice(c.id); flashVar(v); } }, String.fromCharCode(65 + i), c.id === it.it.recommend && ic('star')));
+      v.el = h('div', { class: 'bd-var', hidden: true, role: 'radiogroup', 'aria-label': `${s.title}: versions` }, ic('variants'), h('span', { class: 'l' }, s.title), h('span', { class: 'rw' }, h('span', { class: 'ch' }, v.btns), v.pick));
+      v.br = h('div', { class: 'bd-var-br', hidden: true, 'aria-hidden': 'true', title: `${s.title}: ${it.choices.length} versions` });
+      v.hl = h('div', { class: 'bd-var-hl', hidden: true, 'aria-hidden': 'true' }, h('b', {}, s.title));
+      const hot = (k, on) => { v.hot[k] = on; paintHl(v); };
+      for (const t of [v.el, v.br]) { t.addEventListener('pointerenter', () => hot('hover', true)); t.addEventListener('pointerleave', () => hot('hover', false)); }
+      v.el.addEventListener('focusin', e => hot('focus', e.target.matches(':focus-visible')));
+      v.el.addEventListener('focusout', e => { if (!v.el.contains(e.relatedTarget)) hot('focus', false); });
+      x.el.append(v.hl, v.br, v.el);
+      x.vars.push(v);
     }
     paintVars(x);
+  }
+  function flashVar(v) {
+    clearTimeout(v.hot.flash);
+    v.hot.flash = setTimeout(() => { v.hot.flash = 0; paintHl(v); }, 1200);
+    paintHl(v);
+  }
+  function paintHl(v) {
+    const r = v.r, on = !!r && (v.hot.hover || v.hot.focus || !!v.hot.flash);
+    if (on) { Object.assign(v.hl.style, { left: r.x + 'px', top: r.y + 'px', width: r.w + 'px', height: r.h + 'px' }); v.hl.classList.toggle('in', r.y * B.k < 24); }   // at the page's top: its tab inside
+    v.hl.hidden = !on;
   }
   const secKey = s => `:is(${s.sel})`;   // as the frame locates it (a CSS selector, never read as data-bd names)
   function paintVars(x) {
@@ -5743,15 +5786,17 @@ function renderBoard(b) {
       const cur = varShown(v.it), r = x.rects[secKey(v.s)];
       v.btns.forEach(bt => bt.setAttribute('aria-checked', String(bt.dataset.id === cur)));
       v.pick.textContent = cur ? choiceLabel(v.it, cur) + (v.it.choice ? '' : ' (recommended)') : '';
-      v.el.hidden = v.br.hidden = !r || !x.fr || r.y + r.h < 40 || r.y > x.p.h - 40;
-      if (v.el.hidden) continue;
-      const top = clamp(r.y, 0, x.p.h - 40), bottom = clamp(r.y + r.h, top, x.p.h);
-      v.el.style.top = top + 'px';
-      Object.assign(v.br.style, { top: top + 'px', height: (bottom - top) + 'px' });
+      const off = !r || !x.fr || r.y + r.h < 40 || r.y > x.p.h - 40;
+      // the section's part inside the frame (Viewport: the part scrolled into view)
+      const top = off ? 0 : clamp(r.y, 0, x.p.h), left = off ? 0 : clamp(r.x, 0, x.p.w);
+      v.r = off ? null : { x: left, y: top, w: clamp(r.x + r.w, left, x.p.w) - left, h: clamp(r.y + r.h, top, x.p.h) - top };
+      v.el.hidden = v.br.hidden = off;
+      if (!off) { v.el.style.top = top + 'px'; Object.assign(v.br.style, { top: top + 'px', height: v.r.h + 'px' }); }
+      paintHl(v);
     }
   }
   B.paintVariants = () => { for (const x of B.frames.values()) paintVars(x); for (const x of B.live) for (const m of siteMsgs(x)) post(x, m); };
-  const pos = boardLayout(b, VIEW.links, sizeOf);
+  const pos = layoutOf(sizeOf);
   for (const a of abs) { const x = makeAb(a, pos.get(a.id), false); B.frames.set(a.id, x); vp.append(x.el); }
   // a deck's slides in reading order: by row (top first), left to right in a row, ties in the doc's order
   const deck = abs.filter(a => devOf(a) === 'slide').sort((a, c) => pos.get(a.id).y - pos.get(c.id).y || pos.get(a.id).x - pos.get(c.id).x);
@@ -5891,8 +5936,7 @@ function renderBoard(b) {
   function paintView() {
     vp.style.transform = `translate(${B.tx}px,${B.ty}px) scale(${B.k})`;
     vp.style.setProperty('--k', B.k);
-    // a page narrower than 760 screen px shows its versions pickers without the pick's label, under 420 px as icon + keys
-    for (const x of B.frames.values()) if (x.vars.length) { const w = x.p.w * B.k, z = w < 420 ? 'xs' : w < 760 ? 's' : ''; if (x.el.dataset.vz !== z) x.el.dataset.vz = z; }
+    if (vp.dataset.vz !== varZoom()) vp.dataset.vz = varZoom();   // the versions gutter's room on screen
     const g = 24 * B.k; stage.style.backgroundSize = `${g}px ${g}px`; stage.style.backgroundPosition = `${B.tx}px ${B.ty}px`;
     if (zoomLbl) zoomLbl.textContent = Math.round(B.k * 100) + '%';
     if (B.rq) placeRqe();
@@ -5910,10 +5954,11 @@ function renderBoard(b) {
     anim = requestAnimationFrame(step);
   }
   const shownXs = () => [...B.frames.values(), ...B.ghosts.values()].filter(x => !x.el.classList.contains('off'));
-  // the box of xs on the board: their screens with bezels and page bars (titles sit above, in screen px: room().top)
+  // the box of xs on the board: their screens with bezels, page bars and versions gutters (titles sit above, in screen
+  // px: room().top)
   function boxOf(xs) {
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-    for (const x of xs) { const bz = BEZEL[devOf(x.a)] || 0, bar = devOf(x.a) === 'page' ? PAGE_BAR : 0; x0 = Math.min(x0, x.p.x - bz); y0 = Math.min(y0, x.p.y - bz - bar); x1 = Math.max(x1, x.p.x + x.p.w + bz); y1 = Math.max(y1, x.p.y + x.p.h + bz); }
+    for (const x of xs) { const bz = BEZEL[devOf(x.a)] || 0, bar = devOf(x.a) === 'page' ? PAGE_BAR : 0; x0 = Math.min(x0, x.p.x - bz); y0 = Math.min(y0, x.p.y - bz - bar); x1 = Math.max(x1, x.p.x + x.p.w + bz + gutOf(x.a)); y1 = Math.max(y1, x.p.y + x.p.h + bz); }
     return isFinite(x0) ? { x: x0, y: y0, w: Math.max(1, x1 - x0), h: Math.max(1, y1 - y0) } : { x: 0, y: 0, w: 1, h: 1 };
   }
   // the room the view leaves: the toolbar and a title bar above, the tray below (on a design page)
@@ -5923,12 +5968,12 @@ function renderBoard(b) {
     const k = clamp(Math.min((W - 2 * m) / box.w, (H - top - bot) / box.h), BK_MIN, maxK);
     go(k, W / 2 - (box.x + box.w / 2) * k, top + (H - top - bot) / 2 - (box.y + box.h / 2) * k, animate);
   }
-  // a section of a page in Full page (r: its rect in the frame): the page's width across the view (at most 100%), the
-  // section in the middle, or its top at the top when it is taller than the view
+  // a section of a page in Full page (r: its rect in the frame): the page's width and its versions gutter across the view
+  // (at most 100%), the section in the middle, or its top at the top when it is taller than the view
   function showSection(x, r) {
-    const { W, H, m, top, bot } = room(), k = clamp((W - 2 * m) / x.p.w, BK_MIN, 1), y = x.p.y + r.y, avail = H - top - bot;
+    const { W, H, m, top, bot } = room(), w = x.p.w + gutOf(x.a), k = clamp((W - 2 * m) / w, BK_MIN, 1), y = x.p.y + r.y, avail = H - top - bot;
     select(x.a.id); B.touched = true;
-    go(k, W / 2 - (x.p.x + x.p.w / 2) * k, r.h * k <= avail ? top + avail / 2 - (y + r.h / 2) * k : top - y * k, true);
+    go(k, W / 2 - (x.p.x + w / 2) * k, r.h * k <= avail ? top + avail / 2 - (y + r.h / 2) * k : top - y * k, true);
   }
   const rqXs = () => B.variants ? [] : [...B.rqs.values()].map(el => ({ a: {}, p: el._box }));
   const fit = animate => showBox(boxOf([...shownXs(), ...rqXs()]), animate, 1);
@@ -6026,13 +6071,13 @@ function renderBoard(b) {
   // a gesture link has nothing to tap: its element is hidden, so the arrow starts on the screen's border
   const gesture = l => !!l.edge || (() => { const x = B.frames.get(l.from); return !!(x && x.navAt && x.navAt[l.el] === null); })();
   B.boxes = () => { const out = {}; for (const x of B.frames.values()) out[x.a.id] = { ...x.p }; return out; };
-  // what the router avoids: every shown screen with its bezel and title bar
+  // what the router avoids: every shown screen with its bezel, title bar and versions gutter
   function obstacles() {
     const out = {};
     for (const x of [...B.frames.values(), ...B.ghosts.values()]) {
       if (x.el.classList.contains('off')) continue;
       const bz = BEZEL[devOf(x.a)] || 0, bar = devOf(x.a) === 'page' ? PAGE_BAR : 0;
-      out[x.a.id] = { x: x.p.x - bz, y: x.p.y - bz - bar - TITLE_H, w: x.p.w + 2 * bz, h: x.p.h + 2 * bz + bar + TITLE_H };
+      out[x.a.id] = { x: x.p.x - bz, y: x.p.y - bz - bar - TITLE_H, w: x.p.w + 2 * bz + gutOf(x.a), h: x.p.h + 2 * bz + bar + TITLE_H };
     }
     return out;
   }
