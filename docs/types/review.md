@@ -2,11 +2,13 @@
 
 Code review findings, each pinned to its lines in the diff, with options to pick from and the agent's recommendation starred.
 
-![The acme-review-findings page: the acme-shop #412 diff, tiers.ts open, with the findings on lines 10–13 and 17 as cards carrying their options](../media/review-hero.webp)
+![The acme-review-findings page: section #412 in its Diff view (the Checklist and Diff toggle in its title bar), tiers.ts open, with the findings on lines 10–13 and 17 as cards carrying their options](../media/review-hero.webp)
 
 ## Features
 
 - **Findings pinned to diff lines.** A `diff` block shows the change file by file; each finding is a card under the lines it is about, with its size (blocker, major, minor, nit). A file with several findings counts them and steps between them; a pill says how many sit above or below the view.
+- **Checklist or Diff.** A **[Checklist][Diff]** toggle in each PR's section bar shows the findings as a checklist or as the diff, one at a time; the browser remembers the pick, and a link to a finding or to a line opens the view it needs. Print shows both.
+- **The code under each finding.** Expanding a finding in the checklist shows its file, the lines around the comment and the comment card with the same options, plus **Open in Diff view**. Comments pinned on those lines are the diff's own.
 - **Diffs come from git.** The doc stores only the repo and the commit range. The server runs `git diff` on each render and caches the result next to the doc, falling back to `gh pr diff`. Agents never write hunks by hand.
 - **GitHub threads.** `ghthreads.py` turns a PR's open review threads into findings and diff comments.
 - **One decision per finding.** Each finding offers options (Fix in PR, Ticket, Decline, or the real alternatives) with the recommendation starred and a reason. The same pills show on the card and in the checklist, kept in sync.

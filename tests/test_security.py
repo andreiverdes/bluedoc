@@ -90,12 +90,12 @@ class PageDoesNotInject(unittest.TestCase):
         self.assertNotIn("onerror=", outside)
 
     def test_diff_renderer_coerces_hunk_numbers(self) -> None:
-        # the renderer builds an HTML string from the hunk header: every read of hk.old / hk.new goes through num()
+        # the renderer builds an HTML string from the hunk header: every read of hk.old / hk.new goes through diffNum()
         t = template_text()
         reads = [m.start() for m in re.finditer(r"\bhk\.(old|new)\b", t)]
         self.assertTrue(reads, "the diff renderer no longer reads hk.old / hk.new: update this test")
         for i in reads:
-            self.assertEqual(t[i - 4:i], "num(", f"uncoerced hunk number at template offset {i}: {t[i - 40:i + 20]!r}")
+            self.assertEqual(t[i - 8:i], "diffNum(", f"uncoerced hunk number at template offset {i}: {t[i - 40:i + 20]!r}")
 
     def test_doc_urls_go_through_safeUrl(self) -> None:
         # every href built from doc data (links[].href, a diff's url) is filtered by safeUrl
@@ -439,12 +439,12 @@ NODE = shutil.which("node")
 
 
 def run_node(cases: list) -> list:
-    """Evaluate the template's markdown-lite helpers and the diff renderer's num() over cases ([fn, arg])."""
+    """Evaluate the template's markdown-lite helpers and the diff renderer's diffNum() (as `num`) over cases ([fn, arg])."""
     helpers = template_slice("/* ---------- markdown-lite ---------- */", "/* ---------- storage ---------- */")
-    num = re.search(r"const num = x => [^\n]*;", template_text())
-    assert num, "the diff renderer's `const num = x => …;` is gone: update this test"
+    num = re.search(r"const diffNum = x => [^\n]*?;", template_text())
+    assert num, "the diff renderer's `const diffNum = x => …;` is gone: update this test"
     js = ("const src = require('fs').readFileSync(0, 'utf8'); const {code, cases} = JSON.parse(src);"
-          "const fns = new Function(code + '\\nreturn { esc, safeUrl, inline, md, num };')();"
+          "const fns = new Function(code + '\\nreturn { esc, safeUrl, inline, md, num: diffNum };')();"
           "process.stdout.write(JSON.stringify(cases.map(([f, a]) => fns[f](a))));")
     r = subprocess.run([NODE, "-e", js], input=json.dumps({"code": helpers + "\n" + num.group(0), "cases": cases}),
                        capture_output=True, text=True, timeout=20)

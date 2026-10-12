@@ -8,7 +8,9 @@ in rev 2) and not through a text edit (Changes since approved rev 1) (st/approva
 comment opener renders (bld/comment-escape). A plan's item comments and every page's "Need more details" items count
 toward Request changes and go with it (rc/items). A design board's link edits and moved screens are drafts in reader
 state that go with Request changes with a `patch` command each and are resolved once the doc has them, or marked stale
-when a newer rev changed the link (bd/link-edit, bd/move).
+when a newer rev changed the link (bd/link-edit, bd/move). A review's findings section shows its checklist or its diff,
+as [Checklist][Diff] in its title bar picks and the browser remembers, and links into the hidden one show it; an open
+finding shows its comment's file, lines and card, whose pick and pins are the diff's.
 
 The browser tests run only with BLUEDOC_BROWSER_TESTS=1 and Chrome installed (BLUEDOC_CHROME names it when it isn't
 in a usual place); each starts Chrome with a temp profile and the server on a free port. The URL check needs no browser."""
@@ -381,6 +383,93 @@ class ItemRequests(ChromePage):
         self.send_changes(a, "1 request for more details")
         self.assertIn("→ **Need more details**", self.reply(self.docs / "acme-review-findings.bluedoc.json"))
         self.assertEqual(self.count(a), [True, "0"])
+
+
+REVIEW = "acme-review-findings.bluedoc.json"   # sections pr-412 and pr-415: checklist t412 + diff diff-412, t415 + diff-415
+TIER_ROW = "document.querySelector('#item-t412-tier-boundary')"   # its comment (index 0) sits on src/pricing/tiers.ts:17
+
+
+@unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")
+class FindingsView(ChromePage):
+    """A findings section (a checklist and the diff whose comments are its items) shows one of them, picked by
+    [Checklist][Diff] in its title bar and remembered per browser; a link into the hidden one shows it. An open
+    finding shows its comment's file, lines and card, whose pick, annotation keys and pins are the diff's."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.url = self.server.url_for(self.docs / REVIEW)
+
+    def shows(self, tab: Tab, *sels: str) -> list:
+        return tab.ev(f"{json.dumps(sels)}.map(s => !!document.querySelector(s)?.checkVisibility())")
+
+    def test_the_toggle_swaps_the_views_and_survives_a_reload(self) -> None:
+        a = self.open(self.url)
+        self.assertEqual(a.ev("[BP.findingsView('pr-412'), BP.findingsView('pr-415'), BP.findingsView('summary')]"), ["checklist", "checklist", None])
+        self.assertEqual(self.shows(a, "#cl-t412", "#diff-diff-412", "#pr-412 > h2 .bp-fv"), [True, False, True])
+        self.assertFalse(a.ev("!!document.querySelector('#summary > h2 .bp-fv')"), "a section without both got the toggle")
+        a.ev("document.querySelector('#pr-412 > h2 .bp-fv [data-v=diff]').click()")
+        self.assertEqual(self.shows(a, "#cl-t412", "#diff-diff-412", "#cl-t415", "#diff-diff-415"), [False, True, False, True])
+        self.assertEqual(a.ev("[...document.querySelectorAll('#pr-412 .bp-fv button')].map(b => b.getAttribute('aria-pressed'))"), ["false", "true"])
+        self.assertEqual(a.ev("BP.progress().map(c => c.total)"), [7, 4], "the tracker lost the hidden checklists")
+        a.go(self.base + self.url)
+        self.assertEqual(a.ev("[BP.findingsView('pr-412'), BP.findingsView('pr-415')]"), ["diff", "diff"])
+        self.assertEqual(self.shows(a, "#cl-t412", "#diff-diff-412"), [False, True])
+        self.assertGreater(a.ev("BP.diffState('diff-412').lines"), 0)
+        self.assertEqual(a.ev("BP.findingsView('pr-412', 'checklist')"), "checklist")
+        a.go(self.base + self.url)
+        self.assertEqual(self.shows(a, "#cl-t412", "#diff-diff-412"), [True, False])
+
+    def test_an_open_finding_shows_its_code_and_card(self) -> None:
+        a = self.open(self.url)
+        self.assertEqual(a.ev(f"{TIER_ROW}.querySelectorAll('.bd-xf').length"), 0, "drawn before the row opened")
+        a.ev(f"{TIER_ROW}.querySelector('.bp-cl-head').click()")
+        xf = f"{TIER_ROW}.querySelector('.bd-xf')"
+        self.assertEqual(a.ev(f"{xf}.querySelector('.bd-fh .p').textContent"), "src/pricing/tiers.ts")
+        self.assertTrue(a.ev(f"{xf}.querySelector('.bd-ln.hit[data-n=\"17\"]').checkVisibility()"))
+        self.assertEqual(a.ev(f"[...{xf}.querySelectorAll('.bd-ln')].map(l => +l.dataset.n)"), list(range(14, 21)), "not ±3 lines around line 17")
+        self.assertEqual(a.ev(f"{xf}.querySelector('.bd-ln[data-n=\"17\"] + .bd-cmw > .bd-cm').dataset.ci"), "0")
+        self.assertEqual(a.ev(f"{xf}.querySelector('.bd-fh .bd-xgo').textContent"), "Open in Diff view")
+        self.assertEqual(a.ev("document.querySelector('#item-t412-pr-claims').querySelectorAll('.bd-xf').length"), 0)
+        # a finding with no line: its whole-change card, no lines
+        a.ev("document.querySelector('#item-t412-pr-claims .bp-cl-head').click()")
+        self.assertEqual(a.ev("(x => [x.querySelectorAll('.bd-ln').length, x.querySelectorAll('.bd-cm').length])(document.querySelector('#item-t412-pr-claims .bd-xf'))"), [0, 1])
+        # a pick in the card: on the row and on the Diff view's card
+        a.ev(f"{xf}.querySelector('.bd-cm .bp-choice[data-id=ticket]').click()")
+        self.assertEqual(a.ev(f"{TIER_ROW}.querySelector(':scope > .bp-cl-choices [aria-checked=true]')?.dataset.id"), "ticket")
+        self.assertEqual(a.ev("BP.findingsView('pr-412', 'diff')"), "diff")
+        self.assertEqual(a.ev("document.querySelector('#diff-diff-412 .bd-cm[data-ci=\"0\"] [aria-checked=true]')?.dataset.id"), "ticket")
+        # Open in Diff view: Diff, that comment focused in the diff's pane
+        a.ev("BP.findingsView('pr-412', 'checklist')")
+        a.ev(f"{xf}.querySelector('.bd-xgo').click()")
+        self.assertEqual(a.ev("[BP.findingsView('pr-412'), BP.diffState('diff-412').file]"), ["diff", "src/pricing/tiers.ts"])
+        a.wait_for("(e => e.matches('#diff-diff-412 .bd-pane .bd-cm[data-ci=\"0\"]'))(document.activeElement)")
+
+    def test_a_pin_in_the_finding_code_has_the_diff_key_and_shows_in_both(self) -> None:
+        a = self.open(self.url)
+        a.ev(f"{TIER_ROW}.querySelector('.bp-cl-head').click()")
+        key = "line:diff-412/src/pricing/tiers.ts:17"
+        made = a.ev(f"BP.annotate({{type: 'pin', key: {json.dumps(key)}, note: 'Acme: inclusive bound'}})")
+        self.assertEqual(made["target"]["key"], key)
+        self.assertIn("item:t412/tier-boundary", made["up"], "pinned on the diff's line, not the one under the finding")
+        pin = "(p => !!p && !p.hidden && !p.classList.contains('away'))(document.querySelector('.bd-ann-pin'))"
+        a.wait_for(pin)
+        a.ev("BP.findingsView('pr-412', 'diff')")
+        self.assertTrue(a.ev("BP.openCode('diff-412', 'src/pricing/tiers.ts', 17)"))   # the line may sit below the pane's fold
+        on = "(r => { const p = document.querySelector('.bd-ann-pin').getBoundingClientRect(); return p.top >= r.top - 40 && p.top <= r.bottom; })"
+        a.wait_for(f"{pin} && {on}(document.querySelector('#diff-diff-412 .bd-ln[data-n=\"17\"]').getBoundingClientRect())")
+        a.ev("BP.findingsView('pr-412', 'checklist')")   # back: on the line under the open finding
+        a.wait_for(f"{pin} && {on}({TIER_ROW}.querySelector('.bd-xf .bd-ln[data-n=\"17\"]').getBoundingClientRect())")
+
+    def test_links_into_the_hidden_view_show_it(self) -> None:
+        a = self.open(self.url)
+        self.assertTrue(a.ev("BP.openComment('diff-412', 0)"))
+        self.assertEqual(a.ev("[BP.findingsView('pr-412'), BP.findingsView('pr-415')]"), ["diff", "checklist"])
+        self.assertEqual(self.shows(a, "#diff-diff-412 .bd-pane .bd-cm"), [True])
+        a.ev("location.hash = '#item-t412-float-cents'")
+        a.wait_for("BP.findingsView('pr-412') === 'checklist' && document.querySelector('#item-t412-float-cents').classList.contains('open')")
+        self.assertTrue(a.ev("BP.openCode('diff-415', 'src/orders/charge.ts', 17)"))
+        self.assertEqual(a.ev("BP.findingsView('pr-415')"), "diff")
+        self.assertIsNone(a.ev("localStorage.getItem('bluedoc:findings-view')"), "a link changed the remembered pick")
 
 
 FIT = "acme-fit-design.bluedoc.json"   # the design example: a phone flow with links, board id `main`

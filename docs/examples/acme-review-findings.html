@@ -1100,6 +1100,22 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .bd-cm.done .tt { color: var(--fg-subtle); }
 .bd-cm.nott .mt, .bd-cm.nott details { margin-left: 26px; }
 .bd-omit { padding: 28px 16px; text-align: center; font-size: 13.5px; color: var(--fg-subtle); }
+/* a findings section: [Checklist][Diff] in its title bar shows its checklist or its diff (print: both); an open
+   finding shows its code: the file header, the lines around the comment and the comment card */
+.bp-sec > h2:has(> .bp-fv) { flex-wrap: wrap; row-gap: 8px; }
+.bp-fv { margin-left: auto; flex: none; font-family: var(--sans); letter-spacing: normal; }
+.bp-fv button { display: inline-flex; align-items: center; gap: 6px; }
+.bp-fv button .bd-ic { width: 14px; height: 14px; }
+@media screen { .bp-sec.fv-cl > .fv-d, .bp-sec.fv-diff > .fv-c { display: none; } }
+@media print { .bp-fv, .bd-xcs { display: none !important; } }
+.bd-xcs { display: grid; gap: 12px; margin-top: 12px; }
+.bd-xcs:empty { display: none; }
+.bd-xf { border: 1px solid var(--line); border-radius: 12px; overflow: clip; background: var(--surface); }
+.bd-xf .bd-fh { position: static; min-height: 36px; }
+.bd-xf .bd-code { padding-bottom: 4px; }
+.bd-xgo { display: inline-flex; align-items: center; gap: 5px; flex: none; height: 26px; padding: 0 8px; border: 0; border-radius: 7px; background: none; font: 500 12.5px var(--sans); color: var(--accent-fg); white-space: nowrap; cursor: pointer; }
+.bd-xgo:hover { background: var(--hover); }
+.bd-xgo .bd-ic { width: 13px; height: 13px; }
 .bd-flash { animation: bd-flash 1.4s var(--ease); }
 @keyframes bd-flash { 0%, 30% { box-shadow: var(--shadow-1), inset 3px 0 0 var(--t), 0 0 0 3px color-mix(in oklch, var(--accent) 45%, transparent); } 100% { box-shadow: var(--shadow-1), inset 3px 0 0 var(--t), 0 0 0 3px transparent; } }
 .bd-ln.bd-flash { animation: bd-flash-ln 1.4s var(--ease); }
@@ -2549,6 +2565,7 @@ function renderChecklist(b, parent) {
     entryItem.setOpen = open => {
       li.classList.toggle('open', open); head.setAttribute('aria-expanded', String(open));
       if (open) body.removeAttribute('hidden'); else body.hidden = 'until-found';
+      if (open && entryItem.onOpen) entryItem.onOpen();   // a finding draws its code on first open (findingCode)
     };
     entryItem.refresh = () => {
       // nothing to expand: the row is just the tick's label, and keyboard focus stays on the tick
@@ -2701,6 +2718,7 @@ const choiceLabel = (x, id) => { const c = x.choices && x.choices.find(c => c.id
 const itemKeyMd = x => `\`item:${x.cid}/${x.it.id}\``;
 const choiceMd = x => `**${choiceLabel(x, x.choice)}** (\`${x.choice}\`)`;
 function openItem(x) {
+  revealFindings(x.li);   // a findings section showing its diff switches to its checklist
   // open the item and every collapsed item it sits inside
   for (let el = x.li; el; el = el.parentElement && el.parentElement.closest('.bp-cl-item')) {
     const owner = Object.values(ITEMS).find(y => y.li === el);
@@ -2933,10 +2951,11 @@ const tocLinks = [];
   const el = h('section', { class: 'bp-sec', id: sec.id },
     h('h2', {}, h('span', { class: 'n' }, num), h('span', {}, sec.title)),
     sec.lead && h('p', { class: 'bp-lead', html: inline(sec.lead) }));
-  (sec.blocks || []).forEach((b, bi) => {
+  const wraps = (sec.blocks || []).map((b, bi) => {
     const r = RENDER[b.type];
-    el.append(h('div', { class: 'bp-block', 'data-bk': `${sec.id}/${bi}` }, r ? r(b) : h('div', { class: 'bp-callout risk' }, ic('octagon'), h('span', { class: 'lbl' }, 'Unknown block'), h('div', {}, `Type "${b.type}" has no renderer.`))));
+    return el.appendChild(h('div', { class: 'bp-block', 'data-bk': `${sec.id}/${bi}` }, r ? r(b) : h('div', { class: 'bp-callout risk' }, ic('octagon'), h('span', { class: 'lbl' }, 'Unknown block'), h('div', {}, `Type "${b.type}" has no renderer.`))));
   });
+  findingsView(sec, el, wraps);
   main.append(el);
   tocLinks.push(h('a', { href: '#' + sec.id }, h('span', { class: 'n' }, num), h('span', {}, sec.title)));
 });
@@ -2950,7 +2969,7 @@ placeMeta();
 if (CHECKLISTS.length) {
   const rows = CHECKLISTS.filter(c => !c.parent).map(c => {
     const cnt = h('span', { class: 'c' }); const bar = h('div', { class: 'bp-bar' }, h('i'));
-    const row = h('a', { class: 'bp-prog-row', href: '#cl-' + c.b.id }, h('span', { class: 't' }, h('span', {}, c.b.title || c.b.id), cnt), bar);
+    const row = h('a', { class: 'bp-prog-row', href: '#cl-' + c.b.id, onclick: () => revealFindings(c.root) }, h('span', { class: 't' }, h('span', {}, c.b.title || c.b.id), cnt), bar);
     c.sideRow = () => {
       const n = c.items.filter(x => x.cb.checked).length;
       cnt.textContent = `${n}/${c.items.length}`;
@@ -3073,7 +3092,7 @@ const STATUS_LETTER = { added: 'A', modified: 'M', deleted: 'D', renamed: 'R', c
 const PR_KEY = '\u0000pr';
 
 function renderDiff(b) {
-  const d = { b, id: b.id, files: b.files || [], comments: (b.comments || []).map((c, i) => ({ ...c, _i: i })), sel: null, filter: 'all', ci: -1, mirrors: [] };
+  const d = { b, id: b.id, files: b.files || [], comments: (b.comments || []).map((c, i) => ({ ...c, _i: i })), sel: null, filter: 'all', ci: -1, mirrors: [], xmirrors: [] };
   DIFFS[d.id] = d;
   d.byPath = Object.fromEntries(d.files.map(f => [f.path, f]));
   // comments read in file-list order: whole-change comments, changed files, then unchanged files
@@ -3144,7 +3163,9 @@ function paintFiles(d) {
     ...shown.map(f => h('option', { value: f.path }, `${STATUS_LETTER[f.status || 'modified'] || '·'}  ${f.path}${commentsIn(d, f.path).length ? `  (${commentsIn(d, f.path).length})` : ''}`))].filter(Boolean));
   if (d.sel) d.fsel.value = d.sel;
 }
-function commentCard(d, c) {
+// a comment card: `mirrors` keeps it in sync with its item (the pane's list is redrawn with the pane, the code
+// under an open finding keeps its own); there (inItem) the card has no link back to its row and no copy of its detail
+function commentCard(d, c, mirrors = d.mirrors, inItem = false) {
   const src = c.item ? ITEMS[c.item] : null;
   const it = src && src.it;
   const kind = c.kind || (it && it.stateKind) || 'info';
@@ -3156,27 +3177,50 @@ function commentCard(d, c) {
     // a decision item: the card carries the same options as its row
     pills = choicePills(src, true);
     dot = h('span', { class: 'bp-cl-dot', 'aria-hidden': 'true' });
-    d.mirrors.push({ pills, src, card });
+    mirrors.push({ pills, src, card });
   } else if (src) {
     tick = h('input', { type: 'checkbox', 'aria-label': 'Tick: ' + plainText(title) });
     tick.addEventListener('change', () => { src.cb.checked = tick.checked; src.cb.dispatchEvent(new Event('change')); });
-    d.mirrors.push({ tick, src, card });
+    mirrors.push({ tick, src, card });
   }
-  const detail = c.md || (it && it.detail);
+  const detail = c.md || (!inItem && it && it.detail);   // under its row, the row's detail is right above
   card.append(
     h('div', { class: 'hd' }, tick ? h('label', { class: 'tk' }, tick) : dot || ic('msg'), h('div', { class: 'tt', html: inline(title) }),
       ((it && it.state) || c.state) && h('span', { class: 'bp-chip ' + kind }, c.state || it.state)),
     pills && pills.el,
     h('div', { class: 'mt' }, h('span', {}, where),
-      src && h('a', { href: `#item-${src.cid}-${it.id}`, onclick: e => { e.preventDefault(); openItem(src); src.li.scrollIntoView({ behavior: REDUCE ? 'auto' : 'smooth', block: 'center' }); flash(src.li); } }, 'Checklist item', ic('chev'))),
+      src && !inItem && h('a', { href: `#item-${src.cid}-${it.id}`, onclick: e => { e.preventDefault(); openItem(src); src.li.scrollIntoView({ behavior: REDUCE ? 'auto' : 'smooth', block: 'center' }); flash(src.li); } }, 'Checklist item', ic('chev'))),
     detail && h('details', {}, h('summary', {}, 'Details'), h('div', { class: 'bd', html: md(detail) })));
   if (src) {
     const nv = noteBox(src, true);
     card.append(nv.el);
-    d.mirrors.push({ note: nv, src, card });
+    mirrors.push({ note: nv, src, card });
   }
   return card;
 }
+// shared by a diff's pane and the code under an open finding (findingCode)
+const diffNum = x => Number.isFinite(+x) ? Math.trunc(+x) : 0;   // hunk fields go into HTML strings: numbers stay numbers
+const fileLang = p => LANG_BY_EXT[(p.match(/\.([\w]+)$/) || [])[1]] || (/(^|\/)\.env|\.env\./.test(p) ? 'bash' : '');
+// a hunk's lines (strings) with their old (lo) and new (ln) line numbers; null on the side a line isn't on
+function hunkRows(hk) {
+  let o = diffNum(hk.old), n = diffNum(hk.new); const out = [];
+  for (const l of Array.isArray(hk.lines) ? hk.lines.map(String) : []) {
+    const t = l[0]; out.push({ l, lo: t === '+' ? null : o, ln: t === '-' ? null : n });
+    if (t !== '+') o++; if (t !== '-') n++;
+  }
+  return out;
+}
+function lineHtml({ l, lo, ln }, lang, hit) {
+  const t = l[0], cls = t === '+' ? 'add' : t === '-' ? 'del' : '';
+  return `<div class="bd-ln ${cls}${hit ? ' hit' : ''}"${ln != null ? ` data-n="${ln}"` : ''}${lo != null ? ` data-o="${lo}"` : ''}><span class="o">${lo ?? ''}</span><span class="n">${ln ?? ''}</span><span class="s">${t === '+' ? '+' : t === '-' ? '−' : ''}</span><span class="c">${highlightLine(l.slice(1), lang) || ' '}</span></div>`;
+}
+const covers = (c, lo, ln) => !!c.line && (c.side === 'old' ? lo != null && lo >= c.line && lo <= (c.end || c.line) : ln != null && ln >= c.line && ln <= (c.end || c.line));
+function filePathEl(f) {
+  const i = f.path.lastIndexOf('/');
+  return h('div', { class: 'p' }, i >= 0 ? f.path.slice(0, i + 1) : '', h('b', {}, baseName(f.path)), f.from ? ` ← ${f.from}` : '');
+}
+const fileStat = f => f.status === 'context' ? h('span', { class: 'bp-chip todo' }, 'not changed')
+  : h('span', { class: 'stat' }, h('span', { class: 'add-c' }, '+' + (f.add || 0)), ' ', h('span', { class: 'del-c' }, '−' + (f.del || 0)));
 function renderPane(d) {
   d.mirrors = [];
   const key = d.sel; const pane = d.pane;
@@ -3186,35 +3230,25 @@ function renderPane(d) {
     fileNav(d); syncDiffs(); return;
   }
   const f = d.byPath[key]; if (!f) { pane.replaceChildren(h('div', { class: 'bd-omit' }, 'No file selected.')); return; }
-  const i = f.path.lastIndexOf('/');
-  const head = h('div', { class: 'bd-fh' },
-    h('div', { class: 'p' }, i >= 0 ? f.path.slice(0, i + 1) : '', h('b', {}, baseName(f.path)), f.from ? ` ← ${f.from}` : ''),
-    f.status === 'context' ? h('span', { class: 'bp-chip todo' }, 'not changed') : h('span', { class: 'stat' }, h('span', { class: 'add-c' }, '+' + (f.add || 0)), ' ', h('span', { class: 'del-c' }, '−' + (f.del || 0))),
+  const head = h('div', { class: 'bd-fh' }, filePathEl(f), fileStat(f),
     h('button', { type: 'button', class: 'bp-btn ghost', title: 'Copy path', 'aria-label': 'Copy path', onclick: () => copyText(f.path, 'Copied path') }, ic('copy')));
   const cs = commentsIn(d, f.path);
   const ends = {};  // "n:12" / "o:12" -> [comment]
   for (const c of cs) if (c.line) (ends[(c.side === 'old' ? 'o:' : 'n:') + (c.end || c.line)] ||= []).push(c);
-  const hits = (o, n) => cs.some(c => c.line && (c.side === 'old' ? o != null && o >= c.line && o <= (c.end || c.line) : n != null && n >= c.line && n <= (c.end || c.line)));
-  const lang = LANG_BY_EXT[(f.path.match(/\.([\w]+)$/) || [])[1]] || (/(^|\/)\.env|\.env\./.test(f.path) ? 'bash' : '');
+  const lang = fileLang(f.path);
   let html = '', prevNew = null; const slots = [];
-  // the hunk fields below go into an HTML string: make the numbers numbers and the lines strings first
-  const num = x => Number.isFinite(+x) ? Math.trunc(+x) : 0;
   const top = cs.filter(c => !c.line);
   for (const hk of f.hunks || []) {
-    const hOld = num(hk.old), hNew = num(hk.new), lines = Array.isArray(hk.lines) ? hk.lines.map(String) : [];
+    const rows = hunkRows(hk), hOld = diffNum(hk.old), hNew = diffNum(hk.new);
     if (prevNew != null && hNew > prevNew + 1) html += `<div class="bd-gap">⋯ ${hNew - prevNew - 1} unchanged line${hNew - prevNew - 1 === 1 ? '' : 's'}</div>`;
-    const nOld = lines.filter(l => l[0] !== '+').length, nNew = lines.filter(l => l[0] !== '-').length;
+    const nOld = rows.filter(r => r.lo != null).length, nNew = rows.filter(r => r.ln != null).length;
     html += hk.context ? `<div class="bd-hh ctx">Unchanged code, shown for a comment · lines ${hNew}–${hNew + nNew - 1}</div>`
       : `<div class="bd-hh">@@ -${hOld},${nOld} +${hNew},${nNew} @@${hk.header ? ' ' + esc(hk.header) : ''}</div>`;
-    let o = hOld, n = hNew;
-    for (const l of lines) {
-      const t = l[0]; const lo = t === '+' ? null : o, ln = t === '-' ? null : n;
-      const cls = t === '+' ? 'add' : t === '-' ? 'del' : '';
-      html += `<div class="bd-ln ${cls}${hits(lo, ln) ? ' hit' : ''}"${ln != null ? ` data-n="${ln}"` : ''}${lo != null ? ` data-o="${lo}"` : ''}><span class="o">${lo ?? ''}</span><span class="n">${ln ?? ''}</span><span class="s">${t === '+' ? '+' : t === '-' ? '−' : ''}</span><span class="c">${highlightLine(l.slice(1), lang) || ' '}</span></div>`;
-      for (const c of [...(ln != null ? ends['n:' + ln] || [] : []), ...(lo != null ? ends['o:' + lo] || [] : [])]) { html += `<div class="bd-cmw" data-slot="${slots.length}"></div>`; slots.push(c); }
-      if (t !== '+') o++; if (t !== '-') n++;
+    for (const r of rows) {
+      html += lineHtml(r, lang, cs.some(c => covers(c, r.lo, r.ln)));
+      for (const c of [...(r.ln != null ? ends['n:' + r.ln] || [] : []), ...(r.lo != null ? ends['o:' + r.lo] || [] : [])]) { html += `<div class="bd-cmw" data-slot="${slots.length}"></div>`; slots.push(c); }
     }
-    prevNew = n - 1;
+    prevNew = hNew + nNew - 1;
   }
   const code = h('div', { class: 'bd-code' });
   code.innerHTML = html || '';
@@ -3299,6 +3333,7 @@ function paneScrollTo(d, el) {
 }
 function flash(el) { el.classList.remove('bd-flash'); void el.offsetWidth; el.classList.add('bd-flash'); setTimeout(() => el.classList.remove('bd-flash'), 1500); }
 function openComment(d, c, fromOutside) {
+  revealFindings(d.root);   // a findings section showing its checklist switches to its diff
   d.ci = c._o;
   selectFile(d, c.file || PR_KEY);
   paintNav(d);
@@ -3315,6 +3350,7 @@ function stepComment(d, dir) {
 function paintNav(d) { if (d.order.length) d.navLbl.textContent = d.ci < 0 ? `${d.order.length} comment${d.order.length === 1 ? '' : 's'}` : `Comment ${d.ci + 1} of ${d.order.length}`; }
 function openCode(did, path, line, fromOutside = true) {
   const d = DIFFS[did]; if (!d) return false;
+  revealFindings(d.root);
   const toDiff = () => d.root.scrollIntoView({ behavior: REDUCE ? 'auto' : 'smooth', block: 'start' });
   if (!path || !d.byPath[path]) { if (fromOutside) toDiff(); return !path; }
   selectFile(d, path);
@@ -3330,7 +3366,7 @@ function openCodeLink(s) {
 }
 function syncDiffs() {
   for (const d of Object.values(DIFFS)) {
-    for (const m of d.mirrors) {
+    for (const m of d.mirrors.concat(d.xmirrors)) {
       if (m.tick) m.tick.checked = m.src.cb.checked;
       if (m.pills) m.pills.paint();
       if (m.note) m.note.paint();
@@ -3350,9 +3386,12 @@ function syncDiffs() {
   }
 }
 function initDiff(d) {
-  // "View in code" on each checklist item a comment points at
+  // each checklist item a comment points at: in the same findings section, the comment's code under the open
+  // item (findingCode); elsewhere a "View in code" button
   for (const c of d.comments) {
     const src = c.item && ITEMS[c.item]; if (!src) continue;
+    const cw = src.li.closest('.fv-c'), dw = d.root.closest('.fv-d');
+    if (cw && dw && cw.parentElement === dw.parentElement) { addFindingCode(src, d, c); continue; }
     let refs = src.body.querySelector(':scope > .bp-refs');
     if (!refs) { refs = h('div', { class: 'bp-refs' }); src.body.append(refs); }
     const label = c.file ? baseName(c.file) + (c.line ? ':' + c.line : '') : (d.b.title || d.id);
@@ -3367,6 +3406,91 @@ function initDiff(d) {
   const first = d.order.find(c => c.file) || d.order[0];
   selectFile(d, busiest || (first ? (first.file || PR_KEY) : (d.files.find(f => f.hunks && f.hunks.length) || d.files[0] || {}).path));
   paintNav(d);
+}
+
+/* The code a finding is about, under its open row: for each diff comment on the item, the file header and the
+   hunk lines around the commented range with the comment card under them, as the diff draws them. Drawn on the
+   row's first open, so a review with many findings stays fast. */
+const FIND_CTX = 3;   // lines shown either side of a comment's range
+function addFindingCode(x, d, c) {
+  if (!x.code) {
+    const el = h('div', { class: 'bd-xcs' }), list = [];
+    x.code = { el, list };
+    x.body.append(el);
+    x.onOpen = () => { x.onOpen = null; el.append(...list.map(([d, c]) => findingCode(d, c))); syncDiffs(); };
+    x.refresh();
+  }
+  x.code.list.push([d, c]);
+}
+function findingCode(d, c) {
+  const f = c.file && d.byPath[c.file];
+  const head = h('div', { class: 'bd-fh' },
+    f ? filePathEl(f) : h('div', { class: 'p' }, h('b', {}, c.file || 'Whole change'), c.file ? '' : ' · not tied to a line'), f && fileStat(f),
+    h('button', { type: 'button', class: 'bd-xgo', title: 'Show this comment in the Diff view', onclick: () => openComment(d, c, true) }, ic('pr'), 'Open in Diff view'));
+  const card = commentCard(d, c, d.xmirrors, true);
+  const code = h('div', { class: 'bd-code' });
+  const rows = f && c.line ? (f.hunks || []).map(hunkRows).find(rs => rs.some(r => covers(c, r.lo, r.ln))) : null;
+  if (rows) {
+    const hit = rows.map(r => covers(c, r.lo, r.ln)), last = hit.lastIndexOf(true), lang = fileLang(f.path);
+    let html = '';
+    for (let i = Math.max(0, hit.indexOf(true) - FIND_CTX); i <= Math.min(rows.length - 1, last + FIND_CTX); i++) html += lineHtml(rows[i], lang, hit[i]) + (i === last ? '<div class="bd-cmw"></div>' : '');
+    code.innerHTML = html;
+    code.querySelector('.bd-cmw').append(card);
+  } else code.append(h('div', { class: 'bd-cmw top' }, card));
+  // the annotator reads the diff and the file of these lines and cards from here (keys as in the diff)
+  return h('div', { class: 'bd-xf', 'data-diff': d.id, 'data-file': c.file || null }, head,
+    f && f.omitted && h('div', { class: 'bd-omit' }, `Diff not included: ${f.omitted}.`), code);
+}
+
+/* Findings sections: a section holding a checklist and a diff whose comments are that checklist's items shows one
+   at a time, picked by [Checklist][Diff] in its title bar. The pick is a layout pref that every such section
+   follows; a link into the hidden one (an item, a comment, a code line) shows it in that section only. Print shows both. */
+const FVIEW_KEY = 'bluedoc:findings-view';
+const FVIEWS = [];   // { el: section, seg, view, set(view) }
+function findingsView(sec, el, wraps) {
+  const blocks = sec.blocks || [], owner = new Map();   // checklist id (nested ones too) -> its top checklist block's index
+  const walk = (b, i) => { if (b.id) owner.set(b.id, i); for (const it of b.items || []) for (const kb of (it && it.blocks) || []) if (kb && kb.type === 'checklist') walk(kb, i); };
+  blocks.forEach((b, i) => { if (b && b.type === 'checklist') walk(b, i); });
+  const cls = new Set(), diffs = [];
+  blocks.forEach((b, i) => {
+    if (!b || b.type !== 'diff') return;
+    const hits = (b.comments || []).map(c => c && typeof c.item === 'string' ? owner.get(c.item.slice(0, c.item.indexOf('/'))) : undefined).filter(x => x != null);
+    if (hits.length) { diffs.push(i); hits.forEach(x => cls.add(x)); }
+  });
+  if (!diffs.length) return;
+  cls.forEach(i => wraps[i].classList.add('fv-c'));
+  diffs.forEach(i => wraps[i].classList.add('fv-d'));
+  const btn = (view, icon, label) => h('button', { type: 'button', 'data-v': view, onclick: e => pickFindings(view, e.currentTarget) }, ic(icon), label);
+  const seg = h('span', { class: 'bd-seg bp-fv', role: 'group', 'aria-label': 'Show the findings as' }, btn('checklist', 'list', 'Checklist'), btn('diff', 'pr', 'Diff'));
+  el.querySelector(':scope > h2').append(seg);
+  const v = { el, seg, view: null, set: view => {
+    if (v.view === view) return;
+    v.view = view;
+    el.classList.toggle('fv-diff', view === 'diff'); el.classList.toggle('fv-cl', view !== 'diff');
+    for (const b of seg.children) b.setAttribute('aria-pressed', String(b.dataset.v === view));
+    if (view === 'diff') diffs.forEach(i => paneShown(DIFFS[blocks[i].id]));
+  } };
+  v.set(store.get(FVIEW_KEY) === 'diff' ? 'diff' : 'checklist');
+  FVIEWS.push(v);
+}
+function pickFindings(view, btn) {
+  const y = btn.getBoundingClientRect().top;
+  store.set(FVIEW_KEY, view);
+  FVIEWS.forEach(v => v.set(view));
+  scrollBy({ top: btn.getBoundingClientRect().top - y, behavior: 'instant' });   // sections above changed too: the toggle stays put
+}
+// the half of a findings section that node sits in, shown
+function revealFindings(node) {
+  const w = node && node.closest('.fv-c, .fv-d'); if (!w) return;
+  const v = FVIEWS.find(v => v.el === w.parentElement);
+  if (v) v.set(w.classList.contains('fv-d') ? 'diff' : 'checklist');
+}
+// a diff drawn while hidden measured nothing: its file header's height and the comment pills, again
+function paneShown(d) {
+  if (!d || !d.fnav) return;
+  const head = d.pane.querySelector('.bd-fh');
+  if (head) d.pane.style.setProperty('--fh-h', head.offsetHeight + 'px');
+  d.fnav.paint();
 }
 
 /* ======================================================================
@@ -5945,7 +6069,9 @@ const MARKUP = (() => {
   const targetAt = t => inDoc(t) ? t.closest(ANY) : null;
   let itemKeys = null;
   const itemKeyOf = li => (itemKeys ||= new Map(Object.entries(ITEMS).map(([k, x]) => [x.li, k]))).get(li);
-  const diffOf = el => DIFFS[el.closest('.bd-diff').id.slice(5)];
+  // a line or card of a diff block, or of the code under an open finding (.bd-xf names its diff and file): same keys
+  const diffOf = el => { const x = el.closest('.bd-xf, .bd-diff'); return DIFFS[x.matches('.bd-xf') ? x.dataset.diff : x.id.slice(5)]; };
+  const lineFile = el => el.closest('.bd-xf')?.dataset.file ?? diffOf(el).sel;
   const canvasOf = el => CANVASES[el.closest('.bp-canvas').id.slice(3)];
   const siblingIndex = el => [...el.parentElement.children].filter(c => c.classList.contains('bp-cl-block')).indexOf(el);
   // the block an element sits in: "<section>/<block>" at the top level, "<checklist>/<item>/<k>" inside an item
@@ -5956,7 +6082,7 @@ const MARKUP = (() => {
   }
   function keyOf(el, t = typeOf(el)) {
     switch (t) {
-      case 'line': { const d = diffOf(el); return `line:${d.id}/${d.sel}:${el.dataset.n ?? 'o' + el.dataset.o}`; }
+      case 'line': return `line:${diffOf(el).id}/${lineFile(el)}:${el.dataset.n ?? 'o' + el.dataset.o}`;
       case 'comment': return `comment:${diffOf(el).id}/${el.dataset.ci}`;
       case 'row': return `row:${pathOf(el)}/${el.dataset.r}`;
       case 'node': return `node:${canvasOf(el).id}/${el.dataset.key}`;
@@ -5985,14 +6111,20 @@ const MARKUP = (() => {
     if (t === 'section') return [...main.children].find(s => s.id === rest && s.matches(SEL.section)) || null;
     if (t === 'node') { const i = rest.indexOf('/'); return CANVASES[rest.slice(0, i)]?.byKey?.[rest.slice(i + 1)]?._el || null; }
     if (t === 'line') {
-      const i = rest.indexOf('/'), j = rest.lastIndexOf(':'), d = DIFFS[rest.slice(0, i)], n = rest.slice(j + 1);
-      if (!d || d.sel !== rest.slice(i + 1, j)) return null;   // another file is open
-      return d.pane.querySelector(n[0] === 'o' ? `.bd-ln[data-o="${CSS.escape(n.slice(1))}"]:not([data-n])` : `.bd-ln[data-n="${CSS.escape(n)}"]`);
+      // the diff's line while its file is open and it shows, else one under an open finding, else the hidden one
+      const i = rest.indexOf('/'), j = rest.lastIndexOf(':'), d = DIFFS[rest.slice(0, i)], path = rest.slice(i + 1, j), n = rest.slice(j + 1);
+      if (!d) return null;
+      const q = n[0] === 'o' ? `.bd-ln[data-o="${CSS.escape(n.slice(1))}"]:not([data-n])` : `.bd-ln[data-n="${CSS.escape(n)}"]`;
+      const inPane = d.sel === path ? d.pane.querySelector(q) : null;
+      if (shown(inPane)) return inPane;
+      return [...shell.querySelectorAll(`.bd-xf[data-diff="${CSS.escape(d.id)}"][data-file="${CSS.escape(path)}"] ${q}`)].find(shown) || inPane;
     }
     if (!SEL[t]) return null;
     if (!rest) return shell.querySelector(SEL[t]);
-    for (const el of shell.querySelectorAll(SEL[t])) if (keyOf(el, t) === key) return el;
-    return null;
+    // one shown wins: a diff comment's card can be both in its diff and under its open finding
+    let hidden = null;
+    for (const el of shell.querySelectorAll(SEL[t])) if (keyOf(el, t) === key) { if (shown(el)) return el; hidden ||= el; }
+    return hidden;
   }
   // breadcrumb label: "04 Run the local stack › Local stack › 2. Start Postgres, Kafka…"
   const sectionOf = id => (DOC.sections || []).find(s => s.id === id);
@@ -6018,7 +6150,7 @@ const MARKUP = (() => {
       case 'row': return `Row ${+el.dataset.r + 1}: ${cut([...el.cells].slice(0, 2).map(c => c.textContent.trim()).filter(Boolean).join(' · '), 48)}`;
       case 'card': return cut(el.querySelector('h4 > span')?.textContent, 48) || 'Card';
       case 'para': return `“${cut(el.textContent, 40)}”`;
-      case 'line': return `${baseName(diffOf(el).sel)}:${el.dataset.n ?? el.dataset.o}${el.dataset.n == null ? ' (before)' : ''}`;
+      case 'line': return `${baseName(lineFile(el))}:${el.dataset.n ?? el.dataset.o}${el.dataset.n == null ? ' (before)' : ''}`;
       case 'comment': return 'Comment: ' + cut(el.querySelector('.tt')?.textContent, 40);
       case 'node': { const n = canvasOf(el)?.byKey[el.dataset.key]; return n ? n.label || n.id : 'Part'; }
       case 'doc': return 'Whole page';
@@ -6859,6 +6991,7 @@ const MARKUP = (() => {
     else if (t === 'line' || t === 'comment') {
       const i = rest.indexOf('/'), d = DIFFS[rest.slice(0, i)]; if (!d) return false;
       const file = t === 'line' ? rest.slice(i + 1, rest.lastIndexOf(':')) : (d.comments[+rest.slice(i + 1)] || {}).file || PR_KEY;
+      revealFindings(d.root);   // a findings section showing its checklist switches to its diff
       if (file === PR_KEY || d.byPath[file]) selectFile(d, file);
     } else if (t === 'node') {
       const i = rest.indexOf('/'), cv = CANVASES[rest.slice(0, i)], n = cv && cv.byKey[rest.slice(i + 1)];
@@ -7625,6 +7758,12 @@ window.BP = {
   openComment: (diffId, index) => { const d = DIFFS[diffId]; const c = d && d.order[index]; if (c) openComment(d, c, true); return !!c; },
   diffState: diffId => { const d = DIFFS[diffId]; if (!d) return null; const linked = d.comments.filter(c => c.item && ITEMS[c.item]);
     return { file: d.sel === PR_KEY ? null : d.sel, comment: d.ci, comments: d.comments.length, cards: d.pane.querySelectorAll('.bd-cm').length, lines: d.pane.querySelectorAll('.bd-ln').length, ticked: linked.filter(c => ITEMS[c.item].cb.checked).length, linked: linked.length }; },
+  // a findings section's view, 'checklist' or 'diff' (null: not one); with view, picks it as its toggle would
+  findingsView: (sectionId, view) => {
+    const v = FVIEWS.find(v => v.el.id === sectionId); if (!v) return null;
+    if (view === 'checklist' || view === 'diff') v.seg.querySelector(`[data-v="${view}"]`).click();
+    return v.view;
+  },
   revisions: () => REVS.map(r => ({ rev: r.rev, date: r.date, current: !!r.current, shown: r === VIEW, changes: r.doc.changes || [] })),
   compare: () => BASE && { from: BASE.rev, to: VIEW.rev, changes: CHG.map(c => ({ kind: c.kind, label: plain(c.label) })) },
   annotations: () => MARKUP.all(),

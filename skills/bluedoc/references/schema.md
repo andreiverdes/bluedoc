@@ -101,7 +101,7 @@ Each item is a collapsed row: a tick, a one-line **title** (`text`), a one-line 
   "choices": [ { "id": "fix", "label": "Fix in PR" }, { "id": "ticket", "label": "Ticket" }, { "id": "decline", "label": "Decline" } ] }
 ```
 
-A decision item's title states the finding or question, not an action. **Copy progress** writes the pick: `- [x] A retry can authorize the card twice → **Fix in PR**`, adds `(recommended: …)` when the pick differs, and `(no decision; recommended: …)` when there is none. In a `diff` block, the comment card for a decision item carries the same pills, kept in sync with the row.
+A decision item's title states the finding or question, not an action. **Copy progress** writes the pick: `- [x] A retry can authorize the card twice → **Fix in PR**`, adds `(recommended: …)` when the pick differs, and `(no decision; recommended: …)` when there is none. In a `diff` block, the comment card for a decision item carries the same pills, kept in sync with the row. On a review, a section's findings checklist and its diff show one at a time (**[Checklist][Diff]** in the section's title bar), and an open finding shows its lines and that card: see [Diff](#diff).
 
 Every decision item also gets a **Need more details** toggle after its pills; the doc never declares it. It is not an option: it leaves the pick alone. On, the item's dot turns amber and its comment box takes focus to say what is missing (optional). It counts toward **Request changes** on every page with the tray, and the Markdown reads `- <text> \`item:<checklist>/<item>\` → **Need more details**`, then `; picked **<label>** (\`<id>\`)` when there is a pick, then the comment as a quote; the item's JSON entry carries `more: true`. Once sent (with Request changes or Send answers) it reads **Details requested** until a newer `meta.rev`, which resets it; clicking it then withdraws the request. On a plan or design, **Approve** is disabled while any item asks for more details, sent or not, and the server refuses (409) an approval whose `answers` carry `more`. Stored under `bp:<doc.id>:<checklist>:<item>:more` as `1`, then `sent@<rev>`; not on `?rev=` or `?diff=`.
 
@@ -177,12 +177,14 @@ Expansion, in order: the cache `<name>.diffcache.json` next to the doc (one entr
 | `files[].hunks[]` | `old`/`new` = first line number on each side; `lines` = diff lines with their `+`/`-`/space prefix. `context: true` marks an excerpt of unchanged code. |
 | `files[].omitted` | Reason the hunks are left out (binary, too large); the file still lists. |
 | `comments[].file`, `line`, `end`, `side` | Anchor. `side: "old"` anchors to the removed side. No `line` = whole file; no `file` = whole change (listed as **Whole change**). |
-| `comments[].item` | `"<checklistId>/<itemId>"`. The card takes the item's text, chip, detail and tick; ticking either one ticks both, and the item gets a code button that opens the comment. |
+| `comments[].item` | `"<checklistId>/<itemId>"`. The card takes the item's text, chip, detail and tick; ticking either one ticks both. In a findings section (below) the open item shows the comment's code; elsewhere the item gets a code button that opens the comment. |
 | `comments[].title`, `md`, `kind`, `state`, `label` | A comment with no `item`: its own title, body, colour (`ok`, `warn`, `risk`, `info`, `todo`) and chip. `label` names a whole-change anchor. |
 
 The validator checks, on the expanded diff, that every anchored line is shown, every `item` exists, and every `#code:` link resolves.
 
 In the page, a file header shows how many comments the file has and, with 2+, ‹ › buttons and "n of N" for the comment in view. While a file's comments sit outside the visible part of the code, a floating pill says "N more comments above/below"; clicking it scrolls to the nearest one.
+
+A section holding a checklist and a `diff` whose comments are that checklist's items is a **findings section**: its title bar gets a **[Checklist][Diff]** toggle and only one of the two shows (Checklist by default; the pick is stored per browser under `bluedoc:findings-view` and applies to every findings section; print shows both). A link into the hidden one shows it in that section only: `#item-…` links, a card's **Checklist item** link and the tracker switch to Checklist; `#code:` links, `BP.openCode`, `BP.openComment` and revealing a `line:` or `comment:` annotation switch to Diff. In Checklist, an open finding shows its code: for each comment on it, the file header, the hunk lines around the commented range (±3) and the comment card under them (same pills, tick and comment box as the row), with **Open in Diff view**. It is drawn on first open, and its lines and card carry the diff's annotation keys, so a pin shows in both views. Nothing in the JSON changes.
 
 ### gitdiff.py
 
@@ -662,6 +664,7 @@ The built page exposes `window.BP`:
 | `BP.openCode('pr-412', 'src/pricing/tiers.ts', 11)` | Scrolls to the diff, opens the file, jumps to the line. |
 | `BP.openComment('pr-412', 0)` | Opens the n-th comment, in file-list order. |
 | `BP.diffState('pr-412')` | `{file, comment, comments, cards, lines, ticked, linked}` |
+| `BP.findingsView('pr-412', view?)` | A findings section's view, `'checklist'` or `'diff'` (`null`: not a findings section); with `view`, picks it as its toggle would. |
 | `BP.revisions()` | `[{rev, date, current, shown, changes}]`, oldest first. |
 | `BP.compare()` | With `?diff=`: `{from, to, changes: [{kind: 'add'|'mod'|'del', label}]}` in page order; else `null`. |
 | `BP.annotations()` | The reader's annotations, sent and unsent. |
