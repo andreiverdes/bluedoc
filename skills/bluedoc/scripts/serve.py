@@ -249,8 +249,9 @@ def approval_carried(doc: Path, row: dict, rev: str, posted: dict) -> bool:
     hit = _carried.get(str(doc))
     if hit and hit[0] == key:
         return hit[1]
-    picks = {f"{a.get('checklist')}:{a.get('item')}": a["choice"] for a in posted.get("answers") or []
-             if isinstance(a, dict) and isinstance(a.get("choice"), str) and a["choice"]}
+    # an item approved without a pick means its recommendation (types/plan.md), so recording that as `choice` is progress
+    picks = {f"{a.get('checklist')}:{a.get('item')}": a.get("choice") or a.get("recommend") for a in posted.get("answers") or []
+             if isinstance(a, dict) and isinstance(a.get("choice") or a.get("recommend"), str) and (a.get("choice") or a.get("recommend"))}
     try:
         d = json.loads(doc.read_text(encoding="utf-8"))
         ok = isinstance(d, dict) and build.approval_carries(build.load_history(hp), rev, row["doc_hash"], d, doc, picks)

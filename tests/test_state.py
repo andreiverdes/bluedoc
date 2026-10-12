@@ -182,16 +182,20 @@ class State(unittest.TestCase):
     def test_progress_after_an_approval_keeps_it(self) -> None:
         """An approval of rev 1 carries to later revs that only mark progress (a step done, the approved pick as the
         item's choice); a text edit ends it, and the ping, the seed and the home card say so with carried: false."""
-        self.assertEqual(self.approve(self.approval_body("1", [{"checklist": "decisions", "item": "retention", "choice": "d180"}]))[0], 200)
+        # retention picked; prices approved with no pick, which means its recommendation (notice)
+        self.assertEqual(self.approve(self.approval_body("1", [{"checklist": "decisions", "item": "retention", "choice": "d180"},
+                                                               {"checklist": "decisions", "item": "prices", "choice": None, "recommend": "notice"}]))[0], 200)
         self.patch("step:steps/0/table", "--set", "status=done", "--change", "Acme: the saved_carts table landed.")
         self.assertEqual(self.approval(), {"rev": "1", "at": "2026-01-01T00:00:00Z", "carried": True})
         self.patch("item:decisions/retention", "--set", "choice=d180", "--change", "Acme: retention as approved.")
         self.assertEqual(self.approval()["carried"], True)
+        self.patch("item:decisions/prices", "--set", "choice=notice", "--change", "Acme: prices as recommended, no pick.")
+        self.assertEqual(self.approval()["carried"], True, "recording an unpicked item's recommendation ended the approval")
         self.assertEqual(self.seed(self.plan_url)["approval"]["carried"], True)
         card = self.card()
-        self.assertEqual((card["rev"], card["approval"]["rev"], card["approval"]["carried"]), ("3", "1", True))
+        self.assertEqual((card["rev"], card["approval"]["rev"], card["approval"]["carried"]), ("4", "1", True))
         # a pick the reader didn't approve, then a step's text: neither is progress
-        for key, field, rev in (("item:decisions/prices", "choice=silent", "4"), ("step:steps/0/repo", "title=Acme: a new repo step", "5")):
+        for key, field, rev in (("item:decisions/prices", "choice=silent", "5"), ("step:steps/0/repo", "title=Acme: a new repo step", "6")):
             with self.subTest(key):
                 self.patch(key, "--set", field, "--change", f"Acme: {key} changed.")
                 self.assertEqual(self.approval(), {"rev": "1", "at": "2026-01-01T00:00:00Z", "carried": False})
