@@ -930,7 +930,8 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .bd-rv-ft .rv-sel { width: 100%; min-width: 0; }
 .bd-rv-ft .bp-btn { justify-content: center; height: 32px; font-size: 13px; }
 @media (min-width: 901px) {
-  html.bd-sp-open .bd-anntb, html.bd-sp-open .bp-toast { left: calc((100% - var(--sp-w)) / 2); }
+  /* a doc page's tray and toasts stay centred on the window, like its column; a design page centres them over its board */
+  html.bd-sp-open[data-layout="board"] .bd-anntb, html.bd-sp-open[data-layout="board"] .bp-toast { left: calc((100% - var(--sp-w)) / 2); }
   html.bd-sp-dock[data-layout="board"] .bd-wchip { left: calc((100% - var(--sp-w)) / 2); }
 }
 @media (max-width: 900px) {
@@ -1627,6 +1628,8 @@ html.bd-presenting :is(.bd-anntb, .bd-ann-layer, .bd-cmp) { display: none !impor
 @media (max-width: 900px) { html.bd-lp-open .bd-boardblk { left: 0; } .bd-lp { width: min(var(--lp-w), 86vw); box-shadow: var(--shadow-3); } .bd-btb .th, .bd-btb .bd-sg { display: none; } }
 /* the tray must fit the board: Accept recommended keeps its count, not its words */
 :root[data-layout="board"] .bd-key.acc .t { display: none; }
+/* a doc page's tray beside an open right panel (fitTray): keys keep their icon and count, not their words */
+.bd-anntb.compact .bd-key :is(.t, .l) { display: none; }
 </style>
 </head>
 <body>
@@ -2105,6 +2108,20 @@ function applyWidth() {
   root.dataset.layout = centredRoom(dock > 0) >= MIN_W ? 'centred' : 'wide';
   if (root.dataset.layout !== 'wide') setDrawer(false);
   placeHandles();
+  fitTray();
+}
+// A doc page's tray stays centred on the window, like its column. When it would run under the open right panel,
+// its keys drop their words (icons, counts and tooltips stay); if it still doesn't fit, it moves left just enough.
+function fitTray() {
+  const tray = document.querySelector('.bd-anntb');
+  if (!tray || IS_DESIGN) return;
+  tray.classList.remove('compact'); tray.style.left = '';
+  if (!root.classList.contains('bd-sp-open') || innerWidth <= 900) return;
+  const edge = root.clientWidth - cssPx('--sp-w') - 12, over = () => tray.getBoundingClientRect().right - edge;
+  if (over() <= 0) return;
+  tray.classList.add('compact');
+  const r = tray.getBoundingClientRect();
+  if (r.right > edge) tray.style.left = Math.max(r.width / 2 + 12, edge - r.width / 2) + 'px';
 }
 // a drag handle on the edge of a width the reader sets (.bd-rh): drag it, or press ← → on it (Shift: bigger
 // steps); double-click it, or press Home, to reset. o = {label, title, dir: px of width per px dragged right,
@@ -6896,6 +6913,7 @@ const MARKUP = (() => {
 
   /* wiring */
   document.body.append(layer, hov, cap, cmp, tb);
+  requestAnimationFrame(fitTray);
   SIDE.add({ id: 'comments', label: 'Comments', body: csBody, chip: () => pending().length ? `${pending().length} pending` : '',
     onToggle: shown => { if (!shown) endEdit(true); schedule(true); paint(); } });
   root.classList.add('bd-tray-on');
