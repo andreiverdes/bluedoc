@@ -1,0 +1,76 @@
+{
+  "id": "website-skeleton",
+  "title": "<<Site: the pages this doc shows>>",
+  "subtitle": "<<One sentence: what the site is for and what this round changes.>>",
+  "meta": { "org": "<<Org; ACME when the project names none>>", "kind": "Website", "type": "website", "rev": "1", "date": "<<YYYY-MM-DD>>" },
+  "state": [
+    { "label": "<<live from the dev server, or mockups>>", "kind": "info" }
+  ],
+  "tldr": "<<Which pages and sections the reader judges, at which widths, and which picks they make.>>",
+  "sections": [
+    {
+      "id": "brief",
+      "title": "Brief",
+      "lead": "<<What the site must do for its visitor, in one line.>>",
+      "blocks": [
+        { "type": "text", "md": "<<Who visits, what they came for, and what each page must get them to do.>>" },
+        {
+          "type": "checklist",
+          "id": "brief",
+          "title": "Picks",
+          "numbered": false,
+          "items": [
+            {
+              "id": "hero-headline",
+              "text": "Which hero headline?",
+              "sub": "Recommend <<option>>: <<why>>.",
+              "recommend": "b",
+              "choices": [
+                { "id": "a", "label": "Current" },
+                { "id": "b", "label": "<<Version B, in 3 words>>" }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "pages",
+      "title": "Pages",
+      "lead": "<<N pages, their sections, and what this revision changed.>>",
+      "blocks": [
+        {
+          "type": "board",
+          "id": "site",
+          "targets": ["web"],
+          "breakpoints": [1440, 768, 390],
+          "artboards": [
+            {
+              "id": "home",
+              "title": "<<Home: what the page is for>>",
+              "device": "page",
+              "fidelity": "hifi",
+              "source": "<<the page's file, e.g. src/pages/index.astro>>",
+              "sections": [
+                {
+                  "id": "hero",
+                  "title": "Hero",
+                  "sel": "<<the hero's CSS selector, e.g. section.hero>>",
+                  "source": "<<where its copy lives, e.g. src/content/site.ts#hero>>",
+                  "decision": "hero-headline",
+                  "variants": { "a": [], "b": [{ "sel": "<<the headline's selector, e.g. h1>>", "text": "<<Version B headline>>" }] }
+                },
+                {
+                  "id": "features",
+                  "title": "Features",
+                  "sel": "<<CSS selector>>",
+                  "source": "<<file#symbol or file:line>>"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

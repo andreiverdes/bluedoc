@@ -1,0 +1,230 @@
+{
+ "bluedoc_history": 1,
+ "revs": [
+  {
+   "rev": "A",
+   "date": "2026-10-12",
+   "built": "2026-10-12T19:40:15+00:00",
+   "head": {
+    "id": "acme-site",
+    "title": "Acme Fit: marketing site, spring refresh",
+    "subtitle": "The home page as a hi-fi mockup and the blog live from the dev server. Comment on any section or element, pick a hero headline and a pricing lead, then approve the round.",
+    "meta": {
+     "org": "Acme Corp",
+     "kind": "Website",
+     "type": "website",
+     "dwg": "ACME-FIT-WEB",
+     "rev": "A",
+     "date": "2026-10-12"
+    },
+    "state": [
+     {
+      "label": "home: mockup; blog: live dev server",
+      "kind": "info"
+     }
+    ],
+    "tldr": "Two pages: the home page as a mockup of the refresh, and the blog live from `npm run dev` on localhost:4321. Pick the hero headline and which plan leads the pricing table; each version shows in place on the page. Check each page at desktop, tablet and mobile widths."
+   },
+   "sections": [
+    {
+     "id": "brief",
+     "title": "Brief",
+     "lead": "The home page must turn a visitor into a trial in one scroll.",
+     "blocks": [
+      "043fc8ccbd6aa2c6",
+      "7b0ce8fc8d4632e5"
+     ]
+    },
+    {
+     "id": "pages",
+     "title": "Pages",
+     "lead": "Two pages: the home page mockup and the live blog, each with its sections and where their source lives.",
+     "blocks": [
+      "076e4a5c522ebc1e"
+     ]
+    }
+   ],
+   "screens": {
+    "home": "0f1ab2512320d614"
+   }
+  }
+ ],
+ "blocks": {
+  "043fc8ccbd6aa2c6": {
+   "type": "text",
+   "md": "Visitors arrive from app store links and search, mostly on phones. The hero says what Acme Fit does, the features show the three things members use daily, and the pricing table ends the scroll with one plan and two ways to pay. Copy lives in `src/content/home.ts`; layout in `src/components/`."
+  },
+  "7b0ce8fc8d4632e5": {
+   "type": "checklist",
+   "id": "brief",
+   "title": "Picks",
+   "numbered": false,
+   "items": [
+    {
+     "id": "hero-headline",
+     "text": "Which hero headline?",
+     "sub": "Recommend Habit first: trial members who set a weekly goal stay twice as long.",
+     "recommend": "b",
+     "choices": [
+      {
+       "id": "a",
+       "label": "Track everything"
+      },
+      {
+       "id": "b",
+       "label": "Habit first"
+      },
+      {
+       "id": "c",
+       "label": "Coach first"
+      }
+     ],
+     "detail": "**Track everything** is the current headline. **Habit first** leads with weekly goals, the feature this release adds. **Coach first** leads with coach notes, which only members on a watch see."
+    },
+    {
+     "id": "pricing-lead",
+     "text": "Which plan leads the pricing table?",
+     "sub": "Recommend Monthly: it is the plan the free trial converts to.",
+     "recommend": "a",
+     "choices": [
+      {
+       "id": "a",
+       "label": "Monthly"
+      },
+      {
+       "id": "b",
+       "label": "Yearly"
+      }
+     ]
+    }
+   ]
+  },
+  "076e4a5c522ebc1e": {
+   "type": "board",
+   "id": "site",
+   "targets": [
+    "web"
+   ],
+   "framework": "plain",
+   "breakpoints": [
+    1440,
+    768,
+    390
+   ],
+   "artboards": [
+    {
+     "id": "home",
+     "title": "Home",
+     "device": "page",
+     "fidelity": "hifi",
+     "source": "src/pages/index.astro",
+     "sections": [
+      {
+       "id": "nav",
+       "title": "Nav",
+       "sel": "[data-bd=\"nav\"]",
+       "source": [
+        "src/content/home.ts#nav",
+        "src/components/Nav.astro"
+       ]
+      },
+      {
+       "id": "hero",
+       "title": "Hero",
+       "sel": "[data-bd=\"hero\"]",
+       "source": [
+        "src/content/home.ts#hero",
+        "src/components/Hero.astro"
+       ],
+       "decision": "hero-headline",
+       "variants": {
+        "a": [],
+        "b": [
+         {
+          "sel": "[data-bd=\"headline\"]",
+          "text": "Build the habit, one week at a time."
+         }
+        ],
+        "c": [
+         {
+          "sel": "[data-bd=\"headline\"]",
+          "text": "A coach on your wrist, every day."
+         }
+        ]
+       }
+      },
+      {
+       "id": "features",
+       "title": "Features",
+       "sel": "[data-bd=\"features\"]",
+       "source": [
+        "src/content/home.ts#features",
+        "src/components/Features.astro"
+       ]
+      },
+      {
+       "id": "pricing",
+       "title": "Pricing",
+       "sel": "[data-bd=\"pricing\"]",
+       "source": [
+        "src/content/home.ts#pricing",
+        "src/components/Pricing.astro"
+       ],
+       "decision": "pricing-lead",
+       "variants": {
+        "a": [],
+        "b": [
+         {
+          "sel": "[data-bd=\"plan-lead\"]",
+          "html": "<h3>Yearly</h3><div class=\"price\">$79<span>/year</span></div><p class=\"note\">Two months free</p><ul><li>Every feature</li><li>Watch and phone</li></ul><span class=\"btn-l\">Start free trial</span>"
+         },
+         {
+          "sel": "[data-bd=\"plan-other\"]",
+          "html": "<h3>Monthly</h3><div class=\"price\">$7.99<span>/month</span></div><p class=\"note\">Billed every month</p><ul><li>Every feature</li><li>Watch and phone</li></ul><span class=\"btn-l ghost\">Choose monthly</span>"
+         }
+        ]
+       }
+      },
+      {
+       "id": "footer",
+       "title": "Footer",
+       "sel": "[data-bd=\"footer\"]",
+       "source": [
+        "src/content/home.ts#footer",
+        "src/components/Footer.astro"
+       ]
+      }
+     ]
+    },
+    {
+     "id": "blog",
+     "title": "Blog",
+     "device": "page",
+     "fidelity": "hifi",
+     "url": "http://localhost:4321/blog/",
+     "source": "src/pages/blog/index.astro",
+     "sections": [
+      {
+       "id": "posts",
+       "title": "Post list",
+       "sel": "main",
+       "source": [
+        "src/content/blog/",
+        "src/components/PostCard.astro"
+       ]
+      },
+      {
+       "id": "subscribe",
+       "title": "Subscribe",
+       "sel": "#subscribe",
+       "source": "src/components/Subscribe.astro"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ "html": {
+  "0f1ab2512320d614": "<style>\n  .site { --ink: #0f172a; --soft: #475569; --line: #e2e8f0; --brand: #4f46e5; --brand-ink: #ffffff; --tint: #eef2ff;\n    background: #ffffff; color: var(--ink); font: 16px/1.55 var(--font); }\n  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 32px; }\n  .nav { position: sticky; top: 0; z-index: 2; background: rgba(255, 255, 255, .92); border-bottom: 1px solid var(--line); }\n  .nav .wrap { display: flex; align-items: center; gap: 28px; height: 68px; }\n  .logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; }\n  .logo i { width: 28px; height: 28px; border-radius: 8px; background: linear-gradient(135deg, #6366f1, #4338ca); }\n  .links { display: flex; gap: 24px; margin-left: auto; color: var(--soft); font-size: 15px; }\n  .btn-s { padding: 9px 16px; border-radius: 10px; background: var(--ink); color: #fff; font-weight: 600; font-size: 14px; }\n  .hero { padding: 96px 0 88px; background: radial-gradient(60% 80% at 80% 0%, #e0e7ff 0%, rgba(224, 231, 255, 0) 70%), linear-gradient(#ffffff, #f8fafc); }\n  .hero .wrap { display: grid; grid-template-columns: 1.1fr .9fr; gap: 56px; align-items: center; }\n  .kicker { display: inline-block; padding: 5px 12px; border-radius: 999px; background: var(--tint); color: var(--brand); font-weight: 600; font-size: 13px; }\n  .hero h1 { margin: 18px 0 16px; font-size: 56px; line-height: 1.05; letter-spacing: -.02em; }\n  .hero p { margin: 0 0 28px; max-width: 34em; color: var(--soft); font-size: 18px; }\n  .ctas { display: flex; flex-wrap: wrap; gap: 12px; }\n  .btn-l { padding: 14px 22px; border-radius: 12px; font-weight: 600; background: var(--brand); color: var(--brand-ink); }\n  .btn-l.ghost { background: #fff; color: var(--ink); box-shadow: inset 0 0 0 1px var(--line); }\n  .phone { justify-self: center; width: 280px; height: 520px; padding: 18px; border-radius: 40px; background: #0f172a; box-shadow: 0 30px 60px rgba(15, 23, 42, .25); }\n  .phone div { height: 100%; border-radius: 26px; background: linear-gradient(160deg, #eef2ff, #c7d2fe); display: grid; place-items: center; }\n  .ring { width: 150px; height: 150px; border-radius: 50%; background: conic-gradient(var(--brand) 0 72%, #e0e7ff 72% 100%); display: grid; place-items: center; }\n  .ring b { width: 112px; height: 112px; border-radius: 50%; background: #fff; display: grid; place-items: center; font-size: 30px; }\n  .features { padding: 88px 0; }\n  .features h2, .pricing h2 { margin: 0 0 12px; font-size: 36px; letter-spacing: -.01em; }\n  .lead { margin: 0 0 40px; color: var(--soft); font-size: 18px; }\n  .grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }\n  .card { padding: 26px; border-radius: 18px; background: #f8fafc; box-shadow: inset 0 0 0 1px var(--line); }\n  .card .ic { width: 40px; height: 40px; border-radius: 12px; background: var(--tint); margin-bottom: 16px; }\n  .card h3 { margin: 0 0 8px; font-size: 19px; }\n  .card p { margin: 0; color: var(--soft); }\n  .pricing { padding: 88px 0; background: #f8fafc; border-top: 1px solid var(--line); }\n  .plans { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; max-width: 760px; }\n  .plan { padding: 28px; border-radius: 20px; background: #fff; box-shadow: inset 0 0 0 1px var(--line); }\n  .plan.hl { box-shadow: inset 0 0 0 2px var(--brand), 0 18px 40px rgba(79, 70, 229, .14); }\n  .plan h3 { margin: 0; font-size: 17px; color: var(--soft); }\n  .price { margin: 10px 0 4px; font-size: 44px; font-weight: 700; letter-spacing: -.02em; }\n  .price span { font-size: 16px; font-weight: 500; color: var(--soft); }\n  .note { margin: 0 0 18px; color: var(--brand); font-weight: 600; font-size: 14px; }\n  .plan ul { margin: 0 0 22px; padding-left: 18px; color: var(--soft); }\n  .foot { padding: 40px 0; border-top: 1px solid var(--line); color: var(--soft); font-size: 14px; }\n  .foot .wrap { display: flex; flex-wrap: wrap; gap: 16px 28px; align-items: center; }\n  .foot .logo { color: var(--ink); font-size: 15px; }\n  .foot .logo i { width: 20px; height: 20px; border-radius: 6px; }\n  @media (max-width: 1023px) {\n    .links { display: none; }\n    .nav .btn-s { margin-left: auto; }\n    .hero .wrap { grid-template-columns: minmax(0, 1fr); }\n    .phone { display: none; }\n    .grid3 { grid-template-columns: minmax(0, 1fr); }\n  }\n  @media (max-width: 599px) {\n    .wrap { padding: 0 20px; }\n    .hero { padding: 56px 0; }\n    .hero h1 { font-size: 38px; }\n    .plans { grid-template-columns: minmax(0, 1fr); }\n  }\n</style>\n<div class=\"site\" data-bd=\"home\">\n  <header class=\"nav\" data-bd=\"nav\">\n    <div class=\"wrap\">\n      <span class=\"logo\" data-bd=\"logo\"><i></i>Acme Fit</span>\n      <nav class=\"links\" data-bd=\"links\"><span>Features</span><span>Pricing</span><span>Stories</span></nav>\n      <span class=\"btn-s\" data-bd=\"nav-cta\">Get the app</span>\n    </div>\n  </header>\n  <section class=\"hero\" data-bd=\"hero\">\n    <div class=\"wrap\">\n      <div>\n        <span class=\"kicker\" data-bd=\"kicker\">New: weekly goals</span>\n        <h1 data-bd=\"headline\">Track every workout in one place.</h1>\n        <p data-bd=\"subline\">Acme Fit logs runs, rides and lifts from your watch and phone, then shows the week at a glance.</p>\n        <div class=\"ctas\"><span class=\"btn-l\" data-bd=\"cta\">Start free trial</span><span class=\"btn-l ghost\" data-bd=\"cta-2\">See how it works</span></div>\n      </div>\n      <div class=\"phone\" data-bd=\"shot\"><div><span class=\"ring\"><b>72%</b></span></div></div>\n    </div>\n  </section>\n  <section class=\"features\" data-bd=\"features\">\n    <div class=\"wrap\">\n      <h2 data-bd=\"features-title\">Everything your week needs</h2>\n      <p class=\"lead\" data-bd=\"features-lead\">Three things members open the app for every day.</p>\n      <div class=\"grid3\">\n        <div class=\"card\" data-bd=\"feature-log\"><div class=\"ic\"></div><h3>Automatic log</h3><p>Workouts arrive from your watch; nothing to type.</p></div>\n        <div class=\"card\" data-bd=\"feature-goals\"><div class=\"ic\"></div><h3>Weekly goals</h3><p>Pick a target; the ring fills as you move.</p></div>\n        <div class=\"card\" data-bd=\"feature-coach\"><div class=\"ic\"></div><h3>Coach notes</h3><p>A short plan for tomorrow, from what you did today.</p></div>\n      </div>\n    </div>\n  </section>\n  <section class=\"pricing\" data-bd=\"pricing\">\n    <div class=\"wrap\">\n      <h2 data-bd=\"pricing-title\">One plan, two ways to pay</h2>\n      <p class=\"lead\">Cancel any time from the app.</p>\n      <div class=\"plans\">\n        <div class=\"plan hl\" data-bd=\"plan-lead\">\n          <h3 data-bd=\"plan-name\">Monthly</h3>\n          <div class=\"price\" data-bd=\"price\">$7.99<span>/month</span></div>\n          <p class=\"note\" data-bd=\"price-note\">Billed every month</p>\n          <ul><li>Every feature</li><li>Watch and phone</li></ul>\n          <span class=\"btn-l\" data-bd=\"plan-cta\">Start free trial</span>\n        </div>\n        <div class=\"plan\" data-bd=\"plan-other\">\n          <h3>Yearly</h3>\n          <div class=\"price\">$79<span>/year</span></div>\n          <p class=\"note\">Two months free</p>\n          <ul><li>Every feature</li><li>Watch and phone</li></ul>\n          <span class=\"btn-l ghost\">Choose yearly</span>\n        </div>\n      </div>\n    </div>\n  </section>\n  <footer class=\"foot\" data-bd=\"footer\">\n    <div class=\"wrap\"><span class=\"logo\"><i></i>Acme Fit</span><span>Privacy</span><span>Terms</span><span>Support</span><span>© 2026 Acme Corp</span></div>\n  </footer>\n</div>\n"
+ }
+}

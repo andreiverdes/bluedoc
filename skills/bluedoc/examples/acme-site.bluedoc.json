@@ -1,0 +1,117 @@
+{
+  "id": "acme-site",
+  "title": "Acme Fit: marketing site, spring refresh",
+  "subtitle": "The home page as a hi-fi mockup and the blog live from the dev server. Comment on any section or element, pick a hero headline and a pricing lead, then approve the round.",
+  "meta": {
+    "org": "Acme Corp",
+    "kind": "Website",
+    "type": "website",
+    "dwg": "ACME-FIT-WEB",
+    "rev": "A",
+    "date": "2026-10-12"
+  },
+  "state": [
+    { "label": "home: mockup; blog: live dev server", "kind": "info" }
+  ],
+  "tldr": "Two pages: the home page as a mockup of the refresh, and the blog live from `npm run dev` on localhost:4321. Pick the hero headline and which plan leads the pricing table; each version shows in place on the page. Check each page at desktop, tablet and mobile widths.",
+  "sections": [
+    {
+      "id": "brief",
+      "title": "Brief",
+      "lead": "The home page must turn a visitor into a trial in one scroll.",
+      "blocks": [
+        { "type": "text", "md": "Visitors arrive from app store links and search, mostly on phones. The hero says what Acme Fit does, the features show the three things members use daily, and the pricing table ends the scroll with one plan and two ways to pay. Copy lives in `src/content/home.ts`; layout in `src/components/`." },
+        {
+          "type": "checklist",
+          "id": "brief",
+          "title": "Picks",
+          "numbered": false,
+          "items": [
+            {
+              "id": "hero-headline",
+              "text": "Which hero headline?",
+              "sub": "Recommend Habit first: trial members who set a weekly goal stay twice as long.",
+              "recommend": "b",
+              "choices": [
+                { "id": "a", "label": "Track everything" },
+                { "id": "b", "label": "Habit first" },
+                { "id": "c", "label": "Coach first" }
+              ],
+              "detail": "**Track everything** is the current headline. **Habit first** leads with weekly goals, the feature this release adds. **Coach first** leads with coach notes, which only members on a watch see."
+            },
+            {
+              "id": "pricing-lead",
+              "text": "Which plan leads the pricing table?",
+              "sub": "Recommend Monthly: it is the plan the free trial converts to.",
+              "recommend": "a",
+              "choices": [
+                { "id": "a", "label": "Monthly" },
+                { "id": "b", "label": "Yearly" }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "pages",
+      "title": "Pages",
+      "lead": "Two pages: the home page mockup and the live blog, each with its sections and where their source lives.",
+      "blocks": [
+        {
+          "type": "board",
+          "id": "site",
+          "targets": ["web"],
+          "framework": "plain",
+          "breakpoints": [1440, 768, 390],
+          "artboards": [
+            {
+              "id": "home",
+              "title": "Home",
+              "device": "page",
+              "fidelity": "hifi",
+              "source": "src/pages/index.astro",
+              "sections": [
+                { "id": "nav", "title": "Nav", "sel": "[data-bd=\"nav\"]", "source": ["src/content/home.ts#nav", "src/components/Nav.astro"] },
+                {
+                  "id": "hero", "title": "Hero", "sel": "[data-bd=\"hero\"]", "source": ["src/content/home.ts#hero", "src/components/Hero.astro"],
+                  "decision": "hero-headline",
+                  "variants": {
+                    "a": [],
+                    "b": [{ "sel": "[data-bd=\"headline\"]", "text": "Build the habit, one week at a time." }],
+                    "c": [{ "sel": "[data-bd=\"headline\"]", "text": "A coach on your wrist, every day." }]
+                  }
+                },
+                { "id": "features", "title": "Features", "sel": "[data-bd=\"features\"]", "source": ["src/content/home.ts#features", "src/components/Features.astro"] },
+                {
+                  "id": "pricing", "title": "Pricing", "sel": "[data-bd=\"pricing\"]", "source": ["src/content/home.ts#pricing", "src/components/Pricing.astro"],
+                  "decision": "pricing-lead",
+                  "variants": {
+                    "a": [],
+                    "b": [
+                      { "sel": "[data-bd=\"plan-lead\"]", "html": "<h3>Yearly</h3><div class=\"price\">$79<span>/year</span></div><p class=\"note\">Two months free</p><ul><li>Every feature</li><li>Watch and phone</li></ul><span class=\"btn-l\">Start free trial</span>" },
+                      { "sel": "[data-bd=\"plan-other\"]", "html": "<h3>Monthly</h3><div class=\"price\">$7.99<span>/month</span></div><p class=\"note\">Billed every month</p><ul><li>Every feature</li><li>Watch and phone</li></ul><span class=\"btn-l ghost\">Choose monthly</span>" }
+                    ]
+                  }
+                },
+                { "id": "footer", "title": "Footer", "sel": "[data-bd=\"footer\"]", "source": ["src/content/home.ts#footer", "src/components/Footer.astro"] }
+              ]
+            },
+            {
+              "id": "blog",
+              "title": "Blog",
+              "device": "page",
+              "fidelity": "hifi",
+              "url": "http://localhost:4321/blog/",
+              "source": "src/pages/blog/index.astro",
+              "sections": [
+                { "id": "posts", "title": "Post list", "sel": "main", "source": ["src/content/blog/", "src/components/PostCard.astro"] },
+                { "id": "subscribe", "title": "Subscribe", "sel": "#subscribe", "source": "src/components/Subscribe.astro" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

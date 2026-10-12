@@ -2,7 +2,7 @@
 
 Lookup reference for every field and command. Grep for a heading, never read the file whole: `grep -n -A25 '^## Diff' references/schema.md`. How to lay out each doc type lives in `types/<type>.md`.
 
-Headings: `## Document` (incl. `hero`) · `## Contracts` · `## Section` · `## Blocks` (`### Inline markdown`) · `## Checklist` (`### Reader comments and replies`) · `## Diff` (`### Diff reference`, `### Embedded diff`, `### gitdiff.py`) · `## Plan blocks` (`### Steps`, `### Files`, `### Media`, `### Compare`) · `## Board` (`### Artboard`, `### Devices`, `### Screen files`, `### Links`, `### Icons`) · `## Revisions` · `## Page layout` · `## Canvas` (`### Node`, `### Semantic zoom`, `### Edge`, `### Flow`) · `## Annotations` (the key grammar; `### Bottom tray`) · `## Plans` (its approval Markdown has `## Decisions` and `## Notes with the approval`) · `## build.py` (`### patch`) · `## serve.py` (`### Reader state`) · `## Automation API`
+Headings: `## Document` (incl. `hero`) · `## Contracts` · `## Section` · `## Blocks` (`### Inline markdown`) · `## Checklist` (`### Reader comments and replies`) · `## Diff` (`### Diff reference`, `### Embedded diff`, `### gitdiff.py`) · `## Plan blocks` (`### Steps`, `### Files`, `### Media`, `### Compare`) · `## Board` (`### Artboard`, `### Devices`, `### Screen files`, `### Links`, `### Icons`, `### Website`) · `## Revisions` · `## Page layout` · `## Canvas` (`### Node`, `### Semantic zoom`, `### Edge`, `### Flow`) · `## Annotations` (the key grammar; `### Bottom tray`) · `## Plans` (its approval Markdown has `## Decisions` and `## Notes with the approval`) · `## build.py` (`### patch`) · `## serve.py` (`### Reader state`) · `## Automation API`
 
 ## Document
 
@@ -11,7 +11,7 @@ Headings: `## Document` (incl. `hero`) · `## Contracts` · `## Section` · `## 
 | `id` | id | yes | Namespace for the reader's ticks, picks and comments (`bp:<id>:…` keys). Never change it after people start ticking. |
 | `title` | string | yes | Page `<h1>` and browser title (`<title> · bluedoc`). |
 | `subtitle` | inline md | no | One sentence under the title. |
-| `meta` | object | no | `org`, `kind` (Architecture, Walkthrough, Runbook, Setup, Change, Plan, Review, or a free label), `dwg` (drawing number), `rev`, `date`, `type`. `org · kind · date` form the line above the title; `dwg` and `rev` appear under **Document** in the status rail and in the canvas title blocks. `rev` names the revision: the build keeps one history entry per `rev` (see Revisions). `type` (`docs`, `review`, `plan`, `design`, `presentation`, `other`) picks the doc's [contract](#contracts), its home-page group and card, and the page's tray; `build.py new` sets it. Unset, it is derived from `kind`, case-insensitive: starts with `plan` or is `implementation plan` → `plan`; contains `review` → `review`; names a docs kind (Architecture, Walkthrough, Runbook, Setup, Reference, Proposal, Change, Status, Guide, Design, Spec, RFC, ADR, …) → `docs`; anything else → `other`. `design` and `presentation` are never derived: only `"type": "design"` or `"type": "presentation"` makes a [board](#board) page. A `plan` doc is a **plan page**: see [Plans](#plans). |
+| `meta` | object | no | `org`, `kind` (Architecture, Walkthrough, Runbook, Setup, Change, Plan, Review, or a free label), `dwg` (drawing number), `rev`, `date`, `type`. `org · kind · date` form the line above the title; `dwg` and `rev` appear under **Document** in the status rail and in the canvas title blocks. `rev` names the revision: the build keeps one history entry per `rev` (see Revisions). `type` (`docs`, `review`, `plan`, `design`, `presentation`, `website`, `other`) picks the doc's [contract](#contracts), its home-page group and card, and the page's tray; `build.py new` sets it. Unset, it is derived from `kind`, case-insensitive: starts with `plan` or is `implementation plan` → `plan`; contains `review` → `review`; names a docs kind (Architecture, Walkthrough, Runbook, Setup, Reference, Proposal, Change, Status, Guide, Design, Spec, RFC, ADR, …) → `docs`; anything else → `other`. `design`, `presentation` and `website` are never derived: only `"type"` set to one of them makes a [board](#board) page. A `plan` doc is a **plan page**: see [Plans](#plans). |
 | `state` | `[{label, kind}]` | no | Provenance, listed under **Status** in the status rail as dots. `kind`: `ok` (green), `warn` (amber), `risk` (red), `info` (blue), `todo` (grey). Example: `{"label": "not live", "kind": "warn"}`. Keep each label under ~40 characters. |
 | `links` | `[{label, href}]` | no | Related documents, listed under **Related** in the status rail. |
 | `hero` | `{icon, value, label}` | no | The home card's stat, for `other` docs and for `docs` without a canvas. `icon`: `chart`, `doc`, `flag`, `bolt`, `clock`, `users`, `bug`, `box`, `check`, `globe`, `lock` or `list`. `value` ≤ 8 characters (`"99.95%"`); `label` ≤ 28 (`"uptime, last 30 days"`). Without it an `other` card shows the `doc` icon and the section count. |
@@ -34,6 +34,7 @@ Each type's home card draws one element, so the build requires that element's da
 | `other` | nothing | `hero`; else the `doc` icon and the section count |
 | `design` | exactly one `board` block with ≥ 1 artboard | the board's outline: each artboard's device frame at its place |
 | `presentation` | exactly one `board` block with ≥ 1 artboard, every one `device: "slide"` (any other device is an error: use a design doc for screens) | the first 9 slides as 16:9 frames in deck order, the slide count and how many have notes |
+| `website` | exactly one `board` block with ≥ 1 artboard, every one `device: "page"` (any other device is an error) | the first 4 pages as browser windows with their sections as bands, a green dot on live ones; the page, section and live counts |
 
 A missing requirement is an **error** on the doc being built: a new `meta.rev` (not yet in its history file), or a recorded rev whose content changed (an edit in place). It is a **warning** only while the doc is exactly the revision its history recorded, so recorded revisions keep rendering. `build.py` and every server render apply the same rule. `build.py new <type>` writes a skeleton that meets the contract.
 
@@ -294,7 +295,7 @@ Each side needs one of `md`, `code` or `src` and shows whichever is present. The
 
 ## Board
 
-A design doc (`meta.type: "design"`) has a brief section and one `board` block. The page shows the board full width, the brief in its left panel. A presentation (`meta.type: "presentation"`) is the same page whose board holds slides only: it says slides and deck where a design says screens, its toolbar's primary key is **Present**, and it is approved with **Approve presentation**. A design may still hold an occasional `slide`.
+A design doc (`meta.type: "design"`) has a brief section and one `board` block. The page shows the board full width, the brief in its left panel. A presentation (`meta.type: "presentation"`) is the same page whose board holds slides only: it says slides and deck where a design says screens, its toolbar's primary key is **Present**, and it is approved with **Approve presentation**. A design may still hold an occasional `slide`. A website (`meta.type: "website"`) is the same page whose board holds web pages only: see [Website](#website).
 
 ```json
 { "type": "board", "id": "main", "targets": ["watch", "mobile", "web"], "framework": "plain", "entry": ["login"], "layout": "flow",
@@ -316,6 +317,8 @@ A design doc (`meta.type: "design"`) has a brief section and one `board` block. 
 | `motion` | `fast`, `base`, `slow`, `ease`: the CSS variables `--dur-fast`, `--dur-base`, `--dur-slow`, `--ease`. |
 | `entry` | Artboard ids a flow starts from: where **Present** starts with nothing selected, and what [reach](#links) is counted from. |
 | `layout` | `rows` (default) or `flow`: unplaced screens the entries reach go in columns by link depth (see `x`, `y`). |
+| `breakpoints` | Website only. 1 to 6 distinct widths in CSS px, 240 to 3840 (default `[1440, 768, 390]`): the widths the toolbar and each page's title bar switch to. |
+| `root` | Website only. The site's repo folder, relative to the doc (e.g. `".."`). Source hints are checked against it; a folder that isn't there is a warning. |
 
 **The brief** is a section with the checklist `brief`. Its decision item `framework` offers framework ids (`plain`, `horizon`, `frameworks[].id`); its item `theme` offers exactly the `themes[].id`s. The build checks both. Other items (targets, motion, scope) are free.
 
@@ -332,6 +335,7 @@ A design doc (`meta.type: "design"`) has a brief section and one `board` block. 
 | `framework` | Overrides the board's `framework`. |
 | `src` | The screen file, relative to the doc: an `.html` file in a `<name>.design/` folder. Default `<stem>.design/<id>.html`; leave it out. |
 | `notes` | md, at most 2 KB (an error above): the speaker notes of a slide. **Present** shows them under it (`N` toggles). |
+| `url`, `source`, `sections` | Website pages only: see [Website](#website). |
 | `icon` | `device: "icons"` only: `{bg, name}`. `bg`: the background colour, `#rgb` or `#rrggbb` (else a `bg.svg` layer); `name`: the label under the icon on the home screens, ≤ 30 characters. See [Icons](#icons). |
 
 ### Devices
@@ -345,6 +349,7 @@ A design doc (`meta.type: "design"`) has a brief section and one `board` block. 
 | `desktop` | 1280 × 800 | 32, 0, 0, 0 (title bar) |
 | `browser` | 1440 × 900 | 72, 0, 0, 0 (tab strip, address bar) |
 | `slide` | 1920 × 1080 | none; a thin frame, no device chrome. Other aspect ratios: `w` and `h` |
+| `page` | 1440 × 900 at first, then the width the reader picks (height: that width's viewport) | none; a browser bar sits above the page, not over it. Website docs only |
 | `icons` | 1280 × 860 | none; the [icon sheet](#icons), built from layers instead of a screen file |
 
 A board with `slide` artboards is a deck: **Present** shows them full-window, scaled to fit, in reading order (rows top to bottom, each left to right, as the board places them); ← → step, `Esc` leaves. Kit slide classes: `references/kits.md` `## Slides`.
@@ -391,6 +396,29 @@ An artboard with `device: "icons"` is an app icon: SVG layers in `<stem>.design/
 | `ios-dark.svg`, `ios-tinted.svg`, `play.svg` | Optional overrides of the iOS dark and tinted icons and the Play Store icon. |
 
 **Errors:** no `fg.svg`; a layer that isn't XML, has a DOCTYPE, or has no square `viewBox`; `<script>`, `<foreignObject>`, an `on…` attribute or a network URL in a layer; `icon` on another device; an `icon.bg` that isn't a hex colour. **Warnings:** `fg.svg` drawn outside the 66 dp safe circle (checked on shape extremes and path points, transforms applied; keep a margin); no `mono.svg`; no background (`icon.bg` or `bg.svg`); `<text>` (fonts don't load in an image: convert to paths). Each layer joins the revision as `<id>/<file>`, so editing one marks the icon Changed and asks for approval again. `patch el:<id>/<tile>` (a sheet tile, e.g. `ios-dark`) and `artboard:<id>` print the layer folder and its layers.
+
+### Website
+
+A website's board holds `page` artboards. Each page is either **live** (`url`) or a mockup (a screen file, as on a design).
+
+```json
+{ "id": "home", "title": "Home", "device": "page", "fidelity": "hifi", "url": "http://localhost:4321/",
+  "source": "src/pages/index.astro",
+  "sections": [ { "id": "hero", "title": "Hero", "sel": "section.hero", "source": ["src/content/site.ts#hero", "src/components/Hero.astro"],
+                  "decision": "hero-headline", "variants": { "a": [], "b": [ { "sel": "h1", "text": "Build the habit, one week at a time." } ] } } ] }
+```
+
+| Field | Meaning |
+|---|---|
+| `url` | A live page: an `http(s)` URL on a loopback host (`localhost`, `127.x.y.z`, `::1`), no credentials; any other is an error. No screen file (`src` with `url` is an error). |
+| `source` | Where the page lives in the site's repo: `path`, `path#symbol` or `path:line[-end]`, or a list of up to 3. No `..`, no leading `/`. With `board.root`: a missing file, a symbol the file never names, or a line past its end is a warning. |
+| `sections[]` | Up to 40 `{id, title, sel, source?, decision?, variants?}`, in page order. `sel`: a CSS selector that finds the section in the page (≤ 200 characters). The **Pages** panel lists them with their source; a click scrolls the page there. |
+| `decision` | The id of a decision item in the checklist `brief`: the section shows its choices in place. More than 3 choices is a warning. |
+| `variants` | `{<choice id>: [{sel?, text \| html}]}`, up to 20 edits each: the page shows the picked (else recommended) choice by setting the text or inner HTML of the element `sel` finds inside the section (the section itself without `sel`). `html` is linted like a screen file, ≤ 8 KB. Needs `decision`. |
+
+**Live pages.** On the first render of a doc with a live page, `serve.py` starts a proxy for that dev server: its own listener on `127.0.0.1:<free port>`, so the site's root-relative URLs, modules and hot-reload WebSocket work. It answers only its own `Host`, rewrites `Host`, `Origin` and `Referer` to the dev server, drops the `bluedoc_key_*` cookie, injects the inspector after `<head>` and a style that hides framework dev toolbars, and replaces the site's `X-Frame-Options` and `frame-ancestors` with this server's origins. The page frames it with `sandbox="allow-scripts allow-same-origin"` (the proxy's origin is another port, never the page's); the page's CSP `frame-src` names exactly its proxies. A dev server that isn't up shows a 502 page in the frame. A static export (`build.py -o`) shows live pages as placeholders.
+
+**On the page.** The toolbar switches every page to one of `breakpoints` or a typed width; each page's title bar switches that page. Pins on a page carry `bp` (its width), `section` (the section's id) and `source` (the section's hints, else the page's) in their target; the Markdown adds `At: <bp> px wide` and `Source: …` lines. A decision whose versions a section shows adds `Shown in: <page> › <section> · Source: …`. `build.py patch <doc> el:<page>/<sel>` prints the live URL (or the screen file), the selector and source hints: the section's when the selector names it (or, on a mockup, an ancestor in the screen file matches it), else every section's.
 
 ## Revisions
 
@@ -506,7 +534,7 @@ The key grammar. This table is the one list of keys: the annotator writes them i
 | `media:<blockPath>` | a `media` block |
 | `compare:<blockPath>/before`, `compare:<blockPath>/after` | one pane of a `compare` block |
 | `artboard:<id>` | an artboard of the `board` (its screen file is `<stem>.design/<id>.html`) |
-| `el:<id>/<path>` | an element in that artboard's screen file: `<path>` is `data-bd` names joined by `/` (`el:login/form/submit`), else a CSS path (`el:login/[data-bd="login"]>h1:nth-of-type(1)`). `patch` prints the file and the selector |
+| `el:<id>/<path>` | an element in that artboard's screen file: `<path>` is `data-bd` names joined by `/` (`el:login/form/submit`), else a CSS path (`el:login/[data-bd="login"]>h1:nth-of-type(1)`; on a website's live page also from the nearest unique id, `el:home/#faq>details:nth-of-type(2)`). `patch` prints the file (a live page: its URL) and the selector, and on a website the source hints |
 | `frame:<device>@<x>,<y>` | a requested empty frame at board px `x`,`y`; `<device>` is a device or `<w>x<h>`. `patch` appends an artboard there (`frame-<n>`, or `--set id=…`) and writes a wireframe stub screen file |
 | `link:<id>/<element>` | the link on an element of that artboard's screen file: `<element>` is its `data-bd` name (the link list's `el`) or a CSS path as for `el:`; a name no element has (or none: `link:<id>/`) is a new gesture link. Without an option `patch` prints the file, the selector and the current `data-nav` and label; `--set to=… kind=… label=…` or `--delete` rewrite that start tag in place |
 | `layout:<boardId>` | the board's artboard positions: `patch layout:main --json '{"<artboard>": [x, y], …}'` sets `x`, `y` (`null` unsets: the board places it). The page sends moves and **Tidy up** as one `layout:` draft with this command |
@@ -581,7 +609,7 @@ The server stores the approval in `state.db` with `docHash`, the sha256 of the d
 
 | Command | Does |
 |---|---|
-| `new <type> <out.bluedoc.json> [--title "…"] [--kind "…"] [--shape pr\|area] [--target T,…] [--framework F]` | Copies `assets/skeletons/<type>.json`; sets `id` from the file name, `meta.rev` `1`, `meta.date` today, `meta.type`, and the title and kind when given. `--shape area` (reviews only) copies `review-area.json`: a review by area of a codebase, diffed from the last release you reviewed to head. `design` only: `--target watch,mobile,tablet,desktop,web` (default `mobile`) writes one wireframe artboard and stub screen file per target (`--target presentation` is an error: a deck is `new presentation`); `--framework plain\|horizon\|<store name>\|auto` sets the board's framework and the brief's recommendation (`auto`, the default, leaves the pick to you: see `types/design.md`). `presentation` writes three wireframe slides (`title`, `content`, `closing`) and their stub files: see `types/presentation.md`. Refuses to overwrite; prints the next steps. The build fails until every `<<…>>` is filled; shell shifts and heredocs (`<<EOF`) in code don't count, and inside backticks only a span that is exactly `<<x>>` does. |
+| `new <type> <out.bluedoc.json> [--title "…"] [--kind "…"] [--shape pr\|area] [--target T,…] [--framework F] [--url URL]` | Copies `assets/skeletons/<type>.json`; sets `id` from the file name, `meta.rev` `1`, `meta.date` today, `meta.type`, and the title and kind when given. `--shape area` (reviews only) copies `review-area.json`: a review by area of a codebase, diffed from the last release you reviewed to head. `design` only: `--target watch,mobile,tablet,desktop,web` (default `mobile`) writes one wireframe artboard and stub screen file per target (`--target presentation` is an error: a deck is `new presentation`); `--framework plain\|horizon\|<store name>\|auto` sets the board's framework and the brief's recommendation (`auto`, the default, leaves the pick to you: see `types/design.md`). `presentation` writes three wireframe slides (`title`, `content`, `closing`) and their stub files: see `types/presentation.md`. `website` writes a home page: live from `--url` (a loopback dev server; any other is an error), else a wireframe stub screen file; `board.root` is the git repo the doc sits in. Refuses to overwrite; prints the next steps. The build fails until every `<<…>>` is filled; shell shifts and heredocs (`<<EOF`) in code don't count, and inside backticks only a span that is exactly `<<x>>` does. |
 | `<doc>` | Validates (structure, field types, ids, refs, links, media, diff anchors against the expanded diff, the [contract](#contracts)), lints the writing, records the revision. A field of the wrong JSON type is an error naming its path (`ERROR sections[0].blocks[2].items[1].text: 404 is a number: must be a string`), never a traceback. |
 | `<doc> -o out.html` | Also writes a standalone page with expanded diffs and media inlined; a design's screens become `srcdoc` frames with their kit inlined (warns above 10 MB). It works from `file://`, where the reply dialogs offer **Copy** only. |
 | `<doc> --check` | Validates and lints only; writes nothing (no history, no diff cache). `--strict` fails on warnings; `--no-history` doesn't read or write the history file. |
@@ -680,6 +708,6 @@ The built page exposes `window.BP`:
 | `BP.acceptRecommended(checklistId?)` | Picks the recommended option on every open decision (in that checklist and its nested ones, or the whole doc); returns how many. |
 | `BP.sidebar({open, section})` | Opens/closes the right panel at the window edge, or opens it on `section` (`'comments'` or `'revisions'`); returns `{available, open, section, as}`. `available` lists the panel's tabs in order: `['comments', 'revisions']` on the current revision of a doc with a `meta.rev`, `['revisions']` on an earlier revision or in compare view (which open on it), `['comments']` without a `meta.rev`. `as` is `'dock'` (beside the page, > 1100 px), `'drawer'` (over it, 901–1100 px), `'sheet'` (bottom sheet, ≤ 900 px) or `null` when closed. The page remembers the reader's last tab and whether the panel was open; `]` and the app-bar key toggle it. |
 | `BP.revisionsRail({open})` | The panel's Revisions tab (every doc with a `meta.rev`, one revision included; Compare appears from the second revision): `open: true` opens the panel on it, `open: false` closes the panel when it shows it; returns `{available, open, as}`, `as` as in `BP.sidebar` while the tab shows, else `null`. **Rev** in the app bar and the **Revision** link under Document do the same as a toggle. |
-| `BP.docType` | Property: the page's type, `'docs'`, `'review'`, `'plan'`, `'design'`, `'presentation'` or `'other'`. |
-| `BP.planState()` | `{type, state, rev, approvedRev, carried}`. `state` is `'awaiting'`, `'stale'` (an earlier rev's approval that changes since don't carry: **Changes since approved rev X**), `'changes'` or `'approved'` on plan, design and presentation pages, `null` elsewhere; `approvedRev` is the rev of the approval the page knows (from the server's seed and ping, or this browser), else `null`; `carried` is true when the server carried an earlier rev's approval to this one. |
+| `BP.docType` | Property: the page's type, `'docs'`, `'review'`, `'plan'`, `'design'`, `'presentation'`, `'website'` or `'other'`. |
+| `BP.planState()` | `{type, state, rev, approvedRev, carried}`. `state` is `'awaiting'`, `'stale'` (an earlier rev's approval that changes since don't carry: **Changes since approved rev X**), `'changes'` or `'approved'` on plan, design, presentation and website pages, `null` elsewhere; `approvedRev` is the rev of the approval the page knows (from the server's seed and ping, or this browser), else `null`; `carried` is true when the server carried an earlier rev's approval to this one. |
 | `BP.approvePayload(note?)` | The body **Approve** posts to `/__bluedoc/approve`. |

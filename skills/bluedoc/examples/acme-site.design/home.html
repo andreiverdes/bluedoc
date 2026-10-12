@@ -1,0 +1,113 @@
+<style>
+  .site { --ink: #0f172a; --soft: #475569; --line: #e2e8f0; --brand: #4f46e5; --brand-ink: #ffffff; --tint: #eef2ff;
+    background: #ffffff; color: var(--ink); font: 16px/1.55 var(--font); }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 32px; }
+  .nav { position: sticky; top: 0; z-index: 2; background: rgba(255, 255, 255, .92); border-bottom: 1px solid var(--line); }
+  .nav .wrap { display: flex; align-items: center; gap: 28px; height: 68px; }
+  .logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; }
+  .logo i { width: 28px; height: 28px; border-radius: 8px; background: linear-gradient(135deg, #6366f1, #4338ca); }
+  .links { display: flex; gap: 24px; margin-left: auto; color: var(--soft); font-size: 15px; }
+  .btn-s { padding: 9px 16px; border-radius: 10px; background: var(--ink); color: #fff; font-weight: 600; font-size: 14px; }
+  .hero { padding: 96px 0 88px; background: radial-gradient(60% 80% at 80% 0%, #e0e7ff 0%, rgba(224, 231, 255, 0) 70%), linear-gradient(#ffffff, #f8fafc); }
+  .hero .wrap { display: grid; grid-template-columns: 1.1fr .9fr; gap: 56px; align-items: center; }
+  .kicker { display: inline-block; padding: 5px 12px; border-radius: 999px; background: var(--tint); color: var(--brand); font-weight: 600; font-size: 13px; }
+  .hero h1 { margin: 18px 0 16px; font-size: 56px; line-height: 1.05; letter-spacing: -.02em; }
+  .hero p { margin: 0 0 28px; max-width: 34em; color: var(--soft); font-size: 18px; }
+  .ctas { display: flex; flex-wrap: wrap; gap: 12px; }
+  .btn-l { padding: 14px 22px; border-radius: 12px; font-weight: 600; background: var(--brand); color: var(--brand-ink); }
+  .btn-l.ghost { background: #fff; color: var(--ink); box-shadow: inset 0 0 0 1px var(--line); }
+  .phone { justify-self: center; width: 280px; height: 520px; padding: 18px; border-radius: 40px; background: #0f172a; box-shadow: 0 30px 60px rgba(15, 23, 42, .25); }
+  .phone div { height: 100%; border-radius: 26px; background: linear-gradient(160deg, #eef2ff, #c7d2fe); display: grid; place-items: center; }
+  .ring { width: 150px; height: 150px; border-radius: 50%; background: conic-gradient(var(--brand) 0 72%, #e0e7ff 72% 100%); display: grid; place-items: center; }
+  .ring b { width: 112px; height: 112px; border-radius: 50%; background: #fff; display: grid; place-items: center; font-size: 30px; }
+  .features { padding: 88px 0; }
+  .features h2, .pricing h2 { margin: 0 0 12px; font-size: 36px; letter-spacing: -.01em; }
+  .lead { margin: 0 0 40px; color: var(--soft); font-size: 18px; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+  .card { padding: 26px; border-radius: 18px; background: #f8fafc; box-shadow: inset 0 0 0 1px var(--line); }
+  .card .ic { width: 40px; height: 40px; border-radius: 12px; background: var(--tint); margin-bottom: 16px; }
+  .card h3 { margin: 0 0 8px; font-size: 19px; }
+  .card p { margin: 0; color: var(--soft); }
+  .pricing { padding: 88px 0; background: #f8fafc; border-top: 1px solid var(--line); }
+  .plans { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; max-width: 760px; }
+  .plan { padding: 28px; border-radius: 20px; background: #fff; box-shadow: inset 0 0 0 1px var(--line); }
+  .plan.hl { box-shadow: inset 0 0 0 2px var(--brand), 0 18px 40px rgba(79, 70, 229, .14); }
+  .plan h3 { margin: 0; font-size: 17px; color: var(--soft); }
+  .price { margin: 10px 0 4px; font-size: 44px; font-weight: 700; letter-spacing: -.02em; }
+  .price span { font-size: 16px; font-weight: 500; color: var(--soft); }
+  .note { margin: 0 0 18px; color: var(--brand); font-weight: 600; font-size: 14px; }
+  .plan ul { margin: 0 0 22px; padding-left: 18px; color: var(--soft); }
+  .foot { padding: 40px 0; border-top: 1px solid var(--line); color: var(--soft); font-size: 14px; }
+  .foot .wrap { display: flex; flex-wrap: wrap; gap: 16px 28px; align-items: center; }
+  .foot .logo { color: var(--ink); font-size: 15px; }
+  .foot .logo i { width: 20px; height: 20px; border-radius: 6px; }
+  @media (max-width: 1023px) {
+    .links { display: none; }
+    .nav .btn-s { margin-left: auto; }
+    .hero .wrap { grid-template-columns: minmax(0, 1fr); }
+    .phone { display: none; }
+    .grid3 { grid-template-columns: minmax(0, 1fr); }
+  }
+  @media (max-width: 599px) {
+    .wrap { padding: 0 20px; }
+    .hero { padding: 56px 0; }
+    .hero h1 { font-size: 38px; }
+    .plans { grid-template-columns: minmax(0, 1fr); }
+  }
+</style>
+<div class="site" data-bd="home">
+  <header class="nav" data-bd="nav">
+    <div class="wrap">
+      <span class="logo" data-bd="logo"><i></i>Acme Fit</span>
+      <nav class="links" data-bd="links"><span>Features</span><span>Pricing</span><span>Stories</span></nav>
+      <span class="btn-s" data-bd="nav-cta">Get the app</span>
+    </div>
+  </header>
+  <section class="hero" data-bd="hero">
+    <div class="wrap">
+      <div>
+        <span class="kicker" data-bd="kicker">New: weekly goals</span>
+        <h1 data-bd="headline">Track every workout in one place.</h1>
+        <p data-bd="subline">Acme Fit logs runs, rides and lifts from your watch and phone, then shows the week at a glance.</p>
+        <div class="ctas"><span class="btn-l" data-bd="cta">Start free trial</span><span class="btn-l ghost" data-bd="cta-2">See how it works</span></div>
+      </div>
+      <div class="phone" data-bd="shot"><div><span class="ring"><b>72%</b></span></div></div>
+    </div>
+  </section>
+  <section class="features" data-bd="features">
+    <div class="wrap">
+      <h2 data-bd="features-title">Everything your week needs</h2>
+      <p class="lead" data-bd="features-lead">Three things members open the app for every day.</p>
+      <div class="grid3">
+        <div class="card" data-bd="feature-log"><div class="ic"></div><h3>Automatic log</h3><p>Workouts arrive from your watch; nothing to type.</p></div>
+        <div class="card" data-bd="feature-goals"><div class="ic"></div><h3>Weekly goals</h3><p>Pick a target; the ring fills as you move.</p></div>
+        <div class="card" data-bd="feature-coach"><div class="ic"></div><h3>Coach notes</h3><p>A short plan for tomorrow, from what you did today.</p></div>
+      </div>
+    </div>
+  </section>
+  <section class="pricing" data-bd="pricing">
+    <div class="wrap">
+      <h2 data-bd="pricing-title">One plan, two ways to pay</h2>
+      <p class="lead">Cancel any time from the app.</p>
+      <div class="plans">
+        <div class="plan hl" data-bd="plan-lead">
+          <h3 data-bd="plan-name">Monthly</h3>
+          <div class="price" data-bd="price">$7.99<span>/month</span></div>
+          <p class="note" data-bd="price-note">Billed every month</p>
+          <ul><li>Every feature</li><li>Watch and phone</li></ul>
+          <span class="btn-l" data-bd="plan-cta">Start free trial</span>
+        </div>
+        <div class="plan" data-bd="plan-other">
+          <h3>Yearly</h3>
+          <div class="price">$79<span>/year</span></div>
+          <p class="note">Two months free</p>
+          <ul><li>Every feature</li><li>Watch and phone</li></ul>
+          <span class="btn-l ghost">Choose yearly</span>
+        </div>
+      </div>
+    </div>
+  </section>
+  <footer class="foot" data-bd="footer">
+    <div class="wrap"><span class="logo"><i></i>Acme Fit</span><span>Privacy</span><span>Terms</span><span>Support</span><span>© 2026 Acme Corp</span></div>
+  </footer>
+</div>

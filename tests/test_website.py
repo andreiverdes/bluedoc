@@ -1,0 +1,506 @@
+"""Website docs: `new website`, the page contract, live URLs, source hints, sections and variants, `patch` on a page,
+the home card, the dev-server proxy, and a pin on a live page in a real browser.
+
+`new website` writes a home page as a stub screen file, or with `--url` a live page and no file; a non-loopback
+`--url` is refused. A website's board holds `page` artboards only. A live `url` must be http(s) on a loopback host
+without credentials. Source hints are `path`, `path#symbol` or `path:line` inside the site's repo; with `board.root`, a
+missing file, a symbol the file never names and a line past its end are warnings. Variants need a brief decision and
+name its choices. The Acme example builds clean, and `patch` on its pages prints the page, the section and their
+source hints. The server's proxy for a dev server answers only its own Host, injects the inspector after <head>, drops
+X-Frame-Options and frame-ancestors for its own, strips bluedoc's key cookie, rewrites Host to the dev server and
+answers 502 when the dev server is down; the doc page's CSP frames exactly that proxy. In headless Chrome
+(BLUEDOC_BROWSER_TESTS=1), a pin on a live page carries its section's source hints and width into the change request,
+a variant pick edits the page in place, and a breakpoint resizes the page."""
+from __future__ import annotations
+
+import copy
+import http.client
+import json
+import shutil
+import subprocess
+import tempfile
+import threading
+import time
+import unittest
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+
+from _support import EXAMPLES, Server, TempHome, load_json
+
+import build
+from test_page_state import CHROME, Browser, Tab
+
+STEM = "acme-site"
+
+
+def errors(out: str) -> list[str]:
+    return [l for l in out.splitlines() if l.startswith("ERROR")]
+
+
+def warnings(out: str) -> list[str]:
+    return [l for l in out.splitlines() if l.startswith("WARN")]
+
+
+def board_of(doc: dict) -> dict:
+    return next(b for b in build.all_blocks(doc) if b.get("type") == "board")
+
+
+# the stub dev server's page: a nav, a hero whose title sits at a fixed place, and a FAQ
+STUB_PAGE = """<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Acme Fit</title>
+<style>body { margin: 0; font: 16px sans-serif; } .hero { position: relative; height: 600px; }
+#hero-title { position: absolute; left: 100px; top: 100px; width: 600px; height: 80px; margin: 0; }</style></head>
+<body><header class="site-nav">Acme Fit</header><section class="hero"><h1 id="hero-title">Track everything</h1></section>
+<section id="faq"><h2>Questions</h2></section></body></html>"""
+
+
+class StubDevServer:
+    """A dev server on a free loopback port: / is STUB_PAGE, sent with X-Frame-Options and a CSP that forbids framing;
+    /echo answers the headers it got as JSON. seen holds each request's (path, headers)."""
+
+    def __init__(self) -> None:
+        seen = self.seen = []
+
+        class H(BaseHTTPRequestHandler):
+            def log_message(self, *_):
+                pass
+
+            def do_GET(self):
+                seen.append((self.path, dict(self.headers.items())))
+                if self.path == "/echo":
+                    body, ctype = json.dumps(dict(self.headers.items())).encode(), "application/json"
+                else:
+                    body, ctype = STUB_PAGE.encode(), "text/html; charset=utf-8"
+                self.send_response(200)
+                self.send_header("Content-Type", ctype)
+                self.send_header("Content-Length", str(len(body)))
+                self.send_header("X-Frame-Options", "DENY")
+                self.send_header("Content-Security-Policy", "default-src 'self' 'unsafe-inline'; frame-ancestors 'none'")
+                self.end_headers()
+                self.wfile.write(body)
+
+        self.srv = ThreadingHTTPServer(("127.0.0.1", 0), H)
+        self.port = self.srv.server_address[1]
+        self.origin = f"http://127.0.0.1:{self.port}"
+        threading.Thread(target=self.srv.serve_forever, daemon=True).start()
+
+    def stop(self) -> None:
+        self.srv.shutdown()
+        self.srv.server_close()
+
+
+def site_doc(url: str) -> dict:
+    """A website doc of one live page at url, its repo one folder up (root ".."), with a hero headline decision."""
+    return {
+        "id": "acme-live", "title": "Acme Fit: the live home page", "subtitle": "The home page from the dev server.",
+        "meta": {"org": "Acme Corp", "kind": "Website", "type": "website", "rev": "1", "date": "2026-10-12"},
+        "tldr": "One live page with two sections; pick the hero headline.",
+        "sections": [
+            {"id": "brief", "title": "Brief", "blocks": [
+                {"type": "text", "md": "The home page turns a visitor into a trial."},
+                {"type": "checklist", "id": "brief", "title": "Picks", "numbered": False, "items": [
+                    {"id": "hero-headline", "text": "Which hero headline?", "recommend": "a",
+                     "choices": [{"id": "a", "label": "Track everything"}, {"id": "b", "label": "Habit first"}]}]}]},
+            {"id": "pages", "title": "Pages", "blocks": [
+                {"type": "board", "id": "site", "targets": ["web"], "root": "..", "artboards": [
+                    {"id": "home", "title": "Home", "device": "page", "fidelity": "hifi", "url": url,
+                     "source": "src/pages/index.astro",
+                     "sections": [
+                         {"id": "hero", "title": "Hero", "sel": "section.hero", "source": ["src/content/site.ts#hero", "src/components/Hero.astro"],
+                          "decision": "hero-headline",
+                          "variants": {"a": [], "b": [{"sel": "#hero-title", "text": "Build the habit, one week at a time."}]}},
+                         {"id": "faq", "title": "FAQ", "sel": "#faq", "source": "src/components/Faq.astro:3"}]}]}]}]}
+
+
+def write_site(folder: Path, url: str) -> Path:
+    """The site's repo in folder: src/ files the source hints name, and docs/site.bluedoc.json."""
+    for rel, text in {"src/pages/index.astro": "<Hero />\n", "src/content/site.ts": "export const hero = { headline: 'Track everything' };\n",
+                      "src/components/Hero.astro": "<section class=\"hero\"></section>\n",
+                      "src/components/Faq.astro": "---\n---\n<section id=\"faq\"></section>\n"}.items():
+        (folder / rel).parent.mkdir(parents=True, exist_ok=True)
+        (folder / rel).write_text(text, encoding="utf-8")
+    doc = folder / "docs" / "site.bluedoc.json"
+    doc.parent.mkdir(parents=True, exist_ok=True)
+    doc.write_text(json.dumps(site_doc(url), indent=1) + "\n", encoding="utf-8")
+    return doc
+
+
+class WebsiteCase(unittest.TestCase):
+    def setUp(self) -> None:
+        self.tmp = TempHome()
+        self.addCleanup(self.tmp.cleanup)
+        self.doc_path = write_site(self.tmp.dir / "site", "http://localhost:4321/")
+        self.doc = load_json(self.doc_path)
+
+    def check(self, doc: dict):
+        self.doc_path.write_text(json.dumps(doc, indent=1) + "\n", encoding="utf-8")
+        return self.tmp.run("build.py", self.doc_path, "--check", "--no-history")
+
+    def page(self, doc: dict) -> dict:
+        return board_of(doc)["artboards"][0]
+
+
+class Validation(WebsiteCase):
+    def test_the_live_doc_builds_clean(self) -> None:
+        r = self.check(self.doc)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("0 error(s), 0 warning(s)", r.stderr)
+
+    def test_a_live_page_must_be_a_loopback_dev_server(self) -> None:
+        for url in ("http://127.0.0.2:3000/", "http://[::1]:5173/blog/", "https://localhost:8443/"):
+            d = copy.deepcopy(self.doc)
+            self.page(d)["url"] = url
+            self.assertEqual(errors(self.check(d).stderr), [], url)
+        for url, says in (("http://example.com/", "not a loopback host"), ("http://10.0.0.5:4321/", "not a loopback host"),
+                          ("http://localhost.example.com/", "not a loopback host"), ("http://user:pw@localhost:4321/", "no credentials"),
+                          ("file:///etc/passwd", "http:// or https://"), ("ftp://localhost/", "http:// or https://"), (4321, "a URL as a string")):
+            d = copy.deepcopy(self.doc)
+            self.page(d)["url"] = url
+            errs = errors(self.check(d).stderr)
+            self.assertTrue(any(".url:" in e and says in e for e in errs), (url, errs))
+
+    def test_a_website_holds_pages_only(self) -> None:
+        d = copy.deepcopy(self.doc)
+        self.page(d)["device"] = "phone"
+        r = self.check(d)
+        self.assertEqual(r.returncode, 1)
+        self.assertTrue(any("a website holds pages only" in e for e in errors(r.stderr)), r.stderr)
+
+    def test_website_fields_belong_to_websites(self) -> None:
+        d = copy.deepcopy(self.doc)
+        d["meta"]["type"] = "design"
+        errs = errors(self.check(d).stderr)
+        for field in ("breakpoints", "root"):
+            if field in board_of(d):
+                self.assertTrue(any(f".{field}:" in e and "only a website's board" in e for e in errs), (field, errs))
+        for field in ("url", "source", "sections"):
+            self.assertTrue(any(f".{field}:" in e and "only a website's page" in e for e in errs), (field, errs))
+
+    def test_breakpoints(self) -> None:
+        for bad in ([], [1440, 1440], [100], [1440, "768"], list(range(400, 1100, 100))):
+            d = copy.deepcopy(self.doc)
+            board_of(d)["breakpoints"] = bad
+            self.assertTrue(any(".breakpoints:" in e for e in errors(self.check(d).stderr)), bad)
+        d = copy.deepcopy(self.doc)
+        board_of(d)["breakpoints"] = [1920, 1024, 375]
+        self.assertEqual(errors(self.check(d).stderr), [])
+
+    def test_source_hints_are_checked_against_the_repo(self) -> None:
+        def hint_warnings(src: str) -> list[str]:
+            d = copy.deepcopy(self.doc)
+            self.page(d)["sections"][1]["source"] = src
+            r = self.check(d)
+            self.assertEqual(errors(r.stderr), [], src)
+            return warnings(r.stderr)
+        self.assertEqual(hint_warnings("src/components/Faq.astro:3"), [])
+        self.assertEqual(hint_warnings("src/content/site.ts#hero"), [])
+        self.assertTrue(any("'src/missing.ts' not found" in w for w in hint_warnings("src/missing.ts")))
+        self.assertTrue(any("never names 'faq'" in w for w in hint_warnings("src/content/site.ts#faq")))
+        self.assertTrue(any("points past them" in w for w in hint_warnings("src/components/Faq.astro:40")))
+        for bad in ("../secrets.txt", "/etc/passwd", "http://localhost/x.ts", "src/x.ts#", "a b.ts"):
+            d = copy.deepcopy(self.doc)
+            self.page(d)["source"] = bad
+            self.assertTrue(any(".source:" in e for e in errors(self.check(d).stderr)), bad)
+        d = copy.deepcopy(self.doc)
+        self.page(d)["source"] = ["a.ts", "b.ts", "c.ts", "d.ts"]
+        self.assertTrue(any("up to 3" in e for e in errors(self.check(d).stderr)))
+
+    def test_without_root_hints_go_unchecked(self) -> None:
+        d = copy.deepcopy(self.doc)
+        del board_of(d)["root"]
+        self.page(d)["source"] = "src/missing.ts#nothing"
+        r = self.check(d)
+        self.assertIn("0 error(s), 0 warning(s)", r.stderr)
+
+    def test_sections_and_variants(self) -> None:
+        cases = [
+            (lambda s: s.pop("decision"), "variants need a `decision`"),
+            (lambda s: s.update(decision="nope"), "no decision item of the checklist `brief`"),
+            (lambda s: s["variants"].update(c=[]), "'c' is no choice of brief/hero-headline"),
+            (lambda s: s["variants"].update(b=[{"text": "x", "html": "<b>x</b>"}]), "{sel?, text} or {sel?, html}"),
+            (lambda s: s["variants"].update(b=[{"html": "<iframe src=x></iframe>"}]), "<iframe>"),
+            (lambda s: s.update(sel="<script>"), "the section's CSS selector"),
+        ]
+        for change, says in cases:
+            d = copy.deepcopy(self.doc)
+            change(self.page(d)["sections"][0])
+            errs = errors(self.check(d).stderr)
+            self.assertTrue(any(says in e for e in errs), (says, errs))
+        d = copy.deepcopy(self.doc)
+        self.page(d)["sections"][1]["id"] = "hero"
+        self.assertTrue(any("duplicate section id 'hero'" in e for e in errors(self.check(d).stderr)))
+
+    def test_a_live_page_has_no_screen_file(self) -> None:
+        d = copy.deepcopy(self.doc)
+        self.page(d)["src"] = "site.design/home.html"
+        self.assertTrue(any("a live page (url) has no screen file" in e for e in errors(self.check(d).stderr)))
+        self.assertEqual(build.screen_paths(self.doc, self.doc_path), {})
+
+
+class NewWebsite(unittest.TestCase):
+    def setUp(self) -> None:
+        self.tmp = TempHome()
+        self.addCleanup(self.tmp.cleanup)
+
+    def filled(self, path: Path) -> subprocess.CompletedProcess:
+        raw = build.PLACEHOLDER.sub("Acme Fit", path.read_text(encoding="utf-8"))
+        doc = json.loads(raw)
+        for s in board_of(doc)["artboards"][0]["sections"]:   # a source hint and a selector, as the agent writes them
+            if "<<" in json.dumps(s) or s.get("source") == "Acme Fit":
+                s["source"] = "src/pages/index.astro"
+            if s.get("sel") == "Acme Fit":
+                s["sel"] = "main"
+        if board_of(doc)["artboards"][0].get("source") == "Acme Fit":
+            board_of(doc)["artboards"][0]["source"] = "src/pages/index.astro"
+        for edits in (board_of(doc)["artboards"][0]["sections"][0].get("variants") or {}).values():
+            for e in edits:
+                if e.get("sel") == "Acme Fit":
+                    e["sel"] = "h1"
+        doc["meta"]["date"] = "2026-10-12"
+        path.write_text(json.dumps(doc, indent=1) + "\n", encoding="utf-8")
+        return self.tmp.run("build.py", path, "--check", "--no-history")
+
+    def test_a_stub_page_with_a_screen_file(self) -> None:
+        out = self.tmp.dir / "site.bluedoc.json"
+        r = self.tmp.run("build.py", "new", "website", out, "--title", "Acme Fit site")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        doc = load_json(out)
+        self.assertEqual((doc["meta"]["type"], doc["meta"]["kind"]), ("website", "Website"))
+        page = board_of(doc)["artboards"][0]
+        self.assertEqual((page["id"], page["device"], page["fidelity"]), ("home", "page", "wireframe"))
+        self.assertNotIn("url", page)
+        self.assertTrue((self.tmp.dir / "site.design" / "home.html").is_file())
+        self.assertEqual([s["sel"] for s in page["sections"]], ['[data-bd="hero"]', '[data-bd="features"]'])
+        r = self.filled(out)
+        self.assertEqual(errors(r.stderr), [], r.stderr)
+
+    def test_a_live_page_from_url(self) -> None:
+        out = self.tmp.dir / "live.bluedoc.json"
+        r = self.tmp.run("build.py", "new", "website", out, "--url", "http://localhost:4321/")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        page = board_of(load_json(out))["artboards"][0]
+        self.assertEqual(page["url"], "http://localhost:4321/")
+        self.assertFalse((self.tmp.dir / "live.design").exists(), "a live page got a screen file")
+        r = self.filled(out)
+        self.assertEqual(errors(r.stderr), [], r.stderr)
+
+    def test_url_is_for_websites_on_loopback_only(self) -> None:
+        for args, says in ((["website", "a.bluedoc.json", "--url", "https://example.com/"], "not a loopback host"),
+                           (["design", "b.bluedoc.json", "--url", "http://localhost:4321/"], "--url is for website docs")):
+            r = self.tmp.run("build.py", "new", *args)
+            self.assertEqual(r.returncode, 2, r.stderr)
+            self.assertIn(says, r.stderr)
+            self.assertFalse((self.tmp.dir / args[1]).exists())
+
+
+class Example(unittest.TestCase):
+    def setUp(self) -> None:
+        self.tmp = TempHome()
+        self.addCleanup(self.tmp.cleanup)
+        self.docs = self.tmp.copy_examples()
+        self.doc_path = self.docs / f"{STEM}.bluedoc.json"
+
+    def test_the_example_builds_clean(self) -> None:
+        r = self.tmp.run("build.py", self.doc_path)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("0 error(s), 0 warning(s)", r.stderr)
+
+    def test_example_shape(self) -> None:
+        doc = load_json(EXAMPLES / f"{STEM}.bluedoc.json")
+        self.assertEqual(doc["meta"]["type"], "website")
+        pages = board_of(doc)["artboards"]
+        self.assertEqual([(a["id"], a["device"], "url" in a) for a in pages], [("home", "page", False), ("blog", "page", True)])
+        self.assertEqual(build.check_contract(doc), [])
+        self.assertTrue((EXAMPLES / f"{STEM}.design" / "home.html").is_file())
+        self.assertFalse((EXAMPLES / f"{STEM}.design" / "blog.html").exists(), "the live page has a screen file")
+
+    def test_patch_names_the_page_section_and_source(self) -> None:
+        r = self.tmp.run("build.py", "patch", self.doc_path, "el:home/headline")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn('acme-site.design/home.html  [data-bd="headline"]', r.stdout)
+        self.assertIn('section hero ([data-bd="hero"]): src/content/home.ts#hero, src/components/Hero.astro', r.stdout)
+        self.assertNotIn("section pricing", r.stdout)
+        src = self.doc_path.read_bytes()
+        r = self.tmp.run("build.py", "patch", self.doc_path, "el:blog/#subscribe>h2:nth-of-type(1)")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("live page http://localhost:4321/blog/  #subscribe>h2:nth-of-type(1)", r.stdout)
+        self.assertIn("section subscribe (#subscribe): src/components/Subscribe.astro", r.stdout)
+        self.assertNotIn("section posts", r.stdout)
+        self.assertEqual(self.doc_path.read_bytes(), src, "printing where to edit wrote the doc")
+        r = self.tmp.run("build.py", "patch", self.doc_path, "artboard:blog", "--html", "-")
+        self.assertEqual(r.returncode, 2)
+        self.assertIn("a live page has no screen file", r.stderr)
+
+    def test_the_home_card(self) -> None:
+        self.assertEqual(self.tmp.run("serve.py", "add", self.docs).returncode, 0)
+        server = Server(self.tmp)
+        server.start()
+        self.addCleanup(server.stop)
+        status, raw = server.req("GET", "/__bluedoc/index.json", headers={"X-Bluedoc": "1"})
+        self.assertEqual(status, 200)
+        doc = next(d for r in json.loads(raw)["roots"] for d in r["docs"] if d["path"].endswith(f"{STEM}.bluedoc.json"))
+        self.assertEqual(doc["type"], "website")
+        self.assertEqual(doc["card"], {"count": 2, "sections": 7, "live": 1,
+                                       "pages": [{"sections": 5, "live": False, "fidelity": "hifi"},
+                                                 {"sections": 2, "live": True, "fidelity": "hifi"}]})
+
+
+class LiveProxy(unittest.TestCase):
+    """serve.py's proxy for a website's dev server, on the doc page's render."""
+
+    def setUp(self) -> None:
+        self.dev = StubDevServer()
+        self.addCleanup(self.dev.stop)
+        self.tmp = TempHome()
+        self.addCleanup(self.tmp.cleanup)
+        self.doc_path = write_site(self.tmp.dir / "site", self.dev.origin + "/")
+        self.assertEqual(self.tmp.run("serve.py", "add", self.doc_path.parent).returncode, 0)
+        self.server = Server(self.tmp)
+        self.server.start()
+        self.addCleanup(self.server.stop)
+        c = http.client.HTTPConnection("127.0.0.1", self.server.port, timeout=10)
+        c.request("GET", self.server.url_for(self.doc_path), headers={"Host": self.server.host})
+        r = c.getresponse()
+        self.page_csp, html = r.getheader("Content-Security-Policy") or "", r.read().decode()
+        c.close()
+        live = json.loads(html.split('<script type="application/json" id="bp-live">', 1)[1].split("</script>", 1)[0])
+        self.assertEqual(list(live), [self.dev.origin])
+        self.proxy = live[self.dev.origin]
+
+    def get(self, path: str, headers: dict | None = None) -> tuple[int, dict, str]:
+        """One request to the proxy; a header sent more than once (the site's CSP and the proxy's) comes joined by ', '."""
+        c = http.client.HTTPConnection("127.0.0.1", self.proxy, timeout=10)
+        try:
+            c.request("GET", path, headers={"Host": f"127.0.0.1:{self.proxy}", **(headers or {})})
+            r = c.getresponse()
+            got: dict[str, str] = {}
+            for k, v in r.getheaders():
+                got[k.lower()] = f"{got[k.lower()]}, {v}" if k.lower() in got else v
+            return r.status, got, r.read().decode("utf-8", "replace")
+        finally:
+            c.close()
+
+    def test_the_doc_page_frames_its_proxy_only(self) -> None:
+        self.assertIn(f"frame-src 'self' http://127.0.0.1:{self.proxy} http://localhost:{self.proxy};", self.page_csp)
+        self.assertIn("frame-ancestors 'none'", self.page_csp)
+
+    def test_the_page_comes_with_the_inspector_and_framable_by_bluedoc(self) -> None:
+        status, headers, body = self.get("/")
+        self.assertEqual(status, 200, body[:300])
+        self.assertNotIn("x-frame-options", headers)
+        csp = headers["content-security-policy"]
+        self.assertNotIn("frame-ancestors 'none'", csp)
+        self.assertIn("default-src 'self' 'unsafe-inline'", csp, "the site's own policy stays")
+        self.assertIn(f"frame-ancestors http://127.0.0.1:{self.server.port} http://localhost:{self.server.port}", csp)
+        head = body.index("<head>") + len("<head>")
+        self.assertTrue(body[head:].startswith(f'<script src="/__bluedoc/inspector.js" data-parents="http://127.0.0.1:{self.server.port} '
+                                                f'http://localhost:{self.server.port}"></script>'), body[:400])
+        self.assertIn('<h1 id="hero-title">Track everything</h1>', body)
+        status, headers, js = self.get("/__bluedoc/inspector.js")
+        self.assertEqual((status, headers["content-type"]), (200, "text/javascript; charset=utf-8"))
+        self.assertIn("bluedoc inspector", js)
+
+    def test_a_foreign_host_is_refused(self) -> None:
+        for host in ("evil.example:80", f"127.0.0.1:{self.server.port}", f"127.0.0.1.evil.example:{self.proxy}"):
+            status, _, _ = self.get("/", {"Host": host})
+            self.assertEqual(status, 403, host)
+        self.assertFalse(any(p == "/" for p, _ in self.dev.seen), "a refused request reached the dev server")
+
+    def test_the_dev_server_sees_itself_and_no_key_cookie(self) -> None:
+        status, _, body = self.get("/echo", {"Cookie": f"bluedoc_key_{self.server.port}=secret; theme=dark",
+                                            "Origin": f"http://127.0.0.1:{self.proxy}"})
+        self.assertEqual(status, 200)
+        got = json.loads(body)
+        self.assertEqual(got.get("Host"), f"127.0.0.1:{self.dev.port}")
+        self.assertEqual(got.get("Cookie"), "theme=dark")
+        self.assertEqual(got.get("Origin"), self.dev.origin)
+        status, _, body = self.get("/echo", {"Cookie": f"bluedoc_key_{self.server.port}=secret"})
+        self.assertNotIn("Cookie", json.loads(body))
+
+    def test_a_dev_server_that_is_down_is_a_502(self) -> None:
+        self.dev.stop()
+        status, _, body = self.get("/")
+        self.assertEqual(status, 502)
+        self.assertIn("isn't answering", body)
+
+
+@unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")
+class LivePageInChrome(unittest.TestCase):
+    """The live page in the board: a variant pick shows in place, a pin carries its section's source hints and width
+    into Request changes, and a breakpoint resizes the page."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.profile = Path(tempfile.mkdtemp(prefix="bluedoc-chrome-"))
+        cls.browser = Browser(cls.profile)
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        cls.browser.close()
+        shutil.rmtree(cls.profile, ignore_errors=True)
+
+    def setUp(self) -> None:
+        self.dev = StubDevServer()
+        self.addCleanup(self.dev.stop)
+        self.tmp = TempHome()
+        self.addCleanup(self.tmp.cleanup)
+        self.doc_path = write_site(self.tmp.dir / "site", self.dev.origin + "/")
+        self.assertEqual(self.tmp.run("serve.py", "add", self.doc_path.parent).returncode, 0)
+        self.server = Server(self.tmp)
+        self.server.start()
+        self.addCleanup(self.server.stop)
+        self.browser.errors.clear()
+        status, raw = self.server.req("POST", "/__bluedoc/unlock", b"{}", {"Content-Type": "application/json", "X-Bluedoc": "1"})
+        self.assertEqual(status, 200, raw)
+        self.tab = Tab(self.browser)
+        self.tab.go(f"http://{self.server.host}{self.server.url_for(self.doc_path)}?key={json.loads(raw)['token']}")
+        self.tab.wait_for("(b => b && b.artboards[0].ready)(BP.board())", 20)
+
+    def pin_title(self, note: str) -> dict:
+        """Point mode, a click on the hero title in the frame, the note saved: the new annotation."""
+        t = self.tab
+        t.ev("BP.setMode('point')")
+        x, y = t.ev("(f => { const r = f.getBoundingClientRect(), k = r.width / f.width; return [r.left + 400 * k, r.top + 140 * k]; })"
+                    "(document.querySelector('iframe.bd-ab-fr'))")
+        for kind, buttons in (("mouseMoved", 0), ("mousePressed", 1), ("mouseReleased", 0)):
+            self.browser.call("Input.dispatchMouseEvent", {"type": kind, "x": x, "y": y, "button": "left", "buttons": buttons, "clickCount": 1},
+                              t.session)
+            time.sleep(0.05)
+        t.wait_for("!document.querySelector('.bd-cmp').hidden")
+        t.ev(f"(ta => {{ ta.value = {json.dumps(note)}; ta.dispatchEvent(new Event('input')); }})(document.querySelector('.bd-cmp textarea'))")
+        t.ev("document.querySelector('.bd-cmp .bp-btn.primary').click()")
+        return t.wait_for(f"BP.annotations().find(a => a.note === {json.dumps(note)})")
+
+    def test_the_page_is_proxied(self) -> None:
+        page = self.tab.ev("BP.board().artboards[0].page")
+        self.assertTrue(page["proxied"])
+        self.assertRegex(page["src"], r"^http://127\.0\.0\.1:\d+/$")
+        self.assertNotEqual(page["src"], self.dev.origin + "/")
+        self.assertEqual(self.browser.errors, [])
+
+    def test_a_pin_carries_its_section_source_and_width(self) -> None:
+        a = self.pin_title("One line at 390 px")
+        self.assertEqual(a["target"]["key"], "el:home/#hero-title")
+        self.assertEqual((a["target"]["section"], a["target"]["bp"]), ("hero", 1440))
+        self.assertEqual(a["target"]["source"], ["src/content/site.ts#hero", "src/components/Hero.astro"])
+        md = self.tab.ev("BP.changesPayload().markdown")
+        self.assertIn("`el:home/#hero-title`", md)
+        self.assertIn("   At: 1440 px wide\n   Source: `src/content/site.ts#hero`, `src/components/Hero.astro`\n   Change: One line at 390 px", md)
+
+    def test_a_variant_pick_shows_in_place(self) -> None:
+        self.assertEqual(self.tab.ev("BP.board().artboards[0].page.variants.hero.shown"), "a")
+        self.tab.wait_for("!document.querySelector('.bd-var').hidden")
+        self.tab.ev("document.querySelector('.bd-var button[data-id=b]').click()")
+        self.assertEqual(self.tab.ev("BP.board().artboards[0].page.variants.hero.shown"), "b")
+        a = self.pin_title("Shorter")
+        self.assertEqual(a["target"]["text"], "Build the habit, one week at a time.", "the frame doesn't show version B")
+        md = self.tab.ev("BP.changesPayload().markdown")
+        self.assertIn("  Shown in: Home › Hero · Source: `src/content/site.ts#hero`, `src/components/Hero.astro`", md)
+
+    def test_a_breakpoint_resizes_the_page(self) -> None:
+        self.tab.ev("BP.board({breakpoint: 390})")
+        self.tab.wait_for("(a => a.w === 390 && a.h === 844 && a.ready)(BP.board().artboards[0])")
+        self.assertEqual(self.tab.ev("document.querySelector('iframe.bd-ab-fr').width"), "390")
+
+
+if __name__ == "__main__":
+    unittest.main()

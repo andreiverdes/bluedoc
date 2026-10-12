@@ -8,11 +8,12 @@ Usage:
   build.py doc.json --strict        treat lint warnings as errors
   build.py doc.json --show-rev B    print revision B, rebuilt from the history, as JSON
   build.py new TYPE out.bluedoc.json [--title T] [--kind K] [--shape pr|area] [--target T,…] [--framework F]
-                                    [--icons]
-                                    write the fill-in skeleton of a docs|review|plan|design|presentation|other
-                                    doc (--shape area: a review by area of a codebase, not by PR; design: one
+                                    [--icons] [--url URL]
+                                    write the fill-in skeleton of a docs|review|plan|design|presentation|website|
+                                    other doc (--shape area: a review by area of a codebase, not by PR; design: one
                                     wireframe screen file per --target watch|mobile|tablet|desktop|web, --icons
-                                    adds an app icon with stub layers; presentation: a deck of three stub slides)
+                                    adds an app icon with stub layers; presentation: a deck of three stub slides;
+                                    website: a home page, live from --url (a loopback dev server) or a stub file)
   build.py patch doc.json KEY [--set f=v ...] [--json OBJ] [--append OBJ] [--delete] [--html FILE|-]
                               [--change LINE ...] [--no-bump]
                                     change one object by its annotator key, bump meta.rev, validate, record
@@ -29,16 +30,18 @@ compare two. --no-history skips reading and writing it.
 
 Type contracts: each meta.type needs its data (review: a diff and sized findings; plan: steps and
 files blocks; docs: a canvas or a hero; design: one board with an artboard; presentation: one board of
-slide artboards only). Missing data is an error on the doc being built: a new meta.rev, or a recorded rev
-whose text changed (an edit in place). It is a warning only while the doc is exactly the revision its
-history recorded, so old revisions keep rendering.
+slide artboards only; website: one board of page artboards only). Missing data is an error on the doc
+being built: a new meta.rev, or a recorded rev whose text changed (an edit in place). It is a warning only
+while the doc is exactly the revision its history recorded, so old revisions keep rendering.
 
-Screens (design and presentation docs): each artboard's HTML is a body fragment in <stem>.design/<id>.html. The build
+Screens (design, presentation and website docs): each artboard's HTML is a body fragment in <stem>.design/<id>.html. The build
 fails on a missing file, a network URL, <base>, <iframe>, <object>, <embed>, <meta http-equiv>,
 <form action> or a whole document; it warns above 24 KB and when no element has a data-bd name.
 An element's data-nav ("[kind:]artboard" or "back") is a link; the build checks its target and name,
 and the screens no board.entry reaches. An `icons` artboard has SVG layers in <stem>.design/<id>/
 instead (fg.svg required), checked for a square viewBox, the safe circle and what a canvas can't draw.
+A website page with `url` has no screen file: serve.py proxies that loopback dev server (any other host is
+an error). Its `source` and its sections' `source` hints are checked against board.root when it is set.
 
 Diff refs: a diff block with base and head and no files is expanded from git (cache file
 <name>.diffcache.json, then `git diff`, then `gh pr diff`) by scripts/diffref.py when validating,
@@ -79,6 +82,7 @@ import base64
 import copy
 import datetime as dt
 import hashlib
+import ipaddress
 import json
 import math
 import os
@@ -88,6 +92,7 @@ import sys
 from html import escape as escape_html
 from html.parser import HTMLParser
 from pathlib import Path
+from urllib.parse import urlsplit
 
 HERE = Path(__file__).resolve().parent
 TEMPLATE = HERE.parent / "assets" / "template.html"
@@ -113,8 +118,8 @@ MD_LINK = re.compile("\\[([^\\]]+)\\]\\(([^)\t\n\v\f\r \u00a0\u1680\u2000-\u200a
 CALLOUT_KINDS = {"note", "caution", "warning", "risk", "decision"}
 STATE_KINDS = {"ok", "warn", "risk", "info", "todo"}
 RESOLVES_ID = re.compile(r"[A-Za-z0-9_-]{1,40}")   # a reader comment's id, as `resolves` lists it (the page writes c<base36>)
-DOC_TYPES = {"docs", "review", "plan", "design", "presentation", "other"}   # meta.type: the home page's grouping; unset = derived from meta.kind
-BOARD_TYPES = ("design", "presentation")   # the types whose page is one board (a presentation: of slides only)
+DOC_TYPES = {"docs", "review", "plan", "design", "presentation", "website", "other"}   # meta.type: the home page's grouping; unset = derived from meta.kind
+BOARD_TYPES = ("design", "presentation", "website")   # the types whose page is one board (a presentation: of slides only; a website: of pages only)
 # meta.kind words that make a doc type "docs" when meta.type is unset (after the plan and review rules)
 DOCS_KINDS = {"architecture", "walkthrough", "runbook", "setup", "reference", "proposal", "change", "changes", "plan",
               "status", "guide", "design", "spec", "rfc", "adr", "overview", "tutorial", "onboarding", "explainer", "playbook"}
@@ -141,7 +146,8 @@ ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 DEVICES = {"watch-round": {"w": 240, "h": 240, "safe": [0, 0, 0, 0]}, "watch-square": {"w": 198, "h": 242, "safe": [8, 8, 8, 8]},
            "phone": {"w": 390, "h": 844, "safe": [47, 0, 34, 0]}, "tablet": {"w": 820, "h": 1180, "safe": [24, 0, 20, 0]},
            "desktop": {"w": 1280, "h": 800, "safe": [32, 0, 0, 0]}, "browser": {"w": 1440, "h": 900, "safe": [72, 0, 0, 0]},
-           "slide": {"w": 1920, "h": 1080, "safe": [0, 0, 0, 0]}, "icons": {"w": 1280, "h": 860, "safe": [0, 0, 0, 0]}}
+           "slide": {"w": 1920, "h": 1080, "safe": [0, 0, 0, 0]}, "icons": {"w": 1280, "h": 860, "safe": [0, 0, 0, 0]},
+           "page": {"w": 1440, "h": 900, "safe": [0, 0, 0, 0]}}
 # board.targets: what the board is for. `build.py new design --target` takes each but presentation, which is
 # `build.py new presentation`: the skeleton's stub deck, its slides in deck order
 TARGET_DEVICES = {"watch": "watch-round", "mobile": "phone", "tablet": "tablet", "desktop": "desktop", "web": "browser",
@@ -171,6 +177,15 @@ TOKEN_KEY = re.compile(r"^[a-z][a-z0-9-]*$")
 TOKEN_VALUE = re.compile(r"^[^;{}<>\\]*$")
 MOTION_KEYS = ("fast", "base", "slow", "ease")
 SCREEN_SRC = re.compile(r"^(?:[\w.-]+/)*[\w.-]+\.design/[\w.-]+\.html$")
+# website docs: every artboard a `page` (the browser bar sits above it, so its safe area is none) at a breakpoint the
+# reader switches; a page with `url` shows a loopback dev server through serve.py's proxy instead of a screen file
+BREAKPOINTS = (1440, 768, 390)    # board.breakpoints' default: desktop, tablet, mobile widths in CSS px
+MIN_BREAKPOINT, MAX_BREAKPOINT, MAX_BREAKPOINTS = 240, 3840, 6
+LOOPBACK_HOSTS = ("localhost", "127.0.0.1", "::1")   # and every 127.x.y.z
+MAX_SECTIONS, MAX_VARIANT_EDITS, MAX_EDIT_HTML = 40, 20, 8 * 1024
+MAX_SOURCES, MAX_SOURCE = 3, 200
+# a source hint: a path in the site's repo, then #symbol or :line (or :start-end); checked when board.root names the repo
+SOURCE_HINT = re.compile(r"^(?P<path>[^\s#:][^\s#:]*?)(?:#(?P<sym>[\w$.-]+)|:(?P<line>\d+)(?:-(?P<end>\d+))?)?$")
 
 # Mechanical CRISP checks. They catch common slips; they do not replace the CRISP pass.
 FILLER = ["very", "really", "just", "simply", "basically", "actually", "quite", "extremely", "incredibly",
@@ -514,9 +529,9 @@ def check_media_src(rep: Report, where: str, src, base: Path | None) -> None:
 
 
 def doc_type(meta: dict) -> str:
-    """docs | review | plan | design | presentation | other: meta.type when set, else read from meta.kind (a design
-    or presentation only by meta.type: a kind like 'Design' stays docs). template.html follows the same rule; serve.py
-    puts the result in the home page's index."""
+    """docs | review | plan | design | presentation | website | other: meta.type when set, else read from meta.kind (a
+    design, presentation or website only by meta.type: a kind like 'Design' stays docs). template.html follows the same
+    rule; serve.py puts the result in the home page's index."""
     if meta.get("type") in DOC_TYPES:
         return meta["type"]
     kind = str(meta.get("kind") or "").strip().lower()
@@ -565,6 +580,52 @@ def screen_rel(doc_path: Path, a: dict) -> str:
 
 def is_icons(a) -> bool:
     return isinstance(a, dict) and a.get("device") == "icons"
+
+
+def is_live(a) -> bool:
+    """A website page shown from a dev server (its `url`) instead of a screen file."""
+    return isinstance(a, dict) and "url" in a
+
+
+def live_url_problem(url) -> str | None:
+    """Why url can't be a live page, or None: it must be http(s) on a loopback host (localhost, 127.x.y.z, ::1),
+    without credentials. serve.py proxies only such URLs, so a doc can't make the reader's server fetch the network."""
+    if not isinstance(url, str) or not url or len(url) > 2000:
+        return "a URL as a string, e.g. http://localhost:4321/"
+    try:
+        u = urlsplit(url)
+        u.port   # noqa: B018 — raises on a bad port
+    except ValueError:
+        return f"'{url}' is no URL"
+    if u.scheme not in ("http", "https") or not u.hostname:
+        return f"'{url}': an http:// or https:// URL of a local dev server"
+    if u.username or u.password:
+        return f"'{url}': no credentials in the URL"
+    if not is_loopback(u.hostname):
+        return f"'{u.hostname}' is not a loopback host: a live page is a dev server on this machine ({', '.join(LOOPBACK_HOSTS)} or 127.x.y.z)"
+    return None
+
+
+def is_loopback(host: str) -> bool:
+    host = host.strip("[]").lower()
+    if host == "localhost":
+        return True
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return False
+
+
+def sources_of(x) -> list[str]:
+    """A page's or a section's `source` hints as a list (it may be one string)."""
+    s = x.get("source") if isinstance(x, dict) else None
+    return [s] if isinstance(s, str) else [v for v in s if isinstance(v, str)] if isinstance(s, list) else []
+
+
+def site_root(board: dict, doc_path: Path | None) -> Path | None:
+    """The site's repo folder a website board's `root` names (relative to the doc), or None."""
+    r = board.get("root") if isinstance(board, dict) else None
+    return (Path(doc_path).parent / r).resolve() if isinstance(r, str) and r and doc_path is not None else None
 
 
 def icon_dir(doc_path: Path, a: dict) -> Path:
@@ -618,13 +679,13 @@ def icon_tile_layers(tile: str, layers: dict[str, Path], a: dict) -> list[str]:
 
 def screen_paths(doc: dict, doc_path: Path) -> dict[str, Path]:
     """{artboard id: its screen file}, and for an icons artboard {"<id>/<layer>": its layer file} instead: every file
-    whose text belongs to the revision. {} for a doc without a board."""
+    whose text belongs to the revision. A website's live page (`url`) has none. {} for a doc without a board."""
     folder, out = Path(doc_path).parent, {}
     layers = icon_layers(doc, doc_path)
     for a in _artboards(doc):
         if a["id"] in layers:
             out.update({f"{a['id']}/{n}": f for n, f in layers[a["id"]].items()})
-        else:
+        elif not is_live(a):
             out[a["id"]] = folder / screen_rel(doc_path, a)
     return out
 
@@ -1315,6 +1376,130 @@ def lint_icon(rep: Report, where: str, a: dict, doc_path: Path) -> None:
 
 
 
+def validate_site_board(rep: Report, bw: str, b: dict, doc_path: Path | None) -> Path | None:
+    """A website board's breakpoints and root; returns the root folder when it exists (source hints are checked
+    against it), else None."""
+    bps = b.get("breakpoints")
+    if bps is not None:
+        ok = isinstance(bps, list) and 0 < len(bps) <= MAX_BREAKPOINTS and len(set(map(str, bps))) == len(bps) and all(
+            isinstance(v, int) and not isinstance(v, bool) and MIN_BREAKPOINT <= v <= MAX_BREAKPOINT for v in bps)
+        if not ok:
+            rep.err(bw + ".breakpoints", f"1 to {MAX_BREAKPOINTS} distinct widths in CSS px, {MIN_BREAKPOINT} to "
+                    f"{MAX_BREAKPOINT} (default {list(BREAKPOINTS)})")
+    if "root" not in b:
+        return None
+    if not isinstance(b["root"], str) or not b["root"] or URL_SCHEME.match(b["root"]):
+        rep.err(bw + ".root", "the site's repo folder, a path relative to the doc (e.g. \"..\")")
+        return None
+    root = site_root(b, doc_path)
+    if root is not None and not root.is_dir():
+        rep.warn(bw + ".root", f"'{b['root']}' is no folder (from {Path(doc_path).parent}): source hints go unchecked")
+        return None
+    return root
+
+
+def validate_sources(rep: Report, where: str, x: dict, root: Path | None) -> None:
+    """`source`: one hint or a list of up to MAX_SOURCES, each `path`, `path#symbol` or `path:line`. With root, a file
+    that isn't there, a symbol the file doesn't name and a line past its end are warnings."""
+    if "source" not in x:
+        return
+    s = x["source"]
+    hints = [s] if isinstance(s, str) else s if isinstance(s, list) else None
+    if not hints or len(hints) > MAX_SOURCES or not all(isinstance(h, str) for h in hints):
+        rep.err(where, f"a source hint (\"src/content/site.ts#hero\") or a list of up to {MAX_SOURCES}")
+        return
+    for h in hints:
+        if PLACEHOLDER.search(h):   # the placeholder check names it
+            continue
+        m = SOURCE_HINT.match(h) if len(h) <= MAX_SOURCE else None
+        if not m or URL_SCHEME.match(h) or ".." in m["path"].split("/") or m["path"].startswith("/"):
+            rep.err(where, f"'{h[:80]}': a path in the site's repo, then #symbol or :line (\"src/components/Hero.astro\", "
+                    "\"src/content/site.ts#hero\", \"src/pages/index.astro:12\")")
+            continue
+        if root is None:
+            continue
+        f = root / m["path"]
+        text = _read_text(f) if f.is_file() else None
+        if text is None:
+            rep.warn(where, f"'{m['path']}' not found under {root}")
+        elif m["sym"] and not re.search(rf"(?<![\w$]){re.escape(m['sym'])}(?![\w$])", text):
+            rep.warn(where, f"'{m['path']}' never names '{m['sym']}'")
+        elif m["line"] and int(m["end"] or m["line"]) > text.count("\n") + 1:
+            rep.warn(where, f"'{m['path']}' has {text.count(chr(10)) + 1} lines; '{h}' points past them")
+
+
+def validate_page(rep: Report, aw: str, a: dict, root: Path | None, decisions: dict[str, dict]) -> None:
+    """A website page: its live `url` (a loopback dev server; no screen file then), `source`, and `sections`, each a
+    CSS selector with source hints and optionally the variants a brief decision picks between, shown in place."""
+    if "url" in a:
+        why = live_url_problem(a["url"])
+        if why:
+            rep.err(aw + ".url", why)
+        if "src" in a:
+            rep.err(aw + ".src", "a live page (url) has no screen file: drop src")
+    validate_sources(rep, aw + ".source", a, root)
+    secs = a.get("sections")
+    if secs is None:
+        return
+    if not isinstance(secs, list) or len(secs) > MAX_SECTIONS:
+        rep.err(aw + ".sections", f"a list of up to {MAX_SECTIONS} sections")
+        return
+    ids: set[str] = set()
+    for j, s in enumerate(secs):
+        sw = f"{aw}.sections[{j}]"
+        if not isinstance(s, dict) or not need(rep, sw, s, "id", "title", "sel"):
+            continue
+        check_id(rep, sw, s["id"])
+        if s["id"] in ids:
+            rep.err(sw, f"duplicate section id '{s['id']}'")
+        ids.add(s["id"])
+        lint_text(rep, sw + ".title", s["title"])
+        if not isinstance(s["sel"], str) or not s["sel"].strip() or len(s["sel"]) > 200 or (
+                re.search(r"[<{};]", s["sel"]) and not PLACEHOLDER.search(s["sel"])):
+            rep.err(sw + ".sel", "the section's CSS selector in the page, e.g. \"section.hero\" or \"#faq\" (at most 200 characters)")
+        validate_sources(rep, sw + ".source", s, root)
+        if "variants" in s and "decision" not in s:
+            rep.err(sw + ".variants", "variants need a `decision`: the brief item whose choices they show")
+        if "decision" not in s:
+            continue
+        it = decisions.get(s["decision"])
+        if it is None:
+            rep.err(sw + ".decision", f"'{s['decision']}' is no decision item of the checklist `brief`")
+            continue
+        choices = {c.get("id") for c in it["choices"] if isinstance(c, dict)}
+        if len(choices) > 3:
+            rep.warn(f"item brief/{s['decision']}", f"{len(choices)} versions of one section: offer 2 or 3")
+        var = s.get("variants", {})
+        if not isinstance(var, dict):
+            rep.err(sw + ".variants", "{choice id: [edits]}: what each choice changes in the section")
+            continue
+        for cid, edits in var.items():
+            vw = f"{sw}.variants.{cid}"
+            if cid not in choices:
+                rep.err(vw, f"'{cid}' is no choice of brief/{s['decision']} ({', '.join(sorted(map(str, choices)))})")
+            if not isinstance(edits, list) or len(edits) > MAX_VARIANT_EDITS:
+                rep.err(vw, f"a list of up to {MAX_VARIANT_EDITS} edits, each {{sel?, text | html}}")
+                continue
+            for k, e in enumerate(edits):
+                ew = f"{vw}[{k}]"
+                if not isinstance(e, dict) or set(e) - {"sel", "text", "html"} or ("text" in e) == ("html" in e):
+                    rep.err(ew, "{sel?, text} or {sel?, html}: the element in the section (the section without sel) and "
+                            "its new text or HTML")
+                    continue
+                if "sel" in e and (not isinstance(e["sel"], str) or not e["sel"] or len(e["sel"]) > 200):
+                    rep.err(ew + ".sel", "a CSS selector inside the section, at most 200 characters")
+                v = e.get("text", e.get("html"))
+                if not isinstance(v, str):
+                    rep.err(ew, "text and html are strings")
+                elif "html" in e:
+                    if len(v.encode("utf-8")) > MAX_EDIT_HTML:
+                        rep.err(ew + ".html", f"over {MAX_EDIT_HTML // 1024} KB: edit a smaller element")
+                    for _, msg in parse_screen(v).errors:
+                        rep.err(ew + ".html", msg)
+                else:
+                    lint_text(rep, ew + ".text", v)
+
+
 def validate_board(rep: Report, bw: str, b: dict, doc: dict, doc_path: Path | None) -> None:
     """A board block: its frameworks, themes, motion and artboards, the brief's options against them, and the
     screen files (when doc_path is known)."""
@@ -1378,6 +1563,16 @@ def validate_board(rep: Report, bw: str, b: dict, doc: dict, doc_path: Path | No
             rep.err(f"{bw}.motion.{k}", f"{_shown(v)}: a CSS time or easing as a string")
     if not b["artboards"]:
         rep.err(bw + ".artboards", "a board needs at least one artboard")
+    site = doc_type(doc.get("meta") or {}) == "website"
+    brief = next((c for c in all_blocks(doc) if c.get("type") == "checklist" and c.get("id") == "brief"), None)
+    if site:
+        root = validate_site_board(rep, bw, b, doc_path)
+        decisions = {it.get("id"): it for it in (brief or {}).get("items") or []
+                     if isinstance(it, dict) and isinstance(it.get("choices"), list)}
+    else:
+        for k in ("breakpoints", "root"):
+            if k in b:
+                rep.err(f"{bw}.{k}", "only a website's board has it: set meta.type to 'website'")
     art_ids: set[str] = set()
     variants: list[tuple[str, str, str]] = []
     parsed: dict[str, tuple[str, str, _ScreenLint]] = {}
@@ -1424,7 +1619,13 @@ def validate_board(rep: Report, bw: str, b: dict, doc: dict, doc_path: Path | No
                 rep.warn(aw + ".icon.name", f"{len(name)} characters (> {MAX_ICON_NAME}): a home screen shows about 12")
         elif "icon" in a:
             rep.err(aw + ".icon", "only an artboard with device \"icons\" has an icon")
-        if doc_path is not None and ID_RE.match(a["id"]):
+        if site:
+            validate_page(rep, aw, a, root, decisions)
+        else:
+            for k in ("url", "source", "sections"):
+                if k in a:
+                    rep.err(f"{aw}.{k}", "only a website's page has it: set meta.type to 'website'")
+        if doc_path is not None and ID_RE.match(a["id"]) and not is_live(a):
             if is_icons(a):
                 lint_icon(rep, aw, a, doc_path)
             else:
@@ -1436,7 +1637,6 @@ def validate_board(rep: Report, bw: str, b: dict, doc: dict, doc_path: Path | No
         if src == aid or src not in art_ids:
             rep.err(where, f"'{src}' is {'the artboard itself' if src == aid else 'no artboard in this board'}")
     lint_links(rep, bw, b, parsed)
-    brief = next((c for c in all_blocks(doc) if c.get("type") == "checklist" and c.get("id") == "brief"), None)
     for it in (brief or {}).get("items") or []:
         if not isinstance(it, dict) or not isinstance(it.get("choices"), list):
             continue
@@ -1478,11 +1678,14 @@ def check_contract(doc: dict) -> list[str]:
             out.append(f"a {t} needs exactly one board block (it has {len(boards)})")
         elif not boards[0].get("artboards"):
             out.append(f"a {t}'s board needs at least one artboard")
-        elif t == "presentation" and isinstance(boards[0]["artboards"], list):
+        elif t in ("presentation", "website") and isinstance(boards[0]["artboards"], list):
+            want = "slide" if t == "presentation" else "page"
             other = [f"{a.get('id')}: {a.get('device') or 'no device'}" for a in boards[0]["artboards"]
-                     if isinstance(a, dict) and a.get("device") != "slide"]
-            if other:
+                     if isinstance(a, dict) and a.get("device") != want]
+            if other and t == "presentation":
                 out.append(f"a presentation holds slides only; use a design doc for screens ({', '.join(other)})")
+            elif other:
+                out.append(f"a website holds pages only (device \"page\"); use a design doc for app screens ({', '.join(other)})")
     return out
 
 
@@ -1832,7 +2035,7 @@ def _validate(rep: Report, doc: dict, doc_path: Path | None, *, allow_remote: bo
                 lint_text(rep, sw_ + ".label", sd.get("label"))
         elif t == "board":
             if doc_type(doc.get("meta") or {}) not in BOARD_TYPES:
-                rep.err(bw, "a board block is for design and presentation docs: set meta.type to 'design' or 'presentation'")
+                rep.err(bw, "a board block is for design, presentation and website docs: set meta.type to one of them")
             boards.append((bw, b))
 
     for si, sec in enumerate(doc.get("sections") or []):
@@ -2204,15 +2407,16 @@ BOARD_GEO_SLOT = "/*__BOARD_GEO__*/"
 
 def build(doc: dict, template: str, history: dict | None = None, media_base: Path | None = None,
           diff_path: Path | None = None, problems: list[str] | None = None, state: dict | None = None,
-          screens: dict[str, str] | None = None) -> str:
+          screens: dict[str, str] | None = None, live: dict[str, int] | None = None) -> str:
     """The page. media_base (the doc's folder) makes it standalone: media files become data: URIs.
     diff_path (the doc's JSON file) fills its diff refs, in the doc and in earlier revisions, and gives the current
     revision its links from the screen files; their problems go into problems, or to stderr when it is None. state is
     the reader state serve.py seeds the page with ({version, state}); None (an -o file) leaves the page on
     localStorage. screens ({artboard id: a whole screen document}, from standalone_screens) makes a design page draw
-    its frames from srcdoc; None (serve.py) loads them from the screen route. A page with a board or a canvas (in
-    any revision it carries) gets assets/board-geo.js, the connector router, at the template's BOARD_GEO_SLOT; other
-    pages get nothing there."""
+    its frames from srcdoc; None (serve.py) loads them from the screen route. live ({dev server origin: proxy port},
+    serve.py's) is where a website page frames its live pages; None shows them as a placeholder. A page with a board
+    or a canvas (in any revision it carries) gets assets/board-geo.js, the connector router, at the template's
+    BOARD_GEO_SLOT; other pages get nothing there."""
     title = (doc.get("title") or "bluedoc").replace("&", "&amp;").replace("<", "&lt;")
     if "__BLUEDOC_DOC__" not in template:
         raise SystemExit("template is missing the __BLUEDOC_DOC__ placeholder")
@@ -2243,7 +2447,8 @@ def build(doc: dict, template: str, history: dict | None = None, media_base: Pat
     # one pass, so a placeholder's name inside a filled value (a doc's text, a reader's note) stays text
     fill = {"__BLUEDOC_TITLE__": title, "__BLUEDOC_HISTORY__": _script_json(hist) if hist else "null",
             "__BLUEDOC_STATE__": _script_json(state) if state is not None else "null", "__BLUEDOC_DOC__": _script_json(doc),
-            "__BLUEDOC_SCREENS__": _script_json(screens) if screens is not None else "null", BOARD_GEO_SLOT: geo}
+            "__BLUEDOC_SCREENS__": _script_json(screens) if screens is not None else "null",
+            "__BLUEDOC_LIVE__": _script_json(live) if live is not None else "null", BOARD_GEO_SLOT: geo}
     return re.sub("|".join(map(re.escape, fill)), lambda m: fill[m.group(0)], template)
 
 
@@ -2308,11 +2513,17 @@ def cmd_new(argv: list[str]) -> int:
                     "name> | auto (default: you fill the brief's framework pick from the project's files; see types/design.md)")
     ap.add_argument("--icons", action="store_true", help="design only: add an `app-icon` artboard (device icons) with stub "
                     "fg.svg and mono.svg layers")
+    ap.add_argument("--url", help="website only: the home page's live URL on a local dev server (http://localhost:4321/); "
+                    "without it the home page is a stub screen file")
     a = ap.parse_args(argv)
     if a.shape != "pr" and a.type != "review":
         ap.error("--shape is for review docs")
     if (a.target or a.framework or a.icons) and a.type != "design":
         ap.error("--target, --framework and --icons are for design docs")
+    if a.url is not None and a.type != "website":
+        ap.error("--url is for website docs")
+    if a.url is not None and live_url_problem(a.url):
+        ap.error(f"--url: {live_url_problem(a.url)}")
     targets = [t.strip() for t in (a.target or "mobile").split(",") if t.strip()]
     if "presentation" in targets:
         ap.error("--target presentation is gone: a deck is its own type, `build.py new presentation <path> --title …`")
@@ -2341,7 +2552,8 @@ def cmd_new(argv: list[str]) -> int:
     if a.kind:
         meta["kind"] = a.kind
     stubs = (scaffold_design(doc, a.out, targets, a.framework or "auto", a.icons) if a.type == "design"
-             else scaffold_deck(doc, a.out) if a.type == "presentation" else {})
+             else scaffold_deck(doc, a.out) if a.type == "presentation"
+             else scaffold_site(doc, a.out, a.url) if a.type == "website" else {})
     for f in stubs:
         if f.exists():
             print(f"{f} exists; not overwriting it", file=sys.stderr)
@@ -2387,6 +2599,24 @@ def stub_screen(a: dict) -> str:
     aid, dev = a["id"], a.get("device")
     if dev == "slide":
         return stub_slide(aid, "content", None)
+    if dev == "page":   # a web page: sections down the page, one column below 768 px
+        return ('<style>\n  .pg { max-width: 1120px; margin: 0 auto; }\n'
+                '  @media (max-width: 767px) { .pg .cols-3 { grid-template-columns: minmax(0, 1fr); } }\n</style>\n'
+                f'<main class="screen stack" data-bd="{aid}">\n'
+                '  <header class="row between p-4" data-bd="nav"><div class="wf-box" data-label="Logo"></div>'
+                '<div class="wf-line"></div></header>\n'
+                '  <section class="pg stack gap-4 p-6 center" data-bd="hero">\n'
+                '    <h1 class="display" data-bd="headline">Headline</h1>\n'
+                '    <div class="wf-text" style="--lines:2" data-bd="subline"></div>\n'
+                '    <button class="btn primary" data-bd="cta">Primary action</button>\n'
+                '  </section>\n'
+                '  <section class="pg grid cols-3 gap-4 p-6" data-bd="features">\n'
+                '    <div class="wf-box" data-label="Feature"></div>\n'
+                '    <div class="wf-box" data-label="Feature"></div>\n'
+                '    <div class="wf-box" data-label="Feature"></div>\n'
+                '  </section>\n'
+                '  <footer class="pg p-6" data-bd="footer"><div class="wf-line"></div></footer>\n'
+                '</main>\n')
     if dev in ("watch-round", "watch-square"):
         return (f'<main class="screen {"round " if dev == "watch-round" else ""}safe stack gap-2 center" data-bd="{aid}">\n'
                 '  <div class="wf-circle" data-bd="glance"></div>\n'
@@ -2418,6 +2648,30 @@ def stub_screen(a: dict) -> str:
 
 STUB_ICON_LAYER = ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108">\n'
                    '  <circle cx="54" cy="54" r="24" fill="{fill}"/>\n</svg>\n')   # inside the 66 dp safe circle
+
+
+def scaffold_site(doc: dict, out: Path, url: str | None) -> dict[Path, str]:
+    """Fill a website skeleton for `build.py new website`: the home page live from url, else a stub screen file
+    (fidelity wireframe, sections on its data-bd names). board.root is the repo the doc sits in, when there is one.
+    Returns {file: stub text} to write beside the doc."""
+    board = board_of(doc)
+    home = board["artboards"][0]
+    repo = next((p for p in [out.resolve().parent, *out.resolve().parent.parents] if (p / ".git").exists()), None)
+    if repo is not None:
+        board["root"] = os.path.relpath(repo, out.resolve().parent)
+    if url:
+        home["url"] = url
+        doc["state"] = [{"label": "live from the dev server", "kind": "ok"}]
+        return {}
+    doc["state"] = [{"label": "wireframes: hi-fi after your picks", "kind": "warn"}]
+    home["fidelity"] = "wireframe"
+    for s in home.get("sections") or []:
+        s["sel"] = f'[data-bd="{s["id"]}"]'
+    hero = next((s for s in home.get("sections") or [] if s["id"] == "hero"), None)
+    for edits in ((hero or {}).get("variants") or {}).values():
+        for e in edits:
+            e["sel"] = '[data-bd="headline"]'
+    return {out.parent / screen_rel(out, home): stub_screen(home)}
 
 
 def scaffold_deck(doc: dict, out: Path) -> dict[Path, str]:
@@ -2622,6 +2876,8 @@ def resolve_key(doc: dict, key: str) -> Target:
         a, i = _find(arts, lambda x: x.get("id") == aid, f"artboard '{aid}'")
         if is_icons(a):
             raise PatchError(f"'{aid}' is an icons artboard: it has no links")
+        if is_live(a):
+            raise PatchError(f"'{aid}' is a live page: its links are the site's own")
         return Target(a, arts, i, "link", sel)
     if kind == "layout" and len(parts) == 1:
         b = board_of(doc)
@@ -2640,7 +2896,8 @@ def resolve_key(doc: dict, key: str) -> Target:
         taken = {o.get("id") for o in arts if isinstance(o, dict)}
         aid = next(f"frame-{n}" for n in range(1, len(arts) + 2) if f"frame-{n}" not in taken)
         a = {"id": aid, "title": "Requested frame",
-             **({"w": int(size.group(1)), "h": int(size.group(2))} if size else {"device": dev}),
+             **({"device": "page"} if doc_type(doc.get("meta") or {}) == "website"   # a website holds pages only
+                else {"w": int(size.group(1)), "h": int(size.group(2))} if size else {"device": dev}),
              "fidelity": "wireframe", "x": x, "y": y}
         arts.append(a)
         return Target(a, arts, len(arts) - 1, "frame")
@@ -2656,6 +2913,34 @@ def _board_artboards(doc: dict) -> list:
     if not b or not isinstance(b.get("artboards"), list):
         raise PatchError("no board block with artboards in this doc")
     return b["artboards"]
+
+
+def source_lines(doc: dict, a: dict, sel: str, doc_path: Path) -> list[str]:
+    """A website page's source hints for `patch` to print: the page's, then the section sel falls in (its key path
+    starts with the section's selector, or names its data-bd; on a page with a screen file, the innermost section whose
+    `[data-bd="…"]` or `#id` selector names an ancestor of the element), else every section's. [] on other docs."""
+    if doc_type(doc.get("meta") or {}) != "website":
+        return []
+    root = site_root(board_of(doc), doc_path)
+    out = [f"in {root}"] if root else []
+    if sources_of(a):
+        out.append(f"source: {', '.join(sources_of(a))}")
+    secs = [s for s in a.get("sections") or [] if isinstance(s, dict) and isinstance(s.get("sel"), str)]
+    names = sel.split("/") if EL_NAMES.match(sel) else []
+    hit = [s for s in secs if sel and (sel == s["sel"] or sel.startswith((s["sel"] + ">", s["sel"] + " "))
+                                       or any(s["sel"] == f'[data-bd="{n}"]' for n in names))]
+    if sel and not hit and not is_live(a):
+        tree = _ScreenTree(_read_text(Path(doc_path).parent / screen_rel(doc_path, a)) or "")
+        i = tree.find(sel)
+        while i is not None and not hit:
+            at = tree.els[i]["attrs"]
+            hit = [s for s in secs if (at.get("data-bd") and s["sel"] == f'[data-bd="{at["data-bd"]}"]')
+                   or (at.get("id") and s["sel"] == f'#{at["id"]}')]
+            i = tree.els[i]["parent"]
+    for s in hit[-1:] or secs:
+        if sources_of(s):
+            out.append(f"section {s.get('id')} ({s['sel']}): {', '.join(sources_of(s))}")
+    return out if len(out) > bool(root) else []
 
 
 VOID_TAGS = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"}
@@ -2997,10 +3282,13 @@ def cmd_patch(argv: list[str]) -> int:
         ap.error("a layout: key takes --json '{\"<artboard>\": [x, y], …}'")
     if a.html is not None and is_icons(t.obj):
         ap.error("an icons artboard has no screen file: edit its layers in place, then patch it with --change")
+    if a.html is not None and is_live(t.obj):
+        ap.error("a live page has no screen file: edit the site's source (patch prints it), then patch it with --change")
     if not ops and t.kind != "frame" and not (on_screen and a.change):
         if not on_screen:
             ap.error("give --set, --json, --append or --delete")
-        # where to make the change: the screen file (an icon: its layers), and the element in it
+        # where to make the change: the screen file (an icon: its layers; a live page: its URL), the element in it, and
+        # on a website the source hints
         if is_icons(t.obj):
             layers = icon_layers(doc, a.doc).get(t.obj["id"], {})
             tile = a.key.partition("/")[2].split("/")[-1] if t.kind == "element" else ""
@@ -3010,7 +3298,13 @@ def cmd_patch(argv: list[str]) -> int:
         else:
             sel = " ".join(f'[data-bd="{n}"]' for n in t.selector.split("/")) if t.kind == "link" and \
                 EL_NAMES.match(t.selector or "") else t.selector
-            print(f"{a.doc.parent / screen_rel(a.doc, t.obj)}" + (f"  {sel}" if sel else ""))
+            where = f"live page {t.obj['url']}" if is_live(t.obj) else f"{a.doc.parent / screen_rel(a.doc, t.obj)}"
+            print(where + (f"  {sel}" if sel else ""))
+        for line in source_lines(doc, t.obj, a.key.partition(":")[2].partition("/")[2] if t.kind == "element" else "", a.doc):
+            print(line)
+        if is_live(t.obj):
+            print(f"edit the source, then: build.py patch {a.doc} {shlex.quote(a.key)} --change '<what changed>'")
+            return 0
         if t.kind == "link":
             tree = _ScreenTree(_read_text(a.doc.parent / screen_rel(a.doc, t.obj)) or "")
             i = tree.find(t.selector) if t.selector else None
@@ -3065,7 +3359,8 @@ def cmd_patch(argv: list[str]) -> int:
     # screen files change before validate, which lints them; undone when the patch fails
     written: list[tuple[Path, str | None]] = []
     screen = None
-    if t.kind in ("artboard", "element", "frame", "link") and not (a.delete and t.kind != "link") and not is_icons(t.obj):
+    if t.kind in ("artboard", "element", "frame", "link") and not (a.delete and t.kind != "link") and not is_icons(t.obj) \
+            and not is_live(t.obj):
         screen = a.doc.parent / screen_rel(a.doc, t.obj)
     if screen and (html is not None or link_text is not None or (t.kind == "frame" and not screen.exists())):
         written.append((screen, _read_text(screen) if screen.exists() else None))
@@ -3110,7 +3405,7 @@ def cmd_patch(argv: list[str]) -> int:
     if screen:
         print(f"screen: {screen}" + (f"  {t.selector}" if t.selector else "")
               + ("  (a stub: write the requested screen there)" if t.kind == "frame" and written else ""))
-    elif a.delete and t.kind in ("artboard", "element"):
+    elif a.delete and t.kind in ("artboard", "element") and not is_live(t.obj):
         left = f"{icon_dir(a.doc, t.obj)}/" if is_icons(t.obj) else a.doc.parent / screen_rel(a.doc, t.obj)
         print(f"left {left}: delete it if nothing uses it (the history keeps its text)")
     if rev0 and rev0 != rev1:

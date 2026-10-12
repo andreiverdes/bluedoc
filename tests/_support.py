@@ -21,7 +21,7 @@ SCRIPTS = SKILL / "scripts"
 EXAMPLES = SKILL / "examples"
 TEMPLATE = SKILL / "assets" / "template.html"
 EXPORTS = REPO / "docs" / "examples"
-EXAMPLE_STEMS = ("acme-orders", "acme-review-findings", "acme-saved-carts-plan", "acme-status")
+EXAMPLE_STEMS = ("acme-orders", "acme-review-findings", "acme-saved-carts-plan", "acme-status", "acme-site")
 
 if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))

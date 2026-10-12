@@ -1539,6 +1539,47 @@ i.warn[hidden] { display: none; }
 .dev-browser .bd-ch .url { height: 36px; display: flex; align-items: center; padding: 0 12px; background: #fff; }
 .dev-browser .bd-ch .url span { flex: 1; height: 26px; display: flex; align-items: center; gap: 8px; padding: 0 12px; border-radius: 13px; background: #f1f3f4; color: #5f6368; }
 .dev-browser .bd-ch .url .bd-ic { width: 14px; height: 14px; }
+/* a website's page: a browser bar above the page (not over it: a live page knows no safe area), the page's widths on
+   its title bar, and in place over a section, the versions a decision picks between */
+.dev-page { --r: 0 0 10px 10px; --bar: 40px; }
+.dev-page .bd-ab-t { max-width: max(100%, calc(420px / var(--k))); margin-bottom: calc(6px / var(--k) + var(--bar)); }
+.bd-pbar { position: absolute; left: 0; right: 0; bottom: 100%; height: var(--bar, 40px); display: flex; align-items: center; gap: 12px; padding: 0 12px; box-sizing: border-box;
+  border-radius: 10px 10px 0 0; background: #e8eaed; box-shadow: 0 0 0 1px var(--line); font: 500 13px var(--sans); color: #5f6368; pointer-events: none; }
+.bd-pbar .dots { display: inline-flex; flex: none; gap: 7px; }
+.bd-pbar .dots i { width: 12px; height: 12px; border-radius: 50%; background: #ff5f57; }
+.bd-pbar .dots i:nth-child(2) { background: #febc2e; } .bd-pbar .dots i:nth-child(3) { background: #28c840; }
+.bd-pbar .url { flex: 1; min-width: 0; height: 26px; display: flex; align-items: center; gap: 8px; padding: 0 12px; border-radius: 13px; background: #fff; overflow: hidden; white-space: nowrap; }
+.bd-pbar .url span { overflow: hidden; text-overflow: ellipsis; }
+.bd-pbar .bd-ic { flex: none; width: 14px; height: 14px; }
+.bd-pbar .live { flex: none; display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 9px; border-radius: 11px; font-size: 12px; font-weight: 600; color: #116b3a; background: #d5f5e1; }
+.bd-pbar .live::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #1fa45a; }
+.bd-pbar.small .url { display: none; }
+.bd-ab-t .bps { display: inline-flex; gap: .15em; padding: .15em; border-radius: .6em; background: var(--inset); }
+.bd-ab-t .bps button { display: inline-grid; place-items: center; min-width: 1.9em; height: 1.75em; padding: 0 .35em; border: 0; border-radius: .45em; background: none; color: var(--fg-subtle); font: inherit; font-weight: 600; cursor: pointer; }
+.bd-ab-t .bps button:hover { color: var(--fg); }
+.bd-ab-t .bps button[aria-checked="true"] { color: var(--fg); background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: var(--shadow-hk); }
+.bd-ab-t .bps .bd-ic { width: 1.15em; height: 1.15em; }
+.bd-var { position: absolute; z-index: 3; display: flex; align-items: center; gap: .35em; max-width: calc(100% - 16px / var(--k)); margin: calc(8px / var(--k)) 0 0 calc(-8px / var(--k)); padding: .3em .35em .3em .7em;
+  transform: translateX(-100%); border-radius: .8em; font: 600 calc(12px / var(--k))/1.2 var(--sans); color: var(--fg); background: color-mix(in oklch, var(--surface) 92%, transparent);
+  box-shadow: var(--shadow-3), 0 0 0 calc(1px / var(--k)) var(--line); backdrop-filter: blur(6px); white-space: nowrap; }
+.bd-var[hidden] { display: none; }
+.bd-var .l { overflow: hidden; text-overflow: ellipsis; color: var(--fg-muted); }
+.bd-var .ch { display: inline-flex; gap: .15em; padding: .15em; border-radius: .6em; background: var(--inset); }
+.bd-var button { display: inline-flex; align-items: center; gap: .25em; height: 1.85em; padding: 0 .6em; border: 0; border-radius: .45em; background: none; color: var(--fg-muted); font: inherit; cursor: pointer; }
+.bd-var button:hover:not(:disabled) { color: var(--fg); }
+.bd-var button[aria-checked="true"] { color: var(--accent-fg); background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: var(--shadow-hk); }
+.bd-var button:disabled { cursor: default; }
+.bd-var button .bd-ic { width: 1em; height: 1em; color: var(--warn); }
+.bd-var .pk { overflow: hidden; text-overflow: ellipsis; max-width: calc(260px / var(--k)); font-weight: 500; color: var(--fg-muted); }
+/* the Pages list: each page's sections under it, with where their source lives */
+.bd-sec-l { list-style: none; margin: 0 0 6px 38px; padding: 0; display: grid; gap: 1px; }
+.bd-scr-l .bd-sec-l button { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 1px 8px; padding: 5px 8px; border-radius: 8px; font-size: 12.5px; }
+.bd-sec-l .st { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bd-sec-l .v { font-size: 11px; font-weight: 600; color: var(--accent-fg); white-space: nowrap; }
+.bd-sec-l code { grid-column: 1 / -1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 11px/1.4 var(--mono); color: var(--fg-subtle); }
+.bd-btb .bd-tbtn[hidden] { display: none; }
+.bd-btb .bd-bpw { width: 64px; height: 26px; padding: 0 8px; border: 0; border-radius: 8px; background: var(--inset); box-shadow: var(--shadow-well); font: 500 12px var(--sans); color: var(--fg); }
+.bd-btb .bd-bpw::placeholder { color: var(--fg-subtle); }
 /* requested frames (Frame mode): dashed, with their labelled boxes; the one being drawn is amber */
 .bd-rq { position: absolute; border: calc(2px / var(--k)) dashed var(--accent); border-radius: 6px; background: color-mix(in oklch, var(--accent) 6%, transparent); }
 .bd-rq.draft { border-color: var(--warn); background: color-mix(in oklch, var(--warn) 8%, transparent); }
@@ -1715,6 +1756,7 @@ html.bd-presenting :is(.bd-anntb, .bd-ann-layer, .bd-cmp) { display: none !impor
 <script type="application/json" id="bp-hist">__BLUEDOC_HISTORY__</script>
 <script type="application/json" id="bp-screens">__BLUEDOC_SCREENS__</script>
 <script type="application/json" id="bp-state">__BLUEDOC_STATE__</script>
+<script type="application/json" id="bp-live">__BLUEDOC_LIVE__</script>
 <script>
 (() => {
 'use strict';
@@ -2111,18 +2153,21 @@ const meta = DOC.meta || {};
 const DOCS_KINDS = new Set(['architecture', 'walkthrough', 'runbook', 'setup', 'reference', 'proposal', 'change', 'changes', 'plan', 'status', 'guide',
   'design', 'spec', 'rfc', 'adr', 'overview', 'tutorial', 'onboarding', 'explainer', 'playbook']);
 function docTypeOf(m) {
-  if (['docs', 'review', 'plan', 'design', 'presentation', 'other'].includes(m.type)) return m.type;
+  if (['docs', 'review', 'plan', 'design', 'presentation', 'website', 'other'].includes(m.type)) return m.type;
   const k = String(m.kind || '').trim().toLowerCase();
   if (k.startsWith('plan') || k === 'implementation plan') return 'plan';
   if (k.includes('review')) return 'review';
   return (k.match(/[a-z]+/g) || []).some(w => DOCS_KINDS.has(w)) ? 'docs' : 'other';
 }
-// plans, designs and presentations are approvable: Approve plan / design / presentation, Request changes with the
-// decision picks. A presentation is a design page whose board holds slides only: IS_DESIGN covers both
-const DOC_TYPE = docTypeOf(meta), IS_PLAN = DOC_TYPE === 'plan', IS_DECK = DOC_TYPE === 'presentation', IS_DESIGN = DOC_TYPE === 'design' || IS_DECK;
+// plans, designs, presentations and websites are approvable: Approve plan / design / presentation / website, Request
+// changes with the decision picks. A presentation is a design page whose board holds slides only, a website one whose
+// board holds web pages only: IS_DESIGN covers all three
+const DOC_TYPE = docTypeOf(meta), IS_PLAN = DOC_TYPE === 'plan', IS_DECK = DOC_TYPE === 'presentation', IS_SITE = DOC_TYPE === 'website';
+const IS_DESIGN = DOC_TYPE === 'design' || IS_DECK || IS_SITE;
 const APPROVABLE = IS_PLAN || IS_DESIGN;
-const AP_NOUN = IS_DECK ? 'presentation' : IS_DESIGN ? 'design' : 'plan', AP_TITLE = IS_DECK ? 'Presentation' : IS_DESIGN ? 'Design' : 'Plan';
-const SCREEN = IS_DECK ? 'slide' : 'screen';   // what the board's artboards are called on this page
+const AP_NOUN = IS_DECK ? 'presentation' : IS_SITE ? 'website' : IS_DESIGN ? 'design' : 'plan';
+const AP_TITLE = AP_NOUN[0].toUpperCase() + AP_NOUN.slice(1);
+const SCREEN = IS_DECK ? 'slide' : IS_SITE ? 'page' : 'screen';   // what the board's artboards are called on this page
 let BOARD = null;   // a design doc's board (renderBoard), once drawn
 const overallBar = h('div', { class: 'bp-bar' }, h('i'));
 const overallTxt = h('span');
@@ -2922,8 +2967,18 @@ function decisionsMd(xs = Object.values(ITEMS).filter(x => x.choices || x.note))
       const rec = x.it.recommend && choiceLabel(x, x.it.recommend);
       line += x.choice ? ` → ${choiceMd(x)}` + (rec && x.choice !== x.it.recommend ? ` (recommended: ${rec})` : '') : rec ? ` (no pick; recommended: ${rec})` : ' (no pick)';
     }
-    return line + (x.note ? '\n' + x.note.trim().split('\n').map(l => `  > ${l}`).join('\n') : '');
+    return line + variantMd(x) + (x.note ? '\n' + x.note.trim().split('\n').map(l => `  > ${l}`).join('\n') : '');
   }).join('\n');
+}
+// on a website, a decision whose versions a section shows in place: which page and section, and where its source is
+function variantMd(x) {
+  if (!IS_SITE || x.cid !== 'brief') return '';
+  const out = [];
+  for (const a of boardAbs(boardOf(DOC))) for (const s of secsOf(a)) if (s.decision === x.it.id) {
+    const src = srcsOf(s).length ? srcsOf(s) : srcsOf(a);
+    out.push(`\n  Shown in: ${plain(a.title || a.id)} › ${plain(s.title)}` + (src.length ? ` · Source: ${src.map(v => '`' + v.replace(/`/g, '') + '`').join(', ')}` : ''));
+  }
+  return out.join('');
 }
 // The page can send replies itself when it is served by scripts/serve.py; otherwise it copies them.
 // Two kinds go back: answers (ticks, picks, item comments: Send answers) and change requests to the
@@ -4372,14 +4427,37 @@ function outlineOf(spec, root) {
 // `mode`, `tokens`, `view`, `locate`; frame → page `ready`, `hover`, `pick`, `nav`, taken from known frames only,
 // strings capped at 200 characters and shown as text. A `nav` names an element; the page follows it only through
 // the build's link list for that screen, so a screen can't move Present anywhere its links don't go.
-const DEVICES = { 'watch-round': [240, 240], 'watch-square': [198, 242], phone: [390, 844], tablet: [820, 1180], desktop: [1280, 800], browser: [1440, 900], slide: [1920, 1080], icons: [1280, 860] };
-const DEVICE_NAME = { 'watch-round': 'Round watch', 'watch-square': 'Square watch', phone: 'Phone', tablet: 'Tablet', desktop: 'Desktop app', browser: 'Browser', slide: 'Slide', icons: 'App icon' };
-const DEVICE_IC = { 'watch-round': 'watch', 'watch-square': 'watch', phone: 'phone', tablet: 'tablet', desktop: 'monitor', browser: 'globe', slide: 'present', icons: 'image', custom: 'frame' };
+// A website's live page (`url`) is no screen file: serve.py proxies its dev server on another port (bp-live: {dev server
+// origin: proxy port}) and injects the inspector there; that frame keeps `allow-same-origin`, as its origin is the
+// proxy's, never this page's.
+const SCREEN_SANDBOX = 'allow-scripts', LIVE_SANDBOX = 'allow-scripts allow-same-origin';
+const DEVICES = { 'watch-round': [240, 240], 'watch-square': [198, 242], phone: [390, 844], tablet: [820, 1180], desktop: [1280, 800], browser: [1440, 900], slide: [1920, 1080], icons: [1280, 860], page: [1440, 900] };
+const DEVICE_NAME = { 'watch-round': 'Round watch', 'watch-square': 'Square watch', phone: 'Phone', tablet: 'Tablet', desktop: 'Desktop app', browser: 'Browser', slide: 'Slide', icons: 'App icon', page: 'Web page' };
+const DEVICE_IC = { 'watch-round': 'watch', 'watch-square': 'watch', phone: 'phone', tablet: 'tablet', desktop: 'monitor', browser: 'globe', slide: 'present', icons: 'image', page: 'globe', custom: 'frame' };
 const BEZEL = { 'watch-round': 12, 'watch-square': 10, phone: 12, tablet: 14 };   // CSS px drawn around the screen
 const FIDELITY = { sketch: 'Sketch', wireframe: 'Wireframe', hifi: 'Hi-fi' };
 const AB_GAP = 80, LIVE_MAX = 12, BK_MIN = 0.02, BK_MAX = 4;
 const SCREENS = (() => { try { const x = JSON.parse(document.getElementById('bp-screens').textContent); return x && typeof x === 'object' && !Array.isArray(x) ? x : null; } catch { return null; } })();
 const SERVED = !SCREENS && /^https?:$/.test(location.protocol);
+const LIVE_PORTS = (() => { try { const x = JSON.parse(document.getElementById('bp-live').textContent); return x && typeof x === 'object' && !Array.isArray(x) ? x : null; } catch { return null; } })();
+const isLive = a => !!a && typeof a.url === 'string';
+// a live page's dev server as serve.py keys its proxies (origin_key): scheme://host:port
+function liveOrigin(url) { try { const u = new URL(url); return /^https?:$/.test(u.protocol) ? `${u.protocol}//${u.hostname}:${u.port || (u.protocol === 'https:' ? 443 : 80)}` : null; } catch { return null; } }
+// a live page through its proxy: this page's host name, the proxy's port, the page's path; null without a proxy
+function liveUrl(a) {
+  const o = liveOrigin(a.url), p = o && SERVED && LIVE_PORTS ? LIVE_PORTS[o] : null;
+  if (!Number.isInteger(p)) return null;
+  const u = new URL(a.url);
+  return `http://${location.hostname}:${p}${u.pathname}${u.search}`;
+}
+// a website page's widths: board.breakpoints, else desktop, tablet, mobile; each one's viewport height
+const BREAKPOINTS = [1440, 768, 390], BP_H = { 1920: 1080, 1440: 900, 1280: 800, 1024: 768, 768: 1024, 390: 844, 375: 812, 360: 780 }, PAGE_BAR = 40;
+const pageDims = w => [w, BP_H[w] || (w >= 1024 ? Math.round(w * 0.625) : w >= 600 ? Math.round(w * 4 / 3) : Math.round(w * 2.164))];
+const bpName = w => w >= 1024 ? 'Desktop' : w >= 600 ? 'Tablet' : 'Mobile';
+const bpIc = w => w >= 1024 ? 'monitor' : w >= 600 ? 'tablet' : 'phone';
+// a page's sections ({id, title, sel, source?, decision?, variants?}) and a page's or section's source hints
+const secsOf = a => (Array.isArray(a && a.sections) ? a.sections : []).filter(s => s && typeof s.id === 'string' && typeof s.sel === 'string');
+const srcsOf = x => (typeof (x && x.source) === 'string' ? [x.source] : Array.isArray(x && x.source) ? x.source : []).filter(s => typeof s === 'string').slice(0, 3);
 const abSize = a => DEVICES[a.device] ? DEVICES[a.device].slice() : [Math.max(1, Math.round(+a.w) || 1), Math.max(1, Math.round(+a.h) || 1)];
 const devOf = a => DEVICES[a && a.device] ? a.device : 'custom';
 const boardOf = d => { for (const s of (d && d.sections) || []) for (const b of s.blocks || []) if (b && b.type === 'board') return b; return null; };
@@ -4404,14 +4482,23 @@ function chromeFor(dev, a) {
   if (dev === 'browser') return h('div', { class: 'bd-ch', 'aria-hidden': 'true' }, h('div', { class: 'tabs' }, dots(), h('span', { class: 'tab' }, t)), h('div', { class: 'url' }, h('span', {}, ic('globe'), a.id)));
   return null;
 }
-// the device around a screen at its native size (present and compare views): bezel, screen, chrome
-function deviceBox(a, fr, why) {
-  const [w, hh] = abSize(a), dev = devOf(a), bz = BEZEL[dev] || 0;
+// a website page's browser bar, above the page: its address (a live page's URL, else its title) and Live
+function pageBar(a, w) {
+  let addr = a.title || a.id;
+  if (isLive(a)) { try { const u = new URL(a.url); addr = u.host + u.pathname; } catch { addr = a.url; } }
+  return h('div', { class: 'bd-pbar' + (w < 600 ? ' small' : ''), 'aria-hidden': 'true' }, h('span', { class: 'dots' }, h('i'), h('i'), h('i')),
+    h('span', { class: 'url' }, ic(isLive(a) ? 'globe' : 'frame'), h('span', {}, addr)), isLive(a) && h('span', { class: 'live' }, 'Live'));
+}
+// the device around a screen at its native size (present and compare views): bezel, screen, chrome. size: a website
+// page's [w, h] at the width the board shows it
+function deviceBox(a, fr, why, size) {
+  const [w, hh] = size || abSize(a), dev = devOf(a), bz = BEZEL[dev] || 0, top = dev === 'page' ? PAGE_BAR : 0;
   const dv = h('div', { class: `bd-pdev dev-${dev}`, style: `width:${w}px;height:${hh}px` }, bz && h('div', { class: 'bd-ab-dev' }),
-    h('div', { class: 'bd-ab-scr' }, fr || h('div', { class: 'bd-ab-ph' }, ic(DEVICE_IC[dev]), h('b', {}, a.title || a.id), h('span', { class: 'why' }, why)), chromeFor(dev, a)));
+    h('div', { class: 'bd-ab-scr' }, fr || h('div', { class: 'bd-ab-ph' }, ic(DEVICE_IC[dev]), h('b', {}, a.title || a.id), h('span', { class: 'why' }, why)), chromeFor(dev, a)),
+    top ? pageBar(a, w) : null);
   const sz = h('div', { class: 'bd-psz' }, dv);
   // fit into W × H, at most native size (up: as large as fits)
-  const fit = (W, H, up) => { const s = Math.min(up ? Infinity : 1, W / (w + 2 * bz), H / (hh + 2 * bz)); dv.style.transform = `translate(${bz * s}px,${bz * s}px) scale(${s})`; sz.style.width = (w + 2 * bz) * s + 'px'; sz.style.height = (hh + 2 * bz) * s + 'px'; };
+  const fit = (W, H, up) => { const s = Math.min(up ? Infinity : 1, W / (w + 2 * bz), H / (hh + 2 * bz + top)); dv.style.transform = `translate(${bz * s}px,${(bz + top) * s}px) scale(${s})`; sz.style.width = (w + 2 * bz) * s + 'px'; sz.style.height = (hh + 2 * bz + top) * s + 'px'; };
   return { sz, fit, w, hh };
 }
 
@@ -4552,27 +4639,96 @@ function renderBoard(b) {
   const rectOf = r => r && typeof r === 'object' && [r.x, r.y, r.w, r.h].every(Number.isFinite) ? { x: r.x, y: r.y, w: Math.max(0, r.w), h: Math.max(0, r.h) } : null;
   const post = (x, m) => { try { x.fr && x.fr.contentWindow && x.fr.contentWindow.postMessage(m, '*'); } catch { /* the frame is gone */ } };
 
+  /* a website's pages: each at a width the reader picks (board.breakpoints, kept per doc in this browser), with its
+     sections (source hints, versions to pick in place) */
+  const BPS = IS_SITE && Array.isArray(b.breakpoints) && b.breakpoints.some(Number.isInteger) ? b.breakpoints.filter(w => Number.isInteger(w) && w >= 240 && w <= 3840) : BREAKPOINTS;
+  const BP_KEY = `bluedoc:bp:${docId}`;
+  B.bpw = new Map((() => { try { return Object.entries(JSON.parse(localStorage.getItem(BP_KEY) || '{}')).filter(([, w]) => Number.isInteger(w) && w >= 240 && w <= 3840); } catch { return []; } })());
+  const pageSize = id => pageDims(B.bpw.get(id) || DEVICES.page[0]);
+  const sizeOf = a => devOf(a) === 'page' ? pageSize(a.id) : abSize(a);
+  const bpDesc = (a, w) => [isLive(a) && 'Live', `${w} px`, FIDELITY[a.fidelity]].filter(Boolean).join(' · ');   // the width's device: the checked icon before it
+
   /* artboards */
   function makeAb(a, p, ghost) {
-    const dev = devOf(a), id = a.id;
+    const dev = devOf(a), id = a.id, page = dev === 'page';
+    if (page && !ghost) { const [w, hh] = pageSize(id); p = { ...p, w, h: hh }; }
     const warn = h('i', { class: 'warn', hidden: true }), tag = h('span', { class: 'tg' });
-    const cmpBtn = h('button', { type: 'button', class: 'cmp', hidden: true, 'aria-label': 'Compare this screen across the two revisions', title: 'Compare this screen across the two revisions',
+    const cmpBtn = h('button', { type: 'button', class: 'cmp', hidden: true, 'aria-label': `Compare this ${SCREEN} across the two revisions`, title: `Compare this ${SCREEN} across the two revisions`,
       onclick: e => { e.stopPropagation(); openCompare(id); } }, ic('split'));
     const rch = h('span', { class: 'rch', hidden: true });
-    const t = h('div', { class: 'bd-ab-t' }, warn, h('span', { class: 'n' }, a.title || id), rch,
-      h('span', { class: 'd' }, [DEVICE_NAME[dev] || `${p.w} × ${p.h}`, FIDELITY[a.fidelity]].filter(Boolean).join(' · ')), tag, cmpBtn, dev === 'icons' && !ghost && iconExportKey(a));
-    const ph = h('div', { class: 'bd-ab-ph' }, ic(DEVICE_IC[dev]), h('b', {}, a.title || id),
-      h('span', { class: 'why' }, ghost ? `Removed in ${VIEW.rev ? 'rev ' + VIEW.rev : 'this revision'}` : SCREENS ? (OLD ? 'An export shows the current revision\'s screens only.' : '') : SERVED ? '' : 'Open this page through serve.py to see the screen.'));
+    const dl = h('span', { class: 'd' }, page ? bpDesc(a, p.w) : [DEVICE_NAME[dev] || `${p.w} × ${p.h}`, FIDELITY[a.fidelity]].filter(Boolean).join(' · '));
+    // a page's widths: an icon each (a width when two share one)
+    const icons = BPS.map(bpIc), bps = page && !ghost ? h('span', { class: 'bps', role: 'radiogroup', 'aria-label': `Width of ${a.title || id}` }, BPS.map((w, i) =>
+      h('button', { type: 'button', role: 'radio', 'data-w': w, title: `${bpName(w)}: ${w} px wide`, 'aria-label': `${bpName(w)}, ${w} px`, onclick: e => { e.stopPropagation(); setBp(id, w); } },
+        icons.indexOf(icons[i]) === icons.lastIndexOf(icons[i]) ? ic(icons[i]) : String(w)))) : null;
+    const t = h('div', { class: 'bd-ab-t' }, warn, h('span', { class: 'n' }, a.title || id), rch, bps, dl, tag, cmpBtn, dev === 'icons' && !ghost && iconExportKey(a));
+    const why = ghost ? `Removed in ${VIEW.rev ? 'rev ' + VIEW.rev : 'this revision'}`
+      : isLive(a) ? (liveUrl(a) ? '' : SERVED ? 'This revision\'s dev server has no proxy: open the current revision.' : 'A live page: open this doc through serve.py, with the dev server running.')
+      : SCREENS ? (OLD ? 'An export shows the current revision\'s screens only.' : '') : SERVED ? '' : `Open this page through serve.py to see the ${SCREEN}.`;
+    const ph = h('div', { class: 'bd-ab-ph' }, ic(DEVICE_IC[dev]), h('b', {}, a.title || id), h('span', { class: 'why' }, why));
     const hov = h('div', { class: 'bd-ab-hov', hidden: true }, h('b'));
     const scr = h('div', { class: 'bd-ab-scr' }, ph, chromeFor(dev, a), hov);
+    const bar = page ? pageBar(a, p.w) : null;
     const el = h('div', { class: `bd-ab dev-${dev} fid-${FIDELITY[a.fidelity] ? a.fidelity : 'hifi'}${ghost ? ' ghost' : ''}`, 'data-ab': ghost ? null : id, 'data-ghost': ghost ? id : null },
-      t, BEZEL[dev] && h('div', { class: 'bd-ab-dev', 'aria-hidden': 'true' }), scr);
-    const x = { a, p, el, scr, ph, hov, warn, tag, cmpBtn, rch, ghost, fr: null, ready: false, fallback: null, rects: {}, navAt: null, named: null, allow: 0, navs: 0, locSig: '', home: null, chg: null, li: null };
-    placeAb(x);
+      t, BEZEL[dev] && h('div', { class: 'bd-ab-dev', 'aria-hidden': 'true' }), bar, scr);
+    const x = { a, p, el, scr, ph, hov, warn, tag, cmpBtn, rch, ghost, dl, bps, bar, vars: [], fr: null, ready: false, fallback: null, rects: {}, navAt: null, named: null, allow: 0, navs: 0, locSig: '', home: null, chg: null, li: null };
+    placeAb(x); paintBp(x);
     if (!ghost) { el.addEventListener('pointerenter', () => hoverAb(id)); el.addEventListener('pointerleave', () => hoverAb(null)); }
     return x;
   }
   const placeAb = x => Object.assign(x.el.style, { left: x.p.x + 'px', top: x.p.y + 'px', width: x.p.w + 'px', height: x.p.h + 'px' });
+  function paintBp(x) {
+    if (!x.bps) return;
+    for (const bt of x.bps.querySelectorAll('button')) bt.setAttribute('aria-checked', String(+bt.dataset.w === x.p.w));
+    x.dl.textContent = bpDesc(x.a, x.p.w);
+    x.bar.classList.toggle('small', x.p.w < 600);
+  }
+  // a page at width w (the board keeps its place: x, y): its frame, title, arrows and pins follow
+  function setBp(id, w, quiet) {
+    const x = B.frames.get(id); if (!x || devOf(x.a) !== 'page') return;
+    w = clamp(Math.round(+w) || DEVICES.page[0], 240, 3840);
+    const [W, H] = pageDims(w);
+    B.bpw.set(id, W); x.p = { ...x.p, w: W, h: H }; if (x.home) x.home = { ...x.home, w: W, h: H };
+    placeAb(x); paintBp(x);
+    if (x.fr) { x.fr.width = W; x.fr.height = H; }
+    if (!quiet) bpChanged();
+  }
+  function bpChanged() {
+    try { localStorage.setItem(BP_KEY, JSON.stringify(Object.fromEntries(B.bpw))); } catch { /* no storage: this view only */ }
+    relink(); MARKUP.relayout(); paintTools();
+  }
+  function setAllBp(w) { for (const x of B.frames.values()) setBp(x.a.id, w, true); bpChanged(); if (!B.touched) fit(true); }
+  // a section's versions, shown in place: the brief item's pick, else its recommendation; [{sel, edits}] for the frame
+  const varItem = s => s.decision ? ITEMS[`brief/${s.decision}`] : null;
+  const varShown = it => it ? it.choice || it.it.recommend || null : null;
+  function editsOf(a) {
+    return secsOf(a).filter(s => varItem(s) && s.variants && typeof s.variants === 'object').map(s => ({ sel: s.sel, edits: Array.isArray(s.variants[varShown(varItem(s))]) ? s.variants[varShown(varItem(s))] : [] }));
+  }
+  const siteMsgs = x => devOf(x.a) === 'page' ? [{ bd: 'sections', sels: secsOf(x.a).map(s => s.sel) }, { bd: 'edits', list: editsOf(x.a) }] : [];
+  // the in-place pickers: one over each section that has versions, at its top right while it shows in the frame
+  function makeVars(x) {
+    for (const s of secsOf(x.a)) {
+      const it = varItem(s); if (!it || !it.choices) continue;
+      const pick = h('span', { class: 'pk' });
+      const btns = it.choices.map((c, i) => h('button', { type: 'button', role: 'radio', 'data-id': c.id, disabled: OLD || !!BASE, title: c.label + (c.id === it.it.recommend ? ' (recommended)' : ''),
+        onclick: e => { e.stopPropagation(); it.setChoice(c.id); } }, String.fromCharCode(65 + i), c.id === it.it.recommend && ic('star')));
+      const el = h('div', { class: 'bd-var', hidden: true, role: 'radiogroup', 'aria-label': `${s.title}: versions` }, h('span', { class: 'l' }, s.title), h('span', { class: 'ch' }, btns), pick);
+      x.el.append(el);
+      x.vars.push({ s, it, el, btns, pick });
+    }
+    paintVars(x);
+  }
+  const secKey = s => `:is(${s.sel})`;   // as the frame locates it (a CSS selector, never read as data-bd names)
+  function paintVars(x) {
+    for (const v of x.vars) {
+      const cur = varShown(v.it), r = x.rects[secKey(v.s)];
+      v.btns.forEach(bt => bt.setAttribute('aria-checked', String(bt.dataset.id === cur)));
+      v.pick.textContent = cur ? choiceLabel(v.it, cur) + (v.it.choice ? '' : ' (recommended)') : '';
+      v.el.hidden = !r || !x.fr || r.y + r.h < 40 || r.y > x.p.h - 40;
+      if (!v.el.hidden) Object.assign(v.el.style, { left: Math.min(r.x + r.w, x.p.w) + 'px', top: clamp(r.y, 0, x.p.h - 40) + 'px' });
+    }
+  }
+  B.paintVariants = () => { for (const x of B.frames.values()) paintVars(x); for (const x of B.live) for (const m of siteMsgs(x)) post(x, m); };
   const pos = boardLayout(b, VIEW.links);
   for (const a of abs) { const x = makeAb(a, pos.get(a.id), false); B.frames.set(a.id, x); vp.append(x.el); }
   // a deck's slides in reading order: by row (top first), left to right in a row, ties in the doc's order
@@ -4584,20 +4740,25 @@ function renderBoard(b) {
   const tokensMsg = () => { const t = themeOf(B.theme); return { bd: 'tokens', theme: t && t.tokens && typeof t.tokens === 'object' ? t.tokens : null, motion: b.motion && typeof b.motion === 'object' ? b.motion : null }; };
   const viewMsg = x => ({ bd: 'view', sketch: B.sketch || x.a.fidelity === 'sketch', reduced: B.reduced, paused: B.paused });
   const modeMsg = x => ({ bd: 'mode', mode: x.role === 'pres' ? 'interact' : x.role === 'cmp' ? 'view' : frameMode() });
-  // an iframe for record x (an artboard, or the present or compare view's copy) at revision rev (null: current)
+  // an iframe for record x (an artboard, or the present or compare view's copy) at revision rev (null: current). A live
+  // page loads its proxy, at any revision
   function frameEl(x, rev) {
-    const attrs = SCREENS ? (rev == null && typeof SCREENS[x.a.id] === 'string' ? { srcdoc: SCREENS[x.a.id] } : null) : SERVED ? { src: screenUrl(x.a, rev, B.theme) } : null;
+    const live = isLive(x.a);
+    const attrs = live ? (liveUrl(x.a) ? { src: liveUrl(x.a), referrerpolicy: 'no-referrer' } : null)
+      : SCREENS ? (rev == null && typeof SCREENS[x.a.id] === 'string' ? { srcdoc: SCREENS[x.a.id] } : null) : SERVED ? { src: screenUrl(x.a, rev, B.theme) } : null;
     if (!attrs) return null;
-    const [w, hh] = abSize(x.a);
-    const fr = h('iframe', { sandbox: 'allow-scripts', class: 'bd-ab-fr', 'data-ab': x.a.id, title: 'Screen: ' + (x.a.title || x.a.id), tabindex: '-1', width: w, height: hh, ...attrs });
-    Object.assign(x, { fr, attrs, allow: 1, ready: false, locSig: '' });
+    const [w, hh] = sizeOf(x.a);
+    const fr = h('iframe', { sandbox: live ? LIVE_SANDBOX : SCREEN_SANDBOX, class: 'bd-ab-fr', 'data-ab': x.a.id, title: `${SCREEN[0].toUpperCase()}${SCREEN.slice(1)}: ` + (x.a.title || x.a.id),
+      tabindex: '-1', width: w, height: hh, ...attrs });
+    Object.assign(x, { fr, attrs, live, allow: 1, ready: false, locSig: '' });
     fr.addEventListener('load', () => loaded(x, fr));
     B.live.add(x);
     return fr;
   }
   function loaded(x, fr) {
     if (x.fr !== fr) return;
-    if (x.allow > 0) { x.allow--; for (const m of [modeMsg(x), tokensMsg(), viewMsg(x)]) post(x, m); return; }
+    // a live page reloads (the dev server's hot reload) and follows its own links: each load is a fresh page to set up
+    if (x.allow > 0 || x.live) { x.allow = 0; x.locSig = ''; for (const m of [modeMsg(x), tokensMsg(), viewMsg(x), ...siteMsgs(x)]) post(x, m); if (x.pendingReveal) post(x, { bd: 'reveal', sel: x.pendingReveal }); x.pendingReveal = null; return; }
     // a load the page didn't start: the screen navigated its own frame. Load it again and flag it; a
     // screen that keeps doing it stops showing.
     x.navs++;
@@ -4611,7 +4772,7 @@ function renderBoard(b) {
     B.live.delete(x);
     if (x.fr) { x.fr.remove(); x.fr = null; }
     x.ready = false;
-    if (x.el) { x.ph.hidden = false; x.el.classList.remove('live'); x.hov.hidden = true; if (x.blocked) x.ph.querySelector('.why').textContent = 'This screen navigates away from its frame, so it isn\'t shown.'; }
+    if (x.el) { x.ph.hidden = false; x.el.classList.remove('live'); x.hov.hidden = true; paintVars(x); if (x.blocked) x.ph.querySelector('.why').textContent = 'This screen navigates away from its frame, so it isn\'t shown.'; }
   }
   function mount(x) {
     if (x.fr || x.blocked) return;
@@ -4639,15 +4800,23 @@ function renderBoard(b) {
     Object.assign(x.hov.style, { left: o.rect.x + 'px', top: o.rect.y + 'px', width: o.rect.w + 'px', height: o.rect.h + 'px' });
     x.hov.firstChild.textContent = o.what; x.hov.hidden = false;
   }
-  // the `el:` keys pinned on a screen, so its frame reports where those elements are now
+  // the `el:` keys pinned on a screen, and a page's sections with versions, so its frame reports where they are now
   function locate(x) {
     const pre = `el:${x.a.id}/`;
-    const sels = [...new Set(MARKUP.all().map(a => a.target.key).filter(k => k.startsWith(pre)).map(k => k.slice(pre.length)))].slice(0, 100);
+    const sels = [...new Set([...MARKUP.all().map(a => a.target.key).filter(k => k.startsWith(pre)).map(k => k.slice(pre.length)), ...x.vars.map(v => secKey(v.s))])].slice(0, 50);
     const sig = sels.join('\n');
     if (!sels.length || sig === x.locSig) return;
     x.locSig = sig; post(x, { bd: 'locate', sels });
   }
   const pickPos = (x, r) => r ? { x: clamp((r.x + r.w) / x.p.w, 0, 1), y: clamp(r.y / x.p.h, 0, 1) } : null;
+  // what a website pin carries for the agent: its section, the source hints (the section's, else the page's) and the
+  // width it was made at
+  function siteTarget(x, sec) {
+    if (devOf(x.a) !== 'page') return {};
+    const s = Number.isInteger(sec) ? secsOf(x.a)[sec] : null, src = srcsOf(s).length ? srcsOf(s) : srcsOf(x.a);
+    return { bp: x.p.w, ...(s ? { section: s.id } : {}), ...(src.length ? { source: src } : {}) };
+  }
+  const secTitle = (x, sec) => { const s = Number.isInteger(sec) ? secsOf(x.a)[sec] : null; return s ? str(s.title, 60) : ''; };
   addEventListener('message', e => {
     let x = null;
     for (const y of B.live) if (y.fr && e.source === y.fr.contentWindow) { x = y; break; }
@@ -4659,7 +4828,7 @@ function renderBoard(b) {
       if (x.role) return;
       x.fallback = str(d.fallback, 80) || null; paintWarn(x);
       if (d.rects && typeof d.rects === 'object') for (const [s, r] of Object.entries(d.rects).slice(0, 100)) x.rects[str(s)] = rectOf(r);
-      locate(x); MARKUP.relayout();
+      locate(x); paintVars(x); MARKUP.relayout();
       return;
     }
     // a tap in a screen: its named elements, innermost first, followed only through this screen's links (drafts
@@ -4673,14 +4842,15 @@ function renderBoard(b) {
       return;
     }
     if (x.role) return;
-    if (d.bd === 'hover') { showHov(x, d.sel == null ? null : { rect: rectOf(d.rect), what: str(d.name, 60) || str(d.tag, 30) }); return; }
+    const what = [secTitle(x, d.sec), str(d.name, 60) || str(d.tag, 30)].filter(Boolean).join(' › ');
+    if (d.bd === 'hover') { showHov(x, d.sel == null ? null : { rect: rectOf(d.rect), what }); return; }
     if (B.mode === 'link') { if (B.onLinkPick) B.onLinkPick(x, d); return; }
     if (B.mode !== 'point' && B.mode !== 'select') return;
     // a pick on the screen's body (no element under it) is about the whole screen: `artboard:<id>`
     const sel = str(d.sel), r = rectOf(d.rect);
-    if (!sel) { MARKUP.pinFrame({ el: x.el, key: 'artboard:' + x.a.id, what: '', text: str(d.text), pos: r ? { x: clamp((r.x + r.w / 2) / x.p.w, 0, 1), y: clamp((r.y + r.h / 2) / x.p.h, 0, 1) } : { x: .5, y: .5 } }); return; }
+    if (!sel) { MARKUP.pinFrame({ el: x.el, key: 'artboard:' + x.a.id, what: '', text: str(d.text), extra: siteTarget(x, null), pos: r ? { x: clamp((r.x + r.w / 2) / x.p.w, 0, 1), y: clamp((r.y + r.h / 2) / x.p.h, 0, 1) } : { x: .5, y: .5 } }); return; }
     if (r) x.rects[sel] = r;
-    MARKUP.pinFrame({ el: x.el, key: `el:${x.a.id}/${sel}`, what: str(d.name, 60) || str(d.tag, 30) || sel.slice(0, 60), text: str(d.text), pos: pickPos(x, r) || { x: .5, y: .5 } });
+    MARKUP.pinFrame({ el: x.el, key: `el:${x.a.id}/${sel}`, what: what || sel.slice(0, 60), text: str(d.text), extra: siteTarget(x, d.sec), pos: pickPos(x, r) || { x: .5, y: .5 } });
   });
 
   /* view: pan, zoom, fit, focus */
@@ -4708,7 +4878,7 @@ function renderBoard(b) {
   const shownXs = () => [...B.frames.values(), ...B.ghosts.values()].filter(x => !x.el.classList.contains('off'));
   function boxOf(xs) {
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-    for (const x of xs) { const bz = BEZEL[devOf(x.a)] || 0; x0 = Math.min(x0, x.p.x - bz); y0 = Math.min(y0, x.p.y - bz - 30); x1 = Math.max(x1, x.p.x + x.p.w + bz); y1 = Math.max(y1, x.p.y + x.p.h + bz); }
+    for (const x of xs) { const bz = BEZEL[devOf(x.a)] || 0, bar = devOf(x.a) === 'page' ? PAGE_BAR : 0; x0 = Math.min(x0, x.p.x - bz); y0 = Math.min(y0, x.p.y - bz - bar - 30); x1 = Math.max(x1, x.p.x + x.p.w + bz); y1 = Math.max(y1, x.p.y + x.p.h + bz); }
     return isFinite(x0) ? { x: x0, y: y0, w: Math.max(1, x1 - x0), h: Math.max(1, y1 - y0) } : { x: 0, y: 0, w: 1, h: 1 };
   }
   function showBox(box, animate, maxK) {
@@ -4744,7 +4914,7 @@ function renderBoard(b) {
     kMin: () => BK_MIN, kMax: () => BK_MAX,
     down: e => {
       if (B.onBoardDown && B.onBoardDown(e)) return false;
-      if (B.mode === 'frame' || (e.target.closest && e.target.closest('.bd-ab-t button'))) return false; cancelAnimationFrame(anim); B.touched = true;
+      if (B.mode === 'frame' || (e.target.closest && e.target.closest('.bd-ab-t button, .bd-var'))) return false; cancelAnimationFrame(anim); B.touched = true;
     },
     tap: (e, at) => {
       const lg = at && at.closest && at.closest('.bd-lnk[data-link]');
@@ -4818,8 +4988,8 @@ function renderBoard(b) {
     const out = {};
     for (const x of [...B.frames.values(), ...B.ghosts.values()]) {
       if (x.el.classList.contains('off')) continue;
-      const bz = BEZEL[devOf(x.a)] || 0;
-      out[x.a.id] = { x: x.p.x - bz, y: x.p.y - bz - TITLE_H, w: x.p.w + 2 * bz, h: x.p.h + 2 * bz + TITLE_H };
+      const bz = BEZEL[devOf(x.a)] || 0, bar = devOf(x.a) === 'page' ? PAGE_BAR : 0;
+      out[x.a.id] = { x: x.p.x - bz, y: x.p.y - bz - bar - TITLE_H, w: x.p.w + 2 * bz, h: x.p.h + 2 * bz + bar + TITLE_H };
     }
     return out;
   }
@@ -4957,7 +5127,7 @@ function renderBoard(b) {
   /* toolbar: panel, Fit · zoom · Focus, Present, Variants, Flows, fidelity, theme, motion */
   const tbtn = (icon, label, fn, extra) => h('button', { type: 'button', class: 'bd-tbtn', 'aria-label': label, title: label, onclick: fn, ...extra }, ic(icon));
   const sep = () => h('span', { class: 'bd-groove', role: 'separator', 'aria-orientation': 'vertical' });
-  const lpBtn = tbtn('panelleft', `${IS_DECK ? 'Slides' : 'Screens'} and brief ([)`, () => setLp(!B.lp, true), { 'aria-pressed': 'false' });
+  const lpBtn = tbtn('panelleft', `${IS_DECK ? 'Slides' : IS_SITE ? 'Pages' : 'Screens'} and brief ([)`, () => setLp(!B.lp, true), { 'aria-pressed': 'false' });
   zoomLbl = h('span', { class: 'zl' }, '100%');
   const varBtn = tbtn('variants', 'Variants: line up the selected screen and its variants', () => toggleVariants(), { 'aria-pressed': 'false' });
   const flowsBtn = h('button', { type: 'button', class: 'bd-tbtn txt', 'aria-pressed': 'false', title: 'Flows: every link as an arrow (off: only the selected screen\'s reach)', onclick: () => setFlows(!B.flows) }, 'Flows');
@@ -4970,10 +5140,17 @@ function renderBoard(b) {
   // a presentation's primary action: Present as a filled key with its word, last in the toolbar; no Variants or Flows
   const presBtn = IS_DECK ? h('button', { type: 'button', class: 'bd-tbtn pri', title: presTip, onclick: () => present(B.sel) }, ic('present'), h('span', {}, 'Present'))
     : tbtn('present', presTip, () => present(B.sel));
+  // a website: every page at one of the board's widths, or a width the reader types
+  const pageXs = () => [...B.frames.values()].filter(x => devOf(x.a) === 'page');
+  const bpWords = BPS.map(bpName), bpSeg = IS_SITE ? h('div', { class: 'bd-sg', role: 'radiogroup', 'aria-label': 'Width of every page' }, BPS.map((w, i) =>
+    h('button', { type: 'button', role: 'radio', 'data-w': w, title: `Every page ${w} px wide`, onclick: () => setAllBp(w) },
+      ic(bpIc(w)), bpWords.indexOf(bpWords[i]) === bpWords.lastIndexOf(bpWords[i]) ? bpWords[i] : String(w)))) : null;
+  const bpIn = IS_SITE ? h('input', { class: 'bd-bpw', type: 'number', min: 240, max: 3840, step: 10, placeholder: 'px', 'aria-label': 'Custom width of every page, in px', title: 'Custom width of every page (px), then Enter' }) : null;
+  if (bpIn) bpIn.addEventListener('change', () => { const w = Math.round(+bpIn.value); if (w >= 240 && w <= 3840) setAllBp(w); });
   const tb = h('div', { class: 'bd-btb', role: 'toolbar', 'aria-label': 'Board' }, lpBtn, sep(),
     tbtn('fit', `Fit all ${SCREEN}s (0)`, () => fit(true)), tbtn('minus', 'Zoom out (−)', () => zoomBy(1 / 1.4)), zoomLbl, tbtn('plus', 'Zoom in (+)', () => zoomBy(1.4)),
     tbtn('target', `Focus the selected ${SCREEN} (F, or double-click it)`, () => focusSel()), sep(),
-    !IS_DECK && [presBtn, varBtn, flowsBtn, sep()], fidSeg,
+    !IS_DECK && [presBtn, varBtn, flowsBtn, sep()], IS_SITE && [bpSeg, bpIn], (!IS_SITE || abs.some(a => !isLive(a))) && [IS_SITE && sep(), fidSeg],
     themeSel && [sep(), h('label', { class: 'th' }, ic('palette'), themeSel)], IS_DECK && [sep(), presBtn]);
   // the motion keys (pause animations, Reduced) are hidden for now: built and painted, not shown; screens play their motion
   if (themeSel) themeSel.addEventListener('change', () => { const x = ITEMS['brief/theme']; if (x && x.setChoice && !OLD) x.setChoice(themeSel.value); else { B.theme = themeSel.value; paintTokens(); } });
@@ -4985,6 +5162,11 @@ function renderBoard(b) {
     varBtn.disabled = !B.variants && !variantGroup(B.sel).length; varBtn.setAttribute('aria-pressed', String(!!B.variants));
     flowsBtn.hidden = !LINKS.length && !GONE.length; flowsBtn.setAttribute('aria-pressed', String(B.flows));
     if (themeSel && B.theme) themeSel.value = B.theme;
+    if (bpSeg) {
+      const ws = new Set(pageXs().map(x => x.p.w)), one = ws.size === 1 ? [...ws][0] : null;
+      bpSeg.querySelectorAll('button').forEach(bt => bt.setAttribute('aria-checked', String(+bt.dataset.w === one)));
+      if (document.activeElement !== bpIn) bpIn.value = one && !BPS.includes(one) ? one : '';
+    }
   }
   // the theme is the brief's pick (the reader's, else the recommendation): picking a pill re-skins every frame
   const themePick = () => { const x = ITEMS['brief/theme']; const id = x ? x.choice || x.it.recommend : null; return themeOf(id) ? id : B.theme || (themes[0] ? themes[0].id : null); };
@@ -5029,7 +5211,7 @@ function renderBoard(b) {
     modal: [{ transform: 'translateY(80px)', opacity: 0 }, { transform: 'none', opacity: 1 }], tab: [{ opacity: 0 }, { opacity: 1 }], replace: [{ opacity: 0 }, { opacity: 1 }] };
   function present(id) {
     if (pres) return;
-    const slides = deck.length > 0, order = slides ? deck : abs.filter(a => B.frames.has(a.id)), what = slides ? 'slide' : 'screen';
+    const slides = deck.length > 0, order = slides ? deck : abs.filter(a => B.frames.has(a.id)), what = slides ? 'slide' : SCREEN;
     if (!order.length) return;
     const entry = slides ? null : [...ENTRY].find(e => order.some(a => a.id === e));
     let i = Math.max(0, order.findIndex(a => a.id === (id || entry)));
@@ -5064,7 +5246,7 @@ function renderBoard(b) {
     function showI(kind) {
       if (rec) B.live.delete(rec);
       const a = order[i]; rec = { a, role: 'pres', fr: null };
-      dev = deviceBox(a, frameEl(rec, OLD ? VIEW.rev : null), SERVED || SCREENS ? '' : `Open this page through serve.py to see the ${what}.`);
+      dev = deviceBox(a, frameEl(rec, OLD ? VIEW.rev : null), SERVED || SCREENS ? '' : `Open this page through serve.py to see the ${what}.`, sizeOf(a));
       box.replaceChildren(dev.sz);
       if (slides) {
         notes.innerHTML = md(typeof a.notes === 'string' ? a.notes : '');
@@ -5114,7 +5296,7 @@ function renderBoard(b) {
       const lb = h('div', { class: 'lb' }, h('b', {}, revName(s.r)), s.r === VIEW ? ' · shown' : '');
       if (!s.a) return { el: h('div', { class: 'bd-cmpv-p none' }, lb, h('div', { class: 'msg' }, s.r === BASE ? `Not in ${revName(BASE)}: new in ${VIEW.rev}` : `Removed in ${revName(VIEW)}`)) };
       const rec = { a: s.a, role: 'cmp', fr: null };
-      const dev = deviceBox(s.a, frameEl(rec, s.r === CUR ? null : s.r.rev), SCREENS ? 'An export shows the current revision\'s screens only.' : 'Open this page through serve.py to compare screens.');
+      const dev = deviceBox(s.a, frameEl(rec, s.r === CUR ? null : s.r.rev), SCREENS ? 'An export shows the current revision\'s screens only.' : 'Open this page through serve.py to compare screens.', sizeOf(s.a));
       return { el: h('div', { class: 'bd-cmpv-p' }, lb, dev.sz), dev, rec };
     };
     const P = [pane(L), pane(R)], name = (R.a || L.a || { id }).title || id;
@@ -5164,7 +5346,9 @@ function renderBoard(b) {
       if (w >= 8 && hh >= 8) addBox({ x, y, w, h: hh });
       return;
     }
-    if (r.w < 16 || r.h < 16) startRq({ x: Math.round(d.p0.x), y: Math.round(d.p0.y), w: DEVICES.phone[0], h: DEVICES.phone[1] }, 'phone');
+    // a website requests a page (a frame of any size becomes a page at the board's widths)
+    if (IS_SITE) startRq({ x: Math.round(Math.min(d.p0.x, r.x)), y: Math.round(Math.min(d.p0.y, r.y)), w: DEVICES.page[0], h: DEVICES.page[1] }, 'page');
+    else if (r.w < 16 || r.h < 16) startRq({ x: Math.round(d.p0.x), y: Math.round(d.p0.y), w: DEVICES.phone[0], h: DEVICES.phone[1] }, 'phone');
     else startRq(r, 'custom');
   };
   stage.addEventListener('pointerup', endDrag); stage.addEventListener('pointercancel', endDrag);
@@ -5172,8 +5356,9 @@ function renderBoard(b) {
     cancelRq();
     const el = h('div', { class: 'bd-rq draft' }, h('div', { class: 'bd-rq-t' }));
     vp.append(el);
-    const sel = h('select', { 'aria-label': 'Device' }, Object.keys(DEVICES).filter(d => d !== 'icons').map(d => h('option', { value: d }, `${DEVICE_NAME[d]} · ${DEVICES[d].join(' × ')}`)), h('option', { value: 'custom' }, `As drawn · ${r.w} × ${r.h}`));
-    const ta = h('textarea', { class: 'bp-note-ta', rows: 3, placeholder: 'What should this screen show?', 'aria-label': 'What the new screen should show' });
+    const sel = h('select', { 'aria-label': 'Device' }, Object.keys(DEVICES).filter(d => d !== 'icons' && (!IS_SITE || d === 'page')).map(d => h('option', { value: d }, `${DEVICE_NAME[d]} · ${DEVICES[d].join(' × ')}`)),
+      !IS_SITE && h('option', { value: 'custom' }, `As drawn · ${r.w} × ${r.h}`));
+    const ta = h('textarea', { class: 'bp-note-ta', rows: 3, placeholder: `What should this ${SCREEN} show?`, 'aria-label': `What the new ${SCREEN} should show` });
     const list = h('ol', { class: 'bxs' });
     const save = h('button', { type: 'button', class: 'bp-btn primary', disabled: true, onclick: () => saveRq() }, 'Save');
     const ed = h('div', { class: 'bd-rqe', role: 'dialog', 'aria-label': 'Requested frame' },
@@ -5335,24 +5520,40 @@ function renderBoard(b) {
   }
   // a change mark in the brief: show the Brief tab first
   B.reveal = el => { if (lp && $('#bd-lp-brief').contains(el)) { setLp(true, false); setTab('brief', false); } };
+  // a section in the Pages list: its page in view, its frame scrolled to it (once the frame loads, if it hasn't)
+  function revealSection(id, s) {
+    focus(id);
+    const x = B.frames.get(id); if (!x) return;
+    if (x.fr && x.ready) post(x, { bd: 'reveal', sel: s.sel }); else x.pendingReveal = s.sel;
+  }
   B.start = () => {
     const blk = wrap.closest('.bp-block'), shell = $('.bd-shell');
     if (!blk || !shell) return;
     // the board leaves its section for the full-bleed layer; a stand-in keeps the section's block order
     blk.replaceWith(h('div', { class: 'bp-block bd-board-ph' }, ic('frame'), h('span', {}, `The ${SCREEN}s of this section are on the board.`)));
     blk.classList.add('bd-boardblk'); shell.append(blk);
-    const Screens = IS_DECK ? 'Slides' : 'Screens';
+    const Screens = IS_DECK ? 'Slides' : IS_SITE ? 'Pages' : 'Screens';
     lpList = h('ol', { class: 'bd-scr-l', 'aria-label': Screens }, abs.map(a => {
-      const x = B.frames.get(a.id), dev = devOf(a);
+      const x = B.frames.get(a.id), dev = devOf(a), secs = secsOf(a);
       x.li = h('button', { type: 'button', 'data-ab': a.id, 'aria-current': 'false', onclick: () => focus(a.id) }, ic(DEVICE_IC[dev]),
-        h('span', { class: 't' }, h('b', {}, a.title || a.id), h('span', {}, [DEVICE_NAME[dev] || `${x.p.w} × ${x.p.h}`, FIDELITY[a.fidelity], a.variantOf && 'variant'].filter(Boolean).join(' · '))),
+        h('span', { class: 't' }, h('b', {}, a.title || a.id), h('span', {}, [dev === 'page' ? (isLive(a) ? 'Live page' : 'Page') : DEVICE_NAME[dev] || `${x.p.w} × ${x.p.h}`,
+          FIDELITY[a.fidelity], a.variantOf && 'variant', secs.length && `${secs.length} section${secs.length === 1 ? '' : 's'}`].filter(Boolean).join(' · '))),
         x.liWarn = h('i', { class: 'warn', hidden: true }), x.liReach = h('span', { class: 'rc' }), x.liTag = h('span', { class: 'tg' }));
-      return h('li', {}, x.li);
+      // a page's sections: a click shows the page and scrolls its frame there
+      return h('li', {}, x.li, secs.length > 0 && h('ol', { class: 'bd-sec-l', 'aria-label': `Sections of ${a.title || a.id}` }, secs.map(s =>
+        h('li', {}, h('button', { type: 'button', 'data-sec': s.id, title: [s.title, ...srcsOf(s)].join('\n'), onclick: () => revealSection(a.id, s) },
+          h('span', { class: 'st' }, s.title), varItem(s) ? h('span', { class: 'v' }, `${varItem(s).choices.length} versions`) : h('span'),
+          srcsOf(s)[0] && h('code', {}, srcsOf(s).join(' · ')))))));
     }));
+    for (const x of B.frames.values()) makeVars(x);
+    // a pick in the brief, or on a page, shows that version in place
+    for (const v of [...B.frames.values()].flatMap(x => x.vars)) v.it.onChoice = () => B.paintVariants();
     lpTabs = h('div', { class: 'bd-sg', role: 'radiogroup', 'aria-label': 'Panel' }, [['screens', Screens], ['brief', 'Brief']].map(([v, l]) =>
       h('button', { type: 'button', role: 'radio', 'data-v': v, 'aria-controls': 'bd-lp-' + v, onclick: () => setTab(v, true) }, l)));
     lp = h('aside', { class: 'bd-lp', 'aria-label': `${Screens} and brief`, inert: true }, head, h('div', { class: 'bd-lp-tabs bd-lp-ui' }, lpTabs),
-      h('div', { class: 'bd-lp-pane bd-lp-ui', id: 'bd-lp-screens' }, lpList, h('p', { class: 'hint' }, `Click a ${SCREEN} to focus it. Double-click one on the board, or press F, to do the same.`)),
+      h('div', { class: 'bd-lp-pane bd-lp-ui', id: 'bd-lp-screens' }, lpList, h('p', { class: 'hint' }, IS_SITE
+        ? 'Click a page to focus it, a section to scroll its page there. Interact (I) scrolls and clicks inside the pages; Point (C) pins a comment on what you point at.'
+        : `Click a ${SCREEN} to focus it. Double-click one on the board, or press F, to do the same.`)),
       h('div', { class: 'bd-lp-pane', id: 'bd-lp-brief', hidden: true }, tldr, main));
     shell.prepend(lp);
     placeMeta();
@@ -5398,6 +5599,10 @@ function renderBoard(b) {
       if (o.tap && pres) pres.follow(String(o.tap));
       if (o.back && pres && pres.back) pres.back();
       if (o.compare) openCompare(String(o.compare)); else if (o.compare === false) closeCompare();
+      // a website: breakpoint (every page) or {<page id>: width}; section: [page id, section id] scrolls it into view
+      if (Number.isFinite(o.breakpoint)) setAllBp(o.breakpoint);
+      else if (o.breakpoint && typeof o.breakpoint === 'object') { for (const [id, w] of Object.entries(o.breakpoint)) setBp(id, w, true); bpChanged(); }
+      if (Array.isArray(o.section)) { const s = secsOf((B.frames.get(String(o.section[0])) || {}).a).find(s => s.id === o.section[1]); if (s) revealSection(String(o.section[0]), s); }
     }
     const R = curReach();
     return { k: B.k, mode: B.mode, selected: B.sel, panel: B.lp, theme: B.theme, sketch: B.sketch, variants: B.variants, present: !!pres, compare: !!cmpv,
@@ -5407,7 +5612,8 @@ function renderBoard(b) {
         routed: gEls.has(l.key), change: gEls.has(l.key) ? ['add', 'mod', 'del'].find(c => gEls.get(l.key).g.classList.contains('bd-chg-' + c)) || null : null })),
       live: boardFrames().length, requested: [...B.rqs.values()].map(el => el.dataset.key),
       artboards: [...B.frames.values()].map(x => ({ id: x.a.id, x: x.p.x, y: x.p.y, w: x.p.w, h: x.p.h, live: !!x.fr, ready: x.ready, fallback: x.fallback, navigated: x.navs, change: x.chg,
-        navs: x.navAt ? { ...x.navAt } : null })) };
+        navs: x.navAt ? { ...x.navAt } : null, ...(devOf(x.a) === 'page' ? { page: { proxied: !!(x.fr && x.live), src: x.fr ? x.fr.getAttribute('src') : null,
+          variants: Object.fromEntries(x.vars.map(v => [v.s.id, { shown: varShown(v.it), visible: !v.el.hidden }])) } } : {}) })) };
   };
   const wrap = h('div', { class: 'bd-bwrap' }, stage, tb);
   B.tb = tb;
@@ -6094,6 +6300,7 @@ function paintPlan() {
   approveKey.setAttribute('aria-label', done ? 'Approved' + revTxt : `Approve ${AP_NOUN}`);
   approveKey._tip = asking.length ? `${asking.length} item${asking.length === 1 ? ' asks' : 's ask'} for more details: ${asking.some(x => x.more === 'on') ? 'send it with Request changes and wait for the agent\'s next revision, or turn it off' : 'wait for the agent\'s next revision, or withdraw the request'}`
     : IS_DECK ? `Approve this presentation${revWord}, every slide in it: the agent takes the deck as final, with your picks`
+    : IS_SITE ? `Approve this website${revWord}, every page and pick in it: the agent applies it to the site's source`
     : IS_DESIGN ? `Approve this design${revWord}, every screen in it: the agent builds it with your picks` : `Approve this plan${revWord}: the agent goes ahead with it and your picks`;
   if (done && approveDlg && approveDlg.open) approveDlg.close();
 }
@@ -6257,6 +6464,9 @@ const MARKUP = (() => {
   const keysMd = a => [...new Set((a.type === 'draw' && a.targets && a.targets.length ? a.targets : [a.target]).map(t => t.key))].map(k => `\`${k}\``).join(' ');
   // the comment's id goes after its key: the agent passes it to `patch --resolves` once the change is made
   const headMd = (a, i) => `${i + 1}. **${a.target.label}** (${TYPE_WORD[a.type]}) ${keysMd(a)} (${a.id})`;
+  // a website pin also says where to edit (its section's source hints, else its page's) and the width it was made at
+  const siteMd = t => [Number.isInteger(t.bp) && `   At: ${t.bp} px wide`,
+    Array.isArray(t.source) && t.source.length && `   Source: ${t.source.filter(s => typeof s === 'string').map(s => '`' + s.replace(/`/g, '') + '`').join(', ')}`].filter(Boolean);
   // general comments first, under General; then the page comments, numbered
   function changesMd(items = pending()) {
     const gen = items.filter(isGeneral), pg = items.filter(a => !isGeneral(a) && !isDraft(a)), dr = items.filter(isDraft), parts = [];
@@ -6264,7 +6474,7 @@ const MARKUP = (() => {
     if (gen.length && pg.length) parts.push('## On the page');
     if (pg.length) parts.push(pg.map((a, i) => {
       const ex = cut(excerpt(a), 200);
-      return [headMd(a, i), ex && `   > ${ex}`,
+      return [headMd(a, i), ex && `   > ${ex}`, ...siteMd(a.target),
         `   Change: ${noteText(a).split('\n').join('\n   ')}`].filter(Boolean).join('\n');
     }).join('\n\n'));
     // a board's drafts: one line each, then the `patch` commands that make them (BOARD.draftCommands)
@@ -6286,7 +6496,7 @@ const MARKUP = (() => {
     const items = pending(), ord = [...items.filter(isGeneral), ...items.filter(a => !isGeneral(a))];
     return { annotations: ord.map(pub), notes: ord.map((a, i) => {
       const ex = cut(excerpt(a), 200);
-      return [headMd(a, i), ex && `   > ${ex}`, `   Note: ${noteText(a).split('\n').join('\n   ')}`].filter(Boolean).join('\n');
+      return [headMd(a, i), ex && `   > ${ex}`, ...siteMd(a.target), `   Note: ${noteText(a).split('\n').join('\n   ')}`].filter(Boolean).join('\n');
     }).join('\n\n') };
   }
   const api = { all: () => JSON.parse(JSON.stringify(list)), payload, approvalNotes, annotate: () => null, setMode: () => false, paint: () => {}, flush: () => {}, markSent: () => {},
@@ -6311,7 +6521,7 @@ const MARKUP = (() => {
   const typeOf = el => el === shell ? 'doc' : TYPES.find(t => el.matches(SEL[t]));
   // the rail is page furniture, except its document sections (Status, Document, Related); so are a design's
   // panel tabs, Screens list and board toolbar, and a findings section's view bar
-  const inDoc = t => !!t && t.nodeType === 1 && shell.contains(t) && !t.closest('.bd-lp-ui, .bd-btb, .bd-fvbar') && (!t.closest('.bp-side') || !!t.closest('.bd-meta'));
+  const inDoc = t => !!t && t.nodeType === 1 && shell.contains(t) && !t.closest('.bd-lp-ui, .bd-btb, .bd-fvbar, .bd-var, .bd-ab-t button') && (!t.closest('.bp-side') || !!t.closest('.bd-meta'));
   const targetAt = t => inDoc(t) ? t.closest(ANY) : null;
   let itemKeys = null;
   // a checklist row, or a finding's row in Merged (data-item)
@@ -6425,6 +6635,7 @@ const MARKUP = (() => {
     const a = newAnn('pin', o.el);
     if (o.key !== a.target.key) { a.up = [a.target.key, ...a.up]; a.target = { key: o.key, label: a.target.label + (o.what ? ' › ' + o.what : ''), text: cut(o.text || '', 300) }; }
     else if (o.text) a.target.text = cut(o.text, 300);
+    Object.assign(a.target, o.extra || {});   // a website pin: its section, source hints and width
     a.pos = { x: r4(clamp(+o.pos.x, 0, 1)), y: r4(clamp(+o.pos.y, 0, 1)) };
     startDraft(a);
     return a;
@@ -7793,7 +8004,7 @@ function boardEdits(B) {
       startWire(e, { part: 'new', src: { from: id, edge: true }, fix });
       return true;
     }
-    if (space || !canMove() || B.mode === 'frame' || t.closest('button, select, input, .bd-lnk')) return false;
+    if (space || !canMove() || B.mode === 'frame' || t.closest('button, select, input, .bd-lnk, .bd-var')) return false;
     const ab = t.closest('.bd-ab[data-ab]');
     if (ab && (t.closest('.bd-ab-t') || B.mode === 'view' || B.mode === 'link')) { startMove(e, ab.dataset.ab); return true; }
     if (!ab && e.shiftKey && (B.mode === 'view' || B.mode === 'link')) { startMarquee(e); return true; }

@@ -1,6 +1,6 @@
 # Design
 
-UI mockups on a pan-and-zoom board: one HTML screen per artboard, in a device frame, that you comment on and approve. Slide decks are their own type: [presentation](presentation.md).
+UI mockups on a pan-and-zoom board: one HTML screen per artboard, in a device frame, that you comment on and approve. Slide decks are their own type: [presentation](presentation.md); so is a website you review live from its dev server: [website](website.md).
 
 ![The acme-fit-design board: the Today phone screen selected, its links drawn as right-angle connectors to Workout, Activity, Workouts and Profile, with the reach count → 4 · ← 5](../media/design-hero.webp)
 

@@ -49,9 +49,9 @@ URLs: /                      home page: every doc under the registered folders, 
                              PUT also the key. An `__ann:<id>` value the page can't draw is dropped from a PUT and
                              left out of a read.
       /__bluedoc/vendor/<path>  files under assets/vendor (HorizonUI, HeroUI, Tailwind's browser build, the Sketch font)
-      /<root>/<dir>/<stem>.design/<artboard>.html[?rev=B&theme=T]   a design or presentation doc's screen: the artboard's fragment
-                             (or revision B's, from the history) wrapped in kits/shell.html with its framework,
-                             theme tokens and the inspector. Its own CSP: no network, `sandbox allow-scripts`,
+      /<root>/<dir>/<stem>.design/<artboard>.html[?rev=B&theme=T]   a design, presentation or website doc's screen: the
+                             artboard's fragment (or revision B's, from the history) wrapped in kits/shell.html with
+                             its framework, theme tokens and the inspector. Its own CSP: no network, `sandbox allow-scripts`,
                              framable by this server's pages only (no X-Frame-Options). An `icons` artboard's
                              screen is the icon sheet (kits/icon-sheet.html and .css) built from its layers in
                              <stem>.design/<artboard>/ (or rev B's, from the history), each layer a data: URI
@@ -63,6 +63,17 @@ URLs: /                      home page: every doc under the registered folders, 
                              draws, into <stem>.icons/<artboard>/ beside the doc. Only the export's own file names
                              (ios/AppIcon.appiconset/…, android/res/mipmap-*/…, play/icon-512.png), PNGs of their
                              exact size under 4 MB, Contents.json and the adaptive-icon XML; no link on the way.
+Live pages (website docs): a page whose `url` names a dev server on a loopback host (build.live_url_problem refuses
+any other) is shown through a proxy this server starts for that origin on first render: its own listener on
+127.0.0.1:<free port>, so the site's root-relative URLs, modules and HMR WebSocket work unchanged. It answers only
+requests whose Host is itself (DNS rebinding), forwards everything else to the dev server (Host and Origin rewritten
+to it, this server's key cookie dropped, WebSocket upgrades tunnelled), and into each HTML response injects
+<script src="/__bluedoc/inspector.js" data-parents="<this server's origins>"> (kits/inspector.js, served by the
+proxy) and a style hiding dev toolbars (astro-dev-toolbar, nextjs-portal). Its responses lose X-Frame-Options and
+any frame-ancestors, and gain frame-ancestors for this server's origins. The page frames it with `sandbox
+allow-scripts allow-same-origin`: the proxy's origin (another port) is not this server's, so the site keeps its
+storage and modules and reaches nothing of bluedoc's. A doc page names its proxies in its bp-live element ({dev
+server origin: proxy port}), and its CSP's frame-src allows exactly those. A dev server that isn't up answers 502.
 Rendering validates the doc (errors show as a page), shows its meta.rev as the latest revision of the history file
 without writing it (build.py records revisions), and fills each `diff` block that references a git range
 (diffref.py: its cache, local git, then `gh pr diff`), so the page always shows the current JSON.
@@ -70,8 +81,8 @@ HTML pages carry a Content-Security-Policy (hashes of their inline scripts, no f
 reader state and the hash of the JSON it shows in its bp-state element ({version, state, docHash}; null without
 sqlite3).
 
-Replies: Send answers posts to /__bluedoc/reply, Request changes to /__bluedoc/changes, Approve (plan, design, presentation) to
-/__bluedoc/approve. Each becomes a row in state.db, queued for `wait`, which returns the oldest unread one
+Replies: Send answers posts to /__bluedoc/reply, Request changes to /__bluedoc/changes, Approve (plan, design,
+presentation, website) to /__bluedoc/approve. Each becomes a row in state.db, queued for `wait`, which returns the oldest unread one
 (GET /__bluedoc/wait needs the X-Bluedoc header and the key) and marks it delivered; a restart keeps the queue. The
 first start with a new state.db imports the <name>.reply/.changes/.approval files of earlier versions and
 inbox.json's delivered marks, and leaves the files. An approval posts the docHash and rev the page showed: the server
@@ -87,6 +98,7 @@ import base64
 import datetime as dt
 import hashlib
 import hmac
+import http.client
 import io
 import json
 import math
@@ -95,6 +107,8 @@ import os
 import re
 import secrets
 import shutil
+import socket
+import ssl
 import subprocess
 import sys
 import tarfile
@@ -475,6 +489,8 @@ def card(doc: dict, dtype: str, doc_path: Path) -> dict:
     links = [i, j] by artboard index, one per pair of those 12 that a link joins (at most 24; none for `back`).
     presentation: count = slides, notes = slides with speaker notes, slides = the fidelity of the first 9 in deck
     order (as Present plays them: top to bottom, then left to right).
+    website: count = pages, sections = their sections, live = pages shown from a dev server, pages = the first 4 as
+    {sections (at most 8), live, fidelity}.
     A doc whose type has none of that: its `hero`, else {icon: 'doc', sections: N}."""
     blocks = list(build.all_blocks(doc))
     if dtype == "review":
@@ -551,6 +567,14 @@ def card(doc: dict, dtype: str, doc_path: Path) -> dict:
             order = sorted(layout, key=lambda aid: (layout[aid][1], layout[aid][0]))
             return {"count": len(order), "notes": sum(bool((info.get(aid) or {}).get("notes")) for aid in order),
                     "slides": [str((info.get(aid) or {}).get("fidelity") or "") for aid in order[:9]]}
+    elif dtype == "website":
+        pages = build._artboards(doc)
+        if pages:
+            secs = [[s for s in p.get("sections") or [] if isinstance(s, dict)] if isinstance(p.get("sections"), list) else []
+                    for p in pages]
+            return {"count": len(pages), "sections": sum(map(len, secs)), "live": sum(map(build.is_live, pages)),
+                    "pages": [{"sections": min(8, len(ss)), "live": build.is_live(p), "fidelity": str(p.get("fidelity") or "")}
+                              for p, ss in list(zip(pages, secs))[:4]]}
     hero = doc.get("hero")
     if isinstance(hero, dict) and hero.get("value") is not None:
         return {"hero": {k: str(hero[k]) for k in ("icon", "value", "label") if hero.get(k) is not None}}
@@ -719,17 +743,28 @@ def error_page(p: Path, lines: list[str]) -> str:
 
 
 INLINE_SCRIPT = re.compile(r"<script\b([^>]*)>(.*?)</script>", re.S | re.I)
+LIVE_BLOCK = re.compile(r'<script type="application/json" id="bp-live">(.*?)</script>', re.S)
 
 
 def page_csp(html: str) -> str:
     """The page's Content-Security-Policy: its own inline scripts by hash (JSON data blocks don't run), same-origin
-    files, data: images, media and fonts, and no framing."""
+    files, data: images, media and fonts, and no framing. A website page may also frame its live pages' proxies (the
+    ports in its bp-live element), on this machine only."""
     hashes = sorted({"'sha256-" + base64.b64encode(hashlib.sha256(body.encode()).digest()).decode() + "'"
                      for attrs, body in INLINE_SCRIPT.findall(html)
                      if "src=" not in attrs and "application/json" not in attrs})
+    frames = ""
+    m = LIVE_BLOCK.findall(html)
+    try:
+        live = json.loads(m[-1]) if m else None
+    except ValueError:
+        live = None
+    ports = sorted({p for p in live.values() if isinstance(p, int) and 0 < p < 65536}) if isinstance(live, dict) else []
+    if ports:
+        frames = "frame-src 'self' " + " ".join(f"http://{h}:{p}" for p in ports for h in ("127.0.0.1", "localhost")) + "; "
     return ("default-src 'self'; script-src " + " ".join(["'self'", *hashes]) + "; style-src 'self' 'unsafe-inline'; "
             "img-src 'self' data:; media-src 'self' data:; font-src 'self' data:; connect-src 'self'; object-src 'none'; "
-            "base-uri 'none'; form-action 'self'; frame-ancestors 'none'")
+            + frames + "base-uri 'none'; form-action 'self'; frame-ancestors 'none'")
 
 
 def render(p: Path) -> tuple[int, str]:
@@ -766,7 +801,8 @@ def _render(p: Path) -> tuple[int, str]:
     # the seed: the reader state, the hash of what this page shows (Approve posts it) and the saved approval
     state = page_state(p)
     return 200, build.build(doc, build.TEMPLATE.read_text(encoding="utf-8"), history, diff_path=p, problems=[],
-                            state=state and {**state, "docHash": shown, "approval": saved_approval(p)})
+                            state=state and {**state, "docHash": shown, "approval": saved_approval(p)},
+                            live=LIVE.for_doc(doc))
 
 
 # ---------- design screens ----------
@@ -1055,8 +1091,9 @@ def wrap_screen(doc: dict, doc_path: Path, artboard_id: str, fragment: str, *, i
 
 
 def screen_for_url(path: str, rev: str | None) -> tuple[Path, dict, str, str] | None:
-    """(doc file, the doc as of rev, artboard id, fragment) for a screen URL; None unless the doc is a design (or presentation) doc
-    under a registered folder with that artboard and its screen file (or that revision's recorded HTML)."""
+    """(doc file, the doc as of rev, artboard id, fragment) for a screen URL; None unless the doc is a board doc (design,
+    presentation or website) under a registered folder with that artboard and its screen file (or that revision's
+    recorded HTML). A website's live page has no screen file, so no screen URL."""
     m = SCREEN_URL.match(path)
     if not m:
         return None
@@ -1092,6 +1129,225 @@ def screen_for_url(path: str, rev: str | None) -> tuple[Path, dict, str, str] | 
     if fragment is None or not board or not any(isinstance(a, dict) and a.get("id") == aid for a in board.get("artboards") or []):
         return None
     return doc_path, doc, aid, fragment
+
+
+# ---------- website live pages: one proxy per dev server ----------
+
+HOP_HEADERS = {"connection", "keep-alive", "proxy-authenticate", "proxy-authorization", "te", "trailer",
+               "transfer-encoding", "upgrade", "content-length", "host", "accept-encoding"}
+LIVE_INSPECTOR = "/__bluedoc/inspector.js"   # on a proxy's origin: kits/inspector.js, which it injects into each page
+# what the proxy injects after <head>: the inspector (told which origins may hear it) and a style hiding framework dev
+# toolbars, which aren't the page the reader judges
+LIVE_INJECT = ('<script src="' + LIVE_INSPECTOR + '" data-parents="{parents}"></script>'
+               '<style id="bd-live">astro-dev-toolbar, nextjs-portal {{ display: none !important; }}</style>')
+HEAD_TAGS = (re.compile(rb"<head\b[^>]*>", re.I), re.compile(rb"<html\b[^>]*>", re.I))   # inject after the first found
+
+
+def live_origin(url: str) -> tuple[str, str, int] | None:
+    """(scheme, host, port) of a live page's dev server, or None when build.live_url_problem refuses the URL."""
+    if build.live_url_problem(url):
+        return None
+    u = urlsplit(url)
+    return u.scheme, u.hostname.lower(), u.port or (443 if u.scheme == "https" else 80)
+
+
+def origin_key(scheme: str, host: str, port: int) -> str:
+    """The dev server's origin as the page writes it (template.html liveOrigin): scheme://host:port, IPv6 bracketed."""
+    return f"{scheme}://{f'[{host}]' if ':' in host else host}:{port}"
+
+
+class LiveProxies:
+    """The proxies of this server's live pages, one per dev-server origin, started on first use and kept until the
+    server stops. page_port is this server's port (its pages' origins may frame them and hear their inspector)."""
+    def __init__(self) -> None:
+        self.lock = threading.Lock()
+        self.page_port: int | None = None
+        self.ports: dict[str, int] = {}
+
+    def port(self, scheme: str, host: str, port: int) -> int | None:
+        if self.page_port is None:
+            return None
+        key = origin_key(scheme, host, port)
+        with self.lock:
+            if key not in self.ports:
+                srv = ThreadingHTTPServer(("127.0.0.1", 0), make_live_handler(scheme, host, port, self.page_port))
+                srv.daemon_threads = True
+                threading.Thread(target=srv.serve_forever, name=f"live {key}", daemon=True).start()
+                self.ports[key] = srv.server_address[1]
+            return self.ports[key]
+
+    def for_doc(self, doc: dict) -> dict[str, int] | None:
+        """{dev server origin: its proxy's port} for a website doc's live pages; None for any other doc."""
+        if not isinstance(doc, dict) or build.doc_type(doc.get("meta") or {}) != "website":
+            return None
+        out = {}
+        for a in build._artboards(doc):
+            o = live_origin(a["url"]) if build.is_live(a) else None
+            if o and (port := self.port(*o)):
+                out[origin_key(*o)] = port
+        return out or None
+
+
+LIVE = LiveProxies()
+
+
+def strip_key_cookie(header: str) -> str:
+    """A Cookie header without bluedoc's key cookies: cookies ignore ports, so the proxy's origin gets them too."""
+    return "; ".join(c for c in (p.strip() for p in header.split(";")) if c and not c.startswith("bluedoc_key_"))
+
+
+def make_live_handler(scheme: str, host: str, port: int, page_port: int):
+    """The handler of one dev server's proxy (see Live pages in this module's docstring)."""
+    target = origin_key(scheme, host, port)
+    parents = f"http://127.0.0.1:{page_port} http://localhost:{page_port}"
+    inject = LIVE_INJECT.format(parents=parents).encode()
+    ancestors = f"frame-ancestors {parents}"
+
+    class P(BaseHTTPRequestHandler):
+        server_version = "bluedoc-live"
+
+        def log_message(self, *_):
+            pass
+
+        def own(self) -> str:
+            return f"http://{self.headers.get('Host')}"
+
+        def handle_any(self) -> None:
+            me = self.server.server_address[1]
+            if self.headers.get("Host") not in (f"127.0.0.1:{me}", f"localhost:{me}"):   # DNS rebinding
+                return self.answer(403, b"bad host", "text/plain; charset=utf-8")
+            if not self.path.startswith("/"):
+                return self.answer(400, b"bad request", "text/plain; charset=utf-8")
+            if urlsplit(self.path).path == LIVE_INSPECTOR:
+                return self.answer(200, (KITS / "inspector.js").read_bytes(), "text/javascript; charset=utf-8")
+            if "websocket" in (self.headers.get("Upgrade") or "").lower():
+                return self.tunnel()
+            self.forward()
+
+        do_GET = do_HEAD = do_POST = do_PUT = do_PATCH = do_DELETE = do_OPTIONS = handle_any
+
+        def answer(self, code: int, body: bytes, ctype: str) -> None:
+            self.send_response(code)
+            self.send_header("Content-Type", ctype)
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("Content-Security-Policy", ancestors)
+            self.end_headers()
+            if self.command != "HEAD":
+                self.wfile.write(body)
+
+        def upstream_headers(self) -> dict[str, str]:
+            out = {}
+            for k, v in self.headers.items():
+                lk = k.lower()
+                if lk in HOP_HEADERS:
+                    continue
+                if lk == "cookie":
+                    v = strip_key_cookie(v)
+                    if not v:
+                        continue
+                elif lk in ("origin", "referer") and v.startswith(self.own()):
+                    v = target + v[len(self.own()):]
+                out[k] = v
+            out["Host"] = target.split("://", 1)[1]
+            out["Accept-Encoding"] = "identity"   # the proxy reads HTML to inject the inspector
+            return out
+
+        def connect(self):
+            if scheme == "https":   # a local dev server's certificate is usually its own
+                return http.client.HTTPSConnection(host, port, timeout=60, context=ssl._create_unverified_context())
+            return http.client.HTTPConnection(host, port, timeout=60)
+
+        def forward(self) -> None:
+            n = int(self.headers.get("Content-Length") or 0)
+            body = self.rfile.read(n) if 0 < n <= MAX_BODY * 16 else None
+            conn = self.connect()
+            try:
+                conn.request(self.command, self.path, body=body, headers=self.upstream_headers())
+                resp = conn.getresponse()
+            except OSError as e:
+                conn.close()
+                msg = (f"<!doctype html><meta charset=utf-8><title>Dev server not answering</title><body style='font: 15px/1.5 "
+                       f"system-ui, sans-serif; margin: 48px; color: #334'><h1 style='font-size: 20px'>The dev server at "
+                       f"{esc(target)} isn't answering</h1><p>Start it (for example <code>npm run dev</code>), then "
+                       f"reload this page.</p><p style='color: #889'>{esc(type(e).__name__)}: {esc(str(e))}</p>")
+                return self.answer(502, msg.encode(), "text/html; charset=utf-8")
+            try:
+                self.relay(resp)
+            finally:
+                conn.close()
+
+        def relay(self, resp) -> None:
+            html = (resp.getheader("Content-Type") or "").lower().startswith("text/html")
+            self.send_response(resp.status, resp.reason)
+            for k, v in resp.getheaders():
+                lk = k.lower()
+                if lk in HOP_HEADERS or lk == "x-frame-options":
+                    continue
+                if lk == "content-security-policy":   # its framing rule is ours; the rest stays the site's
+                    v = ";".join(d for d in v.split(";") if not d.strip().lower().startswith("frame-ancestors"))
+                    if not v.strip(" ;"):
+                        continue
+                if lk == "location" and v.startswith(target):
+                    v = self.own() + v[len(target):]
+                self.send_header(k, v)
+            self.send_header("Content-Security-Policy", ancestors)
+            no_body = self.command == "HEAD" or resp.status in (204, 304) or 100 <= resp.status < 200
+            if html and not no_body:
+                data = resp.read()
+                m = next((m for m in (t.search(data) for t in HEAD_TAGS) if m), None)
+                data = data[:m.end()] + inject + data[m.end():] if m else inject + data
+                self.send_header("Content-Length", str(len(data)))
+                self.end_headers()
+                self.wfile.write(data)
+                return
+            self.send_header("Connection", "close")   # streamed to the end: the length is the upstream's to know
+            self.end_headers()
+            self.close_connection = True
+            if no_body:
+                return
+            try:
+                while chunk := resp.read1(65536):
+                    self.wfile.write(chunk)
+                    self.wfile.flush()
+            except OSError:
+                pass
+
+        def tunnel(self) -> None:
+            """A WebSocket (the dev server's hot reload): the upgrade request rewritten like any other, then the
+            bytes both ways until either side closes."""
+            try:
+                up = socket.create_connection((host, port), timeout=10)
+                if scheme == "https":
+                    up = ssl._create_unverified_context().wrap_socket(up, server_hostname=host)
+            except OSError:
+                return self.answer(502, b"dev server not answering", "text/plain; charset=utf-8")
+            heads = {k: v for k, v in self.upstream_headers().items() if k.lower() != "accept-encoding"}
+            heads.update(Connection="Upgrade", Upgrade=self.headers.get("Upgrade") or "websocket")
+            up.sendall((f"{self.command} {self.path} HTTP/1.1\r\n" + "".join(f"{k}: {v}\r\n" for k, v in heads.items())
+                        + "\r\n").encode("latin-1", "replace"))
+            up.settimeout(None)
+            self.connection.settimeout(None)
+            self.close_connection = True
+
+            def pump(src, dst) -> None:
+                try:
+                    while data := src.recv(65536):
+                        dst.sendall(data)
+                except OSError:
+                    pass
+                for s in (src, dst):
+                    try:
+                        s.shutdown(socket.SHUT_RDWR)
+                    except OSError:
+                        pass
+            back = threading.Thread(target=pump, args=(up, self.connection), daemon=True)
+            back.start()
+            pump(self.connection, up)
+            back.join(5)
+            up.close()
+
+    return P
 
 
 # ---------- app icons ----------
@@ -1756,6 +2012,7 @@ def open_db() -> int:
 def run(port: int, to: str) -> int:
     global SECRET
     srv = ThreadingHTTPServer(("127.0.0.1", port), make_handler(port, to))
+    LIVE.page_port = port   # its pages may frame the live pages' proxies
     STATE.mkdir(parents=True, exist_ok=True)
     SECRET = load_key(create=True)   # kept across restarts, so a browser's cookie outlives an upgrade
     queued = open_db()

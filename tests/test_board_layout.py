@@ -42,12 +42,12 @@ def page_layout(cases: list[tuple[dict, list | None]]) -> list[dict]:
 
 
 def generated(seed: int) -> tuple[dict, list]:
-    """A board of 6-30 artboards: phones with links, variants, some placed, a few other devices and slides."""
+    """A board of 6-30 artboards: phones with links, variants, some placed, a few other devices, web pages and slides."""
     rnd = random.Random(seed)
     n = rnd.randint(6, 30)
     arts, links = [], []
     for k in range(n):
-        a = {"id": f"s{k}", "device": rnd.choice(["phone"] * 6 + ["tablet", "browser", "watch-round", "slide", "icons"])}
+        a = {"id": f"s{k}", "device": rnd.choice(["phone"] * 6 + ["tablet", "browser", "watch-round", "slide", "icons", "page"])}
         if k and rnd.random() < 0.15:
             a["variantOf"] = f"s{rnd.randrange(k)}"
         if rnd.random() < 0.12:

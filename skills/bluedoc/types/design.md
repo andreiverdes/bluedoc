@@ -1,6 +1,6 @@
 # Design
 
-**When:** the user wants UI mockups, wireframes or screen designs for a watch, phone, tablet, desktop app or website. Slides are a `presentation` (`types/presentation.md`); a technical design doc is a `plan`. Save it as `docs/design/<topic>.bluedoc.json`.
+**When:** the user wants UI mockups, wireframes or screen designs for a watch, phone, tablet, desktop app or web app. Slides are a `presentation` (`types/presentation.md`); an existing website's pages to review or change are a `website` (`types/website.md`); a technical design doc is a `plan`. Save it as `docs/design/<topic>.bluedoc.json`.
 
 ```sh
 python3 <skill>/scripts/build.py new design docs/design/<topic>.bluedoc.json --title "…" --target watch,mobile,web [--framework heroui]
