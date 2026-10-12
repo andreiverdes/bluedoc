@@ -1,12 +1,12 @@
 # Design
 
-**When:** the user wants UI mockups, wireframes or screen designs for a watch, phone, tablet, desktop app or website, or slides for a presentation. A technical design doc is a `plan`. Save it as `docs/design/<topic>.bluedoc.json`.
+**When:** the user wants UI mockups, wireframes or screen designs for a watch, phone, tablet, desktop app or website. Slides are a `presentation` (`types/presentation.md`); a technical design doc is a `plan`. Save it as `docs/design/<topic>.bluedoc.json`.
 
 ```sh
 python3 <skill>/scripts/build.py new design docs/design/<topic>.bluedoc.json --title "…" --target watch,mobile,web [--framework heroui]
 ```
 
-This writes the brief, a board with one wireframe artboard per target, and one stub screen file each in `<topic>.design/<target>.html`; `presentation` writes three slides (`title`, `content`, `closing`). The page shows the board full width with the brief beside it, **Request changes** and **Approve design**, as on plans.
+This writes the brief, a board with one wireframe artboard per target, and one stub screen file each in `<topic>.design/<target>.html`. The page shows the board full width with the brief beside it, **Request changes** and **Approve design**, as on plans.
 
 **Home card:** the board's outline. **Required:** exactly one `board` block with at least one artboard.
 
@@ -29,15 +29,10 @@ This writes the brief, a board with one wireframe artboard per target, and one s
 | desktop app | `heroui` |
 | mobile | `heroui`, touch sizes |
 | watch | `plain` |
-| presentation (slides) | `plain`, its slide classes |
 
 `plain`, `horizon` (HorizonUI), `heroui` and `tailwind` (Tailwind utilities alone) ship with bluedoc: no download, no `frameworks` entry. Konsta UI, the usual mobile kit, ships only React, Vue and Svelte components, nothing a static screen can load, so mobile uses HeroUI too. HeroUI runs as its CSS classes (`button button--primary`, `card`, `input`) plus Tailwind utilities, compiled inside the frame; its React components don't run. `serve.py add-framework daisyui` is the other Tailwind option.
 
 A framework that isn't on disk yet is still an option: put the `add-framework` command in the item's `detail`. Until the reader runs it, those screens show the plain kit with a notice and the build warns. Never fetch a framework yourself.
-
-## Slides
-
-`device: "slide"` (1920 × 1080; another ratio: `w`, `h`), one file per slide in kit classes (`## Slides` in `references/kits.md`), speaker notes in the artboard's `notes` (md, ≤ 2 KB). List the slides in deck order without `x`/`y`: the board stacks them in one column, and **Present** plays them top to bottom, with the notes under them.
 
 ## Screen files
 
@@ -54,7 +49,7 @@ A framework that isn't on disk yet is still an option: put the `add-framework` c
 
 - **Rev A is wireframes:** `fidelity: "wireframe"`, kit wireframe classes, real labels. Write hi-fi (`fidelity: "hifi"`) after the reader picks the framework and theme.
 - A variant: a new artboard with `variantOf: "<id>"` and its own file. The board places it right of its source.
-- Without `x`/`y` the board lays artboards out left to right, and slides top to bottom in one column right of them; set both only to start a new row (e.g. `"x": 0, "y": 1000` for the web screens).
+- Without `x`/`y` the board lays artboards out left to right (an occasional `slide` goes in a column right of them); set both only to start a new row (e.g. `"x": 0, "y": 1000` for the web screens).
 - **Edit screen files in place**, the lines the comment names; never rewrite a whole file for one change. Then record it: `build.py patch <doc> artboard:<id> --change "Sign in: passkey first." --resolves <comment id>`.
 - Every build records each screen's text in the history file under `meta.rev`. Once the reader has seen a rev, never edit it in place: bump it (patch does). An edit to any screen file asks for approval again.
 

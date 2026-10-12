@@ -1,0 +1,71 @@
+{
+  "id": "presentation-skeleton",
+  "title": "<<Deck title: the talk and its occasion>>",
+  "subtitle": "<<One sentence: who the deck is for and what it asks of them.>>",
+  "meta": { "org": "<<Org; ACME when the project names none>>", "kind": "Presentation", "type": "presentation", "rev": "1", "date": "<<YYYY-MM-DD>>" },
+  "state": [
+    { "label": "wireframes: hi-fi after your picks", "kind": "warn" }
+  ],
+  "tldr": "<<What the slides say, in how many slides, and which picks the reader makes.>>",
+  "sections": [
+    {
+      "id": "brief",
+      "title": "Brief",
+      "lead": "<<Who presents it, to whom, and for how long.>>",
+      "blocks": [
+        { "type": "text", "md": "<<The audience, where they see it, and the story the slides tell in order.>>" },
+        {
+          "type": "checklist",
+          "id": "brief",
+          "title": "Picks",
+          "numbered": false,
+          "items": [
+            {
+              "id": "framework",
+              "text": "Which framework do the slides use?",
+              "sub": "Recommend the plain kit: its slide classes ship with bluedoc, so the deck needs nothing installed.",
+              "recommend": "plain",
+              "choices": [
+                { "id": "plain", "label": "Plain kit" },
+                { "id": "horizon", "label": "HorizonUI" }
+              ]
+            },
+            {
+              "id": "theme",
+              "text": "Which theme?",
+              "sub": "Recommend <<theme>>: <<why>>.",
+              "recommend": "light",
+              "choices": [
+                { "id": "light", "label": "Light" },
+                { "id": "dark", "label": "Dark" }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "slides",
+      "title": "Slides",
+      "lead": "<<N slides, in the order Present plays them, and what this revision changed.>>",
+      "blocks": [
+        {
+          "type": "board",
+          "id": "main",
+          "targets": ["presentation"],
+          "framework": "plain",
+          "themes": [
+            { "id": "light", "label": "Light", "tokens": { "accent": "#4f46e5", "bg": "#f8fafc", "surface": "#ffffff", "fg": "#0f172a", "muted": "#64748b", "border": "#e2e8f0" } },
+            { "id": "dark", "label": "Dark", "tokens": { "accent": "#818cf8", "bg": "#0b1020", "surface": "#151b2e", "fg": "#e2e8f0", "muted": "#94a3b8", "border": "#27304a" } }
+          ],
+          "motion": { "fast": "120ms", "base": "200ms", "slow": "320ms", "ease": "cubic-bezier(.2,0,0,1)" },
+          "artboards": [
+            { "id": "title", "title": "<<Title slide: the deck's title and who presents it>>", "device": "slide", "fidelity": "wireframe", "notes": "<<What you say on this slide, or drop notes>>" },
+            { "id": "content", "title": "<<Content slide: its one point>>", "device": "slide", "fidelity": "wireframe", "notes": "<<What you say on this slide, or drop notes>>" },
+            { "id": "closing", "title": "<<Closing slide: the ask or next step>>", "device": "slide", "fidelity": "wireframe", "notes": "<<What you say on this slide, or drop notes>>" }
+          ]
+        }
+      ]
+    }
+  ]
+}

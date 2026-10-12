@@ -46,7 +46,7 @@ URLs: /                      home page: every doc under the registered folders, 
                              PUT also the key. An `__ann:<id>` value the page can't draw is dropped from a PUT and
                              left out of a read.
       /__bluedoc/vendor/<path>  files under assets/vendor (HorizonUI, HeroUI, Tailwind's browser build, the Sketch font)
-      /<root>/<dir>/<stem>.design/<artboard>.html[?rev=B&theme=T]   a design doc's screen: the artboard's fragment
+      /<root>/<dir>/<stem>.design/<artboard>.html[?rev=B&theme=T]   a design or presentation doc's screen: the artboard's fragment
                              (or revision B's, from the history) wrapped in kits/shell.html with its framework,
                              theme tokens and the inspector. Its own CSP: no network, `sandbox allow-scripts`,
                              framable by this server's pages only (no X-Frame-Options). An `icons` artboard's
@@ -67,7 +67,7 @@ HTML pages carry a Content-Security-Policy (hashes of their inline scripts, no f
 reader state and the hash of the JSON it shows in its bp-state element ({version, state, docHash}; null without
 sqlite3).
 
-Replies: Send answers posts to /__bluedoc/reply, Request changes to /__bluedoc/changes, Approve plan to
+Replies: Send answers posts to /__bluedoc/reply, Request changes to /__bluedoc/changes, Approve (plan, design, presentation) to
 /__bluedoc/approve. Each becomes a row in state.db, queued for `wait`, which returns the oldest unread one
 (GET /__bluedoc/wait needs the X-Bluedoc header and the key) and marks it delivered; a restart keeps the queue. The
 first start with a new state.db imports the <name>.reply/.changes/.approval files of earlier versions and
@@ -464,6 +464,8 @@ def card(doc: dict, dtype: str, doc_path: Path) -> dict:
     design: count = artboards, artboards = the first 12 as {x, y, w, h, device, fidelity}, placed by
     build.board_layout (with the board's links, for `layout: "flow"`) and shifted so the board's top-left is 0, 0;
     links = [i, j] by artboard index, one per pair of those 12 that a link joins (at most 24; none for `back`).
+    presentation: count = slides, notes = slides with speaker notes, slides = the fidelity of the first 9 in deck
+    order (as Present plays them: top to bottom, then left to right).
     A doc whose type has none of that: its `hero`, else {icon: 'doc', sections: N}."""
     blocks = list(build.all_blocks(doc))
     if dtype == "review":
@@ -532,6 +534,14 @@ def card(doc: dict, dtype: str, doc_path: Path) -> dict:
             if pairs:
                 out["links"] = list(pairs.values())[:24]
             return out
+    elif dtype == "presentation":
+        board = build.board_of(doc)
+        layout = build.board_layout(board) if board else {}
+        if layout:
+            info = {a["id"]: a for a in board.get("artboards") or [] if isinstance(a, dict)}
+            order = sorted(layout, key=lambda aid: (layout[aid][1], layout[aid][0]))
+            return {"count": len(order), "notes": sum(bool((info.get(aid) or {}).get("notes")) for aid in order),
+                    "slides": [str((info.get(aid) or {}).get("fidelity") or "") for aid in order[:9]]}
     hero = doc.get("hero")
     if isinstance(hero, dict) and hero.get("value") is not None:
         return {"hero": {k: str(hero[k]) for k in ("icon", "value", "label") if hero.get(k) is not None}}
@@ -1036,7 +1046,7 @@ def wrap_screen(doc: dict, doc_path: Path, artboard_id: str, fragment: str, *, i
 
 
 def screen_for_url(path: str, rev: str | None) -> tuple[Path, dict, str, str] | None:
-    """(doc file, the doc as of rev, artboard id, fragment) for a screen URL; None unless the doc is a design doc
+    """(doc file, the doc as of rev, artboard id, fragment) for a screen URL; None unless the doc is a design (or presentation) doc
     under a registered folder with that artboard and its screen file (or that revision's recorded HTML)."""
     m = SCREEN_URL.match(path)
     if not m:

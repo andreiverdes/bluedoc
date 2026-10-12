@@ -4,8 +4,8 @@
  "subtitle": "Five slides for the Q3 launch review of the Acme Fit apps, with speaker notes. Comment on any slide, press Present to rehearse, then approve the deck or request changes.",
  "meta": {
   "org": "Acme Corp",
-  "kind": "Design",
-  "type": "design",
+  "kind": "Presentation",
+  "type": "presentation",
   "dwg": "ACME-FIT-Q3",
   "rev": "A",
   "date": "2026-10-10"
@@ -54,7 +54,7 @@
    ]
   },
   {
-   "id": "screens",
+   "id": "slides",
    "title": "Slides",
    "lead": "Five 16:9 slides in one column, in the order Present plays them.",
    "blocks": [

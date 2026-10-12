@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""One-off: convert embedded `diff` blocks to git references and report docs missing their type's data.
+"""One-off: convert embedded `diff` blocks to git references, report docs missing their type's data, and with --decks
+make design docs of slides only presentations.
 
 Usage:
-  migrate.py <docs-folder> [--dry-run] [--repo-root DIR ...]
+  migrate.py <docs-folder> [--dry-run] [--repo-root DIR ...] [--decks]
 
 For every *.bluedoc.json / *.blueprint.json under the folder, each diff block with `files`, `base` and `head`
 is converted to a reference (see diffref.py) when its repo is found with both commits: the block's `repo`
@@ -11,6 +12,8 @@ The reference is expanded from that repo and kept only when the expansion shows 
 numbers and line text as the embedded hunks; the expansion goes to <name>.diffcache.json. Otherwise the block stays
 embedded and the reason is printed. `repo` is stored relative to the doc when the repo sits beside one of
 the doc's ancestors, else as written. `meta.rev` is not bumped; files keep their indent.
+--decks: a `design` doc whose board holds only `slide` artboards gets `meta.type: "presentation"` (and `meta.kind`
+"Presentation" where it was "Design"); it keeps working as a design without this. Build each one afterwards.
 Python 3.9+ standard library only.
 """
 from __future__ import annotations
@@ -142,9 +145,17 @@ def convert(block: dict, doc_dir: Path, roots: list[Path], cache: dict) -> tuple
     return None, why
 
 
-def migrate(path: Path, roots: list[Path], dry_run: bool) -> dict:
+def is_deck(doc: dict) -> bool:
+    """A design doc whose board holds slides and nothing else: a presentation written before that type existed."""
+    arts = (build.board_of(doc) or {}).get("artboards")
+    return (build.doc_type(doc.get("meta") or {}) == "design" and isinstance(arts, list) and bool(arts)
+            and all(isinstance(a, dict) and a.get("device") == "slide" for a in arts))
+
+
+def migrate(path: Path, roots: list[Path], dry_run: bool, decks: bool = False) -> dict:
     raw = path.read_text(encoding="utf-8")
-    row = {"doc": path, "converted": 0, "kept": [], "before": len(raw.encode()), "after": len(raw.encode()), "gaps": None}
+    row = {"doc": path, "converted": 0, "kept": [], "before": len(raw.encode()), "after": len(raw.encode()), "gaps": None,
+           "deck": False}
     try:
         doc = json.loads(raw)
     except ValueError as e:
@@ -163,12 +174,19 @@ def migrate(path: Path, roots: list[Path], dry_run: bool) -> dict:
         block.clear()
         block.update(ref)
         row["converted"] += 1
+    if decks and is_deck(doc):
+        meta = doc["meta"]
+        meta["type"] = "presentation"
+        if str(meta.get("kind") or "").strip().lower() == "design":
+            meta["kind"] = "Presentation"
+        row["deck"] = True
     row["gaps"] = build.check_contract(copy.deepcopy(doc))
-    if row["converted"]:
+    if row["converted"] or row["deck"]:
         text = dump_like(raw, doc)
         row["after"] = len(text.encode())
         if not dry_run:
-            diffref.save_cache(cpath, cache)
+            if row["converted"]:
+                diffref.save_cache(cpath, cache)
             path.write_text(text, encoding="utf-8")
     return row
 
@@ -178,10 +196,11 @@ def main() -> int:
     ap.add_argument("folder", type=Path)
     ap.add_argument("--dry-run", action="store_true", help="report only; write nothing")
     ap.add_argument("--repo-root", type=Path, action="append", default=[], help="folder holding repos (repeatable)")
+    ap.add_argument("--decks", action="store_true", help="make design docs of slides only presentations")
     a = ap.parse_args()
     roots = [r.resolve() for r in a.repo_root]
     docs = sorted(p for suffix in build.DOC_SUFFIXES for p in a.folder.rglob(f"*{suffix}"))
-    rows = [migrate(p, roots, a.dry_run) for p in docs]
+    rows = [migrate(p, roots, a.dry_run, a.decks) for p in docs]
     names = [str(r["doc"].relative_to(a.folder)) for r in rows]
     w = max([len("doc"), *map(len, names)])
     print(f"{'doc':<{w}}  conv  kept  {'bytes before → after':>24}  contract gaps")
@@ -193,6 +212,8 @@ def main() -> int:
     print(f"{'total':<{w}}  {sum(r['converted'] for r in rows):>4}  {sum(len(r['kept']) for r in rows):>4}  "
           f"{f'{before:,} → {after:,}':>24}")
     for name, r in zip(names, rows):
+        if r["deck"]:
+            print(f"deck  {name}: design → presentation; run build.py on it")
         for k in r["kept"]:
             print(f"kept  {name}: {k}")
         for g in r["gaps"] or []:

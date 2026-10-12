@@ -1,6 +1,6 @@
 # Design
 
-UI mockups and slide decks on a pan-and-zoom board: one HTML screen per artboard, in a device frame, that you comment on and approve.
+UI mockups on a pan-and-zoom board: one HTML screen per artboard, in a device frame, that you comment on and approve. Slide decks are their own type: [presentation](presentation.md).
 
 ![The acme-fit-design board: the Today phone screen selected, its links drawn as right-angle connectors to Workout, Activity, Workouts and Profile, with the reach count → 4 · ← 5](../media/design-hero.webp)
 
@@ -17,10 +17,6 @@ UI mockups and slide decks on a pan-and-zoom board: one HTML screen per artboard
 - **Present click-through.** **Present** plays the screens full-window and follows the taps, with a back stack and each link kind's transition.
 - **Editing arrows as drafts.** Point on an arrow to comment on it (`link:today/tab-workouts`). In Link mode (`L`) drag an arrow's end onto another screen, change its kind or label, delete it or draw a new one. Each edit is a draft in your reader state; the board and Present follow it at once, and it goes to the agent with **Request changes**.
 - **Moving screens and Tidy up.** Drag a screen, Shift-click to move several, snap to the others' edges, nudge with the arrow keys. With `layout: "flow"` the board places screens without `x`, `y` in columns by depth from the entry; **Tidy up** arranges the whole board once in layers with no overlaps and no crossings. Moves and Tidy up are drafts too, kept across reloads in `~/.bluedoc/state.db`; Request changes sends them as one `layout:main` item with the `build.py patch <doc> layout:main --json '{…}'` command that writes the positions into the doc.
-- **Presentations.** `--target presentation` scaffolds a deck: 16:9 `slide` artboards (1920×1080) built from the kit's slide classes, each with optional speaker `notes`. **Present** plays the slides full-window in board order (top to bottom, left to right): ← → to step, `N` for notes, Esc to leave.
-
-  ![The acme-fit-deck in Present: slide 3 of 5, Weekly actives, with its speaker notes under it](../media/design-present.webp)
-
 - **App icons with PNG export.** `build.py new design … --target mobile --icons` adds an `app-icon` artboard of SVG layers in `<name>.design/app-icon/`: `fg.svg`, `mono.svg` and a background colour (`icon.bg`) or `bg.svg`, on a 108-unit square. The board shows them as one sheet: the iOS light, dark and tinted icons, Android's masks, themed icon and safe circle, the store icons and four home screens. The build lints the layers (no `fg.svg`, scripts or network URLs, the mark outside the safe circle, `<text>`). **Export PNG sets** renders every PNG with `Contents.json` and the adaptive-icon XML, and saves them to `<name>.icons/app-icon/`, or downloads a zip from a `-o` file.
 
   ![The Acme Fit app icon sheet: iOS light, dark and tinted icons, Android masks and themed icons, the Play Store icon, and four home screens at real size](../media/design-icons.webp)
@@ -40,11 +36,10 @@ python3 <skill>/scripts/serve.py open docs/design/sign-in.bluedoc.json    # the 
 python3 <skill>/scripts/serve.py wait docs/design/sign-in.bluedoc.json --kind any
 ```
 
-`--target` takes `watch`, `mobile`, `tablet`, `desktop`, `web` and `presentation`. The agent writes each screen file, then answers comments with `build.py patch <doc> el:<artboard>/<name> --change "…" --resolves <comment id>`.
+`--target` takes `watch`, `mobile`, `tablet`, `desktop` and `web`; a deck is `build.py new presentation` ([presentation](presentation.md)). The agent writes each screen file, then answers comments with `build.py patch <doc> el:<artboard>/<name> --change "…" --resolves <comment id>`.
 
 ## Examples and guide
 
 - Board with flows: [`acme-fit-design.bluedoc.json`](../../skills/bluedoc/examples/acme-fit-design.bluedoc.json), the Acme Fit activity tracker on a round watch, eight linked phone screens, an app icon and a web dashboard, over three revisions. Screens in [`acme-fit-design.design/`](../../skills/bluedoc/examples/acme-fit-design.design/).
-- Presentation: [`acme-fit-deck.bluedoc.json`](../../skills/bluedoc/examples/acme-fit-deck.bluedoc.json), a five-slide Q3 launch review with speaker notes.
-- Open either with `python3 <skill>/scripts/serve.py open skills/bluedoc/examples/<name>.bluedoc.json`.
+- Open it with `python3 <skill>/scripts/serve.py open skills/bluedoc/examples/acme-fit-design.bluedoc.json`.
 - Agent guide: [`skills/bluedoc/types/design.md`](../../skills/bluedoc/types/design.md). Kit classes: [`skills/bluedoc/references/kits.md`](../../skills/bluedoc/references/kits.md).

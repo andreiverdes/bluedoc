@@ -1541,6 +1541,12 @@ i.warn[hidden] { display: none; }
 .bd-btb .bd-sg button { height: 24px; padding: 0 8px; }
 .bd-btb .th { display: inline-flex; align-items: center; gap: 6px; padding: 0 2px 0 6px; color: var(--fg-subtle); }
 .bd-btb .th .bd-ic { width: 16px; height: 16px; }
+/* a presentation's Present: the toolbar's primary key, filled in the accent like the tray's Request changes */
+.bd-btb .bd-tbtn.pri { display: inline-flex; align-items: center; gap: 6px; padding: 0 12px 0 9px; color: #fff; font-weight: 600;
+  background: var(--accent-solid) linear-gradient(180deg, color-mix(in oklch, var(--accent-solid), white 8%), var(--accent-solid)); box-shadow: var(--shadow-fill); }
+.bd-btb .bd-tbtn.pri:hover { color: #fff; filter: brightness(.95); background: var(--accent-solid) linear-gradient(180deg, color-mix(in oklch, var(--accent-solid), white 8%), var(--accent-solid)); }
+.bd-btb .bd-tbtn.pri:active { transform: translateY(1px) scale(.98); filter: brightness(.9); }
+.bd-btb .bd-tbtn.pri .bd-ic { width: 16px; height: 16px; }
 /* the left panel: the doc's header, then Screens (the artboards) or Brief (TL;DR, the sections, status) */
 .bd-lp { position: fixed; z-index: 41; top: var(--top-h); left: 0; bottom: 0; width: var(--lp-w); display: flex; flex-direction: column; min-height: 0;
   background: var(--panel); box-shadow: inset -1px 0 0 var(--line); transform: translateX(-100%); visibility: hidden; transition: transform .22s var(--ease), visibility 0s .22s; }
@@ -2008,15 +2014,18 @@ const meta = DOC.meta || {};
 const DOCS_KINDS = new Set(['architecture', 'walkthrough', 'runbook', 'setup', 'reference', 'proposal', 'change', 'changes', 'plan', 'status', 'guide',
   'design', 'spec', 'rfc', 'adr', 'overview', 'tutorial', 'onboarding', 'explainer', 'playbook']);
 function docTypeOf(m) {
-  if (['docs', 'review', 'plan', 'design', 'other'].includes(m.type)) return m.type;
+  if (['docs', 'review', 'plan', 'design', 'presentation', 'other'].includes(m.type)) return m.type;
   const k = String(m.kind || '').trim().toLowerCase();
   if (k.startsWith('plan') || k === 'implementation plan') return 'plan';
   if (k.includes('review')) return 'review';
   return (k.match(/[a-z]+/g) || []).some(w => DOCS_KINDS.has(w)) ? 'docs' : 'other';
 }
-// plans and designs are approvable: Approve plan / Approve design, Request changes with the decision picks
-const DOC_TYPE = docTypeOf(meta), IS_PLAN = DOC_TYPE === 'plan', IS_DESIGN = DOC_TYPE === 'design', APPROVABLE = IS_PLAN || IS_DESIGN;
-const AP_NOUN = IS_DESIGN ? 'design' : 'plan', AP_TITLE = IS_DESIGN ? 'Design' : 'Plan';
+// plans, designs and presentations are approvable: Approve plan / design / presentation, Request changes with the
+// decision picks. A presentation is a design page whose board holds slides only: IS_DESIGN covers both
+const DOC_TYPE = docTypeOf(meta), IS_PLAN = DOC_TYPE === 'plan', IS_DECK = DOC_TYPE === 'presentation', IS_DESIGN = DOC_TYPE === 'design' || IS_DECK;
+const APPROVABLE = IS_PLAN || IS_DESIGN;
+const AP_NOUN = IS_DECK ? 'presentation' : IS_DESIGN ? 'design' : 'plan', AP_TITLE = IS_DECK ? 'Presentation' : IS_DESIGN ? 'Design' : 'Plan';
+const SCREEN = IS_DECK ? 'slide' : 'screen';   // what the board's artboards are called on this page
 let BOARD = null;   // a design doc's board (renderBoard), once drawn
 const overallBar = h('div', { class: 'bp-bar' }, h('i'));
 const overallTxt = h('span');
@@ -5511,7 +5520,7 @@ function renderBoard(b) {
   /* toolbar: panel, Fit · zoom · Focus, Present, Variants, Flows, fidelity, theme, motion */
   const tbtn = (icon, label, fn, extra) => h('button', { type: 'button', class: 'bd-tbtn', 'aria-label': label, title: label, onclick: fn, ...extra }, ic(icon));
   const sep = () => h('span', { class: 'bd-groove', role: 'separator', 'aria-orientation': 'vertical' });
-  const lpBtn = tbtn('panelleft', 'Screens and brief ([)', () => setLp(!B.lp, true), { 'aria-pressed': 'false' });
+  const lpBtn = tbtn('panelleft', `${IS_DECK ? 'Slides' : 'Screens'} and brief ([)`, () => setLp(!B.lp, true), { 'aria-pressed': 'false' });
   zoomLbl = h('span', { class: 'zl' }, '100%');
   const varBtn = tbtn('variants', 'Variants: line up the selected screen and its variants', () => toggleVariants(), { 'aria-pressed': 'false' });
   const flowsBtn = h('button', { type: 'button', class: 'bd-tbtn txt', 'aria-pressed': 'false', title: 'Flows: every link as an arrow (off: only the selected screen\'s reach)', onclick: () => setFlows(!B.flows) }, 'Flows');
@@ -5520,11 +5529,15 @@ function renderBoard(b) {
   const themeSel = themes.length ? h('select', { 'aria-label': 'Theme', title: 'Theme: the brief\'s pick; changing it here picks it there' }, themes.map(t => h('option', { value: t.id }, t.label || t.id))) : null;
   const motBtn = tbtn('pause', 'Pause animations', () => { B.paused = !B.paused; sendAll(viewMsg); paintTools(); }, { 'aria-pressed': 'false' });
   const redBtn = h('button', { type: 'button', class: 'bd-tbtn txt', 'aria-pressed': 'false', title: 'Reduced motion in every screen', onclick: () => { B.reduced = !B.reduced; sendAll(viewMsg); paintTools(); } }, 'Reduced');
+  const presTip = deck.length ? 'Present the slides (← →, N: notes, Esc leaves)' : 'Present: one screen at a time (a tap follows its link; Backspace goes back; ← →, Esc leaves)';
+  // a presentation's primary action: Present as a filled key with its word, last in the toolbar; no Variants or Flows
+  const presBtn = IS_DECK ? h('button', { type: 'button', class: 'bd-tbtn pri', title: presTip, onclick: () => present(B.sel) }, ic('present'), h('span', {}, 'Present'))
+    : tbtn('present', presTip, () => present(B.sel));
   const tb = h('div', { class: 'bd-btb', role: 'toolbar', 'aria-label': 'Board' }, lpBtn, sep(),
-    tbtn('fit', 'Fit all screens (0)', () => fit(true)), tbtn('minus', 'Zoom out (−)', () => zoomBy(1 / 1.4)), zoomLbl, tbtn('plus', 'Zoom in (+)', () => zoomBy(1.4)),
-    tbtn('target', 'Focus the selected screen (F, or double-click it)', () => focusSel()), sep(),
-    tbtn('present', deck.length ? 'Present the slides (← →, N: notes, Esc leaves)' : 'Present: one screen at a time (a tap follows its link; Backspace goes back; ← →, Esc leaves)', () => present(B.sel)), varBtn, flowsBtn, sep(), fidSeg,
-    themeSel && [sep(), h('label', { class: 'th' }, ic('palette'), themeSel)]);
+    tbtn('fit', `Fit all ${SCREEN}s (0)`, () => fit(true)), tbtn('minus', 'Zoom out (−)', () => zoomBy(1 / 1.4)), zoomLbl, tbtn('plus', 'Zoom in (+)', () => zoomBy(1.4)),
+    tbtn('target', `Focus the selected ${SCREEN} (F, or double-click it)`, () => focusSel()), sep(),
+    !IS_DECK && [presBtn, varBtn, flowsBtn, sep()], fidSeg,
+    themeSel && [sep(), h('label', { class: 'th' }, ic('palette'), themeSel)], IS_DECK && [sep(), presBtn]);
   // the motion keys (pause animations, Reduced) are hidden for now: built and painted, not shown; screens play their motion
   if (themeSel) themeSel.addEventListener('change', () => { const x = ITEMS['brief/theme']; if (x && x.setChoice && !OLD) x.setChoice(themeSel.value); else { B.theme = themeSel.value; paintTokens(); } });
   function paintTools() {
@@ -5889,19 +5902,20 @@ function renderBoard(b) {
     const blk = wrap.closest('.bp-block'), shell = $('.bd-shell');
     if (!blk || !shell) return;
     // the board leaves its section for the full-bleed layer; a stand-in keeps the section's block order
-    blk.replaceWith(h('div', { class: 'bp-block bd-board-ph' }, ic('frame'), h('span', {}, 'The screens of this section are on the board.')));
+    blk.replaceWith(h('div', { class: 'bp-block bd-board-ph' }, ic('frame'), h('span', {}, `The ${SCREEN}s of this section are on the board.`)));
     blk.classList.add('bd-boardblk'); shell.append(blk);
-    lpList = h('ol', { class: 'bd-scr-l', 'aria-label': 'Screens' }, abs.map(a => {
+    const Screens = IS_DECK ? 'Slides' : 'Screens';
+    lpList = h('ol', { class: 'bd-scr-l', 'aria-label': Screens }, abs.map(a => {
       const x = B.frames.get(a.id), dev = devOf(a);
       x.li = h('button', { type: 'button', 'data-ab': a.id, 'aria-current': 'false', onclick: () => focus(a.id) }, ic(DEVICE_IC[dev]),
         h('span', { class: 't' }, h('b', {}, a.title || a.id), h('span', {}, [DEVICE_NAME[dev] || `${x.p.w} × ${x.p.h}`, FIDELITY[a.fidelity], a.variantOf && 'variant'].filter(Boolean).join(' · '))),
         x.liWarn = h('i', { class: 'warn', hidden: true }), x.liReach = h('span', { class: 'rc' }), x.liTag = h('span', { class: 'tg' }));
       return h('li', {}, x.li);
     }));
-    lpTabs = h('div', { class: 'bd-sg', role: 'radiogroup', 'aria-label': 'Panel' }, [['screens', 'Screens'], ['brief', 'Brief']].map(([v, l]) =>
+    lpTabs = h('div', { class: 'bd-sg', role: 'radiogroup', 'aria-label': 'Panel' }, [['screens', Screens], ['brief', 'Brief']].map(([v, l]) =>
       h('button', { type: 'button', role: 'radio', 'data-v': v, 'aria-controls': 'bd-lp-' + v, onclick: () => setTab(v, true) }, l)));
-    lp = h('aside', { class: 'bd-lp', 'aria-label': 'Screens and brief', inert: true }, head, h('div', { class: 'bd-lp-tabs bd-lp-ui' }, lpTabs),
-      h('div', { class: 'bd-lp-pane bd-lp-ui', id: 'bd-lp-screens' }, lpList, h('p', { class: 'hint' }, 'Click a screen to focus it. Double-click one on the board, or press F, to do the same.')),
+    lp = h('aside', { class: 'bd-lp', 'aria-label': `${Screens} and brief`, inert: true }, head, h('div', { class: 'bd-lp-tabs bd-lp-ui' }, lpTabs),
+      h('div', { class: 'bd-lp-pane bd-lp-ui', id: 'bd-lp-screens' }, lpList, h('p', { class: 'hint' }, `Click a ${SCREEN} to focus it. Double-click one on the board, or press F, to do the same.`)),
       h('div', { class: 'bd-lp-pane', id: 'bd-lp-brief', hidden: true }, tldr, main));
     shell.prepend(lp);
     placeMeta();
@@ -6510,7 +6524,7 @@ function buildRevTab() {
         h('div', { class: 'rv-meta' }, r.date && h('span', {}, r.date), r.built && h('span', {}, 'built ' + String(r.built).slice(0, 16).replace('T', ' ')),
           r.current && h('span', { class: 'bp-chip ok' }, 'current'), r === VIEW && h('span', { class: 'bp-chip info' }, 'shown'), r === BASE && h('span', { class: 'bp-chip todo' }, 'base')),
         notes.length ? h('ul', { class: 'rv-notes' }, notes.map(t => h('li', { html: inline(t) }))) : h('p', { class: 'rv-meta' }, 'No notes for this revision.'),
-        scr.length > 0 && h('p', { class: 'rv-scr' }, h('b', {}, 'Screens changed: '), scr.join(', ')),
+        scr.length > 0 && h('p', { class: 'rv-scr' }, h('b', {}, `${IS_DECK ? 'Slides' : 'Screens'} changed: `), scr.join(', ')),
         Array.isArray(r.doc.resolves) && r.doc.resolves.length > 0 && h('p', { class: 'rv-scr' }, `Resolves ${r.doc.resolves.length} comment${r.doc.resolves.length > 1 ? 's' : ''}`)),
       h('div', { class: 'rv-act' },
         (r !== VIEW || BASE) && h('a', { class: 'bp-btn', href: revUrl(r, null) }, ic('eye'), 'View'),
@@ -6642,6 +6656,7 @@ function paintPlan() {
   approveKey.replaceChildren(ic(done ? 'tick' : 'check'), h('span', { class: 't' }, done ? 'Approved' + revTxt : `Approve ${AP_NOUN}`));
   approveKey.setAttribute('aria-label', done ? 'Approved' + revTxt : `Approve ${AP_NOUN}`);
   approveKey._tip = asking.length ? `${asking.length} item${asking.length === 1 ? ' asks' : 's ask'} for more details: ${asking.some(x => x.more === 'on') ? 'send it with Request changes and wait for the agent\'s next revision, or turn it off' : 'wait for the agent\'s next revision, or withdraw the request'}`
+    : IS_DECK ? `Approve this presentation${revWord}, every slide in it: the agent takes the deck as final, with your picks`
     : IS_DESIGN ? `Approve this design${revWord}, every screen in it: the agent builds it with your picks` : `Approve this plan${revWord}: the agent goes ahead with it and your picks`;
   if (done && approveDlg && approveDlg.open) approveDlg.close();
 }
@@ -6656,7 +6671,8 @@ function openApprove() {
     const ok = h('button', { type: 'button', class: 'bp-btn ok', onclick: () => doApprove() }, ic('tick'), 'Approve');
     approveDlg = h('dialog', { class: 'bd-send bd-approve', 'aria-labelledby': 'bd-ap-h' },
       h('div', { class: 'hd' }, h('h3', { id: 'bd-ap-h' }, `Approve this ${AP_NOUN}${revWord}`), h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Close', onclick: () => approveDlg.close() }, ic('x'))),
-      h('p', { class: 'sum' }, IS_DESIGN ? 'The agent builds the design as drawn, every screen at this revision, with the decisions below.' : 'The agent goes ahead with the plan as written and the decisions below.'), note, sum, decBox, how, h('div', { class: 'ft' }, copy, ok));
+      h('p', { class: 'sum' }, IS_DECK ? 'The agent takes the deck as drawn, every slide at this revision, with the decisions below.'
+        : IS_DESIGN ? 'The agent builds the design as drawn, every screen at this revision, with the decisions below.' : 'The agent goes ahead with the plan as written and the decisions below.'), note, sum, decBox, how, h('div', { class: 'ft' }, copy, ok));
     document.body.append(approveDlg);
     approveDlg.addEventListener('click', e => { if (e.target === approveDlg) approveDlg.close(); });
     Object.assign(approveDlg, { _note: note, _ok: ok });
@@ -8063,12 +8079,12 @@ function boardEdits(B) {
     placeAll();
   };
 
-  /* the toolbar: Tidy up and the drafts count, in the layout group after Fit · zoom · Focus */
+  /* the toolbar: Tidy up (not on a presentation: slides stay in their column) and the drafts count, in the layout group after Fit · zoom · Focus */
   const tidyTip = 'Tidy up: screens in columns by depth from the entry, without overlaps (Ctrl/⌘ Z undoes it)';
   const tidyBtn = h('button', { type: 'button', class: 'bd-tbtn', 'aria-label': tidyTip, title: tidyTip, onclick: () => tidyUp() }, ic('grid'));
   const countBtn = h('button', { type: 'button', class: 'bd-tbtn txt bd-dcount', hidden: true, title: 'Board drafts: link edits and moves not yet in the doc. They go with Request changes.', onclick: () => MARKUP.comments({ open: true }) });
   function paintCount(n) { countBtn.hidden = !n; countBtn.textContent = n === 1 ? '1 draft' : `${n} drafts`; }
-  B.tb.querySelector('[aria-label^="Focus the selected screen"]').after(tidyBtn, countBtn);
+  B.tb.querySelector('[aria-label^="Focus the selected "]').after(...(IS_DECK ? [] : [tidyBtn]), countBtn);
 
   /* Tidy up: BoardGeo's layered layout, animated, saved as one layout draft */
   let tween = 0;

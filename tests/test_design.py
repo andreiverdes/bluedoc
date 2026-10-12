@@ -1,5 +1,5 @@
-"""Design docs: the Acme Fit example, the board contract, screen-file lint, screen HTML in the history, links, the
-flow layout, app icons, the presentation target, and the screen route's framework fallback.
+"""Design and presentation docs: the Acme Fit example, the board contract, screen-file lint, screen HTML in the
+history, links, the flow layout, app icons, `new presentation`, and the screen route's framework fallback.
 
 The example builds clean and its history holds its three revisions with one HTML entry per screen version. The contract
 wants exactly one board with an artboard; the board's ids, devices, fidelity, variants, themes and frameworks are
@@ -8,10 +8,12 @@ in place that changes the approval hash, and the old rev's HTML stays readable. 
 kinds, names, labels, entry, layout, reach) fires on a scratch board; `layout: "flow"` puts reached screens in depth
 columns; each icon layer lint row fires, and layers join the revision and the approval hash. Every revision records
 its links and the page gets them, with board-geo.js inlined only into design pages. `new design --target mobile
---icons` builds clean once filled in. `new design --target presentation` writes a three-slide deck in one column that
-builds clean once filled in; speaker notes over 2 KB are an ERROR. The bundled deck, acme-fit-deck, builds clean: five
-hi-fi plain-kit slides in one column with notes, one revision. The server serves only screens and declared framework
-files, and wraps a screen whose framework is missing in the plain kit with a notice."""
+--icons` builds clean once filled in, and `new design --target presentation` is refused with a pointer to `new
+presentation`. `new presentation` writes a three-slide deck in one column that builds clean once filled in; speaker
+notes over 2 KB are an ERROR, and so is a phone artboard in a presentation, while a design may hold a slide. The bundled
+deck, acme-fit-deck, is a presentation that builds clean: five hi-fi plain-kit slides in one column with notes, one
+revision. The server serves only screens and declared framework files, and wraps a screen whose framework is missing
+in the plain kit with a notice."""
 from __future__ import annotations
 
 import copy
@@ -543,14 +545,14 @@ class IconsAndFlowScaffold(unittest.TestCase):
         self.assertEqual(tmp.run("build.py", "new", "docs", tmp.dir / "x.bluedoc.json", "--icons").returncode, 2)
 
 
-class PresentationTarget(unittest.TestCase):
-    """`build.py new design --target presentation`: the stub deck, filled in, and its speaker notes."""
+class NewPresentation(unittest.TestCase):
+    """`build.py new presentation`: the stub deck, filled in, its speaker notes, and slides-only."""
 
     def setUp(self) -> None:
         self.tmp = TempHome()
         self.addCleanup(self.tmp.cleanup)
         self.doc_path = self.tmp.dir / "deck.bluedoc.json"
-        r = self.tmp.run("build.py", "new", "design", self.doc_path, "--target", "presentation")
+        r = self.tmp.run("build.py", "new", "presentation", self.doc_path, "--title", "Acme Fit launch")
         self.assertEqual(r.returncode, 0, r.stderr)
         # every <<placeholder>> filled, as the agent would
         raw = build.PLACEHOLDER.sub("Acme Fit launch", self.doc_path.read_text(encoding="utf-8"))
@@ -562,6 +564,7 @@ class PresentationTarget(unittest.TestCase):
         return self.tmp.run("build.py", self.doc_path, "--check")
 
     def test_the_stub_deck_is_three_slides_in_a_column_and_builds_clean(self) -> None:
+        self.assertEqual((self.doc["meta"]["type"], self.doc["meta"]["kind"]), ("presentation", "Presentation"))
         board = board_of(self.doc)
         self.assertEqual(board["targets"], ["presentation"])
         self.assertEqual([(a["id"], a["device"]) for a in board["artboards"]],
@@ -585,6 +588,26 @@ class PresentationTarget(unittest.TestCase):
         board_of(d)["artboards"][1]["notes"] = "Acme Fit doubled weekly actives."
         self.assertEqual(errors(self.check(d).stderr), [])
 
+    def test_a_phone_artboard_in_a_presentation_is_an_error(self) -> None:
+        d = copy.deepcopy(self.doc)
+        board_of(d)["artboards"][1]["device"] = "phone"
+        r = self.check(d)
+        self.assertEqual(r.returncode, 1, r.stderr)
+        self.assertTrue(any("a presentation holds slides only; use a design doc for screens" in e for e in errors(r.stderr)), r.stderr)
+
+    def test_a_design_may_hold_a_slide(self) -> None:
+        d = copy.deepcopy(self.doc)
+        d["meta"]["type"] = "design"
+        self.assertEqual(errors(self.check(d).stderr), [])
+        board_of(d)["artboards"][1]["device"] = "phone"
+        self.assertEqual(build.check_contract(d), [])
+
+    def test_new_design_refuses_the_presentation_target(self) -> None:
+        r = self.tmp.run("build.py", "new", "design", self.tmp.dir / "old.bluedoc.json", "--target", "presentation")
+        self.assertEqual(r.returncode, 2, r.stderr)
+        self.assertIn("build.py new presentation", r.stderr)
+        self.assertFalse((self.tmp.dir / "old.bluedoc.json").exists())
+
     def test_on_a_mixed_board_the_slide_column_sits_right_of_the_other_artboards(self) -> None:
         board = {"artboards": [{"id": "title", "device": "slide"}, {"id": "home", "device": "phone"},
                                {"id": "home-b", "device": "phone", "variantOf": "home"},
@@ -596,7 +619,8 @@ class PresentationTarget(unittest.TestCase):
 
 
 class DeckExample(unittest.TestCase):
-    """The bundled deck, acme-fit-deck: five hi-fi plain-kit slides in one column, notes on some, one revision."""
+    """The bundled deck, acme-fit-deck: a presentation of five hi-fi plain-kit slides in one column, notes on some, one
+    revision."""
 
     STEM = "acme-fit-deck"
 
@@ -611,6 +635,7 @@ class DeckExample(unittest.TestCase):
     def test_deck_shape(self) -> None:
         doc_path = EXAMPLES / f"{self.STEM}.bluedoc.json"
         doc = load_json(doc_path)
+        self.assertEqual(doc["meta"]["type"], "presentation")
         board = board_of(doc)
         self.assertEqual(board["targets"], ["presentation"])
         self.assertFalse(board.get("frameworks"), "the deck must need nothing the reader provides")

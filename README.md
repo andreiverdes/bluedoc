@@ -11,7 +11,8 @@ An agent skill for engineering docs, plans, code reviews, UI designs, slide deck
 | `docs` | Architecture pages, walkthroughs, runbooks, setup guides, change proposals | [docs](docs/types/docs.md) | [<img src="docs/media/docs-hero.webp" width="240" alt="The Acme orders doc">](docs/types/docs.md) |
 | `plan` | A plan you approve or send back before the agent writes code | [plan](docs/types/plan.md) | [<img src="docs/media/plan-hero.webp" width="240" alt="The Acme saved carts plan">](docs/types/plan.md) |
 | `review` | Review findings pinned to their lines from git, one decision per finding | [review](docs/types/review.md) | [<img src="docs/media/review-hero.webp" width="240" alt="The Acme review findings">](docs/types/review.md) |
-| `design` | UI screens on a board, slide decks and app icons | [design](docs/types/design.md) | [<img src="docs/media/design-hero.webp" width="240" alt="The Acme Fit design board">](docs/types/design.md) |
+| `design` | UI screens on a board and app icons | [design](docs/types/design.md) | [<img src="docs/media/design-hero.webp" width="240" alt="The Acme Fit design board">](docs/types/design.md) |
+| `presentation` | Slide decks with speaker notes, played in Present | [presentation](docs/types/presentation.md) | [<img src="docs/media/presentation-hero.webp" width="240" alt="The Acme Fit Q3 launch review deck">](docs/types/presentation.md) |
 | `other` | Status pages, incident reports, inventories, meeting notes, comparisons | [other](docs/types/other.md) | [<img src="docs/media/other-hero.webp" width="240" alt="The Acme weekly status page">](docs/types/other.md) |
 
 ## What you get
@@ -20,7 +21,7 @@ An agent skill for engineering docs, plans, code reviews, UI designs, slide deck
 - **Blueprint canvas.** Open a system to see its parts; each level plays its own animated flow (request, event, data). Nests 3 levels deep. Edges are routed at right angles around the nodes, with labels that don't overlap.
 - **Checklists as task trackers.** Each item is a two-line row (the action, then why it matters) that opens to show details, commands, checks, tables or a sub-checklist. Ticks persist on the local server; **Copy progress** exports Markdown for a PR or issue.
 - **Decisions.** When the agent needs you to choose, an item shows its options as pills with the agent's recommendation starred. Pick one, or press **Accept recommended** to take every starred option at once.
-- **Need more details.** Every decision item has a **Need more details** toggle after its pills. It leaves the pick alone, turns the item's dot amber and asks what is missing; the agent answers in the next revision with a fuller description and options. A plan or design can't be approved while an item asks for more details. Turning the toggle off withdraws a sent request.
+- **Need more details.** Every decision item has a **Need more details** toggle after its pills. It leaves the pick alone, turns the item's dot amber and asks what is missing; the agent answers in the next revision with a fuller description and options. A plan, design or presentation can't be approved while an item asks for more details. Turning the toggle off withdraws a sent request.
 - **Comments and Revisions tabs.** The right panel of every doc has two tabs. Comments lists your notes as Pending (saved), Open (sent) or Resolved, with a General comment field for the whole doc. Revisions switches to any earlier revision or compares two: new, changed and removed parts are marked in place with a word-level diff, next to the author's note on what changed.
 - **Comments on anything.** A tray of keys at the bottom (View, Point, Select, Draw) pins a comment on an element, a selected passage or a drawn mark. **Request changes** sends the pending comments to the agent as edits to make; **Send answers** sends your picks, ticks and item comments.
 - **The agent resolves what it addressed.** Each comment in a reply carries an id. The agent lists the ids it addressed in the new revision (`build.py patch … --resolves <id>`); on load, those comments move to Resolved with "Resolved by the agent in rev X".
@@ -29,7 +30,7 @@ An agent skill for engineering docs, plans, code reviews, UI designs, slide deck
 - **Designs on a board.** Screens for a watch, phone, tablet, desktop window or browser, side by side on a pan-and-zoom board, at sketch, wireframe or hi-fi fidelity. Comment on a button, draw a box to ask for a new screen, compare a screen with an earlier revision, then **Approve design**.
 - **Design navigation and editing.** A tappable element names the screen it opens. The board draws each link as a connector routed around the screens, and **Present** follows the taps. Drag a link's end to another screen, draw a new link, move screens or press **Tidy up**: each edit is a draft that goes to the agent with Request changes, as a `build.py patch` command that writes it into the doc.
 - **App icons.** `--icons` adds an icon artboard of SVG layers. The board shows the iOS light, dark and tinted icons, Android's masks and themed icon, the store icons and four home screens. **Export** writes every PNG with `Contents.json` and the adaptive-icon XML.
-- **Presentations.** `--target presentation` scaffolds a deck of 16:9 slides with speaker notes. **Present** plays them full-window: ← → to step, `N` for notes, Esc to leave.
+- **Presentations.** `build.py new presentation` scaffolds a deck of 16:9 slides with speaker notes. **Present** plays them full-window: ← → to step, `N` for notes, Esc to leave. Then **Approve presentation** or **Request changes**.
 - **HeroUI and Tailwind ship with the skill.** A screen uses the plain kit, HorizonUI, HeroUI with Tailwind, Tailwind alone or your project's own CSS, all offline.
 - **Your input stays on your machine.** Ticks, picks, comments and replies live in `~/.bluedoc/state.db`, a SQLite file the server owns, never in the repo. Only a browser that opened a link from `serve.py open` or `serve.py unlock` can save. Screens run sandboxed, with no network.
 - **JSON only.** `serve.py` renders each doc from its JSON on every request; agents never write the page HTML. `build.py -o` writes a standalone HTML file when you need to send one.
@@ -133,9 +134,9 @@ Per doc, the agent reads about 1.5k tokens of instructions (`SKILL.md`) plus one
 
 ## Design mockups
 
-A design doc is a brief and one board of screens. Each screen is an HTML fragment in `<name>.design/<artboard id>.html` beside the JSON; the server wraps it in the chosen kit (plain, HorizonUI, HeroUI with Tailwind, Tailwind or your own CSS) and runs it sandboxed. Screens link to each other with `data-nav`, a deck is a board of slides, and `--icons` adds an app-icon sheet with PNG export.
+A design doc is a brief and one board of screens. Each screen is an HTML fragment in `<name>.design/<artboard id>.html` beside the JSON; the server wraps it in the chosen kit (plain, HorizonUI, HeroUI with Tailwind, Tailwind or your own CSS) and runs it sandboxed. Screens link to each other with `data-nav`, and `--icons` adds an app-icon sheet with PNG export. A presentation is the same page with a board of slides only.
 
-Frameworks, navigation, board editing, presentations, app icons and the sandbox are covered in [docs/types/design.md](docs/types/design.md).
+Frameworks, navigation, board editing, app icons and the sandbox are covered in [docs/types/design.md](docs/types/design.md); decks in [docs/types/presentation.md](docs/types/presentation.md).
 
 ## Update and remove
 
@@ -152,14 +153,14 @@ Frameworks, navigation, board editing, presentations, app icons and the sandbox 
 ```text
 skills/bluedoc/
   SKILL.md               the workflow card the agent reads first
-  types/<type>.md        one guide per doc type: plan, review, docs, design, other
+  types/<type>.md        one guide per doc type: plan, review, docs, design, presentation, other
   references/schema.md   every JSON field and command, for lookup
   references/kits.md     the plain kit's classes, HorizonUI in a screen, bringing your own framework
   assets/skeletons/      fill-in skeleton per doc type (build.py new), plus review-area.json (--shape area)
   scripts/build.py       new, validate, lint, patch, build the HTML
   scripts/gitdiff.py     git range + findings -> diff block (a git reference)
   scripts/diffref.py     expands diff references from the cache, git or gh
-  scripts/migrate.py     one-off: embedded diffs -> references, reports contract gaps
+  scripts/migrate.py     one-off: embedded diffs -> references, reports contract gaps; --decks: slide-only designs -> presentations
   scripts/ghthreads.py   GitHub review threads -> findings + diff comments
   scripts/serve.py       local server: renders docs and design screens, home page, answers and change requests
   scripts/statedb.py     the reader's input and replies in ~/.bluedoc/state.db (SQLite)

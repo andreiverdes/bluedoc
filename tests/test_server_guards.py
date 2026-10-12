@@ -211,6 +211,15 @@ class ScreenRouteGuards(unittest.TestCase):
         for i, j in card["links"]:
             self.assertTrue(0 <= i < n and 0 <= j < n and i != j, (i, j))
 
+    def test_a_presentation_is_a_board_page_with_a_deck_card(self) -> None:
+        status, raw = self.server.req("GET", "/__bluedoc/index.json", headers={"X-Bluedoc": "1"})
+        self.assertEqual(status, 200)
+        doc = next(d for r in json.loads(raw)["roots"] for d in r["docs"] if d["path"].endswith("acme-fit-deck.bluedoc.json"))
+        self.assertEqual(doc["type"], "presentation")
+        self.assertEqual(doc["card"], {"count": 5, "notes": 4, "slides": ["hifi"] * 5})
+        status, _, body = self.get(f"{self.base}/acme-fit-deck.design/actives.html")
+        self.assertEqual(status, 200, body[:200])
+
     def test_board_drafts_are_kept_and_broken_ones_dropped(self) -> None:
         """A link or layout draft is reader state the page draws (template.html MARKUP `valid`); one it can't is dropped."""
         t = {"key": "link:today/tab-workouts", "label": "Workouts tab"}

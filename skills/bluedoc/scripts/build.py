@@ -9,10 +9,10 @@ Usage:
   build.py doc.json --show-rev B    print revision B, rebuilt from the history, as JSON
   build.py new TYPE out.bluedoc.json [--title T] [--kind K] [--shape pr|area] [--target T,…] [--framework F]
                                     [--icons]
-                                    write the fill-in skeleton of a docs|review|plan|design|other doc
-                                    (--shape area: a review by area of a codebase, not by PR; design: one
-                                    wireframe screen file per --target watch|mobile|tablet|desktop|web, three
-                                    slides for presentation; --icons adds an app icon with stub layers)
+                                    write the fill-in skeleton of a docs|review|plan|design|presentation|other
+                                    doc (--shape area: a review by area of a codebase, not by PR; design: one
+                                    wireframe screen file per --target watch|mobile|tablet|desktop|web, --icons
+                                    adds an app icon with stub layers; presentation: a deck of three stub slides)
   build.py patch doc.json KEY [--set f=v ...] [--json OBJ] [--append OBJ] [--delete] [--html FILE|-]
                               [--change LINE ...] [--no-bump]
                                     change one object by its annotator key, bump meta.rev, validate, record
@@ -28,11 +28,12 @@ embeds the history (screens as hashes only, links as they are), so readers can s
 compare two. --no-history skips reading and writing it.
 
 Type contracts: each meta.type needs its data (review: a diff and sized findings; plan: steps and
-files blocks; docs: a canvas or a hero; design: one board with an artboard). Missing data is an error on
-the doc being built: a new meta.rev, or a recorded rev whose text changed (an edit in place). It is a
-warning only while the doc is exactly the revision its history recorded, so old revisions keep rendering.
+files blocks; docs: a canvas or a hero; design: one board with an artboard; presentation: one board of
+slide artboards only). Missing data is an error on the doc being built: a new meta.rev, or a recorded rev
+whose text changed (an edit in place). It is a warning only while the doc is exactly the revision its
+history recorded, so old revisions keep rendering.
 
-Screens (design docs): each artboard's HTML is a body fragment in <stem>.design/<id>.html. The build
+Screens (design and presentation docs): each artboard's HTML is a body fragment in <stem>.design/<id>.html. The build
 fails on a missing file, a network URL, <base>, <iframe>, <object>, <embed>, <meta http-equiv>,
 <form action> or a whole document; it warns above 24 KB and when no element has a data-bd name.
 An element's data-nav ("[kind:]artboard" or "back") is a link; the build checks its target and name,
@@ -112,7 +113,8 @@ MD_LINK = re.compile("\\[([^\\]]+)\\]\\(([^)\t\n\v\f\r \u00a0\u1680\u2000-\u200a
 CALLOUT_KINDS = {"note", "caution", "warning", "risk", "decision"}
 STATE_KINDS = {"ok", "warn", "risk", "info", "todo"}
 RESOLVES_ID = re.compile(r"[A-Za-z0-9_-]{1,40}")   # a reader comment's id, as `resolves` lists it (the page writes c<base36>)
-DOC_TYPES = {"docs", "review", "plan", "design", "other"}   # meta.type: the home page's grouping; unset = derived from meta.kind
+DOC_TYPES = {"docs", "review", "plan", "design", "presentation", "other"}   # meta.type: the home page's grouping; unset = derived from meta.kind
+BOARD_TYPES = ("design", "presentation")   # the types whose page is one board (a presentation: of slides only)
 # meta.kind words that make a doc type "docs" when meta.type is unset (after the plan and review rules)
 DOCS_KINDS = {"architecture", "walkthrough", "runbook", "setup", "reference", "proposal", "change", "changes", "plan",
               "status", "guide", "design", "spec", "rfc", "adr", "overview", "tutorial", "onboarding", "explainer", "playbook"}
@@ -140,11 +142,10 @@ DEVICES = {"watch-round": {"w": 240, "h": 240, "safe": [0, 0, 0, 0]}, "watch-squ
            "phone": {"w": 390, "h": 844, "safe": [47, 0, 34, 0]}, "tablet": {"w": 820, "h": 1180, "safe": [24, 0, 20, 0]},
            "desktop": {"w": 1280, "h": 800, "safe": [32, 0, 0, 0]}, "browser": {"w": 1440, "h": 900, "safe": [72, 0, 0, 0]},
            "slide": {"w": 1920, "h": 1080, "safe": [0, 0, 0, 0]}, "icons": {"w": 1280, "h": 860, "safe": [0, 0, 0, 0]}}
+# board.targets: what the board is for. `build.py new design --target` takes each but presentation, which is
+# `build.py new presentation`: the skeleton's stub deck, its slides in deck order
 TARGET_DEVICES = {"watch": "watch-round", "mobile": "phone", "tablet": "tablet", "desktop": "desktop", "web": "browser",
                   "presentation": "slide"}
-# `build.py new design --target presentation`: the stub deck, one slide artboard each, in deck order
-STUB_SLIDES = (("title", "Title slide: the deck's title and who presents it"), ("content", "Content slide: its one point"),
-               ("closing", "Closing slide: the ask or next step"))
 MAX_NOTES_BYTES = 2 * 1024        # an artboard's speaker notes, shown under the slide in Present
 FIDELITIES = ("sketch", "wireframe", "hifi")
 # what ships with bluedoc (assets/kits, assets/vendor), by id: its label in the brief
@@ -513,9 +514,9 @@ def check_media_src(rep: Report, where: str, src, base: Path | None) -> None:
 
 
 def doc_type(meta: dict) -> str:
-    """docs | review | plan | design | other: meta.type when set, else read from meta.kind (a design only by
-    meta.type: a kind like 'Design' stays docs). template.html follows the same rule; serve.py puts the result
-    in the home page's index."""
+    """docs | review | plan | design | presentation | other: meta.type when set, else read from meta.kind (a design
+    or presentation only by meta.type: a kind like 'Design' stays docs). template.html follows the same rule; serve.py
+    puts the result in the home page's index."""
     if meta.get("type") in DOC_TYPES:
         return meta["type"]
     kind = str(meta.get("kind") or "").strip().lower()
@@ -1471,12 +1472,17 @@ def check_contract(doc: dict) -> list[str]:
         out += [f"a plan needs a {bt} block" for bt in ("steps", "files") if bt not in types]
     elif t == "docs" and "canvas" not in types and not doc.get("hero"):
         out.append("a docs page needs a canvas block or a top-level hero")
-    elif t == "design":
+    elif t in BOARD_TYPES:
         boards = [b for b in blocks if b.get("type") == "board"]
         if len(boards) != 1:
-            out.append(f"a design needs exactly one board block (it has {len(boards)})")
+            out.append(f"a {t} needs exactly one board block (it has {len(boards)})")
         elif not boards[0].get("artboards"):
-            out.append("a design's board needs at least one artboard")
+            out.append(f"a {t}'s board needs at least one artboard")
+        elif t == "presentation" and isinstance(boards[0]["artboards"], list):
+            other = [f"{a.get('id')}: {a.get('device') or 'no device'}" for a in boards[0]["artboards"]
+                     if isinstance(a, dict) and a.get("device") != "slide"]
+            if other:
+                out.append(f"a presentation holds slides only; use a design doc for screens ({', '.join(other)})")
     return out
 
 
@@ -1825,8 +1831,8 @@ def _validate(rep: Report, doc: dict, doc_path: Path | None, *, allow_remote: bo
                 lint_text(rep, sw_ + ".md", sd.get("md"))
                 lint_text(rep, sw_ + ".label", sd.get("label"))
         elif t == "board":
-            if doc_type(doc.get("meta") or {}) != "design":
-                rep.err(bw, "a board block is for design docs: set meta.type to 'design'")
+            if doc_type(doc.get("meta") or {}) not in BOARD_TYPES:
+                rep.err(bw, "a board block is for design and presentation docs: set meta.type to 'design' or 'presentation'")
             boards.append((bw, b))
 
     for si, sec in enumerate(doc.get("sections") or []):
@@ -2295,8 +2301,9 @@ def cmd_new(argv: list[str]) -> int:
     ap.add_argument("--kind", help="meta.kind, the eyebrow word (e.g. Architecture, Runbook)")
     ap.add_argument("--shape", choices=("pr", "area"), default="pr",
                     help="review only: one section per PR (pr), or per area of a codebase review (area)")
-    ap.add_argument("--target", help=f"design only: comma list of {','.join(TARGET_DEVICES)}; one starter artboard "
-                    "and wireframe screen file each, three slides for presentation (default mobile)")
+    design_targets = [t for t in TARGET_DEVICES if t != "presentation"]
+    ap.add_argument("--target", help=f"design only: comma list of {','.join(design_targets)}; one starter artboard "
+                    "and wireframe screen file each (default mobile). A deck is `new presentation`")
     ap.add_argument("--framework", help="design only: plain | horizon | heroui | tailwind | <a `serve.py add-framework` "
                     "name> | auto (default: you fill the brief's framework pick from the project's files; see types/design.md)")
     ap.add_argument("--icons", action="store_true", help="design only: add an `app-icon` artboard (device icons) with stub "
@@ -2307,9 +2314,11 @@ def cmd_new(argv: list[str]) -> int:
     if (a.target or a.framework or a.icons) and a.type != "design":
         ap.error("--target, --framework and --icons are for design docs")
     targets = [t.strip() for t in (a.target or "mobile").split(",") if t.strip()]
-    bad = [t for t in targets if t not in TARGET_DEVICES]
+    if "presentation" in targets:
+        ap.error("--target presentation is gone: a deck is its own type, `build.py new presentation <path> --title …`")
+    bad = [t for t in targets if t not in design_targets]
     if bad or not targets or len(set(targets)) != len(targets):
-        ap.error(f"--target: a comma list of distinct {', '.join(TARGET_DEVICES)}")
+        ap.error(f"--target: a comma list of distinct {', '.join(design_targets)}")
     if a.framework and a.framework != "auto" and not ID_RE.match(a.framework):
         ap.error("--framework: plain, horizon, heroui, tailwind, auto or a store name (lowercase letters, digits, -)")
     if not a.out.name.endswith(DOC_SUFFIXES):
@@ -2331,7 +2340,8 @@ def cmd_new(argv: list[str]) -> int:
     meta.update(rev="1", date=dt.date.today().isoformat(), type=a.type)
     if a.kind:
         meta["kind"] = a.kind
-    stubs = scaffold_design(doc, a.out, targets, a.framework or "auto", a.icons) if a.type == "design" else {}
+    stubs = (scaffold_design(doc, a.out, targets, a.framework or "auto", a.icons) if a.type == "design"
+             else scaffold_deck(doc, a.out) if a.type == "presentation" else {})
     for f in stubs:
         if f.exists():
             print(f"{f} exists; not overwriting it", file=sys.stderr)
@@ -2410,27 +2420,30 @@ STUB_ICON_LAYER = ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108
                    '  <circle cx="54" cy="54" r="24" fill="{fill}"/>\n</svg>\n')   # inside the 66 dp safe circle
 
 
+def scaffold_deck(doc: dict, out: Path) -> dict[Path, str]:
+    """The stub slide files for `build.py new presentation`, one per slide of the skeleton's board in deck order: a
+    title slide first, a closing one last, content slides between. Returns {file: stub text} to write beside the doc."""
+    arts, stubs = board_of(doc)["artboards"], {}
+    for n, a in enumerate(arts, 1):
+        kind = "title" if n == 1 else "closing" if n == len(arts) else "content"
+        stubs[out.parent / screen_rel(out, a)] = stub_slide(a["id"], kind, n)
+    return stubs
+
+
 def scaffold_design(doc: dict, out: Path, targets: list[str], framework: str, icons: bool = False) -> dict[Path, str]:
-    """Fill a design skeleton for `build.py new design`: one wireframe artboard per target (presentation: the stub
-    deck's slides), the framework pick, and with icons an `app-icon` artboard with stub layers. A mobile target
-    makes its screen the entry of a flow layout. Returns {file: stub text} to write beside the doc."""
+    """Fill a design skeleton for `build.py new design`: one wireframe artboard per target, the framework pick, and
+    with icons an `app-icon` artboard with stub layers. A mobile target makes its screen the entry of a flow layout.
+    Returns {file: stub text} to write beside the doc."""
     board = board_of(doc)
     board["targets"] = targets
     if "mobile" in targets:
         board["entry"], board["layout"] = ["mobile"], "flow"
     board["artboards"], stubs = [], {}
     for t in targets:
-        if t == "presentation":
-            for n, (kind, title) in enumerate(STUB_SLIDES, 1):
-                a = {"id": kind, "title": f"<<{title}>>", "device": "slide", "fidelity": "wireframe",
-                     "notes": "<<What you say on this slide, or drop notes>>"}
-                board["artboards"].append(a)
-                stubs[out.parent / screen_rel(out, a)] = stub_slide(kind, kind, n)
-        else:
-            a = {"id": t, "title": f"<<{t.capitalize()} screen: what it shows>>", "device": TARGET_DEVICES[t],
-                 "fidelity": "wireframe"}
-            board["artboards"].append(a)
-            stubs[out.parent / screen_rel(out, a)] = stub_screen(a)
+        a = {"id": t, "title": f"<<{t.capitalize()} screen: what it shows>>", "device": TARGET_DEVICES[t],
+             "fidelity": "wireframe"}
+        board["artboards"].append(a)
+        stubs[out.parent / screen_rel(out, a)] = stub_screen(a)
     if icons:
         a = {"id": "app-icon", "title": "App icon", "device": "icons", "fidelity": "wireframe",
              "icon": {"name": "<<App name>>", "bg": "#2563eb"}}
