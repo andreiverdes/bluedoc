@@ -3383,13 +3383,13 @@ function commentCard(d, c, mirrors = d.mirrors, inItem = false) {
     mirrors.push({ tick, src, card });
   }
   const detail = c.md || (!inItem && it && it.detail);   // under its row, the row's detail is right above
-  card.append(
+  card.append(...[
     h('div', { class: 'hd' }, tick ? h('label', { class: 'tk' }, tick) : dot || ic('msg'), h('div', { class: 'tt', html: inline(title) }),
       ((it && it.state) || c.state) && h('span', { class: 'bp-chip ' + kind }, c.state || it.state)),
     pills && pills.el,
     h('div', { class: 'mt' }, h('span', {}, where),
       src && !inItem && h('a', { href: `#item-${src.cid}-${it.id}`, onclick: e => { e.preventDefault(); const row = openItem(src); row.scrollIntoView({ behavior: REDUCE ? 'auto' : 'smooth', block: 'center' }); flash(row); } }, 'Checklist item', ic('chev'))),
-    detail && h('details', {}, h('summary', {}, 'Details'), h('div', { class: 'bd', html: md(detail) })));
+    detail && h('details', {}, h('summary', {}, 'Details'), h('div', { class: 'bd', html: md(detail) }))].filter(Boolean));
   if (src) {
     const nv = noteBox(src, true);
     card.append(nv.el);
