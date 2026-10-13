@@ -33,7 +33,7 @@ from _support import EXAMPLES, SKILL, Server, TempHome, load_json
 
 import build
 import serve   # on sys.path through _support
-from test_page_state import CHROME, Browser, Tab
+from test_page_state import CHROME, Browser, Tab, until
 
 STEM = "acme-site"
 
@@ -465,7 +465,7 @@ class LiveProxy(unittest.TestCase):
         self.assertIn(f"frame-ancestors http://127.0.0.1:{self.server.port} http://localhost:{self.server.port}", csp)
         head = body.index("<head>") + len("<head>")
         self.assertTrue(body[head:].startswith(f'<script src="/__bluedoc/inspector.js" data-parents="http://127.0.0.1:{self.server.port} '
-                                                f'http://localhost:{self.server.port}"></script>'), body[:400])
+                                                f'http://localhost:{self.server.port}" data-origin="{self.dev.origin}"></script>'), body[:400])
         self.assertIn('<h1 id="hero-title">Track everything</h1>', body)
         status, headers, js = self.get("/__bluedoc/inspector.js")
         self.assertEqual((status, headers["content-type"]), (200, "text/javascript; charset=utf-8"))
@@ -845,6 +845,242 @@ class GrowingPageInChrome(SiteInChrome):
         self.tab.wait_for("(a => a.page.view === 'viewport' && a.h === 900 && a.page.frame[1] === 900)(BP.board().artboards[0])", 15)
         self.assertEqual(self.tab.ev("BP.board().pageView"), "full", "the board's view stays Full page")
         self.assertIn("keeps growing", self.tab.ev("document.getElementById('bp-toast').textContent"))
+
+
+# a stored snapshot of the stub page as rev 1 had it: another headline, the same FAQ
+REV1_PAGE = """<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Acme Fit</title>
+<style>body { margin: 0; font: 16px sans-serif; } .hero { position: relative; height: 600px; }
+#hero-title { position: absolute; left: 100px; top: 100px; width: 600px; height: 80px; margin: 0; }</style></head>
+<body><header class="site-nav">Acme Fit</header><section class="hero"><h1 id="hero-title">Rev one headline</h1></section>
+<section id="faq"><h2>Questions</h2></section></body></html>"""
+
+
+def snap_body(url: str, **over) -> bytes:
+    """A POST /__bluedoc/snapshot body for the doc at url: rev 1's home page at 1440 px."""
+    return json.dumps({"path": url, "rev": "1", "page": "home", "w": 1440, "html": REV1_PAGE, "external": 0, **over}).encode()
+
+
+def patch_rev2(tmp: TempHome, doc_path: Path) -> subprocess.CompletedProcess:
+    """Rev 1 -> 2: the agent changed the site's source and records it on the page."""
+    return tmp.run("build.py", "patch", doc_path, "artboard:home", "--change", "Hero: a new headline.")
+
+
+class SnapshotStore(unittest.TestCase):
+    """POST /__bluedoc/snapshot stores a live page's snapshot for the doc's current rev beside the doc, cleaned of
+    scripts, behind the key and a size cap; the screen route serves it for that rev; patch warns when the rev it
+    replaces has none."""
+
+    def setUp(self) -> None:
+        self.tmp = TempHome()
+        self.addCleanup(self.tmp.cleanup)
+        self.doc_path = write_site(self.tmp.dir / "site", "http://localhost:4321/")
+        self.assertEqual(self.tmp.run("build.py", self.doc_path).returncode, 0)   # rev 1 recorded
+        self.assertEqual(self.tmp.run("serve.py", "add", self.doc_path.parent).returncode, 0)
+        self.server = Server(self.tmp)
+        self.server.start()
+        self.addCleanup(self.server.stop)
+        self.url = self.server.url_for(self.doc_path)
+        self.file = self.doc_path.parent / "site.bluedoc.snapshots" / "rev-1" / "home@1440.html"
+
+    def post(self, body: bytes, key: str | None = None) -> tuple[int, dict]:
+        headers = {"Content-Type": "application/json", "X-Bluedoc": "1", **({"X-Bluedoc-Key": key} if key is not None else {})}
+        status, raw = self.server.req("POST", "/__bluedoc/snapshot", body, headers)
+        return status, json.loads(raw or b"{}")
+
+    def test_a_snapshot_is_stored_beside_the_doc_without_scripts(self) -> None:
+        html = REV1_PAGE.replace("</body>", "<script>alert(1)</script><base href='http://evil.example/'></body>")
+        status, ans = self.post(snap_body(self.url, html=html, external=2))
+        self.assertEqual((status, ans.get("file")), (200, "site.bluedoc.snapshots/rev-1/home@1440.html"), ans)
+        text = self.file.read_text(encoding="utf-8")
+        self.assertIn('<h1 id="hero-title">Rev one headline</h1>', text)
+        self.assertNotIn("<script", text)
+        self.assertNotIn("<base", text)
+        self.assertRegex(text, r'<head><meta name="bluedoc-snapshot" content="external=2; at=\d{4}-')
+        self.assertEqual(build.snapshot_index(self.doc_path), {"1": {"home": {"1440": 2}}})
+        _, page = self.server.req("GET", self.url)
+        snaps = json.loads(page.decode().split('<script type="application/json" id="bp-snaps">', 1)[1].split("</script>", 1)[0])
+        self.assertEqual(snaps, {"1": {"home": {"1440": 2}}})
+
+    def test_a_write_without_the_key_is_refused(self) -> None:
+        status, ans = self.post(snap_body(self.url), key="not-the-key")
+        self.assertEqual(status, 403, ans)
+        self.assertFalse(self.file.exists())
+
+    def test_the_size_cap_and_what_a_snapshot_must_name(self) -> None:
+        big = REV1_PAGE.replace("</body>", "<p>" + "x" * serve.SNAPSHOT_MAX + "</p></body>")
+        self.assertEqual(self.post(snap_body(self.url, html=big))[0], 413)
+        for over, code in (({"rev": "2"}, 409), ({"page": "nope"}, 404), ({"w": 100}, 400), ({"w": "1440"}, 400),
+                           ({"html": ""}, 400), ({"external": -1}, 400), ({"page": "../x"}, 404)):
+            self.assertEqual(self.post(snap_body(self.url, **over))[0], code, over)
+        self.assertFalse(self.file.parent.exists(), "a refused snapshot left a file")
+
+    def test_an_earlier_revision_keeps_its_snapshot(self) -> None:
+        self.assertEqual(self.post(snap_body(self.url))[0], 200)
+        self.assertEqual(patch_rev2(self.tmp, self.doc_path).returncode, 0)
+        status, ans = self.post(snap_body(self.url, html=STUB_PAGE))
+        self.assertEqual(status, 409, ans)
+        self.assertIn("Rev one headline", self.file.read_text(encoding="utf-8"))
+        code, _ = serve.save_snapshot(self.doc_path, "1", "home", 1440, STUB_PAGE, 0, current_only=False)
+        self.assertEqual(code, 409, "the CLI writes an earlier revision only where it has none")
+
+    def test_the_screen_route_serves_the_revision_snapshot(self) -> None:
+        self.assertEqual(self.post(snap_body(self.url))[0], 200)
+        self.assertEqual(patch_rev2(self.tmp, self.doc_path).returncode, 0)
+        route = self.url.replace("site.bluedoc.json", "site.design/home.html")
+        c = http.client.HTTPConnection("127.0.0.1", self.server.port, timeout=10)
+        c.request("GET", route + "?rev=1&w=390", headers={"Host": self.server.host})
+        r = c.getresponse()
+        csp, body = r.getheader("Content-Security-Policy") or "", r.read().decode()
+        c.close()
+        self.assertEqual(r.status, 200, body[:300])
+        self.assertIn("Rev one headline", body, "the nearest width it has")
+        self.assertIn('data-ids="1"></script>', body)
+        self.assertIn("sandbox allow-scripts", csp)
+        self.assertIn("img-src 'self'", csp)
+        self.assertIn("http://localhost:4321", csp, "images it left on the dev server")
+        self.assertEqual(self.server.req("GET", route + "?rev=2")[0], 404, "rev 2 has no snapshot")
+        self.assertEqual(self.server.req("GET", route)[0], 404, "the current rev is the live page")
+
+    def test_patch_warns_when_the_rev_it_replaces_has_no_snapshot(self) -> None:
+        r = patch_rev2(self.tmp, self.doc_path)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("WARN  rev 1 has no snapshot of live page home", r.stderr)
+        self.assertEqual(self.post(snap_body(self.url, rev="2"))[0], 200)
+        r = self.tmp.run("build.py", "patch", self.doc_path, "artboard:home", "--change", "FAQ: one more question.")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertNotIn("no snapshot", r.stderr)
+
+
+@unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")
+class SnapshotOnSendInChrome(SiteInChrome):
+    """Request changes records the live page as the current rev's snapshot before the request goes, scriptless."""
+
+    def test_request_changes_stores_a_snapshot(self) -> None:
+        snaps = self.doc_path.parent / "site.bluedoc.snapshots"
+        self.pin_at(400, 140, "Shorter")
+        f = snaps / "rev-1" / "home@1440.html"
+        until(lambda: f.is_file(), 8)   # the page records itself once it settles; that done, it takes none on its own
+        shutil.rmtree(snaps, ignore_errors=True)
+        t = self.tab
+        t.ev("document.querySelector('.bd-key.go').click()")
+        t.wait_for("(d => !!d && !d.querySelector('.ft .bp-btn:last-child').hidden)(document.querySelector('.bd-chgs[open]'))")
+        t.ev("document.querySelector('.bd-chgs[open] .ft .bp-btn:last-child').click()")
+        t.wait_for("(t => t.classList.contains('on') && t.textContent.toLowerCase().includes('change request sent'))(document.querySelector('#bp-toast'))", 20)
+        self.assertTrue(f.is_file(), "the snapshot was stored before the request went")
+        text = f.read_text(encoding="utf-8")
+        self.assertIn('<h1 id="hero-title">Track everything</h1>', text)
+        self.assertNotIn("<script", text)
+        self.assertNotIn('id="bd-live"', text)
+        self.assertEqual(t.ev("BP.board().snapshots"), {"1": {"home": {"1440": 0}}})
+        self.assertEqual(self.browser.errors, [])
+
+
+@unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")
+class EarlierRevisionInChrome(SiteInChrome):
+    """At rev 2, rev 1 of the live page shows its snapshot (never the live page), labelled Snapshot · rev 1; without
+    one, a placeholder that says so; compare (?diff=1) shows rev 1 beside rev 2, the changed hero outlined on both."""
+
+    def unlocked(self, query: str) -> None:
+        status, raw = self.server.req("POST", "/__bluedoc/unlock", b"{}", {"Content-Type": "application/json", "X-Bluedoc": "1"})
+        self.assertEqual(status, 200, raw)
+        self.tab.go(f"http://{self.server.host}{self.server.url_for(self.doc_path)}?{query}&key={json.loads(raw)['token']}")
+
+    def to_rev2(self, snapshot: bool) -> None:
+        """Leave the page (so it takes no snapshot of its own), store REV1_PAGE as rev 1's (snapshot), patch to rev 2."""
+        self.browser.call("Page.navigate", {"url": "about:blank"}, self.tab.session)
+        time.sleep(0.5)
+        shutil.rmtree(self.doc_path.parent / "site.bluedoc.snapshots", ignore_errors=True)
+        if snapshot:
+            status, raw = self.server.req("POST", "/__bluedoc/snapshot", snap_body(self.server.url_for(self.doc_path)),
+                                          {"Content-Type": "application/json", "X-Bluedoc": "1"})
+            self.assertEqual(status, 200, raw)
+        r = patch_rev2(self.tmp, self.doc_path)
+        self.assertEqual(r.returncode, 0, r.stderr)
+
+    def frame_eval(self, url_has: str, expr: str):
+        """expr evaluated in the board's frame whose URL has url_has: a sandboxed frame runs in a process of its own
+        (an iframe target), else in an isolated world of the page's session."""
+        b = self.browser
+        target = next((t for t in b.call("Target.getTargets")["targetInfos"] if t["type"] == "iframe" and url_has in t["url"]), None)
+        if target:
+            s = b.call("Target.attachToTarget", {"targetId": target["targetId"], "flatten": True})["sessionId"]
+            return b.call("Runtime.evaluate", {"expression": expr, "returnByValue": True}, s)["result"].get("value")
+        tree = b.call("Page.getFrameTree", session=self.tab.session)["frameTree"].get("childFrames", [])
+        frame = next(f["frame"]["id"] for f in tree if url_has in f["frame"]["url"])
+        world = b.call("Page.createIsolatedWorld", {"frameId": frame, "worldName": "snap-test"}, self.tab.session)["executionContextId"]
+        return b.call("Runtime.evaluate", {"expression": expr, "contextId": world, "returnByValue": True}, self.tab.session)["result"].get("value")
+
+    def test_an_earlier_rev_shows_its_snapshot_not_the_live_page(self) -> None:
+        self.to_rev2(snapshot=True)
+        self.unlocked("rev=1")
+        a = self.tab.wait_for("(a => a.ready && a)(BP.board().artboards[0])", 15)
+        self.assertEqual(a["page"]["snapshot"], {"rev": "1", "w": 1440})
+        self.assertFalse(a["page"]["proxied"])
+        self.assertIn("site.design/home.html?rev=1&w=1440", a["page"]["src"])
+        self.assertEqual(a["page"]["badge"], "Snapshot · rev 1")
+        self.assertEqual(self.tab.ev("document.querySelector('iframe.bd-ab-fr').getAttribute('sandbox')"), "allow-scripts")
+        self.assertEqual(self.frame_eval("home.html?rev=1", "document.getElementById('hero-title').textContent"), "Rev one headline")
+        self.assertEqual(self.tab.ev("document.querySelectorAll('iframe.bd-ab-fr').length"), 1, "only the snapshot, no live frame")
+        self.assertEqual((a["page"]["sections"]["hero"]["w"], a["page"]["sections"]["hero"]["h"]), (1440, 600), "sections and readback work on the snapshot")
+        self.assertEqual(self.browser.errors, [])
+
+    def test_an_earlier_rev_without_a_snapshot_says_so(self) -> None:
+        self.to_rev2(snapshot=False)
+        self.unlocked("rev=1")
+        time.sleep(1)
+        a = self.tab.ev("BP.board().artboards[0]")
+        self.assertFalse(a["live"], "no frame: never the live page posing as rev 1")
+        self.assertEqual(a["page"]["why"], "No snapshot of rev 1: live pages are recorded when you send feedback")
+        self.assertEqual(a["page"]["badge"], "No snapshot · rev 1")
+
+    def test_compare_shows_both_revs_side_by_side_with_the_change_marked(self) -> None:
+        self.to_rev2(snapshot=True)
+        self.unlocked("diff=1")
+        b = self.tab.wait_for("(b => b.twins.length && b.twins[0].ready && b.artboards[0].ready && b.twins[0].changed.length && b)(BP.board())", 20)
+        a, t = b["artboards"][0], b["twins"][0]
+        self.assertTrue(b["twin"])
+        self.assertEqual((a["page"]["label"], t["label"]), ("Rev 2", "Rev 1"))
+        self.assertEqual((t["snapshot"], a["page"]["proxied"]), ({"rev": "1", "w": 1440}, True))
+        self.assertEqual((t["w"], t["y"]), (a["w"], a["y"]), "the same width, top aligned")
+        self.assertLess(t["x"] + t["w"], a["x"], "rev 1 at the left of rev 2")
+        self.assertEqual((a["page"]["changed"], t["changed"]), (["hero"], ["hero"]))
+        self.assertEqual(self.tab.ev("document.querySelectorAll('.bd-ab .bd-sec-chg:not([hidden])').length"), 2)
+        self.assertEqual(self.tab.ev("[...document.querySelectorAll('.bd-sec-l button.chg')].map(b => b.dataset.sec)"), ["hero"])
+        self.assertEqual(self.frame_eval("home.html?rev=1", "document.getElementById('hero-title').textContent"), "Rev one headline")
+        # the same breakpoint and height mode on both; Single drops the twin
+        self.tab.ev("BP.board({breakpoint: 390})")
+        b = self.tab.wait_for("(b => b.twins[0].w === 390 && b.artboards[0].w === 390 && b)(BP.board())", 15)
+        self.tab.ev("BP.board({twin: false})")
+        b = self.tab.ev("BP.board()")
+        self.assertEqual((b["twin"], b["twins"][0]["shown"], b["artboards"][0]["page"]["label"]), (False, False, None))
+        self.assertEqual(self.browser.errors, [])
+
+
+@unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")
+class SnapshotCommand(unittest.TestCase):
+    """`serve.py snapshot` records the current rev's live pages through headless Chrome, and an earlier rev that has
+    none from another dev server (--url), never replacing one it has."""
+
+    def setUp(self) -> None:
+        self.dev = StubDevServer()
+        self.addCleanup(self.dev.stop)
+        self.tmp = TempHome()
+        self.addCleanup(self.tmp.cleanup)
+        self.tmp.env["BLUEDOC_CHROME"] = CHROME
+        self.doc_path = write_site(self.tmp.dir / "site", "http://localhost:4321/")
+        self.assertEqual(self.tmp.run("build.py", self.doc_path).returncode, 0)
+
+    def test_it_backfills_an_earlier_rev_from_another_dev_server(self) -> None:
+        self.assertEqual(patch_rev2(self.tmp, self.doc_path).returncode, 0)
+        r = self.tmp.run("serve.py", "snapshot", self.doc_path, "--rev", "1", "--url", self.dev.origin, "--width", "1440", timeout=120)
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        f = self.doc_path.parent / "site.bluedoc.snapshots" / "rev-1" / "home@1440.html"
+        text = f.read_text(encoding="utf-8")
+        self.assertIn('<h1 id="hero-title">Track everything</h1>', text)
+        self.assertNotIn("<script", text)
+        r = self.tmp.run("serve.py", "snapshot", self.doc_path, "--rev", "1", "--url", self.dev.origin, "--width", "1440", timeout=120)
+        self.assertIn("has one already", r.stdout)
+        self.assertEqual(f.read_text(encoding="utf-8"), text)
 
 
 if __name__ == "__main__":

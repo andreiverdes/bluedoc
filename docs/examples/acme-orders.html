@@ -684,6 +684,9 @@ html.bd-tray-on .bp-toast { bottom: 84px; }
 .bd-revtb .lbl b { font: 650 13px var(--mono); color: var(--fg); }
 .bd-revtb .lbl .bd-ic { width: 16px; height: 16px; color: var(--fg-subtle); }
 .bd-revtb .pos { min-width: 4.6em; text-align: center; font: 500 12.5px var(--mono); color: var(--fg-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.bd-revtb .bd-twinsg[hidden], .bd-revtb .bd-twinsg[hidden] + .bd-groove { display: none; }
+.bd-revtb .bd-twinsg button { height: 30px; padding: 0 10px; font-size: 12.5px; }
+.bd-revtb .bd-twinsg .bd-ic { width: 15px; height: 15px; }
 .bd-key.txt { display: inline-flex; align-items: center; width: auto; gap: 7px; padding: 0 13px 0 11px; font-size: 13px; font-weight: 600; white-space: nowrap; }
 .bd-key.txt .bd-ic { width: 16px; height: 16px; }
 .bd-key.go.txt { padding: 0 14px; }
@@ -1554,6 +1557,24 @@ i.warn[hidden] { display: none; }
 .bd-pbar .live { flex: none; display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 9px; border-radius: 11px; font-size: 12px; font-weight: 600; color: #116b3a; background: #d5f5e1; }
 .bd-pbar .live::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #1fa45a; }
 .bd-pbar.small .url { display: none; }
+/* an earlier revision of a live page: its snapshot (a camera-shutter blue, not Live's green), or none */
+.bd-pbar .snap { flex: none; display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 9px; border-radius: 11px; font-size: 12px; font-weight: 600; color: #1d4f91; background: #dbe8fb; white-space: nowrap; }
+.bd-pbar .snap::before { content: ""; width: 7px; height: 7px; border-radius: 2px; background: #3b7ddd; }
+.bd-pbar .snap.none { color: #5f6368; background: #f1f3f4; }
+.bd-pbar .snap.none::before { background: none; box-shadow: inset 0 0 0 1.5px #9aa0a6; border-radius: 50%; }
+/* compare on a website: each page's revision on its title bar, its twin (the other revision) at its left; a section
+   that changed between the two is outlined on both, and accented in the Pages list */
+.bd-ab-t .rv { padding: 0 .55em; border-radius: .45em; font: 700 .9em/1.75 var(--mono); color: var(--fg); background: var(--inset); box-shadow: inset 0 0 0 1px var(--line); }
+.bd-ab-t .rv[hidden] { display: none; }
+.bd-ab.twin .bd-ab-t .rv { color: var(--fg-muted); }
+.bd-sec-chg { position: absolute; z-index: 2; box-sizing: border-box; border: calc(2px / var(--k)) solid var(--warn); border-radius: calc(3px / var(--k));
+  background: color-mix(in oklch, var(--warn) 6%, transparent); pointer-events: none; }
+.bd-sec-chg[hidden] { display: none; }
+.bd-sec-chg b { position: absolute; left: calc(-2px / var(--k)); bottom: 100%; padding: 0 calc(6px / var(--k)); border-radius: calc(4px / var(--k)) calc(4px / var(--k)) 0 0;
+  font: 600 calc(11px / var(--k))/1.7 var(--sans); color: var(--warn-fg); background: var(--warn-tint); box-shadow: 0 0 0 calc(1px / var(--k)) var(--warn); white-space: nowrap; }
+.bd-sec-chg.in b { left: 0; top: 0; bottom: auto; border-radius: 0 0 calc(4px / var(--k)) 0; }
+.bd-scr-l .bd-sec-l button.chg { background: color-mix(in oklch, var(--warn-tint) 70%, transparent); box-shadow: inset 2px 0 0 var(--warn); }
+.bd-scr-l .bd-sec-l button.chg .st::after { content: " · changed"; font-weight: 600; color: var(--warn-fg); }
 .bd-ab-t .bps { display: inline-flex; gap: .15em; padding: .15em; border-radius: .6em; background: var(--inset); }
 .bd-ab-t .bps button { display: inline-grid; place-items: center; min-width: 1.9em; height: 1.75em; padding: 0 .35em; border: 0; border-radius: .45em; background: none; color: var(--fg-subtle); font: inherit; font-weight: 600; cursor: pointer; }
 .bd-ab-t .bps button:hover { color: var(--fg); }
@@ -1782,6 +1803,7 @@ html.bd-presenting :is(.bd-anntb, .bd-ann-layer, .bd-cmp) { display: none !impor
 <script type="application/json" id="bp-screens">null</script>
 <script type="application/json" id="bp-state">null</script>
 <script type="application/json" id="bp-live">null</script>
+<script type="application/json" id="bp-snaps">null</script>
 <script>
 (() => {
 'use strict';
@@ -2136,8 +2158,11 @@ const store = (() => {
 })();
 
 // Send answers, Request changes and Approve post through this. It throws on a failed request; `key` marks a
-// browser the server doesn't take writes from yet, `reload` a doc that changed since this page loaded.
+// browser the server doesn't take writes from yet, `reload` a doc that changed since this page loaded. A website's
+// live pages are recorded first (BOARD.snapLive, at most 15 s): the reader's reply is what the agent changes the site
+// on, and this revision's snapshot is how the site looked to the reader.
 async function postReply(url, body) {
+  if (BOARD && BOARD.snapLive && [REPLY.url, REPLY.changes, REPLY.approve].includes(url)) await Promise.race([BOARD.snapLive(), new Promise(r => setTimeout(r, 15000))]);
   const headers = SERVER_KEY.headers({ 'Content-Type': 'application/json', 'X-Bluedoc': '1' });
   const r = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) });
   if (r.ok) return r;
@@ -5416,6 +5441,23 @@ const isLoopback = host => host === 'localhost' || host === '[::1]' || /^127\.\d
 function devUrl(a) {
   try { const u = new URL(a.url); return /^https?:$/.test(u.protocol) && !u.username && !u.password && isLoopback(u.hostname) ? u.href : null; } catch { return null; }
 }
+// a live page's snapshots, which its earlier revisions show (bp-snaps, serve.py's build.snapshot_index): {rev: {page id:
+// {width: images left on the dev server}}}. The one for width w: that width's, else the nearest width's (the wider on a
+// tie, as serve.py's snapshot_for_url picks it): {w, external}; null when the revision has none of the page
+const SNAPS = (() => { try { const x = JSON.parse(document.getElementById('bp-snaps').textContent); return x && typeof x === 'object' && !Array.isArray(x) ? x : {}; } catch { return {}; } })();
+function snapOf(rev, id, w) {
+  const have = rev != null && SNAPS[rev] && typeof SNAPS[rev][id] === 'object' ? SNAPS[rev][id] : null;
+  const ws = have ? Object.keys(have).map(Number).filter(n => Number.isInteger(n) && n > 0) : [];
+  if (!ws.length) return null;
+  const best = ws.reduce((b, k) => Math.abs(k - w) < Math.abs(b - w) || (Math.abs(k - w) === Math.abs(b - w) && k > b) ? k : b);
+  return { w: best, external: Math.max(0, +have[best] || 0) };
+}
+// a live page at revision srev (null: the current one, live) as its frame shows it, and why it can't: the snapshot's
+// screen route; '' when it shows
+const snapUrl = (a, srev, s) => screenUrl(a, srev) + '&w=' + s.w;
+const liveWhy = (a, srev) => !SERVED ? 'A live page: open this doc through serve.py, with the dev server running.'
+  : srev != null ? (snapOf(srev, a.id, 0) ? '' : `No snapshot of rev ${srev}: live pages are recorded when you send feedback`)
+  : liveUrl(a) ? '' : 'This revision\'s dev server has no proxy: open the current revision.';
 // a website page's widths: board.breakpoints, else desktop, tablet, mobile; each one's design viewport height (vp:
 // board.viewport, {"<width>": height}, first). Full page grows a page's frame to its document, at most PAGE_CAP px.
 const BREAKPOINTS = [1440, 768, 390], BP_H = { 1920: 1080, 1440: 900, 1280: 800, 1024: 768, 768: 1024, 390: 844, 375: 812, 360: 780 }, PAGE_BAR = 40, PAGE_CAP = 30000;
@@ -5449,20 +5491,23 @@ function chromeFor(dev, a) {
   if (dev === 'browser') return h('div', { class: 'bd-ch', 'aria-hidden': 'true' }, h('div', { class: 'tabs' }, dots(), h('span', { class: 'tab' }, t)), h('div', { class: 'url' }, h('span', {}, ic('globe'), a.id)));
   return null;
 }
-// a website page's browser bar, above the page: its address (a live page's URL, else its title) and Live
-function pageBar(a, w) {
+// a website page's browser bar, above the page: its address (a live page's URL, else its title) and Live, or for an
+// earlier revision (srev) Snapshot · rev N, or No snapshot · rev N when that revision has none
+function pageBar(a, w, srev = null) {
   let addr = a.title || a.id;
   if (isLive(a)) { try { const u = new URL(a.url); addr = u.host + u.pathname; } catch { addr = a.url; } }
+  const badge = !isLive(a) ? null : srev == null ? h('span', { class: 'live' }, 'Live')
+    : snapOf(srev, a.id, 0) ? h('span', { class: 'snap' }, `Snapshot · rev ${srev}`) : h('span', { class: 'snap none' }, `No snapshot · rev ${srev}`);
   return h('div', { class: 'bd-pbar' + (w < 600 ? ' small' : ''), 'aria-hidden': 'true' }, h('span', { class: 'dots' }, h('i'), h('i'), h('i')),
-    h('span', { class: 'url' }, ic(isLive(a) ? 'globe' : 'frame'), h('span', {}, addr)), isLive(a) && h('span', { class: 'live' }, 'Live'));
+    h('span', { class: 'url' }, ic(isLive(a) ? 'globe' : 'frame'), h('span', {}, addr)), badge);
 }
 // the device around a screen at its native size (present and compare views): bezel, screen, chrome. size: a website
-// page's [w, h] at the width the board shows it
-function deviceBox(a, fr, why, size) {
+// page's [w, h] at the width the board shows it; srev: the earlier revision a live page shows (pageBar)
+function deviceBox(a, fr, why, size, srev = null) {
   const [w, hh] = size || abSize(a), dev = devOf(a), bz = BEZEL[dev] || 0, top = dev === 'page' ? PAGE_BAR : 0;
   const dv = h('div', { class: `bd-pdev dev-${dev}`, style: `width:${w}px;height:${hh}px` }, bz && h('div', { class: 'bd-ab-dev' }),
     h('div', { class: 'bd-ab-scr' }, fr || h('div', { class: 'bd-ab-ph' }, ic(DEVICE_IC[dev]), h('b', {}, a.title || a.id), h('span', { class: 'why' }, why)), chromeFor(dev, a)),
-    top ? pageBar(a, w) : null);
+    top ? pageBar(a, w, srev) : null);
   const sz = h('div', { class: 'bd-psz' }, dv);
   // fit into W × H, at most native size (up: as large as fits)
   const fit = (W, H, up) => { const s = Math.min(up ? Infinity : 1, W / (w + 2 * bz), H / (hh + 2 * bz + top)); dv.style.transform = `translate(${bz * s}px,${(bz + top) * s}px) scale(${s})`; sz.style.width = (w + 2 * bz) * s + 'px'; sz.style.height = (hh + 2 * bz + top) * s + 'px'; };
@@ -5598,7 +5643,7 @@ async function iconExport(a, btn) {
 function renderBoard(b) {
   const abs = boardAbs(b), themes = (Array.isArray(b.themes) ? b.themes : []).filter(t => t && typeof t.id === 'string');
   const B = BOARD = { b, abs, k: 1, tx: 0, ty: 0, mode: 'view', sel: null, sketch: false, reduced: REDUCE, paused: false, theme: null, touched: false, lp: false,
-    frames: new Map(), ghosts: new Map(), live: new Set(), rqs: new Map(), rq: null, variants: null };
+    frames: new Map(), ghosts: new Map(), twins: new Map(), twin: false, live: new Set(), rqs: new Map(), rq: null, variants: null };
   const vp = h('div', { class: 'bd-bvp', style: `--gut: ${VAR_GUT}px` });
   const stage = h('div', { class: 'bd-board', tabindex: 0, role: 'region', 'data-m': 'view',
     'aria-label': (b.title || 'Design board') + '. Drag to pan; pinch or Ctrl + scroll to zoom; F focuses the selected screen, 0 fits them all.' }, vp);
@@ -5611,12 +5656,15 @@ function renderBoard(b) {
      a page's frame is as tall as its document, which its inspector measures with every viewport height pinned to the
      width's design viewport (board.viewport, else BP_H); the frame never scrolls, so pins sit in board space.
      Viewport: the frame is that viewport and scrolls (sticky bars, scroll effects). Present and compare show Viewport.
-     Whenever a page's height or width changes the board lays its pages out again and reroutes its links. */
+     Whenever a page's height or width changes the board lays its pages out again and reroutes its links.
+     A live page shows the dev server's site as it is now, so an earlier revision (?rev=) shows the page's snapshot at
+     that revision (SNAPS: recorded when the reader sends feedback, and when a live page first loads at a revision
+     without one), or a placeholder that says there is none: never the live page posing as old. */
   const BPS = IS_SITE && Array.isArray(b.breakpoints) && b.breakpoints.some(Number.isInteger) ? b.breakpoints.filter(w => Number.isInteger(w) && w >= 240 && w <= 3840) : BREAKPOINTS;
   const BP_KEY = `bluedoc:bp:${docId}`, VIEW_KEY = `bluedoc:pageview:${docId}`;
   const VP = IS_SITE && b.viewport && typeof b.viewport === 'object' && !Array.isArray(b.viewport) ? b.viewport : null;
   B.bpw = new Map((() => { try { return Object.entries(JSON.parse(localStorage.getItem(BP_KEY) || '{}')).filter(([, w]) => Number.isInteger(w) && w >= 240 && w <= 3840); } catch { return []; } })());
-  B.pageView = store.get(VIEW_KEY) === 'viewport' ? 'viewport' : 'full';
+  B.pageView = store.get(VIEW_KEY) === 'viewport' ? 'viewport' : 'full'; stage.dataset.pv = B.pageView;
   const viewSize = a => pageDims(B.bpw.get(a.id) || DEVICES.page[0], VP);   // a page's width and design viewport height
   const deviceSize = a => devOf(a) === 'page' ? viewSize(a) : abSize(a);   // what present and compare show
   // a page in Full page: the board's view, unless the page fell back to Viewport (it kept growing with its frame)
@@ -5627,7 +5675,17 @@ function renderBoard(b) {
     const s = viewSize(a), x = B.frames.get(a.id);
     return x && x.fullH && fullOf(x) ? [s[0], Math.max(s[1], x.fullH)] : s;
   };
-  const bpDesc = (a, w) => [isLive(a) && 'Live', `${w} px`, FIDELITY[a.fidelity]].filter(Boolean).join(' · ');   // the width's device: the checked icon before it
+  // compare (?diff=) on a website: each page's other revision (BASE) beside it, its twin, TWIN_GAP to its left, at its
+  // width and view (twinOf: the twin shown, else null). An artboard record's size: a twin's as its own frame measured
+  const TWIN_GAP = 96, TWIN_KEY = `bluedoc:compare-twin:${docId}`;
+  const twinOf = a => B.twin && !B.variants ? B.twins.get(a.id) || null : null;
+  const sizeX = x => {
+    if (!x.twin) return sizeOf(x.a);
+    const s = viewSize(x.a);
+    return x.fullH && fullOf(x) ? [s[0], Math.max(s[1], x.fullH)] : s;
+  };
+  // the width's device: the checked icon before it. A live page: Live, or the earlier revision it shows (srev)
+  const bpDesc = (a, w, srev = null) => [isLive(a) && (srev == null ? 'Live' : snapOf(srev, a.id, w) ? `Snapshot · rev ${srev}` : `Rev ${srev}`), `${w} px`, FIDELITY[a.fidelity]].filter(Boolean).join(' · ');
   // what a page's frame is told: its view and its width's design viewport height (the name says it before it loads)
   const pageMsg = x => ({ bd: 'page', full: !x.role && fullOf(x), vh: viewSize(x.a)[1] });
   const frameName = x => `bd-page ${pageMsg(x).full ? 'full' : 'view'} ${viewSize(x.a)[1]}`;
@@ -5635,10 +5693,12 @@ function renderBoard(b) {
   // a page in a tab of its own (Open in new tab, in the toolbar and a page's title bar): a live page's dev server itself
   // (devUrl: HMR, devtools), never its proxy; a mockup's screen route on this server, as its frame loads it; null when
   // neither (an export)
-  function tabUrl(a) {
-    if (isLive(a)) return devUrl(a);
+  function tabUrl(a, srev = OLD ? VIEW.rev : null) {
+    if (isLive(a) && srev == null) return devUrl(a);
     if (!SERVED) return null;
-    const u = new URL(screenUrl(a, OLD ? VIEW.rev : null, B.theme), location.href);
+    const s = isLive(a) ? snapOf(srev, a.id, (B.frames.get(a.id) || { p: { w: viewSize(a)[0] } }).p.w) : null;
+    if (isLive(a) && !s) return null;
+    const u = new URL(s ? snapUrl(a, srev, s) : screenUrl(a, srev, B.theme), location.href);
     return u.origin === location.origin ? u.href : null;
   }
   function openTab(a) { const u = tabUrl(a); if (u) window.open(u, '_blank', 'noopener'); }
@@ -5652,33 +5712,38 @@ function renderBoard(b) {
   }
 
   /* artboards */
-  function makeAb(a, p, ghost) {
-    const dev = devOf(a), id = a.id, page = dev === 'page';
-    if (page && !ghost) { const [w, hh] = sizeOf(a); p = { ...p, w, h: hh }; }
+  // an artboard (ghost: a removed one, at its old place); o.twin: the other revision's page in compare, o.rev that
+  // revision (null: the current one)
+  function makeAb(a, p, ghost, o = {}) {
+    const dev = devOf(a), id = a.id, page = dev === 'page', twin = !!o.twin;
+    const srev = twin ? o.rev : OLD ? VIEW.rev : null;   // the revision the screen shows (null: current; a live page: live)
+    if (page && !ghost) { const [w, hh] = twin ? viewSize(a) : sizeOf(a); p = { ...p, w, h: hh }; }
     const warn = h('i', { class: 'warn', hidden: true }), tag = h('span', { class: 'tg' });
     const cmpBtn = h('button', { type: 'button', class: 'cmp', hidden: true, 'aria-label': `Compare this ${SCREEN} across the two revisions`, title: `Compare this ${SCREEN} across the two revisions`,
       onclick: e => { e.stopPropagation(); openCompare(id); } }, ic('split'));
     const rch = h('span', { class: 'rch', hidden: true });
-    const dl = h('span', { class: 'd' }, page ? bpDesc(a, p.w) : [DEVICE_NAME[dev] || `${p.w} × ${p.h}`, FIDELITY[a.fidelity]].filter(Boolean).join(' · '));
-    // a page's widths: an icon each (a width when two share one)
-    const icons = BPS.map(bpIc), bps = page && !ghost ? h('span', { class: 'bps', role: 'radiogroup', 'aria-label': `Width of ${a.title || id}` }, BPS.map((w, i) =>
+    const dl = h('span', { class: 'd' }, page ? bpDesc(a, p.w, isLive(a) ? srev : null) : [DEVICE_NAME[dev] || `${p.w} × ${p.h}`, FIDELITY[a.fidelity]].filter(Boolean).join(' · '));
+    // a page's widths: an icon each (a width when two share one); a twin follows its page's
+    const icons = BPS.map(bpIc), bps = page && !ghost && !twin ? h('span', { class: 'bps', role: 'radiogroup', 'aria-label': `Width of ${a.title || id}` }, BPS.map((w, i) =>
       h('button', { type: 'button', role: 'radio', 'data-w': w, title: `${bpName(w)}: ${w} px wide`, 'aria-label': `${bpName(w)}, ${w} px`, onclick: e => { e.stopPropagation(); setBp(id, w); } },
         icons.indexOf(icons[i]) === icons.lastIndexOf(icons[i]) ? ic(icons[i]) : String(w)))) : null;
-    const opn = IS_SITE && page && !ghost && tabUrl(a) ? h('button', { type: 'button', class: 'opn', title: 'Open page in a new tab', 'aria-label': `Open ${a.title || id} in a new tab`,
+    const opn = IS_SITE && page && !ghost && !twin && tabUrl(a) ? h('button', { type: 'button', class: 'opn', title: 'Open page in a new tab', 'aria-label': `Open ${a.title || id} in a new tab`,
       onclick: e => { e.stopPropagation(); openTab(a); } }, ic('link')) : null;
-    const t = h('div', { class: 'bd-ab-t' }, warn, h('span', { class: 'n' }, a.title || id), rch, bps, opn, dl, tag, cmpBtn, dev === 'icons' && !ghost && iconExportKey(a));
+    const rv = twin ? h('span', { class: 'rv' }, o.label) : null;
+    const t = h('div', { class: 'bd-ab-t' }, warn, rv, h('span', { class: 'n' }, a.title || id), rch, bps, opn, dl, tag, cmpBtn, dev === 'icons' && !ghost && iconExportKey(a));
     const why = ghost ? `Removed in ${VIEW.rev ? 'rev ' + VIEW.rev : 'this revision'}`
-      : isLive(a) ? (liveUrl(a) ? '' : SERVED ? 'This revision\'s dev server has no proxy: open the current revision.' : 'A live page: open this doc through serve.py, with the dev server running.')
-      : SCREENS ? (OLD ? 'An export shows the current revision\'s screens only.' : '') : SERVED ? '' : `Open this page through serve.py to see the ${SCREEN}.`;
+      : isLive(a) ? liveWhy(a, srev)
+      : SCREENS ? (srev != null ? 'An export shows the current revision\'s screens only.' : '') : SERVED ? '' : `Open this page through serve.py to see the ${SCREEN}.`;
     const ph = h('div', { class: 'bd-ab-ph' }, ic(DEVICE_IC[dev]), h('b', {}, a.title || id), h('span', { class: 'why' }, why));
     const hov = h('div', { class: 'bd-ab-hov', hidden: true }, h('b'));
     const scr = h('div', { class: 'bd-ab-scr' }, ph, chromeFor(dev, a), hov);
-    const bar = page ? pageBar(a, p.w) : null;
-    const el = h('div', { class: `bd-ab dev-${dev} fid-${FIDELITY[a.fidelity] ? a.fidelity : 'hifi'}${ghost ? ' ghost' : ''}`, 'data-ab': ghost ? null : id, 'data-ghost': ghost ? id : null },
+    const bar = page ? pageBar(a, p.w, isLive(a) ? srev : null) : null;
+    const el = h('div', { class: `bd-ab dev-${dev} fid-${FIDELITY[a.fidelity] ? a.fidelity : 'hifi'}${ghost ? ' ghost' : ''}${twin ? ' twin' : ''}`,
+      'data-ab': ghost || twin ? null : id, 'data-ghost': ghost ? id : null, 'data-twin': twin ? id : null },
       t, BEZEL[dev] && h('div', { class: 'bd-ab-dev', 'aria-hidden': 'true' }), bar, scr);
-    const x = { a, p, el, scr, ph, hov, warn, tag, cmpBtn, rch, ghost, dl, bps, bar, vars: [], fr: null, ready: false, fallback: null, rects: {}, navAt: null, named: null, allow: 0, navs: 0, locSig: '', home: null, chg: null, li: null };
+    const x = { a, p, el, t, scr, ph, hov, warn, tag, cmpBtn, rch, ghost, twin, srev, dl, bps, bar, vars: [], fr: null, ready: false, fallback: null, rects: {}, navAt: null, named: null, allow: 0, navs: 0, locSig: '', home: null, chg: null, li: null };
     placeAb(x); paintBp(x);
-    if (!ghost) { el.addEventListener('pointerenter', () => hoverAb(id)); el.addEventListener('pointerleave', () => hoverAb(null)); }
+    if (!ghost && !twin) { el.addEventListener('pointerenter', () => hoverAb(id)); el.addEventListener('pointerleave', () => hoverAb(null)); }
     return x;
   }
   const placeAb = x => {
@@ -5686,33 +5751,40 @@ function renderBoard(b) {
     if (x.fr && (+x.fr.width !== x.p.w || +x.fr.height !== x.p.h)) { x.fr.width = x.p.w; x.fr.height = x.p.h; }
   };
   function paintBp(x) {
-    if (!x.bps) return;
-    for (const bt of x.bps.querySelectorAll('button')) bt.setAttribute('aria-checked', String(+bt.dataset.w === x.p.w));
-    x.dl.textContent = bpDesc(x.a, x.p.w);
+    if (!x.bar) return;
+    if (x.bps) for (const bt of x.bps.querySelectorAll('button')) bt.setAttribute('aria-checked', String(+bt.dataset.w === x.p.w));
+    x.dl.textContent = bpDesc(x.a, x.p.w, isLive(x.a) ? x.srev : null);
     x.bar.classList.toggle('small', x.p.w < 600);
   }
-  // a page at width w: its frame at that width and its viewport's height, measured again in Full page
+  // a page and its twin at width w: frames at that width and its viewport's height, measured again in Full page; a
+  // snapshot taken at another width than the one it showed loads again (snapOf picks the nearest)
   function setBp(id, w, quiet) {
     const x = B.frames.get(id); if (!x || devOf(x.a) !== 'page') return;
     w = clamp(Math.round(+w) || DEVICES.page[0], 240, 3840);
     if (w === x.p.w && B.bpw.get(id) === w) return;
-    B.bpw.set(id, w); x.fullH = null; x.grew = []; x.rects = {};   // measured again at this width
+    B.bpw.set(id, w);
     const [W, H] = viewSize(x.a);
-    x.p = { ...x.p, w: W, h: H }; if (x.home) x.home = { ...x.home, w: W, h: H };
-    placeAb(x); paintBp(x); tellPage(x);
+    for (const y of [x, B.twins.get(id)]) {
+      if (!y) continue;
+      y.fullH = null; y.grew = []; y.rects = {};   // measured again at this width
+      y.p = { ...y.p, w: W, h: H }; if (y.home) y.home = { ...y.home, w: W, h: H };
+      if (y.fr && y.snap && (snapOf(y.srev, id, W) || {}).w !== y.snap.w) dropFrame(y);
+      placeAb(y); paintBp(y); tellPage(y); paintWarn(y);
+    }
     if (!quiet) bpChanged();
   }
   function bpChanged() {
     try { localStorage.setItem(BP_KEY, JSON.stringify(Object.fromEntries(B.bpw))); } catch { /* no storage: this view only */ }
-    relayout();
+    relayout(); relive();
   }
   function setAllBp(w) { for (const x of B.frames.values()) setBp(x.a.id, w, true); bpChanged(); if (!B.touched) fit(true); }
+  const pageRecs = () => [...B.frames.values(), ...B.twins.values()].filter(x => devOf(x.a) === 'page');
   function setPageView(v) {
     v = v === 'viewport' ? 'viewport' : 'full'; if (v === B.pageView) return;
-    B.pageView = v; store.set(VIEW_KEY, v);
-    for (const x of B.frames.values()) if (devOf(x.a) === 'page') { x.fullH = null; x.fullOff = false; x.grew = []; paintWarn(x); }
+    B.pageView = v; store.set(VIEW_KEY, v); stage.dataset.pv = v;
+    for (const x of pageRecs()) { x.fullH = null; x.fullOff = false; x.grew = []; paintWarn(x); }
     relayout();
-    for (const x of B.frames.values()) tellPage(x);
+    for (const x of pageRecs()) tellPage(x);
     if (!B.touched) fit(true);
   }
   // where every artboard sits at its size now: boardLayout over the real sizes; a placed page (x, y in the doc) moves
@@ -5720,7 +5792,7 @@ function renderBoard(b) {
   function homes() {
     const at = layoutOf(sizeOf);
     if (!IS_SITE) return at;
-    const nom = layoutOf(deviceSize);
+    const nom = layoutOf(deviceSize, false);
     for (const a of abs) {
       const p = at.get(a.id), n = nom.get(a.id);
       if (!p || !n || !Number.isFinite(a.x) || !Number.isFinite(a.y)) continue;
@@ -5739,6 +5811,11 @@ function renderBoard(b) {
       if (x.home) { x.home = { ...p }; x.p = { ...x.p, w: p.w, h: p.h }; } else x.p = { ...p };   // Variants keeps its line-up
       placeAb(x); paintVars(x);
     }
+    for (const t of B.twins.values()) {   // at its page's left, top aligned
+      const x = B.frames.get(t.a.id), [w, hh] = sizeX(t);
+      if (x) { t.p = { x: x.p.x - w - TWIN_GAP, y: x.p.y, w, h: hh }; placeAb(t); }
+    }
+    paintSecChg();
     if (B.onLayout) B.onLayout();
     relink(); MARKUP.relayout(); paintTools();
     if (!B.touched) fit(false);
@@ -5770,9 +5847,15 @@ function renderBoard(b) {
   const siteMsgs = x => devOf(x.a) === 'page' ? [{ bd: 'sections', sels: secsOf(x.a).map(s => s.sel) }, { bd: 'edits', list: editsOf(x.a) }] : [];
   // a page with versions keeps VAR_GUT clear right of it, in the layout, the fit and the links' routes
   const gutOf = a => IS_SITE && devOf(a) === 'page' && secsOf(a).some(s => s.decision && s.variants && typeof s.variants === 'object') ? VAR_GUT : 0;
-  function layoutOf(size) {
-    const at = boardLayout(b, VIEW.links, a => { const s = size(a); return s && gutOf(a) ? [s[0] + gutOf(a), s[1]] : s; });
-    for (const a of abs) { const p = at.get(a.id); if (p) p.w -= gutOf(a); }
+  // where each artboard sits, at size(a): a page keeps its versions gutter clear at its right and, in compare, its twin's
+  // width at its left (measured: the twin's height counts in its row)
+  function layoutOf(size, measured = true) {
+    const twinW = a => twinOf(a) ? viewSize(a)[0] + TWIN_GAP : 0;
+    const at = boardLayout(b, VIEW.links, a => {
+      const s = size(a), t = twinOf(a);
+      return s && (gutOf(a) || t) ? [s[0] + gutOf(a) + twinW(a), Math.max(s[1], t && measured ? sizeX(t)[1] : 0)] : s;
+    });
+    for (const a of abs) { const p = at.get(a.id), s = size(a); if (p && s) { p.w = s[0]; p.h = s[1]; p.x += twinW(a); } }
     return at;
   }
   // the gutter's chrome on screen: the full picker, without the pick's label (s), a rail of keys (xs), the bracket alone
@@ -5836,17 +5919,18 @@ function renderBoard(b) {
   const tokensMsg = () => { const t = themeOf(B.theme); return { bd: 'tokens', theme: t && t.tokens && typeof t.tokens === 'object' ? t.tokens : null, motion: b.motion && typeof b.motion === 'object' ? b.motion : null }; };
   const viewMsg = x => ({ bd: 'view', sketch: B.sketch || x.a.fidelity === 'sketch', reduced: B.reduced, paused: B.paused });
   const modeMsg = x => ({ bd: 'mode', mode: x.role === 'pres' ? 'interact' : x.role === 'cmp' ? 'view' : frameMode() });
-  // an iframe for record x (an artboard, or the present or compare view's copy) at revision rev (null: current). A live
-  // page loads its proxy, at any revision
+  // an iframe for record x (an artboard, its twin, or the present or compare view's copy) at revision rev (null:
+  // current). A live page loads its proxy; at an earlier revision its snapshot (snapOf, at the page's width), as a
+  // screen: sandboxed like one, never the live page
   function frameEl(x, rev) {
-    const live = isLive(x.a);
-    const attrs = live ? (liveUrl(x.a) ? { src: liveUrl(x.a), referrerpolicy: 'no-referrer' } : null)
+    const live = isLive(x.a), page = devOf(x.a) === 'page', snap = live && rev != null && SERVED ? snapOf(rev, x.a.id, viewSize(x.a)[0]) : null;
+    const attrs = live ? (rev != null ? (snap ? { src: snapUrl(x.a, rev, snap) } : null) : liveUrl(x.a) ? { src: liveUrl(x.a), referrerpolicy: 'no-referrer' } : null)
       : SCREENS ? (rev == null && typeof SCREENS[x.a.id] === 'string' ? { srcdoc: SCREENS[x.a.id] } : null) : SERVED ? { src: screenUrl(x.a, rev, B.theme) } : null;
     if (!attrs) return null;
-    const [w, hh] = x.role ? deviceSize(x.a) : sizeOf(x.a), page = devOf(x.a) === 'page';
-    const fr = h('iframe', { sandbox: live ? LIVE_SANDBOX : SCREEN_SANDBOX, class: 'bd-ab-fr', 'data-ab': x.a.id, title: `${SCREEN[0].toUpperCase()}${SCREEN.slice(1)}: ` + (x.a.title || x.a.id),
+    const [w, hh] = x.role ? deviceSize(x.a) : sizeX(x), proxied = live && !snap;
+    const fr = h('iframe', { sandbox: proxied ? LIVE_SANDBOX : SCREEN_SANDBOX, class: 'bd-ab-fr', 'data-ab': x.a.id, title: `${SCREEN[0].toUpperCase()}${SCREEN.slice(1)}: ` + (x.a.title || x.a.id),
       tabindex: '-1', width: w, height: hh, name: page ? frameName(x) : null, ...attrs });
-    Object.assign(x, { fr, attrs, live, allow: 1, ready: false, locSig: '' });
+    Object.assign(x, { fr, attrs, live: proxied, snap, allow: 1, ready: false, locSig: '', sigs: null });
     fr.addEventListener('load', () => loaded(x, fr));
     B.live.add(x);
     return fr;
@@ -5876,13 +5960,14 @@ function renderBoard(b) {
   }
   function mount(x) {
     if (x.fr || x.blocked) return;
-    const fr = frameEl(x, OLD ? VIEW.rev : null); if (!fr) return;
+    const fr = frameEl(x, x.srev); if (!fr) return;
     x.scr.prepend(fr); x.ph.hidden = true; x.el.classList.add('live');
+    paintWarn(x);
   }
   function relive() {
     const W = stage.clientWidth, H = stage.clientHeight; if (!W || !H) return;
     const mx = W / 4, my = H / 4, near = [];
-    for (const x of B.frames.values()) {
+    for (const x of [...B.frames.values(), ...B.twins.values()]) {
       const p = x.p, l = B.tx + p.x * B.k, t = B.ty + p.y * B.k, w = p.w * B.k, hh = p.h * B.k;
       // a frame too small to read shows its outline; a tall page (Full page) counts by its longer side
       if (!x.el.classList.contains('off') && Math.max(w, hh) >= 24 && l < W + mx && l + w > -mx && t < H + my && t + hh > -my) near.push([Math.hypot(l + w / 2 - W / 2, t + hh / 2 - H / 2), x]);
@@ -5893,9 +5978,12 @@ function renderBoard(b) {
   const boardFrames = () => [...B.live].filter(x => !x.role);
   const sendAll = fn => { for (const x of B.live) post(x, fn(x)); };
   function paintWarn(x) {
+    const s = x.fr && x.snap, ext = s && s.external;
     const why = [x.fallback && `${x.fallback} not found: showing the plain kit`, x.navs && 'This screen tried to navigate away from its frame',
       x.fullOff && 'This page grows with its frame (a viewport height bluedoc can\'t pin), so it shows in Viewport',
-      x.capped && `Full page shows its first ${PAGE_CAP.toLocaleString('en')} px: Viewport scrolls through all of it`].filter(Boolean).join('. ');
+      x.capped && `Full page shows its first ${PAGE_CAP.toLocaleString('en')} px: Viewport scrolls through all of it`,
+      s && s.w !== x.p.w && `This snapshot of rev ${x.srev} was taken ${s.w} px wide: at ${x.p.w} px its page flows by its own CSS, without its scripts`,
+      ext && `${ext} image${ext > 1 ? 's were' : ' was'} too large to keep in this snapshot: ${ext > 1 ? 'they load' : 'it loads'} from the dev server and may show the current site`].filter(Boolean).join('. ');
     for (const w of [x.warn, x.liWarn]) if (w) { w.hidden = !why; w.title = why; }
   }
   function showHov(x, o) {
@@ -5924,15 +6012,18 @@ function renderBoard(b) {
     let x = null;
     for (const y of B.live) if (y.fr && e.source === y.fr.contentWindow) { x = y; break; }
     const d = e.data;
-    if (!x || !d || typeof d !== 'object' || !['ready', 'hover', 'pick', 'nav'].includes(d.bd)) return;
+    if (!x || !d || typeof d !== 'object' || !['ready', 'hover', 'pick', 'nav', 'scroll', 'snapshot'].includes(d.bd)) return;
+    if (d.bd === 'snapshot') { const f = x.live && snapAsks.get(d.id); if (f) { snapAsks.delete(d.id); f(d); } return; }
+    if (d.bd === 'scroll') { if (!x.role && Number.isFinite(d.y)) syncScroll(x, d.y); return; }
     if (d.bd === 'ready') {
       x.ready = true;
-      if (x.role !== 'cmp') takeNavs(B.frames.get(x.a.id), d);
+      if (x.role !== 'cmp' && !x.twin) takeNavs(B.frames.get(x.a.id), d);
       if (x.role) return;
       x.fallback = str(d.fallback, 80) || null; paintWarn(x);
       if (d.rects && typeof d.rects === 'object') for (const [s, r] of Object.entries(d.rects).slice(0, 100)) x.rects[str(s)] = rectOf(r);
+      if (Array.isArray(d.sigs)) x.sigs = d.sigs.slice(0, 50).map(s => typeof s === 'string' ? s.slice(0, 16) : null);
       if (devOf(x.a) === 'page') takeHeight(x, d);
-      locate(x); paintVars(x); MARKUP.relayout();
+      locate(x); paintVars(x); MARKUP.relayout(); paintSecChg(); snapSoon(x);
       const s = x.pendingSec, r = s && x.rects[secKey(s)];
       if (r) { x.pendingSec = null; showSection(x, r); }
       return;
@@ -5941,6 +6032,7 @@ function renderBoard(b) {
     // included), so a forged name moves nothing
     if (d.bd === 'nav') {
       let l = null;
+      if (x.twin) return;
       for (const n of Array.isArray(d.names) ? d.names.slice(0, 8) : []) if (typeof n === 'string' && NAME_RE.test(n) && (l = linkFor(x.a.id, n))) break;
       if (!l) return;
       if (x.role === 'pres') { if (pres) pres.tap(x, l); }
@@ -5950,6 +6042,7 @@ function renderBoard(b) {
     if (x.role) return;
     const what = [secTitle(x, d.sec), str(d.name, 60) || str(d.tag, 30)].filter(Boolean).join(' › ');
     if (d.bd === 'hover') { showHov(x, d.sel == null ? null : { rect: rectOf(d.rect), what }); return; }
+    if (x.twin) return;   // the other revision's page in compare: nothing to pin or link
     if (B.mode === 'link') { if (B.onLinkPick) B.onLinkPick(x, d); return; }
     if (B.mode !== 'point' && B.mode !== 'select') return;
     // a pick on the screen's body (no element under it) is about the whole screen: `artboard:<id>`
@@ -5958,6 +6051,95 @@ function renderBoard(b) {
     if (r) x.rects[sel] = r;
     MARKUP.pinFrame({ el: x.el, key: `el:${x.a.id}/${sel}`, what: what || sel.slice(0, 60), text: str(d.text), extra: siteTarget(x, d.sec), pos: pickPos(x, r) || { x: .5, y: .5 } });
   });
+
+  /* snapshots: a live page's frame, asked through its inspector ({bd:'snapshot'}), as the current revision's snapshot
+     (POST /__bluedoc/snapshot, which needs the key). Taken from a page in Full page on the current revision only:
+     before Send answers, Request changes and Approve post (B.snapLive), and once a page has settled (2.5 s after its
+     last report) at a width this revision has no snapshot of. A failed one isn't tried again at that width. */
+  const SNAP_MAX = 8 * 1024 * 1024, snapAsks = new Map();
+  let snapSeq = 0;
+  const canSnap = x => SERVED && !OLD && !!CUR.rev && !x.role && !x.twin && x.live && !!x.fr && x.ready && fullOf(x);
+  const askSnap = x => new Promise(res => {
+    const id = ++snapSeq, t = setTimeout(() => { snapAsks.delete(id); res(null); }, 20000);
+    snapAsks.set(id, d => { clearTimeout(t); res(d); });
+    post(x, { bd: 'snapshot', id });
+  });
+  async function snapLive(x) {
+    if (!canSnap(x)) return false;
+    const w = x.p.w, d = await askSnap(x);
+    if (!d || typeof d.html !== 'string' || !d.html || d.html.length > SNAP_MAX || x.p.w !== w) return false;
+    const external = Number.isInteger(d.external) && d.external >= 0 ? d.external : 0;
+    await postReply('/__bluedoc/snapshot', { path: location.pathname, rev: CUR.rev, page: x.a.id, w, html: d.html, external });
+    ((SNAPS[CUR.rev] ||= {})[x.a.id] ||= {})[w] = external;
+    return true;
+  }
+  B.snapLive = () => Promise.all(boardFrames().filter(canSnap).map(x => snapLive(x).catch(() => false))).then(r => r.filter(Boolean).length);
+  function snapSoon(x) {
+    if (!canSnap(x) || snapOf(CUR.rev, x.a.id, x.p.w)?.w === x.p.w || (x.snapTried ||= new Set()).has(x.p.w)) return;
+    clearTimeout(x.snapT);
+    x.snapT = setTimeout(() => {
+      if (!canSnap(x) || snapOf(CUR.rev, x.a.id, x.p.w)?.w === x.p.w || x.snapTried.has(x.p.w)) return;
+      x.snapTried.add(x.p.w);
+      snapLive(x).catch(() => {});
+    }, 2500);
+  }
+
+  /* compare on a website: a page and its twin (BASE) side by side. In Viewport the two scroll together: a frame's own
+     scroll moves the other, whose echo (its scroll within 300 ms of being told) moves nothing back. The sections that
+     changed (by the two frames' signatures of each section, else by the section's JSON when either has none: a new
+     section counts) get an outline on both frames and an accent in the Pages list; a page with any is badged Changed. */
+  const partnerOf = x => x.twin ? B.frames.get(x.a.id) : twinOf(x.a);
+  function syncScroll(x, y) {
+    const o = B.twin && !x.role ? partnerOf(x) : null;
+    if (!o || !o.fr || fullOf(x) || (x.syncAt && performance.now() - x.syncAt < 300)) return;
+    o.syncAt = performance.now(); post(o, { bd: 'scroll', y });
+  }
+  // a rect (frame px) clipped to what the frame shows, or null when it shows none of it
+  const inFrame = (x, r) => {
+    if (!r || !x.fr || r.y + r.h < 8 || r.y > x.p.h - 8) return null;
+    const top = clamp(r.y, 0, x.p.h), left = clamp(r.x, 0, x.p.w);
+    return { x: left, y: top, w: clamp(r.x + r.w, left, x.p.w) - left, h: clamp(r.y + r.h, top, x.p.h) - top };
+  };
+  function outlineSecs(x, secs, chg) {
+    x.chgEls ||= new Map();
+    for (const s of secs) {
+      let el = x.chgEls.get(s.id);
+      const r = chg.has(s.id) ? inFrame(x, x.rects[secKey(s)]) : null;
+      if (!r) { if (el) el.hidden = true; continue; }
+      if (!el) { el = h('div', { class: 'bd-sec-chg', 'aria-hidden': 'true' }, h('b', {}, `Changed · ${s.title || s.id}`)); x.el.append(el); x.chgEls.set(s.id, el); }
+      el.hidden = false; el.classList.toggle('in', r.y * B.k < 24);
+      Object.assign(el.style, { left: r.x + 'px', top: r.y + 'px', width: r.w + 'px', height: r.h + 'px' });
+    }
+  }
+  function paintSecChg() {
+    if (!B.twins.size) return;
+    for (const x of B.frames.values()) {
+      const t = B.twins.get(x.a.id); if (!t) continue;
+      const now = secsOf(x.a), was = secsOf(t.a), chg = new Set();
+      now.forEach((s, i) => {
+        const j = was.findIndex(o => o.id === s.id);
+        if (j < 0) chg.add(s.id);
+        else if (x.sigs && t.sigs && x.sigs.length === now.length && t.sigs.length === was.length ? x.sigs[i] !== t.sigs[j] : canon(was[j]) !== canon(s)) chg.add(s.id);
+      });
+      x.secChg = chg;
+      const on = B.twin ? chg : new Set();
+      if (x.li) for (const bt of x.li.parentElement.querySelectorAll('.bd-sec-l button[data-sec]')) bt.classList.toggle('chg', on.has(bt.dataset.sec));
+      outlineSecs(x, now, on); outlineSecs(t, was, on);
+      if (chg.size && !x.chg) {   // its JSON is the same, its page isn't
+        x.chg = 'mod'; x.el.classList.add('bd-chg', 'bd-chg-mod');
+        x.tag.replaceChildren(chgTag('mod')); if (x.liTag) x.liTag.replaceChildren(chgTag('mod'));
+      }
+    }
+  }
+  // side by side (the default) or the shown revision alone, kept per doc
+  function setTwin(on, remember) {
+    B.twin = !!on && B.twins.size > 0;
+    if (remember) store.set(TWIN_KEY, B.twin ? '1' : '0');
+    stage.classList.toggle('bd-twin', B.twin);
+    for (const t of B.twins.values()) { t.el.classList.toggle('off', !B.twin || !!B.variants); if (!B.twin) dropFrame(t); }
+    for (const x of B.frames.values()) if (x.rv) x.rv.hidden = !B.twin;
+    relayout(); relive(); fit(true);
+  }
 
   /* view: pan, zoom, fit, focus */
   let raf = 0, anim = 0, liveT = 0, zoomLbl = null;
@@ -5982,7 +6164,7 @@ function renderBoard(b) {
     };
     anim = requestAnimationFrame(step);
   }
-  const shownXs = () => [...B.frames.values(), ...B.ghosts.values()].filter(x => !x.el.classList.contains('off'));
+  const shownXs = () => [...B.frames.values(), ...B.ghosts.values(), ...B.twins.values()].filter(x => !x.el.classList.contains('off'));
   // the box of xs on the board: their screens with bezels, page bars and versions gutters (titles sit above, in screen
   // px: room().top)
   function boxOf(xs) {
@@ -5997,18 +6179,20 @@ function renderBoard(b) {
     const k = clamp(Math.min((W - 2 * m) / box.w, (H - top - bot) / box.h), BK_MIN, maxK);
     go(k, W / 2 - (box.x + box.w / 2) * k, top + (H - top - bot) / 2 - (box.y + box.h / 2) * k, animate);
   }
-  // a section of a page in Full page (r: its rect in the frame): the page's width and its versions gutter across the view
-  // (at most 100%), the section in the middle, or its top at the top when it is taller than the view
+  // a section of a page in Full page (r: its rect in the frame): the page's width (with its twin in compare) and its
+  // versions gutter across the view (at most 100%), the section in the middle, or its top at the top when it is taller
   function showSection(x, r) {
-    const { W, H, m, top, bot } = room(), w = x.p.w + gutOf(x.a), k = clamp((W - 2 * m) / w, BK_MIN, 1), y = x.p.y + r.y, avail = H - top - bot;
+    const t = twinOf(x.a), x0 = t ? t.p.x : x.p.x, w = x.p.x + x.p.w + gutOf(x.a) - x0;
+    const { W, H, m, top, bot } = room(), k = clamp((W - 2 * m) / w, BK_MIN, 1), y = x.p.y + r.y, avail = H - top - bot;
     select(x.a.id); B.touched = true;
-    go(k, W / 2 - (x.p.x + w / 2) * k, r.h * k <= avail ? top + avail / 2 - (y + r.h / 2) * k : top - y * k, true);
+    go(k, W / 2 - (x0 + w / 2) * k, r.h * k <= avail ? top + avail / 2 - (y + r.h / 2) * k : top - y * k, true);
   }
   const rqXs = () => B.variants ? [] : [...B.rqs.values()].map(el => ({ a: {}, p: el._box }));
   const fit = animate => showBox(boxOf([...shownXs(), ...rqXs()]), animate, 1);
   function focus(id, animate = true) {
     const x = B.frames.get(id) || B.ghosts.get(id); if (!x) return false;
-    showBox(boxOf([x]), animate, 2); select(id); B.touched = true;
+    const t = B.frames.has(id) ? twinOf(x.a) : null;
+    showBox(boxOf(t ? [x, t] : [x]), animate, 2); select(id); B.touched = true;
     return true;
   }
   // of xs, the one whose middle is nearest the middle of the view
@@ -6040,7 +6224,7 @@ function renderBoard(b) {
     tap: (e, at) => {
       const lg = at && at.closest && at.closest('.bd-lnk[data-link]');
       if (lg) { selectLink(lg.getAttribute('data-link')); return; }
-      const el = at && at.closest && at.closest('.bd-ab'), id = el ? el.dataset.ab || el.dataset.ghost : null, now = performance.now();
+      const el = at && at.closest && at.closest('.bd-ab'), id = el ? el.dataset.ab || el.dataset.ghost || el.dataset.twin : null, now = performance.now();
       selectLink(null);
       if (id && lastTap.id === id && now - lastTap.t < 320) { focus(id); lastTap = { t: 0, id: null }; }
       else { lastTap = { t: now, id }; select(id); }
@@ -6107,7 +6291,7 @@ function renderBoard(b) {
   // what the router avoids: every shown screen with its bezel, title bar and versions gutter
   function obstacles() {
     const out = {};
-    for (const x of [...B.frames.values(), ...B.ghosts.values()]) {
+    for (const x of [...B.frames.values(), ...B.ghosts.values(), ...B.twins.values()]) {
       if (x.el.classList.contains('off')) continue;
       const bz = BEZEL[devOf(x.a)] || 0, bar = devOf(x.a) === 'page' ? PAGE_BAR : 0;
       out[x.a.id] = { x: x.p.x - bz, y: x.p.y - bz - bar - TITLE_H, w: x.p.w + 2 * bz + gutOf(x.a), h: x.p.h + 2 * bz + bar + TITLE_H };
@@ -6276,6 +6460,11 @@ function renderBoard(b) {
     h('button', { type: 'button', role: 'radio', 'data-v': v, title: t, 'aria-label': l, onclick: () => setPageView(v) }, ic(i)))) : null;
   // a website: the selected page (else the one nearest the middle of the view) in a tab of its own, to try it for real
   const tabBtn = IS_SITE ? tbtn('link', 'Open page in a new tab', () => { const x = tabTarget(); if (x) openTab(x.a); }) : null;
+  // a website in compare: each page beside its other revision (Side by side, the default) or alone. It sits in the
+  // compare tray, with the other compare keys (B.twinSeg), not in this toolbar
+  const twinSeg = B.twinSeg = IS_SITE && BASE ? h('div', { class: 'bd-sg bd-twinsg', role: 'radiogroup', 'aria-label': 'Compare pages', hidden: true }, [
+    ['twin', 'columns', 'Side by side', `Each page beside its rev ${BASE.rev} version`], ['single', 'frame', 'Single', `Only rev ${VIEW.rev}`]].map(([v, i, l, t]) =>
+    h('button', { type: 'button', role: 'radio', 'data-v': v, title: t, onclick: () => setTwin(v === 'twin', true) }, ic(i), l))) : null;
   const tb = h('div', { class: 'bd-btb', role: 'toolbar', 'aria-label': 'Board' }, lpBtn, sep(),
     tbtn('fit', `Fit all ${SCREEN}s (0)`, () => fit(true)), tbtn('minus', 'Zoom out (−)', () => zoomBy(1 / 1.4)), zoomLbl, tbtn('plus', 'Zoom in (+)', () => zoomBy(1.4)),
     tbtn('target', `Focus the selected ${SCREEN} (F, or double-click it)`, () => focusSel()), sep(),
@@ -6298,6 +6487,10 @@ function renderBoard(b) {
     }
     if (viewSeg) viewSeg.querySelectorAll('button').forEach(bt => bt.setAttribute('aria-checked', String(bt.dataset.v === B.pageView)));
     if (tabBtn) tabBtn.disabled = !tabTarget();
+    if (twinSeg) {
+      twinSeg.hidden = !B.twins.size; if (twinSeg.nextElementSibling) twinSeg.nextElementSibling.hidden = !B.twins.size;   // and its groove
+      twinSeg.querySelectorAll('button').forEach(bt => bt.setAttribute('aria-checked', String((bt.dataset.v === 'twin') === B.twin)));
+    }
   }
   // the theme is the brief's pick (the reader's, else the recommendation): picking a pill re-skins every frame
   const themePick = () => { const x = ITEMS['brief/theme']; const id = x ? x.choice || x.it.recommend : null; return themeOf(id) ? id : B.theme || (themes[0] ? themes[0].id : null); };
@@ -6314,13 +6507,14 @@ function renderBoard(b) {
     if (on) {
       const g = variantGroup(B.sel); if (!g.length) { toast('Select a screen that has variants'); return; }
       B.variants = g[0].a.id; vp.classList.add('variants');
-      for (const x of [...B.frames.values(), ...B.ghosts.values()]) x.el.classList.toggle('off', !g.includes(x));
+      for (const x of [...B.frames.values(), ...B.ghosts.values(), ...B.twins.values()]) x.el.classList.toggle('off', !g.includes(x));
       let cx = g[0].p.x;
       for (const x of g) { x.home = x.p; x.p = { ...x.p, x: cx, y: g[0].p.y }; cx += x.p.w + AB_GAP; placeAb(x); }
       showBox(boxOf(g), true, 1);
     } else {
       B.variants = null; vp.classList.remove('variants');
       for (const x of [...B.frames.values(), ...B.ghosts.values()]) { if (x.home) { x.p = x.home; x.home = null; placeAb(x); } x.el.classList.remove('off'); }
+      for (const t of B.twins.values()) t.el.classList.toggle('off', !B.twin);
       fit(true);
     }
     relink(); paintTools(); MARKUP.relayout();
@@ -6377,7 +6571,8 @@ function renderBoard(b) {
     function showI(kind) {
       if (rec) B.live.delete(rec);
       const a = order[i]; rec = { a, role: 'pres', fr: null };
-      dev = deviceBox(a, frameEl(rec, OLD ? VIEW.rev : null), SERVED || SCREENS ? '' : `Open this page through serve.py to see the ${what}.`, deviceSize(a));
+      const srev = OLD ? VIEW.rev : null;
+      dev = deviceBox(a, frameEl(rec, srev), isLive(a) ? liveWhy(a, srev) : SERVED || SCREENS ? '' : `Open this page through serve.py to see the ${what}.`, deviceSize(a), isLive(a) ? srev : null);
       box.replaceChildren(dev.sz);
       if (slides) {
         notes.innerHTML = md(typeof a.notes === 'string' ? a.notes : '');
@@ -6427,7 +6622,8 @@ function renderBoard(b) {
       const lb = h('div', { class: 'lb' }, h('b', {}, revName(s.r)), s.r === VIEW ? ' · shown' : '');
       if (!s.a) return { el: h('div', { class: 'bd-cmpv-p none' }, lb, h('div', { class: 'msg' }, s.r === BASE ? `Not in ${revName(BASE)}: new in ${VIEW.rev}` : `Removed in ${revName(VIEW)}`)) };
       const rec = { a: s.a, role: 'cmp', fr: null };
-      const dev = deviceBox(s.a, frameEl(rec, s.r === CUR ? null : s.r.rev), SCREENS ? 'An export shows the current revision\'s screens only.' : 'Open this page through serve.py to compare screens.', deviceSize(s.a));
+      const srev = s.r === CUR ? null : s.r.rev;
+      const dev = deviceBox(s.a, frameEl(rec, srev), isLive(s.a) ? liveWhy(s.a, srev) : SCREENS ? 'An export shows the current revision\'s screens only.' : 'Open this page through serve.py to compare screens.', deviceSize(s.a), isLive(s.a) ? srev : null);
       return { el: h('div', { class: 'bd-cmpv-p' }, lb, dev.sz), dev, rec };
     };
     const P = [pane(L), pane(R)], name = (R.a || L.a || { id }).title || id;
@@ -6601,7 +6797,7 @@ function renderBoard(b) {
     const noPos = a => ({ ...a, x: undefined, y: undefined });
     const mark = (x, kind, word) => {
       const tg = () => word ? h('span', { class: 'bd-chg-tag ' + kind }, word) : chgTag(kind);
-      x.chg = word ? word.toLowerCase() : kind; x.tag.replaceChildren(tg()); if (x.liTag) x.liTag.replaceChildren(tg()); x.cmpBtn.hidden = !!word;
+      x.chg = word ? word.toLowerCase() : kind; x.tag.replaceChildren(tg()); if (x.liTag) x.liTag.replaceChildren(tg()); x.cmpBtn.hidden = !!word || IS_SITE;   // a website compares side by side
       markChg(x.el, kind, x.a.title || x.a.id);
       CHG[CHG.length - 1].show = () => { focus(x.a.id); if (cmpv && !word) openCompare(x.a.id); };
     };
@@ -6632,6 +6828,16 @@ function renderBoard(b) {
     };
     for (const [k, l] of now) { const p = before.get(k); if (!p) markLink(k, 'add', l); else if (p.to !== l.to || p.kind !== l.kind || p.label !== l.label) markLink(k, 'mod', l); }
     for (const l of GONE) markLink(l.key, 'del', l);
+    // a website: each page that both revisions have gets its twin, BASE's page, to its left (setTwin lays them out)
+    if (IS_SITE) for (const x of B.frames.values()) {
+      const a = was.get(x.a.id);
+      if (!a || devOf(a) !== 'page' || devOf(x.a) !== 'page') continue;
+      const t = makeAb(a, x.p, false, { twin: true, rev: BASE === CUR ? null : BASE.rev, label: revName(BASE) });
+      t.el.classList.add('off'); B.twins.set(a.id, t); lsvg.before(t.el);
+      x.rv = h('span', { class: 'rv', hidden: true }, revName(VIEW)); x.t.insertBefore(x.rv, x.t.querySelector('.n'));
+    }
+    // laid out once the page's annotations exist (setTwin moves pins): this runs while the page is still being drawn
+    if (B.twins.size) requestAnimationFrame(() => setTwin(store.get(TWIN_KEY) !== '0'));
     paintReach(); paintTools();
   };
 
@@ -6657,7 +6863,10 @@ function renderBoard(b) {
     const x = B.frames.get(id); if (!x) return;
     if (fullOf(x)) { const r = x.rects[secKey(s)]; if (r) showSection(x, r); else { focus(id); x.pendingSec = s; } return; }
     focus(id);
-    if (x.fr && x.ready) post(x, { bd: 'reveal', sel: s.sel }); else x.pendingReveal = s.sel;
+    const t = twinOf(x.a), ts = t && secsOf(t.a).find(o => o.id === s.id);   // in compare, its twin scrolls there too
+    for (const [y, sel] of [[x, s.sel], ...(ts ? [[t, ts.sel]] : [])]) {
+      if (y.fr && y.ready) { y.syncAt = performance.now(); post(y, { bd: 'reveal', sel }); } else y.pendingReveal = sel;
+    }
   }
   B.start = () => {
     const blk = wrap.closest('.bp-block'), shell = $('.bd-shell');
@@ -6732,7 +6941,9 @@ function renderBoard(b) {
       if (o.tap && pres) pres.follow(String(o.tap));
       if (o.back && pres && pres.back) pres.back();
       if (o.compare) openCompare(String(o.compare)); else if (o.compare === false) closeCompare();
-      // a website: breakpoint (every page) or {<page id>: width}; section: [page id, section id] shows it; pageView: full | viewport
+      // a website: breakpoint (every page) or {<page id>: width}; section: [page id, section id] shows it; pageView: full | viewport;
+      // twin: in compare, each page beside its other revision (true) or alone (false)
+      if (typeof o.twin === 'boolean' && B.twins.size) setTwin(o.twin, true);
       if (Number.isFinite(o.breakpoint)) setAllBp(o.breakpoint);
       else if (o.breakpoint && typeof o.breakpoint === 'object') { for (const [id, w] of Object.entries(o.breakpoint)) setBp(id, w, true); bpChanged(); }
       if (IS_SITE && (o.pageView === 'full' || o.pageView === 'viewport')) setPageView(o.pageView);
@@ -6741,14 +6952,22 @@ function renderBoard(b) {
     const R = curReach();
     return { k: B.k, mode: B.mode, selected: B.sel, panel: B.lp, theme: B.theme, sketch: B.sketch, variants: B.variants, present: !!pres, compare: !!cmpv,
       presented: pres && pres.state ? pres.state() : null, flows: B.flows, selectedLink: B.selLink, pageView: IS_SITE ? B.pageView : null,
+      twin: B.twin, snapshots: JSON.parse(JSON.stringify(SNAPS)),
+      twins: [...B.twins.values()].map(t => ({ id: t.a.id, rev: BASE.rev, x: t.p.x, y: t.p.y, w: t.p.w, h: t.p.h, shown: !t.el.classList.contains('off'), ready: t.ready,
+        src: t.fr ? t.fr.getAttribute('src') : null, snapshot: t.fr && t.snap ? { rev: t.srev, w: t.snap.w } : null, label: t.t.querySelector('.rv').textContent,
+        sections: Object.fromEntries(secsOf(t.a).map(s => [s.id, t.rects[secKey(s)] || null])),
+        changed: [...(B.frames.get(t.a.id)?.secChg || [])].filter(id => t.chgEls?.get(id) && !t.chgEls.get(id).hidden) })),
       reach: R ? { screen: R.f, out: R.tg.size, in: R.src.size, targets: Object.fromEntries([...R.tg].map(([k, v]) => [k, [...v]])) } : null,
       links: LINKS.concat(GONE).map(l => ({ key: l.key, from: l.from, el: l.el, to: l.to, kind: l.kind, label: l.label, draft: l.draft || null, del: !!l.del, gone: GONE.includes(l),
         routed: gEls.has(l.key), change: gEls.has(l.key) ? ['add', 'mod', 'del'].find(c => gEls.get(l.key).g.classList.contains('bd-chg-' + c)) || null : null })),
       live: boardFrames().length, requested: [...B.rqs.values()].map(el => el.dataset.key),
       artboards: [...B.frames.values()].map(x => ({ id: x.a.id, x: x.p.x, y: x.p.y, w: x.p.w, h: x.p.h, live: !!x.fr, ready: x.ready, fallback: x.fallback, navigated: x.navs, change: x.chg,
         navs: x.navAt ? { ...x.navAt } : null, ...(devOf(x.a) === 'page' ? { page: { proxied: !!(x.fr && x.live), src: x.fr ? x.fr.getAttribute('src') : null,
+          snapshot: x.fr && x.snap ? { rev: x.srev, w: x.snap.w } : null, why: x.ph.hidden ? '' : x.ph.querySelector('.why').textContent,
+          badge: (x.bar && x.bar.querySelector('.live, .snap') || {}).textContent || null, label: x.rv && !x.rv.hidden ? x.rv.textContent : null,
           view: fullOf(x) ? 'full' : 'viewport', vh: viewSize(x.a)[1], frame: x.fr ? [+x.fr.width, +x.fr.height] : null, capped: !!x.capped,
           sections: Object.fromEntries(secsOf(x.a).map(s => [s.id, x.rects[secKey(s)] || null])),
+          changed: x.secChg ? [...x.secChg] : [],
           variants: Object.fromEntries(x.vars.map(v => [v.s.id, { shown: varShown(v.it), visible: !v.el.hidden }])) } } : {}) })) };
   };
   const wrap = h('div', { class: 'bd-bwrap' }, stage, tb);
@@ -7359,8 +7578,10 @@ if (REVS.length >= 1 && REVS[0].rev) {
       CHG.length ? [n.add > 0 && h('span', { class: 'k add' }, `${n.add} new`), n.mod > 0 && h('span', { class: 'k mod' }, `${n.mod} changed`), n.del > 0 && h('span', { class: 'k del' }, `${n.del} removed`)] : 'no differences'));
     const step = (icon, label, d, keys) => { const k = tipped(keyBtn('', icon, label, { disabled: !CHG.length }, () => gotoChg(d)), keys); k._tip = label; return k; };
     const doneUrl = revUrl(VIEW, null);
+    // a website's pages: Side by side or Single, beside the change keys
+    const twinKeys = BOARD && BOARD.twinSeg ? [BOARD.twinSeg, groove()] : [];
     tray('Compare revisions', h('span', { class: 'lbl' }, ic('split'), h('b', {}, `${revName(BASE)} → ${VIEW.rev}`)),
-      step('up', 'Previous change', -1, ['K', '↑']), revPos, step('down', 'Next change', 1, ['J', '↓']), groove(),
+      step('up', 'Previous change', -1, ['K', '↑']), revPos, step('down', 'Next change', 1, ['J', '↓']), groove(), twinKeys,
       textKey('go', null, 'Done', 'Leave compare view', ['Esc'], doneUrl));
     // Esc leaves; j/↓ and k/↑ step, unless typing, on a focused drawing, or a drawer or sheet is open (Esc closes that first)
     document.addEventListener('keydown', e => {

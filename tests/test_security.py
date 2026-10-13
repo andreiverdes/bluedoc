@@ -132,16 +132,19 @@ GRANTS = ("allow-same-origin", "allow-top-navigation", "allow-popups", "allow-fo
 class ScreenSandbox(unittest.TestCase):
     """Design screens are LLM HTML: the page frames them with sandbox="allow-scripts" only, and the screen route
     repeats the sandbox in its CSP, so a screen opened on its own runs with the same opaque origin. A website's live
-    page alone keeps allow-same-origin: it loads from its proxy's own port, never this page's origin."""
+    page alone keeps allow-same-origin, and only while it loads from its proxy's own port, never this page's origin: an
+    earlier revision's snapshot of it comes from this server's screen route, sandboxed as a screen."""
 
     def test_every_screen_frame_is_sandboxed_with_scripts_only(self) -> None:
         t = template_text()
         self.assertEqual(dict(re.findall(r"\b(SCREEN_SANDBOX|LIVE_SANDBOX) = '([^']*)'", t)),
                          {"SCREEN_SANDBOX": "allow-scripts", "LIVE_SANDBOX": "allow-scripts allow-same-origin"})
-        self.assertEqual(re.findall(r"sandbox['\"]?\s*[=:,]\s*([^,}]+)", t), ["live ? LIVE_SANDBOX : SCREEN_SANDBOX"],
+        self.assertEqual(re.findall(r"sandbox['\"]?\s*[=:,]\s*([^,}]+)", t), ["proxied ? LIVE_SANDBOX : SCREEN_SANDBOX"],
                          "a frame the template sandboxes some other way")
-        self.assertIn("const live = isLive(x.a);", t)
-        self.assertIn("const attrs = live ? (liveUrl(x.a) ? { src: liveUrl(x.a)", t, "a live frame loads something other than its proxy")
+        self.assertIn("const live = isLive(x.a), page = devOf(x.a) === 'page', snap = live && rev != null && SERVED ? snapOf(rev, x.a.id, viewSize(x.a)[0]) : null;", t)
+        self.assertIn("const attrs = live ? (rev != null ? (snap ? { src: snapUrl(x.a, rev, snap) } : null) : liveUrl(x.a) ? { src: liveUrl(x.a)", t,
+                      "a live frame loads something other than its proxy or its snapshot")
+        self.assertIn("proxied = live && !snap;", t, "a snapshot (this server's origin) framed with allow-same-origin")
 
     def test_the_screen_route_sends_the_sandbox_csp(self) -> None:
         tmp = TempHome()

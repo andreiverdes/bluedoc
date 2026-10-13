@@ -42,6 +42,10 @@ and the screens no board.entry reaches. An `icons` artboard has SVG layers in <s
 instead (fg.svg required), checked for a square viewBox, the safe circle and what a canvas can't draw.
 A website page with `url` has no screen file: serve.py proxies that loopback dev server (any other host is
 an error). Its `source` and its sections' `source` hints are checked against board.root when it is set.
+A live page shows the site as it is now, so an earlier revision shows its snapshot instead: a static copy of the
+page per revision and width in <name>.snapshots/rev-<rev>/<page>@<width>.html, which serve.py records when the
+reader sends feedback (or a live page first loads at a rev without one) and `serve.py snapshot` on demand. A
+patch that bumps the rev warns when the revision it replaces has none.
 
 Diff refs: a diff block with base and head and no files is expanded from git (cache file
 <name>.diffcache.json, then `git diff`, then `gh pr diff`) by scripts/diffref.py when validating,
@@ -2160,6 +2164,61 @@ def history_path(doc_path: Path) -> Path:
     return doc_path.with_name(name + ".history.json")
 
 
+# A website's live pages, recorded per revision (serve.py writes them: POST /__bluedoc/snapshot, `serve.py snapshot`):
+# <name>.snapshots/rev-<rev>/<page id>@<width>.html beside the doc, each a whole document whose head carries
+# <meta name="bluedoc-snapshot" content="external=<images still on the dev server>; at=<UTC time>">.
+SNAP_REV = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,39}$")
+SNAP_FILE = re.compile(r"^([a-z0-9][a-z0-9-]*)@(\d{3,4})\.html$")
+SNAP_META = re.compile(r'<meta name="bluedoc-snapshot" content="external=(\d+)[^"]*">')
+
+
+def snapshots_dir(doc_path: Path) -> Path:
+    """site.bluedoc.json -> site.bluedoc.snapshots/ beside it."""
+    name = doc_path.name[:-5] if doc_path.name.endswith(".json") else doc_path.name
+    return doc_path.with_name(name + ".snapshots")
+
+
+def snapshot_path(doc_path: Path, rev: str, page: str, width: int) -> Path | None:
+    """Where page's snapshot at width for revision rev goes; None for a rev, page id or width it can't be."""
+    if not (isinstance(rev, str) and SNAP_REV.match(rev) and isinstance(page, str) and ID_RE.match(page)
+            and isinstance(width, int) and not isinstance(width, bool) and 240 <= width <= 3840):
+        return None
+    return snapshots_dir(Path(doc_path)) / f"rev-{rev}" / f"{page}@{width}.html"
+
+
+def snapshot_index(doc_path: Path) -> dict[str, dict[str, dict[str, int]]]:
+    """{rev: {page id: {width: images it left on the dev server}}} of the snapshots beside the doc; {} without any."""
+    out: dict[str, dict[str, dict[str, int]]] = {}
+    base = snapshots_dir(Path(doc_path))
+    try:
+        revs = sorted(p for p in base.iterdir() if p.is_dir() and not p.is_symlink() and p.name.startswith("rev-"))
+    except OSError:
+        return out
+    for d in revs:
+        rev = d.name[4:]
+        if not SNAP_REV.match(rev):
+            continue
+        for f in sorted(d.iterdir()):
+            m = SNAP_FILE.match(f.name)
+            if not m or not f.is_file() or f.is_symlink() or not 240 <= int(m[2]) <= 3840:
+                continue
+            try:
+                with f.open("rb") as fh:
+                    head = fh.read(4096).decode("utf-8", "replace")
+            except OSError:
+                continue
+            ext = SNAP_META.search(head)
+            out.setdefault(rev, {}).setdefault(m[1], {})[str(int(m[2]))] = int(ext[1]) if ext else 0
+    return out
+
+
+def live_pages(doc: dict) -> list[str]:
+    """The ids of a website doc's live pages (`url`); [] on any other doc."""
+    if doc_type((doc or {}).get("meta") or {}) != "website":
+        return []
+    return [a["id"] for a in _artboards(doc) if is_live(a)]
+
+
 def _canon(x) -> str:
     return json.dumps(x, ensure_ascii=False, separators=(",", ":"))
 
@@ -2413,14 +2472,16 @@ BOARD_GEO_SLOT = "/*__BOARD_GEO__*/"
 
 def build(doc: dict, template: str, history: dict | None = None, media_base: Path | None = None,
           diff_path: Path | None = None, problems: list[str] | None = None, state: dict | None = None,
-          screens: dict[str, str] | None = None, live: dict[str, int] | None = None) -> str:
+          screens: dict[str, str] | None = None, live: dict[str, int] | None = None,
+          snaps: dict[str, dict[str, dict[str, int]]] | None = None) -> str:
     """The page. media_base (the doc's folder) makes it standalone: media files become data: URIs.
     diff_path (the doc's JSON file) fills its diff refs, in the doc and in earlier revisions, and gives the current
     revision its links from the screen files; their problems go into problems, or to stderr when it is None. state is
     the reader state serve.py seeds the page with ({version, state}); None (an -o file) leaves the page on
     localStorage. screens ({artboard id: a whole screen document}, from standalone_screens) makes a design page draw
     its frames from srcdoc; None (serve.py) loads them from the screen route. live ({dev server origin: proxy port},
-    serve.py's) is where a website page frames its live pages; None shows them as a placeholder. A page with a board
+    serve.py's) is where a website page frames its live pages; None shows them as a placeholder. snaps (serve.py's
+    snapshot_index) lists the live pages' snapshots, which earlier revisions show; None: none. A page with a board
     or a canvas (in any revision it carries) gets assets/board-geo.js, the connector router, at the template's
     BOARD_GEO_SLOT; other pages get nothing there."""
     title = (doc.get("title") or "bluedoc").replace("&", "&amp;").replace("<", "&lt;")
@@ -2454,7 +2515,8 @@ def build(doc: dict, template: str, history: dict | None = None, media_base: Pat
     fill = {"__BLUEDOC_TITLE__": title, "__BLUEDOC_HISTORY__": _script_json(hist) if hist else "null",
             "__BLUEDOC_STATE__": _script_json(state) if state is not None else "null", "__BLUEDOC_DOC__": _script_json(doc),
             "__BLUEDOC_SCREENS__": _script_json(screens) if screens is not None else "null",
-            "__BLUEDOC_LIVE__": _script_json(live) if live is not None else "null", BOARD_GEO_SLOT: geo}
+            "__BLUEDOC_LIVE__": _script_json(live) if live is not None else "null",
+            "__BLUEDOC_SNAPS__": _script_json(snaps) if snaps is not None else "null", BOARD_GEO_SLOT: geo}
     return re.sub("|".join(map(re.escape, fill)), lambda m: fill[m.group(0)], template)
 
 
@@ -3407,6 +3469,15 @@ def cmd_patch(argv: list[str]) -> int:
     for line in rep.warnings:
         if line not in old:
             print(line, file=sys.stderr)
+    # a live page shows the site as it is now: the revision this patch replaces keeps how it looked only in a snapshot
+    if rev0 and rev0 != rev1:
+        shot = snapshot_index(a.doc).get(rev0, {})
+        missing = [p for p in live_pages(before) if p not in shot]
+        if missing:
+            print(f"WARN  rev {rev0} has no snapshot of live page{'s' if len(missing) > 1 else ''} {', '.join(missing)}: "
+                  f"the doc shows a placeholder for it from now on. Before editing the site for the next change, record "
+                  f"the current rev: serve.py snapshot {shlex.quote(str(a.doc))} (sending feedback from the page records "
+                  f"the pages it shows)", file=sys.stderr)
     print(f"rev {rev0 or '-'} → {rev1}; {a.key} {'deleted' if a.delete else 'added' if t.kind == 'frame' else 'updated'}")
     if screen:
         print(f"screen: {screen}" + (f"  {t.selector}" if t.selector else "")

@@ -17,6 +17,9 @@ Usage:
                                                    copy a framework for design boards (`store: NAME`) into
                                                    ~/.bluedoc/frameworks/NAME with a manifest (sizes, sha256);
                                                    NAME alone fetches a pinned preset: daisyui
+  serve.py snapshot DOC.json [--rev R] [--url URL] [--page ID] [--width PX]
+                                                   record a website doc's live pages as revision R's snapshots
+                                                   (default: the current rev; headless Chrome, BLUEDOC_CHROME)
   serve.py run [--port N]                          run in the foreground
 
 One server per user, on 127.0.0.1 (default port 8740, env BLUEDOC_PORT). State lives in
@@ -54,7 +57,9 @@ URLs: /                      home page: every doc under the registered folders, 
                              its framework, theme tokens and the inspector. Its own CSP: no network, `sandbox allow-scripts`,
                              framable by this server's pages only (no X-Frame-Options). An `icons` artboard's
                              screen is the icon sheet (kits/icon-sheet.html and .css) built from its layers in
-                             <stem>.design/<artboard>/ (or rev B's, from the history), each layer a data: URI
+                             <stem>.design/<artboard>/ (or rev B's, from the history), each layer a data: URI. A
+                             website's live page at ?rev=B&w=<px> is its snapshot of rev B (the nearest width it has),
+                             with the inspector and the same CSP, its images from the dev server allowed
       /__bluedoc/kit/<file>  the plain kit and inspector (assets/kits)
       /__bluedoc/fw/<name>/<path>   a framework add-framework copied
       /<root>/<path>.<css|js|mjs|font>   a project file a design board declares (frameworks[].files), and the
@@ -63,20 +68,31 @@ URLs: /                      home page: every doc under the registered folders, 
                              draws, into <stem>.icons/<artboard>/ beside the doc. Only the export's own file names
                              (ios/AppIcon.appiconset/…, android/res/mipmap-*/…, play/icon-512.png), PNGs of their
                              exact size under 4 MB, Contents.json and the adaptive-icon XML; no link on the way.
+      POST /__bluedoc/snapshot  {path, rev, page, w, html, external}: a live page as the reader sees it, as revision
+                             rev's snapshot at w px (save_snapshot): rev must be the doc's current meta.rev, html at
+                             most 8 MB; stored scriptless in <name>.snapshots/rev-<rev>/<page>@<w>.html beside the doc
 Live pages (website docs): a page whose `url` names a dev server on a loopback host (build.live_url_problem refuses
 any other) is shown through a proxy this server starts for that origin on first render: its own listener on
 127.0.0.1:<free port>, so the site's root-relative URLs, modules and HMR WebSocket work unchanged. It answers only
 requests whose Host is itself (DNS rebinding), forwards everything else to the dev server (Host and Origin rewritten
 to it, this server's key cookie dropped, WebSocket upgrades tunnelled), and into each HTML response injects
-<script src="/__bluedoc/inspector.js" data-parents="<this server's origins>"> (kits/inspector.js, served by the
-proxy) and a style hiding dev toolbars (astro-dev-toolbar, nextjs-portal). Its responses lose X-Frame-Options and
-any frame-ancestors, and gain frame-ancestors for this server's origins. The page frames it with `sandbox
-allow-scripts allow-same-origin`: the proxy's origin (another port) is not this server's, so the site keeps its
-storage and modules and reaches nothing of bluedoc's. A doc page names its proxies in its bp-live element ({dev
-server origin: proxy port}), and its CSP's frame-src allows exactly those. A dev server that isn't up answers 502.
+<script src="/__bluedoc/inspector.js" data-parents="<this server's origins>" data-origin="<the dev server>">
+(kits/inspector.js, served by the proxy) and a style hiding dev toolbars (astro-dev-toolbar, nextjs-portal). Its
+responses lose X-Frame-Options and any frame-ancestors, and gain frame-ancestors for this server's origins. The page
+frames it with `sandbox allow-scripts allow-same-origin`: the proxy's origin (another port) is not this server's, so
+the site keeps its storage and modules and reaches nothing of bluedoc's. A doc page names its proxies in its bp-live
+element ({dev server origin: proxy port}), and its CSP's frame-src allows exactly those. A dev server that isn't up
+answers 502.
 The proxy also pins viewport heights for the page's Full page view (pin_viewport_units): in HTML (<style> and style
 attributes), CSS and a dev server's CSS-as-JS modules, N vh (svh, lvh, dvh, vb) becomes calc(N * var(--bd-vh, 1vh)),
 which is the unit itself until the inspector sets --bd-vh.
+Snapshots: a live page shows the site as it is now, so the page shows an earlier revision's live page from its
+snapshot. The inspector serializes the page (kits/inspector.js snapshot(): no scripts, stylesheets inlined as text,
+images and the fonts the page loaded as data: URIs up to 1 MB each and 4.5 MB in all, larger ones left on the dev
+server); the page posts it for its current revision when the reader sends answers, changes or an approval, and when a
+live page in Full page first settles at a width that revision has none of. `snapshot` takes the same through
+headless Chrome and a proxy of its own, also for an earlier revision that has none (e.g. from a checkout of that
+revision on another port, --url). An earlier revision's snapshot is never replaced.
 Rendering validates the doc (errors show as a page), shows its meta.rev as the latest revision of the history file
 without writing it (build.py records revisions), and fills each `diff` block that references a git range
 (diffref.py: its cache, local git, then `gh pr diff`), so the page always shows the current JSON.
@@ -805,7 +821,8 @@ def _render(p: Path) -> tuple[int, str]:
     state = page_state(p)
     return 200, build.build(doc, build.TEMPLATE.read_text(encoding="utf-8"), history, diff_path=p, problems=[],
                             state=state and {**state, "docHash": shown, "approval": saved_approval(p)},
-                            live=LIVE.for_doc(doc))
+                            live=LIVE.for_doc(doc),
+                            snaps=build.snapshot_index(p) if build.doc_type(doc.get("meta") or {}) == "website" else None)
 
 
 # ---------- design screens ----------
@@ -826,13 +843,14 @@ TAILWIND_KITS = ("heroui", "tailwind")
 MOTION_VARS = {"fast": "--dur-fast", "base": "--dur-base", "slow": "--dur-slow", "ease": "--ease"}
 
 
-def screen_csp(host: str) -> str:
+def screen_csp(host: str, img_from: tuple[str, ...] = ()) -> str:
     """A screen's Content-Security-Policy: no network, no forms, framed only by this server's pages, and sandboxed
     even when opened on its own. The explicit origin backs 'self', which browsers read differently in an
-    opaque-origin document; host is one guard() accepted."""
-    o = f"http://{host}"
+    opaque-origin document; host is one guard() accepted. img_from: a live page snapshot's dev server, which keeps the
+    images and fonts too large to inline."""
+    o, ext = f"http://{host}", "".join(f" {x}" for x in img_from)
     return (f"default-src 'none'; script-src 'self' {o} 'unsafe-inline'; style-src 'self' {o} 'unsafe-inline'; "
-            f"img-src 'self' {o} data: blob:; font-src 'self' {o} data:; connect-src 'none'; form-action 'none'; "
+            f"img-src 'self' {o} data: blob:{ext}; font-src 'self' {o} data:{ext}; connect-src 'none'; form-action 'none'; "
             f"base-uri 'none'; frame-ancestors 'self' {o}; sandbox allow-scripts")
 
 
@@ -1141,9 +1159,10 @@ def screen_for_url(path: str, rev: str | None) -> tuple[Path, dict, str, str] | 
 HOP_HEADERS = {"connection", "keep-alive", "proxy-authenticate", "proxy-authorization", "te", "trailer",
                "transfer-encoding", "upgrade", "content-length", "host", "accept-encoding"}
 LIVE_INSPECTOR = "/__bluedoc/inspector.js"   # on a proxy's origin: kits/inspector.js, which it injects into each page
-# what the proxy injects after <head>: the inspector (told which origins may hear it) and a style hiding framework dev
-# toolbars, which aren't the page the reader judges
-LIVE_INJECT = ('<script src="' + LIVE_INSPECTOR + '" data-parents="{parents}"></script>'
+# what the proxy injects after <head>: the inspector (told which origins may hear it, and the dev server's origin, which
+# a snapshot's images left on the dev server load from) and a style hiding framework dev toolbars, which aren't the page
+# the reader judges
+LIVE_INJECT = ('<script src="' + LIVE_INSPECTOR + '" data-parents="{parents}" data-origin="{origin}"></script>'
                '<style id="bd-live">astro-dev-toolbar, nextjs-portal {{ display: none !important; }}</style>')
 HEAD_TAGS = (re.compile(rb"<head\b[^>]*>", re.I), re.compile(rb"<html\b[^>]*>", re.I))   # inject after the first found
 
@@ -1152,8 +1171,9 @@ HEAD_TAGS = (re.compile(rb"<head\b[^>]*>", re.I), re.compile(rb"<html\b[^>]*>", 
 # a multiple of --bd-vh, which the inspector sets to the design viewport's height / 100 in Full page and leaves unset in
 # Viewport, where the fallback is the unit itself (never rewritten again: the lookbehinds, so pinning is idempotent).
 # kits/inspector.js applies the same rewrite to what the proxy never sees (a screen's compiled Tailwind, styles set by
-# script); keep the two alike.
-VIEWPORT_UNIT = re.compile(r"(?<!--bd-vh)(?<!--bd-vh,)(^|[^\w.-])(-?)(\d*\.?\d+(?:e[+-]?\d+)?)[sld]?(vh|vb|vmin|vmax)\b(?![^{};]*\{)", re.I)
+# script); keep the two alike. A number right after '/' or '+' is never a unit: that is base64 (a data: URI's font or
+# image, which a snapshot inlines), where "/5vh+" would otherwise match.
+VIEWPORT_UNIT = re.compile(r"(?<!--bd-vh)(?<!--bd-vh,)(^|[^\w./+-])(-?)(\d*\.?\d+(?:e[+-]?\d+)?)[sld]?(vh|vb|vmin|vmax)\b(?![^{};]*\{)", re.I)
 STYLE_ELEMENT = re.compile(r"(<style\b[^>]*>)(.*?)(</style\s*>)", re.I | re.S)
 STYLE_ATTR = re.compile(r"""(\sstyle\s*=\s*)("[^"]*"|'[^']*')""", re.I)
 # a dev server's CSS served as a JS module (Vite: /src/x.css, an Astro component's ?astro&type=style&lang.css)
@@ -1233,7 +1253,7 @@ def make_live_handler(scheme: str, host: str, port: int, page_port: int):
     """The handler of one dev server's proxy (see Live pages in this module's docstring)."""
     target = origin_key(scheme, host, port)
     parents = f"http://127.0.0.1:{page_port} http://localhost:{page_port}"
-    inject = LIVE_INJECT.format(parents=parents).encode()
+    inject = LIVE_INJECT.format(parents=parents, origin=esc(target)).encode()
     ancestors = f"frame-ancestors {parents}"
 
     class P(BaseHTTPRequestHandler):
@@ -1390,6 +1410,374 @@ def make_live_handler(scheme: str, host: str, port: int, page_port: int):
             up.close()
 
     return P
+
+
+# ---------- website snapshots: a live page as an earlier revision showed it ----------
+
+SNAPSHOT_MAX = 8 * 1024 * 1024   # a snapshot's HTML with its inlined images and fonts (the inspector inlines up to 4.5 MB)
+SNAPSHOT_BODY = SNAPSHOT_MAX * 5 // 4 + 65536   # the POST's JSON: that HTML escaped, and the rest
+# what a stored snapshot never holds, whoever posted it (the inspector drops them already), and our own meta tag
+SNAP_STRIP = re.compile(r'(?is)<script\b.*?</script\s*>|<script\b[^>]*>|<base\b[^>]*>|<meta\b[^>]*\bhttp-equiv\b[^>]*>'
+                        r'|<meta name="bluedoc-snapshot"[^>]*>')
+HEAD_TAG, HTML_TAG = re.compile(r"(?i)<head\b[^>]*>"), re.compile(r"(?i)<html\b[^>]*>")
+
+
+def after_head(html: str, tag: str) -> str:
+    """html with tag right after its <head> (else <html>, else first)."""
+    m = HEAD_TAG.search(html) or HTML_TAG.search(html)
+    return html[:m.end()] + tag + html[m.end():] if m else tag + html
+
+
+# a page's design viewport height at a width: board.viewport {"<width>": height}, else template.html's BP_H, else a
+# ratio by device class (template.html pageDims: keep the two alike)
+BP_H = {1920: 1080, 1440: 900, 1280: 800, 1024: 768, 768: 1024, 390: 844, 375: 812, 360: 780}
+DEVICE_PAGE_W = 1440   # a page's default width (template.html DEVICES.page)
+
+
+def design_viewport(w: int, vp) -> int:
+    v = vp.get(str(w)) if isinstance(vp, dict) else None
+    if isinstance(v, int) and not isinstance(v, bool) and 240 <= v <= 3840:
+        return v
+    return BP_H.get(w) or (round(w * 0.625) if w >= 1024 else round(w * 4 / 3) if w >= 600 else round(w * 2.164))
+
+
+def doc_at(doc_path: Path, doc: dict, rev: str) -> dict | None:
+    """The doc as of revision rev: doc itself when rev is its meta.rev, else the history's entry; None when unknown."""
+    if rev == str((doc.get("meta") or {}).get("rev") or ""):
+        return doc
+    try:
+        h = build.load_history(build.history_path(doc_path))
+        entry = next((e for e in h["revs"] if isinstance(e, dict) and e.get("rev") == rev), None)
+        return build.restore(h, entry) if entry else None
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+
+
+def live_page(doc: dict | None, page) -> dict | None:
+    """The website doc's live page (an artboard with `url`) by id, or None."""
+    if not isinstance(doc, dict) or build.doc_type(doc.get("meta") or {}) != "website":
+        return None
+    return next((a for a in build._artboards(doc) if a["id"] == page and build.is_live(a)), None)
+
+
+def snapshot_html(html: str, external: int) -> str:
+    """A snapshot as it is stored: SNAP_STRIP dropped, then its meta tag (the images left on the dev server, when it was
+    taken) first in <head>, which build.snapshot_index reads."""
+    html = SNAP_STRIP.sub("", html)
+    at = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    meta = f'<meta name="bluedoc-snapshot" content="external={external}; at={at}">'
+    return after_head(html, meta)
+
+
+def save_snapshot(doc_path: Path, rev, page, width, html, external, *, current_only: bool = True) -> tuple[int, dict]:
+    """(status, answer) of storing a live page's snapshot at build.snapshot_path (POST /__bluedoc/snapshot; `snapshot`).
+    rev is the doc's current meta.rev, whose snapshot it replaces; with current_only False (the CLI), also an earlier
+    revision of the history that has none at that width: an earlier revision's snapshot is never replaced. page must
+    be a live page of that revision, width 240..3840 px, html at most SNAPSHOT_MAX bytes (snapshot_html cleans it).
+    Written atomically; no link on the way."""
+    try:
+        doc = json.loads(doc_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as e:
+        return 500, {"error": f"cannot read the doc: {e}"}
+    if not isinstance(doc, dict) or build.doc_type(doc.get("meta") or {}) != "website":
+        return 404, {"error": "not a website doc"}
+    cur = str((doc.get("meta") or {}).get("rev") or "")
+    if not isinstance(rev, str) or not rev:
+        return 400, {"error": "rev: want the revision the page shows"}
+    if rev != cur and current_only:
+        return 409, {"error": f"rev {rev} is not the doc's current revision ({cur or 'none'}): an earlier revision keeps "
+                              "its snapshot", "reload": True}
+    if not live_page(doc_at(doc_path, doc, rev), page):
+        return 404, {"error": f"no live page {page!r} in rev {rev}"}
+    path = build.snapshot_path(doc_path, rev, page, width)
+    if path is None:
+        return 400, {"error": "width: want whole px, 240 to 3840"}
+    if rev != cur and path.exists():
+        return 409, {"error": f"rev {rev} has a snapshot of {page} at {width} px: an earlier revision's is never replaced"}
+    if not isinstance(html, str) or not html.strip():
+        return 400, {"error": "html: want the page's HTML"}
+    if len(html.encode("utf-8")) > SNAPSHOT_MAX:
+        return 413, {"error": f"the snapshot is over {SNAPSHOT_MAX // (1024 * 1024)} MB"}
+    if not (isinstance(external, int) and not isinstance(external, bool) and 0 <= external <= 100000):
+        return 400, {"error": "external: want the count of images left on the dev server"}
+    data = snapshot_html(html, external).encode("utf-8")
+    base = build.snapshots_dir(doc_path)
+    want = doc_path.parent.resolve() / base.name / path.parent.name
+    for p in (base, path.parent, path):
+        if p.is_symlink():
+            return 409, {"error": f"{p.name} is a link"}
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        if path.parent.resolve() != want:
+            return 409, {"error": f"a link on the way to {base.name}/{path.parent.name}"}
+        fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=".bd-", suffix=".tmp")
+        try:
+            with os.fdopen(fd, "wb") as f:
+                f.write(data)
+            os.chmod(tmp, 0o644)
+            os.replace(tmp, path)
+        finally:
+            Path(tmp).unlink(missing_ok=True)
+    except OSError as e:
+        return 500, {"error": f"cannot write the snapshot: {e}"}
+    return 200, {"ok": True, "file": f"{base.name}/{path.parent.name}/{path.name}", "bytes": len(data)}
+
+
+def screen_doc(m: re.Match) -> tuple[Path, dict] | None:
+    """(doc file, its JSON) a SCREEN_URL match names, under a registered folder; None otherwise."""
+    doc_path = next((d for d in (doc_for_url(m[1] + m[2] + s) for s in build.DOC_SUFFIXES) if d), None)
+    try:
+        doc = json.loads(doc_path.read_text(encoding="utf-8")) if doc_path else None
+    except (OSError, ValueError):
+        return None
+    return (doc_path, doc) if isinstance(doc, dict) else None
+
+
+def snapshot_for_url(path: str, rev: str | None, width: str | None) -> tuple[str, str | None] | None:
+    """(the snapshot's HTML, its dev server's origin) for a live page's screen URL at revision rev: the snapshot at
+    width (px), else the nearest width it has (the wider on a tie); None without one."""
+    m = SCREEN_URL.match(path)
+    found = screen_doc(m) if m and rev else None
+    if not found:
+        return None
+    doc_path, doc = found
+    a = live_page(doc_at(doc_path, doc, rev), m[3])
+    have = build.snapshot_index(doc_path).get(rev, {}).get(m[3]) if a else None
+    if not have:
+        return None
+    want = int(width) if (width or "").isdigit() else DEVICE_PAGE_W
+    w = min((int(k) for k in have), key=lambda k: (abs(k - want), -k))
+    f = build.snapshot_path(doc_path, rev, a["id"], w)
+    try:
+        html = f.read_text(encoding="utf-8") if f and not f.is_symlink() else None
+    except (OSError, UnicodeDecodeError):
+        html = None
+    o = live_origin(a["url"])
+    return (html, origin_key(*o) if o else None) if html is not None else None
+
+
+def snapshot_page(html: str) -> str:
+    """A stored snapshot as its frame loads it: viewport heights pinned (as the proxy does), the inspector after
+    <head>, naming elements from ids as on the live page."""
+    tag = f'<script src="/__bluedoc/kit/inspector.js?v={kit_version()}" data-ids="1"></script>'
+    return after_head(pin_html_units(html), tag)
+
+
+def find_chrome() -> str | None:
+    """Chrome or Chromium for `snapshot`: BLUEDOC_CHROME, else the usual places."""
+    if os.environ.get("BLUEDOC_CHROME"):
+        return os.environ["BLUEDOC_CHROME"]
+    for p in ("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", "/Applications/Chromium.app/Contents/MacOS/Chromium",
+              "google-chrome", "google-chrome-stable", "chromium", "chromium-browser"):
+        found = p if os.path.isfile(p) else shutil.which(p)
+        if found:
+            return found
+    return None
+
+
+class HeadlessChrome:
+    """Headless Chrome with a throwaway profile, driven over its DevTools WebSocket (a flat session per page)."""
+
+    def __init__(self, path: str) -> None:
+        self.profile = Path(tempfile.mkdtemp(prefix="bluedoc-chrome-"))
+        self.sock: socket.socket | None = None
+        self.buf, self.seq = bytearray(), 0
+        self.proc = subprocess.Popen([path, "--headless=new", f"--user-data-dir={self.profile}", "--remote-debugging-port=0",
+                                      "--no-first-run", "--no-default-browser-check", "about:blank"],
+                                     stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        try:
+            active, deadline = self.profile / "DevToolsActivePort", time.monotonic() + 30
+            while not (active.is_file() and len(active.read_text().split()) >= 2):
+                if self.proc.poll() is not None or time.monotonic() > deadline:
+                    raise RuntimeError("Chrome did not start")
+                time.sleep(0.05)
+            port, ws = active.read_text().split()[:2]
+            self.sock = socket.create_connection(("127.0.0.1", int(port)), timeout=120)
+            key = base64.b64encode(os.urandom(16)).decode()
+            self.sock.sendall(f"GET {ws} HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n"
+                              f"Sec-WebSocket-Key: {key}\r\nSec-WebSocket-Version: 13\r\n\r\n".encode())
+            while b"\r\n\r\n" not in self.buf:
+                self._fill()
+            end = self.buf.index(b"\r\n\r\n")
+            head = bytes(self.buf[:end])
+            del self.buf[:end + 4]
+            if b" 101 " not in head.split(b"\r\n")[0]:
+                raise RuntimeError("DevTools refused the WebSocket")
+        except BaseException:
+            self.close()
+            raise
+
+    def __enter__(self) -> "HeadlessChrome":
+        return self
+
+    def __exit__(self, *_) -> None:
+        self.close()
+
+    def close(self) -> None:
+        if self.sock:
+            self.sock.close()
+            self.sock = None
+        self.proc.terminate()
+        try:
+            self.proc.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            self.proc.kill()
+            self.proc.wait()
+        shutil.rmtree(self.profile, ignore_errors=True)
+
+    def _fill(self) -> None:
+        chunk = self.sock.recv(1 << 20)
+        if not chunk:
+            raise ConnectionError("DevTools closed the connection")
+        self.buf += chunk
+
+    def _take(self, n: int) -> bytes:
+        while len(self.buf) < n:
+            self._fill()
+        out = bytes(self.buf[:n])
+        del self.buf[:n]
+        return out
+
+    def _send(self, data: bytes, opcode: int = 1) -> None:
+        n, mask = len(data), os.urandom(4)   # a client masks every frame
+        size = bytes([0x80 | n]) if n < 126 else bytes([0xFE]) + n.to_bytes(2, "big") if n < 65536 else bytes([0xFF]) + n.to_bytes(8, "big")
+        masked = (int.from_bytes(data, "big") ^ int.from_bytes((mask * (n // 4 + 1))[:n], "big")).to_bytes(n, "big")
+        self.sock.sendall(bytes([0x80 | opcode]) + size + mask + masked)
+
+    def _message(self) -> dict:
+        parts = []
+        while True:
+            b0, b1 = self._take(2)
+            op, n = b0 & 0x0F, b1 & 0x7F
+            if n >= 126:
+                n = int.from_bytes(self._take(2 if n == 126 else 8), "big")
+            data = self._take(n)
+            if op == 8:
+                raise ConnectionError("DevTools closed the WebSocket")
+            if op == 9:
+                self._send(data, 10)
+            elif op in (0, 1, 2):
+                parts.append(data)
+                if b0 & 0x80:
+                    return json.loads(b"".join(parts))
+
+    def call(self, method: str, params: dict | None = None, session: str | None = None) -> dict:
+        self.seq += 1
+        self._send(json.dumps({"id": self.seq, "method": method, "params": params or {},
+                               **({"sessionId": session} if session else {})}).encode())
+        while True:
+            m = self._message()
+            if m.get("id") == self.seq:
+                if "error" in m:
+                    raise RuntimeError(f"{method}: {(m['error'] or {}).get('message')}")
+                return m.get("result", {})
+
+    def eval(self, session: str, expr: str):
+        r = self.call("Runtime.evaluate", {"expression": expr, "awaitPromise": True, "returnByValue": True}, session)
+        if "exceptionDetails" in r:
+            d = r["exceptionDetails"]
+            raise RuntimeError((d.get("exception") or {}).get("description") or d.get("text") or "script error")
+        return r["result"].get("value")
+
+    def capture(self, url: str, width: int, vh: int) -> tuple[str, int]:
+        """(HTML, images left on the dev server) of the live page at url (its proxy, which brings the inspector) as the
+        board's Full page shows it: width wide, viewport heights pinned to vh, the window grown to the page's height so
+        whatever loads or reveals on scroll has."""
+        target = self.call("Target.createTarget", {"url": "about:blank"})["targetId"]
+        s = self.call("Target.attachToTarget", {"targetId": target, "flatten": True})["sessionId"]
+        metrics = lambda h: {"width": width, "height": h, "deviceScaleFactor": 1, "mobile": False}  # noqa: E731
+        try:
+            self.call("Runtime.enable", None, s)
+            self.call("Page.enable", None, s)
+            self.call("Emulation.setDeviceMetricsOverride", metrics(vh), s)
+            self.call("Page.addScriptToEvaluateOnNewDocument", {"source": f"window.name = 'bd-page full {vh}';"}, s)
+            self.call("Page.navigate", {"url": url}, s)
+            deadline, loaded = time.monotonic() + 60, None
+            while not self.eval(s, "typeof window.__bluedocSnapshot === 'function' && document.readyState === 'complete'"):
+                if loaded is None and self.eval(s, "document.readyState === 'complete' && location.href !== 'about:blank'"):
+                    loaded = time.monotonic()
+                if time.monotonic() > deadline or (loaded and time.monotonic() - loaded > 5):
+                    raise RuntimeError(f"{url} has no inspector: is the dev server up?")
+                time.sleep(0.2)
+            self.eval(s, "document.fonts ? document.fonts.ready.then(() => true) : true")
+            for _ in range(3):   # lazy images and scroll reveals load as the window grows, which may grow the page
+                h = self.eval(s, "Math.max(document.documentElement.scrollHeight, document.body ? document.body.scrollHeight : 0)")
+                self.call("Emulation.setDeviceMetricsOverride", metrics(max(vh, min(int(h or 0), 30000))), s)
+                time.sleep(1)
+            got = self.eval(s, "window.__bluedocSnapshot()")
+        finally:
+            self.call("Target.closeTarget", {"targetId": target})
+        if not isinstance(got, dict) or not isinstance(got.get("html"), str):
+            raise RuntimeError("the inspector returned no snapshot")
+        return got["html"], int(got.get("external") or 0)
+
+
+def cmd_snapshot(doc_arg: Path, rev: str | None, url: str | None, only: list[str], widths: list[int]) -> int:
+    """`serve.py snapshot`: each live page of the doc's revision rev (default: current) at each width (default: the
+    board's breakpoints), read through a proxy of this process by headless Chrome, saved as that revision's snapshot
+    (save_snapshot with current_only False). url names another dev server to read the pages from."""
+    doc_path = doc_arg.resolve()
+    try:
+        doc = json.loads(doc_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as e:
+        print(f"cannot read {doc_arg}: {e}", file=sys.stderr)
+        return 2
+    if not isinstance(doc, dict) or build.doc_type(doc.get("meta") or {}) != "website":
+        print(f"{doc_arg}: not a website doc", file=sys.stderr)
+        return 2
+    cur = str((doc.get("meta") or {}).get("rev") or "")
+    rev = rev or cur
+    src = doc_at(doc_path, doc, rev) if rev else None
+    if src is None:
+        print(f"{doc_arg}: no rev {rev or '(meta.rev is unset)'} in the doc or its history", file=sys.stderr)
+        return 2
+    pages = [a for a in build._artboards(src) if build.is_live(a) and (not only or a["id"] in only)]
+    if not pages:
+        print(f"rev {rev} has no live page{' ' + ', '.join(only) if only else ''}", file=sys.stderr)
+        return 2
+    board = build.board_of(src) or {}
+    widths = widths or [w for w in board.get("breakpoints") or [] if isinstance(w, int) and 240 <= w <= 3840] or [1440, 768, 390]
+    over = None
+    if url:
+        why = build.live_url_problem(url)
+        if why:
+            print(f"--url: {why}", file=sys.stderr)
+            return 2
+        over = live_origin(url)
+    chrome = find_chrome()
+    if not chrome:
+        print("snapshot needs Chrome or Chromium: set BLUEDOC_CHROME to its path", file=sys.stderr)
+        return 1
+    with socket.socket() as sk:   # the proxies' parent origin: nothing listens there, nothing hears the inspector
+        sk.bind(("127.0.0.1", 0))
+        LIVE.page_port = sk.getsockname()[1]
+    failed = 0
+    with HeadlessChrome(chrome) as ch:
+        for a in pages:
+            o = over or live_origin(a["url"])
+            u = urlsplit(a["url"])
+            page_url = f"http://127.0.0.1:{LIVE.port(*o)}{u.path or '/'}{'?' + u.query if u.query else ''}"
+            for w in widths:
+                f = build.snapshot_path(doc_path, rev, a["id"], w)
+                if f is None or (rev != cur and f.exists()):
+                    print(f"{a['id']} @ {w} px: skipped ({'rev ' + rev + ' has one already' if f else 'not a width'})")
+                    continue
+                try:
+                    html, ext = ch.capture(page_url, w, design_viewport(w, board.get("viewport")))
+                except (RuntimeError, OSError, ValueError) as e:
+                    print(f"{a['id']} @ {w} px: {e}", file=sys.stderr)
+                    failed += 1
+                    continue
+                if over:   # what it left on the dev server loads from the page's own one, once that temporary one is gone
+                    html = html.replace(origin_key(*over) + "/", origin_key(*live_origin(a["url"])) + "/")
+                code, ans = save_snapshot(doc_path, rev, a["id"], w, html, ext, current_only=False)
+                if code != 200:
+                    print(f"{a['id']} @ {w} px: {ans.get('error')}", file=sys.stderr)
+                    failed += 1
+                    continue
+                print(f"{a['id']} @ {w} px: {ans['file']} ({ans['bytes'] // 1024} KB"
+                      + (f"; {ext} image{'s' if ext > 1 else ''} too large to keep, loaded from the dev server" if ext else "") + ")")
+    return 1 if failed else 0
 
 
 # ---------- app icons ----------
@@ -1764,13 +2152,20 @@ def make_handler(port: int, default_to: str):
             self.send(200, f.read_bytes(), vendor_type(f), "public, max-age=31536000, immutable" if q.get("v") else "no-cache", extra)
 
         def screen(self, path: str, q: dict) -> None:
-            """A design screen: its fragment wrapped in its kit, sandboxed by its CSP, framable by our pages only."""
+            """A design screen: its fragment wrapped in its kit, sandboxed by its CSP, framable by our pages only. A live
+            page's at an earlier revision: its snapshot (?w= its width), in the same frame."""
             found = screen_for_url(path, q.get("rev") or None)
+            host = self.headers.get("Host") or ""
             if not found:
+                snap = snapshot_for_url(path, q.get("rev") or None, q.get("w"))
+                if snap:
+                    html, origin = snap
+                    return self.send(200, snapshot_page(html), framed=True,
+                                     headers={"Content-Security-Policy": screen_csp(host, (origin,) if origin else ())})
                 return self.send(404, "<!doctype html><title>Not found</title><p>No screen at this address. <a href='/'>All docs</a></p>")
             doc_path, doc, aid, fragment = found
             html = wrap_screen(doc, doc_path, aid, fragment, theme=q.get("theme") or None)
-            return self.send(200, html, headers={"Content-Security-Policy": screen_csp(self.headers.get("Host") or "")}, framed=True)
+            return self.send(200, html, headers={"Content-Security-Policy": screen_csp(host)}, framed=True)
 
         def send_media(self, f: Path) -> None:
             # one byte range at most: enough for <video> seeking (Safari won't play video without it)
@@ -1984,9 +2379,17 @@ def make_handler(port: int, default_to: str):
             if not self.guard():
                 return
             path = urlsplit(self.path).path
-            data = self.body(ICON_MAX_BODY if path == "/__bluedoc/icons" else MAX_BODY)
+            data = self.body(ICON_MAX_BODY if path == "/__bluedoc/icons" else SNAPSHOT_BODY if path == "/__bluedoc/snapshot" else MAX_BODY)
             if data is None:
                 return
+            if path == "/__bluedoc/snapshot":
+                doc = doc_for_url(str(data.get("path") or ""))
+                if not doc:
+                    return self.json(404, {"error": "the page's doc is not under a registered folder"})
+                code, answer = save_snapshot(doc, data.get("rev"), data.get("page"), data.get("w"), data.get("html"), data.get("external", 0))
+                if code == 200:
+                    print(f"snapshot for {doc}: {answer['file']}", flush=True)
+                return self.json(code, answer)
             if path == "/__bluedoc/icons":
                 doc = doc_for_url(str(data.get("path") or ""))
                 if not doc:
@@ -2344,6 +2747,14 @@ def main() -> int:
                    help="a Tailwind source CSS file the frame compiles (repeatable; implies --tailwind)")
     p.add_argument("--tailwind", action="store_true", help="the copy holds Tailwind's browser build: compile classes in each screen")
     p.add_argument("--label", help="the name the notice and the board show")
+    p = sub.add_parser("snapshot", help="record a website doc's live pages as its revision's snapshots (headless Chrome)")
+    p.add_argument("doc", type=Path)
+    p.add_argument("--rev", help="the revision to record (default: the doc's meta.rev); an earlier one only where it has none")
+    p.add_argument("--url", help="read the pages from this dev server (scheme://host:port; each page keeps its path), "
+                                 "e.g. a checkout of that revision on another port")
+    p.add_argument("--page", action="append", default=[], metavar="ID", help="only this live page (repeatable)")
+    p.add_argument("--width", action="append", default=[], type=int, metavar="PX",
+                   help="only this width (repeatable; default: the board's breakpoints)")
     a = ap.parse_args()
 
     if a.cmd == "run":
@@ -2385,6 +2796,8 @@ def main() -> int:
             return 1
         print(f"{base()}/?key={call('/__bluedoc/unlock', {})[1]['token']}")
         return 0
+    if a.cmd == "snapshot":
+        return cmd_snapshot(a.doc, a.rev, a.url, a.page, a.width)
 
     doc = a.doc.resolve()
     if not doc.is_file() or not is_doc(doc):

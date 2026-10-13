@@ -37,7 +37,9 @@ python3 <skill>/scripts/build.py new website docs/site.bluedoc.json --title "…
 | `item:brief/<item>` | A pick: write the chosen version into the source. The reply's `Shown in:` line names the section and its source. |
 | `frame:page@<x>,<y>` | A requested new page: patch it with `--set id=… --set title=…`, then add `url` (a live route) or write its screen file. |
 
-A live page has no screen file to diff: after editing the source, record the change with `build.py patch <doc> artboard:<page> --change "…" --resolves <id>` so the reader sees a new rev. `?diff=` compares the doc's JSON and mockup files, never the site's code.
+A live page has no screen file to diff: after editing the source, record the change with `build.py patch <doc> artboard:<page> --change "…" --resolves <id>` so the reader sees a new rev.
+
+**Snapshots.** A live page always shows today's site, so each revision keeps a static snapshot of it in `<name>.bluedoc.snapshots/` (commit it with the doc). The page records one when the reader sends feedback or first views a revision. `?rev=` shows the snapshot, and `?diff=` puts the earlier page beside the current one with the changed sections outlined. If `patch` warns that the revision it replaces has no snapshot, run `serve.py snapshot <doc>` *before* editing the site for the next change. To back-fill an older revision, check it out on another port and run `serve.py snapshot <doc> --rev R --url http://localhost:<port>`.
 
 ## Approval loop
 
