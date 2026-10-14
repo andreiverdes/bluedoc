@@ -7,5 +7,7 @@
   "license": "MIT AND Apache-2.0 AND OFL-1.1",
   "author": "Andrei Verdeș",
   "repository": { "type": "git", "url": "git+https://github.com/andreiverdes/bluedoc.git" },
+  "homepage": "https://github.com/andreiverdes/bluedoc-src",
+  "bugs": "https://github.com/andreiverdes/bluedoc-src/issues",
   "pi": { "skills": ["./skills"] }
 }

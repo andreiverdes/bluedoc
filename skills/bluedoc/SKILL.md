@@ -54,6 +54,6 @@ The linter warns on filler, vague words, sentences over 32 words, titles over 90
 
 ## Never
 
-- Read or write HTML, `assets/` (template, home page, kits) or `examples/`; a design's own screen files (`<name>.design/*.html`) are the one exception. `build.py <doc> -o out.html` writes a file only when someone needs one to send.
+- Read or write HTML or `assets/` (template, home page, kits); a design's own screen files (`<name>.design/*.html`) are the one exception. `build.py <doc> -o out.html` writes a file only when someone needs one to send.
 - Read `references/schema.md` whole: grep it for a heading, e.g. `grep -n -A25 '^## Diff' <skill>/references/schema.md`. Its first lines list the headings.
 - Rename ids across revisions: they key the reader's ticks and the revision diff.
