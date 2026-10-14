@@ -6,8 +6,6 @@ An agent skill for engineering docs, plans, code reviews, UI designs, slide deck
 
 > **Beta.** bluedoc is in beta: the doc format and commands may still change between betas. It is tested on macOS; Linux and Windows are untested. Issues and feedback are welcome on GitHub.
 
-This is bluedoc's source repo (`andreiverdes/bluedoc-src`): code, docs, examples and tests. Releases are published to [andreiverdes/bluedoc](https://github.com/andreiverdes/bluedoc), a minimal repo with only what agents install; the install commands below use it.
-
 ## Doc types
 
 | Type | What it's for | Page | |
@@ -192,18 +190,9 @@ tests/                   the test suite (python3 -m unittest discover -s tests)
 .agents/plugins/         Codex marketplace
 plugin.json              Agent Plugins manifest (Codex, omp)
 package.json             pi package manifest
-release/                 release.sh and the release repo's README (plugin-README.md)
 ```
 
 The examples describe Acme Corp, a fictional company.
-
-## Release
-
-Releases are made by hand, locally, into `andreiverdes/bluedoc`:
-
-1. Bump the version in `package.json`, `plugin.json`, `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` (twice): `1.0.0-beta02`, `1.0.0-beta03`, and so on.
-2. Run the tests (`python3 -m unittest discover -s tests`, with `BLUEDOC_BROWSER_TESTS=1` for the browser tests) and commit.
-3. Run `release/release.sh`. It copies HEAD's skill (without `examples/`), the manifests, `LICENSE` and `release/plugin-README.md` into a checkout of the release repo (`../bluedoc-release` by default), commits and tags `v<version>`, and prints the push command.
 
 ## License
 
