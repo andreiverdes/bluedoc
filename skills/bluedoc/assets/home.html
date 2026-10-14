@@ -45,6 +45,10 @@ body { font-family: var(--font-hz-sans, Inter, system-ui, sans-serif); -webkit-f
 .wm .b { fill: #0b2560; } .wm .d { fill: #0a6dff; }
 [data-hz-theme="dark"] .wm .b { fill: #eaf4ff; } [data-hz-theme="dark"] .wm .d { fill: #4f9bff; }
 .bd-rail .bd-brand { padding: 0; justify-content: center; }
+/* bluedoc is in beta: a small pill after the wordmark */
+.bd-beta { flex: none; padding: 1px 6px; border-radius: 6px; font: 600 10.5px/1.5 var(--hz-font-sans, system-ui); letter-spacing: .04em; text-transform: uppercase;
+  color: #0a6dff; background: color-mix(in oklch, currentColor 12%, transparent); box-shadow: inset 0 0 0 1px color-mix(in oklch, currentColor 28%, transparent); }
+[data-hz-theme="dark"] .bd-beta { color: #4f9bff; }
 .bd-side-foot { display: flex; align-items: center; gap: 8px; padding-left: 6px; font-size: 12.5px; color: var(--color-hz-fg-subtle); }
 .bd-side-foot .sp { flex: 1; }
 .bd-rail .bd-side-foot { padding: 0; justify-content: center; }
@@ -596,7 +600,7 @@ const WORDMARK = '<path class="b" d="M39 1.1Q35.4 1.1 32.1 0.1Q28.8-0.9 26.2-2.6
   '<path class="d" d="M245.7 1.1Q238.8 1.1 233.4-2.5Q228.1-6 225-12.3Q221.9-18.5 221.9-26.5Q221.9-34.5 225-40.8Q228.1-47 233.5-50.6Q238.9-54.2 245.9-54.2Q249.5-54.2 252.8-53.1Q256.1-52 258.8-50.1Q260.2-49.1 261.4-47.9L261.4-74L277.5-74L277.5 0L262.6 0L262.2-5.8Q260.7-4.1 258.7-2.8Q256.1-1 252.8 0.1Q249.4 1.1 245.7 1.1ZM249.8-12.2Q253.5-12.2 256.2-14Q258.9-15.8 260.4-19Q261.8-22.2 261.8-26.5Q261.8-30.9 260.4-34.1Q258.9-37.3 256.2-39.1Q253.5-40.9 249.8-40.9Q246.1-40.9 243.4-39.1Q240.8-37.3 239.3-34.1Q237.8-30.9 237.8-26.5Q237.8-22.2 239.3-19Q240.8-15.8 243.4-14Q246.1-12.2 249.8-12.2ZM316 1Q307.7 1 301.3-2.6Q294.8-6.2 291-12.4Q287.3-18.6 287.3-26.6Q287.3-34.6 291-40.8Q294.8-47 301.3-50.6Q307.7-54.2 316-54.2Q324.3-54.2 330.8-50.6Q337.2-47 340.9-40.8Q344.6-34.6 344.6-26.6Q344.6-18.6 340.9-12.4Q337.2-6.2 330.8-2.6Q324.3 1 316 1ZM316-12.8Q319.6-12.8 322.4-14.6Q325.2-16.4 326.8-19.5Q328.4-22.6 328.3-26.6Q328.4-30.6 326.8-33.8Q325.2-36.9 322.4-38.7Q319.6-40.5 316-40.5Q312.4-40.5 309.5-38.7Q306.7-36.9 305.1-33.8Q303.5-30.6 303.6-26.6Q303.5-22.6 305.1-19.5Q306.7-16.4 309.5-14.6Q312.4-12.8 316-12.8ZM378.4 1Q370.7 1 364.6-2.6Q358.5-6.2 354.9-12.5Q351.4-18.7 351.4-26.6Q351.4-34.5 354.9-40.8Q358.5-47 364.6-50.6Q370.7-54.2 378.4-54.2Q385.5-54.2 391.4-51.7Q397.4-49.2 400.9-44.7L392.2-34.3Q390.8-35.9 388.9-37.3Q387-38.7 384.7-39.5Q382.4-40.3 379.9-40.3Q376.1-40.3 373.2-38.6Q370.3-36.8 368.7-33.7Q367.1-30.6 367.1-26.6Q367.1-22.8 368.8-19.7Q370.4-16.6 373.3-14.8Q376.2-13 379.9-13Q382.5-13 384.7-13.7Q386.9-14.3 388.8-15.6Q390.6-16.9 392.2-18.8L400.8-8.3Q397.4-4 391.4-1.5Q385.3 1 378.4 1Z"/>';
 const Logo = ({ size = 22 }) => e('svg', { viewBox: '0 0 48 48', width: size, height: size, 'aria-hidden': true, dangerouslySetInnerHTML: { __html: LOGO } });
 const Wordmark = () => e('svg', { className: 'wm', viewBox: '6 -75 396 77', 'aria-hidden': true, dangerouslySetInnerHTML: { __html: WORDMARK } });
-const Brand = ({ mark }) => e('a', { className: 'bd-brand', href: '/', 'aria-label': 'bluedoc, all docs' }, e(Logo), !mark && e(Wordmark));
+const Brand = ({ mark }) => e('a', { className: 'bd-brand', href: '/', 'aria-label': 'bluedoc beta, all docs' }, e(Logo), !mark && e(Wordmark), !mark && e('span', { className: 'bd-beta', 'aria-hidden': true }, 'Beta'));
 const Loc = ({ d, terms }) => e('span', { className: 'bd-loc', title: d.root.path + '/' + d.path }, e(Folder, { size: 14 }), e('span', null, ...hl(d.root.name + (d.dir ? '/' + d.dir : ''), terms)));
 function Prog({ st, bare }) {
   if (!st.total) return null;
