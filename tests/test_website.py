@@ -680,6 +680,45 @@ class VersionsGutterInChrome(SiteInChrome):
         self.assertEqual(a["target"]["text"], "Build the habit, one week at a time.", "the frame doesn't show version B")
 
 
+class TitleBarsInChrome(SiteInChrome):
+    """Each page's title bar stays within its page's width at every zoom, so neighbours never overlap: a narrow page
+    drops the description, then the width and new-tab keys, while a page wide on screen keeps them all."""
+
+    def site(self, url: str) -> dict:
+        doc = site_doc(url)
+        for i, name in enumerate(("Presentations page", "Credits and privacy page", "Everything else page")):
+            board_of(doc)["artboards"].append({"id": f"p{i}", "title": name, "device": "page", "fidelity": "hifi", "url": url + f"p{i}"})
+        return doc
+
+    BARS = """[...document.querySelectorAll('.bd-ab[data-ab]')].map(e => {
+        const t = e.querySelector('.bd-ab-t'), s = e.querySelector('.bd-ab-scr').getBoundingClientRect();
+        const r = getComputedStyle(t).display === 'none' ? null : t.getBoundingClientRect();
+        return { id: e.dataset.ab, page: [s.left, s.right], bar: r && [r.left, r.right, r.top, r.bottom],
+                 keys: !!r && [...t.querySelectorAll('.bps, .opn')].some(k => k.offsetWidth > 0) };
+      })"""
+
+    def test_title_bars_stay_within_their_pages_at_every_zoom(self) -> None:
+        self.tab.wait_for("BP.board().artboards.every(a => a.ready)", 15)
+        self.tab.ev("BP.board({focus: 'home'})")
+        time.sleep(0.6)
+        home = next(b for b in self.tab.ev(self.BARS) if b["id"] == "home")
+        self.assertTrue(home["keys"], "a page wide on screen keeps its width keys")
+        for _ in range(8):
+            k = self.tab.ev("BP.board().k")
+            self.tab.ev("document.body.dispatchEvent(new KeyboardEvent('keydown', { key: '-', bubbles: true }))")
+            self.tab.wait_for(f"BP.board().k < {k}")
+            time.sleep(0.4)
+            bars = [b for b in self.tab.ev(self.BARS) if b["bar"]]
+            for b in bars:
+                self.assertGreaterEqual(b["bar"][0], b["page"][0] - 0.5, (k, b))
+                self.assertLessEqual(b["bar"][1], b["page"][1] + 0.5, (k, b))
+            for i, a in enumerate(bars):
+                for c in bars[i + 1:]:
+                    p, q = a["bar"], c["bar"]
+                    self.assertFalse(p[0] < q[1] - 0.5 and q[0] < p[1] - 0.5 and p[2] < q[3] and q[2] < p[3], (k, a["id"], c["id"]))
+        self.assertFalse(any(b["keys"] for b in self.tab.ev(self.BARS)), "narrow pages drop their keys")
+
+
 class OpenInNewTabInChrome(SiteInChrome):
     """Open in new tab: the toolbar's key opens the selected page, a live page at its dev server's own URL (not the
     proxy) and a mockup at its screen route on this server; each page's title bar key opens that page."""

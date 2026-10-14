@@ -1545,7 +1545,12 @@ i.warn[hidden] { display: none; }
 /* a website's page: a browser bar above the page (not over it: a live page knows no safe area), the page's widths on
    its title bar, and in place over a section, the versions a decision picks between */
 .dev-page { --r: 0 0 10px 10px; --bar: 40px; }
-.dev-page .bd-ab-t { max-width: max(100%, calc(420px / var(--k))); margin-bottom: calc(6px / var(--k) + var(--bar)); }
+.dev-page .bd-ab-t { margin-bottom: calc(6px / var(--k) + var(--bar)); }
+/* a title bar never runs past its screen, so neighbours' bars can't overlap: as the screen gets narrow on screen
+   (data-tz, set from its width × zoom) it drops the description, then the width keys and the new-tab key, and on a
+   screen too small to label, the bar itself; the name ellipsizes in between */
+.bd-ab[data-tz] .bd-ab-t .d, .bd-ab:is([data-tz="s"], [data-tz="xs"]) .bd-ab-t :is(.bps, .opn, .rch) { display: none; }
+.bd-ab[data-tz="xs"] .bd-ab-t { display: none; }
 .bd-pbar { position: absolute; left: 0; right: 0; bottom: 100%; height: var(--bar, 40px); display: flex; align-items: center; gap: 12px; padding: 0 12px; box-sizing: border-box;
   border-radius: 10px 10px 0 0; background: #e8eaed; box-shadow: 0 0 0 1px var(--line); font: 500 13px var(--sans); color: #5f6368; pointer-events: none; }
 .bd-pbar .dots { display: inline-flex; flex: none; gap: 7px; }
@@ -6148,6 +6153,7 @@ function renderBoard(b) {
     vp.style.transform = `translate(${B.tx}px,${B.ty}px) scale(${B.k})`;
     vp.style.setProperty('--k', B.k);
     if (vp.dataset.vz !== varZoom()) vp.dataset.vz = varZoom();   // the versions gutter's room on screen
+    for (const m of [B.frames, B.ghosts]) for (const x of m.values()) { const w = x.p.w * B.k, z = w < 36 ? 'xs' : w < 300 ? 's' : w < 520 ? 'm' : ''; if ((x.el.dataset.tz || '') !== z) { if (z) x.el.dataset.tz = z; else delete x.el.dataset.tz; } }
     const g = 24 * B.k; stage.style.backgroundSize = `${g}px ${g}px`; stage.style.backgroundPosition = `${B.tx}px ${B.ty}px`;
     if (zoomLbl) zoomLbl.textContent = Math.round(B.k * 100) + '%';
     if (B.rq) placeRqe();
