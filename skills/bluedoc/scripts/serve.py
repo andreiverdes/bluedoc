@@ -22,7 +22,8 @@ Usage:
                                                    (default: the current rev; headless Chrome, BLUEDOC_CHROME)
   serve.py run [--port N]                          run in the foreground
 
-One server per user, on 127.0.0.1 (default port 8740, env BLUEDOC_PORT). State lives in
+One server per user, on 127.0.0.1 (default port 8740; when another program holds it, `open`, `start` and `unlock` take
+the next free port up to 8759 and record it in server.json; env BLUEDOC_PORT or --port pins one, with no fallback). State lives in
 ~/.bluedoc (env BLUEDOC_HOME): roots.json (folders the home page scans), server.json (pid, port), key (mode 0600: the
 secret that writes need) and state.db (SQLite, mode 0600: the reader's ticks, picks, comments and plan state per doc,
 and every reply; statedb.py).
@@ -159,6 +160,8 @@ STATE = Path(os.environ.get("BLUEDOC_HOME") or "~/.bluedoc").expanduser()
 ROOTS_FILE, SERVER_FILE, STATE_DB, KEY_FILE = STATE / "roots.json", STATE / "server.json", STATE / "state.db", STATE / "key"
 INBOX_FILE = STATE / "inbox.json"   # before state.db: which reply files `wait` delivered; read once, by the import
 DEFAULT_PORT = int(os.environ.get("BLUEDOC_PORT") or 8740)
+PORT_PINNED = bool(os.environ.get("BLUEDOC_PORT"))   # a port the user chose: no fallback when it is taken
+PORT_SPAN = 20   # without a pinned port, the server takes the first free one of DEFAULT_PORT … DEFAULT_PORT + 19
 UNLOCK_TTL = 3600   # seconds a ?key= token stays good, for any number of opens
 COOKIE_AGE = 400 * 86400   # the key cookie's Max-Age: the most browsers keep; each page view renews it
 SKIP_DIRS = {"node_modules", "build", "dist", "target", "out", "vendor", "Pods", "DerivedData", "__pycache__"}
@@ -2526,8 +2529,30 @@ def stop_server() -> bool:
     return True
 
 
-def ensure_started(port: int) -> bool:
-    """Start the server unless one runs this very code; one that runs another version or code is replaced."""
+def port_free(port: int) -> bool:
+    """Nothing listens on 127.0.0.1:port: a bind succeeds with SO_REUSEADDR, as the server's own does, so a port that
+    only has closed connections lingering (TIME_WAIT) still counts as free."""
+    with socket.socket() as s:
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        try:
+            s.bind(("127.0.0.1", port))
+        except OSError:
+            return False
+    return True
+
+
+def last_port() -> int | None:
+    try:
+        return int(json.loads(SERVER_FILE.read_text()).get("port"))
+    except (OSError, ValueError, TypeError):
+        return None
+
+
+def ensure_started(port: int, pinned: bool = False) -> bool:
+    """Start the server unless one runs this very code; one that runs another version or code is replaced. Unless the
+    port is pinned (--port, BLUEDOC_PORT), a port another program holds is skipped for the next free one of PORT_SPAN,
+    the port the last server used first, so open tabs and the key cookie carry over; server.json records the one used."""
+    last = last_port()   # read before a restart: the stopping server removes server.json
     info = server_info()
     if info and (info.get("version"), info.get("code")) == (VERSION, CODE_HASH):
         return True
@@ -2543,17 +2568,36 @@ def ensure_started(port: int) -> bool:
         else:
             print("the old bluedoc server did not stop", file=sys.stderr)
             return False
+    if pinned:
+        if not port_free(port):
+            print(f"port {port} is in use by another program: free it, or unset BLUEDOC_PORT (and drop --port) so bluedoc "
+                  f"picks a free one", file=sys.stderr)
+            return False
+        tries = [port]
+    else:
+        span = range(port, port + PORT_SPAN)
+        tries = [p for p in dict.fromkeys([*([last] if last in span else []), *span]) if port_free(p)]
+        if not tries:
+            print(f"ports {port}-{port + PORT_SPAN - 1} are all in use: set BLUEDOC_PORT to a free port", file=sys.stderr)
+            return False
+        if tries[0] != port and tries[0] != last:
+            print(f"port {port} is in use by another program; the bluedoc server takes {tries[0]}", file=sys.stderr)
     STATE.mkdir(parents=True, exist_ok=True)
     log = open(STATE / "server.log", "a")
-    subprocess.Popen([sys.executable, str(Path(__file__).resolve()), "run", "--port", str(port)],
-                     stdout=log, stderr=log, stdin=subprocess.DEVNULL, start_new_session=True)
-    for _ in range(50):
-        time.sleep(0.1)
-        try:
-            if json.loads(SERVER_FILE.read_text()).get("port") == port and alive():
-                return True
-        except (OSError, ValueError):
-            pass
+    for p in tries[:3]:   # a port taken between the check and the bind: the next one
+        proc = subprocess.Popen([sys.executable, str(Path(__file__).resolve()), "run", "--port", str(p)],
+                                stdout=log, stderr=log, stdin=subprocess.DEVNULL, start_new_session=True)
+        for _ in range(50):
+            time.sleep(0.1)
+            if proc.poll() is not None:
+                break
+            try:
+                if json.loads(SERVER_FILE.read_text()).get("port") == p and alive():
+                    return True
+            except (OSError, ValueError):
+                pass
+        if proc.poll() is None:
+            break
     print(f"server did not start; see {STATE / 'server.log'}", file=sys.stderr)
     return False
 
@@ -2730,7 +2774,8 @@ def main() -> int:
     p.add_argument("--json", action="store_true", help="print the JSON the page posted instead of the Markdown")
     for name in ("start", "run"):
         p = sub.add_parser(name)
-        p.add_argument("--port", type=int, default=DEFAULT_PORT)
+        p.add_argument("--port", type=int, default=None, help=f"default {DEFAULT_PORT} (BLUEDOC_PORT); start: a port in use is skipped "
+                                                              f"for the next free one unless --port or BLUEDOC_PORT pins it")
         if name == "run":
             p.add_argument("--to", default="", help="default reader-facing agent name")
     sub.add_parser("stop")
@@ -2758,9 +2803,9 @@ def main() -> int:
     a = ap.parse_args()
 
     if a.cmd == "run":
-        return run(a.port, a.to)
+        return run(a.port or DEFAULT_PORT, a.to)
     if a.cmd == "start":
-        if not ensure_started(a.port):
+        if not ensure_started(a.port or DEFAULT_PORT, pinned=a.port is not None or PORT_PINNED):
             return 1
         print(base() + "/")
         return 0
@@ -2792,7 +2837,7 @@ def main() -> int:
     if a.cmd == "add-framework":
         return add_framework(a.name, a.source, a.load, a.sources, a.tailwind, a.label)
     if a.cmd == "unlock":
-        if not ensure_started(DEFAULT_PORT):
+        if not ensure_started(DEFAULT_PORT, pinned=PORT_PINNED):
             return 1
         print(f"{base()}/?key={call('/__bluedoc/unlock', {})[1]['token']}")
         return 0
@@ -2805,7 +2850,7 @@ def main() -> int:
         return 2
     if a.cmd == "open":
         add_root(a.root.resolve() if a.root else root_for(doc))
-        if not ensure_started(DEFAULT_PORT):
+        if not ensure_started(DEFAULT_PORT, pinned=PORT_PINNED):
             return 1
         res = call("/__bluedoc/register", {"doc": str(doc), "to": a.to})[1]
         # the ?key= token (good for an hour) lets this browser save; visiting it redirects to the plain URL

@@ -129,7 +129,7 @@ python3 <skill>/scripts/build.py patch docs/plans/saved-carts.bluedoc.json item:
   --set recommend=d90 --change "Retention: recommend 90 days, as asked."
 ```
 
-Every doc the server knows is listed at `http://127.0.0.1:8740/`. Edit the JSON and reload; there is no build output to keep in sync. For a file you can send to someone, add `-o <name>.html` to the build command.
+Every doc the server knows is listed at `http://127.0.0.1:8740/`. When another program already holds port 8740, the server takes the next free port up to 8759, and the links `serve.py open` prints carry it; set `BLUEDOC_PORT` to pin a port of your own. Edit the JSON and reload; there is no build output to keep in sync. For a file you can send to someone, add `-o <name>.html` to the build command.
 
 Per doc, the agent reads about 1.5k tokens of instructions (`SKILL.md`) plus one type guide (`types/<type>.md`), and greps the schema only for the fields it needs.
 

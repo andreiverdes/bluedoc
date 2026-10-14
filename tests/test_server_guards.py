@@ -18,10 +18,14 @@ from __future__ import annotations
 
 import base64
 import http.client
+import http.server
 import json
 import os
 import shutil
 import struct
+import subprocess
+import sys
+import threading
 import time
 import unittest
 import zlib
@@ -346,6 +350,56 @@ class IconSaveGuards(unittest.TestCase):
         os.symlink(elsewhere, self.out / "app-icon" / "play", target_is_directory=True)
         self.assertEqual(self.post(files)[0], 409)
         self.assertEqual(list(elsewhere.iterdir()), [])
+
+
+class BusyPort(unittest.TestCase):
+    """`open` when another program holds the default port: the server takes the next free one, records it in
+    server.json and prints a link on it; with the port pinned (BLUEDOC_PORT) it says so at once and starts nothing."""
+
+    def setUp(self) -> None:
+        self.tmp = TempHome()
+        self.addCleanup(self.tmp.cleanup)
+        self.docs = self.tmp.copy_examples()
+        class NotBluedoc(http.server.BaseHTTPRequestHandler):   # another program that answers on the port
+            def do_GET(self) -> None:
+                self.send_response(200)
+                self.end_headers()
+                self.wfile.write(b"not bluedoc")
+
+            def log_message(self, *_) -> None:
+                pass
+        self.foreign = http.server.HTTPServer(("127.0.0.1", 0), NotBluedoc)
+        threading.Thread(target=self.foreign.serve_forever, daemon=True).start()
+        self.addCleanup(lambda: (self.foreign.shutdown(), self.foreign.server_close()))
+        self.port = self.foreign.server_address[1]
+        self.addCleanup(lambda: self.tmp.run("serve.py", "stop"))   # its own BLUEDOC_HOME: only this test's server
+
+    def open(self, env: dict | None = None) -> subprocess.CompletedProcess:
+        """serve.py open with DEFAULT_PORT at the held port (BLUEDOC_PORT would pin it)."""
+        code = (f"import sys; sys.path.insert(0, {str(serve.Path(serve.__file__).parent)!r}); import serve; "
+                f"serve.DEFAULT_PORT = {self.port}; sys.argv = ['serve.py', 'open', {str(self.docs / 'acme-status.bluedoc.json')!r}]; "
+                f"sys.exit(serve.main())")
+        return subprocess.run([sys.executable, "-c", code], env={**self.tmp.env, **(env or {})}, cwd=self.tmp.dir,
+                              capture_output=True, text=True, timeout=30)
+
+    def test_the_server_takes_the_next_free_port(self) -> None:
+        r = self.open()
+        self.assertEqual(r.returncode, 0, r.stderr)
+        port = json.loads((self.tmp.home / "server.json").read_text())["port"]
+        self.assertTrue(self.port < port < self.port + serve.PORT_SPAN, port)
+        self.assertIn(f"port {self.port} is in use by another program; the bluedoc server takes {port}", r.stderr)
+        self.assertTrue(r.stdout.startswith(f"http://127.0.0.1:{port}/"), r.stdout)
+        conn = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+        conn.request("GET", "/__bluedoc/ping", headers={"X-Bluedoc": "1"})
+        self.assertTrue(json.loads(conn.getresponse().read())["bluedoc"])
+
+    def test_a_pinned_port_in_use_fails_at_once(self) -> None:
+        t = time.monotonic()
+        r = self.open({"BLUEDOC_PORT": str(self.port)})
+        self.assertEqual(r.returncode, 1)
+        self.assertLess(time.monotonic() - t, 3, "it waited for a server that could not bind")
+        self.assertIn(f"port {self.port} is in use by another program", r.stderr)
+        self.assertFalse((self.tmp.home / "server.json").exists())
 
 
 class UnlockTokens(unittest.TestCase):
