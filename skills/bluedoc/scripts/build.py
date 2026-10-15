@@ -75,6 +75,9 @@ patch keys: doc, meta, header, tldr, status, section:<sec>, heading:<sec>, lead:
   they record a hand edit of the screen file as the next rev.
   Storelisting keys: field:<locale>/<platform>/<field> (a store text) and field:<locale>/strings/<key> (a
   caption string): --set <field>=<text> writes it, --delete drops it, no option prints it with its count and limit.
+  brand:<listing id> is listing.brand: --json '{"font": …, "palette": …, "image": …}' merges it (null deletes one).
+  On a storelisting shot, artboard: and el: with no option also print its recipe per target, each locale's capture
+  with its time, and the `capture.py` command that re-shoots it (an uploaded shot: its PNG, which has none).
   <blockPath> is <section>/<index> or <checklist>/<item>/<index>. header, tldr and status address
   the doc's top level. --set and --json values parse as JSON when they can; null deletes the field.
   --append adds to the target's list (doc: sections, section and item: blocks, table: rows,
@@ -331,7 +334,7 @@ BLOCK_SHAPES = {
               "artboards": [{"id": str, "title": str, "device": str, "fidelity": str, "x": NUMBER, "y": NUMBER,
                              "w": NUMBER, "h": NUMBER, "variantOf": str, "framework": str, "src": str, "notes": str,
                              "icon": {"bg": str, "name": str}, "sets": list, "locale": str, "asset": str,
-                             "recipe": dict, "style": dict}]},
+                             "recipe": dict, "style": dict, "credits": str}]},
     # a storelisting's listing block: listing.validate_listing checks the rest against assets/store-rules.json
     "listing": {"id": str, "app": dict, "platforms": list, "rows": list, "locales": list, "defaultLocale": str,
                 "text": dict, "strings": dict, "mt": dict, "style": dict, "brand": dict, "icon": str, "video": dict,
@@ -729,8 +732,9 @@ def read_screens(doc: dict, doc_path: Path) -> dict[str, str | None]:
 
 def screen_hashes(doc: dict, doc_path: Path) -> dict[str, str | None]:
     """{artboard id or "<id>/<layer>": _hash of the file's text, None when unreadable}: the keys of the history's
-    html pool."""
-    return {aid: None if text is None else _hash(text) for aid, text in read_screens(doc, doc_path).items()}
+    html pool. A storelisting's captures add "<shot>/capture/<target>/<locale>": their PNG's hash (listing.file_hashes)."""
+    out = {aid: None if text is None else _hash(text) for aid, text in read_screens(doc, doc_path).items()}
+    return {**out, **listing.file_hashes(doc, doc_path)} if listing.listing_of(doc) else out
 
 
 def approval_hash(doc, doc_path: Path | None = None, screens: dict[str, str | None] | None = None) -> str:
@@ -2318,6 +2322,10 @@ def record(h: dict, doc: dict, doc_path: Path | None = None, *, keep_screens: bo
             links = links_of(board_of(doc), texts)
             if links:
                 entry["links"] = links
+        if doc_path is not None and listing.listing_of(doc):   # a storelisting's captures: their PNG's hash, no text
+            caps = listing.file_hashes(doc, doc_path)
+            if caps:
+                entry["screens"] = {**entry.get("screens", {}), **caps}
     if last:
         same = json.dumps(restore(h, last), sort_keys=True) == json.dumps(doc, sort_keys=True)
         moved = sorted(a for a in set(last.get("screens") or {}) | set(entry.get("screens") or {})
@@ -3031,6 +3039,13 @@ def resolve_key(doc: dict, key: str) -> Target:
         return Target(a, arts, i, "link", sel)
     if kind == "field" and len(parts) == 3:
         return _field(doc, *parts)
+    if kind == "brand" and len(parts) == 1:
+        lb = listing.listing_of(doc)
+        if lb is None or (lb.get("id") or "main") != path:
+            raise PatchError(f"no listing '{path}'" + (f" (this doc's listing is '{lb.get('id') or 'main'}')" if lb else ": brand: keys are a storelisting's"))
+        if not isinstance(lb.get("brand"), dict):
+            lb["brand"] = {}
+        return Target(lb["brand"], lb, "brand", "brand")
     if kind == "layout" and len(parts) == 1:
         b = board_of(doc)
         if not b or b.get("id") != path:
@@ -3488,10 +3503,16 @@ def cmd_patch(argv: list[str]) -> int:
         else:
             sel = " ".join(f'[data-bd="{n}"]' for n in t.selector.split("/")) if t.kind == "link" and \
                 EL_NAMES.match(t.selector or "") else t.selector
-            where = f"live page {t.obj['url']}" if is_live(t.obj) else f"{a.doc.parent / screen_rel(a.doc, t.obj)}"
-            print(where + (f"  {sel}" if sel else ""))
+            image = listing.is_image_shot(t.obj)   # a storelisting's uploaded shot: a PNG, no element to edit
+            where = f"live page {t.obj['url']}" if is_live(t.obj) else f"{a.doc.parent / t.obj['src']}" \
+                if image else f"{a.doc.parent / screen_rel(a.doc, t.obj)}"
+            print(where + (f"  {sel}" if sel and not image else ""))
         for line in source_lines(doc, t.obj, a.key.partition(":")[2].partition("/")[2] if t.kind == "element" else "", a.doc):
             print(line)
+        for line in listing.reshoot_lines(doc, t.obj, a.doc, str(a.doc)) if listing.listing_of(doc) else []:
+            print(line)
+        if listing.is_image_shot(t.obj):
+            return 0
         if is_live(t.obj):
             print(f"edit the source, then: build.py patch {a.doc} {shlex.quote(a.key)} --change '<what changed>'")
             return 0

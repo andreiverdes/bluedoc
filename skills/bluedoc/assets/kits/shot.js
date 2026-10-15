@@ -5,7 +5,8 @@
    What to show, in order: the frame's name 'bd-shot <JSON>' (the page names each frame before it loads), the URL's
    query (?set=&locale=&i=&n=&message=&layout=&ui=, for a tab or an export), and the defaults (the first set, the
    default locale, shot 1 of 1, the listing's style). Page -> frame, later: {bd:'shot', set?, locale?, i?, n?,
-   message?, layout?, ui?} (any of them) and {bd:'brand', palette: {role: #hex}, font: {family, weight}}.
+   message?, layout?, ui?} (any of them) and {bd:'brand', palette: {role: #hex}, font: {family, weight}|null} (the page's
+   brand draft; font null: the default, Inter). The name may carry `brand` too, applied before the first paint.
    - Strings: each [data-l10n="key"] gets the locale's text, else the default locale's (data-l10n-state="fallback"),
      else keeps its HTML text (data-l10n-state="missing").
    - The UI slot (.shot-ui) holds the mock-up at the set's UI viewport (uiW × uiH), scaled to the layout's place in
@@ -35,7 +36,8 @@
   };
   const q = new URLSearchParams(location.search);
   take(Object.fromEntries(q));
-  try { if ((window.name || '').startsWith('bd-shot ')) take(JSON.parse(window.name.slice(8))); } catch (e) { /* not ours */ }
+  let brand0 = null;
+  try { if ((window.name || '').startsWith('bd-shot ')) { const o = JSON.parse(window.name.slice(8)); take(o); brand0 = o && o.brand; } } catch (e) { /* not ours */ }
 
   const own = (tag, cls) => { const el = doc.createElement(tag); el.className = cls; el.setAttribute('data-bd-own', ''); return el; };
   const shotEl = doc.querySelector('.shot'), cap = doc.querySelector('.shot-cap'), frame = doc.querySelector('.shot-frame'), ui = doc.querySelector('.shot-ui');
@@ -96,7 +98,8 @@
     ['top', 'right', 'bottom', 'left'].forEach((k, i) => root.style.setProperty('--safe-' + k, safe[i] + 'px'));
     root.style.setProperty('--shot-i', String(st.i)); root.style.setProperty('--shot-n', String(st.n));
     const keep = [...root.classList].filter(c => !/^(plat-|row-|msg--|shot--)|^(raw|land|ui--capture)$/.test(c));
-    const style = data.style || {}, msg = st.message || style.message || 'm1', lay = st.layout || style.layout || 'l1';
+    const base = data.style || {}, style = (set && base.platforms && base.platforms[set.platform]) || base;
+    const msg = st.message || style.message || 'm1', lay = st.layout || style.layout || 'l1';
     st.message = msg; st.layout = lay;
     root.className = [...keep, set && 'plat-' + set.platform, set && 'row-' + set.row, set && set.raw && 'raw', dims.w > dims.h && 'land',
       'msg--' + msg, 'shot--' + lay, st.ui && 'ui--capture'].filter(Boolean).join(' ');
@@ -111,18 +114,22 @@
     root.classList.remove('shot-pending');
     doc.dispatchEvent(new Event('bd-stir'));
   }
+  // the root's inline brand tokens over the listing's (shell :root): a role or the font the message leaves out keeps
+  // the listing's value; font null drops the page's pick
   function brand(m) {
     const pal = m.palette && typeof m.palette === 'object' ? m.palette : {};
     for (const r of ROLES) if (typeof pal[r] === 'string' && HEX.test(pal[r])) root.style.setProperty('--brand-' + r, pal[r]);
     const f = m.font;
+    if (f === null) { root.style.setProperty('--bd-font-caption', 'Inter, system-ui, sans-serif'); root.style.removeProperty('--bd-weight-caption'); }
     if (f && typeof f.family === 'string' && FAMILY.test(f.family)) root.style.setProperty('--bd-font-caption', `"${f.family}", Inter, system-ui, sans-serif`);
     if (f && Number.isInteger(f.weight) && f.weight >= 100 && f.weight <= 900) root.style.setProperty('--bd-weight-caption', String(f.weight));
-    place(); doc.dispatchEvent(new Event('bd-stir'));
+    else if (f) root.style.removeProperty('--bd-weight-caption');
   }
   addEventListener('message', e => {
     if (e.source !== parent || !e.data || typeof e.data !== 'object') return;
-    if (e.data.bd === 'shot') { take(e.data); apply(); } else if (e.data.bd === 'brand') brand(e.data);
+    if (e.data.bd === 'shot') { take(e.data); apply(); } else if (e.data.bd === 'brand') { brand(e.data); place(); doc.dispatchEvent(new Event('bd-stir')); }
   });
+  if (brand0 && typeof brand0 === 'object') brand(brand0);
   apply();
   addEventListener('resize', place);
   if (doc.fonts) doc.fonts.ready.then(() => { place(); doc.dispatchEvent(new Event('bd-stir')); });

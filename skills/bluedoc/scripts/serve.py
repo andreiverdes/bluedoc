@@ -71,12 +71,22 @@ URLs: /                      home page: every doc under the registered folders, 
                              writes the html and pdf files
       /__bluedoc/kit/<file>  the plain kit and inspector (assets/kits)
       /__bluedoc/fw/<name>/<path>   a framework add-framework copied
+      /__bluedoc/fonts       the font families installed here (fonts.py: name and OS/2 of each TTF, OTF and TTC in
+                             the font folders, rescanned when a folder changes), for a storelisting's caption font;
+                             needs the X-Bluedoc header and the key
       /<root>/<path>.<css|js|mjs|font>   a project file a design board declares (frameworks[].files), and the
                              files its declared CSS names with url(); nothing else
       POST /__bluedoc/icons  {path, artboard, files: {name: base64}}: an icons artboard's PNG sets, which the page
                              draws, into <stem>.icons/<artboard>/ beside the doc. Only the export's own file names
                              (ios/AppIcon.appiconset/…, android/res/mipmap-*/…, play/icon-512.png), PNGs of their
                              exact size under 4 MB, Contents.json and the adaptive-icon XML; no link on the way.
+      POST /__bluedoc/listing/upload  {path, platform, locale, set, slot, png: base64}: a storelisting shot's PNG,
+                             checked against the set's rule (size, no alpha or tRNS, 8 MB, the slot range: 400 names
+                             the rule and its source), into <stem>.listing/<platform>/<locale>/<set>/NN.png, a draft
+                             until the agent records it; a file a revision records is never overwritten. {path,
+                             discard: <file>} deletes a draft. No link on the way (save_listing_upload)
+      POST /__bluedoc/listing/brand  {path, data: base64}: a storelisting's brand image (PNG, JPEG or WebP, 8 MB),
+                             whose palette the page extracts, into <stem>.listing/brand/source.<ext> (save_brand_image)
       POST /__bluedoc/snapshot  {path, rev, page, w, html, external}: a live page as the reader sees it, as revision
                              rev's snapshot at w px (save_snapshot): rev must be the doc's current meta.rev, html at
                              most 8 MB; stored scriptless in <name>.snapshots/rev-<rev>/<page>@<w>.html beside the doc
@@ -154,6 +164,7 @@ from urllib.parse import parse_qs, parse_qsl, quote, unquote, urlencode, urlspli
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import build  # noqa: E402
+import fonts  # noqa: E402
 import listing  # noqa: E402
 
 try:
@@ -240,6 +251,8 @@ def doc_info(p: Path) -> tuple[str | None, str | None, str]:
         board = build.board_of(doc) if isinstance(doc, dict) else None
         screens += [build.icon_dir(p, a) for a in (board or {}).get("artboards") or []
                     if build.is_icons(a) and isinstance(a.get("id"), str) and build.ID_RE.match(a["id"])]
+        if listing.listing_of(doc):   # a re-shoot changes a storelisting's revision (listing.file_hashes)
+            screens.append(listing.listing_dir(p) / "captures" / "captures.json")
         h = build.approval_hash(doc, p)
         did = (str(doc.get("id") or "") or None) if isinstance(doc, dict) else None
         rev = str(((doc.get("meta") or {}) if isinstance(doc, dict) else {}).get("rev") or "")
@@ -1126,8 +1139,9 @@ def shot_parts(doc: dict, a: dict, inline: bool) -> tuple[list[str], str, str]:
     data: dict = {"id": a["id"], "kind": a.get("device"), "sets": {}, "asset": None,
                   "strings": {k: s for k, s in (lb.get("strings") or {}).items() if isinstance(s, dict)},
                   "defaultLocale": lb.get("defaultLocale") or next(iter(lb.get("locales") or []), None),
-                  "style": {**(lb.get("style") if isinstance(lb.get("style"), dict) else {}),
-                            **(a.get("style") if isinstance(a.get("style"), dict) else {})}}
+                  # the style each platform page shows the shot in (listing.style, its platform's, the shot's own)
+                  "style": {**listing.effective_style(lb, "", a),
+                            "platforms": {p["id"]: listing.effective_style(lb, p["id"], a) for p in rules["platforms"]}}}
     for s in a.get("sets") or [] if a.get("device") == "shot" else []:
         r = sets.get(s) if isinstance(s, str) else None
         if r and "author" in r:
@@ -1958,6 +1972,35 @@ class HeadlessChrome:
             self.call("Target.closeTarget", {"targetId": target})
         return base64.b64decode(got["data"])
 
+    def capture_png(self, url: str, width: int, height: int, scale: int = 1, *, dark: bool = False,
+                    locale: str | None = None, settle: float = 0) -> bytes:
+        """A PNG of the page at url in a width × height CSS px viewport at scale device pixels per px (an opaque RGB
+        image of width·scale × height·scale): prefers-color-scheme dark or light, the locale (navigator.language,
+        Intl and Accept-Language) when given, after the load, the fonts and settle seconds. capture.py's web target."""
+        target = self.call("Target.createTarget", {"url": "about:blank"})["targetId"]
+        s = self.call("Target.attachToTarget", {"targetId": target, "flatten": True})["sessionId"]
+        try:
+            self.call("Runtime.enable", None, s)
+            self.call("Page.enable", None, s)
+            self.call("Emulation.setDeviceMetricsOverride", {"width": width, "height": height, "deviceScaleFactor": scale, "mobile": False}, s)
+            self.call("Emulation.setEmulatedMedia", {"features": [{"name": "prefers-color-scheme", "value": "dark" if dark else "light"}]}, s)
+            if locale:
+                self.call("Emulation.setLocaleOverride", {"locale": locale}, s)
+                ua = self.call("Browser.getVersion").get("userAgent", "")
+                self.call("Emulation.setUserAgentOverride", {"userAgent": ua, "acceptLanguage": locale}, s)
+            self.call("Page.navigate", {"url": url}, s)
+            deadline = time.monotonic() + 60
+            while not self.eval(s, "document.readyState === 'complete' && location.href !== 'about:blank'"):
+                if time.monotonic() > deadline:
+                    raise RuntimeError(f"{url} did not load in 60 s")
+                time.sleep(0.1)
+            self.eval(s, "document.fonts ? document.fonts.ready.then(() => true) : true")
+            time.sleep(max(0.0, settle))
+            got = self.call("Page.captureScreenshot", {"format": "png", "captureBeyondViewport": False}, s)
+        finally:
+            self.call("Target.closeTarget", {"targetId": target})
+        return base64.b64decode(got["data"])
+
 
 def cmd_snapshot(doc_arg: Path, rev: str | None, url: str | None, only: list[str], widths: list[int]) -> int:
     """`serve.py snapshot`: each live page of the doc's revision rev (default: current) at each width (default: the
@@ -2211,6 +2254,163 @@ def save_icons(doc: Path, aid, files) -> tuple[int, dict]:
     except OSError as e:
         return 500, {"error": f"cannot write the export: {e}"}
     return 200, {"ok": True, "dir": f"{out.parent.name}/{aid}", "files": sorted(decoded)}
+
+
+# ---------- store listing uploads ----------
+
+LISTING_UPLOAD_BODY = listing.UPLOAD_MAX_BYTES * 4 // 3 + 65536   # the POST's JSON: a PNG at the limit in base64, and the rest
+# each POST route's body limit (MAX_BODY for the rest)
+POST_LIMITS = {"/__bluedoc/icons": ICON_MAX_BODY, "/__bluedoc/snapshot": SNAPSHOT_BODY, "/__bluedoc/listing/upload": LISTING_UPLOAD_BODY}
+
+
+def save_listing_upload(doc: Path, data: dict) -> tuple[int, dict]:
+    """(status, answer) of POST /__bluedoc/listing/upload {path, platform, locale, set, slot, png: base64}: the PNG,
+    checked against the set's rule (size, RGB or indexed colour without tRNS, the byte limit, the slot range), written
+    atomically to <stem>.listing/<platform>/<locale>/<set name>/NN.png. It is a draft until the agent records it as a
+    shot's src. A file a revision records is never overwritten: the upload takes the next free name. {path, discard:
+    <file>} deletes a draft instead. Nothing outside that folder, no link on the way. A failed check answers 400 with
+    the rule and its source key."""
+    try:
+        d = json.loads(doc.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as e:
+        return 500, {"error": f"cannot read the doc: {e}"}
+    lb = listing.listing_of(d) if isinstance(d, dict) and build.doc_type(d.get("meta") or {}) == "storelisting" else None
+    if lb is None:
+        return 404, {"error": "not a storelisting doc"}
+    rules = listing.load_rules()
+    if "discard" in data:
+        if not any(u["file"] == data["discard"] for u in listing.uploads(d, doc, rules)):
+            return 404, {"error": "no draft upload by that name: a recorded shot is changed by the agent"}
+        f = doc.parent / data["discard"]
+        if f.is_symlink():
+            return 409, {"error": "a link"}
+        f.unlink(missing_ok=True)
+        return 200, {"ok": True, "discarded": data["discard"]}
+    set_id, platform, locale, slot = data.get("set"), data.get("platform"), data.get("locale"), data.get("slot")
+    rule = listing.by_id(rules, "sets").get(set_id) if isinstance(set_id, str) else None
+    if rule is None or rule.get("platform") != platform or platform not in (lb.get("platforms") or []):
+        return 400, {"error": "set: one of the listing's sets, with its platform"}
+    if not isinstance(locale, str) or locale not in (lb.get("locales") or []):
+        return 400, {"error": f"locale: one of {', '.join(lb.get('locales') or [])}"}
+    hi = (rule.get("count") or [0, 10])[1]
+    if not (isinstance(slot, int) and not isinstance(slot, bool) and 1 <= slot <= hi):
+        return 400, {"error": f"slot: 1 to {hi}: {rule['label']} takes at most {hi} shots", "rule": set_id, "source": rule["source"]}
+    limit = rule.get("maxBytes", listing.UPLOAD_MAX_BYTES)
+    try:
+        b64 = data.get("png")
+        if not isinstance(b64, str) or len(b64) > limit * 4 // 3 + 4:
+            raise ValueError
+        png = base64.b64decode(b64, validate=True)
+    except ValueError:
+        return 400, {"error": f"png: base64 of a PNG, at most {limit // 1048576} MB", "rule": set_id, "source": rule["source"]}
+    why = listing.upload_problem(rule, png)
+    if why:
+        return 400, {"error": f"{rule['label']}: {why}", "rule": set_id, "source": rule["source"]}
+    folder = listing.upload_folder(doc, set_id, locale)
+    rel_dir = folder.relative_to(doc.parent)
+    p = doc.parent
+    for part in rel_dir.parts:   # <stem>.listing, the platform, the locale, the set: none a link
+        p = p / part
+        if p.is_symlink():
+            return 409, {"error": f"{p.relative_to(doc.parent)} is a link"}
+    try:
+        folder.mkdir(parents=True, exist_ok=True)
+        if folder.resolve() != doc.parent.resolve() / rel_dir:
+            return 409, {"error": f"a link on the way to {rel_dir.as_posix()}"}
+        rel_of = lambda n: f"{rel_dir.as_posix()}/{n}"  # noqa: E731
+        name = listing.next_upload_name(folder, slot, listing.recorded_srcs(d, doc), rel_of)
+        if name is None:
+            return 409, {"error": f"{rel_dir.as_posix()} has no free name left (99 files)"}
+        target = folder / name
+        if target.is_symlink():
+            return 409, {"error": f"{rel_of(name)} is a link"}
+        replaced = target.exists()
+        fd, tmp = tempfile.mkstemp(dir=folder, prefix=".bd-", suffix=".tmp")
+        try:
+            with os.fdopen(fd, "wb") as f:
+                f.write(png)
+            os.chmod(tmp, 0o644)
+            os.replace(tmp, target)
+        finally:
+            Path(tmp).unlink(missing_ok=True)
+    except OSError as e:
+        return 500, {"error": f"cannot write the upload: {e}"}
+    info = listing.png_info(png) or {}
+    return 200, {"ok": True, "file": rel_of(name), "slot": int(name[:2]), "w": info.get("w"), "h": info.get("h"),
+                 "colour": info.get("colour"), "bytes": len(png), "replaced": replaced}
+
+
+def listing_drafts_block(doc: Path) -> str | None:
+    """Why a storelisting can't be approved yet, or None: an uploaded shot no revision records (the page disables
+    Approve too; this backs it)."""
+    try:
+        d = json.loads(doc.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    if not (isinstance(d, dict) and build.doc_type(d.get("meta") or {}) == "storelisting"):
+        return None
+    n = len(listing.uploads(d, doc))
+    return f"{n} uploaded shot{'s are' if n != 1 else ' is'} not recorded yet: send Request changes, wait for the agent's " \
+           "revision, then approve" if n else None
+
+
+# ---------- store listing brand: the brand image and the installed fonts ----------
+
+BRAND_EXT = {"png": "png", "jpeg": "jpg", "webp": "webp"}   # the brand image's type -> its file's extension
+BRAND_IMAGE_BODY = listing.load_rules()["brand"]["image"]["maxBytes"] * 4 // 3 + 4096   # the POST's JSON: the image in base64
+POST_LIMITS["/__bluedoc/listing/brand"] = BRAND_IMAGE_BODY
+
+
+def save_brand_image(doc: Path, data: dict) -> tuple[int, dict]:
+    """(status, answer) of POST /__bluedoc/listing/brand {path, data: base64}: a storelisting's brand image (PNG, JPEG
+    or WebP by its first bytes, at most the rules' brand.image.maxBytes) written atomically to
+    <stem>.listing/brand/source.<png|jpg|webp>, replacing the source of another type. The page extracts the palette
+    itself; the file is what listing.brand.image records. No link on the way out of the folder."""
+    try:
+        d = json.loads(doc.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as e:
+        return 500, {"error": f"cannot read the doc: {e}"}
+    if not (isinstance(d, dict) and build.doc_type(d.get("meta") or {}) == "storelisting"):
+        return 400, {"error": "a brand image is a storelisting's"}
+    rule = listing.load_rules()["brand"]["image"]
+    b64 = data.get("data")
+    try:
+        if not isinstance(b64, str) or len(b64) > rule["maxBytes"] * 4 // 3 + 4:
+            raise ValueError
+        raw = base64.b64decode(b64, validate=True)
+    except ValueError:
+        return 413 if isinstance(b64, str) and len(b64) > rule["maxBytes"] * 4 // 3 + 4 else 400, \
+            {"error": f"data: the image in base64, at most {rule['maxBytes'] // 1048576} MB"}
+    kind = listing.brand_image_type(raw)
+    if kind not in rule["types"] or len(raw) > rule["maxBytes"]:
+        return 400, {"error": f"a {', '.join(t.upper() for t in rule['types'])} image of at most {rule['maxBytes'] // 1048576} MB"}
+    top = listing.listing_dir(doc)
+    folder = top / "brand"
+    for p in (top, folder):
+        if p.is_symlink() or (p.exists() and not p.is_dir()):
+            return 409, {"error": f"{p.name} is a link or a file"}
+    target = folder / f"source.{BRAND_EXT[kind]}"
+    if target.is_symlink():
+        return 409, {"error": f"{target.name} is a link"}
+    try:
+        folder.mkdir(parents=True, exist_ok=True)
+        if folder.resolve() != doc.parent.resolve() / top.name / "brand":
+            return 409, {"error": "a link on the way to the brand folder"}
+        fd, tmp = tempfile.mkstemp(dir=folder, prefix=".bd-", suffix=".tmp")
+        try:
+            with os.fdopen(fd, "wb") as f:
+                f.write(raw)
+            os.chmod(tmp, 0o644)
+            os.replace(tmp, target)
+        finally:
+            Path(tmp).unlink(missing_ok=True)
+        for ext in BRAND_EXT.values():   # one source image: the last one sent
+            old = folder / f"source.{ext}"
+            if old != target and old.is_file() and not old.is_symlink():
+                old.unlink()
+    except OSError as e:
+        return 500, {"error": f"cannot write the image: {e}"}
+    return 200, {"ok": True, "file": f"{top.name}/brand/{target.name}", "type": kind, "bytes": len(raw)}
 
 
 # ---------- reader state ----------
@@ -2586,6 +2786,13 @@ def make_handler(port: int, default_to: str):
                 if q.get("since") == str(seed["version"]):
                     return self.send(204, b"")
                 return self.json(200, seed)
+            if u.path == "/__bluedoc/fonts":
+                # the fonts installed here (fonts.py): the key, as for a write, since it lists this machine's files
+                if self.headers.get("X-Bluedoc") != "1":
+                    return self.json(403, {"error": "missing X-Bluedoc header"})
+                if not self.has_key():
+                    return self.no_key()
+                return self.json(200, {"families": fonts.families()})
             if u.path == "/__bluedoc/wait":
                 # it consumes a reply: like the POSTs, only our own clients (a cross-site <img> or fetch can't set it)
                 if self.headers.get("X-Bluedoc") != "1":
@@ -2661,7 +2868,7 @@ def make_handler(port: int, default_to: str):
             if not self.guard():
                 return
             path = urlsplit(self.path).path
-            data = self.body(ICON_MAX_BODY if path == "/__bluedoc/icons" else SNAPSHOT_BODY if path == "/__bluedoc/snapshot" else MAX_BODY)
+            data = self.body(POST_LIMITS.get(path, MAX_BODY))
             if data is None:
                 return
             if path == "/__bluedoc/snapshot":
@@ -2672,6 +2879,14 @@ def make_handler(port: int, default_to: str):
                 if code == 200:
                     print(f"snapshot for {doc}: {answer['file']}", flush=True)
                 return self.json(code, answer)
+            if path == "/__bluedoc/listing/upload":
+                doc = doc_for_url(str(data.get("path") or ""))
+                if not doc:
+                    return self.json(404, {"error": "the page's doc is not under a registered folder"})
+                code, answer = save_listing_upload(doc, data)
+                if code == 200:
+                    print(f"upload for {doc}: {answer.get('file') or answer.get('discarded')}", flush=True)
+                return self.json(code, answer)
             if path == "/__bluedoc/icons":
                 doc = doc_for_url(str(data.get("path") or ""))
                 if not doc:
@@ -2679,6 +2894,14 @@ def make_handler(port: int, default_to: str):
                 code, answer = save_icons(doc, data.get("artboard"), data.get("files"))
                 if code == 200:
                     print(f"icons for {doc}: {len(answer['files'])} file(s) in {answer['dir']}", flush=True)
+                return self.json(code, answer)
+            if path == "/__bluedoc/listing/brand":
+                doc = doc_for_url(str(data.get("path") or ""))
+                if not doc:
+                    return self.json(404, {"error": "the page's doc is not under a registered folder"})
+                code, answer = save_brand_image(doc, data)
+                if code == 200:
+                    print(f"brand image for {doc}: {answer['file']}", flush=True)
                 return self.json(code, answer)
             if path == "/__bluedoc/register":
                 doc = Path(str(data.get("doc") or "")).resolve()
@@ -2714,6 +2937,9 @@ def make_handler(port: int, default_to: str):
                 if not current or data.get("docHash") != current or str(data.get("rev") or "") != rev:
                     return self.json(409, {"error": "the doc changed since this page loaded it: reload it and approve again",
                                            "reload": True})
+                why = listing_drafts_block(doc)
+                if why:
+                    return self.json(409, {"error": why})
             rid = INBOX.put(doc, kind, data, str(data.get("markdown") or "").rstrip() + "\n")
             print(f"{kind} for {doc}: reply {rid}", flush=True)
             return self.json(200, {"ok": True, "id": rid})

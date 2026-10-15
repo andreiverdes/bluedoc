@@ -1,0 +1,30 @@
+{
+ "captures": [
+  {
+   "shot": "today",
+   "target": "web",
+   "locale": "en-US",
+   "file": "acme-fit-listing.listing/captures/web/en-US/today.png",
+   "w": 1236,
+   "h": 2745,
+   "sha256": "47e9eeb2bce4049215a53d6d9005090c49848b9dd7fd540a758802b04ce5ef4d",
+   "recipe": "6c94b716f6508173",
+   "device": "headless Chrome at a device size",
+   "tools": "Chrome/155.0.8059.41",
+   "at": "2026-10-15T18:51:49+00:00"
+  },
+  {
+   "shot": "workout",
+   "target": "web",
+   "locale": "en-US",
+   "file": "acme-fit-listing.listing/captures/web/en-US/workout.png",
+   "w": 1236,
+   "h": 2745,
+   "sha256": "ec92f8d26ed56508a20a6157d635be5b328ae5bed66a807982b54ec01c2c5f9a",
+   "recipe": "fc9c7af84a4af98a",
+   "device": "headless Chrome at a device size",
+   "tools": "Chrome/155.0.8059.41",
+   "at": "2026-10-15T18:51:51+00:00"
+  }
+ ]
+}

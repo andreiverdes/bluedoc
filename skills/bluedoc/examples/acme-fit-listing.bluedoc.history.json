@@ -60,6 +60,71 @@
     "watch-rings": "0c9817206e1357f3",
     "feature": "61e9ad175fd67f38"
    }
+  },
+  {
+   "rev": "B",
+   "date": "2026-10-15",
+   "built": "2026-10-15T18:52:15+00:00",
+   "head": {
+    "id": "acme-fit-listing",
+    "title": "Acme Fit: store listing",
+    "subtitle": "The 3.0 listing on Google Play and the App Store, in English and Spanish, for watch, phone and tablet.",
+    "meta": {
+     "org": "Acme",
+     "kind": "Store listing",
+     "type": "storelisting",
+     "rev": "B",
+     "date": "2026-10-15"
+    },
+    "state": [
+     {
+      "label": "mock-up UI: captures follow",
+      "kind": "warn"
+     },
+     {
+      "label": "es-ES machine-translated in part",
+      "kind": "info"
+     }
+    ],
+    "tldr": "Check each platform page in en-US and es-ES: the store text against its counters, the three phone shots, the tablet and watch sets, and the shared icon and feature graphic.",
+    "links": [
+     {
+      "label": "Design: Acme Fit screens",
+      "href": "acme-fit-design.bluedoc.json"
+     }
+    ],
+    "changes": [
+     "Today and Workout are captured from the Acme Fit design screens (web target), in en-US."
+    ]
+   },
+   "sections": [
+    {
+     "id": "brief",
+     "title": "Brief",
+     "lead": "Acme Fit 3.0 leads with the week view: one glance shows steps, workouts and the streak.",
+     "blocks": [
+      "8d18e2dbe1b822a9"
+     ]
+    },
+    {
+     "id": "listing",
+     "title": "Listing",
+     "lead": "Both stores, en-US and es-ES, 4 shots and a feature graphic.",
+     "blocks": [
+      "22014ec789c3321a",
+      "b38d0a5af3f22cae"
+     ]
+    }
+   ],
+   "screens": {
+    "today": "ef27b9de34d0814e",
+    "workout": "5aa5afa7bc893993",
+    "streak": "0720801ff72a6816",
+    "watch-rings": "0c9817206e1357f3",
+    "feature": "61e9ad175fd67f38",
+    "today/capture/web/en-US": "47e9eeb2bce40492",
+    "workout/capture/web/en-US": "ec92f8d26ed56508"
+   }
   }
  ],
  "blocks": {
@@ -204,6 +269,199 @@
       "appstore/iphone",
       "appstore/ipad"
      ]
+    },
+    {
+     "id": "streak",
+     "title": "Streak",
+     "device": "shot",
+     "fidelity": "hifi",
+     "sets": [
+      "play/phone",
+      "appstore/iphone-69",
+      "appstore/iphone"
+     ]
+    },
+    {
+     "id": "watch-rings",
+     "title": "Activity rings",
+     "device": "shot",
+     "fidelity": "hifi",
+     "sets": [
+      "play/wear",
+      "appstore/watch"
+     ]
+    },
+    {
+     "id": "feature",
+     "title": "Feature graphic",
+     "device": "asset",
+     "asset": "play/feature",
+     "fidelity": "hifi"
+    }
+   ]
+  },
+  "22014ec789c3321a": {
+   "type": "listing",
+   "id": "main",
+   "app": {
+    "name": "Acme Fit",
+    "company": "Acme"
+   },
+   "platforms": [
+    "play",
+    "appstore"
+   ],
+   "rows": [
+    "watch",
+    "phone",
+    "tablet"
+   ],
+   "locales": [
+    "en-US",
+    "es-ES"
+   ],
+   "defaultLocale": "en-US",
+   "ipad": true,
+   "icon": "acme-fit-design.bluedoc.json#app-icon",
+   "style": {
+    "message": "m1",
+    "layout": "l1"
+   },
+   "brand": {
+    "font": {
+     "family": "Inter",
+     "weight": 800
+    },
+    "palette": {
+     "bg": "#1d4ed8",
+     "surface": "#e0e7ff",
+     "accent": "#f59e0b",
+     "text": "#ffffff",
+     "caption": "#ffffff"
+    }
+   },
+   "video": {
+    "play": "https://www.youtube.com/watch?v=acmefit3w"
+   },
+   "text": {
+    "en-US": {
+     "play": {
+      "name": "Acme Fit: Run, Ride, Rest",
+      "short": "See your week of runs, rides and sleep in one glance. Keep the streak going.",
+      "full": "Acme Fit shows your week at a glance: steps, workouts, heart rate and sleep in one view.\n\nPlan runs and rides, follow them on your watch, and keep your streak going with gentle reminders.",
+      "releaseNotes": "The week view: steps, workouts and sleep side by side."
+     },
+     "appstore": {
+      "name": "Acme Fit",
+      "subtitle": "Runs, rides and rest",
+      "promo": "Acme Fit 3.0 puts your whole week on one screen.",
+      "description": "Acme Fit shows your week at a glance: steps, workouts, heart rate and sleep in one view.\n\nPlan runs and rides, follow them on Apple Watch, and keep your streak going.",
+      "keywords": "running,cycling,steps,workout,streak,sleep,heart rate,training"
+     }
+    },
+    "es-ES": {
+     "play": {
+      "name": "Acme Fit: corre, pedalea",
+      "short": "Tu semana de carreras, rutas y sueño de un vistazo. Mantén la racha."
+     },
+     "appstore": {
+      "name": "Acme Fit",
+      "subtitle": "Carreras, rutas, descanso",
+      "keywords": "correr,ciclismo,pasos,entreno,racha,sueño,pulso"
+     }
+    }
+   },
+   "strings": {
+    "en-US": {
+     "today.title": "See your week at a glance",
+     "workout.title": "Every run, mapped",
+     "streak.title": "Keep the streak going",
+     "feature.title": "Acme Fit",
+     "feature.sub": "Your week of runs, rides and rest"
+    },
+    "es-ES": {
+     "today.title": "Tu semana de un vistazo",
+     "workout.title": "Cada carrera, en el mapa",
+     "feature.title": "Acme Fit",
+     "feature.sub": "Tu semana de carreras, rutas y descanso"
+    }
+   },
+   "mt": {
+    "es-ES": [
+     "appstore.subtitle",
+     "play.short",
+     "strings.workout.title"
+    ]
+   },
+   "capture": {
+    "apps": {
+     "web": {
+      "design": "acme-fit-design.bluedoc.json"
+     }
+    }
+   }
+  },
+  "b38d0a5af3f22cae": {
+   "type": "board",
+   "id": "shots",
+   "targets": [
+    "listing"
+   ],
+   "themes": [
+    {
+     "id": "acme",
+     "label": "Acme",
+     "tokens": {
+      "accent": "#1d4ed8",
+      "bg": "#f8fafc",
+      "fg": "#0f172a"
+     }
+    }
+   ],
+   "artboards": [
+    {
+     "id": "today",
+     "title": "Today",
+     "device": "shot",
+     "fidelity": "hifi",
+     "sets": [
+      "play/phone",
+      "play/tablet10",
+      "appstore/iphone-69",
+      "appstore/iphone",
+      "appstore/ipad"
+     ],
+     "recipe": {
+      "targets": [
+       "web"
+      ],
+      "route": "today",
+      "locales": [
+       "en-US"
+      ]
+     }
+    },
+    {
+     "id": "workout",
+     "title": "Workout",
+     "device": "shot",
+     "fidelity": "hifi",
+     "sets": [
+      "play/phone",
+      "play/tablet10",
+      "appstore/iphone-69",
+      "appstore/iphone",
+      "appstore/ipad"
+     ],
+     "recipe": {
+      "targets": [
+       "web"
+      ],
+      "route": "workout",
+      "locales": [
+       "en-US"
+      ]
+     }
     },
     {
      "id": "streak",

@@ -152,6 +152,7 @@ def rules_problems(rules: dict) -> list[str]:
             out.append(f"style {v.get('id')}: axis message|layout and a grade A-D")
     if sorted(s.get("id") for s in styles) != [f"{a}{n}" for a in ("l", "m") for n in range(1, 6)]:
         out.append("styles: exactly m1-m5 and l1-l5")
+    out += brand_rules_problems(rules, sources)
     return out
 
 
@@ -296,9 +297,10 @@ def recipe_hash(recipe) -> str:
 
 
 def captures(doc: dict, doc_path: Path) -> dict:
-    """{shot: {target: {locale: {file, w, h, fresh}}}} from <stem>.listing/captures/captures.json (written by
-    capture.py): file relative to the doc's folder; fresh when the capture's recipe hash is the shot's recipe's. {}
-    without the file or a readable list."""
+    """{shot: {target: {locale: {file, w, h, fresh, at, sha, device}}}} from <stem>.listing/captures/captures.json
+    (written by capture.py): file relative to the doc's folder; fresh when the capture's recipe hash is the shot's
+    recipe's; at the time it was taken; sha its PNG's sha256 (16 hex digits), as the revision records it. {} without
+    the file or a readable list."""
     f = listing_dir(doc_path) / "captures" / "captures.json"
     try:
         rows = json.loads(f.read_text(encoding="utf-8")).get("captures")
@@ -313,7 +315,8 @@ def captures(doc: dict, doc_path: Path) -> dict:
         if c["shot"] not in recipes or ".." in c["file"].split("/") or not c["file"].startswith(base):
             continue
         out.setdefault(c["shot"], {}).setdefault(c["target"], {})[c["locale"]] = {
-            "file": c["file"], "w": c.get("w"), "h": c.get("h"), "fresh": c.get("recipe") == recipes[c["shot"]]}
+            "file": c["file"], "w": c.get("w"), "h": c.get("h"), "fresh": c.get("recipe") == recipes[c["shot"]],
+            "at": str(c.get("at") or "")[:25], "sha": str(c.get("sha256") or "")[:16], "device": str(c.get("device") or "")[:80]}
     return out
 
 
@@ -470,10 +473,10 @@ def validate_listing(rep, doc: dict, doc_path: Path | None, rules: dict | None =
             if not ok:
                 rep.err(mw, f"'{k}' names no string in {loc}: <platform>.<field> or strings.<key>")
 
-    # style: the picker's default, and a shot's own
+    # style: the picker's default (listing.style, and listing.style.<platform>: a platform page's pick), and a shot's own
     styles = {s["id"]: s for s in rules["styles"]}
 
-    def style_ok(where: str, st) -> None:
+    def style_ok(where: str, st, platforms: bool = False) -> None:
         if st is None:
             return
         if not isinstance(st, dict):
@@ -484,9 +487,11 @@ def validate_listing(rep, doc: dict, doc_path: Path | None, rules: dict | None =
             if v is not None and not (v in styles and styles[v]["axis"] == axis):
                 rep.err(f"{where}.{axis}", f"{v!r} is no {axis} style: {', '.join(s for s in styles if s.startswith(pre))}")
         for k in st:
-            if k not in ("message", "layout"):
-                rep.err(f"{where}.{k}", "a style has message and layout only")
-    style_ok(lw + ".style", lb.get("style"))
+            if platforms and k in (lb.get("platforms") or []):
+                style_ok(f"{where}.{k}", st[k])
+            elif k not in ("message", "layout"):
+                rep.err(f"{where}.{k}", "a style has message and layout" + (", and a platform's own: play, appstore" if platforms else " only"))
+    style_ok(lw + ".style", lb.get("style"), platforms=True)
 
     brand = lb.get("brand")
     if brand is not None:
@@ -559,9 +564,8 @@ def validate_listing(rep, doc: dict, doc_path: Path | None, rules: dict | None =
                 if n > MAX_PREVIEWS:
                     rep.err(lw + ".video.appstore", f"{n} {row} previews: at most {MAX_PREVIEWS} per size and locale (A-PV)")
 
-    for k in ("capture",):
-        if k in lb and not isinstance(lb[k], dict):
-            rep.err(f"{lw}.{k}", "an object")
+    validate_capture(rep, lw, lb, doc, doc_path, rules)
+    validate_brand_style(rep, lw, lb, doc, doc_path, rules)
     if "variants" in lb and not isinstance(lb["variants"], list):
         rep.err(lw + ".variants", "a list of variants")
 
@@ -765,6 +769,7 @@ def page_data(doc: dict, doc_path: Path | None, texts: dict[str, str | None] | N
     rules = load_rules()
     keys: dict[str, list[str]] = {}
     images: dict[str, dict] = {}
+    hooks: dict[str, list[str]] = {}
     for a in shots_of(doc):
         if is_image_shot(a):
             if doc_path is None or image_src_problem(a["src"], doc_path):
@@ -786,11 +791,480 @@ def page_data(doc: dict, doc_path: Path | None, texts: dict[str, str | None] | N
             except (OSError, UnicodeDecodeError):
                 t = None
         keys[a["id"]] = l10n_keys(t) if t else []
+        hooks[a["id"]] = style_hooks(t) if t else []
     caps = captures(doc, doc_path) if doc_path is not None else {}
     if inline and doc_path is not None:
         for per in caps.values():
             for locs in per.values():
                 for c in locs.values():
                     c["file"] = _data_uri(Path(doc_path).parent / c["file"], "image/png") or c["file"]
-    return {"rules": rules, "keys": keys, "captures": caps, "images": images,
-            "icon": icon_of(doc, doc_path) if doc_path is not None else None}
+    out = {"rules": rules, "keys": keys, "captures": caps, "images": images,
+           "icon": icon_of(doc, doc_path) if doc_path is not None else None}
+    if doc_path is not None and not inline:
+        out.update(capture_page_data(doc, doc_path))
+    out.update(style_page_data(hooks))
+    return out
+
+
+# ---------- uploads, captures, re-shoot (M2) ----------
+# An upload is a PNG the page posts into a set's slot (serve.py POST /__bluedoc/listing/upload): it is written at once
+# under <stem>.listing/<platform>/<locale>/<set name>/NN.png and stays a draft until the agent records it as a shot's
+# `src` (`build.py patch … --append`, the command the page's Request changes gives). A recipe is a shot's capture
+# instructions; capture.py runs it and writes captures.json. A capture's PNG joins the revision by its hash, under
+# "<shot>/capture/<target>/<locale>" in the history entry's screens (file_hashes).
+
+UPLOAD_MAX_BYTES = 8 * 1024 * 1024   # a set's upload limit unless its rule has maxBytes
+UPLOAD_NAME = re.compile(r"^(\d{2})\.png$")
+APP_KINDS = {"ios": "bundle", "watchos": "bundle", "android": "package", "wearos": "package"}
+RECIPE_KEYS = ("route", "appearance", "settle", "targets", "locales", "size")
+BUNDLE = re.compile(r"^[A-Za-z0-9-]+(?:\.[A-Za-z0-9_-]+)+$")
+
+
+def recipe_targets(a: dict, rules: dict) -> list[str]:
+    """The targets a shot's recipe runs on: its own `targets`, else the targets of the sets it fills, once each."""
+    r = a.get("recipe") if isinstance(a.get("recipe"), dict) else {}
+    if isinstance(r.get("targets"), list) and r["targets"]:
+        return [t for t in r["targets"] if isinstance(t, str)]
+    sets = by_id(rules, "sets")
+    return list(dict.fromkeys(sets[s]["target"] for s in a.get("sets") or [] if s in sets and sets[s].get("target")))
+
+
+def recipe_locales(a: dict, lb: dict) -> list[str]:
+    r = a.get("recipe") if isinstance(a.get("recipe"), dict) else {}
+    locs = r.get("locales") if isinstance(r.get("locales"), list) and r["locales"] else lb.get("locales") or []
+    return [x for x in locs if isinstance(x, str)]
+
+
+def target_device(lb: dict, rules: dict, target: str) -> str:
+    """The simulator or AVD a target runs on: listing.capture.devices, else the rules' device."""
+    cap = lb.get("capture") if isinstance(lb.get("capture"), dict) else {}
+    dev = (cap.get("devices") or {}).get(target) if isinstance(cap.get("devices"), dict) else None
+    return dev if isinstance(dev, str) and dev else next((t["device"] for t in rules["targets"] if t["id"] == target), "")
+
+
+def _rel_ok(v) -> bool:
+    return isinstance(v, str) and bool(v) and not v.startswith("/") and "\\" not in v and ".." not in v.split("/")
+
+
+def validate_capture(rep, lw: str, lb: dict, doc: dict, doc_path: Path | None, rules: dict) -> None:
+    """listing.capture ({devices, apps}), each shot's recipe, and on disk: captures a changed recipe made stale, and
+    uploads no shot records yet (warnings)."""
+    targets = {t["id"] for t in rules["targets"]}
+    cap = lb.get("capture")
+    cw = lw + ".capture"
+    if cap is not None and not isinstance(cap, dict):
+        rep.err(cw, "{devices: {<target>: <simulator or AVD>}, apps: {ios|watchos: {bundle, app?}, android|wearos: "
+                "{package, apk?}, web: {url | design}}}")
+        cap = {}
+    for k, v in (cap or {}).items():
+        if k == "devices":
+            if not isinstance(v, dict) or not all(t in targets and isinstance(n, str) and 0 < len(n) <= 80 for t, n in v.items()):
+                rep.err(cw + ".devices", f"{{<target>: <simulator name or UDID, or AVD name>}}, targets {', '.join(sorted(targets))}")
+        elif k == "apps":
+            if not isinstance(v, dict):
+                rep.err(cw + ".apps", "{ios|watchos: {bundle, app?}, android|wearos: {package, apk?}, web: {url | design}}")
+                continue
+            for kind, app in v.items():
+                aw = f"{cw}.apps.{kind}"
+                if kind in APP_KINDS:
+                    idk, build_k = APP_KINDS[kind], "app" if APP_KINDS[kind] == "bundle" else "apk"
+                    if not isinstance(app, dict) or not BUNDLE.match(str(app.get(idk) or "")) \
+                            or (build_k in app and not _rel_ok(app[build_k])) or set(app) - {idk, build_k}:
+                        rep.err(aw, f"{{{idk}: <reverse-DNS id>, {build_k}?: <a build beside the doc>}}")
+                elif kind == "web":
+                    url, design = (app or {}).get("url"), (app or {}).get("design") if isinstance(app, dict) else None
+                    ok_url = isinstance(url, str) and re.match(r"^https?://(localhost|127(?:\.\d{1,3}){3}|\[::1\])(?::\d+)?(?:/|$)", url)
+                    ok_design = _rel_ok(design) and str(design).endswith(DOC_SUFFIXES)
+                    if not isinstance(app, dict) or not (ok_url or ok_design) or (url and design) or set(app) - {"url", "design"}:
+                        rep.err(aw, "{url: a loopback dev server (http://localhost:<port>/)} or {design: <a design doc beside>}")
+                    elif design and doc_path is not None and not (Path(doc_path).parent / design).is_file():
+                        rep.err(aw + ".design", f"'{design}' not found")
+                else:
+                    rep.err(aw, f"no app kind '{kind}': ios, watchos, android, wearos, web")
+        else:
+            rep.err(f"{cw}.{k}", "capture has devices and apps")
+    locs = [x for x in lb.get("locales") or [] if isinstance(x, str)]
+    shots = [a for a in shots_of(doc) if a.get("device") == "shot"]
+    for a in shots:
+        r = a.get("recipe")
+        if not isinstance(r, dict):
+            continue
+        rw = f"artboard '{a['id']}'.recipe"
+        for k in r:
+            if k not in RECIPE_KEYS:
+                rep.err(f"{rw}.{k}", f"a recipe has {', '.join(RECIPE_KEYS)}")
+        if "route" in r and not (isinstance(r["route"], str) and 0 < len(r["route"]) <= 2000 and not re.search(r"\s", r["route"])):
+            rep.err(rw + ".route", "a deep link (acmefit://workout), a path on the web app, or a design screen's id")
+        if r.get("appearance", "light") not in ("light", "dark"):
+            rep.err(rw + ".appearance", "light or dark")
+        s = r.get("settle", 2)
+        if isinstance(s, bool) or not isinstance(s, (int, float)) or not 0 <= s <= 30:
+            rep.err(rw + ".settle", "seconds to wait after opening the route, 0-30")
+        if "targets" in r and not (isinstance(r["targets"], list) and r["targets"] and all(t in targets for t in r["targets"])):
+            rep.err(rw + ".targets", f"a list of {', '.join(sorted(targets))}")
+        if "locales" in r and not (isinstance(r["locales"], list) and r["locales"] and all(x in locs for x in r["locales"])):
+            rep.err(rw + ".locales", f"a list of the listing's locales {locs}")
+        if "size" in r and not (isinstance(r["size"], list) and len(r["size"]) == 2
+                                and all(isinstance(n, int) and not isinstance(n, bool) and 120 <= n <= 3840 for n in r["size"])):
+            rep.err(rw + ".size", "[w, h]: the web capture's viewport in CSS px, 120-3840")
+    if doc_path is None:
+        return
+    stem = Path(doc_path).name
+    for sid, per in captures(doc, doc_path).items():
+        for t, by_loc in per.items():
+            for loc, c in by_loc.items():
+                if not (Path(doc_path).parent / c["file"]).is_file():
+                    rep.warn(f"artboard '{sid}'", f"capture {c['file']} is missing: re-shoot it: capture.py {stem} --shot {sid} "
+                             f"--target {t} --locale {loc}")
+                elif not c["fresh"]:
+                    rep.warn(f"artboard '{sid}'", f"the {t} {loc} capture is stale (its recipe changed since): capture.py {stem} "
+                             f"--shot {sid} --target {t} --locale {loc}")
+    for u in uploads(doc, doc_path, rules):
+        rep.warn(lw, f"{u['file']}: an uploaded shot no artboard records yet (Request changes on the page gives the "
+                 "`build.py patch … --append` command)" + (f"; it doesn't fit {u['set']}: {u['problem']}" if u.get("problem") else ""))
+
+
+def _history_file(doc_path: Path) -> Path:
+    name = Path(doc_path).name
+    return Path(doc_path).with_name((name[:-5] if name.endswith(".json") else name) + ".history.json")
+
+
+def recorded_srcs(doc: dict, doc_path: Path) -> set[str]:
+    """Every image shot src the doc or a revision in its history records: files that are never overwritten."""
+    out = {a["src"] for a in shots_of(doc) if is_image_shot(a)}
+    try:
+        h = json.loads(_history_file(doc_path).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return out
+    for b in (h.get("blocks") or {}).values() if isinstance(h, dict) else []:
+        if isinstance(b, dict) and b.get("type") == "board":
+            out |= {a["src"] for a in b.get("artboards") or [] if is_image_shot(a)}
+    return out
+
+
+def upload_folder(doc_path: Path, set_id: str, locale: str) -> Path:
+    """<stem>.listing/<platform>/<locale>/<set name>/: where a set's uploads for a locale go."""
+    platform, _, name = set_id.partition("/")
+    return listing_dir(doc_path) / platform / locale / name
+
+
+def upload_problem(rule: dict, data: bytes) -> str | None:
+    """Why a PNG can't be an upload to a set, or None: a PNG of an accepted size, RGB or indexed colour without
+    transparency, at most the set's byte limit."""
+    limit = rule.get("maxBytes", UPLOAD_MAX_BYTES)
+    if len(data) > limit:
+        return f"{len(data) / 1048576:.1f} MB: at most {limit // 1048576} MB"
+    info = png_info(data)
+    if info is None:
+        return "not a PNG"
+    why = size_problem(rule, info["w"], info["h"])
+    if why:
+        return f"{info['w']}×{info['h']}: want {why}"
+    if info["colour"] not in (2, 3) or info["trns"]:
+        return "it has transparency: want RGB or indexed colour without alpha"
+    return None
+
+
+def next_upload_name(folder: Path, slot: int, recorded: set[str], rel_of) -> str | None:
+    """The file a slot's upload is written to: NN.png for the slot, unless a revision records that name (the file
+    there, or gone since); then the next number after every NN.png in the folder or recorded in it. None past 99."""
+    name = f"{slot:02d}.png"
+    if rel_of(name) not in recorded:
+        return name
+    nums = [int(m[1]) for f in (folder.iterdir() if folder.is_dir() else []) for m in [UPLOAD_NAME.match(f.name)] if m]
+    nums += [n for n in range(1, 100) if rel_of(f"{n:02d}.png") in recorded]
+    n = max(nums, default=slot) + 1
+    return f"{n:02d}.png" if n <= 99 else None
+
+
+def uploads(doc: dict, doc_path: Path, rules: dict | None = None) -> list[dict]:
+    """The drafts: uploaded PNGs no shot (in the doc or a revision) records, [{file, platform, locale, set, slot, w,
+    h, colour, bytes, problem}] in set and slot order. file is relative to the doc's folder."""
+    rules = rules or load_rules()
+    lb = listing_of(doc) or {}
+    recorded = recorded_srcs(doc, doc_path)
+    base = listing_dir(doc_path)
+    if base.is_symlink() or not base.is_dir():
+        return []
+    out = []
+    for s in rules["sets"]:
+        if s["platform"] not in (lb.get("platforms") or []):
+            continue
+        for loc in lb.get("locales") or []:
+            if not isinstance(loc, str) or not LOCALE.match(loc):
+                continue
+            folder = upload_folder(doc_path, s["id"], loc)
+            if not folder.is_dir() or any(p.is_symlink() for p in (folder.parent.parent, folder.parent, folder)):
+                continue
+            for f in sorted(folder.iterdir()):
+                m = UPLOAD_NAME.match(f.name)
+                rel = f"{base.name}/{s['platform']}/{loc}/{s['id'].partition('/')[2]}/{f.name}"
+                if not m or f.is_symlink() or not f.is_file() or rel in recorded:
+                    continue
+                try:
+                    data = f.read_bytes()
+                except OSError:
+                    continue
+                info = png_info(data[:65536]) or {}
+                out.append({"file": rel, "platform": s["platform"], "locale": loc, "set": s["id"], "slot": int(m[1]),
+                            "w": info.get("w"), "h": info.get("h"), "colour": info.get("colour"), "bytes": len(data),
+                            "problem": upload_problem(s, data)})
+    return out
+
+
+def file_hashes(doc: dict, doc_path: Path) -> dict[str, str]:
+    """{"<shot>/capture/<target>/<locale>": the capture's sha256, 16 hex digits}: what a revision records of the
+    captures (beside its screen files' text hashes), so a re-shoot changes the revision and compare shows it."""
+    out = {}
+    for sid, per in captures(doc, doc_path).items():
+        for t, by_loc in per.items():
+            for loc, c in by_loc.items():
+                f = Path(doc_path).parent / c["file"]
+                if not f.is_file():
+                    continue
+                sha = c.get("sha")
+                if not sha:
+                    try:
+                        sha = hashlib.sha256(f.read_bytes()).hexdigest()[:16]
+                    except OSError:
+                        continue
+                out[f"{sid}/capture/{t}/{loc}"] = sha
+    return out
+
+
+def capture_page_data(doc: dict, doc_path: Path) -> dict:
+    """page_data's part for uploads and re-shoots: the draft uploads (uploads()), the captures a re-shoot replaced
+    ({sha 16: file} in captures/old/, for compare) and each target's device."""
+    rules = load_rules()
+    old = listing_dir(doc_path) / "captures" / "old"
+    olds = {}
+    if old.is_dir() and not old.is_symlink():
+        for f in old.iterdir():
+            if re.fullmatch(r"[0-9a-f]{16}\.png", f.name) and f.is_file() and not f.is_symlink():
+                olds[f.name[:16]] = f"{listing_dir(doc_path).name}/captures/old/{f.name}"
+    lb = listing_of(doc) or {}
+    return {"uploads": uploads(doc, doc_path, rules), "oldCaptures": olds,
+            "devices": {t["id"]: target_device(lb, rules, t["id"]) for t in rules["targets"]}}
+
+
+def reshoot_lines(doc: dict, a: dict, doc_path: Path, doc_arg: str) -> list[str]:
+    """What `build.py patch <doc> el:<shot>/…` prints after the screen file: the shot's recipe per target, each
+    locale's capture with its time, and the capture.py command that re-shoots it; for an upload, that it has none."""
+    if a.get("device") != "shot":
+        return []
+    rules, lb = load_rules(), listing_of(doc) or {}
+    r = a.get("recipe")
+    if not isinstance(r, dict):
+        return [f"upload {a['src']}: no recipe to re-shoot: ask for a new PNG, or add a recipe so the shot becomes a capture"
+                if is_image_shot(a) else "no recipe: the shot shows mock-up UI; add a recipe to capture the app"]
+    caps = captures(doc, doc_path).get(a["id"], {})
+    out = []
+    for t in recipe_targets(a, rules):
+        out.append(f"recipe {t}: {target_device(lb, rules, t) or '?'} · {r.get('route') or '(the app as it opens)'} · "
+                   f"{r.get('appearance') or 'light'}")
+        for loc in recipe_locales(a, lb):
+            c = (caps.get(t) or {}).get(loc)
+            have = (f"{c['file']}, taken {c['at'][:10] or 'at an unknown time'}" + ("" if c["fresh"] else ", stale: the recipe changed since")
+                    if c else "no capture yet")
+            out.append(f"  {loc}: {have}; re-shoot: capture.py {doc_arg} --shot {a['id']} --target {t} --locale {loc}")
+    return out
+
+
+# ---------- style and brand (M3) ----------
+# The Style pane's hooks and thumbnails, the brand (store-rules.json `brand`: defaults, the contrast pairs the shot kit
+# draws text in, the font's embedding bits, the brand image's types) and the build's warnings on picks and palettes.
+
+THUMBS_PATH = HERE.parent / "assets" / "kits" / "style-thumbs.svg"
+
+
+class _Hooks(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.found: set[str] = set()
+
+    def handle_starttag(self, tag, attrs) -> None:
+        d = dict(attrs)
+        if "data-callout" in d:
+            self.found.add("callout")
+        if tag == "img" and "shot-photo" in (d.get("class") or "").split():
+            self.found.add("photo")
+
+    handle_startendtag = handle_starttag
+
+
+def style_hooks(html: str) -> list[str]:
+    """What a shot's HTML offers the styles that need the agent: `callout` (an element marked data-callout, M3) and
+    `photo` (an img.shot-photo, L5's lifestyle photo)."""
+    p = _Hooks()
+    p.feed(html)
+    p.close()
+    return sorted(p.found)
+
+
+def _hex6(c: str) -> str:
+    c = c.lower()
+    return "#" + "".join(ch * 2 for ch in c[1:]) if len(c) == 4 else c
+
+
+def relative_luminance(c: str) -> float:
+    """WCAG 2.2 relative luminance of a #rgb or #rrggbb colour."""
+    c = _hex6(c)
+    ch = [int(c[i:i + 2], 16) / 255 for i in (1, 3, 5)]
+    r, g, b = (v / 12.92 if v <= 0.04045 else ((v + 0.055) / 1.055) ** 2.4 for v in ch)
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+
+def contrast_ratio(a: str, b: str) -> float:
+    """WCAG 2.2 contrast ratio of two colours, 1 to 21."""
+    hi, lo = sorted((relative_luminance(a), relative_luminance(b)), reverse=True)
+    return (hi + 0.05) / (lo + 0.05)
+
+
+def brand_palette(lb: dict, rules: dict) -> dict[str, str]:
+    """The colours every shot gets: the rules' brand defaults (kits/shot.css's), then listing.brand.palette."""
+    pal = {k: _hex6(v) for k, v in rules["brand"]["defaults"].items()}
+    own = (lb.get("brand") or {}).get("palette") if isinstance(lb.get("brand"), dict) else None
+    for k, v in (own if isinstance(own, dict) else {}).items():
+        if k in pal and isinstance(v, str) and HEX.match(v):
+            pal[k] = _hex6(v)
+    return pal
+
+
+def contrast_report(palette: dict[str, str], rules: dict) -> list[dict]:
+    """Each pair the shot kit draws text in (the rules' brand.contrast.pairs): {fg, bg, label, styles, ratio, ok}."""
+    c = rules["brand"]["contrast"]
+    out = []
+    for p in c["pairs"]:
+        r = contrast_ratio(palette[p["fg"]], palette[p["bg"]])
+        out.append({**p, "ratio": round(r, 2), "ok": r >= c["min"]})
+    return out
+
+
+def brand_rules_problems(rules: dict, sources: dict) -> list[str]:
+    """What's wrong with the rules file's `brand`: a default or pair naming no role, a minimum that isn't a ratio."""
+    b = rules.get("brand")
+    if not isinstance(b, dict):
+        return ["brand: {defaults, roles, contrast, font, image}"]
+    out = [f"brand: source {s!r} is not in `sources`" for s in (b.get("source"), (b.get("font") or {}).get("source")) if s not in sources]
+    d = b.get("defaults") or {}
+    if sorted(d) != sorted(PALETTE_ROLES) or not all(isinstance(v, str) and HEX.match(v) for v in d.values()):
+        out.append(f"brand.defaults: a hex colour for each role, {', '.join(PALETTE_ROLES)}")
+    c = b.get("contrast") or {}
+    if not (isinstance(c.get("min"), (int, float)) and 1 < c["min"] <= 21):
+        out.append("brand.contrast.min: a ratio between 1 and 21")
+    for i, p in enumerate(c.get("pairs") or [None]):
+        if not (isinstance(p, dict) and p.get("fg") in PALETTE_ROLES and p.get("bg") in PALETTE_ROLES and p["fg"] != p["bg"]
+                and isinstance(p.get("label"), str) and isinstance(p.get("styles"), str)):
+            out.append(f"brand.contrast.pairs[{i}]: {{fg, bg: two roles, label, styles}}")
+    return out
+
+
+def font_embedding(fs_type: int) -> str | None:
+    """Why a font's OS/2 fsType keeps a PDF from embedding it (OT-FSTYPE), or None: bitmap only (bit 9), or
+    restricted (2) without the preview & print (4) or editable (8) bits."""
+    if fs_type & 0x200:
+        return "bitmap only"
+    if fs_type & 0xF and not fs_type & 0xC:
+        return "restricted embedding"
+    return None
+
+
+def effective_style(lb: dict, platform: str, a: dict | None = None) -> dict[str, str]:
+    """The message and layout a platform page shows: M1 and L1, the listing's, its platform's, then the shot's own."""
+    out = {"message": "m1", "layout": "l1"}
+    st = lb.get("style") if isinstance(lb.get("style"), dict) else {}
+    for src in (st, st.get(platform), (a or {}).get("style")):
+        if isinstance(src, dict):
+            out.update({k: v for k, v in src.items() if k in ("message", "layout") and isinstance(v, str)})
+    return out
+
+
+def _shot_html(a: dict, doc_path: Path | None) -> str:
+    if doc_path is None or is_image_shot(a):
+        return ""
+    f = Path(doc_path).parent / str(a.get("src") or f"{doc_stem(Path(doc_path))}.design/{a['id']}.html")
+    try:
+        return f.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return ""
+
+
+def validate_brand_style(rep, lw: str, lb: dict, doc: dict, doc_path: Path | None, rules: dict) -> None:
+    """Warnings on the brand and the picks: a contrast pair under the rules' minimum (WCAG 2.2 1.4.3; the shot kit's
+    text pairs, named by what they draw), a caption font a PDF can't embed, and per platform page what its style needs
+    from the agent: a data-callout (M3), shot 1's proof string (M4, App Store), a video (M5), a lifestyle photo and its
+    rights in the shot's `credits` (L5); M4 on Play is use-case first, as Play bans awards and testimonials in shots."""
+    brand = lb.get("brand") if isinstance(lb.get("brand"), dict) else {}
+    pal = brand.get("palette")
+    if pal is None or isinstance(pal, dict) and all(isinstance(v, str) and HEX.match(v) for v in pal.values()):
+        mn = rules["brand"]["contrast"]["min"]
+        for p in contrast_report(brand_palette(lb, rules), rules):
+            if not p["ok"]:
+                rep.warn(lw + ".brand.palette", f"{p['label']} ({p['styles']}): {p['fg']} on {p['bg']} is {p['ratio']:.2f}:1, "
+                                                f"under {mn}:1 (WCAG22 1.4.3): a darker or lighter {p['fg']} or {p['bg']}")
+    font = brand.get("font") if isinstance(brand.get("font"), dict) else {}
+    if "fsType" in font:
+        if not (isinstance(font["fsType"], int) and 0 <= font["fsType"] <= 0xFFFF):
+            rep.err(lw + ".brand.font.fsType", "the font's OS/2 fsType, an integer (fonts.py reads it)")
+        elif font_embedding(font["fsType"]):
+            rep.warn(lw + ".brand.font", f"{font.get('family')}: {font_embedding(font['fsType'])} (fsType {font['fsType']}, "
+                                         "OT-FSTYPE): the PNGs render it, a PDF export can't embed it")
+    if "source" in font and font["source"] not in ("system", "vendored"):
+        rep.err(lw + ".brand.font.source", "system (installed on this Mac) or vendored (Inter)")
+    arts = shots_of(doc)
+    by = {a["id"]: a for a in arts}
+    strings = lb.get("strings") if isinstance(lb.get("strings"), dict) else {}
+    base = strings.get(lb.get("defaultLocale")) if isinstance(strings.get(lb.get("defaultLocale")), dict) else {}
+    sets = by_id(rules, "sets")
+    video = lb.get("video") if isinstance(lb.get("video"), dict) else {}
+    hooks: dict[str, list[str]] = {}
+    for p in lb.get("platforms") or []:
+        if p not in ("play", "appstore"):
+            continue
+        groups = [s for r in sections(lb, arts, rules, p, lb.get("defaultLocale")) for s in r["sets"]
+                  if not (sets.get(s["set"]) or {}).get("raw") and s["shots"]]
+        ids = list(dict.fromkeys(i for s in groups for i in s["shots"] if i in by))
+        if not ids:
+            continue
+        for i in ids:
+            if i not in hooks:
+                hooks[i] = style_hooks(_shot_html(by[i], doc_path))
+        where = f"{lw}.style.{p}"
+        used = {(k, effective_style(lb, p, by[i])[k]) for i in ids for k in ("message", "layout")}
+        if ("message", "m3") in used and not any("callout" in hooks[i] for i in ids if effective_style(lb, p, by[i])["message"] == "m3"):
+            rep.warn(where, "M3 zoomed callout needs the agent: mark the element to enlarge with data-callout in a shot's UI")
+        if ("message", "m4") in used:
+            if p == "play":
+                rep.warn(where, "M4 on Google Play is use-case first: shot 1's caption names the job; Play bans awards, "
+                                "testimonials and ranking in shots (G-PA)")
+            elif not any(f"{s['shots'][0]}.proof" in base for s in groups):
+                rep.warn(where, "M4 social proof needs the agent: the string <shot>.proof (a rating, award or quote) for shot 1")
+        if ("message", "m5") in used and not (video.get("play") if p == "play" else video.get("appstore")):
+            rep.warn(where, "M5 video-first needs the agent: " + ("listing.video.play, a YouTube video" if p == "play" else "an app preview in listing.video.appstore"))
+        if ("layout", "l5") in used:
+            l5 = [i for i in ids if effective_style(lb, p, by[i])["layout"] == "l5"]
+            if not any("photo" in hooks[i] for i in l5):
+                rep.warn(where, "L5 lifestyle needs the agent: a photo (img.shot-photo) in the shots; a drawn figure stands in")
+            for i in l5:
+                if "photo" in hooks[i] and not (isinstance(by[i].get("credits"), str) and by[i]["credits"].strip()):
+                    rep.warn(f"artboard {i}.credits", "a lifestyle photo needs a rights note in the shot's credits (A-ARG 2.3.9)")
+
+
+def brand_image_type(data: bytes) -> str | None:
+    """png, jpeg or webp from an image's first bytes, or None."""
+    if data[:8] == b"\x89PNG\r\n\x1a\n":
+        return "png"
+    if data[:3] == b"\xff\xd8\xff":
+        return "jpeg"
+    if data[:4] == b"RIFF" and data[8:12] == b"WEBP":
+        return "webp"
+    return None
+
+
+def style_page_data(hooks: dict[str, list[str]]) -> dict:
+    """What the Style pane reads beside the rules: each shot's hooks and the thumbnails' SVG."""
+    try:
+        thumbs = THUMBS_PATH.read_text(encoding="utf-8")
+    except OSError:
+        thumbs = ""
+    return {"hooks": hooks, "thumbs": thumbs}

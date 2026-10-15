@@ -1,0 +1,52 @@
+{
+  "id": "capture-system-apps",
+  "title": "Capture recipes on the system Settings apps",
+  "meta": { "org": "Acme", "kind": "Store listing", "type": "storelisting", "rev": "A", "date": "2026-10-15" },
+  "tldr": "capture.py's fixture: each simulator's and emulator's own Settings app, so a real run needs no app build.",
+  "sections": [
+    {
+      "id": "listing",
+      "title": "Listing",
+      "blocks": [
+        {
+          "type": "listing",
+          "id": "main",
+          "app": { "name": "Settings", "company": "Acme" },
+          "platforms": ["play", "appstore"],
+          "locales": ["en-US", "es-ES"],
+          "defaultLocale": "en-US",
+          "capture": {
+            "devices": {
+              "ios-phone": "iPhone 17 Pro Max",
+              "ios-phone-63": "iPhone 17 Pro",
+              "ios-tablet": "iPad Pro 13-inch (M5)",
+              "watchos": "Apple Watch Ultra 3 (49mm)",
+              "android-phone": "Acme_Pixel_9"
+            },
+            "apps": {
+              "ios": { "bundle": "com.apple.Preferences" },
+              "watchos": { "bundle": "com.apple.NanoSettings" },
+              "android": { "package": "com.android.settings" }
+            }
+          }
+        },
+        {
+          "type": "board",
+          "id": "shots",
+          "targets": ["listing"],
+          "artboards": [
+            { "id": "settings", "title": "Settings", "device": "shot", "fidelity": "hifi",
+              "sets": ["play/phone", "appstore/iphone-69", "appstore/iphone", "appstore/ipad"],
+              "recipe": { "appearance": "light", "settle": 3 } },
+            { "id": "settings-dark", "title": "Settings, dark", "device": "shot", "fidelity": "hifi",
+              "sets": ["play/phone", "appstore/iphone-69"],
+              "recipe": { "appearance": "dark", "settle": 3, "locales": ["es-ES"] } },
+            { "id": "watch-settings", "title": "Watch settings", "device": "shot", "fidelity": "hifi",
+              "sets": ["play/wear", "appstore/watch"],
+              "recipe": { "settle": 3 } }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -178,8 +178,9 @@ container units (`cqw`, `cqh`), never px.
 
 ## Shot styles
 
-`listing.style` (or a shot's `style`) picks a message style and a layout style; `kits/shot-styles.css` draws both
-from the brand tokens, so a pick restyles every shot without new HTML.
+`listing.style` (`listing.style.<platform>` for one store's page, or a shot's `style`) picks a message style and a
+layout style; `kits/shot-styles.css` draws both from the brand tokens, so a pick restyles every shot without new HTML.
+The page's Style tab shows them with thumbnails (`kits/style-thumbs.svg`).
 
 | Message | Caption |   | Layout | Image |
 |---|---|---|---|---|
@@ -187,6 +188,8 @@ from the brand tokens, so a pick restyles every shot without new HTML.
 | `m2` | story sequence: numbered steps of one journey | | `l2` | panoramic: one band of art across shots 1-3 |
 | `m3` | zoomed callout of the element marked `data-callout` | | `l3` | frameless full-bleed UI under a slim caption band |
 | `m4` | social proof on shot 1, from the string `<shot>.proof` (App Store; Play: use-case first) | | `l4` | dark hero |
-| `m5` | video-first: a play button over shot 1 | | `l5` | lifestyle: a person beside the UI |
+| `m5` | video-first: a play button over shot 1 | | `l5` | lifestyle: a person beside the UI; a photo is `<img class="shot-photo">`, its rights in the shot's `credits` |
 
-Grades and sources: `assets/store-rules.json` `styles`.
+Grades and sources: `assets/store-rules.json` `styles`. Text sits on brand colours in four pairs, which the build
+checks at 4.5:1 (`store-rules.json` `brand.contrast`): caption and subtitle on `--brand-bg` (L1–L3), `--brand-bg` on
+`--brand-surface` (L5) and on `--brand-caption` (M2's step chip). Keep text on other colours off the brand tokens.

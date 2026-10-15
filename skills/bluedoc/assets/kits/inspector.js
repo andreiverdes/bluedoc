@@ -26,7 +26,8 @@
                                        sigs: per section selector, a hash of its tags and text (null: not on the page), so
                                        compare can tell a changed section from the same one in another revision
      {bd:'hover', sel, name, tag, text, rect, sec} | {bd:'hover', sel: null}
-     {bd:'pick',  sel, name, tag, text, rect, sec, shift}   sel null = the whole artboard; sec: the section's index or null
+     {bd:'pick',  sel, name, tag, text, rect, sec, shift, at?}   sel null = the whole artboard; sec: the section's index
+                           or null; at: on a storelisting shot's capture, [x, y] on the UI image as fractions
      {bd:'nav',   names}   in interact mode, a click: the data-bd names of the clicked element and its named ancestors,
                            innermost first (at most 8). The click itself still runs. The page follows the first name
                            that has a link from this screen (its links, drafts included), so a forged name moves nothing.
@@ -269,10 +270,14 @@
 
   const active = () => mode === 'point' || mode === 'select';
   const pickable = el => el && el.nodeType === 1 && el !== doc.body && el !== root && !own(el);
+  // a storelisting shot showing a capture (html.ui--capture: kits/shot.js lays the PNG over the mock-up): a point in
+  // the UI slot names the slot itself, and a pick says where on the image it fell (at: [x, y], fractions)
+  const capUi = e => { const ui = root.classList.contains('ui--capture') && e.target && e.target.closest ? e.target.closest('.shot-ui') : null; return ui && pickable(ui) ? ui : null; };
+  const atOf = (ui, e) => { const r = ui.getBoundingClientRect(), f = (v, a, n) => n > 0 ? Math.round(Math.min(1, Math.max(0, (v - a) / n)) * 1e4) / 1e4 : 0.5; return [f(e.clientX, r.left, r.width), f(e.clientY, r.top, r.height)]; };
 
   function onMove(e) {
     if (!active()) return;
-    const el = pickable(e.target) ? e.target : null;
+    const el = capUi(e) || (pickable(e.target) ? e.target : null);
     if (el === hovered) return;
     hovered = el;
     showOutline(el);
@@ -300,8 +305,8 @@
     if (!active()) return;
     swallow(e);
     if (mode === 'select' && String(getSelection() || '').trim()) return;   // the mouseup reported the selection
-    const el = pickable(e.target) ? e.target : null;
-    post(el ? { bd: 'pick', ...describe(el), shift: !!e.shiftKey } : { bd: 'pick', sel: null, name: null, tag: 'body', text: null, rect: rectOf(root.getBoundingClientRect()), shift: !!e.shiftKey });
+    const ui = capUi(e), el = ui || (pickable(e.target) ? e.target : null);
+    post(el ? { bd: 'pick', ...describe(el), ...(ui ? { at: atOf(ui, e) } : {}), shift: !!e.shiftKey } : { bd: 'pick', sel: null, name: null, tag: 'body', text: null, rect: rectOf(root.getBoundingClientRect()), shift: !!e.shiftKey });
   }
   function onUp(e) {
     if (mode !== 'select') return;

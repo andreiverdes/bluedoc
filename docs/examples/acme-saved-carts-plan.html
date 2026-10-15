@@ -1874,6 +1874,23 @@ html.bd-presenting .bp-toast { z-index: 71; bottom: 84px; }
 .bd-lst-tag.mt { color: #fff; background: oklch(55% 0.2 300); }
 .bd-lst-tag.cap, .bd-lst-tag.up { color: var(--ok-fg); background: var(--ok-tint); }
 .bd-lst-empty { display: grid; place-items: center; min-height: 80px; padding: 10px 16px; border-radius: 8px; border: 1.5px dashed var(--line-strong); font-size: 12px; color: var(--fg-subtle); }
+/* uploads (M2): a set's Drop PNG slot, its draft tiles until the agent records them, a shot's capture before a re-shoot */
+.bd-lst-uptile { flex: none; display: grid; gap: 6px; }
+.bd-lst-upslot { display: grid; place-content: center; gap: 4px; box-sizing: border-box; padding: 10px; border-radius: 6px; border: 1.5px dashed var(--line-strong);
+  background: transparent; font: inherit; font-size: 11.5px; line-height: 1.35; text-align: center; color: var(--fg-subtle); cursor: pointer; }
+.bd-lst-upslot b { font-size: 12.5px; color: var(--fg-muted); }
+.bd-lst-upslot .bd-ic { justify-self: center; width: 20px; height: 20px; }
+.bd-lst-upslot:is(:hover, :focus-visible, .over) { border-color: var(--accent); background: var(--accent-tint); color: var(--fg-muted); }
+.bd-lst-upslot.busy { opacity: .6; pointer-events: none; }
+.bd-lst-upimg { position: relative; overflow: hidden; border-radius: 6px; background: var(--inset); box-shadow: 0 0 0 1.5px var(--accent), 0 4px 14px oklch(20% 0.02 264 / .12); }
+.bd-lst-upimg > img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.bd-lst-upimg.bad { box-shadow: 0 0 0 1.5px var(--risk-fg); }
+.bd-lst-uptile .note { font-size: 11px; color: var(--fg-subtle); }
+.bd-lst-tag.draft { color: var(--accent); background: var(--accent-tint); }
+.bd-lst-cap .bd-lst-x { margin-left: auto; padding: 0 6px; border: 0; border-radius: 6px; background: none; font: 500 11px/1.6 var(--sans); color: var(--fg-subtle); cursor: pointer; }
+.bd-lst-cap .bd-lst-x:hover { background: var(--inset); color: var(--fg); }
+.bd-lst-was { position: relative; flex: none; display: grid; gap: 6px; opacity: .9; }
+.bd-lst-was img { display: block; border-radius: 6px; box-shadow: 0 0 0 2px var(--risk-fg); object-fit: cover; }
 .bd-lst-off { display: flex; align-items: center; gap: 10px; max-width: 1480px; margin: 0 auto 8px; padding: 8px 16px; border-radius: 10px;
   border: 1.5px dashed var(--line-strong); font-size: 12.5px; color: var(--fg-subtle); }
 .bd-lst-off b { color: var(--fg-muted); }
@@ -1906,22 +1923,80 @@ html.bd-presenting .bp-toast { z-index: 71; bottom: 84px; }
 .bd-lst-pane > p { margin: 0; }
 .bd-lst-pane .hint { font-size: 12px; color: var(--fg-subtle); }
 .bd-lst-pane h4 { margin: 4px 0 0; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--fg-subtle); }
-.bd-lst-style { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 10px; padding: 8px 10px; border-radius: 10px; background: var(--inset); }
+/* the Style pane: a card per style (its thumbnail in the brand's colours, grade, store form, state); the pick is on */
+.bd-lst-pick { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 8px 10px; border-radius: 10px; background: var(--inset); font-size: 12.5px; color: var(--fg-muted); }
+.bd-lst-pick.on { background: var(--accent-tint); color: var(--fg); }
+.bd-lst-pick .bp-btn { height: 26px; }
+.bd-lst-style { display: grid; grid-template-columns: 46px minmax(0, 1fr); gap: 10px; width: 100%; padding: 8px 10px 8px 8px; border: 0; border-radius: 10px; background: var(--inset);
+  text-align: left; font: inherit; color: var(--fg); cursor: pointer; transition: background .12s, box-shadow .12s; }
+.bd-lst-style:hover:not(:disabled) { background: var(--hover); }
+.bd-lst-style:disabled { cursor: default; }
 .bd-lst-style.on { background: var(--accent-tint); box-shadow: inset 0 0 0 1.5px var(--accent); }
-.bd-lst-style b { font-size: 12.5px; }
-.bd-lst-style .g { grid-row: span 2; align-self: start; display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 6px; font: 700 11px var(--sans); color: #fff; background: var(--fg-subtle); }
+.bd-lst-style .th { width: 46px; height: 80px; border-radius: 6px; background: var(--surface); box-shadow: 0 0 0 1px var(--line); }
+.bd-lst-style .tx { display: grid; align-content: start; gap: 3px; min-width: 0; }
+.bd-lst-style .hd { display: flex; align-items: center; gap: 8px; }
+.bd-lst-style b { flex: 1; font-size: 12.5px; }
+.bd-lst-style .g { flex: none; display: inline-grid; place-items: center; min-width: 22px; height: 20px; padding: 0 4px; border-radius: 6px; font: 700 11px var(--sans); color: #fff; background: var(--fg-subtle); }
 .bd-lst-style .g.A { background: var(--ok); } .bd-lst-style .g.B { background: var(--accent-solid); } .bd-lst-style .g.C { background: var(--warn); }
-.bd-lst-style span { font-size: 12px; color: var(--fg-muted); }
-.bd-lst-swatches { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
-.bd-lst-swatches figure { display: grid; justify-items: center; gap: 3px; min-width: 0; margin: 0; font-size: 11px; color: var(--fg-muted); }
-.bd-lst-swatches i { width: 100%; aspect-ratio: 1; border-radius: 8px; box-shadow: inset 0 0 0 1px oklch(0% 0 0 / .15); }
-.bd-lst-swatches code { max-width: 100%; overflow: hidden; text-overflow: ellipsis; font-size: 10px; }
+.bd-lst-style .d { font-size: 12px; line-height: 1.4; color: var(--fg-muted); }
+.bd-lst-style .ms { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; }
+.bd-lst-style .ms .bp-chip { height: 20px; font-size: 11px; }
+.bd-lst-sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
+/* the Brand pane: the font menu, the image drop, swatches, the roles and the contrast pairs */
+.bd-lst-brp, .bd-lst-stp { grid-auto-rows: max-content; }   /* a long pane scrolls; its rows (the font menu) keep their height */
+.bd-lst-brp.ro :is(.bd-lst-imgdrop, .bd-lst-roles) { opacity: .7; }
+.bd-lst-fcur { display: grid; gap: 3px; padding: 10px 12px; border-radius: 10px; background: var(--inset); font-size: 12px; color: var(--fg-muted); }
+.bd-lst-fcur b { font-size: 20px; line-height: 1.15; color: var(--fg); overflow-wrap: anywhere; }
+.bd-lst-fcur .bad, .bd-lst-font .bad { color: var(--risk-fg); font-weight: 600; }
+.bd-lst-fcur .note { color: var(--fg-subtle); }
+.bd-lst-frow { display: flex; gap: 6px; }
+.bd-lst-frow .bd-lst-fq { flex: 1; min-width: 0; }
+.bd-lst-frow :is(input, select) { height: 30px; padding: 0 8px; border: 0; border-radius: 8px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); font: inherit; font-size: 12.5px; color: var(--fg); }
+.bd-lst-frow .bp-btn { height: 30px; }
+.bd-lst-fonts { display: grid; gap: 1px; max-height: 260px; overflow: auto; padding: 3px; border-radius: 10px; background: var(--surface); box-shadow: var(--shadow-1); scrollbar-width: thin; }
+.bd-lst-font { display: grid; gap: 1px; width: 100%; padding: 6px 8px; border: 0; border-radius: 7px; background: none; text-align: left; font: inherit; color: var(--fg); cursor: pointer; }
+.bd-lst-font:hover:not(:disabled) { background: var(--hover); }
+.bd-lst-font[aria-selected="true"] { background: var(--selected); box-shadow: inset 2px 0 0 var(--accent); }
+.bd-lst-font .n { display: flex; justify-content: space-between; gap: 8px; font-size: 11.5px; color: var(--fg-muted); }
+.bd-lst-font .n span { flex: none; color: var(--fg-subtle); }
+.bd-lst-font .p { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 16px; line-height: 1.3; }
+.bd-lst-fonts .hint, .bd-lst-fonts .bp-btn { margin: 6px 8px; }
+.bd-lst-imgdrop { display: flex; align-items: center; gap: 10px; width: 100%; padding: 12px; border: 0; border-radius: 10px; background: var(--inset); box-shadow: inset 0 0 0 1.5px var(--line-strong);
+  text-align: left; font: inherit; font-size: 12px; color: var(--fg-muted); cursor: pointer; }
+.bd-lst-imgdrop > span { display: grid; gap: 2px; }
+.bd-lst-imgdrop b { font-size: 12.5px; color: var(--fg); }
+.bd-lst-imgdrop .bd-ic { width: 22px; height: 22px; flex: none; color: var(--fg-subtle); }
+.bd-lst-imgdrop:is(:hover, .over):not(:disabled) { background: var(--accent-tint); box-shadow: inset 0 0 0 1.5px var(--accent); }
+.bd-lst-imgdrop.busy { opacity: .6; pointer-events: none; }
+.bd-lst-sws { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.bd-lst-sws[hidden] { display: none; }
+.bd-lst-swatch { display: grid; grid-template-columns: 22px minmax(0, 1fr); align-items: center; gap: 0 6px; padding: 4px; border: 0; border-radius: 8px; background: var(--inset); font: inherit; color: var(--fg-muted); cursor: grab; text-align: left; }
+.bd-lst-swatch i { grid-row: span 2; width: 22px; height: 22px; border-radius: 6px; box-shadow: inset 0 0 0 1px oklch(0% 0 0 / .15); }
+.bd-lst-swatch code { padding: 0; background: none; font-size: 10.5px; color: var(--fg); } .bd-lst-swatch span { font-size: 10.5px; }
+.bd-lst-swatch.on { box-shadow: inset 0 0 0 1.5px var(--accent); background: var(--accent-tint); }
+.bd-lst-roles { display: grid; gap: 4px; }
+.bd-lst-role { display: grid; grid-template-columns: 26px minmax(0, 1fr) 30px 76px; align-items: center; gap: 8px; padding: 4px; border-radius: 9px; }
+.bd-lst-role.over { background: var(--accent-tint); box-shadow: inset 0 0 0 1.5px var(--accent); }
+.bd-lst-role .sw { width: 26px; height: 26px; padding: 0; border: 0; border-radius: 7px; box-shadow: inset 0 0 0 1px oklch(0% 0 0 / .18); cursor: pointer; }
+.bd-lst-role .sw:disabled { cursor: default; }
+.bd-lst-role .l { display: grid; min-width: 0; font-size: 12.5px; } .bd-lst-role .l code { padding: 0; background: none; font-size: 10.5px; color: var(--fg-subtle); }
+.bd-lst-role input[type="color"] { width: 30px; height: 26px; padding: 0; border: 0; border-radius: 6px; background: none; cursor: pointer; }
+.bd-lst-role .hx { width: 76px; height: 26px; padding: 0 6px; border: 0; border-radius: 6px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); font: 12px var(--mono); color: var(--fg); }
+.bd-lst-pairs { display: grid; gap: 4px; }
+.bd-lst-bstate { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: 12px; color: var(--fg-subtle); }
+.bd-lst-bstate.on { padding: 8px 10px; border-radius: 10px; background: var(--warn-tint); color: var(--warn-fg); }
+.bd-lst-bstate .bp-btn { height: 26px; }
 .bd-lst-checks { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
 .bd-lst-checks li { display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: 6px; font-size: 12.5px; line-height: 1.4; }
 .bd-lst-checks li .bd-ic { width: 14px; height: 14px; margin-top: 2px; }
 .bd-lst-checks li.err { color: var(--risk-fg); } .bd-lst-checks li.warn { color: var(--warn-fg); } .bd-lst-checks li.ok { color: var(--ok-fg); }
-.bd-lst-pair { display: flex; justify-content: space-between; gap: 8px; font-size: 12.5px; }
-.bd-lst-pair .bad { color: var(--risk-fg); font-weight: 600; } .bd-lst-pair .good { color: var(--ok-fg); }
+.bd-lst-pair { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 5px 6px; border-radius: 9px; font-size: 12.5px; }
+.bd-lst-pair.low { background: color-mix(in oklch, var(--risk-tint, var(--warn-tint)) 70%, transparent); }
+.bd-lst-pair .aa { display: grid; place-items: center; height: 26px; border-radius: 6px; font: 700 13px var(--sans); box-shadow: inset 0 0 0 1px oklch(0% 0 0 / .12); }
+.bd-lst-pair .l { display: grid; min-width: 0; } .bd-lst-pair .l span { font-size: 11px; color: var(--fg-subtle); }
+.bd-lst-pair :is(.good, .bad) { display: grid; justify-items: end; font: 600 12.5px var(--mono); }
+.bd-lst-pair small { font: 500 10.5px var(--sans); }
+.bd-lst-pair .bad { color: var(--risk-fg); } .bd-lst-pair .good { color: var(--ok-fg); }
 </style>
 </head>
 <body>
@@ -7226,8 +7301,63 @@ function renderBoard(b) {
 // Checks pane (L.checks), L.variant.
 const LST = (() => { try { const x = JSON.parse(document.getElementById('bp-listing').textContent); return x && typeof x === 'object' && x.rules ? x : null; } catch { return null; } })();
 const LST_H = { watch: 170, phone: 330, tablet: 330, tv: 230, desktop: 230, xr: 230, chromebook: 230, car: 230 }, LST_W = 480, LST_ASSET = [150, 360], LST_LIVE_MAX = 40;
-const LST_PAIRS = [['caption', 'bg'], ['caption', 'surface'], ['text', 'surface'], ['text', 'accent']];
-const LST_DEF_PAL = { bg: '#2457d6', surface: '#eef2ff', accent: '#f59e0b', text: '#ffffff', caption: '#ffffff' };   // kits/shot.css's defaults
+// a colour in CIE Lab (D65) from 8-bit sRGB, and back to #rrggbb: the palette extractor's space
+function lstLab(r, g, b) {
+  const lin = c => (c /= 255) <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4, [R, G, B] = [lin(r), lin(g), lin(b)];
+  const f = t => t > 216 / 24389 ? Math.cbrt(t) : (24389 / 27 * t + 16) / 116;
+  const x = f((0.4124564 * R + 0.3575761 * G + 0.1804375 * B) / 0.95047), y = f(0.2126729 * R + 0.7151522 * G + 0.0721750 * B), z = f((0.0193339 * R + 0.1191920 * G + 0.9503041 * B) / 1.08883);
+  return [116 * y - 16, 500 * (x - y), 200 * (y - z)];
+}
+function lstHex([L, a, b]) {
+  const fy = (L + 16) / 116, fx = fy + a / 500, fz = fy - b / 200, inv = t => t ** 3 > 216 / 24389 ? t ** 3 : (116 * t - 16) / (24389 / 27);
+  const X = 0.95047 * inv(fx), Y = L > 8 ? fy ** 3 : L / (24389 / 27), Z = 1.08883 * inv(fz);
+  const g = c => { c = c <= 0.0031308 ? 12.92 * c : 1.055 * c ** (1 / 2.4) - 0.055; return Math.round(Math.min(1, Math.max(0, c)) * 255).toString(16).padStart(2, '0'); };
+  return '#' + g(3.2404542 * X - 1.5371385 * Y - 0.4985314 * Z) + g(-0.9692660 * X + 1.8760108 * Y + 0.0415560 * Z) + g(0.0556434 * X - 0.2040259 * Y + 1.0572252 * Z);
+}
+// k-means in Lab over pixels ([L, a, b] each): k swatches {hex, share %, lab}, by share. It starts from the commonest
+// colour, then each next centre is the pixel farthest from those chosen (none closer than ΔE 1: a flat image gives fewer)
+function lstKmeans(px, k = 6, iters = 8) {
+  const n = px.length; if (!n) return [];
+  const d2 = (p, c) => (p[0] - c[0]) ** 2 + (p[1] - c[1]) ** 2 + (p[2] - c[2]) ** 2;
+  const bins = new Map(); let top = 0, first = 0;
+  px.forEach((p, i) => { const key = p.map(v => Math.round(v / 4)).join(','), c = (bins.get(key) || 0) + 1; bins.set(key, c); if (c > top) { top = c; first = i; } });
+  const cs = [px[first].slice()], near = new Float64Array(n).fill(Infinity);
+  while (cs.length < k) {
+    const c = cs[cs.length - 1]; let far = -1, fd = 1;
+    for (let i = 0; i < n; i++) { const d = d2(px[i], c); if (d < near[i]) near[i] = d; if (near[i] > fd) { fd = near[i]; far = i; } }
+    if (far < 0) break;
+    cs.push(px[far].slice());
+  }
+  const of = new Int32Array(n), cnt = new Array(cs.length).fill(0);
+  const assign = () => { cnt.fill(0); for (let i = 0; i < n; i++) { let bj = 0, bd = Infinity; for (let j = 0; j < cs.length; j++) { const d = d2(px[i], cs[j]); if (d < bd) { bd = d; bj = j; } } of[i] = bj; cnt[bj]++; } };
+  for (let it = 0; it < iters; it++) {
+    assign();
+    const sum = cs.map(() => [0, 0, 0]);
+    for (let i = 0; i < n; i++) { const s = sum[of[i]]; s[0] += px[i][0]; s[1] += px[i][1]; s[2] += px[i][2]; }
+    cs.forEach((c, j) => { if (cnt[j]) for (let q = 0; q < 3; q++) c[q] = sum[j][q] / cnt[j]; });
+  }
+  assign();
+  return cs.map((c, j) => ({ lab: c, n: cnt[j] })).filter(x => x.n).sort((a, b) => b.n - a.n)
+    .map(x => ({ hex: lstHex(x.lab), share: Math.round(x.n / n * 1000) / 10, lab: x.lab }));
+}
+// an image's swatches: decoded on a canvas, scaled to 128 px at most (nearest pixel: no blended edges), opaque pixels only
+async function lstExtract(blob) {
+  const bmp = await createImageBitmap(blob), s = Math.min(1, 128 / Math.max(bmp.width, bmp.height));
+  const cv = document.createElement('canvas'); cv.width = Math.max(1, Math.round(bmp.width * s)); cv.height = Math.max(1, Math.round(bmp.height * s));
+  const cx = cv.getContext('2d'); cx.imageSmoothingEnabled = false; cx.drawImage(bmp, 0, 0, cv.width, cv.height); if (bmp.close) bmp.close();
+  const d = cx.getImageData(0, 0, cv.width, cv.height).data, px = [];
+  for (let i = 0; i < d.length; i += 4) if (d[i + 3] >= 128) px.push(lstLab(d[i], d[i + 1], d[i + 2]));
+  return lstKmeans(px);
+}
+// the first roles for swatches: the darkest is bg, the lightest surface, the most saturated of the rest accent, and the
+// one with the best contrast on bg both text and caption
+function lstRoles(sw) {
+  const dark = sw.reduce((a, b) => b.lab[0] < a.lab[0] ? b : a), light = sw.reduce((a, b) => b.lab[0] > a.lab[0] ? b : a);
+  const rest = sw.filter(s => s !== dark && s !== light), chroma = s => Math.hypot(s.lab[1], s.lab[2]);
+  const accent = (rest.length ? rest : sw).reduce((a, b) => chroma(b) > chroma(a) ? b : a);
+  const best = sw.filter(s => s !== dark).reduce((a, b) => !a || lstContrast(b.hex, dark.hex) > lstContrast(a.hex, dark.hex) ? b : a, null) || light;
+  return { bg: dark.hex, surface: light.hex, accent: accent.hex, text: best.hex, caption: best.hex };
+}
 // WCAG 2.2 contrast of two #rgb/#rrggbb colours
 function lstContrast(a, b) {
   const lum = hex => { const x = hex.length === 4 ? hex.slice(1).split('').map(c => c + c) : [hex.slice(1, 3), hex.slice(3, 5), hex.slice(5, 7)];
@@ -7274,8 +7404,6 @@ function renderListing(lb) {
     return { ...lb, order, rows };
   }
   const sectionsOf = (p, loc = L.locale) => BoardGeo.listingSections(effective(), abs, RULES, p, loc);
-  // L.styleFor: the message and layout styles a platform page shows (the listing's; the Style picker and variants add theirs)
-  L.styleFor = () => ({ message: 'm1', layout: 'l1', ...obj(lb.style) });
 
   /* the app bar: Google Play | App Store, and the locale menu with each locale's MT and missing counts */
   const missingIn = loc => {
@@ -7332,16 +7460,19 @@ function renderListing(lb) {
   const pg = h('div', { class: 'bd-lst-main', 'data-m': 'view' });
   wrap.append(pg);
   const io = 'IntersectionObserver' in window ? new IntersectionObserver(es => { for (const e of es) { const x = e.target._x; if (!x) continue; x.near = e.isIntersecting; if (x.near) mount(x); } trim(); }, { root: pg, rootMargin: '600px 0px' }) : null;
-  // a capture for a shot's set and the locale ({url, fresh, fb}), else null: the set's target, then a web capture
+  // a capture for a shot's set and the locale ({url, file, fresh, fb, target, at, device}), else null: the set's target,
+  // then a web capture
   function captureFor(a, rule) {
     const per = obj(obj(LST.captures)[a.id]), targets = [...new Set([rule.target, 'web'].filter(Boolean))];
     for (const fb of [false, true]) for (const t of targets) {
       const c = obj(obj(per[t])[fb ? DEF : L.locale]);
-      if (typeof c.file === 'string' && (!fb || L.locale !== DEF)) return { url: fileUrl(c.file), fresh: c.fresh !== false, fb, target: t };
+      if (typeof c.file === 'string' && (!fb || L.locale !== DEF)) return { url: fileUrl(c.file), file: c.file, fresh: c.fresh !== false, fb, target: t,
+        locale: fb ? DEF : L.locale, at: str(c.at, 25), device: str(c.device, 80) };
     }
     return null;
   }
-  const frameState = x => x.kind === 'asset' ? { locale: L.locale } : { set: x.rule.id, locale: L.locale, i: x.i, n: x.n, ...L.styleFor(L.platform), ui: x.cap ? x.cap.url : null };
+  const frameState = x => x.kind === 'asset' ? { locale: L.locale, brand: L.brandTokens() }
+    : { set: x.rule.id, locale: L.locale, i: x.i, n: x.n, ...L.styleFor(L.platform, x.a), ui: x.cap ? x.cap.url : null, brand: L.brandTokens() };
   function frameEl(x) {
     const attrs = SCREENS ? (!OLD && typeof SCREENS[x.a.id] === 'string' ? { srcdoc: SCREENS[x.a.id] } : null) : SERVED ? { src: screenUrl(x.a, OLD ? VIEW.rev : null) } : null;
     if (!attrs) return null;
@@ -7378,12 +7509,13 @@ function renderListing(lb) {
     const loc = L.locale, keys = obj(LST.keys)[a.id] || [];
     const fb = keys.filter(k => strOf(loc, k) == null && strOf(DEF, k) != null).length, gone = keys.filter(k => strOf(loc, k) == null && strOf(DEF, k) == null).length;
     const tags = [kind === 'image' && ['up', 'upload'], kind === 'image' && img.colour !== 2 && img.colour !== undefined && ['stale', 'alpha?'],
-      kind === 'shot' && (x.cap ? (x.cap.fresh ? ['cap', 'capture'] : ['stale', 'stale']) : ['mock', 'mock UI']), x.cap && x.cap.fb && ['', `${DEF} capture`],
+      kind === 'shot' && (x.cap ? (x.cap.fresh ? ['cap', 'capture', capTitle(x.cap)] : ['stale', 'stale', capTitle(x.cap) + '; its recipe changed since: re-shoot it']) : ['mock', 'mock UI', 'No capture: the UI is an HTML mock-up']),
+      x.cap && x.cap.fb && ['', `${DEF} capture`],
       keys.some(k => isMt(loc, 'strings.' + k)) && ['mt', 'MT'], fb && ['', `${fb} falls back`], gone && ['miss', `${gone} missing`],
       typeof a.locale === 'string' && ['', a.locale + ' only'], L.chg.get(a.id) && ['', L.chg.get(a.id) === 'add' ? 'New' : 'Changed']].filter(Boolean);
     if (L.chg.get(a.id)) x.el.classList.add('bd-chg');
     x.box = h('div', { class: 'bd-lst-tile' }, x.el, h('div', { class: 'bd-lst-cap' }, kind !== 'asset' && h('span', { class: 'n' }, String(i + 1)), h('span', { class: 't', title: a.title || a.id }, a.title || a.id),
-      tags.map(([c, t]) => h('span', { class: 'bd-lst-tag ' + c }, t))));
+      tags.map(([c, t, tt]) => h('span', { class: 'bd-lst-tag ' + c, title: tt || null }, t)), kind === 'image' && L.replaceButton && L.replaceButton(a, rule, i)));
     L.tiles.push(x);
     if (io && kind !== 'image') io.observe(x.el); else if (kind !== 'image') { x.near = true; mount(x); }
     return x;
@@ -7436,6 +7568,7 @@ function renderListing(lb) {
     const secs = sectionsOf(p.id), counts = Object.fromEntries(secs.flatMap(s => s.sets.map(x => [x.set, x.shots.length]))), eff = effective();
     const out = [renderShared(p)];
     const pano = L.styleFor(p.id).layout === 'l2';
+    pg.dataset.pano = pano ? '1' : '';
     for (const s of secs) {
       const row = ROWS.get(s.row), sets = s.sets.map(x => SETS.get(x.set));
       out.push(h('section', { class: 'bd-lst-sec', 'data-row': s.row },
@@ -7443,8 +7576,9 @@ function renderListing(lb) {
         h('div', { class: 'bd-lst-sets' }, s.sets.map(x => {
           const rule = SETS.get(x.set), H = LST_H[s.row] || 300;
           const tiles = x.shots.map((id, i) => tile(byId.get(id), rule, i, x.shots.length, listingImage(byId.get(id)) ? 'image' : 'shot', H).box);
+          const more = L.uploadTiles ? L.uploadTiles(rule, x.shots.length, H) : [];
           const row = h('div', { class: 'bd-lst-tiles' + (pano && !rule.raw ? ' pano' : ''), 'data-set': x.set, style: pano && !rule.raw && p.id === 'play' ? `gap:${Math.round(H * 0.02)}px` : null },
-            tiles.length ? tiles : h('div', { class: 'bd-lst-empty', style: `min-height:${Math.min(H, 120)}px` }, 'No shots in this set'));
+            tiles.length || more.length ? [...tiles, ...more] : h('div', { class: 'bd-lst-empty', style: `min-height:${Math.min(H, 120)}px` }, 'No shots in this set'));
           return h('div', { class: 'bd-lst-set', 'data-set': x.set }, setChip(rule, x.shots.length, counts), row);
         }))));
     }
@@ -7502,10 +7636,13 @@ function renderListing(lb) {
     }
     if (d.bd !== 'pick' || !L.M || (L.mode !== 'point' && L.mode !== 'select')) return;
     const sel = str(d.sel), r = rectOf(d.rect), extra = { platform: L.platform, locale: L.locale, ...(x.kind === 'shot' ? { set: x.rule.id } : {}) };
+    // a pin on a capture: where on the UI image it fell (fractions), and the capture the reader saw
+    const at = Array.isArray(d.at) && d.at.length === 2 && d.at.every(v => Number.isFinite(v) && v >= 0 && v <= 1) && x.cap ? d.at.map(v => Math.round(v * 1e4) / 1e4) : null;
+    if (at) Object.assign(extra, { at, cap: { file: /^data:/.test(x.cap.file) ? '' : x.cap.file, target: x.cap.target, locale: x.cap.locale, at: x.cap.at, fresh: x.cap.fresh } });
     if (!sel) { L.M.pinFrame({ el: x.el, key: 'artboard:' + x.a.id, what: '', text: str(d.text), extra, pos: r ? { x: clamp((r.x + r.w / 2) / x.w, 0, 1), y: clamp((r.y + r.h / 2) / x.h, 0, 1) } : { x: .5, y: .5 } }); return; }
     if (r) x.rects[sel] = r;
     L.M.pinFrame({ el: x.el, key: `el:${x.a.id}/${sel}`, what: str(d.name, 60) || str(d.tag, 30) || sel.slice(0, 60), text: str(d.text), extra,
-      pos: r ? { x: clamp((r.x + r.w) / x.w, 0, 1), y: clamp(r.y / x.h, 0, 1) } : { x: .5, y: .5 } });
+      pos: r ? (at ? { x: clamp((r.x + at[0] * r.w) / x.w, 0, 1), y: clamp((r.y + at[1] * r.h) / x.h, 0, 1) } : { x: clamp((r.x + r.w) / x.w, 0, 1), y: clamp(r.y / x.h, 0, 1) }) : { x: .5, y: .5 } });
   });
 
   /* View mode: drag a shot within its set to reorder it (an order draft) */
@@ -7553,39 +7690,476 @@ function renderListing(lb) {
     const rows = effective().rows, next = rows.includes(id) ? rows.filter(r => r !== id) : RULES.rows.map(r => r.id).filter(r => rows.includes(r) || r === id);
     putDraft({ op: 'rows', rows: next }, 'Device sections', `Sections: ${next.map(r => ROWS.get(r).label).join(', ')}`);
   }
-  // the patch command for the drafts: one --json for the listing block with the order and rows they make
+  // a shell word, and the doc's file name as `build.py` takes it: every patch command the drafts make
+  const sh = s => /^[\w@%+=:,./-]+$/.test(s) ? s : `'${s.replace(/'/g, `'\\''`)}'`;
+  const docFile = () => decodeURIComponent(location.pathname.split('/').pop() || '').replace(/\.html?$/i, '.bluedoc.json');
+  // the patch command for the order and rows drafts: one --json for the listing block with the order and rows they make
   L.draftCommands = ds => {
-    const sh = s => /^[\w@%+=:,./-]+$/.test(s) ? s : `'${s.replace(/'/g, `'\\''`)}'`;
-    const doc = decodeURIComponent(location.pathname.split('/').pop() || '').replace(/\.html?$/i, '.bluedoc.json');
-    const mine = ds.filter(a => a.type === 'listing' && a.listing), patch = {};
+    const mine = ds.filter(a => a.type === 'listing' && a.listing && ['order', 'rows'].includes(a.listing.op)), patch = {};
     for (const a of mine) {
       if (a.listing.op === 'order') (patch.order ||= { ...obj(lb.order) })[a.listing.set] = a.listing.ids;
       else if (a.listing.op === 'rows') patch.rows = a.listing.rows;
     }
     if (!mine.length) return '';
-    return ['build.py patch', sh(doc), sh(`block:${blockPath}`), '--json', sh(JSON.stringify(patch)), '--change', sh(mine.map(a => a.note).join('; ')), ...mine.map(a => '--resolves ' + a.id)].join(' ');
+    return ['build.py patch', sh(docFile()), sh(`block:${blockPath}`), '--json', sh(JSON.stringify(patch)), '--change', sh(mine.map(a => a.note).join('; ')), ...mine.map(a => '--resolves ' + a.id)].join(' ');
   };
-  let draftSig = '';
-  L.paintDrafts = () => { const s = JSON.stringify(drafts().map(a => [a.id, a.listing])); if (s !== draftSig) { const first = !draftSig && !drafts().length; draftSig = s; if (!first) renderSections(); } };
+  // drafts the frames take live (style picks, brand edits) restyle them in place; any other draft redraws the sections
+  const LIVE_OPS = ['style', 'brand'];
+  let draftSig = '', liveSig = '';
+  L.paintDrafts = () => {
+    const ds = drafts(), sec = ds.filter(a => !LIVE_OPS.includes(a.listing.op)), live = ds.filter(a => LIVE_OPS.includes(a.listing.op));
+    const s = JSON.stringify(sec.map(a => [a.id, a.listing]));
+    if (s !== draftSig) { const first = !draftSig && !sec.length; draftSig = s; if (!first) renderSections(); }
+    const v = JSON.stringify(live.map(a => [a.id, a.listing]));
+    if (v !== liveSig) { liveSig = v; L.restyle(); }
+  };
+  // whether the doc now has what a draft asks for, per op: on load such a draft is resolved (applied by this rev)
+  L.draftRecorded = {
+    order: o => JSON.stringify(obj(lb.order)[o.set] || null) === JSON.stringify(o.ids),
+    rows: o => JSON.stringify(lb.rows || null) === JSON.stringify(o.rows),
+    upload: o => abs.some(a => a.src === o.file),   // the agent recorded it as a shot's src
+  };
+
+  /* ---------- Uploads and re-shoots (M2) ----------
+     A set's Drop PNG slot (after its last shot, until the set is full) and an uploaded shot's Replace with PNG… take a
+     PNG. The page reads its header (size, colour type, tRNS) against the set's rule and refuses a wrong file, then POST
+     /__bluedoc/listing/upload writes it beside the doc (<stem>.listing/<platform>/<locale>/<set>/NN.png). It shows as
+     a Draft tile until the agent records it: a 'listing' draft (op 'upload': {file, platform, locale, set, slot, w, h,
+     replaces?}) that Request changes sends under ## Uploaded shots with the `build.py patch` command, and Approve waits
+     for it (L.approveBlocks; the server refuses an approval too). bp-listing's `uploads` lists the drafts on disk.
+     A pin on a capture keeps where on the UI image it fell (target.at, fractions) and the capture the reader saw
+     (target.cap); every shot pin's readback (L.pinMd) names the shot, its sets, locale and page, its screen file and
+     element, its capture with its time, its recipe and the capture.py command that re-shoots it. */
+  const UPLOADS = Array.isArray(LST.uploads) ? LST.uploads.filter(u => u && typeof u.file === 'string') : [];
+  const UPLOAD_MAX = 8 * 1024 * 1024;   // listing.UPLOAD_MAX_BYTES, unless the set's rule has maxBytes
+  const boardPath = (() => { const b = boardOf(DOC); for (const s of DOC.sections || []) { const i = (s.blocks || []).indexOf(b); if (i >= 0) return `${s.id}/${i}`; } return ''; })();
+  const canUpload = () => SERVED && !OLD && !BASE && !!L.D;
+  const nn = n => String(n).padStart(2, '0');
+  function capTitle(c) { return `Captured${c.at ? ' ' + c.at.slice(0, 10) : ''}${c.device ? ' on ' + c.device : ''} (${c.target}, ${c.locale})`; }
+  // a PNG's IHDR (width, height, colour type) and whether a tRNS chunk comes before the image data; null: no PNG
+  function pngHead(b) {
+    const sig = [137, 80, 78, 71, 13, 10, 26, 10], u32 = i => ((b[i] << 24) >>> 0) + (b[i + 1] << 16) + (b[i + 2] << 8) + b[i + 3];
+    if (b.length < 33 || sig.some((v, i) => b[i] !== v) || String.fromCharCode(...b.subarray(12, 16)) !== 'IHDR') return null;
+    const out = { w: u32(16), h: u32(20), colour: b[25], trns: false };
+    for (let i = 33; i + 8 <= b.length;) {
+      const kind = String.fromCharCode(...b.subarray(i + 4, i + 8));
+      if (kind === 'tRNS') out.trns = true;
+      if (kind === 'IDAT' || kind === 'IEND') break;
+      i += 12 + u32(i);
+    }
+    return out;
+  }
+  // why a w × h image doesn't fit a set, or null (listing.size_problem, line for line)
+  function sizeWhy(r, w, hh) {
+    if (Array.isArray(r.sizes)) { const ok = [...r.sizes, ...(r.landscape ? r.sizes.map(([a, b]) => [b, a]) : [])]; return ok.some(([a, b]) => a === w && b === hh) ? null : 'one of ' + r.sizes.map(s => s.join('×')).join(', '); }
+    if (Array.isArray(r.sides)) { const [lo, hi] = r.sides; if (!(lo <= w && w <= hi && lo <= hh && hh <= hi)) return `each side ${lo}–${hi} px`; }
+    if (r.maxAspect && Math.max(w, hh) > r.maxAspect * Math.min(w, hh)) return `the long side at most ${r.maxAspect}× the short side`;
+    const ratios = r.ratios || (r.ratio ? [r.ratio] : []);
+    if (ratios.length && !ratios.some(([a, b]) => w * b === hh * a)) return 'a ratio of ' + ratios.map(x => x.join(':')).join(' or ');
+    if (r.min && (w < r.min[0] || hh < r.min[1])) return `at least ${r.min.join('×')}`;
+    if (r.max && (w > r.max[0] || hh > r.max[1])) return `at most ${r.max.join('×')}`;
+    return null;
+  }
+  const uploadDraft = file => drafts().find(a => a.listing.op === 'upload' && a.listing.file === file) || null;
+  function putUploadDraft(u) {
+    if (!L.D) return;
+    const rule = SETS.get(u.set), was = u.replaces && byId.get(u.replaces), same = uploadDraft(u.file);
+    L.D.put({ id: same && same.id, type: 'listing', key: `block:${boardPath}`, label: `Upload ${nn(u.slot)} · ${rule ? rule.label : u.set}`,
+      note: `${u.set} · ${u.locale} · slot ${nn(u.slot)}: ${u.file}${was ? `, replacing ${was.title || was.id}` : ''}`,
+      listing: { op: 'upload', file: u.file, platform: u.platform, locale: u.locale, set: u.set, slot: u.slot, w: u.w, h: u.h, colour: u.colour, bytes: u.bytes, ...(u.replaces ? { replaces: u.replaces } : {}) } });
+  }
+  // the reader's PNG for a set's slot (replaces: the uploaded shot it takes the place of): checked here, then written
+  async function uploadPng(f, rule, slot, replaces, slotEl) {
+    if (!f) return;
+    const limit = rule.maxBytes || UPLOAD_MAX, b = new Uint8Array(await f.arrayBuffer()), info = pngHead(b);
+    const size = info && sizeWhy(rule, info.w, info.h);
+    const why = !info ? `${f.name} is not a PNG` : b.length > limit ? `${(b.length / 1048576).toFixed(1)} MB: at most ${Math.floor(limit / 1048576)} MB`
+      : size ? `${info.w}×${info.h}: want ${size}` : ![2, 3].includes(info.colour) || info.trns ? 'it has transparency: want RGB or indexed colour without alpha' : null;
+    if (why) { toast(`${rule.label}: ${why} (${rule.source})`); return; }
+    let s = '';
+    for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000));
+    const headers = SERVER_KEY.headers({ 'Content-Type': 'application/json', 'X-Bluedoc': '1' });
+    if (slotEl) slotEl.classList.add('busy');
+    let r, j;
+    try {
+      r = await fetch('/__bluedoc/listing/upload', { method: 'POST', headers, body: JSON.stringify({ path: location.pathname, platform: rule.platform, locale: L.locale, set: rule.id, slot, png: btoa(s) }) });
+      j = await r.json().catch(() => ({}));
+    } catch { toast('Couldn\'t reach the server: the PNG isn\'t saved'); return; } finally { if (slotEl) slotEl.classList.remove('busy'); }
+    if (!r.ok) {
+      if (r.status === 403 && j.key) SERVER_KEY.refused(headers);
+      toast(r.status === 403 ? 'This browser can\'t save here yet: run `serve.py unlock` and open its link' : `${j.error || 'Not saved'}${j.source ? ` (${j.source})` : ''}`);
+      return;
+    }
+    const u = { file: j.file, platform: rule.platform, locale: L.locale, set: rule.id, slot: j.slot, w: j.w, h: j.h, colour: j.colour, bytes: j.bytes, problem: null, v: Date.now(), ...(replaces ? { replaces } : {}) };
+    const i = UPLOADS.findIndex(x => x.file === u.file);
+    if (i >= 0) UPLOADS[i] = u; else UPLOADS.push(u);
+    putUploadDraft(u); renderSections();
+    toast(`Saved ${u.file}: a draft until the agent records it`);
+  }
+  async function discardUpload(u) {
+    const headers = SERVER_KEY.headers({ 'Content-Type': 'application/json', 'X-Bluedoc': '1' });
+    const r = await fetch('/__bluedoc/listing/upload', { method: 'POST', headers, body: JSON.stringify({ path: location.pathname, discard: u.file }) }).catch(() => null);
+    if (!r || (!r.ok && r.status !== 404)) { toast('Couldn\'t discard it: the server didn\'t answer'); return; }
+    UPLOADS.splice(UPLOADS.indexOf(u), 1);
+    const d = uploadDraft(u.file); if (d) L.D.drop(d.id);
+    renderSections();
+  }
+  const pick = (rule, slot, replaces, el) => { const inp = h('input', { type: 'file', accept: 'image/png' }); inp.addEventListener('change', () => uploadPng(inp.files[0], rule, slot, replaces, el)); inp.click(); };
+  const dropOn = (el, run) => {
+    el.addEventListener('dragover', e => { if ([...(e.dataTransfer.types || [])].includes('Files')) { e.preventDefault(); el.classList.add('over'); } });
+    el.addEventListener('dragleave', () => el.classList.remove('over'));
+    el.addEventListener('drop', e => { e.preventDefault(); el.classList.remove('over'); const f = e.dataTransfer.files && e.dataTransfer.files[0]; if (f) run(f); });
+  };
+  // the tiles after a set's shots: its draft uploads for the locale, then the Drop PNG slot while the set has room
+  L.uploadTiles = (rule, n, H) => {
+    const ups = UPLOADS.filter(u => u.set === rule.id && u.locale === L.locale), adds = ups.filter(u => !u.replaces).length, hi = (rule.count || [0, 10])[1];
+    const [fw, fh] = frameOf(rule), out = ups.map(u => draftTile(u, rule, H));
+    if (canUpload() && n + adds < hi) {
+      const s = Math.min(H / fh, LST_W / fw), slot = n + adds + 1;
+      const el = h('button', { type: 'button', class: 'bd-lst-upslot', 'data-set': rule.id, 'data-slot': String(slot), style: `width:${Math.round(fw * s)}px;height:${Math.round(fh * s)}px`,
+        title: `Choose or drop a PNG for ${rule.label} in ${L.locale}`, onclick: () => pick(rule, slot, null, el) },
+        ic('image'), h('b', {}, 'Drop PNG'), h('span', {}, sizeTxt(rule)), h('span', {}, 'No alpha'));
+      dropOn(el, f => uploadPng(f, rule, slot, null, el));
+      out.push(h('div', { class: 'bd-lst-uptile' }, el, h('div', { class: 'bd-lst-cap' }, h('span', { class: 'n' }, nn(slot)), h('span', {}, `${n + adds} / ${hi}`))));
+    }
+    return out;
+  };
+  function draftTile(u, rule, H) {
+    const [w, hh] = u.w && u.h ? [u.w, u.h] : frameOf(rule), s = Math.min(H / hh, LST_W / w), was = u.replaces && byId.get(u.replaces);
+    const el = h('div', { class: 'bd-lst-upimg' + (u.problem ? ' bad' : ''), 'data-file': u.file, style: `width:${Math.round(w * s)}px;height:${Math.round(hh * s)}px` },
+      h('img', { src: fileUrl(u.file) + (u.v ? `?v=${u.v}` : ''), alt: `Draft upload ${nn(u.slot)}` }));
+    return h('div', { class: 'bd-lst-uptile', 'data-file': u.file }, el,
+      h('div', { class: 'bd-lst-cap' }, h('span', { class: 'n' }, nn(u.slot)), h('span', { class: 't' }, 'Draft'), h('span', { class: 'bd-lst-tag draft' }, 'upload'),
+        u.w && h('span', { class: 'bd-lst-tag' }, `${u.w}×${u.h}`), u.problem && h('span', { class: 'bd-lst-tag stale', title: u.problem }, 'doesn\'t fit'),
+        was && h('span', { class: 'bd-lst-tag' }, `replaces ${was.title || was.id}`),
+        canUpload() && h('button', { type: 'button', class: 'bd-lst-x', title: 'Delete this upload', onclick: () => discardUpload(u) }, 'Discard')),
+      h('div', { class: 'note' }, 'Until the agent records it'));
+  }
+  // an uploaded shot's Replace with PNG…: a new upload in its slot, which the agent puts in the shot's src
+  L.replaceButton = (a, rule, i) => canUpload() && (typeof a.locale !== 'string' || a.locale === L.locale)
+    ? h('button', { type: 'button', class: 'bd-lst-x', title: `Replace this shot with another PNG (${sizeTxt(rule)}, no alpha)`, onclick: e => pick(rule, i + 1, a.id, e.currentTarget) }, 'Replace with PNG…') : null;
+  // every upload on disk has its draft; a draft whose file is gone (discarded elsewhere) goes
+  L.syncUploads = () => {
+    if (!L.D || OLD || BASE) return;
+    for (const u of UPLOADS) if (!uploadDraft(u.file)) putUploadDraft(u);
+    for (const a of drafts()) if (a.listing.op === 'upload' && !UPLOADS.some(u => u.file === a.listing.file) && !L.draftRecorded.upload(a.listing)) L.D.drop(a.id);
+  };
+  (L.approveBlocks ||= []).push(() => { const n = drafts().filter(a => a.listing.op === 'upload').length; return n ? [`${n} uploaded shot${n === 1 ? ' isn\'t' : 's aren\'t'} recorded yet: send Request changes, then wait for the agent's revision`] : []; });
+  // ## Uploaded shots: one line each, then the patch commands that record them (the first bumps the rev)
+  (L.readbackParts ||= []).push({ ops: ['upload'], md: ds => {
+    if (!ds.length) return '';
+    const ids = new Set(abs.map(a => a.id)), mb = n => n >= 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`;
+    const lines = ds.map(a => { const o = a.listing, was = o.replaces && byId.get(o.replaces);
+      return `- (${a.id}) ${o.set} · ${o.locale} · slot ${nn(o.slot)}: ${o.file} (${o.w}×${o.h}, ${o.colour === 3 ? 'indexed' : 'RGB'}${o.bytes ? ', ' + mb(o.bytes) : ''})${was ? `, replacing ${was.title || was.id} (\`artboard:${was.id}\`)` : ''}`; });
+    const cmds = ds.map((a, k) => {
+      const o = a.listing, was = o.replaces && byId.get(o.replaces), tail = [...(k ? ['--no-bump'] : []), '--change', sh(`Uploaded shot ${nn(o.slot)} (${o.locale}).`), '--resolves', a.id];
+      if (was) return ['build.py patch', sh(docFile()), sh(`artboard:${was.id}`), '--set', sh(`src=${o.file}`), ...tail].join(' ');
+      let id = `upl-${o.set.split('/')[1]}-${o.locale.toLowerCase()}-${nn(o.slot)}`; for (let n = 2; ids.has(id); n++) id = id.replace(/(-\d+)?$/, '') + '-' + n;
+      ids.add(id);
+      const art = { id, title: `Upload ${nn(o.slot)}`, device: 'shot', fidelity: 'hifi', sets: [o.set], locale: o.locale, src: o.file };
+      return ['build.py patch', sh(docFile()), sh(`block:${boardPath}`), '--append', sh(JSON.stringify(art)), ...tail].join(' ');
+    });
+    return `## Uploaded shots\n\n${lines.join('\n')}\n\n\`\`\`sh\n${cmds.join('\n')}\n\`\`\``;
+  } });
+  // a shot pin's lines in the readback: where it sits and, on a capture, how to re-shoot it
+  L.pinMd = a => {
+    const m = /^(?:el|artboard):([^/]+)(?:\/(.+))?$/.exec(a.target.key), s = m && byId.get(m[1]), t = a.target;
+    if (!s || s.device !== 'shot') return [];
+    const plat = PLATS.find(p => p.id === t.platform), sets = (s.sets || []).filter(x => SETS.has(x) && SETS.get(x).platform === t.platform);
+    const out = [`   Shot: ${s.id} · ${sets.join(', ') || t.set || '?'} · ${t.locale || DEF} · ${L.variant && L.variant.id ? L.variant.id : 'Default page'}${plat ? ' (' + plat.label + ')' : ''}`];
+    if (listingImage(s)) return [...out, `   Upload: ${s.src} (a PNG: no recipe to re-shoot; ask for a new file, or add a recipe so it becomes a capture)`];
+    const sel = m[2] ? (/^[A-Za-z0-9_-]+(?:\/[A-Za-z0-9_-]+)*$/.test(m[2]) ? m[2].split('/').map(n => `[data-bd="${n}"]`).join(' ') : m[2]) : '';
+    const c = t.cap && typeof t.cap === 'object' ? t.cap : null;
+    out.push(`   HTML: ${typeof s.src === 'string' ? s.src : docFile().replace(/\.bluedoc\.json$/, '') + `.design/${s.id}.html`}${sel ? ` → ${sel}` : ''}${c ? ' (shows the capture)' : ''}`);
+    const r = s.recipe && typeof s.recipe === 'object' ? s.recipe : null;
+    if (c && c.file) out.push(`   Capture: ${c.file}${c.at ? `, taken ${String(c.at).slice(0, 10)}` : ''}${c.fresh === false ? ', stale: its recipe changed since' : ''}`);
+    if (r && c) out.push(`   Recipe: ${c.target} · ${str(obj(LST.devices)[c.target], 80) || '?'} · ${r.route || '(the app as it opens)'} · ${c.locale} · ${r.appearance || 'light'}`);
+    if (Array.isArray(t.at)) out.push(`   At: ${Math.round(t.at[0] * 100)}%, ${Math.round(t.at[1] * 100)}% of the UI`);
+    if (r && c) out.push(`   Re-shoot: capture.py ${sh(docFile())} --shot ${s.id} --target ${c.target} --locale ${c.locale}`);
+    else if (!r) out.push('   UI: an HTML mock-up (no recipe)');
+    return out;
+  };
 
   /* the right panel: Style, Brand and Checks for the platform on screen */
-  const paneStyle = h('div', { class: 'bd-lst-pane' }), paneBrand = h('div', { class: 'bd-lst-pane' }), paneChecks = h('div', { class: 'bd-lst-pane' });
+  const paneStyle = h('div', { class: 'bd-lst-pane bd-lst-stp' }), paneBrand = h('div', { class: 'bd-lst-pane bd-lst-brp' }), paneChecks = h('div', { class: 'bd-lst-pane' });
   L.panes = { style: paneStyle, brand: paneBrand, checks: paneChecks };
+
+  /* ---------- Style and Brand ----------
+     A style pick is a draft ('listing', op 'style': {platform, variant, message, layout}) per platform page and variant
+     (variant null: the default listing; a variant tab sets L.variant {id, style}). The frames restyle at once
+     ({bd:'shot', message, layout}: kits/shot.js swaps the root classes), no new HTML. Request changes sends the picks as
+     the decisions style-<platform>-<variant>-message and -layout (L.decisionLines) and the patch command that records
+     them in listing.style.<platform> (L.readbackParts). A brand edit is one draft ('listing', op 'brand': {font,
+     palette, image, swatches}, key brand:<listing id>): the caption font from the fonts installed here (GET
+     /__bluedoc/fonts) and a palette by role, typed or extracted from an image (POST /__bluedoc/listing/brand writes it
+     beside the doc; k-means in Lab runs in this page). The frames take it as {bd:'brand'}. The contrast pairs and
+     their minimum are the rules file's brand.contrast, which build.py checks too. Approve waits while a brand draft is
+     unrecorded (L.approveBlocks). */
+  const STYLES = new Map(RULES.styles.map(s => [s.id, s])), BR = obj(RULES.brand), BR_PAL = obj(BR.defaults), BR_ROLES = obj(BR.roles);
+  const BR_PAIRS = Array.isArray(obj(BR.contrast).pairs) ? BR.contrast.pairs : [], BR_MIN = +obj(BR.contrast).min || 4.5;
+  const BR_IMG = obj(BR.image), BR_FONT = obj(BR.font), LID = typeof lb.id === 'string' && lb.id ? lb.id : 'main';
+  const variantId = () => L.variant && typeof L.variant.id === 'string' ? L.variant.id : 'default';
+  const pickOf = s => { s = obj(s); return { ...(obj(STYLES.get(s.message)).axis === 'message' ? { message: s.message } : {}), ...(obj(STYLES.get(s.layout)).axis === 'layout' ? { layout: s.layout } : {}) }; };
+  // the doc's style for a platform page and variant: the listing's, its platform's, the variant's; M1 + L1 by default
+  const docStyle = (p, v) => ({ message: 'm1', layout: 'l1', ...pickOf(lb.style), ...pickOf(obj(lb.style)[p]),
+    ...(v && v !== 'default' ? pickOf(obj((Array.isArray(lb.variants) ? lb.variants : []).find(x => x && x.id === v)).style) : {}) });
+  const styleDraft = (p, v = variantId()) => drafts().find(a => a.listing.op === 'style' && a.listing.platform === p && (a.listing.variant || 'default') === v) || null;
+  // what a platform page shows: the pick, else the doc's; a shot's own style wins over both
+  L.styleFor = (p = L.platform, a = null) => { const d = styleDraft(p); return { ...docStyle(p, variantId()), ...(d ? pickOf(d.listing) : {}), ...(a ? pickOf(a.style) : {}) }; };
+  const styleLabel = id => { const s = STYLES.get(id); return s ? `${id.toUpperCase()} ${s.name}` : id; };
+  // what a style needs from the agent on a platform page, or '' (the rules' `hook`): the index (M2) is always there
+  function needs(p, s) {
+    const ids = [...new Set(sectionsOf(p).flatMap(x => x.sets).filter(x => !SETS.get(x.set).raw).flatMap(x => x.shots))], hooks = obj(LST.hooks);
+    if (s.hook === 'callout' && !ids.some(id => (hooks[id] || []).includes('callout'))) return 'Mark the element to enlarge with data-callout in a shot\'s UI';
+    if (s.hook === 'proof' && p === 'appstore') { const first = sectionsOf(p).flatMap(x => x.sets).filter(x => !SETS.get(x.set).raw).map(x => x.shots[0]).filter(Boolean);
+      if (first.length && !first.some(id => strOf(DEF, `${id}.proof`) != null)) return `Add the string <shot>.proof (a rating, award or press quote) for shot 1`; }
+    if (s.hook === 'poster' && !(p === 'play' ? typeof obj(lb.video).play === 'string' : Array.isArray(obj(lb.video).appstore) && obj(lb.video).appstore.length)) return p === 'play' ? 'Add the YouTube video (listing.video.play)' : 'Add an app preview (listing.video.appstore)';
+    if (s.hook === 'photo' && !ids.some(id => (hooks[id] || []).includes('photo'))) return 'Add a lifestyle photo (img.shot-photo) with its rights in the shot\'s credits; a drawn figure stands in';
+    return '';
+  }
+  function pickStyle(axis, id) {
+    if (!L.D) return;
+    const p = L.platform, v = variantId(), next = { ...L.styleFor(p), [axis]: id }, doc = docStyle(p, v), d = styleDraft(p, v), pl = PLATS.find(x => x.id === p);
+    if (next.message === doc.message && next.layout === doc.layout) { if (d) L.D.drop(d.id); return; }
+    L.D.put({ id: d && d.id, type: 'listing', key: `block:${blockPath}`, label: `Style · ${pl.label}${v !== 'default' ? ' · ' + v : ''}`,
+      note: `${pl.label}${v !== 'default' ? ' ' + v : ''}: ${styleLabel(next.message)}, ${styleLabel(next.layout)}`,
+      listing: { op: 'style', platform: p, variant: v === 'default' ? null : v, message: next.message, layout: next.layout } });
+  }
+
+  // the brand: the draft's, else the doc's, over the kit's defaults (the rules' brand.defaults, as kits/shot.css has them)
+  const isHex = v => typeof v === 'string' && /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(v);
+  const hex6 = v => (v.length === 4 ? '#' + [...v.slice(1)].map(c => c + c).join('') : v).toLowerCase();
+  const palOf = p => Object.fromEntries(Object.entries(obj(p)).filter(([k, v]) => k in BR_PAL && isHex(v)).map(([k, v]) => [k, hex6(v)]));
+  const fontOf = f => { f = obj(f); if (typeof f.family !== 'string' || !/^[^;{}<>\\"'`]{1,64}$/.test(f.family)) return null;
+    return { family: f.family, ...(Number.isInteger(f.weight) && f.weight >= 100 && f.weight <= 900 && f.weight % 100 === 0 ? { weight: f.weight } : {}),
+      ...(typeof f.source === 'string' ? { source: f.source } : {}), ...(Number.isInteger(f.fsType) ? { fsType: f.fsType } : {}) }; };
+  const brandDraft = () => drafts().find(a => a.listing.op === 'brand') || null;
+  let brandLive = null, brandT = 0;   // an edit the frames show before its draft is saved
+  L.brand = () => {
+    const d = brandDraft(), b = brandLive || (d ? d.listing : BRAND);
+    return { palette: { ...palOf(BR_PAL), ...palOf(BRAND.palette), ...palOf(b.palette) }, font: fontOf(b.font), image: typeof b.image === 'string' ? b.image : null,
+      swatches: Array.isArray(b.swatches) ? b.swatches.filter(s => s && isHex(s.hex)).slice(0, 12) : [], draft: d ? d.id : null };
+  };
+  L.brandTokens = () => { const b = L.brand(); return { palette: b.palette, font: b.font }; };
+  const brandSig = b => { const f = fontOf(b.font); return JSON.stringify([f && f.family, f && f.weight || null, { ...palOf(BR_PAL), ...palOf(b.palette) }, typeof b.image === 'string' ? b.image : null]); };
+  L.draftRecorded.style = o => { const d = docStyle(o.platform, o.variant || 'default'); return d.message === o.message && d.layout === o.layout; };
+  L.draftRecorded.brand = o => brandSig(o) === brandSig(BRAND);
+  function putBrand(next, now) {
+    const cur = L.brand();
+    brandLive = { op: 'brand', font: 'font' in next ? next.font : cur.font, palette: { ...cur.palette, ...palOf(next.palette) }, image: 'image' in next ? next.image : cur.image, swatches: next.swatches || cur.swatches };
+    L.restyle();
+    clearTimeout(brandT);
+    const save = () => {
+      const o = brandLive; if (!o) return;
+      const d = brandDraft();
+      if (L.D && brandSig(o) === brandSig(BRAND)) { if (d) L.D.drop(d.id); }
+      else if (L.D) L.D.put({ id: d && d.id, type: 'listing', key: `brand:${LID}`, label: 'Brand', note: brandNote(o), listing: o });
+      brandLive = null; L.restyle();
+    };
+    if (now) save(); else brandT = setTimeout(save, 400);
+  }
+  const fontWord = f => f ? `${f.family}${f.weight ? ' ' + f.weight : ''}` : `${BR_FONT.default || 'Inter'} (the default)`;
+  const brandNote = o => `Caption font ${fontWord(fontOf(o.font))}; palette ${Object.entries({ ...palOf(BR_PAL), ...palOf(o.palette) }).map(([k, v]) => `${k} ${v}`).join(', ')}`;
+  const contrastOf = pal => BR_PAIRS.map(p => ({ ...p, ratio: isHex(pal[p.fg]) && isHex(pal[p.bg]) ? lstContrast(pal[p.fg], pal[p.bg]) : 0 })).map(p => ({ ...p, ok: p.ratio >= BR_MIN }));
+  // OS/2 fsType (the rules' brand.font): what the font's embedding rights allow
+  const fsWord = t => !Number.isInteger(t) ? '' : t & (BR_FONT.bitmapOnly || 512) ? 'bitmap only: the PDF can\'t embed it' : (t & 15) === 0 ? 'installable'
+    : t & 8 ? 'editable embedding' : t & 4 ? 'preview & print embedding' : 'restricted: the PDF can\'t embed it';
+  const fsBad = t => Number.isInteger(t) && (!!(t & (BR_FONT.bitmapOnly || 512)) || ((t & 15) !== 0 && !(t & 12)));
+
+  // the frames follow the picks and the brand; a switch to or from the panorama (L2) lays the rows out again
+  L.restyle = () => {
+    if (pg.isConnected && (L.styleFor(L.platform).layout === 'l2') !== (pg.dataset.pano === '1')) renderSections();
+    else for (const x of L.live) { if (x.kind === 'shot') post(x, { bd: 'shot', ...L.styleFor(L.platform, x.a) }); post(x, { bd: 'brand', ...L.brandTokens() }); }
+    paintStyle(); paintBrand();
+    if (L.S) L.S.paint();
+  };
+
+  // kits/style-thumbs.svg (LST.thumbs): its symbols in the page once, each card a <use> of its own
+  let sprite = null;
+  function thumb(id, p) {
+    if (sprite === null) {
+      sprite = false;
+      try {
+        const svg = new DOMParser().parseFromString(String(LST.thumbs || ''), 'image/svg+xml').documentElement;
+        if (svg && svg.nodeName === 'svg' && !svg.querySelector('parsererror, script')) { const el = document.importNode(svg, true); el.setAttribute('aria-hidden', 'true'); el.setAttribute('class', 'bd-lst-sprite'); document.body.append(el); sprite = true; }
+      } catch { /* no thumbnails */ }
+    }
+    const ref = document.getElementById(`st-${id}-${p}`) ? `st-${id}-${p}` : `st-${id}`;
+    return sprite && document.getElementById(ref) ? sv('svg', { class: 'th', viewBox: '0 0 60 104', 'aria-hidden': 'true' }, sv('use', { href: '#' + ref })) : h('span', { class: 'th' });
+  }
   function paintStyle() {
     const p = PLATS.find(x => x.id === L.platform); if (!p) return;
-    const st = L.styleFor(p.id), card = s => h('div', { class: 'bd-lst-style' + (st[s.axis] === s.id ? ' on' : ''), 'data-style': s.id },
-      h('span', { class: 'g ' + ((p.id === 'play' && s.playGrade) || s.grade)[0] }, (p.id === 'play' && s.playGrade) || s.grade), h('b', {}, `${s.id.toUpperCase()} ${s.name}${st[s.axis] === s.id ? ' · in use' : ''}`),
-      h('span', {}, p.id === 'play' ? s.play : s.appstore));
-    paneStyle.replaceChildren(h('h4', {}, `Message · ${p.label}`), ...RULES.styles.filter(s => s.axis === 'message').map(card),
-      h('h4', {}, `Layout · ${p.label}`), ...RULES.styles.filter(s => s.axis === 'layout').map(card),
-      h('p', { class: 'hint' }, 'Watch sets stay raw (L3) whatever the pick. Grades: A store guidance, B a measured lift, C a vendor trend, D rank correlation.'));
+    const st = L.styleFor(p.id), v = variantId(), d = styleDraft(p.id), doc = docStyle(p.id, v), pal = L.brand().palette, can = !!L.D && !OLD && !BASE;
+    for (const [k, c] of Object.entries(pal)) paneStyle.style.setProperty('--tb-' + k, c);
+    const card = s => {
+      const on = st[s.axis] === s.id, grade = (p.id === 'play' && s.playGrade) || s.grade, need = needs(p.id, s), rec = doc[s.axis] === s.id;
+      return h('button', { type: 'button', class: 'bd-lst-style' + (on ? ' on' : ''), 'data-style': s.id, 'aria-pressed': String(on), disabled: !can,
+        title: `${s.fits}. ${s.evidence}.`, onclick: () => pickStyle(s.axis, s.id) }, thumb(s.id, p.id),
+        h('span', { class: 'tx' }, h('span', { class: 'hd' }, h('b', {}, styleLabel(s.id)), h('span', { class: 'g ' + grade[0], title: 'Evidence grade' }, grade)),
+          h('span', { class: 'd' }, p.id === 'play' ? s.play : s.appstore),
+          (on || rec || need) && h('span', { class: 'ms' }, on && h('span', { class: 'bp-chip ok' }, 'in use'), rec && !on && h('span', { class: 'bp-chip todo' }, v === 'default' ? 'the listing\'s' : 'the variant\'s'),
+            need && h('span', { class: 'bp-chip warn', title: need }, 'needs the agent'))));
+    };
+    const own = sectionsOf(p.id).flatMap(x => x.sets).flatMap(x => x.shots).filter(id => Object.keys(pickOf(obj(byId.get(id)).style)).length);
+    paneStyle.replaceChildren(
+      h('p', { class: 'bd-lst-pick' + (d ? ' on' : '') }, d ? `Your pick for ${p.label}${v !== 'default' ? ' · ' + v : ''}: Request changes sends it.` : `${p.label}${v !== 'default' ? ' · ' + v : ''} shows the listing's style. A pick restyles every shot here.`,
+        d && h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => L.D.drop(d.id) }, ic('reset'), 'Undo pick')),
+      h('h4', {}, 'Message'), ...RULES.styles.filter(s => s.axis === 'message').map(card),
+      h('h4', {}, 'Layout'), ...RULES.styles.filter(s => s.axis === 'layout').map(card),
+      h('p', { class: 'hint' }, `Watch sets stay raw (L3) whatever the pick.${own.length ? ` ${new Set(own).size} shot${new Set(own).size === 1 ? ' keeps its' : 's keep their'} own style.` : ''} Grades: A store guidance, B a measured lift, C a vendor trend, D rank correlation.`));
+  }
+  // the picks as decisions (all: every platform page and variant, picked or not, as Approve sends them)
+  L.decisionLines = (all = false) => {
+    const out = [], vs = p => ['default', ...(Array.isArray(lb.variants) ? lb.variants : []).filter(x => x && x.platform === p && typeof x.id === 'string').map(x => x.id)];
+    for (const p of PLATS) for (const v of vs(p.id)) {
+      const d = styleDraft(p.id, v), doc = docStyle(p.id, v);
+      for (const axis of ['message', 'layout']) {
+        const id = d ? d.listing[axis] : doc[axis], rec = v === 'default' ? (axis === 'message' ? 'm1' : 'l1') : doc[axis];
+        if (!all && !(d && id !== doc[axis])) continue;
+        const need = needs(p.id, obj(STYLES.get(id)));
+        out.push(`- ${axis === 'message' ? 'Message' : 'Layout'} style · ${p.label}${v !== 'default' ? ' · ' + v : ''} \`style-${p.id}-${v}-${axis}\` → ${styleLabel(id)}`
+          + (id !== rec ? ` (recommended: ${styleLabel(rec)})` : '') + (need ? `\n  Needs the agent: ${need}` : ''));
+      }
+    }
+    return out.join('\n');
+  };
+  (L.readbackParts ||= []).push({ ops: ['style'], md: ds => {
+    if (!ds.length) return '';
+    const def = ds.filter(a => !a.listing.variant), out = [];
+    if (def.length) {
+      const st = { ...obj(lb.style) };
+      for (const a of def) st[a.listing.platform] = { message: a.listing.message, layout: a.listing.layout };
+      out.push(['build.py patch', sh(docFile()), sh(`block:${blockPath}`), '--json', sh(JSON.stringify({ style: st })), '--change', sh('Style: ' + def.map(a => a.note).join('; ')), ...def.map(a => '--resolves ' + a.id)].join(' '));
+    }
+    for (const a of ds.filter(a => a.listing.variant))
+      out.push(['build.py patch', sh(docFile()), sh(`variant:${a.listing.variant}`), '--json', sh(JSON.stringify({ style: { message: a.listing.message, layout: a.listing.layout } })), '--change', sh('Style: ' + a.note), '--resolves ' + a.id].join(' '));
+    return `## Style picks\n\n${ds.map(a => `- (${a.id}) ${a.note}`).join('\n')}\n\nRecord the picks (the decisions above) in the listing:\n\n\`\`\`sh\n${out.join('\n')}\n\`\`\``;
+  } });
+  (L.readbackParts ||= []).push({ ops: ['brand'], md: ds => {
+    if (!ds.length) return '';
+    const o = ds[ds.length - 1].listing, f = fontOf(o.font), pal = { ...palOf(BR_PAL), ...palOf(o.palette) };
+    const json = { font: f, palette: pal, image: typeof o.image === 'string' ? o.image : null };
+    const low = contrastOf(pal).filter(p => !p.ok).map(p => `  Below ${BR_MIN}:1: ${p.label} (${p.styles}), ${p.fg} on ${p.bg}, ${p.ratio.toFixed(2)}:1`);
+    return `## Brand drafts\n\n${ds.map(a => `- (${a.id}) \`brand:${LID}\` ${a.note}`).join('\n')}${f && Number.isInteger(f.fsType) ? `\n  Font embedding (fsType ${f.fsType}): ${fsWord(f.fsType)}` : ''}${low.length ? '\n' + low.join('\n') : ''}`
+      + `\n\n\`\`\`sh\n${['build.py patch', sh(docFile()), sh(`brand:${LID}`), '--json', sh(JSON.stringify(json)), '--change', sh('Brand: ' + ds[ds.length - 1].note), ...ds.map(a => '--resolves ' + a.id)].join(' ')}\n\`\`\``;
+  } });
+  (L.approveBlocks ||= []).push(() => brandDraft() ? ['A brand draft isn\'t recorded yet: send it with Request changes, then wait for the agent\'s patch'] : []);
+
+  /* the Brand pane: built once (its inputs keep focus), painted on each change */
+  const FONTS = { list: null, err: '', q: '', busy: false };
+  let BUI = null, armed = null;
+  const sample = () => { for (const k of tilesKeys()) { const v = strOf(L.locale, k) ?? strOf(DEF, k); if (v) return v; } return str(obj(lb.app).name, 60) || 'Acme'; };
+  async function loadFonts() {
+    if (!SERVED || FONTS.busy) return;
+    FONTS.busy = true; FONTS.err = ''; paintBrand();
+    try {
+      const r = await fetch('/__bluedoc/fonts', { cache: 'no-store', headers: SERVER_KEY.headers({ 'X-Bluedoc': '1' }) });
+      const j = await r.json().catch(() => ({}));
+      if (r.ok && Array.isArray(j.families)) FONTS.list = j.families.filter(x => x && typeof x.family === 'string' && /^[^;{}<>\\"'`]{1,64}$/.test(x.family));
+      else FONTS.err = r.status === 403 ? 'This browser can\'t list the fonts yet: open the link from serve.py unlock here.' : `Couldn't list the fonts: ${j.error || r.status}`;
+    } catch { FONTS.err = 'Couldn\'t list the fonts: the server didn\'t answer'; }
+    FONTS.busy = false; paintBrand();
+  }
+  const weightsOf = fam => { if (!fam || fam === (BR_FONT.default || 'Inter')) return [100, 200, 300, 400, 500, 600, 700, 800, 900];
+    const x = (FONTS.list || []).find(y => y.family === fam); return x ? [...new Set((x.faces || []).filter(f => !f.italic && Number.isInteger(f.weight)).map(f => Math.round(f.weight / 100) * 100))].filter(w => w >= 100 && w <= 900).sort((a, b) => a - b) : []; };
+  function pickFont(x) {
+    if (!x) { putBrand({ font: null }, true); return; }
+    const ws = weightsOf(x.family), cur = obj(L.brand().font).weight || 800;
+    const w = ws.includes(cur) ? cur : ws.filter(n => n <= 800).pop() || ws[0];
+    putBrand({ font: { family: x.family, ...(w ? { weight: w } : {}), source: 'system', ...(Number.isInteger(x.fsType) ? { fsType: x.fsType } : {}) } }, true);
+  }
+  async function takeImage(f) {
+    if (!f || !L.D) return;
+    const types = (Array.isArray(BR_IMG.types) ? BR_IMG.types : ['png', 'jpeg', 'webp']).map(t => 'image/' + t), max = +BR_IMG.maxBytes || 8 * 1024 * 1024;
+    if (!types.includes(f.type)) { toast('An image, please: PNG, JPEG or WebP'); return; }
+    if (f.size > max) { toast(`That image is ${(f.size / 1048576).toFixed(1)} MB: at most ${Math.round(max / 1048576)} MB`); return; }
+    BUI.drop.classList.add('busy');
+    try {
+      let image;
+      if (SERVED) {
+        const data = await new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1] || ''); r.onerror = no; r.readAsDataURL(f); });
+        const r = await fetch('/__bluedoc/listing/brand', { method: 'POST', headers: SERVER_KEY.headers({ 'Content-Type': 'application/json', 'X-Bluedoc': '1' }), body: JSON.stringify({ path: location.pathname, data }) });
+        const j = await r.json().catch(() => ({}));
+        if (r.ok && typeof j.file === 'string') image = j.file; else toast(`Couldn't keep the image beside the doc: ${j.error || r.status}`);
+      }
+      const sw = await lstExtract(f);
+      if (!sw.length) { toast('No colours in that image'); return; }
+      putBrand({ palette: lstRoles(sw), swatches: sw.map(s => ({ hex: s.hex, share: s.share })), ...(image ? { image } : {}) }, true);
+    } catch { toast('Couldn\'t read that image'); } finally { BUI.drop.classList.remove('busy'); }
+  }
+  function buildBrand() {
+    const q = h('input', { type: 'search', class: 'bd-lst-fq', placeholder: 'Search the installed fonts', 'aria-label': 'Search the installed fonts', autocomplete: 'off', spellcheck: 'false' });
+    q.addEventListener('input', () => { FONTS.q = q.value; paintBrand(); });
+    q.addEventListener('focus', () => { if (!FONTS.list && !FONTS.busy) loadFonts(); });
+    const weight = h('select', { class: 'bd-lst-fw', 'aria-label': 'Caption weight' });
+    weight.addEventListener('change', () => { const f = L.brand().font; putBrand({ font: f ? { ...f, weight: +weight.value } : { family: BR_FONT.default || 'Inter', weight: +weight.value, source: 'vendored' } }, true); });
+    const file = h('input', { type: 'file', accept: 'image/png,image/jpeg,image/webp', hidden: true, class: 'bd-lst-file' });
+    file.addEventListener('change', () => { takeImage(file.files && file.files[0]); file.value = ''; });
+    const drop = h('button', { type: 'button', class: 'bd-lst-imgdrop', onclick: () => file.click() }, ic('image'), h('span', {}, h('b', {}, 'Drop an image, or choose one'), h('span', {}, `PNG, JPEG or WebP, up to ${Math.round((+BR_IMG.maxBytes || 8388608) / 1048576)} MB: its colours become the palette`)));
+    drop.addEventListener('dragover', e => { if (e.dataTransfer && [...e.dataTransfer.types].includes('Files')) { e.preventDefault(); drop.classList.add('over'); } });
+    drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+    drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('over'); takeImage(e.dataTransfer.files && e.dataTransfer.files[0]); });
+    const roles = Object.keys(BR_PAL).map(role => {
+      const col = h('input', { type: 'color', 'aria-label': `${BR_ROLES[role] || role}: colour` }), hex = h('input', { type: 'text', class: 'hx', maxlength: 7, spellcheck: 'false', 'aria-label': `${BR_ROLES[role] || role}: hex` });
+      col.addEventListener('input', () => putBrand({ palette: { [role]: col.value } }));
+      hex.addEventListener('input', () => { const v = hex.value.trim(); if (isHex(v)) putBrand({ palette: { [role]: v } }); });
+      const chip = h('button', { type: 'button', class: 'sw', title: 'Give this role the swatch you picked', onclick: () => { if (armed) { putBrand({ palette: { [role]: armed } }, true); armed = null; } } });
+      const row = h('div', { class: 'bd-lst-role', 'data-role': role }, chip, h('span', { class: 'l' }, h('b', {}, BR_ROLES[role] || role), h('code', {}, role)), col, hex);
+      row.addEventListener('dragover', e => { if (e.dataTransfer && [...e.dataTransfer.types].includes('text/x-bd-colour')) { e.preventDefault(); row.classList.add('over'); } });
+      row.addEventListener('dragleave', () => row.classList.remove('over'));
+      row.addEventListener('drop', e => { const v = e.dataTransfer.getData('text/x-bd-colour'); row.classList.remove('over'); if (isHex(v)) { e.preventDefault(); putBrand({ palette: { [role]: v } }, true); } });
+      return { role, row, col, hex, chip };
+    });
+    BUI = { cur: h('div', { class: 'bd-lst-fcur' }), q, weight, list: h('div', { class: 'bd-lst-fonts', role: 'listbox', 'aria-label': 'Caption font' }), file, drop,
+      sw: h('div', { class: 'bd-lst-sws' }), roles, pairs: h('div', { class: 'bd-lst-pairs' }), state: h('div', { class: 'bd-lst-bstate' }) };
+    paneBrand.replaceChildren(h('h4', {}, 'Caption font'), BUI.cur, h('div', { class: 'bd-lst-frow' }, q, weight,
+      h('button', { type: 'button', class: 'bp-btn ghost', title: 'List the installed fonts again: a font installed since shows up', onclick: () => loadFonts() }, ic('reset'), 'Fonts')), BUI.list,
+      h('h4', {}, 'Palette'), drop, file, BUI.sw, h('div', { class: 'bd-lst-roles' }, roles.map(r => r.row)),
+      h('h4', {}, `Contrast · at least ${BR_MIN}:1`), BUI.pairs, BUI.state);
   }
   function paintBrand() {
-    const pal = { ...LST_DEF_PAL, ...Object.fromEntries(Object.entries(obj(BRAND.palette)).filter(([k, v]) => k in LST_DEF_PAL && /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(v))) };
-    const own = obj(BRAND.palette), f = obj(BRAND.font);
-    paneBrand.replaceChildren(h('h4', {}, 'Caption font'), h('p', {}, typeof f.family === 'string' ? `${f.family}${f.weight ? ' · ' + f.weight : ''}` : 'Inter (the default, OFL)'),
-      h('h4', {}, 'Palette'), h('div', { class: 'bd-lst-swatches' }, Object.entries(pal).map(([k, v]) => h('figure', {}, h('i', { style: `background:${v}` }), h('span', {}, k), h('code', {}, own[k] ? v : 'default')))),
-      h('h4', {}, 'Contrast (AA: 4.5:1)'), ...LST_PAIRS.map(([a, b]) => { const r = lstContrast(pal[a], pal[b]); return h('div', { class: 'bd-lst-pair' }, h('span', {}, `${a} on ${b}`), h('span', { class: r >= 4.5 ? 'good' : 'bad' }, `${r.toFixed(1)}:1 ${r >= 4.5 ? 'AA' : 'below 4.5:1'}`)); }));
+    if (!BUI) buildBrand();
+    const b = L.brand(), f = b.font, can = !!L.D && !OLD && !BASE, fam = f ? f.family : (BR_FONT.default || 'Inter');
+    paneBrand.classList.toggle('ro', !can);
+    // the font: the pick, its rights; the menu: Inter, then the installed families that match the search
+    BUI.cur.replaceChildren(h('b', { style: `font-family: "${fam}", system-ui; font-weight: ${f && f.weight || 800}` }, sample()),
+      h('span', {}, f ? `${fontWord(f)} · installed on this Mac` : `${fontWord(null)} · vendored, OFL: safe in every export`),
+      f && Number.isInteger(f.fsType) && h('span', { class: fsBad(f.fsType) ? 'bad' : '' }, `fsType ${f.fsType}: ${fsWord(f.fsType)}`),
+      f && h('span', { class: 'note' }, 'fsType covers embedding, not a licence for marketing images: confirm the font\'s licence.'));
+    const ws = weightsOf(fam), wv = String(f && f.weight || 800);
+    if (BUI.weight.dataset.fam !== fam || BUI.weight.options.length !== ws.length) { BUI.weight.dataset.fam = fam; BUI.weight.replaceChildren(...ws.map(w => h('option', { value: String(w) }, String(w)))); }
+    BUI.weight.value = wv; BUI.weight.disabled = !can || ws.length < 2; BUI.q.disabled = !can;
+    const row = (x, label, meta) => h('button', { type: 'button', role: 'option', class: 'bd-lst-font', 'aria-selected': String(fam === (x ? x.family : (BR_FONT.default || 'Inter'))), disabled: !can, onclick: () => pickFont(x) },
+      h('span', { class: 'n' }, label, meta && h('span', { class: meta.bad ? 'bad' : '' }, meta.t)), h('span', { class: 'p', style: `font-family: "${x ? x.family : 'Inter'}", system-ui; font-weight: ${f && f.weight || 800}` }, sample()));
+    const q = FONTS.q.trim().toLowerCase(), hits = (FONTS.list || []).filter(x => !q || x.family.toLowerCase().includes(q));
+    BUI.list.replaceChildren(row(null, `${BR_FONT.default || 'Inter'} · default`, { t: 'OFL, vendored' }),
+      ...hits.slice(0, 60).map(x => row(x, x.family, { t: `${(x.faces || []).length} style${(x.faces || []).length === 1 ? '' : 's'}${fsBad(x.fsType) ? ' · no PDF embedding' : ''}`, bad: fsBad(x.fsType) })),
+      !SERVED ? h('p', { class: 'hint' }, 'Open this page through serve.py to list the fonts installed here.')
+        : FONTS.err ? h('p', { class: 'hint' }, FONTS.err) : FONTS.busy ? h('p', { class: 'hint' }, 'Listing the installed fonts…')
+        : !FONTS.list ? h('button', { type: 'button', class: 'bp-btn ghost', disabled: !can, onclick: () => loadFonts() }, 'List the installed fonts')
+        : hits.length > 60 ? h('p', { class: 'hint' }, `${hits.length - 60} more: search to narrow them`) : !hits.length ? h('p', { class: 'hint' }, 'No installed font matches. Install one in Font Book, then press ↻ Fonts.') : null);
+    // the swatches the image gave, by share; a role takes one dragged onto it (or picked, then its chip clicked)
+    BUI.drop.disabled = !can;
+    BUI.sw.replaceChildren(...b.swatches.map(s => { const el = h('button', { type: 'button', class: 'bd-lst-swatch' + (armed === s.hex ? ' on' : ''), draggable: 'true', disabled: !can, 'aria-pressed': String(armed === s.hex),
+      title: `${s.hex}${Number.isFinite(s.share) ? ` · ${s.share}% of the image` : ''}: drag it onto a role`, onclick: () => { armed = armed === s.hex ? null : s.hex; paintBrand(); } },
+      h('i', { style: `background:${s.hex}` }), h('code', {}, s.hex), Number.isFinite(s.share) && h('span', {}, `${s.share}%`));
+      el.addEventListener('dragstart', e => { e.dataTransfer.setData('text/x-bd-colour', s.hex); e.dataTransfer.setData('text/plain', s.hex); e.dataTransfer.effectAllowed = 'copy'; });
+      return el; }));
+    BUI.sw.hidden = !b.swatches.length;
+    for (const r of BUI.roles) {
+      const v = b.palette[r.role];
+      r.chip.style.background = v; r.chip.disabled = !can || !armed; r.col.disabled = r.hex.disabled = !can;
+      if (document.activeElement !== r.col) r.col.value = v;
+      if (document.activeElement !== r.hex) r.hex.value = v;
+    }
+    BUI.pairs.replaceChildren(...contrastOf(b.palette).map(p => h('div', { class: 'bd-lst-pair' + (p.ok ? '' : ' low'), 'data-pair': `${p.fg}/${p.bg}` },
+      h('span', { class: 'aa', style: `color:${b.palette[p.fg]};background:${b.palette[p.bg]}` }, 'Aa'),
+      h('span', { class: 'l' }, h('b', {}, p.label), h('span', {}, `${p.styles} · ${p.fg} on ${p.bg}`)),
+      h('span', { class: p.ok ? 'good' : 'bad' }, `${p.ratio.toFixed(2)}:1`, h('small', {}, p.ok ? 'AA' : `below ${BR_MIN}`)))));
+    const d = brandDraft();
+    BUI.state.replaceChildren(...(d ? [h('span', {}, 'A brand draft: Request changes sends it; Approve waits until the agent records it.'), can && h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => { brandLive = null; L.D.drop(d.id); } }, ic('reset'), 'Discard draft')]
+      : [h('span', {}, b.image ? `From ${b.image.split('/').pop()}, as the listing records it.` : 'The listing\'s brand. An edit here is a draft until the agent records it.')]));
+    BUI.state.classList.toggle('on', !!d);
   }
   // the checks the page can tell from the doc, for the platform on screen (the build's report replaces them later)
   L.checks = () => {
@@ -7629,11 +8203,11 @@ function renderListing(lb) {
   /* BOARD's interface for the page around it (MARKUP, SIDE, compare) */
   L.setMode = m => { L.mode = m; pg.dataset.m = ['point', 'select'].includes(m) ? m : 'view'; for (const x of L.live) post(x, { bd: 'mode', mode: frameMode() }); };
   L.abFor = key => { const m = /^(?:artboard|el):([^/]+)/.exec(key); if (!m) return null; const x = L.tiles.find(y => y.a.id === m[1] && y.el.isConnected); return x ? x.el : pg.querySelector(`.bd-lst-icon[data-ab="${CSS.escape(m[1])}"]`); };
-  L.pinPos = key => {
+  L.pinPos = (key, t) => {
     if (!key.startsWith('el:')) return null;
     const i = key.indexOf('/'), id = key.slice(3, i), sel = key.slice(i + 1), x = L.tiles.find(y => y.a.id === id && y.el.isConnected && y.rects[sel]);
-    const r = x && x.rects[sel];
-    return r ? { x: clamp((r.x + r.w) / x.w, 0, 1), y: clamp(r.y / x.h, 0, 1) } : null;
+    const r = x && x.rects[sel], at = t && Array.isArray(t.at) && t.at.length === 2 ? t.at : null;   // a pin on a capture: its point
+    return r ? at ? { x: clamp((r.x + at[0] * r.w) / x.w, 0, 1), y: clamp((r.y + at[1] * r.h) / x.h, 0, 1) } : { x: clamp((r.x + r.w) / x.w, 0, 1), y: clamp(r.y / x.h, 0, 1) } : null;
   };
   const flashEl = el => { el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 1400); };
   L.focusKey = key => {
@@ -7654,10 +8228,12 @@ function renderListing(lb) {
     return true;
   };
   L.reveal = el => { if (!lp) return; if ($('#bd-lp-brief').contains(el)) { setLp(true, false); setTab('brief', false); } else if (lpText.contains(el)) { setLp(true, false); setTab('text', false); } };
-  // compare (?diff=): shots New or Changed (their JSON or their screen's hash), store text and captions Changed
+  // compare (?diff=): shots New or Changed (their JSON, their screen's hash or a capture's: "<id>/capture/<target>/<locale>"),
+  // store text and captions Changed; a re-shot capture shows the one it replaced beside it (bp-listing's oldCaptures)
   L.compare = base => {
     const was = new Map(boardAbs(boardOf(base)).map(a => [a.id, a])), hs = BASE.screens || {}, hv = VIEW.screens || {};
-    for (const a of abs) { const o = was.get(a.id); if (!o) L.chg.set(a.id, 'add'); else if (canon(o) !== canon(a) || canon(hs[a.id]) !== canon(hv[a.id])) L.chg.set(a.id, 'mod'); }
+    const hashOf = (hx, id) => canon(Object.keys(hx).filter(k => k === id || k.startsWith(id + '/capture/')).sort().map(k => [k, hx[k]]));
+    for (const a of abs) { const o = was.get(a.id); if (!o) L.chg.set(a.id, 'add'); else if (canon(o) !== canon(a) || hashOf(hs, a.id) !== hashOf(hv, a.id)) L.chg.set(a.id, 'mod'); }
     const ob = (() => { for (const s of base.sections || []) for (const b of s.blocks || []) if (b && b.type === 'listing') return b; return {}; })();
     for (const loc of LOCS) {
       for (const p of PLATS) for (const r of textRules(p.id)) if (canon(obj(obj(obj(ob.text)[loc])[p.id])[r.field]) !== canon(textOf(loc, p.id, r.field))) L.fchg.add(`${loc}/${p.id}/${r.field}`);
@@ -7665,6 +8241,11 @@ function renderListing(lb) {
     }
     renderSections();
     for (const [id, kind] of L.chg) { const x = L.tiles.find(y => y.a.id === id); if (x) { markChg(x.el, kind, x.a.title || id); CHG[CHG.length - 1].show = () => L.focusKey('artboard:' + id); } }
+    for (const x of L.tiles) {
+      const k = x.cap && `${x.a.id}/capture/${x.cap.target}/${x.cap.locale}`, old = k && hs[k] && hs[k] !== hv[k] && obj(LST.oldCaptures)[hs[k]];
+      if (old) x.box.before(h('figure', { class: 'bd-lst-was', 'data-was': x.a.id }, h('img', { src: fileUrl(old), alt: `${x.a.title || x.a.id} before`, style: `width:${x.el.style.width};height:${x.el.style.height}` }),
+        h('figcaption', { class: 'bd-lst-cap' }, h('span', { class: 'bd-lst-tag stale' }, 'before'), `rev ${BASE.rev}'s capture`)));
+    }
     for (const el of lpText.querySelectorAll('.bd-lfield.bd-chg')) { el.classList.remove('bd-chg', 'bd-chg-mod'); markChg(el, 'mod', el.dataset.label); }
   };
   L.listingApi = o => {
@@ -7676,7 +8257,12 @@ function renderListing(lb) {
       tiles: L.tiles.map(x => ({ id: x.a.id, set: x.rule.id, kind: x.kind, w: x.w, h: x.h, live: !!x.fr, ready: x.ready, name: x.fr ? x.fr.name : null, tags: [...x.box.querySelectorAll('.bd-lst-tag')].map(t => t.textContent) })),
       fields: [...lpText.querySelectorAll('.bd-lfield')].map(e => ({ field: e.dataset.field, value: e.querySelector('.v').textContent, count: e.querySelector('.c')?.textContent ?? null, over: !!e.querySelector('.c.over'),
         mt: !!e.querySelector('.bd-lst-tag.mt'), fallback: !!e.querySelector('.v.fb') })),
-      checks: L.checks(), style: L.styleFor(L.platform) };
+      checks: L.checks(), style: L.styleFor(L.platform),
+      brand: (({ palette, font, image, swatches, draft }) => ({ palette, font, image, swatches, draft, contrast: contrastOf(palette).map(p => ({ fg: p.fg, bg: p.bg, label: p.label, ratio: p.ratio, ok: p.ok })),
+        fonts: FONTS.list ? FONTS.list.length : null }))(L.brand()),
+      approveBlocks: (L.approveBlocks || []).flatMap(f => f()), decisions: L.decisionLines(true),
+      uploads: UPLOADS.map(u => ({ ...u })), slots: [...pg.querySelectorAll('.bd-lst-upslot')].map(e => ({ set: e.dataset.set, slot: +e.dataset.slot })),
+      drafts: [...pg.querySelectorAll('.bd-lst-uptile[data-file]')].map(e => e.dataset.file) };
   };
   L.post = (m, filter) => { for (const x of L.live) if (!filter || filter(x)) post(x, m); };
 
@@ -7718,14 +8304,12 @@ function renderListing(lb) {
   // after MARKUP and SIDE exist: the drafts, the right panel's tabs
   L.afterMarkup = () => {
     L.M = MARKUP; L.D = MARKUP.drafts || null; L.S = SIDE;
-    if (L.D) for (const a of drafts()) {   // a draft the doc now has is applied
-      const o = a.listing, has = o.op === 'order' ? JSON.stringify(obj(lb.order)[o.set] || null) === JSON.stringify(o.ids) : JSON.stringify(lb.rows || null) === JSON.stringify(o.rows);
-      if (has) L.D.resolve(a.id);
-    }
+    if (L.D) for (const a of drafts()) { const f = L.draftRecorded[a.listing.op]; if (f && f(a.listing)) L.D.resolve(a.id); }   // a draft the doc now has is applied
+    L.syncUploads();
     SIDE.add({ id: 'style', label: 'Style', at: 2, body: paneStyle });
     SIDE.add({ id: 'brand', label: 'Brand', at: 3, body: paneBrand });
     SIDE.add({ id: 'checks', label: 'Checks', at: 4, body: paneChecks, chip: () => { const n = L.checks().filter(([k]) => k === 'err').length; return n ? `${n} error${n === 1 ? '' : 's'}` : ''; } });
-    draftSig = ''; L.paintDrafts(); renderSections(); paintSide();
+    draftSig = ''; liveSig = ''; L.paintDrafts(); renderSections(); paintSide();
     for (const x of L.tiles) locate(x);
   };
   return wrap;
@@ -8589,13 +9173,17 @@ const MARKUP = (() => {
     if (gen.length && pg.length) parts.push('## On the page');
     if (pg.length) parts.push(pg.map((a, i) => {
       const ex = cut(excerpt(a), 200);
-      return [headMd(a, i), ex && `   > ${ex}`, ...siteMd(a.target),
+      return [headMd(a, i), ex && `   > ${ex}`, ...siteMd(a.target), ...(BOARD && BOARD.pinMd ? BOARD.pinMd(a) : []),
         `   Change: ${noteText(a).split('\n').join('\n   ')}`].filter(Boolean).join('\n');
     }).join('\n\n'));
-    // a board's drafts: one line each, then the `patch` commands that make them (BOARD.draftCommands)
-    if (dr.length) parts.push('## Board drafts\n\n' + dr.map(a => `- (${a.id}) ${keysMd(a)} ${noteText(a)}`).join('\n')
-      + (BOARD && BOARD.draftCommands ? '\n\n```sh\n' + BOARD.draftCommands(dr) + '\n```' : ''));
-    const dec = APPROVABLE ? decisionsMd() : decisionsMd(itemsPending());
+    // a board's drafts: one line each, then the `patch` commands that make them (BOARD.draftCommands). A storelisting's
+    // readback parts ({ops, md}) take the drafts of their ops (uploads, style picks, brand edits) under their own heading
+    const parts2 = BOARD && Array.isArray(BOARD.readbackParts) ? BOARD.readbackParts : [], claimed = new Set(parts2.flatMap(p => p.ops));
+    const own = dr.filter(a => !(a.type === 'listing' && a.listing && claimed.has(a.listing.op)));
+    if (own.length) parts.push('## Board drafts\n\n' + own.map(a => `- (${a.id}) ${keysMd(a)} ${noteText(a)}`).join('\n')
+      + (BOARD && BOARD.draftCommands ? '\n\n```sh\n' + BOARD.draftCommands(own) + '\n```' : ''));
+    for (const p of parts2) { const md = p.md(dr.filter(a => a.type === 'listing' && a.listing && p.ops.includes(a.listing.op))); if (md) parts.push(md); }
+    const dec = [BOARD && BOARD.decisionLines ? BOARD.decisionLines() : '', APPROVABLE ? decisionsMd() : decisionsMd(itemsPending())].filter(Boolean).join('\n');
     if (dec) parts.push('## Decisions\n\n' + dec);
     return `# Change requests: ${DOC.title || docId}${CUR.rev ? ` (rev ${CUR.rev})` : ''}, ${new Date().toISOString().slice(0, 10)}\n\n` + parts.join('\n\n') + '\n';
   }
@@ -8611,7 +9199,7 @@ const MARKUP = (() => {
     const items = pending(), ord = [...items.filter(isGeneral), ...items.filter(a => !isGeneral(a))];
     return { annotations: ord.map(pub), notes: ord.map((a, i) => {
       const ex = cut(excerpt(a), 200);
-      return [headMd(a, i), ex && `   > ${ex}`, ...siteMd(a.target), `   Note: ${noteText(a).split('\n').join('\n   ')}`].filter(Boolean).join('\n');
+      return [headMd(a, i), ex && `   > ${ex}`, ...siteMd(a.target), ...(BOARD && BOARD.pinMd ? BOARD.pinMd(a) : []), `   Note: ${noteText(a).split('\n').join('\n   ')}`].filter(Boolean).join('\n');
     }).join('\n\n') };
   }
   const api = { all: () => JSON.parse(JSON.stringify(list)), payload, approvalNotes, annotate: () => null, setMode: () => false, paint: () => {}, flush: () => {}, markSent: () => {},
@@ -8942,7 +9530,7 @@ const MARKUP = (() => {
       if (i === 0) {
         let p = null;
         // a pin inside a screen sits where its frame last reported the element
-        if (a.type === 'pin' || isDraft(a)) { const q = (BOARD && BOARD.pinPos && BOARD.pinPos(a.target.key)) || a.pos || { x: .5, y: .5 }; p = { x: r.left + q.x * r.width, y: r.top + q.y * r.height }; }
+        if (a.type === 'pin' || isDraft(a)) { const q = (BOARD && BOARD.pinPos && BOARD.pinPos(a.target.key, a.target)) || a.pos || { x: .5, y: .5 }; p = { x: r.left + q.x * r.width, y: r.top + q.y * r.height }; }
         else if (a.type === 'draw') { const b = bounds(a.strokes || []); if (isFinite(b.x1)) p = { x: r.left + b.x1 * r.width - 6, y: r.top + b.y0 * r.height + 6 }; }
         else { const rg = rangeOf(a), rs = rg && shown(rg.startContainer.parentElement) ? rg.getClientRects() : null, last = rs && rs[rs.length - 1]; if (last) p = { x: last.right, y: last.top + 2 }; }
         // an element partly scrolled inside its scroller keeps its mark, pulled in to the visible edge

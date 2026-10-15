@@ -43,7 +43,9 @@
     "SV-PANO-IOS": { "title": "Storemaven: panoramic gallery on the App Store", "url": "https://www.thestoremaven.store/academy/design-panoramic-screenshot-app-store/", "accessed": "2026-10-15" },
     "SV-PANO-PLAY": { "title": "Storemaven: panoramic gallery on Google Play", "url": "https://www.thestoremaven.store/academy/design-panoramic-screenshot-google-play/", "accessed": "2026-10-15" },
     "PH-FG": { "title": "Phiture: 3,300 feature graphics analysed", "url": "https://phiture.com/asostack/what-analyzing-3-300-feature-graphics-has-taught-us-about-google-play-store-aso-4ada57048da4/", "accessed": "2026-10-15" },
-    "IN-TOP100": { "title": "Incipia: screenshots of the top 100 free apps", "url": "https://incipia.co/post/app-marketing/app-store-screenshots-study-of-the-top-100-apps/", "accessed": "2026-10-15" }
+    "IN-TOP100": { "title": "Incipia: screenshots of the top 100 free apps", "url": "https://incipia.co/post/app-marketing/app-store-screenshots-study-of-the-top-100-apps/", "accessed": "2026-10-15" },
+    "WCAG22": { "title": "Web Content Accessibility Guidelines (WCAG) 2.2: 1.4.3 Contrast (Minimum)", "url": "https://www.w3.org/TR/WCAG22/", "accessed": "2026-10-15" },
+    "OT-FSTYPE": { "title": "OpenType specification: OS/2 fsType (embedding permissions)", "url": "https://learn.microsoft.com/en-us/typography/opentype/spec/os2#fstype", "accessed": "2026-10-15" }
   },
   "platforms": [
     { "id": "play", "label": "Google Play", "short": "Play", "minShots": 2, "maxBytes": 8388608, "source": "G-PA",
@@ -262,5 +264,22 @@
     { "id": "l5", "axis": "layout", "name": "Lifestyle photo", "grade": "B", "sources": ["SM-PEOPLE", "AT-TRENDS", "G-PA"], "hook": "photo",
       "appstore": "A person in context, the UI on a device beside them", "play": "A person in context, the UI in a card, no hands on a device",
       "fits": "Fitness, food, dating, photo, ride-hailing", "evidence": "People +5–10% in fitness tests" }
-  ]
+  ],
+  "brand": {
+    "about": "The brand tokens every shot reads (kits/shot.css --brand-<role>), their defaults, and the colour pairs the shot kit draws text in, each checked against WCAG AA for normal text: store thumbnails shrink captions below WCAG's large-text size.",
+    "source": "WCAG22",
+    "defaults": { "bg": "#2457d6", "surface": "#eef2ff", "accent": "#f59e0b", "text": "#ffffff", "caption": "#ffffff" },
+    "roles": { "bg": "Background", "surface": "Light ground", "accent": "Accent", "text": "Subtitle", "caption": "Caption" },
+    "contrast": {
+      "min": 4.5,
+      "pairs": [
+        { "fg": "caption", "bg": "bg", "label": "Caption on background", "styles": "L1–L3, M4 proof" },
+        { "fg": "text", "bg": "bg", "label": "Subtitle on background", "styles": "L1–L3" },
+        { "fg": "bg", "bg": "surface", "label": "Caption on light ground", "styles": "L5" },
+        { "fg": "bg", "bg": "caption", "label": "Step chip", "styles": "M2" }
+      ]
+    },
+    "font": { "default": "Inter", "source": "OT-FSTYPE", "restricted": 2, "bitmapOnly": 512 },
+    "image": { "types": ["png", "jpeg", "webp"], "maxBytes": 8388608 }
+  }
 }

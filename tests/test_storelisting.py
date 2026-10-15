@@ -186,7 +186,7 @@ class Listing(unittest.TestCase):
 
     def test_an_image_shot_is_a_png_inside_the_listing_folder(self) -> None:
         folder = listing.listing_dir(self.path)
-        folder.mkdir()
+        folder.mkdir(exist_ok=True)   # the example has its captures there
         (folder / "up.png").write_bytes(png(1320, 2868))
         (folder / "up.jpg.png").write_bytes(b"not a png at all, just bytes")
         (self.docs / "out.png").write_bytes(png(1320, 2868))
@@ -221,7 +221,7 @@ class Listing(unittest.TestCase):
 
     def test_captures_are_fresh_only_with_their_recipes_hash(self) -> None:
         folder = listing.listing_dir(self.path) / "captures"
-        folder.mkdir(parents=True)
+        folder.mkdir(parents=True, exist_ok=True)
         shot = next(a for a in listing.shots_of(self.doc) if a["device"] == "shot")
         base = f"{folder.parent.name}/captures/"
         rows = [{"shot": shot["id"], "target": "android-phone", "locale": "en-US", "file": base + "a.png",
