@@ -1,0 +1,56 @@
+{
+  "id": "storelisting-skeleton",
+  "title": "<<App name: store listing>>",
+  "subtitle": "<<One sentence: which release this listing is for and what changed.>>",
+  "meta": { "org": "<<Org; ACME when the project names none>>", "kind": "Store listing", "type": "storelisting", "rev": "1", "date": "<<YYYY-MM-DD>>" },
+  "state": [
+    { "label": "<<mock-up UI, or captured UI>>", "kind": "info" }
+  ],
+  "tldr": "<<What the reviewer judges on each platform page and in which locales.>>",
+  "sections": [
+    {
+      "id": "brief",
+      "title": "Brief",
+      "lead": "<<Who the listing must convince, in one line.>>",
+      "blocks": [
+        { "type": "text", "md": "<<The app, its audience, the release, and the one message every first shot carries.>>" }
+      ]
+    },
+    {
+      "id": "listing",
+      "title": "Listing",
+      "lead": "<<Both stores, N locales, N shots.>>",
+      "blocks": [
+        {
+          "type": "listing",
+          "id": "main",
+          "app": { "name": "<<App name>>", "company": "<<Company>>" },
+          "platforms": ["play", "appstore"],
+          "rows": ["watch", "phone", "tablet"],
+          "locales": ["en-US"],
+          "defaultLocale": "en-US",
+          "icon": "app-icon",
+          "style": { "message": "m1", "layout": "l1" },
+          "brand": { "palette": { "bg": "#2457d6", "surface": "#eef2ff", "accent": "#f59e0b", "text": "#ffffff", "caption": "#ffffff" } },
+          "text": {
+            "en-US": {
+              "play": { "name": "<<Play app name, 30 chars>>", "short": "<<Short description, 80 chars>>", "full": "<<Full description, 4000 chars>>" },
+              "appstore": { "name": "<<App Store name, 30 chars>>", "subtitle": "<<Subtitle, 30 chars>>", "description": "<<Description, 4000 chars>>", "keywords": "<<keyword,keyword,keyword>>" }
+            }
+          },
+          "strings": { "en-US": { "first.title": "<<The first shot's benefit, 3-6 words>>" } }
+        },
+        {
+          "type": "board",
+          "id": "shots",
+          "targets": ["listing"],
+          "artboards": [
+            { "id": "first", "title": "<<First shot: what it shows>>", "device": "shot", "fidelity": "wireframe",
+              "sets": ["play/phone", "appstore/iphone-69", "appstore/iphone"] },
+            { "id": "app-icon", "title": "App icon", "device": "icons", "fidelity": "wireframe", "icon": { "name": "<<App name>>", "bg": "#2457d6" } }
+          ]
+        }
+      ]
+    }
+  ]
+}

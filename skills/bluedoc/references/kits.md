@@ -150,3 +150,43 @@ and stub layers in `<stem>.design/app-icon/`. Draw on a 108 × 108 viewBox:
 Shapes and paths only: no `<text>` (convert to paths), `<image>` links, scripts or `<foreignObject>`. The board
 shows every mask, variant and size; Export writes the iOS and Android PNG sets. A comment on a tile arrives as
 `el:app-icon/<tile>`: `patch` prints the layers it is drawn from.
+
+## Store shots
+
+A storelisting's `shot` and `asset` screen files use the shot kit (`kits/shot.css`, `kits/shot-styles.css`,
+`kits/shot.js`) on top of the plain kit. The page renders one file at each of its sets' frames, so size everything in
+container units (`cqw`, `cqh`), never px.
+
+```html
+<main class="shot" data-bd="today">
+  <h1 class="shot-cap" data-bd="cap" data-l10n="today.title">See your week at a glance</h1>
+  <p class="shot-sub" data-l10n="today.sub">…</p>
+  <div class="shot-frame" data-bd="frame">
+    <div class="shot-ui" data-bd="ui"><main class="screen safe stack gap-4">…the app's UI, plain kit…</main></div>
+  </div>
+</main>
+```
+
+- `.shot-cap`, `.shot-sub`: the caption and its line; `data-l10n="<shot>.<name>"` fills them from `listing.strings` for
+  the shown locale (else the default). The text in the file is only the fallback.
+- `.shot-ui`: the app's UI at the set's UI viewport (412 × 915 Play phone, 440 × 956 iPhone 6.9", …), scaled into the
+  frame with the row's safe area. A capture, when there is a fresh one, replaces it. Raw sets (watch) show only this.
+- An asset (`device: "asset"`, feature graphic) is `.asset` > `.asset-title`, `.asset-sub`; keep text inside the
+  guide the page draws.
+- Brand tokens: `--brand-bg`, `--brand-surface`, `--brand-accent`, `--brand-text`, `--brand-caption`,
+  `--bd-font-caption`, `--bd-weight-caption`. The plain kit's `--accent` stays the app's own.
+
+## Shot styles
+
+`listing.style` (or a shot's `style`) picks a message style and a layout style; `kits/shot-styles.css` draws both
+from the brand tokens, so a pick restyles every shot without new HTML.
+
+| Message | Caption |   | Layout | Image |
+|---|---|---|---|---|
+| `m1` | benefit headline, 3-6 words (default) | | `l1` | device frame (App Store) / UI card (Play) on brand colour (default) |
+| `m2` | story sequence: numbered steps of one journey | | `l2` | panoramic: one band of art across shots 1-3 |
+| `m3` | zoomed callout of the element marked `data-callout` | | `l3` | frameless full-bleed UI under a slim caption band |
+| `m4` | social proof on shot 1, from the string `<shot>.proof` (App Store; Play: use-case first) | | `l4` | dark hero |
+| `m5` | video-first: a play button over shot 1 | | `l5` | lifestyle: a person beside the UI |
+
+Grades and sources: `assets/store-rules.json` `styles`.

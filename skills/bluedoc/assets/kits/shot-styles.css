@@ -1,0 +1,86 @@
+/* bluedoc shot styles: the 5 layout styles (shot--l1…l5: what the image looks like) and the 5 message styles
+   (msg--m1…m5: what the captions say), each in its App Store (plat-appstore) and Google Play (plat-play) form, drawn
+   from the brand tokens only, so a pick restyles every shot without new HTML. kits/shot.js places the UI for the
+   layout (its width, side and bleed) and adds what a message style needs: the step (M2), the zoomed callout from the
+   element marked data-callout (M3), the proof line from the string <shot>.proof (M4, App Store, shot 1), the play
+   button (M5, shot 1). Raw sets (watch) ignore both. Evidence and grades: assets/store-rules.json `styles`. */
+
+/* ---------- L1 device frame (App Store) / UI card (Google Play), on brand colour, a tint per shot ---------- */
+.shot--l1 .shot, .shot--l2 .shot { background: var(--brand-bg); }
+.shot--l1[data-odd] .shot { background: color-mix(in oklch, var(--brand-bg), #000 20%); }
+.row-phone .shot-ui { border-radius: 46px; }
+.row-tablet .shot-ui { border-radius: 26px; }
+:is(.shot--l1, .shot--l2, .shot--l4, .shot--l5).plat-appstore .shot-frame::before {
+  border-radius: calc(46px * var(--ui-k) + 1.6cqw);
+  box-shadow: 0 0 0 1.6cqw #15171c, 0 0 0 calc(1.6cqw + 1px) #3a3d45, 0 2.4cqh 6cqh rgba(0, 0, 0, .38); }
+:is(.shot--l1, .shot--l2, .shot--l4, .shot--l5).plat-appstore.row-tablet .shot-frame::before { border-radius: calc(26px * var(--ui-k) + 1.6cqw); }
+:is(.shot--l1, .shot--l2, .shot--l4, .shot--l5).plat-play .shot-ui { border-radius: 30px; }
+:is(.shot--l1, .shot--l2, .shot--l4, .shot--l5).plat-play .shot-frame::before {
+  border-radius: calc(30px * var(--ui-k)); box-shadow: 0 0 0 1.2cqw color-mix(in oklch, var(--brand-surface) 92%, transparent), 0 2.4cqh 5cqh rgba(0, 0, 0, .28); }
+
+/* ---------- L2 panoramic: one band of art across shots 1-3 (--shot-i), each a third of it ---------- */
+.shot--l2 .shot::before { content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(60% 40% at 18% 62%, color-mix(in oklch, var(--brand-accent) 70%, transparent), transparent 70%),
+    radial-gradient(55% 45% at 50% 30%, color-mix(in oklch, var(--brand-surface) 32%, transparent), transparent 70%),
+    radial-gradient(60% 40% at 84% 70%, color-mix(in oklch, var(--brand-accent) 55%, transparent), transparent 70%),
+    linear-gradient(100deg, var(--brand-bg), color-mix(in oklch, var(--brand-bg), var(--brand-accent) 30%) 50%, var(--brand-bg));
+  background-size: 300% 100%; background-position: calc(min(var(--shot-i), 2) * 50%) 0; }
+
+/* ---------- L3 frameless full-bleed UI under a slim caption band ---------- */
+.shot--l3 .shot-cap { padding: 5cqh 6cqw 3cqh; font-size: 6.4cqw; background: var(--brand-bg); }
+.shot--l3.land .shot-cap { font-size: 6.2cqh; }
+.shot--l3 .shot-sub { display: none; }
+.shot--l3 .shot-frame { margin-top: 0; }
+.shot--l3 .shot-ui { border-radius: 0; }
+
+/* ---------- L4 dark hero: a dark ground, white type, the UI bright ---------- */
+.shot--l4 .shot { background: radial-gradient(80% 50% at 50% 70%, color-mix(in oklch, var(--brand-accent) 26%, #05070c), #05070c 70%); color: #fff; }
+.shot--l4 .shot-cap { color: #fff; }
+.shot--l4 .shot-sub { color: #cdd3df; }
+.shot--l4 .shot-frame::before { box-shadow: 0 0 0 1.6cqw #000, 0 0 0 calc(1.6cqw + 1px) #3a3d45, 0 0 12cqh color-mix(in oklch, var(--brand-accent) 45%, transparent) !important; }
+.shot--l4.plat-play .shot-frame::before { box-shadow: 0 0 0 1.2cqw rgba(255, 255, 255, .14), 0 0 12cqh color-mix(in oklch, var(--brand-accent) 45%, transparent) !important; }
+
+/* ---------- L5 lifestyle: a person in context, the UI beside them (App Store: on a device; Play: in a card, no hands) */
+.shot--l5 .shot { background: linear-gradient(180deg, var(--brand-surface), color-mix(in oklch, var(--brand-surface), var(--brand-accent) 35%)); color: var(--brand-bg); }
+.shot--l5 .shot-cap { color: var(--brand-bg); }
+.shot--l5 .shot-sub { color: color-mix(in oklch, var(--brand-bg) 80%, #000); }
+.shot-person { position: absolute; z-index: 1; left: 4cqw; bottom: 0; width: 52cqw; height: 62cqh; pointer-events: none; }
+.shot-person::before { content: ""; position: absolute; left: 30%; top: 0; width: 36%; aspect-ratio: 1; border-radius: 50%;
+  background: color-mix(in oklch, var(--brand-bg) 78%, var(--brand-accent)); }
+.shot-person::after { content: ""; position: absolute; left: 6%; right: 6%; top: 30%; bottom: 0; border-radius: 48% 48% 0 0 / 30% 30% 0 0;
+  background: linear-gradient(180deg, var(--brand-accent), color-mix(in oklch, var(--brand-accent), var(--brand-bg) 40%)); }
+.shot-photo { position: absolute; z-index: 1; left: 0; bottom: 0; width: 60cqw; height: 66cqh; object-fit: contain; object-position: left bottom; pointer-events: none; }
+html:not(.shot--l5) :is(.shot-person, .shot-photo) { display: none; }
+.shot--l5 .shot:has(.shot-photo) .shot-person { display: none; }
+
+/* ---------- M1 benefit headline: the default caption, 3-6 bold words on top ---------- */
+
+/* ---------- M2 story sequence: the shots as numbered steps of one journey ---------- */
+.shot-step { position: relative; z-index: 2; display: none; margin-top: 7cqh; padding: .5cqh 3cqw; border-radius: 99px;
+  font: 700 3.6cqw/1.6 var(--bd-font-caption); letter-spacing: .06em; text-transform: uppercase;
+  color: var(--brand-bg); background: var(--brand-caption); }
+.msg--m2 .shot-step { display: block; }
+.msg--m2 .shot-cap { padding-top: 2.4cqh; }
+.msg--m2 .shot::after { content: ""; position: absolute; z-index: 3; left: 0; bottom: 0; height: .8cqh;
+  width: calc((var(--shot-i) + 1) / var(--shot-n) * 100%); background: var(--brand-accent); }
+
+/* ---------- M3 zoomed callout: the element marked data-callout, enlarged out of the screen ---------- */
+.shot-zoom { position: absolute; z-index: 4; transform-origin: 50% 50%; border-radius: 14px; overflow: hidden; pointer-events: none;
+  background: var(--surface, #fff); color: var(--fg, #0f172a); font-family: var(--font);
+  box-shadow: 0 0 0 .6cqw var(--brand-accent), 0 2cqh 5cqh rgba(0, 0, 0, .4); }
+html:not(.msg--m3) .shot-zoom { display: none; }
+
+/* ---------- M4 social proof first (App Store, shot 1) / use-case first (Google Play: no proof) ---------- */
+.shot-proof { position: relative; z-index: 2; display: none; margin-top: 7cqh; text-align: center; color: var(--brand-caption);
+  font: 600 3.8cqw/1.3 var(--bd-font-caption); }
+.shot-proof::before { content: "★★★★★"; display: block; margin-bottom: .6cqh; font-size: 6cqw; letter-spacing: .1em; color: var(--brand-accent); }
+.msg--m4.plat-appstore[data-first] .shot-proof { display: block; }
+.msg--m4.plat-appstore[data-first] .shot-cap { padding-top: 2.4cqh; }
+
+/* ---------- M5 video-first poster: a play button over shot 1's UI ---------- */
+.shot-play { position: absolute; z-index: 4; display: none; width: 18cqw; aspect-ratio: 1; border-radius: 50%; pointer-events: none;
+  background: rgba(0, 0, 0, .62); box-shadow: 0 0 0 .8cqw rgba(255, 255, 255, .9); transform: translate(-50%, -50%); }
+.shot-play::after { content: ""; position: absolute; left: 38%; top: 28%; border-style: solid; border-width: 4.4cqw 0 4.4cqw 7.4cqw;
+  border-color: transparent transparent transparent #fff; }
+.msg--m5[data-first] .shot-play { display: block; }

@@ -1,0 +1,54 @@
+/* bluedoc store shot kit: a storelisting's shot (device "shot") or asset (device "asset"), loaded after the plain kit.
+   A shot is a layout around the app's UI: .shot (the canvas, every size in container units, so one file fills each
+   set's frame alike), .shot-cap (the caption; its text a data-l10n string), .shot-frame (where the UI sits: a device
+   frame or a card, drawn by the layout style) and .shot-ui (the UI slot: the mock-up HTML at the set's UI viewport,
+   scaled into the frame, or the capture). kits/shot.js sets on <html>: --shot-w --shot-h (the frame, CSS px), --ui-w
+   --ui-h (the UI viewport), --ui-x --ui-y --ui-k (where the UI sits and its scale), --shot-i --shot-n (its place in
+   its set), and the classes plat-<platform>, row-<row>, raw (watch sets: UI only, full bleed), land (a landscape
+   frame), ui--capture, msg--m1…m5 and shot--l1…l5 (kits/shot-styles.css). Brand tokens: --brand-bg --brand-surface
+   --brand-accent --brand-text --brand-caption and --bd-font-caption (Inter by default). Reference: references/kits.md
+   `## Store shots`. */
+:root {
+  --brand-bg: #2457d6; --brand-surface: #eef2ff; --brand-accent: #f59e0b; --brand-text: #ffffff; --brand-caption: #ffffff;
+  --bd-font-caption: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --shot-w: 440px; --shot-h: 956px; --ui-w: 402px; --ui-h: 874px; --ui-x: 0px; --ui-y: 0px; --ui-k: 1; --shot-i: 0; --shot-n: 1;
+}
+html.shot-pending body { visibility: hidden; }   /* until shot.js has filled the strings and placed the UI */
+html, body { overflow: hidden; background: var(--brand-bg); }
+
+.shot { position: relative; width: 100vw; height: 100vh; overflow: hidden; container-type: size; display: flex; flex-direction: column;
+  align-items: center; background: var(--brand-bg); color: var(--brand-text); font-family: var(--bd-font-caption); }
+.shot-cap { position: relative; z-index: 2; box-sizing: border-box; width: 100%; margin: 0; padding: 9cqh 8cqw 0; text-align: center;
+  font: 800 8.4cqw/1.06 var(--bd-font-caption); letter-spacing: -.02em; color: var(--brand-caption); font-weight: var(--bd-weight-caption, 800); text-wrap: balance; }
+.shot-sub { position: relative; z-index: 2; box-sizing: border-box; width: 100%; margin: 0; padding: 1.6cqh 10cqw 0; text-align: center;
+  font: 500 4.2cqw/1.3 var(--bd-font-caption); color: var(--brand-text); opacity: .86; text-wrap: balance; }
+.land .shot-cap { padding: 7cqh 10cqw 0; font-size: 7.6cqh; }
+.land .shot-sub { font-size: 4cqh; }
+/* the UI slot's box: shot.js measures it (what the caption leaves) and places the scaled UI in it */
+.shot-frame { position: relative; z-index: 1; flex: 1 1 auto; align-self: stretch; min-height: 0; margin-top: 6cqh; }
+.shot-frame::before { content: ""; position: absolute; left: var(--ui-x); top: var(--ui-y);
+  width: calc(var(--ui-w) * var(--ui-k)); height: calc(var(--ui-h) * var(--ui-k)); pointer-events: none; }
+.shot-ui { position: absolute; left: var(--ui-x); top: var(--ui-y); width: var(--ui-w); height: var(--ui-h); overflow: hidden;
+  transform: scale(var(--ui-k)); transform-origin: 0 0; background: var(--bg, #fff); color: var(--fg, #0f172a); font-family: var(--font); }
+.shot-ui > .screen { min-height: var(--ui-h); }
+/* a capture in the UI slot: the PNG over the mock-up, which stays for the readback's element names */
+.shot-shot { position: absolute; inset: 0; z-index: 5; width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+html:not(.ui--capture) .shot-shot { display: none; }
+[data-bd-own] { pointer-events: none; }
+/* a mock-up's status bar, as a capture has one (9:41, the stores' convention) */
+:is(.row-phone, .row-tablet):not(.ui--capture):not(.raw) .shot-ui::before { content: "9:41"; position: absolute; z-index: 3; left: 30px; top: 15px;
+  font: 600 15px/1 system-ui, -apple-system, sans-serif; color: var(--fg, #0f172a); pointer-events: none; }
+.row-tablet:not(.ui--capture):not(.raw) .shot-ui::before { left: 20px; top: 6px; font-size: 13px; }
+
+/* raw sets (Wear OS, Apple Watch): the UI alone, full bleed, on an opaque ground; no caption, no frame */
+.raw .shot { background: #000; }
+.raw :is(.shot-cap, .shot-sub, .shot-proof, .shot-step, .shot-person, .shot-zoom, .shot-play) { display: none !important; }
+.raw .shot-frame { position: absolute; inset: 0; margin: 0; }
+.raw .shot-frame::before { display: none; }
+.raw .shot-ui { left: 0; top: 0; border-radius: 0 !important; box-shadow: none !important; }
+
+/* an asset (feature graphic, banner, ad image): a free layout on the brand ground, in container units */
+.asset { position: relative; width: 100vw; height: 100vh; overflow: hidden; container-type: size; display: flex; align-items: center;
+  background: var(--brand-bg); color: var(--brand-text); font-family: var(--bd-font-caption); }
+.asset-title { margin: 0; font: 800 12cqh/1.05 var(--bd-font-caption); letter-spacing: -.02em; color: var(--brand-caption); }
+.asset-sub { margin: 0; font: 500 5.6cqh/1.3 var(--bd-font-caption); opacity: .88; }

@@ -73,6 +73,8 @@ patch keys: doc, meta, header, tldr, status, section:<sec>, heading:<sec>, lead:
   '{"<artboard>": [x, y]}' sets positions). artboard:, el: and link: with no --set/--json/--html
   print the screen file and the element's selector (link: also its data-nav); with only --change
   they record a hand edit of the screen file as the next rev.
+  Storelisting keys: field:<locale>/<platform>/<field> (a store text) and field:<locale>/strings/<key> (a
+  caption string): --set <field>=<text> writes it, --delete drops it, no option prints it with its count and limit.
   <blockPath> is <section>/<index> or <checklist>/<item>/<index>. header, tldr and status address
   the doc's top level. --set and --json values parse as JSON when they can; null deletes the field.
   --append adds to the target's list (doc: sections, section and item: blocks, table: rows,
@@ -104,12 +106,16 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 HERE = Path(__file__).resolve().parent
+if str(HERE) not in sys.path:
+    sys.path.insert(0, str(HERE))
+import listing   # noqa: E402 — the storelisting rules and checks (scripts/listing.py)
+
 TEMPLATE = HERE.parent / "assets" / "template.html"
 SKELETONS = HERE.parent / "assets" / "skeletons"
 HISTORY_VERSION = 1
 
 BLOCK_TYPES = {"text", "callout", "table", "code", "terms", "cards", "checklist", "canvas", "diff", "steps", "files", "media", "compare",
-               "board"}
+               "board", "listing"}
 FILE_STATUSES = {"added", "modified", "deleted", "renamed", "context"}
 ITEM_BLOCK_TYPES = {"text", "callout", "table", "code", "terms", "cards", "checklist", "files", "media", "compare"}
 MAX_TITLE, MAX_SUB = 90, 120   # characters that fit the collapsed checklist row
@@ -127,8 +133,10 @@ MD_LINK = re.compile("\\[([^\\]]+)\\]\\(([^)\t\n\v\f\r \u00a0\u1680\u2000-\u200a
 CALLOUT_KINDS = {"note", "caution", "warning", "risk", "decision"}
 STATE_KINDS = {"ok", "warn", "risk", "info", "todo"}
 RESOLVES_ID = re.compile(r"[A-Za-z0-9_-]{1,40}")   # a reader comment's id, as `resolves` lists it (the page writes c<base36>)
-DOC_TYPES = {"docs", "review", "plan", "design", "presentation", "website", "other"}   # meta.type: the home page's grouping; unset = derived from meta.kind
-BOARD_TYPES = ("design", "presentation", "website")   # the types whose page is one board (a presentation: of slides only; a website: of pages only)
+DOC_TYPES = {"docs", "review", "plan", "design", "presentation", "website", "storelisting", "other"}   # meta.type: the home page's grouping; unset = derived from meta.kind
+# the types whose page is one board (a presentation: of slides only; a website: of pages only; a storelisting: of shots,
+# assets and an icon, shown as platform pages by its listing block)
+BOARD_TYPES = ("design", "presentation", "website", "storelisting")
 # meta.kind words that make a doc type "docs" when meta.type is unset (after the plan and review rules)
 DOCS_KINDS = {"architecture", "walkthrough", "runbook", "setup", "reference", "proposal", "change", "changes", "plan",
               "status", "guide", "design", "spec", "rfc", "adr", "overview", "tutorial", "onboarding", "explainer", "playbook"}
@@ -156,11 +164,14 @@ DEVICES = {"watch-round": {"w": 240, "h": 240, "safe": [0, 0, 0, 0]}, "watch-squ
            "phone": {"w": 390, "h": 844, "safe": [47, 0, 34, 0]}, "tablet": {"w": 820, "h": 1180, "safe": [24, 0, 20, 0]},
            "desktop": {"w": 1280, "h": 800, "safe": [32, 0, 0, 0]}, "browser": {"w": 1440, "h": 900, "safe": [72, 0, 0, 0]},
            "slide": {"w": 1920, "h": 1080, "safe": [0, 0, 0, 0]}, "icons": {"w": 1280, "h": 860, "safe": [0, 0, 0, 0]},
-           "page": {"w": 1440, "h": 900, "safe": [0, 0, 0, 0]}}
-# board.targets: what the board is for. `build.py new design --target` takes each but presentation, which is
-# `build.py new presentation`: the skeleton's stub deck, its slides in deck order
+           "page": {"w": 1440, "h": 900, "safe": [0, 0, 0, 0]},
+           # a storelisting's shot and asset: their size on a board, which the platform pages don't use (they size each
+           # shot by the set it fills, store px / scale: listing.frame_size); the iPhone 6.9" frame and the feature graphic
+           "shot": {"w": 440, "h": 956, "safe": [0, 0, 0, 0]}, "asset": {"w": 1024, "h": 500, "safe": [0, 0, 0, 0]}}
+# board.targets: what the board is for. `build.py new design --target` takes each but presentation and listing, which
+# are `build.py new presentation` (the skeleton's stub deck, its slides in deck order) and `new storelisting`
 TARGET_DEVICES = {"watch": "watch-round", "mobile": "phone", "tablet": "tablet", "desktop": "desktop", "web": "browser",
-                  "presentation": "slide"}
+                  "presentation": "slide", "listing": "shot"}
 MAX_NOTES_BYTES = 2 * 1024        # an artboard's speaker notes, shown under the slide in Present
 FIDELITIES = ("sketch", "wireframe", "hifi")
 # what ships with bluedoc (assets/kits, assets/vendor), by id: its label in the brief
@@ -319,7 +330,12 @@ BLOCK_SHAPES = {
               "themes": [{"id": str, "label": str, "tokens": dict}], "motion": dict,
               "artboards": [{"id": str, "title": str, "device": str, "fidelity": str, "x": NUMBER, "y": NUMBER,
                              "w": NUMBER, "h": NUMBER, "variantOf": str, "framework": str, "src": str, "notes": str,
-                             "icon": {"bg": str, "name": str}}]},
+                             "icon": {"bg": str, "name": str}, "sets": list, "locale": str, "asset": str,
+                             "recipe": dict, "style": dict}]},
+    # a storelisting's listing block: listing.validate_listing checks the rest against assets/store-rules.json
+    "listing": {"id": str, "app": dict, "platforms": list, "rows": list, "locales": list, "defaultLocale": str,
+                "text": dict, "strings": dict, "mt": dict, "style": dict, "brand": dict, "icon": str, "video": dict,
+                "order": dict, "capture": dict, "variants": list},
 }
 DOC_SHAPE = {"title": str, "meta": {"type": str}, "state": [{"kind": str}],
              "sections": [{"id": str, "title": str, "blocks": [BLOCK]}]}
@@ -694,7 +710,7 @@ def screen_paths(doc: dict, doc_path: Path) -> dict[str, Path]:
     for a in _artboards(doc):
         if a["id"] in layers:
             out.update({f"{a['id']}/{n}": f for n, f in layers[a["id"]].items()})
-        elif not is_live(a):
+        elif not is_live(a) and not listing.is_image_shot(a):   # a storelisting's uploaded shot is a PNG, no screen file
             out[a["id"]] = folder / screen_rel(doc_path, a)
     return out
 
@@ -1621,7 +1637,8 @@ def validate_board(rep: Report, bw: str, b: dict, doc: dict, doc_path: Path | No
             rep.err(aw + ".framework", f"'{a['framework']}' not in {sorted(fw_ids)}")
         if a.get("variantOf") is not None:
             variants.append((aw + ".variantOf", a["id"], a["variantOf"]))
-        if "src" in a and not _screen_src_ok(a["src"]):
+        image = listing.is_image_shot(a) and doc_type(doc.get("meta") or {}) == "storelisting"   # checked by validate_listing
+        if "src" in a and not image and not _screen_src_ok(a["src"]):
             rep.err(aw + ".src", f"'{a['src']}': a relative path to an .html file in a <name>.design/ folder, no '..'")
         if is_icons(a):
             if "src" in a:
@@ -1640,7 +1657,7 @@ def validate_board(rep: Report, bw: str, b: dict, doc: dict, doc_path: Path | No
             for k in ("url", "source", "sections"):
                 if k in a:
                     rep.err(f"{aw}.{k}", "only a website's page has it: set meta.type to 'website'")
-        if doc_path is not None and ID_RE.match(a["id"]) and not is_live(a):
+        if doc_path is not None and ID_RE.match(a["id"]) and not is_live(a) and not image:
             if is_icons(a):
                 lint_icon(rep, aw, a, doc_path)
             else:
@@ -1687,6 +1704,8 @@ def check_contract(doc: dict) -> list[str]:
         out += [f"a plan needs a {bt} block" for bt in ("steps", "files") if bt not in types]
     elif t == "docs" and "canvas" not in types and not doc.get("hero"):
         out.append("a docs page needs a canvas block or a top-level hero")
+    elif t == "storelisting":
+        out += listing.contract(doc)
     elif t in BOARD_TYPES:
         boards = [b for b in blocks if b.get("type") == "board"]
         if len(boards) != 1:
@@ -2050,8 +2069,11 @@ def _validate(rep: Report, doc: dict, doc_path: Path | None, *, allow_remote: bo
                 lint_text(rep, sw_ + ".label", sd.get("label"))
         elif t == "board":
             if doc_type(doc.get("meta") or {}) not in BOARD_TYPES:
-                rep.err(bw, "a board block is for design, presentation and website docs: set meta.type to one of them")
+                rep.err(bw, "a board block is for design, presentation, website and storelisting docs: set meta.type to one of them")
             boards.append((bw, b))
+        elif t == "listing":
+            if doc_type(doc.get("meta") or {}) != "storelisting":
+                rep.err(bw, "a listing block is for storelisting docs: set meta.type to 'storelisting'")
 
     for si, sec in enumerate(doc.get("sections") or []):
         sw = f"sections[{si}]"
@@ -2153,6 +2175,11 @@ def _validate(rep: Report, doc: dict, doc_path: Path | None, *, allow_remote: bo
         if isinstance(link, dict):
             check_url(rep, f"doc.links[{i}].href", link.get("href"))
 
+    if doc_type(doc.get("meta") or {}) == "storelisting":
+        try:
+            listing.validate_listing(rep, doc, doc_path)
+        except (listing.RulesError, OSError, ValueError) as e:
+            rep.err("listing", f"cannot read the store rules: {e}")
     gaps = check_contract(doc)
     if gaps:
         where = f"contract ({doc_type(doc.get('meta') or {})})"
@@ -2526,12 +2553,18 @@ def build(doc: dict, template: str, history: dict | None = None, media_base: Pat
         hist = inline_media(hist, media_base, missing, cache)
         for src in sorted(set(missing)):
             print(f"WARN  media '{src}': file not found, left as a relative path (it won't show from file://)", file=sys.stderr)
+    # a storelisting's page: the store rules, each shot's caption keys, its captures and the icon (listing.page_data);
+    # an -o file carries its PNGs inline
+    lst = None
+    if doc_type(doc.get("meta") or {}) == "storelisting":
+        lst = listing.page_data(doc, Path(diff_path) if diff_path is not None else None, inline=media_base is not None)
     # one pass, so a placeholder's name inside a filled value (a doc's text, a reader's note) stays text
     fill = {"__BLUEDOC_TITLE__": title, "__BLUEDOC_HISTORY__": _script_json(hist) if hist else "null",
             "__BLUEDOC_STATE__": _script_json(state) if state is not None else "null", "__BLUEDOC_DOC__": _script_json(doc),
             "__BLUEDOC_SCREENS__": _script_json(screens) if screens is not None else "null",
             "__BLUEDOC_LIVE__": _script_json(live) if live is not None else "null",
-            "__BLUEDOC_SNAPS__": _script_json(snaps) if snaps is not None else "null", BOARD_GEO_SLOT: geo}
+            "__BLUEDOC_SNAPS__": _script_json(snaps) if snaps is not None else "null",
+            "__BLUEDOC_LISTING__": _script_json(lst) if lst is not None else "null", BOARD_GEO_SLOT: geo}
     return re.sub("|".join(map(re.escape, fill)), lambda m: fill[m.group(0)], template)
 
 
@@ -2589,7 +2622,7 @@ def cmd_new(argv: list[str]) -> int:
     ap.add_argument("--kind", help="meta.kind, the eyebrow word (e.g. Architecture, Runbook)")
     ap.add_argument("--shape", choices=("pr", "area"), default="pr",
                     help="review only: one section per PR (pr), or per area of a codebase review (area)")
-    design_targets = [t for t in TARGET_DEVICES if t != "presentation"]
+    design_targets = [t for t in TARGET_DEVICES if t not in ("presentation", "listing")]
     ap.add_argument("--target", help=f"design only: comma list of {','.join(design_targets)}; one starter artboard "
                     "and wireframe screen file each (default mobile). A deck is `new presentation`")
     ap.add_argument("--framework", help="design only: plain | horizon | heroui | tailwind | <a `serve.py add-framework` "
@@ -2636,7 +2669,8 @@ def cmd_new(argv: list[str]) -> int:
         meta["kind"] = a.kind
     stubs = (scaffold_design(doc, a.out, targets, a.framework or "auto", a.icons) if a.type == "design"
              else scaffold_deck(doc, a.out) if a.type == "presentation"
-             else scaffold_site(doc, a.out, a.url) if a.type == "website" else {})
+             else scaffold_site(doc, a.out, a.url) if a.type == "website"
+             else scaffold_listing(doc, a.out) if a.type == "storelisting" else {})
     for f in stubs:
         if f.exists():
             print(f"{f} exists; not overwriting it", file=sys.stderr)
@@ -2680,6 +2714,25 @@ def stub_slide(aid: str, kind: str, n: int | None) -> str:
 def stub_screen(a: dict) -> str:
     """A wireframe starter for an artboard, in plain-kit classes (references/kits.md): the agent's rev A."""
     aid, dev = a["id"], a.get("device")
+    if dev == "shot":   # a store shot: caption, frame and the UI slot (references/kits.md `## Store shots`)
+        return (f'<main class="shot" data-bd="{aid}">\n'
+                f'  <h1 class="shot-cap" data-bd="cap" data-l10n="{aid}.title">Benefit in a few words</h1>\n'
+                '  <div class="shot-frame" data-bd="frame">\n'
+                '    <div class="shot-ui" data-bd="ui">\n'
+                '      <main class="screen safe stack gap-4" data-bd="screen">\n'
+                '        <div class="wf-line" data-bd="title"></div>\n'
+                '        <div class="wf-img" data-bd="hero"></div>\n'
+                '        <div class="wf-text" data-bd="body"></div>\n'
+                '      </main>\n'
+                '    </div>\n'
+                '  </div>\n'
+                '</main>\n')
+    if dev == "asset":
+        return (f'<main class="asset" data-bd="{aid}">\n'
+                '  <div class="stack gap-2 p-6" data-bd="copy">\n'
+                f'    <h1 class="asset-title" data-l10n="{aid}.title" data-bd="title">App name</h1>\n'
+                '  </div>\n'
+                '</main>\n')
     if dev == "slide":
         return stub_slide(aid, "content", None)
     if dev == "page":   # a web page: sections down the page, one column below 768 px
@@ -2755,6 +2808,20 @@ def scaffold_site(doc: dict, out: Path, url: str | None) -> dict[Path, str]:
         for e in edits:
             e["sel"] = '[data-bd="headline"]'
     return {out.parent / screen_rel(out, home): stub_screen(home)}
+
+
+def scaffold_listing(doc: dict, out: Path) -> dict[Path, str]:
+    """The stub files for `build.py new storelisting`: each shot's wireframe layout (caption, frame, UI slot) and the
+    icon's fg and mono layers. Returns {file: stub text} to write beside the doc."""
+    stubs = {}
+    for a in board_of(doc)["artboards"]:
+        if is_icons(a):
+            folder = icon_dir(out, a)
+            stubs[folder / "fg.svg"] = STUB_ICON_LAYER.format(fill="#ffffff")
+            stubs[folder / "mono.svg"] = STUB_ICON_LAYER.format(fill="#000000")
+        else:
+            stubs[out.parent / screen_rel(out, a)] = stub_screen(a)
+    return stubs
 
 
 def scaffold_deck(doc: dict, out: Path) -> dict[Path, str]:
@@ -2962,6 +3029,8 @@ def resolve_key(doc: dict, key: str) -> Target:
         if is_live(a):
             raise PatchError(f"'{aid}' is a live page: its links are the site's own")
         return Target(a, arts, i, "link", sel)
+    if kind == "field" and len(parts) == 3:
+        return _field(doc, *parts)
     if kind == "layout" and len(parts) == 1:
         b = board_of(doc)
         if not b or b.get("id") != path:
@@ -2985,6 +3054,29 @@ def resolve_key(doc: dict, key: str) -> Target:
         arts.append(a)
         return Target(a, arts, len(arts) - 1, "frame")
     raise PatchError(f"unknown key '{key}': see `build.py --help` for the key forms")
+
+
+def _field(doc: dict, loc: str, group: str, field: str) -> Target:
+    """field:<locale>/<platform>/<field> (a store text) or field:<locale>/strings/<key> (a caption string) on a
+    storelisting: the field in listing.text[<locale>][<platform>] or listing.strings[<locale>]. Its parent is that
+    object (made when missing), so --set <field>=… writes it and --delete drops it."""
+    lb = listing.listing_of(doc)
+    if lb is None:
+        raise PatchError("no listing block in this doc: field: keys are a storelisting's")
+    if loc not in (lb.get("locales") or []):
+        raise PatchError(f"no locale '{loc}' in listing.locales ({', '.join(lb.get('locales') or [])})")
+    if group == "strings":
+        if not listing.STRING_KEY.match(field):
+            raise PatchError(f"bad caption key '{field}': letters, digits, - and _ joined by dots")
+        holder = lb.setdefault("strings", {}).setdefault(loc, {})
+    else:
+        if group not in (lb.get("platforms") or []):
+            raise PatchError(f"no platform '{group}' in listing.platforms ({', '.join(lb.get('platforms') or [])}); "
+                             "or strings for a caption")
+        if field not in listing.text_rules(listing.load_rules(), group):
+            raise PatchError(f"no {group} text field '{field}': {', '.join(listing.text_rules(listing.load_rules(), group))}")
+        holder = lb.setdefault("text", {}).setdefault(loc, {}).setdefault(group, {})
+    return Target(holder, holder, field, "field")
 
 
 EL_NAMES = re.compile(r"^[A-Za-z0-9_-]+(?:/[A-Za-z0-9_-]+)*$")   # an el: path of data-bd names, else a CSS path
@@ -3267,6 +3359,8 @@ def apply_patch(t: Target, sets: list[str], merge: str | None, append: str | Non
     if delete:
         if t.kind in ("doc", "meta"):
             raise PatchError(f"can't delete the {t.kind}")
+        if isinstance(t.parent, dict) and t.key not in t.parent:
+            raise PatchError(f"nothing to delete: no '{t.key}' there")
         del t.parent[t.key]
         return
     for s in sets:
@@ -3367,6 +3461,19 @@ def cmd_patch(argv: list[str]) -> int:
         ap.error("an icons artboard has no screen file: edit its layers in place, then patch it with --change")
     if a.html is not None and is_live(t.obj):
         ap.error("a live page has no screen file: edit the site's source (patch prints it), then patch it with --change")
+    if not ops and t.kind == "field":
+        _, _, path = a.key.partition(":")
+        loc, group, field = path.split("/", 2)
+        v = t.obj.get(field)
+        if group == "strings":
+            print(f"{loc} caption {field}: {json.dumps(v, ensure_ascii=False) if v is not None else 'none (the shots show the default locale)'}")
+        else:
+            r = listing.text_rules(listing.load_rules(), group)[field]
+            n = listing.text_count(v, r["unit"]) if isinstance(v, str) else 0
+            print(f"{loc} {group} {r['label']}: {json.dumps(v, ensure_ascii=False) if v is not None else 'none'} "
+                  f"({n} / {r['limit']} {r['unit']})")
+        print(f"change it: build.py patch {a.doc} {shlex.quote(a.key)} --set {shlex.quote(field + '=<text>')}, or --delete")
+        return 0
     if not ops and t.kind != "frame" and not (on_screen and a.change):
         if not on_screen:
             ap.error("give --set, --json, --append or --delete")

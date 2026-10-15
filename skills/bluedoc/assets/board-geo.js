@@ -4,7 +4,8 @@
    - boardLayout(board, links, size): where each artboard sits; the page's copy of build.py's board_layout
    - routeLinks(boxes, links, opts) / reroute(prev, boxes, links, moved, opts): orthogonal connectors around boxes
      (a board's screens, a canvas scope's nodes), with their labels placed
-   - tidy(screens, links, entry): the layered layout of Tidy up */
+   - tidy(screens, links, entry): the layered layout of Tidy up
+   - listingSections(listing, artboards, rules, platform, locale): a storelisting platform page's device sections */
 const BoardGeo = (() => {
   // board_layout's spacing, as build.py has it
   const BOARD_GAP = 80, SLIDE_GAP = 280, FLOW_GAP_X = 200, FLOW_GAP_Y = 120;
@@ -927,6 +928,32 @@ const BoardGeo = (() => {
     return tops;
   }
 
-  return { boardLayout, routeLinks, reroute, tidy };
+  /* ---------- listingSections: listing.py's sections, line for line ---------- */
+  // a storelisting platform page's device sections: [{row, sets: [{set, shots: [ids]}]}] for each row of listing.rows
+  // (default: the rules' core rows) in the rules' order; a row's sets of this platform in the rules' order that are
+  // core, have a shot or are asked for (if:watchFace with listing.watchFace); a set's shots in board order (an upload of
+  // another locale left out), listing.order[set]'s ids first; rows without a set left out
+  function listingSections(lb, artboards, rules, platform, locale) {
+    lb = lb && typeof lb === 'object' ? lb : {};
+    const rows = Array.isArray(lb.rows) ? lb.rows : rules.rows.filter(r => r.core).map(r => r.id);
+    const order = lb.order && typeof lb.order === 'object' && !Array.isArray(lb.order) ? lb.order : {};
+    const arts = (artboards || []).filter(a => a && typeof a.id === 'string' && a.device === 'shot' && Array.isArray(a.sets));
+    const out = [];
+    for (const r of rules.rows) {
+      if (!rows.includes(r.id)) continue;
+      const sets = [];
+      for (const s of rules.sets) {
+        if (s.platform !== platform || s.row !== r.id) continue;
+        const shots = arts.filter(a => a.sets.includes(s.id) && (typeof a.locale !== 'string' || a.locale === locale)).map(a => a.id);
+        if (!(s.core || shots.length || (s.required === 'if:watchFace' && lb.watchFace === true))) continue;
+        const want = Array.isArray(order[s.id]) ? order[s.id].filter(i => shots.includes(i)) : [];
+        sets.push({ set: s.id, shots: [...want, ...shots.filter(i => !want.includes(i))] });
+      }
+      if (sets.length) out.push({ row: r.id, sets });
+    }
+    return out;
+  }
+
+  return { boardLayout, routeLinks, reroute, tidy, listingSections };
 })();
 if (typeof module !== 'undefined' && module.exports) module.exports = BoardGeo;

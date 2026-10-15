@@ -57,7 +57,8 @@
   const nameOf = el => { const n = el.getAttribute && el.getAttribute('data-bd'); return n && NAME.test(n) ? n : null; };
   const count = sel => { try { return doc.querySelectorAll(sel).length; } catch (e) { return 0; } };
   const chainSel = names => names.map(n => '[data-bd="' + n + '"]').join(' ');
-  const own = el => { for (let n = el; n && n !== doc.body; n = n.parentElement) if (OWN.has(n.id)) return true; return false; };
+  // the kit's own elements, never a comment target: the notice, the outline, a shot's (data-bd-own: kits/shot.js)
+  const own = el => { for (let n = el; n && n !== doc.body; n = n.parentElement) if (OWN.has(n.id) || n.hasAttribute('data-bd-own')) return true; return false; };
 
   /* Full page (a website page's view: {bd:'page'}, the frame's name): the frame grows to the document, so every height
      that follows the viewport's is pinned to the design viewport's, pin px. Viewport units go through --bd-vh: serve.py's
@@ -557,4 +558,6 @@
   // a stylesheet, image or font that loads after the page: its sheet pinned, the size reported again
   doc.addEventListener('load', e => { if (e.target === doc) return; if (pin && e.target.nodeName === 'LINK') pinSheets(); if (doc.readyState === 'complete') stir(); }, true);
   doc.addEventListener('DOMContentLoaded', () => { if (pin) { pinSheets(); pinAttrs(root); } });
+  // a store shot laid itself out again (kits/shot.js: a locale, a style, the brand): measure and report
+  doc.addEventListener('bd-stir', () => { if (doc.readyState === 'complete') stir(); });
 })();

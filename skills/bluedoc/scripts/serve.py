@@ -154,6 +154,7 @@ from urllib.parse import parse_qs, parse_qsl, quote, unquote, urlencode, urlspli
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import build  # noqa: E402
+import listing  # noqa: E402
 
 try:
     import statedb  # noqa: E402
@@ -521,6 +522,8 @@ def card(doc: dict, dtype: str, doc_path: Path) -> dict:
     order (as Present plays them: top to bottom, then left to right).
     website: count = pages, sections = their sections, live = pages shown from a dev server, pages = the first 4 as
     {sections (at most 8), live, fidelity}.
+    storelisting: platforms = {platform: [{row, sets: [[set, shots]]}]}: each platform page's device sections in the
+    default locale (listing.sections), how many shots each set has.
     A doc whose type has none of that: its `hero`, else {icon: 'doc', sections: N}."""
     blocks = list(build.all_blocks(doc))
     if dtype == "review":
@@ -605,6 +608,15 @@ def card(doc: dict, dtype: str, doc_path: Path) -> dict:
             return {"count": len(pages), "sections": sum(map(len, secs)), "live": sum(map(build.is_live, pages)),
                     "pages": [{"sections": min(8, len(ss)), "live": build.is_live(p), "fidelity": str(p.get("fidelity") or "")}
                               for p, ss in list(zip(pages, secs))[:4]]}
+    elif dtype == "storelisting":
+        lb = listing.listing_of(doc)
+        if lb:
+            rules = listing.load_rules()
+            loc = lb.get("defaultLocale") or next(iter(lb.get("locales") or []), None)
+            known = {p["id"] for p in rules["platforms"]}
+            plats = [p for p in lb.get("platforms") or [] if p in known]
+            return {"platforms": {p: [{"row": s["row"], "sets": [[x["set"], len(x["shots"])] for x in s["sets"]]}
+                                      for s in listing.sections(lb, listing.shots_of(doc), rules, p, loc)] for p in plats}}
     hero = doc.get("hero")
     if isinstance(hero, dict) and hero.get("value") is not None:
         return {"hero": {k: str(hero[k]) for k in ("icon", "value", "label") if hero.get(k) is not None}}
@@ -1086,6 +1098,51 @@ def asset_tag(kind: str, f: Path, url: str, inline: bool) -> str:
     return f'<script{typ} src="{esc(url)}"></script>'
 
 
+INTER_FONT = VENDOR / "fonts" / "Inter-Variable.woff2"   # a shot's default caption font (OFL)
+SHOT_KITS = ("shot.css", "shot-styles.css")
+
+
+def shot_parts(doc: dict, a: dict, inline: bool) -> tuple[list[str], str, str]:
+    """What a storelisting shot or asset adds to its screen document: (head tags: the shot kit after the plain kit and
+    the Inter font face; :root declarations: the listing's brand tokens; the tail: its data (#bd-shot-data) and
+    kits/shot.js, after the fragment). The data: the sets it fills with their frame and UI sizes from the store rules,
+    every locale's caption strings, the default locale and the style (the shot's own, else the listing's)."""
+    lb = listing.listing_of(doc) or {}
+    rules = listing.load_rules()
+    v = kit_version()
+    head = [asset_tag("css", KITS / n, f"/__bluedoc/kit/{n}?v={v}", inline) for n in SHOT_KITS]
+    font = data_uri(INTER_FONT) if inline else f"/__bluedoc/vendor/fonts/{INTER_FONT.name}?v={vendor_version()}"
+    head.append('<style>@font-face { font-family: "Inter"; font-style: normal; font-weight: 100 900; font-display: block; '
+                f'src: url("{font}") format("woff2"); }}</style>')
+    brand = lb.get("brand") if isinstance(lb.get("brand"), dict) else {}
+    pal = brand.get("palette") if isinstance(brand.get("palette"), dict) else {}
+    out = {f"--brand-{k}": c for k, c in pal.items() if k in listing.PALETTE_ROLES and isinstance(c, str) and listing.HEX.match(c)}
+    f = brand.get("font") if isinstance(brand.get("font"), dict) else {}
+    if isinstance(f.get("family"), str) and listing.FONT_FAMILY.match(f["family"]):
+        out["--bd-font-caption"] = f'"{f["family"]}", Inter, system-ui, sans-serif'
+    if f.get("weight") in range(100, 1000, 100):
+        out["--bd-weight-caption"] = str(f["weight"])
+    sets = listing.by_id(rules, "sets")
+    data: dict = {"id": a["id"], "kind": a.get("device"), "sets": {}, "asset": None,
+                  "strings": {k: s for k, s in (lb.get("strings") or {}).items() if isinstance(s, dict)},
+                  "defaultLocale": lb.get("defaultLocale") or next(iter(lb.get("locales") or []), None),
+                  "style": {**(lb.get("style") if isinstance(lb.get("style"), dict) else {}),
+                            **(a.get("style") if isinstance(a.get("style"), dict) else {})}}
+    for s in a.get("sets") or [] if a.get("device") == "shot" else []:
+        r = sets.get(s) if isinstance(s, str) else None
+        if r and "author" in r:
+            (w, h), (uw, uh) = listing.frame_size(r), listing.ui_size(r)
+            data["sets"][s] = {"w": w, "h": h, "uiW": uw, "uiH": uh, "raw": bool(r.get("raw")), "platform": r["platform"], "row": r["row"]}
+    asset = listing.by_id(rules, "assets").get(a.get("asset")) if a.get("device") == "asset" else None
+    if asset and "author" in asset:
+        w, h = listing.frame_size(asset)
+        data["asset"] = {"w": w, "h": h, "platform": asset["platform"]}
+    blob = json.dumps(data, ensure_ascii=False).replace("<", "\\u003c")   # no '</script' in a string reaches the parser
+    tail = (f'<script type="application/json" id="bd-shot-data">{blob}</script>\n'
+            + asset_tag("js", KITS / "shot.js", f"/__bluedoc/kit/shot.js?v={v}", inline) + "\n")
+    return head, "".join(f" {k}: {val};" for k, val in out.items()), tail
+
+
 def wrap_screen(doc: dict, doc_path: Path, artboard_id: str, fragment: str, *, inline: bool = False,
                 theme: str | None = None, deck: bool = False) -> str:
     """A screen as a whole HTML document: kits/shell.html filled with the artboard's framework (or the plain kit and
@@ -1113,16 +1170,19 @@ def wrap_screen(doc: dict, doc_path: Path, artboard_id: str, fragment: str, *, i
         head.append(f'<style type="text/tailwindcss">{raw_text(text, "style")}</style>')
     if a.get("device") == "page":   # a website's mockup page: its viewport units pinned, as the proxy pins a live page's
         fragment = pin_html_units(fragment)
+    shot_head, shot_vars, shot_tail = shot_parts(doc, a, inline) if a.get("device") in ("shot", "asset") else ([], "", "")
+    head += shot_head
     inspector = KITS / "inspector.js"
     slots = {
-        "html_class": f"fid-{fidelity}", "artboard": esc(artboard_id), "fallback": esc(missing or ""),
-        "title": esc(str(a.get("title") or artboard_id)), "vars": screen_vars(doc, board, a, theme),
+        "html_class": f"fid-{fidelity}" + (" shot-pending" if shot_tail else ""), "artboard": esc(artboard_id),
+        "fallback": esc(missing or ""),
+        "title": esc(str(a.get("title") or artboard_id)), "vars": screen_vars(doc, board, a, theme) + shot_vars,
         "hand_font": (data_uri(HAND_FONT) if not deck or fidelity == "sketch" else "data:,") if inline
         else f"/__bluedoc/vendor/fonts/{HAND_FONT.name}?v={vendor_version()}",
         "inspector": DECK_FRAME_SCRIPT if deck else asset_tag("js", inspector, f"/__bluedoc/kit/inspector.js?v={kit_version()}", inline),
         "head": "\n".join(head),
         "notice": f'<div id="bd-notice" role="status">{esc(missing)} not found: showing the plain kit</div>\n' if missing else "",
-        "body": fragment,
+        "body": fragment, "shot": shot_tail,
     }
     shell = (KITS / "shell.html").read_text(encoding="utf-8")
     return re.sub(r"\{\{(\w+)\}\}", lambda m: slots[m[1]], shell)   # one pass: the fragment's own {{ }} stay as written
@@ -2155,7 +2215,7 @@ def save_icons(doc: Path, aid, files) -> tuple[int, dict]:
 
 # ---------- reader state ----------
 
-ANN_TYPES = ("pin", "text", "draw", "general", "link", "layout")   # link, layout: the board's drafts (template.html)
+ANN_TYPES = ("pin", "text", "draw", "general", "link", "layout", "listing")   # link, layout, listing: drafts (template.html)
 _skipped: set[tuple[str, str]] = set()   # (doc, key) of stored values page_state left out and logged
 
 
@@ -2181,7 +2241,8 @@ def value_ok(key: str, value: str) -> bool:
             and (a.get("pos") is None or isinstance(a["pos"], dict))
             and (a.get("type") != "link" or isinstance(a.get("link"), dict)
                  and all(isinstance(a["link"].get(k), str) for k in ("op", "from", "el")))
-            and (a.get("type") != "layout" or isinstance(a.get("layout"), dict) and isinstance(a["layout"].get("positions"), dict)))
+            and (a.get("type") != "layout" or isinstance(a.get("layout"), dict) and isinstance(a["layout"].get("positions"), dict))
+            and (a.get("type") != "listing" or isinstance(a.get("listing"), dict) and isinstance(a["listing"].get("op"), str)))
 
 
 def page_state(p: Path) -> dict | None:

@@ -130,7 +130,7 @@ GRANTS = ("allow-same-origin", "allow-top-navigation", "allow-popups", "allow-fo
 
 
 class ScreenSandbox(unittest.TestCase):
-    """Design screens are LLM HTML: the page frames them with sandbox="allow-scripts" only, and the screen route
+    """Design screens and store shots are LLM HTML: the page frames them with sandbox="allow-scripts" only, and the screen route
     repeats the sandbox in its CSP, so a screen opened on its own runs with the same opaque origin. A website's live
     page alone keeps allow-same-origin, and only while it loads from its proxy's own port, never this page's origin: an
     earlier revision's snapshot of it comes from this server's screen route, sandboxed as a screen."""
@@ -139,7 +139,8 @@ class ScreenSandbox(unittest.TestCase):
         t = template_text()
         self.assertEqual(dict(re.findall(r"\b(SCREEN_SANDBOX|LIVE_SANDBOX) = '([^']*)'", t)),
                          {"SCREEN_SANDBOX": "allow-scripts", "LIVE_SANDBOX": "allow-scripts allow-same-origin"})
-        self.assertEqual(re.findall(r"sandbox['\"]?\s*[=:,]\s*([^,}]+)", t), ["proxied ? LIVE_SANDBOX : SCREEN_SANDBOX"],
+        # the board's frames, and a storelisting's shots on its platform pages
+        self.assertEqual(re.findall(r"sandbox['\"]?\s*[=:,]\s*([^,}]+)", t), ["proxied ? LIVE_SANDBOX : SCREEN_SANDBOX", "SCREEN_SANDBOX"],
                          "a frame the template sandboxes some other way")
         self.assertIn("const live = isLive(x.a), page = devOf(x.a) === 'page', snap = live && rev != null && SERVED ? snapOf(rev, x.a.id, viewSize(x.a)[0]) : null;", t)
         self.assertIn("const attrs = live ? (rev != null ? (snap ? { src: snapUrl(x.a, rev, snap) } : null) : liveUrl(x.a) ? { src: liveUrl(x.a)", t,
@@ -156,10 +157,12 @@ class ScreenSandbox(unittest.TestCase):
         self.addCleanup(server.stop)
         url = server.url_for(docs / "acme-fit-design.bluedoc.json")
         base = url.rsplit("/", 1)[0]
-        for screen in ("watch-face", "login", "dashboard"):
+        # design screens, and a storelisting's shot and asset in the shot kit
+        for stem, screen in (("acme-fit-design", "watch-face"), ("acme-fit-design", "login"), ("acme-fit-design", "dashboard"),
+                             ("acme-fit-listing", "today"), ("acme-fit-listing", "feature")):
             with self.subTest(screen=screen):
                 c = http.client.HTTPConnection("127.0.0.1", server.port, timeout=10)
-                c.request("GET", f"{base}/acme-fit-design.design/{screen}.html", headers={"Host": server.host})
+                c.request("GET", f"{base}/{stem}.design/{screen}.html", headers={"Host": server.host})
                 r = c.getresponse()
                 r.read()
                 c.close()

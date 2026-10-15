@@ -2,7 +2,7 @@
 
 Lookup reference for every field and command. Grep for a heading, never read the file whole: `grep -n -A25 '^## Diff' references/schema.md`. How to lay out each doc type lives in `types/<type>.md`.
 
-Headings: `## Document` (incl. `hero`) · `## Contracts` · `## Section` · `## Blocks` (`### Inline markdown`) · `## Checklist` (`### Reader comments and replies`) · `## Diff` (`### Diff reference`, `### Embedded diff`, `### gitdiff.py`) · `## Plan blocks` (`### Steps`, `### Files`, `### Media`, `### Compare`) · `## Board` (`### Artboard`, `### Devices`, `### Screen files`, `### Links`, `### Icons`, `### Website`) · `## Revisions` · `## Page layout` · `## Canvas` (`### Node`, `### Semantic zoom`, `### Edge`, `### Flow`) · `## Annotations` (the key grammar; `### Bottom tray`) · `## Plans` (its approval Markdown has `## Decisions` and `## Notes with the approval`) · `## build.py` (`### patch`) · `## serve.py` (`### Reader state`) · `## Automation API`
+Headings: `## Document` (incl. `hero`) · `## Contracts` · `## Section` · `## Blocks` (`### Inline markdown`) · `## Checklist` (`### Reader comments and replies`) · `## Diff` (`### Diff reference`, `### Embedded diff`, `### gitdiff.py`) · `## Plan blocks` (`### Steps`, `### Files`, `### Media`, `### Compare`) · `## Board` (`### Artboard`, `### Devices`, `### Screen files`, `### Links`, `### Icons`, `### Website`) · `## Listing` (`### Shots`, `### Text and locales`) · `## Revisions` · `## Page layout` · `## Canvas` (`### Node`, `### Semantic zoom`, `### Edge`, `### Flow`) · `## Annotations` (the key grammar; `### Bottom tray`) · `## Plans` (its approval Markdown has `## Decisions` and `## Notes with the approval`) · `## build.py` (`### patch`) · `## serve.py` (`### Reader state`) · `## Automation API`
 
 ## Document
 
@@ -11,7 +11,7 @@ Headings: `## Document` (incl. `hero`) · `## Contracts` · `## Section` · `## 
 | `id` | id | yes | Namespace for the reader's ticks, picks and comments (`bp:<id>:…` keys). Never change it after people start ticking. |
 | `title` | string | yes | Page `<h1>` and browser title (`<title> · bluedoc`). |
 | `subtitle` | inline md | no | One sentence under the title. |
-| `meta` | object | no | `org`, `kind` (Architecture, Walkthrough, Runbook, Setup, Change, Plan, Review, or a free label), `dwg` (drawing number), `rev`, `date`, `type`. `org · kind · date` form the line above the title; `dwg` and `rev` appear under **Document** in the status rail and in the canvas title blocks. `rev` names the revision: the build keeps one history entry per `rev` (see Revisions). `type` (`docs`, `review`, `plan`, `design`, `presentation`, `website`, `other`) picks the doc's [contract](#contracts), its home-page group and card, and the page's tray; `build.py new` sets it. Unset, it is derived from `kind`, case-insensitive: starts with `plan` or is `implementation plan` → `plan`; contains `review` → `review`; names a docs kind (Architecture, Walkthrough, Runbook, Setup, Reference, Proposal, Change, Status, Guide, Design, Spec, RFC, ADR, …) → `docs`; anything else → `other`. `design`, `presentation` and `website` are never derived: only `"type"` set to one of them makes a [board](#board) page. A `plan` doc is a **plan page**: see [Plans](#plans). |
+| `meta` | object | no | `org`, `kind` (Architecture, Walkthrough, Runbook, Setup, Change, Plan, Review, or a free label), `dwg` (drawing number), `rev`, `date`, `type`. `org · kind · date` form the line above the title; `dwg` and `rev` appear under **Document** in the status rail and in the canvas title blocks. `rev` names the revision: the build keeps one history entry per `rev` (see Revisions). `type` (`docs`, `review`, `plan`, `design`, `presentation`, `website`, `storelisting`, `other`) picks the doc's [contract](#contracts), its home-page group and card, and the page's tray; `build.py new` sets it. Unset, it is derived from `kind`, case-insensitive: starts with `plan` or is `implementation plan` → `plan`; contains `review` → `review`; names a docs kind (Architecture, Walkthrough, Runbook, Setup, Reference, Proposal, Change, Status, Guide, Design, Spec, RFC, ADR, …) → `docs`; anything else → `other`. `design`, `presentation` and `website` are never derived: only `"type"` set to one of them makes a [board](#board) page. A `plan` doc is a **plan page**: see [Plans](#plans). |
 | `state` | `[{label, kind}]` | no | Provenance, listed under **Status** in the status rail as dots. `kind`: `ok` (green), `warn` (amber), `risk` (red), `info` (blue), `todo` (grey). Example: `{"label": "not live", "kind": "warn"}`. Keep each label under ~40 characters. |
 | `links` | `[{label, href}]` | no | Related documents, listed under **Related** in the status rail. |
 | `hero` | `{icon, value, label}` | no | The home card's stat, for `other` docs and for `docs` without a canvas. `icon`: `chart`, `doc`, `flag`, `bolt`, `clock`, `users`, `bug`, `box`, `check`, `globe`, `lock` or `list`. `value` ≤ 8 characters (`"99.95%"`); `label` ≤ 28 (`"uptime, last 30 days"`). Without it an `other` card shows the `doc` icon and the section count. |
@@ -35,6 +35,7 @@ Each type's home card draws one element, so the build requires that element's da
 | `design` | exactly one `board` block with ≥ 1 artboard | the board's outline: each artboard's device frame at its place |
 | `presentation` | exactly one `board` block with ≥ 1 artboard, every one `device: "slide"` (any other device is an error: use a design doc for screens) | the first 9 slides as 16:9 frames in deck order, the slide count and how many have notes |
 | `website` | exactly one `board` block with ≥ 1 artboard, every one `device: "page"` (any other device is an error) | the first 4 pages as browser windows with their sections as bands, a green dot on live ones; the page, section and live counts |
+| `storelisting` | exactly one `listing` block and one `board` block with ≥ 1 artboard, every one `device` `shot`, `asset` or `icons` | each platform's device sections with their sets' shot counts |
 
 A missing requirement is an **error** on the doc being built: a new `meta.rev` (not yet in its history file), or a recorded rev whose content changed (an edit in place). It is a **warning** only while the doc is exactly the revision its history recorded, so recorded revisions keep rendering. `build.py` and every server render apply the same rule. `build.py new <type>` writes a skeleton that meets the contract.
 
@@ -60,6 +61,7 @@ A missing requirement is an **error** on the doc being built: a new `meta.rev` (
 | `media` | `src`, `alt`, `caption`?, `width`? | An image (opens full size on click) or a video, from a file next to the doc. |
 | `compare` | `before`, `after`, `title`? | Two panes side by side: before and after code, text or images. |
 | `board` | see [Board](#board) | A design doc's UI mockups: artboards on a pan/zoom board, each an HTML screen file. Design docs only; not inside checklist items. |
+| `listing` | see [Listing](#listing) | A storelisting's store text, locales, captions, brand and style. Storelisting docs only; not inside checklist items. |
 
 ### Inline markdown
 
@@ -352,6 +354,7 @@ A design doc (`meta.type: "design"`) has a brief section and one `board` block. 
 | `slide` | 1920 × 1080 | none; a thin frame, no device chrome. Other aspect ratios: `w` and `h` |
 | `page` | 1440 × 900 at first, then the width the reader picks (height: that width's viewport) | none; a browser bar sits above the page, not over it. Website docs only |
 | `icons` | 1280 × 860 | none; the [icon sheet](#icons), built from layers instead of a screen file |
+| `shot`, `asset` | per set or asset: store px ÷ scale (see [Listing](#listing)) | storelisting docs only |
 
 A board with `slide` artboards is a deck: **Present** shows them full-window, scaled to fit, in reading order (rows top to bottom, each left to right, as the board places them); ← → step, `Esc` leaves. Kit slide classes: `references/kits.md` `## Slides`.
 
@@ -424,6 +427,58 @@ A website's board holds `page` artboards. Each page is either **live** (`url`) o
 **Snapshots.** A live page shows the dev server as it is now, so an earlier revision shows the page's **snapshot** at that revision: a static copy per width in `<name>.bluedoc.snapshots/rev-<rev>/<page>@<width>.html` beside the doc (the history's neighbour; commit it with the doc). The inspector writes it: the DOM with the versions shown in place put back, no scripts, event attributes, frames or dev toolbars, every stylesheet inlined as text, and the images and fonts the page loaded as `data:` URIs (up to 1 MB each, 4.5 MB in all; a larger one stays a URL on the dev server, which may show the current site, and the page's title bar warns). The page records the current revision's live pages when the reader sends answers, changes or an approval, and when a page in Full page first settles at a width that revision has none of; `POST /__bluedoc/snapshot` takes them (the key, the current `meta.rev` only, at most 8 MB). `serve.py snapshot` records them through headless Chrome, also for an earlier revision that has none. An earlier revision's snapshot is never replaced. On `?rev=B` a live page shows B's snapshot (the nearest width it has) in the same sandboxed frame as a mockup, its page bar reads **Snapshot · rev B**; without one, a placeholder says **No snapshot of rev B** and nothing live shows. `patch` warns when the revision it replaces has no snapshot.
 
 **Compare.** On `?diff=B` each page that both revisions have shows B's page to its left, **Rev B** beside **Rev C**, at the same width and height (Full page or Viewport, where the two scroll together); zoom and pan move both. A section whose content differs (the two frames' hash of its tags and text, else its JSON) is outlined on both and marked **changed** in the Pages list, and its page is **Changed**. The compare tray's **Side by side** / **Single** keys (kept per doc) show or hide the earlier page.
+
+## Listing
+
+A storelisting (`meta.type: "storelisting"`) is one app's store listing on Google Play and the App Store. It has a `listing` block and one `board` of shots (`device: "shot"`), assets (`device: "asset"`: feature graphic, banners, ad images) and an icon (`device: "icons"`, or another design doc's). The page shows the board as two **platform pages**, one per store, switched in the app bar (`#play`, `#appstore`, with `/<locale>` when it isn't the default). Every size, count, limit and rule comes from `assets/store-rules.json`, each with its source and access date; a rule marked `unverified` only warns. `scripts/listing.py` loads and checks it.
+
+```json
+{ "type": "listing", "id": "main", "app": { "name": "Acme Fit", "company": "Acme" },
+  "platforms": ["play", "appstore"], "rows": ["watch", "phone", "tablet"], "locales": ["en-US", "es-ES"], "defaultLocale": "en-US",
+  "ipad": true, "icon": "acme-fit-design.bluedoc.json#app-icon", "style": { "message": "m1", "layout": "l1" },
+  "brand": { "font": { "family": "Inter", "weight": 800 }, "palette": { "bg": "#1d4ed8", "surface": "#e0e7ff", "accent": "#f59e0b", "text": "#ffffff", "caption": "#ffffff" } },
+  "video": { "play": "https://www.youtube.com/watch?v=…", "appstore": [{ "src": "media/preview.mp4", "row": "phone", "poster": 5 }] },
+  "text": { "en-US": { "play": { "name": "…", "short": "…", "full": "…" }, "appstore": { "name": "…", "subtitle": "…", "keywords": "…" } } },
+  "strings": { "en-US": { "today.title": "See your week at a glance" }, "es-ES": { "today.title": "Tu semana de un vistazo" } },
+  "mt": { "es-ES": ["appstore.subtitle", "strings.today.title"] },
+  "order": { "appstore/iphone-69": ["workout", "today"] } }
+```
+
+| Field | Meaning |
+|---|---|
+| `app` | Required: `{name, company}`. |
+| `platforms` | `play`, `appstore`: the platform pages, in that order. |
+| `rows` | The device sections: `watch`, `phone`, `tablet` (the default) and the optional `tv`, `desktop`, `xr`, `chromebook`, `car` (a warning: their capture and export come later). A section off shows as a strip; **Turn on** is a draft. |
+| `locales`, `defaultLocale` | Locale codes (default: the first). A code a store doesn't list is a warning. A missing text or caption shows the default locale's, flagged *falls back*. |
+| `ipad`, `watchFace` | `true` makes the iPad 13" set, or Wear's watch-face set, required. |
+| `icon` | An icons artboard: its id on this board, or `<design doc>.bluedoc.json#<id>` beside it. The Shared section shows it under Play's 30 % mask and as the App Store's 1024 icon (in the binary). |
+| `style` | The default screenshot style: `message` `m1`…`m5`, `layout` `l1`…`l5` (`store-rules.json` `styles`); a shot may override it with its own `style`. |
+| `brand` | `font: {family, weight}` (the caption font; default Inter, vendored, OFL) and `palette` roles `bg`, `surface`, `accent`, `text`, `caption` as hex: the CSS variables `--brand-<role>` and `--bd-font-caption` in every shot. |
+| `video` | `play`: one YouTube video URL (no playlist, channel or timecode). `appstore`: up to 3 previews per row, each `{src, row, poster}` (an `.mp4` beside the doc; poster frame in seconds, default 5). |
+| `text` | `{locale: {platform: {field: text}}}`. Fields per platform: `store-rules.json` `text` (Play `name` `short` `full` `releaseNotes` `featureAlt`; App Store `name` `subtitle` `promo` `description` `keywords` `whatsNew`). |
+| `strings` | `{locale: {key: text}}`: the captions shots name with `data-l10n="key"`. A key a shot uses with no string in the default locale is a warning. |
+| `mt` | `{locale: ["<platform>.<field>" \| "strings.<key>"]}`: machine-translated strings, badged **MT** until accepted. Each must name a string that exists. |
+| `order` | `{set: [shot ids]}`: a set's upload order (default: board order); the page's drag makes this a draft. |
+| `capture`, `variants` | Reserved for capture targets and custom pages / A/B tests. |
+
+The left panel's **Text** tab lists the shown platform's fields for the shown locale with a counter (code points; UTF-8 bytes for Apple keywords), red past the limit, then the captions; the right panel adds **Style**, **Brand** (palette, caption font, the four WCAG contrast pairs against 4.5:1) and **Checks** (the page's own count of limits and required sets). Point and Select pin a comment inside a shot (`el:<shot>/…`, with `platform`, `locale` and `set` in the target) or on a field (`field:`). Dragging a shot in View reorders its set; turning on a section changes `rows`. Both are drafts: Request changes sends them under **Board drafts** with one `build.py patch <doc> block:<listing path> --json '{"order": …, "rows": …}'` command.
+
+### Shots
+
+| Artboard field | Meaning |
+|---|---|
+| `device` | `shot`, `asset` or `icons`; nothing else on a storelisting's board. |
+| `sets` | A shot's sets, e.g. `["play/phone", "appstore/iphone-69", "appstore/iphone"]`: one screen file renders at each set's frame (its store size ÷ scale: 360×640 for `play/phone`, 440×956 for `appstore/iphone-69`). A set of a platform the listing lacks is an error. |
+| `asset` | An asset's rule id, e.g. `play/feature` (1024×500, with the cut-off guide). |
+| `locale` | A shot that belongs to one locale only (an upload). |
+| `src` | A `.png` inside `<stem>.listing/`: an uploaded shot, shown as the image. |
+| `style`, `recipe` | The shot's own style; its capture recipe (route, appearance, settle, targets). |
+
+A shot's screen file is a layout in the shot kit (`references/kits.md` `## Store shots`): `.shot` > `.shot-cap` (the caption, `data-l10n`) and `.shot-frame` > `.shot-ui` (the app's UI at the set's UI viewport, scaled into the frame). Raw sets (Wear, Apple Watch) show the UI alone. The UI slot shows a capture from `<stem>.listing/captures/captures.json` (fresh when its recipe hash matches) over the mock-up; the section tags each shot **mock UI**, **capture**, **stale** or **upload**, plus **MT** and *falls back*.
+
+### Text and locales
+
+Each set's chip shows its shot count against its range, its accepted sizes and whether it is required (`always`, `row`, `either:<set>|<set>`, `if:ipad`, `if:watchFace`, `dated` from a date). The locale menu shows each locale's MT and missing counts. **Errors:** an unknown platform, row, set, asset, style, text field, locale or palette role; an `mt` key that names no string; a bad YouTube URL; more than 3 previews per row; an image shot outside `<stem>.listing/` or not a PNG; an `order` entry that isn't one of the set's shots. **Warnings:** a required text field missing in the default locale; a caption key without a default string; a locale a store doesn't list; an optional row; the rules file over 180 days old.
 
 ## Revisions
 
@@ -543,6 +598,7 @@ The key grammar. This table is the one list of keys: the annotator writes them i
 | `frame:<device>@<x>,<y>` | a requested empty frame at board px `x`,`y`; `<device>` is a device or `<w>x<h>`. `patch` appends an artboard there (`frame-<n>`, or `--set id=…`) and writes a wireframe stub screen file |
 | `link:<id>/<element>` | the link on an element of that artboard's screen file: `<element>` is its `data-bd` name (the link list's `el`) or a CSS path as for `el:`; a name no element has (or none: `link:<id>/`) is a new gesture link. Without an option `patch` prints the file, the selector and the current `data-nav` and label; `--set to=… kind=… label=…` or `--delete` rewrite that start tag in place |
 | `layout:<boardId>` | the board's artboard positions: `patch layout:main --json '{"<artboard>": [x, y], …}'` sets `x`, `y` (`null` unsets: the board places it). The page sends moves and **Tidy up** as one `layout:` draft with this command |
+| `field:<locale>/<platform>/<field>`, `field:<locale>/strings/<key>` | a storelisting's store text (`listing.text[locale][platform][field]`) or caption string (`listing.strings[locale][key]`), from the Text panel. `patch` with no option prints it with its count and limit; `--set <field>=<text>` writes it, `--delete` drops it. A pin inside a shot is an `el:` key; its comment adds `platform`, `locale` and `set` to the target |
 
 `<blockPath>` is `<sectionId>/<i>`, or `<checklist>/<item>/<k>` for a block inside a checklist item, as in `block:` and `row:`. `<i>`, `<k>` and `<r>` are 0-based.
 

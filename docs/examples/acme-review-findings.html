@@ -1832,6 +1832,96 @@ html.bd-presenting .bp-toast { z-index: 71; bottom: 84px; }
 :root[data-layout="board"] .bd-key.acc .t { display: none; }
 /* a doc page's tray beside an open right panel (fitTray): keys keep their icon and count, not their words */
 .bd-anntb.compact .bd-key :is(.t, .l) { display: none; }
+
+/* ---------- a storelisting's platform pages (renderListing): the platform switch and the locale menu in the app
+   bar; the store text and captions in the left panel; the device sections, each a card of its sets' shots at scale,
+   in the full-bleed layer; Style, Brand and Checks beside Comments in the right panel ---------- */
+.bd-lst-tb { display: flex; align-items: center; gap: 10px; flex: none; margin-left: 8px; }
+.bd-lst-tb .bd-sg button { padding: 0 12px; font-weight: 600; }
+.bd-lst-loc { height: 30px; border: 0; border-radius: 9px; padding: 0 8px; font: 500 12.5px var(--sans); color: var(--fg); background: var(--inset); box-shadow: inset 0 0 0 1px var(--line); }
+.bd-lst-main { position: absolute; inset: 0; overflow: auto; overscroll-behavior: contain; padding: 18px 22px 110px;
+  background-color: var(--canvas); background-image: radial-gradient(circle, color-mix(in oklch, var(--fg) 14%, transparent) 1px, transparent 1.3px); background-size: 24px 24px; }
+.bd-lst-sec { display: grid; grid-template-columns: 132px minmax(0, 1fr); gap: 16px; margin: 0 auto 14px; max-width: 1480px; padding: 14px 16px;
+  border-radius: 14px; background: var(--surface); box-shadow: var(--shadow-1); }
+.bd-lst-sec > .hd h3 { margin: 2px 0 4px; font-size: 14px; }
+.bd-lst-sec > .hd p { margin: 0; font-size: 12px; line-height: 1.45; color: var(--fg-subtle); }
+.bd-lst-sets { display: grid; gap: 14px; min-width: 0; }
+.bd-lst-set { min-width: 0; }
+.bd-lst-chip { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 8px; font-size: 12px; color: var(--fg-muted); }
+.bd-lst-chip b { color: var(--fg); font-weight: 600; }
+.bd-lst-chip .bp-chip { padding: 3px 7px; font-size: 11.5px; }
+.bd-lst-tiles { display: flex; align-items: flex-start; gap: 12px; overflow-x: auto; padding: 2px 2px 6px; scrollbar-width: thin; }
+.bd-lst-tiles.pano { gap: 0; }
+.bd-lst-tile { flex: none; display: grid; gap: 6px; }
+.bd-lst-shot { position: relative; overflow: hidden; border-radius: 6px; background: var(--inset); box-shadow: 0 0 0 1px var(--line), 0 4px 14px oklch(20% 0.02 264 / .12); }
+.bd-lst-shot > iframe { position: absolute; left: 0; top: 0; border: 0; transform-origin: 0 0; pointer-events: none; background: #fff; }
+.bd-lst-shot > img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.bd-lst-main[data-m="point"] .bd-lst-shot > iframe, .bd-lst-main[data-m="select"] .bd-lst-shot > iframe { pointer-events: auto; }
+.bd-lst-main[data-m="view"] .bd-lst-shot { cursor: grab; }
+.bd-lst-shot.drag { z-index: 3; cursor: grabbing; box-shadow: 0 0 0 2px var(--accent), var(--shadow-3); }
+.bd-lst-shot.sel, .bd-lst-shot.flash { outline: 2px solid var(--accent); outline-offset: 3px; }
+.bd-lst-shot.bd-chg { outline: 2px solid var(--chg); outline-offset: 3px; }
+.bd-lst-shot .ph { position: absolute; inset: 0; display: grid; place-items: center; padding: 8px; text-align: center; font-size: 11px; color: var(--fg-subtle); }
+.bd-lst-shot .guide { position: absolute; border: 1.5px dashed oklch(63% 0.25 350); pointer-events: none; }
+.bd-lst-shot .guide::after { content: "safe"; position: absolute; right: 4px; top: 2px; font: 600 9px var(--sans); color: oklch(63% 0.25 350); }
+.bd-lst-drop { flex: none; align-self: stretch; width: 3px; margin: 0 -7px; border-radius: 2px; background: var(--accent); }
+.bd-lst-cap { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; max-width: 100%; font-size: 11.5px; color: var(--fg-muted); }
+.bd-lst-cap .n { font: 600 11px var(--mono); color: var(--fg-subtle); }
+.bd-lst-cap .t { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg); font-weight: 500; }
+.bd-lst-tag { padding: 1px 6px; border-radius: 6px; font: 600 10.5px/1.5 var(--sans); color: var(--fg-muted); background: var(--inset); }
+.bd-lst-tag.mock { color: var(--warn-fg); background: var(--warn-tint); }
+.bd-lst-tag.stale, .bd-lst-tag.miss { color: var(--risk-fg); background: var(--risk-tint); }
+.bd-lst-tag.mt { color: #fff; background: oklch(55% 0.2 300); }
+.bd-lst-tag.cap, .bd-lst-tag.up { color: var(--ok-fg); background: var(--ok-tint); }
+.bd-lst-empty { display: grid; place-items: center; min-height: 80px; padding: 10px 16px; border-radius: 8px; border: 1.5px dashed var(--line-strong); font-size: 12px; color: var(--fg-subtle); }
+.bd-lst-off { display: flex; align-items: center; gap: 10px; max-width: 1480px; margin: 0 auto 8px; padding: 8px 16px; border-radius: 10px;
+  border: 1.5px dashed var(--line-strong); font-size: 12.5px; color: var(--fg-subtle); }
+.bd-lst-off b { color: var(--fg-muted); }
+.bd-lst-off .bp-btn { margin-left: auto; }
+.bd-lst-off.on { border-color: var(--warn); color: var(--warn-fg); }
+.bd-lst-shared { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 18px; }
+.bd-lst-icon { display: grid; justify-items: center; gap: 6px; font-size: 11.5px; color: var(--fg-muted); text-align: center; max-width: 150px; }
+.bd-lst-icon i { display: block; width: 88px; height: 88px; background-size: 100% 100%; box-shadow: 0 1px 4px oklch(20% 0.02 264 / .25); }
+.bd-lst-icon.play i { border-radius: 30%; }
+.bd-lst-icon.appstore i { border-radius: 22.4%; }
+.bd-lst-video { display: grid; gap: 6px; max-width: 220px; font-size: 11.5px; color: var(--fg-muted); }
+.bd-lst-video video { width: 120px; border-radius: 8px; background: #000; }
+.bd-lst-video code { font-size: 11px; word-break: break-all; }
+/* the left panel's Text tab: each field with its counter, then the captions */
+.bd-lst-text h4 { margin: 4px 4px 10px; font-size: 13px; }
+.bd-lst-text h4 + p { margin: -6px 4px 10px; font-size: 12px; color: var(--fg-subtle); }
+.bd-lfield { display: grid; gap: 4px; margin: 0 0 12px; padding: 0 4px; }
+.bd-lfield .lh { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--fg-muted); }
+.bd-lfield .lh .c { margin-left: auto; font: 500 11.5px var(--mono); color: var(--ok-fg); }
+.bd-lfield .lh .c.over { color: var(--risk-fg); font-weight: 700; }
+.bd-lfield .v { padding: 7px 9px; border-radius: 8px; font-size: 13px; line-height: 1.4; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 7.2em; overflow: auto;
+  background: var(--inset); box-shadow: inset 0 0 0 1px var(--line); color: var(--fg); }
+.bd-lfield .v.fb { color: var(--fg-subtle); font-style: italic; }
+.bd-lfield .v.none { color: var(--fg-subtle); }
+.bd-lfield .note { font-size: 11.5px; color: var(--warn-fg); }
+.bd-lfield.cap { grid-template-columns: minmax(0, 1fr); }
+.bd-lfield.cap .v { max-height: none; }
+/* Style, Brand and Checks in the right panel */
+.bd-lst-pane { display: grid; align-content: start; gap: 10px; padding: 12px 14px calc(16px + var(--tray-room, 0px)); overflow: auto; min-height: 0; min-width: 0; font-size: 13px; }
+.bd-lst-pane > p { margin: 0; }
+.bd-lst-pane .hint { font-size: 12px; color: var(--fg-subtle); }
+.bd-lst-pane h4 { margin: 4px 0 0; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--fg-subtle); }
+.bd-lst-style { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 10px; padding: 8px 10px; border-radius: 10px; background: var(--inset); }
+.bd-lst-style.on { background: var(--accent-tint); box-shadow: inset 0 0 0 1.5px var(--accent); }
+.bd-lst-style b { font-size: 12.5px; }
+.bd-lst-style .g { grid-row: span 2; align-self: start; display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 6px; font: 700 11px var(--sans); color: #fff; background: var(--fg-subtle); }
+.bd-lst-style .g.A { background: var(--ok); } .bd-lst-style .g.B { background: var(--accent-solid); } .bd-lst-style .g.C { background: var(--warn); }
+.bd-lst-style span { font-size: 12px; color: var(--fg-muted); }
+.bd-lst-swatches { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.bd-lst-swatches figure { display: grid; justify-items: center; gap: 3px; min-width: 0; margin: 0; font-size: 11px; color: var(--fg-muted); }
+.bd-lst-swatches i { width: 100%; aspect-ratio: 1; border-radius: 8px; box-shadow: inset 0 0 0 1px oklch(0% 0 0 / .15); }
+.bd-lst-swatches code { max-width: 100%; overflow: hidden; text-overflow: ellipsis; font-size: 10px; }
+.bd-lst-checks { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.bd-lst-checks li { display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: 6px; font-size: 12.5px; line-height: 1.4; }
+.bd-lst-checks li .bd-ic { width: 14px; height: 14px; margin-top: 2px; }
+.bd-lst-checks li.err { color: var(--risk-fg); } .bd-lst-checks li.warn { color: var(--warn-fg); } .bd-lst-checks li.ok { color: var(--ok-fg); }
+.bd-lst-pair { display: flex; justify-content: space-between; gap: 8px; font-size: 12.5px; }
+.bd-lst-pair .bad { color: var(--risk-fg); font-weight: 600; } .bd-lst-pair .good { color: var(--ok-fg); }
 </style>
 </head>
 <body>
@@ -1843,6 +1933,7 @@ html.bd-presenting .bp-toast { z-index: 71; bottom: 84px; }
 <script type="application/json" id="bp-state">null</script>
 <script type="application/json" id="bp-live">null</script>
 <script type="application/json" id="bp-snaps">null</script>
+<script type="application/json" id="bp-listing">null</script>
 <script>
 (() => {
 'use strict';
@@ -2245,7 +2336,7 @@ const meta = DOC.meta || {};
 const DOCS_KINDS = new Set(['architecture', 'walkthrough', 'runbook', 'setup', 'reference', 'proposal', 'change', 'changes', 'plan', 'status', 'guide',
   'design', 'spec', 'rfc', 'adr', 'overview', 'tutorial', 'onboarding', 'explainer', 'playbook']);
 function docTypeOf(m) {
-  if (['docs', 'review', 'plan', 'design', 'presentation', 'website', 'other'].includes(m.type)) return m.type;
+  if (['docs', 'review', 'plan', 'design', 'presentation', 'website', 'storelisting', 'other'].includes(m.type)) return m.type;
   const k = String(m.kind || '').trim().toLowerCase();
   if (k.startsWith('plan') || k === 'implementation plan') return 'plan';
   if (k.includes('review')) return 'review';
@@ -2253,13 +2344,15 @@ function docTypeOf(m) {
 }
 // plans, designs, presentations and websites are approvable: Approve plan / design / presentation / website, Request
 // changes with the decision picks. A presentation is a design page whose board holds slides only, a website one whose
-// board holds web pages only: IS_DESIGN covers all three
+// board holds web pages only: IS_DESIGN covers all three. A storelisting (IS_LISTING) has the same full-bleed page with
+// its panels, but shows its board as platform pages (renderListing); it isn't approvable yet
 const DOC_TYPE = docTypeOf(meta), IS_PLAN = DOC_TYPE === 'plan', IS_DECK = DOC_TYPE === 'presentation', IS_SITE = DOC_TYPE === 'website';
-const IS_DESIGN = DOC_TYPE === 'design' || IS_DECK || IS_SITE;
-const APPROVABLE = IS_PLAN || IS_DESIGN;
+const IS_LISTING = DOC_TYPE === 'storelisting';
+const IS_DESIGN = DOC_TYPE === 'design' || IS_DECK || IS_SITE || IS_LISTING;
+const APPROVABLE = IS_PLAN || (IS_DESIGN && !IS_LISTING);
 const AP_NOUN = IS_DECK ? 'presentation' : IS_SITE ? 'website' : IS_DESIGN ? 'design' : 'plan';
 const AP_TITLE = AP_NOUN[0].toUpperCase() + AP_NOUN.slice(1);
-const SCREEN = IS_DECK ? 'slide' : IS_SITE ? 'page' : 'screen';   // what the board's artboards are called on this page
+const SCREEN = IS_DECK ? 'slide' : IS_SITE ? 'page' : IS_LISTING ? 'shot' : 'screen';   // what the board's artboards are called on this page
 let BOARD = null;   // a design doc's board (renderBoard), once drawn
 const overallBar = h('div', { class: 'bp-bar' }, h('i'));
 const overallTxt = h('span');
@@ -2507,7 +2600,8 @@ const RENDER = {
   files: b => renderFiles(b),
   media: b => renderMedia(b),
   compare: b => renderCompare(b),
-  board: b => renderBoard(b),
+  board: b => IS_LISTING ? h('div', { class: 'bd-board-ph' }, ic('frame'), h('span', {}, 'The shots of this section are on the platform pages.')) : renderBoard(b),
+  listing: b => renderListing(b),
 };
 function codeBlock(code, lang, title) {
   const pre = h('pre', {}, h('code', {}, code || ''));
@@ -4523,9 +4617,9 @@ function outlineOf(spec, root) {
 // origin: proxy port}) and injects the inspector there; that frame keeps `allow-same-origin`, as its origin is the
 // proxy's, never this page's.
 const SCREEN_SANDBOX = 'allow-scripts', LIVE_SANDBOX = 'allow-scripts allow-same-origin';
-const DEVICES = { 'watch-round': [240, 240], 'watch-square': [198, 242], phone: [390, 844], tablet: [820, 1180], desktop: [1280, 800], browser: [1440, 900], slide: [1920, 1080], icons: [1280, 860], page: [1440, 900] };
-const DEVICE_NAME = { 'watch-round': 'Round watch', 'watch-square': 'Square watch', phone: 'Phone', tablet: 'Tablet', desktop: 'Desktop app', browser: 'Browser', slide: 'Slide', icons: 'App icon', page: 'Web page' };
-const DEVICE_IC = { 'watch-round': 'watch', 'watch-square': 'watch', phone: 'phone', tablet: 'tablet', desktop: 'monitor', browser: 'globe', slide: 'present', icons: 'image', page: 'globe', custom: 'frame' };
+const DEVICES = { 'watch-round': [240, 240], 'watch-square': [198, 242], phone: [390, 844], tablet: [820, 1180], desktop: [1280, 800], browser: [1440, 900], slide: [1920, 1080], icons: [1280, 860], page: [1440, 900], shot: [440, 956], asset: [1024, 500] };
+const DEVICE_NAME = { 'watch-round': 'Round watch', 'watch-square': 'Square watch', phone: 'Phone', tablet: 'Tablet', desktop: 'Desktop app', browser: 'Browser', slide: 'Slide', icons: 'App icon', page: 'Web page', shot: 'Store shot', asset: 'Store asset' };
+const DEVICE_IC = { 'watch-round': 'watch', 'watch-square': 'watch', phone: 'phone', tablet: 'tablet', desktop: 'monitor', browser: 'globe', slide: 'present', icons: 'image', page: 'globe', shot: 'phone', asset: 'image', custom: 'frame' };
 const BEZEL = { 'watch-round': 12, 'watch-square': 10, phone: 12, tablet: 14 };   // CSS px drawn around the screen
 const FIDELITY = { sketch: 'Sketch', wireframe: 'Wireframe', hifi: 'Hi-fi' };
 const AB_GAP = 80, LIVE_MAX = 12, BK_MIN = 0.02, BK_MAX = 4;
@@ -5865,7 +5959,7 @@ function renderBoard(b) {
     cancelRq();
     const el = h('div', { class: 'bd-rq draft' }, h('div', { class: 'bd-rq-t' }));
     vp.append(el);
-    const sel = h('select', { 'aria-label': 'Device' }, Object.keys(DEVICES).filter(d => d !== 'icons' && (!IS_SITE || d === 'page')).map(d => h('option', { value: d }, `${DEVICE_NAME[d]} · ${DEVICES[d].join(' × ')}`)),
+    const sel = h('select', { 'aria-label': 'Device' }, Object.keys(DEVICES).filter(d => !['icons', 'shot', 'asset'].includes(d) && (!IS_SITE || d === 'page')).map(d => h('option', { value: d }, `${DEVICE_NAME[d]} · ${DEVICES[d].join(' × ')}`)),
       !IS_SITE && h('option', { value: 'custom' }, `As drawn · ${r.w} × ${r.h}`));
     const ta = h('textarea', { class: 'bp-note-ta', rows: 3, placeholder: `What should this ${SCREEN} show?`, 'aria-label': `What the new ${SCREEN} should show` });
     const list = h('ol', { class: 'bxs' });
@@ -6158,6 +6252,526 @@ function renderBoard(b) {
   return wrap;
 }
 
+/* ---------- a storelisting's platform pages ---------- */
+// A storelisting shows its board as one page per store: Google Play and App Store, switched in the app bar (the URL
+// keeps it: #play/es-ES), with the locale menu beside it. Each page holds its device sections (BoardGeo.listingSections,
+// as listing.py lays them out): Shared (icon, graphics, videos), then watch, phone and tablet, each a card of its sets
+// with a chip per set (count, size, required) and its shots at scale, in order. A shot's frame is its screen file in the
+// shot kit (kits/shot.js) at the set's frame size, told its set, locale, place and UI image through its name ('bd-shot
+// <JSON>') and later {bd:'shot'} messages; an uploaded shot is its PNG. The left panel's Text tab lists the platform's
+// store text and the captions for the locale, each with its counter; the right panel adds Style, Brand and Checks.
+// Point and Select pin comments inside a shot (el:<shot>/…) or on a field (field:<locale>/<platform>/<field>); a shot
+// dragged within its set and a section turned on are drafts ('listing' annotations) that Request changes sends with a
+// ready `build.py patch` command. bp-listing (build.py listing.page_data) carries the store rules, each shot's caption
+// keys, the captures, the uploads and the icon. Later milestones plug in through L: L.styleFor (picks), L.brand, the
+// Checks pane (L.checks), L.variant.
+const LST = (() => { try { const x = JSON.parse(document.getElementById('bp-listing').textContent); return x && typeof x === 'object' && x.rules ? x : null; } catch { return null; } })();
+const LST_H = { watch: 170, phone: 330, tablet: 330, tv: 230, desktop: 230, xr: 230, chromebook: 230, car: 230 }, LST_W = 480, LST_ASSET = [150, 360], LST_LIVE_MAX = 40;
+const LST_PAIRS = [['caption', 'bg'], ['caption', 'surface'], ['text', 'surface'], ['text', 'accent']];
+const LST_DEF_PAL = { bg: '#2457d6', surface: '#eef2ff', accent: '#f59e0b', text: '#ffffff', caption: '#ffffff' };   // kits/shot.css's defaults
+// WCAG 2.2 contrast of two #rgb/#rrggbb colours
+function lstContrast(a, b) {
+  const lum = hex => { const x = hex.length === 4 ? hex.slice(1).split('').map(c => c + c) : [hex.slice(1, 3), hex.slice(3, 5), hex.slice(5, 7)];
+    const [r, g, bb] = x.map(v => { const c = parseInt(v, 16) / 255; return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; }); return 0.2126 * r + 0.7152 * g + 0.0722 * bb; };
+  const [h1, h2] = [lum(a), lum(b)].sort((p, q) => q - p);
+  return (h1 + 0.05) / (h2 + 0.05);
+}
+// a text's length as its store counts it: code points, or UTF-8 bytes (Apple's keywords)
+const lstCount = (v, unit) => unit === 'bytes' ? new TextEncoder().encode(v).length : [...v].length;
+function renderListing(lb) {
+  const wrap = h('div', { class: 'bd-bwrap bd-lst' });
+  if (!LST) { wrap.append(h('div', { class: 'bd-board-ph' }, ic('alert'), h('span', {}, 'No store rules in this page: build it with build.py or open it through serve.py.'))); return wrap; }
+  const RULES = LST.rules, board = boardOf(DOC), abs = boardAbs(board), byId = new Map(abs.map(a => [a.id, a]));
+  const SETS = new Map(RULES.sets.map(s => [s.id, s])), ASSETS = new Map(RULES.assets.map(s => [s.id, s])), ROWS = new Map(RULES.rows.map(r => [r.id, r]));
+  const PLATS = RULES.platforms.filter(p => Array.isArray(lb.platforms) && lb.platforms.includes(p.id));
+  const LOCS = (Array.isArray(lb.locales) ? lb.locales : []).filter(x => typeof x === 'string');
+  const DEF = LOCS.includes(lb.defaultLocale) ? lb.defaultLocale : LOCS[0] || 'en-US';
+  const obj = v => v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+  const TEXT = obj(lb.text), STR = obj(lb.strings), MTS = obj(lb.mt), BRAND = obj(lb.brand);
+  const str = (v, n = 200) => typeof v === 'string' ? v.slice(0, n) : '';
+  const rectOf = r => r && typeof r === 'object' && [r.x, r.y, r.w, r.h].every(Number.isFinite) ? { x: r.x, y: r.y, w: Math.max(0, r.w), h: Math.max(0, r.h) } : null;
+  const frameOf = r => [r.author[0] / r.scale, r.author[1] / r.scale];
+  const textRules = p => RULES.text.filter(r => r.platform === p && (r.group || 'listing') === 'listing');
+  const textOf = (loc, p, f) => { const v = obj(obj(TEXT[loc])[p])[f]; return typeof v === 'string' || Array.isArray(v) ? v : null; };
+  const strOf = (loc, k) => { const v = obj(STR[loc])[k]; return typeof v === 'string' ? v : null; };
+  const isMt = (loc, k) => Array.isArray(MTS[loc]) && MTS[loc].includes(k);
+  const usedKeys = () => [...new Set(Object.values(obj(LST.keys)).flat().filter(k => typeof k === 'string'))];
+  const L = BOARD = { lb, mode: 'view', platform: (PLATS[0] || {}).id || null, locale: DEF, tiles: [], live: new Set(), chg: new Map(), fchg: new Set(), variant: null };
+  // the listing block's path (block:<section>/<index>): the target of its drafts' patch commands
+  const blockPath = (() => { for (const s of DOC.sections || []) { const i = (s.blocks || []).indexOf(lb); if (i >= 0) return `${s.id}/${i}`; } return ''; })();
+  const docDir = (() => { const p = location.pathname; return p.slice(0, p.lastIndexOf('/') + 1); })();
+  const fileUrl = rel => /^data:/.test(rel) ? rel : new URL(docDir + String(rel).split('/').map(encodeURIComponent).join('/'), location.href).href;
+
+  /* drafts: a set's order, the device sections turned on; the page shows them at once */
+  const drafts = () => (L.D ? L.D.all() : []).filter(a => a.type === 'listing' && a.status !== 'resolved' && a.listing && typeof a.listing === 'object');
+  function effective() {
+    const order = { ...obj(lb.order) };
+    let rows = Array.isArray(lb.rows) ? lb.rows.slice() : RULES.rows.filter(r => r.core).map(r => r.id);
+    for (const a of drafts()) {
+      const o = a.listing;
+      if (o.op === 'order' && typeof o.set === 'string' && Array.isArray(o.ids)) order[o.set] = o.ids.filter(i => typeof i === 'string');
+      else if (o.op === 'rows' && Array.isArray(o.rows)) rows = o.rows.filter(r => ROWS.has(r));
+    }
+    return { ...lb, order, rows };
+  }
+  const sectionsOf = (p, loc = L.locale) => BoardGeo.listingSections(effective(), abs, RULES, p, loc);
+  // L.styleFor: the message and layout styles a platform page shows (the listing's; the Style picker and variants add theirs)
+  L.styleFor = () => ({ message: 'm1', layout: 'l1', ...obj(lb.style) });
+
+  /* the app bar: Google Play | App Store, and the locale menu with each locale's MT and missing counts */
+  const missingIn = loc => {
+    if (loc === DEF) return 0;
+    let n = 0;
+    for (const p of PLATS) for (const r of textRules(p.id)) if (textOf(DEF, p.id, r.field) != null && textOf(loc, p.id, r.field) == null) n++;
+    for (const k of usedKeys()) if (strOf(DEF, k) != null && strOf(loc, k) == null) n++;
+    return n;
+  };
+  const locLabel = loc => [loc, (MTS[loc] || []).length && `${MTS[loc].length} MT`, missingIn(loc) && `${missingIn(loc)} missing`].filter(Boolean).join(' · ');
+  const platSeg = h('div', { class: 'bd-sg', role: 'radiogroup', 'aria-label': 'Platform' }, PLATS.map(p =>
+    h('button', { type: 'button', role: 'radio', 'data-p': p.id, onclick: () => setPlatform(p.id) }, p.label)));
+  const locSel = h('select', { class: 'bd-lst-loc', 'aria-label': 'Locale', title: 'Locale: text, captions and captures switch with it' },
+    LOCS.map(l => h('option', { value: l }, locLabel(l))));
+  locSel.addEventListener('change', () => setLocale(locSel.value));
+  const tb = h('div', { class: 'bd-lst-tb' }, platSeg, locSel);
+
+  /* the left panel: Text (this platform's store text and the captions, for the locale) and Brief */
+  const lpText = h('div', { class: 'bd-lp-pane bd-lst-text', id: 'bd-lp-text' });
+  let lp = null, lpTabs = null;
+  function paintText() {
+    const p = PLATS.find(x => x.id === L.platform), loc = L.locale, out = [];
+    if (!p) { lpText.replaceChildren(); return; }
+    out.push(h('h4', {}, `${p.label} text · ${loc}`));
+    if (p.id === 'appstore') out.push(h('p', {}, 'Promotional text changes without a new version.'));
+    const field = (fkey, label, v, rule, mt, fb) => {
+      const items = Array.isArray(v) ? v : v == null ? [] : [v];
+      const counts = rule ? items.map(s => lstCount(String(s), rule.unit)) : [];
+      const over = rule && counts.some(n => n > rule.limit || (rule.min && n < rule.min));
+      const c = rule && h('span', { class: 'c' + (over ? ' over' : '') }, items.length ? counts.map(n => `${n} / ${rule.limit}`).join(' · ') + (rule.unit === 'bytes' ? ' bytes' : '') : `0 / ${rule.limit}`);
+      const el = h('div', { class: 'bd-lfield' + (rule ? '' : ' cap') + (L.fchg.has(fkey) ? ' bd-chg bd-chg-mod' : ''), 'data-field': fkey, 'data-label': `${label} · ${loc}` },
+        h('div', { class: 'lh' }, h('span', {}, label), mt && h('span', { class: 'bd-lst-tag mt', title: 'Machine-translated: not yet accepted' }, 'MT'), c),
+        h('div', { class: 'v' + (fb ? ' fb' : '') + (v == null ? ' none' : '') }, v == null ? (rule && rule.required === true ? 'Not set: the store requires it' : 'Not set') : items.join('\n')),
+        fb && h('div', { class: 'note' }, `Missing in ${loc}: shows ${DEF}'s`));
+      return el;
+    };
+    for (const r of textRules(p.id)) {
+      const own = textOf(loc, p.id, r.field), fb = own == null && loc !== DEF && textOf(DEF, p.id, r.field) != null;
+      out.push(field(`${loc}/${p.id}/${r.field}`, r.label, own ?? (fb ? textOf(DEF, p.id, r.field) : null), r, isMt(loc, `${p.id}.${r.field}`), fb));
+    }
+    const keys = [...new Set([...tilesKeys(), ...Object.keys(obj(STR[DEF]))])];
+    out.push(h('h4', {}, `Captions · ${loc}`));
+    if (!keys.length) out.push(h('p', {}, 'No shot names a caption string (data-l10n).'));
+    for (const k of keys) {
+      const own = strOf(loc, k), fb = own == null && strOf(DEF, k) != null && loc !== DEF;
+      out.push(field(`${loc}/strings/${k}`, k, own ?? (fb ? strOf(DEF, k) : null), null, isMt(loc, `strings.${k}`), fb));
+    }
+    lpText.replaceChildren(...out);
+  }
+  // the caption keys of the shots on this platform page
+  const tilesKeys = () => [...new Set(sectionsOf(L.platform).flatMap(s => s.sets.flatMap(x => x.shots)).flatMap(id => obj(LST.keys)[id] || []))];
+
+  /* the sections */
+  const pg = h('div', { class: 'bd-lst-main', 'data-m': 'view' });
+  wrap.append(pg);
+  const io = 'IntersectionObserver' in window ? new IntersectionObserver(es => { for (const e of es) { const x = e.target._x; if (!x) continue; x.near = e.isIntersecting; if (x.near) mount(x); } trim(); }, { root: pg, rootMargin: '600px 0px' }) : null;
+  // a capture for a shot's set and the locale ({url, fresh, fb}), else null: the set's target, then a web capture
+  function captureFor(a, rule) {
+    const per = obj(obj(LST.captures)[a.id]), targets = [...new Set([rule.target, 'web'].filter(Boolean))];
+    for (const fb of [false, true]) for (const t of targets) {
+      const c = obj(obj(per[t])[fb ? DEF : L.locale]);
+      if (typeof c.file === 'string' && (!fb || L.locale !== DEF)) return { url: fileUrl(c.file), fresh: c.fresh !== false, fb, target: t };
+    }
+    return null;
+  }
+  const frameState = x => x.kind === 'asset' ? { locale: L.locale } : { set: x.rule.id, locale: L.locale, i: x.i, n: x.n, ...L.styleFor(L.platform), ui: x.cap ? x.cap.url : null };
+  function frameEl(x) {
+    const attrs = SCREENS ? (!OLD && typeof SCREENS[x.a.id] === 'string' ? { srcdoc: SCREENS[x.a.id] } : null) : SERVED ? { src: screenUrl(x.a, OLD ? VIEW.rev : null) } : null;
+    if (!attrs) return null;
+    const fr = h('iframe', { sandbox: SCREEN_SANDBOX, tabindex: '-1', title: 'Shot: ' + (x.a.title || x.a.id), width: x.w, height: x.h, name: 'bd-shot ' + JSON.stringify(frameState(x)), ...attrs,
+      style: `transform: scale(${x.s})` });
+    fr.addEventListener('load', () => { if (x.fr !== fr) return; post(x, { bd: 'mode', mode: frameMode() }); locate(x); });
+    return fr;
+  }
+  function mount(x) {
+    if (x.fr || x.kind === 'image' || !x.el.isConnected) return;
+    const fr = frameEl(x); if (!fr) return;
+    x.fr = fr; x.ready = false; x.el.querySelector('.ph')?.remove(); x.el.prepend(fr); L.live.add(x);
+  }
+  function drop(x) { if (!x.fr) return; x.fr.remove(); x.fr = null; x.ready = false; L.live.delete(x); x.el.prepend(h('div', { class: 'ph' }, x.a.title || x.a.id)); }
+  function trim() { if (L.live.size <= LST_LIVE_MAX) return; for (const x of [...L.live]) { if (L.live.size <= LST_LIVE_MAX) break; if (!x.near) drop(x); } }
+  const post = (x, m) => { try { x.fr && x.fr.contentWindow && x.fr.contentWindow.postMessage(m, '*'); } catch { /* gone */ } };
+  const frameMode = () => ['point', 'select'].includes(L.mode) ? L.mode : 'view';
+  // the `el:` keys pinned on a shot, so its frame reports where they are
+  function locate(x) {
+    if (!L.M) return;
+    const pre = `el:${x.a.id}/`, sels = [...new Set(L.M.all().map(a => a.target.key).filter(k => k.startsWith(pre)).map(k => k.slice(pre.length)))].slice(0, 100);
+    if (sels.length) post(x, { bd: 'locate', sels });
+  }
+  // one tile: a shot at its set's frame (or an asset at its own), scaled to the row's height
+  function tile(a, rule, i, n, kind, rowH, maxW = LST_W) {
+    const img = kind === 'image' ? obj(obj(LST.images)[a.id]) : null;
+    const [w, hh] = img && img.w && img.h ? [img.w, img.h] : frameOf(rule), s = Math.min(rowH / hh, maxW / w);
+    const x = { a, rule, i, n, kind, w, h: hh, s, rects: {}, fr: null, ready: false, near: false };
+    x.cap = kind === 'shot' ? captureFor(a, rule) : null;
+    x.el = h('div', { class: 'bd-lst-shot', 'data-ab': a.id, 'data-title': a.title || a.id, 'data-set': rule.id, style: `width:${Math.round(w * s)}px;height:${Math.round(hh * s)}px` },
+      img ? h('img', { src: fileUrl(img.src), alt: a.title || a.id }) : h('div', { class: 'ph' }, SERVED || SCREENS ? a.title || a.id : 'Open this page through serve.py to see the shot.'));
+    x.el._x = x;
+    if (rule.guide) { const [gx, gy] = rule.guide; x.el.append(h('div', { class: 'guide', title: 'Keep the logo, name and slogan inside: the cut-off zones vary by format', style: `left:${gx * 100}%;right:${gx * 100}%;top:${gy * 100}%;bottom:${gy * 100}%` })); }
+    const loc = L.locale, keys = obj(LST.keys)[a.id] || [];
+    const fb = keys.filter(k => strOf(loc, k) == null && strOf(DEF, k) != null).length, gone = keys.filter(k => strOf(loc, k) == null && strOf(DEF, k) == null).length;
+    const tags = [kind === 'image' && ['up', 'upload'], kind === 'image' && img.colour !== 2 && img.colour !== undefined && ['stale', 'alpha?'],
+      kind === 'shot' && (x.cap ? (x.cap.fresh ? ['cap', 'capture'] : ['stale', 'stale']) : ['mock', 'mock UI']), x.cap && x.cap.fb && ['', `${DEF} capture`],
+      keys.some(k => isMt(loc, 'strings.' + k)) && ['mt', 'MT'], fb && ['', `${fb} falls back`], gone && ['miss', `${gone} missing`],
+      typeof a.locale === 'string' && ['', a.locale + ' only'], L.chg.get(a.id) && ['', L.chg.get(a.id) === 'add' ? 'New' : 'Changed']].filter(Boolean);
+    if (L.chg.get(a.id)) x.el.classList.add('bd-chg');
+    x.box = h('div', { class: 'bd-lst-tile' }, x.el, h('div', { class: 'bd-lst-cap' }, kind !== 'asset' && h('span', { class: 'n' }, String(i + 1)), h('span', { class: 't', title: a.title || a.id }, a.title || a.id),
+      tags.map(([c, t]) => h('span', { class: 'bd-lst-tag ' + c }, t))));
+    L.tiles.push(x);
+    if (io && kind !== 'image') io.observe(x.el); else if (kind !== 'image') { x.near = true; mount(x); }
+    return x;
+  }
+  // a set's requirement for this listing: {need: required now, why}
+  function requirement(rule, counts) {
+    const r = String(rule.required || 'never');
+    if (r === 'always' || r === 'row') return { need: true, why: 'required' };
+    if (r.startsWith('either:')) { const other = r.slice(7).split('|').filter(id => id !== rule.id); return other.some(id => (counts[id] || 0) > 0) ? { need: false, why: 'optional: ' + other.join(', ') + ' has shots' } : { need: true, why: 'required unless ' + other.join(', ') }; }
+    if (r === 'if:ipad') return lb.ipad === true ? { need: true, why: 'required: the app runs on iPad' } : { need: false, why: 'required if the app runs on iPad' };
+    if (r === 'if:watchFace') return lb.watchFace === true ? { need: true, why: 'required for a watch face' } : { need: false, why: 'for watch faces' };
+    if (r === 'dated') return { need: new Date().toISOString().slice(0, 10) >= rule.from, why: `required from ${rule.from}` };
+    return { need: false, why: 'optional' };
+  }
+  const sizeTxt = rule => Array.isArray(rule.sizes) ? rule.sizes.map(s => s.join('×')).join(' or ') : rule.author ? `${rule.author.join('×')}${rule.sides ? `, sides ${rule.sides.join('–')} px` : rule.min ? `, at least ${rule.min.join('×')}` : ''}` : '';
+  function setChip(rule, n, counts) {
+    const [lo, hi] = rule.count || [0, 10], req = requirement(rule, counts);
+    const bad = n > hi || (req.need && n < Math.max(lo, 1)), weak = !bad && rule.recommend && n < rule.recommend.count;
+    return h('div', { class: 'bd-lst-chip' }, h('b', {}, rule.label), h('span', { class: 'bp-chip ' + (bad ? 'risk' : weak ? 'warn' : n ? 'ok' : 'todo'), title: weak ? rule.recommend.note : null }, `${n} / ${hi}`),
+      h('span', {}, sizeTxt(rule)), h('span', {}, '· ' + req.why), rule.raw && h('span', {}, '· UI only, no frame or caption'), rule.unverified && h('span', { class: 'bp-chip warn', title: rule.unverified }, 'unverified'));
+  }
+  function renderShared(p) {
+    const items = [], icon = LST.icon, layers = icon && obj(icon.layers), local = icon && byId.has(icon.from);
+    if (icon && layers.fg) {
+      const bgc = icon.bg || 'transparent', u = k => `url("${layers[k]}")`;
+      const bg = p.id === 'play' ? (layers.play ? `${u('play')} center / 100% 100% no-repeat` : `${u('fg')} center / 150% 150% no-repeat${layers.bg ? `, ${u('bg')} center / 150% 150% no-repeat` : ''}, ${bgc}`)
+        : `${u('fg')} center / 100% 100% no-repeat${layers.bg ? `, ${u('bg')} center / 100% 100% no-repeat` : ''}, ${bgc}`;
+      items.push(h('figure', { class: 'bd-lst-icon ' + p.id, ...(local ? { 'data-ab': icon.from } : {}) }, h('i', { style: `background: ${bg}` }),
+        h('figcaption', {}, p.id === 'play' ? 'Icon 512 × 512 · Play rounds it 30%' : 'Icon 1024 × 1024 · in the binary: it changes with a new version')));
+    } else items.push(h('div', { class: 'bd-lst-empty' }, 'No icon: set listing.icon to an icons artboard'));
+    const assets = abs.filter(a => a.device === 'asset' && ASSETS.has(a.asset) && ASSETS.get(a.asset).platform === p.id && ASSETS.get(a.asset).kind !== 'ad');
+    assets.forEach((a, i) => items.push(tile(a, ASSETS.get(a.asset), i, assets.length, 'asset', LST_ASSET[0], LST_ASSET[1]).box));
+    if (p.id === 'play' && !assets.some(a => a.asset === 'play/feature')) items.push(h('div', { class: 'bd-lst-empty' }, 'Feature graphic 1024 × 500: required, none yet'));
+    const v = obj(lb.video);
+    if (p.id === 'play' && v.play) items.push(h('div', { class: 'bd-lst-video' }, h('b', {}, 'Preview video (YouTube)'), h('code', {}, str(v.play, 120)), h('span', {}, 'Plays over the feature graphic, muted, up to 30 s')));
+    if (p.id === 'appstore') for (const pv of Array.isArray(v.appstore) ? v.appstore : []) {
+      if (!pv || typeof pv.src !== 'string') continue;
+      const vid = h('video', { src: fileUrl(pv.src), preload: 'metadata', muted: true, playsinline: true });
+      vid.addEventListener('loadedmetadata', () => { try { vid.currentTime = Math.min(Number.isFinite(pv.poster) ? pv.poster : 5, vid.duration || 5); } catch { /* not seekable */ } });
+      items.push(h('div', { class: 'bd-lst-video' }, vid, h('span', {}, `App preview · ${pv.row || 'phone'} · poster at ${Number.isFinite(pv.poster) ? pv.poster : 5} s`)));
+    }
+    return h('section', { class: 'bd-lst-sec', 'data-row': 'shared' }, h('div', { class: 'hd' }, h('h3', {}, 'Shared'), h('p', {}, p.id === 'play' ? 'Icon, feature graphic and video: one per listing, every device' : 'Icon, previews and search assets')),
+      h('div', { class: 'bd-lst-shared' }, items));
+  }
+  function renderSections() {
+    for (const x of L.tiles) { if (io) io.unobserve(x.el); if (x.fr) x.fr.remove(); }
+    L.tiles = []; L.live.clear();
+    const p = PLATS.find(x => x.id === L.platform);
+    if (!p) { pg.replaceChildren(h('div', { class: 'bd-board-ph' }, ic('alert'), h('span', {}, 'This listing names no platform.'))); return; }
+    const secs = sectionsOf(p.id), counts = Object.fromEntries(secs.flatMap(s => s.sets.map(x => [x.set, x.shots.length]))), eff = effective();
+    const out = [renderShared(p)];
+    const pano = L.styleFor(p.id).layout === 'l2';
+    for (const s of secs) {
+      const row = ROWS.get(s.row), sets = s.sets.map(x => SETS.get(x.set));
+      out.push(h('section', { class: 'bd-lst-sec', 'data-row': s.row },
+        h('div', { class: 'hd' }, h('h3', {}, row.label), h('p', {}, sets.map(r => r.label).join(' · ')), h('p', {}, (n => `${n} shot${n === 1 ? '' : 's'} in ${s.sets.length} set${s.sets.length === 1 ? '' : 's'}`)(s.sets.reduce((n, x) => n + x.shots.length, 0)))),
+        h('div', { class: 'bd-lst-sets' }, s.sets.map(x => {
+          const rule = SETS.get(x.set), H = LST_H[s.row] || 300;
+          const tiles = x.shots.map((id, i) => tile(byId.get(id), rule, i, x.shots.length, listingImage(byId.get(id)) ? 'image' : 'shot', H).box);
+          const row = h('div', { class: 'bd-lst-tiles' + (pano && !rule.raw ? ' pano' : ''), 'data-set': x.set, style: pano && !rule.raw && p.id === 'play' ? `gap:${Math.round(H * 0.02)}px` : null },
+            tiles.length ? tiles : h('div', { class: 'bd-lst-empty', style: `min-height:${Math.min(H, 120)}px` }, 'No shots in this set'));
+          return h('div', { class: 'bd-lst-set', 'data-set': x.set }, setChip(rule, x.shots.length, counts), row);
+        }))));
+    }
+    // the optional sections this platform has sets for, off until listing.rows names them; turning one on is a draft
+    const on = eff.rows, draftRows = drafts().find(a => a.listing.op === 'rows');
+    for (const r of RULES.rows) {
+      if (on.includes(r.id) && !(draftRows && !(Array.isArray(lb.rows) ? lb.rows : []).includes(r.id))) continue;
+      if (!RULES.sets.some(s => s.platform === p.id && s.row === r.id)) continue;
+      const drafted = on.includes(r.id);
+      out.push(h('div', { class: 'bd-lst-off' + (drafted ? ' on' : ''), 'data-row': r.id }, h('b', {}, r.label), h('span', {}, drafted ? 'on in a draft: Request changes sends it' : 'off'),
+        h('button', { type: 'button', class: 'bp-btn ghost bd-lst-ui', disabled: !L.D, onclick: () => toggleRow(r.id) }, drafted ? 'Undo' : 'Turn on')));
+    }
+    pg.replaceChildren(...out);
+    paintText();
+    if (L.onRender) L.onRender();
+  }
+  const listingImage = a => !!a && a.device === 'shot' && typeof a.src === 'string' && /\.png$/i.test(a.src);
+
+  /* switching: the URL keeps the platform and locale (#play/es-ES) */
+  function writeHash() { try { history.replaceState(null, '', `${location.pathname}${location.search}#${L.platform}${L.locale !== DEF ? '/' + L.locale : ''}`); } catch { /* sandboxed */ } }
+  function paintTb() {
+    platSeg.querySelectorAll('button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.p === L.platform)));
+    locSel.value = L.locale;
+  }
+  function setPlatform(p, quiet) {
+    if (!PLATS.some(x => x.id === p) || (p === L.platform && !quiet)) return;
+    L.platform = p; paintTb(); renderSections(); writeHash(); pg.scrollTop = 0;
+    if (L.M) L.M.relayout();
+    paintSide();
+  }
+  function setLocale(loc) {
+    if (!LOCS.includes(loc) || loc === L.locale) return;
+    const before = JSON.stringify(sectionsOf(L.platform));
+    L.locale = loc; paintTb(); writeHash();
+    const top = pg.scrollTop; renderSections();   // each frame's name carries the locale and its capture
+    if (JSON.stringify(sectionsOf(L.platform)) === before) pg.scrollTop = top;
+    if (L.M) L.M.relayout();
+    paintSide();
+  }
+  {
+    const m = /^#([a-z]+)(?:\/([A-Za-z0-9-]+))?$/.exec(location.hash || '');
+    if (m && PLATS.some(x => x.id === m[1])) L.platform = m[1];
+    if (m && m[2] && LOCS.includes(m[2])) L.locale = m[2];
+  }
+
+  /* frames talk back: ready (where pinned elements are), pick (a pin in Point or Select) */
+  addEventListener('message', e => {
+    const x = L.tiles.find(y => y.fr && e.source === y.fr.contentWindow), d = e.data;
+    if (!x || !d || typeof d !== 'object') return;
+    if (d.bd === 'ready') {
+      x.ready = true;
+      if (d.rects && typeof d.rects === 'object') for (const [s, r] of Object.entries(d.rects).slice(0, 100)) x.rects[str(s)] = rectOf(r);
+      if (L.M) L.M.relayout();
+      return;
+    }
+    if (d.bd !== 'pick' || !L.M || (L.mode !== 'point' && L.mode !== 'select')) return;
+    const sel = str(d.sel), r = rectOf(d.rect), extra = { platform: L.platform, locale: L.locale, ...(x.kind === 'shot' ? { set: x.rule.id } : {}) };
+    if (!sel) { L.M.pinFrame({ el: x.el, key: 'artboard:' + x.a.id, what: '', text: str(d.text), extra, pos: r ? { x: clamp((r.x + r.w / 2) / x.w, 0, 1), y: clamp((r.y + r.h / 2) / x.h, 0, 1) } : { x: .5, y: .5 } }); return; }
+    if (r) x.rects[sel] = r;
+    L.M.pinFrame({ el: x.el, key: `el:${x.a.id}/${sel}`, what: str(d.name, 60) || str(d.tag, 30) || sel.slice(0, 60), text: str(d.text), extra,
+      pos: r ? { x: clamp((r.x + r.w) / x.w, 0, 1), y: clamp(r.y / x.h, 0, 1) } : { x: .5, y: .5 } });
+  });
+
+  /* View mode: drag a shot within its set to reorder it (an order draft) */
+  let drag = null;
+  pg.addEventListener('pointerdown', e => {
+    if (L.mode !== 'view' || e.button !== 0 || !L.D || OLD || BASE) return;
+    const el = e.target.closest('.bd-lst-shot'), x = el && el._x, row = el && el.closest('.bd-lst-tiles');
+    if (!x || x.kind === 'asset' || !row) return;
+    drag = { x, row, x0: e.clientX, on: false, id: e.pointerId, to: null, mark: h('div', { class: 'bd-lst-drop' }) };
+  });
+  pg.addEventListener('pointermove', e => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const dx = e.clientX - drag.x0;
+    if (!drag.on && Math.abs(dx) < 6) return;
+    if (!drag.on) { drag.on = true; drag.x.el.classList.add('drag'); pg.setPointerCapture(e.pointerId); }
+    drag.x.el.style.transform = `translateX(${dx}px)`;
+    const boxes = [...drag.row.children].filter(c => c.classList.contains('bd-lst-tile'));
+    let to = boxes.length;
+    for (let i = 0; i < boxes.length; i++) { const r = boxes[i].getBoundingClientRect(); if (e.clientX < r.left + r.width / 2) { to = i; break; } }
+    drag.to = to;
+    if (to < boxes.length) boxes[to].before(drag.mark); else drag.row.append(drag.mark);
+  });
+  const endDrag = e => {
+    if (!drag || (e && e.pointerId !== drag.id)) return;
+    const d = drag; drag = null;
+    if (!d.on) return;
+    d.mark.remove(); d.x.el.classList.remove('drag'); d.x.el.style.transform = '';
+    const set = d.row.dataset.set, ids = sectionsOf(L.platform).flatMap(s => s.sets).find(s => s.set === set).shots.slice();
+    const from = ids.indexOf(d.x.a.id); let to = d.to == null ? from : d.to;
+    if (to > from) to--;
+    if (to === from) return;
+    ids.splice(from, 1); ids.splice(to, 0, d.x.a.id);
+    putDraft({ op: 'order', set, ids }, `${SETS.get(set).label} order`, `${SETS.get(set).label}: ${ids.map(i => (byId.get(i) || {}).title || i).join(', ')}`);
+  };
+  pg.addEventListener('pointerup', endDrag); pg.addEventListener('pointercancel', endDrag);
+  function putDraft(op, label, note) {
+    const same = drafts().find(a => a.listing.op === op.op && (op.op !== 'order' || a.listing.set === op.set));
+    const now = op.op === 'order' ? (Array.isArray(obj(lb.order)[op.set]) ? obj(lb.order)[op.set] : null) : (Array.isArray(lb.rows) ? lb.rows : RULES.rows.filter(r => r.core).map(r => r.id));
+    const back = op.op === 'order' ? JSON.stringify(op.ids) === JSON.stringify(now || BoardGeo.listingSections(lb, abs, RULES, L.platform, L.locale).flatMap(s => s.sets).find(s => s.set === op.set).shots) : JSON.stringify(op.rows) === JSON.stringify(now);
+    if (back) { if (same) L.D.drop(same.id); }   // back where the doc has it: no draft
+    else L.D.put({ id: same && same.id, type: 'listing', key: `block:${blockPath}`, label, note, listing: op });
+    renderSections();
+  }
+  function toggleRow(id) {
+    const rows = effective().rows, next = rows.includes(id) ? rows.filter(r => r !== id) : RULES.rows.map(r => r.id).filter(r => rows.includes(r) || r === id);
+    putDraft({ op: 'rows', rows: next }, 'Device sections', `Sections: ${next.map(r => ROWS.get(r).label).join(', ')}`);
+  }
+  // the patch command for the drafts: one --json for the listing block with the order and rows they make
+  L.draftCommands = ds => {
+    const sh = s => /^[\w@%+=:,./-]+$/.test(s) ? s : `'${s.replace(/'/g, `'\\''`)}'`;
+    const doc = decodeURIComponent(location.pathname.split('/').pop() || '').replace(/\.html?$/i, '.bluedoc.json');
+    const mine = ds.filter(a => a.type === 'listing' && a.listing), patch = {};
+    for (const a of mine) {
+      if (a.listing.op === 'order') (patch.order ||= { ...obj(lb.order) })[a.listing.set] = a.listing.ids;
+      else if (a.listing.op === 'rows') patch.rows = a.listing.rows;
+    }
+    if (!mine.length) return '';
+    return ['build.py patch', sh(doc), sh(`block:${blockPath}`), '--json', sh(JSON.stringify(patch)), '--change', sh(mine.map(a => a.note).join('; ')), ...mine.map(a => '--resolves ' + a.id)].join(' ');
+  };
+  let draftSig = '';
+  L.paintDrafts = () => { const s = JSON.stringify(drafts().map(a => [a.id, a.listing])); if (s !== draftSig) { const first = !draftSig && !drafts().length; draftSig = s; if (!first) renderSections(); } };
+
+  /* the right panel: Style, Brand and Checks for the platform on screen */
+  const paneStyle = h('div', { class: 'bd-lst-pane' }), paneBrand = h('div', { class: 'bd-lst-pane' }), paneChecks = h('div', { class: 'bd-lst-pane' });
+  L.panes = { style: paneStyle, brand: paneBrand, checks: paneChecks };
+  function paintStyle() {
+    const p = PLATS.find(x => x.id === L.platform); if (!p) return;
+    const st = L.styleFor(p.id), card = s => h('div', { class: 'bd-lst-style' + (st[s.axis] === s.id ? ' on' : ''), 'data-style': s.id },
+      h('span', { class: 'g ' + ((p.id === 'play' && s.playGrade) || s.grade)[0] }, (p.id === 'play' && s.playGrade) || s.grade), h('b', {}, `${s.id.toUpperCase()} ${s.name}${st[s.axis] === s.id ? ' · in use' : ''}`),
+      h('span', {}, p.id === 'play' ? s.play : s.appstore));
+    paneStyle.replaceChildren(h('h4', {}, `Message · ${p.label}`), ...RULES.styles.filter(s => s.axis === 'message').map(card),
+      h('h4', {}, `Layout · ${p.label}`), ...RULES.styles.filter(s => s.axis === 'layout').map(card),
+      h('p', { class: 'hint' }, 'Watch sets stay raw (L3) whatever the pick. Grades: A store guidance, B a measured lift, C a vendor trend, D rank correlation.'));
+  }
+  function paintBrand() {
+    const pal = { ...LST_DEF_PAL, ...Object.fromEntries(Object.entries(obj(BRAND.palette)).filter(([k, v]) => k in LST_DEF_PAL && /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(v))) };
+    const own = obj(BRAND.palette), f = obj(BRAND.font);
+    paneBrand.replaceChildren(h('h4', {}, 'Caption font'), h('p', {}, typeof f.family === 'string' ? `${f.family}${f.weight ? ' · ' + f.weight : ''}` : 'Inter (the default, OFL)'),
+      h('h4', {}, 'Palette'), h('div', { class: 'bd-lst-swatches' }, Object.entries(pal).map(([k, v]) => h('figure', {}, h('i', { style: `background:${v}` }), h('span', {}, k), h('code', {}, own[k] ? v : 'default')))),
+      h('h4', {}, 'Contrast (AA: 4.5:1)'), ...LST_PAIRS.map(([a, b]) => { const r = lstContrast(pal[a], pal[b]); return h('div', { class: 'bd-lst-pair' }, h('span', {}, `${a} on ${b}`), h('span', { class: r >= 4.5 ? 'good' : 'bad' }, `${r.toFixed(1)}:1 ${r >= 4.5 ? 'AA' : 'below 4.5:1'}`)); }));
+  }
+  // the checks the page can tell from the doc, for the platform on screen (the build's report replaces them later)
+  L.checks = () => {
+    const p = L.platform, out = [];
+    for (const loc of LOCS) for (const r of textRules(p)) {
+      const v = textOf(loc, p, r.field); if (v == null) continue;
+      for (const s of Array.isArray(v) ? v : [v]) { const n = lstCount(String(s), r.unit); if (n > r.limit || (r.min && n < r.min)) out.push(['err', `${loc} ${r.label.toLowerCase()}: ${n} / ${r.limit} ${r.unit === 'bytes' ? 'bytes' : 'chars'}${isMt(loc, `${p}.${r.field}`) ? ' after MT' : ''}`]); }
+    }
+    const secs = sectionsOf(p), counts = Object.fromEntries(secs.flatMap(s => s.sets.map(x => [x.set, x.shots.length])));
+    for (const x of secs.flatMap(s => s.sets)) {
+      const r = SETS.get(x.set), n = x.shots.length, [lo, hi] = r.count || [0, 10], req = requirement(r, counts);
+      if (n > hi) out.push(['err', `${r.label}: ${n} shots, at most ${hi}`]);
+      else if (req.need && n < Math.max(lo, 1)) out.push(['err', `${r.label}: ${n} shots, ${req.why}`]);
+      else if (r.recommend && n < r.recommend.count && n > 0) out.push(['warn', `${r.label}: ${n} shots; ${r.recommend.note}`]);
+    }
+    const plat = RULES.platforms.find(x => x.id === p);
+    if (plat && plat.minShots) { const total = Object.values(counts).reduce((a, b) => a + b, 0); if (total < plat.minShots) out.push(['err', `${total} shots across device types: ${plat.label} needs ${plat.minShots}`]); }
+    if (!LST.icon) out.push(['err', 'No icon: listing.icon names none, or its fg.svg is missing']);
+    if (p === 'play' && !abs.some(a => a.device === 'asset' && a.asset === 'play/feature')) out.push(['err', 'No feature graphic (play/feature)']);
+    const keys = tilesKeys();
+    for (const loc of LOCS) {
+      const miss = keys.filter(k => strOf(loc, k) == null);
+      if (miss.length) out.push(['warn', `${loc}: ${miss.length} caption string${miss.length === 1 ? '' : 's'} missing (${miss.slice(0, 3).join(', ')}${miss.length > 3 ? ', …' : ''})`]);
+      const mt = (MTS[loc] || []).length;
+      if (mt) out.push(['warn', `${loc}: ${mt} MT string${mt === 1 ? '' : 's'} not yet accepted`]);
+    }
+    const mock = secs.flatMap(s => s.sets).flatMap(x => x.shots).filter(id => !listingImage(byId.get(id)) && !Object.keys(obj(obj(LST.captures)[id])).length);
+    if (mock.length) out.push(['warn', `${new Set(mock).size} shot${new Set(mock).size === 1 ? ' shows' : 's show'} mock-up UI: the stores want the app in use`]);
+    const age = Math.floor((Date.now() - Date.parse(RULES.accessed)) / 864e5);
+    if (age > 180) out.push(['warn', `The store rules were read ${age} days ago (${RULES.accessed})`]);
+    if (!out.some(([k]) => k === 'err')) out.push(['ok', 'Text limits, set counts and required sets pass']);
+    return out;
+  };
+  function paintChecks() {
+    const cs = L.checks(), p = PLATS.find(x => x.id === L.platform);
+    paneChecks.replaceChildren(h('h4', {}, `Checks · ${p ? p.label : ''}`), h('ul', { class: 'bd-lst-checks' }, cs.map(([k, t]) => h('li', { class: k }, ic(k === 'ok' ? 'tick' : k === 'err' ? 'x' : 'alert'), h('span', {}, t)))),
+      h('p', { class: 'hint' }, 'Counted on this page: code points, or UTF-8 bytes for Apple keywords. `build.py` checks the files too.'));
+  }
+  function paintSide() { paintStyle(); paintBrand(); paintChecks(); if (L.S) L.S.paint(); }
+
+  /* BOARD's interface for the page around it (MARKUP, SIDE, compare) */
+  L.setMode = m => { L.mode = m; pg.dataset.m = ['point', 'select'].includes(m) ? m : 'view'; for (const x of L.live) post(x, { bd: 'mode', mode: frameMode() }); };
+  L.abFor = key => { const m = /^(?:artboard|el):([^/]+)/.exec(key); if (!m) return null; const x = L.tiles.find(y => y.a.id === m[1] && y.el.isConnected); return x ? x.el : pg.querySelector(`.bd-lst-icon[data-ab="${CSS.escape(m[1])}"]`); };
+  L.pinPos = key => {
+    if (!key.startsWith('el:')) return null;
+    const i = key.indexOf('/'), id = key.slice(3, i), sel = key.slice(i + 1), x = L.tiles.find(y => y.a.id === id && y.el.isConnected && y.rects[sel]);
+    const r = x && x.rects[sel];
+    return r ? { x: clamp((r.x + r.w) / x.w, 0, 1), y: clamp(r.y / x.h, 0, 1) } : null;
+  };
+  const flashEl = el => { el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 1400); };
+  L.focusKey = key => {
+    const f = /^field:([^/]+)\/([^/]+)\/(.+)$/.exec(key);
+    if (f) {
+      if (LOCS.includes(f[1])) setLocale(f[1]);
+      if (PLATS.some(p => p.id === f[2])) setPlatform(f[2]);
+      setLp(true, false); setTab('text', false);
+      const el = [...lpText.querySelectorAll('.bd-lfield')].find(e => e.dataset.field === `${f[1]}/${f[2]}/${f[3]}`);
+      if (el) { el.scrollIntoView({ block: 'center', behavior: REDUCE ? 'auto' : 'smooth' }); flashEl(el.querySelector('.v')); }
+      return !!el;
+    }
+    const m = /^(?:artboard|el):([^/]+)/.exec(key); if (!m) return false;
+    if (!L.tiles.some(x => x.a.id === m[1])) { const p = PLATS.find(p => sectionsOf(p.id).some(s => s.sets.some(x => x.shots.includes(m[1])))); if (p) setPlatform(p.id); }
+    const x = L.tiles.find(y => y.a.id === m[1]);
+    if (!x) return false;
+    x.el.scrollIntoView({ block: 'center', inline: 'center', behavior: REDUCE ? 'auto' : 'smooth' }); flashEl(x.el);
+    return true;
+  };
+  L.reveal = el => { if (!lp) return; if ($('#bd-lp-brief').contains(el)) { setLp(true, false); setTab('brief', false); } else if (lpText.contains(el)) { setLp(true, false); setTab('text', false); } };
+  // compare (?diff=): shots New or Changed (their JSON or their screen's hash), store text and captions Changed
+  L.compare = base => {
+    const was = new Map(boardAbs(boardOf(base)).map(a => [a.id, a])), hs = BASE.screens || {}, hv = VIEW.screens || {};
+    for (const a of abs) { const o = was.get(a.id); if (!o) L.chg.set(a.id, 'add'); else if (canon(o) !== canon(a) || canon(hs[a.id]) !== canon(hv[a.id])) L.chg.set(a.id, 'mod'); }
+    const ob = (() => { for (const s of base.sections || []) for (const b of s.blocks || []) if (b && b.type === 'listing') return b; return {}; })();
+    for (const loc of LOCS) {
+      for (const p of PLATS) for (const r of textRules(p.id)) if (canon(obj(obj(obj(ob.text)[loc])[p.id])[r.field]) !== canon(textOf(loc, p.id, r.field))) L.fchg.add(`${loc}/${p.id}/${r.field}`);
+      for (const k of new Set([...Object.keys(obj(STR[loc])), ...Object.keys(obj(obj(ob.strings)[loc]))])) if (canon(obj(obj(ob.strings)[loc])[k]) !== canon(strOf(loc, k))) L.fchg.add(`${loc}/strings/${k}`);
+    }
+    renderSections();
+    for (const [id, kind] of L.chg) { const x = L.tiles.find(y => y.a.id === id); if (x) { markChg(x.el, kind, x.a.title || id); CHG[CHG.length - 1].show = () => L.focusKey('artboard:' + id); } }
+    for (const el of lpText.querySelectorAll('.bd-lfield.bd-chg')) { el.classList.remove('bd-chg', 'bd-chg-mod'); markChg(el, 'mod', el.dataset.label); }
+  };
+  L.listingApi = o => {
+    if (o && typeof o === 'object') { if (typeof o.locale === 'string') setLocale(o.locale); if (typeof o.platform === 'string') setPlatform(o.platform); }
+    return { platform: L.platform, locale: L.locale, mode: L.mode, hash: location.hash, locales: LOCS.map(l => ({ id: l, label: locSel.querySelector(`option[value="${CSS.escape(l)}"]`).textContent, mt: (MTS[l] || []).length, missing: missingIn(l) })),
+      sections: [...pg.querySelectorAll('.bd-lst-sec')].map(s => ({ row: s.dataset.row, sets: [...s.querySelectorAll('.bd-lst-set')].map(x => ({ set: x.dataset.set, chip: x.querySelector('.bd-lst-chip').textContent,
+        shots: [...x.querySelectorAll('.bd-lst-shot')].map(e => e.dataset.ab) })) })),
+      off: [...pg.querySelectorAll('.bd-lst-off')].map(e => ({ row: e.dataset.row, drafted: e.classList.contains('on') })),
+      tiles: L.tiles.map(x => ({ id: x.a.id, set: x.rule.id, kind: x.kind, w: x.w, h: x.h, live: !!x.fr, ready: x.ready, name: x.fr ? x.fr.name : null, tags: [...x.box.querySelectorAll('.bd-lst-tag')].map(t => t.textContent) })),
+      fields: [...lpText.querySelectorAll('.bd-lfield')].map(e => ({ field: e.dataset.field, value: e.querySelector('.v').textContent, count: e.querySelector('.c')?.textContent ?? null, over: !!e.querySelector('.c.over'),
+        mt: !!e.querySelector('.bd-lst-tag.mt'), fallback: !!e.querySelector('.v.fb') })),
+      checks: L.checks(), style: L.styleFor(L.platform) };
+  };
+  L.post = (m, filter) => { for (const x of L.live) if (!filter || filter(x)) post(x, m); };
+
+  /* the page around: the platform switch in the app bar, the left panel, the full-bleed layer */
+  const LP_KEY = 'bluedoc:listing-panel', LP_TAB = 'bluedoc:listing-tab';
+  function setLp(open, remember) {
+    L.lp = !!open; root.classList.toggle('bd-lp-open', L.lp); if (lp) lp.inert = !L.lp;
+    applyWidth(); if (remember) store.set(LP_KEY, L.lp ? '1' : '0');
+    setTimeout(() => L.M && L.M.relayout(), 260);
+  }
+  function setTab(t, remember) {
+    if (!lp) return;
+    if (remember) store.set(LP_TAB, t);
+    for (const bt of lpTabs.querySelectorAll('button')) { const on = bt.dataset.v === t; bt.setAttribute('aria-checked', String(on)); $('#' + bt.getAttribute('aria-controls')).hidden = !on; }
+  }
+  L.start = () => {
+    const blk = wrap.closest('.bp-block'), shell = $('.bd-shell');
+    if (!blk || !shell) return;
+    blk.replaceWith(h('div', { class: 'bp-block bd-board-ph' }, ic('frame'), h('span', {}, 'This listing is on the platform pages.')));
+    blk.classList.add('bd-boardblk'); shell.append(blk);
+    $('.bd-crumb').after(tb);
+    lpTabs = h('div', { class: 'bd-sg', role: 'radiogroup', 'aria-label': 'Panel' }, [['text', 'Text'], ['brief', 'Brief']].map(([v, l]) =>
+      h('button', { type: 'button', role: 'radio', 'data-v': v, 'aria-controls': 'bd-lp-' + v, onclick: () => setTab(v, true) }, l)));
+    lp = h('aside', { class: 'bd-lp', 'aria-label': 'Store text and brief', inert: true }, head, h('div', { class: 'bd-lp-tabs bd-lp-ui' }, lpTabs), lpText,
+      h('div', { class: 'bd-lp-pane', id: 'bd-lp-brief', hidden: true }, tldr, main));
+    shell.prepend(lp);
+    placeMeta();
+    setTab(store.get(LP_TAB) === 'brief' ? 'brief' : 'text', false);
+    const pref = store.get(LP_KEY);
+    setLp(pref ? pref === '1' : innerWidth > 900, false);
+    paintTb(); renderSections(); writeHash();
+    document.addEventListener('keydown', e => {
+      if (e.defaultPrevented || e.isComposing || e.metaKey || e.ctrlKey || e.altKey || document.querySelector('dialog[open]')) return;
+      const t = e.target; if (t.isContentEditable || (t.closest && t.closest('input, textarea, select, [contenteditable]'))) return;
+      if (e.key === '[') { e.preventDefault(); setLp(!L.lp, true); }
+    });
+    pg.addEventListener('scroll', () => { if (L.M) L.M.relayout(); }, { passive: true });
+  };
+  // after MARKUP and SIDE exist: the drafts, the right panel's tabs
+  L.afterMarkup = () => {
+    L.M = MARKUP; L.D = MARKUP.drafts || null; L.S = SIDE;
+    if (L.D) for (const a of drafts()) {   // a draft the doc now has is applied
+      const o = a.listing, has = o.op === 'order' ? JSON.stringify(obj(lb.order)[o.set] || null) === JSON.stringify(o.ids) : JSON.stringify(lb.rows || null) === JSON.stringify(o.rows);
+      if (has) L.D.resolve(a.id);
+    }
+    SIDE.add({ id: 'style', label: 'Style', at: 2, body: paneStyle });
+    SIDE.add({ id: 'brand', label: 'Brand', at: 3, body: paneBrand });
+    SIDE.add({ id: 'checks', label: 'Checks', at: 4, body: paneChecks, chip: () => { const n = L.checks().filter(([k]) => k === 'err').length; return n ? `${n} error${n === 1 ? '' : 's'}` : ''; } });
+    draftSig = ''; L.paintDrafts(); renderSections(); paintSide();
+    for (const x of L.tiles) locate(x);
+  };
+  return wrap;
+}
+
 renderDocument();
 if (BOARD && IS_DESIGN) BOARD.start();   // elsewhere a board stays a block in the column
 
@@ -6249,13 +6863,14 @@ function blockText(b) {
     case 'media': return [b.caption, b.alt, b.src].filter(Boolean).join('\n');
     case 'compare': { const side = (s, d) => s ? [s.label || d, s.md, s.code, s.src].filter(Boolean).join('\n') : ''; return [b.title, side(b.before, 'Before'), side(b.after, 'After')].filter(Boolean).join('\n\n'); }
     case 'board': return [b.title, ...boardAbs(b).map(a => `- ${a.title || a.id} (${a.device || `${a.w} × ${a.h}`}, ${a.fidelity || ''})`)].filter(Boolean).join('\n');
+    case 'listing': return [(b.app || {}).name, (b.platforms || []).join(', '), (b.locales || []).join(', ')].filter(Boolean).join('\n');
     default: return canon(b);
   }
 }
 const mediaLabel = b => { const t = plain(b.caption || b.alt).replace(/\s+/g, ' ').trim(); return t.length > 48 ? t.slice(0, 47).trimEnd() + '…' : t || 'Media'; };
 const blockLabel = b => ({ text: 'Text', callout: b.title || `${(b.kind || 'note')[0].toUpperCase()}${(b.kind || 'note').slice(1)} callout`, table: 'Table',
   code: b.title || 'Code', terms: 'Terms', cards: 'Cards', checklist: b.title || 'Checklist', canvas: b.title || 'Drawing', diff: b.title || 'Code change',
-  steps: b.title || 'Steps', files: b.title || 'Files', media: b.type === 'media' ? mediaLabel(b) : '', compare: b.title || 'Compare', board: b.title || 'Board' }[b.type] || b.type);
+  steps: b.title || 'Steps', files: b.title || 'Files', media: b.type === 'media' ? mediaLabel(b) : '', compare: b.title || 'Compare', board: b.title || 'Board', listing: 'Store listing' }[b.type] || b.type);
 
 const CHG = [];   // every marked change, in page order once sorted
 const CHG_WORD = { add: 'New', mod: 'Changed', del: 'Removed' };
@@ -6305,7 +6920,7 @@ function compareDocs(base, view) {
 function compareBlocks(ob, nb, secElm) {
   const els = [...secElm.querySelectorAll(':scope > .bp-block')];
   for (const op of alignSeq(ob, nb, b => b.type + ':' + (b.id || ''))) {
-    if (op.op === 'same' || (op.op === 'del' ? ob[op.a] : nb[op.b]).type === 'board') continue;   // boards: BOARD.compare
+    if (op.op === 'same' || ['board', 'listing'].includes((op.op === 'del' ? ob[op.a] : nb[op.b]).type)) continue;   // boards and listings: BOARD.compare
     if (op.op === 'del') {
       const b = ob[op.a];
       const ghost = h('div', { class: 'bp-block bd-ghost' }, chgHead('del', blockLabel(b)), h('div', { class: 'bd-wd', html: `<del>${esc(blockText(b))}</del>` }));
@@ -6937,15 +7552,17 @@ const MARKUP = (() => {
   // a stored value the page can't draw (state.db keeps whatever an import or another version wrote) is
   // skipped and logged, so one bad comment can't stop the page; the next save of the comments removes it
   // `link` and `layout`: a design board's drafts (boardEdits), a link edit or the screens' moved places
-  const ANN_TYPES = ['pin', 'text', 'draw', 'general', 'link', 'layout'];
-  const DRAFT_TYPES = ['link', 'layout'], isDraft = a => DRAFT_TYPES.includes(a.type);
+  // `listing`: a storelisting's drafts (renderListing): a set's shot order, or the device sections turned on
+  const ANN_TYPES = ['pin', 'text', 'draw', 'general', 'link', 'layout', 'listing'];
+  const DRAFT_TYPES = ['link', 'layout', 'listing'], isDraft = a => DRAFT_TYPES.includes(a.type);
   const isTarget = t => !!t && typeof t === 'object' && typeof t.key === 'string' && !!t.key && typeof t.label === 'string' && (t.text == null || typeof t.text === 'string');
   const valid = a => !!a && typeof a === 'object' && typeof a.id === 'string' && ANN_TYPES.includes(a.type) && isTarget(a.target)
     && (a.targets == null || Array.isArray(a.targets) && a.targets.every(isTarget)) && (a.type !== 'text' || typeof a.quote === 'string')
     && (a.note == null || typeof a.note === 'string') && (a.up == null || Array.isArray(a.up))
     && (a.strokes == null || Array.isArray(a.strokes)) && (a.pos == null || typeof a.pos === 'object')
     && (a.type !== 'link' || !!a.link && typeof a.link === 'object' && typeof a.link.op === 'string' && typeof a.link.from === 'string' && typeof a.link.el === 'string')
-    && (a.type !== 'layout' || !!a.layout && typeof a.layout === 'object' && !!a.layout.positions && typeof a.layout.positions === 'object');
+    && (a.type !== 'layout' || !!a.layout && typeof a.layout === 'object' && !!a.layout.positions && typeof a.layout.positions === 'object')
+    && (a.type !== 'listing' || !!a.listing && typeof a.listing === 'object' && typeof a.listing.op === 'string');
   const skipBad = (where, v) => { console.warn(`bluedoc: skipped a stored comment the page can't show (${where})`, v); return false; };
   let saved = store.keys(KEY + ':').map(k => k.slice(KEY.length + 1));
   let list = saved.map(id => [id, store.get(annKey(id))]).map(([id, s]) => [id, s, parse(s)])
@@ -6993,11 +7610,11 @@ const MARKUP = (() => {
   const pending = () => list.filter(a => a.status === 'pending');
   const onPage = () => list.filter(a => !isGeneral(a));
   const cut = (s, n) => { s = String(s ?? '').replace(/\s+/g, ' ').trim(); return s.length > n ? s.slice(0, n - 1).trimEnd() + '…' : s; };
-  const TYPE_IC = { pin: 'msg', text: 'type', draw: 'pencil', general: 'msgsq', link: 'route', layout: 'grid' };
-  const TYPE_WORD = { pin: 'pin', text: 'text', draw: 'drawing', general: 'general', link: 'link draft', layout: 'layout draft' };
+  const TYPE_IC = { pin: 'msg', text: 'type', draw: 'pencil', general: 'msgsq', link: 'route', layout: 'grid', listing: 'grid' };
+  const TYPE_WORD = { pin: 'pin', text: 'text', draw: 'drawing', general: 'general', link: 'link draft', layout: 'layout draft', listing: 'listing draft' };
   const excerpt = a => a.type === 'text' ? a.quote : a.type === 'draw' && a.targets && a.targets.length ? a.targets.map(t => t.text).filter(Boolean).join(' / ') : a.target.text;
   const pub = a => ({ id: a.id, type: a.type, note: a.note, target: a.target, ...(a.type === 'draw' ? { targets: a.targets || [a.target] } : {}),
-    ...(a.type === 'text' ? { quote: a.quote } : {}), ...(a.type === 'link' ? { link: a.link } : {}), ...(a.type === 'layout' ? { layout: a.layout } : {}), rev: a.rev, at: a.at });
+    ...(a.type === 'text' ? { quote: a.quote } : {}), ...(a.type === 'link' ? { link: a.link } : {}), ...(a.type === 'layout' ? { layout: a.layout } : {}), ...(a.type === 'listing' ? { listing: a.listing } : {}), rev: a.rev, at: a.at });
   const noteText = a => String(a.note || '').trim();
   // the key `patch` takes, as changes.json has it; a drawing over several parts names each part's key
   const keysMd = a => [...new Set((a.type === 'draw' && a.targets && a.targets.length ? a.targets : [a.target]).map(t => t.key))].map(k => `\`${k}\``).join(' ');
@@ -7049,18 +7666,19 @@ const MARKUP = (() => {
   // `el:<id>/<path>` (pinFrame), not from here.
   // a Merged excerpt (.bd-mx) is its comment's: `comment:` names it, and its lines are the diff's
   const SEL = { line: '.bd-ln', comment: '.bd-cm[data-ci], .bd-mx[data-ci]', row: 'tr[data-r]', node: '.bp-node[data-key]', step: '.bp-step[data-step]', file: '.bp-frow[data-path]',
-    media: '.bp-media', compare: '.bp-cmpr-side[data-side]', card: '.bp-card', para: '.bp-text p, .bp-text li', artboard: '.bd-ab[data-ab]', frame: '.bd-rq[data-key]', link: '.bd-lnk[data-link]',
+    media: '.bp-media', compare: '.bp-cmpr-side[data-side]', card: '.bp-card', para: '.bp-text p, .bp-text li', artboard: '.bd-ab[data-ab], .bd-lst-shot[data-ab]', frame: '.bd-rq[data-key]', link: '.bd-lnk[data-link]',
+    field: '.bd-lfield[data-field]',
     item: '.bp-cl-item[id], .bp-cl-item[data-item]', block: '.bp-cl-block, .bp-block[data-bk]', heading: '.bp-sec > h2', lead: '.bp-sec > .bp-lead', section: 'section.bp-sec[id]',
     tldr: '.bd-tldr-card', header: '.bd-head', status: '.bd-meta' };
   const KIND = { line: 'Code line', comment: 'Review comment', row: 'Table row', node: 'Drawing part', step: 'Plan step', file: 'File', media: 'Media', compare: 'Compare side',
-    card: 'Card', para: 'Paragraph', artboard: 'Screen', frame: 'Requested frame', link: 'Link', item: 'Checklist item', block: 'Block', heading: 'Section title', lead: 'Section lead', section: 'Section',
+    card: 'Card', para: 'Paragraph', artboard: 'Screen', frame: 'Requested frame', link: 'Link', field: 'Store text', item: 'Checklist item', block: 'Block', heading: 'Section title', lead: 'Section lead', section: 'Section',
     tldr: 'TL;DR', header: 'Header', status: 'Status', doc: 'Page' };
   const TYPES = Object.keys(SEL), ANY = Object.values(SEL).join(', ');
-  const CLIPS = '.bd-pane, .bp-stage, .bp-table-wrap, .bp-side, .bd-board, .bd-lp-pane, .bd-mx > .bd-code';   // inner scrollers that clip what they hold
+  const CLIPS = '.bd-pane, .bp-stage, .bp-table-wrap, .bp-side, .bd-board, .bd-lp-pane, .bd-mx > .bd-code, .bd-lst-main, .bd-lst-tiles';   // inner scrollers that clip what they hold
   const typeOf = el => el === shell ? 'doc' : TYPES.find(t => el.matches(SEL[t]));
   // the rail is page furniture, except its document sections (Status, Document, Related); so are a design's
   // panel tabs, Screens list and board toolbar, and a findings section's view bar
-  const inDoc = t => !!t && t.nodeType === 1 && shell.contains(t) && !t.closest('.bd-lp-ui, .bd-btb, .bd-fvbar, .bd-var, .bd-ab-t button') && (!t.closest('.bp-side') || !!t.closest('.bd-meta'));
+  const inDoc = t => !!t && t.nodeType === 1 && shell.contains(t) && !t.closest('.bd-lp-ui, .bd-btb, .bd-fvbar, .bd-var, .bd-ab-t button, .bd-lst-ui') && (!t.closest('.bp-side') || !!t.closest('.bd-meta'));
   const targetAt = t => inDoc(t) ? t.closest(ANY) : null;
   let itemKeys = null;
   // a checklist row, or a finding's row in Merged (data-item)
@@ -7090,6 +7708,7 @@ const MARKUP = (() => {
       case 'artboard': return 'artboard:' + el.dataset.ab;
       case 'frame': return el.dataset.key;
       case 'link': return el.getAttribute('data-link');
+      case 'field': return 'field:' + el.dataset.field;
       case 'card': return `card:${pathOf(el)}/${[...el.parentElement.children].indexOf(el)}`;
       case 'para': { const t = el.closest('.bp-text'); return `para:${pathOf(t)}/${[...t.querySelectorAll('p, li')].indexOf(el)}`; }
       case 'item': return 'item:' + itemKeyOf(el);
@@ -7141,7 +7760,8 @@ const MARKUP = (() => {
       case 'file': return cut(el.dataset.path, 60);
       case 'media': return '';   // the block's label (caption or alt) already names it
       case 'compare': return cut(el.querySelector('.bp-cmpr-h .l')?.textContent, 40) || (el.dataset.side === 'before' ? 'Before' : 'After');
-      case 'artboard': return cut(el.querySelector('.bd-ab-t .n')?.textContent, 48) || 'Screen';
+      case 'artboard': return cut(el.querySelector('.bd-ab-t .n')?.textContent || el.dataset.title, 48) || 'Screen';
+      case 'field': return cut(el.dataset.label, 60) || 'Store text';
       case 'frame': return cut(el.querySelector('.bd-rq-t')?.textContent, 48) || 'Requested frame';
       case 'link': return cut(el.getAttribute('aria-label'), 60) || 'Link';
       case 'row': return `Row ${+el.dataset.r + 1}: ${cut([...el.cells].slice(0, 2).map(c => c.textContent.trim()).filter(Boolean).join(' · '), 48)}`;
@@ -7167,7 +7787,8 @@ const MARKUP = (() => {
   const textOf = el => cut(el.matches('.bd-lnk') ? el.getAttribute('data-label') : el instanceof SVGElement ? [...el.querySelectorAll(':scope > .bp-cover > text:not(.bp-open)')].map(t => t.textContent).join(' ')
     : el.matches('.bd-ln') ? el.querySelector('.c')?.textContent : el.matches('.bp-cl-item') ? contentText(el.querySelector('.bp-cl-row') || el)
     : el.matches('.bp-step') ? contentText(el.querySelector('.bp-step-t')) : el.matches('.bp-media') ? mediaText(el)
-    : el.matches('.bd-ab') ? el.querySelector('.bd-ab-t .n')?.textContent : el.matches('.bd-rq') ? el.querySelector('.pr')?.textContent
+    : el.matches('.bd-ab') ? el.querySelector('.bd-ab-t .n')?.textContent : el.matches('.bd-lst-shot') ? el.dataset.title : el.matches('.bd-rq') ? el.querySelector('.pr')?.textContent
+    : el.matches('.bd-lfield') ? el.querySelector('.v')?.textContent
     : el.matches('.bd-boardblk') ? [...el.querySelectorAll('.bd-ab-t .n')].map(n => n.textContent).join(' · ') : contentText(el), 300);
   // a pin a screen's inspector picked (`el:` or `artboard:`) or a requested frame: a draft beside it, or a pending comment
   function pinFrame(o) {
@@ -7202,7 +7823,7 @@ const MARKUP = (() => {
         list.push(a);
         if (!matches(a)) setFilter('pending', false);
       } else {
-        for (const k of ['sentAt', 'stale', 'resolvedBy', 'resolvedRev', 'resolvedAt', 'link', 'layout']) delete a[k];
+        for (const k of ['sentAt', 'stale', 'resolvedBy', 'resolvedRev', 'resolvedAt', 'link', 'layout', 'listing']) delete a[k];
         Object.assign(a, { status: 'pending', rev: CUR.rev, target: { ...a.target, key: o.key, label } });
       }
       a.note = o.note; a[o.type] = o[o.type];
@@ -7308,11 +7929,11 @@ const MARKUP = (() => {
   const hov = h('div', { class: 'bd-ann-hov', hidden: true, 'aria-hidden': 'true' }, h('b'));
   const capG = sv('g');
   const cap = h('div', { class: 'bd-ann-cap', hidden: true }, sv('svg', { 'aria-hidden': 'true' }, capG));
-  const VIEW_M = ['cursor', 'View', 'V', IS_DESIGN ? 'View: drag to pan the board; the screens ignore the pointer' : 'View: use the page as usual'];
+  const VIEW_M = ['cursor', 'View', 'V', IS_LISTING ? 'View: scroll the platform page; drag a shot to reorder its set' : IS_DESIGN ? 'View: drag to pan the board; the screens ignore the pointer' : 'View: use the page as usual'];
   const MARK_M = { point: ['msg', 'Point', 'C', IS_DESIGN ? 'Point: pin a comment on an element, inside a screen too' : 'Point: pin a comment on an element'],
     select: ['type', 'Select', 'T', 'Select: comment on some text'], draw: ['pencil', 'Draw', 'D', 'Draw: circle or mark what should change'] };
   // a design's tray also has Interact (clicks go to the screens), Link (edit the arrows) and Frame (request a new screen)
-  const MODES = IS_DESIGN ? { view: VIEW_M, interact: ['hand', 'Interact', 'I', 'Interact: click inside the screens (tabs, toggles)'], ...MARK_M,
+  const MODES = IS_DESIGN && !IS_LISTING ? { view: VIEW_M, interact: ['hand', 'Interact', 'I', 'Interact: click inside the screens (tabs, toggles)'], ...MARK_M,
     link: ['route', 'Link', 'L', 'Link: click an element, then a screen, to add an arrow; drag a + knob for a gesture; drag an arrow\'s dots to change it'],
     frame: ['frame', 'Frame', 'R', 'Frame: drag an empty frame for a new screen, then labelled boxes inside it'] } : { view: VIEW_M, ...MARK_M };
   const PENS = { risk: 'Red', accent: 'Blue', warn: 'Amber', ok: 'Green' };
@@ -7983,7 +8604,7 @@ const MARKUP = (() => {
   function openKey(k) {
     const [t, rest] = splitKey(k);
     // a design: artboards and requested frames are on the board; anything else may be in the Brief tab
-    if (BOARD && BOARD.focusKey && (t === 'artboard' || t === 'el' || t === 'frame')) return BOARD.focusKey(k);
+    if (BOARD && BOARD.focusKey && (t === 'artboard' || t === 'el' || t === 'frame' || t === 'field')) return BOARD.focusKey(k);
     if (BOARD && BOARD.reveal) { const el = elOf(k); if (el) BOARD.reveal(el); }
     if (t === 'item') { const x = ITEMS[rest]; if (x) openItem(x); }
     else if (t === 'line' || t === 'comment') {
@@ -8077,7 +8698,7 @@ const MARKUP = (() => {
       e.preventDefault();   // handled here: the panel's own Escape (close the drawer or sheet) waits for the next press
       return;
     }
-    const m = { v: 'view', c: 'point', t: 'select', d: 'draw', ...(IS_DESIGN ? { i: 'interact', l: 'link', r: 'frame' } : {}) }[e.key.toLowerCase()];
+    const m = { v: 'view', c: 'point', t: 'select', d: 'draw', ...(IS_DESIGN && !IS_LISTING ? { i: 'interact', l: 'link', r: 'frame' } : {}) }[e.key.toLowerCase()];
     if (m) { e.preventDefault(); setMode(m); }
   });
   document.addEventListener('scroll', () => schedule(false), { capture: true, passive: true });
@@ -8729,6 +9350,7 @@ function boardEdits(B) {
   B.paintDrafts();
 }
 if (BOARD && IS_DESIGN && !OLD && !BASE && BOARD.stage) boardEdits(BOARD);
+if (BOARD && BOARD.afterMarkup) BOARD.afterMarkup();   // a storelisting's drafts and right-panel tabs
 
 SIDE.start();
 
@@ -8777,6 +9399,8 @@ window.BP = {
   revisionsRail: opts => revisionsRail(opts),
   // a design's board: {artboards: [{id, live, ready, fallback, …}], k, mode, …}; opts: {focus, fit, sketch, variants, present, compare}
   board: opts => BOARD && BOARD.api ? BOARD.api(opts) : null,
+  // a storelisting's platform pages: {platform, locale, locales, sections, tiles, fields, captions, checks}; opts: {platform, locale}
+  listing: opts => BOARD && BOARD.listingApi ? BOARD.listingApi(opts) : null,
   // a design's board drafts: {drafts, positions, undo, overlaps, selected}; opts: {link: {key, to?, kind?, label?, delete?}, move: {id: [x, y]}, tidy, undo}
   boardEdit: opts => BOARD && BOARD.edit ? BOARD.edit(opts) : null,
 };
