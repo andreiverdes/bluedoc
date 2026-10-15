@@ -19,6 +19,8 @@ import datetime as dt
 import hashlib
 import json
 import re
+import struct
+import zlib
 from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
@@ -36,6 +38,7 @@ SHOT_DEVICES = ("shot", "asset", "icons")
 IMAGE_TYPES = (".png",)
 MAX_PREVIEWS = 3
 DOC_SUFFIXES = (".bluedoc.json", ".blueprint.json")
+UNVERIFIED_FOR = {"limit", "count", "required", "size", "bytes", "raw", "guide"}   # the checks a rule's `unverified` may name
 YOUTUBE_HOSTS = {"youtube.com", "www.youtube.com", "m.youtube.com", "youtu.be"}
 
 
@@ -89,6 +92,9 @@ def rules_problems(rules: dict) -> list[str]:
                 out.append(f"{kind} {label}: source {s!r} is not in `sources`")
         if "unverified" in r and not (isinstance(r["unverified"], str) and r["unverified"]):
             out.append(f"{kind} {label}: `unverified` is a note saying what isn't confirmed")
+        if "unverifiedFor" in r and not (isinstance(r["unverifiedFor"], list) and r["unverifiedFor"]
+                                         and set(r["unverifiedFor"]) <= UNVERIFIED_FOR and "unverified" in r):
+            out.append(f"{kind} {label}: `unverifiedFor` lists the checks its note concerns: {', '.join(sorted(UNVERIFIED_FOR))}")
         if "platform" in r and r["platform"] not in platforms:
             out.append(f"{kind} {label}: platform {r['platform']!r} unknown")
 
@@ -472,6 +478,10 @@ def validate_listing(rep, doc: dict, doc_path: Path | None, rules: dict | None =
                 ok = head in plats and rest in (((text.get(loc) or {}).get(head) or {}) if isinstance(text.get(loc), dict) else {})
             if not ok:
                 rep.err(mw, f"'{k}' names no string in {loc}: <platform>.<field> or strings.<key>")
+    tf = lb.get("translatedFrom")
+    if tf is not None and not (isinstance(tf, dict) and all(loc in locs and isinstance(m, dict) and all(
+            isinstance(v, str) and re.fullmatch(r"[0-9a-f]{16}", v) for v in m.values()) for loc, m in tf.items())):
+        rep.err(lw + ".translatedFrom", "{locale: {key: hash}}: what `build.py l10n --import` records; leave it to it")
 
     # style: the picker's default (listing.style, and listing.style.<platform>: a platform page's pick), and a shot's own
     styles = {s["id"]: s for s in rules["styles"]}
@@ -652,6 +662,7 @@ def validate_listing(rep, doc: dict, doc_path: Path | None, rules: dict | None =
                 elif k not in have:
                     rep.warn(f"artboard '{a['id']}'", f"data-l10n=\"{k}\" has no string in {default}: the shot shows its "
                              "HTML text; add it to listing.strings")
+    validate_store(rep, lb, doc, doc_path, rules)
 
 
 def _where(doc: dict) -> str:
@@ -799,7 +810,8 @@ def page_data(doc: dict, doc_path: Path | None, texts: dict[str, str | None] | N
                 for c in locs.values():
                     c["file"] = _data_uri(Path(doc_path).parent / c["file"], "image/png") or c["file"]
     out = {"rules": rules, "keys": keys, "captures": caps, "images": images,
-           "icon": icon_of(doc, doc_path) if doc_path is not None else None}
+           "icon": icon_of(doc, doc_path) if doc_path is not None else None,
+           "checks": checks_page_data(doc, doc_path)}   # the build's report: the Checks tab, per platform
     if doc_path is not None and not inline:
         out.update(capture_page_data(doc, doc_path))
     out.update(style_page_data(hooks))
@@ -1268,3 +1280,928 @@ def style_page_data(hooks: dict[str, list[str]]) -> dict:
     except OSError:
         thumbs = ""
     return {"hooks": hooks, "thumbs": thumbs}
+
+
+# ---------- store checks, translation and export (M4) ----------
+# store_checks() is the build's report on a listing against the store rules, beyond the doc's shape: text limits and
+# words, keywords, set counts and required sets, PNG sizes and alpha, Wear's UI-only rule, the Apple Watch's one size,
+# locales that fall back, MT strings, mock-up UI, the caption font and the variants. Each finding names its platforms,
+# set, locales and source key; one from a rule marked `unverified` only warns. build.Report.finding keeps them apart
+# from the doc's own errors, so serve.py still draws a listing whose only errors are these, and its Checks tab lists
+# them. l10n_*: `build.py l10n`. export_plan and png_rgb24: the fastlane ZIP of `build.py --listing` and
+# GET /__bluedoc/listing (serve.py renders the PNGs).
+
+EMOJI = re.compile("[\U0001F000-\U0001FAFF\u2600-\u27BF]")
+CAPS = re.compile(r"\b[A-Z]{4,}\b")   # a shouted word; acronyms of up to 3 letters pass
+REPEAT_PUNCT = re.compile(r"[!?]{2,}")
+HTML_TAG = re.compile(r"<[A-Za-z/!][^>]*>")
+PRICE = re.compile(r"[$€£¥]\s?\d|\d\s?[$€£¥]|\b(?:free|gratis)\b", re.I)
+RAW_FRAME = re.compile(r"(?:^|-)(?:bezel|device)(?:-|$)")   # a class naming a device frame
+MASK = re.compile(r"clip-path\s*:|(?<![\w-])mask(?:-image)?\s*:", re.I)
+BACKGROUND = re.compile(r"background(?:-color)?\s*:\s*([^;\"'}]+)", re.I)
+
+
+def _obj(v) -> dict:
+    return v if isinstance(v, dict) else {}
+
+
+def _finding(level: str, msg: str, *, source: str | None = None, platforms=(), set_id: str | None = None, locales=(),
+             section: str | None = None, key: str | None = None, rule: dict | None = None, check: str | None = None) -> dict:
+    """One check's result: {level: err|warn, where, msg, source, platforms, set, locales, section, key}. An error from
+    a rule marked `unverified` is a warning with the note, unless the rule's `unverifiedFor` names other checks (count,
+    required, size, bytes, raw, guide) than this one."""
+    if rule and rule.get("unverified") and level == "err" and (not rule.get("unverifiedFor") or check in rule["unverifiedFor"]):
+        level, msg = "warn", f"{msg} [unverified: {rule['unverified']}]"
+    where = " · ".join([*([set_id] if set_id else platforms), *([", ".join(locales)] if locales else [])]) or "listing"
+    return {"level": level, "where": where, "msg": f"{msg} ({source})" if source else msg, "source": source,
+            "platforms": list(platforms), "set": set_id, "locales": list(locales), "section": section, "key": key}
+
+
+def _hits(text: str, words) -> list[str]:
+    t = text.lower()
+    return [w for w in words if re.search(r"(?<!\w)" + re.escape(w.lower()) + r"(?!\w)", t)]
+
+
+def _see_through(value: str) -> bool:
+    """Whether a CSS background value lets what's under it show: transparent, or a colour with alpha under 1."""
+    v = value.lower()
+    if "transparent" in v:
+        return True
+    for m in re.finditer(r"(?:rgba?|hsla?)\(([^)]*)\)", v):
+        parts = [x for x in re.split(r"[\s,/]+", m[1].strip()) if x]
+        if len(parts) == 4:
+            a = parts[3]
+            try:
+                if (float(a[:-1]) / 100 if a.endswith("%") else float(a)) < 1:
+                    return True
+            except ValueError:
+                pass
+    return any(len(h) in (4, 8) and h[-(len(h) // 4):] not in ("f", "ff") for h in re.findall(r"#([0-9a-f]{3,8})\b", v))
+
+
+class _RawLint(HTMLParser):
+    """What a Wear shot's HTML draws beside the UI: a caption, a device frame, a mask, a see-through background."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.found: list[str] = []
+        self.css: list[str] = []
+        self._style = False
+
+    def handle_starttag(self, tag, attrs) -> None:
+        d = {k: v or "" for k, v in attrs}
+        cls = d.get("class", "").split()
+        if {"shot-cap", "shot-sub"} & set(cls) and "a caption" not in self.found:
+            self.found.append("a caption")
+        if any(RAW_FRAME.search(c) for c in cls) and "a device frame" not in self.found:
+            self.found.append("a device frame")
+        self.css.append(d.get("style", ""))
+        self._style = tag == "style"
+
+    def handle_data(self, data) -> None:
+        if self._style:
+            self.css.append(data)
+
+    def handle_endtag(self, tag) -> None:
+        self._style = False
+
+    def problems(self) -> list[str]:
+        css = "\n".join(self.css)
+        out = list(self.found)
+        if MASK.search(css):
+            out.append("a mask")
+        if any(_see_through(v) for v in BACKGROUND.findall(css)):
+            out.append("a see-through background")
+        return out
+
+
+def _required(rule: dict, counts: dict[str, int], lb: dict) -> tuple[bool, str]:
+    """Whether a set needs shots in this listing, and why."""
+    r = str(rule.get("required") or "never")
+    if r in ("always", "row"):
+        return True, "the store requires it"
+    if r.startswith("either:"):
+        ids = r[7:].split("|")
+        return not any(counts.get(i) for i in ids), f"one of {' or '.join(ids)} needs shots"
+    if r == "if:ipad":
+        return lb.get("ipad") is True, "the app runs on iPad (listing.ipad)"
+    if r == "if:watchFace":
+        return lb.get("watchFace") is True, "the app is a watch face (listing.watchFace)"
+    return False, "optional"
+
+
+def _png_head(f: Path) -> tuple[dict | None, int]:
+    try:
+        with open(f, "rb") as fh:
+            head = fh.read(65536)
+        return png_info(head), f.stat().st_size
+    except OSError:
+        return None, 0
+
+
+def _shown_size(a: dict, rule: dict, doc_path: Path | None) -> tuple[int, int]:
+    """A shot's store size in a set: an upload's PNG size, else the set's authored size (a layout renders at it)."""
+    if doc_path is not None and is_image_shot(a):
+        info = _png_head(Path(doc_path).parent / a["src"])[0]
+        if info:
+            return info["w"], info["h"]
+    return tuple(rule["author"])
+
+
+def capture_for(caps: dict, a: dict, rule: dict, locale: str, default: str | None) -> dict | None:
+    """The capture a shot shows in a set for a locale, as the page's captureFor picks it: the set's target, then web;
+    the locale's, else the default locale's. {file, w, h, fresh, …, target, locale} or None."""
+    per = caps.get(a["id"]) or {}
+    targets = list(dict.fromkeys(t for t in (rule.get("target"), "web") if t))
+    for loc in dict.fromkeys(x for x in (locale, default) if x):
+        for t in targets:
+            c = (per.get(t) or {}).get(loc)
+            if c:
+                return {**c, "target": t, "locale": loc}
+    return None
+
+
+def store_checks(doc: dict, doc_path: Path | None, rules: dict | None = None, today: dt.date | None = None) -> list[dict]:
+    """The listing against the store rules (the table in references/schema.md `### Checks`): a list of _finding()s,
+    errors first. Files (uploads, captures, screen HTML, the icon) are read only with doc_path."""
+    rules = rules or load_rules()
+    today = today or dt.date.today()
+    lb = listing_of(doc)
+    if not isinstance(lb, dict):
+        return []
+    out: list[dict] = []
+    add = lambda level, msg, **kw: out.append(_finding(level, msg, **kw))  # noqa: E731
+    known_p = {p["id"]: p for p in rules["platforms"]}
+    plats = [p for p in lb.get("platforms") or [] if p in known_p]
+    locs = [x for x in lb.get("locales") or [] if isinstance(x, str)]
+    default = lb.get("defaultLocale") if lb.get("defaultLocale") in locs else (locs[0] if locs else None)
+    text, strings, mt = _obj(lb.get("text")), _obj(lb.get("strings")), _obj(lb.get("mt"))
+    app = _obj(lb.get("app"))
+    names = [n.lower() for n in (app.get("name"), app.get("company")) if isinstance(n, str) and n.strip()]
+    terms = {t["id"]: t for t in rules.get("terms") or []}
+    sets, assets = by_id(rules, "sets"), by_id(rules, "assets")
+    arts = shots_of(doc)
+    by = {a["id"]: a for a in arts}
+    rows_on = lb.get("rows") if isinstance(lb.get("rows"), list) else [r["id"] for r in rules["rows"] if r.get("core")]
+    caps = captures(doc, doc_path) if doc_path is not None else {}
+
+    # store text: limits in every locale, MT or not; words each field's rule lists
+    for loc in locs:
+        for p in plats:
+            fields = _obj(_obj(text.get(loc)).get(p))
+            rs = text_rules(rules, p)
+            for f, v in fields.items():
+                r = rs.get(f)
+                if r is None:
+                    continue
+                kw = {"platforms": [p], "locales": [loc], "section": "text", "key": f"field:{loc}/{p}/{f}"}
+                is_mt = f"{p}.{f}" in (mt.get(loc) or [])
+                for s in (v if isinstance(v, list) else [v]):
+                    if not isinstance(s, str):
+                        continue
+                    n = text_count(s, r["unit"])
+                    if n > r["limit"]:
+                        add("warn" if r.get("level") == "warn" else "err", f"{r['label']}: {n} / {r['limit']} {r['unit']}"
+                            + (" after machine translation" if is_mt else ""), source=r["source"], rule=r, check="limit", **kw)
+                    elif r.get("min") and n < r["min"]:
+                        add("err", f"{r['label']}: {n} {r['unit']}, at least {r['min']}", source=r["source"], rule=r, check="limit", **kw)
+                if "items" in r and isinstance(v, list) and len(v) > r["items"][1]:
+                    add("err", f"{r['label']}: {len(v)} items, at most {r['items'][1]}", source=r["source"], rule=r, check="count", **kw)
+                for s in (v if isinstance(v, list) else [v]):
+                    if not isinstance(s, str):
+                        continue
+                    checks = r.get("checks") or []
+                    if "keyword-min" in checks or "no-app-name" in checks or "no-repeats" in checks:
+                        kws = [k.strip() for k in s.split(",")]
+                        short = [k for k in kws if 0 < len(k) <= 2]
+                        if short and "keyword-min" in checks:
+                            add("err", f"keywords of 2 characters or fewer: {', '.join(short)}", source=r["source"], **kw)
+                        named = [k for k in kws if k and any(_hits(k, [nm]) for nm in names)]
+                        if named and "no-app-name" in checks:
+                            add("err", f"keywords repeat the app's or company's name: {', '.join(named)}", source=r["source"], **kw)
+                        seen: set[str] = set()
+                        dup = [k for k in kws if k and (k.lower() in seen or seen.add(k.lower()))]
+                        if dup and "no-repeats" in checks:
+                            add("err", f"repeated keywords: {', '.join(dict.fromkeys(dup))}", source=r["source"], **kw)
+                    for c in ("play-terms", "no-cta"):
+                        hit = _hits(s, terms.get(c, {}).get("words") or []) if c in checks else []
+                        if hit:
+                            what = "a call to action" if c == "no-cta" else "words Play bans in store text"
+                            add("warn", f"{r['label']}: {what}: {', '.join(hit)}", source=terms[c]["source"], **kw)
+                    if "no-emoji" in checks and EMOJI.search(s):
+                        add("warn", f"{r['label']}: emoji", source="G-PA", **kw)
+                    if "no-caps" in checks and CAPS.search(s):
+                        add("warn", f"{r['label']}: words in capitals: {', '.join(dict.fromkeys(CAPS.findall(s)))}", source="G-PA", **kw)
+                    if "no-repeat-punct" in checks and REPEAT_PUNCT.search(s):
+                        add("warn", f"{r['label']}: repeated punctuation", source="G-PA", **kw)
+                    if "no-price" in checks and PRICE.search(s):
+                        add("warn", f"{r['label']}: a price: {PRICE.search(s)[0]}", source="A-ARG 2.3.7", **kw)
+                    if "no-other-platforms" in checks:
+                        hit = _hits(s, terms.get("other-platforms", {}).get("words") or [])
+                        if hit:
+                            add("warn", f"{r['label']}: another platform: {', '.join(hit)}", source="A-ARG 2.3.10", **kw)
+                    if "no-html" in checks and HTML_TAG.search(s):
+                        add("warn", f"{r['label']}: HTML tags: the store shows plain text", source=r["source"], **kw)
+
+    # sets: counts and required sets in each locale (an upload may be one locale's), the same finding once across them
+    seen_f: dict[tuple, list[str]] = {}
+
+    def per_locale(loc: str, level: str, msg: str, **kw) -> None:
+        key = (level, msg, kw.get("set_id"), kw.get("source"), tuple(kw.get("platforms") or ()), kw.get("section"))
+        if key not in seen_f:
+            seen_f[key] = []
+            out.append({"_key": key, "_kw": kw})
+        seen_f[key].append(loc)
+    by_p_loc: dict[tuple[str, str], dict[str, list[str]]] = {}
+    for p in plats:
+        for loc in locs or [None]:
+            secs = sections(lb, arts, rules, p, loc)
+            shots = {x["set"]: x["shots"] for s in secs for x in s["sets"]}
+            by_p_loc[(p, loc)] = shots
+            counts = {k: len(v) for k, v in shots.items()}
+            for r in rules["sets"]:
+                if r["platform"] != p or r["row"] not in rows_on or r.get("required") == "dated":
+                    continue
+                n = counts.get(r["id"], 0)
+                req = str(r.get("required") or "")
+                if r["id"] not in shots and req not in ("row", "always") and not req.startswith("either:"):
+                    continue
+                lo, hi = r.get("count") or [0, 10]
+                need, why = _required(r, counts, lb)
+                kw = {"platforms": [p], "set_id": r["id"], "section": r["row"], "source": r["source"], "rule": r,
+                      "key": f"section:{p}/{r['row']}"}
+                if n > hi:
+                    per_locale(loc, "err", f"{r['label']}: {n} shots, at most {hi}", check="count", **kw)
+                elif need and n < max(lo, 1) and (not req.startswith("either:") or req[7:].split("|")[0] == r["id"]):
+                    per_locale(loc, "err", f"{r['label']}: {n} shot{'' if n == 1 else 's'}; {why}", check="required", **kw)
+                elif 0 < n < lo:
+                    per_locale(loc, "err", f"{r['label']}: {n} shot{'' if n == 1 else 's'}, at least {lo}", check="count", **kw)
+                elif r.get("recommend") and 0 < n < r["recommend"]["count"]:
+                    per_locale(loc, "warn", f"{r['label']}: {n} shot{'' if n == 1 else 's'}; {r['recommend']['note']}",
+                               **{**kw, "rule": None})
+                elif (r.get("recommend") or {}).get("minSide") and n:
+                    big = sum(1 for sid in shots.get(r["id"], []) if min(_shown_size(by.get(sid) or {}, r, doc_path)) >= r["recommend"]["minSide"])
+                    if big < r["recommend"]["count"]:
+                        per_locale(loc, "warn", f"{r['label']}: {big} shot{'' if big == 1 else 's'} at {r['recommend']['minSide']} px or more; "
+                                                f"{r['recommend']['note']}", **{**kw, "rule": None})
+            mn = known_p[p].get("minShots")
+            total = sum(counts.values())
+            if mn and total < mn:
+                per_locale(loc, "err", f"{total} shot{'' if total == 1 else 's'} across device types: {known_p[p]['label']} needs {mn}",
+                           platforms=[p], source=known_p[p]["source"])
+    for i, x in enumerate(out):
+        if "_key" in x:
+            level, msg = x["_key"][0], x["_key"][1]
+            ls = seen_f[x["_key"]]
+            out[i] = _finding(level, msg, locales=[y for y in ls if y], **x["_kw"])
+    # dated sets: a warning until their date, then an error
+    for r in rules["sets"]:
+        if r["platform"] in plats and r.get("required") == "dated" and r["row"] in rows_on \
+                and not any(r["id"] in (a.get("sets") or []) for a in arts if a.get("device") == "shot"):
+            due = dt.date.fromisoformat(r["from"]) <= today
+            add("err" if due else "warn", f"{r['label']}: no shots; required from {r['from']}" + (f" ({r['note']})" if r.get("note") else ""),
+                source=r["source"], platforms=[r["platform"]], set_id=r["id"], section=r["row"])
+    # required assets and the icon
+    for r in rules["assets"]:
+        if r["platform"] not in plats:
+            continue
+        req = str(r.get("required") or "never")
+        if r.get("from") == "icons":
+            if req == "always" and not lb.get("icon"):
+                add("err", f"no icon: listing.icon names none ({r['label']})", source=r["source"], platforms=[r["platform"]], section="shared")
+            elif req == "always" and doc_path is not None and icon_of(doc, doc_path) is None:
+                add("err", f"the icon {lb['icon']} has no readable fg.svg layer ({r['label']})", source=r["source"],
+                    platforms=[r["platform"]], section="shared")
+            continue
+        if "author" in r and (req == "always" or (req.startswith("row:") and req[4:] in rows_on)) \
+                and not any(a.get("device") == "asset" and a.get("asset") == r["id"] for a in arts):
+            add("err", f"no {r['label'].lower()} ({r['id']}): add an asset artboard", source=r["source"], rule=r, check="required",
+                platforms=[r["platform"]], section="shared")
+
+    if doc_path is not None:
+        # uploads: their size for each set they fill, no alpha, the byte limit
+        for a in arts:
+            if not is_image_shot(a) or image_src_problem(a["src"], doc_path):
+                continue
+            info, size = _png_head(Path(doc_path).parent / a["src"])
+            if info is None:
+                continue
+            for s in a.get("sets") or []:
+                r = sets.get(s)
+                if r is None:
+                    continue
+                kw = {"platforms": [r["platform"]], "set_id": s, "locales": [a["locale"]] if isinstance(a.get("locale"), str) else [],
+                      "section": r["row"], "key": f"artboard:{a['id']}"}
+                why = size_problem(r, info["w"], info["h"])
+                if why:
+                    add("err", f"upload {a['src']} is {info['w']}×{info['h']}: want {why}", source=r["source"], rule=r, check="size", **kw)
+                if info["colour"] in (4, 6) or info["trns"]:
+                    add("err", f"upload {a['src']} has an alpha channel: the stores refuse transparency", source=r["source"], **kw)
+                plat = known_p[r["platform"]]
+                limit = r.get("maxBytes") or plat.get("maxBytes")
+                if limit and size > limit:
+                    add("err", f"upload {a['src']}: {size / 1048576:.1f} MB, at most {limit // 1048576} MB", source=plat["source"],
+                        rule=r if r.get("maxBytes") else plat, check="bytes", **kw)
+        # captures: no alpha; a raw set's capture is the shot itself, so its size is the set's
+        for sid, per in caps.items():
+            a = by.get(sid)
+            if a is None:
+                continue
+            for t, by_loc in per.items():
+                raw = [sets[s] for s in a.get("sets") or [] if s in sets and sets[s].get("raw") and sets[s].get("target") == t]
+                for loc, c in by_loc.items():
+                    info, _ = _png_head(Path(doc_path).parent / c["file"])
+                    if info is None:
+                        continue
+                    kw = {"locales": [loc], "key": f"artboard:{sid}"}
+                    if info["colour"] in (4, 6) or info["trns"]:
+                        add("err", f"capture {c['file']} has an alpha channel: re-shoot it", source="A-SS", **kw)
+                    for r in raw:
+                        why = size_problem(r, info["w"], info["h"])
+                        if why:
+                            add("err", f"the {t} capture of {sid} is {info['w']}×{info['h']}: want {why}; re-shoot it on "
+                                       f"{target_device(lb, rules, t)}", source=r["source"], rule=r, check="size", platforms=[r["platform"]],
+                                set_id=r["id"], section=r["row"], **kw)
+        # Wear OS shots are the UI alone
+        for a in arts:
+            wear = [s for s in a.get("sets") or [] if s in sets and sets[s].get("raw") and sets[s]["platform"] == "play"]
+            if not wear or is_image_shot(a):
+                continue
+            lint = _RawLint()
+            lint.feed(_shot_html(a, doc_path))
+            lint.close()
+            for what in lint.problems():
+                add("err", f"{a['id']} draws {what}: Wear OS shots show the UI only", source="G-PA", platforms=["play"], locales=locs,
+                    set_id=wear[0], section="watch", key=f"artboard:{a['id']}")
+
+    # one size in every locale (Apple Watch)
+    for r in rules["sets"]:
+        if not r.get("oneSize") or r["platform"] not in plats:
+            continue
+        per_loc: dict[str, set[tuple[int, int]]] = {}
+        for loc in locs:
+            got: set[tuple[int, int]] = set()
+            for sid in by_p_loc.get((r["platform"], loc), {}).get(r["id"], []):
+                a = by.get(sid) or {}
+                img = _png_head(Path(doc_path).parent / a["src"])[0] if doc_path is not None and is_image_shot(a) else None
+                cap = capture_for(caps, a, r, loc, default) if not img else None
+                got.add((img["w"], img["h"]) if img else (cap["w"], cap["h"]) if cap and cap.get("w") else tuple(r["author"]))
+            per_loc[loc] = got
+        if len(set().union(*per_loc.values()) if per_loc else set()) > 1:
+            add("err", f"{r['label']}: one size in every locale; " + "; ".join(f"{loc} " + ", ".join(f"{w}×{h}" for w, h in sorted(v))
+                                                                          for loc, v in per_loc.items()),
+                source=r["source"], platforms=[r["platform"]], set_id=r["id"], section=r["row"])
+
+    # locales: text, captions and captures that fall back to the default locale
+    used = {}   # caption key -> the shots that show it
+    for a in arts:
+        if a.get("device") in ("shot", "asset") and not is_image_shot(a):
+            for k in l10n_keys(_shot_html(a, doc_path)) if doc_path is not None else []:
+                used.setdefault(k, []).append(a["id"])
+    for loc in locs:
+        if loc == default:
+            continue
+        for p in plats:
+            base, mine = _obj(_obj(text.get(default)).get(p)), _obj(_obj(text.get(loc)).get(p))
+            rs = text_rules(rules, p)
+            gone = [rs[f]["label"].lower() for f in base if f not in mine and f in rs and rs[f].get("group") == "listing"]
+            if gone:
+                add("warn", f"{loc} has no {', '.join(gone)}: the store shows {default}'s", source="G-TR" if p == "play" else "A-LOC",
+                    platforms=[p], locales=[loc], section="text")
+        miss = [k for k in used if k in _obj(strings.get(default)) and k not in _obj(strings.get(loc))]
+        if miss:
+            add("warn", f"{len(miss)} caption string{' falls' if len(miss) == 1 else 's fall'} back to {default}: {', '.join(miss)}",
+                locales=[loc], section="text", key=f"field:{loc}/strings/{miss[0]}")
+        fb = [sid for sid, per in caps.items() if sid in by and any(default in v and loc not in v for v in per.values())]
+        if fb:
+            add("warn", f"{', '.join(fb)} show{'s' if len(fb) == 1 else ''} the {default} capture: no {loc} capture yet",
+                locales=[loc], key=f"artboard:{fb[0]}")
+        n = len(mt.get(loc) or [])
+        if n:
+            add("warn", f"{n} machine-translated string{'' if n == 1 else 's'} not accepted yet: "
+                        f"{', '.join(mt[loc][:6])}{', …' if n > 6 else ''}", locales=[loc], section="text")
+    if default and mt.get(default):
+        add("warn", f"{len(mt[default])} machine-translated string(s) not accepted yet", locales=[default], section="text")
+
+    # mock-up UI (A-ARG 2.3.3) and social proof in Play's shots (G-PA)
+    for p in plats:
+        ids = list(dict.fromkeys(i for i in (x for shots in by_p_loc.get((p, default), {}).values() for x in shots)))
+        mock = [i for i in ids if i in by and not is_image_shot(by[i]) and not caps.get(i)]
+        if mock:
+            add("warn", f"{len(mock)} shot{'s show' if len(mock) != 1 else ' shows'} mock-up UI, no capture or upload: "
+                        f"{', '.join(mock)}; the stores want the app in use", source="A-ARG 2.3.3", platforms=[p],
+                key=f"artboard:{mock[0]}")
+        if p != "play":
+            continue
+        shown = ids + [a["id"] for a in arts if a.get("device") == "asset" and a.get("asset") == "play/feature"]
+        words = terms.get("social-proof", {}).get("words") or []
+        for sid in shown:
+            keys = [k for k, v in used.items() if sid in v] + [f"{sid}.proof"]
+            hit = sorted({w for loc in locs for k in keys for w in _hits(str(_obj(strings.get(loc)).get(k) or ""), words)})
+            if hit:
+                add("warn", f"{sid}: social proof in a Play graphic: {', '.join(hit)}", source="G-PA", platforms=["play"],
+                    key=f"artboard:{sid}")
+
+    # the caption font: installed here (a vendored Inter needs nothing)
+    font = _obj(_obj(lb.get("brand")).get("font"))
+    fam = font.get("family")
+    if isinstance(fam, str) and fam != rules["brand"]["font"]["default"] and font.get("source") != "vendored":
+        try:
+            import fonts   # noqa: PLC0415 — the font folders are read only for a listing with an installed caption font
+            have = {f["family"] for f in fonts.families()}
+        except (ImportError, OSError):
+            have = {fam}
+        if fam not in have:
+            add("warn", f"the caption font {fam} isn't installed here: shots and exports fall back to Inter", section="shared")
+
+    # variants: their kinds and limits (custom pages and A/B tests)
+    vs = lb.get("variants") if isinstance(lb.get("variants"), list) else []
+    kinds = {(v["platform"], v["kind"]): v for v in rules.get("variants") or []}
+    per_kind: dict[tuple[str, str], int] = {}
+    vids: set[str] = set()
+    for i, v in enumerate(vs):
+        vw = f"variants[{i}]"
+        if not isinstance(v, dict) or not isinstance(v.get("id"), str) or not ID_RE.match(v["id"]) or v["id"] in vids:
+            add("err", f"{vw}: an id of a-z, 0-9 and -, once each")
+            continue
+        vids.add(v["id"])
+        r = kinds.get((v.get("platform"), v.get("kind")))
+        if r is None or v.get("platform") not in plats:
+            add("err", f"variant {v['id']}: kind and platform, one of " + ", ".join(f"{k} ({p})" for p, k in kinds), key=f"variant:{v['id']}")
+            continue
+        per_kind[(r["platform"], r["kind"])] = per_kind.get((r["platform"], r["kind"]), 0) + 1
+        if r["kind"] == "ppo" and v.get("text"):
+            add("err", f"variant {v['id']}: a {r['label'].lower()} can't change text", source=r["source"], platforms=[r["platform"]],
+                key=f"variant:{v['id']}")
+        swap = _obj(v.get("swap"))
+        off = sorted({sid for pair in swap.items() for sid in pair if isinstance(sid, str) and sid in by
+                      and any((sets.get(s) or {}).get("row") in (r.get("not") or []) for s in by[sid].get("sets") or [])})
+        if off:
+            add("err", f"variant {v['id']}: a {r['label'].lower()} can't change {', '.join(r['not'])} shots: {', '.join(off)}",
+                source=r["source"], platforms=[r["platform"]], key=f"variant:{v['id']}")
+    for (p, k), n in per_kind.items():
+        r = kinds[(p, k)]
+        if n > r["max"]:
+            add("err", f"{n} {r['label'].lower()}s, at most {r['max']}", source=r["source"], platforms=[p])
+    out.sort(key=lambda f: f["level"] != "err")
+    return out
+
+
+def validate_store(rep, lb: dict, doc: dict, doc_path: Path | None, rules: dict) -> None:
+    """store_checks into the build's report: rep.finding when it has one (build.Report), else err and warn."""
+    for f in store_checks(doc, doc_path, rules):
+        if hasattr(rep, "finding"):
+            rep.finding(f)
+        else:
+            (rep.err if f["level"] == "err" else rep.warn)(f["where"], f["msg"])
+
+
+class Findings:
+    """A report (err, warn, finding) that keeps every line of validate_listing as a finding: what the page's Checks
+    tab lists. A doc-shape line names no platform unless its place does (`….style.play`, `text.es-ES.appstore`)."""
+
+    def __init__(self) -> None:
+        self.items: list[dict] = []
+
+    def _add(self, level: str, where: str, msg: str) -> None:
+        p = re.search(r"\.(play|appstore)(?:\.|$)", where)
+        self.items.append({"level": level, "where": where, "msg": msg, "source": None, "platforms": [p[1]] if p else [],
+                           "set": None, "locales": [], "section": None, "key": None})
+
+    def err(self, where: str, msg: str) -> None:
+        self._add("err", where, msg)
+
+    def warn(self, where: str, msg: str) -> None:
+        self._add("warn", where, msg)
+
+    def finding(self, f: dict) -> None:
+        self.items.append(f)
+
+
+def checks_page_data(doc: dict, doc_path: Path | None) -> list[dict]:
+    """Every finding of validate_listing, errors first: the page's Checks tab and the HTML export's."""
+    rep = Findings()
+    try:
+        validate_listing(rep, doc, doc_path)
+    except (RulesError, OSError, ValueError) as e:
+        rep.err("listing", f"cannot read the store rules: {e}")
+    return sorted(rep.items, key=lambda f: f["level"] != "err")
+
+
+def section_lines(doc: dict, doc_path: Path | None, path: str) -> list[str]:
+    """What `build.py patch <doc> section:<platform>/<row>` prints: the section's sets and shots (text: its fields per
+    locale; shared: the icon and assets) in the default locale, its findings, and the keys that change it."""
+    rules, lb = load_rules(), listing_of(doc) or {}
+    p, _, row = path.partition("/")
+    locs = [x for x in lb.get("locales") or [] if isinstance(x, str)]
+    default = lb.get("defaultLocale") if lb.get("defaultLocale") in locs else (locs[0] if locs else None)
+    label = {x["id"]: x["label"] for x in rules["platforms"]}.get(p, p)
+    rows = {r["id"]: r["label"] for r in rules["rows"]}
+    out = [f"{label} · {rows.get(row, row.capitalize())}"]
+    sets = by_id(rules, "sets")
+    if row == "text":
+        for loc in locs:
+            fields = _obj(_obj(_obj(lb.get("text")).get(loc)).get(p))
+            out += [f"  {loc} {r['label']}: {text_count(fields[f], r['unit']) if isinstance(fields.get(f), str) else '-'} / {r['limit']} {r['unit']}"
+                    + (" (MT)" if f"{p}.{f}" in (_obj(lb.get("mt")).get(loc) or []) else "")
+                    for f, r in text_rules(rules, p).items() if f in fields]
+    elif row == "shared":
+        out.append(f"  icon: {lb.get('icon') or 'none'}")
+        out += [f"  {a['id']}: {a.get('asset')}" for a in shots_of(doc) if a.get("device") == "asset"
+                and platform_of(str(a.get("asset"))) == p]
+    else:
+        for s in sections(lb, shots_of(doc), rules, p, default):
+            if s["row"] == row:
+                out += [f"  {x['set']}: {len(x['shots'])} / {(sets[x['set']].get('count') or [0, 10])[1]} at "
+                        f"{'×'.join(map(str, sets[x['set']]['author']))}: {', '.join(x['shots']) or 'no shots'}" for x in s["sets"]]
+    for f in store_checks(doc, doc_path, rules):
+        if f["section"] == row and (not f["platforms"] or p in f["platforms"]):
+            out.append(f"  {'ERROR' if f['level'] == 'err' else 'WARN '} {f['where']}: {f['msg']}")
+    block = next((f"block:{s.get('id')}/{i}" for s in doc.get("sections") or [] if isinstance(s, dict)
+                  for i, b in enumerate(s.get("blocks") or []) if b is lb), "block:<listing>")
+    out.append("change it: a text by its field: key, a shot by its artboard: key, the sets' order and the sections "
+               f"shown by {block} --json '{{\"order\": …, \"rows\": …}}'")
+    return out
+
+
+# ---------- translation: build.py l10n ----------
+# A string's MT key: "<platform>.<field>" (store text) or "strings.<key>" (a caption). listing.mt[locale] lists the
+# machine-translated ones until the reader accepts them; listing.translatedFrom[locale][key] is the hash of the
+# default locale's text a translation was made from, so `--export` lists the strings whose source changed since.
+
+
+def source_hash(v) -> str:
+    return hashlib.sha256(json.dumps(v, ensure_ascii=False, sort_keys=True).encode()).hexdigest()[:16]
+
+
+def l10n_sources(lb: dict, rules: dict) -> dict[str, dict]:
+    """{MT key: {value, label, limit, unit}} of the default locale: what a translation starts from (limit None for a
+    caption, which no store limits)."""
+    locs = [x for x in lb.get("locales") or [] if isinstance(x, str)]
+    default = lb.get("defaultLocale") if lb.get("defaultLocale") in locs else (locs[0] if locs else None)
+    labels = {p["id"]: p["label"] for p in rules["platforms"]}
+    out: dict[str, dict] = {}
+    for p, fields in _obj(_obj(lb.get("text")).get(default)).items():
+        rs = text_rules(rules, p)
+        for f, v in _obj(fields).items():
+            if f in rs:
+                out[f"{p}.{f}"] = {"value": v, "label": f"{labels.get(p, p)} {rs[f]['label'].lower()}", "limit": rs[f]["limit"], "unit": rs[f]["unit"]}
+    for k, v in _obj(_obj(lb.get("strings")).get(default)).items():
+        out[f"strings.{k}"] = {"value": v, "label": "Caption", "limit": None, "unit": None}
+    return out
+
+
+def l10n_value(lb: dict, locale: str, key: str):
+    head, _, rest = key.partition(".")
+    holder = _obj(_obj(lb.get("strings")).get(locale)) if head == "strings" else _obj(_obj(_obj(lb.get("text")).get(locale)).get(head))
+    return holder.get(rest)
+
+
+def l10n_export(doc: dict, doc_path: Path | None, locale: str, rules: dict | None = None) -> dict:
+    """The strings `locale` lacks, or whose default-locale text changed since its translation: {from, to, strings:
+    [{key, label, source, why: missing|changed, limit?, unit?, current?, shots?}]}. ValueError: not a listing's
+    locale, or the default one."""
+    rules = rules or load_rules()
+    lb = listing_of(doc)
+    if lb is None:
+        raise ValueError("no listing block: l10n is a storelisting's")
+    locs = [x for x in lb.get("locales") or [] if isinstance(x, str)]
+    default = lb.get("defaultLocale") if lb.get("defaultLocale") in locs else (locs[0] if locs else None)
+    if locale not in locs or locale == default:
+        raise ValueError(f"'{locale}': one of the listing's other locales ({', '.join(x for x in locs if x != default)})")
+    done = _obj(_obj(lb.get("translatedFrom")).get(locale))
+    shots: dict[str, list[str]] = {}
+    for a in shots_of(doc):
+        if a.get("device") in ("shot", "asset") and not is_image_shot(a):
+            for k in [*l10n_keys(_shot_html(a, doc_path)), f"{a['id']}.proof"]:
+                shots.setdefault(f"strings.{k}", []).append(a["id"])
+    items = []
+    for key, s in l10n_sources(lb, rules).items():
+        have = l10n_value(lb, locale, key)
+        why = "missing" if have is None else "changed" if key in done and done[key] != source_hash(s["value"]) else None
+        if not why:
+            continue
+        item = {"key": key, "label": s["label"], "source": s["value"], "why": why}
+        if s["limit"]:
+            item.update(limit=s["limit"], unit=s["unit"])
+        if have is not None:
+            item["current"] = have
+        if shots.get(key):
+            item["shots"] = list(dict.fromkeys(shots[key]))
+        items.append(item)
+    return {"from": default, "to": locale, "strings": items}
+
+
+def l10n_import(lb: dict, locale: str, entries, rules: dict, *, mt: bool) -> list[str]:
+    """Merge {MT key: text} into `locale`: each key one the default locale has, each text within its store limit
+    (code points, or UTF-8 bytes for Apple keywords). On any problem nothing changes and the problems come back (an
+    over-limit string with its count). Else the strings are set, translatedFrom records their sources, and listing.mt
+    gains them (mt) or loses them (a human translation)."""
+    if not isinstance(entries, dict) or not entries:
+        return ["the file holds a JSON object of {\"<platform>.<field>\" or \"strings.<key>\": text}"]
+    locs = [x for x in lb.get("locales") or [] if isinstance(x, str)]
+    default = lb.get("defaultLocale") if lb.get("defaultLocale") in locs else (locs[0] if locs else None)
+    if locale not in locs or locale == default:
+        return [f"'{locale}': one of the listing's other locales ({', '.join(x for x in locs if x != default)})"]
+    src = l10n_sources(lb, rules)
+    problems = []
+    for key, v in entries.items():
+        s = src.get(key)
+        if s is None:
+            problems.append(f"{key}: {default} has no such string to translate")
+            continue
+        items = v if isinstance(v, list) else [v]
+        if isinstance(v, list) != isinstance(s["value"], list) or not all(isinstance(x, str) and x.strip() for x in items):
+            problems.append(f"{key}: " + ("a list of strings, as in " + default if isinstance(s["value"], list) else "a non-empty string"))
+            continue
+        for x in items:
+            n = text_count(x, s["unit"]) if s["limit"] else 0
+            if s["limit"] and n > s["limit"]:
+                problems.append(f"{key}: {n} / {s['limit']} {s['unit']}: shorten it")
+    if problems:
+        return problems
+    for key, v in entries.items():
+        head, _, rest = key.partition(".")
+        holder = (lb.setdefault("strings", {}).setdefault(locale, {}) if head == "strings"
+                  else lb.setdefault("text", {}).setdefault(locale, {}).setdefault(head, {}))
+        holder[rest] = v
+        lb.setdefault("translatedFrom", {}).setdefault(locale, {})[key] = source_hash(src[key]["value"])
+    marks = [k for k in (lb.get("mt") or {}).get(locale) or [] if mt or k not in entries]
+    if mt:
+        marks += [k for k in entries if k not in marks]
+    if marks:
+        lb.setdefault("mt", {})[locale] = marks
+    elif isinstance(lb.get("mt"), dict):
+        lb["mt"].pop(locale, None)
+        if not lb["mt"]:
+            del lb["mt"]
+    return []
+
+
+def l10n_accept(lb: dict, locale: str, keys: list[str]) -> list[str]:
+    """Clear the MT marks of `keys` in `locale` (the reader accepted them as they are). Problems: a key that isn't
+    marked; nothing changes then."""
+    marks = list(_obj(lb.get("mt")).get(locale) or [])
+    bad = [k for k in keys if k not in marks]
+    if bad or not keys:
+        return [f"{k}: not a machine-translated {locale} string" for k in bad] or ["name the keys to accept"]
+    left = [k for k in marks if k not in keys]
+    if left:
+        lb["mt"][locale] = left
+    else:
+        lb["mt"].pop(locale)
+        if not lb["mt"]:
+            del lb["mt"]
+    return []
+
+
+def mark_human(lb: dict | None, locale: str, key: str) -> None:
+    """A string a person wrote or edited (`patch field:`): no MT mark, and in another locale than the default, made
+    from the default's text as it is now."""
+    if not isinstance(lb, dict):
+        return
+    if key in (_obj(lb.get("mt")).get(locale) or []):
+        l10n_accept(lb, locale, [key])
+    src = l10n_sources(lb, load_rules()).get(key)
+    locs = [x for x in lb.get("locales") or [] if isinstance(x, str)]
+    default = lb.get("defaultLocale") if lb.get("defaultLocale") in locs else (locs[0] if locs else None)
+    if src is not None and locale != default and l10n_value(lb, locale, key) is not None:
+        lb.setdefault("translatedFrom", {}).setdefault(locale, {})[key] = source_hash(src["value"])
+    elif isinstance(_obj(lb.get("translatedFrom")).get(locale), dict):   # deleted: nothing was translated
+        lb["translatedFrom"][locale].pop(key, None)
+        if not lb["translatedFrom"][locale]:
+            del lb["translatedFrom"][locale]
+        if not lb["translatedFrom"]:
+            del lb["translatedFrom"]
+
+
+# ---------- export: the fastlane layout ----------
+# fastlane's folder names, read in its source (store-rules.json source FL): supply reads
+# fastlane/metadata/android/<locale>/{title,short_description,full_description,video}.txt, changelogs/<code>.txt
+# (default.txt for any), images/{icon,featureGraphic,tvBanner}.png and images/<type>/*.png for phoneScreenshots,
+# sevenInchScreenshots, tenInchScreenshots, tvScreenshots and wearScreenshots, in name order. deliver reads
+# fastlane/metadata/<locale>/<field>.txt and fastlane/screenshots/<locale>/*.png, telling each PNG's display type by its
+# size and ordering a type's PNGs by name. Variants and ads go beside it in folders fastlane doesn't read.
+
+PLAY_META = "fastlane/metadata/android"
+APPSTORE_META = "fastlane/metadata"
+APPSTORE_SHOTS = "fastlane/screenshots"
+PLAY_IMAGE_TYPES = ("phoneScreenshots", "sevenInchScreenshots", "tenInchScreenshots", "tvScreenshots", "wearScreenshots")
+PLAY_IMAGES = ("icon", "featureGraphic", "tvBanner")
+
+
+def _text_file(p: str, loc: str, name: str) -> str:
+    if p == "play":
+        return f"{PLAY_META}/{loc}/" + ("changelogs/default.txt" if name == "changelogs" else name)
+    return f"{APPSTORE_META}/{loc}/{name}"
+
+
+def export_plan(doc: dict, doc_path: Path | None, rules: dict | None = None, platform: str | None = None,
+                locale: str | None = None, caps: dict | None = None) -> list[dict]:
+    """The fastlane ZIP's files in order, before rendering: text {path, kind: text, text, platform, locale, field, mt}
+    and images {path, kind: shot|upload|asset|icon, platform, locale, set or asset, shot, i, n, w, h (store px), fw,
+    fh (CSS px), scale, src (an upload's PNG), capture (the PNG the UI slot shows), fallback (a capture of the
+    default locale)}. A field the locale lacks is left out: the store falls back to its default. Google Ads images and
+    text go under ads/google/<locale>/, a set or asset fastlane has no folder for under extra/<platform>/<locale>/.
+    platform and locale narrow it; caps (captures_at, an earlier revision's) stands in for captures.json. ValueError:
+    a platform or locale the listing hasn't."""
+    rules = rules or load_rules()
+    lb = listing_of(doc) or {}
+    locs = [x for x in lb.get("locales") or [] if isinstance(x, str)]
+    default = lb.get("defaultLocale") if lb.get("defaultLocale") in locs else (locs[0] if locs else None)
+    plats = [p["id"] for p in rules["platforms"] if p["id"] in (lb.get("platforms") or [])]
+    if platform is not None and platform not in plats:
+        raise ValueError(f"platform: one of {', '.join(plats)}")
+    if locale is not None and locale not in locs:
+        raise ValueError(f"locale: one of {', '.join(locs)}")
+    arts = shots_of(doc)
+    by = {a["id"]: a for a in arts}
+    sets, assets = by_id(rules, "sets"), by_id(rules, "assets")
+    caps = caps if caps is not None else captures(doc, doc_path) if doc_path is not None else {}
+    mt = _obj(lb.get("mt"))
+    out: list[dict] = []
+    for p in plats if platform is None else [platform]:
+        for loc in locs if locale is None else [locale]:
+            for f, r in text_rules(rules, p).items():
+                v = _obj(_obj(_obj(lb.get("text")).get(loc)).get(p)).get(f)
+                name = r.get("fastlane") or {"adHeadlines": "headlines.txt", "adDescriptions": "descriptions.txt"}.get(f)
+                if not name or not v or not (isinstance(v, str) or (isinstance(v, list) and all(isinstance(x, str) for x in v))):
+                    continue
+                out.append({"path": f"ads/google/{loc}/{name}" if r.get("group") == "ads" else _text_file(p, loc, name),
+                            "kind": "text", "text": "\n".join(v) if isinstance(v, list) else v, "platform": p,
+                            "locale": loc, "field": f, "mt": [f"{p}.{f}"] if f"{p}.{f}" in (mt.get(loc) or []) else []})
+            if p == "play" and isinstance(_obj(lb.get("video")).get("play"), str):
+                out.append({"path": f"{PLAY_META}/{loc}/video.txt", "kind": "text", "text": lb["video"]["play"], "platform": p,
+                            "locale": loc, "field": "video", "mt": []})
+            if p == "play" and lb.get("icon"):
+                out.append({"path": f"{PLAY_META}/{loc}/images/icon.png", "kind": "icon", "platform": p, "locale": loc,
+                            "asset": "play/icon", "w": 512, "h": 512, "fw": 512, "fh": 512, "scale": 1})
+            ads = 0
+            for a in arts:
+                r = assets.get(a.get("asset")) if a.get("device") == "asset" else None
+                if not r or r["platform"] != p or "author" not in r:
+                    continue
+                fw, fh = frame_size(r)
+                if r.get("kind") == "ad":
+                    ads += 1
+                    path = f"ads/google/{loc}/{r['author'][0]}x{r['author'][1]}-{ads}.png"
+                elif p == "play" and r.get("fastlane") in PLAY_IMAGES:
+                    path = f"{PLAY_META}/{loc}/images/{r['fastlane']}.png"
+                else:
+                    path = f"extra/{p}/{loc}/assets/{a['id']}.png"
+                out.append({"path": path, "kind": "asset", "platform": p, "locale": loc, "asset": r["id"], "shot": a["id"],
+                            "w": r["author"][0], "h": r["author"][1], "fw": fw, "fh": fh, "scale": r["scale"]})
+            for sec in sections(lb, arts, rules, p, loc):
+                for x in sec["sets"]:
+                    r = sets[x["set"]]
+                    name = r["id"].partition("/")[2]
+                    for i, sid in enumerate(x["shots"]):
+                        a = by[sid]
+                        if p == "play" and r.get("fastlane") in PLAY_IMAGE_TYPES:
+                            path = f"{PLAY_META}/{loc}/images/{r['fastlane']}/{i + 1:02d}-{sid}.png"
+                        elif p == "appstore" and r.get("fastlane"):
+                            path = f"{APPSTORE_SHOTS}/{loc}/{i + 1:02d}-{name}-{sid}.png"
+                        else:
+                            path = f"extra/{p}/{loc}/{name}/{i + 1:02d}-{sid}.png"
+                        fw, fh = frame_size(r)
+                        e = {"path": path, "kind": "upload" if is_image_shot(a) else "shot", "platform": p, "locale": loc,
+                             "set": r["id"], "shot": sid, "i": i, "n": len(x["shots"]), "w": r["author"][0], "h": r["author"][1],
+                             "fw": fw, "fh": fh, "scale": r["scale"]}
+                        if is_image_shot(a):
+                            e["src"] = a["src"]
+                        else:
+                            c = capture_for(caps, a, r, loc, default)
+                            if c:
+                                e["capture"] = c["file"]
+                                e["fallback"] = c["locale"] != loc
+                        out.append(e)
+    return out
+
+
+def captures_at(doc: dict, doc_path: Path, screens: dict) -> dict:
+    """An earlier revision's captures, as captures() gives them, from the hashes its history entry records
+    ("<shot>/capture/<target>/<locale>": sha256, 16 hex digits): today's PNG when its hash is still that, else the
+    one a re-shoot kept in captures/old/. A capture neither has is left out (the shot shows its mock-up)."""
+    now = captures(doc, doc_path)
+    base = listing_dir(doc_path)
+    out: dict = {}
+    for k, sha in (screens or {}).items():
+        parts = k.split("/")
+        if len(parts) != 4 or parts[1] != "capture" or not isinstance(sha, str) or not re.fullmatch(r"[0-9a-f]{16}", sha):
+            continue
+        sid, _, t, loc = parts
+        c = ((now.get(sid) or {}).get(t) or {}).get(loc)
+        if c and c.get("sha") == sha:
+            out.setdefault(sid, {}).setdefault(t, {})[loc] = c
+        elif (base / "captures" / "old" / f"{sha}.png").is_file():
+            out.setdefault(sid, {}).setdefault(t, {})[loc] = {"file": f"{base.name}/captures/old/{sha}.png", "fresh": True, "sha": sha}
+    return out
+
+
+def export_fonts(lb: dict, rules: dict) -> list[dict]:
+    """The fonts an export draws with, for manifest.json: the caption font (installed here, with its fsType and what
+    it allows) and Inter, the vendored default (OFL)."""
+    f = _obj(_obj(lb.get("brand")).get("font"))
+    default = rules["brand"]["font"]["default"]
+    out = []
+    if isinstance(f.get("family"), str) and f["family"] != default:
+        fs = f.get("fsType") if isinstance(f.get("fsType"), int) else None
+        out.append({"family": f["family"], "weight": f.get("weight"), "use": "captions", "source": f.get("source") or "system",
+                    "fsType": fs, "embedding": (font_embedding(fs) or "allowed") if fs is not None else "unknown"})
+    out.append({"family": default, "weight": f.get("weight") if f.get("family") == default else None,
+                "use": "captions" if not out else "fallback", "source": "vendored", "licence": "OFL", "embedding": "allowed"})
+    return out
+
+
+PNG_KEEP = (b"IHDR", b"IDAT", b"IEND", b"sRGB", b"gAMA", b"cHRM", b"iCCP", b"pHYs")
+
+
+def png_rgb(w: int, h: int, rgb: bytes) -> bytes:
+    """A PNG (colour type 2, 8 bits, filter 0 on every row) of w × h RGB pixels."""
+    def chunk(kind: bytes, data: bytes) -> bytes:
+        return struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data))
+    stride = w * 3
+    rows = b"".join(b"\0" + rgb[y * stride:(y + 1) * stride] for y in range(h))
+    return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 2, 0, 0, 0))
+            + chunk(b"IDAT", zlib.compress(rows, 6)) + chunk(b"IEND", b""))
+
+
+def _chunks(data: bytes):
+    i = 8
+    while i + 8 <= len(data):
+        n, kind = int.from_bytes(data[i:i + 4], "big"), data[i + 4:i + 8]
+        yield kind, data[i + 8:i + 8 + n], data[i:i + 12 + n]
+        i += 12 + n
+        if kind == b"IEND":
+            return
+
+
+def _unfilter(raw: bytes, h: int, stride: int, bpp: int) -> bytearray:
+    out, prev, i = bytearray(h * stride), bytearray(stride), 0
+    for y in range(h):
+        ft, line = raw[i], bytearray(raw[i + 1:i + 1 + stride])
+        i += 1 + stride
+        if ft == 1:
+            for x in range(bpp, stride):
+                line[x] = (line[x] + line[x - bpp]) & 255
+        elif ft == 2:
+            line = bytearray((a + b) & 255 for a, b in zip(line, prev))
+        elif ft == 3:
+            for x in range(stride):
+                line[x] = (line[x] + (((line[x - bpp] if x >= bpp else 0) + prev[x]) >> 1)) & 255
+        elif ft == 4:
+            for x in range(stride):
+                a, b, c = (line[x - bpp] if x >= bpp else 0), prev[x], (prev[x - bpp] if x >= bpp else 0)
+                pa, pb, pc = abs(b - c), abs(a - c), abs(a + b - 2 * c)
+                line[x] = (line[x] + (a if pa <= pb and pa <= pc else b if pb <= pc else c)) & 255
+        elif ft != 0:
+            raise ValueError(f"PNG row filter {ft}")
+        out[y * stride:(y + 1) * stride] = line
+        prev = line
+    return out
+
+
+def png_rgb24(data: bytes) -> bytes:
+    """data as a 24-bit RGB PNG, what both stores take: an 8-bit RGB one without tRNS keeps its pixels as they are
+    (only IHDR, IDAT, IEND and the colour chunks stay; text and time chunks go); grey, indexed, 16-bit and RGBA ones
+    are decoded and written again, any alpha dropped. ValueError: not a PNG, or an interlaced one."""
+    info = png_info(data)
+    if info is None:
+        raise ValueError("not a PNG")
+    chunks = list(_chunks(data))
+    ihdr = chunks[0][1]
+    w, h, depth, colour, interlace = info["w"], info["h"], info["depth"], info["colour"], ihdr[12]
+    if colour == 2 and depth == 8 and not info["trns"]:
+        return b"\x89PNG\r\n\x1a\n" + b"".join(c for k, _, c in chunks if k in PNG_KEEP)
+    if interlace:
+        raise ValueError("an interlaced PNG: save it without interlacing")
+    channels = {0: 1, 2: 3, 3: 1, 4: 2, 6: 4}[colour]
+    bits = channels * depth
+    stride, bpp = (w * bits + 7) // 8, max(1, bits // 8)
+    px = _unfilter(zlib.decompress(b"".join(b for k, b, _ in chunks if k == b"IDAT")), h, stride, bpp)
+    if depth == 16:
+        px, depth = px[0::2], 8
+        stride = w * channels
+    if depth < 8:   # indexed or grey at 1, 2 or 4 bits: one byte per pixel
+        per = 8 // depth
+        mask = (1 << depth) - 1
+        unpacked = bytearray(w * h)
+        for y in range(h):
+            row = px[y * stride:(y + 1) * stride]
+            for x in range(w):
+                unpacked[y * w + x] = (row[x // per] >> (8 - depth * (x % per + 1))) & mask
+        px = unpacked
+        if colour == 0:
+            px = bytearray(v * 255 // mask for v in px)
+    rgb = bytearray(w * h * 3)
+    if colour == 2:
+        rgb[:] = px
+    elif colour == 6:
+        rgb[0::3], rgb[1::3], rgb[2::3] = px[0::4], px[1::4], px[2::4]
+    elif colour in (0, 4):
+        g = px[0::channels]
+        rgb[0::3], rgb[1::3], rgb[2::3] = g, g, g
+    else:
+        pal = next(b for k, b, _ in chunks if k == b"PLTE")
+        rgb = bytearray(b"".join(pal[3 * v:3 * v + 3] for v in px))
+    return png_rgb(w, h, bytes(rgb))

@@ -197,8 +197,10 @@ class Recipes(unittest.TestCase):
         self.doc = load_json(FIXTURE)
 
     def test_the_fixture_is_clean_apart_from_its_screens(self) -> None:
+        """Its recipes and capture settings are valid; store completeness (an icon, a feature graphic) isn't its subject."""
         rep = report(self.doc)
-        self.assertEqual(rep.errors, [])
+        self.assertEqual(rep.blocking, [])
+        self.assertFalse([e for e in rep.errors if "recipe" in e or "capture" in e], rep.errors)
 
     def test_bad_recipes_and_capture_settings_are_errors(self) -> None:
         cases = {
@@ -216,7 +218,7 @@ class Recipes(unittest.TestCase):
             with self.subTest(case=name):
                 d = copy.deepcopy(self.doc)
                 change(listing.listing_of(d), listing.shots_of(d)[0])
-                self.assertTrue(report(d).errors, name)
+                self.assertTrue(report(d).blocking, name)
 
     def test_a_recipe_runs_on_its_sets_targets_unless_it_names_them(self) -> None:
         rules, lb = listing.load_rules(), listing.listing_of(self.doc)

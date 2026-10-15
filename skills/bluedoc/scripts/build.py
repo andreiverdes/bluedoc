@@ -232,12 +232,27 @@ class Report:
     def __init__(self) -> None:
         self.errors: list[str] = []
         self.warnings: list[str] = []
+        self.store: list[str] = []   # the errors from a storelisting's store rules (listing.store_checks), in errors too
 
     def err(self, where: str, msg: str) -> None:
         self.errors.append(f"ERROR {where}: {msg}")
 
     def warn(self, where: str, msg: str) -> None:
         self.warnings.append(f"WARN  {where}: {msg}")
+
+    def finding(self, f: dict) -> None:
+        """A store-rule finding (listing._finding): an error fails the build, but the doc stays drawable, so serve.py
+        shows the page with it in the Checks tab, and a patch may write while it is there (blocking)."""
+        if f["level"] == "err":
+            self.err(f["where"], f["msg"])
+            self.store.append(self.errors[-1])
+        else:
+            self.warn(f["where"], f["msg"])
+
+    @property
+    def blocking(self) -> list[str]:
+        """The errors that keep the page from drawing the doc: all but the store-rule ones."""
+        return [e for e in self.errors if e not in self.store]
 
 
 def find_placeholders(text: str) -> list[str]:
@@ -338,7 +353,7 @@ BLOCK_SHAPES = {
     # a storelisting's listing block: listing.validate_listing checks the rest against assets/store-rules.json
     "listing": {"id": str, "app": dict, "platforms": list, "rows": list, "locales": list, "defaultLocale": str,
                 "text": dict, "strings": dict, "mt": dict, "style": dict, "brand": dict, "icon": str, "video": dict,
-                "order": dict, "capture": dict, "variants": list},
+                "order": dict, "capture": dict, "variants": list, "translatedFrom": dict},
 }
 DOC_SHAPE = {"title": str, "meta": {"type": str}, "state": [{"kind": str}],
              "sections": [{"id": str, "title": str, "blocks": [BLOCK]}]}
@@ -3039,6 +3054,22 @@ def resolve_key(doc: dict, key: str) -> Target:
         return Target(a, arts, i, "link", sel)
     if kind == "field" and len(parts) == 3:
         return _field(doc, *parts)
+    if kind == "section" and len(parts) == 2:   # a storelisting's device section: section:<platform>/<row>
+        lb = listing.listing_of(doc)
+        if lb is None:
+            raise PatchError(f"bad key '{key}': section:<id> names a section; section:<platform>/<row> is a storelisting's")
+        rules = listing.load_rules()
+        if parts[0] not in (lb.get("platforms") or []) or parts[1] not in [*(r["id"] for r in rules["rows"]), "shared", "text"]:
+            raise PatchError(f"no section '{path}': <platform>/<row>, platforms {', '.join(lb.get('platforms') or [])}, "
+                             f"rows {', '.join(r['id'] for r in rules['rows'])}, shared or text")
+        return Target(lb, None, None, "lsection", path)
+    if kind == "variant" and len(parts) == 1:
+        lb = listing.listing_of(doc)
+        vs = (lb or {}).get("variants")
+        if not isinstance(vs, list):
+            raise PatchError("no listing.variants in this doc: variant: keys are a storelisting's")
+        v, i = _find(vs, lambda x: x.get("id") == path, f"variant '{path}'")
+        return Target(v, vs, i, "variant")
     if kind == "brand" and len(parts) == 1:
         lb = listing.listing_of(doc)
         if lb is None or (lb.get("id") or "main") != path:
@@ -3489,6 +3520,13 @@ def cmd_patch(argv: list[str]) -> int:
                   f"({n} / {r['limit']} {r['unit']})")
         print(f"change it: build.py patch {a.doc} {shlex.quote(a.key)} --set {shlex.quote(field + '=<text>')}, or --delete")
         return 0
+    if t.kind == "lsection":
+        if ops:
+            ap.error("a section: key prints the section: change its shots by their artboard: keys, its sets' order and "
+                     "the sections shown by the listing's block: key")
+        for line in listing.section_lines(doc, a.doc, t.selector):
+            print(line)
+        return 0
     if not ops and t.kind != "frame" and not (on_screen and a.change):
         if not on_screen:
             ap.error("give --set, --json, --append or --delete")
@@ -3548,6 +3586,9 @@ def cmd_patch(argv: list[str]) -> int:
             set_positions(t.obj, _value(a.json))
         elif t.kind != "link":
             apply_patch(t, a.set, a.json, a.append, a.delete)
+            if t.kind == "field":   # a reader's text replaces the string as human-written: no MT mark
+                loc, group, field = a.key.partition(":")[2].split("/", 2)
+                listing.mark_human(listing.listing_of(doc), loc, f"{group}.{field}")
         meta = doc.setdefault("meta", {})
         rev0 = str(meta.get("rev") or "")
         rev1 = rev0 if a.no_bump else next_rev(rev0)
@@ -3586,11 +3627,14 @@ def cmd_patch(argv: list[str]) -> int:
             else:
                 f.write_text(old, encoding="utf-8")
     rep = validate(doc, a.doc)
-    if rep.errors:
+    # a storelisting's store-rule errors block a patch only when it brings them: one fix at a time stays possible
+    had = set(validate(before, a.doc, write_cache=False).store) if rep.store else set()
+    bad = [e for e in rep.errors if e not in rep.store or e not in had]
+    if bad:
         undo()
-        for line in rep.errors:
+        for line in bad:
             print(line, file=sys.stderr)
-        print(f"patch: {len(rep.errors)} error(s); {a.doc} not written", file=sys.stderr)
+        print(f"patch: {len(bad)} error(s); {a.doc} not written", file=sys.stderr)
         return 1
     try:
         if rev0 and not a.no_bump:   # the version this patch replaces stays its own revision
@@ -3609,9 +3653,11 @@ def cmd_patch(argv: list[str]) -> int:
         print(line, file=sys.stderr)
     # only the warnings this patch introduced
     old = set(validate(before, a.doc, write_cache=False).warnings)
-    for line in rep.warnings:
+    for line in rep.warnings + rep.store:
         if line not in old:
             print(line, file=sys.stderr)
+    if rep.store:
+        print(f"{len(rep.store)} store-rule error(s) remain: build.py {shlex.quote(str(a.doc))} --check lists them", file=sys.stderr)
     # a live page shows the site as it is now: the revision this patch replaces keeps how it looked only in a snapshot
     if rev0 and rev0 != rev1:
         shot = snapshot_index(a.doc).get(rev0, {})
@@ -3645,13 +3691,20 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_new(argv[1:])
     if argv[:1] == ["patch"]:
         return cmd_patch(argv[1:])
+    if argv[:1] == ["l10n"]:
+        return cmd_l10n(argv[1:])
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("doc", type=Path)
     ap.add_argument("-o", "--out", type=Path, help="also write a standalone HTML file (for sharing; serve.py renders the JSON directly)")
     ap.add_argument("--deck", type=Path, metavar="OUT", help="presentation only: also write the deck as one HTML file that "
                     "plays its slides offline (Export to… HTML) or, as OUT.pdf, a PDF of one 16:9 page per slide (Export "
                     "to… PDF; needs Chrome or Chromium, BLUEDOC_CHROME)")
-    ap.add_argument("--format", choices=("html", "pdf"), help="--deck's format (default: OUT's extension, .pdf or else html)")
+    ap.add_argument("--listing", type=Path, metavar="OUT", help="storelisting only: also write the listing as OUT.zip, the "
+                    "fastlane layout of every shot and asset at its store size with manifest.json, OUT.pdf, the listing "
+                    "for review, or OUT.html, one file with both platform pages (zip and pdf need Chrome, BLUEDOC_CHROME)")
+    ap.add_argument("--format", choices=("html", "pdf", "zip"), help="--deck's or --listing's format (default: OUT's extension)")
+    ap.add_argument("--platform", help="--listing's ZIP: one platform only (play, appstore)")
+    ap.add_argument("--locale", help="--listing's ZIP: one locale only")
     ap.add_argument("--check", action="store_true", help="validate and lint only; write nothing (history, diff cache)")
     ap.add_argument("--strict", action="store_true", help="fail on lint warnings")
     ap.add_argument("--template", type=Path, default=TEMPLATE)
@@ -3677,21 +3730,32 @@ def main(argv: list[str] | None = None) -> int:
         print(f"cannot read {a.doc}: {e}", file=sys.stderr)
         return 2
     kind = doc_type(doc.get("meta") if isinstance(doc, dict) and isinstance(doc.get("meta"), dict) else {})
-    if a.format and not a.deck:
-        ap.error("--format goes with --deck")
+    if a.format and not (a.deck or a.listing):
+        ap.error("--format goes with --deck or --listing")
+    if (a.platform or a.locale) and not a.listing:
+        ap.error("--platform and --locale go with --listing")
     if a.deck and kind != "presentation":
         print(f"--deck: only a presentation exports as a deck, not a doc of type {kind} ({a.doc})", file=sys.stderr)
         return 2
-    fmt = a.format or ("pdf" if a.deck and a.deck.suffix.lower() == ".pdf" else "html")
-    chrome = _serve().find_chrome() if a.deck and fmt == "pdf" else None
-    if a.deck and fmt == "pdf" and not chrome:
-        print(f"--deck: {_serve().DECK_PDF_NEEDS}", file=sys.stderr)
+    if a.listing and kind != "storelisting":
+        print(f"--listing: only a storelisting exports as a listing, not a doc of type {kind} ({a.doc})", file=sys.stderr)
+        return 2
+    suffix = (a.deck or a.listing or Path()).suffix.lower()
+    fmt = a.format or ("pdf" if suffix == ".pdf" else "html" if suffix in (".html", ".htm") or a.deck else "zip")
+    if a.deck and fmt == "zip":
+        ap.error("--deck writes html or pdf")
+    if a.listing and fmt != "zip" and (a.platform or a.locale):
+        ap.error("--platform and --locale narrow the ZIP only")
+    chrome = _serve().find_chrome() if fmt in ("pdf", "zip") and (a.deck or a.listing) else None
+    if (a.deck or a.listing) and fmt in ("pdf", "zip") and not chrome:
+        print(f"--{'deck' if a.deck else 'listing'}: {_serve().DECK_PDF_NEEDS if a.deck else _serve().LISTING_NEEDS}", file=sys.stderr)
         return 1
     rep = validate(doc, a.doc, write_cache=not a.check)
     for line in rep.errors + rep.warnings:
         print(line, file=sys.stderr)
     print(f"{len(rep.errors)} error(s), {len(rep.warnings)} warning(s)", file=sys.stderr)
-    if rep.errors or (a.strict and rep.warnings):
+    # a storelisting's store-rule errors fail the build (exit 1) but leave it recordable and exportable for review
+    if rep.blocking or (a.strict and rep.warnings) or (rep.errors and a.check):
         return 1
     if a.check:
         return 0
@@ -3734,8 +3798,134 @@ def main(argv: list[str] | None = None) -> int:
         else:
             a.deck.write_text(deck, encoding="utf-8")
         print(f"wrote {a.deck} ({a.deck.stat().st_size // 1024} KB, {len(serve.deck_slides(doc))} slides)", file=sys.stderr)
-    if not a.out and not a.deck:
+    if a.listing:
+        serve = _serve()
+        a.listing.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            if fmt == "zip":
+                tmp = a.listing.with_name(a.listing.name + ".part")
+                try:
+                    m = serve.listing_zip(doc, a.doc, tmp, chrome, platform=a.platform, locale=a.locale)
+                    os.replace(tmp, a.listing)
+                finally:
+                    tmp.unlink(missing_ok=True)
+                pngs = [f for f in m["files"] if f["path"].endswith(".png")]
+                what = f"{len(pngs)} PNGs, {len(m['files']) - len(pngs)} text files, manifest.json"
+            else:
+                html = serve.listing_html(doc, a.doc)
+                if fmt == "pdf":
+                    a.listing.write_bytes(serve.listing_pdf(html, chrome))
+                else:
+                    a.listing.write_text(html, encoding="utf-8")
+                what = fmt.upper()
+        except serve.ListingError as e:
+            print(f"--listing: {e}", file=sys.stderr)
+            return 1
+        except (OSError, RuntimeError) as e:
+            print(f"--listing: Chrome couldn't render the listing: {e}", file=sys.stderr)
+            return 1
+        for w in serve.listing_warnings(doc, fmt):
+            print(f"WARN  --listing: {w}", file=sys.stderr)
+        print(f"wrote {a.listing} ({a.listing.stat().st_size // 1024} KB: {what})", file=sys.stderr)
+    if not a.out and not a.deck and not a.listing:
         print(f"view: python3 {HERE / 'serve.py'} open {a.doc}", file=sys.stderr)
+    return 1 if rep.errors else 0
+
+
+def cmd_l10n(argv: list[str]) -> int:
+    """`build.py l10n`: a storelisting's translations (listing.l10n_*). --export prints, as JSON, the strings a
+    locale lacks or whose default-locale text changed since its translation, each with its limit and the shots that
+    show it. --import merges a JSON file of {MT key: text}, refusing it whole when a string is over its limit (with
+    its count); --mt marks them machine-translated. --accept clears the MT marks of the keys the reader accepted. An
+    import or accept bumps the rev and records it, as `patch` does."""
+    ap = argparse.ArgumentParser(prog="build.py l10n", description=cmd_l10n.__doc__)
+    ap.add_argument("doc", type=Path)
+    g = ap.add_mutually_exclusive_group(required=True)
+    g.add_argument("--export", metavar="LOCALE", help="print the strings LOCALE lacks or whose source changed, as JSON")
+    g.add_argument("--import", dest="imp", nargs=2, metavar=("LOCALE", "FILE"), help="merge FILE's {key: text} into LOCALE")
+    g.add_argument("--accept", nargs="+", metavar="LOCALE KEY", help="clear the MT marks of these keys in LOCALE")
+    ap.add_argument("--mt", action="store_true", help="--import: the strings are machine-translated (MT badges until accepted)")
+    ap.add_argument("--change", action="append", default=[], metavar="LINE", help="a line for `changes` (repeat for more)")
+    ap.add_argument("--resolves", action="append", default=[], metavar="ID", help="a reader comment or draft this addresses")
+    ap.add_argument("--no-bump", action="store_true", help="keep meta.rev: update the current revision in place")
+    a = ap.parse_args(argv)
+    if a.mt and not a.imp:
+        ap.error("--mt goes with --import")
+    try:
+        raw = a.doc.read_text(encoding="utf-8")
+        doc = json.loads(raw)
+    except (OSError, json.JSONDecodeError) as e:
+        print(f"cannot read {a.doc}: {e}", file=sys.stderr)
+        return 2
+    lb = listing.listing_of(doc)
+    if lb is None:
+        print("l10n: no listing block: l10n is a storelisting's", file=sys.stderr)
+        return 2
+    rules = listing.load_rules()
+    if a.export:
+        try:
+            out = listing.l10n_export(doc, a.doc, a.export, rules)
+        except ValueError as e:
+            print(f"l10n: {e}", file=sys.stderr)
+            return 2
+        print(json.dumps({"doc": str(a.doc), **out}, ensure_ascii=False, indent=1))
+        print(f"{len(out['strings'])} string(s) to translate into {a.export}; then: build.py l10n {shlex.quote(str(a.doc))} "
+              f"--import {a.export} <file.json> --mt", file=sys.stderr)
+        return 0
+    before = copy.deepcopy(doc)
+    before_screens = read_screens(before, a.doc)
+    if a.imp:
+        loc, path = a.imp
+        try:
+            entries = json.loads(Path(path).read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as e:
+            print(f"cannot read {path}: {e}", file=sys.stderr)
+            return 2
+        problems = listing.l10n_import(listing.listing_of(doc), loc, entries, rules, mt=a.mt)
+        change = f"Imported {len(entries) if isinstance(entries, dict) else 0} {loc} strings" + (" (machine-translated)" if a.mt else "")
+    else:
+        loc, keys = a.accept[0], a.accept[1:]
+        problems = listing.l10n_accept(listing.listing_of(doc), loc, keys)
+        change = f"Accepted {len(keys)} machine-translated {loc} string{'' if len(keys) == 1 else 's'}"
+    if problems:
+        for p in problems:
+            print(f"l10n: {p}", file=sys.stderr)
+        print(f"l10n: {len(problems)} problem(s); {a.doc} not written", file=sys.stderr)
+        return 1
+    meta = doc.setdefault("meta", {})
+    rev0 = str(meta.get("rev") or "")
+    rev1 = rev0 if a.no_bump else next_rev(rev0)
+    resolves = [x.strip().strip("()`").strip() for x in a.resolves]
+    if a.no_bump:
+        doc["changes"] = list(doc.get("changes") or []) + (a.change or [change])
+        if resolves:
+            doc["resolves"] = list(dict.fromkeys(list(doc.get("resolves") or []) + resolves))
+    else:
+        meta.update(rev=rev1, date=dt.date.today().isoformat())
+        doc["changes"] = a.change or [change]
+        if resolves:
+            doc["resolves"] = list(dict.fromkeys(resolves))
+        else:
+            doc.pop("resolves", None)
+    rep = validate(doc, a.doc)
+    had = set(validate(before, a.doc, write_cache=False).store) if rep.store else set()
+    bad = [e for e in rep.errors if e not in rep.store or e not in had]
+    if bad:
+        for line in bad:
+            print(line, file=sys.stderr)
+        print(f"l10n: {len(bad)} error(s); {a.doc} not written", file=sys.stderr)
+        return 1
+    try:
+        if rev0 and not a.no_bump:
+            sync_history(a.doc, before, keep_screens=True, texts=before_screens)
+        write_doc(a.doc, doc, raw)
+        sync_history(a.doc, doc)
+    except HistoryError as e:
+        print(e, file=sys.stderr)
+        return 1
+    print(f"rev {rev0 or '-'} → {rev1}; {change.lower()[0] + change[1:]}")
+    if rep.store:
+        print(f"{len(rep.store)} store-rule error(s) remain: build.py {shlex.quote(str(a.doc))} --check lists them", file=sys.stderr)
     return 0
 
 

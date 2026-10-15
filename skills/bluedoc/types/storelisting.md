@@ -8,7 +8,7 @@ python3 <skill>/scripts/build.py new storelisting docs/store/<app>.bluedoc.json 
 
 This writes the `listing` block, a board with one shot (`first`), an icon artboard and their files in `<app>.design/`. The page shows the board as two platform pages (Google Play, App Store) with a locale menu, the Text tab beside them, and Style, Brand and Checks on the right.
 
-**Home card:** each platform's sections with their shot counts. **Required:** one `listing` block and one `board` of `shot`, `asset` and `icons` artboards. The fields, sets and checks: `grep -n -A60 '^## Listing' <skill>/references/schema.md`.
+**Home card:** a column per platform with a dot per section, coloured by its worst check. **Required:** one `listing` block and one `board` of `shot`, `asset` and `icons` artboards. The fields, sets and checks: `grep -n -A60 '^## Listing' <skill>/references/schema.md`.
 
 ## Rules
 
@@ -38,3 +38,10 @@ The reader picks styles and the brand on the page; you record them.
 Edit a shot file in place, then `build.py patch <doc> artboard:<id> --change "…" --resolves <id>`. A text or caption comment has a `field:` key: `build.py patch <doc> field:es-ES/play/short --set short="…"`. Reorder and section drafts come with their `block:` command; run it as given.
 
 A pin on a capture comes with the shot's capture, recipe and a `Re-shoot:` command. Fix the app, its demo data or the recipe, run that command, then `build.py patch <doc> artboard:<id> --change "Re-shot …" --resolves <id>`: the new capture joins the revision and compare shows the old one beside it. A pin on an upload has no recipe: ask for a new PNG, or add a recipe.
+
+## Checks, translation, export and approval
+
+- **Checks:** `build.py <doc>` runs every store rule (`grep -n -A20 '^### Checks' <skill>/references/schema.md`). A store-rule error exits 1 but the page still draws; fix each one, or say why it stays.
+- **Translation:** `build.py l10n <doc> --export es-ES` prints what to translate with each limit; translate within it, then `--import es-ES <file.json> --mt`. An over-limit string refuses the file: shorten it. Run the `## Accepted MT` command from a reply as given.
+- **Export:** `build.py <doc> --listing out.zip` writes the fastlane folders (`--listing out.pdf` or `.html` for review). The reader uploads it with fastlane; never upload for them. Mention the `WARN --listing` lines.
+- **Approval:** an approved listing is final at that rev: export it and hand over the ZIP. The reader can approve with unaccepted MT strings; say so.

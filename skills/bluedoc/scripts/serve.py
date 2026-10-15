@@ -69,6 +69,15 @@ URLs: /                      home page: every doc under the registered folders, 
                              print: the HTML file shown in the tab, sandboxed (DECK_PRINT_CSP), which at #print
                              opens the print dialog: the page's PDF when the server has no Chrome. build.py --deck
                              writes the html and pdf files
+      /__bluedoc/listing?path=<doc URL path>[&format=F&rev=B&platform=P&locale=L]   a storelisting (revision B's)
+                             exported, a read, no key, nothing written beside the doc; 400 for any other doc type.
+                             zip (the default): the fastlane layout of every shot and asset at its store size and
+                             manifest.json (listing_zip, headless Chrome), the attachment <stem>.zip; platform and
+                             locale narrow it. html: one file with both platform pages, offline (listing_html,
+                             assets/listing.html). pdf: its print view (listing_pdf). print: that file in the tab, as
+                             a deck's. zip and pdf: 501 without Chrome. X-Bluedoc-Warnings: a JSON list of what the
+                             export should say (a font the PDF can't embed, store-rule errors). build.py --listing
+                             writes the same files
       /__bluedoc/kit/<file>  the plain kit and inspector (assets/kits)
       /__bluedoc/fw/<name>/<path>   a framework add-framework copied
       /__bluedoc/fonts       the font families installed here (fonts.py: name and OS/2 of each TTF, OTF and TTC in
@@ -156,6 +165,7 @@ import time
 import urllib.error
 import urllib.request
 import webbrowser
+import zipfile
 from http.cookies import CookieError, SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -535,8 +545,10 @@ def card(doc: dict, dtype: str, doc_path: Path) -> dict:
     order (as Present plays them: top to bottom, then left to right).
     website: count = pages, sections = their sections, live = pages shown from a dev server, pages = the first 4 as
     {sections (at most 8), live, fidelity}.
-    storelisting: platforms = {platform: [{row, sets: [[set, shots]]}]}: each platform page's device sections in the
-    default locale (listing.sections), how many shots each set has.
+    storelisting: platforms = {platform: [{row, sets: [[set, shots]], level}]}: each platform page's text, Shared and
+    device sections (listing.sections, default locale), how many shots each set has and the worst check on it (ok,
+    warn, err: listing.store_checks); storeErrors = the store-rule errors, which the card shows as dots, not as a
+    doc that doesn't build.
     A doc whose type has none of that: its `hero`, else {icon: 'doc', sections: N}."""
     blocks = list(build.all_blocks(doc))
     if dtype == "review":
@@ -628,8 +640,15 @@ def card(doc: dict, dtype: str, doc_path: Path) -> dict:
             loc = lb.get("defaultLocale") or next(iter(lb.get("locales") or []), None)
             known = {p["id"] for p in rules["platforms"]}
             plats = [p for p in lb.get("platforms") or [] if p in known]
-            return {"platforms": {p: [{"row": s["row"], "sets": [[x["set"], len(x["shots"])] for x in s["sets"]]}
-                                      for s in listing.sections(lb, listing.shots_of(doc), rules, p, loc)] for p in plats}}
+            found = listing.store_checks(doc, doc_path, rules)
+
+            def level(p: str, section: str) -> str:
+                ls = {f["level"] for f in found if f["section"] == section and (not f["platforms"] or p in f["platforms"])}
+                return "err" if "err" in ls else "warn" if ls else "ok"
+            return {"platforms": {p: [{"row": r, "sets": [], "level": level(p, r)} for r in ("text", "shared")]
+                                  + [{"row": s["row"], "sets": [[x["set"], len(x["shots"])] for x in s["sets"]], "level": level(p, s["row"])}
+                                     for s in listing.sections(lb, listing.shots_of(doc), rules, p, loc)] for p in plats},
+                    "storeErrors": sum(f["level"] == "err" for f in found)}
     hero = doc.get("hero")
     if isinstance(hero, dict) and hero.get("value") is not None:
         return {"hero": {k: str(hero[k]) for k in ("icon", "value", "label") if hero.get(k) is not None}}
@@ -710,7 +729,8 @@ def summarize(p: Path) -> dict:
                 "tldr": doc.get("tldr") or "", "kind": meta.get("kind") or "", "type": dtype, "org": meta.get("org") or "",
                 "rev": str(meta.get("rev") or ""), "date": meta.get("date") or "",
                 "sections": [s.get("title") or "" for s in doc.get("sections") or []],
-                "items": items, "errors": len(rep.errors), "firstError": rep.errors[0] if rep.errors else "",
+                # a storelisting's store-rule errors aren't "doesn't build": its card shows them (card()'s storeErrors)
+                "items": items, "errors": len(rep.blocking), "firstError": rep.blocking[0] if rep.blocking else "",
                 "text": " ".join(words)[:SEARCH_CHARS], "card": card(doc, dtype, p),
             })
         except (OSError, ValueError, TypeError, AttributeError) as e:
@@ -839,8 +859,8 @@ def _render(p: Path) -> tuple[int, str]:
     # validate expands diff refs on a copy (cache, local git, then gh) and so warms the cache build.build reads;
     # it also applies the type contract, as errors only while meta.rev is new
     rep = build.validate(doc, p, allow_remote=True)
-    if rep.errors:
-        return 422, error_page(p, rep.errors)
+    if rep.blocking:   # a storelisting's store-rule errors don't stop the page: its Checks tab lists them
+        return 422, error_page(p, rep.blocking)
     history = None
     if (doc.get("meta") or {}).get("rev"):
         # the page shows the doc as the history's latest revision, in memory: only build.py writes the history file
@@ -1162,7 +1182,8 @@ def wrap_screen(doc: dict, doc_path: Path, artboard_id: str, fragment: str, *, i
     """A screen as a whole HTML document: kits/shell.html filled with the artboard's framework (or the plain kit and
     a notice when it's missing), its fidelity, the device's and theme's variables, the inspector, then the fragment.
     inline puts every file in the document (an -o file); else they load from this server. deck (a deck file's slide,
-    deck_html) inlines too, with DECK_FRAME_SCRIPT in the inspector's place and the hand font only on a sketch slide.
+    deck_html, or an exported listing shot, listing_pages) inlines too, with DECK_FRAME_SCRIPT in the inspector's place
+    and the hand font only on a sketch slide.
     KeyError: no such artboard."""
     inline = inline or deck
     board = build.board_of(doc) or {}
@@ -1326,6 +1347,29 @@ def deck_slides(doc: dict) -> list[dict]:
     return sorted(out, key=lambda a: (at[a["id"]][1], at[a["id"]][0]))
 
 
+def shared_parts(pages: list[str | None]) -> tuple[list[str], list[list | None]]:
+    """(assets, parts): each page as text runs and indices into assets, the <style> and <script> blocks at least
+    DECK_SHARED_MIN long that two pages carry, stored once (a kit, a framework, a font). None stays None."""
+    found: dict[str, int] = {}   # each long block: how many pages carry it
+    for p in pages:
+        for t in {m[0] for m in DECK_BLOCK.finditer(p or "") if len(m[0]) >= DECK_SHARED_MIN}:
+            found[t] = found.get(t, 0) + 1
+    assets: list[str] = []
+    index: dict[str, int] = {}
+
+    def parts(page: str) -> list:
+        out, last = [], 0
+        for m in DECK_BLOCK.finditer(page):
+            if found.get(m[0], 0) > 1:
+                if m[0] not in index:
+                    index[m[0]] = len(assets)
+                    assets.append(m[0])
+                out += [page[last:m.start()], index[m[0]]]
+                last = m.end()
+        return [x for x in out + [page[last:]] if x != ""]
+    return assets, [parts(p) if p is not None else None for p in pages]
+
+
 def deck_html(doc: dict, doc_path: Path, rev: str | None = None, theme: str | None = None,
               roots: list[Path] | None = None) -> str:
     """A presentation as one self-contained HTML file that plays its slides anywhere, offline (assets/deck.html): each
@@ -1351,27 +1395,10 @@ def deck_html(doc: dict, doc_path: Path, rev: str | None = None, theme: str | No
     for a in slides:
         text = build.screen_source(doc_path, a["id"], rev) if rev else current_screen_text(doc, doc_path, a["id"], roots)
         pages.append(None if text is None else build.with_screen_csp(wrap_screen(doc, doc_path, a["id"], text, deck=True, theme=theme)))
-    found: dict[str, int] = {}   # each long block: how many slides carry it
-    for p in pages:
-        for t in {m[0] for m in DECK_BLOCK.finditer(p or "") if len(m[0]) >= DECK_SHARED_MIN}:
-            found[t] = found.get(t, 0) + 1
-    assets: list[str] = []
-    index: dict[str, int] = {}
-
-    def parts(page: str) -> list:
-        """page as text runs and indices into assets, for the blocks other slides carry too."""
-        out, last = [], 0
-        for m in DECK_BLOCK.finditer(page):
-            if found.get(m[0], 0) > 1:
-                if m[0] not in index:
-                    index[m[0]] = len(assets)
-                    assets.append(m[0])
-                out += [page[last:m.start()], index[m[0]]]
-                last = m.end()
-        return [x for x in out + [page[last:]] if x != ""]
+    assets, parts = shared_parts(pages)
     shown = [{"id": a["id"], "title": str(a.get("title") or a["id"]),
               "notes": md_html(a["notes"]) if isinstance(a.get("notes"), str) else "",
-              "parts": parts(p) if p is not None else None} for a, p in zip(slides, pages)]
+              "parts": p} for a, p in zip(slides, parts)]
     data = {"w": build.DEVICES["slide"]["w"], "h": build.DEVICES["slide"]["h"], "assets": assets, "slides": shown}
     fill = {"__DECK_TITLE__": esc(str(doc.get("title") or build.doc_stem(Path(doc_path)))),
             "__DECK_CSP__": build.STANDALONE_SCREEN_CSP, "__DECK_DATA__": build._script_json(data)}
@@ -1388,6 +1415,267 @@ def deck_pdf(html: str, chrome: str) -> bytes:
         f.write_text(html, encoding="utf-8")
         with HeadlessChrome(chrome) as ch:
             return ch.print_pdf(f.as_uri() + "#print")
+
+
+# ---------- a storelisting exported (GET /__bluedoc/listing, build.py --listing) ----------
+# zip: the fastlane layout (listing.export_plan) of every shot and asset at its store size, rendered by headless Chrome
+# from its screen file, each PNG made 24-bit RGB and read back before it goes in, with manifest.json. html: one file
+# with both platform pages, offline (assets/listing.html). pdf: that file's print view, printed as a deck's is.
+
+LISTING_PLAYER = HERE.parent / "assets" / "listing.html"
+LISTING_FORMATS = ("zip", "pdf", "html", "print")
+LISTING_NEEDS = "a listing's ZIP or PDF needs Chrome or Chromium: set BLUEDOC_CHROME to its path"
+
+
+class ListingError(ValueError):
+    """Why a doc can't be exported as a listing."""
+
+
+def listing_doc(doc: dict, doc_path: Path, rev: str | None) -> tuple[dict, str | None, dict]:
+    """(the doc as of rev, rev or None for the doc on disk, its captures): an earlier revision's captures are the PNGs
+    its history entry hashes (listing.captures_at). ListingError: not a storelisting, an unknown revision."""
+    kind = build.doc_type(doc.get("meta") if isinstance(doc.get("meta"), dict) else {})
+    if kind != "storelisting":
+        raise ListingError(f"only a storelisting exports as a listing, not a doc of type {kind}")
+    if rev is None or rev == str((doc.get("meta") or {}).get("rev") or ""):
+        return doc, None, listing.captures(doc, doc_path)
+    try:
+        h = build.load_history(build.history_path(doc_path))
+        entry = next((e for e in h["revs"] if isinstance(e, dict) and e.get("rev") == rev), None)
+        old = build.restore(h, entry) if entry else None
+    except (OSError, ValueError, KeyError, TypeError):
+        old = None
+    if old is None:
+        raise ListingError(f"no revision {rev} in the doc's history")
+    return old, rev, listing.captures_at(old, doc_path, entry.get("screens") or {})
+
+
+def listing_pages(doc: dict, doc_path: Path, rev: str | None, roots: list[Path] | None) -> dict[str, str]:
+    """{artboard id: its whole document, inline, behind build.STANDALONE_SCREEN_CSP} for each shot and asset with a
+    screen file (an upload is a PNG). Wrapped as a deck's slides are: no inspector."""
+    out = {}
+    for a in listing.shots_of(doc):
+        if a.get("device") not in ("shot", "asset") or listing.is_image_shot(a):
+            continue
+        text = build.screen_source(doc_path, a["id"], rev) if rev else current_screen_text(doc, doc_path, a["id"], roots)
+        if text is not None:
+            out[a["id"]] = build.with_screen_csp(wrap_screen(doc, doc_path, a["id"], text, deck=True))
+    return out
+
+
+def icon_play_css(icon: dict) -> str:
+    """The Play icon's CSS background, as the page's Shared section draws it: play.svg whole, else the foreground and
+    background layers at 150% (an adaptive icon's 108 dp, 72 dp shown), on the icon's colour (white without one)."""
+    lay, u = icon["layers"], lambda k: f'url("{icon["layers"][k]}")'  # noqa: E731
+    if lay.get("play"):
+        return f"{u('play')} center / 100% 100% no-repeat"
+    return f"{u('fg')} center / 150% 150% no-repeat" + (f", {u('bg')} center / 150% 150% no-repeat" if lay.get("bg") else "") \
+        + f", {icon.get('bg') or '#ffffff'}"
+
+
+def listing_warnings(doc: dict, fmt: str) -> list[str]:
+    """What an export of this listing should say: a caption font a PDF can't embed (OT-FSTYPE), an HTML file that
+    names its fonts instead of carrying them, the store-rule errors still open."""
+    lb, rules = listing.listing_of(doc) or {}, listing.load_rules()
+    out = []
+    for f in listing.export_fonts(lb, rules):
+        if fmt == "pdf" and f["embedding"] not in ("allowed", "unknown"):
+            out.append(f"{f['family']}: {f['embedding']} (fsType {f['fsType']}, OT-FSTYPE): the PDF can't embed it")
+        if fmt == "html" and f["source"] != "vendored":
+            out.append(f"{f['family']} is named, not embedded: install it to see the captions as drawn")
+    errs = [x for x in listing.store_checks(doc, None, rules) if x["level"] == "err"]
+    if errs:
+        out.append(f"{len(errs)} store-rule error(s): {errs[0]['where']}: {errs[0]['msg']}")
+    return out
+
+
+def listing_zip(doc: dict, doc_path: Path, out: Path, chrome: str, *, rev: str | None = None, platform: str | None = None,
+                locale: str | None = None, roots: list[Path] | None = None) -> dict:
+    """Write the fastlane ZIP of the listing (revision rev's) to out, one file at a time, and return its manifest
+    (manifest.json in the ZIP: every file's path, kind, platform, locale, set or asset, shot, size, sha256 and bytes,
+    the MT strings, the fonts, the store-rule errors). Each shot and asset is its screen file in headless Chrome at its
+    set's frame (CSS px) × scale, its UI the capture the page shows; an upload is its PNG; the Play icon is the icons
+    artboard's exported play/icon-512.png, else its layers drawn at 512 px. ListingError: a PNG that isn't its size,
+    or isn't RGB without alpha after listing.png_rgb24. RuntimeError, OSError: Chrome failed."""
+    doc, rev, caps = listing_doc(doc, doc_path, rev)
+    rules, lb = listing.load_rules(), listing.listing_of(doc) or {}
+    try:
+        plan = listing.export_plan(doc, doc_path, rules, platform, locale, caps=caps)
+    except ValueError as e:
+        raise ListingError(str(e)) from None
+    pages = listing_pages(doc, doc_path, rev, roots)
+    sets = listing.by_id(rules, "sets")
+    keys = {aid: listing.l10n_keys(t) for aid, t in pages.items()}   # each shot's caption strings, for its MT marks
+    mt = lb.get("mt") if isinstance(lb.get("mt"), dict) else {}
+    stamp = (dt.date.today().year, dt.date.today().month, dt.date.today().day, 0, 0, 0)
+    files: list[dict] = []
+    with tempfile.TemporaryDirectory(prefix="bluedoc-listing-") as d, zipfile.ZipFile(out, "w") as z:
+        ch: HeadlessChrome | None = None
+        urls: dict[str, str] = {}
+
+        def url_of(aid: str, html: str) -> str:
+            if aid not in urls:
+                f = Path(d) / f"{len(urls)}.html"
+                f.write_text(html, encoding="utf-8")
+                urls[aid] = f.as_uri()
+            return urls[aid]
+        try:
+            for e in plan:
+                meta = {k: v for k, v in e.items() if k not in ("text", "fw", "fh", "scale")}
+                if e["kind"] == "text":
+                    data = e["text"].encode("utf-8")
+                    z.writestr(zipfile.ZipInfo(e["path"], stamp), data, compress_type=zipfile.ZIP_DEFLATED)
+                    files.append({**meta, "bytes": len(data), "sha256": hashlib.sha256(data).hexdigest()})
+                    continue
+                exported = None
+                if e["kind"] == "icon":
+                    icon = listing.icon_of(doc, doc_path)
+                    if icon is None:
+                        continue
+                    ref, _, aid = icon["from"].rpartition("#")
+                    src = (doc_path.parent / ref).resolve() if ref else doc_path
+                    exported = icons_dir(src, aid or icon["from"]) / "play" / "icon-512.png"
+                if e["kind"] == "upload":
+                    png = listing.png_rgb24((doc_path.parent / e["src"]).read_bytes())
+                elif exported is not None and exported.is_file():
+                    png = exported.read_bytes()   # the page's icon export: Play takes it as it is, alpha and all
+                else:
+                    ch = ch or HeadlessChrome(chrome)
+                    if e["kind"] == "icon":
+                        page = ('<!doctype html><meta charset="utf-8"><style>html,body{margin:0;width:512px;height:512px;overflow:hidden}'
+                                f'body{{background:{icon_play_css(icon)}}}</style>')
+                        png = ch.capture_png(url_of("\0icon", page), 512, 512, 1)
+                    elif e["shot"] not in pages:
+                        raise ListingError(f"{e['shot']}: no screen file to render")
+                    else:
+                        state = {"locale": e["locale"]} if e["kind"] == "asset" else {
+                            "set": e["set"], "locale": e["locale"], "i": e["i"], "n": e["n"],
+                            "ui": data_uri(doc_path.parent / e["capture"]) if e.get("capture") else None}
+                        png = ch.capture_png(url_of(e["shot"], pages[e["shot"]]), e["fw"], e["fh"], e["scale"],
+                                             name="bd-shot " + json.dumps(state), settle=0.2)
+                    png = listing.png_rgb24(png)
+                info = listing.png_info(png) or {}
+                rule = sets.get(e.get("set")) or listing.by_id(rules, "assets").get(e.get("asset")) or {}
+                why = listing.size_problem(rule, info.get("w", 0), info.get("h", 0)) if e["kind"] in ("upload", "icon") \
+                    else None if (info.get("w"), info.get("h")) == (e["w"], e["h"]) else f"want {e['w']}×{e['h']}"
+                if why or (exported is None and (info.get("colour") != 2 or info.get("trns"))):
+                    raise ListingError(f"{e['path']}: {info.get('w')}×{info.get('h')} colour type {info.get('colour')}: "
+                                       f"{why or 'want RGB without alpha'}")
+                z.writestr(zipfile.ZipInfo(e["path"], stamp), png, compress_type=zipfile.ZIP_STORED)
+                files.append({**meta, "w": info["w"], "h": info["h"], "bytes": len(png), "sha256": hashlib.sha256(png).hexdigest(),
+                              "mt": [f"strings.{k}" for k in keys.get(e.get("shot"), []) if f"strings.{k}" in (mt.get(e["locale"]) or [])]})
+        finally:
+            if ch:
+                ch.close()
+        manifest = {"doc": doc_path.name, "title": str(doc.get("title") or ""), "rev": str((doc.get("meta") or {}).get("rev") or ""),
+                    "exported": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"), "bluedoc": VERSION,
+                    "layout": "fastlane: metadata/android (supply), metadata and screenshots (deliver)", "rules": rules["accessed"],
+                    "platforms": sorted({f["platform"] for f in files}), "locales": sorted({f["locale"] for f in files}),
+                    "mt": {k: v for k, v in (lb.get("mt") or {}).items() if not locale or k == locale},
+                    "fonts": listing.export_fonts(lb, rules),
+                    "errors": [f"{x['where']}: {x['msg']}" for x in listing.store_checks(doc, doc_path, rules) if x["level"] == "err"],
+                    "notes": ["The App Store icon ships in the binary: it isn't in the ZIP.",
+                              "A field a locale lacks isn't in its folder: the store shows the default locale's."],
+                    "files": files}
+        z.writestr(zipfile.ZipInfo("manifest.json", stamp), json.dumps(manifest, ensure_ascii=False, indent=1),
+                   compress_type=zipfile.ZIP_DEFLATED)
+    return manifest
+
+
+def listing_html(doc: dict, doc_path: Path, rev: str | None = None, roots: list[Path] | None = None) -> str:
+    """The listing as one HTML file that works offline (assets/listing.html): both platform pages with their text
+    per locale (counts, MT marks, fallbacks), captions, Shared and device sections, each shot and asset in a sandboxed
+    srcdoc frame wrapped as the page shows it, captures and uploads inline, the fonts it needs named. Its print view
+    (#print) is the PDF: per platform a text page, then a page per locale and section. ListingError as listing_doc."""
+    doc, rev, caps = listing_doc(doc, doc_path, rev)
+    rules, lb = listing.load_rules(), listing.listing_of(doc) or {}
+    pages = listing_pages(doc, doc_path, rev, roots)
+    ids = list(pages)
+    assets, parts = shared_parts([pages[i] for i in ids])
+    imgs: list[str] = []
+    at: dict[str, int] = {}
+
+    def img(rel: str) -> int | None:
+        if rel not in at:
+            uri = listing._data_uri(doc_path.parent / rel, "image/png")
+            if uri is None:
+                return None
+            at[rel] = len(imgs)
+            imgs.append(uri)
+        return at[rel]
+    locs = [x for x in lb.get("locales") or [] if isinstance(x, str)]
+    default = lb.get("defaultLocale") if lb.get("defaultLocale") in locs else (locs[0] if locs else None)
+    arts = listing.shots_of(doc)
+    by = {a["id"]: a for a in arts}
+    keys = {aid: listing.l10n_keys(t) for aid, t in pages.items()}
+    mt = lb.get("mt") if isinstance(lb.get("mt"), dict) else {}
+    sets, rows = listing.by_id(rules, "sets"), {r["id"]: r for r in rules["rows"]}
+    icon = listing.icon_of(doc, doc_path)
+    text, strings = lb.get("text") or {}, lb.get("strings") or {}
+    findings = listing.checks_page_data(doc, doc_path)
+    plats = []
+    for p in [x for x in rules["platforms"] if x["id"] in (lb.get("platforms") or [])]:
+        fields = []
+        for f, r in listing.text_rules(rules, p["id"]).items():
+            vals = {}
+            for loc in locs:
+                v = ((text.get(loc) or {}).get(p["id"]) or {}).get(f)
+                fb = v is None and loc != default
+                v = v if v is not None else ((text.get(default) or {}).get(p["id"]) or {}).get(f)
+                if v is None:
+                    continue
+                items = v if isinstance(v, list) else [v]
+                vals[loc] = {"v": "\n".join(map(str, items)), "n": [listing.text_count(str(s), r["unit"]) for s in items],
+                             "mt": f"{p['id']}.{f}" in (mt.get(loc) or []), "fb": fb}
+            if vals:
+                fields.append({"field": f, "label": r["label"], "limit": r["limit"], "unit": r["unit"], "values": vals})
+        secs = {}
+        for loc in locs:
+            out = []
+            for s in listing.sections(lb, arts, rules, p["id"], loc):
+                out.append({"row": s["row"], "label": rows[s["row"]]["label"], "sets": [{
+                    "set": x["set"], "label": sets[x["set"]]["label"], "size": "×".join(map(str, sets[x["set"]]["author"])),
+                    "fw": listing.frame_size(sets[x["set"]])[0], "fh": listing.frame_size(sets[x["set"]])[1],
+                    "max": (sets[x["set"]].get("count") or [0, 10])[1],
+                    "shots": [{"id": sid, "title": str(by[sid].get("title") or sid),
+                               **({"img": img(by[sid]["src"])} if listing.is_image_shot(by[sid]) else
+                                  (lambda c: {"cap": img(c["file"]), "fb": c["locale"] != loc} if c else {})(
+                                      listing.capture_for(caps, by[sid], sets[x["set"]], loc, default)))}
+                              for sid in x["shots"]]} for x in s["sets"]]})
+            secs[loc] = out
+        shown = {sid for loc in secs for s in secs[loc] for x in s["sets"] for sid in (y["id"] for y in x["shots"])}
+        art = [{"id": a["id"], "title": str(a.get("title") or a["id"]), "fw": listing.frame_size(r)[0], "fh": listing.frame_size(r)[1],
+                "label": r["label"]} for a in arts for r in [listing.by_id(rules, "assets").get(a.get("asset"))]
+               if a.get("device") == "asset" and r and r["platform"] == p["id"] and "author" in r]
+        caption_keys = list(dict.fromkeys(k for sid in [*shown, *(x["id"] for x in art)] for k in keys.get(sid, [])))
+        plats.append({"id": p["id"], "label": p["label"], "fields": fields, "sections": secs, "assets": art,
+                      "captions": [{"key": k, "values": {loc: {"v": (strings.get(loc) or {}).get(k, (strings.get(default) or {}).get(k)),
+                                                               "mt": f"strings.{k}" in (mt.get(loc) or []),
+                                                               "fb": k not in (strings.get(loc) or {}) and loc != default} for loc in locs}}
+                                   for k in caption_keys],
+                      "icon": (icon_play_css(icon) if p["id"] == "play" else
+                               f"url(\"{icon['layers']['fg']}\") center / 100% 100% no-repeat" + (f", url(\"{icon['layers']['bg']}\") center / 100% 100% no-repeat" if icon["layers"].get("bg") else "")
+                               + f", {icon.get('bg') or '#ffffff'}") if icon else None,
+                      "checks": [{"level": x["level"], "where": x["where"], "msg": x["msg"]} for x in findings
+                                 if not x["platforms"] or p["id"] in x["platforms"]]})
+    data = {"title": str(doc.get("title") or build.doc_stem(doc_path)), "rev": str((doc.get("meta") or {}).get("rev") or ""),
+            "date": str((doc.get("meta") or {}).get("date") or ""), "rules": rules["accessed"], "locales": locs, "default": default,
+            "platforms": plats, "assets": assets, "docs": dict(zip(ids, parts)), "imgs": imgs,
+            "fonts": listing.export_fonts(lb, rules)}
+    fill = {"__LISTING_TITLE__": esc(data["title"]), "__LISTING_CSP__": build.STANDALONE_SCREEN_CSP,
+            "__LISTING_DATA__": build._script_json(data)}
+    return re.sub("|".join(fill), lambda m: fill[m[0]], LISTING_PLAYER.read_text(encoding="utf-8"))
+
+
+def listing_pdf(html: str, chrome: str) -> bytes:
+    """A listing file (listing_html) as a PDF, its print view (#print) printed as deck_pdf prints a deck.
+    RuntimeError or OSError: Chrome failed."""
+    with tempfile.TemporaryDirectory(prefix="bluedoc-listing-") as d:
+        f = Path(d) / "listing.html"
+        f.write_text(html, encoding="utf-8")
+        with HeadlessChrome(chrome) as ch:
+            return ch.print_pdf(f.as_uri() + "#print")
+
 
 
 # ---------- website live pages: one proxy per dev server ----------
@@ -1973,21 +2261,26 @@ class HeadlessChrome:
         return base64.b64decode(got["data"])
 
     def capture_png(self, url: str, width: int, height: int, scale: int = 1, *, dark: bool = False,
-                    locale: str | None = None, settle: float = 0) -> bytes:
+                    locale: str | None = None, settle: float = 0, name: str | None = None) -> bytes:
         """A PNG of the page at url in a width × height CSS px viewport at scale device pixels per px (an opaque RGB
-        image of width·scale × height·scale): prefers-color-scheme dark or light, the locale (navigator.language,
-        Intl and Accept-Language) when given, after the load, the fonts and settle seconds. capture.py's web target."""
+        image of width·scale × height·scale, on white where the page draws nothing): prefers-color-scheme dark or
+        light, the locale (navigator.language, Intl and Accept-Language) when given, window.name set to name before the
+        page's scripts run (a storelisting shot reads 'bd-shot <JSON>'), after the load, the fonts and settle seconds.
+        capture.py's web target and the listing export."""
         target = self.call("Target.createTarget", {"url": "about:blank"})["targetId"]
         s = self.call("Target.attachToTarget", {"targetId": target, "flatten": True})["sessionId"]
         try:
             self.call("Runtime.enable", None, s)
             self.call("Page.enable", None, s)
             self.call("Emulation.setDeviceMetricsOverride", {"width": width, "height": height, "deviceScaleFactor": scale, "mobile": False}, s)
+            self.call("Emulation.setDefaultBackgroundColorOverride", {"color": {"r": 255, "g": 255, "b": 255, "a": 1}}, s)
             self.call("Emulation.setEmulatedMedia", {"features": [{"name": "prefers-color-scheme", "value": "dark" if dark else "light"}]}, s)
             if locale:
                 self.call("Emulation.setLocaleOverride", {"locale": locale}, s)
                 ua = self.call("Browser.getVersion").get("userAgent", "")
                 self.call("Emulation.setUserAgentOverride", {"userAgent": ua, "acceptLanguage": locale}, s)
+            if name is not None:
+                self.call("Page.addScriptToEvaluateOnNewDocument", {"source": f"window.name = {json.dumps(name)};"}, s)
             self.call("Page.navigate", {"url": url}, s)
             deadline = time.monotonic() + 60
             while not self.eval(s, "document.readyState === 'complete' && location.href !== 'about:blank'"):
@@ -1995,6 +2288,7 @@ class HeadlessChrome:
                     raise RuntimeError(f"{url} did not load in 60 s")
                 time.sleep(0.1)
             self.eval(s, "document.fonts ? document.fonts.ready.then(() => true) : true")
+            self.eval(s, "Promise.all([...document.images].map(i => i.complete ? 0 : new Promise(r => { i.onload = i.onerror = r; }))).then(() => true)")
             time.sleep(max(0.0, settle))
             got = self.call("Page.captureScreenshot", {"format": "png", "captureBeyondViewport": False}, s)
         finally:
@@ -2647,6 +2941,65 @@ def make_handler(port: int, default_to: str):
             plain = re.sub(r'[^A-Za-z0-9._ -]', "_", name)
             return self.send(200, body, ctype, headers={"Content-Disposition": f"attachment; filename=\"{plain}\"; filename*=UTF-8''{quote(name)}"})
 
+        def listing_export(self, q: dict) -> None:
+            """GET /__bluedoc/listing?path=<doc URL path>[&format=zip|html|pdf|print][&rev=R][&platform=P][&locale=L]:
+            the storelisting exported, as the attachment <stem>[-<platform>][-<locale>].<format>; print: the HTML file
+            shown in the tab (the PDF without Chrome). A read, no key; the ZIP is made in a temp file and streamed."""
+            fmt = q.get("format") or "zip"
+            if fmt not in LISTING_FORMATS:
+                return self.json(400, {"error": f"format: one of {', '.join(LISTING_FORMATS)}"})
+            doc_path = doc_for_url(q.get("path", ""))
+            if not doc_path:
+                return self.json(404, {"error": "not a doc under a registered folder"})
+            try:
+                doc = json.loads(doc_path.read_text(encoding="utf-8"))
+                if not isinstance(doc, dict):
+                    raise ListingError("the doc is not a JSON object")
+                listing_doc(doc, doc_path, q.get("rev") or None)   # the type and the revision, before Chrome
+            except (OSError, ValueError) as e:   # ListingError is a ValueError
+                return self.json(400, {"error": str(e)})
+            chrome = find_chrome() if fmt in ("zip", "pdf") else None
+            if fmt in ("zip", "pdf") and not chrome:
+                return self.json(501, {"error": LISTING_NEEDS})
+            part = [x for x in (q.get("platform"), q.get("locale")) if x]
+            name = "-".join([build.doc_stem(doc_path), *part]) + f".{'html' if fmt == 'print' else fmt}"
+            plain = re.sub(r'[^A-Za-z0-9._ -]', "_", name)
+            headers = {"Content-Disposition": f"attachment; filename=\"{plain}\"; filename*=UTF-8''{quote(name)}",
+                       "X-Bluedoc-Warnings": json.dumps(listing_warnings(doc, "pdf" if fmt == "print" else fmt))}
+            if fmt == "zip":
+                with tempfile.TemporaryDirectory(prefix="bluedoc-listing-zip-") as d:
+                    out = Path(d) / name
+                    try:
+                        listing_zip(doc, doc_path, out, chrome, rev=q.get("rev") or None, platform=q.get("platform") or None,
+                                    locale=q.get("locale") or None, roots=load_roots())
+                    except ListingError as e:
+                        return self.json(400, {"error": str(e)})
+                    except (OSError, RuntimeError) as e:
+                        return self.json(500, {"error": f"Chrome couldn't render the listing: {e}"})
+                    self.send_response(200)
+                    for k, v in {"Content-Type": "application/zip", "Content-Length": str(out.stat().st_size),
+                                 "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff", **headers}.items():
+                        self.send_header(k, v)
+                    self.end_headers()
+                    if self.command != "HEAD":
+                        with open(out, "rb") as f:
+                            shutil.copyfileobj(f, self.wfile, 1 << 20)
+                    return
+            if q.get("platform") or q.get("locale"):
+                return self.json(400, {"error": "platform and locale narrow the ZIP only"})
+            try:
+                html = listing_html(doc, doc_path, q.get("rev") or None, load_roots())
+            except (OSError, ValueError) as e:
+                return self.json(400, {"error": str(e)})
+            if fmt == "print":
+                return self.send(200, html, headers={"Content-Security-Policy": DECK_PRINT_CSP})
+            if fmt == "pdf":
+                try:
+                    return self.send(200, listing_pdf(html, chrome), "application/pdf", headers=headers)
+                except (OSError, RuntimeError) as e:
+                    return self.json(500, {"error": f"Chrome couldn't print the listing: {e}"})
+            return self.send(200, html, headers=headers)
+
         def send_media(self, f: Path) -> None:
             # one byte range at most: enough for <video> seeking (Safari won't play video without it)
             data, ctype = f.read_bytes(), build.MEDIA_TYPES[f.suffix.lower()]
@@ -2774,6 +3127,8 @@ def make_handler(port: int, default_to: str):
                 return self.page_key()
             if u.path == "/__bluedoc/url":
                 return self.json(200, {"url": url_for(Path(q.get("doc", "")))})
+            if u.path == "/__bluedoc/listing":
+                return self.listing_export(q)
             if u.path == "/__bluedoc/deck":
                 return self.deck(q)
             if u.path == "/__bluedoc/state":

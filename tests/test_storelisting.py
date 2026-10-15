@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import copy
 import json
+import re
 import shutil
 import struct
 import subprocess
@@ -137,9 +138,13 @@ class Listing(unittest.TestCase):
         return report(doc or self.doc, self.path).errors
 
     def test_the_example_builds_clean(self) -> None:
+        """No errors; its warnings are the store's recommendations, dated sets and es-ES fallbacks (store_checks)."""
         r = self.tmp.run("build.py", self.path, "--check")
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertNotIn("WARN", r.stdout + r.stderr)
+        self.assertNotIn("ERROR", r.stdout + r.stderr)
+        found = listing.store_checks(self.doc, self.path)
+        self.assertEqual([f for f in found if f["level"] == "err"], [])
+        self.assertTrue(all(f["level"] == "warn" for f in found))
         self.assertEqual(build.check_contract(self.doc), [])
 
     def test_the_contract_wants_one_listing_and_a_board_of_shots(self) -> None:
@@ -299,7 +304,9 @@ class Commands(unittest.TestCase):
         r = self.tmp.run("build.py", out, "--check")
         self.assertNotEqual(r.returncode, 0)
         errs = [l for l in (r.stdout + r.stderr).splitlines() if l.startswith("ERROR")]
-        self.assertTrue(errs and all("<<" in l or "placeholder" in l.lower() for l in errs), errs)
+        # placeholders, and the store rules a one-shot skeleton can't meet yet (each naming its source)
+        self.assertTrue(errs and all("<<" in l or "placeholder" in l.lower() or re.search(r"\([A-Z]+-[A-Z0-9. ]+\)$", l) for l in errs), errs)
+        self.assertTrue(any("<<" in l for l in errs))
 
     def test_patch_field_sets_prints_and_deletes(self) -> None:
         key = "field:es-ES/play/short"
@@ -349,9 +356,14 @@ class Served(unittest.TestCase):
         self.assertEqual(d["type"], "storelisting")
         doc = load_json(self.docs / f"{STEM}.bluedoc.json")
         lb, rules = listing.listing_of(doc), listing.load_rules()
-        want = {p: [{"row": r["row"], "sets": [[s["set"], len(s["shots"])] for s in r["sets"]]}
+        found = listing.store_checks(doc, self.docs / f"{STEM}.bluedoc.json", rules)
+        want = {p: [[r, []] for r in ("text", "shared")] + [[r["row"], [[s["set"], len(s["shots"])] for s in r["sets"]]]
                     for r in listing.sections(lb, listing.shots_of(doc), rules, p, lb["locales"][0])] for p in lb["platforms"]}
-        self.assertEqual(d["card"], {"platforms": want})
+        card = d["card"]
+        self.assertEqual({p: [[r["row"], r["sets"]] for r in rows] for p, rows in card["platforms"].items()}, want)
+        self.assertTrue(all(r["level"] in ("ok", "warn", "err") for rows in card["platforms"].values() for r in rows))
+        self.assertEqual(card["storeErrors"], sum(f["level"] == "err" for f in found))
+        self.assertEqual(d["errors"], 0)
 
     def test_a_shot_is_served_in_the_shot_kit_with_its_data(self) -> None:
         base = self.server.url_for(self.docs / f"{STEM}.bluedoc.json").rsplit("/", 1)[0]

@@ -41,7 +41,6 @@ import subprocess
 import sys
 import tempfile
 import time
-import zlib
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -68,16 +67,6 @@ def say(kind: str, shot: str, target: str, locale: str, what: str) -> None:
     print(f"{kind:<5} {shot:<12} {target:<14} {locale:<6} {what}", flush=True)
 
 
-def png_rgb(w: int, h: int, rgb: bytes) -> bytes:
-    """A PNG (colour type 2, 8 bits, filter 0 on every row) of w × h RGB pixels."""
-    def chunk(kind: bytes, data: bytes) -> bytes:
-        return struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data))
-    stride = w * 3
-    rows = b"".join(b"\0" + rgb[y * stride:(y + 1) * stride] for y in range(h))
-    return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 2, 0, 0, 0))
-            + chunk(b"IDAT", zlib.compress(rows, 6)) + chunk(b"IEND", b""))
-
-
 def raw_screencap_png(data: bytes) -> bytes:
     """`adb exec-out screencap` (no -p): a 12- or 16-byte header (w, h, format[, colour space]) then RGBA_8888 rows, as
     an RGB PNG. The -p PNG carries an alpha channel (colour type 6) the stores refuse; this one has none. Fail when a
@@ -93,7 +82,7 @@ def raw_screencap_png(data: bytes) -> bytes:
         raise Fail("the screen has transparent pixels")
     rgb = bytearray(w * h * 3)
     rgb[0::3], rgb[1::3], rgb[2::3] = px[0::4], px[1::4], px[2::4]
-    return png_rgb(w, h, bytes(rgb))
+    return listing.png_rgb(w, h, bytes(rgb))
 
 
 class Runner:

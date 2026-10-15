@@ -17,7 +17,7 @@
   --bp-navy-0: #04101f; --bp-navy-1: #071a33; --bp-navy-2: #0b2a4f; --bp-cyan: #5fd4ff; --bp-ice: #d6e9ff; --bp-dim: #6f93bd;
   --bp-amber: #ffc46b; --bp-green: #6fe3a1; --bp-red: #ff7a85; --bp-violet: #b9a2ff;
   --bd-folder: oklch(70% 0.14 248); --bd-folder-back: oklch(56% 0.16 252);
-  --bd-t-docs: oklch(64% 0.16 252); --bd-t-review: oklch(68% 0.13 172); --bd-t-plan: oklch(68% 0.15 300); --bd-t-design: oklch(70% 0.15 20); --bd-t-presentation: oklch(76% 0.16 128); --bd-t-website: oklch(74% 0.14 60); --bd-t-other: oklch(66% 0.035 260);
+  --bd-t-docs: oklch(64% 0.16 252); --bd-t-review: oklch(68% 0.13 172); --bd-t-plan: oklch(68% 0.15 300); --bd-t-design: oklch(70% 0.15 20); --bd-t-presentation: oklch(76% 0.16 128); --bd-t-website: oklch(74% 0.14 60); --bd-t-storelisting: oklch(70% 0.15 200); --bd-t-other: oklch(66% 0.035 260);
   --bd-f-blocker: var(--color-hz-danger); --bd-f-major: var(--color-hz-warning); --bd-f-minor: var(--color-hz-info); --bd-f-nit: var(--color-hz-fg-subtle);
   --bd-top-h: 56px;
 }
@@ -209,8 +209,8 @@ body { font-family: var(--font-hz-sans, Inter, system-ui, sans-serif); -webkit-f
 .bd-stack { display: flex; height: 10px; gap: 3px; margin-top: 14px; border-radius: 6px; overflow: hidden; }
 .bd-stack i { display: block; min-width: 4px; }
 .bd-dot { display: inline-block; flex: none; width: 8px; height: 8px; border-radius: 50%; }
-.t-docs { --t: var(--bd-t-docs); } .t-review { --t: var(--bd-t-review); } .t-plan { --t: var(--bd-t-plan); } .t-design { --t: var(--bd-t-design); } .t-presentation { --t: var(--bd-t-presentation); } .t-website { --t: var(--bd-t-website); } .t-other { --t: var(--bd-t-other); }
-.bd-dot.t-docs, .bd-dot.t-review, .bd-dot.t-plan, .bd-dot.t-design, .bd-dot.t-presentation, .bd-dot.t-website, .bd-dot.t-other, .bd-stack i { background: var(--t); }
+.t-docs { --t: var(--bd-t-docs); } .t-review { --t: var(--bd-t-review); } .t-plan { --t: var(--bd-t-plan); } .t-design { --t: var(--bd-t-design); } .t-presentation { --t: var(--bd-t-presentation); } .t-website { --t: var(--bd-t-website); } .t-storelisting { --t: var(--bd-t-storelisting); } .t-other { --t: var(--bd-t-other); }
+.bd-dot.t-docs, .bd-dot.t-review, .bd-dot.t-plan, .bd-dot.t-design, .bd-dot.t-presentation, .bd-dot.t-website, .bd-dot.t-storelisting, .bd-dot.t-other, .bd-stack i { background: var(--t); }
 .bd-finds { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--color-hz-line-soft); font-size: 12px; color: var(--color-hz-fg-muted); }
 .bd-finds span { display: inline-flex; align-items: center; gap: 6px; }
 .bd-finds b { font: 600 12px var(--font-hz-mono); color: var(--color-hz-fg); }
@@ -262,7 +262,7 @@ body { font-family: var(--font-hz-sans, Inter, system-ui, sans-serif); -webkit-f
 .bd-pill.type { right: 12px; }
 .bd-pill.t-review { --pb: #0b3a2a; --pc: #74e6ab; } .bd-pill.t-plan { --pb: #2d2350; --pc: #c3a6ff; }
 .bd-pill.t-docs { --pb: #0b2f52; --pc: #5fd4ff; } .bd-pill.t-other { --pb: #2a2f38; --pc: #c9d2de; } .bd-pill.t-design { --pb: #4a1f2a; --pc: #ffa8b8; }
-.bd-pill.t-presentation { --pb: #273d10; --pc: #bfe97a; } .bd-pill.t-website { --pb: #47290c; --pc: #ffbe85; }
+.bd-pill.t-presentation { --pb: #273d10; --pc: #bfe97a; } .bd-pill.t-website { --pb: #47290c; --pc: #ffbe85; } .bd-pill.t-storelisting { --pb: #0b3a44; --pc: #7fe3f0; }
 .bd-pill.warn { --pb: #5b3b00; --pc: #ffc35a; } .bd-pill.info { --pb: #0b2f52; --pc: #5fd4ff; }
 .bd-pill.risk { --pb: #4d1620; --pc: #ff8a7a; } .bd-pill.ok { --pb: #0b3a2a; --pc: #74e6ab; }
 .bd-el { position: absolute; inset: var(--pt) 8% 8%; display: flex; flex-direction: column; justify-content: center; min-width: 0; }
@@ -324,6 +324,16 @@ body { font-family: var(--font-hz-sans, Inter, system-ui, sans-serif); -webkit-f
 .bd-art .dsn .lk { fill: none; stroke: var(--bp-ice); stroke-opacity: .45; stroke-width: 1px; }
 .bd-art .dsn g.abs { filter: drop-shadow(0 0 5px rgba(95, 212, 255, .28)); }
 .bd-art .dsn .lv { fill: var(--bp-green); }
+/* storelisting: a column per platform page (Google Play, App Store), a dot per section coloured by its worst check */
+.bd-lsg { flex-direction: row; align-items: stretch; justify-content: center; gap: 6cqw; bottom: calc(8% + 6cqw); }
+.bd-lsg .pc { display: flex; flex-direction: column; gap: 1.6cqw; min-width: 0; flex: 1 1 0; max-width: 38cqw; padding: 3cqw 3.4cqw; border-radius: 2.6cqw;
+  background: rgba(16, 52, 96, .78); box-shadow: inset 0 0 0 1px rgba(214, 233, 255, .55), 0 0 10px rgba(95, 212, 255, .2); }
+.bd-lsg .pc b { font: 600 4.2cqw/1.2 var(--font-hz-sans); color: var(--bp-ice); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bd-lsg .rw { display: flex; align-items: center; gap: 2cqw; font: 500 3.3cqw/1.2 var(--font-hz-mono); color: var(--bp-dim); white-space: nowrap; overflow: hidden; }
+.bd-lsg .rw i { flex: none; width: 2.6cqw; height: 2.6cqw; border-radius: 50%; background: var(--bp-green); box-shadow: 0 0 6px var(--bp-green); }
+.bd-lsg .rw.warn i { background: var(--bp-amber); box-shadow: 0 0 6px var(--bp-amber); }
+.bd-lsg .rw.err i { background: var(--bp-red); box-shadow: 0 0 6px var(--bp-red); }
+.bd-lsg .rw.err { color: var(--bp-red); }
 /* docs with a hero, other docs, and every doc whose type has no data yet: an icon and one big stat */
 .bd-stat { flex-direction: row; align-items: center; justify-content: flex-start; gap: 7cqw; left: 11%; }
 .bd-stat .ic { flex: none; width: 19.5cqw; height: 19.5cqw; color: #5fd4ff; }
@@ -501,10 +511,14 @@ const plural = (n, one, many) => `${n} ${n === 1 ? one : (many || one + 's')}`;
 const PresentationIcon = ({ size = 16, strokeWidth = 1.6, ...rest }) => e('svg', { xmlns: 'http://www.w3.org/2000/svg', width: size, height: size, viewBox: '0 0 24 24',
   fill: 'none', stroke: 'currentColor', strokeWidth, strokeLinecap: 'round', strokeLinejoin: 'round', className: 'lucide lucide-presentation', 'aria-hidden': true, focusable: 'false', ...rest },
   e('path', { d: 'M2 3h20' }), e('path', { d: 'M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3' }), e('path', { d: 'm7 21 5-5 5 5' }));
+// Store listings' icon: lucide's `smartphone` glyph, drawn as HorizonUI's Icons draw theirs
+const ListingIcon = ({ size = 16, strokeWidth = 1.6, ...rest }) => e('svg', { xmlns: 'http://www.w3.org/2000/svg', width: size, height: size, viewBox: '0 0 24 24',
+  fill: 'none', stroke: 'currentColor', strokeWidth, strokeLinecap: 'round', strokeLinejoin: 'round', className: 'lucide lucide-smartphone', 'aria-hidden': true, focusable: 'false', ...rest },
+  e('rect', { x: 5, y: 2, width: 14, height: 20, rx: 2, ry: 2 }), e('path', { d: 'M12 18h.01' }));
 const TYPES = [['docs', 'Docs', Icons.FileText], ['review', 'Reviews', Icons.GitPullRequest], ['plan', 'Plans', Icons.ListChecks], ['design', 'Designs', Icons.Palette],
-  ['presentation', 'Presentations', PresentationIcon], ['website', 'Websites', Icons.Globe], ['other', 'Other', Icons.StickyNote]];
-const TYPE_ONE = { docs: 'Docs', review: 'Review', plan: 'Plan', design: 'Design', presentation: 'Presentation', website: 'Website', other: 'Other' };
-const APPROVABLE = new Set(['plan', 'design', 'presentation', 'website']);   // types the reader approves as a whole (Approve plan / design / presentation / website)
+  ['presentation', 'Presentations', PresentationIcon], ['website', 'Websites', Icons.Globe], ['storelisting', 'Store listings', ListingIcon], ['other', 'Other', Icons.StickyNote]];
+const TYPE_ONE = { docs: 'Docs', review: 'Review', plan: 'Plan', design: 'Design', presentation: 'Presentation', website: 'Website', storelisting: 'Store listing', other: 'Other' };
+const APPROVABLE = new Set(['plan', 'design', 'presentation', 'website', 'storelisting']);   // types the reader approves as a whole (Approve plan / design / presentation / website / listing)
 const STATUSES = [['needs', 'Needs you', Icons.Flag], ['awaiting', 'Awaiting approval', Icons.Clipboard], ['waiting', 'Waiting on agent', Icons.Clock],
   ['approved', 'Approved', Icons.Success], ['errors', "Doesn't build", Icons.Error]];
 const BOARD = [['needs', 'Needs you', 'warning'], ['waiting', 'Waiting on agent', 'ai'], ['progress', 'In progress', 'running'], ['done', 'Done', 'success'], ['errors', "Doesn't build", 'error']];
@@ -774,6 +788,16 @@ function SiteEl({ c }) {
   return e(F, null, e('div', { className: 'bd-drw capd' }, e(SiteArt, { c })),
     e('div', { className: 'bd-el-cap' }, [plural(c.count, 'page'), plural(c.sections, 'section'), c.live > 0 && `${c.live} live`].filter(Boolean).join(' · ')));
 }
+// storelisting: a column per platform page (serve.py card()'s platforms), a row per section (text, Shared, each device
+// row) with a dot for its worst check (ok, warn, err); the caption counts the shots and the store-rule errors
+const PLATFORM_WORD = { play: 'Google Play', appstore: 'App Store' };
+const ROW_WORD = { text: 'Text', shared: 'Shared' };
+function ListingEl({ c }) {
+  const plats = Object.entries(c.platforms), shots = plats.reduce((n, [, rows]) => n + rows.reduce((m, r) => m + r.sets.reduce((k, s) => k + (s[1] || 0), 0), 0), 0);
+  return e(F, null, e('div', { className: 'bd-el bd-lsg capd' }, plats.map(([p, rows]) => e('div', { key: p, className: 'pc' }, e('b', null, PLATFORM_WORD[p] || p),
+    rows.slice(0, 7).map(r => e('span', { key: r.row, className: 'rw ' + r.level }, e('i'), ROW_WORD[r.row] || r.row[0].toUpperCase() + r.row.slice(1)))))),
+    e('div', { className: 'bd-el-cap' }, [plural(plats.length, 'platform'), plural(shots, 'shot'), c.storeErrors > 0 && plural(c.storeErrors, 'store error')].filter(Boolean).join(' · ')));
+}
 const SIZES = ['blocker', 'major', 'minor', 'nit'];
 function ReviewEl({ c }) {
   const f = c.findings || {}, add = `+${c.add || 0}`, del = `−${c.del || 0}`, dots = [];
@@ -813,6 +837,7 @@ function heroElement(d) {
   if (c.steps) return e(PlanEl, { c });
   if (c.slides && c.slides.length) return e(DeckEl, { c });
   if (c.pages && c.pages.length) return e(SiteEl, { c });
+  if (c.platforms && Object.keys(c.platforms).length) return e(ListingEl, { c });
   if (c.artboards && c.artboards.length) return e(DesignEl, { c });
   if ('add' in c) return e(ReviewEl, { c });
   if (c.hero) return e(StatEl, { icon: c.hero.icon, value: c.hero.value, label: c.hero.label });

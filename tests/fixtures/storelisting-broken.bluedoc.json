@@ -1,0 +1,67 @@
+{
+  "id": "storelisting-broken",
+  "title": "A listing that breaks each store rule once",
+  "meta": { "org": "Acme", "kind": "Store listing", "type": "storelisting", "rev": "A", "date": "2026-10-15" },
+  "tldr": "test_listing_export.py's fixture: Apple keywords at 101 bytes, an alpha PNG upload, a framed Wear OS shot, 9 Play phone shots, no iPad set and 4 product page optimizations. Each fails its check once.",
+  "sections": [
+    {
+      "id": "listing",
+      "title": "Listing",
+      "blocks": [
+        {
+          "type": "listing",
+          "id": "main",
+          "app": { "name": "Acme Pulse", "company": "Acme" },
+          "platforms": ["play", "appstore"],
+          "rows": ["watch", "phone", "tablet"],
+          "locales": ["en-US"],
+          "defaultLocale": "en-US",
+          "ipad": true,
+          "icon": "app-icon",
+          "text": {
+            "en-US": {
+              "play": {
+                "name": "Acme Pulse: Heart and Sleep",
+                "short": "Your heart rate and sleep, day by day.",
+                "full": "Acme Pulse shows your heart rate and sleep side by side, day by day."
+              },
+              "appstore": {
+                "name": "Acme Pulse",
+                "subtitle": "Heart rate and sleep",
+                "description": "Acme Pulse shows your heart rate and sleep side by side, day by day.",
+                "keywords": "heart,rate,sleep,tracker,pulse,resting,cardio,wellness,recovery,stress,breathing,calm,night,rested123"
+              }
+            }
+          },
+          "variants": [
+            { "id": "ppo-a", "platform": "appstore", "kind": "ppo" },
+            { "id": "ppo-b", "platform": "appstore", "kind": "ppo" },
+            { "id": "ppo-c", "platform": "appstore", "kind": "ppo" },
+            { "id": "ppo-d", "platform": "appstore", "kind": "ppo" }
+          ]
+        },
+        {
+          "type": "board",
+          "id": "shots",
+          "targets": ["listing"],
+          "artboards": [
+            { "id": "p1", "title": "Phone 1", "device": "shot", "fidelity": "hifi", "sets": ["play/phone", "appstore/iphone"] },
+            { "id": "p2", "title": "Phone 2", "device": "shot", "fidelity": "hifi", "sets": ["play/phone"] },
+            { "id": "p3", "title": "Phone 3", "device": "shot", "fidelity": "hifi", "sets": ["play/phone"] },
+            { "id": "p4", "title": "Phone 4", "device": "shot", "fidelity": "hifi", "sets": ["play/phone"] },
+            { "id": "p5", "title": "Phone 5", "device": "shot", "fidelity": "hifi", "sets": ["play/phone"] },
+            { "id": "p6", "title": "Phone 6", "device": "shot", "fidelity": "hifi", "sets": ["play/phone"] },
+            { "id": "p7", "title": "Phone 7", "device": "shot", "fidelity": "hifi", "sets": ["play/phone"] },
+            { "id": "p8", "title": "Phone 8", "device": "shot", "fidelity": "hifi", "sets": ["play/phone"] },
+            { "id": "p9", "title": "Phone 9", "device": "shot", "fidelity": "hifi", "sets": ["play/phone"] },
+            { "id": "alpha", "title": "Alpha upload", "device": "shot", "fidelity": "hifi", "sets": ["appstore/iphone-69"], "locale": "en-US",
+              "src": "storelisting-broken.listing/appstore/en-US/iphone-69/01.png" },
+            { "id": "wear", "title": "Wear, framed", "device": "shot", "fidelity": "hifi", "sets": ["play/wear", "appstore/watch"] },
+            { "id": "feature", "title": "Feature graphic", "device": "asset", "asset": "play/feature", "fidelity": "hifi" },
+            { "id": "app-icon", "title": "App icon", "device": "icons", "fidelity": "hifi" }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1872,6 +1872,7 @@ html.bd-presenting .bp-toast { z-index: 71; bottom: 84px; }
 .bd-lst-tag.mock { color: var(--warn-fg); background: var(--warn-tint); }
 .bd-lst-tag.stale, .bd-lst-tag.miss { color: var(--risk-fg); background: var(--risk-tint); }
 .bd-lst-tag.mt { color: #fff; background: oklch(55% 0.2 300); }
+.bd-lst-tag.mt.acc { color: var(--fg-muted); background: transparent; box-shadow: inset 0 0 0 1px oklch(55% 0.2 300); }
 .bd-lst-tag.cap, .bd-lst-tag.up { color: var(--ok-fg); background: var(--ok-tint); }
 .bd-lst-empty { display: grid; place-items: center; min-height: 80px; padding: 10px 16px; border-radius: 8px; border: 1.5px dashed var(--line-strong); font-size: 12px; color: var(--fg-subtle); }
 /* uploads (M2): a set's Drop PNG slot, its draft tiles until the agent records them, a shot's capture before a re-shoot */
@@ -1916,6 +1917,9 @@ html.bd-presenting .bp-toast { z-index: 71; bottom: 84px; }
 .bd-lfield .v.fb { color: var(--fg-subtle); font-style: italic; }
 .bd-lfield .v.none { color: var(--fg-subtle); }
 .bd-lfield .note { font-size: 11.5px; color: var(--warn-fg); }
+.bd-lfield .bd-lst-mta { display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: var(--fg-subtle); }
+.bd-lfield .bd-lst-mta .bp-btn { height: 26px; padding: 0 9px; font-size: 12px; }
+.bd-lst-tb .bd-exp { margin-left: 2px; }
 .bd-lfield.cap { grid-template-columns: minmax(0, 1fr); }
 .bd-lfield.cap .v { max-height: none; }
 /* Style, Brand and Checks in the right panel */
@@ -1990,6 +1994,11 @@ html.bd-presenting .bp-toast { z-index: 71; bottom: 84px; }
 .bd-lst-checks li { display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: 6px; font-size: 12.5px; line-height: 1.4; }
 .bd-lst-checks li .bd-ic { width: 14px; height: 14px; margin-top: 2px; }
 .bd-lst-checks li.err { color: var(--risk-fg); } .bd-lst-checks li.warn { color: var(--warn-fg); } .bd-lst-checks li.ok { color: var(--ok-fg); }
+.bd-lst-checks li .t { display: grid; gap: 1px; min-width: 0; }
+.bd-lst-checks li .t small { font-size: 11.5px; color: var(--fg-subtle); }
+.bd-lst-checks li button.bd-lst-ui { all: unset; cursor: pointer; text-align: left; color: inherit; border-radius: 4px; }
+.bd-lst-checks li button.bd-lst-ui:hover { text-decoration: underline; text-underline-offset: 2px; }
+.bd-lst-checks li button.bd-lst-ui:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .bd-lst-pair { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 5px 6px; border-radius: 9px; font-size: 12.5px; }
 .bd-lst-pair.low { background: color-mix(in oklch, var(--risk-tint, var(--warn-tint)) 70%, transparent); }
 .bd-lst-pair .aa { display: grid; place-items: center; height: 26px; border-radius: 6px; font: 700 13px var(--sans); box-shadow: inset 0 0 0 1px oklch(0% 0 0 / .12); }
@@ -2054,6 +2063,11 @@ function h(tag, attrs, ...kids) {
   }
   for (const c of kids.flat(Infinity)) if (c != null && c !== false) e.append(c.nodeType ? c : document.createTextNode(c));
   return e;
+}
+// el's children as h() takes them: a `cond && h(…)` that is false or null adds nothing (replaceChildren would write it as text)
+function setKids(el, ...kids) {
+  el.replaceChildren(...kids.flat(Infinity).filter(c => c != null && c !== false));
+  return el;
 }
 function sv(tag, attrs, ...kids) {
   const e = document.createElementNS(NS, tag);
@@ -2420,12 +2434,12 @@ function docTypeOf(m) {
 // plans, designs, presentations and websites are approvable: Approve plan / design / presentation / website, Request
 // changes with the decision picks. A presentation is a design page whose board holds slides only, a website one whose
 // board holds web pages only: IS_DESIGN covers all three. A storelisting (IS_LISTING) has the same full-bleed page with
-// its panels, but shows its board as platform pages (renderListing); it isn't approvable yet
+// its panels, but shows its board as platform pages (renderListing); Approve listing waits for its drafts (L.approveBlocks)
 const DOC_TYPE = docTypeOf(meta), IS_PLAN = DOC_TYPE === 'plan', IS_DECK = DOC_TYPE === 'presentation', IS_SITE = DOC_TYPE === 'website';
 const IS_LISTING = DOC_TYPE === 'storelisting';
 const IS_DESIGN = DOC_TYPE === 'design' || IS_DECK || IS_SITE || IS_LISTING;
-const APPROVABLE = IS_PLAN || (IS_DESIGN && !IS_LISTING);
-const AP_NOUN = IS_DECK ? 'presentation' : IS_SITE ? 'website' : IS_DESIGN ? 'design' : 'plan';
+const APPROVABLE = IS_PLAN || IS_DESIGN;
+const AP_NOUN = IS_DECK ? 'presentation' : IS_SITE ? 'website' : IS_LISTING ? 'listing' : IS_DESIGN ? 'design' : 'plan';
 const AP_TITLE = AP_NOUN[0].toUpperCase() + AP_NOUN.slice(1);
 const SCREEN = IS_DECK ? 'slide' : IS_SITE ? 'page' : IS_LISTING ? 'shot' : 'screen';   // what the board's artboards are called on this page
 let BOARD = null;   // a design doc's board (renderBoard), once drawn
@@ -4917,6 +4931,50 @@ async function iconExport(a, btn) {
 }
 /* ---- end icon export ---- */
 
+// Export to…: a menu button (WAI-ARIA menu button) of exports [[format, icon, label, description]], run(format) on a
+// pick. A click, Enter, Space or ↓ opens it on its first item, ↑ on its last; ↑ ↓ Home End move, Enter or Space picks,
+// Esc closes it back to the button, Tab or a click elsewhere closes it. up: it opens above the button
+function exportMenu(exports, run, title, up) {
+  const items = exports.map(([f, i, l, d]) => h('button', { type: 'button', role: 'menuitem', tabindex: '-1', 'data-format': f, onclick: () => { close(true); run(f); } },
+    ic(i), h('span', { class: 't' }, h('b', {}, l), h('span', {}, d))));
+  const menu = h('div', { class: 'bd-expm' + (up ? ' up' : ''), role: 'menu', 'aria-label': 'Export to', hidden: true }, items);
+  const btn = h('button', { type: 'button', class: 'bd-tbtn bd-expb', 'aria-haspopup': 'menu', 'aria-expanded': 'false', title,
+    onclick: () => menu.hidden ? open(0) : close(true) }, ic('download'), h('span', {}, 'Export to…'), ic('down', 'cv'));
+  const wrap = h('div', { class: 'bd-exp' }, btn, menu);
+  // a press outside, or focus leaving the page (a click in a screen's frame), closes it
+  const away = e => { if (e.type === 'blur' || !wrap.contains(e.target)) close(false); };
+  function open(k) {
+    menu.hidden = false; btn.setAttribute('aria-expanded', 'true');
+    addEventListener('pointerdown', away, true); addEventListener('blur', away);
+    items.at(k).focus();
+  }
+  function close(refocus) {
+    if (menu.hidden) return;
+    menu.hidden = true; btn.setAttribute('aria-expanded', 'false');
+    removeEventListener('pointerdown', away, true); removeEventListener('blur', away);
+    if (refocus) btn.focus();
+  }
+  btn.addEventListener('keydown', e => { if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); e.stopPropagation(); open(e.key === 'ArrowDown' ? 0 : -1); } });
+  menu.addEventListener('keydown', e => {
+    e.stopPropagation();   // the board's and Present's keys wait until the menu is closed
+    const k = items.indexOf(document.activeElement), n = items.length;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') items[(k + (e.key === 'ArrowDown' ? 1 : n - 1)) % n].focus();
+    else if (e.key === 'Home' || e.key === 'End') items.at(e.key === 'Home' ? 0 : -1).focus();
+    else if (e.key === 'Escape') close(true);
+    else if (e.key === 'Tab') { close(false); return; }
+    else return;
+    e.preventDefault();
+  });
+  return wrap;
+}
+// an export the server sent: saved as a download named name
+async function saveBlob(r, name) {
+  const url = URL.createObjectURL(await r.blob());
+  const link = h('a', { href: url, download: name, style: 'display:none' });
+  document.body.append(link); link.click(); link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
+
 function renderBoard(b) {
   const abs = boardAbs(b), themes = (Array.isArray(b.themes) ? b.themes : []).filter(t => t && typeof t.id === 'string');
   const B = BOARD = { b, abs, k: 1, tx: 0, ty: 0, mode: 'view', sel: null, sketch: false, reduced: REDUCE, paused: false, theme: null, touched: false, lp: false,
@@ -5751,51 +5809,14 @@ function renderBoard(b) {
       const r = await fetch(deckUrl(format), { cache: 'no-store' });
       if (r.status === 501 && format === 'pdf') { pdfByPrint = true; printDeck(); return; }
       if (!r.ok) { const j = await r.json().catch(() => null); toast(`Couldn't export the deck: ${(j && j.error) || r.status}`); return; }
-      const url = URL.createObjectURL(await r.blob()), stem = decodeURIComponent(location.pathname.split('/').pop() || 'deck').replace(/\.(bluedoc|blueprint)\.json$/i, '');
-      const link = h('a', { href: url, download: `${stem}.${format}`, style: 'display:none' });
-      document.body.append(link); link.click(); link.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 60000);
+      const stem = decodeURIComponent(location.pathname.split('/').pop() || 'deck').replace(/\.(bluedoc|blueprint)\.json$/i, '');
+      await saveBlob(r, `${stem}.${format}`);
     } catch { toast('Couldn\'t export the deck: the server didn\'t answer'); }
     finally { if (format === 'pdf') pdfBusy = false; }
   }
-  // the menu button (WAI-ARIA menu button): a click, Enter, Space or ↓ opens it on its first item, ↑ on its last;
-  // ↑ ↓ Home End move, Enter or Space picks, Esc closes it back to the button, Tab or a click elsewhere closes it.
-  // up: it opens above the button (Present's bar, at the bottom)
   const EXPORTS = [['html', 'fcode', 'HTML', 'One file that plays offline'], ['pdf', 'doc', 'PDF', 'One page per slide, no notes']];
-  function exportMenu(up) {
-    const items = EXPORTS.map(([f, i, l, d]) => h('button', { type: 'button', role: 'menuitem', tabindex: '-1', 'data-format': f, onclick: () => { close(true); exportDeck(f); } },
-      ic(i), h('span', { class: 't' }, h('b', {}, l), h('span', {}, d))));
-    const menu = h('div', { class: 'bd-expm' + (up ? ' up' : ''), role: 'menu', 'aria-label': 'Export to', hidden: true }, items);
-    const btn = h('button', { type: 'button', class: 'bd-tbtn bd-expb', 'aria-haspopup': 'menu', 'aria-expanded': 'false', title: 'Export this deck as HTML or PDF',
-      onclick: () => menu.hidden ? open(0) : close(true) }, ic('download'), h('span', {}, 'Export to…'), ic('down', 'cv'));
-    const wrap = h('div', { class: 'bd-exp' }, btn, menu);
-    // a press outside, or focus leaving the page (a click in a screen's frame), closes it
-    const away = e => { if (e.type === 'blur' || !wrap.contains(e.target)) close(false); };
-    function open(k) {
-      menu.hidden = false; btn.setAttribute('aria-expanded', 'true');
-      addEventListener('pointerdown', away, true); addEventListener('blur', away);
-      items.at(k).focus();
-    }
-    function close(refocus) {
-      if (menu.hidden) return;
-      menu.hidden = true; btn.setAttribute('aria-expanded', 'false');
-      removeEventListener('pointerdown', away, true); removeEventListener('blur', away);
-      if (refocus) btn.focus();
-    }
-    btn.addEventListener('keydown', e => { if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); e.stopPropagation(); open(e.key === 'ArrowDown' ? 0 : -1); } });
-    menu.addEventListener('keydown', e => {
-      e.stopPropagation();   // the board's and Present's keys wait until the menu is closed
-      const k = items.indexOf(document.activeElement), n = items.length;
-      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') items[(k + (e.key === 'ArrowDown' ? 1 : n - 1)) % n].focus();
-      else if (e.key === 'Home' || e.key === 'End') items.at(e.key === 'Home' ? 0 : -1).focus();
-      else if (e.key === 'Escape') close(true);
-      else if (e.key === 'Tab') { close(false); return; }
-      else return;
-      e.preventDefault();
-    });
-    return wrap;
-  }
-  const expBtn = canExport && exportMenu(false);
+  const deckMenu = up => exportMenu(EXPORTS, exportDeck, 'Export this deck as HTML or PDF', up);
+  const expBtn = canExport && deckMenu(false);
   // a website: every page at one of the board's widths, or a width the reader types
   const pageXs = () => [...B.frames.values()].filter(x => devOf(x.a) === 'page');
   const bpWords = BPS.map(bpName), bpSeg = IS_SITE ? h('div', { class: 'bd-sg', role: 'radiogroup', 'aria-label': 'Width of every page' }, BPS.map((w, i) =>
@@ -5899,7 +5920,7 @@ function renderBoard(b) {
     const backBtn = h('button', { type: 'button', class: 'bd-tbtn txt', title: 'Back (Backspace)', onclick: () => back() }, 'Back');
     const close = tbtn('x', 'Leave (Esc)', () => end());
     const el = h('div', { class: 'bd-pres' + (slides ? ' slides' : ''), role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Present' }, box, slides ? notes : hints,
-      h('div', { class: 'bar' }, !slides && backBtn, tbtn('prev', `Previous ${what} (←)`, () => step(-1)), cap, tbtn('next', `Next ${what} (→)`, () => step(1)), slides && [notesBtn, canExport && exportMenu(true)], close));
+      h('div', { class: 'bar' }, !slides && backBtn, tbtn('prev', `Previous ${what} (←)`, () => step(-1)), cap, tbtn('next', `Next ${what} (→)`, () => step(1)), slides && [notesBtn, canExport && deckMenu(true)], close));
     let rec = null, dev = null;
     // a slide takes the room the notes and the bar leave (box padding: 16px at the sides and top)
     const lay = () => dev && (slides ? dev.fit(box.clientWidth - 32, box.clientHeight - 16, true) : dev.fit(innerWidth - 96, innerHeight - 120 - hints.offsetHeight));
@@ -6460,7 +6481,37 @@ function renderListing(lb) {
   const locSel = h('select', { class: 'bd-lst-loc', 'aria-label': 'Locale', title: 'Locale: text, captions and captures switch with it' },
     LOCS.map(l => h('option', { value: l }, locLabel(l))));
   locSel.addEventListener('change', () => setLocale(locSel.value));
-  const tb = h('div', { class: 'bd-lst-tb' }, platSeg, locSel);
+  /* Export to… (served pages only): GET /__bluedoc/listing at the revision shown. ZIP: the fastlane folders, every shot
+     and asset at its store size (serve.py listing_zip); PDF: the listing for review (listing_pdf; without Chrome, its
+     print view in a tab); HTML: one file with both platform pages. The server's X-Bluedoc-Warnings (a JSON list: a
+     font a PDF can't embed, store-rule errors still open) show in a toast after the download; L.lastExport keeps them. */
+  const LST_EXPORTS = [['zip', 'download', 'ZIP for fastlane', 'Every shot and asset at store size'], ['pdf', 'doc', 'PDF', 'Both pages for review'], ['html', 'fcode', 'HTML', 'One file that works offline']];
+  const lstBusy = new Set();
+  const listingUrl = format => { const q = new URLSearchParams({ path: location.pathname, format }); if (OLD) q.set('rev', VIEW.rev); return '/__bluedoc/listing?' + q; };
+  function printListing() {
+    const w = window.open('about:blank', '_blank');
+    if (!w) { toast('No Chrome here for a PDF, and the browser blocked the print tab', { label: 'Open it', run: printListing }); return; }
+    w.opener = null; w.location.href = listingUrl('print') + '#print';
+    toast('No Chrome here for a PDF: choose Save as PDF in the print dialog', { label: 'Print again', run: printListing });
+  }
+  async function exportListing(format) {
+    if (lstBusy.has(format)) return toast(`Still making the ${format.toUpperCase()}…`);
+    lstBusy.add(format);
+    if (format !== 'html') toast(`Making the ${format.toUpperCase()}… (Chrome renders every shot)`);
+    try {
+      const r = await fetch(listingUrl(format), { cache: 'no-store' });
+      if (r.status === 501 && format === 'pdf') { printListing(); return; }
+      if (!r.ok) { const j = await r.json().catch(() => null); toast(`Couldn't export the listing: ${(j && j.error) || r.status}`); return; }
+      let warns = [];
+      try { const w = JSON.parse(r.headers.get('X-Bluedoc-Warnings') || '[]'); if (Array.isArray(w)) warns = w.filter(x => typeof x === 'string'); } catch { /* none */ }
+      const name = (/filename\*=UTF-8''([^;]+)/.exec(r.headers.get('Content-Disposition') || '') || [])[1];
+      await saveBlob(r, name ? decodeURIComponent(name) : `listing.${format}`);
+      L.lastExport = { format, warnings: warns };
+      toast(warns.length ? `Exported with ${warns.length} warning${warns.length === 1 ? '' : 's'}: ${warns[0]}${warns.length > 1 ? ` (+${warns.length - 1} more)` : ''}` : `Exported the ${format.toUpperCase()}`);
+    } catch { toast('Couldn\'t export the listing: the server didn\'t answer'); }
+    finally { lstBusy.delete(format); }
+  }
+  const tb = h('div', { class: 'bd-lst-tb' }, platSeg, locSel, SERVED && exportMenu(LST_EXPORTS, exportListing, 'Export the listing: a ZIP for fastlane, a PDF or an HTML file', false));
 
   /* the left panel: Text (this platform's store text and the captions, for the locale) and Brief */
   const lpText = h('div', { class: 'bd-lp-pane bd-lst-text', id: 'bd-lp-text' });
@@ -6470,27 +6521,31 @@ function renderListing(lb) {
     if (!p) { lpText.replaceChildren(); return; }
     out.push(h('h4', {}, `${p.label} text · ${loc}`));
     if (p.id === 'appstore') out.push(h('p', {}, 'Promotional text changes without a new version.'));
-    const field = (fkey, label, v, rule, mt, fb) => {
+    const field = (fkey, label, v, rule, mtKey, fb) => {
+      const acc = mtKey && acceptDraft(loc, mtKey);
       const items = Array.isArray(v) ? v : v == null ? [] : [v];
       const counts = rule ? items.map(s => lstCount(String(s), rule.unit)) : [];
       const over = rule && counts.some(n => n > rule.limit || (rule.min && n < rule.min));
       const c = rule && h('span', { class: 'c' + (over ? ' over' : '') }, items.length ? counts.map(n => `${n} / ${rule.limit}`).join(' · ') + (rule.unit === 'bytes' ? ' bytes' : '') : `0 / ${rule.limit}`);
       const el = h('div', { class: 'bd-lfield' + (rule ? '' : ' cap') + (L.fchg.has(fkey) ? ' bd-chg bd-chg-mod' : ''), 'data-field': fkey, 'data-label': `${label} · ${loc}` },
-        h('div', { class: 'lh' }, h('span', {}, label), mt && h('span', { class: 'bd-lst-tag mt', title: 'Machine-translated: not yet accepted' }, 'MT'), c),
+        h('div', { class: 'lh' }, h('span', {}, label), mtKey && h('span', { class: 'bd-lst-tag mt' + (acc ? ' acc' : ''), title: acc ? 'Accepted here: Request changes sends it' : 'Machine-translated: not yet accepted' }, acc ? 'MT · accepted' : 'MT'), c),
         h('div', { class: 'v' + (fb ? ' fb' : '') + (v == null ? ' none' : '') }, v == null ? (rule && rule.required === true ? 'Not set: the store requires it' : 'Not set') : items.join('\n')),
-        fb && h('div', { class: 'note' }, `Missing in ${loc}: shows ${DEF}'s`));
+        fb && h('div', { class: 'note' }, `Missing in ${loc}: shows ${DEF}'s`),
+        mtKey && L.D && !OLD && !BASE && h('div', { class: 'bd-lst-mta' }, acc
+          ? [h('span', {}, 'Accepted as it is. Request changes sends it.'), h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => L.D.drop(acc.id) }, ic('reset'), 'Undo')]
+          : h('button', { type: 'button', class: 'bp-btn', 'data-accept': mtKey, title: 'Keep this machine translation as it is', onclick: () => acceptMt(loc, mtKey, fkey, label) }, ic('tick'), 'Accept MT')));
       return el;
     };
     for (const r of textRules(p.id)) {
       const own = textOf(loc, p.id, r.field), fb = own == null && loc !== DEF && textOf(DEF, p.id, r.field) != null;
-      out.push(field(`${loc}/${p.id}/${r.field}`, r.label, own ?? (fb ? textOf(DEF, p.id, r.field) : null), r, isMt(loc, `${p.id}.${r.field}`), fb));
+      out.push(field(`${loc}/${p.id}/${r.field}`, r.label, own ?? (fb ? textOf(DEF, p.id, r.field) : null), r, isMt(loc, `${p.id}.${r.field}`) && `${p.id}.${r.field}`, fb));
     }
     const keys = [...new Set([...tilesKeys(), ...Object.keys(obj(STR[DEF]))])];
     out.push(h('h4', {}, `Captions · ${loc}`));
     if (!keys.length) out.push(h('p', {}, 'No shot names a caption string (data-l10n).'));
     for (const k of keys) {
       const own = strOf(loc, k), fb = own == null && strOf(DEF, k) != null && loc !== DEF;
-      out.push(field(`${loc}/strings/${k}`, k, own ?? (fb ? strOf(DEF, k) : null), null, isMt(loc, `strings.${k}`), fb));
+      out.push(field(`${loc}/strings/${k}`, k, own ?? (fb ? strOf(DEF, k) : null), null, isMt(loc, `strings.${k}`) && `strings.${k}`, fb));
     }
     lpText.replaceChildren(...out);
   }
@@ -6744,22 +6799,51 @@ function renderListing(lb) {
     if (!mine.length) return '';
     return ['build.py patch', sh(docFile()), sh(`block:${blockPath}`), '--json', sh(JSON.stringify(patch)), '--change', sh(mine.map(a => a.note).join('; ')), ...mine.map(a => '--resolves ' + a.id)].join(' ');
   };
-  // drafts the frames take live (style picks, brand edits) restyle them in place; any other draft redraws the sections
-  const LIVE_OPS = ['style', 'brand'];
-  let draftSig = '', liveSig = '';
+  // drafts the frames take live (style picks, brand edits) restyle them in place; an Accept MT repaints the text; any
+  // other draft redraws the sections. Approve listing follows the drafts (L.approveBlocks)
+  const LIVE_OPS = ['style', 'brand'], TEXT_OPS = ['accept'];
+  let draftSig = '', liveSig = '', textSig = '';
   L.paintDrafts = () => {
-    const ds = drafts(), sec = ds.filter(a => !LIVE_OPS.includes(a.listing.op)), live = ds.filter(a => LIVE_OPS.includes(a.listing.op));
-    const s = JSON.stringify(sec.map(a => [a.id, a.listing]));
+    const ds = drafts(), of = ops => ds.filter(a => ops.includes(a.listing.op)), sig = xs => JSON.stringify(xs.map(a => [a.id, a.listing]));
+    const sec = ds.filter(a => !LIVE_OPS.includes(a.listing.op) && !TEXT_OPS.includes(a.listing.op));
+    const s = sig(sec);
     if (s !== draftSig) { const first = !draftSig && !sec.length; draftSig = s; if (!first) renderSections(); }
-    const v = JSON.stringify(live.map(a => [a.id, a.listing]));
+    const v = sig(of(LIVE_OPS));
     if (v !== liveSig) { liveSig = v; L.restyle(); }
+    const t = sig(of(TEXT_OPS));
+    if (t !== textSig) { textSig = t; paintText(); }
+    paintPlan();
   };
   // whether the doc now has what a draft asks for, per op: on load such a draft is resolved (applied by this rev)
   L.draftRecorded = {
     order: o => JSON.stringify(obj(lb.order)[o.set] || null) === JSON.stringify(o.ids),
     rows: o => JSON.stringify(lb.rows || null) === JSON.stringify(o.rows),
     upload: o => abs.some(a => a.src === o.file),   // the agent recorded it as a shot's src
+    accept: o => !isMt(o.locale, o.key),   // the agent ran build.py l10n --accept
   };
+
+  /* Accept MT: a machine-translated field or caption the reader keeps as it is. One draft each ('listing', op 'accept':
+     {locale, key}, key field:<locale>/<platform>/<field> or field:<locale>/strings/<key>); Request changes sends them
+     under ## Accepted MT with the `build.py l10n --accept` command per locale. An MT string left unaccepted only warns:
+     Approve counts them. */
+  const acceptDraft = (loc, k) => drafts().find(a => a.listing.op === 'accept' && a.listing.locale === loc && a.listing.key === k) || null;
+  function acceptMt(loc, k, fkey, label) {
+    if (!L.D || acceptDraft(loc, k)) return;
+    L.D.put({ type: 'listing', key: `field:${fkey}`, label: `Accept MT · ${label} · ${loc}`, note: `Keep the machine translation of ${label} (${loc}) as it is`, listing: { op: 'accept', locale: loc, key: k } });
+  }
+  (L.readbackParts ||= []).push({ ops: ['accept'], md: ds => {
+    if (!ds.length) return '';
+    const by = new Map();
+    for (const a of ds) { if (!by.has(a.listing.locale)) by.set(a.listing.locale, []); by.get(a.listing.locale).push(a); }
+    const lines = ds.map(a => `- (${a.id}) ${a.listing.locale} · \`${a.listing.key}\`: keep the machine translation as it is`);
+    const cmds = [...by].map(([loc, as], k) => ['build.py l10n', sh(docFile()), '--accept', sh(loc), ...as.map(a => sh(a.listing.key)), ...(k ? ['--no-bump'] : []), ...as.flatMap(a => ['--resolves', a.id])].join(' '));
+    return `## Accepted MT\n\n${lines.join('\n')}\n\n\`\`\`sh\n${cmds.join('\n')}\n\`\`\``;
+  } });
+  // what Approve listing's dialog counts: MT strings not accepted (here or in the doc), shots that show a mock-up UI
+  L.approveSummary = () => ({
+    mt: LOCS.reduce((n, l) => n + (Array.isArray(MTS[l]) ? MTS[l] : []).filter(k => !acceptDraft(l, k)).length, 0),
+    mock: abs.filter(a => a.device === 'shot' && !listingImage(a) && !Object.keys(obj(obj(LST.captures)[a.id])).length).length,
+  });
 
   /* ---------- Uploads and re-shoots (M2) ----------
      A set's Drop PNG slot (after its last shot, until the set is full) and an uploaded shot's Replace with PNG… take a
@@ -7163,7 +7247,7 @@ function renderListing(lb) {
     const b = L.brand(), f = b.font, can = !!L.D && !OLD && !BASE, fam = f ? f.family : (BR_FONT.default || 'Inter');
     paneBrand.classList.toggle('ro', !can);
     // the font: the pick, its rights; the menu: Inter, then the installed families that match the search
-    BUI.cur.replaceChildren(h('b', { style: `font-family: "${fam}", system-ui; font-weight: ${f && f.weight || 800}` }, sample()),
+    setKids(BUI.cur, h('b', { style: `font-family: "${fam}", system-ui; font-weight: ${f && f.weight || 800}` }, sample()),
       h('span', {}, f ? `${fontWord(f)} · installed on this Mac` : `${fontWord(null)} · vendored, OFL: safe in every export`),
       f && Number.isInteger(f.fsType) && h('span', { class: fsBad(f.fsType) ? 'bad' : '' }, `fsType ${f.fsType}: ${fsWord(f.fsType)}`),
       f && h('span', { class: 'note' }, 'fsType covers embedding, not a licence for marketing images: confirm the font\'s licence.'));
@@ -7173,7 +7257,7 @@ function renderListing(lb) {
     const row = (x, label, meta) => h('button', { type: 'button', role: 'option', class: 'bd-lst-font', 'aria-selected': String(fam === (x ? x.family : (BR_FONT.default || 'Inter'))), disabled: !can, onclick: () => pickFont(x) },
       h('span', { class: 'n' }, label, meta && h('span', { class: meta.bad ? 'bad' : '' }, meta.t)), h('span', { class: 'p', style: `font-family: "${x ? x.family : 'Inter'}", system-ui; font-weight: ${f && f.weight || 800}` }, sample()));
     const q = FONTS.q.trim().toLowerCase(), hits = (FONTS.list || []).filter(x => !q || x.family.toLowerCase().includes(q));
-    BUI.list.replaceChildren(row(null, `${BR_FONT.default || 'Inter'} · default`, { t: 'OFL, vendored' }),
+    setKids(BUI.list, row(null, `${BR_FONT.default || 'Inter'} · default`, { t: 'OFL, vendored' }),
       ...hits.slice(0, 60).map(x => row(x, x.family, { t: `${(x.faces || []).length} style${(x.faces || []).length === 1 ? '' : 's'}${fsBad(x.fsType) ? ' · no PDF embedding' : ''}`, bad: fsBad(x.fsType) })),
       !SERVED ? h('p', { class: 'hint' }, 'Open this page through serve.py to list the fonts installed here.')
         : FONTS.err ? h('p', { class: 'hint' }, FONTS.err) : FONTS.busy ? h('p', { class: 'hint' }, 'Listing the installed fonts…')
@@ -7198,46 +7282,26 @@ function renderListing(lb) {
       h('span', { class: 'l' }, h('b', {}, p.label), h('span', {}, `${p.styles} · ${p.fg} on ${p.bg}`)),
       h('span', { class: p.ok ? 'good' : 'bad' }, `${p.ratio.toFixed(2)}:1`, h('small', {}, p.ok ? 'AA' : `below ${BR_MIN}`)))));
     const d = brandDraft();
-    BUI.state.replaceChildren(...(d ? [h('span', {}, 'A brand draft: Request changes sends it; Approve waits until the agent records it.'), can && h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => { brandLive = null; L.D.drop(d.id); } }, ic('reset'), 'Discard draft')]
+    setKids(BUI.state, ...(d ? [h('span', {}, 'A brand draft: Request changes sends it; Approve waits until the agent records it.'), can && h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => { brandLive = null; L.D.drop(d.id); } }, ic('reset'), 'Discard draft')]
       : [h('span', {}, b.image ? `From ${b.image.split('/').pop()}, as the listing records it.` : 'The listing\'s brand. An edit here is a draft until the agent records it.')]));
     BUI.state.classList.toggle('on', !!d);
   }
-  // the checks the page can tell from the doc, for the platform on screen (the build's report replaces them later)
-  L.checks = () => {
-    const p = L.platform, out = [];
-    for (const loc of LOCS) for (const r of textRules(p)) {
-      const v = textOf(loc, p, r.field); if (v == null) continue;
-      for (const s of Array.isArray(v) ? v : [v]) { const n = lstCount(String(s), r.unit); if (n > r.limit || (r.min && n < r.min)) out.push(['err', `${loc} ${r.label.toLowerCase()}: ${n} / ${r.limit} ${r.unit === 'bytes' ? 'bytes' : 'chars'}${isMt(loc, `${p}.${r.field}`) ? ' after MT' : ''}`]); }
-    }
-    const secs = sectionsOf(p), counts = Object.fromEntries(secs.flatMap(s => s.sets.map(x => [x.set, x.shots.length])));
-    for (const x of secs.flatMap(s => s.sets)) {
-      const r = SETS.get(x.set), n = x.shots.length, [lo, hi] = r.count || [0, 10], req = requirement(r, counts);
-      if (n > hi) out.push(['err', `${r.label}: ${n} shots, at most ${hi}`]);
-      else if (req.need && n < Math.max(lo, 1)) out.push(['err', `${r.label}: ${n} shots, ${req.why}`]);
-      else if (r.recommend && n < r.recommend.count && n > 0) out.push(['warn', `${r.label}: ${n} shots; ${r.recommend.note}`]);
-    }
-    const plat = RULES.platforms.find(x => x.id === p);
-    if (plat && plat.minShots) { const total = Object.values(counts).reduce((a, b) => a + b, 0); if (total < plat.minShots) out.push(['err', `${total} shots across device types: ${plat.label} needs ${plat.minShots}`]); }
-    if (!LST.icon) out.push(['err', 'No icon: listing.icon names none, or its fg.svg is missing']);
-    if (p === 'play' && !abs.some(a => a.device === 'asset' && a.asset === 'play/feature')) out.push(['err', 'No feature graphic (play/feature)']);
-    const keys = tilesKeys();
-    for (const loc of LOCS) {
-      const miss = keys.filter(k => strOf(loc, k) == null);
-      if (miss.length) out.push(['warn', `${loc}: ${miss.length} caption string${miss.length === 1 ? '' : 's'} missing (${miss.slice(0, 3).join(', ')}${miss.length > 3 ? ', …' : ''})`]);
-      const mt = (MTS[loc] || []).length;
-      if (mt) out.push(['warn', `${loc}: ${mt} MT string${mt === 1 ? '' : 's'} not yet accepted`]);
-    }
-    const mock = secs.flatMap(s => s.sets).flatMap(x => x.shots).filter(id => !listingImage(byId.get(id)) && !Object.keys(obj(obj(LST.captures)[id])).length);
-    if (mock.length) out.push(['warn', `${new Set(mock).size} shot${new Set(mock).size === 1 ? ' shows' : 's show'} mock-up UI: the stores want the app in use`]);
-    const age = Math.floor((Date.now() - Date.parse(RULES.accessed)) / 864e5);
-    if (age > 180) out.push(['warn', `The store rules were read ${age} days ago (${RULES.accessed})`]);
-    if (!out.some(([k]) => k === 'err')) out.push(['ok', 'Text limits, set counts and required sets pass']);
-    return out;
-  };
+  // the build's report (listing.checks_page_data, what `build.py --check` prints) for the platform on screen:
+  // [level, text, finding], errors first; a finding names its platforms (none: both pages), set, locales and source
+  const FINDINGS = (Array.isArray(LST.checks) ? LST.checks : []).filter(f => f && (f.level === 'err' || f.level === 'warn') && typeof f.msg === 'string');
+  L.checks = (p = L.platform) => FINDINGS.filter(f => !Array.isArray(f.platforms) || !f.platforms.length || f.platforms.includes(p)).map(f => [f.level, f.msg, f]);
   function paintChecks() {
-    const cs = L.checks(), p = PLATS.find(x => x.id === L.platform);
-    paneChecks.replaceChildren(h('h4', {}, `Checks · ${p ? p.label : ''}`), h('ul', { class: 'bd-lst-checks' }, cs.map(([k, t]) => h('li', { class: k }, ic(k === 'ok' ? 'tick' : k === 'err' ? 'x' : 'alert'), h('span', {}, t)))),
-      h('p', { class: 'hint' }, 'Counted on this page: code points, or UTF-8 bytes for Apple keywords. `build.py` checks the files too.'));
+    const cs = L.checks(), p = PLATS.find(x => x.id === L.platform), ne = cs.filter(([k]) => k === 'err').length, nw = cs.length - ne;
+    const where = f => [f.set && SETS.has(f.set) ? SETS.get(f.set).label : null, ...(Array.isArray(f.locales) ? f.locales : [])].filter(Boolean).join(' · ');
+    const item = ([k, t, f]) => {
+      const go = typeof f.key === 'string' && f.key ? () => L.focusKey(f.key) : null;
+      return h('li', { class: k, 'data-key': f.key || null }, ic(k === 'err' ? 'x' : 'alert'),
+        h('span', { class: 't' }, go ? h('button', { type: 'button', class: 'bd-lst-ui', title: 'Show it', onclick: go }, t) : t, where(f) && h('small', {}, where(f))));
+    };
+    setKids(paneChecks, h('h4', {}, `Checks · ${p ? p.label : ''}`),
+      h('p', { class: 'bd-lst-csum' + (ne ? ' err' : '') }, ne || nw ? `${ne} error${ne === 1 ? '' : 's'}, ${nw} warning${nw === 1 ? '' : 's'}` : 'The store rules pass on this page'),
+      h('ul', { class: 'bd-lst-checks' }, cs.length ? cs.map(item) : h('li', { class: 'ok' }, ic('tick'), h('span', { class: 't' }, 'Sizes, counts, required sets, text limits and locales pass'))),
+      h('p', { class: 'hint' }, `From build.py at rev ${CUR.rev || '-'}${OLD ? ' (the current revision)' : ''}, against the store rules read ${RULES.accessed}. A rule marked unverified only warns. Drafts count once the agent records them.`));
   }
   function paintSide() { paintStyle(); paintBrand(); paintChecks(); if (L.S) L.S.paint(); }
 
@@ -7298,10 +7362,10 @@ function renderListing(lb) {
       tiles: L.tiles.map(x => ({ id: x.a.id, set: x.rule.id, kind: x.kind, w: x.w, h: x.h, live: !!x.fr, ready: x.ready, name: x.fr ? x.fr.name : null, tags: [...x.box.querySelectorAll('.bd-lst-tag')].map(t => t.textContent) })),
       fields: [...lpText.querySelectorAll('.bd-lfield')].map(e => ({ field: e.dataset.field, value: e.querySelector('.v').textContent, count: e.querySelector('.c')?.textContent ?? null, over: !!e.querySelector('.c.over'),
         mt: !!e.querySelector('.bd-lst-tag.mt'), fallback: !!e.querySelector('.v.fb') })),
-      checks: L.checks(), style: L.styleFor(L.platform),
+      checks: L.checks().map(([k, t]) => [k, t]), findings: L.checks().map(([, , f]) => f), style: L.styleFor(L.platform),
       brand: (({ palette, font, image, swatches, draft }) => ({ palette, font, image, swatches, draft, contrast: contrastOf(palette).map(p => ({ fg: p.fg, bg: p.bg, label: p.label, ratio: p.ratio, ok: p.ok })),
         fonts: FONTS.list ? FONTS.list.length : null }))(L.brand()),
-      approveBlocks: (L.approveBlocks || []).flatMap(f => f()), decisions: L.decisionLines(true),
+      approveBlocks: (L.approveBlocks || []).flatMap(f => f()), approveSummary: L.approveSummary(), decisions: L.decisionLines(true),
       uploads: UPLOADS.map(u => ({ ...u })), slots: [...pg.querySelectorAll('.bd-lst-upslot')].map(e => ({ set: e.dataset.set, slot: +e.dataset.slot })),
       drafts: [...pg.querySelectorAll('.bd-lst-uptile[data-file]')].map(e => e.dataset.file) };
   };
@@ -8014,12 +8078,14 @@ function planState() {
 const revWord = CUR.rev ? ` (rev ${CUR.rev})` : '';
 function approvePayload(note) {
   note = String(note || '').trim();
-  const at = new Date().toISOString(), dec = decisionsMd(), { annotations, notes } = MARKUP.approvalNotes();
+  const at = new Date().toISOString(), dec = [decisionsMd(), BOARD && BOARD.decisionLines ? BOARD.decisionLines(true) : ''].filter(Boolean).join('\n'), { annotations, notes } = MARKUP.approvalNotes();
   const markdown = [`# ${AP_TITLE} approved: ${DOC.title || docId}${revWord}, ${at.slice(0, 10)}`, note, dec && '## Decisions\n\n' + dec, notes && '## Notes with the approval\n\n' + notes].filter(Boolean).join('\n\n') + '\n';
   // docHash: the JSON this page rendered; the server refuses the approval (409) when the file differs now
   return { kind: 'approval', decision: 'approved', doc: docId, rev: CUR.rev, docHash: store.docHash, title: DOC.title || '', path: location.pathname, at, note, answers: answerItems(), annotations, markdown };
 }
 const approveKey = APPROVABLE ? tipped(keyBtn('txt approve', 'check', `Approve ${AP_NOUN}`, {}, () => openApprove())) : null;
+// what keeps a listing from approval: an upload or brand draft the agent hasn't recorded yet (renderListing's L.approveBlocks)
+const boardBlocks = () => BOARD && Array.isArray(BOARD.approveBlocks) ? BOARD.approveBlocks.flatMap(f => f()) : [];
 function paintPlan() {
   if (!APPROVABLE || OLD) return;
   const p = planState(), done = p.state === 'approved', revTxt = p.approvedRev ? ` · rev ${p.approvedRev}` : '';
@@ -8033,17 +8099,20 @@ function paintPlan() {
   }
   // a plan can't be approved while an item asks for more details: send it and wait for the agent's rev, or withdraw it
   const asking = done ? [] : Object.values(ITEMS).filter(x => x.more);
-  approveKey.disabled = done || asking.length > 0; approveKey.classList.toggle('done', done);
+  const blocks = done ? [] : boardBlocks();
+  approveKey.disabled = done || asking.length > 0 || blocks.length > 0; approveKey.classList.toggle('done', done);
   approveKey.replaceChildren(ic(done ? 'tick' : 'check'), h('span', { class: 't' }, done ? 'Approved' + revTxt : `Approve ${AP_NOUN}`));
   approveKey.setAttribute('aria-label', done ? 'Approved' + revTxt : `Approve ${AP_NOUN}`);
-  approveKey._tip = asking.length ? `${asking.length} item${asking.length === 1 ? ' asks' : 's ask'} for more details: ${asking.some(x => x.more === 'on') ? 'send it with Request changes and wait for the agent\'s next revision, or turn it off' : 'wait for the agent\'s next revision, or withdraw the request'}`
+  approveKey._tip = blocks.length ? blocks.join('; ')
+    : asking.length ? `${asking.length} item${asking.length === 1 ? ' asks' : 's ask'} for more details: ${asking.some(x => x.more === 'on') ? 'send it with Request changes and wait for the agent\'s next revision, or turn it off' : 'wait for the agent\'s next revision, or withdraw the request'}`
     : IS_DECK ? `Approve this presentation${revWord}, every slide in it: the agent takes the deck as final, with your picks`
     : IS_SITE ? `Approve this website${revWord}, every page and pick in it: the agent applies it to the site's source`
+    : IS_LISTING ? `Approve this listing${revWord}, both platform pages in every locale: the agent takes it as final, with your picks`
     : IS_DESIGN ? `Approve this design${revWord}, every screen in it: the agent builds it with your picks` : `Approve this plan${revWord}: the agent goes ahead with it and your picks`;
   if (done && approveDlg && approveDlg.open) approveDlg.close();
 }
 function openApprove() {
-  if (planState().state === 'approved' || Object.values(ITEMS).some(x => x.more)) return;
+  if (planState().state === 'approved' || Object.values(ITEMS).some(x => x.more) || boardBlocks().length) return;
   MARKUP.flush();
   if (!approveDlg) {
     const note = h('textarea', { class: 'bp-note-ta', rows: 2, placeholder: 'A note for the agent (optional)', 'aria-label': 'Note with the approval' });
@@ -8054,16 +8123,20 @@ function openApprove() {
     approveDlg = h('dialog', { class: 'bd-send bd-approve', 'aria-labelledby': 'bd-ap-h' },
       h('div', { class: 'hd' }, h('h3', { id: 'bd-ap-h' }, `Approve this ${AP_NOUN}${revWord}`), h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Close', onclick: () => approveDlg.close() }, ic('x'))),
       h('p', { class: 'sum' }, IS_DECK ? 'The agent takes the deck as drawn, every slide at this revision, with the decisions below.'
+        : IS_LISTING ? 'The agent takes the listing as shown, both platform pages in every locale at this revision, with the decisions below.'
         : IS_DESIGN ? 'The agent builds the design as drawn, every screen at this revision, with the decisions below.' : 'The agent goes ahead with the plan as written and the decisions below.'), note, sum, decBox, how, h('div', { class: 'ft' }, copy, ok));
     document.body.append(approveDlg);
     approveDlg.addEventListener('click', e => { if (e.target === approveDlg) approveDlg.close(); });
     Object.assign(approveDlg, { _note: note, _ok: ok });
     approveDlg._paint = () => {
       const pend = MARKUP.approvalNotes().annotations.length, dec = Object.values(ITEMS).filter(x => x.choices), open = dec.filter(x => !x.choice).length;
+      const ls = BOARD && BOARD.approveSummary ? BOARD.approveSummary() : { mt: 0, mock: 0 };
       const line = (icon, cls, text) => h('li', { class: cls }, ic(icon), h('span', {}, text));
       sum.replaceChildren(...[
         pend && line('msg', '', pend === 1 ? '1 pending comment goes with it as a note' : `${pend} pending comments go with it as notes`),
         open && line('alert', 'warn', `${open} open question${open === 1 ? ' has' : 's have'} no pick; the agent will use its recommendation`),
+        ls.mt && line('alert', 'warn', `${ls.mt} machine-translated string${ls.mt === 1 ? ' isn\'t' : 's aren\'t'} accepted yet`),
+        ls.mock && line('alert', 'warn', `${ls.mock} shot${ls.mock === 1 ? ' shows' : 's show'} a mock-up UI, not a capture`),
       ].filter(Boolean));
       sum.hidden = !sum.childElementCount;
       decBox.hidden = !dec.length;

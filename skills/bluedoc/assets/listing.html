@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="__LISTING_CSP__">
+<title>__LISTING_TITLE__</title>
+<style>
+/* a storelisting as one offline file: serve.py listing_html fills in the title, the CSP and the listing's JSON
+   ({title, rev, locales, default, platforms: [{id, label, fields, captions, sections: {locale: [...]}, assets, icon,
+   checks}], assets, docs: {artboard: parts}, imgs, fonts}). Each shot and asset is its own document in a sandboxed
+   srcdoc frame, named 'bd-shot <JSON>' as the page names it (kits/shot.js reads its set, locale, place and capture) */
+:root { --bg: #f6f7f9; --card: #fff; --line: #e3e6eb; --fg: #16181d; --muted: #5d6470; --accent: #2457d6; --warn: #b45309; --err: #b91c1c; --mt: #7c3aed;
+  font: 13.5px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--fg); background: var(--bg); }
+* { box-sizing: border-box; }
+body { margin: 0; }
+header { position: sticky; top: 0; z-index: 3; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 10px 20px; background: var(--card); border-bottom: 1px solid var(--line); }
+header h1 { margin: 0 12px 0 0; font-size: 15px; font-weight: 650; }
+header .rev { color: var(--muted); }
+.sg { display: inline-flex; padding: 2px; border-radius: 9px; background: var(--bg); border: 1px solid var(--line); }
+.sg button { border: 0; background: none; padding: 5px 12px; border-radius: 7px; font: inherit; color: var(--muted); cursor: pointer; }
+.sg button[aria-checked="true"] { background: var(--card); color: var(--fg); box-shadow: 0 1px 2px #0002; font-weight: 600; }
+select, .btn { font: inherit; padding: 5px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--fg); }
+.btn { cursor: pointer; }
+.sp { flex: 1; }
+#wrap { display: grid; grid-template-columns: 340px 1fr; min-height: calc(100vh - 54px); }
+#text { padding: 16px 18px; border-right: 1px solid var(--line); background: var(--card); overflow: auto; }
+#text h3 { margin: 18px 0 8px; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+#text h3:first-child { margin-top: 0; }
+.f { padding: 8px 0; border-bottom: 1px solid var(--line); }
+.f .lh { display: flex; gap: 6px; align-items: baseline; font-weight: 600; }
+.f .c { margin-left: auto; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--muted); font-size: 12px; }
+.f .c.over { color: var(--err); font-weight: 650; }
+.f .v { white-space: pre-wrap; overflow-wrap: anywhere; margin-top: 2px; }
+.f .v.fb { color: var(--muted); font-style: italic; }
+.tag { display: inline-block; padding: 0 6px; border-radius: 6px; font-size: 11px; font-weight: 650; line-height: 17px; background: #eef0f4; color: var(--muted); }
+.tag.mt { background: #ede9fe; color: var(--mt); }
+.tag.fb { background: #fef3c7; color: var(--warn); }
+.tag.up { background: #dbeafe; color: var(--accent); }
+.tag.mock { background: #fee2e2; color: var(--err); }
+main { padding: 16px 24px 48px; overflow: auto; }
+section.sec { margin-bottom: 22px; padding: 14px 16px; border-radius: 12px; background: var(--card); border: 1px solid var(--line); }
+section.sec > h2 { margin: 0 0 10px; font-size: 14px; }
+.set { margin-top: 10px; }
+.set .hd { display: flex; gap: 8px; align-items: baseline; margin-bottom: 6px; color: var(--muted); }
+.set .hd b { color: var(--fg); }
+.tiles { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 4px; }
+.tile { flex: none; }
+.tile .box { position: relative; overflow: hidden; border-radius: 6px; background: #eef0f4; box-shadow: 0 0 0 1px var(--line); }
+.tile iframe { position: absolute; left: 0; top: 0; border: 0; transform-origin: 0 0; background: #fff; }
+.tile img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.tile .cap { display: flex; gap: 5px; align-items: center; margin-top: 4px; font-size: 12px; color: var(--muted); max-width: 100%; }
+.tile .cap .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.icon { width: 96px; height: 96px; border-radius: 22px; box-shadow: 0 0 0 1px var(--line); }
+.icon.play { border-radius: 29px; }
+.checks { margin: 0; padding: 0; list-style: none; }
+.checks li { padding: 4px 0; display: flex; gap: 6px; }
+.checks li.err::before { content: "✕"; color: var(--err); font-weight: 700; }
+.checks li.warn::before { content: "!"; color: var(--warn); font-weight: 700; width: 9px; text-align: center; }
+.fonts { color: var(--muted); font-size: 12px; margin-top: 18px; }
+/* the print view (#print): per platform a text page, then a page per locale and section, each 1920 × 1080 CSS px
+   (serve.py listing_pdf prints it). Ready (html[data-print-ready], which print_pdf waits for) once every frame says its
+   fonts and images are in, or after 30 s */
+@page { size: 1920px 1080px; margin: 0; }
+#pages { display: none; }
+html.pv body > :not(#pages) { display: none; }
+html.pv #pages { display: block; }
+.pg { position: relative; width: 1920px; min-height: 1080px; padding: 56px 64px; background: #fff; break-after: page; overflow: hidden; }
+.pg.sec { height: 1080px; }
+.pg h1 { margin: 0 0 4px; font-size: 30px; }
+.pg .sub { color: var(--muted); font-size: 17px; margin-bottom: 24px; }
+.pg table { width: 100%; border-collapse: collapse; font-size: 15px; }
+.pg th, .pg td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+.pg td { white-space: pre-wrap; overflow-wrap: anywhere; }
+.pg th { width: 220px; }
+.pg .row { display: flex; gap: 18px; align-items: flex-start; margin-bottom: 18px; }
+.pg .row .hd { width: 210px; flex: none; font-size: 15px; }
+@media screen { html.pv body { background: #888; } html.pv .pg { margin: 0 auto 24px; transform-origin: 0 0; } }
+@media print { html, body { background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; } .pg { margin: 0 !important; transform: none !important; } }
+</style>
+</head>
+<body>
+<header>
+<h1 id="title"></h1><span class="rev" id="rev"></span>
+<div class="sg" role="radiogroup" aria-label="Platform" id="plats"></div>
+<select id="loc" aria-label="Locale"></select>
+<span class="sp"></span>
+<button type="button" class="btn" id="print">Print / PDF</button>
+</header>
+<div id="wrap"><aside id="text" aria-label="Store text"></aside><main id="main" aria-label="Platform page"></main></div>
+<div id="pages" aria-label="Pages to print"></div>
+<script type="application/json" id="listing">__LISTING_DATA__</script>
+<script>
+(() => {
+  'use strict';
+  const D = JSON.parse(document.getElementById('listing').textContent), $ = id => document.getElementById(id);
+  const el = (tag, attrs, ...kids) => { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs || {})) if (v != null && v !== false) e.setAttribute(k, v === true ? '' : v);
+    for (const c of kids.flat(Infinity)) if (c != null && c !== false) e.append(c.nodeType ? c : String(c)); return e; };
+  const ROW_H = { watch: 170, phone: 330, tablet: 300 };
+  // each frame's document: shared blocks put back, its backgrounds printed, a word to us once its fonts and images are in
+  const READY = '<style>*,*::before,*::after{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}</style>'
+    + '<script>addEventListener("load",()=>(document.fonts?document.fonts.ready:Promise.resolve()).then(()=>Promise.all([...document.images].map(i=>i.complete?0:new Promise(r=>{i.onload=i.onerror=r})))).then(()=>setTimeout(()=>parent.postMessage({bdShot:"ready"},"*"),60)))<\/script>';
+  const docOf = id => D.docs[id] ? D.docs[id].map(p => typeof p === 'number' ? D.assets[p] : p).join('') + READY : null;
+  let P = D.platforms[0], L = D.default || D.locales[0];
+  const frames = new Set();
+  function frame(id, state, w, h) {
+    const src = docOf(id);
+    if (!src) return el('div', {}, 'No screen file');
+    const f = el('iframe', { sandbox: 'allow-scripts', tabindex: '-1', width: w, height: h, title: id });
+    f.name = 'bd-shot ' + JSON.stringify(state);
+    f.srcdoc = src;
+    frames.add(f);
+    return f;
+  }
+  // one tile: a shot or asset at its frame size, scaled to height H (and at most maxW wide)
+  function tile(x, set, i, n, H, maxW, loc) {
+    const w = set ? set.fw : x.fw, h = set ? set.fh : x.fh, k = Math.min(H / h, maxW / w);
+    const box = el('div', { class: 'box', style: `width:${Math.round(w * k)}px;height:${Math.round(h * k)}px` });
+    if (x.img != null) box.append(el('img', { src: D.imgs[x.img], alt: x.title }));
+    else {
+      const f = frame(x.id, set ? { set: set.set, locale: loc, i, n, ui: x.cap != null ? D.imgs[x.cap] : null } : { locale: loc }, w, h);
+      f.style.transform = `scale(${k})`;
+      box.append(f);
+    }
+    const tags = [x.img != null && ['up', 'upload'], set && x.img == null && x.cap == null && ['mock', 'mock UI'], x.fb && ['fb', `${D.default} capture`]].filter(Boolean);
+    return el('div', { class: 'tile' }, box, el('div', { class: 'cap', style: `width:${Math.round(w * k)}px` }, set && el('b', {}, String(i + 1)), el('span', { class: 't' }, x.title), tags.map(([c, t]) => el('span', { class: 'tag ' + c }, t))));
+  }
+  const count = (f, v) => `${v.n.join(' · ')} / ${f.limit}${f.unit === 'bytes' ? ' bytes' : ''}`;
+  function paintText() {
+    const out = [el('h3', {}, `${P.label} text · ${L}`)];
+    for (const f of P.fields) {
+      const v = f.values[L];
+      if (!v) continue;
+      out.push(el('div', { class: 'f' }, el('div', { class: 'lh' }, f.label, v.mt && el('span', { class: 'tag mt' }, 'MT'), v.fb && el('span', { class: 'tag fb' }, `${D.default}'s`),
+        el('span', { class: 'c' + (v.n.some(n => n > f.limit) ? ' over' : '') }, count(f, v))), el('div', { class: 'v' + (v.fb ? ' fb' : '') }, v.v)));
+    }
+    if (P.captions.length) out.push(el('h3', {}, `Captions · ${L}`));
+    for (const c of P.captions) {
+      const v = c.values[L] || {};
+      out.push(el('div', { class: 'f' }, el('div', { class: 'lh' }, c.key, v.mt && el('span', { class: 'tag mt' }, 'MT'), v.fb && el('span', { class: 'tag fb' }, `${D.default}'s`)), el('div', { class: 'v' + (v.fb ? ' fb' : '') }, v.v ?? '')));
+    }
+    if (P.checks.length) out.push(el('h3', {}, 'Checks'), el('ul', { class: 'checks' }, P.checks.map(c => el('li', { class: c.level }, el('span', {}, `${c.where}: ${c.msg}`)))));
+    out.push(el('p', { class: 'fonts' }, 'Fonts: ' + D.fonts.map(f => `${f.family}${f.source === 'vendored' ? ' (in this file)' : ' (install it: named, not embedded)'}`).join(', ')));
+    $('text').replaceChildren(...out);
+  }
+  function paintMain() {
+    frames.clear();
+    const out = [];
+    const shared = [P.icon && el('div', { class: 'tile' }, el('div', { class: `icon ${P.id}`, style: `background:${P.icon}` }), el('div', { class: 'cap' }, 'Icon')),
+      ...P.assets.map((a, i) => tile(a, null, i, 1, 150, 420, L))].filter(Boolean);
+    if (shared.length) out.push(el('section', { class: 'sec' }, el('h2', {}, 'Shared'), el('div', { class: 'tiles' }, shared)));
+    for (const s of P.sections[L] || []) {
+      out.push(el('section', { class: 'sec' }, el('h2', {}, s.label), s.sets.map(x => el('div', { class: 'set' },
+        el('div', { class: 'hd' }, el('b', {}, x.label), `${x.shots.length} / ${x.max} · ${x.size}`),
+        el('div', { class: 'tiles' }, x.shots.length ? x.shots.map((sh, i) => tile(sh, x, i, x.shots.length, ROW_H[s.row] || 300, 520, L)) : el('span', {}, 'No shots'))))));
+    }
+    $('main').replaceChildren(...out);
+  }
+  function paint() {
+    for (const b of $('plats').children) b.setAttribute('aria-checked', String(b.dataset.p === P.id));
+    $('loc').value = L; paintText(); paintMain();
+    try { history.replaceState(null, '', `#${P.id}/${L}`); } catch { /* file: */ }
+  }
+  $('title').textContent = D.title; $('rev').textContent = D.rev ? `rev ${D.rev}` : '';
+  $('plats').append(...D.platforms.map(p => el('button', { type: 'button', role: 'radio', 'data-p': p.id }, p.label)));
+  $('plats').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { P = D.platforms.find(p => p.id === b.dataset.p); paint(); } });
+  $('loc').append(...D.locales.map(l => el('option', { value: l }, l)));
+  $('loc').addEventListener('change', () => { L = $('loc').value; paint(); });
+  // the print view: per platform its text (every locale, MT marks), then a page per locale and section
+  function printView() {
+    const pages = [], root = document.documentElement, waiting = new Set();
+    for (const p of D.platforms) {
+      const rows = p.fields.map(f => el('tr', {}, el('th', {}, f.label, el('div', { class: 'tag' }, `${f.limit} ${f.unit}`)),
+        D.locales.map(l => { const v = f.values[l]; return el('td', {}, v ? [v.v, ' ', v.mt && el('span', { class: 'tag mt' }, 'MT'), v.fb && el('span', { class: 'tag fb' }, `${D.default}'s`), el('div', { class: 'tag' + (v.n.some(n => n > f.limit) ? ' mock' : '') }, count(f, v))] : '—'); })));
+      const caps = p.captions.map(c => el('tr', {}, el('th', {}, c.key), D.locales.map(l => { const v = c.values[l] || {}; return el('td', {}, v.v ?? '—', ' ', v.mt && el('span', { class: 'tag mt' }, 'MT'), v.fb && el('span', { class: 'tag fb' }, `${D.default}'s`)); })));
+      pages.push(el('div', { class: 'pg' }, el('h1', {}, `${D.title} · ${p.label}`), el('div', { class: 'sub' }, [D.rev && `rev ${D.rev}`, D.date, `store rules read ${D.rules}`].filter(Boolean).join(' · ')),
+        el('table', {}, el('tr', {}, el('th', {}, 'Field'), D.locales.map(l => el('th', {}, l))), rows, caps.length && el('tr', {}, el('th', { colspan: D.locales.length + 1 }, 'Captions')), caps),
+        p.checks.length && [el('h1', { style: 'font-size:20px;margin-top:28px' }, 'Checks'), el('ul', { class: 'checks' }, p.checks.map(c => el('li', { class: c.level }, el('span', {}, `${c.where}: ${c.msg}`))))]));
+      for (const l of D.locales) {
+        const secs = [...(p.icon || p.assets.length ? [{ label: 'Shared', shared: true }] : []), ...(p.sections[l] || [])];
+        for (const s of secs) {
+          const head = [el('h1', {}, `${p.label} · ${s.label} · ${l}`), el('div', { class: 'sub' }, D.title + (D.rev ? ` · rev ${D.rev}` : ''))];
+          if (s.shared) { pages.push(el('div', { class: 'pg sec' }, head, el('div', { class: 'row' }, p.icon && el('div', { class: `icon ${p.id}`, style: `background:${p.icon}` }), p.assets.map((a, i) => tile(a, null, i, 1, 300, 900, l))))); continue; }
+          const H = Math.min(820, (900 - s.sets.length * 18) / Math.max(1, s.sets.length) - 30);
+          pages.push(el('div', { class: 'pg sec' }, head, s.sets.map(x => {
+            const w = Math.max(1, x.shots.length), k = Math.min(H / x.fh, (1856 - 228 - w * 18) / w / x.fw);
+            return el('div', { class: 'row' }, el('div', { class: 'hd' }, el('b', {}, x.label), el('div', {}, `${x.shots.length} / ${x.max} · ${x.size}`)),
+              x.shots.map((sh, i) => tile(sh, x, i, x.shots.length, x.fh * k, x.fw * k, l)));
+          })));
+        }
+      }
+    }
+    $('pages').replaceChildren(...pages);
+    for (const f of $('pages').querySelectorAll('iframe')) waiting.add(f);
+    root.classList.add('pv');
+    const fit = () => { const k = Math.min(1, (innerWidth - 24) / 1920); for (const pg of $('pages').children) { pg.style.transform = matchMedia('print').matches ? '' : `scale(${k})`; pg.style.marginBottom = `${-1080 * (1 - k) + 24}px`; } };
+    fit(); addEventListener('resize', fit);
+    return new Promise(done => {
+      const ready = () => { removeEventListener('message', heard); root.dataset.printReady = '1'; done(); };
+      const heard = e => { for (const f of waiting) if (f.contentWindow === e.source && e.data && e.data.bdShot === 'ready') { waiting.delete(f); if (!waiting.size) ready(); } };
+      addEventListener('message', heard);
+      setTimeout(ready, 30000);
+      if (!waiting.size) ready();
+    });
+  }
+  $('print').addEventListener('click', () => { location.hash = 'print'; location.reload(); });
+  const m = /^#(\w+)\/([\w-]+)$/.exec(location.hash);
+  // #print: the print view, then the print dialog; Esc, or a key or press once printed, goes back (never the dialog
+  // closing itself: Chrome may still be drawing the frames into the pages then, and serve.py prints it headless)
+  if (location.hash === '#print') {
+    let printed = false;
+    const leave = () => { location.hash = ''; location.reload(); };
+    addEventListener('afterprint', () => { printed = true; });
+    addEventListener('keydown', e => { if (printed || e.key === 'Escape') leave(); });
+    addEventListener('pointerdown', () => { if (printed) leave(); });
+    printView().then(() => print());
+    return;
+  }
+  if (m && D.platforms.some(p => p.id === m[1])) P = D.platforms.find(p => p.id === m[1]);
+  if (m && D.locales.includes(m[2])) L = m[2];
+  paint();
+})();
+</script>
+</body>
+</html>
