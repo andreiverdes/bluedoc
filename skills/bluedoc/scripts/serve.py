@@ -61,6 +61,9 @@ URLs: /                      home page: every doc under the registered folders, 
                              <stem>.design/<artboard>/ (or rev B's, from the history), each layer a data: URI. A
                              website's live page at ?rev=B&w=<px> is its snapshot of rev B (the nearest width it has),
                              with the inspector and the same CSP, its images from the dev server allowed
+      /__bluedoc/deck?path=<doc URL path>[&rev=B&theme=T]   a presentation (revision B's) as one HTML file that plays
+                             its slides offline (deck_html, assets/deck.html), sent as the attachment <stem>.html; a
+                             read, no key; 400 for any other doc type. build.py --deck writes the same file
       /__bluedoc/kit/<file>  the plain kit and inspector (assets/kits)
       /__bluedoc/fw/<name>/<path>   a framework add-framework copied
       /<root>/<path>.<css|js|mjs|font>   a project file a design board declares (frameworks[].files), and the
@@ -1079,10 +1082,13 @@ def asset_tag(kind: str, f: Path, url: str, inline: bool) -> str:
 
 
 def wrap_screen(doc: dict, doc_path: Path, artboard_id: str, fragment: str, *, inline: bool = False,
-                theme: str | None = None) -> str:
+                theme: str | None = None, deck: bool = False) -> str:
     """A screen as a whole HTML document: kits/shell.html filled with the artboard's framework (or the plain kit and
     a notice when it's missing), its fidelity, the device's and theme's variables, the inspector, then the fragment.
-    inline puts every file in the document (an -o file); else they load from this server. KeyError: no such artboard."""
+    inline puts every file in the document (an -o file); else they load from this server. deck (a deck file's slide,
+    deck_html) inlines too, with DECK_FRAME_SCRIPT in the inspector's place and the hand font only on a sketch slide.
+    KeyError: no such artboard."""
+    inline = inline or deck
     board = build.board_of(doc) or {}
     a = next((x for x in board.get("artboards") or [] if isinstance(x, dict) and x.get("id") == artboard_id), None)
     if a is None:
@@ -1106,14 +1112,27 @@ def wrap_screen(doc: dict, doc_path: Path, artboard_id: str, fragment: str, *, i
     slots = {
         "html_class": f"fid-{fidelity}", "artboard": esc(artboard_id), "fallback": esc(missing or ""),
         "title": esc(str(a.get("title") or artboard_id)), "vars": screen_vars(doc, board, a, theme),
-        "hand_font": data_uri(HAND_FONT) if inline else f"/__bluedoc/vendor/fonts/{HAND_FONT.name}?v={vendor_version()}",
-        "inspector": asset_tag("js", inspector, f"/__bluedoc/kit/inspector.js?v={kit_version()}", inline),
+        "hand_font": (data_uri(HAND_FONT) if not deck or fidelity == "sketch" else "data:,") if inline
+        else f"/__bluedoc/vendor/fonts/{HAND_FONT.name}?v={vendor_version()}",
+        "inspector": DECK_FRAME_SCRIPT if deck else asset_tag("js", inspector, f"/__bluedoc/kit/inspector.js?v={kit_version()}", inline),
         "head": "\n".join(head),
         "notice": f'<div id="bd-notice" role="status">{esc(missing)} not found: showing the plain kit</div>\n' if missing else "",
         "body": fragment,
     }
     shell = (KITS / "shell.html").read_text(encoding="utf-8")
     return re.sub(r"\{\{(\w+)\}\}", lambda m: slots[m[1]], shell)   # one pass: the fragment's own {{ }} stay as written
+
+
+def current_screen_text(doc: dict, doc_path: Path, aid: str, roots: list[Path] | None) -> str | None:
+    """An artboard's screen file's text as it is now; None without one. roots (the server's folders): the file must
+    be in a <stem>.design folder inside one of them; None (the CLI): anywhere."""
+    f = build.screen_paths(doc, doc_path).get(aid)
+    if not f or (roots is not None and not (f.resolve().parent.name.endswith(".design") and under_roots(f.resolve(), roots))):
+        return None
+    try:
+        return f.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return None
 
 
 def screen_for_url(path: str, rev: str | None) -> tuple[Path, dict, str, str] | None:
@@ -1142,19 +1161,136 @@ def screen_for_url(path: str, rev: str | None) -> tuple[Path, dict, str, str] | 
             return None
         fragment = build.screen_source(doc_path, aid, rev) if doc else None
     else:
-        f = build.screen_paths(doc, doc_path).get(aid)
-        fragment = None
-        if f and f.resolve().parent.name.endswith(".design") and under_roots(f.resolve(), load_roots()):
-            try:
-                fragment = f.read_text(encoding="utf-8")
-            except (OSError, UnicodeDecodeError):
-                pass
+        fragment = current_screen_text(doc, doc_path, aid, load_roots())
     if isinstance(doc, dict) and icon_artboard(doc, aid):   # no screen file: the sheet, built from the layers
         fragment = icon_fragment(doc, doc_path, aid, rev, None if rev else load_roots())
     board = build.board_of(doc) if isinstance(doc, dict) else None
     if fragment is None or not board or not any(isinstance(a, dict) and a.get("id") == aid for a in board.get("artboards") or []):
         return None
     return doc_path, doc, aid, fragment
+
+
+# ---------- a presentation as one HTML file (GET /__bluedoc/deck, build.py --deck) ----------
+
+DECK_PLAYER = HERE.parent / "assets" / "deck.html"
+# a deck file's slide, in the inspector's place: a click on anything but a control, and the player's keys, go to the
+# player (assets/deck.html), which never hears a sandboxed frame's events
+DECK_FRAME_SCRIPT = (
+    "<script>(()=>{const K=['ArrowLeft','ArrowRight','ArrowUp','ArrowDown',' ','PageUp','PageDown','Home','End','n','N','f','F'],"
+    "P=m=>parent.postMessage(m,'*'),C='a,button,input,select,textarea,label,summary,video,audio,[contenteditable],[role=button],[tabindex]';"
+    "addEventListener('click',e=>{if(e.button===0&&!e.defaultPrevented&&!(e.target.closest&&e.target.closest(C)))P({deck:'click'})});"
+    "addEventListener('keydown',e=>{if(e.metaKey||e.ctrlKey||e.altKey||!K.includes(e.key)||(e.target.closest&&"
+    "e.target.closest('input,select,textarea,[contenteditable]')))return;e.preventDefault();P({deck:'key',key:e.key,shift:e.shiftKey})})})()</script>")
+# a <style> or <script> block at least this long that two slides carry (their kit, framework, shell) is stored once
+DECK_SHARED_MIN = 512
+DECK_BLOCK = re.compile(r"(?is)<(style|script)\b[^>]*>.*?</\1\s*>")
+
+
+class DeckError(ValueError):
+    """Why a doc can't be a deck file."""
+
+
+def safe_url(u: str) -> str:
+    """template.html safeUrl: web and mail links, relative paths and #fragments; anything else becomes '#'."""
+    m = re.match(r"(?i)^([a-z][a-z\d+.-]*):", re.sub(r"[\x00-\x20]", "", u))
+    return u if not m or m[1].lower() in ("http", "https", "mailto") else "#"
+
+
+def md_inline(src: str) -> str:
+    """template.html inline(): `code`, **bold**, *italic* and [links](url), the rest escaped."""
+    codes: list[str] = []
+
+    def code(m: re.Match) -> str:
+        codes.append(m[1])
+        return f"\0{len(codes) - 1}\0"
+    t = re.sub(r"`([^`]+)`", code, esc(src).replace("'", "&#39;"))
+    t = re.sub(r"\*\*([^*]+)\*\*", r"<strong>\1</strong>", t)
+    t = re.sub(r"(^|[\s(])\*([^*\s][^*]*)\*", r"\1<em>\2</em>", t)
+    t = re.sub(r"\[([^\]]+)\]\(([^)\s]+)\)", lambda m: f'<a href="{safe_url(m[2])}" target="_blank" rel="noopener noreferrer">{m[1]}</a>', t)
+    return re.sub(r"\0(\d+)\0", lambda m: f"<code>{codes[int(m[1])]}</code>", t)
+
+
+MD_BULLET, MD_NUMBER = re.compile(r"^\s*[-*] "), re.compile(r"^\s*\d+[.)] ")
+
+
+def md_html(src: str) -> str:
+    """template.html md(): paragraphs and bulleted or numbered lists of md_inline text, as the page draws notes."""
+    out = []
+    for block in re.split(r"\n\s*\n", str(src or "").strip()):
+        lines = [ln for ln in block.split("\n") if ln.strip()]
+        if not lines:
+            continue
+        for tag, mark in (("ul", MD_BULLET), ("ol", MD_NUMBER)):
+            if all(mark.match(ln) for ln in lines):
+                out.append(f"<{tag}>" + "".join("<li>" + md_inline(mark.sub("", ln)) + "</li>" for ln in lines) + f"</{tag}>")
+                break
+        else:
+            out.append("<p>" + md_inline(" ".join(lines)) + "</p>")
+    return "".join(out)
+
+
+def deck_slides(doc: dict) -> list[dict]:
+    """A presentation's slides in the order Present plays them (template.html `deck`): by row on the board (top
+    first), left to right in a row, ties in the doc's order."""
+    at = build.board_layout(build.board_of(doc) or {})
+    seen, out = set(), []
+    for a in build._artboards(doc):
+        if a.get("device") == "slide" and a["id"] in at and a["id"] not in seen:
+            seen.add(a["id"])
+            out.append(a)
+    return sorted(out, key=lambda a: (at[a["id"]][1], at[a["id"]][0]))
+
+
+def deck_html(doc: dict, doc_path: Path, rev: str | None = None, theme: str | None = None,
+              roots: list[Path] | None = None) -> str:
+    """A presentation as one self-contained HTML file that plays its slides anywhere, offline (assets/deck.html): each
+    slide wrapped as Present shows it (wrap_screen with deck: its kit or framework inline, the theme's tokens) behind
+    build.STANDALONE_SCREEN_CSP, in deck_slides order, with its speaker notes as HTML. A <style> or <script> block two
+    slides share is stored once; the player puts each slide's document back together for its sandboxed srcdoc frame.
+    doc is the doc on disk; rev another revision of it (from the history), theme a theme id (else the brief's pick).
+    roots: the server's folders, which a screen file must be in (None, the CLI: anywhere). A slide without its screen
+    text plays as a placeholder. DeckError: not a presentation, an unknown revision, no slides."""
+    kind = build.doc_type(doc.get("meta") if isinstance(doc.get("meta"), dict) else {})
+    if kind != "presentation":
+        raise DeckError(f"only a presentation exports as a deck, not a doc of type {kind}")
+    if rev is not None and rev != str((doc.get("meta") or {}).get("rev") or ""):
+        doc = doc_at(doc_path, doc, rev)
+        if doc is None:
+            raise DeckError(f"no revision {rev} in the doc's history")
+    else:
+        rev = None
+    slides = deck_slides(doc)
+    if not slides:
+        raise DeckError("the deck has no slides")
+    pages = []
+    for a in slides:
+        text = build.screen_source(doc_path, a["id"], rev) if rev else current_screen_text(doc, doc_path, a["id"], roots)
+        pages.append(None if text is None else build.with_screen_csp(wrap_screen(doc, doc_path, a["id"], text, deck=True, theme=theme)))
+    found: dict[str, int] = {}   # each long block: how many slides carry it
+    for p in pages:
+        for t in {m[0] for m in DECK_BLOCK.finditer(p or "") if len(m[0]) >= DECK_SHARED_MIN}:
+            found[t] = found.get(t, 0) + 1
+    assets: list[str] = []
+    index: dict[str, int] = {}
+
+    def parts(page: str) -> list:
+        """page as text runs and indices into assets, for the blocks other slides carry too."""
+        out, last = [], 0
+        for m in DECK_BLOCK.finditer(page):
+            if found.get(m[0], 0) > 1:
+                if m[0] not in index:
+                    index[m[0]] = len(assets)
+                    assets.append(m[0])
+                out += [page[last:m.start()], index[m[0]]]
+                last = m.end()
+        return [x for x in out + [page[last:]] if x != ""]
+    shown = [{"id": a["id"], "title": str(a.get("title") or a["id"]),
+              "notes": md_html(a["notes"]) if isinstance(a.get("notes"), str) else "",
+              "parts": parts(p) if p is not None else None} for a, p in zip(slides, pages)]
+    data = {"w": build.DEVICES["slide"]["w"], "h": build.DEVICES["slide"]["h"], "assets": assets, "slides": shown}
+    fill = {"__DECK_TITLE__": esc(str(doc.get("title") or build.doc_stem(Path(doc_path)))),
+            "__DECK_CSP__": build.STANDALONE_SCREEN_CSP, "__DECK_DATA__": build._script_json(data)}
+    return re.sub("|".join(fill), lambda m: fill[m[0]], DECK_PLAYER.read_text(encoding="utf-8"))
 
 
 # ---------- website live pages: one proxy per dev server ----------
@@ -2170,6 +2306,23 @@ def make_handler(port: int, default_to: str):
             html = wrap_screen(doc, doc_path, aid, fragment, theme=q.get("theme") or None)
             return self.send(200, html, headers={"Content-Security-Policy": screen_csp(host)}, framed=True)
 
+        def deck(self, q: dict) -> None:
+            """GET /__bluedoc/deck?path=<doc URL path>[&rev=R][&theme=T]: the presentation as one HTML file
+            (deck_html), as a download named <stem>.html. A read: no key, as for the doc's page."""
+            doc_path = doc_for_url(q.get("path", ""))
+            if not doc_path:
+                return self.json(404, {"error": "not a doc under a registered folder"})
+            try:
+                doc = json.loads(doc_path.read_text(encoding="utf-8"))
+                if not isinstance(doc, dict):
+                    raise DeckError("the doc is not a JSON object")
+                html = deck_html(doc, doc_path, q.get("rev") or None, q.get("theme") or None, load_roots())
+            except (OSError, ValueError) as e:   # DeckError is a ValueError
+                return self.json(400, {"error": str(e)})
+            name = build.doc_stem(doc_path) + ".html"
+            plain = re.sub(r'[^A-Za-z0-9._ -]', "_", name)
+            return self.send(200, html, headers={"Content-Disposition": f"attachment; filename=\"{plain}\"; filename*=UTF-8''{quote(name)}"})
+
         def send_media(self, f: Path) -> None:
             # one byte range at most: enough for <video> seeking (Safari won't play video without it)
             data, ctype = f.read_bytes(), build.MEDIA_TYPES[f.suffix.lower()]
@@ -2297,6 +2450,8 @@ def make_handler(port: int, default_to: str):
                 return self.page_key()
             if u.path == "/__bluedoc/url":
                 return self.json(200, {"url": url_for(Path(q.get("doc", "")))})
+            if u.path == "/__bluedoc/deck":
+                return self.deck(q)
             if u.path == "/__bluedoc/state":
                 doc = doc_for_url(q.get("path", ""))
                 if not doc:

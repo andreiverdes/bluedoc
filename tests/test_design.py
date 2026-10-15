@@ -12,17 +12,23 @@ its links and the page gets them, with board-geo.js inlined only into design pag
 presentation`. `new presentation` writes a three-slide deck in one column that builds clean once filled in; speaker
 notes over 2 KB are an ERROR, and so is a phone artboard in a presentation, while a design may hold a slide. The bundled
 deck, acme-fit-deck, is a presentation that builds clean: five hi-fi plain-kit slides in one column with notes, one
-revision. The server serves only screens and declared framework files, and wraps a screen whose framework is missing
-in the plain kit with a notice."""
+revision; `--deck` and GET /__bluedoc/deck make it one HTML file that plays offline (in headless Chrome over file://
+with BLUEDOC_BROWSER_TESTS=1), and refuse other doc types. The server serves only screens and declared framework files,
+and wraps a screen whose framework is missing in the plain kit with a notice."""
 from __future__ import annotations
 
 import copy
 import hashlib
 import json
 import re
+import shutil
+import tempfile
 import unittest
+from pathlib import Path
+from urllib.parse import quote
 
 from _support import EXAMPLES, Server, TempHome, load_json
+from test_page_state import CHROME, Browser, Tab, until
 
 import build
 
@@ -654,6 +660,189 @@ class DeckExample(unittest.TestCase):
         h = load_json(EXAMPLES / f"{self.STEM}.bluedoc.history.json")
         self.assertEqual([r["rev"] for r in h["revs"]], ["A"])
         self.assertEqual(h["revs"][0]["screens"], build.screen_hashes(doc, doc_path))
+
+
+DECK_IDS = ["title", "shipped", "actives", "quote", "ask"]
+
+
+def deck_data(html: str) -> dict:
+    """The deck file's JSON: {w, h, assets, slides}."""
+    return json.loads(re.search(r'<script type="application/json" id="deck">(.*?)</script>', html, re.S)[1])
+
+
+def slide_page(data: dict, slide: dict) -> str:
+    """A slide's whole document, as the player puts it back together."""
+    return "".join(p if isinstance(p, str) else data["assets"][p] for p in slide["parts"])
+
+
+class DeckFile(unittest.TestCase):
+    """`build.py <deck> --deck out.html`: acme-fit-deck as one HTML file that plays offline, every slide in deck order
+    wrapped in its kit with the brief's theme, its notes as HTML, nothing from the network; other doc types refused."""
+
+    def setUp(self) -> None:
+        self.tmp = TempHome()
+        self.addCleanup(self.tmp.cleanup)
+        self.docs = self.tmp.copy_examples()
+        self.doc_path = self.docs / "acme-fit-deck.bluedoc.json"
+        self.out = self.tmp.dir / "out" / "acme-fit-deck.html"
+
+    def test_every_slide_in_order_with_notes_and_nothing_external(self) -> None:
+        r = self.tmp.run("build.py", self.doc_path, "--deck", self.out)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("5 slides", r.stderr)
+        html = self.out.read_text(encoding="utf-8")
+        data = deck_data(html)
+        self.assertEqual((data["w"], data["h"]), (1920, 1080))
+        self.assertEqual([s["id"] for s in data["slides"]], DECK_IDS)
+        doc = load_json(self.doc_path)
+        self.assertIn(f"<title>{doc['title']}</title>", html)
+        for a, s in zip(board_of(doc)["artboards"], data["slides"]):
+            page = slide_page(data, s)
+            fragment = (self.docs / "acme-fit-deck.design" / f"{a['id']}.html").read_text(encoding="utf-8")
+            self.assertIn(fragment, page, a["id"])
+            self.assertIn("--accent: #4f46e5;", page, "the brief's pick, Indigo")
+            self.assertIn(build.STANDALONE_SCREEN_CSP, page)
+            self.assertEqual(s["title"], a["title"])
+            self.assertEqual(bool(s["notes"]), bool(a.get("notes")), a["id"])
+        self.assertIn("<strong>41,800</strong>", data["slides"][2]["notes"])
+        self.assertIn("<li>Passkeys halved the time to sign in.</li>", data["slides"][1]["notes"])
+        self.assertIsNone(re.search(r"(?i)\b(?:https?:)?//[a-z0-9]", html), "the file must not reach the network")
+        self.assertNotIn("/__bluedoc/", html)
+        self.assertNotIn("bluedoc inspector", html, "no editor code in the slides")
+        self.assertEqual(html.count("bluedoc wireframe kit"), 1, "the kit the slides share is stored once")
+        self.assertLess(len(html.encode()), 100_000)
+
+    def test_other_doc_types_are_refused(self) -> None:
+        for stem in ("acme-fit-design", "acme-status"):
+            r = self.tmp.run("build.py", self.docs / f"{stem}.bluedoc.json", "--deck", self.out)
+            self.assertEqual(r.returncode, 2, r.stderr)
+            self.assertIn("only a presentation exports as a deck", r.stderr)
+            self.assertFalse(self.out.exists())
+
+
+class DeckRoute(unittest.TestCase):
+    """GET /__bluedoc/deck?path=…&rev=…&theme=…: the same file as an attachment, a read with no key; the revision and
+    theme asked for; 400 for another doc type or an unknown revision."""
+
+    def setUp(self) -> None:
+        self.tmp = TempHome()
+        self.addCleanup(self.tmp.cleanup)
+        self.docs = self.tmp.copy_examples()
+        self.doc_path = self.docs / "acme-fit-deck.bluedoc.json"
+        self.assertEqual(self.tmp.run("serve.py", "add", self.docs).returncode, 0)
+        self.server = Server(self.tmp)
+        self.server.start()
+        self.addCleanup(self.server.stop)
+        self.url = self.server.url_for(self.doc_path)
+
+    def deck(self, url: str, **q: str) -> tuple[int, dict, bytes]:
+        query = "&".join(f"{k}={quote(v)}" for k, v in {"path": url, **q}.items())
+        return self.server.exchange("GET", f"/__bluedoc/deck?{query}")
+
+    def test_the_deck_downloads_as_an_attachment(self) -> None:
+        status, headers, body = self.deck(self.url)
+        self.assertEqual(status, 200, body[:300])
+        self.assertTrue(headers["content-disposition"].startswith('attachment; filename="acme-fit-deck.html"'), headers)
+        self.assertTrue(headers["content-type"].startswith("text/html"))
+        data = deck_data(body.decode("utf-8"))
+        self.assertEqual([s["id"] for s in data["slides"]], DECK_IDS)
+        self.assertIn("--accent: #4f46e5;", slide_page(data, data["slides"][0]))
+        _, _, forest = self.deck(self.url, theme="forest")
+        self.assertIn("--accent: #15803d;", slide_page(deck_data(forest.decode("utf-8")), deck_data(forest.decode("utf-8"))["slides"][0]))
+
+    def test_an_earlier_revision_is_the_one_asked_for(self) -> None:
+        title = self.docs / "acme-fit-deck.design" / "title.html"
+        title.write_text(title.read_text(encoding="utf-8").replace("Q3 launch review", "Q3 launch recap"), encoding="utf-8")
+        doc = load_json(self.doc_path)
+        doc["meta"]["rev"] = "B"
+        self.doc_path.write_text(json.dumps(doc, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
+        self.assertEqual(self.tmp.run("build.py", self.doc_path).returncode, 0)
+        pages = {}
+        for rev in ("A", "B", None):
+            status, _, body = self.deck(self.url, **({"rev": rev} if rev else {}))
+            self.assertEqual(status, 200, body[:300])
+            data = deck_data(body.decode("utf-8"))
+            pages[rev] = slide_page(data, data["slides"][0])
+        self.assertIn(">Q3 launch review</h1>", pages["A"])
+        self.assertNotIn(">Q3 launch review</h1>", pages["B"])
+        self.assertIn(">Q3 launch recap</h1>", pages["B"])
+        self.assertEqual(pages[None], pages["B"])
+        status, _, body = self.deck(self.url, rev="Z")
+        self.assertEqual(status, 400)
+        self.assertIn("no revision Z", json.loads(body)["error"])
+
+    def test_other_doc_types_unknown_docs_and_foreign_hosts_are_refused(self) -> None:
+        status, _, body = self.deck(self.server.url_for(self.docs / f"{STEM}.bluedoc.json"))
+        self.assertEqual(status, 400)
+        self.assertIn("only a presentation exports as a deck", json.loads(body)["error"])
+        self.assertEqual(self.deck(self.url.replace("acme-fit-deck", "acme-gone"))[0], 404)
+        status, _, _ = self.server.exchange("GET", f"/__bluedoc/deck?path={quote(self.url)}", headers={"Host": "evil.example:80"})
+        self.assertEqual(status, 403)
+
+
+@unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")
+class DeckPlayer(unittest.TestCase):
+    """The deck file over file:// in headless Chrome: the first slide renders in its sandboxed frame, → steps to #2,
+    N shows the notes, a click on the slide steps to #3."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.profile = Path(tempfile.mkdtemp(prefix="bluedoc-chrome-"))
+        cls.browser = Browser(cls.profile)
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        cls.browser.close()
+        shutil.rmtree(cls.profile, ignore_errors=True)
+
+    def setUp(self) -> None:
+        self.tmp = TempHome()
+        self.addCleanup(self.tmp.cleanup)
+        docs = self.tmp.copy_examples()
+        self.out = self.tmp.dir / "acme-fit-deck.html"
+        r = self.tmp.run("build.py", docs / "acme-fit-deck.bluedoc.json", "--deck", self.out)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.browser.errors.clear()
+
+    def key(self, tab: Tab, key: str, code: str, vk: int) -> None:
+        for typ in ("keyDown", "keyUp"):
+            self.browser.call("Input.dispatchKeyEvent", {"type": typ, "key": key, "code": code, "windowsVirtualKeyCode": vk,
+                                                         **({"text": key} if typ == "keyDown" and len(key) == 1 else {})}, tab.session)
+
+    def slide_text(self, slide: str) -> str | None:
+        """The headline of the frame showing slide (sandboxed frames are targets of their own), once it has loaded."""
+        for t in self.browser.call("Target.getTargets")["targetInfos"]:
+            if t["type"] != "iframe" or t["url"] != "about:srcdoc":
+                continue
+            s = self.browser.call("Target.attachToTarget", {"targetId": t["targetId"], "flatten": True})["sessionId"]
+            r = self.browser.call("Runtime.evaluate", {"expression": "[document.documentElement.dataset.bdArtboard, "
+                                  "(document.querySelector('.slide-title') || {}).textContent, getComputedStyle(document.querySelector('.slide-kicker') || document.body).color]",
+                                  "returnByValue": True}, s)
+            self.browser.call("Target.detachFromTarget", {"sessionId": s})
+            aid, text, kicker = (r.get("result") or {}).get("value") or [None, None, None]
+            if aid == slide and text:
+                return f"{text} {kicker}"
+        return None
+
+    def test_the_deck_plays_from_a_file(self) -> None:
+        tab = Tab(self.browser)
+        self.browser.call("Page.navigate", {"url": self.out.as_uri()}, tab.session)
+        tab.wait_for("document.readyState === 'complete' && location.hash === '#1' && !!document.querySelector('iframe.fr.on')")
+        self.assertEqual(tab.ev("document.title"), "Acme Fit: Q3 launch review deck")
+        self.assertEqual(until(lambda: self.slide_text("title")), "Q3 launch review rgb(79, 70, 229)", "the title slide in Indigo")
+        self.assertTrue(tab.ev("document.getElementById('notes').hidden"))
+        self.key(tab, "ArrowRight", "ArrowRight", 39)
+        tab.wait_for("location.hash === '#2'")
+        self.assertTrue(tab.ev("document.getElementById('cap').textContent.startsWith('2 / 5')"))
+        self.key(tab, "n", "KeyN", 78)
+        tab.wait_for("!document.getElementById('notes').hidden")
+        self.assertIn("Three launches this quarter", tab.ev("document.getElementById('notes').textContent"))
+        self.assertTrue(until(lambda: self.slide_text("shipped")), "the second slide's frame loaded")
+        tab.ev("new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))")   # the slide laid out above the notes
+        for typ in ("mousePressed", "mouseReleased"):   # on the slide, inside its frame
+            self.browser.call("Input.dispatchMouseEvent", {"type": typ, "x": 720, "y": 300, "button": "left", "clickCount": 1}, tab.session)
+        tab.wait_for("location.hash === '#3'")
+        self.assertEqual(self.browser.errors, [])
 
 
 class FrameworkFallback(unittest.TestCase):

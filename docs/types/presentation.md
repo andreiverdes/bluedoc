@@ -13,6 +13,7 @@ Slide decks on a board: one HTML slide per artboard, 16:9, with speaker notes, t
   ![The acme-fit-deck in Present: slide 3 of 5, Weekly actives, with its speaker notes under it](../media/presentation-present.webp)
 
 - **Speaker notes.** Each slide's `notes` (Markdown, up to 2 KB) show under it in Present, never on the slide.
+- **Export HTML.** The download key beside Present, and in Present's bar, saves the deck you're viewing as one `.html` file that plays anywhere, offline: arrows, Space or a click to step, `N` for notes, `F` for full screen. Agents run `build.py <doc> --deck out.html`.
 - **Slides only.** A presentation's board holds `slide` artboards and nothing else; the build fails on a phone or any other device and points to a design doc for screens. A design may still hold an occasional slide.
 - **Theme re-skin and Sketch.** The brief's theme pick re-skins every slide at once; **Sketch** redraws the deck hand-drawn for a rough first pass.
 - **Comments on a slide.** Point at an element to comment on it: the key is `el:<slide>/<name>`, from the element's `data-bd` name, so the agent edits that element in that file. `artboard:<id>` keys a whole slide. Notes collect in the **Comments** tab; a comment the agent lists in a revision's `resolves` turns Resolved.

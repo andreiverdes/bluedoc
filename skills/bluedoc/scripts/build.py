@@ -4,6 +4,8 @@
 Usage:
   build.py doc.json                 validate, lint, record the revision (view it with serve.py)
   build.py doc.json -o out.html     same, plus a standalone HTML file for sharing offline (media and diffs inlined)
+  build.py deck.json --deck out.html   same, plus a presentation as one HTML file that plays its slides offline
+                                    (serve.py deck_html; any other doc type is refused)
   build.py doc.json --check         validate and lint only; writes nothing (no history, no diff cache)
   build.py doc.json --strict        treat lint warnings as errors
   build.py doc.json --show-rev B    print revision B, rebuilt from the history, as JSON
@@ -2445,6 +2447,20 @@ STANDALONE_SCREEN_CSP = ("default-src 'none'; script-src 'unsafe-inline'; style-
 MAX_STANDALONE_BYTES = 10 * 1024 * 1024
 
 
+def with_screen_csp(page: str) -> str:
+    """A whole screen document with STANDALONE_SCREEN_CSP as a <meta> first in its <head>."""
+    meta = f'<meta http-equiv="Content-Security-Policy" content="{STANDALONE_SCREEN_CSP}">'
+    return re.sub(r"(?i)<head[^>]*>", lambda m: m.group(0) + meta, page, count=1)
+
+
+def _serve():
+    """serve.py, which wraps screens (wrap_screen) and builds deck files (deck_html)."""
+    if str(HERE) not in sys.path:
+        sys.path.insert(0, str(HERE))
+    import serve
+    return serve
+
+
 def standalone_screens(doc: dict, doc_path: Path) -> dict[str, str] | None:
     """{artboard id: its screen as a whole document with the kit inlined} for an -o file; None for a doc without
     a board. serve.py's wrap_screen fills the shell (an icons artboard: with serve.icon_fragment, the sheet with its
@@ -2452,17 +2468,13 @@ def standalone_screens(doc: dict, doc_path: Path) -> dict[str, str] | None:
     texts = read_screens(doc, doc_path)
     if not texts:
         return None
-    if str(HERE) not in sys.path:
-        sys.path.insert(0, str(HERE))
-    import serve
-    meta = f'<meta http-equiv="Content-Security-Policy" content="{STANDALONE_SCREEN_CSP}">'
+    serve = _serve()
     out = {}
     for a in _artboards(doc):
         aid = a["id"]
         text = serve.icon_fragment(doc, Path(doc_path), aid) if is_icons(a) else texts.get(aid)
         if text is not None and aid not in out:
-            page = serve.wrap_screen(doc, Path(doc_path), aid, text, inline=True)
-            out[aid] = re.sub(r"(?i)<head[^>]*>", lambda m: m.group(0) + meta, page, count=1)
+            out[aid] = with_screen_csp(serve.wrap_screen(doc, Path(doc_path), aid, text, inline=True))
     return out
 
 
@@ -3505,6 +3517,8 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("doc", type=Path)
     ap.add_argument("-o", "--out", type=Path, help="also write a standalone HTML file (for sharing; serve.py renders the JSON directly)")
+    ap.add_argument("--deck", type=Path, metavar="OUT.html", help="presentation only: also write the deck as one HTML file that "
+                    "plays its slides offline (the file Export HTML downloads)")
     ap.add_argument("--check", action="store_true", help="validate and lint only; write nothing (history, diff cache)")
     ap.add_argument("--strict", action="store_true", help="fail on lint warnings")
     ap.add_argument("--template", type=Path, default=TEMPLATE)
@@ -3528,6 +3542,10 @@ def main(argv: list[str] | None = None) -> int:
         doc = json.loads(a.doc.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as e:
         print(f"cannot read {a.doc}: {e}", file=sys.stderr)
+        return 2
+    kind = doc_type(doc.get("meta") if isinstance(doc, dict) and isinstance(doc.get("meta"), dict) else {})
+    if a.deck and kind != "presentation":
+        print(f"--deck: only a presentation exports as a deck, not a doc of type {kind} ({a.doc})", file=sys.stderr)
         return 2
     rep = validate(doc, a.doc, write_cache=not a.check)
     for line in rep.errors + rep.warnings:
@@ -3557,7 +3575,17 @@ def main(argv: list[str] | None = None) -> int:
         if size > MAX_STANDALONE_BYTES:
             print(f"WARN  {a.out}: {size / 1048576:.1f} MB (> {MAX_STANDALONE_BYTES // 1048576} MB): each screen carries its "
                   "kit inline; share the JSON and serve.py instead, or use fewer or plain-kit screens", file=sys.stderr)
-    else:
+    if a.deck:
+        serve = _serve()
+        try:
+            deck = serve.deck_html(doc, a.doc)
+        except serve.DeckError as e:
+            print(f"--deck: {e}", file=sys.stderr)
+            return 1
+        a.deck.parent.mkdir(parents=True, exist_ok=True)
+        a.deck.write_text(deck, encoding="utf-8")
+        print(f"wrote {a.deck} ({a.deck.stat().st_size // 1024} KB, {len(serve.deck_slides(doc))} slides)", file=sys.stderr)
+    if not a.out and not a.deck:
         print(f"view: python3 {HERE / 'serve.py'} open {a.doc}", file=sys.stderr)
     return 0
 

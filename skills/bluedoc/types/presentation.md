@@ -22,6 +22,7 @@ This writes the brief, a board of three slides (`title`, `content`, `closing`) a
 
 - One artboard per slide, `device: "slide"` (1920 × 1080; another ratio: `w`, `h`), listed in deck order without `x`/`y`: the board stacks them in one column, and **Present** plays them top to bottom.
 - Speaker notes go in the artboard's `notes` (md, ≤ 2 KB, an error above), never on the slide. Present shows them under it (`N`).
+- To share the deck as one HTML file that plays offline: `build.py <doc> --deck <out>.html` (the reader's **Export HTML**, in the toolbar and Present, downloads the same file).
 - One point per slide, readable from the back of the room. Build each in the plain kit's slide classes: `grep -n -A20 '^## Slides' <skill>/references/kits.md`. Colours from the theme tokens (`var(--accent)`).
 - The screen-file rules of `types/design.md` hold: a body fragment, no network, `data-bd` on what a reader may point at, ≤ 24 KB.
 

@@ -95,6 +95,11 @@ class Server:
     def req(self, method: str, path: str, body: bytes | None = None, headers: dict | None = None) -> tuple[int, bytes]:
         """One request, path sent as is (no normalisation); Host defaults to the server's own. A request that sends
         X-Bluedoc also sends the server's key (BLUEDOC_HOME/key), as the page does, unless it sets X-Bluedoc-Key."""
+        status, _, data = self.exchange(method, path, body, headers)
+        return status, data
+
+    def exchange(self, method: str, path: str, body: bytes | None = None, headers: dict | None = None) -> tuple[int, dict, bytes]:
+        """req, with the response's headers (names lower-cased) too."""
         headers = {"Host": self.host, **(headers or {})}
         key = self.tmp.home / "key"
         if "X-Bluedoc" in headers and "X-Bluedoc-Key" not in headers and key.is_file():
@@ -103,7 +108,7 @@ class Server:
         try:
             c.request(method, path, body=body, headers=headers)
             r = c.getresponse()
-            return r.status, r.read()
+            return r.status, {k.lower(): v for k, v in r.getheaders()}, r.read()
         finally:
             c.close()
 

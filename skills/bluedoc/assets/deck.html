@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="__DECK_CSP__">
+<title>__DECK_TITLE__</title>
+<style>
+/* a presentation's slides, played full-window: serve.py deck_html fills in the title, the CSP and the deck's JSON
+   ({w, h, assets, slides}: each slide's document as text runs and indices into assets, the blocks slides share) */
+html, body { height: 100%; margin: 0; }
+body { display: flex; flex-direction: column; overflow: hidden; background: oklch(14% 0.01 264); color: oklch(96% 0 0);
+  font: 500 13.5px/1.3 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+#stage { position: relative; flex: 1; min-height: 0; cursor: pointer; }
+.fr { position: absolute; left: 0; top: 0; border: 0; background: #fff; transform-origin: 0 0; visibility: hidden; }
+.fr.on { visibility: visible; }
+.ph { position: absolute; display: grid; place-items: center; background: oklch(21% 0.01 264); color: oklch(78% 0 0); font-size: 16px; }
+#notes { flex: none; box-sizing: border-box; width: min(960px, calc(100% - 32px)); max-height: 30vh; overflow: auto; margin: 12px auto 16px; padding: 10px 16px;
+  border-radius: 12px; background: oklch(21% 0.01 264); color: oklch(86% 0 0); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+#notes[hidden] { display: none; }
+#notes > * { margin: 0; }
+#notes > * + * { margin-top: .6em; }
+#notes a { color: inherit; }
+#bar { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; padding: 6px 8px;
+  border-radius: 14px; background: oklch(24% 0.01 264 / .94); box-shadow: 0 6px 24px oklch(0% 0 0 / .35); cursor: default; transition: opacity .2s; }
+#bar.idle { opacity: 0; pointer-events: none; }
+#bar button { display: inline-grid; place-items: center; height: 30px; min-width: 30px; padding: 0 6px; border: 0; border-radius: 9px; background: none;
+  color: oklch(88% 0 0); font: inherit; font-size: 12.5px; cursor: pointer; }
+#bar button:hover:not(:disabled) { color: #fff; background: oklch(32% 0.01 264); }
+#bar button[aria-pressed="true"] { color: #fff; background: oklch(32% 0.01 264); }
+#bar button:disabled { opacity: .4; cursor: default; }
+#bar button[hidden] { display: none; }
+#bar svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+#cap { min-width: 220px; max-width: 46vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; color: oklch(78% 0 0); }
+#cap b { color: #fff; font-variant-numeric: tabular-nums; }
+#count { position: absolute; right: 12px; bottom: 12px; padding: 2px 8px; border-radius: 999px; background: oklch(14% 0.01 264 / .6); color: oklch(92% 0 0);
+  font-size: 12px; font-variant-numeric: tabular-nums; pointer-events: none; }
+#bar:not(.idle) ~ #count { display: none; }
+</style>
+</head>
+<body>
+<main id="stage" aria-label="Slides" aria-roledescription="slide deck">
+<div id="bar" role="toolbar" aria-label="Deck">
+<button type="button" id="prev" title="Previous slide (←)" aria-label="Previous slide"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
+<span id="cap" aria-live="polite"></span>
+<button type="button" id="next" title="Next slide (→)" aria-label="Next slide"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
+<button type="button" id="notesBtn" aria-pressed="false" title="Speaker notes (N)">Notes</button>
+<button type="button" id="fs" title="Full screen (F)" aria-label="Full screen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></button>
+</div>
+<span id="count" aria-hidden="true"></span>
+</main>
+<div id="notes" role="note" aria-label="Speaker notes" hidden></div>
+<script type="application/json" id="deck">__DECK_DATA__</script>
+<script>
+(() => {
+  'use strict';
+  const D = JSON.parse(document.getElementById('deck').textContent), S = D.slides, W = D.w, H = D.h;
+  const $ = id => document.getElementById(id);
+  const stage = $('stage'), bar = $('bar'), cap = $('cap'), count = $('count'), notes = $('notes'), notesBtn = $('notesBtn');
+  const frames = new Map();   // slide index -> its iframe (or placeholder): the shown slide and its neighbours stay loaded
+  let i = 0, showNotes = false;
+  const docOf = s => s.parts.map(p => typeof p === 'number' ? D.assets[p] : p).join('');
+  function frameOf(k) {
+    let f = frames.get(k);
+    if (f) return f;
+    const s = S[k];
+    if (s.parts) {
+      f = document.createElement('iframe');
+      f.className = 'fr'; f.width = W; f.height = H; f.title = s.title; f.tabIndex = -1;
+      f.setAttribute('sandbox', 'allow-scripts');
+      f.srcdoc = docOf(s);
+    } else {
+      f = document.createElement('div');
+      f.className = 'fr ph'; f.style.width = W + 'px'; f.style.height = H + 'px';
+      f.textContent = s.title + ': no screen file';
+    }
+    frames.set(k, f); stage.prepend(f); fit(f);
+    return f;
+  }
+  function fit(f) {
+    const sw = stage.clientWidth, sh = stage.clientHeight, k = Math.min(sw / W, sh / H);
+    f.style.transform = `translate(${(sw - W * k) / 2}px, ${(sh - H * k) / 2}px) scale(${k})`;
+  }
+  const fitAll = () => frames.forEach(fit);
+  function show(k, keepHash) {
+    i = Math.max(0, Math.min(S.length - 1, k));
+    for (const [n, f] of frames) if (Math.abs(n - i) > 1) { f.remove(); frames.delete(n); }
+    [i - 1, i + 1].forEach(n => { if (n >= 0 && n < S.length) frameOf(n).classList.remove('on'); });
+    frameOf(i).classList.add('on');
+    const s = S[i], n = `${i + 1} / ${S.length}`;
+    cap.replaceChildren(Object.assign(document.createElement('b'), { textContent: n }), ' · ' + s.title);
+    count.textContent = n;
+    $('prev').disabled = i === 0; $('next').disabled = i === S.length - 1;
+    notes.innerHTML = s.notes || '';
+    paintNotes();
+    if (!keepHash) try { history.replaceState(null, '', '#' + (i + 1)); } catch { location.hash = String(i + 1); }
+  }
+  function paintNotes() {
+    const has = !!S[i].notes;
+    notesBtn.hidden = !S.some(s => s.notes); notesBtn.setAttribute('aria-pressed', String(showNotes));
+    notes.hidden = !has || !showNotes;
+    fitAll();
+  }
+  const step = d => show(i + d);
+  const toggleNotes = () => { showNotes = !showNotes; paintNotes(); };
+  function fullscreen() {
+    const el = document.documentElement;
+    if (document.fullscreenElement || document.webkitFullscreenElement) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+    else if (el.requestFullscreen) el.requestFullscreen().catch(() => {}); else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+  }
+  function key(k, shift) {
+    if (k === 'ArrowRight' || k === 'ArrowDown' || k === 'PageDown' || (k === ' ' && !shift)) step(1);
+    else if (k === 'ArrowLeft' || k === 'ArrowUp' || k === 'PageUp' || (k === ' ' && shift)) step(-1);
+    else if (k === 'Home') show(0); else if (k === 'End') show(S.length - 1);
+    else if (k === 'n' || k === 'N') toggleNotes(); else if (k === 'f' || k === 'F') fullscreen();
+    else return false;
+    wake(); return true;
+  }
+  addEventListener('keydown', e => {
+    if (e.metaKey || e.ctrlKey || e.altKey || (e.target.closest && e.target.closest('button') && (e.key === ' ' || e.key === 'Enter'))) return;
+    if (key(e.key, e.shiftKey)) e.preventDefault();
+  });
+  // a slide's frame reports a click (not on one of its controls) and the keys above, which its sandbox keeps from us;
+  // after a click the keys come from the frame that had it, which may be a neighbour by now
+  addEventListener('message', e => {
+    const m = e.data;
+    if (![...frames.values()].some(f => f.contentWindow === e.source) || !m || typeof m !== 'object') return;
+    if (m.deck === 'click') { step(1); wake(); } else if (m.deck === 'key' && typeof m.key === 'string') key(m.key, !!m.shift);
+  });
+  stage.addEventListener('click', e => { if (!bar.contains(e.target)) step(1); });
+  $('prev').onclick = () => step(-1); $('next').onclick = () => step(1); notesBtn.onclick = toggleNotes; $('fs').onclick = fullscreen;
+  // the bar fades after a few still seconds; a move over the deck brings it back
+  let idle = 0;
+  function wake() { bar.classList.remove('idle'); clearTimeout(idle); idle = setTimeout(() => { if (!bar.matches(':hover, :focus-within')) bar.classList.add('idle'); else wake(); }, 2500); }
+  addEventListener('pointermove', wake);
+  addEventListener('resize', fitAll);
+  const fromHash = () => { const n = parseInt(location.hash.slice(1), 10); return Number.isFinite(n) ? n - 1 : 0; };
+  addEventListener('hashchange', () => { if (fromHash() !== i) show(fromHash(), true); });
+  show(fromHash()); wake();
+})();
+</script>
+</body>
+</html>
