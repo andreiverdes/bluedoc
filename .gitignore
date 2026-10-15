@@ -4,3 +4,11 @@ __pycache__/
 node_modules/
 # exported PNG icon sets (Export PNG sets writes <stem>.icons/ beside a design doc)
 *.icons/
+
+# Beads / Dolt files (added by bd init)
+.dolt/
+*.db
+.beads-credential-key
+.beads/proxieddb/
+*.gate.lock*
+.beads/
