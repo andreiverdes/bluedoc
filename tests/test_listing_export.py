@@ -145,7 +145,7 @@ class Layout(unittest.TestCase):
                 self.assertIn(f"fastlane/screenshots/{loc}/{name}", paths)
         self.assertIn("fastlane/metadata/android/en-US/changelogs/default.txt", paths)
         self.assertIn("fastlane/metadata/en-US/promotional_text.txt", paths)
-        self.assertTrue(all(p.startswith(("fastlane/metadata/android/", "fastlane/metadata/", "fastlane/screenshots/", "extra/", "ads/"))
+        self.assertTrue(all(p.startswith(("fastlane/metadata/android/", "fastlane/metadata/", "fastlane/screenshots/", "extra/", "ads/", "variants/"))
                             for p in paths), paths)
         rules = listing.load_rules()
         sets = listing.by_id(rules, "sets")
@@ -339,7 +339,7 @@ class ListingPage(ChromePage):
         self.assertFalse(self.approve_disabled(t))
         t.ev("document.querySelector('.bd-key.approve').click()")
         t.wait_for("!!document.querySelector('.bd-approve[open]')")
-        self.assertEqual({k: v for k, v in t.ev(LST)["approveSummary"].items()}, {"mt": 3, "mock": 2})
+        self.assertEqual({k: t.ev(LST)["approveSummary"][k] for k in ("mt", "mock")}, {"mt": 3, "mock": 3})
         self.assertGreaterEqual(t.ev("document.querySelectorAll('.bd-approve[open] .bd-ap-sum li.warn').length"), 2)
 
 

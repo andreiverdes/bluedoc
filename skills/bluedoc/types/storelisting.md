@@ -33,6 +33,12 @@ The reader picks styles and the brand on the page; you record them.
 - **Style picks** arrive under `## Decisions` (`style-<platform>-<variant>-message`/`-layout`) with a `## Style picks` command that writes `listing.style.<platform>`. A pick marked *needs the agent* also needs its hook: `data-callout` (M3), the string `<shot>.proof` (M4), a video (M5), a photo with `credits` (L5).
 - **Brand drafts** arrive under `## Brand drafts` with a `build.py patch <doc> brand:main --json …` command: run it as given. Approve waits until you do. The build warns on a contrast pair under 4.5:1 and on a font a PDF can't embed: say so in your reply.
 
+## Variants and ads
+
+- **Variants** (`listing.variants`): custom pages (`cpp`, `csl`) and A/B tests (`ppo`, `sle`), a tab each on their platform page. A variant changes only what its kind may: `swap` a shot for its own (`variantOf`), `order` a set, `style`, and `text` (CPP: promo and keywords; SLE: short and full, in its `locale` only; PPO: none, and never the watch). B treatments are L5 lifestyle unless they name a layout. Fields: `grep -n -A12 '^### Variants, preview and ads' <skill>/references/schema.md`.
+- **Ads:** Google Ads headlines and descriptions in `text.<locale>.play.adHeadlines`/`adDescriptions`; ad images and the App Store search asset as `asset` artboards (`play/ad-*`, `appstore/search`) or the reader's uploads. Give a CPP an `adGroup` for Apple Ads.
+- Variant order drafts come with a `variant:<id>` command; run it as given. The **Store preview** is a mock: never quote it as how the store looks.
+
 ## Revisions
 
 Edit a shot file in place, then `build.py patch <doc> artboard:<id> --change "…" --resolves <id>`. A text or caption comment has a `field:` key: `build.py patch <doc> field:es-ES/play/short --set short="…"`. Reorder and section drafts come with their `block:` command; run it as given.

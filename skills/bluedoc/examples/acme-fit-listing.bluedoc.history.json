@@ -125,6 +125,76 @@
     "today/capture/web/en-US": "47e9eeb2bce40492",
     "workout/capture/web/en-US": "ec92f8d26ed56508"
    }
+  },
+  {
+   "rev": "C",
+   "date": "2026-10-16",
+   "built": "2026-10-15T21:25:35+00:00",
+   "head": {
+    "id": "acme-fit-listing",
+    "title": "Acme Fit: store listing",
+    "subtitle": "The 3.0 listing on Google Play and the App Store, in English and Spanish, for watch, phone and tablet, with a custom page, two A/B tests and ads.",
+    "meta": {
+     "org": "Acme",
+     "kind": "Store listing",
+     "type": "storelisting",
+     "rev": "C",
+     "date": "2026-10-16"
+    },
+    "state": [
+     {
+      "label": "mock-up UI: captures follow",
+      "kind": "warn"
+     },
+     {
+      "label": "es-ES machine-translated in part",
+      "kind": "info"
+     }
+    ],
+    "tldr": "Check each platform page in en-US and es-ES: the text against its counters, the shots per device, and the shared icon and feature graphic. Then check the Runners page, the two B treatments, the store preview and the ads.",
+    "links": [
+     {
+      "label": "Design: Acme Fit screens",
+      "href": "acme-fit-design.bluedoc.json"
+     }
+    ],
+    "changes": [
+     "A custom product page for runners: Workout first, its own promotional text, the Runners ad group.",
+     "App Store and Play B treatments put Today in the lifestyle layout.",
+     "Google Ads text and a 1.91:1 image, and the App Store search results asset."
+    ]
+   },
+   "sections": [
+    {
+     "id": "brief",
+     "title": "Brief",
+     "lead": "Acme Fit 3.0 leads with the week view: one glance shows steps, workouts and the streak.",
+     "blocks": [
+      "8d18e2dbe1b822a9"
+     ]
+    },
+    {
+     "id": "listing",
+     "title": "Listing",
+     "lead": "Both stores, en-US and es-ES, 4 shots and a feature graphic.",
+     "blocks": [
+      "2fef4b75a77a6dbc",
+      "b8181f4e87fa8e27"
+     ]
+    }
+   ],
+   "screens": {
+    "today": "ef27b9de34d0814e",
+    "workout": "5aa5afa7bc893993",
+    "streak": "0720801ff72a6816",
+    "today-lifestyle": "5fee49d569078b7c",
+    "watch-rings": "0c9817206e1357f3",
+    "feature": "61e9ad175fd67f38",
+    "ad-wide": "408722b8d03195ad",
+    "search": "a73ff84676ea5bad",
+    "today/capture/web/en-US": "47e9eeb2bce40492",
+    "workout/capture/web/en-US": "ec92f8d26ed56508"
+   }
   }
  ],
  "blocks": {
@@ -492,6 +562,292 @@
      "fidelity": "hifi"
     }
    ]
+  },
+  "b8181f4e87fa8e27": {
+   "type": "board",
+   "id": "shots",
+   "targets": [
+    "listing"
+   ],
+   "themes": [
+    {
+     "id": "acme",
+     "label": "Acme",
+     "tokens": {
+      "accent": "#1d4ed8",
+      "bg": "#f8fafc",
+      "fg": "#0f172a"
+     }
+    }
+   ],
+   "artboards": [
+    {
+     "id": "today",
+     "title": "Today",
+     "device": "shot",
+     "fidelity": "hifi",
+     "sets": [
+      "play/phone",
+      "play/tablet10",
+      "appstore/iphone-69",
+      "appstore/iphone",
+      "appstore/ipad"
+     ],
+     "recipe": {
+      "targets": [
+       "web"
+      ],
+      "route": "today",
+      "locales": [
+       "en-US"
+      ]
+     }
+    },
+    {
+     "id": "workout",
+     "title": "Workout",
+     "device": "shot",
+     "fidelity": "hifi",
+     "sets": [
+      "play/phone",
+      "play/tablet10",
+      "appstore/iphone-69",
+      "appstore/iphone",
+      "appstore/ipad"
+     ],
+     "recipe": {
+      "targets": [
+       "web"
+      ],
+      "route": "workout",
+      "locales": [
+       "en-US"
+      ]
+     }
+    },
+    {
+     "id": "streak",
+     "title": "Streak",
+     "device": "shot",
+     "fidelity": "hifi",
+     "sets": [
+      "play/phone",
+      "appstore/iphone-69",
+      "appstore/iphone"
+     ]
+    },
+    {
+     "id": "today-lifestyle",
+     "title": "Today, lifestyle",
+     "device": "shot",
+     "fidelity": "hifi",
+     "variantOf": "today",
+     "sets": [
+      "play/phone",
+      "play/tablet10",
+      "appstore/iphone-69",
+      "appstore/iphone",
+      "appstore/ipad"
+     ]
+    },
+    {
+     "id": "watch-rings",
+     "title": "Activity rings",
+     "device": "shot",
+     "fidelity": "hifi",
+     "sets": [
+      "play/wear",
+      "appstore/watch"
+     ]
+    },
+    {
+     "id": "feature",
+     "title": "Feature graphic",
+     "device": "asset",
+     "asset": "play/feature",
+     "fidelity": "hifi"
+    },
+    {
+     "id": "ad-wide",
+     "title": "Google Ads image",
+     "device": "asset",
+     "asset": "play/ad-landscape",
+     "fidelity": "hifi",
+     "locale": "en-US"
+    },
+    {
+     "id": "search",
+     "title": "Search results asset",
+     "device": "asset",
+     "asset": "appstore/search",
+     "fidelity": "hifi",
+     "locale": "en-US"
+    }
+   ]
+  },
+  "2fef4b75a77a6dbc": {
+   "type": "listing",
+   "id": "main",
+   "app": {
+    "name": "Acme Fit",
+    "company": "Acme"
+   },
+   "platforms": [
+    "play",
+    "appstore"
+   ],
+   "rows": [
+    "watch",
+    "phone",
+    "tablet"
+   ],
+   "locales": [
+    "en-US",
+    "es-ES"
+   ],
+   "defaultLocale": "en-US",
+   "ipad": true,
+   "icon": "acme-fit-design.bluedoc.json#app-icon",
+   "style": {
+    "message": "m1",
+    "layout": "l1"
+   },
+   "brand": {
+    "font": {
+     "family": "Inter",
+     "weight": 800
+    },
+    "palette": {
+     "bg": "#1d4ed8",
+     "surface": "#e0e7ff",
+     "accent": "#f59e0b",
+     "text": "#ffffff",
+     "caption": "#ffffff"
+    }
+   },
+   "video": {
+    "play": "https://www.youtube.com/watch?v=acmefit3w"
+   },
+   "text": {
+    "en-US": {
+     "play": {
+      "name": "Acme Fit: Run, Ride, Rest",
+      "short": "See your week of runs, rides and sleep in one glance. Keep the streak going.",
+      "full": "Acme Fit shows your week at a glance: steps, workouts, heart rate and sleep in one view.\n\nPlan runs and rides, follow them on your watch, and keep your streak going with gentle reminders.",
+      "releaseNotes": "The week view: steps, workouts and sleep side by side.",
+      "adHeadlines": [
+       "Your week in one view",
+       "Runs, rides and rest",
+       "Keep the streak going"
+      ],
+      "adDescriptions": [
+       "Steps, workouts, heart rate and sleep side by side. Plan the week on your watch."
+      ]
+     },
+     "appstore": {
+      "name": "Acme Fit",
+      "subtitle": "Runs, rides and rest",
+      "promo": "Acme Fit 3.0 puts your whole week on one screen.",
+      "description": "Acme Fit shows your week at a glance: steps, workouts, heart rate and sleep in one view.\n\nPlan runs and rides, follow them on Apple Watch, and keep your streak going.",
+      "keywords": "running,cycling,steps,workout,streak,sleep,heart rate,training"
+     }
+    },
+    "es-ES": {
+     "play": {
+      "name": "Acme Fit: corre, pedalea",
+      "short": "Tu semana de carreras, rutas y sueño de un vistazo. Mantén la racha."
+     },
+     "appstore": {
+      "name": "Acme Fit",
+      "subtitle": "Carreras, rutas, descanso",
+      "keywords": "correr,ciclismo,pasos,entreno,racha,sueño,pulso"
+     }
+    }
+   },
+   "strings": {
+    "en-US": {
+     "today.title": "See your week at a glance",
+     "workout.title": "Every run, mapped",
+     "streak.title": "Keep the streak going",
+     "feature.title": "Acme Fit",
+     "feature.sub": "Your week of runs, rides and rest",
+     "today-lifestyle.title": "Your week, on the move",
+     "ad-wide.title": "Your week of runs in one view",
+     "ad-wide.sub": "Steps, workouts and sleep, side by side",
+     "search.title": "Run, ride, rest",
+     "search.sub": "One week, one view"
+    },
+    "es-ES": {
+     "today.title": "Tu semana de un vistazo",
+     "workout.title": "Cada carrera, en el mapa",
+     "feature.title": "Acme Fit",
+     "feature.sub": "Tu semana de carreras, rutas y descanso",
+     "today-lifestyle.title": "Tu semana, en marcha"
+    }
+   },
+   "mt": {
+    "es-ES": [
+     "appstore.subtitle",
+     "play.short",
+     "strings.workout.title"
+    ]
+   },
+   "capture": {
+    "apps": {
+     "web": {
+      "design": "acme-fit-design.bluedoc.json"
+     }
+    }
+   },
+   "variants": [
+    {
+     "id": "runners",
+     "platform": "appstore",
+     "kind": "cpp",
+     "title": "Runners",
+     "adGroup": "Runners",
+     "order": {
+      "appstore/iphone-69": [
+       "workout"
+      ],
+      "appstore/iphone": [
+       "workout"
+      ],
+      "appstore/ipad": [
+       "workout"
+      ]
+     },
+     "text": {
+      "en-US": {
+       "promo": "Every run mapped, every mile in your week."
+      }
+     }
+    },
+    {
+     "id": "lifestyle",
+     "platform": "appstore",
+     "kind": "ppo",
+     "title": "B: Lifestyle",
+     "swap": {
+      "today": "today-lifestyle"
+     }
+    },
+    {
+     "id": "lifestyle-copy",
+     "platform": "play",
+     "kind": "sle",
+     "title": "B: Lifestyle",
+     "locale": "en-US",
+     "swap": {
+      "today": "today-lifestyle"
+     },
+     "text": {
+      "en-US": {
+       "short": "Your week of runs, rides and sleep, on the move. Keep the streak going."
+      }
+     }
+    }
+   ]
   }
  },
  "html": {
@@ -499,6 +855,9 @@
   "5aa5afa7bc893993": "<main class=\"shot\" data-bd=\"workout\">\n  <h1 class=\"shot-cap\" data-bd=\"cap\" data-l10n=\"workout.title\">Every run, mapped</h1>\n  <div class=\"shot-frame\" data-bd=\"frame\">\n    <div class=\"shot-ui\" data-bd=\"ui\">\n      <main class=\"screen safe stack gap-4\" data-bd=\"screen\">\n        <header class=\"stack gap-1\" data-bd=\"head\"><span class=\"caption muted\">Morning run</span><h2 class=\"title\">5.0 km</h2></header>\n        <section class=\"card\" data-bd=\"map\" style=\"height:260px; padding:0; overflow:hidden; background:#e8f0e6\">\n          <svg viewBox=\"0 0 300 260\" width=\"100%\" height=\"100%\" aria-hidden=\"true\"><path d=\"M0 70 L300 40 M0 180 L300 210 M90 0 L120 260 M210 0 L190 260\" stroke=\"#fff\" stroke-width=\"10\"/>\n            <path d=\"M40 210 C70 150 60 110 110 95 S190 120 200 70 S250 40 262 60\" fill=\"none\" stroke=\"#1d4ed8\" stroke-width=\"6\" stroke-linecap=\"round\"/>\n            <circle cx=\"40\" cy=\"210\" r=\"8\" fill=\"#16a34a\"/><circle cx=\"262\" cy=\"60\" r=\"8\" fill=\"#dc2626\"/></svg>\n        </section>\n        <section class=\"grid cols-3 gap-3\" data-bd=\"stats\" data-callout>\n          <div class=\"card kpi\"><span class=\"label\">Time</span><span class=\"num\">26:41</span></div>\n          <div class=\"card kpi\"><span class=\"label\">Pace</span><span class=\"num\">5:20</span><span class=\"caption muted\">/km</span></div>\n          <div class=\"card kpi\"><span class=\"label\">Heart</span><span class=\"num\">148</span><span class=\"caption muted\">bpm</span></div>\n        </section>\n        <button class=\"btn primary block\" data-bd=\"share\">Share the run</button>\n      </main>\n    </div>\n  </div>\n</main>\n",
   "0720801ff72a6816": "<main class=\"shot\" data-bd=\"streak\">\n  <h1 class=\"shot-cap\" data-bd=\"cap\" data-l10n=\"streak.title\">Keep the streak going</h1>\n  <div class=\"shot-frame\" data-bd=\"frame\">\n    <div class=\"shot-ui\" data-bd=\"ui\">\n      <main class=\"screen safe stack gap-4 center\" data-bd=\"screen\">\n        <span class=\"label\" data-bd=\"label\">Current streak</span>\n        <span class=\"num\" data-bd=\"days\" data-callout style=\"font-size:96px; line-height:1; color:var(--accent)\">23</span>\n        <span class=\"headline\">days in a row</span>\n        <section class=\"card stack gap-2\" data-bd=\"weeks\" style=\"width:100%\">\n          <div class=\"row between\"><span>This week</span><span class=\"badge ok\">7 / 7</span></div>\n          <div class=\"row between\"><span>Last week</span><span class=\"badge ok\">7 / 7</span></div>\n          <div class=\"row between\"><span>Best streak</span><span class=\"num\">41</span></div>\n        </section>\n        <button class=\"btn primary block\" data-bd=\"remind\">Remind me at 7:00</button>\n      </main>\n    </div>\n  </div>\n</main>\n",
   "0c9817206e1357f3": "<main class=\"shot\" data-bd=\"watch-rings\">\n  <div class=\"shot-frame\" data-bd=\"frame\">\n    <div class=\"shot-ui\" data-bd=\"ui\" style=\"background:#000; color:#fff\">\n      <main class=\"screen stack gap-2 center\" data-bd=\"screen\" style=\"background:#000; color:#fff; height:100%\">\n        <div class=\"ring\" data-bd=\"ring\" style=\"--v:.72; --size: 132px; --thick: 14px; --accent:#22c55e; --bg:#000\"><div class=\"stack center\"><span class=\"num\" style=\"font-size:26px; color:#fff\">7,214</span><span class=\"caption\" style=\"color:#a3a3a3\">steps</span></div></div>\n        <span class=\"caption\" data-bd=\"goal\" style=\"color:#a3a3a3\">72% of today</span>\n      </main>\n    </div>\n  </div>\n</main>\n",
-  "61e9ad175fd67f38": "<main class=\"asset\" data-bd=\"feature\" style=\"justify-content:center; text-align:center; background:linear-gradient(110deg, var(--brand-bg), color-mix(in oklch, var(--brand-bg), var(--brand-accent) 35%))\">\n  <div class=\"stack gap-2\" data-bd=\"copy\">\n    <h1 class=\"asset-title\" data-bd=\"title\" data-l10n=\"feature.title\">Acme Fit</h1>\n    <p class=\"asset-sub\" data-bd=\"sub\" data-l10n=\"feature.sub\">Your week of runs, rides and rest</p>\n  </div>\n</main>\n"
+  "61e9ad175fd67f38": "<main class=\"asset\" data-bd=\"feature\" style=\"justify-content:center; text-align:center; background:linear-gradient(110deg, var(--brand-bg), color-mix(in oklch, var(--brand-bg), var(--brand-accent) 35%))\">\n  <div class=\"stack gap-2\" data-bd=\"copy\">\n    <h1 class=\"asset-title\" data-bd=\"title\" data-l10n=\"feature.title\">Acme Fit</h1>\n    <p class=\"asset-sub\" data-bd=\"sub\" data-l10n=\"feature.sub\">Your week of runs, rides and rest</p>\n  </div>\n</main>\n",
+  "5fee49d569078b7c": "<main class=\"shot\" data-bd=\"today-lifestyle\">\n  <h1 class=\"shot-cap\" data-bd=\"cap\" data-l10n=\"today-lifestyle.title\">Your week, on the move</h1>\n  <div class=\"shot-frame\" data-bd=\"frame\">\n    <div class=\"shot-ui\" data-bd=\"ui\">\n      <main class=\"screen safe stack gap-4\" data-bd=\"screen\">\n        <header class=\"row between\" data-bd=\"greeting\">\n          <div class=\"stack gap-1\"><span class=\"caption muted\">Saturday 10 October</span><h2 class=\"title\">This week</h2></div>\n          <span class=\"avatar\" data-bd=\"avatar\">AF</span>\n        </header>\n        <section class=\"card stack center gap-3\" data-bd=\"steps\" data-callout>\n          <div class=\"ring\" style=\"--v:.72; --size: 168px; --thick: 14px\"><div class=\"stack center\"><span class=\"num\" style=\"font-size:34px\">51,214</span><span class=\"caption muted\">of 70,000 steps</span></div></div>\n          <span class=\"badge ok\">72% of the week's goal</span>\n        </section>\n        <section class=\"grid cols-3 gap-3\" data-bd=\"stats\">\n          <div class=\"card kpi\"><span class=\"label\">Runs</span><span class=\"num\">4</span><span class=\"caption muted\">this week</span></div>\n          <div class=\"card kpi\"><span class=\"label\">Rides</span><span class=\"num\">2</span><span class=\"caption muted\">this week</span></div>\n          <div class=\"card kpi\"><span class=\"label\">Sleep</span><span class=\"num\">7.4</span><span class=\"caption muted\">h a night</span></div>\n        </section>\n        <section class=\"card stack gap-2\" data-bd=\"days\">\n          <span class=\"label\">Active minutes</span>\n          <div class=\"row gap-2\" style=\"align-items:flex-end; height:72px\">\n            <i style=\"flex:1; height:40%; background:var(--accent); border-radius:4px\"></i><i style=\"flex:1; height:70%; background:var(--accent); border-radius:4px\"></i>\n            <i style=\"flex:1; height:55%; background:var(--accent); border-radius:4px\"></i><i style=\"flex:1; height:90%; background:var(--accent); border-radius:4px\"></i>\n            <i style=\"flex:1; height:30%; background:var(--accent); border-radius:4px\"></i><i style=\"flex:1; height:80%; background:var(--accent); border-radius:4px\"></i>\n            <i style=\"flex:1; height:62%; background:var(--accent); border-radius:4px; opacity:.5\"></i>\n          </div>\n        </section>\n      </main>\n    </div>\n  </div>\n</main>\n",
+  "a73ff84676ea5bad": "<main class=\"asset\" data-bd=\"search\" style=\"justify-content:center; text-align:center; background:radial-gradient(circle at 70% 30%, color-mix(in oklch, var(--brand-bg), var(--brand-accent) 40%), var(--brand-bg) 65%)\">\n  <div class=\"stack gap-2 center\" data-bd=\"copy\">\n    <h1 class=\"asset-title\" data-bd=\"title\" data-l10n=\"search.title\">Run, ride, rest</h1>\n    <p class=\"asset-sub\" data-bd=\"sub\" data-l10n=\"search.sub\">One week, one view</p>\n  </div>\n</main>\n",
+  "408722b8d03195ad": "<main class=\"asset\" data-bd=\"ad-wide\" style=\"justify-content:space-between; gap:48px; padding:0 72px; background:linear-gradient(120deg, var(--brand-bg), color-mix(in oklch, var(--brand-bg), var(--brand-accent) 30%))\">\n  <div class=\"stack gap-3\" data-bd=\"copy\" style=\"max-width:560px\">\n    <h1 class=\"asset-title\" data-bd=\"title\" data-l10n=\"ad-wide.title\">Your week of runs in one view</h1>\n    <p class=\"asset-sub\" data-bd=\"sub\" data-l10n=\"ad-wide.sub\">Steps, workouts and sleep, side by side</p>\n  </div>\n  <div class=\"ring\" data-bd=\"ring\" style=\"--v:.72; --size: 300px; --thick: 26px; flex:none\"><div class=\"stack center\"><span class=\"num\" style=\"font-size:56px; color:var(--brand-bg)\">72%</span><span class=\"caption\" style=\"color:var(--brand-bg)\">of the week's goal</span></div></div>\n</main>\n"
  }
 }

@@ -144,8 +144,9 @@
       "unverified": "the cut-off zones vary by format: the guide marks a centred safe box, not Play's exact zones", "unverifiedFor": ["guide"] },
     { "id": "play/tv-banner", "platform": "play", "label": "TV banner", "sizes": [[1280, 720]], "author": [1280, 720], "scale": 1,
       "alpha": false, "required": "row:tv", "fastlane": "tvBanner", "source": "G-PA" },
-    { "id": "appstore/search", "platform": "appstore", "label": "Search results asset", "ratio": [3, 2], "min": [1920, 1280], "max": [3840, 2560],
-      "author": [1920, 1280], "scale": 2, "alpha": false, "required": "never", "source": "A-CA" },
+    { "id": "appstore/search", "platform": "appstore", "label": "Search results asset", "group": "ads", "ratio": [3, 2], "min": [1920, 1280], "max": [3840, 2560],
+      "author": [1920, 1280], "scale": 2, "count": [0, 1], "alpha": false, "required": "never", "source": "A-CA",
+      "note": "iOS 27 creative asset: brand or promo art above the search result; no new version needed" },
     { "id": "appstore/header", "platform": "appstore", "label": "Product page header", "sizes": [[3840, 1646]], "author": [3840, 1646], "scale": 2,
       "alpha": false, "required": "never", "source": "A-CA" },
     { "id": "appstore/universal", "platform": "appstore", "label": "Universal creative asset", "sizes": [[5244, 2950]], "author": [5244, 2950], "scale": 2,
@@ -158,12 +159,16 @@
       "alpha": false, "noText": true, "required": "never", "source": "G-PCQ", "note": "no text at all; safe zone 15% top, 10% sides, 20% bottom" },
     { "id": "play/liveops-square", "platform": "play", "label": "Promotional content square image", "ratio": [1, 1], "author": [1080, 1080], "scale": 2,
       "alpha": false, "noText": true, "required": "never", "source": "G-PCQ", "unverified": "the square image's pixel size isn't on the page" },
-    { "id": "play/ad-landscape", "platform": "play", "label": "Google Ads image 1.91:1", "kind": "ad", "sizes": [[1200, 628]], "min": [600, 314],
+    { "id": "play/ad-landscape", "platform": "play", "label": "Google Ads image 1.91:1", "kind": "ad", "group": "ads", "sizes": [[1200, 628]], "min": [600, 314],
       "author": [1200, 628], "scale": 1, "count": [0, 20], "maxBytes": 5242880, "required": "never", "source": "GA-APP" },
-    { "id": "play/ad-portrait", "platform": "play", "label": "Google Ads image 4:5", "kind": "ad", "sizes": [[1200, 1500]], "min": [320, 400],
+    { "id": "play/ad-portrait", "platform": "play", "label": "Google Ads image 4:5", "kind": "ad", "group": "ads", "sizes": [[1200, 1500]], "min": [320, 400],
       "author": [1200, 1500], "scale": 2, "count": [0, 20], "maxBytes": 5242880, "required": "never", "source": "GA-APP" },
-    { "id": "play/ad-square", "platform": "play", "label": "Google Ads image 1:1", "kind": "ad", "sizes": [[1200, 1200]], "min": [200, 200],
-      "author": [1200, 1200], "scale": 2, "count": [0, 20], "maxBytes": 5242880, "required": "never", "source": "GA-APP" }
+    { "id": "play/ad-square", "platform": "play", "label": "Google Ads image 1:1", "kind": "ad", "group": "ads", "sizes": [[1200, 1200]], "min": [200, 200],
+      "author": [1200, 1200], "scale": 2, "count": [0, 20], "maxBytes": 5242880, "required": "never", "source": "GA-APP" },
+    { "id": "appstore/ad", "platform": "appstore", "label": "Apple Ads creative asset", "kind": "ad", "group": "ads", "ratio": [3, 2], "min": [1920, 1280], "max": [3840, 2560],
+      "author": [1920, 1280], "scale": 2, "count": [0, 10], "alpha": false, "required": "never", "source": "AA-CA",
+      "note": "Today tab and search results ads; text allowed, no prices or offers",
+      "unverified": "Apple Ads lists creative assets as coming soon (2026-10-15); the count is ours", "unverifiedFor": ["count", "size"] }
   ],
   "text": [
     { "id": "play/name", "platform": "play", "field": "name", "label": "App name", "group": "listing", "limit": 30, "unit": "chars", "required": true, "fastlane": "title.txt", "source": "G-SETUP" },
@@ -211,14 +216,22 @@
       "note": "up to 3 per size and locale; shown before the screenshots; the poster frame is at 5 s unless changed" }
   ],
   "variants": [
-    { "kind": "cpp", "platform": "appstore", "label": "Custom product page", "max": 70, "varies": ["shots", "previews", "promo", "keywords"], "source": "A-CPP",
-      "note": "own URL; iOS and iPadOS 15 or later; optional deep link" },
-    { "kind": "ppo", "platform": "appstore", "label": "Product page optimization", "max": 3, "varies": ["icon", "shots", "previews"], "not": ["watch"], "source": "A-PPO",
+    { "kind": "cpp", "platform": "appstore", "label": "Custom product page", "short": "CPP", "max": 70, "varies": ["shots", "previews", "promo", "keywords"], "adGroup": true, "source": "A-CPP",
+      "note": "own URL; iOS and iPadOS 15 or later; optional deep link; an Apple Ads ad group can show it" },
+    { "kind": "ppo", "platform": "appstore", "label": "Product page optimization", "short": "PPO", "ab": true, "max": 3, "varies": ["icon", "shots", "previews"], "not": ["watch"], "source": "A-PPO",
       "note": "treatments against the default page; text isn't tested" },
-    { "kind": "csl", "platform": "play", "label": "Custom store listing", "max": 50, "varies": ["name", "icon", "short", "full", "graphics"], "source": "G-CSL",
+    { "kind": "csl", "platform": "play", "label": "Custom store listing", "short": "CSL", "max": 50, "varies": ["name", "icon", "short", "full", "graphics", "shots"], "source": "G-CSL",
       "note": "targets a country, keywords, an audience or an ad group" },
-    { "kind": "sle", "platform": "play", "label": "Store listing experiment", "max": 2, "varies": ["icon", "feature", "shots", "short", "full"], "source": "G-SLE",
-      "note": "1 default-graphics or up to 5 localized experiments at once; descriptions only in localized ones" }
+    { "kind": "sle", "platform": "play", "label": "Store listing experiment", "short": "SLE", "ab": true, "max": 2, "varies": ["icon", "feature", "shots", "short", "full"],
+      "textIn": "locale", "source": "G-SLE",
+      "note": "1 default-graphics or up to 5 localized experiments at once; descriptions only in localized ones (the variant's locale)" }
+  ],
+  "ads": [
+    { "id": "appstore/apple-ads", "platform": "appstore", "label": "Apple Ads", "adGroup": 1, "source": "AA-VAR",
+      "note": "the default ad shows the default page's shots and previews in the order they were uploaded; an ad variation is one custom product page per ad group" },
+    { "id": "play/google-ads", "platform": "play", "label": "Google App campaign", "text": ["adHeadlines", "adDescriptions"],
+      "images": ["play/ad-landscape", "play/ad-portrait", "play/ad-square"], "source": "GA-APP",
+      "note": "headlines and descriptions are required; without images Google takes the listing's; text isn't translated" }
   ],
   "locales": [
     { "platform": "appstore", "source": "A-LOC",

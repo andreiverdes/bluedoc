@@ -145,6 +145,8 @@ def rules_problems(rules: dict) -> list[str]:
         rule("video", v, str(v.get("platform")))
     for v in rules.get("variants") or []:
         rule("variant", v, str(v.get("kind")))
+    for v in rules.get("ads") or []:
+        rule("ads", v, str(v.get("id")))
     for v in rules.get("locales") or []:
         rule("locales", v, str(v.get("platform")))
     for v in rules.get("terms") or []:
@@ -282,8 +284,9 @@ def shots_of(doc: dict) -> list[dict]:
 
 
 def is_image_shot(a) -> bool:
-    """A shot that is a finished PNG (an upload: `src` under <stem>.listing/), not a layout with a screen file."""
-    return isinstance(a, dict) and a.get("device") == "shot" and isinstance(a.get("src"), str) and a["src"].lower().endswith(IMAGE_TYPES)
+    """A shot or asset that is a finished PNG (an upload: `src` under <stem>.listing/), not a layout with a screen file."""
+    return isinstance(a, dict) and a.get("device") in ("shot", "asset") and isinstance(a.get("src"), str) \
+        and a["src"].lower().endswith(IMAGE_TYPES)
 
 
 def image_src_problem(src: str, doc_path: Path | None) -> str | None:
@@ -576,9 +579,6 @@ def validate_listing(rep, doc: dict, doc_path: Path | None, rules: dict | None =
 
     validate_capture(rep, lw, lb, doc, doc_path, rules)
     validate_brand_style(rep, lw, lb, doc, doc_path, rules)
-    if "variants" in lb and not isinstance(lb["variants"], list):
-        rep.err(lw + ".variants", "a list of variants")
-
     sets = by_id(rules, "sets")
     assets = by_id(rules, "assets")
     in_set: dict[str, list[str]] = {}
@@ -586,6 +586,7 @@ def validate_listing(rep, doc: dict, doc_path: Path | None, rules: dict | None =
         aw = f"artboard '{a['id']}'"
         dev = a.get("device")
         if dev == "shot":
+            own = isinstance(a.get("variantOf"), str)   # a variant's shot: only a swap shows it, in its source's place
             ss = a.get("sets")
             if not isinstance(ss, list) or not ss or not all(isinstance(s, str) for s in ss) or len(set(ss)) != len(ss):
                 rep.err(aw + ".sets", "the distinct sets this shot fills, e.g. [\"play/phone\", \"appstore/iphone-69\"]")
@@ -596,29 +597,14 @@ def validate_listing(rep, doc: dict, doc_path: Path | None, rules: dict | None =
                     rep.err(aw + ".sets", f"no set '{s}' in the rules: {', '.join(k for k, v in sets.items() if v.get('core'))}")
                 elif r["platform"] not in plats:
                     rep.err(aw + ".sets", f"'{s}' is a {r['platform']} set and the listing's platforms are {plats}")
-                else:
+                elif not own:
                     in_set.setdefault(s, []).append(a["id"])
                     if r["row"] not in rows:
                         rep.warn(aw + ".sets", f"'{s}' is in the {r['row']} section, which listing.rows leaves off: the "
                                  "pages don't show it")
-            if "locale" in a and a["locale"] not in locs:
-                rep.err(aw + ".locale", f"{a['locale']!r} is not in locales {locs}")
             style_ok(aw + ".style", a.get("style"))
             if "recipe" in a and not isinstance(a["recipe"], dict):
                 rep.err(aw + ".recipe", "an object: route, appearance, settle, targets")
-            if is_image_shot(a):
-                why = image_src_problem(a["src"], doc_path)
-                if why:
-                    rep.err(aw + ".src", f"'{a['src']}': {why}")
-                elif doc_path is not None:
-                    f = Path(doc_path).parent / a["src"]
-                    try:
-                        info = png_info(f.read_bytes()[:4096])
-                    except OSError:
-                        rep.err(aw + ".src", f"'{a['src']}' not found")
-                    else:
-                        if info is None:
-                            rep.err(aw + ".src", f"'{a['src']}' is no PNG")
         elif dev == "asset":
             r = assets.get(a.get("asset"))
             if r is None:
@@ -627,11 +613,29 @@ def validate_listing(rep, doc: dict, doc_path: Path | None, rules: dict | None =
                 rep.err(aw + ".asset", f"'{a['asset']}' is a {r['platform']} asset and the listing's platforms are {plats}")
             elif "author" not in r:
                 rep.err(aw + ".asset", f"'{a['asset']}' isn't drawn as an artboard: {r.get('note') or 'see the rules'}")
-        for k in ("sets", "locale", "recipe", "style"):
+        if dev in ("shot", "asset") and "locale" in a and a["locale"] not in locs:
+            rep.err(aw + ".locale", f"{a['locale']!r} is not in locales {locs}")
+        if is_image_shot(a):
+            why = image_src_problem(a["src"], doc_path)
+            if why:
+                rep.err(aw + ".src", f"'{a['src']}': {why}")
+            elif doc_path is not None:
+                f = Path(doc_path).parent / a["src"]
+                try:
+                    info = png_info(f.read_bytes()[:4096])
+                except OSError:
+                    rep.err(aw + ".src", f"'{a['src']}' not found")
+                else:
+                    if info is None:
+                        rep.err(aw + ".src", f"'{a['src']}' is no PNG")
+        for k in ("sets", "recipe", "style"):
             if k in a and dev != "shot":
                 rep.err(f"{aw}.{k}", "only a shot has it")
+        if "locale" in a and dev not in ("shot", "asset"):
+            rep.err(aw + ".locale", "only a shot or an asset has it")
         if "asset" in a and dev != "asset":
             rep.err(aw + ".asset", "only an asset artboard has it")
+    validate_variants(rep, lw, lb, arts, rules, plats, locs, style_ok)
 
     order = lb.get("order")
     if order is not None:
@@ -693,18 +697,28 @@ def contract(doc: dict) -> list[str]:
     return out
 
 
-def sections(lb: dict, artboards: list, rules: dict, platform: str, locale: str | None) -> list[dict]:
+def sections(lb: dict, artboards: list, rules: dict, platform: str, locale: str | None, variant: dict | None = None) -> list[dict]:
     """A platform page's device sections, as the page lays them out (board-geo.js listingSections, line for line):
     [{row, sets: [{set, shots: [artboard ids]}]}] for each row of listing.rows (default: the core rows) in the rules'
     order. A row lists the platform's sets in that row, in the rules' order, that are core, or have a shot, or are
     asked for (`if:watchFace` with listing.watchFace). A set's shots: the shots that name it, in board order, except
-    an uploaded one of another locale; listing.order[set] puts the ids it names first, in its order. A row with no
-    set is left out."""
+    an uploaded one of another locale and a variant's own shot (`variantOf`); listing.order[set] puts the ids it names
+    first, in its order. With a variant (an entry of listing.variants): its `swap` ({default shot: its shot}) puts a
+    shot in another's place (a shot once, at its first place), then its `order[set]` puts the ids it names first. A
+    row with no set is left out."""
     lb = lb if isinstance(lb, dict) else {}
     rows = lb.get("rows") if isinstance(lb.get("rows"), list) else [r["id"] for r in rules["rows"] if r.get("core")]
     order = lb.get("order") if isinstance(lb.get("order"), dict) else {}
+    shot_ids = {a["id"] for a in artboards or [] if isinstance(a, dict) and isinstance(a.get("id"), str) and a.get("device") == "shot"}
     arts = [a for a in artboards or [] if isinstance(a, dict) and isinstance(a.get("id"), str) and a.get("device") == "shot"
-            and isinstance(a.get("sets"), list)]
+            and isinstance(a.get("sets"), list) and not isinstance(a.get("variantOf"), str)]
+    v = variant if isinstance(variant, dict) else {}
+    swap = {k: s for k, s in v["swap"].items() if isinstance(s, str) and s in shot_ids} if isinstance(v.get("swap"), dict) else {}
+    v_order = v.get("order") if isinstance(v.get("order"), dict) else {}
+
+    def first(ids: list[str], want) -> list[str]:
+        want = [i for i in want if i in ids] if isinstance(want, list) else []
+        return want + [i for i in ids if i not in want]
     out = []
     for r in rules["rows"]:
         if r["id"] not in rows:
@@ -716,8 +730,8 @@ def sections(lb: dict, artboards: list, rules: dict, platform: str, locale: str 
             shots = [a["id"] for a in arts if s["id"] in a["sets"] and (not isinstance(a.get("locale"), str) or a["locale"] == locale)]
             if not (s.get("core") or shots or (s.get("required") == "if:watchFace" and lb.get("watchFace") is True)):
                 continue
-            want = [i for i in order.get(s["id"]) if i in shots] if isinstance(order.get(s["id"]), list) else []
-            sets.append({"set": s["id"], "shots": want + [i for i in shots if i not in want]})
+            shots = list(dict.fromkeys(swap.get(i, i) for i in first(shots, order.get(s["id"]))))
+            sets.append({"set": s["id"], "shots": first(shots, v_order.get(s["id"]))})
         if sets:
             out.append({"row": r["id"], "sets": sets})
     return out
@@ -989,9 +1003,16 @@ def next_upload_name(folder: Path, slot: int, recorded: set[str], rel_of) -> str
     return f"{n:02d}.png" if n <= 99 else None
 
 
+def upload_rules(rules: dict) -> dict[str, dict]:
+    """What takes an upload, by id: every set, and the ads' assets (Google Ads images, the search results asset, Apple
+    Ads creative assets), which are authored as asset artboards or uploaded."""
+    return {**by_id(rules, "sets"), **{r["id"]: r for r in rules["assets"] if r.get("group") == "ads" and "author" in r}}
+
+
 def uploads(doc: dict, doc_path: Path, rules: dict | None = None) -> list[dict]:
-    """The drafts: uploaded PNGs no shot (in the doc or a revision) records, [{file, platform, locale, set, slot, w,
-    h, colour, bytes, problem}] in set and slot order. file is relative to the doc's folder."""
+    """The drafts: uploaded PNGs no shot or asset (in the doc or a revision) records, [{file, platform, locale, set,
+    asset, slot, w, h, colour, bytes, problem}] in set and slot order; `set` is the set's or asset's id, `asset` true for
+    an asset. file is relative to the doc's folder."""
     rules = rules or load_rules()
     lb = listing_of(doc) or {}
     recorded = recorded_srcs(doc, doc_path)
@@ -999,7 +1020,7 @@ def uploads(doc: dict, doc_path: Path, rules: dict | None = None) -> list[dict]:
     if base.is_symlink() or not base.is_dir():
         return []
     out = []
-    for s in rules["sets"]:
+    for s in upload_rules(rules).values():
         if s["platform"] not in (lb.get("platforms") or []):
             continue
         for loc in lb.get("locales") or []:
@@ -1018,9 +1039,9 @@ def uploads(doc: dict, doc_path: Path, rules: dict | None = None) -> list[dict]:
                 except OSError:
                     continue
                 info = png_info(data[:65536]) or {}
-                out.append({"file": rel, "platform": s["platform"], "locale": loc, "set": s["id"], "slot": int(m[1]),
-                            "w": info.get("w"), "h": info.get("h"), "colour": info.get("colour"), "bytes": len(data),
-                            "problem": upload_problem(s, data)})
+                out.append({"file": rel, "platform": s["platform"], "locale": loc, "set": s["id"], "asset": "row" not in s,
+                            "slot": int(m[1]), "w": info.get("w"), "h": info.get("h"), "colour": info.get("colour"),
+                            "bytes": len(data), "problem": upload_problem(s, data)})
     return out
 
 
@@ -1181,14 +1202,147 @@ def font_embedding(fs_type: int) -> str | None:
     return None
 
 
-def effective_style(lb: dict, platform: str, a: dict | None = None) -> dict[str, str]:
-    """The message and layout a platform page shows: M1 and L1, the listing's, its platform's, then the shot's own."""
+def effective_style(lb: dict, platform: str, a: dict | None = None, variant: dict | None = None) -> dict[str, str]:
+    """The message and layout a platform page shows: M1 and L1, the listing's, its platform's, the variant's
+    (variant_style), then the shot's own."""
     out = {"message": "m1", "layout": "l1"}
     st = lb.get("style") if isinstance(lb.get("style"), dict) else {}
-    for src in (st, st.get(platform), (a or {}).get("style")):
+    for src in (st, st.get(platform), variant, (a or {}).get("style")):
         if isinstance(src, dict):
             out.update({k: v for k, v in src.items() if k in ("message", "layout") and isinstance(v, str)})
     return out
+
+
+# ---------- variants (M5): custom pages and A/B tests ----------
+# listing.variants[]: {id, platform, kind: cpp|ppo|csl|sle, title, swap: {default shot: its shot}, order: {set: [ids]},
+# style: {message, layout}, text: {locale: {field: text}}, locale (an SLE's language: a localized experiment),
+# adGroup (a CPP's Apple Ads ad group)}. A variant changes only what its kind's rule `varies`; the rest is the default
+# page's. A shot with `variantOf` is a variant's own shot: it shows only where a swap puts it.
+
+AB_LAYOUT = "l5"   # an A/B treatment's layout unless it names one (the plan's style-ab pick: L5 lifestyle)
+
+
+def variants_of(lb: dict, platform: str | None = None) -> list[dict]:
+    """The listing's variants with an id (of a platform)."""
+    vs = lb.get("variants") if isinstance(lb, dict) and isinstance(lb.get("variants"), list) else []
+    return [v for v in vs if isinstance(v, dict) and isinstance(v.get("id"), str) and (platform is None or v.get("platform") == platform)]
+
+
+def variant_rule(rules: dict, v: dict) -> dict | None:
+    return next((r for r in rules.get("variants") or [] if r["kind"] == v.get("kind") and r["platform"] == v.get("platform")), None)
+
+
+def variant_style(rules: dict, v: dict | None) -> dict[str, str]:
+    """What a variant puts over the platform's style: L5 for an A/B treatment (AB_LAYOUT), then its own style."""
+    if not isinstance(v, dict):
+        return {}
+    out = {"layout": AB_LAYOUT} if (variant_rule(rules, v) or {}).get("ab") else {}
+    st = v.get("style") if isinstance(v.get("style"), dict) else {}
+    out.update({k: s for k, s in st.items() if k in ("message", "layout") and isinstance(s, str)})
+    return out
+
+
+def variant_text_fields(rules: dict, v: dict) -> set[str]:
+    """The store text fields a variant's kind may change: its rule's `varies` that are text fields of its platform."""
+    r = variant_rule(rules, v) or {}
+    return set(r.get("varies") or []) & set(text_rules(rules, v.get("platform")))
+
+
+def variant_changes(lb: dict, arts: list, rules: dict, v: dict, locale: str | None) -> list[str]:
+    """What a variant changes against the default page in a locale: its swaps that show, the sets whose order differs
+    beyond them, the style and the text fields it sets. The page's "N changes" (template.html variantChanges)."""
+    p = v.get("platform")
+    out = []
+    base = {x["set"]: x["shots"] for r in sections(lb, arts, rules, p, locale) for x in r["sets"]}
+    mine = {x["set"]: x["shots"] for r in sections(lb, arts, rules, p, locale, v) for x in r["sets"]}
+    shown = {i for ids in mine.values() for i in ids}
+    shots = {a.get("id") for a in arts if isinstance(a, dict) and a.get("device") == "shot"}
+    swap = {k: s for k, s in v["swap"].items() if isinstance(s, str) and s in shots} if isinstance(v.get("swap"), dict) else {}
+    out += [f"{a} → {b}" for a, b in swap.items() if b in shown]
+    for s, ids in mine.items():
+        if list(dict.fromkeys(swap.get(i, i) for i in base.get(s, []))) != ids:
+            out.append(f"{s} order")
+    a, b = effective_style(lb, p), effective_style(lb, p, variant=variant_style(rules, v))
+    out += [f"{k} {b[k]}" for k in ("message", "layout") if a[k] != b[k]]
+    text = v.get("text") if isinstance(v.get("text"), dict) else {}
+    mine_t = text.get(locale) if isinstance(text.get(locale), dict) else {}
+    out += [f"{f} text" for f in mine_t if f in text_rules(rules, p)]
+    return out
+
+
+def validate_variants(rep, lw: str, lb: dict, arts: list, rules: dict, plats: list, locs: list, style_ok) -> None:
+    """listing.variants' shape: ids, a kind of its platform, swaps from a shot of the default page to a shot, orders
+    of the platform's sets, a style, text fields of its platform per locale, an SLE's locale, a CPP's adGroup. What a
+    kind may change and how many there may be are store rules: store_checks."""
+    if "variants" not in lb:
+        return
+    vs = lb["variants"]
+    if not isinstance(vs, list):
+        rep.err(lw + ".variants", "a list of variants: {id, platform, kind, title, swap, order, style, text}")
+        return
+    shots = {a["id"]: a for a in arts if a.get("device") == "shot"}
+    sets = by_id(rules, "sets")
+    seen: set[str] = set()
+    for i, v in enumerate(vs):
+        vw = f"{lw}.variants[{i}]"
+        if not isinstance(v, dict) or not isinstance(v.get("id"), str) or not ID_RE.match(v["id"]) or v["id"] in seen:
+            rep.err(vw, "an id of a-z, 0-9 and -, once each")
+            continue
+        seen.add(v["id"])
+        r = variant_rule(rules, v)
+        if r is None or v.get("platform") not in plats:
+            rep.err(vw, "a platform of the listing and a kind of it: " + ", ".join(f"{x['kind']} ({x['platform']})" for x in rules["variants"]))
+            continue
+        p = r["platform"]
+        for k in v:
+            if k not in ("id", "platform", "kind", "title", "swap", "order", "style", "text", "locale", "adGroup"):
+                rep.err(f"{vw}.{k}", "a variant has id, platform, kind, title, swap, order, style, text, locale and adGroup")
+        if "title" in v and not (isinstance(v["title"], str) and 0 < len(v["title"]) <= 60):
+            rep.err(vw + ".title", "1-60 characters: the tab's name")
+        swap = v.get("swap", {})
+        if not isinstance(swap, dict):
+            rep.err(vw + ".swap", "{default shot id: the shot that takes its place}")
+            swap = {}
+        for a, b in swap.items():
+            src = shots.get(a)
+            if src is None or isinstance(src.get("variantOf"), str) or not any((sets.get(s) or {}).get("platform") == p for s in src.get("sets") or []):
+                rep.err(f"{vw}.swap.{a}", f"'{a}' is no shot of the default {p} page")
+            elif not (isinstance(b, str) and b in shots):
+                rep.err(f"{vw}.swap.{a}", f"{b!r} is no shot on this board")
+            else:
+                need = [s for s in src.get("sets") or [] if (sets.get(s) or {}).get("platform") == p]
+                gone = [s for s in need if s not in (shots[b].get("sets") or [])]
+                if gone:
+                    rep.err(f"{vw}.swap.{a}", f"'{b}' takes {a}'s place in {', '.join(need)}: add {', '.join(gone)} to its sets")
+        order = v.get("order", {})
+        if not isinstance(order, dict):
+            rep.err(vw + ".order", "{set: [shot ids]}")
+            order = {}
+        for s, ids in order.items():
+            if (sets.get(s) or {}).get("platform") != p or not isinstance(ids, list) or not all(isinstance(x, str) and x in shots for x in ids) \
+                    or len(set(ids)) != len(ids):
+                rep.err(f"{vw}.order.{s}", f"a {p} set and its shots' ids, each once")
+        style_ok(vw + ".style", v.get("style"))
+        text = v.get("text", {})
+        fields = text_rules(rules, p)
+        if not isinstance(text, dict) or not all(loc in locs and isinstance(per, dict) for loc, per in text.items()):
+            rep.err(vw + ".text", f"{{locale: {{field: text}}}} for locales of {locs}")
+        else:
+            for loc, per in text.items():
+                for f, s in per.items():
+                    if f not in fields or fields[f].get("group") != "listing" or not isinstance(s, str):
+                        rep.err(f"{vw}.text.{loc}.{f}", f"a {p} store text field and its text: "
+                                + ", ".join(k for k, x in fields.items() if x.get("group") == "listing"))
+        if "locale" in v and (r.get("textIn") != "locale" or v["locale"] not in locs):
+            rep.err(vw + ".locale", f"an SLE's language (a localized experiment), one of {locs}" if r.get("textIn") == "locale"
+                    else f"a {r['label'].lower()} covers every locale: leave locale out")
+        if "adGroup" in v and not (r.get("adGroup") and isinstance(v["adGroup"], str) and 0 < len(v["adGroup"]) <= 100):
+            rep.err(vw + ".adGroup", "a custom product page's Apple Ads ad group, 1-100 characters" if r.get("adGroup")
+                    else "only a custom product page has an Apple Ads ad group")
+    swapped = {b for v in vs if isinstance(v, dict) and isinstance(v.get("swap"), dict) for b in v["swap"].values() if isinstance(b, str)}
+    for a in shots.values():
+        if isinstance(a.get("variantOf"), str) and a["id"] not in swapped:
+            rep.warn(f"artboard '{a['id']}'", "a variant's shot no variant swaps in: it shows on no page (listing.variants[].swap)")
 
 
 def _shot_html(a: dict, doc_path: Path | None) -> str:
@@ -1668,7 +1822,8 @@ def store_checks(doc: dict, doc_path: Path | None, rules: dict | None = None, to
             if gone:
                 add("warn", f"{loc} has no {', '.join(gone)}: the store shows {default}'s", source="G-TR" if p == "play" else "A-LOC",
                     platforms=[p], locales=[loc], section="text")
-        miss = [k for k in used if k in _obj(strings.get(default)) and k not in _obj(strings.get(loc))]
+        miss = [k for k in used if k in _obj(strings.get(default)) and k not in _obj(strings.get(loc))
+                and any(not isinstance(by[i].get("locale"), str) or by[i]["locale"] == loc for i in used[k])]
         if miss:
             add("warn", f"{len(miss)} caption string{' falls' if len(miss) == 1 else 's fall'} back to {default}: {', '.join(miss)}",
                 locales=[loc], section="text", key=f"field:{loc}/strings/{miss[0]}")
@@ -1714,35 +1869,78 @@ def store_checks(doc: dict, doc_path: Path | None, rules: dict | None = None, to
         if fam not in have:
             add("warn", f"the caption font {fam} isn't installed here: shots and exports fall back to Inter", section="shared")
 
-    # variants: their kinds and limits (custom pages and A/B tests)
-    vs = lb.get("variants") if isinstance(lb.get("variants"), list) else []
-    kinds = {(v["platform"], v["kind"]): v for v in rules.get("variants") or []}
+    # variants: what each kind may change and how many there may be (custom pages and A/B tests); validate_variants
+    # reports a malformed one
     per_kind: dict[tuple[str, str], int] = {}
-    vids: set[str] = set()
-    for i, v in enumerate(vs):
-        vw = f"variants[{i}]"
-        if not isinstance(v, dict) or not isinstance(v.get("id"), str) or not ID_RE.match(v["id"]) or v["id"] in vids:
-            add("err", f"{vw}: an id of a-z, 0-9 and -, once each")
+    groups: dict[str, list[str]] = {}
+    for v in variants_of(lb):
+        r = variant_rule(rules, v)
+        if r is None or r["platform"] not in plats:
             continue
-        vids.add(v["id"])
-        r = kinds.get((v.get("platform"), v.get("kind")))
-        if r is None or v.get("platform") not in plats:
-            add("err", f"variant {v['id']}: kind and platform, one of " + ", ".join(f"{k} ({p})" for p, k in kinds), key=f"variant:{v['id']}")
-            continue
+        kw = {"source": r["source"], "platforms": [r["platform"]], "key": f"variant:{v['id']}", "section": "variants"}
+        what = r["label"].lower()
         per_kind[(r["platform"], r["kind"])] = per_kind.get((r["platform"], r["kind"]), 0) + 1
-        if r["kind"] == "ppo" and v.get("text"):
-            add("err", f"variant {v['id']}: a {r['label'].lower()} can't change text", source=r["source"], platforms=[r["platform"]],
-                key=f"variant:{v['id']}")
+        text = {loc: per for loc, per in _obj(v.get("text")).items() if isinstance(per, dict) and per}
+        ok = variant_text_fields(rules, v)
+        bad = sorted({f for per in text.values() for f in per if f not in ok})
+        if bad:
+            rs = text_rules(rules, r["platform"])
+            add("err", f"variant {v['id']}: a {what} can't change {', '.join(rs[f]['label'].lower() if f in rs else f for f in bad)}"
+                + ("" if ok else ": text isn't tested"), locales=sorted(text), **kw)
+        elif text and r.get("textIn") == "locale" and not (isinstance(v.get("locale"), str) and set(text) == {v["locale"]}):
+            add("err", f"variant {v['id']}: only a localized {what} changes text, in its own language: set its locale"
+                + (f" ({v['locale']}) and keep its text there" if isinstance(v.get("locale"), str) else ""), locales=sorted(text), **kw)
         swap = _obj(v.get("swap"))
         off = sorted({sid for pair in swap.items() for sid in pair if isinstance(sid, str) and sid in by
-                      and any((sets.get(s) or {}).get("row") in (r.get("not") or []) for s in by[sid].get("sets") or [])})
+                      and any((sets.get(s) or {}).get("row") in (r.get("not") or []) for s in by[sid].get("sets") or [])}
+                     | {s for s in _obj(v.get("order")) if (sets.get(s) or {}).get("row") in (r.get("not") or [])})
         if off:
-            add("err", f"variant {v['id']}: a {r['label'].lower()} can't change {', '.join(r['not'])} shots: {', '.join(off)}",
-                source=r["source"], platforms=[r["platform"]], key=f"variant:{v['id']}")
+            add("err", f"variant {v['id']}: a {what} can't change {', '.join(r['not'])} shots: {', '.join(off)}", **kw)
+        if isinstance(v.get("adGroup"), str):
+            groups.setdefault(v["adGroup"], []).append(v["id"])
+        if not variant_changes(lb, arts, rules, v, v.get("locale") if isinstance(v.get("locale"), str) else default):
+            add("warn", f"variant {v['id']}: no change from the default page yet", **{**kw, "source": None})
     for (p, k), n in per_kind.items():
-        r = kinds[(p, k)]
+        r = next(x for x in rules["variants"] if (x["platform"], x["kind"]) == (p, k))
         if n > r["max"]:
-            add("err", f"{n} {r['label'].lower()}s, at most {r['max']}", source=r["source"], platforms=[p])
+            add("err", f"{n} {r['label'].lower()}s, at most {r['max']}", source=r["source"], platforms=[p], section="variants")
+    ads = {x["platform"]: x for x in rules.get("ads") or []}
+    for g, ids in groups.items():
+        if len(ids) > (ads.get("appstore") or {}).get("adGroup", 1):
+            add("err", f"ad group {g}: one custom product page each, not {', '.join(ids)}", source=(ads.get("appstore") or {}).get("source"),
+                platforms=["appstore"], key=f"variant:{ids[1]}", section="ads")
+
+    # ads and other assets: how many of each per locale; an uploaded one's size, alpha and bytes
+    for r in rules["assets"]:
+        if r["platform"] not in plats or "count" not in r:
+            continue
+        for loc in locs:
+            n = sum(1 for a in arts if a.get("device") == "asset" and a.get("asset") == r["id"]
+                    and (not isinstance(a.get("locale"), str) or a["locale"] == loc))
+            if n > r["count"][1]:
+                add("err", f"{r['label']}: {n}, at most {r['count'][1]}", source=r["source"], rule=r, check="count",
+                    platforms=[r["platform"]], locales=[loc], section=r.get("group") or "shared")
+    for a in arts:
+        r = assets.get(a.get("asset")) if a.get("device") == "asset" else None
+        if r is None or r["platform"] not in plats:
+            continue
+        kw = {"platforms": [r["platform"]], "locales": [a["locale"]] if isinstance(a.get("locale"), str) else [],
+              "section": r.get("group") or "shared", "key": f"artboard:{a['id']}"}
+        if r.get("kind") == "ad" and r.get("unverified"):
+            add("warn", f"{a['id']}: {r['label']}: {r['unverified']}", source=r["source"], **kw)
+        if doc_path is None or not is_image_shot(a) or image_src_problem(a["src"], doc_path):
+            continue
+        info, size = _png_head(Path(doc_path).parent / a["src"])
+        if info is None:
+            continue
+        why = size_problem(r, info["w"], info["h"])
+        if why:
+            add("err", f"upload {a['src']} is {info['w']}×{info['h']}: want {why}", source=r["source"], rule=r, check="size", **kw)
+        if not r.get("alpha") and (info["colour"] in (4, 6) or info["trns"]):
+            add("err", f"upload {a['src']} has an alpha channel: the stores refuse transparency", source=r["source"], **kw)
+        if size > r.get("maxBytes", UPLOAD_MAX_BYTES):
+            add("err", f"upload {a['src']}: {size / 1048576:.1f} MB, at most {r.get('maxBytes', UPLOAD_MAX_BYTES) // 1048576} MB",
+                source=r["source"], rule=r, check="bytes", **kw)
     out.sort(key=lambda f: f["level"] != "err")
     return out
 
@@ -2001,10 +2199,12 @@ def export_plan(doc: dict, doc_path: Path | None, rules: dict | None = None, pla
     """The fastlane ZIP's files in order, before rendering: text {path, kind: text, text, platform, locale, field, mt}
     and images {path, kind: shot|upload|asset|icon, platform, locale, set or asset, shot, i, n, w, h (store px), fw,
     fh (CSS px), scale, src (an upload's PNG), capture (the PNG the UI slot shows), fallback (a capture of the
-    default locale)}. A field the locale lacks is left out: the store falls back to its default. Google Ads images and
-    text go under ads/google/<locale>/, a set or asset fastlane has no folder for under extra/<platform>/<locale>/.
-    platform and locale narrow it; caps (captures_at, an earlier revision's) stands in for captures.json. ValueError:
-    a platform or locale the listing hasn't."""
+    default locale), variant, message and layout (a variant's style)}. A field the locale lacks is left out: the store
+    falls back to its default. Ads text and images go under ads/google/<locale>/ and ads/apple/<locale>/, a set or
+    asset fastlane has no folder for under extra/<platform>/<locale>/. A variant's files go under
+    variants/<platform>-<kind>-<id>/ at their default paths: only what it changes (its text, each set whose shots or
+    style differ), the rest is the default page's. platform and locale narrow it; caps (captures_at, an earlier
+    revision's) stands in for captures.json. ValueError: a platform or locale the listing hasn't."""
     rules = rules or load_rules()
     lb = listing_of(doc) or {}
     locs = [x for x in lb.get("locales") or [] if isinstance(x, str)]
@@ -2020,16 +2220,48 @@ def export_plan(doc: dict, doc_path: Path | None, rules: dict | None = None, pla
     caps = caps if caps is not None else captures(doc, doc_path) if doc_path is not None else {}
     mt = _obj(lb.get("mt"))
     out: list[dict] = []
+
+    def text_entry(p: str, loc: str, f: str, r: dict, v, prefix: str = "") -> None:
+        name = r.get("fastlane") or {"adHeadlines": "headlines.txt", "adDescriptions": "descriptions.txt"}.get(f)
+        if not name or not v or not (isinstance(v, str) or (isinstance(v, list) and all(isinstance(x, str) for x in v))):
+            return
+        out.append({"path": prefix + (f"ads/google/{loc}/{name}" if r.get("group") == "ads" else _text_file(p, loc, name)),
+                    "kind": "text", "text": "\n".join(v) if isinstance(v, list) else v, "platform": p,
+                    "locale": loc, "field": f, "mt": [f"{p}.{f}"] if not prefix and f"{p}.{f}" in (mt.get(loc) or []) else []})
+
+    def shot_entries(p: str, loc: str, secs: list[dict], extra: dict | None = None, style: dict | None = None,
+                     prefix: str = "") -> None:
+        for sec in secs:
+            for x in sec["sets"]:
+                r = sets[x["set"]]
+                name = r["id"].partition("/")[2]
+                for i, sid in enumerate(x["shots"]):
+                    a = by[sid]
+                    if p == "play" and r.get("fastlane") in PLAY_IMAGE_TYPES:
+                        path = f"{PLAY_META}/{loc}/images/{r['fastlane']}/{i + 1:02d}-{sid}.png"
+                    elif p == "appstore" and r.get("fastlane"):
+                        path = f"{APPSTORE_SHOTS}/{loc}/{i + 1:02d}-{name}-{sid}.png"
+                    else:
+                        path = f"extra/{p}/{loc}/{name}/{i + 1:02d}-{sid}.png"
+                    fw, fh = frame_size(r)
+                    e = {"path": prefix + path, "kind": "upload" if is_image_shot(a) else "shot", "platform": p, "locale": loc,
+                         "set": r["id"], "shot": sid, "i": i, "n": len(x["shots"]), "w": r["author"][0], "h": r["author"][1],
+                         "fw": fw, "fh": fh, "scale": r["scale"], **(extra or {})}
+                    if style is not None and not r.get("raw"):
+                        e.update(effective_style(lb, p, a, style))
+                    if is_image_shot(a):
+                        e["src"] = a["src"]
+                    else:
+                        c = capture_for(caps, a, r, loc, default)
+                        if c:
+                            e["capture"] = c["file"]
+                            e["fallback"] = c["locale"] != loc
+                    out.append(e)
+
     for p in plats if platform is None else [platform]:
         for loc in locs if locale is None else [locale]:
             for f, r in text_rules(rules, p).items():
-                v = _obj(_obj(_obj(lb.get("text")).get(loc)).get(p)).get(f)
-                name = r.get("fastlane") or {"adHeadlines": "headlines.txt", "adDescriptions": "descriptions.txt"}.get(f)
-                if not name or not v or not (isinstance(v, str) or (isinstance(v, list) and all(isinstance(x, str) for x in v))):
-                    continue
-                out.append({"path": f"ads/google/{loc}/{name}" if r.get("group") == "ads" else _text_file(p, loc, name),
-                            "kind": "text", "text": "\n".join(v) if isinstance(v, list) else v, "platform": p,
-                            "locale": loc, "field": f, "mt": [f"{p}.{f}"] if f"{p}.{f}" in (mt.get(loc) or []) else []})
+                text_entry(p, loc, f, r, _obj(_obj(_obj(lb.get("text")).get(loc)).get(p)).get(f))
             if p == "play" and isinstance(_obj(lb.get("video")).get("play"), str):
                 out.append({"path": f"{PLAY_META}/{loc}/video.txt", "kind": "text", "text": lb["video"]["play"], "platform": p,
                             "locale": loc, "field": "video", "mt": []})
@@ -2039,42 +2271,39 @@ def export_plan(doc: dict, doc_path: Path | None, rules: dict | None = None, pla
             ads = 0
             for a in arts:
                 r = assets.get(a.get("asset")) if a.get("device") == "asset" else None
-                if not r or r["platform"] != p or "author" not in r:
+                if not r or r["platform"] != p or "author" not in r or (isinstance(a.get("locale"), str) and a["locale"] != loc):
                     continue
                 fw, fh = frame_size(r)
-                if r.get("kind") == "ad":
+                if r.get("group") == "ads" and p == "play":
                     ads += 1
                     path = f"ads/google/{loc}/{r['author'][0]}x{r['author'][1]}-{ads}.png"
+                elif r.get("group") == "ads":
+                    path = f"ads/apple/{loc}/{r['id'].partition('/')[2]}-{a['id']}.png"
                 elif p == "play" and r.get("fastlane") in PLAY_IMAGES:
                     path = f"{PLAY_META}/{loc}/images/{r['fastlane']}.png"
                 else:
                     path = f"extra/{p}/{loc}/assets/{a['id']}.png"
-                out.append({"path": path, "kind": "asset", "platform": p, "locale": loc, "asset": r["id"], "shot": a["id"],
-                            "w": r["author"][0], "h": r["author"][1], "fw": fw, "fh": fh, "scale": r["scale"]})
-            for sec in sections(lb, arts, rules, p, loc):
-                for x in sec["sets"]:
-                    r = sets[x["set"]]
-                    name = r["id"].partition("/")[2]
-                    for i, sid in enumerate(x["shots"]):
-                        a = by[sid]
-                        if p == "play" and r.get("fastlane") in PLAY_IMAGE_TYPES:
-                            path = f"{PLAY_META}/{loc}/images/{r['fastlane']}/{i + 1:02d}-{sid}.png"
-                        elif p == "appstore" and r.get("fastlane"):
-                            path = f"{APPSTORE_SHOTS}/{loc}/{i + 1:02d}-{name}-{sid}.png"
-                        else:
-                            path = f"extra/{p}/{loc}/{name}/{i + 1:02d}-{sid}.png"
-                        fw, fh = frame_size(r)
-                        e = {"path": path, "kind": "upload" if is_image_shot(a) else "shot", "platform": p, "locale": loc,
-                             "set": r["id"], "shot": sid, "i": i, "n": len(x["shots"]), "w": r["author"][0], "h": r["author"][1],
-                             "fw": fw, "fh": fh, "scale": r["scale"]}
-                        if is_image_shot(a):
-                            e["src"] = a["src"]
-                        else:
-                            c = capture_for(caps, a, r, loc, default)
-                            if c:
-                                e["capture"] = c["file"]
-                                e["fallback"] = c["locale"] != loc
-                        out.append(e)
+                e = {"path": path, "kind": "upload" if is_image_shot(a) else "asset", "platform": p, "locale": loc, "asset": r["id"],
+                     "shot": a["id"], "w": r["author"][0], "h": r["author"][1], "fw": fw, "fh": fh, "scale": r["scale"]}
+                if is_image_shot(a):
+                    e["src"] = a["src"]
+                out.append(e)
+            base = sections(lb, arts, rules, p, loc)
+            shot_entries(p, loc, base)
+            # the variants: what each changes, under variants/<platform>-<kind>-<id>/
+            for v in variants_of(lb, p):
+                vr = variant_rule(rules, v)
+                if vr is None or (isinstance(v.get("locale"), str) and v["locale"] != loc):
+                    continue
+                prefix, vst = f"variants/{p}-{vr['kind']}-{v['id']}/", variant_style(rules, v)
+                for f, r in text_rules(rules, p).items():
+                    if r.get("group") == "listing":
+                        text_entry(p, loc, f, r, _obj(_obj(v.get("text")).get(loc)).get(f), prefix)
+                was = {x["set"]: x["shots"] for s in base for x in s["sets"]}
+                mine = [{"row": s["row"], "sets": [x for x in s["sets"] if x["shots"] != was.get(x["set"]) or (not sets[x["set"]].get("raw") and any(
+                    effective_style(lb, p, by[i]) != effective_style(lb, p, by[i], vst) for i in x["shots"]))]}
+                        for s in sections(lb, arts, rules, p, loc, v)]
+                shot_entries(p, loc, mine, {"variant": v["id"]}, vst, prefix)
     return out
 
 

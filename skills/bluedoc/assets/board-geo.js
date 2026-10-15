@@ -932,22 +932,31 @@ const BoardGeo = (() => {
   // a storelisting platform page's device sections: [{row, sets: [{set, shots: [ids]}]}] for each row of listing.rows
   // (default: the rules' core rows) in the rules' order; a row's sets of this platform in the rules' order that are
   // core, have a shot or are asked for (if:watchFace with listing.watchFace); a set's shots in board order (an upload of
-  // another locale left out), listing.order[set]'s ids first; rows without a set left out
-  function listingSections(lb, artboards, rules, platform, locale) {
+  // another locale and a variant's own shot, variantOf, left out), listing.order[set]'s ids first; with a variant, its
+  // swap ({default shot: its shot}) puts a shot in another's place (once, at its first place), then its order[set]'s
+  // ids first; rows without a set left out
+  function listingSections(lb, artboards, rules, platform, locale, variant) {
     lb = lb && typeof lb === 'object' ? lb : {};
+    const isObj = o => !!o && typeof o === 'object' && !Array.isArray(o);
     const rows = Array.isArray(lb.rows) ? lb.rows : rules.rows.filter(r => r.core).map(r => r.id);
-    const order = lb.order && typeof lb.order === 'object' && !Array.isArray(lb.order) ? lb.order : {};
-    const arts = (artboards || []).filter(a => a && typeof a.id === 'string' && a.device === 'shot' && Array.isArray(a.sets));
+    const order = isObj(lb.order) ? lb.order : {};
+    const all = (artboards || []).filter(a => a && typeof a.id === 'string' && a.device === 'shot');
+    const shotIds = new Set(all.map(a => a.id));
+    const arts = all.filter(a => Array.isArray(a.sets) && typeof a.variantOf !== 'string');
+    const v = isObj(variant) ? variant : {};
+    const swap = isObj(v.swap) ? Object.fromEntries(Object.entries(v.swap).filter(([, s]) => typeof s === 'string' && shotIds.has(s))) : {};
+    const vOrder = isObj(v.order) ? v.order : {};
+    const first = (ids, want) => { want = Array.isArray(want) ? want.filter(i => ids.includes(i)) : []; return [...want, ...ids.filter(i => !want.includes(i))]; };
     const out = [];
     for (const r of rules.rows) {
       if (!rows.includes(r.id)) continue;
       const sets = [];
       for (const s of rules.sets) {
         if (s.platform !== platform || s.row !== r.id) continue;
-        const shots = arts.filter(a => a.sets.includes(s.id) && (typeof a.locale !== 'string' || a.locale === locale)).map(a => a.id);
+        let shots = arts.filter(a => a.sets.includes(s.id) && (typeof a.locale !== 'string' || a.locale === locale)).map(a => a.id);
         if (!(s.core || shots.length || (s.required === 'if:watchFace' && lb.watchFace === true))) continue;
-        const want = Array.isArray(order[s.id]) ? order[s.id].filter(i => shots.includes(i)) : [];
-        sets.push({ set: s.id, shots: [...want, ...shots.filter(i => !want.includes(i))] });
+        shots = [...new Set(first(shots, order[s.id]).map(i => Object.prototype.hasOwnProperty.call(swap, i) ? swap[i] : i))];
+        sets.push({ set: s.id, shots: first(shots, vOrder[s.id]) });
       }
       if (sets.length) out.push({ row: r.id, sets });
     }

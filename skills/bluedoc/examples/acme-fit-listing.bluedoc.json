@@ -1,13 +1,13 @@
 {
   "id": "acme-fit-listing",
   "title": "Acme Fit: store listing",
-  "subtitle": "The 3.0 listing on Google Play and the App Store, in English and Spanish, for watch, phone and tablet.",
+  "subtitle": "The 3.0 listing on Google Play and the App Store, in English and Spanish, for watch, phone and tablet, with a custom page, two A/B tests and ads.",
   "meta": {
     "org": "Acme",
     "kind": "Store listing",
     "type": "storelisting",
-    "rev": "B",
-    "date": "2026-10-15"
+    "rev": "C",
+    "date": "2026-10-16"
   },
   "state": [
     {
@@ -19,7 +19,7 @@
       "kind": "info"
     }
   ],
-  "tldr": "Check each platform page in en-US and es-ES: the store text against its counters, the three phone shots, the tablet and watch sets, and the shared icon and feature graphic.",
+  "tldr": "Check each platform page in en-US and es-ES: the text against its counters, the shots per device, and the shared icon and feature graphic. Then check the Runners page, the two B treatments, the store preview and the ads.",
   "links": [
     {
       "label": "Design: Acme Fit screens",
@@ -92,7 +92,15 @@
                 "name": "Acme Fit: Run, Ride, Rest",
                 "short": "See your week of runs, rides and sleep in one glance. Keep the streak going.",
                 "full": "Acme Fit shows your week at a glance: steps, workouts, heart rate and sleep in one view.\n\nPlan runs and rides, follow them on your watch, and keep your streak going with gentle reminders.",
-                "releaseNotes": "The week view: steps, workouts and sleep side by side."
+                "releaseNotes": "The week view: steps, workouts and sleep side by side.",
+                "adHeadlines": [
+                  "Your week in one view",
+                  "Runs, rides and rest",
+                  "Keep the streak going"
+                ],
+                "adDescriptions": [
+                  "Steps, workouts, heart rate and sleep side by side. Plan the week on your watch."
+                ]
               },
               "appstore": {
                 "name": "Acme Fit",
@@ -120,13 +128,19 @@
               "workout.title": "Every run, mapped",
               "streak.title": "Keep the streak going",
               "feature.title": "Acme Fit",
-              "feature.sub": "Your week of runs, rides and rest"
+              "feature.sub": "Your week of runs, rides and rest",
+              "today-lifestyle.title": "Your week, on the move",
+              "ad-wide.title": "Your week of runs in one view",
+              "ad-wide.sub": "Steps, workouts and sleep, side by side",
+              "search.title": "Run, ride, rest",
+              "search.sub": "One week, one view"
             },
             "es-ES": {
               "today.title": "Tu semana de un vistazo",
               "workout.title": "Cada carrera, en el mapa",
               "feature.title": "Acme Fit",
-              "feature.sub": "Tu semana de carreras, rutas y descanso"
+              "feature.sub": "Tu semana de carreras, rutas y descanso",
+              "today-lifestyle.title": "Tu semana, en marcha"
             }
           },
           "mt": {
@@ -142,7 +156,56 @@
                 "design": "acme-fit-design.bluedoc.json"
               }
             }
-          }
+          },
+          "variants": [
+            {
+              "id": "runners",
+              "platform": "appstore",
+              "kind": "cpp",
+              "title": "Runners",
+              "adGroup": "Runners",
+              "order": {
+                "appstore/iphone-69": [
+                  "workout"
+                ],
+                "appstore/iphone": [
+                  "workout"
+                ],
+                "appstore/ipad": [
+                  "workout"
+                ]
+              },
+              "text": {
+                "en-US": {
+                  "promo": "Every run mapped, every mile in your week."
+                }
+              }
+            },
+            {
+              "id": "lifestyle",
+              "platform": "appstore",
+              "kind": "ppo",
+              "title": "B: Lifestyle",
+              "swap": {
+                "today": "today-lifestyle"
+              }
+            },
+            {
+              "id": "lifestyle-copy",
+              "platform": "play",
+              "kind": "sle",
+              "title": "B: Lifestyle",
+              "locale": "en-US",
+              "swap": {
+                "today": "today-lifestyle"
+              },
+              "text": {
+                "en-US": {
+                  "short": "Your week of runs, rides and sleep, on the move. Keep the streak going."
+                }
+              }
+            }
+          ]
         },
         {
           "type": "board",
@@ -218,6 +281,20 @@
               ]
             },
             {
+              "id": "today-lifestyle",
+              "title": "Today, lifestyle",
+              "device": "shot",
+              "fidelity": "hifi",
+              "variantOf": "today",
+              "sets": [
+                "play/phone",
+                "play/tablet10",
+                "appstore/iphone-69",
+                "appstore/iphone",
+                "appstore/ipad"
+              ]
+            },
+            {
               "id": "watch-rings",
               "title": "Activity rings",
               "device": "shot",
@@ -233,6 +310,22 @@
               "device": "asset",
               "asset": "play/feature",
               "fidelity": "hifi"
+            },
+            {
+              "id": "ad-wide",
+              "title": "Google Ads image",
+              "device": "asset",
+              "asset": "play/ad-landscape",
+              "fidelity": "hifi",
+              "locale": "en-US"
+            },
+            {
+              "id": "search",
+              "title": "Search results asset",
+              "device": "asset",
+              "asset": "appstore/search",
+              "fidelity": "hifi",
+              "locale": "en-US"
             }
           ]
         }
@@ -240,6 +333,8 @@
     }
   ],
   "changes": [
-    "Today and Workout are captured from the Acme Fit design screens (web target), in en-US."
+    "A custom product page for runners: Workout first, its own promotional text, the Runners ad group.",
+    "App Store and Play B treatments put Today in the lifestyle layout.",
+    "Google Ads text and a 1.91:1 image, and the App Store search results asset."
   ]
 }

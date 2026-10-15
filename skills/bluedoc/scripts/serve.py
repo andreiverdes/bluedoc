@@ -1550,7 +1550,8 @@ def listing_zip(doc: dict, doc_path: Path, out: Path, chrome: str, *, rev: str |
                     else:
                         state = {"locale": e["locale"]} if e["kind"] == "asset" else {
                             "set": e["set"], "locale": e["locale"], "i": e["i"], "n": e["n"],
-                            "ui": data_uri(doc_path.parent / e["capture"]) if e.get("capture") else None}
+                            "ui": data_uri(doc_path.parent / e["capture"]) if e.get("capture") else None,
+                            **{k: e[k] for k in ("message", "layout") if k in e}}
                         png = ch.capture_png(url_of(e["shot"], pages[e["shot"]]), e["fw"], e["fh"], e["scale"],
                                              name="bd-shot " + json.dumps(state), settle=0.2)
                     png = listing.png_rgb24(png)
@@ -1575,7 +1576,8 @@ def listing_zip(doc: dict, doc_path: Path, out: Path, chrome: str, *, rev: str |
                     "fonts": listing.export_fonts(lb, rules),
                     "errors": [f"{x['where']}: {x['msg']}" for x in listing.store_checks(doc, doc_path, rules) if x["level"] == "err"],
                     "notes": ["The App Store icon ships in the binary: it isn't in the ZIP.",
-                              "A field a locale lacks isn't in its folder: the store shows the default locale's."],
+                              "A field a locale lacks isn't in its folder: the store shows the default locale's.",
+                              "variants/<platform>-<kind>-<id>/ holds only what a variant changes: the rest is the default page's."],
                     "files": files}
         z.writestr(zipfile.ZipInfo("manifest.json", stamp), json.dumps(manifest, ensure_ascii=False, indent=1),
                    compress_type=zipfile.ZIP_DEFLATED)
@@ -2560,8 +2562,9 @@ POST_LIMITS = {"/__bluedoc/icons": ICON_MAX_BODY, "/__bluedoc/snapshot": SNAPSHO
 def save_listing_upload(doc: Path, data: dict) -> tuple[int, dict]:
     """(status, answer) of POST /__bluedoc/listing/upload {path, platform, locale, set, slot, png: base64}: the PNG,
     checked against the set's rule (size, RGB or indexed colour without tRNS, the byte limit, the slot range), written
-    atomically to <stem>.listing/<platform>/<locale>/<set name>/NN.png. It is a draft until the agent records it as a
-    shot's src. A file a revision records is never overwritten: the upload takes the next free name. {path, discard:
+    atomically to <stem>.listing/<platform>/<locale>/<set name>/NN.png. `set` may name an ads asset too (Google Ads
+    images, the search results asset: listing.upload_rules). It is a draft until the agent records it as a shot's or
+    asset's src. A file a revision records is never overwritten: the upload takes the next free name. {path, discard:
     <file>} deletes a draft instead. Nothing outside that folder, no link on the way. A failed check answers 400 with
     the rule and its source key."""
     try:
@@ -2581,9 +2584,9 @@ def save_listing_upload(doc: Path, data: dict) -> tuple[int, dict]:
         f.unlink(missing_ok=True)
         return 200, {"ok": True, "discarded": data["discard"]}
     set_id, platform, locale, slot = data.get("set"), data.get("platform"), data.get("locale"), data.get("slot")
-    rule = listing.by_id(rules, "sets").get(set_id) if isinstance(set_id, str) else None
+    rule = listing.upload_rules(rules).get(set_id) if isinstance(set_id, str) else None
     if rule is None or rule.get("platform") != platform or platform not in (lb.get("platforms") or []):
-        return 400, {"error": "set: one of the listing's sets, with its platform"}
+        return 400, {"error": "set: one of the listing's sets or ads assets, with its platform"}
     if not isinstance(locale, str) or locale not in (lb.get("locales") or []):
         return 400, {"error": f"locale: one of {', '.join(lb.get('locales') or [])}"}
     hi = (rule.get("count") or [0, 10])[1]

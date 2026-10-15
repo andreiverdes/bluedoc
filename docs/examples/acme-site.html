@@ -1905,6 +1905,72 @@ html.bd-presenting .bp-toast { z-index: 71; bottom: 84px; }
 .bd-lst-video { display: grid; gap: 6px; max-width: 220px; font-size: 11.5px; color: var(--fg-muted); }
 .bd-lst-video video { width: 120px; border-radius: 8px; background: #000; }
 .bd-lst-video code { font-size: 11px; word-break: break-all; }
+/* variants: a tab per custom page or A/B treatment above the sections, what it changes, and compare to default */
+.bd-lst-vbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; max-width: 1480px; margin: 0 auto 10px; padding: 8px 12px; border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-1); font-size: 12.5px; }
+.bd-lst-vbar > .l { color: var(--fg-subtle); font-weight: 600; }
+.bd-lst-vbar .tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.bd-lst-vtab { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border: 0; border-radius: 9px; background: var(--inset); font: 600 12.5px var(--sans); color: var(--fg-muted); cursor: pointer; }
+.bd-lst-vtab:hover { color: var(--fg); background: var(--hover); }
+.bd-lst-vtab.on { color: var(--surface); background: var(--fg); }
+.bd-lst-vtab .n { padding: 1px 6px; border-radius: 6px; font: 600 10.5px/1.5 var(--sans); background: oklch(55% 0.2 300 / .16); color: oklch(55% 0.2 300); }
+.bd-lst-vtab.on .n { background: oklch(100% 0 0 / .2); color: inherit; }
+.bd-lst-vbar .bd-lst-cmpbtn { margin-left: auto; }
+.bd-lst-vbar .bd-lst-cmpbtn[aria-pressed="true"] { color: var(--accent-fg); background: var(--accent-tint); }
+.bd-lst-vbar .hint { margin-left: auto; color: var(--fg-subtle); }
+.bd-lst-vchg { flex-basis: 100%; margin: 0; color: var(--fg-muted); }
+.bd-lst-vchg b { color: var(--fg); }
+.bd-lst-tag.var { color: #fff; background: oklch(55% 0.2 300); }
+.bd-lst-row { display: grid; gap: 4px; min-width: 0; }
+.bd-lst-row > .rl { font: 600 11px var(--sans); color: var(--fg-subtle); text-transform: uppercase; letter-spacing: .04em; }
+.bd-lst-cmp { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+.bd-lst-cmp > .bd-lst-row + .bd-lst-row { padding-left: 16px; border-left: 1px dashed var(--line-strong); }
+.bd-lst-cmp > [data-cmp]:not([data-cmp="default"]) > .rl { color: oklch(55% 0.2 300); }
+.bd-lfield .v.var { box-shadow: inset 3px 0 0 oklch(55% 0.2 300); }
+/* the store preview: each platform's product page and search result at phone width, from the listing's own parts */
+.bd-lst-pv { display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-start; gap: 28px; max-width: 1480px; margin: 0 auto; }
+.bd-lst-pvnote { flex-basis: 100%; margin: 0; text-align: center; font-size: 12px; color: var(--fg-subtle); }
+.bd-lst-pvnote b { color: var(--warn-fg); }
+.bd-lst-phone { width: 350px; display: grid; gap: 6px; }
+.bd-lst-phone > h3 { margin: 0; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--fg-subtle); text-align: center; }
+.bd-lst-scr .guide { display: none; }
+.bd-lst-scr { display: grid; align-content: start; gap: 14px; height: 720px; overflow: hidden; padding: 50px 16px 20px; border-radius: 44px; background: #fff; color: #111;
+  box-shadow: 0 0 0 10px #15171c, 0 0 0 11px #3a3d45, var(--shadow-2); font: 400 13px/1.35 -apple-system, "Roboto", system-ui, sans-serif; }
+.bd-lst-scr.play { font-family: "Roboto", system-ui, sans-serif; }
+.bd-lst-scr .hd { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; }
+.bd-lst-scr .ico { display: block; width: 72px; height: 72px; background-size: 100% 100%; box-shadow: 0 0 0 .5px rgba(0,0,0,.12); background-color: #eee; }
+.bd-lst-scr.appstore .ico { border-radius: 22.4%; }
+.bd-lst-scr.play .ico { border-radius: 30%; }
+.bd-lst-scr .sr .ico { width: 56px; height: 56px; }
+.bd-lst-scr .nm { display: grid; gap: 2px; min-width: 0; }
+.bd-lst-scr .nm b { font-size: 17px; font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bd-lst-scr .nm span { font-size: 13px; color: #6b6f76; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bd-lst-scr .get { padding: 5px 16px; border-radius: 99px; font: 700 13px system-ui, sans-serif; color: #0a66ff; background: #eef1f6; }
+.bd-lst-scr.play .get { border-radius: 8px; color: #fff; background: #0b6b4f; }
+.bd-lst-scr .strip { display: flex; gap: 8px; overflow: hidden; }
+.bd-lst-scr .strip > * { flex: none; }
+.bd-lst-scr .bd-lst-shot { border-radius: 10px; box-shadow: 0 0 0 .5px rgba(0,0,0,.15); cursor: default; }
+.bd-lst-scr .pv, .bd-lst-scr .fg { position: relative; display: grid; place-items: center; border-radius: 10px; background: #1d1f24; color: #fff; font-size: 11px; overflow: hidden; }
+.bd-lst-scr .fg { width: 100%; }
+.bd-lst-scr .play-btn { position: absolute; left: 50%; top: 50%; width: 46px; height: 46px; margin: -23px 0 0 -23px; border-radius: 50%; background: rgba(0,0,0,.55); z-index: 2; }
+.bd-lst-scr .play-btn::after { content: ""; position: absolute; left: 18px; top: 14px; border: 9px solid transparent; border-left: 14px solid #fff; border-right: 0; }
+.bd-lst-scr .tx { margin: 0; color: #3a3d45; white-space: pre-line; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+.bd-lst-scr .tx.promo { -webkit-line-clamp: 3; color: #111; }
+.bd-lst-scr h5 { margin: 0; font-size: 15px; color: #111; }
+.bd-lst-scr .sr { display: grid; gap: 10px; padding-bottom: 14px; border-bottom: .5px solid #e3e5e8; }
+.bd-lst-scr .sr .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.bd-lst-scr .sr .grid2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.bd-lst-scr .search { height: 34px; display: flex; align-items: center; padding: 0 12px; border-radius: 10px; background: #eef0f3; color: #6b6f76; }
+.bd-lst-scr .muted { color: #9a9ea6; font-size: 12px; }
+/* the Ads view: Google App campaign text and images, Apple Ads' default ad, ad variations and creative assets */
+.bd-lst-ads { display: grid; gap: 12px; }
+.bd-lst-adtext { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+.bd-lst-adtext ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; }
+.bd-lst-adtext li { display: flex; gap: 8px; align-items: baseline; padding: 6px 8px; border-radius: 8px; background: var(--inset); font-size: 12.5px; }
+.bd-lst-adtext li > span:first-child { flex: 1; min-width: 0; }
+.bd-lst-adtext li .c { font: 500 11px var(--mono); color: var(--fg-subtle); }
+.bd-lst-adtext li .c.over { color: var(--risk-fg); font-weight: 700; }
+.bd-lst-adtext li.none { color: var(--fg-subtle); }
+.bd-lst-ads .note { margin: 0; font-size: 12px; color: var(--fg-subtle); }
 /* the left panel's Text tab: each field with its counter, then the captions */
 .bd-lst-text h4 { margin: 4px 4px 10px; font-size: 13px; }
 .bd-lst-text h4 + p { margin: -6px 4px 10px; font-size: 12px; color: var(--fg-subtle); }
@@ -5624,22 +5690,31 @@ const BoardGeo = (() => {
   // a storelisting platform page's device sections: [{row, sets: [{set, shots: [ids]}]}] for each row of listing.rows
   // (default: the rules' core rows) in the rules' order; a row's sets of this platform in the rules' order that are
   // core, have a shot or are asked for (if:watchFace with listing.watchFace); a set's shots in board order (an upload of
-  // another locale left out), listing.order[set]'s ids first; rows without a set left out
-  function listingSections(lb, artboards, rules, platform, locale) {
+  // another locale and a variant's own shot, variantOf, left out), listing.order[set]'s ids first; with a variant, its
+  // swap ({default shot: its shot}) puts a shot in another's place (once, at its first place), then its order[set]'s
+  // ids first; rows without a set left out
+  function listingSections(lb, artboards, rules, platform, locale, variant) {
     lb = lb && typeof lb === 'object' ? lb : {};
+    const isObj = o => !!o && typeof o === 'object' && !Array.isArray(o);
     const rows = Array.isArray(lb.rows) ? lb.rows : rules.rows.filter(r => r.core).map(r => r.id);
-    const order = lb.order && typeof lb.order === 'object' && !Array.isArray(lb.order) ? lb.order : {};
-    const arts = (artboards || []).filter(a => a && typeof a.id === 'string' && a.device === 'shot' && Array.isArray(a.sets));
+    const order = isObj(lb.order) ? lb.order : {};
+    const all = (artboards || []).filter(a => a && typeof a.id === 'string' && a.device === 'shot');
+    const shotIds = new Set(all.map(a => a.id));
+    const arts = all.filter(a => Array.isArray(a.sets) && typeof a.variantOf !== 'string');
+    const v = isObj(variant) ? variant : {};
+    const swap = isObj(v.swap) ? Object.fromEntries(Object.entries(v.swap).filter(([, s]) => typeof s === 'string' && shotIds.has(s))) : {};
+    const vOrder = isObj(v.order) ? v.order : {};
+    const first = (ids, want) => { want = Array.isArray(want) ? want.filter(i => ids.includes(i)) : []; return [...want, ...ids.filter(i => !want.includes(i))]; };
     const out = [];
     for (const r of rules.rows) {
       if (!rows.includes(r.id)) continue;
       const sets = [];
       for (const s of rules.sets) {
         if (s.platform !== platform || s.row !== r.id) continue;
-        const shots = arts.filter(a => a.sets.includes(s.id) && (typeof a.locale !== 'string' || a.locale === locale)).map(a => a.id);
+        let shots = arts.filter(a => a.sets.includes(s.id) && (typeof a.locale !== 'string' || a.locale === locale)).map(a => a.id);
         if (!(s.core || shots.length || (s.required === 'if:watchFace' && lb.watchFace === true))) continue;
-        const want = Array.isArray(order[s.id]) ? order[s.id].filter(i => shots.includes(i)) : [];
-        sets.push({ set: s.id, shots: [...want, ...shots.filter(i => !want.includes(i))] });
+        shots = [...new Set(first(shots, order[s.id]).map(i => Object.prototype.hasOwnProperty.call(swap, i) ? swap[i] : i))];
+        sets.push({ set: s.id, shots: first(shots, vOrder[s.id]) });
       }
       if (sets.length) out.push({ row: r.id, sets });
     }
@@ -7405,33 +7480,48 @@ function renderListing(lb) {
   const textOf = (loc, p, f) => { const v = obj(obj(TEXT[loc])[p])[f]; return typeof v === 'string' || Array.isArray(v) ? v : null; };
   const strOf = (loc, k) => { const v = obj(STR[loc])[k]; return typeof v === 'string' ? v : null; };
   const isMt = (loc, k) => Array.isArray(MTS[loc]) && MTS[loc].includes(k);
-  const usedKeys = () => [...new Set(Object.values(obj(LST.keys)).flat().filter(k => typeof k === 'string'))];
-  const L = BOARD = { lb, mode: 'view', platform: (PLATS[0] || {}).id || null, locale: DEF, tiles: [], live: new Set(), chg: new Map(), fchg: new Set(), variant: null };
+  // the caption keys the shots and assets shown in a locale use (an artboard with its own locale shows only there)
+  const usedKeys = loc => [...new Set(Object.entries(obj(LST.keys)).filter(([id]) => { const a = byId.get(id); return !a || typeof a.locale !== 'string' || a.locale === loc; })
+    .flatMap(([, ks]) => Array.isArray(ks) ? ks : []).filter(k => typeof k === 'string'))];
+  const L = BOARD = { lb, mode: 'view', platform: (PLATS[0] || {}).id || null, locale: DEF, tiles: [], live: new Set(), chg: new Map(), fchg: new Set(), variant: null, view: 'sections', cmp: false };
   // the listing block's path (block:<section>/<index>): the target of its drafts' patch commands
   const blockPath = (() => { for (const s of DOC.sections || []) { const i = (s.blocks || []).indexOf(lb); if (i >= 0) return `${s.id}/${i}`; } return ''; })();
   const docDir = (() => { const p = location.pathname; return p.slice(0, p.lastIndexOf('/') + 1); })();
   const fileUrl = rel => /^data:/.test(rel) ? rel : new URL(docDir + String(rel).split('/').map(encodeURIComponent).join('/'), location.href).href;
 
-  /* drafts: a set's order, the device sections turned on; the page shows them at once */
+  /* drafts: a set's order (the default page's, or a variant's), the device sections turned on; the page shows them at once */
   const drafts = () => (L.D ? L.D.all() : []).filter(a => a.type === 'listing' && a.status !== 'resolved' && a.listing && typeof a.listing === 'object');
+  const orderOp = (o, vid) => o.op === 'order' && typeof o.set === 'string' && Array.isArray(o.ids) && (o.variant || null) === (vid || null);
   function effective() {
     const order = { ...obj(lb.order) };
     let rows = Array.isArray(lb.rows) ? lb.rows.slice() : RULES.rows.filter(r => r.core).map(r => r.id);
     for (const a of drafts()) {
       const o = a.listing;
-      if (o.op === 'order' && typeof o.set === 'string' && Array.isArray(o.ids)) order[o.set] = o.ids.filter(i => typeof i === 'string');
+      if (orderOp(o, null)) order[o.set] = o.ids.filter(i => typeof i === 'string');
       else if (o.op === 'rows' && Array.isArray(o.rows)) rows = o.rows.filter(r => ROWS.has(r));
     }
     return { ...lb, order, rows };
   }
-  const sectionsOf = (p, loc = L.locale) => BoardGeo.listingSections(effective(), abs, RULES, p, loc);
+  /* variants (listing.variants): custom product pages and store listings, PPO and SLE treatments; L.variant is the tab on
+     screen (null: the default page). A variant changes what its kind's rule `varies` (listing.py validate_variants and
+     store_checks); BoardGeo.listingSections applies its swap and order. An A/B treatment's layout is L5 unless it names
+     one (listing.AB_LAYOUT). */
+  const VRULES = Array.isArray(RULES.variants) ? RULES.variants : [];
+  const vRule = v => VRULES.find(r => r.kind === v.kind && r.platform === v.platform) || null;
+  const VARIANTS = (Array.isArray(lb.variants) ? lb.variants : []).filter(v => v && typeof v.id === 'string' && /^[a-z0-9][a-z0-9-]*$/.test(v.id) && vRule(v) && PLATS.some(p => p.id === v.platform));
+  const AB_LAYOUT = 'l5';
+  const variantsOf = p => VARIANTS.filter(v => v.platform === p);
+  const vLabel = v => `${vRule(v).short}: ${str(v.title, 60) || v.id}`;
+  const effVariant = v => { if (!v) return null; const order = { ...obj(v.order) }; for (const a of drafts()) if (orderOp(a.listing, v.id)) order[a.listing.set] = a.listing.ids; return { ...v, order }; };
+  const onPage = p => L.variant && L.variant.platform === p ? L.variant : null;
+  const sectionsOf = (p, loc = L.locale, v = onPage(p)) => BoardGeo.listingSections(effective(), abs, RULES, p, loc, effVariant(v));
 
   /* the app bar: Google Play | App Store, and the locale menu with each locale's MT and missing counts */
   const missingIn = loc => {
     if (loc === DEF) return 0;
     let n = 0;
     for (const p of PLATS) for (const r of textRules(p.id)) if (textOf(DEF, p.id, r.field) != null && textOf(loc, p.id, r.field) == null) n++;
-    for (const k of usedKeys()) if (strOf(DEF, k) != null && strOf(loc, k) == null) n++;
+    for (const k of usedKeys(loc)) if (strOf(DEF, k) != null && strOf(loc, k) == null) n++;
     return n;
   };
   const locLabel = loc => [loc, (MTS[loc] || []).length && `${MTS[loc].length} MT`, missingIn(loc) && `${missingIn(loc)} missing`].filter(Boolean).join(' · ');
@@ -7470,7 +7560,10 @@ function renderListing(lb) {
     } catch { toast('Couldn\'t export the listing: the server didn\'t answer'); }
     finally { lstBusy.delete(format); }
   }
-  const tb = h('div', { class: 'bd-lst-tb' }, platSeg, locSel, SERVED && exportMenu(LST_EXPORTS, exportListing, 'Export the listing: a ZIP for fastlane, a PDF or an HTML file', false));
+  // the view: the device sections, the store preview mock, the ads (L.view)
+  const viewSeg = h('div', { class: 'bd-sg', role: 'radiogroup', 'aria-label': 'View' }, [['sections', 'Sections', 'Every set and shot, by device'], ['preview', 'Store preview', 'The product page and a search result at phone width: a mock'],
+    ['ads', 'Ads', 'Google App campaign and Apple Ads assets']].map(([v, l, t]) => h('button', { type: 'button', role: 'radio', 'data-view': v, title: t, onclick: () => setView(v) }, l)));
+  const tb = h('div', { class: 'bd-lst-tb' }, platSeg, locSel, viewSeg, SERVED && exportMenu(LST_EXPORTS, exportListing, 'Export the listing: a ZIP for fastlane, a PDF or an HTML file', false));
 
   /* the left panel: Text (this platform's store text and the captions, for the locale) and Brief */
   const lpText = h('div', { class: 'bd-lp-pane bd-lst-text', id: 'bd-lp-text' });
@@ -7478,9 +7571,11 @@ function renderListing(lb) {
   function paintText() {
     const p = PLATS.find(x => x.id === L.platform), loc = L.locale, out = [];
     if (!p) { lpText.replaceChildren(); return; }
-    out.push(h('h4', {}, `${p.label} text · ${loc}`));
-    if (p.id === 'appstore') out.push(h('p', {}, 'Promotional text changes without a new version.'));
-    const field = (fkey, label, v, rule, mtKey, fb) => {
+    const vv = onPage(p.id), vText = vv ? obj(obj(vv.text)[loc]) : {};
+    out.push(h('h4', {}, `${p.label} text · ${loc}${vv ? ' · ' + vLabel(vv) : ''}`));
+    if (vv) out.push(h('p', {}, `${vRule(vv).label}: ${vRule(vv).note}.`));
+    else if (p.id === 'appstore') out.push(h('p', {}, 'Promotional text changes without a new version.'));
+    const field = (fkey, label, v, rule, mtKey, fb, isVar) => {
       const acc = mtKey && acceptDraft(loc, mtKey);
       const items = Array.isArray(v) ? v : v == null ? [] : [v];
       const counts = rule ? items.map(s => lstCount(String(s), rule.unit)) : [];
@@ -7488,7 +7583,8 @@ function renderListing(lb) {
       const c = rule && h('span', { class: 'c' + (over ? ' over' : '') }, items.length ? counts.map(n => `${n} / ${rule.limit}`).join(' · ') + (rule.unit === 'bytes' ? ' bytes' : '') : `0 / ${rule.limit}`);
       const el = h('div', { class: 'bd-lfield' + (rule ? '' : ' cap') + (L.fchg.has(fkey) ? ' bd-chg bd-chg-mod' : ''), 'data-field': fkey, 'data-label': `${label} · ${loc}` },
         h('div', { class: 'lh' }, h('span', {}, label), mtKey && h('span', { class: 'bd-lst-tag mt' + (acc ? ' acc' : ''), title: acc ? 'Accepted here: Request changes sends it' : 'Machine-translated: not yet accepted' }, acc ? 'MT · accepted' : 'MT'), c),
-        h('div', { class: 'v' + (fb ? ' fb' : '') + (v == null ? ' none' : '') }, v == null ? (rule && rule.required === true ? 'Not set: the store requires it' : 'Not set') : items.join('\n')),
+        h('div', { class: 'v' + (fb ? ' fb' : '') + (v == null ? ' none' : '') + (isVar ? ' var' : '') }, v == null ? (rule && rule.required === true ? 'Not set: the store requires it' : 'Not set') : items.join('\n')),
+        isVar && h('div', { class: 'note' }, `Only on ${vLabel(vv)}. The default page: ${JSON.stringify(str(textOf(loc, p.id, rule.field) ?? textOf(DEF, p.id, rule.field) ?? '', 80))}`),
         fb && h('div', { class: 'note' }, `Missing in ${loc}: shows ${DEF}'s`),
         mtKey && L.D && !OLD && !BASE && h('div', { class: 'bd-lst-mta' }, acc
           ? [h('span', {}, 'Accepted as it is. Request changes sends it.'), h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => L.D.drop(acc.id) }, ic('reset'), 'Undo')]
@@ -7496,10 +7592,12 @@ function renderListing(lb) {
       return el;
     };
     for (const r of textRules(p.id)) {
+      if (typeof vText[r.field] === 'string') { out.push(field(`${loc}/${p.id}/${r.field}`, r.label, vText[r.field], r, false, false, true)); continue; }
       const own = textOf(loc, p.id, r.field), fb = own == null && loc !== DEF && textOf(DEF, p.id, r.field) != null;
       out.push(field(`${loc}/${p.id}/${r.field}`, r.label, own ?? (fb ? textOf(DEF, p.id, r.field) : null), r, isMt(loc, `${p.id}.${r.field}`) && `${p.id}.${r.field}`, fb));
     }
-    const keys = [...new Set([...tilesKeys(), ...Object.keys(obj(STR[DEF]))])];
+    const here = new Set(usedKeys(loc)), any = new Set(Object.values(obj(LST.keys)).flat());
+    const keys = [...new Set([...tilesKeys(), ...Object.keys(obj(STR[DEF])).filter(k => here.has(k) || !any.has(k))])];
     out.push(h('h4', {}, `Captions · ${loc}`));
     if (!keys.length) out.push(h('p', {}, 'No shot names a caption string (data-l10n).'));
     for (const k of keys) {
@@ -7527,7 +7625,7 @@ function renderListing(lb) {
     return null;
   }
   const frameState = x => x.kind === 'asset' ? { locale: L.locale, brand: L.brandTokens() }
-    : { set: x.rule.id, locale: L.locale, i: x.i, n: x.n, ...L.styleFor(L.platform, x.a), ui: x.cap ? x.cap.url : null, brand: L.brandTokens() };
+    : { set: x.rule.id, locale: L.locale, i: x.i, n: x.n, ...L.styleFor(L.platform, x.a, x.v), ui: x.cap ? x.cap.url : null, brand: L.brandTokens() };
   function frameEl(x) {
     const attrs = SCREENS ? (!OLD && typeof SCREENS[x.a.id] === 'string' ? { srcdoc: SCREENS[x.a.id] } : null) : SERVED ? { src: screenUrl(x.a, OLD ? VIEW.rev : null) } : null;
     if (!attrs) return null;
@@ -7551,12 +7649,13 @@ function renderListing(lb) {
     const pre = `el:${x.a.id}/`, sels = [...new Set(L.M.all().map(a => a.target.key).filter(k => k.startsWith(pre)).map(k => k.slice(pre.length)))].slice(0, 100);
     if (sels.length) post(x, { bd: 'locate', sels });
   }
-  // one tile: a shot at its set's frame (or an asset at its own), scaled to the row's height
-  function tile(a, rule, i, n, kind, rowH, maxW = LST_W) {
+  // one tile: a shot at its set's frame (or an asset at its own), scaled to the row's height, as variant v shows it
+  function tile(a, rule, i, n, kind, rowH, maxW = LST_W, v = variantId()) {
     const img = kind === 'image' ? obj(obj(LST.images)[a.id]) : null;
     const [w, hh] = img && img.w && img.h ? [img.w, img.h] : frameOf(rule), s = Math.min(rowH / hh, maxW / w);
-    const x = { a, rule, i, n, kind, w, h: hh, s, rects: {}, fr: null, ready: false, near: false };
+    const x = { a, rule, i, n, kind, w, h: hh, s, rects: {}, fr: null, ready: false, near: false, v };
     x.cap = kind === 'shot' ? captureFor(a, rule) : null;
+    const swapped = v !== 'default' && Object.values(obj(obj(VARIANTS.find(y => y.id === v)).swap)).includes(a.id);
     x.el = h('div', { class: 'bd-lst-shot', 'data-ab': a.id, 'data-title': a.title || a.id, 'data-set': rule.id, style: `width:${Math.round(w * s)}px;height:${Math.round(hh * s)}px` },
       img ? h('img', { src: fileUrl(img.src), alt: a.title || a.id }) : h('div', { class: 'ph' }, SERVED || SCREENS ? a.title || a.id : 'Open this page through serve.py to see the shot.'));
     x.el._x = x;
@@ -7567,10 +7666,11 @@ function renderListing(lb) {
       kind === 'shot' && (x.cap ? (x.cap.fresh ? ['cap', 'capture', capTitle(x.cap)] : ['stale', 'stale', capTitle(x.cap) + '; its recipe changed since: re-shoot it']) : ['mock', 'mock UI', 'No capture: the UI is an HTML mock-up']),
       x.cap && x.cap.fb && ['', `${DEF} capture`],
       keys.some(k => isMt(loc, 'strings.' + k)) && ['mt', 'MT'], fb && ['', `${fb} falls back`], gone && ['miss', `${gone} missing`],
-      typeof a.locale === 'string' && ['', a.locale + ' only'], L.chg.get(a.id) && ['', L.chg.get(a.id) === 'add' ? 'New' : 'Changed']].filter(Boolean);
+      typeof a.locale === 'string' && ['', a.locale + ' only'], L.chg.get(a.id) && ['', L.chg.get(a.id) === 'add' ? 'New' : 'Changed'],
+      swapped && ['var', 'variant', `${a.title || a.id}: this variant's shot in place of ${a.variantOf || 'a default shot'}`]].filter(Boolean);
     if (L.chg.get(a.id)) x.el.classList.add('bd-chg');
     x.box = h('div', { class: 'bd-lst-tile' }, x.el, h('div', { class: 'bd-lst-cap' }, kind !== 'asset' && h('span', { class: 'n' }, String(i + 1)), h('span', { class: 't', title: a.title || a.id }, a.title || a.id),
-      tags.map(([c, t, tt]) => h('span', { class: 'bd-lst-tag ' + c, title: tt || null }, t)), kind === 'image' && L.replaceButton && L.replaceButton(a, rule, i)));
+      tags.map(([c, t, tt]) => h('span', { class: 'bd-lst-tag ' + c, title: tt || null }, t)), kind === 'image' && v === 'default' && L.replaceButton && L.replaceButton(a, rule, i)));
     L.tiles.push(x);
     if (io && kind !== 'image') io.observe(x.el); else if (kind !== 'image') { x.near = true; mount(x); }
     return x;
@@ -7592,16 +7692,22 @@ function renderListing(lb) {
     return h('div', { class: 'bd-lst-chip' }, h('b', {}, rule.label), h('span', { class: 'bp-chip ' + (bad ? 'risk' : weak ? 'warn' : n ? 'ok' : 'todo'), title: weak ? rule.recommend.note : null }, `${n} / ${hi}`),
       h('span', {}, sizeTxt(rule)), h('span', {}, '· ' + req.why), rule.raw && h('span', {}, '· UI only, no frame or caption'), rule.unverified && h('span', { class: 'bp-chip warn', title: rule.unverified }, 'unverified'));
   }
+  // the icon's CSS background on a platform page (Play: play.svg, else the layers at 150%; App Store: the layers whole)
+  function iconBg(p) {
+    const icon = LST.icon, layers = icon && obj(icon.layers);
+    if (!icon || !layers.fg) return null;
+    const bgc = icon.bg || 'transparent', u = k => `url("${layers[k]}")`;
+    return p.id === 'play' ? (layers.play ? `${u('play')} center / 100% 100% no-repeat` : `${u('fg')} center / 150% 150% no-repeat${layers.bg ? `, ${u('bg')} center / 150% 150% no-repeat` : ''}, ${bgc}`)
+      : `${u('fg')} center / 100% 100% no-repeat${layers.bg ? `, ${u('bg')} center / 100% 100% no-repeat` : ''}, ${bgc}`;
+  }
+  const assetsOf = (p, group) => abs.filter(a => a.device === 'asset' && ASSETS.has(a.asset) && ASSETS.get(a.asset).platform === p && (ASSETS.get(a.asset).group || '') === group
+    && (typeof a.locale !== 'string' || a.locale === L.locale));
   function renderShared(p) {
-    const items = [], icon = LST.icon, layers = icon && obj(icon.layers), local = icon && byId.has(icon.from);
-    if (icon && layers.fg) {
-      const bgc = icon.bg || 'transparent', u = k => `url("${layers[k]}")`;
-      const bg = p.id === 'play' ? (layers.play ? `${u('play')} center / 100% 100% no-repeat` : `${u('fg')} center / 150% 150% no-repeat${layers.bg ? `, ${u('bg')} center / 150% 150% no-repeat` : ''}, ${bgc}`)
-        : `${u('fg')} center / 100% 100% no-repeat${layers.bg ? `, ${u('bg')} center / 100% 100% no-repeat` : ''}, ${bgc}`;
-      items.push(h('figure', { class: 'bd-lst-icon ' + p.id, ...(local ? { 'data-ab': icon.from } : {}) }, h('i', { style: `background: ${bg}` }),
-        h('figcaption', {}, p.id === 'play' ? 'Icon 512 × 512 · Play rounds it 30%' : 'Icon 1024 × 1024 · in the binary: it changes with a new version')));
-    } else items.push(h('div', { class: 'bd-lst-empty' }, 'No icon: set listing.icon to an icons artboard'));
-    const assets = abs.filter(a => a.device === 'asset' && ASSETS.has(a.asset) && ASSETS.get(a.asset).platform === p.id && ASSETS.get(a.asset).kind !== 'ad');
+    const items = [], icon = LST.icon, local = icon && byId.has(icon.from), bg = iconBg(p);
+    if (bg) items.push(h('figure', { class: 'bd-lst-icon ' + p.id, ...(local ? { 'data-ab': icon.from } : {}) }, h('i', { style: `background: ${bg}` }),
+      h('figcaption', {}, p.id === 'play' ? 'Icon 512 × 512 · Play rounds it 30%' : 'Icon 1024 × 1024 · in the binary: it changes with a new version')));
+    else items.push(h('div', { class: 'bd-lst-empty' }, 'No icon: set listing.icon to an icons artboard'));
+    const assets = assetsOf(p.id, '');
     assets.forEach((a, i) => items.push(tile(a, ASSETS.get(a.asset), i, assets.length, 'asset', LST_ASSET[0], LST_ASSET[1]).box));
     if (p.id === 'play' && !assets.some(a => a.asset === 'play/feature')) items.push(h('div', { class: 'bd-lst-empty' }, 'Feature graphic 1024 × 500: required, none yet'));
     const v = obj(lb.video);
@@ -7612,16 +7718,52 @@ function renderListing(lb) {
       vid.addEventListener('loadedmetadata', () => { try { vid.currentTime = Math.min(Number.isFinite(pv.poster) ? pv.poster : 5, vid.duration || 5); } catch { /* not seekable */ } });
       items.push(h('div', { class: 'bd-lst-video' }, vid, h('span', {}, `App preview · ${pv.row || 'phone'} · poster at ${Number.isFinite(pv.poster) ? pv.poster : 5} s`)));
     }
-    return h('section', { class: 'bd-lst-sec', 'data-row': 'shared' }, h('div', { class: 'hd' }, h('h3', {}, 'Shared'), h('p', {}, p.id === 'play' ? 'Icon, feature graphic and video: one per listing, every device' : 'Icon, previews and search assets')),
+    return h('section', { class: 'bd-lst-sec', 'data-row': 'shared' }, h('div', { class: 'hd' }, h('h3', {}, 'Shared'), h('p', {}, p.id === 'play' ? 'Icon, feature graphic and video: one per listing, every device' : 'Icon and previews. Search and ad assets: the Ads view')),
       h('div', { class: 'bd-lst-shared' }, items));
+  }
+  // what variant v changes on its page in a locale, against the default page (listing.py variant_changes): its swaps
+  // that show, the sets it reorders, its style and its own text; drafts count
+  function variantChanges(v, loc = L.locale) {
+    const p = v.platform, out = [], title = id => str(obj(byId.get(id)).title, 40) || id;
+    const base = Object.fromEntries(sectionsOf(p, loc, null).flatMap(s => s.sets).map(x => [x.set, x.shots]));
+    const mine = sectionsOf(p, loc, v).flatMap(s => s.sets), shown = new Set(mine.flatMap(x => x.shots));
+    const swap = new Map(Object.entries(obj(v.swap)).filter(([, b]) => typeof b === 'string' && obj(byId.get(b)).device === 'shot'));
+    for (const [a, b] of swap) if (shown.has(b)) out.push(`${title(a)} → ${title(b)}`);
+    for (const x of mine) if (JSON.stringify([...new Set((base[x.set] || []).map(i => swap.get(i) ?? i))]) !== JSON.stringify(x.shots)) out.push(`${SETS.get(x.set).label} order`);
+    const a = L.styleFor(p, null, 'default'), b = L.styleFor(p, null, v.id);
+    for (const k of ['message', 'layout']) if (a[k] !== b[k]) out.push(`${k === 'message' ? 'Message' : 'Layout'} ${styleLabel(b[k])}`);
+    for (const f of Object.keys(obj(obj(v.text)[loc]))) { const r = textRules(p).find(r => r.field === f); if (r) out.push(r.label); }
+    return out;
+  }
+  // the tabs above a platform page: Default page, then each variant with its count of changes; Compare to default
+  function variantBar(p) {
+    const vs = variantsOf(p.id), cur = onPage(p.id), canCmp = L.view === 'sections';
+    const tab = v => {
+      const on = (cur ? cur.id : null) === (v ? v.id : null), n = v ? variantChanges(v).length : 0, r = v && vRule(v);
+      return h('button', { type: 'button', role: 'tab', class: 'bd-lst-vtab' + (on ? ' on' : ''), 'aria-selected': String(on), 'data-variant': v ? v.id : 'default',
+        title: v ? [r.label, v.locale && `${v.locale} only`, v.adGroup && `Apple Ads ad group: ${v.adGroup}`].filter(Boolean).join(' · ') : 'The page every visitor sees',
+        onclick: () => setVariant(v ? v.id : null) }, v ? vLabel(v) : 'Default page', v && h('span', { class: 'n' }, `${n} change${n === 1 ? '' : 's'}`));
+    };
+    const chg = cur ? variantChanges(cur) : [];
+    return h('div', { class: 'bd-lst-vbar', 'data-variant': cur ? cur.id : 'default' }, h('span', { class: 'l' }, 'Variants'),
+      h('div', { class: 'tabs', role: 'tablist', 'aria-label': 'Variants' }, tab(null), vs.map(tab)),
+      cur && canCmp && h('button', { type: 'button', class: 'bp-btn ghost bd-lst-cmpbtn', 'aria-pressed': String(L.cmp), title: 'Each set: the default page above this variant',
+        onclick: () => { L.cmp = !L.cmp; renderSections(); } }, ic('columns'), 'Compare to default'),
+      !vs.length && h('span', { class: 'hint' }, 'No custom pages or tests: listing.variants'),
+      cur && h('p', { class: 'bd-lst-vchg' }, h('b', {}, `${vRule(cur).label}${cur.locale ? ' · ' + cur.locale : ''}: `),
+        chg.length ? chg.join(' · ') : 'no change from the default page yet', ` · ${variantsOf(p.id).filter(v => v.kind === cur.kind).length} of ${vRule(cur).max}`));
   }
   function renderSections() {
     for (const x of L.tiles) { if (io) io.unobserve(x.el); if (x.fr) x.fr.remove(); }
     L.tiles = []; L.live.clear();
     const p = PLATS.find(x => x.id === L.platform);
     if (!p) { pg.replaceChildren(h('div', { class: 'bd-board-ph' }, ic('alert'), h('span', {}, 'This listing names no platform.'))); return; }
+    pg.dataset.view = L.view;
+    if (L.view === 'preview') { pg.replaceChildren(variantBar(p), renderPreview(p)); paintText(); if (L.onRender) L.onRender(); return; }
+    if (L.view === 'ads') { pg.replaceChildren(...renderAds(p)); paintText(); if (L.onRender) L.onRender(); return; }
+    const cur = onPage(p.id), cmp = !!(cur && L.cmp), base = cmp ? Object.fromEntries(sectionsOf(p.id, L.locale, null).flatMap(s => s.sets).map(x => [x.set, x.shots])) : {};
     const secs = sectionsOf(p.id), counts = Object.fromEntries(secs.flatMap(s => s.sets.map(x => [x.set, x.shots.length]))), eff = effective();
-    const out = [renderShared(p)];
+    const out = [variantBar(p), renderShared(p)];
     const pano = L.styleFor(p.id).layout === 'l2';
     pg.dataset.pano = pano ? '1' : '';
     for (const s of secs) {
@@ -7629,17 +7771,23 @@ function renderListing(lb) {
       out.push(h('section', { class: 'bd-lst-sec', 'data-row': s.row },
         h('div', { class: 'hd' }, h('h3', {}, row.label), h('p', {}, sets.map(r => r.label).join(' · ')), h('p', {}, (n => `${n} shot${n === 1 ? '' : 's'} in ${s.sets.length} set${s.sets.length === 1 ? '' : 's'}`)(s.sets.reduce((n, x) => n + x.shots.length, 0)))),
         h('div', { class: 'bd-lst-sets' }, s.sets.map(x => {
-          const rule = SETS.get(x.set), H = LST_H[s.row] || 300;
-          const tiles = x.shots.map((id, i) => tile(byId.get(id), rule, i, x.shots.length, listingImage(byId.get(id)) ? 'image' : 'shot', H).box);
-          const more = L.uploadTiles ? L.uploadTiles(rule, x.shots.length, H) : [];
-          const row = h('div', { class: 'bd-lst-tiles' + (pano && !rule.raw ? ' pano' : ''), 'data-set': x.set, style: pano && !rule.raw && p.id === 'play' ? `gap:${Math.round(H * 0.02)}px` : null },
-            tiles.length || more.length ? [...tiles, ...more] : h('div', { class: 'bd-lst-empty', style: `min-height:${Math.min(H, 120)}px` }, 'No shots in this set'));
-          return h('div', { class: 'bd-lst-set', 'data-set': x.set }, setChip(rule, x.shots.length, counts), row);
+          const rule = SETS.get(x.set), H = Math.round((LST_H[s.row] || 300) * (cmp ? 0.5 : 1)), v = cur ? cur.id : 'default';
+          const strip = (ids, vv, kind) => h('div', { class: 'bd-lst-tiles' + (pano && !rule.raw ? ' pano' : ''), 'data-set': x.set, 'data-variant': vv, style: pano && !rule.raw && p.id === 'play' ? `gap:${Math.round(H * 0.02)}px` : null }, ...kind);
+          const tiles = x.shots.map((id, i) => tile(byId.get(id), rule, i, x.shots.length, listingImage(byId.get(id)) ? 'image' : 'shot', H, LST_W, v).box);
+          const more = !cur && L.uploadTiles ? L.uploadTiles(rule, x.shots.length, H) : [];
+          const mine = strip(x.shots, v, tiles.length || more.length ? [...tiles, ...more] : [h('div', { class: 'bd-lst-empty', style: `min-height:${Math.min(H, 120)}px` }, 'No shots in this set')]);
+          if (!cmp) return h('div', { class: 'bd-lst-set', 'data-set': x.set }, setChip(rule, x.shots.length, counts), mine);
+          const was = base[x.set] || [], sa = L.styleFor(p.id, null, 'default'), sb = L.styleFor(p.id, null, v);
+          const same = JSON.stringify(was) === JSON.stringify(x.shots) && (rule.raw || (sa.message === sb.message && sa.layout === sb.layout));
+          if (same) return h('div', { class: 'bd-lst-set', 'data-set': x.set }, setChip(rule, x.shots.length, counts), h('div', { class: 'bd-lst-row', 'data-cmp': 'same' }, h('span', { class: 'rl' }, 'Same on both'), mine));
+          const def = strip(was, 'default', was.map((id, i) => tile(byId.get(id), rule, i, was.length, listingImage(byId.get(id)) ? 'image' : 'shot', H, LST_W, 'default').box));
+          return h('div', { class: 'bd-lst-set', 'data-set': x.set }, setChip(rule, x.shots.length, counts), h('div', { class: 'bd-lst-cmp' },
+            h('div', { class: 'bd-lst-row', 'data-cmp': 'default' }, h('span', { class: 'rl' }, 'Default page'), def), h('div', { class: 'bd-lst-row', 'data-cmp': v }, h('span', { class: 'rl' }, vLabel(cur)), mine)));
         }))));
     }
     // the optional sections this platform has sets for, off until listing.rows names them; turning one on is a draft
     const on = eff.rows, draftRows = drafts().find(a => a.listing.op === 'rows');
-    for (const r of RULES.rows) {
+    for (const r of cur ? [] : RULES.rows) {
       if (on.includes(r.id) && !(draftRows && !(Array.isArray(lb.rows) ? lb.rows : []).includes(r.id))) continue;
       if (!RULES.sets.some(s => s.platform === p.id && s.row === r.id)) continue;
       const drafted = on.includes(r.id);
@@ -7650,17 +7798,100 @@ function renderListing(lb) {
     paintText();
     if (L.onRender) L.onRender();
   }
-  const listingImage = a => !!a && a.device === 'shot' && typeof a.src === 'string' && /\.png$/i.test(a.src);
+  const listingImage = a => !!a && (a.device === 'shot' || a.device === 'asset') && typeof a.src === 'string' && /\.png$/i.test(a.src);
 
-  /* switching: the URL keeps the platform and locale (#play/es-ES) */
-  function writeHash() { try { history.replaceState(null, '', `${location.pathname}${location.search}#${L.platform}${L.locale !== DEF ? '/' + L.locale : ''}`); } catch { /* sandboxed */ } }
+  /* the store preview: the platform's product page and a search result at phone width, for the locale and variant on
+     screen, from the listing's text, icon, shots, previews and feature graphic. A mock, not pixel-exact: App Store
+     previews come first and search shows 3 portrait shots (or the iOS 27 search asset); Play's video plays over the
+     feature graphic, and search shows it and 2 large shots. */
+  function renderPreview(p) {
+    const loc = L.locale, v = onPage(p.id), vt = v ? obj(obj(v.text)[loc]) : {};
+    const t = f => typeof vt[f] === 'string' ? vt[f] : str(textOf(loc, p.id, f) ?? textOf(DEF, p.id, f) ?? '', 4000);
+    const bg = iconBg(p), ico = () => h('i', { class: 'ico', style: bg ? `background: ${bg}` : null });
+    const sets = sectionsOf(p.id).filter(s => s.row === 'phone').flatMap(s => s.sets).filter(x => x.shots.length);
+    const set = sets[0], rule = set && SETS.get(set.set), ids = set ? set.shots : [];
+    const shot = (id, i, H, W = 9999) => tile(byId.get(id), rule, i, ids.length, listingImage(byId.get(id)) ? 'image' : 'shot', H, W).el;
+    const app = str(obj(lb.app).name, 60) || 'App', maker = str(obj(lb.app).company, 60);
+    const vid = obj(lb.video), previews = p.id === 'appstore' ? (Array.isArray(vid.appstore) ? vid.appstore : []).filter(x => x && typeof x.src === 'string' && (x.row || 'phone') === 'phone') : [];
+    const feature = p.id === 'play' ? abs.find(a => a.device === 'asset' && a.asset === 'play/feature') : null;
+    const fg = W => { if (!feature) return h('div', { class: 'fg', style: `height:${Math.round(W * 500 / 1024)}px` }, 'Feature graphic'); const x = tile(feature, ASSETS.get('play/feature'), 0, 1, listingImage(feature) ? 'image' : 'asset', 9999, W);
+      return h('div', { class: 'fg', style: `height:${x.el.style.height}` }, x.el, vid.play && h('span', { class: 'play-btn', title: 'The preview video plays over the feature graphic' })); };
+    const pvBox = (W, H) => h('div', { class: 'pv', style: `width:${W}px;height:${H}px` }, h('span', { class: 'play-btn' }), 'App preview');
+    const none = h('p', { class: 'muted' }, 'No phone shots on this page');
+    const header = (getLabel, sub) => h('div', { class: 'hd' }, ico(), h('div', { class: 'nm' }, h('b', {}, t('name') || app), h('span', {}, sub)), h('span', { class: 'get' }, getLabel));
+    const IW = 318;   // the phone's inner width (.bd-lst-phone 350 px, 16 px padding)
+    let page, search;
+    if (p.id === 'appstore') {
+      const H = 280, strip = [...previews.slice(0, 3).map(() => pvBox(Math.round(H * 886 / 1920), H)), ...ids.slice(0, 3).map((id, i) => shot(id, i, H))];
+      page = [header('Get', t('subtitle')), strip.length ? h('div', { class: 'strip' }, strip.slice(0, 3)) : none, t('promo') && h('p', { class: 'tx promo' }, t('promo')), h('p', { class: 'tx' }, t('description'))];
+      const sa = assetsOf('appstore', 'ads').find(a => a.asset === 'appstore/search'), W3 = Math.floor((IW - 12) / 3);
+      const three = sa ? [] : [...previews.slice(0, 1).map(() => pvBox(W3, Math.round(W3 * 1920 / 886))), ...ids.slice(0, 3).map((id, i) => shot(id, i, 9999, W3))].slice(0, 3);
+      search = [h('div', { class: 'search' }, app.toLowerCase()), h('div', { class: 'sr' }, header('Get', t('subtitle')),
+        sa ? tile(sa, ASSETS.get(sa.asset), 0, 1, listingImage(sa) ? 'image' : 'asset', 9999, IW).el : three.length ? h('div', { class: 'grid3' }, three) : none,
+        sa && h('span', { class: 'muted' }, 'The search results asset (iOS 27) shows in place of the shots'))];
+    } else {
+      page = [header('Install', maker), fg(IW), ids.length ? h('div', { class: 'strip' }, ids.slice(0, 3).map((id, i) => shot(id, i, 230))) : none, h('h5', {}, 'About this app'), h('p', { class: 'tx' }, t('short'))];
+      const W2 = Math.floor((IW - 8) / 2);
+      search = [h('div', { class: 'search' }, app.toLowerCase()), h('div', { class: 'sr' }, header('Install', maker), vid.play && fg(IW),
+        ids.length ? h('div', { class: 'grid2' }, ids.slice(0, 2).map((id, i) => shot(id, i, 9999, W2))) : none)];
+    }
+    const phone = (title, kids, k) => h('div', { class: 'bd-lst-phone', 'data-preview': k }, h('h3', {}, title), h('div', { class: 'bd-lst-scr ' + p.id }, kids));
+    return h('div', { class: 'bd-lst-pv', 'data-platform': p.id },
+      h('p', { class: 'bd-lst-pvnote' }, h('b', {}, 'Mock, not pixel-exact.'), ` ${p.label} on a phone · ${loc}${v ? ' · ' + vLabel(v) : ''} · store layouts as of ${RULES.accessed}`),
+      phone('Product page', page, 'page'), phone('Search result', search, 'search'));
+  }
+
+  /* the Ads view: Play's Google App campaign (headlines and descriptions per locale with counters, images at 1.91:1, 4:5
+     and 1:1, authored or uploaded) and the App Store's Apple Ads (the default ad from the default page in upload order,
+     an ad variation per custom product page with its ad group, the search results asset, Apple Ads creative assets). */
+  function renderAds(p) {
+    const loc = L.locale, out = [], ADS = (Array.isArray(RULES.ads) ? RULES.ads : []).find(x => x.platform === p.id) || {};
+    const card = (title, sub, kids, key) => h('section', { class: 'bd-lst-sec', 'data-row': 'ads', 'data-ads': key }, h('div', { class: 'hd' }, h('h3', {}, title), sub && h('p', {}, sub)), h('div', { class: 'bd-lst-ads' }, kids));
+    const assetSet = id => {
+      const rule = ASSETS.get(id); if (!rule) return null;
+      const mine = assetsOf(p.id, 'ads').filter(a => a.asset === id), H = 200, hi = (rule.count || [0, 10])[1];
+      const tiles = mine.map((a, i) => tile(a, rule, i, mine.length, listingImage(a) ? 'image' : 'asset', H, LST_W, 'default').box);
+      const more = L.uploadTiles ? L.uploadTiles(rule, mine.length, H) : [];
+      return h('div', { class: 'bd-lst-set', 'data-set': id }, h('div', { class: 'bd-lst-chip' }, h('b', {}, rule.label), h('span', { class: 'bp-chip ' + (mine.length > hi ? 'risk' : mine.length ? 'ok' : 'todo') }, `${mine.length} / ${hi}`),
+        h('span', {}, sizeTxt(rule)), h('span', {}, `· ${rule.source}`), rule.unverified && h('span', { class: 'bp-chip warn', title: rule.unverified }, 'unverified')),
+        h('div', { class: 'bd-lst-tiles', 'data-set': id }, tiles.length || more.length ? [...tiles, ...more] : h('div', { class: 'bd-lst-empty' }, 'None yet: add an asset artboard, or open this page through serve.py to drop a PNG')));
+    };
+    const shotsOf = v => { const s = sectionsOf(p.id, loc, v).filter(x => x.row === 'phone').flatMap(x => x.sets).find(x => x.shots.length); return s ? { rule: SETS.get(s.set), ids: s.shots } : null; };
+    const strip = (v, n) => { const s = shotsOf(v); return s ? h('div', { class: 'bd-lst-tiles' }, s.ids.slice(0, n).map((id, i) => tile(byId.get(id), s.rule, i, s.ids.length, listingImage(byId.get(id)) ? 'image' : 'shot', 220, LST_W, v ? v.id : 'default').box))
+      : h('div', { class: 'bd-lst-empty' }, 'No phone shots'); };
+    if (p.id === 'play') {
+      const list = f => {
+        const r = RULES.text.find(x => x.platform === 'play' && x.field === f), v = textOf(loc, 'play', f), items = Array.isArray(v) ? v : typeof v === 'string' ? [v] : [];
+        const [lo, hi] = r.items || [1, 5];
+        return h('div', { 'data-field': `${loc}/play/${f}` }, h('div', { class: 'bd-lst-chip' }, h('b', {}, r.label), h('span', { class: 'bp-chip ' + (items.length > hi ? 'risk' : items.length >= lo ? 'ok' : 'todo') }, `${items.length} / ${hi}`), h('span', {}, `up to ${r.limit} characters each`)),
+          h('ol', {}, items.length ? items.map(s => { const n = lstCount(String(s), r.unit); return h('li', {}, h('span', {}, String(s)), h('span', { class: 'c' + (n > r.limit ? ' over' : '') }, `${n} / ${r.limit}`)); })
+            : h('li', { class: 'none' }, `None in ${loc}: text.${loc}.play.${f}`)));
+      };
+      out.push(card(`${ADS.label || 'Google App campaign'} · ${loc}`, ADS.note, [h('div', { class: 'bd-lst-adtext' }, (ADS.text || ['adHeadlines', 'adDescriptions']).map(list)),
+        ...(ADS.images || []).map(assetSet)], 'google'));
+    } else {
+      const cpps = variantsOf('appstore').filter(v => vRule(v).adGroup);
+      out.push(card(ADS.label || 'Apple Ads', ADS.note, [
+        h('div', { class: 'bd-lst-set', 'data-ad': 'default' }, h('div', { class: 'bd-lst-chip' }, h('b', {}, 'Default ad'), h('span', {}, '· the default page\'s shots in upload order: the export numbers them so')), strip(null, 3)),
+        ...cpps.map(v => h('div', { class: 'bd-lst-set', 'data-ad': v.id }, h('div', { class: 'bd-lst-chip' }, h('b', {}, `Ad variation · ${vLabel(v)}`),
+          v.adGroup ? h('span', { class: 'bp-chip ok' }, `ad group: ${str(v.adGroup, 100)}`) : h('span', { class: 'bp-chip todo', title: 'Set the variant\'s adGroup to show it in an Apple Ads ad group' }, 'no ad group')), strip(v, 3))),
+        !cpps.length && h('p', { class: 'note' }, 'No custom product pages: an ad variation shows one. Add a cpp to listing.variants.')], 'apple'));
+      out.push(card('Creative assets', 'Authored as asset artboards or dropped as PNGs, checked, then exported under ads/apple/', ['appstore/search', 'appstore/ad'].map(assetSet), 'creative'));
+    }
+    return out;
+  }
+
+  /* switching: the URL keeps the platform, locale and variant (#play/es-ES@sle-b) */
+  function writeHash() { try { history.replaceState(null, '', `${location.pathname}${location.search}#${L.platform}${L.locale !== DEF ? '/' + L.locale : ''}${L.variant ? '@' + L.variant.id : ''}`); } catch { /* sandboxed */ } }
   function paintTb() {
     platSeg.querySelectorAll('button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.p === L.platform)));
+    viewSeg.querySelectorAll('button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.view === L.view)));
     locSel.value = L.locale;
   }
   function setPlatform(p, quiet) {
     if (!PLATS.some(x => x.id === p) || (p === L.platform && !quiet)) return;
-    L.platform = p; paintTb(); renderSections(); writeHash(); pg.scrollTop = 0;
+    L.platform = p; if (L.variant && L.variant.platform !== p) { L.variant = null; L.cmp = false; }
+    paintTb(); renderSections(); writeHash(); pg.scrollTop = 0;
     if (L.M) L.M.relayout();
     paintSide();
   }
@@ -7673,10 +7904,25 @@ function renderListing(lb) {
     if (L.M) L.M.relayout();
     paintSide();
   }
+  function setVariant(id) {
+    const v = id ? VARIANTS.find(x => x.id === id) || null : null;
+    if ((v ? v.id : null) === (L.variant ? L.variant.id : null)) return;
+    if (v && v.platform !== L.platform) L.platform = v.platform;
+    L.variant = v; if (!v) L.cmp = false;
+    paintTb(); renderSections(); writeHash();
+    if (L.M) L.M.relayout();
+    paintSide();
+  }
+  function setView(view) {
+    if (!['sections', 'preview', 'ads'].includes(view) || view === L.view) return;
+    L.view = view; paintTb(); renderSections(); pg.scrollTop = 0;
+    if (L.M) L.M.relayout();
+  }
   {
-    const m = /^#([a-z]+)(?:\/([A-Za-z0-9-]+))?$/.exec(location.hash || '');
+    const m = /^#([a-z]+)(?:\/([A-Za-z0-9-]+))?(?:@([a-z0-9-]+))?$/.exec(location.hash || '');
     if (m && PLATS.some(x => x.id === m[1])) L.platform = m[1];
     if (m && m[2] && LOCS.includes(m[2])) L.locale = m[2];
+    if (m && m[3]) L.variant = VARIANTS.find(v => v.id === m[3] && v.platform === L.platform) || null;
   }
 
   /* frames talk back: ready (where pinned elements are), pick (a pin in Point or Select) */
@@ -7690,7 +7936,7 @@ function renderListing(lb) {
       return;
     }
     if (d.bd !== 'pick' || !L.M || (L.mode !== 'point' && L.mode !== 'select')) return;
-    const sel = str(d.sel), r = rectOf(d.rect), extra = { platform: L.platform, locale: L.locale, ...(x.kind === 'shot' ? { set: x.rule.id } : {}) };
+    const sel = str(d.sel), r = rectOf(d.rect), extra = { platform: L.platform, locale: L.locale, ...(x.kind === 'shot' ? { set: x.rule.id } : {}), ...(x.v && x.v !== 'default' ? { variant: x.v } : {}) };
     // a pin on a capture: where on the UI image it fell (fractions), and the capture the reader saw
     const at = Array.isArray(d.at) && d.at.length === 2 && d.at.every(v => Number.isFinite(v) && v >= 0 && v <= 1) && x.cap ? d.at.map(v => Math.round(v * 1e4) / 1e4) : null;
     if (at) Object.assign(extra, { at, cap: { file: /^data:/.test(x.cap.file) ? '' : x.cap.file, target: x.cap.target, locale: x.cap.locale, at: x.cap.at, fresh: x.cap.fresh } });
@@ -7700,12 +7946,12 @@ function renderListing(lb) {
       pos: r ? (at ? { x: clamp((r.x + at[0] * r.w) / x.w, 0, 1), y: clamp((r.y + at[1] * r.h) / x.h, 0, 1) } : { x: clamp((r.x + r.w) / x.w, 0, 1), y: clamp(r.y / x.h, 0, 1) }) : { x: .5, y: .5 } });
   });
 
-  /* View mode: drag a shot within its set to reorder it (an order draft) */
+  /* View mode: drag a shot within its set to reorder it (an order draft: the default page's, or the variant's on screen) */
   let drag = null;
   pg.addEventListener('pointerdown', e => {
-    if (L.mode !== 'view' || e.button !== 0 || !L.D || OLD || BASE) return;
+    if (L.mode !== 'view' || L.view !== 'sections' || e.button !== 0 || !L.D || OLD || BASE) return;
     const el = e.target.closest('.bd-lst-shot'), x = el && el._x, row = el && el.closest('.bd-lst-tiles');
-    if (!x || x.kind === 'asset' || !row) return;
+    if (!x || x.kind === 'asset' || !row || row.dataset.variant !== variantId()) return;
     drag = { x, row, x0: e.clientX, on: false, id: e.pointerId, to: null, mark: h('div', { class: 'bd-lst-drop' }) };
   });
   pg.addEventListener('pointermove', e => {
@@ -7730,15 +7976,17 @@ function renderListing(lb) {
     if (to > from) to--;
     if (to === from) return;
     ids.splice(from, 1); ids.splice(to, 0, d.x.a.id);
-    putDraft({ op: 'order', set, ids }, `${SETS.get(set).label} order`, `${SETS.get(set).label}: ${ids.map(i => (byId.get(i) || {}).title || i).join(', ')}`);
+    const v = onPage(L.platform);
+    putDraft({ op: 'order', set, ids, ...(v ? { variant: v.id } : {}) }, `${SETS.get(set).label} order${v ? ' · ' + v.id : ''}`, `${v ? vLabel(v) + ', ' : ''}${SETS.get(set).label}: ${ids.map(i => (byId.get(i) || {}).title || i).join(', ')}`);
   };
   pg.addEventListener('pointerup', endDrag); pg.addEventListener('pointercancel', endDrag);
   function putDraft(op, label, note) {
-    const same = drafts().find(a => a.listing.op === op.op && (op.op !== 'order' || a.listing.set === op.set));
-    const now = op.op === 'order' ? (Array.isArray(obj(lb.order)[op.set]) ? obj(lb.order)[op.set] : null) : (Array.isArray(lb.rows) ? lb.rows : RULES.rows.filter(r => r.core).map(r => r.id));
-    const back = op.op === 'order' ? JSON.stringify(op.ids) === JSON.stringify(now || BoardGeo.listingSections(lb, abs, RULES, L.platform, L.locale).flatMap(s => s.sets).find(s => s.set === op.set).shots) : JSON.stringify(op.rows) === JSON.stringify(now);
+    const v = op.variant ? VARIANTS.find(x => x.id === op.variant) : null;
+    const same = drafts().find(a => a.listing.op === op.op && (op.op !== 'order' || (a.listing.set === op.set && (a.listing.variant || null) === (op.variant || null))));
+    const now = op.op === 'order' ? (Array.isArray(obj(v ? v.order : lb.order)[op.set]) ? obj(v ? v.order : lb.order)[op.set] : null) : (Array.isArray(lb.rows) ? lb.rows : RULES.rows.filter(r => r.core).map(r => r.id));
+    const back = op.op === 'order' ? JSON.stringify(op.ids) === JSON.stringify(now || BoardGeo.listingSections(lb, abs, RULES, L.platform, L.locale, v).flatMap(s => s.sets).find(s => s.set === op.set).shots) : JSON.stringify(op.rows) === JSON.stringify(now);
     if (back) { if (same) L.D.drop(same.id); }   // back where the doc has it: no draft
-    else L.D.put({ id: same && same.id, type: 'listing', key: `block:${blockPath}`, label, note, listing: op });
+    else L.D.put({ id: same && same.id, type: 'listing', key: v ? `variant:${v.id}` : `block:${blockPath}`, label, note, listing: op });
     renderSections();
   }
   function toggleRow(id) {
@@ -7748,15 +7996,23 @@ function renderListing(lb) {
   // a shell word, and the doc's file name as `build.py` takes it: every patch command the drafts make
   const sh = s => /^[\w@%+=:,./-]+$/.test(s) ? s : `'${s.replace(/'/g, `'\\''`)}'`;
   const docFile = () => decodeURIComponent(location.pathname.split('/').pop() || '').replace(/\.html?$/i, '.bluedoc.json');
-  // the patch command for the order and rows drafts: one --json for the listing block with the order and rows they make
+  // the patch commands for the order and rows drafts: one --json for the listing block with the order and rows they
+  // make, and one per variant with its order
   L.draftCommands = ds => {
-    const mine = ds.filter(a => a.type === 'listing' && a.listing && ['order', 'rows'].includes(a.listing.op)), patch = {};
+    const mine = ds.filter(a => a.type === 'listing' && a.listing && ['order', 'rows'].includes(a.listing.op)), patch = {}, byV = new Map(), out = [];
     for (const a of mine) {
-      if (a.listing.op === 'order') (patch.order ||= { ...obj(lb.order) })[a.listing.set] = a.listing.ids;
+      if (a.listing.op === 'order' && a.listing.variant) { if (!byV.has(a.listing.variant)) byV.set(a.listing.variant, []); byV.get(a.listing.variant).push(a); }
+      else if (a.listing.op === 'order') (patch.order ||= { ...obj(lb.order) })[a.listing.set] = a.listing.ids;
       else if (a.listing.op === 'rows') patch.rows = a.listing.rows;
     }
-    if (!mine.length) return '';
-    return ['build.py patch', sh(docFile()), sh(`block:${blockPath}`), '--json', sh(JSON.stringify(patch)), '--change', sh(mine.map(a => a.note).join('; ')), ...mine.map(a => '--resolves ' + a.id)].join(' ');
+    const def = mine.filter(a => !a.listing.variant);
+    if (def.length) out.push(['build.py patch', sh(docFile()), sh(`block:${blockPath}`), '--json', sh(JSON.stringify(patch)), '--change', sh(def.map(a => a.note).join('; ')), ...def.map(a => '--resolves ' + a.id)].join(' '));
+    for (const [vid, as] of byV) {
+      const order = { ...obj(obj(VARIANTS.find(v => v.id === vid)).order) };
+      for (const a of as) order[a.listing.set] = a.listing.ids;
+      out.push(['build.py patch', sh(docFile()), sh(`variant:${vid}`), '--json', sh(JSON.stringify({ order })), '--change', sh(as.map(a => a.note).join('; ')), ...as.map(a => '--resolves ' + a.id)].join(' '));
+    }
+    return out.join('\n');
   };
   // drafts the frames take live (style picks, brand edits) restyle them in place; an Accept MT repaints the text; any
   // other draft redraws the sections. Approve listing follows the drafts (L.approveBlocks)
@@ -7775,7 +8031,7 @@ function renderListing(lb) {
   };
   // whether the doc now has what a draft asks for, per op: on load such a draft is resolved (applied by this rev)
   L.draftRecorded = {
-    order: o => JSON.stringify(obj(lb.order)[o.set] || null) === JSON.stringify(o.ids),
+    order: o => JSON.stringify(obj(o.variant ? obj(VARIANTS.find(v => v.id === o.variant)).order : lb.order)[o.set] || null) === JSON.stringify(o.ids),
     rows: o => JSON.stringify(lb.rows || null) === JSON.stringify(o.rows),
     upload: o => abs.some(a => a.src === o.file),   // the agent recorded it as a shot's src
     accept: o => !isMt(o.locale, o.key),   // the agent ran build.py l10n --accept
@@ -7798,10 +8054,12 @@ function renderListing(lb) {
     const cmds = [...by].map(([loc, as], k) => ['build.py l10n', sh(docFile()), '--accept', sh(loc), ...as.map(a => sh(a.listing.key)), ...(k ? ['--no-bump'] : []), ...as.flatMap(a => ['--resolves', a.id])].join(' '));
     return `## Accepted MT\n\n${lines.join('\n')}\n\n\`\`\`sh\n${cmds.join('\n')}\n\`\`\``;
   } });
-  // what Approve listing's dialog counts: MT strings not accepted (here or in the doc), shots that show a mock-up UI
+  // what Approve listing's dialog counts: MT strings not accepted (here or in the doc), shots that show a mock-up UI,
+  // the variants the approval covers (their style picks go under ## Decisions)
   L.approveSummary = () => ({
     mt: LOCS.reduce((n, l) => n + (Array.isArray(MTS[l]) ? MTS[l] : []).filter(k => !acceptDraft(l, k)).length, 0),
     mock: abs.filter(a => a.device === 'shot' && !listingImage(a) && !Object.keys(obj(obj(LST.captures)[a.id])).length).length,
+    variants: VARIANTS.length, variantIds: VARIANTS.map(v => v.id),
   });
 
   /* ---------- Uploads and re-shoots (M2) ----------
@@ -7847,7 +8105,7 @@ function renderListing(lb) {
   const uploadDraft = file => drafts().find(a => a.listing.op === 'upload' && a.listing.file === file) || null;
   function putUploadDraft(u) {
     if (!L.D) return;
-    const rule = SETS.get(u.set), was = u.replaces && byId.get(u.replaces), same = uploadDraft(u.file);
+    const rule = SETS.get(u.set) || ASSETS.get(u.set), was = u.replaces && byId.get(u.replaces), same = uploadDraft(u.file);
     L.D.put({ id: same && same.id, type: 'listing', key: `block:${boardPath}`, label: `Upload ${nn(u.slot)} · ${rule ? rule.label : u.set}`,
       note: `${u.set} · ${u.locale} · slot ${nn(u.slot)}: ${u.file}${was ? `, replacing ${was.title || was.id}` : ''}`,
       listing: { op: 'upload', file: u.file, platform: u.platform, locale: u.locale, set: u.set, slot: u.slot, w: u.w, h: u.h, colour: u.colour, bytes: u.bytes, ...(u.replaces ? { replaces: u.replaces } : {}) } });
@@ -7940,7 +8198,8 @@ function renderListing(lb) {
       if (was) return ['build.py patch', sh(docFile()), sh(`artboard:${was.id}`), '--set', sh(`src=${o.file}`), ...tail].join(' ');
       let id = `upl-${o.set.split('/')[1]}-${o.locale.toLowerCase()}-${nn(o.slot)}`; for (let n = 2; ids.has(id); n++) id = id.replace(/(-\d+)?$/, '') + '-' + n;
       ids.add(id);
-      const art = { id, title: `Upload ${nn(o.slot)}`, device: 'shot', fidelity: 'hifi', sets: [o.set], locale: o.locale, src: o.file };
+      const art = SETS.has(o.set) ? { id, title: `Upload ${nn(o.slot)}`, device: 'shot', fidelity: 'hifi', sets: [o.set], locale: o.locale, src: o.file }
+        : { id, title: `${ASSETS.has(o.set) ? ASSETS.get(o.set).label : o.set} ${nn(o.slot)}`, device: 'asset', asset: o.set, fidelity: 'hifi', locale: o.locale, src: o.file };
       return ['build.py patch', sh(docFile()), sh(`block:${boardPath}`), '--append', sh(JSON.stringify(art)), ...tail].join(' ');
     });
     return `## Uploaded shots\n\n${lines.join('\n')}\n\n\`\`\`sh\n${cmds.join('\n')}\n\`\`\``;
@@ -7950,7 +8209,8 @@ function renderListing(lb) {
     const m = /^(?:el|artboard):([^/]+)(?:\/(.+))?$/.exec(a.target.key), s = m && byId.get(m[1]), t = a.target;
     if (!s || s.device !== 'shot') return [];
     const plat = PLATS.find(p => p.id === t.platform), sets = (s.sets || []).filter(x => SETS.has(x) && SETS.get(x).platform === t.platform);
-    const out = [`   Shot: ${s.id} · ${sets.join(', ') || t.set || '?'} · ${t.locale || DEF} · ${L.variant && L.variant.id ? L.variant.id : 'Default page'}${plat ? ' (' + plat.label + ')' : ''}`];
+    const tv = typeof t.variant === 'string' ? VARIANTS.find(v => v.id === t.variant) : null;
+    const out = [`   Shot: ${s.id} · ${sets.join(', ') || t.set || '?'} · ${t.locale || DEF} · ${tv ? `${vLabel(tv)} (\`variant:${tv.id}\`)` : 'Default page'}${plat ? ' (' + plat.label + ')' : ''}`];
     if (listingImage(s)) return [...out, `   Upload: ${s.src} (a PNG: no recipe to re-shoot; ask for a new file, or add a recipe so it becomes a capture)`];
     const sel = m[2] ? (/^[A-Za-z0-9_-]+(?:\/[A-Za-z0-9_-]+)*$/.test(m[2]) ? m[2].split('/').map(n => `[data-bd="${n}"]`).join(' ') : m[2]) : '';
     const c = t.cap && typeof t.cap === 'object' ? t.cap : null;
@@ -7984,12 +8244,13 @@ function renderListing(lb) {
   const BR_IMG = obj(BR.image), BR_FONT = obj(BR.font), LID = typeof lb.id === 'string' && lb.id ? lb.id : 'main';
   const variantId = () => L.variant && typeof L.variant.id === 'string' ? L.variant.id : 'default';
   const pickOf = s => { s = obj(s); return { ...(obj(STYLES.get(s.message)).axis === 'message' ? { message: s.message } : {}), ...(obj(STYLES.get(s.layout)).axis === 'layout' ? { layout: s.layout } : {}) }; };
-  // the doc's style for a platform page and variant: the listing's, its platform's, the variant's; M1 + L1 by default
-  const docStyle = (p, v) => ({ message: 'm1', layout: 'l1', ...pickOf(lb.style), ...pickOf(obj(lb.style)[p]),
-    ...(v && v !== 'default' ? pickOf(obj((Array.isArray(lb.variants) ? lb.variants : []).find(x => x && x.id === v)).style) : {}) });
+  // the doc's style for a platform page and variant: the listing's, its platform's, the variant's (an A/B treatment's
+  // layout is L5 unless it names one: listing.variant_style); M1 + L1 by default
+  const docStyle = (p, v) => { const x = v && v !== 'default' ? VARIANTS.find(y => y.id === v) : null;
+    return { message: 'm1', layout: 'l1', ...pickOf(lb.style), ...pickOf(obj(lb.style)[p]), ...(x && vRule(x).ab ? { layout: AB_LAYOUT } : {}), ...(x ? pickOf(x.style) : {}) }; };
   const styleDraft = (p, v = variantId()) => drafts().find(a => a.listing.op === 'style' && a.listing.platform === p && (a.listing.variant || 'default') === v) || null;
-  // what a platform page shows: the pick, else the doc's; a shot's own style wins over both
-  L.styleFor = (p = L.platform, a = null) => { const d = styleDraft(p); return { ...docStyle(p, variantId()), ...(d ? pickOf(d.listing) : {}), ...(a ? pickOf(a.style) : {}) }; };
+  // what a platform page (and variant v) shows: the pick, else the doc's; a shot's own style wins over both
+  L.styleFor = (p = L.platform, a = null, v = variantId()) => { const d = styleDraft(p, v); return { ...docStyle(p, v), ...(d ? pickOf(d.listing) : {}), ...(a ? pickOf(a.style) : {}) }; };
   const styleLabel = id => { const s = STYLES.get(id); return s ? `${id.toUpperCase()} ${s.name}` : id; };
   // what a style needs from the agent on a platform page, or '' (the rules' `hook`): the index (M2) is always there
   function needs(p, s) {
@@ -8053,7 +8314,9 @@ function renderListing(lb) {
   // the frames follow the picks and the brand; a switch to or from the panorama (L2) lays the rows out again
   L.restyle = () => {
     if (pg.isConnected && (L.styleFor(L.platform).layout === 'l2') !== (pg.dataset.pano === '1')) renderSections();
-    else for (const x of L.live) { if (x.kind === 'shot') post(x, { bd: 'shot', ...L.styleFor(L.platform, x.a) }); post(x, { bd: 'brand', ...L.brandTokens() }); }
+    else for (const x of L.live) { if (x.kind === 'shot') post(x, { bd: 'shot', ...L.styleFor(L.platform, x.a, x.v) }); post(x, { bd: 'brand', ...L.brandTokens() }); }
+    const vb = pg.querySelector('.bd-lst-vbar'), p = PLATS.find(x => x.id === L.platform);
+    if (vb && p) vb.replaceWith(variantBar(p));   // a style pick changes a variant's count of changes
     paintStyle(); paintBrand();
     if (L.S) L.S.paint();
   };
@@ -8275,6 +8538,8 @@ function renderListing(lb) {
   };
   const flashEl = el => { el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 1400); };
   L.focusKey = key => {
+    const vk = /^variant:([a-z0-9-]+)$/.exec(key);
+    if (vk) { const v = VARIANTS.find(x => x.id === vk[1]); if (!v) return false; setView('sections'); setVariant(v.id); flashEl(pg.querySelector('.bd-lst-vbar')); return true; }
     const f = /^field:([^/]+)\/([^/]+)\/(.+)$/.exec(key);
     if (f) {
       if (LOCS.includes(f[1])) setLocale(f[1]);
@@ -8285,7 +8550,12 @@ function renderListing(lb) {
       return !!el;
     }
     const m = /^(?:artboard|el):([^/]+)/.exec(key); if (!m) return false;
-    if (!L.tiles.some(x => x.a.id === m[1])) { const p = PLATS.find(p => sectionsOf(p.id).some(s => s.sets.some(x => x.shots.includes(m[1])))); if (p) setPlatform(p.id); }
+    if (!L.tiles.some(x => x.a.id === m[1])) {
+      const a = byId.get(m[1]), ad = a && a.device === 'asset' && obj(ASSETS.get(a.asset)).group === 'ads', vs = VARIANTS.filter(v => Object.values(obj(v.swap)).includes(m[1]));
+      if (ad) { setPlatform(ASSETS.get(a.asset).platform); setView('ads'); }
+      else if (a && typeof a.variantOf === 'string' && vs.length) { setView('sections'); setVariant(vs[0].id); }
+      else { const p = PLATS.find(p => sectionsOf(p.id).some(s => s.sets.some(x => x.shots.includes(m[1])))); if (p) setPlatform(p.id); }
+    }
     const x = L.tiles.find(y => y.a.id === m[1]);
     if (!x) return false;
     x.el.scrollIntoView({ block: 'center', inline: 'center', behavior: REDUCE ? 'auto' : 'smooth' }); flashEl(x.el);
@@ -8313,12 +8583,21 @@ function renderListing(lb) {
     for (const el of lpText.querySelectorAll('.bd-lfield.bd-chg')) { el.classList.remove('bd-chg', 'bd-chg-mod'); markChg(el, 'mod', el.dataset.label); }
   };
   L.listingApi = o => {
-    if (o && typeof o === 'object') { if (typeof o.locale === 'string') setLocale(o.locale); if (typeof o.platform === 'string') setPlatform(o.platform); }
-    return { platform: L.platform, locale: L.locale, mode: L.mode, hash: location.hash, locales: LOCS.map(l => ({ id: l, label: locSel.querySelector(`option[value="${CSS.escape(l)}"]`).textContent, mt: (MTS[l] || []).length, missing: missingIn(l) })),
+    if (o && typeof o === 'object') {
+      if (typeof o.locale === 'string') setLocale(o.locale); if (typeof o.platform === 'string') setPlatform(o.platform);
+      if ('variant' in o) setVariant(typeof o.variant === 'string' ? o.variant : null);
+      if (typeof o.view === 'string') setView(o.view);
+      if ('compare' in o && !!o.compare !== L.cmp && onPage(L.platform)) { L.cmp = !!o.compare; renderSections(); }
+    }
+    return { platform: L.platform, locale: L.locale, mode: L.mode, hash: location.hash, view: L.view, variant: L.variant ? L.variant.id : null, compare: !!(L.cmp && L.variant),
+      variants: VARIANTS.map(v => ({ id: v.id, platform: v.platform, kind: v.kind, title: v.title || null, changes: variantChanges(v), style: L.styleFor(v.platform, null, v.id) })),
+      locales: LOCS.map(l => ({ id: l, label: locSel.querySelector(`option[value="${CSS.escape(l)}"]`).textContent, mt: (MTS[l] || []).length, missing: missingIn(l) })),
       sections: [...pg.querySelectorAll('.bd-lst-sec')].map(s => ({ row: s.dataset.row, sets: [...s.querySelectorAll('.bd-lst-set')].map(x => ({ set: x.dataset.set, chip: x.querySelector('.bd-lst-chip').textContent,
-        shots: [...x.querySelectorAll('.bd-lst-shot')].map(e => e.dataset.ab) })) })),
+        shots: [...x.querySelectorAll('.bd-lst-shot')].map(e => e.dataset.ab),
+        rows: [...x.querySelectorAll('.bd-lst-tiles[data-variant]')].map(r => ({ variant: r.dataset.variant, shots: [...r.querySelectorAll('.bd-lst-shot')].map(e => e.dataset.ab) })) })) })),
+      preview: [...pg.querySelectorAll('.bd-lst-phone')].map(e => ({ kind: e.dataset.preview, text: e.querySelector('.bd-lst-scr').innerText, shots: [...e.querySelectorAll('.bd-lst-shot')].map(s => s.dataset.ab) })),
       off: [...pg.querySelectorAll('.bd-lst-off')].map(e => ({ row: e.dataset.row, drafted: e.classList.contains('on') })),
-      tiles: L.tiles.map(x => ({ id: x.a.id, set: x.rule.id, kind: x.kind, w: x.w, h: x.h, live: !!x.fr, ready: x.ready, name: x.fr ? x.fr.name : null, tags: [...x.box.querySelectorAll('.bd-lst-tag')].map(t => t.textContent) })),
+      tiles: L.tiles.map(x => ({ id: x.a.id, set: x.rule.id, kind: x.kind, variant: x.v, w: x.w, h: x.h, live: !!x.fr, ready: x.ready, name: x.fr ? x.fr.name : null, tags: [...x.box.querySelectorAll('.bd-lst-tag')].map(t => t.textContent) })),
       fields: [...lpText.querySelectorAll('.bd-lfield')].map(e => ({ field: e.dataset.field, value: e.querySelector('.v').textContent, count: e.querySelector('.c')?.textContent ?? null, over: !!e.querySelector('.c.over'),
         mt: !!e.querySelector('.bd-lst-tag.mt'), fallback: !!e.querySelector('.v.fb') })),
       checks: L.checks().map(([k, t]) => [k, t]), findings: L.checks().map(([, , f]) => f), style: L.styleFor(L.platform),
@@ -9096,6 +9375,7 @@ function openApprove() {
         open && line('alert', 'warn', `${open} open question${open === 1 ? ' has' : 's have'} no pick; the agent will use its recommendation`),
         ls.mt && line('alert', 'warn', `${ls.mt} machine-translated string${ls.mt === 1 ? ' isn\'t' : 's aren\'t'} accepted yet`),
         ls.mock && line('alert', 'warn', `${ls.mock} shot${ls.mock === 1 ? ' shows' : 's show'} a mock-up UI, not a capture`),
+        ls.variants && line('tick', '', `It covers ${ls.variants} variant${ls.variants === 1 ? '' : 's'} with ${ls.variants === 1 ? 'its' : 'their'} style picks: ${ls.variantIds.join(', ')}`),
       ].filter(Boolean));
       sum.hidden = !sum.childElementCount;
       decBox.hidden = !dec.length;
