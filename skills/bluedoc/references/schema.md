@@ -496,7 +496,7 @@ A shot's screen file is a layout in the shot kit (`references/kits.md` `## Store
 | `ios-phone`, `ios-phone-63`, `ios-tablet` | `xcrun simctl`: boot, status bar 9:41, appearance, launch with `-AppleLanguages (<locale>) -AppleLocale <ll_CC>`, `openurl <route>`, `io screenshot --mask=black` | `appstore/iphone-69`, `appstore/iphone`, `appstore/ipad` (UI slot) |
 | `watchos` | the same, without status bar or appearance (watchOS has neither) | `appstore/watch` (the shot itself: 422×514 on Apple Watch Ultra 3 (49mm)) |
 | `android-phone`, `android-tablet`, `wearos` | `emulator -avd <avd> -no-window` (an AVD already running is used), SystemUI demo mode, `cmd uimode night`, `cmd locale set-app-locales` (Android 13+), `am start`, raw `screencap` saved as RGB | `play/phone`, `play/tablet*` (UI slot), `play/wear*` (the shot itself) |
-| `web` | headless Chrome at the shot's first set's UI size × its scale (or `size`): `apps.web.url` + `route`, or `apps.web.design`'s screen `route` | the UI slot of any set |
+| `web` | headless Chrome at the shot's first set's UI size × its scale (or `size`): `apps.web.url` + `route`, or `apps.web.design`'s screen `route` | the UI slot of any set whose UI viewport has the capture's aspect (within 5%): a phone capture fills the phone sets, and the tablet sets keep the mock-up |
 
 Each PNG is read back: no alpha, and a raw set's capture must be its size. It writes `<stem>.listing/captures/<target>/<locale>/<shot>.png` (the one it replaces moves to `captures/old/<sha256 16>.png`) and a row in `captures/captures.json`: `{shot, target, locale, file, w, h, sha256, recipe, device, tools, at}`. Lines read `ok`, `skip` or `fail`; exit 0 all taken, 1 one failed, 3 a target skipped (a missing tool or device). A capture whose `recipe` hash differs from the shot's recipe is **stale** (a warning, with the re-shoot command). Each capture joins the revision as `<shot>/capture/<target>/<locale>` (its PNG's hash), so `?diff=` marks the shot Changed and shows the capture it replaced beside it.
 
@@ -519,7 +519,7 @@ Each set's chip shows its shot count against its range, its accepted sizes and w
 | Assets | a required asset missing (the feature graphic); no icon, or one without `fg.svg` | |
 | Files | an upload of the wrong size, with alpha or `tRNS`, or over the byte limit; a capture with alpha; a raw set's capture of the wrong size; a Wear OS shot that draws a caption, a device frame, a mask or a see-through background; Apple Watch shots of more than one size across locales | |
 | Locales | | text, captions or captures that fall back to the default locale; unaccepted MT strings |
-| Content | | shots with mock-up UI (no capture or upload); social proof in a Play graphic; a caption font not installed here |
+| Content | | shots with mock-up UI (no capture or upload), and sets no capture fits (another aspect); social proof in a Play graphic; a caption font not installed here |
 | Variants | a bad id, kind, swap, order or text field; text a kind can't change (PPO: none; CPP: promotional text and keywords; SLE: short and full description, only in its own `locale`); a PPO that swaps or reorders a watch shot; more of a kind than the store allows; two CPPs in one Apple Ads ad group | a variant that changes nothing; a variant's shot no swap shows |
 | Ads | more of an ads asset per locale than its `count`; an uploaded one of the wrong size, with alpha or over its bytes | an Apple Ads creative asset (coming soon: `unverified`) |
 

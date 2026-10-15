@@ -2,7 +2,7 @@
 
 ![The bluedoc home page in dark mode: the pixel-art banner of a bay with a ringed planet behind the title and the search field with its type and status filter chips, the sidebar of projects, and the overview charts](docs/media/home-hero.webp)
 
-An agent skill for engineering docs, plans, code reviews, UI designs, slide decks, website reviews and app icons. The agent writes one JSON file, plus small HTML fragments for screens and SVG layers for icons; a local server renders it as a page. You tick checklists, pick options, comment on any element and approve or send back; your answers and change requests go to the agent, and each revision can be compared with the last. Works with Claude Code, Codex, pi and omp.
+An agent skill for engineering docs, plans, code reviews, UI designs, slide decks, website reviews, app icons and app store listings. The agent writes one JSON file, plus small HTML fragments for screens and SVG layers for icons; a local server renders it as a page. You tick checklists, pick options, comment on any element and approve or send back; your answers and change requests go to the agent, and each revision can be compared with the last. Works with Claude Code, Codex, pi and omp.
 
 > **Beta.** bluedoc is in beta: the doc format and commands may still change between betas. It is tested on macOS; Linux and Windows are untested. Issues and feedback are welcome on GitHub.
 
@@ -16,6 +16,7 @@ An agent skill for engineering docs, plans, code reviews, UI designs, slide deck
 | `design` | UI screens on a board and app icons | [design](docs/types/design.md) | [<img src="docs/media/design-hero.webp" width="240" alt="The Acme Fit design board">](docs/types/design.md) |
 | `website` | A site's pages, live from its dev server: comment on sections, pick versions in place, each comment names the source to edit | [website](docs/types/website.md) | [<img src="docs/media/website-hero.webp" width="240" alt="The Acme Fit marketing site board">](docs/types/website.md) |
 | `presentation` | Slide decks with speaker notes, played in Present | [presentation](docs/types/presentation.md) | [<img src="docs/media/presentation-hero.webp" width="240" alt="The Acme Fit Q3 launch review deck">](docs/types/presentation.md) |
+| `storelisting` | An app's Google Play and App Store listing: screenshots per device, store text per locale, store checks, fastlane export | [storelisting](docs/types/storelisting.md) | [<img src="docs/media/storelisting-hero.webp" width="240" alt="The Acme Fit store listing">](docs/types/storelisting.md) |
 | `other` | Status pages, incident reports, inventories, meeting notes, comparisons | [other](docs/types/other.md) | [<img src="docs/media/other-hero.webp" width="240" alt="The Acme weekly status page">](docs/types/other.md) |
 
 ## What you get
@@ -35,12 +36,13 @@ An agent skill for engineering docs, plans, code reviews, UI designs, slide deck
 - **App icons.** `--icons` adds an icon artboard of SVG layers. The board shows the iOS light, dark and tinted icons, Android's masks and themed icon, the store icons and four home screens. **Export** writes every PNG with `Contents.json` and the adaptive-icon XML.
 - **Presentations.** `build.py new presentation` scaffolds a deck of 16:9 slides with speaker notes. **Present** plays them full-window: ← → to step, `N` for notes, Esc to leave. Then **Approve presentation** or **Request changes**.
 - **Websites.** `build.py new website --url http://localhost:4321/` puts a site's pages on a board, live from its dev server through a local proxy, hot reload included. Switch every page between desktop, tablet and mobile widths, pick between versions of a section in place, and point at anything: each comment carries its section's source file and the width you saw it at. Then **Approve website**.
+- **Store listings.** `build.py new storelisting` lays out an app's Google Play and App Store pages: every device's screenshot set at its store size and maximum, the icon and feature graphic, the store text with live counters, each locale with its machine-translated strings badged until accepted. Screenshots come from HTML mock-ups, from `capture.py` on simulators, emulators or headless Chrome, or from PNGs you drop; the build checks every store rule. Pick caption styles and the brand, compare A/B treatments and custom pages, then **Approve listing** and export the fastlane ZIP.
 - **HeroUI and Tailwind ship with the skill.** A screen uses the plain kit, HorizonUI, HeroUI with Tailwind, Tailwind alone or your project's own CSS, all offline.
 - **Your input stays on your machine.** Ticks, picks, comments and replies live in `~/.bluedoc/state.db`, a SQLite file the server owns, never in the repo. Only a browser that opened a link from `serve.py open` or `serve.py unlock` can save. Design screens run sandboxed, with no network; a website's live pages load only from its dev server on this machine.
 - **JSON only.** `serve.py` renders each doc from its JSON on every request; agents never write the page HTML. `build.py -o` writes a standalone HTML file when you need to send one.
 - **Readable pages.** Light and dark theme, adjustable text width, clean print, keyboard and screen-reader outline. The build flags filler, vague words, long sentences and checklist items that don't start with a verb.
 
-Built examples to open in a browser: [`acme-orders.html`](docs/examples/acme-orders.html) (architecture and runbook), [`acme-review-findings.html`](docs/examples/acme-review-findings.html) (review findings for two PRs), [`acme-saved-carts-plan.html`](docs/examples/acme-saved-carts-plan.html) (a plan to approve), [`acme-status.html`](docs/examples/acme-status.html) (a weekly status page) and [`acme-site.html`](docs/examples/acme-site.html) (a website board; its live page needs the server). Download the file, then open it; GitHub shows HTML as source. Their JSON sources sit in `skills/bluedoc/examples/`, with the design board (`acme-fit-design.bluedoc.json`) and the deck (`acme-fit-deck.bluedoc.json`). `serve.py open <json>` opens any of them.
+Built examples to open in a browser: [`acme-orders.html`](docs/examples/acme-orders.html) (architecture and runbook), [`acme-review-findings.html`](docs/examples/acme-review-findings.html) (review findings for two PRs), [`acme-saved-carts-plan.html`](docs/examples/acme-saved-carts-plan.html) (a plan to approve), [`acme-status.html`](docs/examples/acme-status.html) (a weekly status page) and [`acme-site.html`](docs/examples/acme-site.html) (a website board; its live page needs the server). Download the file, then open it; GitHub shows HTML as source. Their JSON sources sit in `skills/bluedoc/examples/`, with the design board (`acme-fit-design.bluedoc.json`), the deck (`acme-fit-deck.bluedoc.json`) and the store listing (`acme-fit-listing.bluedoc.json`). `serve.py open <json>` opens any of them.
 
 ## Install
 
@@ -104,7 +106,7 @@ ln -s "$PWD/bluedoc/skills/bluedoc" ~/.agents/skills/bluedoc
 
 ## Use
 
-Ask in plain words. The skill triggers on requests for HTML docs, architecture pages, walkthroughs, runbooks, status pages, plans, browsable reviews, UI mockups, slide decks, website reviews and app icons.
+Ask in plain words. The skill triggers on requests for HTML docs, architecture pages, walkthroughs, runbooks, status pages, plans, browsable reviews, UI mockups, slide decks, website reviews, app icons and store listings.
 
 - "Write a bluedoc of how a request flows through this service."
 - "Make a runbook for setting up the local stack, as a bluedoc with checklists."
@@ -115,6 +117,7 @@ Ask in plain words. The skill triggers on requests for HTML docs, architecture p
 - "Make a five-slide launch review deck as a bluedoc presentation."
 - "Open our marketing site as a bluedoc website so I can comment on it."
 - "Design the app icon for iOS and Android in the bluedoc design."
+- "Make the App Store and Google Play listing for our app as a bluedoc, in English and Spanish."
 
 The agent scaffolds `docs/<topic>/<name>.bluedoc.json` from the type's skeleton (the only file it edits, plus any images the doc shows and a design's screen files; the revision history `<name>.bluedoc.history.json` and a review's diff cache `<name>.diffcache.json` sit next to it), fills it in, validates it and opens it on the local server:
 
@@ -141,7 +144,7 @@ Per doc, the agent reads about 1.5k tokens of instructions (`SKILL.md`) plus one
 
 A design doc is a brief and one board of screens. Each screen is an HTML fragment in `<name>.design/<artboard id>.html` beside the JSON; the server wraps it in the chosen kit (plain, HorizonUI, HeroUI with Tailwind, Tailwind or your own CSS) and runs it sandboxed. Screens link to each other with `data-nav`, and `--icons` adds an app-icon sheet with PNG export. A presentation is the same page with a board of slides only; a website, with a board of web pages, live from the dev server or mocked up as screens.
 
-Frameworks, navigation, board editing, app icons and the sandbox are covered in [docs/types/design.md](docs/types/design.md); decks in [docs/types/presentation.md](docs/types/presentation.md); live sites in [docs/types/website.md](docs/types/website.md).
+Frameworks, navigation, board editing, app icons and the sandbox are covered in [docs/types/design.md](docs/types/design.md); decks in [docs/types/presentation.md](docs/types/presentation.md); live sites in [docs/types/website.md](docs/types/website.md); store listings in [docs/types/storelisting.md](docs/types/storelisting.md).
 
 ## Update and remove
 
@@ -158,11 +161,14 @@ Frameworks, navigation, board editing, app icons and the sandbox are covered in 
 ```text
 skills/bluedoc/
   SKILL.md               the workflow card the agent reads first
-  types/<type>.md        one guide per doc type: plan, review, docs, design, presentation, website, other
+  types/<type>.md        one guide per doc type: plan, review, docs, design, presentation, website, storelisting, other
   references/schema.md   every JSON field and command, for lookup
-  references/kits.md     the plain kit's classes, HorizonUI in a screen, bringing your own framework
+  references/kits.md     the plain kit's classes, HorizonUI in a screen, bringing your own framework, the store shot kit
   assets/skeletons/      fill-in skeleton per doc type (build.py new), plus review-area.json (--shape area)
   scripts/build.py       new, validate, lint, patch, build the HTML
+  scripts/listing.py     store listings: the rules file, store checks, l10n, sections and variants, the fastlane export plan
+  scripts/capture.py     store screenshots from capture recipes: simctl, adb and emulator, headless Chrome
+  scripts/fonts.py       the fonts installed on this machine, for a listing's caption font
   scripts/gitdiff.py     git range + findings -> diff block (a git reference)
   scripts/diffref.py     expands diff references from the cache, git or gh
   scripts/migrate.py     one-off: embedded diffs -> references, reports contract gaps; --decks: slide-only designs -> presentations
@@ -172,15 +178,18 @@ skills/bluedoc/
   assets/template.html   the page runtime (styling, canvas, checklists, diff browser, design board, annotator)
   assets/board-geo.js    board layout and orthogonal edge routing, shared by design boards and blueprint canvases
   assets/home.html       the home page (HorizonUI)
-  assets/kits/           what a design screen is wrapped in: shell, plain kit CSS, wireframe CSS, inspector (also injected into live website pages)
+  assets/store-rules.json  every store set, asset, text limit, variant and locale rule, each with its source and date
+  assets/listing.html    a listing's HTML export and its print view (the PDF)
+  assets/kits/           what a design screen is wrapped in: shell, plain kit CSS, wireframe CSS, inspector (also injected into live website pages), the store shot kit and its styles
   assets/kits/icon-sheet.*  the app-icon sheet: every iOS and Android tile, drawn from the icon's layers
   assets/vendor/         files the pages load from the local server, never the network:
     horizon-ui/          HorizonUI browser build (Apache-2.0, see its NOTICE)
     heroui/              HeroUI's CSS and Tailwind's browser build, for design screens
     hero/                the home page's pixel-art banners, dark and light
-    fonts/               the sketch hand font and Lexend's licence (Lexend-OFL.txt), both OFL-1.1
+    fonts/               the sketch hand font, Inter (store shot captions) and Lexend's licence (Lexend-OFL.txt), all OFL-1.1
   examples/              Acme examples (JSON, history, diff cache, the review's git bundle)
-  examples/*.design/     the design, deck and website examples' screen files
+  examples/*.design/     the design, deck, website and store listing examples' screen files
+  examples/*.listing/    the store listing example's captures (capture.py writes them; uploads go here too)
   examples/media/        images the examples show (media blocks)
 docs/types/              one page per doc type, for GitHub readers
 docs/media/              the screenshots those pages and this README show
@@ -196,4 +205,4 @@ The examples describe Acme Corp, a fictional company.
 
 ## License
 
-bluedoc's own code: MIT (`LICENSE`). The vendored HorizonUI build under `skills/bluedoc/assets/vendor/horizon-ui/` is Apache-2.0 (its `LICENSE` and `NOTICE`), and the Inter and JetBrains Mono fonts it ships are OFL-1.1 (its `THIRD_PARTY_NOTICES.md`). Under `skills/bluedoc/assets/vendor/heroui/`, Tailwind's browser build (`@tailwindcss/browser` 4.3.3) is MIT, and HeroUI's CSS (`@heroui/styles` 3.2.6) declares MIT in its `package.json` while its `LICENSE` file is the Apache-2.0 text; both licence files sit in `licenses/` there, unchanged. The Architects Daughter hand font under `skills/bluedoc/assets/vendor/fonts/` is OFL-1.1 (its licence file sits beside it). The bluedoc wordmark is "bluedoc" set in Lexend Bold and outlined to paths in `home.html` and `template.html`; Lexend is OFL-1.1 (`vendor/fonts/Lexend-OFL.txt`). The manifests declare `MIT AND Apache-2.0 AND OFL-1.1`, which covers both readings.
+bluedoc's own code: MIT (`LICENSE`). The vendored HorizonUI build under `skills/bluedoc/assets/vendor/horizon-ui/` is Apache-2.0 (its `LICENSE` and `NOTICE`), and the Inter and JetBrains Mono fonts it ships are OFL-1.1 (its `THIRD_PARTY_NOTICES.md`). Under `skills/bluedoc/assets/vendor/heroui/`, Tailwind's browser build (`@tailwindcss/browser` 4.3.3) is MIT, and HeroUI's CSS (`@heroui/styles` 3.2.6) declares MIT in its `package.json` while its `LICENSE` file is the Apache-2.0 text; both licence files sit in `licenses/` there, unchanged. The Architects Daughter hand font and Inter (the store shots' default caption font) under `skills/bluedoc/assets/vendor/fonts/` are OFL-1.1 (their licence files sit beside them). The bluedoc wordmark is "bluedoc" set in Lexend Bold and outlined to paths in `home.html` and `template.html`; Lexend is OFL-1.1 (`vendor/fonts/Lexend-OFL.txt`). The manifests declare `MIT AND Apache-2.0 AND OFL-1.1`, which covers both readings.

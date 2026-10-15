@@ -87,6 +87,9 @@ class L10n(unittest.TestCase):
         return listing.listing_of(load_json(self.path))
 
     def test_export_lists_what_the_locale_lacks_with_its_limit(self) -> None:
+        doc = load_json(self.path)
+        del listing.listing_of(doc)["text"]["es-ES"]["play"]["full"]
+        self.path.write_text(json.dumps(doc, ensure_ascii=False, indent=2), encoding="utf-8")
         r = self.l10n("--export", "es-ES")
         self.assertEqual(r.returncode, 0, r.stderr)
         out = json.loads(r.stdout)
@@ -313,6 +316,8 @@ class ListingPage(ChromePage):
         self.assertEqual(t.ev(f"{LST}.approveBlocks"), [])
 
     def test_approve_waits_for_an_upload_or_brand_draft(self) -> None:
+        from test_listing_capture import free_a_slot
+        free_a_slot(self.doc_path, "appstore/iphone-69")
         t = self.page(self.url, "#appstore/es-ES", "brand")
         t.wait_for("!!document.querySelector('.bd-key.approve')")
         self.assertFalse(self.approve_disabled(t))
@@ -339,7 +344,9 @@ class ListingPage(ChromePage):
         self.assertFalse(self.approve_disabled(t))
         t.ev("document.querySelector('.bd-key.approve').click()")
         t.wait_for("!!document.querySelector('.bd-approve[open]')")
-        self.assertEqual({k: t.ev(LST)["approveSummary"][k] for k in ("mt", "mock")}, {"mt": 3, "mock": 3})
+        # 15 es-ES MT strings; 21 shots show a mock-up somewhere: every watch shot, the lifestyle shot, and every phone
+        # shot in the tablet sets, which no phone capture fits
+        self.assertEqual({k: t.ev(LST)["approveSummary"][k] for k in ("mt", "mock")}, {"mt": 15, "mock": 21})
         self.assertGreaterEqual(t.ev("document.querySelectorAll('.bd-approve[open] .bd-ap-sum li.warn').length"), 2)
 
 

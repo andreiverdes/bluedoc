@@ -22,7 +22,7 @@ This writes the `listing` block, a board with one shot (`first`), an icon artboa
 
 Stores want the app in use: a shot shows a mock-up only until it has a capture or an upload (the page tags it **mock UI**).
 
-- **Captures:** give the shot a `recipe` (`{route, appearance, settle, targets, locales}`) and `listing.capture` its `devices` and `apps`, then run `python3 <skill>/scripts/capture.py <doc>` (`--dry-run` first; `--shot/--target/--locale` narrow it). It drives `xcrun simctl`, `adb`/`emulator` and headless Chrome, writes `<stem>.listing/captures/`, then `build.py <doc>` records them. Exit 3 means a tool or device is missing: say which. Fields and targets: `grep -n -A30 '^### Uploads and captures' <skill>/references/schema.md`.
+- **Captures:** give the shot a `recipe` (`{route, appearance, settle, targets, locales}`) and `listing.capture` its `devices` and `apps`, then run `python3 <skill>/scripts/capture.py <doc>` (`--dry-run` first; `--shot/--target/--locale` narrow it). It drives `xcrun simctl`, `adb`/`emulator` and headless Chrome, writes `<stem>.listing/captures/`, then `build.py <doc>` records them. Exit 3 means a tool or device is missing: say which. A `web` capture fills only the sets of its aspect (a phone capture leaves tablets their mock-up). Fields and targets: `grep -n -A30 '^### Uploads and captures' <skill>/references/schema.md`.
 - **Uploads:** the reader drops PNGs on the page; each is a draft until you run the `## Uploaded shots` command from the reply. Never write into `<stem>.listing/<platform>/` yourself.
 - After a recipe change the capture is **stale**: re-shoot with the command `build.py` prints.
 

@@ -191,6 +191,21 @@ class CaptureChecks(unittest.TestCase):
         rows = load_json(tmp.dir / "x.listing/captures/captures.json")["captures"]
         self.assertEqual(sorted((r["shot"], r["file"]) for r in rows), [("a", "3"), ("b", "2")])
 
+    def test_a_web_capture_fills_only_the_sets_of_its_aspect(self) -> None:
+        """capture_for: a phone-sized web capture fills the phone sets; the iPad and Play tablet sets show the mock-up;
+        a capture from the set's own target always fills it; one without a size (an earlier rev's) fits anywhere."""
+        sets = listing.by_id(listing.load_rules(), "sets")
+        a = {"id": "s"}
+        caps = {"s": {"web": {"en-US": {"file": "w.png", "w": 1236, "h": 2745}}}}
+        for s in ("play/phone", "appstore/iphone-69", "appstore/iphone"):
+            self.assertEqual(listing.capture_for(caps, a, sets[s], "en-US", "en-US")["file"], "w.png", s)
+        for s in ("appstore/ipad", "play/tablet10"):
+            self.assertIsNone(listing.capture_for(caps, a, sets[s], "en-US", "en-US"), s)
+        own = {"s": {"ios-tablet": {"en-US": {"file": "t.png", "w": 1236, "h": 2745}}}}
+        self.assertEqual(listing.capture_for(own, a, sets["appstore/ipad"], "en-US", "en-US")["file"], "t.png")
+        old = {"s": {"web": {"en-US": {"file": "o.png"}}}}
+        self.assertEqual(listing.capture_for(old, a, sets["appstore/ipad"], "en-US", "en-US")["file"], "o.png")
+
 
 class Recipes(unittest.TestCase):
     def setUp(self) -> None:
@@ -465,6 +480,14 @@ DROP = """(async (url, set) => {
   return true; })"""
 
 
+def free_a_slot(doc_path: Path, set_id: str) -> None:
+    """The example fills every set to the store's maximum, so no set has a Drop PNG slot: take its last shot out."""
+    doc = load_json(doc_path)
+    last = [a for a in listing.shots_of(doc) if set_id in (a.get("sets") or []) and not a.get("variantOf")][-1]
+    last["sets"].remove(set_id)
+    doc_path.write_text(json.dumps(doc, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
 @unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")
 class UploadAndPinInChrome(ChromePage):
     """The page: a PNG dropped on a set's slot is a draft sent with its patch command; a pin on a capture says how to
@@ -486,6 +509,7 @@ class UploadAndPinInChrome(ChromePage):
         return t
 
     def test_a_dropped_png_is_a_draft_sent_with_its_patch_command(self) -> None:
+        free_a_slot(self.doc_path, "appstore/iphone-69")
         t = self.page("#appstore/es-ES")
         t.wait_for(f"{LST}.slots.some(s => s.set === 'appstore/iphone-69')")
         t.ev(f"{DROP}({json.dumps(self.media + 'alpha.png')}, 'appstore/iphone-69')")

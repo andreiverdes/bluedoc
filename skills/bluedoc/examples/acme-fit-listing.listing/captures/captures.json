@@ -1,6 +1,32 @@
 {
  "captures": [
   {
+   "shot": "activity",
+   "target": "web",
+   "locale": "en-US",
+   "file": "acme-fit-listing.listing/captures/web/en-US/activity.png",
+   "w": 1236,
+   "h": 2745,
+   "sha256": "b4aba7e393aed1c24743a6940500233d6c1a19d9fca013975ea092279562e917",
+   "recipe": "6b52bc1383d92a08",
+   "device": "headless Chrome at a device size",
+   "tools": "Chrome/155.0.8059.41",
+   "at": "2026-10-15T21:50:03+00:00"
+  },
+  {
+   "shot": "profile",
+   "target": "web",
+   "locale": "en-US",
+   "file": "acme-fit-listing.listing/captures/web/en-US/profile.png",
+   "w": 1320,
+   "h": 2868,
+   "sha256": "a5eee25e4fd553933d4e307bacb29ae7db48037d4e518c698a03cc7f3ce7c840",
+   "recipe": "b271e19d207542e5",
+   "device": "headless Chrome at a device size",
+   "tools": "Chrome/155.0.8059.41",
+   "at": "2026-10-15T21:50:08+00:00"
+  },
+  {
    "shot": "today",
    "target": "web",
    "locale": "en-US",
@@ -25,6 +51,19 @@
    "device": "headless Chrome at a device size",
    "tools": "Chrome/155.0.8059.41",
    "at": "2026-10-15T18:51:51+00:00"
+  },
+  {
+   "shot": "workouts",
+   "target": "web",
+   "locale": "en-US",
+   "file": "acme-fit-listing.listing/captures/web/en-US/workouts.png",
+   "w": 1236,
+   "h": 2745,
+   "sha256": "5fa41bdc6eafede5f72a8cc716cfa0dde47b89d58997dbf6072a584e685430b0",
+   "recipe": "4d9d8eee579ed24a",
+   "device": "headless Chrome at a device size",
+   "tools": "Chrome/155.0.8059.41",
+   "at": "2026-10-15T21:50:05+00:00"
   }
  ]
 }

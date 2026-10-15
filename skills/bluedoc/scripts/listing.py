@@ -1562,15 +1562,26 @@ def _shown_size(a: dict, rule: dict, doc_path: Path | None) -> tuple[int, int]:
     return tuple(rule["author"])
 
 
+def capture_fits(c: dict, rule: dict) -> bool:
+    """Whether a web capture fills a set: its aspect is within 5% of the set's UI viewport's, so a phone capture
+    stays out of a tablet's slot (that set shows the mock-up). A capture without its size (an earlier rev's) fits."""
+    w, h = c.get("w"), c.get("h")
+    if not (isinstance(w, int) and isinstance(h, int) and w > 0 and h > 0):
+        return True
+    uw, uh = ui_size(rule)
+    return abs((w / h) / (uw / uh) - 1) <= 0.05
+
+
 def capture_for(caps: dict, a: dict, rule: dict, locale: str, default: str | None) -> dict | None:
-    """The capture a shot shows in a set for a locale, as the page's captureFor picks it: the set's target, then web;
-    the locale's, else the default locale's. {file, w, h, fresh, …, target, locale} or None."""
+    """The capture a shot shows in a set for a locale, as the page's captureFor picks it: the set's target, then a web
+    capture that fits the set (capture_fits); the locale's, else the default locale's. {file, w, h, fresh, …, target,
+    locale} or None."""
     per = caps.get(a["id"]) or {}
     targets = list(dict.fromkeys(t for t in (rule.get("target"), "web") if t))
     for loc in dict.fromkeys(x for x in (locale, default) if x):
         for t in targets:
             c = (per.get(t) or {}).get(loc)
-            if c:
+            if c and (t == rule.get("target") or capture_fits(c, rule)):
                 return {**c, "target": t, "locale": loc}
     return None
 
@@ -1838,14 +1849,22 @@ def store_checks(doc: dict, doc_path: Path | None, rules: dict | None = None, to
     if default and mt.get(default):
         add("warn", f"{len(mt[default])} machine-translated string(s) not accepted yet", locales=[default], section="text")
 
-    # mock-up UI (A-ARG 2.3.3) and social proof in Play's shots (G-PA)
+    # mock-up UI (A-ARG 2.3.3): shots with no capture or upload, and sets no capture fits (another aspect: a phone
+    # capture in a tablet set), where captured shots show their mock-up; social proof in Play's shots (G-PA)
     for p in plats:
-        ids = list(dict.fromkeys(i for i in (x for shots in by_p_loc.get((p, default), {}).values() for x in shots)))
-        mock = [i for i in ids if i in by and not is_image_shot(by[i]) and not caps.get(i)]
-        if mock:
-            add("warn", f"{len(mock)} shot{'s show' if len(mock) != 1 else ' shows'} mock-up UI, no capture or upload: "
-                        f"{', '.join(mock)}; the stores want the app in use", source="A-ARG 2.3.3", platforms=[p],
-                key=f"artboard:{mock[0]}")
+        on = by_p_loc.get((p, default), {})
+        ids = list(dict.fromkeys(i for i in (x for shots in on.values() for x in shots)))
+        bare = [i for i in ids if i in by and not is_image_shot(by[i]) and not caps.get(i)]
+        unfit = {s: [i for i in shots if i in by and caps.get(i) and not is_image_shot(by[i])
+                     and capture_for(caps, by[i], sets[s], default, default) is None] for s, shots in on.items() if s in sets}
+        unfit = {s: v for s, v in unfit.items() if v}
+        if bare or unfit:
+            msg = [f"{len(bare)} shot{'s show' if len(bare) != 1 else ' shows'} mock-up UI, no capture or upload: {', '.join(bare)}"] if bare else []
+            if unfit:
+                msg.append(f"no capture fits {', '.join(sets[s]['label'] for s in unfit)} (another aspect), so "
+                           f"{', '.join(dict.fromkeys(i for v in unfit.values() for i in v))} show their mock-up there")
+            add("warn", "; ".join(msg) + "; the stores want the app in use", source="A-ARG 2.3.3", platforms=[p],
+                key=f"artboard:{(bare or next(iter(unfit.values())))[0]}")
         if p != "play":
             continue
         shown = ids + [a["id"] for a in arts if a.get("device") == "asset" and a.get("asset") == "play/feature"]

@@ -153,7 +153,7 @@ class Sections(unittest.TestCase):
         v = {v["id"]: v for v in self.lb["variants"]}
         self.assertNotIn("today-lifestyle", self.shots("appstore", None, "appstore/iphone-69"))
         self.assertEqual(self.shots("appstore", v["lifestyle"], "appstore/iphone-69")[0], "today-lifestyle")
-        self.assertEqual(self.shots("appstore", v["runners"], "appstore/iphone-69")[:2], ["workout", "today"])
+        self.assertEqual(self.shots("appstore", v["runners"], "appstore/iphone-69")[:3], ["run-route", "workout", "today"])
         self.assertEqual(self.shots("play", v["lifestyle-copy"], "play/phone")[0], "today-lifestyle")
 
     def test_an_ab_treatment_is_l5_unless_it_names_a_layout(self) -> None:
@@ -327,11 +327,11 @@ class VariantsInChrome(ChromePage):
         t.ev("document.querySelector('.bd-lst-cmpbtn').click()")
         t.wait_for(f"{LST}.compare")
         rows = next(x["rows"] for s in t.ev(LST)["sections"] for x in s["sets"] if x["set"] == "appstore/iphone-69")
-        self.assertEqual([(r["variant"], r["shots"][:2]) for r in rows], [("default", ["today", "workout"]), ("runners", ["workout", "today"])])
+        self.assertEqual([(r["variant"], r["shots"][:2]) for r in rows], [("default", ["today", "activity"]), ("runners", ["run-route", "workout"])])
         watch = next(x["rows"] for s in t.ev(LST)["sections"] for x in s["sets"] if x["set"] == "appstore/watch")
         self.assertEqual(len(watch), 1, "a set the variant leaves alone shows once")
         promo = next(f for f in t.ev(LST)["fields"] if f["field"] == "en-US/appstore/promo")
-        self.assertIn("Every run mapped", promo["value"])
+        self.assertIn("Plan the route", promo["value"])
 
     def test_store_preview_shows_each_platform_from_the_listing(self) -> None:
         t = self.page("#appstore")
@@ -339,7 +339,7 @@ class VariantsInChrome(ChromePage):
         t.wait_for(f"{LST}.preview.length === 2")
         pv = {p["kind"]: p for p in t.ev(LST)["preview"]}
         self.assertIn("Runs, rides and rest", pv["page"]["text"])
-        self.assertEqual(pv["page"]["shots"][:3], ["today", "workout", "streak"])
+        self.assertEqual(pv["page"]["shots"][:3], ["today", "activity", "workouts"])
         self.assertEqual(pv["search"]["shots"], ["search"], "the search results asset stands in for the shots")
         self.assertTrue(t.ev("document.querySelector('.bd-lst-pvnote').textContent.length > 0"))
         t.ev(f"BP.listing({{variant: 'lifestyle'}})")
@@ -359,7 +359,7 @@ class VariantsInChrome(ChromePage):
         self.assertTrue(t.ev("!!document.querySelector('.bd-lst-upslot[data-set=\"play/ad-portrait\"]')"), "an empty ads asset takes a PNG")
         t.ev("BP.listing({platform: 'appstore'})")
         ads = t.ev("[...document.querySelectorAll('[data-ad]')].map(e => [e.dataset.ad, [...e.querySelectorAll('.bd-lst-shot')].map(s => s.dataset.ab)])")
-        self.assertEqual(ads, [["default", ["today", "workout", "streak"]], ["runners", ["workout", "today", "streak"]]])
+        self.assertEqual(ads, [["default", ["today", "activity", "workouts"]], ["runners", ["run-route", "workout", "today"]]])
 
     def test_approve_carries_every_variants_picks(self) -> None:
         t = self.page("#appstore")

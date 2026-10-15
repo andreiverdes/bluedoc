@@ -195,6 +195,93 @@
     "today/capture/web/en-US": "47e9eeb2bce40492",
     "workout/capture/web/en-US": "ec92f8d26ed56508"
    }
+  },
+  {
+   "rev": "D",
+   "date": "2026-10-16",
+   "built": "2026-10-15T21:56:07+00:00",
+   "head": {
+    "id": "acme-fit-listing",
+    "title": "Acme Fit: store listing",
+    "subtitle": "The 3.0 listing on Google Play and the App Store, in English and Spanish, for watch, phone and tablet, with a custom page, two A/B tests and ads.",
+    "meta": {
+     "org": "Acme",
+     "kind": "Store listing",
+     "type": "storelisting",
+     "rev": "D",
+     "date": "2026-10-16"
+    },
+    "state": [
+     {
+      "label": "phone UI captured; tablet and watch mock-up",
+      "kind": "warn"
+     },
+     {
+      "label": "es-ES machine-translated in part",
+      "kind": "info"
+     }
+    ],
+    "tldr": "Check each platform page in en-US and es-ES: the text against its counters, the shots per device, and the shared icon and feature graphic. Then check the Runners page, the two B treatments, the store preview and the ads.",
+    "links": [
+     {
+      "label": "Design: Acme Fit screens",
+      "href": "acme-fit-design.bluedoc.json"
+     }
+    ],
+    "changes": [
+     "Accepted 2 machine-translated es-ES strings"
+    ]
+   },
+   "sections": [
+    {
+     "id": "brief",
+     "title": "Brief",
+     "lead": "Acme Fit 3.0 leads with the week view: one glance shows steps, workouts and the streak.",
+     "blocks": [
+      "8d18e2dbe1b822a9"
+     ]
+    },
+    {
+     "id": "listing",
+     "title": "Listing",
+     "lead": "Both stores at the store maximums, in en-US and es-ES: 10 shots per App Store set, 8 per Play set, a feature graphic and the icon.",
+     "blocks": [
+      "f6e68e05e852e2d9",
+      "caa902878cf51410"
+     ]
+    }
+   ],
+   "screens": {
+    "today": "ef27b9de34d0814e",
+    "activity": "111618fe96e90c03",
+    "workouts": "3eebed8410c8bb53",
+    "workout": "5aa5afa7bc893993",
+    "run-route": "e6c27e9969042c63",
+    "heart-rate": "42958ca50ac4c2b0",
+    "sleep": "c131ef438281f986",
+    "streak": "0720801ff72a6816",
+    "plans": "4228b324fb6c924d",
+    "profile": "740c756a61e8c50f",
+    "today-lifestyle": "5fee49d569078b7c",
+    "watch-rings": "7c0269d8fec05199",
+    "watch-workout": "b26709d85c0bfdca",
+    "watch-heart": "56cdbdc721248e35",
+    "watch-pace": "b20bbaf4ace58221",
+    "watch-route": "33fc5d80b88173a3",
+    "watch-summary": "86b3de6ff5ef0b32",
+    "watch-streak": "a32904c94d2b157b",
+    "watch-face": "0f8dd5b98a24db67",
+    "watch-sleep": "a56dc17cf16106ce",
+    "watch-timer": "bafaccbec62eec9a",
+    "feature": "61e9ad175fd67f38",
+    "ad-wide": "408722b8d03195ad",
+    "search": "a73ff84676ea5bad",
+    "activity/capture/web/en-US": "b4aba7e393aed1c2",
+    "profile/capture/web/en-US": "a5eee25e4fd55393",
+    "today/capture/web/en-US": "47e9eeb2bce40492",
+    "workout/capture/web/en-US": "ec92f8d26ed56508",
+    "workouts/capture/web/en-US": "5fa41bdc6eafede5"
+   }
   }
  ],
  "blocks": {
@@ -848,6 +935,565 @@
      }
     }
    ]
+  },
+  "f6e68e05e852e2d9": {
+   "type": "listing",
+   "id": "main",
+   "app": {
+    "name": "Acme Fit",
+    "company": "Acme"
+   },
+   "platforms": [
+    "play",
+    "appstore"
+   ],
+   "rows": [
+    "watch",
+    "phone",
+    "tablet"
+   ],
+   "locales": [
+    "en-US",
+    "es-ES"
+   ],
+   "defaultLocale": "en-US",
+   "ipad": true,
+   "icon": "acme-fit-design.bluedoc.json#app-icon",
+   "style": {
+    "message": "m1",
+    "layout": "l1"
+   },
+   "brand": {
+    "font": {
+     "family": "Inter",
+     "weight": 800
+    },
+    "palette": {
+     "bg": "#1d4ed8",
+     "surface": "#e0e7ff",
+     "accent": "#f59e0b",
+     "text": "#ffffff",
+     "caption": "#ffffff"
+    }
+   },
+   "video": {
+    "play": "https://www.youtube.com/watch?v=acmefit3w"
+   },
+   "text": {
+    "en-US": {
+     "play": {
+      "name": "Acme Fit: Run, Ride, Rest",
+      "short": "See your week of runs, rides and sleep in one glance. Keep the streak going.",
+      "full": "Acme Fit shows your week at a glance: steps, workouts, heart rate and sleep in one view.\n\nPlan runs and rides, follow them on your watch, and keep your streak going with gentle reminders.",
+      "releaseNotes": "The week view: steps, workouts and sleep side by side.",
+      "adHeadlines": [
+       "Your week in one view",
+       "Runs, rides and rest",
+       "Keep the streak going"
+      ],
+      "adDescriptions": [
+       "Steps, workouts, heart rate and sleep side by side. Plan the week on your watch."
+      ]
+     },
+     "appstore": {
+      "name": "Acme Fit",
+      "subtitle": "Runs, rides and rest",
+      "promo": "Acme Fit 3.0 puts your whole week on one screen.",
+      "description": "Acme Fit shows your week at a glance: steps, workouts, heart rate and sleep in one view.\n\nPlan runs and rides, follow them on Apple Watch, and keep your streak going.",
+      "keywords": "running,cycling,steps,workout,streak,sleep,heart rate,training"
+     }
+    },
+    "es-ES": {
+     "play": {
+      "name": "Acme Fit: corre, pedalea",
+      "short": "Tu semana de carreras, rutas y sueño de un vistazo. Mantén la racha.",
+      "full": "Acme Fit muestra tu semana de un vistazo: pasos, entrenos, frecuencia cardiaca y sueño en una sola vista.\n\nPlanifica carreras y rutas en bici, síguelas en tu reloj y mantén la racha con recordatorios suaves.",
+      "releaseNotes": "La vista semanal: pasos, entrenos y sueño, uno al lado del otro.",
+      "adHeadlines": [
+       "Tu semana en una vista",
+       "Corre, pedalea, descansa",
+       "Mantén la racha"
+      ],
+      "adDescriptions": [
+       "Pasos, entrenos, pulso y sueño, uno al lado del otro. Planifica la semana en tu reloj."
+      ]
+     },
+     "appstore": {
+      "name": "Acme Fit",
+      "subtitle": "Carreras, rutas, descanso",
+      "keywords": "correr,ciclismo,pasos,entreno,racha,sueño,pulso",
+      "promo": "Acme Fit 3.0 pone toda tu semana en una sola pantalla.",
+      "description": "Acme Fit muestra tu semana de un vistazo: pasos, entrenos, frecuencia cardiaca y sueño en una sola vista.\n\nPlanifica carreras y rutas en bici, síguelas en el Apple Watch y mantén la racha."
+     }
+    }
+   },
+   "strings": {
+    "en-US": {
+     "today.title": "See your week at a glance",
+     "activity.title": "Steps and minutes, day by day",
+     "workouts.title": "Runs, rides and lifts in one log",
+     "workout.title": "Every run, mapped",
+     "run-route.title": "Plan a route before you go",
+     "heart-rate.title": "Train in the right zone",
+     "sleep.title": "See how well you slept",
+     "streak.title": "Keep the streak going",
+     "plans.title": "A 5K plan that fits your week",
+     "profile.title": "Your records in one place",
+     "feature.title": "Acme Fit",
+     "feature.sub": "Your week of runs, rides and rest",
+     "today-lifestyle.title": "Your week, on the move",
+     "ad-wide.title": "Your week of runs in one view",
+     "ad-wide.sub": "Steps, workouts and sleep, side by side",
+     "search.title": "Run, ride, rest",
+     "search.sub": "One week, one view"
+    },
+    "es-ES": {
+     "today.title": "Tu semana de un vistazo",
+     "workout.title": "Cada carrera, en el mapa",
+     "feature.title": "Acme Fit",
+     "feature.sub": "Tu semana de carreras, rutas y descanso",
+     "today-lifestyle.title": "Tu semana, en marcha",
+     "activity.title": "Pasos y minutos, día a día",
+     "workouts.title": "Carreras, rutas y pesas en un registro",
+     "run-route.title": "Planifica la ruta antes de salir",
+     "heart-rate.title": "Entrena en la zona adecuada",
+     "sleep.title": "Mira qué tal has dormido",
+     "streak.title": "Mantén la racha",
+     "plans.title": "Un plan de 5K a tu medida",
+     "profile.title": "Tus récords en un solo lugar"
+    }
+   },
+   "mt": {
+    "es-ES": [
+     "appstore.subtitle",
+     "play.short",
+     "strings.workout.title",
+     "play.full",
+     "play.releaseNotes",
+     "play.adHeadlines",
+     "play.adDescriptions",
+     "appstore.promo",
+     "appstore.description",
+     "strings.workouts.title",
+     "strings.run-route.title",
+     "strings.heart-rate.title",
+     "strings.sleep.title",
+     "strings.plans.title",
+     "strings.profile.title"
+    ]
+   },
+   "capture": {
+    "apps": {
+     "web": {
+      "design": "acme-fit-design.bluedoc.json"
+     }
+    }
+   },
+   "variants": [
+    {
+     "id": "runners",
+     "platform": "appstore",
+     "kind": "cpp",
+     "title": "Runners",
+     "adGroup": "Runners",
+     "order": {
+      "appstore/iphone-69": [
+       "run-route",
+       "workout"
+      ],
+      "appstore/iphone": [
+       "run-route",
+       "workout"
+      ],
+      "appstore/ipad": [
+       "run-route",
+       "workout"
+      ]
+     },
+     "text": {
+      "en-US": {
+       "promo": "Plan the route, run it, see every mile of your week."
+      }
+     }
+    },
+    {
+     "id": "lifestyle",
+     "platform": "appstore",
+     "kind": "ppo",
+     "title": "B: Lifestyle",
+     "swap": {
+      "today": "today-lifestyle"
+     }
+    },
+    {
+     "id": "lifestyle-copy",
+     "platform": "play",
+     "kind": "sle",
+     "title": "B: Lifestyle",
+     "locale": "en-US",
+     "swap": {
+      "today": "today-lifestyle"
+     },
+     "text": {
+      "en-US": {
+       "short": "Your week of runs, rides and sleep, on the move. Keep the streak going."
+      }
+     }
+    }
+   ],
+   "translatedFrom": {
+    "es-ES": {
+     "play.full": "5d6f3b95ee8201e5",
+     "play.releaseNotes": "c872870fac4ea6be",
+     "play.adHeadlines": "fb43e4d1bf6b4df6",
+     "play.adDescriptions": "e83577ffaefbdb7f",
+     "appstore.promo": "86ff82102270585b",
+     "appstore.description": "4d72937fdb108745",
+     "strings.activity.title": "07d55152a20637c0",
+     "strings.workouts.title": "80f370feaf255d44",
+     "strings.run-route.title": "d3bb505599fa189f",
+     "strings.heart-rate.title": "e086aa31318c75bc",
+     "strings.sleep.title": "67ab10e761a0f434",
+     "strings.streak.title": "8b33291f9a4a2cbd",
+     "strings.plans.title": "0a2a752627dbba62",
+     "strings.profile.title": "b360d78e47016082"
+    }
+   }
+  },
+  "caa902878cf51410": {
+   "type": "board",
+   "id": "shots",
+   "targets": [
+    "listing"
+   ],
+   "themes": [
+    {
+     "id": "acme",
+     "label": "Acme",
+     "tokens": {
+      "accent": "#1d4ed8",
+      "bg": "#f8fafc",
+      "fg": "#0f172a"
+     }
+    }
+   ],
+   "artboards": [
+    {
+     "id": "today",
+     "title": "Today",
+     "device": "shot",
+     "fidelity": "hifi",
+     "sets": [
+      "play/phone",
+      "play/tablet7",
+      "play/tablet10",
+      "appstore/iphone-69",
+      "appstore/iphone",
+      "appstore/ipad"
+     ],
+     "recipe": {
+      "targets": [
+       "web"
+      ],
+      "route": "today",
+      "locales": [
+       "en-US"
+      ]
+     }
+    },
+    {
+     "id": "activity",
+     "title": "Activity",
+     "device": "shot",
+     "fidelity": "hifi",
+     "sets": [
+      "play/phone",
+      "play/tablet7",
+      "play/tablet10",
+      "appstore/iphone-69",
+      "appstore/iphone",
+      "appstore/ipad"
+     ],
+     "recipe": {
+      "targets": [
+       "web"
+      ],
+      "route": "activity",
+      "locales": [
+       "en-US"
+      ]
+     }
+    },
+    {
+     "id": "workouts",
+     "title": "Workouts",
+     "device": "shot",
+     "fidelity": "hifi",
+     "sets": [
+      "play/phone",
+      "play/tablet7",
+      "play/tablet10",
+      "appstore/iphone-69",
+      "appstore/iphone",
+      "appstore/ipad"
+     ],
+     "recipe": {
+      "targets": [
+       "web"
+      ],
+      "route": "workouts",
+      "locales": [
+       "en-US"
+      ]
+     }
+    },
+    {
+     "id": "workout",
+     "title": "Workout",
+     "device": "shot",
+     "fidelity": "hifi",
+     "sets": [
+      "play/phone",
+      "play/tablet7",
+      "play/tablet10",
+      "appstore/iphone-69",
+      "appstore/iphone",
+      "appstore/ipad"
+     ],
+     "recipe": {
+      "targets": [
+       "web"
+      ],
+      "route": "workout",
+      "locales": [
+       "en-US"
+      ]
+     }
+    },
+    {
+     "id": "run-route",
+     "title": "Run route",
+     "device": "shot",
+     "fidelity": "hifi",
+     "sets": [
+      "play/phone",
+      "play/tablet7",
+      "play/tablet10",
+      "appstore/iphone-69",
+      "appstore/iphone",
+      "appstore/ipad"
+     ]
+    },
+    {
+     "id": "heart-rate",
+     "title": "Heart rate",
+     "device": "shot",
+     "fidelity": "hifi",
+     "sets": [
+      "play/phone",
+      "play/tablet7",
+      "play/tablet10",
+      "appstore/iphone-69",
+      "appstore/iphone",
+      "appstore/ipad"
+     ]
+    },
+    {
+     "id": "sleep",
+     "title": "Sleep",
+     "device": "shot",
+     "fidelity": "hifi",
+     "sets": [
+      "play/phone",
+      "play/tablet7",
+      "play/tablet10",
+      "appstore/iphone-69",
+      "appstore/iphone",
+      "appstore/ipad"
+     ]
+    },
+    {
+     "id": "streak",
+     "title": "Streak",
+     "device": "shot",
+     "fidelity": "hifi",
+     "sets": [
+      "play/phone",
+      "play/tablet7",
+      "play/tablet10",
+      "appstore/iphone-69",
+      "appstore/iphone",
+      "appstore/ipad"
+     ]
+    },
+    {
+     "id": "plans",
+     "title": "Plans",
+     "device": "shot",
+     "fidelity": "hifi",
+     "sets": [
+      "appstore/iphone-69",
+      "appstore/iphone",
+      "appstore/ipad"
+     ]
+    },
+    {
+     "id": "profile",
+     "title": "Profile",
+     "device": "shot",
+     "fidelity": "hifi",
+     "sets": [
+      "appstore/iphone-69",
+      "appstore/iphone",
+      "appstore/ipad"
+     ],
+     "recipe": {
+      "targets": [
+       "web"
+      ],
+      "route": "profile",
+      "locales": [
+       "en-US"
+      ]
+     }
+    },
+    {
+     "id": "today-lifestyle",
+     "title": "Today, lifestyle",
+     "device": "shot",
+     "fidelity": "hifi",
+     "variantOf": "today",
+     "sets": [
+      "play/phone",
+      "play/tablet7",
+      "play/tablet10",
+      "appstore/iphone-69",
+      "appstore/iphone",
+      "appstore/ipad"
+     ]
+    },
+    {
+     "id": "watch-rings",
+     "title": "Activity rings",
+     "device": "shot",
+     "fidelity": "hifi",
+     "sets": [
+      "play/wear",
+      "appstore/watch"
+     ]
+    },
+    {
+     "id": "watch-workout",
+     "title": "Watch workout",
+     "device": "shot",
+     "fidelity": "hifi",
+     "sets": [
+      "play/wear",
+      "appstore/watch"
+     ]
+    },
+    {
+     "id": "watch-heart",
+     "title": "Watch heart rate",
+     "device": "shot",
+     "fidelity": "hifi",
+     "sets": [
+      "play/wear",
+      "appstore/watch"
+     ]
+    },
+    {
+     "id": "watch-pace",
+     "title": "Watch pace",
+     "device": "shot",
+     "fidelity": "hifi",
+     "sets": [
+      "play/wear",
+      "appstore/watch"
+     ]
+    },
+    {
+     "id": "watch-route",
+     "title": "Watch route",
+     "device": "shot",
+     "fidelity": "hifi",
+     "sets": [
+      "play/wear",
+      "appstore/watch"
+     ]
+    },
+    {
+     "id": "watch-summary",
+     "title": "Watch summary",
+     "device": "shot",
+     "fidelity": "hifi",
+     "sets": [
+      "play/wear",
+      "appstore/watch"
+     ]
+    },
+    {
+     "id": "watch-streak",
+     "title": "Watch streak",
+     "device": "shot",
+     "fidelity": "hifi",
+     "sets": [
+      "play/wear",
+      "appstore/watch"
+     ]
+    },
+    {
+     "id": "watch-face",
+     "title": "Watch face",
+     "device": "shot",
+     "fidelity": "hifi",
+     "sets": [
+      "play/wear",
+      "appstore/watch"
+     ]
+    },
+    {
+     "id": "watch-sleep",
+     "title": "Watch sleep",
+     "device": "shot",
+     "fidelity": "hifi",
+     "sets": [
+      "appstore/watch"
+     ]
+    },
+    {
+     "id": "watch-timer",
+     "title": "Interval timer",
+     "device": "shot",
+     "fidelity": "hifi",
+     "sets": [
+      "appstore/watch"
+     ]
+    },
+    {
+     "id": "feature",
+     "title": "Feature graphic",
+     "device": "asset",
+     "asset": "play/feature",
+     "fidelity": "hifi"
+    },
+    {
+     "id": "ad-wide",
+     "title": "Google Ads image",
+     "device": "asset",
+     "asset": "play/ad-landscape",
+     "fidelity": "hifi",
+     "locale": "en-US"
+    },
+    {
+     "id": "search",
+     "title": "Search results asset",
+     "device": "asset",
+     "asset": "appstore/search",
+     "fidelity": "hifi",
+     "locale": "en-US"
+    }
+   ]
   }
  },
  "html": {
@@ -858,6 +1504,23 @@
   "61e9ad175fd67f38": "<main class=\"asset\" data-bd=\"feature\" style=\"justify-content:center; text-align:center; background:linear-gradient(110deg, var(--brand-bg), color-mix(in oklch, var(--brand-bg), var(--brand-accent) 35%))\">\n  <div class=\"stack gap-2\" data-bd=\"copy\">\n    <h1 class=\"asset-title\" data-bd=\"title\" data-l10n=\"feature.title\">Acme Fit</h1>\n    <p class=\"asset-sub\" data-bd=\"sub\" data-l10n=\"feature.sub\">Your week of runs, rides and rest</p>\n  </div>\n</main>\n",
   "5fee49d569078b7c": "<main class=\"shot\" data-bd=\"today-lifestyle\">\n  <h1 class=\"shot-cap\" data-bd=\"cap\" data-l10n=\"today-lifestyle.title\">Your week, on the move</h1>\n  <div class=\"shot-frame\" data-bd=\"frame\">\n    <div class=\"shot-ui\" data-bd=\"ui\">\n      <main class=\"screen safe stack gap-4\" data-bd=\"screen\">\n        <header class=\"row between\" data-bd=\"greeting\">\n          <div class=\"stack gap-1\"><span class=\"caption muted\">Saturday 10 October</span><h2 class=\"title\">This week</h2></div>\n          <span class=\"avatar\" data-bd=\"avatar\">AF</span>\n        </header>\n        <section class=\"card stack center gap-3\" data-bd=\"steps\" data-callout>\n          <div class=\"ring\" style=\"--v:.72; --size: 168px; --thick: 14px\"><div class=\"stack center\"><span class=\"num\" style=\"font-size:34px\">51,214</span><span class=\"caption muted\">of 70,000 steps</span></div></div>\n          <span class=\"badge ok\">72% of the week's goal</span>\n        </section>\n        <section class=\"grid cols-3 gap-3\" data-bd=\"stats\">\n          <div class=\"card kpi\"><span class=\"label\">Runs</span><span class=\"num\">4</span><span class=\"caption muted\">this week</span></div>\n          <div class=\"card kpi\"><span class=\"label\">Rides</span><span class=\"num\">2</span><span class=\"caption muted\">this week</span></div>\n          <div class=\"card kpi\"><span class=\"label\">Sleep</span><span class=\"num\">7.4</span><span class=\"caption muted\">h a night</span></div>\n        </section>\n        <section class=\"card stack gap-2\" data-bd=\"days\">\n          <span class=\"label\">Active minutes</span>\n          <div class=\"row gap-2\" style=\"align-items:flex-end; height:72px\">\n            <i style=\"flex:1; height:40%; background:var(--accent); border-radius:4px\"></i><i style=\"flex:1; height:70%; background:var(--accent); border-radius:4px\"></i>\n            <i style=\"flex:1; height:55%; background:var(--accent); border-radius:4px\"></i><i style=\"flex:1; height:90%; background:var(--accent); border-radius:4px\"></i>\n            <i style=\"flex:1; height:30%; background:var(--accent); border-radius:4px\"></i><i style=\"flex:1; height:80%; background:var(--accent); border-radius:4px\"></i>\n            <i style=\"flex:1; height:62%; background:var(--accent); border-radius:4px; opacity:.5\"></i>\n          </div>\n        </section>\n      </main>\n    </div>\n  </div>\n</main>\n",
   "a73ff84676ea5bad": "<main class=\"asset\" data-bd=\"search\" style=\"justify-content:center; text-align:center; background:radial-gradient(circle at 70% 30%, color-mix(in oklch, var(--brand-bg), var(--brand-accent) 40%), var(--brand-bg) 65%)\">\n  <div class=\"stack gap-2 center\" data-bd=\"copy\">\n    <h1 class=\"asset-title\" data-bd=\"title\" data-l10n=\"search.title\">Run, ride, rest</h1>\n    <p class=\"asset-sub\" data-bd=\"sub\" data-l10n=\"search.sub\">One week, one view</p>\n  </div>\n</main>\n",
-  "408722b8d03195ad": "<main class=\"asset\" data-bd=\"ad-wide\" style=\"justify-content:space-between; gap:48px; padding:0 72px; background:linear-gradient(120deg, var(--brand-bg), color-mix(in oklch, var(--brand-bg), var(--brand-accent) 30%))\">\n  <div class=\"stack gap-3\" data-bd=\"copy\" style=\"max-width:560px\">\n    <h1 class=\"asset-title\" data-bd=\"title\" data-l10n=\"ad-wide.title\">Your week of runs in one view</h1>\n    <p class=\"asset-sub\" data-bd=\"sub\" data-l10n=\"ad-wide.sub\">Steps, workouts and sleep, side by side</p>\n  </div>\n  <div class=\"ring\" data-bd=\"ring\" style=\"--v:.72; --size: 300px; --thick: 26px; flex:none\"><div class=\"stack center\"><span class=\"num\" style=\"font-size:56px; color:var(--brand-bg)\">72%</span><span class=\"caption\" style=\"color:var(--brand-bg)\">of the week's goal</span></div></div>\n</main>\n"
+  "408722b8d03195ad": "<main class=\"asset\" data-bd=\"ad-wide\" style=\"justify-content:space-between; gap:48px; padding:0 72px; background:linear-gradient(120deg, var(--brand-bg), color-mix(in oklch, var(--brand-bg), var(--brand-accent) 30%))\">\n  <div class=\"stack gap-3\" data-bd=\"copy\" style=\"max-width:560px\">\n    <h1 class=\"asset-title\" data-bd=\"title\" data-l10n=\"ad-wide.title\">Your week of runs in one view</h1>\n    <p class=\"asset-sub\" data-bd=\"sub\" data-l10n=\"ad-wide.sub\">Steps, workouts and sleep, side by side</p>\n  </div>\n  <div class=\"ring\" data-bd=\"ring\" style=\"--v:.72; --size: 300px; --thick: 26px; flex:none\"><div class=\"stack center\"><span class=\"num\" style=\"font-size:56px; color:var(--brand-bg)\">72%</span><span class=\"caption\" style=\"color:var(--brand-bg)\">of the week's goal</span></div></div>\n</main>\n",
+  "111618fe96e90c03": "<main class=\"shot\" data-bd=\"activity\">\n  <h1 class=\"shot-cap\" data-bd=\"cap\" data-l10n=\"activity.title\">Steps and minutes, day by day</h1>\n  <div class=\"shot-frame\" data-bd=\"frame\">\n    <div class=\"shot-ui\" data-bd=\"ui\">\n      <main class=\"screen safe stack gap-4\" data-bd=\"screen\">\n        <header class=\"stack gap-2\" data-bd=\"head\">\n          <h2 class=\"title\">Activity</h2>\n          <div class=\"row gap-2\"><span class=\"chip\">Day</span><span class=\"chip active\">Week</span><span class=\"chip\">Month</span></div>\n        </header>\n        <section class=\"card stack gap-3\" data-bd=\"steps\" data-callout>\n          <div class=\"stack gap-1\"><span class=\"label\">Steps this week</span><span class=\"num\" style=\"font-size:34px\">55,314</span></div>\n          <div class=\"row gap-2\" style=\"align-items:flex-end; height:140px\">\n            <i style=\"flex:1; height:48%; background:color-mix(in srgb, var(--accent) 35%, var(--surface)); border-radius:6px 6px 2px 2px\"></i>\n            <i style=\"flex:1; height:74%; background:color-mix(in srgb, var(--accent) 35%, var(--surface)); border-radius:6px 6px 2px 2px\"></i>\n            <i style=\"flex:1; height:61%; background:color-mix(in srgb, var(--accent) 35%, var(--surface)); border-radius:6px 6px 2px 2px\"></i>\n            <i style=\"flex:1; height:92%; background:color-mix(in srgb, var(--accent) 35%, var(--surface)); border-radius:6px 6px 2px 2px\"></i>\n            <i style=\"flex:1; height:38%; background:color-mix(in srgb, var(--accent) 35%, var(--surface)); border-radius:6px 6px 2px 2px\"></i>\n            <i style=\"flex:1; height:86%; background:var(--accent); border-radius:6px 6px 2px 2px\"></i>\n            <i style=\"flex:1; height:20%; background:var(--surface); border-radius:6px 6px 2px 2px\"></i>\n          </div>\n          <div class=\"row between caption muted\"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div>\n        </section>\n        <section class=\"grid cols-3 gap-3\" data-bd=\"stats\">\n          <div class=\"card kpi\"><span class=\"label\">Active</span><span class=\"num\">286</span><span class=\"caption muted\">min</span></div>\n          <div class=\"card kpi\"><span class=\"label\">Distance</span><span class=\"num\">38.2</span><span class=\"caption muted\">km</span></div>\n          <div class=\"card kpi\"><span class=\"label\">Resting</span><span class=\"num\">58</span><span class=\"caption muted\">bpm</span></div>\n        </section>\n      </main>\n    </div>\n  </div>\n</main>\n",
+  "3eebed8410c8bb53": "<main class=\"shot\" data-bd=\"workouts\">\n  <h1 class=\"shot-cap\" data-bd=\"cap\" data-l10n=\"workouts.title\">Runs, rides and lifts in one log</h1>\n  <div class=\"shot-frame\" data-bd=\"frame\">\n    <div class=\"shot-ui\" data-bd=\"ui\">\n      <main class=\"screen safe stack gap-4\" data-bd=\"screen\">\n        <header class=\"stack gap-2\" data-bd=\"head\">\n          <h2 class=\"title\">Workouts</h2>\n          <div class=\"row gap-2\"><span class=\"chip active\">All</span><span class=\"chip\">Run</span><span class=\"chip\">Strength</span><span class=\"chip\">Ride</span></div>\n        </header>\n        <section class=\"card\" data-bd=\"log\" data-callout>\n          <div class=\"list\">\n            <div class=\"item\"><span class=\"avatar\">R</span><div class=\"stack grow\"><b>Morning run</b><span class=\"caption muted\">Today · 5.2 km · 28 min</span></div><span class=\"muted\">›</span></div>\n            <div class=\"item\"><span class=\"avatar\">S</span><div class=\"stack grow\"><b>Strength</b><span class=\"caption muted\">Thu · 6 sets · 41 min</span></div><span class=\"muted\">›</span></div>\n            <div class=\"item\"><span class=\"avatar\">W</span><div class=\"stack grow\"><b>Evening walk</b><span class=\"caption muted\">Wed · 3.1 km · 35 min</span></div><span class=\"muted\">›</span></div>\n            <div class=\"item\"><span class=\"avatar\">C</span><div class=\"stack grow\"><b>Cycling</b><span class=\"caption muted\">Mon · 18.4 km · 52 min</span></div><span class=\"muted\">›</span></div>\n            <div class=\"item\"><span class=\"avatar\">R</span><div class=\"stack grow\"><b>Long run</b><span class=\"caption muted\">Sun · 12.0 km · 68 min</span></div><span class=\"muted\">›</span></div>\n          </div>\n        </section>\n        <button class=\"btn primary block\" data-bd=\"start\">Start a workout</button>\n      </main>\n    </div>\n  </div>\n</main>\n",
+  "e6c27e9969042c63": "<main class=\"shot\" data-bd=\"run-route\">\n  <h1 class=\"shot-cap\" data-bd=\"cap\" data-l10n=\"run-route.title\">Plan a route before you go</h1>\n  <div class=\"shot-frame\" data-bd=\"frame\">\n    <div class=\"shot-ui\" data-bd=\"ui\">\n      <main class=\"screen safe stack gap-4\" data-bd=\"screen\">\n        <header class=\"row between\" data-bd=\"head\"><div class=\"stack gap-1\"><span class=\"caption muted\">New route</span><h2 class=\"title\">Riverside loop</h2></div><span class=\"badge ok\">Loop</span></header>\n        <section class=\"card\" data-bd=\"map\" data-callout style=\"height:340px; padding:0; overflow:hidden; background:#e8f0e6\">\n          <svg viewBox=\"0 0 300 340\" width=\"100%\" height=\"100%\" preserveAspectRatio=\"xMidYMid slice\" aria-hidden=\"true\">\n            <path d=\"M0 250 C80 230 120 280 300 240\" stroke=\"#93c5fd\" stroke-width=\"28\" fill=\"none\"/>\n            <path d=\"M0 90 L300 60 M60 0 L90 340 M220 0 L200 340\" stroke=\"#fff\" stroke-width=\"9\"/>\n            <path d=\"M70 200 C70 140 110 110 150 110 S230 90 230 150 S200 220 150 215 S70 240 70 200 Z\" fill=\"none\" stroke=\"#1d4ed8\" stroke-width=\"6\" stroke-linejoin=\"round\"/>\n            <circle cx=\"70\" cy=\"200\" r=\"9\" fill=\"#16a34a\"/><circle cx=\"150\" cy=\"110\" r=\"5\" fill=\"#fff\" stroke=\"#1d4ed8\" stroke-width=\"3\"/><circle cx=\"230\" cy=\"150\" r=\"5\" fill=\"#fff\" stroke=\"#1d4ed8\" stroke-width=\"3\"/></svg>\n        </section>\n        <section class=\"grid cols-3 gap-3\" data-bd=\"stats\">\n          <div class=\"card kpi\"><span class=\"label\">Distance</span><span class=\"num\">8.4</span><span class=\"caption muted\">km</span></div>\n          <div class=\"card kpi\"><span class=\"label\">Climb</span><span class=\"num\">62</span><span class=\"caption muted\">m</span></div>\n          <div class=\"card kpi\"><span class=\"label\">At 5:20</span><span class=\"num\">45</span><span class=\"caption muted\">min</span></div>\n        </section>\n        <button class=\"btn primary block\" data-bd=\"send\">Send to watch</button>\n      </main>\n    </div>\n  </div>\n</main>\n",
+  "42958ca50ac4c2b0": "<main class=\"shot\" data-bd=\"heart-rate\">\n  <h1 class=\"shot-cap\" data-bd=\"cap\" data-l10n=\"heart-rate.title\">Train in the right zone</h1>\n  <div class=\"shot-frame\" data-bd=\"frame\">\n    <div class=\"shot-ui\" data-bd=\"ui\">\n      <main class=\"screen safe stack gap-4\" data-bd=\"screen\">\n        <header class=\"stack gap-1\" data-bd=\"head\"><span class=\"caption muted\">Morning run · heart rate</span><h2 class=\"title\">148 bpm average</h2></header>\n        <section class=\"card\" data-bd=\"chart\" style=\"height:180px; padding:12px\">\n          <svg viewBox=\"0 0 300 150\" width=\"100%\" height=\"100%\" preserveAspectRatio=\"none\" aria-hidden=\"true\">\n            <rect x=\"0\" y=\"0\" width=\"300\" height=\"40\" fill=\"#fee2e2\"/><rect x=\"0\" y=\"40\" width=\"300\" height=\"45\" fill=\"#ffedd5\"/><rect x=\"0\" y=\"85\" width=\"300\" height=\"65\" fill=\"#dcfce7\"/>\n            <path d=\"M0 130 C30 110 40 70 70 66 S110 52 140 58 S190 40 220 48 S270 70 300 90\" fill=\"none\" stroke=\"#dc2626\" stroke-width=\"4\"/></svg>\n        </section>\n        <section class=\"card stack gap-3\" data-bd=\"zones\" data-callout>\n          <span class=\"label\">Time in zones</span>\n          <div class=\"stack gap-1\"><div class=\"row between\"><span>Zone 5 · peak</span><span class=\"num\">2 min</span></div><div class=\"progress\"><span style=\"--v:.07; background:#dc2626\"></span></div></div>\n          <div class=\"stack gap-1\"><div class=\"row between\"><span>Zone 4 · threshold</span><span class=\"num\">9 min</span></div><div class=\"progress\"><span style=\"--v:.32; background:#f97316\"></span></div></div>\n          <div class=\"stack gap-1\"><div class=\"row between\"><span>Zone 3 · aerobic</span><span class=\"num\">14 min</span></div><div class=\"progress\"><span style=\"--v:.52; background:#16a34a\"></span></div></div>\n          <div class=\"stack gap-1\"><div class=\"row between\"><span>Zone 2 · easy</span><span class=\"num\">3 min</span></div><div class=\"progress\"><span style=\"--v:.11; background:#22c55e\"></span></div></div>\n        </section>\n      </main>\n    </div>\n  </div>\n</main>\n",
+  "c131ef438281f986": "<main class=\"shot\" data-bd=\"sleep\">\n  <h1 class=\"shot-cap\" data-bd=\"cap\" data-l10n=\"sleep.title\">See how well you slept</h1>\n  <div class=\"shot-frame\" data-bd=\"frame\">\n    <div class=\"shot-ui\" data-bd=\"ui\" style=\"--bg:#0f172a; --fg:#e2e8f0; --surface:#1e293b; --border:#334155; --muted:#94a3b8\">\n      <main class=\"screen safe stack gap-4\" data-bd=\"screen\">\n        <header class=\"stack gap-1\" data-bd=\"head\"><span class=\"caption muted\">Last night · 23:10 to 06:48</span><h2 class=\"title\">7 h 38 min</h2></header>\n        <section class=\"card stack gap-2\" data-bd=\"stages\" data-callout>\n          <span class=\"label\">Stages</span>\n          <div class=\"row\" style=\"height:120px; align-items:stretch; gap:3px\">\n            <i style=\"flex:2; background:#818cf8; margin-top:40px; border-radius:4px\"></i><i style=\"flex:3; background:#4f46e5; margin-top:80px; border-radius:4px\"></i>\n            <i style=\"flex:2; background:#818cf8; margin-top:40px; border-radius:4px\"></i><i style=\"flex:1; background:#c4b5fd; border-radius:4px; margin-bottom:60px\"></i>\n            <i style=\"flex:3; background:#818cf8; margin-top:40px; border-radius:4px\"></i><i style=\"flex:2; background:#4f46e5; margin-top:80px; border-radius:4px\"></i>\n            <i style=\"flex:2; background:#c4b5fd; border-radius:4px; margin-bottom:60px\"></i><i style=\"flex:3; background:#818cf8; margin-top:40px; border-radius:4px\"></i>\n          </div>\n          <div class=\"row between caption muted\"><span>23:10</span><span>03:00</span><span>06:48</span></div>\n        </section>\n        <section class=\"grid cols-3 gap-3\" data-bd=\"stats\">\n          <div class=\"card kpi\"><span class=\"label\">Deep</span><span class=\"num\">1:24</span><span class=\"caption muted\">h</span></div>\n          <div class=\"card kpi\"><span class=\"label\">REM</span><span class=\"num\">1:52</span><span class=\"caption muted\">h</span></div>\n          <div class=\"card kpi\"><span class=\"label\">Resting</span><span class=\"num\">54</span><span class=\"caption muted\">bpm</span></div>\n        </section>\n        <span class=\"badge ok\" data-bd=\"note\">22 min more than your week's average</span>\n      </main>\n    </div>\n  </div>\n</main>\n",
+  "4228b324fb6c924d": "<main class=\"shot\" data-bd=\"plans\">\n  <h1 class=\"shot-cap\" data-bd=\"cap\" data-l10n=\"plans.title\">A 5K plan that fits your week</h1>\n  <div class=\"shot-frame\" data-bd=\"frame\">\n    <div class=\"shot-ui\" data-bd=\"ui\">\n      <main class=\"screen safe stack gap-4\" data-bd=\"screen\">\n        <header class=\"stack gap-1\" data-bd=\"head\"><span class=\"caption muted\">Plan · week 3 of 8</span><h2 class=\"title\">First 5K</h2></header>\n        <section class=\"card stack gap-2\" data-bd=\"progress\"><div class=\"row between\"><span class=\"label\">Plan done</span><span class=\"num\">31%</span></div><div class=\"progress\"><span style=\"--v:.31\"></span></div></section>\n        <section class=\"card\" data-bd=\"week\" data-callout>\n          <div class=\"list\">\n            <div class=\"item\"><span class=\"badge ok\">Done</span><div class=\"stack grow\"><b>Easy run</b><span class=\"caption muted\">Mon · 3 km</span></div></div>\n            <div class=\"item\"><span class=\"badge ok\">Done</span><div class=\"stack grow\"><b>Intervals</b><span class=\"caption muted\">Wed · 6 × 400 m</span></div></div>\n            <div class=\"item\"><span class=\"badge warn\">Today</span><div class=\"stack grow\"><b>Tempo run</b><span class=\"caption muted\">Fri · 20 min</span></div></div>\n            <div class=\"item\"><span class=\"badge\">Sun</span><div class=\"stack grow\"><b>Long run</b><span class=\"caption muted\">Sun · 5 km</span></div></div>\n          </div>\n        </section>\n        <button class=\"btn primary block\" data-bd=\"move\">Move a run</button>\n      </main>\n    </div>\n  </div>\n</main>\n",
+  "740c756a61e8c50f": "<main class=\"shot\" data-bd=\"profile\">\n  <h1 class=\"shot-cap\" data-bd=\"cap\" data-l10n=\"profile.title\">Your records in one place</h1>\n  <div class=\"shot-frame\" data-bd=\"frame\">\n    <div class=\"shot-ui\" data-bd=\"ui\">\n      <main class=\"screen safe stack gap-4\" data-bd=\"screen\">\n        <header class=\"stack center gap-2\" data-bd=\"head\"><span class=\"avatar\" style=\"width:72px; height:72px; font-size:26px\">AF</span><h2 class=\"title\">Acme Fit member</h2><span class=\"caption muted\">you@acme.test · since March</span></header>\n        <section class=\"grid cols-3 gap-3\" data-bd=\"records\" data-callout>\n          <div class=\"card kpi\"><span class=\"label\">Workouts</span><span class=\"num\">128</span></div>\n          <div class=\"card kpi\"><span class=\"label\">Streak</span><span class=\"num\">12 d</span></div>\n          <div class=\"card kpi\"><span class=\"label\">Best day</span><span class=\"num\">14.2k</span></div>\n        </section>\n        <section class=\"card\" data-bd=\"settings\">\n          <div class=\"list\">\n            <div class=\"item\"><span class=\"grow\">Daily goal</span><span class=\"muted\">10,000 steps ›</span></div>\n            <div class=\"item\"><span class=\"grow\">Devices</span><span class=\"muted\">Acme Watch ›</span></div>\n            <div class=\"item\"><span class=\"grow\">Friends</span><span class=\"muted\">8 ›</span></div>\n          </div>\n        </section>\n      </main>\n    </div>\n  </div>\n</main>\n",
+  "b26709d85c0bfdca": "<main class=\"shot\" data-bd=\"watch-workout\">\n  <div class=\"shot-frame\" data-bd=\"frame\">\n    <div class=\"shot-ui\" data-bd=\"ui\" style=\"background:#000; color:#fff\">\n      <main class=\"screen stack gap-2 center\" data-bd=\"screen\" style=\"background:#000; color:#fff; height:100%\">\n        <span class=\"caption\" data-bd=\"kind\" style=\"color:#22c55e\">Outdoor run</span>\n        <span class=\"num\" data-bd=\"time\" style=\"font-size:44px; color:#facc15\">26:41</span>\n        <span class=\"num\" data-bd=\"dist\" style=\"font-size:30px\">5.02 km</span>\n        <span class=\"caption\" data-bd=\"heart\" style=\"color:#f87171\">♥ 148 bpm</span>\n      </main>\n    </div>\n  </div>\n</main>\n",
+  "56cdbdc721248e35": "<main class=\"shot\" data-bd=\"watch-heart\">\n  <div class=\"shot-frame\" data-bd=\"frame\">\n    <div class=\"shot-ui\" data-bd=\"ui\" style=\"background:#000; color:#fff\">\n      <main class=\"screen stack gap-2 center\" data-bd=\"screen\" style=\"background:#000; color:#fff; height:100%\">\n        <span class=\"caption\" style=\"color:#a3a3a3\">Heart rate</span>\n        <span class=\"num\" data-bd=\"bpm\" style=\"font-size:56px; color:#f87171\">148</span>\n        <span class=\"badge\" data-bd=\"zone\" style=\"background:#7c2d12; color:#fed7aa\">Zone 3 · aerobic</span>\n        <svg viewBox=\"0 0 160 36\" width=\"150\" height=\"34\" aria-hidden=\"true\"><path d=\"M0 26 L30 26 L40 8 L52 34 L62 18 L90 18 L100 4 L112 30 L122 22 L160 22\" fill=\"none\" stroke=\"#f87171\" stroke-width=\"3\" stroke-linejoin=\"round\"/></svg>\n      </main>\n    </div>\n  </div>\n</main>\n",
+  "b20bbaf4ace58221": "<main class=\"shot\" data-bd=\"watch-pace\">\n  <div class=\"shot-frame\" data-bd=\"frame\">\n    <div class=\"shot-ui\" data-bd=\"ui\" style=\"background:#000; color:#fff\">\n      <main class=\"screen stack gap-2 center\" data-bd=\"screen\" style=\"background:#000; color:#fff; height:100%\">\n        <span class=\"caption\" style=\"color:#a3a3a3\">Pace · km 4</span>\n        <span class=\"num\" data-bd=\"pace\" style=\"font-size:50px; color:#38bdf8\">5:12</span>\n        <span class=\"caption\" data-bd=\"target\" style=\"color:#a3a3a3\">target 5:20 /km</span>\n        <span class=\"badge\" data-bd=\"ahead\" style=\"background:#14532d; color:#bbf7d0\">8 s ahead</span>\n      </main>\n    </div>\n  </div>\n</main>\n",
+  "33fc5d80b88173a3": "<main class=\"shot\" data-bd=\"watch-route\">\n  <div class=\"shot-frame\" data-bd=\"frame\">\n    <div class=\"shot-ui\" data-bd=\"ui\" style=\"background:#000; color:#fff\">\n      <main class=\"screen stack gap-1 center\" data-bd=\"screen\" style=\"background:#000; color:#fff; height:100%\">\n        <svg data-bd=\"map\" viewBox=\"0 0 160 120\" width=\"150\" height=\"112\" aria-hidden=\"true\">\n          <path d=\"M20 90 C20 50 50 30 80 32 S140 30 138 62 S110 104 80 100 S20 112 20 90 Z\" fill=\"none\" stroke=\"#38bdf8\" stroke-width=\"5\" stroke-linejoin=\"round\"/>\n          <circle cx=\"20\" cy=\"90\" r=\"6\" fill=\"#22c55e\"/><circle cx=\"138\" cy=\"62\" r=\"7\" fill=\"#fff\"/></svg>\n        <span class=\"caption\" data-bd=\"next\" style=\"color:#a3a3a3\">Turn left in 200 m</span>\n        <span class=\"num\" data-bd=\"left\" style=\"font-size:24px\">3.4 km to go</span>\n      </main>\n    </div>\n  </div>\n</main>\n",
+  "86b3de6ff5ef0b32": "<main class=\"shot\" data-bd=\"watch-summary\">\n  <div class=\"shot-frame\" data-bd=\"frame\">\n    <div class=\"shot-ui\" data-bd=\"ui\" style=\"background:#000; color:#fff\">\n      <main class=\"screen stack gap-2 center\" data-bd=\"screen\" style=\"background:#000; color:#fff; height:100%\">\n        <span class=\"caption\" style=\"color:#22c55e\">Run done</span>\n        <div class=\"grid cols-2 gap-2\" data-bd=\"stats\" style=\"width:78%; text-align:center\">\n          <div class=\"stack\"><span class=\"num\" style=\"font-size:24px\">5.02</span><span class=\"caption\" style=\"color:#a3a3a3\">km</span></div>\n          <div class=\"stack\"><span class=\"num\" style=\"font-size:24px; color:#facc15\">26:41</span><span class=\"caption\" style=\"color:#a3a3a3\">time</span></div>\n          <div class=\"stack\"><span class=\"num\" style=\"font-size:24px; color:#38bdf8\">5:19</span><span class=\"caption\" style=\"color:#a3a3a3\">/km</span></div>\n          <div class=\"stack\"><span class=\"num\" style=\"font-size:24px; color:#f87171\">148</span><span class=\"caption\" style=\"color:#a3a3a3\">bpm</span></div>\n        </div>\n      </main>\n    </div>\n  </div>\n</main>\n",
+  "a32904c94d2b157b": "<main class=\"shot\" data-bd=\"watch-streak\">\n  <div class=\"shot-frame\" data-bd=\"frame\">\n    <div class=\"shot-ui\" data-bd=\"ui\" style=\"background:#000; color:#fff\">\n      <main class=\"screen stack gap-1 center\" data-bd=\"screen\" style=\"background:#000; color:#fff; height:100%\">\n        <span class=\"num\" data-bd=\"days\" style=\"font-size:64px; line-height:1; color:#f59e0b\">23</span>\n        <span class=\"caption\" style=\"color:#fff\">days in a row</span>\n        <div class=\"row gap-1\" data-bd=\"week\" style=\"margin-top:8px\">\n          <i style=\"width:14px; height:14px; border-radius:50%; background:#f59e0b\"></i><i style=\"width:14px; height:14px; border-radius:50%; background:#f59e0b\"></i>\n          <i style=\"width:14px; height:14px; border-radius:50%; background:#f59e0b\"></i><i style=\"width:14px; height:14px; border-radius:50%; background:#f59e0b\"></i>\n          <i style=\"width:14px; height:14px; border-radius:50%; background:#f59e0b\"></i><i style=\"width:14px; height:14px; border-radius:50%; background:#f59e0b\"></i>\n          <i style=\"width:14px; height:14px; border-radius:50%; border:2px solid #f59e0b; box-sizing:border-box\"></i>\n        </div>\n      </main>\n    </div>\n  </div>\n</main>\n",
+  "0f8dd5b98a24db67": "<main class=\"shot\" data-bd=\"watch-face\">\n  <div class=\"shot-frame\" data-bd=\"frame\">\n    <div class=\"shot-ui\" data-bd=\"ui\" style=\"background:#000; color:#fff\">\n      <main class=\"screen stack gap-1 center\" data-bd=\"screen\" style=\"background:#000; color:#fff; height:100%\">\n        <span class=\"caption\" style=\"color:#a3a3a3\">SAT 10</span>\n        <span class=\"num\" data-bd=\"time\" style=\"font-size:68px; line-height:1; font-weight:300\">9:41</span>\n        <div class=\"row gap-3\" data-bd=\"complications\" style=\"margin-top:6px\">\n          <span class=\"caption\" style=\"color:#22c55e\">7,214</span><span class=\"caption\" style=\"color:#f87171\">♥ 62</span><span class=\"caption\" style=\"color:#f59e0b\">23 d</span>\n        </div>\n      </main>\n    </div>\n  </div>\n</main>\n",
+  "a56dc17cf16106ce": "<main class=\"shot\" data-bd=\"watch-sleep\">\n  <div class=\"shot-frame\" data-bd=\"frame\">\n    <div class=\"shot-ui\" data-bd=\"ui\" style=\"background:#000; color:#fff\">\n      <main class=\"screen stack gap-2 center\" data-bd=\"screen\" style=\"background:#000; color:#fff; height:100%\">\n        <span class=\"caption\" style=\"color:#a5b4fc\">Sleep</span>\n        <span class=\"num\" data-bd=\"hours\" style=\"font-size:44px\">7 h 38</span>\n        <div class=\"row\" data-bd=\"stages\" style=\"width:76%; height:18px; gap:2px\">\n          <i style=\"flex:2; background:#818cf8; border-radius:3px\"></i><i style=\"flex:3; background:#4f46e5; border-radius:3px\"></i><i style=\"flex:1; background:#c4b5fd; border-radius:3px\"></i><i style=\"flex:3; background:#818cf8; border-radius:3px\"></i>\n        </div>\n        <span class=\"caption\" style=\"color:#a3a3a3\">23:10 to 06:48</span>\n      </main>\n    </div>\n  </div>\n</main>\n",
+  "7c0269d8fec05199": "<main class=\"shot\" data-bd=\"watch-rings\">\n  <div class=\"shot-frame\" data-bd=\"frame\">\n    <div class=\"shot-ui\" data-bd=\"ui\" style=\"background:#000; color:#fff\">\n      <main class=\"screen stack gap-2 center\" data-bd=\"screen\" style=\"background:#000; color:#fff; height:100%\">\n        <div class=\"ring\" data-bd=\"ring\" style=\"--v:.72; --size: 132px; --thick: 14px; --accent:#22c55e; --border:#0f3d22; --bg:#000\"><div class=\"stack center\"><span class=\"num\" style=\"font-size:26px; color:#fff\">7,214</span><span class=\"caption\" style=\"color:#a3a3a3\">steps</span></div></div>\n        <span class=\"caption\" data-bd=\"goal\" style=\"color:#a3a3a3\">72% of today</span>\n      </main>\n    </div>\n  </div>\n</main>\n",
+  "bafaccbec62eec9a": "<main class=\"shot\" data-bd=\"watch-timer\">\n  <div class=\"shot-frame\" data-bd=\"frame\">\n    <div class=\"shot-ui\" data-bd=\"ui\" style=\"background:#000; color:#fff\">\n      <main class=\"screen stack gap-2 center\" data-bd=\"screen\" style=\"background:#000; color:#fff; height:100%\">\n        <div class=\"ring\" data-bd=\"ring\" style=\"--v:.6; --size: 128px; --thick: 10px; --accent:#f59e0b; --border:#3f2a06; --bg:#000\"><div class=\"stack center\"><span class=\"num\" style=\"font-size:30px; color:#fff\">0:48</span><span class=\"caption\" style=\"color:#a3a3a3\">rest</span></div></div>\n        <span class=\"caption\" data-bd=\"set\" style=\"color:#fff\">Interval 4 of 6 · 400 m next</span>\n      </main>\n    </div>\n  </div>\n</main>\n"
  }
 }

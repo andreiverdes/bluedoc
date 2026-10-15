@@ -7614,12 +7614,17 @@ function renderListing(lb) {
   wrap.append(pg);
   const io = 'IntersectionObserver' in window ? new IntersectionObserver(es => { for (const e of es) { const x = e.target._x; if (!x) continue; x.near = e.isIntersecting; if (x.near) mount(x); } trim(); }, { root: pg, rootMargin: '600px 0px' }) : null;
   // a capture for a shot's set and the locale ({url, file, fresh, fb, target, at, device}), else null: the set's target,
-  // then a web capture
+  // then a web capture that fits the set (listing.py capture_fits: its aspect within 5% of the set's UI viewport's)
+  const captureFits = (c, rule) => {
+    if (!(c.w > 0 && c.h > 0)) return true;
+    const [uw, uh] = Array.isArray(rule.ui) ? rule.ui : frameOf(rule);
+    return Math.abs((c.w / c.h) / (uw / uh) - 1) <= 0.05;
+  };
   function captureFor(a, rule) {
     const per = obj(obj(LST.captures)[a.id]), targets = [...new Set([rule.target, 'web'].filter(Boolean))];
     for (const fb of [false, true]) for (const t of targets) {
       const c = obj(obj(per[t])[fb ? DEF : L.locale]);
-      if (typeof c.file === 'string' && (!fb || L.locale !== DEF)) return { url: fileUrl(c.file), file: c.file, fresh: c.fresh !== false, fb, target: t,
+      if (typeof c.file === 'string' && (!fb || L.locale !== DEF) && (t === rule.target || captureFits(c, rule))) return { url: fileUrl(c.file), file: c.file, fresh: c.fresh !== false, fb, target: t,
         locale: fb ? DEF : L.locale, at: str(c.at, 25), device: str(c.device, 80) };
     }
     return null;
@@ -8054,11 +8059,11 @@ function renderListing(lb) {
     const cmds = [...by].map(([loc, as], k) => ['build.py l10n', sh(docFile()), '--accept', sh(loc), ...as.map(a => sh(a.listing.key)), ...(k ? ['--no-bump'] : []), ...as.flatMap(a => ['--resolves', a.id])].join(' '));
     return `## Accepted MT\n\n${lines.join('\n')}\n\n\`\`\`sh\n${cmds.join('\n')}\n\`\`\``;
   } });
-  // what Approve listing's dialog counts: MT strings not accepted (here or in the doc), shots that show a mock-up UI,
-  // the variants the approval covers (their style picks go under ## Decisions)
+  // what Approve listing's dialog counts: MT strings not accepted (here or in the doc), shots that show a mock-up UI in
+  // one of their sets (no capture fits it, no upload), the variants the approval covers (their style picks go under ## Decisions)
   L.approveSummary = () => ({
     mt: LOCS.reduce((n, l) => n + (Array.isArray(MTS[l]) ? MTS[l] : []).filter(k => !acceptDraft(l, k)).length, 0),
-    mock: abs.filter(a => a.device === 'shot' && !listingImage(a) && !Object.keys(obj(obj(LST.captures)[a.id])).length).length,
+    mock: abs.filter(a => a.device === 'shot' && !listingImage(a) && (Array.isArray(a.sets) ? a.sets : []).some(s => SETS.has(s) && !captureFor(a, SETS.get(s)))).length,
     variants: VARIANTS.length, variantIds: VARIANTS.map(v => v.id),
   });
 
