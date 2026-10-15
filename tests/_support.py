@@ -98,13 +98,14 @@ class Server:
         status, _, data = self.exchange(method, path, body, headers)
         return status, data
 
-    def exchange(self, method: str, path: str, body: bytes | None = None, headers: dict | None = None) -> tuple[int, dict, bytes]:
+    def exchange(self, method: str, path: str, body: bytes | None = None, headers: dict | None = None,
+                 timeout: float = 10) -> tuple[int, dict, bytes]:
         """req, with the response's headers (names lower-cased) too."""
         headers = {"Host": self.host, **(headers or {})}
         key = self.tmp.home / "key"
         if "X-Bluedoc" in headers and "X-Bluedoc-Key" not in headers and key.is_file():
             headers["X-Bluedoc-Key"] = key.read_text(encoding="utf-8").strip()
-        c = http.client.HTTPConnection("127.0.0.1", self.port, timeout=10)
+        c = http.client.HTTPConnection("127.0.0.1", self.port, timeout=timeout)
         try:
             c.request(method, path, body=body, headers=headers)
             r = c.getresponse()

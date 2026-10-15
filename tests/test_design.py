@@ -13,8 +13,9 @@ presentation`. `new presentation` writes a three-slide deck in one column that b
 notes over 2 KB are an ERROR, and so is a phone artboard in a presentation, while a design may hold a slide. The bundled
 deck, acme-fit-deck, is a presentation that builds clean: five hi-fi plain-kit slides in one column with notes, one
 revision; `--deck` and GET /__bluedoc/deck make it one HTML file that plays offline (in headless Chrome over file://
-with BLUEDOC_BROWSER_TESTS=1), and refuse other doc types. The server serves only screens and declared framework files,
-and wraps a screen whose framework is missing in the plain kit with a notice."""
+with BLUEDOC_BROWSER_TESTS=1), or with Chrome a PDF of one 16:9 page per slide, and refuse other doc types; the page's
+Export to… menu offers both. The server serves only screens and declared framework files, and wraps a screen whose
+framework is missing in the plain kit with a notice."""
 from __future__ import annotations
 
 import copy
@@ -28,7 +29,7 @@ from pathlib import Path
 from urllib.parse import quote
 
 from _support import EXAMPLES, Server, TempHome, load_json
-from test_page_state import CHROME, Browser, Tab, until
+from test_page_state import CHROME, Browser, ChromePage, Tab, until
 
 import build
 
@@ -675,9 +676,23 @@ def slide_page(data: dict, slide: dict) -> str:
     return "".join(p if isinstance(p, str) else data["assets"][p] for p in slide["parts"])
 
 
+def check_deck_pdf(t: unittest.TestCase, data: bytes) -> None:
+    """data is acme-fit-deck as Export to… PDF makes it: one 16:9 page per slide, drawing text (a blank page has no
+    font). Chrome writes the page and font objects uncompressed."""
+    t.assertTrue(data.startswith(b"%PDF-"), data[:20])
+    t.assertEqual(len(re.findall(rb"/Type\s*/Page\b", data)), len(DECK_IDS))
+    boxes = [[float(x) for x in m.split()] for m in re.findall(rb"/MediaBox\s*\[([^\]]*)\]", data)]
+    t.assertEqual(len(boxes), len(DECK_IDS))
+    for x0, y0, x1, y1 in boxes:
+        t.assertAlmostEqual((x1 - x0) / (y1 - y0), 16 / 9, places=3)
+    t.assertTrue(re.search(rb"/Type\s*/Font\b", data), "the pages draw no text")
+
+
 class DeckFile(unittest.TestCase):
     """`build.py <deck> --deck out.html`: acme-fit-deck as one HTML file that plays offline, every slide in deck order
-    wrapped in its kit with the brief's theme, its notes as HTML, nothing from the network; other doc types refused."""
+    wrapped in its kit with the brief's theme, its notes as HTML, nothing from the network; other doc types refused.
+    `--deck out.pdf` (or `--format pdf`): one 16:9 page per slide through headless Chrome; without Chrome, exit 1 naming
+    BLUEDOC_CHROME and no file."""
 
     def setUp(self) -> None:
         self.tmp = TempHome()
@@ -719,10 +734,35 @@ class DeckFile(unittest.TestCase):
             self.assertIn("only a presentation exports as a deck", r.stderr)
             self.assertFalse(self.out.exists())
 
+    def test_a_pdf_without_chrome_says_how_to_name_it(self) -> None:
+        self.tmp.env["BLUEDOC_CHROME"] = str(self.tmp.dir / "no-chrome")
+        pdf = self.out.with_suffix(".pdf")
+        for args in (("--deck", pdf), ("--deck", self.out, "--format", "pdf")):
+            r = self.tmp.run("build.py", self.doc_path, *args)
+            self.assertEqual(r.returncode, 1, r.stderr)
+            self.assertIn("a PDF needs Chrome or Chromium: set BLUEDOC_CHROME to its path", r.stderr)
+            self.assertFalse(pdf.exists() or self.out.exists())
+        r = self.tmp.run("build.py", self.doc_path, "--format", "pdf")
+        self.assertEqual(r.returncode, 2)
+        self.assertIn("--format goes with --deck", r.stderr)
+
+    @unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")
+    def test_the_deck_as_a_pdf(self) -> None:
+        self.tmp.env["BLUEDOC_CHROME"] = CHROME
+        pdf = self.out.with_suffix(".pdf")
+        r = self.tmp.run("build.py", self.doc_path, "--deck", pdf, timeout=120)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("5 slides", r.stderr)
+        check_deck_pdf(self, pdf.read_bytes())
+        r = self.tmp.run("build.py", self.doc_path, "--deck", self.out, "--format", "pdf", timeout=120)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertTrue(self.out.read_bytes().startswith(b"%PDF-"), "--format pdf beats the .html name")
+
 
 class DeckRoute(unittest.TestCase):
-    """GET /__bluedoc/deck?path=…&rev=…&theme=…: the same file as an attachment, a read with no key; the revision and
-    theme asked for; 400 for another doc type or an unknown revision."""
+    """GET /__bluedoc/deck?path=…&rev=…&theme=…&format=…: the same file as an attachment, a read with no key; the
+    revision and theme asked for; 400 for another doc type, an unknown revision or format. format=pdf: the PDF as an
+    attachment (headless Chrome), 501 naming BLUEDOC_CHROME without it; format=print: the file in the tab, sandboxed."""
 
     def setUp(self) -> None:
         self.tmp = TempHome()
@@ -737,7 +777,7 @@ class DeckRoute(unittest.TestCase):
 
     def deck(self, url: str, **q: str) -> tuple[int, dict, bytes]:
         query = "&".join(f"{k}={quote(v)}" for k, v in {"path": url, **q}.items())
-        return self.server.exchange("GET", f"/__bluedoc/deck?{query}")
+        return self.server.exchange("GET", f"/__bluedoc/deck?{query}", timeout=120)
 
     def test_the_deck_downloads_as_an_attachment(self) -> None:
         status, headers, body = self.deck(self.url)
@@ -778,6 +818,31 @@ class DeckRoute(unittest.TestCase):
         self.assertEqual(self.deck(self.url.replace("acme-fit-deck", "acme-gone"))[0], 404)
         status, _, _ = self.server.exchange("GET", f"/__bluedoc/deck?path={quote(self.url)}", headers={"Host": "evil.example:80"})
         self.assertEqual(status, 403)
+        self.assertEqual(self.deck(self.url, format="docx")[0], 400)
+
+    def test_print_and_a_pdf_without_chrome(self) -> None:
+        self.server.stop()
+        self.tmp.env["BLUEDOC_CHROME"] = str(self.tmp.dir / "no-chrome")
+        self.server.start()
+        status, _, body = self.deck(self.url, format="pdf")
+        self.assertEqual(status, 501, body[:300])
+        self.assertIn("a PDF needs Chrome or Chromium: set BLUEDOC_CHROME to its path", json.loads(body)["error"])
+        status, headers, body = self.deck(self.url, format="print")
+        self.assertEqual(status, 200, body[:300])
+        self.assertNotIn("content-disposition", headers, "the print view shows in its tab")
+        self.assertEqual(headers["content-security-policy"], "sandbox allow-scripts allow-modals; frame-ancestors 'none'")
+        self.assertEqual([s["id"] for s in deck_data(body.decode("utf-8"))["slides"]], DECK_IDS)
+        status, headers, _ = self.deck(self.url, format="html")
+        self.assertEqual(status, 200)
+        self.assertTrue(headers["content-disposition"].startswith('attachment; filename="acme-fit-deck.html"'), headers)
+
+    @unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")
+    def test_the_pdf_downloads_as_an_attachment(self) -> None:
+        status, headers, body = self.deck(self.url, format="pdf", theme="forest")
+        self.assertEqual(status, 200, body[:300])
+        self.assertEqual(headers["content-type"], "application/pdf")
+        self.assertTrue(headers["content-disposition"].startswith('attachment; filename="acme-fit-deck.pdf"'), headers)
+        check_deck_pdf(self, body)
 
 
 @unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")
@@ -843,6 +908,146 @@ class DeckPlayer(unittest.TestCase):
             self.browser.call("Input.dispatchMouseEvent", {"type": typ, "x": 720, "y": 300, "button": "left", "clickCount": 1}, tab.session)
         tab.wait_for("location.hash === '#3'")
         self.assertEqual(self.browser.errors, [])
+
+    def test_the_print_view_puts_every_slide_on_a_page(self) -> None:
+        tab = Tab(self.browser)
+        self.browser.call("Page.enable", session=tab.session)
+        self.browser.call("Emulation.setFocusEmulationEnabled", {"enabled": True}, tab.session)
+        self.browser.call("Page.addScriptToEvaluateOnNewDocument", {"source": "window.print = () => { window.__printed = (window.__printed || 0) + 1; };"},
+                          tab.session)
+        self.browser.call("Page.navigate", {"url": self.out.as_uri() + "#print"}, tab.session)
+        tab.wait_for("document.documentElement.dataset.printReady === '1' && window.__printed === 1")
+        titles = [s["title"] for s in deck_data(self.out.read_text(encoding="utf-8"))["slides"]]
+        self.assertEqual(tab.ev("[...document.querySelectorAll('#pages > .pg > iframe')].map(f => f.title)"), titles)
+        self.assertEqual(tab.ev("getComputedStyle(document.getElementById('stage')).display"), "none")
+        self.key(tab, "Escape", "Escape", 27)
+        tab.wait_for("!document.documentElement.classList.contains('pv') && location.hash === '#1' && !document.querySelector('#pages iframe')")
+        for typ in ("keyDown", "keyUp"):   # Ctrl+P: the print view again, then print()
+            self.browser.call("Input.dispatchKeyEvent", {"type": typ, "key": "p", "code": "KeyP", "windowsVirtualKeyCode": 80, "modifiers": 2}, tab.session)
+        tab.wait_for("document.documentElement.dataset.printReady === '1' && window.__printed === 2")
+        self.assertEqual(self.browser.errors, [])
+
+
+KEYS = {"Enter": ("Enter", 13, "\r"), " ": ("Space", 32, " "), "Escape": ("Escape", 27, None), "ArrowDown": ("ArrowDown", 40, None),
+        "ArrowUp": ("ArrowUp", 38, None), "End": ("End", 35, None)}
+# the page's fetches, the blobs it saves (type, size, download name) and the windows it opens (a stand-in, whose
+# location the page sets), instead of real downloads and tabs
+EXPORT_SPY = """(() => { window.__fetched = []; window.__saved = []; window.__opened = [];
+  const f = window.fetch; window.fetch = (u, o) => { __fetched.push(String(u)); return f(u, o); };
+  const mk = URL.createObjectURL; URL.createObjectURL = b => { __saved.push({type: b.type, size: b.size}); return mk(b); };
+  HTMLAnchorElement.prototype.click = function () { if (this.download && __saved.length) __saved.at(-1).name = this.download; };
+  window.open = () => { const w = {location: {}}; __opened.push(w); return w; };
+  return true; })()"""
+DECK_FETCHES = "__fetched.map(u => new URL(u, location.href)).filter(u => u.pathname === '/__bluedoc/deck')"
+
+
+@unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")
+class ExportMenu(ChromePage):
+    """Export to… on the served acme-fit-deck, in the board's toolbar and in Present's bar: a menu button (a click, Enter
+    or ↓ opens it on HTML, ↑ ↓ move, Esc closes it back to the button, and the board's arrow keys leave the selected
+    slide alone) with HTML and PDF. HTML fetches the deck file and saves acme-fit-deck.html; PDF saves
+    acme-fit-deck.pdf; with no Chrome on the server, PDF opens the print view in a new tab and says why."""
+
+    BTN, MENU = "document.querySelector('{} .bd-expb')", "document.querySelector('{} .bd-expm')"
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.deck = self.docs / "acme-fit-deck.bluedoc.json"
+
+    def page(self) -> Tab:
+        a = self.open(self.server.url_for(self.deck))
+        self.browser.call("Emulation.setFocusEmulationEnabled", {"enabled": True}, a.session)
+        a.wait_for("!!document.querySelector('.bd-btb .bd-expb')")
+        self.assertTrue(a.ev(EXPORT_SPY))
+        return a
+
+    def press(self, tab: Tab, key: str) -> None:
+        code, vk, text = KEYS[key]
+        for typ in ("keyDown", "keyUp"):
+            self.browser.call("Input.dispatchKeyEvent", {"type": typ, "key": key, "code": code, "windowsVirtualKeyCode": vk,
+                                                         **({"text": text} if typ == "keyDown" and text else {})}, tab.session)
+
+    def menu_state(self, tab: Tab, where: str) -> list:
+        """[aria-expanded, menu shown, the focused item's format, or 'button' when the button has focus]."""
+        btn, menu = self.BTN.format(where), self.MENU.format(where)
+        return tab.ev(f"[{btn}.getAttribute('aria-expanded'), !{menu}.hidden, "
+                      f"document.activeElement === {btn} ? 'button' : document.activeElement.dataset.format || null]")
+
+    def test_the_toolbar_menu_by_click_and_by_keyboard_and_html_downloads(self) -> None:
+        a, tb = self.page(), ".bd-btb"
+        btn = self.BTN.format(tb)
+        self.assertEqual(a.ev(f"[{btn}.textContent, {btn}.getAttribute('aria-haspopup'), {btn}.nextElementSibling.getAttribute('role')]"),
+                         ["Export to…", "menu", "menu"])
+        self.assertEqual(a.ev(f"[...{self.MENU.format(tb)}.querySelectorAll('[role=menuitem]')].map(b => [b.dataset.format, b.querySelector('b').textContent])"),
+                         [["html", "HTML"], ["pdf", "PDF"]])
+        self.assertTrue(a.ev(f"{btn}.nextElementSibling === {btn}.parentElement.querySelector('.bd-expm') && "
+                             f"{btn}.parentElement.nextElementSibling.matches('.pri')"), "Export to… sits just before Present")
+        a.ev(f"{btn}.click()")
+        self.assertEqual(self.menu_state(a, tb), ["true", True, "html"])
+        self.press(a, "Escape")
+        self.assertEqual(self.menu_state(a, tb), ["false", False, "button"])
+        a.ev("BP.board({focus: 'title'})")
+        self.assertEqual(a.ev("BP.board().selected"), "title")
+        before = a.ev("JSON.stringify(BP.boardEdit().positions)")
+        a.ev(f"{btn}.focus()")
+        self.press(a, "ArrowDown")
+        self.assertEqual(self.menu_state(a, tb), ["true", True, "html"])
+        for key, on in (("ArrowDown", "pdf"), ("ArrowDown", "html"), ("ArrowUp", "pdf"), ("End", "pdf")):
+            self.press(a, key)
+            self.assertEqual(self.menu_state(a, tb)[2], on, key)
+        self.press(a, "Escape")
+        self.assertEqual(self.menu_state(a, tb), ["false", False, "button"])
+        self.assertEqual(a.ev("JSON.stringify(BP.boardEdit().positions)"), before, "the arrow keys moved the selected slide")
+        self.press(a, "Enter")
+        self.assertEqual(self.menu_state(a, tb), ["true", True, "html"])
+        self.press(a, "Enter")
+        saved = a.wait_for("__saved.length && __saved[0].name && __saved")
+        self.assertEqual([(s["type"].split(";")[0], s["name"]) for s in saved], [("text/html", "acme-fit-deck.html")])
+        self.assertGreater(saved[0]["size"], 10_000)
+        self.assertEqual(a.ev(DECK_FETCHES + ".map(u => [u.searchParams.get('format'), u.searchParams.get('path')])"),
+                         [["html", a.ev("location.pathname")]])
+        self.assertEqual(self.menu_state(a, tb), ["false", False, "button"])
+        self.assertEqual(self.browser.errors, [])
+
+    def test_present_has_the_menu_and_the_pdf_downloads(self) -> None:
+        a, bar = self.page(), ".bd-pres .bar"
+        a.ev("BP.board({present: 'title'})")
+        a.wait_for(f"!!{self.BTN.format(bar)}")
+        self.assertTrue(a.ev(f"{self.MENU.format(bar)}.classList.contains('up')"), "the menu rises over Present's bar")
+        a.ev(f"{self.BTN.format(bar)}.focus()")
+        self.press(a, " ")
+        self.assertEqual(self.menu_state(a, bar), ["true", True, "html"])
+        self.press(a, "ArrowDown")
+        self.press(a, "Escape")   # closes the menu, not Present
+        self.assertEqual(self.menu_state(a, bar), ["false", False, "button"])
+        self.assertTrue(a.ev("BP.board().present"))
+        a.ev(f"{self.BTN.format(bar)}.click()")
+        self.press(a, "ArrowDown")
+        self.press(a, "Enter")
+        saved = a.wait_for("__saved.length && __saved[0].name && __saved", timeout=90)
+        self.assertEqual([(s["type"], s["name"]) for s in saved], [("application/pdf", "acme-fit-deck.pdf")])
+        self.assertEqual(a.ev(DECK_FETCHES + ".map(u => u.searchParams.get('format'))"), ["pdf"])
+        self.assertTrue(a.ev("BP.board().present"))
+        self.assertEqual(self.browser.errors, [])
+
+    def test_without_chrome_the_pdf_opens_the_print_view(self) -> None:
+        self.server.stop()
+        self.tmp.env["BLUEDOC_CHROME"] = str(self.tmp.dir / "no-chrome")
+        self.server.start()
+        a, tb = self.page(), ".bd-btb"
+        a.ev(f"{self.BTN.format(tb)}.click()")
+        a.ev(f"{self.MENU.format(tb)}.querySelector('[data-format=pdf]').click()")
+        href = a.wait_for("__opened.length && __opened[0].location.href")
+        q = a.ev(f"Object.fromEntries(new URL({json.dumps(href)}, location.href).searchParams)")
+        self.assertEqual((q["format"], q["path"], href.endswith("#print")), ("print", a.ev("location.pathname"), True))
+        self.assertIsNone(a.ev("__opened[0].opener"), "the print tab can reach this page")
+        self.assertIn("no chrome here for a pdf", self.toast(a, "no chrome here").lower())
+        a.ev(f"{self.BTN.format(tb)}.click()")   # known now: straight to the print view, no second try
+        a.ev(f"{self.MENU.format(tb)}.querySelector('[data-format=pdf]').click()")
+        a.wait_for("__opened.length === 2")
+        self.assertEqual(a.ev(DECK_FETCHES + ".length"), 1)
+        status, _ = self.server.req("GET", href.split("#")[0])
+        self.assertEqual(status, 200)
 
 
 class FrameworkFallback(unittest.TestCase):

@@ -36,6 +36,30 @@ body { display: flex; flex-direction: column; overflow: hidden; background: oklc
 #count { position: absolute; right: 12px; bottom: 12px; padding: 2px 8px; border-radius: 999px; background: oklch(14% 0.01 264 / .6); color: oklch(92% 0 0);
   font-size: 12px; font-variant-numeric: tabular-nums; pointer-events: none; }
 #bar:not(.idle) ~ #count { display: none; }
+/* the print view (#print, Ctrl/Cmd+P): every slide its own page of the slide's size (1920 × 1080, build.DEVICES), in
+   deck order, without the notes; on screen each page scaled to the window (--k). serve.py deck_pdf prints it to PDF in
+   headless Chrome; a browser's print dialog saves it as one. Printed any other way (File › Print), the slide shown */
+@page { size: 1920px 1080px; margin: 0; }
+#pages { display: none; }
+html.pv, html.pv body { height: auto; overflow: visible; }
+html.pv body { display: block; }
+html.pv :is(#stage, #notes) { display: none; }
+html.pv #pages { display: grid; justify-content: center; gap: 24px; padding: 24px; }
+.pg { position: relative; overflow: hidden; width: calc(1920px * var(--k, 1)); height: calc(1080px * var(--k, 1)); background: #fff; }
+.pg > * { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; border: 0; transform: scale(var(--k, 1)); transform-origin: 0 0; }
+@media print {
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  html, body { height: auto; overflow: visible; background: #fff; }
+  body { display: block; }
+  html.pv #pages { display: block; padding: 0; }
+  .pg { width: 1920px; height: 1080px; break-after: page; }
+  .pg:last-child { break-after: auto; }
+  .pg > * { transform: none; }
+  html:not(.pv) :is(#bar, #count, #notes) { display: none; }
+  html:not(.pv) #stage { flex: none; width: 1920px; height: 1080px; overflow: hidden; }
+  html:not(.pv) .fr { transform: none !important; }
+  html:not(.pv) .fr:not(.on) { display: none; }
+}
 </style>
 </head>
 <body>
@@ -50,6 +74,7 @@ body { display: flex; flex-direction: column; overflow: hidden; background: oklc
 <span id="count" aria-hidden="true"></span>
 </main>
 <div id="notes" role="note" aria-label="Speaker notes" hidden></div>
+<div id="pages" aria-label="Slides to print"></div>
 <script type="application/json" id="deck">__DECK_DATA__</script>
 <script>
 (() => {
@@ -60,6 +85,8 @@ body { display: flex; flex-direction: column; overflow: hidden; background: oklc
   const frames = new Map();   // slide index -> its iframe (or placeholder): the shown slide and its neighbours stay loaded
   let i = 0, showNotes = false;
   const docOf = s => s.parts.map(p => typeof p === 'number' ? D.assets[p] : p).join('');
+  // in every slide: its backgrounds print, whatever the dialog's Background graphics says
+  const PRINT_COLORS = '<style>*,*::before,*::after{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}</style>';
   function frameOf(k) {
     let f = frames.get(k);
     if (f) return f;
@@ -68,7 +95,7 @@ body { display: flex; flex-direction: column; overflow: hidden; background: oklc
       f = document.createElement('iframe');
       f.className = 'fr'; f.width = W; f.height = H; f.title = s.title; f.tabIndex = -1;
       f.setAttribute('sandbox', 'allow-scripts');
-      f.srcdoc = docOf(s);
+      f.srcdoc = docOf(s) + PRINT_COLORS;
     } else {
       f = document.createElement('div');
       f.className = 'fr ph'; f.style.width = W + 'px'; f.style.height = H + 'px';
@@ -117,15 +144,18 @@ body { display: flex; flex-direction: column; overflow: hidden; background: oklc
     wake(); return true;
   }
   addEventListener('keydown', e => {
+    if ((e.metaKey || e.ctrlKey) && !e.altKey && (e.key === 'p' || e.key === 'P')) { e.preventDefault(); printDeck(); return; }
+    if (printing && (printed || e.key === 'Escape')) { e.preventDefault(); leavePrintView(); return; }
     if (e.metaKey || e.ctrlKey || e.altKey || (e.target.closest && e.target.closest('button') && (e.key === ' ' || e.key === 'Enter'))) return;
     if (key(e.key, e.shiftKey)) e.preventDefault();
   });
-  // a slide's frame reports a click (not on one of its controls) and the keys above, which its sandbox keeps from us;
-  // after a click the keys come from the frame that had it, which may be a neighbour by now
+  // a slide's frame reports a click (not on one of its controls), the keys above and Ctrl/Cmd+P, which its sandbox
+  // keeps from us; after a click the keys come from the frame that had it, which may be a neighbour by now
   addEventListener('message', e => {
     const m = e.data;
     if (![...frames.values()].some(f => f.contentWindow === e.source) || !m || typeof m !== 'object') return;
     if (m.deck === 'click') { step(1); wake(); } else if (m.deck === 'key' && typeof m.key === 'string') key(m.key, !!m.shift);
+    else if (m.deck === 'print') printDeck();
   });
   stage.addEventListener('click', e => { if (!bar.contains(e.target)) step(1); });
   $('prev').onclick = () => step(-1); $('next').onclick = () => step(1); notesBtn.onclick = toggleNotes; $('fs').onclick = fullscreen;
@@ -133,10 +163,55 @@ body { display: flex; flex-direction: column; overflow: hidden; background: oklc
   let idle = 0;
   function wake() { bar.classList.remove('idle'); clearTimeout(idle); idle = setTimeout(() => { if (!bar.matches(':hover, :focus-within')) bar.classList.add('idle'); else wake(); }, 2500); }
   addEventListener('pointermove', wake);
-  addEventListener('resize', fitAll);
+  // the print view: every slide in a frame on a page of its own, its motion settled (bd-reduced, as the board's
+  // Reduced) and its backgrounds printed; ready (html[data-print-ready], which serve.py deck_pdf waits for) once each
+  // frame says its fonts are in, or after 20 s with what has loaded. #print opens it and prints, as Ctrl/Cmd+P does.
+  // Esc leaves it; once printed, so does the next key or press, never the dialog closing: Chrome may still be drawing
+  // the slides' frames into the pages then, and a frame gone by then prints blank
+  const PRINT_SLIDE = PRINT_COLORS + '<style>*,*::before,*::after{animation-duration:0s!important;animation-delay:0s!important;'
+    + 'animation-iteration-count:1!important;transition-duration:0s!important;transition-delay:0s!important}</style>'
+    + '<script>document.documentElement.classList.add("bd-reduced");addEventListener("load",()=>(document.fonts?document.fonts.ready:Promise.resolve())'
+    + '.then(()=>setTimeout(()=>parent.postMessage({deck:"ready"},"*"),50)))<\/script>';
+  const pages = $('pages'), root = document.documentElement;
+  let printing = null, printed = false;   // the print view's promise, while it is up; printed: since then
+  const fitPages = () => pages.style.setProperty('--k', String(Math.min(1, (innerWidth - 48) / W)));
+  function printView() {
+    if (printing) return printing;
+    const waiting = new Set();
+    root.classList.add('pv'); fitPages();
+    pages.replaceChildren(...S.map(s => {
+      const pg = document.createElement('div'), f = document.createElement(s.parts ? 'iframe' : 'div');
+      pg.className = 'pg';
+      if (s.parts) { f.title = s.title; f.tabIndex = -1; f.setAttribute('sandbox', 'allow-scripts'); f.srcdoc = docOf(s) + PRINT_SLIDE; waiting.add(f); }
+      else { f.className = 'ph'; f.textContent = s.title + ': no screen file'; }
+      pg.append(f);
+      return pg;
+    }));
+    return printing = new Promise(done => {
+      let t = 0;
+      const ready = () => { removeEventListener('message', heard); clearTimeout(t); root.dataset.printReady = '1'; done(); };
+      const heard = e => {
+        for (const f of waiting) if (f.contentWindow === e.source && e.data && e.data.deck === 'ready') { waiting.delete(f); if (!waiting.size) ready(); }
+      };
+      addEventListener('message', heard);
+      t = setTimeout(ready, 20000);
+      if (!waiting.size) ready();
+    });
+  }
+  function leavePrintView() {
+    if (!printing) return;
+    printing = null; printed = false; pages.replaceChildren(); root.classList.remove('pv'); delete root.dataset.printReady;
+    show(i);
+  }
+  function printDeck() { printView().then(() => { if (printing) print(); }); }
+  addEventListener('afterprint', () => { if (printing) printed = true; });
+  addEventListener('pointerdown', () => { if (printed) leavePrintView(); });
+  addEventListener('resize', () => { fitAll(); fitPages(); });
   const fromHash = () => { const n = parseInt(location.hash.slice(1), 10); return Number.isFinite(n) ? n - 1 : 0; };
   addEventListener('hashchange', () => { if (fromHash() !== i) show(fromHash(), true); });
-  show(fromHash()); wake();
+  const toPrint = location.hash === '#print';
+  show(fromHash(), toPrint); wake();
+  if (toPrint) printDeck();
 })();
 </script>
 </body>

@@ -6,6 +6,9 @@ Usage:
   build.py doc.json -o out.html     same, plus a standalone HTML file for sharing offline (media and diffs inlined)
   build.py deck.json --deck out.html   same, plus a presentation as one HTML file that plays its slides offline
                                     (serve.py deck_html; any other doc type is refused)
+  build.py deck.json --deck out.pdf    same, plus the deck as a PDF, one 16:9 page per slide, no notes (serve.py
+                                    deck_pdf: needs Chrome or Chromium, BLUEDOC_CHROME); --format html|pdf
+                                    overrides the extension
   build.py doc.json --check         validate and lint only; writes nothing (no history, no diff cache)
   build.py doc.json --strict        treat lint warnings as errors
   build.py doc.json --show-rev B    print revision B, rebuilt from the history, as JSON
@@ -3517,8 +3520,10 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("doc", type=Path)
     ap.add_argument("-o", "--out", type=Path, help="also write a standalone HTML file (for sharing; serve.py renders the JSON directly)")
-    ap.add_argument("--deck", type=Path, metavar="OUT.html", help="presentation only: also write the deck as one HTML file that "
-                    "plays its slides offline (the file Export HTML downloads)")
+    ap.add_argument("--deck", type=Path, metavar="OUT", help="presentation only: also write the deck as one HTML file that "
+                    "plays its slides offline (Export to… HTML) or, as OUT.pdf, a PDF of one 16:9 page per slide (Export "
+                    "to… PDF; needs Chrome or Chromium, BLUEDOC_CHROME)")
+    ap.add_argument("--format", choices=("html", "pdf"), help="--deck's format (default: OUT's extension, .pdf or else html)")
     ap.add_argument("--check", action="store_true", help="validate and lint only; write nothing (history, diff cache)")
     ap.add_argument("--strict", action="store_true", help="fail on lint warnings")
     ap.add_argument("--template", type=Path, default=TEMPLATE)
@@ -3544,9 +3549,16 @@ def main(argv: list[str] | None = None) -> int:
         print(f"cannot read {a.doc}: {e}", file=sys.stderr)
         return 2
     kind = doc_type(doc.get("meta") if isinstance(doc, dict) and isinstance(doc.get("meta"), dict) else {})
+    if a.format and not a.deck:
+        ap.error("--format goes with --deck")
     if a.deck and kind != "presentation":
         print(f"--deck: only a presentation exports as a deck, not a doc of type {kind} ({a.doc})", file=sys.stderr)
         return 2
+    fmt = a.format or ("pdf" if a.deck and a.deck.suffix.lower() == ".pdf" else "html")
+    chrome = _serve().find_chrome() if a.deck and fmt == "pdf" else None
+    if a.deck and fmt == "pdf" and not chrome:
+        print(f"--deck: {_serve().DECK_PDF_NEEDS}", file=sys.stderr)
+        return 1
     rep = validate(doc, a.doc, write_cache=not a.check)
     for line in rep.errors + rep.warnings:
         print(line, file=sys.stderr)
@@ -3582,8 +3594,17 @@ def main(argv: list[str] | None = None) -> int:
         except serve.DeckError as e:
             print(f"--deck: {e}", file=sys.stderr)
             return 1
+        if fmt == "pdf":
+            try:
+                deck = serve.deck_pdf(deck, chrome)
+            except (OSError, RuntimeError) as e:
+                print(f"--deck: Chrome couldn't print the deck: {e}", file=sys.stderr)
+                return 1
         a.deck.parent.mkdir(parents=True, exist_ok=True)
-        a.deck.write_text(deck, encoding="utf-8")
+        if isinstance(deck, bytes):
+            a.deck.write_bytes(deck)
+        else:
+            a.deck.write_text(deck, encoding="utf-8")
         print(f"wrote {a.deck} ({a.deck.stat().st_size // 1024} KB, {len(serve.deck_slides(doc))} slides)", file=sys.stderr)
     if not a.out and not a.deck:
         print(f"view: python3 {HERE / 'serve.py'} open {a.doc}", file=sys.stderr)

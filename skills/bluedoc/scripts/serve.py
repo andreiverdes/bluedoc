@@ -61,9 +61,14 @@ URLs: /                      home page: every doc under the registered folders, 
                              <stem>.design/<artboard>/ (or rev B's, from the history), each layer a data: URI. A
                              website's live page at ?rev=B&w=<px> is its snapshot of rev B (the nearest width it has),
                              with the inspector and the same CSP, its images from the dev server allowed
-      /__bluedoc/deck?path=<doc URL path>[&rev=B&theme=T]   a presentation (revision B's) as one HTML file that plays
-                             its slides offline (deck_html, assets/deck.html), sent as the attachment <stem>.html; a
-                             read, no key; 400 for any other doc type. build.py --deck writes the same file
+      /__bluedoc/deck?path=<doc URL path>[&rev=B&theme=T&format=F]   a presentation (revision B's) exported, a read,
+                             no key; 400 for any other doc type. format html (the default): one HTML file that plays
+                             its slides offline (deck_html, assets/deck.html), sent as the attachment <stem>.html.
+                             pdf: one 16:9 page per slide, no speaker notes (deck_pdf: headless Chrome prints the
+                             file's print view), the attachment <stem>.pdf; 501 without Chrome (BLUEDOC_CHROME).
+                             print: the HTML file shown in the tab, sandboxed (DECK_PRINT_CSP), which at #print
+                             opens the print dialog: the page's PDF when the server has no Chrome. build.py --deck
+                             writes the html and pdf files
       /__bluedoc/kit/<file>  the plain kit and inspector (assets/kits)
       /__bluedoc/fw/<name>/<path>   a framework add-framework copied
       /<root>/<path>.<css|js|mjs|font>   a project file a design board declares (frameworks[].files), and the
@@ -1173,17 +1178,23 @@ def screen_for_url(path: str, rev: str | None) -> tuple[Path, dict, str, str] | 
 # ---------- a presentation as one HTML file (GET /__bluedoc/deck, build.py --deck) ----------
 
 DECK_PLAYER = HERE.parent / "assets" / "deck.html"
-# a deck file's slide, in the inspector's place: a click on anything but a control, and the player's keys, go to the
-# player (assets/deck.html), which never hears a sandboxed frame's events
+# a deck file's slide, in the inspector's place: a click on anything but a control, the player's keys and Ctrl/Cmd+P
+# (the whole deck's print view) go to the player (assets/deck.html), which never hears a sandboxed frame's events
 DECK_FRAME_SCRIPT = (
     "<script>(()=>{const K=['ArrowLeft','ArrowRight','ArrowUp','ArrowDown',' ','PageUp','PageDown','Home','End','n','N','f','F'],"
     "P=m=>parent.postMessage(m,'*'),C='a,button,input,select,textarea,label,summary,video,audio,[contenteditable],[role=button],[tabindex]';"
     "addEventListener('click',e=>{if(e.button===0&&!e.defaultPrevented&&!(e.target.closest&&e.target.closest(C)))P({deck:'click'})});"
-    "addEventListener('keydown',e=>{if(e.metaKey||e.ctrlKey||e.altKey||!K.includes(e.key)||(e.target.closest&&"
+    "addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&!e.altKey&&(e.key==='p'||e.key==='P')){e.preventDefault();P({deck:'print'});return}"
+    "if(e.metaKey||e.ctrlKey||e.altKey||!K.includes(e.key)||(e.target.closest&&"
     "e.target.closest('input,select,textarea,[contenteditable]')))return;e.preventDefault();P({deck:'key',key:e.key,shift:e.shiftKey})})})()</script>")
 # a <style> or <script> block at least this long that two slides carry (their kit, framework, shell) is stored once
 DECK_SHARED_MIN = 512
 DECK_BLOCK = re.compile(r"(?is)<(style|script)\b[^>]*>.*?</\1\s*>")
+DECK_FORMATS = ("html", "pdf", "print")
+# the deck file shown in a tab of this server (format=print): an opaque origin that reaches nothing of bluedoc's, and
+# may open the print dialog; the file's own <meta> CSP (no network) holds too
+DECK_PRINT_CSP = "sandbox allow-scripts allow-modals; frame-ancestors 'none'"
+DECK_PDF_NEEDS = "a PDF needs Chrome or Chromium: set BLUEDOC_CHROME to its path"
 
 
 class DeckError(ValueError):
@@ -1291,6 +1302,18 @@ def deck_html(doc: dict, doc_path: Path, rev: str | None = None, theme: str | No
     fill = {"__DECK_TITLE__": esc(str(doc.get("title") or build.doc_stem(Path(doc_path)))),
             "__DECK_CSP__": build.STANDALONE_SCREEN_CSP, "__DECK_DATA__": build._script_json(data)}
     return re.sub("|".join(fill), lambda m: fill[m[0]], DECK_PLAYER.read_text(encoding="utf-8"))
+
+
+def deck_pdf(html: str, chrome: str) -> bytes:
+    """A deck file (deck_html) as a PDF: one 16:9 page per slide in deck order, no speaker notes, each slide as the
+    file draws it (kit, theme, fonts) with its motion settled and its backgrounds printed. Headless Chrome opens the
+    file at #print, its print view (every slide a page of 1920 × 1080 CSS px, assets/deck.html), and prints it with
+    Page.printToPDF. chrome: find_chrome's path. RuntimeError or OSError: Chrome failed."""
+    with tempfile.TemporaryDirectory(prefix="bluedoc-deck-") as d:
+        f = Path(d) / "deck.html"
+        f.write_text(html, encoding="utf-8")
+        with HeadlessChrome(chrome) as ch:
+            return ch.print_pdf(f.as_uri() + "#print")
 
 
 # ---------- website live pages: one proxy per dev server ----------
@@ -1703,9 +1726,11 @@ def snapshot_page(html: str) -> str:
 
 
 def find_chrome() -> str | None:
-    """Chrome or Chromium for `snapshot`: BLUEDOC_CHROME, else the usual places."""
+    """Chrome or Chromium for `snapshot` and deck PDFs: BLUEDOC_CHROME (None when it names nothing there), else the
+    usual places."""
     if os.environ.get("BLUEDOC_CHROME"):
-        return os.environ["BLUEDOC_CHROME"]
+        p = os.environ["BLUEDOC_CHROME"]
+        return p if os.path.isfile(p) else shutil.which(p)
     for p in ("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", "/Applications/Chromium.app/Contents/MacOS/Chromium",
               "google-chrome", "google-chrome-stable", "chromium", "chromium-browser"):
         found = p if os.path.isfile(p) else shutil.which(p)
@@ -1849,6 +1874,29 @@ class HeadlessChrome:
         if not isinstance(got, dict) or not isinstance(got.get("html"), str):
             raise RuntimeError("the inspector returned no snapshot")
         return got["html"], int(got.get("external") or 0)
+
+    def print_pdf(self, url: str) -> bytes:
+        """The page at url (a deck file at #print) as a PDF once it says it is ready (html[data-print-ready]), at its
+        CSS page size (@page), backgrounds printed, no margins. The page's own print() does nothing here, so the
+        view it set up for printing stays up."""
+        target = self.call("Target.createTarget", {"url": "about:blank"})["targetId"]
+        s = self.call("Target.attachToTarget", {"targetId": target, "flatten": True})["sessionId"]
+        try:
+            self.call("Runtime.enable", None, s)
+            self.call("Page.enable", None, s)
+            self.call("Emulation.setDeviceMetricsOverride", {"width": 1920, "height": 1080, "deviceScaleFactor": 1, "mobile": False}, s)
+            self.call("Page.addScriptToEvaluateOnNewDocument", {"source": "window.print = () => {};"}, s)
+            self.call("Page.navigate", {"url": url}, s)
+            deadline = time.monotonic() + 60
+            while not self.eval(s, "document.documentElement.dataset.printReady === '1'"):
+                if time.monotonic() > deadline:
+                    raise RuntimeError("the slides did not load")
+                time.sleep(0.1)
+            got = self.call("Page.printToPDF", {"printBackground": True, "preferCSSPageSize": True, "marginTop": 0,
+                                                "marginBottom": 0, "marginLeft": 0, "marginRight": 0}, s)
+        finally:
+            self.call("Target.closeTarget", {"targetId": target})
+        return base64.b64decode(got["data"])
 
 
 def cmd_snapshot(doc_arg: Path, rev: str | None, url: str | None, only: list[str], widths: list[int]) -> int:
@@ -2307,8 +2355,12 @@ def make_handler(port: int, default_to: str):
             return self.send(200, html, headers={"Content-Security-Policy": screen_csp(host)}, framed=True)
 
         def deck(self, q: dict) -> None:
-            """GET /__bluedoc/deck?path=<doc URL path>[&rev=R][&theme=T]: the presentation as one HTML file
-            (deck_html), as a download named <stem>.html. A read: no key, as for the doc's page."""
+            """GET /__bluedoc/deck?path=<doc URL path>[&rev=R][&theme=T][&format=F]: the presentation exported (F: html,
+            the default, deck_html; pdf, deck_pdf; as downloads named <stem>.html or .pdf) or, format=print, the HTML
+            file shown in the tab under DECK_PRINT_CSP. A read: no key, as for the doc's page."""
+            fmt = q.get("format") or "html"
+            if fmt not in DECK_FORMATS:
+                return self.json(400, {"error": f"format: one of {', '.join(DECK_FORMATS)}"})
             doc_path = doc_for_url(q.get("path", ""))
             if not doc_path:
                 return self.json(404, {"error": "not a doc under a registered folder"})
@@ -2319,9 +2371,20 @@ def make_handler(port: int, default_to: str):
                 html = deck_html(doc, doc_path, q.get("rev") or None, q.get("theme") or None, load_roots())
             except (OSError, ValueError) as e:   # DeckError is a ValueError
                 return self.json(400, {"error": str(e)})
-            name = build.doc_stem(doc_path) + ".html"
+            if fmt == "print":
+                return self.send(200, html, headers={"Content-Security-Policy": DECK_PRINT_CSP})
+            body, ctype = html, "text/html; charset=utf-8"
+            if fmt == "pdf":
+                chrome = find_chrome()
+                if not chrome:
+                    return self.json(501, {"error": DECK_PDF_NEEDS})
+                try:
+                    body, ctype = deck_pdf(html, chrome), "application/pdf"
+                except (OSError, RuntimeError) as e:
+                    return self.json(500, {"error": f"Chrome couldn't print the deck: {e}"})
+            name = f"{build.doc_stem(doc_path)}.{fmt}"
             plain = re.sub(r'[^A-Za-z0-9._ -]', "_", name)
-            return self.send(200, html, headers={"Content-Disposition": f"attachment; filename=\"{plain}\"; filename*=UTF-8''{quote(name)}"})
+            return self.send(200, body, ctype, headers={"Content-Disposition": f"attachment; filename=\"{plain}\"; filename*=UTF-8''{quote(name)}"})
 
         def send_media(self, f: Path) -> None:
             # one byte range at most: enough for <video> seeking (Safari won't play video without it)

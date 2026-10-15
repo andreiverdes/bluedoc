@@ -1709,6 +1709,28 @@ i.warn[hidden] { display: none; }
 .bd-btb .bd-tbtn.pri:hover { color: #fff; filter: brightness(.95); background: var(--accent-solid) linear-gradient(180deg, color-mix(in oklch, var(--accent-solid), white 8%), var(--accent-solid)); }
 .bd-btb .bd-tbtn.pri:active { transform: translateY(1px) scale(.98); filter: brightness(.9); }
 .bd-btb .bd-tbtn.pri .bd-ic { width: 16px; height: 16px; }
+/* a presentation's Export to…: a raised key with its words and a chevron, beside Present; its menu (HTML, PDF) drops
+   under it, or rises over it in Present's bar */
+.bd-exp { position: relative; display: inline-flex; }
+.bd-tbtn.bd-expb { display: inline-flex; align-items: center; gap: 6px; padding: 0 7px 0 9px; color: var(--fg); font-weight: 600; white-space: nowrap;
+  background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: var(--shadow-hk); }
+.bd-btb .bd-tbtn.bd-expb { padding: 0 7px 0 9px; margin-right: 4px; }
+.bd-tbtn.bd-expb:hover:not(:disabled) { color: var(--fg); background: linear-gradient(var(--hover), var(--hover)), linear-gradient(180deg, var(--hk-top), var(--hk-bot)); }
+.bd-tbtn.bd-expb[aria-expanded="true"] { background: var(--hk-down); box-shadow: var(--shadow-hk-down); }
+.bd-tbtn.bd-expb:focus-visible { box-shadow: var(--shadow-hk), var(--focus-ring); }
+.bd-tbtn.bd-expb .bd-ic { width: 16px; height: 16px; }
+.bd-tbtn.bd-expb .cv { width: 14px; height: 14px; color: var(--fg-subtle); transition: rotate .15s var(--ease); }
+.bd-tbtn.bd-expb[aria-expanded="true"] .cv { rotate: 180deg; }
+.bd-expm { position: absolute; z-index: 5; top: calc(100% + 8px); right: 0; width: 260px; display: grid; gap: 2px; padding: 5px; border-radius: 12px;
+  background: var(--surface); color: var(--fg); box-shadow: var(--shadow-3); text-align: left; }
+.bd-expm.up { top: auto; bottom: calc(100% + 14px); }
+.bd-expm[hidden] { display: none; }
+.bd-expm button { display: flex; align-items: center; gap: 11px; padding: 8px 10px; border: 0; border-radius: 8px; background: none; color: inherit; font: 500 12.5px/1.35 var(--sans); text-align: left; cursor: pointer; }
+.bd-expm button:is(:hover, :focus) { outline: none; background: var(--selected); box-shadow: none; }
+.bd-expm button .bd-ic { width: 20px; height: 20px; color: var(--fg-muted); }
+.bd-expm .t { display: grid; }
+.bd-expm .t b { font-size: 13.5px; font-weight: 600; }
+.bd-expm .t span { color: var(--fg-subtle); }
 /* the left panel: the doc's header, then Screens (the artboards) or Brief (TL;DR, the sections, status) */
 .bd-lp { position: fixed; z-index: 41; top: var(--top-h); left: 0; bottom: 0; width: var(--lp-w); display: flex; flex-direction: column; min-height: 0;
   background: var(--panel); box-shadow: inset -1px 0 0 var(--line); transform: translateX(-100%); visibility: hidden; transition: transform .22s var(--ease), visibility 0s .22s; }
@@ -1771,6 +1793,18 @@ html.bd-presenting :is(.bd-anntb, .bd-ann-layer, .bd-cmp) { display: none !impor
 .bd-pres .notes > * + * { margin-top: .6em; }
 .bd-pres .bar .bd-tbtn[aria-pressed="true"] { color: #fff; background: oklch(32% 0.01 264); }
 .bd-pres .bar .bd-tbtn[hidden] { display: none; }
+/* Export to… on the dark stage: a lit key, and its menu in the bar's dark */
+.bd-pres .bar .bd-tbtn.bd-expb { color: #fff; background: oklch(33% 0.01 264); box-shadow: inset 0 0 0 1px oklch(44% 0.01 264); }
+.bd-pres .bar .bd-tbtn.bd-expb:hover { color: #fff; background: oklch(38% 0.01 264); }
+.bd-pres .bar .bd-tbtn.bd-expb[aria-expanded="true"] { background: oklch(20% 0.01 264); box-shadow: inset 0 0 0 1px oklch(44% 0.01 264); }
+.bd-pres .bar .bd-tbtn.bd-expb:focus-visible { box-shadow: inset 0 0 0 1px oklch(44% 0.01 264), var(--focus-ring); }
+.bd-pres .bar .bd-tbtn.bd-expb .cv { color: oklch(80% 0 0); }
+.bd-pres .bd-expm { background: oklch(26% 0.01 264); color: oklch(96% 0 0); box-shadow: 0 0 0 1px oklch(38% 0.01 264), 0 14px 36px oklch(0% 0 0 / .55); }
+.bd-pres .bd-expm button:is(:hover, :focus) { background: oklch(34% 0.01 264); }
+.bd-pres .bd-expm button .bd-ic { color: oklch(82% 0 0); }
+.bd-pres .bd-expm .t span { color: oklch(74% 0 0); }
+/* a toast shows over Present, above its bar */
+html.bd-presenting .bp-toast { z-index: 71; bottom: 84px; }
 /* compare a screen across two revisions: side by side, or the shown one over the base (onion skin) */
 .bd-cmpv { position: absolute; inset: 0; z-index: 4; display: flex; flex-direction: column; background: color-mix(in oklch, var(--canvas) 97%, transparent); }
 .bd-cmpv .hd { flex: none; display: flex; align-items: center; gap: 10px; padding: 10px 12px 10px 16px; border-bottom: 1px solid var(--line); font-size: 13.5px; }
@@ -6452,24 +6486,79 @@ function renderBoard(b) {
   // a presentation's primary action: Present as a filled key with its word, last in the toolbar; no Variants or Flows
   const presBtn = IS_DECK ? h('button', { type: 'button', class: 'bd-tbtn pri', title: presTip, onclick: () => present(B.sel) }, ic('present'), h('span', {}, 'Present'))
     : tbtn('present', presTip, () => present(B.sel));
-  // Export HTML (here and in Present's bar): the deck as one HTML file that plays anywhere, offline, at the revision
-  // shown and the theme picked (GET /__bluedoc/deck: serve.py deck_html). Only through serve.py: an -o file or a page on
-  // file:// has no server to build it, so the key isn't there
-  const canExport = IS_DECK && SERVED && deck.length > 0, expTip = 'Download this deck as one HTML file';
-  async function exportDeck() {
-    const q = new URLSearchParams({ path: location.pathname });
+  // Export to… (here and in Present's bar): a menu of the deck's exports at the revision shown and the theme picked
+  // (GET /__bluedoc/deck). HTML: one file that plays anywhere, offline (serve.py deck_html). PDF: one 16:9 page per
+  // slide, without speaker notes, that the server prints with headless Chrome (deck_pdf); when it has no Chrome (501),
+  // the deck's print view opens in a tab of its own (format=print, sandboxed) for the browser's Save as PDF. Only
+  // through serve.py: an -o file or a page on file:// has no server to build them, so the menu isn't there
+  const canExport = IS_DECK && SERVED && deck.length > 0;
+  let pdfByPrint = false, pdfBusy = false;   // pdfByPrint: the server said it has no Chrome
+  const deckUrl = format => {
+    const q = new URLSearchParams({ path: location.pathname, format });
     if (OLD) q.set('rev', VIEW.rev);
     if (B.theme) q.set('theme', B.theme);
+    return '/__bluedoc/deck?' + q;
+  };
+  // the print view in a new tab, which opens the print dialog; opened with no way back to this page
+  function printDeck() {
+    const w = window.open('about:blank', '_blank');
+    if (!w) { toast('No Chrome here for a PDF, and the browser blocked the print tab', { label: 'Open it', run: printDeck }); return; }
+    w.opener = null; w.location.href = deckUrl('print') + '#print';
+    toast('No Chrome here for a PDF: choose Save as PDF in the print dialog', { label: 'Print again', run: printDeck });
+  }
+  async function exportDeck(format) {
+    if (format === 'pdf' && pdfByPrint) return printDeck();
+    if (format === 'pdf' && pdfBusy) return toast('Still making the PDF…');
+    if (format === 'pdf') { pdfBusy = true; toast('Making the PDF…'); }
     try {
-      const r = await fetch('/__bluedoc/deck?' + q, { cache: 'no-store' });
+      const r = await fetch(deckUrl(format), { cache: 'no-store' });
+      if (r.status === 501 && format === 'pdf') { pdfByPrint = true; printDeck(); return; }
       if (!r.ok) { const j = await r.json().catch(() => null); toast(`Couldn't export the deck: ${(j && j.error) || r.status}`); return; }
       const url = URL.createObjectURL(await r.blob()), stem = decodeURIComponent(location.pathname.split('/').pop() || 'deck').replace(/\.(bluedoc|blueprint)\.json$/i, '');
-      const link = h('a', { href: url, download: stem + '.html', style: 'display:none' });
+      const link = h('a', { href: url, download: `${stem}.${format}`, style: 'display:none' });
       document.body.append(link); link.click(); link.remove();
       setTimeout(() => URL.revokeObjectURL(url), 60000);
     } catch { toast('Couldn\'t export the deck: the server didn\'t answer'); }
+    finally { if (format === 'pdf') pdfBusy = false; }
   }
-  const expKey = () => canExport && tbtn('download', expTip, () => exportDeck(), { 'aria-label': 'Export HTML' }), expBtn = expKey();
+  // the menu button (WAI-ARIA menu button): a click, Enter, Space or ↓ opens it on its first item, ↑ on its last;
+  // ↑ ↓ Home End move, Enter or Space picks, Esc closes it back to the button, Tab or a click elsewhere closes it.
+  // up: it opens above the button (Present's bar, at the bottom)
+  const EXPORTS = [['html', 'fcode', 'HTML', 'One file that plays offline'], ['pdf', 'doc', 'PDF', 'One page per slide, no notes']];
+  function exportMenu(up) {
+    const items = EXPORTS.map(([f, i, l, d]) => h('button', { type: 'button', role: 'menuitem', tabindex: '-1', 'data-format': f, onclick: () => { close(true); exportDeck(f); } },
+      ic(i), h('span', { class: 't' }, h('b', {}, l), h('span', {}, d))));
+    const menu = h('div', { class: 'bd-expm' + (up ? ' up' : ''), role: 'menu', 'aria-label': 'Export to', hidden: true }, items);
+    const btn = h('button', { type: 'button', class: 'bd-tbtn bd-expb', 'aria-haspopup': 'menu', 'aria-expanded': 'false', title: 'Export this deck as HTML or PDF',
+      onclick: () => menu.hidden ? open(0) : close(true) }, ic('download'), h('span', {}, 'Export to…'), ic('down', 'cv'));
+    const wrap = h('div', { class: 'bd-exp' }, btn, menu);
+    // a press outside, or focus leaving the page (a click in a screen's frame), closes it
+    const away = e => { if (e.type === 'blur' || !wrap.contains(e.target)) close(false); };
+    function open(k) {
+      menu.hidden = false; btn.setAttribute('aria-expanded', 'true');
+      addEventListener('pointerdown', away, true); addEventListener('blur', away);
+      items.at(k).focus();
+    }
+    function close(refocus) {
+      if (menu.hidden) return;
+      menu.hidden = true; btn.setAttribute('aria-expanded', 'false');
+      removeEventListener('pointerdown', away, true); removeEventListener('blur', away);
+      if (refocus) btn.focus();
+    }
+    btn.addEventListener('keydown', e => { if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); e.stopPropagation(); open(e.key === 'ArrowDown' ? 0 : -1); } });
+    menu.addEventListener('keydown', e => {
+      e.stopPropagation();   // the board's and Present's keys wait until the menu is closed
+      const k = items.indexOf(document.activeElement), n = items.length;
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') items[(k + (e.key === 'ArrowDown' ? 1 : n - 1)) % n].focus();
+      else if (e.key === 'Home' || e.key === 'End') items.at(e.key === 'Home' ? 0 : -1).focus();
+      else if (e.key === 'Escape') close(true);
+      else if (e.key === 'Tab') { close(false); return; }
+      else return;
+      e.preventDefault();
+    });
+    return wrap;
+  }
+  const expBtn = canExport && exportMenu(false);
   // a website: every page at one of the board's widths, or a width the reader types
   const pageXs = () => [...B.frames.values()].filter(x => devOf(x.a) === 'page');
   const bpWords = BPS.map(bpName), bpSeg = IS_SITE ? h('div', { class: 'bd-sg', role: 'radiogroup', 'aria-label': 'Width of every page' }, BPS.map((w, i) =>
@@ -6573,7 +6662,7 @@ function renderBoard(b) {
     const backBtn = h('button', { type: 'button', class: 'bd-tbtn txt', title: 'Back (Backspace)', onclick: () => back() }, 'Back');
     const close = tbtn('x', 'Leave (Esc)', () => end());
     const el = h('div', { class: 'bd-pres' + (slides ? ' slides' : ''), role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Present' }, box, slides ? notes : hints,
-      h('div', { class: 'bar' }, !slides && backBtn, tbtn('prev', `Previous ${what} (←)`, () => step(-1)), cap, tbtn('next', `Next ${what} (→)`, () => step(1)), slides && [notesBtn, expKey()], close));
+      h('div', { class: 'bar' }, !slides && backBtn, tbtn('prev', `Previous ${what} (←)`, () => step(-1)), cap, tbtn('next', `Next ${what} (→)`, () => step(1)), slides && [notesBtn, canExport && exportMenu(true)], close));
     let rec = null, dev = null;
     // a slide takes the room the notes and the bar leave (box padding: 16px at the sides and top)
     const lay = () => dev && (slides ? dev.fit(box.clientWidth - 32, box.clientHeight - 16, true) : dev.fit(innerWidth - 96, innerHeight - 120 - hints.offsetHeight));
@@ -9529,7 +9618,7 @@ function boardEdits(B) {
   document.addEventListener('keydown', e => {
     if (e.defaultPrevented || e.isComposing) return;
     const t = e.target;
-    if (t.isContentEditable || (t.closest && t.closest('input, textarea, select, [contenteditable]')) || document.querySelector('dialog[open]') || (B.api && B.api().present)) return;
+    if (t.isContentEditable || (t.closest && t.closest('input, textarea, select, [contenteditable], .bd-exp')) || document.querySelector('dialog[open]') || (B.api && B.api().present)) return;
     if (e.key === ' ' && !e.repeat && t.closest && !t.closest('button, a')) { space = true; return; }
     if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'z') { if (undoLast()) e.preventDefault(); return; }
     if (e.metaKey || e.ctrlKey || e.altKey) return;
