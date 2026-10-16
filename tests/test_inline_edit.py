@@ -16,6 +16,7 @@ import tempfile
 import time
 import unittest
 from pathlib import Path
+from urllib.parse import quote
 
 from _support import Server, TempHome
 
@@ -111,6 +112,67 @@ class ElementDraftValue(unittest.TestCase):
         for bad in ({"op": "move"}, {"text": "x" * 1001}, {"base": "x" * 1001}, {"sel": ""}, {"sel": 5}, {"text": None}, {"ord": "3"}, {"tag": "t" * 21}):
             self.assertFalse(serve.value_ok("__ann:c1", self.ann(**bad)), bad)
         self.assertFalse(serve.value_ok("__ann:c1", json.dumps({"id": "c1", "type": "element", "target": {"key": "k", "label": ""}})))
+
+    def test_history_values_kept_and_dropped(self) -> None:
+        draft = json.loads(self.ann())
+        self.assertTrue(serve.value_ok("__hist", json.dumps({"rev": "C", "steps": ["h1", "h2"], "cursor": 1, "sealed": 0})))
+        self.assertTrue(serve.value_ok("__hist:h1", json.dumps({"label": "Text", "ops": [{"id": "c1", "before": None, "after": draft}]})))
+        for bad in ({"rev": "C", "steps": ["h1"], "cursor": 2, "sealed": 0}, {"rev": "C", "steps": ["H 1"], "cursor": 0, "sealed": 0},
+                    {"rev": "C", "steps": ["h"] * 201, "cursor": 0, "sealed": 0}, {"rev": "C", "steps": [], "cursor": 0, "sealed": 1}, []):
+            self.assertFalse(serve.value_ok("__hist", json.dumps(bad)), bad)
+        for bad in ({"label": "Text", "ops": []}, {"label": "Text", "ops": [{"id": "c2", "before": None, "after": draft}]},
+                    {"label": "Text", "ops": [{"id": "c1", "before": {**draft, "type": "nope"}, "after": None}]}):
+            self.assertFalse(serve.value_ok("__hist:h1", json.dumps(bad)), bad)
+
+
+class DeckDrafts(unittest.TestCase):
+    """A deck export with Include unapplied edits: the slides' element drafts go into their text as the frames show them."""
+
+    def setUp(self) -> None:
+        self.tmp = TempHome()
+        self.addCleanup(self.tmp.cleanup)
+        self.docs = self.tmp.copy_examples()
+        self.doc = self.docs / DECK
+        self.title = (self.docs / "acme-fit-deck.design" / "title.html").read_text(encoding="utf-8")
+
+    def test_drafts_apply_where_the_element_still_has_its_base(self) -> None:
+        out = build.apply_element_drafts(self.title, [
+            {"sel": "headline", "tag": "h1", "base": "Q3 launch review", "text": "Q3 <b>launch</b> & review"},
+            {"sel": "presenter", "tag": "p", "base": "Product team · 14 October 2026", "del": True},
+            {"sel": "kicker", "tag": "p", "base": "Not the kicker's text", "text": "Skipped"},
+            {"sel": "nothing-here", "tag": "p", "base": "", "text": "Skipped"}])
+        self.assertIn(">Q3 &lt;b&gt;launch&lt;/b&gt; &amp; review</h1>", out)
+        self.assertNotIn('data-bd="presenter"', out)
+        self.assertNotIn("Skipped", out)
+        self.assertIn(">Acme Fit · Q3 2026</p>", out)
+        # a text edit inside a deleted element goes with it
+        out = build.apply_element_drafts(self.title, [{"sel": "headline", "tag": "h1", "base": "Q3 launch review", "text": "Gone"},
+                                                      {"sel": "title", "tag": "section", "base": build._plain(build._ScreenTree(self.title).els[0]["text"]), "del": True}])
+        self.assertEqual(out.strip(), "")
+
+    def test_the_export_route_with_and_without_drafts(self) -> None:
+        self.assertEqual(self.tmp.run("serve.py", "add", self.docs).returncode, 0)
+        server = Server(self.tmp)
+        server.start()
+        self.addCleanup(server.stop)
+        url = server.url_for(self.doc)
+        edit = {"title": [{"sel": "headline", "tag": "h1", "base": "Q3 launch review", "text": "Q3 launch, reviewed"}]}
+        post = lambda body, **h: server.req("POST", "/__bluedoc/deck", json.dumps(body).encode(), {"Content-Type": "application/json", "X-Bluedoc": "1", **h})   # noqa: E731
+        status, html = post({"path": url, "format": "html", "drafts": edit})
+        self.assertEqual(status, 200, html[:300])
+        self.assertIn(b"Q3 launch, reviewed", html)
+        status, html = server.req("GET", f"/__bluedoc/deck?path={quote(url)}&format=html")
+        self.assertEqual(status, 200)
+        self.assertNotIn(b"Q3 launch, reviewed", html)
+        self.assertIn(b"Q3 launch review", html)
+        # malformed drafts, drafts on an earlier revision and a POST without the key are refused
+        self.assertEqual(post({"path": url, "drafts": {"title": [{"sel": "headline", "tag": "h1", "base": "x", "text": "a\nb"}]}})[0], 400)
+        self.assertEqual(post({"path": url, "rev": "A", "drafts": edit})[0], 400)
+        self.assertEqual(post({"path": url, "drafts": edit}, **{"X-Bluedoc-Key": "wrong"})[0], 403)
+        # the CLI's --deck has no reader drafts: the revision's text
+        r = self.tmp.run("build.py", self.doc, "--deck", self.tmp.dir / "deck.html")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("Q3 launch review", (self.tmp.dir / "deck.html").read_text(encoding="utf-8"))
 
 
 def frame_eval(tab: Tab, part: str, expr: str):
@@ -311,6 +373,165 @@ class EditDesign(ChromePage, EditOnBoard):
         self.assertEqual([a["type"] for a in t.ev("BP.annotations()") if a.get("element", {}).get("text") == "Forged"], [])
 
 
+def combo(tab: Tab, k: str, code: int, mods: int) -> None:
+    """A key with modifiers (CDP: 2 Ctrl, 8 Shift) to the focused frame."""
+    for kind in ("rawKeyDown", "keyUp"):
+        tab.browser.call("Input.dispatchKeyEvent", {"type": kind, "key": k, "code": "Key" + k.upper(), "windowsVirtualKeyCode": code, "modifiers": mods}, tab.session)
+
+
+CTRL, SHIFT = 2, 8
+
+
+@unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")
+class History(ChromePage, EditOnBoard):
+    """One undo/redo history per doc: every draft kind, kept across a reload, 200 steps, empty on a new rev."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.doc = self.docs / FIT
+        self.url = self.server.url_for(self.doc)
+        self.tab = self.open(self.url)
+        self.load()
+
+    def load(self) -> None:
+        self.tab.wait_for("!!BP.boardEdit()")
+        self.tab.ev("BP.board({focus: 'today'})")
+        self.tab.wait_for("BP.board().artboards.find(a => a.id === 'today').ready", 15)
+
+    def board(self) -> dict:
+        return self.tab.ev("BP.boardEdit()")
+
+    def kinds(self) -> list[tuple]:
+        return sorted((d["type"], d.get("element", {}).get("op")) for d in self.board()["drafts"])
+
+    def page_key(self, k: str, code: int, mods: int) -> None:
+        """The key on the page itself, not in a screen's frame."""
+        self.tab.ev("document.activeElement && document.activeElement.blur(), 1")
+        combo(self.tab, k, code, mods)
+
+    def hist_keys(self) -> list[str]:
+        return [k for k in self.state(self.url) if k.startswith("__hist:")]
+
+    def test_undo_and_redo_across_kinds_and_a_reload(self) -> None:
+        t, today = self.tab, self.scr("today.html")
+        undo_btn, redo_btn = "document.querySelector('.bd-btb [aria-keyshortcuts^=\"Meta+Z\"]')", "document.querySelector('.bd-btb [aria-keyshortcuts^=\"Shift+Meta+Z\"]')"
+        self.assertEqual(t.ev(f"[{undo_btn}.disabled, {redo_btn}.disabled]"), [True, True])
+        home = self.board()["positions"]["today"]
+        self.edit_text("today", today, '[data-bd="start-workout"]', "Start run")
+        until(self.element_drafts)
+        x, y = self.at("today", today, '[data-bd="heart"]', .06, .1)
+        mouse(t, x, y)
+        self.assertEqual(t.wait_for("BP.board().editSel && BP.board().editSel.sel"), "heart")
+        key(t, "Delete", 46)
+        until(lambda: len(self.element_drafts()) == 2)
+        t.ev(f"BP.setMode('view'), BP.boardEdit({{move: {{today: [{home[0] + 480}, {home[1]}]}}}}), 1")
+        done = [("element", "delete"), ("element", "text"), ("layout", None)]
+        self.assertEqual(self.kinds(), done)
+        self.assertEqual((self.board()["undo"], self.board()["redo"]), (3, 0))
+        self.assertEqual(t.ev(f"[{undo_btn}.disabled, {redo_btn}.disabled]"), [False, True])
+        # Ctrl+Z on the page: the move, then the delete
+        self.page_key("z", 90, CTRL)
+        self.assertTrue(until(lambda: self.board()["positions"]["today"] == home))
+        self.page_key("z", 90, CTRL)
+        self.assertTrue(until(lambda: self.kinds() == [("element", "text")]))
+        self.assertTrue(until(lambda: (self.frame_text(today, '[data-bd="heart"]') or [0, "none"])[1] != "none"))
+        # a reload keeps the history
+        self.assertTrue(until(lambda: len(self.hist_keys()) == 3), "the history never reached state.db")
+        t.go(self.base + self.url)
+        self.load()
+        self.assertEqual((self.board()["undo"], self.board()["redo"]), (1, 2))
+        t.ev(f"{undo_btn}.click()")
+        self.assertTrue(until(lambda: self.kinds() == []))
+        self.assertTrue(until(lambda: (self.frame_text(today, '[data-bd="start-workout"]') or [""])[0] == "Start workout"))
+        self.assertEqual(t.ev(f"[{undo_btn}.disabled, {redo_btn}.disabled]"), [True, False])
+        # redo: Shift+Ctrl+Z, Ctrl+Y and the toolbar's Redo bring them back in order
+        self.page_key("z", 90, CTRL | SHIFT)
+        self.assertTrue(until(lambda: self.kinds() == [("element", "text")]))
+        self.page_key("y", 89, CTRL)
+        self.assertTrue(until(lambda: self.kinds() == done[:2]))
+        t.ev(f"{redo_btn}.click()")
+        self.assertTrue(until(lambda: self.kinds() == done))
+        self.assertTrue(until(lambda: self.board()["positions"]["today"] == [home[0] + 480, home[1]]))
+        self.assertEqual((self.board()["undo"], self.board()["redo"]), (3, 0))
+        # a new step after an undo drops the steps undone; Tidy up (here: every screen back home) is one step
+        t.ev(f"BP.boardEdit({{undo: true}}), BP.boardEdit({{move: {{today: [{home[0] + 960}, {home[1]}]}}}}), 1")
+        self.assertEqual((self.board()["undo"], self.board()["redo"]), (3, 0))
+        t.ev("BP.boardEdit({tidy: true}), 1")
+        self.assertTrue(until(lambda: self.board()["undo"] == 4 and self.board()["positions"]["today"] == home))
+        self.assertEqual(self.kinds(), done[:2])
+        t.ev("BP.boardEdit({undo: true}), 1")
+        self.assertTrue(until(lambda: self.board()["positions"]["today"] == [home[0] + 960, home[1]]))
+        self.assertEqual(self.browser.errors, [])
+
+    def test_capped_at_200_steps_and_empty_on_a_new_rev(self) -> None:
+        t = self.tab
+        home = self.board()["positions"]["today"]
+        t.ev(f"for (let i = 1; i <= 205; i++) BP.boardEdit({{move: {{today: [{home[0]} + i * 24, {home[1]}]}}}}); 1")
+        self.assertEqual((self.board()["undo"], self.board()["redo"]), (200, 0))
+        self.assertTrue(until(lambda: len(self.hist_keys()) == 200, 20), "the stored history isn't 200 steps")
+        for _ in range(200):
+            t.ev("BP.boardEdit({undo: true}), 1")
+        self.assertEqual(self.board()["undo"], 0)
+        self.assertEqual(self.board()["positions"]["today"], [home[0] + 5 * 24, home[1]], "undo went past the oldest step kept")
+        # a new rev: the stack starts empty, the draft stays
+        t.ev("BP.boardEdit({redo: true}), 1")
+        r = self.tmp.run("build.py", "patch", self.doc, "el:today/greeting", "--change", "Today: a hand edit.")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        until(lambda: len(self.hist_keys()) == 200)
+        t.go(self.base + self.url)
+        self.load()
+        self.assertEqual((self.board()["undo"], self.board()["redo"]), (0, 0))
+        self.assertEqual([d["type"] for d in self.board()["drafts"]], ["layout"])
+        self.assertTrue(until(lambda: self.hist_keys() == [] and "__hist" not in self.state(self.url)), "the old rev's history stayed in state.db")
+        self.assertEqual(self.browser.errors, [])
+
+    def test_a_text_field_keeps_its_own_undo(self) -> None:
+        t, today = self.tab, self.scr("today.html")
+        home = self.board()["positions"]["today"]
+        t.ev(f"BP.boardEdit({{move: {{today: [{home[0] + 240}, {home[1]}]}}}}), 1")
+        self.assertEqual(self.board()["undo"], 1)
+        # a field on the page
+        t.ev("BP.comments({open: true}), 1")
+        t.wait_for("!!document.querySelector('.bd-sp textarea')")
+        t.ev("document.querySelector('.bd-sp textarea').focus(), 1")
+        t.browser.call("Input.insertText", {"text": "Looks good"}, t.session)
+        combo(t, "z", 90, CTRL)
+        combo(t, "z", 90, CTRL | SHIFT)
+        time.sleep(0.3)
+        self.assertEqual((self.board()["undo"], self.board()["redo"]), (1, 0))
+        self.assertEqual(self.board()["positions"]["today"], [home[0] + 240, home[1]])
+        # an element being edited in a screen
+        t.ev("BP.setMode('edit')")
+        x, y = self.at("today", today, '[data-bd="start-workout"]')
+        mouse(t, x, y)
+        t.wait_for("(s => s && s.sel === 'start-workout')(BP.board().editSel)")
+        mouse(t, x, y, 2)
+        self.assertTrue(until(lambda: frame_eval(t, today, "!!document.querySelector('[contenteditable]')")))
+        t.browser.call("Input.insertText", {"text": "Go"}, t.session)
+        combo(t, "z", 90, CTRL)
+        time.sleep(0.3)
+        self.assertEqual((self.board()["undo"], self.board()["redo"]), (1, 0))
+        self.assertTrue(frame_eval(t, today, "!!document.querySelector('[contenteditable]')"), "the undo key ended the edit")
+        key(t, "Escape", 27)
+        self.assertEqual(self.element_drafts(), [])
+        self.assertEqual(self.browser.errors, [])
+
+    def test_undo_and_redo_keys_from_a_screen(self) -> None:
+        t, today = self.tab, self.scr("today.html")
+        self.edit_text("today", today, '[data-bd="start-workout"]', "Start run")
+        until(self.element_drafts)
+        press = "document.body.dispatchEvent(new KeyboardEvent('keydown', {{key: '{}', ctrlKey: true, shiftKey: {}, bubbles: true, cancelable: true}})), 1"
+        frame_eval(t, today, press.format("z", "false"))
+        self.assertTrue(until(lambda: self.element_drafts() == []))
+        frame_eval(t, today, press.format("Z", "true"))
+        self.assertTrue(until(lambda: [d["element"]["text"] for d in self.element_drafts()] == ["Start run"]))
+        t.ev("BP.boardEdit({undo: true}), 1")
+        frame_eval(t, today, press.format("y", "false"))
+        self.assertTrue(until(lambda: len(self.element_drafts()) == 1))
+        self.assertEqual((self.board()["undo"], self.board()["redo"]), (1, 0))
+        self.assertEqual(self.browser.errors, [])
+
+
 @unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")
 class EditDeck(ChromePage, EditOnBoard):
     def test_a_slide_takes_a_text_edit(self) -> None:
@@ -323,6 +544,34 @@ class EditDeck(ChromePage, EditOnBoard):
         ds = until(self.element_drafts)
         self.assertEqual([(d["key"], d["element"]["text"]) for d in ds], [("el:title/headline", "Q3 launch, reviewed")])
         self.assertIn("File: acme-fit-deck.design/title.html", self.tab.ev("BP.changesPayload().markdown"))
+        self.assertEqual(self.browser.errors, [])
+
+    def test_export_includes_unapplied_edits_only_when_asked(self) -> None:
+        t = self.tab = self.open(self.server.url_for(self.docs / DECK))
+        t.wait_for("!!BP.boardEdit()")
+        t.ev("BP.board({focus: 'title'})")
+        t.wait_for("BP.board().artboards.find(a => a.id === 'title').ready", 15)
+        self.edit_text("title", self.scr("title.html"), '[data-bd="headline"]', "Q3 launch, reviewed")
+        until(self.element_drafts)
+        # the downloads, as the blobs the page saves
+        t.ev("window.__blobs = []; (o => { URL.createObjectURL = b => (window.__blobs.push(b), o(b)); })(URL.createObjectURL.bind(URL)); 1")
+        box = "document.querySelector('.bd-btb .bd-expm [role=menuitemcheckbox]')"
+
+        def export(edits: bool) -> str:
+            n = t.ev("window.__blobs.length")
+            t.ev("document.querySelector('.bd-btb .bd-expb').click()")
+            t.wait_for("!document.querySelector('.bd-btb .bd-expm').hidden")
+            if t.ev(f"{box}.getAttribute('aria-checked')") != json.dumps(edits):
+                t.ev(f"{box}.click()")
+            self.assertEqual(t.ev(f"{box}.getAttribute('aria-checked')"), json.dumps(edits))
+            t.ev("document.querySelector('.bd-btb .bd-expm [data-format=html]').click()")
+            t.wait_for(f"window.__blobs.length > {n}", 20)
+            return t.ev(f"window.__blobs[{n}].text()")
+        self.assertEqual(t.ev(f"{box}.getAttribute('aria-checked')"), "false", "Include unapplied edits starts off")
+        off = export(False)
+        self.assertNotIn("Q3 launch, reviewed", off)
+        self.assertIn("Q3 launch review", off)
+        self.assertIn("Q3 launch, reviewed", export(True))
         self.assertEqual(self.browser.errors, [])
 
 

@@ -58,6 +58,7 @@ A framework that isn't on disk yet is still an option: put the `add-framework` c
 | Key | Do |
 |---|---|
 | `el:<id>/<path>` | `build.py patch <doc> <key>` prints the file and the selector (`[data-bd="submit"]`, or a CSS path). Edit that element, then patch the key with `--change`. |
+| `el:<id>/<path>` under `## Board drafts` | An element draft: the reader changed its text or deleted it in **Edit**. Run the command given (`patch <doc> el:… --set 'text="…"'` or `--delete`, text edits first, deletes last to first): it rewrites that one element in `<stem>.design/<id>.html`, plain text only. |
 | `artboard:<id>` | The whole screen, or a drawing over it: edit the file; or `--set device=…`, `--set fidelity=hifi`, `--set x=… --set y=…`. |
 | `frame:<device>@<x>,<y>` | A requested new screen; the note holds the prompt and its labelled boxes. `build.py patch <doc> <key> --set id=settings --set title=Settings` adds the artboard and a stub file; write the screen there, keeping the boxes' labels as `data-bd` names. |
 | `item:brief/<item>` | A pick or note on the brief: apply it to every screen it touches. |

@@ -3372,8 +3372,25 @@ def element_patch(text: str, sel: str, sets: list[str], delete: bool) -> str:
     if i is None:
         raise PatchError(f"no single element '{sel}' in the screen (a data-bd name, names joined by '/', or the "
                          "inspector's CSS path)")
-    el = tree.els[i]
-    if delete:
+    value = None
+    for s in [] if delete else sets:
+        k, eq, v = s.partition("=")
+        if not eq or k != "text":
+            raise PatchError(f"--set '{s}': an el: key takes --set text=<JSON string>, or --delete")
+        p = _value(v)   # a JSON string ('text="Start run"') reads as its text; any other value as written
+        value = (p if isinstance(p, str) else v).strip()
+    if not delete and not value:
+        raise PatchError("the text is empty: --delete removes the element")
+    a, b, new = _element_edit(tree, i, sel, None if delete else value)
+    return text[:a] + new + text[b:]
+
+
+def _element_edit(tree: _ScreenTree, i: int, sel: str, value: str | None) -> tuple[int, int, str]:
+    """The edit element_patch makes to element i of tree, as (start, end, replacement) offsets in tree.src: value None
+    deletes it (its line too when it is alone on it), else value (plain text, HTML-escaped here) replaces its one text
+    run. PatchError: the element can't take that edit."""
+    text, el = tree.src, tree.els[i]
+    if value is None:
         if el["close"] is None and not el["void"]:
             raise PatchError(f"'{sel}' has no end tag: close it, then delete it")
         start, end = el["start"], el["close_end"] if el["close"] is not None else el["tag_end"]
@@ -3381,16 +3398,7 @@ def element_patch(text: str, sel: str, sets: list[str], delete: bool) -> str:
         le = len(text) if le < 0 else le
         if not text[ls:start].strip() and not text[end:le].strip():
             start, end = ls, min(le + 1, len(text))
-        return text[:start] + text[end:]
-    value = None
-    for s in sets:
-        k, eq, v = s.partition("=")
-        if not eq or k != "text":
-            raise PatchError(f"--set '{s}': an el: key takes --set text=<JSON string>, or --delete")
-        p = _value(v)   # a JSON string ('text="Start run"') reads as its text; any other value as written
-        value = (p if isinstance(p, str) else v).strip()
-    if not value:
-        raise PatchError("the text is empty: --delete removes the element")
+        return start, end, ""
     if el["close"] is None:
         raise PatchError(f"'{sel}' ({el['tag']}) holds no text: comment on it instead")
     kids = tree.children(i)
@@ -3409,10 +3417,40 @@ def element_patch(text: str, sel: str, sets: list[str], delete: bool) -> str:
     if not runs:
         if kids:
             raise PatchError(f"'{sel}' has no text run beside its children: edit the screen file")
-        return text[:el["tag_end"]] + new + text[el["close"]:]
+        return el["tag_end"], el["close"], new
     a, b = runs[0]
     seg = text[a:b]
-    return text[:a + len(seg) - len(seg.lstrip())] + new + text[a + len(seg.rstrip()):]
+    return a + len(seg) - len(seg.lstrip()), a + len(seg.rstrip()), new
+
+
+def _plain(s: str) -> str:
+    """Text as the inspector compares it (inspector.js norm): control characters as spaces, whitespace collapsed."""
+    return re.sub(r"\s+", " ", re.sub(r"[\x00-\x1f\x7f]", " ", s)).strip()
+
+
+def apply_element_drafts(text: str, drafts: list[dict]) -> str:
+    """A screen's text with a reader's element drafts in it, as its frame shows them (inspector.js applyDrafts): each
+    {sel, tag, base, text} or {sel, tag, base, del: true} applies only where sel finds one element that still has that
+    tag and base text; text is plain text, HTML-escaped. Every selector is looked up in the text as it is, and each edit
+    replaces its own span, so a deletion doesn't shift another draft's CSS path; an edit inside a deleted element goes
+    with it. A draft that doesn't apply is left out."""
+    tree = _ScreenTree(text)
+    edits = []
+    for d in drafts:
+        i = tree.find(d["sel"])
+        if i is None or tree.els[i]["tag"] != d["tag"] or _plain(tree.els[i]["text"])[:1000] != d["base"]:
+            continue
+        try:
+            edits.append(_element_edit(tree, i, d["sel"], None if d.get("del") else d["text"]))
+        except PatchError:
+            continue
+    kept: list[tuple[int, int, str]] = []
+    for e in sorted(edits, key=lambda e: (e[0], -e[1])):
+        if not kept or e[0] >= kept[-1][1]:   # inside an earlier span (a deleted ancestor): already gone
+            kept.append(e)
+    for a, b, new in reversed(kept):
+        text = text[:a] + new + text[b:]
+    return text
 
 
 def set_positions(board: dict, fields) -> list[str]:

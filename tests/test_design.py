@@ -929,7 +929,7 @@ class DeckPlayer(unittest.TestCase):
 
 
 KEYS = {"Enter": ("Enter", 13, "\r"), " ": ("Space", 32, " "), "Escape": ("Escape", 27, None), "ArrowDown": ("ArrowDown", 40, None),
-        "ArrowUp": ("ArrowUp", 38, None), "End": ("End", 35, None)}
+        "ArrowUp": ("ArrowUp", 38, None), "Home": ("Home", 36, None), "End": ("End", 35, None)}
 # the page's fetches, the blobs it saves (type, size, download name) and the windows it opens (a stand-in, whose
 # location the page sets), instead of real downloads and tabs
 EXPORT_SPY = """(() => { window.__fetched = []; window.__saved = []; window.__opened = [];
@@ -968,10 +968,11 @@ class ExportMenu(ChromePage):
                                                          **({"text": text} if typ == "keyDown" and text else {})}, tab.session)
 
     def menu_state(self, tab: Tab, where: str) -> list:
-        """[aria-expanded, menu shown, the focused item's format, or 'button' when the button has focus]."""
+        """[aria-expanded, menu shown, the focused item's format ('menuitemcheckbox' for Include unapplied edits), or
+        'button' when the button has focus]."""
         btn, menu = self.BTN.format(where), self.MENU.format(where)
-        return tab.ev(f"[{btn}.getAttribute('aria-expanded'), !{menu}.hidden, "
-                      f"document.activeElement === {btn} ? 'button' : document.activeElement.dataset.format || null]")
+        return tab.ev(f"[{btn}.getAttribute('aria-expanded'), !{menu}.hidden, document.activeElement === {btn} ? 'button' "
+                      ": document.activeElement.dataset.format || document.activeElement.getAttribute('role')]")
 
     def test_the_toolbar_menu_by_click_and_by_keyboard_and_html_downloads(self) -> None:
         a, tb = self.page(), ".bd-btb"
@@ -992,7 +993,8 @@ class ExportMenu(ChromePage):
         a.ev(f"{btn}.focus()")
         self.press(a, "ArrowDown")
         self.assertEqual(self.menu_state(a, tb), ["true", True, "html"])
-        for key, on in (("ArrowDown", "pdf"), ("ArrowDown", "html"), ("ArrowUp", "pdf"), ("End", "pdf")):
+        for key, on in (("ArrowDown", "pdf"), ("ArrowDown", "menuitemcheckbox"), ("ArrowDown", "html"), ("ArrowUp", "menuitemcheckbox"),
+                        ("Home", "html"), ("End", "menuitemcheckbox")):
             self.press(a, key)
             self.assertEqual(self.menu_state(a, tb)[2], on, key)
         self.press(a, "Escape")

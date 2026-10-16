@@ -34,6 +34,7 @@ python3 <skill>/scripts/build.py new website docs/site.bluedoc.json --title "…
 |---|---|
 | `el:<page>/<css path>` | The comment's `Source: …` line names its section's files and `At: <width> px wide` the width it was made at: edit there. `build.py patch <doc> <key>` prints the page (live URL or screen file), the selector and source hints (every section's when the selector alone can't tell the section). Then patch the key with `--change`. |
 | `artboard:<page>` | The whole page: same as above, without a selector. |
+| `el:<page>/<sel>` under `## Board drafts` | An element draft (a text edit or deletion in **Edit**). A mockup page: run the `patch el:` command given. A live page: change that text or element in the file the `Source:` line names, then run the `--change` command given. |
 | `item:brief/<item>` | A pick: write the chosen version into the source. The reply's `Shown in:` line names the section and its source. |
 | `frame:page@<x>,<y>` | A requested new page: patch it with `--set id=… --set title=…`, then add `url` (a live route) or write its screen file. |
 

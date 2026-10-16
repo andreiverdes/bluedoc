@@ -67,8 +67,10 @@ URLs: /                      home page: every doc under the registered folders, 
                              pdf: one 16:9 page per slide, no speaker notes (deck_pdf: headless Chrome prints the
                              file's print view), the attachment <stem>.pdf; 501 without Chrome (BLUEDOC_CHROME).
                              print: the HTML file shown in the tab, sandboxed (DECK_PRINT_CSP), which at #print
-                             opens the print dialog: the page's PDF when the server has no Chrome. build.py --deck
-                             writes the html and pdf files
+                             opens the print dialog: the page's PDF when the server has no Chrome. POST {path,
+                             format, theme, drafts} (the key): the same, with the page's unapplied text edits and
+                             deletions in the slides (Include unapplied edits; deck_drafts). build.py --deck
+                             writes the html and pdf files, without drafts (the CLI has no reader state)
       /__bluedoc/listing?path=<doc URL path>[&format=F&rev=B&platform=P&locale=L]   a storelisting (revision B's)
                              exported, a read, no key, nothing written beside the doc; 400 for any other doc type.
                              zip (the default): the fastlane layout of every shot and asset at its store size and
@@ -1370,15 +1372,40 @@ def shared_parts(pages: list[str | None]) -> tuple[list[str], list[list | None]]
     return assets, [parts(p) if p is not None else None for p in pages]
 
 
+def deck_drafts(v) -> dict[str, list[dict]]:
+    """A page's unapplied element drafts for a deck export, {slide id: [{sel, tag, base, text} | {sel, tag, base, del:
+    true}]} (template.html elList per slide), checked: at most 300, text plain and capped as an `element` draft's.
+    v: that object, or its JSON (a query parameter); None or '' is none. DeckError when it isn't one."""
+    if v in (None, ""):
+        return {}
+    try:
+        d = json.loads(v) if isinstance(v, str) else v
+    except ValueError:
+        raise DeckError("drafts: not JSON") from None
+    ok = isinstance(d, dict) and sum(len(x) if isinstance(x, list) else 0 for x in d.values()) <= 300
+    for ab, xs in d.items() if ok else ():
+        ok = isinstance(ab, str) and isinstance(xs, list) and all(
+            isinstance(x, dict) and _element_ok({"op": "delete" if x.get("del") is True else "text", "ab": ab, **{k: x.get(k) for k in ("sel", "tag", "base", "text")}})
+            and (x.get("del") is True) == (x.get("text") is None) and not re.search(r"[\x00-\x1f\x7f]", x.get("text") or "")
+            for x in xs)
+        if not ok:
+            break
+    if not ok:
+        raise DeckError("drafts: {slide id: [{sel, tag, base, text} or {sel, tag, base, del: true}]}, at most 300")
+    return {ab: [{k: x[k] for k in ("sel", "tag", "base", "text", "del") if k in x} for x in xs] for ab, xs in d.items() if xs}
+
+
 def deck_html(doc: dict, doc_path: Path, rev: str | None = None, theme: str | None = None,
-              roots: list[Path] | None = None) -> str:
+              roots: list[Path] | None = None, drafts: dict[str, list[dict]] | None = None) -> str:
     """A presentation as one self-contained HTML file that plays its slides anywhere, offline (assets/deck.html): each
     slide wrapped as Present shows it (wrap_screen with deck: its kit or framework inline, the theme's tokens) behind
     build.STANDALONE_SCREEN_CSP, in deck_slides order, with its speaker notes as HTML. A <style> or <script> block two
     slides share is stored once; the player puts each slide's document back together for its sandboxed srcdoc frame.
     doc is the doc on disk; rev another revision of it (from the history), theme a theme id (else the brief's pick).
-    roots: the server's folders, which a screen file must be in (None, the CLI: anywhere). A slide without its screen
-    text plays as a placeholder. DeckError: not a presentation, an unknown revision, no slides."""
+    roots: the server's folders, which a screen file must be in (None, the CLI: anywhere). drafts (deck_drafts): a
+    reader's unapplied text edits and deletions, put in each slide's text as its frame shows them
+    (build.apply_element_drafts); the CLI has none. A slide without its screen text plays as a placeholder.
+    DeckError: not a presentation, an unknown revision, no slides."""
     kind = build.doc_type(doc.get("meta") if isinstance(doc.get("meta"), dict) else {})
     if kind != "presentation":
         raise DeckError(f"only a presentation exports as a deck, not a doc of type {kind}")
@@ -1394,6 +1421,8 @@ def deck_html(doc: dict, doc_path: Path, rev: str | None = None, theme: str | No
     pages = []
     for a in slides:
         text = build.screen_source(doc_path, a["id"], rev) if rev else current_screen_text(doc, doc_path, a["id"], roots)
+        if text is not None and drafts and drafts.get(a["id"]):
+            text = build.apply_element_drafts(text, drafts[a["id"]])
         pages.append(None if text is None else build.with_screen_csp(wrap_screen(doc, doc_path, a["id"], text, deck=True, theme=theme)))
     assets, parts = shared_parts(pages)
     shown = [{"id": a["id"], "title": str(a.get("title") or a["id"]),
@@ -2733,14 +2762,44 @@ def _element_ok(e) -> bool:
             and (e.get("ord") is None or isinstance(e["ord"], int) and not isinstance(e["ord"], bool)))
 
 
+# a board's undo history (template.html boardEdits H): `__hist` {rev, steps: [step ids], cursor, sealed}, at most
+# HIST_MAX steps; `__hist:<step>` {label, ops: [{id, before, after}]}, each copy a draft or null
+HIST_MAX = 200
+HIST_STEP = re.compile(r"^[a-z0-9]{1,40}$")
+
+
+def _int(v) -> bool:
+    return isinstance(v, int) and not isinstance(v, bool) and v >= 0
+
+
+def _hist_ok(key: str, a) -> bool:
+    if key == "__hist":
+        if not isinstance(a, dict):
+            return False
+        steps = a.get("steps")
+        return (isinstance(a.get("rev"), str) and isinstance(steps, list) and len(steps) <= HIST_MAX
+                and all(isinstance(s, str) and HIST_STEP.match(s) for s in steps)
+                and _int(a.get("cursor")) and _int(a.get("sealed")) and a["sealed"] <= a["cursor"] <= len(steps))
+
+    def copy_ok(c, i: str) -> bool:
+        return c is None or isinstance(c, dict) and c.get("id") == i and value_ok("__ann:" + i, json.dumps(c))
+    return (isinstance(a, dict) and isinstance(a.get("label"), str) and isinstance(a.get("ops"), list) and len(a["ops"]) > 0
+            and all(isinstance(o, dict) and isinstance(o.get("id"), str) and copy_ok(o.get("before"), o["id"])
+                    and copy_ok(o.get("after"), o["id"]) for o in a["ops"]))
+
+
 def value_ok(key: str, value: str) -> bool:
-    """False for an `__ann:<id>` value the page can't draw (template.html's MARKUP `valid`); True for any other key."""
-    if not key.startswith("__ann:"):
+    """False for an `__ann:<id>` value the page can't draw (template.html's MARKUP `valid`), or an `__hist` or
+    `__hist:<step>` value that isn't the board's undo history; True for any other key."""
+    hist = key == "__hist" or key.startswith("__hist:")
+    if not key.startswith("__ann:") and not hist:
         return True
     try:
         a = json.loads(value)
     except ValueError:
         return False
+    if hist:
+        return _hist_ok(key, a)
     return (isinstance(a, dict) and a.get("id") == key[len("__ann:"):] and a.get("type") in ANN_TYPES
             and _target_ok(a.get("target"))
             and (a.get("targets") is None or isinstance(a["targets"], list) and all(map(_target_ok, a["targets"])))
@@ -2928,7 +2987,9 @@ def make_handler(port: int, default_to: str):
         def deck(self, q: dict) -> None:
             """GET /__bluedoc/deck?path=<doc URL path>[&rev=R][&theme=T][&format=F]: the presentation exported (F: html,
             the default, deck_html; pdf, deck_pdf; as downloads named <stem>.html or .pdf) or, format=print, the HTML
-            file shown in the tab under DECK_PRINT_CSP. A read: no key, as for the doc's page."""
+            file shown in the tab under DECK_PRINT_CSP. A read: no key, as for the doc's page. POST with the same
+            fields as JSON, plus drafts (deck_drafts: the page's unapplied text edits and deletions, Export to…'s
+            Include unapplied edits; the current revision only), needs the key as any POST does."""
             fmt = q.get("format") or "html"
             if fmt not in DECK_FORMATS:
                 return self.json(400, {"error": f"format: one of {', '.join(DECK_FORMATS)}"})
@@ -2939,7 +3000,10 @@ def make_handler(port: int, default_to: str):
                 doc = json.loads(doc_path.read_text(encoding="utf-8"))
                 if not isinstance(doc, dict):
                     raise DeckError("the doc is not a JSON object")
-                html = deck_html(doc, doc_path, q.get("rev") or None, q.get("theme") or None, load_roots())
+                drafts = deck_drafts(q.get("drafts"))
+                if drafts and q.get("rev"):
+                    raise DeckError("drafts go with the current revision only")
+                html = deck_html(doc, doc_path, q.get("rev") or None, q.get("theme") or None, load_roots(), drafts)
             except (OSError, ValueError) as e:   # DeckError is a ValueError
                 return self.json(400, {"error": str(e)})
             if fmt == "print":
@@ -3280,6 +3344,8 @@ def make_handler(port: int, default_to: str):
                 return self.json(200, {"ok": True, "url": url_for(doc), "token": mint_token()})
             if path == "/__bluedoc/unlock":
                 return self.json(200, {"ok": True, "token": mint_token()})
+            if path == "/__bluedoc/deck":   # an export with the page's unapplied edits (Include unapplied edits)
+                return self.deck({k: v for k, v in data.items() if k == "drafts" or isinstance(v, str)})
             if path == "/__bluedoc/stop":
                 self.json(200, {"ok": True})
                 threading.Thread(target=self.server.shutdown, daemon=True).start()

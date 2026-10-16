@@ -1737,6 +1737,14 @@ i.warn[hidden] { display: none; }
 .bd-expm .t { display: grid; }
 .bd-expm .t b { font-size: 13.5px; font-weight: 600; }
 .bd-expm .t span { color: var(--fg-subtle); }
+/* a deck's Include unapplied edits: a checkbox row under the exports */
+.bd-expm .sep { height: 1px; margin: 3px 6px; background: var(--line-soft); }
+.bd-expm button.opt { gap: 10px; padding: 7px 10px; color: var(--fg-muted); }
+.bd-expm .opt .bx { flex: none; display: grid; place-items: center; width: 16px; height: 16px; margin: 0 2px; border-radius: 4px; box-shadow: inset 0 0 0 1.5px var(--line-strong); }
+.bd-expm .opt .bx .bd-ic { width: 11px; height: 11px; color: #fff; stroke-width: 3.2; visibility: hidden; }
+.bd-expm .opt[aria-checked="true"] { color: var(--fg); }
+.bd-expm .opt[aria-checked="true"] .bx { background: var(--accent-solid); box-shadow: none; }
+.bd-expm .opt[aria-checked="true"] .bx .bd-ic { visibility: visible; }
 /* the left panel: the doc's header, then Screens (the artboards) or Brief (TL;DR, the sections, status) */
 .bd-lp { position: fixed; z-index: 41; top: var(--top-h); left: 0; bottom: 0; width: var(--lp-w); display: flex; flex-direction: column; min-height: 0;
   background: var(--panel); box-shadow: inset -1px 0 0 var(--line); transform: translateX(-100%); visibility: hidden; transition: transform .22s var(--ease), visibility 0s .22s; }
@@ -2158,6 +2166,8 @@ function sv(tag, attrs, ...kids) {
 const ICONS = {
   copy: '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
   reset: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>',
+  undo: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',
+  redo: '<path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/>',
   info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>',
   help: '<circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"/>',
   alert: '<path d="m21.7 18-8-14a2 2 0 0 0-3.4 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.7-3Z"/><path d="M12 9v4M12 17h.01"/>',
@@ -5014,18 +5024,23 @@ async function iconExport(a, btn) {
 
 // Export to…: a menu button (WAI-ARIA menu button) of exports [[format, icon, label, description]], run(format) on a
 // pick. A click, Enter, Space or ↓ opens it on its first item, ↑ on its last; ↑ ↓ Home End move, Enter or Space picks,
-// Esc closes it back to the button, Tab or a click elsewhere closes it. up: it opens above the button
-function exportMenu(exports, run, title, up) {
+// Esc closes it back to the button, Tab or a click elsewhere closes it. up: it opens above the button. check: an option
+// under the exports ({label, get, set}), a menuitemcheckbox that a pick turns on or off and the menu stays open
+function exportMenu(exports, run, title, up, check) {
   const items = exports.map(([f, i, l, d]) => h('button', { type: 'button', role: 'menuitem', tabindex: '-1', 'data-format': f, onclick: () => { close(true); run(f); } },
     ic(i), h('span', { class: 't' }, h('b', {}, l), h('span', {}, d))));
-  const menu = h('div', { class: 'bd-expm' + (up ? ' up' : ''), role: 'menu', 'aria-label': 'Export to', hidden: true }, items);
+  const box = check && h('button', { type: 'button', role: 'menuitemcheckbox', class: 'opt', tabindex: '-1', 'aria-checked': String(!!check.get()),
+    onclick: () => { check.set(!check.get()); paintCheck(); } }, h('span', { class: 'bx', 'aria-hidden': 'true' }, ic('tick')), h('span', {}, check.label));
+  const paintCheck = () => { if (box) box.setAttribute('aria-checked', String(!!check.get())); };
+  const menu = h('div', { class: 'bd-expm' + (up ? ' up' : ''), role: 'menu', 'aria-label': 'Export to', hidden: true }, items, box && h('div', { class: 'sep', role: 'separator' }), box);
+  if (box) items.push(box);
   const btn = h('button', { type: 'button', class: 'bd-tbtn bd-expb', 'aria-haspopup': 'menu', 'aria-expanded': 'false', title,
     onclick: () => menu.hidden ? open(0) : close(true) }, ic('download'), h('span', {}, 'Export to…'), ic('down', 'cv'));
   const wrap = h('div', { class: 'bd-exp' }, btn, menu);
   // a press outside, or focus leaving the page (a click in a screen's frame), closes it
   const away = e => { if (e.type === 'blur' || !wrap.contains(e.target)) close(false); };
   function open(k) {
-    menu.hidden = false; btn.setAttribute('aria-expanded', 'true');
+    menu.hidden = false; btn.setAttribute('aria-expanded', 'true'); paintCheck();
     addEventListener('pointerdown', away, true); addEventListener('blur', away);
     items.at(k).focus();
   }
@@ -5877,9 +5892,14 @@ function renderBoard(b) {
   // (GET /__bluedoc/deck). HTML: one file that plays anywhere, offline (serve.py deck_html). PDF: one 16:9 page per
   // slide, without speaker notes, that the server prints with headless Chrome (deck_pdf); when it has no Chrome (501),
   // the deck's print view opens in a tab of its own (format=print, sandboxed) for the browser's Save as PDF. Only
-  // through serve.py: an -o file or a page on file:// has no server to build them, so the menu isn't there
+  // through serve.py: an -o file or a page on file:// has no server to build them, so the menu isn't there.
+  // Include unapplied edits (off by default; the current revision only, where Edit is): the export goes as a POST with
+  // the slides' element drafts (B.exportDrafts), which the server puts in the slides' text as the frames show them
   const canExport = IS_DECK && SERVED && deck.length > 0;
   let pdfByPrint = false, pdfBusy = false;   // pdfByPrint: the server said it has no Chrome
+  let withEdits = false;
+  const editsOpt = !OLD && !BASE ? { label: 'Include unapplied edits', get: () => withEdits, set: v => { withEdits = v; } } : null;
+  const NO_PDF_EDITS = 'No Chrome here for a PDF with your edits: export HTML, open it and print it';
   const deckUrl = format => {
     const q = new URLSearchParams({ path: location.pathname, format });
     if (OLD) q.set('rev', VIEW.rev);
@@ -5894,12 +5914,15 @@ function renderBoard(b) {
     toast('No Chrome here for a PDF: choose Save as PDF in the print dialog', { label: 'Print again', run: printDeck });
   }
   async function exportDeck(format) {
-    if (format === 'pdf' && pdfByPrint) return printDeck();
+    const edits = editsOpt && withEdits && B.exportDrafts ? B.exportDrafts() : null;
+    if (format === 'pdf' && pdfByPrint) return edits ? toast(NO_PDF_EDITS) : printDeck();
     if (format === 'pdf' && pdfBusy) return toast('Still making the PDF…');
     if (format === 'pdf') { pdfBusy = true; toast('Making the PDF…'); }
     try {
-      const r = await fetch(deckUrl(format), { cache: 'no-store' });
-      if (r.status === 501 && format === 'pdf') { pdfByPrint = true; printDeck(); return; }
+      const r = edits ? await fetch('/__bluedoc/deck', { method: 'POST', cache: 'no-store', headers: SERVER_KEY.headers({ 'Content-Type': 'application/json', 'X-Bluedoc': '1' }),
+        body: JSON.stringify({ path: location.pathname, format, ...(B.theme ? { theme: B.theme } : {}), drafts: edits }) })
+        : await fetch(deckUrl(format), { cache: 'no-store' });
+      if (r.status === 501 && format === 'pdf') { pdfByPrint = true; if (edits) toast(NO_PDF_EDITS); else printDeck(); return; }
       if (!r.ok) { const j = await r.json().catch(() => null); toast(`Couldn't export the deck: ${(j && j.error) || r.status}`); return; }
       const stem = decodeURIComponent(location.pathname.split('/').pop() || 'deck').replace(/\.(bluedoc|blueprint)\.json$/i, '');
       await saveBlob(r, `${stem}.${format}`);
@@ -5907,7 +5930,7 @@ function renderBoard(b) {
     finally { if (format === 'pdf') pdfBusy = false; }
   }
   const EXPORTS = [['html', 'fcode', 'HTML', 'One file that plays offline'], ['pdf', 'doc', 'PDF', 'One page per slide, no notes']];
-  const deckMenu = up => exportMenu(EXPORTS, exportDeck, 'Export this deck as HTML or PDF', up);
+  const deckMenu = up => exportMenu(EXPORTS, exportDeck, 'Export this deck as HTML or PDF', up, editsOpt);
   const expBtn = canExport && deckMenu(false);
   // a website: every page at one of the board's widths, or a width the reader types
   const pageXs = () => [...B.frames.values()].filter(x => devOf(x.a) === 'page');
@@ -8798,12 +8821,15 @@ const MARKUP = (() => {
     return a;
   }
   // a design board's drafts (boardEdits): put creates one or updates it (an edit makes a sent one pending again),
-  // restore puts back a copy (undo), drop deletes one, resolve marks it applied by the current rev, mark sets flags (stale).
+  // restore puts back a copy (undo, redo), drop deletes one, resolve marks it applied by the current rev, mark sets flags
+  // (stale), get is a copy of one (null: none), ok whether a stored copy is a draft the page can draw.
   // put's text, extra (a website page's bp, section and source) and pos (the pin's spot) go on an element draft's target
   const draftSaved = () => { save(); hlDirty = true; schedule(true); paint(); };
   const draftOf = id => list.find(x => x.id === id && isDraft(x)) || null;
   const drafts = {
     all: () => JSON.parse(JSON.stringify(list.filter(isDraft))),
+    get: id => { const a = draftOf(id); return a ? JSON.parse(JSON.stringify(a)) : null; },
+    ok: c => valid(c) && isDraft(c),
     put(o) {
       const host = $('.bd-boardblk'), label = (host ? labelOf(host) + ' › ' : '') + o.label;
       let a = o.id ? draftOf(o.id) : null;
@@ -9238,10 +9264,10 @@ const MARKUP = (() => {
     // a board draft whose link or element a newer rev changed some other way: the board follows the rev until it is re-applied
     if (a.stale && a.status !== 'resolved') mt.push(h('span', { class: 'old' }, `Stale: a newer rev changed this ${a.type === 'element' ? 'element' : 'link'}`),
       h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => BOARD && BOARD.reapply && BOARD.reapply(a.id) }, 'Re-apply'),
-      h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => remove(a) }, 'Discard'));
+      h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => discard(a) }, 'Discard'));
     // an element draft: its text before and after, Discard; a deleted element, Restore (a text edit made before the delete stays)
     const E = a.type === 'element' && a.element, del = E && E.op === 'delete';
-    if (E && a.status === 'pending' && !a.stale) mt.push(h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => del ? BOARD && BOARD.restoreEl && BOARD.restoreEl(a.id) : remove(a) }, del ? 'Restore' : 'Discard'));
+    if (E && a.status === 'pending' && !a.stale) mt.push(h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => del ? BOARD && BOARD.restoreEl && BOARD.restoreEl(a.id) : discard(a) }, del ? 'Restore' : 'Discard'));
     const gone = E && (a.target.text || E.base);
     const eld = !E ? null : del ? h('div', { class: 'eld' }, h('span', { class: 'del' }, `Deleted: ${E.tag}`), gone && [' “', cut(gone, 160), '”'])
       : h('div', { class: 'eld' }, h('s', {}, cut(E.base, 160)), h('span', { class: 'ar', 'aria-label': 'becomes' }, '→'), h('b', {}, cut(E.text, 240)));
@@ -9251,7 +9277,7 @@ const MARKUP = (() => {
           a.status === 'pending' && !editing && !isDraft(a) && ib('pencil', 'Edit', () => startEdit(a)),
           a.status === 'open' && ib('check', 'Resolve', () => setStatus(a, 'resolved')),
           a.status === 'resolved' && ib('reset', 'Reopen', () => setStatus(a, 'open')),
-          ib('trash', 'Delete', () => remove(a)))),
+          ib('trash', 'Delete', () => discard(a)))),
       segs.length > 0 && h('div', { class: 'path', title: a.target.label }, segs.join(' › ')),
       ex && h('q', { class: a.type === 'text' ? 'tx' : null }, cut(ex, 240)),
       eld || (editing ? editor(a) : a.note ? h('p', { class: 'nt' }, a.note) : null),
@@ -9344,6 +9370,8 @@ const MARKUP = (() => {
     list = list.filter(x => x !== a); save(); hlDirty = true;
     schedule(true); paint();
   }
+  // Discard or Delete on a board draft's card is a step of the board's undo history (BOARD.discard); the rest go at once
+  const discard = a => { if (isDraft(a) && BOARD && BOARD.discard && BOARD.discard(a.id)) return; remove(a); };
   function clearResolved() {
     if (selA && selA.status === 'resolved') selA = null;
     list = list.filter(a => a.status !== 'resolved'); save(); hlDirty = true; schedule(true); paint();
@@ -9591,12 +9619,14 @@ const MARKUP = (() => {
       copyText(p.markdown, replyFailed(e));
     }
   }
-  // notes that went to the agent (Request changes, a plan's Approve) are open from now on
+  // notes that went to the agent (Request changes, a plan's Approve) are open from now on; the board's undo history
+  // stops there (BOARD.seal), so the agent never gets a draft the page no longer shows
   function markSent(ids, at) {
     ids = new Set(ids); if (!ids.size) return;
     for (const a of list) if (ids.has(a.id)) { a.status = 'open'; a.sentAt = at; }
     if (filter === 'pending') setFilter('open', false);   // what was just sent, not an empty list
     save(); hlDirty = true; schedule(true); paint();
+    if (BOARD && BOARD.seal) BOARD.seal();
   }
   // save what is being typed (a draft, an edit, a general comment) before something reads the pending notes
   const flush = () => { endEdit(true); finishDraft(true); finishGeneral(true); };
@@ -9723,7 +9753,8 @@ const MARKUP = (() => {
 // The board, its counts, Present and Tidy up follow them at once (B.mergeLinks, B.setPositions). Request changes sends
 // them with a ready `build.py patch` command each (B.draftCommands). On load a draft the current rev already has becomes
 // Resolved ("Applied in rev X"); one whose link a newer rev changed some other way is Stale: the board follows the rev
-// until it is re-applied or discarded. Ctrl/Cmd+Z steps back through this session's drafts, moves and Tidy up.
+// until it is re-applied or discarded. Ctrl/Cmd+Z and Shift+Ctrl/Cmd+Z (Ctrl+Y) undo and redo every draft change, from
+// one history per doc that a reload keeps (H).
 function boardEdits(B) {
   const D = MARKUP.drafts; if (!D) return;
   const KINDS = ['push', 'modal', 'tab', 'replace', 'back'];
@@ -9768,22 +9799,70 @@ function boardEdits(B) {
     return out;
   };
 
-  /* drafts: commit (with undo), settle on load, the commands that go with Request changes. One commit is one change of
-     one draft: before (a copy, null: none) and after (spec, null: dropped), so it can be undone */
-  const undo = [];
-  function commit(prev, spec) {
+  /* drafts: commit (one step of the undo history), settle on load, the commands that go with Request changes. One commit
+     is one change of one draft and one reader action: a text edit, a delete, a Restore, a Discard, a link edit, a drag, a
+     Tidy up, a Re-apply. Its step keeps the draft before (a copy, null: none) and after (null: dropped) */
+  // The undo history: one stack per doc in the reader state, so a reload keeps it. `__hist` is {rev, steps: [step ids],
+  // cursor (the steps before it are done), sealed (Request changes sent the steps before it: undo stops there)};
+  // `__hist:<step>` is {label, ops: [{id, before, after}]}, written with its drafts (one PUT). Undo restores each op's
+  // before, redo its after; a new step drops the steps undone. At most 200 steps (the oldest go); a step too big for the
+  // state API (64 KB) isn't kept and the history starts again after it. A rev other than `rev` starts it empty: the
+  // agent has applied or answered the drafts it held.
+  const H = (() => {
+    const PFX = `bp:${docId}:__hist`, MAX = 200, BIG = 60000, ID = /^[a-z0-9]+$/;
+    const stepKey = id => `${PFX}:${id}`;
+    const parse = s => { try { return JSON.parse(s); } catch { return null; } };
+    const okOp = o => !!o && typeof o === 'object' && typeof o.id === 'string' && (o.before === null || D.ok(o.before)) && (o.after === null || D.ok(o.after));
+    const okStep = s => !!s && typeof s.label === 'string' && Array.isArray(s.ops) && s.ops.length > 0 && s.ops.every(okOp);
+    const fresh = () => ({ rev: CUR.rev, cursor: 0, sealed: 0 });
+    let h = parse(store.get(PFX)), steps = null;
+    if (h && typeof h === 'object' && h.rev === CUR.rev && Array.isArray(h.steps) && h.steps.length <= MAX && h.steps.every(id => typeof id === 'string' && ID.test(id))
+      && Number.isInteger(h.cursor) && h.cursor >= 0 && h.cursor <= h.steps.length && Number.isInteger(h.sealed) && h.sealed >= 0 && h.sealed <= h.cursor) {
+      steps = h.steps.map(id => ({ ...parse(store.get(stepKey(id))), id }));
+      if (!steps.every(okStep)) steps = null;
+    }
+    if (!steps) { steps = []; h = fresh(); store.del(PFX); }
+    // a step the history doesn't hold (an older rev's, one dropped in another tab) goes
+    const held = new Set(steps.map(s => stepKey(s.id)));
+    for (const k of store.keys(PFX + ':')) if (!held.has(k)) store.del(k);
+    const write = () => { if (steps.length) store.set(PFX, JSON.stringify({ rev: h.rev, steps: steps.map(s => s.id), cursor: h.cursor, sealed: h.sealed })); else store.del(PFX); };
+    const enc = new TextEncoder();
+    function clear() { for (const s of steps) store.del(stepKey(s.id)); steps = []; h = fresh(); write(); }
+    function push(label, ops) {
+      for (const s of steps.splice(h.cursor)) store.del(stepKey(s.id));
+      const s = { id: 'h' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), label: String(label).slice(0, 160), ops }, v = JSON.stringify({ label: s.label, ops });
+      if (enc.encode(v).length > BIG) { clear(); return; }
+      steps.push(s); store.set(stepKey(s.id), v);
+      while (steps.length > MAX) { store.del(stepKey(steps.shift().id)); h.sealed = Math.max(0, h.sealed - 1); }
+      h.cursor = steps.length; write();
+    }
+    const run = (s, back) => { for (const o of back ? [...s.ops].reverse() : s.ops) { const c = back ? o.before : o.after; if (c) D.restore(c); else D.drop(o.id); } };
+    return {
+      push,
+      undo() {
+        if (!h.cursor) return false;
+        if (h.cursor <= h.sealed) { toast('Already sent: discard the draft in the panel'); return false; }
+        run(steps[--h.cursor], true); write(); return true;
+      },
+      redo() { if (h.cursor >= steps.length) return false; run(steps[h.cursor++], false); write(); return true; },
+      seal() { if (h.sealed !== h.cursor) { h.sealed = h.cursor; write(); } },
+      // what undo and redo would do: the step's label, null at either end (undo also at the seal)
+      next: () => ({ undo: h.cursor > h.sealed ? steps[h.cursor - 1].label : null, redo: h.cursor < steps.length ? steps[h.cursor].label : null }),
+      size: () => ({ undo: h.cursor, redo: steps.length - h.cursor, sealed: h.sealed }),
+    };
+  })();
+  function commit(prev, spec, label) {
+    if (!spec && !prev) return null;
     const before = prev ? JSON.parse(JSON.stringify(prev)) : null;
-    if (!spec) { if (!prev) return null; D.drop(prev.id); undo.push({ before, id: prev.id }); return null; }
-    const id = D.put({ ...spec, id: prev ? prev.id : null });
-    undo.push({ before, id });
-    return id;
+    const id = spec ? D.put({ ...spec, id: prev ? prev.id : null }) : prev.id;
+    if (!spec) D.drop(id);
+    H.push(label || (spec ? spec.note : 'Discard: ' + prev.note), [{ id, before, after: spec ? D.get(id) : null }]);
+    paintHist();
+    return spec ? id : null;
   }
-  function undoLast() {
-    const u = undo.pop(); if (!u) return false;
-    if (u.before) D.restore(u.before); else D.drop(u.id);
-    moved = true;
-    return true;
-  }
+  function undoLast() { const r = H.undo(); if (r) moved = true; paintHist(); return r; }
+  function redoNext() { const r = H.redo(); if (r) moved = true; paintHist(); return r; }
+  B.seal = () => { H.seal(); paintHist(); };
   function describe(L) {
     const b = L.base, arrow = l => `${T(l.from)} › ${l.kind === 'back' ? 'back' : T(l.to)}`, ch = [];
     if (b && (L.to ?? null) !== (b.to ?? null)) ch.push(`to ${L.kind === 'back' ? 'back' : T(L.to)}`);
@@ -9805,14 +9884,15 @@ function boardEdits(B) {
       toast(`${T(next.from)} › ${next.el} already has a link: change that one`);
       return false;
     }
-    if (same(base, next)) { commit(d, null); return true; }
+    if (same(base, next)) { commit(d, null, d && `Link ${T(d.link.base ? d.link.base.from : d.link.from)} › ${d.link.base ? d.link.base.el : d.link.el} as in rev ${CUR.rev}`); return true; }
     const op = !base ? 'add' : !next ? 'delete' : lkey(base) !== lkey(next) ? 'move' : 'set';
     const L = { op, ...(next || base), base };
     commit(d, { type: 'link', key: lkey(next || base), label: `${T(L.from)} › ${L.el}`, note: describe(L), link: L });
     return true;
   }
-  function writeLayout(m) {
-    const a = layoutDraft(), P = posOf(a);
+  // label: the history step's (default: Move <screen>, or Move N screens)
+  function writeLayout(m, label) {
+    const a = layoutDraft(), P = posOf(a), ids0 = Object.keys(m).filter(id => home[id]);
     for (const [id, p] of Object.entries(m)) {
       if (!home[id]) continue;
       const r = [Math.round(p[0]), Math.round(p[1])];
@@ -9821,7 +9901,8 @@ function boardEdits(B) {
     const ids = Object.keys(P);
     if (a && JSON.stringify(P) === JSON.stringify(posOf(a))) return;
     commit(a, ids.length ? { type: 'layout', key: LAYOUT_KEY, label: 'Screen positions',
-      note: `Move ${ids.length} screen${ids.length === 1 ? '' : 's'}: ${ids.map(T).join(', ')}`, layout: { positions: P } } : null);
+      note: `Move ${ids.length} screen${ids.length === 1 ? '' : 's'}: ${ids.map(T).join(', ')}`, layout: { positions: P } } : null,
+      label || (ids0.length === 1 ? `Move ${T(ids0[0])}` : `Move ${ids0.length} ${SCREEN}s`));
   }
   // A draft the current rev already has is applied; one whose link the rev changed some other way is stale
   function settle() {
@@ -9843,7 +9924,7 @@ function boardEdits(B) {
     const L = a.link, r = resultOf(L), rev = revMap(), now = (L.base ? rev.get(lkey(L.base)) : r && rev.get(lkey(r))) || null;
     if (same(now, r)) { D.resolve(a.id); return true; }
     const op = !now ? 'add' : !r ? 'delete' : lkey(now) !== lkey(r) ? 'move' : 'set', L2 = { op, ...(r || now), base: now };
-    commit(a, { type: 'link', key: lkey(r || now), label: `${T(L2.from)} › ${L2.el}`, note: describe(L2), link: L2 });
+    commit(a, { type: 'link', key: lkey(r || now), label: `${T(L2.from)} › ${L2.el}`, note: describe(L2), link: L2 }, `Re-apply: ${describe(L2)}`);
     return true;
   };
 
@@ -9868,6 +9949,8 @@ function boardEdits(B) {
   // the drafts a frame of artboard id shows
   const elList = id => elDrafts().filter(a => live(a) && a.element.ab === id).map(({ element: E }) => E.op === 'delete'
     ? { sel: E.sel, tag: E.tag, base: E.base, del: true } : { sel: E.sel, tag: E.tag, base: E.base, text: E.text });
+  // a deck export with Include unapplied edits: every screen's list, {artboard id: elList}, only the ones with drafts
+  B.exportDrafts = () => Object.fromEntries([...B.frames.keys()].map(id => [id, elList(id)]).filter(([, l]) => l.length));
   const elSent = new Map();
   function sendEl() {
     for (const id of B.frames.keys()) {
@@ -9899,9 +9982,10 @@ function boardEdits(B) {
   function textEdit(s, text) {
     const d = elOf(elKey(s.ab, s.sel)), base = d ? d.element.base : s.base;
     if (d && d.element.op === 'delete') return;   // hidden: nothing to edit
-    if (text === base) { if (d) commit(d, null); return; }
+    const label = `Text in ${T(s.ab)} › ${cut(s.sel, 80)}`;
+    if (text === base) { if (d) commit(d, null, label); return; }
     if (!d && !room()) return;
-    commit(d, elSpec({ op: 'text', ab: s.ab, sel: s.sel, tag: s.tag, base, text, ...(s.ord != null ? { ord: s.ord } : {}) }, extraOf(s)));
+    commit(d, elSpec({ op: 'text', ab: s.ab, sel: s.sel, tag: s.tag, base, text, ...(s.ord != null ? { ord: s.ord } : {}) }, extraOf(s)), label);
   }
   function deleteSel() {
     const s = B.editSel; if (!s) return;
@@ -9910,20 +9994,27 @@ function boardEdits(B) {
     if (!d && !room()) return;
     const E = { op: 'delete', ab: s.ab, sel: s.sel, tag: s.tag, base: d ? d.element.base : s.base, ...(d && d.element.text ? { text: d.element.text } : {}), ...(s.ord != null ? { ord: s.ord } : {}) };
     setEditSel(null);
-    commit(d, elSpec(E, { ...extraOf(s), shown: s.shown }));
+    commit(d, elSpec(E, { ...extraOf(s), shown: s.shown }), `Delete ${T(s.ab)} › ${elName(E)}`);
   }
   // Restore on a deletion's card: the element shows again, with the text an earlier edit gave it
   B.restoreEl = id => {
     const a = elDrafts().find(x => x.id === id); if (!a || a.element.op !== 'delete') return false;
     const { text, ...E } = a.element;
-    commit(a, text ? elSpec({ ...E, op: 'text', text }) : null);
+    commit(a, text ? elSpec({ ...E, op: 'text', text }) : null, `Restore ${T(E.ab)} › ${elName(E)}`);
     return true;
   };
-  // an edit or a key from a frame: only in Edit, from the frame of the selection, for that element; undo from any frame
+  // Discard (or Delete) on a board draft's card: one step, so undo brings the draft back
+  B.discard = id => {
+    const a = D.get(id); if (!a || !['link', 'layout', 'element'].includes(a.type)) return false;
+    commit(a, null, 'Discard: ' + (a.note || a.target.label));
+    return true;
+  };
+  // an edit or a key from a frame: only in Edit, from the frame of the selection, for that element; undo and redo from any frame
   B.onEditMsg = (x, d) => {
     if (!editable(x)) return;
     if (d.bd === 'key') {
       if (d.k === 'undo') { undoLast(); return; }
+      if (d.k === 'redo') { redoNext(); return; }
       if (B.mode !== 'edit') return;
       if (d.k === 'escape') { if (B.editSel) setEditSel(null); else MARKUP.setMode('view'); return; }
       if (d.k === 'delete' && B.editSel && B.editSel.ab === x.a.id) deleteSel();
@@ -9954,7 +10045,7 @@ function boardEdits(B) {
     const E = a.element, x = B.frames.get(E.ab), now = x && x.draftNow && x.draftNow[E.sel];
     if (!now) { toast(`That element is gone in rev ${CUR.rev}: discard the draft`); return false; }
     if (E.op !== 'delete' && now.text === E.text) { D.resolve(a.id); return true; }
-    commit(a, elSpec({ ...E, tag: now.tag, base: now.text }));
+    commit(a, elSpec({ ...E, tag: now.tag, base: now.text }), `Re-apply ${T(E.ab)} › ${elName(E)}`);
     return true;
   }
   B.frameMsgs = x => x.role === 'cmp' || x.twin ? [] : [{ bd: 'drafts', list: elList(x.a.id) },
@@ -10043,12 +10134,24 @@ function boardEdits(B) {
     placeAll();
   };
 
-  /* the toolbar: Tidy up (not on a presentation: slides stay in their column) and the drafts count, in the layout group after Fit · zoom · Focus */
+  /* the toolbar: Tidy up (not on a presentation: slides stay in their column), Undo, Redo and the drafts count, in the
+     layout group after Fit · zoom · Focus. Undo and Redo name the step they would undo or redo; disabled at either end */
   const tidyTip = 'Tidy up: screens in columns by depth from the entry, without overlaps (Ctrl/⌘ Z undoes it)';
   const tidyBtn = h('button', { type: 'button', class: 'bd-tbtn', 'aria-label': tidyTip, title: tidyTip, onclick: () => tidyUp() }, ic('grid'));
+  const histBtn = (icon, run, keys, kbds) => tipped(h('button', { type: 'button', class: 'bd-tbtn', 'aria-keyshortcuts': keys, onclick: run }, ic(icon)), kbds);
+  const undoBtn = histBtn('undo', () => undoLast(), 'Meta+Z Control+Z', [MAC ? '⌘Z' : 'Ctrl+Z']);
+  const redoBtn = histBtn('redo', () => redoNext(), 'Shift+Meta+Z Shift+Control+Z Control+Y', [MAC ? '⇧⌘Z' : 'Ctrl+Y']);
+  function paintHist() {
+    const n = H.next();
+    for (const [b, l, verb] of [[undoBtn, n.undo, 'Undo'], [redoBtn, n.redo, 'Redo']]) {
+      b.disabled = l == null; b._tip = l == null ? `Nothing to ${verb.toLowerCase()}` : `${verb}: ${l}`;
+      b.setAttribute('aria-label', b._tip);
+    }
+  }
   const countBtn = h('button', { type: 'button', class: 'bd-tbtn txt bd-dcount', hidden: true, title: 'Board drafts: text edits, deletions, link edits and moves not yet in the doc. They go with Request changes.', onclick: () => MARKUP.comments({ open: true }) });
   function paintCount(n) { countBtn.hidden = !n; countBtn.textContent = n === 1 ? '1 draft' : `${n} drafts`; }
-  B.tb.querySelector('[aria-label^="Focus the selected "]').after(...(IS_DECK ? [] : [tidyBtn]), countBtn);
+  B.tb.querySelector('[aria-label^="Focus the selected "]').after(...(IS_DECK ? [] : [tidyBtn]), undoBtn, redoBtn, countBtn);
+  paintHist();
 
   /* Tidy up: BoardGeo's layered layout, animated, saved as one layout draft */
   let tween = 0;
@@ -10058,7 +10161,7 @@ function boardEdits(B) {
     const to = BoardGeo.tidy(screens, B.links(), Array.isArray(B.b.entry) ? B.b.entry : []) || {};
     const from = B.boxes(), ids = Object.keys(to).filter(id => from[id] && Array.isArray(to[id]));
     if (!ids.length) return 0;
-    const done = () => { tween = 0; moved = true; writeLayout(Object.fromEntries(ids.map(id => [id, to[id]]))); placeAll(); B.reroute(); toast(`Tidied ${ids.length} screens`, { label: 'Undo', run: () => undoLast() }); };
+    const done = () => { tween = 0; moved = true; writeLayout(Object.fromEntries(ids.map(id => [id, to[id]])), `Tidy up ${ids.length} ${SCREEN}s`); placeAll(); B.reroute(); toast(`Tidied ${ids.length} screens`, { label: 'Undo', run: () => undoLast() }); };
     cancelAnimationFrame(tween);
     if (REDUCE || B.reduced) { B.setPositions(Object.fromEntries(ids.map(id => [id, to[id]]))); done(); return ids.length; }
     const t0 = performance.now();
@@ -10450,7 +10553,13 @@ function boardEdits(B) {
     const t = e.target;
     if (t.isContentEditable || (t.closest && t.closest('input, textarea, select, [contenteditable], .bd-exp')) || document.querySelector('dialog[open]') || (B.api && B.api().present)) return;
     if (e.key === ' ' && !e.repeat && t.closest && !t.closest('button, a')) { space = true; return; }
-    if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'z') { if (undoLast()) e.preventDefault(); return; }
+    // the one owner of Z and Y: Ctrl/⌘ Z undoes, Shift+Ctrl/⌘ Z and Ctrl+Y redo (a field returned above: its own undo runs)
+    const k = e.key.toLowerCase(), mod = e.metaKey || e.ctrlKey;
+    if (mod && !e.altKey && k === 'z' || e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey && k === 'y') {
+      e.preventDefault(); e.stopPropagation();
+      if (k === 'z' && !e.shiftKey) undoLast(); else redoNext();
+      return;
+    }
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     if (e.key === 'Escape') {
       if (wire) endWire(); else if (!pop.hidden) closePop(); else if (drag) { drag = null; stage.classList.remove('dragging'); chip.hidden = true; ovClear(); placeAll(); }
@@ -10474,7 +10583,8 @@ function boardEdits(B) {
   }, true);
 
   /* tests and agents: BP.boardEdit({link: {key, to?, kind?, label?, from?, el?, edge?} | {key, delete: true}, move: {id: [x, y]}, tidy, undo,
-     restore: <element draft id>}); the reader's text edits and deletions go through Edit in the frames */
+     redo, restore: <element draft id>}); the reader's text edits and deletions go through Edit in the frames. It returns the
+     drafts, positions, the history's {undo, redo, sealed} step counts and next: {undo, redo} (the steps' labels) */
   B.edit = o => {
     if (o && typeof o === 'object') {
       if (o.link && typeof o.link.key === 'string') {
@@ -10485,11 +10595,12 @@ function boardEdits(B) {
       if (o.move && typeof o.move === 'object') { const m = Object.fromEntries(Object.entries(o.move).filter(([id, p]) => home[id] && Array.isArray(p) && p.every(Number.isFinite))); moved = true; writeLayout(m); placeAll(); }
       if (o.tidy) tidyUp();
       if (o.undo) undoLast();
+      if (o.redo) redoNext();
       if (typeof o.restore === 'string') B.restoreEl(o.restore);
     }
     return { drafts: D.all().map(a => ({ id: a.id, type: a.type, key: a.target.key, status: a.status, stale: !!a.stale, note: a.note,
       ...(a.link ? { link: a.link } : a.element ? { element: a.element } : { positions: posOf(a) }) })),
-      positions: Object.fromEntries(Object.entries(B.boxes()).map(([id, b]) => [id, [Math.round(b.x), Math.round(b.y)]])), undo: undo.length, overlaps: [...overlaps], selected: selection(),
+      positions: Object.fromEntries(Object.entries(B.boxes()).map(([id, b]) => [id, [Math.round(b.x), Math.round(b.y)]])), ...H.size(), next: H.next(), overlaps: [...overlaps], selected: selection(),
       editSel: B.editSel ? { ...B.editSel } : null };
   };
 
@@ -10548,7 +10659,7 @@ window.BP = {
   board: opts => BOARD && BOARD.api ? BOARD.api(opts) : null,
   // a storelisting's platform pages: {platform, locale, locales, sections, tiles, fields, captions, checks}; opts: {platform, locale}
   listing: opts => BOARD && BOARD.listingApi ? BOARD.listingApi(opts) : null,
-  // a design's board drafts: {drafts, positions, undo, overlaps, selected}; opts: {link: {key, to?, kind?, label?, delete?}, move: {id: [x, y]}, tidy, undo}
+  // a design's board drafts: {drafts, positions, undo, redo, sealed, next, overlaps, selected, editSel}; opts: {link: {key, to?, kind?, label?, delete?}, move: {id: [x, y]}, tidy, undo, redo, restore}
   boardEdit: opts => BOARD && BOARD.edit ? BOARD.edit(opts) : null,
 };
 })();
