@@ -171,7 +171,7 @@ class State(unittest.TestCase):
                 self.assertEqual(self.approve({**body, **over})[0], 409)
         self.assertIsNone(self.approval())
         self.assertEqual(self.approve(body)[0], 200)
-        self.assertEqual(self.approval(), {"rev": rev, "at": "2026-01-01T00:00:00Z", "carried": False})
+        self.assertEqual(self.approval(), {"rev": rev, "at": "2026-01-01T00:00:00Z", "carried": False, "picks": {}})
         self.assertEqual(self.seed(self.plan_url)["approval"], self.approval())
         self.assertEqual((self.card()["approval"]["rev"], self.card()["approval"]["carried"]), (rev, False))
         # an edit of the approved rev in place resets it
@@ -186,7 +186,9 @@ class State(unittest.TestCase):
         self.assertEqual(self.approve(self.approval_body("1", [{"checklist": "decisions", "item": "retention", "choice": "d180"},
                                                                {"checklist": "decisions", "item": "prices", "choice": None, "recommend": "notice"}]))[0], 200)
         self.patch("step:steps/0/table", "--set", "status=done", "--change", "Acme: the saved_carts table landed.")
-        self.assertEqual(self.approval(), {"rev": "1", "at": "2026-01-01T00:00:00Z", "carried": True})
+        # picks: what the page compares a later pick against (an unpicked item as its recommendation)
+        self.assertEqual(self.approval(), {"rev": "1", "at": "2026-01-01T00:00:00Z", "carried": True,
+                                           "picks": {"decisions/retention": "d180", "decisions/prices": "notice"}})
         self.patch("item:decisions/retention", "--set", "choice=d180", "--change", "Acme: retention as approved.")
         self.assertEqual(self.approval()["carried"], True)
         self.patch("item:decisions/prices", "--set", "choice=notice", "--change", "Acme: prices as recommended, no pick.")
@@ -198,7 +200,7 @@ class State(unittest.TestCase):
         for key, field, rev in (("item:decisions/prices", "choice=silent", "5"), ("step:steps/0/repo", "title=Acme: a new repo step", "6")):
             with self.subTest(key):
                 self.patch(key, "--set", field, "--change", f"Acme: {key} changed.")
-                self.assertEqual(self.approval(), {"rev": "1", "at": "2026-01-01T00:00:00Z", "carried": False})
+                self.assertEqual({k: v for k, v in self.approval().items() if k != "picks"}, {"rev": "1", "at": "2026-01-01T00:00:00Z", "carried": False})
                 self.assertEqual((self.card()["rev"], self.card()["approval"]["carried"]), (rev, False))
 
 
@@ -212,15 +214,16 @@ class ApprovalCarries(unittest.TestCase):
         picks = {"decisions:retention": "d180"}
 
         def progress(d, step, pick, check):
-            step.update(status="done")
-            check.update(done=True)
+            step.update(status="done", evidence=[{"label": "Migration test", "md": "`4 passed`"}])
+            check.update(done=True, evidence=[{"label": "CI run", "href": "https://ci.acme.example/123"}])
             pick.update(choice="d180")
             d["meta"].update(rev="2", date="2026-10-12")
             d.update(changes=["Acme: the table landed."], resolves=["c1"])
             d["state"].append({"label": "1 step done", "kind": "ok"})
         cases = (("unchanged", lambda d, s, p, c: None, True),
-                 ("progress", progress, True),
+                 ("progress, evidence included", progress, True),
                  ("a pick the reader didn't approve", lambda d, s, p, c: p.update(choice="forever"), False),
+                 ("evidence on a decision", lambda d, s, p, c: p.update(evidence=[{"label": "Acme", "md": "x"}]), False),
                  ("a step's text", lambda d, s, p, c: s.update(title="Acme: another step"), False),
                  ("a new option", lambda d, s, p, c: p["choices"].append({"id": "d30", "label": "30 days"}), False),
                  ("a check's text", lambda d, s, p, c: c.update(text="Acme: another check"), False),

@@ -401,6 +401,35 @@ td.bd-cell-mod { background: color-mix(in oklch, var(--warn-tint) 70%, transpare
 .bp-cl.nested .bp-cl-body { padding-left: calc(14px + var(--ind)); padding-right: 14px; }
 .bp-cl-verify { font-size: 13.5px; color: var(--fg-muted); display: flex; gap: 8px; align-items: flex-start; line-height: 1.5; }
 .bp-cl-verify .bd-ic { width: 15px; height: 15px; color: var(--ok); margin-top: 2px; }
+/* the two kinds of checklist: a decision list asks the reader (accent rail, "Needs your answer", N open), a progress
+   list tracks work (its bar, and a caption saying whose ticks they are) */
+.bp-cl.k-decisions { box-shadow: var(--shadow-1), inset 3px 0 0 var(--accent); }
+.bp-cl.k-decisions > .bp-cl-h > .bd-ic { color: var(--accent-fg); }
+.bp-cl.k-decisions .bp-cl-count { color: var(--accent-fg); }
+.bp-cl-ask { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 999px; font: 600 11.5px/1 var(--sans); color: var(--accent-fg); background: var(--accent-tint); white-space: nowrap; }
+.bp-cl-ask[hidden] { display: none; }
+.bp-cl-cap { margin: -4px 16px 8px; font-size: 12.5px; line-height: 1.45; color: var(--fg-subtle); }
+/* under the title: how many decisions still need the reader; a click goes to the first */
+.bd-ask { display: inline-flex; align-items: center; gap: 7px; margin-top: 16px; height: 30px; padding: 0 12px 0 10px; border: 0; border-radius: 999px; cursor: pointer;
+  font: 600 13px/1 var(--sans); color: var(--accent-fg); background: var(--accent-tint); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--accent) 30%, transparent); }
+.bd-ask:hover { background: color-mix(in oklch, var(--accent-tint), var(--accent) 10%); }
+.bd-ask:focus-visible { box-shadow: var(--focus-ring); }
+.bd-ask .bd-ic { width: 15px; height: 15px; }
+.bd-ask[hidden] { display: none; }
+/* evidence on a step or progress item: embedded (inline) or linked (a chip that opens the path or URL) */
+.bp-ev { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border-radius: 10px; background: var(--panel); box-shadow: inset 0 0 0 1px var(--line-soft); }
+.bp-ev-h { display: flex; align-items: center; gap: 6px; font: 600 12px/1 var(--sans); letter-spacing: .02em; text-transform: uppercase; color: var(--ok-fg); }
+.bp-ev-h .bd-ic { width: 14px; height: 14px; }
+.bp-ev-i { display: flex; flex-direction: column; gap: 6px; font-size: 13.5px; }
+.bp-ev-l { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-weight: 600; }
+.bp-ev-tag { font: 500 11px/1 var(--mono); color: var(--fg-subtle); padding: 3px 6px; border-radius: 6px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); }
+.bp-ev-a { display: inline-flex; align-items: center; gap: 5px; font-weight: 500; color: var(--accent-fg); text-decoration: none; overflow-wrap: anywhere; }
+.bp-ev-a:hover { text-decoration: underline; }
+.bp-ev-a .bd-ic { width: 13px; height: 13px; flex: none; }
+.bp-ev-md { color: var(--fg-muted); } .bp-ev-md > :first-child { margin-top: 0; } .bp-ev-md > :last-child { margin-bottom: 0; }
+.bp-ev .bp-media { margin: 0; }
+.bp-step-ev { display: inline-flex; align-items: center; gap: 4px; color: var(--ok-fg); }
+.bp-step-ev .bd-ic { width: 13px; height: 13px; }
 .bp-cl-verify b { font-weight: 600; color: var(--ok-fg); margin-right: 4px; }
 .bp-cl-item .bp-code { box-shadow: 0 0 0 1px var(--line); }
 .bp-cl-item .bp-code-h { height: 30px; }
@@ -2814,6 +2843,29 @@ function codeBlock(code, lang, title) {
       h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => copyText(code || '', 'Copied') }, ic('copy'), 'Copy')),
     pre);
 }
+// A step's or progress item's evidence (optional): each entry its label, then what is embedded (md, a command,
+// a media file beside the doc) and a linked path or URL. Linked targets are pointers: they may change after the step.
+const evList = x => Array.isArray(x && x.evidence) ? x.evidence.filter(e => e && typeof e === 'object') : [];
+function evidenceBlock(ev) {
+  if (!ev.length) return null;
+  return h('div', { class: 'bp-ev', role: 'group', 'aria-label': 'Evidence' },
+    h('div', { class: 'bp-ev-h' }, ic('tick'), 'Evidence'),
+    ev.map(e => h('div', { class: 'bp-ev-i' },
+      h('div', { class: 'bp-ev-l' }, h('span', { html: inline(e.label || '') }),
+        h('span', { class: 'bp-ev-tag', title: e.href ? 'A pointer: the file or page may have changed since' : 'Recorded in this revision' }, e.href ? 'linked' : 'embedded')),
+      e.md && h('div', { class: 'bp-ev-md', html: md(e.md) }),
+      e.code && codeBlock(e.code, e.lang || 'sh'),
+      e.src && renderMedia({ src: e.src, alt: e.label || 'Evidence' }),
+      e.href && h('a', { class: 'bp-ev-a', href: safeUrl(e.href), target: '_blank', rel: 'noopener noreferrer' }, ic(/^https?:/i.test(e.href) ? 'link' : 'doc'), h('span', {}, e.href)))));
+}
+// build.py checklist_kind: 'decisions' (every item has choices), 'progress' (none has), 'mixed', 'empty'
+function checklistKind(b) {
+  const flags = new Set((b.items || []).filter(it => it && typeof it === 'object').map(it => Array.isArray(it.choices) && it.choices.length > 0));
+  return flags.size === 2 ? 'mixed' : flags.has(true) ? 'decisions' : flags.has(false) ? 'progress' : 'empty';
+}
+const evidenceMd = (ev, indent) => ev.map(e => `${indent}  - Evidence: ${e.label || ''}${e.href ? ` (${e.href})` : e.src ? ` (${e.src})` : ''}`).join('\n');
+// one line per evidence entry, for compare view's "What changed"
+const evText = x => evList(x).map(e => [e.label, e.md, e.code, e.src, e.href].filter(Boolean).join(' · '));
 
 /* ---------- plan blocks: steps, files, media, compare ---------- */
 // Meant mainly for plans, valid in any doc. Steps are the proposal's own timeline: their statuses are
@@ -2840,17 +2892,19 @@ function renderSteps(b) {
   const bid = b.id || 'steps', items = Array.isArray(b.items) ? b.items : [], byId = new Map();
   const list = h('ol', { class: 'bp-tl-l' });
   items.forEach((s, i) => {
-    const st = STEP_STATUS[s.status] ? s.status : 'todo', files = Array.isArray(s.files) ? s.files : [], refs = Array.isArray(s.refs) ? s.refs : [];
+    const st = STEP_STATUS[s.status] ? s.status : 'todo', files = Array.isArray(s.files) ? s.files : [], refs = Array.isArray(s.refs) ? s.refs : [], ev = evList(s);
     const bodyId = `stepb-${bid}-${s.id}`;
     const body = h('div', { class: 'bp-step-body', id: bodyId, role: 'region', 'aria-label': plainText(s.title) },
       s.md && h('div', { class: 'bp-step-md', html: md(s.md) }),
       files.length > 0 && h('div', { class: 'bp-fchips' }, files.map(p => h('button', { type: 'button', class: 'bp-fchip', 'data-path': p, title: p, onclick: () => jumpFile(p) }, fileIcon(p), h('span', {}, baseName(String(p)))))),
-      refs.length > 0 && h('div', { class: 'bp-refs' }, refs.map(r => h('button', { type: 'button', class: 'bp-ref', onclick: () => focusNode(r) }, ic('target'), refLabel(r)))));
+      refs.length > 0 && h('div', { class: 'bp-refs' }, refs.map(r => h('button', { type: 'button', class: 'bp-ref', onclick: () => focusNode(r) }, ic('target'), refLabel(r)))),
+      evidenceBlock(ev));
     const meta = h('span', { class: 'bp-step-meta' },
       st !== 'todo' && h('span', { class: 'bp-chip ' + STEP_CHIP[st] }, STEP_STATUS[st]),
       EFFORT[s.effort] && h('span', { class: 'bp-eff e-' + s.effort, title: 'Effort: ' + EFFORT[s.effort].toLowerCase() },
         h('span', { 'aria-hidden': 'true' }, h('i'), h('i'), h('i')), h('span', { class: 'bp-sr' }, 'Effort '), s.effort),
-      files.length > 0 && h('span', { class: 'bp-step-fc' }, ic('file'), `${files.length} file${files.length === 1 ? '' : 's'}`));
+      files.length > 0 && h('span', { class: 'bp-step-fc' }, ic('file'), `${files.length} file${files.length === 1 ? '' : 's'}`),
+      ev.length > 0 && h('span', { class: 'bp-step-ev', title: 'Evidence that this step landed' }, ic('tick'), `${ev.length} evidence`));
     const head = h('button', { type: 'button', class: 'bp-step-head', 'aria-expanded': 'false', 'aria-controls': bodyId },
       h('span', { class: 'bp-step-main' }, h('span', { class: 'bp-sr' }, `Step ${i + 1}${st === 'todo' ? '' : ', ' + STEP_STATUS[st].toLowerCase()}: `),
         h('span', { class: 'bp-step-t', html: inline(s.title) }), meta),
@@ -2993,7 +3047,10 @@ function renderChecklist(b, parent) {
   const numbered = b.numbered !== false;
   const list = h(numbered ? 'ol' : 'ul', { class: 'bp-cl-items' });
   const items = [];
-  const root = h('div', { class: 'bp-cl' + (parent ? ' nested' : ''), id: 'cl-' + cid });
+  // decisions: every item has choices (the reader answers it); progress: none has (ticks track work); mixed: an
+  // older doc the build only warns about, shown as before
+  const kind = checklistKind(b);
+  const root = h('div', { class: 'bp-cl k-' + kind + (parent ? ' nested' : ''), id: 'cl-' + cid });
   (b.items || []).forEach((it, i) => {
     const key = itemKey(cid, it.id);
     const choices = Array.isArray(it.choices) && it.choices.length ? it.choices : null;
@@ -3021,7 +3078,8 @@ function renderChecklist(b, parent) {
       it.code && codeBlock(it.code, it.lang || 'sh'),
       (it.blocks || []).map(kb => h('div', { class: 'bp-cl-block' }, kb.type === 'checklist' ? renderChecklist(kb, { cid, iid: it.id }) : (RENDER[kb.type] || RENDER.text)(kb))),
       it.verify && !subIsCheck && h('div', { class: 'bp-cl-verify' }, ic('check'), h('span', {}, h('b', {}, 'Check'), h('span', { html: inline(it.verify) }))),
-      it.refs && it.refs.length && h('div', { class: 'bp-refs' }, it.refs.map(r => h('button', { type: 'button', class: 'bp-ref', onclick: () => focusNode(r) }, ic('target'), refLabel(r)))));
+      it.refs && it.refs.length && h('div', { class: 'bp-refs' }, it.refs.map(r => h('button', { type: 'button', class: 'bp-ref', onclick: () => focusNode(r) }, ic('target'), refLabel(r)))),
+      !choices && evidenceBlock(evList(it)));
     // the reader's comment for the agent: stored per item, exported with the answers. On a plan or design,
     // `:note-sent` holds the hash of the comment as Request changes or Approve last sent it: a new or
     // edited comment is pending until the next one
@@ -3042,9 +3100,13 @@ function renderChecklist(b, parent) {
       ic('chev', 'bp-cl-chev'));
     const dot = choices && h('span', { class: 'bp-cl-dot', 'aria-hidden': 'true' });
     const li = h('li', { class: 'bp-cl-item' + (choices ? ' has-choices' : ''), id: `item-${cid}-${it.id}` }, h('div', { class: 'bp-cl-row' }, cb, dot, head));
+    // a pick changed after approval: pending until Request changes sends it (`:pick-sent` holds the pick it sent)
+    const pickSentKey = key + ':pick-sent';
     const entryItem = { it, cb, li, cid, body, head, choices, get choice() { return choice; }, get note() { return note; },
       get notePending() { return !!note && store.get(noteSentKey) !== noteHash(note); },
-      get more() { return more === '1' ? 'on' : more ? 'sent' : null; } };
+      get more() { return more === '1' ? 'on' : more ? 'sent' : null; },
+      get pickChanged() { return !!choices && pickDiffers(entryItem); },
+      get pickPending() { return entryItem.pickChanged && store.get(pickSentKey) !== (choice || ''); } };
     entryItem.setNote = (v, from) => {
       note = v.trim() ? v : '';
       if (note) store.set(noteKey, note); else { store.del(noteKey); store.del(noteSentKey); }
@@ -3065,12 +3127,14 @@ function renderChecklist(b, parent) {
     entryItem.markSent = () => {
       if (note) store.set(noteSentKey, noteHash(note));
       if (more === '1') { more = 'sent@' + CUR.rev; store.set(moreKey, more); paintMore(); }
+      if (entryItem.pickChanged) store.set(pickSentKey, choice || '');
     };
     if (choices) {
       entryItem.setChoice = id => {
         choice = id || null; cb.checked = !!choice;
         if ((choice || '') === authorChoice) store.del(key); else store.set(key, `=${choice || ''}|${authorChoice}`);
         li.classList.toggle('done', cb.checked); entryItem.pills.paint(); update();
+        if (APPROVABLE && !OLD) { paintPlan(); MARKUP.paint(); }   // a pick changed after approval: chip and Request changes
         if (entryItem.onChoice) entryItem.onChoice(choice);   // a design's theme pick re-skins its screens
       };
       entryItem.pills = choicePills(entryItem);
@@ -3131,16 +3195,21 @@ function renderChecklist(b, parent) {
   // not on earlier revisions or in compare view
   const acceptBtn = !OLD && !BASE ? h('button', { type: 'button', class: 'bp-btn ghost', hidden: true, title: 'Pick the starred option on every open decision in this checklist',
     onclick: () => acceptRecs(checklistScope(entry)) }) : null;
+  const ask = kind === 'decisions' ? h('span', { class: 'bp-cl-ask' }, 'Needs your answer') : null;
+  const cap = kind === 'progress' && !parent ? h('p', { class: 'bp-cl-cap' }, APPROVABLE
+    ? `The agent marks these as the work lands. Your ticks stay on this page and don't change the approval.`
+    : 'Your own tracker: ticks are saved for you and go with Send answers.') : null;
   root.append(h('div', { class: 'bp-cl-h' },
-    ic('list'), h(parent ? 'h4' : 'h3', {}, b.title || 'Checklist'), count,
+    ic(kind === 'decisions' ? 'help' : 'list'), h(parent ? 'h4' : 'h3', {}, b.title || 'Checklist'), ask, count,
     h('span', { class: 'tools' }, acceptBtn, expandBtn,
       !parent && h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => copyText(checklistMd(entry), 'Copied checklist as Markdown') }, ic('copy'), 'Copy'),
       !parent && h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => { if (!confirm('Reset this checklist?')) return; resetChecklist(entry); } }, ic('reset'), 'Reset'))),
-    bar, list);
-  const entry = { b, items, root, count, bar, sideRow: null, parent, paintExpand, acceptBtn };
+    ...[cap, kind !== 'decisions' && bar, list].filter(Boolean));
+  const entry = { b, items, root, count, bar, sideRow: null, parent, paintExpand, acceptBtn, kind };
   function update() {
-    const n = items.filter(x => x.cb.checked).length;
-    count.textContent = `${n} of ${items.length}`;
+    const n = items.filter(x => x.cb.checked).length, open = items.length - n;
+    if (kind === 'decisions') { count.textContent = open ? `${open} open` : 'All answered'; ask.hidden = !open; }
+    else count.textContent = `${n} of ${items.length}`;
     bar.firstChild.style.width = (items.length ? n / items.length * 100 : 0) + '%';
     root.classList.toggle('complete', items.length > 0 && n === items.length);
     if (entry.sideRow) entry.sideRow();
@@ -3256,15 +3325,18 @@ function checklistMd(c, indent = '') {
       else line += rec ? ` (no decision; recommended: ${rec})` : ' (no decision)';
     }
     const quoted = x.note ? '\n' + x.note.trim().split('\n').map(l => `${indent}  > ${l}`).join('\n') : '';
-    return line + quoted + sub.map(n => '\n' + checklistMd(n, indent + '  ').trimEnd()).join('');
+    const ev = x.choices ? [] : evList(x.it);
+    return line + quoted + (ev.length ? '\n' + evidenceMd(ev, indent) : '') + sub.map(n => '\n' + checklistMd(n, indent + '  ').trimEnd()).join('');
   });
   if (indent) return lines.join('\n') + '\n';
   const n = c.items.filter(x => x.cb.checked).length;
   return `## ${c.b.title || c.b.id} (${n}/${c.items.length})\n` + lines.join('\n') + '\n';
 }
+// decision lists first: what needs the agent's attention, then the progress lists in page order
 function allChecklistsMd() {
-  const msg = store.get(MSG_KEY) || '';
-  return `# ${DOC.title} — progress ${new Date().toISOString().slice(0, 10)}\n\n` + (msg.trim() ? `${msg.trim()}\n\n` : '') + CHECKLISTS.filter(c => !c.parent).map(c => checklistMd(c)).join('\n');
+  const msg = store.get(MSG_KEY) || '', top = CHECKLISTS.filter(c => !c.parent);
+  return `# ${DOC.title} — progress ${new Date().toISOString().slice(0, 10)}\n\n` + (msg.trim() ? `${msg.trim()}\n\n` : '')
+    + [...top.filter(c => c.kind === 'decisions'), ...top.filter(c => c.kind !== 'decisions')].map(c => checklistMd(c)).join('\n');
 }
 
 /* ---------- replies: comments and answers back to the agent ---------- */
@@ -3341,8 +3413,15 @@ function replyPayload() {
 }
 // What Request changes carries besides the pending annotations: decision items marked "Need more details"
 // and not sent yet (every page with the tray) and, on a plan or design, item comments new or edited since
-// the last Request changes or Approve
-const itemsPending = () => Object.values(ITEMS).filter(x => x.more === 'on' || APPROVABLE && x.notePending);
+// the last Request changes or Approve, and picks changed since the approval and not sent yet
+const itemsPending = () => Object.values(ITEMS).filter(x => x.more === 'on' || APPROVABLE && (x.notePending || x.pickPending));
+// On an approved plan or design: whether a decision's pick differs from the approved one (an item approved without
+// a pick means its recommendation). Items the approval didn't carry (added since) don't count.
+function pickDiffers(x) {
+  const p = planState(), k = `${x.cid}/${x.it.id}`;
+  if (p.state !== 'approved' || !p.picks || !(k in p.picks)) return false;
+  return (x.choice || x.it.recommend || '') !== p.picks[k];
+}
 // FNV-1a of a comment: what `:note-sent` keeps of the one that went
 const noteHash = s => { let n = 0x811c9dc5; for (let i = 0; i < s.length; i++) n = Math.imul(n ^ s.charCodeAt(i), 0x01000193); return (n >>> 0).toString(36); };
 // "Need more details" in the Markdown: the request, then the pick when there is one
@@ -3468,14 +3547,28 @@ async function doSend() {
     copyText(allChecklistsMd(), replyFailed(e));
   }
 }
+// the top bar's tracker counts progress items only; decisions are counted by the chip under the title (paintAsk)
 function updateOverall() {
+  paintAsk();
   if (!CHECKLISTS.length) return;
   let n = 0, t = 0;
-  for (const c of CHECKLISTS) { t += c.items.length; n += c.items.filter(x => x.cb.checked).length; }
-  overall.hidden = false;
+  for (const c of CHECKLISTS) { const xs = c.items.filter(x => !x.choices); t += xs.length; n += xs.filter(x => x.cb.checked).length; }
+  overall.hidden = !t;
   overallTxt.textContent = `${n}/${t}`;
   overallBar.firstChild.style.width = (t ? n / t * 100 : 0) + '%';
   overallBar.classList.toggle('full', t > 0 && n === t);
+}
+// "N questions need your answer" under the title, until each decision has a pick; not once the doc is approved
+// (an approval without a pick means the recommendation), on earlier revisions or in compare view
+const askChip = !OLD && !BASE ? h('button', { type: 'button', class: 'bd-ask', hidden: true, onclick: () => {
+  const x = Object.values(ITEMS).find(y => y.choices && !y.choice); if (x) jumpTo(openItem(x));
+} }) : null;
+if (askChip) head.append(askChip);
+function paintAsk() {
+  if (!askChip) return;
+  const n = Object.values(ITEMS).filter(x => x.choices && !x.choice).length;
+  askChip.hidden = !n || planState().state === 'approved';
+  if (!askChip.hidden) askChip.replaceChildren(ic('help'), `${n} question${n === 1 ? ' needs' : 's need'} your answer`);
 }
 
 /* ---------- sections (run at the end, after the canvas engine is defined) ---------- */
@@ -3509,7 +3602,7 @@ if (CHECKLISTS.length) {
     const row = h('a', { class: 'bp-prog-row', href: '#cl-' + c.b.id, onclick: go }, h('span', { class: 't' }, h('span', {}, c.b.title || c.b.id), cnt), bar);
     c.sideRow = () => {
       const n = c.items.filter(x => x.cb.checked).length;
-      cnt.textContent = `${n}/${c.items.length}`;
+      cnt.textContent = c.kind === 'decisions' ? (n < c.items.length ? `${c.items.length - n} open` : 'answered') : `${n}/${c.items.length}`;
       bar.firstChild.style.width = (c.items.length ? n / c.items.length * 100 : 0) + '%';
       bar.classList.toggle('full', c.items.length > 0 && n === c.items.length);
     };
@@ -8104,7 +8197,7 @@ function compareChecklist(o, n) {
       ['Options', (w.choices || []).map(c => c.label), (it.choices || []).map(c => c.label)],
       ['Recommended', w.recommend && lbl(w, w.recommend), it.recommend && lbl(it, it.recommend)],
       ['Picked', w.choice && lbl(w, w.choice), it.choice && lbl(it, it.choice)], ['Done', w.done ? 'yes' : 'no', it.done ? 'yes' : 'no'],
-      ['Details', w.detail, it.detail], ['Command', w.code, it.code], ['Check', w.verify, it.verify], ['Links', w.refs, it.refs]]);
+      ['Details', w.detail, it.detail], ['Command', w.code, it.code], ['Check', w.verify, it.verify], ['Evidence', evText(w), evText(it)], ['Links', w.refs, it.refs]]);
     // nested blocks: sub-checklists mark their own items; anything else is diffed as text
     const wb = w.blocks || [], ib = it.blocks || [];
     for (const op of alignSeq(wb, ib, b => b.type + ':' + (b.id || ''))) {
@@ -8145,7 +8238,7 @@ function compareSteps(o, n, el) {
     const w = was.get(s.id);
     if (!w) { cnt.add++; x.meta.prepend(chgTag('add')); markChg(x.li, 'add', s.title); continue; }
     if (canon(w) === canon(s)) continue;
-    const rows = fieldRows([['Title', w.title, s.title], ['Status', status(w), status(s)], ['Effort', w.effort, s.effort], ['Details', w.md, s.md], ['Files', w.files, s.files], ['Links', w.refs, s.refs]]);
+    const rows = fieldRows([['Title', w.title, s.title], ['Status', status(w), status(s)], ['Effort', w.effort, s.effort], ['Details', w.md, s.md], ['Files', w.files, s.files], ['Evidence', evText(w), evText(s)], ['Links', w.refs, s.refs]]);
     if (!rows.length) continue;
     cnt.mod++;
     x.meta.prepend(chgTag('mod'));
@@ -8572,7 +8665,8 @@ function planState() {
   const ap = server ? REPLY.approval : loc && loc.state === 'approved' ? loc : null;
   const approvedRev = ap ? String(ap.rev ?? '') : null, carried = !!(server && ap && ap.carried === true);
   const state = approvedRev === CUR.rev || carried ? 'approved' : loc && loc.state === 'changes' && String(loc.rev) === CUR.rev ? 'changes' : ap ? 'stale' : 'awaiting';
-  return { type: DOC_TYPE, state, rev: CUR.rev, approvedRev, carried };
+  // picks: the decisions the approval carried, {"<checklist>/<item>": pick} (serve.py approved_picks)
+  return { type: DOC_TYPE, state, rev: CUR.rev, approvedRev, carried, picks: ap && ap.picks && typeof ap.picks === 'object' ? ap.picks : null };
 }
 const revWord = CUR.rev ? ` (rev ${CUR.rev})` : '';
 function approvePayload(note) {
@@ -8587,14 +8681,19 @@ const approveKey = APPROVABLE ? tipped(keyBtn('txt approve', 'check', `Approve $
 const boardBlocks = () => BOARD && Array.isArray(BOARD.approveBlocks) ? BOARD.approveBlocks.flatMap(f => f()) : [];
 function paintPlan() {
   if (!APPROVABLE || OLD) return;
+  paintAsk();
   const p = planState(), done = p.state === 'approved', revTxt = p.approvedRev ? ` · rev ${p.approvedRev}` : '';
+  // approved, but the reader has picked differently since: the agent hears it only with Request changes
+  const moved = done ? Object.values(ITEMS).filter(x => x.pickChanged) : [];
   if (planChip) {
-    planChip.className = 'bd-planchip ' + p.state;
+    planChip.className = 'bd-planchip ' + (moved.length ? 'moved' : p.state);
     // carried: approved at an earlier rev, and the agent has only marked progress since
     const since = done && p.approvedRev !== CUR.rev && CUR.rev ? h('span', { class: 'sub' }, `· progress in rev ${CUR.rev}`) : null;
-    planChip.replaceChildren(...(done ? [ic('tick'), 'Approved' + revTxt, since] : p.state === 'changes' ? [ic('edit'), 'Changes requested']
+    planChip.replaceChildren(...(moved.length ? [h('i'), `Pick${moved.length === 1 ? '' : 's'} changed since approval`, moved.every(x => !x.pickPending) && h('span', { class: 'sub' }, '· sent')]
+      : done ? [ic('tick'), 'Approved' + revTxt, since] : p.state === 'changes' ? [ic('edit'), 'Changes requested']
       : p.state === 'stale' ? [h('i'), `Changes since approved rev ${p.approvedRev}`] : [h('i'), `${AP_TITLE} · Awaiting approval`]).filter(Boolean));
-    planChip.title = p.state === 'stale' ? `You approved rev ${p.approvedRev}; it has changed since, so this rev needs your approval again` : '';
+    planChip.title = moved.length ? `You approved rev ${p.approvedRev} with other picks. Send ${moved.length === 1 ? 'this one' : 'these'} with Request changes, or pick the approved option again`
+      : p.state === 'stale' ? `You approved rev ${p.approvedRev}; it has changed since, so this rev needs your approval again` : '';
   }
   // a plan can't be approved while an item asks for more details: send it and wait for the agent's rev, or withdraw it
   const asking = done ? [] : Object.values(ITEMS).filter(x => x.more);
@@ -8657,8 +8756,9 @@ function openApprove() {
 async function doApprove() {
   const dlg = approveDlg, p = approvePayload(dlg ? dlg._note.value : '');
   const done = () => {
-    REPLY.approval = { rev: p.rev, at: p.at, carried: false };
-    store.set(PLAN_KEY, JSON.stringify({ rev: p.rev, state: 'approved', at: p.at }));
+    const picks = Object.fromEntries(p.answers.filter(a => a.choice || a.recommend).map(a => [`${a.checklist}/${a.item}`, a.choice || a.recommend]));
+    REPLY.approval = { rev: p.rev, at: p.at, carried: false, picks };
+    store.set(PLAN_KEY, JSON.stringify({ rev: p.rev, state: 'approved', at: p.at, picks }));
     MARKUP.markSent(p.annotations.map(a => a.id), p.at);
     Object.values(ITEMS).forEach(x => x.markSent()); MARKUP.paint();
     if (dlg) { dlg._note.value = ''; dlg.close(); }
@@ -9756,10 +9856,11 @@ const MARKUP = (() => {
       dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });
       dlg._paint = () => {
         const open = pending(), old = open.filter(a => a.rev !== CUR.rev).length, gn = open.filter(isGeneral).length, xs = itemsPending();
-        const nn = xs.filter(x => APPROVABLE && x.notePending).length, nm = xs.filter(x => x.more === 'on').length;
+        const nn = xs.filter(x => APPROVABLE && x.notePending).length, nm = xs.filter(x => x.more === 'on').length, np = xs.filter(x => APPROVABLE && x.pickPending).length;
         const what = [open.length && `${open.length} pending comment${open.length === 1 ? '' : 's'}${gn ? `, ${gn} general` : ''}`,
-          nn && `${nn} comment${nn === 1 ? '' : 's'} on items`, nm && `${nm} request${nm === 1 ? '' : 's'} for more details`].filter(Boolean).join(', ');
-        cnt.replaceChildren(h('b', {}, what), open.length + nn + nm === 1 ? ' goes with this request' : ' go with this request',
+          nn && `${nn} comment${nn === 1 ? '' : 's'} on items`, nm && `${nm} request${nm === 1 ? '' : 's'} for more details`,
+          np && `${np} pick${np === 1 ? '' : 's'} changed since approval`].filter(Boolean).join(', ');
+        cnt.replaceChildren(h('b', {}, what), open.length + nn + nm + np === 1 ? ' goes with this request' : ' go with this request',
           ...(old ? [' (', h('span', { class: 'old' }, `${old} made on an earlier revision`), ')'] : []), open.length ? '. Edit or delete them in the Comments sidebar.' : '.');
         send.hidden = !REPLY.changes; send.disabled = copy.disabled = !open.length && !xs.length;
         copy.classList.toggle('primary', !REPLY.changes);

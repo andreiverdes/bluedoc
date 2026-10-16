@@ -69,6 +69,26 @@
       "blocks": [
         {
           "type": "checklist",
+          "id": "decide",
+          "title": "Open decision",
+          "numbered": false,
+          "items": [
+            {
+              "id": "saved-carts",
+              "text": "When does the saved carts rollout start?",
+              "sub": "Recommend 19 October: the plan is approved and the migration is ready.",
+              "recommend": "oct19",
+              "choices": [
+                { "id": "oct19", "label": "19 October" },
+                { "id": "oct26", "label": "26 October" },
+                { "id": "after-sale", "label": "After the November sale" }
+              ],
+              "detail": "The table migration takes no lock on `carts`. Starting on 26 October leaves one week before the November sale freeze."
+            }
+          ]
+        },
+        {
+          "type": "checklist",
           "id": "next",
           "title": "Week 42",
           "numbered": false,
@@ -84,18 +104,6 @@
               "text": "Renew the PayCo client certificate before 20 October",
               "sub": "It expires on 24 October; an expired certificate stops card payments.",
               "verify": "`openssl x509 -enddate` on the new certificate shows 2027."
-            },
-            {
-              "id": "saved-carts",
-              "text": "When does the saved carts rollout start?",
-              "sub": "Recommend 19 October: the plan is approved and the migration is ready.",
-              "recommend": "oct19",
-              "choices": [
-                { "id": "oct19", "label": "19 October" },
-                { "id": "oct26", "label": "26 October" },
-                { "id": "after-sale", "label": "After the November sale" }
-              ],
-              "detail": "The table migration takes no lock on `carts`. Starting on 26 October leaves one week before the November sale freeze."
             }
           ]
         }

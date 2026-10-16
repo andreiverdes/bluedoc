@@ -338,15 +338,17 @@ SCOPE_SHAPE = {"nodes": [{"id": str, "label": str, "kind": str, "state": str, "x
                           "col": NUMBER, "row": NUMBER, "w": NUMBER, "h": NUMBER, "children": SCOPE}],
                "edges": [{"id": str, "from": str, "to": str, "kind": str, "label": str}],
                "flows": [{"steps": [{"edge": str, "edges": [str]}]}]}
+EVIDENCE_SHAPE = [{"label": str, "md": str, "code": str, "lang": str, "src": str, "href": str}]
 ITEM_SHAPE = {"id": str, "text": str, "sub": str, "recommend": str, "choice": str, "refs": [str], "blocks": [BLOCK],
-              "choices": [{"id": str, "label": str}]}
+              "choices": [{"id": str, "label": str}], "evidence": EVIDENCE_SHAPE}
 BLOCK_SHAPES = {
     "text": {"md": str}, "callout": {"md": str, "kind": str}, "code": {"code": str},
     "table": {"columns": list, "rows": [list]}, "terms": {"items": [dict]}, "cards": {"items": [dict]},
     "checklist": {"id": str, "items": [ITEM_SHAPE]}, "canvas": {"id": str, **SCOPE_SHAPE},
     "diff": {"id": str, "base": str, "head": str, "files": [{"path": str, "status": str}],
              "comments": [{"file": str, "item": str}]},
-    "steps": {"id": str, "items": [{"id": str, "title": str, "status": str, "effort": str, "refs": [str]}]},
+    "steps": {"id": str, "items": [{"id": str, "title": str, "status": str, "effort": str, "refs": [str],
+                                    "evidence": EVIDENCE_SHAPE}]},
     "files": {"items": [{"path": str, "action": str, "step": str}]},
     "board": {"id": str, "targets": [str], "framework": str, "entry": [str], "layout": str, "viewport": dict,
               "frameworks": [{"id": str, "label": str, "files": [str], "store": str}],
@@ -576,6 +578,51 @@ def check_media_src(rep: Report, where: str, src, base: Path | None) -> None:
         rep.warn(where, f"'{src}' is {f.stat().st_size / 1048576:.1f} MB (> {MAX_MEDIA_BYTES // 1048576} MB): compress or crop it; -o embeds it in the page")
 
 
+def checklist_kind(b: dict) -> str:
+    """'decisions' when every item has choices (the reader answers it), 'progress' when none has (ticks track work),
+    'mixed' when both (a build error), 'empty' without items."""
+    flags = {bool(it.get("choices")) for it in b.get("items") or [] if isinstance(it, dict)}
+    return {frozenset({True}): "decisions", frozenset({False}): "progress"}.get(frozenset(flags), "mixed" if flags else "empty")
+
+
+EVIDENCE_BODY = ("md", "code", "src", "href")
+
+
+def check_evidence(rep: Report, where: str, ev, base: Path | None) -> None:
+    """A step's or progress item's `evidence`: entries of a label and at least one of md, code (lang), src (a media
+    file beside the doc, embedded) or href (a relative path or http(s) URL, linked). Optional; never hashed."""
+    if ev is None:
+        return
+    if not isinstance(ev, list):
+        rep.err(where, "list of {label, md?, code?, lang?, src?, href?}: what shows the work landed")
+        return
+    for i, e in enumerate(ev):
+        ew = f"{where}[{i}]"
+        if not isinstance(e, dict) or not need(rep, ew, e, "label"):
+            continue
+        if not any(e.get(k) for k in EVIDENCE_BODY):
+            rep.err(ew, f"give at least one of {', '.join(EVIDENCE_BODY)}: a label alone shows nothing")
+        lint_text(rep, ew + ".md", e.get("md"))
+        if e.get("lang") and not e.get("code"):
+            rep.err(ew + ".lang", "'lang' names the language of 'code'; this entry has no code")
+        if e.get("src") is not None:
+            check_media_src(rep, ew + ".src", e["src"], base)
+        href = e.get("href")
+        if href is None:
+            continue
+        bare = re.sub(r"[\x00-\x20]", "", href) if isinstance(href, str) else ""
+        if not bare:
+            rep.err(ew + ".href", "href must be a non-empty string: a path relative to the doc's folder or an http(s) URL")
+        elif re.match(r"[a-zA-Z][a-zA-Z0-9+.-]*:", bare) and not re.match(r"https?:", bare, re.I):
+            rep.err(ew + ".href", f"'{href}': evidence links take a path relative to the doc's folder or an http(s) URL")
+        elif bare.startswith("/") and not bare.startswith("//"):
+            rep.err(ew + ".href", f"'{href}' is absolute: use a path relative to the doc's folder")
+        elif base is not None and not re.match(r"(https?:)?//|#", bare, re.I):
+            path = href.split("?", 1)[0].split("#", 1)[0]
+            if not (base / path).exists():
+                rep.warn(ew + ".href", f"'{href}' not found (looked for {base / path}): the page's link would be dead")
+
+
 def doc_type(meta: dict) -> str:
     """docs | review | plan | design | presentation | website | other: meta.type when set, else read from meta.kind (a
     design, presentation or website only by meta.type: a kind like 'Design' stays docs). template.html follows the same
@@ -774,9 +821,9 @@ PROGRESS_FIELDS, PROGRESS_META = ("changes", "resolves", "state"), ("rev", "date
 
 def without_progress(doc: dict, picks: dict[str, str] | None = None, approved: dict[str, object] | None = None) -> dict:
     """A copy of doc without what may change after an approval and keep it: meta.rev and meta.date, `changes`,
-    `resolves`, the `state` labels, steps' `status` and checklist items' `done`. With picks ({"<checklist>:<item>":
-    the reader's approved pick}) a decision's `choice` set to its pick reads as the approved doc's (approved:
-    {"<checklist>:<item>": that doc's item, for its `choice` or its absence})."""
+    `resolves`, the `state` labels, steps' `status` and `evidence`, and progress items' `done` and `evidence`. With
+    picks ({"<checklist>:<item>": the reader's approved pick}) a decision's `choice` set to its pick reads as the
+    approved doc's (approved: {"<checklist>:<item>": that doc's item, for its `choice` or its absence})."""
     d = copy.deepcopy(doc)
     for k in PROGRESS_FIELDS:
         d.pop(k, None)
@@ -791,8 +838,11 @@ def without_progress(doc: dict, picks: dict[str, str] | None = None, approved: d
                 continue
             if b["type"] == "steps":
                 it.pop("status", None)
+                it.pop("evidence", None)
                 continue
             it.pop("done", None)
+            if not it.get("choices"):
+                it.pop("evidence", None)
             k = f"{b.get('id')}:{it.get('id')}"
             if picks and it.get("choice") and it.get("choice") == picks.get(k):
                 was = (approved or {}).get(k) or {}
@@ -1877,6 +1927,8 @@ def _validate(rep: Report, doc: dict, doc_path: Path | None, *, allow_remote: bo
     file_rows: set[str] = set()                # paths listed by files blocks
     file_steps: list[tuple[str, str]] = []     # (where, step id) a files row points to
     boards: list[tuple[str, dict]] = []        # (where, block): checked once the brief is known
+    mixed: list[tuple[str, str]] = []          # (where, message): checklists holding decisions and progress items
+    top_lists: list[tuple[str, str, str]] = [] # (where, id, kind) of section-level checklists, in page order
 
     def check_block(bw: str, b: dict, depth: int) -> None:
         """depth 0 = section block, 1 = inside a checklist item, 2 = inside a nested checklist's item."""
@@ -1953,6 +2005,8 @@ def _validate(rep: Report, doc: dict, doc_path: Path | None, *, allow_remote: bo
                                 rep.err(f"{iw}.{field}", f"'{it[field]}' is not one of the option ids {sorted(cids)}")
                     if it.get("done"):
                         rep.err(iw + ".done", "a decision item is answered by 'choice', not 'done'")
+                    if it.get("evidence") is not None:
+                        rep.err(iw + ".evidence", "a decision item is answered by 'choice'; evidence belongs on steps and progress items")
                 elif it.get("recommend") or it.get("choice"):
                     rep.err(iw, "'recommend' and 'choice' need 'choices'")
                 title = re.sub(r"`([^`]*)`", r"\1", it.get("text", ""))
@@ -1971,6 +2025,17 @@ def _validate(rep: Report, doc: dict, doc_path: Path | None, *, allow_remote: bo
                     refs_to_check.append((iw, r))
                 for ki, kb in enumerate(it.get("blocks") or []):
                     check_block(f"{iw}.blocks[{ki}]", kb, depth + 1)
+                if not choices:
+                    check_evidence(rep, iw + ".evidence", it.get("evidence"), base)
+            kind = checklist_kind(b)
+            if kind == "mixed":
+                its = [it for it in b["items"] if isinstance(it, dict)]
+                dec = [str(it.get("id")) for it in its if it.get("choices")]
+                act = [str(it.get("id")) for it in its if not it.get("choices")]
+                mixed.append((bw, f"checklist '{b['id']}' mixes decisions ({', '.join(dec)}) and progress items "
+                                  f"({', '.join(act)}): split it into a decision list and a progress list"))
+            elif depth == 0 and kind != "empty":
+                top_lists.append((bw, b["id"], kind))
         elif t == "canvas":
             if not need(rep, bw, b, "id", "title", "nodes"):
                 return
@@ -2039,6 +2104,7 @@ def _validate(rep: Report, doc: dict, doc_path: Path | None, *, allow_remote: bo
                     rep.err(iw + ".refs", "list of '<canvas>/<node>' refs")
                 else:
                     refs_to_check.extend((iw, r) for r in refs or [])
+                check_evidence(rep, iw + ".evidence", it.get("evidence"), base)
         elif t == "files":
             if not need(rep, bw, b, "items"):
                 return
@@ -2205,14 +2271,27 @@ def _validate(rep: Report, doc: dict, doc_path: Path | None, *, allow_remote: bo
         except (listing.RulesError, OSError, ValueError) as e:
             rep.err("listing", f"cannot read the store rules: {e}")
     gaps = check_contract(doc)
+    level = contract_level(doc, doc_path) if gaps or mixed else "warn"
     if gaps:
         where = f"contract ({doc_type(doc.get('meta') or {})})"
-        if contract_level(doc, doc_path) == "error":
+        if level == "error":
             for m in gaps:
                 rep.err(where, m)
         else:
             for m in gaps:
                 rep.warn(where, m + " (an error as soon as the doc changes)")
+    for where, m in mixed:
+        if level == "error":
+            rep.err(where, m)
+        else:
+            rep.warn(where, m + " (an error as soon as the doc changes)")
+    first_progress = None
+    for where, cid, kind in top_lists:
+        if kind == "progress":
+            first_progress = first_progress or cid
+        elif first_progress:
+            rep.warn(where, f"decision list '{cid}' comes after progress list '{first_progress}': "
+                            "put what needs the reader's answer first")
 
 
 def history_path(doc_path: Path) -> Path:
@@ -2430,7 +2509,7 @@ def _script_json(x) -> str:
 
 
 def inline_media(x, base: Path, missing: list[str], cache: dict[str, str] | None = None):
-    """A copy of x (doc, or embedded history) with every relative media src (media blocks, compare sides)
+    """A copy of x (doc, or embedded history) with every relative media src (media blocks, compare sides, evidence)
     replaced by a data: URI read from base, the doc's folder. Srcs whose file is gone go into missing."""
     cache = {} if cache is None else cache
 
@@ -2458,6 +2537,8 @@ def inline_media(x, base: Path, missing: list[str], cache: dict[str, str] | None
         for side in ("before", "after"):
             if isinstance(out.get(side), dict) and out[side].get("src"):
                 out[side] = {**out[side], "src": uri(out[side]["src"])}
+    if isinstance(out.get("evidence"), list):
+        out["evidence"] = [{**e, "src": uri(e["src"])} if isinstance(e, dict) and e.get("src") else e for e in out["evidence"]]
     return out
 
 

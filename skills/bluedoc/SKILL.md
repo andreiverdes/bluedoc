@@ -36,7 +36,7 @@ You write one `*.bluedoc.json`; the local server renders it as a page (blueprint
 - **Plan mode** (Claude Code): ExitPlanMode is denied with a message naming the plan doc and its URL. Follow it: `wait` in the background, `patch` that doc on a change request, call ExitPlanMode again after the approval.
 - **Revise** per target: `build.py patch <doc> <key> --set field=value --change "what changed and why"` (`--json`, `--append`, `--delete` for more). It validates, bumps `meta.rev`, replaces `changes`, records history and prints the `?diff=` link to send. Several patches for one reply: bump on the first, `--no-bump` on the rest. Once you have sent the reader a rev's URL, never edit it in place. Hand edits: bump `meta.rev` and rewrite `changes` (1–4 lines) yourself, then run `build.py <doc>`: only the build records the revision.
 - **Resolve**: pass each addressed comment's id (after its key) with `--resolves ID`; hand edits set `resolves`. Never list one you didn't do.
-- Record the reader's picks as `choice` and finished, verified steps as `done: true`. Send the `?diff=` link, then `wait` again.
+- Record the reader's picks as `choice` and finished, verified work as done (steps `status: "done"`, checklist items `done: true`), with optional `evidence`: what you ran and saw, a screenshot, a link to a log or review. Send the `?diff=` link, then `wait` again.
 - Commit `<name>.bluedoc.history.json` with the JSON.
 
 ## Writing
@@ -48,7 +48,7 @@ You write one `*.bluedoc.json`; the local server renders it as a page (blueprint
 5. Name the actor and the condition: "If the token expired, the server closes the socket."
 6. Checkable, not vague: numbers, names, conditions, or "unknown".
 7. Shape fits content: procedures are checklists (`text` an imperative action ≤ 90 chars, `sub` why); comparisons are tables; a `caution` (data, equipment) or `warning` (people, production) callout sits before the step it guards.
-8. The reader chooses through decision items (`choices` + `recommend`), never "check if you agree". Set `choice` only to carry over the reader's own pick.
+8. The reader chooses through decision items (`choices` + `recommend`), never "check if you agree". Set `choice` only to carry over the reader's own pick. A checklist is either a decision list (every item has `choices`) or a progress list (none has): never both; put decision lists before progress lists.
 9. Short is not cryptic: keep commands, risks and real uncertainty.
 10. Sound like a colleague: no ceremony, flattery or hedges.
 

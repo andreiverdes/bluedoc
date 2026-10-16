@@ -292,12 +292,23 @@ def doc_id(p: Path) -> str | None:
 _carried: dict[str, tuple[tuple, bool]] = {}
 
 
+def approved_picks(posted: dict) -> dict[str, str]:
+    """The decisions an approval carried, {"<checklist>/<item>": pick}: an item approved without a pick means its
+    recommendation (types/plan.md)."""
+    out: dict[str, str] = {}
+    for a in posted.get("answers") or []:
+        pick = isinstance(a, dict) and (a.get("choice") or a.get("recommend"))
+        if isinstance(pick, str) and pick:
+            out[f"{a.get('checklist')}/{a.get('item')}"] = pick
+    return out
+
+
 def approval_of(doc: Path, row: dict | None) -> dict | None:
-    """The approval row as {rev, at, carried} (rev and at as the page posted them), or None. It holds while the doc's
-    JSON and screen files are the ones approved (carried: false), or when every change since is progress
-    (build.approval_carries: carried: true), so marking steps done keeps a plan approved. An approval of an earlier rev
-    that no longer holds comes back with carried: false, so the page can say there are changes since; one of the
-    current rev that an edit in place changed is None: the doc awaits approval again."""
+    """The approval row as {rev, at, carried, picks} (rev and at as the page posted them; picks: approved_picks), or
+    None. It holds while the doc's JSON and screen files are the ones approved (carried: false), or when every change
+    since is progress (build.approval_carries: carried: true), so marking steps done keeps a plan approved. An approval
+    of an earlier rev that no longer holds comes back with carried: false, so the page can say there are changes
+    since; one of the current rev that an edit in place changed is None: the doc awaits approval again."""
     if not row or not row["doc_hash"]:
         return None
     try:
@@ -305,7 +316,7 @@ def approval_of(doc: Path, row: dict | None) -> dict | None:
     except ValueError:
         posted = {}
     posted = posted if isinstance(posted, dict) else {}
-    out = {"rev": str(posted.get("rev", row["rev"]) or ""), "at": posted.get("at", row["at"])}
+    out = {"rev": str(posted.get("rev", row["rev"]) or ""), "at": posted.get("at", row["at"]), "picks": approved_picks(posted)}
     current, _, rev = doc_info(doc)
     if row["doc_hash"] == current:
         return {**out, "carried": False}
@@ -322,9 +333,7 @@ def approval_carried(doc: Path, row: dict, rev: str, posted: dict) -> bool:
     hit = _carried.get(str(doc))
     if hit and hit[0] == key:
         return hit[1]
-    # an item approved without a pick means its recommendation (types/plan.md), so recording that as `choice` is progress
-    picks = {f"{a.get('checklist')}:{a.get('item')}": a.get("choice") or a.get("recommend") for a in posted.get("answers") or []
-             if isinstance(a, dict) and isinstance(a.get("choice") or a.get("recommend"), str) and (a.get("choice") or a.get("recommend"))}
+    picks = {k.replace("/", ":", 1): v for k, v in approved_picks(posted).items()}
     try:
         d = json.loads(doc.read_text(encoding="utf-8"))
         ok = isinstance(d, dict) and build.approval_carries(build.load_history(hp), rev, row["doc_hash"], d, doc, picks)

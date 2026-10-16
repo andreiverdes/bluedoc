@@ -71,6 +71,15 @@ A missing requirement is an **error** on the doc being built: a new `meta.rev` (
 
 Each item is a collapsed row: a tick, a one-line **title** (`text`), a one-line **subtitle** and an optional chip. Clicking the row opens everything else. Write the row so a reader can scan the list without opening anything.
 
+A checklist is one of two kinds, read from its items:
+
+| Kind | Items | On the page |
+|---|---|---|
+| **Decision list** | Every item has `choices`. | A question icon, an accent edge, **Needs your answer** and `N open` (then **All answered**) instead of a bar. A chip under the doc's title, "N questions need your answer", goes to the first open one; it hides once the doc is approved. |
+| **Progress list** | No item has `choices`. | Its bar and `n of m`. A section-level one gets a caption: on a plan, design, presentation or website, "The agent marks these as the work lands. Your ticks stay on this page and don't change the approval."; elsewhere "Your own tracker: ticks are saved for you and go with Send answers." |
+
+A checklist with both kinds of item is a build error on a new rev (a warning on revisions recorded before the rule): split it in two. A nested checklist is classified on its own. The build warns when a section-level decision list comes after a progress list: put what needs the reader's answer first.
+
 ```json
 { "type": "checklist", "id": "setup", "title": "Set up", "items": [
   { "id": "install", "text": "Install the CLI", "sub": "Needs Homebrew; takes 1 minute",
@@ -90,11 +99,12 @@ Each item is a collapsed row: a tick, a one-line **title** (`text`), a one-line 
 | `state`, `stateKind` | row, right | Chip such as `unverified` / `warn`. Keep it to 1–3 words. |
 | `detail` | open | Extra md: lists, paragraphs, links. |
 | `code`, `lang` | open | Command to run for this step, with a Copy button. |
-| `blocks` | open | Any of `text`, `callout`, `table`, `code`, `terms`, `cards`, `files`, `media`, `compare`, `checklist`. A nested checklist ticks on its own, counts in the page total and exports indented under its parent; nested checklists can't nest again. |
+| `blocks` | open | Any of `text`, `callout`, `table`, `code`, `terms`, `cards`, `files`, `media`, `compare`, `checklist`. A nested checklist ticks on its own, counts in the page total when it is a progress list, and exports indented under its parent; nested checklists can't nest again. |
 | `verify` | open (or row line 2) | Observable success check (output, state, file). Required for steps whose failure is silent. Shown as **Check** when the row is open, unless it already fills line 2. |
 | `refs` | open | `"<canvasId>/<nodeKey>"`; renders buttons that open that node. Node keys nest with `/`: `arch/api/auth`. |
 | `done` | | Initial tick before the reader touches it (e.g. steps the author already verified). Not for decision items. |
-| `choices` | row, line 3 | Makes the item a **decision**: 2–6 options `{id, label, md?}` shown as pills instead of a tick. Label ≤ 28 characters; `md` is the tooltip. The reader picks one; picking it again clears it. A picked item counts as done. |
+| `evidence` | open | Optional proof the item landed: see [Evidence](#evidence). Progress items only. |
+| `choices` | row, line 3 | Makes the item a **decision**: 2–6 options `{id, label, md?}` shown as pills instead of a tick. Label ≤ 28 characters; `md` is the tooltip. The reader picks one; picking it again clears it. A picked item counts as answered. Every item of a decision list has `choices`; no item of a progress list has. |
 | `recommend` | row, line 3 | The id of the recommended option, starred. |
 | `choice` | | A pre-picked option, like `done` for ticks. Use it only to carry over the reader's answer from an earlier round; leave it unset when the reader has not decided. Changing it in a new revision overrides the reader's stored pick. |
 
@@ -110,9 +120,31 @@ Every decision item also gets a **Need more details** toggle after its pills; th
 
 A row with nothing to open has no chevron; clicking it ticks it. **Expand** in the checklist header opens or closes every row. Links to `#item-<checklist>-<item>` (from a canvas node, a table cell or a shared URL) open the row, and its parents, before scrolling to it. Print shows every row open.
 
-Ticks persist across browsers and reloads: see [Reader state](#reader-state). The sidebar shows per-checklist progress; **Copy progress** exports all checklists as Markdown task lists (`- [x] …`) for PRs or issues.
+Ticks persist across browsers and reloads: see [Reader state](#reader-state). The sidebar shows per-checklist progress (`n/m`, or `N open` for a decision list) and the top bar the page's progress items; **Copy progress** exports all checklists as Markdown task lists (`- [x] …`) for PRs or issues, decision lists first.
 
 A reader's tick is stored only when it differs from the item's `done`, together with the `done` it overrode. If the author later changes `done`, the author wins and the old tick is dropped, so marking a step done in a new revision shows as done for readers who unticked it earlier. Picks follow the same rule against `choice`, and a pick is dropped when its option no longer exists.
+
+### Evidence
+
+A step or progress item may carry `evidence`: what shows the work landed. It is optional; `done` never needs it.
+
+```json
+"evidence": [
+  { "label": "Migration test", "code": "pytest tests/test_migrations.py", "md": "`4 passed in 1.2s`" },
+  { "label": "Cart page at 390 px", "src": "media/cart-390.png" },
+  { "label": "Review findings", "href": "../reviews/saved-carts.bluedoc.json" }
+]
+```
+
+| Field | Meaning |
+|---|---|
+| `label` | Required. What the entry shows, inline md. |
+| `md` | Embedded: output, a note, a result. |
+| `code`, `lang` | Embedded: the command that produced it, with Copy. |
+| `src` | Embedded: an image or video beside the doc, checked like a [media](#media) `src`; `-o` inlines it. |
+| `href` | Linked: a path relative to the doc's folder or an `http(s)` URL. The build warns when a local path doesn't exist. |
+
+Each entry needs `label` and at least one of `md`, `code`, `src`, `href`. The page shows an **Evidence** group in the open row or step, each entry tagged *embedded* or *linked*; a step's meta row counts them. A linked target is a pointer: nothing records its content, so it can change after the step is marked done. Embedded entries are part of the revision. Evidence on a decision item is a build error. Adding or changing evidence after an approval keeps it, like `status` and `done` (see [Plans](#plans)). **Copy progress** lists each entry as `- Evidence: <label> (<href or src>)` under its item.
 
 ### Reader comments and replies
 
@@ -236,8 +268,9 @@ Four block types made for plans. They work in any doc. Text fields are inline md
 | `items[].status` | `todo` (default), `doing`, `done`, `blocked`. |
 | `items[].effort` | `S`, `M` or `L`. |
 | `items[].refs` | `"<canvasId>/<nodeKey>"`: buttons that open that node. |
+| `items[].evidence` | Optional proof the step landed, embedded or linked: see [Evidence](#evidence). |
 
-The page draws a numbered vertical timeline. Steps are the proposal, not a tracker: the reader can't tick them. Change `status` in a new revision as work lands.
+The page draws a numbered vertical timeline. Steps are the proposal, not a tracker: the reader can't tick them. Change `status` in a new revision as work lands, with `evidence` when there is some.
 
 ### Files
 
@@ -691,8 +724,9 @@ A status chip sits next to the eyebrow:
 | **Changes since approved rev X** (amber) | The reader approved an earlier rev X, and something besides progress changed since (see below): it needs approval again. |
 | **Changes requested** (blue) | The reader sent Request changes on the current `meta.rev`. Stored under `bp:<doc.id>:__planstate` as `{rev, state, at}`. |
 | **Approved · rev X** (green) | The saved approval is for the current `meta.rev`, or for an earlier rev X carried to this one, shown as **Approved · rev X · progress in rev Y**. |
+| **Pick changed since approval** (amber) | Approved, but the reader has since picked another option on a decision the approval carried (an item approved without a pick counts as its recommendation). Each changed pick counts toward **Request changes** until sent (`<checklist>:<item>:pick-sent` holds the pick sent), then the chip adds **· sent**. Picking the approved option again clears it. |
 
-An approval of rev X carries to a later rev Y when every change between them is progress: a step's `status`, a checklist item's `done`, a decision's `choice` set to the pick the reader approved, `meta.rev`, `meta.date`, `changes`, `resolves` and the doc's `state` labels. Any other change (text, options, sections, blocks, a screen file or icon layer) does not carry. The server decides from the history file (rev X's snapshot and screen hashes, which must match the approval's `docHash`), so `--no-bump` on rev X itself, which rewrites its snapshot, ends the approval.
+An approval of rev X carries to a later rev Y when every change between them is progress: a step's `status` and `evidence`, a progress item's `done` and `evidence`, a decision's `choice` set to the pick the reader approved, `meta.rev`, `meta.date`, `changes`, `resolves` and the doc's `state` labels. Any other change (text, options, sections, blocks, a screen file or icon layer) does not carry. The server decides from the history file (rev X's snapshot and screen hashes, which must match the approval's `docHash`), so `--no-bump` on rev X itself, which rewrites its snapshot, ends the approval.
 
 **Approve plan** opens a dialog titled "Approve this plan (rev X)": an optional note, a summary ("N pending comments go with it as notes", and "M open questions have no pick; the agent will use its recommendation" when some decision items are unpicked), a preview of the decisions, **Copy**, and a green **Approve**. Approve posts `POST /__bluedoc/approve` with the header `X-Bluedoc: 1`:
 
@@ -727,8 +761,8 @@ A pick carries `(recommended: …)` only when it differs from the recommendation
 
 The server stores the approval in `state.db` with `docHash`, the sha256 of the doc's canonical JSON, queues it with kind `approval` for `serve.py wait`, and answers `{ok, id}`. The page posts the `docHash` its seed carried (the JSON it rendered) and its `rev`; when either differs from the file's current JSON or `meta.rev`, the server answers 409 `{"reload": true}` and the page offers **Reload** instead, so an approval never covers text the reader hasn't seen. The key then reads **Approved · rev X** with a check, disabled, and stays so while the approval holds or carries. A new `meta.rev` with more than progress, or any edit of the doc's JSON in place, resets it: the plan awaits approval again.
 
-- **Request changes** on a plan page also carries `answers` (the decision picks) when there are any, and its Markdown ends with the same `## Decisions` section, item comments included. An item comment counts toward it until sent with Request changes or Approve, and again once edited. Plan pages have no Send answers.
-- `GET /__bluedoc/ping?path=<doc URL path>` returns `{bluedoc, home, version, code, unlocked, to, approval}`. `version` is the plugin's, `code` a hash of the server, build and template code; `serve.py open` restarts a server whose `version` or `code` differs and prints one line saying so. `unlocked` says whether the request carries the key: the cookie, or the copy the page keeps in `localStorage` (see [serve.py](#servepy)); while it doesn't, doc pages and the home page show "This browser can't save yet" with a **Copy unlock command** button. `approval` is the doc's newest approval as `{rev, at, carried}`: `carried: false` with `rev === meta.rev` while the doc's JSON still matches its `docHash`; `carried: true` when every change since is progress (above); `carried: false` with an older `rev` when other changes followed; `null` when there is none, or the approved rev was edited in place. The page's seed (`bp-state`) carries the same, and `index.json` each doc's as `{rev, at, carried}` with `at` in epoch seconds. The page and the home cards (and the home page's Awaiting approval and Approved filters) count the plan approved when `approval.rev === meta.rev` or `approval.carried`, and show **Changes since approved rev X** for an older one that isn't carried.
+- **Request changes** on a plan page also carries `answers` (the decision picks) when there are any, and its Markdown ends with the same `## Decisions` section, item comments included. An item comment counts toward it until sent with Request changes or Approve, and again once edited; on an approved plan, so does each pick changed since the approval (**Pick changed since approval**, above). Plan pages have no Send answers.
+- `GET /__bluedoc/ping?path=<doc URL path>` returns `{bluedoc, home, version, code, unlocked, to, approval}`. `version` is the plugin's, `code` a hash of the server, build and template code; `serve.py open` restarts a server whose `version` or `code` differs and prints one line saying so. `unlocked` says whether the request carries the key: the cookie, or the copy the page keeps in `localStorage` (see [serve.py](#servepy)); while it doesn't, doc pages and the home page show "This browser can't save yet" with a **Copy unlock command** button. `approval` is the doc's newest approval as `{rev, at, carried, picks}`: `carried: false` with `rev === meta.rev` while the doc's JSON still matches its `docHash`; `carried: true` when every change since is progress (above); `carried: false` with an older `rev` when other changes followed; `null` when there is none, or the approved rev was edited in place. `picks` is `{"<checklist>/<item>": option}` for each decision the approval carried, its recommendation when it had no pick. The page's seed (`bp-state`) carries the same, and `index.json` each doc's as `{rev, at, carried}` with `at` in epoch seconds. The page and the home cards (and the home page's Awaiting approval and Approved filters) count the plan approved when `approval.rev === meta.rev` or `approval.carried`, and show **Changes since approved rev X** for an older one that isn't carried.
 - `serve.py wait DOC --kind answers|changes|approval|any` (default `any`) returns the oldest queued message of that kind. An approval prints `--- bluedoc approval (reply <id>, rev <rev>, <time>) ---`, the Markdown, then `--- end ---`.
 
 ## build.py
@@ -807,7 +841,7 @@ Each render validates the doc (errors show as a page), shows its rev as the late
 
 The reader's ticks, picks, item comments, annotations with their statuses, the general comment, the Send answers message, the plan state and the last-seen rev live in `~/.bluedoc/state.db` (SQLite, mode 0600), so clearing browsing data or opening another browser loses nothing. The page keeps a copy in `localStorage` and writes through to the server; unsent writes wait in `bp:<doc.id>:__outbox:<URL path>` until the server answers, so two docs with one `id` (a copy, a git worktree) each send only their own (the older per-id `__outbox` is taken over by the first page of that id). A write the server refuses with 403 `{"key": true}` (browser not unlocked) or 404 (no doc at that address now) stays queued and goes on the next focus or write; the reader sees one toast. A standalone `-o` file or a page without a server uses `localStorage` alone. Theme, content width, the Comments panel and its filter, and the pen colour (`bluedoc:*`) stay in each browser. Replies are rows in the same file, every one kept. A doc's state follows its path. A doc moved with its folder keeps it: the first write from the new path takes over the row of the one other path with the same `id` whose folder is gone; a read never moves a row, and a doc whose file alone is gone (a branch switch) keeps its row. The first start with a new `state.db` imports the `<name>.reply/.changes/.approval` files and `inbox.json` of earlier versions and leaves them in place. Copying `state.db` with the server stopped is a full backup.
 
-Keys are the page's `bp:<doc.id>:` keys without that prefix: `<checklist>:<item>`, `<checklist>:<item>:note`, `<checklist>:<item>:note-sent`, `<checklist>:<item>:more`, `__ann:<id>`, `__message`, `__planstate`, `__seen`, and a board's undo history: `__hist` `{rev, steps: [<step id>], cursor, sealed}` (at most 200 steps; `cursor`: the steps before it are done; `sealed`: undo stops there) and `__hist:<step>` `{label, ops: [{id, before, after}]}` (each a copy of the draft, or null for none), written in the same PUT as its drafts; a step over 64 KB isn't kept. Both routes need `X-Bluedoc: 1`, the server's own `Host`, and no foreign `Origin`, else 403; the PUT also needs [the key](#servepy). `path` must be a doc under a registered folder, else 404. An `__ann:<id>` value the page can't draw (no `target.label`, an unknown `type`, …) is dropped from a PUT (listed in the response's `dropped`) and left out of reads, as is an `__hist` or `__hist:<step>` value that isn't that shape; the page likewise skips and logs such a stored comment and keeps working.
+Keys are the page's `bp:<doc.id>:` keys without that prefix: `<checklist>:<item>`, `<checklist>:<item>:note`, `<checklist>:<item>:note-sent`, `<checklist>:<item>:more`, `<checklist>:<item>:pick-sent`, `__ann:<id>`, `__message`, `__planstate`, `__seen`, and a board's undo history: `__hist` `{rev, steps: [<step id>], cursor, sealed}` (at most 200 steps; `cursor`: the steps before it are done; `sealed`: undo stops there) and `__hist:<step>` `{label, ops: [{id, before, after}]}` (each a copy of the draft, or null for none), written in the same PUT as its drafts; a step over 64 KB isn't kept. Both routes need `X-Bluedoc: 1`, the server's own `Host`, and no foreign `Origin`, else 403; the PUT also needs [the key](#servepy). `path` must be a doc under a registered folder, else 404. An `__ann:<id>` value the page can't draw (no `target.label`, an unknown `type`, …) is dropped from a PUT (listed in the response's `dropped`) and left out of reads, as is an `__hist` or `__hist:<step>` value that isn't that shape; the page likewise skips and logs such a stored comment and keeps working.
 
 - `GET /__bluedoc/state?path=<doc URL path>[&since=<n>]` returns `{version, state: {key: value}}`, or 204 when `n` is the current version. The version rises by one with each PUT that changes a row. A served page seeds the same in its `bp-state` element, plus `docHash` (the sha256 of the JSON it rendered, which Approve posts) and `approval` (as the ping's, see [Plans](#plans)).
 - `PUT /__bluedoc/state` with `{path, import, ops: [[key, value], …]}` applies the ops in one transaction and returns `{ok, version}`. A `null` value deletes the key. `import: true` (each browser's one-time migration of its older `localStorage`) adds only keys the server lacks and drops item keys the doc doesn't have. Limits: 1 MB body (413), 2,000 ops, keys matching `^[a-z0-9_][a-z0-9:_-]*$`, string values up to 64 KB (400).
@@ -842,5 +876,5 @@ The built page exposes `window.BP`:
 | `BP.sidebar({open, section})` | Opens/closes the right panel at the window edge, or opens it on `section` (`'comments'` or `'revisions'`); returns `{available, open, section, as}`. `available` lists the panel's tabs in order: `['comments', 'revisions']` on the current revision of a doc with a `meta.rev`, `['revisions']` on an earlier revision or in compare view (which open on it), `['comments']` without a `meta.rev`. `as` is `'dock'` (beside the page, > 1100 px), `'drawer'` (over it, 901–1100 px), `'sheet'` (bottom sheet, ≤ 900 px) or `null` when closed. The page remembers the reader's last tab and whether the panel was open; `]` and the app-bar key toggle it. |
 | `BP.revisionsRail({open})` | The panel's Revisions tab (every doc with a `meta.rev`, one revision included; Compare appears from the second revision): `open: true` opens the panel on it, `open: false` closes the panel when it shows it; returns `{available, open, as}`, `as` as in `BP.sidebar` while the tab shows, else `null`. **Rev** in the app bar and the **Revision** link under Document do the same as a toggle. |
 | `BP.docType` | Property: the page's type, `'docs'`, `'review'`, `'plan'`, `'design'`, `'presentation'`, `'website'` or `'other'`. |
-| `BP.planState()` | `{type, state, rev, approvedRev, carried}`. `state` is `'awaiting'`, `'stale'` (an earlier rev's approval that changes since don't carry: **Changes since approved rev X**), `'changes'` or `'approved'` on plan, design, presentation and website pages, `null` elsewhere; `approvedRev` is the rev of the approval the page knows (from the server's seed and ping, or this browser), else `null`; `carried` is true when the server carried an earlier rev's approval to this one. |
+| `BP.planState()` | `{type, state, rev, approvedRev, carried, picks}`. `state` is `'awaiting'`, `'stale'` (an earlier rev's approval that changes since don't carry: **Changes since approved rev X**), `'changes'` or `'approved'` on plan, design, presentation and website pages, `null` elsewhere; `approvedRev` is the rev of the approval the page knows (from the server's seed and ping, or this browser), else `null`; `carried` is true when the server carried an earlier rev's approval to this one; `picks` the decisions that approval carried (as the ping's), else `null`. |
 | `BP.approvePayload(note?)` | The body **Approve** posts to `/__bluedoc/approve`. |

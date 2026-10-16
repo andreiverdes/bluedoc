@@ -14,14 +14,15 @@
 | Approach | The proposal: a canvas with new parts `state: "proposed"` and removed ones `removed`; a `compare` block for before/after (API response, schema, UI); `media` blocks for mockups or wireframes. |
 | Steps | One `steps` block in implementation order. Each step is one reviewable change: imperative title, `effort` S/M/L, `md` with the detail, the `files` it touches, `refs` to the canvas. |
 | Files | One `files` block: every path the plan adds, edits, deletes, renames or moves, with `why` and the `step` that touches it. |
-| Open questions | A checklist (`numbered: false`) of decision items, one per choice the reader must make. `text` is the question; `sub` is "Recommend <option>: <reason>." |
+| Open questions | A decision list (`numbered: false`): one item per choice the reader must make, each with `choices`. `text` is the question; `sub` is "Recommend <option>: <reason>." |
 | Risks | A table: Risk, Likelihood, Impact, Mitigation. |
-| Verification | A checklist of plain steps, each with `verify` (and `code` when there's a command): how you'll show the plan worked. |
+| Verification | A progress list: plain steps, each with `verify` (and `code` when there's a command): how you'll show the plan worked. |
 
 ## Rules
 
 - Keep each path identical in the step's `files` and the `files` block; the build warns on a mismatch.
-- Leave every step `status: "todo"` until its work lands; then `build.py patch <doc> step:steps/0/<stepId> --set status=done`.
+- Leave every step `status: "todo"` until its work lands; then `build.py patch <doc> step:steps/0/<stepId> --set status=done`, with `--json '{"evidence": […]}'` when you have proof: the test command and its result, a screenshot beside the doc, a link to a log or review doc (`references/schema.md` `### Evidence`). Evidence is optional; never invent it. Tick verification checks the same way: `item:<checklist>/<item> --set done=true`.
+- Never mix questions and work in one checklist: the build rejects a list where some items have `choices` and others don't.
 - Canvases: ≤ 9 nodes per level, never draw a proposed part as if it exists. The full canvas rules are under "Canvas rules" in `types/docs.md`.
 - Every open question gets a `recommend`. Never set `choice` yourself.
 - Draw SVG mockups that read on light and dark pages: a neutral palette, or a `prefers-color-scheme` style block inside the SVG.
@@ -31,8 +32,8 @@
 1. Validate, `serve.py open <doc> --to <your name>`, give the user the URL.
 2. Run `serve.py wait <doc> --kind any` in the background.
 3. **Approval** (`--- bluedoc approval … ---`): implement exactly the approved rev. Use the reader's picks; an open question with no pick means your recommendation. The notes sent with the approval are binding instructions.
-4. **Change request**: revise the plan (`build.py patch`, which bumps `meta.rev` and writes `changes`; `--resolves <id>` per comment you addressed), send `<url>?diff=<previous rev>`, wait again. Picks sent with it are the reader's decisions so far: carry them over as `choice`. A question marked **Need more details** gets a fuller `detail` and options, and stays unpicked.
-5. Never start implementing before an approval of the current rev. Marking steps done after the approval (`patch step:… --set status=done`, which bumps past the approved rev; checklist `done`; the approved picks as `choice`) keeps it approved; any other edit needs approval again, and so does `--no-bump` on the approved rev itself, which rewrites what was approved.
+4. **Change request**: revise the plan (`build.py patch`, which bumps `meta.rev` and writes `changes`; `--resolves <id>` per comment you addressed), send `<url>?diff=<previous rev>`, wait again. Picks sent with it are the reader's decisions so far: carry them over as `choice`. A question marked **Need more details** gets a fuller `detail` and options, and stays unpicked. A change request on an approved plan that carries a different pick ("Pick changed since approval") is a change like any other: record the new `choice`, and the plan needs approval again.
+5. Never start implementing before an approval of the current rev. Marking progress after the approval keeps it approved: steps' `status` and `evidence`, checklist `done` and `evidence`, and the approved picks as `choice`, each in a patch that bumps past the approved rev (bump on the first, `--no-bump` on the rest). Any other edit needs approval again, and so does `--no-bump` on the approved rev itself, which rewrites what was approved.
 
 ## Fragment
 

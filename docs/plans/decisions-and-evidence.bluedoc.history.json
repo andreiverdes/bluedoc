@@ -1,0 +1,893 @@
+{
+ "bluedoc_history": 1,
+ "revs": [
+  {
+   "rev": "1",
+   "date": "2026-10-16",
+   "built": "2026-10-16T09:56:42+00:00",
+   "head": {
+    "id": "decisions-and-evidence",
+    "title": "Separate decisions from progress, and attach evidence to finished work",
+    "subtitle": "Readers see what needs their answer apart from what the agent tracks; finished steps can show their proof without losing approval.",
+    "meta": {
+     "org": "bluedoc",
+     "kind": "Plan",
+     "type": "plan",
+     "rev": "1",
+     "date": "2026-10-16"
+    },
+    "state": [
+     {
+      "label": "proposal: nothing built yet",
+      "kind": "warn"
+     },
+     {
+      "label": "beads bluedoc-ixw, bluedoc-azg",
+      "kind": "info"
+     }
+    ],
+    "links": [
+     {
+      "label": "Saved carts plan (example)",
+      "href": "../../skills/bluedoc/examples/acme-saved-carts-plan.bluedoc.json"
+     }
+    ],
+    "tldr": "Seven steps. Checklists become either a **decision list** (needs your answer) or a **progress list** (the agent tracks it), never both; the build rejects a mix. Steps and progress items gain an optional `evidence` list, embedded or linked, that keeps a plan approved like `status: done` does. Four questions need a pick."
+   },
+   "sections": [
+    {
+     "id": "context",
+     "title": "Context",
+     "lead": "One checklist block carries both questions and to-dos today, and a finished step has nowhere to put its proof.",
+     "blocks": [
+      "f1858c6af90ca292"
+     ]
+    },
+    {
+     "id": "approach",
+     "title": "Approach",
+     "lead": "Classify each checklist by its items, render the two kinds differently, and add `evidence` to the progress side of the approval carry.",
+     "blocks": [
+      "35fa8601e9fe544a",
+      "c66e283d1a73deb2",
+      "443adc49440e9a40"
+     ]
+    },
+    {
+     "id": "steps",
+     "title": "Steps",
+     "lead": "Seven steps: the split first (build, page, picks), then evidence (build, page), then docs and tests that cover both.",
+     "blocks": [
+      "27ba6eff7391e5fc"
+     ]
+    },
+    {
+     "id": "files",
+     "title": "Files",
+     "lead": "1 new test file, 9 edited.",
+     "blocks": [
+      "21b5659d2f0cb8ba"
+     ]
+    },
+    {
+     "id": "questions",
+     "title": "Open questions",
+     "lead": "Pick one option per question; my recommendation is starred. Your picks go with **Approve plan** or **Request changes**.",
+     "blocks": [
+      "6532b0cdf19ce7c1"
+     ]
+    },
+    {
+     "id": "risks",
+     "title": "Risks",
+     "lead": "The main risk is a template change that silently shifts stored ticks or the golden HTML another agent is regenerating.",
+     "blocks": [
+      "af86404fe722d2ae"
+     ]
+    },
+    {
+     "id": "verify",
+     "title": "Verification",
+     "lead": "Done when the suite passes and the saved-carts plan stays approved after a step is marked done with evidence.",
+     "blocks": [
+      "58ac24552500c22e"
+     ]
+    }
+   ]
+  },
+  {
+   "rev": "2",
+   "date": "2026-10-16",
+   "built": "2026-10-16T09:56:43+00:00",
+   "head": {
+    "id": "decisions-and-evidence",
+    "title": "Separate decisions from progress, and attach evidence to finished work",
+    "subtitle": "Readers see what needs their answer apart from what the agent tracks; finished steps can show their proof without losing approval.",
+    "meta": {
+     "org": "bluedoc",
+     "kind": "Plan",
+     "type": "plan",
+     "rev": "2",
+     "date": "2026-10-16"
+    },
+    "state": [
+     {
+      "label": "proposal: nothing built yet",
+      "kind": "warn"
+     },
+     {
+      "label": "beads bluedoc-ixw, bluedoc-azg",
+      "kind": "info"
+     }
+    ],
+    "links": [
+     {
+      "label": "Saved carts plan (example)",
+      "href": "../../skills/bluedoc/examples/acme-saved-carts-plan.bluedoc.json"
+     }
+    ],
+    "tldr": "Seven steps. Checklists become either a **decision list** (needs your answer) or a **progress list** (the agent tracks it), never both; the build rejects a mix. Steps and progress items gain an optional `evidence` list, embedded or linked, that keeps a plan approved like `status: done` does. Four questions need a pick.",
+    "changes": [
+     "Recorded the approved picks as choice."
+    ]
+   },
+   "sections": [
+    {
+     "id": "context",
+     "title": "Context",
+     "lead": "One checklist block carries both questions and to-dos today, and a finished step has nowhere to put its proof.",
+     "blocks": [
+      "f1858c6af90ca292"
+     ]
+    },
+    {
+     "id": "approach",
+     "title": "Approach",
+     "lead": "Classify each checklist by its items, render the two kinds differently, and add `evidence` to the progress side of the approval carry.",
+     "blocks": [
+      "35fa8601e9fe544a",
+      "c66e283d1a73deb2",
+      "443adc49440e9a40"
+     ]
+    },
+    {
+     "id": "steps",
+     "title": "Steps",
+     "lead": "Seven steps: the split first (build, page, picks), then evidence (build, page), then docs and tests that cover both.",
+     "blocks": [
+      "27ba6eff7391e5fc"
+     ]
+    },
+    {
+     "id": "files",
+     "title": "Files",
+     "lead": "1 new test file, 9 edited.",
+     "blocks": [
+      "21b5659d2f0cb8ba"
+     ]
+    },
+    {
+     "id": "questions",
+     "title": "Open questions",
+     "lead": "Pick one option per question; my recommendation is starred. Your picks go with **Approve plan** or **Request changes**.",
+     "blocks": [
+      "a40a7ba14ed805c4"
+     ]
+    },
+    {
+     "id": "risks",
+     "title": "Risks",
+     "lead": "The main risk is a template change that silently shifts stored ticks or the golden HTML another agent is regenerating.",
+     "blocks": [
+      "af86404fe722d2ae"
+     ]
+    },
+    {
+     "id": "verify",
+     "title": "Verification",
+     "lead": "Done when the suite passes and the saved-carts plan stays approved after a step is marked done with evidence.",
+     "blocks": [
+      "58ac24552500c22e"
+     ]
+    }
+   ]
+  },
+  {
+   "rev": "3",
+   "date": "2026-10-16",
+   "built": "2026-10-16T10:12:04+00:00",
+   "head": {
+    "id": "decisions-and-evidence",
+    "title": "Separate decisions from progress, and attach evidence to finished work",
+    "subtitle": "Readers see what needs their answer apart from what the agent tracks; finished steps can show their proof without losing approval.",
+    "meta": {
+     "org": "bluedoc",
+     "kind": "Plan",
+     "type": "plan",
+     "rev": "3",
+     "date": "2026-10-16"
+    },
+    "state": [
+     {
+      "label": "proposal: nothing built yet",
+      "kind": "warn"
+     },
+     {
+      "label": "beads bluedoc-ixw, bluedoc-azg",
+      "kind": "info"
+     }
+    ],
+    "links": [
+     {
+      "label": "Saved carts plan (example)",
+      "href": "../../skills/bluedoc/examples/acme-saved-carts-plan.bluedoc.json"
+     }
+    ],
+    "tldr": "Seven steps. Checklists become either a **decision list** (needs your answer) or a **progress list** (the agent tracks it), never both; the build rejects a mix. Steps and progress items gain an optional `evidence` list, embedded or linked, that keeps a plan approved like `status: done` does. Four questions need a pick.",
+    "changes": [
+     "Marked steps done with their evidence; tests and docs landed."
+    ]
+   },
+   "sections": [
+    {
+     "id": "context",
+     "title": "Context",
+     "lead": "One checklist block carries both questions and to-dos today, and a finished step has nowhere to put its proof.",
+     "blocks": [
+      "f1858c6af90ca292"
+     ]
+    },
+    {
+     "id": "approach",
+     "title": "Approach",
+     "lead": "Classify each checklist by its items, render the two kinds differently, and add `evidence` to the progress side of the approval carry.",
+     "blocks": [
+      "35fa8601e9fe544a",
+      "c66e283d1a73deb2",
+      "443adc49440e9a40"
+     ]
+    },
+    {
+     "id": "steps",
+     "title": "Steps",
+     "lead": "Seven steps: the split first (build, page, picks), then evidence (build, page), then docs and tests that cover both.",
+     "blocks": [
+      "8e19e19b6e07dce9"
+     ]
+    },
+    {
+     "id": "files",
+     "title": "Files",
+     "lead": "1 new test file, 9 edited.",
+     "blocks": [
+      "21b5659d2f0cb8ba"
+     ]
+    },
+    {
+     "id": "questions",
+     "title": "Open questions",
+     "lead": "Pick one option per question; my recommendation is starred. Your picks go with **Approve plan** or **Request changes**.",
+     "blocks": [
+      "a40a7ba14ed805c4"
+     ]
+    },
+    {
+     "id": "risks",
+     "title": "Risks",
+     "lead": "The main risk is a template change that silently shifts stored ticks or the golden HTML another agent is regenerating.",
+     "blocks": [
+      "af86404fe722d2ae"
+     ]
+    },
+    {
+     "id": "verify",
+     "title": "Verification",
+     "lead": "Done when the suite passes and the saved-carts plan stays approved after a step is marked done with evidence.",
+     "blocks": [
+      "58ac24552500c22e"
+     ]
+    }
+   ]
+  }
+ ],
+ "blocks": {
+  "35fa8601e9fe544a": {
+   "type": "terms",
+   "items": [
+    {
+     "term": "Decision list",
+     "md": "A checklist whose every item has `choices`. The reader answers it; the answers go with Send answers, Approve or Request changes."
+    },
+    {
+     "term": "Progress list",
+     "md": "A checklist with no `choices` on any item: procedure steps, verification checks, follow-ups. Ticks track work."
+    },
+    {
+     "term": "Evidence",
+     "md": "What shows a step or progress item worked: **embedded** (text, a command and its output, an image beside the doc) or **linked** (a file path or URL)."
+    }
+   ]
+  },
+  "c66e283d1a73deb2": {
+   "type": "table",
+   "columns": [
+    "Field",
+    "Lives on",
+    "Changing it after approval"
+   ],
+   "rows": [
+    [
+     "`choices`, `recommend`, question text",
+     "Decision list items",
+     "Needs approval again"
+    ],
+    [
+     "`choice`",
+     "Decision list items",
+     "Keeps approval only when it equals the approved pick"
+    ],
+    [
+     "`status`",
+     "Steps",
+     "Keeps approval"
+    ],
+    [
+     "`done`",
+     "Progress list items",
+     "Keeps approval"
+    ],
+    [
+     "`evidence` (new)",
+     "Steps, progress list items",
+     "Keeps approval"
+    ]
+   ]
+  },
+  "443adc49440e9a40": {
+   "type": "compare",
+   "title": "One step's JSON once it lands",
+   "before": {
+    "label": "Today",
+    "code": "{ \"id\": \"table\", \"title\": \"Add the `saved_carts` table\",\n  \"status\": \"done\", \"effort\": \"S\" }",
+    "lang": "json"
+   },
+   "after": {
+    "label": "Proposed",
+    "code": "{ \"id\": \"table\", \"title\": \"Add the `saved_carts` table\",\n  \"status\": \"done\", \"effort\": \"S\",\n  \"evidence\": [\n    { \"label\": \"Migration test\", \"code\": \"pytest tests/test_migrations.py\",\n      \"md\": \"`4 passed in 1.2s`\" },\n    { \"label\": \"Cart page check\", \"src\": \"media/saved-carts-panel.png\" },\n    { \"label\": \"Review findings\", \"href\": \"../reviews/saved-carts.bluedoc.json\" }\n  ] }",
+    "lang": "json"
+   }
+  },
+  "27ba6eff7391e5fc": {
+   "type": "steps",
+   "id": "plan",
+   "title": "Implementation order",
+   "items": [
+    {
+     "id": "classify",
+     "title": "Classify checklists and reject mixed ones in `build.py`",
+     "status": "todo",
+     "effort": "S",
+     "md": "Add `checklist_kind(b)` → `decisions` or `progress` from its items. A list with both kinds is an error on a new rev and a warning on older ones (`contract_level`, `build.py:1733`). Nested checklists are classified on their own. Per question 1, also lint the placement of decision lists. Split `acme-status` `next/next` into a decision list and a progress list.",
+     "files": [
+      "skills/bluedoc/scripts/build.py",
+      "skills/bluedoc/examples/acme-status.bluedoc.json"
+     ]
+    },
+    {
+     "id": "render-split",
+     "title": "Render decision lists and progress lists as two kinds",
+     "status": "todo",
+     "effort": "M",
+     "md": "In `renderChecklist` (`template.html:2862`): a decision list gets a question icon, a **Needs your answer** label and an `N open` count in place of the bar. A progress list keeps the bar and gets a one-line caption: on plans *“The agent marks these as work lands; ticking doesn't change approval”*, elsewhere *“Your own tracker”*. The Send answers and Approve Markdown list decisions before ticks (`decisionsMd`, `answerItems`).",
+     "files": [
+      "skills/bluedoc/assets/template.html"
+     ]
+    },
+    {
+     "id": "picks",
+     "title": "Handle a pick changed on an approved plan",
+     "status": "todo",
+     "effort": "S",
+     "md": "Per question 3. Applies to plan, design, presentation and website pages (`APPROVABLE`). Earlier revisions and compare view already disable pills.",
+     "files": [
+      "skills/bluedoc/assets/template.html"
+     ]
+    },
+    {
+     "id": "evidence-build",
+     "title": "Validate `evidence` and count it as progress",
+     "status": "todo",
+     "effort": "S",
+     "md": "Each entry: `label` (required) plus at least one of `md`, `code`/`lang`, `src` (a file beside the doc, checked like a media `src`), `href` (a path or `http(s)` URL, checked like inline links). Error on a decision item. Pop `evidence` in `without_progress` for steps and progress items, so `patch step:… --set status=done --json '{\"evidence\": […]}'` keeps the approval.",
+     "files": [
+      "skills/bluedoc/scripts/build.py"
+     ]
+    },
+    {
+     "id": "evidence-page",
+     "title": "Show evidence on steps and progress items",
+     "status": "todo",
+     "effort": "M",
+     "md": "In `renderSteps` (`template.html:2710`) and the checklist item body: an **Evidence** group. Embedded entries render inline (md, a code block with Copy, an image or video); linked ones render as a chip tagged *linked* that opens the path or URL. A step with evidence shows a small evidence count in its meta row. Compare view gets an **Evidence** row in *What changed*; Copy checklist adds evidence links under the item.",
+     "files": [
+      "skills/bluedoc/assets/template.html"
+     ]
+    },
+    {
+     "id": "docs",
+     "title": "Document the split and the `evidence` field",
+     "status": "todo",
+     "effort": "S",
+     "md": "`schema.md`: `## Checklist` (two kinds, the mix error), `### Steps` and the item table (`evidence`), `## Plans` (the progress list at line 654 gains `evidence`). `types/plan.md`: rules at lines 24 and 35. `SKILL.md`: writing rule 8 and the Replies bullet on recording finished steps.",
+     "files": [
+      "skills/bluedoc/references/schema.md",
+      "skills/bluedoc/types/plan.md",
+      "skills/bluedoc/SKILL.md"
+     ]
+    },
+    {
+     "id": "tests",
+     "title": "Cover the mix error, evidence carry and goldens",
+     "status": "todo",
+     "effort": "S",
+     "md": "`test_state.ApprovalCarries.test_plan`: added evidence carries; changed step text still doesn't. A new build test: a mixed list errors, evidence on a decision errors, a bad `href` scheme errors. Regenerate `docs/examples/*.html` for `test_golden_examples`.",
+     "files": [
+      "tests/test_state.py",
+      "tests/test_checklist_kinds.py",
+      "docs/examples/acme-status.html"
+     ]
+    }
+   ]
+  },
+  "21b5659d2f0cb8ba": {
+   "type": "files",
+   "title": "Changed files",
+   "items": [
+    {
+     "path": "skills/bluedoc/scripts/build.py",
+     "action": "edit",
+     "why": "Checklist kinds, the mix error, `evidence` validation and its progress carry.",
+     "step": "classify"
+    },
+    {
+     "path": "skills/bluedoc/examples/acme-status.bluedoc.json",
+     "action": "edit",
+     "why": "Splits the one mixed list.",
+     "step": "classify"
+    },
+    {
+     "path": "skills/bluedoc/assets/template.html",
+     "action": "edit",
+     "why": "The two list kinds, picks after approval, evidence rendering.",
+     "step": "render-split"
+    },
+    {
+     "path": "skills/bluedoc/references/schema.md",
+     "action": "edit",
+     "why": "Documents both changes.",
+     "step": "docs"
+    },
+    {
+     "path": "skills/bluedoc/types/plan.md",
+     "action": "edit",
+     "why": "Rules for marking steps done with evidence.",
+     "step": "docs"
+    },
+    {
+     "path": "skills/bluedoc/SKILL.md",
+     "action": "edit",
+     "why": "Writing rule 8 and the Replies bullet.",
+     "step": "docs"
+    },
+    {
+     "path": "tests/test_state.py",
+     "action": "edit",
+     "why": "Evidence keeps an approval.",
+     "step": "tests"
+    },
+    {
+     "path": "tests/test_checklist_kinds.py",
+     "action": "add",
+     "why": "The mix error and evidence validation.",
+     "step": "tests"
+    },
+    {
+     "path": "docs/examples/acme-status.html",
+     "action": "edit",
+     "why": "Regenerated golden; the other goldens change with the template too.",
+     "step": "tests"
+    }
+   ]
+  },
+  "af86404fe722d2ae": {
+   "type": "table",
+   "columns": [
+    "Risk",
+    "Likelihood",
+    "Impact",
+    "Mitigation"
+   ],
+   "rows": [
+    [
+     "A concurrent agent edits `template.html`, `build.py` or `schema.md` (uncommitted storelisting work)",
+     "High",
+     "Merge conflicts, broken goldens",
+     "Coordinate with peer `bluedoc` before each file; regenerate goldens last"
+    ],
+    [
+     "The mix error breaks a user's existing doc on its next rev",
+     "Low",
+     "Build fails until the list is split",
+     "Error names both item ids and the fix; older revs only warn"
+    ],
+    [
+     "`evidence` lets content slip past approval",
+     "Medium",
+     "An agent rewrites scope inside an evidence note",
+     "Evidence is shown as evidence, not plan text; it can't hold blocks or decisions"
+    ],
+    [
+     "Stored ticks or picks lose their keys",
+     "Low",
+     "Reader state disappears",
+     "Keys stay `<checklist>:<item>`; the split renames no ids"
+    ]
+   ]
+  },
+  "f1858c6af90ca292": {
+   "type": "text",
+   "md": "- **Mixed lists.** An item becomes a decision only by having `choices` (`skills/bluedoc/scripts/build.py:1915-1940`). Both kinds share one header, one `n of m` count and one bar (`skills/bluedoc/assets/template.html:3012-3016`). Of the 17 checklists in the examples and skeletons, one mixes them: `acme-status` `next/next` (1 decision, 2 actions).\n- **Approval carry.** `without_progress` strips step `status`, checklist `done` and the approved `choice` before comparing revs (`build.py:758-786`). `approval_carries` compares the rest (`build.py:789-802`). Anything else on a step, a note or a link, asks for approval again.\n- **No evidence field.** A step has `md`, `files`, `refs`, `status` and `effort` (`references/schema.md:228-238`). A checklist item has `verify`, which is the planned check, not its result.\n- **Picks after approval.** The page still lets the reader click another pill on an approved plan. That pick stays in reader state until a later Request changes sends it. The chip stays green meanwhile."
+  },
+  "58ac24552500c22e": {
+   "type": "checklist",
+   "id": "checks",
+   "title": "Checks",
+   "items": [
+    {
+     "id": "suite",
+     "text": "Run the full test suite",
+     "sub": "Goldens, approval carry, the new checklist-kind tests.",
+     "code": "python3 -m unittest discover -s tests",
+     "verify": "`OK`, no failures."
+    },
+    {
+     "id": "browser",
+     "text": "Run the browser page tests",
+     "sub": "Picks, ticks and Send answers through headless Chrome.",
+     "code": "BLUEDOC_BROWSER_TESTS=1 python3 -m unittest tests.test_page_state",
+     "verify": "`OK`."
+    },
+    {
+     "id": "carry",
+     "text": "Approve a copy of the saved-carts plan, then mark a step done with evidence",
+     "sub": "The end-to-end case the user comment asked about.",
+     "code": "build.py patch <copy> step:steps/0/table --set status=done --json '{\"evidence\": [{\"label\": \"Test\", \"md\": \"`4 passed`\"}]}'",
+     "verify": "Page chip reads **Approved · rev 1 · progress in rev 2**; the step shows its evidence."
+    },
+    {
+     "id": "mixed",
+     "text": "Build a doc with a mixed checklist",
+     "sub": "The split is enforced by the build, not only styled.",
+     "verify": "`ERROR` naming the list and one item of each kind."
+    },
+    {
+     "id": "look",
+     "text": "Open `acme-status` and the saved-carts plan in a browser",
+     "sub": "The two list kinds and the header chip read as intended.",
+     "verify": "Decision list labelled **Needs your answer** with an open count; progress list keeps its bar and caption."
+    }
+   ]
+  },
+  "6532b0cdf19ce7c1": {
+   "type": "checklist",
+   "id": "decisions",
+   "title": "Open questions",
+   "numbered": false,
+   "items": [
+    {
+     "id": "kind-field",
+     "text": "How does a checklist say which kind it is?",
+     "sub": "Recommend inferring it: no new field, no migration, stored ticks and picks keep their keys.",
+     "recommend": "infer",
+     "choices": [
+      {
+       "id": "infer",
+       "label": "Inferred from items",
+       "md": "All items have `choices`: a decision list. None do: a progress list. Both: build error."
+      },
+      {
+       "id": "field",
+       "label": "Explicit `kind` field",
+       "md": "`\"kind\": \"decisions\" | \"progress\"` on the block; every existing checklist gets one."
+      }
+     ],
+     "detail": "**Inferred** changes no JSON outside `acme-status`. **Explicit** reads clearer in the JSON and catches an author who forgot `choices` on one question, at the cost of migrating 17 checklists and the skeletons."
+    },
+    {
+     "id": "placement",
+     "text": "How do decision lists get priority on the page?",
+     "sub": "Recommend a header chip plus a lint: the author keeps section order, the reader can't miss open questions.",
+     "recommend": "chip-lint",
+     "choices": [
+      {
+       "id": "chip-lint",
+       "label": "Header chip + lint",
+       "md": "A chip under the title, “N questions need your answer”, jumps to the first open one. The build warns when a decision list follows a progress list."
+      },
+      {
+       "id": "reorder",
+       "label": "Page moves them first",
+       "md": "The page renders decision sections above all others, whatever the JSON order."
+      },
+      {
+       "id": "lint",
+       "label": "Lint only",
+       "md": "Only the build warning; no page change."
+      }
+     ],
+     "detail": "**Reorder** breaks a review doc, where each finding's decision sits in its PR's section, and makes the page order differ from the JSON. **Lint only** leaves review pages and long docs without a visible prompt."
+    },
+    {
+     "id": "approved-picks",
+     "text": "What happens when the reader changes a pick on an approved plan?",
+     "sub": "Recommend flagging it: no locked controls, and the agent hears about it.",
+     "recommend": "flag",
+     "choices": [
+      {
+       "id": "flag",
+       "label": "Flag it, ask to send",
+       "md": "The chip turns amber, “Pick changed since approval”, and Request changes lights up with the pick."
+      },
+      {
+       "id": "lock",
+       "label": "Lock the pills",
+       "md": "Pills are disabled on the approved rev; the reader comments and sends Request changes to reopen."
+      }
+     ],
+     "detail": "**Flag** keeps one way to change your mind, the same as before approval. **Lock** prevents a stray click from diverging silently, but changing a pick then takes a comment and an extra round."
+    },
+    {
+     "id": "linked-drift",
+     "text": "Should linked local evidence files be fingerprinted?",
+     "sub": "Recommend link only: optional evidence shouldn't add history machinery; embedded is the tamper-proof form.",
+     "recommend": "link-only",
+     "choices": [
+      {
+       "id": "link-only",
+       "label": "Link only",
+       "md": "A linked path or URL is a pointer, tagged *linked* on the page; it may change after the step is done."
+      },
+      {
+       "id": "hash",
+       "label": "Hash local files",
+       "md": "The build records each linked local file's sha256 in the revision; the page marks one that changed since."
+      }
+     ],
+     "detail": "**Hash** costs a history field per revision, a check per render, and a new compare state. URLs can't be hashed either way."
+    }
+   ]
+  },
+  "a40a7ba14ed805c4": {
+   "type": "checklist",
+   "id": "decisions",
+   "title": "Open questions",
+   "numbered": false,
+   "items": [
+    {
+     "id": "kind-field",
+     "text": "How does a checklist say which kind it is?",
+     "sub": "Recommend inferring it: no new field, no migration, stored ticks and picks keep their keys.",
+     "recommend": "infer",
+     "choices": [
+      {
+       "id": "infer",
+       "label": "Inferred from items",
+       "md": "All items have `choices`: a decision list. None do: a progress list. Both: build error."
+      },
+      {
+       "id": "field",
+       "label": "Explicit `kind` field",
+       "md": "`\"kind\": \"decisions\" | \"progress\"` on the block; every existing checklist gets one."
+      }
+     ],
+     "detail": "**Inferred** changes no JSON outside `acme-status`. **Explicit** reads clearer in the JSON and catches an author who forgot `choices` on one question, at the cost of migrating 17 checklists and the skeletons.",
+     "choice": "infer"
+    },
+    {
+     "id": "placement",
+     "text": "How do decision lists get priority on the page?",
+     "sub": "Recommend a header chip plus a lint: the author keeps section order, the reader can't miss open questions.",
+     "recommend": "chip-lint",
+     "choices": [
+      {
+       "id": "chip-lint",
+       "label": "Header chip + lint",
+       "md": "A chip under the title, “N questions need your answer”, jumps to the first open one. The build warns when a decision list follows a progress list."
+      },
+      {
+       "id": "reorder",
+       "label": "Page moves them first",
+       "md": "The page renders decision sections above all others, whatever the JSON order."
+      },
+      {
+       "id": "lint",
+       "label": "Lint only",
+       "md": "Only the build warning; no page change."
+      }
+     ],
+     "detail": "**Reorder** breaks a review doc, where each finding's decision sits in its PR's section, and makes the page order differ from the JSON. **Lint only** leaves review pages and long docs without a visible prompt.",
+     "choice": "chip-lint"
+    },
+    {
+     "id": "approved-picks",
+     "text": "What happens when the reader changes a pick on an approved plan?",
+     "sub": "Recommend flagging it: no locked controls, and the agent hears about it.",
+     "recommend": "flag",
+     "choices": [
+      {
+       "id": "flag",
+       "label": "Flag it, ask to send",
+       "md": "The chip turns amber, “Pick changed since approval”, and Request changes lights up with the pick."
+      },
+      {
+       "id": "lock",
+       "label": "Lock the pills",
+       "md": "Pills are disabled on the approved rev; the reader comments and sends Request changes to reopen."
+      }
+     ],
+     "detail": "**Flag** keeps one way to change your mind, the same as before approval. **Lock** prevents a stray click from diverging silently, but changing a pick then takes a comment and an extra round.",
+     "choice": "flag"
+    },
+    {
+     "id": "linked-drift",
+     "text": "Should linked local evidence files be fingerprinted?",
+     "sub": "Recommend link only: optional evidence shouldn't add history machinery; embedded is the tamper-proof form.",
+     "recommend": "link-only",
+     "choices": [
+      {
+       "id": "link-only",
+       "label": "Link only",
+       "md": "A linked path or URL is a pointer, tagged *linked* on the page; it may change after the step is done."
+      },
+      {
+       "id": "hash",
+       "label": "Hash local files",
+       "md": "The build records each linked local file's sha256 in the revision; the page marks one that changed since."
+      }
+     ],
+     "detail": "**Hash** costs a history field per revision, a check per render, and a new compare state. URLs can't be hashed either way.",
+     "choice": "link-only"
+    }
+   ]
+  },
+  "8e19e19b6e07dce9": {
+   "type": "steps",
+   "id": "plan",
+   "title": "Implementation order",
+   "items": [
+    {
+     "id": "classify",
+     "title": "Classify checklists and reject mixed ones in `build.py`",
+     "status": "done",
+     "effort": "S",
+     "md": "Add `checklist_kind(b)` → `decisions` or `progress` from its items. A list with both kinds is an error on a new rev and a warning on older ones (`contract_level`, `build.py:1733`). Nested checklists are classified on their own. Per question 1, also lint the placement of decision lists. Split `acme-status` `next/next` into a decision list and a progress list.",
+     "files": [
+      "skills/bluedoc/scripts/build.py",
+      "skills/bluedoc/examples/acme-status.bluedoc.json"
+     ],
+     "evidence": [
+      {
+       "label": "Mixed list and bad evidence rejected",
+       "code": "python3 -m unittest test_checklist_kinds",
+       "md": "`Ran 5 tests … OK`"
+      },
+      {
+       "label": "acme-status split",
+       "href": "../../skills/bluedoc/examples/acme-status.bluedoc.json"
+      }
+     ]
+    },
+    {
+     "id": "render-split",
+     "title": "Render decision lists and progress lists as two kinds",
+     "status": "done",
+     "effort": "M",
+     "md": "In `renderChecklist` (`template.html:2862`): a decision list gets a question icon, a **Needs your answer** label and an `N open` count in place of the bar. A progress list keeps the bar and gets a one-line caption: on plans *“The agent marks these as work lands; ticking doesn't change approval”*, elsewhere *“Your own tracker”*. The Send answers and Approve Markdown list decisions before ticks (`decisionsMd`, `answerItems`).",
+     "files": [
+      "skills/bluedoc/assets/template.html"
+     ],
+     "evidence": [
+      {
+       "label": "Browser check",
+       "md": "Decision list shows **Needs your answer** and `3 open` without a bar; the progress list keeps its bar and caption; the top tracker counts progress items only (`0/6`)."
+      }
+     ]
+    },
+    {
+     "id": "picks",
+     "title": "Handle a pick changed on an approved plan",
+     "status": "done",
+     "effort": "S",
+     "md": "Per question 3. Applies to plan, design, presentation and website pages (`APPROVABLE`). Earlier revisions and compare view already disable pills.",
+     "files": [
+      "skills/bluedoc/assets/template.html"
+     ],
+     "evidence": [
+      {
+       "label": "Browser check",
+       "md": "After approving with 90 days, picking 180 days turns the chip to **Pick changed since approval** and Request changes to `1 pending`. Sending it adds **· sent**; picking 90 days again returns **Approved · rev 1**."
+      }
+     ]
+    },
+    {
+     "id": "evidence-build",
+     "title": "Validate `evidence` and count it as progress",
+     "status": "done",
+     "effort": "S",
+     "md": "Each entry: `label` (required) plus at least one of `md`, `code`/`lang`, `src` (a file beside the doc, checked like a media `src`), `href` (a path or `http(s)` URL, checked like inline links). Error on a decision item. Pop `evidence` in `without_progress` for steps and progress items, so `patch step:… --set status=done --json '{\"evidence\": […]}'` keeps the approval.",
+     "files": [
+      "skills/bluedoc/scripts/build.py"
+     ],
+     "evidence": [
+      {
+       "label": "Approval carry",
+       "code": "python3 -m unittest test_state.ApprovalCarries",
+       "md": "Evidence on steps and checks carries; evidence on a decision does not."
+      },
+      {
+       "label": "Served carry",
+       "md": "Ping after `patch step:… --set status=done --json evidence`: `carried: true`; after a step title edit: `carried: false`."
+      }
+     ]
+    },
+    {
+     "id": "evidence-page",
+     "title": "Show evidence on steps and progress items",
+     "status": "done",
+     "effort": "M",
+     "md": "In `renderSteps` (`template.html:2710`) and the checklist item body: an **Evidence** group. Embedded entries render inline (md, a code block with Copy, an image or video); linked ones render as a chip tagged *linked* that opens the path or URL. A step with evidence shows a small evidence count in its meta row. Compare view gets an **Evidence** row in *What changed*; Copy checklist adds evidence links under the item.",
+     "files": [
+      "skills/bluedoc/assets/template.html"
+     ],
+     "evidence": [
+      {
+       "label": "Browser check",
+       "md": "The step meta row reads `Done · S · 1 file · 3 evidence`; the open step shows embedded output, a command, an image and a *linked* chip; a check shows its linked CI URL."
+      }
+     ]
+    },
+    {
+     "id": "docs",
+     "title": "Document the split and the `evidence` field",
+     "status": "done",
+     "effort": "S",
+     "md": "`schema.md`: `## Checklist` (two kinds, the mix error), `### Steps` and the item table (`evidence`), `## Plans` (the progress list at line 654 gains `evidence`). `types/plan.md`: rules at lines 24 and 35. `SKILL.md`: writing rule 8 and the Replies bullet on recording finished steps.",
+     "files": [
+      "skills/bluedoc/references/schema.md",
+      "skills/bluedoc/types/plan.md",
+      "skills/bluedoc/SKILL.md"
+     ]
+    },
+    {
+     "id": "tests",
+     "title": "Cover the mix error, evidence carry and goldens",
+     "status": "done",
+     "effort": "S",
+     "md": "`test_state.ApprovalCarries.test_plan`: added evidence carries; changed step text still doesn't. A new build test: a mixed list errors, evidence on a decision errors, a bad `href` scheme errors. Regenerate `docs/examples/*.html` for `test_golden_examples`.",
+     "files": [
+      "tests/test_state.py",
+      "tests/test_checklist_kinds.py",
+      "docs/examples/acme-status.html"
+     ],
+     "evidence": [
+      {
+       "label": "Full suite",
+       "code": "python3 -m unittest discover -s tests",
+       "md": "`Ran 336 tests … OK (skipped=71)`"
+      }
+     ]
+    }
+   ]
+  }
+ }
+}
