@@ -2712,13 +2712,25 @@ def save_brand_image(doc: Path, data: dict) -> tuple[int, dict]:
 
 # ---------- reader state ----------
 
-ANN_TYPES = ("pin", "text", "draw", "general", "link", "layout", "listing")   # link, layout, listing: drafts (template.html)
+# link, layout, listing, element: drafts (template.html); an element draft's text and base are at most 1,000 characters
+ANN_TYPES = ("pin", "text", "draw", "general", "link", "layout", "listing", "element")
+EL_TEXT_MAX = 1000
 _skipped: set[tuple[str, str]] = set()   # (doc, key) of stored values page_state left out and logged
 
 
 def _target_ok(t) -> bool:
     return (isinstance(t, dict) and isinstance(t.get("key"), str) and bool(t["key"]) and isinstance(t.get("label"), str)
             and (t.get("text") is None or isinstance(t["text"], str)))
+
+
+def _element_ok(e) -> bool:
+    """An `element` draft's payload: {op: text | delete, ab, sel, tag, base, text (op text)}, text and base capped."""
+    def s(k: str, n: int) -> bool:
+        return isinstance(e.get(k), str) and len(e[k]) <= n
+    return (isinstance(e, dict) and e.get("op") in ("text", "delete") and s("ab", 200) and bool(e["ab"]) and s("sel", 200)
+            and bool(e["sel"]) and s("tag", 20) and s("base", EL_TEXT_MAX)
+            and (e.get("text") is None and e["op"] == "delete" or s("text", EL_TEXT_MAX) and bool(e["text"]))
+            and (e.get("ord") is None or isinstance(e["ord"], int) and not isinstance(e["ord"], bool)))
 
 
 def value_ok(key: str, value: str) -> bool:
@@ -2739,7 +2751,8 @@ def value_ok(key: str, value: str) -> bool:
             and (a.get("type") != "link" or isinstance(a.get("link"), dict)
                  and all(isinstance(a["link"].get(k), str) for k in ("op", "from", "el")))
             and (a.get("type") != "layout" or isinstance(a.get("layout"), dict) and isinstance(a["layout"].get("positions"), dict))
-            and (a.get("type") != "listing" or isinstance(a.get("listing"), dict) and isinstance(a["listing"].get("op"), str)))
+            and (a.get("type") != "listing" or isinstance(a.get("listing"), dict) and isinstance(a["listing"].get("op"), str))
+            and (a.get("type") != "element" or _element_ok(a.get("element"))))
 
 
 def page_state(p: Path) -> dict | None:

@@ -840,6 +840,12 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .bd-cs-c .mt { display: flex; flex-wrap: wrap; gap: 2px 10px; font-size: 11.5px; color: var(--fg-subtle); }
 .bd-cs-c .mt:empty { display: none; }
 .bd-cs-c .mt .old { color: var(--warn-fg); }
+/* an element draft's card: the text before and after, or what was deleted */
+.bd-cs-c .eld { font-size: 13px; line-height: 1.45; overflow-wrap: anywhere; }
+.bd-cs-c .eld s { color: var(--fg-muted); }
+.bd-cs-c .eld b { font-weight: 600; }
+.bd-cs-c .eld .ar { margin: 0 .35em; color: var(--fg-subtle); }
+.bd-cs-c .eld .del { color: var(--fg-muted); }
 .bd-cs-c .ed { display: grid; gap: 6px; margin-top: 2px; }
 .bd-cs-c .ed .bp-note-ta { display: block; width: 100%; min-height: 60px; max-height: 240px; overflow: auto; }
 .bd-cs-c .ef { display: flex; align-items: center; gap: 6px; }
@@ -1482,7 +1488,7 @@ i.warn[hidden] { display: none; }
 .bd-ab.ghost { opacity: .6; }
 .bd-ab.ghost .bd-ab-scr { outline: calc(2px / var(--k)) dashed var(--risk); }
 .bd-ab-fr { position: absolute; left: 0; top: 0; display: block; border: 0; background: #fff; pointer-events: none; }
-.bd-board:is([data-m="interact"], [data-m="point"], [data-m="select"], [data-m="link"]) .bd-ab-fr, :is(.bd-pres, .bd-cmpv) .bd-ab-fr { pointer-events: auto; }
+.bd-board:is([data-m="interact"], [data-m="point"], [data-m="select"], [data-m="link"], [data-m="edit"]) .bd-ab-fr, :is(.bd-pres, .bd-cmpv) .bd-ab-fr { pointer-events: auto; }
 /* links: connectors over the board, faint at rest; the selected (or hovered) screen's arrows, in and out, at full
    strength with their labels. Screens never dim. Widths are in screen px (÷ --k), so arrows read the same at every zoom. */
 .bd-ab-t .rch { padding: 0 .5em; border-radius: .45em; background: var(--accent-tint); color: var(--accent-fg); font-variant-numeric: tabular-nums; }
@@ -1491,7 +1497,7 @@ i.warn[hidden] { display: none; }
 .bd-lnks.off, .bd-lnk-lbls.off { display: none; }
 .bd-lnk .ln { fill: none; stroke: var(--fg-subtle); stroke-width: calc(1.5px / var(--k)); stroke-linejoin: round; opacity: .45; }
 .bd-lnk .hit { fill: none; stroke: transparent; stroke-width: calc(14px / var(--k)); pointer-events: stroke; cursor: pointer; }
-.bd-board:is([data-m="interact"], [data-m="select"], [data-m="draw"], [data-m="frame"]) .bd-lnk :is(.hit, .bd-lnk-dot) { pointer-events: none; }
+.bd-board:is([data-m="interact"], [data-m="select"], [data-m="draw"], [data-m="frame"], [data-m="edit"]) .bd-lnk :is(.hit, .bd-lnk-dot) { pointer-events: none; }
 .bd-lnk.k-modal .ln { stroke-dasharray: calc(7px / var(--k)) calc(4px / var(--k)); }
 .bd-lnk.k-tab .ln { stroke-dasharray: 0 calc(5px / var(--k)); stroke-linecap: round; }
 .bd-lnk:is(.lit, .sel, .hov) .ln { stroke: var(--accent); stroke-width: calc(2px / var(--k)); opacity: 1; }
@@ -2193,6 +2199,7 @@ const ICONS = {
   type: '<path d="M12 4v16M4 7V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2M9 20h6"/>',
   pencil: '<path d="M21.17 6.81a1 1 0 0 0-3.99-3.99L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5zM15 5l4 4"/>',
   edit: '<path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.38 2.63a1 1 0 0 1 3 3l-9.02 9.01a2 2 0 0 1-.85.5l-2.87.84a.5.5 0 0 1-.62-.62l.84-2.87a2 2 0 0 1 .5-.85z"/>',
+  penline: '<path d="M12 20h9"/><path d="M16.38 3.62a1 1 0 0 1 3 3L7.37 18.64a2 2 0 0 1-.86.5l-2.87.84a.5.5 0 0 1-.62-.62l.84-2.87a2 2 0 0 1 .5-.85z"/>',
   eye: '<path d="M2.06 12.35a1 1 0 0 1 0-.7 10.75 10.75 0 0 1 19.88 0 1 1 0 0 1 0 .7 10.75 10.75 0 0 1-19.88 0"/><circle cx="12" cy="12" r="3"/>',
   eyeoff: '<path d="M10.73 5.08a10.74 10.74 0 0 1 11.2 6.57 1 1 0 0 1 0 .7 10.75 10.75 0 0 1-1.44 2.49M14.08 14.16a3 3 0 0 1-4.24-4.24M17.48 17.5a10.75 10.75 0 0 1-15.42-5.15 1 1 0 0 1 0-.7 10.75 10.75 0 0 1 4.45-5.14M2 2l20 20"/>',
   trash: '<path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
@@ -6291,11 +6298,13 @@ function renderBoard(b) {
   const deck = abs.filter(a => devOf(a) === 'slide').sort((a, c) => pos.get(a.id).y - pos.get(c.id).y || pos.get(a.id).x - pos.get(c.id).x);
 
   /* frames: at most LIVE_MAX at a time, the screens nearest the middle of the view; the others show their outline */
-  const frameMode = () => B.mode === 'link' ? 'point' : ['interact', 'point', 'select', 'draw'].includes(B.mode) ? B.mode : 'view';
+  const frameMode = () => B.mode === 'link' ? 'point' : ['interact', 'point', 'select', 'draw', 'edit'].includes(B.mode) ? B.mode : 'view';
   const themeOf = id => themes.find(t => t.id === id) || null;
   const tokensMsg = () => { const t = themeOf(B.theme); return { bd: 'tokens', theme: t && t.tokens && typeof t.tokens === 'object' ? t.tokens : null, motion: b.motion && typeof b.motion === 'object' ? b.motion : null }; };
   const viewMsg = x => ({ bd: 'view', sketch: B.sketch || x.a.fidelity === 'sketch', reduced: B.reduced, paused: B.paused });
-  const modeMsg = x => ({ bd: 'mode', mode: x.role === 'pres' ? 'interact' : x.role === 'cmp' ? 'view' : frameMode() });
+  // Edit reaches the board's own frames of the current revision, never an icons artboard (the server builds its sheet)
+  const editable = x => !x.role && !x.twin && devOf(x.a) !== 'icons';
+  const modeMsg = x => ({ bd: 'mode', mode: x.role === 'pres' ? 'interact' : x.role === 'cmp' ? 'view' : B.mode === 'edit' && !editable(x) ? 'view' : frameMode() });
   // an iframe for record x (an artboard, its twin, or the present or compare view's copy) at revision rev (null:
   // current). A live page loads its proxy; at an earlier revision its snapshot (snapOf, at the page's width), as a
   // screen: sandboxed like one, never the live page
@@ -6317,7 +6326,8 @@ function renderBoard(b) {
     // a live page reloads (the dev server's hot reload) and follows its own links: each load is a fresh page to set up
     if (x.allow > 0 || x.live) {
       x.allow = 0; x.locSig = '';
-      for (const m of [modeMsg(x), tokensMsg(), viewMsg(x), ...siteMsgs(x), devOf(x.a) === 'page' && pageMsg(x)]) if (m) post(x, m);
+      // boardEdits' frameMsgs: the reader's element drafts on this artboard and the Edit selection
+      for (const m of [modeMsg(x), tokensMsg(), viewMsg(x), ...siteMsgs(x), devOf(x.a) === 'page' && pageMsg(x), ...(B.frameMsgs ? B.frameMsgs(x) : [])]) if (m) post(x, m);
       if (x.pendingReveal) post(x, { bd: 'reveal', sel: x.pendingReveal }); x.pendingReveal = null; return;
     }
     // a load the page didn't start: the screen navigated its own frame. Load it again and flag it; a
@@ -6354,6 +6364,8 @@ function renderBoard(b) {
   }
   const boardFrames = () => [...B.live].filter(x => !x.role);
   const sendAll = fn => { for (const x of B.live) post(x, fn(x)); };
+  // boardEdits: a message to each frame of artboard id that shows the current revision (the board's and Present's)
+  B.postAb = (id, m) => { for (const x of B.live) if (x.a.id === id && x.role !== 'cmp' && !x.twin) post(x, typeof m === 'function' ? m(x) : m); };
   function paintWarn(x) {
     const s = x.fr && x.snap, ext = s && s.external;
     const why = [x.fallback && `${x.fallback} not found: showing the plain kit`, x.navs && 'This screen tried to navigate away from its frame',
@@ -6385,17 +6397,20 @@ function renderBoard(b) {
     return { bp: x.p.w, ...(s ? { section: s.id } : {}), ...(src.length ? { source: src } : {}) };
   }
   const secTitle = (x, sec) => { const s = Number.isInteger(sec) ? secsOf(x.a)[sec] : null; return s ? str(s.title, 60) : ''; };
+  B.siteTarget = (id, sec) => { const x = B.frames.get(id); return x ? siteTarget(x, sec) : {}; };
   addEventListener('message', e => {
     let x = null;
     for (const y of B.live) if (y.fr && e.source === y.fr.contentWindow) { x = y; break; }
     const d = e.data;
-    if (!x || !d || typeof d !== 'object' || !['ready', 'hover', 'pick', 'nav', 'scroll', 'snapshot'].includes(d.bd)) return;
+    if (!x || !d || typeof d !== 'object' || !['ready', 'hover', 'pick', 'nav', 'scroll', 'snapshot', 'edit', 'key'].includes(d.bd)) return;
     if (d.bd === 'snapshot') { const f = x.live && snapAsks.get(d.id); if (f) { snapAsks.delete(d.id); f(d); } return; }
     if (d.bd === 'scroll') { if (!x.role && Number.isFinite(d.y)) syncScroll(x, d.y); return; }
     if (d.bd === 'ready') {
       x.ready = true;
       if (x.role !== 'cmp' && !x.twin) takeNavs(B.frames.get(x.a.id), d);
       if (x.role) return;
+      // the reader's element drafts as this frame found them (boardEdits settles them)
+      if (!x.twin && d.drafts && typeof d.drafts === 'object' && B.onDraftStatus) B.onDraftStatus(x, d.drafts, d.draftsNow && typeof d.draftsNow === 'object' ? d.draftsNow : {});
       x.fallback = str(d.fallback, 80) || null; paintWarn(x);
       if (d.rects && typeof d.rects === 'object') for (const [s, r] of Object.entries(d.rects).slice(0, 100)) x.rects[str(s)] = rectOf(r);
       if (Array.isArray(d.sigs)) x.sigs = d.sigs.slice(0, 50).map(s => typeof s === 'string' ? s.slice(0, 16) : null);
@@ -6420,6 +6435,9 @@ function renderBoard(b) {
     const what = [secTitle(x, d.sec), str(d.name, 60) || str(d.tag, 30)].filter(Boolean).join(' › ');
     if (d.bd === 'hover') { showHov(x, d.sel == null ? null : { rect: rectOf(d.rect), what }); return; }
     if (x.twin) return;   // the other revision's page in compare: nothing to pin or link
+    // Edit: a pick selects, an edit or a key goes to boardEdits, which takes them only from the selection's frame
+    if (d.bd === 'edit' || d.bd === 'key') { if (B.onEditMsg) B.onEditMsg(x, d); return; }
+    if (B.mode === 'edit') { if (B.onEditPick && editable(x)) B.onEditPick(x, d); return; }
     if (B.mode === 'link') { if (B.onLinkPick) B.onLinkPick(x, d); return; }
     if (B.mode !== 'point' && B.mode !== 'select') return;
     // a pick on the screen's body (no element under it) is about the whole screen: `artboard:<id>`
@@ -7187,8 +7205,8 @@ function renderBoard(b) {
   B.pinPos = key => {
     if (key.startsWith('link:')) return linkPinPos(key);
     if (!key.startsWith('el:')) return null;
-    const i = key.indexOf('/'), x = i > 3 && B.frames.get(key.slice(3, i));
-    return x ? pickPos(x, x.rects[key.slice(i + 1)]) : null;
+    const i = key.indexOf('/'), x = i > 3 && B.frames.get(key.slice(3, i)), r = x && x.rects[key.slice(i + 1)];
+    return r && r.w + r.h > 0 ? pickPos(x, r) : null;   // a hidden element (a deletion draft): the pin keeps its own spot
   };
   // the artboard a key names (artboard:, el:), else null
   B.abFor = key => { const m = /^(?:artboard|el):([^/]+)/.exec(key); const x = m && B.frames.get(m[1]); return x ? x.el : null; };
@@ -7374,8 +7392,9 @@ function renderBoard(b) {
       reach: R ? { screen: R.f, out: R.tg.size, in: R.src.size, targets: Object.fromEntries([...R.tg].map(([k, v]) => [k, [...v]])) } : null,
       links: LINKS.concat(GONE).map(l => ({ key: l.key, from: l.from, el: l.el, to: l.to, kind: l.kind, label: l.label, draft: l.draft || null, del: !!l.del, gone: GONE.includes(l),
         routed: gEls.has(l.key), change: gEls.has(l.key) ? ['add', 'mod', 'del'].find(c => gEls.get(l.key).g.classList.contains('bd-chg-' + c)) || null : null })),
-      live: boardFrames().length, requested: [...B.rqs.values()].map(el => el.dataset.key),
+      live: boardFrames().length, requested: [...B.rqs.values()].map(el => el.dataset.key), editSel: B.editSel ? { ...B.editSel } : null,
       artboards: [...B.frames.values()].map(x => ({ id: x.a.id, x: x.p.x, y: x.p.y, w: x.p.w, h: x.p.h, live: !!x.fr, ready: x.ready, fallback: x.fallback, navigated: x.navs, change: x.chg,
+        drafts: x.draftSt ? { ...x.draftSt } : null,
         navs: x.navAt ? { ...x.navAt } : null, ...(devOf(x.a) === 'page' ? { page: { proxied: !!(x.fr && x.live), src: x.fr ? x.fr.getAttribute('src') : null,
           snapshot: x.fr && x.snap ? { rev: x.srev, w: x.snap.w } : null, why: x.ph.hidden ? '' : x.ph.querySelector('.why').textContent,
           badge: (x.bar && x.bar.querySelector('.live, .snap') || {}).textContent || null, label: x.rv && !x.rv.hidden ? x.rv.textContent : null,
@@ -9479,8 +9498,12 @@ const MARKUP = (() => {
   // skipped and logged, so one bad comment can't stop the page; the next save of the comments removes it
   // `link` and `layout`: a design board's drafts (boardEdits), a link edit or the screens' moved places
   // `listing`: a storelisting's drafts (renderListing): a set's shot order, or the device sections turned on
-  const ANN_TYPES = ['pin', 'text', 'draw', 'general', 'link', 'layout', 'listing'];
-  const DRAFT_TYPES = ['link', 'layout', 'listing'], isDraft = a => DRAFT_TYPES.includes(a.type);
+  // `element`: a design board's draft of one element in a screen (boardEdits): its new text, or its removal
+  const ANN_TYPES = ['pin', 'text', 'draw', 'general', 'link', 'layout', 'listing', 'element'];
+  const DRAFT_TYPES = ['link', 'layout', 'listing', 'element'], isDraft = a => DRAFT_TYPES.includes(a.type);
+  const capStr = (v, n) => typeof v === 'string' && v.length <= n;
+  const isElement = e => !!e && typeof e === 'object' && ['text', 'delete'].includes(e.op) && capStr(e.ab, 200) && !!e.ab && capStr(e.sel, 200) && !!e.sel
+    && capStr(e.tag, 20) && capStr(e.base, 1000) && (e.text == null && e.op === 'delete' || capStr(e.text, 1000) && !!e.text) && (e.ord == null || Number.isInteger(e.ord));
   const isTarget = t => !!t && typeof t === 'object' && typeof t.key === 'string' && !!t.key && typeof t.label === 'string' && (t.text == null || typeof t.text === 'string');
   const valid = a => !!a && typeof a === 'object' && typeof a.id === 'string' && ANN_TYPES.includes(a.type) && isTarget(a.target)
     && (a.targets == null || Array.isArray(a.targets) && a.targets.every(isTarget)) && (a.type !== 'text' || typeof a.quote === 'string')
@@ -9488,7 +9511,8 @@ const MARKUP = (() => {
     && (a.strokes == null || Array.isArray(a.strokes)) && (a.pos == null || typeof a.pos === 'object')
     && (a.type !== 'link' || !!a.link && typeof a.link === 'object' && typeof a.link.op === 'string' && typeof a.link.from === 'string' && typeof a.link.el === 'string')
     && (a.type !== 'layout' || !!a.layout && typeof a.layout === 'object' && !!a.layout.positions && typeof a.layout.positions === 'object')
-    && (a.type !== 'listing' || !!a.listing && typeof a.listing === 'object' && typeof a.listing.op === 'string');
+    && (a.type !== 'listing' || !!a.listing && typeof a.listing === 'object' && typeof a.listing.op === 'string')
+    && (a.type !== 'element' || isElement(a.element));
   const skipBad = (where, v) => { console.warn(`bluedoc: skipped a stored comment the page can't show (${where})`, v); return false; };
   let saved = store.keys(KEY + ':').map(k => k.slice(KEY.length + 1));
   let list = saved.map(id => [id, store.get(annKey(id))]).map(([id, s]) => [id, s, parse(s)])
@@ -9536,11 +9560,12 @@ const MARKUP = (() => {
   const pending = () => list.filter(a => a.status === 'pending');
   const onPage = () => list.filter(a => !isGeneral(a));
   const cut = (s, n) => { s = String(s ?? '').replace(/\s+/g, ' ').trim(); return s.length > n ? s.slice(0, n - 1).trimEnd() + '…' : s; };
-  const TYPE_IC = { pin: 'msg', text: 'type', draw: 'pencil', general: 'msgsq', link: 'route', layout: 'grid', listing: 'grid' };
-  const TYPE_WORD = { pin: 'pin', text: 'text', draw: 'drawing', general: 'general', link: 'link draft', layout: 'layout draft', listing: 'listing draft' };
+  const TYPE_IC = { pin: 'msg', text: 'type', draw: 'pencil', general: 'msgsq', link: 'route', layout: 'grid', listing: 'grid', element: 'penline' };
+  const TYPE_WORD = { pin: 'pin', text: 'text', draw: 'drawing', general: 'general', link: 'link draft', layout: 'layout draft', listing: 'listing draft', element: 'element draft' };
   const excerpt = a => a.type === 'text' ? a.quote : a.type === 'draw' && a.targets && a.targets.length ? a.targets.map(t => t.text).filter(Boolean).join(' / ') : a.target.text;
   const pub = a => ({ id: a.id, type: a.type, note: a.note, target: a.target, ...(a.type === 'draw' ? { targets: a.targets || [a.target] } : {}),
-    ...(a.type === 'text' ? { quote: a.quote } : {}), ...(a.type === 'link' ? { link: a.link } : {}), ...(a.type === 'layout' ? { layout: a.layout } : {}), ...(a.type === 'listing' ? { listing: a.listing } : {}), rev: a.rev, at: a.at });
+    ...(a.type === 'text' ? { quote: a.quote } : {}), ...(a.type === 'link' ? { link: a.link } : {}), ...(a.type === 'layout' ? { layout: a.layout } : {}), ...(a.type === 'listing' ? { listing: a.listing } : {}),
+    ...(a.type === 'element' ? { element: a.element } : {}), rev: a.rev, at: a.at });
   const noteText = a => String(a.note || '').trim();
   // the key `patch` takes, as changes.json has it; a drawing over several parts names each part's key
   const keysMd = a => [...new Set((a.type === 'draw' && a.targets && a.targets.length ? a.targets : [a.target]).map(t => t.key))].map(k => `\`${k}\``).join(' ');
@@ -9559,11 +9584,12 @@ const MARKUP = (() => {
       return [headMd(a, i), ex && `   > ${ex}`, ...siteMd(a.target), ...(BOARD && BOARD.pinMd ? BOARD.pinMd(a) : []),
         `   Change: ${noteText(a).split('\n').join('\n   ')}`].filter(Boolean).join('\n');
     }).join('\n\n'));
-    // a board's drafts: one line each, then the `patch` commands that make them (BOARD.draftCommands). A storelisting's
-    // readback parts ({ops, md}) take the drafts of their ops (uploads, style picks, brand edits) under their own heading
+    // a board's drafts: one line each (an element draft adds where to make it: BOARD.draftLines), then the `patch`
+    // commands that make them (BOARD.draftCommands). A storelisting's readback parts ({ops, md}) take the drafts of their
+    // ops (uploads, style picks, brand edits) under their own heading
     const parts2 = BOARD && Array.isArray(BOARD.readbackParts) ? BOARD.readbackParts : [], claimed = new Set(parts2.flatMap(p => p.ops));
     const own = dr.filter(a => !(a.type === 'listing' && a.listing && claimed.has(a.listing.op)));
-    if (own.length) parts.push('## Board drafts\n\n' + own.map(a => `- (${a.id}) ${keysMd(a)} ${noteText(a)}`).join('\n')
+    if (own.length) parts.push('## Board drafts\n\n' + own.map(a => [`- (${a.id}) ${keysMd(a)} ${noteText(a)}`, ...(BOARD && BOARD.draftLines ? BOARD.draftLines(a) : [])].join('\n')).join('\n')
       + (BOARD && BOARD.draftCommands ? '\n\n```sh\n' + BOARD.draftCommands(own) + '\n```' : ''));
     for (const p of parts2) { const md = p.md(dr.filter(a => a.type === 'listing' && a.listing && p.ops.includes(a.listing.op))); if (md) parts.push(md); }
     const dec = [BOARD && BOARD.decisionLines ? BOARD.decisionLines() : '', APPROVABLE ? decisionsMd() : decisionsMd(itemsPending())].filter(Boolean).join('\n');
@@ -9740,7 +9766,8 @@ const MARKUP = (() => {
     return a;
   }
   // a design board's drafts (boardEdits): put creates one or updates it (an edit makes a sent one pending again),
-  // restore puts back a copy (undo), drop deletes one, resolve marks it applied by the current rev, mark sets flags (stale)
+  // restore puts back a copy (undo), drop deletes one, resolve marks it applied by the current rev, mark sets flags (stale).
+  // put's text, extra (a website page's bp, section and source) and pos (the pin's spot) go on an element draft's target
   const draftSaved = () => { save(); hlDirty = true; schedule(true); paint(); };
   const draftOf = id => list.find(x => x.id === id && isDraft(x)) || null;
   const drafts = {
@@ -9753,9 +9780,12 @@ const MARKUP = (() => {
         list.push(a);
         if (!matches(a)) setFilter('pending', false);
       } else {
-        for (const k of ['sentAt', 'stale', 'resolvedBy', 'resolvedRev', 'resolvedAt', 'link', 'layout', 'listing']) delete a[k];
+        for (const k of ['sentAt', 'stale', 'resolvedBy', 'resolvedRev', 'resolvedAt', 'link', 'layout', 'listing', 'element']) delete a[k];
         Object.assign(a, { status: 'pending', rev: CUR.rev, target: { ...a.target, key: o.key, label } });
       }
+      if (typeof o.text === 'string') a.target.text = cut(o.text, 300);
+      Object.assign(a.target, o.extra || {});
+      if (o.pos) a.pos = o.pos;
       a.note = o.note; a[o.type] = o[o.type];
       draftSaved();
       return a.id;
@@ -9862,8 +9892,10 @@ const MARKUP = (() => {
   const VIEW_M = ['cursor', 'View', 'V', IS_LISTING ? 'View: scroll the platform page; drag a shot to reorder its set' : IS_DESIGN ? 'View: drag to pan the board; the screens ignore the pointer' : 'View: use the page as usual'];
   const MARK_M = { point: ['msg', 'Point', 'C', IS_DESIGN ? 'Point: pin a comment on an element, inside a screen too' : 'Point: pin a comment on an element'],
     select: ['type', 'Select', 'T', 'Select: comment on some text'], draw: ['pencil', 'Draw', 'D', 'Draw: circle or mark what should change'] };
-  // a design's tray also has Interact (clicks go to the screens), Link (edit the arrows) and Frame (request a new screen)
+  // a design's tray also has Edit (change a screen's text, delete an element: drafts), Interact (clicks go to the
+  // screens), Link (edit the arrows) and Frame (request a new screen)
   const MODES = IS_DESIGN && !IS_LISTING ? { view: VIEW_M, interact: ['hand', 'Interact', 'I', 'Interact: click inside the screens (tabs, toggles)'], ...MARK_M,
+    edit: ['penline', 'Edit', 'E', `Edit: click an element in a ${SCREEN} to select it, double-click to change its text, Delete to remove it`],
     link: ['route', 'Link', 'L', 'Link: click an element, then a screen, to add an arrow; drag a + knob for a gesture; drag an arrow\'s dots to change it'],
     frame: ['frame', 'Frame', 'R', 'Frame: drag an empty frame for a new screen, then labelled boxes inside it'] } : { view: VIEW_M, ...MARK_M };
   const PENS = { risk: 'Red', accent: 'Blue', warn: 'Amber', ok: 'Green' };
@@ -10160,7 +10192,7 @@ const MARKUP = (() => {
   }
   function fill(li, a, n, editing) {
     const segs = a.target.label.split(' › '), last = segs.pop();
-    let ex = excerpt(a) || '';
+    let ex = a.type === 'element' ? '' : excerpt(a) || '';
     if (a.type !== 'text' && (a.type === 'draw' && a.targets ? a.targets : [a.target]).every(t => t.key === 'doc')) ex = '';   // the whole page's text says nothing
     else if (a.type !== 'text' && !last.endsWith('…')) {   // "TL;DR" + its text: drop the part the title already says
       const lead = last.replace(/\s+/g, '');
@@ -10171,10 +10203,16 @@ const MARKUP = (() => {
     if (a.type === 'draw' && a.targets && a.targets.length > 1) mt.push(h('span', {}, 'Covers ' + a.targets.map(t => t.label.split(' › ').pop()).join(' · ')));
     if (a.status !== 'pending') mt.push(h('span', { class: 'sago' }));
     else if (a.rev !== CUR.rev) mt.push(h('span', { class: 'old' }, `Made on rev ${a.rev}`));
-    // a board draft whose link a newer rev changed some other way: the board follows the rev until it is re-applied
-    if (a.stale && a.status !== 'resolved') mt.push(h('span', { class: 'old' }, 'Stale: a newer rev changed this link'),
+    // a board draft whose link or element a newer rev changed some other way: the board follows the rev until it is re-applied
+    if (a.stale && a.status !== 'resolved') mt.push(h('span', { class: 'old' }, `Stale: a newer rev changed this ${a.type === 'element' ? 'element' : 'link'}`),
       h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => BOARD && BOARD.reapply && BOARD.reapply(a.id) }, 'Re-apply'),
       h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => remove(a) }, 'Discard'));
+    // an element draft: its text before and after, Discard; a deleted element, Restore (a text edit made before the delete stays)
+    const E = a.type === 'element' && a.element, del = E && E.op === 'delete';
+    if (E && a.status === 'pending' && !a.stale) mt.push(h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => del ? BOARD && BOARD.restoreEl && BOARD.restoreEl(a.id) : remove(a) }, del ? 'Restore' : 'Discard'));
+    const gone = E && (a.target.text || E.base);
+    const eld = !E ? null : del ? h('div', { class: 'eld' }, h('span', { class: 'del' }, `Deleted: ${E.tag}`), gone && [' “', cut(gone, 160), '”'])
+      : h('div', { class: 'eld' }, h('s', {}, cut(E.base, 160)), h('span', { class: 'ar', 'aria-label': 'becomes' }, '→'), h('b', {}, cut(E.text, 240)));
     li.replaceChildren(numChip(a, n), h('div', { class: 'cb' },
       h('div', { class: 'ch' }, !isGeneral(a) && ic(TYPE_IC[a.type]), h('span', { class: 'lb', title: a.target.label }, isGeneral(a) ? 'General' : last), h('span', { class: 'ago' }),
         h('span', { class: 'acts' }, !isGeneral(a) && ib('target', 'Show on the page', () => { select(a); reveal(a); }),
@@ -10184,7 +10222,7 @@ const MARKUP = (() => {
           ib('trash', 'Delete', () => remove(a)))),
       segs.length > 0 && h('div', { class: 'path', title: a.target.label }, segs.join(' › ')),
       ex && h('q', { class: a.type === 'text' ? 'tx' : null }, cut(ex, 240)),
-      editing ? editor(a) : a.note ? h('p', { class: 'nt' }, a.note) : null,
+      eld || (editing ? editor(a) : a.note ? h('p', { class: 'nt' }, a.note) : null),
       h('div', { class: 'mt' }, mt)));
   }
   function editor(a) {
@@ -10628,7 +10666,7 @@ const MARKUP = (() => {
       e.preventDefault();   // handled here: the panel's own Escape (close the drawer or sheet) waits for the next press
       return;
     }
-    const m = { v: 'view', c: 'point', t: 'select', d: 'draw', ...(IS_DESIGN && !IS_LISTING ? { i: 'interact', l: 'link', r: 'frame' } : {}) }[e.key.toLowerCase()];
+    const m = { v: 'view', c: 'point', t: 'select', d: 'draw', ...(IS_DESIGN && !IS_LISTING ? { i: 'interact', e: 'edit', l: 'link', r: 'frame' } : {}) }[e.key.toLowerCase()];
     if (m) { e.preventDefault(); setMode(m); }
   });
   document.addEventListener('scroll', () => schedule(false), { capture: true, passive: true });
@@ -10698,12 +10736,13 @@ function boardEdits(B) {
     return out;
   };
 
-  /* drafts: commit (with undo), settle on load, the commands that go with Request changes */
+  /* drafts: commit (with undo), settle on load, the commands that go with Request changes. One commit is one change of
+     one draft: before (a copy, null: none) and after (spec, null: dropped), so it can be undone */
   const undo = [];
   function commit(prev, spec) {
     const before = prev ? JSON.parse(JSON.stringify(prev)) : null;
     if (!spec) { if (!prev) return null; D.drop(prev.id); undo.push({ before, id: prev.id }); return null; }
-    const id = D.put({ id: prev ? prev.id : null, type: spec.type, key: spec.key, label: spec.label, note: spec.note, [spec.type]: spec[spec.type] });
+    const id = D.put({ ...spec, id: prev ? prev.id : null });
     undo.push({ before, id });
     return id;
   }
@@ -10765,8 +10804,9 @@ function boardEdits(B) {
     const a = layoutDraft(), P = posOf(a);
     if (a && Object.entries(P).every(([id, p]) => home[id].x === p[0] && home[id].y === p[1])) D.resolve(a.id);
   }
-  // Re-apply a stale draft: the same result, over the link as the rev has it now
+  // Re-apply a stale draft: the same result, over the link (or the element) as the rev has it now
   B.reapply = id => {
+    if (elDrafts().some(x => x.id === id)) return reapplyEl(id);
     const a = linkDrafts().find(x => x.id === id); if (!a) return false;
     const L = a.link, r = resultOf(L), rev = revMap(), now = (L.base ? rev.get(lkey(L.base)) : r && rev.get(lkey(r))) || null;
     if (same(now, r)) { D.resolve(a.id); return true; }
@@ -10774,6 +10814,128 @@ function boardEdits(B) {
     commit(a, { type: 'link', key: lkey(r || now), label: `${T(L2.from)} › ${L2.el}`, note: describe(L2), link: L2 });
     return true;
   };
+
+  /* element drafts (Edit): a screen's element with new text, or deleted. One draft per element, keyed el:<artboard>/<sel>
+     as a comment on it is, payload {op: text | delete, ab, sel, tag, base, text, ord}: base is the element's text as the
+     rev has it when the first draft was made (a later edit folds in and keeps it; back to the base drops the draft), ord
+     its place in document order (deletes run last to first). A delete keeps an earlier edit's text, which Restore brings
+     back. The frames show them ({bd:'drafts'}, only where the element still has its tag and base text) and say how each
+     went: done (the rev has it: resolved), changed or gone on a newer rev (stale; a delete gone: resolved). */
+  const EL_MAX = 300, TEXT_MAX = 1000;
+  const cut = (s, n) => { s = String(s ?? ''); return s.length > n ? s.slice(0, n - 1).trimEnd() + '…' : s; };
+  const elDrafts = () => D.all().filter(a => a.type === 'element' && a.element);
+  const elKey = (ab, sel) => `el:${ab}/${sel}`;
+  const elOf = key => elDrafts().find(a => a.target.key === key && a.status !== 'resolved') || null;
+  const elName = E => cut(E.sel, 80);
+  const q = s => `"${cut(s, 120)}"`;
+  // shown: the element's text as the reader sees it (a deletion names it by that; base is its raw text, for matching)
+  const elNote = (E, shown) => E.op === 'delete' ? `Delete ${T(E.ab)} › ${elName(E)} (${E.tag}${shown || E.base ? ': ' + q(shown || E.base) : ''})`
+    : `Text in ${T(E.ab)} › ${elName(E)}: ${q(E.base)} → ${q(E.text)}`;
+  const elSpec = (E, x) => ({ type: 'element', key: elKey(E.ab, E.sel), label: `${T(E.ab)} › ${elName(E)}`, note: elNote(E, x && x.shown), element: E,
+    text: E.op === 'delete' && x && x.shown ? x.shown : E.base, extra: x ? x.extra : undefined, pos: x ? x.pos : undefined });
+  // the drafts a frame of artboard id shows
+  const elList = id => elDrafts().filter(a => live(a) && a.element.ab === id).map(({ element: E }) => E.op === 'delete'
+    ? { sel: E.sel, tag: E.tag, base: E.base, del: true } : { sel: E.sel, tag: E.tag, base: E.base, text: E.text });
+  const elSent = new Map();
+  function sendEl() {
+    for (const id of B.frames.keys()) {
+      const list = elList(id), s = JSON.stringify(list);
+      if ((elSent.get(id) || '[]') === s) continue;
+      elSent.set(id, s); B.postAb(id, { bd: 'drafts', list });
+    }
+  }
+  const room = () => elDrafts().filter(live).length < EL_MAX || (toast(`At most ${EL_MAX} element drafts: send them with Request changes first`), false);
+  // the selection (Edit): the element a pick in a frame named, outlined in that artboard's frames
+  function setEditSel(s) {
+    const was = B.editSel;
+    B.editSel = s;
+    if (was && (!s || was.ab !== s.ab)) B.postAb(was.ab, { bd: 'select', sel: null });
+    if (s) B.postAb(s.ab, { bd: 'select', sel: s.sel });
+  }
+  const clean = s => String(s).replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim();
+  B.onEditPick = (x, d) => {
+    const sel = typeof d.sel === 'string' ? d.sel.slice(0, 200) : '';
+    if (!sel) { setEditSel(null); return; }
+    const r = d.rect && [d.rect.x, d.rect.y, d.rect.w, d.rect.h].every(Number.isFinite) ? d.rect : null;
+    if (r) x.rects[sel] = r;
+    setEditSel({ ab: x.a.id, sel, tag: typeof d.tag === 'string' ? d.tag.slice(0, 20) : '', base: typeof d.base === 'string' ? clean(d.base).slice(0, TEXT_MAX) : '',
+      ord: Number.isInteger(d.ord) ? d.ord : null, root: !!d.root, sec: Number.isInteger(d.sec) ? d.sec : null, shown: typeof d.text === 'string' ? clean(d.text).slice(0, 200) : '',
+      pos: r ? { x: clamp((r.x + r.w) / x.p.w, 0, 1), y: clamp(r.y / x.p.h, 0, 1) } : null });
+    B.select(x.a.id);
+  };
+  const extraOf = s => ({ extra: B.siteTarget(s.ab, s.sec), pos: s.pos ? { x: Math.round(s.pos.x * 1e4) / 1e4, y: Math.round(s.pos.y * 1e4) / 1e4 } : undefined });
+  function textEdit(s, text) {
+    const d = elOf(elKey(s.ab, s.sel)), base = d ? d.element.base : s.base;
+    if (d && d.element.op === 'delete') return;   // hidden: nothing to edit
+    if (text === base) { if (d) commit(d, null); return; }
+    if (!d && !room()) return;
+    commit(d, elSpec({ op: 'text', ab: s.ab, sel: s.sel, tag: s.tag, base, text, ...(s.ord != null ? { ord: s.ord } : {}) }, extraOf(s)));
+  }
+  function deleteSel() {
+    const s = B.editSel; if (!s) return;
+    if (s.root) { toast(`The ${SCREEN} itself can't be deleted: select an element inside it`); return; }
+    const d = elOf(elKey(s.ab, s.sel));
+    if (!d && !room()) return;
+    const E = { op: 'delete', ab: s.ab, sel: s.sel, tag: s.tag, base: d ? d.element.base : s.base, ...(d && d.element.text ? { text: d.element.text } : {}), ...(s.ord != null ? { ord: s.ord } : {}) };
+    setEditSel(null);
+    commit(d, elSpec(E, { ...extraOf(s), shown: s.shown }));
+  }
+  // Restore on a deletion's card: the element shows again, with the text an earlier edit gave it
+  B.restoreEl = id => {
+    const a = elDrafts().find(x => x.id === id); if (!a || a.element.op !== 'delete') return false;
+    const { text, ...E } = a.element;
+    commit(a, text ? elSpec({ ...E, op: 'text', text }) : null);
+    return true;
+  };
+  // an edit or a key from a frame: only in Edit, from the frame of the selection, for that element; undo from any frame
+  B.onEditMsg = (x, d) => {
+    if (!editable(x)) return;
+    if (d.bd === 'key') {
+      if (d.k === 'undo') { undoLast(); return; }
+      if (B.mode !== 'edit') return;
+      if (d.k === 'escape') { if (B.editSel) setEditSel(null); else MARKUP.setMode('view'); return; }
+      if (d.k === 'delete' && B.editSel && B.editSel.ab === x.a.id) deleteSel();
+      return;
+    }
+    // the frame showed the edit at once: it gets the drafts list again either way, so a refused edit goes back
+    const s = B.editSel, ok = B.mode === 'edit' && s && s.ab === x.a.id && d.sel === s.sel && typeof d.text === 'string' && d.text.length <= TEXT_MAX;
+    const text = ok ? clean(d.text) : '';
+    if (text) textEdit(s, text);
+    elSent.delete(x.a.id); sendEl();
+  };
+  const editable = x => !!x && !x.role && !x.twin && B.frames.get(x.a.id) === x && devOf(x.a) !== 'icons';
+  // what a frame found: done resolves; changed or gone on a newer rev is stale, but a deletion gone is done
+  B.onDraftStatus = (x, st, now) => {
+    x.draftSt = {}; x.draftNow = {};
+    for (const a of elDrafts()) {
+      const E = a.element; if (E.ab !== x.a.id || !(E.sel in st)) continue;
+      const v = st[E.sel]; x.draftSt[E.sel] = v;
+      if (now[E.sel] && typeof now[E.sel] === 'object') x.draftNow[E.sel] = { tag: String(now[E.sel].tag || '').slice(0, 20), text: String(now[E.sel].text || '') };
+      if (!live(a)) continue;
+      if (v === 'done' || (v === 'gone' && E.op === 'delete' && a.rev !== CUR.rev)) D.resolve(a.id);
+      else if ((v === 'changed' || v === 'gone') && a.rev !== CUR.rev) D.mark(a.id, { stale: true });
+    }
+  };
+  // Re-apply a stale element draft over the element as the rev has it now
+  function reapplyEl(id) {
+    const a = elDrafts().find(x => x.id === id); if (!a) return false;
+    const E = a.element, x = B.frames.get(E.ab), now = x && x.draftNow && x.draftNow[E.sel];
+    if (!now) { toast(`That element is gone in rev ${CUR.rev}: discard the draft`); return false; }
+    if (E.op !== 'delete' && now.text === E.text) { D.resolve(a.id); return true; }
+    commit(a, elSpec({ ...E, tag: now.tag, base: now.text }));
+    return true;
+  }
+  B.frameMsgs = x => x.role === 'cmp' || x.twin ? [] : [{ bd: 'drafts', list: elList(x.a.id) },
+    !x.role && B.editSel && B.editSel.ab === x.a.id && { bd: 'select', sel: B.editSel.sel }];
+  // where the agent makes an element draft: the screen file, or a live page's URL, width and source hints
+  const stem = () => docFile().replace(/\.bluedoc\.json$/i, '');
+  B.draftLines = a => {
+    const x = a.type === 'element' && a.element && B.frames.get(a.element.ab); if (!x) return [];
+    if (!isLive(x.a)) return [`  File: ${typeof x.a.src === 'string' && x.a.src ? x.a.src : `${stem()}.design/${x.a.id}.html`}`];
+    const t = a.target, src = Array.isArray(t.source) ? t.source.filter(s => typeof s === 'string') : [];
+    return [`  Live page: ${x.a.url}${Number.isInteger(t.bp) ? `  At: ${t.bp} px wide` : ''}`, src.length && `  Source: ${src.map(s => '`' + s.replace(/`/g, '') + '`').join(', ')}`].filter(Boolean);
+  };
+  stage.addEventListener('pointerdown', e => { if (B.mode === 'edit' && B.editSel && !e.target.closest('.bd-ab')) setEditSel(null); });
   // the `patch` commands for these drafts: the first bumps the rev, the rest add to it
   const docFile = () => {
     const p = decodeURIComponent(location.pathname.split('/').pop() || '');
@@ -10782,6 +10944,15 @@ function boardEdits(B) {
   const sh = s => /^[\w@%+=:,./-]+$/.test(s) ? s : `'${s.replace(/'/g, `'\\''`)}'`;
   const parses = v => { try { JSON.parse(v); return true; } catch { return false; } };
   const setArg = (k, v) => '--set ' + sh(`${k}=${v == null || v === '' ? 'null' : k === 'label' || parses(v) ? JSON.stringify(v) : v}`);
+  // element drafts first: text edits (a text edit changes no structure), then deletes from last to first in document
+  // order, per screen, so each CSS path still names the element it named on the page; a live page's edit is made in the
+  // site's source, then recorded
+  const elChange = E => E.op === 'delete' ? `${T(E.ab)}: ${cut(E.sel, 60)} removed.` : `${T(E.ab)}: ${cut(E.base, 60)} → ${cut(E.text, 60)}.`;
+  const elFirst = ds => {
+    const el = ds.filter(a => a.type === 'element'), texts = el.filter(a => a.element.op !== 'delete');
+    const dels = el.filter(a => a.element.op === 'delete').sort((a, c) => a.element.ab.localeCompare(c.element.ab) || (c.element.ord ?? -1) - (a.element.ord ?? -1));
+    return [...texts, ...dels, ...ds.filter(a => a.type !== 'element')];
+  };
   B.draftCommands = ds => {
     const doc = sh(docFile()), out = [];
     let first = true;
@@ -10789,7 +10960,13 @@ function boardEdits(B) {
       out.push(['build.py patch', doc, sh(key), ...args, change && '--change ' + sh(change), last && '--resolves ' + a.id, !first && '--no-bump'].filter(Boolean).join(' '));
       first = false;
     };
-    for (const a of ds) {
+    for (const a of elFirst(ds)) {
+      if (a.type === 'element') {
+        const E = a.element, x = B.frames.get(E.ab);
+        if (x && isLive(x.a)) { out.push(`# (${a.id}) a live page: edit the source, then record it`); cmd(a.target.key, [], a, true, elChange(E)); continue; }
+        cmd(a.target.key, [E.op === 'delete' ? '--delete' : '--set ' + sh('text=' + JSON.stringify(E.text))], a, true, elChange(E));
+        continue;
+      }
       if (a.type === 'layout') { cmd(a.target.key, ['--json ' + sh(JSON.stringify(posOf(a)))], a, true, a.note + '.'); continue; }
       const L = a.link, toFrame = L.op !== 'delete' && String(L.to || '').startsWith('frame:');
       if (toFrame) out.push(`# (${a.id}) add the requested screen \`${L.to}\` first, then put its id in to=`);
@@ -10825,8 +11002,9 @@ function boardEdits(B) {
   }
   B.paintDrafts = () => {
     const ds = D.all().filter(live);
-    const s = JSON.stringify(ds.map(a => [a.id, a.link || a.layout]));
+    const s = JSON.stringify(ds.filter(a => a.type !== 'element').map(a => [a.id, a.link || a.layout]));
     paintCount(ds.length);
+    sendEl();
     if (s === sig) return;
     sig = s;
     B.refreshLinks();
@@ -10836,7 +11014,7 @@ function boardEdits(B) {
   /* the toolbar: Tidy up (not on a presentation: slides stay in their column) and the drafts count, in the layout group after Fit · zoom · Focus */
   const tidyTip = 'Tidy up: screens in columns by depth from the entry, without overlaps (Ctrl/⌘ Z undoes it)';
   const tidyBtn = h('button', { type: 'button', class: 'bd-tbtn', 'aria-label': tidyTip, title: tidyTip, onclick: () => tidyUp() }, ic('grid'));
-  const countBtn = h('button', { type: 'button', class: 'bd-tbtn txt bd-dcount', hidden: true, title: 'Board drafts: link edits and moves not yet in the doc. They go with Request changes.', onclick: () => MARKUP.comments({ open: true }) });
+  const countBtn = h('button', { type: 'button', class: 'bd-tbtn txt bd-dcount', hidden: true, title: 'Board drafts: text edits, deletions, link edits and moves not yet in the doc. They go with Request changes.', onclick: () => MARKUP.comments({ open: true }) });
   function paintCount(n) { countBtn.hidden = !n; countBtn.textContent = n === 1 ? '1 draft' : `${n} drafts`; }
   B.tb.querySelector('[aria-label^="Focus the selected "]').after(...(IS_DECK ? [] : [tidyBtn]), countBtn);
 
@@ -11075,6 +11253,7 @@ function boardEdits(B) {
     closePop(); endWire(); B.selectLink(null);
     stage.classList.toggle('bd-linkm', m === 'link');
     if (m === 'link') knobs();
+    if (m !== 'edit' && B.editSel) setEditSel(null);
   };
 
   /* moving screens: drag (Shift locks the axis, Alt turns snapping off), Shift-click and Shift-drag to select several */
@@ -11243,9 +11422,11 @@ function boardEdits(B) {
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     if (e.key === 'Escape') {
       if (wire) endWire(); else if (!pop.hidden) closePop(); else if (drag) { drag = null; stage.classList.remove('dragging'); chip.hidden = true; ovClear(); placeAll(); }
-      else if (B.selLink) B.selectLink(null); else return;
+      else if (B.selLink) B.selectLink(null); else if (B.mode === 'edit' && B.editSel) setEditSel(null); else return;
       e.preventDefault(); e.stopPropagation(); return;
     }
+    // Edit: Delete or Backspace removes the selected element (a draft)
+    if (B.mode === 'edit' && B.editSel && (e.key === 'Delete' || e.key === 'Backspace')) { e.preventDefault(); e.stopPropagation(); deleteSel(); return; }
     if (B.selLink && (e.key === 'Delete' || e.key === 'Backspace' || e.key === 'Enter')) {
       const l = effective(B.selLink); if (!l) return;
       e.preventDefault(); e.stopPropagation();
@@ -11260,7 +11441,8 @@ function boardEdits(B) {
     }
   }, true);
 
-  /* tests and agents: BP.boardEdit({link: {key, to?, kind?, label?, from?, el?, edge?} | {key, delete: true}, move: {id: [x, y]}, tidy, undo}) */
+  /* tests and agents: BP.boardEdit({link: {key, to?, kind?, label?, from?, el?, edge?} | {key, delete: true}, move: {id: [x, y]}, tidy, undo,
+     restore: <element draft id>}); the reader's text edits and deletions go through Edit in the frames */
   B.edit = o => {
     if (o && typeof o === 'object') {
       if (o.link && typeof o.link.key === 'string') {
@@ -11271,9 +11453,12 @@ function boardEdits(B) {
       if (o.move && typeof o.move === 'object') { const m = Object.fromEntries(Object.entries(o.move).filter(([id, p]) => home[id] && Array.isArray(p) && p.every(Number.isFinite))); moved = true; writeLayout(m); placeAll(); }
       if (o.tidy) tidyUp();
       if (o.undo) undoLast();
+      if (typeof o.restore === 'string') B.restoreEl(o.restore);
     }
-    return { drafts: D.all().map(a => ({ id: a.id, type: a.type, key: a.target.key, status: a.status, stale: !!a.stale, note: a.note, ...(a.link ? { link: a.link } : { positions: posOf(a) }) })),
-      positions: Object.fromEntries(Object.entries(B.boxes()).map(([id, b]) => [id, [Math.round(b.x), Math.round(b.y)]])), undo: undo.length, overlaps: [...overlaps], selected: selection() };
+    return { drafts: D.all().map(a => ({ id: a.id, type: a.type, key: a.target.key, status: a.status, stale: !!a.stale, note: a.note,
+      ...(a.link ? { link: a.link } : a.element ? { element: a.element } : { positions: posOf(a) }) })),
+      positions: Object.fromEntries(Object.entries(B.boxes()).map(([id, b]) => [id, [Math.round(b.x), Math.round(b.y)]])), undo: undo.length, overlaps: [...overlaps], selected: selection(),
+      editSel: B.editSel ? { ...B.editSel } : null };
   };
 
   settle();

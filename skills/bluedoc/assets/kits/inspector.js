@@ -15,8 +15,16 @@
                              visualViewport.height, the root's clientHeight); else (Viewport) the frame's own. The
                              frame's name ('bd-page full 900' | 'bd-page view 900') says the same before the page loads.
      {bd:'snapshot', id}     a live page only: answer with the page as one self-contained document (snapshot() below)
-   Frame -> page, exactly 6 types, strings capped at 200 chars (but a snapshot's html):
-     {bd:'ready', w, h, vw, vh, byFrame, fallback, rects, navs, named, sigs}   on load, on resize, on scroll, after each
+     {bd:'mode', mode:'edit'}   Edit: hover outline, a click selects (pick), a double-click edits the element's one text run
+                             in place (plaintext-only), Delete or Backspace is forwarded; links don't follow, forms don't submit
+     {bd:'select', sel}      the page's selection in Edit, outlined with its name chip (null: none)
+     {bd:'drafts', list}     the reader's element drafts, at most 300: [{sel, tag, base, text} | {sel, tag, base, del: true}],
+                             applied after the variants on their own restore stack: a text draft sets the element's one
+                             text run, a delete hides it (display: none, so later siblings' CSS paths still match), only
+                             where the element still has its tag and base text. A live page applies them again after
+                             DOM changes (hot reload), at most once a frame
+   Frame -> page, exactly 8 types, strings capped at 200 chars (but a snapshot's html and an edit's text):
+     {bd:'ready', w, h, vw, vh, byFrame, fallback, rects, navs, named, sigs, drafts, draftsNow}   on load, on resize, on scroll, after each
                                        locate and on any change of the document's size (fonts, images, DOM); vw: the
                                        frame's width; vh: the pinned height (null: none). h: the document's height;
                                        pinned, the height the frame should take (at least vh). byFrame: nothing in the
@@ -24,15 +32,24 @@
                                        for up to 50 [data-nav] elements (null: hidden, a gesture link); named: the same
                                        for up to 100 [data-bd] elements; rects: the last locate's selectors, measured again;
                                        sigs: per section selector, a hash of its tags and text (null: not on the page), so
-                                       compare can tell a changed section from the same one in another revision
+                                       compare can tell a changed section from the same one in another revision; drafts:
+                                       per sel of the drafts list, 'shown' (applied), 'done' (the text is already the
+                                       draft's), 'changed' (another tag or text) or 'gone' (nothing there); draftsNow:
+                                       the changed ones' {tag, text} as the page has them
      {bd:'hover', sel, name, tag, text, rect, sec} | {bd:'hover', sel: null}
-     {bd:'pick',  sel, name, tag, text, rect, sec, shift, at?}   sel null = the whole artboard; sec: the section's index
-                           or null; at: on a storelisting shot's capture, [x, y] on the UI image as fractions
+     {bd:'pick',  sel, name, tag, text, rect, sec, shift, at?, ord?, base?, root?}   sel null = the whole artboard; sec: the
+                           section's index or null; at: on a storelisting shot's capture, [x, y] on the UI image as
+                           fractions; in Edit, ord: the element's place in document order, base: its text without the
+                           drafts, root: a screen file's root (not to delete). A double-click to edit picks first
      {bd:'nav',   names}   in interact mode, a click: the data-bd names of the clicked element and its named ancestors,
                            innermost first (at most 8). The click itself still runs. The page follows the first name
                            that has a link from this screen (its links, drafts included), so a forged name moves nothing.
      {bd:'scroll', y}      the frame scrolled (Viewport), at most once a frame
      {bd:'snapshot', id, html, external, error}   the answer to a snapshot request: html, or error when it failed
+     {bd:'edit', sel, tag, base, text, ord}   in Edit, a text edit committed (Enter, or a click away): text at most 1,000
+                           chars, whitespace collapsed; base: the text before, without the drafts
+     {bd:'key', k}         k: 'delete' | 'escape' (Edit only) | 'undo' | 'redo' (every mode), pressed in the frame outside a
+                           field or an element being edited
    sel: the shortest unique chain of data-bd names ('submit', 'form/submit'), else a CSS path with '>' and no spaces
    from the nearest uniquely named ancestor ('[data-bd="login"]>h1:nth-of-type(1)'), on a live page (or its snapshot)
    also from the nearest unique id ('#hero-title', '#faq>details:nth-of-type(2)'), or from body. */
@@ -41,7 +58,7 @@
   const doc = document, root = doc.documentElement;
   const NAME = /^[A-Za-z0-9_-]+$/, TOKEN_KEY = /^[a-z][a-z0-9-]*$/, BAD_VALUE = /[;{}<>\\]|url\(/i;
   const MOTION_VARS = { fast: '--dur-fast', base: '--dur-base', slow: '--dur-slow', ease: '--ease' };
-  const OWN = new Set(['bd-notice', 'bd-kit-svg', 'bd-inspect']);
+  const OWN = new Set(['bd-notice', 'bd-kit-svg', 'bd-inspect', 'bd-inspect-sel']);
   // a live page: the page origins the proxy named (its own origin is the proxy's, not the page's)
   const me = doc.currentScript, PARENTS = ((me && me.dataset.parents) || '').split(' ').filter(o => /^http:\/\/[\w.[\]:-]+$/.test(o));
   const LIVE = PARENTS.length > 0, IDS = LIVE || (!!me && me.dataset.ids === '1');   // IDS: names from ids too
@@ -50,6 +67,10 @@
   const post = msg => { for (const t of targets) try { parent.postMessage(msg, t); } catch (e) { /* the page went away */ } };
   let mode = 'view', outline = null, hovered = null, sections = [], located = [], shownEdits = [], sigs = null;
   const changed = [];   // [element, its innerHTML before an edit], in the order the edits ran
+  // the reader's element drafts ({bd:'drafts'}): the list, what applying them changed (undo closures, in order) and
+  // each one's status; the Edit selection and the element being edited
+  let shownDrafts = [], draftSt = {}, draftNow = {}, selEl = null, selBox = null, editing = null;
+  const drafted = [];
   const idSel = el => (el.id && typeof CSS !== 'undefined' ? '#' + CSS.escape(el.id) : null);
   // a snapshot inlines the stylesheets, fonts and backgrounds the page loaded: keep every resource's timing entry
   if (LIVE && typeof performance !== 'undefined' && performance.setResourceTimingBufferSize) performance.setResourceTimingBufferSize(5000);
@@ -252,8 +273,10 @@
   function ready(rects) {
     if (stirred || !sigs) sigs = sections.map(s => sigOf(query(s)));
     post({ bd: 'ready', w: Math.max(root.scrollWidth, doc.body ? doc.body.scrollWidth : 0), h: pin ? pageHeight() : Math.max(root.scrollHeight, doc.body ? doc.body.scrollHeight : 0),
-      vw: innerWidth, vh: pin || null, byFrame: !stirred, fallback: cap(root.getAttribute('data-bd-fallback')) || null, rects: rects || {}, navs: namedRects('[data-nav]', 50), named: namedRects('[data-bd]', 100), sigs });
+      vw: innerWidth, vh: pin || null, byFrame: !stirred, fallback: cap(root.getAttribute('data-bd-fallback')) || null, rects: rects || {}, navs: namedRects('[data-nav]', 50), named: namedRects('[data-bd]', 100), sigs,
+      drafts: draftSt, draftsNow: draftNow });
     stirred = false;
+    paintSel();
   }
 
   function showOutline(el) {
@@ -268,7 +291,7 @@
     Object.assign(outline.style, { display: 'block', left: r.left - 2 + 'px', top: r.top - 2 + 'px', width: r.width + 4 + 'px', height: r.height + 4 + 'px' });
   }
 
-  const active = () => mode === 'point' || mode === 'select';
+  const active = () => mode === 'point' || mode === 'select' || mode === 'edit';
   const pickable = el => el && el.nodeType === 1 && el !== doc.body && el !== root && !own(el);
   // a storelisting shot showing a capture (html.ui--capture: kits/shot.js lays the PNG over the mock-up): a point in
   // the UI slot names the slot itself, and a pick says where on the image it fell (at: [x, y], fractions)
@@ -294,7 +317,12 @@
     e.preventDefault();
     e.stopPropagation();
   }
-  function onDown(e) { if (mode === 'point') swallow(e); else if (mode === 'select') e.stopPropagation(); }
+  const inEdit = e => !!editing && editing.box.contains(e.target);
+  function onDown(e) {
+    if (mode === 'point') swallow(e);
+    else if (mode === 'select') e.stopPropagation();
+    else if (mode === 'edit' && !inEdit(e)) { if (editing) endEdit(true); swallow(e); }   // no focus, no text selection
+  }
   function onClick(e) {
     if (mode === 'interact') {
       const names = [];
@@ -305,8 +333,15 @@
     if (!active()) return;
     swallow(e);
     if (mode === 'select' && String(getSelection() || '').trim()) return;   // the mouseup reported the selection
+    if (inEdit(e)) return;   // a click inside the text being edited only moves the caret
     const ui = capUi(e), el = ui || (pickable(e.target) ? e.target : null);
-    post(el ? { bd: 'pick', ...describe(el), ...(ui ? { at: atOf(ui, e) } : {}), shift: !!e.shiftKey } : { bd: 'pick', sel: null, name: null, tag: 'body', text: null, rect: rectOf(root.getBoundingClientRect()), shift: !!e.shiftKey });
+    const ed = el && mode === 'edit' ? editPick(el) : {};
+    post(el ? { bd: 'pick', ...describe(el), ...(ui ? { at: atOf(ui, e) } : {}), ...ed, shift: !!e.shiftKey } : { bd: 'pick', sel: null, name: null, tag: 'body', text: null, rect: rectOf(root.getBoundingClientRect()), shift: !!e.shiftKey });
+  }
+  function onDbl(e) {
+    if (!active()) return;
+    swallow(e);
+    if (mode === 'edit' && !inEdit(e)) startEdit(e.target);
   }
   function onUp(e) {
     if (mode !== 'select') return;
@@ -320,6 +355,172 @@
     if (!pickable(el)) return;
     post({ bd: 'pick', ...describe(el, text, range.getBoundingClientRect()), shift: !!e.shiftKey });
   }
+
+  /* Edit: the selection's outline and name chip, text edits in place, the reader's element drafts */
+  const norm = s => String(s).replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim();
+  const ordOf = el => Array.prototype.indexOf.call(doc.body.getElementsByTagName('*'), el);
+  // the element's one text run: its only direct text that isn't blank, beside children without text (icons); null when
+  // it has none or several, or a child holds text (that child is the one to edit)
+  function runOf(el) {
+    if (!el || el.nodeType !== 1 || el.namespaceURI !== 'http://www.w3.org/1999/xhtml' || /^(INPUT|TEXTAREA|SELECT|OPTION|SCRIPT|STYLE|TEMPLATE)$/.test(el.tagName)) return null;
+    let run = null;
+    for (let c = el.firstChild; c; c = c.nextSibling) {
+      if (c.nodeType === 3) { if (c.data.trim()) { if (run) return null; run = c; } }
+      else if (c.nodeType === 1 && c.textContent.trim()) return null;
+    }
+    return run;
+  }
+  const textOf = el => norm(el.textContent).slice(0, 1000);
+  // the element's text as the revision has it: the drafts put back while it is read
+  function baseOf(el) {
+    undoDrafts();
+    try { return textOf(el); } finally { applyDrafts(); }
+  }
+  // what an Edit pick adds: the element's place in document order, its text as the revision has it, and whether it is
+  // a screen file's root (body's child: the screen itself, which can't be deleted; a live page's sections can)
+  const editPick = el => ({ ord: ordOf(el), base: baseOf(el), root: !LIVE && el.parentElement === doc.body });
+  function undoDrafts() {
+    for (let i = drafted.length - 1; i >= 0; i--) drafted[i]();
+    drafted.length = 0;
+  }
+  // the drafts over the page as the revision (and the variants) have it: each one's status, the ones that match shown
+  function applyDrafts() {
+    undoDrafts();
+    const st = {}, now = {}, todo = [];
+    for (const d of shownDrafts) {
+      const el = find(d.sel);
+      if (!el || !doc.body.contains(el)) { st[d.sel] = 'gone'; continue; }
+      const tag = el.tagName.toLowerCase(), text = textOf(el);
+      if (!d.del && text === d.text) st[d.sel] = 'done';
+      else if (tag !== d.tag || (d.base != null && text !== d.base) || (!d.del && !runOf(el))) { st[d.sel] = 'changed'; now[d.sel] = { tag: tag.slice(0, 20), text: text.slice(0, 200) }; }
+      else todo.push([d, el]);
+    }
+    for (const [d, el] of todo) {
+      st[d.sel] = 'shown';
+      if (d.del) {
+        const had = el.hasAttribute('style'), v = el.style.getPropertyValue('display'), p = el.style.getPropertyPriority('display');
+        el.style.setProperty('display', 'none', 'important');
+        drafted.push(() => { if (v) el.style.setProperty('display', v, p); else el.style.removeProperty('display'); if (!had && !el.getAttribute('style')) el.removeAttribute('style'); });
+        continue;
+      }
+      const run = runOf(el), was = run.data;
+      run.data = /^\s*/.exec(was)[0] + d.text + /\s*$/.exec(was)[0];
+      drafted.push(() => { run.data = was; });
+    }
+    draftSt = st; draftNow = now;
+  }
+  function setDrafts(list) {
+    if (editing) endEdit(false);
+    shownDrafts = list.slice(0, 300).filter(d => d && typeof d.sel === 'string' && d.sel && d.sel.length <= 200 && typeof d.tag === 'string'
+      && (d.base === null || typeof d.base === 'string') && (d.del === true || typeof d.text === 'string' && d.text.length <= 1000));
+    applyDrafts();
+    if (dmo) dmo.takeRecords();
+    watchDrafts();
+    stirred = true;
+    if (doc.readyState === 'complete') ready(measure());
+  }
+  // a live page: a hot reload or the site's own script that replaced or rewrote an element gets the drafts again,
+  // at most once a frame
+  let dmo = null, dRaf = 0;
+  function watchDrafts() {
+    if (!LIVE || dmo || typeof MutationObserver !== 'function') return;
+    dmo = new MutationObserver(() => {
+      if (dRaf || !shownDrafts.length || editing) return;
+      dRaf = requestAnimationFrame(() => {
+        dRaf = 0;
+        if (editing) return;
+        const was = JSON.stringify(draftSt);
+        applyDrafts(); dmo.takeRecords();
+        if (JSON.stringify(draftSt) !== was) { stirred = true; ready(measure()); }
+      });
+    });
+    dmo.observe(root, { childList: true, subtree: true, characterData: true });
+  }
+  // the page's selection: an orange outline with the element's name, kept over it as the frame scrolls or reflows
+  let selSel = null;
+  function paintSel() {
+    if (!doc.body) return;
+    if (selSel && (!selEl || !selEl.isConnected)) selEl = find(selSel);
+    const el = mode === 'edit' ? selEl : null, r = el && el.getBoundingClientRect();
+    if (!selBox) {
+      if (!r) return;
+      selBox = doc.createElement('div');
+      selBox.id = 'bd-inspect-sel';
+      selBox.style.cssText = 'position:fixed;z-index:2147483647;pointer-events:none;border:2px solid #ff8a00;border-radius:3px;display:none;box-sizing:border-box';
+      const chip = doc.createElement('span');
+      chip.style.cssText = 'position:absolute;left:-2px;padding:0 6px;border-radius:3px;background:#ff8a00;color:#fff;font:600 11px/18px system-ui,sans-serif;white-space:nowrap;max-width:240px;overflow:hidden;text-overflow:ellipsis';
+      selBox.append(chip);
+      doc.body.appendChild(selBox);
+    }
+    if (!r || r.width + r.height === 0) { selBox.style.display = 'none'; return; }
+    Object.assign(selBox.style, { display: 'block', left: r.left - 3 + 'px', top: r.top - 3 + 'px', width: r.width + 6 + 'px', height: r.height + 6 + 'px' });
+    const chip = selBox.firstChild, name = nameOf(el), tag = el.tagName.toLowerCase();
+    chip.textContent = name ? name + ' · ' + tag : tag + (el.id ? '#' + el.id : '');
+    chip.style.top = r.top < 24 ? r.height + 6 + 'px' : '-21px';
+  }
+  // a double-click: the innermost element under it with one text run becomes editable as plain text. A text run beside
+  // icons is wrapped in a span for the edit; an element whose text is split by inline marks is left alone.
+  function startEdit(target) {
+    let el = target && target.nodeType === 1 ? target : target && target.parentElement;
+    for (; el && el !== doc.body && el !== root; el = el.parentElement) {
+      if (el.namespaceURI !== 'http://www.w3.org/1999/xhtml' || own(el)) continue;
+      if (runOf(el)) break;
+      for (let c = el.firstChild; c; c = c.nextSibling) if (c.nodeType === 3 && c.data.trim()) return;
+    }
+    if (!pickable(el) || !runOf(el)) return;
+    const sel = selOf(el); if (!sel) return;
+    const pick = editPick(el), run = runOf(el), box = doc.createElement('span'), base = pick.base;
+    post({ bd: 'pick', ...describe(el), ...pick, shift: false });   // the page selects what is edited (an icon's text: its parent)
+    box.setAttribute('data-bd-own', 'edit');
+    run.replaceWith(box); box.append(run);
+    box.contentEditable = 'plaintext-only';
+    if (box.contentEditable !== 'plaintext-only') box.contentEditable = 'true';
+    box.style.outline = 'none';
+    editing = { el, run, box, sel, base, was: run.data, tag: el.tagName.toLowerCase(), ord: ordOf(el) };
+    box.addEventListener('keydown', e => {
+      e.stopPropagation();
+      if (e.isComposing || e.keyCode === 229) return;   // an IME is composing: its Enter picks, it doesn't commit
+      if (e.key === 'Enter') { e.preventDefault(); endEdit(true); } else if (e.key === 'Escape') { e.preventDefault(); endEdit(false); }
+    });
+    // text only: no line breaks, no formatting, a paste or drop as its plain text
+    box.addEventListener('beforeinput', e => {
+      if (/^(insertParagraph|insertLineBreak)$|^format/.test(e.inputType)) e.preventDefault();
+      else if (/^insertFrom(Paste|Drop)$/.test(e.inputType) && e.dataTransfer) { e.preventDefault(); doc.execCommand('insertText', false, norm(e.dataTransfer.getData('text/plain'))); }
+    });
+    box.addEventListener('blur', () => endEdit(true));
+    box.addEventListener('input', paintSel);   // the outline follows the text as it grows
+    box.focus();
+    const r = doc.createRange(), s = getSelection();
+    r.selectNodeContents(box); s.removeAllRanges(); s.addRange(r);
+  }
+  // keep: the text is committed when it changed (Enter, a click away), shown at once as a draft the page then confirms
+  function endEdit(keep) {
+    const ed = editing; if (!ed) return;
+    editing = null;
+    const text = norm(ed.box.textContent);
+    ed.box.replaceWith(ed.run);
+    ed.run.data = ed.was;
+    const s = getSelection(); if (s) s.removeAllRanges();
+    if (keep && text && text !== norm(ed.was)) {
+      const t = text.slice(0, 1000);   // shown at once; the page answers with the drafts list it keeps
+      shownDrafts = [...shownDrafts.filter(d => d.sel !== ed.sel), ...(t === ed.base ? [] : [{ sel: ed.sel, tag: ed.tag, base: ed.base, text: t }])];
+      applyDrafts();
+      post({ bd: 'edit', sel: ed.sel, tag: ed.tag, base: ed.base, text: t, ord: ed.ord });
+    }
+    stir();
+  }
+  // keys pressed in the frame go to the page: Delete, Backspace and Esc in Edit, undo and redo in every mode; never
+  // while a field or an element is being edited (the browser's own undo runs there)
+  addEventListener('keydown', e => {
+    const t = e.target;
+    if (editing || e.defaultPrevented || e.isComposing || (t && t.nodeType === 1 && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)))) return;
+    const mod = e.metaKey || e.ctrlKey, k = (e.key || '').toLowerCase();
+    const key = mod && !e.altKey && k === 'z' ? (e.shiftKey ? 'redo' : 'undo') : e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey && k === 'y' ? 'redo'
+      : mode === 'edit' && !mod && !e.altKey ? ({ delete: 'delete', backspace: 'delete', escape: 'escape' })[k] : null;
+    if (!key) return;
+    e.preventDefault();
+    post({ bd: 'key', k: key });
+  }, true);
 
   function setTokens(theme, motion) {
     const out = [];
@@ -338,8 +539,16 @@
     if (e.source !== parent || !e.data || typeof e.data !== 'object') return;
     const m = e.data;
     if (m.bd === 'mode' && typeof m.mode === 'string') {
+      if (m.mode !== 'edit' && editing) endEdit(true);
       mode = m.mode;
       if (!active()) { hovered = null; showOutline(null); }
+      paintSel();
+    } else if (m.bd === 'select') {
+      selSel = typeof m.sel === 'string' && m.sel.length <= 200 ? m.sel : null;
+      selEl = selSel ? find(selSel) : null;
+      paintSel();
+    } else if (m.bd === 'drafts' && Array.isArray(m.list)) {
+      setDrafts(m.list);
     } else if (m.bd === 'tokens') {
       setTokens(m.theme, m.motion);
     } else if (m.bd === 'view') {
@@ -372,8 +581,8 @@
   // Viewport: the frame's own scroll, at most once a frame (compare scrolls the other revision's frame along)
   let scrollRaf = 0;
   addEventListener('scroll', () => {
-    if (pin || scrollRaf) return;
-    scrollRaf = requestAnimationFrame(() => { scrollRaf = 0; post({ bd: 'scroll', y: Math.round(scrollY) }); });
+    if (scrollRaf) return;
+    scrollRaf = requestAnimationFrame(() => { scrollRaf = 0; paintSel(); if (!pin) post({ bd: 'scroll', y: Math.round(scrollY) }); });
   }, { passive: true });
 
   /* A live page's snapshot ({bd:'snapshot'} from the page; serve.py's `snapshot` command calls window.__bluedocSnapshot):
@@ -387,7 +596,7 @@
      images, which may show what the site has now. Form fields keep their values, a readable canvas its picture. */
   const SNAP_ASSET = 1024 * 1024, SNAP_TOTAL = 4608 * 1024;
   const SNAP_DROP = 'script, noscript, template, base, meta[http-equiv], object, embed, source, track, link:not([rel~="stylesheet" i]), ' +
-    '#bd-inspect, #bd-live, astro-dev-toolbar, astro-dev-overlay, nextjs-portal, vite-error-overlay';
+    '#bd-inspect, #bd-inspect-sel, #bd-live, astro-dev-toolbar, astro-dev-overlay, nextjs-portal, vite-error-overlay';
   const DEV_ATTRS = ['data-astro-source-file', 'data-astro-source-loc', 'data-vite-dev-id'];
   const CSS_URL = /url\(\s*(['"]?)([^'")]*)\1\s*\)/gi;
   const DEV = LIVE && /^https?:\/\/[\w.[\]:-]+$/.test((me && me.dataset.origin) || '') ? me.dataset.origin : null;
@@ -413,7 +622,9 @@
     return out;
   }
   async function snapshot() {
+    if (editing) endEdit(true);
     const shown = shownEdits;
+    undoDrafts();   // the reader's drafts never enter a revision's snapshot
     while (changed.length) { const [el, html] = changed.pop(); el.innerHTML = html; }
     const clone = root.cloneNode(true), from = [root, ...root.querySelectorAll('*')], to = [clone, ...clone.querySelectorAll('*')];
     const sheets = [], imgs = [], styled = [], swaps = [];
@@ -463,7 +674,7 @@
       clone.classList.remove('bd-sketch', 'bd-reduced', 'bd-paused');
       if (!clone.classList.length) clone.removeAttribute('class');
     } finally {
-      applyEdits(shown, true);   // the page as the reader sees it again, before anything awaits, unreported: nothing moved
+      applyEdits(shown, true);   // the page as the reader sees it again (versions, then drafts), before anything awaits, unreported: nothing moved
     }
     for (const n of clone.querySelectorAll(SNAP_DROP)) n.remove();
     for (const [c, by] of swaps) { if (by) c.replaceWith(by); else c.remove(); }
@@ -521,10 +732,12 @@
     for (const sel of located) { const el = find(sel); rects[sel] = el ? rectOf(el.getBoundingClientRect()) : null; }
     return rects;
   }
-  // the variants shown in place: what the last list changed goes back first, newest first. quiet: no report (a
-  // snapshot puts the same edits back)
+  // the variants shown in place: what the last list changed goes back first, newest first (the reader's drafts before
+  // them), then the drafts go over the new list. quiet: no report (a snapshot puts the same edits back)
   function applyEdits(list, quiet) {
+    if (editing) endEdit(false);
     shownEdits = list;
+    undoDrafts();
     while (changed.length) { const [el, html] = changed.pop(); el.innerHTML = html; }
     for (const s of list.slice(0, 50)) {
       const host = s && typeof s.sel === 'string' ? query(s.sel) : null;
@@ -539,6 +752,8 @@
         else if (typeof e.html === 'string') el.innerHTML = e.html;
       }
     }
+    applyDrafts();
+    if (dmo) dmo.takeRecords();
     if (quiet) return;
     stirred = true;
     if (doc.readyState === 'complete') ready(measure());
@@ -550,7 +765,7 @@
   addEventListener('pointerdown', onDown, true);
   addEventListener('mouseup', onUp, true);
   addEventListener('click', onClick, true);
-  addEventListener('dblclick', swallow, true);
+  addEventListener('dblclick', onDbl, true);
   addEventListener('submit', e => e.preventDefault(), true);
   addEventListener('load', () => {
     if (pin) pinSheets();

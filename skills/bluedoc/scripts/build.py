@@ -66,7 +66,9 @@ patch keys: doc, meta, header, tldr, status, section:<sec>, heading:<sec>, lead:
   the finding with item:<checklist>/<item>, or add a comment). A key may keep the backticks the
   reply Markdown puts around it.
   Design keys: artboard:<id> (the artboard; --html FILE replaces its screen file), el:<id>/<path>
-  (an element: data-bd names joined by '/', else a CSS path), frame:<device or WxH>@<x>,<y> (appends
+  (an element: data-bd names joined by '/', else a CSS path; --set 'text="<text>"' rewrites its one text
+  run, HTML-escaped, --delete removes it from its screen file; the artboard stays. Live pages and icons
+  artboards refuse both), frame:<device or WxH>@<x>,<y> (appends
   an artboard there and writes a stub screen file), link:<id>/<element> (the element's link: --set
   to=<artboard> kind=<push|modal|tab|replace|back> label=<text>, or --delete, rewrite its start tag in
   place; an element no name finds becomes a hidden gesture link), layout:<board> (--json
@@ -3169,9 +3171,9 @@ CSS_STEP = re.compile(r"^([a-z][a-z0-9-]*):nth-of-type\((\d+)\)$")
 
 
 class _ScreenTree(HTMLParser):
-    """A screen fragment's elements with their source offsets, for rewriting one start tag in place. Each element:
+    """A screen fragment's elements with their source offsets, for rewriting one element in place. Each element:
     {tag, attrs, start, tag_end (offset after its start tag), close, close_end (its end tag's span; None without
-    one), parent (index or None), text}."""
+    one), parent (index or None), text (its descendants' text), void (a void or self-closed tag)}."""
     def __init__(self, text: str) -> None:
         super().__init__(convert_charrefs=True)
         self.src = text
@@ -3188,9 +3190,10 @@ class _ScreenTree(HTMLParser):
     def handle_starttag(self, tag: str, attrs, void: bool = False) -> None:
         start = self._off()
         raw = self.get_starttag_text() or ""
+        void = void or tag in VOID_TAGS
         self.els.append({"tag": tag, "attrs": dict(attrs), "start": start, "tag_end": start + len(raw), "close": None,
-                         "close_end": None, "parent": self._open[-1] if self._open else None, "text": ""})
-        if not void and tag not in VOID_TAGS:
+                         "close_end": None, "parent": self._open[-1] if self._open else None, "text": "", "void": void})
+        if not void:
             self._open.append(len(self.els) - 1)
 
     def handle_startendtag(self, tag: str, attrs) -> None:
@@ -3358,6 +3361,60 @@ def link_patch(text: str, sel: str, sets: list[str], delete: bool, art_ids: set[
     return text[:el["start"]] + tag + text[el["tag_end"]:], name
 
 
+def element_patch(text: str, sel: str, sets: list[str], delete: bool) -> str:
+    """A screen's text with one element rewritten in place, every other byte kept: --set text=<JSON string> replaces
+    its one text run (the text between its tags beside children without text, such as icons; the run's surrounding
+    whitespace stays), HTML-escaped; delete removes it from its start tag to its end tag, with its line when it is
+    alone on it. A selector that finds no element or several, an element with no text run or several, or with text in
+    a child element, is an error."""
+    tree = _ScreenTree(text)
+    i = tree.find(sel)
+    if i is None:
+        raise PatchError(f"no single element '{sel}' in the screen (a data-bd name, names joined by '/', or the "
+                         "inspector's CSS path)")
+    el = tree.els[i]
+    if delete:
+        if el["close"] is None and not el["void"]:
+            raise PatchError(f"'{sel}' has no end tag: close it, then delete it")
+        start, end = el["start"], el["close_end"] if el["close"] is not None else el["tag_end"]
+        ls, le = text.rfind("\n", 0, start) + 1, text.find("\n", end)
+        le = len(text) if le < 0 else le
+        if not text[ls:start].strip() and not text[end:le].strip():
+            start, end = ls, min(le + 1, len(text))
+        return text[:start] + text[end:]
+    value = None
+    for s in sets:
+        k, eq, v = s.partition("=")
+        if not eq or k != "text":
+            raise PatchError(f"--set '{s}': an el: key takes --set text=<JSON string>, or --delete")
+        p = _value(v)   # a JSON string ('text="Start run"') reads as its text; any other value as written
+        value = (p if isinstance(p, str) else v).strip()
+    if not value:
+        raise PatchError("the text is empty: --delete removes the element")
+    if el["close"] is None:
+        raise PatchError(f"'{sel}' ({el['tag']}) holds no text: comment on it instead")
+    kids = tree.children(i)
+    if any(tree.els[k]["text"].strip() for k in kids):
+        raise PatchError(f"'{sel}' has text in a child element: set that element's text (its own el: key)")
+    gaps, pos = [], el["tag_end"]
+    for k in kids:
+        c = tree.els[k]
+        gaps.append((pos, c["start"]))
+        pos = c["close_end"] if c["close"] is not None else c["tag_end"]
+    gaps.append((pos, el["close"]))
+    runs = [(a, b) for a, b in gaps if text[a:b].strip()]
+    if len(runs) > 1 or any("<" in text[a:b] for a, b in runs):
+        raise PatchError(f"'{sel}' has {len(runs)} text runs: set the text of one element inside it")
+    new = escape_html(value, quote=False)
+    if not runs:
+        if kids:
+            raise PatchError(f"'{sel}' has no text run beside its children: edit the screen file")
+        return text[:el["tag_end"]] + new + text[el["close"]:]
+    a, b = runs[0]
+    seg = text[a:b]
+    return text[:a + len(seg) - len(seg.lstrip())] + new + text[a + len(seg.rstrip()):]
+
+
 def set_positions(board: dict, fields) -> list[str]:
     """Set x, y on the artboards {artboard id: [x, y] (null: unset, the board places it)} names; the ids changed."""
     if not isinstance(fields, dict) or not fields:
@@ -3507,6 +3564,15 @@ def cmd_patch(argv: list[str]) -> int:
         ap.error("an icons artboard has no screen file: edit its layers in place, then patch it with --change")
     if a.html is not None and is_live(t.obj):
         ap.error("a live page has no screen file: edit the site's source (patch prints it), then patch it with --change")
+    # an el: key changes the element in its screen file, never the artboard: only its text, or the element itself
+    if t.kind == "element" and (a.json is not None or a.append is not None or any(s.partition("=")[0] != "text" for s in a.set)):
+        ap.error("an el: key takes --set 'text=\"<text>\"' or --delete (--html replaces the whole screen file)")
+    if t.kind == "element" and (a.set or a.delete) and (is_icons(t.obj) or is_live(t.obj) or listing.is_image_shot(t.obj)):
+        for line in source_lines(doc, t.obj, a.key.partition(":")[2].partition("/")[2], a.doc):
+            print(line, file=sys.stderr)
+        ap.error("an icons artboard has no screen file: edit its layers in place, then patch it with --change" if is_icons(t.obj)
+                 else "a live page has no screen file: edit the site's source, then patch it with --change" if is_live(t.obj)
+                 else "an uploaded shot is a PNG: it has no element to change")
     if not ops and t.kind == "field":
         _, _, path = a.key.partition(":")
         loc, group, field = path.split("/", 2)
@@ -3564,7 +3630,8 @@ def cmd_patch(argv: list[str]) -> int:
             print(f"change it: build.py patch {a.doc} {shlex.quote(a.key)} --set to=<artboard> --set kind=<kind> "
                   "--set label=<text>, or --delete")
             return 0
-        print(f"edit it in place, then: build.py patch {a.doc} {shlex.quote(a.key)} --change '<what changed>'")
+        how = "; or set its text with --set 'text=\"<text>\"', or remove it with --delete" if t.kind == "element" else ""
+        print(f"edit it in place, then: build.py patch {a.doc} {shlex.quote(a.key)} --change '<what changed>'{how}")
         return 0
     html = None
     if a.html is not None:
@@ -3573,18 +3640,21 @@ def cmd_patch(argv: list[str]) -> int:
         except (OSError, UnicodeDecodeError) as e:
             print(f"cannot read {a.html}: {e}", file=sys.stderr)
             return 2
-    link_text = None   # a link: key's new screen text
+    screen_text = None   # a link: or el: key's new screen text
     try:
-        if t.kind == "link" and (a.set or a.delete):
+        if t.kind in ("link", "element") and (a.set or a.delete):
             old_text = _read_text(a.doc.parent / screen_rel(a.doc, t.obj))
             if old_text is None:
                 raise PatchError(f"cannot read {a.doc.parent / screen_rel(a.doc, t.obj)}")
-            link_text, name = link_patch(old_text, t.selector, a.set, a.delete,
-                                         {x.get("id") for x in _board_artboards(doc) if isinstance(x, dict)})
-            t.selector = f'[data-bd="{name}"]' if name else t.selector
+            if t.kind == "element":
+                screen_text = element_patch(old_text, a.key.partition(":")[2].partition("/")[2], a.set, a.delete)
+            else:
+                screen_text, name = link_patch(old_text, t.selector, a.set, a.delete,
+                                               {x.get("id") for x in _board_artboards(doc) if isinstance(x, dict)})
+                t.selector = f'[data-bd="{name}"]' if name else t.selector
         elif t.kind == "layout":
             set_positions(t.obj, _value(a.json))
-        elif t.kind != "link":
+        elif t.kind not in ("link", "element"):
             apply_patch(t, a.set, a.json, a.append, a.delete)
             if t.kind == "field":   # a reader's text replaces the string as human-written: no MT mark
                 loc, group, field = a.key.partition(":")[2].split("/", 2)
@@ -3611,13 +3681,13 @@ def cmd_patch(argv: list[str]) -> int:
     # screen files change before validate, which lints them; undone when the patch fails
     written: list[tuple[Path, str | None]] = []
     screen = None
-    if t.kind in ("artboard", "element", "frame", "link") and not (a.delete and t.kind != "link") and not is_icons(t.obj) \
+    if t.kind in ("artboard", "element", "frame", "link") and not (a.delete and t.kind == "artboard") and not is_icons(t.obj) \
             and not is_live(t.obj):
         screen = a.doc.parent / screen_rel(a.doc, t.obj)
-    if screen and (html is not None or link_text is not None or (t.kind == "frame" and not screen.exists())):
+    if screen and (html is not None or screen_text is not None or (t.kind == "frame" and not screen.exists())):
         written.append((screen, _read_text(screen) if screen.exists() else None))
         screen.parent.mkdir(parents=True, exist_ok=True)
-        screen.write_text(html if html is not None else link_text if link_text is not None else stub_screen(t.obj),
+        screen.write_text(html if html is not None else screen_text if screen_text is not None else stub_screen(t.obj),
                           encoding="utf-8")
 
     def undo() -> None:
@@ -3671,7 +3741,7 @@ def cmd_patch(argv: list[str]) -> int:
     if screen:
         print(f"screen: {screen}" + (f"  {t.selector}" if t.selector else "")
               + ("  (a stub: write the requested screen there)" if t.kind == "frame" and written else ""))
-    elif a.delete and t.kind in ("artboard", "element") and not is_live(t.obj):
+    elif a.delete and t.kind == "artboard" and not is_live(t.obj):
         left = f"{icon_dir(a.doc, t.obj)}/" if is_icons(t.obj) else a.doc.parent / screen_rel(a.doc, t.obj)
         print(f"left {left}: delete it if nothing uses it (the history keeps its text)")
     if rev0 and rev0 != rev1:
