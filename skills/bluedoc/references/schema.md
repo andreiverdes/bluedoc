@@ -462,7 +462,7 @@ A storelisting (`meta.type: "storelisting"`) is one app's store listing on Googl
 | `capture` | The capture recipes' devices and apps: `{devices: {<target>: <simulator name or UDID, or AVD name>}, apps: {ios\|watchos: {bundle, app?}, android\|wearos: {package, apk?}, web: {url} \| {design}}}`. `app`/`apk`: a build beside the doc, installed first. `web.url`: a loopback dev server; `web.design`: a design doc beside it, whose screens the web target captures. See [Uploads and captures](#uploads-and-captures). |
 | `variants` | Custom pages and A/B tests: see [Variants, preview and ads](#variants-preview-and-ads). |
 
-The left panel's **Text** tab lists the shown platform's fields for the shown locale with a counter (code points; UTF-8 bytes for Apple keywords), red past the limit, then the captions; the right panel adds **Style**, **Brand** and **Checks** (the build's findings for the platform on screen: see [Checks](#checks)). Point and Select pin a comment inside a shot (`el:<shot>/…`, with `platform`, `locale` and `set` in the target) or on a field (`field:`). Dragging a shot in View reorders its set; turning on a section changes `rows`. Both are drafts: Request changes sends them under **Board drafts** with one `build.py patch <doc> block:<listing path> --json '{"order": …, "rows": …}'` command.
+The left panel has five tabs: **Text**, **Brief**, **Style**, **Brand** and **Checks**; the browser keeps the last one picked (`localStorage` key `bluedoc:listing-tab`). **Text** lists the shown platform's fields for the shown locale with a counter (code points; UTF-8 bytes for Apple keywords), red past the limit, then the captions. **Checks** lists the build's findings for the platform on screen (see [Checks](#checks)); its tab counts the errors, else the warnings. The right panel holds Comments and Revisions only, as on every doc. Point and Select pin a comment inside a shot (`el:<shot>/…`, with `platform`, `locale` and `set` in the target) or on a field (`field:`). Dragging a shot in View reorders its set; turning on a section changes `rows`. Both are drafts: Request changes sends them under **Board drafts** with one `build.py patch <doc> block:<listing path> --json '{"order": …, "rows": …}'` command.
 
 ### Style and brand
 
@@ -510,7 +510,7 @@ Each set's chip shows its shot count against its range, its accepted sizes and w
 
 ### Checks
 
-`build.py <doc>` runs every store check (`listing.store_checks`). Each finding names its platforms, set, locales, section, key and source (the rules file's `sources`); a rule marked `unverified` only warns. Store-rule errors fail the build (exit 1) but leave the page, its history and its exports working: the **Checks** tab lists the build's findings for the platform on screen (click one to show its field or shot), and the home card colours each section by its worst one.
+`build.py <doc>` runs every store check (`listing.store_checks`). Each finding names its platforms, set, locales, section, key and source (the rules file's `sources`); a rule marked `unverified` only warns. Store-rule errors fail the build (exit 1) but leave the page, its history and its exports working: the **Checks** tab lists the build's findings for the platform on screen (click one to show its field or shot; one on the style or the brand, such as *needs the agent* or a contrast pair, opens the Style or Brand tab), and the home card colours each section by its worst one.
 
 | Check | Error | Warning |
 |---|---|---|

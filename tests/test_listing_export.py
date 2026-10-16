@@ -263,9 +263,9 @@ class ListingPage(ChromePage):
         t.ev(f"location.hash = {json.dumps(frag)}; location.reload()")
         t.wait_for("document.readyState === 'complete' && !!window.BP && !!document.querySelector('.bd-lst-sec') && !!BP.listing()")
         if side:
-            t.ev("document.documentElement.classList.contains('bd-sp-open') || document.querySelector('.bd-sp-btn').click()")
-            t.ev(f"document.querySelector('.bd-sp-tabs [data-f=\"{side}\"]').click()")
-            t.wait_for(f"!document.getElementById('bd-sp-{side}').hidden")
+            t.ev("document.documentElement.classList.contains('bd-lp-open') || document.dispatchEvent(new KeyboardEvent('keydown', {key: '['}))")
+            t.ev(f"document.querySelector('.bd-lp-tabs [data-v=\"{side}\"]').click()")
+            t.wait_for(f"!document.getElementById('bd-lp-{side}').hidden && document.documentElement.classList.contains('bd-lp-open')")
         return t
 
     def approve_disabled(self, t) -> bool:
@@ -275,12 +275,27 @@ class ListingPage(ChromePage):
         path = copy_broken(self.docs)
         t = self.page(self.server.url_for(path), "#appstore", "checks")
         found = [f for f in listing.checks_page_data(load_json(path), path) if not f["platforms"] or "appstore" in f["platforms"]]
-        got = t.ev("[...document.querySelectorAll('#bd-sp-checks .bd-lst-checks li')].map(li => [li.className, li.dataset.key || null])")
+        got = t.ev("[...document.querySelectorAll('#bd-lp-checks .bd-lst-checks li')].map(li => [li.className, li.dataset.key || null])")
         self.assertEqual(sorted(got, key=repr), sorted([[f["level"], f["key"]] for f in found], key=repr))
         self.assertTrue(any(k == "err" for k, _ in got))
         texts = t.ev("(() => { const w = document.createTreeWalker(document.querySelector('.bd-lst-brp'), NodeFilter.SHOW_TEXT), out = [];"
                      " while (w.nextNode()) out.push(w.currentNode.data.trim()); return out; })()")
         self.assertNotIn("false", texts, "a `cond && h(…)` child drew as text")
+        # the tab is the left panel's, with its count of errors; the right panel keeps Comments and Revisions only
+        ne = sum(f["level"] == "err" for f in found)
+        self.assertEqual(t.ev("[...document.querySelectorAll('.bd-lp-tabs [data-v]')].map(b => b.dataset.v)"), ["text", "brief", "style", "brand", "checks"])
+        self.assertEqual(t.ev("(n => [n.hidden, n.textContent, n.classList.contains('warn')])(document.querySelector('.bd-lp-tabs [data-v=checks] .n'))"), [False, str(ne), False])
+        self.assertEqual(t.ev("document.querySelector('.bd-lp-tabs').getBoundingClientRect().height < 50"), True, "the five tabs keep one row")
+        side = t.ev("BP.sidebar().available")
+        self.assertTrue(side and set(side) <= {"comments", "revisions"}, side)
+        self.assertEqual(t.ev("document.querySelectorAll('#bd-sp .bd-lst-pane, #bd-sp-style, #bd-sp-brand, #bd-sp-checks').length"), 0)
+        # a finding with a key shows its shot
+        t.ev("document.querySelector('#bd-lp-checks li[data-key=\"artboard:alpha\"] button').click()")
+        t.wait_for("!!document.querySelector('.bd-lst-shot[data-ab=\"alpha\"].flash')")
+        # a reload keeps the tab
+        t.ev("window.__before = 1; location.reload()")
+        t.wait_for("!window.__before && document.readyState === 'complete' && !!window.BP && !!document.querySelector('.bd-lst-sec') && !!BP.listing()")
+        self.assertEqual(t.ev("[document.getElementById('bd-lp-checks').hidden, document.querySelector('.bd-lp-tabs [data-v=checks]').getAttribute('aria-checked')]"), [False, "true"])
 
     def test_accept_mt_is_a_draft_whose_command_clears_the_badge(self) -> None:
         t = self.page(self.url, "#play/es-ES")

@@ -1834,8 +1834,8 @@ html.bd-presenting .bp-toast { z-index: 71; bottom: 84px; }
 .bd-anntb.compact .bd-key :is(.t, .l) { display: none; }
 
 /* ---------- a storelisting's platform pages (renderListing): the platform switch and the locale menu in the app
-   bar; the store text and captions in the left panel; the device sections, each a card of its sets' shots at scale,
-   in the full-bleed layer; Style, Brand and Checks beside Comments in the right panel ---------- */
+   bar; the left panel's Text, Brief, Style, Brand and Checks; the device sections, each a card of its sets' shots
+   at scale, in the full-bleed layer ---------- */
 .bd-lst-tb { display: flex; align-items: center; gap: 10px; flex: none; margin-left: 8px; }
 .bd-lst-tb .bd-sg button { padding: 0 12px; font-weight: 600; }
 .bd-lst-loc { height: 30px; border: 0; border-radius: 9px; padding: 0 8px; font: 500 12.5px var(--sans); color: var(--fg); background: var(--inset); box-shadow: inset 0 0 0 1px var(--line); }
@@ -1988,10 +1988,17 @@ html.bd-presenting .bp-toast { z-index: 71; bottom: 84px; }
 .bd-lst-tb .bd-exp { margin-left: 2px; }
 .bd-lfield.cap { grid-template-columns: minmax(0, 1fr); }
 .bd-lfield.cap .v { max-height: none; }
-/* Style, Brand and Checks in the right panel */
-.bd-lst-pane { display: grid; align-content: start; gap: 10px; padding: 12px 14px calc(16px + var(--tray-room, 0px)); overflow: auto; min-height: 0; min-width: 0; font-size: 13px; }
+/* the left panel's five tabs: no shrinking; a panel too narrow for them scrolls them sideways. Checks counts its errors (else warnings) */
+.bd-lst-lpt { position: relative; overflow-x: auto; scrollbar-width: none; }
+.bd-lst-lpt::-webkit-scrollbar { display: none; }
+.bd-lst-lpt button { flex: 1 0 auto; gap: 3px; padding: 0 5px; }
+.bd-lst-lpt .n { min-width: 16px; height: 16px; padding: 0 4px; border-radius: 5px; font: 650 10.5px/16px var(--sans); font-variant-numeric: tabular-nums; color: var(--risk-fg); background: var(--risk-tint); }
+.bd-lst-lpt .n.warn { color: var(--warn-fg); background: var(--warn-tint); }
+.bd-lst-lpt .n[hidden] { display: none; }
+/* Style, Brand and Checks: left panel tabs */
+.bd-lst-pane { display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; gap: 10px; padding: 12px 14px calc(16px + var(--tray-room, 0px)); overflow: auto; overflow-x: hidden; min-height: 0; min-width: 0; font-size: 13px; }
 .bd-lst-pane > p { margin: 0; }
-.bd-lst-pane .hint { font-size: 12px; color: var(--fg-subtle); }
+.bd-lst-pane .hint { margin: 0; font-size: 12px; color: var(--fg-subtle); }
 .bd-lst-pane h4 { margin: 4px 0 0; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--fg-subtle); }
 /* the Style pane: a card per style (its thumbnail in the brand's colours, grade, store form, state); the pick is on */
 .bd-lst-pick { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 8px 10px; border-radius: 10px; background: var(--inset); font-size: 12.5px; color: var(--fg-muted); }
@@ -2682,10 +2689,11 @@ function resetWidth() { userW = 0; store.del(WIDTH_KEY); applyWidth(); toast('Co
 
 // A design page's panels take the same handles on the edge each shares with the board: Screens and Brief on
 // the left (while open), Comments and Revisions on the right (while docked). Their widths are reader prefs
-// too; each panel stays within its bounds and leaves the board at least BOARD_MIN wide.
+// too; each panel stays within its bounds and leaves the board at least BOARD_MIN wide. A storelisting's left
+// panel holds five tabs and the Brand pane's rows: at least 300 px.
 const BOARD_MIN = 480;
 const PANELS = IS_DESIGN ? [
-  { side: 'left', v: '--lp-w', key: 'bluedoc:design-left-w', min: 240, max: 560, dir: 1, label: 'Width of the screens and brief panel', on: () => root.classList.contains('bd-lp-open') && !PHONE.matches },
+  { side: 'left', v: '--lp-w', key: 'bluedoc:design-left-w', min: IS_LISTING ? 300 : 240, max: 560, dir: 1, label: IS_LISTING ? 'Width of the left panel' : 'Width of the screens and brief panel', on: () => root.classList.contains('bd-lp-open') && !PHONE.matches },
   { side: 'right', v: '--sp-w', key: 'bluedoc:design-right-w', min: 280, max: 640, dir: -1, label: 'Width of the comments panel', on: () => dockW() > 0 },
 ] : [];
 for (const p of PANELS) {
@@ -6597,7 +6605,8 @@ function renderListing(lb) {
     ['ads', 'Ads', 'Google App campaign and Apple Ads assets']].map(([v, l, t]) => h('button', { type: 'button', role: 'radio', 'data-view': v, title: t, onclick: () => setView(v) }, l)));
   const tb = h('div', { class: 'bd-lst-tb' }, platSeg, locSel, viewSeg, SERVED && exportMenu(LST_EXPORTS, exportListing, 'Export the listing: a ZIP for fastlane, a PDF or an HTML file', false));
 
-  /* the left panel: Text (this platform's store text and the captions, for the locale) and Brief */
+  /* the left panel: Text (this platform's store text and the captions, for the locale), Brief, then Style, Brand
+     and Checks (below) */
   const lpText = h('div', { class: 'bd-lp-pane bd-lst-text', id: 'bd-lp-text' });
   let lp = null, lpTabs = null;
   function paintText() {
@@ -7261,8 +7270,10 @@ function renderListing(lb) {
     return out;
   };
 
-  /* the right panel: Style, Brand and Checks for the platform on screen */
-  const paneStyle = h('div', { class: 'bd-lst-pane bd-lst-stp' }), paneBrand = h('div', { class: 'bd-lst-pane bd-lst-brp' }), paneChecks = h('div', { class: 'bd-lst-pane' });
+  /* the left panel's Style, Brand and Checks for the platform on screen: panel furniture (bd-lp-ui), so Point and
+     Select leave their controls alone */
+  const lpPane = (id, cls) => h('div', { class: `bd-lp-pane bd-lp-ui bd-lst-pane ${cls}`.trim(), id: 'bd-lp-' + id, hidden: true });
+  const paneStyle = lpPane('style', 'bd-lst-stp'), paneBrand = lpPane('brand', 'bd-lst-brp'), paneChecks = lpPane('checks', '');
   L.panes = { style: paneStyle, brand: paneBrand, checks: paneChecks };
 
   /* ---------- Style and Brand ----------
@@ -7355,7 +7366,6 @@ function renderListing(lb) {
     const vb = pg.querySelector('.bd-lst-vbar'), p = PLATS.find(x => x.id === L.platform);
     if (vb && p) vb.replaceWith(variantBar(p));   // a style pick changes a variant's count of changes
     paintStyle(); paintBrand();
-    if (L.S) L.S.paint();
   };
 
   // kits/style-thumbs.svg (LST.thumbs): its symbols in the page once, each card a <use> of its own
@@ -7472,7 +7482,7 @@ function renderListing(lb) {
     } catch { toast('Couldn\'t read that image'); } finally { BUI.drop.classList.remove('busy'); }
   }
   function buildBrand() {
-    const q = h('input', { type: 'search', class: 'bd-lst-fq', placeholder: 'Search the installed fonts', 'aria-label': 'Search the installed fonts', autocomplete: 'off', spellcheck: 'false' });
+    const q = h('input', { type: 'search', class: 'bd-lst-fq', placeholder: 'Search fonts', 'aria-label': 'Search the installed fonts', autocomplete: 'off', spellcheck: 'false' });
     q.addEventListener('input', () => { FONTS.q = q.value; paintBrand(); });
     q.addEventListener('focus', () => { if (!FONTS.list && !FONTS.busy) loadFonts(); });
     const weight = h('select', { class: 'bd-lst-fw', 'aria-label': 'Caption weight' });
@@ -7552,17 +7562,28 @@ function renderListing(lb) {
   function paintChecks() {
     const cs = L.checks(), p = PLATS.find(x => x.id === L.platform), ne = cs.filter(([k]) => k === 'err').length, nw = cs.length - ne;
     const where = f => [f.set && SETS.has(f.set) ? SETS.get(f.set).label : null, ...(Array.isArray(f.locales) ? f.locales : [])].filter(Boolean).join(' · ');
+    // a finding with a key shows its shot, field, section or variant; one on the style or the brand (`….style.play`,
+    // `….brand.palette`: the style hooks that need the agent, the contrast pairs) opens its tab
+    const paneOf = f => { const m = typeof f.where === 'string' && /\.(style|brand)(?:\.|$)/.exec(f.where); return m ? m[1] : null; };
     const item = ([k, t, f]) => {
-      const go = typeof f.key === 'string' && f.key ? () => L.focusKey(f.key) : null;
+      const tab = paneOf(f), go = typeof f.key === 'string' && f.key ? () => L.focusKey(f.key) : tab ? () => { setLp(true, false); setTab(tab, false); } : null;
       return h('li', { class: k, 'data-key': f.key || null }, ic(k === 'err' ? 'x' : 'alert'),
-        h('span', { class: 't' }, go ? h('button', { type: 'button', class: 'bd-lst-ui', title: 'Show it', onclick: go }, t) : t, where(f) && h('small', {}, where(f))));
+        h('span', { class: 't' }, go ? h('button', { type: 'button', class: 'bd-lst-ui', title: tab && !f.key ? `Open ${tab === 'style' ? 'Style' : 'Brand'}` : 'Show it', onclick: go }, t) : t, where(f) && h('small', {}, where(f))));
     };
     setKids(paneChecks, h('h4', {}, `Checks · ${p ? p.label : ''}`),
       h('p', { class: 'bd-lst-csum' + (ne ? ' err' : '') }, ne || nw ? `${ne} error${ne === 1 ? '' : 's'}, ${nw} warning${nw === 1 ? '' : 's'}` : 'The store rules pass on this page'),
       h('ul', { class: 'bd-lst-checks' }, cs.length ? cs.map(item) : h('li', { class: 'ok' }, ic('tick'), h('span', { class: 't' }, 'Sizes, counts, required sets, text limits and locales pass'))),
       h('p', { class: 'hint' }, `From build.py at rev ${CUR.rev || '-'}${OLD ? ' (the current revision)' : ''}, against the store rules read ${RULES.accessed}. A rule marked unverified only warns. Drafts count once the agent records them.`));
+    paintChecksTab(ne, nw);
   }
-  function paintSide() { paintStyle(); paintBrand(); paintChecks(); if (L.S) L.S.paint(); }
+  // the Checks tab's count: its errors, else its warnings
+  function paintChecksTab(ne, nw) {
+    const bt = lpTabs && lpTabs.querySelector('[data-v="checks"]'); if (!bt) return;
+    const n = bt.querySelector('.n'), say = ne || nw ? `${ne} error${ne === 1 ? '' : 's'}, ${nw} warning${nw === 1 ? '' : 's'}` : 'The store rules pass';
+    n.hidden = !(ne || nw); n.textContent = String(ne || nw); n.classList.toggle('warn', !ne);
+    bt.title = say; bt.setAttribute('aria-label', `Checks: ${say}`);
+  }
+  function paintSide() { paintStyle(); paintBrand(); paintChecks(); }
 
   /* BOARD's interface for the page around it (MARKUP, SIDE, compare) */
   L.setMode = m => { L.mode = m; pg.dataset.m = ['point', 'select'].includes(m) ? m : 'view'; for (const x of L.live) post(x, { bd: 'mode', mode: frameMode() }); };
@@ -7653,10 +7674,15 @@ function renderListing(lb) {
     applyWidth(); if (remember) store.set(LP_KEY, L.lp ? '1' : '0');
     setTimeout(() => L.M && L.M.relayout(), 260);
   }
+  const LP_TABS = [['text', 'Text'], ['brief', 'Brief'], ['style', 'Style'], ['brand', 'Brand'], ['checks', 'Checks']];
   function setTab(t, remember) {
-    if (!lp) return;
+    if (!lp || !LP_TABS.some(([v]) => v === t)) return;
     if (remember) store.set(LP_TAB, t);
-    for (const bt of lpTabs.querySelectorAll('button')) { const on = bt.dataset.v === t; bt.setAttribute('aria-checked', String(on)); $('#' + bt.getAttribute('aria-controls')).hidden = !on; }
+    for (const bt of lpTabs.querySelectorAll('button')) {
+      const on = bt.dataset.v === t; bt.setAttribute('aria-checked', String(on)); $('#' + bt.getAttribute('aria-controls')).hidden = !on;
+      // a strip narrower than its tabs scrolls the picked one into view (the strip only, never the page)
+      if (on && lpTabs.scrollWidth > lpTabs.clientWidth) lpTabs.scrollLeft = Math.max(0, Math.min(lpTabs.scrollLeft, bt.offsetLeft - 4), bt.offsetLeft + bt.offsetWidth + 4 - lpTabs.clientWidth);
+    }
   }
   L.start = () => {
     const blk = wrap.closest('.bp-block'), shell = $('.bd-shell');
@@ -7664,13 +7690,15 @@ function renderListing(lb) {
     blk.replaceWith(h('div', { class: 'bp-block bd-board-ph' }, ic('frame'), h('span', {}, 'This listing is on the platform pages.')));
     blk.classList.add('bd-boardblk'); shell.append(blk);
     $('.bd-crumb').after(tb);
-    lpTabs = h('div', { class: 'bd-sg', role: 'radiogroup', 'aria-label': 'Panel' }, [['text', 'Text'], ['brief', 'Brief']].map(([v, l]) =>
-      h('button', { type: 'button', role: 'radio', 'data-v': v, 'aria-controls': 'bd-lp-' + v, onclick: () => setTab(v, true) }, l)));
-    lp = h('aside', { class: 'bd-lp', 'aria-label': 'Store text and brief', inert: true }, head, h('div', { class: 'bd-lp-tabs bd-lp-ui' }, lpTabs), lpText,
-      h('div', { class: 'bd-lp-pane', id: 'bd-lp-brief', hidden: true }, tldr, main));
+    lpTabs = h('div', { class: 'bd-sg bd-lst-lpt', role: 'radiogroup', 'aria-label': 'Panel' }, LP_TABS.map(([v, l]) =>
+      h('button', { type: 'button', role: 'radio', 'data-v': v, 'aria-controls': 'bd-lp-' + v, onclick: () => setTab(v, true) }, l, v === 'checks' && h('span', { class: 'n', hidden: true }))));
+    lp = h('aside', { class: 'bd-lp', 'aria-label': 'Text, brief, style, brand and checks', inert: true }, head, h('div', { class: 'bd-lp-tabs bd-lp-ui' }, lpTabs), lpText,
+      h('div', { class: 'bd-lp-pane', id: 'bd-lp-brief', hidden: true }, tldr, main), paneStyle, paneBrand, paneChecks);
     shell.prepend(lp);
     placeMeta();
-    setTab(store.get(LP_TAB) === 'brief' ? 'brief' : 'text', false);
+    const tab = store.get(LP_TAB);
+    setTab(LP_TABS.some(([v]) => v === tab) ? tab : 'text', false);
+    paintChecks();
     const pref = store.get(LP_KEY);
     setLp(pref ? pref === '1' : innerWidth > 900, false);
     paintTb(); renderSections(); writeHash();
@@ -7681,14 +7709,11 @@ function renderListing(lb) {
     });
     pg.addEventListener('scroll', () => { if (L.M) L.M.relayout(); }, { passive: true });
   };
-  // after MARKUP and SIDE exist: the drafts, the right panel's tabs
+  // after MARKUP exists: the drafts
   L.afterMarkup = () => {
-    L.M = MARKUP; L.D = MARKUP.drafts || null; L.S = SIDE;
+    L.M = MARKUP; L.D = MARKUP.drafts || null;
     if (L.D) for (const a of drafts()) { const f = L.draftRecorded[a.listing.op]; if (f && f(a.listing)) L.D.resolve(a.id); }   // a draft the doc now has is applied
     L.syncUploads();
-    SIDE.add({ id: 'style', label: 'Style', at: 2, body: paneStyle });
-    SIDE.add({ id: 'brand', label: 'Brand', at: 3, body: paneBrand });
-    SIDE.add({ id: 'checks', label: 'Checks', at: 4, body: paneChecks, chip: () => { const n = L.checks().filter(([k]) => k === 'err').length; return n ? `${n} error${n === 1 ? '' : 's'}` : ''; } });
     draftSig = ''; liveSig = ''; L.paintDrafts(); renderSections(); paintSide();
     for (const x of L.tiles) locate(x);
   };

@@ -4,9 +4,10 @@ store-rules.json `brand` and match a reference WCAG 2.2 calculation; the build w
 embed and a style whose hook is missing, and checks listing.style.<platform>; `patch brand:` records a brand draft;
 GET /__bluedoc/fonts and POST /__bluedoc/listing/brand need the key, and the brand image lands in
 <stem>.listing/brand/. Under node, the page's k-means finds an image's colours by share and gives them roles.
-The browser tests (BLUEDOC_BROWSER_TESTS=1): a style pick restyles the shots in place and goes as decisions with its
-patch command; an image's palette, the role editor and the contrast pairs; a brand draft blocks Approve; the font menu
-lists the folder's fonts and ↻ Fonts finds a new one; an installed font renders in a shot."""
+The browser tests (BLUEDOC_BROWSER_TESTS=1), on the left panel's Style, Brand and Checks tabs: a style pick restyles
+the shots in place and goes as decisions with its patch command; a style finding in Checks opens Style; an image's
+palette, the role editor and the contrast pairs; a brand draft blocks Approve; the font menu lists the folder's fonts
+and ↻ Fonts finds a new one; an installed font renders in a shot."""
 from __future__ import annotations
 
 import base64
@@ -404,12 +405,12 @@ class BrandPage(ChromePage):
         self.base = f"http://{self.server.host}"
 
     def page(self, side: str):
-        """The listing's page with the right panel open on `side` (style or brand)."""
+        """The listing's page with the left panel open on `side` (style or brand)."""
         t = self.open(self.url)
         t.wait_for("!!document.querySelector('.bd-lst-sec') && !!BP.listing()")
-        t.ev("document.documentElement.classList.contains('bd-sp-open') || document.querySelector('.bd-sp-btn').click()")
-        t.ev(f"document.querySelector('.bd-sp-tabs [data-f=\"{side}\"]').click()")
-        t.wait_for(f"!document.getElementById('bd-sp-{side}').hidden")
+        t.ev("document.documentElement.classList.contains('bd-lp-open') || document.dispatchEvent(new KeyboardEvent('keydown', {key: '['}))")
+        t.ev(f"document.querySelector('.bd-lp-tabs [data-v=\"{side}\"]').click()")
+        t.wait_for(f"!document.getElementById('bd-lp-{side}').hidden && document.documentElement.classList.contains('bd-lp-open')")
         return t
 
     def first_tile(self, t, s: str = "play/phone") -> dict:
@@ -450,6 +451,18 @@ class BrandPage(ChromePage):
         t2 = self.page("style")
         self.assertEqual(t2.ev(LST)["style"], {"message": "m3", "layout": "l4"})
         self.assertNotIn("Your pick", t2.ev("document.querySelector('.bd-lst-pick').textContent"))
+
+    def test_a_style_finding_in_checks_opens_the_style_tab(self) -> None:
+        doc = load_json(self.doc_path)
+        lb = listing.listing_of(doc)
+        lb["style"] = {**(lb.get("style") or {}), "play": {"message": "m4", "layout": "l1"}}   # M4 on Play warns: use-case first
+        self.doc_path.write_text(json.dumps(doc, indent=2, ensure_ascii=False) + "\n")
+        t = self.page("checks")
+        t.ev("BP.listing({platform: 'play'})")
+        open_style = "[...document.querySelectorAll('#bd-lp-checks li.warn button')].find(b => b.title === 'Open Style')"
+        t.wait_for(f"!!{open_style}")
+        t.ev(f"{open_style}.click()")
+        t.wait_for("!document.getElementById('bd-lp-style').hidden && document.querySelector('.bd-lp-tabs [data-v=style]').getAttribute('aria-checked') === 'true'")
 
     def test_a_palette_from_an_image_with_roles_contrast_and_a_draft_that_blocks_approve(self) -> None:
         t = self.page("brand")
