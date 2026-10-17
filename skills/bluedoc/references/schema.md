@@ -2,7 +2,7 @@
 
 Lookup reference for every field and command. Grep for a heading, never read the file whole: `grep -n -A25 '^## Diff' references/schema.md`. How to lay out each doc type lives in `types/<type>.md`.
 
-Headings: `## Document` (incl. `hero`) · `## Contracts` · `## Section` · `## Blocks` (`### Inline markdown`) · `## Checklist` (`### Reader comments and replies`) · `## Diff` (`### Diff reference`, `### Embedded diff`, `### gitdiff.py`) · `## Plan blocks` (`### Steps`, `### Files`, `### Media`, `### Compare`) · `## Board` (`### Artboard`, `### Devices`, `### Screen files`, `### Links`, `### Icons`, `### Website`) · `## Listing` (`### Style and brand`, `### Shots`, `### Uploads and captures`, `### Text and locales`, `### Checks`, `### Export`) · `## Revisions` · `## Page layout` · `## Canvas` (`### Node`, `### Semantic zoom`, `### Edge`, `### Flow`) · `## Annotations` (the key grammar; `### Bottom tray`) · `## Plans` (its approval Markdown has `## Decisions` and `## Notes with the approval`) · `## build.py` (`### patch`) · `## serve.py` (`### Reader state`) · `## Automation API`
+Headings: `## Document` (incl. `hero`) · `## Contracts` · `## Section` · `## Blocks` (`### Inline markdown`) · `## Checklist` (`### Evidence`, `#### Pinned evidence`, `### Reader comments and replies`) · `## Diff` (`### Diff reference`, `### Embedded diff`, `### gitdiff.py`) · `## Plan blocks` (`### Steps`, `### Files`, `### Media`, `### Compare`) · `## Board` (`### Artboard`, `### Devices`, `### Screen files`, `### Links`, `### Icons`, `### Website`) · `## Listing` (`### Style and brand`, `### Shots`, `### Uploads and captures`, `### Text and locales`, `### Checks`, `### Export`) · `## Revisions` · `## Page layout` · `## Canvas` (`### Node`, `### Semantic zoom`, `### Edge`, `### Flow`) · `## Annotations` (the key grammar; `### Bottom tray`) · `## Plans` (its approval Markdown has `## Decisions` and `## Notes with the approval`) · `## build.py` (`### patch`) · `## serve.py` (`### Reader state`) · `## Automation API`
 
 ## Document
 
@@ -130,7 +130,8 @@ A step or progress item may carry `evidence`: what shows the work landed. It is 
 
 ```json
 "evidence": [
-  { "label": "Migration test", "code": "pytest tests/test_migrations.py", "md": "`4 passed in 1.2s`" },
+  { "label": "Migration test", "code": "pytest tests/test_migrations.py", "md": "`4 passed in 1.2s`",
+    "pin": { "repo": "..", "commit": "0a46a97f3dfbb4636547ea05323edb3c19b052bf", "dirty": false, "paths": ["src/carts"], "at": "2026-10-17T09:30:00Z" } },
   { "label": "Cart page at 390 px", "src": "media/cart-390.png" },
   { "label": "Review findings", "href": "../reviews/saved-carts.bluedoc.json" }
 ]
@@ -143,8 +144,37 @@ A step or progress item may carry `evidence`: what shows the work landed. It is 
 | `code`, `lang` | Embedded: the command that produced it, with Copy. |
 | `src` | Embedded: an image or video beside the doc, checked like a [media](#media) `src`; `-o` inlines it. |
 | `href` | Linked: a path relative to the doc's folder or an `http(s)` URL. The build warns when a local path doesn't exist. |
+| `pin` | The code revision the check ran on: `build.py patch` stamps it (see [Pinned evidence](#pinned-evidence)); never write it by hand. |
 
-Each entry needs `label` and at least one of `md`, `code`, `src`, `href`. The page shows an **Evidence** group in the open row or step, each entry tagged *embedded* or *linked*; a step's meta row counts them. A linked target is a pointer: nothing records its content, so it can change after the step is marked done. Embedded entries are part of the revision. Evidence on a decision item is a build error. Adding or changing evidence after an approval keeps it, like `status` and `done` (see [Plans](#plans)). **Copy progress** lists each entry as `- Evidence: <label> (<href or src>)` under its item.
+Each entry needs `label` and at least one of `md`, `code`, `src`, `href`. The page shows an **Evidence** group in the open row or step, each entry tagged *embedded* or *linked*; a step's meta row counts them. A linked target is a pointer: nothing records its content, so it can change after the step is marked done. Embedded entries are part of the revision. Evidence on a decision item is a build error. Adding or changing evidence after an approval keeps it, like `status` and `done` (see [Plans](#plans)). **Copy progress** lists each entry as `- Evidence: <label> (<href or src>) @ <short sha>` under its item.
+
+#### Pinned evidence
+
+A passing check proves something about the code it ran on, not the code after it. So `build.py patch` pins each evidence entry it adds or changes to the code revision of the moment (`scripts/codepin.py`), and the page tells an older pass from a check of the current code.
+
+| `pin` field | Meaning |
+|---|---|
+| `repo` | The git repo root: relative to the doc's folder when the doc is inside it (`.`, `../..`), else the root folder's name (`acme-shop`). A name is found through `$BLUEDOC_HOME/repos.json` (the stamp records it there), then as a folder of that name beside the doc. `patch --repo DIR` picks the repo; the default is the doc's, else the current folder's. |
+| `commit` | The full HEAD sha when the check ran; `null` when there was none (no git, not in a repo, no commit yet), with `reason` saying why. |
+| `dirty` | Whether the covered files differed from `commit` (uncommitted, staged or untracked changes). |
+| `tree` | When dirty: sha256 over each such file's path and content, so the same uncommitted state reads as current and any other as stale. |
+| `paths` | Optional: what the check covers, as paths or globs from the repo root (`patch --paths src/carts 'test/**/*.ts'`). Without it the check covers the whole repo. |
+| `at` | When the evidence was recorded, UTC ISO time. |
+
+bluedoc's own files (`*.bluedoc.json`, their history, diff cache and snapshots) never count as changes: recording evidence writes them. Old evidence without `pin` stays valid and shows as unpinned. The build checks a `pin`'s shape (a full sha or `null` with a reason, a relative or named repo, `tree` when dirty).
+
+**Staleness.** Served pages (`serve.py`, cached per repo, HEAD and working-tree fingerprint) and `build.py --check-code` compare each pin with its repo now; the covered files are compared with `commit`, committed and uncommitted changes together:
+
+| State | When | On the page |
+|---|---|---|
+| current | HEAD is still `commit`; the covered files are as checked (both clean, or the same `tree`). | A green chip: ✓ `abc1234` · its time. |
+| moved | HEAD moved past `commit`, but no covered file changed. Still valid. | A plain chip, and "Checked at abc1234, code since doesn't touch it". |
+| stale | A covered file changed since `commit` (in later commits or uncommitted), `commit` is no longer an ancestor of HEAD (a rebase or reset) or no longer in the repo, or the uncommitted changes differ from `tree`. | An amber chip and "Stale: code changed since abc1234 (3 files)", the files listed when opened. |
+| unknown | The repo isn't here, or git isn't installed. | A plain chip. |
+
+A chip's tooltip has the full sha, the repo, the paths, the time and the state's reason; "+ changes" follows the sha when the check ran on uncommitted changes. An entry without a pin shows *unpinned*. A done progress item with stale evidence needs a recheck: its tick turns amber with **Needs recheck**, it doesn't count in the checklist's `n of m` (which adds `· N to recheck`), the sidebar tracker or the top bar, and Copy progress leaves it unticked. A done step with stale evidence shows **Needs recheck** and an amber dot. Approve warns ("2 checks have stale evidence") without blocking, and the approval, Request changes and Copy progress Markdown end with `## Stale evidence`: each such check, its changed files, its command to re-run, and the `build.py patch <doc> <key> --pin` commands that re-record its evidence (the first bumps the rev, the rest `--no-bump`). The plan gate (`hook.py`) adds the same section to what it tells Claude. Earlier revisions (`?rev=`) show the pins alone.
+
+The static build (`-o`, and so the goldens in `docs/examples/`) has no repo state: it shows each pin's commit chip without a state. `build.py doc.json --check-code [-o out.html]` prints each pin's state and the stale ones' section, and gives an `-o` page the live states.
 
 ### Reader comments and replies
 
@@ -563,7 +593,9 @@ Each set's chip shows its shot count against its range, its accepted sizes and w
 
 `build.py <doc> --listing out.zip` writes the fastlane ZIP: `fastlane/metadata/android/<locale>/` for `supply` (`title.txt`, `short_description.txt`, `full_description.txt`, `changelogs/default.txt`, `video.txt`, `images/icon.png`, `images/featureGraphic.png`, `images/<type>Screenshots/NN-<shot>.png`), and `fastlane/metadata/<locale>/*.txt` and `fastlane/screenshots/<locale>/NN-<set>-<shot>.png` for `deliver` (it reads the display type from the size). Sets fastlane has no folder for go to `extra/`, Google Ads text and images to `ads/google/<locale>/`, the search results and Apple Ads assets to `ads/apple/<locale>/`. Each variant's files go to `variants/<platform>-<kind>-<id>/` at their default paths: its own text and each set whose shots or style differ, nothing else. Every PNG is at its store size, 24-bit RGB without `tRNS`; a field a locale lacks isn't written (the store shows the default locale's). `manifest.json` lists every file (kind, platform, locale, set, shot, variant, size, sha256, bytes), the MT strings, the fonts and the store-rule errors still open. The App Store icon ships in the binary. `--listing out.pdf` writes the listing for review (both platform pages, text with counts, MT and fallback tags, the checks); `--listing out.html` writes it as one file that works offline. `--platform` and `--locale` narrow the ZIP. ZIP and PDF render through headless Chrome (`BLUEDOC_CHROME`; without one: exit 1). Upload the ZIP's folders with fastlane yourself; nothing here talks to the stores.
 
-The server sends the same files from `GET /__bluedoc/listing?path=<doc URL path>[&format=zip|pdf|html|print][&rev=B][&platform=P][&locale=L][&job=J]`: a read, no key; 400 for another type, an unknown rev or format, or a filter on anything but the ZIP; 501 for a ZIP or PDF without Chrome. `X-Bluedoc-Warnings` is a JSON list of what the export should say (a font a PDF can't embed, store-rule errors still open). The ZIP renders in up to 6 headless Chromes side by side and draws each distinct shot (its page, state, frame and scale) once: files that are the same render (Play's 7- and 10-inch tablets, a variant's unchanged shots) carry the same bytes, and `manifest.json` still lists each. A ZIP or PDF with `job=J` (8-64 of `A-Z a-z 0-9 - _`) is followed by `GET /__bluedoc/listing/progress?job=J`: `{job, format, stage: plan|render|zip|done|error|cancelled, done, total, file?, error?}` (`total` is the ZIP's file count; a PDF has none), kept 10 minutes after its last change, else 404; a read, no key. `DELETE` on it (with the `X-Bluedoc` header), or `POST …&cancel=1` (the key), cancels the export: its Chromes are killed, its temp files go and the export answers 409. Closing the export's connection stops it too. The page's **Export to…** menu (ZIP for fastlane, PDF, HTML) uses it at the revision shown: while one runs, the key is its progress (a spinner and `ZIP…` until the total is known, then `ZIP 120/294` and a bar along its foot; icon and bar when the toolbar is narrow), a click on it, its ×, or Esc cancels, and a second export waits until it ends; then `Exported` with a tick (or `Failed`, and the server's error in a toast) and the key as it was. It shows those warnings; without Chrome its PDF opens the print view in a tab.
+`--listing out.zip --format folders` writes the same files (same renders and bytes) as plain folders under one `<stem>/` folder, for a person or another tool: `google-play/<locale>/` and `app-store/<locale>/` each hold `text/<field>.txt` (the field's store label, slugged: `app-name.txt`, `short-description.txt`, `full-description.txt`, `release-notes.txt`, `video-url.txt`; `name.txt`, `subtitle.txt`, `promotional-text.txt`, `description.txt`, `keywords.txt`, `whats-new.txt`), Play's `icon.png`, `feature-graphic.png` and `tv-banner.png`, and a folder per device named from its set's label (`phone/`, `tablet-7in/`, `tablet-10in/`, `wear-os/`; `iphone-6.9in/`, `ipad-13in/`, `apple-watch/`) of `NN-<shot>.png` in store order; other assets are `<asset label>-<shot>.png` beside them. Ads go to `ads/google/<locale>/` and `ads/apple/<locale>/` (their text under `text/`), each variant to `variants/<platform>-<kind>-<id>/<locale>/` with only what it changes. `README.txt` maps each folder and file to its store field or slot, with its limit or size; `manifest.json` is the fastlane ZIP's, its paths this ZIP's.
+
+The server sends the same files from `GET /__bluedoc/listing?path=<doc URL path>[&format=zip|folders|pdf|html|print][&rev=B][&platform=P][&locale=L][&job=J]` (the attachment `<stem>[-<platform>][-<locale>].zip`, or `…-folders.zip` for `folders`): a read, no key; 400 for another type, an unknown rev or format, or a filter on anything but a ZIP; 501 for a ZIP or PDF without Chrome. `X-Bluedoc-Warnings` is a JSON list of what the export should say (a font a PDF can't embed, store-rule errors still open). The ZIP renders in up to 6 headless Chromes side by side and draws each distinct shot (its page, state, frame and scale) once: files that are the same render (Play's 7- and 10-inch tablets, a variant's unchanged shots) carry the same bytes, and `manifest.json` still lists each. A ZIP or PDF with `job=J` (8-64 of `A-Z a-z 0-9 - _`) is followed by `GET /__bluedoc/listing/progress?job=J`: `{job, format, stage: plan|render|zip|done|error|cancelled, done, total, file?, error?}` (`total` is the ZIP's file count; a PDF has none), kept 10 minutes after its last change, else 404; a read, no key. `DELETE` on it (with the `X-Bluedoc` header), or `POST …&cancel=1` (the key), cancels the export: its Chromes are killed, its temp files go and the export answers 409. Closing the export's connection stops it too. The page's **Export to…** menu (ZIP (fastlane), ZIP (folders), PDF, HTML) uses it at the revision shown: while one runs, the key is its progress (a spinner and `ZIP…` until the total is known, then `ZIP 120/294` and a bar along its foot; icon and bar when the toolbar is narrow), a click on it, its ×, or Esc cancels, and a second export waits until it ends; then `Exported` with a tick (or `Failed`, and the server's error in a toast) and the key as it was. It shows those warnings; without Chrome its PDF opens the print view in a tab.
 
 **Approve listing** sends the approval with the style picks of every page and variant under `## Decisions`. It is disabled while a text edit is unsaved or an upload, brand or text draft is unrecorded (the server refuses it too while an upload is); its dialog counts the unaccepted MT strings and the shots with mock-up UI, and names the variants it covers.
 
@@ -758,13 +790,21 @@ An approval of rev X carries to a later rev Y when every change between them is 
 1. **<label>** (pin|text|drawing|general) `<key>` (<id>)
    > <excerpt>
    Note: <note>
+
+## Stale evidence
+N checks have stale evidence: the code changed since they ran. Re-run each, then re-record its evidence …
+- **<check title>** `<key>`
+  - <evidence label>: code changed since abc1234 (<changed files>)
+    Re-run: `<its command>`
+
+(a sh block of `build.py patch <doc> <key> --pin` commands)
 ```
 
 A pick carries `(recommended: …)` only when it differs from the recommendation; an item with no `recommend` and no pick reads `(no pick)`. Plain items the reader commented on are listed too. General comments come first in the notes; `> <excerpt>` is left out when there is none, and `(rev <rev>)` when the doc has no `meta.rev`.
 
 The server stores the approval in `state.db` with `docHash`, the sha256 of the doc's canonical JSON, queues it with kind `approval` for `serve.py wait`, and answers `{ok, id}`. The page posts the `docHash` its seed carried (the JSON it rendered) and its `rev`; when either differs from the file's current JSON or `meta.rev`, the server answers 409 `{"reload": true}` and the page offers **Reload** instead, so an approval never covers text the reader hasn't seen. The key then reads **Approved · rev X** with a check, disabled, and stays so while the approval holds or carries. A new `meta.rev` with more than progress, or any edit of the doc's JSON in place, resets it: the plan awaits approval again.
 
-- **Request changes** on a plan page also carries `answers` (the decision picks) when there are any, and its Markdown ends with the same `## Decisions` section, item comments included. An item comment counts toward it until sent with Request changes or Approve, and again once edited; on an approved plan, so does each pick changed since the approval (**Pick changed since approval**, above). Plan pages have no Send answers.
+- **Request changes** on a plan page also carries `answers` (the decision picks) when there are any, and its Markdown ends with the same `## Decisions` section, item comments included, then `## Stale evidence` when a check's pinned evidence is stale (see [Pinned evidence](#pinned-evidence)). An item comment counts toward it until sent with Request changes or Approve, and again once edited; on an approved plan, so does each pick changed since the approval (**Pick changed since approval**, above). Plan pages have no Send answers.
 - `GET /__bluedoc/ping?path=<doc URL path>` returns `{bluedoc, home, version, code, unlocked, to, approval}`. `version` is the plugin's, `code` a hash of the server, build and template code; `serve.py open` restarts a server whose `version` or `code` differs and prints one line saying so. `unlocked` says whether the request carries the key: the cookie, or the copy the page keeps in `localStorage` (see [serve.py](#servepy)); while it doesn't, doc pages and the home page show "This browser can't save yet" with a **Copy unlock command** button. `approval` is the doc's newest approval as `{rev, at, carried, picks}`: `carried: false` with `rev === meta.rev` while the doc's JSON still matches its `docHash`; `carried: true` when every change since is progress (above); `carried: false` with an older `rev` when other changes followed; `null` when there is none, or the approved rev was edited in place. `picks` is `{"<checklist>/<item>": option}` for each decision the approval carried, its recommendation when it had no pick. The page's seed (`bp-state`) carries the same, and `index.json` each doc's as `{rev, at, carried}` with `at` in epoch seconds. The page and the home cards (and the home page's Awaiting approval and Approved filters) count the plan approved when `approval.rev === meta.rev` or `approval.carried`, and show **Changes since approved rev X** for an older one that isn't carried.
 - `serve.py wait DOC --kind answers|changes|approval|any` (default `any`) returns the oldest queued message of that kind. An approval prints `--- bluedoc approval (reply <id>, rev <rev>, <time>) ---`, the Markdown, then `--- end ---`.
 
@@ -778,10 +818,11 @@ The server stores the approval in `state.db` with `docHash`, the sha256 of the d
 | `<doc>` | Validates (structure, field types, ids, refs, links, media, diff anchors against the expanded diff, the [contract](#contracts)), lints the writing, records the revision. A field of the wrong JSON type is an error naming its path (`ERROR sections[0].blocks[2].items[1].text: 404 is a number: must be a string`), never a traceback. |
 | `<doc> -o out.html` | Also writes a standalone page with expanded diffs and media inlined; a design's screens become `srcdoc` frames with their kit inlined (warns above 10 MB). It works from `file://`, where the reply dialogs offer **Copy** only. |
 | `<deck> --deck out.html` | Presentations only (any other type: exit 2). Also writes the deck as one HTML file that plays offline: every slide in its kit with the theme's tokens, in deck order, with its notes; ← → Space, Home/End, a click step, `N` notes, `F` full screen, `#3` in the URL; Ctrl/Cmd+P prints every slide as a 16:9 page. `--deck out.pdf` (or `--format pdf`) writes a PDF instead: one 16:9 page per slide in deck order, no notes, printed by headless Chrome or Chromium (`BLUEDOC_CHROME` names it, as for `serve.py snapshot`; without one: exit 1). The server sends the same files from `GET /__bluedoc/deck?path=<doc URL path>[&rev=B&theme=T&format=html\|pdf]` (a read, no key; 400 for another type; PDF without Chrome: 501), which **Export to…** downloads (served pages only: an `-o` page has no server); with no Chrome there, its PDF opens the deck's print view in a new tab for the browser's Save as PDF. The menu's **Include unapplied edits** (off by default; current revision only) sends the export as `POST /__bluedoc/deck` `{path, format, theme, drafts: {"<slide>": [{sel, tag, base, text} or {sel, tag, base, del: true}]}}` (the key; at most 300): the reader's element drafts go into the slides' text as the frames show them, plain text, only where the element still has its tag and base text; drafts with `rev` are a 400. Without Chrome a PDF with edits isn't made: export HTML and print it. `--deck` has no reader state, so it always writes the revision's text. |
-| `<listing> --listing out.zip\|pdf\|html [--platform P] [--locale L]` | Storelistings only (any other type: exit 2). Also writes the fastlane ZIP, the review PDF or the one-file HTML: see [Export](#export). |
+| `<listing> --listing out.zip\|pdf\|html [--format folders] [--platform P] [--locale L]` | Storelistings only (any other type: exit 2). Also writes the fastlane ZIP (`--format folders`: the same files in plain folders), the review PDF or the one-file HTML: see [Export](#export). |
 | `l10n <listing> --export L \| --import L FILE [--mt] \| --accept L KEY …` | A storelisting's translations: see [Text and locales](#text-and-locales). |
 | `<doc> --check` | Validates and lints only; writes nothing (no history, no diff cache). `--strict` fails on warnings; `--no-history` doesn't read or write the history file. |
 | `<doc> --show-rev B` | Prints revision B, rebuilt from the history, as JSON. |
+| `<doc> --check-code [--repo DIR]` | Also compares each pinned evidence entry with its repo now (current, moved, stale, unknown; `--repo` names the repo for every pin), prints one line each and the `## Stale evidence` section, and gives an `-o` page the states: see [Pinned evidence](#pinned-evidence). Stale evidence warns; the exit code doesn't change. |
 | `patch <doc> <key> …` | Changes one object by key, bumps the rev, validates, records. See below. |
 | `from-md <plan.md> <out.bluedoc.json> [--org O] [--project DIR] [--change "…"]` | Imports a Markdown plan as a `plan` doc (`scripts/mdplan.py`) and builds it. The first `#` heading is the title, the first paragraph the `tldr`, each `##` a section; the numbered list under a heading like Steps or Implementation (else the first one outside context, questions, risks and verification) becomes the `steps` block, else each other `##` becomes a step; backticked paths become the `files` block (`edit` if they exist under `--project`, else `add`). Everything else stays text, tables and code. An existing out keeps its `id` and takes the next `meta.rev`, with `--change` lines as `changes`. Claude Code's plan gate (`scripts/hook.py`) runs it. |
 
@@ -789,7 +830,7 @@ The linter warns on: filler and ceremony words; vague words; sentences over 32 w
 
 ### patch
 
-`build.py patch <doc> <key> [--set field=value …] [--json '{…}'] [--append '{…}'] [--delete] [--html FILE|-] [--change "line" …] [--resolves ID …] [--no-bump]`
+`build.py patch <doc> <key> [--set field=value …] [--json '{…}'] [--append '{…}'] [--delete] [--html FILE|-] [--change "line" …] [--resolves ID …] [--no-bump] [--pin] [--repo DIR] [--paths PATH …]`
 
 | Option | Effect |
 |---|---|
@@ -801,6 +842,11 @@ The linter warns on: filler and ceremony words; vague words; sentences over 32 w
 | `--change "line"` | One `changes` line; repeatable. |
 | `--resolves ID` | One comment id for `resolves` (the id after the key in the reply Markdown, with or without its parentheses); repeatable. |
 | `--no-bump` | Keeps `meta.rev`: only while the reader hasn't seen this rev. |
+| `--repo DIR` | Pins the evidence this patch records to DIR's git repo (default: the doc's repo, else the current folder's). |
+| `--paths PATH …` | What that evidence covers: paths or globs from the repo root (default: the whole repo). |
+| `--pin` | `step:` and `item:` keys: re-pins every evidence entry of the target to the code now, keeping each entry's `paths` unless `--paths` is given. Run it after re-running the checks; it alone is a change (`Re-recorded the evidence of <key>.`). |
+
+Evidence the patch adds or changes (with `--set`, `--json` or `--append`, on any key) is pinned to the code revision of the moment: see [Pinned evidence](#pinned-evidence). The patch prints `pinned N evidence entries to <repo> at abc1234` (`+ uncommitted changes` when dirty), or why they are unpinned (no git, not in a repo); it never fails for want of git.
 
 By default the rev bumps (1→2, A→B, v1→v2), `meta.date` becomes today, `changes` becomes the `--change` lines (default "Updated `<key>`.") and `resolves` the `--resolves` ids (removed when there are none); with `--no-bump` both are appended. Patch refuses to write when validation fails, keeps the file's indent, records the history, and prints `rev X → Y; <key> updated`.
 
@@ -813,6 +859,8 @@ Link keys: `link:<id>/<element>` takes `--set to=<artboard>`, `--set kind=push|m
 ```sh
 build.py patch doc.json item:t412/tier-boundary --set choice=fix --change "#412 tier-boundary: Fix in PR, as picked."
 build.py patch doc.json step:steps/0/table --set status=done --no-bump
+build.py patch doc.json item:checks/unit --set done=true --json '{"evidence": [{"label": "Unit tests", "code": "pnpm test", "md": "`48 passed`"}]}' --paths services/orders-api
+build.py patch doc.json item:checks/unit --pin --change "Re-ran the unit tests after the reprice fix."
 build.py patch doc.json block:risks/0 --append '["Cache stampede", "Low", "High", "Jittered TTL"]'
 build.py patch doc.json el:login/submit                                  # prints acme-fit-design.design/login.html  [data-bd="submit"]
 build.py patch doc.json el:login/submit --change "Sign in: the button says Continue."
@@ -859,7 +907,8 @@ The built page exposes `window.BP`:
 | `BP.zoomTo('arch', 'api/auth')` | Scrolls to the canvas and opens the node. |
 | `BP.fit('arch')` | Fits the root drawing. |
 | `BP.state('arch')` | `{k, focus, revealed, flow, step, tokens}` |
-| `BP.progress()` | `[{id, done, total}]` per checklist. |
+| `BP.progress()` | `[{id, done, total}]` per checklist; `done` leaves out items whose evidence is stale. |
+| `BP.evidence()` | `{live, stale, markdown}`: whether the page has the pins' live states (served, or `--check-code`), the keys of the checks with stale evidence, and their `## Stale evidence` Markdown. |
 | `BP.progressMarkdown()` | The **Copy progress** Markdown, with the overall message and comments. |
 | `BP.replyPayload()` | The reply JSON that **Send** posts. |
 | `BP.choose('t412/tier-boundary', 'fix')` | Picks an option, as a click would (`null` clears). `false` if the item has no choices. |

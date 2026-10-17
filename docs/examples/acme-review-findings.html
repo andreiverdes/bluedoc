@@ -430,6 +430,28 @@ td.bd-cell-mod { background: color-mix(in oklch, var(--warn-tint) 70%, transpare
 .bp-ev .bp-media { margin: 0; }
 .bp-step-ev { display: inline-flex; align-items: center; gap: 4px; color: var(--ok-fg); }
 .bp-step-ev .bd-ic { width: 13px; height: 13px; }
+/* evidence pinned to the code revision it checked (codepin.py): the commit chip; served, how the repo compares now */
+.bp-pin { display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 8px 0 7px; border-radius: 6px; font: 500 11.5px/1 var(--sans); white-space: nowrap;
+  color: var(--fg-muted); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); cursor: default; }
+.bp-pin .bd-ic { width: 12px; height: 12px; flex: none; }
+.bp-pin code { font: 600 11.5px/1 var(--mono); color: var(--fg); background: none; padding: 0; }
+.bp-pin .dt { color: var(--fg-subtle); }
+.bp-pin.current { color: var(--ok-fg); background: var(--ok-tint); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--ok) 35%, transparent); }
+.bp-pin.current code { color: inherit; }
+.bp-pin.stale { color: var(--warn-fg); background: var(--warn-tint); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--warn) 45%, transparent); }
+.bp-pin.stale code { color: inherit; }
+.bp-pin.none { font-style: italic; }
+.bp-pin-why { margin: 0; font-size: 12.5px; line-height: 1.45; color: var(--fg-subtle); }
+.bp-pin-stale { margin: 0; padding: 7px 10px; border-radius: 8px; font-size: 12.5px; line-height: 1.45; color: var(--warn-fg); background: color-mix(in oklch, var(--warn-tint) 70%, transparent);
+  box-shadow: inset 3px 0 0 var(--warn); }
+.bp-pin-stale summary { cursor: pointer; font-weight: 600; }
+.bp-pin-stale ul { margin: 6px 0 0; padding-left: 18px; font: 12px/1.55 var(--mono); color: var(--fg-muted); overflow-wrap: anywhere; }
+.bp-pin-stale p { margin: 4px 0 0; color: var(--fg-muted); }
+.bp-recheck { flex: none; margin-top: 2px; }
+.bp-step-ev.stale { color: var(--warn-fg); }
+/* a done item whose evidence is stale needs a recheck: its tick turns amber with a recheck arrow and it isn't counted */
+.bp-cl-item.stale > .bp-cl-row > input:checked { background: var(--warn) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 12a9 9 0 1 0 3-6.7L3 8'/%3E%3Cpath d='M3 3v5h5'/%3E%3C/svg%3E") center / 11px no-repeat; }
+.bp-cl-item.done.stale > .bp-cl-row .bp-cl-text, .bp-cl-item.done.stale > .bp-cl-row .bp-cl-text code { color: var(--fg); }
 .bp-cl-verify b { font-weight: 600; color: var(--ok-fg); margin-right: 4px; }
 .bp-cl-item .bp-code { box-shadow: 0 0 0 1px var(--line); }
 .bp-cl-item .bp-code-h { height: 30px; }
@@ -491,6 +513,7 @@ td.bd-cell-mod { background: color-mix(in oklch, var(--warn-tint) 70%, transpare
 .s-doing .bp-step-dot { color: var(--accent-fg); background: var(--accent-tint); box-shadow: inset 0 0 0 1.5px var(--accent), 0 0 0 4px color-mix(in oklch, var(--accent) 14%, transparent); }
 .s-done .bp-step-dot { color: #fff; background: var(--ok); box-shadow: none; }
 .s-blocked .bp-step-dot { color: var(--risk-fg); background: var(--risk-tint); box-shadow: inset 0 0 0 1.5px var(--risk); font-weight: 750; }
+.s-done.stale .bp-step-dot { background: var(--warn); }   /* done, but its evidence is stale: needs a recheck */
 .bp-step-head { grid-column: 2; min-width: 0; display: flex; align-items: flex-start; gap: 10px; padding: 10px 4px 10px 0; border: 0; background: none; text-align: left; color: inherit; font: inherit; border-radius: 8px; }
 .bp-step-head:focus-visible { box-shadow: var(--focus-ring); }
 .bp-step:not(.empty) .bp-step-head:hover .bp-step-t { color: var(--accent-fg); }
@@ -1931,6 +1954,8 @@ html.bd-presenting .bp-toast { z-index: 71; bottom: 84px; }
 .bd-lst-btb:is([data-fit="2"], [data-fit="3"], [data-fit="4"]) :is(.bd-sg button[data-p]) { padding: 0 7px; }
 .bd-lst-btb:is([data-fit="2"], [data-fit="3"], [data-fit="4"]) .bd-selb .v { max-width: 96px; }
 .bd-lst-btb:is([data-fit="3"], [data-fit="4"]) .bd-lst-jump, .bd-lst-btb[data-fit="4"] :is(.bd-dcount, .bd-lst-ckb) { display: none; }
+/* a listing's Export to… menu: as wide as its longest description (ZIP (folders)'s) */
+.bd-lstx .bd-expm { width: max-content; min-width: 260px; }
 /* Export to…'s run on a listing (.bd-lstx, exportListing): the key turns into its progress, a spinner while the count
    is unknown, the format and files done of total, a × that cancels (so do a click on the key and Esc), a thin bar along
    its foot (role progressbar); then a tick and Exported, or an alert and Failed. Narrow (data-fit 2+): icon and bar */
@@ -2276,6 +2301,7 @@ html.bd-presenting .bp-toast { z-index: 71; bottom: 84px; }
 <script type="application/json" id="bp-live">null</script>
 <script type="application/json" id="bp-snaps">null</script>
 <script type="application/json" id="bp-listing">null</script>
+<script type="application/json" id="bp-pins">null</script>
 <script>
 (() => {
 'use strict';
@@ -2339,6 +2365,7 @@ const ICONS = {
   reset: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>',
   undo: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',
   redo: '<path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/>',
+  commit: '<circle cx="12" cy="12" r="3"/><path d="M3 12h6M15 12h6"/>',
   info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>',
   help: '<circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"/>',
   alert: '<path d="m21.7 18-8-14a2 2 0 0 0-3.4 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.7-3Z"/><path d="M12 9v4M12 17h.01"/>',
@@ -2974,26 +3001,78 @@ function codeBlock(code, lang, title) {
 // A step's or progress item's evidence (optional): each entry its label, then what is embedded (md, a command,
 // a media file beside the doc) and a linked path or URL. Linked targets are pointers: they may change after the step.
 const evList = x => Array.isArray(x && x.evidence) ? x.evidence.filter(e => e && typeof e === 'object') : [];
-function evidenceBlock(ev) {
+// An entry's `pin` is the code revision its check ran on (codepin.py): {repo, commit, dirty, tree?, paths?, at}, or
+// {commit: null, reason, at} when there was none. Served (or built with --check-code), bp-pins says how each pinned
+// entry compares with its repo now: {file, owners: {"item:<checklist>/<item>" | "step:<steps>/<step>": {key, label,
+// ev: [result or null per entry]}}}, a result {state: current|moved|stale|unknown, reason, files?, n?, label, run?}.
+// Without it (an -o file, the goldens) and on earlier revisions the chips show the pins alone.
+const PINS = (() => { if (OLD) return null; try { const x = JSON.parse(document.getElementById('bp-pins').textContent); return x && typeof x === 'object' && x.owners && typeof x.owners === 'object' ? x : null; } catch { return null; } })();
+const pinRes = (owner, i) => { const o = PINS && PINS.owners[owner], r = o && Array.isArray(o.ev) ? o.ev[i] : null; return r && typeof r === 'object' ? r : null; };
+const ownerStale = owner => !!(PINS && PINS.owners[owner] && (PINS.owners[owner].ev || []).some(r => r && r.state === 'stale'));
+const staleOwners = () => PINS ? Object.values(PINS.owners).filter(o => o && Array.isArray(o.ev) && o.ev.some(r => r && r.state === 'stale')) : [];
+const pinDate = at => String(at || '').replace('T', ' ').slice(0, 16);   // "2026-10-17 09:30", UTC
+const pinShort = e => e.pin && typeof e.pin.commit === 'string' && e.pin.commit ? e.pin.commit.slice(0, 7) : '';
+function pinChip(e, r) {
+  const p = e.pin && typeof e.pin === 'object' ? e.pin : null;
+  if (!pinShort(e)) return h('span', { class: 'bp-pin none', 'data-state': 'unpinned', title: p && p.reason ? `Not pinned to a code revision: ${p.reason}` : 'Not pinned to a code revision' }, ic('commit'), 'unpinned');
+  const st = r ? r.state : '';
+  const tip = [`Checked at commit ${p.commit}${p.dirty ? ', with uncommitted changes' : ''}`, p.repo && `Repo: ${p.repo}`,
+    Array.isArray(p.paths) && p.paths.length && `Covers: ${p.paths.join(', ')}`, p.at && `Recorded ${pinDate(p.at)} UTC`, r && r.reason && `Now: ${r.reason}`].filter(Boolean).join('\n');
+  return h('span', { class: 'bp-pin' + (st === 'current' || st === 'stale' ? ' ' + st : ''), 'data-state': st || 'pinned', title: tip },
+    ic(st === 'stale' ? 'alert' : st === 'current' ? 'tick' : 'commit'), h('code', {}, pinShort(e)), p.dirty && h('span', {}, '+ changes'), p.at && h('span', { class: 'dt' }, '· ' + pinDate(p.at)));
+}
+// under the entry: moved ("checked at abc1234, code since doesn't touch it") or stale (what changed; it doesn't count)
+function pinNote(r) {
+  if (!r || !r.reason) return null;
+  if (r.state === 'moved') return h('p', { class: 'bp-pin-why' }, r.reason[0].toUpperCase() + r.reason.slice(1));
+  if (r.state !== 'stale') return null;
+  const files = Array.isArray(r.files) ? r.files.map(String) : [], n = Math.max(+r.n || 0, files.length);
+  return h('details', { class: 'bp-pin-stale' }, h('summary', {}, `Stale: ${r.reason}${n ? ` (${n} file${n === 1 ? '' : 's'})` : ''}`),
+    files.length > 0 && h('ul', {}, files.map(f => h('li', {}, f)), n > files.length && h('li', {}, `+${n - files.length} more`)),
+    h('p', {}, 'This check doesn\'t count as passing until it runs again and its evidence is re-recorded.'));
+}
+function evidenceBlock(ev, owner) {
   if (!ev.length) return null;
   return h('div', { class: 'bp-ev', role: 'group', 'aria-label': 'Evidence' },
     h('div', { class: 'bp-ev-h' }, ic('tick'), 'Evidence'),
-    ev.map(e => h('div', { class: 'bp-ev-i' },
+    ev.map((e, i) => { const r = pinRes(owner, i); return h('div', { class: 'bp-ev-i' },
       h('div', { class: 'bp-ev-l' }, h('span', { html: inline(e.label || '') }),
-        h('span', { class: 'bp-ev-tag', title: e.href ? 'A pointer: the file or page may have changed since' : 'Recorded in this revision' }, e.href ? 'linked' : 'embedded')),
+        h('span', { class: 'bp-ev-tag', title: e.href ? 'A pointer: the file or page may have changed since' : 'Recorded in this revision' }, e.href ? 'linked' : 'embedded'),
+        pinChip(e, r)),
+      pinNote(r),
       e.md && h('div', { class: 'bp-ev-md', html: md(e.md) }),
       e.code && codeBlock(e.code, e.lang || 'sh'),
       e.src && renderMedia({ src: e.src, alt: e.label || 'Evidence' }),
-      e.href && h('a', { class: 'bp-ev-a', href: safeUrl(e.href), target: '_blank', rel: 'noopener noreferrer' }, ic(/^https?:/i.test(e.href) ? 'link' : 'doc'), h('span', {}, e.href)))));
+      e.href && h('a', { class: 'bp-ev-a', href: safeUrl(e.href), target: '_blank', rel: 'noopener noreferrer' }, ic(/^https?:/i.test(e.href) ? 'link' : 'doc'), h('span', {}, e.href))); }));
 }
 // build.py checklist_kind: 'decisions' (every item has choices), 'progress' (none has), 'mixed', 'empty'
 function checklistKind(b) {
   const flags = new Set((b.items || []).filter(it => it && typeof it === 'object').map(it => Array.isArray(it.choices) && it.choices.length > 0));
   return flags.size === 2 ? 'mixed' : flags.has(true) ? 'decisions' : flags.has(false) ? 'progress' : 'empty';
 }
-const evidenceMd = (ev, indent) => ev.map(e => `${indent}  - Evidence: ${e.label || ''}${e.href ? ` (${e.href})` : e.src ? ` (${e.src})` : ''}`).join('\n');
-// one line per evidence entry, for compare view's "What changed"
-const evText = x => evList(x).map(e => [e.label, e.md, e.code, e.src, e.href].filter(Boolean).join(' · '));
+const evidenceMd = (ev, indent, owner) => ev.map((e, i) => {
+  const r = pinRes(owner, i), at = pinShort(e);
+  return `${indent}  - Evidence: ${e.label || ''}${e.href ? ` (${e.href})` : e.src ? ` (${e.src})` : ''}${at ? ` @ ${at}${e.pin.dirty ? ' + changes' : ''}` : ''}${r && r.state === 'stale' ? ` (stale: ${r.reason})` : ''}`;
+}).join('\n');
+// ## Stale evidence for the readbacks (codepin.stale_md): each check whose evidence is stale, what changed, its
+// command, then the `build.py patch … --pin` commands that re-record it (the first bumps the rev)
+function staleEvidenceMd() {
+  const os = staleOwners();
+  if (!os.length) return '';
+  const q = s => /^[\w@%+=:,./-]+$/.test(s) ? s : `'${String(s).replace(/'/g, `'\\''`)}'`;
+  const lines = os.flatMap(o => [`- **${o.label}** \`${o.key}\``, ...o.ev.filter(r => r && r.state === 'stale').flatMap(r => {
+    const files = Array.isArray(r.files) ? r.files : [], more = (+r.n || 0) > files.length ? `, +${r.n - files.length} more` : '';
+    return [`  - ${r.label}: ${r.reason}${files.length ? ` (${files.join(', ')}${more})` : ''}`, r.run && `    Re-run: \`${r.run}\``].filter(Boolean);
+  })]);
+  const cmds = os.map((o, i) => `build.py patch ${q(PINS.file || 'doc.bluedoc.json')} ${q(o.key)} --pin` + (i ? ' --no-bump' : ` --change 'Re-ran the checks after code changes'`));
+  const one = os.length === 1;
+  return `## Stale evidence\n\n${os.length} check${one ? ' has' : 's have'} stale evidence: the code changed since ${one ? 'it' : 'they'} ran. Re-run ${one ? 'it' : 'each'}, then re-record its evidence (update its \`md\` when the result changed):\n\n`
+    + lines.join('\n') + '\n\n```sh\n' + cmds.join('\n') + '\n```\n';
+}
+// a progress item passes when it is ticked and its evidence isn't stale (a stale one needs a recheck)
+const passing = x => x.cb.checked && !x.stale;
+// one line per evidence entry, for compare view's "What changed": a re-recorded pin shows as its new commit
+const evText = x => evList(x).map(e => [e.label, e.md, e.code, e.src, e.href, pinShort(e) && '@ ' + pinShort(e) + (e.pin.dirty ? ' + changes' : '')].filter(Boolean).join(' · '));
 
 /* ---------- plan blocks: steps, files, media, compare ---------- */
 // Meant mainly for plans, valid in any doc. Steps are the proposal's own timeline: their statuses are
@@ -3021,23 +3100,24 @@ function renderSteps(b) {
   const list = h('ol', { class: 'bp-tl-l' });
   items.forEach((s, i) => {
     const st = STEP_STATUS[s.status] ? s.status : 'todo', files = Array.isArray(s.files) ? s.files : [], refs = Array.isArray(s.refs) ? s.refs : [], ev = evList(s);
-    const bodyId = `stepb-${bid}-${s.id}`;
+    const bodyId = `stepb-${bid}-${s.id}`, owner = `step:${bid}/${s.id}`, stale = ownerStale(owner);
     const body = h('div', { class: 'bp-step-body', id: bodyId, role: 'region', 'aria-label': plainText(s.title) },
       s.md && h('div', { class: 'bp-step-md', html: md(s.md) }),
       files.length > 0 && h('div', { class: 'bp-fchips' }, files.map(p => h('button', { type: 'button', class: 'bp-fchip', 'data-path': p, title: p, onclick: () => jumpFile(p) }, fileIcon(p), h('span', {}, baseName(String(p)))))),
       refs.length > 0 && h('div', { class: 'bp-refs' }, refs.map(r => h('button', { type: 'button', class: 'bp-ref', onclick: () => focusNode(r) }, ic('target'), refLabel(r)))),
-      evidenceBlock(ev));
+      evidenceBlock(ev, owner));
     const meta = h('span', { class: 'bp-step-meta' },
       st !== 'todo' && h('span', { class: 'bp-chip ' + STEP_CHIP[st] }, STEP_STATUS[st]),
       EFFORT[s.effort] && h('span', { class: 'bp-eff e-' + s.effort, title: 'Effort: ' + EFFORT[s.effort].toLowerCase() },
         h('span', { 'aria-hidden': 'true' }, h('i'), h('i'), h('i')), h('span', { class: 'bp-sr' }, 'Effort '), s.effort),
       files.length > 0 && h('span', { class: 'bp-step-fc' }, ic('file'), `${files.length} file${files.length === 1 ? '' : 's'}`),
-      ev.length > 0 && h('span', { class: 'bp-step-ev', title: 'Evidence that this step landed' }, ic('tick'), `${ev.length} evidence`));
+      ev.length > 0 && (stale ? h('span', { class: 'bp-step-ev stale', title: 'Its evidence is stale: the code changed since the check ran' }, ic('alert'), 'Needs recheck')
+        : h('span', { class: 'bp-step-ev', title: 'Evidence that this step landed' }, ic('tick'), `${ev.length} evidence`)));
     const head = h('button', { type: 'button', class: 'bp-step-head', 'aria-expanded': 'false', 'aria-controls': bodyId },
       h('span', { class: 'bp-step-main' }, h('span', { class: 'bp-sr' }, `Step ${i + 1}${st === 'todo' ? '' : ', ' + STEP_STATUS[st].toLowerCase()}: `),
         h('span', { class: 'bp-step-t', html: inline(s.title) }), meta),
       ic('chev', 'bp-cl-chev'));
-    const li = h('li', { class: `bp-step s-${st}`, id: `step-${bid}-${s.id}`, 'data-step': s.id },
+    const li = h('li', { class: `bp-step s-${st}` + (stale ? ' stale' : ''), id: `step-${bid}-${s.id}`, 'data-step': s.id },
       h('span', { class: 'bp-step-mk', 'aria-hidden': 'true' }, h('span', { class: 'bp-step-dot' }, st === 'done' ? ic('tick') : st === 'blocked' ? '!' : String(i + 1))), head, body);
     const x = { s, n: i + 1, li, head, body, meta, empty: false };
     x.setOpen = open => {
@@ -3207,7 +3287,10 @@ function renderChecklist(b, parent) {
       (it.blocks || []).map(kb => h('div', { class: 'bp-cl-block' }, kb.type === 'checklist' ? renderChecklist(kb, { cid, iid: it.id }) : (RENDER[kb.type] || RENDER.text)(kb))),
       it.verify && !subIsCheck && h('div', { class: 'bp-cl-verify' }, ic('check'), h('span', {}, h('b', {}, 'Check'), h('span', { html: inline(it.verify) }))),
       it.refs && it.refs.length && h('div', { class: 'bp-refs' }, it.refs.map(r => h('button', { type: 'button', class: 'bp-ref', onclick: () => focusNode(r) }, ic('target'), refLabel(r)))),
-      !choices && evidenceBlock(evList(it)));
+      !choices && evidenceBlock(evList(it), `item:${cid}/${it.id}`));
+    // a progress item whose evidence is stale (the code changed since its check ran) needs a recheck: its tick shows
+    // amber and the counts leave it out until the agent re-records the evidence
+    const stale = !choices && ownerStale(`item:${cid}/${it.id}`);
     // the reader's comment for the agent: stored per item, exported with the answers. On a plan or design,
     // `:note-sent` holds the hash of the comment as Request changes or Approve last sent it: a new or
     // edited comment is pending until the next one
@@ -3224,13 +3307,14 @@ function renderChecklist(b, parent) {
         h('span', { class: 'bp-cl-text', html: inline(it.text) }),
         subMd && h('span', { class: 'bp-cl-subt' + (subIsCheck ? ' check' : '') }, subIsCheck && ic('check'), h('span', { html: inline(subMd) }))),
       it.state && h('span', { class: 'bp-chip ' + (it.stateKind || 'warn') }, it.state),
+      stale && h('span', { class: 'bp-chip warn bp-recheck', title: 'Its evidence is stale: the code changed since the check ran. It doesn\'t count as done until it is re-checked' }, ic('reset'), 'Needs recheck'),
       h('span', { class: 'bp-cl-noteic', title: 'You left a comment' }, ic('msg')),
       ic('chev', 'bp-cl-chev'));
     const dot = choices && h('span', { class: 'bp-cl-dot', 'aria-hidden': 'true' });
-    const li = h('li', { class: 'bp-cl-item' + (choices ? ' has-choices' : ''), id: `item-${cid}-${it.id}` }, h('div', { class: 'bp-cl-row' }, cb, dot, head));
+    const li = h('li', { class: 'bp-cl-item' + (choices ? ' has-choices' : '') + (stale ? ' stale' : ''), id: `item-${cid}-${it.id}` }, h('div', { class: 'bp-cl-row' }, cb, dot, head));
     // a pick changed after approval: pending until Request changes sends it (`:pick-sent` holds the pick it sent)
     const pickSentKey = key + ':pick-sent';
-    const entryItem = { it, cb, li, cid, body, head, choices, get choice() { return choice; }, get note() { return note; },
+    const entryItem = { it, cb, li, cid, body, head, choices, stale, get choice() { return choice; }, get note() { return note; },
       get notePending() { return !!note && store.get(noteSentKey) !== noteHash(note); },
       get more() { return more === '1' ? 'on' : more ? 'sent' : null; },
       get pickChanged() { return !!choices && pickDiffers(entryItem); },
@@ -3335,9 +3419,9 @@ function renderChecklist(b, parent) {
     ...[cap, kind !== 'decisions' && bar, list].filter(Boolean));
   const entry = { b, items, root, count, bar, sideRow: null, parent, paintExpand, acceptBtn, kind };
   function update() {
-    const n = items.filter(x => x.cb.checked).length, open = items.length - n;
+    const n = items.filter(passing).length, open = items.length - items.filter(x => x.cb.checked).length, recheck = items.filter(x => x.stale && x.cb.checked).length;
     if (kind === 'decisions') { count.textContent = open ? `${open} open` : 'All answered'; ask.hidden = !open; }
-    else count.textContent = `${n} of ${items.length}`;
+    else count.textContent = `${n} of ${items.length}` + (recheck ? ` · ${recheck} to recheck` : '');
     bar.firstChild.style.width = (items.length ? n / items.length * 100 : 0) + '%';
     root.classList.toggle('complete', items.length > 0 && n === items.length);
     if (entry.sideRow) entry.sideRow();
@@ -3445,7 +3529,7 @@ function openItem(x) {
 function checklistMd(c, indent = '') {
   const lines = c.items.map(x => {
     const sub = CHECKLISTS.filter(n => n.parent && n.parent.cid === c.b.id && n.parent.iid === x.it.id);
-    let line = `${indent}- [${x.cb.checked ? 'x' : ' '}] ${x.it.text} ${itemKeyMd(x)}`;
+    let line = `${indent}- [${passing(x) ? 'x' : ' '}] ${x.it.text} ${itemKeyMd(x)}` + (x.stale ? ' (needs recheck: its evidence is stale)' : '');
     if (x.more) line += moreMd(x);
     else if (x.choices) {
       const rec = x.it.recommend && choiceLabel(x, x.it.recommend);
@@ -3454,17 +3538,18 @@ function checklistMd(c, indent = '') {
     }
     const quoted = x.note ? '\n' + x.note.trim().split('\n').map(l => `${indent}  > ${l}`).join('\n') : '';
     const ev = x.choices ? [] : evList(x.it);
-    return line + quoted + (ev.length ? '\n' + evidenceMd(ev, indent) : '') + sub.map(n => '\n' + checklistMd(n, indent + '  ').trimEnd()).join('');
+    return line + quoted + (ev.length ? '\n' + evidenceMd(ev, indent, `item:${x.cid}/${x.it.id}`) : '') + sub.map(n => '\n' + checklistMd(n, indent + '  ').trimEnd()).join('');
   });
   if (indent) return lines.join('\n') + '\n';
-  const n = c.items.filter(x => x.cb.checked).length;
+  const n = c.items.filter(passing).length;
   return `## ${c.b.title || c.b.id} (${n}/${c.items.length})\n` + lines.join('\n') + '\n';
 }
 // decision lists first: what needs the agent's attention, then the progress lists in page order
 function allChecklistsMd() {
   const msg = store.get(MSG_KEY) || '', top = CHECKLISTS.filter(c => !c.parent);
   return `# ${DOC.title} — progress ${new Date().toISOString().slice(0, 10)}\n\n` + (msg.trim() ? `${msg.trim()}\n\n` : '')
-    + [...top.filter(c => c.kind === 'decisions'), ...top.filter(c => c.kind !== 'decisions')].map(c => checklistMd(c)).join('\n');
+    + [...top.filter(c => c.kind === 'decisions'), ...top.filter(c => c.kind !== 'decisions')].map(c => checklistMd(c)).join('\n')
+    + (staleOwners().length ? '\n' + staleEvidenceMd() : '');
 }
 
 /* ---------- replies: comments and answers back to the agent ---------- */
@@ -3680,7 +3765,7 @@ function updateOverall() {
   paintAsk();
   if (!CHECKLISTS.length) return;
   let n = 0, t = 0;
-  for (const c of CHECKLISTS) { const xs = c.items.filter(x => !x.choices); t += xs.length; n += xs.filter(x => x.cb.checked).length; }
+  for (const c of CHECKLISTS) { const xs = c.items.filter(x => !x.choices); t += xs.length; n += xs.filter(passing).length; }
   overall.hidden = !t;
   overallTxt.textContent = `${n}/${t}`;
   overallBar.firstChild.style.width = (t ? n / t * 100 : 0) + '%';
@@ -3729,7 +3814,7 @@ if (CHECKLISTS.length) {
     const go = e => { const v = fviewOf(c.root); if (v && v.view === 'merged') { e.preventDefault(); v.mv.scrollIntoView({ behavior: REDUCE ? 'auto' : 'smooth', block: 'start' }); } else revealFindings(c.root); };
     const row = h('a', { class: 'bp-prog-row', href: '#cl-' + c.b.id, onclick: go }, h('span', { class: 't' }, h('span', {}, c.b.title || c.b.id), cnt), bar);
     c.sideRow = () => {
-      const n = c.items.filter(x => x.cb.checked).length;
+      const n = c.items.filter(passing).length;
       cnt.textContent = c.kind === 'decisions' ? (n < c.items.length ? `${c.items.length - n} open` : 'answered') : `${n}/${c.items.length}`;
       bar.firstChild.style.width = (c.items.length ? n / c.items.length * 100 : 0) + '%';
       bar.classList.toggle('full', c.items.length > 0 && n === c.items.length);
@@ -6936,15 +7021,18 @@ function renderListing(lb) {
   // the locale menu (selectMenu): each locale, with its MT and missing counts as the option's hint
   const locSel = selectMenu({ label: 'Locale', cls: 'bd-lst-loc', title: 'Locale: text, captions and captures switch with it', value: L.locale,
     options: LOCS.map(l => ({ value: l, label: l, hint: locLabel(l).slice(l.length + 3) || null })), onPick: v => setLocale(v) });
-  /* Export to… (served pages only): GET /__bluedoc/listing at the revision shown. ZIP: the fastlane folders, every shot
-     and asset at its store size (serve.py listing_zip); PDF: the listing for review (listing_pdf; without Chrome, its
-     print view in a tab); HTML: one file with both platform pages. The server's X-Bluedoc-Warnings (a JSON list: a
-     font a PDF can't embed, store-rule errors still open) show in a toast after the download; L.lastExport keeps them.
-     While one runs the key is its progress (.bd-lstx): a ZIP or PDF goes with a random &job= id, and GET
+  /* Export to… (served pages only): GET /__bluedoc/listing at the revision shown. ZIP (fastlane): the fastlane folders,
+     every shot and asset at its store size (serve.py listing_zip); ZIP (folders): the same files in plain folders by
+     store, language and device, with a README (format folders); PDF: the listing for review (listing_pdf; without
+     Chrome, its print view in a tab); HTML: one file with both platform pages. The server's X-Bluedoc-Warnings (a JSON
+     list: a font a PDF can't embed, store-rule errors still open) show in a toast after the download; L.lastExport
+     keeps them. While one runs the key is its progress (.bd-lstx): a ZIP or PDF goes with a random &job= id, and GET
      /__bluedoc/listing/progress every 450 ms gives its stage and files done of total (L.exporting). A click on the key,
      its ×, or Esc on it cancels: the fetch is aborted and DELETE …/progress stops the render. The menu stays shut
      until the export ends, so a second one waits. */
-  const LST_EXPORTS = [['zip', 'download', 'ZIP for fastlane', 'Every shot and asset at store size'], ['pdf', 'doc', 'PDF', 'Both pages for review'], ['html', 'fcode', 'HTML', 'One file that works offline']];
+  const LST_EXPORTS = [['zip', 'download', 'ZIP (fastlane)', 'fastlane supply and deliver layout'], ['folders', 'folder', 'ZIP (folders)', 'Plain folders by store, language and device'],
+    ['pdf', 'doc', 'PDF', 'Both pages for review'], ['html', 'fcode', 'HTML', 'One file that works offline']];
+  const xpName = format => format === 'folders' ? 'ZIP' : format.toUpperCase();   // what the key and toasts call it
   const listingUrl = (format, job) => { const q = new URLSearchParams({ path: location.pathname, format }); if (OLD) q.set('rev', VIEW.rev); if (job) q.set('job', job); return '/__bluedoc/listing?' + q; };
   function printListing() {
     const w = window.open('about:blank', '_blank');
@@ -6952,7 +7040,7 @@ function renderListing(lb) {
     w.opener = null; w.location.href = listingUrl('print') + '#print';
     toast('No Chrome here for a PDF: choose Save as PDF in the print dialog', { label: 'Print again', run: printListing });
   }
-  const expMenu = SERVED && exportMenu(LST_EXPORTS, exportListing, 'Export the listing: a ZIP for fastlane, a PDF or an HTML file', false);
+  const expMenu = SERVED && exportMenu(LST_EXPORTS, exportListing, 'Export the listing: a ZIP for fastlane or in plain folders, a PDF or an HTML file', false);
   const xp = expMenu && (() => {
     const btn = expMenu.querySelector('.bd-expb'), title = btn.title;
     const lead = h('span', { class: 'xp xp-lead', 'aria-hidden': 'true' }), label = h('span', { class: 'xp xp-l', 'aria-live': 'polite' });
@@ -6967,7 +7055,7 @@ function renderListing(lb) {
     }, true);
     let run = null, endT = 0;
     function paint() {
-      const r = run, F = r ? r.format.toUpperCase() : '';
+      const r = run, F = r ? xpName(r.format) : '';
       expMenu.classList.toggle('busy', !!r && !r.end); expMenu.classList.toggle('ok', r?.end === 'ok'); expMenu.classList.toggle('err', r?.end === 'err');
       if (!r) { btn.title = title; btn.removeAttribute('aria-label'); L.exporting = null; fitLtb(); return; }
       const known = r.total != null && r.total > 0 && !r.end;
@@ -7002,7 +7090,7 @@ function renderListing(lb) {
   async function exportListing(format) {
     if (!xp) return;
     const now = xp.busy();
-    if (now) return toast(`Still making the ${now.toUpperCase()}: cancel it on the Export key first`);
+    if (now) return toast(`Still making the ${xpName(now)}: cancel it on the Export key first`);
     const job = format === 'html' ? null : [...crypto.getRandomValues(new Uint8Array(12))].map(b => b.toString(16).padStart(2, '0')).join('');
     const run = xp.start(format, job);
     let poll = 0;
@@ -7020,10 +7108,10 @@ function renderListing(lb) {
       let warns = [];
       try { const w = JSON.parse(r.headers.get('X-Bluedoc-Warnings') || '[]'); if (Array.isArray(w)) warns = w.filter(x => typeof x === 'string'); } catch { /* none */ }
       const name = (/filename\*=UTF-8''([^;]+)/.exec(r.headers.get('Content-Disposition') || '') || [])[1];
-      await saveBlob(r, name ? decodeURIComponent(name) : `listing.${format}`);
+      await saveBlob(r, name ? decodeURIComponent(name) : `listing.${format === 'folders' ? 'zip' : format}`);
       L.lastExport = { format, warnings: warns };
       xp.finish('ok');
-      toast(warns.length ? `Exported with ${warns.length} warning${warns.length === 1 ? '' : 's'}: ${warns[0]}${warns.length > 1 ? ` (+${warns.length - 1} more)` : ''}` : `Exported the ${format.toUpperCase()}`);
+      toast(warns.length ? `Exported with ${warns.length} warning${warns.length === 1 ? '' : 's'}: ${warns[0]}${warns.length > 1 ? ` (+${warns.length - 1} more)` : ''}` : `Exported the ${xpName(format)}`);
     } catch {
       if (run.cancelled) { xp.finish(null); toast('Export cancelled'); return; }
       xp.finish('err'); toast('Couldn\'t export the listing: the server didn\'t answer');
@@ -9248,7 +9336,8 @@ const revWord = CUR.rev ? ` (rev ${CUR.rev})` : '';
 function approvePayload(note) {
   note = String(note || '').trim();
   const at = new Date().toISOString(), dec = [decisionsMd(), BOARD && BOARD.decisionLines ? BOARD.decisionLines(true) : ''].filter(Boolean).join('\n'), { annotations, notes } = MARKUP.approvalNotes();
-  const markdown = [`# ${AP_TITLE} approved: ${DOC.title || docId}${revWord}, ${at.slice(0, 10)}`, note, dec && '## Decisions\n\n' + dec, notes && '## Notes with the approval\n\n' + notes].filter(Boolean).join('\n\n') + '\n';
+  const stale = staleEvidenceMd().trimEnd();
+  const markdown = [`# ${AP_TITLE} approved: ${DOC.title || docId}${revWord}, ${at.slice(0, 10)}`, note, dec && '## Decisions\n\n' + dec, notes && '## Notes with the approval\n\n' + notes, stale].filter(Boolean).join('\n\n') + '\n';
   // docHash: the JSON this page rendered; the server refuses the approval (409) when the file differs now
   return { kind: 'approval', decision: 'approved', doc: docId, rev: CUR.rev, docHash: store.docHash, title: DOC.title || '', path: location.pathname, at, note, answers: answerItems(), annotations, markdown };
 }
@@ -9309,6 +9398,7 @@ function openApprove() {
       sum.replaceChildren(...[
         pend && line('msg', '', pend === 1 ? '1 pending comment goes with it as a note' : `${pend} pending comments go with it as notes`),
         open && line('alert', 'warn', `${open} open question${open === 1 ? ' has' : 's have'} no pick; the agent will use its recommendation`),
+        staleOwners().length && line('alert', 'warn', `${staleOwners().length} check${staleOwners().length === 1 ? ' has' : 's have'} stale evidence: the code changed since ${staleOwners().length === 1 ? 'it' : 'they'} ran. The approval asks the agent to re-run ${staleOwners().length === 1 ? 'it' : 'them'}`),
         ls.mt && line('alert', 'warn', `${ls.mt} machine-translated string${ls.mt === 1 ? ' isn\'t' : 's aren\'t'} accepted yet`),
         ls.mock && line('alert', 'warn', `${ls.mock} shot${ls.mock === 1 ? ' shows' : 's show'} a mock-up UI, not a capture`),
         ls.variants && line('tick', '', `It covers ${ls.variants} variant${ls.variants === 1 ? '' : 's'} with ${ls.variants === 1 ? 'its' : 'their'} style picks: ${ls.variantIds.join(', ')}`),
@@ -9485,6 +9575,8 @@ const MARKUP = (() => {
     for (const p of parts2) { const md = p.md(dr.filter(a => a.type === 'listing' && a.listing && p.ops.includes(a.listing.op))); if (md) parts.push(md); }
     const dec = [BOARD && BOARD.decisionLines ? BOARD.decisionLines() : '', APPROVABLE ? decisionsMd() : decisionsMd(itemsPending())].filter(Boolean).join('\n');
     if (dec) parts.push('## Decisions\n\n' + dec);
+    const stale = staleEvidenceMd().trimEnd();
+    if (stale) parts.push(stale);
     return `# Change requests: ${DOC.title || docId}${CUR.rev ? ` (rev ${CUR.rev})` : ''}, ${new Date().toISOString().slice(0, 10)}\n\n` + parts.join('\n\n') + '\n';
   }
   // `message` repeats the general comments for agents that read only it. A plan's or design's decision picks
@@ -11468,7 +11560,10 @@ window.BP = {
   zoomTo: (canvasId, nodeKey) => focusNode(`${canvasId}/${nodeKey}`),
   fit: canvasId => CANVASES[canvasId] && CANVASES[canvasId].fit(false),
   state: canvasId => { const cv = CANVASES[canvasId]; return cv && { k: cv.k, focus: cv.focusPath.map(n => n._key), revealed: cv.sysNodes.filter(n => n._reveal > 0.5).map(n => n._key), flow: cv.focusPlayer && cv.focusPlayer.flow && cv.focusPlayer.flow.id, step: cv.focusPlayer && cv.focusPlayer.si, tokens: [...cv.svg.querySelectorAll('.bp-tok')].filter(t => t.style.display !== 'none').length }; },
-  progress: () => CHECKLISTS.map(c => ({ id: c.b.id, done: c.items.filter(x => x.cb.checked).length, total: c.items.length })),
+  progress: () => CHECKLISTS.map(c => ({ id: c.b.id, done: c.items.filter(passing).length, total: c.items.length })),
+  // evidence pins: {live: whether the server (or --check-code) compared them with the repo, stale: the patch keys of
+  // the checks whose evidence is stale, markdown: their ## Stale evidence section}
+  evidence: () => ({ live: !!PINS, stale: staleOwners().map(o => o.key), markdown: staleEvidenceMd() }),
   progressMarkdown: allChecklistsMd,
   replyPayload,
   approvePayload: note => approvePayload(note),

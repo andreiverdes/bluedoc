@@ -37,6 +37,7 @@ You write one `*.bluedoc.json`; the local server renders it as a page (blueprint
 - **Revise** per target: `build.py patch <doc> <key> --set field=value --change "what changed and why"` (`--json`, `--append`, `--delete` for more). It validates, bumps `meta.rev`, replaces `changes`, records history and prints the `?diff=` link to send. Several patches for one reply: bump on the first, `--no-bump` on the rest. Once you have sent the reader a rev's URL, never edit it in place. Hand edits: bump `meta.rev` and rewrite `changes` (1–4 lines) yourself, then run `build.py <doc>`: only the build records the revision.
 - **Resolve**: pass each addressed comment's id (after its key) with `--resolves ID`; hand edits set `resolves`. Never list one you didn't do.
 - Record the reader's picks as `choice` and finished, verified work as done (steps `status: "done"`, checklist items `done: true`), with optional `evidence`: what you ran and saw, a screenshot, a link to a log or review. Send the `?diff=` link, then `wait` again.
+- **Evidence is pinned**: record it with `build.py patch` right after the check runs, so it carries the commit (and uncommitted changes) it checked; `--paths` names what the check covers. After changing code a check covers, re-run it and re-record with `build.py patch <doc> <key> --pin`. Stale evidence (code changed since) shows on the page, doesn't count as done, and comes back under `## Stale evidence` with those commands.
 - Commit `<name>.bluedoc.history.json` with the JSON.
 
 ## Writing

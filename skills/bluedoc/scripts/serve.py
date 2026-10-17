@@ -75,13 +75,15 @@ URLs: /                      home page: every doc under the registered folders, 
                              B's) exported, a read, no key, nothing written beside the doc; 400 for any other doc type.
                              zip (the default): the fastlane layout of every shot and asset at its store size and
                              manifest.json (listing_zip: up to 6 headless Chromes side by side, each distinct render
-                             once), the attachment <stem>.zip; platform and locale narrow it. html: one file with both
-                             platform pages, offline (listing_html, assets/listing.html). pdf: its print view
-                             (listing_pdf). print: that file in the tab, as a deck's. zip and pdf: 501 without Chrome.
-                             X-Bluedoc-Warnings: a JSON list of what the export should say (a font the PDF can't
-                             embed, store-rule errors). job J (8-64 of A-Z a-z 0-9 - _, the page's random id): a zip
-                             or pdf export the progress route follows; 409 while a J runs. Closing the connection
-                             stops the render. build.py --listing writes the same files
+                             once), the attachment <stem>.zip; platform and locale narrow it. folders: the same files
+                             in plain folders under <stem>/ (<store>/<locale>/text/, <device>/NN-<shot>.png, ads/,
+                             variants/) with README.txt and manifest.json, the attachment <stem>-folders.zip.
+                             html: one file with both platform pages, offline (listing_html, assets/listing.html).
+                             pdf: its print view (listing_pdf). print: that file in the tab, as a deck's. zip, folders
+                             and pdf: 501 without Chrome. X-Bluedoc-Warnings: a JSON list of what the export should say
+                             (a font the PDF can't embed, store-rule errors). job J (8-64 of A-Z a-z 0-9 - _, the
+                             page's random id): a zip, folders or pdf export the progress route follows; 409 while a J
+                             runs. Closing the connection stops the render. build.py --listing writes the same files
       /__bluedoc/listing/progress?job=J   that export's {job, format, stage: plan|render|zip|done|error|cancelled,
                              done, total (files; null for a pdf), file?, error?}, kept 10 minutes after its last
                              change, else 404; a read, no key. DELETE (the X-Bluedoc header) or POST &cancel=1 (the
@@ -245,9 +247,9 @@ def skill_version() -> str:
 
 
 def code_hash() -> str:
-    """Changes whenever the code a server renders with does: serve.py, statedb.py, build.py and the template."""
+    """Changes whenever the code a server renders with does: serve.py, statedb.py, build.py, codepin.py and the template."""
     h = hashlib.sha256()
-    for f in (Path(__file__).resolve(), HERE / "statedb.py", HERE / "build.py", build.TEMPLATE):
+    for f in (Path(__file__).resolve(), HERE / "statedb.py", HERE / "build.py", HERE / "codepin.py", build.TEMPLATE):
         h.update(f.read_bytes())
     return h.hexdigest()[:12]
 
@@ -899,7 +901,18 @@ def _render(p: Path) -> tuple[int, str]:
     return 200, build.build(doc, build.TEMPLATE.read_text(encoding="utf-8"), history, diff_path=p, problems=[],
                             state=state and {**state, "docHash": shown, "approval": saved_approval(p)},
                             live=LIVE.for_doc(doc),
-                            snaps=build.snapshot_index(p) if build.doc_type(doc.get("meta") or {}) == "website" else None)
+                            snaps=build.snapshot_index(p) if build.doc_type(doc.get("meta") or {}) == "website" else None,
+                            pins=evidence_pins(doc, p))
+
+
+def evidence_pins(doc: dict, p: Path) -> dict | None:
+    """How each pinned evidence entry compares with its repo now (codepin.evaluate, cached per repo state), for the
+    page's chips, counts and readbacks; None when nothing is pinned or git fails, so the page shows the pins alone."""
+    try:
+        return build.codepin.evaluate(doc, p)
+    except Exception as e:   # noqa: BLE001 — a repo the page can't read must never stop the page
+        print(f"WARN  evidence pins of {p.name}: {type(e).__name__}: {e}", file=sys.stderr)
+        return None
 
 
 # ---------- design screens ----------
@@ -1466,12 +1479,21 @@ def deck_pdf(html: str, chrome: str) -> bytes:
 
 # ---------- a storelisting exported (GET /__bluedoc/listing, build.py --listing) ----------
 # zip: the fastlane layout (listing.export_plan) of every shot and asset at its store size, rendered by headless Chrome
-# from its screen file, each PNG made 24-bit RGB and read back before it goes in, with manifest.json. html: one file
-# with both platform pages, offline (assets/listing.html). pdf: that file's print view, printed as a deck's is.
+# from its screen file, each PNG made 24-bit RGB and read back before it goes in, with manifest.json. folders: the same
+# files at plain paths (listing.folder_path) under <stem>/, with README.txt. html: one file with both platform pages,
+# offline (assets/listing.html). pdf: that file's print view, printed as a deck's is.
 
 LISTING_PLAYER = HERE.parent / "assets" / "listing.html"
-LISTING_FORMATS = ("zip", "pdf", "html", "print")
+LISTING_FORMATS = ("zip", "folders", "pdf", "html", "print")
+LISTING_ZIPS = ("zip", "folders")   # the ZIP formats: zip is the fastlane layout, folders the plain one
 LISTING_NEEDS = "a listing's ZIP or PDF needs Chrome or Chromium: set BLUEDOC_CHROME to its path"
+
+
+def listing_filename(doc_path: Path, fmt: str, platform: str | None = None, locale: str | None = None) -> str:
+    """A listing export's attachment name: <stem>[-<platform>][-<locale>].<zip|pdf|html> (print: .html); folders:
+    <stem>[-<platform>][-<locale>]-folders.zip."""
+    part = [x for x in (platform, locale) if x] + (["folders"] if fmt == "folders" else [])
+    return "-".join([build.doc_stem(doc_path), *part]) + {"print": ".html", "folders": ".zip"}.get(fmt, f".{fmt}")
 
 
 class ListingError(ValueError):
@@ -1712,10 +1734,13 @@ def listing_sources(doc: dict, doc_path: Path, plan: list[dict], pages: dict[str
 
 
 def listing_zip(doc: dict, doc_path: Path, out: Path, chrome: str, *, rev: str | None = None, platform: str | None = None,
-                locale: str | None = None, roots: list[Path] | None = None, job: ExportJob | None = None) -> dict:
-    """Write the fastlane ZIP of the listing (revision rev's) to out, one file at a time in plan order, and return its
-    manifest (manifest.json in the ZIP: every file's path, kind, platform, locale, set or asset, shot, size, sha256 and
-    bytes, the MT strings, the fonts, the store-rule errors). Each shot and asset is its screen file in headless Chrome
+                locale: str | None = None, roots: list[Path] | None = None, job: ExportJob | None = None,
+                layout: str = "fastlane") -> dict:
+    """Write the listing's ZIP (revision rev's) to out, one file at a time in plan order, and return its manifest
+    (manifest.json in the ZIP: every file's path, kind, platform, locale, set or asset, shot, size, sha256 and bytes,
+    the MT strings, the fonts, the store-rule errors). layout fastlane: the plan's paths (listing.export_plan);
+    folders: each at listing.folder_path under one <stem>/ folder, with README.txt (listing.folders_readme) and the
+    manifest in it. Each shot and asset is its screen file in headless Chrome
     at its set's frame (CSS px) × scale, its UI the capture the page shows; an upload is its PNG; the Play icon is the
     icons artboard's exported play/icon-512.png, else its layers drawn at 512 px. The renders run in up to
     LISTING_WORKERS Chromes at once (ShotPool), each distinct one once (listing_sources). job: its progress, and its
@@ -1728,6 +1753,10 @@ def listing_zip(doc: dict, doc_path: Path, out: Path, chrome: str, *, rev: str |
         plan = listing.export_plan(doc, doc_path, rules, platform, locale, caps=caps)
     except ValueError as e:
         raise ListingError(str(e)) from None
+    folders = layout == "folders"
+    top = f"{build.doc_stem(doc_path)}/" if folders else ""
+    if folders:   # the same files and renders, at plain paths
+        plan = [{**e, "path": top + listing.folder_path(e, rules)} for e in plan]
     pages = listing_pages(doc, doc_path, rev, roots)
     sources, renders = listing_sources(doc, doc_path, plan, pages, rules)
     sets = listing.by_id(rules, "sets")
@@ -1786,16 +1815,21 @@ def listing_zip(doc: dict, doc_path: Path, out: Path, chrome: str, *, rev: str |
         job.update(stage="zip")
         manifest = {"doc": doc_path.name, "title": str(doc.get("title") or ""), "rev": str((doc.get("meta") or {}).get("rev") or ""),
                     "exported": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"), "bluedoc": VERSION,
-                    "layout": "fastlane: metadata/android (supply), metadata and screenshots (deliver)", "rules": rules["accessed"],
+                    "layout": "folders: <stem>/<store>/<locale>/ (text/, store images, a folder per device), ads/, variants/" if folders
+                    else "fastlane: metadata/android (supply), metadata and screenshots (deliver)", "rules": rules["accessed"],
                     "platforms": sorted({f["platform"] for f in files}), "locales": sorted({f["locale"] for f in files}),
                     "mt": {k: v for k, v in (lb.get("mt") or {}).items() if not locale or k == locale},
                     "fonts": listing.export_fonts(lb, rules),
                     "errors": [f"{x['where']}: {x['msg']}" for x in listing.store_checks(doc, doc_path, rules) if x["level"] == "err"],
                     "notes": ["The App Store icon ships in the binary: it isn't in the ZIP.",
                               "A field a locale lacks isn't in its folder: the store shows the default locale's.",
-                              "variants/<platform>-<kind>-<id>/ holds only what a variant changes: the rest is the default page's."],
+                              ("variants/<platform>-<kind>-<id>/<locale>/" if folders else "variants/<platform>-<kind>-<id>/")
+                              + " holds only what a variant changes: the rest is the default page's."],
                     "files": files}
-        z.writestr(zipfile.ZipInfo("manifest.json", stamp), json.dumps(manifest, ensure_ascii=False, indent=1),
+        if folders:
+            z.writestr(zipfile.ZipInfo(f"{top}README.txt", stamp), listing.folders_readme(
+                doc, [{**f, "path": f["path"][len(top):]} for f in files], rules, manifest["notes"]), compress_type=zipfile.ZIP_DEFLATED)
+        z.writestr(zipfile.ZipInfo(f"{top}manifest.json", stamp), json.dumps(manifest, ensure_ascii=False, indent=1),
                    compress_type=zipfile.ZIP_DEFLATED)
     return manifest
 
@@ -3314,11 +3348,11 @@ def make_handler(port: int, default_to: str):
             return self.send(200, body, ctype, headers={"Content-Disposition": f"attachment; filename=\"{plain}\"; filename*=UTF-8''{quote(name)}"})
 
         def listing_export(self, q: dict) -> None:
-            """GET /__bluedoc/listing?path=<doc URL path>[&format=zip|html|pdf|print][&rev=R][&platform=P][&locale=L]
-            [&job=ID]: the storelisting exported, as the attachment <stem>[-<platform>][-<locale>].<format>; print: the
-            HTML file shown in the tab (the PDF without Chrome). A read, no key; the ZIP is made in a temp file and
-            streamed. A ZIP or PDF runs as an ExportJob, under ID in EXPORT_JOBS when given (GET
-            /__bluedoc/listing/progress follows it); the reader closing the connection stops it, as a cancel does."""
+            """GET /__bluedoc/listing?path=<doc URL path>[&format=zip|folders|html|pdf|print][&rev=R][&platform=P][&locale=L]
+            [&job=ID]: the storelisting exported, as the attachment listing_filename names (zip: fastlane, folders: plain
+            folders, listing_zip); print: the HTML file shown in the tab (the PDF without Chrome). A read, no key; a ZIP
+            is made in a temp file and streamed. A ZIP or PDF runs as an ExportJob, under ID in EXPORT_JOBS when given
+            (GET /__bluedoc/listing/progress follows it); the reader closing the connection stops it, as a cancel does."""
             fmt = q.get("format") or "zip"
             if fmt not in LISTING_FORMATS:
                 return self.json(400, {"error": f"format: one of {', '.join(LISTING_FORMATS)}"})
@@ -3334,13 +3368,13 @@ def make_handler(port: int, default_to: str):
                 listing_doc(doc, doc_path, q.get("rev") or None)   # the type and the revision, before Chrome
             except (OSError, ValueError) as e:   # ListingError is a ValueError
                 return self.json(400, {"error": str(e)})
-            chrome = find_chrome() if fmt in ("zip", "pdf") else None
-            if fmt in ("zip", "pdf") and not chrome:
+            zips = fmt in LISTING_ZIPS
+            chrome = find_chrome() if zips or fmt == "pdf" else None
+            if (zips or fmt == "pdf") and not chrome:
                 return self.json(501, {"error": LISTING_NEEDS})
-            if fmt != "zip" and (q.get("platform") or q.get("locale")):
+            if not zips and (q.get("platform") or q.get("locale")):
                 return self.json(400, {"error": "platform and locale narrow the ZIP only"})
-            part = [x for x in (q.get("platform"), q.get("locale")) if x]
-            name = "-".join([build.doc_stem(doc_path), *part]) + f".{'html' if fmt == 'print' else fmt}"
+            name = listing_filename(doc_path, fmt, q.get("platform"), q.get("locale"))
             plain = re.sub(r'[^A-Za-z0-9._ -]', "_", name)
             headers = {"Content-Disposition": f"attachment; filename=\"{plain}\"; filename*=UTF-8''{quote(name)}",
                        "X-Bluedoc-Warnings": json.dumps(listing_warnings(doc, "pdf" if fmt == "print" else fmt))}
@@ -3360,13 +3394,14 @@ def make_handler(port: int, default_to: str):
             try:
                 with tempfile.TemporaryDirectory(prefix="bluedoc-listing-zip-") as d:
                     out = Path(d) / name
-                    if fmt == "zip":
+                    if zips:
                         listing_zip(doc, doc_path, out, chrome, rev=q.get("rev") or None, platform=q.get("platform") or None,
-                                    locale=q.get("locale") or None, roots=load_roots(), job=job)
+                                    locale=q.get("locale") or None, roots=load_roots(), job=job,
+                                    layout="folders" if fmt == "folders" else "fastlane")
                     else:
                         out.write_bytes(listing_pdf(listing_html(doc, doc_path, q.get("rev") or None, load_roots()), chrome, job))
                     self.send_response(200)
-                    for k, v in {"Content-Type": "application/zip" if fmt == "zip" else "application/pdf",
+                    for k, v in {"Content-Type": "application/zip" if zips else "application/pdf",
                                  "Content-Length": str(out.stat().st_size), "Cache-Control": "no-store",
                                  "X-Content-Type-Options": "nosniff", **headers}.items():
                         self.send_header(k, v)
@@ -3388,7 +3423,7 @@ def make_handler(port: int, default_to: str):
                 if job.cancelled.is_set():   # Chrome killed under it
                     job.update(stage="cancelled")
                 else:
-                    job.update(stage="error", error=f"Chrome couldn't {'render' if fmt == 'zip' else 'print'} the listing: {e}")
+                    job.update(stage="error", error=f"Chrome couldn't {'render' if zips else 'print'} the listing: {e}")
                 try:
                     self.json(500, {"error": job.error or "the export was cancelled"})
                 except OSError:

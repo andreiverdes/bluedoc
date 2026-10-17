@@ -1518,7 +1518,7 @@ def style_page_data(hooks: dict[str, list[str]]) -> dict:
 # set, locales and source key; one from a rule marked `unverified` only warns. build.Report.finding keeps them apart
 # from the doc's own errors, so serve.py still draws a listing whose only errors are these, and its Checks tab lists
 # them. l10n_*: `build.py l10n`. export_plan and png_rgb24: the fastlane ZIP of `build.py --listing` and
-# GET /__bluedoc/listing (serve.py renders the PNGs).
+# GET /__bluedoc/listing (serve.py renders the PNGs); folder_path and folders_readme: the same files as plain folders.
 
 EMOJI = re.compile("[\U0001F000-\U0001FAFF\u2600-\u27BF]")
 CAPS = re.compile(r"\b[A-Z]{4,}\b")   # a shouted word; acronyms of up to 3 letters pass
@@ -2399,6 +2399,76 @@ def export_plan(doc: dict, doc_path: Path | None, rules: dict | None = None, pla
                         for s in sections(lb, arts, rules, p, loc, v)]
                 shot_entries(p, loc, mine, {"variant": v["id"]}, vst, prefix)
     return out
+
+
+# ---------- export: plain folders ----------
+# The fastlane ZIP's files (export_plan, the same renders) at paths a person reads, under one <stem>/ folder:
+# <store>/<locale>/text/<field>.txt, the store's images by name (icon.png, feature-graphic.png), <device>/NN-<shot>.png
+# per set in store order; ads/<network>/<locale>/; variants/<platform>-<kind>-<id>/<locale>/ with only what each changes.
+# Store, device and field names are their store-rules labels slugged, a size last ('7" tablet': tablet-7in).
+
+def folder_slug(label: str) -> str:
+    """A label as a folder or file name: 'iPhone 6.9"' -> iphone-6.9in, '7" tablet' -> tablet-7in, "What's New" ->
+    whats-new."""
+    s = re.sub(r"[^a-z0-9.]+", "-", re.sub("['\u2019]", "", label.lower().replace('"', "in"))).strip("-.")
+    m = re.fullmatch(r"(\d+(?:\.\d+)?in)-(.+)", s)
+    return f"{m[2]}-{m[1]}" if m else s
+
+
+def folder_path(e: dict, rules: dict) -> str:
+    """Where export_plan's entry e goes in the folders ZIP, relative to its <stem>/ folder (see above)."""
+    loc, p = e["locale"], e["platform"]
+    if e["path"].startswith("ads/"):
+        net, name = e["path"].split("/")[1], e["path"].rsplit("/", 1)[1]
+        return f"ads/{net}/{loc}/text/{name}" if e["kind"] == "text" else f"ads/{net}/{loc}/{name}"
+    variant = re.match(r"variants/[^/]+", e["path"])
+    base = f"{variant[0]}/{loc}" if variant else f"{folder_slug(by_id(rules, 'platforms')[p]['label'])}/{loc}"
+    if e["kind"] == "text":
+        return f"{base}/text/" + ("video-url" if e["field"] == "video" else folder_slug(text_rules(rules, p)[e["field"]]["label"])) + ".txt"
+    if "set" in e:
+        return f"{base}/{folder_slug(by_id(rules, 'sets')[e['set']]['label'])}/{e['i'] + 1:02d}-{e['shot']}.png"
+    a = by_id(rules, "assets")[e["asset"]]
+    if a.get("fastlane"):   # Play's own image slots: icon, featureGraphic, tvBanner -> icon, feature-graphic, tv-banner
+        return f"{base}/" + re.sub(r"(?<=[a-z0-9])([A-Z])", r"-\1", a["fastlane"]).lower() + ".png"
+    return f"{base}/{folder_slug(a['label'])}-{e['shot']}.png"
+
+
+def folders_readme(doc: dict, files: list[dict], rules: dict, notes: list[str]) -> str:
+    """README.txt of the folders ZIP: the listing, then each folder and file kind (its locale as <locale>, its shots as
+    NN-<shot>.png) with the store field or slot it fills and its limit or size, stores first, then ads and variants (one
+    line each), then the notes."""
+    lb = listing_of(doc) or {}
+    plats, sets, assets = by_id(rules, "platforms"), by_id(rules, "sets"), by_id(rules, "assets")
+    variants = {f"variants/{v['platform']}-{vr['kind']}-{v['id']}": (v, vr) for v in variants_of(lb) if (vr := variant_rule(rules, v))}
+    rows: dict[str, str] = {}
+    for f in files:
+        parts = f["path"].split("/")
+        store = next((a["label"] for a in rules.get("ads") or [] if a["platform"] == f["platform"]), "Ads") if parts[0] == "ads" \
+            else plats[f["platform"]]["label"]
+        if parts[0] == "variants":
+            v, vr = variants.get("/".join(parts[:2]), ({}, {}))
+            rows.setdefault("/".join(parts[:2]) + "/<locale>/", f"{store}: {vr.get('label', 'variant')} “{v.get('id', parts[1])}”, only "
+                            "what it changes (text, device folders); the rest is the default page's")
+            continue
+        parts[2 if parts[0] == "ads" else 1] = "<locale>"
+        if f["kind"] == "text":
+            r = text_rules(rules, f["platform"]).get(f["field"]) or {}
+            what = "Promo video, its YouTube URL" if f["field"] == "video" else \
+                f"{r.get('label', f['field'])}, up to {r.get('limit')} {r.get('unit', 'chars')}" + (" each, one per line" if r.get("items") else "")
+        elif "set" in f:
+            parts[-1] = "NN-<shot>.png"
+            what = f"{sets[f['set']]['label']} screenshots, {f['w']} × {f['h']} px, in store order"
+        else:
+            what = f"{assets[f['asset']]['label']}, {f['w']} × {f['h']} px"
+        rows.setdefault("/".join(parts), f"{store}: {what}")
+    order = sorted(rows, key=lambda k: {"ads": 1, "variants": 2}.get(k.split("/")[0], 0))   # stable: plan order within each
+    width = max((len(k) for k in rows), default=0) + 2
+    meta = doc.get("meta") if isinstance(doc.get("meta"), dict) else {}
+    head = [str(doc.get("title") or "Store listing") + (f", rev {meta['rev']}" if meta.get("rev") else ""), "",
+            "The store listing in plain folders: by store, then language, then device. Each .txt is one store field as",
+            "written; each PNG a screenshot or graphic at its store size. manifest.json lists every file with its size and",
+            "SHA-256.", "", f"Locales: {', '.join(sorted({f['locale'] for f in files})) or 'none'}", "", "What goes where:", ""]
+    return "\n".join(head + [f"  {k.ljust(width)}{rows[k]}" for k in order] + ["", "Notes:", ""] + [f"  - {n}" for n in notes]) + "\n"
 
 
 def captures_at(doc: dict, doc_path: Path, screens: dict) -> dict:

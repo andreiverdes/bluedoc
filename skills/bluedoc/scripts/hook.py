@@ -11,6 +11,8 @@ which waits for the reader with `serve.py wait` as it does for any bluedoc doc:
   2. The page opens in the browser (once per plan text), and the gate denies ExitPlanMode with instructions: wait in
      the background, patch the doc on a change request, call ExitPlanMode again after the approval.
   3. When Claude calls ExitPlanMode again and the doc's current rev is approved, the gate allows it at once.
+Both the denial and the approval note end with `## Stale evidence` when checks' pinned evidence is stale (codepin.py):
+a warning that names the checks to re-run, never a block.
 The gate prints nothing, so Claude Code shows its own dialog, when BLUEDOC_PLAN_GATE=0, in CI, over SSH without a
 display, in bypassPermissions mode, and on any error (logged to $BLUEDOC_HOME/hooks/hook.log).
 
@@ -182,6 +184,9 @@ def claude_plan(event: dict) -> int:
             session_file(session_id).unlink(missing_ok=True)
             note = (f"\n\n---\nApproved in bluedoc, rev {rev}: {rec['doc']}. Implement that rev of the doc, with the "
                     "reader's decisions and notes from the approval.")
+            stale = stale_evidence(Path(rec["doc"]))
+            if stale:   # a warning, not a block: the approval stands, and the checks run again
+                note += "\n\n" + stale
             log(f"plan approved: {rec['doc']} rev {rev}")
             return emit({"hookSpecificOutput": {"hookEventName": "PermissionRequest", "decision": {
                 "behavior": "allow", "updatedInput": {**tool_input, "plan": text + note}}}})
@@ -206,8 +211,19 @@ def claude_plan(event: dict) -> int:
     url = run("serve.py", *args).stdout.strip().splitlines()[-1]
     save_session(session_id, {"doc": str(doc), "sha": sha, "url": url})
     log(f"plan gate: {'reminded' if opened else 'opened'} {doc}")
+    stale = stale_evidence(doc)
     return emit({"hookSpecificOutput": {"hookEventName": "PermissionRequest", "decision": {
-        "behavior": "deny", "message": instructions(doc, url)}}})
+        "behavior": "deny", "message": instructions(doc, url) + ("\n\n" + stale if stale else "")}}})
+
+
+def stale_evidence(doc: Path) -> str:
+    """The doc's `## Stale evidence` (codepin.stale_md): checks whose pinned evidence the code has moved past, with the
+    commands that re-record them; '' when there are none or the doc can't be read."""
+    import codepin
+    try:
+        return codepin.stale_md(codepin.evaluate(json.loads(doc.read_text(encoding="utf-8")), doc), shlex.quote(str(doc))).rstrip()
+    except (OSError, ValueError, codepin.GitMissing):
+        return ""
 
 
 def _plan_file(text: str) -> str:

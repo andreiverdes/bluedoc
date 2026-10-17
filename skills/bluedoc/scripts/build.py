@@ -12,6 +12,10 @@ Usage:
   build.py doc.json --check         validate and lint only; writes nothing (no history, no diff cache)
   build.py doc.json --strict        treat lint warnings as errors
   build.py doc.json --show-rev B    print revision B, rebuilt from the history, as JSON
+  build.py doc.json --check-code [--repo DIR]
+                                    also compare each pinned evidence entry with its repo now (codepin.py: current,
+                                    moved, stale, unknown) and list the stale ones; with -o the page shows it. Without
+                                    it an -o page shows each pin's commit only (the goldens have no repo state)
   build.py new TYPE out.bluedoc.json [--title T] [--kind K] [--shape pr|area] [--target T,…] [--framework F]
                                     [--icons] [--url URL]
                                     write the fill-in skeleton of a docs|review|plan|design|presentation|website|
@@ -20,7 +24,7 @@ Usage:
                                     adds an app icon with stub layers; presentation: a deck of three stub slides;
                                     website: a home page, live from --url (a loopback dev server) or a stub file)
   build.py patch doc.json KEY [--set f=v ...] [--json OBJ] [--append OBJ] [--delete] [--html FILE|-]
-                              [--change LINE ...] [--no-bump]
+                              [--change LINE ...] [--no-bump] [--pin] [--repo DIR] [--paths PATH ...]
                                     change one object by its annotator key, bump meta.rev, validate, record
   build.py from-md PLAN.md out.bluedoc.json [--org O] [--project DIR] [--change LINE ...]
                                     import a Markdown plan as a plan doc (mdplan.py) and build it; an existing out
@@ -91,6 +95,10 @@ patch keys: doc, meta, header, tldr, status, section:<sec>, heading:<sec>, lead:
   v1->v2) and meta.date becomes today unless --no-bump; on a bump `changes` becomes the --change lines
   (default: "Updated `KEY`.") and `resolves` the --resolves ids (none: removed), with --no-bump both are
   appended.
+  Evidence a patch adds or changes is pinned to the code revision it checked (codepin.py): `pin` {repo, commit,
+  dirty, tree?, paths?, at} from the doc's git repo (else the current folder's; --repo DIR picks one), or
+  {commit: null, reason, at} without one. --paths narrows what it covers (paths or globs from the repo root).
+  --pin on a step: or item: key re-pins its evidence after its checks ran again.
 
 Exit codes: 0 ok, 1 validation errors (or warnings with --strict), 2 usage/IO error.
 Python 3.9+ standard library only.
@@ -118,6 +126,7 @@ HERE = Path(__file__).resolve().parent
 if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
 import listing   # noqa: E402 — the storelisting rules and checks (scripts/listing.py)
+import codepin   # noqa: E402 — evidence pinned to a code revision, and its staleness (scripts/codepin.py)
 
 TEMPLATE = HERE.parent / "assets" / "template.html"
 SKELETONS = HERE.parent / "assets" / "skeletons"
@@ -339,7 +348,7 @@ SCOPE_SHAPE = {"nodes": [{"id": str, "label": str, "kind": str, "state": str, "x
                           "col": NUMBER, "row": NUMBER, "w": NUMBER, "h": NUMBER, "children": SCOPE}],
                "edges": [{"id": str, "from": str, "to": str, "kind": str, "label": str}],
                "flows": [{"steps": [{"edge": str, "edges": [str]}]}]}
-EVIDENCE_SHAPE = [{"label": str, "md": str, "code": str, "lang": str, "src": str, "href": str}]
+EVIDENCE_SHAPE = [{"label": str, "md": str, "code": str, "lang": str, "src": str, "href": str, "pin": dict}]
 ITEM_SHAPE = {"id": str, "text": str, "sub": str, "recommend": str, "choice": str, "refs": [str], "blocks": [BLOCK],
               "choices": [{"id": str, "label": str}], "evidence": EVIDENCE_SHAPE}
 BLOCK_SHAPES = {
@@ -589,13 +598,44 @@ def checklist_kind(b: dict) -> str:
 EVIDENCE_BODY = ("md", "code", "src", "href")
 
 
+def check_pin(rep: Report, where: str, pin) -> None:
+    """An evidence entry's `pin`, the code revision it checked (codepin.py, which `build.py patch` stamps it with):
+    {repo, commit: full sha, dirty, tree when dirty, paths?, at}, or {commit: null, reason, at} when there was none."""
+    if not isinstance(pin, dict):
+        rep.err(where, "{repo, commit, dirty, tree?, paths?, at} or {commit: null, reason, at}: build.py patch stamps it")
+        return
+    at = pin.get("at")
+    if not isinstance(at, str) or not re.match(r"\d{4}-\d\d-\d\dT\d\d:\d\d", at):
+        rep.err(where + ".at", "when the evidence was recorded, as an ISO time (2026-10-17T09:30:00Z)")
+    commit = pin.get("commit")
+    if commit is None:
+        if not isinstance(pin.get("reason"), str) or not pin["reason"].strip():
+            rep.err(where + ".reason", "an unpinned record says why there is no commit (no git, not in a repository)")
+        return
+    if not isinstance(commit, str) or not codepin.SHA_RE.match(commit):
+        rep.err(where + ".commit", f"{json.dumps(commit)}: a full commit sha (40 hex characters), or null")
+    repo = pin.get("repo")
+    if not isinstance(repo, str) or not repo.strip():
+        rep.err(where + ".repo", "the repo root relative to the doc's folder, or its folder name")
+    elif repo.startswith(("/", "~")) or re.match(r"[A-Za-z]:[\\/]", repo):
+        rep.err(where + ".repo", f"'{repo}' is absolute: use the path relative to the doc's folder, or the repo's folder name")
+    if not isinstance(pin.get("dirty"), bool):
+        rep.err(where + ".dirty", "true when the covered files had uncommitted changes, else false")
+    elif pin["dirty"] and not (isinstance(pin.get("tree"), str) and codepin.TREE_RE.match(pin["tree"])):
+        rep.err(where + ".tree", "a dirty pin fingerprints its changes: a sha256 (64 hex characters)")
+    paths = pin.get("paths")
+    if paths is not None and not (isinstance(paths, list) and paths and all(isinstance(p, str) and p.strip() for p in paths)):
+        rep.err(where + ".paths", "a non-empty list of paths or globs from the repo root")
+
+
 def check_evidence(rep: Report, where: str, ev, base: Path | None) -> None:
     """A step's or progress item's `evidence`: entries of a label and at least one of md, code (lang), src (a media
-    file beside the doc, embedded) or href (a relative path or http(s) URL, linked). Optional; never hashed."""
+    file beside the doc, embedded) or href (a relative path or http(s) URL, linked), and optionally the code revision
+    it checked (pin). Optional; never hashed."""
     if ev is None:
         return
     if not isinstance(ev, list):
-        rep.err(where, "list of {label, md?, code?, lang?, src?, href?}: what shows the work landed")
+        rep.err(where, "list of {label, md?, code?, lang?, src?, href?, pin?}: what shows the work landed")
         return
     for i, e in enumerate(ev):
         ew = f"{where}[{i}]"
@@ -608,6 +648,8 @@ def check_evidence(rep: Report, where: str, ev, base: Path | None) -> None:
             rep.err(ew + ".lang", "'lang' names the language of 'code'; this entry has no code")
         if e.get("src") is not None:
             check_media_src(rep, ew + ".src", e["src"], base)
+        if e.get("pin") is not None:
+            check_pin(rep, ew + ".pin", e["pin"])
         href = e.get("href")
         if href is None:
             continue
@@ -2625,7 +2667,7 @@ BOARD_GEO_SLOT = "/*__BOARD_GEO__*/"
 def build(doc: dict, template: str, history: dict | None = None, media_base: Path | None = None,
           diff_path: Path | None = None, problems: list[str] | None = None, state: dict | None = None,
           screens: dict[str, str] | None = None, live: dict[str, int] | None = None,
-          snaps: dict[str, dict[str, dict[str, int]]] | None = None) -> str:
+          snaps: dict[str, dict[str, dict[str, int]]] | None = None, pins: dict | None = None) -> str:
     """The page. media_base (the doc's folder) makes it standalone: media files become data: URIs.
     diff_path (the doc's JSON file) fills its diff refs, in the doc and in earlier revisions, and gives the current
     revision its links from the screen files; their problems go into problems, or to stderr when it is None. state is
@@ -2635,7 +2677,8 @@ def build(doc: dict, template: str, history: dict | None = None, media_base: Pat
     serve.py's) is where a website page frames its live pages; None shows them as a placeholder. snaps (serve.py's
     snapshot_index) lists the live pages' snapshots, which earlier revisions show; None: none. A page with a board
     or a canvas (in any revision it carries) gets assets/board-geo.js, the connector router, at the template's
-    BOARD_GEO_SLOT; other pages get nothing there."""
+    BOARD_GEO_SLOT; other pages get nothing there. pins (codepin.evaluate: serve.py's, or -o with --check-code) is how
+    each pinned evidence entry compares with its repo now; None (an -o file, the goldens) shows the pins without it."""
     title = (doc.get("title") or "bluedoc").replace("&", "&amp;").replace("<", "&lt;")
     if "__BLUEDOC_DOC__" not in template:
         raise SystemExit("template is missing the __BLUEDOC_DOC__ placeholder")
@@ -2674,7 +2717,8 @@ def build(doc: dict, template: str, history: dict | None = None, media_base: Pat
             "__BLUEDOC_SCREENS__": _script_json(screens) if screens is not None else "null",
             "__BLUEDOC_LIVE__": _script_json(live) if live is not None else "null",
             "__BLUEDOC_SNAPS__": _script_json(snaps) if snaps is not None else "null",
-            "__BLUEDOC_LISTING__": _script_json(lst) if lst is not None else "null", BOARD_GEO_SLOT: geo}
+            "__BLUEDOC_LISTING__": _script_json(lst) if lst is not None else "null",
+            "__BLUEDOC_PINS__": _script_json(pins) if pins is not None else "null", BOARD_GEO_SLOT: geo}
     return re.sub("|".join(map(re.escape, fill)), lambda m: fill[m.group(0)], template)
 
 
@@ -3622,6 +3666,45 @@ def apply_patch(t: Target, sets: list[str], merge: str | None, append: str | Non
         t.obj.setdefault(field, []).append(_value(append))
 
 
+def code_check_lines(pins: dict) -> list[str]:
+    """`--check-code`'s report: one line per pinned evidence entry (its state and why), then the stale ones' summary
+    with the commands that re-record them (codepin.stale_md)."""
+    out, stale = [], codepin.stale_owners(pins)
+    for o in pins["owners"].values():
+        for r in o["ev"]:
+            if r:
+                more = f": {', '.join(r['files'])}" if r["state"] == "stale" and r.get("files") else ""
+                out.append(f"{'WARN  ' if r['state'] == 'stale' else 'code  '}{o['key']} '{r['label']}' {r['state']}: {r['reason']}{more}")
+    n = len(stale)
+    out.append(f"{n} check{' has' if n == 1 else 's have'} stale evidence" if n else
+               "no stale evidence" if out else "no pinned evidence")
+    if n:
+        out.append(codepin.stale_md(pins).rstrip())
+    return out
+
+
+def pin_evidence(before: dict, doc: dict, target: dict | None, doc_path: Path, *, repo: Path | None = None,
+                 paths: list[str] | None = None) -> list[dict]:
+    """Stamp with the code revision now (codepin.stamp) each evidence entry this patch adds or changes that has no
+    `pin`, and with target (a step or item, --pin) every entry of its own. paths narrows what they cover; without it,
+    a re-pinned entry keeps its own. Returns the pins written."""
+    seen = {json.dumps(e, sort_keys=True) for _, _, _, ev in codepin._evidence_owners(before) for e in ev or []}
+    todo = [e for _, _, _, ev in codepin._evidence_owners(doc) if isinstance(ev, list) for e in ev
+            if isinstance(e, dict) and "pin" not in e and json.dumps(e, sort_keys=True) not in seen]
+    if target is not None:
+        todo += [e for e in target.get("evidence") or [] if isinstance(e, dict) and all(e is not x for x in todo)]
+    at, stamps, out = codepin.now_iso(), {}, []
+    for e in todo:
+        old = e.get("pin") if isinstance(e.get("pin"), dict) else {}
+        cover = paths or (old.get("paths") if isinstance(old.get("paths"), list) else None)
+        k = json.dumps(cover)
+        if k not in stamps:
+            stamps[k] = codepin.stamp(doc_path, repo=repo, paths=cover, at=at)
+        e["pin"] = dict(stamps[k])
+        out.append(e["pin"])
+    return out
+
+
 def next_rev(rev: str) -> str:
     """A -> B, Z -> AA, 3 -> 4, v1 -> v2, 09 -> 10; no rev yet -> A."""
     if not rev:
@@ -3658,9 +3741,15 @@ def cmd_patch(argv: list[str]) -> int:
     ap.add_argument("--resolves", action="append", default=[], metavar="ID",
                     help="a reader comment this revision addresses, by the id the reply shows (repeat for more)")
     ap.add_argument("--no-bump", action="store_true", help="keep meta.rev: update the current revision in place")
+    ap.add_argument("--pin", action="store_true", help="step: and item: keys: re-record every evidence entry's code "
+                    "revision (after re-running its check); evidence a patch adds is pinned without it")
+    ap.add_argument("--repo", type=Path, metavar="DIR", help="pin evidence to DIR's git repo (default: the doc's, else "
+                    "the current folder's)")
+    ap.add_argument("--paths", nargs="+", metavar="PATH", help="what the evidence covers: paths or globs from the repo "
+                    "root (default: the whole repo; --pin keeps each entry's own)")
     a = ap.parse_args(argv)
-    ops = bool(a.set or a.json is not None or a.append is not None or a.delete or a.html is not None)
-    if a.delete and (a.set or a.json is not None or a.append is not None or a.html is not None):
+    ops = bool(a.set or a.json is not None or a.append is not None or a.delete or a.html is not None or a.pin)
+    if a.delete and (a.set or a.json is not None or a.append is not None or a.html is not None or a.pin):
         ap.error("--delete goes alone")
     try:
         raw = a.doc.read_text(encoding="utf-8")
@@ -3764,6 +3853,9 @@ def cmd_patch(argv: list[str]) -> int:
             print(f"cannot read {a.html}: {e}", file=sys.stderr)
             return 2
     screen_text = None   # a link: or el: key's new screen text
+    pinned: list[dict] = []   # the evidence pins this patch writes
+    if (a.pin or a.repo or a.paths) and t.kind in ("link", "element", "layout"):
+        ap.error("--pin, --repo and --paths go with a key that records evidence (step:, item:, or one holding them)")
     try:
         if t.kind in ("link", "element") and (a.set or a.delete):
             old_text = _read_text(a.doc.parent / screen_rel(a.doc, t.obj))
@@ -3779,6 +3871,11 @@ def cmd_patch(argv: list[str]) -> int:
             set_positions(t.obj, _value(a.json))
         elif t.kind not in ("link", "element"):
             apply_patch(t, a.set, a.json, a.append, a.delete)
+            if a.pin and t.kind not in ("step", "item"):
+                raise PatchError("--pin re-pins a step's or item's evidence: use a step: or item: key")
+            pinned = pin_evidence(before, doc, t.obj if a.pin else None, a.doc, repo=a.repo, paths=a.paths)
+            if (a.repo or a.paths or a.pin) and not pinned:
+                raise PatchError("nothing to pin: this patch records no evidence" + ("" if a.pin else " (re-pin a step's or item's with --pin)"))
             if t.kind == "field":   # a reader's text replaces the string as human-written: no MT mark
                 loc, group, field = a.key.partition(":")[2].split("/", 2)
                 listing.mark_human(listing.listing_of(doc), loc, f"{group}.{field}")
@@ -3796,7 +3893,8 @@ def cmd_patch(argv: list[str]) -> int:
             doc["resolves"] = list(dict.fromkeys(list(doc.get("resolves") or []) + resolves))
     else:
         meta.update(rev=rev1, date=dt.date.today().isoformat())
-        doc["changes"] = a.change or [f"Updated `{a.key}`."]
+        doc["changes"] = a.change or [f"Re-recorded the evidence of `{a.key}`." if a.pin and not (a.set or a.json or a.append)
+                                      else f"Updated `{a.key}`."]
         if resolves:
             doc["resolves"] = list(dict.fromkeys(resolves))
         else:
@@ -3861,6 +3959,12 @@ def cmd_patch(argv: list[str]) -> int:
                   f"the current rev: serve.py snapshot {shlex.quote(str(a.doc))} (sending feedback from the page records "
                   f"the pages it shows)", file=sys.stderr)
     print(f"rev {rev0 or '-'} → {rev1}; {a.key} {'deleted' if a.delete else 'added' if t.kind == 'frame' else 'updated'}")
+    if pinned:
+        p, n = pinned[0], len(pinned)
+        what = f"{n} evidence entr{'y' if n == 1 else 'ies'}"
+        where = "the doc's repo" if p.get("repo", "").startswith(".") else f"repo {p.get('repo')}"
+        print(f"pinned {what} to {where} at {p['commit'][:7]}" + (" + uncommitted changes" if p.get("dirty") else "")
+              if p.get("commit") else f"{what} unpinned: {p.get('reason')}")
     if screen:
         print(f"screen: {screen}" + (f"  {t.selector}" if t.selector else "")
               + ("  (a stub: write the requested screen there)" if t.kind == "frame" and written else ""))
@@ -3930,9 +4034,12 @@ def main(argv: list[str] | None = None) -> int:
                     "plays its slides offline (Export to… HTML) or, as OUT.pdf, a PDF of one 16:9 page per slide (Export "
                     "to… PDF; needs Chrome or Chromium, BLUEDOC_CHROME)")
     ap.add_argument("--listing", type=Path, metavar="OUT", help="storelisting only: also write the listing as OUT.zip, the "
-                    "fastlane layout of every shot and asset at its store size with manifest.json, OUT.pdf, the listing "
-                    "for review, or OUT.html, one file with both platform pages (zip and pdf need Chrome, BLUEDOC_CHROME)")
-    ap.add_argument("--format", choices=("html", "pdf", "zip"), help="--deck's or --listing's format (default: OUT's extension)")
+                    "fastlane layout of every shot and asset at its store size with manifest.json (--format folders: "
+                    "the same files in plain folders by store, locale and device, with README.txt), OUT.pdf, the "
+                    "listing for review, or OUT.html, one file with both platform pages (zip and pdf need Chrome, "
+                    "BLUEDOC_CHROME)")
+    ap.add_argument("--format", choices=("html", "pdf", "zip", "folders"),
+                    help="--deck's or --listing's format (default: OUT's extension); folders: --listing's plain ZIP")
     ap.add_argument("--platform", help="--listing's ZIP: one platform only (play, appstore)")
     ap.add_argument("--locale", help="--listing's ZIP: one locale only")
     ap.add_argument("--check", action="store_true", help="validate and lint only; write nothing (history, diff cache)")
@@ -3940,6 +4047,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--template", type=Path, default=TEMPLATE)
     ap.add_argument("--no-history", action="store_true", help="don't read or write <doc>.history.json")
     ap.add_argument("--show-rev", metavar="REV", help="print that revision from the history as JSON and exit")
+    ap.add_argument("--check-code", action="store_true", help="compare each pinned evidence entry with its repo now "
+                    "(current, moved, stale, unknown), list the stale ones, and show it in -o's page")
+    ap.add_argument("--repo", type=Path, metavar="DIR", help="--check-code: compare every pin with DIR's repo")
     a = ap.parse_args(argv)
     hpath = history_path(a.doc)
     if a.show_rev is not None:
@@ -3972,12 +4082,13 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     suffix = (a.deck or a.listing or Path()).suffix.lower()
     fmt = a.format or ("pdf" if suffix == ".pdf" else "html" if suffix in (".html", ".htm") or a.deck else "zip")
-    if a.deck and fmt == "zip":
+    if a.deck and fmt in ("zip", "folders"):
         ap.error("--deck writes html or pdf")
-    if a.listing and fmt != "zip" and (a.platform or a.locale):
+    zips = fmt in ("zip", "folders")
+    if a.listing and not zips and (a.platform or a.locale):
         ap.error("--platform and --locale narrow the ZIP only")
-    chrome = _serve().find_chrome() if fmt in ("pdf", "zip") and (a.deck or a.listing) else None
-    if (a.deck or a.listing) and fmt in ("pdf", "zip") and not chrome:
+    chrome = _serve().find_chrome() if (fmt == "pdf" or zips) and (a.deck or a.listing) else None
+    if (a.deck or a.listing) and (fmt == "pdf" or zips) and not chrome:
         print(f"--{'deck' if a.deck else 'listing'}: {_serve().DECK_PDF_NEEDS if a.deck else _serve().LISTING_NEEDS}", file=sys.stderr)
         return 1
     rep = validate(doc, a.doc, write_cache=not a.check)
@@ -3987,6 +4098,13 @@ def main(argv: list[str] | None = None) -> int:
     # a storelisting's store-rule errors fail the build (exit 1) but leave it recordable and exportable for review
     if rep.blocking or (a.strict and rep.warnings) or (rep.errors and a.check):
         return 1
+    if a.repo and not a.check_code:
+        ap.error("--repo goes with --check-code")
+    pins = None
+    if a.check_code:
+        pins = codepin.evaluate(doc, a.doc, repo=a.repo) or {"file": a.doc.name, "owners": {}}
+        for line in code_check_lines(pins):
+            print(line, file=sys.stderr)
     if a.check:
         return 0
     history = None
@@ -4002,7 +4120,7 @@ def main(argv: list[str] | None = None) -> int:
     if a.out:
         a.out.parent.mkdir(parents=True, exist_ok=True)
         page = build(doc, a.template.read_text(encoding="utf-8"), history, a.doc.resolve().parent, a.doc,
-                     screens=standalone_screens(doc, a.doc))
+                     screens=standalone_screens(doc, a.doc), pins=pins)
         a.out.write_text(page, encoding="utf-8")
         size = a.out.stat().st_size
         print(f"wrote {a.out} ({size // 1024} KB)", file=sys.stderr)
@@ -4032,15 +4150,16 @@ def main(argv: list[str] | None = None) -> int:
         serve = _serve()
         a.listing.parent.mkdir(parents=True, exist_ok=True)
         try:
-            if fmt == "zip":
+            if zips:
                 tmp = a.listing.with_name(a.listing.name + ".part")
                 try:
-                    m = serve.listing_zip(doc, a.doc, tmp, chrome, platform=a.platform, locale=a.locale)
+                    m = serve.listing_zip(doc, a.doc, tmp, chrome, platform=a.platform, locale=a.locale,
+                                          layout="folders" if fmt == "folders" else "fastlane")
                     os.replace(tmp, a.listing)
                 finally:
                     tmp.unlink(missing_ok=True)
                 pngs = [f for f in m["files"] if f["path"].endswith(".png")]
-                what = f"{len(pngs)} PNGs, {len(m['files']) - len(pngs)} text files, manifest.json"
+                what = f"{len(pngs)} PNGs, {len(m['files']) - len(pngs)} text files, {'README.txt, ' if fmt == 'folders' else ''}manifest.json"
             else:
                 html = serve.listing_html(doc, a.doc)
                 if fmt == "pdf":

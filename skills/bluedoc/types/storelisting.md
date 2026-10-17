@@ -50,5 +50,5 @@ A pin on a capture comes with the shot's capture, recipe and a `Re-shoot:` comma
 
 - **Checks:** `build.py <doc>` runs every store rule (`grep -n -A20 '^### Checks' <skill>/references/schema.md`). A store-rule error exits 1 but the page still draws; fix each one, or say why it stays.
 - **Translation:** `build.py l10n <doc> --export es-ES` prints what to translate with each limit; translate within it, then `--import es-ES <file.json> --mt`. An over-limit string refuses the file: shorten it. Run the `## Accepted MT` command from a reply as given.
-- **Export:** `build.py <doc> --listing out.zip` writes the fastlane folders (`--listing out.pdf` or `.html` for review). The reader uploads it with fastlane; never upload for them. Mention the `WARN --listing` lines.
+- **Export:** `build.py <doc> --listing out.zip` writes the fastlane folders; add `--format folders` for plain folders by store, language and device with a README (`--listing out.pdf` or `.html` for review). The reader uploads it with fastlane or by hand; never upload for them. Mention the `WARN --listing` lines.
 - **Approval:** an approved listing is final at that rev: export it and hand over the ZIP. The reader can approve with unaccepted MT strings; say so.

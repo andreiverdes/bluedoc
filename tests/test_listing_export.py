@@ -1,14 +1,16 @@
 """A storelisting checked, translated and exported (M4): the broken fixture fails each store rule once; `build.py
 l10n` exports, imports (refusing an over-limit string) and accepts; the fastlane layout; the ZIP's PNGs against its
 manifest.json; GET /__bluedoc/listing's guards; the export's progress (ExportJobs, the progress route), its renders
-deduplicated, and a cancel that stops it; setKids. The browser tests (BLUEDOC_BROWSER_TESTS=1): the Checks tab lists
-the build's findings; Accept MT is a draft whose readback runs; Export to… downloads a ZIP with its progress on the
-key, and its × cancels it; Approve listing waits for an upload or brand draft."""
+deduplicated, and a cancel that stops it; the plain folders ZIP as the fastlane ZIP's files at plain paths; setKids.
+The browser tests (BLUEDOC_BROWSER_TESTS=1): the Checks tab lists the build's findings; Accept MT is a draft whose
+readback runs; Export to… downloads a ZIP (fastlane, or folders) with its progress on the key, and its × cancels it;
+Approve listing waits for an upload or brand draft."""
 from __future__ import annotations
 
 import hashlib
 import io
 import json
+import re
 import shlex
 import shutil
 import subprocess
@@ -17,6 +19,7 @@ import time
 import unittest
 import zipfile
 import zlib
+from pathlib import Path
 
 from _support import REPO, Server, TempHome, load_json, template_slice
 from test_page_state import CHROME, ChromePage, until
@@ -229,16 +232,17 @@ class Route(unittest.TestCase):
                 self.assertEqual(self.get(**q)[0], 400)
         self.assertEqual(self.get(path="/nowhere/x.bluedoc.json", format="html")[0], 404)
 
-    def test_zip_and_pdf_need_chrome(self) -> None:
-        for fmt in ("zip", "pdf"):
+    def test_zips_and_pdf_need_chrome(self) -> None:
+        for fmt in ("zip", "folders", "pdf"):
             self.assertEqual(self.get(path=self.url, format=fmt)[0], 501)
+        self.assertEqual(self.get(path=self.url, format="folders", platform="play", locale="en-US")[0], 501, "a ZIP takes the filters")
 
     def test_html_is_one_file_and_nothing_is_written(self) -> None:
         before = tree(self.docs, self.tmp.home)
         status, body = self.get(path=self.url, format="html")
         self.assertEqual(status, 200)
         self.assertIn(b"<html", body[:2000].lower())
-        for fmt in ("zip", "pdf", "print"):
+        for fmt in ("zip", "folders", "pdf", "print"):
             self.get(path=self.url, format=fmt)
         after = tree(self.docs, self.tmp.home)
         self.assertEqual({k: v for k, v in after.items() if not k.endswith(("state.db", "state.db-wal", "state.db-shm", "server.log"))},
@@ -321,12 +325,25 @@ class FakeChrome:
             raise ConnectionError("DevTools closed the connection")
         W, H = w * scale, h * scale
         ihdr = (W).to_bytes(4, "big") + (H).to_bytes(4, "big") + bytes([8, 2, 0, 0, 0])
-        raw = (b"\0" + bytes([n % 256]) * 3 * W) * H
+        raw = (b"\0" + self.pixel(n, url, name) * W) * H
         chunk = lambda k, d: len(d).to_bytes(4, "big") + k + d + zlib.crc32(k + d).to_bytes(4, "big")  # noqa: E731
         return b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", ihdr) + chunk(b"IDAT", zlib.compress(raw, 1)) + chunk(b"IEND", b"")
 
+    def pixel(self, n: int, url: str, name: str | None) -> bytes:
+        return bytes([n % 256]) * 3
+
     def close(self) -> None:
         self.closed = True
+
+
+class SameChrome(FakeChrome):
+    """FakeChrome whose pixels are what it draws (the page's file and the shot's state), not the call's number: two
+    exports of one listing carry the same bytes, whatever order their renders run in."""
+
+    def pixel(self, n: int, url: str, name: str | None) -> bytes:
+        from urllib.request import url2pathname
+        page = Path(url2pathname(url.removeprefix("file://"))).read_bytes()
+        return hashlib.sha256(page + (name or "").encode("utf-8")).digest()[:3]
 
 
 class ZipRenders(unittest.TestCase):
@@ -390,6 +407,62 @@ class ZipRenders(unittest.TestCase):
         self.assertEqual(got.get("r"), "cancelled")
         self.assertLess(len(FakeChrome.calls), 100, "the queued renders never ran")
         self.assertTrue(all(c.proc.dead.is_set() and c.closed for c in FakeChrome.started), "every Chrome killed and closed")
+
+    def test_the_folders_layout_is_the_fastlane_zip_at_plain_paths(self) -> None:
+        serve.HeadlessChrome = SameChrome
+        fast, plain = self.tmp.dir / "fastlane.zip", self.tmp.dir / "folders.zip"
+        a = serve.listing_zip(self.doc, self.path, fast, "fake", locale="en-US")
+        b = serve.listing_zip(self.doc, self.path, plain, "fake", locale="en-US", layout="folders")
+        top = f"{STEM}/"
+        paths = [f["path"] for f in b["files"]]
+        # every fastlane file has exactly one counterpart, at its folder_path, with its bytes
+        self.assertEqual(len(a["files"]), len(b["files"]))
+        self.assertEqual(len(set(paths)), len(paths), "one counterpart each")
+        rules = listing.load_rules()
+        for f, g in zip(a["files"], b["files"]):
+            self.assertEqual(g["path"], top + listing.folder_path(f, rules), f["path"])
+            self.assertEqual((g["sha256"], g["bytes"]), (f["sha256"], f["bytes"]), f"{f['path']} -> {g['path']}")
+            self.assertEqual({k: v for k, v in g.items() if k != "path"}, {k: v for k, v in f.items() if k != "path"})
+        # the scheme: <stem>/<store>/<locale>/{text/<field>.txt, <image>.png, <device>/NN-<shot>.png}, ads/, variants/
+        scheme = re.compile(r"acme-fit-listing/(?:(?:google-play|app-store|variants/(?:play|appstore)-[a-z]+-[a-z0-9-]+)/en-US"
+                            r"/(?:text/[a-z0-9-]+\.txt|[a-z0-9-]+\.png|[a-z0-9.-]+/\d\d-[a-z0-9-]+\.png)"
+                            r"|ads/(?:google|apple)/en-US/(?:text/[a-z]+\.txt|[a-z0-9-]+\.png))")
+        self.assertEqual([p for p in paths if not scheme.fullmatch(p)], [])
+        for name in ("text/app-name.txt", "text/short-description.txt", "text/full-description.txt", "text/release-notes.txt",
+                     "text/video-url.txt", "icon.png", "feature-graphic.png", "phone/01-today.png", "tablet-7in/01-today.png",
+                     "tablet-10in/01-today.png", "wear-os/01-watch-rings.png"):
+            self.assertIn(f"{top}google-play/en-US/{name}", paths)
+        for name in ("text/name.txt", "text/subtitle.txt", "text/promotional-text.txt", "text/description.txt", "text/keywords.txt",
+                     "iphone-6.9in/01-today.png", "iphone-6.9in/10-profile.png", "ipad-13in/01-today.png", "apple-watch/01-watch-rings.png"):
+            self.assertIn(f"{top}app-store/en-US/{name}", paths)
+        self.assertIn(f"{top}ads/google/en-US/text/headlines.txt", paths)
+        self.assertIn(f"{top}variants/appstore-cpp-runners/en-US/iphone-6.9in/01-run-route.png", paths)
+        self.assertIn(f"{top}variants/play-sle-lifestyle-copy/en-US/text/short-description.txt", paths)
+        # the manifest lists the ZIP; README.txt maps it
+        with zipfile.ZipFile(plain) as z:
+            self.assertEqual(set(z.namelist()) - {f"{top}manifest.json", f"{top}README.txt"}, set(paths))
+            self.assertTrue(all(n.startswith(top) for n in z.namelist()))
+            man = json.loads(z.read(f"{top}manifest.json"))
+            self.assertEqual([f["path"] for f in man["files"]], paths)
+            self.assertTrue(man["layout"].startswith("folders"))
+            for f in man["files"]:
+                self.assertEqual(hashlib.sha256(z.read(f["path"])).hexdigest(), f["sha256"], f["path"])
+            readme = z.read(f"{top}README.txt").decode("utf-8")
+        for line in ("google-play/<locale>/text/app-name.txt", "App name, up to 30 chars", "app-store/<locale>/iphone-6.9in/NN-<shot>.png",
+                     'iPhone 6.9" screenshots, 1320 × 2868 px', "variants/appstore-cpp-runners/<locale>/", "Locales: en-US"):
+            self.assertIn(line, readme)
+        with zipfile.ZipFile(fast) as z:
+            self.assertEqual(set(z.namelist()) - {"manifest.json"}, {f["path"] for f in a["files"]}, "the fastlane ZIP as it was")
+
+    def test_a_narrowed_folders_zip_names_its_platform_and_locale(self) -> None:
+        man = serve.listing_zip(self.doc, self.path, self.tmp.dir / "x.zip", "fake", platform="appstore", locale="es-ES", layout="folders")
+        self.assertEqual((man["platforms"], man["locales"]), (["appstore"], ["es-ES"]))
+        self.assertTrue(all(f["path"].startswith((f"{STEM}/app-store/es-ES/", f"{STEM}/variants/appstore-", f"{STEM}/ads/apple/es-ES/"))
+                            for f in man["files"]))
+        self.assertEqual(serve.listing_filename(self.path, "folders", "appstore", "es-ES"), f"{STEM}-appstore-es-ES-folders.zip")
+        self.assertEqual(serve.listing_filename(self.path, "folders"), f"{STEM}-folders.zip")
+        self.assertEqual(serve.listing_filename(self.path, "zip", "play"), f"{STEM}-play.zip")
+        self.assertEqual(serve.listing_filename(self.path, "print"), f"{STEM}.html")
 
 
 @unittest.skipUnless(NODE, "node not installed")
@@ -479,10 +552,16 @@ class ListingPage(ChromePage):
              " if (l && __xp.labels.at(-1) !== l.textContent) __xp.labels.push(l.textContent);"
              " }).observe(k, {subtree: true, attributes: true, childList: true, characterData: true}))(document.querySelector('.bd-lst-btb .bd-lstx'))")
 
-    def pick_zip(self, t) -> None:
+    def pick_zip(self, t, fmt: str = "zip") -> None:
         t.ev("document.querySelector('.bd-lst-btb .bd-lstx .bd-expb').click()")
         t.wait_for("!document.querySelector('.bd-lst-btb .bd-lstx .bd-expm').hidden")
-        t.ev("__xp.t0 = performance.now(); document.querySelector('.bd-lst-btb .bd-expm [data-format=\"zip\"]').click()")
+        t.ev(f"__xp.t0 = performance.now(); document.querySelector('.bd-lst-btb .bd-expm [data-format=\"{fmt}\"]').click()")
+
+    def blob_zip(self, t) -> zipfile.ZipFile:
+        """The first download the page made (URL.createObjectURL's blob, __blobs), as a ZIP."""
+        import base64
+        b64 = t.ev("__blobs[0].arrayBuffer().then(b => { let s = ''; const u = new Uint8Array(b); for (let i = 0; i < u.length; i += 32768) s += String.fromCharCode(...u.subarray(i, i + 32768)); return btoa(s); })")
+        return zipfile.ZipFile(io.BytesIO(base64.b64decode(b64)))
 
     def test_export_to_downloads_a_zip(self) -> None:
         t = self.page(self.url)
@@ -497,9 +576,7 @@ class ListingPage(ChromePage):
         t.wait_for("__blobs.length > 0", 240)
         head = t.ev("__blobs[0].slice(0, 4).arrayBuffer().then(b => [...new Uint8Array(b)])")
         self.assertEqual(bytes(head), b"PK\x03\x04")
-        b64 = t.ev("__blobs[0].arrayBuffer().then(b => { let s = ''; const u = new Uint8Array(b); for (let i = 0; i < u.length; i += 32768) s += String.fromCharCode(...u.subarray(i, i + 32768)); return btoa(s); })")
-        import base64
-        with zipfile.ZipFile(io.BytesIO(base64.b64decode(b64))) as z:
+        with self.blob_zip(t) as z:
             self.assertIn("manifest.json", z.namelist())
             n = len(json.loads(z.read("manifest.json"))["files"])
         now = t.ev("__xp.now")
@@ -512,6 +589,39 @@ class ListingPage(ChromePage):
         self.assertIsNone(t.ev(f"{LST}.exporting"))
         t.wait_for("(k => !k.matches('.busy, .ok, .err') && getComputedStyle(k.querySelector('.bd-expb > span:not(.xp)')).display !== 'none')(document.querySelector('.bd-lst-btb .bd-lstx'))", 5)
         self.assertEqual(t.ev(f"{LST}.approveBlocks"), [])
+
+    def test_export_to_downloads_the_folders_zip(self) -> None:
+        t = self.page(self.url)
+        t.ev("window.__blobs = []; window.__names = []; (o => { URL.createObjectURL = b => { __blobs.push(b); return o.call(URL, b); }; })(URL.createObjectURL);"
+             "(c => { HTMLAnchorElement.prototype.click = function () { if (this.download) __names.push(this.download); return c.call(this); }; })(HTMLAnchorElement.prototype.click)")
+        t.ev(self.WATCH)
+        # the menu: both ZIPs, then PDF and HTML
+        t.ev("document.querySelector('.bd-lst-btb .bd-lstx .bd-expb').click()")
+        t.wait_for("!document.querySelector('.bd-lst-btb .bd-lstx .bd-expm').hidden")
+        self.assertEqual(t.ev("[...document.querySelectorAll('.bd-lst-btb .bd-expm [role=menuitem]')].map(b => [b.dataset.format, b.querySelector('b').textContent, b.querySelector('.t > span').textContent])"),
+                         [["zip", "ZIP (fastlane)", "fastlane supply and deliver layout"], ["folders", "ZIP (folders)", "Plain folders by store, language and device"],
+                          ["pdf", "PDF", "Both pages for review"], ["html", "HTML", "One file that works offline"]])
+        self.assertEqual(t.ev("[...document.querySelectorAll('.bd-lst-btb .bd-expm [role=menuitem] .t > span')].filter(s => s.getBoundingClientRect().right"
+                              " > s.closest('.bd-expm').getBoundingClientRect().right - 4).length"), 0, "each description fits the menu")
+        t.ev("document.querySelector('.bd-lst-btb .bd-lstx .bd-expb').click()")   # closes it
+        t.wait_for("document.querySelector('.bd-lst-btb .bd-lstx .bd-expm').hidden")
+        self.pick_zip(t, "folders")
+        t.wait_for("__xp.busyAt > 0", 2)
+        t.wait_for(f"{LST}.exporting && {LST}.exporting.format === 'folders'", 2)
+        self.assertIn("format=folders", t.ev("__xp.urls.find(u => u.startsWith('/__bluedoc/listing?'))"))
+        t.wait_for("__blobs.length > 0", 240)
+        with self.blob_zip(t) as z:
+            names = z.namelist()
+            n = len(json.loads(z.read(f"{STEM}/manifest.json"))["files"])
+        self.assertTrue(all(x.startswith(f"{STEM}/") for x in names), names[:5])
+        self.assertTrue(names[0].startswith(f"{STEM}/google-play/"), names[:5])
+        self.assertIn(f"{STEM}/README.txt", names)
+        now = t.ev("__xp.now")
+        self.assertGreaterEqual(len(now), 2, f"aria-valuenow rose while it ran: {now}")
+        self.assertTrue(any(l.startswith("ZIP ") and l.endswith(f"/{n}") for l in t.ev("__xp.labels")), t.ev("__xp.labels"))
+        t.wait_for("document.querySelector('.bd-lst-btb .bd-lstx').classList.contains('ok') || !document.querySelector('.bd-lst-btb .bd-lstx.busy')", 5)
+        self.assertIn("Exported", t.ev("__xp.labels"))
+        self.assertEqual(t.ev("__names"), [f"{STEM}-folders.zip"])
 
     def test_the_export_key_cancels_the_render(self) -> None:
         t = self.page(self.url)

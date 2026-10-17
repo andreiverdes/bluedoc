@@ -6,9 +6,10 @@
     "org": "Acme Corp",
     "kind": "Status",
     "type": "other",
-    "rev": "1",
-    "date": "2026-10-11"
+    "rev": "2",
+    "date": "2026-10-12"
   },
+  "changes": ["Renewed the PayCo client certificate, with its end date as evidence pinned to the acme-shop commit it checked."],
   "state": [
     { "label": "numbers from the orders dashboard", "kind": "info" },
     { "label": "1 incident, resolved", "kind": "ok" },
@@ -103,7 +104,16 @@
               "id": "payco",
               "text": "Renew the PayCo client certificate before 20 October",
               "sub": "It expires on 24 October; an expired certificate stops card payments.",
-              "verify": "`openssl x509 -enddate` on the new certificate shows 2027."
+              "verify": "`openssl x509 -enddate` on the new certificate shows 2027.",
+              "done": true,
+              "evidence": [
+                {
+                  "label": "New certificate",
+                  "code": "openssl x509 -enddate -noout -in payco-client.pem",
+                  "md": "`notAfter=Oct 24 09:00:00 2027 GMT`",
+                  "pin": { "repo": "acme-shop", "commit": "0a46a97f3dfbb4636547ea05323edb3c19b052bf", "dirty": false, "paths": ["src/payments"], "at": "2026-10-12T09:30:00Z" }
+                }
+              ]
             }
           ]
         }

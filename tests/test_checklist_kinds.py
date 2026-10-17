@@ -4,7 +4,9 @@ A checklist is a decision list (every item has choices) or a progress list (none
 error on a new revision and a warning on a doc that keeps no history, and a decision list after a progress list
 warns. Steps and progress items may carry `evidence` (label plus md, code, src or href); evidence on a decision item,
 an entry with nothing to show and a link with another scheme or an absolute path are errors, a dead local link a
-warning."""
+warning. An entry's `pin` (the code revision it checked, test_codepin) is a full sha with its repo, dirty flag (and
+tree when dirty) and time, or a null commit with a reason; anything else is an error, and evidence without one stays
+valid."""
 from __future__ import annotations
 
 import json
@@ -83,6 +85,33 @@ class ChecklistKinds(unittest.TestCase):
                      "evidence[2].href: '/etc/acme.log' is absolute",
                      "evidence[3].href: 'logs/acme.log' not found",
                      "evidence[4].src: 'media/acme-none.png' not found"):
+            self.assertIn(want, out)
+
+    def test_evidence_pins_are_checked(self) -> None:
+        ls = self.lists(self.plan)
+        sha = "0a46a97f3dfbb4636547ea05323edb3c19b052bf"
+        ls["plan"]["items"][0]["evidence"] = [
+            {"label": "Pinned", "md": "ok", "pin": {"repo": "../acme-shop", "commit": sha, "dirty": False, "paths": ["src/carts"], "at": "2026-10-17T09:30:00Z"}},
+            {"label": "Dirty", "md": "ok", "pin": {"repo": "acme-shop", "commit": sha, "dirty": True, "tree": "a" * 64, "at": "2026-10-17T09:30:00Z"}},
+            {"label": "Unpinned", "md": "ok", "pin": {"commit": None, "reason": "not in a git repository", "at": "2026-10-17T09:30:00Z"}},
+            {"label": "Old", "md": "ok"}]
+        code, out = self.build(self.plan)
+        self.assertEqual(code, 0, out)
+        self.assertIn("0 error(s), 0 warning(s)", out)
+        ls["checks"]["items"][0]["evidence"] = [
+            {"label": "Short", "md": "x", "pin": {"repo": ".", "commit": sha[:7], "dirty": False, "at": "2026-10-17T09:30:00Z"}},
+            {"label": "No tree", "md": "x", "pin": {"repo": ".", "commit": sha, "dirty": True, "at": "2026-10-17T09:30:00Z"}},
+            {"label": "Absolute", "md": "x", "pin": {"repo": "/srv/acme-shop", "commit": sha, "dirty": False, "at": "yesterday"}},
+            {"label": "No reason", "md": "x", "pin": {"commit": None, "at": "2026-10-17T09:30:00Z"}},
+            {"label": "Paths", "md": "x", "pin": {"repo": ".", "commit": sha, "dirty": False, "paths": [], "at": "2026-10-17T09:30:00Z"}}]
+        code, out = self.build(self.plan)
+        self.assertEqual(code, 1, out)
+        for want in ("evidence[0].pin.commit: \"0a46a97\": a full commit sha",
+                     "evidence[1].pin.tree: a dirty pin fingerprints its changes",
+                     "evidence[2].pin.at: when the evidence was recorded",
+                     "evidence[2].pin.repo: '/srv/acme-shop' is absolute",
+                     "evidence[3].pin.reason: an unpinned record says why",
+                     "evidence[4].pin.paths: a non-empty list"):
             self.assertIn(want, out)
 
 

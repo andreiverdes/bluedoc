@@ -13,6 +13,7 @@ A plan the agent writes before it writes code; you approve it or send it back on
 - **Item comments.** Each step and question takes a comment. An item comment counts toward **Request changes**, so a comment alone is enough to send the plan back.
 - **Comments on any part.** Point at an element, select a passage or draw on the page. Notes collect in the **Comments** tab as Pending, then Open once sent. When the agent lists a comment's id in a revision's `resolves`, the comment turns Resolved.
 - **Request changes or Approve plan.** Both send your picks and notes to the agent. The agent revises on a change request and starts coding only after **Approve plan** on the current revision; any edit to the plan beyond marking progress resets the approval.
+- **Evidence pinned to the code.** A finished step or check can carry evidence (the test it ran and its output), stamped with the commit it checked. When the code it covers changes, the page marks it **Needs recheck** with the changed files, stops counting it as done, and Approve warns; the agent re-runs it and re-records the evidence.
 - **Revisions.** The **Revisions** tab shows each revision with the agent's note on what changed. Compare two to see new, changed and removed steps, questions and rows marked in place.
 
 ## How an agent makes one
