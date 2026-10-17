@@ -174,6 +174,12 @@ class StateDB:
         rows = self._read(REPLY_SELECT + " WHERE r.id = ?", (reply_id,))
         return dict(zip(REPLY_KEYS, rows[0])) if rows else None
 
+    def newest(self, kind: str = "any") -> dict | None:
+        """The newest reply of any doc, of one kind or ('any') of every kind; None when there is none."""
+        sql, args = (REPLY_SELECT, ()) if kind == "any" else (REPLY_SELECT + " WHERE r.kind = ?", (kind,))
+        rows = self._read(sql + " ORDER BY r.id DESC LIMIT 1", args)
+        return dict(zip(REPLY_KEYS, rows[0])) if rows else None
+
     def latest(self, path: str) -> dict[str, dict]:
         """The doc's newest reply of each kind, by kind."""
         doc = self._find(path)

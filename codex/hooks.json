@@ -1,0 +1,12 @@
+{
+  "description": "bluedoc plan gate: Codex plans (Plan mode's <proposed_plan>) open as bluedoc plan pages (hook.py; BLUEDOC_PLAN_GATE=0 turns it off)",
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          { "type": "command", "command": "python3 \"${PLUGIN_ROOT}/skills/bluedoc/scripts/hook.py\" codex plan", "timeout": 120, "statusMessage": "bluedoc plan gate" }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "hooks": {
+    "BeforeTool": [
+      {
+        "matcher": "exit_plan_mode",
+        "hooks": [
+          { "type": "command", "name": "bluedoc-plan-gate", "command": "python3 \"${extensionPath}/skills/bluedoc/scripts/hook.py\" gemini plan", "timeout": 120000, "description": "bluedoc plan gate: the plan opens as a bluedoc plan page (BLUEDOC_PLAN_GATE=0 turns it off)" }
+        ]
+      }
+    ],
+    "AfterTool": [
+      {
+        "matcher": "exit_plan_mode",
+        "hooks": [
+          { "type": "command", "name": "bluedoc-plan-note", "command": "python3 \"${extensionPath}/skills/bluedoc/scripts/hook.py\" gemini note", "timeout": 10000, "description": "bluedoc plan gate: the reader's approval note" }
+        ]
+      }
+    ]
+  }
+}

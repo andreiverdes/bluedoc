@@ -1,0 +1,5 @@
+{
+  "name": "bluedoc",
+  "version": "1.0.0-beta19",
+  "description": "Engineering docs, plans and code reviews an agent writes as JSON and a local server renders: plan mode's plans open as bluedoc plan pages, and /bluedoc-* commands for every doc type."
+}

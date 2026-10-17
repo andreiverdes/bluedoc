@@ -4100,9 +4100,10 @@ def main() -> int:
     p.add_argument("doc", type=Path)
     p.add_argument("--kind", choices=(*KINDS, "any"), default="any")
     p.add_argument("--timeout", type=float, default=0, help="seconds; 0 waits forever. Exit 3 on timeout")
-    p = sub.add_parser("reply", help="print a stored reply: by the id `wait` printed, or DOC's newest")
-    p.add_argument("target", help="a reply id, or a doc's JSON file")
-    p.add_argument("--kind", choices=(*KINDS, "any"), default="any", help="with DOC: the newest reply of this kind")
+    p = sub.add_parser("reply", help="print a stored reply: by the id `wait` printed, DOC's newest, or (no target) "
+                       "the newest of any doc")
+    p.add_argument("target", nargs="?", default="", help="a reply id, or a doc's JSON file")
+    p.add_argument("--kind", choices=(*KINDS, "any"), default="any", help="with DOC or no target: the newest reply of this kind")
     p.add_argument("--json", action="store_true", help="print the JSON the page posted instead of the Markdown")
     for name in ("start", "run"):
         p = sub.add_parser(name)
@@ -4238,7 +4239,10 @@ def cmd_reply(target: str, kind: str, as_json: bool) -> int:
     except FileNotFoundError:
         print(f"no replies stored yet ({STATE_DB} doesn't exist)", file=sys.stderr)
         return 1
-    if target.isdigit():
+    if not target:
+        m = db.newest(kind)
+        missing = f"no {kind if kind != 'any' else 'reply'} stored"
+    elif target.isdigit():
         m = db.reply(int(target))
         missing = f"no reply {target}"
     else:

@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "hooks": {
+    "preToolUse": [
+      {
+        "type": "command",
+        "matcher": "exit_plan_mode",
+        "bash": "python3 \"${PLUGIN_ROOT}/skills/bluedoc/scripts/hook.py\" copilot plan",
+        "timeoutSec": 120
+      }
+    ]
+  }
+}

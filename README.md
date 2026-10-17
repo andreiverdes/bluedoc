@@ -2,7 +2,7 @@
 
 ![The bluedoc home page in dark mode: the pixel-art banner of a bay with a ringed planet behind the title and the search field with its type and status filter chips, the sidebar of projects, and the overview charts](docs/media/home-hero.webp)
 
-An agent skill for engineering docs, plans, code reviews, UI designs, slide decks, website reviews, app icons and app store listings. The agent writes one JSON file, plus small HTML fragments for screens and SVG layers for icons; a local server renders it as a page. You tick checklists, pick options, comment on any element and approve or send back; your answers and change requests go to the agent, and each revision can be compared with the last. Works with Claude Code, Codex, pi and omp.
+An agent skill for engineering docs, plans, code reviews, UI designs, slide decks, website reviews, app icons and app store listings. The agent writes one JSON file, plus small HTML fragments for screens and SVG layers for icons; a local server renders it as a page. You tick checklists, pick options, comment on any element and approve or send back; your answers and change requests go to the agent, and each revision can be compared with the last. Works with Claude Code, Codex, pi, omp, Copilot CLI and Gemini CLI.
 
 > **Beta.** bluedoc is in beta: the doc format and commands may still change between betas. It is tested on macOS; Linux and Windows are untested. Issues and feedback are welcome on GitHub.
 
@@ -58,7 +58,7 @@ claude plugin install bluedoc@bluedoc
 
 Inside a session the same commands are `/plugin marketplace add andreiverdes/bluedoc` and `/plugin install bluedoc@bluedoc`. Start a new session to load the skill.
 
-**Plan mode.** With the plugin installed, every plan Claude finishes in plan mode opens as a bluedoc plan page in your browser. Claude waits for your answer on the page, revises the doc on **Request changes** and leaves plan mode once you **Approve plan**. If the plan names a `*.bluedoc.json` Claude already wrote, that doc opens; otherwise the plan is imported into `~/.bluedoc/plans/<project>/`. The gate stays out of the way in CI, over SSH without a display and in `bypassPermissions` mode, and `BLUEDOC_PLAN_GATE=0` turns it off; in those cases, and on any error, Claude Code shows its own plan dialog. Plannotator installed too means two reviews open for one plan.
+**Plan mode.** With the plugin installed, every plan Claude finishes in plan mode opens as a bluedoc plan page in your browser. Claude waits for your answer on the page, revises the doc on **Request changes** and leaves plan mode once you **Approve plan**. If the plan names a `*.bluedoc.json` Claude already wrote, that doc opens; otherwise the plan is imported into `~/.bluedoc/plans/<project>/`. The gate stays out of the way in CI, over SSH without a display and in `bypassPermissions` mode, and `BLUEDOC_PLAN_GATE=0` turns it off; in those cases, and on any error, Claude Code shows its own plan dialog. Plannotator installed too means two reviews open for one plan. The other agents below share this gate, each through its own hook.
 
 ### Codex
 
@@ -69,6 +69,8 @@ codex plugin add bluedoc@bluedoc
 
 Restart Codex. The skill is listed as `bluedoc:bluedoc`; mention it with `$bluedoc` or let Codex pick it from your request.
 
+**Plan mode.** The plugin's `Stop` hook opens the plan Codex proposes in Plan mode (`/plan`) as a bluedoc plan page; Codex waits for your answer on the page, revises the doc on **Request changes** and, after **Approve plan**, goes on with your decisions. Codex runs a plugin's hooks only once you trust them: open `/hooks` and trust the bluedoc `Stop` hook (again after an update changes it).
+
 ### pi
 
 ```sh
@@ -76,6 +78,8 @@ pi install git:github.com/andreiverdes/bluedoc
 ```
 
 Restart pi. Run it as `/skill:bluedoc` or let pi pick it from your request.
+
+**The plan gate:** `/bluedoc-plan-mode [file.md]` turns on plan mode; the agent writes its plan and calls `bluedoc_submit_plan`, which opens it as a bluedoc page and returns your approval or change request. `/bluedoc-<name>` commands come from the bundled extension.
 
 ### omp
 
@@ -85,6 +89,25 @@ omp plugin install bluedoc@bluedoc
 ```
 
 Run `/reload-plugins` in an open session, or start a new one.
+
+**The plan gate:** the bundled extension opens omp's plan reviews as bluedoc pages: Approve executes the plan, Request changes refines it; the terminal picker stays live. The `/bluedoc-<name>` commands come from the extension too.
+
+### Copilot CLI
+
+```sh
+copilot plugin install andreiverdes/bluedoc
+```
+
+Start a new session. **Plan mode:** when Copilot calls `exit_plan_mode`, its `plan.md` opens as a bluedoc plan page; Copilot waits for your answer there and leaves plan mode after **Approve plan**. If the gate takes longer than its 120 s timeout, Copilot shows its own plan prompt.
+
+### Gemini CLI
+
+```sh
+git clone https://github.com/andreiverdes/bluedoc.git
+bluedoc/gemini/install.sh
+```
+
+The script installs `gemini/` plus the skill as the `bluedoc` extension (run it again to update; `gemini extensions uninstall bluedoc` removes it). **Plan mode:** when Gemini calls `exit_plan_mode`, the plan file opens as a bluedoc plan page; Gemini waits for your answer there, and after **Approve plan** its own approval prompt follows, with your decisions passed to the agent. Plan mode blocks shell commands, so Gemini asks you before each `serve.py wait` and `build.py patch` the gate needs.
 
 ### Any other agent
 
@@ -143,6 +166,37 @@ Per doc, the agent reads about 1.5k tokens of instructions (`SKILL.md`) plus one
 
 `<skill>` is the installed skill folder, for example `~/.agents/skills/bluedoc`.
 
+## Slash commands
+
+Every bluedoc feature is also a command. The prompt commands start an agent turn with the skill; the action commands run a script and show its output.
+
+| Command | What it does |
+|---|---|
+| `/bluedoc-plan <what>` | writes a plan doc, opens it and waits for your approval or changes |
+| `/bluedoc-review [PR, branch or paths]` | reviews code (default: uncommitted changes) as a review doc |
+| `/bluedoc-docs <what>` | documents a system, flow or runbook |
+| `/bluedoc-design <screens>` | designs UI screens on a board |
+| `/bluedoc-deck <topic>` | makes a slide deck |
+| `/bluedoc-website <URL>` | opens a website from its dev server for review |
+| `/bluedoc-icons <app>` | designs an app icon |
+| `/bluedoc-listing <app>` | lays out the Google Play and App Store listing |
+| `/bluedoc-status <project>` | writes a status page |
+| `/bluedoc-last [notes]` | turns the agent's previous reply into a docs page |
+| `/bluedoc-open <doc>` | opens a doc in the browser |
+| `/bluedoc-home` | prints a home page link that lets this browser save |
+| `/bluedoc-replies [doc]` | prints the newest reply to the doc, or to any doc |
+| `/bluedoc-export <doc> [format]` | writes the doc's file next to it: a deck (`html`, `pdf`), a listing (`zip`, `folders`, `pdf`, `html`) or a page (`html`) |
+
+| Agent | How you run them |
+|---|---|
+| Claude Code | `/bluedoc:bluedoc-plan …`; Claude Code prefixes plugin commands with the plugin name |
+| omp, pi | `/bluedoc-plan …`, from the bundled extension |
+| Copilot CLI | `/bluedoc-plan …`; an action asks the agent to run its script |
+| Gemini CLI | `/bluedoc-plan …`; an action asks before it runs its script |
+| Codex | no commands: Codex plugins can't hold skills only Codex loads. Ask for `$bluedoc <request>`, e.g. `$bluedoc plan saved carts` |
+
+The commands are generated from `commands/commands.json` by `tools/gen_commands.py`; edit the spec and run it, never the generated files.
+
 ## Design mockups
 
 A design doc is a brief and one board of screens. Each screen is an HTML fragment in `<name>.design/<artboard id>.html` beside the JSON; the server wraps it in the chosen kit (plain, HorizonUI, HeroUI with Tailwind, Tailwind or your own CSS) and runs it sandboxed. Screens link to each other with `data-nav`, and `--icons` adds an app-icon sheet with PNG export. A presentation is the same page with a board of slides only; a website, with a board of web pages, live from the dev server or mocked up as screens.
@@ -157,6 +211,8 @@ Frameworks, navigation, board editing, app icons and the sandbox are covered in 
 | Codex | `codex plugin marketplace upgrade bluedoc` | `codex plugin remove bluedoc@bluedoc` |
 | pi | `pi update` | `pi remove git:github.com/andreiverdes/bluedoc` |
 | omp | `omp plugin upgrade bluedoc@bluedoc` | `omp plugin uninstall bluedoc@bluedoc` |
+| Copilot CLI | `copilot plugin update bluedoc` | `copilot plugin uninstall bluedoc` |
+| Gemini CLI | `git -C bluedoc pull && bluedoc/gemini/install.sh` | `gemini extensions uninstall bluedoc` |
 | skills CLI | `npx skills update` | `npx skills remove bluedoc` |
 
 ## What's in the repo
@@ -170,7 +226,7 @@ skills/bluedoc/
   assets/skeletons/      fill-in skeleton per doc type (build.py new), plus review-area.json (--shape area)
   scripts/build.py       new, validate, lint, patch, from-md (a Markdown plan → a plan doc), build the HTML
   scripts/mdplan.py      the Markdown plan importer behind build.py from-md
-  scripts/hook.py        agent hooks: Claude Code's plan gate (ExitPlanMode) and its Bash allowance
+  scripts/hook.py        agent hooks: the plan gate for Claude Code, Codex, Copilot CLI and Gemini CLI, `ext open|wait` for the pi/omp extension, Claude's Bash allowance
   scripts/listing.py     store listings: the rules file, store checks, l10n, sections and variants, the fastlane export plan
   scripts/capture.py     store screenshots from capture recipes: simctl, adb and emulator, headless Chrome
   scripts/fonts.py       the fonts installed on this machine, for a listing's caption font
@@ -199,12 +255,21 @@ skills/bluedoc/
 docs/types/              one page per doc type, for GitHub readers
 docs/media/              the screenshots those pages and this README show
 docs/examples/           the examples built to HTML, for GitHub readers
+commands/commands.json   the slash commands' spec, the one place they're edited
+commands/bluedoc-*.md    Claude Code's commands, generated by tools/gen_commands.py
+com.github.copilot/commands/  Copilot CLI's commands, generated
+gemini/commands/         Gemini CLI's commands, generated
+tools/gen_commands.py    writes every agent's command files from the spec (--check: are they up to date)
 tests/                   the test suite (python3 -m unittest discover -s tests)
 .claude-plugin/          Claude Code plugin and marketplace (omp reads it too)
 hooks/hooks.json         Claude Code hooks: the plan gate (omp doesn't run them)
+codex/hooks.json         Codex hooks: the plan gate (Stop), wired from plugin.json
+com.github.copilot/hooks/  Copilot CLI hooks: the plan gate (preToolUse on exit_plan_mode)
+gemini/                 Gemini CLI extension: manifest, hooks (the plan gate), plan-mode policy, install.sh
+extensions/bluedoc.ts   pi and omp extension: the plan gate and /bluedoc-* commands
 .agents/plugins/         Codex marketplace
-plugin.json              Agent Plugins manifest (Codex, omp)
-package.json             pi package manifest
+plugin.json              Agent Plugins manifest (Codex, Copilot CLI, omp)
+package.json             pi package manifest (skills, extension)
 ```
 
 The examples describe Acme Corp, a fictional company.

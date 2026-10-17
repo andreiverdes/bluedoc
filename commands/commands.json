@@ -1,0 +1,100 @@
+[
+  {
+    "name": "plan",
+    "description": "Write a bluedoc plan doc, open it and wait for your approval or changes",
+    "args": "<what to plan>",
+    "kind": "prompt",
+    "prompt": "Write a bluedoc plan doc for: {{args}}\n\nUse the bluedoc skill; open the page and wait for my reply."
+  },
+  {
+    "name": "review",
+    "description": "Review code (default: uncommitted changes) as a bluedoc review doc",
+    "args": "[PR, branch, commit range or paths]",
+    "kind": "prompt",
+    "prompt": "Review {{args}} (default: uncommitted changes) as a bluedoc review doc.\n\nUse the bluedoc skill; open the page and wait for my reply."
+  },
+  {
+    "name": "docs",
+    "description": "Document a system, flow or runbook as a bluedoc docs page",
+    "args": "<what to document>",
+    "kind": "prompt",
+    "prompt": "Document {{args}} as a bluedoc docs page.\n\nUse the bluedoc skill; open the page and wait for my reply."
+  },
+  {
+    "name": "design",
+    "description": "Design UI screens as a bluedoc design board",
+    "args": "<screens, app or flow>",
+    "kind": "prompt",
+    "prompt": "Design screens for {{args}} as a bluedoc design doc.\n\nUse the bluedoc skill; open the page and wait for my reply."
+  },
+  {
+    "name": "deck",
+    "description": "Make a slide deck as a bluedoc presentation",
+    "args": "<topic>",
+    "kind": "prompt",
+    "prompt": "Make a bluedoc presentation about {{args}}.\n\nUse the bluedoc skill; open the page and wait for my reply."
+  },
+  {
+    "name": "website",
+    "description": "Review a website's pages from its dev server as a bluedoc website doc",
+    "args": "<dev server URL>",
+    "kind": "prompt",
+    "prompt": "Review the website at {{args}} as a bluedoc website doc.\n\nUse the bluedoc skill; open the page and wait for my reply."
+  },
+  {
+    "name": "icons",
+    "description": "Design an app icon on a bluedoc design board",
+    "args": "<app>",
+    "kind": "prompt",
+    "prompt": "Design an app icon for {{args}} as a bluedoc design doc with an app icon.\n\nUse the bluedoc skill; open the page and wait for my reply."
+  },
+  {
+    "name": "listing",
+    "description": "Lay out an app's Google Play and App Store listing as a bluedoc storelisting",
+    "args": "<app>",
+    "kind": "prompt",
+    "prompt": "Lay out the app store listing for {{args}} as a bluedoc storelisting doc.\n\nUse the bluedoc skill; open the page and wait for my reply."
+  },
+  {
+    "name": "status",
+    "description": "Write a status page as a bluedoc doc",
+    "args": "<project or period>",
+    "kind": "prompt",
+    "prompt": "Write a bluedoc status page for {{args}}.\n\nUse the bluedoc skill; open the page and wait for my reply."
+  },
+  {
+    "name": "last",
+    "description": "Turn the agent's previous reply into a bluedoc docs page and open it",
+    "args": "[notes]",
+    "kind": "prompt",
+    "prompt": "Turn your previous reply into a bluedoc docs page and open it. {{args}}\n\nUse the bluedoc skill; open the page and wait for my reply."
+  },
+  {
+    "name": "open",
+    "description": "Open a bluedoc doc in the browser",
+    "args": "<doc.bluedoc.json>",
+    "kind": "action",
+    "run": { "script": "serve.py", "args": ["open", "--browser", "{{args}}"] }
+  },
+  {
+    "name": "home",
+    "description": "Print a bluedoc home page link that lets this browser save",
+    "args": "",
+    "kind": "action",
+    "run": { "script": "serve.py", "args": ["unlock"] }
+  },
+  {
+    "name": "replies",
+    "description": "Print the newest reply to a bluedoc doc (default: to any doc)",
+    "args": "[doc.bluedoc.json]",
+    "kind": "action",
+    "run": { "script": "serve.py", "args": ["reply", "--kind", "any", "{{args}}"] }
+  },
+  {
+    "name": "export",
+    "description": "Export a bluedoc doc next to it: a deck (html, pdf), a store listing (zip, folders, pdf, html) or a page (html)",
+    "args": "<doc.bluedoc.json> [format]",
+    "kind": "action",
+    "run": { "script": "build.py", "args": ["export", "{{args}}"] }
+  }
+]

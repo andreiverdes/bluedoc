@@ -29,6 +29,9 @@ Usage:
   build.py from-md PLAN.md out.bluedoc.json [--org O] [--project DIR] [--change LINE ...]
                                     import a Markdown plan as a plan doc (mdplan.py) and build it; an existing out
                                     keeps its id and gets the next meta.rev
+  build.py export doc.json [FORMAT]   write the doc's shareable file next to it, <stem>.<ext>: a presentation's deck
+                                    (html|pdf), a storelisting's listing (zip|folders|pdf|html), any other doc as
+                                    one standalone HTML page (html)
 
 serve.py renders the JSON with assets/template.html on every request, so normal work needs no
 HTML file at all: write the JSON, run build.py, open the serve.py URL.
@@ -4017,6 +4020,32 @@ def cmd_from_md(argv: list[str]) -> int:
     return main([str(a.out)])
 
 
+def cmd_export(argv: list[str]) -> int:
+    """`build.py export`: write DOC's shareable file next to it, chosen by its type: a presentation's deck (--deck,
+    html or pdf), a storelisting's listing (--listing, zip, folders, pdf or html), any other doc's standalone page
+    (-o, html). FORMAT defaults to the first of those; the file is <stem>.<html|pdf|zip>."""
+    ap = argparse.ArgumentParser(prog="build.py export", description=cmd_export.__doc__)
+    ap.add_argument("doc", type=Path)
+    ap.add_argument("format", nargs="?", help="html, pdf, zip or folders, as the doc's type allows")
+    a = ap.parse_args(argv)
+    try:
+        doc = json.loads(a.doc.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as e:
+        print(f"cannot read {a.doc}: {e}", file=sys.stderr)
+        return 2
+    kind = doc_type(doc.get("meta") if isinstance(doc, dict) and isinstance(doc.get("meta"), dict) else {})
+    flag, formats = {"presentation": ("--deck", ("html", "pdf")),
+                     "storelisting": ("--listing", ("zip", "folders", "pdf", "html"))}.get(kind, ("-o", ("html",)))
+    fmt = a.format or formats[0]
+    if fmt not in formats:
+        ap.error(f"a {kind} doc exports as {', '.join(formats)}, not {fmt}")
+    out = a.doc.with_name(f"{doc_stem(a.doc)}.{'zip' if fmt == 'folders' else fmt}")
+    code = main([str(a.doc), flag, str(out)] + (["--format", fmt] if flag != "-o" else []))
+    if code == 0:
+        print(out)
+    return code
+
+
 def main(argv: list[str] | None = None) -> int:
     argv = sys.argv[1:] if argv is None else argv
     if argv[:1] == ["new"]:
@@ -4025,6 +4054,8 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_patch(argv[1:])
     if argv[:1] == ["from-md"]:
         return cmd_from_md(argv[1:])
+    if argv[:1] == ["export"]:
+        return cmd_export(argv[1:])
     if argv[:1] == ["l10n"]:
         return cmd_l10n(argv[1:])
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
