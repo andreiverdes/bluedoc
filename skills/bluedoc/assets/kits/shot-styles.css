@@ -28,8 +28,12 @@
   background-size: 300% 100%; background-position: calc(min(var(--shot-i), 2) * 50%) 0; }
 
 /* ---------- L3 frameless full-bleed UI under a slim caption band ---------- */
-.shot--l3 .shot-cap { padding: 5cqh 6cqw 3cqh; font-size: 6.4cqw; background: var(--brand-bg); }
-.shot--l3.land .shot-cap { font-size: 6.2cqh; }
+.shot--l3 .shot-cap { padding: 5cqh 6cqw 3cqh; font-size: calc(6.4cqw * var(--bd-size-caption, 1)); background: var(--brand-bg); }
+.shot--l3.land .shot-cap { font-size: calc(6.2cqh * var(--bd-size-caption, 1)); }
+/* the band under the UI (cap--bottom) or across its middle (cap--middle) */
+.shot--l3.cap--bottom .shot { padding-bottom: 0; }
+.shot--l3.cap--bottom .shot-cap { padding: 3cqh 6cqw 5cqh; }
+.shot--l3.cap--middle .shot-cap { padding: 3cqh 6cqw; }
 .shot--l3 .shot-sub { display: none; }
 .shot--l3 .shot-frame { margin-top: 0; }
 .shot--l3 .shot-ui { border-radius: 0; }
@@ -61,6 +65,8 @@ html:not(.shot--l5) :is(.shot-person, .shot-photo) { display: none; }
   font: 700 3.6cqw/1.6 var(--bd-font-caption); letter-spacing: .06em; text-transform: uppercase;
   color: var(--brand-bg); background: var(--brand-caption); }
 .msg--m2 .shot-step { display: block; }
+.cap--left .shot-step { align-self: flex-start; margin-left: 8cqw; }
+.cap--right .shot-step { align-self: flex-end; margin-right: 8cqw; }
 .msg--m2 .shot-cap { padding-top: 2.4cqh; }
 .msg--m2 .shot::after { content: ""; position: absolute; z-index: 3; left: 0; bottom: 0; height: .8cqh;
   width: calc((var(--shot-i) + 1) / var(--shot-n) * 100%); background: var(--brand-accent); }
@@ -72,8 +78,8 @@ html:not(.shot--l5) :is(.shot-person, .shot-photo) { display: none; }
 html:not(.msg--m3) .shot-zoom { display: none; }
 
 /* ---------- M4 social proof first (App Store, shot 1) / use-case first (Google Play: no proof) ---------- */
-.shot-proof { position: relative; z-index: 2; display: none; margin-top: 7cqh; text-align: center; color: var(--brand-caption);
-  font: 600 3.8cqw/1.3 var(--bd-font-caption); }
+.shot-proof { position: relative; z-index: 2; display: none; align-self: stretch; margin-top: 7cqh; padding: 0 8cqw; text-align: var(--bd-align-caption, center);
+  color: var(--brand-caption); font: 600 3.8cqw/1.3 var(--bd-font-caption); }
 .shot-proof::before { content: "★★★★★"; display: block; margin-bottom: .6cqh; font-size: 6cqw; letter-spacing: .1em; color: var(--brand-accent); }
 .msg--m4.plat-appstore[data-first] .shot-proof { display: block; }
 .msg--m4.plat-appstore[data-first] .shot-cap { padding-top: 2.4cqh; }

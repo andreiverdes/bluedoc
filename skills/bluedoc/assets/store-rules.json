@@ -269,19 +269,19 @@
       "fits": "Games; apps whose value is motion", "evidence": "Video lifts installs by more than 25%" },
     { "id": "l1", "axis": "layout", "name": "Device frame / UI card", "grade": "C", "sources": ["IN-TOP100", "SM-GUIDE", "AT-TRENDS"],
       "appstore": "The UI in a generic phone frame on brand colour", "play": "The UI in a rounded card, no device",
-      "fits": "Most apps", "evidence": "Full-device frames ranked better than partial" },
+      "fits": "Most apps", "evidence": "Full-device frames ranked better than partial", "valign": ["top", "bottom"] },
     { "id": "l2", "axis": "layout", "name": "Panoramic background", "grade": "C", "sources": ["SV-PANO-IOS", "SV-PANO-PLAY"],
       "appstore": "One image runs across shots 1–3", "play": "Same; a gap of 2% of the shot's height",
-      "fits": "Brands with strong art; games", "evidence": "No published number" },
+      "fits": "Brands with strong art; games", "evidence": "No published number", "valign": ["top", "bottom"] },
     { "id": "l3", "axis": "layout", "name": "Frameless full-bleed UI", "grade": "A", "sources": ["A-PP", "G-PA", "IN-TOP100"],
       "appstore": "The raw screen with a slim caption band", "play": "Same; required for Wear OS",
-      "fits": "Strong UI; games; Wear", "evidence": "Both stores ask for captured UI" },
+      "fits": "Strong UI; games; Wear", "evidence": "Both stores ask for captured UI", "valign": ["top", "middle", "bottom"] },
     { "id": "l4", "axis": "layout", "name": "Dark hero", "grade": "C", "sources": ["SM-GUIDE", "A-PP"],
       "appstore": "Dark background, white type, bright UI", "play": "Same",
-      "fits": "Night, media, finance, ride-hailing", "evidence": "Apple asks for one Dark Mode shot" },
+      "fits": "Night, media, finance, ride-hailing", "evidence": "Apple asks for one Dark Mode shot", "valign": ["top", "bottom"] },
     { "id": "l5", "axis": "layout", "name": "Lifestyle photo", "grade": "B", "sources": ["SM-PEOPLE", "AT-TRENDS", "G-PA"], "hook": "photo",
       "appstore": "A person in context, the UI on a device beside them", "play": "A person in context, the UI in a card, no hands on a device",
-      "fits": "Fitness, food, dating, photo, ride-hailing", "evidence": "People +5–10% in fitness tests" }
+      "fits": "Fitness, food, dating, photo, ride-hailing", "evidence": "People +5–10% in fitness tests", "valign": ["top"] }
   ],
   "brand": {
     "about": "The brand tokens every shot reads (kits/shot.css --brand-<role>), their defaults, and the colour pairs the shot kit draws text in, each checked against WCAG AA for normal text: store thumbnails shrink captions below WCAG's large-text size.",
@@ -297,7 +297,10 @@
         { "fg": "bg", "bg": "caption", "label": "Step chip", "styles": "M2" }
       ]
     },
-    "font": { "default": "Inter", "source": "OT-FSTYPE", "restricted": 2, "bitmapOnly": 512 },
+    "font": { "default": "Inter", "source": "OT-FSTYPE", "restricted": 2, "bitmapOnly": 512,
+      "about": "The caption's typography (listing.brand.font): size a scale of each style's caption size (1: the kit's), lineHeight a multiple of the size (absent: the style's own), letterSpacing % of the size (absent: -2), align, and valign (where the caption block sits; a layout style's valign lists the ones it draws).",
+      "size": [0.5, 1.6], "lineHeight": [0.8, 2], "letterSpacing": [-20, 50],
+      "align": ["left", "center", "right"], "valign": ["top", "middle", "bottom"] },
     "image": { "types": ["png", "jpeg", "webp"], "maxBytes": 8388608 }
   }
 }

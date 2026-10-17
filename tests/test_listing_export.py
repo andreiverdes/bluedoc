@@ -319,9 +319,9 @@ class ListingPage(ChromePage):
     def test_export_to_downloads_a_zip(self) -> None:
         t = self.page(self.url)
         t.ev("window.__blobs = []; (o => { URL.createObjectURL = b => { __blobs.push(b); return o.call(URL, b); }; })(URL.createObjectURL)")
-        t.ev("document.querySelector('.bd-lst-tb .bd-expb').click()")
-        t.wait_for("!document.querySelector('.bd-lst-tb .bd-expm').hidden")
-        t.ev("document.querySelector('.bd-lst-tb .bd-expm [data-format=\"zip\"]').click()")
+        t.ev("document.querySelector('.bd-lst-btb .bd-expb').click()")
+        t.wait_for("!document.querySelector('.bd-lst-btb .bd-expm').hidden")
+        t.ev("document.querySelector('.bd-lst-btb .bd-expm [data-format=\"zip\"]').click()")
         t.wait_for("__blobs.length > 0", 240)
         head = t.ev("__blobs[0].slice(0, 4).arrayBuffer().then(b => [...new Uint8Array(b)])")
         self.assertEqual(bytes(head), b"PK\x03\x04")

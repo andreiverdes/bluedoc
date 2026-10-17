@@ -80,7 +80,8 @@ patch keys: doc, meta, header, tldr, status, section:<sec>, heading:<sec>, lead:
   they record a hand edit of the screen file as the next rev.
   Storelisting keys: field:<locale>/<platform>/<field> (a store text) and field:<locale>/strings/<key> (a
   caption string): --set <field>=<text> writes it, --delete drops it, no option prints it with its count and limit.
-  brand:<listing id> is listing.brand: --json '{"font": …, "palette": …, "image": …}' merges it (null deletes one).
+  brand:<listing id> is listing.brand: --json '{"font": …, "palette": …, "image": …}' merges it (null deletes one);
+  font is {family, weight, italic, size, lineHeight, letterSpacing, align, valign, source, fsType} (schema.md).
   On a storelisting shot, artboard: and el: with no option also print its recipe per target, each locale's capture
   with its time, and the `capture.py` command that re-shoots it (an uploaded shot: its PNG, which has none).
   <blockPath> is <section>/<index> or <checklist>/<item>/<index>. header, tldr and status address

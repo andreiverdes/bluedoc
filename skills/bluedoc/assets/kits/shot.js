@@ -1,12 +1,16 @@
 /* bluedoc shot runner: the last script of a storelisting shot's or asset's document (serve.py wrap_screen). It reads
    the shot's data (#bd-shot-data: {id, kind: shot|asset, sets: {<set>: {w, h, uiW, uiH, raw, platform, row}}, asset:
-   {w, h}|null, strings: {<locale>: {key: text}}, defaultLocale, style: {message, layout}}) and what to show, then lays
-   the shot out before it shows (html.shot-pending hides it until then).
+   {w, h}|null, strings: {<locale>: {key: text}}, defaultLocale, style: {message, layout}, caption: {size, lineHeight,
+   letterSpacing: [min, max], align, valign: [names], layouts: {<layout>: [the valign it draws]}}}) and what to show,
+   then lays the shot out before it shows (html.shot-pending hides it until then).
    What to show, in order: the frame's name 'bd-shot <JSON>' (the page names each frame before it loads), the URL's
    query (?set=&locale=&i=&n=&message=&layout=&ui=, for a tab or an export), and the defaults (the first set, the
    default locale, shot 1 of 1, the listing's style). Page -> frame, later: {bd:'shot', set?, locale?, i?, n?,
-   message?, layout?, ui?} (any of them) and {bd:'brand', palette: {role: #hex}, font: {family, weight}|null} (the page's
-   brand draft; font null: the default, Inter). The name may carry `brand` too, applied before the first paint.
+   message?, layout?, ui?} (any of them) and {bd:'brand', palette: {role: #hex}, font: {family, weight, italic, size,
+   lineHeight, letterSpacing, align, valign}|null} (the page's brand draft; font null: the default, Inter; a key the
+   font leaves out: the kit's default). The name may carry `brand` too, applied before the first paint.
+   - Caption placement: --bd-align-caption and --bd-valign-caption (the listing's, or the page's) set cap--left,
+     cap--right, cap--middle and cap--bottom on <html>; a valign the layout doesn't draw (caption.layouts) stays top.
    - Strings: each [data-l10n="key"] gets the locale's text, else the default locale's (data-l10n-state="fallback"),
      else keeps its HTML text (data-l10n-state="missing").
    - The UI slot (.shot-ui) holds the mock-up at the set's UI viewport (uiW × uiH), scaled to the layout's place in
@@ -20,6 +24,9 @@
   const sets = data.sets && typeof data.sets === 'object' ? data.sets : {};
   const strings = data.strings && typeof data.strings === 'object' ? data.strings : {};
   const STYLE = /^[ml][1-5]$/, HEX = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/, FAMILY = /^[^;{}<>\\"'`]{1,64}$/, ROLES = ['bg', 'surface', 'accent', 'text', 'caption'];
+  const CAP = data.caption && typeof data.caption === 'object' ? data.caption : {};
+  const within = (k, v) => typeof v === 'number' && Array.isArray(CAP[k]) && v >= CAP[k][0] && v <= CAP[k][1];
+  const named = (k, v) => Array.isArray(CAP[k]) && CAP[k].includes(v);
   // where a layout puts the UI in .shot-frame: wf of its width (at most), hf of its height (a bleed past the bottom
   // edge when over 1), its side; flush: the full width from the top
   const LAYOUT = { l1: { wf: 0.76, hf: 1.1 }, l2: { wf: 0.72, hf: 1.1 }, l3: { wf: 1, hf: 99, flush: true }, l4: { wf: 0.76, hf: 1.1 }, l5: { wf: 0.5, hf: 1, side: 'right' } };
@@ -60,12 +67,14 @@
   function place() {
     const set = sets[st.set] || null;
     if (!frame || !ui || !set) return;
-    const uw = set.uiW, uh = set.uiH, W = frame.clientWidth, H = frame.clientHeight;
+    const uw = set.uiW, uh = set.uiH, W = frame.clientWidth, H = frame.clientHeight, low = root.classList.contains('cap--bottom');
     let k, x, y = 0;
     if (set.raw) { k = Math.min(W / uw, H / uh); x = (W - uw * k) / 2; }
     else {
       const L = LAYOUT[st.layout] || LAYOUT.l1;
       if (L.flush) { k = W / uw; x = 0; }
+      // the caption under it: the whole UI over it (no bleed), its foot on the caption
+      else if (low) { k = Math.min(W * L.wf / uw, H / uh); x = L.side === 'right' ? W - uw * k - W * 0.06 : (W - uw * k) / 2; y = H - uh * k; }
       else { k = Math.min(W * L.wf / uw, H * L.hf / uh); x = L.side === 'right' ? W - uw * k - W * 0.06 : (W - uw * k) / 2; }
     }
     root.style.setProperty('--ui-k', String(Math.max(0.05, k)));
@@ -97,12 +106,13 @@
     const safe = set && !set.raw ? (set.row === 'phone' ? [47, 0, 34, 0] : set.row === 'tablet' ? [24, 0, 20, 0] : [0, 0, 0, 0]) : [0, 0, 0, 0];
     ['top', 'right', 'bottom', 'left'].forEach((k, i) => root.style.setProperty('--safe-' + k, safe[i] + 'px'));
     root.style.setProperty('--shot-i', String(st.i)); root.style.setProperty('--shot-n', String(st.n));
-    const keep = [...root.classList].filter(c => !/^(plat-|row-|msg--|shot--)|^(raw|land|ui--capture)$/.test(c));
+    const keep = [...root.classList].filter(c => !/^(plat-|row-|msg--|shot--|cap--)|^(raw|land|ui--capture)$/.test(c));
     const base = data.style || {}, style = (set && base.platforms && base.platforms[set.platform]) || base;
     const msg = st.message || style.message || 'm1', lay = st.layout || style.layout || 'l1';
     st.message = msg; st.layout = lay;
     root.className = [...keep, set && 'plat-' + set.platform, set && 'row-' + set.row, set && set.raw && 'raw', dims.w > dims.h && 'land',
       'msg--' + msg, 'shot--' + lay, st.ui && 'ui--capture'].filter(Boolean).join(' ');
+    placeCaption();
     root.toggleAttribute('data-odd', st.i % 2 === 1); root.toggleAttribute('data-first', st.i === 0);
     if (step) step.textContent = `${st.i + 1} / ${st.n}`;
     if (ui) {
@@ -114,20 +124,34 @@
     root.classList.remove('shot-pending');
     doc.dispatchEvent(new Event('bd-stir'));
   }
-  // the root's inline brand tokens over the listing's (shell :root): a role or the font the message leaves out keeps
-  // the listing's value; font null drops the page's pick
+  // the caption's alignment and place as classes (the tokens are on :root, the listing's or inline from the page); a
+  // valign the layout doesn't draw (data.caption.layouts) leaves it at the top
+  function placeCaption() {
+    const cs = getComputedStyle(root), al = cs.getPropertyValue('--bd-align-caption').trim(), va = cs.getPropertyValue('--bd-valign-caption').trim();
+    const can = (CAP.layouts && CAP.layouts[st.layout]) || ['top'];
+    for (const v of ['left', 'right']) root.classList.toggle('cap--' + v, al === v);
+    for (const v of ['middle', 'bottom']) root.classList.toggle('cap--' + v, va === v && can.includes(v));
+  }
+  // the root's inline brand tokens over the listing's (shell :root): a role the message leaves out keeps the listing's
+  // value. A font is the whole pick: a key it leaves out is the kit's default ('initial': the var()'s fallback); font
+  // null is the default font with the kit's typography
   function brand(m) {
     const pal = m.palette && typeof m.palette === 'object' ? m.palette : {};
     for (const r of ROLES) if (typeof pal[r] === 'string' && HEX.test(pal[r])) root.style.setProperty('--brand-' + r, pal[r]);
-    const f = m.font;
-    if (f === null) { root.style.setProperty('--bd-font-caption', 'Inter, system-ui, sans-serif'); root.style.removeProperty('--bd-weight-caption'); }
-    if (f && typeof f.family === 'string' && FAMILY.test(f.family)) root.style.setProperty('--bd-font-caption', `"${f.family}", Inter, system-ui, sans-serif`);
-    if (f && Number.isInteger(f.weight) && f.weight >= 100 && f.weight <= 900) root.style.setProperty('--bd-weight-caption', String(f.weight));
-    else if (f) root.style.removeProperty('--bd-weight-caption');
+    if (!('font' in m) || m.font !== null && (typeof m.font !== 'object' || typeof m.font.family !== 'string' || !FAMILY.test(m.font.family))) return;
+    const f = m.font || {}, tok = (k, v) => root.style.setProperty(k, v == null ? 'initial' : v);
+    root.style.setProperty('--bd-font-caption', f.family ? `"${f.family}", Inter, system-ui, sans-serif` : 'Inter, system-ui, sans-serif');
+    tok('--bd-weight-caption', Number.isInteger(f.weight) && f.weight >= 100 && f.weight <= 900 ? String(f.weight) : null);
+    tok('--bd-style-caption', f.italic === true ? 'italic' : null);
+    tok('--bd-size-caption', within('size', f.size) ? String(f.size) : null);
+    tok('--bd-leading-caption', within('lineHeight', f.lineHeight) ? String(f.lineHeight) : null);
+    tok('--bd-tracking-caption', within('letterSpacing', f.letterSpacing) ? f.letterSpacing / 100 + 'em' : null);
+    tok('--bd-align-caption', named('align', f.align) ? f.align : null);
+    tok('--bd-valign-caption', named('valign', f.valign) ? f.valign : null);
   }
   addEventListener('message', e => {
     if (e.source !== parent || !e.data || typeof e.data !== 'object') return;
-    if (e.data.bd === 'shot') { take(e.data); apply(); } else if (e.data.bd === 'brand') { brand(e.data); place(); doc.dispatchEvent(new Event('bd-stir')); }
+    if (e.data.bd === 'shot') { take(e.data); apply(); } else if (e.data.bd === 'brand') { brand(e.data); placeCaption(); place(); doc.dispatchEvent(new Event('bd-stir')); }
   });
   if (brand0 && typeof brand0 === 'object') brand(brand0);
   apply();

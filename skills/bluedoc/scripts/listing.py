@@ -511,11 +511,8 @@ def validate_listing(rep, doc: dict, doc_path: Path | None, rules: dict | None =
         if not isinstance(brand, dict):
             rep.err(lw + ".brand", "{font, palette, image}")
         else:
-            font = brand.get("font")
-            if font is not None and not (isinstance(font, dict) and isinstance(font.get("family"), str)
-                                         and FONT_FAMILY.match(font["family"])
-                                         and (font.get("weight") is None or font["weight"] in range(100, 1000, 100))):
-                rep.err(lw + ".brand.font", "{family, weight}: a family name without quotes or ; { } < > \\, a weight 100-900")
+            for k, msg in caption_font_problems(brand.get("font"), rules):
+                rep.err(lw + ".brand.font" + (f".{k}" if k else ""), msg)
             pal = brand.get("palette")
             if pal is not None:
                 if not isinstance(pal, dict):
@@ -1189,6 +1186,77 @@ def brand_rules_problems(rules: dict, sources: dict) -> list[str]:
         if not (isinstance(p, dict) and p.get("fg") in PALETTE_ROLES and p.get("bg") in PALETTE_ROLES and p["fg"] != p["bg"]
                 and isinstance(p.get("label"), str) and isinstance(p.get("styles"), str)):
             out.append(f"brand.contrast.pairs[{i}]: {{fg, bg: two roles, label, styles}}")
+    f = b.get("font") or {}
+    for k in ("size", "lineHeight", "letterSpacing"):
+        if not (isinstance(f.get(k), list) and len(f[k]) == 2 and all(_number(x) for x in f[k]) and f[k][0] < f[k][1]):
+            out.append(f"brand.font.{k}: [min, max]")
+    for k, names in (("align", ["left", "center", "right"]), ("valign", ["top", "middle", "bottom"])):
+        if f.get(k) != names:
+            out.append(f"brand.font.{k}: {names}")
+    for s in rules.get("styles") or []:
+        if isinstance(s, dict) and s.get("axis") == "layout" and not (isinstance(s.get("valign"), list) and "top" in s["valign"]
+                                                                     and set(s["valign"]) <= set(f.get("valign") or [])):
+            out.append(f"styles {s.get('id')}: valign, where the layout can put the caption block: top and others of brand.font.valign")
+    return out
+
+
+# listing.brand.font: the caption's family and its typography (the page's Typography section; kits/shot.css reads them
+# as the --bd-*-caption tokens). The rules' brand.font bounds the numbers and names the alignments
+FONT_KEYS = ("family", "weight", "italic", "source", "fsType", "size", "lineHeight", "letterSpacing", "align", "valign")
+
+
+def _number(v) -> bool:
+    return isinstance(v, (int, float)) and not isinstance(v, bool)
+
+
+def caption_font_problems(font, rules: dict) -> list[tuple[str, str]]:
+    """(key, message) for what's wrong with listing.brand.font (key '' : the whole of it); [] for None. family: a name
+    without quotes or ; { } < > \\; weight 100-900 by 100; italic a boolean; size a scale of each style's caption size
+    (1: the kit's); lineHeight a multiple of the size (absent: the style's own); letterSpacing % of the size; align and
+    valign (where the caption block sits) the rules' names."""
+    if font is None:
+        return []
+    if not (isinstance(font, dict) and isinstance(font.get("family"), str) and FONT_FAMILY.match(font["family"])):
+        return [("", "{family, …}: a family name without quotes or ; { } < > \\")]
+    r, out = rules["brand"]["font"], []
+    out += [(k, f"no font key '{k}': {', '.join(FONT_KEYS)}") for k in font if k not in FONT_KEYS]
+    if font.get("weight") is not None and font["weight"] not in range(100, 1000, 100):
+        out.append(("weight", "a weight 100-900, by 100"))
+    if font.get("italic") is not None and not isinstance(font["italic"], bool):
+        out.append(("italic", "true or false"))
+    for k, what in (("size", "a scale of the style's caption size (1: as the kit draws it)"),
+                    ("lineHeight", "a multiple of the size (absent: the style's own)"), ("letterSpacing", "% of the size")):
+        lo, hi = r[k]
+        if font.get(k) is not None and not (_number(font[k]) and lo <= font[k] <= hi):
+            out.append((k, f"{what}, {lo} to {hi}"))
+    for k in ("align", "valign"):
+        if font.get(k) is not None and font[k] not in r[k]:
+            out.append((k, f"{font[k]!r}: one of {', '.join(r[k])}"))
+    return out
+
+
+def caption_tokens(font, rules: dict) -> dict[str, str]:
+    """The caption tokens a valid listing.brand.font sets on a shot's :root (kits/shot.js `brand` sets the same from
+    the page): --bd-font-caption (the family, then Inter), --bd-weight-caption, --bd-style-caption (italic),
+    --bd-size-caption (unitless scale), --bd-leading-caption (unitless), --bd-tracking-caption (em: letterSpacing / 100),
+    --bd-align-caption (left|center|right) and --bd-valign-caption (top|middle|bottom). A key it leaves out keeps the
+    kit's default (kits/shot.css); an invalid font sets none."""
+    if not isinstance(font, dict) or caption_font_problems(font, rules):
+        return {}
+    out = {"--bd-font-caption": f'"{font["family"]}", Inter, system-ui, sans-serif'}
+    if font.get("weight") is not None:
+        out["--bd-weight-caption"] = str(font["weight"])
+    if font.get("italic"):
+        out["--bd-style-caption"] = "italic"
+    if font.get("size") is not None:
+        out["--bd-size-caption"] = f"{font['size']:g}"
+    if font.get("lineHeight") is not None:
+        out["--bd-leading-caption"] = f"{font['lineHeight']:g}"
+    if font.get("letterSpacing") is not None:
+        out["--bd-tracking-caption"] = f"{font['letterSpacing'] / 100:g}em"
+    for k in ("align", "valign"):
+        if font.get(k) is not None:
+            out[f"--bd-{k}-caption"] = font[k]
     return out
 
 
@@ -1414,6 +1482,13 @@ def validate_brand_style(rep, lw: str, lb: dict, doc: dict, doc_path: Path | Non
             for i in l5:
                 if "photo" in hooks[i] and not (isinstance(by[i].get("credits"), str) and by[i]["credits"].strip()):
                     rep.warn(f"artboard {i}.credits", "a lifestyle photo needs a rights note in the shot's credits (A-ARG 2.3.9)")
+        valign = font.get("valign")
+        if valign in rules["brand"]["font"]["valign"] and valign != "top":
+            styles = by_id(rules, "styles")
+            off = sorted({effective_style(lb, p, by[i])["layout"] for i in ids} - {s for s in styles if valign in styles[s].get("valign", [])})
+            if off:
+                rep.warn(lw + ".brand.font.valign", f"{', '.join(x.upper() for x in off)} on {p} puts the caption at the top, "
+                                                    f"not {valign} (store-rules.json styles[].valign)")
 
 
 def brand_image_type(data: bytes) -> str | None:

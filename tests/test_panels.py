@@ -3,7 +3,7 @@ Brief tab, before Comments and Revisions, on a design, a deck, a website and a s
 and, on the first three, no tab bar. A storelisting's left panel is Text, Style, Colors and Checks: every store text
 and caption is editable, Save makes each changed field a `listing` draft (op `field`) in the one undo history, Request
 changes sends it with its `build.py patch … field:… --set` command, and the draft resolves once the doc has the value;
-Colors is the old Brand (a stored `brand` tab opens it); the caption font is a section of Text. serve.py keeps a field
+Colors is the old Brand (a stored `brand` tab opens it); the captions' Typography is a section of Text. serve.py keeps a field
 draft only in its shape."""
 from __future__ import annotations
 
@@ -132,7 +132,7 @@ class ListingLeftPanel(ChromePage):
         f = self.field(t, k)
         self.assertEqual((f["value"], f["draft"], f["dirty"]), (new, True, False))
         self.assertEqual(t.ev(LST)["text"]["undo"], 1)
-        self.assertIn("Save 1 text edit", t.ev(LST)["text"]["next"]["undo"])
+        self.assertEqual(t.ev(LST)["text"]["next"]["undo"], "Short description · en-US", "a one-field Save is named for its field")
         # undo puts the doc's text back; redo the draft
         t.ev("BP.listing({undo: true})")
         t.wait_for(f"{LST}.text.drafts.length === 0")
@@ -205,15 +205,144 @@ class ListingLeftPanel(ChromePage):
         t.wait_for("!window.__before && document.readyState === 'complete' && !!window.BP && !!BP.listing()")
         self.assertFalse(t.ev("document.getElementById('bd-lp-text').hidden"), "a stored Brief tab opens Text")
 
-    def test_the_caption_font_is_a_section_of_text(self) -> None:
+    def test_typography_is_a_section_of_text(self) -> None:
         t = self.page()
         sec = "document.querySelector('#bd-lp-text .bd-lst-fsec')"
-        self.assertEqual(t.ev(f"{sec}.querySelector('h4').textContent"), "Caption font")
-        self.assertTrue(t.ev(f"!!{sec}.querySelector('.bd-lst-fq') && !!{sec}.querySelector('.bd-lst-fw') && !!{sec}.querySelector('.bd-lst-fonts')"
-                             f" && [...{sec}.querySelectorAll('.bd-lst-frow .bp-btn')].some(b => b.textContent.includes('Fonts'))"))
-        # vendored Inter, or the same family installed on this machine: either way a licence note
-        self.assertRegex(t.ev(f"{sec}.querySelector('.bd-lst-fcur').textContent"), r"vendored, OFL|not a licence for marketing images", "the licence note")
+        self.assertEqual(t.ev(f"{sec}.querySelector('h4').textContent"), "Typography")
+        self.assertTrue(t.ev(f"!!{sec}.querySelector('.bd-ty-dd.fam[aria-haspopup=listbox]') && !!{sec}.querySelector('.bd-ty-dd.sty[aria-haspopup=listbox]')"
+                             f" && !!{sec}.querySelector('.bd-ty-num[data-key=size]') && !!{sec}.querySelector('.bd-ty-num[data-key=lineHeight]')"
+                             f" && !!{sec}.querySelector('.bd-ty-num[data-key=letterSpacing]') && {sec}.querySelectorAll('.seg button').length === 6"))
+        # no always-open list, no preview card: the family list is a closed popover with ↻ Refresh fonts
+        self.assertEqual(t.ev(f"{sec}.querySelectorAll('.bd-lst-fonts, .bd-lst-fcur, .bd-ty-pop:popover-open').length"), 0)
+        self.assertIn("Refresh fonts", t.ev(f"{sec}.querySelector('.bd-ty-pop[data-menu=family] .rf').textContent"))
+        # vendored Inter, or the same family installed on this machine: either way a licence note, in the ⓘ by the family
+        self.assertRegex(t.ev(f"{sec}.querySelector('.bd-ty-info').title"), r"vendored, OFL|not a licence for marketing images", "the licence note")
         self.assertTrue(t.ev(f"{sec} === document.querySelector('#bd-lp-text').lastElementChild"), "at the bottom of Text")
+
+
+@unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")
+class ListingToolbar(ChromePage):
+    """1.0.0-beta16: a storelisting's floating toolbar (the left panel's key, Undo, Redo, the drafts count, platform,
+    locale, view, Jump to, Checks, Export to…), and every listing draft a step of the one undo history."""
+
+    TB = ".bd-lst-btb"
+    UNDO = ".bd-lst-btb [aria-keyshortcuts^='Meta+Z']"
+    REDO = ".bd-lst-btb [aria-keyshortcuts^='Shift+Meta+Z']"
+    page, field = ListingLeftPanel.page, ListingLeftPanel.field
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.doc_path = self.docs / f"{STEM}.bluedoc.json"
+        self.url = self.server.url_for(self.doc_path)
+
+    def keys(self, t) -> list:
+        """[undo disabled, undo label, redo disabled, redo label]: the keys' state and the tooltips that name the step."""
+        return t.ev(f"[...document.querySelectorAll(\"{self.UNDO}, {self.REDO}\")].flatMap(b => [b.disabled, b.getAttribute('aria-label')])")
+
+    def test_the_toolbar_holds_the_listing_controls_and_the_app_bar_does_not(self) -> None:
+        t = self.page()
+        self.assertEqual(t.ev(LST)["toolbar"]["controls"], ["play", "appstore", "locale", "sections", "preview", "ads", "jump", "checks", "export"])
+        self.assertTrue(t.ev(f"!!document.querySelector('.bd-lst .bd-btb{self.TB}[role=toolbar]')"), "floating in the listing, as a board's")
+        self.assertEqual(t.ev("document.querySelectorAll('.bd-bar :is([data-p], [data-view], select, .bd-expb, .bd-lst-btb)').length"), 0, "the app bar keeps the breadcrumb, Rev and theme")
+        self.assertTrue(t.ev("!!document.querySelector('.bd-bar .bd-crumb')"))
+        # the switches still work, and the URL keeps the platform and locale
+        t.ev(f"document.querySelector('{self.TB} [data-p=appstore]').click()")
+        t.ev(f"(s => {{ s.value = 'es-ES'; s.dispatchEvent(new Event('change')); }})(document.querySelector('{self.TB} .bd-lst-loc'))")
+        t.ev(f"document.querySelector('{self.TB} [data-view=preview]').click()")
+        got = t.ev(LST)
+        self.assertEqual((got["platform"], got["locale"], got["view"], got["hash"]), ("appstore", "es-ES", "preview", "#appstore/es-ES"))
+        self.assertTrue(any("MT" in loc["label"] for loc in got["locales"]), "the locale menu keeps its MT counts")
+        # the Checks count opens the Checks tab
+        t.ev(f"document.querySelector('{self.TB} .bd-lst-ckb').click()")
+        self.assertFalse(t.ev("document.getElementById('bd-lp-checks').hidden"))
+        # one row at 1440 px with both panels open, and at 1100 px
+        for w in (1440, 1100):
+            self.browser.call("Emulation.setDeviceMetricsOverride", {"width": w, "height": 900, "deviceScaleFactor": 1, "mobile": False}, t.session)
+            t.wait_for(f"(b => b.scrollWidth <= b.clientWidth + 1 && b.getBoundingClientRect().right <= document.querySelector('.bd-lst').getBoundingClientRect().right"
+                       f" && b.getBoundingClientRect().height < 48)(document.querySelector('{self.TB}'))")
+        self.assertEqual(self.browser.errors, [])
+
+    def test_the_bracket_and_the_toolbar_key_toggle_the_left_panel_and_a_reload_keeps_it(self) -> None:
+        t = self.page()
+        self.assertTrue(t.ev(LST)["toolbar"]["lp"])
+        t.ev("document.dispatchEvent(new KeyboardEvent('keydown', {key: '['}))")
+        self.assertEqual((t.ev(LST)["toolbar"]["lp"], t.ev("document.documentElement.classList.contains('bd-lp-open')")), (False, False))
+        self.assertEqual(t.ev(f"document.querySelector('{self.TB} [aria-keyshortcuts=\"[\"]').getAttribute('aria-pressed')"), "false")
+        t.ev("window.__before = 1; location.reload()")
+        t.wait_for("!window.__before && document.readyState === 'complete' && !!window.BP && !!document.querySelector('.bd-lst-sec') && !!BP.listing()")
+        self.assertFalse(t.ev(LST)["toolbar"]["lp"], "a reload keeps it hidden")
+        t.ev(f"document.querySelector('{self.TB} [aria-keyshortcuts=\"[\"]').click()")
+        self.assertTrue(t.ev(LST)["toolbar"]["lp"])
+        t.ev("window.__before = 1; location.reload()")
+        t.wait_for("!window.__before && document.readyState === 'complete' && !!window.BP && !!BP.listing()")
+        self.assertTrue(t.ev(LST)["toolbar"]["lp"], "and open")
+
+    def test_undo_and_redo_run_one_history_across_a_save_a_style_pick_and_a_colour_edit(self) -> None:
+        t = self.page()
+        self.assertEqual(self.keys(t), [True, "Nothing to undo", True, "Nothing to redo"])
+        self.assertEqual(t.ev("document.querySelectorAll('#bd-lp-text .bd-lst-tsave :is(.bd-ibtn, [aria-label^=Undo], [aria-label^=Redo])').length"), 0,
+                         "Text has Save, not its own Undo and Redo")
+        self.assertTrue(t.ev("!!document.querySelector('#bd-lp-text .bd-lst-tsave [data-save]')"))
+        k, new = "en-US/play/short", "Your week of runs, rides and sleep at a glance."
+        was = self.field(t, k)["value"]
+        was_style, was_bg = t.ev(LST)["style"], t.ev(LST)["brand"]["palette"]["bg"]
+        # 1 a text Save, 2 a style pick, 3 a colour edit: three steps
+        t.ev(f"BP.listing({{text: {{{json.dumps(k)}: {json.dumps(new)}}}, save: true}})")
+        t.wait_for(f"{LST}.toolbar.undo === 'Short description · en-US'")
+        t.ev("document.querySelector('.bd-lp-tabs [data-v=style]').click()")
+        pick = "l4" if was_style["layout"] != "l4" else "l3"
+        t.ev(f"document.querySelector('.bd-lst-stp [data-style=\"{pick}\"]').click()")
+        t.wait_for(f"{LST}.style.layout === '{pick}' && {LST}.toolbar.undo.startsWith('Style · Google Play')")
+        t.ev("document.querySelector('.bd-lp-tabs [data-v=colors]').click()")
+        t.ev("(i => { i.value = '#7c3aed'; i.dispatchEvent(new Event('input')); })(document.querySelector('.bd-lst-role[data-role=\"bg\"] .hx'))")
+        t.wait_for(f"{LST}.brand.draft && {LST}.text.undo === 3", 5)
+        self.assertEqual(t.ev(LST)["toolbar"]["drafts"], 3)
+        self.assertIn("Undo: ", self.keys(t)[1])
+        self.assertEqual(self.keys(t)[2:], [True, "Nothing to redo"])
+        # the history survives a reload
+        t = self.page(t=t)
+        self.assertEqual((t.ev(LST)["text"]["undo"], t.ev(LST)["toolbar"]["drafts"]), (3, 3))
+        # undo each in reverse order: the colour, the pick, the text
+        t.ev(f"document.querySelector(\"{self.UNDO}\").click()")
+        t.wait_for(f"!{LST}.brand.draft && {LST}.brand.palette.bg === {json.dumps(was_bg)}")
+        self.assertEqual(t.ev(LST)["style"]["layout"], pick)
+        t.ev("document.dispatchEvent(new KeyboardEvent('keydown', {key: 'z', metaKey: true}))")
+        t.wait_for(f"{LST}.style.layout === {json.dumps(was_style['layout'])}")
+        self.assertEqual(self.field(t, k)["value"], new)
+        t.ev("document.dispatchEvent(new KeyboardEvent('keydown', {key: 'z', ctrlKey: true}))")
+        t.wait_for(f"{LST}.text.drafts.length === 0")
+        self.assertEqual(self.field(t, k)["value"], was)
+        self.assertEqual(t.ev(LST)["toolbar"]["drafts"], 0)
+        undo_off, _, redo_off, redo_tip = self.keys(t)
+        self.assertEqual((undo_off, redo_off, redo_tip), (True, False, "Redo: Short description · en-US"), "at the start: Undo off")
+        # redo one: the text comes back; a reload keeps where the history is
+        t.ev(f"document.querySelector(\"{self.REDO}\").click()")
+        t.wait_for(f"{LST}.text.drafts.length === 1")
+        self.assertEqual(self.field(t, k)["value"], new)
+        t = self.page(t=t)
+        self.assertEqual((t.ev(LST)["text"]["undo"], t.ev(LST)["text"]["redo"]), (1, 2))
+        self.assertEqual(t.ev(LST)["toolbar"]["redo"].split(": ")[0], f"Style · Google Play")
+        # redo to the end: Redo off
+        t.ev("document.dispatchEvent(new KeyboardEvent('keydown', {key: 'z', metaKey: true, shiftKey: true}))")
+        t.ev("document.dispatchEvent(new KeyboardEvent('keydown', {key: 'y', ctrlKey: true}))")
+        t.wait_for(f"{LST}.brand.draft && {LST}.style.layout === '{pick}'")
+        self.assertEqual(self.keys(t)[2:], [True, "Nothing to redo"])
+        # in a text field the field's own undo runs, not the history's
+        t.ev("document.querySelector('.bd-lp-tabs [data-v=text]').click()")
+        t.ev("(ta => { ta.focus(); ta.dispatchEvent(new KeyboardEvent('keydown', {key: 'z', metaKey: true, bubbles: true})); })(document.querySelector('#bd-lp-text .bd-lfield textarea'))")
+        self.assertEqual(t.ev(LST)["text"]["undo"], 3)
+        self.assertEqual(self.browser.errors, [])
+
+    def test_the_drafts_count_opens_comments_on_pending(self) -> None:
+        t = self.page()
+        self.assertTrue(t.ev(f"document.querySelector('{self.TB} .bd-dcount').hidden"))
+        t.ev("BP.listing({text: {'en-US/play/short': 'Short and new'}, save: true})")
+        t.wait_for(f"{LST}.toolbar.drafts === 1")
+        self.assertEqual(t.ev(f"document.querySelector('{self.TB} .bd-dcount').textContent"), "1 draft")
+        t.ev("BP.comments({filter: 'all', open: false})")
+        t.ev(f"document.querySelector('{self.TB} .bd-dcount').click()")
+        c = t.ev("BP.comments()")
+        self.assertEqual((c["open"], c["filter"]), (True, "pending"))
 
 
 if __name__ == "__main__":

@@ -23,7 +23,7 @@ import zlib
 from pathlib import Path
 
 from _support import REPO, SCRIPTS, Server, TempHome, load_json
-from test_page_state import CHROME, ChromePage
+from test_page_state import CHROME, ChromePage, until
 from test_storelisting import STEM, png, report
 
 import build
@@ -404,6 +404,26 @@ class Uploads(unittest.TestCase):
         self.assertEqual(status, 200, gone)
         self.assertFalse((self.docs / again["file"]).exists())
 
+    def test_a_discarded_upload_is_set_aside_and_restore_brings_it_back(self) -> None:
+        status, ans = self.upload(png(1320, 2868))
+        self.assertEqual(status, 200, ans)
+        f = self.docs / ans["file"]
+        kept = f.read_bytes()
+        status, gone = self.post({"path": self.url, "discard": ans["file"]})
+        self.assertEqual(status, 200, gone)
+        self.assertFalse(f.exists())
+        self.assertEqual(listing.uploads(load_json(self.path), self.path), [], "a file set aside is no draft")
+        status, back = self.post({"path": self.url, "restore": ans["file"]})
+        self.assertEqual(status, 200, back)
+        self.assertEqual((back["restored"], back["w"], back["h"]), (ans["file"], 1320, 2868))
+        self.assertEqual(f.read_bytes(), kept)
+        self.assertEqual([u["file"] for u in listing.uploads(load_json(self.path), self.path)], [ans["file"]])
+        status, again = self.post({"path": self.url, "restore": ans["file"]})
+        self.assertEqual(status, 409, again)   # it is there already
+        for bad in ("../outside.png", f"{ans['file'].rsplit('/', 1)[0]}/x.png", "acme-fit-listing.listing/brand/source.png"):
+            status, no = self.post({"path": self.url, "restore": bad})
+            self.assertEqual(status, 404, (bad, no))
+
     def test_approve_is_refused_while_an_upload_is_unrecorded(self) -> None:
         status, ans = self.upload(png(1320, 2868))
         self.assertEqual(status, 200, ans)
@@ -535,6 +555,37 @@ class UploadAndPinInChrome(ChromePage):
         t.wait_for(f"{LST}.approveBlocks.length === 0")
         self.assertEqual(t.ev(f"{LST}.drafts"), [])
         self.assertIn("upload", [tag for x in t.ev(LST)["tiles"] if x["set"] == "appstore/iphone-69" for tag in x["tags"]])
+
+    def test_an_upload_in_the_ads_view_is_a_step_that_undoes_and_redoes_with_its_file(self) -> None:
+        (self.docs / "media" / "ad.png").write_bytes(png(1200, 628))
+        t = self.page("#play")
+        t.ev("BP.listing({view: 'ads'})")
+        t.wait_for(f"{LST}.slots.some(s => s.set === 'play/ad-landscape')")
+        self.assertIsNone(t.ev(LST)["toolbar"]["undo"], "nothing to undo yet")
+        t.ev(f"{DROP}({json.dumps(self.media + 'ad.png')}, 'play/ad-landscape')")
+        t.wait_for(f"{LST}.drafts.length === 1")
+        f = self.docs / t.ev(LST)["uploads"][0]["file"]
+        self.assertTrue(f.is_file())
+        self.assertRegex(t.ev(LST)["toolbar"]["undo"], r"^Upload \d\d · Google Ads image 1\.91:1 · en-US$")
+        self.assertEqual(t.ev(LST)["toolbar"]["drafts"], 1)
+        # the toolbar's Undo: the draft goes and its file is set aside, which a reload keeps
+        t.ev("document.querySelector('.bd-lst-btb [aria-keyshortcuts^=\"Meta+Z\"]').click()")
+        t.wait_for(f"{LST}.drafts.length === 0 && {LST}.uploads.length === 0")
+        t.wait_for(f"{LST}.toolbar.redo !== null && {LST}.toolbar.drafts === 0")
+        until(lambda: not f.exists())
+        self.assertEqual(listing.uploads(load_json(self.doc_path), self.doc_path), [])
+        self.assertFalse(f.exists())
+        t = self.page("#play")
+        t.ev("BP.listing({view: 'ads'})")
+        t.wait_for(f"{LST}.toolbar.redo !== null")
+        self.assertEqual(t.ev(f"{LST}.drafts"), [])
+        # Redo (Ctrl+Y on the page): the draft and its file come back
+        t.ev("document.dispatchEvent(new KeyboardEvent('keydown', {key: 'y', ctrlKey: true}))")
+        t.wait_for(f"{LST}.drafts.length === 1 && {LST}.uploads.length === 1")
+        self.assertTrue(f.is_file())
+        self.assertEqual([u["file"] for u in listing.uploads(load_json(self.doc_path), self.doc_path)], [t.ev(LST)["uploads"][0]["file"]])
+        self.assertIsNone(t.ev(LST)["toolbar"]["redo"])
+        self.assertEqual(self.browser.errors, [])
 
     def test_a_pin_on_a_capture_reads_back_its_recipe_and_reshoot(self) -> None:
         t = self.page()

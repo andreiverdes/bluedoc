@@ -1880,15 +1880,34 @@ html.bd-presenting .bp-toast { z-index: 71; bottom: 84px; }
 /* a doc page's tray beside an open right panel (fitTray): keys keep their icon and count, not their words */
 .bd-anntb.compact .bd-key :is(.t, .l) { display: none; }
 
-/* ---------- a storelisting's platform pages (renderListing): the platform switch and the locale menu in the app
-   bar; the left panel's Text, Style, Colors and Checks; the device sections, each a card of its sets' shots
-   at scale, in the full-bleed layer ---------- */
-.bd-lst-tb { display: flex; align-items: center; gap: 10px; flex: none; margin-left: 8px; }
-.bd-lst-tb .bd-sg button { padding: 0 12px; font-weight: 600; }
-.bd-lst-loc { height: 30px; border: 0; border-radius: 9px; padding: 0 8px; font: 500 12.5px var(--sans); color: var(--fg); background: var(--inset); box-shadow: inset 0 0 0 1px var(--line); }
-.bd-lst-main { position: absolute; inset: 0; overflow: auto; overscroll-behavior: contain; padding: 18px 22px 110px;
+/* ---------- a storelisting's platform pages (renderListing): the floating toolbar; the left panel's Text, Style,
+   Colors and Checks; the device sections, each a card of its sets' shots at scale, in the full-bleed layer ---------- */
+/* the toolbar: the board's (.bd-btb), one row, centred in the room the panels leave (fitLtb). Where its words don't
+   fit, it sheds them a tier at a time (data-fit): 1 the view keys keep their icons, 2 Export to… its icon and the
+   platforms their short names, 3 Jump to goes, 4 the drafts and Checks counts go (Comments and the Checks tab keep them) */
+.bd-lst-btb { flex-wrap: nowrap; max-width: calc(100% - 24px); }
+.bd-lst-btb > * { flex: none; white-space: nowrap; }
+.bd-lst-btb .bd-sg button { display: inline-flex; align-items: center; gap: 5px; padding: 0 9px; font-weight: 600; white-space: nowrap; }
+.bd-lst-btb .bd-sg button .bd-ic { width: 15px; height: 15px; }
+.bd-lst-btb select { max-width: 150px; margin: 0 2px; }
+.bd-lst-btb .bd-lst-jump { width: 92px; color: var(--fg-muted); }
+.bd-lst-btb .bd-exp { margin-left: 2px; }
+.bd-lst-btb .bd-expb span { white-space: nowrap; }
+.bd-lst-ckb { display: inline-flex; align-items: center; gap: 4px; color: var(--ok-fg, var(--fg-muted)); }
+.bd-lst-ckb .bd-ic { width: 16px; height: 16px; }
+.bd-lst-ckb .n { font-variant-numeric: tabular-nums; font-weight: 650; }
+.bd-lst-ckb.err { color: var(--risk-fg); } .bd-lst-ckb.warn { color: var(--warn-fg); }
+.bd-lst-btb [data-p] .ls { display: none; }
+.bd-lst-btb:is([data-fit="1"], [data-fit="2"], [data-fit="3"], [data-fit="4"]) [data-view] { padding: 0 7px; }
+.bd-lst-btb:is([data-fit="1"], [data-fit="2"], [data-fit="3"], [data-fit="4"]) [data-view] .w { display: none; }
+.bd-lst-btb:is([data-fit="2"], [data-fit="3"], [data-fit="4"]) :is(.bd-expb > span, [data-p] .lf) { display: none; }
+.bd-lst-btb:is([data-fit="2"], [data-fit="3"], [data-fit="4"]) [data-p] .ls { display: inline; }
+.bd-lst-btb:is([data-fit="2"], [data-fit="3"], [data-fit="4"]) :is(.bd-sg button[data-p]) { padding: 0 7px; }
+.bd-lst-btb:is([data-fit="2"], [data-fit="3"], [data-fit="4"]) select { max-width: 104px; }
+.bd-lst-btb:is([data-fit="3"], [data-fit="4"]) .bd-lst-jump, .bd-lst-btb[data-fit="4"] :is(.bd-dcount, .bd-lst-ckb) { display: none; }
+.bd-lst-main { position: absolute; inset: 0; overflow: auto; overscroll-behavior: contain; padding: 64px 22px 110px;
   background-color: var(--canvas); background-image: radial-gradient(circle, color-mix(in oklch, var(--fg) 14%, transparent) 1px, transparent 1.3px); background-size: 24px 24px; }
-.bd-lst-sec { display: grid; grid-template-columns: 132px minmax(0, 1fr); gap: 16px; margin: 0 auto 14px; max-width: 1480px; padding: 14px 16px;
+.bd-lst-sec { display: grid; grid-template-columns: 132px minmax(0, 1fr); gap: 16px; margin: 0 auto 14px; max-width: 1480px; padding: 14px 16px; scroll-margin-top: 60px;
   border-radius: 14px; background: var(--surface); box-shadow: var(--shadow-1); }
 .bd-lst-sec > .hd h3 { margin: 2px 0 4px; font-size: 14px; }
 .bd-lst-sec > .hd p { margin: 0; font-size: 12px; line-height: 1.45; color: var(--fg-subtle); }
@@ -2026,7 +2045,6 @@ html.bd-presenting .bp-toast { z-index: 71; bottom: 84px; }
 .bd-lst-tsave .st { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: var(--fg-subtle); }
 .bd-lst-tsave .st.dirty { color: var(--warn-fg); font-weight: 600; }
 .bd-lst-tsave .sp { flex: 1; }
-.bd-lst-tsave .bd-ibtn { width: 28px; height: 28px; }
 .bd-lst-tsave .bp-btn { height: 28px; margin-left: 4px; padding: 0 14px; }
 .bd-lst-tsave .bp-btn:disabled { opacity: .5; cursor: default; }
 .bd-lst-text h4 { margin: 4px 4px 10px; font-size: 13px; }
@@ -2048,7 +2066,6 @@ html.bd-presenting .bp-toast { z-index: 71; bottom: 84px; }
 .bd-lfield .note { font-size: 11.5px; color: var(--warn-fg); }
 .bd-lfield .bd-lst-mta { display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: var(--fg-subtle); }
 .bd-lfield .bd-lst-mta .bp-btn { height: 26px; padding: 0 9px; font-size: 12px; }
-.bd-lst-tb .bd-exp { margin-left: 2px; }
 .bd-lfield.cap { grid-template-columns: minmax(0, 1fr); }
 .bd-lst-fsec { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; margin: 18px 0 0; padding: 14px 4px 0; box-shadow: inset 0 1px 0 var(--line-soft); font-size: 13px; }
 .bd-lst-fsec h4 { margin: 0; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--fg-subtle); }
@@ -2086,25 +2103,72 @@ html.bd-presenting .bp-toast { z-index: 71; bottom: 84px; }
 .bd-lst-style .ms { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; }
 .bd-lst-style .ms .bp-chip { height: 20px; font-size: 11px; }
 .bd-lst-sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
-/* the Text tab's caption font (the font menu) and the Colors pane (the image drop, swatches, the roles and the contrast pairs) */
-.bd-lst-clp, .bd-lst-stp, .bd-lst-fsec { grid-auto-rows: max-content; }   /* a long pane scrolls; its rows (the font menu) keep their height */
+/* the Text tab's Typography section and the Colors pane (the image drop, swatches, the roles and the contrast pairs) */
+.bd-lst-clp, .bd-lst-stp, .bd-lst-fsec { grid-auto-rows: max-content; }   /* a long pane scrolls; its rows keep their height */
 .bd-lst-clp.ro :is(.bd-lst-imgdrop, .bd-lst-roles) { opacity: .7; }
-.bd-lst-fcur { display: grid; gap: 3px; padding: 10px 12px; border-radius: 10px; background: var(--inset); font-size: 12px; color: var(--fg-muted); }
-.bd-lst-fcur b { font-size: 20px; line-height: 1.15; color: var(--fg); overflow-wrap: anywhere; }
-.bd-lst-fcur .bad, .bd-lst-font .bad { color: var(--risk-fg); font-weight: 600; }
-.bd-lst-fcur .note { color: var(--fg-subtle); }
-.bd-lst-frow { display: flex; gap: 6px; }
-.bd-lst-frow .bd-lst-fq { flex: 1; min-width: 0; }
-.bd-lst-frow :is(input, select) { height: 30px; padding: 0 8px; border: 0; border-radius: 8px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); font: inherit; font-size: 12.5px; color: var(--fg); }
-.bd-lst-frow .bp-btn { height: 30px; }
-.bd-lst-fonts { display: grid; gap: 1px; max-height: 260px; overflow: auto; padding: 3px; border-radius: 10px; background: var(--surface); box-shadow: var(--shadow-1); scrollbar-width: thin; }
-.bd-lst-font { display: grid; gap: 1px; width: 100%; padding: 6px 8px; border: 0; border-radius: 7px; background: none; text-align: left; font: inherit; color: var(--fg); cursor: pointer; }
-.bd-lst-font:hover:not(:disabled) { background: var(--hover); }
-.bd-lst-font[aria-selected="true"] { background: var(--selected); box-shadow: inset 2px 0 0 var(--accent); }
-.bd-lst-font .n { display: flex; justify-content: space-between; gap: 8px; font-size: 11.5px; color: var(--fg-muted); }
-.bd-lst-font .n span { flex: none; color: var(--fg-subtle); }
-.bd-lst-font .p { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 16px; line-height: 1.3; }
-.bd-lst-fonts .hint, .bd-lst-fonts .bp-btn { margin: 6px 8px; }
+/* Typography: Figma's density, 28 px controls on a faint fill, a ring on hover and focus */
+.bd-typo { --ty-h: 28px; --ty-fill: color-mix(in oklch, var(--fg) 6%, transparent); gap: 8px; font-size: 12px; }
+.bd-typo .hd { display: flex; align-items: baseline; gap: 6px; margin-bottom: 2px; }
+.bd-typo .hd h4 { font-size: 12px; font-weight: 600; text-transform: none; letter-spacing: 0; color: var(--fg); }
+.bd-typo .hd .sub { font-size: 11.5px; color: var(--fg-subtle); }
+.bd-typo .f { display: grid; gap: 4px; min-width: 0; }
+.bd-ty-lb { font-size: 11px; color: var(--fg-subtle); }
+.bd-ty-row { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); gap: 8px; }
+.bd-ty-row.eq { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.bd-ty-dd, .bd-ty-num { display: flex; align-items: center; gap: 6px; width: 100%; height: var(--ty-h); border-radius: 6px; background: var(--ty-fill);
+  box-shadow: inset 0 0 0 1px transparent; transition: box-shadow .12s; }
+.bd-ty-dd { padding: 0 5px 0 8px; border: 0; color: var(--fg); font: 12px/1 var(--sans); text-align: left; cursor: default; }
+.bd-ty-dd .v { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12.5px; line-height: var(--ty-h); }
+.bd-ty-dd.sty .v { font-family: var(--sans); }
+:is(.bd-ty-dd, .bd-ty-num) .cv { flex: none; width: 14px; height: 14px; color: var(--fg-subtle); }
+.bd-ty-info { flex: none; display: grid; place-items: center; color: var(--fg-subtle); cursor: help; }
+.bd-ty-info .bd-ic { width: 13px; height: 13px; }
+.bd-ty-dd:hover:not(:disabled), .bd-ty-num:hover:not(:has(:disabled)) { box-shadow: inset 0 0 0 1px var(--line-strong); }
+.bd-ty-dd:focus-visible, .bd-ty-dd[aria-expanded="true"], .bd-ty-num:focus-within { outline: none; box-shadow: inset 0 0 0 1px var(--focus); }
+.bd-ty-num { padding: 0 3px 0 8px; color: var(--fg-subtle); cursor: text; }
+.bd-ty-num .ic { flex: none; display: grid; place-items: center; }
+.bd-ty-num .ic .bd-ic { width: 15px; height: 15px; }
+.bd-ty-num .n { flex: 1; width: 0; min-width: 0; height: 100%; padding: 0; border: 0; background: none; color: var(--fg); font: 12px var(--sans); font-variant-numeric: tabular-nums; outline: none; }
+.bd-ty-num .n::placeholder { color: var(--fg-muted); opacity: 1; }
+.bd-ty-num .u { flex: none; margin-right: 4px; font-size: 11.5px; }
+.bd-ty-num .dd { flex: none; display: grid; place-items: center; width: 20px; height: 22px; margin-left: -2px; padding: 0; border: 0; border-radius: 4px; background: none; color: var(--fg-subtle); cursor: default; }
+.bd-ty-num .dd:hover:not(:disabled), .bd-ty-num .dd[aria-expanded="true"] { background: var(--hover); color: var(--fg); }
+.bd-ty-al { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
+.bd-typo .seg { display: flex; gap: 2px; padding: 2px; border-radius: 6px; background: var(--ty-fill); }
+.bd-typo .seg button { flex: 1; display: grid; place-items: center; height: 24px; padding: 0; border: 0; border-radius: 4px; background: none; color: var(--fg-muted); cursor: default; }
+.bd-typo .seg .bd-ic { width: 16px; height: 16px; }
+.bd-typo .seg button:hover:not([aria-disabled="true"]):not([aria-pressed="true"]) { background: var(--hover); color: var(--fg); }
+.bd-typo .seg button[aria-pressed="true"] { background: var(--raised); color: var(--fg); box-shadow: var(--shadow-1); }
+.bd-typo .seg button[aria-disabled="true"] { color: var(--fg-subtle); opacity: .45; cursor: not-allowed; }
+.bd-typo .seg button:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.bd-ty-warn { display: flex; align-items: flex-start; gap: 6px; margin: -2px 0 0; font-size: 11.5px; line-height: 1.35; color: var(--warn-fg); }
+.bd-ty-warn[hidden] { display: none; }
+.bd-ty-warn .bd-ic { flex: none; width: 13px; height: 13px; margin-top: 1px; }
+.bd-typo.ro :is(.bd-ty-dd, .bd-ty-num, .seg) { opacity: .6; }
+/* a Typography dropdown's popover: in the top layer, placed by its button (tyMenu) */
+.bd-ty-pop { position: fixed; inset: auto; z-index: 80; display: flex; flex-direction: column; box-sizing: border-box; min-height: 0; margin: 0; padding: 4px; border: 0;
+  overflow: hidden; border-radius: 10px; background: var(--raised); color: var(--fg); box-shadow: var(--shadow-3); font: 12px/1.3 var(--sans); }
+.bd-ty-pop[popover]:not(:popover-open), .bd-ty-pop[hidden] { display: none; }
+.bd-ty-pop .sr { flex: none; display: flex; align-items: center; gap: 6px; height: 28px; margin-bottom: 4px; padding: 0 8px; border-radius: 6px; background: var(--ty-fill, color-mix(in oklch, var(--fg) 6%, transparent)); color: var(--fg-subtle); }
+.bd-ty-pop .sr .bd-ic { flex: none; width: 14px; height: 14px; }
+.bd-ty-pop .q { flex: 1; min-width: 0; height: 100%; padding: 0; border: 0; background: none; color: var(--fg); font: inherit; outline: none; }
+.bd-ty-pop .q::-webkit-search-cancel-button { display: none; }
+.bd-ty-pop :is(.q, .ls):focus-visible { outline: none; box-shadow: none; }
+.bd-ty-pop .sr:focus-within { box-shadow: inset 0 0 0 1px var(--focus); }
+.bd-ty-pop .ls { flex: 1 1 auto; min-height: 0; overflow: auto; outline: none; scrollbar-width: thin; }
+.bd-ty-pop .o { display: flex; align-items: center; gap: 4px; height: 28px; padding: 0 8px 0 2px; border-radius: 6px; cursor: default; content-visibility: auto; contain-intrinsic-size: auto 28px; }
+.bd-ty-pop .o.act { background: var(--accent); color: #fff; }
+.bd-ty-pop .o .ck { flex: none; display: grid; place-items: center; width: 18px; }
+.bd-ty-pop .o .ck .bd-ic { width: 13px; height: 13px; }
+.bd-ty-pop .o .l { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; line-height: 28px; }
+.bd-ty-pop .o .m { flex: none; font: 11px var(--sans); color: var(--fg-subtle); }
+.bd-ty-pop .o .m.bad { color: var(--warn-fg); }
+.bd-ty-pop .o.act .m { color: color-mix(in oklch, #fff 78%, transparent); }
+.bd-ty-pop .hint { padding: 6px 8px; color: var(--fg-subtle); }
+.bd-ty-pop .ft { flex: none; margin: 4px -4px 0; padding: 4px 4px 0; border-top: 1px solid var(--line-soft); }
+.bd-ty-pop .rf { display: flex; align-items: center; gap: 6px; width: 100%; height: 28px; padding: 0 8px; border: 0; border-radius: 6px; background: none; color: var(--fg-muted); font: inherit; cursor: default; }
+.bd-ty-pop .rf:is(:hover, :focus-visible) { outline: none; background: var(--hover); color: var(--fg); }
+.bd-ty-pop .rf .bd-ic { width: 14px; height: 14px; }
 .bd-lst-imgdrop { display: flex; align-items: center; gap: 10px; width: 100%; padding: 12px; border: 0; border-radius: 10px; background: var(--inset); box-shadow: inset 0 0 0 1.5px var(--line-strong);
   text-align: left; font: inherit; font-size: 12px; color: var(--fg-muted); cursor: pointer; }
 .bd-lst-imgdrop > span { display: grid; gap: 2px; }
@@ -2277,6 +2341,16 @@ const ICONS = {
   tick: '<path d="M20 6 9 17l-5-5"/>',
   checks: '<path d="M18 6 7 17l-5-5"/><path d="m22 10-7.5 7.5L13 16"/>',
   arrowr: '<path d="M5 12h14M12 5l7 7-7 7"/>',
+  // the storelisting's Typography section: alignment, line height, letter spacing, search
+  alignl: '<path d="M21 6H3M15 12H3M17 18H3"/>',
+  alignc: '<path d="M21 6H3M17 12H7M19 18H5"/>',
+  alignr: '<path d="M21 6H3M21 12H9M21 18H7"/>',
+  valignt: '<path d="M5 3h14M12 21V8M7.5 12.5 12 8l4.5 4.5"/>',
+  valignm: '<path d="M5 12h14M12 2v6M9 5.5 12 8l3-2.5M12 22v-6M9 18.5l3-2.5 3 2.5"/>',
+  valignb: '<path d="M5 21h14M12 3v13M7.5 11.5 12 16l4.5-4.5"/>',
+  leading: '<path d="M4 3h16M4 21h16M8 17.5l4-10 4 10M9.6 13.5h4.8"/>',
+  tracking: '<path d="M3 4v16M21 4v16M8 17l4-10 4 10M9.6 13h4.8"/>',
+  search: '<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>',
   // design boards: devices, modes and the board's toolbar
   watch: '<circle cx="12" cy="12" r="6"/><path d="M12 10v2l1 1M16.13 7.66l-.81-4.05a2 2 0 0 0-2-1.61h-2.68a2 2 0 0 0-2 1.61l-.78 4.05M7.88 16.36l.8 4a2 2 0 0 0 2 1.61h2.72a2 2 0 0 0 2-1.61l.81-4.05"/>',
   phone: '<rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/>',
@@ -6709,7 +6783,7 @@ function renderListing(lb) {
   const onPage = p => L.variant && L.variant.platform === p ? L.variant : null;
   const sectionsOf = (p, loc = L.locale, v = onPage(p)) => BoardGeo.listingSections(effective(), abs, RULES, p, loc, effVariant(v));
 
-  /* the app bar: Google Play | App Store, and the locale menu with each locale's MT and missing counts */
+  /* the toolbar's switches: Google Play | App Store, and the locale menu with each locale's MT and missing counts */
   const missingIn = loc => {
     if (loc === DEF) return 0;
     let n = 0;
@@ -6719,7 +6793,7 @@ function renderListing(lb) {
   };
   const locLabel = loc => [loc, (MTS[loc] || []).length && `${MTS[loc].length} MT`, missingIn(loc) && `${missingIn(loc)} missing`].filter(Boolean).join(' · ');
   const platSeg = h('div', { class: 'bd-sg', role: 'radiogroup', 'aria-label': 'Platform' }, PLATS.map(p =>
-    h('button', { type: 'button', role: 'radio', 'data-p': p.id, onclick: () => setPlatform(p.id) }, p.label)));
+    h('button', { type: 'button', role: 'radio', 'data-p': p.id, title: p.label, onclick: () => setPlatform(p.id) }, p.short && p.short !== p.label ? [h('span', { class: 'lf' }, p.label), h('span', { class: 'ls' }, p.short)] : p.label)));
   const locSel = h('select', { class: 'bd-lst-loc', 'aria-label': 'Locale', title: 'Locale: text, captions and captures switch with it' },
     LOCS.map(l => h('option', { value: l }, locLabel(l))));
   locSel.addEventListener('change', () => setLocale(locSel.value));
@@ -6753,10 +6827,54 @@ function renderListing(lb) {
     } catch { toast('Couldn\'t export the listing: the server didn\'t answer'); }
     finally { lstBusy.delete(format); }
   }
-  // the view: the device sections, the store preview mock, the ads (L.view)
-  const viewSeg = h('div', { class: 'bd-sg', role: 'radiogroup', 'aria-label': 'View' }, [['sections', 'Sections', 'Every set and shot, by device'], ['preview', 'Store preview', 'The product page and a search result at phone width: a mock'],
-    ['ads', 'Ads', 'Google App campaign and Apple Ads assets']].map(([v, l, t]) => h('button', { type: 'button', role: 'radio', 'data-view': v, title: t, onclick: () => setView(v) }, l)));
-  const tb = h('div', { class: 'bd-lst-tb' }, platSeg, locSel, viewSeg, SERVED && exportMenu(LST_EXPORTS, exportListing, 'Export the listing: a ZIP for fastlane, a PDF or an HTML file', false));
+  // the view: the device sections, the store preview mock, the ads (L.view); an icon each, and its word while the
+  // toolbar has room (.bd-lst-btb's container widths)
+  const viewSeg = h('div', { class: 'bd-sg', role: 'radiogroup', 'aria-label': 'View' }, [['sections', 'layers', 'Sections', 'Every set and shot, by device'], ['preview', 'phone', 'Store preview', 'The product page and a search result at phone width: a mock'],
+    ['ads', 'zap', 'Ads', 'Google App campaign and Apple Ads assets']].map(([v, i, l, t]) => h('button', { type: 'button', role: 'radio', 'data-view': v, title: `${l}: ${t}`, 'aria-label': l, onclick: () => setView(v) }, ic(i), h('span', { class: 'w' }, l))));
+
+  /* the toolbar, floating at the top of the listing as a design board's does: the left panel ([), Undo, Redo and the
+     drafts count, the platform and locale, the view and Jump to a section, the Checks count, Export to…. Undo and Redo
+     run the doc's one draft history (draftHistory, L.H): every listing draft change is a step of it (L.step) */
+  const tbtn = (icon, label, fn, extra) => h('button', { type: 'button', class: 'bd-tbtn', 'aria-label': label, title: label, onclick: fn, ...extra }, ic(icon));
+  const sep = () => h('span', { class: 'bd-groove', role: 'separator', 'aria-orientation': 'vertical' });
+  const lpBtn = tbtn('panelleft', 'Text, style, colors and checks ([)', () => setLp(!L.lp, true), { 'aria-pressed': 'false', 'aria-keyshortcuts': '[' });
+  const histBtn = (icon, run, keys, kbds) => tipped(h('button', { type: 'button', class: 'bd-tbtn', 'aria-keyshortcuts': keys, onclick: run }, ic(icon)), kbds);
+  const undoBtn = histBtn('undo', () => L.undo(), 'Meta+Z Control+Z', [MAC ? '⌘Z' : 'Ctrl+Z']);
+  const redoBtn = histBtn('redo', () => L.redo(), 'Shift+Meta+Z Shift+Control+Z Control+Y', [MAC ? '⇧⌘Z' : 'Ctrl+Y']);
+  const countBtn = h('button', { type: 'button', class: 'bd-tbtn txt bd-dcount', hidden: true, title: 'Listing drafts: text edits, picks, colours, orders and uploads not yet in the doc. They go with Request changes.',
+    onclick: () => L.M && L.M.comments({ open: true, filter: 'pending' }) });
+  function paintHist() {
+    const nx = L.H ? L.H.next() : { undo: null, redo: null };
+    for (const [b, l, verb] of [[undoBtn, nx.undo, 'Undo'], [redoBtn, nx.redo, 'Redo']]) {
+      b.disabled = l == null; b._tip = l == null ? `Nothing to ${verb.toLowerCase()}` : `${verb}: ${l}`;
+      b.setAttribute('aria-label', b._tip);
+    }
+    const n = drafts().length;
+    const was = countBtn.hidden;
+    countBtn.hidden = !n; countBtn.textContent = n === 1 ? '1 draft' : `${n} drafts`;
+    if (was !== countBtn.hidden) fitLtb();
+  }
+  // Jump to: each section on screen (Shared, Watch, Phone, Tablet; the Ads view's cards), scrolled to under the toolbar
+  const jumpSel = h('select', { class: 'bd-lst-jump', 'aria-label': 'Jump to a section', title: 'Jump to a section' });
+  jumpSel.addEventListener('change', () => {
+    const s = pg.querySelectorAll('.bd-lst-sec')[+jumpSel.value]; jumpSel.value = '';
+    if (s) { s.scrollIntoView({ block: 'start', behavior: REDUCE ? 'auto' : 'smooth' }); jumpSel.blur(); }
+  });
+  function paintJump() {
+    const secs = [...pg.querySelectorAll('.bd-lst-sec')];
+    jumpSel.replaceChildren(h('option', { value: '', disabled: true }, 'Jump to'), ...secs.map((s, i) => h('option', { value: String(i) }, s.querySelector('h3') ? s.querySelector('h3').textContent : s.dataset.row)));
+    jumpSel.value = ''; jumpSel.disabled = secs.length < 2;
+  }
+  // the Checks count (errors, else warnings): opens the Checks tab
+  const checksBtn = h('button', { type: 'button', class: 'bd-tbtn txt bd-lst-ckb', onclick: () => { setLp(true, true); setTab('checks', true); } }, ic('checks'), h('span', { class: 'n' }));
+  const ltb = h('div', { class: 'bd-btb bd-lst-btb', role: 'toolbar', 'aria-label': 'Listing', 'data-fit': '0' }, lpBtn, sep(), undoBtn, redoBtn, countBtn, sep(),
+    platSeg, locSel, sep(), viewSeg, jumpSel, sep(), checksBtn, SERVED && exportMenu(LST_EXPORTS, exportListing, 'Export the listing: a ZIP for fastlane, a PDF or an HTML file', false));
+  // the fewest tiers that fit the listing's width (a container query can't measure the keys; this does)
+  function fitLtb() {
+    const room = wrap.clientWidth - 24; if (room <= 0) return;
+    for (let k = 0; k <= 4; k++) { ltb.dataset.fit = String(k); if (ltb.scrollWidth <= room) break; }
+  }
+  if ('ResizeObserver' in window) new ResizeObserver(fitLtb).observe(wrap);
 
   /* the left panel: Text (this platform's store text and the captions, for the locale, then the caption font), then
      Style, Colors and Checks (below) */
@@ -6780,11 +6898,9 @@ function renderListing(lb) {
     const items = list ? fieldVal(text, true) : text ? [text] : [], counts = items.map(s => lstCount(s, rule.unit));
     return { over: counts.some(n => n > rule.limit || (rule.min && n < rule.min)), say: items.length ? counts.map(n => `${n} / ${rule.limit}`).join(' · ') + (rule.unit === 'bytes' ? ' bytes' : '') : `0 / ${rule.limit}` };
   };
-  const undoBtnT = h('button', { type: 'button', class: 'bd-ibtn', onclick: () => L.undo() }, ic('undo'));
-  const redoBtnT = h('button', { type: 'button', class: 'bd-ibtn', onclick: () => L.redo() }, ic('redo'));
   const saveSay = h('span', { class: 'st' });
   const saveBtn = h('button', { type: 'button', class: 'bp-btn primary', 'data-save': '', onclick: () => saveText() }, 'Save');
-  const saveBar = h('div', { class: 'bd-lst-tsave bd-lp-ui' }, saveSay, h('span', { class: 'sp' }), undoBtnT, redoBtnT, saveBtn);
+  const saveBar = h('div', { class: 'bd-lst-tsave bd-lp-ui' }, saveSay, h('span', { class: 'sp' }), saveBtn);
   lpText.append(saveBar, lpFields);
   function paintSaveBar() {
     const n = edits.size, nd = drafts().filter(a => a.listing.op === 'field').length, can = canEditText();
@@ -6794,8 +6910,7 @@ function renderListing(lb) {
     saveSay.textContent = n ? `${n} unsaved` : nd ? `${nd} draft${nd === 1 ? '' : 's'} saved` : 'Edit a field, then Save';
     saveSay.title = n ? 'Save makes each edit a draft' : nd ? `Request changes sends ${nd === 1 ? 'it' : 'them'}` : '';
     saveSay.classList.toggle('dirty', !!n);
-    const nx = L.H ? L.H.next() : { undo: null, redo: null };
-    for (const [b, l, verb] of [[undoBtnT, nx.undo, 'Undo'], [redoBtnT, nx.redo, 'Redo']]) { b.disabled = l == null; b.title = l == null ? `Nothing to ${verb.toLowerCase()}` : `${verb}: ${l}`; b.setAttribute('aria-label', b.title); }
+    paintHist();
     const tab = lpTabs && lpTabs.querySelector('[data-v="text"]');
     if (tab) { tab.classList.toggle('dirty', !!n); tab.title = n ? `Text: ${n} unsaved edit${n === 1 ? '' : 's'}` : 'Text'; }
   }
@@ -6805,21 +6920,23 @@ function renderListing(lb) {
   const fitsDraft = v => Array.isArray(v) ? v.length <= 20 && v.every(s => s.length <= 1000) : v.length <= 8000;
   function saveText() {
     if (!canEditText() || !edits.size) return;
-    const ops = [], long = [];
-    for (const [fkey, e] of edits) {
-      const prev = fieldDraft(fkey), v = fieldVal(e.text, e.list), before = prev ? L.D.get(prev.id) : null;
-      if (!fitsDraft(v)) { long.push(e.label); continue; }
-      edits.delete(fkey);
-      if (sameVal(v, e.base)) { if (prev) { L.D.drop(prev.id); ops.push({ id: prev.id, before, after: null }); } continue; }
-      if (prev && sameVal(prev.listing.value, v)) continue;
-      const id = L.D.put({ id: prev && prev.id, type: 'listing', key: 'field:' + fkey, label: `${e.label} · ${e.loc}`, note: `${e.label} (${e.loc}): ${JSON.stringify(str(fieldText(v), 120))}`,
-        listing: { op: 'field', locale: e.loc, group: e.group, field: e.field, value: v, base: e.base } });
-      ops.push({ id, before, after: L.D.get(id) });
-    }
-    if (ops.length) L.H.push(`Save ${ops.length} text edit${ops.length === 1 ? '' : 's'}`, ops);
+    const long = [], done = [];
+    // one Save is one step, named for its field when it is one ("Short description · en-US")
+    L.step(() => done.length === 1 ? done[0] : `Save ${done.length} text edits`, () => {
+      for (const [fkey, e] of edits) {
+        const prev = fieldDraft(fkey), v = fieldVal(e.text, e.list);
+        if (!fitsDraft(v)) { long.push(e.label); continue; }
+        edits.delete(fkey);
+        if (sameVal(v, e.base)) { if (prev) { L.D.drop(prev.id); done.push(`${e.label} · ${e.loc}`); } continue; }
+        if (prev && sameVal(prev.listing.value, v)) continue;
+        L.D.put({ id: prev && prev.id, type: 'listing', key: 'field:' + fkey, label: `${e.label} · ${e.loc}`, note: `${e.label} (${e.loc}): ${JSON.stringify(str(fieldText(v), 120))}`,
+          listing: { op: 'field', locale: e.loc, group: e.group, field: e.field, value: v, base: e.base } });
+        done.push(`${e.label} · ${e.loc}`);
+      }
+    });
     paintText();
     if (long.length) toast(`Too long to keep as a draft: ${long.join(', ')}`);
-    else if (ops.length) toast(`Saved ${ops.length} draft${ops.length === 1 ? '' : 's'}: Request changes sends ${ops.length === 1 ? 'it' : 'them'}`, { label: 'Undo', run: () => L.undo() });
+    else if (done.length) toast(`Saved ${done.length} draft${done.length === 1 ? '' : 's'}: Request changes sends ${done.length === 1 ? 'it' : 'them'}`, { label: 'Undo', run: () => L.undo() });
   }
   function paintText() {
     const p = PLATS.find(x => x.id === L.platform), loc = L.locale, out = [];
@@ -6849,7 +6966,7 @@ function renderListing(lb) {
         isVar && h('div', { class: 'note' }, `Only on ${vLabel(vv)}. The default page: ${JSON.stringify(str(textOf(loc, p.id, rule.field) ?? textOf(DEF, p.id, rule.field) ?? '', 80))}`),
         fb && h('div', { class: 'note' }, `Missing in ${loc}: shows ${DEF}'s`),
         mtKey && can && h('div', { class: 'bd-lst-mta' }, acc
-          ? [h('span', {}, 'Accepted as it is. Request changes sends it.'), h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => L.D.drop(acc.id) }, ic('reset'), 'Undo')]
+          ? [h('span', {}, 'Accepted as it is. Request changes sends it.'), h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => L.step(`Discard Accept MT · ${label} · ${loc}`, () => L.D.drop(acc.id)) }, ic('reset'), 'Undo')]
           : h('button', { type: 'button', class: 'bp-btn', 'data-accept': mtKey, title: 'Keep this machine translation as it is', onclick: () => acceptMt(loc, mtKey, fkey, label) }, ic('tick'), 'Accept MT')));
       ta.addEventListener('input', () => {
         if (ta.value === saved) edits.delete(fkey); else edits.set(fkey, { text: ta.value, list, loc, group, field: f, label, base: own ?? null });
@@ -6886,7 +7003,7 @@ function renderListing(lb) {
 
   /* the sections */
   const pg = h('div', { class: 'bd-lst-main', 'data-m': 'view' });
-  wrap.append(pg);
+  wrap.append(pg, ltb);
   const io = 'IntersectionObserver' in window ? new IntersectionObserver(es => { for (const e of es) { const x = e.target._x; if (!x) continue; x.near = e.isIntersecting; if (x.near) mount(x); } trim(); }, { root: pg, rootMargin: '600px 0px' }) : null;
   // a capture for a shot's set and the locale ({url, file, fresh, fb, target, at, device}), else null: the set's target,
   // then a web capture that fits the set (listing.py capture_fits: its aspect within 5% of the set's UI viewport's)
@@ -7039,8 +7156,8 @@ function renderListing(lb) {
     const p = PLATS.find(x => x.id === L.platform);
     if (!p) { pg.replaceChildren(h('div', { class: 'bd-board-ph' }, ic('alert'), h('span', {}, 'This listing names no platform.'))); return; }
     pg.dataset.view = L.view;
-    if (L.view === 'preview') { pg.replaceChildren(variantBar(p), renderPreview(p)); paintText(); if (L.onRender) L.onRender(); return; }
-    if (L.view === 'ads') { pg.replaceChildren(...renderAds(p)); paintText(); if (L.onRender) L.onRender(); return; }
+    if (L.view === 'preview') { pg.replaceChildren(variantBar(p), renderPreview(p)); paintText(); paintJump(); if (L.onRender) L.onRender(); return; }
+    if (L.view === 'ads') { pg.replaceChildren(...renderAds(p)); paintText(); paintJump(); if (L.onRender) L.onRender(); return; }
     const cur = onPage(p.id), cmp = !!(cur && L.cmp), base = cmp ? Object.fromEntries(sectionsOf(p.id, L.locale, null).flatMap(s => s.sets).map(x => [x.set, x.shots])) : {};
     const secs = sectionsOf(p.id), counts = Object.fromEntries(secs.flatMap(s => s.sets.map(x => [x.set, x.shots.length]))), eff = effective();
     const out = [variantBar(p), renderShared(p)];
@@ -7075,7 +7192,7 @@ function renderListing(lb) {
         h('button', { type: 'button', class: 'bp-btn ghost bd-lst-ui', disabled: !L.D, onclick: () => toggleRow(r.id) }, drafted ? 'Undo' : 'Turn on')));
     }
     pg.replaceChildren(...out);
-    paintText();
+    paintText(); paintJump();
     if (L.onRender) L.onRender();
   }
   const listingImage = a => !!a && (a.device === 'shot' || a.device === 'asset') && typeof a.src === 'string' && /\.png$/i.test(a.src);
@@ -7209,6 +7326,8 @@ function renderListing(lb) {
   addEventListener('message', e => {
     const x = L.tiles.find(y => y.fr && e.source === y.fr.contentWindow), d = e.data;
     if (!x || !d || typeof d !== 'object') return;
+    // undo and redo pressed in a frame (its inspector forwards them)
+    if (d.bd === 'key') { if (d.k === 'undo') L.undo(); else if (d.k === 'redo') L.redo(); return; }
     if (d.bd === 'ready') {
       x.ready = true;
       if (d.rects && typeof d.rects === 'object') for (const [s, r] of Object.entries(d.rects).slice(0, 100)) x.rects[str(s)] = rectOf(r);
@@ -7265,8 +7384,10 @@ function renderListing(lb) {
     const same = drafts().find(a => a.listing.op === op.op && (op.op !== 'order' || (a.listing.set === op.set && (a.listing.variant || null) === (op.variant || null))));
     const now = op.op === 'order' ? (Array.isArray(obj(v ? v.order : lb.order)[op.set]) ? obj(v ? v.order : lb.order)[op.set] : null) : (Array.isArray(lb.rows) ? lb.rows : RULES.rows.filter(r => r.core).map(r => r.id));
     const back = op.op === 'order' ? JSON.stringify(op.ids) === JSON.stringify(now || BoardGeo.listingSections(lb, abs, RULES, L.platform, L.locale, v).flatMap(s => s.sets).find(s => s.set === op.set).shots) : JSON.stringify(op.rows) === JSON.stringify(now);
-    if (back) { if (same) L.D.drop(same.id); }   // back where the doc has it: no draft
-    else L.D.put({ id: same && same.id, type: 'listing', key: v ? `variant:${v.id}` : `block:${blockPath}`, label, note, listing: op });
+    L.step(op.op === 'rows' ? note : label, () => {
+      if (back) { if (same) L.D.drop(same.id); }   // back where the doc has it: no draft
+      else L.D.put({ id: same && same.id, type: 'listing', key: v ? `variant:${v.id}` : `block:${blockPath}`, label, note, listing: op });
+    });
     renderSections();
   }
   function toggleRow(id) {
@@ -7307,7 +7428,7 @@ function renderListing(lb) {
     if (v !== liveSig) { liveSig = v; L.restyle(); }
     const t = sig(of(TEXT_OPS));
     if (t !== textSig) { textSig = t; paintText(); }
-    paintPlan();
+    paintPlan(); paintHist();
   };
   // whether the doc now has what a draft asks for, per op: on load such a draft is resolved (applied by this rev)
   L.draftRecorded = {
@@ -7325,7 +7446,7 @@ function renderListing(lb) {
   const acceptDraft = (loc, k) => drafts().find(a => a.listing.op === 'accept' && a.listing.locale === loc && a.listing.key === k) || null;
   function acceptMt(loc, k, fkey, label) {
     if (!L.D || acceptDraft(loc, k)) return;
-    L.D.put({ type: 'listing', key: `field:${fkey}`, label: `Accept MT · ${label} · ${loc}`, note: `Keep the machine translation of ${label} (${loc}) as it is`, listing: { op: 'accept', locale: loc, key: k } });
+    L.step(`Accept MT · ${label} · ${loc}`, () => L.D.put({ type: 'listing', key: `field:${fkey}`, label: `Accept MT · ${label} · ${loc}`, note: `Keep the machine translation of ${label} (${loc}) as it is`, listing: { op: 'accept', locale: loc, key: k } }));
   }
   (L.readbackParts ||= []).push({ ops: ['accept'], md: ds => {
     if (!ds.length) return '';
@@ -7347,14 +7468,29 @@ function renderListing(lb) {
       '--change', sh(`Edit ${a.target.label.split(' › ').pop()}`), ...(k ? ['--no-bump'] : []), '--resolves', a.id].join(' '));
     return `## Text edits\n\n${lines.join('\n')}\n\n\`\`\`sh\n${cmds.join('\n')}\n\`\`\``;
   } });
-  // the text edits' undo history (one per doc: draftHistory); Discard on a text draft's card is a step of it too, and
-  // Request changes seals it (MARKUP calls BOARD.seal)
-  L.undo = () => { const r = !!L.H && L.H.undo(); paintSaveBar(); return r; };
-  L.redo = () => { const r = !!L.H && L.H.redo(); paintSaveBar(); return r; };
+  /* the doc's draft history (draftHistory, one per doc, kept across reloads): every listing draft change is one step.
+     L.step(label, fn) runs fn, which puts or drops listing drafts, and records what changed as one step named label (a
+     function: named after fn ran); nothing changed, no step. Undo and Redo restore the drafts and then the uploads'
+     files (syncUploadFiles); Discard on a listing draft's card is a step too, and Request changes seals the history
+     (MARKUP calls BOARD.seal) */
+  const listingDrafts = () => new Map((L.D ? L.D.all() : []).filter(a => a.type === 'listing').map(a => [a.id, a]));
+  L.step = (label, fn) => {
+    if (!L.H) { const r = fn(); paintHist(); return r; }
+    const was = listingDrafts(), r = fn(), now = listingDrafts(), ops = [];
+    for (const [id, a] of now) { const b = was.get(id) || null; if (!b || JSON.stringify(b) !== JSON.stringify(a)) ops.push({ id, before: b, after: a }); }
+    for (const [id, b] of was) if (!now.has(id)) ops.push({ id, before: b, after: null });
+    if (ops.length) L.H.push(typeof label === 'function' ? label() : label, ops);
+    paintHist();
+    return r;
+  };
+  L.undo = () => { const r = !!L.H && L.H.undo(); paintSaveBar(); if (r) syncUploadFiles(); return r; };
+  L.redo = () => { const r = !!L.H && L.H.redo(); paintSaveBar(); if (r) syncUploadFiles(); return r; };
   L.seal = () => { if (L.H) { L.H.seal(); paintSaveBar(); } };
   L.discard = id => {
-    const a = L.H && L.D.get(id); if (!a || a.type !== 'listing' || !a.listing || a.listing.op !== 'field') return false;
-    L.D.drop(id); L.H.push('Discard: ' + a.note, [{ id, before: a, after: null }]); paintSaveBar();
+    const a = L.H && L.D.get(id); if (!a || a.type !== 'listing' || !a.listing) return false;
+    const u = a.listing.op === 'upload' && UPLOADS.find(x => x.file === a.listing.file);
+    if (u) discardUpload(u);
+    else L.step(`Discard ${a.target.label.split(' › ').pop()}`, () => L.D.drop(id));
     return true;
   };
   (L.approveBlocks ||= []).push(() => {
@@ -7443,16 +7579,43 @@ function renderListing(lb) {
     const u = { file: j.file, platform: rule.platform, locale: L.locale, set: rule.id, slot: j.slot, w: j.w, h: j.h, colour: j.colour, bytes: j.bytes, problem: null, v: Date.now(), ...(replaces ? { replaces } : {}) };
     const i = UPLOADS.findIndex(x => x.file === u.file);
     if (i >= 0) UPLOADS[i] = u; else UPLOADS.push(u);
-    putUploadDraft(u); renderSections();
+    L.step(`Upload ${nn(u.slot)} · ${(SETS.get(u.set) || ASSETS.get(u.set) || {}).label || u.set} · ${u.locale}`, () => putUploadDraft(u)); renderSections();
     toast(`Saved ${u.file}: a draft until the agent records it`);
   }
-  async function discardUpload(u) {
+  // a POST to the uploads route: {ok, status, j}; status 0 when the server didn't answer
+  async function uploadCall(body) {
     const headers = SERVER_KEY.headers({ 'Content-Type': 'application/json', 'X-Bluedoc': '1' });
-    const r = await fetch('/__bluedoc/listing/upload', { method: 'POST', headers, body: JSON.stringify({ path: location.pathname, discard: u.file }) }).catch(() => null);
-    if (!r || (!r.ok && r.status !== 404)) { toast('Couldn\'t discard it: the server didn\'t answer'); return; }
-    UPLOADS.splice(UPLOADS.indexOf(u), 1);
-    const d = uploadDraft(u.file); if (d) L.D.drop(d.id);
+    try { const r = await fetch('/__bluedoc/listing/upload', { method: 'POST', headers, body: JSON.stringify({ path: location.pathname, ...body }) }); return { ok: r.ok, status: r.status, j: await r.json().catch(() => ({})) }; }
+    catch { return { ok: false, status: 0, j: {} }; }
+  }
+  // Discard sets the file aside on the server (serve.py keeps it as .discarded-NN.png), so Undo can bring it back
+  async function discardUpload(u) {
+    const r = await uploadCall({ discard: u.file });
+    if (!r.ok && r.status !== 404) { toast('Couldn\'t discard it: the server didn\'t answer'); return; }
+    if (UPLOADS.includes(u)) UPLOADS.splice(UPLOADS.indexOf(u), 1);
+    L.step(`Discard upload ${nn(u.slot)} · ${(SETS.get(u.set) || ASSETS.get(u.set) || {}).label || u.set} · ${u.locale}`, () => { const d = uploadDraft(u.file); if (d) L.D.drop(d.id); });
     renderSections();
+  }
+  // after an undo or redo, the files follow the upload drafts: a file without its draft is set aside, a draft without
+  // its file gets it back; one sync at a time, in the order of the steps
+  let uploadSync = Promise.resolve();
+  const syncUploadFiles = () => (uploadSync = uploadSync.then(syncUploadsNow, syncUploadsNow));
+  async function syncUploadsNow() {
+    if (!canUpload()) return;
+    const want = new Map(drafts().filter(a => a.listing.op === 'upload').map(a => [a.listing.file, a.listing]));
+    let moved = false;
+    for (const u of UPLOADS.slice()) {
+      if (want.has(u.file)) continue;
+      const r = await uploadCall({ discard: u.file });
+      if (r.ok || r.status === 404) { UPLOADS.splice(UPLOADS.indexOf(u), 1); moved = true; } else toast(`Couldn't set ${u.file} aside: ${r.j.error || 'the server didn\'t answer'}`);
+    }
+    for (const [file, o] of want) {
+      if (UPLOADS.some(u => u.file === file)) continue;
+      const r = await uploadCall({ restore: file });
+      if (r.ok) { UPLOADS.push({ file, platform: o.platform, locale: o.locale, set: o.set, slot: o.slot, w: o.w, h: o.h, colour: o.colour, bytes: o.bytes, problem: null, v: Date.now(), ...(o.replaces ? { replaces: o.replaces } : {}) }); moved = true; }
+      else toast(`Couldn't bring back ${file}: ${r.j.error || 'the server didn\'t answer'}`);
+    }
+    if (moved) renderSections();
   }
   const pick = (rule, slot, replaces, el) => { const inp = h('input', { type: 'file', accept: 'image/png' }); inp.addEventListener('change', () => uploadPng(inp.files[0], rule, slot, replaces, el)); inp.click(); };
   const dropOn = (el, run) => {
@@ -7575,19 +7738,32 @@ function renderListing(lb) {
   function pickStyle(axis, id) {
     if (!L.D) return;
     const p = L.platform, v = variantId(), next = { ...L.styleFor(p), [axis]: id }, doc = docStyle(p, v), d = styleDraft(p, v), pl = PLATS.find(x => x.id === p);
-    if (next.message === doc.message && next.layout === doc.layout) { if (d) L.D.drop(d.id); return; }
-    L.D.put({ id: d && d.id, type: 'listing', key: `block:${blockPath}`, label: `Style · ${pl.label}${v !== 'default' ? ' · ' + v : ''}`,
-      note: `${pl.label}${v !== 'default' ? ' ' + v : ''}: ${styleLabel(next.message)}, ${styleLabel(next.layout)}`,
-      listing: { op: 'style', platform: p, variant: v === 'default' ? null : v, message: next.message, layout: next.layout } });
+    const where = `${pl.label}${v !== 'default' ? ' · ' + v : ''}`;
+    L.step(`Style · ${where}: ${styleLabel(id)}`, () => {
+      if (next.message === doc.message && next.layout === doc.layout) { if (d) L.D.drop(d.id); return; }
+      L.D.put({ id: d && d.id, type: 'listing', key: `block:${blockPath}`, label: `Style · ${where}`,
+        note: `${pl.label}${v !== 'default' ? ' ' + v : ''}: ${styleLabel(next.message)}, ${styleLabel(next.layout)}`,
+        listing: { op: 'style', platform: p, variant: v === 'default' ? null : v, message: next.message, layout: next.layout } });
+    });
   }
 
   // the brand: the draft's, else the doc's, over the kit's defaults (the rules' brand.defaults, as kits/shot.css has them)
   const isHex = v => typeof v === 'string' && /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(v);
   const hex6 = v => (v.length === 4 ? '#' + [...v.slice(1)].map(c => c + c).join('') : v).toLowerCase();
   const palOf = p => Object.fromEntries(Object.entries(obj(p)).filter(([k, v]) => k in BR_PAL && isHex(v)).map(([k, v]) => [k, hex6(v)]));
+  // the caption font: its family and typography (listing.brand.font; the rules' brand.font bounds them, as build.py and
+  // serve.py check): size a scale of each style's caption size, lineHeight a multiple of it (absent: the style's own),
+  // letterSpacing % of it, align, valign (where the caption block sits). A key at the kit's default is left out
+  const FAM_DEF = BR_FONT.default || 'Inter', TYPO_DEF = { size: 1, letterSpacing: -2, align: 'center', valign: 'top' };
+  const inBounds = (k, v) => typeof v === 'number' && Array.isArray(BR_FONT[k]) && v >= BR_FONT[k][0] && v <= BR_FONT[k][1];
   const fontOf = f => { f = obj(f); if (typeof f.family !== 'string' || !/^[^;{}<>\\"'`]{1,64}$/.test(f.family)) return null;
-    return { family: f.family, ...(Number.isInteger(f.weight) && f.weight >= 100 && f.weight <= 900 && f.weight % 100 === 0 ? { weight: f.weight } : {}),
-      ...(typeof f.source === 'string' ? { source: f.source } : {}), ...(Number.isInteger(f.fsType) ? { fsType: f.fsType } : {}) }; };
+    const out = { family: f.family, ...(Number.isInteger(f.weight) && f.weight >= 100 && f.weight <= 900 && f.weight % 100 === 0 ? { weight: f.weight } : {}),
+      ...(f.italic === true ? { italic: true } : {}), ...(typeof f.source === 'string' ? { source: f.source } : {}), ...(Number.isInteger(f.fsType) ? { fsType: f.fsType } : {}) };
+    for (const k of ['size', 'lineHeight', 'letterSpacing']) if (inBounds(k, f[k]) && f[k] !== TYPO_DEF[k]) out[k] = f[k];
+    for (const k of ['align', 'valign']) if ((BR_FONT[k] || []).includes(f[k]) && f[k] !== TYPO_DEF[k]) out[k] = f[k];
+    return out; };
+  // what a font draws, the default font as Inter with the kit's typography
+  const fontSig = f => { f = fontOf(f) || { family: FAM_DEF }; return [f.family, f.weight || 800, !!f.italic, ...['size', 'lineHeight', 'letterSpacing', 'align', 'valign'].map(k => f[k] ?? null)]; };
   const brandDraft = () => drafts().find(a => a.listing.op === 'brand') || null;
   let brandLive = null, brandT = 0;   // an edit the frames show before its draft is saved
   L.brand = () => {
@@ -7596,25 +7772,32 @@ function renderListing(lb) {
       swatches: Array.isArray(b.swatches) ? b.swatches.filter(s => s && isHex(s.hex)).slice(0, 12) : [], draft: d ? d.id : null };
   };
   L.brandTokens = () => { const b = L.brand(); return { palette: b.palette, font: b.font }; };
-  const brandSig = b => { const f = fontOf(b.font); return JSON.stringify([f && f.family, f && f.weight || null, { ...palOf(BR_PAL), ...palOf(b.palette) }, typeof b.image === 'string' ? b.image : null]); };
+  const brandSig = b => JSON.stringify([fontSig(b.font), { ...palOf(BR_PAL), ...palOf(b.palette) }, typeof b.image === 'string' ? b.image : null]);
   L.draftRecorded.style = o => { const d = docStyle(o.platform, o.variant || 'default'); return d.message === o.message && d.layout === o.layout; };
   L.draftRecorded.brand = o => brandSig(o) === brandSig(BRAND);
-  function putBrand(next, now) {
+  // an edit: the frames show it at once; saved (now, else 400 ms after the last one) it is the brand draft, one step of
+  // the undo history named label
+  function putBrand(next, now, label = 'Brand') {
     const cur = L.brand();
-    brandLive = { op: 'brand', font: 'font' in next ? next.font : cur.font, palette: { ...cur.palette, ...palOf(next.palette) }, image: 'image' in next ? next.image : cur.image, swatches: next.swatches || cur.swatches };
+    brandLive = { op: 'brand', font: 'font' in next ? fontOf(next.font) : cur.font, palette: { ...cur.palette, ...palOf(next.palette) }, image: 'image' in next ? next.image : cur.image, swatches: next.swatches || cur.swatches };
     L.restyle();
     clearTimeout(brandT);
     const save = () => {
       const o = brandLive; if (!o) return;
-      const d = brandDraft();
-      if (L.D && brandSig(o) === brandSig(BRAND)) { if (d) L.D.drop(d.id); }
-      else if (L.D) L.D.put({ id: d && d.id, type: 'listing', key: `brand:${LID}`, label: 'Brand', note: brandNote(o), listing: o });
+      L.step(label, () => {
+        const d = brandDraft();
+        if (L.D && brandSig(o) === brandSig(BRAND)) { if (d) L.D.drop(d.id); }
+        else if (L.D) L.D.put({ id: d && d.id, type: 'listing', key: `brand:${LID}`, label: 'Brand', note: brandNote(o), listing: o });
+      });
       brandLive = null; L.restyle();
     };
     if (now) save(); else brandT = setTimeout(save, 400);
   }
-  const fontWord = f => f ? `${f.family}${f.weight ? ' ' + f.weight : ''}` : `${BR_FONT.default || 'Inter'} (the default)`;
-  const brandNote = o => `Caption font ${fontWord(fontOf(o.font))}; palette ${Object.entries({ ...palOf(BR_PAL), ...palOf(o.palette) }).map(([k, v]) => `${k} ${v}`).join(', ')}`;
+  const fontWord = f => f ? `${f.family}${f.weight ? ' ' + f.weight : ''}${f.italic ? ' italic' : ''}` : `${FAM_DEF} (the default)`;
+  const typoWord = f => { f = fontOf(f); if (!f) return fontWord(null);
+    return [fontWord(f), f.size != null && `size ${Math.round(f.size * 100)}%`, f.lineHeight != null && `line height ${f.lineHeight}`,
+      f.letterSpacing != null && `letter spacing ${f.letterSpacing}%`, f.align && `align ${f.align}`, f.valign && `caption at the ${f.valign}`].filter(Boolean).join(', '); };
+  const brandNote = o => `Caption font ${typoWord(o.font)}; palette ${Object.entries({ ...palOf(BR_PAL), ...palOf(o.palette) }).map(([k, v]) => `${k} ${v}`).join(', ')}`;
   const contrastOf = pal => BR_PAIRS.map(p => ({ ...p, ratio: isHex(pal[p.fg]) && isHex(pal[p.bg]) ? lstContrast(pal[p.fg], pal[p.bg]) : 0 })).map(p => ({ ...p, ok: p.ratio >= BR_MIN }));
   // OS/2 fsType (the rules' brand.font): what the font's embedding rights allow
   const fsWord = t => !Number.isInteger(t) ? '' : t & (BR_FONT.bitmapOnly || 512) ? 'bitmap only: the PDF can\'t embed it' : (t & 15) === 0 ? 'installable'
@@ -7659,7 +7842,7 @@ function renderListing(lb) {
     const own = sectionsOf(p.id).flatMap(x => x.sets).flatMap(x => x.shots).filter(id => Object.keys(pickOf(obj(byId.get(id)).style)).length);
     paneStyle.replaceChildren(
       h('p', { class: 'bd-lst-pick' + (d ? ' on' : '') }, d ? `Your pick for ${p.label}${v !== 'default' ? ' · ' + v : ''}: Request changes sends it.` : `${p.label}${v !== 'default' ? ' · ' + v : ''} shows the listing's style. A pick restyles every shot here.`,
-        d && h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => L.D.drop(d.id) }, ic('reset'), 'Undo pick')),
+        d && h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => L.step(`Discard style pick · ${p.label}${v !== 'default' ? ' · ' + v : ''}`, () => L.D.drop(d.id)) }, ic('reset'), 'Undo pick')),
       h('h4', {}, 'Message'), ...RULES.styles.filter(s => s.axis === 'message').map(card),
       h('h4', {}, 'Layout'), ...RULES.styles.filter(s => s.axis === 'layout').map(card),
       h('p', { class: 'hint' }, `Watch sets stay raw (L3) whatever the pick.${own.length ? ` ${new Set(own).size} shot${new Set(own).size === 1 ? ' keeps its' : 's keep their'} own style.` : ''} Grades: A store guidance, B a measured lift, C a vendor trend, D rank correlation.`));
@@ -7701,11 +7884,10 @@ function renderListing(lb) {
   } });
   (L.approveBlocks ||= []).push(() => brandDraft() ? ['A brand draft isn\'t recorded yet: send it with Request changes, then wait for the agent\'s patch'] : []);
 
-  /* the brand's two homes: the caption font at the foot of the Text tab, the palette and contrast in Colors. Built once
-     (their inputs keep focus), painted on each change (paintBrand) */
-  const FONTS = { list: null, err: '', q: '', busy: false };
+  /* the brand's two homes: the caption's Typography at the foot of the Text tab, the palette and contrast in Colors.
+     Built once (their inputs keep focus), painted from L.brand() on each change (paintBrand), undo and redo too */
+  const FONTS = { list: null, err: '', busy: false };
   let BUI = null, armed = null;
-  const sample = () => { for (const k of tilesKeys()) { const v = strOf(L.locale, k) ?? strOf(DEF, k); if (v) return v; } return str(obj(lb.app).name, 60) || 'Acme'; };
   async function loadFonts() {
     if (!SERVED || FONTS.busy) return;
     FONTS.busy = true; FONTS.err = ''; paintBrand();
@@ -7717,13 +7899,225 @@ function renderListing(lb) {
     } catch { FONTS.err = 'Couldn\'t list the fonts: the server didn\'t answer'; }
     FONTS.busy = false; paintBrand();
   }
-  const weightsOf = fam => { if (!fam || fam === (BR_FONT.default || 'Inter')) return [100, 200, 300, 400, 500, 600, 700, 800, 900];
-    const x = (FONTS.list || []).find(y => y.family === fam); return x ? [...new Set((x.faces || []).filter(f => !f.italic && Number.isInteger(f.weight)).map(f => Math.round(f.weight / 100) * 100))].filter(w => w >= 100 && w <= 900).sort((a, b) => a - b) : []; };
+
+  /* ---------- Typography (the caption font, Figma's Typography panel) ----------
+     The family: a dropdown whose popover has a search, the families in their own face with their style count, and
+     ↻ Refresh fonts (GET /__bluedoc/fonts again: a font installed since shows). The style: the family's real faces
+     (fonts.py: weight and italic; the vendored Inter: its 9 upright weights). The size: % of each style's caption size
+     (the font's size, a scale, so it holds in every store size), typed or from a menu. Line height (Auto: the style's
+     own; a multiple of the size) and letter spacing (% of the size). Alignment: left, centre, right; the caption block
+     at the top, middle or bottom where the layout draws it (store-rules.json styles[].valign; else disabled, with
+     why). Each change goes through putBrand: the frames at once, then one step of the undo history. The licence note
+     is the ⓘ by the family; a font a PDF can't embed shows a warning line */
+  let TY = null, tyOpen = null;
+  const TY_KEYS = ['size', 'lineHeight', 'letterSpacing', 'align', 'valign'];
+  const WEIGHT_NAMES = { 100: 'Thin', 200: 'ExtraLight', 300: 'Light', 400: 'Regular', 500: 'Medium', 600: 'SemiBold', 700: 'Bold', 800: 'ExtraBold', 900: 'Black' };
+  const canBrand = () => !!L.D && !OLD && !BASE;
+  const vendored = f => !f || f.family === FAM_DEF && f.source !== 'system';
+  // the family's styles: {weight (by 100), italic, label (the face's style name)}, upright first
+  function stylesOf(f) {
+    if (vendored(f)) return Object.entries(WEIGHT_NAMES).map(([w, label]) => ({ weight: +w, italic: false, label }));
+    const x = (FONTS.list || []).find(y => y.family === f.family), by = new Map();
+    for (const s of x ? x.faces || [] : []) {
+      if (!Number.isInteger(s.weight)) continue;
+      const w = Math.min(900, Math.max(100, Math.round(s.weight / 100) * 100)), it = !!s.italic, k = w + (it ? 'i' : '');
+      if (!by.has(k)) by.set(k, { weight: w, italic: it, label: typeof s.style === 'string' && s.style.trim() ? s.style.trim().slice(0, 40) : WEIGHT_NAMES[w] + (it ? ' Italic' : '') });
+    }
+    return [...by.values()].sort((a, b) => a.italic - b.italic || a.weight - b.weight);
+  }
+  const styleWord = f => { const w = f && f.weight || 800, it = !!(f && f.italic), s = stylesOf(f).find(x => x.weight === w && x.italic === it);
+    return s ? s.label : WEIGHT_NAMES[w] + (it ? ' Italic' : ''); };
+  const licenceNote = f => vendored(f) ? `${FAM_DEF}: vendored, OFL. Safe in every export.`
+    : `${f.family}: installed on this Mac.${Number.isInteger(f.fsType) ? ` Embedding (fsType ${f.fsType}): ${fsWord(f.fsType)}.` : ''} fsType covers embedding, not a licence for marketing images: confirm the font's licence.`;
+  // a typography change: the font with patch over it (null: the key's default), one undo step named label
+  function setTypo(patch, label, now = true) {
+    const next = { ...(L.brand().font || { family: FAM_DEF, source: 'vendored' }), ...patch };
+    for (const [k, v] of Object.entries(patch)) if (v == null) delete next[k];
+    putBrand({ font: next }, now, label);
+  }
   function pickFont(x) {
-    if (!x) { putBrand({ font: null }, true); return; }
-    const ws = weightsOf(x.family), cur = obj(L.brand().font).weight || 800;
-    const w = ws.includes(cur) ? cur : ws.filter(n => n <= 800).pop() || ws[0];
-    putBrand({ font: { family: x.family, ...(w ? { weight: w } : {}), source: 'system', ...(Number.isInteger(x.fsType) ? { fsType: x.fsType } : {}) } }, true);
+    const cur = L.brand().font, f = x ? { family: x.family, source: 'system', ...(Number.isInteger(x.fsType) ? { fsType: x.fsType } : {}) } : { family: FAM_DEF, source: 'vendored' };
+    const ss = stylesOf(f), w = cur && cur.weight || 800, it = !!(cur && cur.italic);
+    const s = ss.find(y => y.weight === w && y.italic === it) || ss.filter(y => !y.italic && y.weight <= w).pop() || ss.find(y => !y.italic) || ss[0];
+    const typo = Object.fromEntries(TY_KEYS.filter(k => cur && cur[k] != null).map(k => [k, cur[k]]));
+    putBrand({ font: { ...f, ...(s ? { weight: s.weight } : {}), ...(s && s.italic ? { italic: true } : {}), ...typo } }, true, `Caption font · ${f.family}`);
+  }
+  // a dropdown: btn opens pop, a popover in the top layer (the panel's scroll can't clip it) under anchor, or over it
+  // where the room is. rows() gives [{v, label, meta, font (a style), sel}] and {hint} lines; pick(row) takes one.
+  // ↑ ↓ (Home End) move, Enter picks, Esc closes; with a search, typing filters (a key on the closed button too)
+  function tyMenu(btn, { name, label, search, rows, pick, foot, onOpen, anchor = btn, minW = 0, empty = 'No match' }) {
+    const q = search ? h('input', { type: 'search', class: 'q', placeholder: search, 'aria-label': search, autocomplete: 'off', spellcheck: 'false' }) : null;
+    const list = h('div', { class: 'ls', role: 'listbox', id: `bd-ty-${name}`, 'aria-label': label, tabindex: q ? null : '-1' });
+    const pop = h('div', { class: 'bd-ty-pop', 'data-menu': name, ...(HTMLElement.prototype.showPopover ? { popover: 'manual' } : { hidden: true }) },
+      q && h('div', { class: 'sr' }, ic('search'), q), list, foot && h('div', { class: 'ft' }, foot));
+    btn.setAttribute('aria-haspopup', 'listbox'); btn.setAttribute('aria-expanded', 'false'); btn.setAttribute('aria-controls', list.id);
+    let shown = [], els = [], act = -1, isOpen = false;
+    const keyEl = () => q || list;
+    function mark(scroll) {
+      els.forEach((e, i) => e.classList.toggle('act', i === act));
+      const el = els[act]; keyEl().setAttribute('aria-activedescendant', el ? el.id : '');
+      if (el && scroll) el.scrollIntoView({ block: 'nearest' });
+    }
+    function paint() {
+      const s = q ? q.value.trim().toLowerCase() : '', all = rows();
+      // a match at the start of the name, then at a word's, then anywhere (Figma's order)
+      const rank = l => { l = l.toLowerCase(); return l.startsWith(s) ? 0 : l.includes(' ' + s) ? 1 : l.includes(s) ? 2 : 3; };
+      shown = all.filter(r => !r.hint && (!s || rank(r.label) < 3));
+      if (s) shown = shown.map((r, i) => [rank(r.label), i, r]).sort((a, b) => a[0] - b[0] || a[1] - b[1]).map(x => x[2]);
+      els = shown.map((r, i) => h('div', { role: 'option', id: `${list.id}-${i}`, class: 'o', 'aria-selected': String(!!r.sel), 'data-v': r.v,
+        onclick: () => choose(i), onpointermove: () => { if (act !== i) { act = i; mark(); } } },
+        h('span', { class: 'ck' }, r.sel && ic('tick')), h('span', { class: 'l', style: r.font || null }, r.label), r.meta && h('span', { class: 'm' + (r.bad ? ' bad' : '') }, r.meta)));
+      setKids(list, els, all.filter(r => r.hint).map(r => h('div', { class: 'hint' }, r.hint)), s && !shown.length && h('div', { class: 'hint' }, empty));
+      if (act >= shown.length || act < 0) act = shown.length ? Math.max(0, shown.findIndex(r => r.sel)) : -1;
+      mark();
+    }
+    function place() {
+      const r = anchor.getBoundingClientRect(), w = Math.max(r.width, minW), below = innerHeight - r.bottom - 12, above = r.top - 12, up = below < 240 && above > below;
+      Object.assign(pop.style, { left: Math.max(8, Math.min(r.left, innerWidth - w - 8)) + 'px', width: w + 'px', top: up ? 'auto' : r.bottom + 4 + 'px',
+        bottom: up ? innerHeight - r.top + 4 + 'px' : 'auto', maxHeight: Math.max(120, Math.min(380, up ? above : below)) + 'px' });
+    }
+    function open(typed) {
+      if (isOpen || btn.disabled) return;
+      if (tyOpen) tyOpen.close(false);
+      isOpen = true; tyOpen = api; act = -1;
+      if (q) q.value = typed || '';
+      if (onOpen) onOpen();
+      paint();
+      if (pop.showPopover) pop.showPopover(); else pop.hidden = false;
+      place(); btn.setAttribute('aria-expanded', 'true');
+      keyEl().focus({ preventScroll: true }); mark(true);
+    }
+    function close(back) {
+      if (!isOpen) return;
+      isOpen = false; if (tyOpen === api) tyOpen = null;
+      if (pop.hidePopover) pop.hidePopover(); else pop.hidden = true;
+      btn.setAttribute('aria-expanded', 'false');
+      if (back) btn.focus({ preventScroll: true });
+    }
+    function choose(i) { const r = shown[i]; if (!r) return; close(true); pick(r); }
+    btn.addEventListener('click', () => isOpen ? close(true) : open());
+    btn.addEventListener('keydown', e => {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') open();
+      else if (q && e.key.length === 1 && e.key !== ' ' && !e.metaKey && !e.ctrlKey && !e.altKey) open(e.key);
+      else return;
+      e.preventDefault(); e.stopPropagation();
+    });
+    q && q.addEventListener('input', () => { act = 0; paint(); mark(true); });
+    pop.addEventListener('mousedown', e => { if (!e.target.closest('input, button')) e.preventDefault(); });
+    pop.addEventListener('focusout', e => { if (isOpen && !pop.contains(e.relatedTarget) && e.relatedTarget !== btn) close(false); });
+    pop.addEventListener('keydown', e => {
+      const k = e.key, n = shown.length;
+      if (k === 'ArrowDown' || k === 'ArrowUp') { if (n) { act = k === 'ArrowDown' ? (act + 1) % n : (act - 1 + n) % n; mark(true); } }
+      else if ((k === 'Home' || k === 'End') && !q) { if (n) { act = k === 'Home' ? 0 : n - 1; mark(true); } }
+      else if (k === 'Enter') { if (e.target.closest('button')) return; choose(act); }
+      else if (k === 'Escape') close(true);
+      else if (!q && k.length === 1 && !e.metaKey && !e.ctrlKey && !e.altKey) { const i = shown.findIndex(r => r.label.toLowerCase().startsWith(k.toLowerCase())); if (i >= 0) { act = i; mark(true); } }
+      else return;
+      e.preventDefault(); e.stopPropagation();
+    });
+    const api = { pop, list, q, open, close, place, paint: () => { if (isOpen) paint(); }, owns: t => pop.contains(t) || btn.contains(t) || anchor.contains(t), get isOpen() { return isOpen; } };
+    return api;
+  }
+  // a number field with an icon or a unit; typing shows at once and saves as one step after a pause (putBrand), Enter
+  // or leaving it saves now (clamped into the rules' bounds), ↑ ↓ step it (Shift: ×10). k: the shown value per stored
+  // unit; def: the kit's value (stored as no key); auto: empty means the style's own
+  function tyNum({ key, label, word, icon, unit, k = 1, dp = 2, step, def = null, auto = false, start = def, extra }) {
+    const B = BR_FONT[key], inp = h('input', { type: 'text', inputmode: 'decimal', class: 'n', 'aria-label': label, autocomplete: 'off', spellcheck: 'false', ...(auto ? { placeholder: 'Auto' } : {}) });
+    const box = h('label', { class: 'bd-ty-num', 'data-key': key, title: label }, icon && h('span', { class: 'ic' }, ic(icon)), inp, unit && h('span', { class: 'u' }, unit), extra);
+    const cur = () => obj(L.brand().font)[key] ?? null;
+    const show = v => v == null ? (def == null ? '' : String(+(def * k).toFixed(4))) : String(+(v * k).toFixed(4));
+    const parse = (s, clamp) => {
+      s = s.trim().replace(/%$/, '').replace(',', '.').trim();
+      if (auto && (!s || /^auto$/i.test(s))) return null;
+      const n = Number(s); if (!s || !Number.isFinite(n)) return undefined;
+      let v = n / k;
+      if (clamp) v = Math.min(B[1], Math.max(B[0], v)); else if (v < B[0] || v > B[1]) return undefined;
+      v = +v.toFixed(dp); return v === def ? null : v;
+    };
+    const set = (v, now) => { if (v === cur()) return; setTypo({ [key]: v }, `${label} · ${word(v ?? def)}`, now); };
+    let typing = false;   // what the reader is typing stays until Enter, Esc or leaving the field; else it shows the font's
+    const commit = () => { typing = false; const v = parse(inp.value, true); if (v !== undefined) set(v, true); inp.value = show(cur()); };
+    inp.addEventListener('input', () => { typing = true; const v = parse(inp.value, false); if (v !== undefined) set(v, false); });
+    inp.addEventListener('change', commit);
+    inp.addEventListener('blur', () => { if (typing) commit(); });
+    inp.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); commit(); inp.select(); }
+      else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        const base = parse(inp.value, true) ?? def ?? start, d = (e.key === 'ArrowUp' ? 1 : -1) * step * (e.shiftKey ? 10 : 1) / k;
+        const v = +Math.min(B[1], Math.max(B[0], base + d)).toFixed(dp);
+        set(v === def ? null : v, false); inp.value = show(v === def ? null : v);
+      } else if (e.key === 'Escape') { typing = false; inp.value = show(cur()); inp.blur(); }
+    });
+    return { key, box, inp, paint: can => { if (!typing) inp.value = show(cur()); inp.disabled = !can; } };
+  }
+  function buildTypography() {
+    const caret = () => ic('down', 'cv');
+    const famV = h('span', { class: 'v' }), info = h('span', { class: 'bd-ty-info', role: 'img', 'aria-label': 'Licence' }, ic('info'));
+    const fam = h('button', { type: 'button', class: 'bd-ty-dd fam', 'aria-label': 'Font family' }, famV, info, caret());
+    const famMenu = tyMenu(fam, { name: 'family', label: 'Font family', search: 'Search fonts', empty: 'No installed font matches',
+      foot: h('button', { type: 'button', class: 'rf', title: 'List the installed fonts again: a font installed since shows', onclick: () => loadFonts() }, ic('reset'), 'Refresh fonts'),
+      rows: () => { const f = L.brand().font, cur = f ? f.family : FAM_DEF, sys = !vendored(f);
+        return [{ v: '', label: FAM_DEF, meta: 'Default', font: `font-family: "${FAM_DEF}", system-ui`, sel: !sys },
+          ...(FONTS.list || []).map(x => { const n = (x.faces || []).length;
+            return { v: x.family, label: x.family, x, sel: sys && cur === x.family, bad: fsBad(x.fsType), font: `font-family: "${x.family}", system-ui`,
+              meta: fsBad(x.fsType) ? 'No PDF embedding' : `${n} style${n === 1 ? '' : 's'}` }; }),
+          ...(!SERVED ? [{ hint: 'Open this page through serve.py to list the fonts installed here.' }] : FONTS.err ? [{ hint: FONTS.err }] : FONTS.busy ? [{ hint: 'Listing the installed fonts…' }] : [])]; },
+      onOpen: () => { if (!FONTS.list && !FONTS.busy) loadFonts(); }, pick: r => pickFont(r.x || null) });
+    const styV = h('span', { class: 'v' }), sty = h('button', { type: 'button', class: 'bd-ty-dd sty', 'aria-label': 'Font style' }, styV, caret());
+    const styMenu = tyMenu(sty, { name: 'style', label: 'Font style', minW: 160,
+      rows: () => { const f = L.brand().font, w = f && f.weight || 800, it = !!(f && f.italic), ss = stylesOf(f);
+        return [...ss.map(s => ({ v: s.weight + (s.italic ? 'i' : ''), label: s.label, s, sel: s.weight === w && s.italic === it,
+          font: `font-family: "${f ? f.family : FAM_DEF}", system-ui; font-weight: ${s.weight}; font-style: ${s.italic ? 'italic' : 'normal'}` })),
+          ...(!ss.length ? [{ hint: FONTS.busy ? 'Listing the styles…' : FONTS.err || 'This font isn\'t installed here' }] : [])]; },
+      onOpen: () => { if (!vendored(L.brand().font) && !FONTS.list && !FONTS.busy) loadFonts(); },
+      pick: r => setTypo({ weight: r.s.weight, italic: r.s.italic || null }, `Caption style · ${r.s.label}`) });
+    const sizeDd = h('button', { type: 'button', class: 'dd', 'aria-label': 'Common sizes', tabindex: '-1' }, caret());
+    const size = tyNum({ key: 'size', label: 'Caption size', word: v => `${Math.round(v * 100)}%`, unit: '%', k: 100, step: 1, def: 1, extra: sizeDd });
+    const sizeMenu = tyMenu(sizeDd, { name: 'size', label: 'Caption size', anchor: size.box, minW: 96,
+      rows: () => { const v = Math.round((obj(L.brand().font).size ?? 1) * 100);
+        return [50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160].filter(n => n / 100 >= BR_FONT.size[0] && n / 100 <= BR_FONT.size[1]).map(n => ({ v: String(n), label: `${n}%`, sel: n === v })); },
+      pick: r => setTypo({ size: +r.v === 100 ? null : +r.v / 100 }, `Caption size · ${r.v}%`) });
+    const lead = tyNum({ key: 'lineHeight', label: 'Line height', word: v => v == null ? 'Auto' : String(v), icon: 'leading', step: 0.05, auto: true, start: 1.1 });
+    const track = tyNum({ key: 'letterSpacing', label: 'Letter spacing', word: v => `${v}%`, icon: 'tracking', unit: '%', dp: 1, step: 0.5, def: -2 });
+    const seg = (key, vals, label) => h('div', { class: 'seg', role: 'group', 'aria-label': label }, vals.map(([v, icon, name]) =>
+      h('button', { type: 'button', 'data-v': v, 'aria-label': name, title: name, 'aria-pressed': 'false', onclick: e => {
+        if (e.currentTarget.getAttribute('aria-disabled') === 'true' || !canBrand()) return;
+        setTypo({ [key]: v === TYPO_DEF[key] ? null : v }, `Caption ${key === 'align' ? 'align' : 'place'} · ${v === 'center' ? 'centre' : v}`); } }, ic(icon))));
+    const al = seg('align', [['left', 'alignl', 'Align left'], ['center', 'alignc', 'Align centre'], ['right', 'alignr', 'Align right']], 'Horizontal alignment');
+    const va = seg('valign', [['top', 'valignt', 'Top'], ['middle', 'valignm', 'Middle'], ['bottom', 'valignb', 'Bottom']], 'Caption block');
+    const lb = t => h('span', { class: 'bd-ty-lb' }, t), warn = h('p', { class: 'bd-ty-warn', role: 'note', hidden: true });
+    const sec = h('div', { class: 'bd-lst-fsec bd-typo bd-lp-ui', 'data-sec': 'typography' },
+      h('div', { class: 'hd' }, h('h4', {}, 'Typography'), h('span', { class: 'sub' }, 'Captions')),
+      h('div', { class: 'bd-ty-fam' }, fam, famMenu.pop), warn,
+      h('div', { class: 'bd-ty-row' }, h('div', { class: 'bd-ty-sty' }, sty, styMenu.pop), h('div', { class: 'bd-ty-size' }, size.box, sizeMenu.pop)),
+      h('div', { class: 'bd-ty-row eq' }, h('div', { class: 'f' }, lb('Line height'), lead.box), h('div', { class: 'f' }, lb('Letter spacing'), track.box)),
+      h('div', { class: 'f' }, lb('Alignment'), h('div', { class: 'bd-ty-al' }, al, va)));
+    // a press outside the open menu closes it; a scroll or resize moves it with its button
+    document.addEventListener('pointerdown', e => { if (tyOpen && !tyOpen.owns(e.target)) tyOpen.close(false); }, true);
+    document.addEventListener('scroll', e => { if (tyOpen && !tyOpen.pop.contains(e.target)) tyOpen.place(); }, true);
+    addEventListener('resize', () => { if (tyOpen) tyOpen.place(); });
+    TY = { sec, fam, famV, info, sty, styV, sizeDd, nums: [size, lead, track], al, va, warn, menus: [famMenu, styMenu, sizeMenu] };
+    return sec;
+  }
+  function paintTypography() {
+    const f = L.brand().font, can = canBrand(), fam = f ? f.family : FAM_DEF, lay = L.styleFor(L.platform).layout, places = obj(STYLES.get(lay)).valign || ['top'];
+    TY.sec.classList.toggle('ro', !can);
+    TY.famV.textContent = fam; TY.famV.style.fontFamily = `"${fam}", system-ui`;
+    TY.info.title = licenceNote(f); TY.fam.setAttribute('aria-description', TY.info.title);
+    TY.styV.textContent = styleWord(f);
+    TY.fam.disabled = TY.sty.disabled = TY.sizeDd.disabled = !can;
+    for (const n of TY.nums) n.paint(can);
+    for (const [g, key] of [[TY.al, 'align'], [TY.va, 'valign']]) for (const b of g.children) {
+      const v = b.dataset.v, off = key === 'valign' && !places.includes(v);
+      b.setAttribute('aria-pressed', String(((f && f[key]) || TYPO_DEF[key]) === v));
+      b.setAttribute('aria-disabled', String(!can || off));
+      b.title = off ? `${styleLabel(lay)} draws the caption at the ${places.join(' or ')}` : b.getAttribute('aria-label');
+    }
+    const bad = !!f && fsBad(f.fsType);
+    TY.warn.hidden = !bad;
+    setKids(TY.warn, bad && [ic('alert'), h('span', {}, `${f.family}: ${fsWord(f.fsType).replace(/^./, c => c.toUpperCase())}`)]);
+    for (const m of TY.menus) m.paint();
   }
   async function takeImage(f) {
     if (!f || !L.D) return;
@@ -7745,11 +8139,6 @@ function renderListing(lb) {
     } catch { toast('Couldn\'t read that image'); } finally { BUI.drop.classList.remove('busy'); }
   }
   function buildBrand() {
-    const q = h('input', { type: 'search', class: 'bd-lst-fq', placeholder: 'Search fonts', 'aria-label': 'Search the installed fonts', autocomplete: 'off', spellcheck: 'false' });
-    q.addEventListener('input', () => { FONTS.q = q.value; paintBrand(); });
-    q.addEventListener('focus', () => { if (!FONTS.list && !FONTS.busy) loadFonts(); });
-    const weight = h('select', { class: 'bd-lst-fw', 'aria-label': 'Caption weight' });
-    weight.addEventListener('change', () => { const f = L.brand().font; putBrand({ font: f ? { ...f, weight: +weight.value } : { family: BR_FONT.default || 'Inter', weight: +weight.value, source: 'vendored' } }, true); });
     const file = h('input', { type: 'file', accept: 'image/png,image/jpeg,image/webp', hidden: true, class: 'bd-lst-file' });
     file.addEventListener('change', () => { takeImage(file.files && file.files[0]); file.value = ''; });
     const drop = h('button', { type: 'button', class: 'bd-lst-imgdrop', onclick: () => file.click() }, ic('image'), h('span', {}, h('b', {}, 'Drop an image, or choose one'), h('span', {}, `PNG, JPEG or WebP, up to ${Math.round((+BR_IMG.maxBytes || 8388608) / 1048576)} MB: its colours become the palette`)));
@@ -7767,35 +8156,17 @@ function renderListing(lb) {
       row.addEventListener('drop', e => { const v = e.dataTransfer.getData('text/x-bd-colour'); row.classList.remove('over'); if (isHex(v)) { e.preventDefault(); putBrand({ palette: { [role]: v } }, true); } });
       return { role, row, col, hex, chip };
     });
-    BUI = { cur: h('div', { class: 'bd-lst-fcur' }), q, weight, list: h('div', { class: 'bd-lst-fonts', role: 'listbox', 'aria-label': 'Caption font' }), file, drop,
-      sw: h('div', { class: 'bd-lst-sws' }), roles, pairs: h('div', { class: 'bd-lst-pairs' }), state: h('div', { class: 'bd-lst-bstate' }) };
-    BUI.font = h('div', { class: 'bd-lst-fsec bd-lp-ui', 'data-sec': 'caption-font' }, h('h4', {}, 'Caption font'), BUI.cur, h('div', { class: 'bd-lst-frow' }, q, weight,
-      h('button', { type: 'button', class: 'bp-btn ghost', title: 'List the installed fonts again: a font installed since shows up', onclick: () => loadFonts() }, ic('reset'), 'Fonts')), BUI.list);
+    BUI = { file, drop, sw: h('div', { class: 'bd-lst-sws' }), roles, pairs: h('div', { class: 'bd-lst-pairs' }), state: h('div', { class: 'bd-lst-bstate' }) };
+    BUI.font = buildTypography();
     lpText.append(BUI.font);
     paneColors.replaceChildren(h('h4', {}, 'Palette'), drop, file, BUI.sw, h('div', { class: 'bd-lst-roles' }, roles.map(r => r.row)),
       h('h4', {}, `Contrast · at least ${BR_MIN}:1`), BUI.pairs, BUI.state);
   }
   function paintBrand() {
     if (!BUI) buildBrand();
-    const b = L.brand(), f = b.font, can = !!L.D && !OLD && !BASE, fam = f ? f.family : (BR_FONT.default || 'Inter');
-    paneColors.classList.toggle('ro', !can); BUI.font.classList.toggle('ro', !can);
-    // the font: the pick, its rights; the menu: Inter, then the installed families that match the search
-    setKids(BUI.cur, h('b', { style: `font-family: "${fam}", system-ui; font-weight: ${f && f.weight || 800}` }, sample()),
-      h('span', {}, f ? `${fontWord(f)} · installed on this Mac` : `${fontWord(null)} · vendored, OFL: safe in every export`),
-      f && Number.isInteger(f.fsType) && h('span', { class: fsBad(f.fsType) ? 'bad' : '' }, `fsType ${f.fsType}: ${fsWord(f.fsType)}`),
-      f && h('span', { class: 'note' }, 'fsType covers embedding, not a licence for marketing images: confirm the font\'s licence.'));
-    const ws = weightsOf(fam), wv = String(f && f.weight || 800);
-    if (BUI.weight.dataset.fam !== fam || BUI.weight.options.length !== ws.length) { BUI.weight.dataset.fam = fam; BUI.weight.replaceChildren(...ws.map(w => h('option', { value: String(w) }, String(w)))); }
-    BUI.weight.value = wv; BUI.weight.disabled = !can || ws.length < 2; BUI.q.disabled = !can;
-    const row = (x, label, meta) => h('button', { type: 'button', role: 'option', class: 'bd-lst-font', 'aria-selected': String(fam === (x ? x.family : (BR_FONT.default || 'Inter'))), disabled: !can, onclick: () => pickFont(x) },
-      h('span', { class: 'n' }, label, meta && h('span', { class: meta.bad ? 'bad' : '' }, meta.t)), h('span', { class: 'p', style: `font-family: "${x ? x.family : 'Inter'}", system-ui; font-weight: ${f && f.weight || 800}` }, sample()));
-    const q = FONTS.q.trim().toLowerCase(), hits = (FONTS.list || []).filter(x => !q || x.family.toLowerCase().includes(q));
-    setKids(BUI.list, row(null, `${BR_FONT.default || 'Inter'} · default`, { t: 'OFL, vendored' }),
-      ...hits.slice(0, 60).map(x => row(x, x.family, { t: `${(x.faces || []).length} style${(x.faces || []).length === 1 ? '' : 's'}${fsBad(x.fsType) ? ' · no PDF embedding' : ''}`, bad: fsBad(x.fsType) })),
-      !SERVED ? h('p', { class: 'hint' }, 'Open this page through serve.py to list the fonts installed here.')
-        : FONTS.err ? h('p', { class: 'hint' }, FONTS.err) : FONTS.busy ? h('p', { class: 'hint' }, 'Listing the installed fonts…')
-        : !FONTS.list ? h('button', { type: 'button', class: 'bp-btn ghost', disabled: !can, onclick: () => loadFonts() }, 'List the installed fonts')
-        : hits.length > 60 ? h('p', { class: 'hint' }, `${hits.length - 60} more: search to narrow them`) : !hits.length ? h('p', { class: 'hint' }, 'No installed font matches. Install one in Font Book, then press ↻ Fonts.') : null);
+    const b = L.brand(), can = canBrand();
+    paneColors.classList.toggle('ro', !can);
+    paintTypography();
     // the swatches the image gave, by share; a role takes one dragged onto it (or picked, then its chip clicked)
     BUI.drop.disabled = !can;
     BUI.sw.replaceChildren(...b.swatches.map(s => { const el = h('button', { type: 'button', class: 'bd-lst-swatch' + (armed === s.hex ? ' on' : ''), draggable: 'true', disabled: !can, 'aria-pressed': String(armed === s.hex),
@@ -7815,7 +8186,7 @@ function renderListing(lb) {
       h('span', { class: 'l' }, h('b', {}, p.label), h('span', {}, `${p.styles} · ${p.fg} on ${p.bg}`)),
       h('span', { class: p.ok ? 'good' : 'bad' }, `${p.ratio.toFixed(2)}:1`, h('small', {}, p.ok ? 'AA' : `below ${BR_MIN}`)))));
     const d = brandDraft();
-    setKids(BUI.state, ...(d ? [h('span', {}, 'A brand draft: Request changes sends it; Approve waits until the agent records it.'), can && h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => { brandLive = null; L.D.drop(d.id); } }, ic('reset'), 'Discard draft')]
+    setKids(BUI.state, ...(d ? [h('span', {}, 'A brand draft: Request changes sends it; Approve waits until the agent records it.'), can && h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => { clearTimeout(brandT); brandLive = null; L.step('Discard brand draft', () => L.D.drop(d.id)); } }, ic('reset'), 'Discard draft')]
       : [h('span', {}, b.image ? `From ${b.image.split('/').pop()}, as the listing records it.` : 'The listing\'s brand. An edit here is a draft until the agent records it.')]));
     BUI.state.classList.toggle('on', !!d);
   }
@@ -7842,10 +8213,13 @@ function renderListing(lb) {
       h('p', { class: 'hint' }, `From build.py at rev ${CUR.rev || '-'}${OLD ? ' (the current revision)' : ''}, against the store rules read ${RULES.accessed}. A rule marked unverified only warns. Drafts count once the agent records them.`));
     paintChecksTab(ne, nw);
   }
-  // the Checks tab's count: its errors, else its warnings
+  // the Checks tab's count and the toolbar's: its errors, else its warnings
   function paintChecksTab(ne, nw) {
+    const say = ne || nw ? `${ne} error${ne === 1 ? '' : 's'}, ${nw} warning${nw === 1 ? '' : 's'}` : 'The store rules pass';
+    checksBtn.querySelector('.n').textContent = String(ne || nw); checksBtn.classList.toggle('err', !!ne); checksBtn.classList.toggle('warn', !ne && !!nw);
+    checksBtn.title = `Checks: ${say}`; checksBtn.setAttribute('aria-label', checksBtn.title); fitLtb();
     const bt = lpTabs && lpTabs.querySelector('[data-v="checks"]'); if (!bt) return;
-    const n = bt.querySelector('.n'), say = ne || nw ? `${ne} error${ne === 1 ? '' : 's'}, ${nw} warning${nw === 1 ? '' : 's'}` : 'The store rules pass';
+    const n = bt.querySelector('.n');
     n.hidden = !(ne || nw); n.textContent = String(ne || nw); n.classList.toggle('warn', !ne);
     bt.title = say; bt.setAttribute('aria-label', `Checks: ${say}`);
   }
@@ -7934,6 +8308,8 @@ function renderListing(lb) {
         mt: !!e.querySelector('.bd-lst-tag.mt'), fallback: !!e.querySelector('.v.fb'), dirty: e.classList.contains('dirty'), draft: e.classList.contains('drafted'), editable: !e.querySelector('.v').readOnly })),
       text: { unsaved: [...edits.keys()], canSave: !saveBtn.disabled, drafts: drafts().filter(a => a.listing.op === 'field').map(a => ({ id: a.id, key: a.target.key, value: a.listing.value, base: a.listing.base })),
         ...(L.H ? { ...L.H.size(), next: L.H.next() } : {}) },
+      toolbar: { lp: !!L.lp, undo: undoBtn.disabled ? null : L.H.next().undo, redo: redoBtn.disabled ? null : L.H.next().redo, drafts: drafts().length,
+        controls: [...ltb.querySelectorAll('[data-p], [data-view], select, .bd-expb, .bd-lst-ckb')].map(e => e.dataset.p || e.dataset.view || (e.matches('.bd-lst-loc') ? 'locale' : e.matches('.bd-lst-jump') ? 'jump' : e.matches('.bd-lst-ckb') ? 'checks' : 'export')) },
       checks: L.checks().map(([k, t]) => [k, t]), findings: L.checks().map(([, , f]) => f), style: L.styleFor(L.platform),
       brand: (({ palette, font, image, swatches, draft }) => ({ palette, font, image, swatches, draft, contrast: contrastOf(palette).map(p => ({ fg: p.fg, bg: p.bg, label: p.label, ratio: p.ratio, ok: p.ok })),
         fonts: FONTS.list ? FONTS.list.length : null }))(L.brand()),
@@ -7943,10 +8319,10 @@ function renderListing(lb) {
   };
   L.post = (m, filter) => { for (const x of L.live) if (!filter || filter(x)) post(x, m); };
 
-  /* the page around: the platform switch in the app bar, the left panel, the full-bleed layer */
+  /* the page around: the left panel, the full-bleed layer (the app bar keeps the breadcrumb, Rev and theme) */
   const LP_KEY = 'bluedoc:listing-panel', LP_TAB = 'bluedoc:listing-tab';
   function setLp(open, remember) {
-    L.lp = !!open; root.classList.toggle('bd-lp-open', L.lp); if (lp) lp.inert = !L.lp;
+    L.lp = !!open; root.classList.toggle('bd-lp-open', L.lp); if (lp) lp.inert = !L.lp; lpBtn.setAttribute('aria-pressed', String(L.lp));
     applyWidth(); if (remember) store.set(LP_KEY, L.lp ? '1' : '0');
     setTimeout(() => L.M && L.M.relayout(), 260);
   }
@@ -7966,7 +8342,6 @@ function renderListing(lb) {
     if (!blk || !shell) return;
     blk.replaceWith(h('div', { class: 'bp-block bd-board-ph' }, ic('frame'), h('span', {}, 'This listing is on the platform pages.')));
     blk.classList.add('bd-boardblk'); shell.append(blk);
-    $('.bd-crumb').after(tb);
     lpTabs = h('div', { class: 'bd-sg bd-lst-lpt', role: 'radiogroup', 'aria-label': 'Panel' }, LP_TABS.map(([v, l]) =>
       h('button', { type: 'button', role: 'radio', 'data-v': v, 'aria-controls': 'bd-lp-' + v, onclick: () => setTab(v, true) }, l, v === 'text' && h('i', { class: 'd', 'aria-hidden': 'true' }), v === 'checks' && h('span', { class: 'n', hidden: true }))));
     L.brief = h('div', { class: 'bd-sp-brief' }, tldr, main);
@@ -9972,6 +10347,8 @@ const MARKUP = (() => {
     return JSON.parse(JSON.stringify(a));
   }
   function comments(o) {
+    // o.filter (pending, open, resolved, all) picks the list's filter for this visit, as a drafts count does
+    if (o && typeof o === 'object' && FILTERS[o.filter]) { setFilter(o.filter, false); paint(); }
     if (o && typeof o === 'object' && 'open' in o) { if (o.open) SIDE.show('comments'); else if (SIDE.shows('comments')) SIDE.setOpen(false, true); }
     return { available: true, open: SIDE.shows('comments'), as: SIDE.shows('comments') ? SIDE.as() : null, count: list.length, unsent: pending().length, pending: pending().length,
       statuses: Object.fromEntries(STATUSES.map(s => [s, list.filter(a => a.status === s).length])), draft: draft && draft.id,
@@ -10419,7 +10796,7 @@ function boardEdits(B) {
       b.setAttribute('aria-label', b._tip);
     }
   }
-  const countBtn = h('button', { type: 'button', class: 'bd-tbtn txt bd-dcount', hidden: true, title: 'Board drafts: text edits, deletions, link edits and moves not yet in the doc. They go with Request changes.', onclick: () => MARKUP.comments({ open: true }) });
+  const countBtn = h('button', { type: 'button', class: 'bd-tbtn txt bd-dcount', hidden: true, title: 'Board drafts: text edits, deletions, link edits and moves not yet in the doc. They go with Request changes.', onclick: () => MARKUP.comments({ open: true, filter: 'pending' }) });
   function paintCount(n) { countBtn.hidden = !n; countBtn.textContent = n === 1 ? '1 draft' : `${n} drafts`; }
   B.tb.querySelector('[aria-label^="Focus the selected "]').after(...(IS_DECK ? [] : [tidyBtn]), undoBtn, redoBtn, countBtn);
   paintHist();

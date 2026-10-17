@@ -6,8 +6,8 @@ GET /__bluedoc/fonts and POST /__bluedoc/listing/brand need the key, and the bra
 <stem>.listing/brand/. Under node, the page's k-means finds an image's colours by share and gives them roles.
 The browser tests (BLUEDOC_BROWSER_TESTS=1), on the left panel's Style, Brand and Checks tabs: a style pick restyles
 the shots in place and goes as decisions with its patch command; a style finding in Checks opens Style; an image's
-palette, the role editor and the contrast pairs; a brand draft blocks Approve; the font menu lists the folder's fonts
-and ↻ Fonts finds a new one; an installed font renders in a shot."""
+palette, the role editor and the contrast pairs; a brand draft blocks Approve; the family popover lists the folder's
+fonts and ↻ Refresh fonts finds a new one; an installed font renders in a shot."""
 from __future__ import annotations
 
 import base64
@@ -505,25 +505,28 @@ class BrandPage(ChromePage):
     def listing_rules(self) -> dict:
         return listing.load_rules()
 
-    def test_the_font_menu_lists_the_folders_fonts_and_refresh_finds_a_new_one(self) -> None:
+    def test_the_family_popover_lists_the_folders_fonts_and_refresh_finds_a_new_one(self) -> None:
         fdir = self.tmp.dir / "fonts"
         fdir.mkdir()
         (fdir / "AcmeTest-Regular.ttf").write_bytes(sfnt("Acme Test", "Regular", 400, 0))
         self.restart(BLUEDOC_FONT_DIRS=str(fdir))
         self.url = self.server.url_for(self.doc_path)
         t = self.page("text")
-        self.assertTrue(t.ev("!!document.querySelector('#bd-lp-text .bd-lst-fsec .bd-lst-fonts')"), "the font menu is in Text's Caption font section")
-        t.ev("document.querySelector('.bd-lst-fonts .bp-btn').click()")
-        t.wait_for("BP.listing().brand.fonts === 1")
+        pop = "document.querySelector('#bd-lp-text .bd-typo .bd-ty-pop[data-menu=family]')"
+        self.assertTrue(t.ev(f"!!{pop} && !{pop}.matches(':popover-open')"), "the family list is a closed popover in Text's Typography")
+        t.ev("document.querySelector('.bd-typo .bd-ty-dd.fam').click()")
+        t.wait_for(f"BP.listing().brand.fonts === 1 && {pop}.matches(':popover-open')")
         time.sleep(0.01)
         (fdir / "AcmeSerif.ttc").write_bytes(ttc(("Acme Serif", "Regular", 400, 2), ("Acme Serif", "Bold", 700, 2)))
-        t.ev("[...document.querySelectorAll('.bd-lst-frow .bp-btn')].pop().click()")
+        t.ev(f"{pop}.querySelector('.rf').click()")
         t.wait_for("BP.listing().brand.fonts === 2")
-        t.ev("[...document.querySelectorAll('.bd-lst-font')].find(b => b.textContent.startsWith('Acme Serif')).click()")
+        t.wait_for(f"!!{pop}.querySelector('.o[data-v=\"Acme Serif\"]')")
+        self.assertEqual(t.ev(f"{pop}.querySelector('.o[data-v=\"Acme Serif\"] .m').textContent"), "No PDF embedding")
+        t.ev(f"{pop}.querySelector('.o[data-v=\"Acme Serif\"]').click()")
         t.wait_for("BP.listing().brand.font && BP.listing().brand.font.family === 'Acme Serif'")
         f = t.ev(LST)["brand"]["font"]
         self.assertEqual((f["weight"], f["fsType"], f["source"]), (700, 2, "system"))
-        self.assertIn("restricted", t.ev("document.querySelector('.bd-lst-fcur').textContent"))
+        self.assertIn("restricted", t.ev("document.querySelector('.bd-typo .bd-ty-warn:not([hidden])').textContent").lower())
         self.send_changes(t, "1")
         out = self.reply(self.doc_path)
         self.assertIn('"family":"Acme Serif"', out)

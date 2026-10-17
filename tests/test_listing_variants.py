@@ -318,7 +318,7 @@ class VariantsInChrome(ChromePage):
         self.assertEqual(len(next(v for v in t.ev(LST)["variants"] if v["id"] == "lifestyle")["changes"]), 2)
         t2 = self.page("#appstore@lifestyle")
         self.assertEqual(t2.ev(LST)["variant"], "lifestyle", "the URL keeps the tab")
-        t2.ev("document.querySelector('.bd-lst-tb [data-p=play]').click()")
+        t2.ev("document.querySelector('.bd-lst-btb [data-p=play]').click()")
         t2.wait_for(f"{LST}.platform === 'play'")
         self.assertIsNone(t2.ev(LST)["variant"], "another platform's page opens on its default")
 
@@ -335,7 +335,7 @@ class VariantsInChrome(ChromePage):
 
     def test_store_preview_shows_each_platform_from_the_listing(self) -> None:
         t = self.page("#appstore")
-        t.ev("document.querySelector('.bd-lst-tb [data-view=preview]').click()")
+        t.ev("document.querySelector('.bd-lst-btb [data-view=preview]').click()")
         t.wait_for(f"{LST}.preview.length === 2")
         pv = {p["kind"]: p for p in t.ev(LST)["preview"]}
         self.assertIn("Runs, rides and rest", pv["page"]["text"])

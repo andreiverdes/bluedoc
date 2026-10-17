@@ -173,8 +173,12 @@ container units (`cqw`, `cqh`), never px.
   frame with the row's safe area. A capture, when there is a fresh one, replaces it. Raw sets (watch) show only this.
 - An asset (`device: "asset"`, feature graphic) is `.asset` > `.asset-title`, `.asset-sub`; keep text inside the
   guide the page draws.
-- Brand tokens: `--brand-bg`, `--brand-surface`, `--brand-accent`, `--brand-text`, `--brand-caption`,
-  `--bd-font-caption`, `--bd-weight-caption`. The plain kit's `--accent` stays the app's own.
+- Brand tokens: `--brand-bg`, `--brand-surface`, `--brand-accent`, `--brand-text`, `--brand-caption`, and the
+  caption's (`listing.brand.font`, the page's Typography): `--bd-font-caption`, `--bd-weight-caption`,
+  `--bd-style-caption`, `--bd-size-caption` (a unitless scale of the style's caption size), `--bd-leading-caption`
+  (unitless), `--bd-tracking-caption` (em), `--bd-align-caption`, and `--bd-valign-caption` (shot.js sets
+  `cap--middle` or `cap--bottom` where the layout draws it). Size a caption as `calc(<n>cqw * var(--bd-size-caption, 1))`.
+  The plain kit's `--accent` stays the app's own.
 
 ## Shot styles
 

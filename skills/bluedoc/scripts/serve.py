@@ -95,7 +95,8 @@ URLs: /                      home page: every doc under the registered folders, 
                              checked against the set's rule (size, no alpha or tRNS, 8 MB, the slot range: 400 names
                              the rule and its source), into <stem>.listing/<platform>/<locale>/<set>/NN.png, a draft
                              until the agent records it; a file a revision records is never overwritten. {path,
-                             discard: <file>} deletes a draft. No link on the way (save_listing_upload)
+                             discard: <file>} sets a draft aside, {path, restore: <file>} brings it back (undo,
+                             redo). No link on the way (save_listing_upload)
       POST /__bluedoc/listing/brand  {path, data: base64}: a storelisting's brand image (PNG, JPEG or WebP, 8 MB),
                              whose palette the page extracts, into <stem>.listing/brand/source.<ext> (save_brand_image)
       POST /__bluedoc/snapshot  {path, rev, page, w, html, external}: a live page as the reader sees it, as revision
@@ -1161,18 +1162,17 @@ def shot_parts(doc: dict, a: dict, inline: bool) -> tuple[list[str], str, str]:
     brand = lb.get("brand") if isinstance(lb.get("brand"), dict) else {}
     pal = brand.get("palette") if isinstance(brand.get("palette"), dict) else {}
     out = {f"--brand-{k}": c for k, c in pal.items() if k in listing.PALETTE_ROLES and isinstance(c, str) and listing.HEX.match(c)}
-    f = brand.get("font") if isinstance(brand.get("font"), dict) else {}
-    if isinstance(f.get("family"), str) and listing.FONT_FAMILY.match(f["family"]):
-        out["--bd-font-caption"] = f'"{f["family"]}", Inter, system-ui, sans-serif'
-    if f.get("weight") in range(100, 1000, 100):
-        out["--bd-weight-caption"] = str(f["weight"])
+    out.update(listing.caption_tokens(brand.get("font"), rules))   # the caption's family and typography
     sets = listing.by_id(rules, "sets")
     data: dict = {"id": a["id"], "kind": a.get("device"), "sets": {}, "asset": None,
                   "strings": {k: s for k, s in (lb.get("strings") or {}).items() if isinstance(s, dict)},
                   "defaultLocale": lb.get("defaultLocale") or next(iter(lb.get("locales") or []), None),
                   # the style each platform page shows the shot in (listing.style, its platform's, the shot's own)
                   "style": {**listing.effective_style(lb, "", a),
-                            "platforms": {p["id"]: listing.effective_style(lb, p["id"], a) for p in rules["platforms"]}}}
+                            "platforms": {p["id"]: listing.effective_style(lb, p["id"], a) for p in rules["platforms"]}},
+                  # the caption typography's bounds and the valign each layout draws (kits/shot.js checks the page's)
+                  "caption": {**{k: rules["brand"]["font"][k] for k in ("size", "lineHeight", "letterSpacing", "align", "valign")},
+                              "layouts": {s["id"]: s["valign"] for s in rules["styles"] if s["axis"] == "layout"}}}
     for s in a.get("sets") or [] if a.get("device") == "shot" else []:
         r = sets.get(s) if isinstance(s, str) else None
         if r and "author" in r:
@@ -2595,6 +2595,7 @@ def save_icons(doc: Path, aid, files) -> tuple[int, dict]:
 LISTING_UPLOAD_BODY = listing.UPLOAD_MAX_BYTES * 4 // 3 + 65536   # the POST's JSON: a PNG at the limit in base64, and the rest
 # each POST route's body limit (MAX_BODY for the rest)
 POST_LIMITS = {"/__bluedoc/icons": ICON_MAX_BODY, "/__bluedoc/snapshot": SNAPSHOT_BODY, "/__bluedoc/listing/upload": LISTING_UPLOAD_BODY}
+DISCARDED = ".discarded-"   # a discarded upload's prefix: set aside beside its slot, so an undo can bring it back
 
 
 def save_listing_upload(doc: Path, data: dict) -> tuple[int, dict]:
@@ -2603,8 +2604,9 @@ def save_listing_upload(doc: Path, data: dict) -> tuple[int, dict]:
     atomically to <stem>.listing/<platform>/<locale>/<set name>/NN.png. `set` may name an ads asset too (Google Ads
     images, the search results asset: listing.upload_rules). It is a draft until the agent records it as a shot's or
     asset's src. A file a revision records is never overwritten: the upload takes the next free name. {path, discard:
-    <file>} deletes a draft instead. Nothing outside that folder, no link on the way. A failed check answers 400 with
-    the rule and its source key."""
+    <file>} sets a draft aside instead (.discarded-NN.png beside it, which the uploads never list), and {path, restore:
+    <file>} brings it back (the page's undo and redo). Nothing outside that folder, no link on the way. A failed check
+    answers 400 with the rule and its source key."""
     try:
         d = json.loads(doc.read_text(encoding="utf-8"))
     except (OSError, ValueError) as e:
@@ -2619,8 +2621,31 @@ def save_listing_upload(doc: Path, data: dict) -> tuple[int, dict]:
         f = doc.parent / data["discard"]
         if f.is_symlink():
             return 409, {"error": "a link"}
-        f.unlink(missing_ok=True)
+        if f.exists():
+            os.replace(f, f.with_name(DISCARDED + f.name))
         return 200, {"ok": True, "discarded": data["discard"]}
+    if "restore" in data:
+        rel = data["restore"]
+        folder, _, name = rel.rpartition("/") if isinstance(rel, str) else ("", "", "")
+        folders = {listing.upload_folder(doc, s["id"], loc).relative_to(doc.parent).as_posix()
+                   for s in listing.upload_rules(rules).values() if s["platform"] in (lb.get("platforms") or [])
+                   for loc in (lb.get("locales") or []) if isinstance(loc, str) and listing.LOCALE.match(loc)}
+        if folder not in folders or not listing.UPLOAD_NAME.match(name) or rel in listing.recorded_srcs(d, doc):
+            return 404, {"error": "not a draft upload's name"}
+        p = doc.parent
+        for part in folder.split("/"):
+            p = p / part
+            if p.is_symlink():
+                return 409, {"error": f"{p.relative_to(doc.parent)} is a link"}
+        f = doc.parent / rel
+        aside = f.with_name(DISCARDED + name)
+        if f.exists() or f.is_symlink():
+            return 409, {"error": f"{rel} holds another upload now"}
+        if aside.is_symlink() or not aside.is_file():
+            return 404, {"error": f"{rel} is gone: upload it again"}
+        os.replace(aside, f)
+        info = listing.png_info(f.read_bytes()[:65536]) or {}
+        return 200, {"ok": True, "restored": rel, "w": info.get("w"), "h": info.get("h"), "colour": info.get("colour"), "bytes": f.stat().st_size}
     set_id, platform, locale, slot = data.get("set"), data.get("platform"), data.get("locale"), data.get("slot")
     rule = listing.upload_rules(rules).get(set_id) if isinstance(set_id, str) else None
     if rule is None or rule.get("platform") != platform or platform not in (lb.get("platforms") or []):
@@ -2786,6 +2811,17 @@ def _field_ok(o: dict) -> bool:
     return s("locale", 35) and s("group", 40) and s("field", 200) and text(o.get("value"), False) and text(o.get("base"), True)
 
 
+def _brand_ok(o: dict) -> bool:
+    """A `listing` draft of op `brand`: {font (listing.caption_font_problems: family, weight, italic, size, lineHeight,
+    letterSpacing, align, valign in the rules' bounds; null: the default), palette {role: #hex}, image, swatches}."""
+    pal = o.get("palette")
+    return (not listing.caption_font_problems(o.get("font"), listing.load_rules())
+            and (pal is None or isinstance(pal, dict) and all(k in listing.PALETTE_ROLES and isinstance(v, str) and listing.HEX.match(v)
+                                                               for k, v in pal.items()))
+            and (o.get("image") is None or isinstance(o["image"], str) and len(o["image"]) <= 300)
+            and (o.get("swatches") is None or isinstance(o["swatches"], list) and len(o["swatches"]) <= 12))
+
+
 # the drafts' undo history (template.html draftHistory: a board's edits, a listing's text): `__hist` {rev, steps:
 # [step ids], cursor, sealed}, at most HIST_MAX steps; `__hist:<step>` {label, ops: [{id, before, after}]}, each copy a
 # draft or null
@@ -2836,7 +2872,8 @@ def value_ok(key: str, value: str) -> bool:
                  and all(isinstance(a["link"].get(k), str) for k in ("op", "from", "el")))
             and (a.get("type") != "layout" or isinstance(a.get("layout"), dict) and isinstance(a["layout"].get("positions"), dict))
             and (a.get("type") != "listing" or isinstance(a.get("listing"), dict) and isinstance(a["listing"].get("op"), str)
-                 and (a["listing"]["op"] != "field" or _field_ok(a["listing"])))
+                 and (a["listing"]["op"] != "field" or _field_ok(a["listing"]))
+                 and (a["listing"]["op"] != "brand" or _brand_ok(a["listing"])))
             and (a.get("type") != "element" or _element_ok(a.get("element"))))
 
 
@@ -3346,7 +3383,7 @@ def make_handler(port: int, default_to: str):
                     return self.json(404, {"error": "the page's doc is not under a registered folder"})
                 code, answer = save_listing_upload(doc, data)
                 if code == 200:
-                    print(f"upload for {doc}: {answer.get('file') or answer.get('discarded')}", flush=True)
+                    print(f"upload for {doc}: {answer.get('file') or answer.get('discarded') or answer.get('restored')}", flush=True)
                 return self.json(code, answer)
             if path == "/__bluedoc/icons":
                 doc = doc_for_url(str(data.get("path") or ""))
