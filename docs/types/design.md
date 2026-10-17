@@ -2,7 +2,7 @@
 
 UI mockups on a pan-and-zoom board: one HTML screen per artboard, in a device frame, that you comment on and approve. Slide decks are their own type: [presentation](presentation.md); so is a website you review live from its dev server: [website](website.md).
 
-![The acme-fit-design board: the Today phone screen selected, its links drawn as right-angle connectors to Workout, Activity, Workouts and Profile, with the reach count → 4 · ← 5](../media/design-hero.webp)
+![The acme-fit-design board: the Today phone screen selected, its links drawn as right-angle connectors to Workouts, Activity and Profile, the Screens list on the left and Brief, Comments and Revisions on the right](../media/design-hero.webp)
 
 ## Features
 
@@ -26,7 +26,7 @@ UI mockups on a pan-and-zoom board: one HTML screen per artboard, in a device fr
 - **Comments on a screen.** Point at an element to comment on it: the key is `el:<artboard>/<name>`, from the element's `data-bd` name, so the agent edits that element in that file. `artboard:<id>` keys a whole screen; a box drawn in Frame mode asks for a new screen (`frame:`). Notes collect in the **Comments** tab; a comment the agent lists in a revision's `resolves` turns Resolved.
 - **Revisions and compare.** Each build records the screens' HTML, links and icon layers in the doc's history file, stored once per version. An edit to a screen file counts as an edit to the doc: it voids an approval, as a JSON edit does. The **Revisions** tab compares a screen with an earlier revision **side by side** or as an **onion skin** (the newer one over the older, with an opacity slider); compare marks links New, Removed or Changed.
 - **Request changes or Approve design.** As on plans, the agent waits for **Approve design** on the current revision; your picks in the brief go with it.
-- **The board.** The toolbar stays centred over the board. Drag the inner edge of the Screens/Brief panel or the Comments/Revisions panel to resize it; every design page in that browser remembers the widths. Double-click a handle to reset.
+- **The board.** The toolbar stays centred over the board. The left panel lists the screens; the right one holds **Brief** (the TL;DR, the brief's sections and picks, status), **Comments** and **Revisions**. Drag a panel's inner edge to resize it; every design page in that browser remembers the widths. Double-click a handle to reset.
 - **Sandbox.** Each screen runs in an `<iframe sandbox="allow-scripts">` from its own route, whose CSP allows no network connections. A screen can't read the page, your cookies or stored input, post an approval, or navigate the tab. The build rejects network URLs, `<base>`, `<meta http-equiv>`, `<iframe>`, `<object>`, `<embed>` and `<form action>` in screen files.
 
 ## How an agent makes one

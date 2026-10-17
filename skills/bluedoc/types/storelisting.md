@@ -6,7 +6,7 @@
 python3 <skill>/scripts/build.py new storelisting docs/store/<app>.bluedoc.json --title "…"
 ```
 
-This writes the `listing` block, a board with one shot (`first`), an icon artboard and their files in `<app>.design/`. The page shows the board as two platform pages (Google Play, App Store) with a locale menu, and a left panel of tabs beside them: Text, Brief, Style, Brand and Checks. The right panel holds Comments and Revisions, as on every doc.
+This writes the `listing` block, a board with one shot (`first`), an icon artboard and their files in `<app>.design/`. The page shows the board as two platform pages (Google Play, App Store) with a locale menu, and a left panel of tabs beside them: Text, Style, Colors and Checks. The right panel holds Brief, Comments and Revisions, as on every design page.
 
 **Home card:** a column per platform with a dot per section, coloured by its worst check. **Required:** one `listing` block and one `board` of `shot`, `asset` and `icons` artboards. The fields, sets and checks: `grep -n -A60 '^## Listing' <skill>/references/schema.md`.
 
@@ -26,12 +26,13 @@ Stores want the app in use: a shot shows a mock-up only until it has a capture o
 - **Uploads:** the reader drops PNGs on the page; each is a draft until you run the `## Uploaded shots` command from the reply. Never write into `<stem>.listing/<platform>/` yourself.
 - After a recipe change the capture is **stale**: re-shoot with the command `build.py` prints.
 
-## Style and brand
+## Text, style and brand
 
-The reader picks styles and the brand on the page; you record them.
+The reader edits text and picks styles and the brand on the page; you record them.
 
+- **Text edits** arrive under `## Text edits`, a `build.py patch <doc> field:<locale>/<group>/<field> --set <field>=<text>` command each: run them as given (it also clears an MT mark). Approve waits until you do. `patch` refuses a text over its store limit (the page lets the reader save one, in red): say so in your reply and offer a shorter one.
 - **Style picks** arrive under `## Decisions` (`style-<platform>-<variant>-message`/`-layout`) with a `## Style picks` command that writes `listing.style.<platform>`. A pick marked *needs the agent* also needs its hook: `data-callout` (M3), the string `<shot>.proof` (M4), a video (M5), a photo with `credits` (L5).
-- **Brand drafts** arrive under `## Brand drafts` with a `build.py patch <doc> brand:main --json …` command: run it as given. Approve waits until you do. The build warns on a contrast pair under 4.5:1 and on a font a PDF can't embed: say so in your reply.
+- **Brand drafts** (the Colors tab's palette, the caption font at the bottom of Text) arrive under `## Brand drafts` with a `build.py patch <doc> brand:main --json …` command: run it as given. Approve waits until you do. The build warns on a contrast pair under 4.5:1 and on a font a PDF can't embed: say so in your reply.
 
 ## Variants and ads
 

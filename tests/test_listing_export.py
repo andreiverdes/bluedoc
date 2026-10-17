@@ -278,17 +278,18 @@ class ListingPage(ChromePage):
         got = t.ev("[...document.querySelectorAll('#bd-lp-checks .bd-lst-checks li')].map(li => [li.className, li.dataset.key || null])")
         self.assertEqual(sorted(got, key=repr), sorted([[f["level"], f["key"]] for f in found], key=repr))
         self.assertTrue(any(k == "err" for k, _ in got))
-        texts = t.ev("(() => { const w = document.createTreeWalker(document.querySelector('.bd-lst-brp'), NodeFilter.SHOW_TEXT), out = [];"
-                     " while (w.nextNode()) out.push(w.currentNode.data.trim()); return out; })()")
-        self.assertNotIn("false", texts, "a `cond && h(…)` child drew as text")
-        # the tab is the left panel's, with its count of errors; the right panel keeps Comments and Revisions only
+        for pane in (".bd-lst-clp", ".bd-lst-fsec"):
+            texts = t.ev(f"(() => {{ const w = document.createTreeWalker(document.querySelector('{pane}'), NodeFilter.SHOW_TEXT), out = [];"
+                         " while (w.nextNode()) out.push(w.currentNode.data.trim()); return out; })()")
+            self.assertNotIn("false", texts, f"a `cond && h(…)` child drew as text in {pane}")
+        # the tab is the left panel's, with its count of errors; the right panel holds Brief, Comments and Revisions
         ne = sum(f["level"] == "err" for f in found)
-        self.assertEqual(t.ev("[...document.querySelectorAll('.bd-lp-tabs [data-v]')].map(b => b.dataset.v)"), ["text", "brief", "style", "brand", "checks"])
+        self.assertEqual(t.ev("[...document.querySelectorAll('.bd-lp-tabs [data-v]')].map(b => b.dataset.v)"), ["text", "style", "colors", "checks"])
         self.assertEqual(t.ev("(n => [n.hidden, n.textContent, n.classList.contains('warn')])(document.querySelector('.bd-lp-tabs [data-v=checks] .n'))"), [False, str(ne), False])
-        self.assertEqual(t.ev("document.querySelector('.bd-lp-tabs').getBoundingClientRect().height < 50"), True, "the five tabs keep one row")
+        self.assertEqual(t.ev("document.querySelector('.bd-lp-tabs').getBoundingClientRect().height < 50"), True, "the four tabs keep one row")
         side = t.ev("BP.sidebar().available")
-        self.assertTrue(side and set(side) <= {"comments", "revisions"}, side)
-        self.assertEqual(t.ev("document.querySelectorAll('#bd-sp .bd-lst-pane, #bd-sp-style, #bd-sp-brand, #bd-sp-checks').length"), 0)
+        self.assertTrue(side and side[0] == "brief" and set(side) <= {"brief", "comments", "revisions"}, side)
+        self.assertEqual(t.ev("document.querySelectorAll('#bd-sp .bd-lst-pane, #bd-sp-style, #bd-sp-colors, #bd-sp-checks, #bd-sp-text').length"), 0)
         # a finding with a key shows its shot
         t.ev("document.querySelector('#bd-lp-checks li[data-key=\"artboard:alpha\"] button').click()")
         t.wait_for("!!document.querySelector('.bd-lst-shot[data-ab=\"alpha\"].flash')")
@@ -333,14 +334,14 @@ class ListingPage(ChromePage):
     def test_approve_waits_for_an_upload_or_brand_draft(self) -> None:
         from test_listing_capture import free_a_slot
         free_a_slot(self.doc_path, "appstore/iphone-69")
-        t = self.page(self.url, "#appstore/es-ES", "brand")
+        t = self.page(self.url, "#appstore/es-ES", "colors")
         t.wait_for("!!document.querySelector('.bd-key.approve')")
         self.assertFalse(self.approve_disabled(t))
         # a brand draft
         t.ev("(i => { i.value = '#7c3aed'; i.dispatchEvent(new Event('input')); })(document.querySelector('.bd-lst-role[data-role=\"bg\"] .hx'))")
         t.wait_for(f"{LST}.brand.draft && {LST}.approveBlocks.length > 0")
         self.assertTrue(self.approve_disabled(t))
-        t.ev("[...document.querySelectorAll('.bd-lst-brp .bp-btn.ghost')].find(b => b.closest('.on')).click()")
+        t.ev("[...document.querySelectorAll('.bd-lst-clp .bp-btn.ghost')].find(b => b.closest('.on')).click()")
         t.wait_for(f"{LST}.approveBlocks.length === 0")
         self.assertFalse(self.approve_disabled(t))
         # an upload

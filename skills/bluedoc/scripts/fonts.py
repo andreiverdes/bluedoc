@@ -1,4 +1,4 @@
-"""The fonts installed on this machine, for a storelisting's caption font (the Brand pane, GET /__bluedoc/fonts).
+"""The fonts installed on this machine, for a storelisting's caption font (the Text tab's Caption font, GET /__bluedoc/fonts).
 
 scan() walks the font folders (macOS: /System/Library/Fonts, /Library/Fonts and ~/Library/Fonts; elsewhere
 fontconfig's usual folders; BLUEDOC_FONT_DIRS, os.pathsep-separated, replaces them) and reads each TTF, OTF and TTC:

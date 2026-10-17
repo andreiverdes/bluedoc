@@ -2744,6 +2744,10 @@ def save_brand_image(doc: Path, data: dict) -> tuple[int, dict]:
 # link, layout, listing, element: drafts (template.html); an element draft's text and base are at most 1,000 characters
 ANN_TYPES = ("pin", "text", "draw", "general", "link", "layout", "listing", "element")
 EL_TEXT_MAX = 1000
+# a listing text edit (op `field`): its value and base are text up to FIELD_TEXT_MAX, or a list of FIELD_ITEMS_MAX texts
+# of EL_TEXT_MAX each (ads headlines); base null: the field wasn't set
+FIELD_TEXT_MAX = 8000
+FIELD_ITEMS_MAX = 20
 _skipped: set[tuple[str, str]] = set()   # (doc, key) of stored values page_state left out and logged
 
 
@@ -2762,8 +2766,20 @@ def _element_ok(e) -> bool:
             and (e.get("ord") is None or isinstance(e["ord"], int) and not isinstance(e["ord"], bool)))
 
 
-# a board's undo history (template.html boardEdits H): `__hist` {rev, steps: [step ids], cursor, sealed}, at most
-# HIST_MAX steps; `__hist:<step>` {label, ops: [{id, before, after}]}, each copy a draft or null
+def _field_ok(o: dict) -> bool:
+    """A `listing` draft of op `field`: {locale, group (a platform or 'strings'), field, value, base}."""
+    def s(k: str, n: int) -> bool:
+        return isinstance(o.get(k), str) and 0 < len(o[k]) <= n
+
+    def text(v, nullable: bool) -> bool:
+        return (nullable and v is None or isinstance(v, str) and len(v) <= FIELD_TEXT_MAX
+                or isinstance(v, list) and len(v) <= FIELD_ITEMS_MAX and all(isinstance(x, str) and len(x) <= EL_TEXT_MAX for x in v))
+    return s("locale", 35) and s("group", 40) and s("field", 200) and text(o.get("value"), False) and text(o.get("base"), True)
+
+
+# the drafts' undo history (template.html draftHistory: a board's edits, a listing's text): `__hist` {rev, steps:
+# [step ids], cursor, sealed}, at most HIST_MAX steps; `__hist:<step>` {label, ops: [{id, before, after}]}, each copy a
+# draft or null
 HIST_MAX = 200
 HIST_STEP = re.compile(r"^[a-z0-9]{1,40}$")
 
@@ -2810,7 +2826,8 @@ def value_ok(key: str, value: str) -> bool:
             and (a.get("type") != "link" or isinstance(a.get("link"), dict)
                  and all(isinstance(a["link"].get(k), str) for k in ("op", "from", "el")))
             and (a.get("type") != "layout" or isinstance(a.get("layout"), dict) and isinstance(a["layout"].get("positions"), dict))
-            and (a.get("type") != "listing" or isinstance(a.get("listing"), dict) and isinstance(a["listing"].get("op"), str))
+            and (a.get("type") != "listing" or isinstance(a.get("listing"), dict) and isinstance(a["listing"].get("op"), str)
+                 and (a["listing"]["op"] != "field" or _field_ok(a["listing"])))
             and (a.get("type") != "element" or _element_ok(a.get("element"))))
 
 

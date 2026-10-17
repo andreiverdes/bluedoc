@@ -792,9 +792,9 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .bd-cs-c .acts .bd-cs-ib[aria-label="Resolve"]:hover { color: var(--ok-fg); background: var(--ok-tint); }
 .bd-sp-sec { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .bd-sp-sec[hidden], .bd-sp-h h2[hidden], .bd-sp-tabs[hidden] { display: none !important; }
-/* two sections (Comments and Revisions) show as tabs in the header */
+/* two or more sections (Brief on a design page, Comments, Revisions) show as tabs in the header */
 .bd-sp-tabs { flex: 0 1 auto; min-width: 0; }
-.bd-sp-tabs button { padding: 0 12px; font-size: 12.5px; }
+.bd-sp-tabs button { padding: 0 10px; font-size: 12.5px; }
 .bd-gc .gf .sp, .bd-cs-c .ef .sp { flex: 1; }
 .bd-cs-f { flex: none; display: flex; align-items: center; gap: 6px; padding: 0 12px 10px; box-shadow: inset 0 -1px 0 var(--line-soft); }
 .bd-cs-f .bd-sg { flex: 1; min-width: 0; }
@@ -901,8 +901,8 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
    Expanded: date, chips and every change note. */
 .bd-rvr, .bd-rvr .bd-rail-sec { min-width: 0; }
 /* the Revisions tab, the Comments list and the left panels scroll without a visible scrollbar (wheel, trackpad, keys still work) */
-.bd-rvr, .bd-cs-l, .bp-side, .bd-lp-pane { scrollbar-width: none; -ms-overflow-style: none; }
-.bd-rvr::-webkit-scrollbar, .bd-cs-l::-webkit-scrollbar, .bp-side::-webkit-scrollbar, .bd-lp-pane::-webkit-scrollbar { display: none; width: 0; height: 0; }
+.bd-rvr, .bd-cs-l, .bp-side, .bd-lp-pane, .bd-sp-brief { scrollbar-width: none; -ms-overflow-style: none; }
+.bd-rvr::-webkit-scrollbar, .bd-cs-l::-webkit-scrollbar, .bp-side::-webkit-scrollbar, .bd-lp-pane::-webkit-scrollbar, .bd-sp-brief::-webkit-scrollbar { display: none; width: 0; height: 0; }
 @media (min-width: 901px) { .bp-side { -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent); } :root[data-layout="wide"] .bp-side { -webkit-mask-image: none; mask-image: none; } }
 .bd-rvs { list-style: none; margin: 0; padding: 0; border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-1); overflow: hidden; }
 .bd-rv { min-width: 0; padding: 9px 10px; }
@@ -1425,8 +1425,8 @@ html.bd-resizing, html.bd-resizing * { cursor: col-resize !important; user-selec
   .bp-cl-text, .bp-cl-subt > span { white-space: normal !important; overflow: visible !important; }
 }
 
-/* design page: the board fills the window under the app bar, between the left panel (Screens, Brief)
-   and the right one (Comments, Revisions). JS sets data-layout="board", html.bd-lp-open and html.bd-sp-dock. */
+/* design page: the board fills the window under the app bar, between the left panel (Screens) and the right one
+   (Brief, Comments, Revisions). JS sets data-layout="board", html.bd-lp-open and html.bd-sp-dock. */
 :root[data-layout="board"] { --lp-w: 320px; }
 :root[data-layout="board"], :root[data-layout="board"] body { height: 100%; overflow: hidden; }
 :root[data-layout="board"] .bd-shell { display: block; padding: 0; }
@@ -1745,7 +1745,7 @@ i.warn[hidden] { display: none; }
 .bd-expm .opt[aria-checked="true"] { color: var(--fg); }
 .bd-expm .opt[aria-checked="true"] .bx { background: var(--accent-solid); box-shadow: none; }
 .bd-expm .opt[aria-checked="true"] .bx .bd-ic { visibility: visible; }
-/* the left panel: the doc's header, then Screens (the artboards) or Brief (TL;DR, the sections, status) */
+/* the left panel: the doc's header, then Screens (the artboards); a storelisting's, its tabs (Text, Style, Colors, Checks) */
 .bd-lp { position: fixed; z-index: 41; top: var(--top-h); left: 0; bottom: 0; width: var(--lp-w); display: flex; flex-direction: column; min-height: 0;
   background: var(--panel); box-shadow: inset -1px 0 0 var(--line); transform: translateX(-100%); visibility: hidden; transition: transform .22s var(--ease), visibility 0s .22s; }
 html.bd-lp-open .bd-lp { transform: none; visibility: visible; transition: transform .22s var(--ease); }
@@ -1756,14 +1756,18 @@ html.bd-lp-open .bd-lp { transform: none; visibility: visible; transition: trans
 .bd-lp-pane { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 10px 12px calc(16px + var(--tray-room, 0px)); }
 .bd-lp-pane[hidden] { display: none; }
 .bd-lp-pane .hint { margin: 12px 10px 0; font-size: 12px; line-height: 1.45; color: var(--fg-subtle); }
-#bd-lp-brief { font-size: 14px; }
-#bd-lp-brief :is(.bd-tldr, main) { width: auto; max-width: none; }
-#bd-lp-brief .bd-tldr-card { margin-top: 2px; padding: 12px 14px; grid-template-columns: minmax(0, 1fr); }
-#bd-lp-brief .bd-tldr-card .ico { display: none; }
-#bd-lp-brief .bp-sec { padding-top: 18px; }
-#bd-lp-brief .bp-sec + .bp-sec { margin-top: 18px; }
-#bd-lp-brief .bp-sec > h2 { font-size: 16px; }
-#bd-lp-brief .bd-meta { margin-top: 20px; }
+.bd-lp > .bd-head + .bd-lp-pane { margin-top: 10px; box-shadow: inset 0 1px 0 var(--line-soft); }
+/* a design page's brief (TL;DR, the sections, status): the right panel's Brief tab */
+.bd-sp-sec.bd-sp-brief { display: block; overflow: auto; overflow-x: hidden; overscroll-behavior: contain; padding: 2px 16px calc(16px + var(--tray-room, 0px)); font-size: 14px; }
+.bd-sp-brief :is(.bd-tldr, main) { width: auto; max-width: none; }
+.bd-sp-brief .bd-tldr-card { margin-top: 2px; padding: 12px 14px; grid-template-columns: minmax(0, 1fr); }
+.bd-sp-brief .bd-tldr-card .ico { display: none; }
+.bd-sp-brief .bp-sec { padding-top: 18px; }
+.bd-sp-brief .bp-sec + .bp-sec { margin-top: 18px; }
+.bd-sp-brief .bp-sec > h2 { font-size: 16px; }
+.bd-sp-brief .bd-meta { margin-top: 20px; }
+html.bd-ann-m-point .bd-sp-brief *, html.bd-ann-m-point .bd-sp-brief { cursor: crosshair !important; }
+html.bd-ann-m-select .bd-sp-brief *, html.bd-ann-m-select .bd-sp-brief { cursor: text !important; }
 .bd-scr-l { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
 .bd-scr-l button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; border: 0; border-radius: 10px; background: none; text-align: left; font: inherit; font-size: 13.5px; color: var(--fg); cursor: pointer; }
 .bd-scr-l button:hover { background: var(--hover); }
@@ -1848,7 +1852,7 @@ html.bd-presenting .bp-toast { z-index: 71; bottom: 84px; }
 .bd-anntb.compact .bd-key :is(.t, .l) { display: none; }
 
 /* ---------- a storelisting's platform pages (renderListing): the platform switch and the locale menu in the app
-   bar; the left panel's Text, Brief, Style, Brand and Checks; the device sections, each a card of its sets' shots
+   bar; the left panel's Text, Style, Colors and Checks; the device sections, each a card of its sets' shots
    at scale, in the full-bleed layer ---------- */
 .bd-lst-tb { display: flex; align-items: center; gap: 10px; flex: none; margin-left: 8px; }
 .bd-lst-tb .bd-sg button { padding: 0 12px; font-weight: 600; }
@@ -1985,31 +1989,51 @@ html.bd-presenting .bp-toast { z-index: 71; bottom: 84px; }
 .bd-lst-adtext li .c.over { color: var(--risk-fg); font-weight: 700; }
 .bd-lst-adtext li.none { color: var(--fg-subtle); }
 .bd-lst-ads .note { margin: 0; font-size: 12px; color: var(--fg-subtle); }
-/* the left panel's Text tab: each field with its counter, then the captions */
+/* the left panel's Text tab: Save (sticky), each field with its counter, then the captions, then the caption font. A
+   field typed in and not saved has a dot and an amber edge; a saved one a Draft tag */
+.bd-lst-tsave { position: sticky; top: -10px; z-index: 2; display: flex; align-items: center; gap: 4px; margin: -10px -12px 12px; padding: 8px 12px;
+  background: var(--panel); box-shadow: inset 0 -1px 0 var(--line-soft); }
+.bd-lst-tsave[hidden] { display: none; }
+.bd-lst-tsave .st { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: var(--fg-subtle); }
+.bd-lst-tsave .st.dirty { color: var(--warn-fg); font-weight: 600; }
+.bd-lst-tsave .sp { flex: 1; }
+.bd-lst-tsave .bd-ibtn { width: 28px; height: 28px; }
+.bd-lst-tsave .bp-btn { height: 28px; margin-left: 4px; padding: 0 14px; }
+.bd-lst-tsave .bp-btn:disabled { opacity: .5; cursor: default; }
 .bd-lst-text h4 { margin: 4px 4px 10px; font-size: 13px; }
 .bd-lst-text h4 + p { margin: -6px 4px 10px; font-size: 12px; color: var(--fg-subtle); }
 .bd-lfield { display: grid; gap: 4px; margin: 0 0 12px; padding: 0 4px; }
 .bd-lfield .lh { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--fg-muted); }
 .bd-lfield .lh .c { margin-left: auto; font: 500 11.5px var(--mono); color: var(--ok-fg); }
 .bd-lfield .lh .c.over { color: var(--risk-fg); font-weight: 700; }
-.bd-lfield .v { padding: 7px 9px; border-radius: 8px; font-size: 13px; line-height: 1.4; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 7.2em; overflow: auto;
+.bd-lfield .lh .dot { display: none; flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--warn); }
+.bd-lfield.dirty .lh .dot { display: inline-block; }
+.bd-lfield .v { display: block; width: 100%; min-height: 2.3em; max-height: 9.4em; margin: 0; padding: 7px 9px; border: 0; border-radius: 8px; resize: vertical; field-sizing: content;
+  font: inherit; font-size: 13px; line-height: 1.4; white-space: pre-wrap; overflow-wrap: anywhere; overflow: auto;
   background: var(--inset); box-shadow: inset 0 0 0 1px var(--line); color: var(--fg); }
+.bd-lfield .v:focus { outline: none; background: var(--surface); box-shadow: inset 0 0 0 1.5px var(--accent); }
+.bd-lfield .v[readonly] { resize: none; }
+.bd-lfield .v::placeholder { color: var(--fg-subtle); }
 .bd-lfield .v.fb { color: var(--fg-subtle); font-style: italic; }
-.bd-lfield .v.none { color: var(--fg-subtle); }
+.bd-lfield.dirty .v { box-shadow: inset 0 0 0 1.5px var(--warn); }
 .bd-lfield .note { font-size: 11.5px; color: var(--warn-fg); }
 .bd-lfield .bd-lst-mta { display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: var(--fg-subtle); }
 .bd-lfield .bd-lst-mta .bp-btn { height: 26px; padding: 0 9px; font-size: 12px; }
 .bd-lst-tb .bd-exp { margin-left: 2px; }
 .bd-lfield.cap { grid-template-columns: minmax(0, 1fr); }
-.bd-lfield.cap .v { max-height: none; }
-/* the left panel's five tabs: no shrinking; a panel too narrow for them scrolls them sideways. Checks counts its errors (else warnings) */
+.bd-lst-fsec { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; margin: 18px 0 0; padding: 14px 4px 0; box-shadow: inset 0 1px 0 var(--line-soft); font-size: 13px; }
+.bd-lst-fsec h4 { margin: 0; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--fg-subtle); }
+/* the left panel's four tabs: no shrinking; a panel too narrow for them scrolls them sideways. Text has a dot while an
+   edit is unsaved; Checks counts its errors (else warnings) */
 .bd-lst-lpt { position: relative; overflow-x: auto; scrollbar-width: none; }
 .bd-lst-lpt::-webkit-scrollbar { display: none; }
 .bd-lst-lpt button { flex: 1 0 auto; gap: 3px; padding: 0 5px; }
 .bd-lst-lpt .n { min-width: 16px; height: 16px; padding: 0 4px; border-radius: 5px; font: 650 10.5px/16px var(--sans); font-variant-numeric: tabular-nums; color: var(--risk-fg); background: var(--risk-tint); }
 .bd-lst-lpt .n.warn { color: var(--warn-fg); background: var(--warn-tint); }
 .bd-lst-lpt .n[hidden] { display: none; }
-/* Style, Brand and Checks: left panel tabs */
+.bd-lst-lpt .d { display: none; width: 6px; height: 6px; border-radius: 50%; background: var(--warn); }
+.bd-lst-lpt .dirty .d { display: inline-block; }
+/* Style, Colors and Checks: left panel tabs */
 .bd-lst-pane { display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; gap: 10px; padding: 12px 14px calc(16px + var(--tray-room, 0px)); overflow: auto; overflow-x: hidden; min-height: 0; min-width: 0; font-size: 13px; }
 .bd-lst-pane > p { margin: 0; }
 .bd-lst-pane .hint { margin: 0; font-size: 12px; color: var(--fg-subtle); }
@@ -2033,9 +2057,9 @@ html.bd-presenting .bp-toast { z-index: 71; bottom: 84px; }
 .bd-lst-style .ms { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; }
 .bd-lst-style .ms .bp-chip { height: 20px; font-size: 11px; }
 .bd-lst-sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
-/* the Brand pane: the font menu, the image drop, swatches, the roles and the contrast pairs */
-.bd-lst-brp, .bd-lst-stp { grid-auto-rows: max-content; }   /* a long pane scrolls; its rows (the font menu) keep their height */
-.bd-lst-brp.ro :is(.bd-lst-imgdrop, .bd-lst-roles) { opacity: .7; }
+/* the Text tab's caption font (the font menu) and the Colors pane (the image drop, swatches, the roles and the contrast pairs) */
+.bd-lst-clp, .bd-lst-stp, .bd-lst-fsec { grid-auto-rows: max-content; }   /* a long pane scrolls; its rows (the font menu) keep their height */
+.bd-lst-clp.ro :is(.bd-lst-imgdrop, .bd-lst-roles) { opacity: .7; }
 .bd-lst-fcur { display: grid; gap: 3px; padding: 10px 12px; border-radius: 10px; background: var(--inset); font-size: 12px; color: var(--fg-muted); }
 .bd-lst-fcur b { font-size: 20px; line-height: 1.15; color: var(--fg); overflow-wrap: anywhere; }
 .bd-lst-fcur .bad, .bd-lst-font .bad { color: var(--risk-fg); font-weight: 600; }
@@ -2583,8 +2607,8 @@ app.append(h('div', { class: 'bd-shell' }, head, tldr, side, main));
 const PHONE = matchMedia('(max-width: 900px)');
 function placeMeta() {
   if (!metaRail.childNodes.length) return;
-  // a design page has no rail: they close its left panel's Brief tab
-  if (IS_DESIGN) { const b = document.getElementById('bd-lp-brief'); if (b) b.append(metaRail); return; }
+  // a design page has no rail: they close its Brief tab (the right panel's)
+  if (IS_DESIGN) { if (BOARD && BOARD.brief) BOARD.brief.append(metaRail); return; }
   if (PHONE.matches) tldr.after(metaRail); else side.append(metaRail);
 }
 PHONE.addEventListener('change', placeMeta);
@@ -2704,14 +2728,14 @@ function setWidth(w, save) {
 }
 function resetWidth() { userW = 0; store.del(WIDTH_KEY); applyWidth(); toast('Content width reset'); }
 
-// A design page's panels take the same handles on the edge each shares with the board: Screens and Brief on
-// the left (while open), Comments and Revisions on the right (while docked). Their widths are reader prefs
-// too; each panel stays within its bounds and leaves the board at least BOARD_MIN wide. A storelisting's left
-// panel holds five tabs and the Brand pane's rows: at least 300 px.
+// A design page's panels take the same handles on the edge each shares with the board: Screens on the left (while
+// open), Brief, Comments and Revisions on the right (while docked). Their widths are reader prefs too; each panel
+// stays within its bounds and leaves the board at least BOARD_MIN wide. A storelisting's left panel holds four tabs
+// and the Colors pane's rows: at least 300 px.
 const BOARD_MIN = 480;
 const PANELS = IS_DESIGN ? [
-  { side: 'left', v: '--lp-w', key: 'bluedoc:design-left-w', min: IS_LISTING ? 300 : 240, max: 560, dir: 1, label: IS_LISTING ? 'Width of the left panel' : 'Width of the screens and brief panel', on: () => root.classList.contains('bd-lp-open') && !PHONE.matches },
-  { side: 'right', v: '--sp-w', key: 'bluedoc:design-right-w', min: 280, max: 640, dir: -1, label: 'Width of the comments panel', on: () => dockW() > 0 },
+  { side: 'left', v: '--lp-w', key: 'bluedoc:design-left-w', min: IS_LISTING ? 300 : 240, max: 560, dir: 1, label: IS_LISTING ? 'Width of the left panel' : `Width of the ${SCREEN}s panel`, on: () => root.classList.contains('bd-lp-open') && !PHONE.matches },
+  { side: 'right', v: '--sp-w', key: 'bluedoc:design-right-w', min: 280, max: 640, dir: -1, label: 'Width of the side panel', on: () => dockW() > 0 },
 ] : [];
 for (const p of PANELS) {
   p.user = +store.get(p.key) || 0;
@@ -6843,7 +6867,7 @@ function renderBoard(b) {
   /* toolbar: panel, Fit · zoom · Focus, Present, Variants, Flows, fidelity, theme, motion */
   const tbtn = (icon, label, fn, extra) => h('button', { type: 'button', class: 'bd-tbtn', 'aria-label': label, title: label, onclick: fn, ...extra }, ic(icon));
   const sep = () => h('span', { class: 'bd-groove', role: 'separator', 'aria-orientation': 'vertical' });
-  const lpBtn = tbtn('panelleft', `${IS_DECK ? 'Slides' : IS_SITE ? 'Pages' : 'Screens'} and brief ([)`, () => setLp(!B.lp, true), { 'aria-pressed': 'false' });
+  const lpBtn = tbtn('panelleft', `${IS_DECK ? 'Slides' : IS_SITE ? 'Pages' : 'Screens'} ([)`, () => setLp(!B.lp, true), { 'aria-pressed': 'false' });
   zoomLbl = h('span', { class: 'zl' }, '100%');
   const varBtn = tbtn('variants', 'Variants: line up the selected screen and its variants', () => toggleVariants(), { 'aria-pressed': 'false' });
   const flowsBtn = h('button', { type: 'button', class: 'bd-tbtn txt', 'aria-pressed': 'false', title: 'Flows: every link as an arrow (off: only the selected screen\'s reach)', onclick: () => setFlows(!B.flows) }, 'Flows');
@@ -7296,22 +7320,18 @@ function renderBoard(b) {
     paintReach(); paintTools();
   };
 
-  /* the page around the board: the left panel (Screens, Brief) and the keys. Runs once the document is drawn. */
-  const LP_KEY = 'bluedoc:design-panel', LP_TAB = 'bluedoc:design-tab';
-  let lp = null, lpList = null, lpTabs = null;
+  /* the page around the board: the left panel (Screens) and the keys. Runs once the document is drawn. The brief
+     (TL;DR, the sections, status) is the right panel's Brief tab (B.brief, SP_BRIEF). */
+  const LP_KEY = 'bluedoc:design-panel';
+  let lp = null, lpList = null;
   function setLp(open, remember) {
     B.lp = !!open; root.classList.toggle('bd-lp-open', B.lp); if (lp) lp.inert = !B.lp;
     applyWidth();   // the right panel's room changes with it
     if (remember) store.set(LP_KEY, B.lp ? '1' : '0');
     paintTools(); setTimeout(() => MARKUP.relayout(), 260);
   }
-  function setTab(t, remember) {
-    if (!lp) return;
-    if (remember) store.set(LP_TAB, t);
-    for (const bt of lpTabs.querySelectorAll('button')) { const on = bt.dataset.v === t; bt.setAttribute('aria-checked', String(on)); $('#' + bt.getAttribute('aria-controls')).hidden = !on; }
-  }
   // a change mark in the brief: show the Brief tab first
-  B.reveal = el => { if (lp && $('#bd-lp-brief').contains(el)) { setLp(true, false); setTab('brief', false); } };
+  B.reveal = el => { if (B.brief && B.brief.contains(el)) SIDE.show('brief', { remember: false }); };
   // a section in the Pages list: in Full page the board pans to it, in Viewport its page shows and its frame scrolls
   // there (either once the frame reports where it is, if it hasn't)
   function revealSection(id, s) {
@@ -7345,16 +7365,13 @@ function renderBoard(b) {
     for (const x of B.frames.values()) makeVars(x);
     // a pick in the brief, or on a page, shows that version in place
     for (const v of [...B.frames.values()].flatMap(x => x.vars)) v.it.onChoice = () => B.paintVariants();
-    lpTabs = h('div', { class: 'bd-sg', role: 'radiogroup', 'aria-label': 'Panel' }, [['screens', Screens], ['brief', 'Brief']].map(([v, l]) =>
-      h('button', { type: 'button', role: 'radio', 'data-v': v, 'aria-controls': 'bd-lp-' + v, onclick: () => setTab(v, true) }, l)));
-    lp = h('aside', { class: 'bd-lp', 'aria-label': `${Screens} and brief`, inert: true }, head, h('div', { class: 'bd-lp-tabs bd-lp-ui' }, lpTabs),
+    B.brief = h('div', { class: 'bd-sp-brief' }, tldr, main);
+    lp = h('aside', { class: 'bd-lp', 'aria-label': Screens, inert: true }, head,
       h('div', { class: 'bd-lp-pane bd-lp-ui', id: 'bd-lp-screens' }, lpList, h('p', { class: 'hint' }, IS_SITE
         ? 'Click a page to focus it, a section to go to it. Interact (I) scrolls and clicks inside the pages; Point (C) pins a comment on what you point at.'
-        : `Click a ${SCREEN} to focus it. Double-click one on the board, or press F, to do the same.`)),
-      h('div', { class: 'bd-lp-pane', id: 'bd-lp-brief', hidden: true }, tldr, main));
+        : `Click a ${SCREEN} to focus it. Double-click one on the board, or press F, to do the same.`)));
     shell.prepend(lp);
     placeMeta();
-    setTab(store.get(LP_TAB) === 'brief' ? 'brief' : 'screens', false);
     const pref = store.get(LP_KEY);
     setLp(pref ? pref === '1' : innerWidth > 900, false);
     // the theme follows the brief's pick
@@ -7439,7 +7456,8 @@ function renderBoard(b) {
 // with a chip per set (count, size, required) and its shots at scale, in order. A shot's frame is its screen file in the
 // shot kit (kits/shot.js) at the set's frame size, told its set, locale, place and UI image through its name ('bd-shot
 // <JSON>') and later {bd:'shot'} messages; an uploaded shot is its PNG. The left panel's Text tab lists the platform's
-// store text and the captions for the locale, each with its counter; the right panel adds Style, Brand and Checks.
+// store text and the captions for the locale, each editable with its counter, then the caption font; Style, Colors and
+// Checks follow. The brief is the right panel's Brief tab.
 // Point and Select pin comments inside a shot (el:<shot>/…) or on a field (field:<locale>/<platform>/<field>); a shot
 // dragged within its set and a section turned on are drafts ('listing' annotations) that Request changes sends with a
 // ready `build.py patch` command. bp-listing (build.py listing.page_data) carries the store rules, each shot's caption
@@ -7615,47 +7633,128 @@ function renderListing(lb) {
     ['ads', 'Ads', 'Google App campaign and Apple Ads assets']].map(([v, l, t]) => h('button', { type: 'button', role: 'radio', 'data-view': v, title: t, onclick: () => setView(v) }, l)));
   const tb = h('div', { class: 'bd-lst-tb' }, platSeg, locSel, viewSeg, SERVED && exportMenu(LST_EXPORTS, exportListing, 'Export the listing: a ZIP for fastlane, a PDF or an HTML file', false));
 
-  /* the left panel: Text (this platform's store text and the captions, for the locale), Brief, then Style, Brand
-     and Checks (below) */
-  const lpText = h('div', { class: 'bd-lp-pane bd-lst-text', id: 'bd-lp-text' });
+  /* the left panel: Text (this platform's store text and the captions, for the locale, then the caption font), then
+     Style, Colors and Checks (below) */
+  const lpText = h('div', { class: 'bd-lp-pane bd-lst-text', id: 'bd-lp-text' }), lpFields = h('div', { class: 'bd-lst-fields' });
   let lp = null, lpTabs = null;
+
+  /* Text edits: every store text and caption is a field. What the reader types stays unsaved (edits: field key → the
+     text, with what Save needs) across tabs, platforms and locales; leaving the page with some asks first. Save makes
+     each changed field a draft ('listing', op 'field': {locale, group (the platform, or 'strings'), field, value, base},
+     key field:<locale>/<group>/<field>), all in one step of the undo history (draftHistory). Request changes sends them
+     under ## Text edits with a `build.py patch … --set` command each, which also clears the field's MT mark; a draft
+     the doc carries is applied. A count over the store's limit shows red: the build's check reports it. */
+  const edits = new Map();
+  const sameVal = (a, b) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+  const fieldText = v => Array.isArray(v) ? v.join('\n') : v == null ? '' : String(v);
+  const fieldVal = (text, list) => list ? text.split('\n').map(s => s.trim()).filter(Boolean) : text;
+  const docField = (loc, group, f) => group === 'strings' ? strOf(loc, f) ?? null : textOf(loc, group, f) ?? null;
+  const fieldDraft = fkey => drafts().find(a => a.listing.op === 'field' && a.target.key === 'field:' + fkey) || null;
+  const canEditText = () => !!L.D && !OLD && !BASE;
+  const countOf = (rule, text, list) => {
+    const items = list ? fieldVal(text, true) : text ? [text] : [], counts = items.map(s => lstCount(s, rule.unit));
+    return { over: counts.some(n => n > rule.limit || (rule.min && n < rule.min)), say: items.length ? counts.map(n => `${n} / ${rule.limit}`).join(' · ') + (rule.unit === 'bytes' ? ' bytes' : '') : `0 / ${rule.limit}` };
+  };
+  const undoBtnT = h('button', { type: 'button', class: 'bd-ibtn', onclick: () => L.undo() }, ic('undo'));
+  const redoBtnT = h('button', { type: 'button', class: 'bd-ibtn', onclick: () => L.redo() }, ic('redo'));
+  const saveSay = h('span', { class: 'st' });
+  const saveBtn = h('button', { type: 'button', class: 'bp-btn primary', 'data-save': '', onclick: () => saveText() }, 'Save');
+  const saveBar = h('div', { class: 'bd-lst-tsave bd-lp-ui' }, saveSay, h('span', { class: 'sp' }), undoBtnT, redoBtnT, saveBtn);
+  lpText.append(saveBar, lpFields);
+  function paintSaveBar() {
+    const n = edits.size, nd = drafts().filter(a => a.listing.op === 'field').length, can = canEditText();
+    saveBar.hidden = !can;
+    saveBtn.disabled = !n;
+    saveBtn.title = n ? `Save ${n} edit${n === 1 ? '' : 's'}: each becomes a draft` : 'Nothing to save';
+    saveSay.textContent = n ? `${n} unsaved` : nd ? `${nd} draft${nd === 1 ? '' : 's'} saved` : 'Edit a field, then Save';
+    saveSay.title = n ? 'Save makes each edit a draft' : nd ? `Request changes sends ${nd === 1 ? 'it' : 'them'}` : '';
+    saveSay.classList.toggle('dirty', !!n);
+    const nx = L.H ? L.H.next() : { undo: null, redo: null };
+    for (const [b, l, verb] of [[undoBtnT, nx.undo, 'Undo'], [redoBtnT, nx.redo, 'Redo']]) { b.disabled = l == null; b.title = l == null ? `Nothing to ${verb.toLowerCase()}` : `${verb}: ${l}`; b.setAttribute('aria-label', b.title); }
+    const tab = lpTabs && lpTabs.querySelector('[data-v="text"]');
+    if (tab) { tab.classList.toggle('dirty', !!n); tab.title = n ? `Text: ${n} unsaved edit${n === 1 ? '' : 's'}` : 'Text'; }
+  }
+  addEventListener('beforeunload', e => { if (edits.size) { e.preventDefault(); e.returnValue = ''; } });
+  // a draft holds up to 8,000 characters (a list: 20 items of 1,000), what the state API keeps (serve.py _field_ok);
+  // a longer edit stays unsaved
+  const fitsDraft = v => Array.isArray(v) ? v.length <= 20 && v.every(s => s.length <= 1000) : v.length <= 8000;
+  function saveText() {
+    if (!canEditText() || !edits.size) return;
+    const ops = [], long = [];
+    for (const [fkey, e] of edits) {
+      const prev = fieldDraft(fkey), v = fieldVal(e.text, e.list), before = prev ? L.D.get(prev.id) : null;
+      if (!fitsDraft(v)) { long.push(e.label); continue; }
+      edits.delete(fkey);
+      if (sameVal(v, e.base)) { if (prev) { L.D.drop(prev.id); ops.push({ id: prev.id, before, after: null }); } continue; }
+      if (prev && sameVal(prev.listing.value, v)) continue;
+      const id = L.D.put({ id: prev && prev.id, type: 'listing', key: 'field:' + fkey, label: `${e.label} · ${e.loc}`, note: `${e.label} (${e.loc}): ${JSON.stringify(str(fieldText(v), 120))}`,
+        listing: { op: 'field', locale: e.loc, group: e.group, field: e.field, value: v, base: e.base } });
+      ops.push({ id, before, after: L.D.get(id) });
+    }
+    if (ops.length) L.H.push(`Save ${ops.length} text edit${ops.length === 1 ? '' : 's'}`, ops);
+    paintText();
+    if (long.length) toast(`Too long to keep as a draft: ${long.join(', ')}`);
+    else if (ops.length) toast(`Saved ${ops.length} draft${ops.length === 1 ? '' : 's'}: Request changes sends ${ops.length === 1 ? 'it' : 'them'}`, { label: 'Undo', run: () => L.undo() });
+  }
   function paintText() {
     const p = PLATS.find(x => x.id === L.platform), loc = L.locale, out = [];
-    if (!p) { lpText.replaceChildren(); return; }
-    const vv = onPage(p.id), vText = vv ? obj(obj(vv.text)[loc]) : {};
+    // a repaint keeps the field being typed in, and where in it
+    const fa = document.activeElement, fk = lpFields.contains(fa) && fa.matches('textarea') ? fa.closest('.bd-lfield').dataset.field : null, sel = fk && [fa.selectionStart, fa.selectionEnd, fa.scrollTop];
+    paintSaveBar();
+    if (!p) { lpFields.replaceChildren(); return; }
+    const vv = onPage(p.id), vText = vv ? obj(obj(vv.text)[loc]) : {}, can = canEditText();
     out.push(h('h4', {}, `${p.label} text · ${loc}${vv ? ' · ' + vLabel(vv) : ''}`));
     if (vv) out.push(h('p', {}, `${vRule(vv).label}: ${vRule(vv).note}.`));
     else if (p.id === 'appstore') out.push(h('p', {}, 'Promotional text changes without a new version.'));
-    const field = (fkey, label, v, rule, mtKey, fb, isVar) => {
-      const acc = mtKey && acceptDraft(loc, mtKey);
-      const items = Array.isArray(v) ? v : v == null ? [] : [v];
-      const counts = rule ? items.map(s => lstCount(String(s), rule.unit)) : [];
-      const over = rule && counts.some(n => n > rule.limit || (rule.min && n < rule.min));
-      const c = rule && h('span', { class: 'c' + (over ? ' over' : '') }, items.length ? counts.map(n => `${n} / ${rule.limit}`).join(' · ') + (rule.unit === 'bytes' ? ' bytes' : '') : `0 / ${rule.limit}`);
-      const el = h('div', { class: 'bd-lfield' + (rule ? '' : ' cap') + (L.fchg.has(fkey) ? ' bd-chg bd-chg-mod' : ''), 'data-field': fkey, 'data-label': `${label} · ${loc}` },
-        h('div', { class: 'lh' }, h('span', {}, label), mtKey && h('span', { class: 'bd-lst-tag mt' + (acc ? ' acc' : ''), title: acc ? 'Accepted here: Request changes sends it' : 'Machine-translated: not yet accepted' }, acc ? 'MT · accepted' : 'MT'), c),
-        h('div', { class: 'v' + (fb ? ' fb' : '') + (v == null ? ' none' : '') + (isVar ? ' var' : '') }, v == null ? (rule && rule.required === true ? 'Not set: the store requires it' : 'Not set') : items.join('\n')),
+    // group: the platform, or 'strings'; v: the doc's own value (null: not set), else fb: the default locale's
+    const field = (group, f, label, own, fbv, rule, mtKey, isVar) => {
+      const fkey = `${loc}/${group}/${f}`, acc = mtKey && acceptDraft(loc, mtKey), d = !isVar && fieldDraft(fkey), e = !isVar && edits.get(fkey);
+      const list = Array.isArray(own) || Array.isArray(fbv) || !!(rule && rule.items);
+      const saved = d ? fieldText(d.listing.value) : fieldText(own ?? fbv), fb = !d && own == null && fbv != null;
+      const text = e ? e.text : saved;
+      const ct = rule && countOf(rule, text, list), c = rule && h('span', { class: 'c' + (ct.over ? ' over' : '') }, ct.say);
+      const ta = h('textarea', { class: 'v' + (fb && !e ? ' fb' : '') + (isVar ? ' var' : ''), rows: 1, spellcheck: 'true', 'aria-label': `${label} · ${loc}`,
+        placeholder: rule && rule.required === true ? 'Not set: the store requires it' : 'Not set' });
+      ta.value = text; ta.readOnly = !can || !!isVar;
+      const el = h('div', { class: 'bd-lfield' + (rule ? '' : ' cap') + (e ? ' dirty' : '') + (d ? ' drafted' : '') + (L.fchg.has(fkey) ? ' bd-chg bd-chg-mod' : ''), 'data-field': fkey, 'data-label': `${label} · ${loc}` },
+        h('div', { class: 'lh' }, h('span', {}, label), h('i', { class: 'dot', title: 'Unsaved' }),
+          d && h('span', { class: 'bd-lst-tag draft', title: 'Saved as a draft: Request changes sends it' }, 'Draft'),
+          mtKey && h('span', { class: 'bd-lst-tag mt' + (acc ? ' acc' : ''), title: acc ? 'Accepted here: Request changes sends it' : 'Machine-translated: not yet accepted' }, acc ? 'MT · accepted' : 'MT'), c),
+        ta,
         isVar && h('div', { class: 'note' }, `Only on ${vLabel(vv)}. The default page: ${JSON.stringify(str(textOf(loc, p.id, rule.field) ?? textOf(DEF, p.id, rule.field) ?? '', 80))}`),
         fb && h('div', { class: 'note' }, `Missing in ${loc}: shows ${DEF}'s`),
-        mtKey && L.D && !OLD && !BASE && h('div', { class: 'bd-lst-mta' }, acc
+        mtKey && can && h('div', { class: 'bd-lst-mta' }, acc
           ? [h('span', {}, 'Accepted as it is. Request changes sends it.'), h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => L.D.drop(acc.id) }, ic('reset'), 'Undo')]
           : h('button', { type: 'button', class: 'bp-btn', 'data-accept': mtKey, title: 'Keep this machine translation as it is', onclick: () => acceptMt(loc, mtKey, fkey, label) }, ic('tick'), 'Accept MT')));
+      ta.addEventListener('input', () => {
+        if (ta.value === saved) edits.delete(fkey); else edits.set(fkey, { text: ta.value, list, loc, group, field: f, label, base: own ?? null });
+        el.classList.toggle('dirty', edits.has(fkey)); ta.classList.remove('fb');
+        if (rule) { const k = countOf(rule, ta.value, list); c.textContent = k.say; c.classList.toggle('over', k.over); }
+        paintSaveBar(); paintPlan();   // Approve waits for unsaved edits
+      });
+      // ⌘/Ctrl + S saves; Esc puts the field back as saved
+      ta.addEventListener('keydown', ev => {
+        if ((ev.metaKey || ev.ctrlKey) && !ev.altKey && ev.key.toLowerCase() === 's') { ev.preventDefault(); saveText(); }
+        else if (ev.key === 'Escape' && edits.has(fkey)) { ev.preventDefault(); ev.stopPropagation(); ta.value = saved; ta.dispatchEvent(new Event('input')); }
+      });
       return el;
     };
     for (const r of textRules(p.id)) {
-      if (typeof vText[r.field] === 'string') { out.push(field(`${loc}/${p.id}/${r.field}`, r.label, vText[r.field], r, false, false, true)); continue; }
-      const own = textOf(loc, p.id, r.field), fb = own == null && loc !== DEF && textOf(DEF, p.id, r.field) != null;
-      out.push(field(`${loc}/${p.id}/${r.field}`, r.label, own ?? (fb ? textOf(DEF, p.id, r.field) : null), r, isMt(loc, `${p.id}.${r.field}`) && `${p.id}.${r.field}`, fb));
+      if (typeof vText[r.field] === 'string') { out.push(field(p.id, r.field, r.label, vText[r.field], null, r, false, true)); continue; }
+      const own = textOf(loc, p.id, r.field) ?? null, fbv = own == null && loc !== DEF ? textOf(DEF, p.id, r.field) ?? null : null;
+      out.push(field(p.id, r.field, r.label, own, fbv, r, isMt(loc, `${p.id}.${r.field}`) && `${p.id}.${r.field}`));
     }
     const here = new Set(usedKeys(loc)), any = new Set(Object.values(obj(LST.keys)).flat());
     const keys = [...new Set([...tilesKeys(), ...Object.keys(obj(STR[DEF])).filter(k => here.has(k) || !any.has(k))])];
     out.push(h('h4', {}, `Captions · ${loc}`));
     if (!keys.length) out.push(h('p', {}, 'No shot names a caption string (data-l10n).'));
     for (const k of keys) {
-      const own = strOf(loc, k), fb = own == null && strOf(DEF, k) != null && loc !== DEF;
-      out.push(field(`${loc}/strings/${k}`, k, own ?? (fb ? strOf(DEF, k) : null), null, isMt(loc, `strings.${k}`) && `strings.${k}`, fb));
+      const own = strOf(loc, k) ?? null, fbv = own == null && loc !== DEF ? strOf(DEF, k) ?? null : null;
+      out.push(field('strings', k, k, own, fbv, null, isMt(loc, `strings.${k}`) && `strings.${k}`));
     }
-    lpText.replaceChildren(...out);
+    lpFields.replaceChildren(...out);
+    const back = fk && [...lpFields.querySelectorAll('.bd-lfield')].find(x => x.dataset.field === fk);
+    if (back) { const t = back.querySelector('textarea'); t.focus({ preventScroll: true }); t.setSelectionRange(sel[0], sel[1]); t.scrollTop = sel[2]; }
   }
   // the caption keys of the shots on this platform page
   const tilesKeys = () => [...new Set(sectionsOf(L.platform).flatMap(s => s.sets.flatMap(x => x.shots)).flatMap(id => obj(LST.keys)[id] || []))];
@@ -8070,9 +8169,9 @@ function renderListing(lb) {
     }
     return out.join('\n');
   };
-  // drafts the frames take live (style picks, brand edits) restyle them in place; an Accept MT repaints the text; any
-  // other draft redraws the sections. Approve listing follows the drafts (L.approveBlocks)
-  const LIVE_OPS = ['style', 'brand'], TEXT_OPS = ['accept'];
+  // drafts the frames take live (style picks, brand edits) restyle them in place; an Accept MT or a text edit repaints
+  // the text; any other draft redraws the sections. Approve listing follows the drafts (L.approveBlocks)
+  const LIVE_OPS = ['style', 'brand'], TEXT_OPS = ['accept', 'field'];
   let draftSig = '', liveSig = '', textSig = '';
   L.paintDrafts = () => {
     const ds = drafts(), of = ops => ds.filter(a => ops.includes(a.listing.op)), sig = xs => JSON.stringify(xs.map(a => [a.id, a.listing]));
@@ -8091,6 +8190,7 @@ function renderListing(lb) {
     rows: o => JSON.stringify(lb.rows || null) === JSON.stringify(o.rows),
     upload: o => abs.some(a => a.src === o.file),   // the agent recorded it as a shot's src
     accept: o => !isMt(o.locale, o.key),   // the agent ran build.py l10n --accept
+    field: o => sameVal(docField(o.locale, o.group, o.field), o.value),   // the agent ran the draft's build.py patch
   };
 
   /* Accept MT: a machine-translated field or caption the reader keeps as it is. One draft each ('listing', op 'accept':
@@ -8110,6 +8210,33 @@ function renderListing(lb) {
     const cmds = [...by].map(([loc, as], k) => ['build.py l10n', sh(docFile()), '--accept', sh(loc), ...as.map(a => sh(a.listing.key)), ...(k ? ['--no-bump'] : []), ...as.flatMap(a => ['--resolves', a.id])].join(' '));
     return `## Accepted MT\n\n${lines.join('\n')}\n\n\`\`\`sh\n${cmds.join('\n')}\n\`\`\``;
   } });
+  // ## Text edits: one line each (its key, the field, the new text and the one it replaces), then one `build.py patch
+  // … --set` per field (the first bumps the rev). A --set value that would parse as JSON goes as a JSON string; a list
+  // (ads headlines) as JSON
+  (L.readbackParts ||= []).push({ ops: ['field'], md: ds => {
+    if (!ds.length) return '';
+    const q = v => JSON.stringify(fieldText(v));
+    const setArg = v => { if (Array.isArray(v)) return JSON.stringify(v); try { JSON.parse(v); return JSON.stringify(v); } catch { return v; } };
+    const lines = ds.map(a => `- (${a.id}) \`${a.target.key}\` ${a.listing.group === 'strings' ? 'caption' : a.listing.group} · ${a.listing.locale}: ${q(a.listing.value)}${a.listing.base == null ? ' (not set before)' : ` (was ${q(a.listing.base)})`}`);
+    const cmds = ds.map((a, k) => ['build.py patch', sh(docFile()), sh(a.target.key), '--set', sh(`${a.listing.field}=${setArg(a.listing.value)}`),
+      '--change', sh(`Edit ${a.target.label.split(' › ').pop()}`), ...(k ? ['--no-bump'] : []), '--resolves', a.id].join(' '));
+    return `## Text edits\n\n${lines.join('\n')}\n\n\`\`\`sh\n${cmds.join('\n')}\n\`\`\``;
+  } });
+  // the text edits' undo history (one per doc: draftHistory); Discard on a text draft's card is a step of it too, and
+  // Request changes seals it (MARKUP calls BOARD.seal)
+  L.undo = () => { const r = !!L.H && L.H.undo(); paintSaveBar(); return r; };
+  L.redo = () => { const r = !!L.H && L.H.redo(); paintSaveBar(); return r; };
+  L.seal = () => { if (L.H) { L.H.seal(); paintSaveBar(); } };
+  L.discard = id => {
+    const a = L.H && L.D.get(id); if (!a || a.type !== 'listing' || !a.listing || a.listing.op !== 'field') return false;
+    L.D.drop(id); L.H.push('Discard: ' + a.note, [{ id, before: a, after: null }]); paintSaveBar();
+    return true;
+  };
+  (L.approveBlocks ||= []).push(() => {
+    const n = drafts().filter(a => a.listing.op === 'field').length, u = edits.size;
+    return [...(u ? [`${u} text edit${u === 1 ? ' isn\'t' : 's aren\'t'} saved: Save, or put ${u === 1 ? 'it' : 'them'} back`] : []),
+      ...(n ? [`${n} text edit${n === 1 ? ' isn\'t' : 's aren\'t'} recorded yet: send Request changes, then wait for the agent's patch`] : [])];
+  });
   // what Approve listing's dialog counts: MT strings not accepted (here or in the doc), shots that show a mock-up UI in
   // one of their sets (no capture fits it, no upload), the variants the approval covers (their style picks go under ## Decisions)
   L.approveSummary = () => ({
@@ -8280,11 +8407,11 @@ function renderListing(lb) {
     return out;
   };
 
-  /* the left panel's Style, Brand and Checks for the platform on screen: panel furniture (bd-lp-ui), so Point and
+  /* the left panel's Style, Colors and Checks for the platform on screen: panel furniture (bd-lp-ui), so Point and
      Select leave their controls alone */
   const lpPane = (id, cls) => h('div', { class: `bd-lp-pane bd-lp-ui bd-lst-pane ${cls}`.trim(), id: 'bd-lp-' + id, hidden: true });
-  const paneStyle = lpPane('style', 'bd-lst-stp'), paneBrand = lpPane('brand', 'bd-lst-brp'), paneChecks = lpPane('checks', '');
-  L.panes = { style: paneStyle, brand: paneBrand, checks: paneChecks };
+  const paneStyle = lpPane('style', 'bd-lst-stp'), paneColors = lpPane('colors', 'bd-lst-clp'), paneChecks = lpPane('checks', '');
+  L.panes = { style: paneStyle, colors: paneColors, checks: paneChecks };
 
   /* ---------- Style and Brand ----------
      A style pick is a draft ('listing', op 'style': {platform, variant, message, layout}) per platform page and variant
@@ -8449,7 +8576,8 @@ function renderListing(lb) {
   } });
   (L.approveBlocks ||= []).push(() => brandDraft() ? ['A brand draft isn\'t recorded yet: send it with Request changes, then wait for the agent\'s patch'] : []);
 
-  /* the Brand pane: built once (its inputs keep focus), painted on each change */
+  /* the brand's two homes: the caption font at the foot of the Text tab, the palette and contrast in Colors. Built once
+     (their inputs keep focus), painted on each change (paintBrand) */
   const FONTS = { list: null, err: '', q: '', busy: false };
   let BUI = null, armed = null;
   const sample = () => { for (const k of tilesKeys()) { const v = strOf(L.locale, k) ?? strOf(DEF, k); if (v) return v; } return str(obj(lb.app).name, 60) || 'Acme'; };
@@ -8516,15 +8644,16 @@ function renderListing(lb) {
     });
     BUI = { cur: h('div', { class: 'bd-lst-fcur' }), q, weight, list: h('div', { class: 'bd-lst-fonts', role: 'listbox', 'aria-label': 'Caption font' }), file, drop,
       sw: h('div', { class: 'bd-lst-sws' }), roles, pairs: h('div', { class: 'bd-lst-pairs' }), state: h('div', { class: 'bd-lst-bstate' }) };
-    paneBrand.replaceChildren(h('h4', {}, 'Caption font'), BUI.cur, h('div', { class: 'bd-lst-frow' }, q, weight,
-      h('button', { type: 'button', class: 'bp-btn ghost', title: 'List the installed fonts again: a font installed since shows up', onclick: () => loadFonts() }, ic('reset'), 'Fonts')), BUI.list,
-      h('h4', {}, 'Palette'), drop, file, BUI.sw, h('div', { class: 'bd-lst-roles' }, roles.map(r => r.row)),
+    BUI.font = h('div', { class: 'bd-lst-fsec bd-lp-ui', 'data-sec': 'caption-font' }, h('h4', {}, 'Caption font'), BUI.cur, h('div', { class: 'bd-lst-frow' }, q, weight,
+      h('button', { type: 'button', class: 'bp-btn ghost', title: 'List the installed fonts again: a font installed since shows up', onclick: () => loadFonts() }, ic('reset'), 'Fonts')), BUI.list);
+    lpText.append(BUI.font);
+    paneColors.replaceChildren(h('h4', {}, 'Palette'), drop, file, BUI.sw, h('div', { class: 'bd-lst-roles' }, roles.map(r => r.row)),
       h('h4', {}, `Contrast · at least ${BR_MIN}:1`), BUI.pairs, BUI.state);
   }
   function paintBrand() {
     if (!BUI) buildBrand();
     const b = L.brand(), f = b.font, can = !!L.D && !OLD && !BASE, fam = f ? f.family : (BR_FONT.default || 'Inter');
-    paneBrand.classList.toggle('ro', !can);
+    paneColors.classList.toggle('ro', !can); BUI.font.classList.toggle('ro', !can);
     // the font: the pick, its rights; the menu: Inter, then the installed families that match the search
     setKids(BUI.cur, h('b', { style: `font-family: "${fam}", system-ui; font-weight: ${f && f.weight || 800}` }, sample()),
       h('span', {}, f ? `${fontWord(f)} · installed on this Mac` : `${fontWord(null)} · vendored, OFL: safe in every export`),
@@ -8573,12 +8702,14 @@ function renderListing(lb) {
     const cs = L.checks(), p = PLATS.find(x => x.id === L.platform), ne = cs.filter(([k]) => k === 'err').length, nw = cs.length - ne;
     const where = f => [f.set && SETS.has(f.set) ? SETS.get(f.set).label : null, ...(Array.isArray(f.locales) ? f.locales : [])].filter(Boolean).join(' · ');
     // a finding with a key shows its shot, field, section or variant; one on the style or the brand (`….style.play`,
-    // `….brand.palette`: the style hooks that need the agent, the contrast pairs) opens its tab
-    const paneOf = f => { const m = typeof f.where === 'string' && /\.(style|brand)(?:\.|$)/.exec(f.where); return m ? m[1] : null; };
+    // `….brand.palette`: the style hooks that need the agent, the contrast pairs) opens its tab: the brand's font is
+    // in Text, the rest of it in Colors
+    const TAB_OF = { style: ['style', 'Style'], brand: ['colors', 'Colors'], font: ['text', 'Text'] };
+    const paneOf = f => { const m = typeof f.where === 'string' && /\.(style|brand)(\.font)?(?:\.|$)/.exec(f.where); return m ? TAB_OF[m[2] ? 'font' : m[1]] : null; };
     const item = ([k, t, f]) => {
-      const tab = paneOf(f), go = typeof f.key === 'string' && f.key ? () => L.focusKey(f.key) : tab ? () => { setLp(true, false); setTab(tab, false); } : null;
+      const tab = paneOf(f), go = typeof f.key === 'string' && f.key ? () => L.focusKey(f.key) : tab ? () => { setLp(true, false); setTab(tab[0], false); } : null;
       return h('li', { class: k, 'data-key': f.key || null }, ic(k === 'err' ? 'x' : 'alert'),
-        h('span', { class: 't' }, go ? h('button', { type: 'button', class: 'bd-lst-ui', title: tab && !f.key ? `Open ${tab === 'style' ? 'Style' : 'Brand'}` : 'Show it', onclick: go }, t) : t, where(f) && h('small', {}, where(f))));
+        h('span', { class: 't' }, go ? h('button', { type: 'button', class: 'bd-lst-ui', title: tab && !f.key ? `Open ${tab[1]}` : 'Show it', onclick: go }, t) : t, where(f) && h('small', {}, where(f))));
     };
     setKids(paneChecks, h('h4', {}, `Checks · ${p ? p.label : ''}`),
       h('p', { class: 'bd-lst-csum' + (ne ? ' err' : '') }, ne || nw ? `${ne} error${ne === 1 ? '' : 's'}, ${nw} warning${nw === 1 ? '' : 's'}` : 'The store rules pass on this page'),
@@ -8629,7 +8760,7 @@ function renderListing(lb) {
     x.el.scrollIntoView({ block: 'center', inline: 'center', behavior: REDUCE ? 'auto' : 'smooth' }); flashEl(x.el);
     return true;
   };
-  L.reveal = el => { if (!lp) return; if ($('#bd-lp-brief').contains(el)) { setLp(true, false); setTab('brief', false); } else if (lpText.contains(el)) { setLp(true, false); setTab('text', false); } };
+  L.reveal = el => { if (!lp) return; if (L.brief && L.brief.contains(el)) SIDE.show('brief', { remember: false }); else if (lpText.contains(el)) { setLp(true, false); setTab('text', false); } };
   // compare (?diff=): shots New or Changed (their JSON, their screen's hash or a capture's: "<id>/capture/<target>/<locale>"),
   // store text and captions Changed; a re-shot capture shows the one it replaced beside it (bp-listing's oldCaptures)
   L.compare = base => {
@@ -8656,6 +8787,14 @@ function renderListing(lb) {
       if ('variant' in o) setVariant(typeof o.variant === 'string' ? o.variant : null);
       if (typeof o.view === 'string') setView(o.view);
       if ('compare' in o && !!o.compare !== L.cmp && onPage(L.platform)) { L.cmp = !!o.compare; renderSections(); }
+      // the Text tab: text {field key: what the reader types}, save, undo, redo
+      if (o.text && typeof o.text === 'object') for (const [k, v] of Object.entries(o.text)) {
+        const ta = [...lpFields.querySelectorAll('.bd-lfield')].find(e => e.dataset.field === k)?.querySelector('textarea');
+        if (ta && !ta.readOnly && typeof v === 'string') { ta.value = v; ta.dispatchEvent(new Event('input')); }
+      }
+      if (o.save) saveText();
+      if (o.undo) L.undo();
+      if (o.redo) L.redo();
     }
     return { platform: L.platform, locale: L.locale, mode: L.mode, hash: location.hash, view: L.view, variant: L.variant ? L.variant.id : null, compare: !!(L.cmp && L.variant),
       variants: VARIANTS.map(v => ({ id: v.id, platform: v.platform, kind: v.kind, title: v.title || null, changes: variantChanges(v), style: L.styleFor(v.platform, null, v.id) })),
@@ -8666,8 +8805,10 @@ function renderListing(lb) {
       preview: [...pg.querySelectorAll('.bd-lst-phone')].map(e => ({ kind: e.dataset.preview, text: e.querySelector('.bd-lst-scr').innerText, shots: [...e.querySelectorAll('.bd-lst-shot')].map(s => s.dataset.ab) })),
       off: [...pg.querySelectorAll('.bd-lst-off')].map(e => ({ row: e.dataset.row, drafted: e.classList.contains('on') })),
       tiles: L.tiles.map(x => ({ id: x.a.id, set: x.rule.id, kind: x.kind, variant: x.v, w: x.w, h: x.h, live: !!x.fr, ready: x.ready, name: x.fr ? x.fr.name : null, tags: [...x.box.querySelectorAll('.bd-lst-tag')].map(t => t.textContent) })),
-      fields: [...lpText.querySelectorAll('.bd-lfield')].map(e => ({ field: e.dataset.field, value: e.querySelector('.v').textContent, count: e.querySelector('.c')?.textContent ?? null, over: !!e.querySelector('.c.over'),
-        mt: !!e.querySelector('.bd-lst-tag.mt'), fallback: !!e.querySelector('.v.fb') })),
+      fields: [...lpText.querySelectorAll('.bd-lfield')].map(e => ({ field: e.dataset.field, value: e.querySelector('.v').value, count: e.querySelector('.c')?.textContent ?? null, over: !!e.querySelector('.c.over'),
+        mt: !!e.querySelector('.bd-lst-tag.mt'), fallback: !!e.querySelector('.v.fb'), dirty: e.classList.contains('dirty'), draft: e.classList.contains('drafted'), editable: !e.querySelector('.v').readOnly })),
+      text: { unsaved: [...edits.keys()], canSave: !saveBtn.disabled, drafts: drafts().filter(a => a.listing.op === 'field').map(a => ({ id: a.id, key: a.target.key, value: a.listing.value, base: a.listing.base })),
+        ...(L.H ? { ...L.H.size(), next: L.H.next() } : {}) },
       checks: L.checks().map(([k, t]) => [k, t]), findings: L.checks().map(([, , f]) => f), style: L.styleFor(L.platform),
       brand: (({ palette, font, image, swatches, draft }) => ({ palette, font, image, swatches, draft, contrast: contrastOf(palette).map(p => ({ fg: p.fg, bg: p.bg, label: p.label, ratio: p.ratio, ok: p.ok })),
         fonts: FONTS.list ? FONTS.list.length : null }))(L.brand()),
@@ -8684,7 +8825,8 @@ function renderListing(lb) {
     applyWidth(); if (remember) store.set(LP_KEY, L.lp ? '1' : '0');
     setTimeout(() => L.M && L.M.relayout(), 260);
   }
-  const LP_TABS = [['text', 'Text'], ['brief', 'Brief'], ['style', 'Style'], ['brand', 'Brand'], ['checks', 'Checks']];
+  // the tabs; a stored tab from before (brand: Colors' old name; brief: now the right panel's) opens its successor
+  const LP_TABS = [['text', 'Text'], ['style', 'Style'], ['colors', 'Colors'], ['checks', 'Checks']], LP_OLD = { brand: 'colors', brief: 'text' };
   function setTab(t, remember) {
     if (!lp || !LP_TABS.some(([v]) => v === t)) return;
     if (remember) store.set(LP_TAB, t);
@@ -8701,20 +8843,28 @@ function renderListing(lb) {
     blk.classList.add('bd-boardblk'); shell.append(blk);
     $('.bd-crumb').after(tb);
     lpTabs = h('div', { class: 'bd-sg bd-lst-lpt', role: 'radiogroup', 'aria-label': 'Panel' }, LP_TABS.map(([v, l]) =>
-      h('button', { type: 'button', role: 'radio', 'data-v': v, 'aria-controls': 'bd-lp-' + v, onclick: () => setTab(v, true) }, l, v === 'checks' && h('span', { class: 'n', hidden: true }))));
-    lp = h('aside', { class: 'bd-lp', 'aria-label': 'Text, brief, style, brand and checks', inert: true }, head, h('div', { class: 'bd-lp-tabs bd-lp-ui' }, lpTabs), lpText,
-      h('div', { class: 'bd-lp-pane', id: 'bd-lp-brief', hidden: true }, tldr, main), paneStyle, paneBrand, paneChecks);
+      h('button', { type: 'button', role: 'radio', 'data-v': v, 'aria-controls': 'bd-lp-' + v, onclick: () => setTab(v, true) }, l, v === 'text' && h('i', { class: 'd', 'aria-hidden': 'true' }), v === 'checks' && h('span', { class: 'n', hidden: true }))));
+    L.brief = h('div', { class: 'bd-sp-brief' }, tldr, main);
+    lp = h('aside', { class: 'bd-lp', 'aria-label': 'Text, style, colors and checks', inert: true }, head, h('div', { class: 'bd-lp-tabs bd-lp-ui' }, lpTabs), lpText,
+      paneStyle, paneColors, paneChecks);
     shell.prepend(lp);
     placeMeta();
-    const tab = store.get(LP_TAB);
-    setTab(LP_TABS.some(([v]) => v === tab) ? tab : 'text', false);
+    const tab = store.get(LP_TAB), was = LP_OLD[tab] || tab;
+    setTab(LP_TABS.some(([v]) => v === was) ? was : 'text', false);
+    if (was !== tab) store.set(LP_TAB, was);
     paintChecks();
     const pref = store.get(LP_KEY);
     setLp(pref ? pref === '1' : innerWidth > 900, false);
     paintTb(); renderSections(); writeHash();
     document.addEventListener('keydown', e => {
-      if (e.defaultPrevented || e.isComposing || e.metaKey || e.ctrlKey || e.altKey || document.querySelector('dialog[open]')) return;
-      const t = e.target; if (t.isContentEditable || (t.closest && t.closest('input, textarea, select, [contenteditable]'))) return;
+      if (e.defaultPrevented || e.isComposing || document.querySelector('dialog[open]')) return;
+      const t = e.target; if (t.isContentEditable || (t.closest && t.closest('input, textarea, select, [contenteditable], .bd-exp'))) return;
+      // Ctrl/⌘ Z undoes a text edit step, Shift+Ctrl/⌘ Z and Ctrl+Y redo (in a field, the field's own undo runs)
+      const k = e.key.toLowerCase();
+      if (L.H && ((e.metaKey || e.ctrlKey) && !e.altKey && k === 'z' || e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey && k === 'y')) {
+        e.preventDefault(); if (k === 'z' && !e.shiftKey) L.undo(); else L.redo(); return;
+      }
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
       if (e.key === '[') { e.preventDefault(); setLp(!L.lp, true); }
     });
     pg.addEventListener('scroll', () => { if (L.M) L.M.relayout(); }, { passive: true });
@@ -8723,6 +8873,7 @@ function renderListing(lb) {
   L.afterMarkup = () => {
     L.M = MARKUP; L.D = MARKUP.drafts || null;
     if (L.D) for (const a of drafts()) { const f = L.draftRecorded[a.listing.op]; if (f && f(a.listing)) L.D.resolve(a.id); }   // a draft the doc now has is applied
+    if (L.D && canEditText()) L.H = draftHistory(L.D);
     L.syncUploads();
     draftSig = ''; liveSig = ''; L.paintDrafts(); renderSections(); paintSide();
     for (const x of L.tiles) locate(x);
@@ -9124,16 +9275,17 @@ const SIDE = (() => {
   const badge = n => { togN.hidden = !n; togN.textContent = String(n || ''); };   // the caller repaints
   const as = () => panelOpen ? (sheet() ? 'sheet' : dockW() ? 'dock' : 'drawer') : null;
   const shows = id => panelOpen && !!sec && sec.id === id;
-  // add({id, label, body, at?, chip?, onToggle?}): at orders the tabs (default 0); chip is the header's
-  // count; onToggle(shown) runs when the section starts or stops showing
+  // add({id, label, body, at?, chip?, onToggle?, later?}): at orders the tabs (default 0); chip is the header's
+  // count; onToggle(shown) runs when the section starts or stops showing; a `later` section (Brief) shows only when
+  // picked: it is never the one a page opens on
   function add(s) {
-    const x = { at: 0, chip: () => '', onToggle: () => {}, shown: false, ...s };
+    const x = { at: 0, chip: () => '', onToggle: () => {}, shown: false, later: false, ...s };
     s.body.classList.add('bd-sp-sec'); s.body.id = 'bd-sp-' + s.id;
     x.tab = h('button', { type: 'button', role: 'tab', 'aria-controls': s.body.id, 'data-f': s.id, onclick: () => { pick(x.id, true); paint(); } }, s.label);
     secs.push(x); secs.sort((a, b) => a.at - b.at);
     tabs.replaceChildren(...secs.map(y => y.tab));
     el.append(s.body); if (!el.isConnected) document.body.append(el);
-    sec = secs[0]; layout();
+    sec = secs.find(y => !y.later) || secs[0]; layout();
   }
   tabs.addEventListener('keydown', e => {
     const step = { ArrowRight: 1, ArrowLeft: -1 }[e.key]; if (!step || !sec) return;
@@ -9211,6 +9363,11 @@ const SIDE = (() => {
   }
   return { el, add, show, shows, setOpen, paint, start, api, sheet, as, badge };
 })();
+
+// a design page's brief (TL;DR, the sections, status): the right panel's first tab. Its parts stay the doc's: Point and
+// Select pin them as on any page (MARKUP reads SP_BRIEF beside the shell)
+const SP_BRIEF = BOARD && BOARD.brief || null;
+if (SP_BRIEF) SIDE.add({ id: 'brief', label: 'Brief', at: -1, body: SP_BRIEF, later: true });
 
 // URLs and UI
 function revUrl(view, base) {
@@ -9520,7 +9677,8 @@ const MARKUP = (() => {
   // a stored value the page can't draw (state.db keeps whatever an import or another version wrote) is
   // skipped and logged, so one bad comment can't stop the page; the next save of the comments removes it
   // `link` and `layout`: a design board's drafts (boardEdits), a link edit or the screens' moved places
-  // `listing`: a storelisting's drafts (renderListing): a set's shot order, or the device sections turned on
+  // `listing`: a storelisting's drafts (renderListing): a set's shot order, the device sections turned on, a style
+  // pick, a brand edit, an upload, an Accept MT or a text edit (op 'field': its value and base, text or a list of text)
   // `element`: a design board's draft of one element in a screen (boardEdits): its new text, or its removal
   const ANN_TYPES = ['pin', 'text', 'draw', 'general', 'link', 'layout', 'listing', 'element'];
   const DRAFT_TYPES = ['link', 'layout', 'listing', 'element'], isDraft = a => DRAFT_TYPES.includes(a.type);
@@ -9528,13 +9686,15 @@ const MARKUP = (() => {
   const isElement = e => !!e && typeof e === 'object' && ['text', 'delete'].includes(e.op) && capStr(e.ab, 200) && !!e.ab && capStr(e.sel, 200) && !!e.sel
     && capStr(e.tag, 20) && capStr(e.base, 1000) && (e.text == null && e.op === 'delete' || capStr(e.text, 1000) && !!e.text) && (e.ord == null || Number.isInteger(e.ord));
   const isTarget = t => !!t && typeof t === 'object' && typeof t.key === 'string' && !!t.key && typeof t.label === 'string' && (t.text == null || typeof t.text === 'string');
+  const isFieldText = (v, nul) => nul && v === null || capStr(v, 8000) || Array.isArray(v) && v.length <= 20 && v.every(s => capStr(s, 1000));
+  const isField = o => capStr(o.locale, 35) && !!o.locale && capStr(o.group, 40) && !!o.group && capStr(o.field, 200) && !!o.field && isFieldText(o.value, false) && isFieldText(o.base, true);
   const valid = a => !!a && typeof a === 'object' && typeof a.id === 'string' && ANN_TYPES.includes(a.type) && isTarget(a.target)
     && (a.targets == null || Array.isArray(a.targets) && a.targets.every(isTarget)) && (a.type !== 'text' || typeof a.quote === 'string')
     && (a.note == null || typeof a.note === 'string') && (a.up == null || Array.isArray(a.up))
     && (a.strokes == null || Array.isArray(a.strokes)) && (a.pos == null || typeof a.pos === 'object')
     && (a.type !== 'link' || !!a.link && typeof a.link === 'object' && typeof a.link.op === 'string' && typeof a.link.from === 'string' && typeof a.link.el === 'string')
     && (a.type !== 'layout' || !!a.layout && typeof a.layout === 'object' && !!a.layout.positions && typeof a.layout.positions === 'object')
-    && (a.type !== 'listing' || !!a.listing && typeof a.listing === 'object' && typeof a.listing.op === 'string')
+    && (a.type !== 'listing' || !!a.listing && typeof a.listing === 'object' && typeof a.listing.op === 'string' && (a.listing.op !== 'field' || isField(a.listing)))
     && (a.type !== 'element' || isElement(a.element));
   const skipBad = (where, v) => { console.warn(`bluedoc: skipped a stored comment the page can't show (${where})`, v); return false; };
   let saved = store.keys(KEY + ':').map(k => k.slice(KEY.length + 1));
@@ -9653,11 +9813,14 @@ const MARKUP = (() => {
     card: 'Card', para: 'Paragraph', artboard: 'Screen', frame: 'Requested frame', link: 'Link', field: 'Store text', item: 'Checklist item', block: 'Block', heading: 'Section title', lead: 'Section lead', section: 'Section',
     tldr: 'TL;DR', header: 'Header', status: 'Status', doc: 'Page' };
   const TYPES = Object.keys(SEL), ANY = Object.values(SEL).join(', ');
-  const CLIPS = '.bd-pane, .bp-stage, .bp-table-wrap, .bp-side, .bd-board, .bd-lp-pane, .bd-mx > .bd-code, .bd-lst-main, .bd-lst-tiles';   // inner scrollers that clip what they hold
+  const CLIPS = '.bd-pane, .bp-stage, .bp-table-wrap, .bp-side, .bd-board, .bd-lp-pane, .bd-sp-brief, .bd-mx > .bd-code, .bd-lst-main, .bd-lst-tiles';   // inner scrollers that clip what they hold
   const typeOf = el => el === shell ? 'doc' : TYPES.find(t => el.matches(SEL[t]));
-  // the rail is page furniture, except its document sections (Status, Document, Related); so are a design's
-  // panel tabs, Screens list and board toolbar, and a findings section's view bar
-  const inDoc = t => !!t && t.nodeType === 1 && shell.contains(t) && !t.closest('.bd-lp-ui, .bd-btb, .bd-fvbar, .bd-var, .bd-ab-t button, .bd-lst-ui') && (!t.closest('.bp-side') || !!t.closest('.bd-meta'));
+  // the doc's parts: the shell's, and on a design page the right panel's Brief tab (SP_BRIEF); the rest of the right
+  // panel is furniture (spUi). The rail is page furniture, except its document sections (Status, Document, Related);
+  // so are a design's panel tabs, Screens list and board toolbar, and a findings section's view bar
+  const docAll = sel => SP_BRIEF ? [...shell.querySelectorAll(sel), ...SP_BRIEF.querySelectorAll(sel)] : [...shell.querySelectorAll(sel)];
+  const spUi = t => !!t.closest('.bd-sp') && !(SP_BRIEF && SP_BRIEF.contains(t));
+  const inDoc = t => !!t && t.nodeType === 1 && (shell.contains(t) || !!SP_BRIEF && SP_BRIEF.contains(t)) && !t.closest('.bd-lp-ui, .bd-btb, .bd-fvbar, .bd-var, .bd-ab-t button, .bd-lst-ui') && (!t.closest('.bp-side') || !!t.closest('.bd-meta'));
   const targetAt = t => inDoc(t) ? t.closest(ANY) : null;
   let itemKeys = null;
   // a checklist row, or a finding's row in Merged (data-item)
@@ -9712,13 +9875,13 @@ const MARKUP = (() => {
       const q = n[0] === 'o' ? `.bd-ln[data-o="${CSS.escape(n.slice(1))}"]:not([data-n])` : `.bd-ln[data-n="${CSS.escape(n)}"]`;
       const inPane = d.sel === path ? d.pane.querySelector(q) : null;
       if (shown(inPane)) return inPane;
-      return [...shell.querySelectorAll(`.bd-xf[data-diff="${CSS.escape(d.id)}"][data-file="${CSS.escape(path)}"] ${q}`)].find(shown) || inPane;
+      return docAll(`.bd-xf[data-diff="${CSS.escape(d.id)}"][data-file="${CSS.escape(path)}"] ${q}`).find(shown) || inPane;
     }
     if (!SEL[t]) return null;
-    if (!rest) return shell.querySelector(SEL[t]);
+    if (!rest) return docAll(SEL[t])[0] || null;
     // one shown wins: a diff comment's card can be both in its diff and under its open finding
     let hidden = null;
-    for (const el of shell.querySelectorAll(SEL[t])) if (keyOf(el, t) === key) { if (shown(el)) return el; hidden ||= el; }
+    for (const el of docAll(SEL[t])) if (keyOf(el, t) === key) { if (shown(el)) return el; hidden ||= el; }
     return hidden;
   }
   // breadcrumb label: "04 Run the local stack › Local stack › 2. Start Postgres, Kafka…"
@@ -9767,7 +9930,7 @@ const MARKUP = (() => {
     : el.matches('.bd-ln') ? el.querySelector('.c')?.textContent : el.matches('.bp-cl-item') ? contentText(el.querySelector('.bp-cl-row') || el)
     : el.matches('.bp-step') ? contentText(el.querySelector('.bp-step-t')) : el.matches('.bp-media') ? mediaText(el)
     : el.matches('.bd-ab') ? el.querySelector('.bd-ab-t .n')?.textContent : el.matches('.bd-lst-shot') ? el.dataset.title : el.matches('.bd-rq') ? el.querySelector('.pr')?.textContent
-    : el.matches('.bd-lfield') ? el.querySelector('.v')?.textContent
+    : el.matches('.bd-lfield') ? el.querySelector('.v')?.value
     : el.matches('.bd-boardblk') ? [...el.querySelectorAll('.bd-ab-t .n')].map(n => n.textContent).join(' · ') : contentText(el), 300);
   // a pin a screen's inspector picked (`el:` or `artboard:`) or a requested frame: a draft beside it, or a pending comment
   function pinFrame(o) {
@@ -9851,7 +10014,7 @@ const MARKUP = (() => {
   // every annotatable element on screen, with its box (not ones scrolled away inside an inner scroller)
   function onScreen() {
     const clips = new Map(), out = [];
-    for (const el of shell.querySelectorAll(ANY)) {
+    for (const el of docAll(ANY)) {
       if (!shown(el)) continue;
       const r = el.getBoundingClientRect(); if (!r.width || !r.height) continue;
       const box = el.parentElement?.closest(CLIPS);
@@ -10237,7 +10400,11 @@ const MARKUP = (() => {
     const E = a.type === 'element' && a.element, del = E && E.op === 'delete';
     if (E && a.status === 'pending' && !a.stale) mt.push(h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => del ? BOARD && BOARD.restoreEl && BOARD.restoreEl(a.id) : discard(a) }, del ? 'Restore' : 'Discard'));
     const gone = E && (a.target.text || E.base);
-    const eld = !E ? null : del ? h('div', { class: 'eld' }, h('span', { class: 'del' }, `Deleted: ${E.tag}`), gone && [' “', cut(gone, 160), '”'])
+    // a storelisting's text edit: the text it replaces and the new one, Discard
+    const F = a.type === 'listing' && a.listing && a.listing.op === 'field' && a.listing, ft = v => Array.isArray(v) ? v.join(' · ') : String(v ?? '');
+    if (F && a.status === 'pending') mt.push(h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => discard(a) }, 'Discard'));
+    const eld = F ? h('div', { class: 'eld' }, F.base == null ? h('span', { class: 'del' }, 'Not set') : h('s', {}, cut(ft(F.base), 160)), h('span', { class: 'ar', 'aria-label': 'becomes' }, '→'), h('b', {}, cut(ft(F.value), 240)))
+      : !E ? null : del ? h('div', { class: 'eld' }, h('span', { class: 'del' }, `Deleted: ${E.tag}`), gone && [' “', cut(gone, 160), '”'])
       : h('div', { class: 'eld' }, h('s', {}, cut(E.base, 160)), h('span', { class: 'ar', 'aria-label': 'becomes' }, '→'), h('b', {}, cut(E.text, 240)));
     li.replaceChildren(numChip(a, n), h('div', { class: 'cb' },
       h('div', { class: 'ch' }, !isGeneral(a) && ic(TYPE_IC[a.type]), h('span', { class: 'lb', title: a.target.label }, isGeneral(a) ? 'General' : last), h('span', { class: 'ago' }),
@@ -10461,14 +10628,14 @@ const MARKUP = (() => {
     if (e.type === 'pointerdown') {
       swallow = false; press = null;
       // a press outside the sidebar and the composer ends the edit or the draft (keeping what was typed) and the selection
-      if (t && t !== cap && !t.closest('.bd-sp, .bd-anntb, .bd-ann-pin, .bd-cmp, dialog')) {
+      if (t && t !== cap && !t.closest('.bd-anntb, .bd-ann-pin, .bd-cmp, dialog') && !spUi(t)) {
         if (editA) swallow = endEdit(true) && mode === 'point';   // this click saved a note; the next one pins
         if (draft) swallow = finishDraft(true) && mode === 'point' || swallow;
         if (selA) select(null);
       }
     }
     if (t && t.closest('.bp-note')) return;   // an item's comment field is for typing in every mode: no pins, no selection notes
-    if (mode === 'select' && e.type === 'pointerup' && !(t && t.closest('.bd-ann-ui, .bd-sp'))) setTimeout(fromSelection, 0);
+    if (mode === 'select' && e.type === 'pointerup' && !(t && (t.closest('.bd-ann-ui') || spUi(t)))) setTimeout(fromSelection, 0);
     if ((mode !== 'point' && mode !== 'select') || !inDoc(t)) return;
     if (mode === 'select') {
       if ((e.type === 'click' || e.type === 'dblclick') && t.closest('a, button, input, label, summary, select, textarea, .bp-node')) { e.preventDefault(); e.stopPropagation(); }
@@ -10685,7 +10852,7 @@ const MARKUP = (() => {
     onToggle: shown => { if (!shown) endEdit(true); schedule(true); paint(); } });
   root.classList.add('bd-tray-on');
   for (const ty of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click', 'dblclick']) addEventListener(ty, onCapture, true);
-  addEventListener('pointermove', e => { if (mode === 'point' && !(e.target.closest && e.target.closest('.bd-sp'))) showHover(e.target.closest && e.target.closest('.bp-note') ? null : targetAt(e.target)); }, { capture: true, passive: true });
+  addEventListener('pointermove', e => { if (mode === 'point' && !(e.target.closest && spUi(e.target))) showHover(e.target.closest && e.target.closest('.bp-note') ? null : targetAt(e.target)); }, { capture: true, passive: true });
   root.addEventListener('mouseleave', () => { if (mode === 'point') showHover(null); });
   document.addEventListener('keydown', e => {
     if (e.defaultPrevented || e.isComposing || e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
@@ -10712,6 +10879,57 @@ const MARKUP = (() => {
   paint(); schedule(true);
   return Object.assign(api, { annotate, setMode, paint, comments, flush, markSent, pinFrame, addFrame, drafts, relayout: () => schedule(true) });
 })();
+
+/* ---------- the drafts' undo history (a design's board edits, a storelisting's text edits) ---------- */
+// One stack per doc in the reader state, so a reload keeps it. `__hist` is {rev, steps: [step ids], cursor (the steps
+// before it are done), sealed (Request changes sent the steps before it: undo stops there)}; `__hist:<step>` is
+// {label, ops: [{id, before, after}]}, written with its drafts (one PUT). Undo restores each op's before, redo its after;
+// a new step drops the steps undone. At most 200 steps (the oldest go); a step too big for the state API (64 KB) isn't
+// kept and the history starts again after it. A rev other than `rev` starts it empty: the agent has applied or answered
+// the drafts it held.
+function draftHistory(D) {
+  const PFX = `bp:${docId}:__hist`, MAX = 200, BIG = 60000, ID = /^[a-z0-9]+$/;
+  const stepKey = id => `${PFX}:${id}`;
+  const parse = s => { try { return JSON.parse(s); } catch { return null; } };
+  const okOp = o => !!o && typeof o === 'object' && typeof o.id === 'string' && (o.before === null || D.ok(o.before)) && (o.after === null || D.ok(o.after));
+  const okStep = s => !!s && typeof s.label === 'string' && Array.isArray(s.ops) && s.ops.length > 0 && s.ops.every(okOp);
+  const fresh = () => ({ rev: CUR.rev, cursor: 0, sealed: 0 });
+  let h = parse(store.get(PFX)), steps = null;
+  if (h && typeof h === 'object' && h.rev === CUR.rev && Array.isArray(h.steps) && h.steps.length <= MAX && h.steps.every(id => typeof id === 'string' && ID.test(id))
+    && Number.isInteger(h.cursor) && h.cursor >= 0 && h.cursor <= h.steps.length && Number.isInteger(h.sealed) && h.sealed >= 0 && h.sealed <= h.cursor) {
+    steps = h.steps.map(id => ({ ...parse(store.get(stepKey(id))), id }));
+    if (!steps.every(okStep)) steps = null;
+  }
+  if (!steps) { steps = []; h = fresh(); store.del(PFX); }
+  // a step the history doesn't hold (an older rev's, one dropped in another tab) goes
+  const held = new Set(steps.map(s => stepKey(s.id)));
+  for (const k of store.keys(PFX + ':')) if (!held.has(k)) store.del(k);
+  const write = () => { if (steps.length) store.set(PFX, JSON.stringify({ rev: h.rev, steps: steps.map(s => s.id), cursor: h.cursor, sealed: h.sealed })); else store.del(PFX); };
+  const enc = new TextEncoder();
+  function clear() { for (const s of steps) store.del(stepKey(s.id)); steps = []; h = fresh(); write(); }
+  function push(label, ops) {
+    for (const s of steps.splice(h.cursor)) store.del(stepKey(s.id));
+    const s = { id: 'h' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), label: String(label).slice(0, 160), ops }, v = JSON.stringify({ label: s.label, ops });
+    if (enc.encode(v).length > BIG) { clear(); return; }
+    steps.push(s); store.set(stepKey(s.id), v);
+    while (steps.length > MAX) { store.del(stepKey(steps.shift().id)); h.sealed = Math.max(0, h.sealed - 1); }
+    h.cursor = steps.length; write();
+  }
+  const run = (s, back) => { for (const o of back ? [...s.ops].reverse() : s.ops) { const c = back ? o.before : o.after; if (c) D.restore(c); else D.drop(o.id); } };
+  return {
+    push,
+    undo() {
+      if (!h.cursor) return false;
+      if (h.cursor <= h.sealed) { toast('Already sent: discard the draft in the panel'); return false; }
+      run(steps[--h.cursor], true); write(); return true;
+    },
+    redo() { if (h.cursor >= steps.length) return false; run(steps[h.cursor++], false); write(); return true; },
+    seal() { if (h.sealed !== h.cursor) { h.sealed = h.cursor; write(); } },
+    // what undo and redo would do: the step's label, null at either end (undo also at the seal)
+    next: () => ({ undo: h.cursor > h.sealed ? steps[h.cursor - 1].label : null, redo: h.cursor < steps.length ? steps[h.cursor].label : null }),
+    size: () => ({ undo: h.cursor, redo: steps.length - h.cursor, sealed: h.sealed }),
+  };
+}
 
 /* ---------- board edits (design pages): link drafts, moving screens, Tidy up ---------- */
 // Every edit on a design's board is a draft in the reader's synced state (MARKUP.drafts), never a write to the doc:
@@ -10770,55 +10988,7 @@ function boardEdits(B) {
   /* drafts: commit (one step of the undo history), settle on load, the commands that go with Request changes. One commit
      is one change of one draft and one reader action: a text edit, a delete, a Restore, a Discard, a link edit, a drag, a
      Tidy up, a Re-apply. Its step keeps the draft before (a copy, null: none) and after (null: dropped) */
-  // The undo history: one stack per doc in the reader state, so a reload keeps it. `__hist` is {rev, steps: [step ids],
-  // cursor (the steps before it are done), sealed (Request changes sent the steps before it: undo stops there)};
-  // `__hist:<step>` is {label, ops: [{id, before, after}]}, written with its drafts (one PUT). Undo restores each op's
-  // before, redo its after; a new step drops the steps undone. At most 200 steps (the oldest go); a step too big for the
-  // state API (64 KB) isn't kept and the history starts again after it. A rev other than `rev` starts it empty: the
-  // agent has applied or answered the drafts it held.
-  const H = (() => {
-    const PFX = `bp:${docId}:__hist`, MAX = 200, BIG = 60000, ID = /^[a-z0-9]+$/;
-    const stepKey = id => `${PFX}:${id}`;
-    const parse = s => { try { return JSON.parse(s); } catch { return null; } };
-    const okOp = o => !!o && typeof o === 'object' && typeof o.id === 'string' && (o.before === null || D.ok(o.before)) && (o.after === null || D.ok(o.after));
-    const okStep = s => !!s && typeof s.label === 'string' && Array.isArray(s.ops) && s.ops.length > 0 && s.ops.every(okOp);
-    const fresh = () => ({ rev: CUR.rev, cursor: 0, sealed: 0 });
-    let h = parse(store.get(PFX)), steps = null;
-    if (h && typeof h === 'object' && h.rev === CUR.rev && Array.isArray(h.steps) && h.steps.length <= MAX && h.steps.every(id => typeof id === 'string' && ID.test(id))
-      && Number.isInteger(h.cursor) && h.cursor >= 0 && h.cursor <= h.steps.length && Number.isInteger(h.sealed) && h.sealed >= 0 && h.sealed <= h.cursor) {
-      steps = h.steps.map(id => ({ ...parse(store.get(stepKey(id))), id }));
-      if (!steps.every(okStep)) steps = null;
-    }
-    if (!steps) { steps = []; h = fresh(); store.del(PFX); }
-    // a step the history doesn't hold (an older rev's, one dropped in another tab) goes
-    const held = new Set(steps.map(s => stepKey(s.id)));
-    for (const k of store.keys(PFX + ':')) if (!held.has(k)) store.del(k);
-    const write = () => { if (steps.length) store.set(PFX, JSON.stringify({ rev: h.rev, steps: steps.map(s => s.id), cursor: h.cursor, sealed: h.sealed })); else store.del(PFX); };
-    const enc = new TextEncoder();
-    function clear() { for (const s of steps) store.del(stepKey(s.id)); steps = []; h = fresh(); write(); }
-    function push(label, ops) {
-      for (const s of steps.splice(h.cursor)) store.del(stepKey(s.id));
-      const s = { id: 'h' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), label: String(label).slice(0, 160), ops }, v = JSON.stringify({ label: s.label, ops });
-      if (enc.encode(v).length > BIG) { clear(); return; }
-      steps.push(s); store.set(stepKey(s.id), v);
-      while (steps.length > MAX) { store.del(stepKey(steps.shift().id)); h.sealed = Math.max(0, h.sealed - 1); }
-      h.cursor = steps.length; write();
-    }
-    const run = (s, back) => { for (const o of back ? [...s.ops].reverse() : s.ops) { const c = back ? o.before : o.after; if (c) D.restore(c); else D.drop(o.id); } };
-    return {
-      push,
-      undo() {
-        if (!h.cursor) return false;
-        if (h.cursor <= h.sealed) { toast('Already sent: discard the draft in the panel'); return false; }
-        run(steps[--h.cursor], true); write(); return true;
-      },
-      redo() { if (h.cursor >= steps.length) return false; run(steps[h.cursor++], false); write(); return true; },
-      seal() { if (h.sealed !== h.cursor) { h.sealed = h.cursor; write(); } },
-      // what undo and redo would do: the step's label, null at either end (undo also at the seal)
-      next: () => ({ undo: h.cursor > h.sealed ? steps[h.cursor - 1].label : null, redo: h.cursor < steps.length ? steps[h.cursor].label : null }),
-      size: () => ({ undo: h.cursor, redo: steps.length - h.cursor, sealed: h.sealed }),
-    };
-  })();
+  const H = draftHistory(D);
   function commit(prev, spec, label) {
     if (!spec && !prev) return null;
     const before = prev ? JSON.parse(JSON.stringify(prev)) : null;

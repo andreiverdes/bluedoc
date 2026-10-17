@@ -405,7 +405,7 @@ class BrandPage(ChromePage):
         self.base = f"http://{self.server.host}"
 
     def page(self, side: str):
-        """The listing's page with the left panel open on `side` (style or brand)."""
+        """The listing's page with the left panel open on `side` (text, style, colors or checks)."""
         t = self.open(self.url)
         t.wait_for("!!document.querySelector('.bd-lst-sec') && !!BP.listing()")
         t.ev("document.documentElement.classList.contains('bd-lp-open') || document.dispatchEvent(new KeyboardEvent('keydown', {key: '['}))")
@@ -465,11 +465,11 @@ class BrandPage(ChromePage):
         t.wait_for("!document.getElementById('bd-lp-style').hidden && document.querySelector('.bd-lp-tabs [data-v=style]').getAttribute('aria-checked') === 'true'")
 
     def test_a_palette_from_an_image_with_roles_contrast_and_a_draft_that_blocks_approve(self) -> None:
-        t = self.page("brand")
+        t = self.page("colors")
         img = self.tmp.dir / "brand.png"
         img.write_bytes(png_bands(BANDS, 128))
         doc = t.browser.call("DOM.getDocument", {}, t.session)["root"]["nodeId"]
-        node = t.browser.call("DOM.querySelector", {"nodeId": doc, "selector": ".bd-lst-brp .bd-lst-file"}, t.session)["nodeId"]
+        node = t.browser.call("DOM.querySelector", {"nodeId": doc, "selector": ".bd-lst-clp .bd-lst-file"}, t.session)["nodeId"]
         t.browser.call("DOM.setFileInputFiles", {"nodeId": node, "files": [str(img)]}, t.session)
         t.wait_for("BP.listing().brand.swatches.length === 6", 15)
         b = t.ev(LST)["brand"]
@@ -498,7 +498,7 @@ class BrandPage(ChromePage):
         rec = listing.listing_of(load_json(self.doc_path))["brand"]
         self.assertEqual(rec["palette"]["bg"], "#7c3aed")
         self.assertEqual(rec["image"], f"{STEM}.listing/brand/source.png")
-        t2 = self.page("brand")
+        t2 = self.page("colors")
         self.assertFalse(t2.ev(LST)["brand"]["draft"])
         self.assertEqual(t2.ev(LST)["approveBlocks"], [])
 
@@ -511,7 +511,8 @@ class BrandPage(ChromePage):
         (fdir / "AcmeTest-Regular.ttf").write_bytes(sfnt("Acme Test", "Regular", 400, 0))
         self.restart(BLUEDOC_FONT_DIRS=str(fdir))
         self.url = self.server.url_for(self.doc_path)
-        t = self.page("brand")
+        t = self.page("text")
+        self.assertTrue(t.ev("!!document.querySelector('#bd-lp-text .bd-lst-fsec .bd-lst-fonts')"), "the font menu is in Text's Caption font section")
         t.ev("document.querySelector('.bd-lst-fonts .bp-btn').click()")
         t.wait_for("BP.listing().brand.fonts === 1")
         time.sleep(0.01)

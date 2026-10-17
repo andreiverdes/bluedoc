@@ -2,7 +2,7 @@
 
 Slide decks on a board: one HTML slide per artboard, 16:9, with speaker notes, that you rehearse in **Present**, comment on and approve.
 
-![The acme-fit-deck board: five Q3 launch review slides stacked in one column, the Present key in the board toolbar](../media/presentation-hero.webp)
+![The acme-fit-deck board: five Q3 launch review slides stacked in one column, the Slides list on the left, the Present key in the board toolbar, and Brief, Comments and Revisions on the right](../media/presentation-hero.webp)
 
 ## Features
 
