@@ -78,10 +78,10 @@
   },
   {
     "name": "home",
-    "description": "Print a bluedoc home page link that lets this browser save",
+    "description": "Open the bluedoc home page in your default browser (its link lets this browser save)",
     "args": "",
     "kind": "action",
-    "run": { "script": "serve.py", "args": ["unlock"] }
+    "run": { "script": "serve.py", "args": ["unlock", "--browser"] }
   },
   {
     "name": "replies",

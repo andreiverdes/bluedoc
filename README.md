@@ -214,7 +214,7 @@ Every bluedoc feature is also a command. The prompt commands start an agent turn
 | `/bluedoc-status <project>` | writes a status page |
 | `/bluedoc-last [notes]` | turns the agent's previous reply into a docs page |
 | `/bluedoc-open <doc>` | opens a doc in the browser |
-| `/bluedoc-home` | prints a home page link that lets this browser save |
+| `/bluedoc-home` | opens the home page in your default browser, with a link that lets that browser save |
 | `/bluedoc-replies [doc]` | prints the newest reply to the doc, or to any doc |
 | `/bluedoc-export <doc> [format]` | writes the doc's file next to it: a deck (`html`, `pdf`), a listing (`zip`, `folders`, `pdf`, `html`) or a page (`html`) |
 

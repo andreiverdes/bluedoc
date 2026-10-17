@@ -10,7 +10,8 @@ Usage:
                                                    request or a plan approval for DOC; print it as Markdown
   serve.py reply ID | DOC.json [--kind K] [--json] print a stored reply: by the id `wait` printed, or DOC's
                                                    newest (of kind K); --json prints what the page posted
-  serve.py unlock                                  print a home page link that lets a browser save here
+  serve.py unlock [--browser]                      print a home page link that lets a browser save here;
+                                                   --browser also opens it in the default browser
   serve.py start | stop | status                   manage the background server
   serve.py add DIR | roots                         add a folder to the home page / list folders
   serve.py add-framework NAME [PATH|URL] [--load F] [--source F] [--tailwind]
@@ -4112,7 +4113,8 @@ def main() -> int:
         if name == "run":
             p.add_argument("--to", default="", help="default reader-facing agent name")
     sub.add_parser("stop")
-    sub.add_parser("unlock", help="print a home page link that lets a browser save here")
+    p = sub.add_parser("unlock", help="print a home page link that lets a browser save here")
+    p.add_argument("--browser", action="store_true", help="also open the link in the default browser")
     sub.add_parser("status")
     p = sub.add_parser("add", help="add a folder to the home page")
     p.add_argument("dir", type=Path)
@@ -4172,7 +4174,10 @@ def main() -> int:
     if a.cmd == "unlock":
         if not ensure_started(DEFAULT_PORT, pinned=PORT_PINNED):
             return 1
-        print(f"{base()}/?key={call('/__bluedoc/unlock', {})[1]['token']}")
+        url = f"{base()}/?key={call('/__bluedoc/unlock', {})[1]['token']}"
+        print(url)
+        if a.browser:
+            webbrowser.open(url)
         return 0
     if a.cmd == "snapshot":
         return cmd_snapshot(a.doc, a.rev, a.url, a.page, a.width)
