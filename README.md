@@ -71,6 +71,35 @@ Restart Codex. The skill is listed as `bluedoc:bluedoc`; mention it with `$blued
 
 **Plan mode.** The plugin's `Stop` hook opens the plan Codex proposes in Plan mode (`/plan`) as a bluedoc plan page; Codex waits for your answer on the page, revises the doc on **Request changes** and, after **Approve plan**, goes on with your decisions. Codex runs a plugin's hooks only once you trust them: open `/hooks` and trust the bluedoc `Stop` hook (again after an update changes it).
 
+**The sandbox.** In Codex's default `workspace-write` sandbox, every `serve.py wait` (it calls the server on `127.0.0.1`) and `build.py patch` (it writes `~/.bluedoc`) asks you to approve running outside the sandbox. A plugin can't widen the sandbox, so to skip those prompts add this to `~/.codex/config.toml` ([Codex sandbox settings](https://developers.openai.com/codex/config-reference)):
+
+```toml
+[sandbox_workspace_write]
+writable_roots = ["~/.bluedoc"]
+network_access = true
+```
+
+`network_access` lets sandboxed commands reach any host. To allow only the local server, use a [permissions profile](https://developers.openai.com/codex/permissions) instead (beta; it replaces `sandbox_mode` and `[sandbox_workspace_write]`):
+
+```toml
+default_permissions = "bluedoc"
+
+[features]
+network_proxy = true
+
+[permissions.bluedoc]
+extends = ":workspace"
+
+[permissions.bluedoc.filesystem]
+"~/.bluedoc" = "write"
+
+[permissions.bluedoc.network]
+enabled = true
+
+[permissions.bluedoc.network.domains]
+"127.0.0.1" = "allow"
+```
+
 ### pi
 
 ```sh
@@ -87,6 +116,8 @@ Restart pi. Run it as `/skill:bluedoc` or let pi pick it from your request.
 omp plugin marketplace add andreiverdes/bluedoc
 omp plugin install bluedoc@bluedoc
 ```
+
+Added the marketplace before? Run `omp plugin marketplace update bluedoc` first: omp installs from its cached catalog.
 
 Run `/reload-plugins` in an open session, or start a new one.
 
@@ -193,7 +224,7 @@ Every bluedoc feature is also a command. The prompt commands start an agent turn
 | omp, pi | `/bluedoc-plan …`, from the bundled extension |
 | Copilot CLI | `/bluedoc-plan …`; an action asks the agent to run its script |
 | Antigravity CLI | `/bluedoc-plan …`; each command is a skill, and an action asks the agent to run its script |
-| Codex | no commands: Codex plugins can't hold skills only Codex loads. Ask for `$bluedoc <request>`, e.g. `$bluedoc plan saved carts` |
+| Codex | no commands; ask for `$bluedoc <request>`, e.g. `$bluedoc plan saved carts` |
 
 The commands are generated from `commands/commands.json` by `tools/gen_commands.py`; edit the spec and run it, never the generated files.
 
@@ -210,7 +241,7 @@ Frameworks, navigation, board editing, app icons and the sandbox are covered in 
 | Claude Code | `claude plugin marketplace update bluedoc` then `claude plugin update bluedoc@bluedoc` | `claude plugin uninstall bluedoc@bluedoc` |
 | Codex | `codex plugin marketplace upgrade bluedoc` | `codex plugin remove bluedoc@bluedoc` |
 | pi | `pi update` | `pi remove git:github.com/andreiverdes/bluedoc` |
-| omp | `omp plugin upgrade bluedoc@bluedoc` | `omp plugin uninstall bluedoc@bluedoc` |
+| omp | `omp plugin marketplace update bluedoc && omp plugin upgrade bluedoc@bluedoc` (omp upgrades from its cached catalog, so refresh it first) | `omp plugin uninstall bluedoc@bluedoc` |
 | Copilot CLI | `copilot plugin update bluedoc` | `copilot plugin uninstall bluedoc` |
 | Antigravity CLI | `git -C bluedoc pull && agy plugin install bluedoc/antigravity` | `agy plugin uninstall bluedoc` |
 | skills CLI | `npx skills update` | `npx skills remove bluedoc` |
@@ -263,12 +294,13 @@ tools/gen_commands.py    writes every agent's command files from the spec (--che
 tests/                   the test suite (python3 -m unittest discover -s tests)
 .claude-plugin/          Claude Code plugin and marketplace (omp reads it too)
 hooks/hooks.json         Claude Code hooks: the plan gate (omp doesn't run them)
-codex/hooks.json         Codex hooks: the plan gate (Stop), wired from plugin.json
-com.github.copilot/hooks/  Copilot CLI hooks: the plan gate (preToolUse on exit_plan_mode)
+codex/hooks.json         Codex hooks: the plan gate (Stop), wired from .codex-plugin/plugin.json
+.codex-plugin/plugin.json  Codex plugin manifest (skills, hooks)
+.plugin/plugin.json      Copilot CLI plugin manifest (skills, com.github.copilot/ commands and hooks)
+com.github.copilot/hooks/  Copilot CLI hooks: the plan gate (preToolUse on exit_plan_mode; agentStop after an approval)
 antigravity/             Antigravity CLI plugin: manifest, hooks.json (the plan gate), skills/ (the commands and a link to the skill)
 extensions/bluedoc.ts   pi and omp extension: the plan gate and /bluedoc-* commands
 .agents/plugins/         Codex marketplace
-plugin.json              Agent Plugins manifest (Codex, Copilot CLI, omp)
 package.json             pi package manifest (skills, extension)
 ```
 

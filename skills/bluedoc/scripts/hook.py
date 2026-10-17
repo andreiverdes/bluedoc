@@ -5,6 +5,8 @@
   hook.py claude bash    Claude Code PreToolUse on Bash: lets the gate's own serve.py / build.py commands run unprompted
   hook.py codex plan     Codex Stop: the plan gate for a turn that ends with a <proposed_plan> (codex/hooks.json)
   hook.py copilot plan   Copilot CLI preToolUse on exit_plan_mode: the plan gate (com.github.copilot/hooks/hooks.json)
+  hook.py copilot stop   Copilot CLI agentStop: a turn that ends after the reader approved, before exit_plan_mode,
+                         goes on with a prompt to call it (com.github.copilot/hooks/hooks.json)
   hook.py agy plan       Antigravity CLI PreToolUse on write_to_file: the plan gate (antigravity/hooks.json)
   hook.py agy note       Antigravity CLI PreInvocation: hands the approval note to the model (antigravity/hooks.json)
   hook.py ext open       for agent extensions (omp, pi): stdin {text, planPath, cwd, sessionId, agent}; prints open_gate's
@@ -175,8 +177,9 @@ def instructions(doc: Path, url: str, exit_hint: str, wait_hint: str = "Run in t
         f"Do not {exit_hint} until the reader approves.\n"
         f"1. {wait_hint}: python3 {serve} wait {q(doc)} --kind any\n"
         f"2. On a change request: revise the doc with python3 {build} patch {q(doc)} <key> --set field=value "
-        "--change \"what changed and why\" (--resolves <comment id> for each comment you addressed; --no-bump on the "
-        "second and later patches for one reply). Tell the reader in one line what changed, then wait again. Keys and "
+        "--change \"what changed and why\" (--resolves <comment id> for each comment you addressed). The first patch "
+        "for each reply never takes --no-bump: it makes the new rev the reader reviews; only further patches for the "
+        "same reply add --no-bump. Tell the reader in one line what changed, then wait again. Keys and "
         f"fields: the Replies section of {q(HERE.parent / 'SKILL.md')}. Don't edit the Markdown plan file.\n"
         f"3. On an approval: {exit_hint}. The reader's decisions and notes in the approval are binding."
     )
@@ -334,7 +337,8 @@ def codex_plan(event: dict) -> int:
     opens it and blocks the stop, so Codex goes on with the instructions as its next prompt (or, once the reader
     approved, with the approval note). Schema: https://learn.chatgpt.com/docs/hooks (Stop: stop_hook_active,
     last_assistant_message; `decision: "block"` + `reason` continues the turn with `reason` as the prompt) and
-    https://developers.openai.com/plugins/build/plugins (extensions.com.openai.hooks, PLUGIN_ROOT).
+    https://developers.openai.com/plugins/build/plugins (.codex-plugin/plugin.json `hooks`, PLUGIN_ROOT; Codex
+    0.163 loads no hooks from a root Agent Plugins plugin.json, codex-rs/core-plugins/src/loader.rs).
     Codex (codex-rs core/src/hook_runtime.rs, stream_events_utils.rs) reports permission_mode from the approval
     policy only and strips the <proposed_plan> block from last_assistant_message in Plan mode, so Plan mode and the plan
     text come from the rollout at transcript_path (turn_context.collaboration_mode.mode, the raw assistant message).
@@ -396,6 +400,25 @@ def copilot_plan(event: dict) -> int:
         summary = str(args.get("summary") or "")
         return emit({"permissionDecision": "allow", "modifiedArgs": {**args, "summary": summary + "\n\n---\n" + g["note"]}})
     return 0
+
+
+def copilot_stop(event: dict) -> int:
+    """Copilot CLI agentStop. Live runs (beta19 gpt-6-luna, beta20 mai-code-1.1-flash): the agent read the approval from
+    `serve.py wait`, then ended its turn without calling exit_plan_mode again, so nothing ran until the user asked. When
+    the session's gated doc is approved at its current rev, block the stop with a prompt to call exit_plan_mode (which
+    copilot_plan then allows); once only (stop_hook_active), and nothing while the reader hasn't answered. Schema:
+    https://docs.github.com/en/copilot/reference/hooks-reference (agentStop input sessionId/stop_hook_active, or
+    snake_case for Stop; output decision "block" with reason as the next turn's prompt)."""
+    session_id = str(event.get("sessionId") or event.get("session_id") or "")
+    rec = load_session("copilot", session_id)
+    if not rec or event.get("stop_hook_active") or no_reader({}):
+        return 0
+    rev = approved(Path(rec["doc"]))
+    if not rev:
+        return 0
+    return emit({"decision": "block", "reason": f"The reader approved rev {rev} of {rec['doc']} in bluedoc. Call "
+                 "exit_plan_mode again now: the plan gate lets it through, then implement that rev with the reader's "
+                 "decisions and notes from the approval."})
 
 
 def _agy_plan_call(event: dict) -> dict | None:
@@ -487,8 +510,8 @@ def ext_wait(args: list[str]) -> int:
 
 
 HANDLERS = {("claude", "plan"): claude_plan, ("claude", "bash"): claude_bash, ("codex", "plan"): codex_plan,
-            ("copilot", "plan"): copilot_plan, ("agy", "plan"): agy_plan, ("agy", "note"): agy_note,
-            ("ext", "open"): ext_open, ("ext", "wait"): ext_wait}
+            ("copilot", "plan"): copilot_plan, ("copilot", "stop"): copilot_stop, ("agy", "plan"): agy_plan,
+            ("agy", "note"): agy_note, ("ext", "open"): ext_open, ("ext", "wait"): ext_wait}
 
 
 def main(argv: list[str]) -> int:

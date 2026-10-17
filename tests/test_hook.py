@@ -1,8 +1,9 @@
 """hook.py, the plan gate, against `serve.py run`. Claude Code: a plan is imported and opened and ExitPlanMode is
 denied with instructions; the same plan stays one doc until the reader approves it, then ExitPlanMode is allowed; a
 rewritten plan becomes the next rev; a plan that names a bluedoc doc opens that doc; the guards print nothing; the Bash
-hook allows only the gate's own commands. Codex (Stop), Copilot CLI (preToolUse) and Antigravity CLI (PreToolUse on
-write_to_file, PreInvocation) from recorded events, and `ext open` / `ext wait` for the omp and pi extension."""
+hook allows only the gate's own commands. Codex (Stop), Copilot CLI (preToolUse, agentStop) and Antigravity CLI
+(PreToolUse on write_to_file, PreInvocation) from recorded events, and `ext open` / `ext wait` for the omp and pi
+extension."""
 from __future__ import annotations
 
 import json
@@ -228,6 +229,30 @@ class OtherAgents(GateCase):
         self.assertIn("Approved in bluedoc, rev 1", out["modifiedArgs"]["summary"])
         self.assertEqual(json.loads(doc.read_text(encoding="utf-8"))["meta"]["rev"], "1")
         self.assertEqual(list(self.plans.glob("*.bluedoc.json")), [doc])
+
+    def test_copilot_stop_after_the_approval_prompts_exit_plan_mode(self) -> None:
+        # live runs (beta19, beta20): the agent read the approval from `serve.py wait` and ended its turn without
+        # calling exit_plan_mode again, so the approved plan never ran until the user asked
+        copilot = self.tmp.dir / "copilot-home"
+        plan_md = copilot / "session-state" / "p3" / "plan.md"
+        plan_md.parent.mkdir(parents=True)
+        plan_md.write_text(PLAN, encoding="utf-8")
+        plan = {"sessionId": "p3", "timestamp": 1760000000000, "cwd": str(self.project), "toolName": "exit_plan_mode",
+                "toolArgs": {"summary": "- token bucket"}}
+        stop = {"sessionId": "p3", "timestamp": 1760000000000, "cwd": str(self.project), "transcriptPath": "",
+                "stopReason": "end_turn", "stop_hook_active": False}
+        self.assertIsNone(self.out("copilot", "stop", stop), "no gate in this session")
+        self.assertEqual(self.out("copilot", "plan", plan, COPILOT_HOME=str(copilot))["permissionDecision"], "deny")
+        self.assertIsNone(self.out("copilot", "stop", stop), "the reader hasn't answered")
+        doc = self.plans / "plan.bluedoc.json"
+        self.approve(doc)
+        out = self.out("copilot", "stop", stop)
+        self.assertEqual(out["decision"], "block")
+        self.assertIn("approved rev 1", out["reason"])
+        self.assertIn("exit_plan_mode", out["reason"])
+        self.assertIsNone(self.out("copilot", "stop", {**stop, "stop_hook_active": True}), "once per turn")
+        self.assertEqual(self.out("copilot", "plan", plan, COPILOT_HOME=str(copilot))["permissionDecision"], "allow")
+        self.assertIsNone(self.out("copilot", "stop", stop), "the approval went through: the record is gone")
 
     def agy_event(self, args: dict, name: str = "write_to_file") -> dict:
         """A PreToolUse event as `agy --mode plan` sent it (agy 1.4.0), trimmed to the fields the hook reads."""

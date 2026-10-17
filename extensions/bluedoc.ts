@@ -60,6 +60,9 @@ interface Api {
 	}): void;
 	sendUserMessage(content: string, options?: { deliverAs?: "steer" | "followUp" }): void;
 	appendEntry(customType: string, data?: unknown): void;
+	/** Names of the tools declared to the model, in declaration order. */
+	getActiveTools(): string[];
+	setActiveTools(toolNames: string[]): void;
 }
 
 /** One entry of commands/commands.json; the command is /bluedoc-<name>. */
@@ -336,6 +339,13 @@ export default function bluedoc(pi: Api) {
 		if (!planModeRegistered) {
 			planModeRegistered = true;
 			registerPlanMode();
+		}
+		// pi appends a tool registered after load behind every other tool, so it followed pi-mcp-adapter's `mcp`
+		// gateway; a local qwen (LM Studio, beta20 live test) then called it through `mcp` every time, and declared
+		// ahead of `mcp` it called it directly every time. Declare it first.
+		const active = pi.getActiveTools();
+		if (active.includes(SUBMIT_TOOL) && active[0] !== SUBMIT_TOOL) {
+			pi.setActiveTools([SUBMIT_TOOL, ...active.filter(name => name !== SUBMIT_TOOL)]);
 		}
 	});
 

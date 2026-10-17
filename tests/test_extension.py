@@ -1,6 +1,8 @@
 """extensions/bluedoc.ts loaded under node with a stub pi API: on pi (no resolvePlanReview), session_start registers
 /bluedoc-plan-mode and bluedoc_submit_plan, and the tool carries a promptSnippet, without which pi leaves it out of the
-system prompt's tool list (a local model in the beta19 live test then took the tool for an MCP one and never called it)."""
+system prompt's tool list (a local model in the beta19 live test then took the tool for an MCP one and never called it).
+The tool is also declared first: pi appends a late-registered tool behind pi-mcp-adapter's `mcp`, and the beta20 live
+test's qwen then called it through `mcp` every time."""
 from __future__ import annotations
 
 import json
@@ -15,10 +17,15 @@ EXT = REPO / "extensions" / "bluedoc.ts"
 
 LOAD = """
 const tools = [], commands = [], handlers = {};
+// pi's active tools before session_start: its built-ins and an extension tool registered at load.
+let active = ["read", "bash", "edit", "write", "mcp"];
 const pi = {
   on: (event, handler) => (handlers[event] ??= []).push(handler),
   registerCommand: (name) => commands.push(name),
-  registerTool: (tool) => tools.push(tool),
+  // Like pi after load: a new tool is registered and appended to the active tools.
+  registerTool: (tool) => { tools.push(tool); active = [...active, tool.name]; },
+  getActiveTools: () => [...active],
+  setActiveTools: (names) => { active = [...names]; },
   sendUserMessage: () => {},
   appendEntry: () => {},
 };
@@ -27,7 +34,7 @@ bluedoc(pi);
 const ctx = { cwd: process.cwd(), hasUI: true, ui: { notify: () => {} }, isIdle: () => true,
   sessionManager: { getSessionId: () => "s", getBranch: () => [] } };
 for (const handler of handlers.session_start ?? []) handler({}, ctx);
-console.log(JSON.stringify({ commands, tools: tools.map(({ execute, ...rest }) => rest) }));
+console.log(JSON.stringify({ commands, active, tools: tools.map(({ execute, ...rest }) => rest) }));
 """
 
 
@@ -45,6 +52,11 @@ class OnPi(unittest.TestCase):
         self.assertIn("bluedoc-plan-mode", got["commands"])
         tool = next(t for t in got["tools"] if t["name"] == "bluedoc_submit_plan")
         self.assertTrue(tool.get("promptSnippet", "").strip(), "pi omits a custom tool without promptSnippet from <tools>")
+
+    def test_the_submit_tool_is_declared_ahead_of_the_mcp_gateway(self) -> None:
+        active = load_on_pi()["active"]
+        self.assertEqual(active[0], "bluedoc_submit_plan", active)
+        self.assertEqual(sorted(active), sorted(["read", "bash", "edit", "write", "mcp", "bluedoc_submit_plan"]))
 
 
 if __name__ == "__main__":

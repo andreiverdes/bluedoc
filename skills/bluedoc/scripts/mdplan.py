@@ -1,8 +1,10 @@
 """A Markdown plan (Claude Code's plan mode, or any plan written as Markdown) as a bluedoc `plan` doc.
 
-    from_markdown(text, *, stem, project_dir, org) -> dict
+    from_markdown(text, *, stem, project_dir, org, plan_file=None) -> dict
 
-The first `#` heading is the title and the first paragraph the tldr. Each `##` heading is a section. The steps block
+The first `#` heading is the title and the first paragraph the tldr; a plan without one (omp's start at `##`) is titled
+from its file's name, else the doc's name (stem: what the gate names it, an omp `local://` plan's name), else the first
+`##` heading that isn't a generic one like Context or Summary. Each `##` heading is a section. The steps block
 comes from the numbered list under a heading named like Steps or Implementation, else the first top-level numbered
 list; a plan without one makes each `##` section that isn't context, risks or verification a step. Backticked paths
 become the files block (`edit` when the path exists under project_dir, else `add`). Everything else stays text,
@@ -26,11 +28,22 @@ TABLE_SEP = re.compile(r"^\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$")
 CODE_SPAN = re.compile(r"`([^`\s]+)`")
 PATH_LIKE = re.compile(r"^(?:\.{0,2}/|~/)?[\w.@+-]+(?:/[\w.@+-]+)*(?:\.[A-Za-z0-9]{1,8}|/)$")
 UNSAFE_LINK = re.compile(r"\[([^\]]+)\]\((?!https?:|mailto:|#|\.{0,2}/|[\w-]+\.)[^)]*\)", re.I)
+# Names that say nothing about the plan: never its title. Matched whole, after deslugging; a dedupe suffix (plan-2) too.
+GENERIC_TITLE = re.compile(r"(context|summary|overview|background|goals?|approach|introduction|intro|tl;?dr|problem|"
+                           r"motivation|notes?|steps|(implementation )?plan|readme|inline [0-9a-f]{12})( \d+)?", re.I)
 
 
 def slug(text: str, fallback: str) -> str:
     s = re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")[:48].strip("-")
     return s or fallback
+
+
+def title_from_name(name: str) -> str | None:
+    """A file or doc name as a title (hello-txt-plan -> Hello txt plan), or None when it is generic."""
+    words = re.sub(r"[-_\s]+", " ", name).strip()
+    if not words or GENERIC_TITLE.fullmatch(words):
+        return None
+    return words[0].upper() + words[1:]
 
 
 def unique(base: str, used: set[str]) -> str:
@@ -202,8 +215,10 @@ def from_markdown(text: str, *, stem: str, project_dir: Path, org: str, plan_fil
     the one file when the plan names none."""
     lines = text.replace("\r\n", "\n").split("\n")
     title, intro, raw_sections = split_sections(lines)
-    if not title:
-        title = next((h for h, _ in raw_sections), None) or stem.replace("-", " ").capitalize()
+    if not title:   # no `#` heading: the plan file's name, the doc's, a telling `##` heading, else the doc's name as is
+        title = (title_from_name(Path(plan_file).stem) if plan_file else None) or title_from_name(stem) \
+            or next((h for h, _ in raw_sections if not GENERIC_TITLE.fullmatch(h.strip())), None) \
+            or stem.replace("-", " ").capitalize()
 
     used_sections: set[str] = set()
     used_steps: set[str] = set()

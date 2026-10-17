@@ -111,8 +111,8 @@ class Packaging(unittest.TestCase):
     def test_every_manifest_has_one_version(self) -> None:
         read = lambda p: json.loads((REPO / p).read_text(encoding="utf-8"))  # noqa: E731
         market = read(".claude-plugin/marketplace.json")
-        versions = {read(p)["version"] for p in ("package.json", "plugin.json", ".claude-plugin/plugin.json",
-                                                  "antigravity/plugin.json")}
+        versions = {read(p)["version"] for p in ("package.json", ".claude-plugin/plugin.json", ".codex-plugin/plugin.json",
+                                                  ".plugin/plugin.json", "antigravity/plugin.json")}
         versions |= {market.get("metadata", {}).get("version")} | {p.get("version") for p in market["plugins"]}
         self.assertEqual(len(versions - {None}), 1, versions)
 

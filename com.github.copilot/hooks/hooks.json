@@ -8,6 +8,13 @@
         "bash": "python3 \"${PLUGIN_ROOT}/skills/bluedoc/scripts/hook.py\" copilot plan",
         "timeoutSec": 120
       }
+    ],
+    "agentStop": [
+      {
+        "type": "command",
+        "bash": "python3 \"${PLUGIN_ROOT}/skills/bluedoc/scripts/hook.py\" copilot stop",
+        "timeoutSec": 30
+      }
     ]
   }
 }

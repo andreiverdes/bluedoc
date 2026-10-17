@@ -60,6 +60,17 @@ QUESTIONS = """# Add dark mode
 2. Switch on `prefers-color-scheme`
 """
 
+NO_TITLE = """## Context
+The reader asked for a greeting file.
+
+## Summary
+One file.
+
+## Add the greeting file
+1. Create `/tmp/greet/hello.txt`
+2. Write `hi` into it
+"""
+
 
 class FromMarkdown(unittest.TestCase):
     def setUp(self) -> None:
@@ -118,6 +129,22 @@ class FromMarkdown(unittest.TestCase):
         d = self.doc("# Tiny fix\n\nRename a variable.\n")
         self.assertEqual(len(self.steps(d)), 1)
         self.assertEqual(len(self.files(d)), 1)
+
+    def test_a_plan_without_a_title_is_named_from_its_file_or_doc_else_a_telling_heading(self) -> None:
+        """omp's plans start at ##: the title isn't their first section (Context)."""
+        title = lambda **kw: mdplan.from_markdown(NO_TITLE, project_dir=self.project, org="Acme", **kw)["title"]  # noqa: E731
+        self.assertEqual(title(stem="p", plan_file="/plans/hello-txt-plan.md"), "Hello txt plan")
+        # the gate's inline copy of an omp local:// plan says nothing; the doc it names after local://hello-txt-plan.md does
+        self.assertEqual(title(stem="hello-txt-plan", plan_file="/h/omp/inline-0123456789ab.md"), "Hello txt plan")
+        self.assertEqual(title(stem="plan-2", plan_file="/h/PLAN.md"), "Add the greeting file")
+        self.assertEqual(title(stem="plan", plan_file=None), "Add the greeting file")
+        self.assertEqual(mdplan.from_markdown("## Context\nx\n", stem="plan", project_dir=self.project, org="A")["title"],
+                         "Plan")
+        plan, out = self.tmp.dir / "hello-txt-plan.md", self.tmp.dir / "out" / "hello-txt-plan.bluedoc.json"
+        plan.write_text(NO_TITLE, encoding="utf-8")
+        r = self.tmp.run("build.py", "from-md", plan, out, "--project", self.project)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(json.loads(out.read_text(encoding="utf-8"))["title"], "Hello txt plan")
 
     def test_reimport_keeps_the_id_and_bumps_the_rev(self) -> None:
         plan, out = self.tmp.dir / "plan.md", self.tmp.dir / "out" / "my-plan.bluedoc.json"

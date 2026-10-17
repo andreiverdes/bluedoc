@@ -12,8 +12,8 @@ args, the user's arguments as a last "{{args}}" element, split shell-style). Out
                                                  $ARGUMENTS and !`…` with ${CLAUDE_PLUGIN_ROOT}:
                                                  https://code.claude.com/docs/en/skills (string substitutions,
                                                  dynamic context injection)
-  com.github.copilot/commands/bluedoc-<name>.md  Copilot CLI: an Agent Plugins plugin reads commands only from
-                                                 com.github.copilot/commands/ (https://docs.github.com/en/copilot/
+  com.github.copilot/commands/bluedoc-<name>.md  Copilot CLI: .plugin/plugin.json's `commands` names this folder
+                                                 (https://docs.github.com/en/copilot/
                                                  reference/copilot-cli-reference/cli-plugin-reference) and loads each
                                                  as a skill whose base directory is that folder. No documented `!`
                                                  lines or plugin-root variable, so actions ask the agent to run the
@@ -26,9 +26,7 @@ args, the user's arguments as a last "{{args}}" element, split shell-style). Out
                                                  actions ask the agent to run the script at ../bluedoc/scripts from
                                                  the skill's folder (antigravity/skills/bluedoc links the skill)
 
-Codex gets no files: its plugins load skills only from the fixed root skills/ folder (no Codex-only skills path in
-extensions.com.openai: https://developers.openai.com/plugins/build/plugins.md), so command skills would reach every
-agent. Codex users ask for `$bluedoc <request>`. pi registers the commands itself from the spec
+Codex gets no files; Codex users ask for `$bluedoc <request>`. pi registers the commands itself from the spec
 (extensions/bluedoc.ts)."""
 from __future__ import annotations
 
