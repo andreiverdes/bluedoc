@@ -179,6 +179,8 @@ container units (`cqw`, `cqh`), never px.
   (unitless), `--bd-tracking-caption` (em), `--bd-align-caption`, and `--bd-valign-caption` (shot.js sets
   `cap--middle` or `cap--bottom` where the layout draws it). Size a caption as `calc(<n>cqw * var(--bd-size-caption, 1))`.
   The plain kit's `--accent` stays the app's own.
+- The export (the fastlane ZIP) shoots each shot with no motion (`html.shot-still`: animations at their end, no
+  transitions) once its fonts and images are in, so keep a shot's look in its end state, not mid-animation.
 
 ## Shot styles
 

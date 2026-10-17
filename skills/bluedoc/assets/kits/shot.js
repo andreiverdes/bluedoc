@@ -15,7 +15,10 @@
      else keeps its HTML text (data-l10n-state="missing").
    - The UI slot (.shot-ui) holds the mock-up at the set's UI viewport (uiW × uiH), scaled to the layout's place in
      .shot-frame; `ui` (a capture's URL) shows that PNG over it (html.ui--capture).
-   - After a change it fires 'bd-stir' on the document: the inspector measures and reports again. */
+   - After a change it fires 'bd-stir' on the document: the inspector measures and reports again.
+   - An export's render (serve.py listing_zip) names the frame with still: true: html.shot-still stops all motion
+     (kits/shot.css), and window.__bdShotReady is a promise that resolves once the state is applied, the fonts are in
+     and the UI placed for them, every image is decoded and two frames have drawn: Chrome shoots then. */
 (() => {
   'use strict';
   const doc = document, root = doc.documentElement;
@@ -43,8 +46,9 @@
   };
   const q = new URLSearchParams(location.search);
   take(Object.fromEntries(q));
-  let brand0 = null;
-  try { if ((window.name || '').startsWith('bd-shot ')) { const o = JSON.parse(window.name.slice(8)); take(o); brand0 = o && o.brand; } } catch (e) { /* not ours */ }
+  let brand0 = null, still = false;
+  try { if ((window.name || '').startsWith('bd-shot ')) { const o = JSON.parse(window.name.slice(8)); take(o); brand0 = o && o.brand; still = !!(o && o.still === true); } } catch (e) { /* not ours */ }
+  if (still) root.classList.add('shot-still');
 
   const own = (tag, cls) => { const el = doc.createElement(tag); el.className = cls; el.setAttribute('data-bd-own', ''); return el; };
   const shotEl = doc.querySelector('.shot'), cap = doc.querySelector('.shot-cap'), frame = doc.querySelector('.shot-frame'), ui = doc.querySelector('.shot-ui');
@@ -156,5 +160,10 @@
   if (brand0 && typeof brand0 === 'object') brand(brand0);
   apply();
   addEventListener('resize', place);
-  if (doc.fonts) doc.fonts.ready.then(() => { place(); doc.dispatchEvent(new Event('bd-stir')); });
+  const fontsIn = doc.fonts ? doc.fonts.ready.then(() => { place(); doc.dispatchEvent(new Event('bd-stir')); }) : Promise.resolve();
+  if (still) {
+    window.__bdShotReady = fontsIn
+      .then(() => Promise.all([...doc.images].map(i => i.getAttribute('src') ? i.decode().catch(() => null) : null)))
+      .then(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => r(true)))));
+  }
 })();

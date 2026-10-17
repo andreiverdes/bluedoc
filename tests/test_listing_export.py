@@ -1,23 +1,29 @@
 """A storelisting checked, translated and exported (M4): the broken fixture fails each store rule once; `build.py
 l10n` exports, imports (refusing an over-limit string) and accepts; the fastlane layout; the ZIP's PNGs against its
-manifest.json; GET /__bluedoc/listing's guards; setKids. The browser tests (BLUEDOC_BROWSER_TESTS=1): the Checks tab
-lists the build's findings; Accept MT is a draft whose readback runs; Export to… downloads a ZIP; Approve listing waits
-for an upload or brand draft."""
+manifest.json; GET /__bluedoc/listing's guards; the export's progress (ExportJobs, the progress route), its renders
+deduplicated, and a cancel that stops it; setKids. The browser tests (BLUEDOC_BROWSER_TESTS=1): the Checks tab lists
+the build's findings; Accept MT is a draft whose readback runs; Export to… downloads a ZIP with its progress on the
+key, and its × cancels it; Approve listing waits for an upload or brand draft."""
 from __future__ import annotations
 
+import hashlib
 import io
 import json
 import shlex
 import shutil
 import subprocess
+import threading
+import time
 import unittest
 import zipfile
+import zlib
 
 from _support import REPO, Server, TempHome, load_json, template_slice
-from test_page_state import CHROME, ChromePage
+from test_page_state import CHROME, ChromePage, until
 
 import build
 import listing
+import serve
 
 STEM = "acme-fit-listing"
 BROKEN = REPO / "tests" / "fixtures" / "storelisting-broken.bluedoc.json"
@@ -238,6 +244,153 @@ class Route(unittest.TestCase):
         self.assertEqual({k: v for k, v in after.items() if not k.endswith(("state.db", "state.db-wal", "state.db-shm", "server.log"))},
                          {k: v for k, v in before.items() if not k.endswith(("state.db", "state.db-wal", "state.db-shm", "server.log"))})
 
+    def test_progress_needs_a_known_job(self) -> None:
+        self.assertEqual(self.server.req("GET", "/__bluedoc/listing/progress?job=nosuchjob1")[0], 404)
+        self.assertEqual(self.server.req("DELETE", "/__bluedoc/listing/progress?job=nosuchjob1", headers={"X-Bluedoc": "1"})[0], 404)
+        self.assertEqual(self.server.req("DELETE", "/__bluedoc/listing/progress?job=nosuchjob1")[0], 403)
+        self.assertEqual(self.get(path=self.url, format="zip", job="bad id!")[0], 400)
+        # 501 before the job starts: nothing to follow
+        self.assertEqual(self.get(path=self.url, format="zip", job="nochrome01")[0], 501)
+        self.assertEqual(self.server.req("GET", "/__bluedoc/listing/progress?job=nochrome01")[0], 404)
+
+
+class Jobs(unittest.TestCase):
+    """ExportJob and ExportJobs: what GET /__bluedoc/listing/progress shows, one running job per id, expiry, cancel."""
+
+    def test_a_job_reports_its_stages_and_is_followed_by_its_id(self) -> None:
+        jobs = serve.ExportJobs()
+        job = serve.ExportJob("abcdef0123", "zip")
+        self.assertTrue(jobs.start(job))
+        self.assertEqual(jobs.get("abcdef0123").view(), {"job": "abcdef0123", "format": "zip", "stage": "plan", "done": 0, "total": None})
+        job.update(stage="render", done=3, total=10, file="a/b.png")
+        self.assertEqual(jobs.get("abcdef0123").view(), {"job": "abcdef0123", "format": "zip", "stage": "render", "done": 3, "total": 10, "file": "a/b.png"})
+        self.assertFalse(jobs.start(serve.ExportJob("abcdef0123", "zip")), "a running job keeps its id")
+        job.update(stage="done", done=10)
+        self.assertTrue(jobs.start(serve.ExportJob("abcdef0123", "pdf")), "an ended one gives it up")
+        self.assertIsNone(jobs.get("unknown0000"))
+
+    def test_a_job_expires_after_its_last_change(self) -> None:
+        jobs = serve.ExportJobs()
+        job = serve.ExportJob("expire0001", "zip")
+        jobs.start(job)
+        job.at -= jobs.TTL - 5
+        self.assertIs(jobs.get("expire0001"), job)
+        job.at -= 10
+        self.assertIsNone(jobs.get("expire0001"))
+
+    def test_stop_runs_the_hooks_and_check_raises(self) -> None:
+        job, hits = serve.ExportJob("stop000001"), []
+        job.on_stop(lambda: hits.append(1))
+        job.check()
+        job.stop()
+        self.assertEqual(hits, [1])
+        with self.assertRaises(serve.ListingCancelled):
+            job.check()
+        job.on_stop(lambda: hits.append(2))   # added after the stop: runs at once
+        self.assertEqual(hits, [1, 2])
+
+
+class FakeChrome:
+    """serve.HeadlessChrome for listing_zip without Chrome: render_shot draws a PNG of the asked size whose pixels are
+    its call's number, after `delay` s (a kill ends the wait with ConnectionError, as a killed Chrome's socket does)."""
+    calls: list = []
+    started: list = []
+    lock = threading.Lock()
+    delay = 0.0
+
+    class Proc:
+        def __init__(self) -> None:
+            self.dead = threading.Event()
+
+        def poll(self):
+            return 0 if self.dead.is_set() else None
+
+        def kill(self) -> None:
+            self.dead.set()
+
+    def __init__(self, path: str) -> None:
+        self.proc, self.closed = FakeChrome.Proc(), False
+        with FakeChrome.lock:
+            FakeChrome.started.append(self)
+
+    def render_shot(self, url: str, w: int, h: int, scale: int = 1, *, name: str | None = None) -> bytes:
+        with FakeChrome.lock:
+            FakeChrome.calls.append((url, w, h, scale, name))
+            n = len(FakeChrome.calls)
+        if self.proc.dead.wait(FakeChrome.delay):
+            raise ConnectionError("DevTools closed the connection")
+        W, H = w * scale, h * scale
+        ihdr = (W).to_bytes(4, "big") + (H).to_bytes(4, "big") + bytes([8, 2, 0, 0, 0])
+        raw = (b"\0" + bytes([n % 256]) * 3 * W) * H
+        chunk = lambda k, d: len(d).to_bytes(4, "big") + k + d + zlib.crc32(k + d).to_bytes(4, "big")  # noqa: E731
+        return b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", ihdr) + chunk(b"IDAT", zlib.compress(raw, 1)) + chunk(b"IEND", b"")
+
+    def close(self) -> None:
+        self.closed = True
+
+
+class ZipRenders(unittest.TestCase):
+    """listing_zip with FakeChrome: one render per distinct (page, state, frame, scale), every file in the manifest,
+    and a stop that ends it early."""
+
+    def setUp(self) -> None:
+        self.tmp = TempHome()
+        self.addCleanup(self.tmp.cleanup)
+        self.path = self.tmp.copy_examples() / f"{STEM}.bluedoc.json"
+        self.doc = load_json(self.path)
+        FakeChrome.calls, FakeChrome.started, FakeChrome.delay = [], [], 0.0
+        real = serve.HeadlessChrome
+        serve.HeadlessChrome = FakeChrome
+        self.addCleanup(setattr, serve, "HeadlessChrome", real)
+
+    def test_identical_renders_run_once_and_every_file_is_listed(self) -> None:
+        out = self.tmp.dir / "play.zip"
+        job = serve.ExportJob("dedupe0001")
+        man = serve.listing_zip(self.doc, self.path, out, "fake", platform="play", locale="en-US", job=job)
+        plan = listing.export_plan(self.doc, self.path, listing.load_rules(), "play", "en-US", caps=listing.captures(self.doc, self.path))
+        drawn = [e for e in plan if e["kind"] in ("shot", "asset")]
+        self.assertEqual([f["path"] for f in man["files"]], [e["path"] for e in plan], "every file, in plan order")
+        self.assertLess(len(FakeChrome.calls), len(drawn), "Play's 7- and 10-inch tablets draw alike: rendered once")
+        self.assertEqual(len(FakeChrome.calls), len(set(FakeChrome.calls)), "no render twice")
+        sha = {f["path"]: f["sha256"] for f in man["files"]}
+        seven = {p.replace("sevenInchScreenshots", "X"): s for p, s in sha.items() if "/sevenInchScreenshots/" in p}
+        ten = {p.replace("tenInchScreenshots", "X"): s for p, s in sha.items() if "/tenInchScreenshots/" in p}
+        self.assertTrue(seven)
+        self.assertEqual(seven, ten, "each 10-inch file is its 7-inch twin's bytes")
+        rendered = [e for e in plan if e["kind"] in ("shot", "asset", "icon")]   # the copied examples have no icon export
+        self.assertEqual(len({sha[e["path"]] for e in rendered}), len(FakeChrome.calls), "distinct renders: distinct bytes")
+        with zipfile.ZipFile(out) as z:
+            self.assertEqual(set(z.namelist()) - {"manifest.json"}, set(sha))
+            for p, s in sha.items():
+                self.assertEqual(hashlib.sha256(z.read(p)).hexdigest(), s, p)
+        self.assertEqual((job.stage, job.done, job.total), ("zip", len(plan), len(plan)))
+        self.assertTrue(all('"still": true' in c[4] for c in FakeChrome.calls if c[4]), "a shot is named still")
+        self.assertTrue(FakeChrome.started and all(c.closed for c in FakeChrome.started))
+
+    def test_a_stop_ends_the_export_early(self) -> None:
+        FakeChrome.delay = 0.3
+        job, got = serve.ExportJob("cancel0001"), {}
+
+        def run() -> None:
+            try:
+                serve.listing_zip(self.doc, self.path, self.tmp.dir / "all.zip", "fake", job=job)
+                got["r"] = "finished"
+            except serve.ListingCancelled:
+                got["r"] = "cancelled"
+        th = threading.Thread(target=run)
+        th.start()
+        deadline = time.monotonic() + 30
+        while job.done < 3 and time.monotonic() < deadline:
+            time.sleep(0.02)
+        t0 = time.monotonic()
+        job.stop()
+        th.join(10)
+        self.assertFalse(th.is_alive())
+        self.assertLess(time.monotonic() - t0, 2, "the stop is prompt")
+        self.assertEqual(got.get("r"), "cancelled")
+        self.assertLess(len(FakeChrome.calls), 100, "the queued renders never ran")
+        self.assertTrue(all(c.proc.dead.is_set() and c.closed for c in FakeChrome.started), "every Chrome killed and closed")
+
 
 @unittest.skipUnless(NODE, "node not installed")
 class SetKids(unittest.TestCase):
@@ -316,12 +469,31 @@ class ListingPage(ChromePage):
         self.assertFalse(next(f for f in t2.ev(LST)["fields"] if f["field"] == "es-ES/play/short")["mt"])
         self.assertTrue(t2.ev("!!document.querySelector('[data-accept=\"appstore.subtitle\"]') || !!document.querySelector('[data-accept=\"strings.workout.title\"]')"))
 
+    # what the Export key shows while it runs: the time from the pick to its first progress, each aria-valuenow, the
+    # labels; and the URLs the page fetched (its job id)
+    WATCH = ("window.__xp = {t0: 0, busyAt: 0, now: [], labels: [], urls: []};"
+             "(f => { window.fetch = (u, o) => { __xp.urls.push(String(u)); return f(u, o); }; })(window.fetch);"
+             "(k => new MutationObserver(() => { const b = k.querySelector('.bd-xp-bar'), l = k.querySelector('.xp-l');"
+             " if (k.classList.contains('busy') && !__xp.busyAt) __xp.busyAt = performance.now();"
+             " const v = b && b.getAttribute('aria-valuenow'); if (v != null && __xp.now.at(-1) !== +v) __xp.now.push(+v);"
+             " if (l && __xp.labels.at(-1) !== l.textContent) __xp.labels.push(l.textContent);"
+             " }).observe(k, {subtree: true, attributes: true, childList: true, characterData: true}))(document.querySelector('.bd-lst-btb .bd-lstx'))")
+
+    def pick_zip(self, t) -> None:
+        t.ev("document.querySelector('.bd-lst-btb .bd-lstx .bd-expb').click()")
+        t.wait_for("!document.querySelector('.bd-lst-btb .bd-lstx .bd-expm').hidden")
+        t.ev("__xp.t0 = performance.now(); document.querySelector('.bd-lst-btb .bd-expm [data-format=\"zip\"]').click()")
+
     def test_export_to_downloads_a_zip(self) -> None:
         t = self.page(self.url)
         t.ev("window.__blobs = []; (o => { URL.createObjectURL = b => { __blobs.push(b); return o.call(URL, b); }; })(URL.createObjectURL)")
-        t.ev("document.querySelector('.bd-lst-btb .bd-expb').click()")
-        t.wait_for("!document.querySelector('.bd-lst-btb .bd-expm').hidden")
-        t.ev("document.querySelector('.bd-lst-btb .bd-expm [data-format=\"zip\"]').click()")
+        t.ev(self.WATCH)
+        self.pick_zip(t)
+        t.wait_for("__xp.busyAt > 0", 2)
+        self.assertLess(t.ev("__xp.busyAt - __xp.t0"), 1000, "the key shows the export at once")
+        self.assertEqual(t.ev("(k => [k.querySelector('[role=progressbar]') !== null, k.querySelector('.xp-l').getAttribute('aria-live')])(document.querySelector('.bd-lst-btb .bd-lstx'))"),
+                         [True, "polite"])
+        t.wait_for(f"{LST}.exporting && {LST}.exporting.format === 'zip'", 2)
         t.wait_for("__blobs.length > 0", 240)
         head = t.ev("__blobs[0].slice(0, 4).arrayBuffer().then(b => [...new Uint8Array(b)])")
         self.assertEqual(bytes(head), b"PK\x03\x04")
@@ -329,7 +501,34 @@ class ListingPage(ChromePage):
         import base64
         with zipfile.ZipFile(io.BytesIO(base64.b64decode(b64))) as z:
             self.assertIn("manifest.json", z.namelist())
+            n = len(json.loads(z.read("manifest.json"))["files"])
+        now = t.ev("__xp.now")
+        self.assertGreaterEqual(len(now), 2, f"aria-valuenow rose while it ran: {now}")
+        self.assertEqual(now, sorted(now))
+        self.assertTrue(any(l.startswith("ZIP ") and l.endswith(f"/{n}") for l in t.ev("__xp.labels")), t.ev("__xp.labels"))
+        # done: a tick and Exported, then the key as it was
+        t.wait_for("document.querySelector('.bd-lst-btb .bd-lstx').classList.contains('ok') || !document.querySelector('.bd-lst-btb .bd-lstx.busy')", 5)
+        self.assertIn("Exported", t.ev("__xp.labels"))
+        self.assertIsNone(t.ev(f"{LST}.exporting"))
+        t.wait_for("(k => !k.matches('.busy, .ok, .err') && getComputedStyle(k.querySelector('.bd-expb > span:not(.xp)')).display !== 'none')(document.querySelector('.bd-lst-btb .bd-lstx'))", 5)
         self.assertEqual(t.ev(f"{LST}.approveBlocks"), [])
+
+    def test_the_export_key_cancels_the_render(self) -> None:
+        t = self.page(self.url)
+        t.ev(self.WATCH)
+        self.pick_zip(t)
+        t.wait_for("__xp.now.some(v => v > 0)", 30)
+        job = t.ev("new URL(__xp.urls.find(u => u.startsWith('/__bluedoc/listing?')), location.href).searchParams.get('job')")
+        self.assertTrue(job)
+        self.assertEqual(json.loads(self.server.req("GET", f"/__bluedoc/listing/progress?job={job}")[1])["stage"], "render")
+        t.ev("document.querySelector('.bd-lst-btb .bd-lstx .bd-expb').click()")   # the key, while it runs, cancels
+        t.wait_for("!document.querySelector('.bd-lst-btb .bd-lstx').matches('.busy, .ok, .err')", 5)
+        self.assertIsNone(t.ev(f"{LST}.exporting"))
+        self.assertTrue(t.ev("document.querySelector('.bd-lst-btb .bd-expm').hidden"), "a cancel doesn't open the menu")
+        view = until(lambda: (lambda v: v if v["stage"] in ("cancelled", "done", "error") else None)(
+            json.loads(self.server.req("GET", f"/__bluedoc/listing/progress?job={job}")[1])), 10)
+        self.assertEqual(view and view["stage"], "cancelled")
+        self.assertLess(view["done"], view["total"])
 
     def test_approve_waits_for_an_upload_or_brand_draft(self) -> None:
         from test_listing_capture import free_a_slot

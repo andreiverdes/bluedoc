@@ -217,7 +217,10 @@ class ListingLeftPanel(ChromePage):
         self.assertIn("Refresh fonts", t.ev(f"{sec}.querySelector('.bd-ty-pop[data-menu=family] .rf').textContent"))
         # vendored Inter, or the same family installed on this machine: either way a licence note, in the ⓘ by the family
         self.assertRegex(t.ev(f"{sec}.querySelector('.bd-ty-info').title"), r"vendored, OFL|not a licence for marketing images", "the licence note")
-        self.assertTrue(t.ev(f"{sec} === document.querySelector('#bd-lp-text').lastElementChild"), "at the bottom of Text")
+        self.assertTrue(t.ev(f"(s => s.nextElementSibling === document.querySelector('#bd-lp-text .bd-lst-fields') && s.parentElement.id === 'bd-lp-text'"
+                             f" && !s.previousElementSibling.matches('.bd-lfield, .bd-lst-fields'))({sec})"), "at the top of Text, over the fields")
+        self.assertTrue(t.ev(f"(s => s.getBoundingClientRect().bottom <= document.querySelector('#bd-lp-text .bd-lfield').getBoundingClientRect().top)({sec})"),
+                        "drawn above the first field")
 
 
 @unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")
@@ -247,11 +250,26 @@ class ListingToolbar(ChromePage):
         self.assertTrue(t.ev("!!document.querySelector('.bd-bar .bd-crumb')"))
         # the switches still work, and the URL keeps the platform and locale
         t.ev(f"document.querySelector('{self.TB} [data-p=appstore]').click()")
-        t.ev(f"(s => {{ s.value = 'es-ES'; s.dispatchEvent(new Event('change')); }})(document.querySelector('{self.TB} .bd-lst-loc'))")
+        t.ev(f"document.querySelector('{self.TB} .bd-lst-loc .bd-selb').click()")
+        t.ev(f"document.querySelector('{self.TB} .bd-lst-loc [role=option][data-v=es-ES]').click()")
         t.ev(f"document.querySelector('{self.TB} [data-view=preview]').click()")
         got = t.ev(LST)
         self.assertEqual((got["platform"], got["locale"], got["view"], got["hash"]), ("appstore", "es-ES", "preview", "#appstore/es-ES"))
         self.assertTrue(any("MT" in loc["label"] for loc in got["locales"]), "the locale menu keeps its MT counts")
+        self.assertEqual(t.ev(f"[...document.querySelectorAll('{self.TB} .bd-lst-loc [role=option]')].map(o => [o.dataset.v, o.querySelector('.m') ? o.querySelector('.m').textContent : ''])"),
+                         [[loc["id"], loc["label"][len(loc["id"]) + 3:]] for loc in got["locales"]], "each option's hint: its MT and missing counts")
+        self.assertEqual(t.ev(f"document.querySelectorAll('{self.TB} select').length"), 0, "no native select in the toolbar")
+        # Jump to: a menu of the sections, its key still "Jump to"; a pick scrolls to one
+        jump = f"document.querySelector('{self.TB} .bd-lst-jump')"
+        t.ev(f"document.querySelector('{self.TB} [data-view=sections]').click()")
+        self.assertEqual(t.ev(f"[{jump}.btn.getAttribute('aria-haspopup'), {jump}.btn.getAttribute('aria-label'), {jump}.btn.textContent, {jump}.btn.disabled]"),
+                         ["menu", "Jump to a section", "Jump to", False])
+        rows = t.ev(f"[...{jump}.querySelectorAll('[role=menuitem]')].map(o => o.textContent)")
+        self.assertEqual(rows, t.ev("[...document.querySelectorAll('.bd-lst-sec')].map(s => s.querySelector('h3') ? s.querySelector('h3').textContent : s.dataset.row)"))
+        self.assertGreater(len(rows), 1)
+        t.ev(f"{jump}.btn.click(); {jump}.querySelectorAll('[role=menuitem]')[{len(rows) - 1}].click()")
+        t.wait_for("document.querySelector('.bd-lst-main').scrollTop > 0")
+        self.assertEqual(t.ev(f"[{jump}.btn.textContent, {jump}.btn.getAttribute('aria-expanded')]"), ["Jump to", "false"])
         # the Checks count opens the Checks tab
         t.ev(f"document.querySelector('{self.TB} .bd-lst-ckb').click()")
         self.assertFalse(t.ev("document.getElementById('bd-lp-checks').hidden"))
@@ -343,6 +361,67 @@ class ListingToolbar(ChromePage):
         t.ev(f"document.querySelector('{self.TB} .bd-dcount').click()")
         c = t.ev("BP.comments()")
         self.assertEqual((c["open"], c["filter"]), (True, "pending"))
+
+    KEYS = {"Enter": ("Enter", 13, "\r"), "Escape": ("Escape", 27, None), "ArrowDown": ("ArrowDown", 40, None), "ArrowUp": ("ArrowUp", 38, None),
+            "Home": ("Home", 36, None), "End": ("End", 35, None), "Tab": ("Tab", 9, None), "e": ("KeyE", 69, "e"), "[": ("BracketLeft", 219, "[")}
+
+    def press(self, t, key: str) -> None:
+        code, vk, text = self.KEYS[key]
+        for typ in ("keyDown", "keyUp"):
+            self.browser.call("Input.dispatchKeyEvent", {"type": typ, "key": key, "code": code, "windowsVirtualKeyCode": vk,
+                                                         **({"text": text} if typ == "keyDown" and text else {})}, t.session)
+
+    def test_the_locale_menu_opens_by_click_and_arrow_picks_by_keyboard_and_closes_back_to_its_key(self) -> None:
+        """1.0.0-beta17: the toolbar's locale is a menu button, as Export to… is, not a native select: a listbox of the
+        locales, the current one ticked; ↓ or a click opens it on the current locale, ↑ ↓ Home End and a typed letter
+        move, Enter picks, Esc closes it back to its key, a press outside closes it, and the page's keys wait."""
+        t = self.page()
+        self.browser.call("Emulation.setFocusEmulationEnabled", {"enabled": True}, t.session)
+        self.assertEqual(t.ev(f"document.querySelectorAll('{self.TB} select').length"), 0, "no native select in the toolbar")
+        loc = f"document.querySelector('{self.TB} .bd-lst-loc')"
+        btn, menu = f"{loc}.querySelector('.bd-selb')", f"{loc}.querySelector('[role=listbox]')"
+        state = f"[{btn}.getAttribute('aria-expanded'), !{menu}.hidden, document.activeElement === {btn} ? 'button' : document.activeElement.dataset.v || null]"
+        self.assertEqual(t.ev(f"[{btn}.getAttribute('aria-haspopup'), {btn}.getAttribute('aria-label'), {btn}.textContent, {loc}.value]"),
+                         ["listbox", "Locale", "en-US", "en-US"])
+        self.assertEqual(t.ev(f"[...{menu}.querySelectorAll('[role=option]')].map(o => [o.dataset.v, o.getAttribute('aria-selected')])"),
+                         [["en-US", "true"], ["es-ES", "false"]])
+        # a click opens it on the current locale; Esc closes it back to the key
+        t.ev(f"{btn}.click()")
+        self.assertEqual(t.ev(state), ["true", True, "en-US"])
+        self.press(t, "Escape")
+        self.assertEqual(t.ev(state), ["false", False, "button"])
+        # ↓ opens it on the current locale; ↓ ↑ wrap, End and Home, a typed letter goes to the next locale it starts
+        self.press(t, "ArrowDown")
+        self.assertEqual(t.ev(state), ["true", True, "en-US"])
+        for key, on in (("ArrowDown", "es-ES"), ("ArrowDown", "en-US"), ("ArrowUp", "es-ES"), ("Home", "en-US"), ("End", "es-ES"), ("e", "en-US"), ("Home", "en-US")):
+            self.press(t, key)
+            self.assertEqual(t.ev(state)[2], on, key)
+        # the page's keys wait while it is open: [ leaves the left panel as it is
+        lp = t.ev(LST)["toolbar"]["lp"]
+        self.press(t, "[")
+        self.assertEqual((t.ev(LST)["toolbar"]["lp"], t.ev(state)[:2]), (lp, ["true", True]))
+        # ↓ Enter picks es-ES: the locale switches, the menu closes back to its key, which shows it, ticked
+        self.press(t, "ArrowDown")
+        self.press(t, "Enter")
+        t.wait_for(f"{LST}.locale === 'es-ES'")
+        self.assertEqual(t.ev(state), ["false", False, "button"])
+        self.assertEqual(t.ev(f"[{btn}.textContent, {loc}.value, location.hash, [...{menu}.querySelectorAll('[aria-selected=true]')].map(o => o.dataset.v)]"),
+                         ["es-ES", "es-ES", "#play/es-ES", ["es-ES"]])
+        # a click opens it again on es-ES; a press outside closes it and leaves the locale; Tab closes it too
+        t.ev(f"{btn}.click()")
+        self.assertEqual(t.ev(state), ["true", True, "es-ES"])
+        t.ev("document.querySelector('.bd-lst-main').dispatchEvent(new PointerEvent('pointerdown', {bubbles: true}))")
+        self.assertEqual(t.ev(state)[:2], ["false", False])
+        t.ev(f"{btn}.focus()")
+        self.press(t, "ArrowUp")
+        self.assertEqual(t.ev(state), ["true", True, "es-ES"])
+        self.press(t, "Tab")
+        self.assertEqual(t.ev(state)[:2], ["false", False])
+        self.assertEqual(t.ev(LST)["locale"], "es-ES")
+        # the platform switch keeps the menu showing the locale (the page sets .value, which picks nothing)
+        t.ev(f"document.querySelector('{self.TB} [data-p=appstore]').click()")
+        self.assertEqual(t.ev(f"[{btn}.textContent, {LST}.locale]"), ["es-ES", "es-ES"])
+        self.assertEqual(self.browser.errors, [])
 
 
 if __name__ == "__main__":

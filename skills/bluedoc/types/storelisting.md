@@ -32,7 +32,7 @@ The reader edits text and picks styles and the brand on the page; you record the
 
 - **Text edits** arrive under `## Text edits`, a `build.py patch <doc> field:<locale>/<group>/<field> --set <field>=<text>` command each: run them as given (it also clears an MT mark). Approve waits until you do. `patch` refuses a text over its store limit (the page lets the reader save one, in red): say so in your reply and offer a shorter one.
 - **Style picks** arrive under `## Decisions` (`style-<platform>-<variant>-message`/`-layout`) with a `## Style picks` command that writes `listing.style.<platform>`. A pick marked *needs the agent* also needs its hook: `data-callout` (M3), the string `<shot>.proof` (M4), a video (M5), a photo with `credits` (L5).
-- **Brand drafts** (the Colors tab's palette, the caption font at the bottom of Text) arrive under `## Brand drafts` with a `build.py patch <doc> brand:main --json …` command: run it as given. Approve waits until you do. The build warns on a contrast pair under 4.5:1 and on a font a PDF can't embed: say so in your reply.
+- **Brand drafts** (the Colors tab's palette, the caption font at the top of Text) arrive under `## Brand drafts` with a `build.py patch <doc> brand:main --json …` command: run it as given. Approve waits until you do. The build warns on a contrast pair under 4.5:1 and on a font a PDF can't embed: say so in your reply.
 
 ## Variants and ads
 

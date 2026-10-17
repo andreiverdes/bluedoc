@@ -71,15 +71,22 @@ URLs: /                      home page: every doc under the registered folders, 
                              format, theme, drafts} (the key): the same, with the page's unapplied text edits and
                              deletions in the slides (Include unapplied edits; deck_drafts). build.py --deck
                              writes the html and pdf files, without drafts (the CLI has no reader state)
-      /__bluedoc/listing?path=<doc URL path>[&format=F&rev=B&platform=P&locale=L]   a storelisting (revision B's)
-                             exported, a read, no key, nothing written beside the doc; 400 for any other doc type.
+      /__bluedoc/listing?path=<doc URL path>[&format=F&rev=B&platform=P&locale=L&job=J]   a storelisting (revision
+                             B's) exported, a read, no key, nothing written beside the doc; 400 for any other doc type.
                              zip (the default): the fastlane layout of every shot and asset at its store size and
-                             manifest.json (listing_zip, headless Chrome), the attachment <stem>.zip; platform and
-                             locale narrow it. html: one file with both platform pages, offline (listing_html,
-                             assets/listing.html). pdf: its print view (listing_pdf). print: that file in the tab, as
-                             a deck's. zip and pdf: 501 without Chrome. X-Bluedoc-Warnings: a JSON list of what the
-                             export should say (a font the PDF can't embed, store-rule errors). build.py --listing
-                             writes the same files
+                             manifest.json (listing_zip: up to 6 headless Chromes side by side, each distinct render
+                             once), the attachment <stem>.zip; platform and locale narrow it. html: one file with both
+                             platform pages, offline (listing_html, assets/listing.html). pdf: its print view
+                             (listing_pdf). print: that file in the tab, as a deck's. zip and pdf: 501 without Chrome.
+                             X-Bluedoc-Warnings: a JSON list of what the export should say (a font the PDF can't
+                             embed, store-rule errors). job J (8-64 of A-Z a-z 0-9 - _, the page's random id): a zip
+                             or pdf export the progress route follows; 409 while a J runs. Closing the connection
+                             stops the render. build.py --listing writes the same files
+      /__bluedoc/listing/progress?job=J   that export's {job, format, stage: plan|render|zip|done|error|cancelled,
+                             done, total (files; null for a pdf), file?, error?}, kept 10 minutes after its last
+                             change, else 404; a read, no key. DELETE (the X-Bluedoc header) or POST &cancel=1 (the
+                             key, as every POST): cancel it; its Chromes are killed and its temp files go, and the
+                             export answers 409
       /__bluedoc/kit/<file>  the plain kit and inspector (assets/kits)
       /__bluedoc/fw/<name>/<path>   a framework add-framework copied
       /__bluedoc/fonts       the font families installed here (fonts.py: name and OS/2 of each TTF, OTF and TTC in
@@ -145,6 +152,7 @@ from __future__ import annotations
 
 import argparse
 import base64
+import concurrent.futures
 import datetime as dt
 import hashlib
 import hmac
@@ -155,6 +163,7 @@ import math
 import mimetypes
 import os
 import re
+import select
 import secrets
 import shutil
 import socket
@@ -1469,6 +1478,92 @@ class ListingError(ValueError):
     """Why a doc can't be exported as a listing."""
 
 
+class ListingCancelled(Exception):
+    """The reader cancelled the export, or left: its render stopped."""
+
+
+class ExportJob:
+    """One listing export's progress, as GET /__bluedoc/listing/progress shows it: stage plan (the doc read, the files
+    planned), render (Chrome draws them: done of total files in the ZIP so far, file the last one; a PDF's total is
+    None), zip (the manifest, the file sent), then done, error or cancelled. Readers poll it from other threads.
+    stop() cancels it from any thread: it sets `cancelled` and runs each hook the export added (on_stop), which kill
+    its Chromes, so a render waiting on one ends at once."""
+
+    def __init__(self, job_id: str | None = None, fmt: str = "zip") -> None:
+        self.id, self.format = job_id, fmt
+        self.stage, self.done, self.total, self.file, self.error = "plan", 0, None, None, None
+        self.cancelled = threading.Event()
+        self.lock = threading.Lock()
+        self.hooks: list = []
+        self.at = time.monotonic()
+
+    def update(self, **kw) -> None:
+        with self.lock:
+            for k, v in kw.items():
+                setattr(self, k, v)
+            self.at = time.monotonic()
+
+    def view(self) -> dict:
+        with self.lock:
+            return {"job": self.id, "format": self.format, "stage": self.stage, "done": self.done, "total": self.total,
+                    **({"file": self.file} if self.file else {}), **({"error": self.error} if self.error else {})}
+
+    def on_stop(self, hook) -> None:
+        """Run hook() when the job is cancelled (now, if it is)."""
+        with self.lock:
+            self.hooks.append(hook)
+        if self.cancelled.is_set():
+            hook()
+
+    def stop(self) -> None:
+        self.cancelled.set()
+        with self.lock:
+            hooks = list(self.hooks)
+        for hook in hooks:
+            try:
+                hook()
+            except OSError:
+                pass
+
+    def check(self) -> None:
+        if self.cancelled.is_set():
+            raise ListingCancelled("cancelled")
+
+
+class ExportJobs:
+    """The listing exports a page follows (its &job=<id>), in memory: a job ends TTL seconds after its last change."""
+    TTL = 600
+    ID = re.compile(r"[A-Za-z0-9_-]{8,64}")
+
+    def __init__(self) -> None:
+        self.jobs: dict[str, ExportJob] = {}
+        self.lock = threading.Lock()
+
+    def _prune(self) -> None:
+        now = time.monotonic()
+        for k in [k for k, j in self.jobs.items() if now - j.at > self.TTL]:
+            del self.jobs[k]
+
+    def start(self, job: ExportJob) -> bool:
+        """Follow job under its id; False when a running job has it."""
+        with self.lock:
+            self._prune()
+            old = self.jobs.get(job.id)
+            if old is not None and old.stage not in ("done", "error", "cancelled"):
+                return False
+            self.jobs[job.id] = job
+            return True
+
+    def get(self, job_id: str) -> ExportJob | None:
+        with self.lock:
+            self._prune()
+            return self.jobs.get(job_id)
+
+
+EXPORT_JOBS = ExportJobs()
+LISTING_WORKERS = max(1, min(6, os.cpu_count() or 1))   # the headless Chromes a ZIP renders in, side by side
+
+
 def listing_doc(doc: dict, doc_path: Path, rev: str | None) -> tuple[dict, str | None, dict]:
     """(the doc as of rev, rev or None for the doc on disk, its captures): an earlier revision's captures are the PNGs
     its history entry hashes (listing.captures_at). ListingError: not a storelisting, an unknown revision."""
@@ -1527,14 +1622,106 @@ def listing_warnings(doc: dict, fmt: str) -> list[str]:
     return out
 
 
+class ShotPool:
+    """Headless Chromes rendering side by side, one per worker thread, each started on its thread's first shot and
+    kept for the next (HeadlessChrome.render_shot). submit(url, w, h, scale, name) is a Future of the PNG made 24-bit
+    RGB (listing.png_rgb24). The job's stop() kills every Chrome, so a render waiting on one fails at once and a queued
+    one doesn't start. close() waits for the threads, then closes the Chromes and their profiles."""
+
+    def __init__(self, chrome: str, workers: int, job: ExportJob) -> None:
+        self.chrome, self.job = chrome, job
+        self.local, self.lock, self.started = threading.local(), threading.Lock(), []
+        self.pool = concurrent.futures.ThreadPoolExecutor(max_workers=max(1, workers), thread_name_prefix="bluedoc-shot")
+        job.on_stop(self.kill)
+
+    def _render(self, url: str, w: int, h: int, scale: int, name: str | None) -> bytes:
+        self.job.check()
+        ch = getattr(self.local, "ch", None)
+        if ch is None:
+            ch = self.local.ch = HeadlessChrome(self.chrome)
+            with self.lock:
+                self.started.append(ch)
+            self.job.check()   # stopped while it started: kill() may not have seen it
+        return listing.png_rgb24(ch.render_shot(url, w, h, scale, name=name))
+
+    def submit(self, url: str, w: int, h: int, scale: int, name: str | None) -> concurrent.futures.Future:
+        return self.pool.submit(self._render, url, w, h, scale, name)
+
+    def kill(self) -> None:
+        with self.lock:
+            chs = list(self.started)
+        for ch in chs:
+            if ch.proc.poll() is None:
+                ch.proc.kill()
+
+    def close(self) -> None:
+        self.pool.shutdown(wait=True, cancel_futures=True)
+        for ch in self.started:
+            ch.close()
+
+
+def listing_sources(doc: dict, doc_path: Path, plan: list[dict], pages: dict[str, str], rules: dict) -> tuple[list, dict]:
+    """Where each file of the plan comes from: ([(entry, source)], {render key: (page HTML, fw, fh, scale, name)}).
+    source: ("text", bytes), ("file", path, exported: the icon export, kept as it is) or ("render", key). A render's
+    key is what it draws from: the page's HTML, its state with each set as its frame, UI viewport, platform and row
+    (the shot kit reads no more of a set: Play's 7- and 10-inch tablets draw alike), the frame and scale; one render
+    serves every file with its key. An icon with no artboard drops out. ListingError: a shot with no screen file."""
+    sets = listing.by_id(rules, "sets")
+    look = {}
+    for sid, r in sets.items():
+        if "author" in r:
+            (w, h), (uw, uh) = listing.frame_size(r), listing.ui_size(r)
+            look[sid] = [w, h, uw, uh, bool(r.get("raw")), r["platform"], r["row"]]
+    digest = {aid: hashlib.sha256(t.encode("utf-8")).hexdigest() for aid, t in pages.items()}
+    uris: dict[str, str] = {}
+    out, renders = [], {}
+    for e in plan:
+        if e["kind"] == "text":
+            out.append((e, ("text", e["text"].encode("utf-8"))))
+        elif e["kind"] == "upload":
+            out.append((e, ("file", doc_path.parent / e["src"], False)))
+        elif e["kind"] == "icon":
+            icon = listing.icon_of(doc, doc_path)
+            if icon is None:
+                continue
+            ref, _, aid = icon["from"].rpartition("#")
+            src = (doc_path.parent / ref).resolve() if ref else doc_path
+            exported = icons_dir(src, aid or icon["from"]) / "play" / "icon-512.png"
+            if exported.is_file():
+                out.append((e, ("file", exported, True)))   # the page's icon export: Play takes it as it is, alpha and all
+                continue
+            page = ('<!doctype html><meta charset="utf-8"><style>html,body{margin:0;width:512px;height:512px;overflow:hidden}'
+                    f'body{{background:{icon_play_css(icon)}}}</style>')
+            key = ("icon", hashlib.sha256(page.encode("utf-8")).hexdigest())
+            renders.setdefault(key, (page, 512, 512, 1, None))
+            out.append((e, ("render", key)))
+        else:
+            if e["shot"] not in pages:
+                raise ListingError(f"{e['shot']}: no screen file to render")
+            cap = e.get("capture")
+            if cap and cap not in uris:
+                uris[cap] = data_uri(doc_path.parent / cap)
+            state = {"locale": e["locale"]} if e["kind"] == "asset" else {
+                "set": e["set"], "locale": e["locale"], "i": e["i"], "n": e["n"], "ui": uris[cap] if cap else None,
+                **{k: e[k] for k in ("message", "layout") if k in e}}
+            drawn = {**state, "set": look.get(e["set"]), "ui": cap} if "set" in state else state
+            key = (digest[e["shot"]], json.dumps(drawn, sort_keys=True), e["fw"], e["fh"], e["scale"])
+            renders.setdefault(key, (pages[e["shot"]], e["fw"], e["fh"], e["scale"], "bd-shot " + json.dumps({**state, "still": True})))
+            out.append((e, ("render", key)))
+    return out, renders
+
+
 def listing_zip(doc: dict, doc_path: Path, out: Path, chrome: str, *, rev: str | None = None, platform: str | None = None,
-                locale: str | None = None, roots: list[Path] | None = None) -> dict:
-    """Write the fastlane ZIP of the listing (revision rev's) to out, one file at a time, and return its manifest
-    (manifest.json in the ZIP: every file's path, kind, platform, locale, set or asset, shot, size, sha256 and bytes,
-    the MT strings, the fonts, the store-rule errors). Each shot and asset is its screen file in headless Chrome at its
-    set's frame (CSS px) × scale, its UI the capture the page shows; an upload is its PNG; the Play icon is the icons
-    artboard's exported play/icon-512.png, else its layers drawn at 512 px. ListingError: a PNG that isn't its size,
-    or isn't RGB without alpha after listing.png_rgb24. RuntimeError, OSError: Chrome failed."""
+                locale: str | None = None, roots: list[Path] | None = None, job: ExportJob | None = None) -> dict:
+    """Write the fastlane ZIP of the listing (revision rev's) to out, one file at a time in plan order, and return its
+    manifest (manifest.json in the ZIP: every file's path, kind, platform, locale, set or asset, shot, size, sha256 and
+    bytes, the MT strings, the fonts, the store-rule errors). Each shot and asset is its screen file in headless Chrome
+    at its set's frame (CSS px) × scale, its UI the capture the page shows; an upload is its PNG; the Play icon is the
+    icons artboard's exported play/icon-512.png, else its layers drawn at 512 px. The renders run in up to
+    LISTING_WORKERS Chromes at once (ShotPool), each distinct one once (listing_sources). job: its progress, and its
+    stop() ends the export (ListingCancelled). ListingError: a PNG that isn't its size, or isn't RGB without alpha
+    after listing.png_rgb24. RuntimeError, OSError: Chrome failed."""
+    job = job or ExportJob()
     doc, rev, caps = listing_doc(doc, doc_path, rev)
     rules, lb = listing.load_rules(), listing.listing_of(doc) or {}
     try:
@@ -1542,70 +1729,61 @@ def listing_zip(doc: dict, doc_path: Path, out: Path, chrome: str, *, rev: str |
     except ValueError as e:
         raise ListingError(str(e)) from None
     pages = listing_pages(doc, doc_path, rev, roots)
+    sources, renders = listing_sources(doc, doc_path, plan, pages, rules)
     sets = listing.by_id(rules, "sets")
     keys = {aid: listing.l10n_keys(t) for aid, t in pages.items()}   # each shot's caption strings, for its MT marks
     mt = lb.get("mt") if isinstance(lb.get("mt"), dict) else {}
     stamp = (dt.date.today().year, dt.date.today().month, dt.date.today().day, 0, 0, 0)
     files: list[dict] = []
+    job.check()
+    job.update(stage="render", done=0, total=len(sources))
     with tempfile.TemporaryDirectory(prefix="bluedoc-listing-") as d, zipfile.ZipFile(out, "w") as z:
-        ch: HeadlessChrome | None = None
-        urls: dict[str, str] = {}
-
-        def url_of(aid: str, html: str) -> str:
-            if aid not in urls:
-                f = Path(d) / f"{len(urls)}.html"
-                f.write_text(html, encoding="utf-8")
-                urls[aid] = f.as_uri()
-            return urls[aid]
+        pool = ShotPool(chrome, min(LISTING_WORKERS, len(renders)), job) if renders else None
         try:
-            for e in plan:
+            urls: dict[str, str] = {}
+            futures: dict[tuple, concurrent.futures.Future] = {}
+            for key, (page, fw, fh, scale, name) in renders.items():
+                if page not in urls:
+                    f = Path(d) / f"{len(urls)}.html"
+                    f.write_text(page, encoding="utf-8")
+                    urls[page] = f.as_uri()
+                futures[key] = pool.submit(urls[page], fw, fh, scale, name)
+            for n, (e, src) in enumerate(sources):
+                job.check()
                 meta = {k: v for k, v in e.items() if k not in ("text", "fw", "fh", "scale")}
-                if e["kind"] == "text":
-                    data = e["text"].encode("utf-8")
-                    z.writestr(zipfile.ZipInfo(e["path"], stamp), data, compress_type=zipfile.ZIP_DEFLATED)
-                    files.append({**meta, "bytes": len(data), "sha256": hashlib.sha256(data).hexdigest()})
+                if src[0] == "text":
+                    z.writestr(zipfile.ZipInfo(e["path"], stamp), src[1], compress_type=zipfile.ZIP_DEFLATED)
+                    files.append({**meta, "bytes": len(src[1]), "sha256": hashlib.sha256(src[1]).hexdigest()})
+                    job.update(done=n + 1, file=e["path"])
                     continue
-                exported = None
-                if e["kind"] == "icon":
-                    icon = listing.icon_of(doc, doc_path)
-                    if icon is None:
-                        continue
-                    ref, _, aid = icon["from"].rpartition("#")
-                    src = (doc_path.parent / ref).resolve() if ref else doc_path
-                    exported = icons_dir(src, aid or icon["from"]) / "play" / "icon-512.png"
-                if e["kind"] == "upload":
-                    png = listing.png_rgb24((doc_path.parent / e["src"]).read_bytes())
-                elif exported is not None and exported.is_file():
-                    png = exported.read_bytes()   # the page's icon export: Play takes it as it is, alpha and all
+                exported = src[0] == "file" and src[2]
+                if src[0] == "file":
+                    png = src[1].read_bytes() if exported else listing.png_rgb24(src[1].read_bytes())
                 else:
-                    ch = ch or HeadlessChrome(chrome)
-                    if e["kind"] == "icon":
-                        page = ('<!doctype html><meta charset="utf-8"><style>html,body{margin:0;width:512px;height:512px;overflow:hidden}'
-                                f'body{{background:{icon_play_css(icon)}}}</style>')
-                        png = ch.capture_png(url_of("\0icon", page), 512, 512, 1)
-                    elif e["shot"] not in pages:
-                        raise ListingError(f"{e['shot']}: no screen file to render")
-                    else:
-                        state = {"locale": e["locale"]} if e["kind"] == "asset" else {
-                            "set": e["set"], "locale": e["locale"], "i": e["i"], "n": e["n"],
-                            "ui": data_uri(doc_path.parent / e["capture"]) if e.get("capture") else None,
-                            **{k: e[k] for k in ("message", "layout") if k in e}}
-                        png = ch.capture_png(url_of(e["shot"], pages[e["shot"]]), e["fw"], e["fh"], e["scale"],
-                                             name="bd-shot " + json.dumps(state), settle=0.2)
-                    png = listing.png_rgb24(png)
+                    try:
+                        png = futures[src[1]].result()
+                    except Exception:
+                        job.check()   # a render the stop ended: the stop is the news
+                        raise
                 info = listing.png_info(png) or {}
                 rule = sets.get(e.get("set")) or listing.by_id(rules, "assets").get(e.get("asset")) or {}
                 why = listing.size_problem(rule, info.get("w", 0), info.get("h", 0)) if e["kind"] in ("upload", "icon") \
                     else None if (info.get("w"), info.get("h")) == (e["w"], e["h"]) else f"want {e['w']}×{e['h']}"
-                if why or (exported is None and (info.get("colour") != 2 or info.get("trns"))):
+                if why or (not exported and (info.get("colour") != 2 or info.get("trns"))):
                     raise ListingError(f"{e['path']}: {info.get('w')}×{info.get('h')} colour type {info.get('colour')}: "
                                        f"{why or 'want RGB without alpha'}")
                 z.writestr(zipfile.ZipInfo(e["path"], stamp), png, compress_type=zipfile.ZIP_STORED)
                 files.append({**meta, "w": info["w"], "h": info["h"], "bytes": len(png), "sha256": hashlib.sha256(png).hexdigest(),
                               "mt": [f"strings.{k}" for k in keys.get(e.get("shot"), []) if f"strings.{k}" in (mt.get(e["locale"]) or [])]})
+                job.update(done=n + 1, file=e["path"])
+        except BaseException:
+            if pool:
+                pool.kill()   # an error or a stop: the renders still queued or running are of no use
+            raise
         finally:
-            if ch:
-                ch.close()
+            if pool:
+                pool.close()
+        job.update(stage="zip")
         manifest = {"doc": doc_path.name, "title": str(doc.get("title") or ""), "rev": str((doc.get("meta") or {}).get("rev") or ""),
                     "exported": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"), "bluedoc": VERSION,
                     "layout": "fastlane: metadata/android (supply), metadata and screenshots (deliver)", "rules": rules["accessed"],
@@ -1707,14 +1885,23 @@ def listing_html(doc: dict, doc_path: Path, rev: str | None = None, roots: list[
     return re.sub("|".join(fill), lambda m: fill[m[0]], LISTING_PLAYER.read_text(encoding="utf-8"))
 
 
-def listing_pdf(html: str, chrome: str) -> bytes:
-    """A listing file (listing_html) as a PDF, its print view (#print) printed as deck_pdf prints a deck.
+def listing_pdf(html: str, chrome: str, job: ExportJob | None = None) -> bytes:
+    """A listing file (listing_html) as a PDF, its print view (#print) printed as deck_pdf prints a deck. job: its
+    stage (render while Chrome prints; no count), and its stop() kills Chrome (ListingCancelled).
     RuntimeError or OSError: Chrome failed."""
+    job = job or ExportJob(fmt="pdf")
+    job.check()
+    job.update(stage="render")
     with tempfile.TemporaryDirectory(prefix="bluedoc-listing-") as d:
         f = Path(d) / "listing.html"
         f.write_text(html, encoding="utf-8")
         with HeadlessChrome(chrome) as ch:
-            return ch.print_pdf(f.as_uri() + "#print")
+            job.on_stop(lambda: ch.proc.poll() is None and ch.proc.kill())
+            try:
+                return ch.print_pdf(f.as_uri() + "#print")
+            except Exception:
+                job.check()   # a print the stop ended: the stop is the news
+                raise
 
 
 
@@ -2148,6 +2335,8 @@ class HeadlessChrome:
         self.profile = Path(tempfile.mkdtemp(prefix="bluedoc-chrome-"))
         self.sock: socket.socket | None = None
         self.buf, self.seq = bytearray(), 0
+        self.tab: tuple[str, str] | None = None   # render_shot's page: (target id, session id), kept between shots
+        self.navs = 0
         self.proc = subprocess.Popen([path, "--headless=new", f"--user-data-dir={self.profile}", "--remote-debugging-port=0",
                                       "--no-first-run", "--no-default-browser-check", "about:blank"],
                                      stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -2333,6 +2522,46 @@ class HeadlessChrome:
             got = self.call("Page.captureScreenshot", {"format": "png", "captureBeyondViewport": False}, s)
         finally:
             self.call("Target.closeTarget", {"targetId": target})
+        return base64.b64decode(got["data"])
+
+    def render_shot(self, url: str, width: int, height: int, scale: int = 1, *, name: str | None = None) -> bytes:
+        """A PNG of the page at url as capture_png takes it (light, no locale), in one page kept from shot to shot: a
+        listing export renders hundreds. window.name is name ('' without one) before the page's scripts run; Chrome
+        shoots once the page says it's ready (a shot named with still: true, kits/shot.js window.__bdShotReady), else
+        once the load, the fonts and the images are in, after two frames."""
+        if self.tab is None:
+            target = self.call("Target.createTarget", {"url": "about:blank"})["targetId"]
+            s = self.call("Target.attachToTarget", {"targetId": target, "flatten": True})["sessionId"]
+            self.call("Runtime.enable", None, s)
+            self.call("Page.enable", None, s)
+            self.call("Emulation.setDefaultBackgroundColorOverride", {"color": {"r": 255, "g": 255, "b": 255, "a": 1}}, s)
+            self.call("Emulation.setEmulatedMedia", {"features": [{"name": "prefers-color-scheme", "value": "light"}]}, s)
+            self.tab = (target, s)
+        s = self.tab[1]
+        self.navs += 1
+        # this navigation's document marks itself (__bdNav), so a check can't read the last shot's document
+        script = self.call("Page.addScriptToEvaluateOnNewDocument", {"source": f"window.__bdNav = {self.navs}; "
+                                                                               f"window.name = {json.dumps(name or '')};"}, s)["identifier"]
+        try:
+            self.call("Emulation.setDeviceMetricsOverride", {"width": width, "height": height, "deviceScaleFactor": scale, "mobile": False}, s)
+            self.call("Page.navigate", {"url": url}, s)
+            deadline = time.monotonic() + 60
+            while True:
+                try:
+                    if self.eval(s, f"window.__bdNav === {self.navs} && (document.readyState === 'complete' || "
+                                    "new Promise(r => addEventListener('load', () => r(true), {once: true})))"):
+                        break
+                except RuntimeError:   # the last document went while the check ran in it
+                    pass
+                if time.monotonic() > deadline:
+                    raise RuntimeError(f"{url} did not load in 60 s")
+                time.sleep(0.01)
+            self.eval(s, "window.__bdShotReady || Promise.all([document.fonts ? document.fonts.ready : 0, "
+                         "...[...document.images].map(i => i.getAttribute('src') ? i.decode().catch(() => 0) : 0)])"
+                         ".then(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => r(true)))))")
+            got = self.call("Page.captureScreenshot", {"format": "png", "captureBeyondViewport": False}, s)
+        finally:
+            self.call("Page.removeScriptToEvaluateOnNewDocument", {"identifier": script}, s)
         return base64.b64decode(got["data"])
 
 
@@ -3085,12 +3314,16 @@ def make_handler(port: int, default_to: str):
             return self.send(200, body, ctype, headers={"Content-Disposition": f"attachment; filename=\"{plain}\"; filename*=UTF-8''{quote(name)}"})
 
         def listing_export(self, q: dict) -> None:
-            """GET /__bluedoc/listing?path=<doc URL path>[&format=zip|html|pdf|print][&rev=R][&platform=P][&locale=L]:
-            the storelisting exported, as the attachment <stem>[-<platform>][-<locale>].<format>; print: the HTML file
-            shown in the tab (the PDF without Chrome). A read, no key; the ZIP is made in a temp file and streamed."""
+            """GET /__bluedoc/listing?path=<doc URL path>[&format=zip|html|pdf|print][&rev=R][&platform=P][&locale=L]
+            [&job=ID]: the storelisting exported, as the attachment <stem>[-<platform>][-<locale>].<format>; print: the
+            HTML file shown in the tab (the PDF without Chrome). A read, no key; the ZIP is made in a temp file and
+            streamed. A ZIP or PDF runs as an ExportJob, under ID in EXPORT_JOBS when given (GET
+            /__bluedoc/listing/progress follows it); the reader closing the connection stops it, as a cancel does."""
             fmt = q.get("format") or "zip"
             if fmt not in LISTING_FORMATS:
                 return self.json(400, {"error": f"format: one of {', '.join(LISTING_FORMATS)}"})
+            if "job" in q and not ExportJobs.ID.fullmatch(q["job"]):
+                return self.json(400, {"error": "job: 8 to 64 letters, digits, - or _"})
             doc_path = doc_for_url(q.get("path", ""))
             if not doc_path:
                 return self.json(404, {"error": "not a doc under a registered folder"})
@@ -3104,44 +3337,87 @@ def make_handler(port: int, default_to: str):
             chrome = find_chrome() if fmt in ("zip", "pdf") else None
             if fmt in ("zip", "pdf") and not chrome:
                 return self.json(501, {"error": LISTING_NEEDS})
+            if fmt != "zip" and (q.get("platform") or q.get("locale")):
+                return self.json(400, {"error": "platform and locale narrow the ZIP only"})
             part = [x for x in (q.get("platform"), q.get("locale")) if x]
             name = "-".join([build.doc_stem(doc_path), *part]) + f".{'html' if fmt == 'print' else fmt}"
             plain = re.sub(r'[^A-Za-z0-9._ -]', "_", name)
             headers = {"Content-Disposition": f"attachment; filename=\"{plain}\"; filename*=UTF-8''{quote(name)}",
                        "X-Bluedoc-Warnings": json.dumps(listing_warnings(doc, "pdf" if fmt == "print" else fmt))}
-            if fmt == "zip":
+            if fmt in ("html", "print"):
+                try:
+                    html = listing_html(doc, doc_path, q.get("rev") or None, load_roots())
+                except (OSError, ValueError) as e:
+                    return self.json(400, {"error": str(e)})
+                if fmt == "print":
+                    return self.send(200, html, headers={"Content-Security-Policy": DECK_PRINT_CSP})
+                return self.send(200, html, headers=headers)
+            job = ExportJob(q.get("job"), fmt)
+            if job.id and not EXPORT_JOBS.start(job):
+                return self.json(409, {"error": f"export {job.id} is still running"})
+            ended = threading.Event()
+            threading.Thread(target=self.watch_reader, args=(job, ended), name="bluedoc-export-reader", daemon=True).start()
+            try:
                 with tempfile.TemporaryDirectory(prefix="bluedoc-listing-zip-") as d:
                     out = Path(d) / name
-                    try:
+                    if fmt == "zip":
                         listing_zip(doc, doc_path, out, chrome, rev=q.get("rev") or None, platform=q.get("platform") or None,
-                                    locale=q.get("locale") or None, roots=load_roots())
-                    except ListingError as e:
-                        return self.json(400, {"error": str(e)})
-                    except (OSError, RuntimeError) as e:
-                        return self.json(500, {"error": f"Chrome couldn't render the listing: {e}"})
+                                    locale=q.get("locale") or None, roots=load_roots(), job=job)
+                    else:
+                        out.write_bytes(listing_pdf(listing_html(doc, doc_path, q.get("rev") or None, load_roots()), chrome, job))
                     self.send_response(200)
-                    for k, v in {"Content-Type": "application/zip", "Content-Length": str(out.stat().st_size),
-                                 "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff", **headers}.items():
+                    for k, v in {"Content-Type": "application/zip" if fmt == "zip" else "application/pdf",
+                                 "Content-Length": str(out.stat().st_size), "Cache-Control": "no-store",
+                                 "X-Content-Type-Options": "nosniff", **headers}.items():
                         self.send_header(k, v)
                     self.end_headers()
                     if self.command != "HEAD":
                         with open(out, "rb") as f:
                             shutil.copyfileobj(f, self.wfile, 1 << 20)
-                    return
-            if q.get("platform") or q.get("locale"):
-                return self.json(400, {"error": "platform and locale narrow the ZIP only"})
-            try:
-                html = listing_html(doc, doc_path, q.get("rev") or None, load_roots())
-            except (OSError, ValueError) as e:
-                return self.json(400, {"error": str(e)})
-            if fmt == "print":
-                return self.send(200, html, headers={"Content-Security-Policy": DECK_PRINT_CSP})
-            if fmt == "pdf":
+                job.update(stage="done")
+            except ListingCancelled:
+                job.update(stage="cancelled")
                 try:
-                    return self.send(200, listing_pdf(html, chrome), "application/pdf", headers=headers)
-                except (OSError, RuntimeError) as e:
-                    return self.json(500, {"error": f"Chrome couldn't print the listing: {e}"})
-            return self.send(200, html, headers=headers)
+                    self.json(409, {"error": "the export was cancelled", "cancelled": True})
+                except OSError:
+                    pass   # the reader left
+            except ListingError as e:
+                job.update(stage="error", error=str(e))
+                self.json(400, {"error": str(e)})
+            except (OSError, RuntimeError, ValueError) as e:
+                if job.cancelled.is_set():   # Chrome killed under it
+                    job.update(stage="cancelled")
+                else:
+                    job.update(stage="error", error=f"Chrome couldn't {'render' if fmt == 'zip' else 'print'} the listing: {e}")
+                try:
+                    self.json(500, {"error": job.error or "the export was cancelled"})
+                except OSError:
+                    pass
+            finally:
+                ended.set()
+
+        def watch_reader(self, job: ExportJob, ended: threading.Event) -> None:
+            """Stop job when the reader closes its connection before the export ends (a fetch aborted, a tab closed)."""
+            while not ended.wait(0.2):
+                try:
+                    readable, _, _ = select.select([self.connection], [], [], 0)
+                    gone = bool(readable) and self.connection.recv(1, socket.MSG_PEEK) == b""
+                except (OSError, ValueError):
+                    gone = True
+                if gone:
+                    job.stop()
+                    return
+
+        def listing_progress(self, q: dict, cancel: bool) -> None:
+            """GET /__bluedoc/listing/progress?job=ID: the export's ExportJob.view(), 404 for a job this server doesn't
+            know (or forgot, 10 minutes after its last change). DELETE, or POST with &cancel=1: cancel it (the export
+            answers 409), then its view."""
+            job = EXPORT_JOBS.get(q.get("job") or "")
+            if job is None:
+                return self.json(404, {"error": "no such export"})
+            if cancel and job.stage not in ("done", "error", "cancelled"):
+                job.stop()
+            return self.json(200, job.view())
 
         def send_media(self, f: Path) -> None:
             # one byte range at most: enough for <video> seeking (Safari won't play video without it)
@@ -3270,6 +3546,8 @@ def make_handler(port: int, default_to: str):
                 return self.page_key()
             if u.path == "/__bluedoc/url":
                 return self.json(200, {"url": url_for(Path(q.get("doc", "")))})
+            if u.path == "/__bluedoc/listing/progress":
+                return self.listing_progress(q, False)
             if u.path == "/__bluedoc/listing":
                 return self.listing_export(q)
             if u.path == "/__bluedoc/deck":
@@ -3333,6 +3611,17 @@ def make_handler(port: int, default_to: str):
             code, html = render(doc)
             return self.send(code, html)
 
+        def do_DELETE(self):
+            # a cancel: no key (the export is a read), but our header, which a cross-site request can't send
+            if not self.guard():
+                return
+            u = urlsplit(self.path)
+            if u.path != "/__bluedoc/listing/progress":
+                return self.json(404, {"error": "not found"})
+            if self.headers.get("X-Bluedoc") != "1":
+                return self.json(403, {"error": "missing X-Bluedoc header"})
+            return self.listing_progress({k: v[0] for k, v in parse_qs(u.query).items()}, True)
+
         def do_PUT(self):
             if not self.guard():
                 return
@@ -3366,6 +3655,9 @@ def make_handler(port: int, default_to: str):
             if not self.guard():
                 return
             path = urlsplit(self.path).path
+            if path == "/__bluedoc/listing/progress":   # a cancel (&cancel=1): no body
+                q = {k: v[0] for k, v in parse_qs(urlsplit(self.path).query).items()}
+                return self.listing_progress(q, q.get("cancel") == "1")
             data = self.body(POST_LIMITS.get(path, MAX_BODY))
             if data is None:
                 return

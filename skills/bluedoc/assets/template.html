@@ -1227,10 +1227,19 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .bp-tb button .bd-ic { width: 15px; height: 15px; }
 .bp-tb button:hover { background: rgba(214,233,255,.1); color: #fff; }
 .bp-tb button[aria-pressed="true"] { background: rgba(95,212,255,.16); color: var(--bp-cyan); }
-.bp-tb button:focus-visible, .bp-tb select:focus-visible { box-shadow: 0 0 0 2px rgba(95,212,255,.6); }
-.bp-tb select { appearance: none; -webkit-appearance: none; height: 28px; max-width: 220px; border: 0; border-radius: 8px; padding: 0 28px 0 10px; font: 500 12.5px var(--sans); color: #eef6ff;
-  background: rgba(214,233,255,.08) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238db2da' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") right 8px center / 14px no-repeat; text-overflow: ellipsis; }
-.bp-tb select option { color: #0b2a4f; }
+.bp-tb button:focus-visible { box-shadow: 0 0 0 2px rgba(95,212,255,.6); }
+/* the Flow menu (selectMenu) in the drawing's blueprint: a lit key on the deep blue, its menu in the drawing's ink */
+.bp-tb .bd-tbtn.bd-selb { width: auto; height: 28px; max-width: 240px; padding: 0 6px 0 10px; border-radius: 8px; color: #eef6ff; font-weight: 600;
+  background: linear-gradient(180deg, rgba(214,233,255,.13), rgba(214,233,255,.07)); box-shadow: inset 0 0 0 1px rgba(214,233,255,.14), inset 0 1px 0 rgba(255,255,255,.08); }
+.bp-tb .bd-tbtn.bd-selb:hover:not(:disabled) { color: #fff; background: rgba(214,233,255,.17); }
+.bp-tb .bd-tbtn.bd-selb[aria-expanded="true"] { background: rgba(0,0,0,.3); box-shadow: inset 0 1px 3px rgba(0,0,0,.4), inset 0 0 0 1px rgba(214,233,255,.1); }
+.bp-tb .bd-tbtn.bd-selb:focus-visible { box-shadow: 0 0 0 2px rgba(95,212,255,.6); }
+.bp-tb .bd-tbtn.bd-selb .cv { color: var(--bp-dim); }
+.bp-tb .bd-selm { z-index: 6; background: #0e2c52; color: #eef6ff; box-shadow: 0 0 0 1px rgba(214,233,255,.16), 0 14px 36px rgba(0,0,0,.5); }
+.bp-tb .bd-selm button { width: auto; height: auto; place-items: initial; color: inherit; }
+.bp-tb .bd-selm button:is(:hover, :focus) { background: rgba(214,233,255,.1); color: #fff; }
+.bp-tb .bd-selm .ck .bd-ic { color: var(--bp-cyan); }
+.bp-tb .bd-selm .m { color: var(--bp-dim); }
 .bp-stage { position: relative; height: var(--h, 540px); overflow: hidden; cursor: grab; outline: none; touch-action: pan-y; user-select: none; -webkit-user-select: none;
   background: radial-gradient(120% 90% at 50% 35%, #0f3566 0%, var(--bp-bg) 55%, #082140 100%); }
 .bp-stage.dragging { cursor: grabbing; }
@@ -1371,7 +1380,8 @@ svg.anim .bp-edge.k-async { animation: bp-march 1.6s linear infinite; }
   .bp-tb { padding: 8px; gap: 6px; }
   .bp-tb .ttl { flex: 1 1 100%; padding: 2px 4px 0; }
   .bp-tb .flowgrp { flex: 1 1 0; min-width: 150px; }
-  .bp-tb .flowgrp select { flex: 1 1 80px; min-width: 0; max-width: none; }
+  .bp-tb .flowgrp .bd-selw { flex: 1 1 80px; min-width: 0; }
+  .bp-tb .flowgrp .bd-tbtn.bd-selb { flex: 1; min-width: 0; max-width: none; }
   .bp-tb button { width: 28px; }
   .bp-hint { max-width: calc(100% - 110px); }
   .bp-cl { --ind: 28px; }
@@ -1679,7 +1689,7 @@ i.warn[hidden] { display: none; }
 .bd-rqe .hd { display: flex; align-items: center; gap: 8px; }
 .bd-rqe .hd .bd-ic { width: 16px; height: 16px; color: var(--accent-fg); }
 .bd-rqe .dv { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--fg-muted); }
-.bd-rqe select, .bd-btb select { height: 28px; border: 0; border-radius: 8px; padding: 0 6px; font: 500 12.5px var(--sans); color: var(--fg); background: var(--inset); box-shadow: inset 0 0 0 1px var(--line); }
+.bd-rqe select { height: 28px; border: 0; border-radius: 8px; padding: 0 6px; font: 500 12.5px var(--sans); color: var(--fg); background: var(--inset); box-shadow: inset 0 0 0 1px var(--line); }
 .bd-rqe .dv select { flex: 1; min-width: 0; }
 .bd-rqe .bxs { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 .bd-rqe .bxs:empty { display: none; }
@@ -1736,8 +1746,6 @@ i.warn[hidden] { display: none; }
 .bd-btb .zl { min-width: 38px; text-align: center; font: 500 12px var(--mono); font-variant-numeric: tabular-nums; color: var(--fg-muted); }
 .bd-btb .bd-groove { height: 20px; margin: 0 1px; }
 .bd-btb .bd-sg button { height: 24px; padding: 0 8px; }
-.bd-btb .th { display: inline-flex; align-items: center; gap: 6px; padding: 0 2px 0 6px; color: var(--fg-subtle); }
-.bd-btb .th .bd-ic { width: 16px; height: 16px; }
 /* a presentation's Present: the toolbar's primary key, filled in the accent like the tray's Request changes */
 .bd-btb .bd-tbtn.pri { display: inline-flex; align-items: center; gap: 6px; padding: 0 12px 0 9px; color: #fff; font-weight: 600;
   background: var(--accent-solid) linear-gradient(180deg, color-mix(in oklch, var(--accent-solid), white 8%), var(--accent-solid)); box-shadow: var(--shadow-fill); }
@@ -1745,24 +1753,42 @@ i.warn[hidden] { display: none; }
 .bd-btb .bd-tbtn.pri:active { transform: translateY(1px) scale(.98); filter: brightness(.9); }
 .bd-btb .bd-tbtn.pri .bd-ic { width: 16px; height: 16px; }
 /* a presentation's Export to…: a raised key with its words and a chevron, beside Present; its menu (HTML, PDF) drops
-   under it, or rises over it in Present's bar */
+   under it, or rises over it in Present's bar. A toolbar's select (selectMenu: Locale, Jump to, Theme, Flow) is the
+   same key, showing its value, over the same menu of options, the current one ticked */
 .bd-exp { position: relative; display: inline-flex; }
-.bd-tbtn.bd-expb { display: inline-flex; align-items: center; gap: 6px; padding: 0 7px 0 9px; color: var(--fg); font-weight: 600; white-space: nowrap;
+.bd-tbtn:is(.bd-expb, .bd-selb) { display: inline-flex; align-items: center; gap: 6px; padding: 0 7px 0 9px; color: var(--fg); font-weight: 600; white-space: nowrap;
   background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: var(--shadow-hk); }
 .bd-btb .bd-tbtn.bd-expb { padding: 0 7px 0 9px; margin-right: 4px; }
-.bd-tbtn.bd-expb:hover:not(:disabled) { color: var(--fg); background: linear-gradient(var(--hover), var(--hover)), linear-gradient(180deg, var(--hk-top), var(--hk-bot)); }
-.bd-tbtn.bd-expb[aria-expanded="true"] { background: var(--hk-down); box-shadow: var(--shadow-hk-down); }
-.bd-tbtn.bd-expb:focus-visible { box-shadow: var(--shadow-hk), var(--focus-ring); }
-.bd-tbtn.bd-expb .bd-ic { width: 16px; height: 16px; }
-.bd-tbtn.bd-expb .cv { width: 14px; height: 14px; color: var(--fg-subtle); transition: rotate .15s var(--ease); }
-.bd-tbtn.bd-expb[aria-expanded="true"] .cv { rotate: 180deg; }
-.bd-expm { position: absolute; z-index: 5; top: calc(100% + 8px); right: 0; width: 260px; display: grid; gap: 2px; padding: 5px; border-radius: 12px;
+.bd-btb .bd-tbtn.bd-selb { padding: 0 6px 0 10px; }
+.bd-tbtn:is(.bd-expb, .bd-selb):hover:not(:disabled) { color: var(--fg); background: linear-gradient(var(--hover), var(--hover)), linear-gradient(180deg, var(--hk-top), var(--hk-bot)); }
+.bd-tbtn:is(.bd-expb, .bd-selb)[aria-expanded="true"] { background: var(--hk-down); box-shadow: var(--shadow-hk-down); }
+.bd-tbtn:is(.bd-expb, .bd-selb):focus-visible { box-shadow: var(--shadow-hk), var(--focus-ring); }
+.bd-tbtn:is(.bd-expb, .bd-selb) .bd-ic { width: 16px; height: 16px; }
+.bd-tbtn:is(.bd-expb, .bd-selb) .cv { width: 14px; height: 14px; color: var(--fg-subtle); transition: rotate .15s var(--ease); }
+.bd-tbtn:is(.bd-expb, .bd-selb)[aria-expanded="true"] .cv { rotate: 180deg; }
+.bd-tbtn.bd-selb .bd-ic:not(.cv) { color: var(--fg-muted); }
+.bd-selb .v { min-width: 0; max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
+:is(.bd-expm, .bd-selm) { position: absolute; z-index: 5; top: calc(100% + 8px); right: 0; width: 260px; display: grid; gap: 2px; padding: 5px; border-radius: 12px;
   background: var(--surface); color: var(--fg); box-shadow: var(--shadow-3); text-align: left; }
-.bd-expm.up { top: auto; bottom: calc(100% + 14px); }
-.bd-expm[hidden] { display: none; }
-.bd-expm button { display: flex; align-items: center; gap: 11px; padding: 8px 10px; border: 0; border-radius: 8px; background: none; color: inherit; font: 500 12.5px/1.35 var(--sans); text-align: left; cursor: pointer; }
-.bd-expm button:is(:hover, :focus) { outline: none; background: var(--selected); box-shadow: none; }
-.bd-expm button .bd-ic { width: 20px; height: 20px; color: var(--fg-muted); }
+:is(.bd-expm, .bd-selm).up { top: auto; bottom: calc(100% + 14px); }
+:is(.bd-expm, .bd-selm)[hidden] { display: none; }
+:is(.bd-expm, .bd-selm) button { display: flex; align-items: center; gap: 11px; padding: 8px 10px; border: 0; border-radius: 8px; background: none; color: inherit; font: 500 12.5px/1.35 var(--sans); text-align: left; cursor: pointer; }
+:is(.bd-expm, .bd-selm) button:is(:hover, :focus) { outline: none; background: var(--selected); box-shadow: none; }
+:is(.bd-expm, .bd-selm) button .bd-ic { width: 20px; height: 20px; color: var(--fg-muted); }
+/* a select's menu: under its key's left edge, at least as wide; its options a tick, the label and a hint (a locale's
+   MT and missing counts); a long list scrolls */
+.bd-selm { left: 0; right: auto; width: max-content; min-width: max(100%, 168px); max-width: 320px; max-height: min(60vh, 420px); overflow: auto; overscroll-behavior: contain; scrollbar-width: thin; outline: none; }
+.bd-selm button { gap: 8px; padding: 7px 12px 7px 6px; white-space: nowrap; }
+.bd-selm.act button { padding-left: 12px; }
+.bd-selm button .bd-ic { width: 16px; height: 16px; }
+.bd-selm .ck { flex: none; display: grid; place-items: center; width: 16px; }
+.bd-selm .ck .bd-ic { width: 14px; height: 14px; color: var(--accent); stroke-width: 2.4; visibility: hidden; }
+.bd-selm [aria-selected="true"] { font-weight: 600; }
+.bd-selm [aria-selected="true"] .ck .bd-ic { visibility: visible; }
+.bd-selm .l { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.bd-selm .m { flex: none; margin-left: 12px; font-size: 11.5px; font-weight: 500; color: var(--fg-subtle); }
+.bd-selm [aria-disabled="true"] { opacity: .45; cursor: default; }
+.bd-selm [aria-disabled="true"]:hover { background: none; }
 .bd-expm .t { display: grid; }
 .bd-expm .t b { font-size: 13.5px; font-weight: 600; }
 .bd-expm .t span { color: var(--fg-subtle); }
@@ -1889,8 +1915,8 @@ html.bd-presenting .bp-toast { z-index: 71; bottom: 84px; }
 .bd-lst-btb > * { flex: none; white-space: nowrap; }
 .bd-lst-btb .bd-sg button { display: inline-flex; align-items: center; gap: 5px; padding: 0 9px; font-weight: 600; white-space: nowrap; }
 .bd-lst-btb .bd-sg button .bd-ic { width: 15px; height: 15px; }
-.bd-lst-btb select { max-width: 150px; margin: 0 2px; }
-.bd-lst-btb .bd-lst-jump { width: 92px; color: var(--fg-muted); }
+.bd-lst-btb .bd-selw { margin: 0 2px; }
+.bd-lst-btb .bd-selb .v { max-width: 150px; }
 .bd-lst-btb .bd-exp { margin-left: 2px; }
 .bd-lst-btb .bd-expb span { white-space: nowrap; }
 .bd-lst-ckb { display: inline-flex; align-items: center; gap: 4px; color: var(--ok-fg, var(--fg-muted)); }
@@ -1903,8 +1929,34 @@ html.bd-presenting .bp-toast { z-index: 71; bottom: 84px; }
 .bd-lst-btb:is([data-fit="2"], [data-fit="3"], [data-fit="4"]) :is(.bd-expb > span, [data-p] .lf) { display: none; }
 .bd-lst-btb:is([data-fit="2"], [data-fit="3"], [data-fit="4"]) [data-p] .ls { display: inline; }
 .bd-lst-btb:is([data-fit="2"], [data-fit="3"], [data-fit="4"]) :is(.bd-sg button[data-p]) { padding: 0 7px; }
-.bd-lst-btb:is([data-fit="2"], [data-fit="3"], [data-fit="4"]) select { max-width: 104px; }
+.bd-lst-btb:is([data-fit="2"], [data-fit="3"], [data-fit="4"]) .bd-selb .v { max-width: 96px; }
 .bd-lst-btb:is([data-fit="3"], [data-fit="4"]) .bd-lst-jump, .bd-lst-btb[data-fit="4"] :is(.bd-dcount, .bd-lst-ckb) { display: none; }
+/* Export to…'s run on a listing (.bd-lstx, exportListing): the key turns into its progress, a spinner while the count
+   is unknown, the format and files done of total, a × that cancels (so do a click on the key and Esc), a thin bar along
+   its foot (role progressbar); then a tick and Exported, or an alert and Failed. Narrow (data-fit 2+): icon and bar */
+.bd-lstx .xp, .bd-lstx .bd-xp-bar { display: none; }
+.bd-lstx:is(.busy, .ok, .err) .bd-expb > :not(.xp) { display: none; }
+.bd-lstx:is(.busy, .ok, .err) .bd-expb > .xp { display: inline-grid; place-items: center; }
+.bd-lstx:is(.busy, .ok, .err) .bd-xp-bar { display: block; }
+.bd-lstx .bd-expb .xp-l { min-width: 6.4em; font-weight: 600; font-variant-numeric: tabular-nums; text-align: left; place-items: center start; }
+.bd-lstx .xp .bd-ic { width: 15px; height: 15px; }
+.bd-lstx .xp-x { width: 18px; height: 18px; margin-left: 1px; border-radius: 5px; color: var(--fg-subtle); }
+.bd-lstx.busy .bd-expb:hover .xp-x { color: var(--fg); background: var(--hover); }
+.bd-lstx.busy .xp-lead { color: var(--accent-fg); }
+.bd-lstx .xp-spin { box-sizing: border-box; width: 14px; height: 14px; border-radius: 50%; border: 2px solid color-mix(in oklch, var(--accent) 22%, transparent);
+  border-top-color: var(--accent); animation: bd-spin .8s linear infinite; }
+@keyframes bd-spin { to { rotate: 360deg; } }
+.bd-lstx .bd-xp-bar { position: absolute; left: 9px; right: 13px; bottom: 3px; height: 2px; border-radius: 2px; overflow: hidden; pointer-events: none;
+  background: color-mix(in oklch, var(--accent) 18%, transparent); }
+.bd-lstx .bd-xp-bar i { display: block; height: 100%; width: calc(var(--v, 0) * 100%); border-radius: inherit; background: var(--accent); transition: width .35s var(--ease); }
+.bd-lstx .bd-xp-bar.ind i { width: 34%; animation: bd-xp-ind 1.2s var(--ease) infinite; }
+@keyframes bd-xp-ind { from { translate: -100% 0; } to { translate: 300% 0; } }
+.bd-lstx.ok :is(.xp-lead, .xp-l) { color: var(--ok-fg); }
+.bd-lstx.ok .bd-xp-bar { background: var(--ok-tint); } .bd-lstx.ok .bd-xp-bar i { width: 100%; background: var(--ok); }
+.bd-lstx.err :is(.xp-lead, .xp-l) { color: var(--risk-fg); }
+.bd-lstx.err .bd-xp-bar { background: var(--risk-tint); } .bd-lstx.err .bd-xp-bar i { width: 100%; background: var(--risk); }
+.bd-lstx:is(.ok, .err) .bd-expb > .xp-x, .bd-lst-btb:is([data-fit="2"], [data-fit="3"], [data-fit="4"]) .bd-lstx .bd-expb > :is(.xp-l, .xp-x) { display: none; }
+@media (prefers-reduced-motion: reduce) { .bd-lstx .xp-spin { animation-duration: 2.4s; } .bd-lstx .bd-xp-bar.ind i { animation: none; width: 100%; opacity: .45; } }
 .bd-lst-main { position: absolute; inset: 0; overflow: auto; overscroll-behavior: contain; padding: 64px 22px 110px;
   background-color: var(--canvas); background-image: radial-gradient(circle, color-mix(in oklch, var(--fg) 14%, transparent) 1px, transparent 1.3px); background-size: 24px 24px; }
 .bd-lst-sec { display: grid; grid-template-columns: 132px minmax(0, 1fr); gap: 16px; margin: 0 auto 14px; max-width: 1480px; padding: 14px 16px; scroll-margin-top: 60px;
@@ -2037,8 +2089,8 @@ html.bd-presenting .bp-toast { z-index: 71; bottom: 84px; }
 .bd-lst-adtext li .c.over { color: var(--risk-fg); font-weight: 700; }
 .bd-lst-adtext li.none { color: var(--fg-subtle); }
 .bd-lst-ads .note { margin: 0; font-size: 12px; color: var(--fg-subtle); }
-/* the left panel's Text tab: Save (sticky), each field with its counter, then the captions, then the caption font. A
-   field typed in and not saved has a dot and an amber edge; a saved one a Draft tag */
+/* the left panel's Text tab: Save (sticky), the caption font (Typography), then each field with its counter, then the
+   captions. A field typed in and not saved has a dot and an amber edge; a saved one a Draft tag */
 .bd-lst-tsave { position: sticky; top: -10px; z-index: 2; display: flex; align-items: center; gap: 4px; margin: -10px -12px 12px; padding: 8px 12px;
   background: var(--panel); box-shadow: inset 0 -1px 0 var(--line-soft); }
 .bd-lst-tsave[hidden] { display: none; }
@@ -2068,6 +2120,8 @@ html.bd-presenting .bp-toast { z-index: 71; bottom: 84px; }
 .bd-lfield .bd-lst-mta .bp-btn { height: 26px; padding: 0 9px; font-size: 12px; }
 .bd-lfield.cap { grid-template-columns: minmax(0, 1fr); }
 .bd-lst-fsec { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; margin: 18px 0 0; padding: 14px 4px 0; box-shadow: inset 0 1px 0 var(--line-soft); font-size: 13px; }
+/* Typography heads Text, over the fields: its rule below it */
+.bd-lst-text > .bd-typo { margin: 0 0 16px; padding: 2px 4px 16px; box-shadow: inset 0 -1px 0 var(--line-soft); }
 .bd-lst-fsec h4 { margin: 0; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--fg-subtle); }
 /* the left panel's four tabs: no shrinking; a panel too narrow for them scrolls them sideways. Text has a dot while an
    edit is unsaved; Checks counts its errors (else warnings) */
@@ -4535,7 +4589,9 @@ function renderCanvas(spec) {
   vp.append(buildScope(cv, root, abs0, null));
 
   // chrome
-  const flowSel = h('select', { 'aria-label': 'Flow' });
+  // Flow: the focused level's flows, as a toolbar menu (selectMenu); a pick plays that flow from its first step
+  const flowSel = selectMenu({ label: 'Flow', title: 'Flow: the one the drawing plays',
+    onPick: v => { if (cv.focusPlayer) { cv.focusPlayer.fi = +v; cv.focusPlayer.restart(performance.now(), cv.animOn); } } });
   const tbBtn = (label, icon) => h('button', { type: 'button', 'aria-label': label, title: label }, ic(icon));
   const playBtn = h('button', { type: 'button', 'aria-label': 'Play or pause flows', title: 'Play or pause flows', 'aria-pressed': String(cv.animOn) }, ic(cv.animOn ? 'pause' : 'play'));
   const prevBtn = tbBtn('Previous step', 'prev');
@@ -4606,7 +4662,6 @@ function renderCanvas(spec) {
   };
   prevBtn.onclick = () => cv.focusPlayer && cv.focusPlayer.stepBy(-1);
   nextBtn.onclick = () => cv.focusPlayer && cv.focusPlayer.stepBy(1);
-  flowSel.onchange = () => { if (cv.focusPlayer) { cv.focusPlayer.fi = +flowSel.value; cv.focusPlayer.restart(performance.now(), cv.animOn); } };
 
   // ---- pointer: pan, pinch and wheel zoom; a tap selects a node, a double tap opens a system
   let lastTap = { t: 0, id: null };
@@ -4626,7 +4681,7 @@ function renderCanvas(spec) {
     },
   }).zoomAt;
   fig.addEventListener('keydown', e => {
-    if (e.target.closest('select')) return;
+    if (e.target.closest('.bd-selw')) return;   // the Flow menu's keys are its own
     if (e.target.closest('button') && (e.key === 'Enter' || e.key === ' ')) return;
     const { w, h: H } = cv.size(); let used = true;
     if (e.key === '+' || e.key === '=') cv.zoomAt(w / 2, H / 2, 1.25);
@@ -4784,12 +4839,10 @@ function applyNow(cv) {
 }
 function refreshFlowSelect(cv) {
   const pl = cv.focusPlayer; const sel = cv.flowSel;
-  sel.textContent = '';
   const grp = sel.parentElement;
-  if (!pl || !pl.flows.length) { grp.style.display = 'none'; cv.capLbl.textContent = ''; cv.capTxt.textContent = cv.spec.flows && cv.spec.flows.length ? '' : 'Open a system to see its flows.'; return; }
+  if (!pl || !pl.flows.length) { sel.setOptions([], null); grp.style.display = 'none'; cv.capLbl.textContent = ''; cv.capTxt.textContent = cv.spec.flows && cv.spec.flows.length ? '' : 'Open a system to see its flows.'; return; }
   grp.style.display = '';
-  pl.flows.forEach((f, i) => sel.append(h('option', { value: i }, f.label || f.id)));
-  sel.value = pl.fi;
+  sel.setOptions(pl.flows.map((f, i) => ({ value: i, label: f.label || f.id })), pl.fi);
   pl.caption(true);
 }
 
@@ -5213,27 +5266,45 @@ async function iconExport(a, btn) {
 }
 /* ---- end icon export ---- */
 
-// Export to…: a menu button (WAI-ARIA menu button) of exports [[format, icon, label, description]], run(format) on a
-// pick. A click, Enter, Space or ↓ opens it on its first item, ↑ on its last; ↑ ↓ Home End move, Enter or Space picks,
-// Esc closes it back to the button, Tab or a click elsewhere closes it. up: it opens above the button. check: an option
-// under the exports ({label, get, set}), a menuitemcheckbox that a pick turns on or off and the menu stays open
-function exportMenu(exports, run, title, up, check) {
-  const items = exports.map(([f, i, l, d]) => h('button', { type: 'button', role: 'menuitem', tabindex: '-1', 'data-format': f, onclick: () => { close(true); run(f); } },
-    ic(i), h('span', { class: 't' }, h('b', {}, l), h('span', {}, d))));
-  const box = check && h('button', { type: 'button', role: 'menuitemcheckbox', class: 'opt', tabindex: '-1', 'aria-checked': String(!!check.get()),
-    onclick: () => { check.set(!check.get()); paintCheck(); } }, h('span', { class: 'bx', 'aria-hidden': 'true' }, ic('tick')), h('span', {}, check.label));
-  const paintCheck = () => { if (box) box.setAttribute('aria-checked', String(!!check.get())); };
-  const menu = h('div', { class: 'bd-expm' + (up ? ' up' : ''), role: 'menu', 'aria-label': 'Export to', hidden: true }, items, box && h('div', { class: 'sep', role: 'separator' }), box);
-  if (box) items.push(box);
-  const btn = h('button', { type: 'button', class: 'bd-tbtn bd-expb', 'aria-haspopup': 'menu', 'aria-expanded': 'false', title,
-    onclick: () => menu.hidden ? open(0) : close(true) }, ic('download'), h('span', {}, 'Export to…'), ic('down', 'cv'));
-  const wrap = h('div', { class: 'bd-exp' }, btn, menu);
-  // a press outside, or focus leaving the page (a click in a screen's frame), closes it
+// a menu button's popover (Export to…, selectMenu): open(at) shows it with a row focused (a row, or an index; negative
+// counts from the end), close(refocus) hides it, back to the button when refocus. ↓ on the button opens it on
+// start(1), ↑ on start(-1); ↑ ↓ Home End move among rows() (a disabled row is skipped), Esc closes it back to the button,
+// Tab closes it; a press outside, or focus leaving the page (a click in a screen's frame), closes it. typeahead: typed
+// letters go to the next row whose label (.l) starts with them, and on the closed button open the menu there. Keys stop
+// at the menu: the board's and Present's wait until it is closed
+function menuPop(wrap, btn, menu, rows, { start = dir => dir > 0 ? 0 : -1, typeahead = false, onOpen = null } = {}) {
+  const live = () => rows().filter(r => r.getAttribute('aria-disabled') !== 'true');
   const away = e => { if (e.type === 'blur' || !wrap.contains(e.target)) close(false); };
-  function open(k) {
-    menu.hidden = false; btn.setAttribute('aria-expanded', 'true'); paintCheck();
+  let typed = '', typedAt = 0;
+  const printable = e => typeahead && e.key.length === 1 && e.key !== ' ' && !e.metaKey && !e.ctrlKey && !e.altKey;
+  // the row typed so far starts; one letter typed again steps to the next row with it
+  function seek(ch, from) {
+    const now = performance.now();
+    typed = now - typedAt < 800 ? typed + ch.toLowerCase() : ch.toLowerCase(); typedAt = now;
+    const q = /^(.)\1+$/.test(typed) ? typed[0] : typed, rs = live(), k = rs.indexOf(from);
+    for (let i = 0, s = q.length === 1 ? k + 1 : Math.max(k, 0); i < rs.length; i++) {
+      const r = rs[(s + i) % rs.length];
+      if ((r.querySelector('.l') || r).textContent.trim().toLowerCase().startsWith(q)) return r;
+    }
+    return null;
+  }
+  // focus a row, scrolling only the menu (an ancestor that clips, as a drawing's figure, must not move)
+  function go(r) {
+    r.focus({ preventScroll: true });
+    if (r.offsetTop < menu.scrollTop) menu.scrollTop = r.offsetTop;
+    else if (r.offsetTop + r.offsetHeight > menu.scrollTop + menu.clientHeight) menu.scrollTop = r.offsetTop + r.offsetHeight - menu.clientHeight;
+  }
+  function open(at) {
+    if (!menu.hidden) return;
+    if (onOpen) onOpen();
+    menu.hidden = false; btn.setAttribute('aria-expanded', 'true');
+    // a menu that drops under its key's left edge ends at its bar's right edge, else it hangs from the key's right
+    menu.style.removeProperty('left'); menu.style.removeProperty('right');
+    const bar = (wrap.closest('[role=toolbar], .bp-tb') || document.documentElement).getBoundingClientRect();
+    if (menu.getBoundingClientRect().right > Math.min(bar.right, innerWidth) + 4) { menu.style.left = 'auto'; menu.style.right = '0'; }
     addEventListener('pointerdown', away, true); addEventListener('blur', away);
-    items.at(k).focus();
+    const rs = live(), r = typeof at === 'number' ? rs.at(at) : at;
+    if (r) go(r); else menu.focus({ preventScroll: true });
   }
   function close(refocus) {
     if (menu.hidden) return;
@@ -5241,17 +5312,83 @@ function exportMenu(exports, run, title, up, check) {
     removeEventListener('pointerdown', away, true); removeEventListener('blur', away);
     if (refocus) btn.focus();
   }
-  btn.addEventListener('keydown', e => { if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); e.stopPropagation(); open(e.key === 'ArrowDown' ? 0 : -1); } });
+  btn.addEventListener('keydown', e => {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') open(start(e.key === 'ArrowDown' ? 1 : -1));
+    else if (printable(e)) { const r = seek(e.key, null); if (r) open(r); }
+    else return;
+    e.preventDefault(); e.stopPropagation();
+  });
   menu.addEventListener('keydown', e => {
     e.stopPropagation();   // the board's and Present's keys wait until the menu is closed
-    const k = items.indexOf(document.activeElement), n = items.length;
-    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') items[(k + (e.key === 'ArrowDown' ? 1 : n - 1)) % n].focus();
-    else if (e.key === 'Home' || e.key === 'End') items.at(e.key === 'Home' ? 0 : -1).focus();
+    const rs = live(), k = rs.indexOf(document.activeElement), n = rs.length, down = e.key === 'ArrowDown';
+    if (down || e.key === 'ArrowUp') { if (n) go(rs[k < 0 ? (down ? 0 : n - 1) : (k + (down ? 1 : n - 1)) % n]); }
+    else if (e.key === 'Home' || e.key === 'End') { if (n) go(rs.at(e.key === 'Home' ? 0 : -1)); }
     else if (e.key === 'Escape') close(true);
     else if (e.key === 'Tab') { close(false); return; }
+    else if (printable(e)) { const r = seek(e.key, document.activeElement); if (r) go(r); }
     else return;
     e.preventDefault();
   });
+  return { open, close };
+}
+// Export to…: a menu button (WAI-ARIA menu button) of exports [[format, icon, label, description]], run(format) on a
+// pick. A click, Enter, Space or ↓ opens it on its first item, ↑ on its last; ↑ ↓ Home End move, Enter or Space picks,
+// Esc closes it back to the button, Tab or a click elsewhere closes it (menuPop). up: it opens above the button. check:
+// an option under the exports ({label, get, set}), a menuitemcheckbox that a pick turns on or off and the menu stays open
+function exportMenu(exports, run, title, up, check) {
+  const items = exports.map(([f, i, l, d]) => h('button', { type: 'button', role: 'menuitem', tabindex: '-1', 'data-format': f, onclick: () => { pop.close(true); run(f); } },
+    ic(i), h('span', { class: 't' }, h('b', {}, l), h('span', {}, d))));
+  const box = check && h('button', { type: 'button', role: 'menuitemcheckbox', class: 'opt', tabindex: '-1', 'aria-checked': String(!!check.get()),
+    onclick: () => { check.set(!check.get()); paintCheck(); } }, h('span', { class: 'bx', 'aria-hidden': 'true' }, ic('tick')), h('span', {}, check.label));
+  const paintCheck = () => { if (box) box.setAttribute('aria-checked', String(!!check.get())); };
+  const menu = h('div', { class: 'bd-expm' + (up ? ' up' : ''), role: 'menu', 'aria-label': 'Export to', hidden: true }, items, box && h('div', { class: 'sep', role: 'separator' }), box);
+  if (box) items.push(box);
+  const btn = h('button', { type: 'button', class: 'bd-tbtn bd-expb', 'aria-haspopup': 'menu', 'aria-expanded': 'false', title,
+    onclick: () => menu.hidden ? pop.open(0) : pop.close(true) }, ic('download'), h('span', {}, 'Export to…'), ic('down', 'cv'));
+  const wrap = h('div', { class: 'bd-exp' }, btn, menu);
+  const pop = menuPop(wrap, btn, menu, () => items, { onOpen: paintCheck });
+  return wrap;
+}
+// a toolbar's select, drawn as Export to…'s key and menu (a WAI-ARIA select-only listbox): the button shows the current
+// option's label (label while none is current) and a chevron, the popover its options [{value, label, hint, icon,
+// disabled}] with the current one ticked. A click, Enter, Space, ↓ or ↑ opens it on the current option; ↑ ↓ Home End
+// move, a typed letter goes to the option it starts, Enter or Space picks (onPick(value)), Esc closes it back to the
+// button, Tab, a press outside or the window losing focus closes it (menuPop). action: a menu of actions (Jump to):
+// role menu, the button keeps label and nothing is ticked. aria: the button's and popover's aria-label (else label);
+// cls: the wrapper's class; icon: one before the words; up: it opens above. The wrapper it returns has .value (set:
+// no onPick, as a select's), .disabled and .setOptions(options, value)
+function selectMenu({ label, options = [], value = null, onPick, title, aria, cls, icon, up, action }) {
+  let opts = [], cur = value;
+  const v = h('span', { class: 'v' });
+  const btn = h('button', { type: 'button', class: 'bd-tbtn bd-selb', 'aria-haspopup': action ? 'menu' : 'listbox', 'aria-expanded': 'false', 'aria-label': aria || label, title,
+    onclick: () => menu.hidden ? pop.open(start(1)) : pop.close(true) }, icon && ic(icon), v, ic('down', 'cv'));
+  const menu = h('div', { class: 'bd-selm' + (up ? ' up' : '') + (action ? ' act' : ''), role: action ? 'menu' : 'listbox', 'aria-label': aria || label, tabindex: '-1', hidden: true });
+  const wrap = h('div', { class: 'bd-exp bd-selw' + (cls ? ' ' + cls : '') }, btn, menu);
+  const rows = () => [...menu.children];
+  const start = dir => !action && rows().find(r => r.dataset.v === String(cur) && r.getAttribute('aria-disabled') !== 'true') || (dir > 0 ? 0 : -1);
+  const pop = menuPop(wrap, btn, menu, rows, { start, typeahead: true });
+  const row = o => {
+    const r = h('button', { type: 'button', role: action ? 'menuitem' : 'option', tabindex: '-1', 'data-v': String(o.value), 'aria-disabled': o.disabled ? 'true' : null,
+      onclick: () => { if (o.disabled) return; pop.close(true); if (!action) { cur = o.value; paint(); } if (onPick) onPick(o.value); },
+      onpointermove: () => { if (!o.disabled && document.activeElement !== r) r.focus({ preventScroll: true }); } },
+      !action && h('span', { class: 'ck' }, ic('tick')), o.icon && ic(o.icon), h('span', { class: 'l' }, o.label), o.hint && h('span', { class: 'm' }, o.hint));
+    return r;
+  };
+  function paint() {
+    const o = action ? null : opts.find(o => String(o.value) === String(cur));
+    v.textContent = o ? o.label : label;
+    if (!action) for (const r of rows()) r.setAttribute('aria-selected', String(r.dataset.v === String(cur)));
+  }
+  wrap.setOptions = (list, val = cur) => {
+    pop.close(menu.contains(document.activeElement));
+    opts = list.slice(); cur = val; setKids(menu, opts.map(row)); paint();
+  };
+  Object.defineProperties(wrap, {
+    value: { get: () => cur, set: x => { cur = x; paint(); } },
+    disabled: { get: () => btn.disabled, set: x => { if (x) pop.close(false); btn.disabled = !!x; } },
+  });
+  wrap.btn = btn;
+  wrap.setOptions(options, value);
   return wrap;
 }
 // an export the server sent: saved as a download named name
@@ -6072,7 +6209,10 @@ function renderBoard(b) {
   const flowsBtn = h('button', { type: 'button', class: 'bd-tbtn txt', 'aria-pressed': 'false', title: 'Flows: every link as an arrow (off: only the selected screen\'s reach)', onclick: () => setFlows(!B.flows) }, 'Flows');
   const fidSeg = h('div', { class: 'bd-sg', role: 'radiogroup', 'aria-label': 'Fidelity' }, [['drawn', 'As drawn', 'Each screen at the fidelity it was drawn in'], ['sketch', 'Sketch', 'Every screen hand-drawn: wobbly lines, hand font']].map(([v, l, t]) =>
     h('button', { type: 'button', role: 'radio', 'data-v': v, title: t, onclick: () => { B.sketch = v === 'sketch'; sendAll(viewMsg); paintTools(); } }, l)));
-  const themeSel = themes.length ? h('select', { 'aria-label': 'Theme', title: 'Theme: the brief\'s pick; changing it here picks it there' }, themes.map(t => h('option', { value: t.id }, t.label || t.id))) : null;
+  // Theme: the brief's pick, as a toolbar menu (selectMenu); picking one here picks it there (else re-skins the frames)
+  const themeSel = themes.length ? selectMenu({ label: 'Theme', icon: 'palette', cls: 'th', title: 'Theme: the brief\'s pick; changing it here picks it there',
+    options: themes.map(t => ({ value: t.id, label: t.label || t.id })), value: themes[0].id,
+    onPick: v => { const x = ITEMS['brief/theme']; if (x && x.setChoice && !OLD) x.setChoice(v); else { B.theme = v; paintTokens(); } } }) : null;
   const motBtn = tbtn('pause', 'Pause animations', () => { B.paused = !B.paused; sendAll(viewMsg); paintTools(); }, { 'aria-pressed': 'false' });
   const redBtn = h('button', { type: 'button', class: 'bd-tbtn txt', 'aria-pressed': 'false', title: 'Reduced motion in every screen', onclick: () => { B.reduced = !B.reduced; sendAll(viewMsg); paintTools(); } }, 'Reduced');
   const presTip = deck.length ? 'Present the slides (← →, N: notes, Esc leaves)' : 'Present: one screen at a time (a tap follows its link; Backspace goes back; ← →, Esc leaves)';
@@ -6147,9 +6287,8 @@ function renderBoard(b) {
     tbtn('fit', `Fit all ${SCREEN}s (0)`, () => fit(true)), tbtn('minus', 'Zoom out (−)', () => zoomBy(1 / 1.4)), zoomLbl, tbtn('plus', 'Zoom in (+)', () => zoomBy(1.4)),
     tbtn('target', `Focus the selected ${SCREEN} (F, or double-click it)`, () => focusSel()), sep(),
     !IS_DECK && [presBtn, varBtn, flowsBtn, sep()], IS_SITE && [bpSeg, bpIn, sep(), viewSeg], (!IS_SITE || abs.some(a => !isLive(a))) && [IS_SITE && sep(), fidSeg],
-    IS_SITE && [sep(), tabBtn], themeSel && [sep(), h('label', { class: 'th' }, ic('palette'), themeSel)], IS_DECK && [sep(), expBtn, presBtn]);
+    IS_SITE && [sep(), tabBtn], themeSel && [sep(), themeSel], IS_DECK && [sep(), expBtn, presBtn]);
   // the motion keys (pause animations, Reduced) are hidden for now: built and painted, not shown; screens play their motion
-  if (themeSel) themeSel.addEventListener('change', () => { const x = ITEMS['brief/theme']; if (x && x.setChoice && !OLD) x.setChoice(themeSel.value); else { B.theme = themeSel.value; paintTokens(); } });
   function paintTools() {
     lpBtn.setAttribute('aria-pressed', String(B.lp));
     fidSeg.querySelectorAll('button').forEach(bt => bt.setAttribute('aria-checked', String((bt.dataset.v === 'sketch') === B.sketch)));
@@ -6654,9 +6793,9 @@ function renderBoard(b) {
 // as listing.py lays them out): Shared (icon, graphics, videos), then watch, phone and tablet, each a card of its sets
 // with a chip per set (count, size, required) and its shots at scale, in order. A shot's frame is its screen file in the
 // shot kit (kits/shot.js) at the set's frame size, told its set, locale, place and UI image through its name ('bd-shot
-// <JSON>') and later {bd:'shot'} messages; an uploaded shot is its PNG. The left panel's Text tab lists the platform's
-// store text and the captions for the locale, each editable with its counter, then the caption font; Style, Colors and
-// Checks follow. The brief is the right panel's Brief tab.
+// <JSON>') and later {bd:'shot'} messages; an uploaded shot is its PNG. The left panel's Text tab has the caption font
+// first, then the platform's store text and the captions for the locale, each editable with its counter; Style, Colors
+// and Checks follow. The brief is the right panel's Brief tab.
 // Point and Select pin comments inside a shot (el:<shot>/…) or on a field (field:<locale>/<platform>/<field>); a shot
 // dragged within its set and a section turned on are drafts ('listing' annotations) that Request changes sends with a
 // ready `build.py patch` command. bp-listing (build.py listing.page_data) carries the store rules, each shot's caption
@@ -6794,38 +6933,101 @@ function renderListing(lb) {
   const locLabel = loc => [loc, (MTS[loc] || []).length && `${MTS[loc].length} MT`, missingIn(loc) && `${missingIn(loc)} missing`].filter(Boolean).join(' · ');
   const platSeg = h('div', { class: 'bd-sg', role: 'radiogroup', 'aria-label': 'Platform' }, PLATS.map(p =>
     h('button', { type: 'button', role: 'radio', 'data-p': p.id, title: p.label, onclick: () => setPlatform(p.id) }, p.short && p.short !== p.label ? [h('span', { class: 'lf' }, p.label), h('span', { class: 'ls' }, p.short)] : p.label)));
-  const locSel = h('select', { class: 'bd-lst-loc', 'aria-label': 'Locale', title: 'Locale: text, captions and captures switch with it' },
-    LOCS.map(l => h('option', { value: l }, locLabel(l))));
-  locSel.addEventListener('change', () => setLocale(locSel.value));
+  // the locale menu (selectMenu): each locale, with its MT and missing counts as the option's hint
+  const locSel = selectMenu({ label: 'Locale', cls: 'bd-lst-loc', title: 'Locale: text, captions and captures switch with it', value: L.locale,
+    options: LOCS.map(l => ({ value: l, label: l, hint: locLabel(l).slice(l.length + 3) || null })), onPick: v => setLocale(v) });
   /* Export to… (served pages only): GET /__bluedoc/listing at the revision shown. ZIP: the fastlane folders, every shot
      and asset at its store size (serve.py listing_zip); PDF: the listing for review (listing_pdf; without Chrome, its
      print view in a tab); HTML: one file with both platform pages. The server's X-Bluedoc-Warnings (a JSON list: a
-     font a PDF can't embed, store-rule errors still open) show in a toast after the download; L.lastExport keeps them. */
+     font a PDF can't embed, store-rule errors still open) show in a toast after the download; L.lastExport keeps them.
+     While one runs the key is its progress (.bd-lstx): a ZIP or PDF goes with a random &job= id, and GET
+     /__bluedoc/listing/progress every 450 ms gives its stage and files done of total (L.exporting). A click on the key,
+     its ×, or Esc on it cancels: the fetch is aborted and DELETE …/progress stops the render. The menu stays shut
+     until the export ends, so a second one waits. */
   const LST_EXPORTS = [['zip', 'download', 'ZIP for fastlane', 'Every shot and asset at store size'], ['pdf', 'doc', 'PDF', 'Both pages for review'], ['html', 'fcode', 'HTML', 'One file that works offline']];
-  const lstBusy = new Set();
-  const listingUrl = format => { const q = new URLSearchParams({ path: location.pathname, format }); if (OLD) q.set('rev', VIEW.rev); return '/__bluedoc/listing?' + q; };
+  const listingUrl = (format, job) => { const q = new URLSearchParams({ path: location.pathname, format }); if (OLD) q.set('rev', VIEW.rev); if (job) q.set('job', job); return '/__bluedoc/listing?' + q; };
   function printListing() {
     const w = window.open('about:blank', '_blank');
     if (!w) { toast('No Chrome here for a PDF, and the browser blocked the print tab', { label: 'Open it', run: printListing }); return; }
     w.opener = null; w.location.href = listingUrl('print') + '#print';
     toast('No Chrome here for a PDF: choose Save as PDF in the print dialog', { label: 'Print again', run: printListing });
   }
+  const expMenu = SERVED && exportMenu(LST_EXPORTS, exportListing, 'Export the listing: a ZIP for fastlane, a PDF or an HTML file', false);
+  const xp = expMenu && (() => {
+    const btn = expMenu.querySelector('.bd-expb'), title = btn.title;
+    const lead = h('span', { class: 'xp xp-lead', 'aria-hidden': 'true' }), label = h('span', { class: 'xp xp-l', 'aria-live': 'polite' });
+    const x = h('span', { class: 'xp xp-x', 'aria-hidden': 'true', title: 'Cancel' }, ic('x'));
+    const bar = h('span', { class: 'bd-xp-bar', role: 'progressbar', 'aria-valuemin': '0' }, h('i'));
+    btn.append(lead, label, x); expMenu.append(bar); expMenu.classList.add('bd-lstx');
+    // while it runs, the key cancels: a click or Esc, before the menu's own handlers see them
+    expMenu.addEventListener('click', e => { if (!run || run.end) return; e.preventDefault(); e.stopPropagation(); if (btn.contains(e.target)) cancel(); }, true);
+    expMenu.addEventListener('keydown', e => {
+      if (!run || run.end) return;
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); cancel(); } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); e.stopPropagation(); }
+    }, true);
+    let run = null, endT = 0;
+    function paint() {
+      const r = run, F = r ? r.format.toUpperCase() : '';
+      expMenu.classList.toggle('busy', !!r && !r.end); expMenu.classList.toggle('ok', r?.end === 'ok'); expMenu.classList.toggle('err', r?.end === 'err');
+      if (!r) { btn.title = title; btn.removeAttribute('aria-label'); L.exporting = null; fitLtb(); return; }
+      const known = r.total != null && r.total > 0 && !r.end;
+      lead.replaceChildren(r.end === 'ok' ? ic('tick') : r.end === 'err' ? ic('alert') : known ? ic('download') : h('span', { class: 'xp-spin' }));
+      const say = r.end === 'ok' ? 'Exported' : r.end === 'err' ? 'Failed' : known ? `${F} ${r.done}/${r.total}` : `${F}…`;
+      if (label.textContent !== say) label.textContent = say;
+      bar.classList.toggle('ind', !known && !r.end);
+      if (known) { bar.style.setProperty('--v', String(Math.min(1, r.done / r.total))); bar.setAttribute('aria-valuenow', String(r.done)); bar.setAttribute('aria-valuemax', String(r.total)); }
+      else { bar.style.removeProperty('--v'); bar.removeAttribute('aria-valuenow'); bar.removeAttribute('aria-valuemax'); }
+      bar.setAttribute('aria-label', `Exporting the ${F}`);
+      btn.title = r.end ? say : `Making the ${F}${known ? `: ${r.done} of ${r.total} files` : ''}. Click or press Esc to cancel`;
+      btn.setAttribute('aria-label', r.end ? `${say}: the ${F}` : `Cancel the ${F} export${known ? ` (${r.done} of ${r.total} files)` : ''}`);
+      L.exporting = r.end ? null : { format: r.format, done: r.done, total: r.total, stage: r.stage };
+    }
+    function cancel() {
+      const r = run; if (!r || r.end) return;
+      r.cancelled = true; r.ctl.abort();
+      if (r.job) fetch('/__bluedoc/listing/progress?' + new URLSearchParams({ job: r.job }), { method: 'DELETE', headers: { 'X-Bluedoc': '1' } }).catch(() => {});
+    }
+    return {
+      busy: () => run && !run.end ? run.format : null,
+      start(format, job) { clearTimeout(endT); run = { format, job, ctl: new AbortController(), done: 0, total: null, stage: 'plan', end: null }; paint(); fitLtb(); return run; },
+      update(j) { if (!run || run.end || !j) return; run.done = +j.done || 0; run.total = j.total ?? null; run.stage = j.stage; paint(); },
+      finish(how) {   // 'ok', 'err' or null (cancelled, or nothing to show): the state stays a moment, then the key is back
+        if (!run) return;
+        run.end = how; paint();
+        if (!how) { run = null; paint(); return; }
+        endT = setTimeout(() => { run = null; paint(); }, how === 'ok' ? 1600 : 4000);
+      },
+    };
+  })();
   async function exportListing(format) {
-    if (lstBusy.has(format)) return toast(`Still making the ${format.toUpperCase()}…`);
-    lstBusy.add(format);
-    if (format !== 'html') toast(`Making the ${format.toUpperCase()}… (Chrome renders every shot)`);
+    if (!xp) return;
+    const now = xp.busy();
+    if (now) return toast(`Still making the ${now.toUpperCase()}: cancel it on the Export key first`);
+    const job = format === 'html' ? null : [...crypto.getRandomValues(new Uint8Array(12))].map(b => b.toString(16).padStart(2, '0')).join('');
+    const run = xp.start(format, job);
+    let poll = 0;
+    if (job) poll = setInterval(() => {
+      fetch('/__bluedoc/listing/progress?' + new URLSearchParams({ job }), { cache: 'no-store' }).then(r => r.ok ? r.json() : null).then(j => { if (poll) xp.update(j); }).catch(() => {});
+    }, 450);
     try {
-      const r = await fetch(listingUrl(format), { cache: 'no-store' });
-      if (r.status === 501 && format === 'pdf') { printListing(); return; }
-      if (!r.ok) { const j = await r.json().catch(() => null); toast(`Couldn't export the listing: ${(j && j.error) || r.status}`); return; }
+      const r = await fetch(listingUrl(format, job), { cache: 'no-store', signal: run.ctl.signal });
+      if (r.status === 501 && format === 'pdf') { xp.finish(null); printListing(); return; }
+      if (!r.ok) {
+        const j = await r.json().catch(() => null);
+        if (run.cancelled || (j && j.cancelled)) { xp.finish(null); toast('Export cancelled'); return; }
+        xp.finish('err'); toast(`Couldn't export the listing: ${(j && j.error) || r.status}`); return;
+      }
       let warns = [];
       try { const w = JSON.parse(r.headers.get('X-Bluedoc-Warnings') || '[]'); if (Array.isArray(w)) warns = w.filter(x => typeof x === 'string'); } catch { /* none */ }
       const name = (/filename\*=UTF-8''([^;]+)/.exec(r.headers.get('Content-Disposition') || '') || [])[1];
       await saveBlob(r, name ? decodeURIComponent(name) : `listing.${format}`);
       L.lastExport = { format, warnings: warns };
+      xp.finish('ok');
       toast(warns.length ? `Exported with ${warns.length} warning${warns.length === 1 ? '' : 's'}: ${warns[0]}${warns.length > 1 ? ` (+${warns.length - 1} more)` : ''}` : `Exported the ${format.toUpperCase()}`);
-    } catch { toast('Couldn\'t export the listing: the server didn\'t answer'); }
-    finally { lstBusy.delete(format); }
+    } catch {
+      if (run.cancelled) { xp.finish(null); toast('Export cancelled'); return; }
+      xp.finish('err'); toast('Couldn\'t export the listing: the server didn\'t answer');
+    } finally { clearInterval(poll); poll = 0; }
   }
   // the view: the device sections, the store preview mock, the ads (L.view); an icon each, and its word while the
   // toolbar has room (.bd-lst-btb's container widths)
@@ -6854,21 +7056,19 @@ function renderListing(lb) {
     countBtn.hidden = !n; countBtn.textContent = n === 1 ? '1 draft' : `${n} drafts`;
     if (was !== countBtn.hidden) fitLtb();
   }
-  // Jump to: each section on screen (Shared, Watch, Phone, Tablet; the Ads view's cards), scrolled to under the toolbar
-  const jumpSel = h('select', { class: 'bd-lst-jump', 'aria-label': 'Jump to a section', title: 'Jump to a section' });
-  jumpSel.addEventListener('change', () => {
-    const s = pg.querySelectorAll('.bd-lst-sec')[+jumpSel.value]; jumpSel.value = '';
-    if (s) { s.scrollIntoView({ block: 'start', behavior: REDUCE ? 'auto' : 'smooth' }); jumpSel.blur(); }
-  });
+  // Jump to: each section on screen (Shared, Watch, Phone, Tablet; the Ads view's cards), scrolled to under the toolbar;
+  // a menu of actions (selectMenu), its key always "Jump to"
+  const jumpSel = selectMenu({ label: 'Jump to', aria: 'Jump to a section', cls: 'bd-lst-jump', title: 'Jump to a section', action: true,
+    onPick: i => { const s = pg.querySelectorAll('.bd-lst-sec')[+i]; if (s) s.scrollIntoView({ block: 'start', behavior: REDUCE ? 'auto' : 'smooth' }); } });
   function paintJump() {
     const secs = [...pg.querySelectorAll('.bd-lst-sec')];
-    jumpSel.replaceChildren(h('option', { value: '', disabled: true }, 'Jump to'), ...secs.map((s, i) => h('option', { value: String(i) }, s.querySelector('h3') ? s.querySelector('h3').textContent : s.dataset.row)));
-    jumpSel.value = ''; jumpSel.disabled = secs.length < 2;
+    jumpSel.setOptions(secs.map((s, i) => ({ value: String(i), label: s.querySelector('h3') ? s.querySelector('h3').textContent : s.dataset.row })));
+    jumpSel.disabled = secs.length < 2;
   }
   // the Checks count (errors, else warnings): opens the Checks tab
   const checksBtn = h('button', { type: 'button', class: 'bd-tbtn txt bd-lst-ckb', onclick: () => { setLp(true, true); setTab('checks', true); } }, ic('checks'), h('span', { class: 'n' }));
   const ltb = h('div', { class: 'bd-btb bd-lst-btb', role: 'toolbar', 'aria-label': 'Listing', 'data-fit': '0' }, lpBtn, sep(), undoBtn, redoBtn, countBtn, sep(),
-    platSeg, locSel, sep(), viewSeg, jumpSel, sep(), checksBtn, SERVED && exportMenu(LST_EXPORTS, exportListing, 'Export the listing: a ZIP for fastlane, a PDF or an HTML file', false));
+    platSeg, locSel, sep(), viewSeg, jumpSel, sep(), checksBtn, expMenu);
   // the fewest tiers that fit the listing's width (a container query can't measure the keys; this does)
   function fitLtb() {
     const room = wrap.clientWidth - 24; if (room <= 0) return;
@@ -6876,7 +7076,7 @@ function renderListing(lb) {
   }
   if ('ResizeObserver' in window) new ResizeObserver(fitLtb).observe(wrap);
 
-  /* the left panel: Text (this platform's store text and the captions, for the locale, then the caption font), then
+  /* the left panel: Text (the caption font, then this platform's store text and the captions, for the locale), then
      Style, Colors and Checks (below) */
   const lpText = h('div', { class: 'bd-lp-pane bd-lst-text', id: 'bd-lp-text' }), lpFields = h('div', { class: 'bd-lst-fields' });
   let lp = null, lpTabs = null;
@@ -8158,7 +8358,7 @@ function renderListing(lb) {
     });
     BUI = { file, drop, sw: h('div', { class: 'bd-lst-sws' }), roles, pairs: h('div', { class: 'bd-lst-pairs' }), state: h('div', { class: 'bd-lst-bstate' }) };
     BUI.font = buildTypography();
-    lpText.append(BUI.font);
+    lpText.insertBefore(BUI.font, lpFields);   // Typography first, over the fields
     paneColors.replaceChildren(h('h4', {}, 'Palette'), drop, file, BUI.sw, h('div', { class: 'bd-lst-roles' }, roles.map(r => r.row)),
       h('h4', {}, `Contrast · at least ${BR_MIN}:1`), BUI.pairs, BUI.state);
   }
@@ -8297,7 +8497,7 @@ function renderListing(lb) {
     }
     return { platform: L.platform, locale: L.locale, mode: L.mode, hash: location.hash, view: L.view, variant: L.variant ? L.variant.id : null, compare: !!(L.cmp && L.variant),
       variants: VARIANTS.map(v => ({ id: v.id, platform: v.platform, kind: v.kind, title: v.title || null, changes: variantChanges(v), style: L.styleFor(v.platform, null, v.id) })),
-      locales: LOCS.map(l => ({ id: l, label: locSel.querySelector(`option[value="${CSS.escape(l)}"]`).textContent, mt: (MTS[l] || []).length, missing: missingIn(l) })),
+      locales: LOCS.map(l => ({ id: l, label: locLabel(l), mt: (MTS[l] || []).length, missing: missingIn(l) })),
       sections: [...pg.querySelectorAll('.bd-lst-sec')].map(s => ({ row: s.dataset.row, sets: [...s.querySelectorAll('.bd-lst-set')].map(x => ({ set: x.dataset.set, chip: x.querySelector('.bd-lst-chip').textContent,
         shots: [...x.querySelectorAll('.bd-lst-shot')].map(e => e.dataset.ab),
         rows: [...x.querySelectorAll('.bd-lst-tiles[data-variant]')].map(r => ({ variant: r.dataset.variant, shots: [...r.querySelectorAll('.bd-lst-shot')].map(e => e.dataset.ab) })) })) })),
@@ -8309,7 +8509,8 @@ function renderListing(lb) {
       text: { unsaved: [...edits.keys()], canSave: !saveBtn.disabled, drafts: drafts().filter(a => a.listing.op === 'field').map(a => ({ id: a.id, key: a.target.key, value: a.listing.value, base: a.listing.base })),
         ...(L.H ? { ...L.H.size(), next: L.H.next() } : {}) },
       toolbar: { lp: !!L.lp, undo: undoBtn.disabled ? null : L.H.next().undo, redo: redoBtn.disabled ? null : L.H.next().redo, drafts: drafts().length,
-        controls: [...ltb.querySelectorAll('[data-p], [data-view], select, .bd-expb, .bd-lst-ckb')].map(e => e.dataset.p || e.dataset.view || (e.matches('.bd-lst-loc') ? 'locale' : e.matches('.bd-lst-jump') ? 'jump' : e.matches('.bd-lst-ckb') ? 'checks' : 'export')) },
+        controls: [...ltb.querySelectorAll('[data-p], [data-view], .bd-selw, .bd-expb, .bd-lst-ckb')].map(e => e.dataset.p || e.dataset.view || (e.matches('.bd-lst-loc') ? 'locale' : e.matches('.bd-lst-jump') ? 'jump' : e.matches('.bd-lst-ckb') ? 'checks' : 'export')) },
+      exporting: L.exporting || null,   // an Export to… running: {format, done, total, stage}
       checks: L.checks().map(([k, t]) => [k, t]), findings: L.checks().map(([, , f]) => f), style: L.styleFor(L.platform),
       brand: (({ palette, font, image, swatches, draft }) => ({ palette, font, image, swatches, draft, contrast: contrastOf(palette).map(p => ({ fg: p.fg, bg: p.bg, label: p.label, ratio: p.ratio, ok: p.ok })),
         fonts: FONTS.list ? FONTS.list.length : null }))(L.brand()),

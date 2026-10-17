@@ -6,8 +6,9 @@
    --ui-h (the UI viewport), --ui-x --ui-y --ui-k (where the UI sits and its scale), --shot-i --shot-n (its place in
    its set), and the classes plat-<platform>, row-<row>, raw (watch sets: UI only, full bleed), land (a landscape
    frame), ui--capture, msg--m1…m5 and shot--l1…l5 (kits/shot-styles.css), cap--left, cap--right, cap--middle and
-   cap--bottom (the caption's place). Brand tokens: --brand-bg --brand-surface --brand-accent --brand-text
-   --brand-caption, and the caption's (listing.brand.font; unset: the default noted): --bd-font-caption (Inter),
+   cap--bottom (the caption's place), shot-still (an export's render: no motion). Brand tokens: --brand-bg
+   --brand-surface --brand-accent --brand-text --brand-caption, and the caption's (listing.brand.font; unset: the
+   default noted): --bd-font-caption (Inter),
    --bd-weight-caption (800), --bd-style-caption (normal), --bd-size-caption (a unitless scale of each style's caption
    size, so it holds in every store size: 1), --bd-leading-caption (unitless line height: 1.06), --bd-tracking-caption
    (em: -.02em), --bd-align-caption (left|center|right: center), --bd-valign-caption (top|middle|bottom: top; shot.js
@@ -18,6 +19,9 @@
   --shot-w: 440px; --shot-h: 956px; --ui-w: 402px; --ui-h: 874px; --ui-x: 0px; --ui-y: 0px; --ui-k: 1; --shot-i: 0; --shot-n: 1;
 }
 html.shot-pending body { visibility: hidden; }   /* until shot.js has filled the strings and placed the UI */
+/* an export's render (the name's still: true): every animation at its end and no transition, so one frame is the shot */
+html.shot-still *, html.shot-still *::before, html.shot-still *::after { animation-delay: 0s !important; animation-duration: 0s !important;
+  animation-iteration-count: 1 !important; transition: none !important; }
 html, body { overflow: hidden; background: var(--brand-bg); }
 
 .shot { position: relative; width: 100vw; height: 100vh; overflow: hidden; container-type: size; display: flex; flex-direction: column;
