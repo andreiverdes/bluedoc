@@ -1,7 +1,7 @@
 """tools/gen_commands.py and the /bluedoc-<name> commands it writes from commands/commands.json: the checked-in files
 match the spec, and an edited spec or a stale file fails `--check`; every command has its Claude Code, Copilot and
-Gemini file; the action commands' shell lines run their script as written (Claude's `!` line, Gemini's `!{…}` with
-its shell-escaped arguments); `build.py export` and `serve.py reply` without a target, which two actions use."""
+Antigravity file; the action commands' shell lines run their script as written (Claude's `!` line, the command Antigravity's
+skill names from its own folder); `build.py export` and `serve.py reply` without a target, which two actions use."""
 from __future__ import annotations
 
 import json
@@ -17,7 +17,8 @@ from _support import REPO, TempHome
 
 GEN = REPO / "tools" / "gen_commands.py"
 SPEC = REPO / "commands" / "commands.json"
-FOLDERS = ("commands", "com.github.copilot/commands", "gemini/commands")
+FOLDERS = ("commands", "com.github.copilot/commands", "antigravity/skills")
+SUFFIXES = (".md", ".md", "/SKILL.md")
 
 
 def gen(*args: str) -> subprocess.CompletedProcess:
@@ -47,10 +48,14 @@ class Generated(unittest.TestCase):
         self.assertIn(f"out of date: commands/bluedoc-{edited[0]['name']}.md", r.stderr)
         self.assertEqual(gen("--root", str(tmp.dir)).returncode, 0)
         self.assertIn("Draft", (tmp.dir / "commands" / f"bluedoc-{edited[0]['name']}.md").read_text(encoding="utf-8"))
-        (tmp.dir / "gemini" / "commands" / "bluedoc-gone.toml").write_text("prompt = 'x'\n", encoding="utf-8")
+        gone = tmp.dir / "antigravity" / "skills" / "bluedoc-gone"
+        gone.mkdir()
+        (gone / "SKILL.md").write_text("---\nname: bluedoc-gone\n---\n", encoding="utf-8")
         r = gen("--check", "--root", str(tmp.dir))
         self.assertEqual(r.returncode, 1)
-        self.assertIn("stale: gemini/commands/bluedoc-gone.toml", r.stderr)
+        self.assertIn("stale: antigravity/skills/bluedoc-gone/SKILL.md", r.stderr)
+        self.assertEqual(gen("--root", str(tmp.dir)).returncode, 0)
+        self.assertFalse(gone.exists())
 
     def test_a_bad_spec_is_refused(self) -> None:
         tmp = TempHome()
@@ -70,7 +75,7 @@ class Generated(unittest.TestCase):
         names = [c["name"] for c in spec()]
         self.assertEqual(len(names), 14)
         for name in names:
-            for folder, suffix in zip(FOLDERS, (".md", ".md", ".toml")):
+            for folder, suffix in zip(FOLDERS, SUFFIXES):
                 self.assertTrue((REPO / folder / f"bluedoc-{name}{suffix}").is_file(), f"{folder}/bluedoc-{name}{suffix}")
         for c in spec():
             md = (REPO / "commands" / f"bluedoc-{c['name']}.md").read_text(encoding="utf-8")
@@ -80,14 +85,36 @@ class Generated(unittest.TestCase):
             if c["kind"] == "prompt":
                 self.assertTrue(c["prompt"].endswith("Use the bluedoc skill; open the page and wait for my reply."))
                 self.assertNotIn("!`", md)
-        try:
-            import tomllib
-        except ImportError:   # Python < 3.11
-            return
         for c in spec():
-            toml = tomllib.loads((REPO / "gemini" / "commands" / f"bluedoc-{c['name']}.toml").read_text(encoding="utf-8"))
-            self.assertEqual(toml["description"], c["description"])
-            self.assertIn("{{args}}" if c["kind"] == "prompt" else "!{", toml["prompt"])
+            md = (REPO / "antigravity" / "skills" / f"bluedoc-{c['name']}" / "SKILL.md").read_text(encoding="utf-8")
+            self.assertIn(f"name: \"bluedoc-{c['name']}\"", md)
+            self.assertIn(f"description: {json.dumps(c['description'])}", md)
+            self.assertNotIn("{{args}}", md)
+            if c["kind"] == "prompt":
+                self.assertIn("the text I typed after the command", md)
+
+    def test_antigravity_loads_the_skill_through_its_link(self) -> None:
+        link = REPO / "antigravity" / "skills" / "bluedoc"
+        self.assertTrue(link.is_symlink())
+        self.assertEqual(link.resolve(), (REPO / "skills" / "bluedoc").resolve())
+
+
+class Packaging(unittest.TestCase):
+    def test_the_skill_description_fits_the_agent_skills_limit(self) -> None:
+        """The Agent Skills spec caps `description` at 1024 characters; pi refuses a longer one."""
+        skill = (REPO / "skills" / "bluedoc" / "SKILL.md").read_text(encoding="utf-8")
+        description = re.search(r"^description: (.*)$", skill, re.M).group(1)
+        self.assertLessEqual(len(description), 1024)
+        for phrase in ('"plan mode"', '"make a plan"', '"review findings"', '"a bluedoc"', "slide decks", "UI mockups"):
+            self.assertIn(phrase, description)
+
+    def test_every_manifest_has_one_version(self) -> None:
+        read = lambda p: json.loads((REPO / p).read_text(encoding="utf-8"))  # noqa: E731
+        market = read(".claude-plugin/marketplace.json")
+        versions = {read(p)["version"] for p in ("package.json", "plugin.json", ".claude-plugin/plugin.json",
+                                                  "antigravity/plugin.json")}
+        versions |= {market.get("metadata", {}).get("version")} | {p.get("version") for p in market["plugins"]}
+        self.assertEqual(len(versions - {None}), 1, versions)
 
 
 class Actions(unittest.TestCase):
@@ -108,15 +135,16 @@ class Actions(unittest.TestCase):
         line = re.search(r"^!`(.*)`$", md, re.M).group(1)
         return line.replace("${CLAUDE_PLUGIN_ROOT}", str(REPO)).replace("$ARGUMENTS", args)
 
-    def gemini_line(self, name: str, args: str) -> str:
-        """Gemini's `!{…}` command: {{args}} shell-escaped, the installed extension's folder being the repo."""
-        toml = (REPO / "gemini" / "commands" / f"bluedoc-{name}.toml").read_text(encoding="utf-8")
-        line = re.search(r"!\{(.*)\}", toml).group(1)
-        return line.replace("~/.gemini/extensions/bluedoc", shlex.quote(str(REPO))).replace("{{args}}", shlex.quote(args))
+    def agy_line(self, name: str, args: str) -> str:
+        """The command Antigravity's command skill asks for: <skill> is its own folder, <args> the user's text."""
+        md = (REPO / "antigravity" / "skills" / f"bluedoc-{name}" / "SKILL.md").read_text(encoding="utf-8")
+        line = re.search(r"^Run `(.*?)`", md, re.M).group(1)
+        return line.replace("<skill>", shlex.quote(str(REPO / "antigravity" / "skills" / f"bluedoc-{name}"))) \
+            .replace("<args>", args)
 
     def test_export_writes_the_docs_file_next_to_it(self) -> None:
         status, deck = self.docs / "acme-status.bluedoc.json", self.docs / "acme-fit-deck.bluedoc.json"
-        for line in (self.claude_line("export", str(status)), self.gemini_line("export", f"{deck} html")):
+        for line in (self.claude_line("export", str(status)), self.agy_line("export", f"{deck} html")):
             r = self.sh(line)
             self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(Path(r.stdout.strip().splitlines()[-1]), self.docs / "acme-fit-deck.html")
@@ -136,12 +164,12 @@ class Actions(unittest.TestCase):
         db.add_reply(str(orders), "orders", "answers", "1", "{}", "# Orders answers\n")
         db.add_reply(str(status), "status", "changes", "2", "{}", "# Status changes\n")
         db.close()
-        for line in (self.claude_line("replies", ""), self.gemini_line("replies", "")):
+        for line in (self.claude_line("replies", ""), self.agy_line("replies", "")):
             r = self.sh(line)
             self.assertEqual(r.returncode, 0, r.stderr)
             self.assertIn("# Status changes", r.stdout)
             self.assertIn("--- bluedoc change request (reply 2, rev 2", r.stdout)
-        r = self.sh(self.gemini_line("replies", str(orders)))
+        r = self.sh(self.agy_line("replies", str(orders)))
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn("# Orders answers", r.stdout)
 

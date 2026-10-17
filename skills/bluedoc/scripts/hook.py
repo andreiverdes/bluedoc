@@ -5,7 +5,8 @@
   hook.py claude bash    Claude Code PreToolUse on Bash: lets the gate's own serve.py / build.py commands run unprompted
   hook.py codex plan     Codex Stop: the plan gate for a turn that ends with a <proposed_plan> (codex/hooks.json)
   hook.py copilot plan   Copilot CLI preToolUse on exit_plan_mode: the plan gate (com.github.copilot/hooks/hooks.json)
-  hook.py gemini plan    Gemini CLI BeforeTool / AfterTool on exit_plan_mode: the plan gate (gemini/hooks/hooks.json)
+  hook.py agy plan       Antigravity CLI PreToolUse on write_to_file: the plan gate (antigravity/hooks.json)
+  hook.py agy note       Antigravity CLI PreInvocation: hands the approval note to the model (antigravity/hooks.json)
   hook.py ext open       for agent extensions (omp, pi): stdin {text, planPath, cwd, sessionId, agent}; prints open_gate's
                          result as JSON; exits non-zero with a one-line error on stderr when it fails
   hook.py ext wait DOC   blocks on `serve.py wait DOC --kind any`, then prints {kind: approval|changes, md, rev?}
@@ -52,7 +53,7 @@ AGENTS = {
     "claude": ("Claude", "call ExitPlanMode again"),
     "codex": ("Codex", "write the final plan again"),
     "copilot": ("Copilot", "call exit_plan_mode again"),
-    "gemini": ("Gemini", "call exit_plan_mode again"),
+    "agy": ("Antigravity", "write the implementation plan artifact again with write_to_file (RequestFeedback true)"),
     "omp": ("omp", "submit the plan again"),
     "pi": ("pi", "call bluedoc_submit_plan again"),
 }
@@ -216,6 +217,8 @@ def open_gate(text: str, plan_path: str | None, cwd: Path, session_id: str, agen
         if done:
             return done
 
+    # The agent's plan file only when it is one on disk: omp reports `local://…` URLs, which from-md can't read.
+    source = plan_path if plan_path and Path(plan_path).expanduser().is_file() else None
     doc = named_doc(text, cwd)
     fresh = False
     if doc is None:
@@ -223,12 +226,12 @@ def open_gate(text: str, plan_path: str | None, cwd: Path, session_id: str, agen
             doc = Path(rec["doc"])   # the same plan, not yet approved: keep the doc
         elif rec and Path(rec["doc"]).is_relative_to(PLANS):
             doc = Path(rec["doc"])   # the agent rewrote the Markdown: the next rev of the same doc
-            run("build.py", "from-md", plan_path or _plan_file(agent, text), str(doc), "--project", str(cwd),
+            run("build.py", "from-md", source or _plan_file(agent, text), str(doc), "--project", str(cwd),
                 "--change", f"{label} rewrote the Markdown plan; imported again.")
             fresh = True
         else:
             doc = new_doc_path(cwd, plan_path, text)
-            run("build.py", "from-md", plan_path or _plan_file(agent, text), str(doc), "--project", str(cwd))
+            run("build.py", "from-md", source or _plan_file(agent, text), str(doc), "--project", str(cwd))
             fresh = True
     opened = rec.get("doc") == str(doc) and rec.get("sha") == sha and not fresh
     root = doc.parent if doc.is_relative_to(PLANS) else None
@@ -370,7 +373,8 @@ def copilot_plan(event: dict) -> int:
     that file is the plan text, the summary the fallback. Schema: https://docs.github.com/en/copilot/reference/hooks-reference
     (preToolUse input sessionId/cwd/toolName/toolArgs, or snake_case for PreToolUse; output permissionDecision,
     permissionDecisionReason, modifiedArgs). Opened: deny with the instructions; approved: allow with the note
-    appended to the summary; skip: no output."""
+    appended to the summary; skip: no output. Copilot's plan mode has it update plan.md along with the doc on a change
+    request, so the session doc's approval counts whatever plan.md says now (as for Codex), not only for the same text."""
     args = event.get("toolArgs") if "toolArgs" in event else event.get("tool_input")
     if isinstance(args, str):
         try:
@@ -382,8 +386,10 @@ def copilot_plan(event: dict) -> int:
     home = Path(os.environ.get("COPILOT_HOME") or "~/.copilot").expanduser()
     plan_md = home / "session-state" / re.sub(r"[^A-Za-z0-9_-]", "_", session_id or "none") / "plan.md"
     text = plan_text({"planFilePath": str(plan_md) if plan_md.is_file() else "", "plan": args.get("summary")})
-    g = open_gate(text, str(plan_md) if plan_md.is_file() else None, Path(event.get("cwd") or os.getcwd()).resolve(),
-                  session_id, "copilot")
+    rec = load_session("copilot", session_id)
+    g = approval("copilot", session_id, rec) if rec and not no_reader({}) else None
+    g = g or open_gate(text, str(plan_md) if plan_md.is_file() else None,
+                       Path(event.get("cwd") or os.getcwd()).resolve(), session_id, "copilot")
     if g["state"] == "opened":
         return emit({"permissionDecision": "deny", "permissionDecisionReason": g["message"]})
     if g["state"] == "approved":
@@ -392,58 +398,59 @@ def copilot_plan(event: dict) -> int:
     return 0
 
 
-def _gemini_plan_file(event: dict) -> Path | None:
-    """Where Gemini's exit_plan_mode plan_filename lives (packages/core/src/utils/planUtils.ts resolveAndValidatePlanPath):
-    absolute, or under the project, or in the plans folder: general.plan.directory from the settings (relative to the
-    project), else <project temp>/<session>/plans, the project temp folder being the transcript's grandparent."""
-    name = str((event.get("tool_input") or {}).get("plan_filename") or "").strip()
-    if not name:
+def _agy_plan_call(event: dict) -> dict | None:
+    """The tool call's args when it writes a plan for review: write_to_file with ArtifactMetadata.RequestFeedback, which
+    Antigravity's planning mode sets on implementation_plan.md, the artifact the user approves before execution."""
+    call = event.get("toolCall") or {}
+    args = call.get("args") if isinstance(call, dict) else None
+    if not isinstance(args, dict) or call.get("name") != "write_to_file":
         return None
-    cwd = Path(event.get("cwd") or os.getcwd())
-    tries = [Path(name).expanduser(), cwd / name]
-    for settings in (cwd / ".gemini" / "settings.json", Path("~/.gemini/settings.json").expanduser()):
-        try:
-            d = ((json.loads(settings.read_text(encoding="utf-8")).get("general") or {}).get("plan") or {}).get("directory")
-        except (OSError, ValueError, AttributeError):
-            d = None
-        if isinstance(d, str) and d:
-            tries.append(cwd / d / name)
-    transcript = str(event.get("transcript_path") or "")
-    if transcript:
-        temp = Path(transcript).parent.parent
-        tries += [temp / str(event.get("session_id") or "") / "plans" / name, temp / "plans" / name]
-    return next((p for p in tries if p.is_absolute() and p.is_file()), None)
+    meta = args.get("ArtifactMetadata")
+    if not isinstance(meta, dict) or meta.get("RequestFeedback") is not True or not isinstance(args.get("CodeContent"), str):
+        return None
+    return args
 
 
-def gemini_plan(event: dict) -> int:
-    """Gemini CLI BeforeTool on exit_plan_mode ({plan_filename}). Schema:
-    https://github.com/google-gemini/gemini-cli/blob/main/docs/hooks/reference.md (BeforeTool: decision deny + reason,
-    sent to the agent as the tool error; AfterTool: hookSpecificOutput.additionalContext, appended to the tool result).
-    Opened: deny with the instructions. Approved: no decision, so Gemini's own plan approval follows, and the note waits
-    for the AfterTool hook (gemini_note), which appends it to the tool result. Skip: no output."""
-    plan = _gemini_plan_file(event)
-    text = plan_text({"planFilePath": str(plan) if plan else ""})
-    session_id = str(event.get("session_id") or "")
-    g = open_gate(text, str(plan) if plan else None, Path(event.get("cwd") or os.getcwd()).resolve(), session_id, "gemini")
+def agy_plan(event: dict) -> int:
+    """Antigravity CLI (agy) PreToolUse on write_to_file. In plan mode agy writes implementation_plan.md into the
+    conversation's artifact folder with write_to_file and ArtifactMetadata.RequestFeedback true, then waits for the
+    user's review; that call is the gate. Sources: agy 1.4.0's bundled agy-customizations skill, docs/hooks.md
+    (~/.gemini/antigravity-cli/builtin/skills/agy-customizations/docs/hooks.md: camelCase stdin with conversationId,
+    workspacePaths, toolCall {name, args}; stdout decision allow|deny, reason, overwrite as a shallow args merge) and
+    recorded `agy --mode plan` events. A denial reaches the model as the tool error ("tool call denied by pre-tool hook:
+    <reason>"); an allow's reason does not reach it, so the approval note goes through agy_note.
+    Opened: deny with the instructions. Approved: allow with RequestFeedback turned off (the reader's approval in bluedoc
+    is the review) and the note left for agy_note. agy writes the plan anew each time, so once the conversation's doc is
+    approved any plan written counts as that doc's. Skip or another call: no output."""
+    args = _agy_plan_call(event)
+    if args is None:
+        return 0
+    session_id = str(event.get("conversationId") or "")
+    paths = event.get("workspacePaths") or []
+    cwd = Path(paths[0] if paths and isinstance(paths[0], str) else Path.home()).resolve()
+    rec = load_session("agy", session_id)
+    g = approval("agy", session_id, rec) if rec and not no_reader({}) else None
+    g = g or open_gate(args["CodeContent"], None, cwd, session_id, "agy")
     if g["state"] == "opened":
         return emit({"decision": "deny", "reason": g["message"]})
     if g["state"] == "approved":
-        note = session_file("gemini", session_id).with_suffix(".note")
+        note = session_file("agy", session_id).with_suffix(".note")
         note.parent.mkdir(parents=True, exist_ok=True)
         note.write_text(g["note"], encoding="utf-8")
-        return emit({"systemMessage": f"bluedoc: plan approved (rev {g['rev']})"})
+        return emit({"decision": "allow", "overwrite": {"ArtifactMetadata": {**args["ArtifactMetadata"], "RequestFeedback": False}}})
     return 0
 
 
-def gemini_note(event: dict) -> int:
-    """Gemini CLI AfterTool on exit_plan_mode: the approval note gemini_plan left, appended to the tool result."""
-    note = session_file("gemini", str(event.get("session_id") or "")).with_suffix(".note")
+def agy_note(event: dict) -> int:
+    """Antigravity CLI PreInvocation: the approval note agy_plan left, injected once as a system message before the
+    model's next call (docs/hooks.md: injectSteps [{systemMessage: {systemMessage}}])."""
+    note = session_file("agy", str(event.get("conversationId") or "")).with_suffix(".note")
     try:
         text = note.read_text(encoding="utf-8")
     except OSError:
         return 0
     note.unlink(missing_ok=True)
-    return emit({"hookSpecificOutput": {"hookEventName": "AfterTool", "additionalContext": text}})
+    return emit({"injectSteps": [{"systemMessage": {"systemMessage": text}}]})
 
 
 def ext_open(args: list[str]) -> int:
@@ -480,7 +487,7 @@ def ext_wait(args: list[str]) -> int:
 
 
 HANDLERS = {("claude", "plan"): claude_plan, ("claude", "bash"): claude_bash, ("codex", "plan"): codex_plan,
-            ("copilot", "plan"): copilot_plan, ("gemini", "plan"): gemini_plan, ("gemini", "note"): gemini_note,
+            ("copilot", "plan"): copilot_plan, ("agy", "plan"): agy_plan, ("agy", "note"): agy_note,
             ("ext", "open"): ext_open, ("ext", "wait"): ext_wait}
 
 

@@ -2,7 +2,7 @@
 
 ![The bluedoc home page in dark mode: the pixel-art banner of a bay with a ringed planet behind the title and the search field with its type and status filter chips, the sidebar of projects, and the overview charts](docs/media/home-hero.webp)
 
-An agent skill for engineering docs, plans, code reviews, UI designs, slide decks, website reviews, app icons and app store listings. The agent writes one JSON file, plus small HTML fragments for screens and SVG layers for icons; a local server renders it as a page. You tick checklists, pick options, comment on any element and approve or send back; your answers and change requests go to the agent, and each revision can be compared with the last. Works with Claude Code, Codex, pi, omp, Copilot CLI and Gemini CLI.
+An agent skill for engineering docs, plans, code reviews, UI designs, slide decks, website reviews, app icons and app store listings. The agent writes one JSON file, plus small HTML fragments for screens and SVG layers for icons; a local server renders it as a page. You tick checklists, pick options, comment on any element and approve or send back; your answers and change requests go to the agent, and each revision can be compared with the last. Works with Claude Code, Codex, pi, omp, Copilot CLI and Antigravity CLI.
 
 > **Beta.** bluedoc is in beta: the doc format and commands may still change between betas. It is tested on macOS; Linux and Windows are untested. Issues and feedback are welcome on GitHub.
 
@@ -100,14 +100,14 @@ copilot plugin install andreiverdes/bluedoc
 
 Start a new session. **Plan mode:** when Copilot calls `exit_plan_mode`, its `plan.md` opens as a bluedoc plan page; Copilot waits for your answer there and leaves plan mode after **Approve plan**. If the gate takes longer than its 120 s timeout, Copilot shows its own plan prompt.
 
-### Gemini CLI
+### Antigravity CLI
 
 ```sh
 git clone https://github.com/andreiverdes/bluedoc.git
-bluedoc/gemini/install.sh
+agy plugin install bluedoc/antigravity
 ```
 
-The script installs `gemini/` plus the skill as the `bluedoc` extension (run it again to update; `gemini extensions uninstall bluedoc` removes it). **Plan mode:** when Gemini calls `exit_plan_mode`, the plan file opens as a bluedoc plan page; Gemini waits for your answer there, and after **Approve plan** its own approval prompt follows, with your decisions passed to the agent. Plan mode blocks shell commands, so Gemini asks you before each `serve.py wait` and `build.py patch` the gate needs.
+Restart `agy`. `antigravity/` is the Antigravity plugin: its manifest, its hooks and the skill (a link to `skills/bluedoc`, copied on install). **Plan mode** (`agy --mode plan` or `/plan`): when the agent writes its implementation plan for your review, the plan opens as a bluedoc plan page instead; the agent waits for your answer there, revises the doc on **Request changes** and, after **Approve plan**, writes the plan again and implements it with your decisions. agy asks you before each `serve.py wait` and `build.py patch` the gate runs.
 
 ### Any other agent
 
@@ -192,7 +192,7 @@ Every bluedoc feature is also a command. The prompt commands start an agent turn
 | Claude Code | `/bluedoc:bluedoc-plan …`; Claude Code prefixes plugin commands with the plugin name |
 | omp, pi | `/bluedoc-plan …`, from the bundled extension |
 | Copilot CLI | `/bluedoc-plan …`; an action asks the agent to run its script |
-| Gemini CLI | `/bluedoc-plan …`; an action asks before it runs its script |
+| Antigravity CLI | `/bluedoc-plan …`; each command is a skill, and an action asks the agent to run its script |
 | Codex | no commands: Codex plugins can't hold skills only Codex loads. Ask for `$bluedoc <request>`, e.g. `$bluedoc plan saved carts` |
 
 The commands are generated from `commands/commands.json` by `tools/gen_commands.py`; edit the spec and run it, never the generated files.
@@ -212,7 +212,7 @@ Frameworks, navigation, board editing, app icons and the sandbox are covered in 
 | pi | `pi update` | `pi remove git:github.com/andreiverdes/bluedoc` |
 | omp | `omp plugin upgrade bluedoc@bluedoc` | `omp plugin uninstall bluedoc@bluedoc` |
 | Copilot CLI | `copilot plugin update bluedoc` | `copilot plugin uninstall bluedoc` |
-| Gemini CLI | `git -C bluedoc pull && bluedoc/gemini/install.sh` | `gemini extensions uninstall bluedoc` |
+| Antigravity CLI | `git -C bluedoc pull && agy plugin install bluedoc/antigravity` | `agy plugin uninstall bluedoc` |
 | skills CLI | `npx skills update` | `npx skills remove bluedoc` |
 
 ## What's in the repo
@@ -226,7 +226,7 @@ skills/bluedoc/
   assets/skeletons/      fill-in skeleton per doc type (build.py new), plus review-area.json (--shape area)
   scripts/build.py       new, validate, lint, patch, from-md (a Markdown plan → a plan doc), build the HTML
   scripts/mdplan.py      the Markdown plan importer behind build.py from-md
-  scripts/hook.py        agent hooks: the plan gate for Claude Code, Codex, Copilot CLI and Gemini CLI, `ext open|wait` for the pi/omp extension, Claude's Bash allowance
+  scripts/hook.py        agent hooks: the plan gate for Claude Code, Codex, Copilot CLI and Antigravity CLI, `ext open|wait` for the pi/omp extension, Claude's Bash allowance
   scripts/listing.py     store listings: the rules file, store checks, l10n, sections and variants, the fastlane export plan
   scripts/capture.py     store screenshots from capture recipes: simctl, adb and emulator, headless Chrome
   scripts/fonts.py       the fonts installed on this machine, for a listing's caption font
@@ -258,14 +258,14 @@ docs/examples/           the examples built to HTML, for GitHub readers
 commands/commands.json   the slash commands' spec, the one place they're edited
 commands/bluedoc-*.md    Claude Code's commands, generated by tools/gen_commands.py
 com.github.copilot/commands/  Copilot CLI's commands, generated
-gemini/commands/         Gemini CLI's commands, generated
+antigravity/skills/bluedoc-*/  Antigravity CLI's commands (skills), generated
 tools/gen_commands.py    writes every agent's command files from the spec (--check: are they up to date)
 tests/                   the test suite (python3 -m unittest discover -s tests)
 .claude-plugin/          Claude Code plugin and marketplace (omp reads it too)
 hooks/hooks.json         Claude Code hooks: the plan gate (omp doesn't run them)
 codex/hooks.json         Codex hooks: the plan gate (Stop), wired from plugin.json
 com.github.copilot/hooks/  Copilot CLI hooks: the plan gate (preToolUse on exit_plan_mode)
-gemini/                 Gemini CLI extension: manifest, hooks (the plan gate), plan-mode policy, install.sh
+antigravity/             Antigravity CLI plugin: manifest, hooks.json (the plan gate), skills/ (the commands and a link to the skill)
 extensions/bluedoc.ts   pi and omp extension: the plan gate and /bluedoc-* commands
 .agents/plugins/         Codex marketplace
 plugin.json              Agent Plugins manifest (Codex, Copilot CLI, omp)

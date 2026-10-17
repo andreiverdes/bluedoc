@@ -1,8 +1,8 @@
 """hook.py, the plan gate, against `serve.py run`. Claude Code: a plan is imported and opened and ExitPlanMode is
 denied with instructions; the same plan stays one doc until the reader approves it, then ExitPlanMode is allowed; a
 rewritten plan becomes the next rev; a plan that names a bluedoc doc opens that doc; the guards print nothing; the Bash
-hook allows only the gate's own commands. Codex (Stop), Copilot CLI (preToolUse) and Gemini CLI (BeforeTool/AfterTool)
-from recorded events, and `ext open` / `ext wait` for the omp and pi extension."""
+hook allows only the gate's own commands. Codex (Stop), Copilot CLI (preToolUse) and Antigravity CLI (PreToolUse on
+write_to_file, PreInvocation) from recorded events, and `ext open` / `ext wait` for the omp and pi extension."""
 from __future__ import annotations
 
 import json
@@ -210,25 +210,70 @@ class OtherAgents(GateCase):
         self.assertTrue(out["modifiedArgs"]["summary"].startswith("- token bucket"))
         self.assertIn("Approved in bluedoc, rev 1", out["modifiedArgs"]["summary"])
 
-    def test_gemini_denies_then_notes_the_approval_after_the_tool(self) -> None:
-        temp = self.tmp.dir / "gemini-tmp" / "acme-shop"
-        (temp / "g1" / "plans").mkdir(parents=True)
-        (temp / "g1" / "plans" / "rate-limits.md").write_text(PLAN, encoding="utf-8")
-        (temp / "chats").mkdir()
-        base = {"session_id": "g1", "transcript_path": str(temp / "chats" / "session-g1.json"), "cwd": str(self.project),
-                "timestamp": "2026-01-01T00:00:00Z", "tool_name": "exit_plan_mode", "tool_input": {"plan_filename": "rate-limits.md"}}
-        out = self.out("gemini", "plan", {**base, "hook_event_name": "BeforeTool"})
-        self.assertEqual(out["decision"], "deny")
-        self.assertIn("call exit_plan_mode again", out["reason"])
-        doc = self.plans / "rate-limits.bluedoc.json"
-        self.assertTrue(doc.is_file())
-        self.assertIsNone(self.out("gemini", "note", {**base, "hook_event_name": "AfterTool"}))
+    def test_copilot_approval_holds_when_plan_md_was_updated_in_the_change_round(self) -> None:
+        # live run (beta19): Copilot's plan mode updates plan.md while it patches the doc for a change request; the
+        # reader then approved, and the next exit_plan_mode re-imported plan.md as a new rev and opened it again
+        copilot = self.tmp.dir / "copilot-home"
+        plan_md = copilot / "session-state" / "p2" / "plan.md"
+        plan_md.parent.mkdir(parents=True)
+        plan_md.write_text(PLAN, encoding="utf-8")
+        event = {"sessionId": "p2", "timestamp": 1760000000000, "cwd": str(self.project), "toolName": "exit_plan_mode",
+                 "toolArgs": {"summary": "- token bucket"}}
+        self.assertEqual(self.out("copilot", "plan", event, COPILOT_HOME=str(copilot))["permissionDecision"], "deny")
+        doc = self.plans / "plan.bluedoc.json"
+        plan_md.write_text(PLAN.replace("Requests have no limit.", "Nothing limits requests today."), encoding="utf-8")
         self.approve(doc)
-        out = self.out("gemini", "plan", {**base, "hook_event_name": "BeforeTool"})
-        self.assertNotIn("decision", out)
-        out = self.out("gemini", "note", {**base, "hook_event_name": "AfterTool"})
-        self.assertIn("Approved in bluedoc, rev 1", out["hookSpecificOutput"]["additionalContext"])
-        self.assertIsNone(self.out("gemini", "note", {**base, "hook_event_name": "AfterTool"}))
+        out = self.out("copilot", "plan", event, COPILOT_HOME=str(copilot))
+        self.assertEqual(out["permissionDecision"], "allow")
+        self.assertIn("Approved in bluedoc, rev 1", out["modifiedArgs"]["summary"])
+        self.assertEqual(json.loads(doc.read_text(encoding="utf-8"))["meta"]["rev"], "1")
+        self.assertEqual(list(self.plans.glob("*.bluedoc.json")), [doc])
+
+    def agy_event(self, args: dict, name: str = "write_to_file") -> dict:
+        """A PreToolUse event as `agy --mode plan` sent it (agy 1.4.0), trimmed to the fields the hook reads."""
+        brain = self.tmp.dir / "agy-brain" / "a1"
+        return {"conversationId": "a1", "workspacePaths": [str(self.project)], "modelName": "gemini-3.8-flash-high",
+                "artifactDirectoryPath": str(brain), "transcriptPath": str(brain / ".system_generated" / "logs" /
+                                                                         "transcript_full.jsonl"),
+                "stepIdx": 4, "toolCall": {"name": name, "args": args}}
+
+    def agy_plan_args(self, text: str = PLAN) -> dict:
+        return {"ArtifactMetadata": {"RequestFeedback": True, "Summary": "Rate limiting plan", "UserFacing": True},
+                "CodeContent": text, "Description": "Implementation plan", "Overwrite": True,
+                "TargetFile": str(self.tmp.dir / "agy-brain" / "a1" / "implementation_plan.md"),
+                "toolAction": "Writing plan artifact", "toolSummary": "Write plan artifact"}
+
+    def agy_note_event(self) -> dict:
+        return {"conversationId": "a1", "workspacePaths": [str(self.project)], "invocationNum": 3, "initialNumSteps": 4}
+
+    def test_agy_denies_the_plan_artifact_then_allows_it_and_injects_the_note(self) -> None:
+        out = self.out("agy", "plan", self.agy_event(self.agy_plan_args()))
+        self.assertEqual(out["decision"], "deny")
+        self.assertRegex(out["reason"], r"http://127\.0\.0\.1:\d+/")
+        self.assertIn("write the implementation plan artifact again", out["reason"])
+        doc = self.plans / "add-rate-limiting.bluedoc.json"
+        self.assertTrue(doc.is_file())
+        self.assertTrue((self.tmp.home / "hooks" / "agy" / "a1.json").is_file())
+        self.assertIsNone(self.out("agy", "note", self.agy_note_event()))
+        self.approve(doc)
+        reworded = self.agy_plan_args(PLAN.replace("Requests have no limit.", "Nothing limits requests today."))
+        out = self.out("agy", "plan", self.agy_event(reworded))
+        self.assertEqual(out, {"decision": "allow", "overwrite": {"ArtifactMetadata": {
+            "RequestFeedback": False, "Summary": "Rate limiting plan", "UserFacing": True}}})
+        out = self.out("agy", "note", self.agy_note_event())
+        note = out["injectSteps"][0]["systemMessage"]["systemMessage"]
+        self.assertIn("Approved in bluedoc, rev 1", note)
+        self.assertIn(str(doc), note)
+        self.assertIsNone(self.out("agy", "note", self.agy_note_event()))   # once
+        self.assertEqual(list(self.plans.glob("*.bluedoc.json")), [doc])
+
+    def test_agy_leaves_other_calls_and_unreviewed_writes_alone(self) -> None:
+        self.assertIsNone(self.out("agy", "plan", self.agy_event({"CommandLine": "ls"}, name="run_command")))
+        walkthrough = {**self.agy_plan_args(), "ArtifactMetadata": {"RequestFeedback": False, "UserFacing": True}}
+        self.assertIsNone(self.out("agy", "plan", self.agy_event(walkthrough)))
+        self.assertIsNone(self.out("agy", "plan", self.agy_event({"CodeContent": "hi\n", "TargetFile": "/tmp/x.txt"})))
+        self.assertIsNone(self.out("agy", "plan", self.agy_event(self.agy_plan_args()), BLUEDOC_PLAN_GATE="0"))
+        self.assertFalse(self.plans.exists())
 
     def test_ext_open_then_wait_for_the_approval(self) -> None:
         req = {"text": PLAN, "planPath": None, "cwd": str(self.project), "sessionId": "o1", "agent": "omp"}
@@ -250,6 +295,23 @@ class OtherAgents(GateCase):
         self.assertEqual(json.loads(r.stdout)["state"], "approved")
         self.assertEqual(self.run_hook("ext", "open", req, BLUEDOC_PLAN_GATE="0").stdout.strip(),
                          json.dumps({"state": "skip", "why": "BLUEDOC_PLAN_GATE=0"}))
+
+    def test_ext_open_imports_the_text_when_the_plan_path_is_an_omp_url(self) -> None:
+        # omp's plan_review_requested reports `local://x-plan.md`; from-md can't read it, so the text is imported.
+        req = {"text": PLAN, "planPath": "local://x-plan.md", "cwd": str(self.project), "sessionId": "o2", "agent": "omp"}
+        r = self.run_hook("ext", "open", req)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        g = json.loads(r.stdout)
+        self.assertEqual(g["state"], "opened")
+        self.assertEqual(Path(g["doc"]).name, "x-plan.bluedoc.json")
+        self.assertIn("Add rate limiting", Path(g["doc"]).read_text(encoding="utf-8"))
+        # The refined plan under the same URL: the text again, as the next rev of the same doc.
+        r = self.run_hook("ext", "open", {**req, "text": PLAN.replace("429", "503")})
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(json.loads(r.stdout)["doc"], g["doc"])
+        doc = json.loads(Path(g["doc"]).read_text(encoding="utf-8"))
+        self.assertEqual(str(doc["meta"]["rev"]), "2")
+        self.assertIn("503", json.dumps(doc))
 
     def test_ext_open_reports_an_error_in_one_line(self) -> None:
         r = self.run_hook("ext", "open", "{not json")

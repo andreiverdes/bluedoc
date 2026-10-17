@@ -1,0 +1,15 @@
+{
+  "bluedoc-plan-gate": {
+    "PreToolUse": [
+      {
+        "matcher": "write_to_file",
+        "hooks": [
+          { "type": "command", "command": "python3 skills/bluedoc/scripts/hook.py agy plan", "timeout": 120 }
+        ]
+      }
+    ],
+    "PreInvocation": [
+      { "type": "command", "command": "python3 skills/bluedoc/scripts/hook.py agy note", "timeout": 10 }
+    ]
+  }
+}

@@ -52,6 +52,9 @@ interface Api {
 		name: string;
 		label: string;
 		description: string;
+		/** pi lists a custom tool in the system prompt's tools section only when it has this. */
+		promptSnippet?: string;
+		promptGuidelines?: string[];
 		parameters: object;
 		execute(id: string, params: { path?: string }, signal: AbortSignal | undefined, onUpdate: unknown, ctx: Ctx): Promise<ToolResult>;
 	}): void;
@@ -127,6 +130,7 @@ async function hookExt<T>(args: string[], options: RunOptions): Promise<T | unde
 }
 
 function openGate(text: string, planPath: string | undefined, ctx: Ctx, agent: "omp" | "pi", signal?: AbortSignal) {
+	// planPath may be omp's `local://…` URL: hook.py names the doc from it and imports `text`.
 	const stdin = JSON.stringify({ text, planPath: planPath ?? null, cwd: ctx.cwd, sessionId: ctx.sessionManager.getSessionId(), agent });
 	return hookExt<Gate>(["open"], { cwd: ctx.cwd, stdin, signal });
 }
@@ -275,6 +279,10 @@ export default function bluedoc(pi: Api) {
 				"Open a Markdown plan file as a bluedoc plan page and wait for the user's review. " +
 				"Returns 'Approved:' with the user's notes, or 'Changes requested:' with the changes to make; " +
 				`after changes, edit the same file and call ${SUBMIT_TOOL} again.`,
+			// Without a snippet pi leaves the tool out of the system prompt's tool list, and models that trust that list
+			// (a local qwen in the beta19 live test) decide the tool doesn't exist and route it through `mcp` instead.
+			promptSnippet: "Open a Markdown plan file as a bluedoc page for the user's review and wait for the answer",
+			promptGuidelines: [`In bluedoc plan mode, call ${SUBMIT_TOOL} directly (it is a native tool, not an MCP tool).`],
 			parameters: {
 				type: "object",
 				properties: { path: { type: "string", description: "Path of the Markdown plan file, relative to the working directory" } },
