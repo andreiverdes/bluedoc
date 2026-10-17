@@ -22,6 +22,9 @@ Usage:
   build.py patch doc.json KEY [--set f=v ...] [--json OBJ] [--append OBJ] [--delete] [--html FILE|-]
                               [--change LINE ...] [--no-bump]
                                     change one object by its annotator key, bump meta.rev, validate, record
+  build.py from-md PLAN.md out.bluedoc.json [--org O] [--project DIR] [--change LINE ...]
+                                    import a Markdown plan as a plan doc (mdplan.py) and build it; an existing out
+                                    keeps its id and gets the next meta.rev
 
 serve.py renders the JSON with assets/template.html on every request, so normal work needs no
 HTML file at all: write the JSON, run build.py, open the serve.py URL.
@@ -3793,12 +3796,49 @@ def cmd_patch(argv: list[str]) -> int:
     return 0
 
 
+def cmd_from_md(argv: list[str]) -> int:
+    """`build.py from-md`: a Markdown plan as a plan doc, built like any doc. An existing out keeps its id and takes
+    the next rev (a number one higher, else rev+'.1'), with --change lines (default: re-imported) as its changes."""
+    ap = argparse.ArgumentParser(prog="build.py from-md", description="Import a Markdown plan as a bluedoc plan and build it.")
+    ap.add_argument("plan", type=Path, help="the Markdown plan")
+    ap.add_argument("out", type=Path, help="the <name>.bluedoc.json to write; its name becomes the doc id")
+    ap.add_argument("--org", default="", help="meta.org (default: the project folder's name)")
+    ap.add_argument("--project", type=Path, help="the folder whose files the plan names (default: the current one)")
+    ap.add_argument("--change", action="append", default=[], help="a line for `changes` when out exists (repeatable)")
+    a = ap.parse_args(argv)
+    import mdplan
+    try:
+        text = a.plan.read_text(encoding="utf-8")
+    except OSError as e:
+        print(f"cannot read {a.plan}: {e}", file=sys.stderr)
+        return 2
+    project = (a.project or Path.cwd()).resolve()
+    doc = mdplan.from_markdown(text, stem=doc_stem(a.out), project_dir=project, org=a.org or project.name,
+                               plan_file=str(a.plan))
+    if a.out.is_file():
+        try:
+            old = json.loads(a.out.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as e:
+            print(f"cannot read {a.out}: {e}", file=sys.stderr)
+            return 2
+        rev = str((old.get("meta") or {}).get("rev") or "0")
+        doc["id"] = old.get("id") or doc["id"]
+        doc["meta"]["rev"] = str(int(rev) + 1) if rev.isdigit() else rev + ".1"
+        doc["changes"] = a.change or ["Re-imported from the Markdown plan."]
+    a.out.parent.mkdir(parents=True, exist_ok=True)
+    write_doc(a.out, doc, "{\n  \"")
+    print(f"wrote {a.out} (plan, rev {doc['meta']['rev']})", file=sys.stderr)
+    return main([str(a.out)])
+
+
 def main(argv: list[str] | None = None) -> int:
     argv = sys.argv[1:] if argv is None else argv
     if argv[:1] == ["new"]:
         return cmd_new(argv[1:])
     if argv[:1] == ["patch"]:
         return cmd_patch(argv[1:])
+    if argv[:1] == ["from-md"]:
+        return cmd_from_md(argv[1:])
     if argv[:1] == ["l10n"]:
         return cmd_l10n(argv[1:])
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)

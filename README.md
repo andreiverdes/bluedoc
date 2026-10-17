@@ -58,6 +58,8 @@ claude plugin install bluedoc@bluedoc
 
 Inside a session the same commands are `/plugin marketplace add andreiverdes/bluedoc` and `/plugin install bluedoc@bluedoc`. Start a new session to load the skill.
 
+**Plan mode.** With the plugin installed, every plan Claude finishes in plan mode opens as a bluedoc plan page in your browser. Claude waits for your answer on the page, revises the doc on **Request changes** and leaves plan mode once you **Approve plan**. If the plan names a `*.bluedoc.json` Claude already wrote, that doc opens; otherwise the plan is imported into `~/.bluedoc/plans/<project>/`. The gate stays out of the way in CI, over SSH without a display and in `bypassPermissions` mode, and `BLUEDOC_PLAN_GATE=0` turns it off; in those cases, and on any error, Claude Code shows its own plan dialog. Plannotator installed too means two reviews open for one plan.
+
 ### Codex
 
 ```sh
@@ -166,7 +168,9 @@ skills/bluedoc/
   references/schema.md   every JSON field and command, for lookup
   references/kits.md     the plain kit's classes, HorizonUI in a screen, bringing your own framework, the store shot kit
   assets/skeletons/      fill-in skeleton per doc type (build.py new), plus review-area.json (--shape area)
-  scripts/build.py       new, validate, lint, patch, build the HTML
+  scripts/build.py       new, validate, lint, patch, from-md (a Markdown plan → a plan doc), build the HTML
+  scripts/mdplan.py      the Markdown plan importer behind build.py from-md
+  scripts/hook.py        agent hooks: Claude Code's plan gate (ExitPlanMode) and its Bash allowance
   scripts/listing.py     store listings: the rules file, store checks, l10n, sections and variants, the fastlane export plan
   scripts/capture.py     store screenshots from capture recipes: simctl, adb and emulator, headless Chrome
   scripts/fonts.py       the fonts installed on this machine, for a listing's caption font
@@ -197,6 +201,7 @@ docs/media/              the screenshots those pages and this README show
 docs/examples/           the examples built to HTML, for GitHub readers
 tests/                   the test suite (python3 -m unittest discover -s tests)
 .claude-plugin/          Claude Code plugin and marketplace (omp reads it too)
+hooks/hooks.json         Claude Code hooks: the plan gate (omp doesn't run them)
 .agents/plugins/         Codex marketplace
 plugin.json              Agent Plugins manifest (Codex, omp)
 package.json             pi package manifest
