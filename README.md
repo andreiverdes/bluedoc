@@ -4,7 +4,7 @@
 
 An agent skill for engineering docs, plans, code reviews, UI designs, slide decks, website reviews, app icons and app store listings. The agent writes one JSON file, plus small HTML fragments for screens and SVG layers for icons; a local server renders it as a page. You tick checklists, pick options, comment on any element and approve or send back; your answers and change requests go to the agent, and each revision can be compared with the last. Works with Claude Code, Codex, pi, omp, Copilot CLI and Antigravity CLI.
 
-> **Beta.** bluedoc is in beta: the doc format and commands may still change between betas. It is tested on macOS; Linux and Windows are untested. Issues and feedback are welcome on GitHub.
+> bluedoc 1.0 is tested on macOS; Linux and Windows are untested. Issues and feedback are welcome on GitHub.
 
 ## Doc types
 
