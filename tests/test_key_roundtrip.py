@@ -19,6 +19,7 @@ from _support import EXAMPLE_STEMS, SKILL, TempHome, load_json, template_text
 
 import build
 import diffref
+import serve
 
 DESIGN = "acme-fit-design"
 LISTING = "acme-fit-listing"
@@ -81,15 +82,9 @@ def diff_line_keys(d: dict):
 
 
 def md_parts(src: str) -> int:
-    """How many <p> and <li> the template's md() makes of src (keyOf's para index runs over them)."""
-    n = 0
-    for block in re.split(r"\n\s*\n", src.strip()):
-        lines = [l for l in block.split("\n") if l.strip()]
-        if lines and (all(re.match(r"\s*[-*] ", l) for l in lines) or all(re.match(r"\s*\d+[.)] ", l) for l in lines)):
-            n += len(lines)
-        else:
-            n += 1
-    return n
+    """How many <p> and <li> the template's md() makes of src (keyOf's para index runs over them); serve.md_html
+    renders it as md() does."""
+    return len(re.findall(r"<(?:p|li)[ >]", serve.md_html(src)))
 
 
 def keys_of(doc: dict, expanded: dict, doc_path=None) -> dict[str, list[str]]:

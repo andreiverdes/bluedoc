@@ -149,8 +149,10 @@ CODE_SPAN = re.compile(r"`([^`\n]*)`")
 # after dropping U+0000-U+0020 as browsers do
 URL_SCHEME = re.compile(r"^([a-z][a-z\d+.-]*):", re.I)
 SAFE_SCHEMES = re.compile(r"^(https?|mailto)$", re.I)
-# a markdown link as the page's inline() reads it; JavaScript's \s, not Python's (which also takes \x1c-\x1f)
-MD_LINK = re.compile("\\[([^\\]]+)\\]\\(([^)\t\n\v\f\r \u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]+)\\)")
+# a markdown link as the page's inline() reads it (serve.py MD_LINK)
+MD_LINK = re.compile(r"\[([^\[\]]+)\]\(([^)\[\]\x00 \t\n]+)\)")
+MD_FENCE_LINE = re.compile(r" {0,3}(`{3,}|~{3,})")
+MD_TABLE_SEP = re.compile(r"[ \t]*\|?(?:[ \t]*:?-+:?[ \t]*\|)*[ \t]*:?-+:?[ \t]*\|?[ \t]*")
 CALLOUT_KINDS = {"note", "caution", "warning", "risk", "decision"}
 STATE_KINDS = {"ok", "warn", "risk", "info", "todo"}
 RESOLVES_ID = re.compile(r"[A-Za-z0-9_-]{1,40}")   # a reader comment's id, as `resolves` lists it (the page writes c<base36>)
@@ -301,6 +303,30 @@ def check_url(rep: Report, where: str, url) -> None:
                        "a relative path or a #fragment")
 
 
+def md_prose(text: str) -> str:
+    """md text as the linter reads it: fenced code goes, and so does a table's delimiter row; each other table row
+    becomes one line per cell, so a row is never read as one long sentence."""
+    out: list[str] = []
+    lines = text.split("\n")
+    fence, table = None, False
+    for i, line in enumerate(lines):
+        f = MD_FENCE_LINE.match(line)
+        if fence:
+            if f and f[1][0] == fence[0] and len(f[1]) >= len(fence) and not line[f.end():].strip():
+                fence = None
+            continue
+        if f:
+            fence = f[1]
+            continue
+        nxt = lines[i + 1] if i + 1 < len(lines) else ""
+        table = "|" in line and (table or ("|" in nxt and bool(MD_TABLE_SEP.fullmatch(nxt))))
+        if not table:
+            out.append(line)
+        elif not MD_TABLE_SEP.fullmatch(line):
+            out.extend(c.strip() for c in re.split(r"(?<!\\)\|", line) if c.strip())
+    return "\n".join(out)
+
+
 def lint_text(rep: Report, where: str, text: str | None, *, imperative: bool = False) -> None:
     if not isinstance(text, str):
         if text is not None:
@@ -308,7 +334,7 @@ def lint_text(rep: Report, where: str, text: str | None, *, imperative: bool = F
         return
     if not text:
         return
-    plain = re.sub(r"`[^`]*`", "", text)
+    plain = re.sub(r"`[^`]*`", "", md_prose(text))
     plain = re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", plain)
     low = " " + plain.lower() + " "
     for w in FILLER:
@@ -2025,7 +2051,7 @@ def _validate(rep: Report, doc: dict, doc_path: Path | None, *, allow_remote: bo
         if t in ("text", "callout"):
             need(rep, bw, b, "md")
             lint_text(rep, bw, b.get("md"))
-            if t == "text" and len(re.findall(r"^\s*\d+[.)]\s", b.get("md") or "", re.M)) >= 3:
+            if t == "text" and isinstance(b.get("md"), str) and len(re.findall(r"^\s*\d+[.)]\s", md_prose(b["md"]), re.M)) >= 3:
                 rep.warn(bw, "a procedure as a numbered list: make it a checklist, one action per item")
             if t == "callout" and b.get("kind", "note") not in CALLOUT_KINDS:
                 rep.err(bw, f"callout kind '{b.get('kind')}' not in {sorted(CALLOUT_KINDS)}")
@@ -2337,7 +2363,7 @@ def _validate(rep: Report, doc: dict, doc_path: Path | None, *, allow_remote: bo
         elif isinstance(node, str):
             for m in find_placeholders(node):
                 rep.err(where, f"unfilled placeholder {m}: replace it with what it names")
-            for _, url in MD_LINK.findall(CODE_SPAN.sub(" ", node)):
+            for _, url in MD_LINK.findall(CODE_SPAN.sub(" ", md_prose(node))):
                 check_url(rep, where, url)
     for k, v in doc.items():
         texts(v, k if k == "sections" else f"doc.{k}")

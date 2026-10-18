@@ -2,7 +2,7 @@
 
 Lookup reference for every field and command. Grep for a heading, never read the file whole: `grep -n -A25 '^## Diff' references/schema.md`. How to lay out each doc type lives in `types/<type>.md`.
 
-Headings: `## Document` (incl. `hero`, `emoji`; `### Reader title and emoji`) · `## Contracts` · `## Section` · `## Blocks` (`### Inline markdown`) · `## Checklist` (`### Evidence`, `#### Pinned evidence`, `### Reader comments and replies`) · `## Diff` (`### Diff reference`, `### Embedded diff`, `### gitdiff.py`) · `## Plan blocks` (`### Steps`, `### Files`, `### Media`, `### Compare`) · `## Board` (`### Artboard`, `### Devices`, `### Screen files`, `### Links`, `### Icons`, `### Website`) · `## Listing` (`### Style and brand`, `### Shots`, `### Uploads and captures`, `### Text and locales`, `### Checks`, `### Export`) · `## Revisions` · `## Page layout` · `## Canvas` (`### Node`, `### Semantic zoom`, `### Edge`, `### Flow`) · `## Annotations` (the key grammar; `### Bottom tray`) · `## Plans` (its approval Markdown has `## Decisions` and `## Notes with the approval`) · `## build.py` (`### patch`) · `## serve.py` (`### Reader state`) · `## Automation API`
+Headings: `## Document` (incl. `hero`, `emoji`; `### Reader title and emoji`) · `## Contracts` · `## Section` · `## Blocks` (`### Markdown`) · `## Checklist` (`### Evidence`, `#### Pinned evidence`, `### Reader comments and replies`) · `## Diff` (`### Diff reference`, `### Embedded diff`, `### gitdiff.py`) · `## Plan blocks` (`### Steps`, `### Files`, `### Media`, `### Compare`) · `## Board` (`### Artboard`, `### Devices`, `### Screen files`, `### Links`, `### Icons`, `### Website`) · `## Listing` (`### Style and brand`, `### Shots`, `### Uploads and captures`, `### Text and locales`, `### Checks`, `### Export`) · `## Revisions` · `## Page layout` · `## Canvas` (`### Node`, `### Semantic zoom`, `### Edge`, `### Flow`) · `## Annotations` (the key grammar; `### Bottom tray`) · `## Plans` (its approval Markdown has `## Decisions` and `## Notes with the approval`) · `## build.py` (`### patch`) · `## serve.py` (`### Reader state`) · `## Automation API`
 
 ## Document
 
@@ -52,7 +52,7 @@ A missing requirement is an **error** on the doc being built: a new `meta.rev` (
 
 | `type` | Fields | Use for |
 |---|---|---|
-| `text` | `md` | Prose. Paragraphs split on blank lines; `- ` lists; `1. ` lists. |
+| `text` | `md` | Prose in [Markdown](#markdown): paragraphs, lists, tables, code, quotes. |
 | `callout` | `kind` (`note`, `caution`, `warning`, `risk`, `decision`), `md`, `title`? | `caution` = risk to equipment or data; `warning` = risk to people or production; `decision` = a choice and its reason. |
 | `table` | `columns: [str]`, `rows: [[inline md]]`, `caption`? | 2+ items sharing 2+ attributes. Every row has `len(columns)` cells. |
 | `code` | `code`, `lang`?, `title`? | Copyable commands or files. |
@@ -68,9 +68,14 @@ A missing requirement is an **error** on the doc being built: a new `meta.rev` (
 | `board` | see [Board](#board) | A design doc's UI mockups: artboards on a pan/zoom board, each an HTML screen file. Design docs only; not inside checklist items. |
 | `listing` | see [Listing](#listing) | A storelisting's store text, locales, captions, brand and style. Storelisting docs only; not inside checklist items. |
 
-### Inline markdown
+### Markdown
 
-`**bold**`, `*em*`, `` `code` ``, `[text](url)`. `[text](#node:<canvasId>/<nodeKey>)` scrolls to the canvas and opens that node. `[text](#code:<diffId>/<path>:<line>)` opens that file in a `diff` block and jumps to the line; `/<path>` and `:<line>` are optional. The same `#code:` URL works as a page link. No headings, images, or raw HTML (input is escaped). A URL with a scheme other than `http`, `https` or `mailto` (checked after stripping control characters and spaces) is a build error, here and in `links[].href` and a diff's `url`; `#…` and relative URLs are fine.
+Fields marked **md** (`tldr`, `text`, `callout`, `terms`, `cards`, item `detail`, step and evidence `md`, compare sides, canvas node `md`, comment `md`, a diff's `note`, speaker `notes`) take block Markdown; fields marked **inline md** (titles, subtitles, `lead`, cells, captions, labels) take the inline part only. One renderer draws both, the page's and `serve.py`'s alike (`tests/fixtures/markdown-cases.json`).
+
+- **Blocks**, with or without a blank line between them (a list or a table may start right under a paragraph line): paragraphs (a single newline stays inside one); `-`, `*` or `+` bullets and `1.` or `1)` numbered lists, nested by indenting 2+ spaces under the item, a line indented under an item continuing it; task items `- [ ]` / `- [x]` (read-only boxes); GFM tables (header row, a `---` / `:---` / `:---:` / `---:` delimiter row, body rows; outer pipes optional, `\|` for a pipe in a cell, short rows padded, cells take inline md) in the `table` block's look, scrolling sideways when wide; fenced code (` ``` ` or `~~~`, optional language) in the `code` block's look with Copy; `>` quotes, nestable; `---`, `***` or `___` alone on a line as a rule (never a heading: no setext headings).
+- **Headings** stay under the section and block titles: `#` draws as `h4`, `##` as `h5`, `###` to `######` as `h6`.
+- **Inline**: `` `code` ``, `**bold**` / `__bold__`, `*em*` / `_em_` (`_` only at word edges, so `snake_case` stays), `~~strike~~`, `[text](url)`, `<https://…>` autolinks, bare `https://…` URLs, `\` escapes, and a line break from two trailing spaces or a trailing `\`. Web links open in a new tab. `[text](#node:<canvasId>/<nodeKey>)` scrolls to the canvas and opens that node. `[text](#code:<diffId>/<path>:<line>)` opens that file in a `diff` block and jumps to the line; `/<path>` and `:<line>` are optional. The same `#code:` URL works as a page link.
+- **Not rendered**: images, indented code blocks, setext headings, raw HTML (input is escaped). A URL with a scheme other than `http`, `https` or `mailto` (checked after stripping control characters and spaces) is a build error, here and in `links[].href` and a diff's `url`; `#…` and relative URLs are fine. Fenced code is never linted or link-checked.
 
 ## Checklist
 
@@ -102,7 +107,7 @@ A checklist with both kinds of item is a build error on a new rev (a warning on 
 | `text` | row, line 1 | The action, imperative, one line (≤ 90 characters; the build warns above that and the row truncates with …). Full text shows when the row is open. |
 | `sub` | row, line 2 | One line of context: why, what it unblocks, who owns it (≤ 120 characters). If absent, `verify` takes this line with a ✓ icon. |
 | `state`, `stateKind` | row, right | Chip such as `unverified` / `warn`. Keep it to 1–3 words. |
-| `detail` | open | Extra md: lists, paragraphs, links. |
+| `detail` | open | Extra md: paragraphs, lists, tables, code, links. |
 | `code`, `lang` | open | Command to run for this step, with a Copy button. |
 | `blocks` | open | Any of `text`, `callout`, `table`, `code`, `terms`, `cards`, `files`, `media`, `compare`, `checklist`. A nested checklist ticks on its own, counts in the page total when it is a progress list, and exports indented under its parent; nested checklists can't nest again. |
 | `verify` | open (or row line 2) | Observable success check (output, state, file). Required for steps whose failure is silent. Shown as **Check** when the row is open, unless it already fills line 2. |
@@ -832,7 +837,7 @@ The server stores the approval in `state.db` with `docHash`, the sha256 of the d
 | `patch <doc> <key> …` | Changes one object by key, bumps the rev, validates, records. See below. |
 | `from-md <plan.md> <out.bluedoc.json> [--org O] [--project DIR] [--change "…"]` | Imports a Markdown plan as a `plan` doc (`scripts/mdplan.py`) and builds it. The first `#` heading is the title, the first paragraph the `tldr`, each `##` a section; the numbered list under a heading like Steps or Implementation (else the first one outside context, questions, risks and verification) becomes the `steps` block, else each other `##` becomes a step; backticked paths become the `files` block (`edit` if they exist under `--project`, else `add`). Everything else stays text, tables and code. An existing out keeps its `id` and takes the next `meta.rev`, with `--change` lines as `changes`. Claude Code's plan gate (`scripts/hook.py`) runs it. |
 
-The linter warns on: filler and ceremony words; vague words; sentences over 32 words; a `tldr` or `lead` opening with "This section/doc/document/page" or "In this …"; a last section (of 2+) titled Summary, Conclusion(s), Wrap-up, Recap or Closing thoughts; a text block with 3+ numbered lines (make it a checklist); checklist text or sub with "if you agree", "do you agree", "confirm whether"; checklist and step titles that don't start with a verb or end in `?`; titles over 90 characters, subtitles over 120, option labels over 28.
+The linter warns on: filler and ceremony words; vague words; sentences over 32 words; a `tldr` or `lead` opening with "This section/doc/document/page" or "In this …"; a last section (of 2+) titled Summary, Conclusion(s), Wrap-up, Recap or Closing thoughts; a text block with 3+ numbered lines (make it a checklist); checklist text or sub with "if you agree", "do you agree", "confirm whether"; checklist and step titles that don't start with a verb or end in `?`; titles over 90 characters, subtitles over 120, option labels over 28. In md it skips fenced code and reads each table cell on its own.
 
 ### patch
 

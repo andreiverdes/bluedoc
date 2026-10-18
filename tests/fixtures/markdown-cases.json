@@ -1,0 +1,371 @@
+{
+ "about": "Markdown in, the HTML md() / inline() give out: template.html and serve.py md_html / md_inline must both produce it (tests/test_markdown.py)",
+ "cases": [
+  {
+   "name": "paragraph: a single newline stays inside it",
+   "fn": "md",
+   "md": "Acme ships on Monday.\nThe carts move first.",
+   "html": "<p>Acme ships on Monday.\nThe carts move first.</p>"
+  },
+  {
+   "name": "paragraphs split on blank lines",
+   "fn": "md",
+   "md": "First paragraph.\n\n\nSecond paragraph.",
+   "html": "<p>First paragraph.</p><p>Second paragraph.</p>"
+  },
+  {
+   "name": "hard break: two trailing spaces",
+   "fn": "md",
+   "md": "Line one  \nLine two",
+   "html": "<p>Line one<br>\nLine two</p>"
+  },
+  {
+   "name": "hard break: trailing backslash",
+   "fn": "md",
+   "md": "Line one\\\nLine two",
+   "html": "<p>Line one<br>\nLine two</p>"
+  },
+  {
+   "name": "bullets: -, * and +",
+   "fn": "md",
+   "md": "- one\n* two\n+ three",
+   "html": "<ul><li>one</li><li>two</li><li>three</li></ul>"
+  },
+  {
+   "name": "numbered: 1. and 1), with a start",
+   "fn": "md",
+   "md": "3. three\n4) four\n\n1. one",
+   "html": "<ol start=\"3\"><li>three</li><li>four</li><li>one</li></ol>"
+  },
+  {
+   "name": "nested list by 2 spaces",
+   "fn": "md",
+   "md": "- carts\n  - saved\n  - shared\n- orders",
+   "html": "<ul><li>carts<ul><li>saved</li><li>shared</li></ul></li><li>orders</li></ul>"
+  },
+  {
+   "name": "mixed nesting: numbered in bullets in numbered",
+   "fn": "md",
+   "md": "1. Plan\n   - read\n     1. first\n     2. second\n2. Ship",
+   "html": "<ol><li>Plan<ul><li>read<ol><li>first</li><li>second</li></ol></li></ul></li><li>Ship</li></ol>"
+  },
+  {
+   "name": "task items",
+   "fn": "md",
+   "md": "- [x] migrate\n- [ ] backfill\n- [X] done\n- [] not a task",
+   "html": "<ul><li class=\"bd-task\"><input type=\"checkbox\" checked disabled> migrate</li><li class=\"bd-task\"><input type=\"checkbox\" disabled> backfill</li><li class=\"bd-task\"><input type=\"checkbox\" checked disabled> done</li><li>[] not a task</li></ul>"
+  },
+  {
+   "name": "a list item continuing on an indented line",
+   "fn": "md",
+   "md": "- Ship the API\n  before the page.\n- Then the page",
+   "html": "<ul><li>Ship the API\nbefore the page.</li><li>Then the page</li></ul>"
+  },
+  {
+   "name": "a lazy continuation line joins the item",
+   "fn": "md",
+   "md": "- Ship the API\nbefore the page.",
+   "html": "<ul><li>Ship the API\nbefore the page.</li></ul>"
+  },
+  {
+   "name": "a list right after a paragraph",
+   "fn": "md",
+   "md": "Steps:\n- one\n- two",
+   "html": "<p>Steps:</p><ul><li>one</li><li>two</li></ul>"
+  },
+  {
+   "name": "a numbered line other than 1. doesn't interrupt a paragraph",
+   "fn": "md",
+   "md": "Released in\n2. quarter.",
+   "html": "<p>Released in\n2. quarter.</p>"
+  },
+  {
+   "name": "headings # to ######: h4, h5, h6",
+   "fn": "md",
+   "md": "# One\n## Two ##\n### Three\n###### Six",
+   "html": "<h4 class=\"bd-mh\">One</h4><h5 class=\"bd-mh\">Two</h5><h6 class=\"bd-mh\">Three</h6><h6 class=\"bd-mh\">Six</h6>"
+  },
+  {
+   "name": "not headings: 7 hashes, no space",
+   "fn": "md",
+   "md": "####### seven\n#tag",
+   "html": "<p>####### seven\n#tag</p>"
+  },
+  {
+   "name": "fenced code keeps Markdown literal",
+   "fn": "md",
+   "md": "```md\n# not a heading\n- not a list\n**not bold** | not | a table |\n```",
+   "html": "<div class=\"bp-code\"><div class=\"bp-code-h\"><span>md</span><button type=\"button\" class=\"bp-btn ghost bd-md-copy\"><svg viewBox=\"0 0 24 24\" class=\"bd-ic\" aria-hidden=\"true\"><rect x=\"9\" y=\"9\" width=\"13\" height=\"13\" rx=\"2\"/><path d=\"M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1\"/></svg>Copy</button></div><pre><code># not a heading\n- not a list\n**not bold** | not | a table |</code></pre></div>"
+  },
+  {
+   "name": "tilde fence, info after the language",
+   "fn": "md",
+   "md": "~~~sh title\nnpm test\n~~~",
+   "html": "<div class=\"bp-code\"><div class=\"bp-code-h\"><span>sh</span><button type=\"button\" class=\"bp-btn ghost bd-md-copy\"><svg viewBox=\"0 0 24 24\" class=\"bd-ic\" aria-hidden=\"true\"><rect x=\"9\" y=\"9\" width=\"13\" height=\"13\" rx=\"2\"/><path d=\"M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1\"/></svg>Copy</button></div><pre><code>npm test</code></pre></div>"
+  },
+  {
+   "name": "fenced code escapes HTML",
+   "fn": "md",
+   "md": "```\n<script>alert(1)</script>\n```",
+   "html": "<div class=\"bp-code\"><div class=\"bp-code-h\"><span>code</span><button type=\"button\" class=\"bp-btn ghost bd-md-copy\"><svg viewBox=\"0 0 24 24\" class=\"bd-ic\" aria-hidden=\"true\"><rect x=\"9\" y=\"9\" width=\"13\" height=\"13\" rx=\"2\"/><path d=\"M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1\"/></svg>Copy</button></div><pre><code>&lt;script&gt;alert(1)&lt;/script&gt;</code></pre></div>"
+  },
+  {
+   "name": "an unclosed fence runs to the end",
+   "fn": "md",
+   "md": "Run:\n```\nmake\nmake test",
+   "html": "<p>Run:</p><div class=\"bp-code\"><div class=\"bp-code-h\"><span>code</span><button type=\"button\" class=\"bp-btn ghost bd-md-copy\"><svg viewBox=\"0 0 24 24\" class=\"bd-ic\" aria-hidden=\"true\"><rect x=\"9\" y=\"9\" width=\"13\" height=\"13\" rx=\"2\"/><path d=\"M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1\"/></svg>Copy</button></div><pre><code>make\nmake test</code></pre></div>"
+  },
+  {
+   "name": "a fence inside a list item",
+   "fn": "md",
+   "md": "- Build:\n  ```sh\n  make\n  ```\n- Ship",
+   "html": "<ul><li>Build:<div class=\"bp-code\"><div class=\"bp-code-h\"><span>sh</span><button type=\"button\" class=\"bp-btn ghost bd-md-copy\"><svg viewBox=\"0 0 24 24\" class=\"bd-ic\" aria-hidden=\"true\"><rect x=\"9\" y=\"9\" width=\"13\" height=\"13\" rx=\"2\"/><path d=\"M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1\"/></svg>Copy</button></div><pre><code>make</code></pre></div></li><li>Ship</li></ul>"
+  },
+  {
+   "name": "block quote, nested",
+   "fn": "md",
+   "md": "> Ship it.\n> > With the test first.\n>\n> Then deploy.",
+   "html": "<blockquote><p>Ship it.</p><blockquote><p>With the test first.</p></blockquote><p>Then deploy.</p></blockquote>"
+  },
+  {
+   "name": "a nested list in a quote",
+   "fn": "md",
+   "md": "> - carts\n>   - saved\n> - orders",
+   "html": "<blockquote><ul><li>carts<ul><li>saved</li></ul></li><li>orders</li></ul></blockquote>"
+  },
+  {
+   "name": "thematic breaks",
+   "fn": "md",
+   "md": "---\n***\n- - -\n___",
+   "html": "<hr><hr><hr><hr>"
+  },
+  {
+   "name": "a rule after a paragraph is a rule, not a setext heading",
+   "fn": "md",
+   "md": "Above\n---\nBelow",
+   "html": "<p>Above</p><hr><p>Below</p>"
+  },
+  {
+   "name": "table with alignment",
+   "fn": "md",
+   "md": "| Left | Center | Right | None |\n|:---|:---:|---:|---|\n| a | b | c | d |",
+   "html": "<div class=\"bp-table-wrap\"><table class=\"bp-table\"><thead><tr><th style=\"text-align:left\">Left</th><th style=\"text-align:center\">Center</th><th style=\"text-align:right\">Right</th><th>None</th></tr></thead><tbody><tr><td style=\"text-align:left\">a</td><td style=\"text-align:center\">b</td><td style=\"text-align:right\">c</td><td>d</td></tr></tbody></table></div>"
+  },
+  {
+   "name": "a table right after a paragraph, no blank line",
+   "fn": "md",
+   "md": "Findings:\n| Finding | Fix |\n|---|---|\n| `tier` | Clamp it |",
+   "html": "<p>Findings:</p><div class=\"bp-table-wrap\"><table class=\"bp-table\"><thead><tr><th>Finding</th><th>Fix</th></tr></thead><tbody><tr><td><code>tier</code></td><td>Clamp it</td></tr></tbody></table></div>"
+  },
+  {
+   "name": "a table without outer pipes",
+   "fn": "md",
+   "md": "Finding | Fix\n--- | ---\ntier | clamp",
+   "html": "<div class=\"bp-table-wrap\"><table class=\"bp-table\"><thead><tr><th>Finding</th><th>Fix</th></tr></thead><tbody><tr><td>tier</td><td>clamp</td></tr></tbody></table></div>"
+  },
+  {
+   "name": "a pipe in inline code inside a cell",
+   "fn": "md",
+   "md": "| Command | Does |\n|---|---|\n| `grep a|b` | either |",
+   "html": "<div class=\"bp-table-wrap\"><table class=\"bp-table\"><thead><tr><th>Command</th><th>Does</th></tr></thead><tbody><tr><td><code>grep a|b</code></td><td>either</td></tr></tbody></table></div>"
+  },
+  {
+   "name": "an escaped pipe in a cell",
+   "fn": "md",
+   "md": "| Expr | Means |\n|---|---|\n| a \\| b | a or b |",
+   "html": "<div class=\"bp-table-wrap\"><table class=\"bp-table\"><thead><tr><th>Expr</th><th>Means</th></tr></thead><tbody><tr><td>a | b</td><td>a or b</td></tr></tbody></table></div>"
+  },
+  {
+   "name": "ragged rows: short rows fill, extra cells go",
+   "fn": "md",
+   "md": "| a | b |\n|---|---|\n| 1 |\n| 1 | 2 | 3 |",
+   "html": "<div class=\"bp-table-wrap\"><table class=\"bp-table\"><thead><tr><th>a</th><th>b</th></tr></thead><tbody><tr><td>1</td><td></td></tr><tr><td>1</td><td>2</td></tr></tbody></table></div>"
+  },
+  {
+   "name": "a table ends at a line without a pipe",
+   "fn": "md",
+   "md": "| a | b |\n|---|---|\n| 1 | 2 |\nAfter the table.",
+   "html": "<div class=\"bp-table-wrap\"><table class=\"bp-table\"><thead><tr><th>a</th><th>b</th></tr></thead><tbody><tr><td>1</td><td>2</td></tr></tbody></table></div><p>After the table.</p>"
+  },
+  {
+   "name": "a delimiter row of another width is no table",
+   "fn": "md",
+   "md": "| a | b |\n|---|\n| 1 | 2 |",
+   "html": "<p>| a | b |\n|---|\n| 1 | 2 |</p>"
+  },
+  {
+   "name": "a header row alone",
+   "fn": "md",
+   "md": "| a | b |\n|---|---|",
+   "html": "<div class=\"bp-table-wrap\"><table class=\"bp-table\"><thead><tr><th>a</th><th>b</th></tr></thead></table></div>"
+  },
+  {
+   "name": "cells take inline Markdown",
+   "fn": "md",
+   "md": "| Item | Note |\n|---|---|\n| **bold** | [docs](https://acme.test/docs) and _em_ |",
+   "html": "<div class=\"bp-table-wrap\"><table class=\"bp-table\"><thead><tr><th>Item</th><th>Note</th></tr></thead><tbody><tr><td><strong>bold</strong></td><td><a href=\"https://acme.test/docs\" target=\"_blank\" rel=\"noopener noreferrer\">docs</a> and <em>em</em></td></tr></tbody></table></div>"
+  },
+  {
+   "name": "inline code, with a backtick inside a double-backtick span",
+   "fn": "inline",
+   "md": "Run `make` and `` a`b ``.",
+   "html": "Run <code>make</code> and <code>a`b</code>."
+  },
+  {
+   "name": "strong and em with * and _",
+   "fn": "inline",
+   "md": "**bold**, __bold__, *em*, _em_.",
+   "html": "<strong>bold</strong>, <strong>bold</strong>, <em>em</em>, <em>em</em>."
+  },
+  {
+   "name": "_ inside snake_case stays",
+   "fn": "inline",
+   "md": "Set snake_case_name and __init__ and a_b_c.",
+   "html": "Set snake_case_name and <strong>init</strong> and a_b_c."
+  },
+  {
+   "name": "strikethrough",
+   "fn": "inline",
+   "md": "~~old~~ new",
+   "html": "<del>old</del> new"
+  },
+  {
+   "name": "a link URL with underscores",
+   "fn": "inline",
+   "md": "[saved carts](https://acme.test/saved_carts_v2/a_b) and _em_",
+   "html": "<a href=\"https://acme.test/saved_carts_v2/a_b\" target=\"_blank\" rel=\"noopener noreferrer\">saved carts</a> and <em>em</em>"
+  },
+  {
+   "name": "em inside strong and strong inside em",
+   "fn": "inline",
+   "md": "**all *of* it** and *a **b** c*",
+   "html": "<strong>all <em>of</em> it</strong> and <em>a <strong>b</strong> c</em>"
+  },
+  {
+   "name": "globs and stars that aren't emphasis",
+   "fn": "inline",
+   "md": "Match *.ts and *.js, 2 * 3 * 4.",
+   "html": "Match *.ts and *.js, 2 * 3 * 4."
+  },
+  {
+   "name": "links: http, relative, #node and #code",
+   "fn": "inline",
+   "md": "[site](https://acme.test) [doc](acme.bluedoc.json) [api](#node:arch/api) [line](#code:pr/src/a.ts:12)",
+   "html": "<a href=\"https://acme.test\" target=\"_blank\" rel=\"noopener noreferrer\">site</a> <a href=\"acme.bluedoc.json\">doc</a> <a href=\"#node:arch/api\" data-node=\"arch/api\">api</a> <a href=\"#code:pr/src/a.ts:12\">line</a>"
+  },
+  {
+   "name": "link text takes inline Markdown",
+   "fn": "inline",
+   "md": "[`tierFor` **docs**](https://acme.test/tier)",
+   "html": "<a href=\"https://acme.test/tier\" target=\"_blank\" rel=\"noopener noreferrer\"><code>tierFor</code> <strong>docs</strong></a>"
+  },
+  {
+   "name": "autolinks",
+   "fn": "inline",
+   "md": "<https://acme.test/a?b=1&c=2> and <mailto:ops@acme.test>",
+   "html": "<a href=\"https://acme.test/a?b=1&amp;c=2\" target=\"_blank\" rel=\"noopener noreferrer\">https://acme.test/a?b=1&amp;c=2</a> and <a href=\"mailto:ops@acme.test\">mailto:ops@acme.test</a>"
+  },
+  {
+   "name": "bare URLs, one with an underscore",
+   "fn": "inline",
+   "md": "See https://acme.test/saved_carts/a_b and http://acme.test.",
+   "html": "See <a href=\"https://acme.test/saved_carts/a_b\" target=\"_blank\" rel=\"noopener noreferrer\">https://acme.test/saved_carts/a_b</a> and <a href=\"http://acme.test\" target=\"_blank\" rel=\"noopener noreferrer\">http://acme.test</a>."
+  },
+  {
+   "name": "a bare URL's trailing punctuation and unopened paren stay text",
+   "fn": "inline",
+   "md": "(see https://acme.test/x_(y)), then https://acme.test/z!",
+   "html": "(see <a href=\"https://acme.test/x_(y)\" target=\"_blank\" rel=\"noopener noreferrer\">https://acme.test/x_(y)</a>), then <a href=\"https://acme.test/z\" target=\"_blank\" rel=\"noopener noreferrer\">https://acme.test/z</a>!"
+  },
+  {
+   "name": "a URL in code stays code",
+   "fn": "inline",
+   "md": "`https://acme.test/a_b`",
+   "html": "<code>https://acme.test/a_b</code>"
+  },
+  {
+   "name": "backslash escapes",
+   "fn": "inline",
+   "md": "\\*not em\\*, \\_not em\\_, \\`not code\\`, \\[not](link), C:\\path",
+   "html": "*not em*, _not em_, `not code`, [not](link), C:\\path"
+  },
+  {
+   "name": "unclosed markers stay text",
+   "fn": "inline",
+   "md": "**open and *half and `tick",
+   "html": "**open and *half and `tick"
+  },
+  {
+   "name": "XSS: a script tag is text",
+   "fn": "md",
+   "md": "<script>alert(1)</script>",
+   "html": "<p>&lt;script&gt;alert(1)&lt;/script&gt;</p>"
+  },
+  {
+   "name": "XSS: a javascript: link goes nowhere",
+   "fn": "inline",
+   "md": "[x](javascript:alert(1)) [y](JAVASCRIPT:alert(1)) [z]( javascript:x)",
+   "html": "<a href=\"#\">x</a>) <a href=\"#\">y</a>) [z]( javascript:x)"
+  },
+  {
+   "name": "XSS: an img with onerror is text",
+   "fn": "md",
+   "md": "<img src=x onerror=alert(1)>",
+   "html": "<p>&lt;img src=x onerror=alert(1)&gt;</p>"
+  },
+  {
+   "name": "XSS: an autolink with another scheme is text",
+   "fn": "inline",
+   "md": "<javascript:alert(1)> <data:text/html,x>",
+   "html": "&lt;javascript:alert(1)&gt; &lt;data:text/html,x&gt;"
+  },
+  {
+   "name": "XSS: a quote in a URL can't leave the attribute",
+   "fn": "inline",
+   "md": "[x](https://acme.test/\"onmouseover=\"alert(1))",
+   "html": "<a href=\"https://acme.test/&quot;onmouseover=&quot;alert(1\" target=\"_blank\" rel=\"noopener noreferrer\">x</a>)"
+  },
+  {
+   "name": "XSS: HTML in a table cell and a code fence's language",
+   "fn": "md",
+   "md": "```<b>\nx\n```\n| <b>a</b> | b |\n|---|---|\n| <i onclick=x>c</i> | d |",
+   "html": "<div class=\"bp-code\"><div class=\"bp-code-h\"><span>&lt;b&gt;</span><button type=\"button\" class=\"bp-btn ghost bd-md-copy\"><svg viewBox=\"0 0 24 24\" class=\"bd-ic\" aria-hidden=\"true\"><rect x=\"9\" y=\"9\" width=\"13\" height=\"13\" rx=\"2\"/><path d=\"M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1\"/></svg>Copy</button></div><pre><code>x</code></pre></div><div class=\"bp-table-wrap\"><table class=\"bp-table\"><thead><tr><th>&lt;b&gt;a&lt;/b&gt;</th><th>b</th></tr></thead><tbody><tr><td>&lt;i onclick=x&gt;c&lt;/i&gt;</td><td>d</td></tr></tbody></table></div>"
+  },
+  {
+   "name": "empty",
+   "fn": "md",
+   "md": "",
+   "html": ""
+  },
+  {
+   "name": "CRLF line ends",
+   "fn": "md",
+   "md": "- one\r\n- two\r\n\r\nPara",
+   "html": "<ul><li>one</li><li>two</li></ul><p>Para</p>"
+  },
+  {
+   "name": "tabs indent a nested list",
+   "fn": "md",
+   "md": "- one\n\t- two",
+   "html": "<ul><li>one<ul><li>two</li></ul></li></ul>"
+  },
+  {
+   "name": "quotes and lists past the nesting limit read as text",
+   "fn": "md",
+   "md": "> > > > > > > > > > > > > > deep",
+   "html": "<blockquote><blockquote><blockquote><blockquote><blockquote><blockquote><blockquote><blockquote><blockquote><blockquote><blockquote><blockquote><p>&gt; &gt; deep</p></blockquote></blockquote></blockquote></blockquote></blockquote></blockquote></blockquote></blockquote></blockquote></blockquote></blockquote></blockquote>"
+  },
+  {
+   "name": "XSS: control characters before a javascript: URL",
+   "fn": "inline",
+   "md": "[go](\u0001javascript:alert(1)) [nul](\u0000javascript:x)",
+   "html": "<a href=\"#\">go</a>) <a href=\"#\">nul</a>"
+  },
+  {
+   "name": "the reply in the screenshot",
+   "fn": "md",
+   "md": "**What I need to start: only your picks.** No accounts, keys or server access: every fix is backend code, built and tested here, pushed to `origin` for CI. You release it to OVH as usual.\n\n| Finding | What the fix does |\n|---|---|\n| `mod-fail-open` | With `REQUIRE_SAFETY_CONTROLS=1` in the production compose file, the API refuses to start unless AWS, AssemblyAI and `ADMIN_TOKEN` are set; `/healthz` reports each control. The next release then can't start without those keys on the server, by design. |\n| `ban-control` | Accounts get a status: active, suspended or banned. A kill for explicit content suspends the streamer until an admin lifts it; resolving a report can ban. Suspended accounts get 403 on user routes. |\n| `reports-abuse` | Only people in a session (or its job) can report it, at most 5 times an hour. An admin can close a hold as invalid, so erasure proceeds. |\n| `bypass-guard` | Production can't run the unchecked sign-in mode (see that item). |\n\nDefaults I'd use unless you say otherwise: suspension stays until an admin lifts it; report limit 5 per hour. Each fix is one reviewable commit with its tests.",
+   "html": "<p><strong>What I need to start: only your picks.</strong> No accounts, keys or server access: every fix is backend code, built and tested here, pushed to <code>origin</code> for CI. You release it to OVH as usual.</p><div class=\"bp-table-wrap\"><table class=\"bp-table\"><thead><tr><th>Finding</th><th>What the fix does</th></tr></thead><tbody><tr><td><code>mod-fail-open</code></td><td>With <code>REQUIRE_SAFETY_CONTROLS=1</code> in the production compose file, the API refuses to start unless AWS, AssemblyAI and <code>ADMIN_TOKEN</code> are set; <code>/healthz</code> reports each control. The next release then can&#39;t start without those keys on the server, by design.</td></tr><tr><td><code>ban-control</code></td><td>Accounts get a status: active, suspended or banned. A kill for explicit content suspends the streamer until an admin lifts it; resolving a report can ban. Suspended accounts get 403 on user routes.</td></tr><tr><td><code>reports-abuse</code></td><td>Only people in a session (or its job) can report it, at most 5 times an hour. An admin can close a hold as invalid, so erasure proceeds.</td></tr><tr><td><code>bypass-guard</code></td><td>Production can&#39;t run the unchecked sign-in mode (see that item).</td></tr></tbody></table></div><p>Defaults I&#39;d use unless you say otherwise: suspension stays until an admin lifts it; report limit 5 per hour. Each fix is one reviewable commit with its tests.</p>"
+  }
+ ]
+}

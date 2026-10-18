@@ -48,7 +48,7 @@ You write one `*.bluedoc.json`; the local server renders it as a page (blueprint
 4. Same words: define terms once in a `terms` block and reuse them exactly.
 5. Name the actor and the condition: "If the token expired, the server closes the socket."
 6. Checkable, not vague: numbers, names, conditions, or "unknown".
-7. Shape fits content: procedures are checklists (`text` an imperative action ≤ 90 chars, `sub` why); comparisons are tables; a `caution` (data, equipment) or `warning` (people, production) callout sits before the step it guards.
+7. Shape fits content: procedures are checklists (`text` an imperative action ≤ 90 chars, `sub` why); comparisons are tables (in an item's md, a Markdown table is fine); a `caution` (data, equipment) or `warning` (people, production) callout sits before the step it guards.
 8. The reader chooses through decision items (`choices` + `recommend`), never "check if you agree". Set `choice` only to carry over the reader's own pick. A checklist is either a decision list (every item has `choices`) or a progress list (none has): never both; put decision lists before progress lists.
 9. Short is not cryptic: keep commands, risks and real uncertainty.
 10. Sound like a colleague: no ceremony, flattery or hedges.

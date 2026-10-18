@@ -449,8 +449,8 @@ NODE = shutil.which("node")
 
 
 def run_node(cases: list) -> list:
-    """Evaluate the template's markdown-lite helpers and the diff renderer's diffNum() (as `num`) over cases ([fn, arg])."""
-    helpers = template_slice("/* ---------- markdown-lite ---------- */", "/* ---------- storage ---------- */")
+    """Evaluate the template's markdown helpers and the diff renderer's diffNum() (as `num`) over cases ([fn, arg])."""
+    helpers = template_slice("/* ---------- markdown ---------- */", "/* ---------- storage ---------- */")
     num = re.search(r"const diffNum = x => [^\n]*?;", template_text())
     assert num, "the diff renderer's `const diffNum = x => …;` is gone: update this test"
     js = ("const src = require('fs').readFileSync(0, 'utf8'); const {code, cases} = JSON.parse(src);"

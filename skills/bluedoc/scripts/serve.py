@@ -1340,41 +1340,400 @@ class DeckError(ValueError):
 
 def safe_url(u: str) -> str:
     """template.html safeUrl: web and mail links, relative paths and #fragments; anything else becomes '#'."""
-    m = re.match(r"(?i)^([a-z][a-z\d+.-]*):", re.sub(r"[\x00-\x20]", "", u))
+    m = re.match(r"([A-Za-z][A-Za-z0-9+.-]*):", re.sub(r"[\x00-\x20]", "", u))
     return u if not m or m[1].lower() in ("http", "https", "mailto") else "#"
 
 
-def md_inline(src: str) -> str:
-    """template.html inline(): `code`, **bold**, *italic* and [links](url), the rest escaped."""
-    codes: list[str] = []
+# ---------- Markdown: template.html inline() and md(), byte for byte (tests/fixtures/markdown-cases.json runs both) ----------
 
-    def code(m: re.Match) -> str:
-        codes.append(m[1])
-        return f"\0{len(codes) - 1}\0"
-    t = re.sub(r"`([^`]+)`", code, esc(src).replace("'", "&#39;"))
-    t = re.sub(r"\*\*([^*]+)\*\*", r"<strong>\1</strong>", t)
-    t = re.sub(r"(^|[\s(])\*([^*\s][^*]*)\*", r"\1<em>\2</em>", t)
-    t = re.sub(r"\[([^\]]+)\]\(([^)\s]+)\)", lambda m: f'<a href="{safe_url(m[2])}" target="_blank" rel="noopener noreferrer">{m[1]}</a>', t)
-    return re.sub(r"\0(\d+)\0", lambda m: f"<code>{codes[int(m[1])]}</code>", t)
+MD_ESC = {"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}
+MD_PUNCT = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"
+MD_EMPH = [
+    (re.compile(r"()\*\*([^* \t\n](?:[^*]*[^* \t\n])?)\*\*"), "strong"),
+    (re.compile(r"(^|[^A-Za-z0-9_])__([^_ \t\n](?:[^_]*[^_ \t\n])?)__(?![A-Za-z0-9_])"), "strong"),
+    (re.compile(r"()~~([^~ \t\n](?:[^~]*[^~ \t\n])?)~~"), "del"),
+    (re.compile(r"(^|[^A-Za-z0-9*])\*([^* \t\n](?:[^*]*[^* \t\n])?)\*(?![A-Za-z0-9*])"), "em"),
+    (re.compile(r"(^|[^A-Za-z0-9_])_([^_ \t\n](?:[^_]*[^_ \t\n])?)_(?![A-Za-z0-9_])"), "em"),
+]
+MD_EMPH_PASSES = MD_EMPH + MD_EMPH[:3]
+MD_AUTOLINK = re.compile(r"<((?:[Hh][Tt][Tt][Pp][Ss]?://|[Mm][Aa][Ii][Ll][Tt][Oo]:)[^<>\x00 \t\n]+)>")
+MD_LINK = re.compile(r"\[([^\[\]]+)\]\(([^)\[\]\x00 \t\n]+)\)")
+MD_BARE_URL = re.compile(r"(^|[ \t\n(*_~\"'])([Hh][Tt][Tt][Pp][Ss]?://[^ \t\n<>\"\x00]+)")
+MD_DEPTH = 12
+MD_COPY = ('<button type="button" class="bp-btn ghost bd-md-copy"><svg viewBox="0 0 24 24" class="bd-ic" aria-hidden="true">'
+           '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copy</button>')
+MD_ITEM = re.compile(r"( {0,3})(?:([-*+])|([0-9]{1,9})([.)]))( +|\Z)")
+MD_FENCE = re.compile(r"( {0,3})(`{3,}|~{3,})")
+MD_FENCE_END = re.compile(r" {0,3}(`{3,}|~{3,})[ \t]*\Z")
+MD_QUOTE = re.compile(r" {0,3}>")
 
 
-MD_BULLET, MD_NUMBER = re.compile(r"^\s*[-*] "), re.compile(r"^\s*\d+[.)] ")
+def md_esc(s: str) -> str:
+    """template.html esc()."""
+    return re.sub(r"[&<>\"']", lambda m: MD_ESC[m[0]], s)
 
 
-def md_html(src: str) -> str:
-    """template.html md(): paragraphs and bulleted or numbered lists of md_inline text, as the page draws notes."""
-    out = []
-    for block in re.split(r"\n\s*\n", str(src or "").strip()):
-        lines = [ln for ln in block.split("\n") if ln.strip()]
-        if not lines:
+def md_ticks(s: str):
+    """template.html mdTicks: closer(from, k) is where the first run of exactly k backticks at or after `from` starts,
+    else -1; `from` only grows."""
+    runs: dict[int, list[int]] = {}
+    at: dict[int, int] = {}
+    i, n = 0, len(s)
+    while i < n:
+        if s[i] != "`":
+            i += 1
             continue
-        for tag, mark in (("ul", MD_BULLET), ("ol", MD_NUMBER)):
-            if all(mark.match(ln) for ln in lines):
-                out.append(f"<{tag}>" + "".join("<li>" + md_inline(mark.sub("", ln)) + "</li>" for ln in lines) + f"</{tag}>")
+        j = i + 1
+        while j < n and s[j] == "`":
+            j += 1
+        runs.setdefault(j - i, []).append(i)
+        i = j
+
+    def closer(frm: int, k: int) -> int:
+        lst = runs.get(k)
+        if not lst:
+            return -1
+        x = at.get(k, 0)
+        while x < len(lst) and lst[x] < frm:
+            x += 1
+        at[k] = x
+        return lst[x] if x < len(lst) else -1
+    return closer
+
+
+def md_link(url: str, html: str) -> str:
+    """template.html mdLink."""
+    u = safe_url(url)
+    node = re.fullmatch(r"#node:([A-Za-z0-9_-]+)/([A-Za-z0-9_-]+)", u)
+    extra = (f' data-node="{node[1]}/{node[2]}"' if node
+             else ' target="_blank" rel="noopener noreferrer"' if re.match(r"[Hh][Tt][Tt][Pp][Ss]?:", u) else "")
+    return f'<a href="{md_esc(u)}"{extra}>{html}</a>'
+
+
+def md_inline(src) -> str:
+    """template.html inline(): code spans, escapes, hard breaks, links and autolinks, strong, em and strike."""
+    s = ("" if src is None else str(src)).replace("\x00", "")   # NUL marks the placeholders below
+    toks: list[str] = []
+
+    def put(x: str) -> str:
+        toks.append(x)
+        return f"\x00{len(toks) - 1}\x00"
+
+    def done(w: str) -> str:
+        return re.sub(r"\x00([0-9]+)\x00", lambda m: toks[int(m[1])], md_esc(w))
+
+    def emph(w: str) -> str:
+        for rx, tag in MD_EMPH_PASSES:
+            w = rx.sub(lambda m, tag=tag: m[1] + put(f"<{tag}>") + m[2] + put(f"</{tag}>"), w)
+        return w
+
+    closer = md_ticks(s)
+    out: list[str] = []
+    i, n = 0, len(s)
+    while i < n:
+        c = s[i]
+        if c == "\\" and i + 1 < n and s[i + 1] == "\n":
+            out.append(put("<br>"))
+            i += 1
+            continue
+        if c == "\\" and i + 1 < n and s[i + 1] in MD_PUNCT:
+            out.append(put(md_esc(s[i + 1])))
+            i += 2
+            continue
+        if c == "`":
+            j = i + 1
+            while j < n and s[j] == "`":
+                j += 1
+            e = closer(j, j - i)
+            if e < 0:
+                out.append(s[i:j])
+                i = j
+                continue
+            code = s[j:e].replace("\n", " ")
+            if len(code) > 1 and code[0] == " " and code[-1] == " " and code.strip(" "):
+                code = code[1:-1]
+            out.append(put("<code>" + md_esc(code) + "</code>"))
+            i = e + (j - i)
+            continue
+        if c == " ":
+            j = i + 1
+            while j < n and s[j] == " ":
+                j += 1
+            out.append(put("<br>") if j < n and s[j] == "\n" and j - i >= 2 else s[i:j])
+            i = j
+            continue
+        out.append(c)
+        i += 1
+    w = "".join(out)
+    w = MD_AUTOLINK.sub(lambda m: put(md_link(m[1], md_esc(m[1]))), w)
+    w = MD_LINK.sub(lambda m: put(md_link(m[2], done(emph(m[1])))), w)
+
+    def bare(m: re.Match) -> str:
+        u = m[2]
+        opened, shut, end = u.count("("), u.count(")"), len(u)
+        while end > 0:
+            ch = u[end - 1]
+            if ch in ".,:;!?*_~'":
+                end -= 1
+            elif ch == ")" and shut > opened:
+                shut -= 1
+                end -= 1
+            else:
                 break
+        return m[1] + put(md_link(u[:end], md_esc(u[:end]))) + u[end:]
+    w = MD_BARE_URL.sub(bare, w)
+    return done(emph(w))
+
+
+def _md_sp(s: str) -> int:
+    return len(s) - len(s.lstrip(" "))
+
+
+def _md_blank(s: str) -> bool:
+    return not s.strip(" \t")
+
+
+def _md_hr(line: str) -> bool:
+    return _md_sp(line) < 4 and bool(re.fullmatch(r"-{3,}|\*{3,}|_{3,}", re.sub(r"[ \t]", "", line)))
+
+
+def _md_item(line: str) -> dict | None:
+    m = MD_ITEM.match(line)
+    if not m:
+        return None
+    ind, sp = len(m[1]), len(m[5])
+    return {"ord": not m[2], "start": int(m[3]) if m[3] else 1, "rest": line[m.end():], "ind": ind,
+            "ci": ind + (1 if m[2] else len(m[3]) + 1) + (1 if sp == 0 or sp > 4 else sp)}
+
+
+def _md_fence(line: str) -> dict | None:
+    m = MD_FENCE.match(line)
+    if not m:
+        return None
+    info = line[m.end():].strip(" \t")
+    if m[2][0] == "`" and "`" in info:
+        return None
+    return {"ind": len(m[1]), "ch": m[2][0], "n": len(m[2]), "lang": re.split(r"[ \t]", info)[0]}
+
+
+def _md_head(line: str) -> dict | None:
+    m = re.match(r" {0,3}(#{1,6})(?=[ \t]|\Z)", line)
+    if not m:
+        return None
+    t = line[m.end():].strip(" \t")
+    j = len(t)
+    while j > 0 and t[j - 1] == "#":   # a closing run of #s goes
+        j -= 1
+    if j == 0:
+        t = ""
+    elif t[j - 1] in " \t":
+        t = t[:j].strip(" \t")
+    return {"level": len(m[1]), "text": t}
+
+
+def _md_cells(line: str) -> list[str]:
+    """A table row's cells: a pipe splits, unless escaped (\\|) or inside a code span; the outer pipes are optional."""
+    s = line.strip(" \t")
+    if s[:1] == "|":
+        s = s[1:]
+    if s.endswith("|") and not s.endswith("\\|"):
+        s = s[:-1]
+    closer, cells, cur = md_ticks(s), [], []
+    i, n = 0, len(s)
+    while i < n:
+        c = s[i]
+        if c == "\\" and i + 1 < n:
+            cur.append("|" if s[i + 1] == "|" else c + s[i + 1])
+            i += 2
+            continue
+        if c == "`":
+            j = i + 1
+            while j < n and s[j] == "`":
+                j += 1
+            e = closer(j, j - i)
+            end = j if e < 0 else e + (j - i)
+            cur.append(s[i:end].replace("\\|", "|"))
+            i = end
+            continue
+        if c == "|":
+            cells.append("".join(cur).strip(" \t"))
+            cur = []
         else:
-            out.append("<p>" + md_inline(" ".join(lines)) + "</p>")
-    return "".join(out)
+            cur.append(c)
+        i += 1
+    cells.append("".join(cur).strip(" \t"))
+    return cells
+
+
+def _md_table(lines: list[str], i: int) -> dict | None:
+    """A GFM table at line i: a header row, then a delimiter row (---, :---, ---:, :---:) with as many cells."""
+    if i + 1 >= len(lines):
+        return None
+    head, sep = lines[i], lines[i + 1]
+    if "|" not in head or "|" not in sep or _md_sp(head) > 3 or _md_sp(sep) > 3:
+        return None
+    al = _md_cells(sep)
+    if not all(re.fullmatch(r":?-+:?", c) for c in al):
+        return None
+    cols = _md_cells(head)
+    if len(cols) != len(al):
+        return None
+    return {"cols": cols, "align": [("center" if c[0] == ":" else "right") if c.endswith(":") else "left" if c[0] == ":" else ""
+                                    for c in al]}
+
+
+def _md_starts(lines: list[str], i: int, depth: int) -> bool:
+    """Whether line i starts a block other than a paragraph (so it ends one)."""
+    line = lines[i]
+    if _md_fence(line) or _md_head(line) or _md_hr(line):
+        return True
+    if depth < MD_DEPTH:
+        if MD_QUOTE.match(line):
+            return True
+        it = _md_item(line)
+        if it and not _md_blank(it["rest"]) and (not it["ord"] or it["start"] == 1):
+            return True
+    return _md_table(lines, i) is not None
+
+
+def _md_blocks(lines: list[str], depth: int) -> list[dict]:
+    out: list[dict] = []
+    i, n = 0, len(lines)
+    while i < n:
+        line = lines[i]
+        if _md_blank(line):
+            i += 1
+            continue
+        f = _md_fence(line)
+        if f:
+            body = []
+            i += 1
+            while i < n:
+                c = MD_FENCE_END.match(lines[i])
+                if c and c[1][0] == f["ch"] and len(c[1]) >= f["n"]:
+                    i += 1
+                    break
+                body.append(lines[i][min(_md_sp(lines[i]), f["ind"]):])
+                i += 1
+            out.append({"t": "code", "lang": f["lang"], "text": "\n".join(body)})
+            continue
+        hd = _md_head(line)
+        if hd:
+            out.append({"t": "h", **hd})
+            i += 1
+            continue
+        if _md_hr(line):
+            out.append({"t": "hr"})
+            i += 1
+            continue
+        if depth < MD_DEPTH and MD_QUOTE.match(line):
+            sub: list[str] = []
+            while i < n:
+                x = lines[i]
+                if MD_QUOTE.match(x):
+                    sub.append(re.sub(r"^ {0,3}> ?", "", x, count=1))
+                elif not _md_blank(x) and not _md_blank(sub[-1]) and not _md_starts(lines, i, depth):
+                    sub.append(x)   # a lazy continuation line
+                else:
+                    break
+                i += 1
+            out.append({"t": "quote", "kids": _md_blocks(sub, depth + 1)})
+            continue
+        first = _md_item(line) if depth < MD_DEPTH else None
+        if first:
+            items = []
+            while i < n:
+                m = None if _md_hr(lines[i]) else _md_item(lines[i])
+                if not m or m["ord"] != first["ord"]:
+                    break
+                # an item holds the lines indented under it (2 spaces nest, whatever the marker's width) and lazy text lines
+                sub, nest = [m["rest"]], min(m["ci"], m["ind"] + 2)
+                i += 1
+                while i < n:
+                    x = lines[i]
+                    sp = _md_sp(x)
+                    if _md_blank(x):
+                        sub.append("")
+                    elif sp >= nest:
+                        sub.append(x[min(sp, m["ci"]):])
+                    elif not _md_blank(sub[-1]) and not _md_item(x) and not _md_starts(lines, i, depth):
+                        sub.append(x[sp:])
+                    else:
+                        break
+                    i += 1
+                while len(sub) > 1 and _md_blank(sub[-1]):
+                    sub.pop()
+                items.append(_md_blocks(sub, depth + 1))
+            out.append({"t": "list", "ord": first["ord"], "start": first["start"], "items": items})
+            continue
+        tb = _md_table(lines, i)
+        if tb:
+            rows = []
+            i += 2
+            while i < n and "|" in lines[i] and not _md_blank(lines[i]) and not _md_starts(lines, i, depth):
+                rows.append(_md_cells(lines[i]))
+                i += 1
+            out.append({"t": "table", **tb, "rows": rows})
+            continue
+        para: list[str] = []
+        while i < n and not _md_blank(lines[i]) and (not para or not _md_starts(lines, i, depth)):
+            para.append(lines[i].lstrip(" \t"))
+            i += 1
+        out.append({"t": "p", "text": "\n".join(para).strip(" \t")})
+    return out
+
+
+def _md_render(nodes: list[dict]) -> str:
+    html: list[str] = []
+    for nd in nodes:
+        t = nd["t"]
+        if t == "p":
+            html.append(f"<p>{md_inline(nd['text'])}</p>")
+        elif t == "h":
+            tag = f"h{min(nd['level'] + 3, 6)}"
+            html.append(f'<{tag} class="bd-mh">{md_inline(nd["text"])}</{tag}>')
+        elif t == "hr":
+            html.append("<hr>")
+        elif t == "code":
+            html.append(f'<div class="bp-code"><div class="bp-code-h"><span>{md_esc(nd["lang"] or "code")}</span>{MD_COPY}</div>'
+                        f'<pre><code>{md_esc(nd["text"])}</code></pre></div>')
+        elif t == "quote":
+            html.append(f"<blockquote>{_md_render(nd['kids'])}</blockquote>")
+        elif t == "list":
+            tag = "ol" if nd["ord"] else "ul"
+            html.append(f"<{tag}" + (f' start="{nd["start"]}"' if nd["ord"] and nd["start"] != 1 else "") + ">")
+            for kids in nd["items"]:
+                # a tight list: the item's first paragraph is its text; `[ ]` / `[x]` before it make a task
+                if not kids or kids[0]["t"] != "p":
+                    html.append(f"<li>{_md_render(kids)}</li>")
+                    continue
+                text, box = kids[0]["text"], ""
+                task = re.match(r"\[([ xX])\](?:[ \t\n]+|\Z)", text)
+                if task:
+                    box = '<input type="checkbox"' + ("" if task[1] == " " else " checked") + " disabled> "
+                    text = text[task.end():]
+                html.append(("<li class=\"bd-task\">" if task else "<li>") + box + md_inline(text) + _md_render(kids[1:]) + "</li>")
+            html.append(f"</{tag}>")
+        elif t == "table":
+            def al(k: int) -> str:
+                return f' style="text-align:{nd["align"][k]}"' if nd["align"][k] else ""
+            cols, rows = nd["cols"], nd["rows"]
+            html.append('<div class="bp-table-wrap"><table class="bp-table"><thead><tr>'
+                        + "".join(f"<th{al(k)}>{md_inline(c)}</th>" for k, c in enumerate(cols)) + "</tr></thead>"
+                        + ("<tbody>" + "".join("<tr>" + "".join(f"<td{al(k)}>{md_inline(r[k] if k < len(r) else '')}</td>"
+                                                                  for k in range(len(cols))) + "</tr>" for r in rows)
+                           + "</tbody>" if rows else "")
+                        + "</table></div>")
+    return "".join(html)
+
+
+def md_html(src) -> str:
+    """template.html md(): the doc's Markdown as the page draws it (speaker notes in the deck file)."""
+    if not src:
+        return ""
+    lines = [re.sub(r"^[ \t]+", lambda m: m[0].replace("\t", "    "), ln)
+             for ln in re.sub(r"\r\n?", "\n", str(src)).split("\n")]
+    return _md_render(_md_blocks(lines, 0))
 
 
 def deck_slides(doc: dict) -> list[dict]:

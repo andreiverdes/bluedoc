@@ -649,6 +649,32 @@ img.bp-cmpr-img { cursor: zoom-in; }
 .bp-cmpr-code { flex: 1; margin: 0; padding: 12px 14px; overflow-x: auto; color: var(--fg); font: 12.5px/1.65 var(--mono); background: var(--panel); }
 .bp-cmpr-code code { background: none; padding: 0; font-size: inherit; color: inherit; overflow-wrap: normal; }
 .bp-cmpr-b + .bp-cmpr-code { border-top: 1px solid var(--line-soft); }
+/* md text (md(), every md field: class bd-md) beyond paragraphs and flat lists: headings sized under the section and
+   block titles, nested and task lists, quotes, rules, and tables and code blocks in the table and code blocks' look */
+.bd-md .bd-mh { display: block; margin: 16px 0 6px; font-family: var(--sans); font-weight: 600; line-height: 1.35; letter-spacing: 0; text-transform: none; color: var(--fg); }
+.bd-md h4.bd-mh { font-size: 1.08em; } .bd-md h5.bd-mh { font-size: 1em; } .bd-md h6.bd-mh { font-size: .92em; color: var(--fg-muted); }
+.bd-md > .bd-mh:first-child { margin-top: 6px; }
+.bd-md li > :is(ul, ol) { margin-top: 2px; margin-bottom: 2px; }
+.bd-md li.bd-task { list-style: none; }
+/* a task's box is read-only: small and square, never the round tick a checklist row takes */
+.bd-md li.bd-task > input { appearance: none; -webkit-appearance: none; width: 14px; height: 14px; margin: 0 8px 0 -21px; vertical-align: -2px; border-radius: 4px; cursor: default;
+  background: var(--surface); box-shadow: inset 0 0 0 1.5px var(--line-strong); }
+.bd-md li.bd-task > input:checked { background: var(--ok) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / 10px no-repeat; box-shadow: none; }
+.bd-md blockquote { margin: 8px 0; padding: 1px 0 1px 12px; border-left: 3px solid var(--line-strong); color: var(--fg-muted); }
+.bd-md blockquote > :first-child { margin-top: 0; } .bd-md blockquote > :last-child { margin-bottom: 0; }
+.bd-md hr { height: 0; margin: 14px 0; border: 0; border-top: 1px solid var(--line); }
+.bd-md .bp-table-wrap, .bd-md .bp-code { margin: 10px 0; }
+.bd-md .bp-table { font-size: 13.5px; }
+.bd-md .bp-table td:first-child code { white-space: nowrap; }
+/* on the dark canvas detail and Present's speaker notes */
+:is(.bp-detail, .bd-pres .notes) .bd-mh, :is(.bp-detail, .bd-pres .notes) blockquote { color: inherit; }
+:is(.bp-detail, .bd-pres .notes) blockquote, :is(.bp-detail, .bd-pres .notes) hr { border-color: rgba(214,233,255,.22); }
+:is(.bp-detail, .bd-pres .notes) :is(.bp-table-wrap, .bp-code) { background: rgba(214,233,255,.05); box-shadow: inset 0 0 0 1px rgba(214,233,255,.16); }
+:is(.bp-detail, .bd-pres .notes) :is(.bp-table th, .bp-code-h) { color: inherit; opacity: .75; border-color: rgba(214,233,255,.16); }
+:is(.bp-detail, .bd-pres .notes) .bp-table td { border-color: rgba(214,233,255,.1); }
+:is(.bp-detail, .bd-pres .notes) .bp-table tbody tr:hover { background: rgba(214,233,255,.05); }
+:is(.bp-detail, .bd-pres .notes) .bp-code pre { background: none; color: inherit; }
+:is(.bp-detail, .bd-pres .notes) .bp-code-h .bp-btn { margin-top: 0; }
 @media (max-width: 900px) {
   .bp-cmpr-g { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 0 auto; row-gap: 14px; }
   .bp-cmpr-ar b { transform: rotate(90deg); }
@@ -2495,33 +2521,283 @@ function ic(name, cls) {
   return s;
 }
 
-/* ---------- markdown-lite ---------- */
+/* ---------- markdown ---------- */
+// Every md field renders through md() and every inline md field through inline(); serve.py md_html()/md_inline()
+// mirror them byte for byte (tests/fixtures/markdown-cases.json runs both). Text is escaped before any markup is
+// added, so no raw HTML passes, and every scan is linear: no regex here can backtrack across the whole input.
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ESC[c]);
 // The URL parser drops spaces and C0 controls before it reads the scheme, so test without them; only
 // web and mail links, relative paths and #fragments pass
 const safeUrl = u => { const m = /^([a-z][a-z\d+.-]*):/i.exec(String(u ?? '').replace(/[\u0000-\u0020]/g, '')); return !m || /^(https?|mailto)$/i.test(m[1]) ? u : '#'; };
+const MD_PUNCT = '!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~';
+// strong, strike, em, then strong and strike again, so either nests in the other; `_` only at word edges (snake_case stays)
+const MD_EMPH = [
+  [/()\*\*([^* \t\n](?:[^*]*[^* \t\n])?)\*\*/g, 'strong'],
+  [/(^|[^A-Za-z0-9_])__([^_ \t\n](?:[^_]*[^_ \t\n])?)__(?![A-Za-z0-9_])/g, 'strong'],
+  [/()~~([^~ \t\n](?:[^~]*[^~ \t\n])?)~~/g, 'del'],
+  [/(^|[^A-Za-z0-9*])\*([^* \t\n](?:[^*]*[^* \t\n])?)\*(?![A-Za-z0-9*])/g, 'em'],
+  [/(^|[^A-Za-z0-9_])_([^_ \t\n](?:[^_]*[^_ \t\n])?)_(?![A-Za-z0-9_])/g, 'em'],
+];
+const MD_EMPH_PASSES = [...MD_EMPH, ...MD_EMPH.slice(0, 3)];
+// mdTicks(s)(from, k): where the first run of exactly k backticks at or after `from` starts, else -1; `from` only grows
+function mdTicks(s) {
+  const runs = new Map(), at = new Map();
+  for (let i = 0; i < s.length;) {
+    if (s[i] !== '`') { i++; continue; }
+    let j = i + 1;
+    while (s[j] === '`') j++;
+    const l = runs.get(j - i);
+    if (l) l.push(i); else runs.set(j - i, [i]);
+    i = j;
+  }
+  return (from, k) => {
+    const l = runs.get(k);
+    if (!l) return -1;
+    let n = at.get(k) || 0;
+    while (n < l.length && l[n] < from) n++;
+    at.set(k, n);
+    return n < l.length ? l[n] : -1;
+  };
+}
+// a link: #node: links open the canvas node, web links open in a new tab
+function mdLink(url, html) {
+  const u = safeUrl(url), n = /^#node:([A-Za-z0-9_-]+)\/([A-Za-z0-9_-]+)$/.exec(u);
+  return `<a href="${esc(u)}"` + (n ? ` data-node="${n[1]}/${n[2]}"` : /^[Hh][Tt][Tt][Pp][Ss]?:/.test(u) ? ' target="_blank" rel="noopener noreferrer"' : '') + `>${html}</a>`;
+}
 function inline(src) {
-  let t = esc(src);
-  const codes = [];
-  t = t.replace(/`([^`]+)`/g, (_, c) => { codes.push(c); return '\u0000' + (codes.length - 1) + '\u0000'; });
-  t = t.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-       .replace(/(^|[\s(])\*([^*\s][^*]*)\*/g, '$1<em>$2</em>')
-       .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_, txt, url) => {
-         const u = safeUrl(url);
-         const m = /^#node:([\w-]+)\/([\w-]+)$/.exec(u);
-         return m ? `<a href="${u}" data-node="${m[1]}/${m[2]}">${txt}</a>` : `<a href="${u}">${txt}</a>`;
-       });
-  return t.replace(/\u0000(\d+)\u0000/g, (_, i) => `<code>${codes[+i]}</code>`);
+  const s = String(src ?? '').replace(/\u0000/g, '');   // NUL marks the placeholders below
+  const toks = [];
+  const put = x => '\u0000' + (toks.push(x) - 1) + '\u0000';
+  const done = w => esc(w).replace(/\u0000([0-9]+)\u0000/g, (_, i) => toks[+i]);
+  const emph = w => MD_EMPH_PASSES.reduce((t, [re, tag]) => t.replace(re, (_, pre, body) => pre + put(`<${tag}>`) + body + put(`</${tag}>`)), w);
+  // code spans, backslash escapes and hard breaks first: what they hold is literal
+  const closer = mdTicks(s);
+  let w = '';
+  for (let i = 0; i < s.length;) {
+    const c = s[i];
+    if (c === '\\' && s[i + 1] === '\n') { w += put('<br>'); i++; continue; }
+    if (c === '\\' && i + 1 < s.length && MD_PUNCT.includes(s[i + 1])) { w += put(esc(s[i + 1])); i += 2; continue; }
+    if (c === '`') {
+      let j = i + 1;
+      while (s[j] === '`') j++;
+      const e = closer(j, j - i);
+      if (e < 0) { w += s.slice(i, j); i = j; continue; }
+      let code = s.slice(j, e).replace(/\n/g, ' ');
+      if (code.length > 1 && code[0] === ' ' && code[code.length - 1] === ' ' && /[^ ]/.test(code)) code = code.slice(1, -1);
+      w += put('<code>' + esc(code) + '</code>');
+      i = e + (j - i);
+      continue;
+    }
+    if (c === ' ') {
+      let j = i + 1;
+      while (s[j] === ' ') j++;
+      w += s[j] === '\n' && j - i >= 2 ? put('<br>') : s.slice(i, j);
+      i = j;
+      continue;
+    }
+    w += c;
+    i++;
+  }
+  w = w.replace(/<((?:[Hh][Tt][Tt][Pp][Ss]?:\/\/|[Mm][Aa][Ii][Ll][Tt][Oo]:)[^<>\u0000 \t\n]+)>/g, (_, u) => put(mdLink(u, esc(u))));
+  w = w.replace(/\[([^\[\]]+)\]\(([^)\[\]\u0000 \t\n]+)\)/g, (_, txt, u) => put(mdLink(u, done(emph(txt)))));
+  // a bare web URL; trailing punctuation, and a ')' the URL doesn't open, stay text
+  w = w.replace(/(^|[ \t\n(*_~"'])([Hh][Tt][Tt][Pp][Ss]?:\/\/[^ \t\n<>"\u0000]+)/g, (_, pre, u) => {
+    let open = 0, shut = 0, end = u.length;
+    for (const ch of u) { if (ch === '(') open++; else if (ch === ')') shut++; }
+    while (end > 0) {
+      const ch = u[end - 1];
+      if (".,:;!?*_~'".includes(ch)) end--;
+      else if (ch === ')' && shut > open) { shut--; end--; }
+      else break;
+    }
+    return pre + put(mdLink(u.slice(0, end), esc(u.slice(0, end)))) + u.slice(end);
+  });
+  return done(emph(w));
+}
+
+// Blocks: paragraphs, ATX headings (# → h4, ## → h5, ### and deeper → h6, so they never outrank a section title),
+// fenced code, block quotes, thematic breaks, bullet, numbered and task lists nested by indentation, GFM tables.
+// A list, quote, heading, fence, rule or table may start right under a paragraph line, with no blank line between.
+const MD_DEPTH = 12;   // quotes and lists nest at most this deep; deeper markers read as text
+const MD_COPY = '<button type="button" class="bp-btn ghost bd-md-copy"><svg viewBox="0 0 24 24" class="bd-ic" aria-hidden="true">'
+  + '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copy</button>';
+const MD_ITEM = /^( {0,3})(?:([-*+])|([0-9]{1,9})([.)]))( +|$)/;
+const MD_FENCE_END = /^ {0,3}(`{3,}|~{3,})[ \t]*$/;
+const MD_QUOTE = /^ {0,3}>/;
+const mdSp = s => { let i = 0; while (s[i] === ' ') i++; return i; };
+const mdTrim = s => {
+  let a = 0, b = s.length;
+  while (a < b && (s[a] === ' ' || s[a] === '\t')) a++;
+  while (b > a && (s[b - 1] === ' ' || s[b - 1] === '\t')) b--;
+  return s.slice(a, b);
+};
+const mdBlank = s => mdTrim(s) === '';
+const mdHr = l => mdSp(l) < 4 && /^(?:-{3,}|\*{3,}|_{3,})$/.test(l.replace(/[ \t]/g, ''));
+function mdItem(l) {
+  const m = MD_ITEM.exec(l);
+  if (!m) return null;
+  const ind = m[1].length, sp = m[5].length;
+  return { ord: !m[2], start: m[3] ? parseInt(m[3], 10) : 1, rest: l.slice(m[0].length), ind,
+    ci: ind + (m[2] ? 1 : m[3].length + 1) + (sp === 0 || sp > 4 ? 1 : sp) };
+}
+function mdFence(l) {
+  const m = /^( {0,3})(`{3,}|~{3,})/.exec(l);
+  if (!m) return null;
+  const info = mdTrim(l.slice(m[0].length));
+  if (m[2][0] === '`' && info.includes('`')) return null;
+  return { ind: m[1].length, ch: m[2][0], n: m[2].length, lang: info.split(/[ \t]/)[0] };
+}
+function mdHead(l) {
+  const m = /^ {0,3}(#{1,6})(?=[ \t]|$)/.exec(l);
+  if (!m) return null;
+  let t = mdTrim(l.slice(m[0].length)), j = t.length;
+  while (j > 0 && t[j - 1] === '#') j--;   // a closing run of #s goes
+  if (j === 0) t = ''; else if (t[j - 1] === ' ' || t[j - 1] === '\t') t = mdTrim(t.slice(0, j));
+  return { level: m[1].length, text: t };
+}
+// a table row's cells: a pipe splits, unless escaped (\|) or inside a code span; the outer pipes are optional
+function mdCells(l) {
+  let s = mdTrim(l);
+  if (s[0] === '|') s = s.slice(1);
+  if (s.endsWith('|') && !s.endsWith('\\|')) s = s.slice(0, -1);
+  const closer = mdTicks(s), cells = [];
+  let cur = '';
+  for (let i = 0; i < s.length;) {
+    const c = s[i];
+    if (c === '\\' && i + 1 < s.length) { cur += s[i + 1] === '|' ? '|' : c + s[i + 1]; i += 2; continue; }
+    if (c === '`') {
+      let j = i + 1;
+      while (s[j] === '`') j++;
+      const e = closer(j, j - i), end = e < 0 ? j : e + (j - i);
+      cur += s.slice(i, end).replace(/\\\|/g, '|');
+      i = end;
+      continue;
+    }
+    if (c === '|') { cells.push(mdTrim(cur)); cur = ''; } else cur += c;
+    i++;
+  }
+  cells.push(mdTrim(cur));
+  return cells;
+}
+// a GFM table at line i: a header row, then a delimiter row (---, :---, ---:, :---:) with as many cells
+function mdTable(lines, i) {
+  const head = lines[i], sep = lines[i + 1];
+  if (sep === undefined || !head.includes('|') || !sep.includes('|') || mdSp(head) > 3 || mdSp(sep) > 3) return null;
+  const al = mdCells(sep);
+  if (!al.every(c => /^:?-+:?$/.test(c))) return null;
+  const cols = mdCells(head);
+  if (cols.length !== al.length) return null;
+  return { cols, align: al.map(c => c.endsWith(':') ? (c[0] === ':' ? 'center' : 'right') : c[0] === ':' ? 'left' : '') };
+}
+// whether line i starts a block other than a paragraph (so it ends one)
+function mdStarts(lines, i, depth) {
+  const l = lines[i];
+  if (mdFence(l) || mdHead(l) || mdHr(l)) return true;
+  if (depth < MD_DEPTH) {
+    if (MD_QUOTE.test(l)) return true;
+    const it = mdItem(l);
+    if (it && !mdBlank(it.rest) && (!it.ord || it.start === 1)) return true;
+  }
+  return !!mdTable(lines, i);
+}
+function mdBlocks(lines, depth) {
+  const out = [];
+  for (let i = 0; i < lines.length;) {
+    const l = lines[i];
+    if (mdBlank(l)) { i++; continue; }
+    const f = mdFence(l);
+    if (f) {
+      const body = [];
+      for (i++; i < lines.length; i++) {
+        const c = MD_FENCE_END.exec(lines[i]);
+        if (c && c[1][0] === f.ch && c[1].length >= f.n) { i++; break; }
+        body.push(lines[i].slice(Math.min(mdSp(lines[i]), f.ind)));
+      }
+      out.push({ t: 'code', lang: f.lang, text: body.join('\n') });
+      continue;
+    }
+    const hd = mdHead(l);
+    if (hd) { out.push({ t: 'h', ...hd }); i++; continue; }
+    if (mdHr(l)) { out.push({ t: 'hr' }); i++; continue; }
+    if (depth < MD_DEPTH && MD_QUOTE.test(l)) {
+      const sub = [];
+      for (; i < lines.length; i++) {
+        const x = lines[i];
+        if (MD_QUOTE.test(x)) sub.push(x.replace(/^ {0,3}> ?/, ''));
+        else if (!mdBlank(x) && !mdBlank(sub[sub.length - 1]) && !mdStarts(lines, i, depth)) sub.push(x);   // a lazy continuation line
+        else break;
+      }
+      out.push({ t: 'quote', kids: mdBlocks(sub, depth + 1) });
+      continue;
+    }
+    const first = depth < MD_DEPTH && mdItem(l);
+    if (first) {
+      const items = [];
+      while (i < lines.length) {
+        const m = mdHr(lines[i]) ? null : mdItem(lines[i]);
+        if (!m || m.ord !== first.ord) break;
+        // an item holds the lines indented under it (2 spaces nest, whatever the marker's width) and lazy text lines
+        const sub = [m.rest], nest = Math.min(m.ci, m.ind + 2);
+        for (i++; i < lines.length; i++) {
+          const x = lines[i], sp = mdSp(x);
+          if (mdBlank(x)) sub.push('');
+          else if (sp >= nest) sub.push(x.slice(Math.min(sp, m.ci)));
+          else if (!mdBlank(sub[sub.length - 1]) && !mdItem(x) && !mdStarts(lines, i, depth)) sub.push(x.slice(sp));
+          else break;
+        }
+        while (sub.length > 1 && mdBlank(sub[sub.length - 1])) sub.pop();
+        items.push(mdBlocks(sub, depth + 1));
+      }
+      out.push({ t: 'list', ord: first.ord, start: first.start, items });
+      continue;
+    }
+    const tb = mdTable(lines, i);
+    if (tb) {
+      const rows = [];
+      for (i += 2; i < lines.length && lines[i].includes('|') && !mdBlank(lines[i]) && !mdStarts(lines, i, depth); i++) rows.push(mdCells(lines[i]));
+      out.push({ t: 'table', ...tb, rows });
+      continue;
+    }
+    const para = [];
+    for (; i < lines.length && !mdBlank(lines[i]) && (!para.length || !mdStarts(lines, i, depth)); i++) para.push(lines[i].replace(/^[ \t]+/, ''));
+    out.push({ t: 'p', text: mdTrim(para.join('\n')) });
+  }
+  return out;
+}
+function mdRender(nodes) {
+  let html = '';
+  for (const n of nodes) {
+    if (n.t === 'p') html += `<p>${inline(n.text)}</p>`;
+    else if (n.t === 'h') { const tag = 'h' + Math.min(n.level + 3, 6); html += `<${tag} class="bd-mh">${inline(n.text)}</${tag}>`; }
+    else if (n.t === 'hr') html += '<hr>';
+    else if (n.t === 'code') html += `<div class="bp-code"><div class="bp-code-h"><span>${esc(n.lang || 'code')}</span>${MD_COPY}</div><pre><code>${esc(n.text)}</code></pre></div>`;
+    else if (n.t === 'quote') html += `<blockquote>${mdRender(n.kids)}</blockquote>`;
+    else if (n.t === 'list') {
+      const tag = n.ord ? 'ol' : 'ul';
+      html += `<${tag}${n.ord && n.start !== 1 ? ` start="${n.start}"` : ''}>`;
+      for (const kids of n.items) {
+        // a tight list: the item's first paragraph is its text; `[ ]` / `[x]` before it make a task
+        if (!kids.length || kids[0].t !== 'p') { html += `<li>${mdRender(kids)}</li>`; continue; }
+        let t = kids[0].text, box = '';
+        const task = /^\[([ xX])\](?:[ \t\n]+|$)/.exec(t);
+        if (task) { box = `<input type="checkbox"${task[1] === ' ' ? '' : ' checked'} disabled> `; t = t.slice(task[0].length); }
+        html += `<li${task ? ' class="bd-task"' : ''}>${box}${inline(t)}${mdRender(kids.slice(1))}</li>`;
+      }
+      html += `</${tag}>`;
+    } else if (n.t === 'table') {
+      const al = k => n.align[k] ? ` style="text-align:${n.align[k]}"` : '';
+      html += '<div class="bp-table-wrap"><table class="bp-table"><thead><tr>' + n.cols.map((c, k) => `<th${al(k)}>${inline(c)}</th>`).join('') + '</tr></thead>'
+        + (n.rows.length ? '<tbody>' + n.rows.map(r => '<tr>' + n.cols.map((_, k) => `<td${al(k)}>${inline(r[k] ?? '')}</td>`).join('') + '</tr>').join('') + '</tbody>' : '')
+        + '</table></div>';
+    }
+  }
+  return html;
 }
 function md(src) {
   if (!src) return '';
-  return String(src).trim().split(/\n\s*\n/).map(block => {
-    const lines = block.split('\n').filter(l => l.trim());
-    if (lines.every(l => /^\s*[-*] /.test(l))) return '<ul>' + lines.map(l => '<li>' + inline(l.replace(/^\s*[-*] /, '')) + '</li>').join('') + '</ul>';
-    if (lines.every(l => /^\s*\d+[.)] /.test(l))) return '<ol>' + lines.map(l => '<li>' + inline(l.replace(/^\s*\d+[.)] /, '')) + '</li>').join('') + '</ol>';
-    return '<p>' + inline(lines.join(' ')) + '</p>';
-  }).join('');
+  const lines = String(src).replace(/\r\n?/g, '\n').split('\n').map(l => l.replace(/^[ \t]+/, m => m.replace(/\t/g, '    ')));
+  return mdRender(mdBlocks(lines, 0));
 }
 
 /* ---------- storage ---------- */
@@ -2746,6 +3022,11 @@ async function copyText(text, msg) {
     ta.select(); try { document.execCommand('copy'); toast(msg); } catch { toast('Copy failed: select the text by hand'); } ta.remove();
   }
 }
+// a fenced code block in md text is HTML (md()), so its Copy key has no handler of its own: this one copies the block
+document.addEventListener('click', e => {
+  const b = e.target.closest && e.target.closest('.bd-md-copy');
+  if (b) copyText(b.closest('.bp-code').querySelector('pre').textContent, 'Copied');
+});
 
 /* ---------- theme ---------- */
 const THEME_KEY = 'bluedoc:theme';
@@ -2992,7 +3273,7 @@ const head = h('header', { class: 'bd-head', id: 'top' },
   DOC.subtitle && h('p', { class: 'bd-sub', html: inline(DOC.subtitle) }));
 NAME.paint();
 const tldr = h('div', { class: 'bd-tldr' }, DOC.tldr && h('div', { class: 'bd-tldr-card' },
-  h('span', { class: 'ico' }, ic('zap')), h('span', { class: 'lbl' }, 'TL;DR'), h('div', { class: 'body', html: md(DOC.tldr) })));
+  h('span', { class: 'ico' }, ic('zap')), h('span', { class: 'lbl' }, 'TL;DR'), h('div', { class: 'body bd-md', html: md(DOC.tldr) })));
 
 // document sections of the rail: status, document properties, links. They follow Contents and Tracker
 // in the rail (placeMeta); org, kind and date already sit in the eyebrow, so only the drawing identity is added
@@ -3207,12 +3488,12 @@ const NODE_REFS = {};   // "canvas/node" -> [{checklist, item, li}]
 const CANVASES = {};
 
 const RENDER = {
-  text: b => h('div', { class: 'bp-text', html: md(b.md) }),
+  text: b => h('div', { class: 'bp-text bd-md', html: md(b.md) }),
   callout: b => {
     const kind = b.kind || 'note';
     const label = b.title || { note: 'Note', caution: 'Caution', warning: 'Warning', risk: 'Risk', decision: 'Decision' }[kind] || kind;
     const icon = { note: 'info', caution: 'alert', warning: 'octagon', risk: 'flag', decision: 'split' }[kind] || 'info';
-    return h('div', { class: 'bp-callout ' + kind, role: kind === 'warning' ? 'alert' : null }, ic(icon), h('span', { class: 'lbl' }, label), h('div', { html: md(b.md) }));
+    return h('div', { class: 'bp-callout ' + kind, role: kind === 'warning' ? 'alert' : null }, ic(icon), h('span', { class: 'lbl' }, label), h('div', { class: 'bd-md', html: md(b.md) }));
   },
   table: b => h('div', {},
     h('div', { class: 'bp-table-wrap' }, h('table', { class: 'bp-table' },
@@ -3220,10 +3501,10 @@ const RENDER = {
       h('tbody', {}, (b.rows || []).map((r, ri) => h('tr', { 'data-r': ri }, r.map(c => h('td', { html: inline(c) }))))))),
     b.caption && h('div', { class: 'bp-caption', html: inline(b.caption) })),
   code: b => codeBlock(b.code, b.lang, b.title),
-  terms: b => h('dl', { class: 'bp-terms' }, (b.items || []).map(t => [h('dt', {}, t.term), h('dd', { html: md(t.md) })])),
+  terms: b => h('dl', { class: 'bp-terms' }, (b.items || []).map(t => [h('dt', {}, t.term), h('dd', { class: 'bd-md', html: md(t.md) })])),
   cards: b => h('div', { class: 'bp-cards' }, (b.items || []).map(c => h('div', { class: 'bp-card' },
     h('h4', {}, h('span', {}, c.title), c.tag && h('span', { class: 'bp-chip ' + (c.kind || 'info') }, c.tag)),
-    h('div', { html: md(c.md) })))),
+    h('div', { class: 'bd-md', html: md(c.md) })))),
   checklist: b => renderChecklist(b),
   diff: b => renderDiff(b),
   canvas: b => renderCanvas(b),
@@ -3283,7 +3564,7 @@ function evidenceBlock(ev, owner) {
         h('span', { class: 'bp-ev-tag', title: e.href ? 'A pointer: the file or page may have changed since' : 'Recorded in this revision' }, e.href ? 'linked' : 'embedded'),
         pinChip(e, r)),
       pinNote(r),
-      e.md && h('div', { class: 'bp-ev-md', html: md(e.md) }),
+      e.md && h('div', { class: 'bp-ev-md bd-md', html: md(e.md) }),
       e.code && codeBlock(e.code, e.lang || 'sh'),
       e.src && renderMedia({ src: e.src, alt: e.label || 'Evidence' }),
       e.href && h('a', { class: 'bp-ev-a', href: safeUrl(e.href), target: '_blank', rel: 'noopener noreferrer' }, ic(/^https?:/i.test(e.href) ? 'link' : 'doc'), h('span', {}, e.href))); }));
@@ -3345,7 +3626,7 @@ function renderSteps(b) {
     const st = STEP_STATUS[s.status] ? s.status : 'todo', files = Array.isArray(s.files) ? s.files : [], refs = Array.isArray(s.refs) ? s.refs : [], ev = evList(s);
     const bodyId = `stepb-${bid}-${s.id}`, owner = `step:${bid}/${s.id}`, stale = ownerStale(owner);
     const body = h('div', { class: 'bp-step-body', id: bodyId, role: 'region', 'aria-label': plainText(s.title) },
-      s.md && h('div', { class: 'bp-step-md', html: md(s.md) }),
+      s.md && h('div', { class: 'bp-step-md bd-md', html: md(s.md) }),
       files.length > 0 && h('div', { class: 'bp-fchips' }, files.map(p => h('button', { type: 'button', class: 'bp-fchip', 'data-path': p, title: p, onclick: () => jumpFile(p) }, fileIcon(p), h('span', {}, baseName(String(p)))))),
       refs.length > 0 && h('div', { class: 'bp-refs' }, refs.map(r => h('button', { type: 'button', class: 'bp-ref', onclick: () => focusNode(r) }, ic('target'), refLabel(r)))),
       evidenceBlock(ev, owner));
@@ -3471,7 +3752,7 @@ function renderCompare(b) {
     return h('section', { class: 'bp-cmpr-side ' + which, 'data-side': which, 'aria-label': plainText(label) },
       h('div', { class: 'bp-cmpr-h' }, h('i', { class: 'd' }), h('span', { class: 'l', html: inline(label) }), s.code && s.lang && h('span', { class: 'lg' }, s.lang),
         s.code && h('button', { type: 'button', class: 'bp-btn ghost', 'aria-label': 'Copy code', title: 'Copy code', onclick: () => copyText(s.code, 'Copied') }, ic('copy'))),
-      (s.md || s.src) && h('div', { class: 'bp-cmpr-b' }, s.md && h('div', { class: 'bp-cmpr-md', html: md(s.md) }), s.src && (im || mediaMiss(s.src, missWhy(s.src)))),
+      (s.md || s.src) && h('div', { class: 'bp-cmpr-b' }, s.md && h('div', { class: 'bp-cmpr-md bd-md', html: md(s.md) }), s.src && (im || mediaMiss(s.src, missWhy(s.src)))),
       s.code && h('pre', { class: 'bp-cmpr-code' }, h('code', {}, s.code)));
   };
   return h('div', { class: 'bp-cmpr' },
@@ -3525,7 +3806,7 @@ function renderChecklist(b, parent) {
     const subIsCheck = !it.sub && !!it.verify;
     const bodyId = `body-${cid}-${it.id}`;
     const body = h('div', { class: 'bp-cl-body', id: bodyId, role: 'region', 'aria-label': String(it.text || '').replace(/[`*]/g, '') },
-      it.detail && h('div', { class: 'bp-cl-detail', html: md(it.detail) }),
+      it.detail && h('div', { class: 'bp-cl-detail bd-md', html: md(it.detail) }),
       it.code && codeBlock(it.code, it.lang || 'sh'),
       (it.blocks || []).map(kb => h('div', { class: 'bp-cl-block' }, kb.type === 'checklist' ? renderChecklist(kb, { cid, iid: it.id }) : (RENDER[kb.type] || RENDER.text)(kb))),
       it.verify && !subIsCheck && h('div', { class: 'bp-cl-verify' }, ic('check'), h('span', {}, h('b', {}, 'Check'), h('span', { html: inline(it.verify) }))),
@@ -4203,7 +4484,7 @@ function renderDiff(b) {
       h('span', { class: 'sp' }),
       h('span', { class: 'stat' }, `${changed.length} file${changed.length === 1 ? '' : 's'} `, h('span', { class: 'add-c' }, '+' + add), ' ', h('span', { class: 'del-c' }, '−' + del)),
       b.url && h('a', { class: 'gh', href: safeUrl(b.url), target: '_blank', rel: 'noopener' }, 'Open', ic('link'))),
-    b.note && h('div', { class: 'bd-diff-note', html: md(b.note) }),
+    b.note && h('div', { class: 'bd-diff-note bd-md', html: md(b.note) }),
     h('div', { class: 'bd-diff-tb' }, d.fsel,
       hasComments && h('span', { class: 'bd-seg', role: 'group', 'aria-label': 'Show files' }, segBtn('All files', 'all'), segBtn('With comments', 'commented')),
       hasComments && d.comments.some(c => c.item) && h('span', { class: 'bd-prog', title: 'Comments whose checklist item is ticked' }, d.progBar, d.progTxt),
@@ -4276,7 +4557,7 @@ function commentCard(d, c, mirrors = d.mirrors, inItem = false) {
     pills && pills.el,
     h('div', { class: 'mt' }, h('span', {}, where),
       src && !inItem && h('a', { href: `#item-${src.cid}-${it.id}`, onclick: e => { e.preventDefault(); const row = openItem(src); row.scrollIntoView({ behavior: REDUCE ? 'auto' : 'smooth', block: 'center' }); flash(row); } }, 'Checklist item', ic('chev'))),
-    detail && h('details', {}, h('summary', {}, 'Details'), h('div', { class: 'bd', html: md(detail) }))].filter(Boolean));
+    detail && h('details', {}, h('summary', {}, 'Details'), h('div', { class: 'bd bd-md', html: md(detail) }))].filter(Boolean));
   if (src) {
     const nv = noteBox(src, true);
     card.append(nv.el);
@@ -4708,7 +4989,7 @@ function mergedRow(x, extra) {
   const pills = x.choices ? choicePills(x) : null, note = noteBox(x);
   if (pills) row.append(pills.el);
   row.append(note.el);
-  const parts = [extra && h('div', { class: 'bp-cl-detail', html: md(extra) }), it.detail && h('div', { class: 'bp-cl-detail', html: md(it.detail) }),
+  const parts = [extra && h('div', { class: 'bp-cl-detail bd-md', html: md(extra) }), it.detail && h('div', { class: 'bp-cl-detail bd-md', html: md(it.detail) }),
     it.code && codeBlock(it.code, it.lang || 'sh'),
     it.verify && it.sub && h('div', { class: 'bp-cl-verify' }, ic('check'), h('span', {}, h('b', {}, 'Check'), h('span', { html: inline(it.verify) })))].filter(Boolean);
   if (parts.length) {
@@ -5215,7 +5496,7 @@ function select(cv, n, quiet) {
     h('button', { type: 'button', class: 'x', 'aria-label': 'Close details', onclick: () => select(cv, null) }, ic('x')),
     h('h4', {}, h('span', {}, n.label || n.id), n.kind && h('span', { class: 'bp-chip info' }, n.kind), n.state && h('span', { class: 'bp-chip ' + ({ live: 'ok', local: 'info', proposed: 'warn', unverified: 'warn', removed: 'risk', replaced: 'risk' }[n.state] || 'todo') }, n.state)),
     n.sub && h('div', { class: 'sub' }, n.sub),
-    n.md && h('div', { html: md(n.md) }),
+    n.md && h('div', { class: 'bd-md', html: md(n.md) }),
     n.refs && n.refs.length && h('div', {}, h('span', { class: 'k' }, 'Source'), h('ul', {}, n.refs.map(r => h('li', { html: inline(r) })))),
     refs.length && h('div', {}, h('span', { class: 'k' }, 'Checklist'), h('ul', {}, refs.map(r => h('li', {}, h('a', { href: `#item-${r.checklist.id}-${r.item.id}` }, r.item.text.replace(/[`*]/g, '')))))),
     srefs.length && h('div', {}, h('span', { class: 'k' }, 'Plan steps'), h('ul', {}, srefs.map(x => h('li', {}, h('a', { href: '#' + x.li.id }, `${x.n}. ${plainText(x.s.title)}`))))),
@@ -6687,7 +6968,7 @@ function renderBoard(b) {
     let i = Math.max(0, order.findIndex(a => a.id === (id || entry)));
     let stack = [order[i].id];
     const box = h('div', { class: 'box' }), cap = h('div', { class: 'cap', 'aria-live': 'polite' });
-    const notes = h('div', { class: 'notes', role: 'note', 'aria-label': 'Speaker notes' });
+    const notes = h('div', { class: 'notes bd-md', role: 'note', 'aria-label': 'Speaker notes' });
     const hints = h('div', { class: 'hints', 'aria-label': 'Links on this screen', hidden: true });
     const notesBtn = h('button', { type: 'button', class: 'bd-tbtn txt', 'aria-pressed': 'false', title: 'Speaker notes (N)', onclick: () => toggleNotes() }, 'Notes');
     const backBtn = h('button', { type: 'button', class: 'bd-tbtn txt', title: 'Back (Backspace)', onclick: () => back() }, 'Back');
@@ -9966,7 +10247,7 @@ const MARKUP = (() => {
   }
   // the element's own content, without UI chrome (option pills, comment boxes, buttons, change marks)
   const CHROME = '.bp-cl-choices, .bp-note, button:not(.bp-cl-head, .bp-step-head), input, textarea, .bd-chg-tag, .bd-chgbox, .bp-cl-noteic, .bp-cl-num, .bp-code-h, .bp-cl-h .tools, .bd-planchip, .bp-sr, .bp-fbadge, .bp-cmpr-h .lg';
-  const BLOCKY = 'div, p, li, td, th, tr, dt, dd, h1, h2, h3, h4, pre, .bp-cl-text, .bp-cl-subt, .bp-chip, .bp-fmain > span';
+  const BLOCKY = 'div, p, li, td, th, tr, dt, dd, h1, h2, h3, h4, h5, h6, pre, blockquote, .bp-cl-text, .bp-cl-subt, .bp-chip, .bp-fmain > span';
   const contentText = el => { const c = el.cloneNode(true); c.querySelectorAll(CHROME).forEach(x => x.remove()); c.querySelectorAll(BLOCKY).forEach(x => x.append(' ')); return c.textContent.replace(/\s+/g, ' ').trim(); };
   const mediaText = el => contentText(el) || el.querySelector('img')?.alt || el.querySelector('video')?.getAttribute('aria-label') || '';
   const textOf = el => cut(el.matches('.bd-lnk') ? el.getAttribute('data-label') : el instanceof SVGElement ? [...el.querySelectorAll(':scope > .bp-cover > text:not(.bp-open)')].map(t => t.textContent).join(' ')
