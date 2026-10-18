@@ -15,7 +15,9 @@ links, and links into a hidden view show it; an open finding in Checklist shows 
 whose pick and pins are the diff's. A browser that loses the key
 cookie (Tern's WKWebView keeps none) still saves with the key the page kept in localStorage while it had the cookie.
 The reader renames a doc and picks its emoji in its header or app bar: they hold through a reload and show in the tab
-and the home index, never in a reply or the doc's JSON, and ?rev= shows them as text (rt/name).
+and the home index, never in a reply or the doc's JSON, and ?rev= shows them as text (rt/name). The reader archives a
+doc from its page or a home card; the home page hides it from its views, counts and widgets and says when a search or
+filter hides it; a new rev brings it back; an all-done plan offers Archive and Not now (rt/archive).
 
 The browser tests run only with BLUEDOC_BROWSER_TESTS=1 and Chrome installed (BLUEDOC_CHROME names it when it isn't
 in a usual place); each starts Chrome with a temp profile and the server on a free port. The URL check needs no browser."""
@@ -831,6 +833,144 @@ class ReaderName(ChromePage):
         t.go(self.base + url)
         self.assertEqual(t.ev("[document.title, document.querySelector('.bd-crumb').textContent]"), ["Acme Fit: onboarding · bluedoc", "/🚀Acme Fit: onboarding"])
         self.assertEqual(self.card(doc)["emoji"], "🚀")
+        self.assertEqual(self.browser.errors, [])
+
+
+@unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")
+class Archive(ChromePage):
+    """The reader archives a doc from its page's ⋯ menu or a home card's (rt/archive): reader state `__archived` {at, rev},
+    never in a reply or the doc's JSON. The page shows a banner with Unarchive and an Archived chip; the home page leaves
+    the doc out of its views, counts and widgets, an Archived chip lists it, and a search or filter that hides it says so
+    (Show them). A rev the agent writes brings it back, said once on the page. An approved plan with every step done and
+    every check ticked offers "All done · Archive it?" on its page and card; Not now holds until the next rev."""
+
+    MENU = "document.querySelector('.bd-docm')"
+
+    def home(self, query: str = "") -> Tab:
+        status, raw = self.server.req("POST", "/__bluedoc/unlock", b"{}", {"Content-Type": "application/json", "X-Bluedoc": "1"})
+        self.assertEqual(status, 200, raw)
+        t = Tab(self.browser)
+        self.browser.call("Page.navigate", {"url": f"{self.base}/?key={json.loads(raw)['token']}" + (f"&{query}" if query else "")}, t.session)
+        t.wait_for("document.readyState === 'complete' && !!document.querySelector('.bd-fc')")
+        return t
+
+    def chips(self, t: Tab) -> dict:
+        return t.ev("Object.fromEntries([...document.querySelectorAll('.bd-fc')].map(c => [c.childNodes[c.childNodes.length - 2].textContent, +c.querySelector('.c').textContent]))")
+
+    def archived(self, url: str) -> dict | None:
+        v = self.state(url).get("__archived")
+        return json.loads(v) if v else None
+
+    def test_archive_from_the_page_and_back_with_a_new_rev(self) -> None:
+        url, raw = self.server.url_for(self.plan), self.plan.read_bytes()
+        t = self.open(url)
+        t.ev(f"{self.MENU}.querySelector('.bd-ibtn').click()")
+        self.assertEqual(t.ev(f"{self.MENU}.querySelector('[role=menuitem]').textContent"), "Archive")
+        t.ev(f"{self.MENU}.querySelector('[role=menuitem]').click()")
+        self.toast(t, "archived")
+        self.assertEqual(until(lambda: (self.archived(url) or {}).get("rev")), "1")
+        t.go(self.base + url)
+        self.assertRegex(t.ev("document.querySelector('.bd-revbar.arc').textContent"), r"^Archived on \d+ \w+ · it's hidden from the home page's views\.Unarchive$")
+        self.assertEqual(t.ev("document.querySelector('.bd-planchip.arc').hidden"), False)
+        replies = t.ev("[BP.progressMarkdown(), JSON.stringify(BP.approvePayload()), JSON.stringify(BP.changesPayload())]")
+        self.assertEqual([r for r in replies if "rchive" in r], [], "a reply mentions the archive")
+        self.assertEqual(self.plan.read_bytes(), raw)
+        # Unarchive in the banner
+        t.ev("document.querySelector('.bd-revbar.arc .bp-btn').click()")
+        self.assertEqual(until(lambda: self.archived(url) is None and "gone"), "gone")
+        self.assertEqual(t.ev("[document.querySelectorAll('.bd-revbar.arc').length, document.querySelector('.bd-planchip.arc').hidden]"), [0, True])
+        # archived again, then the agent writes rev 2: back, said once
+        t.ev(f"{self.MENU}.querySelector('[role=menuitem]').click()")
+        self.assertEqual(until(lambda: (self.archived(url) or {}).get("rev")), "1")
+        r = self.tmp.run("build.py", "patch", self.plan, "step:steps/0/table", "--set", "status=done", "--change", "Acme: the table is in.")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        t.go(self.base + url)
+        self.assertEqual(t.ev("document.querySelector('.bd-revbar.arc').textContent"), "Back from the archive: rev 2 changed it.")
+        self.assertEqual(until(lambda: self.archived(url) is None and "dropped"), "dropped")
+        t.go(self.base + url)
+        self.assertEqual(t.ev("document.querySelectorAll('.bd-revbar.arc').length"), 0)
+        # an earlier revision has no menu
+        t.go(f"{self.base}{url}?rev=1")
+        self.assertEqual(t.ev(f"!!{self.MENU}"), False)
+        self.assertEqual(self.browser.errors, [])
+
+    def test_the_home_page_hides_archived_docs_and_says_so(self) -> None:
+        url = self.server.url_for(self.plan)
+        t = self.home()
+        before = self.chips(t)
+        by_type = "document.querySelectorAll('.bd-w-head .r')[2].textContent"
+        docs = t.ev(by_type)
+        # archive from the plan's card menu
+        card = f"[...document.querySelectorAll('.bd-cw')].find(w => w.querySelector('a').getAttribute('href') === {json.dumps(url)})"
+        t.ev(f"{card}.querySelector('.bd-cm-b').click()")
+        self.assertEqual(t.wait_for("document.querySelector('.bd-cm-m [role=menuitem]')?.textContent"), "Archive")
+        t.ev("document.querySelector('.bd-cm-m [role=menuitem]').click()")
+        t.wait_for(f"!{card}")
+        self.assertEqual((self.archived(url) or {}).get("rev"), "1")
+        after = self.chips(t)
+        self.assertEqual(after.pop("Archived"), 1)
+        self.assertEqual((after["All"], after.get("Plans", 0)), (before["All"] - 1, 0))
+        self.assertEqual(t.ev(by_type), f"{int(docs.split()[0]) - 1} docs")
+        self.assertIn("Undo", t.ev("document.querySelector('.bd-toast').textContent"))
+        # a search and a type filter that would show it say so; Show them lists it, dimmed, with an Archived badge
+        t = self.home("q=saved+carts&t=plan")
+        self.assertEqual(t.wait_for("document.querySelector('.bd-empty .bd-ahint-x')?.textContent"), "1 archived doc does · Show them")
+        t.ev("document.querySelector('.bd-empty .bd-ahint-x button').click()")
+        t.wait_for(f"!!{card}")
+        self.assertEqual(t.ev(f"[{card}.classList.contains('arch'), {card}.querySelector('.bd-pill.st').textContent, location.search]"),
+                         [True, "Archived", "?q=saved+carts&t=plan&s=archived"])
+        # the Archived chip off goes back to the search as it was
+        t.ev("[...document.querySelectorAll('.bd-fc')].find(c => c.textContent.startsWith('Archived')).click()")
+        t.wait_for("location.search === '?q=saved+carts&t=plan'")
+        # under the results when other docs match: a search for Acme
+        t = self.home("q=acme")
+        self.assertEqual(t.wait_for("document.querySelector('.bd-ahint').textContent"), "1 archived doc matches·Show them")
+        # unarchive from the card in the Archived view: back in every count, the line gone
+        t = self.home("s=archived")
+        t.wait_for(f"!!{card}")
+        t.ev(f"{card}.querySelector('.bd-cm-b').click()")
+        self.assertEqual(t.wait_for("document.querySelector('.bd-cm-m [role=menuitem]')?.textContent"), "Unarchive")
+        t.ev("document.querySelector('.bd-cm-m [role=menuitem]').click()")
+        self.assertEqual(until(lambda: self.archived(url) is None and "gone"), "gone")
+        t = self.home("q=acme")
+        self.assertEqual(t.ev("document.querySelector('.bd-ahint').textContent"), "")
+        t = self.home()
+        self.assertEqual(self.chips(t), before)
+        self.assertEqual(self.browser.errors, [])
+
+    def test_a_plan_all_done_offers_archive(self) -> None:
+        url = self.server.url_for(self.plan)
+        html = self.server.req("GET", url)[1].decode()
+        seed = json.loads(html.split('id="bp-state">', 1)[1].split("</script>", 1)[0])
+        body = {"path": url, "rev": "1", "docHash": seed["docHash"], "decision": "approved", "answers": [], "annotations": [],
+                "at": "2026-01-01T00:00:00Z", "markdown": "# Plan approved: Acme\n"}
+        self.assertEqual(self.server.req("POST", "/__bluedoc/approve", json.dumps(body).encode(), {"Content-Type": "application/json", "X-Bluedoc": "1"})[0], 200)
+        doc = json.loads(self.plan.read_text(encoding="utf-8"))
+        steps = next(b for s in doc["sections"] for b in s.get("blocks") or [] if b.get("type") == "steps")
+        for i, s in enumerate(steps["items"]):
+            r = self.tmp.run("build.py", "patch", self.plan, f"step:steps/0/{s['id']}", "--set", "status=done", *(["--no-bump"] if i else ["--change", "Acme: all steps in."]))
+            self.assertEqual(r.returncode, 0, r.stderr)
+        t = self.open(url)
+        self.assertEqual(t.ev("document.querySelectorAll('.bd-revbar.arc.sug').length"), 0, "offered before every check is ticked")
+        checks = next(b for s in doc["sections"] for b in s.get("blocks") or [] if b.get("type") == "checklist" and b["id"] == "checks")
+        for it in checks["items"]:
+            t.ev(f"document.querySelector('#item-checks-{it['id']} input[type=checkbox]').click()")
+        self.assertEqual(t.wait_for("document.querySelector('.bd-revbar.arc.sug')?.textContent"), "All done · Archive it?ArchiveNot now")
+        # Not now holds for this rev, on the page and the card
+        t.ev("document.querySelector('.bd-revbar.arc.sug .bp-btn:last-child').click()")
+        self.assertEqual(until(lambda: self.state(url).get("__archive-later")), "2")
+        t.go(self.base + url)
+        self.assertEqual(t.ev("document.querySelectorAll('.bd-revbar.arc.sug').length"), 0)
+        h = self.home()
+        self.assertEqual(h.ev("document.querySelectorAll('.bd-sug').length"), 0)
+        # without it the card offers it too; Archive there archives
+        body = json.dumps({"path": url, "import": False, "ops": [["__archive-later", None]]}).encode()
+        self.assertEqual(self.server.req("PUT", "/__bluedoc/state", body, {"Content-Type": "application/json", "X-Bluedoc": "1", "Origin": self.base})[0], 200)
+        h = self.home()
+        self.assertEqual(h.wait_for("document.querySelector('.bd-sug')?.textContent"), "All done · Archive it?ArchiveNot now")
+        h.ev("document.querySelector('.bd-sug button').click()")
+        self.assertEqual(until(lambda: (self.archived(url) or {}).get("rev")), "2")
+        h.wait_for("!document.querySelector('.bd-sug')")
         self.assertEqual(self.browser.errors, [])
 
 

@@ -39,6 +39,7 @@ You write one `*.bluedoc.json`; the local server renders it as a page (blueprint
 - Record the reader's picks as `choice` and finished, verified work as done (steps `status: "done"`, checklist items `done: true`), with optional `evidence`: what you ran and saw, a screenshot, a link to a log or review. Send the `?diff=` link, then `wait` again.
 - **Evidence is pinned**: record it with `build.py patch` right after the check runs, so it carries the commit (and uncommitted changes) it checked; `--paths` names what the check covers. After changing code a check covers, re-run it and re-record with `build.py patch <doc> <key> --pin`. Stale evidence (code changed since) shows on the page, doesn't count as done, and comes back under `## Stale evidence` with those commands.
 - Commit `<name>.bluedoc.history.json` with the JSON.
+- **Archive** is the reader's (the page's ⋯ menu, a home card's): never archive a doc yourself. An archived doc still takes replies; a new rev brings it back to the home page.
 
 ## Writing
 

@@ -262,6 +262,7 @@ body { font-family: var(--font-hz-sans, Inter, system-ui, sans-serif); -webkit-f
 .bd-pill.t-presentation { --pb: #273d10; --pc: #bfe97a; } .bd-pill.t-website { --pb: #47290c; --pc: #ffbe85; } .bd-pill.t-storelisting { --pb: #0b3a44; --pc: #7fe3f0; }
 .bd-pill.warn { --pb: #5b3b00; --pc: #ffc35a; } .bd-pill.info { --pb: #0b2f52; --pc: #5fd4ff; }
 .bd-pill.risk { --pb: #4d1620; --pc: #ff8a7a; } .bd-pill.ok { --pb: #0b3a2a; --pc: #74e6ab; }
+.bd-pill.arch { --pb: #2a2f38; --pc: #c9d2de; }
 .bd-el { position: absolute; inset: var(--pt) 8% 8%; display: flex; flex-direction: column; justify-content: center; min-width: 0; }
 .bd-el .cap, .bd-el-cap { font: 500 3.5cqw/1.3 var(--font-hz-mono); letter-spacing: .08em; text-transform: uppercase; color: #9fc6e8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* review: +N / −N, files and PRs, one dot per finding coloured by size */
@@ -345,7 +346,7 @@ body { font-family: var(--font-hz-sans, Inter, system-ui, sans-serif); -webkit-f
 /* list */
 .bd-list { border-radius: var(--radius-hz-card); background: var(--color-hz-surface); box-shadow: var(--hz-shadow-1); }
 .bd-row { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 1.3fr) 150px 110px 84px 92px; gap: 16px; align-items: center; padding: 9px 16px; text-decoration: none; outline: none; color: var(--color-hz-fg); }
-.bd-row + .bd-row { border-top: 1px solid var(--color-hz-line-soft); }
+.bd-list > :is(.bd-row.head, .bd-cw) + .bd-cw { border-top: 1px solid var(--color-hz-line-soft); }
 a.bd-row:hover { background: var(--color-hz-hover); }
 a.bd-row:focus-visible { box-shadow: inset 0 0 0 2px var(--color-hz-accent); }
 .bd-row.head { position: sticky; top: var(--bd-top-h); z-index: 1; padding-top: 10px; padding-bottom: 10px; border-radius: var(--radius-hz-card) var(--radius-hz-card) 0 0; background: var(--color-hz-panel); }
@@ -386,6 +387,54 @@ a.bd-row:hover .tx .t { color: var(--color-hz-accent-fg); }
 .bd-group > h3 .when { margin-left: auto; font-size: 12px; font-weight: 400; color: var(--color-hz-fg-subtle); }
 .bd-empty { padding: 36px 0; border-radius: var(--radius-hz-card); background: var(--color-hz-surface); box-shadow: var(--hz-shadow-1); }
 .bd-empty code { font: 500 12.5px var(--font-hz-mono); padding: 1px 5px; border-radius: 5px; background: var(--color-hz-inset); white-space: nowrap; }
+
+/* archive: every card, row and board card sits in a .bd-cw with its ⋯ menu (Archive / Unarchive) and, when the doc is
+   all done, the "All done · Archive it?" line; an archived doc listed (the Archived chip) is dimmed */
+.bd-cw { position: relative; display: flex; flex-direction: column; min-width: 0; }
+.bd-cw > .bd-card { flex: 1; }
+.bd-cw.arch > :is(.bd-card, .bd-bcard, .bd-row) { opacity: .62; }
+.bd-cw.arch:is(:hover, :focus-within) > :is(.bd-card, .bd-bcard, .bd-row) { opacity: .9; }
+.bd-cm { position: absolute; z-index: 3; top: 9px; right: 9px; transition: transform var(--hz-dur-2) var(--hz-ease-out); }
+.bd-cw.card:hover .bd-cm { transform: translateY(-3px); }
+.bd-cw.board:hover .bd-cm { transform: translateY(-2px); }
+.bd-cw.row .bd-cm { top: 50%; right: 10px; transform: translateY(-50%); }
+.bd-cm-b { display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 8px; cursor: pointer; color: #dbe9ff;
+  background: rgba(6, 22, 44, .78); box-shadow: inset 0 0 0 1px rgba(214, 233, 255, .16); opacity: 0; transition: opacity var(--hz-dur-2) var(--hz-ease-out); }
+.bd-cw.row .bd-cm-b { color: var(--color-hz-fg-muted); background: var(--color-hz-surface); box-shadow: var(--hz-shadow-1); }
+.bd-cm-b:hover { color: #fff; }
+.bd-cw.row .bd-cm-b:hover { color: var(--color-hz-fg); }
+.bd-cm-b:focus-visible { outline: none; box-shadow: var(--hz-shadow-focus); }
+.bd-cw:is(:hover, :focus-within) .bd-cm-b, .bd-cm.open .bd-cm-b { opacity: 1; }
+.bd-cw:is(.card, .board) .bd-pill.type { transition: right var(--hz-dur-2) var(--hz-ease-out); }
+.bd-cw.card:is(:hover, :focus-within) .bd-pill.type { right: 46px; }
+.bd-cw.board:is(:hover, :focus-within) .bd-pill.type { right: 44px; }
+.bd-cw .bd-pill.st { max-width: calc(100% - 150px); }
+@media (hover: none) {
+  .bd-cm-b { opacity: 1; }
+  .bd-cw.card .bd-pill.type { right: 46px; } .bd-cw.board .bd-pill.type { right: 44px; }
+}
+.bd-cm-m { position: absolute; top: calc(100% + 6px); right: 0; display: grid; min-width: 150px; padding: 5px; border-radius: 10px; background: var(--color-hz-surface); box-shadow: var(--hz-shadow-3); }
+.bd-cm-m button { display: flex; align-items: center; gap: 9px; padding: 7px 10px; border: 0; border-radius: 7px; background: none; color: var(--color-hz-fg); font: 500 13px var(--font-hz-sans); text-align: left; white-space: nowrap; cursor: pointer; }
+.bd-cm-m button:is(:hover, :focus-visible) { outline: none; background: var(--color-hz-hover); }
+.bd-cm-m svg { flex: none; color: var(--color-hz-fg-muted); }
+.bd-sug { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 6px 8px 6px 14px; font-size: 12.5px; color: var(--color-hz-fg);
+  background: color-mix(in srgb, var(--color-hz-success) 13%, var(--color-hz-surface)); border-radius: 0 0 var(--radius-hz-card) var(--radius-hz-card); box-shadow: var(--hz-shadow-1); }
+.bd-sug > svg { flex: none; color: var(--color-hz-success); }
+.bd-sug .t { flex: 1 0 auto; white-space: nowrap; }
+.bd-sug .acts { display: flex; gap: 2px; margin-left: auto; }
+.bd-cw.sug > :is(.bd-card, .bd-bcard) { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+.bd-cw.sug.board .bd-sug { border-radius: 0 0 12px 12px; padding-left: 12px; }
+.bd-cw.sug.row .bd-sug { border-radius: 0; box-shadow: none; padding-left: 16px; }
+/* the line under the results that says what archive hides; Show them turns on the Archived chip */
+.bd-ahint { margin: 0; }
+.bd-ahint:not(:empty) { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px 8px; margin: 18px 0 0; font-size: 13px; color: var(--color-hz-fg-muted); }
+.bd-ahint svg { flex: none; color: var(--color-hz-fg-subtle); }
+.bd-ahint button, .bd-empty .bd-ahint-x button { padding: 0; border: 0; background: none; color: var(--color-hz-accent-fg); font: 600 13px var(--font-hz-sans); cursor: pointer; text-decoration: underline; text-underline-offset: 2px;
+  text-decoration-color: color-mix(in oklch, currentColor 35%, transparent); }
+.bd-ahint button:focus-visible, .bd-empty .bd-ahint-x button:focus-visible { outline: none; border-radius: 4px; box-shadow: var(--hz-shadow-focus); }
+.bd-toast { position: fixed; z-index: 70; left: 50%; bottom: 24px; transform: translateX(-50%); display: flex; align-items: center; gap: 14px; max-width: calc(100vw - 32px); padding: 10px 12px 10px 16px;
+  border-radius: 12px; background: var(--color-hz-fg); color: var(--color-hz-canvas); box-shadow: var(--hz-shadow-3); font: 500 13.5px var(--font-hz-sans); }
+.bd-toast button { padding: 4px 8px; border: 0; border-radius: 7px; background: none; color: inherit; font: 600 13.5px var(--font-hz-sans); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
 
 /* mobile drawer */
 .bd-drawer { position: fixed; inset: 0; z-index: 60; }
@@ -512,12 +561,18 @@ const PresentationIcon = ({ size = 16, strokeWidth = 1.6, ...rest }) => e('svg',
 const ListingIcon = ({ size = 16, strokeWidth = 1.6, ...rest }) => e('svg', { xmlns: 'http://www.w3.org/2000/svg', width: size, height: size, viewBox: '0 0 24 24',
   fill: 'none', stroke: 'currentColor', strokeWidth, strokeLinecap: 'round', strokeLinejoin: 'round', className: 'lucide lucide-smartphone', 'aria-hidden': true, focusable: 'false', ...rest },
   e('rect', { x: 5, y: 2, width: 14, height: 20, rx: 2, ry: 2 }), e('path', { d: 'M12 18h.01' }));
+// Archived docs' icon: lucide's `archive` glyph (a box with a lid), drawn as HorizonUI's Icons draw theirs
+const ArchiveIcon = ({ size = 16, strokeWidth = 1.6, ...rest }) => e('svg', { xmlns: 'http://www.w3.org/2000/svg', width: size, height: size, viewBox: '0 0 24 24',
+  fill: 'none', stroke: 'currentColor', strokeWidth, strokeLinecap: 'round', strokeLinejoin: 'round', className: 'lucide lucide-archive', 'aria-hidden': true, focusable: 'false', ...rest },
+  e('rect', { x: 2, y: 3, width: 20, height: 5, rx: 1 }), e('path', { d: 'M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8' }), e('path', { d: 'M10 12h4' }));
 const TYPES = [['docs', 'Docs', Icons.FileText], ['review', 'Reviews', Icons.GitPullRequest], ['plan', 'Plans', Icons.ListChecks], ['design', 'Designs', Icons.Palette],
   ['presentation', 'Presentations', PresentationIcon], ['website', 'Websites', Icons.Globe], ['storelisting', 'Store listings', ListingIcon], ['other', 'Other', Icons.StickyNote]];
 const TYPE_ONE = { docs: 'Docs', review: 'Review', plan: 'Plan', design: 'Design', presentation: 'Presentation', website: 'Website', storelisting: 'Store listing', other: 'Other' };
 const APPROVABLE = new Set(['plan', 'design', 'presentation', 'website', 'storelisting']);   // types the reader approves as a whole (Approve plan / design / presentation / website / listing)
+// Archived is last: an archived doc (the index's `archived`, set from its page or a card's ⋯ menu) counts under it alone,
+// never under the others, and the default list, the board, the counts and the widgets leave it out (statusIs)
 const STATUSES = [['needs', 'Needs you', Icons.Flag], ['awaiting', 'Awaiting approval', Icons.Clipboard], ['waiting', 'Waiting on agent', Icons.Clock],
-  ['approved', 'Approved', Icons.Success], ['errors', "Doesn't build", Icons.Error]];
+  ['approved', 'Approved', Icons.Success], ['errors', "Doesn't build", Icons.Error], ['archived', 'Archived', ArchiveIcon]];
 const BOARD = [['needs', 'Needs you', 'warning'], ['waiting', 'Waiting on agent', 'ai'], ['progress', 'In progress', 'running'], ['done', 'Done', 'success'], ['errors', "Doesn't build", 'error']];
 
 function prepare(data) {
@@ -568,9 +623,14 @@ function statusOf(d) {
   const total = p.dec + p.steps, did = p.decided + p.done;
   // board column: in progress = partly done; done = all done, approved, or nothing left to decide
   const col = errors ? 'errors' : approved ? 'done' : waiting ? 'waiting' : needs ? 'needs' : did > 0 && did < total ? 'progress' : 'done';
-  return { p, total, did, errors, waiting, needs, awaiting, approved, staleRev, col, sent, changesSent: !!(waiting && d.changes && (!d.answers || d.changes.at >= d.answers.at)) };
+  // archived holds for the rev the reader archived (serve.py drops it once the agent writes a later one); all done: approved
+  // with every step done and every check ticked, so the card offers "All done · Archive it?" unless put off for this rev
+  const archived = !!d.archived;
+  const allDone = approved && !archived && !!d.rev && d.archiveLater !== d.rev && !(d.stepsOpen > 0) && p.steps === p.done;
+  return { p, total, did, errors, waiting, needs, awaiting, approved, staleRev, col, sent, archived, allDone,
+    changesSent: !!(waiting && d.changes && (!d.answers || d.changes.at >= d.answers.at)) };
 }
-const statusIs = (st, s) => !!st[s];
+const statusIs = (st, s) => (s === 'archived' ? st.archived : !st.archived && !!st[s]);
 const inScope = (d, sc) => !sc || (d.root.slug === sc.slug && (!sc.dir || d.dir === sc.dir || d.dir.startsWith(sc.dir + '/')));
 const scopeLabel = (roots, sc) => { const r = roots.find(x => x.slug === sc.slug); return (r ? r.name : sc.slug) + (sc.dir ? ' / ' + sc.dir : ''); };
 
@@ -619,9 +679,10 @@ function Prog({ st, bare }) {
     e('span', { className: 'tr' }, e('i', { style: { width: `${st.did / st.total * 100}%` } })), !bare && `${st.did}/${st.total}`);
 }
 const revText = d => (d.rev ? `Rev ${d.rev}${d.revs > 1 ? ` of ${d.revs}` : ''}` : '');
-const PILL_TONE = { risk: 'danger', info: 'info', warn: 'warning', ok: 'success' };
+const PILL_TONE = { risk: 'danger', info: 'info', warn: 'warning', ok: 'success', arch: 'neutral' };
 // [tone, label] of the status pill, or null when nothing needs saying
 function statusPill(st, d) {
+  if (st.archived) return ['arch', 'Archived'];
   if (st.errors) return ['risk', "Doesn't build"];
   if (st.approved) return ['ok', d.approval.rev ? `Approved · rev ${d.approval.rev}` : 'Approved'];
   if (st.waiting) return ['info', st.changesSent ? 'Changes requested' : 'Answers sent'];
@@ -840,9 +901,10 @@ function heroElement(d) {
   if (c.hero) return e(StatEl, { icon: c.hero.icon, value: c.hero.value, label: c.hero.label });
   return e(StatEl, { icon: c.icon, value: String(c.sections || 0), label: (c.sections === 1 ? 'section' : 'sections') });
 }
-// size: card (both pills), board (type pill; the column says the status), thumb (list row: element only)
+// size: card (both pills), board (type pill; the column says the status, but an archived doc says Archived), thumb (list
+// row: element only)
 function CardHero({ d, st, size }) {
-  const pill = size === 'card' && statusPill(st, d);
+  const pill = (size === 'card' || (size === 'board' && st.archived)) && statusPill(st, d);
   return e('div', { className: `bd-art ${size}` + (d.errors ? ' err' : ''), 'aria-hidden': size === 'thumb' || undefined }, heroElement(d),
     pill && e('span', { className: 'bd-pill st ' + pill[0], title: pill[1] }, e('span', { className: 'dot' }), e('span', { className: 'lb' }, pill[1])),
     size !== 'thumb' && e('span', { className: 'bd-pill type t-' + d.type }, TYPE_ONE[d.type]));
@@ -960,18 +1022,57 @@ function BoardCard({ d, st, terms }) {
   return e('a', { className: 'bd-bcard', href: d.url, 'data-res': '' }, e(CardHero, { d, st, size: 'board' }),
     e('div', { className: 'b' }, e('div', { className: 't bd-md', title: ownTitle(d) }, Emo(d), ...md(d.title, terms)), e(Foot, { d, st, terms })));
 }
+
+/* ---------- archive on a card ---------- */
+// the App's writes: {archive(d, on), notNow(d)}, for every card's menu and its All done line
+const ArchiveActs = React.createContext(null);
+// a card's ⋯ menu: Archive, or Unarchive for an archived doc. It shows on hover and focus (always on touch screens); Esc
+// or a press outside closes it. A doc without a meta.rev can't be archived (the record names the rev)
+function CardMenu({ d, st }) {
+  const acts = React.useContext(ArchiveActs);
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!open) return undefined;
+    const away = ev => { if (ref.current && !ref.current.contains(ev.target)) setOpen(false); };
+    const key = ev => { if (ev.key === 'Escape') { ev.stopPropagation(); setOpen(false); const b = ref.current && ref.current.querySelector('.bd-cm-b'); if (b) b.focus(); } };
+    const item = ref.current && ref.current.querySelector('[role=menuitem]');
+    if (item) item.focus();
+    addEventListener('pointerdown', away, true); ref.current.addEventListener('keydown', key);
+    const el = ref.current;
+    return () => { removeEventListener('pointerdown', away, true); el.removeEventListener('keydown', key); };
+  }, [open]);
+  if (!acts || !d.rev) return null;
+  const label = st.archived ? 'Unarchive' : 'Archive';
+  return e('div', { className: 'bd-cm' + (open ? ' open' : ''), ref },
+    e('button', { type: 'button', className: 'bd-cm-b', 'aria-haspopup': 'menu', 'aria-expanded': open, 'aria-label': `More: ${plain(d.title)}`, title: 'More', onClick: () => setOpen(o => !o) },
+      e(Icons.MoreHorizontal, { width: 16, height: 16 })),
+    open && e('div', { className: 'bd-cm-m', role: 'menu', 'aria-label': plain(d.title) },
+      e('button', { type: 'button', role: 'menuitem', onClick: () => { setOpen(false); acts.archive(d, !st.archived); } }, e(ArchiveIcon, { size: 15 }), label)));
+}
+// a card, row or board card (kind) with its menu and, when the doc is all done, "All done · Archive it?"
+function Wrap({ d, st, kind, children }) {
+  const acts = React.useContext(ArchiveActs);
+  const sug = !!acts && st.allDone;
+  return e('div', { className: `bd-cw ${kind}` + (st.archived ? ' arch' : '') + (sug ? ' sug' : '') }, children, e(CardMenu, { d, st }),
+    sug && e('div', { className: 'bd-sug', role: 'group', 'aria-label': 'All done' }, e(Icons.Success, { width: 14, height: 14 }),
+      e('span', { className: 't' }, e('b', null, 'All done'), ' · Archive it?'),
+      e('span', { className: 'acts' }, e(Button, { size: 'sm', variant: 'secondary', onClick: () => acts.archive(d, true) }, 'Archive'),
+        e(Button, { size: 'sm', variant: 'ghost', onClick: () => acts.notNow(d) }, 'Not now'))));
+}
 function Board({ rows, terms }) {
   return e('div', { className: 'bd-board' }, BOARD.map(([id, label, dot]) => {
     const xs = rows.filter(r => r.st.col === id);
     if (id === 'errors' && !xs.length) return null;
     return e('section', { key: id, className: 'bd-col', 'aria-label': label },
       e('h3', null, e(StatusDot, { status: dot, pulse: id === 'waiting' && xs.length > 0 }), label, e('span', { className: 'c' }, xs.length)),
-      xs.length ? xs.map(r => e(BoardCard, { key: r.d.key, ...r, terms })) : e('div', { className: 'none' }, 'Nothing here'));
+      xs.length ? xs.map(r => e(Wrap, { key: r.d.key, ...r, kind: 'board' }, e(BoardCard, { ...r, terms }))) : e('div', { className: 'none' }, 'Nothing here'));
   }));
 }
 function Items({ rows, view, cols, terms }) {
-  if (view === 'list') return e('div', { className: 'bd-list' }, e(ListHead), rows.map(r => e(DocRow, { key: r.d.key, ...r, terms })));
-  return e('div', { className: 'bd-grid', 'data-cols': cols, style: cols === 'auto' ? null : { '--cols': cols } }, rows.map(r => e(DocCard, { key: r.d.key, ...r, terms })));
+  if (view === 'list') return e('div', { className: 'bd-list' }, e(ListHead), rows.map(r => e(Wrap, { key: r.d.key, ...r, kind: 'row' }, e(DocRow, { ...r, terms }))));
+  return e('div', { className: 'bd-grid', 'data-cols': cols, style: cols === 'auto' ? null : { '--cols': cols } },
+    rows.map(r => e(Wrap, { key: r.d.key, ...r, kind: 'card' }, e(DocCard, { ...r, terms }))));
 }
 
 /* ---------- composer filters ---------- */
@@ -1021,8 +1122,10 @@ function App() {
   const [settings, setSettings] = useState(loadSettings);
   const [drawer, setDrawer] = useState(false);
   const [heroOut, setHeroOut] = useState(false);
-  const heroInput = useRef(null), topInput = useRef(null), composer = useRef(null), results = useRef(null);
+  const [note, setNote] = useState(null);   // the toast: {text, undo?}
+  const heroInput = useRef(null), topInput = useRef(null), composer = useRef(null), results = useRef(null), reload = useRef(null);
   const set = (k, v) => setSettings(s => ({ ...s, [k]: v }));
+  useEffect(() => { if (!note) return undefined; const t = setTimeout(() => setNote(null), note.undo ? 8000 : 3000); return () => clearTimeout(t); }, [note]);
 
   useEffect(() => { document.documentElement.setAttribute('data-hz-theme', theme); }, [theme]);
   useEffect(() => { store.set(HOME_KEY, JSON.stringify(settings)); }, [settings]);
@@ -1047,6 +1150,7 @@ function App() {
         if (alive && txt !== last) { last = txt; const d = JSON.parse(txt); setData(d); keepServerKey(d.unlocked, sent); }
       } catch { /* server restarting: keep the last list */ }
     };
+    reload.current = load;
     load();
     const t = setInterval(() => { if (document.visibilityState === 'visible') load(); }, 4000);
     return () => { alive = false; clearInterval(t); };
@@ -1079,21 +1183,27 @@ function App() {
   const docs = useMemo(() => (data ? prepare(data) : []), [data]);
   const sts = useMemo(() => new Map(docs.map(d => [d.key, statusOf(d)])), [docs, tick]);
   const roots = data ? data.roots : [];
+  // archived docs are out of every view, count and widget but the Archived chip's (statusIs)
+  const live = docs.filter(d => !sts.get(d.key).archived);
+  const showArchived = filters.status === 'archived';
   const scoped = docs.filter(d => inScope(d, filters.scope));
   const typeN = Object.fromEntries(TYPES.map(([id]) => [id, 0]));
-  for (const d of scoped) typeN[d.type]++;
+  for (const d of scoped) if (sts.get(d.key).archived === showArchived) typeN[d.type]++;
   const typed = filters.type ? scoped.filter(d => d.type === filters.type) : scoped;
   const statusN = Object.fromEntries(STATUSES.map(([id]) => [id, 0]));
   for (const d of typed) { const st = sts.get(d.key); for (const k in statusN) if (statusIs(st, k)) statusN[k]++; }
-  const filtered = filters.status ? typed.filter(d => statusIs(sts.get(d.key), filters.status)) : typed;
+  const filtered = typed.filter(d => (filters.status ? statusIs(sts.get(d.key), filters.status) : !sts.get(d.key).archived));
   const terms = dq.toLowerCase().split(/\s+/).filter(Boolean);
   const rows = [];
   for (const d of filtered) { const m = match(d, terms); if (m) rows.push({ d, st: sts.get(d.key), m }); }
   const byName = (a, b) => plain(a.d.title).localeCompare(plain(b.d.title));
   rows.sort((a, b) => (terms.length ? b.m.score - a.m.score || b.d.mtime - a.d.mtime : settings.sort === 'name' ? byName(a, b) : b.d.mtime - a.d.mtime));
+  // the archived docs this search, type, status and folder would show if they weren't archived
+  const hiddenN = showArchived ? 0 : typed.filter(d => { const st = sts.get(d.key); return st.archived && (!filters.status || st[filters.status]) && match(d, terms); }).length;
 
   // the sidebar picks a project or folder ('all' clears every filter); the composer's chips toggle a type ('t:<id>') or
-  // a status ('s:<id>'), one of each at a time; 't:' and 's:' clear them
+  // a status ('s:<id>'), one of each at a time; 't:' and 's:' clear them. The Archived chip (and Show them) remembers the
+  // status it replaced, and turning it off goes back to it
   const pick = id => {
     setDrawer(false);
     if (id === 'all') return setFilters({ scope: null, type: null, status: null });
@@ -1101,8 +1211,23 @@ function App() {
     if (k === 'p') setFilters(f => ({ ...f, scope: { slug: a, dir: '' } }));
     else if (k === 'd') setFilters(f => ({ ...f, scope: { slug: a, dir: rest.join(':') } }));
     else if (k === 't') setFilters(f => ({ ...f, type: !a || f.type === a ? null : a }));
-    else if (k === 's') setFilters(f => ({ ...f, status: !a || f.status === a ? null : a }));
+    else if (k === 's') setFilters(f => (a === 'archived' && f.status === a ? { ...f, status: f.back || null, back: null }
+      : { ...f, status: !a || f.status === a ? null : a, back: a === 'archived' ? f.status : null }));
   };
+  const showThem = () => pick('s:archived');
+  // archive and Not now write the doc's reader state as its page does (the server checks both keys), then reload the index
+  const write = async (d, ops) => {
+    const r = await fetch('/__bluedoc/state', { method: 'PUT', headers: { 'Content-Type': 'application/json', 'X-Bluedoc': '1', ...serverKeyHeaders() },
+      body: JSON.stringify({ path: d.url, ops }) });
+    if (!r.ok) throw Object.assign(new Error(String(r.status)), { key: r.status === 403 });
+    if (reload.current) await reload.current();
+  };
+  const failed = err => setNote({ text: err && err.key ? 'This browser can\'t save yet: open the link from serve.py unlock here' : 'Couldn\'t save: is the server running?' });
+  const acts = useMemo(() => ({
+    archive: (d, on) => write(d, [['__archived', on ? JSON.stringify({ at: new Date().toISOString().replace(/\.\d+Z$/, 'Z'), rev: d.rev }) : null]])
+      .then(() => setNote(on ? { text: `Archived “${plain(d.title)}”`, undo: () => acts.archive(d, false) } : { text: `Unarchived “${plain(d.title)}”` }), failed),
+    notNow: d => write(d, [['__archive-later', d.rev]]).catch(failed),
+  }), []);
   const scopeId = filters.scope ? `d:${filters.scope.slug}:${filters.scope.dir}` : 'all';
   const anyFilter = !!(filters.scope || filters.type || filters.status);
   const toggleTheme = () => { const t = theme === 'dark' ? 'light' : 'dark'; store.set(THEME_KEY, t); setThemePick(t); };
@@ -1111,9 +1236,9 @@ function App() {
 
   // the rail shows icons only; HorizonUI's Sidebar would still lay out open children there, so they go
   const sectionsFor = rail => [
-    { id: 'top', items: [{ id: 'all', label: 'All docs', icon: e(Icons.Home), badge: String(docs.length) }] },
-    { id: 'projects', title: 'Projects', items: roots.map(r => ({ id: 'p:' + r.slug, label: r.name, icon: e(Icons.Package), badge: String(r.docs.length), defaultOpen: true,
-      children: rail ? undefined : folderItems(r, docs.filter(d => d.root === r)) })) },
+    { id: 'top', items: [{ id: 'all', label: 'All docs', icon: e(Icons.Home), badge: String(live.length) }] },
+    { id: 'projects', title: 'Projects', items: roots.map(r => ({ id: 'p:' + r.slug, label: r.name, icon: e(Icons.Package), badge: String(live.filter(d => d.root === r).length), defaultOpen: true,
+      children: rail ? undefined : folderItems(r, live.filter(d => d.root === r)) })) },
   ];
   const sidebar = inDrawer => {
     const collapsed = !inDrawer && settings.rail;
@@ -1141,7 +1266,7 @@ function App() {
   const searchProps = { value: q, onChange: ev => setQ(ev.target.value), onKeyDown: onSearchKey, 'aria-label': 'Search docs', autoComplete: 'off', spellCheck: false };
 
   // the composer's chips: one type and one status at a time, each chip toggling its filter; a count of 0 hides a chip unless it's picked
-  const typeChips = [e(FilterChip, { key: 'all', on: !filters.type, label: 'All', n: scoped.length, onClick: () => pick('t:') }),
+  const typeChips = [e(FilterChip, { key: 'all', on: !filters.type, label: 'All', n: Object.values(typeN).reduce((a, n) => a + n, 0), onClick: () => pick('t:') }),
     ...TYPES.filter(([id]) => typeN[id] || filters.type === id).map(([id, label, I]) =>
       e(FilterChip, { key: id, className: 't-' + id, on: filters.type === id, icon: e(I), label, n: typeN[id], onClick: () => pick('t:' + id) }))];
   const statusChips = STATUSES.filter(([id]) => statusN[id] || filters.status === id).map(([id, label, I]) =>
@@ -1151,12 +1276,16 @@ function App() {
   // the sticky bar repeats every active filter as a removable tag
   const topTags = [scopeTag, typeDef && e(Tag, { key: 't', icon: e(typeDef[2]), onRemove: () => pick('t:') }, typeDef[1]),
     statusDef && e(Tag, { key: 's', icon: e(statusDef[2]), onRemove: () => pick('s:') }, statusDef[1])].filter(Boolean);
-  const countText = !data ? 'loading…' : rows.length === docs.length ? plural(docs.length, 'doc') : `${rows.length} of ${docs.length}`;
+  const total = showArchived ? docs.length - live.length : live.length;
+  const countText = !data ? 'loading…' : rows.length === total ? plural(total, showArchived ? 'archived doc' : 'doc') : `${rows.length} of ${total}`;
 
-  const needsN = docs.filter(d => sts.get(d.key).needs).length;
-  const newest = docs.reduce((a, d) => Math.max(a, d.mtime), 0);
+  const needsN = live.filter(d => sts.get(d.key).needs).length;
+  const newest = live.reduce((a, d) => Math.max(a, d.mtime), 0);
   const lede = !data ? 'Loading your docs…' : !docs.length ? 'No docs yet.'
-    : e(F, null, `${plural(docs.length, 'doc')} in ${plural(roots.length, 'project')}`, needsN ? e(F, null, ' · ', e('b', null, `${needsN} need${needsN === 1 ? 's' : ''} you`)) : null, newest ? ` · updated ${ago(newest)}` : null);
+    : e(F, null, `${plural(live.length, 'doc')} in ${plural(roots.length, 'project')}`, needsN ? e(F, null, ' · ', e('b', null, `${needsN} need${needsN === 1 ? 's' : ''} you`)) : null, newest ? ` · updated ${ago(newest)}` : null);
+  // what archive hides from this view: under the results, or in the empty state; Show them turns on the Archived chip
+  const hiddenText = (verb = ['matches', 'match']) => `${plural(hiddenN, 'archived doc')} ${hiddenN === 1 ? verb[0] : verb[1]}`;
+  const showBtn = e('button', { type: 'button', onClick: showThem }, 'Show them');
 
   // grouping by folder, ordered like the docs inside
   let body;
@@ -1164,7 +1293,8 @@ function App() {
   else if (!roots.length) body = e('div', { className: 'bd-empty' }, e(EmptyState, { icon: e(Icons.FolderOpen), title: 'No folders yet',
     description: e(F, null, 'An agent registers one when it runs ', e('code', null, 'serve.py open <doc>.bluedoc.json'), '; add one yourself with ', e('code', null, 'serve.py add <folder>'), '.'), actions: null }));
   else if (!rows.length) body = e('div', { className: 'bd-empty' }, e(EmptyState, { size: 'sm', icon: e(Icons.Search), title: terms.length ? `Nothing matches “${dq}”` : 'No docs in this view',
-    description: terms.length ? 'Try fewer or different words, or clear the filters.' : 'Clear the filters to see every doc.',
+    description: hiddenN ? e('span', { className: 'bd-ahint-x' }, hiddenText(terms.length ? ['does', 'do'] : undefined), ' · ', showBtn)
+      : terms.length ? 'Try fewer or different words, or clear the filters.' : 'Clear the filters to see every doc.',
     actions: e(F, null, terms.length > 0 && e(Button, { size: 'sm', variant: 'secondary', onClick: () => setQ('') }, 'Clear search'), anyFilter && e(Button, { size: 'sm', variant: 'ghost', onClick: () => pick('all') }, 'Clear filters')) }));
   else if (settings.view === 'board') body = e(Board, { rows, terms });
   else if (settings.group) {
@@ -1207,7 +1337,8 @@ function App() {
               e(FilterRow, { label: 'Type' }, typeChips),
               statusChips.length > 0 && e(FilterRow, { label: 'Status' }, statusChips)))),
         e('div', { className: 'bd-wrap' },
-          data && docs.length > 0 && e(F, null,
+          // the widgets never count archived docs, so the Archived view has none
+          data && docs.length > 0 && !showArchived && e(F, null,
             e('div', { className: 'bd-sec-head' }, e('h2', null, 'Overview'), e('span', { className: 'sub' }, scopeText)),
             e('section', { className: 'bd-widgets', 'aria-label': 'Overview' },
               e(Activity, { docs: filtered }), e(Decisions, { docs: filtered, sts }), e(ByType, { docs: filtered, sts, onType: id => pick('t:' + id) }), e(Waiting, { docs: filtered, sts }))),
@@ -1219,7 +1350,11 @@ function App() {
               e(SegmentedControl, { size: 'sm', 'aria-label': 'Grid columns', options: COLS.map(c => ({ value: c, label: c === 'auto' ? 'Auto' : c })), value: settings.cols, onValueChange: v => set('cols', v) })),
             e(SegmentedControl, { size: 'sm', 'aria-label': 'Sort', options: [{ value: 'recent', label: 'Recent', icon: e(Icons.Clock) }, { value: 'name', label: 'Name', icon: e(Icons.SortAsc) }], value: settings.sort, onValueChange: v => set('sort', v) }),
             settings.view !== 'board' && e(ToggleButton, { size: 'sm', pressed: settings.group, onPressedChange: v => set('group', v), leading: e(Icons.FolderTree) }, 'Folders')),
-          e('div', { ref: results, onKeyDown: onResultsKey }, body)))),
+          e(ArchiveActs.Provider, { value: acts }, e('div', { ref: results, onKeyDown: onResultsKey }, body)),
+          // always in the page, so a screen reader hears the line once when it appears
+          e('p', { className: 'bd-ahint', role: 'status' }, rows.length > 0 && hiddenN > 0 && (terms.length > 0 || anyFilter)
+            ? [e(ArchiveIcon, { key: 'i', size: 14 }), e('span', { key: 't' }, hiddenText()), e('span', { key: 's', 'aria-hidden': true }, '·'), e(F, { key: 'b' }, showBtn)] : null)))),
+    note && e('div', { className: 'bd-toast', role: 'status' }, note.text, note.undo && e('button', { type: 'button', onClick: () => { const u = note.undo; setNote(null); u(); } }, 'Undo')),
     drawer && data && e('div', { className: 'bd-drawer', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Projects and folders' },
       e('div', { className: 'scrim', onClick: () => setDrawer(false) }), e('div', { className: 'panel' }, sidebar(true))));
 }

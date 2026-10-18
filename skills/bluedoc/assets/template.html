@@ -126,6 +126,15 @@ button.bd-emo:hover, button.bd-emo[aria-expanded="true"] { background: var(--sel
   background: linear-gradient(180deg, var(--key-top), var(--key-bot)); box-shadow: var(--shadow-key); transition: color .12s var(--ease), transform .09s; }
 .bd-ibtn:hover { color: var(--fg); }
 .bd-ibtn:active { transform: translateY(.5px); }
+/* the doc's ⋯ menu (Archive / Unarchive) and the archive strips under the app bar (ARC): they scroll with the page */
+.bd-docm .bd-selm { left: auto; right: 0; min-width: 168px; }
+.bd-bar:has(.bd-docm [aria-expanded="true"]) { z-index: 43; }   /* the open menu over the docked right panel */
+.bd-revbar.arc { position: static; background: color-mix(in oklch, var(--fg) 6%, var(--canvas)); }
+.bd-revbar.arc.sug { background: color-mix(in srgb, var(--ok) 13%, var(--canvas)); }
+.bd-revbar.arc.sug .in > .bd-ic { color: var(--ok-fg); }
+.bd-planchip.arc { --t: var(--fg-muted); --tf: var(--fg-muted); --tt: color-mix(in oklch, var(--fg) 8%, transparent); }
+.bd-planchip.arc[hidden] { display: none; }
+@media print { .bd-docm, .bd-revbar.arc { display: none !important; } }
 
 /* shell: the rail (Contents, Tracker, Status, Document, Related) on the left, in view while the page
    scrolls, and the content column (at most --content-w) centred right of it, in the room the docked
@@ -2427,6 +2436,8 @@ const ICONS = {
   copy: '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
   reset: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>',
   undo: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',
+  archive: '<rect x="2" y="3" width="20" height="5" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8M10 12h4"/>',
+  more: '<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',
   redo: '<path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/>',
   commit: '<circle cx="12" cy="12" r="3"/><path d="M3 12h6M15 12h6"/>',
   info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>',
@@ -3267,11 +3278,98 @@ app.append(h('header', { class: 'bd-bar' }, mark,
 const eyebrow = [meta.org, meta.kind, meta.date].filter(Boolean);
 // a plan's or design's status beside the eyebrow: awaiting approval, changes requested or approved (paintPlan)
 const planChip = APPROVABLE && !OLD ? h('span', { class: 'bd-planchip', role: 'status' }) : null;
+// an archived doc says so beside the eyebrow too (ARC)
+const arcChip = NAME.edits && CUR.rev ? h('span', { class: 'bd-planchip arc', hidden: true }, ic('archive'), 'Archived') : null;
 const head = h('header', { class: 'bd-head', id: 'top' },
-  (eyebrow.length || planChip) && h('div', { class: 'bd-eyebrow' }, planChip, eyebrow.map((t, i) => [i ? h('span', { class: 'dot' }) : null, h('span', {}, t)])),
+  (eyebrow.length || planChip || arcChip) && h('div', { class: 'bd-eyebrow' }, planChip, arcChip, eyebrow.map((t, i) => [i ? h('span', { class: 'dot' }) : null, h('span', {}, t)])),
   h('h1', {}, NAME.part()),
   DOC.subtitle && h('p', { class: 'bd-sub', html: inline(DOC.subtitle) }));
 NAME.paint();
+
+// the strips under the app bar: a doc page keeps its sticky revision strip in view (--rv-h); a design page's board
+// starts under every strip
+function fitStrips() {
+  const bars = [...document.querySelectorAll('.bd-revbar')].filter(b => IS_DESIGN || getComputedStyle(b).position === 'sticky');
+  document.documentElement.style.setProperty('--rv-h', bars.reduce((n, b) => n + b.offsetHeight, 0) + 'px');
+}
+addEventListener('resize', fitStrips);
+
+/* ---------- archive: the reader's, never the agent's ---------- */
+// The reader archives a doc from the app bar's ⋯ menu (reader state `__archived`: {at, rev}; serve.py checks it, and the
+// home page leaves the doc out of its views, counts and widgets). The doc stays where it is and still takes replies.
+// An archive holds for the rev archived: a later rev the agent writes brings the doc back, and the page says so once
+// (then drops the record). Archive asks no confirm; its toast offers Undo. A plan, design, deck, website or listing that
+// is all done (approved, every step done, every check ticked) offers "All done · Archive it?"; Not now
+// (`__archive-later`: the rev) holds until the next rev. Only a served page of the current revision with a meta.rev
+// shows any of it: ?rev=, ?diff= and an -o export don't. paint() runs again when the approval or a tick changes.
+const ARC = (() => {
+  if (!arcChip) return { paint() {} };
+  const KA = `bp:${docId}:__archived`, KL = `bp:${docId}:__archive-later`;
+  const rec = () => { try { const x = JSON.parse(store.get(KA) || 'null'); return x && typeof x.at === 'string' && typeof x.rev === 'string' ? x : null; } catch { return null; } };
+  const day = at => {
+    const d = new Date(at);
+    return isNaN(d) ? '' : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', ...(d.getFullYear() !== new Date().getFullYear() ? { year: 'numeric' } : {}) });
+  };
+  const steps = [];
+  const walk = bs => (Array.isArray(bs) ? bs : []).forEach(b => {
+    if (!b || typeof b !== 'object') return;
+    if (b.type === 'steps' && Array.isArray(b.items)) steps.push(...b.items.filter(s => s && typeof s === 'object'));
+    walk(b.blocks);
+    if (Array.isArray(b.items)) b.items.forEach(it => it && walk(it.blocks));
+  });
+  (DOC.sections || []).forEach(s => s && walk(s.blocks));
+  let ready = false, shown = null, strip = null;
+  // approved, every step done, every check ticked (a stale check isn't done) and not put off for this rev; the approval
+  // settles open picks
+  const allDone = () => ready && APPROVABLE && store.get(KL) !== CUR.rev && planState().state === 'approved'
+    && steps.every(s => s.status === 'done') && Object.values(ITEMS).every(x => x.choices || (x.cb.checked && !x.stale));
+  const bar = document.querySelector('.bd-bar');
+  const setStrip = (key, cls, kids) => {
+    if (key === shown) return;
+    shown = key;
+    const el = key && h('div', { class: 'bd-revbar arc ' + cls, role: 'region', 'aria-label': 'Archive' }, h('div', { class: 'in' }, kids));
+    if (strip && el) strip.replaceWith(el); else if (strip) strip.remove(); else if (el) (document.querySelector('.bd-revbar.arc') || bar).after(el);
+    strip = el || null;
+    fitStrips();
+  };
+  const nowIso = () => new Date().toISOString().replace(/\.\d+Z$/, 'Z');
+  function archive() { store.set(KA, JSON.stringify({ at: nowIso(), rev: CUR.rev })); paint(); toast('Archived: hidden from the home page', { label: 'Undo', run: unarchive }); }
+  function unarchive() { store.del(KA); paint(); toast('Unarchived'); }
+  function notNow() { store.set(KL, CUR.rev); paint(); }
+  // the agent wrote a rev since the reader archived this doc: it's back, said once
+  const was = rec();
+  if (was && was.rev !== CUR.rev) {
+    const s = h('div', { class: 'bd-revbar arc', role: 'status' }, h('div', { class: 'in' }, ic('archive'),
+      h('span', { class: 't' }, h('b', {}, 'Back from the archive'), `: rev ${CUR.rev} changed it.`),
+      h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Dismiss', onclick: () => { s.remove(); fitStrips(); } }, ic('x'))));
+    bar.after(s);
+    store.del(KA);
+  }
+  const item = h('button', { type: 'button', role: 'menuitem', tabindex: '-1', onclick: () => { pop.close(true); if (archived()) unarchive(); else archive(); } },
+    ic('archive'), h('span', { class: 'l' }));
+  const menu = h('div', { class: 'bd-selm act', role: 'menu', 'aria-label': 'Doc', tabindex: '-1', hidden: true }, item);
+  const btn = h('button', { type: 'button', class: 'bd-ibtn', 'aria-haspopup': 'menu', 'aria-expanded': 'false', 'aria-label': 'More', title: 'More',
+    onclick: () => menu.hidden ? pop.open(0) : pop.close(true) }, ic('more'));
+  const wrap = h('div', { class: 'bd-exp bd-docm' }, btn, menu);
+  const pop = menuPop(wrap, btn, menu, () => [item]);
+  document.querySelector('.bd-bar-r').insertBefore(wrap, themeBtn);
+  const archived = () => { const r = rec(); return r && r.rev === CUR.rev ? r : null; };
+  function paint() {
+    const r = archived();
+    item.querySelector('.l').textContent = r ? 'Unarchive' : 'Archive';
+    arcChip.hidden = !r;
+    arcChip.title = r ? `Archived on ${day(r.at)}` : '';
+    // the actions sit right after the words: a docked right panel covers the strip's far end (it scrolls away under the
+    // app bar, so the panel doesn't start below it)
+    if (r) setStrip('a' + r.at, '', [ic('archive'), h('span', { class: 't' }, h('b', {}, `Archived on ${day(r.at)}`), ' · it\'s hidden from the home page\'s views.'),
+      h('button', { type: 'button', class: 'bp-btn', onclick: unarchive }, ic('undo'), 'Unarchive')]);
+    else if (allDone()) setStrip('s', 'sug', [ic('checks'), h('span', { class: 't' }, h('b', {}, 'All done'), ' · Archive it?'),
+      h('button', { type: 'button', class: 'bp-btn primary', onclick: archive }, ic('archive'), 'Archive'), h('button', { type: 'button', class: 'bp-btn', onclick: notNow }, 'Not now')]);
+    else setStrip(null);
+  }
+  paint();
+  return { paint() { ready = true; paint(); } };
+})();
 const tldr = h('div', { class: 'bd-tldr' }, DOC.tldr && h('div', { class: 'bd-tldr-card' },
   h('span', { class: 'ico' }, ic('zap')), h('span', { class: 'lbl' }, 'TL;DR'), h('div', { class: 'body bd-md', html: md(DOC.tldr) })));
 
@@ -4209,7 +4307,7 @@ if (/^https?:$/.test(location.protocol)) {
         h('span', { class: 'sp' }),
         h('button', { type: 'button', class: 'bp-btn', onclick: () => copyText('serve.py unlock', 'Copied: run it, then open the link it prints here') }, ic('copy'), 'Copy unlock command'))));
       // a design page doesn't scroll: its board and panels start under every strip
-      if (IS_DESIGN) { const fit = () => root.style.setProperty('--rv-h', [...document.querySelectorAll('.bd-revbar')].reduce((n, e) => n + e.offsetHeight, 0) + 'px'); fit(); addEventListener('resize', fit); }
+      if (IS_DESIGN) fitStrips();
     }
   }).catch(() => {});
 }
@@ -4232,6 +4330,7 @@ function replyCounts() {
     changed: all.filter(x => x.choices ? (x.choice || '') !== (x.it.choice || '') : x.cb.checked !== !!x.it.done).length };
 }
 function paintSend() {
+  ARC.paint();   // a tick may finish the doc: All done · Archive it?
   if (approveDlg && approveDlg.open) approveDlg._paint();
   if (!sendBtn) return;
   const c = replyCounts(), has = !!(c.changed || c.notes);
@@ -9828,12 +9927,11 @@ if (REVS.length >= 1 && REVS[0].rev) {
     if (was) {
       const s = strip('upd', ic('hist'), h('span', { class: 't' }, 'Updated since you last opened it: ', h('b', {}, `${was.rev} → ${CUR.rev}`), CUR.date ? ` (${CUR.date})` : ''),
         h('span', { class: 'sp' }), h('a', { class: 'bp-btn primary', href: revUrl(CUR, was) }, ic('split'), 'Show what changed'),
-        h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Dismiss', onclick: () => { s.remove(); root.style.removeProperty('--rv-h'); } }, ic('x')));
+        h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Dismiss', onclick: () => { s.remove(); fitStrips(); } }, ic('x')));
     }
     store.set(SEEN_KEY, CUR.rev);
   }
-  const bar = document.querySelector('.bd-revbar');
-  if (bar) { const fit = () => root.style.setProperty('--rv-h', bar.offsetHeight + 'px'); fit(); addEventListener('resize', fit); }
+  fitStrips();
   // Revisions are a tab of the right panel, beside Comments; earlier revisions and compare view open on it
   revTab = buildRevTab();
   SIDE.add({ id: 'revisions', label: 'Revisions', at: 1, body: revTab, chip: () => BASE ? `${CHG.length} change${CHG.length === 1 ? '' : 's'}` : '' });
@@ -9897,6 +9995,7 @@ function paintPlan() {
     : IS_LISTING ? `Approve this listing${revWord}, both platform pages in every locale: the agent takes it as final, with your picks`
     : IS_DESIGN ? `Approve this design${revWord}, every screen in it: the agent builds it with your picks` : `Approve this plan${revWord}: the agent goes ahead with it and your picks`;
   if (done && approveDlg && approveDlg.open) approveDlg.close();
+  ARC.paint();
 }
 function openApprove() {
   if (planState().state === 'approved' || Object.values(ITEMS).some(x => x.more) || boardBlocks().length) return;

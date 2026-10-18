@@ -8,7 +8,8 @@ done, the approved pick as the choice: carried), not after any other change; bui
 on a design's screen files; reply files of earlier versions are imported once and left in place, and no reply files
 are written. A reader's `__title` and `__emoji` out of bounds are refused; valid ones show in the index and the page's
 title, and null resets to the doc's own (its `emoji`, else its type's); the page's emoji set and type defaults agree
-with build.py's."""
+with build.py's. A reader's `__archived` record is exactly {at, rev}; it holds for that rev, and a later rev brings the
+doc back (unarchivedBy) and the next write drops the record."""
 from __future__ import annotations
 
 import json
@@ -228,6 +229,44 @@ class State(unittest.TestCase):
         self.assertEqual(self.card()["emoji"], "🛒")
         self.put([["__emoji", "🚀"]], path=self.plan_url)
         self.assertEqual(self.card()["emoji"], "🚀")
+
+    def test_reader_archive(self) -> None:
+        """`__archived` takes exactly {at: <ISO time>, rev: <1 to 40 characters>} (400 otherwise) and `__archive-later` a
+        rev. The index says archived (the time) while the doc's meta.rev is the archived rev, archiveLater for this rev,
+        and the steps not done. A rev the agent writes brings the doc back: archived null, unarchivedBy the new rev, and the
+        next state write drops the stale record. The doc's JSON never changes."""
+        raw = self.plan.read_bytes()
+        for value in ("", "2026-10-18T09:00:00Z", '{"at": "2026-10-18T09:00:00Z"}', '{"at": "yesterday", "rev": "1"}',
+                      '{"at": "2026-10-18", "rev": "1"}', '{"at": "2026-13-18T09:00:00Z", "rev": "1"}', '{"at": "2026-10-18T09:00:00Z", "rev": ""}',
+                      '{"at": "2026-10-18T09:00:00Z", "rev": "' + "1" * 41 + '"}', '{"at": "2026-10-18T09:00:00Z", "rev": 1}',
+                      '{"at": "2026-10-18T09:00:00Z", "rev": "1", "by": "agent"}', '["2026-10-18T09:00:00Z", "1"]'):
+            with self.subTest(value=value):
+                status, got = self.put([["__archived", value]], path=self.plan_url)
+                self.assertEqual(status, 400)
+                self.assertIn('{"at": <ISO 8601 time>, "rev": <1 to 40 characters>}', got["error"])
+        self.assertEqual(self.put([["__archive-later", ""]], path=self.plan_url)[0], 400)
+        card = self.card()
+        self.assertEqual((card["archived"], "unarchivedBy" in card, "archiveLater" in card, card["stepsOpen"]), (None, False, False, 7))
+        for at in ("2026-10-18T09:00:00Z", "2026-10-18T11:00:00.123+02:00"):
+            self.assertEqual(self.put([["__archived", json.dumps({"at": at, "rev": "1"})], ["__archive-later", "1"]], path=self.plan_url)[0], 200)
+            self.assertEqual((self.card()["archived"], self.card()["archiveLater"]), (at, "1"))
+        self.assertEqual(self.plan.read_bytes(), raw, "archiving changed the doc's JSON")
+        # a rev the agent writes brings it back; a write of another key drops the stale record
+        self.patch("step:steps/0/table", "--set", "status=done", "--change", "Acme: the table is in.")
+        card = self.card()
+        self.assertEqual((card["rev"], card["archived"], card["unarchivedBy"], "archiveLater" in card, card["stepsOpen"]), ("2", None, "2", False, 6))
+        self.assertIn("__archived", self.seed(self.plan_url)["state"], "the page can't say it's back from the archive")
+        self.assertEqual(self.put([["__seen", "2"]], path=self.plan_url)[0], 200)
+        self.assertNotIn("__archived", self.seed(self.plan_url)["state"])
+        self.assertNotIn("unarchivedBy", self.card())
+        # archived again at rev 2, then unarchived with null
+        self.put([["__archived", json.dumps({"at": "2026-10-18T12:00:00Z", "rev": "2"})]], path=self.plan_url)
+        self.assertEqual(self.card()["archived"], "2026-10-18T12:00:00Z")
+        self.put([["__seen", None]], path=self.plan_url)
+        self.assertEqual(self.card()["archived"], "2026-10-18T12:00:00Z", "a write dropped a record that still holds")
+        self.assertEqual(self.put([["__archived", None]], path=self.plan_url)[0], 200)
+        self.assertIsNone(self.card()["archived"])
+        self.assertNotIn("__archive", self.plan.read_text(encoding="utf-8"))
 
 
 class Emoji(unittest.TestCase):

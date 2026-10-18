@@ -757,6 +757,9 @@ def summarize(p: Path) -> dict:
                 "sections": [s.get("title") or "" for s in doc.get("sections") or []],
                 # a storelisting's store-rule errors aren't "doesn't build": its card shows them (card()'s storeErrors)
                 "items": items, "errors": len(rep.blocking), "firstError": rep.blocking[0] if rep.blocking else "",
+                # steps not done yet: an approved doc with none open and every check ticked is all done (Archive it?)
+                "stepsOpen": sum(1 for b in build.all_blocks(doc) if b.get("type") == "steps" for it in b.get("items") or []
+                                 if isinstance(it, dict) and it.get("status") != "done"),
                 "text": " ".join(words)[:SEARCH_CHARS], "card": card(doc, dtype, p),
             })
         except (OSError, ValueError, TypeError, AttributeError) as e:
@@ -782,6 +785,13 @@ def summarize(p: Path) -> dict:
     info["title"] = build.shown_title({"title": info["docTitle"]}, reader)
     if build.emoji_ok(reader.get("__emoji")):
         info["emoji"] = reader["__emoji"]
+    # archived: the time the reader archived this rev, else null; unarchivedBy: the rev the agent wrote since an archive
+    rec, rev = archive_record(reader.get(ARCHIVED)), info.get("rev") or ""
+    info["archived"] = rec["at"] if rec and rec["rev"] == rev else None
+    if rec and rec["rev"] != rev:
+        info["unarchivedBy"] = rev
+    if reader.get(ARCHIVE_LATER) == rev:
+        info["archiveLater"] = rev
     return info
 
 
@@ -3483,12 +3493,57 @@ def _hist_ok(key: str, a) -> bool:
 # the reader's own title and emoji for a doc (the page's header editor): the page and the home index show them over the
 # doc's; the agent never sees them (no reply carries them)
 READER_KEYS = {"__title": build.reader_title_ok, "__emoji": build.emoji_ok}
+# the reader's archive of a doc (the page's ⋯ menu, a home card's menu): {"at": <ISO time>, "rev": <meta.rev then>}. It
+# holds while the doc's meta.rev is that rev: a later rev the agent writes brings the doc back (summarize's
+# unarchivedBy), and the next state write drops the stale record. `__archive-later` is the rev whose "All done ·
+# Archive it?" the reader put off (Not now). Reader-only, like `__title`: no reply carries them, the JSON never changes.
+ARCHIVED, ARCHIVE_LATER, MAX_ARCHIVE_REV = "__archived", "__archive-later", 40
+ISO_TIME = re.compile(r"\d{4}-\d\d-\d\dT\d\d:\d\d(:\d\d(\.\d{1,6})?)?(Z|[+-]\d\d:\d\d)?")
+
+
+def archive_rev_ok(v) -> bool:
+    return isinstance(v, str) and 1 <= len(v) <= MAX_ARCHIVE_REV and v.isprintable()
+
+
+def archive_record(value) -> dict | None:
+    """The stored `__archived` value as {at, rev}, or None unless it is exactly that: an ISO 8601 time and a rev of 1 to
+    MAX_ARCHIVE_REV characters."""
+    try:
+        a = json.loads(value) if isinstance(value, str) else None
+    except ValueError:
+        return None
+    if not (isinstance(a, dict) and set(a) == {"at", "rev"} and isinstance(a["at"], str) and ISO_TIME.fullmatch(a["at"])
+            and archive_rev_ok(a["rev"])):
+        return None
+    try:
+        dt.datetime.fromisoformat(a["at"].replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return a
+
+
+READER_KEYS.update({ARCHIVED: lambda v: archive_record(v) is not None, ARCHIVE_LATER: archive_rev_ok})
+READER_KEY_RULE = {"__title": f"a title of 1 to {build.MAX_READER_TITLE} characters on one line", "__emoji": "one emoji",
+                   ARCHIVED: f'{{"at": <ISO 8601 time>, "rev": <1 to {MAX_ARCHIVE_REV} characters>}}',
+                   ARCHIVE_LATER: f"a rev of 1 to {MAX_ARCHIVE_REV} characters"}
+
+
+def stale_archive(doc: Path, state: dict) -> bool:
+    """True when the doc's `__archived` names a rev other than its meta.rev now: the agent wrote a new rev since."""
+    rec = archive_record(state.get(ARCHIVED))
+    if not rec:
+        return False
+    try:
+        meta = json.loads(doc.read_text(encoding="utf-8")).get("meta") or {}
+    except (OSError, ValueError, AttributeError):
+        return False
+    return rec["rev"] != str(meta.get("rev") or "")
 
 
 def value_ok(key: str, value: str) -> bool:
     """False for an `__ann:<id>` value the page can't draw (template.html's MARKUP `valid`), an `__hist` or
-    `__hist:<step>` value that isn't the board's undo history, or a `__title` / `__emoji` out of bounds
-    (build.reader_title_ok, build.emoji_ok); True for any other key."""
+    `__hist:<step>` value that isn't the board's undo history, or a reader key out of bounds (`__title` / `__emoji`:
+    build.reader_title_ok, build.emoji_ok; `__archived`: archive_record; `__archive-later`); True for any other key."""
     if key in READER_KEYS:
         return READER_KEYS[key](value)
     hist = key == "__hist" or key.startswith("__hist:")
@@ -3552,8 +3607,7 @@ def state_ops(data: dict) -> list[tuple[str, str | None]]:
         if value is not None and (not isinstance(value, str) or len(value.encode("utf-8")) > STATE_MAX_VALUE):
             raise ValueError(f"the value of {key!r} must be a string of at most {STATE_MAX_VALUE // 1024} KB, or null")
         if key in READER_KEYS and value is not None and not value_ok(key, value):
-            raise ValueError(f"the value of {key!r} must be " + (f"a title of 1 to {build.MAX_READER_TITLE} characters on one line"
-                             if key == "__title" else "one emoji") + ", or null")
+            raise ValueError(f"the value of {key!r} must be {READER_KEY_RULE[key]}, or null")
         out.append((key, value))
     return out
 
@@ -4062,6 +4116,9 @@ def make_handler(port: int, default_to: str):
                 ops = [(k, v) for k, v in ops if k.startswith("__") or ":".join(k.split(":")[:2]) in items]
             dropped = [k for k, v in ops if v is not None and not value_ok(k, v)]   # values the page could not draw
             ops = [(k, v) for k, v in ops if v is None or value_ok(k, v)]
+            # the agent wrote a rev since the reader archived it: the doc is back, so the record goes with this write
+            if not imported and all(k != ARCHIVED for k, _ in ops) and stale_archive(doc, DB.state(str(doc))[1]):
+                ops.append((ARCHIVED, None))
             version = DB.apply(str(doc), doc_id(doc), ops, imported)
             return self.json(200, {"ok": True, "version": version, **({"dropped": dropped} if dropped else {})})
 
