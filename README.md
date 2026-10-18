@@ -240,7 +240,7 @@ Frameworks, navigation, board editing, app icons and the sandbox are covered in 
 |---|---|---|
 | Claude Code | `claude plugin marketplace update bluedoc` then `claude plugin update bluedoc@bluedoc` | `claude plugin uninstall bluedoc@bluedoc` |
 | Codex | `codex plugin marketplace upgrade bluedoc` | `codex plugin remove bluedoc@bluedoc` |
-| pi | `pi update` | `pi remove git:github.com/andreiverdes/bluedoc` |
+| pi | `pi update --extension git:github.com/andreiverdes/bluedoc` (plain `pi update` updates pi itself, not its packages) | `pi remove git:github.com/andreiverdes/bluedoc` |
 | omp | `omp plugin marketplace update bluedoc && omp plugin upgrade bluedoc@bluedoc` (omp upgrades from its cached catalog, so refresh it first) | `omp plugin uninstall bluedoc@bluedoc` |
 | Copilot CLI | `copilot plugin update bluedoc` | `copilot plugin uninstall bluedoc` |
 | Antigravity CLI | `git -C bluedoc pull && agy plugin install bluedoc/antigravity` | `agy plugin uninstall bluedoc` |
