@@ -302,10 +302,15 @@ antigravity/             Antigravity CLI plugin: manifest, hooks.json (the plan 
 extensions/bluedoc.ts   pi and omp extension: the plan gate and /bluedoc-* commands
 .agents/plugins/         Codex marketplace
 package.json             pi package manifest (skills, extension)
+LICENSE                  MIT
+TRADEMARK.md             what the bluedoc name and logo may be used for
+CONTRIBUTING.md          DCO sign-off, tests, generated commands
 ```
 
 The examples describe Acme Corp, a fictional company.
 
 ## License
+
+bluedoc's core is MIT and stays MIT: every version in this repository, now and later. A separate paid app, bluedoc Desktop, is planned. It will live in its own repository under its own license and doesn't change anything here. The MIT license covers the code, not the bluedoc name, wordmark or logo; see `TRADEMARK.md`. Contributions come in under MIT with a DCO sign-off; see `CONTRIBUTING.md`.
 
 bluedoc's own code: MIT (`LICENSE`). The vendored HorizonUI build under `skills/bluedoc/assets/vendor/horizon-ui/` is Apache-2.0 (its `LICENSE` and `NOTICE`), and the Inter and JetBrains Mono fonts it ships are OFL-1.1 (its `THIRD_PARTY_NOTICES.md`). Under `skills/bluedoc/assets/vendor/heroui/`, Tailwind's browser build (`@tailwindcss/browser` 4.3.3) is MIT, and HeroUI's CSS (`@heroui/styles` 3.2.6) declares MIT in its `package.json` while its `LICENSE` file is the Apache-2.0 text; both licence files sit in `licenses/` there, unchanged. The Architects Daughter hand font and Inter (the store shots' default caption font) under `skills/bluedoc/assets/vendor/fonts/` are OFL-1.1 (their licence files sit beside them). The bluedoc wordmark is "bluedoc" set in Lexend Bold and outlined to paths in `home.html` and `template.html`; Lexend is OFL-1.1 (`vendor/fonts/Lexend-OFL.txt`). The manifests declare `MIT AND Apache-2.0 AND OFL-1.1`, which covers both readings.
