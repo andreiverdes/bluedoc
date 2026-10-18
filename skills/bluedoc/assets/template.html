@@ -1438,8 +1438,9 @@ svg.anim .bp-edge.k-async { animation: bp-march 1.6s linear infinite; }
 /* layouts above 900 px. The column is always centred on the window. JS picks one:
    "centred": side columns at least --side-min (the rail, or the docked right panel's room) on both sides; the
      column is the reader's width (drag handles) or --content-w, narrowed to fit.
-   "wide": not even MIN_W fits beside two side columns; the column takes the whole width and the rail (Status,
-     Document and Related included) becomes a drawer opened from the app bar. */
+   "wide": the centred column would be narrower than READ_W; the column takes the whole width (the reader's stored
+     width doesn't apply, and its drag handles hide) and the rail (Status, Document and Related included) becomes a
+     drawer opened from the app bar. */
 .bd-rh { position: fixed; top: var(--bar-h); bottom: 0; z-index: 30; width: 16px; margin-left: -8px; cursor: col-resize; touch-action: none; display: none; }
 .bd-rh::before { content: ""; position: absolute; top: 0; bottom: 0; left: 7.5px; width: 1px; background: var(--accent); opacity: 0; transition: opacity .15s; }
 .bd-rh i { position: absolute; left: 5px; top: 50%; width: 6px; height: 44px; margin-top: -22px; border-radius: 3px; background: var(--line-strong);
@@ -1466,6 +1467,7 @@ html.bd-resizing, html.bd-resizing * { cursor: col-resize !important; user-selec
     visibility: hidden; opacity: 0; transform: translateX(-10px); transition: opacity .16s var(--ease), transform .16s var(--ease), visibility 0s .16s; }
   :root[data-layout="wide"] .bp-side.drawer { visibility: visible; opacity: 1; transform: none; transition: opacity .16s var(--ease), transform .16s var(--ease); }
   :root[data-layout="wide"] .bd-toc-btn { display: inline-grid !important; }
+  :root[data-layout="wide"] .bd-rh-col { display: none; }
 }
 @media print {
   :root { color-scheme: light; }
@@ -2800,21 +2802,24 @@ PHONE.addEventListener('change', placeMeta);
 /* ---------- content width: drag either edge; the column stays centred ---------- */
 // The width is a reader preference, shared by every bluedoc page in this browser. No stored width
 // means the default layout. Double-click a handle (or press Home on it) to go back to it.
-const WIDTH_KEY = 'bluedoc:width', MIN_W = 520, PAGE_PAD = 20;   // PAGE_PAD = .bd-shell side padding
+// READ_W: below it a centred column is too narrow to read beside two side columns, so the page goes wide instead
+const WIDTH_KEY = 'bluedoc:width', MIN_W = 520, READ_W = 640, PAGE_PAD = 20;   // PAGE_PAD = .bd-shell side padding
 const root = document.documentElement;
 let userW = +store.get(WIDTH_KEY) || 0;
 const cssPx = v => parseFloat(getComputedStyle(root).getPropertyValue(v)) || 0;
 // The column is always centred on the window. The centred grid's two side columns share one minimum: the rail, or
 // while the right panel (SIDE below) is docked, the room the panel needs. So docking never pushes the column over;
-// the column narrows instead. Where a docked panel would leave less than MIN_W, it opens as an overlay. A design
+// the column narrows instead. Where a docked panel would leave less than READ_W, it opens as an overlay. A design
 // page's board sits between its panels (fitPanels).
 let panelOpen = false;
 const DOCK_MIN = 1101;
 // a side column's minimum: the rail; docked, also the panel less the page padding, so a gap's width stays between column and panel
 const sideMin = docked => Math.max(cssPx('--rail'), docked ? cssPx('--sp-w') - PAGE_PAD : 0);
 const centredRoom = (docked = root.classList.contains('bd-sp-dock')) => root.clientWidth - 2 * PAGE_PAD - 2 * (sideMin(docked) + cssPx('--gap'));
-const dockW = () => panelOpen && innerWidth >= DOCK_MIN && (IS_DESIGN || centredRoom(true) >= MIN_W) ? cssPx('--sp-w') : 0;
-const maxW = () => Math.max(MIN_W, IS_DESIGN ? innerWidth - dockW() - 2 * PAGE_PAD : centredRoom(dockW() > 0));
+const dockW = () => panelOpen && innerWidth >= DOCK_MIN && (IS_DESIGN || centredRoom(true) >= READ_W) ? cssPx('--sp-w') : 0;
+const wide = () => !IS_DESIGN && centredRoom(dockW() > 0) < READ_W;
+// the widest the column can be: the window between the paddings when wide, else the room between the side columns
+const maxW = () => Math.max(MIN_W, IS_DESIGN ? innerWidth - dockW() - 2 * PAGE_PAD : wide() ? root.clientWidth - 2 * PAGE_PAD : centredRoom(dockW() > 0));
 function setDrawer(open) {
   side.classList.toggle('drawer', open);
   document.querySelector('.bd-toc-btn')?.setAttribute('aria-expanded', String(open));
@@ -2824,11 +2829,14 @@ function applyWidth() {
   root.classList.toggle('bd-sp-dock', dock > 0);
   // a design page is its board, full-bleed between the left panel and the right one: no column, no rails
   if (IS_DESIGN) { root.dataset.layout = 'board'; fitPanels(); return; }
-  if (userW) root.style.setProperty('--content-w', Math.min(userW, maxW()) + 'px'); else root.style.removeProperty('--content-w');
-  // always centred: both side columns are the same minimum width, so the column (narrowed to fit) sits on the
-  // window's centre line, the right panel docked or not; below MIN_W the rail becomes a drawer instead
+  // centred: both side columns are the same minimum width, so the column (the reader's width, narrowed to fit) sits on
+  // the window's centre line, the right panel docked or not. Wide: the column fills the window between the paddings
+  // and the rail becomes a drawer, so a narrow window reads edge to edge
+  root.dataset.layout = wide() ? 'wide' : 'centred';
+  if (root.dataset.layout === 'wide') root.style.setProperty('--content-w', maxW() + 'px');
+  else if (userW) root.style.setProperty('--content-w', Math.min(userW, maxW()) + 'px');
+  else root.style.removeProperty('--content-w');
   root.style.setProperty('--side-min', sideMin(dock > 0) + 'px');
-  root.dataset.layout = centredRoom(dock > 0) >= MIN_W ? 'centred' : 'wide';
   if (root.dataset.layout !== 'wide') setDrawer(false);
   placeHandles();
   fitTray();
@@ -2884,7 +2892,7 @@ function resizeHandle(o) {
 // both edges of the column move as one is dragged: the column stays centred
 const handles = [-1, 1].map(dir => resizeHandle({ label: 'Content width', title: 'Drag to change the content width · double-click to reset', dir: 2 * dir,
   width: () => main.getBoundingClientRect().width, set: setWidth, reset: resetWidth }));
-for (const el of handles) el.setAttribute('aria-valuemin', MIN_W);
+for (const el of handles) { el.classList.add('bd-rh-col'); el.setAttribute('aria-valuemin', MIN_W); }
 const wchip = h('div', { class: 'bd-wchip', 'aria-hidden': 'true' });
 document.body.append(...handles, wchip);
 function placeHandles() {

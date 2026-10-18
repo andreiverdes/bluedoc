@@ -759,6 +759,37 @@ class BoardDrafts(ChromePage):
         self.assertIn("Stale", a.wait_for(f"document.querySelector('.bd-cs-c[data-id={did}]')?.textContent"))
 
 
+@unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")
+class NarrowWindow(ChromePage):
+    """A doc page in a window too narrow for a readable centred column goes wide: the column fills the window between the
+    page paddings, whatever width the reader stored, and the width handles hide; a wide window keeps the stored width."""
+
+    COL = "Math.round(document.querySelector('.bd-shell > main').getBoundingClientRect().width)"
+
+    def size(self, t: Tab, w: int) -> None:
+        self.browser.call("Emulation.setDeviceMetricsOverride", {"width": w, "height": 900, "deviceScaleFactor": 1, "mobile": False}, t.session)
+        t.wait_for(f"innerWidth === {w}")
+
+    def test_a_narrow_window_reads_edge_to_edge_and_a_wide_one_keeps_the_stored_width(self) -> None:
+        t = self.open(self.server.url_for(self.plan))
+        t.ev("localStorage.setItem('bluedoc:width', '560')")
+        t.go(t.ev("location.href"))
+        # 1060 px: the rail and an empty right column would leave the stored 560 px: wide, edge to edge
+        self.size(t, 1060)
+        t.wait_for("document.documentElement.dataset.layout === 'wide'")
+        self.assertEqual(t.ev(self.COL), t.ev("document.documentElement.clientWidth") - 40)
+        self.assertEqual(t.ev("[...document.querySelectorAll('.bd-rh-col')].map(h => getComputedStyle(h).display)"), ["none", "none"])
+        # 1180 px: a centred column would get 540 px, under the 640 px it takes to read: still wide
+        self.size(t, 1180)
+        t.wait_for(f"document.documentElement.dataset.layout === 'wide' && {self.COL} === document.documentElement.clientWidth - 40")
+        # 1600 px: centred, at the stored width, with its handles
+        self.size(t, 1600)
+        t.wait_for(f"document.documentElement.dataset.layout === 'centred' && {self.COL} === 560")
+        self.assertEqual(t.ev("[...document.querySelectorAll('.bd-rh-col')].map(h => getComputedStyle(h).display)"), ["block", "block"])
+        self.assertEqual(self.browser.errors, [])
+
+
+
 class UrlKeptByAWiderFolder(unittest.TestCase):
     """st/url-move without a browser: registering a folder above a registered docs/ leaves its docs' URLs working."""
 
