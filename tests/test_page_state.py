@@ -14,6 +14,8 @@ its title picks and the browser remembers; picks sync across the three, Merged k
 links, and links into a hidden view show it; an open finding in Checklist shows its comment's file, lines and card,
 whose pick and pins are the diff's. A browser that loses the key
 cookie (Tern's WKWebView keeps none) still saves with the key the page kept in localStorage while it had the cookie.
+The reader renames a doc and picks its emoji in its header or app bar: they hold through a reload and show in the tab
+and the home index, never in a reply or the doc's JSON, and ?rev= shows them as text (rt/name).
 
 The browser tests run only with BLUEDOC_BROWSER_TESTS=1 and Chrome installed (BLUEDOC_CHROME names it when it isn't
 in a usual place); each starts Chrome with a temp profile and the server on a free port. The URL check needs no browser."""
@@ -757,6 +759,79 @@ class BoardDrafts(ChromePage):
         self.assertEqual((shown["to"], shown["draft"]), ("profile", None), "the board follows the rev, not the stale draft")
         a.ev(f"BP.comments({{open: true}})")
         self.assertIn("Stale", a.wait_for(f"document.querySelector('.bd-cs-c[data-id={did}]')?.textContent"))
+
+
+@unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")
+class ReaderName(ChromePage):
+    """The reader renames a doc and picks its emoji on the page (rt/name): the h1 on a doc page, the app bar's crumb on a
+    board. Enter saves `__title`, Esc restores; the picker's search and Enter save `__emoji`; both hold through a reload,
+    show in the tab and the home index, and never in a reply or the doc's JSON. The picker's reset items bring the doc's
+    own back. ?rev= shows them as text."""
+
+    def keys(self, t: Tab, key: str, code: int) -> None:
+        for kind in ("keyDown", "keyUp"):
+            self.browser.call("Input.dispatchKeyEvent", {"type": kind, "key": key, "code": key, "windowsVirtualKeyCode": code,
+                                                         **({"text": "\r"} if key == "Enter" and kind == "keyDown" else {})}, t.session)
+
+    def rename(self, t: Tab, sel: str, title: str, emoji_search: str) -> None:
+        t.ev(f"document.querySelector({json.dumps(sel + ' .bd-tt')}).click()")
+        self.assertTrue(t.ev(f"document.querySelector({json.dumps(sel + ' .bd-tt')}).isContentEditable"))
+        self.browser.call("Input.insertText", {"text": title}, t.session)
+        self.keys(t, "Enter", 13)
+        t.ev(f"document.querySelector({json.dumps(sel + ' button.bd-emo')}).click()")
+        self.assertEqual(t.ev("document.activeElement === document.querySelector('.bd-emop input')"), True)
+        self.browser.call("Input.insertText", {"text": emoji_search}, t.session)
+        self.keys(t, "Enter", 13)
+
+    def card(self, doc: Path) -> dict:
+        index = json.loads(self.server.req("GET", "/__bluedoc/index.json")[1])
+        return next(d for r in index["roots"] for d in r["docs"] if d["path"] == doc.name)
+
+    def stored(self, url: str) -> dict:
+        return {k: v for k, v in self.state(url).items() if k in ("__title", "__emoji")}
+
+    def test_a_plan_renamed_in_its_header(self) -> None:
+        url, raw = self.server.url_for(self.plan), self.plan.read_bytes()
+        t = self.open(url)
+        self.assertEqual(t.ev("document.querySelector('.bd-head h1').textContent"), "📋Acme Shop: saved carts")
+        self.rename(t, ".bd-head h1", "Acme carts", "cart")
+        self.assertEqual(until(lambda: self.stored(url) if len(self.stored(url)) == 2 else None), {"__title": "Acme carts", "__emoji": "🛒"})
+        # Esc restores what was there
+        t.ev("document.querySelector('.bd-head h1 .bd-tt').click()")
+        self.browser.call("Input.insertText", {"text": "Not kept"}, t.session)
+        self.keys(t, "Escape", 27)
+        t.go(self.base + url)
+        self.assertEqual(t.ev("[document.title, document.querySelector('.bd-head h1').textContent, document.querySelector('.bd-crumb').textContent]"),
+                         ["Acme carts · bluedoc", "🛒Acme carts", "/🛒Acme carts"])
+        self.assertEqual(t.ev("document.querySelector('.bd-head h1 .bd-tt').title"), "Rename (F2). Doc title: Acme Shop: saved carts")
+        card = self.card(self.plan)
+        self.assertEqual((card["title"], card["docTitle"], card["emoji"]), ("Acme carts", "Acme Shop: saved carts", "🛒"))
+        replies = t.ev("[BP.progressMarkdown(), JSON.stringify(BP.approvePayload()), JSON.stringify(BP.changesPayload())]")
+        self.assertEqual([r for r in replies if "Acme carts" in r], [], "a reply names the reader's title")
+        self.assertEqual(self.plan.read_bytes(), raw)
+        # ?rev= shows them as text
+        t.go(f"{self.base}{url}?rev=1")
+        self.assertEqual(t.ev("[document.querySelector('.bd-head h1').textContent, document.querySelectorAll('button.bd-emo, .bd-tt[tabindex]').length]"),
+                         ["🛒Acme carts", 0])
+        # the picker's reset items bring the doc's own back
+        t.go(self.base + url)
+        for _ in range(2):
+            t.ev("document.querySelector('.bd-head h1 button.bd-emo').click()")
+            t.ev("document.querySelector('.bd-emop .rs button').click()")
+        self.assertEqual(t.ev("document.querySelector('.bd-head h1').textContent"), "📋Acme Shop: saved carts")
+        self.assertEqual(until(lambda: not self.stored(url) and "reset"), "reset")
+        self.assertEqual(self.browser.errors, [])
+
+    def test_a_board_renamed_in_its_app_bar(self) -> None:
+        doc = self.docs / FIT
+        url = self.server.url_for(doc)
+        t = self.open(url)
+        self.rename(t, ".bd-crumb", "Acme Fit: onboarding", "rocket")
+        self.assertEqual(until(lambda: self.stored(url) if len(self.stored(url)) == 2 else None), {"__title": "Acme Fit: onboarding", "__emoji": "🚀"})
+        t.go(self.base + url)
+        self.assertEqual(t.ev("[document.title, document.querySelector('.bd-crumb').textContent]"), ["Acme Fit: onboarding · bluedoc", "/🚀Acme Fit: onboarding"])
+        self.assertEqual(self.card(doc)["emoji"], "🚀")
+        self.assertEqual(self.browser.errors, [])
 
 
 @unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")

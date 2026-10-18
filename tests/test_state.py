@@ -6,7 +6,9 @@ reply once; an import adds only missing keys; the seed is embedded as inert JSON
 doc the page showed (its rev and docHash) and while the doc is unchanged, or changed only by progress since (a step
 done, the approved pick as the choice: carried), not after any other change; build.approval_carries on the plan and
 on a design's screen files; reply files of earlier versions are imported once and left in place, and no reply files
-are written."""
+are written. A reader's `__title` and `__emoji` out of bounds are refused; valid ones show in the index and the page's
+title, and null resets to the doc's own (its `emoji`, else its type's); the page's emoji set and type defaults agree
+with build.py's."""
 from __future__ import annotations
 
 import json
@@ -202,6 +204,56 @@ class State(unittest.TestCase):
                 self.patch(key, "--set", field, "--change", f"Acme: {key} changed.")
                 self.assertEqual({k: v for k, v in self.approval().items() if k != "picks"}, {"rev": "1", "at": "2026-01-01T00:00:00Z", "carried": False})
                 self.assertEqual((self.card()["rev"], self.card()["approval"]["carried"]), (rev, False))
+
+    def test_reader_title_and_emoji(self) -> None:
+        """`__title` and `__emoji` out of bounds are refused (400); valid ones show in the index (title, emoji, with the
+        doc's own as docTitle) and the page's <title>; null resets to the doc's own, whose emoji is the doc's `emoji`, else
+        its type's. The doc's JSON never changes."""
+        raw = self.plan.read_bytes()
+        for key, value in (("__title", ""), ("__title", "   "), ("__title", "x" * 201), ("__title", "Acme\ncarts"),
+                           ("__emoji", ""), ("__emoji", "ab"), ("__emoji", "🛒 "), ("__emoji", "1"), ("__emoji", "🛒" * 17)):
+            with self.subTest(key=key, value=value):
+                self.assertEqual(self.put([[key, value]], path=self.plan_url)[0], 400)
+        self.assertEqual(self.put([["__title", "Acme carts, " + "x" * 188], ["__emoji", "🛒"]], path=self.plan_url)[0], 200)
+        self.assertEqual(self.put([["__title", "Acme carts"], ["__emoji", "🏳️‍🌈"]], path=self.plan_url)[0], 200)
+        card = self.card()
+        self.assertEqual((card["title"], card["docTitle"], card["emoji"]), ("Acme carts", "Acme Shop: saved carts", "🏳️‍🌈"))
+        self.assertIn("<title>Acme carts</title>", self.req("GET", self.plan_url)[1].decode())
+        self.assertEqual(self.put([["__title", None], ["__emoji", None]], path=self.plan_url)[0], 200)
+        card = self.card()
+        self.assertEqual((card["title"], card["docTitle"], card["emoji"]), ("Acme Shop: saved carts", "Acme Shop: saved carts", "📋"))
+        self.assertEqual(self.plan.read_bytes(), raw, "the reader's title or emoji reached the doc's JSON")
+        # the doc's own emoji (build.py patch … doc --set emoji=…) shows until the reader picks one
+        self.patch("doc", "--set", "emoji=🛒", "--no-bump")
+        self.assertEqual(self.card()["emoji"], "🛒")
+        self.put([["__emoji", "🚀"]], path=self.plan_url)
+        self.assertEqual(self.card()["emoji"], "🚀")
+
+
+class Emoji(unittest.TestCase):
+    """build.emoji_ok and the doc's `emoji`; the page's emoji set and type defaults agree with build.py."""
+
+    def test_doc_emoji(self) -> None:
+        doc = json.loads((EXAMPLES / "acme-saved-carts-plan.bluedoc.json").read_text(encoding="utf-8"))
+        for v in ("🛒", "🧑‍💻", "🇷🇴", "🖥️", "👍🏽"):
+            with self.subTest(v=v):
+                self.assertTrue(build.emoji_ok(v))
+                self.assertEqual([e for e in build.validate({**doc, "emoji": v}).errors if "emoji" in e], [])
+        for v in ("", "cart", "🛒 ", 3, "\u0007"):
+            with self.subTest(v=v):
+                self.assertFalse(build.emoji_ok(v))
+                self.assertTrue([e for e in build.validate({**doc, "emoji": v}).errors if "doc.emoji" in e])
+        self.assertEqual(build.shown_emoji(doc, None), build.TYPE_EMOJI["plan"])
+        self.assertEqual(build.shown_emoji({**doc, "emoji": "🛒"}, {"__emoji": "bad"}), "🛒")
+
+    def test_the_page_agrees_with_build(self) -> None:
+        page = build.TEMPLATE.read_text(encoding="utf-8")
+        types = re.search(r"const TYPE_EMOJI = (\{[^}]*\})", page).group(1)
+        self.assertEqual(json.loads(re.sub(r"(\w+):", r'"\1":', types).replace("'", '"')), build.TYPE_EMOJI)
+        picked = [x.split(" ")[0] for s in re.findall(r"^  \['\w+', '([^']*)'\],$", page, re.M) for x in s.split("|")]
+        self.assertGreater(len(picked), 180)
+        self.assertEqual([e for e in picked if not build.emoji_ok(e)], [])
+        self.assertEqual(len(picked), len(set(picked)), "an emoji is in the picker twice")
 
 
 class ApprovalCarries(unittest.TestCase):

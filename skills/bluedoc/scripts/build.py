@@ -165,6 +165,14 @@ FINDING_SIZES = ("blocker", "major", "minor", "nit")   # a review finding's stat
 # hero: the home card's element for docs without a canvas and for other docs
 HERO_ICONS = ["chart", "doc", "flag", "bolt", "clock", "users", "bug", "box", "check", "globe", "lock", "list"]
 MAX_HERO_VALUE, MAX_HERO_LABEL = 8, 28
+# a doc's emoji: the agent's top-level `emoji`, the reader's `__emoji` (serve.py), else its type's (template.html and
+# the home page show the one serve.py's index names). One emoji: ZWJ sequences, skin tones and flags are several
+# characters, so up to MAX_EMOJI of them, none an ASCII letter or digit, whitespace or a control character.
+TYPE_EMOJI = {"plan": "📋", "review": "🔎", "docs": "📘", "design": "🎨", "presentation": "🖥️", "website": "🌐",
+              "storelisting": "🛍️", "other": "📄"}
+MAX_EMOJI = 16
+# a reader's title (`__title`, serve.py): at most this many characters, as the page caps it
+MAX_READER_TITLE = 200
 STEP_STATUSES = {"todo", "doing", "done", "blocked"}
 STEP_EFFORTS = {"S", "M", "L"}
 FILE_ACTIONS = {"add", "edit", "delete", "rename", "move"}
@@ -681,6 +689,29 @@ def doc_type(meta: dict) -> str:
     if "review" in kind:
         return "review"
     return "docs" if set(re.findall(r"[a-z]+", kind)) & DOCS_KINDS else "other"
+
+
+def emoji_ok(v) -> bool:
+    return (isinstance(v, str) and 0 < len(v) <= MAX_EMOJI
+            and not any(c.isascii() and c.isalnum() or c.isspace() or ord(c) < 32 or ord(c) == 127 for c in v))
+
+
+def reader_title_ok(v) -> bool:
+    return isinstance(v, str) and "\n" not in v and "\r" not in v and 0 < len(v.strip()) <= MAX_READER_TITLE
+
+
+def shown_title(doc: dict, reader: dict | None) -> str:
+    """The title bluedoc shows for doc: the reader's `__title` (reader: the doc's state.db values), else its own."""
+    t = (reader or {}).get("__title")
+    return t.strip() if reader_title_ok(t) else doc.get("title") or ""
+
+
+def shown_emoji(doc: dict, reader: dict | None) -> str:
+    """The emoji bluedoc shows for doc: the reader's `__emoji`, else the doc's `emoji`, else its type's."""
+    for v in ((reader or {}).get("__emoji"), doc.get("emoji")):
+        if emoji_ok(v):
+            return v
+    return TYPE_EMOJI[doc_type(doc.get("meta") or {})]
 
 
 def all_blocks(doc: dict):
@@ -1905,6 +1936,9 @@ def _validate(rep: Report, doc: dict, doc_path: Path | None, *, allow_remote: bo
     lint_text(rep, "doc.subtitle", doc.get("subtitle"))
     lint_text(rep, "doc.tldr", doc.get("tldr"))
     lint_opening(rep, "doc.tldr", doc.get("tldr"))
+    if "emoji" in doc and not emoji_ok(doc["emoji"]):
+        rep.err("doc.emoji", f"{doc['emoji']!r} is no emoji: one emoji, e.g. \"🛒\" (at most {MAX_EMOJI} characters, "
+                "no letters, digits or spaces); leave it out for the type's")
     hero = doc.get("hero")
     if hero is not None:
         if not isinstance(hero, dict):
@@ -2682,7 +2716,7 @@ def build(doc: dict, template: str, history: dict | None = None, media_base: Pat
     or a canvas (in any revision it carries) gets assets/board-geo.js, the connector router, at the template's
     BOARD_GEO_SLOT; other pages get nothing there. pins (codepin.evaluate: serve.py's, or -o with --check-code) is how
     each pinned evidence entry compares with its repo now; None (an -o file, the goldens) shows the pins without it."""
-    title = (doc.get("title") or "bluedoc").replace("&", "&amp;").replace("<", "&lt;")
+    title = (shown_title(doc, (state or {}).get("state")) or "bluedoc").replace("&", "&amp;").replace("<", "&lt;")
     if "__BLUEDOC_DOC__" not in template:
         raise SystemExit("template is missing the __BLUEDOC_DOC__ placeholder")
     board = board_of(doc)

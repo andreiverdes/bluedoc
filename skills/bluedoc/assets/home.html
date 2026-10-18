@@ -201,6 +201,7 @@ body { font-family: var(--font-hz-sans, Inter, system-ui, sans-serif); -webkit-f
 .bd-wl a:hover, .bd-wl button:hover { background: var(--color-hz-hover); }
 .bd-wl a:focus-visible, .bd-wl button:focus-visible { outline: none; box-shadow: var(--hz-shadow-focus); }
 .bd-wl .t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bd-emo { margin-right: .3em; font-weight: 400; font-style: normal; }
 .bd-wl .m { flex: none; font: 500 11.5px var(--font-hz-mono); color: var(--color-hz-fg-subtle); }
 .bd-wl .m.warn { color: var(--color-hz-warning-fg); }
 .bd-wl .two { display: flex; flex-direction: column; min-width: 0; flex: 1; }
@@ -899,7 +900,7 @@ function Decisions({ docs, sts }) {
       e('div', { className: 'tx' }, e('b', null, `${decided} of ${dec}`), e('span', null, 'decided'), steps > 0 && e('span', { style: { display: 'block' } }, `${done} of ${steps} steps done`))),
     open.length ? e('ul', { className: 'bd-wl' }, open.slice(0, 3).map(({ d, n, awaiting }) => e('li', { key: d.key },
       e('a', { href: d.url }, e(awaiting ? Icons.Clipboard : Icons.Flag, { width: 14, height: 14, style: { color: 'var(--color-hz-warning-fg)', flex: 'none' } }),
-        e('span', { className: 'two' }, e('span', { className: 't' }, plain(d.title)),
+        e('span', { className: 'two' }, e('span', { className: 't', title: ownTitle(d) }, Emo(d), plain(d.title)),
           e('span', { className: 's' }, `${awaiting ? 'Awaiting approval' + (n ? `, ${n} open` : '') : `${n} to decide`} · ${d.root.name}${d.dir ? '/' + d.dir : ''}`))))))
       : e('div', { className: 'bd-w-empty' }, dec ? 'Every decision here is made.' : 'No decisions in these docs.'));
 }
@@ -923,13 +924,17 @@ function Waiting({ docs, sts }) {
     e('div', { className: 'bd-w-head' }, e(Icons.Inbox), 'Waiting on agent', e('span', { className: 'r' }, String(xs.length))),
     xs.length ? e('ul', { className: 'bd-wl' }, xs.slice(0, 4).map(({ d, st }) => e('li', { key: d.key },
       e('a', { href: d.url }, e(StatusDot, { status: 'ai', pulse: true }),
-        e('span', { className: 'two' }, e('span', { className: 't' }, plain(d.title)), e('span', { className: 's' }, `${st.changesSent ? 'Changes requested' : 'Answers sent'} · ${ago(st.sent)}`))))))
+        e('span', { className: 'two' }, e('span', { className: 't', title: ownTitle(d) }, Emo(d), plain(d.title)), e('span', { className: 's' }, `${st.changesSent ? 'Changes requested' : 'Answers sent'} · ${ago(st.sent)}`))))))
       : e('div', { className: 'bd-w-empty' }, 'Nothing waiting. Answers and change requests you send from a doc wait here until the agent updates it.'));
 }
 
 /* ---------- doc views ---------- */
 // the pieces every view shares: CardHero, the summary lines and the footer
 const summary = (d, m, terms) => (m.snip ? hl(m.snip, terms) : md(d.subtitle || plain(d.tldr).slice(0, 260), terms));
+// the emoji before a doc's title (the index's: the reader's, else the doc's, else its type's); a doc the reader renamed
+// has its own title as the title's tooltip
+const Emo = d => d.emoji ? e('span', { className: 'bd-emo', 'aria-hidden': true }, d.emoji) : null;
+const ownTitle = d => d.docTitle && d.docTitle !== d.title ? `Doc title: ${plain(d.docTitle)}` : undefined;
 const Foot = ({ d, st, terms }) => e('div', { className: 'bd-card-f' }, e(Loc, { d, terms }),
   ...[['rv', revText(d)], ['ago', ago(d.mtime)]].filter(([, t]) => t).map(([k, t]) => e('span', { key: k, className: k }, e('span', { className: 'sep' }, '·'), t)),
   e(Prog, { st, bare: true }));
@@ -937,7 +942,7 @@ function DocCard({ d, st, m, terms }) {
   return e('a', { className: 'bd-card', href: d.url, 'data-res': '' },
     e(CardHero, { d, st, size: 'card' }),
     e('div', { className: 'bd-card-body' },
-      e('div', { className: 'bd-card-t bd-md' }, ...md(d.title, terms)),
+      e('div', { className: 'bd-card-t bd-md', title: ownTitle(d) }, Emo(d), ...md(d.title, terms)),
       e('div', { className: 'bd-card-s bd-md' }, ...summary(d, m, terms)),
       e(Foot, { d, st, terms })));
 }
@@ -947,7 +952,7 @@ function DocRow({ d, st, m, terms }) {
     : !st.total ? ['neutral', 'Nothing to do'] : st.did === st.total ? ['success', 'Done'] : st.did ? ['neutral', 'In progress'] : ['neutral', 'Not started'];
   return e('a', { className: 'bd-row', href: d.url, 'data-res': '' },
     e('span', { className: 'c-doc', title: TYPE_ONE[d.type] }, e(CardHero, { d, st, size: 'thumb' }),
-      e('span', { className: 'tx' }, e('span', { className: 't bd-md' }, ...md(d.title, terms)), e('span', { className: 's bd-md' }, ...summary(d, m, terms)))),
+      e('span', { className: 'tx' }, e('span', { className: 't bd-md', title: ownTitle(d) }, Emo(d), ...md(d.title, terms)), e('span', { className: 's bd-md' }, ...summary(d, m, terms)))),
     e('span', { className: 'c-folder' }, e(Loc, { d, terms })),
     e('span', { className: 'c-status' }, e(Badge, { tone, size: 'sm', variant: 'soft' }, label)),
     e('span', { className: 'c-prog' }, e(Prog, { st })),
@@ -957,7 +962,7 @@ function DocRow({ d, st, m, terms }) {
 const ListHead = () => e('div', { className: 'bd-row head', 'aria-hidden': true }, ...['Doc', 'Folder', 'Status', 'Progress', 'Rev', 'Edited'].map(t => e('span', { key: t }, t)));
 function BoardCard({ d, st, terms }) {
   return e('a', { className: 'bd-bcard', href: d.url, 'data-res': '' }, e(CardHero, { d, st, size: 'board' }),
-    e('div', { className: 'b' }, e('div', { className: 't bd-md' }, ...md(d.title, terms)), e(Foot, { d, st, terms })));
+    e('div', { className: 'b' }, e('div', { className: 't bd-md', title: ownTitle(d) }, Emo(d), ...md(d.title, terms)), e(Foot, { d, st, terms })));
 }
 function Board({ rows, terms }) {
   return e('div', { className: 'bd-board' }, BOARD.map(([id, label, dot]) => {

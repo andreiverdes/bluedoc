@@ -87,6 +87,38 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .bd-crumb { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 13px; color: var(--fg-subtle); }
 .bd-crumb .sep { color: var(--line-strong); flex: none; }
 .bd-crumb .t { color: var(--fg-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* the doc's emoji and title (NAME): on the current revision of a served page the emoji is a button that opens the
+   picker (.bd-emop) and the title one that turns into a field (.on) */
+.bd-emo { font-style: normal; font-weight: 400; letter-spacing: 0; flex: none; }
+button.bd-emo { display: inline-block; margin: 0; padding: 0 .08em; border: 0; border-radius: .22em; background: none; color: inherit; font: inherit; font-weight: 400; line-height: inherit; vertical-align: baseline; cursor: pointer; }
+button.bd-emo:hover, button.bd-emo[aria-expanded="true"] { background: var(--selected); }
+:is(button.bd-emo, .bd-tt.ed):focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.bd-head h1 .bd-emo { margin-right: .24em; }
+.bd-crumb .bd-emo { margin-right: 1px; }
+.bd-tt.ed { border-radius: .18em; cursor: pointer; }
+.bd-tt.ed:hover:not(.on) { box-shadow: 0 2px 0 var(--line-strong); }
+.bd-tt.on { cursor: text; outline: 2px solid var(--accent); outline-offset: 3px; text-overflow: clip; }
+.bd-emop { position: fixed; left: 0; top: 0; z-index: 60; display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto; gap: 8px; box-sizing: border-box;
+  width: min(332px, calc(100vw - 16px)); max-height: min(440px, calc(100vh - 16px)); padding: 10px; border-radius: 12px;
+  background: var(--surface); color: var(--fg); box-shadow: var(--shadow-3); font: 13px var(--sans); outline: none; }
+.bd-emop[hidden], .bd-emop [hidden] { display: none !important; }
+.bd-emop input { box-sizing: border-box; width: 100%; min-width: 0; height: 30px; padding: 0 10px; border: 0; border-radius: 8px; font: 13px var(--sans); color: var(--fg); background: var(--inset); box-shadow: inset 0 0 0 1px var(--line); }
+.bd-emop input:focus { outline: none; box-shadow: inset 0 0 0 1.5px var(--accent); }
+.bd-emop .g { min-height: 0; overflow: auto; overscroll-behavior: contain; scrollbar-width: thin; margin: 0 -4px; padding: 0 4px; }
+.bd-emop h4 { margin: 6px 2px 2px; font: 600 11px var(--sans); letter-spacing: .04em; text-transform: uppercase; color: var(--fg-subtle); }
+.bd-emop .cat { display: grid; grid-template-columns: repeat(auto-fill, minmax(34px, 1fr)); }
+.bd-emop .cat button { height: 34px; padding: 0; border: 0; border-radius: 8px; background: none; font: 20px/1 var(--sans); cursor: pointer; }
+.bd-emop .cat button:is(:hover, :focus) { outline: none; background: var(--selected); }
+.bd-emop .cat button[aria-pressed="true"] { box-shadow: inset 0 0 0 1.5px var(--accent); }
+.bd-emop .none { margin: 0; padding: 16px 4px; color: var(--fg-subtle); }
+.bd-emop .any { display: flex; gap: 6px; }
+.bd-emop .any .bp-btn { flex: none; height: 30px; }
+.bd-emop .any .bp-btn:disabled { opacity: .5; }
+.bd-emop .rs { display: grid; gap: 2px; margin: 0 -4px; padding-top: 6px; border-top: 1px solid var(--line-soft); }
+.bd-emop .rs button { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 7px 8px; border: 0; border-radius: 8px; background: none; color: inherit; font: 500 12.5px/1.35 var(--sans); text-align: left; cursor: pointer; }
+.bd-emop .rs button:is(:hover, :focus) { outline: none; background: var(--selected); }
+.bd-emop .rs .l { flex: none; }
+.bd-emop .rs .v { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg-subtle); text-align: right; }
 .bd-bar-r { margin-left: auto; display: flex; align-items: center; gap: 10px; flex: none; }
 .bd-overall { display: flex; align-items: center; gap: 8px; font: 500 12px var(--mono); color: var(--fg-muted); }
 .bd-overall .bp-bar { width: 72px; }
@@ -2670,6 +2702,8 @@ const store = (() => {
   }
   return {
     get, keys,
+    // served: the server seeded this page's reader state; synced: and this page writes it back (the current revision)
+    served, synced: sync,
     // the hash of the doc's JSON this page shows: an approval names it, so it can't cover edits made since
     docHash: SEED && typeof SEED.docHash === 'string' ? SEED.docHash : null,
     // the server's saved approval {rev, at, carried} as the page loaded (null: none that holds or says what changed);
@@ -2722,7 +2756,6 @@ const isDark = () => (document.documentElement.dataset.theme || (darkMQ.matches 
 
 /* ---------- app bar, header, rails ---------- */
 const app = $('#bp-app'); app.textContent = '';
-document.title = DOC.title ? DOC.title + ' · bluedoc' : 'bluedoc';
 const meta = DOC.meta || {};
 // the doc's type: meta.type, else read from meta.kind. serve.py and the home page use the same rule.
 const DOCS_KINDS = new Set(['architecture', 'walkthrough', 'runbook', 'setup', 'reference', 'proposal', 'change', 'changes', 'plan', 'status', 'guide',
@@ -2761,8 +2794,190 @@ const mark = h('a', { class: 'bd-mark', href: '#top', 'aria-label': 'bluedoc, ba
   '<g fill="#1e88ff"><rect x="14.2" y="20.6" width="14.2" height="2.5" rx="1.25"/><rect x="14.2" y="25.7" width="14.2" height="2.5" rx="1.25"/><rect x="14.2" y="30.6" width="8.6" height="2.5" rx="1.25"/></g></svg>' +
   '<svg class="wm" viewBox="6 -75 396 77" aria-hidden="true"><path class="b" d="M39 1.1Q35.4 1.1 32.1 0.1Q28.8-0.9 26.2-2.6Q24-4 22.4-5.8L22-0.1L7.1-0.1L7.1-74L23.2-74L23.2-47.6Q24.6-49.2 26.5-50.5Q29.1-52.2 32.2-53.2Q35.3-54.2 38.6-54.2Q45.5-54.2 50.9-50.7Q56.2-47.1 59.3-40.9Q62.4-34.6 62.4-26.6Q62.4-18.5 59.4-12.3Q56.3-6 51-2.5Q45.7 1.1 39 1.1ZM34.8-12.4Q38.4-12.4 41.1-14.2Q43.8-16 45.3-19.2Q46.7-22.3 46.7-26.6Q46.7-30.8 45.3-34Q43.8-37.2 41.1-38.9Q38.4-40.6 34.8-40.6Q31.1-40.6 28.4-38.9Q25.7-37.2 24.2-34Q22.7-30.8 22.7-26.6Q22.7-22.3 24.2-19.2Q25.7-16 28.4-14.2Q31.1-12.4 34.8-12.4ZM89 0L73 0L73-74L89-74L89 0ZM120.9 1.1Q115 1.1 110.9-1.5Q106.7-4 104.5-8.8Q102.2-13.6 102.2-20.3L102.2-53.1L118.3-53.1L118.3-22.5Q118.3-19.3 119.3-17Q120.3-14.7 122.3-13.5Q124.3-12.2 127.1-12.2Q129.2-12.2 130.9-12.9Q132.7-13.6 133.9-14.9Q135.2-16.1 135.9-17.8Q136.6-19.4 136.6-21.4L136.6-53.1L152.7-53.1L152.7 0L137.6 0L137.2-6.8Q136.6-6.1 135.9-5.4Q133.1-2.4 129.2-0.7Q125.3 1.1 120.9 1.1ZM192.3 1Q183.5 1 177-2.6Q170.5-6.1 166.9-12.3Q163.3-18.4 163.3-26.3Q163.3-32.4 165.3-37.5Q167.3-42.6 170.9-46.4Q174.5-50.1 179.5-52.2Q184.4-54.2 190.3-54.2Q195.9-54.2 200.6-52.2Q205.2-50.2 208.6-46.6Q212-43 213.8-38.1Q215.6-33.2 215.4-27.4L215.3-23.1L178.8-23.1Q179.3-21.4 180.2-19.9Q182-16.6 185.6-14.8Q189.1-13 194-13Q197.4-13 200.1-14Q202.7-15 205.8-17.4L213.3-6.8Q210.2-4.1 206.7-2.4Q203.2-0.7 199.6 0.2Q195.9 1 192.3 1ZM178.8-32.1L200.6-32.1L200.6-32.2Q200.4-34.7 199.1-36.6Q197.7-38.6 195.5-39.7Q193.3-40.8 190.5-40.8Q186.6-40.8 183.9-39.3Q181.1-37.7 179.7-34.8Q179.1-33.5 178.8-32.1Z"/>' +
   '<path class="d" d="M245.7 1.1Q238.8 1.1 233.4-2.5Q228.1-6 225-12.3Q221.9-18.5 221.9-26.5Q221.9-34.5 225-40.8Q228.1-47 233.5-50.6Q238.9-54.2 245.9-54.2Q249.5-54.2 252.8-53.1Q256.1-52 258.8-50.1Q260.2-49.1 261.4-47.9L261.4-74L277.5-74L277.5 0L262.6 0L262.2-5.8Q260.7-4.1 258.7-2.8Q256.1-1 252.8 0.1Q249.4 1.1 245.7 1.1ZM249.8-12.2Q253.5-12.2 256.2-14Q258.9-15.8 260.4-19Q261.8-22.2 261.8-26.5Q261.8-30.9 260.4-34.1Q258.9-37.3 256.2-39.1Q253.5-40.9 249.8-40.9Q246.1-40.9 243.4-39.1Q240.8-37.3 239.3-34.1Q237.8-30.9 237.8-26.5Q237.8-22.2 239.3-19Q240.8-15.8 243.4-14Q246.1-12.2 249.8-12.2ZM316 1Q307.7 1 301.3-2.6Q294.8-6.2 291-12.4Q287.3-18.6 287.3-26.6Q287.3-34.6 291-40.8Q294.8-47 301.3-50.6Q307.7-54.2 316-54.2Q324.3-54.2 330.8-50.6Q337.2-47 340.9-40.8Q344.6-34.6 344.6-26.6Q344.6-18.6 340.9-12.4Q337.2-6.2 330.8-2.6Q324.3 1 316 1ZM316-12.8Q319.6-12.8 322.4-14.6Q325.2-16.4 326.8-19.5Q328.4-22.6 328.3-26.6Q328.4-30.6 326.8-33.8Q325.2-36.9 322.4-38.7Q319.6-40.5 316-40.5Q312.4-40.5 309.5-38.7Q306.7-36.9 305.1-33.8Q303.5-30.6 303.6-26.6Q303.5-22.6 305.1-19.5Q306.7-16.4 309.5-14.6Q312.4-12.8 316-12.8ZM378.4 1Q370.7 1 364.6-2.6Q358.5-6.2 354.9-12.5Q351.4-18.7 351.4-26.6Q351.4-34.5 354.9-40.8Q358.5-47 364.6-50.6Q370.7-54.2 378.4-54.2Q385.5-54.2 391.4-51.7Q397.4-49.2 400.9-44.7L392.2-34.3Q390.8-35.9 388.9-37.3Q387-38.7 384.7-39.5Q382.4-40.3 379.9-40.3Q376.1-40.3 373.2-38.6Q370.3-36.8 368.7-33.7Q367.1-30.6 367.1-26.6Q367.1-22.8 368.8-19.7Q370.4-16.6 373.3-14.8Q376.2-13 379.9-13Q382.5-13 384.7-13.7Q386.9-14.3 388.8-15.6Q390.6-16.9 392.2-18.8L400.8-8.3Q397.4-4 391.4-1.5Q385.3 1 378.4 1Z"/></svg>' });
+
+/* ---------- the doc's emoji and title, as the reader names them ---------- */
+// The reader may give a doc their own title and emoji (reader state `__title`, `__emoji`; serve.py checks them and lists
+// the doc under them on the home page). The header, the app bar's crumb and the tab show the reader's over the doc's own
+// (`title`; `emoji`, else its type's); replies keep DOC.title, so the agent never sees the reader's. The current revision
+// of a served page edits them: a click on the title (Enter or F2 on it) makes it a field, Enter or leaving it saves, Esc
+// restores, an empty title restores; the emoji opens the picker (PICKER), whose last items reset to the doc's own. ?rev=,
+// ?diff= and an -o export show them as text (an export the doc's own: it has no reader state).
+const TYPE_EMOJI = { plan: '📋', review: '🔎', docs: '📘', design: '🎨', presentation: '🖥️', website: '🌐', storelisting: '🛍️', other: '📄' };   // build.TYPE_EMOJI
+const SEGMENTER = typeof Intl.Segmenter === 'function' ? new Intl.Segmenter() : null;
+// one emoji: what serve.py takes (build.emoji_ok: 1 to 16 code points, no ASCII letter or digit, whitespace or control
+// character), and here also a pictograph or flag that draws as one character
+const emojiOk = v => typeof v === 'string' && v.length > 0 && [...v].length <= 16 && !/[A-Za-z0-9\s\u0000-\u001f\u007f]/.test(v)
+  && /\p{Extended_Pictographic}|\p{Regional_Indicator}/u.test(v) && (!SEGMENTER || [...SEGMENTER.segment(v)].length === 1);
+const TITLE_MAX = 200;   // build.MAX_READER_TITLE
+const titleOk = v => typeof v === 'string' && !/[\r\n]/.test(v) && v.trim().length > 0 && [...v.trim()].length <= TITLE_MAX;
+// the picker's emoji by category, each with the words its search matches (a word's start)
+const EMOJI_SET = [
+  ['Docs', '📋 clipboard plan checklist|📝 memo note write draft|📄 page document file|📃 curled page|📑 tabs bookmarks|📘 blue book docs manual|📗 green book|📕 red book|📙 orange book|📚 books library|📓 notebook|📒 ledger|📖 open book read|🗒️ notepad notes|🗂️ dividers index|📁 folder|📂 open folder|🗃️ card box archive|🗄️ cabinet files|📊 bar chart stats|📈 chart up growth|📉 chart down|🗺️ map roadmap|🧾 receipt invoice|📰 newspaper news|🔖 bookmark|📎 paperclip attach|📌 pin|✏️ pencil edit|🖋️ pen sign|🔍 search magnifier|🔎 review inspect'],
+  ['Status', '✅ done check yes|☑️ checkbox|❌ cross no fail|⛔ stop blocked|🚫 forbidden|⚠️ warning risk|❗ important|❓ question|💡 idea|🔥 fire hot urgent|🚀 rocket launch ship release|🎯 target goal|🏁 finish|🏆 trophy win|🎉 party celebrate|✨ sparkles new|⭐ star|💯 hundred perfect|🔴 red|🟠 orange|🟡 yellow|🟢 green|🔵 blue|🟣 purple|🚧 construction wip|⏳ hourglass waiting|⏰ alarm deadline|📅 calendar date|🗓️ schedule|🔒 lock secure private|🔓 unlock open|🔑 key|🛡️ shield security|🐛 bug'],
+  ['Tech', '💻 laptop computer|🖥️ desktop monitor|⌨️ keyboard|🖱️ mouse|📱 phone mobile|📲 app install|⌚ watch|🌐 globe web website|🔗 link|📡 antenna|🛰️ satellite|☁️ cloud|💾 disk save|🧮 abacus math|🤖 robot ai bot|🧠 brain|⚙️ gear settings|🔧 wrench fix|🔨 hammer build|🛠️ tools|🧰 toolbox|🔌 plug|🔋 battery|🧪 test tube experiment|🧬 dna|🔬 microscope research|📦 package box|🏗️ crane build|🧩 puzzle plugin|🎮 game controller|🕹️ joystick|🖨️ printer|📷 camera photo|🎥 video camera|🎙️ microphone podcast|🔊 speaker sound|📶 signal'],
+  ['People', '👋 wave hello|👍 thumbs up yes|👎 thumbs down|👏 clap|🙌 raised hands|🤝 handshake deal|🙏 thanks please|💪 strong|🏃 runner run fitness|👀 eyes look|🧑‍💻 developer coder|🧑‍🎨 artist designer|🧑‍🏫 teacher|🧑‍🔬 scientist|🧑‍🚀 astronaut|👥 team people|👤 user person|🗣️ speaking|💬 chat comment|💭 thought|🤔 thinking|😀 happy smile|😎 cool|🥳 party|😅 phew|🤯 mind blown|😴 sleep|❤️ heart love|👑 crown'],
+  ['Nature', '🌱 seedling grow|🌿 herb|🌳 tree|🌲 evergreen|🌵 cactus|🌸 blossom|🌻 sunflower|🍀 clover luck|🍁 leaf autumn|🌊 wave ocean sea|☀️ sun|🌙 moon night|⚡ lightning fast|❄️ snow cold|🌈 rainbow|🌍 earth world|🏔️ mountain|🌋 volcano|🐶 dog|🐱 cat|🦊 fox|🐻 bear|🐼 panda|🦉 owl|🐝 bee|🦋 butterfly|🐢 turtle slow|🐙 octopus|🐳 whale|🦄 unicorn'],
+  ['Food', '☕ coffee|🍵 tea|🍺 beer|🍷 wine|🥤 drink|🍕 pizza|🍔 burger|🌮 taco|🍣 sushi|🍜 noodles ramen|🥗 salad|🍎 apple|🍋 lemon|🍌 banana|🍓 strawberry|🥑 avocado|🍩 donut|🍪 cookie|🎂 cake birthday|🧁 cupcake|🍿 popcorn|🧀 cheese|🍞 bread'],
+  ['Objects', '🛒 cart shop|🛍️ shopping bags store|💳 card payment|💰 money bag|💵 cash dollar|🏦 bank|🏠 home house|🏢 office building|🏭 factory|🏪 shop store|🚗 car|🚚 truck delivery|✈️ plane travel|🚢 ship|🚲 bike|🎨 palette design art|🖌️ brush paint|🖼️ picture image|🎬 film clapper|🎵 music|🎧 headphones|🎁 gift|🎈 balloon|📣 megaphone announce|🔔 bell notify|📬 mailbox|✉️ envelope email mail|🏷️ label tag|🧭 compass|⚖️ scale legal|🔦 flashlight|💎 gem diamond|🪄 magic wand|🧲 magnet|📐 triangle ruler|📏 ruler|✂️ scissors cut|🧹 broom cleanup|🗑️ trash delete|♻️ recycle|🎲 dice|🧸 teddy bear'],
+  ['Flags', '🏳️ white flag|🏴 black flag|🚩 red flag|🏳️‍🌈 rainbow flag|🇺🇸 united states usa|🇬🇧 united kingdom uk|🇪🇺 european union eu|🇩🇪 germany|🇫🇷 france|🇪🇸 spain|🇮🇹 italy|🇳🇱 netherlands|🇸🇪 sweden|🇷🇴 romania|🇯🇵 japan|🇨🇳 china|🇮🇳 india|🇧🇷 brazil|🇨🇦 canada|🇦🇺 australia'],
+].map(([label, s]) => [label, s.split('|').map(x => { const i = x.indexOf(' '); return [x.slice(0, i), x.slice(i + 1)]; })]);
+const NAME = (() => {
+  const KT = `bp:${docId}:__title`, KE = `bp:${docId}:__emoji`;
+  const own = { title: DOC.title || '', emoji: emojiOk(DOC.emoji) ? DOC.emoji : TYPE_EMOJI[DOC_TYPE] };
+  const edits = store.synced && !QP.has('rev') && !QP.has('diff');
+  const mine = k => store.served ? store.get(k) : null;
+  const title = () => { const v = mine(KT); return titleOk(v) ? v.trim() : own.title; };
+  const emoji = () => { const v = mine(KE); return emojiOk(v) ? v : own.emoji; };
+  const parts = [];
+  function paint() {
+    const t = title(), tip = t !== own.title ? `Doc title: ${own.title}` : '';
+    document.title = t ? t + ' · bluedoc' : 'bluedoc';
+    for (const p of parts) {
+      p.emo.textContent = emoji();
+      if (!p.tt.isContentEditable) p.tt.textContent = t;
+      const say = edits ? ['Rename (F2)', tip].filter(Boolean).join('. ') : tip;
+      if (say) p.tt.title = say; else p.tt.removeAttribute('title');
+    }
+  }
+  // the doc's own value clears the reader's: a later rev's title or emoji then shows
+  const save = (k, v, ownV) => { if (v === ownV) store.del(k); else store.set(k, v); paint(); };
+  const setTitle = v => save(KT, v, own.title), setEmoji = v => save(KE, v, own.emoji);
+
+  function editTitle(tt) {
+    if (tt.isContentEditable) return;
+    tt.contentEditable = 'plaintext-only';
+    if (tt.contentEditable !== 'plaintext-only') tt.contentEditable = 'true';
+    tt.setAttribute('role', 'textbox'); tt.setAttribute('aria-label', 'Title'); tt.classList.add('on');
+    tt.focus();
+    const r = document.createRange(), s = getSelection(); r.selectNodeContents(tt); s.removeAllRanges(); s.addRange(r);
+  }
+  function endTitle(tt, keep) {
+    if (!tt.isContentEditable) return;
+    const v = [...tt.textContent.replace(/\s+/g, ' ').trim()].slice(0, TITLE_MAX).join('');
+    tt.removeAttribute('contenteditable'); tt.setAttribute('role', 'button'); tt.removeAttribute('aria-label'); tt.classList.remove('on');
+    if (keep && v && v !== title()) setTitle(v); else paint();
+  }
+  // the emoji and the title, for the header's h1 and the app bar's crumb (cls: the title's extra class)
+  function part(cls) {
+    const emo = edits ? h('button', { type: 'button', class: 'bd-emo', 'aria-haspopup': 'dialog', 'aria-expanded': 'false', 'aria-label': 'Change the emoji', title: 'Change the emoji',
+      onclick: e => { e.stopPropagation(); PICKER.toggle(emo); } }) : h('span', { class: 'bd-emo', 'aria-hidden': 'true' });
+    const tt = h('span', { class: 'bd-tt' + (edits ? ' ed' : '') + (cls ? ' ' + cls : '') });
+    if (edits) {
+      tt.tabIndex = 0; tt.setAttribute('role', 'button');
+      tt.addEventListener('click', () => editTitle(tt));
+      tt.addEventListener('keydown', e => {
+        if (!tt.isContentEditable) {
+          if (e.key === 'Enter' || e.key === 'F2' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); editTitle(tt); }
+          return;
+        }
+        e.stopPropagation();
+        if (e.isComposing) return;
+        if (e.key === 'Enter') { e.preventDefault(); endTitle(tt, true); }
+        else if (e.key === 'Escape') { e.preventDefault(); endTitle(tt, false); }
+      });
+      tt.addEventListener('beforeinput', e => { if (e.inputType === 'insertParagraph' || e.inputType === 'insertLineBreak') e.preventDefault(); });
+      tt.addEventListener('paste', e => { e.preventDefault(); document.execCommand('insertText', false, (e.clipboardData?.getData('text/plain') || '').replace(/\s+/g, ' ')); });
+      tt.addEventListener('blur', () => endTitle(tt, true));
+    }
+    parts.push({ emo, tt });
+    return [emo, tt];
+  }
+
+  /* the picker: a popover under the emoji, with a search, the picked set by category and a field for any emoji; ← → ↑ ↓
+     move, Enter picks, Esc closes back to the emoji; a press outside, a scroll or a resize closes it */
+  const PICKER = (() => {
+    let pop = null, anchor = null, q, grid, none, any, use, resets;
+    const btns = [];
+    const shown = () => btns.filter(b => !b.hidden);
+    const anyVal = () => { const v = any.value.trim(); return emojiOk(v) ? v : ''; };
+    const pick = v => { close(true); setEmoji(v); };
+    // the nearest emoji in the row above or below b
+    function vert(b, dir) {
+      const r0 = b.getBoundingClientRect();
+      const xs = shown().map(x => [x, x.getBoundingClientRect()]).filter(([, r]) => dir > 0 ? r.top > r0.top + 4 : r.top < r0.top - 4);
+      if (!xs.length) return null;
+      const y = dir > 0 ? Math.min(...xs.map(([, r]) => r.top)) : Math.max(...xs.map(([, r]) => r.top));
+      return xs.filter(([, r]) => Math.abs(r.top - y) < 4).sort((a, c) => Math.abs(a[1].left - r0.left) - Math.abs(c[1].left - r0.left))[0][0];
+    }
+    function filter() {
+      const terms = q.value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+      for (const b of btns) b.hidden = !terms.every(t => b.textContent === t || b.dataset.w.split(' ').some(w => w.startsWith(t)));
+      for (const s of grid.children) if (s.tagName === 'SECTION') s.hidden = !s.querySelector('button:not([hidden])');
+      none.hidden = shown().length > 0;
+    }
+    function build() {
+      q = h('input', { type: 'search', placeholder: 'Search emoji', 'aria-label': 'Search emoji', autocomplete: 'off', spellcheck: 'false' });
+      none = h('p', { class: 'none', hidden: true }, 'No match. Type or paste any emoji below.');
+      grid = h('div', { class: 'g' }, EMOJI_SET.map(([label, xs]) => h('section', { 'aria-label': label }, h('h4', {}, label),
+        h('div', { class: 'cat' }, xs.map(([ch, words]) => {
+          const b = h('button', { type: 'button', 'data-w': words, 'aria-label': words, title: words, onclick: () => pick(ch) }, ch);
+          btns.push(b);
+          return b;
+        })))), none);
+      any = h('input', { type: 'text', placeholder: MAC ? 'Any emoji (⌃⌘Space)' : 'Any emoji', 'aria-label': 'Any emoji', autocomplete: 'off', spellcheck: 'false' });
+      use = h('button', { type: 'button', class: 'bp-btn', disabled: true, onclick: () => { const v = anyVal(); if (v) pick(v); } }, 'Use');
+      resets = h('div', { class: 'rs' });
+      pop = h('div', { class: 'bd-emop', role: 'dialog', 'aria-label': 'Emoji', tabindex: '-1', hidden: true }, q, grid, h('div', { class: 'any' }, any, use), resets);
+      q.addEventListener('input', filter);
+      any.addEventListener('input', () => { use.disabled = !anyVal(); });
+      pop.addEventListener('keydown', e => {
+        e.stopPropagation();   // the page's and the board's keys wait while the picker is open
+        if (e.isComposing) return;
+        const t = e.target;
+        if (e.key === 'Escape') { e.preventDefault(); close(true); }
+        else if (t === q && e.key === 'ArrowDown') { e.preventDefault(); shown()[0]?.focus(); }
+        else if (t === q && e.key === 'Enter') {
+          e.preventDefault();
+          const v = q.value.trim(), first = shown()[0];
+          if (first) first.click(); else if (emojiOk(v)) pick(v);
+        } else if (t === any && e.key === 'Enter') { e.preventDefault(); use.click(); }
+        else if (btns.includes(t) && /^Arrow(Left|Right|Up|Down)$/.test(e.key)) {
+          e.preventDefault();
+          const xs = shown(), i = xs.indexOf(t);
+          const next = e.key === 'ArrowLeft' ? xs[i - 1] : e.key === 'ArrowRight' ? xs[i + 1] : vert(t, e.key === 'ArrowDown' ? 1 : -1);
+          (next || (e.key === 'ArrowUp' || e.key === 'ArrowLeft' ? q : t)).focus();
+        }
+      });
+      pop.addEventListener('focusout', e => { if (e.relatedTarget && !pop.contains(e.relatedTarget)) close(false); });
+      document.addEventListener('pointerdown', e => { if (!pop.hidden && !pop.contains(e.target) && !anchor.contains(e.target)) close(false); }, true);
+      addEventListener('scroll', e => { if (!pop.hidden && !pop.contains(e.target)) close(false); }, true);
+      addEventListener('resize', () => close(false));
+      document.body.append(pop);
+    }
+    function place() {
+      const r = anchor.getBoundingClientRect(), w = pop.offsetWidth, ph = pop.offsetHeight;
+      const below = r.bottom + 6, above = r.top - ph - 6;
+      pop.style.left = Math.max(8, Math.min(r.left, innerWidth - w - 8)) + 'px';
+      pop.style.top = (below + ph <= innerHeight - 8 ? below : above >= 8 ? above : Math.max(8, innerHeight - ph - 8)) + 'px';
+    }
+    const resetBtn = (label, value, run) => h('button', { type: 'button', onclick: () => { close(true); run(); } }, h('span', { class: 'l' }, label), h('span', { class: 'v' }, value));
+    function open(btn) {
+      if (!pop) build();
+      anchor = btn;
+      q.value = ''; any.value = ''; use.disabled = true; filter();
+      const cur = emoji();
+      for (const b of btns) b.setAttribute('aria-pressed', String(b.textContent === cur));
+      setKids(resets, cur !== own.emoji && resetBtn('Use the doc\'s emoji', own.emoji, () => setEmoji(own.emoji)),
+        title() !== own.title && resetBtn('Use the doc\'s title', own.title, () => setTitle(own.title)));
+      resets.hidden = !resets.children.length;
+      pop.hidden = false; btn.setAttribute('aria-expanded', 'true');
+      grid.scrollTop = 0;
+      place();
+      (matchMedia('(pointer: coarse)').matches ? pop : q).focus({ preventScroll: true });
+    }
+    function close(focus) {
+      if (!pop || pop.hidden) return;
+      pop.hidden = true; anchor.setAttribute('aria-expanded', 'false');
+      if (focus) anchor.focus({ preventScroll: true });
+    }
+    return { toggle: btn => (pop && !pop.hidden && anchor === btn ? close(true) : open(btn)) };
+  })();
+
+  return { part, paint, edits, own, title, emoji, setTitle, setEmoji };
+})();
+
 app.append(h('header', { class: 'bd-bar' }, mark,
-  h('div', { class: 'bd-crumb' }, h('span', { class: 'sep' }, '/'), h('span', { class: 't' }, DOC.title || '')),
+  h('div', { class: 'bd-crumb' }, h('span', { class: 'sep' }, '/'), NAME.part('t')),
   h('div', { class: 'bd-bar-r' }, overall,
     h('button', { type: 'button', class: 'bd-ibtn bd-toc-btn', 'aria-label': 'Contents', title: 'Contents', 'aria-expanded': 'false',
       onclick: e => { e.stopPropagation(); setDrawer(!side.classList.contains('drawer')); } }, ic('list')),
@@ -2773,8 +2988,9 @@ const eyebrow = [meta.org, meta.kind, meta.date].filter(Boolean);
 const planChip = APPROVABLE && !OLD ? h('span', { class: 'bd-planchip', role: 'status' }) : null;
 const head = h('header', { class: 'bd-head', id: 'top' },
   (eyebrow.length || planChip) && h('div', { class: 'bd-eyebrow' }, planChip, eyebrow.map((t, i) => [i ? h('span', { class: 'dot' }) : null, h('span', {}, t)])),
-  h('h1', {}, DOC.title || ''),
+  h('h1', {}, NAME.part()),
   DOC.subtitle && h('p', { class: 'bd-sub', html: inline(DOC.subtitle) }));
+NAME.paint();
 const tldr = h('div', { class: 'bd-tldr' }, DOC.tldr && h('div', { class: 'bd-tldr-card' },
   h('span', { class: 'ico' }, ic('zap')), h('span', { class: 'lbl' }, 'TL;DR'), h('div', { class: 'body', html: md(DOC.tldr) })));
 

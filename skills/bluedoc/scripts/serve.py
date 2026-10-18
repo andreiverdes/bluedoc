@@ -718,7 +718,8 @@ def mtime(p: Path) -> float:
 def summarize(p: Path) -> dict:
     """What the home page needs about one doc, cached by the mtimes of the doc, its screen files (a design's lint and
     card), its history (a contract problem is an error only while meta.rev is new) and its diff cache (a review
-    card's line counts)."""
+    card's line counts). title and emoji are the ones bluedoc shows (build.shown_title, build.shown_emoji: the
+    reader's from state.db over the doc's), docTitle the doc's own."""
     import diffref   # noqa: PLC0415
     st = p.stat()
     keyed = lambda: (st.st_mtime, info_key(p), mtime(build.history_path(p)), mtime(diffref.cache_path(p)))  # noqa: E731
@@ -749,7 +750,8 @@ def summarize(p: Path) -> dict:
             words: list[str] = []
             text_of(doc, words)
             info.update({
-                "id": doc.get("id"), "title": doc.get("title") or build.doc_stem(p), "subtitle": doc.get("subtitle") or "",
+                "id": doc.get("id"), "docTitle": doc.get("title") or build.doc_stem(p), "subtitle": doc.get("subtitle") or "",
+                "emoji": build.shown_emoji(doc, None),
                 "tldr": doc.get("tldr") or "", "kind": meta.get("kind") or "", "type": dtype, "org": meta.get("org") or "",
                 "rev": str(meta.get("rev") or ""), "date": meta.get("date") or "",
                 "sections": [s.get("title") or "" for s in doc.get("sections") or []],
@@ -758,12 +760,14 @@ def summarize(p: Path) -> dict:
                 "text": " ".join(words)[:SEARCH_CHARS], "card": card(doc, dtype, p),
             })
         except (OSError, ValueError, TypeError, AttributeError) as e:
-            info.update({"errors": 1, "firstError": f"cannot read: {e}", "type": "other"})
+            info.update({"errors": 1, "firstError": f"cannot read: {e}", "type": "other", "emoji": build.TYPE_EMOJI["other"]})
+        info.setdefault("docTitle", info.pop("title"))
         # the card may just have written the diff cache: key on the files as they are now
         _cache[str(p)] = (keyed(), info)
         info = dict(info)
     info["mtime"] = st.st_mtime
     info["revs"], info["built"] = history_info(p)
+    reader = {}
     if DB:
         path = str(p.resolve())
         for kind, row in DB.latest(path).items():
@@ -772,8 +776,12 @@ def summarize(p: Path) -> dict:
                 info[kind] = {"at": at, "rev": row["rev"]}
             elif ap := approval_of(p, row):   # None: approved other content of this rev, awaiting again
                 info[kind] = {"at": at, "rev": ap["rev"], "carried": ap["carried"]}
+        reader = DB.state(path)[1]
         # the home card's progress: the reader's tick and pick values (<checklist>:<item>), {} when there are none
-        info["state"] = {k: v for k, v in DB.state(path)[1].items() if k.count(":") == 1 and not k.startswith("__")}
+        info["state"] = {k: v for k, v in reader.items() if k.count(":") == 1 and not k.startswith("__")}
+    info["title"] = build.shown_title({"title": info["docTitle"]}, reader)
+    if build.emoji_ok(reader.get("__emoji")):
+        info["emoji"] = reader["__emoji"]
     return info
 
 
@@ -3113,9 +3121,17 @@ def _hist_ok(key: str, a) -> bool:
                     and copy_ok(o.get("after"), o["id"]) for o in a["ops"]))
 
 
+# the reader's own title and emoji for a doc (the page's header editor): the page and the home index show them over the
+# doc's; the agent never sees them (no reply carries them)
+READER_KEYS = {"__title": build.reader_title_ok, "__emoji": build.emoji_ok}
+
+
 def value_ok(key: str, value: str) -> bool:
-    """False for an `__ann:<id>` value the page can't draw (template.html's MARKUP `valid`), or an `__hist` or
-    `__hist:<step>` value that isn't the board's undo history; True for any other key."""
+    """False for an `__ann:<id>` value the page can't draw (template.html's MARKUP `valid`), an `__hist` or
+    `__hist:<step>` value that isn't the board's undo history, or a `__title` / `__emoji` out of bounds
+    (build.reader_title_ok, build.emoji_ok); True for any other key."""
+    if key in READER_KEYS:
+        return READER_KEYS[key](value)
     hist = key == "__hist" or key.startswith("__hist:")
     if not key.startswith("__ann:") and not hist:
         return True
@@ -3176,6 +3192,9 @@ def state_ops(data: dict) -> list[tuple[str, str | None]]:
             raise ValueError(f"bad key {key[:80]!r}")
         if value is not None and (not isinstance(value, str) or len(value.encode("utf-8")) > STATE_MAX_VALUE):
             raise ValueError(f"the value of {key!r} must be a string of at most {STATE_MAX_VALUE // 1024} KB, or null")
+        if key in READER_KEYS and value is not None and not value_ok(key, value):
+            raise ValueError(f"the value of {key!r} must be " + (f"a title of 1 to {build.MAX_READER_TITLE} characters on one line"
+                             if key == "__title" else "one emoji") + ", or null")
         out.append((key, value))
     return out
 
