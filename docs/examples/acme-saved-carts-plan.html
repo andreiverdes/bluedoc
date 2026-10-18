@@ -1435,9 +1435,11 @@ svg.anim .bp-edge.k-async { animation: bp-march 1.6s linear infinite; }
   .bd-cm .mt, .bd-cm details { margin-left: 0; }
 }
 
-/* layouts above 900 px. The column is always centred on the window. JS picks one:
-   "centred": side columns at least --side-min (the rail, or the docked right panel's room) on both sides; the
-     column is the reader's width (drag handles) or --content-w, narrowed to fit.
+/* layouts above 900 px. JS picks one:
+   "centred": side columns at least --side-min (the rail, or the docked right panel's room) on both sides, so the
+     column (the reader's width from the drag handles, or --content-w, narrowed to fit) sits on the window's centre.
+     With no right panel docked, the right handle drags the column past that into the empty right side: the left
+     edge stays beside the rail and --side-min-r lets the right side column shrink to nothing.
    "wide": the centred column would be narrower than READ_W; the column takes the whole width (the reader's stored
      width doesn't apply, and its drag handles hide) and the rail (Status, Document and Related included) becomes a
      drawer opened from the app bar. */
@@ -1457,8 +1459,9 @@ html.bd-resizing, html.bd-resizing * { cursor: col-resize !important; user-selec
 .bd-toc-btn { display: none !important; }
 @media (min-width: 901px) {
   .bd-rh { display: block; }
-  /* --side-min: both side columns' minimum (JS sets it while the right panel is docked), so the column stays centred on the window */
-  :root[data-layout="centred"] .bd-shell { grid-template-columns: minmax(var(--side-min, var(--rail)), 1fr) minmax(0, var(--content-w)) minmax(var(--side-min, var(--rail)), 1fr);
+  /* --side-min: both side columns' minimum (JS sets it while the right panel is docked), so the column stays centred on the window;
+     --side-min-r: the right one's, 0 while the reader's width reaches into the empty right side */
+  :root[data-layout="centred"] .bd-shell { grid-template-columns: minmax(var(--side-min, var(--rail)), 1fr) minmax(0, var(--content-w)) minmax(var(--side-min-r, var(--side-min, var(--rail))), 1fr);
     grid-template-areas: "side head ." "side tldr ." "side main ."; }
   :root[data-layout="centred"] .bp-side { justify-self: end; width: var(--rail); }
   :root[data-layout="wide"] .bd-shell { grid-template-columns: minmax(0, 1fr); grid-template-areas: "head" "tldr" "main"; column-gap: 0; }
@@ -2818,8 +2821,12 @@ const sideMin = docked => Math.max(cssPx('--rail'), docked ? cssPx('--sp-w') - P
 const centredRoom = (docked = root.classList.contains('bd-sp-dock')) => root.clientWidth - 2 * PAGE_PAD - 2 * (sideMin(docked) + cssPx('--gap'));
 const dockW = () => panelOpen && innerWidth >= DOCK_MIN && (IS_DESIGN || centredRoom(true) >= READ_W) ? cssPx('--sp-w') : 0;
 const wide = () => !IS_DESIGN && centredRoom(dockW() > 0) < READ_W;
-// the widest the column can be: the window between the paddings when wide, else the room between the side columns
-const maxW = () => Math.max(MIN_W, IS_DESIGN ? innerWidth - dockW() - 2 * PAGE_PAD : wide() ? root.clientWidth - 2 * PAGE_PAD : centredRoom(dockW() > 0));
+// the column's left edge while it reaches past the centred room into the empty right side: beside the rail
+const reachL = () => PAGE_PAD + sideMin(false) + cssPx('--gap');
+// the widest the column can be: the window between the paddings when wide; with the right panel docked, the room
+// between the side columns; else up to the window's right padding, the left edge kept beside the rail
+const maxW = () => Math.max(MIN_W, IS_DESIGN ? innerWidth - dockW() - 2 * PAGE_PAD : wide() ? root.clientWidth - 2 * PAGE_PAD
+  : dockW() ? centredRoom(true) : root.clientWidth - PAGE_PAD - cssPx('--gap') - reachL());
 function setDrawer(open) {
   side.classList.toggle('drawer', open);
   document.querySelector('.bd-toc-btn')?.setAttribute('aria-expanded', String(open));
@@ -2830,13 +2837,15 @@ function applyWidth() {
   // a design page is its board, full-bleed between the left panel and the right one: no column, no rails
   if (IS_DESIGN) { root.dataset.layout = 'board'; fitPanels(); return; }
   // centred: both side columns are the same minimum width, so the column (the reader's width, narrowed to fit) sits on
-  // the window's centre line, the right panel docked or not. Wide: the column fills the window between the paddings
-  // and the rail becomes a drawer, so a narrow window reads edge to edge
+  // the window's centre line, the right panel docked or not; a reader's width past that room (no panel docked) keeps
+  // the left edge beside the rail and takes the right side column. Wide: the column fills the window between the
+  // paddings and the rail becomes a drawer, so a narrow window reads edge to edge
   root.dataset.layout = wide() ? 'wide' : 'centred';
   if (root.dataset.layout === 'wide') root.style.setProperty('--content-w', maxW() + 'px');
   else if (userW) root.style.setProperty('--content-w', Math.min(userW, maxW()) + 'px');
   else root.style.removeProperty('--content-w');
   root.style.setProperty('--side-min', sideMin(dock > 0) + 'px');
+  root.style.setProperty('--side-min-r', !dock && userW > centredRoom(false) ? '0px' : sideMin(dock > 0) + 'px');
   if (root.dataset.layout !== 'wide') setDrawer(false);
   placeHandles();
   fitTray();
@@ -2856,7 +2865,7 @@ function fitTray() {
 }
 // a drag handle on the edge of a width the reader sets (.bd-rh): drag it, or press ← → on it (Shift: bigger
 // steps); double-click it, or press Home, to reset. o = {label, title, dir: px of width per px dragged right,
-// width(): now, set(w, save), reset()}
+// width(): now, set(w, save), reset(), fromX?(x): the width that puts the dragged edge at x (else dir × the drag)}
 function resizeHandle(o) {
   const el = h('div', { class: 'bd-rh', role: 'separator', 'aria-orientation': 'vertical', tabindex: 0, 'aria-label': o.label, title: o.title }, h('i'));
   let drag = null, raf = 0, lastDown = 0;
@@ -2872,7 +2881,7 @@ function resizeHandle(o) {
   });
   el.addEventListener('pointermove', e => {
     if (!drag) return;
-    drag.to = drag.w + o.dir * (e.clientX - drag.x);
+    drag.to = o.fromX ? o.fromX(e.clientX) : drag.w + o.dir * (e.clientX - drag.x);
     if (!raf) raf = requestAnimationFrame(() => { raf = 0; if (drag && drag.to != null) o.set(drag.to, false); });
   });
   const end = () => {
@@ -2889,9 +2898,19 @@ function resizeHandle(o) {
   });
   return el;
 }
-// both edges of the column move as one is dragged: the column stays centred
+// both edges of the column move as one is dragged, so it stays centred. The right handle follows the pointer: past the
+// centred room (no right panel docked) the column's left edge stays beside the rail and its right edge goes with the
+// pointer, up to the window's padding. The left handle never widens the column past the centred room (or the width
+// it reaches already), since its edge can't go over the rail.
 const handles = [-1, 1].map(dir => resizeHandle({ label: 'Content width', title: 'Drag to change the content width · double-click to reset', dir: 2 * dir,
-  width: () => main.getBoundingClientRect().width, set: setWidth, reset: resetWidth }));
+  width: () => main.getBoundingClientRect().width, reset: resetWidth,
+  set: dir < 0 ? (w, save) => setWidth(Math.min(w, Math.max(centredRoom(dockW() > 0), userW)), save) : setWidth,
+  // the handle sits a little right of the column's edge (placeHandles): take that off, so grabbing it doesn't jump
+  fromX: dir < 0 ? null : x => {
+    x -= parseFloat(handles[1].style.left) - main.getBoundingClientRect().right || 0;
+    const w = 2 * (x - root.clientWidth / 2);
+    return w <= centredRoom(dockW() > 0) || dockW() ? w : x - reachL();
+  } }));
 for (const el of handles) { el.classList.add('bd-rh-col'); el.setAttribute('aria-valuemin', MIN_W); }
 const wchip = h('div', { class: 'bd-wchip', 'aria-hidden': 'true' });
 document.body.append(...handles, wchip);

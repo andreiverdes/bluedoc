@@ -788,6 +788,46 @@ class NarrowWindow(ChromePage):
         self.assertEqual(t.ev("[...document.querySelectorAll('.bd-rh-col')].map(h => getComputedStyle(h).display)"), ["block", "block"])
         self.assertEqual(self.browser.errors, [])
 
+    def drag(self, t: Tab, handle: int, to: int) -> None:
+        """Press the column's handle (0 left, 1 right), move the mouse to x = to, release: real pointer events. Waits first,
+        so two drags in a row aren't a double press (which resets the width)."""
+        time.sleep(0.4)
+        x = t.ev(f"(r => Math.round(r.left + r.width / 2))(document.querySelectorAll('.bd-rh-col')[{handle}].getBoundingClientRect())")
+        for kind, at in (("mousePressed", x), ("mouseMoved", (x + to) // 2), ("mouseMoved", to), ("mouseReleased", to)):
+            self.browser.call("Input.dispatchMouseEvent", {"type": kind, "x": at, "y": 450, "button": "left", "buttons": 0 if kind == "mouseReleased" else 1,
+                                                           "clickCount": 1}, t.session)
+            time.sleep(0.05)
+
+    def test_the_right_handle_reaches_into_the_empty_right_side_and_the_left_one_stays_off_the_rail(self) -> None:
+        t = self.open(self.server.url_for(self.plan))
+        self.size(t, 1420)
+        t.ev("BP.sidebar({open: false})")   # no right panel docked: its room is the empty right side the column may take
+        t.wait_for("!document.documentElement.classList.contains('bd-sp-dock')")
+        edges = "(r => [Math.round(r.left), Math.round(r.right)])(document.querySelector('.bd-shell > main').getBoundingClientRect())"
+        vw = t.ev("document.documentElement.clientWidth")
+        left, right = t.wait_for(f"document.documentElement.dataset.layout === 'centred' && {edges}")
+        self.assertLessEqual(abs(left - (vw - right)), 1, "no stored width: centred")
+        rail = 20 + 248 + 32   # the page padding, the rail and the gap: the left edge while the column reaches right
+        # past the centred room, the right edge follows the pointer (the handle sits half a gap, 16 px, right of the
+        # edge, and stays under the pointer) and the left edge stays beside the rail
+        self.drag(t, 1, 1300)
+        t.wait_for(f"(e => e[0] === {rail} && Math.abs(e[1] - 1284) <= 1)({edges})")
+        self.assertLessEqual(abs(t.ev("+localStorage.getItem('bluedoc:width')") - (1284 - rail)), 1)
+        # up to the window's padding and the gap, no further
+        self.drag(t, 1, vw)
+        t.wait_for(f"(e => e[0] === {rail} && e[1] === {vw - 20 - 32})({edges})")
+        # a reload keeps it
+        t.go(t.ev("location.href"))
+        self.size(t, 1420)
+        t.wait_for(f"(e => e[0] === {rail} && e[1] === {vw - 20 - 32})({edges})")
+        # the left handle never pushes the edge over the rail: dragged outward it changes nothing
+        self.drag(t, 0, 100)
+        t.wait_for(f"(e => e[0] === {rail} && e[1] === {vw - 20 - 32})({edges})")
+        # back under the centred room, both edges move again: centred
+        self.drag(t, 1, 1100)
+        left, right = t.wait_for(f"(e => e[0] > {rail} && e)({edges})")
+        self.assertLessEqual(abs(left - (vw - right)), 1)
+        self.assertEqual(self.browser.errors, [])
 
 
 class UrlKeptByAWiderFolder(unittest.TestCase):
