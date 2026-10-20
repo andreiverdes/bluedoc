@@ -20,9 +20,25 @@ header .rev { color: var(--muted); }
 .sg { display: inline-flex; padding: 2px; border-radius: 9px; background: var(--bg); border: 1px solid var(--line); }
 .sg button { border: 0; background: none; padding: 5px 12px; border-radius: 7px; font: inherit; color: var(--muted); cursor: pointer; }
 .sg button[aria-checked="true"] { background: var(--card); color: var(--fg); box-shadow: 0 1px 2px #0002; font-weight: 600; }
-select, .btn { font: inherit; padding: 5px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--fg); }
-.btn { cursor: pointer; }
+.btn { font: inherit; padding: 5px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--fg); cursor: pointer; }
 .sp { flex: 1; }
+/* the locale: a key showing its value and a chevron over a listbox of the locales, the current one ticked (as a doc
+   page's selects) */
+.sel { position: relative; display: inline-flex; }
+.selb { display: inline-flex; align-items: center; gap: 6px; padding: 5px 8px 5px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--fg); font: inherit; font-weight: 600; cursor: pointer; }
+.selb:hover, .selb[aria-expanded="true"] { background: var(--bg); }
+.selb:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.sel svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.selb svg { color: var(--muted); transition: rotate .15s; }
+.selb[aria-expanded="true"] svg { rotate: 180deg; }
+.selm { position: absolute; z-index: 4; top: calc(100% + 6px); left: 0; display: grid; gap: 2px; min-width: max(100%, 150px); max-height: min(60vh, 360px); overflow: auto; overscroll-behavior: contain; padding: 5px;
+  border-radius: 12px; background: var(--card); box-shadow: 0 0 0 1px var(--line), 0 12px 32px #0002; outline: none; }
+.selm[hidden] { display: none; }
+.selm button { display: flex; align-items: center; gap: 8px; padding: 7px 12px 7px 6px; border: 0; border-radius: 8px; background: none; color: var(--fg); font: inherit; text-align: left; white-space: nowrap; cursor: pointer; }
+.selm button:is(:hover, :focus) { outline: none; background: #eef0f4; }
+.selm svg { flex: none; color: var(--accent); visibility: hidden; }
+.selm [aria-selected="true"] { font-weight: 600; }
+.selm [aria-selected="true"] svg { visibility: visible; }
 #wrap { display: grid; grid-template-columns: 340px 1fr; min-height: calc(100vh - 54px); }
 #text { padding: 16px 18px; border-right: 1px solid var(--line); background: var(--card); overflow: auto; }
 #text h3 { margin: 18px 0 8px; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
@@ -83,7 +99,7 @@ html.pv #pages { display: block; }
 <header>
 <h1 id="title"></h1><span class="rev" id="rev"></span>
 <div class="sg" role="radiogroup" aria-label="Platform" id="plats"></div>
-<select id="loc" aria-label="Locale"></select>
+<div class="sel" id="loc"><button type="button" class="selb" aria-haspopup="listbox" aria-expanded="false" aria-label="Locale"><span class="v"></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button><div class="selm" role="listbox" aria-label="Locale" tabindex="-1" hidden></div></div>
 <span class="sp"></span>
 <button type="button" class="btn" id="print">Print / PDF</button>
 </header>
@@ -158,14 +174,63 @@ html.pv #pages { display: block; }
   }
   function paint() {
     for (const b of $('plats').children) b.setAttribute('aria-checked', String(b.dataset.p === P.id));
-    $('loc').value = L; paintText(); paintMain();
+    paintLoc(); paintText(); paintMain();
     try { history.replaceState(null, '', `#${P.id}/${L}`); } catch { /* file: */ }
   }
   $('title').textContent = D.title; $('rev').textContent = D.rev ? `rev ${D.rev}` : '';
   $('plats').append(...D.platforms.map(p => el('button', { type: 'button', role: 'radio', 'data-p': p.id }, p.label)));
   $('plats').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { P = D.platforms.find(p => p.id === b.dataset.p); paint(); } });
-  $('loc').append(...D.locales.map(l => el('option', { value: l }, l)));
-  $('loc').addEventListener('change', () => { L = $('loc').value; paint(); });
+  // the locale: a menu button over a listbox (as a doc page's selects). A click, Enter, Space, ↓ or ↑ opens it on the
+  // current locale; ↑ ↓ Home End and a typed letter move, Enter or Space picks, Esc closes it back to its key, Tab or a
+  // press outside closes it
+  const locBtn = $('loc').querySelector('button'), locMenu = $('loc').querySelector('[role=listbox]'), locRows = () => [...locMenu.children];
+  const TICK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>';
+  locMenu.append(...D.locales.map(l => { const r = el('button', { type: 'button', role: 'option', tabindex: '-1', 'data-v': l }, el('span', {}, l)); r.insertAdjacentHTML('afterbegin', TICK); return r; }));
+  function paintLoc() {
+    locBtn.querySelector('.v').textContent = L;
+    for (const r of locRows()) r.setAttribute('aria-selected', String(r.dataset.v === L));
+  }
+  function openLoc(r) {
+    if (!locMenu.hidden) return;
+    locMenu.hidden = false; locBtn.setAttribute('aria-expanded', 'true');
+    (r || locRows().find(x => x.dataset.v === L) || locRows()[0]).focus();
+  }
+  function closeLoc(refocus) {
+    if (locMenu.hidden) return;
+    locMenu.hidden = true; locBtn.setAttribute('aria-expanded', 'false');
+    if (refocus) locBtn.focus();
+  }
+  // the row the letters typed so far start; one letter typed again steps to the next row with it
+  let typed = '', typedAt = 0;
+  const letter = e => e.key.length === 1 && e.key !== ' ' && !e.metaKey && !e.ctrlKey && !e.altKey;
+  function seek(ch, from) {
+    const now = performance.now();
+    typed = now - typedAt < 800 ? typed + ch.toLowerCase() : ch.toLowerCase(); typedAt = now;
+    const q = /^(.)\1+$/.test(typed) ? typed[0] : typed, rs = locRows(), k = rs.indexOf(from);
+    for (let i = 0, s = q.length === 1 ? k + 1 : Math.max(k, 0); i < rs.length; i++) { const r = rs[(s + i) % rs.length]; if (r.dataset.v.toLowerCase().startsWith(q)) return r; }
+    return null;
+  }
+  locBtn.addEventListener('click', () => locMenu.hidden ? openLoc() : closeLoc(true));
+  locBtn.addEventListener('keydown', e => {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') openLoc();
+    else if (letter(e)) { const r = seek(e.key, null); if (r) openLoc(r); }
+    else return;
+    e.preventDefault();
+  });
+  locMenu.addEventListener('keydown', e => {
+    const rs = locRows(), k = rs.indexOf(document.activeElement), n = rs.length, down = e.key === 'ArrowDown';
+    if (down || e.key === 'ArrowUp') rs[k < 0 ? 0 : (k + (down ? 1 : n - 1)) % n].focus();
+    else if (e.key === 'Home' || e.key === 'End') rs.at(e.key === 'Home' ? 0 : -1).focus();
+    else if (e.key === 'Escape') closeLoc(true);
+    else if (e.key === 'Tab') { closeLoc(false); return; }
+    else if (letter(e)) { const r = seek(e.key, document.activeElement); if (r) r.focus(); }
+    else return;
+    e.preventDefault();
+  });
+  locMenu.addEventListener('click', e => { const r = e.target.closest('[role=option]'); if (!r) return; closeLoc(true); L = r.dataset.v; paint(); });
+  locMenu.addEventListener('pointermove', e => { const r = e.target.closest('[role=option]'); if (r && document.activeElement !== r) r.focus({ preventScroll: true }); });
+  addEventListener('pointerdown', e => { if (!$('loc').contains(e.target)) closeLoc(false); }, true);
+  addEventListener('blur', () => closeLoc(false));
   // the print view: per platform its text (every locale, MT marks), then a page per locale and section
   function printView() {
     const pages = [], root = document.documentElement, waiting = new Set();

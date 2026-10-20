@@ -248,7 +248,6 @@ button.bd-emo:hover, button.bd-emo[aria-expanded="true"] { background: var(--sel
 .bd-revbar .bd-groove { height: 20px; }
 .bd-revbar.bd-lockbar { position: static; }
 .bd-lockbar code { font: 500 12.5px var(--mono); }
-.rv-sel { height: 32px; border: 0; border-radius: 9px; padding: 0 8px; font: 500 12.5px var(--sans); color: var(--fg); background: var(--inset); box-shadow: inset 0 0 0 1px var(--line); }
 .bd-chg { --chg: var(--warn); }
 .bd-chg-add { --chg: var(--ok); } .bd-chg-del { --chg: var(--risk); }
 .bp-block.bd-chg, .bd-chg-wrap { box-shadow: -10px 0 0 -7px var(--chg); }
@@ -1060,7 +1059,9 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .bd-rv-ft { display: grid; gap: 6px; padding: 0 2px; }
 .bd-rv-ft .row { display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; align-items: center; gap: 4px; }
 .bd-rv-ft .row > .bd-ic { color: var(--fg-subtle); transform: rotate(90deg); }
-.bd-rv-ft .rv-sel { width: 100%; min-width: 0; }
+.bd-rv-ft .rv-sel { display: flex; width: 100%; min-width: 0; }
+.bd-rv-ft .rv-sel .bd-selb { flex: 1; min-width: 0; height: 32px; }
+.bd-rv-ft .rv-sel .bd-selb .v { flex: 1; max-width: none; text-align: left; }
 .bd-rv-ft .bp-btn { justify-content: center; height: 32px; font-size: 13px; }
 @media (min-width: 901px) {
   /* a doc page's tray and toasts stay centred on the window, like its column; a design page centres them over its board */
@@ -1159,7 +1160,8 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .bd-cnav { display: inline-flex; align-items: center; gap: 2px; margin-left: auto; font-size: 12.5px; color: var(--fg-muted); white-space: nowrap; }
 .bd-cnav .lbl { padding: 0 6px; font-variant-numeric: tabular-nums; }
 .bd-cnav .bd-ibtn { width: 28px; height: 28px; }
-.bd-fsel { display: none; }
+.bd-selw.bd-fsel { display: none; }
+.bd-fsel :is(.bd-selb, .bd-selm button) { font-family: var(--mono); }
 .bd-diff-body { display: grid; grid-template-columns: 252px minmax(0, 1fr); height: var(--pane-h); }
 .bd-files { overflow: auto; border-right: 1px solid var(--line); padding: 6px; background: var(--panel); scrollbar-width: thin; }
 .bd-files .grp { font: 600 10.5px/1 var(--sans); letter-spacing: .07em; text-transform: uppercase; color: var(--fg-subtle); padding: 10px 8px 6px; }
@@ -1494,9 +1496,9 @@ svg.anim .bp-edge.k-async { animation: bp-march 1.6s linear infinite; }
   .bp-table th, .bp-table td { padding-left: 11px; padding-right: 11px; }
   .bd-diff-body { display: block; height: auto; }
   .bd-files { display: none; }
-  .bd-fsel { display: block; flex: 1 1 100%; order: -1; min-width: 0; height: 32px; border: 0; border-radius: 9px; padding: 0 30px 0 10px; font: 500 12.5px var(--mono); color: var(--fg);
-    background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") right 9px center / 14px no-repeat;
-    box-shadow: inset 0 0 0 1px var(--line-strong); appearance: none; -webkit-appearance: none; }
+  .bd-selw.bd-fsel { display: flex; flex: 1 1 100%; order: -1; min-width: 0; }
+  .bd-fsel .bd-selb { flex: 1; min-width: 0; height: 32px; }
+  .bd-fsel .bd-selb .v { flex: 1; max-width: none; text-align: left; }
   .bd-pane { overflow: visible; }
   .bd-fh { top: var(--top-h); flex-wrap: wrap; row-gap: 4px; }
   .bd-diff { --fh-top: var(--top-h); }
@@ -1789,8 +1791,9 @@ i.warn[hidden] { display: none; }
 .bd-rqe .hd { display: flex; align-items: center; gap: 8px; }
 .bd-rqe .hd .bd-ic { width: 16px; height: 16px; color: var(--accent-fg); }
 .bd-rqe .dv { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--fg-muted); }
-.bd-rqe select { height: 28px; border: 0; border-radius: 8px; padding: 0 6px; font: 500 12.5px var(--sans); color: var(--fg); background: var(--inset); box-shadow: inset 0 0 0 1px var(--line); }
-.bd-rqe .dv select { flex: 1; min-width: 0; }
+.bd-rqe .dv .bd-selw { flex: 1; min-width: 0; }
+.bd-rqe .dv .bd-selb { flex: 1; min-width: 0; height: 28px; }
+.bd-rqe .dv .bd-selb .v { flex: 1; max-width: none; text-align: left; }
 .bd-rqe .bxs { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 .bd-rqe .bxs:empty { display: none; }
 .bd-rqe .bxs li { display: flex; align-items: center; gap: 6px; }
@@ -1826,8 +1829,8 @@ i.warn[hidden] { display: none; }
 .bd-lpop .tg { margin-left: auto; padding: 0 6px; border-radius: 6px; font-size: 11px; font-weight: 600; color: var(--warn-fg); background: var(--warn-tint); }
 .bd-lpop .tg.sent { color: var(--accent-fg); background: var(--accent-tint); }
 .bd-lpop .row { display: flex; align-items: center; gap: 6px; }
-.bd-lpop .row label { display: flex; align-items: center; gap: 6px; margin-right: auto; font-size: 12.5px; color: var(--fg-muted); }
-.bd-lpop select { height: 28px; border: 0; border-radius: 8px; padding: 0 6px; font: 500 12.5px var(--sans); color: var(--fg); background: var(--inset); box-shadow: inset 0 0 0 1px var(--line); }
+.bd-lpop .row .kd { display: flex; align-items: center; gap: 6px; margin-right: auto; font-size: 12.5px; color: var(--fg-muted); }
+.bd-lpop .kd .bd-selb { height: 28px; }
 .bd-lpop .bp-btn.risk { color: var(--risk-fg); }
 .bd-lpop :is(.lbl, .hint) { margin: 0; } .bd-lpop .hint { font-size: 12px; color: var(--fg-subtle); }
 .bd-lpop input { min-height: 30px; padding: 4px 8px; }
@@ -1853,8 +1856,9 @@ i.warn[hidden] { display: none; }
 .bd-btb .bd-tbtn.pri:active { transform: translateY(1px) scale(.98); filter: brightness(.9); }
 .bd-btb .bd-tbtn.pri .bd-ic { width: 16px; height: 16px; }
 /* a presentation's Export to…: a raised key with its words and a chevron, beside Present; its menu (HTML, PDF) drops
-   under it, or rises over it in Present's bar. A toolbar's select (selectMenu: Locale, Jump to, Theme, Flow) is the
-   same key, showing its value, over the same menu of options, the current one ticked */
+   under it, or rises over it in Present's bar. Every select (selectMenu: a toolbar's Locale, Jump to, Theme, Flow; the
+   Revisions tab's Compare pickers, a code review's File, a requested frame's Device, an arrow's Kind) is the same key,
+   showing its value, over the same menu of options, the current one ticked: no native select anywhere */
 .bd-exp { position: relative; display: inline-flex; }
 .bd-tbtn:is(.bd-expb, .bd-selb) { display: inline-flex; align-items: center; gap: 6px; padding: 0 7px 0 9px; color: var(--fg); font-weight: 600; white-space: nowrap;
   background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: var(--shadow-hk); }
@@ -1878,6 +1882,8 @@ i.warn[hidden] { display: none; }
 /* a select's menu: under its key's left edge, at least as wide; its options a tick, the label and a hint (a locale's
    MT and missing counts); a long list scrolls */
 .bd-selm { left: 0; right: auto; width: max-content; min-width: max(100%, 168px); max-width: 320px; max-height: min(60vh, 420px); overflow: auto; overscroll-behavior: contain; scrollbar-width: thin; outline: none; }
+/* a select in a panel, a dialog or the link editor (float): fixed in the window, over the dialog, where menuPop puts it */
+.bd-selm.float { position: fixed; z-index: 60; }
 .bd-selm button { gap: 8px; padding: 7px 12px 7px 6px; white-space: nowrap; }
 .bd-selm.act button { padding-left: 12px; }
 .bd-selm button .bd-ic { width: 16px; height: 16px; }
@@ -4575,7 +4581,7 @@ function renderDiff(b) {
   d.progTxt = h('span'); d.progBar = h('div', { class: 'bp-bar' }, h('i'));
   d.navLbl = h('span', { class: 'lbl', 'aria-live': 'polite' });
   d.files_ = h('nav', { class: 'bd-files', 'aria-label': 'Files' });
-  d.fsel = h('select', { class: 'bd-fsel', 'aria-label': 'File', onchange: () => selectFile(d, d.fsel.value) });
+  d.fsel = selectMenu({ label: 'File', cls: 'bd-fsel', float: true, onPick: key => selectFile(d, key) });
   d.pane = h('div', { class: 'bd-pane', tabindex: 0, 'aria-label': 'Code' });
   const segBtn = (label, v) => h('button', { type: 'button', 'aria-pressed': String(v === 'all'), onclick: e => {
     d.filter = v; e.currentTarget.parentElement.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x === e.currentTarget))); paintFiles(d);
@@ -4630,9 +4636,8 @@ function paintFiles(d) {
   if (changed.length) rows.push(h('div', { class: 'grp' }, `Changed · ${changed.length}`), changed.map(row));
   if (ctx.length) rows.push(h('div', { class: 'grp', title: 'Files the comments point at that this change does not touch' }, `Not changed · ${ctx.length}`), ctx.map(row));
   d.files_.replaceChildren(...rows.flat());
-  d.fsel.replaceChildren(...[pr.length ? h('option', { value: PR_KEY }, `Whole change (${pr.length})`) : null,
-    ...shown.map(f => h('option', { value: f.path }, `${STATUS_LETTER[f.status || 'modified'] || '·'}  ${f.path}${commentsIn(d, f.path).length ? `  (${commentsIn(d, f.path).length})` : ''}`))].filter(Boolean));
-  if (d.sel) d.fsel.value = d.sel;
+  d.fsel.setOptions([pr.length ? { value: PR_KEY, label: `Whole change (${pr.length})` } : null,
+    ...shown.map(f => ({ value: f.path, label: `${STATUS_LETTER[f.status || 'modified'] || '·'}  ${f.path}${commentsIn(d, f.path).length ? `  (${commentsIn(d, f.path).length})` : ''}` }))].filter(Boolean), d.sel);
 }
 // a comment card: `mirrors` keeps it in sync with its item (the pane's list is redrawn with the pane, the code
 // under an open finding keeps its own); there (inItem) the card has no link back to its row and no copy of its detail
@@ -6952,8 +6957,10 @@ async function iconExport(a, btn) {
 // start(1), ↑ on start(-1); ↑ ↓ Home End move among rows() (a disabled row is skipped), Esc closes it back to the button,
 // Tab closes it; a press outside, or focus leaving the page (a click in a screen's frame), closes it. typeahead: typed
 // letters go to the next row whose label (.l) starts with them, and on the closed button open the menu there. Keys stop
-// at the menu: the board's and Present's wait until it is closed
-function menuPop(wrap, btn, menu, rows, { start = dir => dir > 0 ? 0 : -1, typeahead = false, onOpen = null } = {}) {
+// at the menu: the board's and Present's wait until it is closed. float: the menu is fixed in the window (a select in
+// a panel, a dialog or the link editor), so no scrolling or clipping box cuts it: under its key, above it when there is
+// more room there, its left edge on the key's and kept in the window, and it follows the key when a box scrolls
+function menuPop(wrap, btn, menu, rows, { start = dir => dir > 0 ? 0 : -1, typeahead = false, onOpen = null, float = false } = {}) {
   const live = () => rows().filter(r => r.getAttribute('aria-disabled') !== 'true');
   const away = e => { if (e.type === 'blur' || !wrap.contains(e.target)) close(false); };
   let typed = '', typedAt = 0;
@@ -6975,14 +6982,28 @@ function menuPop(wrap, btn, menu, rows, { start = dir => dir > 0 ? 0 : -1, typea
     if (r.offsetTop < menu.scrollTop) menu.scrollTop = r.offsetTop;
     else if (r.offsetTop + r.offsetHeight > menu.scrollTop + menu.clientHeight) menu.scrollTop = r.offsetTop + r.offsetHeight - menu.clientHeight;
   }
+  // a floating menu's place: (0, 0) fixed lands at the window's corner unless a translated dialog holds it, so its
+  // offset is measured first
+  function place(e) {
+    if (e && e.target === menu) return;   // the menu's own list scrolling
+    const b = btn.getBoundingClientRect(), s = menu.style, gap = 6, pad = 8;
+    Object.assign(s, { left: '0px', top: '0px', right: 'auto', bottom: 'auto', maxHeight: '', minWidth: `max(${Math.round(b.width)}px, 168px)` });
+    const o = menu.getBoundingClientRect(), below = innerHeight - b.bottom - gap - pad, above = b.top - gap - pad;
+    const up = o.height > below && above > below, hh = Math.min(o.height, Math.max(up ? above : below, 80));
+    const x = clamp(b.left, pad, Math.max(pad, innerWidth - o.width - pad)), y = up ? b.top - gap - hh : b.bottom + gap;
+    Object.assign(s, { maxHeight: hh + 'px', left: Math.round(x - o.left) + 'px', top: Math.round(y - o.top) + 'px' });
+  }
   function open(at) {
     if (!menu.hidden) return;
     if (onOpen) onOpen();
     menu.hidden = false; btn.setAttribute('aria-expanded', 'true');
-    // a menu that drops under its key's left edge ends at its bar's right edge, else it hangs from the key's right
-    menu.style.removeProperty('left'); menu.style.removeProperty('right');
-    const bar = (wrap.closest('[role=toolbar], .bp-tb') || document.documentElement).getBoundingClientRect();
-    if (menu.getBoundingClientRect().right > Math.min(bar.right, innerWidth) + 4) { menu.style.left = 'auto'; menu.style.right = '0'; }
+    if (float) { place(); addEventListener('scroll', place, true); addEventListener('resize', place); }
+    else {
+      // a menu that drops under its key's left edge ends at its bar's right edge, else it hangs from the key's right
+      menu.style.removeProperty('left'); menu.style.removeProperty('right');
+      const bar = (wrap.closest('[role=toolbar], .bp-tb') || document.documentElement).getBoundingClientRect();
+      if (menu.getBoundingClientRect().right > Math.min(bar.right, innerWidth) + 4) { menu.style.left = 'auto'; menu.style.right = '0'; }
+    }
     addEventListener('pointerdown', away, true); addEventListener('blur', away);
     const rs = live(), r = typeof at === 'number' ? rs.at(at) : at;
     if (r) go(r); else menu.focus({ preventScroll: true });
@@ -6991,6 +7012,7 @@ function menuPop(wrap, btn, menu, rows, { start = dir => dir > 0 ? 0 : -1, typea
     if (menu.hidden) return;
     menu.hidden = true; btn.setAttribute('aria-expanded', 'false');
     removeEventListener('pointerdown', away, true); removeEventListener('blur', away);
+    if (float) { removeEventListener('scroll', place, true); removeEventListener('resize', place); }
     if (refocus) btn.focus();
   }
   btn.addEventListener('keydown', e => {
@@ -7030,26 +7052,27 @@ function exportMenu(exports, run, title, up, check) {
   const pop = menuPop(wrap, btn, menu, () => items, { onOpen: paintCheck });
   return wrap;
 }
-// a toolbar's select, drawn as Export to…'s key and menu (a WAI-ARIA select-only listbox): the button shows the current
-// option's label (label while none is current) and a chevron, the popover its options [{value, label, hint, icon,
-// disabled}] with the current one ticked. A click, Enter, Space, ↓ or ↑ opens it on the current option; ↑ ↓ Home End
+// a select, drawn as Export to…'s key and menu (a WAI-ARIA select-only listbox): the button shows the current
+// option's label (label while none is current) and a chevron, the popover its options [{value, label, hint, title,
+// icon, disabled}] with the current one ticked. A click, Enter, Space, ↓ or ↑ opens it on the current option; ↑ ↓ Home End
 // move, a typed letter goes to the option it starts, Enter or Space picks (onPick(value)), Esc closes it back to the
 // button, Tab, a press outside or the window losing focus closes it (menuPop). action: a menu of actions (Jump to):
 // role menu, the button keeps label and nothing is ticked. aria: the button's and popover's aria-label (else label);
-// cls: the wrapper's class; icon: one before the words; up: it opens above. The wrapper it returns has .value (set:
-// no onPick, as a select's), .disabled and .setOptions(options, value)
-function selectMenu({ label, options = [], value = null, onPick, title, aria, cls, icon, up, action }) {
+// cls: the wrapper's class; icon: one before the words; up: it opens above; float: the menu floats in the window (a
+// select in a panel, a dialog or the link editor; menuPop). The wrapper it returns has .value (set: no onPick, as a
+// select's), .disabled and .setOptions(options, value)
+function selectMenu({ label, options = [], value = null, onPick, title, aria, cls, icon, up, action, float }) {
   let opts = [], cur = value;
   const v = h('span', { class: 'v' });
   const btn = h('button', { type: 'button', class: 'bd-tbtn bd-selb', 'aria-haspopup': action ? 'menu' : 'listbox', 'aria-expanded': 'false', 'aria-label': aria || label, title,
     onclick: () => menu.hidden ? pop.open(start(1)) : pop.close(true) }, icon && ic(icon), v, ic('down', 'cv'));
-  const menu = h('div', { class: 'bd-selm' + (up ? ' up' : '') + (action ? ' act' : ''), role: action ? 'menu' : 'listbox', 'aria-label': aria || label, tabindex: '-1', hidden: true });
+  const menu = h('div', { class: 'bd-selm' + (up ? ' up' : '') + (action ? ' act' : '') + (float ? ' float' : ''), role: action ? 'menu' : 'listbox', 'aria-label': aria || label, tabindex: '-1', hidden: true });
   const wrap = h('div', { class: 'bd-exp bd-selw' + (cls ? ' ' + cls : '') }, btn, menu);
   const rows = () => [...menu.children];
   const start = dir => !action && rows().find(r => r.dataset.v === String(cur) && r.getAttribute('aria-disabled') !== 'true') || (dir > 0 ? 0 : -1);
-  const pop = menuPop(wrap, btn, menu, rows, { start, typeahead: true });
+  const pop = menuPop(wrap, btn, menu, rows, { start, typeahead: true, float });
   const row = o => {
-    const r = h('button', { type: 'button', role: action ? 'menuitem' : 'option', tabindex: '-1', 'data-v': String(o.value), 'aria-disabled': o.disabled ? 'true' : null,
+    const r = h('button', { type: 'button', role: action ? 'menuitem' : 'option', tabindex: '-1', 'data-v': String(o.value), 'aria-disabled': o.disabled ? 'true' : null, title: o.title || null,
       onclick: () => { if (o.disabled) return; pop.close(true); if (!action) { cur = o.value; paint(); } if (onPick) onPick(o.value); },
       onpointermove: () => { if (!o.disabled && document.activeElement !== r) r.focus({ preventScroll: true }); } },
       !action && h('span', { class: 'ck' }, ic('tick')), o.icon && ic(o.icon), h('span', { class: 'l' }, o.label), o.hint && h('span', { class: 'm' }, o.hint));
@@ -8181,19 +8204,18 @@ function renderBoard(b) {
     cancelRq();
     const el = h('div', { class: 'bd-rq draft' }, h('div', { class: 'bd-rq-t' }));
     vp.append(el);
-    const sel = h('select', { 'aria-label': 'Device' }, Object.keys(DEVICES).filter(d => !['icons', 'shot', 'asset'].includes(d) && (!IS_SITE || d === 'page')).map(d => h('option', { value: d }, `${DEVICE_NAME[d]} · ${DEVICES[d].join(' × ')}`)),
-      !IS_SITE && h('option', { value: 'custom' }, `As drawn · ${r.w} × ${r.h}`));
+    const sel = selectMenu({ label: 'Device', float: true, value: device, onPick: v => { const q = B.rq; q.device = v; [q.w, q.h] = v === 'custom' ? [q.dw, q.dh] : DEVICES[v]; paintRq(); },
+      options: [...Object.keys(DEVICES).filter(d => !['icons', 'shot', 'asset'].includes(d) && (!IS_SITE || d === 'page')).map(d => ({ value: d, label: `${DEVICE_NAME[d]} · ${DEVICES[d].join(' × ')}` })),
+        ...(IS_SITE ? [] : [{ value: 'custom', label: `As drawn · ${r.w} × ${r.h}` }])] });
     const ta = h('textarea', { class: 'bp-note-ta', rows: 3, placeholder: `What should this ${SCREEN} show?`, 'aria-label': `What the new ${SCREEN} should show` });
     const list = h('ol', { class: 'bxs' });
     const save = h('button', { type: 'button', class: 'bp-btn primary', disabled: true, onclick: () => saveRq() }, 'Save');
     const ed = h('div', { class: 'bd-rqe', role: 'dialog', 'aria-label': 'Requested frame' },
-      h('div', { class: 'hd' }, ic('frame'), h('b', {}, 'Requested frame')), h('label', { class: 'dv' }, h('span', {}, 'Device'), sel), ta, list,
+      h('div', { class: 'hd' }, ic('frame'), h('b', {}, 'Requested frame')), h('div', { class: 'dv' }, h('span', {}, 'Device'), sel), ta, list,
       h('p', { class: 'hint' }, 'Drag inside the frame to add a labelled box.'),
       h('div', { class: 'ft' }, h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => cancelRq() }, 'Cancel'), save));
     document.body.append(ed);
     B.rq = { ...r, dw: r.w, dh: r.h, device, boxes: [], el, ed, ta, sel, list, save };
-    sel.value = device;
-    sel.addEventListener('change', () => { const q = B.rq; q.device = sel.value; [q.w, q.h] = q.device === 'custom' ? [q.dw, q.dh] : DEVICES[q.device]; paintRq(); });
     ta.addEventListener('input', paintRq);
     ed.addEventListener('keydown', e => {
       e.stopPropagation();   // mode keys must not fire while typing
@@ -10826,9 +10848,9 @@ function buildRevTab() {
         prev && h('a', { class: 'bp-btn', href: revUrl(r, prev), 'aria-current': cmp ? 'page' : null }, ic('split'), `Changes from ${prev.rev}`)));
     return li;
   });
-  // the list has full dates, the picker month and day
-  const sel = (def, label) => h('select', { class: 'rv-sel', 'aria-label': label }, REVS.map(r => h('option', { value: r.rev, selected: r === def, title: r.date || null },
-    revName(r) + (r.date ? ` · ${/^\d{4}-\d\d-\d\d$/.test(r.date) ? r.date.slice(5) : r.date}` : ''))));
+  // the picker shows month and day, each option's title the full date
+  const sel = (def, label) => selectMenu({ label, cls: 'rv-sel', float: true, value: def ? def.rev : null, options: REVS.map(r => ({ value: r.rev, title: r.date || null,
+    label: revName(r) + (r.date ? ` · ${/^\d{4}-\d\d-\d\d$/.test(r.date) ? r.date.slice(5) : r.date}` : '') })) });
   const from = sel(BASE || (OLD ? VIEW : REVS[REVS.length - 2]), 'Compare from'), to = sel(BASE ? VIEW : CUR, 'Compare with');
   const go = () => { const a = REVS.find(r => r.rev === from.value), b = REVS.find(r => r.rev === to.value); if (a && b && a !== b) location.href = revUrl(b, a); else toast('Pick two different revisions'); };
   const cmpSec = sec('Compare', h('div', { class: 'bd-rv-ft' }, h('div', { class: 'row' }, from, ic('next'), to),
@@ -10883,7 +10905,7 @@ if (REVS.length >= 1 && REVS[0].rev) {
     // Esc leaves; j/↓ and k/↑ step, unless typing, on a focused drawing, or a drawer or sheet is open (Esc closes that first)
     document.addEventListener('keydown', e => {
       if (e.defaultPrevented || e.isComposing || e.metaKey || e.ctrlKey || e.altKey || document.querySelector('dialog[open]')) return;
-      const t = e.target; if (t.closest && t.closest('input, textarea, select, [contenteditable], .bp-stage, .bd-diff')) return;
+      const t = e.target; if (t.closest && t.closest('input, textarea, .bd-selw, [contenteditable], .bp-stage, .bd-diff')) return;
       if (e.key === 'Escape') { if (SIDE.as() === 'drawer' || SIDE.as() === 'sheet') return; e.preventDefault(); location.href = doneUrl; }
       else if (e.key === 'j' || e.key === 'ArrowDown') { e.preventDefault(); gotoChg(1); }
       else if (e.key === 'k' || e.key === 'ArrowUp') { e.preventDefault(); gotoChg(-1); }
@@ -12757,16 +12779,15 @@ function boardEdits(B) {
         h('div', { class: 'ft' }, btn('Restore', () => { closePop(); editLink(key, l); }, 'primary'))]);
       return;
     }
-    const kind = h('select', { 'aria-label': 'Kind' }, KINDS.map(k => h('option', { value: k }, k)));
-    kind.value = l.kind;
-    kind.addEventListener('change', () => {
-      const k = kind.value, to = k === 'back' ? null : l.to ?? null;
+    const kind = selectMenu({ label: 'Kind', float: true, value: l.kind, options: KINDS.map(k => ({ value: k, label: k })), onPick: k => {
+      if (k === l.kind) return;
+      const to = k === 'back' ? null : l.to ?? null;
       if (k !== 'back' && to == null) { toast('Drag the end dot onto a screen to give this link a target'); kind.value = l.kind; return; }
       closePop(); editLink(key, { ...l, kind: k, to });
-    });
+    } });
     openPop(at(e), 'Link', [h('div', { class: 'hd' }, h('b', {}, name), ' → ', l.kind === 'back' ? 'back' : T(l.to), tagOf(l)),
       lab(l) && h('p', { class: 'lbl' }, `“${lab(l)}”`),
-      h('div', { class: 'row' }, h('label', {}, h('span', {}, 'Kind'), kind), btn('Label', () => editLabel(e, l)), btn('Delete', () => { closePop(); editLink(key, null); }, 'risk')),
+      h('div', { class: 'row' }, h('div', { class: 'kd' }, h('span', {}, 'Kind'), kind), btn('Label', () => editLabel(e, l)), btn('Delete', () => { closePop(); editLink(key, null); }, 'risk')),
       h('p', { class: 'hint' }, 'Drag the end dot to retarget, the start dot to move the start. Del deletes, Enter labels.')]);
   }
   async function editLabel(e, l) {
