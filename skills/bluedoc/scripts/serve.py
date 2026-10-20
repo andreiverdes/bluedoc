@@ -52,6 +52,7 @@ URLs: /                      home page: every doc under the registered folders, 
                              the current version. PUT {path, import, ops: [[key, value or null]]} writes it: null
                              deletes, an import adds only keys the server lacks. Both need the X-Bluedoc header, the
                              PUT also the key. An `__ann:<id>` value the page can't draw is dropped from a PUT and
+                             left out of a read; an item's `:thread` or pick of the wrong shape answers 400 and is
                              left out of a read.
       /__bluedoc/vendor/<path>  files under assets/vendor (HorizonUI, HeroUI, Tailwind's browser build, the Sketch font)
       /<root>/<dir>/<stem>.design/<artboard>.html[?rev=B&theme=T]   a design, presentation or website doc's screen: the
@@ -236,17 +237,6 @@ def reply_file(doc: Path, kind: str, ext: str) -> Path:
     return doc.with_name(f"{build.doc_stem(doc)}.{REPLY_SUFFIX[kind]}.{ext}")
 
 
-def skill_version() -> str:
-    """The plugin's version from its plugin.json, or '' for a skill installed without one."""
-    root = HERE.parent.parent.parent
-    for f in (root / ".claude-plugin" / "plugin.json", root / "plugin.json"):
-        try:
-            return str(json.loads(f.read_text(encoding="utf-8")).get("version") or "")
-        except (OSError, ValueError, AttributeError):
-            continue
-    return ""
-
-
 def code_hash() -> str:
     """Changes whenever the code a server renders with does: serve.py, statedb.py, build.py, codepin.py and the template."""
     h = hashlib.sha256()
@@ -255,7 +245,7 @@ def code_hash() -> str:
     return h.hexdigest()[:12]
 
 
-VERSION, CODE_HASH = skill_version(), code_hash()
+VERSION, CODE_HASH = build.skill_version(), code_hash()
 _doc_info: dict[str, tuple[tuple, list[Path], str | None, str | None, str]] = {}
 
 
@@ -305,13 +295,13 @@ def doc_id(p: Path) -> str | None:
 _carried: dict[str, tuple[tuple, bool]] = {}
 
 
-def approved_picks(posted: dict) -> dict[str, str]:
+def approved_picks(posted: dict) -> dict[str, str | list[str]]:
     """The decisions an approval carried, {"<checklist>/<item>": pick}: an item approved without a pick means its
-    recommendation (types/plan.md)."""
-    out: dict[str, str] = {}
+    recommendation (types/plan.md). A `multi` item's pick is its list of ids."""
+    out: dict[str, str | list[str]] = {}
     for a in posted.get("answers") or []:
         pick = isinstance(a, dict) and (a.get("choice") or a.get("recommend"))
-        if isinstance(pick, str) and pick:
+        if isinstance(pick, str) and pick or isinstance(pick, list) and all(isinstance(x, str) and x for x in pick):
             out[f"{a.get('checklist')}/{a.get('item')}"] = pick
     return out
 
@@ -738,8 +728,12 @@ def summarize(p: Path) -> dict:
                     if b.get("type") == "checklist":
                         for it in b.get("items") or []:
                             dec = bool(it.get("choices"))
+                            # the author's choice as the page's pick value has it: a `multi` item's ids comma-joined, so
+                            # one or more ticks (the reader's or the author's) count as decided
+                            choice = it.get("choice") or ""
                             items.append([b.get("id"), it.get("id"), 1 if dec else 0,
-                                          (it.get("choice") or "") if dec else ("1" if it.get("done") else "0"),
+                                          (",".join(map(str, choice)) if isinstance(choice, list) else choice) if dec
+                                          else ("1" if it.get("done") else "0"),
                                           [c.get("id") for c in it.get("choices") or []] if dec else None])
                             scan(it.get("blocks"))
             for s in doc.get("sections") or []:
@@ -3502,6 +3496,17 @@ def archive_rev_ok(v) -> bool:
     return isinstance(v, str) and 1 <= len(v) <= MAX_ARCHIVE_REV and v.isprintable()
 
 
+def iso_time_ok(v) -> bool:
+    """An ISO 8601 time as the page writes it (Date.toISOString), parseable."""
+    if not (isinstance(v, str) and ISO_TIME.fullmatch(v)):
+        return False
+    try:
+        dt.datetime.fromisoformat(v.replace("Z", "+00:00"))
+    except ValueError:
+        return False
+    return True
+
+
 def archive_record(value) -> dict | None:
     """The stored `__archived` value as {at, rev}, or None unless it is exactly that: an ISO 8601 time and a rev of 1 to
     MAX_ARCHIVE_REV characters."""
@@ -3509,12 +3514,7 @@ def archive_record(value) -> dict | None:
         a = json.loads(value) if isinstance(value, str) else None
     except ValueError:
         return None
-    if not (isinstance(a, dict) and set(a) == {"at", "rev"} and isinstance(a["at"], str) and ISO_TIME.fullmatch(a["at"])
-            and archive_rev_ok(a["rev"])):
-        return None
-    try:
-        dt.datetime.fromisoformat(a["at"].replace("Z", "+00:00"))
-    except ValueError:
+    if not (isinstance(a, dict) and set(a) == {"at", "rev"} and iso_time_ok(a["at"]) and archive_rev_ok(a["rev"])):
         return None
     return a
 
@@ -3523,6 +3523,38 @@ READER_KEYS.update({ARCHIVED: lambda v: archive_record(v) is not None, ARCHIVE_L
 READER_KEY_RULE = {"__title": f"a title of 1 to {build.MAX_READER_TITLE} characters on one line", "__emoji": "one emoji",
                    ARCHIVED: f'{{"at": <ISO 8601 time>, "rev": <1 to {MAX_ARCHIVE_REV} characters>}}',
                    ARCHIVE_LATER: f"a rev of 1 to {MAX_ARCHIVE_REV} characters"}
+
+# the reader's side of an item's conversation, `<checklist>:<item>:thread`: the messages they sent, oldest first, each
+# {md, rev (the rev it was sent on; null: sent before threads existed), at}; an annotation's follow-ups (`thread` in its
+# `__ann:<id>` value) are the same. The agent's side is the doc's (items' `replies`, `threads`).
+THREAD_MAX = 200
+ITEM_RULE = {"thread": f'[{{"md": <1 to {build.MAX_REPLY_MD} characters>, "rev": <1 to {MAX_ARCHIVE_REV} characters> or '
+                       f'null, "at": <ISO 8601 time>}}, …], at most {THREAD_MAX}',
+             "pick": "=<option id>|<author's id>, or with several answers =<ids>|<author's ids>, each comma-joined"}
+PICK_IDS = re.compile(r"[^,|]+(?:,[^,|]+)*")
+
+
+def thread_ok(t) -> bool:
+    return isinstance(t, list) and len(t) <= THREAD_MAX and all(
+        isinstance(e, dict) and set(e) == {"md", "rev", "at"} and isinstance(e["md"], str)
+        and 0 < len(e["md"]) <= build.MAX_REPLY_MD and (e["rev"] is None or archive_rev_ok(e["rev"])) and iso_time_ok(e["at"])
+        for e in t)
+
+
+def pick_ok(value: str) -> bool:
+    """An item's pick (its `<checklist>:<item>` value starting with '='): `=<id>|<the author's choice>`, with several
+    answers the ids comma-joined on both sides (`=|…`: none ticked); each list without repeats."""
+    pick, _, author = value[1:].partition("|")
+    return all(PICK_IDS.fullmatch(p) and len(set(p.split(","))) == p.count(",") + 1 for p in (pick, author) if p)
+
+
+def item_rule(key: str) -> str | None:
+    """Which of ITEM_RULE a reader key's value must follow: 'thread' for `<checklist>:<item>:thread`, 'pick' for
+    `<checklist>:<item>` (when its value is a pick); None for any other key."""
+    if key.startswith("__"):
+        return None
+    n = key.count(":")
+    return "thread" if n == 2 and key.endswith(":thread") else "pick" if n == 1 else None
 
 
 def stale_archive(doc: Path, state: dict) -> bool:
@@ -3538,11 +3570,20 @@ def stale_archive(doc: Path, state: dict) -> bool:
 
 
 def value_ok(key: str, value: str) -> bool:
-    """False for an `__ann:<id>` value the page can't draw (template.html's MARKUP `valid`), an `__hist` or
-    `__hist:<step>` value that isn't the board's undo history, or a reader key out of bounds (`__title` / `__emoji`:
+    """False for an `__ann:<id>` value the page can't draw (template.html's MARKUP `valid`; its follow-ups `thread`:
+    thread_ok, `draft`: a string or null), an `__hist` or `__hist:<step>` value that isn't the board's undo history, an
+    item's thread or pick of the wrong shape (ITEM_RULE), or a reader key out of bounds (`__title` / `__emoji`:
     build.reader_title_ok, build.emoji_ok; `__archived`: archive_record; `__archive-later`); True for any other key."""
     if key in READER_KEYS:
         return READER_KEYS[key](value)
+    rule = item_rule(key)
+    if rule == "thread":
+        try:
+            return thread_ok(json.loads(value))
+        except ValueError:
+            return False
+    if rule == "pick":
+        return not value.startswith("=") or pick_ok(value)
     hist = key == "__hist" or key.startswith("__hist:")
     if not key.startswith("__ann:") and not hist:
         return True
@@ -3557,6 +3598,7 @@ def value_ok(key: str, value: str) -> bool:
             and (a.get("targets") is None or isinstance(a["targets"], list) and all(map(_target_ok, a["targets"])))
             and (a.get("type") != "text" or isinstance(a.get("quote"), str))
             and (a.get("note") is None or isinstance(a["note"], str)) and (a.get("up") is None or isinstance(a["up"], list))
+            and (a.get("thread") is None or thread_ok(a["thread"])) and (a.get("draft") is None or isinstance(a["draft"], str))
             and (a.get("strokes") is None or isinstance(a["strokes"], list))
             and (a.get("pos") is None or isinstance(a["pos"], dict))
             and (a.get("type") != "link" or isinstance(a.get("link"), dict)
@@ -3605,6 +3647,8 @@ def state_ops(data: dict) -> list[tuple[str, str | None]]:
             raise ValueError(f"the value of {key!r} must be a string of at most {STATE_MAX_VALUE // 1024} KB, or null")
         if key in READER_KEYS and value is not None and not value_ok(key, value):
             raise ValueError(f"the value of {key!r} must be {READER_KEY_RULE[key]}, or null")
+        if item_rule(key) and value is not None and not value_ok(key, value):
+            raise ValueError(f"the value of {key!r} must be {ITEM_RULE[item_rule(key)]}, or null")
         out.append((key, value))
     return out
 

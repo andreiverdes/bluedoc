@@ -80,9 +80,9 @@
               "sub": "Recommend 19 October: the plan is approved and the migration is ready.",
               "recommend": "oct19",
               "choices": [
-                { "id": "oct19", "label": "19 October" },
-                { "id": "oct26", "label": "26 October" },
-                { "id": "after-sale", "label": "After the November sale" }
+                { "id": "oct19", "label": "19 October", "md": "Starts next Monday. Leaves two weeks of real use before the November sale freeze." },
+                { "id": "oct26", "label": "26 October", "md": "One more week on staging. Leaves one week before the freeze to fix what the rollout finds." },
+                { "id": "after-sale", "label": "After the November sale", "md": "No risk to the sale. Business customers can't save a cart until the sale ends." }
               ],
               "detail": "The table migration takes no lock on `carts`. Starting on 26 October leaves one week before the November sale freeze."
             }

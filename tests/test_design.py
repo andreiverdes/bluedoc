@@ -1127,7 +1127,8 @@ class ShippedFrameworks(unittest.TestCase):
         self.assertFalse(board.get("frameworks"), "a shipped framework needs no frameworks[] entry")
         item = next(it for b in build.all_blocks(doc) if b.get("id") == "brief" and b.get("type") == "checklist"
                     for it in b["items"] if it["id"] == "framework")
-        self.assertEqual((item["recommend"], item["choices"][0]), ("heroui", {"id": "heroui", "label": "Tailwind + HeroUI"}))
+        self.assertEqual((item["recommend"], item["choices"][0]),
+                         ("heroui", {"id": "heroui", "label": "Tailwind + HeroUI", "md": build.FRAMEWORK_MD["heroui"]}))
         r = self.tmp.run("build.py", doc_path)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn("0 error(s), 0 warning(s)", r.stderr)

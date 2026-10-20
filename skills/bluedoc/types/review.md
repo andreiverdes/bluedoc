@@ -24,7 +24,7 @@
   - `text`: the finding as a fact in one line ("A retry can authorize the card twice"), not an instruction: the options are the instructions.
   - `sub`: `Recommend <option>: <one-line reason>.`
   - `state` / `stateKind`: the size: `blocker` / `risk`, `major` / `warn`, `minor` / `info`, `nit` / `todo`.
-  - `choices`: `fix` "Fix in PR", `ticket` "Ticket", `decline` "Decline" by default. Use the real decision when it differs: a finding that resolves once another lands gets `after` "Resolve after <x>" plus a fix option; a design question gets its actual alternatives. 2–6 options, labels ≤ 28 characters.
+  - `choices`: `fix` "Fix in PR", `ticket` "Ticket", `decline` "Decline" by default. Use the real decision when it differs: a finding that resolves once another lands gets `after` "Resolve after <x>" plus a fix option; a design question gets its actual alternatives. 2–6 options, labels ≤ 28 characters. Each option's `md` says what it means for this finding and what it costs, 1–3 sentences ("Change `>` to `>=` before #412 merges: one character."); the build fails without it.
   - `recommend`: your option's id. Never set `choice`.
   - `detail`, in this order: **Reviewer:** the finding restated faithfully, with the reviewer's evidence. **My reasoning:** why this recommendation, citing `path:line` and what you checked. **Fix:** the concrete change. **Verify:** the observable check. **Reply I'd post:** for declines and tickets.
 - A `diff` block right after the checklist, from `gitdiff.py` (below): only the files with findings, a `note` naming the head and scope ("Only the commented files. Head `<head>`."), one comment per finding.
@@ -44,6 +44,7 @@
 4. Diff the commits the reviewer read. After a rebase, keep the reviewed range and say so in `note`, or regenerate the block and check every anchor still lands on the code it describes.
 5. A thread on a different line than the code that needs the fix: anchor the comment on the code and say so in `note`. A finding with no line becomes a "Whole change" comment (`{"label": "PR description", "item": …}`).
 6. Never answer a decision yourself. Set `choice` only to carry over the reader's answer from an earlier round, and say so in `detail` (`**Status:** picked <option> on <date>`).
+7. Answer a reader's comment on a finding with `build.py patch <doc> item:t<n>/<item> --reply "…"`, short and direct; rewrite the finding only when the answer changes it or its options.
 
 ## Diff blocks from git
 
@@ -69,7 +70,9 @@ python3 <skill>/scripts/gitdiff.py --repo <checkout> --base <base> --head <head>
   { "type": "checklist", "id": "t412", "title": "Findings · #412", "numbered": false, "items": [
     { "id": "tier-boundary", "text": "`tierFor` gives no tier at exactly 10 units", "sub": "Recommend Fix in PR: the spec says \"10 or more\".",
       "state": "major", "stateKind": "warn", "recommend": "fix",
-      "choices": [ { "id": "fix", "label": "Fix in PR" }, { "id": "ticket", "label": "Ticket" }, { "id": "decline", "label": "Decline" } ],
+      "choices": [ { "id": "fix", "label": "Fix in PR", "md": "Change `>` to `>=` before #412 merges: one character." },
+                   { "id": "ticket", "label": "Ticket", "md": "#412 merges with the bug; 10 units get no discount until the ticket lands." },
+                   { "id": "decline", "label": "Decline", "md": "Keep `>`: the code then contradicts the spec's \"10 or more\"." } ],
       "detail": "**Reviewer:** … **My reasoning:** `src/pricing/tiers.ts:17` uses `>`. **Fix:** use `>=`. **Verify:** `tierFor(10)` returns `bulk`." } ] },
   { "type": "diff", "id": "diff-412", "title": "acme-shop #412", "repo": "../acme-shop", "base": "89efd8e", "head": "62ccc86",
     "paths": ["src/pricing/tiers.ts"], "pr": "acme/acme-shop#412", "note": "Only the commented files. Head `62ccc86`.",

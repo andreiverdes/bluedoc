@@ -129,7 +129,8 @@ def site_doc(url: str) -> dict:
                 {"type": "text", "md": "The home page turns a visitor into a trial."},
                 {"type": "checklist", "id": "brief", "title": "Picks", "numbered": False, "items": [
                     {"id": "hero-headline", "text": "Which hero headline?", "recommend": "a",
-                     "choices": [{"id": "a", "label": "Track everything"}, {"id": "b", "label": "Habit first"}]}]}]},
+                     "choices": [{"id": "a", "label": "Track everything", "md": "The current headline: nothing to change."},
+                                 {"id": "b", "label": "Habit first", "md": "Leads with weekly goals, the feature this release adds."}]}]}]},
             {"id": "pages", "title": "Pages", "blocks": [
                 {"type": "board", "id": "site", "targets": ["web"], "root": "..", "artboards": [
                     {"id": "home", "title": "Home", "device": "page", "fidelity": "hifi", "url": url,

@@ -110,7 +110,9 @@ def main() -> int:
             "text": f"<<the finding in one line: {first_line(head['body'])}>>",
             "sub": "Recommend <<option>>: <<one-line reason>>.",
             "state": "<<blocker | major | minor | nit>>",
-            "choices": [{"id": "fix", "label": "Fix in PR"}, {"id": "ticket", "label": "Ticket"}, {"id": "decline", "label": "Decline"}],
+            "choices": [{"id": "fix", "label": "Fix in PR", "md": "The PR changes it before it merges: the **Fix** below, in this branch."},
+                        {"id": "ticket", "label": "Ticket", "md": "The PR merges as it is; a ticket tracks the change for later."},
+                        {"id": "decline", "label": "Decline", "md": "No change: the reply tells the reviewer why."}],
             "recommend": "<<fix | ticket | decline>>",
             "detail": (f"**Reviewer** ([@{who}]({head['url']}), {where}):{note} {quote(head['body'])}{replies}\n\n"
                        "**My reasoning:** <<what you checked, with path:line>>\n\n"

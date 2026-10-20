@@ -597,7 +597,7 @@ function progress(d) {
     if (isDec) {
       dec++;
       let pick = author || '';
-      if (s != null && s.startsWith('=')) { const bar = s.indexOf('|'); const c = s.slice(1, bar); if (s.slice(bar + 1) === author && (!c || (choiceIds || []).includes(c))) pick = c; }
+      if (s != null && s.startsWith('=')) { const bar = s.indexOf('|'); const c = s.slice(1, bar); if (s.slice(bar + 1) === author && (!c || c.split(',').every(x => (choiceIds || []).includes(x)))) pick = c; }
       if (pick) decided++;
     } else {
       steps++;

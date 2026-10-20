@@ -94,7 +94,7 @@
   {
    "rev": "C",
    "date": "2026-10-11",
-   "built": "2026-10-10T21:07:01+00:00",
+   "built": "2026-10-20T19:47:47+00:00",
    "head": {
     "id": "acme-fit-design",
     "title": "Acme Fit: watch, phone and web mockups",
@@ -121,7 +121,7 @@
      "lead": "Acme Fit tracks steps, workouts and heart rate; these screens set its look before the apps are built.",
      "blocks": [
       "c7543ef86800341c",
-      "2ce3b09392f69019"
+      "3548d9ec415891df"
      ]
     },
     {
@@ -651,6 +651,71 @@
      "framework": "horizon",
      "x": 0,
      "y": 5076
+    }
+   ]
+  },
+  "3548d9ec415891df": {
+   "type": "checklist",
+   "id": "brief",
+   "title": "Choices",
+   "numbered": false,
+   "items": [
+    {
+     "id": "framework",
+     "text": "Pick the framework for the web dashboard",
+     "sub": "Recommend HorizonUI: it ships with bluedoc, so the dashboard renders with nothing to install.",
+     "recommend": "horizon",
+     "choice": "horizon",
+     "choices": [
+      {
+       "id": "horizon",
+       "label": "HorizonUI",
+       "md": "HorizonUI ships with bluedoc, so the dashboard renders with nothing to install. It looks like a finished admin app from the first screen."
+      },
+      {
+       "id": "plain",
+       "label": "Plain kit",
+       "md": "bluedoc's own wireframe classes: quickest to change. The dashboard looks like a sketch, not a product."
+      }
+     ],
+     "detail": "Acme Fit has no web or app code yet, so there is no framework of its own to match. For a new product the usual pick is Tailwind with HeroUI, on the web and on the phone. To mock up with it, run `serve.py add-framework heroui` once and ask me to switch the screens to it."
+    },
+    {
+     "id": "theme",
+     "text": "Pick the theme",
+     "sub": "Recommend Indigo: its accent reads on the watch's black and on the dashboard's white.",
+     "recommend": "indigo",
+     "choice": "indigo",
+     "choices": [
+      {
+       "id": "indigo",
+       "label": "Indigo",
+       "md": "An indigo accent with 12 px corners. It reads on the watch's black and on the dashboard's white."
+      },
+      {
+       "id": "forest",
+       "label": "Forest",
+       "md": "A green accent with 8 px corners. It suits a health app, but its darker green is harder to read on the watch's black."
+      }
+     ]
+    },
+    {
+     "id": "sign-in",
+     "text": "Pick the sign-in to build",
+     "sub": "Recommend passkey first: one tap on a phone that already has a passkey, email stays one step away.",
+     "recommend": "passkey",
+     "choices": [
+      {
+       "id": "password",
+       "label": "Email and password",
+       "md": "Works on every phone and the web. Every member types a password, and we build password reset."
+      },
+      {
+       "id": "passkey",
+       "label": "Passkey first",
+       "md": "One tap on a phone that already has a passkey; email stays a step away for the rest. Needs the passkey API on the server, about 2 more days."
+      }
+     ]
     }
    ]
   }

@@ -15,7 +15,7 @@ python3 <skill>/scripts/build.py new website docs/site.bluedoc.json --title "…
 | Section | Holds |
 |---|---|
 | Goal (`tldr`) | Which pages and sections the reader judges, and which picks they make. |
-| Brief (`brief`) | A `text` block: who visits, what each page must get them to do, where the copy and layout live. The checklist `brief` (`numbered: false`): one decision item per section with versions. |
+| Brief (`brief`) | A `text` block: who visits, what each page must get them to do, where the copy and layout live. The checklist `brief` (`numbered: false`): one decision item per section with versions, each option's `md` saying in 1–3 sentences what that version says or does differently and what it costs (the build fails without it). A section shows one version: no `multi` here. |
 | Pages | One `board` block: `targets: ["web"]`, `root`, `breakpoints`, `artboards`. |
 
 ## Pages
@@ -35,7 +35,7 @@ python3 <skill>/scripts/build.py new website docs/site.bluedoc.json --title "…
 | `el:<page>/<css path>` | The comment's `Source: …` line names its section's files and `At: <width> px wide` the width it was made at: edit there. `build.py patch <doc> <key>` prints the page (live URL or screen file), the selector and source hints (every section's when the selector alone can't tell the section). Then patch the key with `--change`. |
 | `artboard:<page>` | The whole page: same as above, without a selector. |
 | `el:<page>/<sel>` under `## Board drafts` | An element draft (a text edit or deletion in **Edit**). A mockup page: run the `patch el:` command given. A live page: change that text or element in the file the `Source:` line names, then run the `--change` command given. |
-| `item:brief/<item>` | A pick: write the chosen version into the source. The reply's `Shown in:` line names the section and its source. |
+| `item:brief/<item>` | A pick: write the chosen version into the source. The reply's `Shown in:` line names the section and its source. A question in the note: answer it with `build.py patch <doc> item:brief/<item> --reply "…"`. |
 | `frame:page@<x>,<y>` | A requested new page: patch it with `--set id=… --set title=…`, then add `url` (a live route) or write its screen file. |
 
 A live page has no screen file to diff: after editing the source, record the change with `build.py patch <doc> artboard:<page> --change "…" --resolves <id>` so the reader sees a new rev.

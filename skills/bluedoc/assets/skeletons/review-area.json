@@ -48,9 +48,9 @@
               "stateKind": "warn",
               "recommend": "fix",
               "choices": [
-                { "id": "fix", "label": "Fix in <<release>>" },
-                { "id": "ticket", "label": "Ticket" },
-                { "id": "decline", "label": "Decline" }
+                { "id": "fix", "label": "Fix in <<release>>", "md": "Fixed before <<release>> ships: the **Fix** below." },
+                { "id": "ticket", "label": "Ticket", "md": "Not in <<release>>: a ticket tracks the change for later." },
+                { "id": "decline", "label": "Decline", "md": "No change: the code stays as it is, for the reasons below." }
               ],
               "detail": "**Evidence:** <<what you read or ran, with path:line>>\n\n**My reasoning:** <<why this recommendation and what you checked>>\n\n**Fix:** <<the concrete change>>\n\n**Verify:** <<the observable check>>"
             },
@@ -62,9 +62,9 @@
               "stateKind": "info",
               "recommend": "ticket",
               "choices": [
-                { "id": "fix", "label": "Fix in <<release>>" },
-                { "id": "ticket", "label": "Ticket" },
-                { "id": "decline", "label": "Decline" }
+                { "id": "fix", "label": "Fix in <<release>>", "md": "Fixed before <<release>> ships: the **Fix** below." },
+                { "id": "ticket", "label": "Ticket", "md": "Not in <<release>>: a ticket tracks the change for later." },
+                { "id": "decline", "label": "Decline", "md": "No change: the code stays as it is, for the reasons below." }
               ],
               "detail": "**Evidence:** <<what you read or ran, with path:line>>\n\n**My reasoning:** <<why this recommendation and what you checked>>\n\n**Fix:** <<the change the ticket asks for>>\n\n**Verify:** <<the observable check>>"
             }

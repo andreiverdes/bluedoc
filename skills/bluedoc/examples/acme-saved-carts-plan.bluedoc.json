@@ -592,7 +592,7 @@
     {
       "id": "questions",
       "title": "Open questions",
-      "lead": "Pick one option per question; my recommendation is starred. Your picks go with **Approve plan** or **Request changes**.",
+      "lead": "Pick an answer for each question, several for *Who can save a cart?*; my recommendation is starred. Your picks go with **Approve plan** or **Request changes**.",
       "blocks": [
         {
           "type": "checklist",
@@ -608,16 +608,18 @@
               "choices": [
                 {
                   "id": "d90",
-                  "label": "90 days"
+                  "label": "90 days",
+                  "md": "About half the rows of 180 days. A customer who reorders every half year finds the cart gone."
                 },
                 {
                   "id": "d180",
-                  "label": "180 days"
+                  "label": "180 days",
+                  "md": "Covers 70 % of business reorders. Keeps about 900,000 rows, about 1.8 GB."
                 },
                 {
                   "id": "forever",
                   "label": "Until deleted",
-                  "md": "No sweeper; the 20-cart limit is the only cap."
+                  "md": "No sweeper; the 20-cart limit is the only cap. The table grows with every new account."
                 }
               ],
               "detail": "**Why 180:** 70 % of business reorders in the last year came within 150 days of the previous order (orders DB, Sep 2025 to Sep 2026). At 1.2 M accounts and 1.4 saved carts per active account, 180 days keeps about 900,000 rows, about 1.8 GB. *Row size is an estimate; check it on staging in step 1.*"
@@ -630,16 +632,18 @@
               "choices": [
                 {
                   "id": "notice",
-                  "label": "Today's price + notice"
+                  "label": "Today's price + notice",
+                  "md": "The cart charges today's price and says so: a *Prices changed* badge, old prices struck through. One more string to translate."
                 },
                 {
                   "id": "silent",
-                  "label": "Today's price, no notice"
+                  "label": "Today's price, no notice",
+                  "md": "The cart charges today's price without a word. Least work, but a shopper may read a higher total as a bug."
                 },
                 {
                   "id": "keep",
                   "label": "Saved price for 7 days",
-                  "md": "Needs a price lock in pricing and a new discount reason."
+                  "md": "The cart keeps its saved prices for a week. Needs a price lock in pricing, a new discount reason and a finance sign-off."
                 }
               ],
               "detail": "**Notice:** the panel badge says *Prices changed*; the cart marks each changed line with the old price struck through. **Keep** adds a price-lock path to `pricing/reprice.ts` and a finance sign-off; I'd ticket it if you want it later."
@@ -647,17 +651,32 @@
             {
               "id": "guests",
               "text": "Who can save a cart?",
-              "sub": "Recommend signed-in accounts only: guests have no account to attach the cart to.",
-              "recommend": "accounts",
+              "sub": "Recommend personal and business accounts: both have an account to attach the cart to.",
+              "multi": true,
+              "recommend": [
+                "accounts",
+                "business"
+              ],
               "choices": [
                 {
                   "id": "accounts",
-                  "label": "Signed-in accounts only"
+                  "label": "Personal accounts",
+                  "md": "Shoppers signed in to their own account. The plan's steps build this; no extra work."
+                },
+                {
+                  "id": "business",
+                  "label": "Business accounts",
+                  "md": "Each buyer on a business account saves their own carts, for the reorders this plan starts from. No extra work."
+                },
+                {
+                  "id": "support",
+                  "label": "Support, for a shopper",
+                  "md": "Support saves a cart into a shopper's account from the admin, for orders taken by phone. Needs an admin screen, about 2 more days."
                 },
                 {
                   "id": "email",
-                  "label": "Guests too, by email link",
-                  "md": "Adds an email token flow and a mail template; about 3 more days."
+                  "label": "Guests, by email link",
+                  "md": "A guest gets the cart by an emailed link. Adds an email token flow and a mail template, about 3 more days."
                 }
               ],
               "detail": "Guests are 22 % of carts but 6 % of repeat orders. A guest who presses Save cart gets the sign-in sheet, then the cart is saved."

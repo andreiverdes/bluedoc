@@ -14,7 +14,7 @@
 | Approach | The proposal: a canvas with new parts `state: "proposed"` and removed ones `removed`; a `compare` block for before/after (API response, schema, UI); `media` blocks for mockups or wireframes. |
 | Steps | One `steps` block in implementation order. Each step is one reviewable change: imperative title, `effort` S/M/L, `md` with the detail, the `files` it touches, `refs` to the canvas. |
 | Files | One `files` block: every path the plan adds, edits, deletes, renames or moves, with `why` and the `step` that touches it. |
-| Open questions | A decision list (`numbered: false`): one item per choice the reader must make, each with `choices`. `text` is the question; `sub` is "Recommend <option>: <reason>." |
+| Open questions | A decision list (`numbered: false`): one item per choice the reader must make, each with `choices`. `text` is the question; `sub` is "Recommend <option>: <reason>."; each option's `md` explains it. |
 | Risks | A table: Risk, Likelihood, Impact, Mitigation. |
 | Verification | A progress list: plain steps, each with `verify` (and `code` when there's a command): how you'll show the plan worked. |
 
@@ -26,6 +26,9 @@
 - Never mix questions and work in one checklist: the build rejects a list where some items have `choices` and others don't.
 - Canvases: ≤ 9 nodes per level, never draw a proposed part as if it exists. The full canvas rules are under "Canvas rules" in `types/docs.md`.
 - Every open question gets a `recommend`. Never set `choice` yourself.
+- Every option gets an `md` explanation, 1–3 sentences: what picking it means and what it costs (time, risk, what it rules out). The page shows it on the option's row; the build fails without it. Keep the evidence for the recommendation in `detail`.
+- A question where several answers make sense (which stores, which platforms) gets `multi: true`; `recommend` may then be a list of ids.
+- Answer a reader's comment on an item with `build.py patch <doc> item:<checklist>/<item> --reply "…"` (a pin or general comment: `ann:<id>`), not by rewriting the item; change the item only when the answer changes the question or its options.
 - Draw SVG mockups that read on light and dark pages: a neutral palette, or a `prefers-color-scheme` style block inside the SVG.
 
 ## Approval loop
@@ -33,8 +36,8 @@
 1. Validate, `serve.py open <doc> --to <your name>`, give the user the URL.
 2. Run `serve.py wait <doc> --kind any` in the background.
 3. **Approval** (`--- bluedoc approval … ---`): implement exactly the approved rev. Use the reader's picks; an open question with no pick means your recommendation. The notes sent with the approval are binding instructions.
-4. **Change request**: revise the plan (`build.py patch`, which bumps `meta.rev` and writes `changes`; `--resolves <id>` per comment you addressed), send `<url>?diff=<previous rev>`, wait again. Picks sent with it are the reader's decisions so far: carry them over as `choice`. A question marked **Need more details** gets a fuller `detail` and options, and stays unpicked. A change request on an approved plan that carries a different pick ("Pick changed since approval") is a change like any other: record the new `choice`, and the plan needs approval again.
-5. Never start implementing before an approval of the current rev. Marking progress after the approval keeps it approved: steps' `status` and `evidence`, checklist `done` and `evidence`, and the approved picks as `choice`, each in a patch that bumps past the approved rev (bump on the first, `--no-bump` on the rest). Any other edit needs approval again, and so does `--no-bump` on the approved rev itself, which rewrites what was approved.
+4. **Change request**: revise the plan (`build.py patch`, which bumps `meta.rev` and writes `changes`; `--resolves <id>` per comment you addressed), send `<url>?diff=<previous rev>`, wait again. Picks sent with it are the reader's decisions so far: carry them over as `choice`. A question marked **Need more details** gets a `--reply` and sharper options with fuller explanations, and stays unpicked. A change request on an approved plan that carries a different pick ("Pick changed since approval") is a change like any other: record the new `choice`, and the plan needs approval again.
+5. Never start implementing before an approval of the current rev. Marking progress after the approval keeps it approved: steps' `status` and `evidence`, checklist `done` and `evidence`, the approved picks as `choice`, and `--reply` answers, each in a patch that bumps past the approved rev (bump on the first, `--no-bump` on the rest). Any other edit needs approval again, and so does `--no-bump` on the approved rev itself, which rewrites what was approved.
 
 ## Fragment
 
@@ -48,7 +51,15 @@
   { "path": "web/src/cart/sessionCartStorage.ts", "action": "rename", "from": "web/src/cart/cartStorage.ts", "why": "Holds only the session cart now.", "step": "table" } ] },
 { "type": "checklist", "id": "decisions", "title": "Open questions", "numbered": false, "items": [
   { "id": "retention", "text": "How long do saved carts live?", "sub": "Recommend 180 days: covers a seasonal reorder.",
-    "recommend": "d180", "choices": [ { "id": "d90", "label": "90 days" }, { "id": "d180", "label": "180 days" }, { "id": "forever", "label": "Until deleted" } ] } ] }
+    "recommend": "d180", "choices": [
+      { "id": "d90", "label": "90 days", "md": "About half the rows. A customer who reorders every half year finds the cart gone." },
+      { "id": "d180", "label": "180 days", "md": "Covers 70 % of business reorders; about 1.8 GB." },
+      { "id": "forever", "label": "Until deleted", "md": "No sweeper; the 20-cart limit is the only cap." } ] },
+  { "id": "guests", "text": "Who can save a cart?", "sub": "Recommend personal and business accounts: both have an account.",
+    "multi": true, "recommend": ["accounts", "business"], "choices": [
+      { "id": "accounts", "label": "Personal accounts", "md": "Shoppers signed in to their own account; no extra work." },
+      { "id": "business", "label": "Business accounts", "md": "Each buyer saves their own carts; no extra work." },
+      { "id": "email", "label": "Guests, by email link", "md": "An email token flow and a mail template, about 3 more days." } ] } ] }
 ```
 
 Field details: grep `## Plan blocks`, `### Steps`, `### Files`, `### Compare`, `### Media` in `references/schema.md`.

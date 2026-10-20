@@ -26,8 +26,8 @@
               "sub": "Recommend <<option>>: <<why>>.",
               "recommend": "b",
               "choices": [
-                { "id": "a", "label": "Current" },
-                { "id": "b", "label": "<<Version B, in 3 words>>" }
+                { "id": "a", "label": "Current", "md": "The headline as the site has it now: nothing changes." },
+                { "id": "b", "label": "<<Version B, in 3 words>>", "md": "<<What version B says differently, and what it costs.>>" }
               ]
             }
           ]

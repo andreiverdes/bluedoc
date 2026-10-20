@@ -15,7 +15,7 @@ This writes the brief, a board with one wireframe artboard per target, and one s
 | Section | Holds |
 |---|---|
 | Goal (`tldr`) | What the screens show, on which devices, and which picks the reader makes. |
-| Brief (`brief`) | A `text` block: who uses it, on which device, what each screen must let them do. The checklist `brief` (`numbered: false`): decision item `framework` (ids: `plain`, `horizon`, `heroui`, `tailwind`, `frameworks[].id`), `theme` (ids = `themes[].id`), plus any open question (scope, navigation, motion). `sub` is "Recommend <option>: <reason>." |
+| Brief (`brief`) | A `text` block: who uses it, on which device, what each screen must let them do. The checklist `brief` (`numbered: false`): decision item `framework` (ids: `plain`, `horizon`, `heroui`, `tailwind`, `frameworks[].id`), `theme` (ids = `themes[].id`), plus any open question (scope, navigation, motion). `sub` is "Recommend <option>: <reason>." Every option's `md` says in 1–3 sentences how the screens come out with it and what it costs; the build fails without it. `framework` and `theme` take one answer; an open question where several answers make sense gets `multi: true`. |
 | Screens | One `board` block: `targets`, `framework`, `frameworks`, `themes`, `motion`, `artboards`. |
 
 ## Pick the framework
@@ -61,7 +61,7 @@ A framework that isn't on disk yet is still an option: put the `add-framework` c
 | `el:<id>/<path>` under `## Board drafts` | An element draft: the reader changed its text or deleted it in **Edit**. Run the command given (`patch <doc> el:… --set 'text="…"'` or `--delete`, text edits first, deletes last to first): it rewrites that one element in `<stem>.design/<id>.html`, plain text only. |
 | `artboard:<id>` | The whole screen, or a drawing over it: edit the file; or `--set device=…`, `--set fidelity=hifi`, `--set x=… --set y=…`. |
 | `frame:<device>@<x>,<y>` | A requested new screen; the note holds the prompt and its labelled boxes. `build.py patch <doc> <key> --set id=settings --set title=Settings` adds the artboard and a stub file; write the screen there, keeping the boxes' labels as `data-bd` names. |
-| `item:brief/<item>` | A pick or note on the brief: apply it to every screen it touches. |
+| `item:brief/<item>` | A pick or note on the brief: apply it to every screen it touches. Answer a question in the note with `build.py patch <doc> item:brief/<item> --reply "…"`. |
 
 Several patches for one reply: bump on the first, `--no-bump` on the rest. Send `<url>?diff=<previous rev>`: changed screens are marked and open side by side.
 

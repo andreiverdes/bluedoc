@@ -4,7 +4,7 @@
   {
    "rev": "A",
    "date": "2026-10-10",
-   "built": "2026-10-12T14:01:40+00:00",
+   "built": "2026-10-20T19:47:47+00:00",
    "head": {
     "id": "acme-fit-deck",
     "title": "Acme Fit: Q3 launch review deck",
@@ -26,7 +26,7 @@
      "lead": "The product lead presents the Q3 launch of Acme Fit to the leadership team in twenty minutes.",
      "blocks": [
       "03f05d7bc03d32bb",
-      "c8fc55d99bce57f3"
+      "40cd8b9c4e5272ee"
      ]
     },
     {
@@ -51,48 +51,6 @@
   "03f05d7bc03d32bb": {
    "type": "text",
    "md": "- **Audience:** the Acme leadership team, on the boardroom screen and on laptops afterwards.\n- **Story:** what shipped, what it moved, one member's voice, then the Q4 ask.\n- **One point per slide,** large enough to read from the back of the room."
-  },
-  "c8fc55d99bce57f3": {
-   "type": "checklist",
-   "id": "brief",
-   "title": "Picks",
-   "numbered": false,
-   "items": [
-    {
-     "id": "framework",
-     "text": "Which framework do the slides use?",
-     "sub": "Recommend the plain kit: its slide classes ship with bluedoc, so the deck needs nothing installed.",
-     "recommend": "plain",
-     "choice": "plain",
-     "choices": [
-      {
-       "id": "plain",
-       "label": "Plain kit"
-      },
-      {
-       "id": "horizon",
-       "label": "HorizonUI"
-      }
-     ]
-    },
-    {
-     "id": "theme",
-     "text": "Which theme?",
-     "sub": "Recommend Indigo: it matches the Acme Fit apps the deck reports on.",
-     "recommend": "indigo",
-     "choice": "indigo",
-     "choices": [
-      {
-       "id": "indigo",
-       "label": "Indigo"
-      },
-      {
-       "id": "forest",
-       "label": "Forest"
-      }
-     ]
-    }
-   ]
   },
   "857fe68ac163ccb0": {
    "type": "board",
@@ -167,6 +125,52 @@
      "device": "slide",
      "fidelity": "hifi",
      "notes": "The ask: two engineers for Android Wear and a coach dashboard by December. Decide today and we start on the 20th."
+    }
+   ]
+  },
+  "40cd8b9c4e5272ee": {
+   "type": "checklist",
+   "id": "brief",
+   "title": "Picks",
+   "numbered": false,
+   "items": [
+    {
+     "id": "framework",
+     "text": "Which framework do the slides use?",
+     "sub": "Recommend the plain kit: its slide classes ship with bluedoc, so the deck needs nothing installed.",
+     "recommend": "plain",
+     "choice": "plain",
+     "choices": [
+      {
+       "id": "plain",
+       "label": "Plain kit",
+       "md": "Slide classes that ship with bluedoc: titles, columns, big numbers. The deck needs nothing installed and exports as one file."
+      },
+      {
+       "id": "horizon",
+       "label": "HorizonUI",
+       "md": "HorizonUI's cards, tables and charts on the slides. Closer to the Acme Fit dashboard; each slide takes longer to lay out."
+      }
+     ]
+    },
+    {
+     "id": "theme",
+     "text": "Which theme?",
+     "sub": "Recommend Indigo: it matches the Acme Fit apps the deck reports on.",
+     "recommend": "indigo",
+     "choice": "indigo",
+     "choices": [
+      {
+       "id": "indigo",
+       "label": "Indigo",
+       "md": "An indigo accent on light slides, as in the Acme Fit apps the deck reports on. Charts and app screens share one colour."
+      },
+      {
+       "id": "forest",
+       "label": "Forest",
+       "md": "A green accent on light slides. It reads as health and outdoors, but no Acme Fit screen uses it."
+      }
+     ]
     }
    ]
   }

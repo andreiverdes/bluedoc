@@ -26,8 +26,8 @@
               "sub": "Recommend the plain kit: its slide classes ship with bluedoc, so the deck needs nothing installed.",
               "recommend": "plain",
               "choices": [
-                { "id": "plain", "label": "Plain kit" },
-                { "id": "horizon", "label": "HorizonUI" }
+                { "id": "plain", "label": "Plain kit", "md": "Slide classes that ship with bluedoc: titles, columns, big numbers. The deck needs nothing installed and exports as one file." },
+                { "id": "horizon", "label": "HorizonUI", "md": "HorizonUI's cards, tables and charts on the slides. Closer to the product's dashboard; the slides take longer to lay out." }
               ]
             },
             {
@@ -36,8 +36,8 @@
               "sub": "Recommend <<theme>>: <<why>>.",
               "recommend": "light",
               "choices": [
-                { "id": "light", "label": "Light" },
-                { "id": "dark", "label": "Dark" }
+                { "id": "light", "label": "Light", "md": "<<What the light theme suits (a lit room, print), and what it costs.>>" },
+                { "id": "dark", "label": "Dark", "md": "<<What the dark theme suits (a projector, a dark room), and what it costs.>>" }
               ]
             }
           ]

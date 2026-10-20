@@ -39,8 +39,8 @@
        "recommend": "horizon",
        "choice": "horizon",
        "choices": [
-        { "id": "horizon", "label": "HorizonUI" },
-        { "id": "plain", "label": "Plain kit" }
+        { "id": "horizon", "label": "HorizonUI", "md": "HorizonUI ships with bluedoc, so the dashboard renders with nothing to install. It looks like a finished admin app from the first screen." },
+        { "id": "plain", "label": "Plain kit", "md": "bluedoc's own wireframe classes: quickest to change. The dashboard looks like a sketch, not a product." }
        ],
        "detail": "Acme Fit has no web or app code yet, so there is no framework of its own to match. For a new product the usual pick is Tailwind with HeroUI, on the web and on the phone. To mock up with it, run `serve.py add-framework heroui` once and ask me to switch the screens to it."
       },
@@ -51,8 +51,8 @@
        "recommend": "indigo",
        "choice": "indigo",
        "choices": [
-        { "id": "indigo", "label": "Indigo" },
-        { "id": "forest", "label": "Forest" }
+        { "id": "indigo", "label": "Indigo", "md": "An indigo accent with 12 px corners. It reads on the watch's black and on the dashboard's white." },
+        { "id": "forest", "label": "Forest", "md": "A green accent with 8 px corners. It suits a health app, but its darker green is harder to read on the watch's black." }
        ]
       },
       {
@@ -61,8 +61,8 @@
        "sub": "Recommend passkey first: one tap on a phone that already has a passkey, email stays one step away.",
        "recommend": "passkey",
        "choices": [
-        { "id": "password", "label": "Email and password" },
-        { "id": "passkey", "label": "Passkey first" }
+        { "id": "password", "label": "Email and password", "md": "Works on every phone and the web. Every member types a password, and we build password reset." },
+        { "id": "passkey", "label": "Passkey first", "md": "One tap on a phone that already has a passkey; email stays a step away for the rest. Needs the passkey API on the server, about 2 more days." }
        ]
       }
      ]

@@ -34,8 +34,8 @@
        "recommend": "plain",
        "choice": "plain",
        "choices": [
-        { "id": "plain", "label": "Plain kit" },
-        { "id": "horizon", "label": "HorizonUI" }
+        { "id": "plain", "label": "Plain kit", "md": "Slide classes that ship with bluedoc: titles, columns, big numbers. The deck needs nothing installed and exports as one file." },
+        { "id": "horizon", "label": "HorizonUI", "md": "HorizonUI's cards, tables and charts on the slides. Closer to the Acme Fit dashboard; each slide takes longer to lay out." }
        ]
       },
       {
@@ -45,8 +45,8 @@
        "recommend": "indigo",
        "choice": "indigo",
        "choices": [
-        { "id": "indigo", "label": "Indigo" },
-        { "id": "forest", "label": "Forest" }
+        { "id": "indigo", "label": "Indigo", "md": "An indigo accent on light slides, as in the Acme Fit apps the deck reports on. Charts and app screens share one colour." },
+        { "id": "forest", "label": "Forest", "md": "A green accent on light slides. It reads as health and outdoors, but no Acme Fit screen uses it." }
        ]
       }
      ]

@@ -26,10 +26,10 @@
               "sub": "Recommend <<the project's own framework, else the default for the target>>: <<why>>.",
               "recommend": "plain",
               "choices": [
-                { "id": "plain", "label": "Plain kit" },
-                { "id": "horizon", "label": "HorizonUI" }
+                { "id": "plain", "label": "Plain kit", "md": "bluedoc's own wireframe classes: nothing to install, quickest to change. The screens look like no product yet." },
+                { "id": "horizon", "label": "HorizonUI", "md": "HorizonUI ships with bluedoc, so the screens render with nothing to install. They look like a finished dashboard, in a framework the app may not use." }
               ],
-              "detail": "<<Each option's look and cost; for a framework not on disk, the serve.py add-framework command to run.>>"
+              "detail": "<<What decides it: the project's own code, the target; for a framework not on disk, the serve.py add-framework command to run.>>"
             },
             {
               "id": "theme",
@@ -37,8 +37,8 @@
               "sub": "Recommend <<theme>>: <<why>>.",
               "recommend": "light",
               "choices": [
-                { "id": "light", "label": "Light" },
-                { "id": "dark", "label": "Dark" }
+                { "id": "light", "label": "Light", "md": "<<What the light theme suits (the screens' daylight use, the brand), and what it costs.>>" },
+                { "id": "dark", "label": "Dark", "md": "<<What the dark theme suits, and what it costs.>>" }
               ]
             }
           ]

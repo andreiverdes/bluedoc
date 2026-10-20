@@ -54,9 +54,9 @@
               "stateKind": "warn",
               "recommend": "fix",
               "choices": [
-                { "id": "fix", "label": "Fix in PR" },
-                { "id": "ticket", "label": "Ticket" },
-                { "id": "decline", "label": "Decline" }
+                { "id": "fix", "label": "Fix in PR", "md": "The PR changes it before it merges: the **Fix** below, in this branch." },
+                { "id": "ticket", "label": "Ticket", "md": "The PR merges as it is; a ticket tracks the change for later." },
+                { "id": "decline", "label": "Decline", "md": "No change: the reply tells the reviewer why." }
               ],
               "detail": "**Reviewer:** <<the finding restated faithfully, with the reviewer's evidence>>\n\n**My reasoning:** <<why this recommendation, citing path:line and what you checked>>\n\n**Fix:** <<the concrete change>>\n\n**Verify:** <<the observable check>>"
             },
@@ -68,9 +68,9 @@
               "stateKind": "info",
               "recommend": "ticket",
               "choices": [
-                { "id": "fix", "label": "Fix in PR" },
-                { "id": "ticket", "label": "Ticket" },
-                { "id": "decline", "label": "Decline" }
+                { "id": "fix", "label": "Fix in PR", "md": "The PR changes it before it merges: the **Fix** below, in this branch." },
+                { "id": "ticket", "label": "Ticket", "md": "The PR merges as it is; a ticket tracks the change for later." },
+                { "id": "decline", "label": "Decline", "md": "No change: the reply tells the reviewer why." }
               ],
               "detail": "**Reviewer:** <<the finding restated faithfully, with the reviewer's evidence>>\n\n**My reasoning:** <<why this recommendation, citing path:line and what you checked>>\n\n**Fix:** <<the change the ticket asks for>>\n\n**Verify:** <<the observable check>>\n\n**Reply I'd post:** <<the reply for the thread>>"
             }

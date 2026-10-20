@@ -157,7 +157,8 @@ class MarkdownInChrome(ChromePage):
                "sections": [{"id": "lane", "title": "Fix lane", "blocks": [{"type": "checklist", "id": "lane", "title": "Decisions", "items": [
                    {"id": "start", "text": "Start a fix lane for the code findings in the advisor review?",
                     "sub": "Ban/suspend control, report abuse limits, fail-closed safety startup, bypass guard: code, not plan text.",
-                    "choices": [{"id": "now", "label": "Start now"}, {"id": "after", "label": "After your picks below"}],
+                    "choices": [{"id": "now", "label": "Start now", "md": "The fix lane starts today, before your picks below."},
+                                {"id": "after", "label": "After your picks below", "md": "The fix lane waits for your picks below, then starts."}],
                     "recommend": "after", "detail": SHOT}]}]}]}
         path = self.docs / "acme-md-reply.bluedoc.json"
         path.write_text(json.dumps(doc), encoding="utf-8")

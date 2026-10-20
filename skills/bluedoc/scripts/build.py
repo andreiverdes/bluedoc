@@ -23,8 +23,8 @@ Usage:
                                     wireframe screen file per --target watch|mobile|tablet|desktop|web, --icons
                                     adds an app icon with stub layers; presentation: a deck of three stub slides;
                                     website: a home page, live from --url (a loopback dev server) or a stub file)
-  build.py patch doc.json KEY [--set f=v ...] [--json OBJ] [--append OBJ] [--delete] [--html FILE|-]
-                              [--change LINE ...] [--no-bump] [--pin] [--repo DIR] [--paths PATH ...]
+  build.py patch doc.json KEY [--set f=v ...] [--json OBJ] [--append OBJ] [--delete] [--html FILE|-] [--reply MD]
+                              [--change LINE ...] [--resolves ID ...] [--no-bump] [--pin] [--repo DIR] [--paths PATH ...]
                                     change one object by its annotator key, bump meta.rev, validate, record
   build.py from-md PLAN.md out.bluedoc.json [--org O] [--project DIR] [--change LINE ...]
                                     import a Markdown plan as a plan doc (mdplan.py) and build it; an existing out
@@ -71,6 +71,7 @@ patch keys: doc, meta, header, tldr, status, section:<sec>, heading:<sec>, lead:
   block:<blockPath>, item:<checklist>/<item>, row:<blockPath>/<r>, card:<blockPath>/<i>,
   step:<blockPath>/<step>, file:<blockPath>/<path>, node:<canvas>/<node>[/<child>…],
   comment:<diff>/<i>, para:<blockPath>/<i>, media:<blockPath>, compare:<blockPath>/<before|after>,
+  ann:<comment id> (a reader's pin or general comment; --reply only),
   line:<diff>/<path>:<n> (o<n> for an old-side line): the diff comment on <path> whose lines cover n;
   a diff ref's code comes from git, so with no such comment patch exits 2 (change the code, patch
   the finding with item:<checklist>/<item>, or add a comment). A key may keep the backticks the
@@ -102,6 +103,14 @@ patch keys: doc, meta, header, tldr, status, section:<sec>, heading:<sec>, lead:
   dirty, tree?, paths?, at} from the doc's git repo (else the current folder's; --repo DIR picks one), or
   {commit: null, reason, at} without one. --paths narrows what it covers (paths or globs from the repo root).
   --pin on a step: or item: key re-pins its evidence after its checks ran again.
+  --reply "md" answers a reader's comment in its conversation, one reply per call: item:<checklist>/<item> appends
+  {rev, md} to the item's `replies`, ann:<comment id> (a pin or general comment, by the id the reply Markdown shows)
+  to the doc's `threads[<id>]`. rev is the rev the patch writes (the bumped one; with --no-bump the current one). It
+  goes with --resolves, --change and --no-bump, and on an item: key with --set/--json; ann: takes no other option.
+
+Explanations: on a doc whose history file says which bluedoc created it (`created`, written into every new history
+file) or that has no history yet, every option (`choices[].md`) needs its explanation: an error names the item and
+the option. A doc whose history predates `created` builds as before, with no error and no warning.
 
 Exit codes: 0 ok, 1 validation errors (or warnings with --strict), 2 usage/IO error.
 Python 3.9+ standard library only.
@@ -134,6 +143,22 @@ import codepin   # noqa: E402 — evidence pinned to a code revision, and its st
 TEMPLATE = HERE.parent / "assets" / "template.html"
 SKELETONS = HERE.parent / "assets" / "skeletons"
 HISTORY_VERSION = 1
+
+
+def skill_version() -> str:
+    """The plugin's version from its plugin.json, or '' for a skill installed without one."""
+    root = HERE.parent.parent.parent
+    for f in (root / ".claude-plugin" / "plugin.json", root / "plugin.json"):
+        try:
+            return str(json.loads(f.read_text(encoding="utf-8")).get("version") or "")
+        except (OSError, ValueError, AttributeError):
+            continue
+    return ""
+
+
+# the agent's answers in a conversation: an item's `replies` and the doc's `threads` (per reader comment id), each
+# [{rev, md}]; a reply's md is block Markdown of 1 to MAX_REPLY_MD characters
+MAX_REPLY_MD, MAX_REPLY_REV = 8192, 40
 
 BLOCK_TYPES = {"text", "callout", "table", "code", "terms", "cards", "checklist", "canvas", "diff", "steps", "files", "media", "compare",
                "board", "listing"}
@@ -207,6 +232,16 @@ MAX_NOTES_BYTES = 2 * 1024        # an artboard's speaker notes, shown under the
 FIDELITIES = ("sketch", "wireframe", "hifi")
 # what ships with bluedoc (assets/kits, assets/vendor), by id: its label in the brief
 BUILTIN_FRAMEWORKS = {"plain": "Plain kit", "horizon": "HorizonUI", "heroui": "Tailwind + HeroUI", "tailwind": "Tailwind CSS"}
+# a framework option's explanation in the brief `build.py new design --framework` writes
+FRAMEWORK_MD = {
+    "plain": "bluedoc's own wireframe classes: nothing to install, quickest to change. The screens look like no product yet.",
+    "horizon": "HorizonUI ships with bluedoc, so the screens render with nothing to install. They look like a finished "
+               "dashboard, in a framework the app may not use.",
+    "heroui": "Tailwind with HeroUI's components, as many React apps use. The screens match such an app; each one is "
+              "written in Tailwind classes.",
+    "tailwind": "Tailwind's utility classes with no component library. The screens match a Tailwind codebase; every "
+                "component is drawn by hand.",
+}
 # were `serve.py add-framework` presets until they shipped: a board may still declare them in frameworks[] (its files
 # or store copy load instead), and a `store` of that name with no copy loads the shipped one
 SHIPPED_PRESETS = ("heroui", "tailwind")
@@ -392,8 +427,9 @@ SCOPE_SHAPE = {"nodes": [{"id": str, "label": str, "kind": str, "state": str, "x
                "edges": [{"id": str, "from": str, "to": str, "kind": str, "label": str}],
                "flows": [{"steps": [{"edge": str, "edges": [str]}]}]}
 EVIDENCE_SHAPE = [{"label": str, "md": str, "code": str, "lang": str, "src": str, "href": str, "pin": dict}]
-ITEM_SHAPE = {"id": str, "text": str, "sub": str, "recommend": str, "choice": str, "refs": [str], "blocks": [BLOCK],
-              "choices": [{"id": str, "label": str}], "evidence": EVIDENCE_SHAPE}
+# `recommend` and `choice` are a string, or with `multi` a list of strings: the checklist check reads them
+ITEM_SHAPE = {"id": str, "text": str, "sub": str, "refs": [str], "blocks": [BLOCK],
+              "choices": [{"id": str, "label": str}], "evidence": EVIDENCE_SHAPE, "replies": [dict]}
 BLOCK_SHAPES = {
     "text": {"md": str}, "callout": {"md": str, "kind": str}, "code": {"code": str},
     "table": {"columns": list, "rows": [list]}, "terms": {"items": [dict]}, "cards": {"items": [dict]},
@@ -416,7 +452,7 @@ BLOCK_SHAPES = {
                 "order": dict, "capture": dict, "variants": list, "translatedFrom": dict},
 }
 DOC_SHAPE = {"title": str, "meta": {"type": str}, "state": [{"kind": str}],
-             "sections": [{"id": str, "title": str, "blocks": [BLOCK]}]}
+             "sections": [{"id": str, "title": str, "blocks": [BLOCK]}], "threads": dict}
 JSON_TYPES = {dict: "an object", list: "a list", str: "a string", NUMBER: "a number"}
 
 
@@ -1007,14 +1043,24 @@ def approval_hash(doc, doc_path: Path | None = None, screens: dict[str, str | No
     return hashlib.sha256(canon.encode()).hexdigest()
 
 
-PROGRESS_FIELDS, PROGRESS_META = ("changes", "resolves", "state"), ("rev", "date")
+# the agent's answers (items' `replies`, the doc's `threads`) are progress too: replying never asks for approval again
+PROGRESS_FIELDS, PROGRESS_META = ("changes", "resolves", "state", "threads"), ("rev", "date")
 
 
-def without_progress(doc: dict, picks: dict[str, str] | None = None, approved: dict[str, object] | None = None) -> dict:
+def same_pick(a, b) -> bool:
+    """Whether two picks are the same answer: equal ids, or with several answers the same ids in any order."""
+    if isinstance(a, list) and isinstance(b, list):
+        return sorted(map(str, a)) == sorted(map(str, b))
+    return a == b
+
+
+def without_progress(doc: dict, picks: dict[str, str | list[str]] | None = None,
+                     approved: dict[str, object] | None = None) -> dict:
     """A copy of doc without what may change after an approval and keep it: meta.rev and meta.date, `changes`,
-    `resolves`, the `state` labels, steps' `status` and `evidence`, and progress items' `done` and `evidence`. With
-    picks ({"<checklist>:<item>": the reader's approved pick}) a decision's `choice` set to its pick reads as the
-    approved doc's (approved: {"<checklist>:<item>": that doc's item, for its `choice` or its absence})."""
+    `resolves`, the `state` labels, the agent's replies (`threads`, items' `replies`), steps' `status` and `evidence`,
+    and progress items' `done` and `evidence`. With picks ({"<checklist>:<item>": the reader's approved pick, a list
+    of ids for a `multi` item}) a decision's `choice` set to its pick reads as the approved doc's (approved:
+    {"<checklist>:<item>": that doc's item, for its `choice` or its absence})."""
     d = copy.deepcopy(doc)
     for k in PROGRESS_FIELDS:
         d.pop(k, None)
@@ -1032,10 +1078,11 @@ def without_progress(doc: dict, picks: dict[str, str] | None = None, approved: d
                 it.pop("evidence", None)
                 continue
             it.pop("done", None)
+            it.pop("replies", None)
             if not it.get("choices"):
                 it.pop("evidence", None)
             k = f"{b.get('id')}:{it.get('id')}"
-            if picks and it.get("choice") and it.get("choice") == picks.get(k):
+            if picks and it.get("choice") and same_pick(it.get("choice"), picks.get(k)):
                 was = (approved or {}).get(k) or {}
                 if "choice" in was:
                     it["choice"] = was["choice"]
@@ -1762,6 +1809,8 @@ def validate_page(rep: Report, aw: str, a: dict, root: Path | None, decisions: d
         if it is None:
             rep.err(sw + ".decision", f"'{s['decision']}' is no decision item of the checklist `brief`")
             continue
+        if it.get("multi"):
+            rep.err(f"item brief/{s['decision']}", "a section shows one version: drop `multi`")
         choices = {c.get("id") for c in it["choices"] if isinstance(c, dict)}
         if len(choices) > 3:
             rep.warn(f"item brief/{s['decision']}", f"{len(choices)} versions of one section: offer 2 or 3")
@@ -1939,6 +1988,8 @@ def validate_board(rep: Report, bw: str, b: dict, doc: dict, doc_path: Path | No
             continue
         ids = {c.get("id") for c in it["choices"] if isinstance(c, dict)}
         iw = f"item brief/{it.get('id')}"
+        if it.get("id") in ("framework", "theme") and it.get("multi"):
+            rep.err(iw, f"the screens use one {it['id']}: drop `multi`")
         if it.get("id") == "framework":
             for c in sorted(ids - fw_ids, key=str):
                 rep.err(iw, f"option '{c}' is no framework: add it to {bw}.frameworks or use one of {sorted(fw_ids)}")
@@ -1986,6 +2037,18 @@ def check_contract(doc: dict) -> list[str]:
             elif other:
                 out.append(f"a website holds pages only (device \"page\"); use a design doc for app screens ({', '.join(other)})")
     return out
+
+
+def explanations_required(doc: dict, doc_path: Path | None, hist: dict | None) -> bool:
+    """Whether every option needs its `md` explanation: on a doc created by a bluedoc that writes `created` into a new
+    history file (sync_history), and on one with no history yet (without doc_path: every doc with a meta.rev). A doc
+    whose history predates `created` keeps building as it did, with no error and no warning; so does a doc without
+    meta.rev, which keeps no history. hist: the doc's history (load_history), None when it can't be read."""
+    if not (doc.get("meta") or {}).get("rev"):
+        return False
+    if doc_path is None:
+        return True
+    return hist is not None and ("created" in hist or not hist["revs"])
 
 
 def contract_level(doc: dict, doc_path: Path | None) -> str:
@@ -2123,6 +2186,42 @@ def _validate(rep: Report, doc: dict, doc_path: Path | None, *, allow_remote: bo
     boards: list[tuple[str, dict]] = []        # (where, block): checked once the brief is known
     mixed: list[tuple[str, str]] = []          # (where, message): checklists holding decisions and progress items
     top_lists: list[tuple[str, str, str]] = [] # (where, id, kind) of section-level checklists, in page order
+    hist = None   # the doc's history file (a fresh one when there's none yet); None without doc_path or when unreadable
+    if doc_path is not None:
+        try:
+            hist = load_history(history_path(Path(doc_path)))
+        except (OSError, ValueError):
+            hist = None
+    explain = explanations_required(doc, doc_path, hist)
+    rev_now = str((doc.get("meta") or {}).get("rev") or "")
+    known_revs = {str(r.get("rev")) for r in hist["revs"] if isinstance(r, dict)} | {rev_now} if hist is not None else None
+
+    def check_replies(where: str, replies) -> None:
+        """The agent's answers in a conversation: [{rev, md}], md block Markdown; a rev the history lacks warns."""
+        if replies is None:
+            return
+        if not isinstance(replies, list) or not replies:
+            rep.err(where, '[{"rev": "<meta.rev>", "md": "<answer>"}, …]: the agent\'s answers, oldest first')
+            return
+        for i, r in enumerate(replies):
+            rw = f"{where}[{i}]"
+            if not isinstance(r, dict) or set(r) - {"rev", "md"}:
+                rep.err(rw, '{"rev": "<meta.rev>", "md": "<answer>"}: build.py patch <doc> <key> --reply "…" writes it')
+                continue
+            rev, md = r.get("rev"), r.get("md")
+            if not (isinstance(rev, str) and 0 < len(rev) <= MAX_REPLY_REV):
+                rep.err(rw + ".rev", f"the meta.rev it was written in: 1 to {MAX_REPLY_REV} characters")
+            elif known_revs is not None and rev not in known_revs:
+                rep.warn(rw + ".rev", f"rev '{rev}' is not in the doc's history: the page can't place this reply by revision")
+            if not (isinstance(md, str) and md.strip() and len(md) <= MAX_REPLY_MD):
+                rep.err(rw + ".md", f"the answer: block Markdown of 1 to {MAX_REPLY_MD} characters")
+            else:
+                lint_text(rep, rw + ".md", md)
+
+    for cid, replies in (doc.get("threads") or {}).items():
+        if not RESOLVES_ID.fullmatch(cid):
+            rep.err(f"doc.threads.{cid}", "key: a reader comment's id, as the reply Markdown shows it (e.g. c…)")
+        check_replies(f"doc.threads.{cid}", replies if replies is not None else [])
 
     def check_block(bw: str, b: dict, depth: int) -> None:
         """depth 0 = section block, 1 = inside a checklist item, 2 = inside a nested checklist's item."""
@@ -2192,17 +2291,39 @@ def _validate(rep: Report, doc: dict, doc_path: Path | None, *, allow_remote: bo
                                 rep.err(cw, f"duplicate option id '{c['id']}'")
                             cids.add(c["id"])
                             if len(re.sub(r"`", "", c["label"])) > MAX_CHOICE_LABEL:
-                                rep.warn(cw, f"option label over {MAX_CHOICE_LABEL} characters: options are pills; put the explanation in 'md'")
+                                rep.warn(cw, f"option label over {MAX_CHOICE_LABEL} characters: the row shows it on one line; put the explanation in 'md'")
                             lint_text(rep, cw + ".md", c.get("md"))
+                            if explain and not (isinstance(c.get("md"), str) and c["md"].strip()):
+                                rep.err(cw + ".md", f"option '{c['id']}' of item '{b['id']}/{it['id']}' has no explanation: give it "
+                                        "`md`, 1 to 3 sentences on what picking it means and what it costs")
+                        multi = it.get("multi")
+                        if multi is not None and not isinstance(multi, bool):
+                            rep.err(iw + ".multi", f"{_shown(multi)} is {_json_type(multi)}: true (several answers) or leave it out")
                         for field in ("recommend", "choice"):
-                            if it.get(field) is not None and it[field] not in cids:
-                                rep.err(f"{iw}.{field}", f"'{it[field]}' is not one of the option ids {sorted(cids)}")
+                            v = it.get(field)
+                            if v is None:
+                                continue
+                            if isinstance(v, list):
+                                if multi is not True:
+                                    rep.err(f"{iw}.{field}", "a list of ids needs `multi: true` (several answers); one answer is one id")
+                                elif not v or not all(isinstance(x, str) for x in v) or len(set(v)) != len(v):
+                                    rep.err(f"{iw}.{field}", "a list of distinct option ids, at least one")
+                                else:
+                                    for x in v:
+                                        if x not in cids:
+                                            rep.err(f"{iw}.{field}", f"'{x}' is not one of the option ids {sorted(cids)}")
+                            elif not isinstance(v, str):
+                                rep.err(f"{iw}.{field}", f"{_shown(v)} is {_json_type(v)}: an option id"
+                                        + (", or a list of them" if multi is True else ""))
+                            elif v not in cids:
+                                rep.err(f"{iw}.{field}", f"'{v}' is not one of the option ids {sorted(cids)}")
                     if it.get("done"):
                         rep.err(iw + ".done", "a decision item is answered by 'choice', not 'done'")
                     if it.get("evidence") is not None:
                         rep.err(iw + ".evidence", "a decision item is answered by 'choice'; evidence belongs on steps and progress items")
-                elif it.get("recommend") or it.get("choice"):
-                    rep.err(iw, "'recommend' and 'choice' need 'choices'")
+                elif it.get("recommend") or it.get("choice") or it.get("multi") is not None:
+                    rep.err(iw, "'recommend', 'choice' and 'multi' need 'choices'")
+                check_replies(iw + ".replies", it.get("replies"))
                 title = re.sub(r"`([^`]*)`", r"\1", it.get("text", ""))
                 if len(title) > MAX_TITLE:
                     rep.warn(iw + ".text", f"{len(title)} characters: the collapsed row shows one line (about {MAX_TITLE}); "
@@ -2880,7 +3001,9 @@ class HistoryError(Exception):
 def sync_history(doc_path: Path, doc: dict, *, keep_screens: bool = False,
                  texts: dict[str, str | None] | None = None) -> tuple[dict | None, str]:
     """Record doc in its history file under meta.rev (keep_screens, texts: see record); returns (history or
-    None, log line). Raises HistoryError when meta.rev names an earlier revision or the file is unreadable."""
+    None, log line). A new history file records the bluedoc version that created it (`created`), which marks the
+    doc as held to the rules of that version on (explanations_required). Raises HistoryError when meta.rev names an
+    earlier revision or the file is unreadable."""
     if not (doc.get("meta") or {}).get("rev"):
         return None, "history: off (set meta.rev to keep revisions)"
     hpath = history_path(doc_path)
@@ -2888,6 +3011,8 @@ def sync_history(doc_path: Path, doc: dict, *, keep_screens: bool = False,
         history = load_history(hpath)
     except (OSError, ValueError, json.JSONDecodeError) as e:
         raise HistoryError(f"cannot read {hpath}: {e}") from e
+    if not hpath.exists():
+        history = {"bluedoc_history": history.pop("bluedoc_history"), "created": skill_version() or "unknown", **history}
     before = _canon(history)
     log = record(history, doc, doc_path, keep_screens=keep_screens, texts=texts)
     if log.startswith("ERROR"):
@@ -3169,9 +3294,10 @@ def scaffold_design(doc: dict, out: Path, targets: list[str], framework: str, ic
             except (OSError, ValueError, AttributeError):
                 label = framework
             board["frameworks"] = [{"id": framework, "label": label, "store": framework}]
-            item["choices"].insert(0, {"id": framework, "label": label})
+            item["choices"].insert(0, {"id": framework, "label": label, "md": f"The {label} files `serve.py add-framework` "
+                                       "installed: the screens use the project's own components and styles."})
         elif not any(c["id"] == framework for c in item["choices"]):
-            item["choices"].insert(0, {"id": framework, "label": BUILTIN_FRAMEWORKS[framework]})
+            item["choices"].insert(0, {"id": framework, "label": BUILTIN_FRAMEWORKS[framework], "md": FRAMEWORK_MD[framework]})
         board["framework"] = framework
         item["recommend"] = framework
         label = next(c["label"] for c in item["choices"] if c["id"] == framework)
@@ -3313,6 +3439,10 @@ def resolve_key(doc: dict, key: str) -> Target:
         cs = d.get("comments")
         i = _index(cs, parts[1], f"comment in diff '{parts[0]}':")
         return Target(cs[i], cs, i, "comment")
+    if kind == "ann" and len(parts) == 1:   # a reader's pin or general comment: its thread, doc.threads[<id>]
+        if not RESOLVES_ID.fullmatch(path):
+            raise PatchError(f"bad key '{key}': ann:<comment id>, as the reply Markdown shows it (e.g. ann:c1x2y3)")
+        return Target(None, None, path, "ann")
     if kind == "line":
         return _line(doc, key, path)
     if kind in ("artboard", "el") and parts:
@@ -3898,9 +4028,13 @@ def cmd_patch(argv: list[str]) -> int:
                     "the current folder's)")
     ap.add_argument("--paths", nargs="+", metavar="PATH", help="what the evidence covers: paths or globs from the repo "
                     "root (default: the whole repo; --pin keeps each entry's own)")
+    ap.add_argument("--reply", metavar="MD", help="item:<checklist>/<item> and ann:<comment id> keys: answer the reader's "
+                    "comment in its conversation: append {rev: the new meta.rev, md} to the item's `replies` (ann: to "
+                    "the doc's `threads[<id>]`); one per call, block Markdown")
     a = ap.parse_args(argv)
-    ops = bool(a.set or a.json is not None or a.append is not None or a.delete or a.html is not None or a.pin)
-    if a.delete and (a.set or a.json is not None or a.append is not None or a.html is not None or a.pin):
+    ops = bool(a.set or a.json is not None or a.append is not None or a.delete or a.html is not None or a.pin
+               or a.reply is not None)
+    if a.delete and (a.set or a.json is not None or a.append is not None or a.html is not None or a.pin or a.reply is not None):
         ap.error("--delete goes alone")
     try:
         raw = a.doc.read_text(encoding="utf-8")
@@ -3916,6 +4050,11 @@ def cmd_patch(argv: list[str]) -> int:
     except PatchError as e:
         print(f"patch: {e}", file=sys.stderr)
         return 2
+    if a.reply is not None and t.kind not in ("item", "ann"):
+        ap.error("--reply takes an item:<checklist>/<item> or ann:<comment id> key")
+    if t.kind == "ann" and (a.reply is None or a.set or a.json is not None or a.append is not None or a.html is not None
+                            or a.pin or a.repo or a.paths):
+        ap.error('an ann: key takes --reply "<answer>" (with --change, --resolves, --no-bump): the reply to that comment')
     on_screen = t.kind in ("artboard", "element", "link")
     if a.html is not None and t.kind not in ("artboard", "element"):
         ap.error("--html takes an artboard: or el: key")
@@ -4020,7 +4159,7 @@ def cmd_patch(argv: list[str]) -> int:
                 t.selector = f'[data-bd="{name}"]' if name else t.selector
         elif t.kind == "layout":
             set_positions(t.obj, _value(a.json))
-        elif t.kind not in ("link", "element"):
+        elif t.kind not in ("link", "element", "ann"):
             apply_patch(t, a.set, a.json, a.append, a.delete)
             if a.pin and t.kind not in ("step", "item"):
                 raise PatchError("--pin re-pins a step's or item's evidence: use a step: or item: key")
@@ -4033,6 +4172,18 @@ def cmd_patch(argv: list[str]) -> int:
         meta = doc.setdefault("meta", {})
         rev0 = str(meta.get("rev") or "")
         rev1 = rev0 if a.no_bump else next_rev(rev0)
+        if a.reply is not None:   # stamped with the rev this patch writes, so the page places it among the reader's messages
+            if not rev1:
+                raise PatchError("the doc has no meta.rev: a reply records the rev it was written in (drop --no-bump)")
+            if t.kind == "ann":
+                if not isinstance(doc.setdefault("threads", {}), dict):
+                    raise PatchError("doc.threads is not an object: {<comment id>: [{rev, md}]}")
+                into = doc["threads"].setdefault(t.key, [])
+            else:
+                into = t.obj.setdefault("replies", [])
+            if not isinstance(into, list):
+                raise PatchError(f"{a.key}: its replies are not a list of {{rev, md}}")
+            into.append({"rev": rev1, "md": a.reply})
     except PatchError as e:
         print(f"patch: {e}", file=sys.stderr)
         return 2
@@ -4045,6 +4196,7 @@ def cmd_patch(argv: list[str]) -> int:
     else:
         meta.update(rev=rev1, date=dt.date.today().isoformat())
         doc["changes"] = a.change or [f"Re-recorded the evidence of `{a.key}`." if a.pin and not (a.set or a.json or a.append)
+                                      else f"Replied on `{a.key}`." if a.reply is not None and not (a.set or a.json or a.append)
                                       else f"Updated `{a.key}`."]
         if resolves:
             doc["resolves"] = list(dict.fromkeys(resolves))
@@ -4109,7 +4261,9 @@ def cmd_patch(argv: list[str]) -> int:
                   f"the doc shows a placeholder for it from now on. Before editing the site for the next change, record "
                   f"the current rev: serve.py snapshot {shlex.quote(str(a.doc))} (sending feedback from the page records "
                   f"the pages it shows)", file=sys.stderr)
-    print(f"rev {rev0 or '-'} → {rev1}; {a.key} {'deleted' if a.delete else 'added' if t.kind == 'frame' else 'updated'}")
+    done = ("deleted" if a.delete else "added" if t.kind == "frame"
+            else "replied" if a.reply is not None and not (a.set or a.json is not None or a.append is not None) else "updated")
+    print(f"rev {rev0 or '-'} → {rev1}; {a.key} {done}")
     if pinned:
         p, n = pinned[0], len(pinned)
         what = f"{n} evidence entr{'y' if n == 1 else 'ies'}"

@@ -86,7 +86,7 @@
   {
    "rev": "2",
    "date": "2026-03-14",
-   "built": "2026-10-10T10:36:28+00:00",
+   "built": "2026-10-20T19:47:48+00:00",
    "head": {
     "id": "acme-review-findings-2026-03",
     "title": "Review findings: acme-shop #412 and #415",
@@ -153,7 +153,7 @@
      "title": "#412 · bulk discount tiers",
      "lead": "3 bugs this PR introduces, 1 test gap, 3 smaller comments. Diff: `main` `89efd8e` → head `62ccc86`, limited to the commented files.",
      "blocks": [
-      "dfa60c432210bf1e",
+      "fc77b74cb2f7a17c",
       "a14020c66391e741"
      ]
     },
@@ -162,7 +162,7 @@
      "title": "#415 · retry PayCo authorization",
      "lead": "1 bug this PR introduces, 1 behaviour gap, 2 smaller comments. Diff: `main` `89efd8e` → head `0a46a97`, limited to the two commented files.",
      "blocks": [
-      "b180154e8eb0a159",
+      "515f2be34dbe4293",
       "1159505000c89929"
      ]
     }
@@ -864,171 +864,6 @@
     ]
    ]
   },
-  "dfa60c432210bf1e": {
-   "type": "checklist",
-   "id": "t412",
-   "title": "Findings · #412",
-   "numbered": false,
-   "items": [
-    {
-     "id": "tier-boundary",
-     "text": "`tierFor` gives no tier at exactly 10 or 50 units",
-     "sub": "Recommend fix in PR: The spec says \"10 or more\"; `>` drops both thresholds. One character.",
-     "state": "blocker",
-     "stateKind": "risk",
-     "detail": "**Reviewer:** `TIERS.find((t) => qty > t.minQty)` excludes the threshold, so 10 units get no discount and 50 units get 5 % instead of 10 %.\n\n**My reasoning:** the file header (`src/pricing/tiers.ts:2`) quotes PRICING-88 as \"10 or more … 50 or more\". `lineTotal({qty: 10, unitCents: 100})` returns 1000, the undiscounted price. The fix is one character in a file this PR adds.\n\n**Fix:** `TIERS.find((t) => qty >= t.minQty)` at `src/pricing/tiers.ts:17`.\n\n**Verify:** `tierFor(10)?.percent === 5` and `tierFor(50)?.percent === 10` (the boundary tests below).",
-     "choices": [
-      {
-       "id": "fix",
-       "label": "Fix in PR"
-      },
-      {
-       "id": "ticket",
-       "label": "Ticket"
-      },
-      {
-       "id": "decline",
-       "label": "Decline"
-      }
-     ],
-     "recommend": "fix"
-    },
-    {
-     "id": "float-cents",
-     "text": "Tiered line totals are fractional cents",
-     "sub": "Recommend fix in PR: Without a coupon the fraction reaches VAT and the payment request.",
-     "state": "major",
-     "stateKind": "warn",
-     "detail": "**Reviewer:** `gross * (1 - tier.percent / 100)` returns 3163.5 for 3 × 1110 cents at 5 %.\n\n**My reasoning:** `applyCoupon` rounds only when a coupon is present (`src/pricing/discounts.ts:14`). Without one, the subtotal stays fractional and `addTax` rounds once more, so line and order totals can disagree by a cent. Every other money path in the repo uses integer cents (`docs/pricing.md:3`).\n\n**Fix:** `Math.round(gross * (100 - tier.percent) / 100)`, the form `applyCoupon` already uses.\n\n**Verify:** `Number.isInteger(lineTotal({qty: 3, unitCents: 1110}))`.",
-     "choices": [
-      {
-       "id": "fix",
-       "label": "Fix in PR"
-      },
-      {
-       "id": "ticket",
-       "label": "Ticket"
-      },
-      {
-       "id": "decline",
-       "label": "Decline"
-      }
-     ],
-     "recommend": "fix"
-    },
-    {
-     "id": "savings-coupon",
-     "text": "`bulkSavingsCents` also counts the coupon",
-     "sub": "Recommend fix in PR: A 15 % coupon would show on the receipt as a bulk saving.",
-     "state": "major",
-     "stateKind": "warn",
-     "detail": "**Reviewer:** savings are gross-with-tax minus the final total, so the coupon counts as a bulk saving.\n\n**My reasoning:** `src/orders/createOrder.ts:16` subtracts `totalCents`, which already includes the coupon. The field name promises the tier saving, so every caller will read it that way; with a coupon it isn't.\n\n**Fix:** `addTax(gross) - addTax(sum of lineTotal)`, before the coupon.\n\n**Verify:** a 20-unit order with a 15 % coupon reports savings equal to 5 % of gross plus VAT.",
-     "choices": [
-      {
-       "id": "fix",
-       "label": "Fix in PR"
-      },
-      {
-       "id": "ticket",
-       "label": "Ticket"
-      },
-      {
-       "id": "decline",
-       "label": "Decline"
-      }
-     ],
-     "recommend": "fix"
-    },
-    {
-     "id": "boundary-tests",
-     "text": "Tier tests stop short of both thresholds",
-     "sub": "Recommend fix in PR: The cases use 5 and 60 units, so they pass with the off-by-one.",
-     "state": "minor",
-     "stateKind": "info",
-     "detail": "**Reviewer:** the tests never touch a threshold.\n\n**My reasoning:** the three cases (`test/tiers.test.ts:5-15`) use 5 and 60 units. Neither sits on a threshold, so all three pass with the `>` bug present.\n\n**Fix:** four `it` cases in `test/tiers.test.ts`: 9 → none, 10 → 5 %, 49 → 5 %, 50 → 10 %.\n\n**Verify:** the 10 and 50 cases fail on the current head and pass after the `>=` fix.",
-     "choices": [
-      {
-       "id": "fix",
-       "label": "Fix in PR"
-      },
-      {
-       "id": "ticket",
-       "label": "Ticket"
-      },
-      {
-       "id": "decline",
-       "label": "Decline"
-      }
-     ],
-     "recommend": "fix"
-    },
-    {
-     "id": "docs-stale",
-     "text": "`docs/pricing.md` still says there are no bulk discounts",
-     "sub": "Recommend ticket: The pricing spec needs a tier step; the PR is right without it.",
-     "state": "minor",
-     "stateKind": "info",
-     "detail": "**Reviewer:** `docs/pricing.md:11` still says \"There are no bulk discounts\".\n\n**My reasoning:** the doc is the pricing spec for every flow, and its order of operations (lines 5-9) needs a tier step, which is a product decision for PRICING-88's owner. This PR doesn't touch the file, and the code is right without it.\n\n**Fix:** a ticket for the PRICING-88 owner: add tiers to the order of operations (sum lines, apply tiers, apply coupon, add VAT).\n\n**Reply I'd post:** \"Agreed; ticketed (PRICING-91) so the spec change gets its own review.\"",
-     "choices": [
-      {
-       "id": "fix",
-       "label": "Fix in PR"
-      },
-      {
-       "id": "ticket",
-       "label": "Ticket"
-      },
-      {
-       "id": "decline",
-       "label": "Decline"
-      }
-     ],
-     "recommend": "ticket"
-    },
-    {
-     "id": "tiers-map",
-     "text": "Turn `TIERS` into a `Map`",
-     "sub": "Recommend decline: It's a range lookup over 2 sorted tiers; a Map wouldn't remove the scan.",
-     "state": "nit",
-     "stateKind": "todo",
-     "detail": "**Reviewer:** a `Map` would make the lookup O(1).\n\n**My reasoning:** the lookup is a range match, not a key match: `tierFor(37)` needs the highest tier at or below 37, which a `Map` can't answer without the same scan. With 2 tiers the scan is free, and the array's order is the rule.\n\n**Reply I'd post:** \"Not taken: it's a range lookup over 2 sorted tiers, so a Map wouldn't remove the scan.\"",
-     "choices": [
-      {
-       "id": "fix",
-       "label": "Fix in PR"
-      },
-      {
-       "id": "ticket",
-       "label": "Ticket"
-      },
-      {
-       "id": "decline",
-       "label": "Decline"
-      }
-     ],
-     "recommend": "decline"
-    },
-    {
-     "id": "pr-claims",
-     "text": "PR description says every tier is tested",
-     "sub": "Recommend resolve after the tests: The boundary tests make the sentence true; nothing else to change.",
-     "state": "nit",
-     "stateKind": "todo",
-     "detail": "**Reviewer:** the description says \"tests cover every tier\"; only the 10 % tier has a positive test.\n\n**My reasoning:** with the boundary tests, every tier and both thresholds are covered, so the sentence becomes accurate.\n\n**Reply I'd post:** \"Covered by the boundary tests in <sha>.\"",
-     "choices": [
-      {
-       "id": "after",
-       "label": "Resolve after the tests"
-      },
-      {
-       "id": "fix",
-       "label": "Edit the description"
-      }
-     ],
-     "recommend": "after"
-    }
-   ]
-  },
   "a14020c66391e741": {
    "type": "diff",
    "id": "diff-412",
@@ -1103,6 +938,309 @@
     {
      "at": "src/orders/charge.ts:25",
      "item": "t415/backoff-const"
+    }
+   ]
+  },
+  "fc77b74cb2f7a17c": {
+   "type": "checklist",
+   "id": "t412",
+   "title": "Findings · #412",
+   "numbered": false,
+   "items": [
+    {
+     "id": "tier-boundary",
+     "text": "`tierFor` gives no tier at exactly 10 or 50 units",
+     "sub": "Recommend fix in PR: The spec says \"10 or more\"; `>` drops both thresholds. One character.",
+     "state": "blocker",
+     "stateKind": "risk",
+     "detail": "**Reviewer:** `TIERS.find((t) => qty > t.minQty)` excludes the threshold, so 10 units get no discount and 50 units get 5 % instead of 10 %.\n\n**My reasoning:** the file header (`src/pricing/tiers.ts:2`) quotes PRICING-88 as \"10 or more … 50 or more\". `lineTotal({qty: 10, unitCents: 100})` returns 1000, the undiscounted price. The fix is one character in a file this PR adds.\n\n**Fix:** `TIERS.find((t) => qty >= t.minQty)` at `src/pricing/tiers.ts:17`.\n\n**Verify:** `tierFor(10)?.percent === 5` and `tierFor(50)?.percent === 10` (the boundary tests below).",
+     "choices": [
+      {
+       "id": "fix",
+       "label": "Fix in PR",
+       "md": "Change `>` to `>=` in `tierFor` before #412 merges. One character, and 10 and 50 units get their discount."
+      },
+      {
+       "id": "ticket",
+       "label": "Ticket",
+       "md": "#412 merges with the bug: orders of exactly 10 or 50 units get the wrong discount until the ticket lands."
+      },
+      {
+       "id": "decline",
+       "label": "Decline",
+       "md": "Keep `>`. The code then contradicts PRICING-88's \"10 or more\"."
+      }
+     ],
+     "recommend": "fix"
+    },
+    {
+     "id": "float-cents",
+     "text": "Tiered line totals are fractional cents",
+     "sub": "Recommend fix in PR: Without a coupon the fraction reaches VAT and the payment request.",
+     "state": "major",
+     "stateKind": "warn",
+     "detail": "**Reviewer:** `gross * (1 - tier.percent / 100)` returns 3163.5 for 3 × 1110 cents at 5 %.\n\n**My reasoning:** `applyCoupon` rounds only when a coupon is present (`src/pricing/discounts.ts:14`). Without one, the subtotal stays fractional and `addTax` rounds once more, so line and order totals can disagree by a cent. Every other money path in the repo uses integer cents (`docs/pricing.md:3`).\n\n**Fix:** `Math.round(gross * (100 - tier.percent) / 100)`, the form `applyCoupon` already uses.\n\n**Verify:** `Number.isInteger(lineTotal({qty: 3, unitCents: 1110}))`.",
+     "choices": [
+      {
+       "id": "fix",
+       "label": "Fix in PR",
+       "md": "Round once with `Math.round`, as `applyCoupon` does. Line and order totals stay in whole cents."
+      },
+      {
+       "id": "ticket",
+       "label": "Ticket",
+       "md": "#412 merges as it is; a total without a coupon can be a cent off until the ticket lands."
+      },
+      {
+       "id": "decline",
+       "label": "Decline",
+       "md": "Keep fractional cents. VAT and the payment request then each round them their own way."
+      }
+     ],
+     "recommend": "fix"
+    },
+    {
+     "id": "savings-coupon",
+     "text": "`bulkSavingsCents` also counts the coupon",
+     "sub": "Recommend fix in PR: A 15 % coupon would show on the receipt as a bulk saving.",
+     "state": "major",
+     "stateKind": "warn",
+     "detail": "**Reviewer:** savings are gross-with-tax minus the final total, so the coupon counts as a bulk saving.\n\n**My reasoning:** `src/orders/createOrder.ts:16` subtracts `totalCents`, which already includes the coupon. The field name promises the tier saving, so every caller will read it that way; with a coupon it isn't.\n\n**Fix:** `addTax(gross) - addTax(sum of lineTotal)`, before the coupon.\n\n**Verify:** a 20-unit order with a 15 % coupon reports savings equal to 5 % of gross plus VAT.",
+     "choices": [
+      {
+       "id": "fix",
+       "label": "Fix in PR",
+       "md": "Compute the saving before the coupon. The receipt's bulk saving then shows only the tier discount."
+      },
+      {
+       "id": "ticket",
+       "label": "Ticket",
+       "md": "#412 merges as it is; a receipt with a coupon overstates the bulk saving until the ticket lands."
+      },
+      {
+       "id": "decline",
+       "label": "Decline",
+       "md": "Keep it: `bulkSavingsCents` then counts coupons as bulk savings."
+      }
+     ],
+     "recommend": "fix"
+    },
+    {
+     "id": "boundary-tests",
+     "text": "Tier tests stop short of both thresholds",
+     "sub": "Recommend fix in PR: The cases use 5 and 60 units, so they pass with the off-by-one.",
+     "state": "minor",
+     "stateKind": "info",
+     "detail": "**Reviewer:** the tests never touch a threshold.\n\n**My reasoning:** the three cases (`test/tiers.test.ts:5-15`) use 5 and 60 units. Neither sits on a threshold, so all three pass with the `>` bug present.\n\n**Fix:** four `it` cases in `test/tiers.test.ts`: 9 → none, 10 → 5 %, 49 → 5 %, 50 → 10 %.\n\n**Verify:** the 10 and 50 cases fail on the current head and pass after the `>=` fix.",
+     "choices": [
+      {
+       "id": "fix",
+       "label": "Fix in PR",
+       "md": "Add four cases at 9, 10, 49 and 50 units. They fail on today's head and pass after the `>=` fix."
+      },
+      {
+       "id": "ticket",
+       "label": "Ticket",
+       "md": "#412 merges with its tests as they are; nothing catches a regression at a threshold."
+      },
+      {
+       "id": "decline",
+       "label": "Decline",
+       "md": "Keep the 5 and 60 unit cases. They pass with the off-by-one."
+      }
+     ],
+     "recommend": "fix"
+    },
+    {
+     "id": "docs-stale",
+     "text": "`docs/pricing.md` still says there are no bulk discounts",
+     "sub": "Recommend ticket: The pricing spec needs a tier step; the PR is right without it.",
+     "state": "minor",
+     "stateKind": "info",
+     "detail": "**Reviewer:** `docs/pricing.md:11` still says \"There are no bulk discounts\".\n\n**My reasoning:** the doc is the pricing spec for every flow, and its order of operations (lines 5-9) needs a tier step, which is a product decision for PRICING-88's owner. This PR doesn't touch the file, and the code is right without it.\n\n**Fix:** a ticket for the PRICING-88 owner: add tiers to the order of operations (sum lines, apply tiers, apply coupon, add VAT).\n\n**Reply I'd post:** \"Agreed; ticketed (PRICING-91) so the spec change gets its own review.\"",
+     "choices": [
+      {
+       "id": "fix",
+       "label": "Fix in PR",
+       "md": "Edit `docs/pricing.md` in #412. The PR then settles the spec's order of operations without the PRICING-88 owner."
+      },
+      {
+       "id": "ticket",
+       "label": "Ticket",
+       "md": "A ticket asks the PRICING-88 owner to add tiers to the spec. #412 merges without waiting for it."
+      },
+      {
+       "id": "decline",
+       "label": "Decline",
+       "md": "No change: the spec keeps saying there are no bulk discounts."
+      }
+     ],
+     "recommend": "ticket",
+     "replies": [
+      {
+       "rev": "2",
+       "md": "Moved to a ticket: the spec's order of operations is the PRICING-88 owner's call, so #412 shouldn't settle it. PRICING-91 asks them to add the tier step."
+      }
+     ]
+    },
+    {
+     "id": "tiers-map",
+     "text": "Turn `TIERS` into a `Map`",
+     "sub": "Recommend decline: It's a range lookup over 2 sorted tiers; a Map wouldn't remove the scan.",
+     "state": "nit",
+     "stateKind": "todo",
+     "detail": "**Reviewer:** a `Map` would make the lookup O(1).\n\n**My reasoning:** the lookup is a range match, not a key match: `tierFor(37)` needs the highest tier at or below 37, which a `Map` can't answer without the same scan. With 2 tiers the scan is free, and the array's order is the rule.\n\n**Reply I'd post:** \"Not taken: it's a range lookup over 2 sorted tiers, so a Map wouldn't remove the scan.\"",
+     "choices": [
+      {
+       "id": "fix",
+       "label": "Fix in PR",
+       "md": "Turn `TIERS` into a `Map`. The lookup is a range match, so it still scans."
+      },
+      {
+       "id": "ticket",
+       "label": "Ticket",
+       "md": "Track it for later. With 2 tiers there is nothing to gain."
+      },
+      {
+       "id": "decline",
+       "label": "Decline",
+       "md": "Keep the sorted array; the reply tells the reviewer why a `Map` wouldn't help."
+      }
+     ],
+     "recommend": "decline"
+    },
+    {
+     "id": "pr-claims",
+     "text": "PR description says every tier is tested",
+     "sub": "Recommend resolve after the tests: The boundary tests make the sentence true; nothing else to change.",
+     "state": "nit",
+     "stateKind": "todo",
+     "detail": "**Reviewer:** the description says \"tests cover every tier\"; only the 10 % tier has a positive test.\n\n**My reasoning:** with the boundary tests, every tier and both thresholds are covered, so the sentence becomes accurate.\n\n**Reply I'd post:** \"Covered by the boundary tests in <sha>.\"",
+     "choices": [
+      {
+       "id": "after",
+       "label": "Resolve after the tests",
+       "md": "Resolve it once the boundary tests land: the sentence is then true. Nothing else changes."
+      },
+      {
+       "id": "fix",
+       "label": "Edit the description",
+       "md": "Say what the tests cover now, and edit it again after the boundary tests."
+      }
+     ],
+     "recommend": "after"
+    }
+   ]
+  },
+  "515f2be34dbe4293": {
+   "type": "checklist",
+   "id": "t415",
+   "title": "Findings · #415",
+   "numbered": false,
+   "items": [
+    {
+     "id": "double-auth",
+     "text": "A retry can authorize the card twice",
+     "sub": "Recommend fix in PR: A timeout after PayCo accepted the call becomes a second authorization.",
+     "state": "blocker",
+     "stateKind": "risk",
+     "detail": "**Reviewer:** the retry re-POSTs `/v2/authorizations` with no idempotency key. If the first call succeeds but the response times out, the retry authorizes the card again.\n\n**My reasoning:** `src/orders/charge.ts:17-21` sends only amount, currency and reference; `src/payments/paycoClient.ts` sets no default header. The 10 s client timeout makes \"accepted but timed out\" a realistic case. *Unverified:* that PayCo deduplicates on `Idempotency-Key`; their public docs say so, but I haven't seen it in the sandbox.\n\n**Fix:** pass `{ headers: { \"Idempotency-Key\": orderId } }` as the third argument to `payco.post`.\n\n**Verify (required):** in the PayCo sandbox, two calls with the same key return the same authorization id; the unit test asserts both attempts carry the same key.",
+     "choices": [
+      {
+       "id": "fix",
+       "label": "Fix in PR",
+       "md": "Send an `Idempotency-Key` with each charge before #415 merges. A retried call can't authorize the card twice."
+      },
+      {
+       "id": "ticket",
+       "label": "Ticket",
+       "md": "#415 merges with the risk: a timeout after PayCo accepts becomes a second authorization."
+      },
+      {
+       "id": "decline",
+       "label": "Decline",
+       "md": "Keep retrying without a key. Double authorizations stay possible."
+      }
+     ],
+     "recommend": "fix"
+    },
+    {
+     "id": "retry-4xx",
+     "text": "Card declines are retried too",
+     "sub": "Recommend fix in PR: The doc comment says network errors and 5xx; the `catch` retries everything.",
+     "state": "major",
+     "stateKind": "warn",
+     "detail": "**Reviewer:** a 402 decline is retried twice more, adding 750 ms before the customer sees it.\n\n**My reasoning:** the comment at `src/orders/charge.ts:12` promises \"network errors and 5xx\"; the `catch` at line 23 doesn't look at the status.\n\n**Fix:** in the `catch`, rethrow when `err.response?.status` is below 500.\n\n**Verify:** a test where the first call rejects with status 402 expects one call and a thrown error.",
+     "choices": [
+      {
+       "id": "fix",
+       "label": "Fix in PR",
+       "md": "Retry only network errors and 5xx, as the doc comment says. A declined card fails at once."
+      },
+      {
+       "id": "ticket",
+       "label": "Ticket",
+       "md": "#415 merges as it is; every decline waits 750 ms more until the ticket lands."
+      },
+      {
+       "id": "decline",
+       "label": "Decline",
+       "md": "Keep retrying declines. The doc comment is then wrong."
+      }
+     ],
+     "recommend": "fix"
+    },
+    {
+     "id": "latency",
+     "text": "Worst case blocks checkout for 31.5 s",
+     "sub": "Recommend ticket: Real, but the timeout budget is a checkout decision, not this PR's.",
+     "state": "minor",
+     "stateKind": "info",
+     "detail": "**Reviewer:** 3 attempts × 10 s timeout plus backoff is 31.5 s worst case, past checkout's 15 s gateway timeout.\n\n**My reasoning:** `src/payments/paycoClient.ts:5` sets 10 s for every PayCo call, including refunds. Lowering it here changes those too. The fix needs a budget from the checkout owners: per-attempt timeout, attempts, and what the customer sees when it runs out.\n\n**Reply I'd post:** \"Agreed it's too long; ticketed (PAY-34) so checkout can set the budget.\"",
+     "choices": [
+      {
+       "id": "fix",
+       "label": "Fix in PR",
+       "md": "Lower the timeout in #415. Refunds use the same client, so their timeout drops too."
+      },
+      {
+       "id": "ticket",
+       "label": "Ticket",
+       "md": "A ticket asks checkout to set the timeout budget. #415 merges with the 31.5 s worst case."
+      },
+      {
+       "id": "decline",
+       "label": "Decline",
+       "md": "Keep the 10 s timeout and three attempts."
+      }
+     ],
+     "recommend": "ticket"
+    },
+    {
+     "id": "backoff-const",
+     "text": "Name the 250 ms backoff",
+     "sub": "Recommend decline: Used once, inside the loop it controls.",
+     "state": "nit",
+     "stateKind": "todo",
+     "detail": "**Reviewer:** `250 * attempt` is a magic number; make it a constant.\n\n**My reasoning:** the number appears once, inside the retry loop it controls (`src/orders/charge.ts:25`), and nothing else reads it. A constant would move it away from the only place it means anything.\n\n**Reply I'd post:** \"Not taken: it's used once, inside the loop it controls.\"",
+     "choices": [
+      {
+       "id": "fix",
+       "label": "Fix in PR",
+       "md": "Move `250` into a named constant, away from the loop that uses it."
+      },
+      {
+       "id": "ticket",
+       "label": "Ticket",
+       "md": "Track it for later. Nothing else reads the number."
+      },
+      {
+       "id": "decline",
+       "label": "Decline",
+       "md": "Keep `250 * attempt` in the loop it controls; the reply tells the reviewer why."
+      }
+     ],
+     "recommend": "decline"
     }
    ]
   }

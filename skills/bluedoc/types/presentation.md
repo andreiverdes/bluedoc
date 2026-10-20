@@ -15,7 +15,7 @@ This writes the brief, a board of three slides (`title`, `content`, `closing`) a
 | Section | Holds |
 |---|---|
 | Goal (`tldr`) | What the deck says, in how many slides, and which picks the reader makes. |
-| Brief (`brief`) | A `text` block: audience, where they see it, the story in order. The checklist `brief` (`numbered: false`): `framework` (recommend `plain`), `theme` (ids = `themes[].id`), any open question. |
+| Brief (`brief`) | A `text` block: audience, where they see it, the story in order. The checklist `brief` (`numbered: false`): `framework` (recommend `plain`), `theme` (ids = `themes[].id`), any open question. Every option's `md` says in 1–3 sentences how the slides come out with it and what it costs; the build fails without it. |
 | Slides | One `board` block: `targets: ["presentation"]`, `framework`, `themes`, `artboards`. |
 
 ## Slides

@@ -119,10 +119,10 @@
               "sub": "Recommend <<option>>: <<reason>>.",
               "recommend": "option-a",
               "choices": [
-                { "id": "option-a", "label": "<<Option A>>" },
-                { "id": "option-b", "label": "<<Option B>>" }
+                { "id": "option-a", "label": "<<Option A>>", "md": "<<What picking it means and what it costs, in 1 to 3 sentences.>>" },
+                { "id": "option-b", "label": "<<Option B>>", "md": "<<What picking it means and what it costs, in 1 to 3 sentences.>>" }
               ],
-              "detail": "<<What each option costs and what it changes in the plan.>>"
+              "detail": "<<The evidence behind the recommendation: numbers, sources, what you checked.>>"
             }
           ]
         }

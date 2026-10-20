@@ -159,15 +159,18 @@
               "choices": [
                 {
                   "id": "fix",
-                  "label": "Fix in PR"
+                  "label": "Fix in PR",
+                  "md": "Change `>` to `>=` in `tierFor` before #412 merges. One character, and 10 and 50 units get their discount."
                 },
                 {
                   "id": "ticket",
-                  "label": "Ticket"
+                  "label": "Ticket",
+                  "md": "#412 merges with the bug: orders of exactly 10 or 50 units get the wrong discount until the ticket lands."
                 },
                 {
                   "id": "decline",
-                  "label": "Decline"
+                  "label": "Decline",
+                  "md": "Keep `>`. The code then contradicts PRICING-88's \"10 or more\"."
                 }
               ],
               "recommend": "fix"
@@ -182,15 +185,18 @@
               "choices": [
                 {
                   "id": "fix",
-                  "label": "Fix in PR"
+                  "label": "Fix in PR",
+                  "md": "Round once with `Math.round`, as `applyCoupon` does. Line and order totals stay in whole cents."
                 },
                 {
                   "id": "ticket",
-                  "label": "Ticket"
+                  "label": "Ticket",
+                  "md": "#412 merges as it is; a total without a coupon can be a cent off until the ticket lands."
                 },
                 {
                   "id": "decline",
-                  "label": "Decline"
+                  "label": "Decline",
+                  "md": "Keep fractional cents. VAT and the payment request then each round them their own way."
                 }
               ],
               "recommend": "fix"
@@ -205,15 +211,18 @@
               "choices": [
                 {
                   "id": "fix",
-                  "label": "Fix in PR"
+                  "label": "Fix in PR",
+                  "md": "Compute the saving before the coupon. The receipt's bulk saving then shows only the tier discount."
                 },
                 {
                   "id": "ticket",
-                  "label": "Ticket"
+                  "label": "Ticket",
+                  "md": "#412 merges as it is; a receipt with a coupon overstates the bulk saving until the ticket lands."
                 },
                 {
                   "id": "decline",
-                  "label": "Decline"
+                  "label": "Decline",
+                  "md": "Keep it: `bulkSavingsCents` then counts coupons as bulk savings."
                 }
               ],
               "recommend": "fix"
@@ -228,15 +237,18 @@
               "choices": [
                 {
                   "id": "fix",
-                  "label": "Fix in PR"
+                  "label": "Fix in PR",
+                  "md": "Add four cases at 9, 10, 49 and 50 units. They fail on today's head and pass after the `>=` fix."
                 },
                 {
                   "id": "ticket",
-                  "label": "Ticket"
+                  "label": "Ticket",
+                  "md": "#412 merges with its tests as they are; nothing catches a regression at a threshold."
                 },
                 {
                   "id": "decline",
-                  "label": "Decline"
+                  "label": "Decline",
+                  "md": "Keep the 5 and 60 unit cases. They pass with the off-by-one."
                 }
               ],
               "recommend": "fix"
@@ -251,18 +263,27 @@
               "choices": [
                 {
                   "id": "fix",
-                  "label": "Fix in PR"
+                  "label": "Fix in PR",
+                  "md": "Edit `docs/pricing.md` in #412. The PR then settles the spec's order of operations without the PRICING-88 owner."
                 },
                 {
                   "id": "ticket",
-                  "label": "Ticket"
+                  "label": "Ticket",
+                  "md": "A ticket asks the PRICING-88 owner to add tiers to the spec. #412 merges without waiting for it."
                 },
                 {
                   "id": "decline",
-                  "label": "Decline"
+                  "label": "Decline",
+                  "md": "No change: the spec keeps saying there are no bulk discounts."
                 }
               ],
-              "recommend": "ticket"
+              "recommend": "ticket",
+              "replies": [
+                {
+                  "rev": "2",
+                  "md": "Moved to a ticket: the spec's order of operations is the PRICING-88 owner's call, so #412 shouldn't settle it. PRICING-91 asks them to add the tier step."
+                }
+              ]
             },
             {
               "id": "tiers-map",
@@ -274,15 +295,18 @@
               "choices": [
                 {
                   "id": "fix",
-                  "label": "Fix in PR"
+                  "label": "Fix in PR",
+                  "md": "Turn `TIERS` into a `Map`. The lookup is a range match, so it still scans."
                 },
                 {
                   "id": "ticket",
-                  "label": "Ticket"
+                  "label": "Ticket",
+                  "md": "Track it for later. With 2 tiers there is nothing to gain."
                 },
                 {
                   "id": "decline",
-                  "label": "Decline"
+                  "label": "Decline",
+                  "md": "Keep the sorted array; the reply tells the reviewer why a `Map` wouldn't help."
                 }
               ],
               "recommend": "decline"
@@ -297,11 +321,13 @@
               "choices": [
                 {
                   "id": "after",
-                  "label": "Resolve after the tests"
+                  "label": "Resolve after the tests",
+                  "md": "Resolve it once the boundary tests land: the sentence is then true. Nothing else changes."
                 },
                 {
                   "id": "fix",
-                  "label": "Edit the description"
+                  "label": "Edit the description",
+                  "md": "Say what the tests cover now, and edit it again after the boundary tests."
                 }
               ],
               "recommend": "after"
@@ -376,15 +402,18 @@
               "choices": [
                 {
                   "id": "fix",
-                  "label": "Fix in PR"
+                  "label": "Fix in PR",
+                  "md": "Send an `Idempotency-Key` with each charge before #415 merges. A retried call can't authorize the card twice."
                 },
                 {
                   "id": "ticket",
-                  "label": "Ticket"
+                  "label": "Ticket",
+                  "md": "#415 merges with the risk: a timeout after PayCo accepts becomes a second authorization."
                 },
                 {
                   "id": "decline",
-                  "label": "Decline"
+                  "label": "Decline",
+                  "md": "Keep retrying without a key. Double authorizations stay possible."
                 }
               ],
               "recommend": "fix"
@@ -399,15 +428,18 @@
               "choices": [
                 {
                   "id": "fix",
-                  "label": "Fix in PR"
+                  "label": "Fix in PR",
+                  "md": "Retry only network errors and 5xx, as the doc comment says. A declined card fails at once."
                 },
                 {
                   "id": "ticket",
-                  "label": "Ticket"
+                  "label": "Ticket",
+                  "md": "#415 merges as it is; every decline waits 750 ms more until the ticket lands."
                 },
                 {
                   "id": "decline",
-                  "label": "Decline"
+                  "label": "Decline",
+                  "md": "Keep retrying declines. The doc comment is then wrong."
                 }
               ],
               "recommend": "fix"
@@ -422,15 +454,18 @@
               "choices": [
                 {
                   "id": "fix",
-                  "label": "Fix in PR"
+                  "label": "Fix in PR",
+                  "md": "Lower the timeout in #415. Refunds use the same client, so their timeout drops too."
                 },
                 {
                   "id": "ticket",
-                  "label": "Ticket"
+                  "label": "Ticket",
+                  "md": "A ticket asks checkout to set the timeout budget. #415 merges with the 31.5 s worst case."
                 },
                 {
                   "id": "decline",
-                  "label": "Decline"
+                  "label": "Decline",
+                  "md": "Keep the 10 s timeout and three attempts."
                 }
               ],
               "recommend": "ticket"
@@ -445,15 +480,18 @@
               "choices": [
                 {
                   "id": "fix",
-                  "label": "Fix in PR"
+                  "label": "Fix in PR",
+                  "md": "Move `250` into a named constant, away from the loop that uses it."
                 },
                 {
                   "id": "ticket",
-                  "label": "Ticket"
+                  "label": "Ticket",
+                  "md": "Track it for later. Nothing else reads the number."
                 },
                 {
                   "id": "decline",
-                  "label": "Decline"
+                  "label": "Decline",
+                  "md": "Keep `250 * attempt` in the loop it controls; the reply tells the reviewer why."
                 }
               ],
               "recommend": "decline"

@@ -79,7 +79,7 @@
   {
    "rev": "2",
    "date": "2026-10-12",
-   "built": "2026-10-17T13:42:35+00:00",
+   "built": "2026-10-20T19:47:47+00:00",
    "head": {
     "id": "acme-status",
     "title": "Acme shop status, week 41",
@@ -148,7 +148,7 @@
      "title": "Next week",
      "lead": "Two releases are planned and one decision is open.",
      "blocks": [
-      "683cef11715f6e54",
+      "a59c22e6caa52370",
       "48f99161266b44fc"
      ]
     }
@@ -304,6 +304,38 @@
        }
       }
      ]
+    }
+   ]
+  },
+  "a59c22e6caa52370": {
+   "type": "checklist",
+   "id": "decide",
+   "title": "Open decision",
+   "numbered": false,
+   "items": [
+    {
+     "id": "saved-carts",
+     "text": "When does the saved carts rollout start?",
+     "sub": "Recommend 19 October: the plan is approved and the migration is ready.",
+     "recommend": "oct19",
+     "choices": [
+      {
+       "id": "oct19",
+       "label": "19 October",
+       "md": "Starts next Monday. Leaves two weeks of real use before the November sale freeze."
+      },
+      {
+       "id": "oct26",
+       "label": "26 October",
+       "md": "One more week on staging. Leaves one week before the freeze to fix what the rollout finds."
+      },
+      {
+       "id": "after-sale",
+       "label": "After the November sale",
+       "md": "No risk to the sale. Business customers can't save a cart until the sale ends."
+      }
+     ],
+     "detail": "The table migration takes no lock on `carts`. Starting on 26 October leaves one week before the November sale freeze."
     }
    ]
   }
