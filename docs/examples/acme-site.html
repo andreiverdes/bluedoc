@@ -241,6 +241,11 @@ button.bd-emo:hover, button.bd-emo[aria-expanded="true"] { background: var(--sel
 .bd-revbar .k { margin-left: 6px; font-weight: 600; }
 .bd-revbar .k.add { color: var(--ok-fg); } .bd-revbar .k.mod { color: var(--warn-fg); } .bd-revbar .k.del { color: var(--risk-fg); }
 .bd-revbar .bp-btn { height: 28px; }
+/* the compare view's keys, docked at the strip's end: ↑ n of N ↓, then Done */
+.bd-revbar .bd-revtb { display: flex; align-items: center; gap: 4px; margin-left: auto; }
+.bd-revbar .bd-key { width: 30px; height: 30px; border-radius: 9px; }
+.bd-revbar .bd-key.txt { width: auto; font-size: 12.5px; }
+.bd-revbar .bd-groove { height: 20px; }
 .bd-revbar.bd-lockbar { position: static; }
 .bd-lockbar code { font: 500 12.5px var(--mono); }
 .rv-sel { height: 32px; border: 0; border-radius: 9px; padding: 0 8px; font: 500 12.5px var(--sans); color: var(--fg); background: var(--inset); box-shadow: inset 0 0 0 1px var(--line); }
@@ -282,7 +287,7 @@ td.bd-cell-mod { background: color-mix(in oklch, var(--warn-tint) 70%, transpare
 .bp-node.chg-mod { filter: drop-shadow(0 0 5px #f5b544) drop-shadow(0 0 2px #f5b544); }
 @media (max-width: 900px) { .bd-rev-btn .l { display: none; } .bd-rev-btn { padding: 0 8px; } }
 @media (max-width: 600px) { .bd-revbar .in { padding: 6px 12px; gap: 2px 6px; font-size: 13px; } .bd-revbar .in > .bd-ic { display: none; } .bd-revbar .t { flex: 1 1 100%; } }
-@media print { .bd-revbar .bd-ibtn, .bd-revbar .bp-btn, .bd-rev-btn { display: none !important; } .bd-revbar { position: static; } }
+@media print { .bd-revbar .bd-ibtn, .bd-revbar .bp-btn, .bd-revbar .bd-revtb, .bd-rev-btn { display: none !important; } .bd-revbar { position: static; } }
 /* the reader's comment on an item: a draft until Save (⌘/Ctrl+Enter); Cancel (Esc) restores the saved text */
 .bp-note { display: flex; align-items: flex-start; gap: 8px; }
 .bp-note > .bd-ic { flex: none; width: 15px; height: 15px; margin-top: 8px; color: var(--fg-subtle); }
@@ -798,7 +803,7 @@ html.bd-tray-on .bd-shell { padding-bottom: 150px; }
 html.bd-tray-on { --tray-room: 64px; }   /* the rail and its drawer end above the tray */
 html.bd-tray-on .bp-toast { bottom: 84px; }
 @media (max-width: 600px) { html.bd-tray-on .bp-toast { bottom: 70px; } }
-/* the revision tray (compare view, earlier revisions): what is shown, ↑ n of N ↓, and the way out */
+/* the revision trays: an earlier revision's at the bottom; the compare view's keys docked in its strip at the top (↑ n of N ↓, Done) */
 .bd-revtb .lbl { display: inline-flex; align-items: center; gap: 7px; padding: 0 6px 0 8px; font-size: 13px; color: var(--fg-muted); white-space: nowrap; }
 .bd-revtb .lbl b { font: 650 13px var(--mono); color: var(--fg); }
 .bd-revtb .lbl .bd-ic { width: 16px; height: 16px; color: var(--fg-subtle); }
@@ -10598,7 +10603,7 @@ function compareDiff(o, n) {
 
 /* ---------- trays of keys and their tooltips (the annotation tray, the compare tray) ---------- */
 // tooltips: HorizonUI Tooltip with Kbd chips; instant while the pointer moves from key to key.
-// Above the key, or below it when there is no room (the app bar).
+// Above the key, or below it in the strips at the top or when there is no room (the app bar).
 const tip = h('div', { class: 'bd-tip', role: 'tooltip', hidden: true });
 const kbd = k => h('kbd', { class: 'bd-kbd' }, k);
 let tipT = 0, tipWarm = -1e9;
@@ -10611,7 +10616,7 @@ function showTip(el) {
     tip.hidden = false;
     const r = el.getBoundingClientRect(), w = tip.offsetWidth, th = tip.offsetHeight;
     tip.style.left = Math.round(clamp(r.left + r.width / 2 - w / 2, 8, root.clientWidth - w - 8)) + 'px';
-    tip.style.top = Math.round(r.top - th - 10 < 8 ? r.bottom + 10 : r.top - th - 10) + 'px';
+    tip.style.top = Math.round(r.top - th - 10 < 8 || el.closest('.bd-revbar') ? r.bottom + 10 : r.top - th - 10) + 'px';
   }, performance.now() - tipWarm < 400 ? 0 : 450);
 }
 function tipped(el, keys) {
@@ -10852,8 +10857,8 @@ if (REVS.length >= 1 && REVS[0].rev) {
   if (revDd) { const dd = revDd.nextElementSibling; dd.textContent = ''; dd.append(h('button', { type: 'button', class: 'bd-rev-link', 'aria-controls': 'bd-sp', onclick: revealRevs }, `${VIEW.rev} of ${REVS.length}`)); }
   if (OLD) document.title = `${revName(VIEW)} · ${document.title}`;
   const strip = (cls, ...kids) => { const s = h('div', { class: 'bd-revbar ' + cls, role: 'region', 'aria-label': 'Revision' }, h('div', { class: 'in' }, kids)); document.querySelector('.bd-bar').after(s); return s; };
-  // compare view and earlier revisions get their own tray of keys at the bottom, where the annotation
-  // tray is on the current revision: the one place to step through changes and to leave
+  // an earlier revision gets its own tray of keys at the bottom, where the annotation tray is on the current
+  // revision; the compare view docks its keys in the strip at the top: the one place to step through changes and to leave
   const tray = (label, ...kids) => { document.body.append(h('div', { class: 'bd-anntb bd-revtb', role: 'toolbar', 'aria-label': label }, kids)); root.classList.add('bd-tray-on'); };
   const textKey = (cls, icon, text, tipText, keys, href) => { const k = tipped(h('button', { type: 'button', class: 'bd-key txt ' + cls, 'aria-label': text, onclick: () => { location.href = href; } }, icon && ic(icon), h('span', { class: 't' }, text)), keys); k._tip = tipText; return k; };
   if (BASE) {
@@ -10866,15 +10871,15 @@ if (REVS.length >= 1 && REVS[0].rev) {
     compareDocs(BASE.doc, VIEW.doc);
     const n = { add: 0, mod: 0, del: 0 }; CHG.forEach(c => n[c.kind]++);
     revPos = h('span', { class: 'pos', 'aria-live': 'polite' }, CHG.length === 1 ? '1 change' : `${CHG.length} changes`);
-    strip('cmp', ic('split'), h('span', { class: 't' }, h('b', {}, `${revName(BASE)} → ${VIEW.rev}`), ': ',
-      CHG.length ? [n.add > 0 && h('span', { class: 'k add' }, `${n.add} new`), n.mod > 0 && h('span', { class: 'k mod' }, `${n.mod} changed`), n.del > 0 && h('span', { class: 'k del' }, `${n.del} removed`)] : 'no differences'));
     const step = (icon, label, d, keys) => { const k = tipped(keyBtn('', icon, label, { disabled: !CHG.length }, () => gotoChg(d)), keys); k._tip = label; return k; };
     const doneUrl = revUrl(VIEW, null);
     // a website's pages: Side by side or Single, beside the change keys
     const twinKeys = BOARD && BOARD.twinSeg ? [BOARD.twinSeg, groove()] : [];
-    tray('Compare revisions', h('span', { class: 'lbl' }, ic('split'), h('b', {}, `${revName(BASE)} → ${VIEW.rev}`)),
-      step('up', 'Previous change', -1, ['K', '↑']), revPos, step('down', 'Next change', 1, ['J', '↓']), groove(), twinKeys,
-      textKey('go', null, 'Done', 'Leave compare view', ['Esc'], doneUrl));
+    strip('cmp', ic('split'), h('span', { class: 't' }, h('b', {}, `${revName(BASE)} → ${VIEW.rev}`), ': ',
+      CHG.length ? [n.add > 0 && h('span', { class: 'k add' }, `${n.add} new`), n.mod > 0 && h('span', { class: 'k mod' }, `${n.mod} changed`), n.del > 0 && h('span', { class: 'k del' }, `${n.del} removed`)] : 'no differences'),
+      h('div', { class: 'bd-revtb', role: 'toolbar', 'aria-label': 'Compare revisions' },
+        step('up', 'Previous change', -1, ['K', '↑']), revPos, step('down', 'Next change', 1, ['J', '↓']), groove(), twinKeys,
+        textKey('go', null, 'Done', 'Leave compare view', ['Esc'], doneUrl)));
     // Esc leaves; j/↓ and k/↑ step, unless typing, on a focused drawing, or a drawer or sheet is open (Esc closes that first)
     document.addEventListener('keydown', e => {
       if (e.defaultPrevented || e.isComposing || e.metaKey || e.ctrlKey || e.altKey || document.querySelector('dialog[open]')) return;
