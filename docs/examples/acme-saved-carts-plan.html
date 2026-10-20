@@ -5125,8 +5125,7 @@ function paneShown(d) {
 /* ======================================================================
    Blueprint canvas: pan/zoom, semantic zoom into children, animated flows
    ====================================================================== */
-const DEF_W = 180, DEF_H = 80, SYS_W = 240, SYS_H = 140, COL_W = 250, ROW_H = 160;
-const HEAD = 7, PAD = 5;
+// a canvas's geometry (node sizes, the col/row layout, a system's frame, routes) is board-geo.js's: BoardGeo.canvas*
 const REVEAL_A = 0.40, REVEAL_B = 0.72;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const ease = p => p < .5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
@@ -5175,58 +5174,20 @@ const STATE_COLORS = { live: 'var(--bp-green)', local: 'var(--bp-cyan)', propose
 function prepScope(scope, parentPath) {
   scope.nodes = scope.nodes || []; scope.edges = scope.edges || []; scope.flows = scope.flows || [];
   scope._byId = {};
-  for (const n of scope.nodes) {
+  const at = BoardGeo.canvasLayout(scope);
+  scope.nodes.forEach((n, k) => {
     const sys = !!(n.children && n.children.nodes && n.children.nodes.length);
-    n.w = n.w || (sys ? SYS_W : DEF_W); n.h = n.h || (sys ? SYS_H : DEF_H);
-    const cx = n.x != null ? n.x : (n.col || 0) * COL_W;
-    const cy = n.y != null ? n.y : (n.row || 0) * ROW_H;
-    n._l = cx - n.w / 2; n._t = cy - n.h / 2;
+    n.w = at[k].w; n.h = at[k].h; n._l = at[k].x; n._t = at[k].y;
     n._path = parentPath.concat(n.id);
     n._sys = sys;
     scope._byId[n.id] = n;
     if (sys) prepScope(n.children, n._path);
-  }
-  const b = boundsOf(scope.nodes);
-  scope._bounds = b;
+  });
+  scope._bounds = BoardGeo.canvasBounds(at);
 }
-function boundsOf(nodes) {
-  if (!nodes.length) return { x: 0, y: 0, w: 1, h: 1 };
-  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-  for (const n of nodes) { x0 = Math.min(x0, n._l); y0 = Math.min(y0, n._t); x1 = Math.max(x1, n._l + n.w); y1 = Math.max(y1, n._t + n.h); }
-  return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
-}
-// the room kept between a system's children and its frame, per side, in the children's units: 36, and where an edge
-// with a label ends on that side's frame port, enough for the label on the line between the frame and the node
-function frameRoom(scope) {
-  const room = { l: 36, r: 36, t: 36, b: 36 }, side = { '@left': 'l', '@right': 'r', '@top': 't', '@bottom': 'b' };
-  for (const e of scope.edges) for (const end of [e.from, e.to]) {
-    const s = side[end];
-    if (s && e.label) room[s] = Math.max(room[s], (s === 'l' || s === 'r' ? edgeLabelW(e.label) : 18) + 24);
-  }
-  return room;
-}
-function innerFit(n) {
-  const B = n.children._bounds, room = frameRoom(n.children);
-  const bx = B.x - room.l, by = B.y - room.t, bw = B.w + room.l + room.r, bh = B.h + room.t + room.b;
-  const aw = n.w - 2 * PAD, ah = n.h - HEAD - 2 * PAD;
-  const s = Math.min(aw / bw, ah / bh);
-  const tx = PAD + (aw - bw * s) / 2 - bx * s;
-  const ty = HEAD + PAD + (ah - bh * s) / 2 - by * s;
-  return { s, tx, ty };
-}
-// a system's frame, in its inner scope's coordinates, and its ports (@left, @right, @top, @bottom): each a side of
-// the frame (no area: an end for the router, not an obstacle) that edges cross square, spread along it
-function frameOf(n) {
-  const f = n._inner, X0 = (0 - f.tx) / f.s, X1 = (n.w - f.tx) / f.s, Y0 = (HEAD - f.ty) / f.s, Y1 = (n.h - f.ty) / f.s;
-  return { bounds: { x: X0, y: Y0, w: X1 - X0, h: Y1 - Y0 },
-    ports: { '@left': { x: X0, y: Y0, w: 0, h: Y1 - Y0 }, '@right': { x: X1, y: Y0, w: 0, h: Y1 - Y0 },
-      '@top': { x: X0, y: Y0, w: X1 - X0, h: 0 }, '@bottom': { x: X0, y: Y1, w: X1 - X0, h: 0 } } };
-}
-// the side of a frame port an edge crosses, facing into the frame
-const PORT_SIDE = { '@left': 'r', '@right': 'l', '@top': 'b', '@bottom': 't' };
-// a canvas's routing: the clearance edges keep around nodes, in canvas units; an edge label's width
-const CANVAS_PAD = 16;
-const edgeLabelW = t => t.length * 5.9 + 14;
+// a system's inner drawing scaled into its box, and its frame and ports in the inner scope's units
+const innerFit = n => BoardGeo.canvasFit(n.w, n.h, n.children._bounds, BoardGeo.canvasRoom(n.children));
+const frameOf = n => BoardGeo.canvasFrame(n.w, n.h, n._inner);
 
 /* ---------- pan and zoom: the blueprint canvas and the design board share it ---------- */
 // `v` is the view ({k, tx, ty}: the content drawn at tx,ty scaled by k, stage px) and apply() repaints it.
@@ -5429,6 +5390,7 @@ document.addEventListener('pointerdown', e => {
 function setActive(cv, on) { cv.active = on; cv.stage.classList.toggle('active', on); }
 
 function buildScope(cv, scope, abs, owner) {
+  const { head: HEAD, labelH } = BoardGeo.CANVAS;
   const g = sv('g', { class: 'bp-scope' });
   scope._g = g;
   const gE = sv('g', { class: 'bp-edges' }), gN = sv('g', { class: 'bp-nodes' }), gT = sv('g', { class: 'bp-tokens' });
@@ -5476,32 +5438,19 @@ function buildScope(cv, scope, abs, owner) {
     gN.append(ng);
   }
   // edges: routed once per scope by BoardGeo (right angles round the scope's own nodes, parallel lines nudged apart,
-  // labels clear of nodes and of each other); zoom and pan only scale the drawing. Inside a system, @left/@right/
+  // labels clear of nodes, lines and each other); zoom and pan only scale the drawing. Inside a system, @left/@right/
   // @top/@bottom end on its frame.
   const box = owner ? frameOf(owner) : null, ports = box && box.ports;
-  const boxes = {}, links = [], ends = {};
-  for (const n of scope.nodes) boxes[n.id] = { x: n._l, y: n._t, w: n.w, h: n.h };
-  if (ports) Object.assign(boxes, ports);
-  for (const e of scope.edges) {
-    const a = scope._byId[e.from] || (ports && ports[e.from]), b = scope._byId[e.to] || (ports && ports[e.to]);
-    if (!a || !b || e.from === e.to) continue;
-    const id = e.id || `${e.from}->${e.to}`;
-    ends[id] = { e, from: a, to: b };
-    links.push({ id, from: e.from, to: e.to, kind: e.kind || 'data', fromSide: PORT_SIDE[e.from], toSide: PORT_SIDE[e.to],
-      labelBox: e.label ? [edgeLabelW(e.label), 18] : null });
-  }
-  const routes = BoardGeo.routeLinks(boxes, links, { pad: CANVAS_PAD, bounds: box && box.bounds });
   const lblLayer = sv('g', { class: 'bp-elbls' });
-  for (const { id } of links) {
-    const r = routes[id], { e, from, to } = ends[id];
-    if (!r) continue;
+  for (const { id, edge: e, route: r } of BoardGeo.canvasRoutes(scope, scope.nodes.map(n => ({ x: n._l, y: n._t, w: n.w, h: n.h })), box)) {
+    const from = scope._byId[e.from] || ports[e.from], to = scope._byId[e.to] || ports[e.to];
     const kind = e.kind || 'data';
     const path = sv('path', { class: `bp-edge k-${kind}`, d: r.d, 'data-edge': id, 'marker-end': e.dir === 'none' ? null : `url(#${cv.gid}-m-${kind})`, 'marker-start': e.dir === 'both' ? `url(#${cv.gid}-m-${kind})` : null });
     path._kind = kind;
     gE.append(path);
     if (e.label) {
-      const t = e.label, lw = edgeLabelW(t);
-      lblLayer.append(sv('g', { class: 'bp-elbl', 'data-edge': id, transform: `translate(${r.label.x - lw / 2},${r.label.y - 9})` }, sv('rect', { width: lw, height: 18, rx: 3 }), sv('text', { x: lw / 2, y: 12.5, 'text-anchor': 'middle' }, t)));
+      const t = e.label, lw = BoardGeo.canvasLabelW(t);
+      lblLayer.append(sv('g', { class: 'bp-elbl', 'data-edge': id, transform: `translate(${r.label.x - lw / 2},${r.label.y - labelH / 2})` }, sv('rect', { width: lw, height: labelH, rx: 3 }), sv('text', { x: lw / 2, y: 12.5, 'text-anchor': 'middle' }, t)));
     }
     scope._edgeEls[id] = { path, e, from, to };
   }
@@ -5758,10 +5707,15 @@ const BoardGeo = (() => {
   const TIDY_GAP_X = 200, TIDY_GAP_Y = 80, TIDY_ROW_GAP = 120;
   // the router: clearance around screens, corner radius, spacing of parallel segments, the cost of a bend in px, the
   // extra cost per px of running along a screen's padded border, the cost of crossing another route, the least
-  // spacing of ends on one side; reroute keeps a link's old route unless a new one costs under KEEP of it
-  const PAD = 24, RADIUS = 12, GAP = 12, BEND = 48, HUG = 0.5, CROSS = 120, PORT_GAP = 24, KEEP = 0.85;
-  // labels: the space kept around each, the step between the spots tried along a segment, an arrowhead's length
-  const LABEL_GAP = 3, LABEL_STEP = 8, ARROW = 10;
+  // spacing of ends on one side; reroute keeps a link's old route unless a new one costs under KEEP of it. A link
+  // with no way round the padded screens, routed with `through`, goes through them at a price: CLEAR more per px
+  // inside a screen's clearance, INSIDE more per px inside the screen itself (so it crosses as little of either, and
+  // of screens before clearances, as it can)
+  const PAD = 24, RADIUS = 12, GAP = 12, BEND = 48, HUG = 0.5, CROSS = 120, PORT_GAP = 24, KEEP = 0.85, CLEAR = 40, INSIDE = 1000;
+  // labels: the space kept around each, the step between the spots tried along a segment, an arrowhead's length,
+  // how far beside its segment a label may sit (px between them: touching, then further out), half the thickness
+  // of another route's line, which labels keep off
+  const LABEL_GAP = 3, LABEL_STEP = 8, ARROW = 10, BESIDE = [1, 8, 16, 24], LINE = 1;
   const num = v => typeof v === 'number' && Number.isFinite(v);
 
   /* ---------- boardLayout: build.py's board_layout, line for line ---------- */
@@ -6000,9 +5954,10 @@ const BoardGeo = (() => {
   }
 
   // the sparse grid: a line through every padded screen edge, the middle of every gap between two of those, and every
-  // port. Nodes inside a padded screen, and grid edges through one, are blocked; an edge along a padded screen's
-  // border costs HUG more per px, so routes keep to the middle of the channels between screens.
-  function makeGrid(obstacles, pts) {
+  // port. A grid edge through a padded screen costs CLEAR more per px, and INSIDE more for the part inside the screen
+  // itself (pad in from the padded edge); an edge along a padded screen's border costs HUG more per px, so routes
+  // keep to the middle of the channels between screens.
+  function makeGrid(obstacles, pts, pad) {
     const lines = (edges, ports) => {
       const e = [...new Set(edges)].sort((a, b) => a - b), mids = [];
       for (let k = 1; k < e.length; k++) mids.push((e[k - 1] + e[k]) / 2);
@@ -6012,17 +5967,27 @@ const BoardGeo = (() => {
     const ys = lines(obstacles.flatMap(o => [o.y, o.y + o.h]), pts.map(p => p[1]));
     const xi = new Map(xs.map((v, k) => [v, k])), yi = new Map(ys.map((v, k) => [v, k]));
     const nx = xs.length, ny = ys.length, n = nx * ny;
-    const node = new Uint8Array(n), hEdge = new Uint8Array(n), vEdge = new Uint8Array(n);   // 1 blocked, 2 along a border
+    const hEdge = new Uint8Array(n), vEdge = new Uint8Array(n);   // 1 through a padded screen, 2 along a border
+    const hCost = new Float64Array(n), vCost = new Float64Array(n);   // the extra cost of an edge through one
+    // the extra cost of the stretch a..b of a line at c across a padded screen spanning lo..hi along it, c0..c1 across
+    const through = (a, b, lo, hi, c, c0, c1) => CLEAR * (b - a)
+      + (c > c0 + pad && c < c1 - pad ? (INSIDE - CLEAR) * Math.max(0, Math.min(b, hi - pad) - Math.max(a, lo + pad)) : 0);
     for (const o of obstacles) {
       if (!(o.w > 0 && o.h > 0)) continue;
       const i1 = xi.get(o.x), i2 = xi.get(o.x + o.w), j1 = yi.get(o.y), j2 = yi.get(o.y + o.h);
-      for (let j = j1 + 1; j < j2; j++) for (let i = i1; i < i2; i++) { hEdge[j * nx + i] = 1; if (i > i1) node[j * nx + i] = 1; }
-      for (let i = i1 + 1; i < i2; i++) for (let j = j1; j < j2; j++) vEdge[j * nx + i] = 1;
+      for (let j = j1 + 1; j < j2; j++) for (let i = i1; i < i2; i++) {
+        const k = j * nx + i;
+        hEdge[k] = 1; hCost[k] = Math.max(hCost[k], through(xs[i], xs[i + 1], o.x, o.x + o.w, ys[j], o.y, o.y + o.h));
+      }
+      for (let i = i1 + 1; i < i2; i++) for (let j = j1; j < j2; j++) {
+        const k = j * nx + i;
+        vEdge[k] = 1; vCost[k] = Math.max(vCost[k], through(ys[j], ys[j + 1], o.y, o.y + o.h, xs[i], o.x, o.x + o.w));
+      }
       for (let i = i1; i < i2; i++) for (const j of [j1, j2]) if (!hEdge[j * nx + i]) hEdge[j * nx + i] = 2;
       for (let j = j1; j < j2; j++) for (const i of [i1, i2]) if (!vEdge[j * nx + i]) vEdge[j * nx + i] = 2;
     }
     // occH, occV: how many routes run through each node across, and up or down (routes routed so far)
-    return { xs, ys, xi, yi, nx, ny, node, hEdge, vEdge, occH: new Int16Array(n), occV: new Int16Array(n),
+    return { xs, ys, xi, yi, nx, ny, hEdge, vEdge, hCost, vCost, occH: new Int16Array(n), occV: new Int16Array(n),
       g: new Float64Array(n * 4), from: new Int32Array(n * 4), seen: new Int32Array(n * 4), stamp: 0 };
   }
 
@@ -6044,10 +6009,11 @@ const BoardGeo = (() => {
   }
 
   // A* over (node, direction) from s leaving in direction sd to e arriving in direction ed: Manhattan distance plus
-  // BEND per turn, HUG per px along a screen's border and CROSS per route crossed, no turning back. The node points
-  // of the cheapest path, or null.
-  function astar(G, s, sd, e, ed) {
-    const { xs, ys, nx, ny, node, hEdge, vEdge, occH, occV, g, from, seen } = G;
+  // BEND per turn, HUG per px along a screen's border and CROSS per route crossed, no turning back; a grid edge
+  // through a padded screen is closed, or with `through` open at its price (makeGrid), when every node can be
+  // reached. The node points of the cheapest path, or null.
+  function astar(G, s, sd, e, ed, through) {
+    const { xs, ys, nx, ny, hEdge, vEdge, hCost, vCost, occH, occV, g, from, seen } = G;
     const stamp = ++G.stamp, ex = xs[e % nx], ey = ys[(e / nx) | 0];
     const hf = [], hs = [];   // a binary heap of (f, state)
     const push = (f, st) => {
@@ -6087,13 +6053,12 @@ const BoardGeo = (() => {
         if (dd === (d + 2) % 4) continue;
         const ni = i + DX[dd], nj = j + DY[dd];
         if (ni < 0 || nj < 0 || ni >= nx || nj >= ny) continue;
-        const edge = dd === 0 ? hEdge[j * nx + i] : dd === 2 ? hEdge[j * nx + ni] : dd === 1 ? vEdge[j * nx + i] : vEdge[nj * nx + i];
-        if (edge === 1) continue;
+        const k = dd === 0 ? j * nx + i : dd === 2 ? j * nx + ni : dd === 1 ? j * nx + i : nj * nx + i, edge = dd & 1 ? vEdge[k] : hEdge[k];
+        if (edge === 1 && !through) continue;
         const nn = nj * nx + ni;
-        if (node[nn] && nn !== e) continue;
         const ns = nn * 4 + dd, len = Math.abs(xs[ni] - xs[i]) + Math.abs(ys[nj] - ys[j]);
-        const cost = g[st] + len * (edge === 2 ? 1 + HUG : 1) + (dd !== d ? BEND : 0) + (nn === e && dd !== ed ? BEND : 0)
-          + CROSS * (dd & 1 ? occH[nn] : occV[nn]);
+        const cost = g[st] + len * (edge === 2 ? 1 + HUG : 1) + (edge === 1 ? (dd & 1 ? vCost[k] : hCost[k]) : 0)
+          + (dd !== d ? BEND : 0) + (nn === e && dd !== ed ? BEND : 0) + CROSS * (dd & 1 ? occH[nn] : occV[nn]);
         if (seen[ns] === stamp && g[ns] <= cost) continue;
         seen[ns] = stamp; g[ns] = cost; from[ns] = st;
         push(cost + h(nn), ns);
@@ -6114,14 +6079,28 @@ const BoardGeo = (() => {
     return r;
   }
 
-  // a route from p1 to e1 through the grid; else around the two screens alone; else one elbow
-  function routeOne(G, p, pad) {
+  // a route from p1 to e1 through the grid, clear of every padded box. With none: with `through` (canvases), ends
+  // on facing sides whose stubs pass each other (boxes nearer than two pads) join directly, straight where they line
+  // up, else turning halfway, and any other goes the cheapest way through the boxes (astar's prices); without
+  // (boards, whose screens are dragged about: a steady shape matters more there), round its two boxes alone, else
+  // one elbow.
+  function routeOne(G, p, pad, through) {
     const at = q => G.yi.get(q[1]) * G.nx + G.xi.get(q[0]);
-    let mid = astar(G, at(p.p1), p.sd, at(p.e1), p.ed);
+    let mid = astar(G, at(p.p1), p.sd, at(p.e1), p.ed, false);
+    if (!mid && through) {
+      const k = across(p.ss) ? 0 : 1, dir = SIDE[p.ss][k];
+      if (SIDE[p.es][k] === -dir && (p.e1[k] - p.p1[k]) * dir < 0) {
+        if (p.p0[1 - k] === p.e[1 - k]) return simplify([p.p0, p.e]);
+        const m = (p.p0[k] + p.e[k]) / 2, a = p.p0.slice(), b = p.e.slice();
+        a[k] = m; b[k] = m;
+        return simplify([p.p0, a, b, p.e]);
+      }
+      mid = astar(G, at(p.p1), p.sd, at(p.e1), p.ed, true);
+    }
     if (!mid) {
-      const L = makeGrid([p.A, p.B].filter(b => b.w > 0 && b.h > 0).map(b => grow(b, pad)), [p.p1, p.e1]);
+      const L = makeGrid([p.A, p.B].filter(b => b.w > 0 && b.h > 0).map(b => grow(b, pad)), [p.p1, p.e1], pad);
       const at2 = q => L.yi.get(q[1]) * L.nx + L.xi.get(q[0]);
-      mid = astar(L, at2(p.p1), p.sd, at2(p.e1), p.ed);
+      mid = astar(L, at2(p.p1), p.sd, at2(p.e1), p.ed, false);
     }
     if (!mid) mid = [p.p1, across(p.ss) ? [p.e1[0], p.p1[1]] : [p.p1[0], p.e1[1]], p.e1];
     return simplify([p.p0, ...mid, p.e]);
@@ -6314,7 +6293,7 @@ const BoardGeo = (() => {
   // the spots a w × h label may take on the path pts, best first: centred on one of its segments, the longest
   // first, at the segment's middle, then LABEL_STEP px either way, as far as the label stays on the segment (and off
   // the arrowheads); then the same spots with the label beside the segment, touching it (above, then below; left,
-  // then right). [[x, y]]: the label's centre at each.
+  // then right), then BESIDE's px further out each time. [[x, y]]: the label's centre at each.
   function labelSpots(pts, w, h) {
     const segs = [], out = [];
     for (let k = 0; k + 1 < pts.length; k++) {
@@ -6322,7 +6301,7 @@ const BoardGeo = (() => {
       if (len > 0) segs.push({ k, a, b, len });
     }
     segs.sort((p, q) => q.len - p.len || p.k - q.k);
-    for (const beside of [[0], [-1, 1]]) for (const s of segs) {
+    for (const off of [null, ...BESIDE]) for (const s of segs) {
       const across = s.a[1] === s.b[1], A = across ? 0 : 1, lo = Math.min(s.a[A], s.b[A]), hi = Math.max(s.a[A], s.b[A]);
       // keep clear of the route's ends (an arrowhead, a port) on its first and last segment
       const end = ARROW + LABEL_GAP, ext = (across ? w : h) / 2 + LABEL_GAP;
@@ -6334,39 +6313,44 @@ const BoardGeo = (() => {
         if (mid + d <= to) at.push(mid + d);
         if (d && mid - d >= from) at.push(mid - d);
       }
-      for (const side of beside) {
-        const c = s.a[1 - A] + side * ((across ? h : w) / 2 + 1);
+      for (const side of off === null ? [0] : [-1, 1]) {
+        const c = s.a[1 - A] + side * ((across ? h : w) / 2 + off);
         for (const v of at) out.push(across ? [v, c] : [c, v]);
       }
     }
     return out.length ? out : [[pts[0][0], pts[0][1]]];
   }
 
-  // how much of a w × h label at x, y, LABEL_GAP bigger, overlaps the rects of avoid
-  function labelHit(x, y, w, h, avoid) {
+  // how much of a w × h label at x, y, LABEL_GAP bigger, overlaps the rects of avoid (but those of its own line: own)
+  function labelHit(x, y, w, h, avoid, own) {
     let o = 0;
     const x0 = x - w / 2 - LABEL_GAP, x1 = x + w / 2 + LABEL_GAP, y0 = y - h / 2 - LABEL_GAP, y1 = y + h / 2 + LABEL_GAP;
-    for (const r of avoid) o += Math.max(0, Math.min(x1, r.x + r.w) - Math.max(x0, r.x)) * Math.max(0, Math.min(y1, r.y + r.h) - Math.max(y0, r.y));
+    for (const r of avoid) if (r.line === undefined || r.line !== own) o += Math.max(0, Math.min(x1, r.x + r.w) - Math.max(x0, r.x)) * Math.max(0, Math.min(y1, r.y + r.h) - Math.max(y0, r.y));
     return o;
   }
 
-  // place labels ([{id, pts, w, h}]) clear of the rects of avoid and of each other: the label with the fewest clear
-  // spots left goes first (ties in the given order), at its first clear spot; a label with none goes, once no
-  // other has one, at its spot with the least overlap. {id: {x, y}}: each label's centre.
-  function placeLabels(labels, avoid) {
+  // place labels ([{id, pts, w, h}]) clear of the rects of avoid, of the lines of the other routes (lines: [{id, pts}];
+  // each segment a rect LINE px either side of it) and of each other: the label with the fewest clear spots left goes
+  // first (ties in the given order), at its first clear spot; a label with none goes, once no other has one, at its
+  // spot with the least overlap (a line, thin, weighs less there than a box). {id: {x, y}}: each label's centre.
+  function placeLabels(labels, avoid, lines) {
     const todo = labels.map(l => ({ ...l, spots: labelSpots(l.pts, l.w, l.h) })), at = {}, rects = avoid.slice();
+    for (const { id, pts } of lines || []) for (let k = 0; k + 1 < pts.length; k++) {
+      const [a, b] = [pts[k], pts[k + 1]];
+      rects.push({ x: Math.min(a[0], b[0]) - LINE, y: Math.min(a[1], b[1]) - LINE, w: Math.abs(b[0] - a[0]) + 2 * LINE, h: Math.abs(b[1] - a[1]) + 2 * LINE, line: id });
+    }
     while (todo.length) {
       let pick = -1, fewest = Infinity, first = null;
       todo.forEach((l, k) => {
         let n = 0, f = null;
-        for (const s of l.spots) if (!labelHit(s[0], s[1], l.w, l.h, rects)) { n++; f = f || s; if (n >= fewest) break; }
+        for (const s of l.spots) if (!labelHit(s[0], s[1], l.w, l.h, rects, l.id)) { n++; f = f || s; if (n >= fewest) break; }
         if (n && n < fewest) { fewest = n; pick = k; first = f; }
       });
       if (pick < 0) {   // none has a clear spot: the least overlap, in order
         pick = 0;
         const l = todo[0];
         let best = Infinity;
-        for (const s of l.spots) { const o = labelHit(s[0], s[1], l.w, l.h, rects); if (o < best) { best = o; first = s; } }
+        for (const s of l.spots) { const o = labelHit(s[0], s[1], l.w, l.h, rects, l.id); if (o < best) { best = o; first = s; } }
       }
       const l = todo.splice(pick, 1)[0];
       at[l.id] = { x: first[0], y: first[1] };
@@ -6382,11 +6366,13 @@ const BoardGeo = (() => {
   // (null: the link starts on the box's border, as an `edge` link always does); fromSide, toSide fix the side an end
   // leaves or enters by ('l', 'r', 't', 'b'; else the sides facing each other); labelBox [w, h] sizes its label.
   // points: the corners, from the element (or border) to the target's border, the last segment square to it; d:
-  // the same with rounded corners (lines and arcs only); label: where the label's centre goes, clear of every box
-  // and every label placed before it where any spot on the path is (placeLabel), else the middle of the longest
-  // segment; start, end: the sides used; raw: the route before nudging, which reroute reuses. opts: {pad, the
-  // clearance round boxes (PAD); bounds, a rect labels stay inside}. A pure function of boxes, links and opts: the
-  // same input gives the same paths, in any order of links.
+  // the same with rounded corners (lines and arcs only); label: where the label's centre goes, clear of every box,
+  // of the other routes' lines and of every label placed before it where any spot on or beside the path is
+  // (placeLabels), else the middle of the longest segment; start, end: the sides used; raw: the route before
+  // nudging, which reroute reuses. opts: {pad, the clearance round boxes (PAD); bounds, a rect labels stay inside;
+  // through: a link with no way round the boxes goes through them as little as it can (routeOne), else round its
+  // own two alone}. A pure function of boxes, links and opts: the same input gives the same paths, in any order of
+  // links.
   function routeLinks(boxes, links, opts) { return reroute(null, boxes, links, null, opts); }
 
   // routeLinks again from the previous result, for drags and changed inputs, with hysteresis. Ports are placed as
@@ -6395,7 +6381,7 @@ const BoardGeo = (() => {
   // route passes near a box in `moved` (ids), the new route replaces the old one only if it costs under KEEP of it.
   // So the same input given again changes nothing, and a drag doesn't flip a route back and forth.
   function reroute(prev, boxes, links, moved, opts) {
-    const pad = opts && num(opts.pad) ? opts.pad : PAD;
+    const pad = opts && num(opts.pad) ? opts.pad : PAD, through = !!(opts && opts.through);
     const bm = new Map();
     for (const [id, r] of boxes instanceof Map ? boxes : Object.entries(boxes || {})) { const b = rectOf(r); if (b) bm.set(id, b); }
     // links in id order, so the input's order doesn't matter
@@ -6409,10 +6395,10 @@ const BoardGeo = (() => {
     const routeAll = (ps, keep) => {
       const raws = new Map(keep), todo = ps.filter(p => !keep.has(p.id));
       if (!todo.length) return raws;
-      const G = makeGrid(padded, todo.flatMap(p => [p.p1, p.e1]));
+      const G = makeGrid(padded, todo.flatMap(p => [p.p1, p.e1]), pad);
       for (const r of keep.values()) occupy(G, r, 1);
-      for (const p of todo) { const r = routeOne(G, p, pad); raws.set(p.id, r); occupy(G, r, 1); }
-      for (const p of todo) { occupy(G, raws.get(p.id), -1); const r = routeOne(G, p, pad); raws.set(p.id, r); occupy(G, r, 1); }
+      for (const p of todo) { const r = routeOne(G, p, pad, through); raws.set(p.id, r); occupy(G, r, 1); }
+      for (const p of todo) { occupy(G, raws.get(p.id), -1); const r = routeOne(G, p, pad, through); raws.set(p.id, r); occupy(G, r, 1); }
       return raws;
     };
     // ports placed knowing which way each route turns, from a first routing of every link: never from prev
@@ -6434,13 +6420,13 @@ const BoardGeo = (() => {
       }
       raws = routeAll(ps, new Map([...keep, ...weigh]));
       if (weigh.size) {
-        const G = makeGrid(padded, ps.filter(p => weigh.has(p.id)).flatMap(p => [p.p1, p.e1]));
+        const G = makeGrid(padded, ps.filter(p => weigh.has(p.id)).flatMap(p => [p.p1, p.e1]), pad);
         for (const r of raws.values()) occupy(G, r, 1);
         for (const p of ps) {
           if (!weigh.has(p.id)) continue;
           const old = raws.get(p.id);
           occupy(G, old, -1);
-          const fresh = routeOne(G, p, pad), r = routeCost(fresh) < KEEP * routeCost(old) ? fresh : old;
+          const fresh = routeOne(G, p, pad, through), r = routeCost(fresh) < KEEP * routeCost(old) ? fresh : old;
           raws.set(p.id, r); occupy(G, r, 1);
         }
       }
@@ -6455,8 +6441,10 @@ const BoardGeo = (() => {
         { x: bd.x - F, y: bd.y, w: F, h: bd.h }, { x: bd.x + bd.w, y: bd.y, w: F, h: bd.h });
     }
     const pts = ps.map((p, k) => simplify(routes[k]));
-    // labels with a size (labelBox) go clear of the boxes and of each other (placeLabels); the rest at labelAt
-    const placed = placeLabels(ps.flatMap((p, k) => p.box ? [{ id: p.id, pts: pts[k], w: p.box[0], h: p.box[1] }] : []), avoid);
+    // labels with a size (labelBox) go clear of the boxes, of the other routes and of each other (placeLabels); the
+    // rest at labelAt
+    const placed = placeLabels(ps.flatMap((p, k) => p.box ? [{ id: p.id, pts: pts[k], w: p.box[0], h: p.box[1] }] : []), avoid,
+      ps.map((p, k) => ({ id: p.id, pts: pts[k] })));
     ps.forEach((p, k) => {
       // ports: where the start and end sit along their sides, from each side's start (what reroute holds)
       const ports = [p.sc - sideSpan(p.A, p.ss)[0], p.ec - sideSpan(p.B, p.es)[0]];
@@ -6708,7 +6696,123 @@ const BoardGeo = (() => {
     return out;
   }
 
-  return { boardLayout, routeLinks, reroute, tidy, listingSections };
+  /* ---------- blueprint canvases: a scope's layout, its frame inside a system, its routes ---------- */
+  // node sizes (a system: a node with children); the clearance routes keep around nodes; a system frame's title
+  // band and inset, in its own px; an edge label's height. gap: the least space between neighbouring columns (rows)
+  // of the col/row grid, 80 = the clearance round both nodes (2 × pad) + a label's height with LABEL_GAP above and
+  // below (24) + two lanes GAP apart (24): an unlabelled channel holds three parallel lines, a labelled one a label
+  // between its nodes' clearances
+  const CANVAS = { nodeW: 180, nodeH: 80, sysW: 240, sysH: 140, pad: 16, head: 7, inset: 5, labelH: 18, gap: 80 };
+  // an edge label's width: 5.9 px a character, 7 px either side
+  const canvasLabelW = t => String(t).length * 5.9 + 14;
+  // the length of line a label needs between two nodes: its own, the clearance either side, and an arrowhead and
+  // LABEL_GAP at each end (labelSpots keeps labels off those)
+  const canvasLabelRun = len => len + 2 * CANVAS.pad + 2 * (ARROW + LABEL_GAP);
+  const isSystem = n => !!(n.children && n.children.nodes && n.children.nodes.length);
+
+  // where each node of a scope sits: [{x, y, w, h}] (top left), in scope.nodes order. A node's x, y is its centre,
+  // as given; else its col, row on the grid, whose columns and rows are as wide (tall) as their widest (tallest)
+  // node and as far apart as what crosses between them needs (canvasTracks). Size: w, h, else canvasSize.
+  function canvasLayout(scope) {
+    const nodes = scope.nodes || [], edges = scope.edges || [], size = nodes.map(canvasSize);
+    const cx = canvasTracks(nodes, edges, size, 0), cy = canvasTracks(nodes, edges, size, 1);
+    return nodes.map((n, k) => ({ x: cx[k] - size[k][0] / 2, y: cy[k] - size[k][1] / 2, w: size[k][0], h: size[k][1] }));
+  }
+  const canvasSize = n => { const sys = isSystem(n); return [n.w || (sys ? CANVAS.sysW : CANVAS.nodeW), n.h || (sys ? CANVAS.sysH : CANVAS.nodeH)]; };
+  // one axis of the grid (ax 0: columns, x; 1: rows, y): each node's centre on it. The nodes without x (y) form the
+  // columns (rows): one per distinct col (row), in order, each as wide as its widest node. Between neighbours, the
+  // most of: CANVAS.gap; the clearance round both plus GAP per edge that crosses between them (a lane each); for an
+  // edge between neighbours level on the other axis (a straight line), its label's run (canvasLabelRun: its width
+  // across columns, its height down rows; a label is level text, so between rows it reaches along the free row
+  // gap). A skipped col (row) number leaves a default node's width (height) and a gap per number. Column (row) 0
+  // is centred on 0, as is a lowest column k on k × (default size + gap), so nodes with x (y) keep their place
+  // relative to the grid; edges to them, or between them, don't size it.
+  function canvasTracks(nodes, edges, size, ax) {
+    const pos = ax ? 'y' : 'x', key = ax ? 'row' : 'col', oPos = ax ? 'x' : 'y', oKey = ax ? 'col' : 'row';
+    const grid = n => n[pos] == null, at = n => num(n[key]) ? n[key] : 0;
+    const vals = [...new Set(nodes.filter(grid).map(at))].sort((a, b) => a - b), idx = new Map(vals.map((v, k) => [v, k]));
+    const ext = vals.map(() => 0);
+    nodes.forEach((n, k) => { if (grid(n)) ext[idx.get(at(n))] = Math.max(ext[idx.get(at(n))], size[k][ax]); });
+    const byId = new Map(nodes.map(n => [n.id, n])), first = ax ? '@top' : '@left', last = ax ? '@bottom' : '@right';
+    // an end's column (row): -1 for the frame port before the first, vals.length for the one after the last
+    const track = id => id === first ? -1 : id === last ? vals.length : byId.has(id) && grid(byId.get(id)) ? idx.get(at(byId.get(id))) : null;
+    const across = n => n[oPos] != null ? `p${n[oPos]}` : `g${num(n[oKey]) ? n[oKey] : 0}`;   // where it sits on the other axis
+    const lanes = vals.map(() => 0), run = vals.map(() => 0);   // per gap k, between column k and k + 1
+    for (const e of edges) {
+      const a = track(e.from), b = track(e.to);
+      if (a == null || b == null || a === b) continue;
+      const lo = Math.min(a, b), hi = Math.max(a, b);
+      for (let k = Math.max(lo, 0); k < Math.min(hi, vals.length - 1); k++) lanes[k]++;
+      if (e.label && hi === lo + 1 && lo >= 0 && hi < vals.length && across(byId.get(e.from)) === across(byId.get(e.to)))
+        run[lo] = Math.max(run[lo], canvasLabelRun(ax ? CANVAS.labelH : canvasLabelW(e.label)));
+    }
+    const step = (ax ? CANVAS.nodeH : CANVAS.nodeW) + CANVAS.gap, c = [];
+    vals.forEach((v, k) => {
+      if (!k) { c.push(v * step); return; }
+      const gap = Math.max(CANVAS.gap, 2 * CANVAS.pad + (lanes[k - 1] + 1) * GAP, run[k - 1]);
+      c.push(c[k - 1] + ext[k - 1] / 2 + gap + ext[k] / 2 + Math.max(0, v - vals[k - 1] - 1) * step);
+    });
+    return nodes.map(n => grid(n) ? c[idx.get(at(n))] : n[pos]);
+  }
+  function canvasBounds(boxes) {
+    if (!boxes.length) return { x: 0, y: 0, w: 1, h: 1 };
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const b of boxes) { x0 = Math.min(x0, b.x); y0 = Math.min(y0, b.y); x1 = Math.max(x1, b.x + b.w); y1 = Math.max(y1, b.y + b.h); }
+    return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+  }
+  // the room kept between a system's children and its frame, per side, in the children's units, by the grid's rule:
+  // half a gap (the frame is no node: it needs no clearance of its own); the clearance plus GAP per edge ending on
+  // that side's port; and for each labelled one, its label's run (canvasLabelRun: width at @left/@right, height at
+  // @top/@bottom) on the line between the frame and the node
+  function canvasRoom(scope) {
+    const room = { l: 0, r: 0, t: 0, b: 0 }, n = { l: 0, r: 0, t: 0, b: 0 }, side = { '@left': 'l', '@right': 'r', '@top': 't', '@bottom': 'b' };
+    for (const e of scope.edges || []) for (const end of [e.from, e.to]) {
+      const s = side[end];
+      if (!s) continue;
+      n[s]++;
+      if (e.label) room[s] = Math.max(room[s], canvasLabelRun(s === 'l' || s === 'r' ? canvasLabelW(e.label) : CANVAS.labelH));
+    }
+    for (const s of 'lrtb') room[s] = Math.max(room[s], CANVAS.gap / 2, CANVAS.pad + (n[s] + 1) * GAP);
+    return room;
+  }
+  // a w × h system's inner drawing (children in bounds, room round them) scaled into it below its title band:
+  // {s, tx, ty}, the children's units to the system's px
+  function canvasFit(w, h, bounds, room) {
+    const bx = bounds.x - room.l, by = bounds.y - room.t, bw = bounds.w + room.l + room.r, bh = bounds.h + room.t + room.b;
+    const aw = w - 2 * CANVAS.inset, ah = h - CANVAS.head - 2 * CANVAS.inset;
+    const s = Math.min(aw / bw, ah / bh);
+    return { s, tx: CANVAS.inset + (aw - bw * s) / 2 - bx * s, ty: CANVAS.head + CANVAS.inset + (ah - bh * s) / 2 - by * s };
+  }
+  // a w × h system's frame, in its inner scope's units (fit: canvasFit), and its ports (@left, @right, @top,
+  // @bottom): each a side of the frame (no area: an end for the router, not an obstacle) that edges cross square
+  function canvasFrame(w, h, fit) {
+    const X0 = -fit.tx / fit.s, X1 = (w - fit.tx) / fit.s, Y0 = (CANVAS.head - fit.ty) / fit.s, Y1 = (h - fit.ty) / fit.s;
+    return { bounds: { x: X0, y: Y0, w: X1 - X0, h: Y1 - Y0 },
+      ports: { '@left': { x: X0, y: Y0, w: 0, h: Y1 - Y0 }, '@right': { x: X1, y: Y0, w: 0, h: Y1 - Y0 },
+        '@top': { x: X0, y: Y0, w: X1 - X0, h: 0 }, '@bottom': { x: X0, y: Y1, w: X1 - X0, h: 0 } } };
+  }
+  // the side of a frame port an edge crosses, facing into the frame
+  const PORT_SIDE = { '@left': 'r', '@right': 'l', '@top': 'b', '@bottom': 't' };
+  // a scope's edges routed round its nodes (boxes: canvasLayout's) and, inside a system, to its frame's ports
+  // (frame: canvasFrame's, else null), labels clear of the nodes, inside the frame: [{id, edge, route}] in edge order
+  // (none for an edge whose end is missing, or to itself); route: routeLinks'
+  function canvasRoutes(scope, boxes, frame) {
+    const ports = frame && frame.ports, bx = {}, links = [], edges = [];
+    (scope.nodes || []).forEach((n, k) => { bx[n.id] = boxes[k]; });
+    if (ports) Object.assign(bx, ports);
+    for (const e of scope.edges || []) {
+      if (!bx[e.from] || !bx[e.to] || e.from === e.to) continue;
+      const id = e.id || `${e.from}->${e.to}`;
+      edges.push({ id, edge: e });
+      links.push({ id, from: e.from, to: e.to, kind: e.kind || 'data', fromSide: PORT_SIDE[e.from], toSide: PORT_SIDE[e.to],
+        labelBox: e.label ? [canvasLabelW(e.label), CANVAS.labelH] : null });
+    }
+    const routes = routeLinks(bx, links, { pad: CANVAS.pad, bounds: frame && frame.bounds, through: true });
+    return edges.filter(x => routes[x.id]).map(x => ({ ...x, route: routes[x.id] }));
+  }
+
+  return { boardLayout, routeLinks, reroute, tidy, listingSections,
+    CANVAS, canvasLabelW, canvasLayout, canvasBounds, canvasRoom, canvasFit, canvasFrame, canvasRoutes };
 })();
 if (typeof module !== 'undefined' && module.exports) module.exports = BoardGeo;
 

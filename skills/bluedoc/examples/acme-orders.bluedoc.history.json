@@ -4,7 +4,7 @@
   {
    "rev": "1",
    "date": "2026-03-12",
-   "built": "2026-10-11T15:38:43+00:00",
+   "built": "2026-10-20T14:27:26+00:00",
    "head": {
     "id": "acme-orders-arch",
     "title": "Acme order path: checkout to pick ticket",
@@ -48,7 +48,7 @@
      "title": "The order path",
      "lead": "Open a system to see its parts. Each level plays its own flow.",
      "blocks": [
-      "b77b1346795be776"
+      "49168607aeed253e"
      ]
     },
     {
@@ -290,7 +290,7 @@
    "kind": "decision",
    "md": "We keep the outbox instead of publishing from the request handler. A crash between commit and publish would otherwise lose the event."
   },
-  "b77b1346795be776": {
+  "49168607aeed253e": {
    "type": "canvas",
    "id": "orders",
    "title": "Checkout → pick ticket",
@@ -303,8 +303,8 @@
      "label": "Acme Shop web",
      "sub": "React · checkout",
      "kind": "client",
-     "x": 0,
-     "y": 0,
+     "col": 0,
+     "row": 0,
      "md": "The browser app. The checkout form builds an order draft and posts it with an idempotency key.",
      "refs": [
       "`web/src/checkout/CheckoutForm.tsx`"
@@ -395,8 +395,8 @@
      "id": "api",
      "label": "orders-api",
      "sub": "Node · Fastify",
-     "x": 340,
-     "y": 0,
+     "col": 1,
+     "row": 0,
      "w": 300,
      "h": 150,
      "md": "Validates, prices and charges the order, then writes it and its outbox row in one transaction.",
@@ -616,8 +616,8 @@
      "label": "order-events",
      "sub": "Kafka topic · 6 partitions",
      "kind": "queue",
-     "x": 690,
-     "y": 0,
+     "col": 2,
+     "row": 0,
      "md": "Keyed by order id, so events for one order stay in order.",
      "refs": [
       "`infra/kafka/topics.yaml:12`"
@@ -627,8 +627,8 @@
      "id": "fulfil",
      "label": "fulfilment-worker",
      "sub": "Go · consumer group",
-     "x": 950,
-     "y": 0,
+     "col": 3,
+     "row": 0,
      "md": "Reserves stock and creates the pick ticket. Out-of-stock orders go to the dead-letter topic.",
      "refs": [
       "`services/fulfilment/internal/consume.go:40-118`"
@@ -654,8 +654,8 @@
         "id": "ticket",
         "label": "create pick ticket",
         "sub": "WMS client",
-        "x": 570,
-        "y": 0,
+        "col": 2,
+        "row": 0,
         "w": 200
        },
        {
@@ -750,8 +750,8 @@
      "sub": "card authorization",
      "kind": "external",
      "state": "unverified",
-     "x": 0,
-     "y": 270,
+     "col": 0,
+     "row": 1,
      "md": "Third-party payment provider. We see its API, not its internals."
     },
     {
@@ -759,8 +759,8 @@
      "label": "orders DB",
      "sub": "Postgres 16 · orders, outbox",
      "kind": "db",
-     "x": 340,
-     "y": 270,
+     "col": 1,
+     "row": 1,
      "refs": [
       "`services/orders-api/migrations/0007_outbox.sql`"
      ]
@@ -770,8 +770,8 @@
      "label": "seed-orders.py",
      "sub": "local only",
      "state": "local",
-     "x": 690,
-     "y": 270,
+     "col": 2,
+     "row": 1,
      "md": "Publishes synthetic `order.placed` events to a local Kafka. Never points at production.",
      "refs": [
       "`scripts/seed-orders.py`"
@@ -782,8 +782,8 @@
      "label": "Warehouse WMS",
      "sub": "REST · pick tickets",
      "kind": "external",
-     "x": 950,
-     "y": 270
+     "col": 3,
+     "row": 1
     }
    ],
    "edges": [

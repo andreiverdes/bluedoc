@@ -215,6 +215,12 @@ BOARD_GAP = 80                    # px between artboards placed without x/y
 SLIDE_GAP = 280                   # px between slides in the slide column: clears their labels down to ~10% zoom
 FLOW_GAP_X, FLOW_GAP_Y = 200, 120  # layout "flow": px between depth columns, and between screens in a column
 BOARD_LAYOUTS = ("rows", "flow")
+# a blueprint canvas (board-geo.js's CANVAS, GAP, ARROW, LABEL_GAP): node sizes w, h (a node with children: a system),
+# the clearance edges keep round nodes, the least gap between grid columns (rows) and between any two nodes, an edge
+# label's height, the spacing of parallel edges, an arrowhead's length, the space kept round a label
+CANVAS_NODE, CANVAS_SYSTEM = (180, 80), (240, 140)
+CANVAS_PAD, CANVAS_GAP, CANVAS_LABEL_H = 16, 80, 18
+ROUTE_LANE, ROUTE_ARROW, ROUTE_LABEL_GAP = 12, 10, 3
 # links: an element's data-nav is "[kind:]artboard" (no kind: push) or "back"; data-nav-label names the action
 NAV_KINDS = ("push", "modal", "tab", "replace", "back")
 MAX_NAV_LABEL = 40                # characters a label pill on an arrow fits
@@ -452,6 +458,89 @@ def check_shape(rep: Report, where: str, value, spec) -> None:
         rep.err(where, f"{_shown(value)} is {_json_type(value)}: must be {JSON_TYPES[spec]}")
 
 
+def _is_num(v) -> bool:
+    return isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v)
+
+
+def canvas_label_w(text: str) -> float:
+    """An edge label's width on a canvas: 5.9 px a character (UTF-16 units, as the page counts) and 7 px either side."""
+    return len(str(text).encode("utf-16-le")) // 2 * 5.9 + 14
+
+
+def canvas_label_run(length: float) -> float:
+    """The length of line a canvas edge label needs between two nodes: its own, the clearance either side, and an
+    arrowhead and the label's gap at each end."""
+    return length + 2 * CANVAS_PAD + 2 * (ROUTE_ARROW + ROUTE_LABEL_GAP)
+
+
+def canvas_size(n: dict) -> tuple[float, float]:
+    """A canvas node's w, h: its own, else a system's (a node with children) or a node's."""
+    kids = n.get("children")
+    w, h = CANVAS_SYSTEM if isinstance(kids, dict) and kids.get("nodes") else CANVAS_NODE
+    return n.get("w") or w, n.get("h") or h
+
+
+def canvas_tracks(nodes: list[dict], edges: list[dict], size: list[tuple[float, float]], ax: int) -> list[float]:
+    """One axis of a canvas scope's grid (ax 0: columns, x; 1: rows, y): each node's centre on it. board-geo.js's
+    canvasTracks, line for line: the nodes without x (y) form the columns (rows), one per distinct col (row), each as
+    wide (tall) as its widest (tallest) node; between neighbours the most of CANVAS_GAP, the clearance round both plus a
+    lane per edge crossing between them (and one more), and for an edge between neighbours level on the other axis
+    its label's run; a skipped number leaves a default node and a gap; the lowest column k is centred on
+    k × (default size + gap)."""
+    pos, key, opos, okey = ("y", "row", "x", "col") if ax else ("x", "col", "y", "row")
+    grid = [n.get(pos) is None for n in nodes]
+    at = [n[key] if _is_num(n.get(key)) else 0 for n in nodes]
+    vals = sorted({at[k] for k, n in enumerate(nodes) if grid[k]})
+    idx = {v: k for k, v in enumerate(vals)}
+    ext = [0.0] * len(vals)
+    for k in range(len(nodes)):
+        if grid[k]:
+            ext[idx[at[k]]] = max(ext[idx[at[k]]], size[k][ax])
+    by_id = {n.get("id"): k for k, n in enumerate(nodes)}
+    first, last = ("@top", "@bottom") if ax else ("@left", "@right")
+
+    def track(end):
+        if end == first:
+            return -1
+        if end == last:
+            return len(vals)
+        k = by_id.get(end)
+        return idx[at[k]] if k is not None and grid[k] else None
+
+    def across(k: int):
+        n = nodes[k]
+        return ("p", float(n[opos])) if n.get(opos) is not None else ("g", float(n[okey]) if _is_num(n.get(okey)) else 0.0)
+    lanes, run = [0] * len(vals), [0.0] * len(vals)
+    for e in edges:
+        a, b = track(e.get("from")), track(e.get("to"))
+        if a is None or b is None or a == b:
+            continue
+        lo, hi = min(a, b), max(a, b)
+        for k in range(max(lo, 0), min(hi, len(vals) - 1)):
+            lanes[k] += 1
+        if e.get("label") and hi == lo + 1 and lo >= 0 and hi < len(vals) and across(by_id[e["from"]]) == across(by_id[e["to"]]):
+            run[lo] = max(run[lo], canvas_label_run(CANVAS_LABEL_H if ax else canvas_label_w(e["label"])))
+    step = (CANVAS_NODE[1] if ax else CANVAS_NODE[0]) + CANVAS_GAP
+    c: list[float] = []
+    for k, v in enumerate(vals):
+        if not k:
+            c.append(v * step)
+            continue
+        gap = max(CANVAS_GAP, 2 * CANVAS_PAD + (lanes[k - 1] + 1) * ROUTE_LANE, run[k - 1])
+        c.append(c[k - 1] + ext[k - 1] / 2 + gap + ext[k] / 2 + max(0, v - vals[k - 1] - 1) * step)
+    return [c[idx[at[k]]] if grid[k] else n[pos] for k, n in enumerate(nodes)]
+
+
+def canvas_layout(scope: dict) -> list[tuple[float, float, float, float]]:
+    """Where each node of a canvas scope sits, as the page places it (board-geo.js's canvasLayout): (x, y, w, h), the
+    top left and size, in node order. A node's x, y is its centre; else its col, row on the grid (canvas_tracks)."""
+    nodes, edges = scope.get("nodes") or [], scope.get("edges") or []
+    size = [canvas_size(n) for n in nodes]
+    cx, cy = canvas_tracks(nodes, edges, size, 0), canvas_tracks(nodes, edges, size, 1)
+    return [(cx[k] - w / 2, cy[k] - h / 2, w, h) for k, (w, h) in enumerate(size)]
+
+
+
 def validate_scope(rep: Report, where: str, scope: dict, depth: int, node_keys: set[str], prefix: str,
                    is_child: bool) -> None:
     nodes = scope.get("nodes") or []
@@ -486,22 +575,21 @@ def validate_scope(rep: Report, where: str, scope: dict, depth: int, node_keys: 
         lint_text(rep, w + ".md", n.get("md"))
         if n.get("children"):
             validate_scope(rep, w + ".children", n["children"], depth + 1, node_keys, key + "/", True)
-    # overlap check (centre-based boxes)
-    boxes = []
-    for n in nodes:
-        if "id" not in n:
-            continue
-        sys_ = bool(n.get("children", {}).get("nodes"))
-        w_ = n.get("w") or (240 if sys_ else 180)
-        h_ = n.get("h") or (140 if sys_ else 80)
-        cx = n["x"] if "x" in n else n.get("col", 0) * 250
-        cy = n["y"] if "y" in n else n.get("row", 0) * 160
-        boxes.append((n["id"], cx - w_ / 2, cy - h_ / 2, cx + w_ / 2, cy + h_ / 2))
+    # nodes as the page places them: none on another, and none nearer another than the grid's least gap, which
+    # edges and their labels need between them (only placed x/y can be nearer: the grid sizes its own gaps)
+    placeable = all(isinstance(n, dict) and isinstance(n.get("id"), str) and isinstance(n.get("children") or {}, dict)
+                    and all(n.get(f) is None or _is_num(n[f]) for f in ("x", "y", "col", "row", "w", "h")) for n in nodes) \
+        and all(isinstance(e, dict) and all(isinstance(e.get(f), str) for f in ("from", "to")) for e in edges)
+    boxes = [(n.get("id"), *b) for n, b in zip(nodes, canvas_layout(scope))] if placeable else []
     for a in range(len(boxes)):
         for b in range(a + 1, len(boxes)):
-            A, B = boxes[a], boxes[b]
-            if A[1] < B[3] and B[1] < A[3] and A[2] < B[4] and B[2] < A[4]:
-                rep.err(where, f"nodes '{A[0]}' and '{B[0]}' overlap: move one (col/row grid is 250 x 160)")
+            (ia, ax, ay, aw, ah), (ib, bx, by, bw, bh) = boxes[a], boxes[b]
+            apart = max(bx - (ax + aw), ax - (bx + bw), by - (ay + ah), ay - (by + bh))
+            if apart < 0:
+                rep.err(where, f"nodes '{ia}' and '{ib}' overlap: move one, or place both with col/row")
+            elif apart < CANVAS_GAP:
+                rep.warn(where, f"nodes '{ia}' and '{ib}' are {apart:.0f} px apart: keep them {CANVAS_GAP} apart so edges "
+                                "and their labels fit between, or place them with col/row")
     edge_ids: set[str] = set()
     for i, e in enumerate(edges):
         w = f"{where}.edges[{i}]"

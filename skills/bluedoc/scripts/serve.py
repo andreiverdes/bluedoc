@@ -522,15 +522,12 @@ def scope_flows(scope: dict) -> int:
 
 def canvas_card(canvas: dict) -> dict:
     nodes, at = [], {}
-    for n in canvas["nodes"]:
-        if not isinstance(n, dict) or "id" not in n:
-            continue
+    good = [n for n in canvas["nodes"] if isinstance(n, dict) and "id" in n]
+    links = [e for e in canvas.get("edges") or [] if isinstance(e, dict)]
+    for n, (x, y, w, h) in zip(good, build.canvas_layout({"nodes": good, "edges": links})):
         kids = len((n.get("children") or {}).get("nodes") or [])
-        w, h = n.get("w") or (240 if kids else 180), n.get("h") or (140 if kids else 80)
-        cx = n["x"] if n.get("x") is not None else (n.get("col") or 0) * 250
-        cy = n["y"] if n.get("y") is not None else (n.get("row") or 0) * 160
         at[n["id"]] = len(nodes)
-        node = {"x": round(cx - w / 2), "y": round(cy - h / 2), "w": round(w), "h": round(h), "label": str(n.get("label") or "")[:40]}
+        node = {"x": round(x), "y": round(y), "w": round(w), "h": round(h), "label": str(n.get("label") or "")[:40]}
         node.update({k: n[k] for k in ("kind", "state") if n.get(k)})
         if kids:
             node["c"] = kids
@@ -560,8 +557,8 @@ def card(doc: dict, dtype: str, doc_path: Path) -> dict:
     git only, never gh). plan: steps = [status, effort] per step (first 24); files = counts per action (move counts
     as rename); decisions = {total, decided} over decision items, decided only when the author carried picks over.
     docs: kind, levels, flows and the first canvas's root drawing: nodes with x, y = top-left in canvas units, placed
-    as the template does (centre = x/y, else col*250, row*160; size w/h, else 180x80, or 240x140 for a node with
-    children), c = child count; edges = [from, to, kind] by node index; play = the edges the first root flow walks.
+    as the page places them (build.canvas_layout), c = child count; edges = [from, to, kind] by node index; play = the
+    edges the first root flow walks.
     design: count = artboards, artboards = the first 12 as {x, y, w, h, device, fidelity}, placed by
     build.board_layout (with the board's links, for `layout: "flow"`) and shifted so the board's top-left is 0, 0;
     links = [i, j] by artboard index, one per pair of those 12 that a link joins (at most 24; none for `back`).

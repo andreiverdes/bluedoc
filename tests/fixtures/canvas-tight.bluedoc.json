@@ -1,0 +1,121 @@
+{
+  "id": "acme-canvas-tight",
+  "title": "Acme kiosk store scan",
+  "subtitle": "Three Acme Shop apps ask one SDK for the stores a kiosk can see: a col/row canvas with long edge labels between neighbours and on frame ports.",
+  "meta": {
+    "org": "Acme Corp",
+    "kind": "Architecture",
+    "dwg": "ACME-KSK",
+    "rev": "1",
+    "date": "2026-10-20"
+  },
+  "tldr": "Every app calls `listStores()` on the kiosk SDK, which asks the kiosk over BLE, and the kiosk scans the store network.",
+  "sections": [
+    {
+      "id": "scan",
+      "title": "The scan path",
+      "blocks": [
+        {
+          "type": "canvas",
+          "id": "scan",
+          "title": "App → kiosk → store network",
+          "rootLabel": "Store scan",
+          "height": 560,
+          "nodes": [
+            {"id": "ios", "label": "Acme Shop iOS", "kind": "client", "col": 0, "row": 0, "children": {
+              "nodes": [
+                {"id": "view", "label": "StoreListView", "kind": "function", "col": 0, "row": 0},
+                {"id": "model", "label": "StoreListModel", "kind": "function", "col": 1, "row": 0},
+                {"id": "bridge", "label": "KioskBridge", "kind": "function", "col": 2, "row": 0}
+              ],
+              "edges": [
+                {"from": "view", "to": "model", "label": "refresh()"},
+                {"from": "model", "to": "bridge", "label": "listStores()"},
+                {"from": "bridge", "to": "@right", "label": "listStores()"},
+                {"from": "@right", "to": "bridge", "label": "([Store]?, error?)"}
+              ],
+              "flows": [
+                {"id": "refresh", "label": "Refresh the list", "steps": [
+                  {"edge": "view->model", "label": "The view asks for a refresh."},
+                  {"edge": "model->bridge", "label": "The model calls the bridge."},
+                  {"edge": "bridge->@right", "label": "The bridge calls the SDK."},
+                  {"edge": "@right->bridge", "label": "The SDK answers with stores or an error."}
+                ]}
+              ]
+            }},
+            {"id": "android", "label": "Acme Shop Android", "kind": "client", "col": 0, "row": 1, "children": {
+              "nodes": [
+                {"id": "screen", "label": "StoresScreen", "kind": "function", "col": 0, "row": 0},
+                {"id": "vm", "label": "StoresViewModel", "kind": "function", "col": 1, "row": 0},
+                {"id": "repo", "label": "StoreRepository", "kind": "function", "col": 2, "row": 0},
+                {"id": "client", "label": "KioskClient", "kind": "function", "col": 3, "row": 0}
+              ],
+              "edges": [
+                {"from": "screen", "to": "vm", "label": "onRefresh()"},
+                {"from": "vm", "to": "repo", "label": "stores()"},
+                {"from": "repo", "to": "client", "label": "listStores()"},
+                {"from": "client", "to": "@right", "label": "listStores(timeout: 5s)"},
+                {"from": "@right", "to": "client", "label": "Result<List<Store>, Error>"}
+              ]
+            }},
+            {"id": "web", "label": "Acme Shop Web", "kind": "client", "col": 0, "row": 2, "children": {
+              "nodes": [
+                {"id": "page", "label": "stores page", "kind": "function", "col": 0, "row": 0},
+                {"id": "hook", "label": "useStores", "kind": "function", "col": 1, "row": 0},
+                {"id": "wasm", "label": "kiosk-sdk.wasm", "kind": "function", "col": 2, "row": 0}
+              ],
+              "edges": [
+                {"from": "page", "to": "hook", "label": "mount"},
+                {"from": "hook", "to": "wasm", "label": "listStores()"},
+                {"from": "wasm", "to": "@right", "label": "listStores()"},
+                {"from": "@right", "to": "wasm", "label": "Promise<Store[]>"}
+              ]
+            }},
+            {"id": "sdk", "label": "Acme Kiosk SDK", "col": 1, "row": 1, "children": {
+              "nodes": [
+                {"id": "api", "label": "KioskApi", "kind": "function", "col": 0, "row": 0},
+                {"id": "session", "label": "KioskSession", "kind": "function", "col": 1, "row": 0},
+                {"id": "ble", "label": "BleTransport", "kind": "function", "col": 2, "row": 0}
+              ],
+              "edges": [
+                {"from": "@left", "to": "api", "label": "listStores()"},
+                {"from": "api", "to": "session", "label": "scan(request)"},
+                {"from": "session", "to": "ble", "label": "write(frame)"},
+                {"from": "ble", "to": "@right", "label": "store-scan over BLE"},
+                {"from": "api", "to": "@left", "label": "([Store]?, error?)"}
+              ]
+            }},
+            {"id": "kiosk", "label": "Acme Kiosk", "kind": "device", "col": 2, "row": 1, "children": {
+              "nodes": [
+                {"id": "gatt", "label": "GattServer", "kind": "function", "col": 0, "row": 0},
+                {"id": "scanner", "label": "StoreScanner", "kind": "function", "col": 1, "row": 0},
+                {"id": "radio", "label": "WifiRadio", "kind": "function", "col": 2, "row": 0}
+              ],
+              "edges": [
+                {"from": "@left", "to": "gatt", "label": "store-scan over BLE"},
+                {"from": "gatt", "to": "scanner", "label": "startScan()"},
+                {"from": "scanner", "to": "radio", "label": "scan(channels)"},
+                {"from": "radio", "to": "@right", "label": "802.11 scan"}
+              ]
+            }},
+            {"id": "wifi", "label": "Store Wi-Fi", "kind": "external", "col": 3, "row": 1}
+          ],
+          "edges": [
+            {"from": "ios", "to": "sdk", "label": "listStores()"},
+            {"from": "android", "to": "sdk", "label": "listStores(5s)"},
+            {"from": "web", "to": "sdk", "label": "listStores() wasm"},
+            {"from": "sdk", "to": "kiosk", "label": "store-scan over BLE"},
+            {"from": "kiosk", "to": "wifi", "label": "802.11 scan"}
+          ],
+          "flows": [
+            {"id": "scan", "label": "Scan for stores", "steps": [
+              {"edge": "ios->sdk", "label": "The iOS app asks the SDK for stores."},
+              {"edge": "sdk->kiosk", "label": "The SDK asks the kiosk over BLE."},
+              {"edge": "kiosk->wifi", "label": "The kiosk scans the store network."}
+            ]}
+          ]
+        }
+      ]
+    }
+  ]
+}

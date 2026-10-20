@@ -324,12 +324,15 @@ def overlap(a: dict, b: dict) -> float:
     return max(0, min(a["x"] + a["w"], b["x"] + b["w"]) - max(a["x"], b["x"])) * max(0, min(a["y"] + a["h"], b["y"] + b["h"]) - max(a["y"], b["y"]))
 
 
+BESIDE = 24   # board-geo.js BESIDE: the furthest a label sits beside its segment, px between them
+
+
 def on_path(pts: list, x: float, y: float, w: float, h: float) -> bool:
-    """Is a w × h label centred at x, y on a segment of pts: across it, or beside it and touching it."""
+    """Is a w × h label centred at x, y on a segment of pts: across it, or beside it, at most BESIDE px off it."""
     for a, b in segments(pts):
-        if a[1] == b[1] and min(a[0], b[0]) <= x <= max(a[0], b[0]) and abs(y - a[1]) <= h / 2 + 1:
+        if a[1] == b[1] and min(a[0], b[0]) <= x <= max(a[0], b[0]) and abs(y - a[1]) <= h / 2 + BESIDE:
             return True
-        if a[0] == b[0] and min(a[1], b[1]) <= y <= max(a[1], b[1]) and abs(x - a[0]) <= w / 2 + 1:
+        if a[0] == b[0] and min(a[1], b[1]) <= y <= max(a[1], b[1]) and abs(x - a[0]) <= w / 2 + BESIDE:
             return True
     return False
 

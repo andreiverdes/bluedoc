@@ -5125,8 +5125,7 @@ function paneShown(d) {
 /* ======================================================================
    Blueprint canvas: pan/zoom, semantic zoom into children, animated flows
    ====================================================================== */
-const DEF_W = 180, DEF_H = 80, SYS_W = 240, SYS_H = 140, COL_W = 250, ROW_H = 160;
-const HEAD = 7, PAD = 5;
+// a canvas's geometry (node sizes, the col/row layout, a system's frame, routes) is board-geo.js's: BoardGeo.canvas*
 const REVEAL_A = 0.40, REVEAL_B = 0.72;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const ease = p => p < .5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
@@ -5175,58 +5174,20 @@ const STATE_COLORS = { live: 'var(--bp-green)', local: 'var(--bp-cyan)', propose
 function prepScope(scope, parentPath) {
   scope.nodes = scope.nodes || []; scope.edges = scope.edges || []; scope.flows = scope.flows || [];
   scope._byId = {};
-  for (const n of scope.nodes) {
+  const at = BoardGeo.canvasLayout(scope);
+  scope.nodes.forEach((n, k) => {
     const sys = !!(n.children && n.children.nodes && n.children.nodes.length);
-    n.w = n.w || (sys ? SYS_W : DEF_W); n.h = n.h || (sys ? SYS_H : DEF_H);
-    const cx = n.x != null ? n.x : (n.col || 0) * COL_W;
-    const cy = n.y != null ? n.y : (n.row || 0) * ROW_H;
-    n._l = cx - n.w / 2; n._t = cy - n.h / 2;
+    n.w = at[k].w; n.h = at[k].h; n._l = at[k].x; n._t = at[k].y;
     n._path = parentPath.concat(n.id);
     n._sys = sys;
     scope._byId[n.id] = n;
     if (sys) prepScope(n.children, n._path);
-  }
-  const b = boundsOf(scope.nodes);
-  scope._bounds = b;
+  });
+  scope._bounds = BoardGeo.canvasBounds(at);
 }
-function boundsOf(nodes) {
-  if (!nodes.length) return { x: 0, y: 0, w: 1, h: 1 };
-  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-  for (const n of nodes) { x0 = Math.min(x0, n._l); y0 = Math.min(y0, n._t); x1 = Math.max(x1, n._l + n.w); y1 = Math.max(y1, n._t + n.h); }
-  return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
-}
-// the room kept between a system's children and its frame, per side, in the children's units: 36, and where an edge
-// with a label ends on that side's frame port, enough for the label on the line between the frame and the node
-function frameRoom(scope) {
-  const room = { l: 36, r: 36, t: 36, b: 36 }, side = { '@left': 'l', '@right': 'r', '@top': 't', '@bottom': 'b' };
-  for (const e of scope.edges) for (const end of [e.from, e.to]) {
-    const s = side[end];
-    if (s && e.label) room[s] = Math.max(room[s], (s === 'l' || s === 'r' ? edgeLabelW(e.label) : 18) + 24);
-  }
-  return room;
-}
-function innerFit(n) {
-  const B = n.children._bounds, room = frameRoom(n.children);
-  const bx = B.x - room.l, by = B.y - room.t, bw = B.w + room.l + room.r, bh = B.h + room.t + room.b;
-  const aw = n.w - 2 * PAD, ah = n.h - HEAD - 2 * PAD;
-  const s = Math.min(aw / bw, ah / bh);
-  const tx = PAD + (aw - bw * s) / 2 - bx * s;
-  const ty = HEAD + PAD + (ah - bh * s) / 2 - by * s;
-  return { s, tx, ty };
-}
-// a system's frame, in its inner scope's coordinates, and its ports (@left, @right, @top, @bottom): each a side of
-// the frame (no area: an end for the router, not an obstacle) that edges cross square, spread along it
-function frameOf(n) {
-  const f = n._inner, X0 = (0 - f.tx) / f.s, X1 = (n.w - f.tx) / f.s, Y0 = (HEAD - f.ty) / f.s, Y1 = (n.h - f.ty) / f.s;
-  return { bounds: { x: X0, y: Y0, w: X1 - X0, h: Y1 - Y0 },
-    ports: { '@left': { x: X0, y: Y0, w: 0, h: Y1 - Y0 }, '@right': { x: X1, y: Y0, w: 0, h: Y1 - Y0 },
-      '@top': { x: X0, y: Y0, w: X1 - X0, h: 0 }, '@bottom': { x: X0, y: Y1, w: X1 - X0, h: 0 } } };
-}
-// the side of a frame port an edge crosses, facing into the frame
-const PORT_SIDE = { '@left': 'r', '@right': 'l', '@top': 'b', '@bottom': 't' };
-// a canvas's routing: the clearance edges keep around nodes, in canvas units; an edge label's width
-const CANVAS_PAD = 16;
-const edgeLabelW = t => t.length * 5.9 + 14;
+// a system's inner drawing scaled into its box, and its frame and ports in the inner scope's units
+const innerFit = n => BoardGeo.canvasFit(n.w, n.h, n.children._bounds, BoardGeo.canvasRoom(n.children));
+const frameOf = n => BoardGeo.canvasFrame(n.w, n.h, n._inner);
 
 /* ---------- pan and zoom: the blueprint canvas and the design board share it ---------- */
 // `v` is the view ({k, tx, ty}: the content drawn at tx,ty scaled by k, stage px) and apply() repaints it.
@@ -5429,6 +5390,7 @@ document.addEventListener('pointerdown', e => {
 function setActive(cv, on) { cv.active = on; cv.stage.classList.toggle('active', on); }
 
 function buildScope(cv, scope, abs, owner) {
+  const { head: HEAD, labelH } = BoardGeo.CANVAS;
   const g = sv('g', { class: 'bp-scope' });
   scope._g = g;
   const gE = sv('g', { class: 'bp-edges' }), gN = sv('g', { class: 'bp-nodes' }), gT = sv('g', { class: 'bp-tokens' });
@@ -5476,32 +5438,19 @@ function buildScope(cv, scope, abs, owner) {
     gN.append(ng);
   }
   // edges: routed once per scope by BoardGeo (right angles round the scope's own nodes, parallel lines nudged apart,
-  // labels clear of nodes and of each other); zoom and pan only scale the drawing. Inside a system, @left/@right/
+  // labels clear of nodes, lines and each other); zoom and pan only scale the drawing. Inside a system, @left/@right/
   // @top/@bottom end on its frame.
   const box = owner ? frameOf(owner) : null, ports = box && box.ports;
-  const boxes = {}, links = [], ends = {};
-  for (const n of scope.nodes) boxes[n.id] = { x: n._l, y: n._t, w: n.w, h: n.h };
-  if (ports) Object.assign(boxes, ports);
-  for (const e of scope.edges) {
-    const a = scope._byId[e.from] || (ports && ports[e.from]), b = scope._byId[e.to] || (ports && ports[e.to]);
-    if (!a || !b || e.from === e.to) continue;
-    const id = e.id || `${e.from}->${e.to}`;
-    ends[id] = { e, from: a, to: b };
-    links.push({ id, from: e.from, to: e.to, kind: e.kind || 'data', fromSide: PORT_SIDE[e.from], toSide: PORT_SIDE[e.to],
-      labelBox: e.label ? [edgeLabelW(e.label), 18] : null });
-  }
-  const routes = BoardGeo.routeLinks(boxes, links, { pad: CANVAS_PAD, bounds: box && box.bounds });
   const lblLayer = sv('g', { class: 'bp-elbls' });
-  for (const { id } of links) {
-    const r = routes[id], { e, from, to } = ends[id];
-    if (!r) continue;
+  for (const { id, edge: e, route: r } of BoardGeo.canvasRoutes(scope, scope.nodes.map(n => ({ x: n._l, y: n._t, w: n.w, h: n.h })), box)) {
+    const from = scope._byId[e.from] || ports[e.from], to = scope._byId[e.to] || ports[e.to];
     const kind = e.kind || 'data';
     const path = sv('path', { class: `bp-edge k-${kind}`, d: r.d, 'data-edge': id, 'marker-end': e.dir === 'none' ? null : `url(#${cv.gid}-m-${kind})`, 'marker-start': e.dir === 'both' ? `url(#${cv.gid}-m-${kind})` : null });
     path._kind = kind;
     gE.append(path);
     if (e.label) {
-      const t = e.label, lw = edgeLabelW(t);
-      lblLayer.append(sv('g', { class: 'bp-elbl', 'data-edge': id, transform: `translate(${r.label.x - lw / 2},${r.label.y - 9})` }, sv('rect', { width: lw, height: 18, rx: 3 }), sv('text', { x: lw / 2, y: 12.5, 'text-anchor': 'middle' }, t)));
+      const t = e.label, lw = BoardGeo.canvasLabelW(t);
+      lblLayer.append(sv('g', { class: 'bp-elbl', 'data-edge': id, transform: `translate(${r.label.x - lw / 2},${r.label.y - labelH / 2})` }, sv('rect', { width: lw, height: labelH, rx: 3 }), sv('text', { x: lw / 2, y: 12.5, 'text-anchor': 'middle' }, t)));
     }
     scope._edgeEls[id] = { path, e, from, to };
   }

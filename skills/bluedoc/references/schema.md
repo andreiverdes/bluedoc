@@ -665,7 +665,7 @@ The template fixes the layout; documents don't set it.
 |---|---|
 | `id`, `label` | Required. Label ≤ 40 chars; put detail in `sub` or `md`. |
 | `sub` | Second line (path, technology, one fact). |
-| position | `x`,`y` = centre in canvas units, **or** `col`,`row` on a 250 × 160 grid. Nodes must not overlap (validator checks). |
+| position | `x`,`y` = centre in canvas units, **or** `col`,`row` on the grid (below). Nodes must not overlap (validator error) and should sit at least 80 apart (validator warning). |
 | `w`, `h` | Size. Defaults 180 × 80; systems with `children` 240 × 140. |
 | `kind` | Shape: `service` (default), `process`, `function`, `store`/`db`/`cache`/`stream` (cylinder), `queue`, `device`/`hardware` (chamfered), `actor`/`user`/`person` (pill), `client`/`app`/`ui` (window), `external`/`cloud` (dashed), `note`, `port`. |
 | `state` | Outline + badge: `live` (green), `local` (cyan), `proposed`/`unverified` (amber dashed), `removed`/`replaced` (red dashed). |
@@ -679,6 +679,10 @@ A node with `children` is a **system**. Collapsed, it shows its label and `⊕ O
 
 Lay out children in their own space starting near `col: 0, row: 0`; the runtime scales them into the parent's box.
 
+### Grid
+
+`col` and `row` are places, not distances: the drawing spaces them from what it draws. Each column is as wide as its widest node and each row as tall as its tallest, and neighbouring columns (rows) sit at least 80 apart: room for the clearance edges keep round both nodes, a label's height and two lanes. A gap grows for what crosses it: 12 more per edge beyond the third, and for an edge between neighbours on one row (column), the room its label needs on the line between them (its width, or its height down a column, plus the clearance and an arrowhead at each end). Column (row) 0 is centred on 0, so a node placed with `x` (`y`) keeps its place beside the grid; the grid sizes its gaps from its own nodes only, so keep placed nodes clear of it (the validator warns under 80). A skipped `col` (`row`) number leaves room for a default node. Inside a system, the room between its children and its frame is half a gap, more on a side whose port carries edges, and a labelled port edge's label run.
+
 ### Edge
 
 | Field | Meaning |
@@ -689,7 +693,7 @@ Lay out children in their own space starting near `col: 0, row: 0`; the runtime 
 | `kind` | `data` (cyan, animated), `control` (dashed), `async` (violet dotted, queues/events), `power` (amber), `dep` (dependency, dim), `replaced` (red). |
 | `dir` | `none` or `both` (default: arrow at `to`). |
 
-Edges route themselves, as a design board's links do: right angles with rounded corners, round the scope's other nodes, leaving each node on the side facing the other end. Parallel lines are spaced apart, and each label sits on its line clear of nodes and other labels. A frame port is a stretch of the frame's edge that edges cross square. `bend` is gone (the build warns that it is ignored).
+Edges route themselves, as a design board's links do: right angles with rounded corners, round the scope's other nodes, leaving each node on the side facing the other end. Parallel lines are spaced apart. An edge with no way round goes through as little of the nodes in its way (their clearance before the node itself) as it can. Each label sits on its line, or beside it (touching, then up to 24 px off), clear of nodes, other labels and other edges' lines wherever such a spot exists. A frame port is a stretch of the frame's edge that edges cross square. `bend` is gone (the build warns that it is ignored).
 
 ### Flow
 
