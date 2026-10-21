@@ -4117,8 +4117,10 @@ const revOrd = r => { if (r == null) return -1; const i = REVS.findIndex(x => x.
 // replies on a later rev are new, and their items open on load
 const SEEN_REV = store.get(`bp:${docId}:__seen`);
 const isNewMsg = m => m.who === 'agent' && !RO && !!SEEN_REV && SEEN_REV !== CUR.rev && revOrd(SEEN_REV) < REVS.length && revOrd(m.rev) > revOrd(SEEN_REV);
-// the agent that opened the page (`serve.py open --to`), else Agent
+// the agent that opened the page (`serve.py open --to`), else Agent: in the Markdown it reads
 const agentName = () => REPLY.to || 'Agent';
+// the same in the page's conversations, where an agent nobody named is Clank Kent
+const convoName = () => REPLY.to || 'Clank Kent';
 function convo(mine, theirs) {
   const upto = OLD ? revOrd(VIEW.rev) : Infinity;
   const ms = [...(Array.isArray(theirs) ? theirs : []).filter(okReply).map((m, i) => ({ who: 'agent', rev: String(m.rev), md: m.md, i })),
@@ -4131,7 +4133,7 @@ const fmtAt = s => { const d = new Date(s); return isNaN(d) ? '' : `${d.getDate(
 // the files it carried
 function timeline(ms) {
   return h('ol', { class: 'bp-msgs', 'aria-label': 'Conversation' }, ms.map(m => {
-    const name = m.who === 'you' ? 'You' : agentName(), nw = isNewMsg(m);
+    const name = m.who === 'you' ? 'You' : convoName(), nw = isNewMsg(m);
     return h('li', { class: 'bp-msg ' + m.who + (nw ? ' new' : '') },
       h('span', { class: 'av', 'aria-hidden': 'true' }, name.slice(0, 1).toUpperCase()),
       h('div', { class: 'mh' }, h('b', { class: 'who' }, name), h('span', { class: 'rv' }, m.rev == null ? 'earlier' : 'rev ' + m.rev),
@@ -4145,7 +4147,7 @@ function threadView(x, compact) {
   const el = h('div', { class: 'bp-convo' + (compact ? ' compact' : '') });
   let sig = null;
   const paint = () => {
-    const ms = x.messages(), s = JSON.stringify([agentName(), ms.map(m => [m.who, m.rev, m.md, m.at, isNewMsg(m), m.files])]);
+    const ms = x.messages(), s = JSON.stringify([convoName(), ms.map(m => [m.who, m.rev, m.md, m.at, isNewMsg(m), m.files])]);
     if (s === sig) return;
     sig = s; el.hidden = !ms.length;
     el.replaceChildren(...(ms.length ? [h('div', { class: 'bp-cap' }, 'Conversation'), timeline(ms)] : []));
@@ -4156,7 +4158,7 @@ function threadView(x, compact) {
 // a closed row's conversation in one line: "3 messages · omp replied in rev 3 · New"
 function convoLine(ms) {
   const last = ms.filter(m => m.who === 'agent').at(-1);
-  return [ic('msgsq'), h('span', {}, `${ms.length} message${ms.length === 1 ? '' : 's'}` + (last ? ` · ${agentName()} replied in rev ${last.rev}` : '')),
+  return [ic('msgsq'), h('span', {}, `${ms.length} message${ms.length === 1 ? '' : 's'}` + (last ? ` · ${convoName()} replied in rev ${last.rev}` : '')),
     ...(ms.some(isNewMsg) ? [h('span', { class: 'nw' }, '· ', h('i'), 'New')] : [])];
 }
 // Each item is a two-line row (title, subtitle) and, on a decision, its options; open, it shows everything else: the
@@ -11246,7 +11248,7 @@ const MARKUP = (() => {
     li._a = a;
     const n = isGeneral(a) ? 0 : onPage().indexOf(a) + 1, editing = a === editA;
     const ms = annConvo(a), lastMsg = ms.at(-1);
-    const sig = [n, a.note, JSON.stringify(a.files || null), a.status, a.rev, a.target.key, a.target.label, a.color, editing, (a.targets || []).length, !!a.stale, JSON.stringify(ms), agentName()].join('\u0001');
+    const sig = [n, a.note, JSON.stringify(a.files || null), a.status, a.rev, a.target.key, a.target.label, a.color, editing, (a.targets || []).length, !!a.stale, JSON.stringify(ms), convoName()].join('\u0001');
     if (li._sig !== sig) { li._sig = sig; fill(li, a, n, editing, ms); }
     li.className = cardCls(li, a);
     li.querySelector('.ago').textContent = ago(a.at);

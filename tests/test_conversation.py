@@ -94,7 +94,7 @@ class Conversation(ChromePage):
             ("you", "1", "Acme: what does 180 days cost?"), ("agent", "2", "About **2 GB** a month at Acme's volume."),
             ("you", "2", "Acme: fine, keep 180 days."), ("agent", "3", "Done: 180 days.")])
         self.assertEqual(a.ev(f"[...{row}.querySelectorAll('.bp-msg')].map(m => m.querySelector('.who').textContent + ' ' + m.querySelector('.rv').textContent)"),
-                         ["You rev 1", "Agent rev 2", "You rev 2", "Agent rev 3"])
+                         ["You rev 1", "Clank Kent rev 2", "You rev 2", "Clank Kent rev 3"])
         # an earlier rev: the thread as it stood then, and no box to write in
         for rev, n in (("2", 3), ("1", 1)):
             with self.subTest(rev=rev):
@@ -233,7 +233,7 @@ class Conversation(ChromePage):
         a.ev("BP.comments({open: true, filter: 'open'})")
         a.wait_for(f"!!{card}")
         self.assertEqual(a.ev(f"[...{card}.querySelectorAll('.bp-msg')].map(m => m.querySelector('.who').textContent + ' ' + m.querySelector('.rv').textContent)"),
-                         ["Agent rev 2", "You rev 2"])
+                         ["Clank Kent rev 2", "You rev 2"])
         self.assertEqual(self.count(a), [True, "0"])
 
     def test_a_closed_decision_shows_its_box_and_a_click_into_it_opens_the_row(self) -> None:
