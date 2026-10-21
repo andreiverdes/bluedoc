@@ -428,7 +428,8 @@ td.bd-cell-mod { background: color-mix(in oklch, var(--warn-tint) 70%, transpare
 .bp-cl-subt > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .bp-cl-subt .bd-ic { width: 13px; height: 13px; color: var(--ok); flex: none; margin-top: 3px; }
 .bp-cl-subt code { font-size: .9em; }
-.bp-cl-item.open .bp-cl-text, .bp-cl-item.open .bp-cl-subt > span { white-space: normal; overflow: visible; }
+/* open, or with nothing to open: the title and subtitle wrap instead of truncating */
+.bp-cl-item:is(.open, .empty) .bp-cl-text, .bp-cl-item:is(.open, .empty) .bp-cl-subt > span { white-space: normal; overflow: visible; }
 .bp-cl-item.done .bp-cl-text, .bp-cl-item.done .bp-cl-text code { color: var(--fg-subtle); }
 .bp-cl-head > .bp-chip { margin-top: 2px; flex: none; }
 .bp-cl-chev { width: 16px; height: 16px; flex: none; margin-top: 4px; color: var(--fg-subtle); transition: transform .18s var(--ease); }
@@ -3480,11 +3481,11 @@ const tldr = h('div', { class: 'bd-tldr' }, DOC.tldr && h('div', { class: 'bd-tl
 // in the rail (placeMeta); org, kind and date already sit in the eyebrow, so only the drawing identity is added
 const props = [['Drawing', meta.dwg], ['Revision', meta.rev]].filter(p => p[1]);
 const metaRail = h('aside', { class: 'bd-meta', 'aria-label': 'Document status' },
-  DOC.state && DOC.state.length && h('div', { class: 'bd-rail-sec' }, h('h4', { class: 'bd-rail-h' }, 'Status'),
+  DOC.state && DOC.state.length > 0 && h('div', { class: 'bd-rail-sec' }, h('h4', { class: 'bd-rail-h' }, 'Status'),
     h('ul', { class: 'bd-states' }, DOC.state.map(s => h('li', { class: 'bd-state ' + (s.kind || 'info') }, h('i'), h('span', {}, s.label))))),
-  props.length && h('div', { class: 'bd-rail-sec' }, h('h4', { class: 'bd-rail-h' }, 'Document'),
+  props.length > 0 && h('div', { class: 'bd-rail-sec' }, h('h4', { class: 'bd-rail-h' }, 'Document'),
     h('dl', { class: 'bd-props' }, props.map(([k, v]) => [h('dt', {}, k), h('dd', {}, v)]))),
-  DOC.links && DOC.links.length && h('div', { class: 'bd-rail-sec' }, h('h4', { class: 'bd-rail-h' }, 'Related'),
+  DOC.links && DOC.links.length > 0 && h('div', { class: 'bd-rail-sec' }, h('h4', { class: 'bd-rail-h' }, 'Related'),
     h('ul', { class: 'bd-links' }, DOC.links.map(l => h('li', {}, h('a', { href: safeUrl(l.href) }, ic(/^https?:/.test(l.href) ? 'link' : 'doc'), h('span', {}, l.label)))))));
 
 const side = h('aside', { class: 'bp-side', 'aria-label': 'Contents' });
@@ -4081,7 +4082,7 @@ function renderChecklist(b, parent) {
       !choices && evidenceBlock(evList(it), `item:${cid}/${it.id}`)].filter(Boolean);
     // the question's details show only while the row is open, under its options
     const body = h('div', { class: 'bp-cl-body', id: bodyId, role: 'region', 'aria-label': String(it.text || '').replace(/[`*]/g, '') },
-      choices && details.length && h('div', { class: 'bp-cap' }, 'Details'), details);
+      choices && details.length > 0 && h('div', { class: 'bp-cap' }, 'Details'), details);
     // a progress item whose evidence is stale (the code changed since its check ran) needs a recheck: its tick shows
     // amber and the counts leave it out until the agent re-records the evidence
     const stale = !choices && ownerStale(`item:${cid}/${it.id}`);
@@ -4142,7 +4143,7 @@ function renderChecklist(b, parent) {
     // a decision's box shows while its row is closed too: a click into it (or typing) opens the row, the details
     // grow above it and the page scrolls with them, so the box stays under the pointer
     entryItem.noteView = noteBox(entryItem, false, choices && (() => {
-      if (li.classList.contains('open')) return;
+      if (li.classList.contains('open') || li.classList.contains('empty')) return;
       const ta = entryItem.noteView.ta, y = ta.getBoundingClientRect().top;
       entryItem.setOpen(true); CHECKLISTS.forEach(c => c.paintExpand());
       const dy = ta.getBoundingClientRect().top - y;
@@ -4156,6 +4157,8 @@ function renderChecklist(b, parent) {
       entryItem.thread.paint();
       sum.hidden = !ms.length;
       sum.replaceChildren(...(ms.length ? convoLine(ms) : []));
+      // a first message gives a decision with no details a row to open
+      if (entryItem.refresh) { entryItem.refresh(); CHECKLISTS.forEach(c => c.paintExpand()); }
     };
     entryItem.paintConvo = paintConvo;
     li.classList.toggle('has-note', !!note);
@@ -4212,10 +4215,13 @@ function renderChecklist(b, parent) {
       if (open && entryItem.onOpen) entryItem.onOpen();   // a finding draws its code on first open (findingCode)
     };
     entryItem.refresh = () => {
-      // nothing to expand: the row is just the tick's label, and keyboard focus stays on the tick
-      const empty = !body.childElementCount;
+      // nothing to expand (no details, no conversation, no box in the body): the row is just the tick's label, and
+      // keyboard focus stays on the tick
+      const empty = ![...body.children].some(c => !c.hidden);
+      if (empty && li.classList.contains('open')) entryItem.setOpen(false);
       li.classList.toggle('empty', empty);
-      if (empty) { head.removeAttribute('aria-expanded'); head.removeAttribute('aria-controls'); head.tabIndex = -1; head.setAttribute('aria-hidden', 'true'); }
+      // a decision's head stays readable: its question names the options under it (a progress row's tick carries the text)
+      if (empty) { head.removeAttribute('aria-expanded'); head.removeAttribute('aria-controls'); head.tabIndex = -1; if (!choices) head.setAttribute('aria-hidden', 'true'); }
       else { head.setAttribute('aria-expanded', String(li.classList.contains('open'))); head.setAttribute('aria-controls', bodyId); head.removeAttribute('tabindex'); head.removeAttribute('aria-hidden'); }
     };
     head.addEventListener('click', () => {

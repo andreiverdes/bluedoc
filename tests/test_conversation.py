@@ -261,6 +261,30 @@ class Conversation(ChromePage):
         self.assertEqual(a.ev(state)[2], [True, True])
         self.assertEqual(until(lambda: (self.state(url) or {}).get("decisions:retention:note")), "Acme: how big is it?")
 
+    def test_a_decision_with_no_details_has_nothing_to_open_until_its_first_message(self) -> None:
+        doc = load_json(self.plan)
+        guests = next(it for s in doc["sections"] for b in s.get("blocks", []) if b.get("type") == "checklist"
+                      for it in b.get("items", []) if it["id"] == "guests")
+        del guests["detail"]
+        self.plan.write_text(json.dumps(doc))
+        url = self.server.url_for(self.plan)
+        a = self.open(url)
+        row, other = "document.querySelector('#item-decisions-guests')", "document.querySelector('#item-decisions-retention')"
+        look = "(r => [r.classList.contains('empty'), r.classList.contains('open'), r.querySelector('.bp-cl-body').textContent])"
+        self.assertEqual(a.ev(f"{look}({row})"), [True, False, ""])
+        # a click on the question or into the box opens nothing
+        a.ev(f"{row}.querySelector('.bp-cl-head').click(); {row}.querySelector(':scope > .bp-note textarea').dispatchEvent(new InputEvent('input'))")
+        self.assertEqual(a.ev(f"{look}({row})"), [True, False, ""])
+        # a decision with details still opens to them, under their caption
+        a.ev(f"{other}.querySelector('.bp-cl-head').click()")
+        self.assertEqual(a.ev(f"[{other}.classList.contains('open'), {other}.querySelector('.bp-cl-body > .bp-cap').textContent]"), [True, "Details"])
+        # its first message gives it a conversation to open
+        a.ev("BP.setNote('decisions/guests', 'Acme: guests too?')")
+        self.send_changes(a, "1 comment on items")
+        self.assertFalse(a.ev(f"{row}.classList.contains('empty')"))
+        a.ev(f"{row}.querySelector('.bp-cl-head').click()")
+        self.assertEqual(a.ev(f"[{row}.classList.contains('open'), {row}.querySelector('.bp-convo').checkVisibility()]"), [True, True])
+
 
 if __name__ == "__main__":
     unittest.main()
