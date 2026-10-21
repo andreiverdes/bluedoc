@@ -480,6 +480,10 @@ td.bd-cell-mod { background: color-mix(in oklch, var(--warn-tint) 70%, transpare
 .bp-cl.nested > .bp-bar { margin: 0 14px; }
 .bp-cl.nested .bp-cl-row { padding-left: 14px; }
 .bp-cl.nested .bp-cl-text { font-size: 14px; }
+/* a decision's question: a step above its options (14 px, 500), so the eye finds the question first; it wraps
+   rather than cutting off, open or closed */
+.bp-cl-item.has-choices > .bp-cl-row .bp-cl-text { font-size: 16px; line-height: 1.45; font-weight: 600; white-space: normal; overflow: visible; }
+.bp-cl.nested .bp-cl-item.has-choices > .bp-cl-row .bp-cl-text { font-size: 15px; }
 .bp-cl.nested .bp-cl-body { padding-left: calc(14px + var(--ind)); padding-right: 14px; }
 .bp-cl-verify { font-size: 13.5px; color: var(--fg-muted); display: flex; gap: 8px; align-items: flex-start; line-height: 1.5; }
 .bp-cl-verify .bd-ic { width: 15px; height: 15px; color: var(--ok); margin-top: 2px; }
