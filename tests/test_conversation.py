@@ -236,6 +236,31 @@ class Conversation(ChromePage):
                          ["Agent rev 2", "You rev 2"])
         self.assertEqual(self.count(a), [True, "0"])
 
+    def test_a_closed_decision_shows_its_box_and_a_click_into_it_opens_the_row(self) -> None:
+        url = self.server.url_for(self.plan)
+        a = self.open(url)
+        row = "document.querySelector('#item-decisions-retention')"
+        box = f"{row}.querySelector(':scope > .bp-note')"
+        state = f"(b => [{row}.classList.contains('open'), b.checkVisibility(), [...b.querySelectorAll('.acts button')].map(x => x.disabled)])({box})"
+        self.assertEqual(a.ev(state), [False, True, [True, True]])
+        # a Tab into the field leaves the row closed
+        a.ev(f"{box}.querySelector('textarea').focus()")
+        self.assertFalse(a.ev(f"{row}.classList.contains('open')"))
+        a.ev("document.activeElement.blur()")
+        # a click opens it; the details grow above the box, which stays under the pointer
+        x, y = a.ev(f"(t => {{ t.scrollIntoView({{block: 'center', behavior: 'instant'}}); const r = t.getBoundingClientRect(); return [r.x + 30, r.y + r.height / 2]; }})({box}.querySelector('textarea'))")
+        for kind, buttons in (("mouseMoved", 0), ("mousePressed", 1), ("mouseReleased", 0)):
+            self.browser.call("Input.dispatchMouseEvent", {"type": kind, "x": x, "y": y, "button": "left", "buttons": buttons, "clickCount": 1}, a.session)
+        a.wait_for(f"{row}.classList.contains('open')")
+        self.assertLess(abs(a.ev(f"{box}.querySelector('textarea').getBoundingClientRect().top + {box}.querySelector('textarea').getBoundingClientRect().height / 2") - y), 3)
+        self.assertTrue(a.ev(f"document.activeElement === {box}.querySelector('textarea')"))
+        # Cancel and Save are enabled while the text differs from the saved comment
+        self.browser.call("Input.insertText", {"text": "Acme: how big is it?"}, a.session)
+        self.assertEqual(a.ev(state)[2], [False, False])
+        a.ev(f"{box}.querySelector('.acts .primary').click()")
+        self.assertEqual(a.ev(state)[2], [True, True])
+        self.assertEqual(until(lambda: (self.state(url) or {}).get("decisions:retention:note")), "Acme: how big is it?")
+
 
 if __name__ == "__main__":
     unittest.main()

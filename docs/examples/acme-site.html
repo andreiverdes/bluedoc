@@ -287,29 +287,36 @@ td.bd-cell-mod { background: color-mix(in oklch, var(--warn-tint) 70%, transpare
 @media (max-width: 900px) { .bd-rev-btn .l { display: none; } .bd-rev-btn { padding: 0 8px; } }
 @media (max-width: 600px) { .bd-revbar .in { padding: 6px 12px; gap: 2px 6px; font-size: 13px; } .bd-revbar .in > .bd-ic { display: none; } .bd-revbar .t { flex: 1 1 100%; } }
 @media print { .bd-revbar .bd-ibtn, .bd-revbar .bp-btn, .bd-revbar .bd-revtb, .bd-rev-btn { display: none !important; } .bd-revbar { position: static; } }
-/* the reader's reply box on an item: one quiet line that grows; a draft until Save (⌘/Ctrl+Enter), Cancel (Esc)
-   restores the saved text. Sending it (Approve, Request changes, Send answers) moves it into the conversation */
+/* the reader's reply box on an item: one field that grows, its Cancel and Save inside it, always shown and disabled
+   until the text differs from the saved comment. A draft until Save (⌘/Ctrl+Enter); Cancel (Esc) restores the saved
+   text. Sending it (Approve, Request changes, Send answers) moves it into the conversation */
 .bp-note { display: flex; align-items: flex-start; gap: 8px; }
-.bp-note .f { container: bp-note / inline-size; position: relative; flex: 1; min-width: 0; display: grid; gap: 6px; }
-.bp-note .hint { position: absolute; right: 12px; top: 7px; font-size: 12px; line-height: 20px; color: var(--fg-subtle); pointer-events: none; }
-.bp-note-ta:is(:focus, :not(:placeholder-shown)) ~ .hint { display: none; }
+.bp-note .f { container: bp-note / inline-size; flex: 1; min-width: 0; display: grid; border-radius: 9px; cursor: text;
+  background: var(--inset); box-shadow: inset 0 0 0 1px var(--line); transition: box-shadow .12s, background .12s; }
+.bp-note .f:focus-within { background: var(--surface); box-shadow: var(--focus-ring); }
+.bp-note.dirty .f:not(:focus-within) { box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--accent) 55%, transparent); }
 .bp-note-ta { flex: 1; min-width: 0; min-height: 34px; resize: none; overflow: hidden; padding: 6px 10px; border: 0; border-radius: 9px; font: 13.5px/1.5 var(--sans); color: var(--fg);
   background: var(--inset); box-shadow: inset 0 0 0 1px var(--line); transition: box-shadow .12s; }
 .bp-note-ta::placeholder { color: var(--fg-subtle); }
 .bp-note-ta:focus { outline: none; background: var(--surface); box-shadow: var(--focus-ring); }
-.bp-note .f > .bp-note-ta { display: block; width: 100%; overflow-y: auto; scrollbar-width: thin; }
+.bp-note .f > .bp-note-ta, .bp-note .f > .bp-note-ta:focus { display: block; width: 100%; min-height: 32px; padding: 7px 12px 3px; overflow-y: auto; scrollbar-width: thin;
+  background: none; box-shadow: none; border-radius: 9px 9px 0 0; }
 .bp-note .f > .bp-note-ta::placeholder { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.bp-note.dirty .bp-note-ta:not(:focus) { box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--accent) 55%, transparent); }
-.bp-note .ft { display: flex; align-items: center; gap: 6px; min-height: 26px; }
-.bp-note .ft[hidden], .bp-note .acts[hidden], .bp-note .saved[hidden] { display: none; }
-.bp-note .acts { display: inline-flex; gap: 4px; margin-left: auto; }
+.bp-note .ft { display: flex; align-items: center; gap: 6px; min-width: 0; padding: 0 6px 6px 12px; }
+.bp-note .hint { min-width: 0; font-size: 12px; color: var(--fg-subtle); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bp-note .ft:has(.saved:not([hidden])) .hint, .bp-note .saved[hidden] { display: none; }
+.bp-note .acts { display: inline-flex; flex: none; gap: 4px; margin-left: auto; cursor: default; }
 .bp-note .acts .bp-btn { height: 26px; font-size: 12.5px; }
+.bp-note .acts .bp-btn:disabled { opacity: .5; cursor: default; }
 .bp-note .saved { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--ok-fg); animation: bd-tip-in .12s var(--ease); }
 .bp-note .saved .bd-ic { width: 13px; height: 13px; stroke-width: 2.4; }
 .bp-note.compact { margin-top: 8px; padding-left: 28px; }
-.bp-note.compact .bp-note-ta { font-size: 13px; padding: 5px 9px; min-height: 31px; }
+.bp-note.compact .f > .bp-note-ta { font-size: 13px; padding: 6px 10px 2px; min-height: 29px; }
+.bp-note.compact .ft { padding-left: 10px; }
 .bp-cl-body > .bp-note { margin-top: 16px; }
-.bp-cl-body > .bp-note .bp-note-ta { padding: 7px 12px; }
+/* a decision's box stays under its options when the row is closed (a click in it opens the row) */
+.bp-cl-item > .bp-note { padding: 0 16px 14px calc(16px + var(--ind)); }
+.bp-cl.nested .bp-cl-item > .bp-note { padding-left: calc(14px + var(--ind)); padding-right: 14px; }
 /* a Merged finding: its conversation and reply box under its options, in the title column */
 .bd-mrow > :is(.bp-note, .bp-convo) { padding: 0 16px 12px calc(16px + var(--ind)); }
 .bd-mrow > .bp-convo { padding-top: 2px; }
@@ -1557,7 +1564,7 @@ svg.anim .bp-edge.k-async { animation: bp-march 1.6s linear infinite; }
   .bp-cl { --ind: 28px; }
   .bp-cl-row { padding: 0 4px 0 12px; }
   .bp-cl-body { padding: 0 12px 12px 12px; }
-  .bp-opts, .bp-cl-sum, .bd-mrow > :is(.bp-note, .bp-convo) { padding: 0 12px 12px 12px; }
+  .bp-opts, .bp-cl-sum, .bp-cl-item > .bp-note, .bd-mrow > :is(.bp-note, .bp-convo) { padding: 0 12px 12px 12px; }
   .bp-opts.compact { padding: 8px 0 0; }
   .bp-cl-num { display: none; }
   .bp-cl-head { flex-wrap: wrap; row-gap: 4px; }
@@ -4132,7 +4139,15 @@ function renderChecklist(b, parent) {
       if (from !== entryItem.noteView) entryItem.noteView.paint();
       syncDiffs(); paintSend(); MARKUP.paint();
     };
-    entryItem.noteView = noteBox(entryItem);
+    // a decision's box shows while its row is closed too: a click into it (or typing) opens the row, the details
+    // grow above it and the page scrolls with them, so the box stays under the pointer
+    entryItem.noteView = noteBox(entryItem, false, choices && (() => {
+      if (li.classList.contains('open')) return;
+      const ta = entryItem.noteView.ta, y = ta.getBoundingClientRect().top;
+      entryItem.setOpen(true); CHECKLISTS.forEach(c => c.paintExpand());
+      const dy = ta.getBoundingClientRect().top - y;
+      if (dy) scrollerOf(ta).scrollBy({ top: dy, behavior: 'instant' });
+    }));
     entryItem.thread = threadView(entryItem);
     const sum = h('div', { class: 'bp-cl-sum', title: 'Show the conversation' });
     sum.addEventListener('click', () => { entryItem.setOpen(true); CHECKLISTS.forEach(c => c.paintExpand()); });
@@ -4184,11 +4199,13 @@ function renderChecklist(b, parent) {
       paintPicked();
     }
     li.append(sum);
-    // open: the details, then the conversation (read-only views: only when there is one), then the reply box
+    // open: the details, then the conversation (read-only views: only when there is one), then the reply box (a
+    // decision's sits under the row's body, shown open or closed)
     if (!RO || entryItem.messages().length) body.append(entryItem.thread.el);
-    if (!RO) body.append(entryItem.noteView.el);
+    if (!RO && !choices) body.append(entryItem.noteView.el);
     paintConvo();
     li.append(body);
+    if (!RO && choices) li.append(entryItem.noteView.el);
     entryItem.setOpen = open => {
       li.classList.toggle('open', open); head.setAttribute('aria-expanded', String(open));
       if (open) body.removeAttribute('hidden'); else body.hidden = 'until-found';
@@ -4440,11 +4457,20 @@ function allChecklistsMd() {
 
 /* ---------- replies: comments and answers back to the agent ---------- */
 const MSG_KEY = `bp:${docId}:__message`;
-// An item's reply box: in its open row, on its diff comment cards and in Merged; they stay in sync on Save. It holds
+// An item's reply box: in its row, on its diff comment cards and in Merged; they stay in sync on Save. It holds
 // the draft (`:note`) until the next send moves it into the conversation. Auto-height needs layout: a box that is not
 // shown (a closed row, another diff file) measures 0, so fit waits until it is.
 const noteFit = 'ResizeObserver' in window ? new ResizeObserver(es => es.forEach(e => e.target._fit && e.target._fit())) : null;
-function noteBox(x, compact) {
+// the element that scrolls an element: its nearest scrolling ancestor, or the page
+function scrollerOf(el) {
+  for (let p = el.parentElement; p; p = p.parentElement) if (p.scrollHeight > p.clientHeight && /auto|scroll/.test(getComputedStyle(p).overflowY)) return p;
+  return document.scrollingElement;
+}
+// when the last press was: a focus right after one is a click into the field (a Tab into it is not)
+let lastPress = -1e9;
+addEventListener('pointerdown', () => { lastPress = performance.now(); }, true);
+// onEnter: called when the reader clicks into the field or types in it (a decision row opens)
+function noteBox(x, compact, onEnter) {
   const ph = () => x.more === 'on' ? 'What details do you need? (optional)' : x.messages().length ? 'Reply…' : 'Comment for the agent…';
   const ta = h('textarea', { class: 'bp-note-ta', rows: 1, maxlength: 8192, placeholder: ph(),
     'aria-label': 'Reply to the agent on: ' + String(x.it.text || '').replace(/[`*]/g, '') });
@@ -4457,18 +4483,26 @@ function noteBox(x, compact) {
   };
   ta._fit = fit;
   if (noteFit) noteFit.observe(ta);
-  // a draft until saved: typing shows Save and Cancel; blur keeps the draft. Saving updates the item
-  // (its comment icon, Send answers, the other boxes for it); Cancel puts the saved text back.
+  // a draft until saved: Cancel and Save sit in the field, enabled while its text differs from the saved comment;
+  // blur keeps the draft. Saving updates the item (its comment icon, Send answers, the other boxes for it); Cancel
+  // puts the saved text back.
   let draft = false, savedT = 0;
-  const saveBtn = h('button', { type: 'button', class: 'bp-btn primary', title: `Save (${MAC ? '⌘' : 'Ctrl'} + Enter)`, onclick: () => save() }, 'Save');
-  const cancelBtn = h('button', { type: 'button', class: 'bp-btn ghost', title: 'Cancel (Esc): back to the saved comment', onclick: () => cancel() }, 'Cancel');
+  const saveBtn = h('button', { type: 'button', class: 'bp-btn primary', title: `Save (${MAC ? '⌘' : 'Ctrl'} + Enter)`, disabled: true, onclick: () => save() }, 'Save');
+  const cancelBtn = h('button', { type: 'button', class: 'bp-btn ghost', title: 'Cancel (Esc): back to the saved comment', disabled: true, onclick: () => cancel() }, 'Cancel');
   const acts = h('span', { class: 'acts' }, cancelBtn, saveBtn);
   const saved = h('span', { class: 'saved', role: 'status', hidden: true }, ic('tick'), 'Saved');
-  const ft = h('div', { class: 'ft' }, saved, acts);
-  const el = h('div', { class: 'bp-note' + (compact ? ' compact' : '') }, h('div', { class: 'f' }, ta, !compact && h('span', { class: 'hint', 'aria-hidden': 'true' }, 'goes with your answers'), ft));
+  const ft = h('div', { class: 'ft' }, !compact && h('span', { class: 'hint', 'aria-hidden': 'true' }, 'goes with your answers'), saved, acts);
+  const f = h('div', { class: 'f' }, ta, ft);
+  const el = h('div', { class: 'bp-note' + (compact ? ' compact' : '') }, f);
+  // a press on the field's padding or footer (not its buttons) puts the caret in the text
+  f.addEventListener('mousedown', e => { if (e.target !== ta && !e.target.closest('button')) { e.preventDefault(); ta.focus(); } });
+  if (onEnter) {
+    ta.addEventListener('focus', () => { if (performance.now() - lastPress < 800) onEnter(); });
+    ta.addEventListener('input', () => onEnter());
+  }
   const paintFt = () => {
     if (draft && ta.value === x.note) draft = false;
-    el.classList.toggle('dirty', draft); acts.hidden = !draft; ft.hidden = acts.hidden && saved.hidden;
+    el.classList.toggle('dirty', draft); saveBtn.disabled = cancelBtn.disabled = !draft;
   };
   function save() {
     x.setNote(ta.value, view);
