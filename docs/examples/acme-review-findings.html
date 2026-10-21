@@ -218,6 +218,11 @@ button.bd-emo:hover, button.bd-emo[aria-expanded="true"] { background: var(--sel
 .bd-send .hd h3 { flex: 1; margin: 0; font-size: 16px; font-weight: 600; }
 .bd-send .sum { margin-top: 2px; margin-bottom: 12px; font-size: 13.5px; color: var(--fg-muted); }
 .bd-send textarea { display: block; box-sizing: border-box; width: calc(100% - 40px); min-height: 84px; }
+/* a dialog's message to the agent and its files: Attach under the field, the chips between */
+.bd-send .bd-msgf textarea { width: 100%; }
+.bd-send .bd-msgf > .bp-files-w { margin-top: 8px; }
+.bd-send .bd-msgf > .ft { justify-content: flex-start; padding: 6px 0 0; }
+.bd-send .bd-msgf > .ft .bp-btn { height: 28px; padding: 0 8px; font-size: 12.5px; }
 .bd-send details { margin-top: 10px; }
 .bd-send summary { cursor: pointer; font-size: 13px; font-weight: 500; color: var(--accent-fg); width: max-content; }
 .bd-send pre { margin: 8px 0 0; max-height: 220px; overflow: auto; padding: 10px 12px; border-radius: 10px; background: var(--inset); font: 12px/1.55 var(--mono); white-space: pre-wrap; }
@@ -287,9 +292,10 @@ td.bd-cell-mod { background: color-mix(in oklch, var(--warn-tint) 70%, transpare
 @media (max-width: 900px) { .bd-rev-btn .l { display: none; } .bd-rev-btn { padding: 0 8px; } }
 @media (max-width: 600px) { .bd-revbar .in { padding: 6px 12px; gap: 2px 6px; font-size: 13px; } .bd-revbar .in > .bd-ic { display: none; } .bd-revbar .t { flex: 1 1 100%; } }
 @media print { .bd-revbar .bd-ibtn, .bd-revbar .bp-btn, .bd-revbar .bd-revtb, .bd-rev-btn { display: none !important; } .bd-revbar { position: static; } }
-/* the reader's reply box on an item: one field that grows, its Cancel and Save inside it, always shown and disabled
-   until the text differs from the saved comment. A draft until Save (⌘/Ctrl+Enter); Cancel (Esc) restores the saved
-   text. Sending it (Approve, Request changes, Send answers) moves it into the conversation */
+/* the reader's reply box on an item: one field that grows, Attach bottom-left and its Cancel and Save inside it,
+   always shown and disabled until the text or files differ from the saved comment. A draft until Save (⌘/Ctrl+Enter);
+   Cancel (Esc) restores the saved text and files. Sending it (Approve, Request changes, Send answers) moves it into the
+   conversation */
 .bp-note { display: flex; align-items: flex-start; gap: 8px; }
 .bp-note .f { container: bp-note / inline-size; flex: 1; min-width: 0; display: grid; border-radius: 9px; cursor: text;
   background: var(--inset); box-shadow: inset 0 0 0 1px var(--line); transition: box-shadow .12s, background .12s; }
@@ -302,9 +308,10 @@ td.bd-cell-mod { background: color-mix(in oklch, var(--warn-tint) 70%, transpare
 .bp-note .f > .bp-note-ta, .bp-note .f > .bp-note-ta:focus { display: block; width: 100%; min-height: 32px; padding: 7px 12px 3px; overflow-y: auto; scrollbar-width: thin;
   background: none; box-shadow: none; border-radius: 9px 9px 0 0; }
 .bp-note .f > .bp-note-ta::placeholder { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.bp-note .ft { display: flex; align-items: center; gap: 6px; min-width: 0; padding: 0 6px 6px 12px; }
-.bp-note .hint { min-width: 0; font-size: 12px; color: var(--fg-subtle); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.bp-note .ft:has(.saved:not([hidden])) .hint, .bp-note .saved[hidden] { display: none; }
+.bp-note .ft { display: flex; align-items: center; gap: 6px; min-width: 0; padding: 0 6px 6px 6px; }
+.bp-note .ft .bp-attach { height: 26px; font-size: 12.5px; }
+.bp-note .f > .bp-files-w { padding: 4px 10px 6px; cursor: default; }
+.bp-note .saved[hidden] { display: none; }
 .bp-note .acts { display: inline-flex; flex: none; gap: 4px; margin-left: auto; cursor: default; }
 .bp-note .acts .bp-btn { height: 26px; font-size: 12.5px; }
 .bp-note .acts .bp-btn:disabled { opacity: .5; cursor: default; }
@@ -312,7 +319,30 @@ td.bd-cell-mod { background: color-mix(in oklch, var(--warn-tint) 70%, transpare
 .bp-note .saved .bd-ic { width: 13px; height: 13px; stroke-width: 2.4; }
 .bp-note.compact { margin-top: 8px; padding-left: 28px; }
 .bp-note.compact .f > .bp-note-ta { font-size: 13px; padding: 6px 10px 2px; min-height: 29px; }
-.bp-note.compact .ft { padding-left: 10px; }
+.bp-note.compact .ft { padding-left: 4px; }
+@container bp-note (max-width: 300px) { .bp-note .bp-attach:not(.ic) { width: 28px; padding: 0; justify-content: center; } .bp-note .bp-attach span { display: none; } }
+/* attachments: the Attach button, a file as a chip (icon, name, size; × while it is a draft), a field files can drop on */
+.bp-attach { gap: 5px; }
+.bp-attach .bd-ic { width: 15px; height: 15px; }
+.bp-attach.ic { width: 28px; padding: 0; justify-content: center; }
+.bp-attach:disabled { opacity: .5; cursor: default; }
+.bp-files-w { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
+.bp-files-w[hidden] { display: none; }
+.bp-files { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; margin: 0; padding: 0; list-style: none; }
+.bp-file { display: inline-flex; align-items: center; min-width: 0; max-width: 100%; border-radius: 7px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); font-size: 12.5px; }
+.bp-file .nm { display: inline-flex; align-items: center; gap: 6px; min-width: 0; height: 26px; padding: 0 8px; border: 0; border-radius: 7px; background: none; color: var(--fg); font: inherit; cursor: pointer; }
+.bp-file .nm:hover .t { text-decoration: underline; }
+.bp-file .nm:focus-visible, .bp-file .x:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.bp-file .nm .bd-ic { width: 14px; height: 14px; flex: none; color: var(--fg-subtle); }
+.bp-file .t { min-width: 0; max-width: 240px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bp-file .sz { flex: none; font-size: 11.5px; color: var(--fg-subtle); }
+.bp-file:has(.x) .nm { padding-right: 2px; }
+.bp-file .x { display: grid; place-items: center; flex: none; width: 22px; height: 22px; margin-right: 2px; padding: 0; border: 0; border-radius: 5px; background: none; color: var(--fg-subtle); cursor: pointer; }
+.bp-file .x:hover { background: var(--hover); color: var(--fg); }
+.bp-file .x .bd-ic { width: 13px; height: 13px; }
+.bp-files-up { font-size: 12px; color: var(--fg-subtle); }
+:is(.bp-note .f, .bd-cmp, .bd-gc, .bd-msgf, .bd-cs-c .rp, .bd-cs-c .ed).drop { outline: 2px dashed var(--accent); outline-offset: 2px; }
+.bp-msg .mf { grid-column: 2; margin-top: 6px; }
 .bp-cl-body > .bp-note { margin-top: 16px; }
 /* a decision's box stays under its options when the row is closed (a click in it opens the row) */
 .bp-cl-item > .bp-note { padding: 0 16px 14px calc(16px + var(--ind)); }
@@ -956,6 +986,7 @@ html.bd-ann-m-select .bp-cl-head { user-select: text; -webkit-user-select: text;
 .bd-cmp .hd > .bd-ic { width: 14px; height: 14px; color: var(--fg-subtle); }
 .bd-cmp .lb { flex: 1; min-width: 0; font-size: 12.5px; font-weight: 600; color: var(--fg-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bd-cmp .bp-note-ta { display: block; width: 100%; min-height: 60px; max-height: 160px; overflow: auto; resize: none; }
+.bd-cmp > .bp-files-w { margin-top: 8px; }
 .bd-cmp .ft { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
 .bd-cmp .ft .sp { flex: 1; }
 .bd-cmp .ft .hint { display: inline-flex; align-items: center; gap: 3px; font-size: 11.5px; color: var(--fg-subtle); white-space: nowrap; }
@@ -1053,9 +1084,10 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 /* a sent comment's conversation (the agent's replies, the reader's follow-ups) and its reply box */
 .bd-cs-c .bp-convo { margin-top: 6px; padding-top: 10px; border-top: 1px solid var(--line-soft); cursor: default; }
 .bd-cs-c .rp { position: relative; margin-top: 4px; }
-.bd-cs-c .rp .bp-note-ta { display: block; width: 100%; min-height: 32px; max-height: 200px; padding: 5px 9px; font-size: 13px; overflow-y: auto; }
-.bd-cs-c .rp .hint { position: absolute; right: 10px; top: 6px; font-size: 11.5px; line-height: 20px; color: var(--fg-subtle); pointer-events: none; }
-.bd-cs-c .rp .bp-note-ta:is(:focus, :not(:placeholder-shown)) ~ .hint { display: none; }
+.bd-cs-c .rp .bp-note-ta { display: block; width: 100%; min-height: 32px; max-height: 200px; padding: 5px 34px 5px 9px; font-size: 13px; overflow-y: auto; }
+.bd-cs-c .rp > .bp-attach { position: absolute; right: 3px; top: 3px; width: 26px; height: 26px; }
+.bd-cs-c .rp > .bp-files-w { margin-top: 6px; }
+.bd-cs-c .nf { margin-top: 2px; }
 .bd-cs-e { display: grid; justify-items: center; gap: 10px; padding: 28px 12px; text-align: center; font-size: 13px; line-height: 1.5; color: var(--fg-subtle); }
 .bd-cs-e[hidden] { display: none; }
 .bd-cs-e .ico { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; color: var(--fg-muted); background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: var(--shadow-hk); }
@@ -1600,7 +1632,6 @@ svg.anim .bp-edge.k-async { animation: bp-march 1.6s linear infinite; }
 }
 @container bp-opts (max-width: 360px) { .bp-opt .yp { display: none; } }   /* the tint and the edge still mark the pick */
 @container bp-msgs (max-width: 420px) { .bp-msg time { display: none; } }
-@container bp-note (max-width: 420px) { .bp-note .hint { display: none; } }
 
 /* layouts above 900 px. JS picks one:
    "centred": side columns at least --side-min (the rail, or the docked right panel's room) on both sides, so the
@@ -2566,6 +2597,7 @@ const ICONS = {
   fit: '<path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><rect x="7" y="8" width="10" height="8" rx="1"/>',
   full: '<path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>',
   x: '<path d="M18 6 6 18M6 6l12 12"/>',
+  clip: '<path d="m16 6-8.4 8.6a2 2 0 0 0 2.8 2.8l8.4-8.6a4 4 0 1 0-5.7-5.6l-8.4 8.5a6 6 0 1 0 8.5 8.5l8.4-8.5"/>',
   open: '<circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8v8"/>',
   sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M6.3 17.7l-1.4 1.4M19.1 4.9l-1.4 1.4"/>',
   moon: '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
@@ -3981,11 +4013,99 @@ const pickKey = v => [...idsOf(v)].sort().join(',');
 const recIds = x => idsOf(x.it.recommend).filter(id => x.choices.some(c => c.id === id));
 // an earlier revision (?rev=) and compare view (?diff=) are read-only: no reply boxes, no Need more details
 const RO = OLD || !!BASE;
+/* Attachments: files the reader attaches to a comment. Each is posted to the server (POST /__bluedoc/attach), which
+   keeps a copy in ~/.bluedoc/attachments/<doc>/ and answers {name, path, size}; the comment carries that, and the
+   reply lists each path for the agent to read. In a draft until Save (an item's box, a comment's editor): Save deletes
+   the copies the draft dropped, Cancel the ones it added. Drop files on a field, or paste a screenshot, to attach. */
+const FILES_MAX = 10, FILE_BYTES = 50 * 1024 * 1024;
+const okFile = f => !!f && typeof f === 'object' && typeof f.name === 'string' && !!f.name && f.name.length <= 255
+  && typeof f.path === 'string' && !!f.path && f.path.length <= 4096 && Number.isSafeInteger(f.size) && f.size >= 0;
+const okFiles = v => Array.isArray(v) && v.length <= FILES_MAX && v.every(okFile);
+const filesOf = v => okFiles(v) ? v : [];
+const samePaths = (a, b) => a.length === b.length && a.every((f, i) => f.path === b[i].path);
+const fileSize = n => n < 1024 ? `${n} B` : n < 1024 * 1024 ? `${Math.round(n / 1024)} KB` : `${(n / 1024 / 1024).toFixed(1).replace(/\.0$/, '')} MB`;
+// a code span that holds any path: a fence longer than its longest run of backticks
+const codeSpan = s => { const f = '`'.repeat(Math.max(0, ...(s.match(/`+/g) || []).map(r => r.length)) + 1); return f + (/^`|`$/.test(s) ? ` ${s} ` : s) + f; };
+// under a comment in a reply's Markdown: "Files:", then each copy's full path and size
+const filesMd = (files, indent) => files.length ? `\n${indent}Files:` + files.map(f => `\n${indent}- ${codeSpan(f.path)} (${fileSize(f.size)})`).join('') : '';
+// in a reply's JSON, beside the comment's text
+const filesJson = files => files.length ? { files: files.map(({ name, path, size }) => ({ name, path, size })) } : {};
+// a file as a chip: its icon, name and size (a click copies its path), and × when onRemove is given
+function fileChips(files, onRemove) {
+  return h('ul', { class: 'bp-files', 'aria-label': 'Attached files' }, files.map(f => h('li', { class: 'bp-file' },
+    h('button', { type: 'button', class: 'nm', title: `${f.path}\nClick to copy the path`, onclick: () => copyText(f.path, 'Copied the file\'s path') },
+      ic(/\.(png|jpe?g|gif|webp|avif|heic|bmp|svg|tiff?)$/i.test(f.name) ? 'fimg' : 'file'), h('span', { class: 't' }, f.name), h('span', { class: 'sz' }, fileSize(f.size))),
+    onRemove && h('button', { type: 'button', class: 'x', 'aria-label': 'Remove ' + f.name, title: 'Remove', onclick: () => onRemove(f) }, ic('x')))));
+}
+const attachUrl = q => '/__bluedoc/attach?' + new URLSearchParams({ path: location.pathname, ...q });
+async function uploadFile(file) {
+  const r = await fetch(attachUrl({ name: file.name || 'file' }), { method: 'POST', body: file,
+    headers: SERVER_KEY.headers({ 'Content-Type': 'application/octet-stream', 'X-Bluedoc': '1' }) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok || !okFile(j)) throw new Error(j.error || `the server answered ${r.status}`);
+  return { name: j.name, path: j.path, size: j.size };
+}
+// copies no comment holds any more go (a chip removed, a draft cancelled); the server only deletes the doc's own
+const dropFiles = files => files.forEach(f => fetch(attachUrl({ file: f.path }), { method: 'DELETE', headers: SERVER_KEY.headers({ 'X-Bluedoc': '1' }) }).catch(() => {}));
+// A field's files: the Attach button (and its hidden picker), the chips, drop and paste on the field. `saved` is what
+// the comment holds; `cur` what the field shows. onChange runs when the reader adds or removes one, and when an upload
+// starts. An upload that ends after Cancel (or a closed composer: abandon) has its copy deleted.
+function fileDraft(onChange, { compact = false } = {}) {
+  let saved = [], cur = [], busy = 0, gen = 0;
+  const input = h('input', { type: 'file', multiple: true, hidden: true, tabindex: '-1' });
+  const btn = h('button', { type: 'button', class: 'bp-btn ghost bp-attach' + (compact ? ' ic' : ''), title: 'Attach files: the agent gets a copy of each, by its path', 'aria-label': 'Attach files' },
+    ic('clip'), !compact && h('span', {}, 'Attach'));
+  const list = h('div', { class: 'bp-files-w', hidden: true });
+  btn.addEventListener('click', () => input.click());
+  input.addEventListener('change', () => { add([...input.files]); input.value = ''; });
+  const paint = () => {
+    list.hidden = !cur.length && !busy;
+    setKids(list, cur.length > 0 && fileChips(cur, remove), busy > 0 && h('span', { class: 'bp-files-up', role: 'status' }, `Attaching ${busy} file${busy === 1 ? '' : 's'}…`));
+    btn.disabled = cur.length + busy >= FILES_MAX;
+  };
+  async function add(fs) {
+    if (!fs.length) return;
+    if (!REPLY.connected) { toast('Attaching needs the page opened through serve.py'); return; }
+    const room = FILES_MAX - cur.length - busy;
+    if (fs.length > room) toast(`A comment takes up to ${FILES_MAX} files`);
+    for (const file of fs.slice(0, Math.max(0, room))) {
+      if (file.size > FILE_BYTES) { toast(`${file.name} is over ${FILE_BYTES / 1024 / 1024} MB`); continue; }
+      const g = gen;
+      busy++; paint(); onChange();
+      try {
+        const f = await uploadFile(file);
+        if (g === gen) cur = [...cur, f]; else dropFiles([f]);   // the draft was cancelled or closed meanwhile
+      } catch (e) { if (g === gen) toast(`Couldn't attach ${file.name}: ${e.message}`); }
+      busy--; paint(); if (g === gen) onChange();
+    }
+  }
+  function remove(f) {
+    cur = cur.filter(x => x !== f);
+    if (!saved.some(x => x.path === f.path)) dropFiles([f]);   // a saved one goes on Save (Cancel brings it back)
+    paint(); onChange();
+  }
+  return { btn, input, list, add,
+    get files() { return cur.slice(); }, get dirty() { return !samePaths(cur, saved); }, get busy() { return busy > 0; },
+    // the comment's files changed (another box saved, a send moved them): show them, unless `keep` (this field holds a draft)
+    load(files, keep) { saved = files.slice(); if (!keep) cur = saved.slice(); paint(); },
+    commit() { dropFiles(saved.filter(f => !cur.some(x => x.path === f.path))); saved = cur.slice(); paint(); },
+    cancel() { gen++; dropFiles(cur.filter(f => !saved.some(x => x.path === f.path))); cur = saved.slice(); paint(); },
+    abandon() { gen++; },
+    // files dropped on `zone` or pasted into `ta` attach (text pastes and drags stay text)
+    hook(zone, ta) {
+      const has = e => [...(e.dataTransfer?.types || [])].includes('Files');
+      zone.addEventListener('dragover', e => { if (!has(e)) return; e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; zone.classList.add('drop'); });
+      zone.addEventListener('dragleave', e => { if (!zone.contains(e.relatedTarget)) zone.classList.remove('drop'); });
+      zone.addEventListener('drop', e => { zone.classList.remove('drop'); if (!has(e)) return; e.preventDefault(); add([...e.dataTransfer.files]); });
+      ta.addEventListener('paste', e => { const fs = [...(e.clipboardData?.files || [])]; if (fs.length) { e.preventDefault(); add(fs); } });
+    } };
+}
 /* Conversations: an item's, a pin's or a general comment's messages. The reader's sent ones are reader state (an
-   item's `:thread`, an annotation's `thread`: {md, rev, at}; rev null: sent before threads, "earlier"); the agent's
-   are the doc's (the item's `replies`, the doc's `threads[<comment id>]`: {rev, md}). By rev, then time; on one rev
-   the agent's replies come before what the reader sent on it. ?rev= shows the thread as it stood at that rev. */
-const okMsg = m => !!m && typeof m === 'object' && typeof m.md === 'string' && m.md.length >= 1 && m.md.length <= 8192
+   item's `:thread`, an annotation's `thread`: {md, rev, at, files?}; rev null: sent before threads, "earlier"); the
+   agent's are the doc's (the item's `replies`, the doc's `threads[<comment id>]`: {rev, md}). By rev, then time; on one
+   rev the agent's replies come before what the reader sent on it. ?rev= shows the thread as it stood at that rev. */
+const okMsg = m => !!m && typeof m === 'object' && typeof m.md === 'string' && m.md.length <= 8192
+  && (m.files == null || okFiles(m.files) && m.files.length > 0) && (m.md.length >= 1 || !!m.files)
   && (m.rev === null || typeof m.rev === 'string' && m.rev.length <= 40) && typeof m.at === 'string';
 const okReply = r => !!r && typeof r === 'object' && typeof r.md === 'string' && !!r.md.trim() && r.rev != null;
 const revOrd = r => { if (r == null) return -1; const i = REVS.findIndex(x => x.rev === String(r)); return i < 0 ? REVS.length : i; };
@@ -3998,12 +4118,13 @@ const agentName = () => REPLY.to || 'Agent';
 function convo(mine, theirs) {
   const upto = OLD ? revOrd(VIEW.rev) : Infinity;
   const ms = [...(Array.isArray(theirs) ? theirs : []).filter(okReply).map((m, i) => ({ who: 'agent', rev: String(m.rev), md: m.md, i })),
-    ...(Array.isArray(mine) ? mine : []).map((m, i) => ({ who: 'you', rev: m.rev, md: m.md, at: m.at, i }))];
+    ...(Array.isArray(mine) ? mine : []).map((m, i) => ({ who: 'you', rev: m.rev, md: m.md, at: m.at, files: filesOf(m.files), i }))];
   const tie = (a, b) => a.who !== b.who ? (a.who === 'agent' ? -1 : 1) : a.who === 'you' && a.at !== b.at ? (a.at < b.at ? -1 : 1) : a.i - b.i;
   return ms.filter(m => revOrd(m.rev) <= upto).sort((a, b) => revOrd(a.rev) - revOrd(b.rev) || tie(a, b));
 }
 const fmtAt = s => { const d = new Date(s); return isNaN(d) ? '' : `${d.getDate()} ${d.toLocaleString('en', { month: 'short' })}, ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
-// HorizonUI's Timeline: an avatar node, the name (You, or the agent), the rev, the time the reader sent it, the text
+// HorizonUI's Timeline: an avatar node, the name (You, or the agent), the rev, the time the reader sent it, the text,
+// the files it carried
 function timeline(ms) {
   return h('ol', { class: 'bp-msgs', 'aria-label': 'Conversation' }, ms.map(m => {
     const name = m.who === 'you' ? 'You' : agentName(), nw = isNewMsg(m);
@@ -4011,7 +4132,8 @@ function timeline(ms) {
       h('span', { class: 'av', 'aria-hidden': 'true' }, name.slice(0, 1).toUpperCase()),
       h('div', { class: 'mh' }, h('b', { class: 'who' }, name), h('span', { class: 'rv' }, m.rev == null ? 'earlier' : 'rev ' + m.rev),
         nw && h('span', { class: 'nw' }, h('i'), 'New'), m.at && m.rev != null && h('time', { datetime: m.at }, fmtAt(m.at))),
-      h('div', { class: 'mb bd-md', html: md(m.md) }));
+      m.md && h('div', { class: 'mb bd-md', html: md(m.md) }),
+      m.files && m.files.length > 0 && h('div', { class: 'mf' }, fileChips(m.files)));
   }));
 }
 // an item's conversation, every message, nothing folded: in its open row, its diff cards and Merged (compact), in sync
@@ -4019,7 +4141,7 @@ function threadView(x, compact) {
   const el = h('div', { class: 'bp-convo' + (compact ? ' compact' : '') });
   let sig = null;
   const paint = () => {
-    const ms = x.messages(), s = JSON.stringify([agentName(), ms.map(m => [m.who, m.rev, m.md, m.at, isNewMsg(m)])]);
+    const ms = x.messages(), s = JSON.stringify([agentName(), ms.map(m => [m.who, m.rev, m.md, m.at, isNewMsg(m), m.files])]);
     if (s === sig) return;
     sig = s; el.hidden = !ms.length;
     el.replaceChildren(...(ms.length ? [h('div', { class: 'bp-cap' }, 'Conversation'), timeline(ms)] : []));
@@ -4086,10 +4208,11 @@ function renderChecklist(b, parent) {
     // a progress item whose evidence is stale (the code changed since its check ran) needs a recheck: its tick shows
     // amber and the counts leave it out until the agent re-records the evidence
     const stale = !choices && ownerStale(`item:${cid}/${it.id}`);
-    // The reader's reply box holds a draft (`:note`); sending it (Request changes, Approve, Send answers) appends it to
-    // the item's thread (`:thread`) and empties the box
-    const noteKey = key + ':note', noteSentKey = key + ':note-sent', threadKey = key + ':thread';
+    // The reader's reply box holds a draft (`:note`, its files `:files`); sending it (Request changes, Approve, Send
+    // answers) appends it to the item's thread (`:thread`) and empties the box
+    const noteKey = key + ':note', noteSentKey = key + ':note-sent', threadKey = key + ':thread', filesKey = key + ':files';
     let note = store.get(noteKey) || '';
+    let files = (() => { try { return filesOf(JSON.parse(store.get(filesKey) || '[]')); } catch { return []; } })();
     let thread = (() => { try { const v = JSON.parse(store.get(threadKey) || '[]'); return Array.isArray(v) ? v.filter(okMsg).slice(-200) : []; } catch { return []; } })();
     // before threads a sent comment stayed in the box, its hash in `:note-sent`: it becomes the first message, "earlier"
     if (note.trim() && store.get(noteSentKey) === noteHash(note)) {
@@ -4118,11 +4241,11 @@ function renderChecklist(b, parent) {
     const li = h('li', { class: 'bp-cl-item' + (choices ? ' has-choices' : '') + (stale ? ' stale' : ''), id: `item-${cid}-${it.id}` }, h('div', { class: 'bp-cl-row' }, cb, dot, head));
     // a pick changed after approval: pending until Request changes sends it (`:pick-sent` holds the pick it sent)
     const pickSentKey = key + ':pick-sent';
-    const entryItem = { it, cb, li, cid, body, head, choices, multi, stale, get note() { return note; },
+    const entryItem = { it, cb, li, cid, body, head, choices, multi, stale, get note() { return note; }, get files() { return files.slice(); },
       // the pick: an id or null; with `multi`, the ticked ids (null when none)
       get choice() { return multi ? (choice.length ? choice.slice() : null) : choice; },
-      // every reply in the box is a draft: sending moves it into the thread
-      get notePending() { return !!note; },
+      // every reply in the box is a draft: sending moves it, with its files, into the thread
+      get notePending() { return !!note || files.length > 0; },
       get more() { return more === '1' ? 'on' : more ? 'sent' : null; },
       get pickChanged() { return !!choices && pickDiffers(entryItem); },
       get pickPending() { return entryItem.pickChanged && store.get(pickSentKey) !== pickStr(); },
@@ -4133,10 +4256,12 @@ function renderChecklist(b, parent) {
       picked.classList.toggle('ask', !!more);
       picked.textContent = more ? 'Asking for more' : choice.length ? `${choice.length} picked` : '';
     };
-    entryItem.setNote = (v, from) => {
-      note = v.trim() ? v : '';
+    // files: the box's files (undefined keeps them: BP.setNote)
+    entryItem.setNote = (v, from, fs = files) => {
+      note = v.trim() ? v : ''; files = filesOf(fs);
       if (note) store.set(noteKey, note); else { store.del(noteKey); store.del(noteSentKey); }
-      li.classList.toggle('has-note', !!note);
+      if (files.length) store.set(filesKey, JSON.stringify(files)); else store.del(filesKey);
+      li.classList.toggle('has-note', entryItem.notePending);
       if (from !== entryItem.noteView) entryItem.noteView.paint();
       syncDiffs(); paintSend(); MARKUP.paint();
     };
@@ -4161,7 +4286,7 @@ function renderChecklist(b, parent) {
       if (entryItem.refresh) { entryItem.refresh(); CHECKLISTS.forEach(c => c.paintExpand()); }
     };
     entryItem.paintConvo = paintConvo;
-    li.classList.toggle('has-note', !!note);
+    li.classList.toggle('has-note', entryItem.notePending);
     li.classList.toggle('more', !!more);
     const paintMore = () => { li.classList.toggle('more', !!more); entryItem.opts.paint(); entryItem.noteView.paint(); paintPicked(); syncDiffs(); paintPlan(); };
     // Need more details asks the agent instead of picking: on, it clears the pick (the ticks)
@@ -4171,13 +4296,13 @@ function renderChecklist(b, parent) {
       if (on && entryItem.choice) entryItem.setChoice(null);
       paintMore(); paintSend(); MARKUP.paint();
     };
-    // the item went to the agent (Request changes, Approve, Send answers): its reply joins the thread (the thread is
-    // written first, in the same state write), its request is sent
+    // the item went to the agent (Request changes, Approve, Send answers): its reply and files join the thread (the
+    // thread is written first, in the same state write), its request is sent
     entryItem.markSent = () => {
-      if (note) {
-        thread = [...thread, { md: note.trim().slice(0, 8192), rev: CUR.rev, at: new Date().toISOString() }].slice(-200);
-        store.set(threadKey, JSON.stringify(thread)); store.del(noteKey); store.del(noteSentKey);
-        note = ''; li.classList.remove('has-note'); entryItem.noteView.paint(); paintConvo(); syncDiffs();
+      if (entryItem.notePending) {
+        thread = [...thread, { md: note.trim().slice(0, 8192), rev: CUR.rev, at: new Date().toISOString(), ...filesJson(files) }].slice(-200);
+        store.set(threadKey, JSON.stringify(thread)); store.del(noteKey); store.del(noteSentKey); store.del(filesKey);
+        note = ''; files = []; li.classList.remove('has-note'); entryItem.noteView.paint(); paintConvo(); syncDiffs();
       }
       if (more === '1') { more = 'sent@' + CUR.rev; store.set(moreKey, more); paintMore(); }
       if (entryItem.pickChanged) store.set(pickSentKey, pickStr());
@@ -4425,8 +4550,10 @@ function replyMd(ref, replies, indent) {
   const last = (Array.isArray(replies) ? replies : []).filter(okReply).at(-1);
   return (last ? `\n${indent}> ${agentName()}, rev ${last.rev}: ${cutLine(last.md, 300)}` : '') + `\n${indent}Reply: \`build.py patch ${docArg()} ${ref} --reply "…"\``;
 }
-// an item's new message in the Markdown: quoted, then the context and the command (a blank line keeps the quotes apart)
-const noteMd = (x, indent) => x.note ? '\n' + x.note.trim().split('\n').map(l => `${indent}  > ${l}`).join('\n') + '\n' + replyMd(`item:${x.cid}/${x.it.id}`, x.it.replies, indent + '  ') : '';
+// an item's new message in the Markdown: quoted, its files' paths, then the context and the command (a blank line
+// keeps the quotes apart)
+const noteMd = (x, indent) => !x.notePending ? '' : (x.note ? '\n' + x.note.trim().split('\n').map(l => `${indent}  > ${l}`).join('\n') : '')
+  + filesMd(x.files, indent + '  ') + '\n' + replyMd(`item:${x.cid}/${x.it.id}`, x.it.replies, indent + '  ');
 // opens an item's row (and every collapsed item it sits inside) and returns the row to scroll to: in a findings
 // section showing Merged, its first row there (the view stays); showing Diff, the checklist's row (Checklist shows)
 function openItem(x) {
@@ -4455,14 +4582,16 @@ function checklistMd(c, indent = '') {
 }
 // decision lists first: what needs the agent's attention, then the progress lists in page order
 function allChecklistsMd() {
-  const msg = store.get(MSG_KEY) || '', top = CHECKLISTS.filter(c => !c.parent);
-  return `# ${DOC.title} — progress ${new Date().toISOString().slice(0, 10)}\n\n` + (msg.trim() ? `${msg.trim()}\n\n` : '')
+  const msg = (store.get(MSG_KEY) || '').trim(), fs = msgFiles(), top = CHECKLISTS.filter(c => !c.parent);
+  return `# ${DOC.title} — progress ${new Date().toISOString().slice(0, 10)}\n\n` + (msg || fs.length ? `${msg}${filesMd(fs, '').replace(/^\n/, msg ? '\n' : '')}\n\n` : '')
     + [...top.filter(c => c.kind === 'decisions'), ...top.filter(c => c.kind !== 'decisions')].map(c => checklistMd(c)).join('\n')
     + (staleOwners().length ? '\n' + staleEvidenceMd() : '');
 }
 
 /* ---------- replies: comments and answers back to the agent ---------- */
-const MSG_KEY = `bp:${docId}:__message`;
+// Send answers' message to the agent, and its files
+const MSG_KEY = `bp:${docId}:__message`, MSG_FILES_KEY = `bp:${docId}:__message-files`;
+const msgFiles = () => { try { return filesOf(JSON.parse(store.get(MSG_FILES_KEY) || '[]')); } catch { return []; } };
 // An item's reply box: in its row, on its diff comment cards and in Merged; they stay in sync on Save. It holds
 // the draft (`:note`) until the next send moves it into the conversation. Auto-height needs layout: a box that is not
 // shown (a closed row, another diff file) measures 0, so fit waits until it is.
@@ -4489,17 +4618,19 @@ function noteBox(x, compact, onEnter) {
   };
   ta._fit = fit;
   if (noteFit) noteFit.observe(ta);
-  // a draft until saved: Cancel and Save sit in the field, enabled while its text differs from the saved comment;
-  // blur keeps the draft. Saving updates the item (its comment icon, Send answers, the other boxes for it); Cancel
-  // puts the saved text back.
+  // a draft until saved: Cancel and Save sit in the field, enabled while its text or files differ from the saved
+  // comment; blur keeps the draft. Saving updates the item (its comment icon, Send answers, the other boxes for it);
+  // Cancel puts the saved text and files back. Attach (bottom-left) adds files; so do a drop and a pasted screenshot.
   let draft = false, savedT = 0;
+  const fd = fileDraft(() => { draft = true; saved.hidden = true; paintFt(); }, { compact });
   const saveBtn = h('button', { type: 'button', class: 'bp-btn primary', title: `Save (${MAC ? '⌘' : 'Ctrl'} + Enter)`, disabled: true, onclick: () => save() }, 'Save');
   const cancelBtn = h('button', { type: 'button', class: 'bp-btn ghost', title: 'Cancel (Esc): back to the saved comment', disabled: true, onclick: () => cancel() }, 'Cancel');
   const acts = h('span', { class: 'acts' }, cancelBtn, saveBtn);
   const saved = h('span', { class: 'saved', role: 'status', hidden: true }, ic('tick'), 'Saved');
-  const ft = h('div', { class: 'ft' }, !compact && h('span', { class: 'hint', 'aria-hidden': 'true' }, 'goes with your answers'), saved, acts);
-  const f = h('div', { class: 'f' }, ta, ft);
-  const el = h('div', { class: 'bp-note' + (compact ? ' compact' : '') }, f);
+  const ft = h('div', { class: 'ft' }, fd.btn, saved, acts);
+  const f = h('div', { class: 'f' }, ta, fd.list, ft);
+  const el = h('div', { class: 'bp-note' + (compact ? ' compact' : '') }, f, fd.input);
+  fd.hook(f, ta);
   // a press on the field's padding or footer (not its buttons) puts the caret in the text
   f.addEventListener('mousedown', e => { if (e.target !== ta && !e.target.closest('button')) { e.preventDefault(); ta.focus(); } });
   if (onEnter) {
@@ -4507,20 +4638,23 @@ function noteBox(x, compact, onEnter) {
     ta.addEventListener('input', () => onEnter());
   }
   const paintFt = () => {
-    if (draft && ta.value === x.note) draft = false;
-    el.classList.toggle('dirty', draft); saveBtn.disabled = cancelBtn.disabled = !draft;
+    if (draft && ta.value === x.note && !fd.dirty) draft = false;
+    el.classList.toggle('dirty', draft); saveBtn.disabled = cancelBtn.disabled = !draft || fd.busy;
   };
   function save() {
-    x.setNote(ta.value, view);
+    if (fd.busy) return;   // an upload still running: its file joins the draft first
+    fd.commit();   // first: the copies this draft dropped go, before setNote repaints the item's other boxes
+    x.setNote(ta.value, view, fd.files);
     draft = false; ta.value = x.note; fit();
     saved.hidden = false; clearTimeout(savedT); savedT = setTimeout(() => { saved.hidden = true; paintFt(); }, 2000);
     paintFt();
   }
-  function cancel() { draft = false; ta.value = x.note; fit(); paintFt(); }
+  function cancel() { if (fd.busy) return; draft = false; ta.value = x.note; fd.cancel(); fit(); paintFt(); }
   // another box for the item saved, or a send emptied it: show it, unless this one holds a draft. "Need more
   // details" on: ask what is missing
   const view = { el, ta, paint: () => {
     if (!draft && ta.value !== x.note) { ta.value = x.note; fit(); }
+    fd.load(x.files, draft);
     ta.placeholder = ph();
     paintFt();
   } };
@@ -4542,12 +4676,12 @@ const answerItems = (xs = Object.values(ITEMS)) => xs.map(x => ({
   checklist: x.cid, item: x.it.id, text: x.it.text,
   ...(x.choices ? { choice: x.multi ? x.choice || [] : x.choice || null, recommend: x.it.recommend || null } : { done: x.cb.checked }),
   ...(x.more ? { more: true } : {}),
-  ...(x.note ? { note: x.note.trim() } : {}),
+  ...(x.note ? { note: x.note.trim() } : {}), ...filesJson(x.files),
 }));
 function replyPayload() {
   return {
     kind: 'answers', doc: docId, rev: CUR.rev, title: DOC.title || '', path: location.pathname, at: new Date().toISOString(),
-    message: (store.get(MSG_KEY) || '').trim(),
+    message: (store.get(MSG_KEY) || '').trim(), ...(msgFiles().length ? { messageFiles: filesJson(msgFiles()).files } : {}),
     items: answerItems(),
     markdown: allChecklistsMd(),
   };
@@ -4569,7 +4703,7 @@ const noteHash = s => { let n = 0x811c9dc5; for (let i = 0; i < s.length; i++) n
 const moreMd = () => ' → **Need more details**';
 // a plan's decisions (and comments on its other items) as Markdown, for Approve and Request changes; other
 // pages' Request changes passes only its "Need more details" items
-function decisionsMd(xs = Object.values(ITEMS).filter(x => x.choices || x.note)) {
+function decisionsMd(xs = Object.values(ITEMS).filter(x => x.choices || x.notePending)) {
   return xs.map(x => {
     let line = `- ${x.it.text} ${itemKeyMd(x)}`;
     if (x.more) line += moreMd(x);
@@ -4629,7 +4763,7 @@ const PLAN_KEY = `bp:${docId}:__planstate`;
 function replyCounts() {
   const all = Object.values(ITEMS), dec = all.filter(x => x.choices);
   return { decisions: dec.length, decided: dec.filter(x => x.choice).length, steps: all.length - dec.length,
-    ticked: all.filter(x => !x.choices && x.cb.checked).length, notes: all.filter(x => x.note).length,
+    ticked: all.filter(x => !x.choices && x.cb.checked).length, notes: all.filter(x => x.notePending).length,
     // what the reader did: picks and ticks that differ from the author's
     changed: all.filter(x => x.choices ? pickKey(x.choice) !== pickKey(x.it.choice) : x.cb.checked !== !!x.it.done).length };
 }
@@ -4648,6 +4782,15 @@ function openSend() {
     msg.value = store.get(MSG_KEY) || '';
     msg.addEventListener('input', () => { if (msg.value.trim()) store.set(MSG_KEY, msg.value); else store.del(MSG_KEY); pre.textContent = allChecklistsMd(); });
     msg.addEventListener('keydown', e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); doSend(); } });
+    // its files are kept as they change, like its text; a removed one's copy goes at once
+    const fd = fileDraft(() => {
+      const fs = fd.files;
+      if (fs.length) store.set(MSG_FILES_KEY, JSON.stringify(filesJson(fs).files)); else store.del(MSG_FILES_KEY);
+      fd.commit(); pre.textContent = allChecklistsMd();
+    });
+    fd.load(msgFiles());
+    const field = h('div', { class: 'bd-msgf' }, msg, fd.list, h('div', { class: 'ft' }, fd.btn), fd.input);
+    fd.hook(field, msg);
     const summary = h('p', { class: 'sum' });
     const how = h('p', { class: 'how' });
     const pre = h('pre', {});
@@ -4655,7 +4798,7 @@ function openSend() {
     const copy = h('button', { type: 'button', class: 'bp-btn', onclick: () => { copyText(allChecklistsMd(), 'Copied: paste it into the chat with the agent'); sendDlg.close(); } }, ic('copy'), 'Copy');
     sendDlg = h('dialog', { class: 'bd-send', 'aria-labelledby': 'bd-send-h' },
       h('div', { class: 'hd' }, h('h3', { id: 'bd-send-h' }, 'Send your answers to the agent'), h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Close', onclick: () => sendDlg.close() }, ic('x'))),
-      summary, msg, h('details', {}, h('summary', {}, 'Preview'), pre), how, h('div', { class: 'ft' }, copy, send));
+      summary, field, h('details', {}, h('summary', {}, 'Preview'), pre), how, h('div', { class: 'ft' }, copy, send));
     document.body.append(sendDlg);
     sendDlg.addEventListener('click', e => { if (e.target === sendDlg) sendDlg.close(); });
     sendDlg._paint = () => {
@@ -10231,13 +10374,15 @@ function planState() {
   return { type: DOC_TYPE, state, rev: CUR.rev, approvedRev, carried, picks: ap && ap.picks && typeof ap.picks === 'object' ? ap.picks : null };
 }
 const revWord = CUR.rev ? ` (rev ${CUR.rev})` : '';
-function approvePayload(note) {
+// note: the approval dialog's note to the agent; files: its attachments
+function approvePayload(note, files = []) {
   note = String(note || '').trim();
   const at = new Date().toISOString(), dec = [decisionsMd(), BOARD && BOARD.decisionLines ? BOARD.decisionLines(true) : ''].filter(Boolean).join('\n'), { annotations, notes } = MARKUP.approvalNotes();
-  const stale = staleEvidenceMd().trimEnd();
-  const markdown = [`# ${AP_TITLE} approved: ${DOC.title || docId}${revWord}, ${at.slice(0, 10)}`, note, dec && '## Decisions\n\n' + dec, notes && '## Notes with the approval\n\n' + notes, stale].filter(Boolean).join('\n\n') + '\n';
+  const stale = staleEvidenceMd().trimEnd(), noteMdx = (note + filesMd(files, '')).trim();
+  const markdown = [`# ${AP_TITLE} approved: ${DOC.title || docId}${revWord}, ${at.slice(0, 10)}`, noteMdx, dec && '## Decisions\n\n' + dec, notes && '## Notes with the approval\n\n' + notes, stale].filter(Boolean).join('\n\n') + '\n';
   // docHash: the JSON this page rendered; the server refuses the approval (409) when the file differs now
-  return { kind: 'approval', decision: 'approved', doc: docId, rev: CUR.rev, docHash: store.docHash, title: DOC.title || '', path: location.pathname, at, note, answers: answerItems(), annotations, markdown };
+  return { kind: 'approval', decision: 'approved', doc: docId, rev: CUR.rev, docHash: store.docHash, title: DOC.title || '', path: location.pathname, at, note,
+    ...(files.length ? { noteFiles: filesJson(files).files } : {}), answers: answerItems(), annotations, markdown };
 }
 const approveKey = APPROVABLE ? tipped(keyBtn('txt approve', 'check', `Approve ${AP_NOUN}`, {}, () => openApprove())) : null;
 // what keeps a listing from approval: an upload or brand draft the agent hasn't recorded yet (renderListing's L.approveBlocks)
@@ -10279,17 +10424,21 @@ function openApprove() {
   if (!approveDlg) {
     const note = h('textarea', { class: 'bp-note-ta', rows: 2, placeholder: 'A note for the agent (optional)', 'aria-label': 'Note with the approval' });
     note.addEventListener('keydown', e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); doApprove(); } });
+    // the note's files: a removed one's copy goes at once
+    const fd = fileDraft(() => fd.commit());
+    const field = h('div', { class: 'bd-msgf' }, note, fd.list, h('div', { class: 'ft' }, fd.btn), fd.input);
+    fd.hook(field, note);
     const sum = h('ul', { class: 'bd-ap-sum' }), decs = h('ul', {}), decBox = h('div', { class: 'bd-ap-dec' }, h('h4', {}, 'Decisions'), decs), how = h('p', { class: 'how' });
-    const copy = h('button', { type: 'button', class: 'bp-btn', onclick: () => copyText(approvePayload(note.value).markdown, 'Copied: paste it into the chat with the agent') }, ic('copy'), 'Copy');
+    const copy = h('button', { type: 'button', class: 'bp-btn', onclick: () => copyText(approvePayload(note.value, fd.files).markdown, 'Copied: paste it into the chat with the agent') }, ic('copy'), 'Copy');
     const ok = h('button', { type: 'button', class: 'bp-btn ok', onclick: () => doApprove() }, ic('tick'), 'Approve');
     approveDlg = h('dialog', { class: 'bd-send bd-approve', 'aria-labelledby': 'bd-ap-h' },
       h('div', { class: 'hd' }, h('h3', { id: 'bd-ap-h' }, `Approve this ${AP_NOUN}${revWord}`), h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Close', onclick: () => approveDlg.close() }, ic('x'))),
       h('p', { class: 'sum' }, IS_DECK ? 'The agent takes the deck as drawn, every slide at this revision, with the decisions below.'
         : IS_LISTING ? 'The agent takes the listing as shown, both platform pages in every locale at this revision, with the decisions below.'
-        : IS_DESIGN ? 'The agent builds the design as drawn, every screen at this revision, with the decisions below.' : 'The agent goes ahead with the plan as written and the decisions below.'), note, sum, decBox, how, h('div', { class: 'ft' }, copy, ok));
+        : IS_DESIGN ? 'The agent builds the design as drawn, every screen at this revision, with the decisions below.' : 'The agent goes ahead with the plan as written and the decisions below.'), field, sum, decBox, how, h('div', { class: 'ft' }, copy, ok));
     document.body.append(approveDlg);
     approveDlg.addEventListener('click', e => { if (e.target === approveDlg) approveDlg.close(); });
-    Object.assign(approveDlg, { _note: note, _ok: ok });
+    Object.assign(approveDlg, { _note: note, _files: fd, _ok: ok });
     approveDlg._paint = () => {
       const pend = MARKUP.approvalNotes().annotations.length, dec = Object.values(ITEMS).filter(x => x.choices), open = dec.filter(x => !x.choice).length;
       const ls = BOARD && BOARD.approveSummary ? BOARD.approveSummary() : { mt: 0, mock: 0 };
@@ -10319,7 +10468,7 @@ function openApprove() {
   approveDlg._note.focus();
 }
 async function doApprove() {
-  const dlg = approveDlg, p = approvePayload(dlg ? dlg._note.value : '');
+  const dlg = approveDlg, p = approvePayload(dlg ? dlg._note.value : '', dlg ? dlg._files.files : []);
   const done = () => {
     const pick = a => idsOf(a.choice).length ? a.choice : a.recommend;
     const picks = Object.fromEntries(p.answers.filter(a => idsOf(pick(a)).length).map(a => [`${a.checklist}/${a.item}`, pick(a)]));
@@ -10327,7 +10476,7 @@ async function doApprove() {
     store.set(PLAN_KEY, JSON.stringify({ rev: p.rev, state: 'approved', at: p.at, picks }));
     MARKUP.markSent(p.annotations.map(a => a.id), p.at);
     Object.values(ITEMS).forEach(x => x.markSent()); MARKUP.paint();
-    if (dlg) { dlg._note.value = ''; dlg.close(); }
+    if (dlg) { dlg._note.value = ''; dlg._files.load([]); dlg.close(); }   // the files went with it: their copies stay
     paintPlan();
   };
   if (!REPLY.approve) { copyText(p.markdown, 'Approved and copied: paste it into the chat with the agent'); done(); return; }
@@ -10394,8 +10543,10 @@ const MARKUP = (() => {
     && (a.type !== 'layout' || !!a.layout && typeof a.layout === 'object' && !!a.layout.positions && typeof a.layout.positions === 'object')
     && (a.type !== 'listing' || !!a.listing && typeof a.listing === 'object' && typeof a.listing.op === 'string' && (a.listing.op !== 'field' || isField(a.listing)))
     && (a.type !== 'element' || isElement(a.element))
-    // a sent comment's thread: the reader's follow-ups ({md, rev, at}) and the one waiting in its reply box
-    && (a.thread == null || Array.isArray(a.thread) && a.thread.length <= 200 && a.thread.every(okMsg)) && (a.draft == null || typeof a.draft === 'string');
+    // a sent comment's thread: the reader's follow-ups ({md, rev, at, files?}) and the one waiting in its reply box
+    // (`draft`, `draftFiles`); `files`: the comment's own
+    && (a.thread == null || Array.isArray(a.thread) && a.thread.length <= 200 && a.thread.every(okMsg)) && (a.draft == null || typeof a.draft === 'string')
+    && (a.files == null || okFiles(a.files)) && (a.draftFiles == null || okFiles(a.draftFiles));
   const skipBad = (where, v) => { console.warn(`bluedoc: skipped a stored comment the page can't show (${where})`, v); return false; };
   let saved = store.keys(KEY + ':').map(k => k.slice(KEY.length + 1));
   let list = saved.map(id => [id, store.get(annKey(id))]).map(([id, s]) => [id, s, parse(s)])
@@ -10435,14 +10586,14 @@ const MARKUP = (() => {
   const newId = () => 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   // a general comment is about the whole doc: no mark on the page, written in the sidebar's footer
   const isGeneral = a => a.type === 'general';
-  const generalAnn = note => ({ id: newId(), type: 'general', status: 'pending', note, target: { key: 'doc', label: 'Whole doc', text: '' }, rev: CUR.rev, at: new Date().toISOString() });
+  const generalAnn = (note, files = []) => ({ id: newId(), type: 'general', status: 'pending', note, ...filesJson(files), target: { key: 'doc', label: 'Whole doc', text: '' }, rev: CUR.rev, at: new Date().toISOString() });
   {   // the overall message pages used to keep beside the comments becomes one pending general comment
     const old = store.get(MSG);
     if (old != null) { if (old.trim()) { list.push(generalAnn(old.trim())); save(); } store.del(MSG); }
   }
   // a follow-up: a reply typed in a sent comment's box; it goes with the next Request changes or Approve, under the
   // comment's id, and opens the comment again
-  const followUp = a => a.status !== 'pending' && !isDraft(a) && typeof a.draft === 'string' && !!a.draft.trim();
+  const followUp = a => a.status !== 'pending' && !isDraft(a) && (typeof a.draft === 'string' && !!a.draft.trim() || filesOf(a.draftFiles).length > 0);
   // what the next Request changes or Approve sends: new comments and follow-ups
   const pending = () => list.filter(a => a.status === 'pending' || followUp(a));
   const onPage = () => list.filter(a => !isGeneral(a));
@@ -10450,16 +10601,17 @@ const MARKUP = (() => {
   const TYPE_IC = { pin: 'msg', text: 'type', draw: 'pencil', general: 'msgsq', link: 'route', layout: 'grid', listing: 'grid', element: 'penline' };
   const TYPE_WORD = { pin: 'pin', text: 'text', draw: 'drawing', general: 'general', link: 'link draft', layout: 'layout draft', listing: 'listing draft', element: 'element draft' };
   const excerpt = a => a.type === 'text' ? a.quote : a.type === 'draw' && a.targets && a.targets.length ? a.targets.map(t => t.text).filter(Boolean).join(' / ') : a.target.text;
-  const pub = a => ({ id: a.id, type: a.type, note: followUp(a) ? a.draft.trim() : a.note, target: a.target, ...(a.type === 'draw' ? { targets: a.targets || [a.target] } : {}),
+  const pub = a => ({ id: a.id, type: a.type, note: followUp(a) ? String(a.draft || '').trim() : a.note, ...filesJson(noteFiles(a)), target: a.target, ...(a.type === 'draw' ? { targets: a.targets || [a.target] } : {}),
     ...(a.type === 'text' ? { quote: a.quote } : {}), ...(a.type === 'link' ? { link: a.link } : {}), ...(a.type === 'layout' ? { layout: a.layout } : {}), ...(a.type === 'listing' ? { listing: a.listing } : {}),
     ...(a.type === 'element' ? { element: a.element } : {}), rev: a.rev, at: a.at });
-  // the new message: the comment, or its follow-up
-  const noteText = a => followUp(a) ? a.draft.trim() : String(a.note || '').trim();
+  // the new message: the comment, or its follow-up; and its files
+  const noteText = a => followUp(a) ? String(a.draft || '').trim() : String(a.note || '').trim();
+  const noteFiles = a => filesOf(followUp(a) ? a.draftFiles : a.files);
   // the agent's replies to a pin or general comment (the doc's `threads`), and the comment's conversation after its note
   const annReplies = a => DOC.threads && typeof DOC.threads === 'object' && Array.isArray(DOC.threads[a.id]) ? DOC.threads[a.id] : [];
   const annConvo = a => convo(a.thread, annReplies(a));
-  // a comment's message in the Markdown, "Change:" (a follow-up: "Follow-up:"), then the agent's latest reply and the command that answers it
-  const msgMd = (a, word, indent) => `${followUp(a) ? 'Follow-up' : word}: ${noteText(a).split('\n').join('\n' + indent)}` + replyMd(`ann:${a.id}`, annReplies(a), indent);
+  // a comment's message in the Markdown, "Change:" (a follow-up: "Follow-up:"), its files, then the agent's latest reply and the command that answers it
+  const msgMd = (a, word, indent) => `${followUp(a) ? 'Follow-up' : word}:` + (noteText(a) ? ' ' + noteText(a).split('\n').join('\n' + indent) : '') + filesMd(noteFiles(a), indent) + replyMd(`ann:${a.id}`, annReplies(a), indent);
   // the key `patch` takes, as changes.json has it; a drawing over several parts names each part's key
   const keysMd = a => [...new Set((a.type === 'draw' && a.targets && a.targets.length ? a.targets : [a.target]).map(t => t.key))].map(k => `\`${k}\``).join(' ');
   // the comment's id goes after its key: the agent passes it to `patch --resolves` once the change is made
@@ -10470,7 +10622,7 @@ const MARKUP = (() => {
   // general comments first, under General; then the page comments, numbered
   function changesMd(items = pending()) {
     const gen = items.filter(isGeneral), pg = items.filter(a => !isGeneral(a) && !isDraft(a)), dr = items.filter(isDraft), parts = [];
-    if (gen.length) parts.push('## General\n\n' + gen.map(a => `- (${a.id}) ` + (followUp(a) ? msgMd(a, '', '  ') : noteText(a).split('\n').join('\n  ') + replyMd(`ann:${a.id}`, annReplies(a), '  '))).join('\n'));
+    if (gen.length) parts.push('## General\n\n' + gen.map(a => `- (${a.id}) ` + (followUp(a) ? msgMd(a, '', '  ') : noteText(a).split('\n').join('\n  ') + filesMd(noteFiles(a), '  ') + replyMd(`ann:${a.id}`, annReplies(a), '  '))).join('\n'));
     if (gen.length && pg.length) parts.push('## On the page');
     if (pg.length) parts.push(pg.map((a, i) => {
       const ex = cut(excerpt(a), 200);
@@ -10820,10 +10972,13 @@ const MARKUP = (() => {
   const cmpTa = h('textarea', { class: 'bp-note-ta', rows: 2, 'aria-label': 'Requested change' });
   const cmpHd = h('div', { class: 'hd' });
   const cmpSave = h('button', { type: 'button', class: 'bp-btn primary', onclick: () => finishDraft(true) }, 'Save');
+  // its files: Save keeps them with the comment, Cancel deletes their copies
+  const cmpFd = fileDraft(() => { cmpSave.disabled = !cmpTa.value.trim() && !cmpFd.files.length || cmpFd.busy; placeComposer(); }, { compact: true });
   const cmp = h('div', { class: 'bd-cmp bd-ann-ui', role: 'dialog', 'aria-label': 'New comment', hidden: true },
-    h('span', { class: 'ar', 'aria-hidden': 'true' }), cmpHd, cmpTa,
-    h('div', { class: 'ft' }, h('span', { class: 'hint', 'aria-hidden': 'true' }, kbd(MAC ? '⌘' : 'Ctrl'), kbd('↵'), ' save', h('span', { class: 'dot' }), kbd('Esc'), ' cancel'),
-      h('span', { class: 'sp' }), h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => finishDraft(false) }, 'Cancel'), cmpSave));
+    h('span', { class: 'ar', 'aria-hidden': 'true' }), cmpHd, cmpTa, cmpFd.list,
+    h('div', { class: 'ft' }, cmpFd.btn, h('span', { class: 'hint', 'aria-hidden': 'true' }, kbd(MAC ? '⌘' : 'Ctrl'), kbd('↵'), ' save', h('span', { class: 'dot' }), kbd('Esc'), ' cancel'),
+      h('span', { class: 'sp' }), h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => finishDraft(false) }, 'Cancel'), cmpSave), cmpFd.input);
+  cmpFd.hook(cmp, cmpTa);
 
   /* placing marks: on scroll only boxes move; after DOM or size changes keys resolve afresh */
   const marks = new Map();   // id -> { a, pin, ink }
@@ -11017,10 +11172,14 @@ const MARKUP = (() => {
   // the general comment field: one line until focused, then a composer like the page's (Save, Cancel)
   const genTa = h('textarea', { class: 'bp-note-ta', rows: 1, placeholder: 'Add a general comment…', 'aria-label': 'General comment about the whole doc' });
   const genSave = h('button', { type: 'button', class: 'bp-btn primary', title: `Save (${MAC ? '⌘' : 'Ctrl'} + Enter)`, disabled: true, onclick: () => finishGeneral(true) }, 'Save');
-  const genFt = h('div', { class: 'gf', hidden: true }, h('span', { class: 'hint', 'aria-hidden': 'true' }, kbd(MAC ? '⌘' : 'Ctrl'), kbd('↵'), ' save', h('span', { class: 'dot' }), kbd('Esc'), ' cancel'),
+  // its files: Save keeps them with the comment, Cancel deletes their copies
+  const genReady = () => !!genTa.value.trim() || genFd.files.length > 0;
+  const genFd = fileDraft(() => { genSave.disabled = !genReady() || genFd.busy; if (genFd.files.length || genFd.busy) genOpen(true); }, { compact: true });
+  const genFt = h('div', { class: 'gf', hidden: true }, genFd.btn, h('span', { class: 'hint', 'aria-hidden': 'true' }, kbd(MAC ? '⌘' : 'Ctrl'), kbd('↵'), ' save', h('span', { class: 'dot' }), kbd('Esc'), ' cancel'),
     h('span', { class: 'sp' }), h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => finishGeneral(false) }, 'Cancel'), genSave);
   const gen = h('div', { class: 'bd-gc' },
-    h('div', { class: 'gh' }, h('b', {}, 'General comment'), h('span', {}, 'About the whole doc, not one spot')), genTa, genFt);
+    h('div', { class: 'gh' }, h('b', {}, 'General comment'), h('span', {}, 'About the whole doc, not one spot')), genTa, genFd.list, genFt, genFd.input);
+  genFd.hook(gen, genTa);
   const clearRow = h('div', { class: 'row' }, clearBtn);
   const csBody = h('div', {},
     h('div', { class: 'bd-cs-f' }, h('div', { class: 'bd-sg', role: 'radiogroup', 'aria-label': 'Show' }, filterBtns), sortBtn),
@@ -11029,12 +11188,13 @@ const MARKUP = (() => {
   const genOpen = on => { gen.classList.toggle('on', on); genFt.hidden = !on; grow(genTa); };
   // keep: save what was typed (Save, ⌘↵, opening Request changes); else drop it (Cancel, Esc). Returns whether one was saved.
   function finishGeneral(keep) {
-    const v = genTa.value.trim(), saved = keep && !!v;
+    const v = genTa.value.trim(), fs = genFd.files, saved = keep && (!!v || fs.length > 0);
+    if (saved) { genFd.abandon(); genFd.load([]); } else genFd.cancel();   // saved: the files go with it; else their copies go
     genTa.value = ''; genSave.disabled = true;
     if (document.activeElement === genTa) genTa.blur();
     genOpen(false);
     if (!saved) return false;
-    const a = generalAnn(v);
+    const a = generalAnn(v, fs);
     list.push(a); save();
     if (!matches(a)) setFilter('pending', false);
     paint();
@@ -11043,8 +11203,8 @@ const MARKUP = (() => {
     return true;
   }
   genTa.addEventListener('focus', () => { endEdit(true); finishDraft(true); genOpen(true); });
-  genTa.addEventListener('focusout', e => { if (!genTa.value.trim() && !gen.contains(e.relatedTarget)) genOpen(false); });
-  genTa.addEventListener('input', () => { genSave.disabled = !genTa.value.trim(); grow(genTa); });
+  genTa.addEventListener('focusout', e => { if (!genReady() && !genFd.busy && !gen.contains(e.relatedTarget)) genOpen(false); });
+  genTa.addEventListener('input', () => { genSave.disabled = !genReady() || genFd.busy; grow(genTa); });
   genTa.addEventListener('keydown', e => {
     e.stopPropagation();   // page keys (modes, n/p, canvas) must not fire while typing
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); finishGeneral(true); }
@@ -11082,7 +11242,7 @@ const MARKUP = (() => {
     li._a = a;
     const n = isGeneral(a) ? 0 : onPage().indexOf(a) + 1, editing = a === editA;
     const ms = annConvo(a), lastMsg = ms.at(-1);
-    const sig = [n, a.note, a.status, a.rev, a.target.key, a.target.label, a.color, editing, (a.targets || []).length, !!a.stale, JSON.stringify(ms), agentName()].join('\u0001');
+    const sig = [n, a.note, JSON.stringify(a.files || null), a.status, a.rev, a.target.key, a.target.label, a.color, editing, (a.targets || []).length, !!a.stale, JSON.stringify(ms), agentName()].join('\u0001');
     if (li._sig !== sig) { li._sig = sig; fill(li, a, n, editing, ms); }
     li.className = cardCls(li, a);
     li.querySelector('.ago').textContent = ago(a.at);
@@ -11129,18 +11289,26 @@ const MARKUP = (() => {
           ib('trash', 'Delete', () => discard(a)))),
       segs.length > 0 && h('div', { class: 'path', title: a.target.label }, segs.join(' › ')),
       ex && h('q', { class: a.type === 'text' ? 'tx' : null }, cut(ex, 240)),
-      eld || (editing ? editor(a) : a.note ? h('p', { class: 'nt' }, a.note) : null),
+      eld || (editing ? editor(a) : [a.note ? h('p', { class: 'nt' }, a.note) : null, filesOf(a.files).length > 0 && h('div', { class: 'nf' }, fileChips(filesOf(a.files)))]),
       h('div', { class: 'mt' }, mt),
       // sent: the agent's replies and the reader's follow-ups by rev, then a box for the next one
       ms.length > 0 && h('div', { class: 'bp-convo compact' }, timeline(ms)),
       a.status !== 'pending' && !isDraft(a) && replyBox(a)));
   }
-  // a sent comment's reply box: what is typed is its pending follow-up (`draft`), saved as it is typed
+  // a sent comment's reply box: what is typed is its pending follow-up (`draft`, its files `draftFiles`), saved as it
+  // is typed; a file removed before it goes has its copy deleted at once
   function replyBox(a) {
     const ta = h('textarea', { class: 'bp-note-ta', rows: 1, maxlength: 8192, placeholder: 'Reply…', 'aria-label': 'Reply on: ' + (isGeneral(a) ? 'general comment' : a.target.label) });
     ta.value = a.draft || '';
     let t = 0;
     const keep = () => { clearTimeout(t); save(); };
+    const fd = fileDraft(() => {
+      const had = followUp(a), fs = fd.files;
+      if (fs.length) a.draftFiles = filesJson(fs).files; else delete a.draftFiles;
+      fd.commit(); keep();
+      if (had !== followUp(a)) paint();   // Request changes counts it
+    }, { compact: true });
+    fd.load(filesOf(a.draftFiles));
     ta.addEventListener('input', () => {
       grow(ta);
       const had = followUp(a);
@@ -11154,23 +11322,34 @@ const MARKUP = (() => {
       if (e.key === 'Escape') { e.preventDefault(); ta.blur(); }
     });
     requestAnimationFrame(() => { if (ta.value) grow(ta); });
-    return h('div', { class: 'rp' }, ta, h('span', { class: 'hint', 'aria-hidden': 'true' }, APPROVABLE ? 'goes with Request changes or Approve' : 'goes with Request changes'));
+    const rp = h('div', { class: 'rp' }, ta, fd.btn, fd.list, fd.input);
+    fd.hook(rp, ta);
+    return rp;
   }
+  // a pending comment's editor: its text and files, kept across the card's redraws until Save or Cancel (endEdit)
+  let editFd = null, editOk = null;
   function editor(a) {
     const ta = h('textarea', { class: 'bp-note-ta', rows: 2, placeholder: isGeneral(a) ? 'What should change in the doc?' : a.type === 'text' ? 'What should change in this text?' : 'What should change here?',
       'aria-label': isGeneral(a) ? 'General comment' : 'Requested change' });
     ta.value = editTa && editA === a ? editTa.value : a.note || '';
-    const ok = h('button', { type: 'button', class: 'bp-btn primary', title: `Save (${MAC ? '⌘' : 'Ctrl'} + Enter)`, onclick: () => commitEdit() }, 'Save');
-    ok.disabled = !ta.value.trim();
-    ta.addEventListener('input', () => { ok.disabled = !ta.value.trim(); grow(ta); });
+    const ready = () => (!!(editTa || ta).value.trim() || editFd.files.length > 0) && !editFd.busy;
+    const ok = editOk = h('button', { type: 'button', class: 'bp-btn primary', title: `Save (${MAC ? '⌘' : 'Ctrl'} + Enter)`, onclick: () => commitEdit() }, 'Save');
+    if (!editFd || editFd._a !== a) {
+      editFd = fileDraft(() => { if (editOk) editOk.disabled = !ready(); }, { compact: true });
+      editFd._a = a; editFd.load(filesOf(a.files));
+    }
+    ok.disabled = !ready();
+    ta.addEventListener('input', () => { ok.disabled = !ready(); grow(ta); });
     ta.addEventListener('keydown', e => {
       e.stopPropagation();   // page keys (modes, n/p, canvas) must not fire while typing
       if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); commitEdit(); }
       else if (e.key === 'Escape') { e.preventDefault(); endEdit(false); }
     });
     editTa = ta;
-    return h('div', { class: 'ed' }, ta, h('div', { class: 'ef' }, h('span', { class: 'hint', 'aria-hidden': 'true' }, kbd(MAC ? '⌘' : 'Ctrl'), kbd('↵'), ' save'),
-      h('span', { class: 'sp' }), h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => endEdit(false) }, 'Cancel'), ok));
+    const ed = h('div', { class: 'ed' }, ta, editFd.list, h('div', { class: 'ef' }, editFd.btn, h('span', { class: 'hint', 'aria-hidden': 'true' }, kbd(MAC ? '⌘' : 'Ctrl'), kbd('↵'), ' save'),
+      h('span', { class: 'sp' }), h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => endEdit(false) }, 'Cancel'), ok), editFd.input);
+    editFd.hook(ed, ta);
+    return ed;
   }
   function renderList() {
     const xs = shownList(), ids = new Set(xs.map(a => a.id));
@@ -11224,20 +11403,27 @@ const MARKUP = (() => {
     const li = cards.get(a.id); if (li) scrollCard(li);
     requestAnimationFrame(() => { if (editA === a && editTa) { editTa.focus({ preventScroll: true }); const n = editTa.value.length; editTa.setSelectionRange(n, n); grow(editTa); } });
   }
-  // keep: what was typed is saved (Save, an outside click, a mode switch); else it's dropped (Cancel, Esc)
+  // keep: what was typed is saved (Save, an outside click, a mode switch); else it's dropped (Cancel, Esc). Its files
+  // go with it; else the copies added since go (a file still uploading is dropped either way)
   function endEdit(keep) {
     const a = editA; if (!a) return false;
-    const v = editTa ? editTa.value.trim() : '', saved = keep && !!v;
-    if (saved) { a.note = v; save(); }
+    const fd = editFd && editFd._a === a ? editFd : null, fs = fd ? fd.files : filesOf(a.files);
+    const v = editTa ? editTa.value.trim() : '', saved = keep && (!!v || fs.length > 0);
+    if (saved) { a.note = v; delete a.files; Object.assign(a, filesJson(fs)); if (fd) fd.commit(); save(); }
+    else if (fd) fd.cancel();
+    if (fd) fd.abandon();
+    editFd = null; editOk = null;
     const back = !!editTa && document.activeElement === editTa;
     editA = null; editTa = null; hlDirty = true;
     schedule(true); paint();
     if (back) cards.get(a.id)?.focus({ preventScroll: true });
     return saved;
   }
-  const commitEdit = () => { if (editTa && editTa.value.trim()) endEdit(true); };
+  const commitEdit = () => { if (editTa && (editTa.value.trim() || editFd && editFd.files.length) && !(editFd && editFd.busy)) endEdit(true); };
+  // a comment deleted before it went takes its files' copies with it; so does a follow-up not sent yet
   function remove(a) {
-    if (a === editA) { editA = null; editTa = null; }
+    if (a === editA) { if (editFd) editFd.cancel(); editFd = null; editA = null; editTa = null; }
+    dropFiles([...(a.status === 'pending' ? filesOf(a.files) : []), ...filesOf(a.draftFiles)]);
     if (a === selA) selA = null;
     if (a === hotA) setHot(null, true);
     list = list.filter(x => x !== a); save(); hlDirty = true;
@@ -11264,7 +11450,7 @@ const MARKUP = (() => {
     draft = a;
     cmpHd.replaceChildren(numChip(a, onPage().length + 1), ic(TYPE_IC[a.type]), h('span', { class: 'lb', title: a.target.label }, a.target.label.split(' › ').pop()));
     cmpTa.value = ''; cmpTa.placeholder = a.type === 'text' ? 'What should change in this text?' : 'What should change here?';
-    cmpSave.disabled = true; cmpSave.title = `Save (${MAC ? '⌘' : 'Ctrl'} + Enter)`;
+    cmpSave.disabled = true; cmpSave.title = `Save (${MAC ? '⌘' : 'Ctrl'} + Enter)`; cmpFd.load([]);
     cmp.hidden = false; grow(cmpTa);
     hlDirty = true; schedule(true); paint();
     requestAnimationFrame(() => {
@@ -11281,8 +11467,10 @@ const MARKUP = (() => {
   // and any draft on Cancel or Esc, is removed with its mark. Returns whether a note was saved.
   function finishDraft(keep) {
     const a = draft; if (!a) return false;
-    const v = cmpTa.value.trim(), saved = keep && !!v;
-    if (saved) { a.note = v; a.status = 'pending'; list.push(a); save(); }
+    const v = cmpTa.value.trim(), fs = cmpFd.files, saved = keep && (!!v || fs.length > 0);
+    // saved: its files go with it (one still uploading is dropped); else their copies go
+    if (saved) { a.note = v; Object.assign(a, filesJson(fs)); a.status = 'pending'; list.push(a); save(); cmpFd.abandon(); cmpFd.load([]); }
+    else cmpFd.cancel();
     draft = null; draftBox = null; page = null; cmp.hidden = true;
     if (document.activeElement === cmpTa) cmpTa.blur();
     hlDirty = true; schedule(true); paint();
@@ -11298,10 +11486,11 @@ const MARKUP = (() => {
     }
     return saved;
   }
-  cmpTa.addEventListener('input', () => { cmpSave.disabled = !cmpTa.value.trim(); grow(cmpTa); placeComposer(); });
+  const cmpReady = () => !!cmpTa.value.trim() || cmpFd.files.length > 0;
+  cmpTa.addEventListener('input', () => { cmpSave.disabled = !cmpReady() || cmpFd.busy; grow(cmpTa); placeComposer(); });
   cmpTa.addEventListener('keydown', e => {
     e.stopPropagation();   // page keys (modes, n/p, canvas) must not fire while typing
-    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); if (cmpTa.value.trim()) finishDraft(true); }
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); if (cmpReady()) finishDraft(true); }
     else if (e.key === 'Escape') { e.preventDefault(); finishDraft(false); }
   });
   listBox.addEventListener('click', e => {
@@ -11499,8 +11688,11 @@ const MARKUP = (() => {
     ids = new Set(ids); if (!ids.size) return;
     for (const a of list) if (ids.has(a.id)) {
       // a follow-up joins the comment's thread, and a resolved comment opens again
-      if (followUp(a)) { a.thread = [...(a.thread || []), { md: a.draft.trim().slice(0, 8192), rev: CUR.rev, at }].slice(-200); delete a.resolvedBy; delete a.resolvedAt; }
-      delete a.draft;
+      if (followUp(a)) {
+        a.thread = [...(a.thread || []), { md: String(a.draft || '').trim().slice(0, 8192), rev: CUR.rev, at, ...filesJson(filesOf(a.draftFiles)) }].slice(-200);
+        delete a.resolvedBy; delete a.resolvedAt;
+      }
+      delete a.draft; delete a.draftFiles;
       a.status = 'open'; a.sentAt = at;
     }
     if (filter === 'pending') setFilter('open', false);   // what was just sent, not an empty list
@@ -12520,8 +12712,8 @@ window.BP = {
     return c ? acceptRecs(checklistScope(c)) : 0;
   },
   setNote: (key, text) => { const x = ITEMS[key]; if (!x) return false; x.setNote(text || ''); return true; },
-  // an item's conversation, oldest first: [{who: 'you' | 'agent', rev, md, at?, new}] (?rev=: as it stood then)
-  thread: key => { const x = ITEMS[key]; return x ? x.messages().map(m => ({ who: m.who, rev: m.rev, md: m.md, ...(m.at ? { at: m.at } : {}), new: isNewMsg(m) })) : null; },
+  // an item's conversation, oldest first: [{who: 'you' | 'agent', rev, md, at?, files?, new}] (?rev=: as it stood then)
+  thread: key => { const x = ITEMS[key]; return x ? x.messages().map(m => ({ who: m.who, rev: m.rev, md: m.md, ...(m.at ? { at: m.at } : {}), ...(m.files && m.files.length ? { files: m.files } : {}), new: isNewMsg(m) })) : null; },
   // "Need more details" on a decision item, as its toggle would; false without choices, on ?rev=/?diff= or once sent
   moreDetails: (key, on = true) => { const x = ITEMS[key]; if (!x || !x.choices || OLD || BASE || on && x.more === 'sent') return false; x.setMore(on); return true; },
   openCode: (diffId, path, line) => openCode(diffId, path, line),

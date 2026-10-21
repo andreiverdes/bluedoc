@@ -110,6 +110,10 @@ URLs: /                      home page: every doc under the registered folders, 
                              redo). No link on the way (save_listing_upload)
       POST /__bluedoc/listing/brand  {path, data: base64}: a storelisting's brand image (PNG, JPEG or WebP, 8 MB),
                              whose palette the page extracts, into <stem>.listing/brand/source.<ext> (save_brand_image)
+      POST /__bluedoc/attach?path=<doc URL path>&name=<file name>  the body is a file the reader attaches to a
+                             comment (at most 50 MB): kept as ~/.bluedoc/attachments/<doc id>/<8 hex>-<name>, answered
+                             with {name, path, size}; replies list each path for the agent. DELETE with &file=<path>
+                             (the X-Bluedoc header and the key) removes one before its comment is sent
       POST /__bluedoc/snapshot  {path, rev, page, w, html, external}: a live page as the reader sees it, as revision
                              rev's snapshot at w px (save_snapshot): rev must be the doc's current meta.rev, html at
                              most 8 MB; stored scriptless in <name>.snapshots/rev-<rev>/<page>@<w>.html beside the doc
@@ -3524,20 +3528,101 @@ READER_KEY_RULE = {"__title": f"a title of 1 to {build.MAX_READER_TITLE} charact
                    ARCHIVED: f'{{"at": <ISO 8601 time>, "rev": <1 to {MAX_ARCHIVE_REV} characters>}}',
                    ARCHIVE_LATER: f"a rev of 1 to {MAX_ARCHIVE_REV} characters"}
 
+# Attachments: files the reader attaches to a comment. The page posts each one (POST /__bluedoc/attach); the server
+# keeps a copy in ~/.bluedoc/attachments/<doc>/ and answers {name, path, size}, which the comment carries: an item's
+# draft in `<checklist>:<item>:files`, a sent message as `files` on its thread entry, a pin's or general comment's as
+# `files` (its note's) and `draftFiles` (its follow-up's) in `__ann:<id>`, the Send answers message's in
+# `__message-files`. Replies list each copy's full path for the agent to read. The shape is checked, not the folder:
+# a state.db moved to another home keeps its conversations.
+ATTACH_DIR = STATE / "attachments"
+ATTACH_MAX_BYTES, ATTACH_MAX_FILES, ATTACH_MAX_NAME = 50 * 1024 * 1024, 10, 120
+FILES_RULE = f'[{{"name": <1 to 255 characters>, "path": <an absolute path>, "size": <bytes>}}, …], at most {ATTACH_MAX_FILES}'
+
+
+def files_ok(v) -> bool:
+    return isinstance(v, list) and len(v) <= ATTACH_MAX_FILES and all(
+        isinstance(f, dict) and set(f) == {"name", "path", "size"} and isinstance(f["name"], str) and 0 < len(f["name"]) <= 255
+        and isinstance(f["path"], str) and 0 < len(f["path"]) <= 4096 and (f["path"].startswith("/") or re.match(r"^[A-Za-z]:[\\/]", f["path"]))
+        and type(f["size"]) is int and f["size"] >= 0 for f in v)
+
+
+def _json_files_ok(value: str) -> bool:
+    try:
+        return files_ok(json.loads(value))
+    except ValueError:
+        return False
+
+
+MESSAGE_FILES = "__message-files"   # the Send answers message's files
+
+
+def attach_dir(doc: Path) -> Path:
+    """Where a doc's attachments go: ~/.bluedoc/attachments/<its id, else its file name's stem>/."""
+    key = re.sub(r"[^A-Za-z0-9._-]+", "-", doc_id(doc) or doc.name.split(".")[0]).strip(".-")[:80]
+    return ATTACH_DIR / (key or "doc")
+
+
+def attach_name(name: str) -> str:
+    """An attached file's name as stored and shown: its last path part, without control characters, path separators,
+    backticks or characters Windows refuses, at most ATTACH_MAX_NAME characters (the extension kept)."""
+    base = re.sub(r'[\x00-\x1f\x7f/\\:*?"<>|`]+', "-", name.replace("\\", "/").rsplit("/", 1)[-1]).strip(" .-")
+    if len(base) > ATTACH_MAX_NAME:
+        stem, dot, ext = base.rpartition(".")
+        base = stem[: ATTACH_MAX_NAME - len(ext) - 1].rstrip(" .") + "." + ext if dot and 0 < len(ext) <= 16 else base[:ATTACH_MAX_NAME]
+    return base or "file"
+
+
+def save_attachment(doc: Path, name: str, size: int, stream) -> dict:
+    """Copy `size` bytes from stream into the doc's attachment folder as `<8 hex>-<name>` (attach_name), written
+    to a temp file first; {name, path, size}. OSError, or ValueError when the stream ends early."""
+    d = attach_dir(doc)
+    d.mkdir(parents=True, exist_ok=True)
+    clean = attach_name(name)
+    final = d / f"{secrets.token_hex(4)}-{clean}"
+    tmp = d / f".{final.name}.part"
+    try:
+        with open(tmp, "wb") as out:
+            left = size
+            while left:
+                chunk = stream.read(min(left, 1024 * 1024))
+                if not chunk:
+                    raise ValueError(f"the upload ended {left} bytes early")
+                out.write(chunk)
+                left -= len(chunk)
+        os.replace(tmp, final)
+    except BaseException:
+        tmp.unlink(missing_ok=True)
+        raise
+    return {"name": clean, "path": str(final), "size": size}
+
+
+def remove_attachment(doc: Path, file: str) -> bool:
+    """Delete one of the doc's attachments (a chip removed before its comment was sent); False when `file` isn't
+    a file directly in the doc's attachment folder."""
+    d, p = attach_dir(doc).resolve(), Path(file)
+    if not p.is_absolute() or p.name.startswith(".") or p.resolve().parent != d or not p.is_file():
+        return False
+    p.unlink()
+    return True
+
+
 # the reader's side of an item's conversation, `<checklist>:<item>:thread`: the messages they sent, oldest first, each
-# {md, rev (the rev it was sent on; null: sent before threads existed), at}; an annotation's follow-ups (`thread` in its
-# `__ann:<id>` value) are the same. The agent's side is the doc's (items' `replies`, `threads`).
+# {md, rev (the rev it was sent on; null: sent before threads existed), at, files?}; an annotation's follow-ups
+# (`thread` in its `__ann:<id>` value) are the same. A message with files may have no text. The agent's side is the
+# doc's (items' `replies`, `threads`).
 THREAD_MAX = 200
-ITEM_RULE = {"thread": f'[{{"md": <1 to {build.MAX_REPLY_MD} characters>, "rev": <1 to {MAX_ARCHIVE_REV} characters> or '
-                       f'null, "at": <ISO 8601 time>}}, …], at most {THREAD_MAX}',
-             "pick": "=<option id>|<author's id>, or with several answers =<ids>|<author's ids>, each comma-joined"}
+ITEM_RULE = {"thread": f'[{{"md": <up to {build.MAX_REPLY_MD} characters, at least 1 without files>, "rev": <1 to {MAX_ARCHIVE_REV} characters> or '
+                       f'null, "at": <ISO 8601 time>, "files"?: {FILES_RULE}}}, …], at most {THREAD_MAX}',
+             "pick": "=<option id>|<author's id>, or with several answers =<ids>|<author's ids>, each comma-joined",
+             "files": FILES_RULE}
 PICK_IDS = re.compile(r"[^,|]+(?:,[^,|]+)*")
 
 
 def thread_ok(t) -> bool:
     return isinstance(t, list) and len(t) <= THREAD_MAX and all(
-        isinstance(e, dict) and set(e) == {"md", "rev", "at"} and isinstance(e["md"], str)
-        and 0 < len(e["md"]) <= build.MAX_REPLY_MD and (e["rev"] is None or archive_rev_ok(e["rev"])) and iso_time_ok(e["at"])
+        isinstance(e, dict) and {"md", "rev", "at"} <= set(e) <= {"md", "rev", "at", "files"} and isinstance(e["md"], str)
+        and len(e["md"]) <= build.MAX_REPLY_MD and (e["rev"] is None or archive_rev_ok(e["rev"])) and iso_time_ok(e["at"])
+        and ("files" not in e or files_ok(e["files"]) and len(e["files"]) > 0) and (len(e["md"]) > 0 or bool(e.get("files")))
         for e in t)
 
 
@@ -3549,12 +3634,17 @@ def pick_ok(value: str) -> bool:
 
 
 def item_rule(key: str) -> str | None:
-    """Which of ITEM_RULE a reader key's value must follow: 'thread' for `<checklist>:<item>:thread`, 'pick' for
-    `<checklist>:<item>` (when its value is a pick); None for any other key."""
+    """Which of ITEM_RULE a reader key's value must follow: 'thread' for `<checklist>:<item>:thread`, 'files' for
+    `<checklist>:<item>:files` and `__message-files`, 'pick' for `<checklist>:<item>` (when its value is a pick); None
+    for any other key."""
+    if key == MESSAGE_FILES:
+        return "files"
     if key.startswith("__"):
         return None
     n = key.count(":")
-    return "thread" if n == 2 and key.endswith(":thread") else "pick" if n == 1 else None
+    if n == 2:
+        return "thread" if key.endswith(":thread") else "files" if key.endswith(":files") else None
+    return "pick" if n == 1 else None
 
 
 def stale_archive(doc: Path, state: dict) -> bool:
@@ -3571,9 +3661,10 @@ def stale_archive(doc: Path, state: dict) -> bool:
 
 def value_ok(key: str, value: str) -> bool:
     """False for an `__ann:<id>` value the page can't draw (template.html's MARKUP `valid`; its follow-ups `thread`:
-    thread_ok, `draft`: a string or null), an `__hist` or `__hist:<step>` value that isn't the board's undo history, an
-    item's thread or pick of the wrong shape (ITEM_RULE), or a reader key out of bounds (`__title` / `__emoji`:
-    build.reader_title_ok, build.emoji_ok; `__archived`: archive_record; `__archive-later`); True for any other key."""
+    thread_ok, `draft`: a string or null, `files` and `draftFiles`: files_ok or null), an `__hist` or `__hist:<step>`
+    value that isn't the board's undo history, an item's thread, files or pick of the wrong shape (ITEM_RULE), or a
+    reader key out of bounds (`__title` / `__emoji`: build.reader_title_ok, build.emoji_ok; `__archived`:
+    archive_record; `__archive-later`; `__message-files`: files_ok); True for any other key."""
     if key in READER_KEYS:
         return READER_KEYS[key](value)
     rule = item_rule(key)
@@ -3582,6 +3673,8 @@ def value_ok(key: str, value: str) -> bool:
             return thread_ok(json.loads(value))
         except ValueError:
             return False
+    if rule == "files":
+        return _json_files_ok(value)
     if rule == "pick":
         return not value.startswith("=") or pick_ok(value)
     hist = key == "__hist" or key.startswith("__hist:")
@@ -3599,6 +3692,7 @@ def value_ok(key: str, value: str) -> bool:
             and (a.get("type") != "text" or isinstance(a.get("quote"), str))
             and (a.get("note") is None or isinstance(a["note"], str)) and (a.get("up") is None or isinstance(a["up"], list))
             and (a.get("thread") is None or thread_ok(a["thread"])) and (a.get("draft") is None or isinstance(a["draft"], str))
+            and all(a.get(k) is None or files_ok(a[k]) for k in ("files", "draftFiles"))
             and (a.get("strokes") is None or isinstance(a["strokes"], list))
             and (a.get("pos") is None or isinstance(a["pos"], dict))
             and (a.get("type") != "link" or isinstance(a.get("link"), dict)
@@ -4120,11 +4214,47 @@ def make_handler(port: int, default_to: str):
             code, html = render(doc)
             return self.send(code, html)
 
+        def attach(self, q: dict) -> None:
+            """POST /__bluedoc/attach?path=<doc URL path>&name=<file name>: the body is the file (at most
+            ATTACH_MAX_BYTES), copied into the doc's attachment folder (save_attachment); answers {name, path, size}."""
+            doc = doc_for_url(q.get("path", ""))
+            name = q.get("name", "").strip()
+            try:
+                n = int(self.headers.get("Content-Length") or "-1")
+            except ValueError:
+                n = -1
+            why = (not doc and (404, "the page's doc is not under a registered folder")
+                   or not name and (400, "name the file: &name=")
+                   or not 0 <= n <= ATTACH_MAX_BYTES and (413, f"a file attaches up to {ATTACH_MAX_BYTES // (1024 * 1024)} MB"))
+            if why:
+                self.close_connection = True   # the body is left unread
+                return self.json(why[0], {"error": why[1]})
+            try:
+                answer = save_attachment(doc, name, n, self.rfile)
+            except (OSError, ValueError) as e:
+                self.close_connection = True
+                return self.json(500 if isinstance(e, OSError) else 400, {"error": f"cannot keep the file: {e}"})
+            print(f"attachment for {doc}: {answer['path']} ({n} bytes)", flush=True)
+            return self.json(200, answer)
+
         def do_DELETE(self):
             # a cancel: no key (the export is a read), but our header, which a cross-site request can't send
             if not self.guard():
                 return
             u = urlsplit(self.path)
+            if u.path == "/__bluedoc/attach":
+                # a chip removed before its comment went: the copy goes too (the key, as for the POST)
+                if self.headers.get("X-Bluedoc") != "1":
+                    return self.json(403, {"error": "missing X-Bluedoc header"})
+                if not self.has_key():
+                    return self.no_key()
+                q = {k: v[0] for k, v in parse_qs(u.query).items()}
+                doc = doc_for_url(q.get("path", ""))
+                if not doc:
+                    return self.json(404, {"error": "the page's doc is not under a registered folder"})
+                if not remove_attachment(doc, q.get("file", "")):
+                    return self.json(404, {"error": "not one of this doc's attachments"})
+                return self.json(200, {"ok": True})
             if u.path != "/__bluedoc/listing/progress":
                 return self.json(404, {"error": "not found"})
             if self.headers.get("X-Bluedoc") != "1":
@@ -4170,6 +4300,8 @@ def make_handler(port: int, default_to: str):
             if path == "/__bluedoc/listing/progress":   # a cancel (&cancel=1): no body
                 q = {k: v[0] for k, v in parse_qs(urlsplit(self.path).query).items()}
                 return self.listing_progress(q, q.get("cancel") == "1")
+            if path == "/__bluedoc/attach":   # the body is the file itself
+                return self.attach({k: v[0] for k, v in parse_qs(urlsplit(self.path).query).items()})
             data = self.body(POST_LIMITS.get(path, MAX_BODY))
             if data is None:
                 return
