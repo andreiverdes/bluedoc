@@ -11,7 +11,7 @@ relative to the doc, then a folder named after it under each --repo-root, then u
 The reference is expanded from that repo and kept only when the expansion shows the same files, line
 numbers and line text as the embedded hunks; the expansion goes to <name>.diffcache.json. Otherwise the block stays
 embedded and the reason is printed. `repo` is stored relative to the doc when the repo sits beside one of
-the doc's ancestors, else as written. `meta.rev` is not bumped; files keep their indent.
+the doc's ancestors, else as written. `meta.rev` is not bumped; files are written minified (build.dump_doc).
 --decks: a `design` doc whose board holds only `slide` artboards gets `meta.type: "presentation"` (and `meta.kind`
 "Presentation" where it was "Design"); it keeps working as a design without this. Build each one afterwards.
 Python 3.9+ standard library only.
@@ -28,7 +28,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import build  # noqa: E402
 import diffref  # noqa: E402
-from gitdiff import dump_like  # noqa: E402
 
 
 def embedded_blocks(node):
@@ -182,7 +181,7 @@ def migrate(path: Path, roots: list[Path], dry_run: bool, decks: bool = False) -
         row["deck"] = True
     row["gaps"] = build.check_contract(copy.deepcopy(doc))
     if row["converted"] or row["deck"]:
-        text = dump_like(raw, doc)
+        text = build.dump_doc(doc)
         row["after"] = len(text.encode())
         if not dry_run:
             if row["converted"]:

@@ -41,11 +41,9 @@ def git(repo: str, *args: str) -> str:
     return r.stdout
 
 
-def dump_like(raw_doc: str, doc: dict) -> str:
-    """`doc` serialised with the indent (1, 2 or 4 spaces) and final newline of `raw_doc`."""
-    indent = next((n for n in (1, 2, 4) if raw_doc.startswith("{\n" + " " * n + '"')
-                   and not raw_doc.startswith("{\n" + " " * (n + 1))), 2)
-    return json.dumps(doc, ensure_ascii=False, indent=indent) + ("\n" if raw_doc.endswith("\n") else "")
+def dump_doc(doc: dict) -> str:
+    """`doc` in the layout bluedoc writes docs in: minified, one line, final newline (build.dump_doc)."""
+    return json.dumps(doc, ensure_ascii=False, separators=(",", ":")) + "\n"
 
 
 def build_ref(a: argparse.Namespace) -> dict:
@@ -147,7 +145,7 @@ def main() -> int:
         blocks.insert(a.after_block + 1, block)
     else:
         blocks.append(block)
-    path.write_text(dump_like(raw_doc, doc), encoding="utf-8")
+    path.write_text(dump_doc(doc), encoding="utf-8")
     n = sum(len(h["lines"]) for f in expanded["files"] for h in f["hunks"])
     print(f"{'replaced' if idx is not None else 'inserted'} diff '{a.id}' in section '{a.section}': "
           f"{len(expanded['files'])} files, {n} lines, {len(expanded.get('comments', []))} comments"

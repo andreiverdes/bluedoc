@@ -26,8 +26,10 @@ Usage:
 One server per user, on 127.0.0.1 (default port 8740; when another program holds it, `open`, `start` and `unlock` take
 the next free port up to 8759 and record it in server.json; env BLUEDOC_PORT or --port pins one, with no fallback). State lives in
 ~/.bluedoc (env BLUEDOC_HOME): roots.json (folders the home page scans), server.json (pid, port), key (mode 0600: the
-secret that writes need) and state.db (SQLite, mode 0600: the reader's ticks, picks, comments and plan state per doc,
-and every reply; statedb.py).
+secret that writes need), state.db (SQLite, mode 0600: the reader's ticks, picks, comments and plan state per doc,
+and every reply; statedb.py) and app/<version>-<code>/ (the copy of scripts and assets the server runs from, so
+deleting or updating the install it was opened from never pulls files from under it; other versions' copies go once
+a new server is up).
 `open` registers the topmost ancestor folder named `docs`, else the doc's own folder, and restarts a running server
 whose version or code differs from its own. A folder inside a registered one is not added; a wider one is added
 next to the narrower ones, which keep their URLs (a doc's URL uses its deepest registered folder).
@@ -4489,6 +4491,46 @@ def last_port() -> int | None:
         return None
 
 
+APP_DIR = STATE / "app"   # the copies servers run from: <version>-<code>/
+
+
+def server_copy() -> Path:
+    """serve.py in a copy of this skill's scripts and assets (and the plugin.json skill_version reads) under
+    ~/.bluedoc/app/<version>-<code>/, made once per code version, so a running server never loses its files to a plugin
+    update or a /tmp cleanup at the place the skill is installed. Without a copy (disk full, read-only home): this file."""
+    here = Path(__file__).resolve()
+    dest = APP_DIR / f"{VERSION or 'dev'}-{CODE_HASH}"
+    script = dest / "skills" / HERE.parent.name / "scripts" / here.name
+    if script.is_file():
+        return script
+    tmp = APP_DIR / f".{dest.name}.{os.getpid()}"
+    try:
+        shutil.rmtree(tmp, ignore_errors=True)
+        skip = shutil.ignore_patterns("__pycache__", "*.pyc")
+        for d in ("scripts", "assets"):
+            shutil.copytree(HERE.parent / d, tmp / "skills" / HERE.parent.name / d, ignore=skip)
+        root = HERE.parent.parent.parent
+        for f in (Path(".claude-plugin") / "plugin.json", Path("plugin.json")):
+            if (root / f).is_file():
+                (tmp / f).parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(root / f, tmp / f)
+        os.replace(tmp, dest)
+    except OSError:   # another `open` made it first (a rename onto a full folder fails), or no room: use what exists
+        shutil.rmtree(tmp, ignore_errors=True)
+    return script if script.is_file() else here
+
+
+def prune_copies(keep: Path) -> None:
+    """Drop the copies of other code versions (their server is stopped) and copies an `open` left half-made an hour ago."""
+    try:
+        old = [d for d in APP_DIR.iterdir() if d.is_dir() and d not in keep.parents
+               and (not d.name.startswith(".") or time.time() - d.stat().st_mtime > 3600)]
+    except OSError:
+        return
+    for d in old:
+        shutil.rmtree(d, ignore_errors=True)
+
+
 def ensure_started(port: int, pinned: bool = False) -> bool:
     """Start the server unless one runs this very code; one that runs another version or code is replaced. Unless the
     port is pinned (--port, BLUEDOC_PORT), a port another program holds is skipped for the next free one of PORT_SPAN,
@@ -4525,8 +4567,9 @@ def ensure_started(port: int, pinned: bool = False) -> bool:
             print(f"port {port} is in use by another program; the bluedoc server takes {tries[0]}", file=sys.stderr)
     STATE.mkdir(parents=True, exist_ok=True)
     log = open(STATE / "server.log", "a")
+    script = server_copy()
     for p in tries[:3]:   # a port taken between the check and the bind: the next one
-        proc = subprocess.Popen([sys.executable, str(Path(__file__).resolve()), "run", "--port", str(p)],
+        proc = subprocess.Popen([sys.executable, str(script), "run", "--port", str(p)],
                                 stdout=log, stderr=log, stdin=subprocess.DEVNULL, start_new_session=True)
         for _ in range(50):
             time.sleep(0.1)
@@ -4534,6 +4577,7 @@ def ensure_started(port: int, pinned: bool = False) -> bool:
                 break
             try:
                 if json.loads(SERVER_FILE.read_text()).get("port") == p and alive():
+                    prune_copies(script)
                     return True
             except (OSError, ValueError):
                 pass
@@ -4795,6 +4839,7 @@ def main() -> int:
         print(f"{a.doc}: not a {DOC_FILES} file", file=sys.stderr)
         return 2
     if a.cmd == "open":
+        build.migrate_layout(doc)   # an older pretty-printed doc becomes minified; content and history unchanged
         add_root(a.root.resolve() if a.root else root_for(doc))
         if not ensure_started(DEFAULT_PORT, pinned=PORT_PINNED):
             return 1
@@ -4830,12 +4875,15 @@ def main() -> int:
                 return 1
             continue
         if code == 200 and body and body.get("message"):
-            print_reply(body["message"])
+            print_reply(body["message"], rules=True)
             return 0
 
 
-def print_reply(m: dict) -> None:
-    """A reply as `wait` and `reply` print it: a header with its id, rev and time, then its Markdown."""
+def print_reply(m: dict, rules: bool = False) -> None:
+    """A reply as `wait` and `reply` print it: a header with its id, rev and time, then its Markdown. `wait` (one
+    reply per process) names the reply rules in the skill this CLI runs from on stderr, so stdout keeps its shape."""
+    if rules:
+        print(f"(rules: {HERE.parent / 'types' / 'replies.md'} — read once)", file=sys.stderr, flush=True)
     label = {"answers": "answers", "changes": "change request", "approval": "approval"}[m["kind"]]
     at = dt.datetime.fromisoformat(m["at"]).isoformat(timespec="seconds")
     print(f"--- bluedoc {label} (reply {m['id']}{', rev ' + m['rev'] if m.get('rev') else ''}, {at}) ---")

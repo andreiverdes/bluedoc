@@ -173,6 +173,27 @@ class Actions(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn("# Orders answers", r.stdout)
 
+    def test_get_prints_one_object_or_the_outline(self) -> None:
+        plan = self.docs / "acme-saved-carts-plan.bluedoc.json"
+        r = self.tmp.run("build.py", "get", plan, "item:decisions/retention")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(len(r.stdout.splitlines()), 1)
+        self.assertEqual(json.loads(r.stdout)["id"], "retention")
+        r = self.tmp.run("build.py", "get", plan)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        lines = r.stdout.splitlines()
+        self.assertEqual(lines[0].split()[0], "doc")
+        self.assertTrue(any(ln.strip().startswith("item:decisions/retention  item  ") for ln in lines))
+        self.assertTrue(any(ln.strip().startswith("row:risks/0/0  row  ") for ln in lines))
+        self.assertTrue(all(len(ln) < 200 for ln in lines))
+        for ln in lines:   # every outline key resolves with get
+            key = ln.split()[0]
+            if key not in ("doc", "meta"):
+                self.assertEqual(self.tmp.run("build.py", "get", plan, key).returncode, 0, key)
+        r = self.tmp.run("build.py", "get", plan, "item:decisions/nope")
+        self.assertEqual(r.returncode, 2)
+        self.assertIn("no item 'nope'", r.stderr)
+
     def test_every_action_names_a_script_that_takes_its_args(self) -> None:
         for c in spec():
             if c["kind"] != "action":

@@ -21,7 +21,7 @@
 ## Rules
 
 - Keep each path identical in the step's `files` and the `files` block; the build warns on a mismatch.
-- Leave every step `status: "todo"` until its work lands; then `build.py patch <doc> step:steps/0/<stepId> --set status=done`, with `--json '{"evidence": […]}'` when you have proof: the test command and its result, a screenshot beside the doc, a link to a log or review doc (`references/schema.md` `### Evidence`). Evidence is optional; never invent it. Tick verification checks the same way: `item:<checklist>/<item> --set done=true`.
+- Leave every step `status: "todo"` until its work lands; then `build.py patch <doc> step:steps/0/<stepId> --set status=done`, with `--json '{"evidence": […]}'` when you have proof: the test command and its result, a screenshot beside the doc, a link to a log or review doc (`build.py schema evidence`). Evidence is optional; never invent it. Tick verification checks the same way: `item:<checklist>/<item> --set done=true`.
 - Record evidence right after running its check, through `patch`, so it is pinned to the commit (and any uncommitted changes) it checked; add `--paths` for what the check covers, so later commits elsewhere leave it valid. When you change code a check covers, run the check again and re-record: `build.py patch <doc> <key> --pin` (update its `md` if the result changed). The page marks evidence the code has moved past as stale and doesn't count that check as done; an approval or change request lists such checks under `## Stale evidence` with these commands (`#### Pinned evidence` in `references/schema.md`).
 - Never mix questions and work in one checklist: the build rejects a list where some items have `choices` and others don't.
 - Canvases: ≤ 9 nodes per level, never draw a proposed part as if it exists. The full canvas rules are under "Canvas rules" in `types/docs.md`.
@@ -62,4 +62,4 @@
       { "id": "email", "label": "Guests, by email link", "md": "An email token flow and a mail template, about 3 more days." } ] } ] }
 ```
 
-Field details: grep `## Plan blocks`, `### Steps`, `### Files`, `### Compare`, `### Media` in `references/schema.md`.
+Field cards: `build.py schema steps`, `files`, `compare`, `media` (each `build.py schema <block>`).

@@ -11,7 +11,7 @@ You write one `*.bluedoc.json`; the local server renders it as a page (blueprint
 
 1. **Gather facts from the source.** Read the code, configs and runs the doc describes. Every node, step and finding maps to a file, symbol, queue or command; keep `path:line` anchors for `refs`. Mark what you did not observe `unverified`.
 2. **Scaffold:** `python3 <skill>/scripts/build.py new <type> docs/<topic>/<name>.bluedoc.json --title "…" [--kind Runbook]`. Plans go in `docs/plans/<topic>.bluedoc.json`; a codebase review by area, not by PR, adds `--shape area`; a design adds `--target watch,mobile,desktop,web --framework …`, and `--icons` for an app icon; a deck is `new presentation`; a site is `new website --url http://localhost:<port>/`; an app's store listing is `new storelisting`. Then read the type's guide (table below), once.
-3. **Fill every `<<…>>`**; add or drop blocks as the guide says. Images and videos go next to the JSON (`media/…`), referenced by relative path. You may set a top-level `emoji` (one emoji, e.g. `"🛒"`; else the type's shows); the reader may rename the doc and change its emoji on the page, which you never see, so don't try to undo it.
+3. **Fill every `<<…>>`**, adding or dropping blocks as the guide says: write the doc once (one `write` of minified JSON on one line, never pretty-printed) or `build.py patch` it. Images and videos go next to the JSON (`media/…`), referenced by relative path. You may set a top-level `emoji` (one emoji, e.g. `"🛒"`); the reader may rename the doc and change its emoji, which you never see: don't undo it.
 4. **Validate:** `python3 <skill>/scripts/build.py <doc>`. Fix every `ERROR`; fix every `WARN` unless it is a false positive you can name. This records the revision. A passing build is the whole verification: no browser check.
 5. **Open:** `python3 <skill>/scripts/serve.py open <doc> --to <your name>` starts the server if needed and prints the URL with a `?key=` token good for an hour; later edits show on reload. Give the reader that exact link (it lets their browser save) and what stays unverified. A page that says "This browser can't save yet": run `serve.py unlock` and send its link.
 6. **Wait** in the background, no timeout: `python3 <skill>/scripts/serve.py wait <doc> --kind any`. It prints `--- bluedoc <kind> (reply <id>, …) ---`, the reader's Markdown, `--- end ---`. Replies sent while nobody waits are queued; `serve.py reply <id>` reprints one.
@@ -27,21 +27,11 @@ You write one `*.bluedoc.json`; the local server renders it as a page (blueprint
 | `docs` | `types/docs.md` | Architecture, walkthrough, runbook, setup guide, change proposal. |
 | `other` | `types/other.md` | Anything else: status page, report, inventory. |
 
+After `new`, never read or hand-edit the JSON: `build.py get <doc>` lists every key, `build.py get <doc> <key>` prints one object, `build.py patch <doc> <key> --set a/b/c=v` changes it, `build.py schema <block>` shows a block's fields.
+
 ## Replies
 
-- **Answers** (picks, ticks, comments): act on each pick; no pick means undecided, so ask. An item comment is an instruction about that item and can override its pick. A `multi` item's pick is a list: `→ **Lyon**, **Porto**`.
-- **Answer comments in their conversation**: `build.py patch <doc> item:<checklist>/<item> --reply "…"` for an item, `ann:<id>` for a pin or general comment; the reply Markdown ends each comment with that command. Keep it short and direct. Change the item itself only when the answer changes the question or its options. `--reply` goes with `--resolves` and `--no-bump`, one reply per call.
-- **Attached files**: a comment may list `Files:` with full paths (copies in `~/.bluedoc/attachments/`). Read each one before you act on or answer that comment; it is part of the instruction.
-- **Need more details** (`item:… → **Need more details**`): in the next rev, answer its comment with `--reply`, sharpen that item's options and their `md` explanations (or add one), and keep it unpicked; `--resolves` doesn't apply.
-- **Change requests**: each annotation names a `key`; pass it to `patch` as is. The annotator writes `doc` (general notes: apply across the doc), `header`, `tldr`, `status`, `section:`, `heading:`, `lead:`, `block:`, `item:`, `row:`, `card:`, `para:`, `step:`, `file:`, `media:`, `compare:`, `node:`, `comment:` and `line:` keys, and on design, presentation and website pages `artboard:`, `el:`, `frame:`, `link:` and `layout:`, and on storelisting pages `field:`, `brand:`, `section:<platform>/<row>` and `variant:`; their grammar is the table under `## Annotations` in `references/schema.md`. A `line:` key patches the review comment covering that line; with none, change the code or patch the finding. An `el:` key: `patch` prints the screen file and selector (on a website's live page: the URL, selector and source hints); edit there. Board drafts (`link:`, `layout:`, and `el:` element drafts: a reader's text edit or deletion in Edit, applied with `patch el:… --set 'text="…"'` or `--delete`; on a live page edit the source the `Source:` line names, then run its `--change` command) and a listing's drafts (`## Text edits`, `## Uploaded shots`, `## Style picks`, `## Brand drafts`, `## Accepted MT`) come with a ready command: run it. One you can't or shouldn't do: say so in `changes` or ask, never skip it silently.
-- **Approval** (plans, designs, presentations, websites, store listings): implement exactly the approved rev, as `types/plan.md`, `types/design.md` and `types/storelisting.md` say.
-- **Plan mode** (Claude Code): ExitPlanMode is denied with a message naming the plan doc and its URL. Follow it: `wait` in the background, `patch` that doc on a change request, call ExitPlanMode again after the approval.
-- **Revise** per target: `build.py patch <doc> <key> --set field=value --change "what changed and why"` (`--json`, `--append`, `--delete` for more). It validates, bumps `meta.rev`, replaces `changes`, records history and prints the `?diff=` link to send. Several patches for one reply: bump on the first, `--no-bump` on the rest. Once you have sent the reader a rev's URL, never edit it in place. Hand edits: bump `meta.rev` and rewrite `changes` (1–4 lines) yourself, then run `build.py <doc>`: only the build records the revision.
-- **Resolve**: pass each addressed comment's id (after its key) with `--resolves ID`; hand edits set `resolves`. Never list one you didn't do.
-- Record the reader's picks as `choice` and finished, verified work as done (steps `status: "done"`, checklist items `done: true`), with optional `evidence`: what you ran and saw, a screenshot, a link to a log or review. Send the `?diff=` link, then `wait` again.
-- **Evidence is pinned**: record it with `build.py patch` right after the check runs, so it carries the commit (and uncommitted changes) it checked; `--paths` names what the check covers. After changing code a check covers, re-run it and re-record with `build.py patch <doc> <key> --pin`. Stale evidence (code changed since) shows on the page, doesn't count as done, and comes back under `## Stale evidence` with those commands.
-- Commit `<name>.bluedoc.history.json` with the JSON.
-- **Archive** is the reader's (the page's ⋯ menu, a home card's): never archive a doc yourself. An archived doc still takes replies; a new rev brings it back to the home page.
+When `wait` returns, read `types/replies.md` once: how to answer, revise, resolve and record evidence.
 
 ## Writing
 
@@ -61,5 +51,5 @@ The linter warns on filler, vague words, sentences over 32 words, titles over 90
 ## Never
 
 - Read or write HTML, `assets/` (template, home page, kits) or `examples/`; a design's own screen files (`<name>.design/*.html`) are the one exception. `build.py <doc> -o out.html` writes a file only when someone needs one to send.
-- Read `references/schema.md` whole: grep it for a heading, e.g. `grep -n -A25 '^## Diff' <skill>/references/schema.md`. Its first lines list the headings.
+- Read or grep `references/schema.md` for fields: run `build.py schema <block|type>`.
 - Rename ids across revisions: they key the reader's ticks and the revision diff.

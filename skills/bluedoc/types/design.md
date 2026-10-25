@@ -89,4 +89,4 @@ As in `types/plan.md`: `serve.py open`, `wait --kind any`, revise on change requ
 </main>
 ```
 
-Field details: grep `## Board`, `### Artboard`, `### Devices`, `### Screen files` in `references/schema.md`.
+Field cards: `build.py schema board`, `build.py schema artboard`; device sizes and screen-file rules: `### Devices`, `### Screen files` in `references/schema.md`.

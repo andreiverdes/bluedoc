@@ -175,10 +175,10 @@ class KeyOfForms(unittest.TestCase):
 
     def test_docs_list_every_form(self) -> None:
         cased, bare = keyof_forms()
-        skill = (SKILL / "SKILL.md").read_text(encoding="utf-8")
+        skill = (SKILL / "types" / "replies.md").read_text(encoding="utf-8")
         line = next(l for l in skill.splitlines() if "**Change requests**" in l)
         listed = set(re.findall(r"`(\w+):?`", line))
-        self.assertEqual((cased | bare) - listed, set(), "SKILL.md's Change requests line misses key forms")
+        self.assertEqual((cased | bare) - listed, set(), "types/replies.md's Change requests line misses key forms")
         schema = (SKILL / "references" / "schema.md").read_text(encoding="utf-8")
         table = set(re.findall(r"^\| `(\w+)", schema, re.M)) | set(re.findall(r", `(\w+)[:`]", schema))
         self.assertEqual((cased | bare) - table, set(), "schema.md's key table misses key forms")

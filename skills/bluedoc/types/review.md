@@ -79,4 +79,4 @@ python3 <skill>/scripts/gitdiff.py --repo <checkout> --base <base> --head <head>
     "comments": [ { "at": "src/pricing/tiers.ts:17-21", "item": "t412/tier-boundary" } ] } ] }
 ```
 
-Field details: grep `## Diff` and `## Checklist` in `references/schema.md`.
+Field cards: `build.py schema diff`, `build.py schema checklist`, `build.py schema item`.

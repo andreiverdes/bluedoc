@@ -4551,11 +4551,15 @@ const docArg = () => {
   return /^[\w@%+=:,./-]+$/.test(f) ? f : `'${f.replace(/'/g, `'\\''`)}'`;
 };
 const cutLine = (s, n) => { s = String(s ?? '').replace(/\s+/g, ' ').trim(); return s.length > n ? s.slice(0, n - 1).trimEnd() + '…' : s; };
-// under a comment that goes to the agent: its latest reply there, quoted as context, then the command that answers
-function replyMd(ref, replies, indent) {
+// under a comment that goes to the agent: its latest reply there, quoted as context, then a short target line
+// (`→ <key> · <comment id>`); replyCmdsMd adds the command templates once, at the end of the Markdown
+function replyMd(ref, replies, indent, id) {
   const last = (Array.isArray(replies) ? replies : []).filter(okReply).at(-1);
-  return (last ? `\n${indent}> ${agentName()}, rev ${last.rev}: ${cutLine(last.md, 300)}` : '') + `\n${indent}Reply: \`build.py patch ${docArg()} ${ref} --reply "…"\``;
+  return (last ? `\n${indent}> ${agentName()}, rev ${last.rev}: ${cutLine(last.md, 300)}` : '') + `\n${indent}→ ${ref}` + (id ? ` · ${id}` : '');
 }
+const replyCmdsMd = md => !/^\s*→ /m.test(md) ? '' : `\n## Answering\n\n\`\`\`sh\n`
+  + `build.py patch ${docArg()} <key> --reply "…" --resolves <id> --no-bump\n`
+  + `build.py patch ${docArg()} <key> --set a/b=v --resolves <id>   # or --json '{…}'\n\`\`\`\n`;
 // an item's new message in the Markdown: quoted, its files' paths, then the context and the command (a blank line
 // keeps the quotes apart)
 const noteMd = (x, indent) => !x.notePending ? '' : (x.note ? '\n' + x.note.trim().split('\n').map(l => `${indent}  > ${l}`).join('\n') : '')
@@ -10617,7 +10621,7 @@ const MARKUP = (() => {
   const annReplies = a => DOC.threads && typeof DOC.threads === 'object' && Array.isArray(DOC.threads[a.id]) ? DOC.threads[a.id] : [];
   const annConvo = a => convo(a.thread, annReplies(a));
   // a comment's message in the Markdown, "Change:" (a follow-up: "Follow-up:"), its files, then the agent's latest reply and the command that answers it
-  const msgMd = (a, word, indent) => `${followUp(a) ? 'Follow-up' : word}:` + (noteText(a) ? ' ' + noteText(a).split('\n').join('\n' + indent) : '') + filesMd(noteFiles(a), indent) + replyMd(`ann:${a.id}`, annReplies(a), indent);
+  const msgMd = (a, word, indent) => `${followUp(a) ? 'Follow-up' : word}:` + (noteText(a) ? ' ' + noteText(a).split('\n').join('\n' + indent) : '') + filesMd(noteFiles(a), indent) + replyMd(`ann:${a.id}`, annReplies(a), indent, a.id);
   // the key `patch` takes, as changes.json has it; a drawing over several parts names each part's key
   const keysMd = a => [...new Set((a.type === 'draw' && a.targets && a.targets.length ? a.targets : [a.target]).map(t => t.key))].map(k => `\`${k}\``).join(' ');
   // the comment's id goes after its key: the agent passes it to `patch --resolves` once the change is made
@@ -10628,7 +10632,7 @@ const MARKUP = (() => {
   // general comments first, under General; then the page comments, numbered
   function changesMd(items = pending()) {
     const gen = items.filter(isGeneral), pg = items.filter(a => !isGeneral(a) && !isDraft(a)), dr = items.filter(isDraft), parts = [];
-    if (gen.length) parts.push('## General\n\n' + gen.map(a => `- (${a.id}) ` + (followUp(a) ? msgMd(a, '', '  ') : noteText(a).split('\n').join('\n  ') + filesMd(noteFiles(a), '  ') + replyMd(`ann:${a.id}`, annReplies(a), '  '))).join('\n'));
+    if (gen.length) parts.push('## General\n\n' + gen.map(a => `- (${a.id}) ` + (followUp(a) ? msgMd(a, '', '  ') : noteText(a).split('\n').join('\n  ') + filesMd(noteFiles(a), '  ') + replyMd(`ann:${a.id}`, annReplies(a), '  ', a.id))).join('\n'));
     if (gen.length && pg.length) parts.push('## On the page');
     if (pg.length) parts.push(pg.map((a, i) => {
       const ex = cut(excerpt(a), 200);
@@ -10647,7 +10651,8 @@ const MARKUP = (() => {
     if (dec) parts.push('## Decisions\n\n' + dec);
     const stale = staleEvidenceMd().trimEnd();
     if (stale) parts.push(stale);
-    return `# Change requests: ${DOC.title || docId}${CUR.rev ? ` (rev ${CUR.rev})` : ''}, ${new Date().toISOString().slice(0, 10)}\n\n` + parts.join('\n\n') + '\n';
+    const body = parts.join('\n\n');
+    return `# Change requests: ${DOC.title || docId}${CUR.rev ? ` (rev ${CUR.rev})` : ''}, ${new Date().toISOString().slice(0, 10)}\n\n` + body + '\n' + replyCmdsMd(body);
   }
   // `message` repeats the general comments for agents that read only it. A plan's or design's decision picks
   // go along as `answers`; elsewhere `answers` holds the "Need more details" items
@@ -10662,7 +10667,7 @@ const MARKUP = (() => {
     return { annotations: ord.map(pub), notes: ord.map((a, i) => {
       const ex = cut(excerpt(a), 200);
       return [headMd(a, i), ex && `   > ${ex}`, ...siteMd(a.target), ...(BOARD && BOARD.pinMd ? BOARD.pinMd(a) : []), '   ' + msgMd(a, 'Note', '   ')].filter(Boolean).join('\n');
-    }).join('\n\n') };
+    }).join('\n\n') + (s => s && '\n' + s.trimEnd())(replyCmdsMd(ord.map(a => replyMd(`ann:${a.id}`, [], '', a.id)).join(''))) };
   }
   const api = { all: () => JSON.parse(JSON.stringify(list)), payload, approvalNotes, annotate: () => null, setMode: () => false, paint: () => {}, flush: () => {}, markSent: () => {},
     comments: () => ({ open: false, available: false }), pinFrame: () => null, addFrame: () => null, relayout: () => {} };

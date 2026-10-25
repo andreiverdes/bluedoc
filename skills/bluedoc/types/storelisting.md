@@ -8,7 +8,7 @@ python3 <skill>/scripts/build.py new storelisting docs/store/<app>.bluedoc.json 
 
 This writes the `listing` block, a board with one shot (`first`), an icon artboard and their files in `<app>.design/`. The page shows the board as two platform pages (Google Play, App Store) with a locale menu, and a left panel of tabs beside them: Text, Style, Colors and Checks. The right panel holds Brief, Comments and Revisions, as on every design page.
 
-**Home card:** a column per platform with a dot per section, coloured by its worst check. **Required:** one `listing` block and one `board` of `shot`, `asset` and `icons` artboards. The fields, sets and checks: `grep -n -A60 '^## Listing' <skill>/references/schema.md`.
+**Home card:** a column per platform with a dot per section, coloured by its worst check. **Required:** one `listing` block and one `board` of `shot`, `asset` and `icons` artboards. Fields: `build.py schema listing` and `build.py schema artboard`; sets and checks: `## Listing` in `references/schema.md`.
 
 ## Rules
 
@@ -22,7 +22,7 @@ This writes the `listing` block, a board with one shot (`first`), an icon artboa
 
 Stores want the app in use: a shot shows a mock-up only until it has a capture or an upload (the page tags it **mock UI**).
 
-- **Captures:** give the shot a `recipe` (`{route, appearance, settle, targets, locales}`) and `listing.capture` its `devices` and `apps`, then run `python3 <skill>/scripts/capture.py <doc>` (`--dry-run` first; `--shot/--target/--locale` narrow it). It drives `xcrun simctl`, `adb`/`emulator` and headless Chrome, writes `<stem>.listing/captures/`, then `build.py <doc>` records them. Exit 3 means a tool or device is missing: say which. A `web` capture fills only the sets of its aspect (a phone capture leaves tablets their mock-up). Fields and targets: `grep -n -A30 '^### Uploads and captures' <skill>/references/schema.md`.
+- **Captures:** give the shot a `recipe` (`{route, appearance, settle, targets, locales}`) and `listing.capture` its `devices` and `apps`, then run `python3 <skill>/scripts/capture.py <doc>` (`--dry-run` first; `--shot/--target/--locale` narrow it). It drives `xcrun simctl`, `adb`/`emulator` and headless Chrome, writes `<stem>.listing/captures/`, then `build.py <doc>` records them. Exit 3 means a tool or device is missing: say which. A `web` capture fills only the sets of its aspect (a phone capture leaves tablets their mock-up). Fields: `build.py schema listing` (`capture`); targets: `### Uploads and captures` in `references/schema.md`.
 - **Uploads:** the reader drops PNGs on the page; each is a draft until you run the `## Uploaded shots` command from the reply. Never write into `<stem>.listing/<platform>/` yourself.
 - After a recipe change the capture is **stale**: re-shoot with the command `build.py` prints.
 
@@ -36,7 +36,7 @@ The reader edits text and picks styles and the brand on the page; you record the
 
 ## Variants and ads
 
-- **Variants** (`listing.variants`): custom pages (`cpp`, `csl`) and A/B tests (`ppo`, `sle`), a tab each on their platform page. A variant changes only what its kind may: `swap` a shot for its own (`variantOf`), `order` a set, `style`, and `text` (CPP: promo and keywords; SLE: short and full, in its `locale` only; PPO: none, and never the watch). B treatments are L5 lifestyle unless they name a layout. Fields: `grep -n -A12 '^### Variants, preview and ads' <skill>/references/schema.md`.
+- **Variants** (`listing.variants`): custom pages (`cpp`, `csl`) and A/B tests (`ppo`, `sle`), a tab each on their platform page. A variant changes only what its kind may: `swap` a shot for its own (`variantOf`), `order` a set, `style`, and `text` (CPP: promo and keywords; SLE: short and full, in its `locale` only; PPO: none, and never the watch). B treatments are L5 lifestyle unless they name a layout. Fields: `build.py schema listing` (`variants`); each kind's: `### Variants, preview and ads` in `references/schema.md`.
 - **Ads:** Google Ads headlines and descriptions in `text.<locale>.play.adHeadlines`/`adDescriptions`; ad images and the App Store search asset as `asset` artboards (`play/ad-*`, `appstore/search`) or the reader's uploads. Give a CPP an `adGroup` for Apple Ads.
 - Variant order drafts come with a `variant:<id>` command; run it as given. The **Store preview** is a mock: never quote it as how the store looks.
 
@@ -48,7 +48,7 @@ A pin on a capture comes with the shot's capture, recipe and a `Re-shoot:` comma
 
 ## Checks, translation, export and approval
 
-- **Checks:** `build.py <doc>` runs every store rule (`grep -n -A20 '^### Checks' <skill>/references/schema.md`). A store-rule error exits 1 but the page still draws; fix each one, or say why it stays.
+- **Checks:** `build.py <doc>` runs every store rule (`### Checks` in `references/schema.md`). A store-rule error exits 1 but the page still draws; fix each one, or say why it stays.
 - **Translation:** `build.py l10n <doc> --export es-ES` prints what to translate with each limit; translate within it, then `--import es-ES <file.json> --mt`. An over-limit string refuses the file: shorten it. Run the `## Accepted MT` command from a reply as given.
 - **Export:** `build.py <doc> --listing out.zip` writes the fastlane folders; add `--format folders` for plain folders by store, language and device with a README (`--listing out.pdf` or `.html` for review). The reader uploads it with fastlane or by hand; never upload for them. Mention the `WARN --listing` lines.
 - **Approval:** an approved listing is final at that rev: export it and hand over the ZIP. The reader can approve with unaccepted MT strings; say so.

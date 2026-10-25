@@ -21,7 +21,7 @@ Anything you'd hand over for approval before implementing is a plan (`types/plan
 - **One canvas per system boundary.** Put depth in `children`, not in more canvases. ≤ 9 nodes per level, ≤ 3 levels.
 - **Children explain the parent:** its real parts (modules, classes, threads, pins). `@left`/`@right`/`@top`/`@bottom` ports show where the parent's outer edges enter and leave.
 - **One flow per question** ("How does a request get served?"). Each step is one edge and one sentence (actor, action, object), with an optional `payload` naming what moves. Every scope with edges has at least one flow.
-- **Kinds carry meaning.** Edges: `data` payloads, `control` calls and starts, `async` queues and events, `power` hardware supply, `dep` build or runtime dependencies. Node shapes follow the node `kind` (grep `### Node` in the schema).
+- **Kinds carry meaning.** Edges: `data` payloads, `control` calls and starts, `async` queues and events, `power` hardware supply, `dep` build or runtime dependencies. Node shapes follow the node `kind` (`build.py schema node`).
 - **State is visible.** Use node `state` and doc `state` chips for anything not live or not verified; never draw a proposed part as if it exists.
 - **A drawing explains; it does not prove.** Say so in doc `state` when a reader could take it for runtime evidence.
 - Nodes must not overlap (the build checks). Labels ≤ 40 chars, edge labels ≤ 28; detail goes in `sub` or `md`, source anchors in `refs`.
@@ -47,4 +47,4 @@ Every procedure is a checklist. A row shows two lines: `text` is the action (imp
     { "edge": "api->db", "label": "orders-api stores the order." } ] } ] }
 ```
 
-Field details: grep `## Canvas`, `### Node`, `### Edge`, `### Flow`, `## Checklist` in `references/schema.md`.
+Field cards: `build.py schema canvas`, `node`, `edge`, `flow`, `checklist` (each `build.py schema <name>`).

@@ -64,7 +64,8 @@ class Conversation(ChromePage):
         self.assertEqual([a.ev(f"{box}.value"), self.count(a)], ["", [True, "0"]])
         reply = self.reply(self.plan)
         self.assertIn("  > Acme: what does 180 days cost in storage?", reply)
-        self.assertIn(f'  Reply: `build.py patch {PLAN} item:decisions/retention --reply "…"`', reply)
+        self.assertIn("  → item:decisions/retention", reply)
+        self.assertIn(f'build.py patch {PLAN} <key> --reply "…" --resolves <id> --no-bump', reply)
         # the thread is stored and the draft is gone; a reload shows the message and an empty box
         sent = until(lambda: (s := self.state(url)) and "decisions:retention:note" not in s and s.get("decisions:retention:thread"))
         self.assertEqual([(m["md"], m["rev"]) for m in json.loads(sent)], [("Acme: what does 180 days cost in storage?", "1")])
@@ -88,6 +89,7 @@ class Conversation(ChromePage):
         a.ev("BP.setNote('decisions/retention', 'Acme: fine, keep 180 days.')")
         self.assertIn("  > Agent, rev 2: About **2 GB** a month at Acme's volume.", a.ev("BP.changesPayload().markdown"))
         self.send_changes(a, "1 comment on items")
+        until(lambda: len(json.loads(self.state(url).get("decisions:retention:thread") or "[]")) == 2)
         self.patch("item:decisions/retention", "--reply", "Done: 180 days.")
         a.go(self.base + url)
         self.assertEqual(self.thread(a, "decisions/retention"), [
@@ -225,7 +227,8 @@ class Conversation(ChromePage):
         self.assertEqual([(x["id"], x["note"]) for x in p["annotations"]], [(cid, "Acme: and who gets paged?")])
         self.assertIn("Follow-up: Acme: and who gets paged?", p["markdown"])
         self.assertIn("> Agent, rev 2: The platform team; step 3 says so now.", p["markdown"])
-        self.assertIn(f'Reply: `build.py patch {PLAN} ann:{cid} --reply "…"`', p["markdown"])
+        self.assertIn(f"→ ann:{cid} · {cid}", p["markdown"])
+        self.assertIn(f'build.py patch {PLAN} <key> --reply "…"', p["markdown"])
         self.send_changes(a, "1 pending comment")
         ann = a.ev(f"BP.annotations().find(x => x.id === '{cid}')")
         self.assertEqual([ann["status"], [(m["md"], m["rev"]) for m in ann["thread"]], "draft" in ann], ["open", [("Acme: and who gets paged?", "2")], False])

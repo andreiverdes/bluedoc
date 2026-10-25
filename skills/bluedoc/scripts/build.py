@@ -23,9 +23,16 @@ Usage:
                                     wireframe screen file per --target watch|mobile|tablet|desktop|web, --icons
                                     adds an app icon with stub layers; presentation: a deck of three stub slides;
                                     website: a home page, live from --url (a loopback dev server) or a stub file)
-  build.py patch doc.json KEY [--set f=v ...] [--json OBJ] [--append OBJ] [--delete] [--html FILE|-] [--reply MD]
-                              [--change LINE ...] [--resolves ID ...] [--no-bump] [--pin] [--repo DIR] [--paths PATH ...]
+  build.py patch doc.json KEY [--set f=v|a/b/f=v ...] [--json OBJ] [--append OBJ [--at N]] [--move N] [--delete]
+                              [--html FILE|-] [--reply MD] [--change LINE ...] [--resolves ID ...] [--no-bump] [--pin]
+                              [--repo DIR] [--paths PATH ...]
                                     change one object by its annotator key, bump meta.rev, validate, record
+  build.py get doc.json [KEY]       print the object KEY names as one line of JSON; no KEY: the outline, one line per
+                                    object with its patch key, type and label
+  build.py migrate DOC|FOLDER ... [--dry-run]
+                                    rewrite older pretty-printed docs minified (content, rev and history unchanged)
+  build.py schema [BLOCK|PART|TYPE]  print a block type's fields and a minified example (schema checklist), a part's
+                                    (item, node, …) or a doc type's required blocks and sections; no name: the list
   build.py from-md PLAN.md out.bluedoc.json [--org O] [--project DIR] [--change LINE ...]
                                     import a Markdown plan as a plan doc (mdplan.py) and build it; an existing out
                                     keeps its id and gets the next meta.rev
@@ -94,8 +101,10 @@ patch keys: doc, meta, header, tldr, status, section:<sec>, heading:<sec>, lead:
   with its time, and the `capture.py` command that re-shoots it (an uploaded shot: its PNG, which has none).
   <blockPath> is <section>/<index> or <checklist>/<item>/<index>. header, tldr and status address
   the doc's top level. --set and --json values parse as JSON when they can; null deletes the field.
-  --append adds to the target's list (doc: sections, section and item: blocks, table: rows,
-  canvas: nodes, diff: comments, board: artboards, other blocks: items). The rev bumps (A->B, 3->4,
+  --set a/b/f=v sets a nested field: each segment is a dict key, or in a list the element whose id is
+  it, else its index (choices/d90/md=…). --append adds to the target's list (doc: sections, section and
+  item: blocks, table: rows, canvas: nodes, diff: comments, board: artboards, other blocks: items);
+  --at N inserts there instead. --move N moves the target to position N of its list. The rev bumps (A->B, 3->4,
   v1->v2) and meta.date becomes today unless --no-bump; on a bump `changes` becomes the --change lines
   (default: "Updated `KEY`.") and `resolves` the --resolves ids (none: removed), with --no-bump both are
   appended.
@@ -454,6 +463,208 @@ BLOCK_SHAPES = {
 DOC_SHAPE = {"title": str, "meta": {"type": str}, "state": [{"kind": str}],
              "sections": [{"id": str, "title": str, "blocks": [BLOCK]}], "threads": dict}
 JSON_TYPES = {dict: "an object", list: "a list", str: "a string", NUMBER: "a number"}
+
+# `build.py schema` prints a card per block type and per part from this table: (purpose, fields, example). A field row is
+# (name, type, req, notes): req is "req" (need() checks it), "opt", or "ref" (a diff reference's own); notes is text or a
+# list of text and value collections (the validator's own sets, shown a|b|c; a callable is read when the card prints).
+# check_block, validate_board and validate() take their required fields from it (BLOCK_REQUIRED, DOC_REQUIRED);
+# tests/test_schema_cards.py checks that every field the validator reads is on a card and every block's example validates.
+SCHEMA_CARDS = {
+    "text": ("prose in block Markdown", [
+        ("md", "md", "req", "paragraphs, lists, GFM tables, fenced code, quotes")],
+        {"type": "text", "md": "Orders reach `orders-api`, which writes them to **Postgres**."}),
+    "callout": ("a boxed note, risk or decision with its reason", [
+        ("kind", "str", "opt", [CALLOUT_KINDS, "; default note; caution: data, warning: people"]),
+        ("md", "md", "req", ""),
+        ("title", "inline", "opt", "")],
+        {"type": "callout", "kind": "decision", "title": "Keep Postgres", "md": "One store keeps the rollback simple."}),
+    "table": ("2+ items sharing 2+ attributes", [
+        ("columns", "[inline]", "req", ""),
+        ("rows", "[[inline]]", "req", "each row has len(columns) cells"),
+        ("caption", "inline", "opt", "")],
+        {"type": "table", "columns": ["Risk", "Mitigation"], "rows": [["Cache stampede", "Jittered TTL"]]}),
+    "code": ("a copyable command or file", [
+        ("code", "str", "req", ""),
+        ("lang", "str", "opt", "highlight language"),
+        ("title", "inline", "opt", "")],
+        {"type": "code", "lang": "sh", "code": "pnpm test"}),
+    "terms": ("glossary: define each term once", [
+        ("items", "[object]", "opt", ""),
+        ("items[].term", "inline", "req", ""),
+        ("items[].md", "md", "req", "")],
+        {"type": "terms", "items": [{"term": "Saved cart", "md": "A cart the shopper keeps for later."}]}),
+    "cards": ("options or components side by side", [
+        ("items", "[object]", "opt", ""),
+        ("items[].title", "inline", "req", ""),
+        ("items[].md", "md", "req", ""),
+        ("items[].tag", "inline", "opt", "chip text"),
+        ("items[].kind", "str", "opt", ["chip colour: ", STATE_KINDS])],
+        {"type": "cards", "items": [{"title": "Postgres", "md": "One store.", "tag": "pick", "kind": "ok"}]}),
+    "checklist": ("a progress list to tick, or a decision list to pick (never both)", [
+        ("id", "id", "req", "unique in the doc; progress key bp:<doc>:<id>:<item>"),
+        ("title", "inline", "req", ""),
+        ("items", "[item]", "req", "build.py schema item"),
+        ("numbered", "bool", "opt", "default true")],
+        {"type": "checklist", "id": "verify", "title": "Verification",
+         "items": [{"id": "unit", "text": "Run the unit tests", "code": "pnpm test", "verify": "`48 passed`"}]}),
+    "canvas": ("a blueprint drawing: nodes, edges, flows; nodes nest", [
+        ("id", "id", "req", "refs name nodes as <id>/<node>"),
+        ("title", "inline", "req", ""),
+        ("nodes", "[node]", "req", "build.py schema node"),
+        ("edges", "[edge]", "opt", "build.py schema edge"),
+        ("flows", "[flow]", "opt", "build.py schema flow"),
+        ("rootLabel", "inline", "opt", "root crumb"),
+        ("height", "number", "opt", "px"),
+        ("caption", "inline", "opt", "")],
+        {"type": "canvas", "id": "arch", "title": "Data path", "nodes": [
+            {"id": "web", "label": "Web app", "kind": "client", "col": 0, "row": 0},
+            {"id": "api", "label": "orders-api", "col": 1, "row": 0}],
+         "edges": [{"from": "web", "to": "api", "label": "POST /orders", "kind": "data"}]}),
+    "diff": ("a code change with line comments; gitdiff.py writes it", [
+        ("id,title", "inline", "req", ""),
+        ("repo,base,head", "str", "ref", "a ref: checkout from the doc's folder (or pr) and commits; no files"),
+        ("paths,pr", "str", "opt", "pathspecs; owner/repo#N for gh"),
+        ("url,note", "str", "opt", "link; md under the header"),
+        ("comments", "[object]", "opt", "{file,line,end,side | at:\"f:3-5\" | label} + item:\"<list>/<item>\" or title,md,kind"),
+        ("files", "[object]", "opt", ["embedded {path,status,add,del,hunks:[{old,new,lines}]}; status ", FILE_STATUSES])],
+        {"type": "diff", "id": "pr-4", "title": "acme#4", "files": [
+            {"path": "a.ts", "hunks": [{"old": 3, "new": 3, "lines": ["-a<9", "+a<=9"]}]}],
+         "comments": [{"file": "a.ts", "line": 3, "title": "Edge moved", "md": "9 now passes."}]}),
+    "steps": ("a plan's implementation order, a numbered timeline", [
+        ("id", "id", "req", ""),
+        ("title", "inline", "opt", ""),
+        ("items", "[object]", "req", ""),
+        ("items[].id,title", "inline", "req", "id unique in the doc; title imperative, <=90 chars"),
+        ("items[].status", "str", "opt", [STEP_STATUSES, "; default todo"]),
+        ("items[].effort", "str", "opt", STEP_EFFORTS),
+        ("items[].md,files,refs", "", "opt", "md shown open; paths; <canvas>/<node>"),
+        ("items[].evidence", "[evidence]", "opt", "build.py schema evidence")],
+        {"type": "steps", "id": "plan", "items": [{"id": "table", "title": "Add the `carts` table", "status": "todo",
+                                                   "effort": "S", "files": ["db/0012.sql"]}]}),
+    "files": ("the files a plan touches, grouped by folder", [
+        ("title", "inline", "opt", ""),
+        ("items", "[object]", "req", ""),
+        ("items[].path", "str", "req", "from the repo root"),
+        ("items[].action", "str", "req", FILE_ACTIONS),
+        ("items[].why", "inline", "req", "one line"),
+        ("items[].from", "str", "opt", "old path; rename and move only"),
+        ("items[].step", "id", "opt", "a steps item id")],
+        {"type": "files", "items": [{"path": "src/carts/repo.ts", "action": "add", "why": "Reads and writes saved carts."}]}),
+    "media": ("an image or video beside the doc", [
+        ("src", "str", "req", ["path from the doc's folder or data: URI, no URLs; ", sorted(MEDIA_TYPES)]),
+        ("alt", "inline", "req", "what it shows"),
+        ("caption", "inline", "opt", ""),
+        ("width", "number", "opt", "most px wide")],
+        {"type": "media", "src": "media/cart.png", "alt": "The cart page with the Saved carts panel.", "width": 960}),
+    "compare": ("two panes: before and after code, text or images", [
+        ("before,after", "object", "req", "{label, md | code,lang | src,alt}: one of md, code, src"),
+        ("title", "inline", "opt", "")],
+        {"type": "compare", "before": {"label": "Today", "lang": "http", "code": "GET /v1/cart"},
+         "after": {"label": "Proposed", "lang": "http", "code": "GET /v1/saved-carts"}}),
+    "board": ("design, presentation, website, storelisting: artboards on a pan/zoom board", [
+        ("id", "id", "req", ""),
+        ("artboards", "[artboard]", "req", "build.py schema artboard"),
+        ("targets", "[str]", "opt", TARGET_DEVICES),
+        ("framework", "str", "opt", [BUILTIN_FRAMEWORKS, " or a frameworks[].id"]),
+        ("frameworks", "[object]", "opt", "{id,label,files:[.css|.js]} or {id,label,store}"),
+        ("themes", "[object]", "opt", "{id,label,tokens:{name:css value}}"),
+        ("motion", "object", "opt", ["keys ", MOTION_KEYS]),
+        ("entry,layout", "", "opt", ["start artboard ids; ", BOARD_LAYOUTS]),
+        ("breakpoints,viewport,root", "", "opt", "website only")],
+        {"type": "board", "id": "main", "targets": ["mobile"],
+         "artboards": [{"id": "login", "title": "Sign in", "device": "phone", "fidelity": "wireframe"}]}),
+    "listing": ("a storelisting's store text, locales, captions, brand and style", [
+        ("id", "id", "req", ""),
+        ("app", "object", "req", "{name, company}"),
+        ("platforms", "[str]", "req", [lambda: [p["id"] for p in listing.load_rules()["platforms"]]]),
+        ("rows", "[str]", "opt", [lambda: [r["id"] for r in listing.load_rules()["rows"]]]),
+        ("locales", "[str]", "req", "locale codes"),
+        ("defaultLocale", "str", "opt", "default: the first locale"),
+        ("text,strings,mt", "object", "opt", "per locale: {platform:{field:text}}; {key:caption}; [MT keys]"),
+        ("style,brand", "object", "opt", "{message m1-m5, layout l1-l5}; {font, palette, image}"),
+        ("icon", "str", "opt", "icons artboard id, or <doc>#<id>"),
+        ("video,order,capture", "object", "opt", "previews; {set:[shot ids]}; {devices, apps}"),
+        ("variants", "[object]", "opt", ["kind ", lambda: sorted({v["kind"] for v in listing.load_rules()["variants"]})]),
+        ("ipad,watchFace", "bool", "opt", "require that set"),
+        ("translatedFrom", "object", "opt", "l10n --import writes it")],
+        {"type": "listing", "id": "main", "app": {"name": "Acme Fit", "company": "Acme"}, "platforms": ["play"],
+         "locales": ["en-US"], "text": {"en-US": {"play": {"name": "Acme Fit"}}}}),
+    # parts: the objects inside blocks, and the doc itself
+    "item": ("a checklist row: a progress item, or a decision with choices", [
+        ("id", "id", "req", "stable"),
+        ("text", "inline", "req", "<=90 chars: an action, or the question"),
+        ("sub,detail,verify", "", "opt", "row line 2, <=120 chars; md shown open; success check"),
+        ("state,stateKind", "str", "opt", ["chip; kind ", STATE_KINDS, "; findings ", FINDING_SIZES]),
+        ("code,lang,refs", "", "opt", "command with Copy; <canvas>/<node>"),
+        ("blocks", "[block]", "opt", ["any but ", lambda: BLOCK_TYPES - ITEM_BLOCK_TYPES]),
+        ("done,evidence", "", "opt", "progress items: initial tick; schema evidence"),
+        ("choices", "[object]", "opt", ["2-", str(MAX_CHOICES), " {id, label <=28, md}: a decision"]),
+        ("multi,recommend,choice", "", "opt", "several answers; starred id; pre-picked id"),
+        ("replies", "[object]", "opt", "{rev, md}: patch --reply writes them")],
+        {"id": "ttl", "text": "Keep carts how long?", "recommend": "d90", "choices": [
+            {"id": "d90", "label": "90 days", "md": "Half the rows."}, {"id": "ever", "label": "Forever", "md": "No sweeper."}]}),
+    "evidence": ("proof a step or progress item landed", [
+        ("label", "inline", "req", ["plus one of ", lambda: EVIDENCE_BODY]),
+        ("md", "md", "opt", "output or result"),
+        ("code,lang", "str", "opt", "the command"),
+        ("src", "str", "opt", "image or video beside the doc"),
+        ("href", "str", "opt", "path from the doc's folder or http(s) URL"),
+        ("pin", "object", "opt", "patch stamps it; never write it")],
+        {"label": "Unit tests", "code": "pnpm test", "md": "`48 passed`"}),
+    "node": ("a canvas node; with children, a system", [
+        ("id,label", "inline", "req", "label <=40 chars"),
+        ("x,y | col,row", "number", "req", "centre, or grid place"),
+        ("sub", "inline", "opt", "second line"),
+        ("w,h", "number", "opt", "default 180x80"),
+        ("kind", "str", "opt", NODE_KINDS),
+        ("state", "str", "opt", NODE_STATES),
+        ("md", "md", "opt", "detail panel"),
+        ("refs", "[inline]", "opt", "source anchors"),
+        ("children", "object", "opt", "{nodes, edges, flows}, own space")],
+        {"id": "api", "label": "orders-api", "sub": "Node 20", "kind": "service", "state": "live", "col": 1, "row": 0}),
+    "edge": ("a canvas edge between nodes of one scope", [
+        ("from,to", "id", "req", ["node ids; in children also ", PORTS]),
+        ("id", "str", "opt", "default <from>-><to>"),
+        ("label", "inline", "opt", "<=28 chars"),
+        ("kind", "str", "opt", EDGE_KINDS),
+        ("dir", "str", "opt", "none|both; default arrow at to")],
+        {"from": "web", "to": "api", "label": "POST /orders", "kind": "data"}),
+    "flow": ("a token stepping along a scope's edges", [
+        ("id,label", "inline", "req", ""),
+        ("steps", "[object]", "req", "{edge | edges:[..], label, payload, ms, reverse}"),
+        ("loop", "bool", "opt", ""),
+        ("color", "str", "opt", "hex")],
+        {"id": "order", "label": "Place an order", "steps": [{"edge": "web->api", "label": "The web app posts the cart."}]}),
+    "artboard": ("one screen, slide or page on a board", [
+        ("id", "id", "req", "names <stem>.design/<id>.html"),
+        ("title", "inline", "req", ""),
+        ("fidelity", "str", "req", FIDELITIES),
+        ("device", "str", "opt", [DEVICES, "; or w,h"]),
+        ("x,y,w,h", "number", "opt", "board px; unset: placed for you"),
+        ("variantOf", "id", "opt", "the screen it varies"),
+        ("framework,src", "str", "opt", "overrides"),
+        ("notes", "md", "opt", "speaker notes, <=2 KB"),
+        ("url,source,sections", "", "opt", "website pages"),
+        ("icon", "object", "opt", "device icons: {bg, name}"),
+        ("sets,locale,asset,recipe,style,credits", "", "opt", "storelisting shots")],
+        {"id": "login", "title": "Sign in", "device": "phone", "fidelity": "hifi"}),
+    "doc": ("the document's top level", [
+        ("id", "id", "req", "never change it once read"),
+        ("title", "inline", "req", ""),
+        ("sections", "[object]", "req", "{id, title, lead, blocks}"),
+        ("meta", "object", "opt", "{org, kind, dwg, rev, date, type}"),
+        ("subtitle,tldr", "md", "opt", "one sentence; the answer in 1-3"),
+        ("emoji", "str", "opt", "one emoji"),
+        ("state,links", "[object]", "opt", ["{label, kind ", STATE_KINDS, "}; {label, href}"]),
+        ("hero", "object", "opt", "{icon, value <=8 chars, label <=28}"),
+        ("changes,resolves", "[str]", "opt", "this rev's change lines; comment ids it resolves"),
+        ("threads", "object", "opt", "{comment id: [{rev, md}]}: patch --reply writes them")],
+        {"id": "acme-status", "title": "Checkout status", "meta": {"type": "other"},
+         "sections": [{"id": "outages", "title": "Outages", "blocks": [{"type": "text", "md": "One 21-minute outage."}]}]}),
+}
+BLOCK_REQUIRED = {t: tuple(f for name, _, req, _ in SCHEMA_CARDS[t][1] if req == "req" and "[" not in name
+                           for f in name.split(",")) for t in BLOCK_TYPES}
+DOC_REQUIRED = tuple(f for name, _, req, _ in SCHEMA_CARDS["doc"][1] if req == "req" for f in name.split(","))
 
 
 def _json_type(v) -> str:
@@ -1848,7 +2059,7 @@ def validate_page(rep: Report, aw: str, a: dict, root: Path | None, decisions: d
 def validate_board(rep: Report, bw: str, b: dict, doc: dict, doc_path: Path | None) -> None:
     """A board block: its frameworks, themes, motion and artboards, the brief's options against them, and the
     screen files (when doc_path is known)."""
-    if not need(rep, bw, b, "id", "artboards"):
+    if not need(rep, bw, b, *BLOCK_REQUIRED["board"]):
         return
     check_id(rep, bw, b["id"])
     base = Path(doc_path).resolve().parent if doc_path else None
@@ -2107,7 +2318,7 @@ def validate(doc: dict, doc_path: Path | None = None, *, allow_remote: bool = Fa
 
 def _validate(rep: Report, doc: dict, doc_path: Path | None, *, allow_remote: bool, write_cache: bool) -> None:
     base = Path(doc_path).resolve().parent if doc_path else None
-    need(rep, "doc", doc, "id", "title", "sections")
+    need(rep, "doc", doc, *DOC_REQUIRED)
     if "id" in doc:
         check_id(rep, "doc", doc["id"])
     lint_text(rep, "doc.subtitle", doc.get("subtitle"))
@@ -2236,19 +2447,19 @@ def _validate(rep: Report, doc: dict, doc_path: Path | None, *, allow_remote: bo
             rep.err(bw, "checklists nest one level only: a nested checklist's items can't hold another checklist")
             return
         if t in ("text", "callout"):
-            need(rep, bw, b, "md")
+            need(rep, bw, b, *BLOCK_REQUIRED[t])
             lint_text(rep, bw, b.get("md"))
             if t == "text" and isinstance(b.get("md"), str) and len(re.findall(r"^\s*\d+[.)]\s", md_prose(b["md"]), re.M)) >= 3:
                 rep.warn(bw, "a procedure as a numbered list: make it a checklist, one action per item")
             if t == "callout" and b.get("kind", "note") not in CALLOUT_KINDS:
                 rep.err(bw, f"callout kind '{b.get('kind')}' not in {sorted(CALLOUT_KINDS)}")
         elif t == "table":
-            if need(rep, bw, b, "columns", "rows"):
+            if need(rep, bw, b, *BLOCK_REQUIRED[t]):
                 for ri, row in enumerate(b["rows"]):
                     if len(row) != len(b["columns"]):
                         rep.err(f"{bw}.rows[{ri}]", f"{len(row)} cells, {len(b['columns'])} columns")
         elif t == "code":
-            need(rep, bw, b, "code")
+            need(rep, bw, b, *BLOCK_REQUIRED[t])
         elif t == "terms":
             for ti, it in enumerate(b.get("items") or []):
                 need(rep, f"{bw}.items[{ti}]", it, "term", "md")
@@ -2258,7 +2469,7 @@ def _validate(rep: Report, doc: dict, doc_path: Path | None, *, allow_remote: bo
                 need(rep, f"{bw}.items[{ci}]", it, "title", "md")
                 lint_text(rep, f"{bw}.items[{ci}]", it.get("md"))
         elif t == "checklist":
-            if not need(rep, bw, b, "id", "title", "items"):
+            if not need(rep, bw, b, *BLOCK_REQUIRED[t]):
                 return
             check_id(rep, bw, b["id"])
             if b["id"] in checklist_ids:
@@ -2352,7 +2563,7 @@ def _validate(rep: Report, doc: dict, doc_path: Path | None, *, allow_remote: bo
             elif depth == 0 and kind != "empty":
                 top_lists.append((bw, b["id"], kind))
         elif t == "canvas":
-            if not need(rep, bw, b, "id", "title", "nodes"):
+            if not need(rep, bw, b, *BLOCK_REQUIRED[t]):
                 return
             check_id(rep, bw, b["id"])
             if b["id"] in canvas_nodes:
@@ -2363,7 +2574,7 @@ def _validate(rep: Report, doc: dict, doc_path: Path | None, *, allow_remote: bo
             lint_text(rep, bw + ".caption", b.get("caption"))
         elif t == "diff":
             ref = id(b) in ref_ids
-            if not need(rep, bw, b, "id", "title", *(("base", "head") if ref else ("files",))):
+            if not need(rep, bw, b, *BLOCK_REQUIRED[t], *(("base", "head") if ref else ("files",))):
                 return
             check_id(rep, bw, b["id"])
             if b["id"] in diffs:
@@ -2385,7 +2596,7 @@ def _validate(rep: Report, doc: dict, doc_path: Path | None, *, allow_remote: bo
             for ci, c in enumerate(src.get("comments") or []):
                 comments_to_check.append((f"{bw}.comments[{ci}]", b["id"], c))
         elif t == "steps":
-            if not need(rep, bw, b, "id", "items"):
+            if not need(rep, bw, b, *BLOCK_REQUIRED[t]):
                 return
             check_id(rep, bw, b["id"])
             if b["id"] in steps_blocks:
@@ -2421,7 +2632,7 @@ def _validate(rep: Report, doc: dict, doc_path: Path | None, *, allow_remote: bo
                     refs_to_check.extend((iw, r) for r in refs or [])
                 check_evidence(rep, iw + ".evidence", it.get("evidence"), base)
         elif t == "files":
-            if not need(rep, bw, b, "items"):
+            if not need(rep, bw, b, *BLOCK_REQUIRED[t]):
                 return
             lint_text(rep, bw + ".title", b.get("title"))
             seen: set[str] = set()
@@ -2448,7 +2659,7 @@ def _validate(rep: Report, doc: dict, doc_path: Path | None, *, allow_remote: bo
                 if f.get("step"):
                     file_steps.append((fw + ".step", f["step"]))
         elif t == "media":
-            need(rep, bw, b, "src", "alt")
+            need(rep, bw, b, *BLOCK_REQUIRED[t])
             if "src" in b:
                 check_media_src(rep, bw + ".src", b["src"], base)
             if b.get("width") is not None and not (isinstance(b["width"], (int, float)) and not isinstance(b["width"], bool) and b["width"] > 0):
@@ -2456,7 +2667,7 @@ def _validate(rep: Report, doc: dict, doc_path: Path | None, *, allow_remote: bo
             lint_text(rep, bw + ".alt", b.get("alt"))
             lint_text(rep, bw + ".caption", b.get("caption"))
         elif t == "compare":
-            if not need(rep, bw, b, "before", "after"):
+            if not need(rep, bw, b, *BLOCK_REQUIRED[t]):
                 return
             lint_text(rep, bw + ".title", b.get("title"))
             for side in ("before", "after"):
@@ -3034,13 +3245,150 @@ def doc_stem(path: Path) -> str:
     return next((name[:-len(s)] for s in DOC_SUFFIXES if name.endswith(s)), path.stem)
 
 
-def write_doc(path: Path, doc: dict, raw: str) -> None:
-    """Write doc atomically with the indent (none, 1, 2 or 4 spaces) and final newline raw had."""
-    indent = None if not raw.startswith("{\n") else next(
-        (n for n in (1, 2, 4) if raw.startswith("{\n" + " " * n + '"') and not raw.startswith("{\n" + " " * (n + 1))), 2)
+def dump_doc(doc) -> str:
+    """The one layout bluedoc writes a doc in: minified JSON on one line, with a final newline."""
+    return json.dumps(doc, ensure_ascii=False, separators=(",", ":")) + "\n"
+
+
+def write_doc(path: Path, doc: dict) -> None:
+    """Write doc atomically, minified (dump_doc)."""
     tmp = path.with_name(path.name + ".tmp")
-    tmp.write_text(json.dumps(doc, ensure_ascii=False, indent=indent) + ("\n" if raw.endswith("\n") else ""), encoding="utf-8")
+    tmp.write_text(dump_doc(doc), encoding="utf-8")
     tmp.replace(path)
+
+
+def migrate_layout(path: Path) -> bool:
+    """Rewrite a doc in an older layout (pretty-printed) minified, content unchanged and no rev bump; True when it
+    did. The history hashes canonical content, so this records no revision. Unreadable files are left alone."""
+    try:
+        raw = path.read_text(encoding="utf-8")
+        doc = json.loads(raw)
+    except (OSError, ValueError):
+        return False
+    if raw == dump_doc(doc):
+        return False
+    write_doc(path, doc)
+    return True
+
+
+def cmd_migrate(argv: list[str]) -> int:
+    ap = argparse.ArgumentParser(prog="build.py migrate", description="Rewrite docs in the minified layout bluedoc "
+                                 "writes (content unchanged, no rev bump, no new revision).")
+    ap.add_argument("paths", type=Path, nargs="+", metavar="DOC|FOLDER", help="a doc, or a folder searched for docs")
+    ap.add_argument("--dry-run", action="store_true", help="list the docs it would rewrite; write nothing")
+    a = ap.parse_args(argv)
+    docs: list[Path] = []
+    for p in a.paths:
+        docs += sorted(f for s in DOC_SUFFIXES for f in p.rglob("*" + s)) if p.is_dir() else [p]
+    n = 0
+    for f in docs:
+        try:
+            raw = f.read_text(encoding="utf-8")
+            doc = json.loads(raw)
+        except (OSError, ValueError) as e:
+            print(f"skip {f}: {e}", file=sys.stderr)
+            continue
+        if raw == dump_doc(doc):
+            continue
+        n += 1
+        if not a.dry_run:
+            write_doc(f, doc)
+        print(f"{'would rewrite' if a.dry_run else 'rewrote'} {f}")
+    print(f"{n} doc{'' if n == 1 else 's'} {'to rewrite' if a.dry_run else 'rewritten'}; {len(docs) - n} already minified")
+    return 0
+
+
+def _label(x) -> str:
+    """A short one-line label for an outline row: its title, label, text… (a table row: its cells), ~60 chars."""
+    if isinstance(x, list):
+        s = " | ".join(str(c if not isinstance(c, (dict, list)) else _label(c)) for c in x)
+    elif isinstance(x, dict):
+        s = next((str(x[k]) for k in ("title", "label", "text", "name", "q", "md", "path", "at", "alt", "caption", "src")
+                  if isinstance(x.get(k), (str, int, float)) and str(x[k]).strip()), "")
+    else:
+        s = str(x)
+    s = " ".join(s.split())
+    return s if len(s) <= 60 else s[:59] + "…"
+
+
+def outline(doc: dict) -> list[str]:
+    """One line per addressable object: its patch key, its type and its label (`build.py get` with no key)."""
+    out = [f"doc  doc  {_label(doc)}", f"meta  meta  rev {(doc.get('meta') or {}).get('rev', '-')}"]
+
+    def nodes(cv: str, ns, trail: str, indent: str) -> None:
+        for n in ns or []:
+            if isinstance(n, dict) and n.get("id"):
+                out.append(f"{indent}node:{cv}/{trail}{n['id']}  node  {_label(n)}")
+                nodes(cv, (n.get("children") or {}).get("nodes"), f"{trail}{n['id']}/", indent + "  ")
+
+    def blocks(bs, prefix: str, indent: str) -> None:
+        for i, b in enumerate(bs or []):
+            if not isinstance(b, dict):
+                continue
+            bp, ty = f"{prefix}/{i}", b.get("type", "?")
+            out.append(f"{indent}block:{bp}  {ty}" + (f"#{b['id']}" if b.get("id") else "") + f"  {_label(b)}")
+            sub = indent + "  "
+            items = b.get("items") if isinstance(b.get("items"), list) else []
+            if ty == "checklist" and b.get("id"):
+                for it in items:
+                    if isinstance(it, dict) and it.get("id"):
+                        out.append(f"{sub}item:{b['id']}/{it['id']}  item  {_label(it)}")
+                        blocks(it.get("blocks"), f"{b['id']}/{it['id']}", sub + "  ")
+            elif ty == "steps":
+                out.extend(f"{sub}step:{bp}/{it['id']}  step  {_label(it)}" for it in items if isinstance(it, dict) and it.get("id"))
+            elif ty == "files":
+                out.extend(f"{sub}file:{bp}/{it['path']}  file  {it.get('action', '')} {_label(it.get('why') or '')}".rstrip()
+                           for it in items
+                           if isinstance(it, dict) and it.get("path"))
+            elif ty == "cards":
+                out.extend(f"{sub}card:{bp}/{j}  card  {_label(it)}" for j, it in enumerate(items))
+            elif ty == "table":
+                out.extend(f"{sub}row:{bp}/{j}  row  {_label(r)}" for j, r in enumerate(b.get("rows") or []))
+            elif ty == "compare":
+                out.extend(f"{sub}compare:{bp}/{s}  side  {_label(b[s])}" for s in ("before", "after") if isinstance(b.get(s), dict))
+            elif ty == "canvas" and b.get("id"):
+                nodes(b["id"], b.get("nodes"), "", sub)
+            elif ty == "diff" and b.get("id"):
+                out.extend(f"{sub}comment:{b['id']}/{j}  comment  {_label(c)}" for j, c in enumerate(b.get("comments") or []))
+            elif ty == "board":
+                out.extend(f"{sub}artboard:{x['id']}  artboard  {_label(x)}" for x in b.get("artboards") or []
+                           if isinstance(x, dict) and x.get("id"))
+
+    for s in doc.get("sections") or []:
+        if isinstance(s, dict) and s.get("id"):
+            out.append(f"section:{s['id']}  section  {_label(s)}")
+            blocks(s.get("blocks"), s["id"], "  ")
+    return out
+
+
+def cmd_get(argv: list[str]) -> int:
+    ap = argparse.ArgumentParser(prog="build.py get", description="Print one object of a doc by its patch key as one "
+                                 "line of JSON; with no key, the doc's outline: each object's patch key, type and label.")
+    ap.add_argument("doc", type=Path)
+    ap.add_argument("key", nargs="?", help="any key build.py patch takes (e.g. item:t412/tier-boundary, section:risks)")
+    a = ap.parse_args(argv)
+    try:
+        doc = json.loads(a.doc.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as e:
+        print(f"cannot read {a.doc}: {e}", file=sys.stderr)
+        return 2
+    if not isinstance(doc, dict):
+        print(f"{a.doc} is no doc: its JSON isn't an object", file=sys.stderr)
+        return 2
+    if a.key is None:
+        print("\n".join(outline(doc)))
+        return 0
+    if a.key.partition(":")[0].strip("` ") == "frame":
+        ap.error("a frame: key adds a frame; there is nothing to get")
+    try:
+        t = resolve_key(doc, a.key)
+    except PatchError as e:
+        print(f"get: {e}", file=sys.stderr)
+        return 2
+    obj = ((doc.get("threads") or {}).get(t.key) if t.kind == "ann" else t.obj.get(t.key) if t.kind == "field"
+           else t.obj)
+    print(json.dumps(obj, ensure_ascii=False, separators=(",", ":")))
+    return 0
 
 
 def cmd_new(argv: list[str]) -> int:
@@ -3106,12 +3454,14 @@ def cmd_new(argv: list[str]) -> int:
             print(f"{f} exists; not overwriting it", file=sys.stderr)
             return 2
     a.out.parent.mkdir(parents=True, exist_ok=True)
-    write_doc(a.out, doc, raw)
+    write_doc(a.out, doc)
     for f, text in stubs.items():
         f.parent.mkdir(parents=True, exist_ok=True)
         f.write_text(text, encoding="utf-8")
         print(f"wrote {f} (a {'layer' if f.suffix == '.svg' else 'wireframe'} stub)")
     print(f"wrote {a.out} ({a.type}): replace every <<…>>; `build.py {a.out} --check` lists the ones left")
+    print(f"fill with: python3 {HERE / 'build.py'} get {a.out} (the outline: every patch key), then build.py patch "
+          f"<key> --set field=… per placeholder, or rewrite the whole file once")
     print(f"then: python3 {HERE / 'build.py'} {a.out} && python3 {HERE / 'serve.py'} open {a.out}")
     return 0
 
@@ -3906,7 +4256,53 @@ def _merge(obj: dict, fields: dict) -> None:
             obj[k] = v
 
 
-def apply_patch(t: Target, sets: list[str], merge: str | None, append: str | None, delete: bool) -> None:
+def _step(cur, seg: str, path: str):
+    """One segment of a --set path into cur: a dict's key, or a list's element whose id is seg, else index seg."""
+    if isinstance(cur, dict):
+        if seg not in cur:
+            raise PatchError(f"--set {path}: no '{seg}' (there: {', '.join(cur) or 'nothing'})")
+        return cur[seg]
+    if isinstance(cur, list):
+        for x in cur:
+            if isinstance(x, dict) and x.get("id") == seg:
+                return x
+        if seg.isdigit() and int(seg) < len(cur):
+            return cur[int(seg)]
+        ids = [str(x["id"]) for x in cur if isinstance(x, dict) and "id" in x]
+        raise PatchError(f"--set {path}: no '{seg}' in that list (" + (f"ids: {', '.join(ids)}" if ids else
+                                                                       f"indexes 0-{len(cur) - 1}" if cur else "empty") + ")")
+    raise PatchError(f"--set {path}: '{seg}' goes into a {_json_type(cur)}, which has no fields")
+
+
+def set_path(obj, path: str, value) -> None:
+    """--set a/b/c=value: walk a and b (dict keys; list element by id, else index), then set field c (null deletes;
+    in a list c names an element: replaced, or removed by null)."""
+    *walk, last = path.split("/")
+    cur = obj
+    for seg in walk:
+        cur = _step(cur, seg, path)
+    if isinstance(cur, list):
+        el = _step(cur, last, path)
+        i = next(i for i, x in enumerate(cur) if x is el)
+        if value is None:
+            del cur[i]
+        else:
+            cur[i] = value
+    elif isinstance(cur, dict):
+        _merge(cur, {last: value})
+    else:
+        raise PatchError(f"--set {path}: '{walk[-1] if walk else path}' is a {_json_type(cur)}, which has no fields")
+
+
+def apply_patch(t: Target, sets: list[str], merge: str | None, append: str | None, delete: bool,
+                at: int | None = None, move: int | None = None) -> None:
+    if move is not None:
+        if not isinstance(t.parent, list):
+            raise PatchError(f"--move: a {t.kind} doesn't sit in a list")
+        if not 0 <= move < len(t.parent):
+            raise PatchError(f"--move {move}: the list has positions 0-{len(t.parent) - 1}")
+        t.parent.insert(move, t.parent.pop(t.key))
+        return
     if delete:
         if t.kind in ("doc", "meta"):
             raise PatchError(f"can't delete the {t.kind}")
@@ -3918,7 +4314,9 @@ def apply_patch(t: Target, sets: list[str], merge: str | None, append: str | Non
         field, eq, v = s.partition("=")
         if not eq or not field:
             raise PatchError(f"--set '{s}': write field=value")
-        if isinstance(t.obj, list):   # a table row: field is the cell index
+        if "/" in field:
+            set_path(t.obj, field, _value(v))
+        elif isinstance(t.obj, list):   # a table row: field is the cell index
             t.obj[_index(t.obj, field, "cell")] = _value(v)
         else:
             _merge(t.obj, {field: _value(v)})
@@ -3932,19 +4330,17 @@ def apply_patch(t: Target, sets: list[str], merge: str | None, append: str | Non
             raise PatchError("--json takes an object to merge (a list replaces a table row)")
     if append is not None:
         if isinstance(t.obj, list):
-            t.obj.append(_value(append))
-            return
-        if t.kind == "block":
-            field = APPEND_BLOCK_FIELD.get(t.obj.get("type"))
+            into = t.obj
         elif t.kind == "node":
-            t.obj.setdefault("children", {})
-            t.obj["children"].setdefault("nodes", []).append(_value(append))
-            return
+            into = t.obj.setdefault("children", {}).setdefault("nodes", [])
         else:
-            field = APPEND_FIELD.get(t.kind)
-        if not field:
-            raise PatchError(f"--append: a {t.obj.get('type') or t.kind} has no list to append to")
-        t.obj.setdefault(field, []).append(_value(append))
+            field = APPEND_BLOCK_FIELD.get(t.obj.get("type")) if t.kind == "block" else APPEND_FIELD.get(t.kind)
+            if not field:
+                raise PatchError(f"--append: a {t.obj.get('type') or t.kind} has no list to append to")
+            into = t.obj.setdefault(field, [])
+        if at is not None and not 0 <= at <= len(into):
+            raise PatchError(f"--at {at}: the list has positions 0-{len(into)}")
+        into.insert(len(into) if at is None else at, _value(append))
 
 
 def code_check_lines(pins: dict) -> list[str]:
@@ -4013,9 +4409,12 @@ def cmd_patch(argv: list[str]) -> int:
                                  "validate, write and record the revision. Key forms: see `build.py --help`.")
     ap.add_argument("doc", type=Path)
     ap.add_argument("key", help="e.g. item:t412/tier-boundary, step:steps/0/s3, row:risks/0/2, meta, tldr, artboard:login")
-    ap.add_argument("--set", action="append", default=[], metavar="FIELD=VALUE", help="set one field (JSON value, else a string; null deletes)")
+    ap.add_argument("--set", action="append", default=[], metavar="FIELD=VALUE", help="set one field (JSON value, else a "
+                    "string; null deletes); a/b/c=VALUE sets a nested field: dict keys, list elements by id, else index")
     ap.add_argument("--json", metavar="OBJ", help="merge these fields (null deletes one)")
     ap.add_argument("--append", metavar="VALUE", help="append to the target's list (items, rows, nodes, blocks, comments, artboards)")
+    ap.add_argument("--at", type=int, metavar="N", help="with --append: insert at position N (0 = first) instead")
+    ap.add_argument("--move", type=int, metavar="N", help="move the target to position N of the list it sits in")
     ap.add_argument("--delete", action="store_true", help="remove the target")
     ap.add_argument("--html", metavar="FILE", help="artboard: and el: keys: replace the screen file with FILE's text (- reads stdin)")
     ap.add_argument("--change", action="append", default=[], metavar="LINE", help="a line for `changes` (repeat for more)")
@@ -4033,9 +4432,14 @@ def cmd_patch(argv: list[str]) -> int:
                     "the doc's `threads[<id>]`); one per call, block Markdown")
     a = ap.parse_args(argv)
     ops = bool(a.set or a.json is not None or a.append is not None or a.delete or a.html is not None or a.pin
-               or a.reply is not None)
+               or a.reply is not None or a.move is not None)
     if a.delete and (a.set or a.json is not None or a.append is not None or a.html is not None or a.pin or a.reply is not None):
         ap.error("--delete goes alone")
+    if a.at is not None and a.append is None:
+        ap.error("--at goes with --append")
+    if a.move is not None and (a.delete or a.set or a.json is not None or a.append is not None or a.html is not None
+                               or a.pin or a.reply is not None):
+        ap.error("--move goes alone")
     try:
         raw = a.doc.read_text(encoding="utf-8")
         doc = json.loads(raw)
@@ -4062,6 +4466,8 @@ def cmd_patch(argv: list[str]) -> int:
         ap.error("a link: key takes --set to=<artboard> / kind=<kind> / label=<text>, or --delete")
     if t.kind == "layout" and (a.set or a.append is not None or a.delete or a.json is None):
         ap.error("a layout: key takes --json '{\"<artboard>\": [x, y], …}'")
+    if a.move is not None and t.kind in ("link", "element", "ann", "layout", "lsection", "field", "frame"):
+        ap.error("--move takes a key whose object sits in a list (section:, block:, item:, row:, step:, artboard:, …)")
     if a.html is not None and is_icons(t.obj):
         ap.error("an icons artboard has no screen file: edit its layers in place, then patch it with --change")
     if a.html is not None and is_live(t.obj):
@@ -4097,7 +4503,7 @@ def cmd_patch(argv: list[str]) -> int:
         return 0
     if not ops and t.kind != "frame" and not (on_screen and a.change):
         if not on_screen:
-            ap.error("give --set, --json, --append or --delete")
+            ap.error("give --set, --json, --append, --move or --delete")
         # where to make the change: the screen file (an icon: its layers; a live page: its URL), the element in it, and
         # on a website the source hints
         if is_icons(t.obj):
@@ -4160,7 +4566,7 @@ def cmd_patch(argv: list[str]) -> int:
         elif t.kind == "layout":
             set_positions(t.obj, _value(a.json))
         elif t.kind not in ("link", "element", "ann"):
-            apply_patch(t, a.set, a.json, a.append, a.delete)
+            apply_patch(t, a.set, a.json, a.append, a.delete, a.at, a.move)
             if a.pin and t.kind not in ("step", "item"):
                 raise PatchError("--pin re-pins a step's or item's evidence: use a step: or item: key")
             pinned = pin_evidence(before, doc, t.obj if a.pin else None, a.doc, repo=a.repo, paths=a.paths)
@@ -4237,7 +4643,7 @@ def cmd_patch(argv: list[str]) -> int:
         undo()
         print(e, file=sys.stderr)
         return 1
-    write_doc(a.doc, doc, raw)
+    write_doc(a.doc, doc)
     try:
         history, _ = sync_history(a.doc, doc)
     except HistoryError as e:
@@ -4261,7 +4667,7 @@ def cmd_patch(argv: list[str]) -> int:
                   f"the doc shows a placeholder for it from now on. Before editing the site for the next change, record "
                   f"the current rev: serve.py snapshot {shlex.quote(str(a.doc))} (sending feedback from the page records "
                   f"the pages it shows)", file=sys.stderr)
-    done = ("deleted" if a.delete else "added" if t.kind == "frame"
+    done = ("deleted" if a.delete else "moved" if a.move is not None else "added" if t.kind == "frame"
             else "replied" if a.reply is not None and not (a.set or a.json is not None or a.append is not None) else "updated")
     print(f"rev {rev0 or '-'} → {rev1}; {a.key} {done}")
     if pinned:
@@ -4285,6 +4691,80 @@ def cmd_patch(argv: list[str]) -> int:
         except Exception:
             pass
     return 0
+
+
+def _card_notes(notes) -> str:
+    """A card row's notes: text, or a list of text and value collections (a set sorted, others in order) joined a|b|c;
+    a callable is called first."""
+    if isinstance(notes, str):
+        return notes
+    out = []
+    for p in notes if isinstance(notes, list) else [notes]:
+        p = p() if callable(p) else p
+        out.append(p if isinstance(p, str) else "|".join(sorted(p) if isinstance(p, (set, frozenset)) else p))
+    return "".join(out)
+
+
+def schema_index() -> str:
+    """`build.py schema` with no name: the block types with their purpose, then the parts and the doc types."""
+    w = max(map(len, BLOCK_TYPES))
+    blocks = [f"  {t:<{w}}  {card[0]}" for t, card in SCHEMA_CARDS.items() if t in BLOCK_TYPES]
+    parts = [t for t in SCHEMA_CARDS if t not in BLOCK_TYPES]
+    return "\n".join(["block types (build.py schema <type>: its fields and an example):", *blocks,
+                      f"parts: {' '.join(parts)}",
+                      f"doc types (build.py schema <type>: its required blocks and sections): {' '.join(sorted(DOC_TYPES))}"])
+
+
+def schema_card(name: str) -> str | None:
+    """`build.py schema NAME`: a block type's or part's card from SCHEMA_CARDS (purpose, a row per field, a minified
+    example), or a doc type's contract and skeleton sections; None for a name that is neither."""
+    if name in DOC_TYPES:
+        return _type_card(name)
+    if name not in SCHEMA_CARDS:
+        return None
+    purpose, fields, example = SCHEMA_CARDS[name]
+    rows = ["  ".join(filter(None, (f, t, req, _card_notes(n)))) for f, t, req, n in fields]   # unpadded: fewer tokens
+    return "\n".join([f"{name}: {purpose}", *rows, "e.g. " + json.dumps(example, ensure_ascii=False, separators=(",", ":"))])
+
+
+def _type_card(t: str) -> str:
+    """A doc type's card: what check_contract asks of it (probed on a doc without blocks, and on one whose board has no
+    artboards), its other rules, and the sections `build.py new` writes from its skeleton."""
+    needs = check_contract({"meta": {"type": t}, "sections": []})
+    if t in BOARD_TYPES:
+        blocks = [{"type": "board", "artboards": []}] + ([{"type": "listing"}] if t == "storelisting" else [])
+        needs += check_contract({"meta": {"type": t}, "sections": [{"blocks": blocks}]})
+    needs = [re.sub(r" \(it has \d+\)$", "", n) for n in needs]
+    rule = {"review": f"every finding (an item with choices) has state {'|'.join(FINDING_SIZES)}",
+            "presentation": 'every artboard has device "slide"', "website": 'every artboard has device "page"',
+            "storelisting": f"every artboard has device {'|'.join(listing.SHOT_DEVICES)}"}.get(t)
+    skel = json.loads((SKELETONS / f"{t}.json").read_text(encoding="utf-8"))
+    rows = [f"  {s.get('id')} · {s.get('title')} · "
+            + ", ".join(" ".join(filter(None, (b.get("type"), b.get("id")))) for b in s.get("blocks") or [])
+            for s in skel.get("sections") or []]
+    shapes = sorted(p.stem[len(t) + 1:] for p in SKELETONS.glob(f"{t}-*.json"))
+    return "\n".join([f"{t}: " + ("; ".join(needs + ([rule] if rule else [])) or "no required blocks"),
+                      f"doc: {', '.join(DOC_REQUIRED)} required; meta.type \"{t}\"",
+                      f"build.py new {t} <out> writes (section id · title · blocks):", *rows,
+                      *([f"other shapes: --shape {' | '.join(shapes)}"] if shapes else []),
+                      f"layout: types/{t}.md; fields: build.py schema <block>"])
+
+
+def cmd_schema(argv: list[str]) -> int:
+    """`build.py schema [NAME]`: print a block type's, a part's or a doc type's card, or with no NAME the list of them."""
+    ap = argparse.ArgumentParser(prog="build.py schema", description=cmd_schema.__doc__)
+    ap.add_argument("name", nargs="?", help="a block type (checklist), a part (item, node) or a doc type (plan)")
+    a = ap.parse_args(argv)
+    if not a.name:
+        print(schema_index())
+        return 0
+    card = schema_card(a.name)
+    if card is None:
+        print(f"no card '{a.name}': one of {', '.join(list(SCHEMA_CARDS) + sorted(DOC_TYPES))}", file=sys.stderr)
+        return 2
+    print(card)
+    return 0
+
 
 
 def cmd_from_md(argv: list[str]) -> int:
@@ -4317,7 +4797,7 @@ def cmd_from_md(argv: list[str]) -> int:
         doc["meta"]["rev"] = str(int(rev) + 1) if rev.isdigit() else rev + ".1"
         doc["changes"] = a.change or ["Re-imported from the Markdown plan."]
     a.out.parent.mkdir(parents=True, exist_ok=True)
-    write_doc(a.out, doc, "{\n  \"")
+    write_doc(a.out, doc)
     print(f"wrote {a.out} (plan, rev {doc['meta']['rev']})", file=sys.stderr)
     return main([str(a.out)])
 
@@ -4354,6 +4834,12 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_new(argv[1:])
     if argv[:1] == ["patch"]:
         return cmd_patch(argv[1:])
+    if argv[:1] == ["get"]:
+        return cmd_get(argv[1:])
+    if argv[:1] == ["migrate"]:
+        return cmd_migrate(argv[1:])
+    if argv[:1] == ["schema"]:
+        return cmd_schema(argv[1:])
     if argv[:1] == ["from-md"]:
         return cmd_from_md(argv[1:])
     if argv[:1] == ["export"]:
@@ -4402,6 +4888,8 @@ def main(argv: list[str] | None = None) -> int:
     except (OSError, json.JSONDecodeError) as e:
         print(f"cannot read {a.doc}: {e}", file=sys.stderr)
         return 2
+    if not a.check:
+        migrate_layout(a.doc)   # an older pretty-printed doc becomes minified; content and history unchanged
     kind = doc_type(doc.get("meta") if isinstance(doc, dict) and isinstance(doc.get("meta"), dict) else {})
     if a.format and not (a.deck or a.listing):
         ap.error("--format goes with --deck or --listing")
@@ -4600,7 +5088,7 @@ def cmd_l10n(argv: list[str]) -> int:
     try:
         if rev0 and not a.no_bump:
             sync_history(a.doc, before, keep_screens=True, texts=before_screens)
-        write_doc(a.doc, doc, raw)
+        write_doc(a.doc, doc)
         sync_history(a.doc, doc)
     except HistoryError as e:
         print(e, file=sys.stderr)

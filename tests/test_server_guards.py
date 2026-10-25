@@ -31,9 +31,10 @@ import unittest
 import zlib
 from types import SimpleNamespace
 from unittest import mock
-from urllib.parse import quote
+from pathlib import Path
+from urllib.parse import quote, urlsplit
 
-from _support import Server, TempHome
+from _support import REPO, SKILL, SCRIPTS, Server, TempHome, free_port
 
 import serve   # on sys.path through _support
 
@@ -400,6 +401,56 @@ class BusyPort(unittest.TestCase):
         self.assertLess(time.monotonic() - t, 3, "it waited for a server that could not bind")
         self.assertIn(f"port {self.port} is in use by another program", r.stderr)
         self.assertFalse((self.tmp.home / "server.json").exists())
+
+
+class ServerCopy(unittest.TestCase):
+    """`open` starts the server from a copy under BLUEDOC_HOME/app/<version>-<code>/: deleting the install it was
+    opened from (a plugin update, a /tmp cleanup) leaves pages rendering; an install with other code replaces the
+    server and drops the old copy."""
+
+    def setUp(self) -> None:
+        self.tmp = TempHome()
+        self.addCleanup(self.tmp.cleanup)
+        self.docs = self.tmp.copy_examples()
+        self.env = {**self.tmp.env, "BLUEDOC_PORT": str(free_port())}
+        self.addCleanup(lambda: subprocess.run([sys.executable, str(SCRIPTS / "serve.py"), "stop"], env=self.env,
+                                               capture_output=True, timeout=30))
+
+    def install(self, name: str, mark: str = "") -> Path:
+        root = self.tmp.dir / name
+        shutil.copytree(REPO / ".claude-plugin", root / ".claude-plugin")
+        shutil.copytree(SKILL, root / "skills" / "bluedoc", ignore=shutil.ignore_patterns("examples", "__pycache__"))
+        if mark:
+            with open(root / "skills" / "bluedoc" / "assets" / "template.html", "a") as f:
+                f.write(mark)
+        return root / "skills" / "bluedoc" / "scripts" / "serve.py"
+
+    def open(self, script: Path) -> str:
+        r = subprocess.run([sys.executable, str(script), "open", str(self.docs / "acme-status.bluedoc.json"), "--to", "none"],
+                           env=self.env, cwd=self.tmp.dir, capture_output=True, text=True, timeout=60)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        return r.stdout.strip()
+
+    def get(self, url: str) -> tuple[int, bytes]:
+        u = urlsplit(url)
+        conn = http.client.HTTPConnection(u.hostname, u.port, timeout=10)
+        conn.request("GET", u.path, headers={"X-Bluedoc": "1"})
+        res = conn.getresponse()
+        return res.status, res.read()
+
+    def test_pages_render_after_the_install_is_deleted_and_an_upgrade_drops_the_old_copy(self) -> None:
+        url = self.open(self.install("v1"))
+        shutil.rmtree(self.tmp.dir / "v1")
+        status, body = self.get(url)
+        self.assertEqual(status, 200)
+        self.assertIn(b"Acme", body)
+        first = [d.name for d in (self.tmp.home / "app").iterdir()]
+        self.assertEqual(len(first), 1, first)
+        url = self.open(self.install("v2", "<!-- v2 -->"))
+        second = [d.name for d in (self.tmp.home / "app").iterdir()]
+        self.assertEqual(len(second), 1, second)
+        self.assertNotEqual(first, second)
+        self.assertTrue(self.get(url)[1].rstrip().endswith(b"<!-- v2 -->"))
 
 
 class UnlockTokens(unittest.TestCase):

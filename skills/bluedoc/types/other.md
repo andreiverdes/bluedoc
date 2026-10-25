@@ -30,4 +30,4 @@ Pick the number the reader would ask for first, and make the `tldr` agree with i
     "blocks": [ { "type": "table", "columns": ["Date", "Duration", "Cause"], "rows": [["14 Sep", "21 min", "Expired PayCo certificate"]] } ] } ] }
 ```
 
-Field details: grep `## Document` and `## Blocks` in `references/schema.md`.
+Field cards: `build.py schema doc`, and `build.py schema` for the block types (then `build.py schema <block>`).
