@@ -11058,7 +11058,8 @@ const MARKUP = (() => {
       if (hlNow && a.type === 'text' && !off) { const rg = rangeOf(a); if (rg && shown(cachedEl(a.target.key))) (isOn(a) || a === hotA ? hl.open : a.status !== 'pending' && a !== draft ? hl.sent : hl.on).push(rg); }
       const p = off ? null : locate(a);
       m.pin.hidden = !p;
-      if (m.ink) m.ink.style.display = p && p.exact ? '' : 'none';
+      // a saved drawing leaves its pin; its strokes show while it is drawn, hovered, selected or edited
+      if (m.ink) m.ink.style.display = p && p.exact && (isOn(a) || a === hotA) ? '' : 'none';
       if (!p) return;
       const old = a.status === 'pending' && a.rev !== CUR.rev, st = a === draft ? '' : { open: ' sent', resolved: ' sent res' }[a.status] || '';
       m.pin.className = 'bd-ann-pin' + (a.type === 'draw' ? ' bd-pen-' + (a.color || 'risk') : '') + st + (old ? ' old' : '') +

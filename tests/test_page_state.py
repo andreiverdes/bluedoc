@@ -1047,6 +1047,43 @@ class NarrowWindow(ChromePage):
         self.assertEqual(self.browser.errors, [])
 
 
+@unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")
+class Drawings(ChromePage):
+    """A drawing's strokes show while it is drawn; once saved only its pin stays, and hovering the pin or its card
+    shows the strokes again."""
+
+    INK = "[...document.querySelectorAll('.bd-ann-ink')].map(s => s.style.display !== 'none')"
+
+    def mouse(self, tab: Tab, kind: str, x: float, y: float, buttons: int = 0) -> None:
+        self.browser.call("Input.dispatchMouseEvent", {"type": kind, "x": x, "y": y, "button": "left", "buttons": buttons,
+                                                       "clickCount": 1}, tab.session)
+
+    def test_a_saved_drawing_leaves_its_pin_and_shows_on_hover(self) -> None:
+        a = self.open(self.server.url_for(self.plan))
+        x, y = a.ev("(r => [r.left + 20, r.bottom + 40])(document.querySelector('h1').getBoundingClientRect())")
+        a.ev("BP.setMode('draw')")
+        self.mouse(a, "mousePressed", x, y, 1)
+        for i in range(1, 11):
+            self.mouse(a, "mouseMoved", x + i * 25, y + i * 6, 1)
+        self.mouse(a, "mouseReleased", x + 250, y + 60)
+        a.wait_for("!!document.querySelector('.bd-cmp:not([hidden]) textarea')")
+        a.wait_for(f"{self.INK}.join() === 'true'")   # the drawing in progress shows
+        a.ev("(ta => { ta.value = 'Acme: circle the title'; ta.dispatchEvent(new Event('input', {bubbles: true})); })"
+             "(document.querySelector('.bd-cmp textarea'))")
+        a.ev("[...document.querySelectorAll('.bd-cmp .bp-btn.primary')].find(b => b.textContent === 'Save').click()")
+        a.wait_for(f"{self.INK}.join() === 'false'")
+        px, py = a.wait_for("(p => p && !p.hidden && (r => [r.left + r.width / 2, r.top + r.height / 2])(p.getBoundingClientRect()))"
+                            "(document.querySelector('.bd-ann-pin'))")
+        self.mouse(a, "mouseMoved", px, py)
+        a.wait_for(f"{self.INK}.join() === 'true'")
+        self.mouse(a, "mouseMoved", x, y + 200)
+        a.wait_for(f"{self.INK}.join() === 'false'")
+        cx, cy = a.ev("(r => [r.left + 40, r.top + 20])(document.querySelector('.bd-cs-c').getBoundingClientRect())")
+        self.mouse(a, "mouseMoved", cx, cy)
+        a.wait_for(f"{self.INK}.join() === 'true'")
+        self.assertEqual(self.browser.errors, [])
+
+
 class UrlKeptByAWiderFolder(unittest.TestCase):
     """st/url-move without a browser: registering a folder above a registered docs/ leaves its docs' URLs working."""
 
