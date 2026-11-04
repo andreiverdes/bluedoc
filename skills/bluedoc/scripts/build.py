@@ -3108,7 +3108,7 @@ def prune_diff_cache(doc: dict, history: dict | None, doc_path: Path) -> list[st
 # the screen route's CSP for a srcdoc frame in an -o file, as a <meta>: everything is inline there, so no 'self';
 # frame-ancestors and sandbox can't sit in a <meta> (the frame's sandbox attribute carries the sandbox)
 STANDALONE_SCREEN_CSP = ("default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; "
-                         "font-src data:; connect-src 'none'; form-action 'none'; base-uri 'none'")
+                         "media-src data: blob:; font-src data:; connect-src 'none'; form-action 'none'; base-uri 'none'")
 MAX_STANDALONE_BYTES = 10 * 1024 * 1024
 
 

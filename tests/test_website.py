@@ -978,6 +978,9 @@ class SnapshotStore(unittest.TestCase):
         self.assertIn("sandbox allow-scripts", csp)
         self.assertIn("img-src 'self'", csp)
         self.assertIn("http://localhost:4321", csp, "images it left on the dev server")
+        media = next((d for d in csp.split(";") if d.strip().startswith("media-src ")), "")
+        self.assertIn("'self'", media, "a video or audio file in the screen plays")
+        self.assertIn("http://localhost:4321", media, "video it left on the dev server")
         self.assertEqual(self.server.req("GET", route + "?rev=2")[0], 404, "rev 2 has no snapshot")
         self.assertEqual(self.server.req("GET", route)[0], 404, "the current rev is the live page")
 

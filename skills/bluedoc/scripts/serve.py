@@ -956,7 +956,8 @@ def screen_csp(host: str, img_from: tuple[str, ...] = ()) -> str:
     images and fonts too large to inline."""
     o, ext = f"http://{host}", "".join(f" {x}" for x in img_from)
     return (f"default-src 'none'; script-src 'self' {o} 'unsafe-inline'; style-src 'self' {o} 'unsafe-inline'; "
-            f"img-src 'self' {o} data: blob:{ext}; font-src 'self' {o} data:{ext}; connect-src 'none'; form-action 'none'; "
+            f"img-src 'self' {o} data: blob:{ext}; media-src 'self' {o} data: blob:{ext}; font-src 'self' {o} data:{ext}; "
+            f"connect-src 'none'; form-action 'none'; "
             f"base-uri 'none'; frame-ancestors 'self' {o}; sandbox allow-scripts")
 
 
