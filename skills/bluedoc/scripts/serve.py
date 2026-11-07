@@ -164,6 +164,7 @@ import argparse
 import base64
 import concurrent.futures
 import datetime as dt
+import getpass
 import hashlib
 import hmac
 import http.client
@@ -4742,12 +4743,59 @@ def add_framework(name: str, source: str | None, load: list[str], sources: list[
     return 0
 
 
+# (an env var a harness sets in the commands it runs, its model family): who `open` names when --to gives no one
+HARNESSES = (("CLAUDECODE", "Claude"), ("CODEX_THREAD_ID", "Codex"), ("COPILOT_CLI", "Copilot"))
+TO_HELP = "the agent's model family, shown on its replies in the page (Claude, Codex, Copilot, Gemini, GLM…); never the user's name"
+
+
+def norm_name(s: str) -> str:
+    return " ".join(s.split()).casefold()
+
+
+def user_names() -> set[str]:
+    """The user's own names, normalised: git's user.name, the login name and the passwd full name (each full and
+    its first word). A source that is missing or fails is skipped."""
+    found: list[str] = []
+    try:
+        found.append(subprocess.run(["git", "config", "--get", "user.name"], capture_output=True, text=True,
+                                    timeout=5).stdout)
+    except (OSError, subprocess.SubprocessError):
+        pass
+    try:
+        found.append(getpass.getuser())
+    except (KeyError, OSError):
+        pass
+    try:
+        import pwd
+        found.append(pwd.getpwuid(os.getuid()).pw_gecos.split(",")[0])
+    except (ImportError, KeyError, OSError, AttributeError):
+        pass
+    out = set()
+    for n in map(norm_name, found):
+        if n:
+            out |= {n, n.split()[0]}
+    return out
+
+
+def agent_name(given: str) -> str:
+    """The name the page shows on the agent's replies: `given` (open's --to), unless it is empty or the user's own
+    name; else the model family of the harness running us (HARNESSES), else "Agent"."""
+    given = given.strip()
+    if given and norm_name(given) not in user_names():
+        return given
+    name = next((family for var, family in HARNESSES if os.environ.get(var)), "Agent")
+    if given:
+        print(f'serve.py: --to "{given}" looks like your own name; the page shows "{name}". '
+              "Pass your model family, e.g. --to Claude.", file=sys.stderr)
+    return name
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
     p = sub.add_parser("open", help="register the doc's folder, start the server if needed, print the URL")
     p.add_argument("doc", type=Path)
-    p.add_argument("--to", default="", help="who reads the replies (shown in the page), e.g. your agent name")
+    p.add_argument("--to", default="", help=TO_HELP)
     p.add_argument("--root", type=Path, help="folder to register instead of the default")
     p.add_argument("--browser", action="store_true", help="also open the URL in the default browser")
     p = sub.add_parser("wait", help="block until the reader sends answers, a change request or a plan approval for DOC")
@@ -4764,7 +4812,7 @@ def main() -> int:
         p.add_argument("--port", type=int, default=None, help=f"default {DEFAULT_PORT} (BLUEDOC_PORT); start: a port in use is skipped "
                                                               f"for the next free one unless --port or BLUEDOC_PORT pins it")
         if name == "run":
-            p.add_argument("--to", default="", help="default reader-facing agent name")
+            p.add_argument("--to", default="", help=TO_HELP)
     sub.add_parser("stop")
     p = sub.add_parser("unlock", help="print a home page link that lets a browser save here")
     p.add_argument("--browser", action="store_true", help="also open the link in the default browser")
@@ -4844,7 +4892,7 @@ def main() -> int:
         add_root(a.root.resolve() if a.root else root_for(doc))
         if not ensure_started(DEFAULT_PORT, pinned=PORT_PINNED):
             return 1
-        res = call("/__bluedoc/register", {"doc": str(doc), "to": a.to})[1]
+        res = call("/__bluedoc/register", {"doc": str(doc), "to": agent_name(a.to)})[1]
         # the ?key= token (good for an hour) lets this browser save; visiting it redirects to the plain URL
         url = base() + res["url"] + (f"?key={res['token']}" if res.get("token") else "")
         print(url)

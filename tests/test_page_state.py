@@ -8,10 +8,12 @@ in rev 2) and not through a text edit (Changes since approved rev 1) (st/approva
 comment opener renders (bld/comment-escape). A plan's item comments and every page's "Need more details" items count
 toward Request changes and go with it (rc/items). A design board's link edits and moved screens are drafts in reader
 state that go with Request changes with a `patch` command each and are resolved once the doc has them, or marked stale
-when a newer rev changed the link (bd/link-edit, bd/move). A review's findings section shows Merged (each finding's
-full row under its lines, in code order), its checklist or its diff, as [Merged][Checklist][Diff] in a sticky bar under
-its title picks and the browser remembers; picks sync across the three, Merged keeps item and line keys and item
-links, and links into a hidden view show it; an open finding in Checklist shows its comment's file, lines and card,
+when a newer rev changed the link (bd/link-edit, bd/move). A review's findings section is one card: its checklist, its
+diff or Merged (each finding's full row with its lines under its options, in code order), picked by
+[Checklist][Diff][Merged] in a sticky toolbar the browser remembers; picks sync across the three, Merged keeps item and
+line keys and item links, and links into a hidden view show it; answered findings fold once the reader moves on, a
+finished section folds to its band, and a tracker row leads to the first finding that needs the reader; an open
+finding in Checklist shows its comment's file, lines and card,
 whose pick and pins are the diff's. A browser that loses the key
 cookie (Tern's WKWebView keeps none) still saves with the key the page kept in localStorage while it had the cookie.
 The reader renames a doc and picks its emoji in its header or app bar: they hold through a reload and show in the tab
@@ -424,12 +426,12 @@ TIER_ROW = "document.querySelector('#item-t412-tier-boundary')"   # its comment 
 
 @unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")
 class FindingsView(ChromePage):
-    """A findings section (a checklist and the diff whose comments are its items) shows them as Merged (the default:
-    each commented range's lines with the full finding row under them, in code order), as its checklist or as its
-    diff, picked by [Merged][Checklist][Diff] in a bar under its title, sticky while the section is on screen, and
-    remembered per browser; a link into a hidden view shows it, and an item link stays in Merged. Picks sync across
-    the three. An open finding in Checklist shows its comment's file, lines and card, whose pick, annotation keys and
-    pins are the diff's."""
+    """A findings section (a checklist and the diff whose comments are its items) is one card that shows them as
+    Merged (the default: each finding's full row with its commented lines under its options, in code order), as its
+    checklist or as its diff, picked by [Checklist][Diff][Merged] in a toolbar under its band, sticky while the
+    section is on screen, and remembered per browser; a link into a hidden view shows it, and an item link stays in
+    Merged. Picks sync across the three. An open finding in Checklist shows its comment's file, lines and card, whose
+    pick, annotation keys and pins are the diff's."""
 
     def setUp(self) -> None:
         super().setUp()
@@ -444,11 +446,11 @@ class FindingsView(ChromePage):
         self.assertEqual(self.shows(a, "#pr-412 .bd-mv", "#cl-t412", "#diff-diff-412", "#pr-412 > .bd-fvbar"), [True, False, False, True])
         self.assertTrue(a.ev("document.querySelector('#pr-412 > .bp-lead').nextElementSibling.matches('.bd-fvbar')"), "the bar is not right under the lead")
         self.assertFalse(a.ev("!!document.querySelector('#summary .bd-fvbar')"), "a section without both got the bar")
-        self.assertEqual(a.ev("[...document.querySelectorAll('#pr-412 .bd-fvbar button')].map(b => [b.textContent, !!b.querySelector('.bd-ic'), b.offsetHeight])"),
-                         [["Merged", True, 38], ["Checklist", True, 38], ["Diff", True, 38]])
+        self.assertEqual(a.ev("[...document.querySelectorAll('#pr-412 .bd-fvseg button')].map(b => [b.textContent, !!b.querySelector('.bd-ic'), b.offsetHeight])"),
+                         [["Checklist", True, 28], ["Diff", True, 28], ["Merged", True, 28]])
         a.ev("document.querySelector('#pr-412 .bd-fvbar [data-v=diff]').click()")
         self.assertEqual(self.shows(a, "#cl-t412", "#diff-diff-412", "#pr-415 .bd-mv", "#diff-diff-415"), [False, True, False, True])
-        self.assertEqual(a.ev("[...document.querySelectorAll('#pr-412 .bd-fvbar button')].map(b => b.getAttribute('aria-pressed'))"), ["false", "false", "true"])
+        self.assertEqual(a.ev("[...document.querySelectorAll('#pr-412 .bd-fvseg button')].map(b => b.getAttribute('aria-pressed'))"), ["false", "true", "false"])
         self.assertEqual(a.ev("BP.progress().map(c => c.total)"), [7, 4], "the tracker lost the hidden checklists")
         a.go(self.base + self.url)
         self.assertEqual(a.ev("[BP.findingsView('pr-412'), BP.findingsView('pr-415')]"), ["diff", "diff"])
@@ -513,7 +515,7 @@ class FindingsView(ChromePage):
         row = "document.querySelector('#pr-412 .bd-mx[data-ci=\"0\"] .bd-mrow')"
         a.ev(f"{row}.querySelector('.bp-opt[data-id=ticket] .pk').click()")
         self.assertEqual(a.ev(f"{TIER_ROW}.querySelector(':scope > .bp-opts .pk[aria-checked=true]')?.dataset.id"), "ticket")
-        self.assertEqual(a.ev("[BP.progress()[0].done, document.querySelector('#pr-412 .bd-mv-top .bp-cl-count').textContent]"), [1, "1 of 7"])
+        self.assertEqual(a.ev("[BP.progress()[0].done, document.querySelector('#pr-412 > h2 .bd-prm').textContent]"), [1, "1 of 7"])
         self.assertTrue(a.ev(f"{row}.classList.contains('done')"))
         self.assertEqual(a.ev("BP.findingsView('pr-412', 'diff')"), "diff")
         self.assertEqual(a.ev("document.querySelector('#diff-diff-412 .bd-cm[data-ci=\"0\"] [aria-checked=true]')?.dataset.id"), "ticket")
@@ -527,10 +529,67 @@ class FindingsView(ChromePage):
         self.assertEqual(a.ev(f"[[...{row}.querySelectorAll('.pk[aria-checked=true]')].map(b => b.dataset.id), {row}.classList.contains('more'), {row}.querySelector('.bp-note textarea').value]"),
                          [[""], True, "Acme: the spec owner agrees"])
         # Accept recommended in Merged picks the starred option on the open decisions there, not on one asking for more
-        acc = "document.querySelector('#pr-412 .bd-mv-top .tools .bp-btn')"
+        acc = "document.querySelector('#pr-412 > .bd-fvbar > .bp-btn')"
         self.assertEqual(a.ev(f"{acc}.textContent"), "Accept recommended (6)")
         a.ev(f"{acc}.click()")
         self.assertEqual(a.ev(f"[BP.progress()[0].done, {acc}.hidden]"), [6, True])
+
+    def test_answered_findings_and_a_finished_section_fold(self) -> None:
+        a = self.open(self.url)
+        rows = "[...document.querySelectorAll('#pr-415 .bd-mrow')]"
+        folded = f"{rows}.map(r => r.classList.contains('bd-fold'))"
+        pick = lambda i: a.ev(f"{rows}[{i}].querySelector('.bp-opt .pk').click()")
+        pick(0)
+        time.sleep(0.2)
+        self.assertEqual(a.ev(folded), [False] * 4, "a finding folded before the reader moved on")
+        pick(1)   # moving on: the answered one above folds to its title, its pick and its size
+        a.wait_for(f"{folded}[0]")
+        self.assertEqual(a.ev(f"(r => [r.querySelector('.bd-mpick').textContent === r.querySelector('.bp-opt.on .ol').textContent, r.querySelector('.bp-opts').checkVisibility(), r.querySelector('.bd-mcode')?.checkVisibility() ?? false])({rows}[0])"),
+                         [True, False, False], "the folded row lost its pick, or still shows its options or code")
+        self.assertEqual(a.ev(folded), [True, False, False, False])
+        pick(2); pick(3)
+        a.ev("document.querySelector('#pr-412 .bd-mrow .pk').focus()")   # keyboard focus on another section's finding
+        a.wait_for("document.querySelector('#pr-415').classList.contains('bd-fold')")
+        self.assertEqual(a.ev(folded), [True] * 4)
+        self.assertEqual(self.shows(a, "#pr-415 > h2", "#pr-415 > .bd-prc", "#pr-415 > .bd-fvbar", "#pr-415 .bd-mv"), [True, True, False, False])
+        self.assertEqual(a.ev("[document.querySelector('#pr-415 .bd-prm').textContent, document.querySelector('#pr-415 .bd-prs').textContent]"), ["4 of 4", "Answered"])
+        # the chevron opens the section; a row's chevron opens its finding; a reload folds them again
+        a.ev("document.querySelector('#pr-415 .bd-prchev').click()")
+        self.assertEqual(self.shows(a, "#pr-415 .bd-mv", "#pr-415 .bd-mrow .bp-opts"), [True, False])
+        a.ev(f"{rows}[0].querySelector('.bd-mchev').click()")
+        self.assertTrue(a.ev(f"{rows}[0].querySelector('.bp-opts').checkVisibility()"))
+        deadline = time.time() + 5   # the picks reach the server before the reload
+        while sum(":t415:" in k for k in self.state(self.url)) < 4 and time.time() < deadline:
+            time.sleep(0.1)
+        a.go(self.base + self.url)
+        a.wait_for("document.querySelector('#pr-415').classList.contains('bd-fold')")
+        self.assertEqual(a.ev(folded), [True] * 4)
+        self.assertFalse(a.ev("document.querySelector('#pr-412').classList.contains('bd-fold')"), "a section with open findings folded")
+
+    def test_a_tracker_row_leads_to_the_first_finding_that_needs_the_reader(self) -> None:
+        a = self.open(self.url)
+        rows = "[...document.querySelectorAll('#pr-415 .bd-mrow')]"
+        trk = "[...document.querySelectorAll('.bp-prog-row')][1]"
+        in_view = "(b => b.top >= 0 && b.bottom <= innerHeight)"
+        for i in (0, 1):
+            a.ev(f"{rows}[{i}].querySelector('.bp-opt .pk').click()")
+        a.wait_for(f"{trk}.querySelector('.c').textContent === '2 open'")
+        a.ev("scrollTo({top: 0, behavior: 'instant'})")
+        self.assertFalse(a.ev(f"{in_view}({rows}[2].getBoundingClientRect())"))
+        a.ev(f"{trk}.click()")   # the first unanswered one, in page order
+        a.wait_for(f"{in_view}({rows}[2].getBoundingClientRect())")
+        # a reply the reader hasn't read leads, on an answered finding above the unanswered ones: it stays open
+        deadline = time.time() + 5
+        while not any(k.endswith(":__seen") for k in self.state(self.url)) and time.time() < deadline:
+            time.sleep(0.1)
+        self.assertEqual(self.tmp.run("build.py", "patch", self.docs / REVIEW, "item:t415/double-auth", "--reply", "Acme: the key is the order id.").returncode, 0)
+        a.go(self.base + self.url)
+        a.wait_for(f"{trk}.querySelector('.c').textContent === '1 reply · 2 open'")
+        self.assertEqual(a.ev(f"{rows}.map(r => r.classList.contains('bd-fold'))"), [False, True, False, False])
+        a.ev("scrollTo({top: document.body.scrollHeight, behavior: 'instant'})")
+        a.ev(f"{trk}.click()")
+        a.wait_for(f"{in_view}({rows}[0].getBoundingClientRect())")
+        self.assertEqual(a.ev("document.querySelector('#pr-415 .bd-prs').textContent"), "1 reply")
 
     def test_show_more_lines_grows_the_excerpt(self) -> None:
         a = self.open(self.url)

@@ -13,7 +13,9 @@ names, only PNGs of their size under 4 MB (and the two kinds of text file), only
 a bad file in a set writes none of it.
 
 A ?key= link sets the key cookie any number of times within UNLOCK_TTL and not after; GET /__bluedoc/key gives the key
-only to the page's own fetch with the cookie (no cookie, a foreign Origin or no X-Bluedoc header is 403)."""
+only to the page's own fetch with the cookie (no cookie, a foreign Origin or no X-Bluedoc header is 403).
+
+`open --to` with the user's own name gives the ping the harness's model family, else Agent, and a warning."""
 from __future__ import annotations
 
 import base64
@@ -451,6 +453,44 @@ class ServerCopy(unittest.TestCase):
         self.assertEqual(len(second), 1, second)
         self.assertNotEqual(first, second)
         self.assertTrue(self.get(url)[1].rstrip().endswith(b"<!-- v2 -->"))
+
+
+class AgentName(unittest.TestCase):
+    """`open --to` names the agent's replies with its model family: the user's own name (git's user.name, full or its
+    first word, any case) is dropped with a warning for the detected harness's family, else Agent; any other is kept."""
+
+    def setUp(self) -> None:
+        self.tmp = TempHome()
+        self.addCleanup(self.tmp.cleanup)
+        self.docs = self.tmp.copy_examples()
+        home = self.tmp.dir / "user"
+        home.mkdir()
+        (home / ".gitconfig").write_text("[user]\n\tname = Ada Lovelace\n", encoding="utf-8")
+        self.port = free_port()
+        self.env = {k: v for k, v in self.tmp.env.items()
+                    if not k.startswith(("CLAUDECODE", "CODEX", "COPILOT", "GIT_CONFIG", "XDG_CONFIG"))}
+        self.env.update(HOME=str(home), GIT_CONFIG_NOSYSTEM="1", BLUEDOC_PORT=str(self.port))
+        self.addCleanup(lambda: subprocess.run([sys.executable, str(SCRIPTS / "serve.py"), "stop"], env=self.env,
+                                               capture_output=True, timeout=30))
+
+    def test_the_users_own_name_is_replaced_and_a_model_family_kept(self) -> None:
+        doc = self.docs / "acme-status.bluedoc.json"
+        for given, harness, want in (("Ada Lovelace", {}, "Agent"), ("  ada ", {}, "Agent"),
+                                     ("ADA  LOVELACE", {"CLAUDECODE": "1"}, "Claude"), ("Claude", {}, "Claude")):
+            with self.subTest(given=given, harness=harness):
+                r = subprocess.run([sys.executable, str(SCRIPTS / "serve.py"), "open", str(doc), "--to", given],
+                                   env={**self.env, **harness}, cwd=self.tmp.dir, capture_output=True, text=True, timeout=60)
+                self.assertEqual(r.returncode, 0, r.stderr)
+                path = urlsplit(r.stdout.strip().splitlines()[-1]).path
+                conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=10)
+                conn.request("GET", f"/__bluedoc/ping?path={quote(path)}", headers={"X-Bluedoc": "1"})
+                self.assertEqual(json.loads(conn.getresponse().read())["to"], want)
+                conn.close()
+                warned = f'--to "{given.strip()}" looks like your own name; the page shows "{want}"'
+                if want == given:
+                    self.assertNotIn("looks like your own name", r.stderr)
+                else:
+                    self.assertIn(warned, r.stderr)
 
 
 class UnlockTokens(unittest.TestCase):
