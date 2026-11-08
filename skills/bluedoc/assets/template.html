@@ -1393,9 +1393,9 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 @keyframes bd-fold-out { to { opacity: 0; } }
 @media screen {
   .bp-sec.fv-on.bd-fold:not(.bd-anim) > :not(h2, .bd-prc) { display: none; }
-  .bp-sec.fv-on.bd-anim > :not(h2, .bd-prc), .bd-mrow.bd-anim > :not(.bp-cl-row), .bd-mrow.bd-anim .bp-cl-subt, .bd-mx:has(> .bd-mrow.bd-anim) > .bd-mlbl,
-    .bd-mrow.bd-fold.bd-anim .bd-mpick { animation: bd-fold-in .24s var(--ease) both; }
-  .bp-sec.fv-on.bd-fold.bd-anim > :not(h2, .bd-prc), .bd-mrow.bd-fold.bd-anim > :not(.bp-cl-row), .bd-mrow.bd-fold.bd-anim .bp-cl-subt,
+  .bp-sec.fv-on.bd-anim > :not(h2, .bd-prc), .bp-cl-item.bd-anim > :not(.bp-cl-row), .bp-cl-item.bd-anim > .bp-cl-row .bp-cl-subt, .bd-mx:has(> .bd-mrow.bd-anim) > .bd-mlbl,
+    .bp-cl-item.bd-fold.bd-anim > .bp-cl-row .bd-mpick { animation: bd-fold-in .24s var(--ease) both; }
+  .bp-sec.fv-on.bd-fold.bd-anim > :not(h2, .bd-prc), .bp-cl-item.bd-fold.bd-anim > :not(.bp-cl-row), .bp-cl-item.bd-fold.bd-anim > .bp-cl-row .bp-cl-subt,
     .bd-mx:has(> .bd-mrow.bd-fold.bd-anim) > .bd-mlbl { animation: bd-fold-out .18s ease-out both; }
 }
 .bd-fvhint { flex: 0 1 auto; min-width: 0; display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 11px 0 9px; border-radius: 999px; overflow: hidden; white-space: nowrap; font: 500 12.5px var(--sans); color: var(--accent-fg);
@@ -1430,10 +1430,11 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .bd-mpick { display: none; }
 @media screen {
   .bd-mrow.bd-fold:not(.bd-anim) { padding-bottom: 0; }
-  .bd-mrow.bd-fold:not(.bd-anim) > :not(.bp-cl-row), .bd-mrow.bd-fold:not(.bd-anim) .bp-cl-subt, .bd-mx:has(> .bd-mrow.bd-fold:not(.bd-anim)) > .bd-mlbl { display: none; }
-  .bd-mrow.bd-fold .bp-cl-text { color: var(--fg-muted); }
-  .bd-mrow.bd-fold .bd-mpick { flex: none; display: inline-flex; align-items: center; gap: 6px; max-width: 40%; margin: 1px 4px 0 auto; font-size: 13px; font-weight: 600; color: var(--fg); }
-  .bd-mrow.bd-fold .bd-mpick::before { content: "→"; font-weight: 400; color: var(--fg-subtle); }
+  .bp-cl-item.bd-fold:not(.bd-anim) > :not(.bp-cl-row), .bp-cl-item.bd-fold:not(.bd-anim) > .bp-cl-row .bp-cl-subt, .bp-cl-item.bd-fold > .bp-cl-row .bp-cl-picked,
+    .bd-mx:has(> .bd-mrow.bd-fold:not(.bd-anim)) > .bd-mlbl { display: none; }
+  .bp-cl-item.has-choices.bd-fold > .bp-cl-row .bp-cl-text { color: var(--fg-muted); }
+  .bp-cl-item.bd-fold > .bp-cl-row .bd-mpick { flex: none; display: inline-flex; align-items: center; gap: 6px; max-width: 40%; margin: 1px 4px 0 auto; font-size: 13px; font-weight: 600; color: var(--fg); }
+  .bp-cl-item.bd-fold > .bp-cl-row .bd-mpick::before { content: "→"; font-weight: 400; color: var(--fg-subtle); }
 }
 .bd-mdet { display: inline-flex; align-items: center; gap: 4px; height: 26px; margin: 0 0 8px calc(10px + var(--ind)); padding: 0 8px 0 6px; border: 0; border-radius: 7px; background: none; font: 500 12.5px var(--sans); color: var(--accent-fg); cursor: pointer; }
 .bd-mdet:hover { background: var(--hover); }
@@ -1651,6 +1652,7 @@ svg.anim .bp-edge.k-async { animation: bp-march 1.6s linear infinite; }
   .bp-cl-head { flex-wrap: wrap; row-gap: 4px; }
   .bp-cl-main { flex: 1 1 calc(100% - 30px); }
   .bp-cl-head > .bp-chip { order: 3; margin-top: 0; font-size: 11.5px; padding: 3px 7px; }
+  .bp-cl-item.bd-fold > .bp-cl-row .bp-cl-head > .bd-mpick { order: 3; max-width: calc(100% - 90px); margin: 0; }   /* folded: → the pick, then the size, under the title */
   .bp-terms { grid-template-columns: minmax(0, 1fr); }
   .bp-terms dt { border-right: 0; border-bottom: 0; padding-bottom: 2px; background: none; }
   .bp-terms dd { padding-top: 0; }
@@ -4399,6 +4401,7 @@ function renderChecklist(b, parent) {
       else { head.setAttribute('aria-expanded', String(li.classList.contains('open'))); head.setAttribute('aria-controls', bodyId); head.removeAttribute('tabindex'); head.removeAttribute('aria-hidden'); }
     };
     head.addEventListener('click', () => {
+      if (entryItem.onHead && entryItem.onHead()) return;   // a findings section's decision: it folds or opens (headItem)
       if (li.classList.contains('empty')) { if (!choices) cb.click(); return; }   // nothing to show: the row ticks
       entryItem.setOpen(!li.classList.contains('open'));
     });
@@ -4425,7 +4428,7 @@ function renderChecklist(b, parent) {
   const bar = h('div', { class: 'bp-bar' }, h('i'));
   const expandBtn = h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => {
     const open = !items.every(x => x.li.classList.contains('empty') || x.li.classList.contains('open'));
-    items.forEach(x => { if (!x.li.classList.contains('empty')) x.setOpen(open); });
+    items.forEach(x => { if (!x.li.classList.contains('empty')) { if (open && x.folded) foldItem(x, false, false); x.setOpen(open); } });
     paintExpand();
   } });
   const paintExpand = () => {
@@ -4614,10 +4617,10 @@ function openItem(x) {
   const row = itemRow(x), v = fviewOf(x.li);
   if (row === x.li) revealFindings(x.li);
   if (v && v.el.classList.contains('bd-fold')) v.fold(false, true, false);   // no motion: the caller scrolls to the row next
-  const m = MROWS.find(m => m.row === row);
-  if (m && m.row.classList.contains('bd-fold')) { foldRow(m, false, false); m.armed = answeredX(x); }
+  if (x.folded) { foldItem(x, false, false); x.armed = answeredX(x); }
   for (let el = x.li; el; el = el.parentElement && el.parentElement.closest('.bp-cl-item')) {
     const owner = Object.values(ITEMS).find(y => y.li === el);
+    if (owner && owner !== x && owner.folded) foldItem(owner, false, false);
     if (owner && !owner.li.classList.contains('empty')) owner.setOpen(true);
   }
   CHECKLISTS.forEach(c => c.paintExpand());
@@ -4947,7 +4950,7 @@ if (CHECKLISTS.length) {
         const x = nextForReader(c);
         if (!x) { (v ? v.el : c.root).scrollIntoView({ behavior: REDUCE ? 'auto' : 'smooth', block: 'start' }); return; }
         const row = openItem(x);
-        moveOn(row, false); jumpTo(row);   // no motion: rows folding above would move the scroll's target
+        moveOn(x, false); jumpTo(row);   // no motion: rows folding above would move the scroll's target
       } else if (v && v.view === 'merged') { e.preventDefault(); v.mv.scrollIntoView({ behavior: REDUCE ? 'auto' : 'smooth', block: 'start' }); } else revealFindings(c.root);
     };
     const row = h('a', { class: 'bp-prog-row', href: '#cl-' + c.b.id, onclick: go }, h('span', { class: 't' }, h('span', {}, c.b.title || c.b.id), cnt), bar);
@@ -5382,11 +5385,13 @@ function syncDiffs() {
     if (m.note) m.note.paint();
     m.thread.paint();
     m.row.classList.toggle('done', m.x.cb.checked); m.row.classList.toggle('more', !!m.x.more);
-    // a pick arms the row: it folds once the reader moves on; a row no longer answered opens
-    const ans = answeredX(m.x);
-    if (ans && !m.ans) m.armed = true;
-    if (!ans && m.row.classList.contains('bd-fold')) foldRow(m, false);
-    m.ans = ans;
+  }
+  // a pick arms the finding: it folds once the reader moves on; one no longer answered opens
+  for (const x of FOLDX) {
+    const ans = answeredX(x);
+    if (ans && !x.ans) x.armed = true;
+    if (!ans && x.folded) foldItem(x, false);
+    x.ans = ans;
   }
   FVIEWS.forEach(v => v.paint());
 }
@@ -5461,7 +5466,7 @@ const FVIEW_NAMES = ['merged', 'checklist', 'diff'];
 const FVIEWS = [];   // { el: section, bar, seg, mv: the Merged view, items, view, set(view), paint(), fold(on, byReader) }
 const SEV_RANK = { risk: 0, warn: 1, info: 2, todo: 3, ok: 4 };
 const shortRef = r => /^[0-9a-f]{12,40}$/i.test(r) ? r.slice(0, 7) : r;
-const MROWS = [];   // Merged's finding rows { x, row, tick, pills, note }, repainted by syncDiffs
+const MROWS = [];   // Merged's finding rows { x, row, tick, opts, note, thread; pick, chev (decisions) }, repainted by syncDiffs
 const MORE_LINES = 8;   // Show more lines: lines added either side of an excerpt
 function findingsView(sec, el, wraps) {
   const blocks = sec.blocks || [], owner = new Map();   // checklist id (nested ones too) -> its top checklist block's index
@@ -5479,6 +5484,17 @@ function findingsView(sec, el, wraps) {
   const cids = new Set([...owner].filter(([, i]) => cls.has(i)).map(([id]) => id));
   const scope = CHECKLISTS.filter(c => cids.has(c.b.id)), items = scope.flatMap(c => c.items);
   const mv = mergedView(scope, diffs.map(i => DIFFS[blocks[i].id]).filter(Boolean));
+  // each item's rows tell where the reader is; a decision folds in Checklist too: its title gets the pick to show folded
+  for (const x of items) {
+    ROWX.set(x.li, x); for (const r of x.mrows || []) ROWX.set(r, x);
+    if (!x.choices) continue;
+    const pick = h('span', { class: 'bd-mpick' });
+    x.head.querySelector(':scope > .bp-cl-main').after(pick);
+    (x.frows ||= []).push({ row: x.li, pick, cl: true });
+    x.onHead = () => headItem(x);
+    x.ans = answeredX(x);
+    FOLDX.push(x);
+  }
   wraps[Math.min(...cls, ...diffs)].before(mv.el);
   const btn = (view, icon, label) => h('button', { type: 'button', 'data-v': view, onclick: e => pickFindings(view, e.currentTarget) }, ic(icon), label);
   const seg = h('div', { class: 'bd-fvseg', role: 'group', 'aria-label': 'Show the findings as' },
@@ -5526,10 +5542,15 @@ function findingsView(sec, el, wraps) {
   FVIEWS.push(v);
   if (store.get(FVIEW_HINT_KEY) == null) fviewHint(v);
 }
-/* Folding. A decision finding the reader has answered folds, in Merged, to one row (title, → the pick, its size, a
-   chevron) once they move on: pick in or open another finding. On load every answered one starts folded unless
-   something waits for the reader there: a reply they haven't read, Need more details, a comment not sent. The
-   chevron or a click on the row's title opens or folds it. A findings section folds with its last finding. */
+/* Folding. A decision finding the reader has answered folds, in Merged and in Checklist, to one row (title, → the
+   pick, its size; in Merged a chevron too) once they move on: pick in or open another finding. On load every answered
+   one starts folded unless something waits for the reader there: a reply they haven't read, Need more details, a
+   comment not sent. In Merged the chevron or a click on the row's title opens or folds it; in Checklist a click on a
+   folded title opens it with its details, and on an open answered one folds it. The fold is the finding's: its rows
+   (one per comment in Merged, its checklist row) fold and open together. A findings section folds with its last
+   finding. */
+const FOLDX = [];   // the findings sections' decision items; `x.frows` their rows { row, pick, chev (Merged), cl (Checklist) }
+const ROWX = new Map();   // a findings section's item row, in Merged or Checklist -> its item: where the reader is
 function answeredX(x) { return !!x.choices && x.cb.checked && !x.more; }
 function keepsOpen(x) { return !!x.more || x.notePending; }
 // the first item of a decision list, where it shows (Merged row or checklist row) in page order, that needs the
@@ -5538,23 +5559,31 @@ function nextForReader(c) {
   const need = c.items.filter(x => x.fresh || (!passing(x) && !x.more));
   return need.sort((a, b) => itemRow(a).compareDocumentPosition(itemRow(b)) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1)[0] || null;
 }
-// the chevron or a click on the title: fold it, or open it (armed again: it folds when the reader moves on)
-function toggleRow(m) {
-  const on = !m.row.classList.contains('bd-fold');
-  foldRow(m, on);
-  if (on) settleSections(false); else m.armed = answeredX(m.x);
+// Merged's chevron or a click on its title: fold the finding, or open it (armed again: it folds when the reader moves on)
+function toggleItem(x) {
+  const on = !x.folded;
+  foldItem(x, on);
+  if (on) settleSections(false); else x.armed = answeredX(x);
 }
-function foldRow(m, on, anim = true) {
-  if (!m.chev) return;
-  foldMotion(m.row.parentElement.classList.contains('bd-mx') ? m.row.parentElement : m.row, m.row, anim, () => {
-    m.row.classList.toggle('bd-fold', on);
-    m.chev.setAttribute('aria-expanded', String(!on)); m.chev.setAttribute('aria-label', on ? 'Open this finding' : 'Fold this finding');
-    if (on) {
-      const ids = [].concat(m.x.choice ?? []), labels = ids.map(id => (m.x.choices.find(c => c.id === id) || {}).label).filter(Boolean);
-      m.pick.innerHTML = labels.map(l => inline(String(l))).join(', ');
-    }
+// a click on a checklist finding's title: a folded one opens with its details, an open answered one folds; false
+// leaves the click to the checklist (the details open or close)
+function headItem(x) {
+  if (x.folded) { foldItem(x, false, true, true); x.armed = answeredX(x); return true; }
+  if (!x.li.classList.contains('open') || !answeredX(x) || keepsOpen(x)) return false;
+  foldItem(x, true); settleSections(false);
+  return true;
+}
+// fold or open each of finding `x`'s rows; a checklist row folds with its details closed, and `details` opens them
+function foldItem(x, on, anim = true, details = false) {
+  x.folded = on; x.armed = false;
+  const ids = [].concat(x.choice ?? []), pick = ids.map(id => (x.choices.find(c => c.id === id) || {}).label).filter(Boolean).map(l => inline(String(l))).join(', ');
+  for (const r of x.frows) foldMotion(r.row.parentElement.classList.contains('bd-mx') ? r.row.parentElement : r.row, r.row, anim, () => {
+    r.row.classList.toggle('bd-fold', on);
+    if (r.chev) { r.chev.setAttribute('aria-expanded', String(!on)); r.chev.setAttribute('aria-label', on ? 'Open this finding' : 'Fold this finding'); }
+    if (on) r.pick.innerHTML = pick;
+    if (r.cl && (on || details)) x.setOpen(!on);
   });
-  m.armed = false;
+  if (on || details) CHECKLISTS.forEach(c => c.paintExpand());
 }
 // a fold, eased: `apply` flips it; `box` then runs from its old height to its new one, clipped, while `mark` carries
 // .bd-anim, which keeps the parts folding away drawn (fading out, or in) until it lands. A fold started mid-motion
@@ -5570,25 +5599,27 @@ function foldMotion(box, mark, anim, apply) {
   const a = box.bdFold = box.animate({ height: [from + 'px', to + 'px'] }, { duration: Math.round(Math.min(420, 200 + Math.abs(to - from) / 12)), easing: 'cubic-bezier(0.23, 1, 0.32, 1)' });
   a.onfinish = a.oncancel = () => { if (box.bdFold === a || !box.bdFold) { box.bdFold = null; mark.classList.remove('bd-anim'); box.classList.remove('bd-anim-box'); } };
 }
-// the reader moved to row `at` (or off every row): answered rows they left fold, then sections whose rows all have
+// the reader moved to finding `at` (or off every finding): answered ones they left fold, then sections whose findings
+// all have
 function moveOn(at, anim = true) {
-  for (const m of MROWS) if (m.armed && m.row !== at && answeredX(m.x) && !keepsOpen(m.x)) foldRow(m, true, anim);
+  for (const x of FOLDX) if (x.armed && x !== at && answeredX(x) && !keepsOpen(x)) foldItem(x, true, anim);
   settleSections(false, anim);
 }
 function settleSections(onLoad, anim = !onLoad) {
   for (const v of FVIEWS) {
     if (v.byReader || v.el.classList.contains('bd-fold') || !v.items.length) continue;
-    const rows = MROWS.filter(m => v.items.includes(m.x));
-    const done = v.items.every(x => x.cb.checked && !keepsOpen(x) && !(onLoad && x.fresh)) && rows.every(m => !m.chev || m.row.classList.contains('bd-fold'));
+    const done = v.items.every(x => x.cb.checked && !keepsOpen(x) && !(onLoad && x.fresh) && (!x.frows || x.folded));
     if (done) v.fold(true, false, anim);
   }
 }
 function initFolds() {
-  for (const m of MROWS) foldRow(m, answeredX(m.x) && !keepsOpen(m.x) && !m.x.fresh, false);
+  for (const x of FOLDX) foldItem(x, answeredX(x) && !keepsOpen(x) && !x.fresh, false);
   settleSections(true);
-  // a pick in a row arms it; a click in, or keyboard focus on, another finding's row is moving on. The fold waits for
-  // the click to finish: rows folding above under a pressed pointer would move what it lands on
-  const at = e => { const r = e.target.closest && e.target.closest('.bd-mrow'); if (r && r.closest('.bp-sec.fv-on')) moveOn(r); };
+  // a pick in a finding arms it; a click in, or keyboard focus on, another finding's row (Merged or Checklist) is
+  // moving on. The fold waits for the click to finish: rows folding above under a pressed pointer would move what it
+  // lands on
+  const rowSel = '.bd-mrow, .bp-cl-item';
+  const at = e => { for (let r = e.target.closest && e.target.closest(rowSel); r; r = r.parentElement && r.parentElement.closest(rowSel)) if (ROWX.has(r)) return moveOn(ROWX.get(r)); };
   let pressed = false;
   document.addEventListener('pointerdown', () => { pressed = true; }, true);
   document.addEventListener('click', e => setTimeout(() => at(e)), true);
@@ -5717,13 +5748,14 @@ function mergedRow(x, extra, code) {
   const m = { x, row, tick };
   if (x.choices) {
     m.pick = h('span', { class: 'bd-mpick' });
-    m.chev = h('button', { type: 'button', class: 'bd-mchev', 'aria-expanded': 'true', 'aria-label': 'Fold this finding', onclick: e => { e.stopPropagation(); toggleRow(m); } }, ic('chev'));
+    m.chev = h('button', { type: 'button', class: 'bd-mchev', 'aria-expanded': 'true', 'aria-label': 'Fold this finding', onclick: e => { e.stopPropagation(); toggleItem(x); } }, ic('chev'));
+    (x.frows ||= []).push(m);
   }
   const head = h('div', { class: 'bd-mhead' },
     h('span', { class: 'bp-cl-main' }, h('span', { class: 'bp-cl-text', html: inline(it.text) }),
       subMd && h('span', { class: 'bp-cl-subt' + (it.sub ? '' : ' check') }, !it.sub && ic('check'), h('span', { html: inline(subMd) }))),
     m.pick, it.state && h('span', { class: 'bp-chip ' + kind }, it.state), m.chev);
-  if (m.chev) head.addEventListener('click', e => { if (!/\bbd-ann-m-/.test(root.className) && !e.target.closest('a, button') && !String(getSelection())) toggleRow(m); });
+  if (m.chev) head.addEventListener('click', e => { if (!/\bbd-ann-m-/.test(root.className) && !e.target.closest('a, button') && !String(getSelection())) toggleItem(x); });
   row.append(h('div', { class: 'bp-cl-row' }, tick, x.choices && h('span', { class: 'bp-cl-dot', 'aria-hidden': 'true' }), head));
   const opts = x.choices ? optionRows(x) : null, thread = threadView(x, true), note = RO ? null : noteBox(x);
   if (opts) row.append(opts.el);
@@ -5741,7 +5773,7 @@ function mergedRow(x, extra, code) {
     row.append(btn, body);
   }
   row.append(thread.el, ...(note ? [note.el] : []));
-  Object.assign(m, { opts, note, thread, ans: answeredX(x) });
+  Object.assign(m, { opts, note, thread });
   MROWS.push(m);
   (x.mrows ||= []).push(row);
   return row;

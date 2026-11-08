@@ -566,6 +566,30 @@ class FindingsView(ChromePage):
         self.assertEqual(a.ev(folded), [True] * 4)
         self.assertFalse(a.ev("document.querySelector('#pr-412').classList.contains('bd-fold')"), "a section with open findings folded")
 
+    def test_in_checklist_answered_findings_fold_and_the_title_opens_them(self) -> None:
+        a = self.open(self.url)
+        a.ev("document.querySelector('#pr-415 .bd-fvbar [data-v=checklist]').click()")
+        lis = "[...document.querySelectorAll('#cl-t415 .bp-cl-items > .bp-cl-item')]"
+        state = f"{lis}.map(li => [li.classList.contains('bd-fold'), li.classList.contains('open'), li.querySelector(':scope > .bp-opts').checkVisibility()])"
+        landed = "!document.querySelector('.bd-anim')"
+        head = lambda i: a.ev(f"{lis}[{i}].querySelector('.bp-cl-head').click()")
+        a.ev(f"{lis}[0].querySelector('.bp-opt .pk').click()")
+        time.sleep(0.2)
+        self.assertEqual(a.ev(state)[0], [False, False, True], "a finding folded before the reader moved on")
+        a.ev(f"{lis}[1].querySelector('.bp-opt .pk').click()")   # moving on folds the one above: title, its pick, its size
+        a.wait_for(f"{lis}[0].classList.contains('bd-fold') && {landed}")
+        self.assertEqual(a.ev(state)[:2], [[True, False, False], [False, False, True]])
+        self.assertEqual(a.ev(f"(li => [li.querySelector('.bd-mpick').textContent === li.querySelector('.bp-opt.on .ol').textContent, li.querySelector('.bd-mpick').checkVisibility()])({lis}[0])"), [True, True])
+        self.assertTrue(a.ev("document.querySelector('#pr-415 .bd-mrow').classList.contains('bd-fold')"), "Merged's row of the finding stayed open")
+        head(0)   # its title opens it with its details; the one just left folds
+        a.wait_for(landed)
+        self.assertEqual(a.ev(state)[:2], [[False, True, True], [True, False, False]])
+        head(0)   # on the open answered one, the title folds it
+        a.wait_for(landed)
+        self.assertEqual(a.ev(state)[0], [True, False, False])
+        head(2)   # an unanswered one's title only opens its details
+        self.assertEqual(a.ev(state)[2], [False, True, True])
+
     def test_a_tracker_row_leads_to_the_first_finding_that_needs_the_reader(self) -> None:
         a = self.open(self.url)
         rows = "[...document.querySelectorAll('#pr-415 .bd-mrow')]"
