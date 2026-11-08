@@ -543,13 +543,13 @@ class FindingsView(ChromePage):
         time.sleep(0.2)
         self.assertEqual(a.ev(folded), [False] * 4, "a finding folded before the reader moved on")
         pick(1)   # moving on: the answered one above folds to its title, its pick and its size
-        a.wait_for(f"{folded}[0]")
+        a.wait_for(f"{folded}[0] && !document.querySelector('.bd-anim')")   # folded, and the motion landed
         self.assertEqual(a.ev(f"(r => [r.querySelector('.bd-mpick').textContent === r.querySelector('.bp-opt.on .ol').textContent, r.querySelector('.bp-opts').checkVisibility(), r.querySelector('.bd-mcode')?.checkVisibility() ?? false])({rows}[0])"),
                          [True, False, False], "the folded row lost its pick, or still shows its options or code")
         self.assertEqual(a.ev(folded), [True, False, False, False])
         pick(2); pick(3)
         a.ev("document.querySelector('#pr-412 .bd-mrow .pk').focus()")   # keyboard focus on another section's finding
-        a.wait_for("document.querySelector('#pr-415').classList.contains('bd-fold')")
+        a.wait_for("document.querySelector('#pr-415').classList.contains('bd-fold') && !document.querySelector('.bd-anim')")
         self.assertEqual(a.ev(folded), [True] * 4)
         self.assertEqual(self.shows(a, "#pr-415 > h2", "#pr-415 > .bd-prc", "#pr-415 > .bd-fvbar", "#pr-415 .bd-mv"), [True, True, False, False])
         self.assertEqual(a.ev("[document.querySelector('#pr-415 .bd-prm').textContent, document.querySelector('#pr-415 .bd-prs').textContent]"), ["4 of 4", "Answered"])

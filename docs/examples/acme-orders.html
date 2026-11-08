@@ -1359,7 +1359,7 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .bd-prchev { margin-right: -4px; }
 .bd-prm { flex: none; display: inline-flex; align-items: center; gap: 8px; font: 500 12px var(--mono); letter-spacing: 0; color: var(--fg-subtle); }
 .bd-meter { width: 96px; height: 4px; border-radius: 2px; background: var(--line); overflow: hidden; }
-.bd-meter > i { display: block; height: 100%; background: var(--accent); }
+.bd-meter > i { display: block; height: 100%; background: var(--accent); transition: width .4s var(--ease), background-color .4s; }
 .bd-meter.full > i { background: var(--ok); }
 .bd-prs { flex: none; min-width: 64px; display: inline-flex; align-items: center; justify-content: flex-end; gap: 6px; font: 500 13px var(--sans); letter-spacing: 0; color: var(--fg-muted); }
 .bd-prs:empty { min-width: 0; }
@@ -1386,7 +1386,18 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .bd-fvseg button[aria-pressed="true"]:focus-visible { box-shadow: var(--shadow-hk), var(--focus-ring); }
 .bd-fvseg button .bd-ic { width: 14px; height: 14px; }
 .bp-sec.fv-on > :is(.fv-m, .fv-c, .fv-d) { margin: 0; padding: 12px; background: var(--inset); }
-@media screen { .bp-sec.fv-on.bd-fold > :not(h2, .bd-prc) { display: none; } }
+/* a fold in motion (foldMotion): the box clips while its height eases; what folds away stays drawn and fades out, what
+   opens fades in */
+.bd-anim-box { overflow: clip; }
+@keyframes bd-fold-in { from { opacity: 0; } }
+@keyframes bd-fold-out { to { opacity: 0; } }
+@media screen {
+  .bp-sec.fv-on.bd-fold:not(.bd-anim) > :not(h2, .bd-prc) { display: none; }
+  .bp-sec.fv-on.bd-anim > :not(h2, .bd-prc), .bd-mrow.bd-anim > :not(.bp-cl-row), .bd-mrow.bd-anim .bp-cl-subt, .bd-mx:has(> .bd-mrow.bd-anim) > .bd-mlbl,
+    .bd-mrow.bd-fold.bd-anim .bd-mpick { animation: bd-fold-in .24s var(--ease) both; }
+  .bp-sec.fv-on.bd-fold.bd-anim > :not(h2, .bd-prc), .bd-mrow.bd-fold.bd-anim > :not(.bp-cl-row), .bd-mrow.bd-fold.bd-anim .bp-cl-subt,
+    .bd-mx:has(> .bd-mrow.bd-fold.bd-anim) > .bd-mlbl { animation: bd-fold-out .18s ease-out both; }
+}
 .bd-fvhint { flex: 0 1 auto; min-width: 0; display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 11px 0 9px; border-radius: 999px; overflow: hidden; white-space: nowrap; font: 500 12.5px var(--sans); color: var(--accent-fg);
   background: var(--accent-tint); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--accent) 35%, transparent); animation: bd-fvhint .4s var(--ease) both; }
 .bd-fvbar > :is(.bp-btn, .bd-fvseg) { flex: none; }
@@ -1418,8 +1429,8 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .bd-mrow :is(.bp-cl-text, .bp-cl-subt > span) { white-space: normal; overflow: visible; }
 .bd-mpick { display: none; }
 @media screen {
-  .bd-mrow.bd-fold { padding-bottom: 0; }
-  .bd-mrow.bd-fold > :not(.bp-cl-row), .bd-mrow.bd-fold .bp-cl-subt, .bd-mx:has(> .bd-mrow.bd-fold) > .bd-mlbl { display: none; }
+  .bd-mrow.bd-fold:not(.bd-anim) { padding-bottom: 0; }
+  .bd-mrow.bd-fold:not(.bd-anim) > :not(.bp-cl-row), .bd-mrow.bd-fold:not(.bd-anim) .bp-cl-subt, .bd-mx:has(> .bd-mrow.bd-fold:not(.bd-anim)) > .bd-mlbl { display: none; }
   .bd-mrow.bd-fold .bp-cl-text { color: var(--fg-muted); }
   .bd-mrow.bd-fold .bd-mpick { flex: none; display: inline-flex; align-items: center; gap: 6px; max-width: 40%; margin: 1px 4px 0 auto; font-size: 13px; font-weight: 600; color: var(--fg); }
   .bd-mrow.bd-fold .bd-mpick::before { content: "→"; font-weight: 400; color: var(--fg-subtle); }
@@ -4602,9 +4613,9 @@ const noteMd = (x, indent) => !x.notePending ? '' : (x.note ? '\n' + x.note.trim
 function openItem(x) {
   const row = itemRow(x), v = fviewOf(x.li);
   if (row === x.li) revealFindings(x.li);
-  if (v && v.el.classList.contains('bd-fold')) v.fold(false, true);
+  if (v && v.el.classList.contains('bd-fold')) v.fold(false, true, false);   // no motion: the caller scrolls to the row next
   const m = MROWS.find(m => m.row === row);
-  if (m && m.row.classList.contains('bd-fold')) { foldRow(m, false); m.armed = answeredX(x); }
+  if (m && m.row.classList.contains('bd-fold')) { foldRow(m, false, false); m.armed = answeredX(x); }
   for (let el = x.li; el; el = el.parentElement && el.parentElement.closest('.bp-cl-item')) {
     const owner = Object.values(ITEMS).find(y => y.li === el);
     if (owner && !owner.li.classList.contains('empty')) owner.setOpen(true);
@@ -4936,7 +4947,7 @@ if (CHECKLISTS.length) {
         const x = nextForReader(c);
         if (!x) { (v ? v.el : c.root).scrollIntoView({ behavior: REDUCE ? 'auto' : 'smooth', block: 'start' }); return; }
         const row = openItem(x);
-        moveOn(row); jumpTo(row);
+        moveOn(row, false); jumpTo(row);   // no motion: rows folding above would move the scroll's target
       } else if (v && v.view === 'merged') { e.preventDefault(); v.mv.scrollIntoView({ behavior: REDUCE ? 'auto' : 'smooth', block: 'start' }); } else revealFindings(c.root);
     };
     const row = h('a', { class: 'bp-prog-row', href: '#cl-' + c.b.id, onclick: go }, h('span', { class: 't' }, h('span', {}, c.b.title || c.b.id), cnt), bar);
@@ -5502,10 +5513,12 @@ function findingsView(sec, el, wraps) {
     meter.firstChild.classList.toggle('full', done);
     status.className = 'bd-prs' + (fresh ? ' new' : done ? ' ok' : '');
     status.replaceChildren(...(fresh ? [h('i'), `${fresh} ${fresh === 1 ? 'reply' : 'replies'}`] : done ? ['Answered'] : []));
-  }, fold: (on, byReader) => {
+  }, fold: (on, byReader, anim = true) => {
     if (byReader) v.byReader = !on;   // opened by the reader: it stays open until the next load
-    el.classList.toggle('bd-fold', on);
-    chev.setAttribute('aria-expanded', String(!on)); chev.setAttribute('aria-label', on ? 'Open this section' : 'Fold this section');
+    foldMotion(el, el, anim, () => {
+      el.classList.toggle('bd-fold', on);
+      chev.setAttribute('aria-expanded', String(!on)); chev.setAttribute('aria-label', on ? 'Open this section' : 'Fold this section');
+    });
   } };
   const saved = store.get(FVIEW_KEY);
   v.set(FVIEW_NAMES.includes(saved) ? saved : 'merged');
@@ -5531,31 +5544,47 @@ function toggleRow(m) {
   foldRow(m, on);
   if (on) settleSections(false); else m.armed = answeredX(m.x);
 }
-function foldRow(m, on) {
+function foldRow(m, on, anim = true) {
   if (!m.chev) return;
-  m.row.classList.toggle('bd-fold', on);
-  m.chev.setAttribute('aria-expanded', String(!on)); m.chev.setAttribute('aria-label', on ? 'Open this finding' : 'Fold this finding');
-  if (on) {
-    const ids = [].concat(m.x.choice ?? []), labels = ids.map(id => (m.x.choices.find(c => c.id === id) || {}).label).filter(Boolean);
-    m.pick.innerHTML = labels.map(l => inline(String(l))).join(', ');
-  }
+  foldMotion(m.row.parentElement.classList.contains('bd-mx') ? m.row.parentElement : m.row, m.row, anim, () => {
+    m.row.classList.toggle('bd-fold', on);
+    m.chev.setAttribute('aria-expanded', String(!on)); m.chev.setAttribute('aria-label', on ? 'Open this finding' : 'Fold this finding');
+    if (on) {
+      const ids = [].concat(m.x.choice ?? []), labels = ids.map(id => (m.x.choices.find(c => c.id === id) || {}).label).filter(Boolean);
+      m.pick.innerHTML = labels.map(l => inline(String(l))).join(', ');
+    }
+  });
   m.armed = false;
 }
-// the reader moved to row `at` (or off every row): answered rows they left fold, then sections whose rows all have
-function moveOn(at) {
-  for (const m of MROWS) if (m.armed && m.row !== at && answeredX(m.x) && !keepsOpen(m.x)) foldRow(m, true);
-  settleSections(false);
+// a fold, eased: `apply` flips it; `box` then runs from its old height to its new one, clipped, while `mark` carries
+// .bd-anim, which keeps the parts folding away drawn (fading out, or in) until it lands. A fold started mid-motion
+// starts from where the box is. Instant with reduced motion, off screen, or `anim` false (the caller scrolls next)
+function foldMotion(box, mark, anim, apply) {
+  const from = anim && !REDUCE && box.getClientRects().length ? box.getBoundingClientRect().height : -1;
+  if (box.bdFold) { box.bdFold.cancel(); box.bdFold = null; mark.classList.remove('bd-anim'); box.classList.remove('bd-anim-box'); }
+  apply();
+  if (from < 0) return;
+  const to = box.getBoundingClientRect().height;
+  if (Math.abs(to - from) < 1) return;
+  mark.classList.add('bd-anim'); box.classList.add('bd-anim-box');
+  const a = box.bdFold = box.animate({ height: [from + 'px', to + 'px'] }, { duration: Math.round(Math.min(420, 200 + Math.abs(to - from) / 12)), easing: 'cubic-bezier(0.23, 1, 0.32, 1)' });
+  a.onfinish = a.oncancel = () => { if (box.bdFold === a || !box.bdFold) { box.bdFold = null; mark.classList.remove('bd-anim'); box.classList.remove('bd-anim-box'); } };
 }
-function settleSections(onLoad) {
+// the reader moved to row `at` (or off every row): answered rows they left fold, then sections whose rows all have
+function moveOn(at, anim = true) {
+  for (const m of MROWS) if (m.armed && m.row !== at && answeredX(m.x) && !keepsOpen(m.x)) foldRow(m, true, anim);
+  settleSections(false, anim);
+}
+function settleSections(onLoad, anim = !onLoad) {
   for (const v of FVIEWS) {
     if (v.byReader || v.el.classList.contains('bd-fold') || !v.items.length) continue;
     const rows = MROWS.filter(m => v.items.includes(m.x));
     const done = v.items.every(x => x.cb.checked && !keepsOpen(x) && !(onLoad && x.fresh)) && rows.every(m => !m.chev || m.row.classList.contains('bd-fold'));
-    if (done) v.fold(true, false);
+    if (done) v.fold(true, false, anim);
   }
 }
 function initFolds() {
-  for (const m of MROWS) foldRow(m, answeredX(m.x) && !keepsOpen(m.x) && !m.x.fresh);
+  for (const m of MROWS) foldRow(m, answeredX(m.x) && !keepsOpen(m.x) && !m.x.fresh, false);
   settleSections(true);
   // a pick in a row arms it; a click in, or keyboard focus on, another finding's row is moving on. The fold waits for
   // the click to finish: rows folding above under a pressed pointer would move what it lands on
