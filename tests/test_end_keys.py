@@ -4,11 +4,11 @@ The build: meta.review is post, threads or local, on a review doc only (an ERROR
 name their new words); a review of a PR needs one, and a post review's findings offer only Post and Don't post (the
 type's contract); `build.py new review --of` writes it, --of post with Post / Don't post options, and the doc card
 lists it. The server: an approval for a presentation or storelisting is refused (400); an
-answers reply's reviewEvent is COMMENT, REQUEST_CHANGES or APPROVE (else 400) and `reply`/`wait` print it in the
+answers reply's reviewEvents give each PR COMMENT, REQUEST_CHANGES or APPROVE (else 400) and `reply`/`wait` print them in the
 header. The browser tests (BLUEDOC_BROWSER_TESTS=1): each page type's dock ends as types/review.md and schema.md's
 tray table say (Approve on a plan, design and website; Present on a deck, whose toolbar's last key is a blue Export
 to…; nothing on a listing; the send key named by meta.review; Send answers elsewhere with a checklist; Request changes
-alone without one); the send key counts what hasn't gone; a `post` review's dialog posts as the reader picked."""
+alone without one); the send key counts what hasn't gone; a `post` review's dialog posts each PR as the reader picked."""
 from __future__ import annotations
 
 import json
@@ -120,15 +120,17 @@ class Server(unittest.TestCase):
 
     def test_review_event_is_checked_and_printed(self) -> None:
         path = review_of(self.docs, "post")
-        body = {"path": self.server.url_for(path), "rev": "1", "items": [], "markdown": "# R\n\nPost as: Approve\n"}
-        self.assertEqual(self.post("/__bluedoc/reply", {**body, "reviewEvent": "MERGE"})[0], 400)
-        self.assertEqual(self.post("/__bluedoc/changes", {**body, "annotations": [], "reviewEvent": "APPROVE"})[0], 400)
-        status, raw = self.post("/__bluedoc/reply", {**body, "reviewEvent": "APPROVE"})
+        body = {"path": self.server.url_for(path), "rev": "1", "items": [], "markdown": "# R\n\nPost as:\n- #412: Request changes\n- #415: Approve\n"}
+        evs = [{"section": "pr-412", "title": "#412", "event": "REQUEST_CHANGES"}, {"section": "pr-415", "title": "#415", "event": "APPROVE"}]
+        for bad in ([{**evs[0], "event": "MERGE"}], [{**evs[0], "section": "412"}], [], "APPROVE"):
+            self.assertEqual(self.post("/__bluedoc/reply", {**body, "reviewEvents": bad})[0], 400, bad)
+        self.assertEqual(self.post("/__bluedoc/changes", {**body, "annotations": [], "reviewEvents": evs})[0], 400)
+        status, raw = self.post("/__bluedoc/reply", {**body, "reviewEvents": evs})
         self.assertEqual(status, 200, raw)
         r = self.tmp.run("serve.py", "wait", path, "--timeout", "5")
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertRegex(r.stdout.splitlines()[0], r"^--- bluedoc answers \(reply \d+, rev 1, .*, review event APPROVE\) ---$")
-        self.assertIn("Post as: Approve", r.stdout)
+        self.assertRegex(r.stdout.splitlines()[0], r"^--- bluedoc answers \(reply \d+, rev 1, .*, review events pr-412 REQUEST_CHANGES, pr-415 APPROVE\) ---$")
+        self.assertIn("- #415: Approve", r.stdout)
 
 
 @unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")
@@ -173,19 +175,23 @@ class Dock(ChromePage):
         self.assertEqual(t.ev(f"[{key}.classList.contains('has'), {key}.querySelector('.n').textContent]"), [True, str(n)])
         t.ev(f"{key}.click()")
         t.wait_for("!!document.querySelector('.bd-send[open] .bd-postas')")
-        self.assertEqual(t.ev("document.querySelector('.bd-send[open] h3').textContent"), "Post review to the PR")
-        self.assertEqual(t.ev("document.querySelector('.bd-send[open] [aria-checked=true]').dataset.v"), "COMMENT")
-        t.ev("document.querySelector('.bd-send[open] .bd-postas [data-v=REQUEST_CHANGES]').click()")
-        self.assertIn("Post as: Request changes", t.ev("document.querySelector('.bd-send[open] pre').textContent"))
-        self.assertEqual(t.ev("BP.replyPayload().reviewEvent"), "REQUEST_CHANGES")
+        self.assertEqual(t.ev("document.querySelector('.bd-send[open] h3').textContent"), "Post reviews to the PRs")
+        # one Post as per PR, each starting at Comment: request changes on #412, approve #415
+        self.assertEqual(t.ev("[...document.querySelectorAll('.bd-send[open] .bd-postas [aria-checked=true]')].map(b => b.dataset.v)"), ["COMMENT", "COMMENT"])
+        t.ev("document.querySelector('.bd-send[open] .bd-postas [data-pr=pr-412] [data-v=REQUEST_CHANGES]').click()")
+        t.ev("document.querySelector('.bd-send[open] .bd-postas [data-pr=pr-415] [data-v=APPROVE]').click()")
+        pre = t.ev("document.querySelector('.bd-send[open] pre').textContent")
+        self.assertIn("Post as:\n- #412 · bulk discount tiers: Request changes\n- #415 · retry PayCo authorization: Approve", pre)
+        self.assertEqual(t.ev("BP.replyPayload().reviewEvents.map(e => [e.section, e.event])"), [["pr-412", "REQUEST_CHANGES"], ["pr-415", "APPROVE"]])
         t.wait_for("!document.querySelector('.bd-send[open] .ft .primary').hidden")
         t.ev("document.querySelector('.bd-send[open] .ft .bp-btn.primary').click()")
         self.toast(t, "sent to")
         r = self.tmp.run("serve.py", "reply", path, "--kind", "answers")
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertIn("review event REQUEST_CHANGES) ---", r.stdout.splitlines()[0])
-        self.assertIn("Post as: Request changes", r.stdout)
-        self.assertEqual(json.loads(self.tmp.run("serve.py", "reply", path, "--kind", "answers", "--json").stdout)["reviewEvent"], "REQUEST_CHANGES")
+        self.assertIn("review events pr-412 REQUEST_CHANGES, pr-415 APPROVE) ---", r.stdout.splitlines()[0])
+        self.assertIn("- #412 · bulk discount tiers: Request changes", r.stdout)
+        self.assertEqual([e["event"] for e in json.loads(self.tmp.run("serve.py", "reply", path, "--kind", "answers", "--json").stdout)["reviewEvents"]],
+                         ["REQUEST_CHANGES", "APPROVE"])
         # sent: nothing left to count, also after a reload
         t.wait_for(f"!{key}.classList.contains('has') && {key}.querySelector('.n').hidden")
         t = self.open(self.server.url_for(path))

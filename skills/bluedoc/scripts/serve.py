@@ -149,7 +149,7 @@ reader state and the hash of the JSON it shows in its bp-state element ({version
 sqlite3).
 
 Replies: Send answers (or a review's Apply decisions, Post review, Reply and fix) posts to /__bluedoc/reply, with a
-`post` review's reviewEvent (COMMENT, REQUEST_CHANGES or APPROVE; `wait` prints it in its header), Request changes
+`post` review's reviewEvents (one per PR: COMMENT, REQUEST_CHANGES or APPROVE; `wait` prints them in its header), Request changes
 to /__bluedoc/changes, Approve (plan, design, website; a presentation or storelisting is refused, 400) to
 /__bluedoc/approve. Each becomes a row in state.db, queued for `wait`, which returns the oldest unread one
 (GET /__bluedoc/wait needs the X-Bluedoc header and the key) and marks it delivered; a restart keeps the queue. The
@@ -222,7 +222,7 @@ COOKIE_AGE = 400 * 86400   # the key cookie's Max-Age: the most browsers keep; e
 SKIP_DIRS = {"node_modules", "build", "dist", "target", "out", "vendor", "Pods", "DerivedData", "__pycache__"}
 MAX_DEPTH, MAX_BODY, SEARCH_CHARS = 8, 4 * 1024 * 1024, 8000   # SEARCH_CHARS keeps index.json small (~10 KB a doc)
 KINDS = ("answers", "changes", "approval")
-REVIEW_EVENTS = ("COMMENT", "REQUEST_CHANGES", "APPROVE")   # an answers reply's reviewEvent: a `post` review's Post as
+REVIEW_EVENTS = ("COMMENT", "REQUEST_CHANGES", "APPROVE")   # an answers reply's reviewEvents: a `post` review's Post as, per PR
 REPLY_SUFFIX = {"answers": "reply", "changes": "changes", "approval": "approval"}   # pre-state.db <stem>.<suffix>.md/.json
 REPLY_ROUTES = {"/__bluedoc/reply": "answers", "/__bluedoc/changes": "changes", "/__bluedoc/approve": "approval"}
 STATE_MAX_BODY, STATE_MAX_OPS, STATE_MAX_VALUE = 1024 * 1024, 2000, 64 * 1024
@@ -3358,6 +3358,17 @@ def approval_refused(doc: Path) -> str | None:
     return NOT_APPROVED.get(build.doc_type(d.get("meta") or {})) if isinstance(d, dict) else None
 
 
+def plan_unanswered(doc: Path, answers) -> bool:
+    """True when the doc is a plan and an approval's answers leave a question (an item with choices) without a pick."""
+    try:
+        d = json.loads(doc.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return False
+    if not isinstance(d, dict) or build.doc_type(d.get("meta") or {}) != "plan":
+        return False
+    return any(isinstance(a, dict) and "choice" in a and not a["choice"] for a in answers or [])
+
+
 # ---------- store listing brand: the brand image and the installed fonts ----------
 
 BRAND_EXT = {"png": "png", "jpeg": "jpg", "webp": "webp"}   # the brand image's type -> its file's extension
@@ -3761,14 +3772,21 @@ def state_ops(data: dict) -> list[tuple[str, str | None]]:
 # ---------- inbox: replies the agent waits for ----------
 
 def reply_message(row: dict) -> dict:
-    """What `wait` and `reply` print for a replies row: with its reviewEvent when the reader posted one (a `post`
-    review's Post as)."""
+    """What `wait` and `reply` print for a replies row: with its reviewEvents when the reader posted them (a `post`
+    review's Post as, one per PR: [{section, title, event}])."""
     out = {k: row[k] for k in ("id", "kind", "doc", "rev", "at", "markdown")}
     try:
-        ev = json.loads(row["payload"] or "{}").get("reviewEvent")
+        evs = json.loads(row["payload"] or "{}").get("reviewEvents")
     except (ValueError, AttributeError):
-        ev = None
-    return {**out, "reviewEvent": ev} if ev in REVIEW_EVENTS else out
+        evs = None
+    return {**out, "reviewEvents": evs} if review_events_ok(evs) else out
+
+
+def review_events_ok(evs) -> bool:
+    """A post review's reviewEvents: 1 to 50 PRs, each {section: "pr-<n>" or null, title, event in REVIEW_EVENTS}."""
+    return (isinstance(evs, list) and 0 < len(evs) <= 50 and all(
+        isinstance(e, dict) and e.get("event") in REVIEW_EVENTS and isinstance(e.get("title", ""), str)
+        and (e.get("section") is None or (isinstance(e.get("section"), str) and re.fullmatch(r"pr-\d+", e["section"]))) for e in evs))
 
 
 def import_reply_files(roots: list[Path]) -> int:
@@ -4376,9 +4394,10 @@ def make_handler(port: int, default_to: str):
                     return self.json(409, {"error": "an item asks for more details: send that request or withdraw it, then approve"})
             else:
                 ok = isinstance(data.get("items" if kind == "answers" else "annotations"), list)
-                # a review of someone else's PR (meta.review "post"): the GitHub review event the reader picked
-                if ok and "reviewEvent" in data and (kind != "answers" or data["reviewEvent"] not in REVIEW_EVENTS):
-                    return self.json(400, {"error": f"reviewEvent is one of {', '.join(REVIEW_EVENTS)}, on answers only"})
+                # a post review (meta.review "post"): the GitHub review event the reader picked for each PR
+                if ok and "reviewEvents" in data and (kind != "answers" or not review_events_ok(data["reviewEvents"])):
+                    return self.json(400, {"error": f"reviewEvents: answers only, 1 to 50 of {{section: pr-<n> or null, title, event}}, "
+                                                    f"event one of {', '.join(REVIEW_EVENTS)}"})
             if not ok:
                 return self.json(400, {"error": f"not a bluedoc {kind} payload"})
             doc = doc_for_url(str(data.get("path") or ""))
@@ -4391,6 +4410,9 @@ def make_handler(port: int, default_to: str):
                 why = approval_refused(doc)
                 if why:
                     return self.json(400, {"error": why})
+                # a plan is approved with every question answered (the page's Approve dialog says which aren't)
+                if plan_unanswered(doc, data.get("answers")):
+                    return self.json(409, {"error": "a plan is approved with every question answered: pick an answer for each first"})
                 # the approval covers the JSON the page showed: refuse it when the doc changed since, or the rev isn't its
                 current, _, rev = doc_info(doc)
                 if not current or data.get("docHash") != current or str(data.get("rev") or "") != rev:
@@ -4945,14 +4967,15 @@ def main() -> int:
 
 
 def print_reply(m: dict, rules: bool = False) -> None:
-    """A reply as `wait` and `reply` print it: a header with its id, rev, time and a `post` review's review event
-    (Post as), then its Markdown. `wait` (one reply per process) names the reply rules in the skill this CLI runs from
+    """A reply as `wait` and `reply` print it: a header with its id, rev, time and a `post` review's review events
+    (Post as, per PR), then its Markdown. `wait` (one reply per process) names the reply rules in the skill this CLI runs from
     on stderr, so stdout keeps its shape."""
     if rules:
         print(f"(rules: {HERE.parent / 'types' / 'replies.md'} — read once)", file=sys.stderr, flush=True)
     label = {"answers": "answers", "changes": "change request", "approval": "approval"}[m["kind"]]
     at = dt.datetime.fromisoformat(m["at"]).isoformat(timespec="seconds")
-    event = f", review event {m['reviewEvent']}" if m.get("reviewEvent") else ""
+    evs = m.get("reviewEvents") or []
+    event = (", review events " + ", ".join(f"{e['section']} {e['event']}" if e.get("section") else e["event"] for e in evs)) if evs else ""
     print(f"--- bluedoc {label} (reply {m['id']}{', rev ' + m['rev'] if m.get('rev') else ''}, {at}{event}) ---")
     print(m["markdown"], end="")
     print("--- end ---", flush=True)

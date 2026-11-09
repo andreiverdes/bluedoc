@@ -197,6 +197,7 @@ class Conversation(ChromePage):
         # approved with the two ticks; one more is a pick changed since the approval
         p = a.ev("BP.approvePayload('')")
         self.assertEqual([x["choice"] for x in p["answers"] if x["item"] == "guests"], [["accounts", "business"]])
+        a.ev("BP.acceptRecommended('decisions')")   # the other questions: a plan is approved with every one answered
         a.ev("document.querySelector('.bd-key.approve').click()")
         a.wait_for("!!document.querySelector('.bd-approve[open] .bp-btn.ok')")
         a.ev("document.querySelector('.bd-approve[open] .bp-btn.ok').click()")

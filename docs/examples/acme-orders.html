@@ -223,6 +223,10 @@ button.bd-emo:hover, button.bd-emo[aria-expanded="true"] { background: var(--sel
 /* a review of someone else's PR: Post as, the GitHub review event, above the message */
 .bd-send .bd-postas { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; font-size: 13px; font-weight: 500; color: var(--fg-muted); }
 .bd-send .bd-postas .bd-sg { flex: 1; }
+/* several PRs: a row each, its title then its own Post as */
+.bd-send .bd-postas.many { display: grid; gap: 8px; }
+.bd-send .bd-postas.many .r { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.bd-send .bd-postas.many .t { flex: 0 1 42%; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg); font-weight: 600; }
 .bd-send textarea { display: block; box-sizing: border-box; width: calc(100% - 40px); min-height: 84px; }
 /* a dialog's message to the agent and its files: Attach under the field, the chips between */
 .bd-send .bd-msgf textarea { width: 100%; }
@@ -1293,6 +1297,8 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .bd-ap-sum li { display: flex; gap: 8px; align-items: flex-start; line-height: 1.45; }
 .bd-ap-sum .bd-ic { width: 15px; height: 15px; margin-top: 1px; color: var(--fg-subtle); }
 .bd-ap-sum li.warn .bd-ic { color: var(--warn); }
+/* a plan with a question unanswered: Approve is held and this says why */
+.bd-ap-sum li.risk { color: var(--risk-fg); } .bd-ap-sum li.risk .bd-ic { color: var(--risk); }
 .bd-ap-dec { margin-top: 14px; min-height: 0; }
 .bd-approve[open] > .bd-ap-dec { flex: 0 1 auto; display: flex; flex-direction: column; }
 .bd-ap-dec[hidden] { display: none !important; }
@@ -1306,6 +1312,10 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .bd-ap-dec .pk .rec { font-weight: 400; color: var(--fg-subtle); }
 .bd-ap-dec .pk.none { font-weight: 500; color: var(--fg-subtle); }
 .bd-ap-dec .pk.none .bd-ic { fill: currentColor; stroke: none; color: var(--warn); }
+/* on a plan: a button that closes the dialog and opens the question */
+.bd-ap-dec button.pk.none { padding: 2px 6px; margin: -2px -6px; border: 0; border-radius: 6px; background: none; font: inherit; font-weight: 600; color: var(--warn-fg); cursor: pointer; }
+.bd-ap-dec button.pk.none:hover { background: var(--hover); }
+.bd-ap-dec button.pk.none > .bd-ic:last-child { fill: none; stroke: currentColor; stroke-width: 2; color: inherit; }
 .bd-approve .ft .bp-btn.ok { color: #fff; background: var(--ok-solid); box-shadow: 0 1px 2px oklch(20% 0.05 152 / .25), inset 0 1px 0 oklch(100% 0 0 / .15); }
 .bd-approve .ft .bp-btn.ok .bd-ic { color: currentColor; }
 .bd-approve .ft .bp-btn.ok:hover { background: color-mix(in oklch, var(--ok-solid), black 8%); }
@@ -4844,7 +4854,7 @@ function replyPayload() {
   return {
     kind: 'answers', doc: docId, rev: CUR.rev, title: DOC.title || '', path: location.pathname, at: new Date().toISOString(),
     message: (store.get(MSG_KEY) || '').trim(), ...(msgFiles().length ? { messageFiles: filesJson(msgFiles()).files } : {}),
-    ...(REVIEW_OF === 'post' ? { reviewEvent: postAs } : {}),
+    ...(POST_PRS.length ? { reviewEvents: POST_PRS.map(p => ({ section: p.id, title: p.title, event: postAs[p.id || ''] })) } : {}),
     items: answerItems(),
     markdown: answersMd(),
   };
@@ -4932,13 +4942,21 @@ const SEND_AS = {
   threads: ['reply', 'Reply and fix', 'Reply and fix on your PR', 'The agent fixes the findings you marked to fix on your branch, then replies on each thread and resolves the fixed ones.'],
   post: ['pr', 'Post review', 'Post review to the PR', 'The agent posts one GitHub review on the PR, with a comment per finding you marked Post.'],
 }[REVIEW_OF] || ['send', 'Send answers', 'Send your answers to the agent', ''];
-// a post review (someone else's PR, or your own you asked a review of): the GitHub review event it posts as (the send dialog's Post as), the payload's reviewEvent
+// a post review (someone else's PR, or your own you asked a review of): the GitHub review event each PR posts as (the
+// send dialog's Post as, one per PR), the payload's reviewEvents. Its PRs are its pr-<n> sections; without any, the page is one
 const POST_AS = [['COMMENT', 'Comment'], ['REQUEST_CHANGES', 'Request changes'], ['APPROVE', 'Approve']];
-let postAs = 'COMMENT';
-// what Send sends: the checklists, and on a review of someone else's PR how to post it, under the title
+const POST_PRS = REVIEW_OF !== 'post' ? [] : (xs => xs.length ? xs : [{ id: null, title: DOC.title || '' }])(
+  (DOC.sections || []).filter(s => s && /^pr-\d+$/.test(s.id || '')).map(s => ({ id: s.id, title: String(s.title || s.id).replace(/[`*]/g, '') })));
+const postAs = Object.fromEntries(POST_PRS.map(p => [p.id || '', 'COMMENT']));
+if (POST_PRS.length > 1) SEND_AS.splice(2, 2, 'Post reviews to the PRs', 'The agent posts one GitHub review per PR, with a comment per finding you marked Post.');
+const postLabel = v => POST_AS.find(p => p[0] === v)[1];
+// what Send sends: the checklists, and on a post review how to post each PR, under the title
 function answersMd() {
   const md = allChecklistsMd(), i = md.indexOf('\n\n') + 2;
-  return REVIEW_OF === 'post' ? md.slice(0, i) + `Post as: ${POST_AS.find(p => p[0] === postAs)[1]}\n\n` + md.slice(i) : md;
+  if (!POST_PRS.length) return md;
+  const how = POST_PRS.length === 1 ? `Post as: ${postLabel(postAs[POST_PRS[0].id || ''])}`
+    : 'Post as:\n' + POST_PRS.map(p => `- ${p.title}: ${postLabel(postAs[p.id])}`).join('\n');
+  return md.slice(0, i) + how + '\n\n' + md.slice(i);
 }
 function replyCounts() {
   const all = Object.values(ITEMS), dec = all.filter(x => x.choices);
@@ -4976,14 +4994,17 @@ function openSend() {
     const summary = h('p', { class: 'sum' });
     const how = h('p', { class: 'how' });
     const pre = h('pre', {});
-    // Post as: as GitHub's Submit review asks
-    const postSeg = REVIEW_OF === 'post' ? h('div', { class: 'bd-sg', role: 'radiogroup', 'aria-label': 'Post as' }, POST_AS.map(([v, l]) =>
-      h('button', { type: 'button', role: 'radio', 'data-v': v, onclick: () => { postAs = v; sendDlg._paint(); } }, l))) : null;
+    // Post as: as GitHub's Submit review asks, one per PR: Request changes on one, Approve another
+    const segs = POST_PRS.map(p => h('div', { class: 'bd-sg', role: 'radiogroup', 'aria-label': POST_PRS.length > 1 ? `Post ${p.title} as` : 'Post as', 'data-pr': p.id || '' },
+      POST_AS.map(([v, l]) => h('button', { type: 'button', role: 'radio', 'data-v': v, onclick: () => { postAs[p.id || ''] = v; sendDlg._paint(); } }, l))));
+    const postBox = !segs.length ? null : segs.length === 1 ? h('div', { class: 'bd-postas' }, h('span', {}, 'Post as'), segs[0])
+      : h('div', { class: 'bd-postas many' }, h('span', { class: 'h' }, 'Post as, per PR'),
+        POST_PRS.map((p, i) => h('div', { class: 'r' }, h('span', { class: 't', title: p.title }, p.title), segs[i])));
     const send = h('button', { type: 'button', class: 'bp-btn primary', onclick: () => doSend() }, ic('send'), 'Send');
     const copy = h('button', { type: 'button', class: 'bp-btn', onclick: () => { copyText(answersMd(), 'Copied: paste it into the chat with the agent'); sendDlg.close(); } }, ic('copy'), 'Copy');
     sendDlg = h('dialog', { class: 'bd-send', 'aria-labelledby': 'bd-send-h' },
       h('div', { class: 'hd' }, h('h3', { id: 'bd-send-h' }, SEND_AS[2]), h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Close', onclick: () => sendDlg.close() }, ic('x'))),
-      summary, postSeg && h('div', { class: 'bd-postas' }, h('span', {}, 'Post as'), postSeg), field, h('details', {}, h('summary', {}, 'Preview'), pre), how, h('div', { class: 'ft' }, copy, send));
+      summary, postBox, field, h('details', {}, h('summary', {}, 'Preview'), pre), how, h('div', { class: 'ft' }, copy, send));
     document.body.append(sendDlg);
     sendDlg.addEventListener('click', e => { if (e.target === sendDlg) sendDlg.close(); });
     sendDlg._paint = () => {
@@ -4993,7 +5014,7 @@ function openSend() {
       if (c.steps) parts.push(`${c.ticked} of ${c.steps} step${c.steps === 1 ? '' : 's'} ticked`);
       parts.push(`${c.notes} comment${c.notes === 1 ? '' : 's'}`);
       summary.textContent = [SEND_AS[3], parts.join(' · ')].filter(Boolean).join(' ');
-      if (postSeg) postSeg.querySelectorAll('button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.v === postAs)));
+      segs.forEach(g => g.querySelectorAll('button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.v === postAs[g.dataset.pr]))));
       send.hidden = !REPLY.url;
       copy.classList.toggle('primary', !REPLY.url);
       how.textContent = REPLY.url ? `Send delivers this to ${REPLY.to || 'the agent that opened this page'}. Copy gives you the same text to paste.`
@@ -12003,7 +12024,10 @@ function paintPlan() {
   approveKey.disabled = done || asking.length > 0; approveKey.classList.toggle('done', done);
   approveKey.replaceChildren(ic(done ? 'tick' : 'check'), h('span', { class: 't' }, done ? 'Approved' + revTxt : 'Approve'));
   approveKey.setAttribute('aria-label', done ? 'Approved' + revTxt : `Approve this ${AP_NOUN}`);
-  approveKey._tip = asking.length ? `${asking.length} item${asking.length === 1 ? ' asks' : 's ask'} for more details: ${asking.some(x => x.more === 'on') ? 'send it with Request changes and wait for the agent\'s next revision, or turn it off' : 'wait for the agent\'s next revision, or withdraw the request'}`
+  // a plan is approved with every question answered: the key stays on; its dialog says which aren't and holds Approve
+  const unanswered = IS_PLAN && !done ? Object.values(ITEMS).filter(x => x.choices && !idsOf(x.choice).length).length : 0;
+  approveKey._tip = unanswered ? `${unanswered} question${unanswered === 1 ? ' needs' : 's need'} an answer before you can approve this plan`
+    : asking.length ? `${asking.length} item${asking.length === 1 ? ' asks' : 's ask'} for more details: ${asking.some(x => x.more === 'on') ? 'send it with Request changes and wait for the agent\'s next revision, or turn it off' : 'wait for the agent\'s next revision, or withdraw the request'}`
     : IS_SITE ? `Approve this website${revWord}, every page and pick in it: the agent applies it to the site's source`
     : IS_DESIGN ? `Approve this design${revWord}, every screen in it: the agent builds it with your picks` : `Approve this plan${revWord}: the agent goes ahead with it and your picks`;
   if (done && approveDlg && approveDlg.open) approveDlg.close();
@@ -12029,11 +12053,16 @@ function openApprove() {
     approveDlg.addEventListener('click', e => { if (e.target === approveDlg) approveDlg.close(); });
     Object.assign(approveDlg, { _note: note, _files: fd, _ok: ok });
     approveDlg._paint = () => {
-      const pend = MARKUP.approvalNotes().annotations.length, dec = Object.values(ITEMS).filter(x => x.choices), open = dec.filter(x => !x.choice).length;
+      const pend = MARKUP.approvalNotes().annotations.length, dec = Object.values(ITEMS).filter(x => x.choices), open = dec.filter(x => !idsOf(x.choice).length).length;
+      // a plan waits for every answer: Approve stays off and says why
+      const held = IS_PLAN && open > 0;
+      ok.disabled = held;
+      ok.title = held ? `${open} question${open === 1 ? ' has' : 's have'} no answer yet` : '';
       const line = (icon, cls, text) => h('li', { class: cls }, ic(icon), h('span', {}, text));
       sum.replaceChildren(...[
         pend && line('msg', '', pend === 1 ? '1 pending comment goes with it as a note' : `${pend} pending comments go with it as notes`),
-        open && line('alert', 'warn', `${open} open question${open === 1 ? ' has' : 's have'} no pick; the agent will use its recommendation`),
+        held && line('alert', 'risk', `You can't approve yet: ${open} question${open === 1 ? ' has' : 's have'} no answer. A plan is approved with every question answered: pick one for each below, or use Accept recommended on its list.`),
+        open && !held && line('alert', 'warn', `${open} open question${open === 1 ? ' has' : 's have'} no pick; the agent will use its recommendation`),
         staleOwners().length && line('alert', 'warn', `${staleOwners().length} check${staleOwners().length === 1 ? ' has' : 's have'} stale evidence: the code changed since ${staleOwners().length === 1 ? 'it' : 'they'} ran. The approval asks the agent to re-run ${staleOwners().length === 1 ? 'it' : 'them'}`),
       ].filter(Boolean));
       sum.hidden = !sum.childElementCount;
@@ -12042,6 +12071,7 @@ function openApprove() {
         const rec = recLabels(x);
         return h('li', {}, h('span', { class: 't', html: inline(x.it.text) }),
           x.choice ? h('span', { class: 'pk' }, ic('tick'), idsOf(x.choice).map(id => choiceLabel(x, id)).join(', '), rec && pickKey(x.choice) !== pickKey(recIds(x)) && h('span', { class: 'rec' }, `recommended: ${rec}`))
+            : IS_PLAN ? h('button', { type: 'button', class: 'pk none go', title: 'Answer it', onclick: () => { approveDlg.close(); const row = openItem(x); row.scrollIntoView({ behavior: REDUCE ? 'auto' : 'smooth', block: 'center' }); flash(row); } }, rec ? [ic('star'), `No pick · ${rec}`] : 'No pick', ic('chev'))
             : h('span', { class: 'pk none' }, rec ? [ic('star'), `No pick · ${rec}`] : 'No pick'));
       }));
       how.textContent = REPLY.approve ? `Approve sends this to ${REPLY.to || 'the agent that opened this page'}. Copy gives you the same text to paste.`
@@ -12053,6 +12083,7 @@ function openApprove() {
   approveDlg._note.focus();
 }
 async function doApprove() {
+  if (IS_PLAN && Object.values(ITEMS).some(x => x.choices && !idsOf(x.choice).length)) return;   // the dialog says why
   const dlg = approveDlg, p = approvePayload(dlg ? dlg._note.value : '', dlg ? dlg._files.files : []);
   const done = () => {
     const pick = a => idsOf(a.choice).length ? a.choice : a.recommend;
@@ -12074,7 +12105,7 @@ async function doApprove() {
     // the doc (or a design's screen) changed after this page loaded: approving it would cover what the reader hasn't seen
     if (e.reload) { if (dlg) dlg.close(); toast(`This ${AP_NOUN} changed since you opened it. Reload to read the current version, then approve.`, { label: 'Reload', ms: 60000, run: () => location.reload() }); return; }
     copyText(p.markdown, replyFailed(e));
-  } finally { if (dlg) dlg._ok.disabled = false; }
+  } finally { if (dlg && dlg.open) dlg._paint(); else if (dlg) dlg._ok.disabled = false; }
 }
 // after a plan's, design's or website's Request changes, the header says so for this revision
 function changesSent(p) { if (APPROVABLE) { store.set(PLAN_KEY, JSON.stringify({ rev: p.rev, state: 'changes', at: p.at })); paintPlan(); } }

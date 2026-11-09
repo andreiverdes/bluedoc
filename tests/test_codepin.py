@@ -254,7 +254,9 @@ class StaleOnThePage(ChromePage):
         self.assertEqual(tab.ev("document.querySelector('#cl-checks .bp-cl-count').textContent"), "0 of 6 · 1 to recheck")
         self.assertEqual(tab.ev("BP.evidence().stale"), ["item:checks/unit"])
         self.assertIn("- [ ] Run the orders-api tests `item:checks/unit` (needs recheck: its evidence is stale)", tab.ev("BP.progressMarkdown()"))
-        # Approve warns without blocking, and the approval and the change request carry ## Stale evidence
+        # Approve warns without blocking (once every question is answered), and the approval and the change request
+        # carry ## Stale evidence
+        tab.ev("BP.acceptRecommended('decisions')")
         tab.ev("document.querySelector('.bd-key.approve').click()")
         tab.wait_for("!!document.querySelector('dialog.bd-approve[open]')")
         self.assertIn("1 check has stale evidence: the code changed since it ran",

@@ -185,11 +185,13 @@ class State(unittest.TestCase):
     def test_progress_after_an_approval_keeps_it(self) -> None:
         """An approval of rev 1 carries to later revs that only mark progress (a step done, the approved pick as the
         item's choice); a text edit ends it, and the ping, the seed and the home card say so with carried: false."""
-        # retention picked; prices approved with no pick, which means its recommendation (notice)
-        self.assertEqual(self.approve(self.approval_body("1", [{"checklist": "decisions", "item": "retention", "choice": "d180"},
-                                                               {"checklist": "decisions", "item": "prices", "choice": None, "recommend": "notice"}]))[0], 200)
+        # a plan is approved with every question answered: one left open is refused (409), both picked is approved
+        open_one = [{"checklist": "decisions", "item": "retention", "choice": "d180"},
+                    {"checklist": "decisions", "item": "prices", "choice": None, "recommend": "notice"}]
+        self.assertEqual(self.approve(self.approval_body("1", open_one))[0], 409)
+        self.assertEqual(self.approve(self.approval_body("1", [open_one[0], {**open_one[1], "choice": "notice"}]))[0], 200)
         self.patch("step:steps/0/table", "--set", "status=done", "--change", "Acme: the saved_carts table landed.")
-        # picks: what the page compares a later pick against (an unpicked item as its recommendation)
+        # picks: what the page compares a later pick against
         self.assertEqual(self.approval(), {"rev": "1", "at": "2026-01-01T00:00:00Z", "carried": True,
                                            "picks": {"decisions/retention": "d180", "decisions/prices": "notice"}})
         self.patch("item:decisions/retention", "--set", "choice=d180", "--change", "Acme: retention as approved.")

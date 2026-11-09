@@ -2,7 +2,7 @@
 
 Rules for what `serve.py wait` prints. Read once per session.
 
-- **Answers** (picks, ticks, comments): act on each pick; no pick means undecided, so ask. An item comment is an instruction about that item and can override its pick. A `multi` item's pick is a list: `→ **Lyon**, **Porto**`. On a review with `meta.review`, do what its send key says (`types/review.md`): `post` replies carry `Post as:` and the header's `review event`.
+- **Answers** (picks, ticks, comments): act on each pick; no pick means undecided, so ask. An item comment is an instruction about that item and can override its pick. A `multi` item's pick is a list: `→ **Lyon**, **Porto**`. On a review with `meta.review`, do what its send key says (`types/review.md`): `post` replies carry `Post as:` per PR and the header's `review events`: post each PR with its own event.
 - **Answer comments in their conversation**: each comment ends with `→ <key> · <id>` (an item's `→ item:<checklist>/<item>`, no id); the commands under `## Answering` at the end take them: `build.py patch <doc> <key> --reply "…" --resolves <id> --no-bump` (`ann:<id>` for a pin or general comment; drop `--resolves` without an id). Keep it short and direct. Change the item itself only when the answer changes the question or its options. One reply per call.
 - **Attached files**: a comment may list `Files:` with full paths (copies in `~/.bluedoc/attachments/`). Read each one before you act on or answer that comment; it is part of the instruction.
 - **Need more details** (`item:… → **Need more details**`): in the next rev, answer its comment with `--reply`, sharpen that item's options and their `md` explanations (or add one), and keep it unpicked; `--resolves` doesn't apply.

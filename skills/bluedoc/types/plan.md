@@ -35,7 +35,7 @@
 
 1. Validate, `serve.py open <doc> --to <your model family>` (Claude, Codex, Copilot, Gemini, GLM…: never the user's name), give the user the URL.
 2. Run `serve.py wait <doc> --kind any` in the background.
-3. **Approval** (`--- bluedoc approval … ---`): implement exactly the approved rev. Use the reader's picks; an open question with no pick means your recommendation. The notes sent with the approval are binding instructions.
+3. **Approval** (`--- bluedoc approval … ---`): implement exactly the approved rev. Use the reader's picks: a plan is approved only with every question answered (the page holds Approve and the server refuses it until then). The notes sent with the approval are binding instructions.
 4. **Change request**: revise the plan (`build.py patch`, which bumps `meta.rev` and writes `changes`; `--resolves <id>` per comment you addressed), send `<url>?diff=<previous rev>`, wait again. Picks sent with it are the reader's decisions so far: carry them over as `choice`. A question marked **Need more details** gets a `--reply` and sharper options with fuller explanations, and stays unpicked. A change request on an approved plan that carries a different pick ("Pick changed since approval") is a change like any other: record the new `choice`, and the plan needs approval again.
 5. Never start implementing before an approval of the current rev. Marking progress after the approval keeps it approved: steps' `status` and `evidence`, checklist `done` and `evidence`, the approved picks as `choice`, and `--reply` answers, each in a patch that bumps past the approved rev (bump on the first, `--no-bump` on the rest). Any other edit needs approval again, and so does `--no-bump` on the approved rev itself, which rewrites what was approved.
 

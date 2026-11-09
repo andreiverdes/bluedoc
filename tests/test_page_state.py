@@ -272,11 +272,31 @@ class PageSync(ChromePage):
         a.go(self.base + url)
         self.assertEqual(a.ev(f"localStorage.getItem('bp:' + BP.doc.id + ':{NOTE_KEY}')"), "Third")
 
+    def test_a_plan_with_an_open_question_holds_approve_and_says_why(self) -> None:
+        url = self.server.url_for(self.plan)
+        a = self.open(url)
+        key = "document.querySelector('.bd-key.approve')"
+        self.assertFalse(a.ev(f"{key}.disabled"), "the key stays on")
+        a.ev(f"{key}.click()")
+        a.wait_for("!!document.querySelector('.bd-approve[open] .bp-btn.ok')")
+        self.assertTrue(a.ev("document.querySelector('.bd-approve[open] .bp-btn.ok').disabled"))
+        self.assertIn("You can't approve yet", a.ev("document.querySelector('.bd-approve[open] .bd-ap-sum li.risk').textContent"))
+        # an unanswered question is a button that opens it
+        a.ev("document.querySelector('.bd-approve[open] button.pk.none').click()")
+        self.assertFalse(a.ev("!!document.querySelector('.bd-approve[open]')"))
+        a.ev("BP.acceptRecommended('decisions')")
+        a.ev(f"{key}.click()")
+        a.wait_for("!!document.querySelector('.bd-approve[open] .bp-btn.ok')")
+        self.assertFalse(a.ev("document.querySelector('.bd-approve[open] .bp-btn.ok').disabled"))
+        self.assertIsNone(a.ev("document.querySelector('.bd-approve[open] .bd-ap-sum li.risk')"))
+        self.assertEqual(self.browser.errors, [])
+
     def test_approve_after_an_unseen_edit_is_refused(self) -> None:
         url = self.server.url_for(self.plan)
         a = self.open(url)
         r = self.tmp.run("build.py", "patch", self.plan, "tldr", "--set", "tldr=Acme changed this after the page loaded.", "--no-bump")
         self.assertEqual(r.returncode, 0, r.stderr)
+        a.ev("BP.acceptRecommended('decisions')")   # a plan is approved with every question answered
         a.ev("document.querySelector('.bd-key.approve').click()")
         a.wait_for("!!document.querySelector('.bd-approve[open] .bp-btn.ok')")
         a.ev("document.querySelector('.bd-approve[open] .bp-btn.ok').click()")
@@ -288,6 +308,7 @@ class PageSync(ChromePage):
     def test_marking_steps_done_keeps_an_approval(self) -> None:
         url = self.server.url_for(self.plan)
         a = self.open(url)
+        a.ev("BP.acceptRecommended('decisions')")   # a plan is approved with every question answered
         a.ev("document.querySelector('.bd-key.approve').click()")
         a.wait_for("!!document.querySelector('.bd-approve[open] .bp-btn.ok')")
         a.ev("document.querySelector('.bd-approve[open] .bp-btn.ok').click()")
