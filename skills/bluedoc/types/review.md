@@ -1,29 +1,36 @@
 # Review
 
-**When:** whenever review results (peer review, agent review, open PR threads) go into a bluedoc, without being asked. Each finding is a **decision item**: the reader picks an option (Fix in PR, Ticket, Decline, …) next to your starred recommendation, comments where they disagree, and presses the send key ([Whose review](#whose-review-metareview)). The reply lists each pick (`→ **Ticket** (recommended: Fix in PR)`) and comment; act on them. A finding sent with **Need more details** gets a fuller `detail` and options in the next rev, still unpicked.
+**When:** whenever review results (peer review, agent review, open PR threads) go into a bluedoc, without being asked. Each finding is a **decision item**: the reader picks an option next to your starred recommendation, comments where they disagree, and presses the send key ([Whose PR](#whose-pr-metareview)). The reply lists each pick (`→ **Ticket** (recommended: Fix in PR)`) and comment; act on them. A finding sent with **Need more details** gets a fuller `detail` and options in the next rev, still unpicked.
 
 **Home card:** `+N / −N` lines in large type, the file and PR count, and one dot per finding coloured by size.
-**Required** (an error on a new rev, a warning on older ones): at least one `diff` block, and every item with `choices` has `state` set to `blocker`, `major`, `minor` or `nit`.
+**Required** (an error on a new rev, a warning on older ones): at least one `diff` block; every item with `choices` has `state` set to `blocker`, `major`, `minor` or `nit`; a review of a PR (a `diff` block with `pr`) has `meta.review`; a `post` review's findings offer only `post` and `skip`.
 
-## Whose review: `meta.review`
+## Whose PR: `meta.review`
 
-Set it when you scaffold: `build.py new review <doc> --of local|theirs|mine` (omit it when none fits). It names the page's send key, and the reply says what to do next:
+Who owns the change decides what the reader can do with a finding. Check it before you write anything: `gh pr view <n> --repo <owner>/<repo> --json author --jq .author.login` against `gh api user --jq .login`.
 
-| `meta.review` | The review | Send key | When the reply comes |
+- **Someone else's PR:** the reader can't change their code. Every finding is a comment to **post or not**: never Fix, Ticket or Decline. `post`.
+- **The reader's own PR:** the reader can fix it. Your job is the peers' comments: gather the open threads (`ghthreads.py`), check each against the code, and the reader decides **Fix in PR, Ticket or Decline**. `threads`.
+- **A review of the reader's own PR, only when they ask for one:** you review the code yourself, and each finding is a comment to post or not. `post`.
+- **The reader's change before any PR:** you reviewed their working tree; they fix, ticket or decline. `local`.
+
+PRs of different owners go in separate docs, one `meta.review` each. Scaffold with `build.py new review <doc> --of post|threads|local`: `--of post` writes the Post / Don't post options.
+
+| `meta.review` | Options per finding | Send key | When the reply comes |
 |---|---|---|---|
-| `local` | You reviewed the reader's own change, before any PR | **Apply decisions** | Fix the findings marked to fix in the working tree, file a ticket for each one marked Ticket, drop the declines, then report what you did. |
-| `theirs` | A colleague's PR | **Post review** | Post ONE GitHub review on the PR (`gh api -X POST repos/<owner>/<repo>/pulls/<n>/reviews --input <file>`, `{event, body, comments: [{path, line, side, body}]}`): a comment per finding the reader kept, on its line (its **Reply I'd post**, or the reader's comment), declines left out. `event` is the reply's **Post as**: Comment `COMMENT`, Request changes `REQUEST_CHANGES`, Approve `APPROVE` (`wait`'s header says `review event …`). |
-| `mine` | Comments on the reader's own PR | **Reply and fix** | Fix the findings marked to fix on the PR's branch and push, then reply on each thread with the finding's **Reply I'd post** and resolve the fixed ones (`gh api graphql`, `resolveReviewThread`). |
+| `post` | `post` **Post**, `skip` **Don't post** | **Post review** | Post ONE GitHub review on the PR (`gh api -X POST repos/<owner>/<repo>/pulls/<n>/reviews --input <file>`, `{event, body, comments: [{path, line, side, body}]}`): a comment per finding picked Post, on its line, with its **Comment I'd post** or the reader's comment in its place; nothing for Don't post. `event` is the reply's **Post as**: Comment `COMMENT`, Request changes `REQUEST_CHANGES`, Approve `APPROVE` (`wait`'s header says `review event …`). |
+| `threads` | `fix` **Fix in PR**, `ticket` **Ticket**, `decline` **Decline** | **Reply and fix** | Fix the findings marked to fix on the PR's branch and push, then reply on each thread with the finding's **Reply I'd post** and resolve the fixed ones (`gh api graphql`, `resolveReviewThread`). |
+| `local` | **Fix now**, **Ticket**, **Decline** | **Apply decisions** | Fix the findings marked to fix in the working tree, file a ticket for each one marked Ticket, drop the declines, then report what you did. |
 
-Without `meta.review` the key reads **Send answers**. Each key shows the count of picks, ticks and comments not sent yet.
+Without `meta.review` (a codebase review by area) the key reads **Send answers**. Each key shows the count of picks, ticks and comments not sent yet.
 
 ## Layout
 
 **Document**
 - `subtitle`: what the page holds, then "Pick what to do with each; my recommendation is starred."
-- `state`: counts per verdict, e.g. "11 review comments", "6 fix in the PR", "2 follow-up tickets", "2 decline", "1 resolves when a fix lands".
+- `state`: counts per verdict, e.g. "11 review comments", "6 fix in the PR", "2 follow-up tickets", "2 decline", "1 resolves when a fix lands"; on a `post` review "9 review comments", "7 to post", "2 not to post".
 - `links`: each PR, then related docs.
-- `tldr`: how many to fix, ticket and decline, and which findings are real bugs the change introduces.
+- `tldr`: how many to fix, ticket and decline (on a `post` review: how many to post), and which findings are real bugs the change introduces.
 
 **Section 1, Summary**
 - `lead`: "Each finding has its options under it, with my recommendation starred. Pick one per finding, comment where you disagree, then press **Post review**." Name the page's send key: **Apply decisions**, **Post review**, **Reply and fix**, or **Send answers** without `meta.review`.
@@ -36,9 +43,9 @@ Without `meta.review` the key reads **Send answers**. Each key shows the count o
   - `text`: the finding as a fact in one line ("A retry can authorize the card twice"), not an instruction: the options are the instructions.
   - `sub`: `Recommend <option>: <one-line reason>.`
   - `state` / `stateKind`: the size: `blocker` / `risk`, `major` / `warn`, `minor` / `info`, `nit` / `todo`.
-  - `choices`: `fix` "Fix in PR", `ticket` "Ticket", `decline` "Decline" by default. Use the real decision when it differs: a finding that resolves once another lands gets `after` "Resolve after <x>" plus a fix option; a design question gets its actual alternatives. 2–6 options, labels ≤ 28 characters. Each option's `md` says what it means for this finding and what it costs, 1–3 sentences ("Change `>` to `>=` before #412 merges: one character."); the build fails without it.
+  - `choices`: by `meta.review` (the table above). On `threads` and `local` reviews, use the real decision when it differs: a finding that resolves once another lands gets `after` "Resolve after <x>" plus a fix option; a design question gets its actual alternatives. A `post` review offers only `post` "Post" and `skip` "Don't post". 2–6 options, labels ≤ 28 characters. Each option's `md` says what it means for this finding and what it costs, 1–3 sentences ("Change `>` to `>=` before #412 merges: one character."); the build fails without it.
   - `recommend`: your option's id. Never set `choice`.
-  - `detail`, in this order: **Reviewer:** the finding restated faithfully, with the reviewer's evidence. **My reasoning:** why this recommendation, citing `path:line` and what you checked. **Fix:** the concrete change. **Verify:** the observable check. **Reply I'd post:** for declines and tickets.
+  - `detail`, in this order: **Reviewer:** the finding restated faithfully, with the reviewer's evidence (on a `post` review: **Evidence:**, what you read or ran). **My reasoning:** why this recommendation, citing `path:line` and what you checked. On `threads`: **Fix:** the concrete change, **Verify:** the observable check, **Reply I'd post:** for declines and tickets. On `post`: **Comment I'd post:** the comment as the author will read it, plain and specific.
 - A `diff` block right after the checklist, from `gitdiff.py` (below): only the files with findings, a `note` naming the head and scope ("Only the commented files. Head `<head>`."), one comment per finding.
 
 **Your own review, by area** (no PR, or findings grouped by area or concern): scaffold it with `build.py new review <doc> --shape area`, which writes the changes below; fill its `<<…>>` and copy the area section per area. For a codebase review, diff from the last release you reviewed to head.

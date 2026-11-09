@@ -3354,7 +3354,7 @@ const PICKS_WITH_CHANGES = IS_PLAN || IS_DESIGN;
 const AP_NOUN = IS_DECK ? 'presentation' : IS_SITE ? 'website' : IS_LISTING ? 'listing' : IS_DESIGN ? 'design' : 'plan';
 const AP_TITLE = AP_NOUN[0].toUpperCase() + AP_NOUN.slice(1);
 // a review's kind (meta.review): what Send does with its answers (SEND_AS)
-const REVIEW_OF = DOC_TYPE === 'review' && ['local', 'theirs', 'mine'].includes(meta.review) ? meta.review : null;
+const REVIEW_OF = DOC_TYPE === 'review' && ['local', 'threads', 'post'].includes(meta.review) ? meta.review : null;
 const SCREEN = IS_DECK ? 'slide' : IS_SITE ? 'page' : IS_LISTING ? 'shot' : 'screen';   // what the board's artboards are called on this page
 let BOARD = null;   // a design doc's board (renderBoard), once drawn
 const overallBar = h('div', { class: 'bp-bar' }, h('i'));
@@ -4844,7 +4844,7 @@ function replyPayload() {
   return {
     kind: 'answers', doc: docId, rev: CUR.rev, title: DOC.title || '', path: location.pathname, at: new Date().toISOString(),
     message: (store.get(MSG_KEY) || '').trim(), ...(msgFiles().length ? { messageFiles: filesJson(msgFiles()).files } : {}),
-    ...(REVIEW_OF === 'theirs' ? { reviewEvent: postAs } : {}),
+    ...(REVIEW_OF === 'post' ? { reviewEvent: postAs } : {}),
     items: answerItems(),
     markdown: answersMd(),
   };
@@ -4929,16 +4929,16 @@ const PLAN_KEY = `bp:${docId}:__planstate`;
 // [icon, key, dialog title, what the agent does with it]
 const SEND_AS = {
   local: ['listchecks', 'Apply decisions', 'Apply your decisions', 'The agent fixes the findings you marked to fix in your working tree, files the tickets, drops the declines and reports back.'],
-  theirs: ['pr', 'Post review', 'Post review to the PR', 'The agent posts one GitHub review on the PR, with a comment per finding you kept.'],
-  mine: ['reply', 'Reply and fix', 'Reply and fix on your PR', 'The agent fixes the findings you marked to fix on your branch, then replies on each thread and resolves the fixed ones.'],
+  threads: ['reply', 'Reply and fix', 'Reply and fix on your PR', 'The agent fixes the findings you marked to fix on your branch, then replies on each thread and resolves the fixed ones.'],
+  post: ['pr', 'Post review', 'Post review to the PR', 'The agent posts one GitHub review on the PR, with a comment per finding you marked Post.'],
 }[REVIEW_OF] || ['send', 'Send answers', 'Send your answers to the agent', ''];
-// a review of someone else's PR: the GitHub review event it posts as (the send dialog's Post as), the payload's reviewEvent
+// a post review (someone else's PR, or your own you asked a review of): the GitHub review event it posts as (the send dialog's Post as), the payload's reviewEvent
 const POST_AS = [['COMMENT', 'Comment'], ['REQUEST_CHANGES', 'Request changes'], ['APPROVE', 'Approve']];
 let postAs = 'COMMENT';
 // what Send sends: the checklists, and on a review of someone else's PR how to post it, under the title
 function answersMd() {
   const md = allChecklistsMd(), i = md.indexOf('\n\n') + 2;
-  return REVIEW_OF === 'theirs' ? md.slice(0, i) + `Post as: ${POST_AS.find(p => p[0] === postAs)[1]}\n\n` + md.slice(i) : md;
+  return REVIEW_OF === 'post' ? md.slice(0, i) + `Post as: ${POST_AS.find(p => p[0] === postAs)[1]}\n\n` + md.slice(i) : md;
 }
 function replyCounts() {
   const all = Object.values(ITEMS), dec = all.filter(x => x.choices);
@@ -4977,7 +4977,7 @@ function openSend() {
     const how = h('p', { class: 'how' });
     const pre = h('pre', {});
     // Post as: as GitHub's Submit review asks
-    const postSeg = REVIEW_OF === 'theirs' ? h('div', { class: 'bd-sg', role: 'radiogroup', 'aria-label': 'Post as' }, POST_AS.map(([v, l]) =>
+    const postSeg = REVIEW_OF === 'post' ? h('div', { class: 'bd-sg', role: 'radiogroup', 'aria-label': 'Post as' }, POST_AS.map(([v, l]) =>
       h('button', { type: 'button', role: 'radio', 'data-v': v, onclick: () => { postAs = v; sendDlg._paint(); } }, l))) : null;
     const send = h('button', { type: 'button', class: 'bp-btn primary', onclick: () => doSend() }, ic('send'), 'Send');
     const copy = h('button', { type: 'button', class: 'bp-btn', onclick: () => { copyText(answersMd(), 'Copied: paste it into the chat with the agent'); sendDlg.close(); } }, ic('copy'), 'Copy');

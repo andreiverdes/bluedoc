@@ -149,7 +149,7 @@ reader state and the hash of the JSON it shows in its bp-state element ({version
 sqlite3).
 
 Replies: Send answers (or a review's Apply decisions, Post review, Reply and fix) posts to /__bluedoc/reply, with a
-`theirs` review's reviewEvent (COMMENT, REQUEST_CHANGES or APPROVE; `wait` prints it in its header), Request changes
+`post` review's reviewEvent (COMMENT, REQUEST_CHANGES or APPROVE; `wait` prints it in its header), Request changes
 to /__bluedoc/changes, Approve (plan, design, website; a presentation or storelisting is refused, 400) to
 /__bluedoc/approve. Each becomes a row in state.db, queued for `wait`, which returns the oldest unread one
 (GET /__bluedoc/wait needs the X-Bluedoc header and the key) and marks it delivered; a restart keeps the queue. The
@@ -222,7 +222,7 @@ COOKIE_AGE = 400 * 86400   # the key cookie's Max-Age: the most browsers keep; e
 SKIP_DIRS = {"node_modules", "build", "dist", "target", "out", "vendor", "Pods", "DerivedData", "__pycache__"}
 MAX_DEPTH, MAX_BODY, SEARCH_CHARS = 8, 4 * 1024 * 1024, 8000   # SEARCH_CHARS keeps index.json small (~10 KB a doc)
 KINDS = ("answers", "changes", "approval")
-REVIEW_EVENTS = ("COMMENT", "REQUEST_CHANGES", "APPROVE")   # an answers reply's reviewEvent: a `theirs` review's Post as
+REVIEW_EVENTS = ("COMMENT", "REQUEST_CHANGES", "APPROVE")   # an answers reply's reviewEvent: a `post` review's Post as
 REPLY_SUFFIX = {"answers": "reply", "changes": "changes", "approval": "approval"}   # pre-state.db <stem>.<suffix>.md/.json
 REPLY_ROUTES = {"/__bluedoc/reply": "answers", "/__bluedoc/changes": "changes", "/__bluedoc/approve": "approval"}
 STATE_MAX_BODY, STATE_MAX_OPS, STATE_MAX_VALUE = 1024 * 1024, 2000, 64 * 1024
@@ -3761,7 +3761,7 @@ def state_ops(data: dict) -> list[tuple[str, str | None]]:
 # ---------- inbox: replies the agent waits for ----------
 
 def reply_message(row: dict) -> dict:
-    """What `wait` and `reply` print for a replies row: with its reviewEvent when the reader posted one (a `theirs`
+    """What `wait` and `reply` print for a replies row: with its reviewEvent when the reader posted one (a `post`
     review's Post as)."""
     out = {k: row[k] for k in ("id", "kind", "doc", "rev", "at", "markdown")}
     try:
@@ -4376,7 +4376,7 @@ def make_handler(port: int, default_to: str):
                     return self.json(409, {"error": "an item asks for more details: send that request or withdraw it, then approve"})
             else:
                 ok = isinstance(data.get("items" if kind == "answers" else "annotations"), list)
-                # a review of someone else's PR (meta.review "theirs"): the GitHub review event the reader picked
+                # a review of someone else's PR (meta.review "post"): the GitHub review event the reader picked
                 if ok and "reviewEvent" in data and (kind != "answers" or data["reviewEvent"] not in REVIEW_EVENTS):
                     return self.json(400, {"error": f"reviewEvent is one of {', '.join(REVIEW_EVENTS)}, on answers only"})
             if not ok:
@@ -4945,7 +4945,7 @@ def main() -> int:
 
 
 def print_reply(m: dict, rules: bool = False) -> None:
-    """A reply as `wait` and `reply` print it: a header with its id, rev, time and a `theirs` review's review event
+    """A reply as `wait` and `reply` print it: a header with its id, rev, time and a `post` review's review event
     (Post as), then its Markdown. `wait` (one reply per process) names the reply rules in the skill this CLI runs from
     on stderr, so stdout keeps its shape."""
     if rules:

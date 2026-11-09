@@ -16,11 +16,11 @@ Usage:
                                     also compare each pinned evidence entry with its repo now (codepin.py: current,
                                     moved, stale, unknown) and list the stale ones; with -o the page shows it. Without
                                     it an -o page shows each pin's commit only (the goldens have no repo state)
-  build.py new TYPE out.bluedoc.json [--title T] [--kind K] [--shape pr|area] [--of local|theirs|mine] [--target T,…]
+  build.py new TYPE out.bluedoc.json [--title T] [--kind K] [--shape pr|area] [--of post|threads|local] [--target T,…]
                                     [--framework F] [--icons] [--url URL]
                                     write the fill-in skeleton of a docs|review|plan|design|presentation|website|
                                     other doc (--shape area: a review by area of a codebase, not by PR; --of: a
-                                    review's meta.review, which names its send key; design: one
+                                    review's meta.review, who owns the change: post writes Post/Don't post options; design: one
                                     wireframe screen file per --target watch|mobile|tablet|desktop|web, --icons
                                     adds an app icon with stub layers; presentation: a deck of three stub slides;
                                     website: a home page, live from --url (a loopback dev server) or a stub file)
@@ -199,10 +199,13 @@ BOARD_TYPES = ("design", "presentation", "website", "storelisting")
 DOCS_KINDS = {"architecture", "walkthrough", "runbook", "setup", "reference", "proposal", "change", "changes", "plan",
               "status", "guide", "design", "spec", "rfc", "adr", "overview", "tutorial", "onboarding", "explainer", "playbook"}
 FINDING_SIZES = ("blocker", "major", "minor", "nit")   # a review finding's state
-# a review's meta.review: whose change it reviews, which names the page's send key (types/review.md): local (Claude
-# reviewed your own change: Apply decisions), theirs (a colleague's PR: Post review), mine (comments on your own PR:
-# Reply and fix)
-REVIEW_OF = ("local", "theirs", "mine")
+# a review's meta.review: what the reader's answers become, which names the page's send key (types/review.md). Who
+# owns the change decides it: local (your own change before any PR: Apply decisions), threads (peers' comments on your
+# own PR: Reply and fix), post (someone else's PR, or your own PR when you asked for a review: Post review, whose
+# findings can only be posted or not: POST_CHOICES)
+REVIEW_OF = ("local", "threads", "post")
+REVIEW_RENAMED = {"theirs": "post", "mine": "threads"}   # 1.0.19's words, refused with the new one named
+POST_CHOICES = ("post", "skip")
 # hero: the home card's element for docs without a canvas and for other docs
 HERO_ICONS = ["chart", "doc", "flag", "bolt", "clock", "users", "bug", "box", "check", "globe", "lock", "list"]
 MAX_HERO_VALUE, MAX_HERO_LABEL = 8, 28
@@ -2223,6 +2226,7 @@ def check_contract(doc: dict) -> list[str]:
     blocks = list(all_blocks(doc))
     types = {b.get("type") for b in blocks}
     out: list[str] = []
+    review = (doc.get("meta") or {}).get("review")
     if t == "review":
         if "diff" not in types:
             out.append("a review needs a diff block (gitdiff.py writes one)")
@@ -2233,6 +2237,17 @@ def check_contract(doc: dict) -> list[str]:
                 if isinstance(it, dict) and it.get("choices") and it.get("state") not in FINDING_SIZES:
                     has = f"state {it['state']!r}" if it.get("state") else "no state"
                     out.append(f"finding '{b.get('id')}/{it.get('id')}' has {has}: give it one of {'|'.join(FINDING_SIZES)}")
+                # someone else's PR: the reader can only post a comment or not, never fix, ticket or decline it
+                bad = [str(c.get("id")) for c in it.get("choices") or [] if isinstance(c, dict) and c.get("id") not in POST_CHOICES] \
+                    if isinstance(it, dict) and it.get("choices") and review == "post" else []
+                if bad:
+                    out.append(f"finding '{b.get('id')}/{it.get('id')}' offers {', '.join(bad)}: a post review's findings "
+                               "are only posted or not (choices post \"Post\", skip \"Don't post\")")
+        # a review of a PR (a diff block naming one, or a pr-<n> section) says whose PR it is
+        if review is None and (any(b.get("type") == "diff" and b.get("pr") for b in blocks)
+                               or any(re.fullmatch(r"pr-\d+", str(s.get("id") or "")) for s in doc.get("sections") or [])):
+            out.append("a review of a PR needs meta.review: post (someone else's PR, or your own PR you were asked to "
+                       "review) or threads (peers' comments on your own PR); check the PR's author first")
     elif t == "plan":
         out += [f"a plan needs a {bt} block" for bt in ("steps", "files") if bt not in types]
     elif t == "docs" and "canvas" not in types and not doc.get("hero"):
@@ -2386,8 +2401,9 @@ def _validate(rep: Report, doc: dict, doc_path: Path | None, *, allow_remote: bo
     if review is not None and doc_type(doc.get("meta") or {}) != "review":
         rep.err("doc.meta.review", "only a review doc has it: set meta.type to 'review', or drop it")
     elif review is not None and review not in REVIEW_OF:
-        rep.err("doc.meta.review", f"'{review}' not in {list(REVIEW_OF)}: local (your own change), theirs (a colleague's PR), "
-                                   "mine (comments on your own PR)")
+        hint = f"'{review}' is now '{REVIEW_RENAMED[review]}'" if review in REVIEW_RENAMED else f"'{review}' not in {list(REVIEW_OF)}"
+        rep.err("doc.meta.review", f"{hint}: local (your own change, no PR), threads (peers' comments on your own PR), "
+                                   "post (someone else's PR, or a review of your own PR you were asked for)")
     for i, s in enumerate(doc.get("state") or []):
         if s.get("kind") and s["kind"] not in STATE_KINDS:
             rep.err(f"doc.state[{i}]", f"kind '{s['kind']}' not in {sorted(STATE_KINDS)}")
@@ -3412,8 +3428,9 @@ def cmd_new(argv: list[str]) -> int:
     ap.add_argument("--kind", help="meta.kind, the eyebrow word (e.g. Architecture, Runbook)")
     ap.add_argument("--shape", choices=("pr", "area"), default="pr",
                     help="review only: one section per PR (pr), or per area of a codebase review (area)")
-    ap.add_argument("--of", choices=REVIEW_OF, help="review only: meta.review, whose change it reviews: local (your own "
-                    "change), theirs (a colleague's PR), mine (comments on your own PR); it names the page's send key")
+    ap.add_argument("--of", choices=REVIEW_OF, help="review only: meta.review, what the answers become: local (your own "
+                    "change, no PR), threads (peers' comments on your own PR), post (someone else's PR, or your own PR "
+                    "you were asked to review: findings are only posted or not); it names the page's send key")
     design_targets = [t for t in TARGET_DEVICES if t not in ("presentation", "listing")]
     ap.add_argument("--target", help=f"design only: comma list of {','.join(design_targets)}; one starter artboard "
                     "and wireframe screen file each (default mobile). A deck is `new presentation`")
@@ -3463,6 +3480,12 @@ def cmd_new(argv: list[str]) -> int:
         meta["kind"] = a.kind
     if a.of:
         meta["review"] = a.of
+        if a.of == "post":
+            scaffold_post_review(doc)
+        key = {"local": "Apply decisions", "threads": "Reply and fix", "post": "Post review"}[a.of]
+        for s in doc.get("sections") or []:
+            if isinstance(s.get("lead"), str):
+                s["lead"] = s["lead"].replace("**Send answers**", f"**{key}**")
     stubs = (scaffold_design(doc, a.out, targets, a.framework or "auto", a.icons) if a.type == "design"
              else scaffold_deck(doc, a.out) if a.type == "presentation"
              else scaffold_site(doc, a.out, a.url) if a.type == "website"
@@ -3620,6 +3643,23 @@ def scaffold_listing(doc: dict, out: Path) -> dict[Path, str]:
         else:
             stubs[out.parent / screen_rel(out, a)] = stub_screen(a)
     return stubs
+
+
+def scaffold_post_review(doc: dict) -> None:
+    """`new review --of post`: someone else's PR (or a review of your own PR you were asked for), so every finding is
+    posted as a comment or not: the skeleton's options, counts and verdict words say so."""
+    doc["state"] = [{"label": "<<N review comments>>", "kind": "warn"}, {"label": "<<N to post>>", "kind": "warn"},
+                    {"label": "<<N not to post>>", "kind": "todo"}]
+    doc["tldr"] = "<<How many to post, and which findings are real bugs the PR introduces.>>"
+    for b in all_blocks(doc):
+        for it in b.get("items") or [] if b.get("type") == "checklist" else []:
+            if not it.get("choices"):
+                continue
+            it["sub"], it["recommend"] = "Recommend Post: <<one-line reason>>.", "post"
+            it["choices"] = [{"id": "post", "label": "Post", "md": "Posted on its line as written under **Comment I'd post**, or as your comment here."},
+                             {"id": "skip", "label": "Don't post", "md": "Not posted: <<what is lost if the author never hears it>>."}]
+            it["detail"] = ("**Evidence:** <<what you read or ran, with path:line>>\n\n**My reasoning:** <<why it matters, or why not>>\n\n"
+                            "**Comment I'd post:** <<the comment as the author will read it>>")
 
 
 def scaffold_deck(doc: dict, out: Path) -> dict[Path, str]:

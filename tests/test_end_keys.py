@@ -1,12 +1,14 @@
 """The keys that end the bottom tray, and a review's meta.review.
 
-The build: meta.review is local, theirs or mine, on a review doc only (an ERROR otherwise); `build.py new review --of`
-writes it and the doc card lists it. The server: an approval for a presentation or storelisting is refused (400); an
+The build: meta.review is post, threads or local, on a review doc only (an ERROR otherwise; 1.0.19's theirs and mine
+name their new words); a review of a PR needs one, and a post review's findings offer only Post and Don't post (the
+type's contract); `build.py new review --of` writes it, --of post with Post / Don't post options, and the doc card
+lists it. The server: an approval for a presentation or storelisting is refused (400); an
 answers reply's reviewEvent is COMMENT, REQUEST_CHANGES or APPROVE (else 400) and `reply`/`wait` print it in the
 header. The browser tests (BLUEDOC_BROWSER_TESTS=1): each page type's dock ends as types/review.md and schema.md's
 tray table say (Approve on a plan, design and website; Present on a deck, whose toolbar's last key is a blue Export
 to…; nothing on a listing; the send key named by meta.review; Send answers elsewhere with a checklist; Request changes
-alone without one); the send key counts what hasn't gone; a `theirs` review's dialog posts as the reader picked."""
+alone without one); the send key counts what hasn't gone; a `post` review's dialog posts as the reader picked."""
 from __future__ import annotations
 
 import json
@@ -27,9 +29,16 @@ END = """[...document.querySelector('.bd-anntb .bd-key.go').parentElement.childr
 
 
 def review_of(docs, kind: str):
-    """A copy of the example review with meta.review set, under its own id."""
+    """A copy of the example review with meta.review set, under its own id; a `post` copy's findings offer only Post
+    and Don't post, as the contract asks."""
     d = load_json(docs / f"{REVIEW}.bluedoc.json")
     d["id"], d["meta"] = f"acme-review-{kind}", {**d["meta"], "review": kind}
+    if kind == "post":
+        for b in build.all_blocks(d):
+            for it in b.get("items") or [] if b.get("type") == "checklist" else []:
+                if it.get("choices"):
+                    it["recommend"], it["choices"] = "post", [{"id": "post", "label": "Post", "md": "Posted on its line."},
+                                                              {"id": "skip", "label": "Don't post", "md": "Not posted."}]
     path = docs / f"acme-review-{kind}.bluedoc.json"
     path.write_text(json.dumps(d, ensure_ascii=False), encoding="utf-8")
     shutil.copy(docs / f"{REVIEW}.diffcache.json", docs / f"acme-review-{kind}.diffcache.json")
@@ -40,11 +49,12 @@ class MetaReview(unittest.TestCase):
     def errors(self, doc: dict) -> list[str]:
         return [e for e in build.validate(doc, None, write_cache=False).errors if "meta.review" in e]
 
-    def test_review_takes_local_theirs_or_mine_and_nothing_else(self) -> None:
+    def test_review_takes_post_threads_or_local_and_nothing_else(self) -> None:
         doc = load_json(EXAMPLES / f"{REVIEW}.bluedoc.json")
         for kind in build.REVIEW_OF:
             self.assertEqual(self.errors({**doc, "meta": {**doc["meta"], "review": kind}}), [], kind)
-        self.assertIn("not in ['local', 'theirs', 'mine']", self.errors({**doc, "meta": {**doc["meta"], "review": "ours"}})[0])
+        self.assertIn("not in ['local', 'threads', 'post']", self.errors({**doc, "meta": {**doc["meta"], "review": "ours"}})[0])
+        self.assertIn("'theirs' is now 'post'", self.errors({**doc, "meta": {**doc["meta"], "review": "theirs"}})[0])
         plan = load_json(EXAMPLES / "acme-saved-carts-plan.bluedoc.json")
         self.assertIn("only a review doc has it", self.errors({**plan, "meta": {**plan["meta"], "review": "local"}})[0])
 
@@ -52,16 +62,36 @@ class MetaReview(unittest.TestCase):
         tmp = TempHome()
         self.addCleanup(tmp.cleanup)
         out = tmp.dir / "r.bluedoc.json"
-        r = tmp.run("build.py", "new", "review", out, "--of", "theirs")
+        r = tmp.run("build.py", "new", "review", out, "--of", "post")
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual(load_json(out)["meta"]["review"], "theirs")
+        doc = load_json(out)
+        self.assertEqual(doc["meta"]["review"], "post")
+        items = [it for b in build.all_blocks(doc) if b.get("type") == "checklist" for it in b.get("items") or [] if it.get("choices")]
+        self.assertTrue(items)
+        self.assertEqual({tuple(c["id"] for c in it["choices"]) for it in items}, {("post", "skip")})
+        self.assertNotIn("Send answers", json.dumps(doc), "the scaffold names Post review, not Send answers")
         r = tmp.run("build.py", "new", "review", tmp.dir / "s.bluedoc.json")
         self.assertNotIn("review", load_json(tmp.dir / "s.bluedoc.json")["meta"])
         r = tmp.run("build.py", "new", "plan", tmp.dir / "p.bluedoc.json", "--of", "local")
         self.assertEqual(r.returncode, 2)
         self.assertIn("--of is for review docs", r.stderr)
-        self.assertIn("meta.review  str  opt  local|theirs|mine", build.schema_card("doc"))
-        self.assertIn("meta.review local|theirs|mine", build.schema_card("review"))
+        self.assertIn("meta.review  str  opt  local|threads|post", build.schema_card("doc"))
+        self.assertIn("meta.review local|threads|post", build.schema_card("review"))
+
+
+class WhosePR(unittest.TestCase):
+    """The contract: a review of a PR says whose it is, and someone else's PR gets only Post and Don't post."""
+    def test_a_pr_review_needs_meta_review(self) -> None:
+        doc = load_json(EXAMPLES / f"{REVIEW}.bluedoc.json")
+        self.assertEqual(build.check_contract(doc), [])
+        meta = {k: v for k, v in doc["meta"].items() if k != "review"}
+        self.assertTrue(any("a review of a PR needs meta.review" in g for g in build.check_contract({**doc, "meta": meta})))
+
+    def test_a_post_review_offers_only_post_and_skip(self) -> None:
+        doc = load_json(EXAMPLES / f"{REVIEW}.bluedoc.json")
+        gaps = build.check_contract({**doc, "meta": {**doc["meta"], "review": "post"}})
+        self.assertTrue(gaps and all("a post review's findings are only posted or not" in g for g in gaps), gaps)
+        self.assertIn("offers fix, ticket, decline", gaps[0])
 
 
 class Server(unittest.TestCase):
@@ -89,7 +119,7 @@ class Server(unittest.TestCase):
             self.assertIn(says, raw)
 
     def test_review_event_is_checked_and_printed(self) -> None:
-        path = review_of(self.docs, "theirs")
+        path = review_of(self.docs, "post")
         body = {"path": self.server.url_for(path), "rev": "1", "items": [], "markdown": "# R\n\nPost as: Approve\n"}
         self.assertEqual(self.post("/__bluedoc/reply", {**body, "reviewEvent": "MERGE"})[0], 400)
         self.assertEqual(self.post("/__bluedoc/changes", {**body, "annotations": [], "reviewEvent": "APPROVE"})[0], 400)
@@ -104,15 +134,15 @@ class Server(unittest.TestCase):
 @unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")
 class Dock(ChromePage):
     def test_each_page_type_ends_its_dock_with_its_key(self) -> None:
-        for kind in ("local", "theirs", "mine"):
+        for kind in ("local", "threads", "post"):
             review_of(self.docs, kind)
         (self.docs / "acme-note.bluedoc.json").write_text(json.dumps(
             {"id": "acme-note", "title": "Acme note", "meta": {"type": "other"},
              "sections": [{"id": "s", "title": "Note", "blocks": [{"type": "text", "md": "No checklist here."}]}]}), encoding="utf-8")
         want = {"acme-saved-carts-plan": [["approve", "Approve"]], "acme-fit-design": [["approve", "Approve"]],
                 "acme-site": [["approve", "Approve"]], "acme-fit-deck": [["present", "Present"]], "acme-fit-listing": [],
-                "acme-review-local": [["send", "Apply decisions"]], "acme-review-theirs": [["send", "Post review"]],
-                "acme-review-mine": [["send", "Reply and fix"]], REVIEW: [["send", "Send answers"]],
+                "acme-review-local": [["send", "Apply decisions"]], "acme-review-post": [["send", "Post review"]],
+                "acme-review-threads": [["send", "Reply and fix"]], REVIEW: [["send", "Reply and fix"]],
                 "acme-orders": [["send", "Send answers"]], "acme-note": []}
         for stem, keys in want.items():
             t = self.open(self.server.url_for(self.docs / f"{stem}.bluedoc.json"))
@@ -131,8 +161,8 @@ class Dock(ChromePage):
         t.ev("document.querySelector('.bd-anntb .bd-key.present').click()")
         t.wait_for("BP.board().present")
 
-    def test_the_send_key_counts_and_a_theirs_review_posts_as_picked(self) -> None:
-        path = review_of(self.docs, "theirs")
+    def test_the_send_key_counts_and_a_post_review_posts_as_picked(self) -> None:
+        path = review_of(self.docs, "post")
         t = self.open(self.server.url_for(path))
         key = "document.querySelector('.bd-anntb .bd-key.send')"
         t.wait_for(f"!!{key}")
