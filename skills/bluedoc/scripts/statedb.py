@@ -2,7 +2,7 @@
 
 docs     one row per doc file: its resolved path, its doc.id and a version that every changing write bumps
 state    the page's bp:<doc.id>:<key> values, one row per key (the key without the 'bp:<doc.id>:' prefix)
-replies  Send answers, Request changes and Approve plan, every one kept; delivered is NULL until `wait` returns it
+replies  Send answers, Request changes and Approve, every one kept; delivered is NULL until `wait` returns it
 
 A doc is found by its path. A write (a state PUT or a reply) for a path with no row takes over the row of the one
 other path with the same doc.id whose folder is gone too (the doc moved with its folder); a read never moves a row.

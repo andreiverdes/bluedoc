@@ -117,6 +117,8 @@ class NoNativeSelect(ChromePage):
         """Frame mode, a click on the empty board low in the window: the new-screen dialog; its Device menu."""
         t.wait_for("!!BP.boardEdit()", 20)
         t.ev("BP.setMode('frame')")
+        # the dock slides while the panels settle: a spot picked beside it then may be under it at the click
+        self.settled(t, "document.querySelector('.bd-anntb')")
         at = t.ev("""(() => { const s = document.querySelector('.bd-board'), r = s.getBoundingClientRect();
           for (let y = r.bottom - 40; y > r.top + 80; y -= 23) for (let x = r.left + 40; x < r.right - 40; x += 29) if (document.elementFromPoint(x, y) === s) return [x, y];
           return null; })()""")

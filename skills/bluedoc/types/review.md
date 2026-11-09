@@ -1,9 +1,21 @@
 # Review
 
-**When:** whenever review results (peer review, agent review, open PR threads) go into a bluedoc, without being asked. Each finding is a **decision item**: the reader picks an option (Fix in PR, Ticket, Decline, …) next to your starred recommendation, comments where they disagree, and presses **Send answers**. The reply lists each pick (`→ **Ticket** (recommended: Fix in PR)`) and comment; act on them. A finding sent with **Need more details** gets a fuller `detail` and options in the next rev, still unpicked.
+**When:** whenever review results (peer review, agent review, open PR threads) go into a bluedoc, without being asked. Each finding is a **decision item**: the reader picks an option (Fix in PR, Ticket, Decline, …) next to your starred recommendation, comments where they disagree, and presses the send key ([Whose review](#whose-review-metareview)). The reply lists each pick (`→ **Ticket** (recommended: Fix in PR)`) and comment; act on them. A finding sent with **Need more details** gets a fuller `detail` and options in the next rev, still unpicked.
 
 **Home card:** `+N / −N` lines in large type, the file and PR count, and one dot per finding coloured by size.
 **Required** (an error on a new rev, a warning on older ones): at least one `diff` block, and every item with `choices` has `state` set to `blocker`, `major`, `minor` or `nit`.
+
+## Whose review: `meta.review`
+
+Set it when you scaffold: `build.py new review <doc> --of local|theirs|mine` (omit it when none fits). It names the page's send key, and the reply says what to do next:
+
+| `meta.review` | The review | Send key | When the reply comes |
+|---|---|---|---|
+| `local` | You reviewed the reader's own change, before any PR | **Apply decisions** | Fix the findings marked to fix in the working tree, file a ticket for each one marked Ticket, drop the declines, then report what you did. |
+| `theirs` | A colleague's PR | **Post review** | Post ONE GitHub review on the PR (`gh api -X POST repos/<owner>/<repo>/pulls/<n>/reviews --input <file>`, `{event, body, comments: [{path, line, side, body}]}`): a comment per finding the reader kept, on its line (its **Reply I'd post**, or the reader's comment), declines left out. `event` is the reply's **Post as**: Comment `COMMENT`, Request changes `REQUEST_CHANGES`, Approve `APPROVE` (`wait`'s header says `review event …`). |
+| `mine` | Comments on the reader's own PR | **Reply and fix** | Fix the findings marked to fix on the PR's branch and push, then reply on each thread with the finding's **Reply I'd post** and resolve the fixed ones (`gh api graphql`, `resolveReviewThread`). |
+
+Without `meta.review` the key reads **Send answers**. Each key shows the count of picks, ticks and comments not sent yet.
 
 ## Layout
 
@@ -14,7 +26,7 @@
 - `tldr`: how many to fix, ticket and decline, and which findings are real bugs the change introduces.
 
 **Section 1, Summary**
-- `lead`: "Each finding has its options under it, with my recommendation starred. Pick one per finding, comment where you disagree, then press **Send answers**."
+- `lead`: "Each finding has its options under it, with my recommendation starred. Pick one per finding, comment where you disagree, then press **Post review**." Name the page's send key: **Apply decisions**, **Post review**, **Reply and fix**, or **Send answers** without `meta.review`.
 - A `table`: **PR | Finding | Size | Recommendation**, one row per finding, each finding linked to its item: `[text](#item-<checklist>-<item>)`.
 - A `note` callout for provenance when it matters (who posted the comments, under which login, at which heads).
 

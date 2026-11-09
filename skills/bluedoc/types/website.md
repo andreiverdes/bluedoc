@@ -44,4 +44,4 @@ A live page has no screen file to diff: after editing the source, record the cha
 
 ## Approval loop
 
-As in `types/design.md`. **Approve website** means: apply the picks to the source as approved. The approval covers the JSON and mockup screen files, not the live site's code, which keeps changing under hot reload.
+As in `types/design.md`. **Approve** means: apply the picks to the source as approved. The approval covers the JSON and mockup screen files, not the live site's code, which keeps changing under hot reload.

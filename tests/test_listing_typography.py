@@ -272,7 +272,6 @@ class TypographyPanel(ChromePage):
         t.ev(f"{POP.format('size')}.querySelector('.o[data-v=\"120\"]').click()")
         t.ev(f"{TY}.querySelector('.seg [data-v=right]').click()")
         t.wait_for("!!BP.listing().brand.draft && BP.listing().brand.font.align === 'right' && BP.listing().brand.font.size === 1.2")
-        self.assertTrue(t.ev(LST)["approveBlocks"], "Approve waits for it")
         self.send_changes(t, "1")
         out = self.reply(self.doc_path)
         self.assertIn("## Brand drafts", out)

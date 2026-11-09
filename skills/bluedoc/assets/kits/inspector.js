@@ -3,7 +3,11 @@
    those page origins, names elements from the nearest unique id as well, roots the page's IntersectionObservers in
    the frame's own viewport and can snapshot the page. A live page's snapshot, served as a screen, loads it with
    data-ids="1": named from ids as on the live page, posting to the frame's own server like any screen.
-   Page -> frame: {bd:'mode', mode}, {bd:'tokens', theme, motion}, {bd:'view', sketch, reduced, paused}, {bd:'locate', sels},
+   Page -> frame: {bd:'mode', mode, board}, {bd:'tokens', theme, motion}, {bd:'view', sketch, reduced, paused}, {bd:'locate', sels},
+     {bd:'mode', mode}       view | interact (clicks run, taps are reported: nav) | point (the Annotate bar's Element, and
+                             Link: hover outline, a click picks) | select (Text: a selection or a click picks) | edit
+                             (below) | draw, region (Pen, Region: the page's drawing layer takes the pointer; as view)
+     (board: true for a screen on the design board: its wheel, middle-button drags and Space go to the page, below)
      {bd:'sections', sels}   a website page's section selectors: hover and pick report the innermost one holding the element
      {bd:'edits', list}      list: [{sel, edits: [{sel?, text? | html?}]}]: the variants shown in place. Each edit sets the
                              text or the HTML of the element its sel finds in its section (the section itself without
@@ -23,7 +27,7 @@
                              text run, a delete hides it (display: none, so later siblings' CSS paths still match), only
                              where the element still has its tag and base text. A live page applies them again after
                              DOM changes (hot reload), at most once a frame
-   Frame -> page, exactly 8 types, strings capped at 200 chars (but a snapshot's html and an edit's text):
+   Frame -> page, exactly 11 types, strings capped at 200 chars (but a snapshot's html and an edit's text):
      {bd:'ready', w, h, vw, vh, byFrame, fallback, rects, navs, named, sigs, drafts, draftsNow}   on load, on resize, on scroll, after each
                                        locate and on any change of the document's size (fonts, images, DOM); vw: the
                                        frame's width; vh: the pinned height (null: none). h: the document's height;
@@ -50,6 +54,12 @@
                            chars, whitespace collapsed; base: the text before, without the drafts
      {bd:'key', k}         k: 'delete' | 'escape' (Edit only) | 'undo' | 'redo' (every mode), pressed in the frame outside a
                            field or an element being edited
+     {bd:'wheel', x, y, dx, dy, ctrl, meta, shift}   on the board, a wheel (a pinch: ctrl) the frame doesn't keep (in
+                           Interact it keeps a plain one its content can still scroll that way): the pointer in frame
+                           px, the deltas and modifiers
+     {bd:'pan', on, start?, x, y}   on the board, a middle-button drag: its press (start), moves and release (on: false),
+                           the pointer in frame px; the page keeps the pressed point under it
+     {bd:'space', down}    on the board, Space pressed or let go outside a field or an element being edited
    sel: the shortest unique chain of data-bd names ('submit', 'form/submit'), else a CSS path with '>' and no spaces
    from the nearest uniquely named ancestor ('[data-bd="login"]>h1:nth-of-type(1)'), on a live page (or its snapshot)
    also from the nearest unique id ('#hero-title', '#faq>details:nth-of-type(2)'), or from body. */
@@ -509,6 +519,58 @@
     }
     stir();
   }
+  /* On the board ({bd:'mode', board: true}) the screen never keeps a pinch (⌃/⌘ + wheel), a middle-button drag or
+     Space, nor a wheel but in Interact while what is under the pointer can still scroll that way (a page in Viewport,
+     a list): they go to the page, which pans and zooms the board (Interact keeps the clicks, the typing and its own
+     scrolling). Registered before the pick and key listeners, so a middle press picks nothing. */
+  let onBoard = false, spaceDown = false, midPan = null;
+  const typing = t => !!editing || (t && t.nodeType === 1 && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)));
+  // the element from t up to the document that can still scroll by dx, dy (px; the sign is what counts), else null
+  function scrollerFor(t, dx, dy) {
+    const can = (pos, view, size, d) => (d > 0 && pos + view < size - 1) || (d < 0 && pos > 0);
+    for (let n = t && t.nodeType === 1 ? t : null; n && n !== root && n !== doc.body; n = n.parentElement) {
+      const cs = getComputedStyle(n);
+      if ((/auto|scroll/.test(cs.overflowY) && can(n.scrollTop, n.clientHeight, n.scrollHeight, dy)) ||
+          (/auto|scroll/.test(cs.overflowX) && can(n.scrollLeft, n.clientWidth, n.scrollWidth, dx))) return n;
+    }
+    const se = doc.scrollingElement || root, shut = a => [root, doc.body].some(n => n && /hidden|clip/.test(getComputedStyle(n)[a]));
+    return (!shut('overflowY') && can(se.scrollTop, frameH(), se.scrollHeight, dy)) || (!shut('overflowX') && can(se.scrollLeft, root.clientWidth, se.scrollWidth, dx)) ? se : null;
+  }
+  addEventListener('wheel', e => {
+    if (!onBoard) return;
+    e.preventDefault();
+    // Interact: the screen scrolls itself, by script. Left to the browser, a frame the board scales (and turns its
+    // pointer events on and off) gets the wheel event but now and then scrolls nothing
+    const side = e.shiftKey && !e.deltaX, u = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? frameH() : 1;   // Shift + wheel: sideways
+    const dx = (side ? e.deltaY : e.deltaX) * u, dy = (side ? 0 : e.deltaY) * u;
+    const sc = mode === 'interact' && !e.ctrlKey && !e.metaKey ? scrollerFor(e.target, dx, dy) : null;
+    if (sc) { sc.scrollBy(dx, dy); return; }
+    post({ bd: 'wheel', x: e.clientX, y: e.clientY, dx: e.deltaX, dy: e.deltaY, ctrl: e.ctrlKey, meta: e.metaKey, shift: e.shiftKey });
+  }, { capture: true, passive: false });
+  addEventListener('pointerdown', e => {
+    if (!onBoard || e.button !== 1) return;
+    e.preventDefault(); e.stopImmediatePropagation();
+    midPan = e.pointerId;
+    try { root.setPointerCapture(e.pointerId); } catch (err) { /* gone */ }
+    post({ bd: 'pan', on: true, start: true, x: e.clientX, y: e.clientY });
+  }, true);
+  const endPan = e => { midPan = null; post({ bd: 'pan', on: false, x: e.clientX, y: e.clientY }); };
+  addEventListener('pointermove', e => {   // the pointer in frame px; the page keeps the pressed point under it
+    if (midPan === null || e.pointerId !== midPan) return;
+    if (!(e.buttons & 4)) { endPan(e); return; }   // its release went elsewhere
+    post({ bd: 'pan', on: true, x: e.clientX, y: e.clientY });
+  }, true);
+  for (const ty of ['pointerup', 'pointercancel']) addEventListener(ty, e => { if (midPan !== null && e.pointerId === midPan) endPan(e); }, true);
+  addEventListener('auxclick', e => { if (onBoard && e.button === 1) { e.preventDefault(); e.stopImmediatePropagation(); } }, true);
+  const space = down => { if (spaceDown !== down) { spaceDown = down; post({ bd: 'space', down }); } };
+  addEventListener('keydown', e => {
+    if (!onBoard || e.key !== ' ' || e.isComposing || e.ctrlKey || e.metaKey || e.altKey || typing(e.target)) return;
+    e.preventDefault();
+    if (!e.repeat) space(true);
+  }, true);
+  addEventListener('keyup', e => { if (e.key === ' ' && spaceDown) { e.preventDefault(); space(false); } }, true);
+  addEventListener('blur', () => space(false));
+
   // keys pressed in the frame go to the page: Delete, Backspace and Esc in Edit, undo and redo in every mode; never
   // while a field or an element is being edited (the browser's own undo runs there)
   addEventListener('keydown', e => {
@@ -540,7 +602,7 @@
     const m = e.data;
     if (m.bd === 'mode' && typeof m.mode === 'string') {
       if (m.mode !== 'edit' && editing) endEdit(true);
-      mode = m.mode;
+      mode = m.mode; onBoard = m.board === true;
       if (!active()) { hovered = null; showOutline(null); }
       paintSel();
     } else if (m.bd === 'select') {

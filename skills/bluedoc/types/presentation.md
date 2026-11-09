@@ -6,7 +6,7 @@
 python3 <skill>/scripts/build.py new presentation docs/decks/<topic>.bluedoc.json --title "…"
 ```
 
-This writes the brief, a board of three slides (`title`, `content`, `closing`) and their stub files in `<topic>.design/<id>.html`. The page is a design page: the board, the brief in the right panel's Brief tab, **Present**, **Request changes** and **Approve presentation**.
+This writes the brief, a board of three slides (`title`, `content`, `closing`) and their stub files in `<topic>.design/<id>.html`. The page is a design page: the board, the brief in the right panel's Brief tab, **Request changes**, and **Present** at the end of the dock (from the selected slide); **Export to…** is the board toolbar's blue key. A deck isn't approved: its picks go with Request changes, and `wait` returns only change requests.
 
 **Home card:** the slides as 16:9 frames. **Required:** exactly one `board` block of at least one artboard, every one `device: "slide"`; a phone or any other device is an error (use a design doc for screens).
 
@@ -27,6 +27,6 @@ This writes the brief, a board of three slides (`title`, `content`, `closing`) a
 - One point per slide, readable from the back of the room. Build each in the plain kit's slide classes: `grep -n -A20 '^## Slides' <skill>/references/kits.md`. Colours from the theme tokens (`var(--accent)`).
 - The screen-file rules of `types/design.md` hold: a body fragment, no network, `data-bd` on what a reader may point at, ≤ 24 KB.
 
-## Revisions and approval
+## Revisions
 
-As in `types/design.md`: rev A is wireframes (`fidelity: "wireframe"`), hi-fi after the reader's picks; edit a slide file in place, then `build.py patch <doc> artboard:<id> --change "…" --resolves <comment id>`. A new slide: append an artboard with `build.py patch <doc> block:slides/0 --append '{…}'` and write its file. Approval covers the JSON and every slide file; any edit to a slide asks for approval again.
+As in `types/design.md`: rev A is wireframes (`fidelity: "wireframe"`), hi-fi after the reader's picks; edit a slide file in place, then `build.py patch <doc> artboard:<id> --change "…" --resolves <comment id>`. A new slide: append an artboard with `build.py patch <doc> block:slides/0 --append '{…}'` and write its file. When the reader says the deck is done, export it (`build.py <doc> --deck out.html` or `.pdf`) or let them present it.

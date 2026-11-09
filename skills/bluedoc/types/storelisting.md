@@ -30,9 +30,9 @@ Stores want the app in use: a shot shows a mock-up only until it has a capture o
 
 The reader edits text and picks styles and the brand on the page; you record them.
 
-- **Text edits** arrive under `## Text edits`, a `build.py patch <doc> field:<locale>/<group>/<field> --set <field>=<text>` command each: run them as given (it also clears an MT mark). Approve waits until you do. `patch` refuses a text over its store limit (the page lets the reader save one, in red): say so in your reply and offer a shorter one.
+- **Text edits** arrive under `## Text edits`, a `build.py patch <doc> field:<locale>/<group>/<field> --set <field>=<text>` command each: run them as given (it also clears an MT mark). `patch` refuses a text over its store limit (the page lets the reader save one, in red): say so in your reply and offer a shorter one.
 - **Style picks** arrive under `## Decisions` (`style-<platform>-<variant>-message`/`-layout`) with a `## Style picks` command that writes `listing.style.<platform>`. A pick marked *needs the agent* also needs its hook: `data-callout` (M3), the string `<shot>.proof` (M4), a video (M5), a photo with `credits` (L5).
-- **Brand drafts** (the Colors tab's palette, the caption font at the top of Text) arrive under `## Brand drafts` with a `build.py patch <doc> brand:main --json …` command: run it as given. Approve waits until you do. The build warns on a contrast pair under 4.5:1 and on a font a PDF can't embed: say so in your reply.
+- **Brand drafts** (the Colors tab's palette, the caption font at the top of Text) arrive under `## Brand drafts` with a `build.py patch <doc> brand:main --json …` command: run it as given. The build warns on a contrast pair under 4.5:1 and on a font a PDF can't embed: say so in your reply.
 
 ## Variants and ads
 
@@ -46,9 +46,9 @@ Edit a shot file in place, then `build.py patch <doc> artboard:<id> --change "�
 
 A pin on a capture comes with the shot's capture, recipe and a `Re-shoot:` command. Fix the app, its demo data or the recipe, run that command, then `build.py patch <doc> artboard:<id> --change "Re-shot …" --resolves <id>`: the new capture joins the revision and compare shows the old one beside it. A pin on an upload has no recipe: ask for a new PNG, or add a recipe.
 
-## Checks, translation, export and approval
+## Checks, translation and export
 
 - **Checks:** `build.py <doc>` runs every store rule (`### Checks` in `references/schema.md`). A store-rule error exits 1 but the page still draws; fix each one, or say why it stays.
 - **Translation:** `build.py l10n <doc> --export es-ES` prints what to translate with each limit; translate within it, then `--import es-ES <file.json> --mt`. An over-limit string refuses the file: shorten it. Run the `## Accepted MT` command from a reply as given.
 - **Export:** `build.py <doc> --listing out.zip` writes the fastlane folders; add `--format folders` for plain folders by store, language and device with a README (`--listing out.pdf` or `.html` for review). The reader uploads it with fastlane or by hand; never upload for them. Mention the `WARN --listing` lines.
-- **Approval:** an approved listing is final at that rev: export it and hand over the ZIP. The reader can approve with unaccepted MT strings; say so.
+- **Hand-over:** a listing isn't approved: its picks and drafts come with Request changes. When the reader says it is done, export it and hand over the ZIP; name any unaccepted MT strings.

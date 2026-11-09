@@ -1,8 +1,7 @@
 """A storelisting's variants, store preview and ads (M5): each kind's limit and what it may change (PPO text and a
 watch swap refused, an SLE's text only in its locale), the variant's sections in Python and the page alike, the
 export's variants/ and ads/ folders, the ads checks and an ads asset uploaded. The browser tests
-(BLUEDOC_BROWSER_TESTS=1): the variant tabs, Compare to default, the store preview, the Ads view, and Approve with
-the variants' picks."""
+(BLUEDOC_BROWSER_TESTS=1): the variant tabs, Compare to default, the store preview and the Ads view."""
 from __future__ import annotations
 
 import base64
@@ -360,19 +359,3 @@ class VariantsInChrome(ChromePage):
         t.ev("BP.listing({platform: 'appstore'})")
         ads = t.ev("[...document.querySelectorAll('[data-ad]')].map(e => [e.dataset.ad, [...e.querySelectorAll('.bd-lst-shot')].map(s => s.dataset.ab)])")
         self.assertEqual(ads, [["default", ["today", "activity", "workouts"]], ["runners", ["run-route", "workout", "today"]]])
-
-    def test_approve_carries_every_variants_picks(self) -> None:
-        t = self.page("#appstore")
-        dec = t.ev(LST)["decisions"]
-        for v in ("runners", "lifestyle", "lifestyle-copy"):
-            self.assertIn(f"style-{'play' if v == 'lifestyle-copy' else 'appstore'}-{v}-layout", dec)
-        self.assertIn("`style-appstore-lifestyle-layout` → L5", dec)
-        self.assertEqual(t.ev(LST)["approveSummary"]["variants"], 3)
-        t.ev("document.querySelector('.bd-key.approve').click()")
-        t.wait_for("!!document.querySelector('.bd-approve[open] .bp-btn.ok')")
-        self.assertIn("lifestyle-copy", t.ev("document.querySelector('.bd-approve[open]').textContent"))
-        t.ev("document.querySelector('.bd-approve[open] .bp-btn.ok').click()")
-        self.toast(t, "approved")
-        r = self.tmp.run("serve.py", "reply", self.doc_path, "--kind", "approval")
-        self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertIn("style-play-lifestyle-copy-layout", r.stdout)

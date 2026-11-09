@@ -3,8 +3,7 @@ l10n` exports, imports (refusing an over-limit string) and accepts; the fastlane
 manifest.json; GET /__bluedoc/listing's guards; the export's progress (ExportJobs, the progress route), its renders
 deduplicated, and a cancel that stops it; the plain folders ZIP as the fastlane ZIP's files at plain paths; setKids.
 The browser tests (BLUEDOC_BROWSER_TESTS=1): the Checks tab lists the build's findings; Accept MT is a draft whose
-readback runs; Export to… downloads a ZIP (fastlane, or folders) with its progress on the key, and its × cancels it;
-Approve listing waits for an upload or brand draft."""
+readback runs; Export to… downloads a ZIP (fastlane, or folders) with its progress on the key, and its × cancels it."""
 from __future__ import annotations
 
 import hashlib
@@ -494,9 +493,6 @@ class ListingPage(ChromePage):
             t.wait_for(f"!document.getElementById('bd-lp-{side}').hidden && document.documentElement.classList.contains('bd-lp-open')")
         return t
 
-    def approve_disabled(self, t) -> bool:
-        return t.ev("document.querySelector('.bd-key.approve').disabled")
-
     def test_the_checks_tab_lists_the_builds_findings(self) -> None:
         path = copy_broken(self.docs)
         t = self.page(self.server.url_for(path), "#appstore", "checks")
@@ -530,7 +526,6 @@ class ListingPage(ChromePage):
         self.assertTrue(next(f for f in t.ev(LST)["fields"] if f["field"] == "es-ES/play/short")["mt"])
         t.ev("document.querySelector('[data-accept=\"play.short\"]').click()")
         t.wait_for("!document.querySelector('[data-accept=\"play.short\"]')")
-        self.assertFalse(self.approve_disabled(t), "an MT string only warns")
         self.send_changes(t, "1")
         out = self.reply(self.doc_path)
         cmd = next(l for l in out.splitlines() if l.startswith("build.py l10n"))
@@ -588,7 +583,6 @@ class ListingPage(ChromePage):
         self.assertIn("Exported", t.ev("__xp.labels"))
         self.assertIsNone(t.ev(f"{LST}.exporting"))
         t.wait_for("(k => !k.matches('.busy, .ok, .err') && getComputedStyle(k.querySelector('.bd-expb > span:not(.xp)')).display !== 'none')(document.querySelector('.bd-lst-btb .bd-lstx'))", 5)
-        self.assertEqual(t.ev(f"{LST}.approveBlocks"), [])
 
     def test_export_to_downloads_the_folders_zip(self) -> None:
         t = self.page(self.url)
@@ -639,40 +633,6 @@ class ListingPage(ChromePage):
             json.loads(self.server.req("GET", f"/__bluedoc/listing/progress?job={job}")[1])), 10)
         self.assertEqual(view and view["stage"], "cancelled")
         self.assertLess(view["done"], view["total"])
-
-    def test_approve_waits_for_an_upload_or_brand_draft(self) -> None:
-        from test_listing_capture import free_a_slot
-        free_a_slot(self.doc_path, "appstore/iphone-69")
-        t = self.page(self.url, "#appstore/es-ES", "colors")
-        t.wait_for("!!document.querySelector('.bd-key.approve')")
-        self.assertFalse(self.approve_disabled(t))
-        # a brand draft
-        t.ev("(i => { i.value = '#7c3aed'; i.dispatchEvent(new Event('input')); })(document.querySelector('.bd-lst-role[data-role=\"bg\"] .hx'))")
-        t.wait_for(f"{LST}.brand.draft && {LST}.approveBlocks.length > 0")
-        self.assertTrue(self.approve_disabled(t))
-        t.ev("[...document.querySelectorAll('.bd-lst-clp .bp-btn.ghost')].find(b => b.closest('.on')).click()")
-        t.wait_for(f"{LST}.approveBlocks.length === 0")
-        self.assertFalse(self.approve_disabled(t))
-        # an upload
-        from test_storelisting import png
-        (self.docs / "media").mkdir(exist_ok=True)
-        (self.docs / "media" / "good.png").write_bytes(png(1320, 2868))
-        media = self.url.rsplit("/", 1)[0] + "/media/good.png"
-        t.wait_for(f"{LST}.slots.some(s => s.set === 'appstore/iphone-69')")
-        from test_listing_capture import DROP
-        t.ev(f"{DROP}({json.dumps(media)}, 'appstore/iphone-69')")
-        t.wait_for(f"{LST}.drafts.length === 1")
-        self.assertTrue(self.approve_disabled(t))
-        # the dialog counts MT strings and mock-UI shots when it can open
-        t.ev("document.querySelector('.bd-lst-uptile[data-file] .bd-lst-x, .bd-lst-uptile[data-file] button').click()")
-        t.wait_for(f"{LST}.drafts.length === 0", 15)
-        self.assertFalse(self.approve_disabled(t))
-        t.ev("document.querySelector('.bd-key.approve').click()")
-        t.wait_for("!!document.querySelector('.bd-approve[open]')")
-        # 15 es-ES MT strings; 21 shots show a mock-up somewhere: every watch shot, the lifestyle shot, and every phone
-        # shot in the tablet sets, which no phone capture fits
-        self.assertEqual({k: t.ev(LST)["approveSummary"][k] for k in ("mt", "mock")}, {"mt": 15, "mock": 21})
-        self.assertGreaterEqual(t.ev("document.querySelectorAll('.bd-approve[open] .bd-ap-sum li.warn').length"), 2)
 
 
 if __name__ == "__main__":

@@ -148,8 +148,10 @@ HTML pages carry a Content-Security-Policy (hashes of their inline scripts, no f
 reader state and the hash of the JSON it shows in its bp-state element ({version, state, docHash}; null without
 sqlite3).
 
-Replies: Send answers posts to /__bluedoc/reply, Request changes to /__bluedoc/changes, Approve (plan, design,
-presentation, website) to /__bluedoc/approve. Each becomes a row in state.db, queued for `wait`, which returns the oldest unread one
+Replies: Send answers (or a review's Apply decisions, Post review, Reply and fix) posts to /__bluedoc/reply, with a
+`theirs` review's reviewEvent (COMMENT, REQUEST_CHANGES or APPROVE; `wait` prints it in its header), Request changes
+to /__bluedoc/changes, Approve (plan, design, website; a presentation or storelisting is refused, 400) to
+/__bluedoc/approve. Each becomes a row in state.db, queued for `wait`, which returns the oldest unread one
 (GET /__bluedoc/wait needs the X-Bluedoc header and the key) and marks it delivered; a restart keeps the queue. The
 first start with a new state.db imports the <name>.reply/.changes/.approval files of earlier versions and
 inbox.json's delivered marks, and leaves the files. An approval posts the docHash and rev the page showed: the server
@@ -220,6 +222,7 @@ COOKIE_AGE = 400 * 86400   # the key cookie's Max-Age: the most browsers keep; e
 SKIP_DIRS = {"node_modules", "build", "dist", "target", "out", "vendor", "Pods", "DerivedData", "__pycache__"}
 MAX_DEPTH, MAX_BODY, SEARCH_CHARS = 8, 4 * 1024 * 1024, 8000   # SEARCH_CHARS keeps index.json small (~10 KB a doc)
 KINDS = ("answers", "changes", "approval")
+REVIEW_EVENTS = ("COMMENT", "REQUEST_CHANGES", "APPROVE")   # an answers reply's reviewEvent: a `theirs` review's Post as
 REPLY_SUFFIX = {"answers": "reply", "changes": "changes", "approval": "approval"}   # pre-state.db <stem>.<suffix>.md/.json
 REPLY_ROUTES = {"/__bluedoc/reply": "answers", "/__bluedoc/changes": "changes", "/__bluedoc/approve": "approval"}
 STATE_MAX_BODY, STATE_MAX_OPS, STATE_MAX_VALUE = 1024 * 1024, 2000, 64 * 1024
@@ -3340,18 +3343,19 @@ def save_listing_upload(doc: Path, data: dict) -> tuple[int, dict]:
                  "colour": info.get("colour"), "bytes": len(png), "replaced": replaced}
 
 
-def listing_drafts_block(doc: Path) -> str | None:
-    """Why a storelisting can't be approved yet, or None: an uploaded shot no revision records (the page disables
-    Approve too; this backs it)."""
+# a presentation and a storelisting aren't approved: their picks go with Request changes (types/presentation.md,
+# types/storelisting.md)
+NOT_APPROVED = {"presentation": "a presentation isn't approved: send Request changes, or present or export it",
+                "storelisting": "a storelisting isn't approved: send Request changes, or export it"}
+
+
+def approval_refused(doc: Path) -> str | None:
+    """Why the doc takes no approval (NOT_APPROVED by its type), or None."""
     try:
         d = json.loads(doc.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return None
-    if not (isinstance(d, dict) and build.doc_type(d.get("meta") or {}) == "storelisting"):
-        return None
-    n = len(listing.uploads(d, doc))
-    return f"{n} uploaded shot{'s are' if n != 1 else ' is'} not recorded yet: send Request changes, wait for the agent's " \
-           "revision, then approve" if n else None
+    return NOT_APPROVED.get(build.doc_type(d.get("meta") or {})) if isinstance(d, dict) else None
 
 
 # ---------- store listing brand: the brand image and the installed fonts ----------
@@ -3415,8 +3419,9 @@ def save_brand_image(doc: Path, data: dict) -> tuple[int, dict]:
 
 # ---------- reader state ----------
 
-# link, layout, listing, element: drafts (template.html); an element draft's text and base are at most 1,000 characters
-ANN_TYPES = ("pin", "text", "draw", "general", "link", "layout", "listing", "element")
+# link, layout, listing, element: drafts (template.html); an element draft's text and base are at most 1,000 characters.
+# region: a box on the page, `box` [x, y, w, h] as fractions of its target's box
+ANN_TYPES = ("pin", "text", "draw", "region", "general", "link", "layout", "listing", "element")
 EL_TEXT_MAX = 1000
 # a listing text edit (op `field`): its value and base are text up to FIELD_TEXT_MAX, or a list of FIELD_ITEMS_MAX texts
 # of EL_TEXT_MAX each (ads headlines); base null: the field wasn't set
@@ -3698,6 +3703,8 @@ def value_ok(key: str, value: str) -> bool:
             and (a.get("thread") is None or thread_ok(a["thread"])) and (a.get("draft") is None or isinstance(a["draft"], str))
             and all(a.get(k) is None or files_ok(a[k]) for k in ("files", "draftFiles"))
             and (a.get("strokes") is None or isinstance(a["strokes"], list))
+            and (a.get("type") != "region" or isinstance(a.get("box"), list) and len(a["box"]) == 4
+                 and all(isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v) for v in a["box"]) and min(a["box"][2:]) >= 0)
             and (a.get("pos") is None or isinstance(a["pos"], dict))
             and (a.get("type") != "link" or isinstance(a.get("link"), dict)
                  and all(isinstance(a["link"].get(k), str) for k in ("op", "from", "el")))
@@ -3754,8 +3761,14 @@ def state_ops(data: dict) -> list[tuple[str, str | None]]:
 # ---------- inbox: replies the agent waits for ----------
 
 def reply_message(row: dict) -> dict:
-    """What `wait` returns for a replies row."""
-    return {k: row[k] for k in ("id", "kind", "doc", "rev", "at", "markdown")}
+    """What `wait` and `reply` print for a replies row: with its reviewEvent when the reader posted one (a `theirs`
+    review's Post as)."""
+    out = {k: row[k] for k in ("id", "kind", "doc", "rev", "at", "markdown")}
+    try:
+        ev = json.loads(row["payload"] or "{}").get("reviewEvent")
+    except (ValueError, AttributeError):
+        ev = None
+    return {**out, "reviewEvent": ev} if ev in REVIEW_EVENTS else out
 
 
 def import_reply_files(roots: list[Path]) -> int:
@@ -4363,6 +4376,9 @@ def make_handler(port: int, default_to: str):
                     return self.json(409, {"error": "an item asks for more details: send that request or withdraw it, then approve"})
             else:
                 ok = isinstance(data.get("items" if kind == "answers" else "annotations"), list)
+                # a review of someone else's PR (meta.review "theirs"): the GitHub review event the reader picked
+                if ok and "reviewEvent" in data and (kind != "answers" or data["reviewEvent"] not in REVIEW_EVENTS):
+                    return self.json(400, {"error": f"reviewEvent is one of {', '.join(REVIEW_EVENTS)}, on answers only"})
             if not ok:
                 return self.json(400, {"error": f"not a bluedoc {kind} payload"})
             doc = doc_for_url(str(data.get("path") or ""))
@@ -4372,14 +4388,14 @@ def make_handler(port: int, default_to: str):
                 return self.json(503, {"error": "this server's Python has no sqlite3, so it can't keep replies: use Copy"})
             data["kind"] = kind
             if kind == "approval":
+                why = approval_refused(doc)
+                if why:
+                    return self.json(400, {"error": why})
                 # the approval covers the JSON the page showed: refuse it when the doc changed since, or the rev isn't its
                 current, _, rev = doc_info(doc)
                 if not current or data.get("docHash") != current or str(data.get("rev") or "") != rev:
                     return self.json(409, {"error": "the doc changed since this page loaded it: reload it and approve again",
                                            "reload": True})
-                why = listing_drafts_block(doc)
-                if why:
-                    return self.json(409, {"error": why})
             rid = INBOX.put(doc, kind, data, str(data.get("markdown") or "").rstrip() + "\n")
             print(f"{kind} for {doc}: reply {rid}", flush=True)
             return self.json(200, {"ok": True, "id": rid})
@@ -4929,13 +4945,15 @@ def main() -> int:
 
 
 def print_reply(m: dict, rules: bool = False) -> None:
-    """A reply as `wait` and `reply` print it: a header with its id, rev and time, then its Markdown. `wait` (one
-    reply per process) names the reply rules in the skill this CLI runs from on stderr, so stdout keeps its shape."""
+    """A reply as `wait` and `reply` print it: a header with its id, rev, time and a `theirs` review's review event
+    (Post as), then its Markdown. `wait` (one reply per process) names the reply rules in the skill this CLI runs from
+    on stderr, so stdout keeps its shape."""
     if rules:
         print(f"(rules: {HERE.parent / 'types' / 'replies.md'} — read once)", file=sys.stderr, flush=True)
     label = {"answers": "answers", "changes": "change request", "approval": "approval"}[m["kind"]]
     at = dt.datetime.fromisoformat(m["at"]).isoformat(timespec="seconds")
-    print(f"--- bluedoc {label} (reply {m['id']}{', rev ' + m['rev'] if m.get('rev') else ''}, {at}) ---")
+    event = f", review event {m['reviewEvent']}" if m.get("reviewEvent") else ""
+    print(f"--- bluedoc {label} (reply {m['id']}{', rev ' + m['rev'] if m.get('rev') else ''}, {at}{event}) ---")
     print(m["markdown"], end="")
     print("--- end ---", flush=True)
 
@@ -4970,7 +4988,7 @@ def cmd_reply(target: str, kind: str, as_json: bool) -> int:
     if as_json:
         print(json.dumps(json.loads(m["payload"]), indent=2, ensure_ascii=False))
     else:
-        print_reply(m)
+        print_reply(reply_message(m))
     return 0
 
 

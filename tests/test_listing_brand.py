@@ -6,7 +6,7 @@ GET /__bluedoc/fonts and POST /__bluedoc/listing/brand need the key, and the bra
 <stem>.listing/brand/. Under node, the page's k-means finds an image's colours by share and gives them roles.
 The browser tests (BLUEDOC_BROWSER_TESTS=1), on the left panel's Style, Brand and Checks tabs: a style pick restyles
 the shots in place and goes as decisions with its patch command; a style finding in Checks opens Style; an image's
-palette, the role editor and the contrast pairs; a brand draft blocks Approve; the family popover lists the folder's
+palette, the role editor and the contrast pairs; a brand draft goes with Request changes; the family popover lists the folder's
 fonts and ↻ Refresh fonts finds a new one; an installed font renders in a shot."""
 from __future__ import annotations
 
@@ -464,7 +464,7 @@ class BrandPage(ChromePage):
         t.ev(f"{open_style}.click()")
         t.wait_for("!document.getElementById('bd-lp-style').hidden && document.querySelector('.bd-lp-tabs [data-v=style]').getAttribute('aria-checked') === 'true'")
 
-    def test_a_palette_from_an_image_with_roles_contrast_and_a_draft_that_blocks_approve(self) -> None:
+    def test_a_palette_from_an_image_with_roles_contrast_and_a_draft_that_request_changes_sends(self) -> None:
         t = self.page("colors")
         img = self.tmp.dir / "brand.png"
         img.write_bytes(png_bands(BANDS, 128))
@@ -482,7 +482,6 @@ class BrandPage(ChromePage):
         for c in b["contrast"]:
             self.assertAlmostEqual(c["ratio"], wcag(b["palette"][c["fg"]], b["palette"][c["bg"]]), places=1)
         self.assertTrue(b["draft"])
-        self.assertTrue(t.ev(LST)["approveBlocks"])
         # the hex field of a role restyles the shots live
         t.ev("(i => { i.value = '#7c3aed'; i.dispatchEvent(new Event('input')); })(document.querySelector('.bd-lst-role[data-role=\"bg\"] .hx'))")
         t.wait_for("BP.listing().brand.palette.bg === '#7c3aed'")
@@ -500,7 +499,6 @@ class BrandPage(ChromePage):
         self.assertEqual(rec["image"], f"{STEM}.listing/brand/source.png")
         t2 = self.page("colors")
         self.assertFalse(t2.ev(LST)["brand"]["draft"])
-        self.assertEqual(t2.ev(LST)["approveBlocks"], [])
 
     def listing_rules(self) -> dict:
         return listing.load_rules()

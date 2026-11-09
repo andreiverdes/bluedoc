@@ -1,7 +1,7 @@
 """Storelisting M2: uploads, capture recipes and re-shoots.
 
 capture.py's commands per target (--dry-run), its skip lines with the tools hidden, its PNG checks; the upload route's
-guards (key, size, alpha, slot, links, recorded files) and Approve refused while an upload is unrecorded; recipes in
+guards (key, size, alpha, slot, links, recorded files) and an approval refused (a listing isn't approved); recipes in
 the build; a capture's hash in the revision; and what `patch el:<shot>/ui` prints to re-shoot. A real run against the
 simulators' and the emulator's Settings app (tests/fixtures/capture-system-apps.bluedoc.json) runs with
 BLUEDOC_DEVICE_TESTS=1 when Xcode or the Android SDK is there (it boots devices, a minute or more); the web capture
@@ -424,17 +424,14 @@ class Uploads(unittest.TestCase):
             status, no = self.post({"path": self.url, "restore": bad})
             self.assertEqual(status, 404, (bad, no))
 
-    def test_approve_is_refused_while_an_upload_is_unrecorded(self) -> None:
-        status, ans = self.upload(png(1320, 2868))
-        self.assertEqual(status, 200, ans)
-        status, raw = self.server.req("GET", f"/__bluedoc/ping?path={self.url}", headers={"X-Bluedoc": "1"})
+    def test_an_approval_is_refused(self) -> None:
         doc_hash = build.approval_hash(load_json(self.path), self.path)
         body = {"decision": "approved", "path": self.url, "docHash": doc_hash, "rev": load_json(self.path)["meta"]["rev"],
                 "answers": [], "annotations": [], "markdown": "ok"}
         status, raw = self.server.req("POST", "/__bluedoc/approve", json.dumps(body).encode(),
                                       {"Content-Type": "application/json", "X-Bluedoc": "1"})
-        self.assertEqual(status, 409, raw)
-        self.assertIn(b"not recorded", raw)
+        self.assertEqual(status, 400, raw)
+        self.assertIn(b"a storelisting isn't approved", raw)
 
 
 @unittest.skipUnless(DEVICES and (shutil.which("xcrun") or capture.android_tool("adb")),
@@ -540,7 +537,6 @@ class UploadAndPinInChrome(ChromePage):
         t.wait_for(f"{LST}.drafts.length === 1")
         got = t.ev(LST)
         self.assertEqual(got["uploads"][0]["set"], "appstore/iphone-69")
-        self.assertTrue(got["approveBlocks"])
         self.assertTrue((self.docs / got["uploads"][0]["file"]).is_file())
         self.send_changes(t, "1")
         out = self.reply(self.doc_path)
@@ -552,8 +548,7 @@ class UploadAndPinInChrome(ChromePage):
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(listing.uploads(load_json(self.doc_path), self.doc_path), [])
         t = self.page("#appstore/es-ES")
-        t.wait_for(f"{LST}.approveBlocks.length === 0")
-        self.assertEqual(t.ev(f"{LST}.drafts"), [])
+        t.wait_for(f"{LST}.drafts.length === 0")
         self.assertIn("upload", [tag for x in t.ev(LST)["tiles"] if x["set"] == "appstore/iphone-69" for tag in x["tags"]])
 
     def test_an_upload_in_the_ads_view_is_a_step_that_undoes_and_redoes_with_its_file(self) -> None:

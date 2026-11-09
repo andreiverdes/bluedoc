@@ -981,8 +981,8 @@ class ExportMenu(ChromePage):
                          ["Export to…", "menu", "menu"])
         self.assertEqual(a.ev(f"[...{self.MENU.format(tb)}.querySelectorAll('[role=menuitem]')].map(b => [b.dataset.format, b.querySelector('b').textContent])"),
                          [["html", "HTML"], ["pdf", "PDF"]])
-        self.assertTrue(a.ev(f"{btn}.nextElementSibling === {btn}.parentElement.querySelector('.bd-expm') && "
-                             f"{btn}.parentElement.nextElementSibling.matches('.pri')"), "Export to… sits just before Present")
+        self.assertTrue(a.ev(f"{btn}.nextElementSibling === {btn}.parentElement.querySelector('.bd-expm') && {btn}.matches('.pri') && "
+                             f"!{btn}.parentElement.nextElementSibling"), "Export to… is the toolbar's last key, its primary")
         a.ev(f"{btn}.click()")
         self.assertEqual(self.menu_state(a, tb), ["true", True, "html"])
         self.press(a, "Escape")

@@ -105,7 +105,7 @@
     {
       "id": "questions",
       "title": "Open questions",
-      "lead": "Pick one option per question; my recommendation is starred. Your picks go with **Approve plan** or **Request changes**.",
+      "lead": "Pick one option per question; my recommendation is starred. Your picks go with **Approve** or **Request changes**.",
       "blocks": [
         {
           "type": "checklist",

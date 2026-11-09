@@ -210,13 +210,16 @@ button.bd-emo:hover, button.bd-emo[aria-expanded="true"] { background: var(--sel
 .bp-btn.primary { background: var(--accent); color: #fff; box-shadow: 0 1px 2px oklch(20% 0.05 255 / .25), inset 0 1px 0 oklch(100% 0 0 / .15); }
 .bp-btn.primary .bd-ic { color: currentColor; }
 .bp-btn.primary:hover { background: color-mix(in oklch, var(--accent), black 8%); }
-/* send to agent: dialog (Send answers, Request changes, Approve plan) */
+/* send to agent: dialog (Send answers and a review's send key, Request changes, Approve) */
 .bd-send { width: min(560px, calc(100vw - 32px)); max-height: calc(100vh - 64px); padding: 0; border: 0; border-radius: 16px; background: var(--surface); color: var(--fg); box-shadow: var(--shadow-3); }
 .bd-send::backdrop { background: oklch(15% 0.01 264 / .36); }
 .bd-send > * { margin: 0 20px; }
 .bd-send .hd { display: flex; align-items: center; gap: 10px; margin: 0; padding: 16px 14px 4px 20px; }
 .bd-send .hd h3 { flex: 1; margin: 0; font-size: 16px; font-weight: 600; }
 .bd-send .sum { margin-top: 2px; margin-bottom: 12px; font-size: 13.5px; color: var(--fg-muted); }
+/* a review of someone else's PR: Post as, the GitHub review event, above the message */
+.bd-send .bd-postas { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; font-size: 13px; font-weight: 500; color: var(--fg-muted); }
+.bd-send .bd-postas .bd-sg { flex: 1; }
 .bd-send textarea { display: block; box-sizing: border-box; width: calc(100% - 40px); min-height: 84px; }
 /* a dialog's message to the agent and its files: Attach under the field, the chips between */
 .bd-send .bd-msgf textarea { width: 100%; }
@@ -880,16 +883,72 @@ img.bp-cmpr-img { cursor: zoom-in; }
 .bd-key.go:disabled { cursor: default; filter: none; color: var(--fg-subtle); background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: var(--shadow-hk); }
 .bd-key.go:disabled .n { background: var(--inset); box-shadow: var(--shadow-well); }
 .bd-groove { flex: none; width: 2px; height: 24px; margin: 0 2px; border-radius: 1px; background: var(--groove); }
-.bd-anntb .sw { display: inline-flex; align-items: center; gap: 5px; height: 38px; padding: 0 9px; border-radius: 12px; background: var(--hk-down); box-shadow: var(--shadow-well); }
-.bd-anntb .sw[hidden] { display: none; }
-.bd-anntb .sw button { width: 18px; height: 18px; padding: 0; border: 0; border-radius: 50%; background: var(--pen); box-shadow: inset 0 0 0 1px oklch(0% 0 0 / .15); }
-.bd-anntb .sw button[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--hk-down), 0 0 0 3.5px var(--pen); }
+/* the Annotate key: a labelled key with a caret, pressed while its bar is open */
+.bd-key.ann { display: inline-flex; align-items: center; width: auto; gap: 6px; padding: 0 9px 0 11px; font-size: 13px; font-weight: 600; white-space: nowrap; }
+.bd-key.ann .bd-ic { width: 16px; height: 16px; }
+.bd-key.ann .car { width: 13px; height: 13px; color: var(--fg-subtle); transition: rotate .18s var(--ease); }
+.bd-key.ann[aria-expanded="true"] .car { rotate: 180deg; }
+/* the Annotate bar above the dock: Element, Region, Text and Pen, and while Pen is on its colours and widths in a pill to
+   the right; the dock's tray one key size down. Its left edge sits over the Annotate key (--ann-x), a tail pointing at it */
+.bd-annrow { position: absolute; left: var(--ann-x, 45px); bottom: calc(100% + 8px); display: flex; align-items: center; gap: 8px; animation: bd-annb-in .16s var(--ease); }
+.bd-annrow[hidden], .bd-annb[hidden], .bd-annpop[hidden] { display: none; }
+@keyframes bd-annb-in { from { opacity: 0; translate: 0 6px; } }
+.bd-annb { position: relative; display: flex; align-items: center; gap: 5px; width: max-content; padding: 6px; border-radius: 17px;
+  background: linear-gradient(180deg, var(--tray-top), var(--tray-bot)); box-shadow: var(--shadow-tray), 0 2px 6px oklch(23% 0.01 264 / 0.06); }
+.bd-annb .bd-key { width: 34px; height: 34px; border-radius: 11px; }
+.bd-annb .bd-key .bd-ic { width: 17px; height: 17px; }
+.bd-annb .bd-groove { height: 20px; }
+.bd-annb.tail::after { content: ""; position: absolute; bottom: -5px; left: 24px; width: 10px; height: 10px; rotate: 45deg; border-radius: 2px; background: var(--tray-bot); }
+.bd-annb.opt { padding: 5px; border-radius: 16px; }
+/* pen colours and widths: wells, as the dock's keys sit in */
+.bd-annb .sw, .bd-wt { display: inline-flex; align-items: center; height: 34px; border-radius: 11px; background: var(--hk-down); box-shadow: var(--shadow-well); }
+.bd-annb .sw { gap: 6px; padding: 0 9px; }
+.bd-annb .sw button { width: 18px; height: 18px; padding: 0; border: 0; border-radius: 50%; background: var(--pen); box-shadow: inset 0 0 0 1px oklch(0% 0 0 / .15); }
+.bd-annb .sw button[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--hk-down), 0 0 0 3.5px var(--pen); }
+/* the custom colour: a hue ring, the picked colour inside once there is one */
+.bd-annb .sw button.cust { --ring: conic-gradient(from 90deg, oklch(65% 0.22 25), oklch(80% 0.17 90), oklch(70% 0.2 150), oklch(65% 0.18 230), oklch(58% 0.22 300), oklch(65% 0.22 25)); background: var(--ring); }
+.bd-annb .sw button.cust.set { background: radial-gradient(var(--pen) 0 5px, transparent 5.5px), var(--ring); }
+.bd-wt { gap: 2px; padding: 0 4px; }
+.bd-wt button { display: grid; place-items: center; width: 30px; height: 26px; padding: 0; border: 0; border-radius: 8px; background: none; color: var(--fg-subtle); }
+.bd-wt button svg, .bd-annb .bd-key.sty svg.w { width: 22px; height: 22px; overflow: visible; }
+.bd-wt button line, .bd-key.sty svg.w line { stroke: currentColor; stroke-linecap: round; }
+.bd-wt button:hover { color: var(--fg); }
+.bd-wt button[aria-pressed="true"] { color: var(--fg); background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: var(--shadow-hk); }
+:is(.bd-annb .sw, .bd-wt) button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* ≤ 600 px: a colour key (the current colour) and a width key (the current line), Pen only, each open a menu above it */
+.bd-annb .bd-key.sty { display: none; align-items: center; width: auto; gap: 4px; padding: 0 6px 0 9px; }
+.bd-annb .sty-g { display: none; }
+.bd-key.sty .dot { width: 16px; height: 16px; border-radius: 50%; background: var(--pen); box-shadow: inset 0 0 0 1px oklch(0% 0 0 / .15); }
+.bd-annb .bd-key.sty .car { width: 12px; height: 12px; color: var(--fg-subtle); }
+.bd-annb .bd-key.sty:disabled { opacity: .4; }
+.bd-annpop { position: absolute; bottom: calc(100% + 8px); left: 0; z-index: 1; padding: 8px; border-radius: 14px; background: var(--raised); box-shadow: var(--shadow-3); }
+.bd-annb .bd-annpop .sw { display: grid; grid-template-columns: repeat(3, 22px); gap: 9px; height: auto; padding: 4px; background: none; box-shadow: none; }
+.bd-annb .bd-annpop .sw button { width: 22px; height: 22px; }
+.bd-annb .bd-annpop .sw button[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--raised), 0 0 0 3.5px var(--pen); }
+/* the custom colour's picker: a saturation and value square, a hue strip, the hex value and Use */
+.bd-cpick { width: 204px; display: grid; gap: 10px; padding: 10px; }
+.bd-cpick .sv { position: relative; height: 118px; border-radius: 8px; touch-action: none; cursor: crosshair;
+  background: linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, hsl(var(--hue, 270) 100% 50%)); box-shadow: inset 0 0 0 1px oklch(0% 0 0 / .1); }
+.bd-cpick .hue { position: relative; height: 12px; border-radius: 6px; touch-action: none; cursor: ew-resize; background: linear-gradient(to right, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00); }
+.bd-cpick i { position: absolute; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; pointer-events: none; box-shadow: 0 0 0 2px #fff, 0 1px 4px oklch(0% 0 0 / .4); }
+.bd-cpick .hue i { top: 50%; }
+.bd-cpick .hex { display: flex; align-items: center; gap: 8px; }
+.bd-cpick .hex .dot { flex: none; width: 20px; height: 20px; border-radius: 50%; background: var(--pen); box-shadow: inset 0 0 0 1px oklch(0% 0 0 / .15); }
+.bd-cpick .hex .f { flex: 1; min-width: 0; height: 28px; padding: 0 8px; border: 0; border-radius: 7px; font: 500 12.5px/1 var(--mono); color: var(--fg); background: var(--inset); box-shadow: var(--shadow-well); }
+.bd-cpick .hex .f:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.bd-cpick .hex .ok { height: 28px; padding: 0 10px; border: 0; border-radius: 7px; font: 600 12.5px/1 var(--sans); color: #fff; background: var(--accent-solid); cursor: pointer; }
+.bd-cpick .hex .ok:disabled { opacity: .5; cursor: default; }
+@media (prefers-reduced-motion: reduce) { .bd-annrow { animation: none; } .bd-key.ann .car { transition: none; } }
 @media (max-width: 600px) {
   .bd-anntb { bottom: 10px; gap: 4px; padding: 5px; border-radius: 17px; }
   .bd-key { width: 34px; height: 34px; border-radius: 11px; }
   .bd-key.go { padding: 0 6px 0 9px; gap: 6px; } .bd-key.go .l { display: none; }
-  .bd-anntb .sw { height: 34px; padding: 0 7px; gap: 4px; } .bd-anntb .sw button { width: 16px; height: 16px; }
-  .bd-anntb[data-m="draw"] .eye { display: none; }
+  .bd-key.ann { gap: 3px; padding: 0 6px 0 8px; } .bd-key.ann .t { display: none; }
+  /* one bar centred over the dock, no tail: the tools, then the colour and width keys */
+  .bd-annrow { left: 50%; transform: translateX(-50%); }
+  .bd-annb.tail::after, .bd-annb.opt { display: none; }
+  .bd-annb .bd-key.sty { display: inline-flex; }
+  .bd-annb .sty-g { display: block; }
 }
 /* HorizonUI Tooltip with Kbd chips */
 .bd-tip { position: fixed; left: 0; top: 0; z-index: 61; display: inline-flex; align-items: center; gap: 8px; max-width: min(300px, calc(100vw - 16px)); padding: 6px 8px 6px 10px; border-radius: 9px;
@@ -917,21 +976,20 @@ html.bd-tray-on .bp-toast { bottom: 84px; }
 .bd-key.go.txt { padding: 0 14px; }
 .bd-key:disabled:not(.go) { opacity: .45; cursor: default; transform: none; }
 @media (max-width: 600px) { .bd-revtb .lbl { padding: 0 2px 0 4px; } .bd-revtb .lbl .x, .bd-revtb .lbl .bd-ic, .bd-key.txt:not(.go) .t { display: none; } .bd-key.txt:not(.go) { padding: 0 9px; } .bd-key.go.txt { padding: 0 11px; } }
-/* the tray's last key: Approve plan (green fill; once approved a settled green) or Send answers (green fill when there is something to send) */
-.bd-key:is(.approve, .send.has) { color: #fff; background: var(--ok-solid) linear-gradient(180deg, color-mix(in oklch, var(--ok-solid), white 9%), var(--ok-solid)); box-shadow: var(--shadow-fill); }
-.bd-key:is(.approve, .send.has):hover { color: #fff; filter: brightness(.95); background: var(--ok-solid) linear-gradient(180deg, color-mix(in oklch, var(--ok-solid), white 9%), var(--ok-solid)); }
-.bd-key:is(.approve, .send.has):active:not(:disabled) { transform: translateY(1px) scale(.98); filter: brightness(.9); box-shadow: var(--shadow-fill); background: var(--ok-solid); }
-.bd-key:is(.approve, .send.has):focus-visible { box-shadow: var(--shadow-fill), var(--focus-ring); }
+/* the tray's last key: Approve (green fill; once approved a settled green), a presentation's Present (green fill) or the
+   send key (green fill, with its count of picks, ticks and comments not sent yet, when there is something to send) */
+.bd-key:is(.approve, .send.has, .present) { color: #fff; background: var(--ok-solid) linear-gradient(180deg, color-mix(in oklch, var(--ok-solid), white 9%), var(--ok-solid)); box-shadow: var(--shadow-fill); }
+.bd-key:is(.approve, .send.has, .present):hover { color: #fff; filter: brightness(.95); background: var(--ok-solid) linear-gradient(180deg, color-mix(in oklch, var(--ok-solid), white 9%), var(--ok-solid)); }
+.bd-key:is(.approve, .send.has, .present):active:not(:disabled) { transform: translateY(1px) scale(.98); filter: brightness(.9); box-shadow: var(--shadow-fill); background: var(--ok-solid); }
+.bd-key:is(.approve, .send.has, .present):focus-visible { box-shadow: var(--shadow-fill), var(--focus-ring); }
 .bd-key.approve.done:disabled { opacity: 1; cursor: default; filter: none; transform: none; color: var(--ok-fg); background: var(--ok-tint); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--ok) 38%, transparent); }
 .bd-key.approve .bd-ic { stroke-width: 2.1; }
-/* Accept recommended: a plain key with its count of open decisions in a well; disabled (count hidden) when none is open */
-.bd-key.acc .n { min-width: 22px; height: 22px; padding: 0 6px; border-radius: 8px; display: grid; place-items: center; font: 650 12px/1 var(--sans); font-variant-numeric: tabular-nums;
-  color: var(--fg); background: var(--inset); box-shadow: var(--shadow-well); }
-.bd-key.acc { padding-right: 8px; }
-.bd-key.acc .n[hidden] { display: none; }
-.bd-key.acc:disabled { padding-right: 13px; }
-@media (max-width: 600px) { .bd-key.acc { gap: 5px; padding: 0 6px 0 9px; } .bd-key.acc:disabled { padding: 0 9px; } }
+.bd-key.send.has { padding-right: 8px; }
+.bd-key.send .n { min-width: 22px; height: 22px; padding: 0 6px; border-radius: 8px; display: grid; place-items: center; font: 650 12px/1 var(--sans); font-variant-numeric: tabular-nums;
+  background: oklch(100% 0 0 / .2); box-shadow: inset 0 1px 0 oklch(100% 0 0 / .12); }
+.bd-key.send .n[hidden] { display: none; }
 .bd-pen-risk { --pen: var(--risk); } .bd-pen-accent { --pen: var(--accent); } .bd-pen-warn { --pen: var(--warn); } .bd-pen-ok { --pen: var(--ok); }
+.bd-pen-violet { --pen: light-dark(oklch(55% 0.21 300), oklch(70% 0.17 300)); } .bd-pen-ink { --pen: var(--fg); } .bd-pen-custom { --pen: oklch(55% 0.2 305); }
 /* the cursor rule excludes what `inDoc` excludes: the rail, a design's panel tabs, Screens list and board toolbar, and a findings section's view bar keep their own cursors */
 html.bd-ann-m-point .bd-shell :not(.bp-side, .bp-side :not(.bd-meta, .bd-meta *), .bd-lp-ui, .bd-lp-ui *, .bd-btb, .bd-btb *, .bd-fvbar, .bd-fvbar *), html.bd-ann-m-point .bd-shell { cursor: crosshair !important; }
 html.bd-ann-m-select .bd-shell :not(.bp-side, .bp-side :not(.bd-meta, .bd-meta *), .bd-lp-ui, .bd-lp-ui *, .bd-btb, .bd-btb *, .bd-fvbar, .bd-fvbar *), html.bd-ann-m-select .bd-shell { cursor: text !important; }
@@ -957,11 +1015,25 @@ html.bd-ann-m-select .bp-cl-head { user-select: text; -webkit-user-select: text;
 .bd-ann-pin.flash { animation: bd-ann-flash 1.3s var(--ease); }
 @keyframes bd-ann-flash { 0%, 45% { box-shadow: 0 0 0 2px var(--surface), 0 0 0 11px color-mix(in oklch, var(--pen, var(--accent)) 45%, transparent); } }
 .bd-ann-ink { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
-.bd-ann-ink path, .bd-ann-cap path { fill: none; stroke: var(--pen, var(--risk)); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+/* a drawing in its own width (--pw: 2, 4 or 7 px; drawings made before widths, 3 px), 2 px wider while it is on */
+.bd-ann-ink path, .bd-ann-cap path { fill: none; stroke: var(--pen, var(--risk)); stroke-width: var(--pw, 3px); stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
 .bd-ann-ink.sent { opacity: .35; }
-.bd-ann-ink.hot path { stroke-width: 5; }
+.bd-ann-ink.hot path { stroke-width: calc(var(--pw, 3px) + 2px); }
 .bd-ann-cap { position: fixed; inset: 0; z-index: 34; touch-action: none; cursor: crosshair; }
 .bd-ann-cap svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+/* a region: always a thin accent box, the one being dragged too */
+.bd-ann-rgn { position: absolute; left: 0; top: 0; box-sizing: border-box; border: 1.5px solid var(--accent); border-radius: 6px; pointer-events: none; }
+.bd-ann-rgn.sent { border-color: var(--todo); opacity: .7; }
+.bd-ann-rgn.hot { border-width: 2px; background: color-mix(in oklch, var(--accent) 6%, transparent); }
+.bd-ann-cap rect { fill: color-mix(in oklch, var(--accent) 6%, transparent); stroke: var(--accent); stroke-width: 1.5; }
+/* Text in View: a Comment button by a selection on the page */
+.bd-selc { position: fixed; left: 0; top: 0; z-index: 55; display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 11px 0 9px; border: 0; border-radius: 9px;
+  font: 600 12.5px/1 var(--sans); color: var(--fg); background: var(--raised); box-shadow: var(--shadow-3); cursor: pointer; animation: bd-tip-in .12s var(--ease); }
+.bd-selc:hover { background: linear-gradient(var(--hover), var(--hover)), var(--raised); }
+.bd-selc:focus-visible { box-shadow: var(--shadow-3), var(--focus-ring); }
+.bd-selc .bd-ic { width: 15px; height: 15px; color: var(--accent-fg); }
+.bd-selc[hidden] { display: none; }
+@media (prefers-reduced-motion: reduce) { .bd-selc { animation: none; } }
 .bd-ann-hov { position: fixed; left: 0; top: 0; z-index: 36; pointer-events: none; border-radius: 8px; box-shadow: 0 0 0 2px var(--accent); background: color-mix(in oklch, var(--accent) 7%, transparent); }
 .bd-ann-hov b { position: absolute; left: -2px; bottom: calc(100% + 5px); max-width: min(340px, 80vw); padding: 3px 8px; border-radius: 6px; background: var(--accent); color: #fff;
   font: 600 11.5px/1.5 var(--sans); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -1198,7 +1270,7 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .bd-chgs pre { max-height: 260px; }
 .bd-chgs .ft .sp { flex: 1; }
 .bd-chgs .ft .bp-btn:disabled { opacity: .5; cursor: default; }
-/* Approve plan dialog: note, what goes with it, the decisions, Copy and Approve */
+/* Approve dialog: note, what goes with it, the decisions, Copy and Approve */
 .bd-approve[open] { display: flex; flex-direction: column; }
 .bd-approve[open] > * { flex: none; }
 .bd-ap-sum { list-style: none; padding: 0; margin-top: 12px; display: grid; gap: 6px; font-size: 13.5px; color: var(--fg-muted); }
@@ -1223,7 +1295,7 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .bd-approve .ft .bp-btn.ok .bd-ic { color: currentColor; }
 .bd-approve .ft .bp-btn.ok:hover { background: color-mix(in oklch, var(--ok-solid), black 8%); }
 .bd-approve .ft .bp-btn:disabled { opacity: .6; cursor: default; }
-@media print { .bd-anntb, .bd-ann-layer, .bd-ann-hov, .bd-ann-cap, .bd-tip, .bd-sp, .bd-cmp, .bd-home { display: none !important; } html.bd-tray-on .bd-shell, :root.bd-sp-dock .bd-shell { padding: 0; } }
+@media print { .bd-anntb, .bd-ann-layer, .bd-ann-hov, .bd-ann-cap, .bd-selc, .bd-tip, .bd-sp, .bd-cmp, .bd-home { display: none !important; } html.bd-tray-on .bd-shell, :root.bd-sp-dock .bd-shell { padding: 0; } }
 
 /* code review: diff block (HorizonUI DiffReview, ChangeTable, CodeBlock syntax tokens) */
 :root {
@@ -1812,7 +1884,7 @@ i.warn[hidden] { display: none; }
 .bd-lnks.off, .bd-lnk-lbls.off { display: none; }
 .bd-lnk .ln { fill: none; stroke: var(--fg-subtle); stroke-width: calc(1.5px / var(--k)); stroke-linejoin: round; opacity: .45; }
 .bd-lnk .hit { fill: none; stroke: transparent; stroke-width: calc(14px / var(--k)); pointer-events: stroke; cursor: pointer; }
-.bd-board:is([data-m="interact"], [data-m="select"], [data-m="draw"], [data-m="frame"], [data-m="edit"]) .bd-lnk :is(.hit, .bd-lnk-dot) { pointer-events: none; }
+.bd-board:is([data-m="interact"], [data-m="select"], [data-m="draw"], [data-m="region"], [data-m="frame"], [data-m="edit"]) .bd-lnk :is(.hit, .bd-lnk-dot) { pointer-events: none; }
 .bd-lnk.k-modal .ln { stroke-dasharray: calc(7px / var(--k)) calc(4px / var(--k)); }
 .bd-lnk.k-tab .ln { stroke-dasharray: 0 calc(5px / var(--k)); stroke-linecap: round; }
 .bd-lnk:is(.lit, .sel, .hov) .ln { stroke: var(--accent); stroke-width: calc(2px / var(--k)); opacity: 1; }
@@ -1986,6 +2058,10 @@ i.warn[hidden] { display: none; }
 .bd-board.bd-linkm .bd-ab:not(.off) .bd-knob { display: grid; place-items: center; }
 .bd-board.bd-wiring { cursor: crosshair; }
 .bd-board.bd-wiring .bd-ab-fr { pointer-events: none; }
+/* navigation (NAV): Space held shows the open hand and lets a press through the screens to the board; a pan, the closed one */
+html.bd-space, html.bd-space * { cursor: grab !important; }
+html.bd-panning, html.bd-panning * { cursor: grabbing !important; }
+html.bd-space .bd-board .bd-ab-fr { pointer-events: none; }
 .bd-ab:is(.bd-land, .msel, .bd-ovl) .bd-ab-scr { outline: calc(2px / var(--k)) solid var(--accent); outline-offset: calc(var(--bz, 0px) + 4px / var(--k)); }
 .bd-ab.bd-ovl .bd-ab-scr { outline-color: var(--risk); }
 .bd-ab.bd-land .bd-ab-scr { outline: calc(3px / var(--k)) solid var(--warn); }
@@ -2023,14 +2099,15 @@ i.warn[hidden] { display: none; }
 .bd-btb .zl { min-width: 38px; text-align: center; font: 500 12px var(--mono); font-variant-numeric: tabular-nums; color: var(--fg-muted); }
 .bd-btb .bd-groove { height: 20px; margin: 0 1px; }
 .bd-btb .bd-sg button { height: 24px; padding: 0 8px; }
-/* a presentation's Present: the toolbar's primary key, filled in the accent like the tray's Request changes */
-.bd-btb .bd-tbtn.pri { display: inline-flex; align-items: center; gap: 6px; padding: 0 12px 0 9px; color: #fff; font-weight: 600;
+/* a presentation's Export to…: the toolbar's primary key, filled in the accent like the tray's Request changes */
+.bd-btb .bd-tbtn.bd-expb.pri, .bd-btb .bd-tbtn.bd-expb.pri:hover:not(:disabled) { color: #fff;
   background: var(--accent-solid) linear-gradient(180deg, color-mix(in oklch, var(--accent-solid), white 8%), var(--accent-solid)); box-shadow: var(--shadow-fill); }
-.bd-btb .bd-tbtn.pri:hover { color: #fff; filter: brightness(.95); background: var(--accent-solid) linear-gradient(180deg, color-mix(in oklch, var(--accent-solid), white 8%), var(--accent-solid)); }
-.bd-btb .bd-tbtn.pri:active { transform: translateY(1px) scale(.98); filter: brightness(.9); }
-.bd-btb .bd-tbtn.pri .bd-ic { width: 16px; height: 16px; }
-/* a presentation's Export to…: a raised key with its words and a chevron, beside Present; its menu (HTML, PDF) drops
-   under it, or rises over it in Present's bar. Every select (selectMenu: a toolbar's Locale, Jump to, Theme, Flow; the
+.bd-btb .bd-tbtn.bd-expb.pri:hover:not(:disabled) { filter: brightness(.95); }
+.bd-btb .bd-tbtn.bd-expb.pri:is(:active, [aria-expanded="true"]) { filter: brightness(.9); }
+.bd-btb .bd-tbtn.bd-expb.pri:focus-visible { box-shadow: var(--shadow-fill), var(--focus-ring); }
+.bd-btb .bd-tbtn.bd-expb.pri .cv { color: inherit; opacity: .8; }
+/* Export to…: a raised key with its words and a chevron; its menu (HTML, PDF) drops under it, or rises over it in
+   Present's bar. Every select (selectMenu: a toolbar's Locale, Jump to, Theme, Flow; the
    Revisions tab's Compare pickers, a code review's File, a requested frame's Device, an arrow's Kind) is the same key,
    showing its value, over the same menu of options, the current one ticked: no native select anywhere */
 .bd-exp { position: relative; display: inline-flex; }
@@ -2134,7 +2211,7 @@ html.bd-ann-m-select .bd-sp-brief *, html.bd-ann-m-select .bd-sp-brief { cursor:
 .bd-pres .hint .to { color: oklch(70% 0 0); }
 .bd-pres button.hint { box-shadow: inset 0 0 0 1px oklch(42% 0.01 264); cursor: pointer; }
 .bd-pres button.hint:hover { background: oklch(32% 0.01 264); }
-html.bd-presenting :is(.bd-anntb, .bd-ann-layer, .bd-cmp) { display: none !important; }
+html.bd-presenting :is(.bd-anntb, .bd-ann-layer, .bd-cmp, .bd-selc) { display: none !important; }
 .bd-psz { position: relative; flex: none; }
 .bd-pdev { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
 /* a deck: each slide as large as the window allows, its speaker notes under it (N shows or hides them) */
@@ -2181,8 +2258,6 @@ html.bd-presenting .bp-toast { z-index: 71; bottom: 84px; }
 @media (min-width: 901px) { html.bd-lp-open :is(.bd-anntb, .bp-toast) { left: calc(var(--lp-w) + (100% - var(--lp-w)) / 2); } }
 @media (min-width: 1101px) { html.bd-lp-open.bd-sp-open :is(.bd-anntb, .bp-toast) { left: calc(var(--lp-w) + (100% - var(--lp-w) - var(--sp-w)) / 2); } }
 @media (max-width: 900px) { html.bd-lp-open .bd-boardblk { left: 0; } .bd-lp { width: min(var(--lp-w), 86vw); box-shadow: var(--shadow-3); } .bd-btb .th, .bd-btb .bd-sg { display: none; } }
-/* the tray must fit the board: Accept recommended keeps its count, not its words */
-:root[data-layout="board"] .bd-key.acc .t { display: none; }
 /* a doc page's tray beside an open right panel (fitTray): keys keep their icon and count, not their words */
 .bd-anntb.compact .bd-key :is(.t, .l) { display: none; }
 
@@ -2662,7 +2737,13 @@ const ICONS = {
   down: '<path d="m6 9 6 6 6-6"/>',
   star: '<path d="M11.5 2.8a.6.6 0 0 1 1 0l2.6 5.3 5.8.8a.6.6 0 0 1 .3 1l-4.2 4.1 1 5.8a.6.6 0 0 1-.8.6L12 17.7l-5.2 2.7a.6.6 0 0 1-.8-.6l1-5.8-4.2-4.1a.6.6 0 0 1 .3-1l5.8-.8Z"/>',
   send: '<path d="M14.5 21.7a.5.5 0 0 0 .9 0L22 3.5a.5.5 0 0 0-.6-.6L3.3 9.5a.5.5 0 0 0 0 .9l7.6 3a2 2 0 0 1 1.1 1.1zM21.9 2.1l-10.9 11"/>',
+  listchecks: '<path d="m3 17 2 2 4-4M3 7l2 2 4-4M13 6h8M13 12h8M13 18h8"/>',
+  reply: '<path d="M9 17l-5-5 5-5M20 18v-2a4 4 0 0 0-4-4H4"/>',
   cursor: '<path d="M4.04 4.69a.5.5 0 0 1 .65-.65l16 6.5a.5.5 0 0 1-.06.95l-6.13 1.58a2 2 0 0 0-1.43 1.43l-1.58 6.13a.5.5 0 0 1-.95.06z"/>',
+  // the Annotate key and its bar's Element and Region tools
+  annotate: '<path d="m9 11-6 6v3h9l3-3"/><path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/>',
+  element: '<path d="M12.03 12.68a.5.5 0 0 1 .65-.65l9 3.5a.5.5 0 0 1-.03.94l-3.45 1.07a1 1 0 0 0-.66.66l-1.07 3.44a.5.5 0 0 1-.94.04z"/><path d="M5 3a2 2 0 0 0-2 2M19 3a2 2 0 0 1 2 2M5 21a2 2 0 0 1-2-2M9 3h1M9 21h2M14 3h1M3 9v1M21 9v2M3 14v1"/>',
+  region: '<path d="M5 3a2 2 0 0 0-2 2M19 3a2 2 0 0 1 2 2M21 19a2 2 0 0 1-2 2M5 21a2 2 0 0 1-2-2M9 3h1M9 21h1M14 3h1M14 21h1M3 9v1M21 9v1M3 14v1M21 14v1"/>',
   pin: '<path d="M20 10c0 5-5.54 10.19-7.4 11.8a1 1 0 0 1-1.2 0C9.54 20.19 4 15 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/>',
   type: '<path d="M12 4v16M4 7V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2M9 20h6"/>',
   pencil: '<path d="M21.17 6.81a1 1 0 0 0-3.99-3.99L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5zM15 5l4 4"/>',
@@ -3245,16 +3326,20 @@ function docTypeOf(m) {
   if (k.includes('review')) return 'review';
   return (k.match(/[a-z]+/g) || []).some(w => DOCS_KINDS.has(w)) ? 'docs' : 'other';
 }
-// plans, designs, presentations and websites are approvable: Approve plan / design / presentation / website, Request
-// changes with the decision picks. A presentation is a design page whose board holds slides only, a website one whose
-// board holds web pages only: IS_DESIGN covers all three. A storelisting (IS_LISTING) has the same full-bleed page with
-// its panels, but shows its board as platform pages (renderListing); Approve listing waits for its drafts (L.approveBlocks)
+// plans, designs and websites are approvable: Approve (the tooltip and dialog name the plan, design or website),
+// Request changes with the decision picks. A presentation is a design page whose board holds slides only, a website one
+// whose board holds web pages only: IS_DESIGN covers all three. A storelisting (IS_LISTING) has the same full-bleed page
+// with its panels, but shows its board as platform pages (renderListing). A presentation and a storelisting aren't
+// approved: their picks and item comments go with Request changes, as on the approvable pages (PICKS_WITH_CHANGES)
 const DOC_TYPE = docTypeOf(meta), IS_PLAN = DOC_TYPE === 'plan', IS_DECK = DOC_TYPE === 'presentation', IS_SITE = DOC_TYPE === 'website';
 const IS_LISTING = DOC_TYPE === 'storelisting';
 const IS_DESIGN = DOC_TYPE === 'design' || IS_DECK || IS_SITE || IS_LISTING;
-const APPROVABLE = IS_PLAN || IS_DESIGN;
+const APPROVABLE = IS_PLAN || IS_DESIGN && !IS_DECK && !IS_LISTING;
+const PICKS_WITH_CHANGES = IS_PLAN || IS_DESIGN;
 const AP_NOUN = IS_DECK ? 'presentation' : IS_SITE ? 'website' : IS_LISTING ? 'listing' : IS_DESIGN ? 'design' : 'plan';
 const AP_TITLE = AP_NOUN[0].toUpperCase() + AP_NOUN.slice(1);
+// a review's kind (meta.review): what Send does with its answers (SEND_AS)
+const REVIEW_OF = DOC_TYPE === 'review' && ['local', 'theirs', 'mine'].includes(meta.review) ? meta.review : null;
 const SCREEN = IS_DECK ? 'slide' : IS_SITE ? 'page' : IS_LISTING ? 'shot' : 'screen';   // what the board's artboards are called on this page
 let BOARD = null;   // a design doc's board (renderBoard), once drawn
 const overallBar = h('div', { class: 'bp-bar' }, h('i'));
@@ -4292,6 +4377,9 @@ function renderChecklist(b, parent) {
     const li = h('li', { class: 'bp-cl-item' + (choices ? ' has-choices' : '') + (stale ? ' stale' : ''), id: `item-${cid}-${it.id}` }, h('div', { class: 'bp-cl-row' }, cb, dot, head));
     // a pick changed after approval: pending until Request changes sends it (`:pick-sent` holds the pick it sent)
     const pickSentKey = key + ':pick-sent';
+    // a page with Send answers: the answer as it sends it, '=<pick>' or the tick; `:sent` holds the one it last sent
+    // while that differs from the author's
+    const sentKey = key + ':sent', answerStr = () => choices ? '=' + pickStr() : cb.checked ? '1' : '0', authorAnswer = choices ? '=' + authorChoice : authorDone;
     const entryItem = { it, cb, li, cid, body, head, choices, multi, stale, get note() { return note; }, get files() { return files.slice(); },
       // the pick: an id or null; with `multi`, the ticked ids (null when none)
       get choice() { return multi ? (choice.length ? choice.slice() : null) : choice; },
@@ -4300,6 +4388,8 @@ function renderChecklist(b, parent) {
       get more() { return more === '1' ? 'on' : more ? 'sent' : null; },
       get pickChanged() { return !!choices && pickDiffers(entryItem); },
       get pickPending() { return entryItem.pickChanged && store.get(pickSentKey) !== pickStr(); },
+      // a pick or tick Send answers hasn't sent yet
+      get answerPending() { return !PICKS_WITH_CHANGES && answerStr() !== (store.get(sentKey) ?? authorAnswer); },
       messages: () => convo(thread, replies),
       fresh: replies.some(r => isNewMsg({ who: 'agent', rev: String(r.rev) })) };
     const paintPicked = () => {
@@ -4357,6 +4447,7 @@ function renderChecklist(b, parent) {
       }
       if (more === '1') { more = 'sent@' + CUR.rev; store.set(moreKey, more); paintMore(); }
       if (entryItem.pickChanged) store.set(pickSentKey, pickStr());
+      if (!PICKS_WITH_CHANGES) { const s = answerStr(); if (s === authorAnswer) store.del(sentKey); else store.set(sentKey, s); }
     };
     const authorPick = () => toPick(authorChoice);
     if (choices) {
@@ -4370,7 +4461,7 @@ function renderChecklist(b, parent) {
         if (dropMore) { more = null; store.del(moreKey); li.classList.remove('more'); }
         li.classList.toggle('done', cb.checked); entryItem.opts.paint(); paintPicked(); update();
         if (dropMore) { entryItem.noteView.paint(); paintPlan(); MARKUP.paint(); }
-        else if (APPROVABLE && !OLD) { paintPlan(); MARKUP.paint(); }   // a pick changed after approval: chip and Request changes
+        else if (PICKS_WITH_CHANGES && !OLD) { paintPlan(); MARKUP.paint(); }   // a pick Request changes carries: its count, a plan's chip
         if (entryItem.onChoice) entryItem.onChoice(entryItem.choice);   // a design's theme pick re-skins its screens
       };
       entryItem.opts = optionRows(entryItem);
@@ -4443,8 +4534,8 @@ function renderChecklist(b, parent) {
   const acceptBtn = !OLD && !BASE ? h('button', { type: 'button', class: 'bp-btn ghost', hidden: true, title: 'Pick the starred option on every open decision in this checklist',
     onclick: () => acceptRecs(checklistScope(entry)) }) : null;
   const ask = kind === 'decisions' ? h('span', { class: 'bp-cl-ask' }, 'Needs your answer') : null;
-  const cap = kind === 'progress' && !parent ? h('p', { class: 'bp-cl-cap' }, APPROVABLE
-    ? `The agent marks these as the work lands. Your ticks stay on this page and don't change the approval.`
+  const cap = kind === 'progress' && !parent ? h('p', { class: 'bp-cl-cap' }, PICKS_WITH_CHANGES
+    ? `The agent marks these as the work lands. Your ticks stay on this page${APPROVABLE ? ' and don\'t change the approval' : ''}.`
     : 'Your own tracker: ticks are saved for you and go with Send answers.') : null;
   root.append(h('div', { class: 'bp-cl-h' },
     ic(kind === 'decisions' ? 'help' : 'list'), h(parent ? 'h4' : 'h3', {}, b.title || 'Checklist'), ask, count,
@@ -4474,7 +4565,7 @@ function resetChecklist(c) {
   CHECKLISTS.filter(n => n.parent && n.parent.cid === c.b.id).forEach(resetChecklist);
   c.update();
 }
-// Accept recommended (the tray key, each checklist's header button, BP.acceptRecommended): an open
+// Accept recommended (each checklist's header button, a findings view bar's, BP.acceptRecommended): an open
 // decision has a recommended option (or, with `multi`, several) and no pick, and doesn't ask for more details.
 // Accepting picks the recommendation on each, as its starred rows would; a pick the reader made is never
 // touched. Undo clears the picks it made.
@@ -4493,10 +4584,6 @@ function paintAccept() {
     c.acceptBtn.hidden = !n;
     if (n) c.acceptBtn.replaceChildren(ic('checks'), `Accept recommended (${n})`);
   }
-  if (!accKey) return;
-  const n = openRecs(CHECKLISTS).length;
-  accKey.disabled = !n; accKey._n.hidden = !n; accKey._n.textContent = String(n);
-  accKey.setAttribute('aria-label', n ? `Accept recommended: ${n} open decision${n === 1 ? '' : 's'}` : 'Accept recommended: no open decisions');
 }
 /* The options of a decision as Accordion rows (approved design, variant A): one bordered list, a row per option with
    its radio (a checkbox with `multi`), its label, ★ Recommended, its explanation cut to one line and a chevron; a
@@ -4742,17 +4829,20 @@ function replyPayload() {
   return {
     kind: 'answers', doc: docId, rev: CUR.rev, title: DOC.title || '', path: location.pathname, at: new Date().toISOString(),
     message: (store.get(MSG_KEY) || '').trim(), ...(msgFiles().length ? { messageFiles: filesJson(msgFiles()).files } : {}),
+    ...(REVIEW_OF === 'theirs' ? { reviewEvent: postAs } : {}),
     items: answerItems(),
-    markdown: allChecklistsMd(),
+    markdown: answersMd(),
   };
 }
 // What Request changes carries besides the pending annotations: decision items marked "Need more details"
-// and not sent yet (every page with the tray) and, on a plan or design, replies waiting in item boxes and
-// picks changed since the approval and not sent yet
-const itemsPending = () => Object.values(ITEMS).filter(x => x.more === 'on' || APPROVABLE && (x.notePending || x.pickPending));
-// On an approved plan or design: whether a decision's pick differs from the approved one (an item approved without
-// a pick means its recommendation). Items the approval didn't carry (added since) don't count.
+// and not sent yet (every page with the tray) and, on a plan, design, presentation, website or listing, replies
+// waiting in item boxes and changed picks not sent yet
+const itemsPending = () => Object.values(ITEMS).filter(x => x.more === 'on' || PICKS_WITH_CHANGES && (x.notePending || x.pickPending));
+// Whether a decision's pick is one the agent hasn't heard: on an approved plan, design or website, one that differs from
+// the approved one (an item approved without a pick means its recommendation; items the approval didn't carry, added
+// since, don't count); on a presentation or listing, which has no approval, one that differs from the author's
 function pickDiffers(x) {
+  if (!APPROVABLE) return PICKS_WITH_CHANGES && pickKey(x.choice) !== pickKey(x.it.choice);
   const p = planState(), k = `${x.cid}/${x.it.id}`;
   if (p.state !== 'approved' || !p.picks || !(k in p.picks)) return false;
   return pickKey(x.choice || x.it.recommend) !== pickKey(p.picks[k]);
@@ -4814,39 +4904,56 @@ function linkHome(href) {
   mark.href = href; mark.title = 'All docs'; mark.setAttribute('aria-label', 'bluedoc: all docs');
   if (!document.querySelector('.bd-home')) mark.after(h('a', { class: 'bd-home', href, title: 'All docs' }, ic('grid'), h('span', { class: 'l' }, 'All docs')));
 }
-// Accept recommended (docs with recommended decisions), then Send answers (pages with checklists) or
-// Approve plan (plan pages), end the bottom tray: TRAY_END, filled where the tray's keys are made, below.
-// Plans have no Send answers; their picks go with Approve.
+// The keys that end the bottom tray after Request changes: TRAY_END, filled where the tray's keys are made, below.
+// Approve on a plan, design or website (their picks go with it); Present on a presentation; nothing on a listing (its
+// picks go with Request changes); on other pages with checklists the send key: Send answers, or the next step a review's
+// meta.review names (SEND_AS), with the count of picks, ticks and comments not sent yet
 const TRAY_END = [];
-let sendBtn = null, accKey = null, sendDlg = null, approveDlg = null;
+let sendBtn = null, sendDlg = null, approveDlg = null;
 const PLAN_KEY = `bp:${docId}:__planstate`;
+// [icon, key, dialog title, what the agent does with it]
+const SEND_AS = {
+  local: ['listchecks', 'Apply decisions', 'Apply your decisions', 'The agent fixes the findings you marked to fix in your working tree, files the tickets, drops the declines and reports back.'],
+  theirs: ['pr', 'Post review', 'Post review to the PR', 'The agent posts one GitHub review on the PR, with a comment per finding you kept.'],
+  mine: ['reply', 'Reply and fix', 'Reply and fix on your PR', 'The agent fixes the findings you marked to fix on your branch, then replies on each thread and resolves the fixed ones.'],
+}[REVIEW_OF] || ['send', 'Send answers', 'Send your answers to the agent', ''];
+// a review of someone else's PR: the GitHub review event it posts as (the send dialog's Post as), the payload's reviewEvent
+const POST_AS = [['COMMENT', 'Comment'], ['REQUEST_CHANGES', 'Request changes'], ['APPROVE', 'Approve']];
+let postAs = 'COMMENT';
+// what Send sends: the checklists, and on a review of someone else's PR how to post it, under the title
+function answersMd() {
+  const md = allChecklistsMd(), i = md.indexOf('\n\n') + 2;
+  return REVIEW_OF === 'theirs' ? md.slice(0, i) + `Post as: ${POST_AS.find(p => p[0] === postAs)[1]}\n\n` + md.slice(i) : md;
+}
 function replyCounts() {
   const all = Object.values(ITEMS), dec = all.filter(x => x.choices);
   return { decisions: dec.length, decided: dec.filter(x => x.choice).length, steps: all.length - dec.length,
     ticked: all.filter(x => !x.choices && x.cb.checked).length, notes: all.filter(x => x.notePending).length,
-    // what the reader did: picks and ticks that differ from the author's
-    changed: all.filter(x => x.choices ? pickKey(x.choice) !== pickKey(x.it.choice) : x.cb.checked !== !!x.it.done).length };
+    // the items with a pick, tick or comment Send hasn't sent yet
+    unsent: all.filter(x => x.notePending || x.answerPending).length };
 }
 function paintSend() {
   ARC.paint();   // a tick may finish the doc: All done · Archive it?
   if (approveDlg && approveDlg.open) approveDlg._paint();
   if (!sendBtn) return;
-  const c = replyCounts(), has = !!(c.changed || c.notes);
-  sendBtn.classList.toggle('has', has);
-  sendBtn._tip = has ? 'Send your decisions, ticks and comments to the agent' : 'Send answers: pick, tick or comment on an item first';
+  const n = replyCounts().unsent;
+  sendBtn.classList.toggle('has', n > 0);
+  sendBtn._n.hidden = !n; sendBtn._n.textContent = String(n);
+  sendBtn.setAttribute('aria-label', n ? `${SEND_AS[1]}: ${n} not sent` : SEND_AS[1]);
+  sendBtn._tip = n ? `${n} ${n === 1 ? 'pick, tick or comment' : 'picks, ticks or comments'} not sent yet` : 'Nothing new to send: pick, tick or comment on an item';
   if (sendDlg && sendDlg.open) sendDlg._paint();
 }
 function openSend() {
   if (!sendDlg) {
     const msg = h('textarea', { class: 'bp-note-ta', rows: 3, placeholder: 'Anything else for the agent? (optional)' });
     msg.value = store.get(MSG_KEY) || '';
-    msg.addEventListener('input', () => { if (msg.value.trim()) store.set(MSG_KEY, msg.value); else store.del(MSG_KEY); pre.textContent = allChecklistsMd(); });
+    msg.addEventListener('input', () => { if (msg.value.trim()) store.set(MSG_KEY, msg.value); else store.del(MSG_KEY); pre.textContent = answersMd(); });
     msg.addEventListener('keydown', e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); doSend(); } });
     // its files are kept as they change, like its text; a removed one's copy goes at once
     const fd = fileDraft(() => {
       const fs = fd.files;
       if (fs.length) store.set(MSG_FILES_KEY, JSON.stringify(filesJson(fs).files)); else store.del(MSG_FILES_KEY);
-      fd.commit(); pre.textContent = allChecklistsMd();
+      fd.commit(); pre.textContent = answersMd();
     });
     fd.load(msgFiles());
     const field = h('div', { class: 'bd-msgf' }, msg, fd.list, h('div', { class: 'ft' }, fd.btn), fd.input);
@@ -4854,11 +4961,14 @@ function openSend() {
     const summary = h('p', { class: 'sum' });
     const how = h('p', { class: 'how' });
     const pre = h('pre', {});
+    // Post as: as GitHub's Submit review asks
+    const postSeg = REVIEW_OF === 'theirs' ? h('div', { class: 'bd-sg', role: 'radiogroup', 'aria-label': 'Post as' }, POST_AS.map(([v, l]) =>
+      h('button', { type: 'button', role: 'radio', 'data-v': v, onclick: () => { postAs = v; sendDlg._paint(); } }, l))) : null;
     const send = h('button', { type: 'button', class: 'bp-btn primary', onclick: () => doSend() }, ic('send'), 'Send');
-    const copy = h('button', { type: 'button', class: 'bp-btn', onclick: () => { copyText(allChecklistsMd(), 'Copied: paste it into the chat with the agent'); sendDlg.close(); } }, ic('copy'), 'Copy');
+    const copy = h('button', { type: 'button', class: 'bp-btn', onclick: () => { copyText(answersMd(), 'Copied: paste it into the chat with the agent'); sendDlg.close(); } }, ic('copy'), 'Copy');
     sendDlg = h('dialog', { class: 'bd-send', 'aria-labelledby': 'bd-send-h' },
-      h('div', { class: 'hd' }, h('h3', { id: 'bd-send-h' }, 'Send your answers to the agent'), h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Close', onclick: () => sendDlg.close() }, ic('x'))),
-      summary, field, h('details', {}, h('summary', {}, 'Preview'), pre), how, h('div', { class: 'ft' }, copy, send));
+      h('div', { class: 'hd' }, h('h3', { id: 'bd-send-h' }, SEND_AS[2]), h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Close', onclick: () => sendDlg.close() }, ic('x'))),
+      summary, postSeg && h('div', { class: 'bd-postas' }, h('span', {}, 'Post as'), postSeg), field, h('details', {}, h('summary', {}, 'Preview'), pre), how, h('div', { class: 'ft' }, copy, send));
     document.body.append(sendDlg);
     sendDlg.addEventListener('click', e => { if (e.target === sendDlg) sendDlg.close(); });
     sendDlg._paint = () => {
@@ -4867,12 +4977,13 @@ function openSend() {
       if (c.decisions) parts.push(`${c.decided} of ${c.decisions} decision${c.decisions === 1 ? '' : 's'} made`);
       if (c.steps) parts.push(`${c.ticked} of ${c.steps} step${c.steps === 1 ? '' : 's'} ticked`);
       parts.push(`${c.notes} comment${c.notes === 1 ? '' : 's'}`);
-      summary.textContent = parts.join(' · ');
+      summary.textContent = [SEND_AS[3], parts.join(' · ')].filter(Boolean).join(' ');
+      if (postSeg) postSeg.querySelectorAll('button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.v === postAs)));
       send.hidden = !REPLY.url;
       copy.classList.toggle('primary', !REPLY.url);
       how.textContent = REPLY.url ? `Send delivers this to ${REPLY.to || 'the agent that opened this page'}. Copy gives you the same text to paste.`
         : 'This page isn\'t connected to an agent. Copy the text and paste it into the chat. (Pages opened through serve.py can send directly.)';
-      pre.textContent = allChecklistsMd();
+      pre.textContent = answersMd();
     };
   }
   sendDlg._paint();
@@ -4880,14 +4991,14 @@ function openSend() {
   sendDlg.querySelector('textarea').focus();
 }
 async function doSend() {
-  if (!REPLY.url) { copyText(allChecklistsMd(), 'Copied: paste it into the chat with the agent'); sendDlg && sendDlg.close(); return; }
+  if (!REPLY.url) { copyText(answersMd(), 'Copied: paste it into the chat with the agent'); sendDlg && sendDlg.close(); return; }
   try {
     await postReply(REPLY.url, replyPayload());
-    Object.values(ITEMS).forEach(x => x.markSent()); MARKUP.paint();
+    Object.values(ITEMS).forEach(x => x.markSent()); MARKUP.paint(); paintSend();
     sendDlg && sendDlg.close();
     toast(`Sent to ${REPLY.to || 'the agent'}`);
   } catch (e) {
-    copyText(allChecklistsMd(), replyFailed(e));
+    copyText(answersMd(), replyFailed(e));
   }
 }
 // the top bar's tracker counts progress items only; decisions are counted by the chip under the title (paintAsk)
@@ -5853,26 +5964,127 @@ function prepScope(scope, parentPath) {
 const innerFit = n => BoardGeo.canvasFit(n.w, n.h, n.children._bounds, BoardGeo.canvasRoom(n.children));
 const frameOf = n => BoardGeo.canvasFrame(n.w, n.h, n._inner);
 
+/* ---------- navigation: the same scroll, pan and zoom in every tool ----------
+   A tool takes only the primary press. The wheel pans or zooms the stage under the pointer (a panZoom: the design
+   board, a diagram) as in View, also through a drawing layer (.bd-ann-cap) and from inside a screen (inspector.js
+   forwards it); elsewhere the page scrolls. Space + drag and a middle-button drag pan that stage, else scroll what is
+   under the press. Space held (outside fields and keyboard-focused controls): html.bd-space, a grab cursor, and
+   screens let the press through to the board; html.bd-panning while a pan runs. On a drawing layer a second finger
+   ends the stroke and pinches the stage under. NAV.stages: each panZoom's {stage, wheel(e), pan(e), stop()}. */
+const NAV = (() => {
+  const stages = new Set(), cls = document.documentElement.classList;
+  let space = false, used = false, drag = null, eat = false;
+  const fingers = new Map();   // touches that began on a drawing layer: pointerId -> {pointerId, clientX, clientY}
+  const elOf = t => t && t.nodeType === 1 ? t : null;
+  const field = t => t.isContentEditable || !!t.closest('input, textarea, select, [contenteditable], .bp-note');
+  const CONTROL = 'button, a[href], summary, [role="button"], [role="radio"], [role="checkbox"], [role="option"], [role="menuitem"], [role="menuitemcheckbox"], [role="tab"], [role="switch"]';
+  // the stage under a point, through the drawing layers
+  function at(x, y) {
+    const el = document.elementsFromPoint(x, y).find(n => !n.closest('.bd-ann-cap'));
+    if (el) for (const s of stages) if (s.stage.contains(el)) return s;
+    return null;
+  }
+  const ended = () => { drag = null; cls.remove('bd-panning'); };
+  function setSpace(on) {
+    if (on === space) return;
+    space = on; cls.toggle('bd-space', on);
+    if (on) used = false;
+    else if (drag) drag.end();   // letting Space go ends its pan
+  }
+  // a pan that starts at press e: the stage's under it, else a scroll of what holds the press
+  function start(e, t) {
+    used = true; cls.add('bd-panning');
+    const s = at(e.clientX, e.clientY);
+    if (s) { s.pan(e); drag = { end: s.stop }; return; }
+    const sc = scrollerOf(t), id = e.pointerId;
+    let x = e.clientX, y = e.clientY;
+    const move = ev => { if (ev.pointerId !== id) return; sc.scrollBy(x - ev.clientX, y - ev.clientY); x = ev.clientX; y = ev.clientY; };
+    const end = ev => {
+      if (ev && ev.pointerId !== id) return;
+      removeEventListener('pointermove', move, true); removeEventListener('pointerup', end, true); removeEventListener('pointercancel', end, true);
+      ended();
+    };
+    addEventListener('pointermove', move, true); addEventListener('pointerup', end, true); addEventListener('pointercancel', end, true);
+    drag = { end: () => end() };
+  }
+  // capture on window, registered before every tool's (the tray's, the board's, a drawing layer's): a press that pans
+  // is NAV's alone
+  addEventListener('pointerdown', e => {
+    const t = elOf(e.target);
+    if (!t) return;
+    const layer = t.closest('.bd-ann-cap');
+    if (e.pointerType === 'touch' && layer) {
+      if (!fingers.size) { fingers.set(e.pointerId, { pointerId: e.pointerId, clientX: e.clientX, clientY: e.clientY }); return; }
+      // a second finger: the stroke ends unsaved and both fingers pinch or pan the stage under
+      const first = [...fingers.values()][0];
+      fingers.clear();
+      layer.dispatchEvent(new PointerEvent('pointercancel', { pointerId: first.pointerId, pointerType: 'touch', bubbles: true }));
+      e.preventDefault(); e.stopImmediatePropagation();
+      const s = at(e.clientX, e.clientY);
+      if (s) { used = true; cls.add('bd-panning'); s.pan(first); s.pan(e); drag = { end: s.stop }; } else start(e, t);
+      return;
+    }
+    if (!(e.button === 1 || (space && e.button === 0)) || field(t) || t.closest('.bd-ann-ui, dialog')) return;
+    if (e.button === 1 && t.closest('a[href]') && !at(e.clientX, e.clientY)) return;   // a middle click on a link opens it
+    e.preventDefault(); e.stopImmediatePropagation(); eat = true;
+    start(e, t);
+  }, true);
+  addEventListener('pointermove', e => { const f = fingers.get(e.pointerId); if (f) { f.clientX = e.clientX; f.clientY = e.clientY; } }, true);
+  for (const ty of ['pointerup', 'pointercancel']) addEventListener(ty, e => { fingers.delete(e.pointerId); if (eat) setTimeout(() => { eat = false; }); }, true);
+  // the click that ends a pan is no tool's
+  for (const ty of ['click', 'auxclick']) addEventListener(ty, e => { if (eat) { eat = false; e.preventDefault(); e.stopImmediatePropagation(); } }, true);
+  // the wheel on a drawing layer goes to the stage under it; elsewhere on the layer the page scrolls (or zooms)
+  addEventListener('wheel', e => {
+    const t = elOf(e.target);
+    if (!t || !t.closest('.bd-ann-cap')) return;
+    const s = at(e.clientX, e.clientY);
+    if (s && s.wheel(e)) e.preventDefault();
+  }, { capture: true, passive: false });
+  // Space: held for a pan. Its keys are the page's (a mouse-focused button isn't pressed by it); a tap without a pan
+  // still pages a doc down (Shift: up), as the browser's own Space did
+  const takes = t => !document.querySelector('dialog[open], .bd-pres') && !(t && (field(t) || (t.closest(CONTROL) && t.matches(':focus-visible'))));
+  addEventListener('keydown', e => {
+    if (e.key !== ' ' || e.isComposing || e.metaKey || e.ctrlKey || e.altKey || !takes(elOf(e.target))) return;
+    e.preventDefault();
+    if (!e.repeat) setSpace(true);
+  }, true);
+  addEventListener('keyup', e => {
+    if (e.key !== ' ' || !space) return;
+    e.preventDefault();
+    const tap = !used;
+    setSpace(false);
+    if (tap && !IS_DESIGN) scrollBy(0, (e.shiftKey ? -1 : 1) * innerHeight * 0.85);
+  }, true);
+  addEventListener('blur', () => { if (document.activeElement && document.activeElement.tagName !== 'IFRAME') setSpace(false); });
+  return { stages, ended, setSpace, grab: on => cls.toggle('bd-panning', on) };
+})();
+
 /* ---------- pan and zoom: the blueprint canvas and the design board share it ---------- */
 // `v` is the view ({k, tx, ty}: the content drawn at tx,ty scaled by k, stage px) and apply() repaints it.
 // o.kMin(), o.kMax() bound the zoom; o.down(e) sees a press first (false: not this stage's); o.press(e) a
 // press that may pan; o.tap(e, at) a press that ended without moving (at: the element pressed); o.wheel(e)
-// answers 'zoom', 'pan' or nothing (the page scrolls). Drag pans, two pointers pinch.
+// answers 'zoom', 'pan' or nothing (the page scrolls); o.halt() runs as a pan or a zoom starts. Drag pans, two
+// pointers pinch; NAV's presses (Space, the middle button) only pan.
 function panZoom(stage, v, apply, o) {
   const rel = e => { const r = stage.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
   const zoomAt = (px, py, f) => {
     const k2 = clamp(v.k * f, o.kMin(), o.kMax()), r = k2 / v.k;
     v.tx = px - (px - v.tx) * r; v.ty = py - (py - v.ty) * r; v.k = k2; apply();
   };
-  const ptrs = new Map(); let pan = null, pinch = null, moved = false, at = null;
+  const ptrs = new Map(); let pan = null, pinch = null, moved = false, at = null, nav = false;
+  function begin(e, byNav) {
+    if (o.halt) o.halt();
+    try { stage.setPointerCapture(e.pointerId); } catch { /* the pointer is gone */ }
+    ptrs.set(e.pointerId, rel(e));
+    if (byNav) { nav = true; moved = true; stage.classList.add('dragging'); } else { moved = false; at = e.target; }
+    if (ptrs.size === 1) pan = { ...rel(e), tx: v.tx, ty: v.ty };
+    if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), k: v.k, tx: v.tx, ty: v.ty, mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 }; pan = null; }
+  }
   stage.addEventListener('pointerdown', e => {
     if (o.down && o.down(e) === false) return;
     if (e.pointerType === 'mouse' && e.button !== 0) return;
     if (o.press) o.press(e);
-    stage.setPointerCapture(e.pointerId);
-    ptrs.set(e.pointerId, rel(e)); moved = false; at = e.target;
-    if (ptrs.size === 1) pan = { ...rel(e), tx: v.tx, ty: v.ty };
-    if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), k: v.k, tx: v.tx, ty: v.ty, mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 }; pan = null; }
+    begin(e, false);
   });
   stage.addEventListener('pointermove', e => {
     if (!ptrs.has(e.pointerId)) return;
@@ -5888,22 +6100,34 @@ function panZoom(stage, v, apply, o) {
       if (moved) { v.tx = pan.tx + dx; v.ty = pan.ty + dy; apply(); }
     }
   });
+  const stop = () => {
+    for (const id of ptrs.keys()) try { stage.releasePointerCapture(id); } catch { /* gone */ }
+    ptrs.clear(); pinch = pan = null; stage.classList.remove('dragging');
+    if (nav) { nav = false; NAV.ended(); }
+  };
   const up = e => {
     if (!ptrs.has(e.pointerId)) return;
     ptrs.delete(e.pointerId);
     if (ptrs.size < 2) pinch = null;
     if (ptrs.size === 1) { const p = [...ptrs.values()][0]; pan = { ...p, tx: v.tx, ty: v.ty }; return; }
-    stage.classList.remove('dragging'); pan = null;
-    if (!moved && e.type === 'pointerup' && o.tap) o.tap(e, at);
+    const wasNav = nav;
+    stop();
+    if (!wasNav && !moved && e.type === 'pointerup' && o.tap) o.tap(e, at);
   };
   stage.addEventListener('pointerup', up); stage.addEventListener('pointercancel', up);
-  stage.addEventListener('wheel', e => {
-    const how = o.wheel(e); if (!how) return;
-    e.preventDefault();
-    if (how === 'pan') { v.tx -= e.deltaX; v.ty -= e.deltaY; apply(); return; }
+  // e: a wheel event, or one a screen forwarded ({clientX, clientY, deltaX, deltaY, ctrlKey, metaKey, shiftKey});
+  // true when the stage took it. Shift + wheel pans sideways.
+  const wheel = e => {
+    const how = o.wheel(e); if (!how) return false;
+    if (o.halt) o.halt();
+    if (how === 'pan') { const side = e.shiftKey && !e.deltaX; v.tx -= side ? e.deltaY : e.deltaX; v.ty -= side ? 0 : e.deltaY; apply(); return true; }
     const p = rel(e); zoomAt(p.x, p.y, Math.exp(-e.deltaY * (e.ctrlKey ? 0.012 : 0.0022)));
-  }, { passive: false });
-  return { zoomAt, rel };
+    return true;
+  };
+  stage.addEventListener('wheel', e => { if (wheel(e)) e.preventDefault(); }, { passive: false });
+  const panBy = (dx, dy) => { if (o.halt) o.halt(); v.tx += dx; v.ty += dy; apply(); };
+  NAV.stages.add({ stage, wheel, pan: e => begin(e, true), stop });
+  return { zoomAt, rel, wheel, panBy };
 }
 
 let uid = 0;
@@ -6010,7 +6234,8 @@ function renderCanvas(spec) {
   let lastTap = { t: 0, id: null };
   cv.zoomAt = panZoom(stage, cv, cv.apply, {
     kMin: cv.kMin, kMax: cv.kMax,
-    down: e => { if (e.target.closest && e.target.closest('.bp-crumbs button')) return false; touch(); cancelAnim(cv); },
+    down: e => { if (e.target.closest && e.target.closest('.bp-crumbs button')) return false; },
+    halt: () => { touch(); cancelAnim(cv); },
     press: () => setActive(cv, true),
     tap: (e, at) => {
       const downNode = at && at.closest && at.closest('.bp-node');
@@ -6020,7 +6245,7 @@ function renderCanvas(spec) {
     },
     wheel: e => {
       if (!(e.ctrlKey || e.metaKey || cv.active)) { hint.classList.remove('off'); clearTimeout(cv._ht); cv._ht = setTimeout(() => hint.classList.add('off'), 1600); return null; }
-      touch(); cancelAnim(cv); return 'zoom';
+      return 'zoom';
     },
   }).zoomAt;
   fig.addEventListener('keydown', e => {
@@ -8145,13 +8370,14 @@ function renderBoard(b) {
   const deck = abs.filter(a => devOf(a) === 'slide').sort((a, c) => pos.get(a.id).y - pos.get(c.id).y || pos.get(a.id).x - pos.get(c.id).x);
 
   /* frames: at most LIVE_MAX at a time, the screens nearest the middle of the view; the others show their outline */
-  const frameMode = () => B.mode === 'link' ? 'point' : ['interact', 'point', 'select', 'draw', 'edit'].includes(B.mode) ? B.mode : 'view';
+  const frameMode = () => B.mode === 'link' ? 'point' : ['interact', 'point', 'select', 'draw', 'region', 'edit'].includes(B.mode) ? B.mode : 'view';
   const themeOf = id => themes.find(t => t.id === id) || null;
   const tokensMsg = () => { const t = themeOf(B.theme); return { bd: 'tokens', theme: t && t.tokens && typeof t.tokens === 'object' ? t.tokens : null, motion: b.motion && typeof b.motion === 'object' ? b.motion : null }; };
   const viewMsg = x => ({ bd: 'view', sketch: B.sketch || x.a.fidelity === 'sketch', reduced: B.reduced, paused: B.paused });
   // Edit reaches the board's own frames of the current revision, never an icons artboard (the server builds its sheet)
   const editable = x => !x.role && !x.twin && devOf(x.a) !== 'icons';
-  const modeMsg = x => ({ bd: 'mode', mode: x.role === 'pres' ? 'interact' : x.role === 'cmp' ? 'view' : B.mode === 'edit' && !editable(x) ? 'view' : frameMode() });
+  // board: a screen on the board forwards its wheel, middle-button drags and Space to the board (frameNav)
+  const modeMsg = x => ({ bd: 'mode', mode: x.role === 'pres' ? 'interact' : x.role === 'cmp' ? 'view' : B.mode === 'edit' && !editable(x) ? 'view' : frameMode(), board: !x.role });
   // an iframe for record x (an artboard, its twin, or the present or compare view's copy) at revision rev (null:
   // current). A live page loads its proxy; at an earlier revision its snapshot (snapOf, at the page's width), as a
   // screen: sandboxed like one, never the live page
@@ -8245,13 +8471,34 @@ function renderBoard(b) {
   }
   const secTitle = (x, sec) => { const s = Number.isInteger(sec) ? secsOf(x.a)[sec] : null; return s ? str(s.title, 60) : ''; };
   B.siteTarget = (id, sec) => { const x = B.frames.get(id); return x ? siteTarget(x, sec) : {}; };
+  // navigation a board screen forwards (inspector.js): its wheel and a middle-button drag at their point (frame px),
+  // placed on the board by its model as just applied (the paint follows a frame later), and Space held or let go
+  let framePan = null;   // a middle-button drag in a screen: its frame and the pressed point (frame px), kept under the pointer
+  function frameNav(x, d) {
+    const num = (n, m) => Number.isFinite(n) ? clamp(n, -m, m) : NaN;
+    if (d.bd === 'space') { NAV.setSpace(d.down === true); return; }
+    const fx = num(d.x, 1e5), fy = num(d.y, 1e5);
+    if (d.bd === 'pan') {
+      NAV.grab(d.on === true);
+      if (Number.isNaN(fx) || Number.isNaN(fy)) framePan = null;
+      else if (d.start === true) framePan = { x, fx, fy };
+      else if (framePan && framePan.x === x) pz.panBy((fx - framePan.fx) * B.k, (fy - framePan.fy) * B.k);
+      if (d.on !== true) framePan = null;
+      return;
+    }
+    if (Number.isNaN(fx) || Number.isNaN(fy)) return;
+    const r = stage.getBoundingClientRect();
+    pz.wheel({ clientX: r.left + B.tx + (x.p.x + fx) * B.k, clientY: r.top + B.ty + (x.p.y + fy) * B.k, deltaX: num(d.dx, 1e4) || 0, deltaY: num(d.dy, 1e4) || 0,
+      ctrlKey: d.ctrl === true, metaKey: d.meta === true, shiftKey: d.shift === true });
+  }
   addEventListener('message', e => {
     let x = null;
     for (const y of B.live) if (y.fr && e.source === y.fr.contentWindow) { x = y; break; }
     const d = e.data;
-    if (!x || !d || typeof d !== 'object' || !['ready', 'hover', 'pick', 'nav', 'scroll', 'snapshot', 'edit', 'key'].includes(d.bd)) return;
+    if (!x || !d || typeof d !== 'object' || !['ready', 'hover', 'pick', 'nav', 'scroll', 'snapshot', 'edit', 'key', 'wheel', 'pan', 'space'].includes(d.bd)) return;
     if (d.bd === 'snapshot') { const f = x.live && snapAsks.get(d.id); if (f) { snapAsks.delete(d.id); f(d); } return; }
     if (d.bd === 'scroll') { if (!x.role && Number.isFinite(d.y)) syncScroll(x, d.y); return; }
+    if (d.bd === 'wheel' || d.bd === 'pan' || d.bd === 'space') { if (!x.role) frameNav(x, d); return; }
     if (d.bd === 'ready') {
       x.ready = true;
       if (x.role !== 'cmp' && !x.twin) takeNavs(B.frames.get(x.a.id), d);
@@ -8462,8 +8709,9 @@ function renderBoard(b) {
     kMin: () => BK_MIN, kMax: () => BK_MAX,
     down: e => {
       if (B.onBoardDown && B.onBoardDown(e)) return false;
-      if (B.mode === 'frame' || (e.target.closest && e.target.closest('.bd-ab-t button, .bd-var'))) return false; cancelAnimationFrame(anim); B.touched = true;
+      if (B.mode === 'frame' || (e.target.closest && e.target.closest('.bd-ab-t button, .bd-var'))) return false;
     },
+    halt: () => { cancelAnimationFrame(anim); B.touched = true; },
     tap: (e, at) => {
       const lg = at && at.closest && at.closest('.bd-lnk[data-link]');
       if (lg) { selectLink(lg.getAttribute('data-link')); return; }
@@ -8472,7 +8720,7 @@ function renderBoard(b) {
       if (id && lastTap.id === id && now - lastTap.t < 320) { focus(id); lastTap = { t: 0, id: null }; }
       else { lastTap = { t: now, id }; select(id); }
     },
-    wheel: e => { B.touched = true; cancelAnimationFrame(anim); return e.ctrlKey || e.metaKey ? 'zoom' : 'pan'; },
+    wheel: e => e.ctrlKey || e.metaKey ? 'zoom' : 'pan',
   });
   const zoomBy = f => { B.touched = true; pz.zoomAt(stage.clientWidth / 2, stage.clientHeight / 2, f); };
   // pan (keeping the zoom) so a screen that is partly off the view shows whole, in the middle
@@ -8688,10 +8936,10 @@ function renderBoard(b) {
   const motBtn = tbtn('pause', 'Pause animations', () => { B.paused = !B.paused; sendAll(viewMsg); paintTools(); }, { 'aria-pressed': 'false' });
   const redBtn = h('button', { type: 'button', class: 'bd-tbtn txt', 'aria-pressed': 'false', title: 'Reduced motion in every screen', onclick: () => { B.reduced = !B.reduced; sendAll(viewMsg); paintTools(); } }, 'Reduced');
   const presTip = deck.length ? 'Present the slides (← →, N: notes, Esc leaves)' : 'Present: one screen at a time (a tap follows its link; Backspace goes back; ← →, Esc leaves)';
-  // a presentation's primary action: Present as a filled key with its word, last in the toolbar; no Variants or Flows
-  const presBtn = IS_DECK ? h('button', { type: 'button', class: 'bd-tbtn pri', title: presTip, onclick: () => present(B.sel) }, ic('present'), h('span', {}, 'Present'))
-    : tbtn('present', presTip, () => present(B.sel));
-  // Export to… (here and in Present's bar): a menu of the deck's exports at the revision shown and the theme picked
+  // a presentation presents from its dock's Present (B.present); its toolbar has no Present, Variants or Flows
+  const presBtn = !IS_DECK && tbtn('present', presTip, () => present(B.sel));
+  B.present = () => present(B.sel);
+  // Export to… (here, a presentation's primary key, and in Present's bar): a menu of the deck's exports at the revision shown and the theme picked
   // (GET /__bluedoc/deck). HTML: one file that plays anywhere, offline (serve.py deck_html). PDF: one 16:9 page per
   // slide, without speaker notes, that the server prints with headless Chrome (deck_pdf); when it has no Chrome (501),
   // the deck's print view opens in a tab of its own (format=print, sandboxed) for the browser's Save as PDF. Only
@@ -8735,6 +8983,7 @@ function renderBoard(b) {
   const EXPORTS = [['html', 'fcode', 'HTML', 'One file that plays offline'], ['pdf', 'doc', 'PDF', 'One page per slide, no notes']];
   const deckMenu = up => exportMenu(EXPORTS, exportDeck, 'Export this deck as HTML or PDF', up, editsOpt);
   const expBtn = canExport && deckMenu(false);
+  if (expBtn) expBtn.querySelector('.bd-expb').classList.add('pri');
   // a website: every page at one of the board's widths, or a width the reader types
   const pageXs = () => [...B.frames.values()].filter(x => devOf(x.a) === 'page');
   const bpWords = BPS.map(bpName), bpSeg = IS_SITE ? h('div', { class: 'bd-sg', role: 'radiogroup', 'aria-label': 'Width of every page' }, BPS.map((w, i) =>
@@ -8759,7 +9008,7 @@ function renderBoard(b) {
     tbtn('fit', `Fit all ${SCREEN}s (0)`, () => fit(true)), tbtn('minus', 'Zoom out (−)', () => zoomBy(1 / 1.4)), zoomLbl, tbtn('plus', 'Zoom in (+)', () => zoomBy(1.4)),
     tbtn('target', `Focus the selected ${SCREEN} (F, or double-click it)`, () => focusSel()), sep(),
     !IS_DECK && [presBtn, varBtn, flowsBtn, sep()], IS_SITE && [bpSeg, bpIn, sep(), viewSeg], (!IS_SITE || abs.some(a => !isLive(a))) && [IS_SITE && sep(), fidSeg],
-    IS_SITE && [sep(), tabBtn], themeSel && [sep(), themeSel], IS_DECK && [sep(), expBtn, presBtn]);
+    IS_SITE && [sep(), tabBtn], themeSel && [sep(), themeSel], expBtn && [sep(), expBtn]);
   // the motion keys (pause animations, Reduced) are hidden for now: built and painted, not shown; screens play their motion
   function paintTools() {
     lpBtn.setAttribute('aria-pressed', String(B.lp));
@@ -9177,7 +9426,7 @@ function renderBoard(b) {
     B.brief = h('div', { class: 'bd-sp-brief' }, tldr, main);
     lp = h('aside', { class: 'bd-lp', 'aria-label': Screens, inert: true }, head,
       h('div', { class: 'bd-lp-pane bd-lp-ui', id: 'bd-lp-screens' }, lpList, h('p', { class: 'hint' }, IS_SITE
-        ? 'Click a page to focus it, a section to go to it. Interact (I) scrolls and clicks inside the pages; Point (C) pins a comment on what you point at.'
+        ? 'Click a page to focus it, a section to go to it. Interact (I) scrolls and clicks inside the pages; Element (C) pins a comment on what you point at.'
         : `Click a ${SCREEN} to focus it. Double-click one on the board, or press F, to do the same.`)));
     shell.prepend(lp);
     placeMeta();
@@ -9199,6 +9448,9 @@ function renderBoard(b) {
       }
       if (k === 'Escape') { if (cmpv) closeCompare(); else if (B.rq) cancelRq(); else if (B.variants) toggleVariants(false); else if (B.selLink || B.sel) { selectLink(null); select(null); } else return; }
       else if (k === '[') setLp(!B.lp, true);
+      else if (e.shiftKey && e.code === 'Digit1') fit(true);   // Shift + 1, 2, 0 by the key, whatever it types
+      else if (e.shiftKey && e.code === 'Digit2') { if (B.sel) focus(B.sel); }
+      else if (e.shiftKey && e.code === 'Digit0') zoomBy(1 / B.k);
       else if (k === '0') fit(true);
       else if (k === 'f' || k === 'F') focusSel();
       else if (k === '+' || k === '=') zoomBy(1.25);
@@ -9646,7 +9898,7 @@ function renderListing(lb) {
         if (ta.value === saved) edits.delete(fkey); else edits.set(fkey, { text: ta.value, list, loc, group, field: f, label, base: own ?? null });
         el.classList.toggle('dirty', edits.has(fkey)); ta.classList.remove('fb');
         if (rule) { const k = countOf(rule, ta.value, list); c.textContent = k.say; c.classList.toggle('over', k.over); }
-        paintSaveBar(); paintPlan();   // Approve waits for unsaved edits
+        paintSaveBar();
       });
       // ⌘/Ctrl + S saves; Esc puts the field back as saved
       ta.addEventListener('keydown', ev => {
@@ -10090,7 +10342,7 @@ function renderListing(lb) {
     return out.join('\n');
   };
   // drafts the frames take live (style picks, brand edits) restyle them in place; an Accept MT or a text edit repaints
-  // the text; any other draft redraws the sections. Approve listing follows the drafts (L.approveBlocks)
+  // the text; any other draft redraws the sections
   const LIVE_OPS = ['style', 'brand'], TEXT_OPS = ['accept', 'field'];
   let draftSig = '', liveSig = '', textSig = '';
   L.paintDrafts = () => {
@@ -10167,26 +10419,14 @@ function renderListing(lb) {
     else L.step(`Discard ${a.target.label.split(' › ').pop()}`, () => L.D.drop(id));
     return true;
   };
-  (L.approveBlocks ||= []).push(() => {
-    const n = drafts().filter(a => a.listing.op === 'field').length, u = edits.size;
-    return [...(u ? [`${u} text edit${u === 1 ? ' isn\'t' : 's aren\'t'} saved: Save, or put ${u === 1 ? 'it' : 'them'} back`] : []),
-      ...(n ? [`${n} text edit${n === 1 ? ' isn\'t' : 's aren\'t'} recorded yet: send Request changes, then wait for the agent's patch`] : [])];
-  });
-  // what Approve listing's dialog counts: MT strings not accepted (here or in the doc), shots that show a mock-up UI in
-  // one of their sets (no capture fits it, no upload), the variants the approval covers (their style picks go under ## Decisions)
-  L.approveSummary = () => ({
-    mt: LOCS.reduce((n, l) => n + (Array.isArray(MTS[l]) ? MTS[l] : []).filter(k => !acceptDraft(l, k)).length, 0),
-    mock: abs.filter(a => a.device === 'shot' && !listingImage(a) && (Array.isArray(a.sets) ? a.sets : []).some(s => SETS.has(s) && !captureFor(a, SETS.get(s)))).length,
-    variants: VARIANTS.length, variantIds: VARIANTS.map(v => v.id),
-  });
 
   /* ---------- Uploads and re-shoots (M2) ----------
      A set's Drop PNG slot (after its last shot, until the set is full) and an uploaded shot's Replace with PNG… take a
      PNG. The page reads its header (size, colour type, tRNS) against the set's rule and refuses a wrong file, then POST
      /__bluedoc/listing/upload writes it beside the doc (<stem>.listing/<platform>/<locale>/<set>/NN.png). It shows as
      a Draft tile until the agent records it: a 'listing' draft (op 'upload': {file, platform, locale, set, slot, w, h,
-     replaces?}) that Request changes sends under ## Uploaded shots with the `build.py patch` command, and Approve waits
-     for it (L.approveBlocks; the server refuses an approval too). bp-listing's `uploads` lists the drafts on disk.
+     replaces?}) that Request changes sends under ## Uploaded shots with the `build.py patch` command. bp-listing's
+     `uploads` lists the drafts on disk.
      A pin on a capture keeps where on the UI image it fell (target.at, fractions) and the capture the reader saw
      (target.cap); every shot pin's readback (L.pinMd) names the shot, its sets, locale and page, its screen file and
      element, its capture with its time, its recipe and the capture.py command that re-shoots it. */
@@ -10331,7 +10571,6 @@ function renderListing(lb) {
     for (const u of UPLOADS) if (!uploadDraft(u.file)) putUploadDraft(u);
     for (const a of drafts()) if (a.listing.op === 'upload' && !UPLOADS.some(u => u.file === a.listing.file) && !L.draftRecorded.upload(a.listing)) L.D.drop(a.id);
   };
-  (L.approveBlocks ||= []).push(() => { const n = drafts().filter(a => a.listing.op === 'upload').length; return n ? [`${n} uploaded shot${n === 1 ? ' isn\'t' : 's aren\'t'} recorded yet: send Request changes, then wait for the agent's revision`] : []; });
   // ## Uploaded shots: one line each, then the patch commands that record them (the first bumps the rev)
   (L.readbackParts ||= []).push({ ops: ['upload'], md: ds => {
     if (!ds.length) return '';
@@ -10384,8 +10623,7 @@ function renderListing(lb) {
      palette, image, swatches}, key brand:<listing id>): the caption font from the fonts installed here (GET
      /__bluedoc/fonts) and a palette by role, typed or extracted from an image (POST /__bluedoc/listing/brand writes it
      beside the doc; k-means in Lab runs in this page). The frames take it as {bd:'brand'}. The contrast pairs and
-     their minimum are the rules file's brand.contrast, which build.py checks too. Approve waits while a brand draft is
-     unrecorded (L.approveBlocks). */
+     their minimum are the rules file's brand.contrast, which build.py checks too. */
   const STYLES = new Map(RULES.styles.map(s => [s.id, s])), BR = obj(RULES.brand), BR_PAL = obj(BR.defaults), BR_ROLES = obj(BR.roles);
   const BR_PAIRS = Array.isArray(obj(BR.contrast).pairs) ? BR.contrast.pairs : [], BR_MIN = +obj(BR.contrast).min || 4.5;
   const BR_IMG = obj(BR.image), BR_FONT = obj(BR.font), LID = typeof lb.id === 'string' && lb.id ? lb.id : 'main';
@@ -10521,14 +10759,14 @@ function renderListing(lb) {
       h('h4', {}, 'Layout'), ...RULES.styles.filter(s => s.axis === 'layout').map(card),
       h('p', { class: 'hint' }, `Watch sets stay raw (L3) whatever the pick.${own.length ? ` ${new Set(own).size} shot${new Set(own).size === 1 ? ' keeps its' : 's keep their'} own style.` : ''} Grades: A store guidance, B a measured lift, C a vendor trend, D rank correlation.`));
   }
-  // the picks as decisions (all: every platform page and variant, picked or not, as Approve sends them)
-  L.decisionLines = (all = false) => {
+  // the picks Request changes sends as decisions: each platform page's and variant's style draft that differs from the doc's
+  L.decisionLines = () => {
     const out = [], vs = p => ['default', ...(Array.isArray(lb.variants) ? lb.variants : []).filter(x => x && x.platform === p && typeof x.id === 'string').map(x => x.id)];
     for (const p of PLATS) for (const v of vs(p.id)) {
       const d = styleDraft(p.id, v), doc = docStyle(p.id, v);
       for (const axis of ['message', 'layout']) {
-        const id = d ? d.listing[axis] : doc[axis], rec = v === 'default' ? (axis === 'message' ? 'm1' : 'l1') : doc[axis];
-        if (!all && !(d && id !== doc[axis])) continue;
+        if (!d || d.listing[axis] === doc[axis]) continue;
+        const id = d.listing[axis], rec = v === 'default' ? (axis === 'message' ? 'm1' : 'l1') : doc[axis];
         const need = needs(p.id, obj(STYLES.get(id)));
         out.push(`- ${axis === 'message' ? 'Message' : 'Layout'} style · ${p.label}${v !== 'default' ? ' · ' + v : ''} \`style-${p.id}-${v}-${axis}\` → ${styleLabel(id)}`
           + (id !== rec ? ` (recommended: ${styleLabel(rec)})` : '') + (need ? `\n  Needs the agent: ${need}` : ''));
@@ -10556,7 +10794,6 @@ function renderListing(lb) {
     return `## Brand drafts\n\n${ds.map(a => `- (${a.id}) \`brand:${LID}\` ${a.note}`).join('\n')}${f && Number.isInteger(f.fsType) ? `\n  Font embedding (fsType ${f.fsType}): ${fsWord(f.fsType)}` : ''}${low.length ? '\n' + low.join('\n') : ''}`
       + `\n\n\`\`\`sh\n${['build.py patch', sh(docFile()), sh(`brand:${LID}`), '--json', sh(JSON.stringify(json)), '--change', sh('Brand: ' + ds[ds.length - 1].note), ...ds.map(a => '--resolves ' + a.id)].join(' ')}\n\`\`\``;
   } });
-  (L.approveBlocks ||= []).push(() => brandDraft() ? ['A brand draft isn\'t recorded yet: send it with Request changes, then wait for the agent\'s patch'] : []);
 
   /* the brand's two homes: the caption's Typography at the foot of the Text tab, the palette and contrast in Colors.
      Built once (their inputs keep focus), painted from L.brand() on each change (paintBrand), undo and redo too */
@@ -10860,7 +11097,7 @@ function renderListing(lb) {
       h('span', { class: 'l' }, h('b', {}, p.label), h('span', {}, `${p.styles} · ${p.fg} on ${p.bg}`)),
       h('span', { class: p.ok ? 'good' : 'bad' }, `${p.ratio.toFixed(2)}:1`, h('small', {}, p.ok ? 'AA' : `below ${BR_MIN}`)))));
     const d = brandDraft();
-    setKids(BUI.state, ...(d ? [h('span', {}, 'A brand draft: Request changes sends it; Approve waits until the agent records it.'), can && h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => { clearTimeout(brandT); brandLive = null; L.step('Discard brand draft', () => L.D.drop(d.id)); } }, ic('reset'), 'Discard draft')]
+    setKids(BUI.state, ...(d ? [h('span', {}, 'A brand draft: Request changes sends it.'), can && h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => { clearTimeout(brandT); brandLive = null; L.step('Discard brand draft', () => L.D.drop(d.id)); } }, ic('reset'), 'Discard draft')]
       : [h('span', {}, b.image ? `From ${b.image.split('/').pop()}, as the listing records it.` : 'The listing\'s brand. An edit here is a draft until the agent records it.')]));
     BUI.state.classList.toggle('on', !!d);
   }
@@ -10988,7 +11225,7 @@ function renderListing(lb) {
       checks: L.checks().map(([k, t]) => [k, t]), findings: L.checks().map(([, , f]) => f), style: L.styleFor(L.platform),
       brand: (({ palette, font, image, swatches, draft }) => ({ palette, font, image, swatches, draft, contrast: contrastOf(palette).map(p => ({ fg: p.fg, bg: p.bg, label: p.label, ratio: p.ratio, ok: p.ok })),
         fonts: FONTS.list ? FONTS.list.length : null }))(L.brand()),
-      approveBlocks: (L.approveBlocks || []).flatMap(f => f()), approveSummary: L.approveSummary(), decisions: L.decisionLines(true),
+      decisions: L.decisionLines(),
       uploads: UPLOADS.map(u => ({ ...u })), slots: [...pg.querySelectorAll('.bd-lst-upslot')].map(e => ({ set: e.dataset.set, slot: +e.dataset.slot })),
       drafts: [...pg.querySelectorAll('.bd-lst-uptile[data-file]')].map(e => e.dataset.file) };
   };
@@ -11701,8 +11938,9 @@ if (REVS.length >= 1 && REVS[0].rev) {
   if (BASE || OLD) SIDE.show('revisions', { remember: false });
 }
 
-/* ---------- plans: Approve plan; other pages with checklists: Send answers. The keys that end the tray ---------- */
-// Approve plan is the reader's go-ahead for this revision, with their decision picks and any pending
+/* ---------- plans, designs and websites: Approve; a presentation: Present; other pages with checklists: the send key.
+   The keys that end the tray ---------- */
+// Approve is the reader's go-ahead for this revision, with their decision picks and any pending
 // comments as notes. When served, the server's `approval` {rev, at, carried} (seed, then ping) decides:
 // approved when its rev is the page's, or when `carried` (every change since that rev is progress: steps
 // marked done, picks carried over); an older one that isn't carried reads "Changes since approved rev X".
@@ -11721,16 +11959,14 @@ const revWord = CUR.rev ? ` (rev ${CUR.rev})` : '';
 // note: the approval dialog's note to the agent; files: its attachments
 function approvePayload(note, files = []) {
   note = String(note || '').trim();
-  const at = new Date().toISOString(), dec = [decisionsMd(), BOARD && BOARD.decisionLines ? BOARD.decisionLines(true) : ''].filter(Boolean).join('\n'), { annotations, notes } = MARKUP.approvalNotes();
+  const at = new Date().toISOString(), dec = decisionsMd(), { annotations, notes } = MARKUP.approvalNotes();
   const stale = staleEvidenceMd().trimEnd(), noteMdx = (note + filesMd(files, '')).trim();
   const markdown = [`# ${AP_TITLE} approved: ${DOC.title || docId}${revWord}, ${at.slice(0, 10)}`, noteMdx, dec && '## Decisions\n\n' + dec, notes && '## Notes with the approval\n\n' + notes, stale].filter(Boolean).join('\n\n') + '\n';
   // docHash: the JSON this page rendered; the server refuses the approval (409) when the file differs now
   return { kind: 'approval', decision: 'approved', doc: docId, rev: CUR.rev, docHash: store.docHash, title: DOC.title || '', path: location.pathname, at, note,
     ...(files.length ? { noteFiles: filesJson(files).files } : {}), answers: answerItems(), annotations, markdown };
 }
-const approveKey = APPROVABLE ? tipped(keyBtn('txt approve', 'check', `Approve ${AP_NOUN}`, {}, () => openApprove())) : null;
-// what keeps a listing from approval: an upload or brand draft the agent hasn't recorded yet (renderListing's L.approveBlocks)
-const boardBlocks = () => BOARD && Array.isArray(BOARD.approveBlocks) ? BOARD.approveBlocks.flatMap(f => f()) : [];
+const approveKey = APPROVABLE ? tipped(keyBtn('txt approve', 'check', 'Approve', {}, () => openApprove())) : null;
 function paintPlan() {
   if (!APPROVABLE || OLD) return;
   paintAsk();
@@ -11749,21 +11985,17 @@ function paintPlan() {
   }
   // a plan can't be approved while an item asks for more details: send it and wait for the agent's rev, or withdraw it
   const asking = done ? [] : Object.values(ITEMS).filter(x => x.more);
-  const blocks = done ? [] : boardBlocks();
-  approveKey.disabled = done || asking.length > 0 || blocks.length > 0; approveKey.classList.toggle('done', done);
-  approveKey.replaceChildren(ic(done ? 'tick' : 'check'), h('span', { class: 't' }, done ? 'Approved' + revTxt : `Approve ${AP_NOUN}`));
-  approveKey.setAttribute('aria-label', done ? 'Approved' + revTxt : `Approve ${AP_NOUN}`);
-  approveKey._tip = blocks.length ? blocks.join('; ')
-    : asking.length ? `${asking.length} item${asking.length === 1 ? ' asks' : 's ask'} for more details: ${asking.some(x => x.more === 'on') ? 'send it with Request changes and wait for the agent\'s next revision, or turn it off' : 'wait for the agent\'s next revision, or withdraw the request'}`
-    : IS_DECK ? `Approve this presentation${revWord}, every slide in it: the agent takes the deck as final, with your picks`
+  approveKey.disabled = done || asking.length > 0; approveKey.classList.toggle('done', done);
+  approveKey.replaceChildren(ic(done ? 'tick' : 'check'), h('span', { class: 't' }, done ? 'Approved' + revTxt : 'Approve'));
+  approveKey.setAttribute('aria-label', done ? 'Approved' + revTxt : `Approve this ${AP_NOUN}`);
+  approveKey._tip = asking.length ? `${asking.length} item${asking.length === 1 ? ' asks' : 's ask'} for more details: ${asking.some(x => x.more === 'on') ? 'send it with Request changes and wait for the agent\'s next revision, or turn it off' : 'wait for the agent\'s next revision, or withdraw the request'}`
     : IS_SITE ? `Approve this website${revWord}, every page and pick in it: the agent applies it to the site's source`
-    : IS_LISTING ? `Approve this listing${revWord}, both platform pages in every locale: the agent takes it as final, with your picks`
     : IS_DESIGN ? `Approve this design${revWord}, every screen in it: the agent builds it with your picks` : `Approve this plan${revWord}: the agent goes ahead with it and your picks`;
   if (done && approveDlg && approveDlg.open) approveDlg.close();
   ARC.paint();
 }
 function openApprove() {
-  if (planState().state === 'approved' || Object.values(ITEMS).some(x => x.more) || boardBlocks().length) return;
+  if (planState().state === 'approved' || Object.values(ITEMS).some(x => x.more)) return;
   MARKUP.flush();
   if (!approveDlg) {
     const note = h('textarea', { class: 'bp-note-ta', rows: 2, placeholder: 'A note for the agent (optional)', 'aria-label': 'Note with the approval' });
@@ -11777,23 +12009,17 @@ function openApprove() {
     const ok = h('button', { type: 'button', class: 'bp-btn ok', onclick: () => doApprove() }, ic('tick'), 'Approve');
     approveDlg = h('dialog', { class: 'bd-send bd-approve', 'aria-labelledby': 'bd-ap-h' },
       h('div', { class: 'hd' }, h('h3', { id: 'bd-ap-h' }, `Approve this ${AP_NOUN}${revWord}`), h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Close', onclick: () => approveDlg.close() }, ic('x'))),
-      h('p', { class: 'sum' }, IS_DECK ? 'The agent takes the deck as drawn, every slide at this revision, with the decisions below.'
-        : IS_LISTING ? 'The agent takes the listing as shown, both platform pages in every locale at this revision, with the decisions below.'
-        : IS_DESIGN ? 'The agent builds the design as drawn, every screen at this revision, with the decisions below.' : 'The agent goes ahead with the plan as written and the decisions below.'), field, sum, decBox, how, h('div', { class: 'ft' }, copy, ok));
+      h('p', { class: 'sum' }, IS_DESIGN ? 'The agent builds the design as drawn, every screen at this revision, with the decisions below.' : 'The agent goes ahead with the plan as written and the decisions below.'), field, sum, decBox, how, h('div', { class: 'ft' }, copy, ok));
     document.body.append(approveDlg);
     approveDlg.addEventListener('click', e => { if (e.target === approveDlg) approveDlg.close(); });
     Object.assign(approveDlg, { _note: note, _files: fd, _ok: ok });
     approveDlg._paint = () => {
       const pend = MARKUP.approvalNotes().annotations.length, dec = Object.values(ITEMS).filter(x => x.choices), open = dec.filter(x => !x.choice).length;
-      const ls = BOARD && BOARD.approveSummary ? BOARD.approveSummary() : { mt: 0, mock: 0 };
       const line = (icon, cls, text) => h('li', { class: cls }, ic(icon), h('span', {}, text));
       sum.replaceChildren(...[
         pend && line('msg', '', pend === 1 ? '1 pending comment goes with it as a note' : `${pend} pending comments go with it as notes`),
         open && line('alert', 'warn', `${open} open question${open === 1 ? ' has' : 's have'} no pick; the agent will use its recommendation`),
         staleOwners().length && line('alert', 'warn', `${staleOwners().length} check${staleOwners().length === 1 ? ' has' : 's have'} stale evidence: the code changed since ${staleOwners().length === 1 ? 'it' : 'they'} ran. The approval asks the agent to re-run ${staleOwners().length === 1 ? 'it' : 'them'}`),
-        ls.mt && line('alert', 'warn', `${ls.mt} machine-translated string${ls.mt === 1 ? ' isn\'t' : 's aren\'t'} accepted yet`),
-        ls.mock && line('alert', 'warn', `${ls.mock} shot${ls.mock === 1 ? ' shows' : 's show'} a mock-up UI, not a capture`),
-        ls.variants && line('tick', '', `It covers ${ls.variants} variant${ls.variants === 1 ? '' : 's'} with ${ls.variants === 1 ? 'its' : 'their'} style picks: ${ls.variantIds.join(', ')}`),
       ].filter(Boolean));
       sum.hidden = !sum.childElementCount;
       decBox.hidden = !dec.length;
@@ -11835,31 +12061,32 @@ async function doApprove() {
     copyText(p.markdown, replyFailed(e));
   } finally { if (dlg) dlg._ok.disabled = false; }
 }
-// after a plan's or design's Request changes, the header says so for this revision
+// after a plan's, design's or website's Request changes, the header says so for this revision
 function changesSent(p) { if (APPROVABLE) { store.set(PLAN_KEY, JSON.stringify({ rev: p.rev, state: 'changes', at: p.at })); paintPlan(); } }
 if (!OLD && !BASE) {
-  if (Object.values(ITEMS).some(x => x.choices && recIds(x).length)) {
-    const n = h('span', { class: 'n' });
-    accKey = tipped(keyBtn('txt acc', 'checks', 'Accept recommended', {}, () => acceptRecs(CHECKLISTS), h('span', { class: 't' }, 'Accept recommended'), n));
-    accKey._n = n; accKey._tip = 'Pick the starred option on every open decision';
-    TRAY_END.push(accKey); paintAccept();
-  }
   if (APPROVABLE) TRAY_END.push(approveKey);
-  else if (CHECKLISTS.length) { sendBtn = tipped(keyBtn('txt send', 'send', 'Send answers', {}, () => openSend(), h('span', { class: 't' }, 'Send answers'))); TRAY_END.push(sendBtn); paintSend(); }
+  // a presentation: Present (BOARD.present: from the selected slide)
+  else if (IS_DECK) { const k = tipped(keyBtn('txt present', 'present', 'Present', {}, () => BOARD && BOARD.present(), h('span', { class: 't' }, 'Present'))); k._tip = 'Present the slides from the selected one (← →, N: notes, Esc leaves)'; TRAY_END.push(k); }
+  else if (CHECKLISTS.length && !PICKS_WITH_CHANGES) {
+    const n = h('span', { class: 'n', hidden: true });
+    sendBtn = tipped(keyBtn('txt send', SEND_AS[0], SEND_AS[1], {}, () => openSend(), h('span', { class: 't' }, SEND_AS[1]), n));
+    sendBtn._n = n; TRAY_END.push(sendBtn); paintSend();
+  }
 }
 paintPlan();
 
 /* ---------- change requests: pins, text selections and drawings on the page ---------- */
-// The bottom toolbar switches between View (the page as usual), Point (pin a note on an element),
-// Select (a note on selected text) and Draw (freehand strokes). A note anchors to the smallest
+// The bottom toolbar switches between View (the page as usual) and the Annotate bar's tools: Element (mode `point`:
+// pin a note on an element), Region (`region`: a dragged box), Text (`select`: a note on selected text) and Pen
+// (`draw`: freehand strokes); View also offers a Comment button on selected text. A note anchors to the smallest
 // annotatable element, named by a key built from ids (see keyOf: `item:<checklist>/<item>`,
 // `row:<section>/<block>/<row>`, `line:<diff>/<path>:<n>`, ...), and keeps its ancestors' keys, so a
 // mark whose element is hidden (a collapsed row, another diff file, a closed system) sits on the
 // nearest visible ancestor. Positions are fractions of the element's box, so marks follow reflow,
 // width changes and canvas zoom. Notes belong to the current revision: no toolbar on earlier
-// revisions or in compare view. Send answers never carries these. This carries a plan's or design's
-// decision picks and item comments (there is no Send answers there; they also go with Approve), and on
-// other pages only the "Need more details" items (itemsPending counts what has not gone yet).
+// revisions or in compare view. Send answers never carries these. This carries the decision picks and item comments of a
+// plan, design, presentation, website or listing (PICKS_WITH_CHANGES: there is no Send answers there; on an approvable
+// one they also go with Approve), and on other pages only the "Need more details" items (itemsPending counts what has not gone yet).
 const MARKUP = (() => {
   const KEY = `bp:${docId}:__ann`, MSG = `bp:${docId}:__chgmsg`, PEN_KEY = 'bluedoc:pen';
   // one key per annotation, `__ann:<id>`, so two browsers adding notes don't overwrite each other
@@ -11871,8 +12098,14 @@ const MARKUP = (() => {
   // `listing`: a storelisting's drafts (renderListing): a set's shot order, the device sections turned on, a style
   // pick, a brand edit, an upload, an Accept MT or a text edit (op 'field': its value and base, text or a list of text)
   // `element`: a design board's draft of one element in a screen (boardEdits): its new text, or its removal
-  const ANN_TYPES = ['pin', 'text', 'draw', 'general', 'link', 'layout', 'listing', 'element'];
+  // `region`: a box dragged on the page (Region), `box` [x, y, w, h] as fractions of its target's box
+  const ANN_TYPES = ['pin', 'text', 'draw', 'region', 'general', 'link', 'layout', 'listing', 'element'];
   const DRAFT_TYPES = ['link', 'layout', 'listing', 'element'], isDraft = a => DRAFT_TYPES.includes(a.type);
+  // a drawing or a region: a shape over the page, anchored to the smallest element holding it, covering `targets`
+  const isShape = a => a.type === 'draw' || a.type === 'region';
+  const isBox = b => Array.isArray(b) && b.length === 4 && b.every(Number.isFinite) && b[2] >= 0 && b[3] >= 0;
+  // what a mark is called where it is listed: a region names the element it sits on
+  const onLabel = (a, s) => a.type === 'region' ? 'Region on ' + s : s;
   const capStr = (v, n) => typeof v === 'string' && v.length <= n;
   const isElement = e => !!e && typeof e === 'object' && ['text', 'delete'].includes(e.op) && capStr(e.ab, 200) && !!e.ab && capStr(e.sel, 200) && !!e.sel
     && capStr(e.tag, 20) && capStr(e.base, 1000) && (e.text == null && e.op === 'delete' || capStr(e.text, 1000) && !!e.text) && (e.ord == null || Number.isInteger(e.ord));
@@ -11882,7 +12115,7 @@ const MARKUP = (() => {
   const valid = a => !!a && typeof a === 'object' && typeof a.id === 'string' && ANN_TYPES.includes(a.type) && isTarget(a.target)
     && (a.targets == null || Array.isArray(a.targets) && a.targets.every(isTarget)) && (a.type !== 'text' || typeof a.quote === 'string')
     && (a.note == null || typeof a.note === 'string') && (a.up == null || Array.isArray(a.up))
-    && (a.strokes == null || Array.isArray(a.strokes)) && (a.pos == null || typeof a.pos === 'object')
+    && (a.strokes == null || Array.isArray(a.strokes)) && (a.pos == null || typeof a.pos === 'object') && (a.type !== 'region' || isBox(a.box))
     && (a.type !== 'link' || !!a.link && typeof a.link === 'object' && typeof a.link.op === 'string' && typeof a.link.from === 'string' && typeof a.link.el === 'string')
     && (a.type !== 'layout' || !!a.layout && typeof a.layout === 'object' && !!a.layout.positions && typeof a.layout.positions === 'object')
     && (a.type !== 'listing' || !!a.listing && typeof a.listing === 'object' && typeof a.listing.op === 'string' && (a.listing.op !== 'field' || isField(a.listing)))
@@ -11942,10 +12175,10 @@ const MARKUP = (() => {
   const pending = () => list.filter(a => a.status === 'pending' || followUp(a));
   const onPage = () => list.filter(a => !isGeneral(a));
   const cut = (s, n) => { s = String(s ?? '').replace(/\s+/g, ' ').trim(); return s.length > n ? s.slice(0, n - 1).trimEnd() + '…' : s; };
-  const TYPE_IC = { pin: 'msg', text: 'type', draw: 'pencil', general: 'msgsq', link: 'route', layout: 'grid', listing: 'grid', element: 'penline' };
-  const TYPE_WORD = { pin: 'pin', text: 'text', draw: 'drawing', general: 'general', link: 'link draft', layout: 'layout draft', listing: 'listing draft', element: 'element draft' };
-  const excerpt = a => a.type === 'text' ? a.quote : a.type === 'draw' && a.targets && a.targets.length ? a.targets.map(t => t.text).filter(Boolean).join(' / ') : a.target.text;
-  const pub = a => ({ id: a.id, type: a.type, note: followUp(a) ? String(a.draft || '').trim() : a.note, ...filesJson(noteFiles(a)), target: a.target, ...(a.type === 'draw' ? { targets: a.targets || [a.target] } : {}),
+  const TYPE_IC = { pin: 'msg', text: 'type', draw: 'pencil', region: 'region', general: 'msgsq', link: 'route', layout: 'grid', listing: 'grid', element: 'penline' };
+  const TYPE_WORD = { pin: 'pin', text: 'text', draw: 'drawing', region: 'region', general: 'general', link: 'link draft', layout: 'layout draft', listing: 'listing draft', element: 'element draft' };
+  const excerpt = a => a.type === 'text' ? a.quote : isShape(a) && a.targets && a.targets.length ? a.targets.map(t => t.text).filter(Boolean).join(' / ') : a.target.text;
+  const pub = a => ({ id: a.id, type: a.type, note: followUp(a) ? String(a.draft || '').trim() : a.note, ...filesJson(noteFiles(a)), target: a.target, ...(isShape(a) ? { targets: a.targets || [a.target] } : {}),
     ...(a.type === 'text' ? { quote: a.quote } : {}), ...(a.type === 'link' ? { link: a.link } : {}), ...(a.type === 'layout' ? { layout: a.layout } : {}), ...(a.type === 'listing' ? { listing: a.listing } : {}),
     ...(a.type === 'element' ? { element: a.element } : {}), rev: a.rev, at: a.at });
   // the new message: the comment, or its follow-up; and its files
@@ -11956,10 +12189,10 @@ const MARKUP = (() => {
   const annConvo = a => convo(a.thread, annReplies(a));
   // a comment's message in the Markdown, "Change:" (a follow-up: "Follow-up:"), its files, then the agent's latest reply and the command that answers it
   const msgMd = (a, word, indent) => `${followUp(a) ? 'Follow-up' : word}:` + (noteText(a) ? ' ' + noteText(a).split('\n').join('\n' + indent) : '') + filesMd(noteFiles(a), indent) + replyMd(`ann:${a.id}`, annReplies(a), indent, a.id);
-  // the key `patch` takes, as changes.json has it; a drawing over several parts names each part's key
-  const keysMd = a => [...new Set((a.type === 'draw' && a.targets && a.targets.length ? a.targets : [a.target]).map(t => t.key))].map(k => `\`${k}\``).join(' ');
+  // the key `patch` takes, as changes.json has it; a drawing or region over several parts names each part's key
+  const keysMd = a => [...new Set((isShape(a) && a.targets && a.targets.length ? a.targets : [a.target]).map(t => t.key))].map(k => `\`${k}\``).join(' ');
   // the comment's id goes after its key: the agent passes it to `patch --resolves` once the change is made
-  const headMd = (a, i) => `${i + 1}. **${a.target.label}** (${TYPE_WORD[a.type]}) ${keysMd(a)} (${a.id})`;
+  const headMd = (a, i) => `${i + 1}. **${onLabel(a, a.target.label)}** (${TYPE_WORD[a.type]}) ${keysMd(a)} (${a.id})`;
   // a website pin also says where to edit (its section's source hints, else its page's) and the width it was made at
   const siteMd = t => [Number.isInteger(t.bp) && `   At: ${t.bp} px wide`,
     Array.isArray(t.source) && t.source.length && `   Source: ${t.source.filter(s => typeof s === 'string').map(s => '`' + s.replace(/`/g, '') + '`').join(', ')}`].filter(Boolean);
@@ -11981,17 +12214,17 @@ const MARKUP = (() => {
     if (own.length) parts.push('## Board drafts\n\n' + own.map(a => [`- (${a.id}) ${keysMd(a)} ${noteText(a)}`, ...(BOARD && BOARD.draftLines ? BOARD.draftLines(a) : [])].join('\n')).join('\n')
       + (BOARD && BOARD.draftCommands ? '\n\n```sh\n' + BOARD.draftCommands(own) + '\n```' : ''));
     for (const p of parts2) { const md = p.md(dr.filter(a => a.type === 'listing' && a.listing && p.ops.includes(a.listing.op))); if (md) parts.push(md); }
-    const dec = [BOARD && BOARD.decisionLines ? BOARD.decisionLines() : '', APPROVABLE ? decisionsMd() : decisionsMd(itemsPending())].filter(Boolean).join('\n');
+    const dec = [BOARD && BOARD.decisionLines ? BOARD.decisionLines() : '', PICKS_WITH_CHANGES ? decisionsMd() : decisionsMd(itemsPending())].filter(Boolean).join('\n');
     if (dec) parts.push('## Decisions\n\n' + dec);
     const stale = staleEvidenceMd().trimEnd();
     if (stale) parts.push(stale);
     const body = parts.join('\n\n');
     return `# Change requests: ${DOC.title || docId}${CUR.rev ? ` (rev ${CUR.rev})` : ''}, ${new Date().toISOString().slice(0, 10)}\n\n` + body + '\n' + replyCmdsMd(body);
   }
-  // `message` repeats the general comments for agents that read only it. A plan's or design's decision picks
-  // go along as `answers`; elsewhere `answers` holds the "Need more details" items
+  // `message` repeats the general comments for agents that read only it. The decision picks of a plan, design,
+  // presentation, website or listing go along as `answers`; elsewhere `answers` holds the "Need more details" items
   function payload() {
-    const items = pending(), answers = APPROVABLE ? answerItems() : answerItems(itemsPending());
+    const items = pending(), answers = PICKS_WITH_CHANGES ? answerItems() : answerItems(itemsPending());
     return { kind: 'changes', doc: docId, rev: CUR.rev, title: DOC.title || '', path: location.pathname, at: new Date().toISOString(),
       message: items.filter(isGeneral).map(noteText).join('\n\n'), annotations: items.map(pub), ...(answers.length ? { answers } : {}), markdown: changesMd(items) };
   }
@@ -12259,6 +12492,8 @@ const MARKUP = (() => {
     for (const s of strokes) for (let i = 0; i + 1 < s.length; i += 2) { x0 = Math.min(x0, s[i]); x1 = Math.max(x1, s[i]); y0 = Math.min(y0, s[i + 1]); y1 = Math.max(y1, s[i + 1]); }
     return { x0, y0, x1, y1 };
   };
+  // a drawing's strokes or a region's box, as fractions of its target's box
+  const extent = a => a.type === 'region' ? { x0: a.box[0], y0: a.box[1], x1: a.box[0] + a.box[2], y1: a.box[1] + a.box[3] } : bounds(a.strokes || []);
   const pathD = s => { let d = ''; for (let i = 0; i + 1 < s.length; i += 2) d += (i ? 'L' : 'M') + s[i] + ' ' + s[i + 1]; return d; };
   const ellipse = () => { const s = []; for (let i = 0; i <= 48; i++) { const t = i / 48 * Math.PI * 2; s.push(r4(.5 + .52 * Math.cos(t)), r4(.5 + .56 * Math.sin(t))); } return s; };
   // text: the quote's place in its element's text (the concatenated text nodes), found again later
@@ -12288,27 +12523,122 @@ const MARKUP = (() => {
   const capG = sv('g');
   const cap = h('div', { class: 'bd-ann-cap', hidden: true }, sv('svg', { 'aria-hidden': 'true' }, capG));
   const VIEW_M = ['cursor', 'View', 'V', IS_LISTING ? 'View: scroll the platform page; drag a shot to reorder its set' : IS_DESIGN ? 'View: drag to pan the board; the screens ignore the pointer' : 'View: use the page as usual'];
-  const MARK_M = { point: ['msg', 'Point', 'C', IS_DESIGN ? 'Point: pin a comment on an element, inside a screen too' : 'Point: pin a comment on an element'],
-    select: ['type', 'Select', 'T', 'Select: comment on some text'], draw: ['pencil', 'Draw', 'D', 'Draw: circle or mark what should change'] };
+  // the Annotate bar's tools (their ids are the modes': point, region, select, draw)
+  const MARK_M = { point: ['element', 'Element', 'C', IS_DESIGN ? 'Element: pin a comment on an element, inside a screen too' : 'Element: pin a comment on an element'],
+    region: ['region', 'Region', 'M', 'Region: drag a box around what should change'],
+    select: ['type', 'Text', 'T', 'Text: comment on some text'], draw: ['pencil', 'Pen', 'D', 'Pen: circle or mark what should change'] };
+  const ANN_M = Object.keys(MARK_M);
   // a design's tray also has Edit (change a screen's text, delete an element: drafts), Interact (clicks go to the
   // screens), Link (edit the arrows) and Frame (request a new screen)
   const MODES = IS_DESIGN && !IS_LISTING ? { view: VIEW_M, interact: ['hand', 'Interact', 'I', 'Interact: click inside the screens (tabs, toggles)'], ...MARK_M,
     edit: ['penline', 'Edit', 'E', `Edit: click an element in a ${SCREEN} to select it, double-click to change its text, Delete to remove it`],
     link: ['route', 'Link', 'L', 'Link: click an element, then a screen, to add an arrow; drag a + knob for a gesture; drag an arrow\'s dots to change it'],
     frame: ['frame', 'Frame', 'R', 'Frame: drag an empty frame for a new screen, then labelled boxes inside it'] } : { view: VIEW_M, ...MARK_M };
-  const PENS = { risk: 'Red', accent: 'Blue', warn: 'Amber', ok: 'Green' };
-  let mode = 'view', marksOff = false, pen = PENS[store.get(PEN_KEY)] ? store.get(PEN_KEY) : 'risk';
-  const modeBtns = Object.entries(MODES).map(([m, [icon, name, key, tipText]]) => {
+  // the pen: six colours or a custom one (#rrggbb, from the picker), and a width in px; kept in this browser. Each
+  // drawing records its own (`color`, `width`)
+  const PENS = { risk: 'Red', warn: 'Amber', ok: 'Green', accent: 'Blue', violet: 'Violet', ink: 'Ink' }, WIDTHS = { 2: 'Thin', 4: 'Medium', 7: 'Bold' };
+  const WIDTH_KEY = 'bluedoc:pen-width', CUSTOM_KEY = 'bluedoc:pen-custom', HEX = /^#[0-9a-f]{6}$/i, isHex = c => typeof c === 'string' && HEX.test(c);
+  const okPen = c => !!PENS[c] || isHex(c);
+  // tool: the Annotate bar's last tool, which the Annotate key opens it on
+  let mode = 'view', tool = 'point', marksOff = false, pen = okPen(store.get(PEN_KEY)) ? store.get(PEN_KEY) : 'risk',
+    width = WIDTHS[store.get(WIDTH_KEY)] ? +store.get(WIDTH_KEY) : 4, custom = isHex(store.get(CUSTOM_KEY)) ? store.get(CUSTOM_KEY) : null;
+  // a mark in a pen's colour: a named pen's class, a custom colour on --pen
+  const penCls = c => PENS[c] ? ' bd-pen-' + c : '';
+  const setPen = (el, c) => { if (isHex(c)) el.style.setProperty('--pen', c); else el.style.removeProperty('--pen'); };
+  const btn = Object.fromEntries(Object.entries(MODES).map(([m, [icon, name, key, tipText]]) => {
     const b = tipped(keyBtn('', icon, name, { 'data-m': m, 'aria-pressed': String(m === mode), 'aria-keyshortcuts': key }, () => setMode(m)), [key]);
     b._tip = tipText;
-    return b;
-  });
-  const swatches = h('span', { class: 'sw', role: 'group', 'aria-label': 'Pen colour', hidden: true }, Object.entries(PENS).map(([c, name]) =>
-    h('button', { type: 'button', class: 'bd-pen-' + c, 'data-pen': c, 'aria-label': name + ' pen', title: name + ' pen', onclick: () => { pen = c; store.set(PEN_KEY, c); paint(); } })));
+    return [m, b];
+  }));
+  // the Annotate key opens its bar on the last tool, and closes it back to View
+  const toggleAnn = () => setMode(ANN_M.includes(mode) ? 'view' : tool);
+  const annBtn = tipped(keyBtn('ann', 'annotate', 'Annotate', { 'aria-pressed': 'false', 'aria-expanded': 'false', 'aria-keyshortcuts': 'A' }, toggleAnn,
+    h('span', { class: 't' }, 'Annotate'), ic('up', 'car')), ['A']);
+  annBtn._tip = 'Annotate: comment on an element, a region or some text, or draw';
+  const pickPen = c => { pen = c; store.set(PEN_KEY, c); if (popFor === 'color') closePop(false); paint(); };
+  const pickWidth = w => { width = w; store.set(WIDTH_KEY, String(w)); if (popFor === 'width') closePop(false); paint(); };
+  const swatches = () => h('span', { class: 'sw', role: 'group', 'aria-label': 'Pen colour' }, Object.entries(PENS).map(([c, name]) =>
+    h('button', { type: 'button', class: 'bd-pen-' + c, 'data-pen': c, 'aria-label': name + ' pen', title: name + ' pen', onclick: () => pickPen(c) })),
+    h('button', { type: 'button', class: 'cust bd-pen-custom', 'data-pen': 'custom', 'aria-label': 'Custom colour', title: 'Custom colour', 'aria-haspopup': 'dialog', onclick: e => togglePop('pick', e.currentTarget) }));
+  const wLine = w => sv('line', { x1: 4, y1: 11, x2: 18, y2: 11, 'stroke-width': w });
+  const widths = () => h('span', { class: 'bd-wt', role: 'group', 'aria-label': 'Stroke width' }, Object.entries(WIDTHS).map(([w, name]) =>
+    h('button', { type: 'button', 'data-w': w, 'aria-label': name, title: `${name} (${w} px)`, onclick: () => pickWidth(+w) }, sv('svg', { viewBox: '0 0 22 22', 'aria-hidden': 'true' }, wLine(w)))));
+  // ≤ 600 px the colours and widths are menus: a key showing the current colour, one the current width
+  const colorDot = h('span', { class: 'dot' }), widthLine = wLine(width);
+  const styKey = (label, kind, ...kids) => { const k = tipped(h('button', { type: 'button', class: 'bd-key sty', 'aria-label': label, 'aria-haspopup': 'true', 'aria-expanded': 'false', onclick: () => togglePop(kind, k) }, kids, ic('down', 'car'))); k._tip = label; return k; };
+  const colorKey = styKey('Pen colour', 'color', colorDot), widthKey = styKey('Stroke width', 'width', sv('svg', { viewBox: '0 0 22 22', class: 'w', 'aria-hidden': 'true' }, widthLine));
+  const styGroove = groove(); styGroove.classList.add('sty-g');
+  const toolsBar = h('div', { class: 'bd-annb tail', role: 'toolbar', 'aria-label': 'Annotate' }, ANN_M.map(m => btn[m]), styGroove, colorKey, widthKey);
+  const optBar = h('div', { class: 'bd-annb opt', role: 'toolbar', 'aria-label': 'Pen', hidden: true }, swatches(), widths());
+  const annRow = h('div', { class: 'bd-annrow', hidden: true }, toolsBar, optBar);
+  // wide windows: the bar's left edge 6 px left of the Annotate key, its tail on the key's icon (≤ 600 px: centred, CSS)
+  const placeBar = () => { if (!annRow.hidden) annRow.style.setProperty('--ann-x', annBtn.offsetLeft - 6 + 'px'); };
+  // the narrow menus and the custom colour's picker: one popover over the key that opened it
+  const pop = h('div', { class: 'bd-annpop', hidden: true });
+  let popFor = null, popAt = null;
+  pop.addEventListener('keydown', e => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closePop(true); } });
+  function togglePop(kind, at) {
+    if (popFor === kind) { closePop(false); return; }
+    if (pop.contains(at)) at = colorKey;   // the narrow colour menu's custom swatch: the picker takes the menu's place
+    closePop(false);
+    popFor = kind; popAt = at;
+    pop.className = 'bd-annpop' + (kind === 'pick' ? ' bd-cpick' : '');
+    pop.setAttribute('role', kind === 'pick' ? 'dialog' : 'group');
+    pop.setAttribute('aria-label', { pick: 'Custom colour', color: 'Pen colour', width: 'Stroke width' }[kind]);
+    setKids(pop, kind === 'color' ? swatches() : kind === 'width' ? widths() : picker());
+    at.closest('.bd-annb').append(pop); pop.hidden = false;
+    paint();
+    const bar = pop.parentElement.getBoundingClientRect(), w = pop.offsetWidth;
+    pop.style.left = Math.round(clamp(at.offsetLeft + at.offsetWidth / 2 - w / 2, 8 - bar.left, root.clientWidth - 8 - w - bar.left)) + 'px';
+    (pop.querySelector(kind === 'pick' ? '.f' : '[aria-pressed="true"]') || pop.querySelector('button'))?.focus({ preventScroll: true });
+  }
+  // back: focus returns to the key that opened it (Esc, Use)
+  function closePop(back) {
+    if (!popFor) return false;
+    const at = popAt;
+    popFor = null; popAt = null; pop.hidden = true; pop.replaceChildren();
+    if (back && at && at.isConnected) at.focus({ preventScroll: true });
+    paint();
+    return true;
+  }
+  // the custom colour: a saturation and value square, a hue strip, the hex value (typed or picked), Use
+  const hsvHex = (hu, s, v) => '#' + [5, 3, 1].map(n => { const k = (n + hu / 60) % 6; return Math.round(255 * (v - v * s * Math.max(0, Math.min(k, 4 - k, 1)))).toString(16).padStart(2, '0'); }).join('');
+  function hexHsv(c) {
+    const [r, g, b] = [1, 3, 5].map(i => parseInt(c.slice(i, i + 2), 16) / 255), v = Math.max(r, g, b), d = v - Math.min(r, g, b);
+    const hu = !d ? 0 : v === r ? ((g - b) / d + 6) % 6 : v === g ? (b - r) / d + 2 : (r - g) / d + 4;
+    return [hu * 60, v ? d / v : 0, v];
+  }
+  function picker() {
+    let cur = custom || (isHex(pen) ? pen : '#8b5cf6'), [hu, sa, va] = hexHsv(cur);
+    const sq = h('div', { class: 'sv', 'aria-hidden': 'true' }, h('i')), hue = h('div', { class: 'hue', 'aria-hidden': 'true' }, h('i'));
+    const dot = h('span', { class: 'dot' }), f = h('input', { class: 'f', type: 'text', maxlength: 7, spellcheck: 'false', autocomplete: 'off', 'aria-label': 'Hex colour' });
+    const use = h('button', { type: 'button', class: 'ok', onclick: () => usePick() }, 'Use');
+    const show = typed => {
+      sq.style.setProperty('--hue', Math.round(hu));
+      Object.assign(sq.firstChild.style, { left: sa * 100 + '%', top: (1 - va) * 100 + '%' }); hue.firstChild.style.left = hu / 3.6 + '%';
+      if (isHex(cur)) dot.style.setProperty('--pen', cur);
+      if (!typed) f.value = cur;
+      use.disabled = !isHex(cur);
+    };
+    const usePick = () => { if (!isHex(cur)) return; custom = cur.toLowerCase(); store.set(CUSTOM_KEY, custom); closePop(true); pickPen(custom); };
+    const drag = (el, set) => {
+      const at = e => { const r = el.getBoundingClientRect(); set(clamp((e.clientX - r.left) / (r.width || 1), 0, 1), clamp((e.clientY - r.top) / (r.height || 1), 0, 1)); cur = hsvHex(hu, sa, va); show(false); };
+      el.addEventListener('pointerdown', e => { if (e.button !== 0) return; e.preventDefault(); el.setPointerCapture(e.pointerId); at(e); });
+      el.addEventListener('pointermove', e => { if (el.hasPointerCapture(e.pointerId)) at(e); });
+    };
+    drag(sq, (x, y) => { sa = x; va = 1 - y; });
+    drag(hue, x => { hu = x * 359.9; });
+    f.addEventListener('input', () => { const v = f.value.trim().toLowerCase(); cur = v[0] === '#' ? v : '#' + v; if (isHex(cur)) [hu, sa, va] = hexHsv(cur); show(true); });
+    f.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); usePick(); } });
+    show(false);
+    return [sq, hue, h('div', { class: 'hex' }, dot, f, use)];
+  }
   const eye = tipped(keyBtn('eye', 'eye', 'Hide comment marks', {}, () => { marksOff = !marksOff; paint(); schedule(true); }));
   const goN = h('span', { class: 'n' });
   const go = tipped(keyBtn('go', 'edit', 'Request changes', {}, () => openDlg(), h('span', { class: 'l' }, 'Request changes'), goN));
-  const tb = h('div', { class: 'bd-anntb bd-ann-ui', role: 'toolbar', 'aria-label': 'Comment on this doc' }, modeBtns, swatches, groove(), eye, TRAY_END.length ? groove() : null, go, TRAY_END);
+  // the dock: View, Interact, Annotate (its bar above it), Edit, Link, Frame; the eye; Request changes and the page's last keys
+  const dockKeys = Object.keys(MODES).flatMap(m => m === ANN_M[0] ? [annBtn, annRow] : ANN_M.includes(m) ? [] : [btn[m]]);
+  const tb = h('div', { class: 'bd-anntb bd-ann-ui', role: 'toolbar', 'aria-label': 'Comment on this doc' }, dockKeys, groove(), eye, TRAY_END.length ? groove() : null, go, TRAY_END);
   let page = null, swallow = false, press = null, ink = null, lastUp = 0, dlg = null, hovEl = null, hovFor = null, flashT = 0;
   // the comment being written (on the page, in the composer; not in the list until saved), the one being
   // edited in its sidebar card, the selected one, the hovered one
@@ -12347,7 +12677,7 @@ const MARKUP = (() => {
         let p = null;
         // a pin inside a screen sits where its frame last reported the element
         if (a.type === 'pin' || isDraft(a)) { const q = (BOARD && BOARD.pinPos && BOARD.pinPos(a.target.key, a.target)) || a.pos || { x: .5, y: .5 }; p = { x: r.left + q.x * r.width, y: r.top + q.y * r.height }; }
-        else if (a.type === 'draw') { const b = bounds(a.strokes || []); if (isFinite(b.x1)) p = { x: r.left + b.x1 * r.width - 6, y: r.top + b.y0 * r.height + 6 }; }
+        else if (isShape(a)) { const b = extent(a); if (isFinite(b.x1)) p = { x: r.left + b.x1 * r.width - 6, y: r.top + b.y0 * r.height + 6 }; }
         else { const rg = rangeOf(a), rs = rg && shown(rg.startContainer.parentElement) ? rg.getClientRects() : null, last = rs && rs[rs.length - 1]; if (last) p = { x: last.right, y: last.top + 2 }; }
         // an element partly scrolled inside its scroller keeps its mark, pulled in to the visible edge
         if (p && !inClip(p, clip) && r.right > clip.l && r.left < clip.r && r.bottom > clip.t && r.top < clip.b) {
@@ -12363,7 +12693,7 @@ const MARKUP = (() => {
   function markFor(a) {
     let m = marks.get(a.id);
     if (!m) {
-      m = { a, ink: null, inkFor: null, flashUntil: 0 };
+      m = { a, ink: null, inkFor: null, box: null, flashUntil: 0 };
       m.pin = h('button', { type: 'button', class: 'bd-ann-pin', onclick: e => { e.stopPropagation(); if (m.a === draft) cmpTa.focus(); else select(m.a, { open: true, scroll: true }); } });
       m.pin.addEventListener('pointerenter', () => setHot(m.a, false));
       m.pin.addEventListener('pointerleave', () => setHot(null, false));
@@ -12371,6 +12701,7 @@ const MARKUP = (() => {
     }
     m.a = a;
     if (a.type === 'draw' && !m.ink) { m.ink = sv('svg', { class: 'bd-ann-ink', viewBox: '0 0 1 1', preserveAspectRatio: 'none', 'aria-hidden': 'true' }); layer.prepend(m.ink); }
+    if (a.type === 'region' && !m.box) { m.box = h('div', { class: 'bd-ann-rgn', 'aria-hidden': 'true' }); layer.prepend(m.box); }
     return m;
   }
   const isOn = a => a === selA || a === editA || a === draft;
@@ -12392,14 +12723,16 @@ const MARKUP = (() => {
       if (hlNow && a.type === 'text' && !off) { const rg = rangeOf(a); if (rg && shown(cachedEl(a.target.key))) (isOn(a) || a === hotA ? hl.open : a.status !== 'pending' && a !== draft ? hl.sent : hl.on).push(rg); }
       const p = off ? null : locate(a);
       m.pin.hidden = !p;
-      // a saved drawing leaves its pin; its strokes show while it is drawn, hovered, selected or edited
+      // a saved drawing leaves its pin; its strokes show while it is drawn, hovered, selected or edited. A region's box always shows
       if (m.ink) m.ink.style.display = p && p.exact && (isOn(a) || a === hotA) ? '' : 'none';
+      if (m.box) m.box.style.display = p && p.exact ? '' : 'none';
       if (!p) return;
       const old = a.status === 'pending' && a.rev !== CUR.rev, st = a === draft ? '' : { open: ' sent', resolved: ' sent res' }[a.status] || '';
-      m.pin.className = 'bd-ann-pin' + (a.type === 'draw' ? ' bd-pen-' + (a.color || 'risk') : '') + st + (old ? ' old' : '') +
+      m.pin.className = 'bd-ann-pin' + (a.type === 'draw' ? penCls(a.color || 'risk') : '') + st + (old ? ' old' : '') +
         (p.exact ? '' : ' away') + (isOn(a) ? ' on' : '') + (a === hotA ? ' hot' : '') + (m.flashUntil > now ? ' flash' : '');
+      setPen(m.pin, a.type === 'draw' && a.color);
       m.pin.textContent = String(i + 1);
-      const label = `${i + 1}. ${a.target.label}${a.note ? ': ' + cut(a.note, 90) : ''}${a === draft ? ' (new)' : a.status !== 'pending' ? ` (${a.status === 'open' ? 'sent' : 'resolved'})` : old ? ` (made on rev ${a.rev})` : ''}${p.exact ? '' : ' · hidden here, click to see it'}`;
+      const label = `${i + 1}. ${onLabel(a, a.target.label)}${a.note ? ': ' + cut(a.note, 90) : ''}${a === draft ? ' (new)' : a.status !== 'pending' ? ` (${a.status === 'open' ? 'sent' : 'resolved'})` : old ? ` (made on rev ${a.rev})` : ''}${p.exact ? '' : ' · hidden here, click to see it'}`;
       if (m.pin.title !== label) { m.pin.title = label; m.pin.setAttribute('aria-label', 'Comment ' + label); }
       let x = p.x;
       if (!p.exact) { const k = stacks.get(p.el) || 0; stacks.set(p.el, k + 1); x -= k * 30; }
@@ -12411,10 +12744,18 @@ const MARKUP = (() => {
         ist.transform = `translate(${r.left}px,${r.top}px)`; ist.width = r.width + 'px'; ist.height = r.height + 'px';
         ist.clipPath = c ? `inset(${c.t - r.top}px ${r.right - c.r}px ${r.bottom - c.b}px ${c.l - r.left}px)` : '';
         if (m.inkFor !== a.strokes) { m.inkFor = a.strokes; m.ink.replaceChildren(...(a.strokes || []).map(s => sv('path', { d: pathD(s) }))); }
-        m.ink.setAttribute('class', `bd-ann-ink bd-pen-${a.color || 'risk'}${st}${a === hotA || isOn(a) ? ' hot' : ''}`);
+        m.ink.setAttribute('class', `bd-ann-ink${penCls(a.color || 'risk')}${st}${a === hotA || isOn(a) ? ' hot' : ''}`);
+        setPen(m.ink, a.color); ist.setProperty('--pw', (WIDTHS[a.width] ? a.width : 3) + 'px');
+      }
+      if (m.box && p.exact) {
+        const e = extent(a), r = p.r, c = p.clip, bst = m.box.style;
+        const x0 = r.left + e.x0 * r.width, y0 = r.top + e.y0 * r.height, w = (e.x1 - e.x0) * r.width, hh = (e.y1 - e.y0) * r.height;
+        bst.transform = `translate(${x0}px,${y0}px)`; bst.width = w + 'px'; bst.height = hh + 'px';
+        bst.clipPath = c ? `inset(${Math.max(0, c.t - y0)}px ${Math.max(0, x0 + w - c.r)}px ${Math.max(0, y0 + hh - c.b)}px ${Math.max(0, c.l - x0)}px)` : '';
+        m.box.className = 'bd-ann-rgn' + st + (a === hotA || isOn(a) ? ' hot' : '');
       }
     });
-    for (const [id, m] of marks) if (!keep.has(id)) { m.pin.remove(); m.ink?.remove(); marks.delete(id); }
+    for (const [id, m] of marks) if (!keep.has(id)) { m.pin.remove(); m.ink?.remove(); m.box?.remove(); marks.delete(id); }
     if (hlNow) for (const [name, rs] of [['bd-ann', hl.on], ['bd-ann-sent', hl.sent], ['bd-ann-on', hl.open]]) {
       if (rs.length) CSS.highlights.set(name, new Highlight(...rs)); else CSS.highlights.delete(name);
     }
@@ -12428,8 +12769,8 @@ const MARKUP = (() => {
     if (p.exact && a.type === 'text') {
       const rs = [...(rangeOf(a)?.getClientRects() || [])].filter(r => r.width);
       if (rs.length) { const last = rs[rs.length - 1]; box = { l: Math.min(...rs.map(r => r.left)), t: rs[0].top, r: Math.max(...rs.map(r => r.right)), b: last.bottom, at: last.left }; }
-    } else if (p.exact && a.type === 'draw') {
-      const s = bounds(a.strokes || []), r = p.r;
+    } else if (p.exact && isShape(a)) {
+      const s = extent(a), r = p.r;
       if (isFinite(s.x1)) box = { l: r.left + s.x0 * r.width, t: r.top + s.y0 * r.height, r: r.left + s.x1 * r.width, b: r.top + s.y1 * r.height };
     }
     if (!box) return { ...pin, side: true };
@@ -12439,8 +12780,9 @@ const MARKUP = (() => {
   // part of the window the sidebar, the tray and the app bar leave; on narrow screens, above the tray
   function placeComposer() {
     if (!draft || cmp.hidden) return;
-    const tray = tb.getBoundingClientRect(), as = SIDE.as();
-    const bottom = Math.min(innerHeight, tray.top, as === 'sheet' ? SIDE.el.getBoundingClientRect().top : innerHeight) - 8;
+    // the tray's top, or the Annotate bar's when it is open
+    const tray = Math.min(tb.getBoundingClientRect().top, annRow.hidden ? Infinity : annRow.getBoundingClientRect().top), as = SIDE.as();
+    const bottom = Math.min(innerHeight, tray, as === 'sheet' ? SIDE.el.getBoundingClientRect().top : innerHeight) - 8;
     const compact = innerWidth <= 600;
     cmp.classList.toggle('dock', compact);
     if (compact) { cmp.style.translate = ''; cmp.style.setProperty('--cmp-b', Math.round(innerHeight - bottom) + 'px'); return; }
@@ -12507,7 +12849,7 @@ const MARKUP = (() => {
     return s < 45 ? 'just now' : s < 3600 ? Math.max(1, Math.round(s / 60)) + ' min ago' : s < 86400 ? Math.round(s / 3600) + ' h ago' : s < 7 * 86400 ? Math.round(s / 86400) + ' d ago' : fmtDay(iso);
   }
   const numChip = (a, n) => isGeneral(a) ? h('span', { class: 'bd-ann-num gen' + (a.status === 'pending' ? '' : ' sent') }, ic(TYPE_IC.general))
-    : h('span', { class: 'bd-ann-num' + (a.type === 'draw' ? ' bd-pen-' + (a.color || 'risk') : '') + (a.status === 'pending' ? '' : ' sent') }, String(n));
+    : h('span', { class: 'bd-ann-num' + (a.type === 'draw' ? penCls(a.color || 'risk') : '') + (a.status === 'pending' ? '' : ' sent'), style: a.type === 'draw' && isHex(a.color) ? '--pen: ' + a.color : null }, String(n));
   const grow = ta => { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; };
   const sortBtn = h('button', { type: 'button', class: 'bp-btn ghost srt', onclick: () => { sort = sort === 'page' ? 'new' : 'page'; paint(); } });
   const filterBtns = Object.keys(FILTERS).map(f => h('button', { type: 'button', role: 'radio', 'data-f': f, onclick: () => { setFilter(f, true); paint(); } }));
@@ -12562,7 +12904,7 @@ const MARKUP = (() => {
     const at = new Map(xs.map(a => {
       let el = null;
       for (const k of [a.target.key, ...(a.up || [])]) if ((el = cachedEl(k))) break;
-      const y = a.type === 'pin' ? a.pos?.y ?? .5 : a.type === 'draw' ? bounds(a.strokes || []).y0 : el ? (a.off || 0) / (el.textContent.length || 1) : 0;
+      const y = a.type === 'pin' ? a.pos?.y ?? .5 : isShape(a) ? extent(a).y0 : el ? (a.off || 0) / (el.textContent.length || 1) : 0;
       return [a, { el, y }];
     }));
     const byTime = (a, b) => (a.at > b.at) - (a.at < b.at);
@@ -12596,20 +12938,20 @@ const MARKUP = (() => {
     // open, and the agent has the last word without resolving it: Answered in rev N
     if (s) s.textContent = a.status === 'open' ? (lastMsg && lastMsg.who === 'agent' ? `Answered in rev ${lastMsg.rev}` : 'Sent ' + ago(a.sentAt))
       : a.resolvedBy === 'agent' ? `Resolved by the agent in rev ${a.resolvedRev}` : a.resolvedBy === 'rev' ? `Applied in rev ${a.resolvedRev}` : 'Resolved ' + ago(a.resolvedAt);
-    li.setAttribute('aria-label', isGeneral(a) ? 'General comment' : `Comment ${n} on ${a.target.label}`);
+    li.setAttribute('aria-label', isGeneral(a) ? 'General comment' : `Comment ${n} on ${onLabel(a, a.target.label)}`);
     return li;
   }
   function fill(li, a, n, editing, ms) {
     const segs = a.target.label.split(' › '), last = segs.pop();
     let ex = a.type === 'element' ? '' : excerpt(a) || '';
-    if (a.type !== 'text' && (a.type === 'draw' && a.targets ? a.targets : [a.target]).every(t => t.key === 'doc')) ex = '';   // the whole page's text says nothing
+    if (a.type !== 'text' && (isShape(a) && a.targets ? a.targets : [a.target]).every(t => t.key === 'doc')) ex = '';   // the whole page's text says nothing
     else if (a.type !== 'text' && !last.endsWith('…')) {   // "TL;DR" + its text: drop the part the title already says
       const lead = last.replace(/\s+/g, '');
       if (lead && ex.replace(/\s+/g, '').startsWith(lead)) { let i = 0; for (let k = 0; i < ex.length && k < lead.length; i++) if (!/\s/.test(ex[i])) k++; ex = ex.slice(i).trim(); }
     }
     const ib = (icon, label, fn) => h('button', { type: 'button', class: 'bd-cs-ib', 'aria-label': label, title: label, onclick: fn }, ic(icon));
     const mt = [];
-    if (a.type === 'draw' && a.targets && a.targets.length > 1) mt.push(h('span', {}, 'Covers ' + a.targets.map(t => t.label.split(' › ').pop()).join(' · ')));
+    if (isShape(a) && a.targets && a.targets.length > 1) mt.push(h('span', {}, 'Covers ' + a.targets.map(t => t.label.split(' › ').pop()).join(' · ')));
     if (a.status !== 'pending') mt.push(h('span', { class: 'sago' }));
     else if (a.rev !== CUR.rev) mt.push(h('span', { class: 'old' }, `Made on rev ${a.rev}`));
     // a board draft whose link or element a newer rev changed some other way: the board follows the rev until it is re-applied
@@ -12627,7 +12969,7 @@ const MARKUP = (() => {
       : !E ? null : del ? h('div', { class: 'eld' }, h('span', { class: 'del' }, `Deleted: ${E.tag}`), gone && [' “', cut(gone, 160), '”'])
       : h('div', { class: 'eld' }, h('s', {}, cut(E.base, 160)), h('span', { class: 'ar', 'aria-label': 'becomes' }, '→'), h('b', {}, cut(E.text, 240)));
     li.replaceChildren(numChip(a, n), h('div', { class: 'cb' },
-      h('div', { class: 'ch' }, !isGeneral(a) && ic(TYPE_IC[a.type]), h('span', { class: 'lb', title: a.target.label }, isGeneral(a) ? 'General' : last), h('span', { class: 'ago' }),
+      h('div', { class: 'ch' }, !isGeneral(a) && ic(TYPE_IC[a.type]), h('span', { class: 'lb', title: onLabel(a, a.target.label) }, isGeneral(a) ? 'General' : onLabel(a, last)), h('span', { class: 'ago' }),
         h('span', { class: 'acts' }, !isGeneral(a) && ib('target', 'Show on the page', () => { select(a); reveal(a); }),
           a.status === 'pending' && !editing && !isDraft(a) && ib('pencil', 'Edit', () => startEdit(a)),
           a.status === 'open' && ib('check', 'Resolve', () => setStatus(a, 'resolved')),
@@ -12716,15 +13058,15 @@ const MARKUP = (() => {
       ? [h('span', {}, { pending: 'Nothing pending. Comments you have sent are under Open.', open: 'Nothing open. Comments you send show here until you resolve them.',
           resolved: 'Nothing resolved yet. Resolve an open comment once the agent has made the change.' }[filter] || '')]
       : [h('span', { class: 'ico' }, ic('msg')), h('b', {}, 'No comments yet'),
-        h('span', {}, 'Pick a tool, then click, select or draw on the page. Each comment asks the agent to change that spot. For the doc as a whole, use the general comment field below.'),
-        h('span', { class: 'keys' }, ['point', 'select', 'draw'].map(m => h('span', {}, kbd(MODES[m][2]), MODES[m][1])))]));
+        h('span', {}, 'Open Annotate and pick a tool, then click an element, drag a region, select text or draw on the page. Each comment asks the agent to change that spot. For the doc as a whole, use the general comment field below.'),
+        h('span', { class: 'keys' }, ANN_M.map(m => h('span', {}, kbd(MODES[m][2]), MODES[m][1])))]));
   }
   const scrollCard = li => scrollWithin(listBox, li);
   function setHot(a, fromCard) {
     if (hotA === a) return;
     const prev = hotA; hotA = a; hlDirty = true;
     for (const x of [prev, a]) { const li = x && cards.get(x.id); if (li) li.classList.toggle('hot', x === a); }
-    if (fromCard) { const el = a && a.type !== 'draw' && !isGeneral(a) && cachedEl(a.target.key); showHover(el && el !== shell && shown(el) ? el : null); }
+    if (fromCard) { const el = a && !isShape(a) && !isGeneral(a) && cachedEl(a.target.key); showHover(el && el !== shell && shown(el) ? el : null); }
     schedule(false);
   }
   function select(a, { open = false, scroll = false } = {}) {
@@ -12794,7 +13136,7 @@ const MARKUP = (() => {
     endEdit(true);
     if (draft && draft !== a) finishDraft(true);
     draft = a;
-    cmpHd.replaceChildren(numChip(a, onPage().length + 1), ic(TYPE_IC[a.type]), h('span', { class: 'lb', title: a.target.label }, a.target.label.split(' › ').pop()));
+    cmpHd.replaceChildren(numChip(a, onPage().length + 1), ic(TYPE_IC[a.type]), h('span', { class: 'lb', title: onLabel(a, a.target.label) }, onLabel(a, a.target.label.split(' › ').pop())));
     cmpTa.value = ''; cmpTa.placeholder = a.type === 'text' ? 'What should change in this text?' : 'What should change here?';
     cmpSave.disabled = true; cmpSave.title = `Save (${MAC ? '⌘' : 'Ctrl'} + Enter)`; cmpFd.load([]);
     cmp.hidden = false; grow(cmpTa);
@@ -12859,11 +13201,12 @@ const MARKUP = (() => {
   function setMode(m) {
     if (!MODES[m]) return false;
     if (m === mode) return true;
-    endEdit(true); finishDraft(true);
+    endEdit(true); finishDraft(true); closePop(false); hideSelC();
     root.classList.remove('bd-ann-m-' + mode);
     mode = m;
+    if (ANN_M.includes(m)) tool = m;
     if (m !== 'view') root.classList.add('bd-ann-m-' + m);
-    cap.hidden = m !== 'draw';
+    cap.hidden = m !== 'draw' && m !== 'region';
     if (BOARD && BOARD.setMode) BOARD.setMode(m);
     showHover(null);
     if (m !== 'view' && marksOff) { marksOff = false; schedule(true); }   // marking with the marks hidden would hide the new one too
@@ -12875,16 +13218,30 @@ const MARKUP = (() => {
     goN.textContent = String(all);
     go.disabled = !all;
     go.setAttribute('aria-label', `Request changes: ${all} pending`);
-    go._tip = all ? `Review and send ${all} pending change request${all === 1 ? '' : 's'}` : 'Point, select or draw on the page, or add a general comment, to request a change';
+    go._tip = all ? `Review and send ${all} pending change request${all === 1 ? '' : 's'}` : 'Annotate the page, or add a general comment, to request a change';
     SIDE.badge(n);
     filterBtns.forEach(b => { const f = b.dataset.f; b.setAttribute('aria-checked', String(f === filter)); b.replaceChildren(FILTERS[f], h('i', {}, String(f === 'all' ? total : by(f)))); });
     sortBtn.replaceChildren(ic(sort === 'page' ? 'doc' : 'hist'));
     sortBtn.title = sort === 'page' ? 'In page order; click for newest first' : 'Newest first; click for page order'; sortBtn.setAttribute('aria-label', sortBtn.title);
     clearRow.hidden = !by('resolved');
     tb.dataset.m = mode;
-    modeBtns.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.m === mode)));
-    swatches.hidden = mode !== 'draw';
-    swatches.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.pen === pen)));
+    for (const [m, b] of Object.entries(btn)) b.setAttribute('aria-pressed', String(m === mode));
+    // the Annotate bar: open while one of its tools is; Pen's colours and widths (the narrow keys, disabled) only with Pen
+    const open = ANN_M.includes(mode);
+    annBtn.setAttribute('aria-pressed', String(open)); annBtn.setAttribute('aria-expanded', String(open));
+    annRow.hidden = !open;
+    placeBar();
+    optBar.hidden = mode !== 'draw';
+    colorKey.disabled = widthKey.disabled = mode !== 'draw';
+    colorKey.setAttribute('aria-expanded', String(popFor === 'color')); widthKey.setAttribute('aria-expanded', String(popFor === 'width'));
+    for (const b of annRow.querySelectorAll('[data-pen]')) {
+      const c = b.dataset.pen;
+      b.setAttribute('aria-pressed', String(c === 'custom' ? isHex(pen) : c === pen));
+      if (c === 'custom') { setPen(b, custom); b.classList.toggle('set', !!custom); }
+    }
+    for (const b of annRow.querySelectorAll('[data-w]')) b.setAttribute('aria-pressed', String(+b.dataset.w === width));
+    colorDot.className = 'dot' + penCls(pen); setPen(colorDot, pen);
+    widthLine.setAttribute('stroke-width', width);
     eye.replaceChildren(ic(marksOff ? 'eyeoff' : 'eye'));
     eye._tip = marksOff ? 'Show comment marks' : 'Hide comment marks'; eye.setAttribute('aria-label', eye._tip);
     layer.hidden = marksOff;
@@ -12900,13 +13257,16 @@ const MARKUP = (() => {
     const t = e.target && e.target.nodeType === 1 ? e.target : null;
     if (e.type === 'pointerdown') {
       swallow = false; press = null;
+      if (popFor && t && !pop.contains(t) && !popAt.contains(t)) closePop(false);   // a press outside a menu or the picker closes it
+      if (!(t && t.closest('.bd-selc'))) { selDown = true; hideSelC(); }   // a press elsewhere: a new selection, or none
       // a press outside the sidebar and the composer ends the edit or the draft (keeping what was typed) and the selection
-      if (t && t !== cap && !t.closest('.bd-anntb, .bd-ann-pin, .bd-cmp, dialog') && !spUi(t)) {
+      if (t && t !== cap && !t.closest('.bd-anntb, .bd-ann-pin, .bd-cmp, .bd-selc, dialog') && !spUi(t)) {
         if (editA) swallow = endEdit(true) && mode === 'point';   // this click saved a note; the next one pins
         if (draft) swallow = finishDraft(true) && mode === 'point' || swallow;
         if (selA) select(null);
       }
     }
+    if (e.type === 'pointerup' && selDown) { selDown = false; if (mode === 'view') setTimeout(showSelC, 0); }   // the selection made: its button
     if (t && t.closest('.bp-note')) return;   // an item's comment field is for typing in every mode: no pins, no selection notes
     if (mode === 'select' && e.type === 'pointerup' && !(t && (t.closest('.bd-ann-ui') || spUi(t)))) setTimeout(fromSelection, 0);
     if ((mode !== 'point' && mode !== 'select') || !inDoc(t)) return;
@@ -12926,8 +13286,9 @@ const MARKUP = (() => {
     a.pos = { x: r4(clamp((x - r.left) / (r.width || 1), 0, 1)), y: r4(clamp((y - r.top) / (r.height || 1), 0, 1)) };
     startDraft(a);
   }
-  function fromSelection() {
-    if (mode !== 'select') return;
+  // Text, and the Comment button by a selection in View (force)
+  function fromSelection(force) {
+    if (mode !== 'select' && !force) return;
     const s = getSelection(); if (!s || !s.rangeCount || s.isCollapsed) return;
     const rg = s.getRangeAt(0), q = s.toString().trim(); if (!q) return;
     let c = rg.commonAncestorContainer; if (c.nodeType !== 1) c = c.parentElement;
@@ -12937,14 +13298,46 @@ const MARKUP = (() => {
     s.removeAllRanges();
     startDraft(a);
   }
-  // Draw: strokes in page px while drawing; one ending within 1.5 s of the last, or before anything
+  /* Text in View: text selected on the page (not in a field, the dock, a panel or a dialog) shows a Comment button by
+     its end, which makes the comment Text makes. It hides when the selection goes, on a scroll, on Esc */
+  const selc = h('button', { type: 'button', class: 'bd-selc bd-ann-ui', hidden: true, onpointerdown: e => e.preventDefault(), onmousedown: e => e.preventDefault(),
+    onclick: () => { hideSelC(); fromSelection(true); } }, ic('msg'), 'Comment');
+  let selDown = false;   // a press is selecting: the button waits for the release
+  const hideSelC = () => { if (selc.hidden) return false; selc.hidden = true; return true; };
+  function showSelC() {
+    const s = getSelection(), act = document.activeElement;
+    if (mode !== 'view' || selDown || !s || !s.rangeCount || s.isCollapsed || !s.toString().trim() || (act && act.closest('input, textarea, [contenteditable]'))) { hideSelC(); return; }
+    let c = s.getRangeAt(0).commonAncestorContainer; if (c.nodeType !== 1) c = c.parentElement;
+    const rs = [...s.getRangeAt(0).getClientRects()].filter(r => r.width), last = rs[rs.length - 1];
+    if (!last || !inDoc(c) || c.closest('.bp-note, dialog, [contenteditable]')) { hideSelC(); return; }
+    selc.hidden = false;
+    const w = selc.offsetWidth, hh = selc.offsetHeight, floor = Math.min(tb.getBoundingClientRect().top, innerHeight) - 8;
+    const y = last.bottom + 8 + hh <= floor ? last.bottom + 8 : Math.max(cssPx('--top-h') + 8, rs[0].top - hh - 8);
+    selc.style.translate = `${Math.round(clamp(last.right - w, 8, root.clientWidth - w - 8))}px ${Math.round(y)}px`;
+  }
+  document.addEventListener('selectionchange', () => { if (mode === 'view' && !selDown) requestAnimationFrame(showSelC); });
+  // Pen and Region: a box (client px) anchors to the smallest element holding it and covers the parts under it
+  function anchorBox(a, box) {
+    const items = onScreen(), el = anchorFor(box, items), cov = covered(box, items);
+    Object.assign(a, { target: info(el), up: ups(el), targets: (cov.length ? cov : [el]).map(info) });
+    return el.getBoundingClientRect();
+  }
+  // Pen: strokes in page px while drawing; one ending within 1.5 s of the last, or before anything
   // is typed, joins the open drawing. The drawing anchors to the smallest element holding it.
   function fitDrawing(a, strokes) {
     let l = Infinity, t = Infinity, r = -Infinity, b = -Infinity;
     for (const s of strokes) for (let i = 0; i < s.length; i += 2) { l = Math.min(l, s[i] - scrollX); r = Math.max(r, s[i] - scrollX); t = Math.min(t, s[i + 1] - scrollY); b = Math.max(b, s[i + 1] - scrollY); }
-    const box = { l, t, r, b }, items = onScreen(), el = anchorFor(box, items), er = el.getBoundingClientRect(), cov = covered(box, items);
-    Object.assign(a, { target: info(el), up: ups(el), targets: (cov.length ? cov : [el]).map(info),
-      strokes: strokes.map(s => s.map((v, i) => r4(i % 2 ? (v - scrollY - er.top) / (er.height || 1) : (v - scrollX - er.left) / (er.width || 1)))) });
+    const er = anchorBox(a, { l, t, r, b });
+    a.strokes = strokes.map(s => s.map((v, i) => r4(i % 2 ? (v - scrollY - er.top) / (er.height || 1) : (v - scrollX - er.left) / (er.width || 1))));
+  }
+  // Region: a box dragged in page px; one of at least 8 × 8 px becomes a region, anchored as a drawing is
+  function endRegion(k) {
+    const l = Math.min(k.x0, k.x1) - scrollX, t = Math.min(k.y0, k.y1) - scrollY, r = Math.max(k.x0, k.x1) - scrollX, b = Math.max(k.y0, k.y1) - scrollY;
+    if (r - l < 8 || b - t < 8) return;
+    const a = { id: newId(), type: 'region', status: 'pending', note: '', rev: CUR.rev, at: new Date().toISOString() };
+    const er = anchorBox(a, { l, t, r, b }), fw = er.width || 1, fh = er.height || 1;
+    a.box = [r4((l - er.left) / fw), r4((t - er.top) / fh), r4((r - l) / fw), r4((b - t) / fh)];
+    startDraft(a);
   }
   cap.addEventListener('pointerdown', e => {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
@@ -12952,15 +13345,30 @@ const MARKUP = (() => {
     // a press on an item's comment field goes to the field, not into a drawing
     const under = document.elementsFromPoint(e.clientX, e.clientY).find(el => el !== cap && !cap.contains(el)), note = under && under.closest('.bp-note');
     if (note) { const b = under.closest('button'); if (b) b.click(); else setTimeout(() => note.querySelector('textarea').focus({ preventScroll: true })); return; }   // after the press's own focus change
+    if (mode === 'region') {
+      endEdit(true); finishDraft(true);
+      cap.setPointerCapture(e.pointerId);
+      const x = Math.round(e.clientX + scrollX), y = Math.round(e.clientY + scrollY);
+      ink = { id: e.pointerId, box: true, x0: x, y0: y, x1: x, y1: y, el: sv('rect', { rx: 6, x, y, width: 0, height: 0 }) };
+      capG.append(ink.el);
+      return;
+    }
     const join = draft && draft.type === 'draw' && page && (e.timeStamp - lastUp < 1500 || !cmpTa.value.trim());
     if (!join) { endEdit(true); finishDraft(true); page = []; }
     cmp.hidden = true;   // out of the way while drawing
     cap.setPointerCapture(e.pointerId);
-    ink = { id: e.pointerId, pts: [Math.round(e.clientX + scrollX), Math.round(e.clientY + scrollY)], el: sv('path', { class: 'bd-pen-' + pen }) };
+    // the stroke in its drawing's pen: the open one's when it joins it
+    const c = join ? draft.color : pen, w = join ? draft.width : width;
+    ink = { id: e.pointerId, pts: [Math.round(e.clientX + scrollX), Math.round(e.clientY + scrollY)], el: sv('path', { class: penCls(c).trim() || null, style: (isHex(c) ? `--pen: ${c}; ` : '') + `--pw: ${WIDTHS[w] ? w : 3}px` }) };
     capG.append(ink.el);
   });
   cap.addEventListener('pointermove', e => {
     if (!ink || e.pointerId !== ink.id) return;
+    if (ink.box) {
+      ink.x1 = Math.round(e.clientX + scrollX); ink.y1 = Math.round(e.clientY + scrollY);
+      for (const [k, v] of Object.entries({ x: Math.min(ink.x0, ink.x1), y: Math.min(ink.y0, ink.y1), width: Math.abs(ink.x1 - ink.x0), height: Math.abs(ink.y1 - ink.y0) })) ink.el.setAttribute(k, v);
+      return;
+    }
     const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [];
     for (const ev of evs.length ? evs : [e]) {
       const x = Math.round(ev.clientX + scrollX), y = Math.round(ev.clientY + scrollY), n = ink.pts.length;
@@ -12970,10 +13378,11 @@ const MARKUP = (() => {
   });
   const endInk = e => {
     if (!ink || e.pointerId !== ink.id) return;
+    if (ink.box) { const k = ink; ink.el.remove(); ink = null; if (e.type !== 'pointercancel') endRegion(k); return; }
     const pts = ink.pts; ink.el.remove(); ink = null; lastUp = e.timeStamp;
-    if (pts.length < 6 || !page) { if (draft) { cmp.hidden = false; schedule(false); } return; }   // a tap, not a stroke
+    if (pts.length < 6 || !page || e.type === 'pointercancel') { if (draft) { cmp.hidden = false; schedule(false); } return; }   // a tap, or a stroke a second finger cancelled (NAV)
     page.push(pts);
-    const strokes = page, a = draft && draft.type === 'draw' ? draft : { id: newId(), type: 'draw', status: 'pending', note: '', rev: CUR.rev, at: new Date().toISOString(), color: pen };
+    const strokes = page, a = draft && draft.type === 'draw' ? draft : { id: newId(), type: 'draw', status: 'pending', note: '', rev: CUR.rev, at: new Date().toISOString(), color: pen, width };
     fitDrawing(a, strokes);
     if (a !== draft) { startDraft(a); page = strokes; }
     else { cmp.hidden = false; cmpHd.querySelector('.lb').textContent = a.target.label.split(' › ').pop(); schedule(true); cmpTa.focus({ preventScroll: true }); }
@@ -12989,18 +13398,18 @@ const MARKUP = (() => {
       const copy = h('button', { type: 'button', class: 'bp-btn', onclick: () => { copyText(changesMd(), 'Copied: paste it into the chat with the agent'); dlg.close(); } }, ic('copy'), 'Copy');
       const send = h('button', { type: 'button', class: 'bp-btn primary', onclick: () => sendChanges() }, ic('send'), 'Send');
       dlg = h('dialog', { class: 'bd-send bd-chgs', 'aria-labelledby': 'bd-chgs-h' },
-        h('div', { class: 'hd' }, h('h3', { id: 'bd-chgs-h' }, APPROVABLE ? `Request changes to this ${AP_NOUN}` : 'Request changes to this doc'), h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Close', onclick: () => dlg.close() }, ic('x'))),
-        h('p', { class: 'sum' }, APPROVABLE ? `Change requests ask the agent to revise the ${AP_NOUN}. Your decision picks and comments on items go with them.`
+        h('div', { class: 'hd' }, h('h3', { id: 'bd-chgs-h' }, PICKS_WITH_CHANGES ? `Request changes to this ${AP_NOUN}` : 'Request changes to this doc'), h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Close', onclick: () => dlg.close() }, ic('x'))),
+        h('p', { class: 'sum' }, PICKS_WITH_CHANGES ? `Change requests ask the agent to revise the ${AP_NOUN}. Your decision picks and comments on items go with them.`
           : 'Change requests ask the agent to edit the document. "Need more details" requests go with them; your other decisions and comments on items go with Send answers.'),
         cnt, h('details', { open: true }, h('summary', {}, 'Preview'), pre), how, h('div', { class: 'ft' }, copy, send));
       document.body.append(dlg);
       dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });
       dlg._paint = () => {
         const open = pending(), old = open.filter(a => a.rev !== CUR.rev).length, gn = open.filter(isGeneral).length, xs = itemsPending();
-        const nn = xs.filter(x => APPROVABLE && x.notePending).length, nm = xs.filter(x => x.more === 'on').length, np = xs.filter(x => APPROVABLE && x.pickPending).length;
+        const nn = xs.filter(x => PICKS_WITH_CHANGES && x.notePending).length, nm = xs.filter(x => x.more === 'on').length, np = xs.filter(x => PICKS_WITH_CHANGES && x.pickPending).length;
         const what = [open.length && `${open.length} pending comment${open.length === 1 ? '' : 's'}${gn ? `, ${gn} general` : ''}`,
           nn && `${nn} comment${nn === 1 ? '' : 's'} on items`, nm && `${nm} request${nm === 1 ? '' : 's'} for more details`,
-          np && `${np} pick${np === 1 ? '' : 's'} changed since approval`].filter(Boolean).join(', ');
+          np && `${np} pick${np === 1 ? '' : 's'} ${APPROVABLE ? 'changed since approval' : 'changed'}`].filter(Boolean).join(', ');
         cnt.replaceChildren(h('b', {}, what), open.length + nn + nm + np === 1 ? ' goes with this request' : ' go with this request',
           ...(old ? [' (', h('span', { class: 'old' }, `${old} made on an earlier revision`), ')'] : []), open.length ? '. Edit or delete them in the Comments sidebar.' : '.');
         send.hidden = !REPLY.changes; send.disabled = copy.disabled = !open.length && !xs.length;
@@ -13020,7 +13429,7 @@ const MARKUP = (() => {
     try {
       await postReply(REPLY.changes, p);
       markSent(p.annotations.map(x => x.id), p.at);
-      (APPROVABLE ? Object.values(ITEMS) : xs).forEach(x => x.markSent()); paint();
+      (PICKS_WITH_CHANGES ? Object.values(ITEMS) : xs).forEach(x => x.markSent()); paint();
       if (dlg) dlg.close();
       changesSent(p);
       toast(`Change request sent to ${REPLY.to || 'the agent'}`);
@@ -13093,7 +13502,7 @@ const MARKUP = (() => {
     }, canvas ? 700 : 60);
   }
 
-  /* tests and agents: BP.annotate({type, key, note, quote?, pos?, strokes?, color?}) or ({type: 'general', note}), BP.comments({open}) */
+  /* tests and agents: BP.annotate({type, key, note, quote?, pos?, strokes?, color?, width?, box?}) or ({type: 'general', note}), BP.comments({open}) */
   function annotate(spec) {
     if (spec && spec.type === 'general') {
       const note = String(spec.note || '').trim(); if (!note) return null;
@@ -13111,9 +13520,12 @@ const MARKUP = (() => {
       if (off < 0) return null;
       Object.assign(a, { quote: q.trim(), raw: q, off });
     } else {
-      a.color = PENS[spec.color] ? spec.color : pen;
-      a.strokes = Array.isArray(spec.strokes) && spec.strokes.length ? spec.strokes : [ellipse()];
-      const r = el.getBoundingClientRect(), b = bounds(a.strokes);
+      if (spec.type === 'region') a.box = isBox(spec.box) ? spec.box.map(r4) : [.05, .05, .9, .9];
+      else {
+        a.color = okPen(spec.color) ? spec.color : pen; a.width = WIDTHS[spec.width] ? +spec.width : width;
+        a.strokes = Array.isArray(spec.strokes) && spec.strokes.length ? spec.strokes : [ellipse()];
+      }
+      const r = el.getBoundingClientRect(), b = extent(a);
       const cov = shown(el) ? covered({ l: r.left + b.x0 * r.width, t: r.top + b.y0 * r.height, r: r.left + b.x1 * r.width, b: r.top + b.y1 * r.height }, onScreen()) : [];
       a.targets = (cov.length ? cov : [el]).map(info);
     }
@@ -13130,28 +13542,32 @@ const MARKUP = (() => {
   }
 
   /* wiring */
-  document.body.append(layer, hov, cap, cmp, tb);
+  document.body.append(layer, hov, cap, cmp, selc, tb);
   requestAnimationFrame(fitTray);
   SIDE.add({ id: 'comments', label: 'Comments', body: csBody, chip: () => pending().length ? `${pending().length} pending` : '',
     onToggle: shown => { if (!shown) endEdit(true); schedule(true); paint(); } });
   root.classList.add('bd-tray-on');
   for (const ty of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click', 'dblclick']) addEventListener(ty, onCapture, true);
+  addEventListener('pointercancel', () => { selDown = false; }, true);   // a touch that scrolled or long-pressed: selections show their button again
   addEventListener('pointermove', e => { if (mode === 'point' && !(e.target.closest && spUi(e.target))) showHover(e.target.closest && e.target.closest('.bp-note') ? null : targetAt(e.target)); }, { capture: true, passive: true });
   root.addEventListener('mouseleave', () => { if (mode === 'point') showHover(null); });
   document.addEventListener('keydown', e => {
     if (e.defaultPrevented || e.isComposing || e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
     const t = e.target;
     if (t.isContentEditable || (t.closest && t.closest('input, textarea, select, [contenteditable]')) || document.querySelector('dialog[open]')) return;
+    // Esc closes a menu or the picker, the Comment button, the new comment or the edit, the selection; then the tool
     if (e.key === 'Escape') {
-      if (draft) finishDraft(false); else if (editA) endEdit(false); else if (selA) select(null); else if (mode !== 'view') setMode('view'); else return;
+      if (!closePop(true) && !hideSelC()) { if (draft) finishDraft(false); else if (editA) endEdit(false); else if (selA) select(null); else if (mode !== 'view') setMode('view'); else return; }
       e.preventDefault();   // handled here: the panel's own Escape (close the drawer or sheet) waits for the next press
       return;
     }
-    const m = { v: 'view', c: 'point', t: 'select', d: 'draw', ...(IS_DESIGN && !IS_LISTING ? { i: 'interact', e: 'edit', l: 'link', r: 'frame' } : {}) }[e.key.toLowerCase()];
+    const k = e.key.toLowerCase();
+    if (k === 'a') { e.preventDefault(); toggleAnn(); return; }
+    const m = { v: 'view', c: 'point', m: 'region', t: 'select', d: 'draw', ...(IS_DESIGN && !IS_LISTING ? { i: 'interact', e: 'edit', l: 'link', r: 'frame' } : {}) }[k];
     if (m) { e.preventDefault(); setMode(m); }
   });
-  document.addEventListener('scroll', () => schedule(false), { capture: true, passive: true });
-  addEventListener('resize', () => schedule(true));
+  document.addEventListener('scroll', () => { schedule(false); hideSelC(); }, { capture: true, passive: true });
+  addEventListener('resize', () => { schedule(true); placeBar(); });
   if ('ResizeObserver' in window) new ResizeObserver(() => schedule(true)).observe(main);
   // DOM changes that can move or hide an anchor: rows opening, diff files switching, canvas pan and zoom.
   // Flow animation (token moves, highlight classes on the drawing) changes nothing that anchors.
@@ -13814,7 +14230,7 @@ function boardEdits(B) {
 
   /* moving screens: drag (Shift locks the axis, Alt turns snapping off), Shift-click and Shift-drag to select several */
   const sel = new Set();
-  let drag = null, space = false, raf = 0, lastTap = { id: null, t: 0 };
+  let drag = null, raf = 0, lastTap = { id: null, t: 0 };
   function selection() {
     if (!B.sel) sel.clear(); else if (!sel.has(B.sel)) { sel.clear(); sel.add(B.sel); }
     paintSel();
@@ -13832,7 +14248,7 @@ function boardEdits(B) {
       startWire(e, { part: 'new', src: { from: id, edge: true }, fix });
       return true;
     }
-    if (space || !canMove() || B.mode === 'frame' || t.closest('button, select, input, .bd-lnk, .bd-var')) return false;
+    if (!canMove() || B.mode === 'frame' || t.closest('button, select, input, .bd-lnk, .bd-var')) return false;
     const ab = t.closest('.bd-ab[data-ab]');
     if (ab && (t.closest('.bd-ab-t') || B.mode === 'view' || B.mode === 'link')) { startMove(e, ab.dataset.ab); return true; }
     if (!ab && e.shiftKey && (B.mode === 'view' || B.mode === 'link')) { startMarquee(e); return true; }
@@ -13967,13 +14383,10 @@ function boardEdits(B) {
   }
 
   /* keys (capture, so they go before the board's and the tray's): Esc, Del, Enter on an arrow; arrows nudge; Ctrl/⌘ Z */
-  document.addEventListener('keyup', e => { if (e.key === ' ') space = false; });
-  addEventListener('blur', () => { space = false; });
   document.addEventListener('keydown', e => {
     if (e.defaultPrevented || e.isComposing) return;
     const t = e.target;
     if (t.isContentEditable || (t.closest && t.closest('input, textarea, select, [contenteditable], .bd-exp')) || document.querySelector('dialog[open]') || (B.api && B.api().present)) return;
-    if (e.key === ' ' && !e.repeat && t.closest && !t.closest('button, a')) { space = true; return; }
     // the one owner of Z and Y: Ctrl/⌘ Z undoes, Shift+Ctrl/⌘ Z and Ctrl+Y redo (a field returned above: its own undo runs)
     const k = e.key.toLowerCase(), mod = e.metaKey || e.ctrlKey;
     if (mod && !e.altKey && k === 'z' || e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey && k === 'y') {

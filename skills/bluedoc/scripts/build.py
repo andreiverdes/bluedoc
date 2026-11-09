@@ -16,10 +16,11 @@ Usage:
                                     also compare each pinned evidence entry with its repo now (codepin.py: current,
                                     moved, stale, unknown) and list the stale ones; with -o the page shows it. Without
                                     it an -o page shows each pin's commit only (the goldens have no repo state)
-  build.py new TYPE out.bluedoc.json [--title T] [--kind K] [--shape pr|area] [--target T,…] [--framework F]
-                                    [--icons] [--url URL]
+  build.py new TYPE out.bluedoc.json [--title T] [--kind K] [--shape pr|area] [--of local|theirs|mine] [--target T,…]
+                                    [--framework F] [--icons] [--url URL]
                                     write the fill-in skeleton of a docs|review|plan|design|presentation|website|
-                                    other doc (--shape area: a review by area of a codebase, not by PR; design: one
+                                    other doc (--shape area: a review by area of a codebase, not by PR; --of: a
+                                    review's meta.review, which names its send key; design: one
                                     wireframe screen file per --target watch|mobile|tablet|desktop|web, --icons
                                     adds an app icon with stub layers; presentation: a deck of three stub slides;
                                     website: a home page, live from --url (a loopback dev server) or a stub file)
@@ -198,6 +199,10 @@ BOARD_TYPES = ("design", "presentation", "website", "storelisting")
 DOCS_KINDS = {"architecture", "walkthrough", "runbook", "setup", "reference", "proposal", "change", "changes", "plan",
               "status", "guide", "design", "spec", "rfc", "adr", "overview", "tutorial", "onboarding", "explainer", "playbook"}
 FINDING_SIZES = ("blocker", "major", "minor", "nit")   # a review finding's state
+# a review's meta.review: whose change it reviews, which names the page's send key (types/review.md): local (Claude
+# reviewed your own change: Apply decisions), theirs (a colleague's PR: Post review), mine (comments on your own PR:
+# Reply and fix)
+REVIEW_OF = ("local", "theirs", "mine")
 # hero: the home card's element for docs without a canvas and for other docs
 HERO_ICONS = ["chart", "doc", "flag", "bolt", "clock", "users", "bug", "box", "check", "globe", "lock", "list"]
 MAX_HERO_VALUE, MAX_HERO_LABEL = 8, 28
@@ -652,7 +657,8 @@ SCHEMA_CARDS = {
         ("id", "id", "req", "never change it once read"),
         ("title", "inline", "req", ""),
         ("sections", "[object]", "req", "{id, title, lead, blocks}"),
-        ("meta", "object", "opt", "{org, kind, dwg, rev, date, type}"),
+        ("meta", "object", "opt", "{org, kind, dwg, rev, date, type, review}"),
+        ("meta.review", "str", "opt", [REVIEW_OF, "; review docs only (new review --of): the send key, Apply decisions | Post review | Reply and fix"]),
         ("subtitle,tldr", "md", "opt", "one sentence; the answer in 1-3"),
         ("emoji", "str", "opt", "one emoji"),
         ("state,links", "[object]", "opt", ["{label, kind ", STATE_KINDS, "}; {label, href}"]),
@@ -2376,6 +2382,12 @@ def _validate(rep: Report, doc: dict, doc_path: Path | None, *, allow_remote: bo
     dtype = (doc.get("meta") or {}).get("type")
     if dtype is not None and dtype not in DOC_TYPES:
         rep.err("doc.meta.type", f"'{dtype}' not in {sorted(DOC_TYPES)}")
+    review = (doc.get("meta") or {}).get("review")
+    if review is not None and doc_type(doc.get("meta") or {}) != "review":
+        rep.err("doc.meta.review", "only a review doc has it: set meta.type to 'review', or drop it")
+    elif review is not None and review not in REVIEW_OF:
+        rep.err("doc.meta.review", f"'{review}' not in {list(REVIEW_OF)}: local (your own change), theirs (a colleague's PR), "
+                                   "mine (comments on your own PR)")
     for i, s in enumerate(doc.get("state") or []):
         if s.get("kind") and s["kind"] not in STATE_KINDS:
             rep.err(f"doc.state[{i}]", f"kind '{s['kind']}' not in {sorted(STATE_KINDS)}")
@@ -3400,6 +3412,8 @@ def cmd_new(argv: list[str]) -> int:
     ap.add_argument("--kind", help="meta.kind, the eyebrow word (e.g. Architecture, Runbook)")
     ap.add_argument("--shape", choices=("pr", "area"), default="pr",
                     help="review only: one section per PR (pr), or per area of a codebase review (area)")
+    ap.add_argument("--of", choices=REVIEW_OF, help="review only: meta.review, whose change it reviews: local (your own "
+                    "change), theirs (a colleague's PR), mine (comments on your own PR); it names the page's send key")
     design_targets = [t for t in TARGET_DEVICES if t not in ("presentation", "listing")]
     ap.add_argument("--target", help=f"design only: comma list of {','.join(design_targets)}; one starter artboard "
                     "and wireframe screen file each (default mobile). A deck is `new presentation`")
@@ -3412,6 +3426,8 @@ def cmd_new(argv: list[str]) -> int:
     a = ap.parse_args(argv)
     if a.shape != "pr" and a.type != "review":
         ap.error("--shape is for review docs")
+    if a.of and a.type != "review":
+        ap.error("--of is for review docs")
     if (a.target or a.framework or a.icons) and a.type != "design":
         ap.error("--target, --framework and --icons are for design docs")
     if a.url is not None and a.type != "website":
@@ -3445,6 +3461,8 @@ def cmd_new(argv: list[str]) -> int:
     meta.update(rev="1", date=dt.date.today().isoformat(), type=a.type)
     if a.kind:
         meta["kind"] = a.kind
+    if a.of:
+        meta["review"] = a.of
     stubs = (scaffold_design(doc, a.out, targets, a.framework or "auto", a.icons) if a.type == "design"
              else scaffold_deck(doc, a.out) if a.type == "presentation"
              else scaffold_site(doc, a.out, a.url) if a.type == "website"
@@ -4735,7 +4753,8 @@ def _type_card(t: str) -> str:
         blocks = [{"type": "board", "artboards": []}] + ([{"type": "listing"}] if t == "storelisting" else [])
         needs += check_contract({"meta": {"type": t}, "sections": [{"blocks": blocks}]})
     needs = [re.sub(r" \(it has \d+\)$", "", n) for n in needs]
-    rule = {"review": f"every finding (an item with choices) has state {'|'.join(FINDING_SIZES)}",
+    rule = {"review": f"every finding (an item with choices) has state {'|'.join(FINDING_SIZES)}; meta.review "
+                      f"{'|'.join(REVIEW_OF)} (new review --of) names the send key",
             "presentation": 'every artboard has device "slide"', "website": 'every artboard has device "page"',
             "storelisting": f"every artboard has device {'|'.join(listing.SHOT_DEVICES)}"}.get(t)
     skel = json.loads((SKELETONS / f"{t}.json").read_text(encoding="utf-8"))
