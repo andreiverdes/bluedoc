@@ -1857,7 +1857,9 @@ html:not(.bd-lp-open) .bd-rh-left, html:not(.bd-sp-dock) .bd-rh-right { display:
 /* a board outside a design doc stays a block in the column */
 .bd-bwrap { position: relative; height: 560px; overflow: hidden; border-radius: 14px; box-shadow: var(--shadow-1); }
 .bd-boardblk .bd-bwrap { height: 100%; border-radius: 0; box-shadow: none; }
-.bd-board { position: absolute; inset: 0; overflow: hidden; outline: none; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none;
+/* the board paints in its own layer (z 0) under its toolbar: a browser that composites the screens' iframes apart
+   (WebKit) can't lift them, or their labels, over the toolbar */
+.bd-board { position: absolute; inset: 0; z-index: 0; isolation: isolate; overflow: hidden; outline: none; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none;
   background-color: var(--canvas); background-image: radial-gradient(circle, color-mix(in oklch, var(--fg) 18%, transparent) 1px, transparent 1.3px); }
 .bd-board.dragging { cursor: grabbing; }
 .bd-board[data-m="frame"] { cursor: crosshair; }
@@ -2113,7 +2115,7 @@ html.bd-space .bd-board .bd-ab-fr { pointer-events: none; }
 .bd-dcount { color: var(--warn-fg); }
 /* the board's toolbar, centred in the board: panel, Fit · zoom · Focus · Tidy up, Present, Variants, Flows, fidelity, theme,
    motion. Tight enough for one row on a 1440 px window with both panels open; narrower, it wraps in centred rows */
-.bd-btb { position: absolute; z-index: 3; left: 12px; right: 12px; top: 12px; width: fit-content; margin: 0 auto; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 2px; padding: 4px; border-radius: 14px;
+.bd-btb { position: absolute; z-index: 10; transform: translateZ(0); left: 12px; right: 12px; top: 12px; width: fit-content; margin: 0 auto; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 2px; padding: 4px; border-radius: 14px;
   background: linear-gradient(180deg, var(--tray-top), var(--tray-bot)); box-shadow: var(--shadow-tray), 0 2px 6px oklch(23% 0.01 264 / 0.06); font-size: 12.5px; }
 .bd-tbtn { display: inline-grid; place-items: center; height: 30px; min-width: 30px; padding: 0 6px; border: 0; border-radius: 9px; background: none; color: var(--fg-muted); font: 500 12.5px var(--sans); cursor: pointer; }
 .bd-tbtn:hover:not(:disabled) { color: var(--fg); background: var(--hover); }
