@@ -122,6 +122,9 @@ button.bd-emo:hover, button.bd-emo[aria-expanded="true"] { background: var(--sel
 .bd-bar-r { margin-left: auto; display: flex; align-items: center; gap: 10px; flex: none; }
 .bd-overall { display: flex; align-items: center; gap: 8px; font: 500 12px var(--mono); color: var(--fg-muted); }
 .bd-overall .bp-bar { width: 72px; }
+/* a phone: the logo without its wordmark, closer keys, then a shorter meter, so the bar fits 320 px */
+@media (max-width: 600px) { .bd-mark svg.wm { display: none; } .bd-bar-r { gap: 6px; } }
+@media (max-width: 400px) { .bd-overall { gap: 6px; } .bd-overall .bp-bar { width: 40px; } }
 .bd-ibtn { display: inline-grid; place-items: center; width: 30px; height: 30px; border: 0; border-radius: 9px; color: var(--fg-muted);
   background: linear-gradient(180deg, var(--key-top), var(--key-bot)); box-shadow: var(--shadow-key); transition: color .12s var(--ease), transform .09s; }
 .bd-ibtn:hover { color: var(--fg); }
@@ -950,6 +953,18 @@ img.bp-cmpr-img { cursor: zoom-in; }
   .bd-annb .bd-key.sty { display: inline-flex; }
   .bd-annb .sty-g { display: block; }
 }
+/* narrow phones: smaller keys and gaps; then a design page's dock (six modes, the eye, two end keys) drops the eye and
+   an empty Request changes count at 380 px, and Annotate's caret at 340 px, so it fits 320 px */
+@media (max-width: 420px) {
+  .bd-anntb { gap: 3px; padding: 4px; }
+  .bd-key { width: 32px; height: 32px; border-radius: 10px; }
+  .bd-groove { margin: 0 1px; }
+}
+@media (max-width: 380px) {
+  .bd-anntb:has(.bd-key[data-m="interact"]) :is(.eye, .eye + .bd-groove) { display: none; }
+  .bd-key.go:disabled { padding: 0 9px; } .bd-key.go:disabled .n { display: none; }
+}
+@media (max-width: 340px) { .bd-key.ann { padding: 0 9px; } .bd-key.ann .car { display: none; } }
 /* HorizonUI Tooltip with Kbd chips */
 .bd-tip { position: fixed; left: 0; top: 0; z-index: 61; display: inline-flex; align-items: center; gap: 8px; max-width: min(300px, calc(100vw - 16px)); padding: 6px 8px 6px 10px; border-radius: 9px;
   background: var(--tip); color: oklch(97% 0 0); font: 500 12.5px/1.35 var(--sans); box-shadow: var(--shadow-3); pointer-events: none; animation: bd-tip-in .12s var(--ease); }

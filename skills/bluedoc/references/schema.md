@@ -829,6 +829,8 @@ On the current revision the tray's last keys depend on the page. The `?diff=` tr
 | Page without a checklist | View · Annotate │ eye │ **Request changes · N** |
 | Design, presentation or website page | View · Interact · Annotate · **Edit** (`E`: select an element, double-click its text to change it, Delete to remove it; see Board drafts) · Link · Frame │ eye │ **Request changes · N** · **Approve** (design, website) or **Present** (a presentation, green: from the selected slide; its board toolbar's blue key is **Export to…**). A storelisting ends with **Request changes** alone. Each decision list keeps **Accept recommended (N)** in its header, a findings section in its view bar. |
 
+On a phone the page fits 320 px: at 600 px and below the app bar shows the logo without its wordmark, and the tray's keys lose their labels; at 400 px the progress meter shortens; at 420 px the tray's keys shrink; at 380 px a design page's tray drops the eye and an empty **Request changes** count, and at 340 px Annotate's caret.
+
 ### Navigation
 
 Every tool scrolls, pans and zooms alike, as View does; a tool takes only the primary press, and switching tools keeps the view.
