@@ -253,6 +253,92 @@
      ]
     }
    ]
+  },
+  {
+   "rev": "4",
+   "date": "2026-11-09",
+   "built": "2026-11-09T17:26:13+00:00",
+   "head": {
+    "id": "acme-review-findings-2026-03",
+    "title": "Review findings: acme-shop #412 and #415",
+    "subtitle": "The 11 review comments on two open PRs, each next to its code. Pick what to do with each; my recommendation is starred.",
+    "meta": {
+     "org": "Acme Corp",
+     "kind": "Review",
+     "rev": "4",
+     "date": "2026-11-09",
+     "review": "threads"
+    },
+    "state": [
+     {
+      "label": "11 review comments",
+      "kind": "warn"
+     },
+     {
+      "label": "6 fix in the PR",
+      "kind": "warn"
+     },
+     {
+      "label": "2 follow-up tickets",
+      "kind": "info"
+     },
+     {
+      "label": "2 decline",
+      "kind": "todo"
+     },
+     {
+      "label": "1 resolves when a fix lands",
+      "kind": "info"
+     }
+    ],
+    "links": [
+     {
+      "label": "acme-shop #412 (bulk tiers)",
+      "href": "https://github.com/acme/acme-shop/pull/412"
+     },
+     {
+      "label": "acme-shop #415 (PayCo retry)",
+      "href": "https://github.com/acme/acme-shop/pull/415"
+     },
+     {
+      "label": "PRICING-88 spec",
+      "href": "https://example.com/acme/tickets/PRICING-88"
+     }
+    ],
+    "tldr": "Fix 6 in the PRs, ticket 2, decline 2; 1 resolves itself. Two are real bugs these PRs introduce: #412 gives no discount at exactly 10 or 50 units, and #415 can authorize a card twice when PayCo times out after accepting. Both are one-line fixes; neither PR should merge before them.",
+    "changes": [
+     "#412 and #415 diffs name their branches (headRef, baseRef)."
+    ]
+   },
+   "sections": [
+    {
+     "id": "summary",
+     "title": "Summary",
+     "lead": "Each finding has its options under it, with my recommendation starred. Pick one per finding, comment where you disagree, then press **Reply and fix**.",
+     "blocks": [
+      "0f334205a8047b08",
+      "62f145411f332db8"
+     ]
+    },
+    {
+     "id": "pr-412",
+     "title": "#412 · bulk discount tiers",
+     "lead": "3 bugs this PR introduces, 1 test gap, 3 smaller comments. Diff: `main` `89efd8e` → head `62ccc86`, limited to the commented files.",
+     "blocks": [
+      "fc77b74cb2f7a17c",
+      "2d4e7209366ec7b9"
+     ]
+    },
+    {
+     "id": "pr-415",
+     "title": "#415 · retry PayCo authorization",
+     "lead": "1 bug this PR introduces, 1 behaviour gap, 2 smaller comments. Diff: `main` `89efd8e` → head `0a46a97`, limited to the two commented files.",
+     "blocks": [
+      "515f2be34dbe4293",
+      "dc3fd1c9f05d2b4a"
+     ]
+    }
+   ]
   }
  ],
  "blocks": {
@@ -1329,6 +1415,87 @@
      "recommend": "decline"
     }
    ]
+  },
+  "2d4e7209366ec7b9": {
+   "type": "diff",
+   "id": "diff-412",
+   "title": "acme-shop #412",
+   "repo": "acme-shop",
+   "base": "89efd8e",
+   "head": "62ccc86",
+   "paths": [
+    "src/orders/createOrder.ts",
+    "src/pricing/tiers.ts",
+    "test/tiers.test.ts"
+   ],
+   "url": "https://github.com/acme/acme-shop/pull/412/files",
+   "note": "Only the commented files. Head `62ccc86`; `docs/pricing.md` is unchanged and shown for its comment.",
+   "comments": [
+    {
+     "at": "src/pricing/tiers.ts:17",
+     "item": "t412/tier-boundary"
+    },
+    {
+     "at": "src/pricing/tiers.ts:25",
+     "item": "t412/float-cents"
+    },
+    {
+     "at": "src/orders/createOrder.ts:16",
+     "item": "t412/savings-coupon"
+    },
+    {
+     "at": "test/tiers.test.ts:5-15",
+     "item": "t412/boundary-tests"
+    },
+    {
+     "at": "docs/pricing.md:11",
+     "item": "t412/docs-stale"
+    },
+    {
+     "at": "src/pricing/tiers.ts:10-13",
+     "item": "t412/tiers-map"
+    },
+    {
+     "label": "PR description",
+     "item": "t412/pr-claims"
+    }
+   ],
+   "headRef": "bulk-discount-tiers",
+   "baseRef": "main"
+  },
+  "dc3fd1c9f05d2b4a": {
+   "type": "diff",
+   "id": "diff-415",
+   "title": "acme-shop #415",
+   "repo": "acme-shop",
+   "base": "89efd8e",
+   "head": "0a46a97",
+   "paths": [
+    "src/orders/charge.ts",
+    "src/payments/paycoClient.ts"
+   ],
+   "url": "https://github.com/acme/acme-shop/pull/415/files",
+   "note": "Only the two commented files; the new test is left out. Head `0a46a97`.",
+   "comments": [
+    {
+     "at": "src/orders/charge.ts:17-21",
+     "item": "t415/double-auth"
+    },
+    {
+     "at": "src/orders/charge.ts:23-25",
+     "item": "t415/retry-4xx"
+    },
+    {
+     "at": "src/payments/paycoClient.ts:5",
+     "item": "t415/latency"
+    },
+    {
+     "at": "src/orders/charge.ts:25",
+     "item": "t415/backoff-const"
+    }
+   ],
+   "headRef": "fix/payco-retry-reuses-the-idempotency-key",
+   "baseRef": "main"
   }
  }
 }

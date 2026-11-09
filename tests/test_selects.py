@@ -94,7 +94,7 @@ class NoNativeSelect(ChromePage):
         # a code review at 390 px, with its File menu in place of the file list
         self.width(t, 390)
         t.go(self.base + self.server.url_for(self.docs / REVIEW))
-        t.ev("document.querySelector('#pr-412 .bd-fvbar [data-v=diff]').click()")
+        t.ev("document.querySelector('#pr-412 .bd-ftb [data-v=diff]').click()")
         self.assertTrue(t.wait_for("document.querySelector('#diff-diff-412 .bd-fsel .bd-selb').checkVisibility()"))
         self.assertEqual(t.ev(NO_SELECT), 0)
         self.width(t, 1440)
@@ -174,7 +174,7 @@ class NoNativeSelect(ChromePage):
 
     def test_the_code_review_file_menu_switches_the_file_at_390(self) -> None:
         t = self.page(REVIEW, 390)
-        t.ev("document.querySelector('#pr-412 .bd-fvbar [data-v=diff]').click()")
+        t.ev("document.querySelector('#pr-412 .bd-ftb [data-v=diff]').click()")
         fsel = "document.querySelector('#diff-diff-412 .bd-fsel')"
         shown = "[...document.querySelectorAll('#diff-diff-412 .bd-file')].find(b => b.getAttribute('aria-current') === 'true')?.dataset.key"
         t.wait_for(f"{fsel}.btn.checkVisibility()")

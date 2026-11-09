@@ -14,8 +14,8 @@ Code review findings, each pinned to its lines in the diff, with options to pick
 - **One decision per finding.** Each finding offers options (Fix in PR, Ticket, Decline, or the real alternatives) with the recommendation starred and a reason. The same pills show on the card and in the checklist, kept in sync.
 - **Accept recommended.** One key in the bottom tray (or per checklist) picks every starred option at once.
 - **Need more details.** A toggle on each finding asks the agent for fuller evidence and options in the next revision.
-- **Send answers.** Sends your picks, item comments and an overall message to the agent. The export shows each pick next to the recommendation when they differ.
-- **Comments and revisions.** The **Comments** tab collects notes pinned to any element; **Request changes** sends them. A comment the agent lists in a revision's `resolves` turns Resolved. The **Revisions** tab compares two rounds of the review, including changed ranges, files and comments.
+- **Send answers.** Sends your picks and an overall message to the agent (on a PR review the key reads **Apply decisions**, **Post review** or **Reply and fix**). The export shows each pick next to the recommendation when they differ.
+- **Comments and revisions.** The **Comments** tab collects notes pinned to any element and every finding's thread: what Claude replied and waits for you, what you haven't sent, what you answered. A click on a finding's card opens it and rings it; the tab opens by itself when something waits for you. **Request changes** sends the notes and your comments on findings. A comment the agent lists in a revision's `resolves` turns Resolved. The **Revisions** tab compares two rounds of the review, including changed ranges, files and comments.
 
 ## How an agent makes one
 

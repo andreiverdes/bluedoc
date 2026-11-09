@@ -451,7 +451,7 @@ BLOCK_SHAPES = {
     "text": {"md": str}, "callout": {"md": str, "kind": str}, "code": {"code": str},
     "table": {"columns": list, "rows": [list]}, "terms": {"items": [dict]}, "cards": {"items": [dict]},
     "checklist": {"id": str, "items": [ITEM_SHAPE]}, "canvas": {"id": str, **SCOPE_SHAPE},
-    "diff": {"id": str, "base": str, "head": str, "files": [{"path": str, "status": str}],
+    "diff": {"id": str, "base": str, "head": str, "headRef": str, "baseRef": str, "files": [{"path": str, "status": str}],
              "comments": [{"file": str, "item": str}]},
     "steps": {"id": str, "items": [{"id": str, "title": str, "status": str, "effort": str, "refs": [str],
                                     "evidence": EVIDENCE_SHAPE}]},
@@ -532,6 +532,7 @@ SCHEMA_CARDS = {
         ("id,title", "inline", "req", ""),
         ("repo,base,head", "str", "ref", "a ref: checkout from the doc's folder (or pr) and commits; no files"),
         ("paths,pr", "str", "opt", "pathspecs; owner/repo#N for gh"),
+        ("headRef,baseRef", "str", "opt", "the PR's branch names (gitdiff.py --pr)"),
         ("url,note", "str", "opt", "link; md under the header"),
         ("comments", "[object]", "opt", "{file,line,end,side | at:\"f:3-5\" | label} + item:\"<list>/<item>\" or title,md,kind"),
         ("files", "[object]", "opt", ["embedded {path,status,add,del,hunks:[{old,new,lines}]}; status ", FILE_STATUSES])],
@@ -2621,6 +2622,11 @@ def _validate(rep: Report, doc: dict, doc_path: Path | None, *, allow_remote: bo
             diffs[b["id"]] = validate_diff(rep, bw, src)
             lint_text(rep, bw + ".note", b.get("note"))
             check_url(rep, bw + ".url", b.get("url"))
+            # the PR's branch names (gitdiff.py --pr): the findings header shows head → base
+            for k in ("headRef", "baseRef"):
+                v = b.get(k)
+                if isinstance(v, str) and not (0 < len(v) <= 255 and not any(ch.isspace() or ord(ch) < 32 for ch in v)):
+                    rep.err(f"{bw}.{k}", "a branch name: 1-255 characters, no spaces")
             for ci, c in enumerate(src.get("comments") or []):
                 comments_to_check.append((f"{bw}.comments[{ci}]", b["id"], c))
         elif t == "steps":

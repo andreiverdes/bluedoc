@@ -79,6 +79,8 @@ class Conversation(ChromePage):
         a = self.open(url)
         a.ev("BP.setNote('decisions/retention', 'Acme: what does 180 days cost?')")
         self.send_changes(a, "1 comment on items")
+        # the sent message reaches the server's reader state before the reload reads it back
+        until(lambda: len(json.loads(self.state(url).get("decisions:retention:thread") or "[]")) == 1)
         self.patch("item:decisions/retention", "--reply", "About **2 GB** a month at Acme's volume.")
         a.go(self.base + url)
         row = "document.querySelector('#item-decisions-retention')"
@@ -212,6 +214,8 @@ class Conversation(ChromePage):
         a = self.open(url)
         cid = a.ev("BP.annotate({type: 'pin', key: 'tldr', note: 'Acme: who owns the nightly sweep?'}).id")
         self.send_changes(a, "1 pending comment")
+        # the sent comment reaches the server's reader state before the reload reads it back
+        until(lambda: bool(self.state(url).get(f"__ann:{cid}")))
         self.patch(f"ann:{cid}", "--reply", "The platform team; step 3 says so now.")
         a.go(self.base + url)
         a.ev("BP.comments({open: true, filter: 'all'})")
@@ -233,6 +237,7 @@ class Conversation(ChromePage):
         self.send_changes(a, "1 pending comment")
         ann = a.ev(f"BP.annotations().find(x => x.id === '{cid}')")
         self.assertEqual([ann["status"], [(m["md"], m["rev"]) for m in ann["thread"]], "draft" in ann], ["open", [("Acme: and who gets paged?", "2")], False])
+        until(lambda: "Acme: and who gets paged?" in (self.state(url).get(f"__ann:{cid}") or ""))
         a.go(self.base + url)
         a.ev("BP.comments({open: true, filter: 'open'})")
         a.wait_for(f"!!{card}")

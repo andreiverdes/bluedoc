@@ -446,11 +446,11 @@ td.bd-cell-mod { background: color-mix(in oklch, var(--warn-tint) 70%, transpare
 .bp-cl.complete .bp-bar i, .bp-bar.full i { background: var(--ok); }
 .bp-cl-items { margin: 0; padding: 4px 0 6px; list-style: none; }
 .bp-cl-item + .bp-cl-item { border-top: 1px solid var(--line-soft); }
-:is(.bp-cl-item, .bd-cm) input { appearance: none; -webkit-appearance: none; width: 18px; height: 18px; margin: 2px 0 0; flex: none; border-radius: 50%; cursor: pointer;
+:is(.bp-cl-item, .bd-cm) input[type=checkbox] { appearance: none; -webkit-appearance: none; width: 18px; height: 18px; margin: 2px 0 0; flex: none; border-radius: 50%; cursor: pointer;
   background: var(--surface); box-shadow: inset 0 0 0 1.5px var(--line-strong); transition: background .15s, box-shadow .15s; }
-:is(.bp-cl-item, .bd-cm) input:hover { box-shadow: inset 0 0 0 1.5px var(--fg-subtle); }
-:is(.bp-cl-item, .bd-cm) input:checked { background: var(--ok) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / 11px no-repeat; box-shadow: none; }
-:is(.bp-cl-item, .bd-cm) input:focus-visible { box-shadow: var(--focus-ring); }
+:is(.bp-cl-item, .bd-cm) input[type=checkbox]:hover { box-shadow: inset 0 0 0 1.5px var(--fg-subtle); }
+:is(.bp-cl-item, .bd-cm) input[type=checkbox]:checked { background: var(--ok) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / 11px no-repeat; box-shadow: none; }
+:is(.bp-cl-item, .bd-cm) input[type=checkbox]:focus-visible { box-shadow: var(--focus-ring); }
 .bp-cl-num { font: 500 11.5px/1.95 var(--mono); color: var(--fg-subtle); min-width: 22px; flex: none; margin-top: 1px; }
 /* collapsed row: [tick] [num] title / subtitle [chip] [chevron]; the whole row except the tick toggles */
 .bp-cl-row { display: flex; align-items: flex-start; gap: 10px; padding: 0 8px 0 16px; }
@@ -1009,10 +1009,10 @@ html.bd-tray-on .bp-toast { bottom: 84px; }
 .bd-key.send .n[hidden] { display: none; }
 .bd-pen-risk { --pen: var(--risk); } .bd-pen-accent { --pen: var(--accent); } .bd-pen-warn { --pen: var(--warn); } .bd-pen-ok { --pen: var(--ok); }
 .bd-pen-violet { --pen: light-dark(oklch(55% 0.21 300), oklch(70% 0.17 300)); } .bd-pen-ink { --pen: var(--fg); } .bd-pen-custom { --pen: oklch(55% 0.2 305); }
-/* the cursor rule excludes what `inDoc` excludes: the rail, a design's panel tabs, Screens list and board toolbar, and a findings section's view bar keep their own cursors */
-html.bd-ann-m-point .bd-shell :not(.bp-side, .bp-side :not(.bd-meta, .bd-meta *), .bd-lp-ui, .bd-lp-ui *, .bd-btb, .bd-btb *, .bd-fvbar, .bd-fvbar *), html.bd-ann-m-point .bd-shell { cursor: crosshair !important; }
-html.bd-ann-m-select .bd-shell :not(.bp-side, .bp-side :not(.bd-meta, .bd-meta *), .bd-lp-ui, .bd-lp-ui *, .bd-btb, .bd-btb *, .bd-fvbar, .bd-fvbar *), html.bd-ann-m-select .bd-shell { cursor: text !important; }
-html:is(.bd-ann-m-point, .bd-ann-m-select) .bd-shell :is(.bp-side, .bd-lp-ui, .bd-btb, .bd-fvbar) { cursor: default; }
+/* the cursor rule excludes what `inDoc` excludes: the rail, a design's panel tabs, Screens list and board toolbar, and a findings section's toolbar keep their own cursors */
+html.bd-ann-m-point .bd-shell :not(.bp-side, .bp-side :not(.bd-meta, .bd-meta *), .bd-lp-ui, .bd-lp-ui *, .bd-btb, .bd-btb *, .bd-ftb, .bd-ftb *), html.bd-ann-m-point .bd-shell { cursor: crosshair !important; }
+html.bd-ann-m-select .bd-shell :not(.bp-side, .bp-side :not(.bd-meta, .bd-meta *), .bd-lp-ui, .bd-lp-ui *, .bd-btb, .bd-btb *, .bd-ftb, .bd-ftb *), html.bd-ann-m-select .bd-shell { cursor: text !important; }
+html:is(.bd-ann-m-point, .bd-ann-m-select) .bd-shell :is(.bp-side, .bd-lp-ui, .bd-btb, .bd-ftb) { cursor: default; }
 html:is(.bd-ann-m-point, .bd-ann-m-select) .bd-shell .bp-note .bp-note-ta { cursor: text !important; }
 html:is(.bd-ann-m-point, .bd-ann-m-select) .bd-shell .bp-note button { cursor: default !important; }
 html.bd-ann-m-select .bp-cl-head { user-select: text; -webkit-user-select: text; }
@@ -1183,6 +1183,27 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .bd-cs-e b { color: var(--fg); font-weight: 600; font-size: 13.5px; }
 .bd-cs-e .keys { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 12px; }
 .bd-cs-e .keys span { display: inline-flex; align-items: center; gap: 5px; }
+/* a review's finding threads in the Comments panel: group headings (the agent replied, not sent yet, you answered,
+   resolved, on the page) and a card per finding: its PR and title, the last message on two lines, its state */
+.bd-cs-h { display: flex; align-items: center; gap: 6px; margin: 6px 4px -2px; font: 600 11px/1.3 var(--sans); letter-spacing: .06em; text-transform: uppercase; color: var(--fg-subtle); }
+.bd-cs-h:first-child { margin-top: 0; }
+.bd-cs-h .n { padding: 0 6px; border-radius: 6px; font: 600 11px/1.5 var(--mono); letter-spacing: 0; color: var(--fg-muted); background: var(--inset); }
+.bd-cs-h.you .n { color: var(--accent-fg); background: var(--accent-tint); }
+.bd-cs-fc { display: grid; gap: 4px; padding: 10px 12px; border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-1); cursor: pointer; font-size: 13px; line-height: 1.45;
+  scroll-margin: 10px; transition: box-shadow .14s var(--ease), opacity .14s; }
+.bd-cs-fc:hover { box-shadow: 0 0 0 1px color-mix(in oklch, var(--accent) 50%, transparent), var(--shadow-1); }
+.bd-cs-fc:focus-visible { box-shadow: var(--shadow-1), var(--focus-ring); }
+.bd-cs-fc .t { display: flex; align-items: center; gap: 6px; min-width: 0; font: 600 13px/1.35 var(--sans); }
+.bd-cs-fc .t .tt { min-width: 0; overflow-wrap: anywhere; }
+.bd-cs-fc .pr { flex: none; padding: 0 6px; border-radius: 6px; font: 600 11px/1.6 var(--mono); color: var(--fg-muted); background: var(--inset); }
+.bd-cs-fc .m { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; color: var(--fg-muted); }
+.bd-cs-fc .m b { color: var(--fg); font-weight: 600; }
+.bd-cs-fc .s { display: flex; align-items: center; gap: 6px; font: 500 11.5px var(--sans); color: var(--fg-subtle); }
+.bd-cs-fc .st { padding: 1px 7px; border-radius: 999px; font-weight: 600; }
+.bd-cs-fc .st.you { color: var(--accent-fg); background: var(--accent-tint); }
+.bd-cs-fc .st.rc { color: var(--warn-fg); background: var(--warn-tint); }
+.bd-cs-fc .st.ok { color: var(--ok-fg); background: var(--ok-tint); }
+.bd-cs-fc.done:not(:hover, :focus-visible) { opacity: .62; box-shadow: none; background: transparent; outline: 1px solid var(--line-soft); outline-offset: -1px; }
 .bd-cs-ft { flex: none; display: grid; gap: 8px; padding: 10px 12px 12px; box-shadow: inset 0 1px 0 var(--line); }
 .bd-cs-ft .row { display: flex; align-items: center; gap: 6px; margin: -2px -4px 0; }
 .bd-cs-ft .row[hidden] { display: none; }
@@ -1392,7 +1413,7 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .bd-fnav .cnt { display: inline-flex; align-items: center; gap: 4px; margin-right: 4px; font: 600 11.5px/1 var(--sans); color: var(--accent-fg); background: var(--accent-tint); border-radius: 999px; padding: 4px 8px; }
 .bd-fnav .cnt .bd-ic { width: 12px; height: 12px; }
 .bd-fnav .lbl { min-width: 46px; text-align: center; font-variant-numeric: tabular-nums; }
-.bd-fnav.one .lbl { display: none; }
+.bd-fnav.one .lbl, .bd-fnav[hidden], .bd-fnav .bd-ibtn[hidden] { display: none; }
 .bd-fnav .bd-ibtn { width: 26px; height: 26px; }
 .bd-fnav .bd-ibtn .bd-ic { width: 14px; height: 14px; }
 .bd-fnav .bd-ibtn:disabled { opacity: .35; cursor: default; }
@@ -1438,43 +1459,56 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .bd-cm.done .tt { color: var(--fg-subtle); }
 .bd-cm.nott .mt, .bd-cm.nott details { margin-left: 26px; }
 .bd-omit { padding: 28px 16px; text-align: center; font-size: 13.5px; color: var(--fg-subtle); }
-/* a findings section is one card: the band (chevron, number, title, answered meter and status; the findings' sizes
-   and the diff's refs as chips; the lead), a toolbar (Accept recommended, [Checklist][Diff][Merged]; sticky under the
-   app bar while the section is on screen), then the view shown, on the inset colour: its findings with their code in
-   one column, its checklist or its diff (print: Merged). Folded, only the band's title and chips show. An open
-   finding in Checklist shows its code: the file header, the lines around the comment and its card */
-.bp-sec.fv-on { --fvbar-h: 46px; padding-top: 0; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); overflow: clip; }
+/* a findings section is one card: its header (the chevron under the number, the title, the answered meter and a
+   status; the findings' sizes and the PR's branches, head → base; the lead), one toolbar (Open · Done · All, Accept
+   recommended, Expand all, ⋯ with Copy and Reset, [Checklist][Diff][Merged]), then the view shown, on the inset
+   colour: its findings with their code in one column, its checklist or its diff (print: Merged). While its findings
+   scroll, the title row and the sizes stick under the app bar, the lead scrolls away under them and the toolbar sticks
+   right below (600px and narrower: the title row and the toolbar). findingsView measures the parts: --fv-t (the title
+   row), --fv-c (the sizes, while they stick), --fvbar-h (the toolbar). Folded, only the title row and the sizes show */
+.bp-sec.fv-on { --fv-t: 0px; --fv-c: 0px; --fvbar-h: 46px; --fv-stuck: calc(var(--top-h) + var(--fv-t) + var(--fv-c) + var(--fvbar-h));
+  padding-top: 0; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); overflow: clip; }
 .bp-sec + .bp-sec.fv-on { border-top: 1px solid var(--line); }
 .bp-sec.fv-on + .bp-sec.fv-on { margin-top: 16px; }
-.bp-sec.fv-on > :is(h2, .bd-prc, .bp-lead) { background: var(--panel); }
-.bp-sec.fv-on > h2 { margin: 0; padding: 14px 16px 0 10px; font-size: 19px; cursor: pointer; }
+.bp-sec.fv-on > :is(h2, .bd-prc, .bp-lead, .bd-ftb) { background: var(--surface); }
+.bp-sec.fv-on > h2 { position: sticky; top: var(--top-h); z-index: 21; margin: 0; padding: 14px 16px 0 10px; font-size: 19px; cursor: pointer; }
 .bp-sec.fv-on > h2 > span:not([class]) { flex: 1 1 auto; min-width: 0; }
+/* the chevron sits under the number; the title, the sizes, the branches and the lead share one left edge, and the
+   branches end where the meter does (an empty status takes no room) */
+.bp-sec.fv-on > h2 > .bd-prchev { position: absolute; left: 12px; top: 44px; }
+.bp-sec.fv-on > h2 > .bd-prs:empty { display: none; }
 :is(.bd-prchev, .bd-mchev) { flex: none; display: grid; place-items: center; width: 26px; height: 26px; padding: 0; border: 0; border-radius: 7px; background: none; color: var(--fg-subtle); cursor: pointer; }
 :is(.bd-prchev, .bd-mchev):hover { background: var(--hover); color: var(--fg); }
-:is(.bd-prchev, .bd-mchev) .bd-ic { transform: rotate(90deg); transition: transform .18s var(--ease); }
-:is(.bd-prchev, .bd-mchev)[aria-expanded="false"] .bd-ic { transform: none; }
-.bd-prchev { margin-right: -4px; }
+.bd-prchev .bd-ic { transform: rotate(90deg); transition: transform .18s var(--ease); }
+.bd-prchev[aria-expanded="false"] .bd-ic { transform: none; }
 .bd-prm { flex: none; display: inline-flex; align-items: center; gap: 8px; font: 500 12px var(--mono); letter-spacing: 0; color: var(--fg-subtle); }
 .bd-meter { width: 96px; height: 4px; border-radius: 2px; background: var(--line); overflow: hidden; }
 .bd-meter > i { display: block; height: 100%; background: var(--accent); transition: width .4s var(--ease), background-color .4s; }
 .bd-meter.full > i { background: var(--ok); }
 .bd-prs { flex: none; min-width: 64px; display: inline-flex; align-items: center; justify-content: flex-end; gap: 6px; font: 500 13px var(--sans); letter-spacing: 0; color: var(--fg-muted); }
-.bd-prs:empty { min-width: 0; }
 .bd-prs.ok { color: var(--ok-fg); } .bd-prs.new { color: var(--accent-fg); }
 .bd-prs > i, .bp-prog-row .c .new > i { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
 .bp-prog-row .c .new { display: inline-flex; align-items: center; gap: 4px; color: var(--accent-fg); }
-.bd-prc { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 8px 16px 14px 82px; }
+.bd-prc { position: sticky; top: calc(var(--top-h) + var(--fv-t)); z-index: 20; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 8px 16px 8px 52px; }
 .bd-prchip { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 999px; font: 500 12px var(--sans); color: var(--fg-muted); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); }
 .bd-prchip.risk { color: var(--risk-fg); background: var(--risk-tint); box-shadow: none; }
 .bd-prchip.warn { color: var(--warn-fg); background: var(--warn-tint); box-shadow: none; }
-.bd-prref { margin-left: 4px; font-size: 12px; color: var(--fg-subtle); white-space: nowrap; }
-.bd-prref code { padding: 1px 5px; border-radius: 5px; font: 11.5px var(--mono); color: var(--fg-muted); background: var(--code-bg); }
-.bd-prc:has(+ .bp-lead) { padding-bottom: 6px; }
-.bp-sec.fv-on > .bp-lead { margin: 0; padding: 0 16px 14px 82px; max-width: none; font-size: 14px; }
-.bd-fvbar { position: sticky; top: var(--top-h); z-index: 20; display: flex; align-items: center; gap: 8px; padding: 8px 12px 8px 8px;
-  border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--surface); transition: box-shadow .15s; }
-.bd-fvbar > .sp { flex: 1; }
-.bd-fvbar.stuck { box-shadow: 0 10px 18px -14px oklch(0% 0 0 / .5); }
+/* the PR's branches, head → base, right of the sizes: a long name ends in … at 32 characters (whole in the title) */
+.bd-prref { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; min-width: 0; font-size: 12px; color: var(--fg-subtle); white-space: nowrap; }
+.bd-prref code { display: inline-block; max-width: 32ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; padding: 1px 5px; border-radius: 5px; font: 11.5px var(--mono); color: var(--fg-muted); background: var(--code-bg); }
+.bp-sec.fv-on > .bp-lead { position: relative; margin: 0; padding: 0 16px 0 52px; max-width: none; font-size: 14px; }
+.bd-ftb { position: sticky; top: calc(var(--top-h) + var(--fv-t) + var(--fv-c)); z-index: 19; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; row-gap: 6px;
+  margin-top: 12px; padding: 8px 12px 8px 10px; border-top: 1px solid var(--line-soft); transition: box-shadow .15s; }
+.bd-prc + .bd-ftb { margin-top: 0; }
+.bd-ftb.stuck { box-shadow: 0 10px 18px -14px oklch(0% 0 0 / .5); }
+.bd-ftb > .sp { flex: 1; }
+.bd-ftb > :is(.bp-btn, .bd-fvseg, .bd-exp) { flex: none; }
+.bd-ftb .bp-btn[hidden] { display: none; }
+.bd-ftb .bp-btn.icon { width: 30px; padding: 0; justify-content: center; }
+/* a toolbar too narrow for one row (a side panel open, a phone; fvMeasure) keeps every action: the views (.tight),
+   then Accept recommended and Expand all (.tighter), show their icons alone, Accept its count */
+.bd-ftb.tight .bd-fvseg:not(.bd-ffilt) .l, .bd-ftb.tighter > .bp-btn .l { display: none; }
+.bd-ftb.tight .bd-fvseg:not(.bd-ffilt) button, .bd-ftb.tighter > .bp-btn:not(.icon) { padding: 0 8px; }
 .bd-fvseg { display: inline-flex; gap: 2px; padding: 2px; border-radius: 10px; background: var(--hk-down); box-shadow: var(--shadow-well); }
 .bd-fvseg button { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px 0 8px; border: 0; border-radius: 8px; background: none; font: 600 12.5px var(--sans); color: var(--fg-muted); white-space: nowrap; transition: color .12s; }
 .bd-fvseg button:hover { color: var(--fg); }
@@ -1482,30 +1516,74 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .bd-fvseg button:focus-visible { box-shadow: var(--focus-ring); }
 .bd-fvseg button[aria-pressed="true"]:focus-visible { box-shadow: var(--shadow-hk), var(--focus-ring); }
 .bd-fvseg button .bd-ic { width: 14px; height: 14px; }
+/* the filter: the view switch's look, each count in a small well */
+.bd-ffilt button { padding: 0 6px 0 10px; }
+.bd-ffilt button b { min-width: 18px; padding: 1px 5px; border-radius: 6px; font: 600 11px/1.4 var(--mono); color: var(--fg-muted); background: var(--inset); }
+.bd-ffilt button[aria-pressed="true"] b { color: var(--accent-fg); background: var(--accent-tint); }
 .bp-sec.fv-on > :is(.fv-m, .fv-c, .fv-d) { margin: 0; padding: 12px; background: var(--inset); }
-/* a fold in motion (foldMotion): the box clips while its height eases; what folds away stays drawn and fades out, what
-   opens fades in */
+/* a section's fold in motion (foldMotion): the box clips while its height eases; what folds away stays drawn and
+   fades out, what opens fades in */
 .bd-anim-box { overflow: clip; }
 @keyframes bd-fold-in { from { opacity: 0; } }
 @keyframes bd-fold-out { to { opacity: 0; } }
 @media screen {
   .bp-sec.fv-on.bd-fold:not(.bd-anim) > :not(h2, .bd-prc) { display: none; }
-  .bp-sec.fv-on.bd-anim > :not(h2, .bd-prc), .bp-cl-item.bd-anim > :not(.bp-cl-row), .bp-cl-item.bd-anim > .bp-cl-row .bp-cl-subt, .bd-mx:has(> .bd-mrow.bd-anim) > .bd-mlbl,
-    .bp-cl-item.bd-fold.bd-anim > .bp-cl-row .bd-mpick { animation: bd-fold-in .24s var(--ease) both; }
-  .bp-sec.fv-on.bd-fold.bd-anim > :not(h2, .bd-prc), .bp-cl-item.bd-fold.bd-anim > :not(.bp-cl-row), .bp-cl-item.bd-fold.bd-anim > .bp-cl-row .bp-cl-subt,
-    .bd-mx:has(> .bd-mrow.bd-fold.bd-anim) > .bd-mlbl { animation: bd-fold-out .18s ease-out both; }
+  .bp-sec.fv-on.bd-anim > :not(h2, .bd-prc) { animation: bd-fold-in .24s var(--ease) both; }
+  .bp-sec.fv-on.bd-fold.bd-anim > :not(h2, .bd-prc) { animation: bd-fold-out .18s ease-out both; }
+  .bp-sec.fv-merged > :is(.fv-c, .fv-d), .bp-sec.fv-cl > :is(.fv-d, .fv-m), .bp-sec.fv-diff > :is(.fv-c, .fv-m) { display: none; }
+  /* what the filter hides: a finding (its excerpt in Merged, its card in Diff), a Merged group left empty */
+  .bp-sec.fv-on .fv-out { display: none; }
+  /* a closed finding is its head */
+  :is(.bp-cl-item.fd, .bd-mrow):not(.open) > :not(.bp-cl-row) { display: none; }
 }
-.bd-fvhint { flex: 0 1 auto; min-width: 0; display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 11px 0 9px; border-radius: 999px; overflow: hidden; white-space: nowrap; font: 500 12.5px var(--sans); color: var(--accent-fg);
-  background: var(--accent-tint); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--accent) 35%, transparent); animation: bd-fvhint .4s var(--ease) both; }
-.bd-fvbar > :is(.bp-btn, .bd-fvseg) { flex: none; }
-.bd-fvhint .bd-ic { width: 14px; height: 14px; }
-@keyframes bd-fvhint { from { opacity: 0; transform: translateX(-6px); } }
-@media screen { .bp-sec.fv-merged > :is(.fv-c, .fv-d), .bp-sec.fv-cl > :is(.fv-d, .fv-m), .bp-sec.fv-diff > :is(.fv-c, .fv-m) { display: none; } }
-@media print { .bd-fvbar, .bd-xcs, .bp-sec.fv-on > :is(.fv-c, .fv-d), .bd-mmore, .bd-mdet, .bd-mv .bd-xgo, .bd-prchev, .bd-mchev { display: none !important; } .bp-sec.fv-on > .fv-m { display: grid !important; } .bd-mbody[hidden] { display: block !important; content-visibility: visible !important; } }
-.bp-sec.fv-on :is(.bd-diff, .bp-cl, .bd-mv) { scroll-margin-top: calc(var(--top-h) + var(--fvbar-h) + 12px); }
+@media print { .bd-ftb, .pv-more, .pv-hidden, .bd-xcs, .bp-sec.fv-on > :is(.fv-c, .fv-d), .bd-mmore, .bd-mv .bd-xgo, .bd-prchev, .bd-mchev, .pv-chev { display: none !important; } .bp-sec.fv-on > .fv-m { display: grid !important; }
+  .bp-sec.fv-on > :is(h2, .bd-prc) { position: static; } .bd-dets[hidden] { display: block !important; content-visibility: visible !important; } }
+/* a jump into the findings lands 12px under the stuck header: the page's scroll padding (--top-h + 16px) and this */
+.bp-sec.fv-on :is(.bd-diff, .bp-cl, .bd-mv, .bp-cl-item, .bd-mrow) { scroll-margin-top: calc(var(--fv-stuck) - var(--top-h) - 4px); }
+/* a finding: closed, its head (and, answered, ✓ with the pick); open, More details, the details (in Merged then its
+   code), the options, the conversation, the reply box and, under it, a comment that waits for Request changes */
+:is(.bp-cl-item.fd, .bd-mrow) > .bp-cl-row :is(.bp-cl-head, .bd-mhead) { cursor: pointer; }
+:is(.bp-cl-item.fd, .bd-mrow):not(.open) > .bp-cl-row { padding-bottom: 2px; }
+.pv-chev { flex: none; display: grid; place-items: center; width: 22px; height: 22px; margin-left: 2px; color: var(--fg-subtle); }
+.pv-chev .bd-ic { width: 16px; height: 16px; transition: transform .18s var(--ease); }
+.open > .bp-cl-row .pv-chev .bd-ic { transform: rotate(180deg); }
+.bd-mchev.pv-chev { width: 22px; height: 22px; margin: 9px 0 0 2px; border-radius: 6px; }
+.pv-ok { display: none; flex: none; align-items: center; gap: 4px; max-width: 40%; margin-top: 2px; padding: 2px 8px 2px 6px; border-radius: 999px; font: 600 11.5px/1.4 var(--sans); color: var(--ok-fg); background: var(--ok-tint); }
+.pv-ok > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pv-ok .bd-ic { flex: none; width: 13px; height: 13px; stroke-width: 2.4; }
+.done:not(.open) > .bp-cl-row .pv-ok { display: inline-flex; }
+.bp-cl-item.fd.open > .bp-cl-row .bp-cl-noteic { display: none; }
+:is(.bp-cl-item.fd, .bd-mrow).done:not(.open) > .bp-cl-row .bp-cl-text { color: var(--fg-muted); }
+:is(.bp-cl-item.fd, .bd-mrow).done.open > .bp-cl-row .bp-cl-text { color: var(--fg); }
+.pv-more { margin: -2px 0 8px 30px; height: 26px; font-size: 12.5px; color: var(--fg-muted); }
+.pv-more[hidden] { display: none; }
+.pv-more .bd-ic { width: 14px; height: 14px; }
+.bd-mrow > .pv-more { margin-left: 10px; }
+.bd-dets { margin: 2px 12px 10px 36px; padding: 10px 14px; border-radius: 10px; background: var(--inset); font-size: 14px; }
+.bd-dets[hidden] { display: none; }
+.bd-dets > * + * { margin-top: 10px; }
+.bd-mrow > .bd-dets { margin-left: 16px; margin-right: 16px; }
+.bp-cl-item.fd > .bp-convo { padding: 2px 16px 12px calc(16px + var(--ind)); }
+.pv-pend { margin: -6px 0 0; padding: 0 16px 14px calc(16px + var(--ind)); font: 500 12.5px/1.4 var(--sans); color: var(--warn-fg); }
+.pv-pend[hidden] { display: none; }
+.pv-pend .bd-ic { width: 13px; height: 13px; margin-right: 6px; vertical-align: -2px; }
+.bd-cm > .pv-pend { margin: 6px 0 0; padding: 0 0 0 28px; }
+/* the comment field waits for an answer */
+.bp-note.pv-off { opacity: .5; pointer-events: none; }
+/* what the filter hides, said once at the end of the list */
+.pv-hidden { display: flex; align-items: center; gap: 8px; padding: 12px 16px; font: 500 13px var(--sans); color: var(--fg-subtle); }
+.pv-hidden .bd-ic { width: 15px; height: 15px; color: var(--ok-fg); }
+.pv-hidden[hidden] { display: none; }
+.bd-mv > .pv-hidden { padding: 0 4px; }
+/* Custom: the reader's own answer, above Need more details; typing in its field picks it */
+.bp-opt.cust .oh { display: flex; align-items: center; gap: 10px; width: 100%; cursor: default; }
+.bp-cust-in { flex: 1; min-width: 0; height: 30px; padding: 0 10px; border: 0; border-radius: 8px; font: 13.5px var(--sans); color: var(--fg); background: var(--inset); box-shadow: var(--shadow-well); outline: none; }
+.bp-cust-in::placeholder { color: var(--fg-subtle); }
+.bp-opt.cust:not(.on) .bp-cust-in { background: transparent; box-shadow: inset 0 0 0 1px var(--line-soft); }
+.bp-opt.cust .bp-cust-in:focus { box-shadow: var(--focus-ring); }
+.bp-opts.compact .bp-cust-in { height: 28px; font-size: 13px; }
 /* Merged: whole-change findings, then each file's commented ranges in line order (the full finding row with the lines
-   under its options), then the findings not tied to code. An answered decision folds to its head: title, → its pick,
-   its size, the chevron */
+   under its details), then the findings not tied to code */
 .bd-mv { --ind: 28px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin: 18px 0; }
 .bd-mg { border: 1px solid var(--line); border-radius: 12px; overflow: clip; background: var(--surface); }
 .bd-mg > .bd-fh { position: static; min-height: 36px; }
@@ -1518,43 +1596,42 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .bd-mmore[hidden] { display: none; }
 .bd-mmore .bd-ic { width: 13px; height: 13px; }
 .bd-mrow { padding-bottom: 2px; background: color-mix(in oklch, var(--panel) 55%, var(--surface)); }
+.bd-mrow:not(.open) { padding-bottom: 0; }
 .bd-mg > .bd-mrow + .bd-mrow { border-top: 1px solid var(--line); }
 .bd-mhead { flex: 1; min-width: 0; display: flex; align-items: flex-start; gap: 10px; padding: 10px 4px 10px 0; }
-.bd-mhead:has(> .bd-mchev) { cursor: pointer; padding: 8px 8px 8px 0; }
 .bd-mhead > .bp-chip { margin-top: 2px; flex: none; }
-.bd-mhead > .bd-mchev { margin-top: -2px; }
 .bd-mrow :is(.bp-cl-text, .bp-cl-subt > span) { white-space: normal; overflow: visible; }
-.bd-mpick { display: none; }
-@media screen {
-  .bd-mrow.bd-fold:not(.bd-anim) { padding-bottom: 0; }
-  .bp-cl-item.bd-fold:not(.bd-anim) > :not(.bp-cl-row), .bp-cl-item.bd-fold:not(.bd-anim) > .bp-cl-row .bp-cl-subt, .bp-cl-item.bd-fold > .bp-cl-row .bp-cl-picked,
-    .bd-mx:has(> .bd-mrow.bd-fold:not(.bd-anim)) > .bd-mlbl { display: none; }
-  .bp-cl-item.has-choices.bd-fold > .bp-cl-row .bp-cl-text { color: var(--fg-muted); }
-  .bp-cl-item.bd-fold > .bp-cl-row .bd-mpick { flex: none; display: inline-flex; align-items: center; gap: 6px; max-width: 40%; margin: 1px 4px 0 auto; font-size: 13px; font-weight: 600; color: var(--fg); }
-  .bp-cl-item.bd-fold > .bp-cl-row .bd-mpick::before { content: "→"; font-weight: 400; color: var(--fg-subtle); }
-}
-.bd-mdet { display: inline-flex; align-items: center; gap: 4px; height: 26px; margin: 0 0 8px calc(10px + var(--ind)); padding: 0 8px 0 6px; border: 0; border-radius: 7px; background: none; font: 500 12.5px var(--sans); color: var(--accent-fg); cursor: pointer; }
-.bd-mdet:hover { background: var(--hover); }
-.bd-mdet .bd-ic { width: 14px; height: 14px; transition: transform .18s var(--ease); }
-.bd-mdet[aria-expanded="true"] .bd-ic { transform: rotate(90deg); }
-.bd-mbody { padding: 0 16px 14px calc(16px + var(--ind)); font-size: 14px; }
-.bd-mbody[hidden] { display: none; }
-.bd-mbody > * + * { margin-top: 10px; }
-@media (max-width: 900px) { .bp-sec.fv-on .bd-fh { top: calc(var(--top-h) + var(--fvbar-h)); } .bp-sec.fv-on .bd-diff { --fh-top: calc(var(--top-h) + var(--fvbar-h)); } .bd-mg > .bd-fh { position: static; } }
+@media (max-width: 900px) { .bp-sec.fv-on .bd-fh { top: var(--fv-stuck); } .bp-sec.fv-on .bd-diff { --fh-top: var(--fv-stuck); } .bd-mg > .bd-fh { position: static; } }
 /* narrow: one column; an excerpt's lines keep their length and scroll sideways inside its box */
 @media (max-width: 700px) {
-  .bd-fvbar { flex-wrap: wrap; padding: 8px 6px; }
+  .bd-ftb { padding: 8px 6px; }
   .bd-fvseg button { padding: 0 9px 0 7px; }
+  .bd-ffilt button { padding: 0 5px 0 8px; }
   .bp-sec.fv-on > h2 { flex-wrap: wrap; row-gap: 6px; }
   .bp-sec.fv-on > h2 > span:not([class]) { flex-basis: calc(100% - 92px); }
-  .bp-sec.fv-on > h2 > .bd-prm { margin-left: 38px; }
+  .bp-sec.fv-on > h2 > .bd-prm { margin-left: 42px; }
   .bd-meter { width: 56px; }
-  .bd-prc, .bp-sec.fv-on > .bp-lead { padding-left: 16px; }
   .bd-mcode { margin-left: 16px; margin-right: 12px; }
   .bd-mcode > .bd-code { overflow-x: auto; scrollbar-width: thin; }
   .bd-mlines { width: max-content; min-width: 100%; }
   .bd-mlines .bd-ln > .c { white-space: pre; overflow-wrap: normal; }
-  .bd-mdet { margin-left: 34px; } .bd-mbody, .bd-mlbl { padding-left: 40px; }
+  .bd-mlbl { padding-left: 40px; }
+  .bd-dets { margin-left: 12px; }
+}
+/* a phone: the title row and the toolbar stick; the sizes and the lead scroll away. The title takes one line, the
+   chevron goes before the number, the toolbar's actions keep their icons */
+@media (max-width: 600px) {
+  .bp-sec.fv-on > h2 { flex-wrap: nowrap; gap: 8px; padding: 10px 10px 8px 6px; font-size: 16px; }
+  .bp-sec.fv-on > h2 > span:not([class]) { flex-basis: auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bp-sec.fv-on > h2 > .bd-prchev { position: static; margin-right: -4px; }
+  .bp-sec.fv-on > h2 > .bd-prm { margin-left: 0; gap: 6px; }
+  .bp-sec.fv-on > h2 > .bd-prs { display: none; }
+  .bd-meter { width: 36px; }
+  .bd-prc { position: static; padding: 2px 12px 8px 12px; }
+  .bd-prref { margin-left: 0; max-width: 100%; }
+  .bd-prref code { max-width: 20ch; }
+  .bp-sec.fv-on > .bp-lead { padding: 0 12px; }
+  .bd-ftb > .bd-fvseg:not(.bd-ffilt) { margin-left: auto; }
 }
 .bd-xcs { display: grid; gap: 12px; margin-top: 12px; }
 .bd-xcs:empty { display: none; }
@@ -1570,6 +1647,9 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .bp-cl-item.bd-flash { animation: bd-flash-ln 1.4s var(--ease); }
 .bp-step.bd-flash, .bp-frow.bd-flash { animation: bd-flash-ln 1.4s var(--ease); }
 @keyframes bd-flash-ln { 0%, 30% { background: color-mix(in oklch, var(--accent) 28%, transparent); } }
+/* the finding a Comments card leads to: a ring for a moment, inset (a findings card clips what spills out) */
+.bd-ring { border-radius: 12px; animation: bd-ring 1.6s var(--ease); }
+@keyframes bd-ring { 0%, 55% { box-shadow: inset 0 0 0 2px var(--accent), inset 0 0 0 6px var(--accent-tint); } 100% { box-shadow: inset 0 0 0 2px transparent, inset 0 0 0 6px transparent; } }
 .bp-ref.code .bd-ic { color: var(--fg-subtle); }
 .bp-ref.code { font-family: var(--mono); font-size: 11.5px; }
 
@@ -1743,13 +1823,14 @@ svg.anim .bp-edge.k-async { animation: bp-march 1.6s linear infinite; }
   .bp-cl { --ind: 28px; }
   .bp-cl-row { padding: 0 4px 0 12px; }
   .bp-cl-body { padding: 0 12px 12px 12px; }
-  .bp-opts, .bp-cl-sum, .bp-cl-item > .bp-note, .bd-mrow > :is(.bp-note, .bp-convo) { padding: 0 12px 12px 12px; }
+  .bp-opts, .bp-cl-sum, .bp-cl-item > :is(.bp-note, .pv-pend), .bp-cl-item.fd > .bp-convo, .bd-mrow > :is(.bp-note, .bp-convo) { padding: 0 12px 12px 12px; }
   .bp-opts.compact { padding: 8px 0 0; }
   .bp-cl-num { display: none; }
   .bp-cl-head { flex-wrap: wrap; row-gap: 4px; }
   .bp-cl-main { flex: 1 1 calc(100% - 30px); }
   .bp-cl-head > .bp-chip { order: 3; margin-top: 0; font-size: 11.5px; padding: 3px 7px; }
-  .bp-cl-item.bd-fold > .bp-cl-row .bp-cl-head > .bd-mpick { order: 3; max-width: calc(100% - 90px); margin: 0; }   /* folded: → the pick, then the size, under the title */
+  .bp-cl-head > .pv-ok { order: 3; max-width: calc(100% - 90px); margin: 0; }   /* answered: ✓ the pick, then the size, under the title */
+  .bp-cl-item.fd > .bp-cl-row .bp-cl-main { flex-basis: calc(100% - 40px); }   /* a finding's chevron stays beside its title */
   .bp-terms { grid-template-columns: minmax(0, 1fr); }
   .bp-terms dt { border-right: 0; border-bottom: 0; padding-bottom: 2px; background: none; }
   .bp-terms dd { padding-top: 0; }
@@ -3363,6 +3444,9 @@ const IS_LISTING = DOC_TYPE === 'storelisting';
 const IS_DESIGN = DOC_TYPE === 'design' || IS_DECK || IS_SITE || IS_LISTING;
 const APPROVABLE = IS_PLAN || IS_DESIGN && !IS_DECK && !IS_LISTING;
 const PICKS_WITH_CHANGES = IS_PLAN || IS_DESIGN;
+// comments on items go with Request changes there and on a review (its findings' comments); a review's send key
+// carries its picks and ticks only
+const NOTES_WITH_CHANGES = PICKS_WITH_CHANGES || DOC_TYPE === 'review';
 const AP_NOUN = IS_DECK ? 'presentation' : IS_SITE ? 'website' : IS_LISTING ? 'listing' : IS_DESIGN ? 'design' : 'plan';
 const AP_TITLE = AP_NOUN[0].toUpperCase() + AP_NOUN.slice(1);
 // a review's kind (meta.review): what Send does with its answers (SEND_AS)
@@ -4007,7 +4091,10 @@ const FILE_ACTION = { add: ['A', 'Added', 'add'], edit: ['M', 'Changed', 'edit']
 const fileRowSel = p => `.bp-frow[data-path="${CSS.escape(p)}"]`;
 const dirOf = p => { p = String(p || ''); const i = p.lastIndexOf('/'); return i < 0 ? '' : p.slice(0, i); };
 const stepFor = id => Object.values(STEPS).find(x => x.s.id === id) || null;
-function jumpTo(el) { el.scrollIntoView({ block: 'center', behavior: REDUCE ? 'auto' : 'smooth' }); flash(el); }
+// a row in a findings section lands right under its stuck header (its scroll margin), where an open finding has room;
+// anything else centres
+const rowBlock = el => el.closest('.bp-sec.fv-on') ? 'start' : 'center';
+function jumpTo(el) { el.scrollIntoView({ block: rowBlock(el), behavior: REDUCE ? 'auto' : 'smooth' }); flash(el); }
 function jumpFile(p) { const row = main.querySelector(fileRowSel(p)); if (row) jumpTo(row); return !!row; }
 function jumpStep(id) { const x = stepFor(id); if (x) { x.setOpen(true); jumpTo(x.li); } return !!x; }
 function fileIcon(p) {
@@ -4333,6 +4420,9 @@ function renderChecklist(b, parent) {
     const key = itemKey(cid, it.id);
     const choices = Array.isArray(it.choices) && it.choices.length ? it.choices : null;
     const multi = !!choices && it.multi === true;
+    // a decision in a findings section (a finding) opens and closes whole, its details behind More details; one with a
+    // single answer also takes a Custom answer, the reader's own words (`:custom`)
+    const fd = !!choices && FINDING_CIDS.has(cid), custKey = key + ':custom';
     const authorDone = it.done ? '1' : '0';
     // the author's pick as stored: its id, or (multi) its ids comma-joined
     const authorChoice = choices ? idsOf(it.choice).slice(0, multi ? undefined : 1).join(',') : '';
@@ -4353,7 +4443,10 @@ function renderChecklist(b, parent) {
     let choice = null;
     if (choices) { choice = toPick(stored != null ? stored.slice(1, stored.indexOf('|')) : authorChoice); cb.hidden = true; cb.tabIndex = -1; }
     const pickStr = () => multi ? choice.join(',') : choice || '';
-    if (choices) cb.checked = !!pickStr();
+    // a Custom answer stands in for a pick: one of them, never both
+    let custom = fd && !multi && !pickStr() ? store.get(custKey) || '' : '';
+    if (!custom && store.get(custKey) != null) store.del(custKey);
+    if (choices) cb.checked = !!pickStr() || !!custom;
     else cb.checked = stored == null ? !!it.done : stored[0] === '1';
     // subtitle: the author's `sub`, else the check (what "done" looks like), else nothing
     const subMd = it.sub || it.verify;
@@ -4365,9 +4458,11 @@ function renderChecklist(b, parent) {
       it.verify && !subIsCheck && h('div', { class: 'bp-cl-verify' }, ic('check'), h('span', {}, h('b', {}, 'Check'), h('span', { html: inline(it.verify) }))),
       it.refs && it.refs.length && h('div', { class: 'bp-refs' }, it.refs.map(r => h('button', { type: 'button', class: 'bp-ref', onclick: () => focusNode(r) }, ic('target'), refLabel(r)))),
       !choices && evidenceBlock(evList(it), `item:${cid}/${it.id}`)].filter(Boolean);
-    // the question's details show only while the row is open, under its options
-    const body = h('div', { class: 'bp-cl-body', id: bodyId, role: 'region', 'aria-label': String(it.text || '').replace(/[`*]/g, '') },
-      choices && details.length > 0 && h('div', { class: 'bp-cap' }, 'Details'), details);
+    // the question's details show only while the row is open, under its options; a finding's, behind More details
+    // above its options
+    const body = fd ? h('div', { class: 'bd-dets', id: bodyId, role: 'region', 'aria-label': 'Details: ' + plainText(it.text) }, details)
+      : h('div', { class: 'bp-cl-body', id: bodyId, role: 'region', 'aria-label': String(it.text || '').replace(/[`*]/g, '') },
+        choices && details.length > 0 && h('div', { class: 'bp-cap' }, 'Details'), details);
     // a progress item whose evidence is stale (the code changed since its check ran) needs a recheck: its tick shows
     // amber and the counts leave it out until the agent re-records the evidence
     const stale = !choices && ownerStale(`item:${cid}/${it.id}`);
@@ -4390,24 +4485,29 @@ function renderChecklist(b, parent) {
     body.hidden = 'until-found';  // find-in-page still reaches collapsed content where supported
     // several answers: "2 picked" or "Asking for more" beside the title
     const picked = multi ? h('span', { class: 'bp-cl-picked' }) : null;
-    const head = h('button', { type: 'button', class: 'bp-cl-head', 'aria-expanded': 'false', 'aria-controls': bodyId },
+    // a finding's head: once answered and closed, ✓ with the pick; its chevron points down, up while open
+    const okChip = fd ? h('span', { class: 'pv-ok' }, ic('tick'), h('span')) : null;
+    const head = h('button', { type: 'button', class: 'bp-cl-head', 'aria-expanded': 'false', ...(fd ? {} : { 'aria-controls': bodyId }) },
       numbered && h('span', { class: 'bp-cl-num' }, String(i + 1).padStart(2, '0')),
       h('span', { class: 'bp-cl-main' },
         h('span', { class: 'bp-cl-text', html: inline(it.text) }),
         subMd && h('span', { class: 'bp-cl-subt' + (subIsCheck ? ' check' : '') }, subIsCheck && ic('check'), h('span', { html: inline(subMd) }))),
+      okChip,
       it.state && h('span', { class: 'bp-chip ' + (it.stateKind || 'warn') }, it.state),
       stale && h('span', { class: 'bp-chip warn bp-recheck', title: 'Its evidence is stale: the code changed since the check ran. It doesn\'t count as done until it is re-checked' }, ic('reset'), 'Needs recheck'),
       picked,
       h('span', { class: 'bp-cl-noteic', title: 'A reply waits in the box' }, ic('msg')),
-      ic('chev', 'bp-cl-chev'));
+      fd ? h('span', { class: 'pv-chev' }, ic('down')) : ic('chev', 'bp-cl-chev'));
     const dot = choices && h('span', { class: 'bp-cl-dot', 'aria-hidden': 'true' });
-    const li = h('li', { class: 'bp-cl-item' + (choices ? ' has-choices' : '') + (stale ? ' stale' : ''), id: `item-${cid}-${it.id}` }, h('div', { class: 'bp-cl-row' }, cb, dot, head));
+    const li = h('li', { class: 'bp-cl-item' + (choices ? ' has-choices' : '') + (fd ? ' fd' : '') + (stale ? ' stale' : ''), id: `item-${cid}-${it.id}` }, h('div', { class: 'bp-cl-row' }, cb, dot, head));
     // a pick changed after approval: pending until Request changes sends it (`:pick-sent` holds the pick it sent)
     const pickSentKey = key + ':pick-sent';
     // a page with Send answers: the answer as it sends it, '=<pick>' or the tick; `:sent` holds the one it last sent
     // while that differs from the author's
-    const sentKey = key + ':sent', answerStr = () => choices ? '=' + pickStr() : cb.checked ? '1' : '0', authorAnswer = choices ? '=' + authorChoice : authorDone;
-    const entryItem = { it, cb, li, cid, body, head, choices, multi, stale, get note() { return note; }, get files() { return files.slice(); },
+    const sentKey = key + ':sent', answerStr = () => choices ? '=' + pickStr() + (custom ? '~' + custom : '') : cb.checked ? '1' : '0', authorAnswer = choices ? '=' + authorChoice : authorDone;
+    const entryItem = { it, cb, li, cid, body, head, choices, multi, fd, stale, get note() { return note; }, get files() { return files.slice(); },
+      // the reader's own answer (Custom), '' when none
+      get custom() { return custom; },
       // the pick: an id or null; with `multi`, the ticked ids (null when none)
       get choice() { return multi ? (choice.length ? choice.slice() : null) : choice; },
       // every reply in the box is a draft: sending moves it, with its files, into the thread
@@ -4419,6 +4519,7 @@ function renderChecklist(b, parent) {
       get answerPending() { return !PICKS_WITH_CHANGES && answerStr() !== (store.get(sentKey) ?? authorAnswer); },
       messages: () => convo(thread, replies),
       fresh: replies.some(r => isNewMsg({ who: 'agent', rev: String(r.rev) })) };
+    const paintOk = () => { if (okChip) { okChip.lastChild.textContent = okLabel(entryItem); okChip.title = okChip.lastChild.textContent; } };
     const paintPicked = () => {
       if (!picked) return;
       picked.classList.toggle('ask', !!more);
@@ -4435,7 +4536,7 @@ function renderChecklist(b, parent) {
     };
     // a decision's box shows while its row is closed too: a click into it (or typing) opens the row, the details
     // grow above it and the page scrolls with them, so the box stays under the pointer
-    entryItem.noteView = noteBox(entryItem, false, choices && (() => {
+    entryItem.noteView = noteBox(entryItem, false, choices && !fd && (() => {
       if (li.classList.contains('open') || li.classList.contains('empty')) return;
       const ta = entryItem.noteView.ta, y = ta.getBoundingClientRect().top;
       entryItem.setOpen(true); CHECKLISTS.forEach(c => c.paintExpand());
@@ -4452,6 +4553,7 @@ function renderChecklist(b, parent) {
       sum.replaceChildren(...(ms.length ? convoLine(ms) : []));
       // a first message gives a decision with no details a row to open
       if (entryItem.refresh) { entryItem.refresh(); CHECKLISTS.forEach(c => c.paintExpand()); }
+      if (fd) entryItem.noteView.paint();   // its placeholder, and the agent's name under a comment not yet sent
     };
     entryItem.paintConvo = paintConvo;
     li.classList.toggle('has-note', entryItem.notePending);
@@ -4462,17 +4564,20 @@ function renderChecklist(b, parent) {
       more = on ? '1' : null;
       if (more) store.set(moreKey, more); else store.del(moreKey);
       if (on && entryItem.choice) entryItem.setChoice(null);
+      if (on && custom) entryItem.setCustom('');
       paintMore(); paintSend(); MARKUP.paint();
     };
     // the item went to the agent (Request changes, Approve, Send answers): its reply and files join the thread (the
-    // thread is written first, in the same state write), its request is sent
-    entryItem.markSent = () => {
-      if (entryItem.notePending) {
+    // thread is written first, in the same state write), its request is sent. On a review `what` says which part
+    // went: 'answer' (the send key: the pick or tick) or 'note' (Request changes: the comment and Need more details)
+    entryItem.markSent = what => {
+      if (what !== 'answer' && entryItem.notePending) {
         thread = [...thread, { md: note.trim().slice(0, 8192), rev: CUR.rev, at: new Date().toISOString(), ...filesJson(files) }].slice(-200);
         store.set(threadKey, JSON.stringify(thread)); store.del(noteKey); store.del(noteSentKey); store.del(filesKey);
         note = ''; files = []; li.classList.remove('has-note'); entryItem.noteView.paint(); paintConvo(); syncDiffs();
       }
-      if (more === '1') { more = 'sent@' + CUR.rev; store.set(moreKey, more); paintMore(); }
+      if (what !== 'answer' && more === '1') { more = 'sent@' + CUR.rev; store.set(moreKey, more); paintMore(); }
+      if (what === 'note') return;
       if (entryItem.pickChanged) store.set(pickSentKey, pickStr());
       if (!PICKS_WITH_CHANGES) { const s = answerStr(); if (s === authorAnswer) store.del(sentKey); else store.set(sentKey, s); }
     };
@@ -4483,32 +4588,72 @@ function renderChecklist(b, parent) {
         const ids = idsOf(v).filter(id => choices.some(c => c.id === id));
         choice = multi ? choices.map(c => c.id).filter(id => ids.includes(id)) : ids[0] || null;
         const s = pickStr(), dropMore = !!s && !!more;
-        cb.checked = !!s;
+        if (s && custom) { custom = ''; store.del(custKey); }
+        cb.checked = !!s || !!custom;
         if (s === authorChoice) store.del(key); else store.set(key, `=${s}|${authorChoice}`);
         if (dropMore) { more = null; store.del(moreKey); li.classList.remove('more'); }
-        li.classList.toggle('done', cb.checked); entryItem.opts.paint(); paintPicked(); update();
-        if (dropMore) { entryItem.noteView.paint(); paintPlan(); MARKUP.paint(); }
+        li.classList.toggle('done', cb.checked); entryItem.opts.paint(); paintPicked(); paintOk(); update();
+        if (dropMore || fd) entryItem.noteView.paint();
+        if (dropMore) { paintPlan(); MARKUP.paint(); }
         else if (PICKS_WITH_CHANGES && !OLD) { paintPlan(); MARKUP.paint(); }   // a pick Request changes carries: its count, a plan's chip
         if (entryItem.onChoice) entryItem.onChoice(entryItem.choice);   // a design's theme pick re-skins its screens
       };
+      // Custom: the reader's words answer the finding; they drop the pick and Need more details, '' takes them back
+      if (fd && !multi) entryItem.setCustom = v => {
+        custom = String(v ?? '').trim() ? String(v).slice(0, 2000) : '';
+        if (custom) store.set(custKey, custom); else store.del(custKey);
+        if (custom && choice) { choice = null; if (authorChoice) store.set(key, `=|${authorChoice}`); else store.del(key); }
+        if (custom && more) { more = null; store.del(moreKey); li.classList.remove('more'); }
+        cb.checked = !!pickStr() || !!custom;
+        li.classList.toggle('done', cb.checked); entryItem.opts.paint(); paintOk(); entryItem.noteView.paint(); update(); MARKUP.paint();
+      };
       entryItem.opts = optionRows(entryItem);
-      li.append(entryItem.opts.el);
-      paintPicked();
+      paintPicked(); paintOk();
     }
-    li.append(sum);
-    // open: the details, then the conversation (read-only views: only when there is one), then the reply box (a
-    // decision's sits under the row's body, shown open or closed)
-    if (!RO || entryItem.messages().length) body.append(entryItem.thread.el);
-    if (!RO && !choices) body.append(entryItem.noteView.el);
-    paintConvo();
-    li.append(body);
-    if (!RO && choices) li.append(entryItem.noteView.el);
-    entryItem.setOpen = open => {
-      li.classList.toggle('open', open); head.setAttribute('aria-expanded', String(open));
-      if (open) body.removeAttribute('hidden'); else body.hidden = 'until-found';
-      if (open && entryItem.onOpen) entryItem.onOpen();   // a finding draws its code on first open (findingCode)
-    };
+    if (fd) {
+      // a finding, open: More details (the details under it, then its code), the options, the conversation, the reply
+      // box and, under it, a comment that waits to be sent
+      const moreBtn = h('button', { type: 'button', class: 'bp-btn ghost pv-more', 'aria-expanded': 'false', 'aria-controls': bodyId, onclick: () => entryItem.setDetails(!entryItem.details) });
+      entryItem.moreBtn = moreBtn;
+      li.append(moreBtn, body, entryItem.opts.el);
+      if (!RO || entryItem.messages().length) li.append(entryItem.thread.el);
+      if (!RO) li.append(entryItem.noteView.el, entryItem.noteView.pend);
+      paintConvo();
+      // the finding's own state, painted on each of its rows (this one, Merged's: `x.mviews`)
+      entryItem.open = false; entryItem.details = false;
+      entryItem.setOpen = open => {
+        entryItem.open = open;
+        li.classList.toggle('open', open); head.setAttribute('aria-expanded', String(open));
+        for (const m of entryItem.mviews || []) m.paintOpen(open);
+      };
+      entryItem.setDetails = on => {
+        entryItem.details = on;
+        if (on) body.removeAttribute('hidden'); else body.hidden = 'until-found';
+        moreBtn.setAttribute('aria-expanded', String(on));
+        moreBtn.replaceChildren(ic('info'), on ? 'Hide details' : 'More details', ic(on ? 'up' : 'down'));
+        for (const m of entryItem.mviews || []) m.paintDet(on);
+        if (on && entryItem.onOpen) entryItem.onOpen();   // a finding draws its code when its details first show (findingCode)
+      };
+      entryItem.setDetails(false);
+    } else {
+      if (choices) li.append(entryItem.opts.el);
+      li.append(sum);
+      // open: the details, then the conversation (read-only views: only when there is one), then the reply box (a
+      // decision's sits under the row's body, shown open or closed)
+      if (!RO || entryItem.messages().length) body.append(entryItem.thread.el);
+      if (!RO && !choices) body.append(entryItem.noteView.el);
+      paintConvo();
+      li.append(body);
+      if (!RO && choices) li.append(entryItem.noteView.el);
+      entryItem.setOpen = open => {
+        li.classList.toggle('open', open); head.setAttribute('aria-expanded', String(open));
+        if (open) body.removeAttribute('hidden'); else body.hidden = 'until-found';
+        if (open && entryItem.onOpen) entryItem.onOpen();   // a progress finding draws its code on first open (findingCode)
+      };
+    }
     entryItem.refresh = () => {
+      // a finding: More details shows while it has details
+      if (fd) { entryItem.moreBtn.hidden = ![...body.children].some(c => !c.hidden); return; }
       // nothing to expand (no details, no conversation, no box in the body): the row is just the tick's label, and
       // keyboard focus stays on the tick
       const empty = ![...body.children].some(c => !c.hidden);
@@ -4519,11 +4664,12 @@ function renderChecklist(b, parent) {
       else { head.setAttribute('aria-expanded', String(li.classList.contains('open'))); head.setAttribute('aria-controls', bodyId); head.removeAttribute('tabindex'); head.removeAttribute('aria-hidden'); }
     };
     head.addEventListener('click', () => {
-      if (entryItem.onHead && entryItem.onHead()) return;   // a findings section's decision: it folds or opens (headItem)
+      // a finding opens or closes whole, answered or not; opening it is where the reader is
+      if (fd) { if (!entryItem.open) holdFinding(entryItem); entryItem.setOpen(!entryItem.open); paintFindings(); return; }
       if (li.classList.contains('empty')) { if (!choices) cb.click(); return; }   // nothing to show: the row ticks
       entryItem.setOpen(!li.classList.contains('open'));
     });
-    body.addEventListener('beforematch', () => entryItem.setOpen(true));
+    body.addEventListener('beforematch', () => { if (fd) { entryItem.setOpen(true); entryItem.setDetails(true); } else entryItem.setOpen(true); });
     entryItem.refresh();
     li.classList.toggle('done', cb.checked);
     cb.addEventListener('change', () => {
@@ -4533,7 +4679,8 @@ function renderChecklist(b, parent) {
     });
     entryItem.reset = () => {
       store.del(key);
-      if (choices) { choice = authorPick(); cb.checked = !!pickStr(); entryItem.opts.paint(); paintPicked(); }
+      if (custom) { custom = ''; store.del(custKey); }
+      if (choices) { choice = authorPick(); cb.checked = !!pickStr(); entryItem.opts.paint(); paintPicked(); paintOk(); }
       else cb.checked = !!it.done;
       li.classList.toggle('done', cb.checked);
     };
@@ -4546,7 +4693,7 @@ function renderChecklist(b, parent) {
   const bar = h('div', { class: 'bp-bar' }, h('i'));
   const expandBtn = h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => {
     const open = !items.every(x => x.li.classList.contains('empty') || x.li.classList.contains('open'));
-    items.forEach(x => { if (!x.li.classList.contains('empty')) { if (open && x.folded) foldItem(x, false, false); x.setOpen(open); } });
+    items.forEach(x => { if (!x.li.classList.contains('empty')) x.setOpen(open); });
     paintExpand();
   } });
   const paintExpand = () => {
@@ -4556,21 +4703,24 @@ function renderChecklist(b, parent) {
     expandBtn.hidden = !all.length;
   };
   list.addEventListener('click', e => { if (e.target.closest('.bp-cl-head')) paintExpand(); });
+  // a findings section's own checklist has no header: the section's toolbar holds its actions and the filter its counts
+  const inFindings = FINDING_CIDS.has(cid) && !parent;
   // Accept recommended (N): the open decisions in this checklist and the ones nested in it (paintAccept);
   // not on earlier revisions or in compare view
-  const acceptBtn = !OLD && !BASE ? h('button', { type: 'button', class: 'bp-btn ghost', hidden: true, title: 'Pick the starred option on every open decision in this checklist',
+  const acceptBtn = !OLD && !BASE && !inFindings ? h('button', { type: 'button', class: 'bp-btn ghost', hidden: true, title: 'Pick the starred option on every open decision in this checklist',
     onclick: () => acceptRecs(checklistScope(entry)) }) : null;
   const ask = kind === 'decisions' ? h('span', { class: 'bp-cl-ask' }, 'Needs your answer') : null;
   const cap = kind === 'progress' && !parent ? h('p', { class: 'bp-cl-cap' }, PICKS_WITH_CHANGES
     ? `The agent marks these as the work lands. Your ticks stay on this page${APPROVABLE ? ' and don\'t change the approval' : ''}.`
     : 'Your own tracker: ticks are saved for you and go with Send answers.') : null;
-  root.append(h('div', { class: 'bp-cl-h' },
+  if (inFindings) root.append(list);
+  else root.append(h('div', { class: 'bp-cl-h' },
     ic(kind === 'decisions' ? 'help' : 'list'), h(parent ? 'h4' : 'h3', {}, b.title || 'Checklist'), ask, count,
     h('span', { class: 'tools' }, acceptBtn, expandBtn,
       !parent && h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => copyText(checklistMd(entry), 'Copied checklist as Markdown') }, ic('copy'), 'Copy'),
       !parent && h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => { if (!confirm('Reset this checklist?')) return; resetChecklist(entry); } }, ic('reset'), 'Reset'))),
     ...[cap, kind !== 'decisions' && bar, list].filter(Boolean));
-  const entry = { b, items, root, count, bar, sideRow: null, parent, paintExpand, acceptBtn, kind };
+  const entry = { b, items, root, list, count, bar, sideRow: null, parent, paintExpand, acceptBtn, kind };
   function update() {
     const n = items.filter(passing).length, open = items.length - items.filter(x => x.cb.checked).length, recheck = items.filter(x => x.stale && x.cb.checked).length;
     if (kind === 'decisions') { count.textContent = open ? `${open} open` : 'All answered'; ask.hidden = !open; }
@@ -4597,7 +4747,7 @@ function resetChecklist(c) {
 // Accepting picks the recommendation on each, as its starred rows would; a pick the reader made is never
 // touched. Undo clears the picks it made.
 function checklistScope(c) { return [c, ...CHECKLISTS.filter(n => n.parent && n.parent.cid === c.b.id).flatMap(checklistScope)]; }
-const openRecs = cls => cls.flatMap(c => c.items).filter(x => x.choices && !x.choice && !x.more && recIds(x).length);
+const openRecs = cls => cls.flatMap(c => c.items).filter(x => x.choices && !x.choice && !x.custom && !x.more && recIds(x).length);
 function acceptRecs(cls) {
   const xs = openRecs(cls);
   xs.forEach(x => x.setChoice(recIds(x)));
@@ -4615,7 +4765,9 @@ function paintAccept() {
 /* The options of a decision as Accordion rows (approved design, variant A): one bordered list, a row per option with
    its radio (a checkbox with `multi`), its label, ★ Recommended, its explanation cut to one line and a chevron; a
    click on the row or → opens the whole explanation, the radio or checkbox picks. An option without `md` is its label
-   alone. Need more details is the last row, with a fixed explanation (not on ?rev=/?diff=, which send nothing): with
+   alone. A finding with one answer has Custom above Need more details: the reader's own answer in a field, which
+   typing picks (its radio picks what the field holds, or focuses it; picked, it takes the answer back). Need more
+   details is the last row, with a fixed explanation (not on ?rev=/?diff=, which send nothing): with
    one answer it is a radio in the group, with several a checkbox; on, it clears the pick (the ticks), and picking an
    option turns it off. Sent, it reads "Details requested" until a newer rev; a click withdraws it. ↑ ↓ move, Space
    picks, → ← open and close. The same item can have several lists (its row, a diff card, Merged): each repaints
@@ -4627,12 +4779,18 @@ let OPT_N = 0;
 function optionRows(x, compact) {
   const multi = x.multi, recs = recIds(x);
   const opts = [...x.choices.map(c => ({ id: c.id, label: c.label, md: typeof c.md === 'string' && c.md.trim() ? c.md : '', rec: recs.includes(c.id) })),
+    ...(x.setCustom ? [{ id: 'custom', label: 'Custom', cust: true }] : []),
     ...(RO ? [] : [{ id: '', label: 'Need more details', md: MORE_MD, more: true }])];
   const ls = h('div', { class: 'ls', role: multi ? 'group' : 'radiogroup', 'aria-label': (multi ? 'Pick any: ' : 'Decision: ') + plainText(x.it.text) });
   const rows = opts.map(o => {
     const bid = 'bp-opt-' + ++OPT_N;
-    const pk = h('button', { type: 'button', role: multi ? 'checkbox' : 'radio', class: 'pk', 'data-id': o.id, 'aria-label': plainText(o.label) + (o.rec ? ' (recommended)' : '') }, h('i'));
+    const pk = h('button', { type: 'button', role: multi ? 'checkbox' : 'radio', class: 'pk', ...(o.cust ? {} : { 'data-id': o.id }), 'aria-label': plainText(o.label) + (o.rec ? ' (recommended)' : '') }, h('i'));
     const lb = h('span', { class: 'ol', html: inline(o.label) }), yp = h('span', { class: 'yp' });
+    if (o.cust) {
+      const input = h('input', { type: 'text', class: 'bp-cust-in', maxlength: 2000, placeholder: 'Your own answer', 'aria-label': 'Your own answer to: ' + plainText(x.it.text) });
+      const hd = h('div', { class: 'oh' }, lb, input);
+      return { o, row: h('div', { class: 'bp-opt cust', 'data-id': o.id }, pk, h('div', { class: 'oc' }, hd)), pk, hd, ob: null, lb, yp, input };
+    }
     const hd = h('button', { type: 'button', class: 'oh', tabindex: '-1', ...(o.md ? { 'aria-expanded': 'false', 'aria-controls': bid } : { 'aria-hidden': 'true' }) },
       lb, o.rec && h('span', { class: 'rec' }, '★ Recommended'), o.md && h('span', { class: 'one', html: inline(oneLine(o.md)) }), yp, o.md && ic('down', 'cv'));
     const ob = o.md ? h('div', { class: 'ob bd-md', id: bid, html: md(o.md) }) : null;
@@ -4658,6 +4816,8 @@ function optionRows(x, compact) {
     if (ta && ta.isConnected) { ta.focus({ preventScroll: true }); ta.scrollIntoView({ block: 'nearest', behavior: REDUCE ? 'auto' : 'smooth' }); }
   };
   const pick = r => {
+    if (x.fd) holdFinding(x);   // the finding the reader answers stays where it is until they move on
+    if (r.o.cust) { if (x.custom) x.setCustom(''); else if (r.input.value.trim()) x.setCustom(r.input.value); else r.input.focus(); return; }
     if (r.o.more) { x.setMore(!x.more); if (x.more === 'on') focusReply(); return; }
     const cur = idsOf(x.choice);
     if (multi) x.setChoice(cur.includes(r.o.id) ? cur.filter(id => id !== r.o.id) : [...cur, r.o.id]);
@@ -4665,7 +4825,11 @@ function optionRows(x, compact) {
   };
   for (const r of rows) {
     r.pk.addEventListener('click', () => pick(r));
-    r.hd.addEventListener('click', () => r.ob ? setOpen(r, r.ob.hidden) : pick(r));
+    if (r.input) {
+      r.hd.addEventListener('click', e => { if (e.target !== r.input) r.input.focus(); });
+      r.input.addEventListener('input', () => { holdFinding(x); x.setCustom(r.input.value); });
+      r.input.addEventListener('keydown', e => e.stopPropagation());   // page keys (modes, n/p) must not fire while typing
+    } else r.hd.addEventListener('click', () => r.ob ? setOpen(r, r.ob.hidden) : pick(r));
   }
   ls.addEventListener('keydown', e => {
     const i = rows.findIndex(r => r.pk === document.activeElement); if (i < 0 || e.metaKey || e.ctrlKey || e.altKey) return;
@@ -4677,11 +4841,12 @@ function optionRows(x, compact) {
     const cur = idsOf(x.choice), m = x.more;
     let tab = null;
     for (const r of rows) {
-      const on = r.o.more ? !!m : cur.includes(r.o.id);
+      const on = r.o.cust ? !!x.custom : r.o.more ? !!m : cur.includes(r.o.id);
       r.pk.setAttribute('aria-checked', String(on));
       r.row.classList.toggle('on', on);
       if (on && !tab) tab = r;
-      if (r.o.more) {
+      if (r.o.cust) { if (document.activeElement !== r.input) r.input.value = x.custom; }
+      else if (r.o.more) {
         r.lb.textContent = m === 'sent' ? 'Details requested' : 'Need more details';
         r.pk.setAttribute('aria-label', r.lb.textContent);
         r.row.title = m === 'sent' ? 'Sent to the agent; it resets when the agent posts a new revision. Click to withdraw it'
@@ -4689,19 +4854,23 @@ function optionRows(x, compact) {
       } else r.yp.textContent = on && !multi ? 'Your pick' : '';
     }
     for (const r of rows) r.pk.tabIndex = r === (tab || rows[0]) ? 0 : -1;
-    el.classList.toggle('answered', cur.length > 0);
+    el.classList.toggle('answered', cur.length > 0 || !!x.custom);
   };
   paint();
   return { el, paint };
 }
 const choiceLabel = (x, id) => { const c = x.choices && x.choices.find(c => c.id === id); return c ? c.label.replace(/[`*]/g, '') : id; };
+// what a closed finding shows after ✓: its Custom answer, else its pick's label(s)
+const okLabel = x => x.custom || idsOf(x.choice).map(id => choiceLabel(x, id)).join(', ');
 // the ids `patch` takes, beside the text the reader saw: `item:<checklist>/<item>` and the picked choice's id (several
 // answers: their labels, `→ **Lyon**, **Porto**`)
 const itemKeyMd = x => `\`item:${x.cid}/${x.it.id}\``;
 const choiceMd = x => x.multi ? idsOf(x.choice).map(id => `**${choiceLabel(x, id)}**`).join(', ') : `**${choiceLabel(x, x.choice)}** (\`${x.choice}\`)`;
 const recLabels = x => recIds(x).map(id => choiceLabel(x, id)).join(', ');
-// a decision in the Markdown: the pick, and the recommendation when it differs; none: "(<none>; recommended: …)"
+// a decision in the Markdown: the pick, and the recommendation when it differs; none: "(<none>; recommended: …)"; a
+// Custom answer: its words
 function pickMd(x, none) {
+  if (x.custom) return ` → **Custom**: ${cutLine(x.custom, 2000)}`;
   const rec = recLabels(x);
   return x.choice ? ` → ${choiceMd(x)}` + (rec && pickKey(x.choice) !== pickKey(recIds(x)) ? ` (recommended: ${rec})` : '') : rec ? ` (${none}; recommended: ${rec})` : ` (${none})`;
 }
@@ -4724,41 +4893,46 @@ const replyCmdsMd = md => !/^\s*→ /m.test(md) ? '' : `\n## Answering\n\n\`\`\`
 // keeps the quotes apart)
 const noteMd = (x, indent) => !x.notePending ? '' : (x.note ? '\n' + x.note.trim().split('\n').map(l => `${indent}  > ${l}`).join('\n') : '')
   + filesMd(x.files, indent + '  ') + '\n' + replyMd(`item:${x.cid}/${x.it.id}`, x.it.replies, indent + '  ');
-// opens an item's row (and every collapsed item it sits inside, its folded section and folded Merged row) and returns
-// the row to scroll to: in a findings section showing Merged, its first row there (the view stays); showing Diff, the
-// checklist's row (Checklist shows)
+// opens an item's row (and every collapsed item it sits inside, its folded section) and returns the row to scroll to:
+// in a findings section showing Merged, its first row there (the view stays); showing Diff, the checklist's row
+// (Checklist shows). A finding the filter hides shows every finding (All)
 function openItem(x) {
-  const row = itemRow(x), v = fviewOf(x.li);
+  const v = fviewOf(x.li);
+  if (v && !fvShows(x)) setFindingsFilter('all');
+  const row = itemRow(x);
   if (row === x.li) revealFindings(x.li);
-  if (v && v.el.classList.contains('bd-fold')) v.fold(false, true, false);   // no motion: the caller scrolls to the row next
-  if (x.folded) { foldItem(x, false, false); x.armed = answeredX(x); }
+  if (v && v.el.classList.contains('bd-fold')) v.fold(false, false);   // no motion: the caller scrolls to the row next
   for (let el = x.li; el; el = el.parentElement && el.parentElement.closest('.bp-cl-item')) {
     const owner = Object.values(ITEMS).find(y => y.li === el);
-    if (owner && owner !== x && owner.folded) foldItem(owner, false, false);
     if (owner && !owner.li.classList.contains('empty')) owner.setOpen(true);
   }
+  if (!x.fd) for (const m of x.mviews || []) m.paintOpen(true);
+  if (x.fd) holdFinding(x);
   CHECKLISTS.forEach(c => c.paintExpand());
+  paintFindings();
   return row;
 }
-function checklistMd(c, indent = '') {
+// notes: with "Need more details" and the comments waiting in item boxes (a review's send key leaves them to Request
+// changes)
+function checklistMd(c, indent = '', notes = true) {
   const lines = c.items.map(x => {
     const sub = CHECKLISTS.filter(n => n.parent && n.parent.cid === c.b.id && n.parent.iid === x.it.id);
     let line = `${indent}- [${passing(x) ? 'x' : ' '}] ${x.it.text} ${itemKeyMd(x)}` + (x.stale ? ' (needs recheck: its evidence is stale)' : '');
-    if (x.more) line += moreMd(x);
+    if (notes && x.more) line += moreMd(x);
     else if (x.choices) line += pickMd(x, 'no decision');
-    const quoted = noteMd(x, indent);
+    const quoted = notes ? noteMd(x, indent) : '';
     const ev = x.choices ? [] : evList(x.it);
-    return line + quoted + (ev.length ? '\n' + evidenceMd(ev, indent, `item:${x.cid}/${x.it.id}`) : '') + sub.map(n => '\n' + checklistMd(n, indent + '  ').trimEnd()).join('');
+    return line + quoted + (ev.length ? '\n' + evidenceMd(ev, indent, `item:${x.cid}/${x.it.id}`) : '') + sub.map(n => '\n' + checklistMd(n, indent + '  ', notes).trimEnd()).join('');
   });
   if (indent) return lines.join('\n') + '\n';
   const n = c.items.filter(passing).length;
   return `## ${c.b.title || c.b.id} (${n}/${c.items.length})\n` + lines.join('\n') + '\n';
 }
 // decision lists first: what needs the agent's attention, then the progress lists in page order
-function allChecklistsMd() {
+function allChecklistsMd(notes = true) {
   const msg = (store.get(MSG_KEY) || '').trim(), fs = msgFiles(), top = CHECKLISTS.filter(c => !c.parent);
   return `# ${DOC.title} — progress ${new Date().toISOString().slice(0, 10)}\n\n` + (msg || fs.length ? `${msg}${filesMd(fs, '').replace(/^\n/, msg ? '\n' : '')}\n\n` : '')
-    + [...top.filter(c => c.kind === 'decisions'), ...top.filter(c => c.kind !== 'decisions')].map(c => checklistMd(c)).join('\n')
+    + [...top.filter(c => c.kind === 'decisions'), ...top.filter(c => c.kind !== 'decisions')].map(c => checklistMd(c, '', notes)).join('\n')
     + (staleOwners().length ? '\n' + staleEvidenceMd() : '');
 }
 
@@ -4778,9 +4952,12 @@ function scrollerOf(el) {
 // when the last press was: a focus right after one is a click into the field (a Tab into it is not)
 let lastPress = -1e9;
 addEventListener('pointerdown', () => { lastPress = performance.now(); }, true);
-// onEnter: called when the reader clicks into the field or types in it (a decision row opens)
+// onEnter: called when the reader clicks into the field or types in it (a decision row opens). A finding's field opens
+// once it has an answer (a pick, Custom or Need more details): until then it is dimmed and says so. Under it, a saved
+// comment not yet sent says when the agent reads it (`pend`, the caller places it)
 function noteBox(x, compact, onEnter) {
   const ph = () => x.more === 'on' ? 'What details do you need? (optional)' : x.messages().length ? 'Reply…' : 'Comment for the agent…';
+  const gated = () => !!x.fd && !x.choice && !x.custom && !x.more && !x.notePending;
   const ta = h('textarea', { class: 'bp-note-ta', rows: 1, maxlength: 8192, placeholder: ph(),
     'aria-label': 'Reply to the agent on: ' + String(x.it.text || '').replace(/[`*]/g, '') });
   const fit = () => {
@@ -4804,6 +4981,7 @@ function noteBox(x, compact, onEnter) {
   const ft = h('div', { class: 'ft' }, fd.btn, saved, acts);
   const f = h('div', { class: 'f' }, ta, fd.list, ft);
   const el = h('div', { class: 'bp-note' + (compact ? ' compact' : '') }, f, fd.input);
+  const pend = x.fd ? h('p', { class: 'pv-pend', hidden: true }, ic('msg'), h('span')) : null;
   fd.hook(f, ta);
   // a press on the field's padding or footer (not its buttons) puts the caret in the text
   f.addEventListener('mousedown', e => { if (e.target !== ta && !e.target.closest('button')) { e.preventDefault(); ta.focus(); } });
@@ -4826,13 +5004,16 @@ function noteBox(x, compact, onEnter) {
   function cancel() { if (fd.busy) return; draft = false; ta.value = x.note; fd.cancel(); fit(); paintFt(); }
   // another box for the item saved, or a send emptied it: show it, unless this one holds a draft. "Need more
   // details" on: ask what is missing
-  const view = { el, ta, paint: () => {
+  const view = { el, ta, pend, paint: () => {
     if (!draft && ta.value !== x.note) { ta.value = x.note; fit(); }
     fd.load(x.files, draft);
-    ta.placeholder = ph();
+    const off = gated();
+    el.classList.toggle('pv-off', off); ta.disabled = off; fd.btn.disabled = off;
+    ta.placeholder = off ? 'Pick an answer to comment on it' : ph();
+    if (pend) { pend.hidden = !x.notePending; pend.lastChild.textContent = `${agentName()} will read it once changes are requested.`; }
     paintFt();
   } };
-  ta.addEventListener('input', () => { fit(); draft = true; saved.hidden = true; paintFt(); });
+  ta.addEventListener('input', () => { if (x.fd) holdFinding(x); fit(); draft = true; saved.hidden = true; paintFt(); });
   ta.addEventListener('keydown', e => {
     e.stopPropagation();   // page keys (modes, n/p, canvas) must not fire while typing
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); if (draft) save(); }
@@ -4844,27 +5025,30 @@ function noteBox(x, compact, onEnter) {
   return view;
 }
 // one entry per checklist item: its tick or pick, "Need more details" and the reader's new message (Send answers,
-// a plan's Approve and Request changes, and the "Need more details" items Request changes carries elsewhere).
-// Several answers: `choice` is the list of ticked ids
-const answerItems = (xs = Object.values(ITEMS)) => xs.map(x => ({
+// a plan's Approve and Request changes, and the items Request changes carries elsewhere). Several answers: `choice` is
+// the list of ticked ids; a Custom answer: `choice: "custom"` and its words in `custom`. notes false (a review's send
+// key): the pick or tick alone
+const answerItems = (xs = Object.values(ITEMS), notes = true) => xs.map(x => ({
   checklist: x.cid, item: x.it.id, text: x.it.text,
-  ...(x.choices ? { choice: x.multi ? x.choice || [] : x.choice || null, recommend: x.it.recommend || null } : { done: x.cb.checked }),
-  ...(x.more ? { more: true } : {}),
-  ...(x.note ? { note: x.note.trim() } : {}), ...filesJson(x.files),
+  ...(x.choices ? { choice: x.custom ? 'custom' : x.multi ? x.choice || [] : x.choice || null, ...(x.custom ? { custom: x.custom.trim() } : {}), recommend: x.it.recommend || null } : { done: x.cb.checked }),
+  ...(notes && x.more ? { more: true } : {}),
+  ...(notes && x.note ? { note: x.note.trim() } : {}), ...(notes ? filesJson(x.files) : {}),
 }));
+// a finding whose newest message is Claude's and the reader hasn't answered
+function awaitsReader(x) { const last = x.messages().at(-1); return !!last && last.who === 'agent' && !x.notePending; }
 function replyPayload() {
   return {
     kind: 'answers', doc: docId, rev: CUR.rev, title: DOC.title || '', path: location.pathname, at: new Date().toISOString(),
     message: (store.get(MSG_KEY) || '').trim(), ...(msgFiles().length ? { messageFiles: filesJson(msgFiles()).files } : {}),
     ...(POST_PRS.length ? { reviewEvents: POST_PRS.map(p => ({ section: p.id, title: p.title, event: postAs[p.id || ''] })) } : {}),
-    items: answerItems(),
+    items: answerItems(Object.values(ITEMS), DOC_TYPE !== 'review'),   // a review's send key carries the picks; its comments and requests go with Request changes
     markdown: answersMd(),
   };
 }
 // What Request changes carries besides the pending annotations: decision items marked "Need more details"
-// and not sent yet (every page with the tray) and, on a plan, design, presentation, website or listing, replies
-// waiting in item boxes and changed picks not sent yet
-const itemsPending = () => Object.values(ITEMS).filter(x => x.more === 'on' || PICKS_WITH_CHANGES && (x.notePending || x.pickPending));
+// and not sent yet (every page with the tray), replies waiting in item boxes (a plan, design, presentation, website,
+// listing or review: NOTES_WITH_CHANGES) and, but for a review, changed picks not sent yet (PICKS_WITH_CHANGES)
+const itemsPending = () => Object.values(ITEMS).filter(x => x.more === 'on' || NOTES_WITH_CHANGES && x.notePending || PICKS_WITH_CHANGES && x.pickPending);
 // Whether a decision's pick is one the agent hasn't heard: on an approved plan, design or website, one that differs from
 // the approved one (an item approved without a pick means its recommendation; items the approval didn't carry, added
 // since, don't count); on a presentation or listing, which has no approval, one that differs from the author's
@@ -4934,7 +5118,8 @@ function linkHome(href) {
 // The keys that end the bottom tray after Request changes: TRAY_END, filled where the tray's keys are made, below.
 // Approve on a plan, design or website (their picks go with it); Present on a presentation; nothing on a listing (its
 // picks go with Request changes); on other pages with checklists the send key: Send answers, or the next step a review's
-// meta.review names (SEND_AS), with the count of picks, ticks and comments not sent yet
+// meta.review names (SEND_AS), with the count of picks, ticks and comments not sent yet (on a review, picks and ticks:
+// its comments go with Request changes)
 const TRAY_END = [];
 let sendBtn = null, sendDlg = null, approveDlg = null;
 const PLAN_KEY = `bp:${docId}:__planstate`;
@@ -4952,9 +5137,10 @@ const POST_PRS = REVIEW_OF !== 'post' ? [] : (xs => xs.length ? xs : [{ id: null
 const postAs = Object.fromEntries(POST_PRS.map(p => [p.id || '', 'COMMENT']));
 if (POST_PRS.length > 1) SEND_AS.splice(2, 2, 'Post reviews to the PRs', 'The agent posts one GitHub review per PR, with a comment per finding you marked Post.');
 const postLabel = v => POST_AS.find(p => p[0] === v)[1];
-// what Send sends: the checklists, and on a post review how to post each PR, under the title
+// what Send sends: the checklists, and on a post review how to post each PR, under the title; a review's comments on
+// findings go with Request changes instead
 function answersMd() {
-  const md = allChecklistsMd(), i = md.indexOf('\n\n') + 2;
+  const md = allChecklistsMd(!NOTES_WITH_CHANGES), i = md.indexOf('\n\n') + 2;
   if (!POST_PRS.length) return md;
   const how = POST_PRS.length === 1 ? `Post as: ${postLabel(postAs[POST_PRS[0].id || ''])}`
     : 'Post as:\n' + POST_PRS.map(p => `- ${p.title}: ${postLabel(postAs[p.id])}`).join('\n');
@@ -4962,10 +5148,10 @@ function answersMd() {
 }
 function replyCounts() {
   const all = Object.values(ITEMS), dec = all.filter(x => x.choices);
-  return { decisions: dec.length, decided: dec.filter(x => x.choice).length, steps: all.length - dec.length,
+  return { decisions: dec.length, decided: dec.filter(x => x.choice || x.custom).length, steps: all.length - dec.length,
     ticked: all.filter(x => !x.choices && x.cb.checked).length, notes: all.filter(x => x.notePending).length,
-    // the items with a pick, tick or comment Send hasn't sent yet
-    unsent: all.filter(x => x.notePending || x.answerPending).length };
+    // the items with a pick, tick or comment Send hasn't sent yet (a review's comments: Request changes)
+    unsent: all.filter(x => !NOTES_WITH_CHANGES && x.notePending || x.answerPending).length };
 }
 function paintSend() {
   ARC.paint();   // a tick may finish the doc: All done · Archive it?
@@ -4975,7 +5161,8 @@ function paintSend() {
   sendBtn.classList.toggle('has', n > 0);
   sendBtn._n.hidden = !n; sendBtn._n.textContent = String(n);
   sendBtn.setAttribute('aria-label', n ? `${SEND_AS[1]}: ${n} not sent` : SEND_AS[1]);
-  sendBtn._tip = n ? `${n} ${n === 1 ? 'pick, tick or comment' : 'picks, ticks or comments'} not sent yet` : 'Nothing new to send: pick, tick or comment on an item';
+  const what = NOTES_WITH_CHANGES ? ['pick or tick', 'picks or ticks'] : ['pick, tick or comment', 'picks, ticks or comments'];
+  sendBtn._tip = n ? `${n} ${what[n === 1 ? 0 : 1]} not sent yet` : `Nothing new to send: ${NOTES_WITH_CHANGES ? 'pick an answer' : 'pick, tick or comment on an item'}`;
   if (sendDlg && sendDlg.open) sendDlg._paint();
 }
 function openSend() {
@@ -5014,7 +5201,8 @@ function openSend() {
       const parts = [];
       if (c.decisions) parts.push(`${c.decided} of ${c.decisions} decision${c.decisions === 1 ? '' : 's'} made`);
       if (c.steps) parts.push(`${c.ticked} of ${c.steps} step${c.steps === 1 ? '' : 's'} ticked`);
-      parts.push(`${c.notes} comment${c.notes === 1 ? '' : 's'}`);
+      if (!NOTES_WITH_CHANGES) parts.push(`${c.notes} comment${c.notes === 1 ? '' : 's'}`);
+      else if (c.notes) parts.push(`${c.notes} comment${c.notes === 1 ? '' : 's'} on findings ${c.notes === 1 ? 'goes' : 'go'} with Request changes`);
       summary.textContent = [SEND_AS[3], parts.join(' · ')].filter(Boolean).join(' ');
       segs.forEach(g => g.querySelectorAll('button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.v === postAs[g.dataset.pr]))));
       send.hidden = !REPLY.url;
@@ -5032,7 +5220,7 @@ async function doSend() {
   if (!REPLY.url) { copyText(answersMd(), 'Copied: paste it into the chat with the agent'); sendDlg && sendDlg.close(); return; }
   try {
     await postReply(REPLY.url, replyPayload());
-    Object.values(ITEMS).forEach(x => x.markSent()); MARKUP.paint(); paintSend();
+    Object.values(ITEMS).forEach(x => x.markSent(NOTES_WITH_CHANGES ? 'answer' : undefined)); MARKUP.paint(); paintSend();
     sendDlg && sendDlg.close();
     toast(`Sent to ${REPLY.to || 'the agent'}`);
   } catch (e) {
@@ -5050,15 +5238,17 @@ function updateOverall() {
   overallBar.firstChild.style.width = (t ? n / t * 100 : 0) + '%';
   overallBar.classList.toggle('full', t > 0 && n === t);
 }
-// "N questions need your answer" under the title, until each decision has a pick; not once the doc is approved
-// (an approval without a pick means the recommendation), on earlier revisions or in compare view
+// "N questions need your answer" under the title, until each decision has a pick (a finding: until it leaves Open, as
+// its section's filter counts); not once the doc is approved (an approval without a pick means the recommendation), on
+// earlier revisions or in compare view
+const asksReader = x => x.fd ? findingOpen(x) : !!x.choices && !x.choice;
 const askChip = !OLD && !BASE ? h('button', { type: 'button', class: 'bd-ask', hidden: true, onclick: () => {
-  const x = Object.values(ITEMS).find(y => y.choices && !y.choice); if (x) jumpTo(openItem(x));
+  const x = Object.values(ITEMS).find(asksReader); if (x) jumpTo(openItem(x));
 } }) : null;
 if (askChip) head.append(askChip);
 function paintAsk() {
   if (!askChip) return;
-  const n = Object.values(ITEMS).filter(x => x.choices && !x.choice).length;
+  const n = Object.values(ITEMS).filter(asksReader).length;
   askChip.hidden = !n || planState().state === 'approved';
   if (!askChip.hidden) askChip.replaceChildren(ic('help'), `${n} question${n === 1 ? ' needs' : 's need'} your answer`);
 }
@@ -5066,6 +5256,7 @@ function paintAsk() {
 /* ---------- sections (run at the end, after the canvas engine is defined) ---------- */
 function renderDocument() {
 const tocLinks = [];
+for (const sec of DOC.sections || []) for (const id of findingScope(sec).cids) FINDING_CIDS.add(id);   // before the checklists draw
 (DOC.sections || []).forEach((sec, i) => {
   const num = String(i + 1).padStart(2, '0');
   const el = h('section', { class: 'bp-sec', id: sec.id },
@@ -5090,22 +5281,25 @@ if (CHECKLISTS.length) {
   const rows = CHECKLISTS.filter(c => !c.parent).map(c => {
     const cnt = h('span', { class: 'c' }); const bar = h('div', { class: 'bp-bar' }, h('i'));
     // a decision list's row leads to the first item in page order that needs the reader: unanswered, or with a reply
-    // they haven't read; none, its section. Others: in a findings section showing Merged, its Merged list; showing
-    // Diff, its checklist
+    // they haven't read (a findings section's: the first its filter counts Open); none, its section. Others: in a
+    // findings section showing Merged, its Merged list; showing Diff, its checklist
     const go = e => {
       const v = fviewOf(c.root);
       if (c.kind === 'decisions') {
         e.preventDefault();
         const x = nextForReader(c);
         if (!x) { (v ? v.el : c.root).scrollIntoView({ behavior: REDUCE ? 'auto' : 'smooth', block: 'start' }); return; }
-        const row = openItem(x);
-        moveOn(x, false); jumpTo(row);   // no motion: rows folding above would move the scroll's target
+        jumpTo(openItem(x));
       } else if (v && v.view === 'merged') { e.preventDefault(); v.mv.scrollIntoView({ behavior: REDUCE ? 'auto' : 'smooth', block: 'start' }); } else revealFindings(c.root);
     };
     const row = h('a', { class: 'bp-prog-row', href: '#cl-' + c.b.id, onclick: go }, h('span', { class: 't' }, h('span', {}, c.b.title || c.b.id), cnt), bar);
     c.sideRow = () => {
       const n = c.items.filter(passing).length;
-      if (c.kind === 'decisions') {
+      if (c.kind === 'decisions' && c.items.some(x => x.fd)) {
+        // findings: the ones their section's filter counts Open, "2 open"; none, answered
+        const open = c.items.filter(findingOpen).length;
+        cnt.textContent = open ? `${open} open` : 'answered';
+      } else if (c.kind === 'decisions') {
         // replies waiting, then the open ones without one: "1 reply · 1 open"; none, answered
         const fresh = c.items.filter(x => x.fresh).length, open = c.items.filter(x => !passing(x) && !x.fresh).length;
         cnt.replaceChildren(...(fresh ? [h('span', { class: 'new' }, h('i'), `${fresh} ${fresh === 1 ? 'reply' : 'replies'}`)] : []),
@@ -5126,11 +5320,12 @@ if (CHECKLISTS.length) {
   CHECKLISTS.forEach(c => c.update());
 }
 Object.values(DIFFS).forEach(initDiff);
-// an item the agent has replied on since the reader's last visit opens (and every item it sits in)
-for (const x of Object.values(ITEMS)) if (x.fresh)
+// an item the agent has replied on since the reader's last visit opens (and every item it sits in); a finding stays as
+// it is: nothing opens or closes by itself there
+for (const x of Object.values(ITEMS)) if (x.fresh && !x.fd)
   for (let el = x.li; el; el = el.parentElement && el.parentElement.closest('.bp-cl-item')) { const o = Object.values(ITEMS).find(y => y.li === el); if (o) o.setOpen(true); }
 CHECKLISTS.forEach(c => c.paintExpand());   // after code-review links may have filled empty rows
-initFolds();   // answered findings and finished findings sections start folded
+paintFindings();
 linkPlanBlocks();
 const codeHash = () => { if (location.hash.startsWith('#code:')) openCodeLink(decodeURIComponent(location.hash.slice(6))); };
 if (location.hash.startsWith('#code:')) { if ('scrollRestoration' in history) history.scrollRestoration = 'manual'; setTimeout(codeHash, 300); }
@@ -5234,7 +5429,7 @@ const STATUS_LETTER = { added: 'A', modified: 'M', deleted: 'D', renamed: 'R', c
 const PR_KEY = '\u0000pr';
 
 function renderDiff(b) {
-  const d = { b, id: b.id, files: b.files || [], comments: (b.comments || []).map((c, i) => ({ ...c, _i: i })), sel: null, filter: 'all', ci: -1, mirrors: [], xmirrors: [] };
+  const d = { b, id: b.id, files: b.files || [], comments: (b.comments || []).map((c, i) => ({ ...c, _i: i })), sel: null, filter: 'all', ci: -1, mirrors: [] };
   DIFFS[d.id] = d;
   d.byPath = Object.fromEntries(d.files.map(f => [f.path, f]));
   // comments read in file-list order: whole-change comments, changed files, then unchanged files
@@ -5304,8 +5499,8 @@ function paintFiles(d) {
   d.fsel.setOptions([pr.length ? { value: PR_KEY, label: `Whole change (${pr.length})` } : null,
     ...shown.map(f => ({ value: f.path, label: `${STATUS_LETTER[f.status || 'modified'] || '·'}  ${f.path}${commentsIn(d, f.path).length ? `  (${commentsIn(d, f.path).length})` : ''}` }))].filter(Boolean), d.sel);
 }
-// a comment card: `mirrors` keeps it in sync with its item (the pane's list is redrawn with the pane, the code
-// under an open finding keeps its own); there (inItem) the card has no link back to its row and no copy of its detail
+// a comment card: `mirrors` keeps it in sync with its item (the pane's list is redrawn with the pane); a comment with
+// no item drawn in Merged (inItem) has no link back to a row
 function commentCard(d, c, mirrors = d.mirrors, inItem = false) {
   const src = c.item ? ITEMS[c.item] : null;
   const it = src && src.it;
@@ -5334,9 +5529,9 @@ function commentCard(d, c, mirrors = d.mirrors, inItem = false) {
     detail && h('details', {}, h('summary', {}, 'Details'), h('div', { class: 'bd bd-md', html: md(detail) }))].filter(Boolean));
   if (src && !inItem) {
     // the item's conversation and reply box, compact and in sync with its row (read-only views: the conversation
-    // only); under its own row, the row's are right there
+    // only)
     const tv = threadView(src, true), nv = RO ? null : noteBox(src, true);
-    card.append(tv.el, ...(nv ? [nv.el] : []));
+    card.append(tv.el, ...(nv ? [nv.el, nv.pend].filter(Boolean) : []));
     mirrors.push({ note: nv, thread: tv, src, card });
   }
   return card;
@@ -5405,13 +5600,14 @@ function renderPane(d) {
   syncDiffs();
 }
 /* Comments in the open file: a count in the file header, ‹ › to step through them, and pills that
-   say how many are above or below what you can see, so no comment hides off-screen unnoticed. */
+   say how many are above or below what you can see, so no comment hides off-screen unnoticed. A card the findings
+   filter hides doesn't count */
 function fileNav(d) {
   const pane = d.pane, head = pane.querySelector('.bd-fh');
-  const cards = [...pane.querySelectorAll('.bd-code .bd-cm')];
+  const all = [...pane.querySelectorAll('.bd-code .bd-cm')], shown = () => all.filter(c => !c.closest('.fv-out'));
   d.fnav = null;
-  if (!head || !cards.length) return;
-  const n = cards.length;
+  if (!head || !all.length) return;
+  let cards = shown();
   const lbl = h('span', { class: 'lbl', 'aria-live': 'polite' });
   const go = target => {
     const card = cards[target]; if (!card) return;
@@ -5421,8 +5617,8 @@ function fileNav(d) {
   };
   const prev = h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Previous comment in this file', title: 'Previous comment in this file' }, ic('up'));
   const next = h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Next comment in this file', title: 'Next comment in this file' }, ic('down'));
-  const nav = h('span', { class: 'bd-fnav' + (n > 1 ? '' : ' one') },
-    h('span', { class: 'cnt', title: `${n} comment${n === 1 ? '' : 's'} in this file` }, ic('msg'), String(n)), n > 1 && prev, lbl, n > 1 && next);
+  const cntN = h('span'), cnt = h('span', { class: 'cnt' }, ic('msg'), cntN);
+  const nav = h('span', { class: 'bd-fnav' }, cnt, prev, lbl, next);
   head.insertBefore(nav, head.lastElementChild && head.lastElementChild.matches('button') ? head.lastElementChild : null);
   const upTxt = h('span'), downTxt = h('span');
   const up = h('button', { type: 'button', class: 'bd-pill' }, ic('up'), upTxt);
@@ -5440,7 +5636,10 @@ function fileNav(d) {
     return { above, below, cur };
   };
   const paint = () => {
-    const s = state();
+    cards = shown();
+    const n = cards.length, s = state();
+    nav.hidden = !n; nav.classList.toggle('one', n < 2); prev.hidden = next.hidden = n < 2;
+    cntN.textContent = String(n); cnt.title = `${n} comment${n === 1 ? '' : 's'} in this file`;
     const seen = s.cur >= 0 || s.above.length || s.below.length < n;
     lbl.textContent = s.cur >= 0 && n > 1 ? `${s.cur + 1} of ${n}` : '';
     lbl.hidden = !lbl.textContent;
@@ -5451,7 +5650,7 @@ function fileNav(d) {
     downTxt.textContent = `${s.below.length} ${seen ? 'more ' : ''}comment${s.below.length === 1 ? '' : 's'} below`;
   };
   prev.onclick = () => { const s = state(); go(s.cur > 0 ? s.cur - 1 : s.above[s.above.length - 1]); };
-  next.onclick = () => { const s = state(); go(s.cur >= 0 && s.cur < n - 1 ? s.cur + 1 : s.below[0]); };
+  next.onclick = () => { const s = state(); go(s.cur >= 0 && s.cur < cards.length - 1 ? s.cur + 1 : s.below[0]); };
   up.onclick = () => { const s = state(); go(s.above[s.above.length - 1]); };
   down.onclick = () => { const s = state(); go(s.below[0]); };
   d.fnav = { paint, state };
@@ -5475,7 +5674,11 @@ function paneScrollTo(d, el) {
   } else el.scrollIntoView({ behavior: REDUCE ? 'auto' : 'smooth', block: 'center' });
 }
 function flash(el) { el.classList.remove('bd-flash'); void el.offsetWidth; el.classList.add('bd-flash'); setTimeout(() => el.classList.remove('bd-flash'), 1500); }
+// the finding a Comments card leads to: a ring around it for a moment
+function ring(el) { el.classList.remove('bd-ring'); void el.offsetWidth; el.classList.add('bd-ring'); setTimeout(() => el.classList.remove('bd-ring'), 1700); }
 function openComment(d, c, fromOutside) {
+  const src = c.item && ITEMS[c.item];
+  if (src && fviewOf(src.li) && !fvShows(src)) setFindingsFilter('all');   // its card is one the findings filter hides
   revealFindings(d.root);   // a findings section showing its checklist switches to its diff
   d.ci = c._o;
   selectFile(d, c.file || PR_KEY);
@@ -5509,7 +5712,7 @@ function openCodeLink(s) {
 }
 function syncDiffs() {
   for (const d of Object.values(DIFFS)) {
-    for (const m of d.mirrors.concat(d.xmirrors)) {
+    for (const m of d.mirrors) {
       if (m.tick) m.tick.checked = m.src.cb.checked;
       if (m.opts) m.opts.paint();
       if (m.note) m.note.paint();
@@ -5533,16 +5736,10 @@ function syncDiffs() {
     if (m.opts) m.opts.paint();
     if (m.note) m.note.paint();
     m.thread.paint();
+    if (m.ok) { m.ok.lastChild.textContent = okLabel(m.x); m.ok.title = m.ok.lastChild.textContent; }
     m.row.classList.toggle('done', m.x.cb.checked); m.row.classList.toggle('more', !!m.x.more);
   }
-  // a pick arms the finding: it folds once the reader moves on; one no longer answered opens
-  for (const x of FOLDX) {
-    const ans = answeredX(x);
-    if (ans && !x.ans) x.armed = true;
-    if (!ans && x.folded) foldItem(x, false);
-    x.ans = ans;
-  }
-  FVIEWS.forEach(v => v.paint());
+  paintFindings();
 }
 function initDiff(d) {
   // each checklist item a comment points at: in the same findings section, the comment's code under the open
@@ -5567,57 +5764,79 @@ function initDiff(d) {
   paintNav(d);
 }
 
-/* The code a finding is about, under its open row: for each diff comment on the item, the file header and the
-   hunk lines around the commented range with the comment card under them, as the diff draws them. Drawn on the
-   row's first open, so a review with many findings stays fast. */
+/* The code a finding is about, in its details (after its text): for each diff comment on the item with a line, the
+   file header and the hunk lines around the commented range, as the diff draws them; a comment's own text joins the
+   details. Drawn when the details first show (a progress finding's: when its row first opens), so a review with many
+   findings stays fast. */
 const FIND_CTX = 3;   // lines shown either side of a comment's range
 function addFindingCode(x, d, c) {
   if (!x.code) {
     const el = h('div', { class: 'bd-xcs' }), list = [];
     x.code = { el, list };
     x.body.append(el);
-    x.onOpen = () => { x.onOpen = null; el.append(...list.map(([d, c]) => findingCode(d, c))); syncDiffs(); };
-    x.refresh();
+    x.onOpen = () => { x.onOpen = null; el.append(...list.map(([d, c]) => findingCode(d, c))); };
   }
-  x.code.list.push([d, c]);
+  if (c.md) x.code.el.before(h('div', { class: 'bp-cl-detail bd-md', html: md(c.md) }));
+  if (c.line && c.file && d.byPath[c.file]) x.code.list.push([d, c]);
+  x.code.el.hidden = !x.code.list.length;
+  x.refresh();
 }
 function findingCode(d, c) {
-  const f = c.file && d.byPath[c.file];
-  const head = h('div', { class: 'bd-fh' },
-    f ? filePathEl(f) : h('div', { class: 'p' }, h('b', {}, c.file || 'Whole change'), c.file ? '' : ' · not tied to a line'), f && fileStat(f),
+  const f = d.byPath[c.file];
+  const head = h('div', { class: 'bd-fh' }, filePathEl(f), fileStat(f),
     h('button', { type: 'button', class: 'bd-xgo', title: 'Show this comment in the Diff view', onclick: () => openComment(d, c, true) }, ic('pr'), 'Open in Diff view'));
-  const card = commentCard(d, c, d.xmirrors, true);
   const code = h('div', { class: 'bd-code' });
-  const rows = f && c.line ? (f.hunks || []).map(hunkRows).find(rs => rs.some(r => covers(c, r.lo, r.ln))) : null;
+  const rows = (f.hunks || []).map(hunkRows).find(rs => rs.some(r => covers(c, r.lo, r.ln)));
   if (rows) {
     const hit = rows.map(r => covers(c, r.lo, r.ln)), last = hit.lastIndexOf(true), lang = fileLang(f.path);
     let html = '';
-    for (let i = Math.max(0, hit.indexOf(true) - FIND_CTX); i <= Math.min(rows.length - 1, last + FIND_CTX); i++) html += lineHtml(rows[i], lang, hit[i]) + (i === last ? '<div class="bd-cmw"></div>' : '');
+    for (let i = Math.max(0, hit.indexOf(true) - FIND_CTX); i <= Math.min(rows.length - 1, last + FIND_CTX); i++) html += lineHtml(rows[i], lang, hit[i]);
     code.innerHTML = html;
-    code.querySelector('.bd-cmw').append(card);
-  } else code.append(h('div', { class: 'bd-cmw top' }, card));
-  // the annotator reads the diff and the file of these lines and cards from here (keys as in the diff)
-  return h('div', { class: 'bd-xf', 'data-diff': d.id, 'data-file': c.file || null }, head,
-    f && f.omitted && h('div', { class: 'bd-omit' }, `Diff not included: ${f.omitted}.`), code);
+  }
+  // the annotator reads the diff and the file of these lines from here (keys as in the diff)
+  return h('div', { class: 'bd-xf', 'data-diff': d.id, 'data-file': c.file }, head, f.omitted && h('div', { class: 'bd-omit' }, `Diff not included: ${f.omitted}.`), code);
 }
 
 /* Findings sections: a section holding a checklist and a diff whose comments are that checklist's items is one card
-   (a PR's, in a review). Its band: a chevron, the title, the findings' sizes and the diff's refs as chips, the answered
-   meter and a status (replies waiting, Answered); then the lead. Under it a toolbar, sticky under the app bar while the
-   section is on screen: Accept recommended, and [Checklist][Diff][Merged], which shows the findings one way at a time.
-   The pick is a layout pref that every such section follows (Merged when none is saved); a link into a hidden view
-   (an item from Diff, a comment, a code line) shows it in that section only, and an item link stays in Merged, which
-   holds every finding. A section whose findings are all answered, with nothing waiting for the reader, folds to its
-   band (on load, and once its last answered finding folds); the chevron or a click on the title opens it again.
-   Print shows Merged, unfolded. */
-const FVIEW_KEY = 'bluedoc:findings-view', FVIEW_HINT_KEY = 'bluedoc:findings-hint';
+   (a PR's, in a review). Its header: the title row (a chevron under the number that folds the section, the title, the
+   answered meter and a status: replies waiting, Answered), then the findings' sizes and the PR's branches (head →
+   base: the diff's `headRef` and `baseRef`, else its commits), then the lead. Under it one toolbar: the filter (Open ·
+   Done · All, with counts), Accept recommended, Expand all, ⋯ (Copy, Reset) and [Checklist][Diff][Merged], which shows
+   the findings one way at a time. While the findings scroll, the title row, the sizes and the toolbar stick under the
+   app bar and the lead scrolls away under them (600px and narrower: the title row and the toolbar). The view is a
+   layout pref that every such section follows (Merged when none is saved); a link into a hidden view (an item from
+   Diff, a comment, a code line) shows it in that section only, and an item link stays in Merged, which holds every
+   finding. Nothing folds by itself: the chevron, or a click on the title, folds the section to its title row and
+   sizes. Print shows Merged, every finding. */
+const FVIEW_KEY = 'bluedoc:findings-view';
 const FVIEW_NAMES = ['merged', 'checklist', 'diff'];
-const FVIEWS = [];   // { el: section, bar, seg, mv: the Merged view, items, view, set(view), paint(), fold(on, byReader) }
+const FVIEWS = [];   // { el: section, h2, chips, bar, seg, mv: the Merged view, items, view, set(view), paint(), fold(on, anim) }
 const SEV_RANK = { risk: 0, warn: 1, info: 2, todo: 3, ok: 4 };
 const shortRef = r => /^[0-9a-f]{12,40}$/i.test(r) ? r.slice(0, 7) : r;
-const MROWS = [];   // Merged's finding rows { x, row, tick, opts, note, thread; pick, chev (decisions) }, repainted by syncDiffs
+const MROWS = [];   // Merged's finding rows { x, row, tick, opts, note, thread, ok, open, paintOpen(on), paintDet(on) }, repainted by syncDiffs
 const MORE_LINES = 8;   // Show more lines: lines added either side of an excerpt
-function findingsView(sec, el, wraps) {
+const FINDING_CIDS = new Set();   // every findings section's checklists (nested ones too), known before they draw
+/* The filter: Open (a finding with no answer, a Need more details not sent, or a reply from the agent the reader
+   hasn't answered; a progress finding not done), Done (the rest) or All. One choice for the page, every section and
+   view, kept per doc in reader state (`__findings-filter`); a first visit opens on Open. The finding the reader is on
+   (FHELD: the one they last opened, picked in or wrote in) stays shown when it leaves its filter, until they move on
+   to another. A list ends with what the filter hides, and Show (All). In Diff, a hidden finding's card goes; its code
+   stays. */
+const FFILTER_KEY = `bp:${docId}:__findings-filter`, FFILTERS = [['open', 'Open'], ['done', 'Done'], ['all', 'All']];
+let FFILTER = FFILTERS.some(f => f[0] === store.get(FFILTER_KEY)) ? store.get(FFILTER_KEY) : 'open', FHELD = null;
+const findingOpen = x => x.choices ? !(x.choice || x.custom) || x.more === 'on' || awaitsReader(x) : !passing(x);
+const fvShows = x => FFILTER === 'all' || x === FHELD || (FFILTER === 'open') === findingOpen(x);
+function holdFinding(x) { if (FHELD !== x) { FHELD = x; paintFindings(); } }
+function setFindingsFilter(f) { FFILTER = f; FHELD = null; store.set(FFILTER_KEY, f); paintFindings(); }
+// every findings section's toolbar, list and cards, the Tracker's findings rows and the ask chip, from the items
+function paintFindings() {
+  FVIEWS.forEach(v => v.paint());
+  for (const c of CHECKLISTS) if (c.sideRow && c.items.some(x => x.fd)) c.sideRow();
+  paintAsk();
+}
+// a findings section's parts: its top checklist blocks (`cls`, block indexes), the diffs whose comments are their items
+// (`diffs`) and every checklist id in them, nested ones too (`cids`); not a findings section: all empty
+function findingScope(sec) {
   const blocks = sec.blocks || [], owner = new Map();   // checklist id (nested ones too) -> its top checklist block's index
   const walk = (b, i) => { if (b.id) owner.set(b.id, i); for (const it of b.items || []) for (const kb of (it && it.blocks) || []) if (kb && kb.type === 'checklist') walk(kb, i); };
   blocks.forEach((b, i) => { if (b && b.type === 'checklist') walk(b, i); });
@@ -5627,59 +5846,121 @@ function findingsView(sec, el, wraps) {
     const hits = (b.comments || []).map(c => c && typeof c.item === 'string' ? owner.get(c.item.slice(0, c.item.indexOf('/'))) : undefined).filter(x => x != null);
     if (hits.length) { diffs.push(i); hits.forEach(x => cls.add(x)); }
   });
+  return { cls, diffs, cids: new Set([...owner].filter(([, i]) => cls.has(i)).map(([id]) => id)) };
+}
+// the first item of a decision list, where it shows (Merged row or checklist row) in page order, that needs the
+// reader: a finding its section's filter counts Open; elsewhere a reply they haven't read, or no answer and no Need
+// more details waiting on the agent
+function nextForReader(c) {
+  const need = c.items.filter(x => x.fd ? findingOpen(x) : x.fresh || (!passing(x) && !x.more));
+  return need.sort((a, b) => itemRow(a).compareDocumentPosition(itemRow(b)) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1)[0] || null;
+}
+// what Expand all opens: the findings the filter shows that open (a progress finding with nothing to show doesn't)
+const fvOpenable = v => v.items.filter(x => fvShows(x) && (x.fd || x.mviews || !x.li.classList.contains('empty')));
+const fvIsOpen = x => x.fd ? x.open : (x.li.classList.contains('empty') || x.li.classList.contains('open')) && (x.mviews || []).every(m => m.open);
+function expandFindings(v) {
+  const xs = fvOpenable(v), on = !xs.every(fvIsOpen);
+  for (const x of xs) {
+    if (x.fd) { x.setOpen(on); continue; }
+    if (!x.li.classList.contains('empty')) x.setOpen(on);
+    for (const m of x.mviews || []) m.paintOpen(on);
+  }
+  paintFindings();
+}
+function findingsView(sec, el, wraps) {
+  const { cls, diffs, cids } = findingScope(sec), blocks = sec.blocks || [];
   if (!diffs.length) return;
   cls.forEach(i => wraps[i].classList.add('fv-c'));
   diffs.forEach(i => wraps[i].classList.add('fv-d'));
-  const cids = new Set([...owner].filter(([, i]) => cls.has(i)).map(([id]) => id));
-  const scope = CHECKLISTS.filter(c => cids.has(c.b.id)), items = scope.flatMap(c => c.items);
-  const mv = mergedView(scope, diffs.map(i => DIFFS[blocks[i].id]).filter(Boolean));
-  // each item's rows tell where the reader is; a decision folds in Checklist too: its title gets the pick to show folded
-  for (const x of items) {
-    ROWX.set(x.li, x); for (const r of x.mrows || []) ROWX.set(r, x);
-    if (!x.choices) continue;
-    const pick = h('span', { class: 'bd-mpick' });
-    x.head.querySelector(':scope > .bp-cl-main').after(pick);
-    (x.frows ||= []).push({ row: x.li, pick, cl: true });
-    x.onHead = () => headItem(x);
-    x.ans = answeredX(x);
-    FOLDX.push(x);
-  }
-  wraps[Math.min(...cls, ...diffs)].before(mv.el);
-  const btn = (view, icon, label) => h('button', { type: 'button', 'data-v': view, onclick: e => pickFindings(view, e.currentTarget) }, ic(icon), label);
+  const scope = CHECKLISTS.filter(c => cids.has(c.b.id)), items = scope.flatMap(c => c.items), tops = scope.filter(c => !c.parent);
+  const ds = diffs.map(i => DIFFS[blocks[i].id]).filter(Boolean);
+  const mv = mergedView(scope, ds);
+  wraps[Math.min(...cls, ...diffs)].before(mv);
+  // the toolbar: the filter, Accept recommended (the section's open decisions; not on earlier revisions or in compare
+  // view), Expand all, ⋯ (Copy, Reset) and the view
+  const fbtns = FFILTERS.map(([f, l]) => h('button', { type: 'button', 'data-f': f, onclick: () => setFindingsFilter(f) }, l, ' ', h('b')));
+  const acc = !OLD && !BASE ? h('button', { type: 'button', class: 'bp-btn ghost', hidden: true, title: 'Pick the starred option on every open decision in these findings', onclick: () => acceptRecs(scope) }) : null;
+  const expand = h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => expandFindings(v) });
+  const act = (icon, label, run) => h('button', { type: 'button', role: 'menuitem', tabindex: '-1', onclick: () => { pop.close(true); run(); } }, ic(icon), h('span', { class: 'l' }, label));
+  const acts = [act('copy', 'Copy', () => copyText(tops.map(c => checklistMd(c)).join('\n'), 'Copied the findings as Markdown')),
+    act('reset', 'Reset', () => { if (confirm('Reset your answers to these findings?')) tops.forEach(resetChecklist); })];
+  const menu = h('div', { class: 'bd-selm act float', role: 'menu', 'aria-label': 'More', tabindex: '-1', hidden: true }, acts);
+  const moreBtn = h('button', { type: 'button', class: 'bp-btn ghost icon', 'aria-haspopup': 'menu', 'aria-expanded': 'false', 'aria-label': 'More: Copy, Reset', title: 'More',
+    onclick: () => menu.hidden ? pop.open(0) : pop.close(true) }, ic('more'));
+  const moreW = h('div', { class: 'bd-exp' }, moreBtn, menu);
+  const pop = menuPop(moreW, moreBtn, menu, () => acts, { float: true });
+  const vbtn = (view, icon, label) => h('button', { type: 'button', 'data-v': view, title: label, onclick: e => pickFindings(view, e.currentTarget) }, ic(icon), h('span', { class: 'l' }, label));
   const seg = h('div', { class: 'bd-fvseg', role: 'group', 'aria-label': 'Show the findings as' },
-    btn('checklist', 'list', 'Checklist'), btn('diff', 'pr', 'Diff'), btn('merged', 'layers', 'Merged'));
-  const bar = h('div', { class: 'bd-fvbar' }, mv.acc, h('span', { class: 'sp' }), seg);
-  // the band: chevron and meter in the heading, the findings' sizes (by their state label) and the diff's refs as chips
+    vbtn('checklist', 'list', 'Checklist'), vbtn('diff', 'pr', 'Diff'), vbtn('merged', 'layers', 'Merged'));
+  const bar = h('div', { class: 'bd-ftb' }, h('div', { class: 'bd-fvseg bd-ffilt', role: 'group', 'aria-label': 'Show findings' }, fbtns), h('span', { class: 'sp' }), acc, expand, moreW, seg);
+  // what the filter hides, at the end of each list (Checklist, Merged): "2 findings you answered are hidden · Show"
+  const hiddenNote = (tag, xs) => { const n = h(tag, { class: 'pv-hidden', hidden: true }); n._xs = xs; return n; };
+  const notes = [...tops.map(c => { const n = hiddenNote('li', checklistScope(c).flatMap(s => s.items)); c.list.append(n); return n; }), hiddenNote('div', items)];
+  mv.append(notes.at(-1));
+  // the header: the chevron (under the number) and the meter in the title row, then the sizes and the branches
   const h2 = el.querySelector(':scope > h2');
-  const chev = h('button', { type: 'button', class: 'bd-prchev', 'aria-expanded': 'true', 'aria-label': 'Fold this section', onclick: e => { e.stopPropagation(); v.fold(!el.classList.contains('bd-fold'), true); } }, ic('chev'));
+  const chev = h('button', { type: 'button', class: 'bd-prchev', 'aria-expanded': 'true', 'aria-label': 'Fold this section', onclick: e => { e.stopPropagation(); v.fold(!el.classList.contains('bd-fold')); } }, ic('chev'));
   const meter = h('span', { class: 'bd-prm' }, h('span', { class: 'bd-meter' }, h('i')), h('span', { class: 'c' })), status = h('span', { class: 'bd-prs' });
   h2.prepend(chev); h2.append(meter, status);
-  h2.addEventListener('click', e => { if (!/\bbd-ann-m-/.test(root.className) && !e.target.closest('a, button') && !String(getSelection())) v.fold(!el.classList.contains('bd-fold'), true); });
+  h2.addEventListener('click', e => { if (!/\bbd-ann-m-/.test(root.className) && !e.target.closest('a, button') && !String(getSelection())) v.fold(!el.classList.contains('bd-fold')); });
   const sizes = new Map();
   for (const x of items) if (x.it.state) { const k = String(x.it.state), s = sizes.get(k) || { n: 0, kind: x.it.stateKind || 'warn' }; s.n++; sizes.set(k, s); }
-  const refs = diffs.map(i => blocks[i]).filter(b => b.base || b.head);
+  const branch = (name, sha) => String(name || shortRef(String(sha || '')));
   const chips = h('div', { class: 'bd-prc' },
     [...sizes].sort((a, b) => (SEV_RANK[a[1].kind] ?? 9) - (SEV_RANK[b[1].kind] ?? 9)).map(([k, s]) => h('span', { class: 'bd-prchip ' + s.kind }, `${s.n} ${k}`)),
-    refs.map(b => h('span', { class: 'bd-prref' }, b.base && h('code', {}, shortRef(String(b.base))), b.base && b.head && ' → ', b.head && h('code', {}, shortRef(String(b.head))))));
+    diffs.map(i => blocks[i]).filter(b => b.headRef || b.baseRef || b.head || b.base).map(b => {
+      const hd = branch(b.headRef, b.head), bs = branch(b.baseRef, b.base);
+      return h('span', { class: 'bd-prref', title: [b.headRef || b.head, b.baseRef || b.base].filter(Boolean).join(' → ') },
+        hd && h('code', { class: 'hd' }, hd), hd && bs && ' → ', bs && h('code', {}, bs));
+    }));
   h2.after(chips);
   (el.querySelector(':scope > .bp-lead') || chips).after(bar);
   el.classList.add('fv-on');
-  const v = { el, bar, seg, mv: mv.el, items, view: null, byReader: false, set: view => {
+  const v = { el, h2, chips, bar, seg, mv, items, view: null, set: view => {
     if (v.view === view) return;
     v.view = view;
     el.classList.toggle('fv-merged', view === 'merged'); el.classList.toggle('fv-cl', view === 'checklist'); el.classList.toggle('fv-diff', view === 'diff');
     for (const b of seg.children) b.setAttribute('aria-pressed', String(b.dataset.v === view));
     if (view === 'diff') diffs.forEach(i => paneShown(DIFFS[blocks[i].id]));
   }, paint: () => {
-    mv.paint();
     const n = items.filter(x => x.cb.checked).length, fresh = items.filter(x => x.fresh).length, done = items.length > 0 && n === items.length;
     meter.lastChild.textContent = `${n} of ${items.length}`;
     meter.firstChild.firstChild.style.width = (items.length ? n / items.length * 100 : 0) + '%';
     meter.firstChild.classList.toggle('full', done);
     status.className = 'bd-prs' + (fresh ? ' new' : done ? ' ok' : '');
     status.replaceChildren(...(fresh ? [h('i'), `${fresh} ${fresh === 1 ? 'reply' : 'replies'}`] : done ? ['Answered'] : []));
-  }, fold: (on, byReader, anim = true) => {
-    if (byReader) v.byReader = !on;   // opened by the reader: it stays open until the next load
+    // the filter's counts, and what it shows: the findings in Checklist, their excerpts in Merged (a group left empty
+    // goes), their cards in Diff
+    const open = items.filter(findingOpen).length, count = { open, done: items.length - open, all: items.length };
+    for (const b of fbtns) { b.setAttribute('aria-pressed', String(b.dataset.f === FFILTER)); b.lastChild.textContent = String(count[b.dataset.f]); }
+    for (const x of items) {
+      const out = !fvShows(x);
+      x.li.classList.toggle('fv-out', out);
+      for (const r of x.mrows || []) (r.parentElement.classList.contains('bd-mx') ? r.parentElement : r).classList.toggle('fv-out', out);
+    }
+    for (const g of mv.querySelectorAll(':scope > .bd-mg')) {
+      const parts = g.querySelectorAll(':scope > .bd-mx, :scope > .bd-mrow');
+      g.classList.toggle('fv-out', parts.length > 0 && [...parts].every(p => p.classList.contains('fv-out')));
+    }
+    for (const d of ds) {
+      for (const m of d.mirrors) m.card.closest('.bd-cmw')?.classList.toggle('fv-out', !fvShows(m.src));
+      if (d.fnav) d.fnav.paint();
+    }
+    for (const note of notes) {
+      const k = note._xs.filter(x => !fvShows(x)).length;
+      note.hidden = !k || FFILTER === 'all';
+      if (!note.hidden) note.replaceChildren(ic(FFILTER === 'open' ? 'tick' : 'help'),
+        h('span', {}, FFILTER === 'open' ? `${k} finding${k === 1 ? '' : 's'} you answered ${k === 1 ? 'is' : 'are'} hidden · ` : `${k} open finding${k === 1 ? ' is' : 's are'} hidden · `),
+        h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => setFindingsFilter('all') }, 'Show'));
+    }
+    if (acc) { const k = openRecs(scope).length; acc.hidden = !k; if (k) acc.replaceChildren(ic('checks'), h('span', {}, h('span', { class: 'l' }, 'Accept recommended '), `(${k})`)); }
+    const xs = fvOpenable(v), all = xs.length > 0 && xs.every(fvIsOpen);
+    expand.hidden = !xs.length;
+    expand.replaceChildren(ic(all ? 'up' : 'down'), h('span', { class: 'l' }, all ? 'Collapse all' : 'Expand all'));
+    expand.title = all ? 'Close every finding shown' : 'Open every finding shown';
+    const fit = bar.textContent + (acc && acc.hidden);
+    if (fit !== v.fit) { v.fit = fit; if (el.isConnected) fvMeasure(v); }   // the toolbar's words changed: does it still fit one row?
+  }, fold: (on, anim = true) => {
     foldMotion(el, el, anim, () => {
       el.classList.toggle('bd-fold', on);
       chev.setAttribute('aria-expanded', String(!on)); chev.setAttribute('aria-label', on ? 'Open this section' : 'Fold this section');
@@ -5687,56 +5968,17 @@ function findingsView(sec, el, wraps) {
   } };
   const saved = store.get(FVIEW_KEY);
   v.set(FVIEW_NAMES.includes(saved) ? saved : 'merged');
-  if (!FVIEWS.length) addEventListener('scroll', paintStuck, { passive: true });
+  if (!FVIEWS.length) {
+    addEventListener('scroll', paintStuck, { passive: true });
+    addEventListener('resize', () => FVIEWS.forEach(fvMeasure));
+  }
   FVIEWS.push(v);
-  if (store.get(FVIEW_HINT_KEY) == null) fviewHint(v);
+  if (fvSizes) [h2, chips, bar].forEach(e => fvSizes.observe(e));
 }
-/* Folding. A decision finding the reader has answered folds, in Merged and in Checklist, to one row (title, → the
-   pick, its size; in Merged a chevron too) once they move on: pick in or open another finding. On load every answered
-   one starts folded unless something waits for the reader there: a reply they haven't read, Need more details, a
-   comment not sent. In Merged the chevron or a click on the row's title opens or folds it; in Checklist a click on a
-   folded title opens it with its details, and on an open answered one folds it. The fold is the finding's: its rows
-   (one per comment in Merged, its checklist row) fold and open together. A findings section folds with its last
-   finding. */
-const FOLDX = [];   // the findings sections' decision items; `x.frows` their rows { row, pick, chev (Merged), cl (Checklist) }
-const ROWX = new Map();   // a findings section's item row, in Merged or Checklist -> its item: where the reader is
-function answeredX(x) { return !!x.choices && x.cb.checked && !x.more; }
-function keepsOpen(x) { return !!x.more || x.notePending; }
-// the first item of a decision list, where it shows (Merged row or checklist row) in page order, that needs the
-// reader: a reply they haven't read, or no answer and no Need more details waiting on the agent
-function nextForReader(c) {
-  const need = c.items.filter(x => x.fresh || (!passing(x) && !x.more));
-  return need.sort((a, b) => itemRow(a).compareDocumentPosition(itemRow(b)) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1)[0] || null;
-}
-// Merged's chevron or a click on its title: fold the finding, or open it (armed again: it folds when the reader moves on)
-function toggleItem(x) {
-  const on = !x.folded;
-  foldItem(x, on);
-  if (on) settleSections(false); else x.armed = answeredX(x);
-}
-// a click on a checklist finding's title: a folded one opens with its details, an open answered one folds; false
-// leaves the click to the checklist (the details open or close)
-function headItem(x) {
-  if (x.folded) { foldItem(x, false, true, true); x.armed = answeredX(x); return true; }
-  if (!x.li.classList.contains('open') || !answeredX(x) || keepsOpen(x)) return false;
-  foldItem(x, true); settleSections(false);
-  return true;
-}
-// fold or open each of finding `x`'s rows; a checklist row folds with its details closed, and `details` opens them
-function foldItem(x, on, anim = true, details = false) {
-  x.folded = on; x.armed = false;
-  const ids = [].concat(x.choice ?? []), pick = ids.map(id => (x.choices.find(c => c.id === id) || {}).label).filter(Boolean).map(l => inline(String(l))).join(', ');
-  for (const r of x.frows) foldMotion(r.row.parentElement.classList.contains('bd-mx') ? r.row.parentElement : r.row, r.row, anim, () => {
-    r.row.classList.toggle('bd-fold', on);
-    if (r.chev) { r.chev.setAttribute('aria-expanded', String(!on)); r.chev.setAttribute('aria-label', on ? 'Open this finding' : 'Fold this finding'); }
-    if (on) r.pick.innerHTML = pick;
-    if (r.cl && (on || details)) x.setOpen(!on);
-  });
-  if (on || details) CHECKLISTS.forEach(c => c.paintExpand());
-}
-// a fold, eased: `apply` flips it; `box` then runs from its old height to its new one, clipped, while `mark` carries
-// .bd-anim, which keeps the parts folding away drawn (fading out, or in) until it lands. A fold started mid-motion
-// starts from where the box is. Instant with reduced motion, off screen, or `anim` false (the caller scrolls next)
+// a section's fold, eased: `apply` flips it; `box` then runs from its old height to its new one, clipped, while
+// `mark` carries .bd-anim, which keeps the parts folding away drawn (fading out, or in) until it lands. A fold
+// started mid-motion starts from where the box is. Instant with reduced motion, off screen, or `anim` false (the
+// caller scrolls next)
 function foldMotion(box, mark, anim, apply) {
   const from = anim && !REDUCE && box.getClientRects().length ? box.getBoundingClientRect().height : -1;
   if (box.bdFold) { box.bdFold.cancel(); box.bdFold = null; mark.classList.remove('bd-anim'); box.classList.remove('bd-anim-box'); }
@@ -5748,50 +5990,21 @@ function foldMotion(box, mark, anim, apply) {
   const a = box.bdFold = box.animate({ height: [from + 'px', to + 'px'] }, { duration: Math.round(Math.min(420, 200 + Math.abs(to - from) / 12)), easing: 'cubic-bezier(0.23, 1, 0.32, 1)' });
   a.onfinish = a.oncancel = () => { if (box.bdFold === a || !box.bdFold) { box.bdFold = null; mark.classList.remove('bd-anim'); box.classList.remove('bd-anim-box'); } };
 }
-// the reader moved to finding `at` (or off every finding): answered ones they left fold, then sections whose findings
-// all have
-function moveOn(at, anim = true) {
-  for (const x of FOLDX) if (x.armed && x !== at && answeredX(x) && !keepsOpen(x)) foldItem(x, true, anim);
-  settleSections(false, anim);
+// where the parts stick: the title row's height (--fv-t), the sizes' while they stick (--fv-c; a phone's scroll away)
+// and the toolbar's (--fvbar-h), once it fits: too wide for one row, its views, then its actions, drop their words
+function fvMeasure(v) {
+  const s = v.el.style, b = v.bar, wraps = () => b.lastElementChild.offsetTop > b.firstElementChild.offsetTop + 4;
+  b.classList.remove('tight', 'tighter');
+  if (wraps()) b.classList.add('tight');
+  if (wraps()) b.classList.add('tighter');
+  s.setProperty('--fv-t', v.h2.offsetHeight + 'px');
+  s.setProperty('--fv-c', (getComputedStyle(v.chips).position === 'sticky' ? v.chips.offsetHeight : 0) + 'px');
+  s.setProperty('--fvbar-h', b.offsetHeight + 'px');
 }
-function settleSections(onLoad, anim = !onLoad) {
-  for (const v of FVIEWS) {
-    if (v.byReader || v.el.classList.contains('bd-fold') || !v.items.length) continue;
-    const done = v.items.every(x => x.cb.checked && !keepsOpen(x) && !(onLoad && x.fresh) && (!x.frows || x.folded));
-    if (done) v.fold(true, false, anim);
-  }
-}
-function initFolds() {
-  for (const x of FOLDX) foldItem(x, answeredX(x) && !keepsOpen(x) && !x.fresh, false);
-  settleSections(true);
-  // a pick in a finding arms it; a click in, or keyboard focus on, another finding's row (Merged or Checklist) is
-  // moving on. The fold waits for the click to finish: rows folding above under a pressed pointer would move what it
-  // lands on
-  const rowSel = '.bd-mrow, .bp-cl-item';
-  const at = e => { for (let r = e.target.closest && e.target.closest(rowSel); r; r = r.parentElement && r.parentElement.closest(rowSel)) if (ROWX.has(r)) return moveOn(ROWX.get(r)); };
-  let pressed = false;
-  document.addEventListener('pointerdown', () => { pressed = true; }, true);
-  document.addEventListener('click', e => setTimeout(() => at(e)), true);
-  for (const t of ['pointerup', 'pointercancel']) document.addEventListener(t, () => setTimeout(() => { pressed = false; }), true);
-  document.addEventListener('focusin', e => { if (!pressed) at(e); }, true);
-}
-// "New: findings and code together" beside the toggle, until the reader's first click or key press anywhere
-let fvHints = null;
-function fviewHint(v) {
-  const el = h('span', { class: 'bd-fvhint', role: 'note' }, ic('zap'), 'New: findings and code together');
-  v.seg.before(el);
-  if (fvHints) { fvHints.push(el); return; }
-  fvHints = [el];
-  const off = () => {
-    store.set(FVIEW_HINT_KEY, '1');
-    fvHints.forEach(e => e.remove());
-    for (const t of ['pointerdown', 'keydown']) removeEventListener(t, off, true);
-  };
-  for (const t of ['pointerdown', 'keydown']) addEventListener(t, off, true);
-}
-// a bar stuck under the app bar gets a bottom edge
+const fvSizes = 'ResizeObserver' in window ? new ResizeObserver(() => FVIEWS.forEach(fvMeasure)) : null;
+// a toolbar stuck under the header gets a bottom edge
 let stuckRaf = 0;
-const fvStuck = v => v.bar.getBoundingClientRect().top - v.bar.previousElementSibling.getBoundingClientRect().bottom > 26;
+const fvStuck = v => { const t = parseFloat(getComputedStyle(v.bar).top) || 0, r = v.bar.getBoundingClientRect(); return r.height > 0 && Math.abs(r.top - t) < 1 && v.el.getBoundingClientRect().top < t - 1; };
 function paintStuck() {
   if (!stuckRaf) stuckRaf = requestAnimationFrame(() => { stuckRaf = 0; FVIEWS.forEach(v => v.bar.classList.toggle('stuck', fvStuck(v))); });
 }
@@ -5799,8 +6012,8 @@ function pickFindings(view, btn) {
   const v = FVIEWS.find(v => v.seg.contains(btn)), y = v.bar.getBoundingClientRect().top, stuck = fvStuck(v);
   store.set(FVIEW_KEY, view);
   FVIEWS.forEach(v => v.set(view));
-  // sections above changed too: the bar stays put, and while it is stuck the new view (its own padding inside) starts
-  // right under it
+  // sections above changed too: the toolbar stays put, and while it is stuck the new view (its own padding inside)
+  // starts right under it
   const shown = [...v.el.children].find(c => c.matches('.fv-m, .fv-c, .fv-d') && c.getClientRects().length);
   scrollBy({ top: stuck && shown ? shown.getBoundingClientRect().top - (y + v.bar.offsetHeight) : v.bar.getBoundingClientRect().top - y, behavior: 'instant' });
   paintStuck();
@@ -5816,9 +6029,9 @@ function revealFindings(node) {
 }
 
 /* Merged: the section's findings with their code, in one column, ordered by the code. First the findings on the
-   whole change, then per file (the diff's file order) each commented range in line order: the hunk lines around
-   it with the commented ones marked, a Show more lines control, and the full finding row under them; last, the
-   checklist's findings no comment points at. A finding with several comments has a row at each; every row and
+   whole change, then per file (the diff's file order) each commented range in line order: the finding's row, its
+   details and the hunk lines around the range with the commented ones marked and a Show more lines control; last,
+   the checklist's findings no comment points at. A finding with several comments has a row at each; every row and
    the checklist's stay in sync (MROWS, syncDiffs). Lines and ranges carry the diff's keys (.bd-xf, .bd-mx). */
 function mergedView(scope, ds) {
   const items = scope.flatMap(c => c.items), keys = new Set(items.map(x => `${x.cid}/${x.it.id}`));
@@ -5836,9 +6049,7 @@ function mergedView(scope, ds) {
   }
   const loose = items.filter(x => !tied.has(`${x.cid}/${x.it.id}`));
   const groupHead = (name, extra) => h('div', { class: 'bd-fh' }, h('div', { class: 'p' }, h('b', {}, name), extra));
-  // Accept recommended goes in the section's toolbar (findingsView); the count is the band's meter
-  const acc = !OLD && !BASE ? h('button', { type: 'button', class: 'bp-btn ghost', hidden: true, title: 'Pick the starred option on every open decision in these findings', onclick: () => acceptRecs(scope) }) : null;
-  const el = h('div', { class: 'bd-mv fv-m', role: 'region', 'aria-label': 'Findings with their code' },
+  return h('div', { class: 'bd-mv fv-m', role: 'region', 'aria-label': 'Findings with their code' },
     whole.length > 0 && h('div', { class: 'bd-mg' }, groupHead('Whole change', ' · not tied to a line'), whole.map(([d, c]) => mergedExcerpt(d, c, null))),
     files.map(g => h('div', { class: 'bd-mg bd-xf', 'data-diff': g.d.id, 'data-file': g.path },
       h('div', { class: 'bd-fh' }, g.f ? filePathEl(g.f) : h('div', { class: 'p' }, h('b', {}, g.path)), g.f && fileStat(g.f),
@@ -5846,15 +6057,8 @@ function mergedView(scope, ds) {
       g.f && g.f.omitted && h('div', { class: 'bd-omit' }, `Diff not included: ${g.f.omitted}.`),
       g.cs.map(c => mergedExcerpt(g.d, c, g.f)))),
     loose.length > 0 && h('div', { class: 'bd-mg' }, groupHead('Not tied to code', ` · ${loose.length} finding${loose.length === 1 ? '' : 's'} with no comment on the diff`), loose.map(x => mergedRow(x))));
-  const paint = () => {
-    if (!acc) return;
-    const k = openRecs(scope).length;
-    acc.hidden = !k;
-    if (k) acc.replaceChildren(ic('checks'), `Accept recommended (${k})`);
-  };
-  return { el, paint, acc };
 }
-// one commented range: the finding row with its lines under its options (FIND_CTX either side, more on Show more
+// one commented range: the finding row with its lines under its details (FIND_CTX either side, more on Show more
 // lines); a comment with no item shows its lines, then its card
 function mergedExcerpt(d, c, f) {
   const x = c.item && ITEMS[c.item];
@@ -5883,9 +6087,10 @@ function mergedExcerpt(d, c, f) {
   if (!x) ex.append(h('div', { class: 'bd-cmw top' }, commentCard(d, c, [], true)));
   return ex;
 }
-// a finding's full row: tick or decision dot, title, size, the option rows (Need more details last), its code, Details
-// (the reviewer's point, the reasoning, the fix and its check), then its conversation and reply box, compact. A
-// decision's head also holds its pick (shown folded) and a chevron that folds and opens it
+// a finding's full row: tick or decision dot, title, (closed and answered: ✓ the pick), size and a chevron; open, More
+// details (the comment, the reviewer's point, the reasoning, the fix and its check), its code, the option rows
+// (Custom and Need more details last), then its conversation and reply box. A decision opens and closes, and shows
+// its details, as the finding does (its checklist row and every Merged row of it); a progress row on its own
 function mergedRow(x, extra, code) {
   const it = x.it, kind = it.stateKind || 'warn', subMd = it.sub || it.verify;
   const row = h('div', { class: `bp-cl-item bd-mrow ${kind}` + (x.choices ? ' has-choices' : ''), 'data-item': `${x.cid}/${it.id}` });
@@ -5894,35 +6099,37 @@ function mergedRow(x, extra, code) {
     tick = h('input', { type: 'checkbox', 'aria-label': 'Done: ' + plainText(it.text) });
     tick.addEventListener('change', () => { x.cb.checked = tick.checked; x.cb.dispatchEvent(new Event('change')); });
   }
-  const m = { x, row, tick };
-  if (x.choices) {
-    m.pick = h('span', { class: 'bd-mpick' });
-    m.chev = h('button', { type: 'button', class: 'bd-mchev', 'aria-expanded': 'true', 'aria-label': 'Fold this finding', onclick: e => { e.stopPropagation(); toggleItem(x); } }, ic('chev'));
-    (x.frows ||= []).push(m);
-  }
+  const ok = x.choices ? h('span', { class: 'pv-ok' }, ic('tick'), h('span')) : null;
+  const chev = h('button', { type: 'button', class: 'bd-mchev pv-chev', 'aria-expanded': 'false', 'aria-label': 'Open this finding' }, ic('down'));
   const head = h('div', { class: 'bd-mhead' },
     h('span', { class: 'bp-cl-main' }, h('span', { class: 'bp-cl-text', html: inline(it.text) }),
       subMd && h('span', { class: 'bp-cl-subt' + (it.sub ? '' : ' check') }, !it.sub && ic('check'), h('span', { html: inline(subMd) }))),
-    m.pick, it.state && h('span', { class: 'bp-chip ' + kind }, it.state), m.chev);
-  if (m.chev) head.addEventListener('click', e => { if (!/\bbd-ann-m-/.test(root.className) && !e.target.closest('a, button') && !String(getSelection())) toggleItem(x); });
-  row.append(h('div', { class: 'bp-cl-row' }, tick, x.choices && h('span', { class: 'bp-cl-dot', 'aria-hidden': 'true' }), head));
-  const opts = x.choices ? optionRows(x) : null, thread = threadView(x, true), note = RO ? null : noteBox(x);
-  if (opts) row.append(opts.el);
-  if (code) row.append(code);
+    ok, it.state && h('span', { class: 'bp-chip ' + kind }, it.state));
+  row.append(h('div', { class: 'bp-cl-row' }, tick, x.choices && h('span', { class: 'bp-cl-dot', 'aria-hidden': 'true' }), head, chev));
   const parts = [extra && h('div', { class: 'bp-cl-detail bd-md', html: md(extra) }), it.detail && h('div', { class: 'bp-cl-detail bd-md', html: md(it.detail) }),
     it.code && codeBlock(it.code, it.lang || 'sh'),
     it.verify && it.sub && h('div', { class: 'bp-cl-verify' }, ic('check'), h('span', {}, h('b', {}, 'Check'), h('span', { html: inline(it.verify) })))].filter(Boolean);
-  if (parts.length) {
-    const body = h('div', { class: 'bd-mbody', role: 'region', 'aria-label': 'Details: ' + plainText(it.text) }, parts);
-    const btn = h('button', { type: 'button', class: 'bd-mdet', 'aria-expanded': 'false' }, ic('chev'), 'Details');
-    const open = on => { btn.setAttribute('aria-expanded', String(on)); if (on) body.removeAttribute('hidden'); else body.hidden = 'until-found'; };
-    open(false);
-    btn.addEventListener('click', () => open(btn.getAttribute('aria-expanded') !== 'true'));
-    body.addEventListener('beforematch', () => open(true));
-    row.append(btn, body);
-  }
-  row.append(thread.el, ...(note ? [note.el] : []));
-  Object.assign(m, { opts, note, thread });
+  const dets = parts.length ? h('div', { class: 'bd-dets', role: 'region', 'aria-label': 'Details: ' + plainText(it.text) }, parts) : null;
+  const more = dets && h('button', { type: 'button', class: 'bp-btn ghost pv-more', 'aria-expanded': 'false' });
+  const opts = x.choices ? optionRows(x) : null, thread = threadView(x, true), note = RO ? null : noteBox(x);
+  row.append(...[more, dets, code, opts && opts.el, thread.el, note && note.el, note && note.pend].filter(Boolean));
+  const m = { x, row, tick, opts, note, thread, ok, open: false, det: false };
+  m.paintOpen = on => {
+    m.open = on; row.classList.toggle('open', on);
+    chev.setAttribute('aria-expanded', String(on)); chev.setAttribute('aria-label', on ? 'Close this finding' : 'Open this finding');
+  };
+  m.paintDet = on => {
+    m.det = on; if (!dets) return;
+    dets.hidden = !on; more.setAttribute('aria-expanded', String(on));
+    more.replaceChildren(ic('info'), on ? 'Hide details' : 'More details', ic(on ? 'up' : 'down'));
+  };
+  // a decision is the finding's (it opens with the finding, and opening it is where the reader is); a progress row its own
+  const toggle = () => { if (x.fd) { if (!x.open) holdFinding(x); x.setOpen(!x.open); } else m.paintOpen(!m.open); paintFindings(); };
+  chev.addEventListener('click', toggle);
+  head.addEventListener('click', e => { if (!/\bbd-ann-m-/.test(root.className) && !e.target.closest('a, button') && !String(getSelection())) toggle(); });
+  if (more) more.addEventListener('click', () => x.fd ? x.setDetails(!x.details) : m.paintDet(!m.det));
+  m.paintOpen(!!x.fd && x.open); m.paintDet(!!x.fd && x.details);
+  (x.mviews ||= []).push(m);
   MROWS.push(m);
   (x.mrows ||= []).push(row);
   return row;
@@ -11497,7 +11704,7 @@ function compareBlocks(ob, nb, secElm) {
       summary = countWords(n);
       const rows = fieldRows([['Title', o.title, b.title]]);
       if (!rows.length && CHG.length === before) continue;
-      if (rows.length) el.querySelector('.bp-cl-h, .bp-tl-h, .bp-files-h').after(chgBox(rows));
+      if (rows.length) { const hd = el.querySelector('.bp-cl-h, .bp-tl-h, .bp-files-h'); if (hd) hd.after(chgBox(rows)); else el.prepend(chgBox(rows)); }   // a findings section's checklist has no header
     }
     else if (b.type === 'table') compareTable(o, b, el);
     else if (b.type === 'canvas') el.append(chgBox(compareCanvas(o, b)));
@@ -12271,6 +12478,7 @@ const MARKUP = (() => {
   }
   // `message` repeats the general comments for agents that read only it. The decision picks of a plan, design,
   // presentation, website or listing go along as `answers`; elsewhere `answers` holds the "Need more details" items
+  // and, on a review, the findings with a comment (itemsPending)
   function payload() {
     const items = pending(), answers = PICKS_WITH_CHANGES ? answerItems() : answerItems(itemsPending());
     return { kind: 'changes', doc: docId, rev: CUR.rev, title: DOC.title || '', path: location.pathname, at: new Date().toISOString(),
@@ -12285,7 +12493,7 @@ const MARKUP = (() => {
     }).join('\n\n') + (s => s && '\n' + s.trimEnd())(replyCmdsMd(ord.map(a => replyMd(`ann:${a.id}`, [], '', a.id)).join(''))) };
   }
   const api = { all: () => JSON.parse(JSON.stringify(list)), payload, approvalNotes, annotate: () => null, setMode: () => false, paint: () => {}, flush: () => {}, markSent: () => {},
-    comments: () => ({ open: false, available: false }), pinFrame: () => null, addFrame: () => null, relayout: () => {} };
+    comments: () => ({ open: false, available: false }), pinFrame: () => null, addFrame: () => null, relayout: () => {}, openIfWaiting: () => {} };
   if (OLD || BASE) return api;
 
   /* what can be annotated, and the key of each */
@@ -12310,7 +12518,7 @@ const MARKUP = (() => {
   // so are a design's panel tabs, Screens list and board toolbar, and a findings section's view bar
   const docAll = sel => SP_BRIEF ? [...shell.querySelectorAll(sel), ...SP_BRIEF.querySelectorAll(sel)] : [...shell.querySelectorAll(sel)];
   const spUi = t => !!t.closest('.bd-sp') && !(SP_BRIEF && SP_BRIEF.contains(t));
-  const inDoc = t => !!t && t.nodeType === 1 && (shell.contains(t) || !!SP_BRIEF && SP_BRIEF.contains(t)) && !t.closest('.bd-lp-ui, .bd-btb, .bd-fvbar, .bd-var, .bd-ab-t button, .bd-lst-ui') && (!t.closest('.bp-side') || !!t.closest('.bd-meta'));
+  const inDoc = t => !!t && t.nodeType === 1 && (shell.contains(t) || !!SP_BRIEF && SP_BRIEF.contains(t)) && !t.closest('.bd-lp-ui, .bd-btb, .bd-ftb, .bd-var, .bd-ab-t button, .bd-lst-ui') && (!t.closest('.bp-side') || !!t.closest('.bd-meta'));
   const targetAt = t => inDoc(t) ? t.closest(ANY) : null;
   let itemKeys = null;
   // a checklist row, or a finding's row in Merged (data-item)
@@ -12412,7 +12620,7 @@ const MARKUP = (() => {
     return out.filter(Boolean).join(' › ');
   }
   // the element's own content, without UI chrome (option rows, conversations, reply boxes, buttons, change marks)
-  const CHROME = '.bp-opts, .bp-convo, .bp-cl-sum, .bp-cl-picked, .bp-cap, .bp-note, button:not(.bp-cl-head, .bp-step-head), input, textarea, .bd-chg-tag, .bd-chgbox, .bp-cl-noteic, .bp-cl-num, .bp-code-h, .bp-cl-h .tools, .bd-planchip, .bp-sr, .bp-fbadge, .bp-cmpr-h .lg';
+  const CHROME = '.bp-opts, .bp-convo, .bp-cl-sum, .bp-cl-picked, .bp-cap, .bp-note, .pv-pend, .pv-ok, button:not(.bp-cl-head, .bp-step-head), input, textarea, .bd-chg-tag, .bd-chgbox, .bp-cl-noteic, .bp-cl-num, .bp-code-h, .bp-cl-h .tools, .bd-planchip, .bp-sr, .bp-fbadge, .bp-cmpr-h .lg';
   const BLOCKY = 'div, p, li, td, th, tr, dt, dd, h1, h2, h3, h4, h5, h6, pre, blockquote, .bp-cl-text, .bp-cl-subt, .bp-chip, .bp-fmain > span';
   const contentText = el => { const c = el.cloneNode(true); c.querySelectorAll(CHROME).forEach(x => x.remove()); c.querySelectorAll(BLOCKY).forEach(x => x.append(' ')); return c.textContent.replace(/\s+/g, ' ').trim(); };
   const mediaText = el => contentText(el) || el.querySelector('img')?.alt || el.querySelector('video')?.getAttribute('aria-label') || '';
@@ -12880,10 +13088,18 @@ const MARKUP = (() => {
   }
 
   /* comments sidebar: one card per saved note, in page order or newest first; a saved note is edited in
-     its card. Hovering a card or a mark lights up the other; clicking one brings the other into view. */
+     its card. Hovering a card or a mark lights up the other; clicking one brings the other into view. On a review the
+     findings' threads join it: a card per finding with a conversation, a comment not sent or a Need more details. */
   const FILTERS = { pending: 'Pending', open: 'Open', resolved: 'Resolved', all: 'All' }, FILTER_KEY = 'bluedoc:comments-filter';
+  // a review's findings with something to list
+  const finds = () => DOC_TYPE !== 'review' ? [] : Object.values(ITEMS).filter(x => x.choices && (x.notePending || x.more || x.messages().length));
+  // a finding's status: pending (a comment or Need more details not sent: it goes with Request changes), resolved (the
+  // doc carries an answer, `choice`: the agent recorded the reader's pick) or open; and its group in the list
+  const findStatus = x => x.notePending || x.more === 'on' ? 'pending' : idsOf(x.it.choice).length ? 'resolved' : 'open';
+  const findGroup = x => ({ pending: 'unsent', resolved: 'resolved' }[findStatus(x)] || (awaitsReader(x) ? 'wait' : 'answered'));
+  const findsPending = () => finds().filter(x => findStatus(x) === 'pending').length;
   // the reader's last pick, else Pending while there are pending notes, else Open
-  let filter = FILTERS[store.get(FILTER_KEY)] ? store.get(FILTER_KEY) : pending().length || !list.length ? 'pending' : 'open', sort = 'page';
+  let filter = FILTERS[store.get(FILTER_KEY)] ? store.get(FILTER_KEY) : pending().length || findsPending() || !list.length && !finds().length ? 'pending' : 'open', sort = 'page';
   const matches = a => filter === 'all' || a.status === filter;
   function setFilter(f, remember) {
     if (remember) store.set(FILTER_KEY, f);
@@ -12968,6 +13184,53 @@ const MARKUP = (() => {
     const xs = list.filter(matches);
     if (sort !== 'page') return xs.sort((a, b) => (a.at < b.at) - (a.at > b.at));
     return [...xs.filter(isGeneral).sort((a, b) => (a.at > b.at) - (a.at < b.at)), ...pageOrder(xs.filter(a => !isGeneral(a)))];
+  }
+  // the findings the filter shows, by group: the agent replied (waiting for the reader) first, then not sent yet,
+  // answered and resolved, each in page order; then the page's comments ("On the page" when findings show too)
+  const GROUPS = ['wait', 'unsent', 'answered', 'resolved'];
+  const groupLabel = g => ({ wait: `${agentName()} replied`, unsent: 'Not sent yet', answered: 'You answered', resolved: 'Resolved', page: 'On the page' }[g]);
+  function shownFinds() {
+    const xs = finds().filter(x => filter === 'all' || findStatus(x) === filter);
+    return GROUPS.map(g => [g, xs.filter(x => findGroup(x) === g)]).filter(([, ys]) => ys.length);
+  }
+  const heads = new Map(), fcards = new Map();   // group -> li; "checklist/item" -> li
+  function groupHead(g, n) {
+    let li = heads.get(g);
+    if (!li) { li = h('li', { class: 'bd-cs-h' + (g === 'wait' ? ' you' : ''), role: 'heading', 'aria-level': '3', 'data-g': g }); heads.set(g, li); }
+    li.replaceChildren(groupLabel(g), h('span', { class: 'n' }, String(n)));
+    return li;
+  }
+  // a finding's PR: its section's number (#415 for a pr-415 section, else 02)
+  const prOf = x => { const s = x.li.closest('section.bp-sec'), m = s && /^pr-(\d+)$/.exec(s.id); return m ? '#' + m[1] : s && s.querySelector('h2 .n')?.textContent || ''; };
+  // a finding's card: its PR and title, the last message (who: text, two lines) and its state; answered and resolved
+  // ones are quieter. Not sent yet, the message is the reader's comment (or Need more details)
+  function findCard(x) {
+    const k = `${x.cid}/${x.it.id}`, g = findGroup(x), last = x.messages().at(-1), fs = x.files.length;
+    let li = fcards.get(k);
+    if (!li) { li = h('li', { tabindex: '0', 'data-item': k }); li._x = x; fcards.set(k, li); }
+    const unsent = g === 'unsent', who = unsent || !last || last.who === 'you' ? 'You' : agentName();
+    const text = unsent ? [x.more === 'on' && 'Need more details', x.note.trim() || fs && `${fs} file${fs === 1 ? '' : 's'}`].filter(Boolean).join(': ')
+      : last ? last.md : 'Need more details';   // listed with no message: a Need more details it sent
+    const [cls, word, at] = g === 'wait' ? ['you', 'Waiting for you', `rev ${last.rev}`]
+      : g === 'unsent' ? ['rc', 'Goes with Request changes', '']
+      : g === 'resolved' ? ['ok', 'Resolved', '→ ' + idsOf(x.it.choice).map(id => choiceLabel(x, id)).join(', ')]
+      : last ? ['ok', 'Answered', last.rev == null ? 'sent earlier' : `sent in rev ${last.rev}`] : ['ok', 'Details requested', ''];
+    const sig = JSON.stringify([g, who, text, word, at]);
+    if (li._sig !== sig) {
+      li._sig = sig; li.className = 'bd-cs-fc' + (g === 'answered' || g === 'resolved' ? ' done' : '');
+      const pr = prOf(x);
+      li.replaceChildren(h('div', { class: 't' }, pr && h('span', { class: 'pr' }, pr), h('span', { class: 'tt', html: inline(x.it.text) })),
+        h('div', { class: 'm' }, h('b', {}, who + ':'), ' ', cut(plain(text), 300)),
+        h('div', { class: 's' }, h('span', { class: 'st ' + cls }, word), at));
+      li.setAttribute('aria-label', `${pr} ${plain(x.it.text)}: ${word}`.trim());
+    }
+    return li;
+  }
+  // a finding card's click: the finding, opened (openItem shows it in any view or filter), in view, ringed a moment
+  function openFinding(x) {
+    const row = openItem(x);
+    row.scrollIntoView({ block: rowBlock(row), behavior: REDUCE ? 'auto' : 'smooth' });
+    ring(row);
   }
   const cards = new Map();   // id -> li
   const cardCls = (li, a) => 'bd-cs-c' + ({ open: ' sent', resolved: ' sent res' }[a.status] || '') + (a === selA ? ' on' : '') + (a === hotA ? ' hot' : '') + (a === editA ? ' edit' : '') +
@@ -13088,21 +13351,22 @@ const MARKUP = (() => {
     return ed;
   }
   function renderList() {
-    const xs = shownList(), ids = new Set(xs.map(a => a.id));
+    const xs = shownList(), ids = new Set(xs.map(a => a.id)), fg = shownFinds(), keys = new Set(fg.flatMap(([, ys]) => ys.map(x => `${x.cid}/${x.it.id}`)));
     const caret = editTa && document.activeElement === editTa ? [editTa.selectionStart, editTa.selectionEnd] : null;
     for (const [id, li] of cards) if (!ids.has(id)) { li.remove(); cards.delete(id); }
-    let i = 0;
+    for (const [k, li] of fcards) if (!keys.has(k)) { li.remove(); fcards.delete(k); }
+    const mine = [];
     for (const a of xs) {
-      let li;
       // one card that fails to draw is left out and logged; the others and the page carry on
-      try { li = card(a); } catch (e) { console.warn(`bluedoc: skipped comment ${a.id}: it can't be shown`, e, a); cards.get(a.id)?.remove(); cards.delete(a.id); continue; }
-      if (listOl.children[i] !== li) listOl.insertBefore(li, listOl.children[i] || null);
-      i++;
+      try { mine.push(card(a)); } catch (e) { console.warn(`bluedoc: skipped comment ${a.id}: it can't be shown`, e, a); cards.get(a.id)?.remove(); cards.delete(a.id); }
     }
+    const nodes = [...fg.flatMap(([g, ys]) => [groupHead(g, ys.length), ...ys.map(findCard)]), ...(fg.length && mine.length ? [groupHead('page', mine.length)] : []), ...mine];
+    nodes.forEach((li, i) => { if (listOl.children[i] !== li) listOl.insertBefore(li, listOl.children[i] || null); });
+    while (listOl.children.length > nodes.length) listOl.lastElementChild.remove();
     if (caret && editTa && document.activeElement !== editTa) { editTa.focus({ preventScroll: true }); editTa.setSelectionRange(...caret); }
     if (editTa) grow(editTa);
-    emptyEl.hidden = xs.length > 0;
-    if (!xs.length) emptyEl.replaceChildren(...(list.length
+    emptyEl.hidden = nodes.length > 0;
+    if (!nodes.length) emptyEl.replaceChildren(...(list.length || finds().length
       ? [h('span', {}, { pending: 'Nothing pending. Comments you have sent are under Open.', open: 'Nothing open. Comments you send show here until you resolve them.',
           resolved: 'Nothing resolved yet. Resolve an open comment once the agent has made the change.' }[filter] || '')]
       : [h('span', { class: 'ico' }, ic('msg')), h('b', {}, 'No comments yet'),
@@ -13230,16 +13494,20 @@ const MARKUP = (() => {
     else if (e.key === 'Escape') { e.preventDefault(); finishDraft(false); }
   });
   listBox.addEventListener('click', e => {
+    const fc = e.target.closest('.bd-cs-fc'); if (fc) { if (!e.target.closest('a')) openFinding(fc._x); return; }
     const li = e.target.closest('.bd-cs-c'); if (!li || e.target.closest('button, textarea, a')) return;
     const a = li._a; if (a === editA) return;
     if (a.status === 'pending' && !isDraft(a) && e.target.closest('.nt') && !getSelection().toString()) { startEdit(a); return; }
     select(a); reveal(a);
   });
+  // the next card up or down, past the group headings
+  const nextCard = (li, down) => { let n = li; do n = down ? n.nextElementSibling : n.previousElementSibling; while (n && n.classList.contains('bd-cs-h')); return n; };
   listBox.addEventListener('keydown', e => {
-    const li = e.target; if (!li.matches || !li.matches('.bd-cs-c')) return;
+    const li = e.target; if (!li.matches || !li.matches('.bd-cs-c, .bd-cs-fc')) return;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); nextCard(li, e.key === 'ArrowDown')?.focus(); return; }
+    if (li._x) { if (e.key === 'Enter') { e.preventDefault(); openFinding(li._x); } return; }
     if (e.key === 'Enter') { e.preventDefault(); select(li._a); reveal(li._a); }
-    else if (e.key === 'Delete') { e.preventDefault(); const nx = li.nextElementSibling || li.previousElementSibling; remove(li._a); nx?.focus(); }
-    else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); (e.key === 'ArrowDown' ? li.nextElementSibling : li.previousElementSibling)?.focus(); }
+    else if (e.key === 'Delete') { e.preventDefault(); const nx = nextCard(li, true) || nextCard(li, false); remove(li._a); nx?.focus(); }
   });
   listBox.addEventListener('pointerover', e => { const li = e.target.closest('.bd-cs-c'); setHot(li ? li._a : null, true); });
   // leaving the list (pointerleave can miss it when the card under the pointer re-renders): anywhere else clears it
@@ -13262,16 +13530,17 @@ const MARKUP = (() => {
     return true;
   }
   function paint() {
-    const n = pending().length, ni = itemsPending().length, all = n + ni, total = list.length, by = s => list.filter(a => a.status === s).length;
+    const n = pending().length, ni = itemsPending().length, all = n + ni, fs = finds(), total = list.length + fs.length;
+    const by = s => list.filter(a => a.status === s).length + fs.filter(x => findStatus(x) === s).length;
     goN.textContent = String(all);
     go.disabled = !all;
     go.setAttribute('aria-label', `Request changes: ${all} pending`);
     go._tip = all ? `Review and send ${all} pending change request${all === 1 ? '' : 's'}` : 'Annotate the page, or add a general comment, to request a change';
-    SIDE.badge(n);
+    SIDE.badge(n + findsPending());
     filterBtns.forEach(b => { const f = b.dataset.f; b.setAttribute('aria-checked', String(f === filter)); b.replaceChildren(FILTERS[f], h('i', {}, String(f === 'all' ? total : by(f)))); });
     sortBtn.replaceChildren(ic(sort === 'page' ? 'doc' : 'hist'));
     sortBtn.title = sort === 'page' ? 'In page order; click for newest first' : 'Newest first; click for page order'; sortBtn.setAttribute('aria-label', sortBtn.title);
-    clearRow.hidden = !by('resolved');
+    clearRow.hidden = !list.some(a => a.status === 'resolved');   // it clears the page's comments, not the findings'
     tb.dataset.m = mode;
     for (const [m, b] of Object.entries(btn)) b.setAttribute('aria-pressed', String(m === mode));
     // the Annotate bar: open while one of its tools is; Pen's colours and widths (the narrow keys, disabled) only with Pen
@@ -13448,15 +13717,17 @@ const MARKUP = (() => {
       dlg = h('dialog', { class: 'bd-send bd-chgs', 'aria-labelledby': 'bd-chgs-h' },
         h('div', { class: 'hd' }, h('h3', { id: 'bd-chgs-h' }, PICKS_WITH_CHANGES ? `Request changes to this ${AP_NOUN}` : 'Request changes to this doc'), h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Close', onclick: () => dlg.close() }, ic('x'))),
         h('p', { class: 'sum' }, PICKS_WITH_CHANGES ? `Change requests ask the agent to revise the ${AP_NOUN}. Your decision picks and comments on items go with them.`
+          : NOTES_WITH_CHANGES ? `Change requests ask the agent to edit the document. Your comments on findings and "Need more details" requests go with them; your picks go with ${SEND_AS[1]}.`
           : 'Change requests ask the agent to edit the document. "Need more details" requests go with them; your other decisions and comments on items go with Send answers.'),
         cnt, h('details', { open: true }, h('summary', {}, 'Preview'), pre), how, h('div', { class: 'ft' }, copy, send));
       document.body.append(dlg);
       dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });
       dlg._paint = () => {
         const open = pending(), old = open.filter(a => a.rev !== CUR.rev).length, gn = open.filter(isGeneral).length, xs = itemsPending();
-        const nn = xs.filter(x => PICKS_WITH_CHANGES && x.notePending).length, nm = xs.filter(x => x.more === 'on').length, np = xs.filter(x => PICKS_WITH_CHANGES && x.pickPending).length;
+        // a comment on a Need more details item is that request's text: it counts once, as the request
+        const nn = xs.filter(x => NOTES_WITH_CHANGES && x.notePending && x.more !== 'on').length, nm = xs.filter(x => x.more === 'on').length, np = xs.filter(x => PICKS_WITH_CHANGES && x.pickPending).length;
         const what = [open.length && `${open.length} pending comment${open.length === 1 ? '' : 's'}${gn ? `, ${gn} general` : ''}`,
-          nn && `${nn} comment${nn === 1 ? '' : 's'} on items`, nm && `${nm} request${nm === 1 ? '' : 's'} for more details`,
+          nn && `${nn} comment${nn === 1 ? '' : 's'} on ${PICKS_WITH_CHANGES ? 'items' : 'findings'}`, nm && `${nm} request${nm === 1 ? '' : 's'} for more details`,
           np && `${np} pick${np === 1 ? '' : 's'} ${APPROVABLE ? 'changed since approval' : 'changed'}`].filter(Boolean).join(', ');
         cnt.replaceChildren(h('b', {}, what), open.length + nn + nm + np === 1 ? ' goes with this request' : ' go with this request',
           ...(old ? [' (', h('span', { class: 'old' }, `${old} made on an earlier revision`), ')'] : []), open.length ? '. Edit or delete them in the Comments sidebar.' : '.');
@@ -13477,7 +13748,8 @@ const MARKUP = (() => {
     try {
       await postReply(REPLY.changes, p);
       markSent(p.annotations.map(x => x.id), p.at);
-      (PICKS_WITH_CHANGES ? Object.values(ITEMS) : xs).forEach(x => x.markSent()); paint();
+      // a review's Request changes sends its findings' comments, not their picks (the send key's)
+      (PICKS_WITH_CHANGES ? Object.values(ITEMS) : xs).forEach(x => x.markSent(DOC_TYPE === 'review' ? 'note' : undefined)); paint();
       if (dlg) dlg.close();
       changesSent(p);
       toast(`Change request sent to ${REPLY.to || 'the agent'}`);
@@ -13515,6 +13787,12 @@ const MARKUP = (() => {
       const i = rest.indexOf('/'), d = DIFFS[rest.slice(0, i)]; if (!d) return false;
       const file = t === 'line' ? rest.slice(i + 1, rest.lastIndexOf(':')) : (d.comments[+rest.slice(i + 1)] || {}).file || PR_KEY;
       const el = elOf(k); if (el && shown(el) && el.closest('.bd-mv')) return false;   // Merged shows it: the view stays
+      // Merged holds it under a closed finding (or one the filter hides): that finding opens, the view stays
+      const v = fviewOf(d.root), j = rest.lastIndexOf(':'), n = rest.slice(j + 1);
+      const mx = v && v.view === 'merged' ? (t === 'comment' ? v.mv.querySelector(`.bd-mx[data-diff="${CSS.escape(d.id)}"][data-ci="${CSS.escape(rest.slice(i + 1))}"]`)
+        : [...v.mv.querySelectorAll(`.bd-xf[data-diff="${CSS.escape(d.id)}"][data-file="${CSS.escape(file)}"] .bd-mx`)].find(m => m.querySelector(n[0] === 'o' ? `.bd-ln[data-o="${CSS.escape(n.slice(1))}"]:not([data-n])` : `.bd-ln[data-n="${CSS.escape(n)}"]`))) : null;
+      const x = mx && ITEMS[mx.querySelector('.bd-mrow')?.dataset.item];
+      if (x) { openItem(x); return false; }
       revealFindings(d.root);   // a findings section showing its checklist (or Merged, without that line) switches to its diff
       if (file === PR_KEY || d.byPath[file]) selectFile(d, file);
     } else if (t === 'node') {
@@ -13586,13 +13864,28 @@ const MARKUP = (() => {
     if (o && typeof o === 'object' && 'open' in o) { if (o.open) SIDE.show('comments'); else if (SIDE.shows('comments')) SIDE.setOpen(false, true); }
     return { available: true, open: SIDE.shows('comments'), as: SIDE.shows('comments') ? SIDE.as() : null, count: list.length, unsent: pending().length, pending: pending().length,
       statuses: Object.fromEntries(STATUSES.map(s => [s, list.filter(a => a.status === s).length])), draft: draft && draft.id,
-      filter, sort, cards: [...listOl.children].map(li => li.dataset.id), selected: selA && selA.id, editing: editA && editA.id };
+      filter, sort, cards: [...listOl.querySelectorAll('.bd-cs-c')].map(li => li.dataset.id), selected: selA && selA.id, editing: editA && editA.id,
+      // a review's finding threads as listed: the group headings in order, each finding's key, group and status
+      groups: [...listOl.querySelectorAll('.bd-cs-h')].map(li => li.dataset.g),
+      findings: [...listOl.querySelectorAll('.bd-cs-fc')].map(li => ({ item: li.dataset.item, group: findGroup(li._x), status: findStatus(li._x) })) };
+  }
+  // on a review's load the panel opens on what waits for the reader: a finding the agent answered last (Open) or a
+  // comment not sent yet, on a finding or the page (Pending); otherwise it stays as the reader left it. A sheet (a
+  // narrow window) would cover the page: it stays closed
+  function openIfWaiting() {
+    if (DOC_TYPE !== 'review' || SIDE.sheet()) return;
+    const wait = finds().some(x => findGroup(x) === 'wait');
+    if (!wait && !pending().length && !findsPending()) return;
+    const f = wait ? 'open' : 'pending';
+    if (filter !== 'all' && filter !== f) setFilter(f, false);
+    SIDE.show('comments', { remember: false });
+    paint();
   }
 
   /* wiring */
   document.body.append(layer, hov, cap, cmp, selc, tb);
   requestAnimationFrame(fitTray);
-  SIDE.add({ id: 'comments', label: 'Comments', body: csBody, chip: () => pending().length ? `${pending().length} pending` : '',
+  SIDE.add({ id: 'comments', label: 'Comments', body: csBody, chip: () => (n => n ? `${n} pending` : '')(pending().length + findsPending()),
     onToggle: shown => { if (!shown) endEdit(true); schedule(true); paint(); } });
   root.classList.add('bd-tray-on');
   for (const ty of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click', 'dblclick']) addEventListener(ty, onCapture, true);
@@ -13625,7 +13918,7 @@ const MARKUP = (() => {
   document.fonts?.ready.then(() => schedule(true));
   setInterval(() => { if (SIDE.shows('comments')) renderList(); }, 30000);   // "5 min ago"
   paint(); schedule(true);
-  return Object.assign(api, { annotate, setMode, paint, comments, flush, markSent, pinFrame, addFrame, drafts, relayout: () => schedule(true) });
+  return Object.assign(api, { annotate, setMode, paint, comments, flush, markSent, pinFrame, addFrame, drafts, openIfWaiting, relayout: () => schedule(true) });
 })();
 
 /* ---------- the drafts' undo history (a design's board edits, a storelisting's text edits) ---------- */
@@ -14493,6 +14786,7 @@ if (BOARD && IS_DESIGN && !OLD && !BASE && BOARD.stage) boardEdits(BOARD);
 if (BOARD && BOARD.afterMarkup) BOARD.afterMarkup();   // a storelisting's drafts and right-panel tabs
 
 SIDE.start();
+MARKUP.openIfWaiting();   // after the panel's restored state: something waiting for the reader opens it
 
 /* ---------- public API (for tests and agents) ---------- */
 window.BP = {
@@ -14533,6 +14827,10 @@ window.BP = {
     if (FVIEW_NAMES.includes(view)) v.seg.querySelector(`[data-v="${view}"]`).click();
     return v.view;
   },
+  // the findings filter, 'open', 'done' or 'all' (the page's, every findings section's); with f, picks it as its toolbar would
+  findingsFilter: f => { if (FFILTERS.some(x => x[0] === f)) setFindingsFilter(f); return FFILTER; },
+  // a finding's Custom answer, as typing in its field would ('' takes it back); false when the item takes none
+  custom: (key, text) => { const x = ITEMS[key]; if (!x || !x.setCustom) return false; x.setCustom(text || ''); return true; },
   revisions: () => REVS.map(r => ({ rev: r.rev, date: r.date, current: !!r.current, shown: r === VIEW, changes: r.doc.changes || [] })),
   compare: () => BASE && { from: BASE.rev, to: VIEW.rev, changes: CHG.map(c => ({ kind: c.kind, label: plain(c.label) })) },
   annotations: () => MARKUP.all(),

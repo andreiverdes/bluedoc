@@ -6,9 +6,10 @@ Usage:
   gitdiff.py ... --into doc.bluedoc.json --section SECTION_ID [--after-block N]
 
 By default the block is a reference: repo, base and head (resolved to short hashes), the --paths, --pr and the
-comments; the page expands it from git when it renders (see diffref.py). With --into, --repo is stored relative
-to the doc's folder and the expanded diff goes to <name>.diffcache.json next to it (commit that file, so the diff
-survives a rebase or a deleted branch). --embed writes the hunks into the block instead.
+comments; the page expands it from git when it renders (see diffref.py). With --pr it also stores the PR's branch
+names, headRef and baseRef, from `gh pr view` (a warning, and no names, when gh can't tell). With --into, --repo is
+stored relative to the doc's folder and the expanded diff goes to <name>.diffcache.json next to it (commit that file,
+so the diff survives a rebase or a deleted branch). --embed writes the hunks into the block instead.
 
 Comments (--comments FILE) are a JSON list. Each entry anchors one comment:
   {"at": "path/to/file.sh:340-345", "item": "checklist-id/item-id"}
@@ -60,10 +61,27 @@ def build_ref(a: argparse.Namespace) -> dict:
                                 ("max_lines", a.max_lines, diffref.MAX_LINES)):
         if value and value != default:
             block[key] = value
+    if a.pr:
+        block.update(pr_refs(a.pr))
     raw = json.loads(Path(a.comments).read_text(encoding="utf-8")) if a.comments else []
     if raw:
         block["comments"] = [diffref.compact_comment(diffref.parse_comment(c, a.strip_prefix or [])) for c in raw]
     return block
+
+
+def pr_refs(pr: str) -> dict:
+    """The PR's branch names, {"headRef": …, "baseRef": …}, from `gh pr view`; {} with a warning when gh fails."""
+    repo, num = diffref.pr_spec({"pr": pr})
+    code, out = diffref._run(["gh", "pr", "view", num, *(["--repo", repo] if repo else []), "--json", "headRefName,baseRefName"])
+    try:
+        names = json.loads(out) if code == 0 else None
+    except ValueError:
+        names = None
+    if not isinstance(names, dict):
+        print(f"WARNING: gh pr view {pr} gave no branch names, so the block has none: {out.strip()[:300]}", file=sys.stderr)
+        return {}
+    return {key: names[field] for key, field in (("headRef", "headRefName"), ("baseRef", "baseRefName"))
+            if isinstance(names.get(field), str) and names[field]}
 
 
 def embed(ref: dict, a: argparse.Namespace) -> dict:
@@ -72,7 +90,7 @@ def embed(ref: dict, a: argparse.Namespace) -> dict:
     block = {"type": "diff", "id": ref["id"], "title": ref["title"], "repo": a.repo_name or Path(a.repo).resolve().name,
              "base": ref["base"], "head": ref["head"]}
     fail(diffref.expand_doc(full, None, use_cache=False, write_cache=False, allow_remote=False))
-    for k in ("url", "note"):
+    for k in ("url", "note", "headRef", "baseRef"):
         if k in ref:
             block[k] = ref[k]
     block["files"] = full["files"]
@@ -95,7 +113,8 @@ def main() -> int:
     ap.add_argument("--head", required=True)
     ap.add_argument("--id", required=True)
     ap.add_argument("--title", required=True)
-    ap.add_argument("--pr", help="owner/repo#N or the PR URL: lets the page fall back to `gh pr diff` without the repo")
+    ap.add_argument("--pr", help="owner/repo#N or the PR URL: stores the PR's branch names (gh pr view) and lets the "
+                                 "page fall back to `gh pr diff` without the repo")
     ap.add_argument("--embed", action="store_true", help="write the hunks into the block instead of a reference")
     ap.add_argument("--repo-name", help="with --embed: name shown in the header (default: the folder name)")
     ap.add_argument("--url")

@@ -1,6 +1,6 @@
 # Review
 
-**When:** whenever review results (peer review, agent review, open PR threads) go into a bluedoc, without being asked. Each finding is a **decision item**: the reader picks an option next to your starred recommendation, comments where they disagree, and presses the send key ([Whose PR](#whose-pr-metareview)). The reply lists each pick (`→ **Ticket** (recommended: Fix in PR)`) and comment; act on them. A finding sent with **Need more details** gets a fuller `detail` and options in the next rev, still unpicked.
+**When:** whenever review results (peer review, agent review, open PR threads) go into a bluedoc, without being asked. Each finding is a **decision item**: the reader picks an option next to your starred recommendation and presses the send key ([Whose PR](#whose-pr-metareview)); the reply lists each pick (`→ **Ticket** (recommended: Fix in PR)`): act on them. Their comments on findings and **Need more details** go with **Request changes** instead (`kind: changes`, each finding under `## Decisions` with its comment quoted and its `item:` key): answer each with `--reply` (rule 7). A finding sent with **Need more details** gets a fuller `detail` and options in the next rev, still unpicked. The page's Comments panel lists every finding thread; one whose newest message is yours waits for the reader, and one whose `choice` you set (rule 6) reads as resolved.
 
 **Home card:** `+N / −N` lines in large type, the file and PR count, and one dot per finding coloured by size.
 **Required** (an error on a new rev, a warning on older ones): at least one `diff` block; every item with `choices` has `state` set to `blocker`, `major`, `minor` or `nit`; a review of a PR (a `diff` block with `pr`) has `meta.review`; a `post` review's findings offer only `post` and `skip`.
@@ -22,7 +22,7 @@ PRs of different owners go in separate docs, one `meta.review` each. Scaffold wi
 | `threads` | `fix` **Fix in PR**, `ticket` **Ticket**, `decline` **Decline** | **Reply and fix** | Fix the findings marked to fix on the PR's branch and push, then reply on each thread with the finding's **Reply I'd post** and resolve the fixed ones (`gh api graphql`, `resolveReviewThread`). |
 | `local` | **Fix now**, **Ticket**, **Decline** | **Apply decisions** | Fix the findings marked to fix in the working tree, file a ticket for each one marked Ticket, drop the declines, then report what you did. |
 
-Without `meta.review` (a codebase review by area) the key reads **Send answers**. Each key shows the count of picks, ticks and comments not sent yet.
+Without `meta.review` (a codebase review by area) the key reads **Send answers**. Each key shows the count of picks and ticks not sent yet; comments on findings count in **Request changes**.
 
 ## Layout
 
@@ -64,6 +64,7 @@ Without `meta.review` (a codebase review by area) the key reads **Send answers**
 5. A thread on a different line than the code that needs the fix: anchor the comment on the code and say so in `note`. A finding with no line becomes a "Whole change" comment (`{"label": "PR description", "item": …}`).
 6. Never answer a decision yourself. Set `choice` only to carry over the reader's answer from an earlier round, and say so in `detail` (`**Status:** picked <option> on <date>`).
 7. Answer a reader's comment on a finding with `build.py patch <doc> item:t<n>/<item> --reply "…"`, short and direct; rewrite the finding only when the answer changes it or its options.
+8. A reader may answer a finding with **Custom** instead of an option: the reply carries `choice: "custom"` and their words in `custom` (Markdown `→ **Custom**: <text>`). Treat it as their decision; if it doesn't say what to do, ask with `--reply`.
 
 ## Diff blocks from git
 
@@ -79,7 +80,7 @@ python3 <skill>/scripts/gitdiff.py --repo <checkout> --base <base> --head <head>
   --note "Only the commented files. Head <head>." --into <doc> --section pr-<n> --after-block 0
 ```
 
-`ghthreads.py` prints the PR's base and head and one item stub per open thread (`--all` adds resolved ones): the default options, the reviewer's text in `detail`, and `<<…>>` for the finding, size, recommendation and reasoning, which the build rejects until filled. Paste the stubs into the `t<n>` checklist. For your own review, write `/tmp/c<n>.json` yourself: a list of `{"at": "path:12-20", "item": "t<n>/<item>"}`. `gitdiff.py` stores `base`/`head` as short SHAs and `repo` relative to the doc, and replaces a block with the same `id`; `--embed` writes the old inline hunks instead.
+`ghthreads.py` prints the PR's base and head and one item stub per open thread (`--all` adds resolved ones): the default options, the reviewer's text in `detail`, and `<<…>>` for the finding, size, recommendation and reasoning, which the build rejects until filled. Paste the stubs into the `t<n>` checklist. For your own review, write `/tmp/c<n>.json` yourself: a list of `{"at": "path:12-20", "item": "t<n>/<item>"}`. `gitdiff.py` stores `base`/`head` as short SHAs and `repo` relative to the doc, and replaces a block with the same `id`; with `--pr` it also stores the PR's branch names, `headRef` and `baseRef` (`gh pr view <n> --repo <owner>/<repo> --json headRefName,baseRefName`), which the PR's header shows as `head → base`. `--embed` writes the old inline hunks instead.
 
 ## Fragment
 
@@ -94,7 +95,7 @@ python3 <skill>/scripts/gitdiff.py --repo <checkout> --base <base> --head <head>
                    { "id": "decline", "label": "Decline", "md": "Keep `>`: the code then contradicts the spec's \"10 or more\"." } ],
       "detail": "**Reviewer:** … **My reasoning:** `src/pricing/tiers.ts:17` uses `>`. **Fix:** use `>=`. **Verify:** `tierFor(10)` returns `bulk`." } ] },
   { "type": "diff", "id": "diff-412", "title": "acme-shop #412", "repo": "../acme-shop", "base": "89efd8e", "head": "62ccc86",
-    "paths": ["src/pricing/tiers.ts"], "pr": "acme/acme-shop#412", "note": "Only the commented files. Head `62ccc86`.",
+    "paths": ["src/pricing/tiers.ts"], "pr": "acme/acme-shop#412", "headRef": "bulk-discount-tiers", "baseRef": "main", "note": "Only the commented files. Head `62ccc86`.",
     "comments": [ { "at": "src/pricing/tiers.ts:17-21", "item": "t412/tier-boundary" } ] } ] }
 ```
 
