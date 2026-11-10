@@ -309,6 +309,14 @@
   }
 
   const active = () => mode === 'point' || mode === 'select';
+  // the page's Element cursor over the whole screen (text being edited keeps its own); one style, switched by its media
+  let curStyle = null;
+  function setCursor(c) {
+    if (!c && !curStyle) return;
+    if (!curStyle) { curStyle = doc.createElement('style'); curStyle.id = 'bd-cursor'; (doc.head || root).appendChild(curStyle); }
+    if (c) curStyle.textContent = `html, html *:not([contenteditable="true"], [contenteditable="true"] *) { cursor: ${c} !important; }`;
+    curStyle.media = c ? 'all' : 'not all';
+  }
   const pickable = el => el && el.nodeType === 1 && el !== doc.body && el !== root && !own(el);
   // a storelisting shot showing a capture (html.ui--capture: kits/shot.js lays the PNG over the mock-up): a point in
   // the UI slot names the slot itself, and a pick says where on the image it fell (at: [x, y], fractions)
@@ -600,6 +608,7 @@
     if (m.bd === 'mode' && typeof m.mode === 'string') {
       if (editing && (m.mode !== mode || m.edit !== true)) endEdit(true);   // another tool: the edit is kept
       mode = m.mode; onBoard = m.board === true; canEdit = m.edit === true;
+      setCursor(typeof m.cursor === 'string' && m.cursor.length <= 4000 && /^url\("data:image\/svg\+xml,[^"]*"\) \d+ \d+, crosshair$/.test(m.cursor) ? m.cursor : null);
       if (!active()) { hovered = null; showOutline(null); }
       paintSel();
     } else if (m.bd === 'editText') {

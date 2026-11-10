@@ -898,13 +898,13 @@ img.bp-cmpr-img { cursor: zoom-in; }
   background: linear-gradient(180deg, var(--tray-top), var(--tray-bot)); box-shadow: var(--shadow-tray), 0 2px 6px oklch(23% 0.01 264 / 0.06); }
 .bd-annb .bd-key { width: 34px; height: 34px; border-radius: 11px; }
 .bd-annb .bd-key .bd-ic { width: 17px; height: 17px; }
-.bd-annb.opt { position: absolute; left: 52px; bottom: calc(100% + 8px); padding: 5px; border-radius: 16px; animation: bd-annb-in .16s var(--ease); }
+.bd-annb.opt { position: absolute; left: 64px; bottom: calc(100% + 8px); padding: 5px; border-radius: 16px; animation: bd-annb-in .16s var(--ease); }
 /* ≤ 600 px: the fold key (the current tool, else Element's icon, and a caret) opens the four tools in a menu above it */
 .bd-key.fold { display: none; align-items: center; gap: 2px; width: auto; padding: 0 5px 0 7px; }
 .bd-key.fold .bd-ic { width: 16px; height: 16px; }
 .bd-key.fold .car { width: 12px; height: 12px; color: var(--fg-subtle); transition: rotate .18s var(--ease); }
 .bd-key.fold[aria-expanded="true"] .car { rotate: 180deg; }
-.bd-annb.menu { position: absolute; left: 38px; bottom: calc(100% + 8px); display: none; animation: bd-annb-in .16s var(--ease); }
+.bd-annb.menu { position: absolute; left: 48px; bottom: calc(100% + 8px); display: none; animation: bd-annb-in .16s var(--ease); }
 /* pen colours and widths: wells, as the dock's keys sit in */
 .bd-annb .sw, .bd-wt { display: inline-flex; align-items: center; height: 34px; border-radius: 11px; background: var(--hk-down); box-shadow: var(--shadow-well); }
 .bd-annb .sw { gap: 6px; padding: 0 9px; }
@@ -959,7 +959,7 @@ img.bp-cmpr-img { cursor: zoom-in; }
   .bd-anntb { gap: 3px; padding: 4px; }
   .bd-key { width: 32px; height: 32px; border-radius: 10px; }
   .bd-groove { margin: 0 1px; }
-  .bd-annb.menu { left: 34px; }
+  .bd-annb.menu { left: 41px; }
 }
 @media (max-width: 380px) { .bd-key.go:disabled { padding: 0 9px; } .bd-key.go:disabled .n { display: none; } }
 /* HorizonUI Tooltip with Kbd chips */
@@ -1006,7 +1006,7 @@ html.bd-tray-on .bp-toast { bottom: 84px; }
 .bd-pen-risk { --pen: var(--risk); } .bd-pen-accent { --pen: var(--accent); } .bd-pen-warn { --pen: var(--warn); } .bd-pen-ok { --pen: var(--ok); }
 .bd-pen-violet { --pen: light-dark(oklch(55% 0.21 300), oklch(70% 0.17 300)); } .bd-pen-ink { --pen: var(--fg); } .bd-pen-custom { --pen: oklch(55% 0.2 305); }
 /* the cursor rule excludes what `inDoc` excludes: the rail, a design's panel tabs, Screens list and board toolbar, and a findings section's toolbar keep their own cursors */
-html.bd-ann-m-point .bd-shell :not(.bp-side, .bp-side :not(.bd-meta, .bd-meta *), .bd-lp-ui, .bd-lp-ui *, .bd-btb, .bd-btb *, .bd-ftb, .bd-ftb *), html.bd-ann-m-point .bd-shell { cursor: crosshair !important; }
+html.bd-ann-m-point .bd-shell :not(.bp-side, .bp-side :not(.bd-meta, .bd-meta *), .bd-lp-ui, .bd-lp-ui *, .bd-btb, .bd-btb *, .bd-ftb, .bd-ftb *), html.bd-ann-m-point .bd-shell { cursor: var(--bd-elcur, crosshair) !important; }
 html.bd-ann-m-select .bd-shell :not(.bp-side, .bp-side :not(.bd-meta, .bd-meta *), .bd-lp-ui, .bd-lp-ui *, .bd-btb, .bd-btb *, .bd-ftb, .bd-ftb *), html.bd-ann-m-select .bd-shell { cursor: text !important; }
 html:is(.bd-ann-m-point, .bd-ann-m-select) .bd-shell :is(.bp-side, .bd-lp-ui, .bd-btb, .bd-ftb) { cursor: default; }
 html:is(.bd-ann-m-point, .bd-ann-m-select) .bd-shell .bp-note .bp-note-ta { cursor: text !important; }
@@ -1955,12 +1955,19 @@ html:not(.bd-lp-open) .bd-rh-left, html:not(.bd-sp-dock) .bd-rh-right { display:
 .bd-ab-t > * { flex: none; }
 .bd-ab-t .n { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--fg); }
 .bd-ab-t .d { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; font-weight: 450; color: var(--fg-subtle); }
-.bd-ab.bd-chg .bd-ab-t .d { display: none; }   /* compare view: the badge and Compare take its place */
+.bd-ab.bd-chg .bd-ab-t .d { display: none; }
+.bd-ab.bd-chg .bd-ab-t .n { flex-shrink: 8; }   /* compare view: the badge and Compare take its place */
 .bd-ab.sel .bd-ab-t .n { color: var(--accent-fg); }
 .bd-ab-t .bd-chg-tag { height: 1.7em; padding: 0 .55em; font-size: .85em; border-radius: .45em; }
-.bd-ab-t .cmp { display: inline-grid; place-items: center; width: 1.9em; height: 1.9em; padding: 0; border: 0; border-radius: .5em; color: var(--accent-fg); background: var(--accent-tint); cursor: pointer; }
+/* a changed screen's Compare: a labelled key filled in the accent, so it is seen beside the badge; on a narrow
+   screen the name gives way first */
+.bd-ab-t > .cmp { flex: 0 1 auto; min-width: 2.1em; overflow: hidden; }   /* short of room, its label goes before its icon */
+.bd-ab-t .cmp { display: inline-flex; align-items: center; gap: .4em; height: 2.1em; padding: 0 .85em 0 .45em; border: 0; border-radius: .6em; font: inherit; font-size: 1.08em;
+  color: #fff; background: var(--accent); cursor: pointer; transition: filter .12s var(--ease); }
+.bd-ab-t .cmp:hover { filter: brightness(1.12); }
+.bd-ab-t .cmp:focus-visible { outline: calc(2px / var(--k)) solid var(--accent-fg); outline-offset: calc(2px / var(--k)); }
 .bd-ab-t .cmp[hidden] { display: none; }
-.bd-ab-t .cmp .bd-ic { width: 1.1em; height: 1.1em; }
+.bd-ab-t .cmp .bd-ic { flex: none; width: 1.2em; height: 1.2em; }
 /* ---- icon export (IconKit) ---- */
 .bd-ab-t .ixp { height: 1.9em; padding: 0 .75em; border: 0; border-radius: .5em; font: inherit; font-weight: 600; color: var(--accent-fg); background: var(--accent-tint); cursor: pointer; }
 .bd-ab-t .ixp:disabled { cursor: progress; opacity: .7; }
@@ -2287,7 +2294,7 @@ html.bd-lp-open .bd-lp { transform: none; visibility: visible; transition: trans
 .bd-sp-brief .bp-sec + .bp-sec { margin-top: 18px; }
 .bd-sp-brief .bp-sec > h2 { font-size: 16px; }
 .bd-sp-brief .bd-meta { margin-top: 20px; }
-html.bd-ann-m-point .bd-sp-brief *, html.bd-ann-m-point .bd-sp-brief { cursor: crosshair !important; }
+html.bd-ann-m-point .bd-sp-brief *, html.bd-ann-m-point .bd-sp-brief { cursor: var(--bd-elcur, crosshair) !important; }
 html.bd-ann-m-select .bd-sp-brief *, html.bd-ann-m-select .bd-sp-brief { cursor: text !important; }
 .bd-scr-l { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
 .bd-scr-l button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; border: 0; border-radius: 10px; background: none; text-align: left; font: inherit; font-size: 13.5px; color: var(--fg); cursor: pointer; }
@@ -2850,7 +2857,7 @@ const ICONS = {
   reply: '<path d="M9 17l-5-5 5-5M20 18v-2a4 4 0 0 0-4-4H4"/>',
   cursor: '<path d="M4.04 4.69a.5.5 0 0 1 .65-.65l16 6.5a.5.5 0 0 1-.06.95l-6.13 1.58a2 2 0 0 0-1.43 1.43l-1.58 6.13a.5.5 0 0 1-.95.06z"/>',
   // the comment tools Element and Region
-  element: '<path d="M12.03 12.68a.5.5 0 0 1 .65-.65l9 3.5a.5.5 0 0 1-.03.94l-3.45 1.07a1 1 0 0 0-.66.66l-1.07 3.44a.5.5 0 0 1-.94.04z"/><path d="M5 3a2 2 0 0 0-2 2M19 3a2 2 0 0 1 2 2M5 21a2 2 0 0 1-2-2M9 3h1M9 21h2M14 3h1M3 9v1M21 9v2M3 14v1"/>',
+  element: '<path d="M4 4h8a8 8 0 1 1-8 8z"/><path d="M12 8.5v7M8.5 12h7"/>',
   region: '<path d="M5 3a2 2 0 0 0-2 2M19 3a2 2 0 0 1 2 2M21 19a2 2 0 0 1-2 2M5 21a2 2 0 0 1-2-2M9 3h1M9 21h1M14 3h1M14 21h1M3 9v1M21 9v1M3 14v1M21 14v1"/>',
   pin: '<path d="M20 10c0 5-5.54 10.19-7.4 11.8a1 1 0 0 1-1.2 0C9.54 20.19 4 15 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/>',
   type: '<path d="M12 4v16M4 7V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2M9 20h6"/>',
@@ -2899,6 +2906,10 @@ const ICONS = {
   pagefull: '<rect x="6" y="2" width="12" height="20" rx="2"/><path d="M9 7h6M9 11h6M9 15h4"/>',
   pageview: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 8h18M17.5 11v5"/>',
 };
+// Element's cursor: its icon's pin filled in the accent with a white edge, the sharp corner (the tip) its hotspot; the
+// page's CSS reads it as --bd-elcur and a screen's inspector gets it with the mode
+const EL_CURSOR = `url("data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><g transform="translate(3 3) scale(1.25) translate(-4 -4)" stroke-linecap="round" stroke-linejoin="round" stroke="#fff"><path d="M4 4h8a8 8 0 1 1-8 8z" fill="#0078e6" stroke-width="1.5"/><path d="M12 8.5v7M8.5 12h7" fill="none" stroke-width="1.8"/></g></svg>')}") 3 3, crosshair`;
+document.documentElement.style.setProperty('--bd-elcur', EL_CURSOR);
 function ic(name, cls) {
   const s = document.createElementNS(NS, 'svg');
   s.setAttribute('viewBox', '0 0 24 24'); s.setAttribute('class', 'bd-ic' + (cls ? ' ' + cls : '')); s.setAttribute('aria-hidden', 'true');
@@ -7301,7 +7312,7 @@ function renderBoard(b) {
     if (page && !ghost) { const [w, hh] = twin ? viewSize(a) : sizeOf(a); p = { ...p, w, h: hh }; }
     const warn = h('i', { class: 'warn', hidden: true }), tag = h('span', { class: 'tg' });
     const cmpBtn = h('button', { type: 'button', class: 'cmp', hidden: true, 'aria-label': `Compare this ${SCREEN} across the two revisions`, title: `Compare this ${SCREEN} across the two revisions`,
-      onclick: e => { e.stopPropagation(); openCompare(id); } }, ic('split'));
+      onclick: e => { e.stopPropagation(); openCompare(id); } }, ic('split'), h('span', {}, 'Compare'));
     const rch = h('span', { class: 'rch', hidden: true });
     const dl = h('span', { class: 'd' }, page ? bpDesc(a, p.w, isLive(a) ? srev : null) : [DEVICE_NAME[dev] || `${p.w} × ${p.h}`, FIDELITY[a.fidelity]].filter(Boolean).join(' · '));
     // a page's widths: an icon each (a width when two share one); a twin follows its page's
@@ -7504,7 +7515,7 @@ function renderBoard(b) {
   const editable = x => !x.role && !x.twin && devOf(x.a) !== 'icons';
   B.textEdits = x => !!B.onEditMsg && editable(x) && B.frames.get(x.a.id) === x && ['view', 'point', 'link'].includes(B.mode);
   // board: a screen on the board forwards its wheel, middle-button drags and Space to the board (frameNav)
-  const modeMsg = x => ({ bd: 'mode', mode: x.role === 'pres' ? 'interact' : x.role === 'cmp' ? 'view' : frameMode(), board: !x.role, edit: B.textEdits(x) });
+  const modeMsg = x => ({ bd: 'mode', mode: x.role === 'pres' ? 'interact' : x.role === 'cmp' ? 'view' : frameMode(), board: !x.role, edit: B.textEdits(x), cursor: !x.role && B.mode === 'point' ? EL_CURSOR : null });
   // an iframe for record x (an artboard, its twin, or the present or compare view's copy) at revision rev (null:
   // current). A live page loads its proxy; at an earlier revision its snapshot (snapOf, at the page's width), as a
   // screen: sandboxed like one, never the live page
@@ -9086,7 +9097,7 @@ function renderListing(lb) {
     if (!attrs) return null;
     const fr = h('iframe', { sandbox: SCREEN_SANDBOX, tabindex: '-1', title: 'Shot: ' + (x.a.title || x.a.id), width: x.w, height: x.h, name: 'bd-shot ' + JSON.stringify(frameState(x)), ...attrs,
       style: `transform: scale(${x.s})` });
-    fr.addEventListener('load', () => { if (x.fr !== fr) return; post(x, { bd: 'mode', mode: frameMode() }); locate(x); });
+    fr.addEventListener('load', () => { if (x.fr !== fr) return; post(x, { bd: 'mode', mode: frameMode(), cursor: L.mode === 'point' ? EL_CURSOR : null }); locate(x); });
     return fr;
   }
   function mount(x) {
@@ -10269,7 +10280,7 @@ function renderListing(lb) {
   function paintSide() { paintStyle(); paintBrand(); paintChecks(); }
 
   /* BOARD's interface for the page around it (MARKUP, SIDE, compare) */
-  L.setMode = m => { L.mode = m; pg.dataset.m = ['point', 'select'].includes(m) ? m : 'view'; for (const x of L.live) post(x, { bd: 'mode', mode: frameMode() }); };
+  L.setMode = m => { L.mode = m; pg.dataset.m = ['point', 'select'].includes(m) ? m : 'view'; for (const x of L.live) post(x, { bd: 'mode', mode: frameMode(), cursor: L.mode === 'point' ? EL_CURSOR : null }); };
   L.abFor = key => { const m = /^(?:artboard|el):([^/]+)/.exec(key); if (!m) return null; const x = L.tiles.find(y => y.a.id === m[1] && y.el.isConnected); return x ? x.el : pg.querySelector(`.bd-lst-icon[data-ab="${CSS.escape(m[1])}"]`); };
   L.pinPos = (key, t) => {
     if (!key.startsWith('el:')) return null;
@@ -11792,10 +11803,10 @@ const MARKUP = (() => {
   const eye = tipped(keyBtn('eye', 'eye', 'Hide comment marks', {}, () => { marksOff = !marksOff; paint(); schedule(true); }));
   const goN = h('span', { class: 'n' });
   const go = tipped(keyBtn('go', 'edit', 'Request changes', {}, () => openDlg(), h('span', { class: 'l' }, 'Request changes'), goN));
-  // the dock: View, the four tools (≤ 600 px: the fold key and its menu), Pen's pill and strip above it, on a board Link
+  // the dock: View, a groove, the four tools (≤ 600 px: the fold key and its menu), Pen's pill and strip above it, on a board Link
   // and Frame (after a groove the fold key does without); the eye; Request changes and the page's last keys
   const boardKeys = Object.keys(BOARD_M).map(m => btn[m]), boardG = groove(); boardG.classList.add('tools-g');
-  const tb = h('div', { class: 'bd-anntb bd-ann-ui', role: 'toolbar', 'aria-label': 'Comment on this doc' }, btn.view, TOOLS.map(m => btn[m]), fold, menu, optBar, strip,
+  const tb = h('div', { class: 'bd-anntb bd-ann-ui', role: 'toolbar', 'aria-label': 'Comment on this doc' }, btn.view, groove(), TOOLS.map(m => btn[m]), fold, menu, optBar, strip,
     boardKeys.length ? [boardG, boardKeys] : null, groove(), eye, TRAY_END.length ? groove() : null, go, TRAY_END);
   let page = null, swallow = false, press = null, ink = null, lastUp = 0, dlg = null, hovEl = null, hovFor = null, flashT = 0;
   // the comment being written (on the page, in the composer; not in the list until saved), the one being

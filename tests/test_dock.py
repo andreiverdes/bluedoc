@@ -1,7 +1,7 @@
 """The dock with the comment tools in it and text edits at all times (1.0.25), and a board that never runs a screen's
 clicks (1.0.26), in Chrome (BLUEDOC_BROWSER_TESTS=1).
 
-Every page's dock is View · Element · Region · Text · Pen, on a board then │ Link · Frame, then │ the eye │ Request
+Every page's dock is View │ Element · Region · Text · Pen, on a board then │ Link · Frame, then │ the eye │ Request
 changes and the page's last key; at 390 px the four tools fold into one key between View and Link. On the Acme Fit
 board a double-click on a screen's text in View edits it (a draft: the toolbar's count rises), a double-click where
 there is no text focuses the screen, the toolbar has no Interact key and I does nothing: a click on a screen's link
@@ -31,17 +31,17 @@ class DockKeys(ChromePage):
         return got
 
     def test_the_same_four_tools_on_every_page_and_the_board_keys_on_boards(self) -> None:
-        tools = ["View", "Element", "Region", "Text", "Pen"]
+        tools = ["View", "|", "Element", "Region", "Text", "Pen"]
         self.assertEqual(self.keys("acme-saved-carts-plan.bluedoc.json"), [*tools, "|", "Hide comment marks", "|", "Request changes", "Approve this plan"])
         review = self.keys("acme-review-findings.bluedoc.json")
-        self.assertEqual(review[:9], [*tools, "|", "Hide comment marks", "|", "Request changes"])
-        self.assertEqual(len(review), 10, "the review ends with its send key")
+        self.assertEqual(review[:10], [*tools, "|", "Hide comment marks", "|", "Request changes"])
+        self.assertEqual(len(review), 11, "the review ends with its send key")
         self.assertEqual(self.keys(FIT), [*tools, "|", "Link", "Frame", "|", "Hide comment marks", "|", "Request changes", "Approve this design"])
-        self.assertEqual(self.keys("acme-fit-deck.bluedoc.json")[:11], [*tools, "|", "Link", "Frame", "|", "Hide comment marks", "|"])
+        self.assertEqual(self.keys("acme-fit-deck.bluedoc.json")[:12], [*tools, "|", "Link", "Frame", "|", "Hide comment marks", "|"])
 
     def test_at_390_px_the_tools_fold_between_view_and_link(self) -> None:
-        self.assertEqual(self.keys(FIT, 390), ["View", "Comment tools", "Link", "Frame", "|", "Hide comment marks", "|", "Request changes", "Approve this design"])
-        self.assertEqual(self.keys("acme-review-findings.bluedoc.json", 390)[:5], ["View", "Comment tools", "|", "Hide comment marks", "|"])
+        self.assertEqual(self.keys(FIT, 390), ["View", "|", "Comment tools", "Link", "Frame", "|", "Hide comment marks", "|", "Request changes", "Approve this design"])
+        self.assertEqual(self.keys("acme-review-findings.bluedoc.json", 390)[:6], ["View", "|", "Comment tools", "|", "Hide comment marks", "|"])
 
 
 @unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")
