@@ -60,6 +60,8 @@ Inside a session the same commands are `/plugin marketplace add andreiverdes/blu
 
 **Plan mode.** With the plugin installed, every plan Claude finishes in plan mode opens as a bluedoc plan page in your browser. Claude waits for your answer on the page, revises the doc on **Request changes** and leaves plan mode once you **Approve plan**. If the plan names a `*.bluedoc.json` Claude already wrote, that doc opens; otherwise the plan is imported into `~/.bluedoc/plans/<project>/`. The plan-mode hook stays out of the way in CI, over SSH without a display and in `bypassPermissions` mode; the **Plan mode opens plans here** switch in [Settings](#settings), or `BLUEDOC_PLAN_HOOK=0`, turns it off. In those cases, and on any error, Claude Code shows its own plan dialog. Plannotator installed too means two reviews open for one plan. The other agents below get the same plan-mode hook, each through its own hook file.
 
+**Patch-only edits.** Once a doc has been built (it has its `.bluedoc.history.json`), the plugin's hook refuses an edit or write tool on its `*.bluedoc.json` and hands the agent the `build.py get` and `build.py patch` commands instead: a patch changes one object, bumps the rev and records it, where a hand edit rewrites the whole one-line file. A new doc, a scaffold not built yet and a doc that doesn't validate stay open to edits; shell commands aren't checked. The **Patch-only edits** switch in [Settings](#settings), or `BLUEDOC_PATCH_ONLY=0`, turns it off, and any error in the check lets the edit through. The other agents below get the same check, each through its own hook file (pi and omp through the bundled extension).
+
 ### Codex
 
 ```sh
@@ -69,7 +71,7 @@ codex plugin add bluedoc@bluedoc
 
 Restart Codex. The skill is listed as `bluedoc:bluedoc`; mention it with `$bluedoc` or let Codex pick it from your request.
 
-**Plan mode.** The plugin's `Stop` hook opens the plan Codex proposes in Plan mode (`/plan`) as a bluedoc plan page; Codex waits for your answer on the page, revises the doc on **Request changes** and, after **Approve plan**, goes on with your decisions. Codex runs a plugin's hooks only once you trust them: open `/hooks` and trust the bluedoc `Stop` hook (again after an update changes it).
+**Plan mode.** The plugin's `Stop` hook opens the plan Codex proposes in Plan mode (`/plan`) as a bluedoc plan page; Codex waits for your answer on the page, revises the doc on **Request changes** and, after **Approve plan**, goes on with your decisions. Its `PreToolUse` hook on `apply_patch` makes built docs patch-only. Codex runs a plugin's hooks only once you trust them: open `/hooks` and trust bluedoc's `Stop` and `PreToolUse` hooks (again after an update changes them).
 
 **The sandbox.** In Codex's default `workspace-write` sandbox, every `serve.py wait` (it calls the server on `127.0.0.1`) and `build.py patch` (it writes `~/.bluedoc`) asks you to approve running outside the sandbox. A plugin can't widen the sandbox, so to skip those prompts add this to `~/.codex/config.toml` ([Codex sandbox settings](https://developers.openai.com/codex/config-reference)):
 
@@ -199,7 +201,7 @@ Per doc, the agent reads about 1.5k tokens of instructions (`SKILL.md`) plus one
 
 ### Settings
 
-The gear at the foot of the home page's sidebar opens Settings (`http://127.0.0.1:8740/settings`): the folders the home page lists, the repo names in docs' code links, the frameworks design boards can use, the plan-mode hook's switch, Chrome's path (for PDFs, decks, website snapshots and screen captures), the font folders, and the server's version, address and data folder with a **Restart server** button. The page keeps its switches in `~/.bluedoc/settings.json`. An environment variable that is set wins over the file, and Settings shows that row locked: `BLUEDOC_PLAN_HOOK=0` (plan mode), `BLUEDOC_CHROME` and `BLUEDOC_FONT_DIRS` (folders separated by `:`, `;` on Windows).
+The gear at the foot of the home page's sidebar opens Settings (`http://127.0.0.1:8740/settings`): the folders the home page lists, the repo names in docs' code links, the frameworks design boards can use, the switches for the plan-mode hook and patch-only edits, Chrome's path (for PDFs, decks, website snapshots and screen captures), the font folders, and the server's version, address and data folder with a **Restart server** button. The page keeps its switches in `~/.bluedoc/settings.json`. An environment variable that is set wins over the file, and Settings shows that row locked: `BLUEDOC_PLAN_HOOK=0` (plan mode), `BLUEDOC_PATCH_ONLY=0` (patch-only edits), `BLUEDOC_CHROME` and `BLUEDOC_FONT_DIRS` (folders separated by `:`, `;` on Windows).
 
 ## Slash commands
 

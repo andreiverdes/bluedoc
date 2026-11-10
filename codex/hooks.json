@@ -1,10 +1,18 @@
 {
-  "description": "bluedoc plan-mode hook: Codex plans (Plan mode's <proposed_plan>) open as bluedoc plan pages (hook.py; BLUEDOC_PLAN_HOOK=0 or Settings turns it off)",
+  "description": "bluedoc hooks: Codex plans (Plan mode's <proposed_plan>) open as bluedoc plan pages (BLUEDOC_PLAN_HOOK=0 or Settings turns it off), and patch-only edits: apply_patch on a built doc is refused with the build.py patch commands (BLUEDOC_PATCH_ONLY=0 or Settings turns it off); hook.py",
   "hooks": {
     "Stop": [
       {
         "hooks": [
           { "type": "command", "command": "python3 \"${PLUGIN_ROOT}/skills/bluedoc/scripts/hook.py\" codex plan", "timeout": 120, "statusMessage": "bluedoc plan-mode hook" }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "apply_patch",
+        "hooks": [
+          { "type": "command", "command": "python3 \"${PLUGIN_ROOT}/skills/bluedoc/scripts/hook.py\" codex edit", "timeout": 10 }
         ]
       }
     ]

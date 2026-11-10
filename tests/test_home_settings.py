@@ -1,10 +1,10 @@
 """The home page's Settings (1.0.31): the gear at the sidebar's foot opens /settings with pushState (Back returns to the
 docs), pressed there with no doc list current; at 390 px it sits in the drawer's foot. The page lists the folders, code
-links, frameworks, the plan-mode hook's switch, Chrome and font folders, and the server, from GET /__bluedoc/settings.
-A change saves at once (settings.json) and says so in the toast; a switch the environment sets is locked and names its
-variable; a folder that isn't there shows the server's error under the field; the section list marks the section
-scrolled to; a browser without the key sees the page read only with the unlock banner; Restart server reloads the page
-once the server is back.
+links, frameworks, the plan-mode hook's and patch-only edits' switches, Chrome and font folders, and the server, from GET
+/__bluedoc/settings. A change saves at once (settings.json) and says so in the toast; a switch the environment sets is
+locked and names its variable; a folder that isn't there shows the server's error under the field; the section list
+marks the section scrolled to; a browser without the key sees the page read only with the unlock banner; Restart server
+reloads the page once the server is back.
 
 Browser tests: BLUEDOC_BROWSER_TESTS=1 with Chrome (BLUEDOC_CHROME names it when it isn't in a usual place)."""
 from __future__ import annotations
@@ -19,6 +19,7 @@ from test_page_state import CHROME, ChromePage, Tab, until
 
 GEAR = "document.querySelector('.bd-side [aria-label=Settings]')"
 SWITCH = "document.querySelector('#agents button[role=switch]')"
+PATCH_ONLY = "document.querySelector('#agents button[role=switch][aria-label=\"Patch-only edits\"]')"
 NAV = "document.querySelector('.bd-st-nav [aria-current]')?.textContent"
 
 
@@ -118,7 +119,13 @@ class HomeSettings(ChromePage):
         self.assertEqual(t.ev(f"{SWITCH}.disabled"), False)
         self.assertEqual(t.ev("[...document.querySelectorAll('#server .bd-st-row b')].map(b => b.textContent)"), ["Version", "Address", "Data folder", "Running since"])
         self.assertIn(f"http://127.0.0.1:{self.server.port}", t.ev("document.querySelector('#server').textContent"))
-        self.assertNotRegex(t.ev("document.querySelector('.bd-st').textContent"), r"\bTheme\b|Doc width|\bPen\b|Patch-only", "browser preferences on the page")
+        self.assertNotRegex(t.ev("document.querySelector('.bd-st').textContent"), r"\bTheme\b|Doc width|\bPen\b", "browser preferences on the page")
+        self.assertEqual(t.ev("[...document.querySelectorAll('#agents .bd-st-row b')].map(b => b.textContent)"),
+                         ["Plan mode opens plans here", "Patch-only edits"])
+        self.assertEqual(t.ev(f"{PATCH_ONLY}.closest('.bd-st-row').querySelector('.bd-st-l span').textContent"),
+                         "Agents change a built doc with build.py patch; hand edits are refused.")
+        self.assertEqual(t.ev(f"{PATCH_ONLY}.closest('.bd-st-row').querySelector('.bd-st-l code').textContent"), "build.py patch")
+        self.assertEqual((t.ev(f"{PATCH_ONLY}.getAttribute('aria-checked')"), t.ev(f"{PATCH_ONLY}.disabled")), ("true", False))
         self.assertEqual(self.browser.errors, [])
 
     def test_the_plan_mode_switch_saves_at_once(self) -> None:
@@ -133,6 +140,20 @@ class HomeSettings(ChromePage):
         self.assertIs(self.saved().get("planHook"), True)
         self.assertEqual(self.browser.errors, [])
 
+    def test_the_patch_only_switch_saves_at_once(self) -> None:
+        self.start()
+        t = self.settings()
+        t.ev(f"{PATCH_ONLY}.click()")
+        self.assertEqual(t.wait_for("document.querySelector('.bd-toast')?.textContent"), "Saved · Patch-only edits off")
+        self.assertIs(until(lambda: self.saved().get("patchOnly") is False), True, self.saved())
+        self.assertEqual(t.wait_for(f"{PATCH_ONLY}.getAttribute('aria-checked') === 'false' && 'off'"), "off")
+        self.assertEqual(t.ev(f"{SWITCH}.getAttribute('aria-checked')"), "true", "plan mode stays on")
+        t.ev(f"{PATCH_ONLY}.click()")
+        self.assertEqual(t.wait_for("(s => s === 'Saved · Patch-only edits on' && s)(document.querySelector('.bd-toast')?.textContent)"),
+                         "Saved · Patch-only edits on")
+        self.assertIs(self.saved().get("patchOnly"), True)
+        self.assertEqual(self.browser.errors, [])
+
     def test_the_environment_locks_the_switch(self) -> None:
         self.start(BLUEDOC_PLAN_HOOK="0")
         t = self.settings()
@@ -141,6 +162,18 @@ class HomeSettings(ChromePage):
         self.assertEqual(t.ev("document.querySelector('#agents .bd-st-env').textContent"), "BLUEDOC_PLAN_HOOK=0")
         self.assertEqual(t.ev("document.querySelector('#agents .bd-st-l span').textContent"),
                          "Off: set by BLUEDOC_PLAN_HOOK=0 in the environment, which wins over this page.")
+        self.assertEqual(self.saved(), {})
+        self.assertEqual(self.browser.errors, [])
+
+    def test_the_environment_locks_the_patch_only_switch(self) -> None:
+        self.start(BLUEDOC_PATCH_ONLY="0")
+        t = self.settings()
+        row = f"{PATCH_ONLY}.closest('.bd-st-row')"
+        self.assertEqual((t.ev(f"{PATCH_ONLY}.getAttribute('aria-checked')"), t.ev(f"{PATCH_ONLY}.disabled")), ("false", True))
+        self.assertEqual(t.ev(f"{row}.querySelector('.bd-st-env').textContent"), "BLUEDOC_PATCH_ONLY=0")
+        self.assertEqual(t.ev(f"{row}.querySelector('.bd-st-l span').textContent"),
+                         "Off: set by BLUEDOC_PATCH_ONLY=0 in the environment, which wins over this page.")
+        self.assertEqual(t.ev(f"{SWITCH}.disabled"), False, "plan mode stays unlocked")
         self.assertEqual(self.saved(), {})
         self.assertEqual(self.browser.errors, [])
 

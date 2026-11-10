@@ -1,16 +1,18 @@
 /**
- * bluedoc for omp and pi: the plan-mode hook and the /bluedoc-* commands.
+ * bluedoc for omp and pi: the plan-mode hook, patch-only edits and the /bluedoc-* commands.
  *
  * omp: a plan_review_requested handler opens the plan as a bluedoc plan page (hook.py ext open) and, in the
  *   background, waits for the reader (hook.py ext wait): Approve answers the review with "execute", Request changes
  *   with "refine" and the reply as feedback. The terminal picker stays live; the first answer wins.
  * pi: pi has no plan mode, so /bluedoc-plan-mode turns one on: the agent writes its plan to a Markdown file and calls
  *   bluedoc_submit_plan, which opens the page and returns the reader's approval or change request.
- * Both: the /bluedoc-<name> commands from commands/commands.json. omp also loads commands/*.md, but as
- *   /bluedoc:bluedoc-<name> and without running their !`…` shell lines, so the action commands only work from here.
+ * Both: a tool_call handler blocks an edit, write or ast_edit call on a built doc with the build.py patch commands
+ *   (hook.py ext edit, the patch-only check). And the /bluedoc-<name> commands from commands/commands.json. omp also
+ *   loads commands/*.md, but as /bluedoc:bluedoc-<name> and without running their !`…` shell lines, so the action
+ *   commands only work from here.
  *
  * Only omp has ctx.resolvePlanReview; that is how the two are told apart. Python does all the bluedoc work: this file
- * only runs the two hook.py ext CLIs and the commands' scripts. No dependencies.
+ * only runs the hook.py ext CLIs and the commands' scripts. No dependencies.
  */
 import { type ChildProcess, spawn } from "node:child_process";
 import { readFileSync } from "node:fs";
@@ -22,6 +24,7 @@ const SCRIPTS = join(ROOT, "skills", "bluedoc", "scripts");
 const HOOK = join(SCRIPTS, "hook.py");
 const PLAN_MODE_ENTRY = "bluedoc.plan-mode";
 const SUBMIT_TOOL = "bluedoc_submit_plan";
+const DOC_SUFFIX = ".bluedoc.json";
 
 // The host APIs, as far as this file uses them. pi and omp share these shapes; omp adds the plan review members.
 interface PlanReview {
@@ -164,6 +167,46 @@ function splitArgs(line: string): string[] {
 	return words;
 }
 
+// The file names in an edit call's `input` text: omp hashline sections `[PATH#TAG]` and their `MV DEST`, apply_patch
+// headers (omp's apply_patch mode) and sloppy-mode `*** Edit File: PATH[ all]` headers.
+const EDIT_INPUT_FILES = [
+	/^\s*\[(.+)#[^\]#\s]*\]\s*$/gm,
+	/^MV\s+(.+?)\s*$/gm,
+	/^\*\*\* (?:Add File|Update File|Delete File|Move to): (.+?)\s*$/gm,
+	/^\*\*\* Edit File: (.+?)(?: all)?\s*$/gm,
+];
+
+/**
+ * The files an edit, write or ast_edit call writes, as the call names them (relative ones are from ctx.cwd).
+ * pi: edit and write take `path` (a leading @ is dropped, as pi does). omp: write takes `path` (a copied `[path#TAG]`
+ * too); edit takes `input` (EDIT_INPUT_FILES), or in its replace and patch modes `path` and `edits[].rename`;
+ * ast_edit takes `paths`. Internal URLs (local://…) are left out: they never name a doc in a project.
+ */
+export function editTargets(toolName: string, input: unknown): string[] {
+	if (!input || typeof input !== "object") return [];
+	const field = (key: string): unknown => Reflect.get(input, key);
+	const found: string[] = [];
+	const add = (value: unknown) => {
+		if (typeof value === "string") found.push(value);
+	};
+	const paths = field("paths"), edits = field("edits"), text = field("input");
+	if (toolName === "ast_edit") {
+		if (Array.isArray(paths)) paths.forEach(add);
+	} else if (toolName === "edit" || toolName === "write") {
+		add(field("path"));
+		if (Array.isArray(edits)) for (const edit of edits) if (edit && typeof edit === "object" && "rename" in edit) add(edit.rename);
+		if (typeof text === "string") for (const re of EDIT_INPUT_FILES) for (const m of text.matchAll(re)) add(m[1]);
+	}
+	return found
+		.map(raw => {
+			let path = raw.trim();
+			path = /^\[(.+)#[^\]#\s]*\]$/.exec(path)?.[1] ?? path;
+			if (/^(["']).+\1$/.test(path)) path = path.slice(1, -1);
+			return path.startsWith("@") ? path.slice(1) : path;
+		})
+		.filter(path => path && !/^[a-z][a-z0-9+.-]*:\/\//i.test(path));
+}
+
 export default function bluedoc(pi: Api) {
 	// ── Commands (pi and omp) ────────────────────────────────────────────────
 	let commandsError: string | undefined;
@@ -192,6 +235,20 @@ export default function bluedoc(pi: Api) {
 			},
 		});
 	}
+
+	// ── Patch-only edits (pi and omp) ────────────────────────────────────────
+	// Python starts only for a call that names a *.bluedoc.json. A handler that fails blocks the call in both hosts, so
+	// this one never throws: when the check can't run, the call goes through.
+	pi.on<{ toolName: string; input: unknown }>("tool_call", async (event, ctx) => {
+		try {
+			const paths = editTargets(event.toolName, event.input).filter(path => path.endsWith(DOC_SUFFIX));
+			if (!paths.length) return undefined;
+			const out = await hookExt<{ reason?: string }>(["edit"], { cwd: ctx.cwd, stdin: JSON.stringify({ paths, cwd: ctx.cwd }) });
+			return out?.reason ? { block: true, reason: out.reason } : undefined;
+		} catch {
+			return undefined;
+		}
+	});
 
 	// ── omp: plan_review_requested ───────────────────────────────────────────
 	// One background watcher per open review: resolved marks it done, child is its running `hook.py ext wait`.

@@ -27,10 +27,10 @@ One server per user, on 127.0.0.1 (default port 8740; when another program holds
 the next free port up to 8759 and record it in server.json; env BLUEDOC_PORT or --port pins one, with no fallback). State lives in
 ~/.bluedoc (env BLUEDOC_HOME): roots.json (folders the home page scans), server.json (pid, port), key (mode 0600: the
 secret that writes need), state.db (SQLite, mode 0600: the reader's ticks, picks, comments and plan state per doc,
-and every reply; statedb.py), settings.json (the plan-mode hook switch, Chrome's path and the font folders, which
-Settings writes; settings.py: an environment variable that is set wins over it) and app/<version>-<code>/ (the copy
-of scripts and assets the server runs from, so deleting or updating the install it was opened from never pulls files
-from under it; other versions' copies go once a new server is up).
+and every reply; statedb.py), settings.json (the plan-mode hook and patch-only switches, Chrome's path and the font
+folders, which Settings writes; settings.py: an environment variable that is set wins over it) and
+app/<version>-<code>/ (the copy of scripts and assets the server runs from, so deleting or updating the install it was
+opened from never pulls files from under it; other versions' copies go once a new server is up).
 `open` registers the topmost ancestor folder named `docs`, else the doc's own folder, and restarts a running server
 whose version or code differs from its own. A folder inside a registered one is not added; a wider one is added
 next to the narrower ones, which keep their URLs (a doc's URL uses its deepest registered folder).
@@ -45,7 +45,7 @@ say whether the request carries the key (`unlocked`), so a page can tell the rea
 URLs: /                      home page: every doc under the registered folders, searchable, filtered by
                              project, folder, type and status
       /settings              the home page's Settings: folders, code links, frameworks, the plan-mode hook,
-                             Chrome, font folders, and the server (read only, Restart)
+                             patch-only edits, Chrome, font folders, and the server (read only, Restart)
       /<root>/<path>.bluedoc.json      the doc, rendered from its JSON on each request
       /<root>/<path>.bluedoc.json?raw=1   the JSON itself
       /<root>/<path>.<png|jpg|jpeg|gif|webp|svg|mp4|webm>   media files under the folder, for `media` blocks
@@ -53,8 +53,9 @@ URLs: /                      home page: every doc under the registered folders, 
       /__bluedoc/ping?path=  server check (version, code hash, started, pid, unlocked); with a doc's URL path, also
                              who reads replies and its saved approval
       /__bluedoc/settings    GET: what Settings shows (settings_view; each setting's value, source env|file|default
-                             and env NAME=value). POST {planHook?, chrome?, fontDirs?} (the key) writes settings.json,
-                             null back to the default: 409 when the environment sets that setting, 400 for a bad value
+                             and env NAME=value). POST {planHook?, patchOnly?, chrome?, fontDirs?} (the key) writes
+                             settings.json, null back to the default: 409 when the environment sets that setting, 400
+                             for a bad value
       POST /__bluedoc/folders  {add: "<folder>"} or {remove: "<listed path>"}: the home page's folders, {folders}
       POST /__bluedoc/repos  {remove: "<name>"}: a code link name from repos.json (codepin.py), {repos}
       POST /__bluedoc/frameworks  {remove: "<name>"} or {add: "<preset>"} (fetched as add-framework does; 502 when
@@ -5055,7 +5056,7 @@ def settings_view(port: int) -> dict:
     home = Path(os.path.abspath(STATE))
     env = lambda name: f"{name}={os.environ[name]}" if os.environ.get(name) else None  # noqa: E731
     return {"folders": folders_view(), "repos": repos_view(), "frameworks": frameworks_view(), "presets": presets_left(),
-            "agents": {"planHook": setting_view("planHook")},
+            "agents": {"planHook": setting_view("planHook"), "patchOnly": setting_view("patchOnly")},
             "tools": {"chrome": {**setting_view("chrome"), "found": chrome,
                                  "version": chrome_version(chrome)[0] if chrome else None},
                       "fontDirs": {**setting_view("fontDirs"), "system": [str(d) for d in fonts.system_font_dirs()]}},
@@ -5065,11 +5066,11 @@ def settings_view(port: int) -> dict:
 
 
 def change_settings(data: dict, port: int) -> tuple[int, dict]:
-    """POST /__bluedoc/settings {planHook?, chrome?, fontDirs?} into settings.json (null: back to the default):
+    """POST /__bluedoc/settings {planHook?, patchOnly?, chrome?, fontDirs?} into settings.json (null: back to the default):
     (200, settings_view), 409 when the environment sets one of them, 400 for an unknown name or a bad value."""
     unknown = [k for k in data if k not in settings.DEFAULTS]
     if unknown or not data:
-        return 400, {"error": f"unknown setting: {', '.join(unknown)}" if unknown else "nothing to change: send planHook, chrome or fontDirs"}
+        return 400, {"error": f"unknown setting: {', '.join(unknown)}" if unknown else "nothing to change: send planHook, patchOnly, chrome or fontDirs"}
     for k in data:
         if settings.env_text(k):
             return 409, {"error": f"set by {settings.ENV[k]} in the environment"}
@@ -5077,9 +5078,9 @@ def change_settings(data: dict, port: int) -> tuple[int, dict]:
     for k, v in data.items():
         if v is None:
             changes[k] = None
-        elif k == "planHook":
+        elif k in settings.SWITCHES:
             if not isinstance(v, bool):
-                return 400, {"error": "planHook: true or false"}
+                return 400, {"error": f"{k}: true or false"}
             changes[k] = v
         elif k == "chrome":
             if not isinstance(v, str) or not v.strip():

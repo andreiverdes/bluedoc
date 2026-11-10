@@ -47,6 +47,10 @@ cp -rf source dest          # NOT: cp -r source dest
 - `apt-get` - use `-y` flag
 - `brew` - use `HOMEBREW_NO_AUTO_UPDATE=1` env var
 
+## Editing the example docs
+
+The docs in `skills/bluedoc/examples/` are built (each has its `.bluedoc.history.json`), so bluedoc's own hook refuses edit and write tools on them (patch-only edits). Change them with `build.py patch`; to edit one by hand, the session must run with `BLUEDOC_PATCH_ONLY=0` (ask the user to restart it so), then rebuild the doc with `python3 skills/bluedoc/scripts/build.py <doc>`.
+
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:46cd31e7 -->
 ## Beads Issue Tracker
 

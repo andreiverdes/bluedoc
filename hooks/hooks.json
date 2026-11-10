@@ -1,5 +1,5 @@
 {
-  "description": "bluedoc plan-mode hook: Claude Code's plan-mode plans open as bluedoc plan pages (hook.py; BLUEDOC_PLAN_HOOK=0 or Settings turns it off)",
+  "description": "bluedoc hooks: Claude Code's plan-mode plans open as bluedoc plan pages (BLUEDOC_PLAN_HOOK=0 or Settings turns it off), and patch-only edits: Write/Edit on a built doc is refused with the build.py patch commands (BLUEDOC_PATCH_ONLY=0 or Settings turns it off); hook.py",
   "hooks": {
     "PermissionRequest": [
       {
@@ -14,6 +14,12 @@
         "matcher": "Bash",
         "hooks": [
           { "type": "command", "if": "Bash(python3 *)", "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/skills/bluedoc/scripts/hook.py\" claude bash", "timeout": 10 }
+        ]
+      },
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          { "type": "command", "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/skills/bluedoc/scripts/hook.py\" claude edit", "timeout": 10 }
         ]
       }
     ]

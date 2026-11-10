@@ -11,5 +11,15 @@
     "PreInvocation": [
       { "type": "command", "command": "python3 skills/bluedoc/scripts/hook.py agy note", "timeout": 10 }
     ]
+  },
+  "bluedoc-patch-only": {
+    "PreToolUse": [
+      {
+        "matcher": "write_to_file|replace_file_content|multi_replace_file_content|edit_file",
+        "hooks": [
+          { "type": "command", "command": "python3 skills/bluedoc/scripts/hook.py agy edit", "timeout": 10 }
+        ]
+      }
+    ]
   }
 }

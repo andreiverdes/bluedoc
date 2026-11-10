@@ -1,8 +1,9 @@
 """Settings: $BLUEDOC_HOME/settings.json (scripts/settings.py) and the routes the home page's Settings uses.
 
-For each setting (planHook, chrome, fontDirs) a set environment variable wins over the file and the file over the
-default, and its consumer follows: hook.py skips plan mode when the file turns it off, fonts.font_dirs scans the file's
-folders, serve.find_chrome takes the file's path. Against `serve.py run`: GET /settings is the home page, GET
+For each setting (planHook, patchOnly, chrome, fontDirs) a set environment variable wins over the file and the file
+over the default, and its consumer follows: hook.py skips plan mode when the file turns it off, the patch-only check
+lets an edit of a built doc through when the file turns it off, fonts.font_dirs scans the file's folders,
+serve.find_chrome takes the file's path. Against `serve.py run`: GET /settings is the home page, GET
 /__bluedoc/settings reports each value and its source, POST /__bluedoc/settings writes the file (400 for a bad value,
 409 when the environment sets the setting, 403 without the key); folders added and removed, a code link removed, a
 framework removed, chrome-test with a stand-in Chrome, and a restart that comes back with a new `started`."""
@@ -10,6 +11,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -17,14 +19,14 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from _support import SCRIPTS, Server, TempHome
+from _support import EXAMPLES, SCRIPTS, Server, TempHome
 
 import fonts   # on sys.path through _support
 import hook
 import serve
 import settings
 
-ENV_NAMES = ("BLUEDOC_PLAN_HOOK", "BLUEDOC_CHROME", "BLUEDOC_FONT_DIRS")
+ENV_NAMES = ("BLUEDOC_PLAN_HOOK", "BLUEDOC_PATCH_ONLY", "BLUEDOC_CHROME", "BLUEDOC_FONT_DIRS")
 JSON_HDR = {"Content-Type": "application/json", "X-Bluedoc": "1"}
 
 
@@ -71,6 +73,22 @@ class Precedence(unittest.TestCase):
         self.assertIsNone(hook.no_reader({}))
         os.environ["BLUEDOC_PLAN_HOOK"] = "0"
         self.assertEqual(hook.no_reader({}), "BLUEDOC_PLAN_HOOK=0")
+
+    def test_patch_only_env_over_file_over_default_and_the_check_follows(self) -> None:
+        for name in ("acme-orders.bluedoc.json", "acme-orders.bluedoc.history.json"):
+            shutil.copy(EXAMPLES / name, self.tmp.dir / name)
+        built = [str(self.tmp.dir / "acme-orders.bluedoc.json")]
+        self.assertEqual(settings.effective("patchOnly"), (True, "default", None))
+        self.assertIn("is a built bluedoc doc", hook.patch_only(built, self.tmp.dir))
+        write_settings(self.tmp.home, {"patchOnly": False})
+        self.assertEqual(settings.effective("patchOnly"), (False, "file", None))
+        self.assertIsNone(hook.patch_only(built, self.tmp.dir))
+        os.environ["BLUEDOC_PATCH_ONLY"] = "1"
+        self.assertEqual(settings.effective("patchOnly"), (True, "env", "BLUEDOC_PATCH_ONLY=1"))
+        self.assertIsNotNone(hook.patch_only(built, self.tmp.dir))
+        os.environ["BLUEDOC_PATCH_ONLY"] = "0"
+        self.assertEqual(settings.effective("patchOnly"), (False, "env", "BLUEDOC_PATCH_ONLY=0"))
+        self.assertIsNone(hook.patch_only(built, self.tmp.dir))
 
     def test_font_dirs_env_over_file_over_default(self) -> None:
         a, b = self.tmp.dir / "fonts-a", self.tmp.dir / "fonts-b"
@@ -140,7 +158,8 @@ class Routes(unittest.TestCase):
         status, v = self.get("/__bluedoc/settings")
         self.assertEqual(status, 200)
         self.assertEqual(set(v), {"folders", "repos", "frameworks", "presets", "agents", "tools", "server"})
-        self.assertEqual(v["agents"]["planHook"], {"value": True, "source": "default", "env": None})
+        self.assertEqual(v["agents"], {"planHook": {"value": True, "source": "default", "env": None},
+                                       "patchOnly": {"value": True, "source": "default", "env": None}})
         self.assertEqual(v["tools"]["chrome"], {"value": str(self.chrome), "source": "file", "env": None,
                                                 "found": str(self.chrome), "version": "131.0.6778.86"})
         self.assertEqual(v["tools"]["fontDirs"]["source"], "default")
@@ -163,9 +182,21 @@ class Routes(unittest.TestCase):
         r = subprocess.run([sys.executable, str(SCRIPTS / "hook.py"), "ext", "open"], input=json.dumps(req),
                            env=self.tmp.env, capture_output=True, text=True, timeout=60)
         self.assertEqual(json.loads(r.stdout), {"state": "skip", "why": "the plan-mode hook is off in Settings"}, r.stderr)
+        for name in ("acme-orders.bluedoc.json", "acme-orders.bluedoc.history.json"):
+            shutil.copy(EXAMPLES / name, self.tmp.dir / name)
+        edit = {"session_id": "s1", "cwd": str(self.tmp.dir), "hook_event_name": "PreToolUse", "tool_name": "Write",
+                "tool_input": {"file_path": str(self.tmp.dir / "acme-orders.bluedoc.json"), "content": "{}"}}
+        claude_edit = lambda: subprocess.run([sys.executable, str(SCRIPTS / "hook.py"), "claude", "edit"],  # noqa: E731
+                                             input=json.dumps(edit), env=self.tmp.env, capture_output=True, text=True,
+                                             timeout=60).stdout
+        self.assertIn("permissionDecision", claude_edit())
+        status, v = self.post("/__bluedoc/settings", {"patchOnly": False})
+        self.assertEqual(status, 200, v)
+        self.assertEqual(v["agents"]["patchOnly"], {"value": False, "source": "file", "env": None})
+        self.assertEqual(claude_edit(), "", "the patch-only check is off in Settings")
         fdir = self.tmp.dir / "fonts"
         fdir.mkdir()
-        status, v = self.post("/__bluedoc/settings", {"planHook": None, "fontDirs": [str(fdir)]})
+        status, v = self.post("/__bluedoc/settings", {"planHook": None, "patchOnly": None, "fontDirs": [str(fdir)]})
         self.assertEqual(status, 200, v)
         self.assertEqual(v["agents"]["planHook"]["source"], "default")
         self.assertEqual(v["tools"]["fontDirs"]["value"], [str(fdir.resolve())])
@@ -177,6 +208,7 @@ class Routes(unittest.TestCase):
         hosts = self.tmp.dir / "not-a-program"
         hosts.write_text("x", encoding="utf-8")
         for body, error in (({"planHook": "no"}, "planHook: true or false"),
+                            ({"patchOnly": 0}, "patchOnly: true or false"),
                             ({"chrome": str(self.tmp.dir / "nope")}, f"No Chrome at {self.tmp.dir / 'nope'}"),
                             ({"chrome": str(hosts)}, f"{hosts} can't run (it isn't executable)"),
                             ({"fontDirs": [str(self.tmp.dir / "nope")]}, f"No folder at {self.tmp.dir / 'nope'}"),
@@ -192,13 +224,16 @@ class Routes(unittest.TestCase):
     def test_a_setting_the_environment_sets_is_409(self) -> None:
         fdir = TempHome()   # a folder that exists, for BLUEDOC_FONT_DIRS
         self.addCleanup(fdir.cleanup)
-        self.start(BLUEDOC_PLAN_HOOK="0", BLUEDOC_FONT_DIRS=str(fdir.dir))
+        self.start(BLUEDOC_PLAN_HOOK="0", BLUEDOC_PATCH_ONLY="off", BLUEDOC_FONT_DIRS=str(fdir.dir))
         self.assertEqual(self.post("/__bluedoc/settings", {"planHook": True}),
                          (409, {"error": "set by BLUEDOC_PLAN_HOOK in the environment"}))
+        self.assertEqual(self.post("/__bluedoc/settings", {"patchOnly": True}),
+                         (409, {"error": "set by BLUEDOC_PATCH_ONLY in the environment"}))
         self.assertEqual(self.post("/__bluedoc/settings", {"fontDirs": None}),
                          (409, {"error": "set by BLUEDOC_FONT_DIRS in the environment"}))
         _, v = self.get("/__bluedoc/settings")
         self.assertEqual(v["agents"]["planHook"], {"value": False, "source": "env", "env": "BLUEDOC_PLAN_HOOK=0"})
+        self.assertEqual(v["agents"]["patchOnly"], {"value": False, "source": "env", "env": "BLUEDOC_PATCH_ONLY=off"})
         self.assertEqual(v["tools"]["fontDirs"]["env"], f"BLUEDOC_FONT_DIRS={fdir.dir}")
         self.assertEqual(self.file(), {"chrome": str(self.chrome)})
 

@@ -1016,14 +1016,15 @@ Each render validates the doc (errors show as a page), shows its rev as the late
 | Key | Value | Environment | Used by |
 |---|---|---|---|
 | `planHook` | `true` (default) or `false` | `BLUEDOC_PLAN_HOOK` (`0`, `false`, `no`, `off`: off) | the plan-mode hook (`hook.py`): off, every agent shows its own plan dialog |
+| `patchOnly` | `true` (default) or `false` | `BLUEDOC_PATCH_ONLY` (`0`, `false`, `no`, `off`: off) | patch-only edits (`hook.py`): on, agents' edit and write tools can't change a built doc, which takes `build.py patch` instead |
 | `chrome` | Chrome's path, or `null` for the usual places | `BLUEDOC_CHROME` | PDFs, decks, listing exports, `snapshot`, `capture.py` |
 | `fontDirs` | a list of folders, or `null` for this system's | `BLUEDOC_FONT_DIRS` (separated by `:`, `;` on Windows) | `fonts.py` (a listing's caption fonts) |
 
 Routes (GETs need the right `Host`, as `index.json` does; POSTs need the key, as every write does):
 
 - `GET /settings` is the home page, which opens on Settings.
-- `GET /__bluedoc/settings` returns `{folders: [{path, display, docs, exists}], repos: [{name, path, display, exists}], frameworks: [{name, label, version, files, bytes, source}], presets, agents: {planHook}, tools: {chrome: {…, found, version}, fontDirs: {…, system}}, server: {version, code, url, port, portEnv, home, homeDisplay, homeEnv, started, pid}}`. Each setting is `{value, source: env|file|default, env: "NAME=value" or null}`; `presets` are the `add-framework` presets not added yet.
-- `POST /__bluedoc/settings` with any of `{planHook, chrome, fontDirs}` writes them (`null` removes the key) and returns the view above; 409 `{error: "set by BLUEDOC_X in the environment"}` when that variable is set, 400 for a bad value (a Chrome path that isn't there or can't run, a font folder that isn't one).
+- `GET /__bluedoc/settings` returns `{folders: [{path, display, docs, exists}], repos: [{name, path, display, exists}], frameworks: [{name, label, version, files, bytes, source}], presets, agents: {planHook, patchOnly}, tools: {chrome: {…, found, version}, fontDirs: {…, system}}, server: {version, code, url, port, portEnv, home, homeDisplay, homeEnv, started, pid}}`. Each setting is `{value, source: env|file|default, env: "NAME=value" or null}`; `presets` are the `add-framework` presets not added yet.
+- `POST /__bluedoc/settings` with any of `{planHook, patchOnly, chrome, fontDirs}` writes them (`null` removes the key) and returns the view above; 409 `{error: "set by BLUEDOC_X in the environment"}` when that variable is set, 400 for a bad value (a switch that isn't `true` or `false`, a Chrome path that isn't there or can't run, a font folder that isn't one).
 - `POST /__bluedoc/folders` `{add: "~/path"}` or `{remove: "/abs"}` changes `roots.json` (as `add` does: a folder inside a listed one is refused) and returns `{folders}`; 400 `{error: "No folder at ~/path"}`.
 - `POST /__bluedoc/repos` `{remove: "name"}` drops a code-link name from `repos.json` (a build in that repo adds it again) and returns `{repos}`.
 - `POST /__bluedoc/frameworks` `{remove: "name"}` or `{add: "<preset>"}` (fetched as `add-framework <preset>` does) returns `{frameworks, presets}`; 502 when the preset can't be fetched.

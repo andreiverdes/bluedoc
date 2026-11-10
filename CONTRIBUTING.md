@@ -16,6 +16,7 @@ This adds `Signed-off-by: Your Name <you@example.com>` with the name and email f
 
 - Run the tests: `python3 -m unittest discover -s tests`.
 - If you changed `commands/commands.json`, regenerate the command files: `python3 tools/gen_commands.py`. `--check` confirms they're current.
+- The example docs in `skills/bluedoc/examples/` are built, so with the bluedoc plugin installed your agent's edit and write tools refuse them (patch-only edits). Change them with `build.py patch`, or start the agent with `BLUEDOC_PATCH_ONLY=0` to edit one by hand, then rebuild it with `python3 skills/bluedoc/scripts/build.py <doc>`.
 - Issues are tracked with beads (`bd`). See `AGENTS.md`.
 
 ## Name and logo

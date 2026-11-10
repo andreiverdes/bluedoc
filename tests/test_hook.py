@@ -3,18 +3,25 @@ denied with instructions; the same plan stays one doc until the reader approves 
 rewritten plan becomes the next rev; a plan that names a bluedoc doc opens that doc; the guards print nothing; the Bash
 hook allows only the plan-mode hook's own commands. Codex (Stop), Copilot CLI (preToolUse, agentStop) and Antigravity CLI
 (PreToolUse on write_to_file, PreInvocation) from recorded events, and `ext open` / `ext wait` for the omp and pi
-extension."""
+extension.
+
+PatchOnly: the patch-only check behind each agent's edit hook (`claude edit`, `codex edit`, `copilot edit`, `agy edit`,
+`ext edit`), with each agent's event shape: an edit of a built doc that validates is denied with the get/patch
+commands; a new doc, a scaffold not built yet, a doc that doesn't validate, another file and Copilot's `view` go
+through, and so does everything with BLUEDOC_PATCH_ONLY=0 or patchOnly off in settings.json. A patch that names
+several files is denied when any of them is a built doc."""
 from __future__ import annotations
 
 import json
 import re
 import shlex
+import shutil
 import subprocess
 import sys
 import unittest
 from pathlib import Path
 
-from _support import SCRIPTS, Server, TempHome
+from _support import EXAMPLES, SCRIPTS, Server, TempHome
 
 PLAN = """# Add rate limiting
 
@@ -343,6 +350,133 @@ class OtherAgents(PlanHookCase):
         self.assertNotEqual(r.returncode, 0)
         self.assertEqual(len(r.stderr.strip().splitlines()), 1)
         self.assertEqual(r.stdout, "")
+
+
+class PatchOnly(unittest.TestCase):
+    """A temp BLUEDOC_HOME (no server) and a project with a built example doc (acme-orders and its history)."""
+
+    def setUp(self) -> None:
+        self.tmp = TempHome()
+        self.addCleanup(self.tmp.cleanup)
+        for k in ("CI", "BLUEDOC_PATCH_ONLY"):
+            self.tmp.env.pop(k, None)
+        self.project = self.tmp.dir / "acme-shop"
+        self.docs = self.project / "docs"
+        self.docs.mkdir(parents=True)
+        for name in ("acme-orders.bluedoc.json", "acme-orders.bluedoc.history.json"):
+            shutil.copy(EXAMPLES / name, self.docs / name)
+        self.built = self.docs / "acme-orders.bluedoc.json"
+
+    def run_hook(self, agent: str, payload: dict, **env: str) -> str | None:
+        """The denial's reason in the agent's own output shape, or None when the hook let the call through."""
+        r = subprocess.run([sys.executable, str(SCRIPTS / "hook.py"), agent, "edit"], input=json.dumps(payload),
+                           env={**self.tmp.env, **env}, capture_output=True, text=True, timeout=30)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        log = self.tmp.home / "hooks" / "hook.log"
+        self.assertNotIn("failed", log.read_text(encoding="utf-8") if log.exists() else "")
+        out = json.loads(r.stdout) if r.stdout.strip() else None
+        if agent == "ext":
+            return out.get("reason")
+        if out is None:
+            return None
+        if agent in ("claude", "codex"):
+            self.assertEqual((out["hookSpecificOutput"]["hookEventName"], out["hookSpecificOutput"]["permissionDecision"]),
+                             ("PreToolUse", "deny"))
+            return out["hookSpecificOutput"]["permissionDecisionReason"]
+        if agent == "copilot":
+            self.assertEqual(out["permissionDecision"], "deny")
+            return out["permissionDecisionReason"]
+        self.assertEqual(out["decision"], "deny")   # agy
+        return out["reason"]
+
+    @staticmethod
+    def patch(*files: str) -> str:
+        """An apply_patch envelope that updates each file."""
+        return "*** Begin Patch\n" + "".join(f"*** Update File: {f}\n@@\n-old\n+new\n" for f in files) + "*** End Patch\n"
+
+    def events(self, path: Path) -> dict:
+        """Each agent's edit event for one file, as the agent sends it."""
+        rel = str(path.relative_to(self.project)) if path.is_relative_to(self.project) else str(path)
+        return {
+            "claude": {"session_id": "s1", "transcript_path": "", "cwd": str(self.project), "permission_mode": "default",
+                       "hook_event_name": "PreToolUse", "tool_name": "Edit",
+                       "tool_input": {"file_path": str(path), "old_string": "Orders", "new_string": "Acme orders"}},
+            "codex": {"session_id": "c1", "turn_id": "t1", "transcript_path": "", "cwd": str(self.project),
+                      "hook_event_name": "PreToolUse", "model": "gpt-5", "permission_mode": "default",
+                      "tool_name": "apply_patch", "tool_use_id": "call_1", "tool_input": {"command": self.patch(rel)}},
+            "copilot": {"sessionId": "p1", "timestamp": 1760000000000, "cwd": str(self.project), "toolName": "edit",
+                        "toolArgs": {"path": str(path), "old_str": "Orders", "new_str": "Acme orders"}},
+            "agy": {"conversationId": "a1", "workspacePaths": [str(self.project)], "modelName": "gemini-3.8-flash-high",
+                    "stepIdx": 7, "toolCall": {"name": "replace_file_content", "args": {
+                        "TargetFile": str(path), "TargetContent": "Orders", "ReplacementContent": "Acme orders"}}},
+            "ext": {"paths": [rel], "cwd": str(self.project)},
+        }
+
+    def test_a_built_doc_is_denied_with_the_patch_commands(self) -> None:
+        build = str(SCRIPTS / "build.py")
+        for agent, payload in self.events(self.built).items():
+            with self.subTest(agent):
+                why = self.run_hook(agent, payload)
+                self.assertIsNotNone(why)
+                self.assertTrue(why.startswith("acme-orders.bluedoc.json is a built bluedoc doc"), why)
+                for line in (f"python3 {build} get {self.built.resolve()}", f"python3 {build} get {self.built.resolve()} <key>",
+                             f"python3 {build} patch {self.built.resolve()} <key> --set a/b=v --change \"why\"",
+                             f"python3 {build} schema <block>"):
+                    self.assertIn(line, why)
+        self.assertEqual(self.run_hook("claude", {**self.events(self.built)["claude"], "tool_name": "Write",
+                                                  "tool_input": {"file_path": str(self.built), "content": "{}"}})[:24],
+                         "acme-orders.bluedoc.json")
+
+    def test_new_docs_scaffolds_and_invalid_docs_go_through(self) -> None:
+        scaffold = self.docs / "acme-returns.bluedoc.json"
+        r = self.tmp.run("build.py", "new", "plan", scaffold, "--title", "Acme returns")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        broken = self.docs / "acme-broken.bluedoc.json"
+        doc = json.loads(self.built.read_text(encoding="utf-8"))
+        doc["meta"]["type"] = "acme"   # ERROR doc.meta.type
+        broken.write_text(json.dumps(doc), encoding="utf-8")
+        shutil.copy(self.docs / "acme-orders.bluedoc.history.json", self.docs / "acme-broken.bluedoc.history.json")
+        cases = {"a new doc": self.docs / "acme-new.bluedoc.json", "a scaffold not built yet": scaffold,
+                 "a doc that doesn't validate": broken, "another file": self.project / "src" / "orders.ts"}
+        for name, path in cases.items():
+            for agent, payload in self.events(path).items():
+                with self.subTest(name, agent=agent):
+                    self.assertIsNone(self.run_hook(agent, payload))
+
+    def test_the_off_switch_and_the_setting_let_every_edit_through(self) -> None:
+        for agent, payload in self.events(self.built).items():
+            with self.subTest("BLUEDOC_PATCH_ONLY=0", agent=agent):
+                self.assertIsNone(self.run_hook(agent, payload, BLUEDOC_PATCH_ONLY="0"))
+        (self.tmp.home / "settings.json").write_text(json.dumps({"patchOnly": False}), encoding="utf-8")
+        for agent, payload in self.events(self.built).items():
+            with self.subTest("settings.json", agent=agent):
+                self.assertIsNone(self.run_hook(agent, payload))
+        with self.subTest("the variable wins over the file"):
+            self.assertIsNotNone(self.run_hook("claude", self.events(self.built)["claude"], BLUEDOC_PATCH_ONLY="1"))
+
+    def test_a_patch_is_denied_when_any_file_is_a_built_doc(self) -> None:
+        patch = self.patch("src/orders.ts", "docs/acme-orders.bluedoc.json")
+        codex = {**self.events(self.built)["codex"], "tool_input": {"command": patch}}
+        self.assertIn("acme-orders.bluedoc.json", self.run_hook("codex", codex))
+        self.assertIsNone(self.run_hook("codex", {**codex, "tool_input": {"command": self.patch("src/orders.ts")}}))
+        moved = "*** Begin Patch\n*** Update File: src/orders.ts\n*** Move to: docs/acme-orders.bluedoc.json\n*** End Patch\n"
+        self.assertIsNotNone(self.run_hook("codex", {**codex, "tool_input": {"command": moved}}), "a move onto the doc")
+        # Copilot's apply_patch: the patch as the arguments themselves, or as {input}
+        copilot = {"sessionId": "p1", "timestamp": 1760000000000, "cwd": str(self.project), "toolName": "apply_patch"}
+        self.assertIsNotNone(self.run_hook("copilot", {**copilot, "toolArgs": patch}))
+        self.assertIsNotNone(self.run_hook("copilot", {**copilot, "toolArgs": {"input": patch}}))
+        self.assertIsNone(self.run_hook("copilot", {**copilot, "toolArgs": self.patch("src/orders.ts")}))
+        ext = {"paths": ["src/orders.ts", "docs/acme-orders.bluedoc.json"], "cwd": str(self.project)}
+        self.assertIsNotNone(self.run_hook("ext", ext))
+
+    def test_copilot_reads_through_str_replace_editor_view(self) -> None:
+        event = {"sessionId": "p1", "timestamp": 1760000000000, "cwd": str(self.project), "toolName": "str_replace_editor"}
+        self.assertIsNone(self.run_hook("copilot", {**event, "toolArgs": {"command": "view", "path": str(self.built)}}))
+        self.assertIsNotNone(self.run_hook("copilot", {**event, "toolArgs": json.dumps(
+            {"command": "str_replace", "path": str(self.built), "old_str": "Orders", "new_str": "Acme orders"})}))
+        self.assertIsNotNone(self.run_hook("copilot", {**event, "toolName": "create",
+                                                       "toolArgs": {"path": str(self.built), "file_text": "{}"}}))
+
 
 
 if __name__ == "__main__":

@@ -4,15 +4,21 @@
   hook.py claude plan    Claude Code PermissionRequest on ExitPlanMode: the plan-mode hook
   hook.py claude bash    Claude Code PreToolUse on Bash: lets the plan-mode hook's own serve.py / build.py commands run
                          unprompted
+  hook.py claude edit    Claude Code PreToolUse on Write|Edit|MultiEdit: the patch-only check (hooks/hooks.json)
   hook.py codex plan     Codex Stop: the plan-mode hook for a turn that ends with a <proposed_plan> (codex/hooks.json)
+  hook.py codex edit     Codex PreToolUse on apply_patch: the patch-only check (codex/hooks.json)
   hook.py copilot plan   Copilot CLI preToolUse on exit_plan_mode: the plan-mode hook (com.github.copilot/hooks/hooks.json)
   hook.py copilot stop   Copilot CLI agentStop: a turn that ends after the reader approved, before exit_plan_mode,
                          goes on with a prompt to call it (com.github.copilot/hooks/hooks.json)
+  hook.py copilot edit   Copilot CLI preToolUse on its edit tools: the patch-only check (com.github.copilot/hooks/hooks.json)
   hook.py agy plan       Antigravity CLI PreToolUse on write_to_file: the plan-mode hook (antigravity/hooks.json)
   hook.py agy note       Antigravity CLI PreInvocation: hands the approval note to the model (antigravity/hooks.json)
+  hook.py agy edit       Antigravity CLI PreToolUse on its write and replace tools: the patch-only check
+                         (antigravity/hooks.json)
   hook.py ext open       for agent extensions (omp, pi): stdin {text, planPath, cwd, sessionId, agent}; prints open_plan's
                          result as JSON; exits non-zero with a one-line error on stderr when it fails
   hook.py ext wait DOC   blocks on `serve.py wait DOC --kind any`, then prints {kind: approval|changes, md, rev?}
+  hook.py ext edit       the patch-only check for agent extensions: stdin {paths, cwd}; prints {reason} or {}
 
 The plan-mode hook (open_plan, shared by every agent). When the agent finishes a plan, the hook shows it as a bluedoc plan
 page and hands control back to the agent, which waits for the reader with `serve.py wait` as it does for any bluedoc doc:
@@ -30,9 +36,15 @@ bypassPermissions mode, and on any error (logged to $BLUEDOC_HOME/hooks/hook.log
 
 Per agent and session, $BLUEDOC_HOME/hooks/<agent>/<session_id>.json records {doc, sha, url}: the doc, the sha256 of the
 plan text it was imported or opened for, and its URL. An approval removes it, so the session's next plan starts a new doc.
+
+Patch-only edits (patch_only, shared by every agent): an edit or write tool call on a built doc (a *.bluedoc.json with
+its .bluedoc.history.json) that validates is refused with the `build.py get` / `patch` commands to use instead. A new
+doc, a scaffold not built yet and a doc that doesn't validate stay open to edits; the patchOnly setting off (env
+BLUEDOC_PATCH_ONLY=0, else Settings' switch) and any error let every edit through. Shell commands are not checked.
 """
 from __future__ import annotations
 
+import contextlib
 import datetime as dt
 import hashlib
 import json
@@ -514,9 +526,134 @@ def ext_wait(args: list[str]) -> int:
     return 0
 
 
-HANDLERS = {("claude", "plan"): claude_plan, ("claude", "bash"): claude_bash, ("codex", "plan"): codex_plan,
-            ("copilot", "plan"): copilot_plan, ("copilot", "stop"): copilot_stop, ("agy", "plan"): agy_plan,
-            ("agy", "note"): agy_note, ("ext", "open"): ext_open, ("ext", "wait"): ext_wait}
+# ── Patch-only edits ─────────────────────────────────────────────────────────────────────────────────────────────────
+PATCH_FILE = re.compile(r"^\*\*\* (?:Add File|Update File|Delete File|Move to): (.+?)[ \t]*$", re.M)
+
+
+def patch_files(text) -> list[str]:
+    """The files an apply_patch envelope writes: its `*** Add File:`, `*** Update File:`, `*** Delete File:` and
+    `*** Move to:` headers (Codex's and Copilot CLI's apply_patch)."""
+    return PATCH_FILE.findall(text) if isinstance(text, str) else []
+
+
+def refusal(doc: Path) -> str:
+    """What an agent reads when the patch-only check refuses its edit of doc: the commands that change it instead."""
+    build, d = shlex.quote(str(HERE / "build.py")), shlex.quote(str(doc))
+    return (f"{doc.name} is a built bluedoc doc: change it with build.py patch, not by hand (patch-only edits).\n"
+            f"  python3 {build} get {d}   # every object's key\n"
+            f"  python3 {build} get {d} <key>   # one object\n"
+            f"  python3 {build} patch {d} <key> --set a/b=v --change \"why\"   # rev+1, recorded\n"
+            f"  python3 {build} schema <block>   # a block's fields")
+
+
+def patch_only(paths: list, cwd: Path) -> str | None:
+    """The patch-only check: the refusal for the first of paths (relative ones from cwd) that is a built, valid doc,
+    else None. Built: a *.bluedoc.json whose <name>.bluedoc.history.json exists (build and patch record it for a doc
+    with meta.rev).
+    Valid: build.validate finds no error but a storelisting's store-rule ones, which patch fixes one at a time.
+    Everything else goes through: a new doc or a scaffold not built yet, a doc that doesn't validate (patch refuses to
+    write one with an error, so it can't fix it), any path when the patchOnly setting is off (settings.py: env
+    BLUEDOC_PATCH_ONLY=0, else Settings' switch in $BLUEDOC_HOME/settings.json), and any error here (logged to
+    hook.log)."""
+    try:
+        docs = [p.strip() for p in paths if isinstance(p, str) and p.strip().endswith(".bluedoc.json")]
+        if not docs or not settings.effective("patchOnly")[0]:
+            return None
+        import build
+        for raw in docs:
+            doc = Path(raw).expanduser()
+            doc = (doc if doc.is_absolute() else cwd / doc).resolve()
+            if not doc.is_file() or not build.history_path(doc).is_file():
+                continue
+            try:
+                data = json.loads(doc.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                continue   # not JSON: not a valid doc
+            with contextlib.redirect_stdout(sys.stderr):   # stdout is the hook's answer
+                blocking = build.validate(data, doc, write_cache=False).blocking
+            if not blocking:
+                return refusal(doc)
+    except Exception:
+        log(f"patch-only check failed:\n{traceback.format_exc()}")
+    return None
+
+
+def event_cwd(event: dict) -> Path:
+    return Path(event.get("cwd") or os.getcwd())
+
+
+def deny_tool_use(why: str) -> int:
+    """The PreToolUse denial Claude Code and Codex read."""
+    return emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
+                                        "permissionDecisionReason": why}})
+
+
+def claude_edit(event: dict) -> int:
+    """Claude Code PreToolUse on Write|Edit|MultiEdit: the patch-only check on tool_input.file_path (absolute: Claude
+    Code expands it before hooks run). Schema: https://code.claude.com/docs/en/hooks (PreToolUse input tool_input,
+    output hookSpecificOutput.permissionDecision deny + permissionDecisionReason, which Claude reads)."""
+    why = patch_only([(event.get("tool_input") or {}).get("file_path")], event_cwd(event))
+    return deny_tool_use(why) if why else 0
+
+
+def codex_edit(event: dict) -> int:
+    """Codex PreToolUse on apply_patch: the patch-only check on the files the patch in tool_input.command names
+    (patch_files; relative to cwd). Schema: https://learn.chatgpt.com/docs/hooks (PreToolUse: `Bash and apply_patch use
+    tool_input.command`; hookSpecificOutput.permissionDecision deny + permissionDecisionReason)."""
+    why = patch_only(patch_files((event.get("tool_input") or {}).get("command")), event_cwd(event))
+    return deny_tool_use(why) if why else 0
+
+
+def copilot_edit(event: dict) -> int:
+    """Copilot CLI preToolUse on edit|create|str_replace|str_replace_editor|apply_patch: the patch-only check on the
+    files the call writes. toolArgs (an object or its JSON text; tool_input in the snake_case PreToolUse form): edit,
+    create and str_replace take path, str_replace_editor too (except its read-only `view` command), and apply_patch a
+    patch, as the text itself or {input} or {patch} (patch_files; relative to cwd). Tool shapes read from Copilot CLI
+    1.0.96's cli-main.js; schema: https://docs.github.com/en/copilot/reference/hooks-reference (output
+    permissionDecision deny + permissionDecisionReason, shown to the agent)."""
+    tool = event.get("toolName") or event.get("tool_name")
+    args = event.get("toolArgs") if "toolArgs" in event else event.get("tool_input")
+    if isinstance(args, str):
+        try:
+            args = json.loads(args)
+        except ValueError:
+            pass   # apply_patch's patch text itself
+    if tool == "apply_patch":
+        paths = patch_files(args if isinstance(args, str) else (args.get("input") or args.get("patch"))
+                            if isinstance(args, dict) else None)
+    else:
+        paths = [args.get("path")] if isinstance(args, dict) and args.get("command") != "view" else []
+    why = patch_only(paths, event_cwd(event))
+    return emit({"permissionDecision": "deny", "permissionDecisionReason": why}) if why else 0
+
+
+def agy_edit(event: dict) -> int:
+    """Antigravity CLI PreToolUse on write_to_file|replace_file_content|multi_replace_file_content|edit_file: the
+    patch-only check on toolCall.args.TargetFile (an absolute path in each; agy 1.4.0's tool schemas). Output decision
+    deny + reason, which reaches the model as the tool error (docs/hooks.md, see agy_plan)."""
+    call = event.get("toolCall") or {}
+    args = call.get("args") if isinstance(call, dict) else None
+    roots = event.get("workspacePaths") or []
+    cwd = Path(roots[0]) if roots and isinstance(roots[0], str) else Path.home()
+    why = patch_only([args.get("TargetFile")] if isinstance(args, dict) else [], cwd)
+    return emit({"decision": "deny", "reason": why}) if why else 0
+
+
+def ext_edit(args: list[str]) -> int:
+    """hook.py ext edit: stdin {paths, cwd}, the files an omp or pi edit tool call writes; prints {reason} when the
+    patch-only check refuses one, else {}."""
+    req = json.load(sys.stdin)
+    paths = req.get("paths") if isinstance(req, dict) else None
+    why = patch_only(paths if isinstance(paths, list) else [], Path(req.get("cwd") or os.getcwd()))
+    print(json.dumps({"reason": why} if why else {}))
+    return 0
+
+
+HANDLERS = {("claude", "plan"): claude_plan, ("claude", "bash"): claude_bash, ("claude", "edit"): claude_edit,
+            ("codex", "plan"): codex_plan, ("codex", "edit"): codex_edit, ("copilot", "plan"): copilot_plan,
+            ("copilot", "stop"): copilot_stop, ("copilot", "edit"): copilot_edit, ("agy", "plan"): agy_plan,
+            ("agy", "note"): agy_note, ("agy", "edit"): agy_edit, ("ext", "open"): ext_open, ("ext", "wait"): ext_wait,
+            ("ext", "edit"): ext_edit}
 
 
 def main(argv: list[str]) -> int:

@@ -1,11 +1,13 @@
 """bluedoc's settings, in $BLUEDOC_HOME/settings.json (the home page's Settings writes it; a missing key is its default):
 
-  planHook  true | false       the plan-mode hook opens agents' plans as bluedoc pages (hook.py); env BLUEDOC_PLAN_HOOK
-                               (0, false, no or off turn it off)
-  chrome    "<path>" | null    Chrome or Chromium for PDFs, decks, snapshots and captures (serve.find_chrome); null: the
-                               usual places; env BLUEDOC_CHROME
-  fontDirs  ["<dir>"] | null   the font folders fonts.py scans instead of this system's; env BLUEDOC_FONT_DIRS
-                               (os.pathsep-separated)
+  planHook   true | false       the plan-mode hook opens agents' plans as bluedoc pages (hook.py); env BLUEDOC_PLAN_HOOK
+                                (0, false, no or off turn it off)
+  patchOnly  true | false       patch-only edits: agents' edit tools can't change a built doc (hook.py patch_only); env
+                                BLUEDOC_PATCH_ONLY (0, false, no or off turn it off)
+  chrome     "<path>" | null    Chrome or Chromium for PDFs, decks, snapshots and captures (serve.find_chrome); null: the
+                                usual places; env BLUEDOC_CHROME
+  fontDirs   ["<dir>"] | null   the font folders fonts.py scans instead of this system's; env BLUEDOC_FONT_DIRS
+                                (os.pathsep-separated)
 
 An environment variable that is set (not empty) wins over the file, the file over the default. Python 3.9+ standard
 library only."""
@@ -15,8 +17,10 @@ import json
 import os
 from pathlib import Path
 
-ENV = {"planHook": "BLUEDOC_PLAN_HOOK", "chrome": "BLUEDOC_CHROME", "fontDirs": "BLUEDOC_FONT_DIRS"}
-DEFAULTS: dict = {"planHook": True, "chrome": None, "fontDirs": None}
+ENV = {"planHook": "BLUEDOC_PLAN_HOOK", "patchOnly": "BLUEDOC_PATCH_ONLY", "chrome": "BLUEDOC_CHROME",
+       "fontDirs": "BLUEDOC_FONT_DIRS"}
+DEFAULTS: dict = {"planHook": True, "patchOnly": True, "chrome": None, "fontDirs": None}
+SWITCHES = ("planHook", "patchOnly")   # true | false; the environment's 0, false, no or off is false
 OFF = {"0", "false", "no", "off"}
 
 
@@ -30,7 +34,7 @@ def settings_file() -> Path:
 
 def valid(name: str, value) -> bool:
     """Whether value has the shape settings.json keeps for name (null is never kept: it is the default)."""
-    if name == "planHook":
+    if name in SWITCHES:
         return isinstance(value, bool)
     if name == "chrome":
         return isinstance(value, str) and value != ""
@@ -66,7 +70,7 @@ def save(changes: dict) -> dict:
 
 def env_value(name: str, raw: str):
     """The setting an environment variable's text gives."""
-    if name == "planHook":
+    if name in SWITCHES:
         return raw.strip().lower() not in OFF
     if name == "fontDirs":
         return [d for d in raw.split(os.pathsep) if d]

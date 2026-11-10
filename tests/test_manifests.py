@@ -25,11 +25,13 @@ class ManifestLayout(unittest.TestCase):
         if root.exists():
             self.assertFalse(str(manifest("plugin.json").get("$schema", "")).startswith(AGENT_PLUGINS_SCHEMA))
 
-    def test_codex_manifest_wires_skills_and_the_stop_hook(self):
+    def test_codex_manifest_wires_skills_and_hooks(self):
         m = manifest(".codex-plugin/plugin.json")
         self.assertTrue((REPO / m["skills"] / "bluedoc" / "SKILL.md").is_file())
         hooks = manifest(m["hooks"])["hooks"]
         self.assertIn("codex plan", hooks["Stop"][0]["hooks"][0]["command"])
+        self.assertEqual(hooks["PreToolUse"][0]["matcher"], "apply_patch")   # patch-only edits
+        self.assertIn("codex edit", hooks["PreToolUse"][0]["hooks"][0]["command"])
 
     def test_copilot_manifest_wires_skills_commands_and_hooks(self):
         m = manifest(".plugin/plugin.json")
@@ -40,6 +42,8 @@ class ManifestLayout(unittest.TestCase):
         self.assertIn("copilot plan", hooks["preToolUse"][0]["bash"])
         # after an approval Copilot ends its turn without exit_plan_mode unless agentStop prompts it (beta19, beta20)
         self.assertIn("copilot stop", hooks["agentStop"][0]["bash"])
+        self.assertEqual(hooks["preToolUse"][1]["matcher"], "edit|create|str_replace|str_replace_editor|apply_patch")
+        self.assertIn("copilot edit", hooks["preToolUse"][1]["bash"])
 
     def test_component_paths_stay_in_the_repo(self):
         for rel in (".codex-plugin/plugin.json", ".plugin/plugin.json"):

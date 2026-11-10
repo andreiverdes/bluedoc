@@ -7,6 +7,12 @@
         "matcher": "exit_plan_mode",
         "bash": "python3 \"${PLUGIN_ROOT}/skills/bluedoc/scripts/hook.py\" copilot plan",
         "timeoutSec": 120
+      },
+      {
+        "type": "command",
+        "matcher": "edit|create|str_replace|str_replace_editor|apply_patch",
+        "bash": "python3 \"${PLUGIN_ROOT}/skills/bluedoc/scripts/hook.py\" copilot edit",
+        "timeoutSec": 10
       }
     ],
     "agentStop": [

@@ -1259,6 +1259,7 @@ function SettingsPage({ readOnly, reduce, toast, onFolders }) {
   };
 
   const ph = view.agents.planHook, phEnv = ph.source === 'env';
+  const po = view.agents.patchOnly, poEnv = po.source === 'env';
   const ch = view.tools.chrome, chEnv = ch.source === 'env', chNow = ch.value || ch.found || '', chText = chrome ?? chNow;
   const saveChrome = () => {
     const t = chText.trim();
@@ -1319,7 +1320,12 @@ function SettingsPage({ readOnly, reduce, toast, onFolders }) {
             e(Controls, null, phEnv && e(EnvChip, { env: ph.env }),
               // children: null, else HorizonUI's Switch, given only presentational props, draws its demo label
               e(Switch, { checked: !!ph.value, disabled: off || phEnv, 'aria-label': 'Plan mode opens plans here', children: null,
-                onCheckedChange: v => run('plan', '/__bluedoc/settings', { planHook: v }, j => { keep(j); toast(`Saved · Plan mode ${v ? 'on' : 'off'}`); }) })))),
+                onCheckedChange: v => run('plan', '/__bluedoc/settings', { planHook: v }, j => { keep(j); toast(`Saved · Plan mode ${v ? 'on' : 'off'}`); }) }))),
+          e(StRow, { title: 'Patch-only edits', className: poEnv ? 'lk' : '',
+            sub: e('span', null, poEnv ? envLine(po, po.value ? 'On' : 'Off') : e(F, null, 'Agents change a built doc with ', e(Code, null, 'build.py patch'), '; hand edits are refused.')) },
+            e(Controls, null, poEnv && e(EnvChip, { env: po.env }),
+              e(Switch, { checked: !!po.value, disabled: off || poEnv, 'aria-label': 'Patch-only edits', children: null,
+                onCheckedChange: v => run('patch', '/__bluedoc/settings', { patchOnly: v }, j => { keep(j); toast(`Saved · Patch-only edits ${v ? 'on' : 'off'}`); }) })))),
         e(StSection, { id: 'tools', title: 'Tools', lead: 'Programs and folders bluedoc\'s scripts use.' },
           e(StRow, { title: 'Chrome', className: chEnv ? 'lk' : '',
             sub: e(F, null, e('span', null, chEnv ? envLine(ch) : 'For PDFs, decks, website snapshots and screen captures.'),

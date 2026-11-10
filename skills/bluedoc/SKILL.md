@@ -27,7 +27,7 @@ You write one `*.bluedoc.json`; the local server renders it as a page (blueprint
 | `docs` | `types/docs.md` | Architecture, walkthrough, runbook, setup guide, change proposal. |
 | `other` | `types/other.md` | Anything else: status page, report, inventory. |
 
-After `new`, never read or hand-edit the JSON: `build.py get <doc>` lists every key, `build.py get <doc> <key>` prints one object, `build.py patch <doc> <key> --set a/b/c=v` changes it, `build.py schema <block>` shows a block's fields.
+After `new`, never read or hand-edit the JSON: `build.py get <doc>` lists every key, `build.py get <doc> <key>` prints one object, `build.py patch <doc> <key> --set a/b/c=v` changes it, `build.py schema <block>` shows a block's fields. Once the doc has been built, bluedoc's hook refuses edit and write tools on it (patch-only edits).
 
 ## Replies
 
