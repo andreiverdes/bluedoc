@@ -576,10 +576,10 @@ class FindingsView(ChromePage):
         a.ev("BP.findingsView('pr-415', 'merged')")
         self.assertEqual(a.ev(f"{PARTS}({mrow})"), ["bp-cl-row", "pv-more", "bd-dets", "bd-mcode", "bp-opts", "bp-note"])
         a.ev("BP.findingsView('pr-415', 'checklist')")
-        # a pick leaves it open; a click on its title closes all of it, answered or not: ✓ and the pick show
+        # a pick leaves it open, and its head shows ✓ and the pick, open or closed; a click on its title closes all of it
         a.ev(f"{li}.querySelector('.bp-opt[data-id=fix] .pk').click()")
         self.assertTrue(a.ev(f"{li}.classList.contains('open')"), "a pick closed the finding")
-        self.assertFalse(a.ev(f"{li}.querySelector('.pv-ok').checkVisibility()"), "an open finding shows its pick in the head")
+        self.assertTrue(a.ev(f"{li}.querySelector('.pv-ok').checkVisibility()"), "an open answered finding hides its pick")
         a.ev(f"{li}.querySelector('.bp-cl-head').click()")
         self.assertEqual(a.ev(f"[{PARTS}({li}), {li}.querySelector('.pv-ok').checkVisibility(), {li}.querySelector('.pv-ok').textContent]"), [["bp-cl-row"], True, "Fix in PR"])
         a.ev("BP.findingsView('pr-415', 'merged')")

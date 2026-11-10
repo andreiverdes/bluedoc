@@ -905,8 +905,6 @@ img.bp-cmpr-img { cursor: zoom-in; }
 .bd-key.fold .car { width: 12px; height: 12px; color: var(--fg-subtle); transition: rotate .18s var(--ease); }
 .bd-key.fold[aria-expanded="true"] .car { rotate: 180deg; }
 .bd-annb.menu { position: absolute; left: 38px; bottom: calc(100% + 8px); display: none; animation: bd-annb-in .16s var(--ease); }
-/* while Interact is on (the board's top bar) the tools pause: their keys dim */
-.bd-anntb.paused :is(.bd-key.tool, .bd-key.fold, .bd-key[data-m="link"], .bd-key[data-m="frame"]) { opacity: .45; }
 /* pen colours and widths: wells, as the dock's keys sit in */
 .bd-annb .sw, .bd-wt { display: inline-flex; align-items: center; height: 34px; border-radius: 11px; background: var(--hk-down); box-shadow: var(--shadow-well); }
 .bd-annb .sw { gap: 6px; padding: 0 9px; }
@@ -1552,7 +1550,7 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .pv-ok { display: none; flex: none; align-items: center; gap: 4px; max-width: 40%; margin-top: 2px; padding: 2px 8px 2px 6px; border-radius: 999px; font: 600 11.5px/1.4 var(--sans); color: var(--ok-fg); background: var(--ok-tint); }
 .pv-ok > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pv-ok .bd-ic { flex: none; width: 13px; height: 13px; stroke-width: 2.4; }
-.done:not(.open) > .bp-cl-row .pv-ok { display: inline-flex; }
+.done > .bp-cl-row .pv-ok { display: inline-flex; }   /* answered: ✓ the pick, open or closed */
 .bp-cl-item.fd.open > .bp-cl-row .bp-cl-noteic { display: none; }
 :is(.bp-cl-item.fd, .bd-mrow).done:not(.open) > .bp-cl-row .bp-cl-text { color: var(--fg-muted); }
 :is(.bp-cl-item.fd, .bd-mrow).done.open > .bp-cl-row .bp-cl-text { color: var(--fg); }
@@ -1984,7 +1982,7 @@ i.warn[hidden] { display: none; }
 .bd-ab.ghost { opacity: .6; }
 .bd-ab.ghost .bd-ab-scr { outline: calc(2px / var(--k)) dashed var(--risk); }
 .bd-ab-fr { position: absolute; left: 0; top: 0; display: block; border: 0; background: #fff; pointer-events: none; }
-.bd-board:is([data-m="interact"], [data-m="point"], [data-m="select"], [data-m="link"]) .bd-ab-fr, :is(.bd-pres, .bd-cmpv) .bd-ab-fr { pointer-events: auto; }
+.bd-board:is([data-m="point"], [data-m="select"], [data-m="link"]) .bd-ab-fr, :is(.bd-pres, .bd-cmpv) .bd-ab-fr { pointer-events: auto; }
 /* links: connectors over the board, faint at rest; the selected (or hovered) screen's arrows, in and out, at full
    strength with their labels. Screens never dim. Widths are in screen px (÷ --k), so arrows read the same at every zoom. */
 .bd-ab-t .rch { padding: 0 .5em; border-radius: .45em; background: var(--accent-tint); color: var(--accent-fg); font-variant-numeric: tabular-nums; }
@@ -1993,7 +1991,7 @@ i.warn[hidden] { display: none; }
 .bd-lnks.off, .bd-lnk-lbls.off { display: none; }
 .bd-lnk .ln { fill: none; stroke: var(--fg-subtle); stroke-width: calc(1.5px / var(--k)); stroke-linejoin: round; opacity: .45; }
 .bd-lnk .hit { fill: none; stroke: transparent; stroke-width: calc(14px / var(--k)); pointer-events: stroke; cursor: pointer; }
-.bd-board:is([data-m="interact"], [data-m="select"], [data-m="draw"], [data-m="region"], [data-m="frame"]) .bd-lnk :is(.hit, .bd-lnk-dot) { pointer-events: none; }
+.bd-board:is([data-m="select"], [data-m="draw"], [data-m="region"], [data-m="frame"]) .bd-lnk :is(.hit, .bd-lnk-dot) { pointer-events: none; }
 .bd-lnk.k-modal .ln { stroke-dasharray: calc(7px / var(--k)) calc(4px / var(--k)); }
 .bd-lnk.k-tab .ln { stroke-dasharray: 0 calc(5px / var(--k)); stroke-linecap: round; }
 .bd-lnk:is(.lit, .sel, .hov) .ln { stroke: var(--accent); stroke-width: calc(2px / var(--k)); opacity: 1; }
@@ -2208,10 +2206,6 @@ html.bd-space .bd-board .bd-ab-fr { pointer-events: none; }
 .bd-btb .zl { min-width: 38px; text-align: center; font: 500 12px var(--mono); font-variant-numeric: tabular-nums; color: var(--fg-muted); }
 .bd-btb .bd-groove { height: 20px; margin: 0 1px; }
 .bd-btb .bd-sg button { height: 24px; padding: 0 8px; }
-/* Interact (I): a toggle beside Present, filled while on */
-.bd-btb .bd-tbtn.play { display: inline-flex; align-items: center; gap: 6px; padding: 0 10px 0 8px; }
-.bd-btb .bd-tbtn.play .bd-ic { width: 13px; height: 13px; fill: currentColor; stroke: none; }
-.bd-btb .bd-tbtn.play[aria-pressed="true"] { color: #fff; background: var(--accent-solid); box-shadow: none; }
 /* a presentation's Export to…: the toolbar's primary key, filled in the accent like the tray's Request changes */
 .bd-btb .bd-tbtn.bd-expb.pri, .bd-btb .bd-tbtn.bd-expb.pri:hover:not(:disabled) { color: #fff;
   background: var(--accent-solid) linear-gradient(180deg, color-mix(in oklch, var(--accent-solid), white 8%), var(--accent-solid)); box-shadow: var(--shadow-fill); }
@@ -7223,7 +7217,7 @@ async function saveBlob(r, name) {
 
 function renderBoard(b) {
   const abs = boardAbs(b), themes = (Array.isArray(b.themes) ? b.themes : []).filter(t => t && typeof t.id === 'string');
-  const B = BOARD = { b, abs, k: 1, tx: 0, ty: 0, mode: 'view', tool: 'view', interact: false, sel: null, sketch: false, reduced: REDUCE, paused: false, theme: null, touched: false, lp: false,
+  const B = BOARD = { b, abs, k: 1, tx: 0, ty: 0, mode: 'view', sel: null, sketch: false, reduced: REDUCE, paused: false, theme: null, touched: false, lp: false,
     frames: new Map(), ghosts: new Map(), twins: new Map(), twin: false, live: new Set(), rqs: new Map(), rq: null, variants: null };
   const vp = h('div', { class: 'bd-bvp', style: `--gut: ${VAR_GUT}px` });
   const stage = h('div', { class: 'bd-board', tabindex: 0, role: 'region', 'data-m': 'view',
@@ -7495,7 +7489,7 @@ function renderBoard(b) {
   const deck = abs.filter(a => devOf(a) === 'slide').sort((a, c) => pos.get(a.id).y - pos.get(c.id).y || pos.get(a.id).x - pos.get(c.id).x);
 
   /* frames: at most LIVE_MAX at a time, the screens nearest the middle of the view; the others show their outline */
-  const frameMode = () => B.mode === 'link' ? 'point' : ['interact', 'point', 'select', 'draw', 'region'].includes(B.mode) ? B.mode : 'view';
+  const frameMode = () => B.mode === 'link' ? 'point' : ['point', 'select', 'draw', 'region'].includes(B.mode) ? B.mode : 'view';
   const themeOf = id => themes.find(t => t.id === id) || null;
   const tokensMsg = () => { const t = themeOf(B.theme); return { bd: 'tokens', theme: t && t.tokens && typeof t.tokens === 'object' ? t.tokens : null, motion: b.motion && typeof b.motion === 'object' ? b.motion : null }; };
   const viewMsg = x => ({ bd: 'view', sketch: B.sketch || x.a.fidelity === 'sketch', reduced: B.reduced, paused: B.paused });
@@ -7641,19 +7635,16 @@ function renderBoard(b) {
       if (r) { x.pendingSec = null; showSection(x, r); }
       return;
     }
-    // a tap in a screen: its named elements, innermost first, followed only through this screen's links (drafts
-    // included), so a forged name moves nothing
+    // a tap in a presented screen: its named elements, innermost first, followed only through this screen's links
+    // (drafts included), so a forged name moves nothing; a screen on the board never runs its taps
     if (d.bd === 'nav') {
+      if (x.role !== 'pres' || !pres) return;
       let l = null;
-      if (x.twin) return;
       for (const n of Array.isArray(d.names) ? d.names.slice(0, 8) : []) if (typeof n === 'string' && NAME_RE.test(n) && (l = linkFor(x.a.id, n))) break;
-      if (!l) return;
-      if (x.role === 'pres') { if (pres) pres.tap(x, l); }
-      else if (!x.role && B.mode === 'interact' && l.to) { select(l.to); panTo(l.to); }
+      if (l) pres.tap(x, l);
       return;
     }
     if (x.role) return;
-    if (d.bd === 'key' && d.k === 'escape') { if (B.interact) B.setInteract(false); return; }   // Esc in a screen in Interact
     const what = [secTitle(x, d.sec), str(d.name, 60) || str(d.tag, 30)].filter(Boolean).join(' › ');
     if (d.bd === 'hover') { showHov(x, d.sel == null ? null : { rect: rectOf(d.rect), what }); return; }
     if (x.twin) return;   // the other revision's page in compare: nothing to pin or link
@@ -8074,10 +8065,6 @@ function renderBoard(b) {
   // a presentation presents from its dock's Present (B.present); its toolbar has no Present, Variants or Flows
   const presBtn = !IS_DECK && tbtn('present', presTip, () => present(B.sel));
   B.present = () => present(B.sel);
-  // Interact (I): a toggle after Present. While on, the screens take the clicks, the typing and their own scrolling,
-  // whatever the dock's tool, and the tools pause; Esc turns it off
-  const interBtn = h('button', { type: 'button', class: 'bd-tbtn txt play', 'aria-pressed': 'false', 'aria-keyshortcuts': 'I',
-    title: `Interact (I): click, type and scroll inside the ${SCREEN}s; the dock's tools pause (Esc ends it)`, onclick: () => B.setInteract(!B.interact) }, ic('play'), 'Interact');
   // Export to… (here, a presentation's primary key, and in Present's bar): a menu of the deck's exports at the revision shown and the theme picked
   // (GET /__bluedoc/deck). HTML: one file that plays anywhere, offline (serve.py deck_html). PDF: one 16:9 page per
   // slide, without speaker notes, that the server prints with headless Chrome (deck_pdf); when it has no Chrome (501),
@@ -8146,12 +8133,11 @@ function renderBoard(b) {
   const tb = h('div', { class: 'bd-btb', role: 'toolbar', 'aria-label': 'Board' }, lpBtn, sep(),
     tbtn('fit', `Fit all ${SCREEN}s (0)`, () => fit(true)), tbtn('minus', 'Zoom out (−)', () => zoomBy(1 / 1.4)), zoomLbl, tbtn('plus', 'Zoom in (+)', () => zoomBy(1.4)),
     tbtn('target', `Focus the selected ${SCREEN} (F, or double-click it)`, () => focusSel()), sep(),
-    [!IS_DECK && presBtn, interBtn, !IS_DECK && [varBtn, flowsBtn], sep()], IS_SITE && [bpSeg, bpIn, sep(), viewSeg], (!IS_SITE || abs.some(a => !isLive(a))) && [IS_SITE && sep(), fidSeg],
+    !IS_DECK && [presBtn, varBtn, flowsBtn, sep()], IS_SITE && [bpSeg, bpIn, sep(), viewSeg], (!IS_SITE || abs.some(a => !isLive(a))) && [IS_SITE && sep(), fidSeg],
     IS_SITE && [sep(), tabBtn], themeSel && [sep(), themeSel], expBtn && [sep(), expBtn]);
   // the motion keys (pause animations, Reduced) are hidden for now: built and painted, not shown; screens play their motion
   function paintTools() {
     lpBtn.setAttribute('aria-pressed', String(B.lp));
-    interBtn.setAttribute('aria-pressed', String(B.interact));
     fidSeg.querySelectorAll('button').forEach(bt => bt.setAttribute('aria-checked', String((bt.dataset.v === 'sketch') === B.sketch)));
     motBtn.replaceChildren(ic(B.paused ? 'play' : 'pause')); motBtn.title = B.paused ? 'Play animations' : 'Pause animations'; motBtn.setAttribute('aria-label', motBtn.title); motBtn.setAttribute('aria-pressed', String(B.paused));
     redBtn.setAttribute('aria-pressed', String(B.reduced));
@@ -8437,21 +8423,13 @@ function renderBoard(b) {
     for (const [id, el] of B.rqs) if (!keep.has(id)) { el.remove(); B.rqs.delete(id); }
   };
 
-  /* modes: the dock's tool (B.tool), and Interact over it (B.interact, the toolbar's toggle): B.mode is 'interact' while
-     it is on. Frames take the pointer in Interact, Element, Text and Link; elsewhere a drag pans */
+  /* modes: the dock's tool. Frames take the pointer in Element, Text and Link; elsewhere a drag pans */
   B.setMode = m => {
-    B.tool = m; B.mode = B.interact ? 'interact' : m; stage.dataset.m = B.mode;
+    B.mode = m; stage.dataset.m = B.mode;
     for (const x of B.live) post(x, modeMsg(x));
     for (const x of B.frames.values()) x.hov.hidden = true;
     if (B.mode !== 'frame') cancelRq();
     if (B.onMode) B.onMode(B.mode);
-  };
-  B.setInteract = on => {
-    if (!!on === B.interact) return;
-    B.interact = !!on;
-    B.setMode(B.tool);
-    MARKUP.pause(B.interact);   // the dock's tools wait (a comment being written is kept)
-    paintTools();
   };
   // an `el:` pin's spot from where its frame last reported the element, as a fraction of the artboard; a `link:`
   // pin's, on its arrow's label segment
@@ -8574,7 +8552,7 @@ function renderBoard(b) {
     B.brief = h('div', { class: 'bd-sp-brief' }, tldr, main);
     lp = h('aside', { class: 'bd-lp', 'aria-label': Screens, inert: true }, head,
       h('div', { class: 'bd-lp-pane bd-lp-ui', id: 'bd-lp-screens' }, lpList, h('p', { class: 'hint' }, IS_SITE
-        ? 'Click a page to focus it, a section to go to it. Interact (I, in the toolbar) scrolls and clicks inside the pages; Element (C) pins a comment on what you point at; a double-click on text changes it.'
+        ? 'Click a page to focus it, a section to go to it. Element (C) pins a comment on what you point at; a double-click on text changes it. Present, in the toolbar, is where you click through the pages.'
         : `Click a ${SCREEN} to focus it. Double-click one on the board, or press F, to do the same; a double-click on its text changes the text.`)));
     shell.prepend(lp);
     placeMeta();
@@ -8594,8 +8572,7 @@ function renderBoard(b) {
         else if ((k === 'n' || k === 'N') && pres.notes) pres.notes(); else if (k === 'Backspace' && pres.back) pres.back(); else return;
         e.preventDefault(); return;
       }
-      if (k === 'Escape') { if (cmpv) closeCompare(); else if (B.rq) cancelRq(); else if (B.variants) toggleVariants(false); else if (B.interact) B.setInteract(false); else if (B.selLink || B.sel) { selectLink(null); select(null); } else return; }
-      else if (k === 'i' || k === 'I') B.setInteract(!B.interact);
+      if (k === 'Escape') { if (cmpv) closeCompare(); else if (B.rq) cancelRq(); else if (B.variants) toggleVariants(false); else if (B.selLink || B.sel) { selectLink(null); select(null); } else return; }
       else if (k === '[') setLp(!B.lp, true);
       else if (e.shiftKey && e.code === 'Digit1') fit(true);   // Shift + 1, 2, 0 by the key, whatever it types
       else if (e.shiftKey && e.code === 'Digit2') { if (B.sel) focus(B.sel); }
@@ -8610,7 +8587,7 @@ function renderBoard(b) {
     if ('ResizeObserver' in window) new ResizeObserver(() => { if (!B.touched) fit(false); else apply(); if (cmpv) cmpv.lay(); MARKUP.relayout(); }).observe(stage);
     requestAnimationFrame(() => fit(false));
   };
-  // tests and agents: BP.board({focus, fit, sketch, present, compare, variants, flows, interact, tap, breakpoint, section, pageView}); tap follows the presented
+  // tests and agents: BP.board({focus, fit, sketch, present, compare, variants, flows, tap, breakpoint, section, pageView}); tap follows the presented
   // screen's link from that element, as a tap in its frame does
   B.api = o => {
     if (o && typeof o === 'object') {
@@ -8619,7 +8596,6 @@ function renderBoard(b) {
       if ('sketch' in o) { B.sketch = !!o.sketch; sendAll(viewMsg); paintTools(); }
       if ('variants' in o) toggleVariants(!!o.variants);
       if ('flows' in o) setFlows(!!o.flows);
-      if ('interact' in o) B.setInteract(!!o.interact);
       if (o.present) present(String(o.present)); else if (o.present === false && pres) pres.end();
       if (o.tap && pres) pres.follow(String(o.tap));
       if (o.back && pres && pres.back) pres.back();
@@ -8633,7 +8609,7 @@ function renderBoard(b) {
       if (Array.isArray(o.section)) { const s = secsOf((B.frames.get(String(o.section[0])) || {}).a).find(s => s.id === o.section[1]); if (s) revealSection(String(o.section[0]), s); }
     }
     const R = curReach();
-    return { k: B.k, mode: B.mode, tool: B.tool, interact: B.interact, selected: B.sel, panel: B.lp, theme: B.theme, sketch: B.sketch, variants: B.variants, present: !!pres, compare: !!cmpv,
+    return { k: B.k, mode: B.mode, selected: B.sel, panel: B.lp, theme: B.theme, sketch: B.sketch, variants: B.variants, present: !!pres, compare: !!cmpv,
       presented: pres && pres.state ? pres.state() : null, flows: B.flows, selectedLink: B.selLink, pageView: IS_SITE ? B.pageView : null,
       twin: B.twin, snapshots: JSON.parse(JSON.stringify(SNAPS)),
       twins: [...B.twins.values()].map(t => ({ id: t.a.id, rev: BASE.rev, x: t.p.x, y: t.p.y, w: t.p.w, h: t.p.h, shown: !t.el.classList.contains('off'), ready: t.ready,
@@ -11398,7 +11374,7 @@ const MARKUP = (() => {
     }).join('\n\n') + (s => s && '\n' + s.trimEnd())(replyCmdsMd(ord.map(a => replyMd(`ann:${a.id}`, [], '', a.id)).join(''))) };
   }
   const api = { all: () => JSON.parse(JSON.stringify(list)), payload, approvalNotes, annotate: () => null, setMode: () => false, paint: () => {}, flush: () => {}, markSent: () => {},
-    comments: () => ({ open: false, available: false }), pinFrame: () => null, addFrame: () => null, relayout: () => {}, openIfWaiting: () => {}, pause: () => {}, cancelDraft: () => false };
+    comments: () => ({ open: false, available: false }), pinFrame: () => null, addFrame: () => null, relayout: () => {}, openIfWaiting: () => {}, cancelDraft: () => false };
   if (OLD || BASE) return api;
 
   /* what can be annotated, and the key of each */
@@ -11689,7 +11665,7 @@ const MARKUP = (() => {
     region: ['region', 'Region', 'M', 'Region: drag a box around what should change'],
     select: ['type', 'Text', 'T', 'Text: comment on some text'], draw: ['pencil', 'Pen', 'D', 'Pen: circle or mark what should change'] };
   const TOOLS = Object.keys(MARK_M);
-  // a board's dock also has Link (edit the arrows) and Frame (request a new screen); Interact is the board's toolbar's
+  // a board's dock also has Link (edit the arrows) and Frame (request a new screen)
   const BOARD_M = IS_DESIGN && !IS_LISTING ? {
     link: ['route', 'Link', 'L', 'Link: click an element, then a screen, to add an arrow; drag a + knob for a gesture; drag an arrow\'s dots to change it'],
     frame: ['frame', 'Frame', 'R', 'Frame: drag an empty frame for a new screen, then labelled boxes inside it'] } : {};
@@ -11701,13 +11677,10 @@ const MARKUP = (() => {
   const okPen = c => !!PENS[c] || isHex(c);
   let mode = 'view', marksOff = false, pen = okPen(store.get(PEN_KEY)) ? store.get(PEN_KEY) : 'risk',
     width = WIDTHS[store.get(WIDTH_KEY)] ? +store.get(WIDTH_KEY) : 4, custom = isHex(store.get(CUSTOM_KEY)) ? store.get(CUSTOM_KEY) : null;
-  // Interact on (a board's toolbar): the tools pause, the screens take the pointer
-  const paused = () => !!(BOARD && BOARD.interact);
   // a mark in a pen's colour: a named pen's class, a custom colour on --pen
   const penCls = c => PENS[c] ? ' bd-pen-' + c : '';
   const setPen = (el, c) => { if (isHex(c)) el.style.setProperty('--pen', c); else el.style.removeProperty('--pen'); };
-  // a key picks its tool (and ends Interact: the tools wait while it is on)
-  const pick = m => { closeFold(false); if (paused()) BOARD.setInteract(false); setMode(m); };
+  const pick = m => { closeFold(false); setMode(m); };
   const modeKey = m => {
     const [icon, name, key, tipText] = MODES[m];
     const b = tipped(keyBtn(MARK_M[m] ? 'tool' : '', icon, name, { 'data-m': m, 'aria-pressed': String(m === mode), 'aria-keyshortcuts': key }, () => pick(m)), [key]);
@@ -12450,20 +12423,13 @@ const MARKUP = (() => {
     endEdit(true); finishDraft(true); closePop(false); hideSelC();
     root.classList.remove('bd-ann-m-' + mode);
     mode = m;
-    if (m !== 'view' && !paused()) root.classList.add('bd-ann-m-' + m);
-    cap.hidden = paused() || (m !== 'draw' && m !== 'region');
+    if (m !== 'view') root.classList.add('bd-ann-m-' + m);
+    cap.hidden = m !== 'draw' && m !== 'region';
     if (BOARD && BOARD.setMode) BOARD.setMode(m);
     showHover(null);
     if (m !== 'view' && marksOff) { marksOff = false; schedule(true); }   // marking with the marks hidden would hide the new one too
     paint();
     return true;
-  }
-  // Interact on (a board's toolbar): the tools wait, what was being written is saved; off: the tool takes the page again
-  function pause(on) {
-    if (on) { endEdit(true); finishDraft(true); closePop(false); closeFold(false); hideSelC(); showHover(null); root.classList.remove('bd-ann-m-' + mode); }
-    else if (mode !== 'view') root.classList.add('bd-ann-m-' + mode);
-    cap.hidden = on || (mode !== 'draw' && mode !== 'region');
-    paint();
   }
   function paint() {
     const n = pending().length, ni = itemsPending().length, all = n + ni, fs = finds(), total = list.length + fs.length;
@@ -12477,15 +12443,15 @@ const MARKUP = (() => {
     sortBtn.replaceChildren(ic(sort === 'page' ? 'doc' : 'hist'));
     sortBtn.title = sort === 'page' ? 'In page order; click for newest first' : 'Newest first; click for page order'; sortBtn.setAttribute('aria-label', sortBtn.title);
     clearRow.hidden = !list.some(a => a.status === 'resolved');   // it clears the page's comments, not the findings'
-    tb.dataset.m = mode; tb.classList.toggle('paused', paused());
+    tb.dataset.m = mode;
     for (const b of tb.querySelectorAll('.bd-key[data-m]')) b.setAttribute('aria-pressed', String(b.dataset.m === mode));
     // ≤ 600 px: the fold key shows the current tool (else Element's icon), its menu open or not
     const on = !!MARK_M[mode], fi = MODES[on ? mode : 'point'][0];
     if (fold.dataset.ic !== fi) { fold.firstChild.replaceWith(ic(fi)); fold.dataset.ic = fi; }
     fold.setAttribute('aria-pressed', String(on)); fold.setAttribute('aria-expanded', String(foldOpen));
     menu.hidden = !foldOpen;
-    // Pen's colours and widths: the pill (the strip ≤ 600 px, out of the menu's way) while Pen is on and not paused
-    const penOn = mode === 'draw' && !paused();
+    // Pen's colours and widths: the pill (the strip ≤ 600 px, out of the menu's way) while Pen is on
+    const penOn = mode === 'draw';
     optBar.hidden = !penOn; strip.hidden = !penOn || foldOpen;
     colorKey.setAttribute('aria-expanded', String(popFor === 'color')); widthKey.setAttribute('aria-expanded', String(popFor === 'width'));
     for (const b of tb.querySelectorAll('[data-pen]')) {
@@ -12524,7 +12490,6 @@ const MARKUP = (() => {
       }
     }
     if (e.type === 'pointerup' && selDown) { selDown = false; if (mode === 'view') setTimeout(showSelC, 0); }   // the selection made: its button
-    if (paused()) return;   // Interact: the page's own clicks run
     if (t && t.closest('.bp-note')) return;   // an item's comment field is for typing in every mode: no pins, no selection notes
     if (mode === 'select' && e.type === 'pointerup' && !(t && (t.closest('.bd-ann-ui') || spUi(t)))) setTimeout(fromSelection, 0);
     if ((mode !== 'point' && mode !== 'select') || !inDoc(t)) return;
@@ -12831,16 +12796,15 @@ const MARKUP = (() => {
   root.classList.add('bd-tray-on');
   for (const ty of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click', 'dblclick']) addEventListener(ty, onCapture, true);
   addEventListener('pointercancel', () => { selDown = false; }, true);   // a touch that scrolled or long-pressed: selections show their button again
-  addEventListener('pointermove', e => { if (mode === 'point' && !paused() && !(e.target.closest && spUi(e.target))) showHover(e.target.closest && e.target.closest('.bp-note') ? null : targetAt(e.target)); }, { capture: true, passive: true });
+  addEventListener('pointermove', e => { if (mode === 'point' && !(e.target.closest && spUi(e.target))) showHover(e.target.closest && e.target.closest('.bp-note') ? null : targetAt(e.target)); }, { capture: true, passive: true });
   root.addEventListener('mouseleave', () => { if (mode === 'point') showHover(null); });
   document.addEventListener('keydown', e => {
     if (e.defaultPrevented || e.isComposing || e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
     const t = e.target;
     if (t.isContentEditable || (t.closest && t.closest('input, textarea, select, [contenteditable]')) || document.querySelector('dialog[open]')) return;
     // Esc closes a menu or the picker, the Comment button, the new comment or the edit, the selection; then the tool
-    // (while Interact is on the tool stays: the board's Esc ends Interact)
     if (e.key === 'Escape') {
-      if (!closePop(true) && !closeFold(true) && !hideSelC()) { if (draft) finishDraft(false); else if (editA) endEdit(false); else if (selA) select(null); else if (mode !== 'view' && !paused()) setMode('view'); else return; }
+      if (!closePop(true) && !closeFold(true) && !hideSelC()) { if (draft) finishDraft(false); else if (editA) endEdit(false); else if (selA) select(null); else if (mode !== 'view') setMode('view'); else return; }
       e.preventDefault();   // handled here: the panel's own Escape (close the drawer or sheet) waits for the next press
       return;
     }
@@ -12859,7 +12823,7 @@ const MARKUP = (() => {
   document.fonts?.ready.then(() => schedule(true));
   setInterval(() => { if (SIDE.shows('comments')) renderList(); }, 30000);   // "5 min ago"
   paint(); schedule(true);
-  return Object.assign(api, { annotate, setMode, paint, comments, flush, markSent, pinFrame, addFrame, drafts, openIfWaiting, pause, cancelDraft: () => finishDraft(false), relayout: () => schedule(true) });
+  return Object.assign(api, { annotate, setMode, paint, comments, flush, markSent, pinFrame, addFrame, drafts, openIfWaiting, cancelDraft: () => finishDraft(false), relayout: () => schedule(true) });
 })();
 
 /* ---------- the drafts' undo history (a design's board edits, a storelisting's text edits) ---------- */

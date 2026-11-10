@@ -68,7 +68,7 @@ class CommentTools(ChromePage):
             self.assertEqual(t.ev(STATE), [mode, name], k)
         self.key(t, "Escape")
         self.assertEqual(t.ev(STATE), ["view", "View"])
-        for k in ("a", "e", "i"):   # no Annotate, Edit or Interact key here
+        for k in ("a", "e", "i"):   # the old Annotate, Edit and Interact keys do nothing
             self.key(t, k)
             self.assertEqual(t.ev(STATE), ["view", "View"], k)
         self.key(t, "t")

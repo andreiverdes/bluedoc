@@ -4,9 +4,9 @@
    the frame's own viewport and can snapshot the page. A live page's snapshot, served as a screen, loads it with
    data-ids="1": named from ids as on the live page, posting to the frame's own server like any screen.
    Page -> frame: {bd:'mode', mode, board, edit}, {bd:'tokens', theme, motion}, {bd:'view', sketch, reduced, paused}, {bd:'locate', sels},
-     {bd:'mode', mode}       view | interact (clicks run, taps are reported: nav) | point (Element, and Link: hover
-                             outline, a click picks) | select (Text: a selection or a click picks) | draw, region (Pen,
-                             Region: the page's drawing layer takes the pointer; as view)
+     {bd:'mode', mode}       view | interact (Present's screens: clicks run, taps are reported: nav) | point (Element,
+                             and Link: hover outline, a click picks) | select (Text: a selection or a click picks) |
+                             draw, region (Pen, Region: the page's drawing layer takes the pointer; as view)
      (board: true for a screen on the design board: its wheel, middle-button drags and Space go to the page, below)
      (edit: true where the reader may change the text (View, Element, Link on the board's own screens): a pick in point
                              carries ord, base and root; a double-click on text in point asks to edit it (pick, dbl);
@@ -51,18 +51,18 @@
                            the UI image as fractions; with edit, ord: the element's place in document order, base: its
                            text without the drafts, root: a screen file's root (not to delete); dbl: a double-click on
                            this element's text (point); editing: the answer to {bd:'editText'}
-     {bd:'nav',   names}   in interact mode, a click: the data-bd names of the clicked element and its named ancestors,
-                           innermost first (at most 8). The click itself still runs. The page follows the first name
-                           that has a link from this screen (its links, drafts included), so a forged name moves nothing.
+     {bd:'nav',   names}   in interact mode (Present), a click: the data-bd names of the clicked element and its named
+                           ancestors, innermost first (at most 8). The click itself still runs. The page follows the first
+                           name that has a link from this screen (its links, drafts included), so a forged name moves
+                           nothing; from a screen on the board it follows none.
      {bd:'scroll', y}      the frame scrolled (Viewport), at most once a frame
      {bd:'snapshot', id, html, external, error}   the answer to a snapshot request: html, or error when it failed
      {bd:'edit', sel, tag, base, text, ord}   a text edit ended: text (at most 1,000 chars, whitespace collapsed) when it
                            changed and was kept (Enter, or a click away), else null; base: the text before, without the drafts
-     {bd:'key', k}         k: 'delete' (point, with edit) | 'escape' (interact, on the board: the page ends Interact) |
-                           'undo' | 'redo' (every mode), pressed in the frame outside a field or an element being edited
-     {bd:'wheel', x, y, dx, dy, ctrl, meta, shift}   on the board, a wheel (a pinch: ctrl) the frame doesn't keep (in
-                           Interact it keeps a plain one its content can still scroll that way): the pointer in frame
-                           px, the deltas and modifiers
+     {bd:'key', k}         k: 'delete' (point, with edit) | 'undo' | 'redo' (every mode), pressed in the frame outside a
+                           field or an element being edited
+     {bd:'wheel', x, y, dx, dy, ctrl, meta, shift}   on the board, every wheel (a pinch: ctrl): the pointer in frame px,
+                           the deltas and modifiers
      {bd:'pan', on, start?, x, y}   on the board, a middle-button drag: its press (start), moves and release (on: false),
                            the pointer in frame px; the page keeps the pressed point under it
      {bd:'space', down}    on the board, Space pressed or let go outside a field or an element being edited
@@ -533,32 +533,14 @@
     post({ bd: 'edit', sel: ed.sel, tag: ed.tag, base: ed.base, text: t, ord: ed.ord });
     stir();
   }
-  /* On the board ({bd:'mode', board: true}) the screen never keeps a pinch (⌃/⌘ + wheel), a middle-button drag or
-     Space, nor a wheel but in Interact while what is under the pointer can still scroll that way (a page in Viewport,
-     a list): they go to the page, which pans and zooms the board (Interact keeps the clicks, the typing and its own
-     scrolling). Registered before the pick and key listeners, so a middle press picks nothing. */
+  /* On the board ({bd:'mode', board: true}) the screen never keeps a wheel, a pinch (⌃/⌘ + wheel), a middle-button
+     drag or Space: they go to the page, which pans and zooms the board. Registered before the pick and key listeners,
+     so a middle press picks nothing. */
   let onBoard = false, spaceDown = false, midPan = null;
   const typing = t => !!editing || (t && t.nodeType === 1 && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)));
-  // the element from t up to the document that can still scroll by dx, dy (px; the sign is what counts), else null
-  function scrollerFor(t, dx, dy) {
-    const can = (pos, view, size, d) => (d > 0 && pos + view < size - 1) || (d < 0 && pos > 0);
-    for (let n = t && t.nodeType === 1 ? t : null; n && n !== root && n !== doc.body; n = n.parentElement) {
-      const cs = getComputedStyle(n);
-      if ((/auto|scroll/.test(cs.overflowY) && can(n.scrollTop, n.clientHeight, n.scrollHeight, dy)) ||
-          (/auto|scroll/.test(cs.overflowX) && can(n.scrollLeft, n.clientWidth, n.scrollWidth, dx))) return n;
-    }
-    const se = doc.scrollingElement || root, shut = a => [root, doc.body].some(n => n && /hidden|clip/.test(getComputedStyle(n)[a]));
-    return (!shut('overflowY') && can(se.scrollTop, frameH(), se.scrollHeight, dy)) || (!shut('overflowX') && can(se.scrollLeft, root.clientWidth, se.scrollWidth, dx)) ? se : null;
-  }
   addEventListener('wheel', e => {
     if (!onBoard) return;
     e.preventDefault();
-    // Interact: the screen scrolls itself, by script. Left to the browser, a frame the board scales (and turns its
-    // pointer events on and off) gets the wheel event but now and then scrolls nothing
-    const side = e.shiftKey && !e.deltaX, u = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? frameH() : 1;   // Shift + wheel: sideways
-    const dx = (side ? e.deltaY : e.deltaX) * u, dy = (side ? 0 : e.deltaY) * u;
-    const sc = mode === 'interact' && !e.ctrlKey && !e.metaKey ? scrollerFor(e.target, dx, dy) : null;
-    if (sc) { sc.scrollBy(dx, dy); return; }
     post({ bd: 'wheel', x: e.clientX, y: e.clientY, dx: e.deltaX, dy: e.deltaY, ctrl: e.ctrlKey, meta: e.metaKey, shift: e.shiftKey });
   }, { capture: true, passive: false });
   addEventListener('pointerdown', e => {
@@ -598,13 +580,6 @@
     e.preventDefault();
     post({ bd: 'key', k: key });
   }, true);
-  // Interact on the board: Esc the screen leaves alone (its own handlers ran first) goes to the page, which ends Interact
-  addEventListener('keydown', e => {
-    const t = e.target;
-    if (mode !== 'interact' || !onBoard || e.key !== 'Escape' || e.defaultPrevented || e.isComposing || e.metaKey || e.ctrlKey || e.altKey || e.shiftKey
-      || (t && t.nodeType === 1 && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)))) return;
-    post({ bd: 'key', k: 'escape' });
-  });
 
   function setTokens(theme, motion) {
     const out = [];
@@ -623,7 +598,7 @@
     if (e.source !== parent || !e.data || typeof e.data !== 'object') return;
     const m = e.data;
     if (m.bd === 'mode' && typeof m.mode === 'string') {
-      if (editing && (m.mode !== mode || m.edit !== true)) endEdit(true);   // another tool, or Interact: the edit is kept
+      if (editing && (m.mode !== mode || m.edit !== true)) endEdit(true);   // another tool: the edit is kept
       mode = m.mode; onBoard = m.board === true; canEdit = m.edit === true;
       if (!active()) { hovered = null; showOutline(null); }
       paintSel();

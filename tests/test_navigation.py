@@ -1,24 +1,22 @@
 """One navigation in every tool, in Chrome (BLUEDOC_BROWSER_TESTS=1): a tool takes only the primary press; the wheel,
 a pinch (⌃ + wheel), Space + drag and a middle-button drag stay with the board or the diagram under the pointer.
 
-On the Acme Fit design board, in each tool (view, point, select, draw, link, frame) and with Interact on, over a screen:
-the wheel pans the board, ⌃ + wheel zooms it at the pointer, Space + drag and a middle-button drag pan it, and the tool,
-the comments and the screens' places stay as they were (nav/board); in Draw the wheel over the empty board pans it
-(nav/draw-board); Shift + 0, 1, 2 show 100 %, fit, and focus the selected screen (nav/keys). On the Acme orders doc,
-⌃ + wheel over its diagram zooms the diagram in Point, Select and Draw, Space + drag over it pans it in Draw without a
-stroke, and the wheel above it on the Draw layer scrolls the page (nav/doc). A website page in Viewport, with Interact
-on: the wheel scrolls the page inside its frame and the board stays; ⌃ + wheel still zooms the board (nav/site)."""
+On the Acme Fit design board, in each tool (view, point, select, draw, link, frame), over a screen: the wheel pans the
+board, ⌃ + wheel zooms it at the pointer, Space + drag and a middle-button drag pan it, and the tool, the comments and
+the screens' places stay as they were (nav/board); in Draw the wheel over the empty board pans it (nav/draw-board);
+Shift + 0, 1, 2 show 100 %, fit, and focus the selected screen (nav/keys). On the Acme orders doc, ⌃ + wheel over its
+diagram zooms the diagram in Point, Select and Draw, Space + drag over it pans it in Draw without a stroke, and the
+wheel above it on the Draw layer scrolls the page (nav/doc)."""
 from __future__ import annotations
 
 import time
 import unittest
 
-from test_page_state import CHROME, ChromePage, Tab, until
-from test_website import SiteInChrome
+from test_page_state import CHROME, ChromePage, Tab
 
 FIT = "acme-fit-design.bluedoc.json"
 ORDERS = "acme-orders.bluedoc.json"
-BOARD_MODES = ["view", "interact", "point", "select", "draw", "link", "frame"]   # interact: the toolbar's toggle, over View
+BOARD_MODES = ["view", "point", "select", "draw", "link", "frame"]
 CTRL, SHIFT = 2, 8
 FRAME = "document.querySelector('iframe.bd-ab-fr[data-ab=\"today\"]')"
 VIEW = "new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => r(document.querySelector('.bd-bvp').style.transform.match(/-?\\d*\\.?\\d+(e-?\\d+)?/g).map(Number)))))"
@@ -79,9 +77,9 @@ class BoardNavigation(ChromePage, Input):
         t = self.tab
         for mode in BOARD_MODES:
             with self.subTest(mode=mode):
-                t.ev("BP.board({interact: false}); BP.setMode('view'); BP.board({focus: 'today'})")   # each tool from the same view, whatever the last one left
+                t.ev("BP.setMode('view'); BP.board({focus: 'today'})")   # each tool from the same view, whatever the last one left
                 time.sleep(0.4)
-                t.ev("BP.board({interact: true})" if mode == "interact" else f"BP.setMode('{mode}')")
+                t.ev(f"BP.setMode('{mode}')")
                 time.sleep(0.3)
                 notes, places = t.ev("BP.annotations().length"), t.ev("JSON.stringify(BP.boardEdit().positions)")
                 x, y = self.screen_point()
@@ -177,37 +175,6 @@ class DocNavigation(ChromePage, Input):
         y0, top = t.ev("scrollY"), t.ev(f"{self.CV}.stage.getBoundingClientRect().top")
         self.wheel(x, top - 30, 200)
         self.assertGreater(t.ev("scrollY"), y0, "the wheel on the Draw layer didn't scroll the page")
-        self.assertEqual(self.browser.errors, [])
-
-
-@unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")
-class SiteNavigation(SiteInChrome, Input):
-    PATH = "/tall"   # the stub dev server's page taller than its viewport
-
-    def test_in_interact_the_wheel_scrolls_a_viewport_page_inside(self) -> None:
-        t = self.tab
-        t.ev("BP.board({pageView: 'viewport'})")
-        t.wait_for("(a => a.h === 900 && a.page.view === 'viewport' && a.ready)(BP.board().artboards[0])", 15)
-        t.ev("window.__frameY = 0; addEventListener('message', e => { if (e.data && e.data.bd === 'scroll') window.__frameY = e.data.y; })")
-        t.ev("BP.board({interact: true})")
-        t.wait_for("getComputedStyle(document.querySelector('.bd-ab iframe')).pointerEvents === 'auto'")
-        # the board refits to the shorter frame a paint or two after Viewport reports: aim once the frame is drawn at the
-        # board's painted scale and stops moving (by then the screen has its mode message too)
-        t.wait_for("(f => Math.abs(f.getBoundingClientRect().height - 900 * +document.querySelector('.bd-bvp').style.transform.match(/scale\\(([^)]+)\\)/)[1]) < 1)"
-                   "(document.querySelector('iframe.bd-ab-fr'))")
-
-        def still() -> list | None:
-            p = self.on_frame(700, 400)
-            time.sleep(0.25)
-            return p if self.on_frame(700, 400) == p else None
-        x, y = until(still)
-        view = t.ev(VIEW)
-        self.wheel(x, y, 300)
-        self.assertEqual(t.wait_for("window.__frameY"), 300, "the wheel didn't scroll the page in its frame")
-        self.assertEqual(t.ev(VIEW), view, "the board moved under a wheel the page kept")
-        x, y = self.on_frame(700, 400)
-        self.wheel(x, y, -40, mods=CTRL)
-        self.assertGreater(t.ev(VIEW)[2], view[2] * 1.3, "⌃ + wheel didn't zoom the board")
         self.assertEqual(self.browser.errors, [])
 
 

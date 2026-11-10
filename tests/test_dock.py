@@ -1,19 +1,18 @@
-"""The dock with the comment tools in it, text edits at all times and Interact in the board's toolbar (1.0.25), in Chrome
-(BLUEDOC_BROWSER_TESTS=1).
+"""The dock with the comment tools in it and text edits at all times (1.0.25), and a board that never runs a screen's
+clicks (1.0.26), in Chrome (BLUEDOC_BROWSER_TESTS=1).
 
 Every page's dock is View · Element · Region · Text · Pen, on a board then │ Link · Frame, then │ the eye │ Request
 changes and the page's last key; at 390 px the four tools fold into one key between View and Link. On the Acme Fit
 board a double-click on a screen's text in View edits it (a draft: the toolbar's count rises), a double-click where
-there is no text focuses the screen, and Interact (after Present, or I) gives the screens their clicks, so a tap follows
-its link and makes no comment, while the dock's tools pause until Esc ends it."""
+there is no text focuses the screen, the toolbar has no Interact key and I does nothing: a click on a screen's link
+on the board follows nothing, while in Present the same click follows it."""
 from __future__ import annotations
 
-import json
 import time
 import unittest
 
 from test_inline_edit import EditOnBoard, frame_eval, mouse
-from test_page_state import CHROME, ChromePage, Tab
+from test_page_state import CHROME, ChromePage, Tab, until
 
 FIT = "acme-fit-design.bluedoc.json"
 # the dock's shown children, each as its key's label or the kind of what it is
@@ -46,7 +45,7 @@ class DockKeys(ChromePage):
 
 
 @unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")
-class BoardTextAndInteract(ChromePage, EditOnBoard):
+class BoardTextAndPresent(ChromePage, EditOnBoard):
     def setUp(self) -> None:
         super().setUp()
         self.doc = self.docs / FIT
@@ -107,33 +106,36 @@ class BoardTextAndInteract(ChromePage, EditOnBoard):
         self.assertEqual(self.element_drafts(), [])
         self.assertEqual(self.browser.errors, [])
 
-    def test_interact_takes_a_tap_in_a_screen_and_pauses_the_tools(self) -> None:
+    def test_the_board_runs_no_tap_and_present_follows_one(self) -> None:
         t, today = self.tab, self.scr("today.html")
-        btn = "document.querySelector('.bd-btb .bd-tbtn.play')"
-        self.assertEqual(t.ev(f"[{btn}.textContent, {btn}.getAttribute('aria-pressed'), {btn}.getAttribute('aria-keyshortcuts')]"), ["Interact", "false", "I"])
-        self.assertTrue(t.ev(f"{btn}.previousElementSibling.getAttribute('aria-label').startsWith('Present')"), "Interact sits after Present")
         link = t.ev("BP.board().links.find(l => l.from === 'today' && l.el === 'start-workout')")
-        # Element on, then I: the screens take the clicks; the tool waits, its keys dim
-        t.ev("BP.setMode('point')")
+        # no Interact key in the toolbar, none in BP.board(); I leaves the tool as it is
+        self.assertEqual(t.ev("""[...document.querySelectorAll('.bd-btb button')].filter(b => b.getAttribute('aria-keyshortcuts') === 'I'
+          || /interact/i.test([b.textContent, b.title, b.getAttribute('aria-label')].join(' '))).length"""), 0)
+        self.assertNotIn("interact", t.ev("Object.keys(BP.board())"))
         t.ev("document.activeElement && document.activeElement.blur(), 1")
-        self.key("i", 73)
-        self.assertEqual(t.ev(f"[{btn}.getAttribute('aria-pressed'), BP.board().mode, BP.board().tool, BP.board().interact]"), ["true", "interact", "point", True])
-        self.assertTrue(t.ev("document.querySelector('.bd-anntb').classList.contains('paused')"))
-        self.assertEqual(t.ev("getComputedStyle(document.querySelector('.bd-anntb > [data-m=point]')).opacity"), "0.45")
+        for mode in ("point", "view"):
+            t.ev(f"BP.setMode('{mode}')")
+            self.key("i", 73)
+            self.assertEqual(t.ev("BP.board().mode"), mode)
+        # in View a click on the screen's link on the board follows nothing
         x, y = self.at("today", today, '[data-bd="start-workout"]')
         mouse(t, x, y)
-        t.wait_for(f"BP.board().selected === {json.dumps(link['to'])}")
-        self.assertTrue(t.ev("document.querySelector('.bd-cmp').hidden"), "a tap in Interact opened a comment box")
+        time.sleep(0.6)
+        self.assertEqual(t.ev("[BP.board().mode, BP.board().selected, BP.board().present]"), ["view", "today", False])
+        # in Present the same click follows the link
+        self.assertEqual(t.ev("BP.board({present: 'today'}).presented.screen"), "today")
+        fr = "document.querySelector('.bd-pres iframe.bd-ab-fr')"
+        t.wait_for(f"!!{fr}")
+        r = until(lambda: frame_eval(t, today, """(e => e && (r => [r.left + r.width / 2, r.top + r.height / 2])(e.getBoundingClientRect()))(document.querySelector('[data-bd="start-workout"]'))"""))
+        self.assertTrue(r, "no start-workout in the today screen")
+        where = f"(f => {{ const b = f.getBoundingClientRect(), k = b.width / f.width; return [b.left + {r[0]} * k, b.top + {r[1]} * k]; }})({fr})"
+
+        def tap():   # until the presented frame has loaded and been told its mode, a click there follows nothing
+            mouse(t, *t.ev(where))
+            return until(lambda: t.ev("BP.board().presented.screen") == link["to"], 1.5)
+        self.assertTrue(until(tap, 12), "Present didn't follow the tap")
         self.assertEqual(t.ev("BP.annotations().length"), 0)
-        # Esc ends it: the tool takes the screens again
-        self.key("Escape", 27)
-        self.assertEqual(t.ev(f"[{btn}.getAttribute('aria-pressed'), BP.board().mode]"), ["false", "point"])
-        self.assertFalse(t.ev("document.querySelector('.bd-anntb').classList.contains('paused')"))
-        # the button toggles it too
-        t.ev(f"{btn}.click()")
-        self.assertEqual(t.ev("BP.board().mode"), "interact")
-        t.ev(f"{btn}.click()")
-        self.assertEqual(t.ev("BP.board().mode"), "point")
         self.assertEqual(self.browser.errors, [])
 
 

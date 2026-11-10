@@ -27,6 +27,7 @@ from urllib.parse import quote
 
 from _support import Server, TempHome, template_slice, template_text
 from test_page_state import CHROME, Browser, Tab, until
+from test_inline_edit import frame_eval
 
 import build
 import diffref
@@ -308,17 +309,22 @@ class ScreenEscape(unittest.TestCase):
         self.assert_server_stored_nothing()
 
 
-# A screen with one real link (its "go" button pushes Today) that, once the page puts it in interact mode, forges
-# `nav` messages for 1.5 s: other screens' element names, junk names and a malformed message. Then it reports a tap
-# on "go". The page follows only this screen's own links, so the forgeries move nothing and "go" opens Today.
+# A screen with one real link (its "go" button pushes Today) that, once the page tells it its mode (Present: interact;
+# the board: view), forges for 1.5 s: `nav` messages with other screens' element names, junk names and a malformed one,
+# and messages asking the page to run its clicks (a mode, the old Interact key, Esc). Then it reports a tap on "go" and
+# sets __done; __modes keeps every mode the page sent it. Present follows only this screen's own links, so the
+# forgeries move nothing and "go" opens Today; the board follows no tap and never puts the screen in interact mode.
 FORGED_NAMES = ["start-workout", "tab-workouts", "tab-activity", "tab-profile", "submit", "passkey", "workout-run",
                 "open-settings", "back", "../today", "a b", "x" * 300, "", None, 7]
 FORGER_SCREEN = """<main class="screen safe stack gap-4" data-bd="forger"><h1 class="title">Acme forged taps</h1>
 <button class="btn primary" data-bd="go" data-nav="today" data-nav-label="Tap Go">Go</button></main>
 <script>
 let started = false;
+window.__modes = [];
 addEventListener('message', e => {
-  if (started || !e.data || e.data.bd !== 'mode' || e.data.mode !== 'interact') return;
+  if (!e.data || e.data.bd !== 'mode') return;
+  window.__modes.push([e.data.mode, e.data.board === true]);
+  if (started) return;
   started = true;
   const t0 = Date.now(), forged = %s;
   const tick = setInterval(() => {
@@ -326,7 +332,9 @@ addEventListener('message', e => {
     parent.postMessage({ bd: 'nav', names: forged }, '*');
     parent.postMessage({ bd: 'nav', name: 'tab-workouts' }, '*');
     parent.postMessage({ bd: 'nav', names: 'start-workout' }, '*');
-    if (Date.now() - t0 > 1500) { clearInterval(tick); parent.postMessage({ bd: 'nav', names: ['go'] }, '*'); }
+    parent.postMessage({ bd: 'mode', mode: 'interact', board: true }, '*');
+    for (const k of ['i', 'I', 'interact', 'escape']) parent.postMessage({ bd: 'key', k }, '*');
+    if (Date.now() - t0 > 1500) { clearInterval(tick); parent.postMessage({ bd: 'nav', names: ['go'] }, '*'); window.__done = true; }
   }, 100);
 });
 </script>
@@ -335,7 +343,8 @@ addEventListener('message', e => {
 
 @unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")
 class ForgedNav(unittest.TestCase):
-    """A screen posting `nav` messages for names that aren't its links moves neither Present nor the board."""
+    """A screen posting `nav` messages for names that aren't its links moves neither Present nor the board, and no
+    message from a screen makes the board run its clicks."""
 
     @classmethod
     def setUpClass(cls) -> None:
@@ -380,16 +389,18 @@ class ForgedNav(unittest.TestCase):
         self.assertEqual(t.ev("BP.board().presented"), {"screen": "today", "stack": ["forger", "today"]})
         self.assertEqual(self.browser.errors, [])
 
-    def test_interact_pans_only_through_the_screens_own_links(self) -> None:
+    def test_the_board_follows_no_tap_and_never_runs_a_screens_clicks(self) -> None:
         t = self.t
         t.ev("BP.board({focus: 'forger'})")
         t.wait_for("BP.board().artboards.find(a => a.id === 'forger').ready", 15)
-        t.ev("document.dispatchEvent(new KeyboardEvent('keydown', {key: 'i', bubbles: true}))")
-        self.assertEqual(t.ev("BP.board().mode"), "interact")
-        time.sleep(1.0)
-        self.assertEqual(t.ev("BP.board().selected"), "forger")
-        t.wait_for("BP.board().selected === 'today'", 10)
-        self.assertFalse(t.ev("BP.board().present"))
+        part = f"{self.server.host}/*/forger.html"
+        self.assertTrue(until(lambda: frame_eval(t, part, "window.__done === true"), 10), "the screen never finished forging")
+        time.sleep(0.5)   # its last message, the tap on "go", reaches the page
+        self.assertEqual(t.ev("[BP.board().mode, BP.board().selected, BP.board().present]"), ["view", "forger", False])
+        self.assertNotIn("interact", t.ev("Object.keys(BP.board())"))
+        modes = frame_eval(t, part, "window.__modes")
+        self.assertTrue(modes)
+        self.assertEqual([m for m in modes if m[0] == "interact"], [], "the board put its screen in interact mode")
         self.assertEqual(self.browser.errors, [])
 
 
