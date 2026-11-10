@@ -309,12 +309,13 @@
   }
 
   const active = () => mode === 'point' || mode === 'select';
-  // the page's Element cursor over the whole screen (text being edited keeps its own); one style, switched by its media
+  // the page's Element cursor over the whole screen (text being edited keeps its own), set on the root and inherited so
+  // the image loads once; one style, switched by its media
   let curStyle = null;
   function setCursor(c) {
     if (!c && !curStyle) return;
     if (!curStyle) { curStyle = doc.createElement('style'); curStyle.id = 'bd-cursor'; (doc.head || root).appendChild(curStyle); }
-    if (c) curStyle.textContent = `html, html *:not([contenteditable="true"], [contenteditable="true"] *) { cursor: ${c} !important; }`;
+    if (c) curStyle.textContent = `html { cursor: ${c} !important; } html *:not([contenteditable="true"], [contenteditable="true"] *) { cursor: inherit !important; }`;
     curStyle.media = c ? 'all' : 'not all';
   }
   const pickable = el => el && el.nodeType === 1 && el !== doc.body && el !== root && !own(el);

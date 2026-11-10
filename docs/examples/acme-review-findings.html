@@ -1006,7 +1006,10 @@ html.bd-tray-on .bp-toast { bottom: 84px; }
 .bd-pen-risk { --pen: var(--risk); } .bd-pen-accent { --pen: var(--accent); } .bd-pen-warn { --pen: var(--warn); } .bd-pen-ok { --pen: var(--ok); }
 .bd-pen-violet { --pen: light-dark(oklch(55% 0.21 300), oklch(70% 0.17 300)); } .bd-pen-ink { --pen: var(--fg); } .bd-pen-custom { --pen: oklch(55% 0.2 305); }
 /* the cursor rule excludes what `inDoc` excludes: the rail, a design's panel tabs, Screens list and board toolbar, and a findings section's toolbar keep their own cursors */
-html.bd-ann-m-point .bd-shell :not(.bp-side, .bp-side :not(.bd-meta, .bd-meta *), .bd-lp-ui, .bd-lp-ui *, .bd-btb, .bd-btb *, .bd-ftb, .bd-ftb *), html.bd-ann-m-point .bd-shell { cursor: var(--bd-elcur, crosshair) !important; }
+/* Element's cursor is set once (the shell, a panel's meta) and inherited below: set on every element, each would
+   load its own copy of the image and show the arrow while it does */
+html.bd-ann-m-point .bd-shell, html.bd-ann-m-point .bd-shell .bp-side .bd-meta { cursor: var(--bd-elcur, crosshair) !important; }
+html.bd-ann-m-point .bd-shell :not(.bp-side, .bp-side :not(.bd-meta, .bd-meta *), .bd-lp-ui, .bd-lp-ui *, .bd-btb, .bd-btb *, .bd-ftb, .bd-ftb *, .bp-side .bd-meta) { cursor: inherit !important; }
 html.bd-ann-m-select .bd-shell :not(.bp-side, .bp-side :not(.bd-meta, .bd-meta *), .bd-lp-ui, .bd-lp-ui *, .bd-btb, .bd-btb *, .bd-ftb, .bd-ftb *), html.bd-ann-m-select .bd-shell { cursor: text !important; }
 html:is(.bd-ann-m-point, .bd-ann-m-select) .bd-shell :is(.bp-side, .bd-lp-ui, .bd-btb, .bd-ftb) { cursor: default; }
 html:is(.bd-ann-m-point, .bd-ann-m-select) .bd-shell .bp-note .bp-note-ta { cursor: text !important; }
@@ -2294,7 +2297,8 @@ html.bd-lp-open .bd-lp { transform: none; visibility: visible; transition: trans
 .bd-sp-brief .bp-sec + .bp-sec { margin-top: 18px; }
 .bd-sp-brief .bp-sec > h2 { font-size: 16px; }
 .bd-sp-brief .bd-meta { margin-top: 20px; }
-html.bd-ann-m-point .bd-sp-brief *, html.bd-ann-m-point .bd-sp-brief { cursor: var(--bd-elcur, crosshair) !important; }
+html.bd-ann-m-point .bd-sp-brief { cursor: var(--bd-elcur, crosshair) !important; }
+html.bd-ann-m-point .bd-sp-brief * { cursor: inherit !important; }
 html.bd-ann-m-select .bd-sp-brief *, html.bd-ann-m-select .bd-sp-brief { cursor: text !important; }
 .bd-scr-l { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
 .bd-scr-l button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; border: 0; border-radius: 10px; background: none; text-align: left; font: inherit; font-size: 13.5px; color: var(--fg); cursor: pointer; }
@@ -2352,7 +2356,8 @@ html.bd-presenting :is(.bd-anntb, .bd-ann-layer, .bd-cmp, .bd-selc) { display: n
 /* a toast shows over Present, above its bar */
 html.bd-presenting .bp-toast { z-index: 71; bottom: 84px; }
 /* compare a screen across two revisions: side by side, or the shown one over the base (onion skin) */
-.bd-cmpv { position: absolute; inset: 0; z-index: 4; display: flex; flex-direction: column; background: color-mix(in oklch, var(--canvas) 97%, transparent); }
+/* above the board's toolbar (z-index 10): the compare view covers the whole stage */
+.bd-cmpv { position: absolute; inset: 0; z-index: 20; display: flex; flex-direction: column; background: color-mix(in oklch, var(--canvas) 97%, transparent); }
 .bd-cmpv .hd { flex: none; display: flex; align-items: center; gap: 10px; padding: 10px 12px 10px 16px; border-bottom: 1px solid var(--line); font-size: 13.5px; }
 .bd-cmpv .hd > .bd-ic { width: 16px; height: 16px; color: var(--fg-subtle); }
 .bd-cmpv .hd .r { font: 500 12px var(--mono); color: var(--fg-muted); }
