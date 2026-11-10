@@ -1182,27 +1182,29 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .bd-cs-e b { color: var(--fg); font-weight: 600; font-size: 13.5px; }
 .bd-cs-e .keys { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 12px; }
 .bd-cs-e .keys span { display: inline-flex; align-items: center; gap: 5px; }
-/* a review's finding threads in the Comments panel: group headings (the agent replied, not sent yet, you answered,
-   resolved, on the page) and a card per finding: its PR and title, the last message on two lines, its state */
+/* the items' threads in the Comments panel: group headings (the agent replied, not sent yet, you answered, resolved,
+   on the page) and a card per item: where it lives (a PR's number, else its checklist's title) and its text, the last
+   message on two lines, its state */
 .bd-cs-h { display: flex; align-items: center; gap: 6px; margin: 6px 4px -2px; font: 600 11px/1.3 var(--sans); letter-spacing: .06em; text-transform: uppercase; color: var(--fg-subtle); }
 .bd-cs-h:first-child { margin-top: 0; }
 .bd-cs-h .n { padding: 0 6px; border-radius: 6px; font: 600 11px/1.5 var(--mono); letter-spacing: 0; color: var(--fg-muted); background: var(--inset); }
 .bd-cs-h.you .n { color: var(--accent-fg); background: var(--accent-tint); }
-.bd-cs-fc { display: grid; gap: 4px; padding: 10px 12px; border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-1); cursor: pointer; font-size: 13px; line-height: 1.45;
+.bd-cs-ic { display: grid; gap: 4px; padding: 10px 12px; border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-1); cursor: pointer; font-size: 13px; line-height: 1.45;
   scroll-margin: 10px; transition: box-shadow .14s var(--ease), opacity .14s; }
-.bd-cs-fc:hover { box-shadow: 0 0 0 1px color-mix(in oklch, var(--accent) 50%, transparent), var(--shadow-1); }
-.bd-cs-fc:focus-visible { box-shadow: var(--shadow-1), var(--focus-ring); }
-.bd-cs-fc .t { display: flex; align-items: center; gap: 6px; min-width: 0; font: 600 13px/1.35 var(--sans); }
-.bd-cs-fc .t .tt { min-width: 0; overflow-wrap: anywhere; }
-.bd-cs-fc .pr { flex: none; padding: 0 6px; border-radius: 6px; font: 600 11px/1.6 var(--mono); color: var(--fg-muted); background: var(--inset); }
-.bd-cs-fc .m { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; color: var(--fg-muted); }
-.bd-cs-fc .m b { color: var(--fg); font-weight: 600; }
-.bd-cs-fc .s { display: flex; align-items: center; gap: 6px; font: 500 11.5px var(--sans); color: var(--fg-subtle); }
-.bd-cs-fc .st { padding: 1px 7px; border-radius: 999px; font-weight: 600; }
-.bd-cs-fc .st.you { color: var(--accent-fg); background: var(--accent-tint); }
-.bd-cs-fc .st.rc { color: var(--warn-fg); background: var(--warn-tint); }
-.bd-cs-fc .st.ok { color: var(--ok-fg); background: var(--ok-tint); }
-.bd-cs-fc.done:not(:hover, :focus-visible) { opacity: .62; box-shadow: none; background: transparent; outline: 1px solid var(--line-soft); outline-offset: -1px; }
+.bd-cs-ic:hover { box-shadow: 0 0 0 1px color-mix(in oklch, var(--accent) 50%, transparent), var(--shadow-1); }
+.bd-cs-ic:focus-visible { box-shadow: var(--shadow-1), var(--focus-ring); }
+.bd-cs-ic .t { display: flex; align-items: center; gap: 6px; min-width: 0; font: 600 13px/1.35 var(--sans); }
+.bd-cs-ic .t .tt { min-width: 0; overflow-wrap: anywhere; }
+.bd-cs-ic .pr { flex: none; padding: 0 6px; border-radius: 6px; font: 600 11px/1.6 var(--mono); color: var(--fg-muted); background: var(--inset); }
+.bd-cs-ic .pr.nm { flex: 0 1 auto; min-width: 0; max-width: 45%; font-family: var(--sans); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bd-cs-ic .m { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; color: var(--fg-muted); }
+.bd-cs-ic .m b { color: var(--fg); font-weight: 600; }
+.bd-cs-ic .s { display: flex; align-items: center; gap: 6px; font: 500 11.5px var(--sans); color: var(--fg-subtle); }
+.bd-cs-ic .st { padding: 1px 7px; border-radius: 999px; font-weight: 600; }
+.bd-cs-ic .st.you { color: var(--accent-fg); background: var(--accent-tint); }
+.bd-cs-ic .st.rc { color: var(--warn-fg); background: var(--warn-tint); }
+.bd-cs-ic .st.ok { color: var(--ok-fg); background: var(--ok-tint); }
+.bd-cs-ic.done:not(:hover, :focus-visible) { opacity: .62; box-shadow: none; background: transparent; outline: 1px solid var(--line-soft); outline-offset: -1px; }
 .bd-cs-ft { flex: none; display: grid; gap: 8px; padding: 10px 12px 12px; box-shadow: inset 0 1px 0 var(--line); }
 .bd-cs-ft .row { display: flex; align-items: center; gap: 6px; margin: -2px -4px 0; }
 .bd-cs-ft .row[hidden] { display: none; }
@@ -1646,7 +1648,7 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .bp-cl-item.bd-flash { animation: bd-flash-ln 1.4s var(--ease); }
 .bp-step.bd-flash, .bp-frow.bd-flash { animation: bd-flash-ln 1.4s var(--ease); }
 @keyframes bd-flash-ln { 0%, 30% { background: color-mix(in oklch, var(--accent) 28%, transparent); } }
-/* the finding a Comments card leads to: a ring for a moment, inset (a findings card clips what spills out) */
+/* the item a Comments card leads to: a ring for a moment, inset (a findings card clips what spills out) */
 .bd-ring { border-radius: 12px; animation: bd-ring 1.6s var(--ease); }
 @keyframes bd-ring { 0%, 55% { box-shadow: inset 0 0 0 2px var(--accent), inset 0 0 0 6px var(--accent-tint); } 100% { box-shadow: inset 0 0 0 2px transparent, inset 0 0 0 6px transparent; } }
 .bp-ref.code .bd-ic { color: var(--fg-subtle); }
@@ -5031,7 +5033,7 @@ const answerItems = (xs = Object.values(ITEMS), notes = true) => xs.map(x => ({
   ...(notes && x.more ? { more: true } : {}),
   ...(notes && x.note ? { note: x.note.trim() } : {}), ...(notes ? filesJson(x.files) : {}),
 }));
-// a finding whose newest message is Claude's and the reader hasn't answered
+// an item whose newest message is the agent's and the reader hasn't answered (a finding's, a question's, a step's)
 function awaitsReader(x) { const last = x.messages().at(-1); return !!last && last.who === 'agent' && !x.notePending; }
 function replyPayload() {
   return {
@@ -5671,7 +5673,7 @@ function paneScrollTo(d, el) {
   } else el.scrollIntoView({ behavior: REDUCE ? 'auto' : 'smooth', block: 'center' });
 }
 function flash(el) { el.classList.remove('bd-flash'); void el.offsetWidth; el.classList.add('bd-flash'); setTimeout(() => el.classList.remove('bd-flash'), 1500); }
-// the finding a Comments card leads to: a ring around it for a moment
+// the item a Comments card leads to: a ring around it for a moment
 function ring(el) { el.classList.remove('bd-ring'); void el.offsetWidth; el.classList.add('bd-ring'); setTimeout(() => el.classList.remove('bd-ring'), 1700); }
 function openComment(d, c, fromOutside) {
   const src = c.item && ITEMS[c.item];
@@ -13111,18 +13113,18 @@ const MARKUP = (() => {
   }
 
   /* comments sidebar: one card per saved note, in page order or newest first; a saved note is edited in
-     its card. Hovering a card or a mark lights up the other; clicking one brings the other into view. On a review the
-     findings' threads join it: a card per finding with a conversation, a comment not sent or a Need more details. */
+     its card. Hovering a card or a mark lights up the other; clicking one brings the other into view. The items' threads
+     join it: a card per checklist item with a conversation, a comment not sent or a Need more details. */
   const FILTERS = { pending: 'Pending', open: 'Open', resolved: 'Resolved', all: 'All' }, FILTER_KEY = 'bluedoc:comments-filter';
-  // a review's findings with something to list
-  const finds = () => DOC_TYPE !== 'review' ? [] : Object.values(ITEMS).filter(x => x.choices && (x.notePending || x.more || x.messages().length));
-  // a finding's status: pending (a comment or Need more details not sent: it goes with Request changes), resolved (the
-  // doc carries an answer, `choice`: the agent recorded the reader's pick) or open; and its group in the list
-  const findStatus = x => x.notePending || x.more === 'on' ? 'pending' : idsOf(x.it.choice).length ? 'resolved' : 'open';
-  const findGroup = x => ({ pending: 'unsent', resolved: 'resolved' }[findStatus(x)] || (awaitsReader(x) ? 'wait' : 'answered'));
-  const findsPending = () => finds().filter(x => findStatus(x) === 'pending').length;
+  // the items with something to list: a decision (a review's finding, a plan's question) or a progress item
+  const threads = () => Object.values(ITEMS).filter(x => x.notePending || x.more || x.messages().length);
+  // an item's status: pending (a comment or Need more details not sent), resolved (the doc carries its answer: a
+  // decision's `choice`, the agent recording the reader's pick; a progress item's `done`) or open; and its group in the list
+  const threadStatus = x => x.notePending || x.more === 'on' ? 'pending' : (x.choices ? idsOf(x.it.choice).length : x.it.done === true) ? 'resolved' : 'open';
+  const threadGroup = x => ({ pending: 'unsent', resolved: 'resolved' }[threadStatus(x)] || (awaitsReader(x) ? 'wait' : 'answered'));
+  const threadsUnsent = () => threads().filter(x => threadStatus(x) === 'pending').length;
   // the reader's last pick, else Pending while there are pending notes, else Open
-  let filter = FILTERS[store.get(FILTER_KEY)] ? store.get(FILTER_KEY) : pending().length || findsPending() || !list.length && !finds().length ? 'pending' : 'open', sort = 'page';
+  let filter = FILTERS[store.get(FILTER_KEY)] ? store.get(FILTER_KEY) : pending().length || threadsUnsent() || !list.length && !threads().length ? 'pending' : 'open', sort = 'page';
   const matches = a => filter === 'all' || a.status === filter;
   function setFilter(f, remember) {
     if (remember) store.set(FILTER_KEY, f);
@@ -13208,50 +13210,64 @@ const MARKUP = (() => {
     if (sort !== 'page') return xs.sort((a, b) => (a.at < b.at) - (a.at > b.at));
     return [...xs.filter(isGeneral).sort((a, b) => (a.at > b.at) - (a.at < b.at)), ...pageOrder(xs.filter(a => !isGeneral(a)))];
   }
-  // the findings the filter shows, by group: the agent replied (waiting for the reader) first, then not sent yet,
-  // answered and resolved, each in page order; then the page's comments ("On the page" when findings show too)
+  // the items the filter shows, by group: the agent replied (waiting for the reader) first, then not sent yet,
+  // answered and resolved, each in page order; then the page's comments ("On the page" when items show too)
   const GROUPS = ['wait', 'unsent', 'answered', 'resolved'];
   const groupLabel = g => ({ wait: `${agentName()} replied`, unsent: 'Not sent yet', answered: 'You answered', resolved: 'Resolved', page: 'On the page' }[g]);
-  function shownFinds() {
-    const xs = finds().filter(x => filter === 'all' || findStatus(x) === filter);
-    return GROUPS.map(g => [g, xs.filter(x => findGroup(x) === g)]).filter(([, ys]) => ys.length);
+  function shownThreads() {
+    const xs = threads().filter(x => filter === 'all' || threadStatus(x) === filter);
+    return GROUPS.map(g => [g, xs.filter(x => threadGroup(x) === g)]).filter(([, ys]) => ys.length);
   }
-  const heads = new Map(), fcards = new Map();   // group -> li; "checklist/item" -> li
+  const heads = new Map(), icards = new Map();   // group -> li; "checklist/item" -> li
   function groupHead(g, n) {
     let li = heads.get(g);
     if (!li) { li = h('li', { class: 'bd-cs-h' + (g === 'wait' ? ' you' : ''), role: 'heading', 'aria-level': '3', 'data-g': g }); heads.set(g, li); }
     li.replaceChildren(groupLabel(g), h('span', { class: 'n' }, String(n)));
     return li;
   }
-  // a finding's PR: its section's number (#415 for a pr-415 section, else 02)
-  const prOf = x => { const s = x.li.closest('section.bp-sec'), m = s && /^pr-(\d+)$/.exec(s.id); return m ? '#' + m[1] : s && s.querySelector('h2 .n')?.textContent || ''; };
-  // a finding's card: its PR and title, the last message (who: text, two lines) and its state; answered and resolved
-  // ones are quieter. Not sent yet, the message is the reader's comment (or Need more details)
-  function findCard(x) {
-    const k = `${x.cid}/${x.it.id}`, g = findGroup(x), last = x.messages().at(-1), fs = x.files.length;
-    let li = fcards.get(k);
-    if (!li) { li = h('li', { tabindex: '0', 'data-item': k }); li._x = x; fcards.set(k, li); }
+  // where an item lives: in a findings section its PR (#415 for a pr-415 section, else the section's number), else its
+  // checklist's title, short (full: the whole title). num: whether it is a number (set in mono)
+  function whereOf(x) {
+    const s = x.li.closest('section.bp-sec'), m = s && /^pr-(\d+)$/.exec(s.id);
+    if (m) return { num: true, text: '#' + m[1] };
+    if (fviewOf(x.li)) return { num: true, text: s.querySelector('h2 .n')?.textContent || '' };
+    const c = CHECKLISTS.find(c => c.b.id === x.cid), full = plain(c && c.b.title || x.cid);
+    return { num: false, text: cut(full, 24), full };
+  }
+  // the key that carries an item's unsent comment on this page, as the routing has it: a review's and a presentation's
+  // or listing's Request changes, a plan's, design's or website's Request changes or Approve, elsewhere the send key
+  // (Need more details also goes with Request changes there)
+  const carrier = x => NOTES_WITH_CHANGES ? (APPROVABLE ? 'Request changes or Approve' : 'Request changes')
+    : x.more === 'on' ? `Request changes or ${SEND_AS[1]}` : SEND_AS[1];
+  // an item's card: where it lives and its text, the last message (who: text, two lines) and its state; answered and
+  // resolved ones are quieter. Not sent yet, the message is the reader's comment (or Need more details)
+  function itemCard(x) {
+    const k = `${x.cid}/${x.it.id}`, g = threadGroup(x), last = x.messages().at(-1), fs = x.files.length;
+    let li = icards.get(k);
+    if (!li) { li = h('li', { tabindex: '0', 'data-item': k }); li._x = x; icards.set(k, li); }
     const unsent = g === 'unsent', who = unsent || !last || last.who === 'you' ? 'You' : agentName();
     const text = unsent ? [x.more === 'on' && 'Need more details', x.note.trim() || fs && `${fs} file${fs === 1 ? '' : 's'}`].filter(Boolean).join(': ')
       : last ? last.md : 'Need more details';   // listed with no message: a Need more details it sent
     const [cls, word, at] = g === 'wait' ? ['you', 'Waiting for you', `rev ${last.rev}`]
-      : g === 'unsent' ? ['rc', 'Goes with Request changes', '']
-      : g === 'resolved' ? ['ok', 'Resolved', '→ ' + idsOf(x.it.choice).map(id => choiceLabel(x, id)).join(', ')]
+      : g === 'unsent' ? ['rc', `Goes with ${carrier(x)}`, '']
+      : g === 'resolved' ? ['ok', 'Resolved', x.choices ? '→ ' + idsOf(x.it.choice).map(id => choiceLabel(x, id)).join(', ') : 'done']
       : last ? ['ok', 'Answered', last.rev == null ? 'sent earlier' : `sent in rev ${last.rev}`] : ['ok', 'Details requested', ''];
     const sig = JSON.stringify([g, who, text, word, at]);
     if (li._sig !== sig) {
-      li._sig = sig; li.className = 'bd-cs-fc' + (g === 'answered' || g === 'resolved' ? ' done' : '');
-      const pr = prOf(x);
-      li.replaceChildren(h('div', { class: 't' }, pr && h('span', { class: 'pr' }, pr), h('span', { class: 'tt', html: inline(x.it.text) })),
+      li._sig = sig; li.className = 'bd-cs-ic' + (g === 'answered' || g === 'resolved' ? ' done' : '');
+      const w = whereOf(x);
+      li.replaceChildren(h('div', { class: 't' }, w.text && h('span', { class: 'pr' + (w.num ? '' : ' nm'), title: w.full || null }, w.text), h('span', { class: 'tt', html: inline(x.it.text) })),
         h('div', { class: 'm' }, h('b', {}, who + ':'), ' ', cut(plain(text), 300)),
         h('div', { class: 's' }, h('span', { class: 'st ' + cls }, word), at));
-      li.setAttribute('aria-label', `${pr} ${plain(x.it.text)}: ${word}`.trim());
+      li.setAttribute('aria-label', `${w.text} ${plain(x.it.text)}: ${word}`.trim());
     }
     return li;
   }
-  // a finding card's click: the finding, opened (openItem shows it in any view or filter), in view, ringed a moment
-  function openFinding(x) {
+  // an item card's click: the item, opened (openItem shows it in any view or filter, and opens the items holding it;
+  // a design's brief shows its tab), in view, ringed a moment
+  function openThread(x) {
     const row = openItem(x);
+    if (BOARD && BOARD.reveal) BOARD.reveal(row);
     row.scrollIntoView({ block: rowBlock(row), behavior: REDUCE ? 'auto' : 'smooth' });
     ring(row);
   }
@@ -13374,22 +13390,22 @@ const MARKUP = (() => {
     return ed;
   }
   function renderList() {
-    const xs = shownList(), ids = new Set(xs.map(a => a.id)), fg = shownFinds(), keys = new Set(fg.flatMap(([, ys]) => ys.map(x => `${x.cid}/${x.it.id}`)));
+    const xs = shownList(), ids = new Set(xs.map(a => a.id)), tg = shownThreads(), keys = new Set(tg.flatMap(([, ys]) => ys.map(x => `${x.cid}/${x.it.id}`)));
     const caret = editTa && document.activeElement === editTa ? [editTa.selectionStart, editTa.selectionEnd] : null;
     for (const [id, li] of cards) if (!ids.has(id)) { li.remove(); cards.delete(id); }
-    for (const [k, li] of fcards) if (!keys.has(k)) { li.remove(); fcards.delete(k); }
+    for (const [k, li] of icards) if (!keys.has(k)) { li.remove(); icards.delete(k); }
     const mine = [];
     for (const a of xs) {
       // one card that fails to draw is left out and logged; the others and the page carry on
       try { mine.push(card(a)); } catch (e) { console.warn(`bluedoc: skipped comment ${a.id}: it can't be shown`, e, a); cards.get(a.id)?.remove(); cards.delete(a.id); }
     }
-    const nodes = [...fg.flatMap(([g, ys]) => [groupHead(g, ys.length), ...ys.map(findCard)]), ...(fg.length && mine.length ? [groupHead('page', mine.length)] : []), ...mine];
+    const nodes = [...tg.flatMap(([g, ys]) => [groupHead(g, ys.length), ...ys.map(itemCard)]), ...(tg.length && mine.length ? [groupHead('page', mine.length)] : []), ...mine];
     nodes.forEach((li, i) => { if (listOl.children[i] !== li) listOl.insertBefore(li, listOl.children[i] || null); });
     while (listOl.children.length > nodes.length) listOl.lastElementChild.remove();
     if (caret && editTa && document.activeElement !== editTa) { editTa.focus({ preventScroll: true }); editTa.setSelectionRange(...caret); }
     if (editTa) grow(editTa);
     emptyEl.hidden = nodes.length > 0;
-    if (!nodes.length) emptyEl.replaceChildren(...(list.length || finds().length
+    if (!nodes.length) emptyEl.replaceChildren(...(list.length || threads().length
       ? [h('span', {}, { pending: 'Nothing pending. Comments you have sent are under Open.', open: 'Nothing open. Comments you send show here until you resolve them.',
           resolved: 'Nothing resolved yet. Resolve an open comment once the agent has made the change.' }[filter] || '')]
       : [h('span', { class: 'ico' }, ic('msg')), h('b', {}, 'No comments yet'),
@@ -13520,7 +13536,7 @@ const MARKUP = (() => {
     else if ((e.key === 'Delete' || e.key === 'Backspace') && !e.repeat && !cmpTyped && !cmpReady() && !cmpDel.hidden) { e.preventDefault(); delPicked(); }
   });
   listBox.addEventListener('click', e => {
-    const fc = e.target.closest('.bd-cs-fc'); if (fc) { if (!e.target.closest('a')) openFinding(fc._x); return; }
+    const ti = e.target.closest('.bd-cs-ic'); if (ti) { if (!e.target.closest('a')) openThread(ti._x); return; }
     const li = e.target.closest('.bd-cs-c'); if (!li || e.target.closest('button, textarea, a')) return;
     const a = li._a; if (a === editA) return;
     if (a.status === 'pending' && !isDraft(a) && e.target.closest('.nt') && !getSelection().toString()) { startEdit(a); return; }
@@ -13529,9 +13545,9 @@ const MARKUP = (() => {
   // the next card up or down, past the group headings
   const nextCard = (li, down) => { let n = li; do n = down ? n.nextElementSibling : n.previousElementSibling; while (n && n.classList.contains('bd-cs-h')); return n; };
   listBox.addEventListener('keydown', e => {
-    const li = e.target; if (!li.matches || !li.matches('.bd-cs-c, .bd-cs-fc')) return;
+    const li = e.target; if (!li.matches || !li.matches('.bd-cs-c, .bd-cs-ic')) return;
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); nextCard(li, e.key === 'ArrowDown')?.focus(); return; }
-    if (li._x) { if (e.key === 'Enter') { e.preventDefault(); openFinding(li._x); } return; }
+    if (li._x) { if (e.key === 'Enter') { e.preventDefault(); openThread(li._x); } return; }
     if (e.key === 'Enter') { e.preventDefault(); select(li._a); reveal(li._a); }
     else if (e.key === 'Delete') { e.preventDefault(); const nx = nextCard(li, true) || nextCard(li, false); remove(li._a); nx?.focus(); }
   });
@@ -13555,13 +13571,13 @@ const MARKUP = (() => {
     return true;
   }
   function paint() {
-    const n = pending().length, ni = itemsPending().length, all = n + ni, fs = finds(), total = list.length + fs.length;
-    const by = s => list.filter(a => a.status === s).length + fs.filter(x => findStatus(x) === s).length;
+    const n = pending().length, ni = itemsPending().length, all = n + ni, ts = threads(), total = list.length + ts.length;
+    const by = s => list.filter(a => a.status === s).length + ts.filter(x => threadStatus(x) === s).length;
     goN.textContent = String(all);
     go.disabled = !all;
     go.setAttribute('aria-label', `Request changes: ${all} pending`);
     go._tip = all ? `Review and send ${all} pending change request${all === 1 ? '' : 's'}` : 'Comment on the page, or add a general comment, to request a change';
-    SIDE.badge(n + findsPending());
+    SIDE.badge(n + threadsUnsent());
     filterBtns.forEach(b => { const f = b.dataset.f; b.setAttribute('aria-checked', String(f === filter)); b.replaceChildren(FILTERS[f], h('i', {}, String(f === 'all' ? total : by(f)))); });
     sortBtn.replaceChildren(ic(sort === 'page' ? 'doc' : 'hist'));
     sortBtn.title = sort === 'page' ? 'In page order; click for newest first' : 'Newest first; click for page order'; sortBtn.setAttribute('aria-label', sortBtn.title);
@@ -13894,17 +13910,18 @@ const MARKUP = (() => {
     return { available: true, open: SIDE.shows('comments'), as: SIDE.shows('comments') ? SIDE.as() : null, count: list.length, unsent: pending().length, pending: pending().length,
       statuses: Object.fromEntries(STATUSES.map(s => [s, list.filter(a => a.status === s).length])), draft: draft && draft.id,
       filter, sort, cards: [...listOl.querySelectorAll('.bd-cs-c')].map(li => li.dataset.id), selected: selA && selA.id, editing: editA && editA.id,
-      // a review's finding threads as listed: the group headings in order, each finding's key, group and status
+      // the items' threads as listed: the group headings in order, each item's key, group and status
       groups: [...listOl.querySelectorAll('.bd-cs-h')].map(li => li.dataset.g),
-      findings: [...listOl.querySelectorAll('.bd-cs-fc')].map(li => ({ item: li.dataset.item, group: findGroup(li._x), status: findStatus(li._x) })) };
+      items: [...listOl.querySelectorAll('.bd-cs-ic')].map(li => ({ item: li.dataset.item, group: threadGroup(li._x), status: threadStatus(li._x) })) };
   }
-  // on a review's load the panel opens on what waits for the reader: a finding the agent answered last (Open) or a
-  // comment not sent yet, on a finding or the page (Pending); otherwise it stays as the reader left it. A sheet (a
-  // narrow window) would cover the page: it stays closed
+  // on the load of a page with items (checklists) the panel opens on what waits for the reader: an item the agent
+  // answered last (Open, even over another section the reader left open), or a comment not sent yet, on an item or the
+  // page (Pending, only when the panel is closed: a section the reader picked stays; a design's board drafts aren't
+  // comments); otherwise it stays as the reader left it. A sheet (a narrow window) would cover the page: it stays closed
   function openIfWaiting() {
-    if (DOC_TYPE !== 'review' || SIDE.sheet()) return;
-    const wait = finds().some(x => findGroup(x) === 'wait');
-    if (!wait && !pending().length && !findsPending()) return;
+    if (!Object.keys(ITEMS).length || SIDE.sheet()) return;
+    const wait = threads().some(x => threadGroup(x) === 'wait');
+    if (!wait && (SIDE.api().open || (!pending().some(a => !isDraft(a)) && !threadsUnsent()))) return;
     const f = wait ? 'open' : 'pending';
     if (filter !== 'all' && filter !== f) setFilter(f, false);
     SIDE.show('comments', { remember: false });
@@ -13914,7 +13931,7 @@ const MARKUP = (() => {
   /* wiring */
   document.body.append(layer, hov, cap, cmp, selc, tb);
   requestAnimationFrame(fitTray);
-  SIDE.add({ id: 'comments', label: 'Comments', body: csBody, chip: () => (n => n ? `${n} pending` : '')(pending().length + findsPending()),
+  SIDE.add({ id: 'comments', label: 'Comments', body: csBody, chip: () => (n => n ? `${n} pending` : '')(pending().length + threadsUnsent()),
     onToggle: shown => { if (!shown) endEdit(true); schedule(true); paint(); } });
   root.classList.add('bd-tray-on');
   for (const ty of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click', 'dblclick']) addEventListener(ty, onCapture, true);

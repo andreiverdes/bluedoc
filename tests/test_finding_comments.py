@@ -46,7 +46,7 @@ class FindingComments(ChromePage):
         return tab.ev(f"BP.comments({{filter: {json.dumps(f)}}})")
 
     def card(self, key: str) -> str:
-        return f"document.querySelector('.bd-cs-fc[data-item=\"{key}\"]')"
+        return f"document.querySelector('.bd-cs-ic[data-item=\"{key}\"]')"
 
     def test_a_finding_comment_goes_with_request_changes_and_the_pick_with_the_send_key(self) -> None:
         a = self.open(self.url)
@@ -103,7 +103,7 @@ class FindingComments(ChromePage):
         self.assertEqual(a.ev("[...document.querySelectorAll('.bd-cs-f [data-f]')].map(b => b.textContent)"), ["Pending3", "Open2", "Resolved1", "All6"])
         p = self.panel(a, "open")
         self.assertEqual(p["groups"], ["wait", "answered"])
-        self.assertEqual([(x["item"], x["group"]) for x in p["findings"]], [("t415/retry-4xx", "wait"), ("t415/double-auth", "answered")])
+        self.assertEqual([(x["item"], x["group"]) for x in p["items"]], [("t415/retry-4xx", "wait"), ("t415/double-auth", "answered")])
         self.assertEqual(a.ev(f"[{self.card('t415/retry-4xx')}.querySelector('.pr').textContent, {self.card('t415/retry-4xx')}.querySelector('.s').textContent]"),
                          ["#415", "Waiting for yourev 5"])
         self.assertTrue(a.ev(f"{self.card('t415/retry-4xx')}.querySelector('.m').textContent.endsWith('Does that cover the decline you saw?')"))
@@ -112,18 +112,18 @@ class FindingComments(ChromePage):
         self.assertTrue(a.ev("document.querySelector('.bd-cs-h[data-g=wait]').textContent.endsWith(' replied1')"))
         p = self.panel(a, "pending")
         self.assertEqual(p["groups"], ["unsent", "page"])
-        self.assertEqual([x["item"] for x in p["findings"]], ["t412/boundary-tests", "t415/latency"])
+        self.assertEqual([x["item"] for x in p["items"]], ["t412/boundary-tests", "t415/latency"])
         self.assertEqual(len(p["cards"]), 1)
         self.assertEqual(a.ev(f"(c => [c.querySelector('.m').textContent, c.querySelector('.st').textContent])({self.card('t412/boundary-tests')})"),
                          ["You: Need more details: Which thresholds, and is 50 inclusive?", "Goes with Request changes"])
         p = self.panel(a, "resolved")
-        self.assertEqual([(x["item"], x["group"]) for x in p["findings"]], [("t412/docs-stale", "resolved")])
+        self.assertEqual([(x["item"], x["group"]) for x in p["items"]], [("t412/docs-stale", "resolved")])
         self.assertEqual(a.ev(f"{self.card('t412/docs-stale')}.querySelector('.s').textContent"), "Resolved→ Ticket")
         self.assertEqual(self.panel(a, "all")["groups"], ["wait", "unsent", "answered", "resolved", "page"])
         # Request changes takes the two comments and the pin: the pending findings move to You answered
         self.send_changes(a, "1 pending comment, 1 comment on findings, 1 request for more details")
         p = self.panel(a, "open")
-        self.assertEqual([(x["item"], x["group"]) for x in p["findings"]],
+        self.assertEqual([(x["item"], x["group"]) for x in p["items"]],
                          [("t415/retry-4xx", "wait"), ("t412/boundary-tests", "answered"), ("t415/double-auth", "answered"), ("t415/latency", "answered")])
         self.assertEqual(self.browser.errors, [])
 
@@ -133,7 +133,7 @@ class FindingComments(ChromePage):
         a.ev("document.querySelector('.bd-cs-f [data-f=resolved]').click(); BP.sidebar({open: false})")
         a = self.open(self.url)
         self.assertEqual([a.ev("BP.comments().open"), a.ev("BP.comments().filter")], [True, "open"])
-        self.assertEqual(self.panel(a, "open")["findings"], [{"item": "t412/docs-stale", "group": "wait", "status": "open"}])
+        self.assertEqual(self.panel(a, "open")["items"], [{"item": "t412/docs-stale", "group": "wait", "status": "open"}])
         # a comment not sent yet: it opens on Pending
         a.ev("BP.setNote('t412/docs-stale', 'Fine as a ticket.'); BP.sidebar({open: false})")
         a = self.open(self.url)
