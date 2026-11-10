@@ -3,8 +3,8 @@
     from_markdown(text, *, stem, project_dir, org, plan_file=None) -> dict
 
 The first `#` heading is the title and the first paragraph the tldr; a plan without one (omp's start at `##`) is titled
-from its file's name, else the doc's name (stem: what the gate names it, an omp `local://` plan's name), else the first
-`##` heading that isn't a generic one like Context or Summary. Each `##` heading is a section. The steps block
+from its file's name, else the doc's name (stem: what the plan-mode hook names it, an omp `local://` plan's name), else
+the first `##` heading that isn't a generic one like Context or Summary. Each `##` heading is a section. The steps block
 comes from the numbered list under a heading named like Steps or Implementation, else the first top-level numbered
 list; a plan without one makes each `##` section that isn't context, risks or verification a step. Backticked paths
 become the files block (`edit` when the path exists under project_dir, else `add`). Everything else stays text,

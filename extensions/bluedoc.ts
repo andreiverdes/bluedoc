@@ -1,5 +1,5 @@
 /**
- * bluedoc for omp and pi: the plan gate and the /bluedoc-* commands.
+ * bluedoc for omp and pi: the plan-mode hook and the /bluedoc-* commands.
  *
  * omp: a plan_review_requested handler opens the plan as a bluedoc plan page (hook.py ext open) and, in the
  *   background, waits for the reader (hook.py ext wait): Approve answers the review with "execute", Request changes
@@ -74,7 +74,7 @@ interface CommandSpec {
 	prompt?: string;
 	run?: { script: string; args: string[] };
 }
-type Gate =
+type Opened =
 	| { state: "skip"; why: string }
 	| { state: "approved"; doc: string; rev: string; note: string }
 	| { state: "opened"; doc: string; url: string; message: string };
@@ -132,10 +132,10 @@ async function hookExt<T>(args: string[], options: RunOptions): Promise<T | unde
 	return JSON.parse(run.stdout) as T;
 }
 
-function openGate(text: string, planPath: string | undefined, ctx: Ctx, agent: "omp" | "pi", signal?: AbortSignal) {
+function openPlan(text: string, planPath: string | undefined, ctx: Ctx, agent: "omp" | "pi", signal?: AbortSignal) {
 	// planPath may be omp's `local://…` URL: hook.py names the doc from it and imports `text`.
 	const stdin = JSON.stringify({ text, planPath: planPath ?? null, cwd: ctx.cwd, sessionId: ctx.sessionManager.getSessionId(), agent });
-	return hookExt<Gate>(["open"], { cwd: ctx.cwd, stdin, signal });
+	return hookExt<Opened>(["open"], { cwd: ctx.cwd, stdin, signal });
 }
 
 /** Splits a command line shell-style: whitespace separates words, single and double quotes group them. */
@@ -209,17 +209,17 @@ export default function bluedoc(pi: Api) {
 		const watcher: { resolved: boolean; child?: ChildProcess } = { resolved: false };
 		watchers.set(review.reviewId, watcher);
 		try {
-			const gate = await openGate(review.planContent ?? "", review.planFilePath, ctx, "omp");
-			if (!gate || watcher.resolved || gate.state === "skip") return;
-			if (gate.state === "approved") {
-				ctx.ui.notify(gate.note, "info");
+			const opened = await openPlan(review.planContent ?? "", review.planFilePath, ctx, "omp");
+			if (!opened || watcher.resolved || opened.state === "skip") return;
+			if (opened.state === "approved") {
+				ctx.ui.notify(opened.note, "info");
 				ctx.resolvePlanReview?.(review.reviewId, "execute", {});
 				return;
 			}
-			ctx.ui.notify(`bluedoc: the plan is open at ${gate.url}. Approve or request changes there, or answer here.`, "info");
+			ctx.ui.notify(`bluedoc: the plan is open at ${opened.url}. Approve or request changes there, or answer here.`, "info");
 			// A reply the review can't take (an empty change request) leaves it open: wait for the next one.
 			while (!watcher.resolved) {
-				const reply = await hookExt<Reply>(["wait", gate.doc], { cwd: ctx.cwd, onChild: child => (watcher.child = child) });
+				const reply = await hookExt<Reply>(["wait", opened.doc], { cwd: ctx.cwd, onChild: child => (watcher.child = child) });
 				watcher.child = undefined;
 				if (!reply || watcher.resolved) return;
 				const answered =
@@ -302,15 +302,15 @@ export default function bluedoc(pi: Api) {
 					return text(`Can't read ${path}: ${message(error)}`, true);
 				}
 				try {
-					const gate = await openGate(plan, file, ctx, "pi", signal);
-					if (!gate) return text("Cancelled before the plan opened.", true);
-					if (gate.state === "skip") return text(`bluedoc can't show the plan here (${gate.why}). Ask the user to approve the plan in the chat.`);
-					if (gate.state === "approved") {
+					const opened = await openPlan(plan, file, ctx, "pi", signal);
+					if (!opened) return text("Cancelled before the plan opened.", true);
+					if (opened.state === "skip") return text(`bluedoc can't show the plan here (${opened.why}). Ask the user to approve the plan in the chat.`);
+					if (opened.state === "approved") {
 						if (planMode.on) setPlanMode({ on: false });
-						return text(`Approved:\n${gate.note}`);
+						return text(`Approved:\n${opened.note}`);
 					}
-					ctx.ui.notify(`bluedoc: the plan is open at ${gate.url}`, "info");
-					const reply = await hookExt<Reply>(["wait", gate.doc], { cwd: ctx.cwd, signal });
+					ctx.ui.notify(`bluedoc: the plan is open at ${opened.url}`, "info");
+					const reply = await hookExt<Reply>(["wait", opened.doc], { cwd: ctx.cwd, signal });
 					if (!reply) return text("Cancelled before the user answered.", true);
 					if (reply.kind === "approval") {
 						if (planMode.on) setPlanMode({ on: false });

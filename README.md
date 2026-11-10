@@ -58,7 +58,7 @@ claude plugin install bluedoc@bluedoc
 
 Inside a session the same commands are `/plugin marketplace add andreiverdes/bluedoc` and `/plugin install bluedoc@bluedoc`. Start a new session to load the skill.
 
-**Plan mode.** With the plugin installed, every plan Claude finishes in plan mode opens as a bluedoc plan page in your browser. Claude waits for your answer on the page, revises the doc on **Request changes** and leaves plan mode once you **Approve plan**. If the plan names a `*.bluedoc.json` Claude already wrote, that doc opens; otherwise the plan is imported into `~/.bluedoc/plans/<project>/`. The gate stays out of the way in CI, over SSH without a display and in `bypassPermissions` mode, and `BLUEDOC_PLAN_GATE=0` turns it off; in those cases, and on any error, Claude Code shows its own plan dialog. Plannotator installed too means two reviews open for one plan. The other agents below share this gate, each through its own hook.
+**Plan mode.** With the plugin installed, every plan Claude finishes in plan mode opens as a bluedoc plan page in your browser. Claude waits for your answer on the page, revises the doc on **Request changes** and leaves plan mode once you **Approve plan**. If the plan names a `*.bluedoc.json` Claude already wrote, that doc opens; otherwise the plan is imported into `~/.bluedoc/plans/<project>/`. The plan-mode hook stays out of the way in CI, over SSH without a display and in `bypassPermissions` mode; the **Plan mode opens plans here** switch in [Settings](#settings), or `BLUEDOC_PLAN_HOOK=0`, turns it off. In those cases, and on any error, Claude Code shows its own plan dialog. Plannotator installed too means two reviews open for one plan. The other agents below get the same plan-mode hook, each through its own hook file.
 
 ### Codex
 
@@ -108,7 +108,7 @@ pi install git:github.com/andreiverdes/bluedoc
 
 Restart pi. Run it as `/skill:bluedoc` or let pi pick it from your request.
 
-**The plan gate:** `/bluedoc-plan-mode [file.md]` turns on plan mode; the agent writes its plan and calls `bluedoc_submit_plan`, which opens it as a bluedoc page and returns your approval or change request. `/bluedoc-<name>` commands come from the bundled extension.
+**Plan mode:** `/bluedoc-plan-mode [file.md]` turns on plan mode; the agent writes its plan and calls `bluedoc_submit_plan`, which opens it as a bluedoc page and returns your approval or change request. `/bluedoc-<name>` commands come from the bundled extension.
 
 ### omp
 
@@ -121,7 +121,7 @@ Added the marketplace before? Run `omp plugin marketplace update bluedoc` first:
 
 Run `/reload-plugins` in an open session, or start a new one.
 
-**The plan gate:** the bundled extension opens omp's plan reviews as bluedoc pages: Approve executes the plan, Request changes refines it; the terminal picker stays live. The `/bluedoc-<name>` commands come from the extension too.
+**Plan mode:** the bundled extension opens omp's plan reviews as bluedoc pages: Approve executes the plan, Request changes refines it; the terminal picker stays live. The `/bluedoc-<name>` commands come from the extension too.
 
 ### Copilot CLI
 
@@ -129,7 +129,7 @@ Run `/reload-plugins` in an open session, or start a new one.
 copilot plugin install andreiverdes/bluedoc
 ```
 
-Start a new session. **Plan mode:** when Copilot calls `exit_plan_mode`, its `plan.md` opens as a bluedoc plan page; Copilot waits for your answer there and leaves plan mode after **Approve plan**. If the gate takes longer than its 120 s timeout, Copilot shows its own plan prompt.
+Start a new session. **Plan mode:** when Copilot calls `exit_plan_mode`, its `plan.md` opens as a bluedoc plan page; Copilot waits for your answer there and leaves plan mode after **Approve plan**. If the hook takes longer than its 120 s timeout, Copilot shows its own plan prompt.
 
 ### Antigravity CLI
 
@@ -138,7 +138,7 @@ git clone https://github.com/andreiverdes/bluedoc.git
 agy plugin install bluedoc/antigravity
 ```
 
-Restart `agy`. `antigravity/` is the Antigravity plugin: its manifest, its hooks and the skill (a link to `skills/bluedoc`, copied on install). **Plan mode** (`agy --mode plan` or `/plan`): when the agent writes its implementation plan for your review, the plan opens as a bluedoc plan page instead; the agent waits for your answer there, revises the doc on **Request changes** and, after **Approve plan**, writes the plan again and implements it with your decisions. agy asks you before each `serve.py wait` and `build.py patch` the gate runs.
+Restart `agy`. `antigravity/` is the Antigravity plugin: its manifest, its hooks and the skill (a link to `skills/bluedoc`, copied on install). **Plan mode** (`agy --mode plan` or `/plan`): when the agent writes its implementation plan for your review, the plan opens as a bluedoc plan page instead; the agent waits for your answer there, revises the doc on **Request changes** and, after **Approve plan**, writes the plan again and implements it with your decisions. agy asks you before each `serve.py wait` and `build.py patch` the plan-mode hook has it run.
 
 ### Any other agent
 
@@ -196,6 +196,10 @@ Every doc the server knows is listed at `http://127.0.0.1:8740/`. When another p
 Per doc, the agent reads about 1.5k tokens of instructions (`SKILL.md`) plus one type guide (`types/<type>.md`), and greps the schema only for the fields it needs.
 
 `<skill>` is the installed skill folder, for example `~/.agents/skills/bluedoc`.
+
+### Settings
+
+The gear at the foot of the home page's sidebar opens Settings (`http://127.0.0.1:8740/settings`): the folders the home page lists, the repo names in docs' code links, the frameworks design boards can use, the plan-mode hook's switch, Chrome's path (for PDFs, decks, website snapshots and screen captures), the font folders, and the server's version, address and data folder with a **Restart server** button. The page keeps its switches in `~/.bluedoc/settings.json`. An environment variable that is set wins over the file, and Settings shows that row locked: `BLUEDOC_PLAN_HOOK=0` (plan mode), `BLUEDOC_CHROME` and `BLUEDOC_FONT_DIRS` (folders separated by `:`, `;` on Windows).
 
 ## Slash commands
 
@@ -257,7 +261,7 @@ skills/bluedoc/
   assets/skeletons/      fill-in skeleton per doc type (build.py new), plus review-area.json (--shape area)
   scripts/build.py       new, validate, lint, patch, from-md (a Markdown plan → a plan doc), build the HTML
   scripts/mdplan.py      the Markdown plan importer behind build.py from-md
-  scripts/hook.py        agent hooks: the plan gate for Claude Code, Codex, Copilot CLI and Antigravity CLI, `ext open|wait` for the pi/omp extension, Claude's Bash allowance
+  scripts/hook.py        agent hooks: the plan-mode hook for Claude Code, Codex, Copilot CLI and Antigravity CLI, `ext open|wait` for the pi/omp extension, Claude's Bash allowance
   scripts/listing.py     store listings: the rules file, store checks, l10n, sections and variants, the fastlane export plan
   scripts/capture.py     store screenshots from capture recipes: simctl, adb and emulator, headless Chrome
   scripts/fonts.py       the fonts installed on this machine, for a listing's caption font
@@ -265,7 +269,8 @@ skills/bluedoc/
   scripts/diffref.py     expands diff references from the cache, git or gh
   scripts/migrate.py     one-off: embedded diffs -> references, reports contract gaps; --decks: slide-only designs -> presentations
   scripts/ghthreads.py   GitHub review threads -> findings + diff comments
-  scripts/serve.py       local server: renders docs and design screens, proxies a website's dev server, home page, answers and change requests
+  scripts/serve.py       local server: renders docs and design screens, proxies a website's dev server, home page and Settings, answers and change requests
+  scripts/settings.py    ~/.bluedoc/settings.json, which Settings writes; a set environment variable wins over it
   scripts/statedb.py     the reader's input and replies in ~/.bluedoc/state.db (SQLite)
   assets/template.html   the page runtime (styling, canvas, checklists, diff browser, design board, annotator)
   assets/board-geo.js    board layout and orthogonal edge routing, shared by design boards and blueprint canvases
@@ -293,13 +298,13 @@ antigravity/skills/bluedoc-*/  Antigravity CLI's commands (skills), generated
 tools/gen_commands.py    writes every agent's command files from the spec (--check: are they up to date)
 tests/                   the test suite (python3 -m unittest discover -s tests)
 .claude-plugin/          Claude Code plugin and marketplace (omp reads it too)
-hooks/hooks.json         Claude Code hooks: the plan gate (omp doesn't run them)
-codex/hooks.json         Codex hooks: the plan gate (Stop), wired from .codex-plugin/plugin.json
+hooks/hooks.json         Claude Code hooks: the plan-mode hook (omp doesn't run them)
+codex/hooks.json         Codex hooks: the plan-mode hook (Stop), wired from .codex-plugin/plugin.json
 .codex-plugin/plugin.json  Codex plugin manifest (skills, hooks)
 .plugin/plugin.json      Copilot CLI plugin manifest (skills, com.github.copilot/ commands and hooks)
-com.github.copilot/hooks/  Copilot CLI hooks: the plan gate (preToolUse on exit_plan_mode; agentStop after an approval)
-antigravity/             Antigravity CLI plugin: manifest, hooks.json (the plan gate), skills/ (the commands and a link to the skill)
-extensions/bluedoc.ts   pi and omp extension: the plan gate and /bluedoc-* commands
+com.github.copilot/hooks/  Copilot CLI hooks: the plan-mode hook (preToolUse on exit_plan_mode; agentStop after an approval)
+antigravity/             Antigravity CLI plugin: manifest, hooks.json (the plan-mode hook), skills/ (the commands and a link to the skill)
+extensions/bluedoc.ts   pi and omp extension: the plan-mode hook and /bluedoc-* commands
 .agents/plugins/         Codex marketplace
 package.json             pi package manifest (skills, extension)
 LICENSE                  MIT

@@ -47,7 +47,9 @@ body { font-family: var(--font-hz-sans, Inter, system-ui, sans-serif); -webkit-f
 .bd-rail .bd-brand { padding: 0; justify-content: center; }
 .bd-side-foot { display: flex; align-items: center; gap: 8px; padding-left: 6px; font-size: 12.5px; color: var(--color-hz-fg-subtle); }
 .bd-side-foot .sp { flex: 1; }
+.bd-side-foot .keys { display: flex; align-items: center; gap: 2px; }
 .bd-rail .bd-side-foot { padding: 0; justify-content: center; }
+.bd-rail .bd-side-foot .keys { flex-direction: column; }
 .bd-fl { display: inline-flex; align-items: center; gap: 8px; min-width: 0; max-width: 100%; }
 .bd-fl > span { overflow: hidden; text-overflow: ellipsis; }
 
@@ -436,6 +438,47 @@ a.bd-row:hover .tx .t { color: var(--color-hz-accent-fg); }
   border-radius: 12px; background: var(--color-hz-fg); color: var(--color-hz-canvas); box-shadow: var(--hz-shadow-3); font: 500 13.5px var(--font-hz-sans); }
 .bd-toast button { padding: 4px 8px; border: 0; border-radius: 7px; background: none; color: inherit; font: 600 13.5px var(--font-hz-sans); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
 
+/* settings (/settings): this computer's bluedoc settings in the main column, a section list beside the sections */
+.bd-st-bar { display: none; }
+.bd-st-bar .sp { flex: 1; }
+.bd-st { max-width: 1040px; margin: 0 auto; padding: 36px 40px 64px; }
+.bd-st code { font: 500 .92em var(--font-hz-mono); padding: 1px 5px; border-radius: 5px; overflow-wrap: anywhere; background: var(--color-hz-inset); color: var(--color-hz-fg-muted); }
+.bd-st-top h1 { margin: 0; font: 650 28px/1.2 var(--font-hz-sans); letter-spacing: -.01em; }
+.bd-st-top p { margin: 6px 0 0; font-size: 14px; color: var(--color-hz-fg-muted); }
+.bd-st-body { display: grid; grid-template-columns: 168px minmax(0, 1fr); gap: 36px; margin-top: 28px; }
+.bd-st-nav { position: sticky; top: 24px; align-self: start; display: grid; gap: 2px; }
+.bd-st-nav a { padding: 7px 10px; border-radius: 8px; font-size: 13.5px; color: var(--color-hz-fg-muted); text-decoration: none; }
+.bd-st-nav a:hover { background: var(--color-hz-hover); color: var(--color-hz-fg); }
+.bd-st-nav a:focus-visible { outline: none; box-shadow: var(--hz-shadow-focus); }
+.bd-st-nav a[aria-current] { background: var(--color-hz-selected); color: var(--color-hz-fg); font-weight: 550; }
+.bd-st-secs { display: grid; gap: 32px; min-width: 0; }
+.bd-st-sec { scroll-margin-top: 24px; }
+.bd-st-sec header { margin-bottom: 10px; }
+.bd-st-sec h2 { margin: 0; font: 620 16px/1.3 var(--font-hz-sans); }
+.bd-st-sec header p { margin: 4px 0 0; font-size: 13px; line-height: 1.45; color: var(--color-hz-fg-subtle); }
+.bd-st-card { border-radius: 14px; background: var(--color-hz-surface); box-shadow: inset 0 0 0 1px var(--color-hz-line-soft), var(--hz-shadow-1); }
+.bd-st-row { display: flex; align-items: center; gap: 18px; min-height: 58px; padding: 12px 16px; box-sizing: border-box; }
+.bd-st-row + .bd-st-row { box-shadow: inset 0 1px 0 var(--color-hz-line-soft); }
+.bd-st-l { flex: 1 1 0; min-width: 0; display: grid; gap: 3px; }
+.bd-st-l b { font-size: 14px; font-weight: 560; overflow-wrap: anywhere; }
+.bd-st-l span { font-size: 12.5px; line-height: 1.45; color: var(--color-hz-fg-subtle); overflow-wrap: anywhere; }
+.bd-st-c { flex: 0 1 auto; display: flex; align-items: center; gap: 10px; min-width: 0; }
+.bd-st-row.lk .bd-st-l b { color: var(--color-hz-fg-muted); }
+.bd-st-row.note { justify-content: space-between; font-size: 13px; color: var(--color-hz-fg-muted); }
+.bd-st-row.add { flex-wrap: wrap; gap: 10px; }
+.bd-st-row.add .bd-st-in { flex: 1 1 260px; }
+.bd-st-row.sub { min-height: 46px; padding-left: 32px; }
+.bd-st-err, .bd-st-l .bd-st-err { flex-basis: 100%; margin: 0; font-size: 12.5px; color: var(--color-hz-danger-fg); }
+.bd-st-env { min-width: 0; padding: 3px 8px; border-radius: 7px; font: 500 11.5px var(--font-hz-mono); overflow-wrap: anywhere; color: var(--color-hz-info-fg); background: var(--color-hz-info-tint); }
+.bd-st-path { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.bd-st-path .bd-st-in { width: 280px; }
+.bd-st-in input { font-size: 13px; }
+.bd-st-ok { font-size: 12px; white-space: nowrap; color: var(--color-hz-success-fg); }
+.bd-st-ok.no { color: var(--color-hz-fg-subtle); }
+.bd-st-v { min-width: 0; font: 500 13px var(--font-hz-mono); color: var(--color-hz-fg-muted); overflow-wrap: anywhere; }
+.bd-st-l .bd-st-wait { color: var(--color-hz-info-fg); }
+.bd-st-none { font-size: 13px; color: var(--color-hz-fg-subtle); }
+
 /* mobile drawer */
 .bd-drawer { position: fixed; inset: 0; z-index: 60; }
 .bd-drawer .scrim { position: absolute; inset: 0; background: var(--color-hz-scrim, rgba(0, 0, 0, .4)); animation: bd-fade var(--hz-dur-2) both; }
@@ -455,6 +498,19 @@ a.bd-row:hover .tx .t { color: var(--color-hz-accent-fg); }
   .bd-top .bd-top-t, .bd-top .bd-top-n, .bd-top .bd-brand { display: none; }
   .bd-top .bd-top-s { flex: 1 1 auto; }
   .bd-top .bd-top-q { flex: 1 1 auto; }
+  /* settings: no sidebar, so the bar keeps the drawer's key and the theme key, over the page */
+  .bd-st-bar { display: flex; }
+  .bd-st-bar + .bd-st { padding-top: calc(var(--bd-top-h) + 20px); }
+}
+/* settings on a phone: one column, no section list (the page scrolls) */
+@media (max-width: 760px) {
+  .bd-st { padding: 20px 14px 48px; }
+  .bd-st-top h1 { font-size: 22px; }
+  .bd-st-body { grid-template-columns: minmax(0, 1fr); margin-top: 18px; }
+  .bd-st-nav { display: none; }
+  .bd-st-row { flex-wrap: wrap; gap: 10px; }
+  .bd-st-c { flex: 1 1 100%; flex-wrap: wrap; }
+  .bd-st-path, .bd-st-path .bd-st-in { flex: 1 1 100%; width: 100%; }
 }
 @media (max-width: 700px) {
   .bd-row { grid-template-columns: minmax(0, 1fr) auto; gap: 10px; }
@@ -485,7 +541,7 @@ a.bd-row:hover .tx .t { color: var(--color-hz-accent-fg); }
 'use strict';
 const e = React.createElement, F = React.Fragment;
 const { useState, useEffect, useMemo, useRef, useDeferredValue } = React;
-const { HorizonProvider, Sidebar, SegmentedControl, Card, ProgressRing, EmptyState, SearchField, Tag, IconButton, Button, ToggleButton, StatusDot, Badge, Banner, Icons } = window.HorizonUI;
+const { HorizonProvider, Sidebar, SegmentedControl, Card, ProgressRing, EmptyState, SearchField, TextField, Switch, Tag, IconButton, Button, ToggleButton, StatusDot, Badge, Banner, Icons } = window.HorizonUI;
 
 /* ---------- storage, theme, settings ---------- */
 const store = { get: k => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch {} } };
@@ -1102,6 +1158,205 @@ function folderItems(r, docs) {
   });
 }
 
+/* ---------- settings (/settings) ---------- */
+// this computer's bluedoc settings (GET /__bluedoc/settings); every change is one POST that saves at once
+const SETTINGS_SECTIONS = [['folders', 'Folders'], ['repos', 'Code links'], ['frameworks', 'Frameworks'], ['agents', 'Agents'], ['tools', 'Tools'], ['server', 'Server']];
+const bytesText = n => (n < 1024 ? `${n} B` : n < 1048576 ? `${Math.round(n / 1024)} KB` : `${(n / 1048576).toFixed(1)} MB`);
+const majorOf = v => String(v || '').split('.')[0];
+function sinceText(iso) {
+  const d = new Date(iso);
+  if (isNaN(d)) return '';
+  const hm = d.toTimeString().slice(0, 5);
+  return d.toDateString() === new Date().toDateString() ? `Today ${hm}` : `${d.getDate()} ${d.toLocaleString('en', { month: 'short' })} ${hm}`;
+}
+// a write the server answers with JSON; a refusal throws its error with the status (0: no answer)
+async function postJSON(path, body) {
+  let r;
+  try {
+    r = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Bluedoc': '1', ...serverKeyHeaders() }, body: JSON.stringify(body) });
+  } catch { throw Object.assign(new Error('Couldn\'t save: is the server running?'), { status: 0 }); }
+  let j = null;
+  try { j = await r.json(); } catch {}
+  if (!r.ok) throw Object.assign(new Error(r.status === 403 ? 'This browser can\'t save yet: open the link from serve.py unlock here' : (j && j.error) || `The server answered ${r.status}`), { status: r.status });
+  return j;
+}
+const Code = ({ children }) => e('code', null, children);
+// a setting the environment sets: the line that says so (its value first when it's a switch)
+const envLine = (s, value) => e(F, null, value ? `${value}: set by ` : 'Set by ', e(Code, null, s.env), ' in the environment, which wins over this page.');
+const EnvChip = ({ env }) => env ? e('span', { className: 'bd-st-env', title: 'Set in the environment' }, env) : null;
+const StSection = ({ id, title, lead, children }) => e('section', { className: 'bd-st-sec', id, 'aria-labelledby': id + '-h' },
+  e('header', null, e('h2', { id: id + '-h' }, title), e('p', null, lead)), e('div', { className: 'bd-st-card' }, children));
+const StRow = ({ title, sub, tip, className, children }) => e('div', { className: 'bd-st-row' + (className ? ' ' + className : '') },
+  e('div', { className: 'bd-st-l' }, e('b', { title: tip }, title), sub), children);
+const Controls = ({ children, onSubmit }) => e(onSubmit ? 'form' : 'div', { className: 'bd-st-c', onSubmit: onSubmit && (ev => { ev.preventDefault(); onSubmit(); }) }, children);
+
+function SettingsPage({ readOnly, reduce, toast, onFolders }) {
+  const [view, setView] = useState(null);
+  const [loadErr, setLoadErr] = useState(false);
+  const [busy, setBusy] = useState('');   // the write in flight; every control waits for it
+  const [folder, setFolder] = useState(''), [folderErr, setFolderErr] = useState('');
+  const [chrome, setChrome] = useState(null), [chromeMsg, setChromeMsg] = useState(null);   // the field's text (null: the setting's); Test's or the save's answer {ok, text}
+  const [font, setFont] = useState(''), [fontErr, setFontErr] = useState('');
+  const [restart, setRestart] = useState('');   // '' | 'wait' | 'late' (20 s without the server)
+  const [cur, setCur] = useState(SETTINGS_SECTIONS[0][0]);
+  const hold = useRef(null), timer = useRef(0);
+  useEffect(() => {
+    let alive = true;
+    fetch('/__bluedoc/settings', { cache: 'no-store', headers: { 'X-Bluedoc': '1', ...serverKeyHeaders() } })
+      .then(r => (r.ok ? r.json() : Promise.reject(r.status))).then(j => { if (alive) setView(j); }, () => { if (alive) setLoadErr(true); });
+    return () => { alive = false; clearTimeout(timer.current); };
+  }, []);
+  // the section list marks the last section whose top has passed under the list's top, the last one at the page's end;
+  // a picked one stays marked while the page scrolls to it and while its top is in the upper half
+  useEffect(() => {
+    if (!view) return undefined;
+    const spy = () => {
+      const els = SETTINGS_SECTIONS.map(([id]) => document.getElementById(id)).filter(Boolean);
+      if (!els.length) return;
+      const h = hold.current;
+      if (h) {
+        const top = document.getElementById(h.id).getBoundingClientRect().top;
+        if (!h.ended || (top > -2 && top < innerHeight / 2)) return;
+        hold.current = null;
+      }
+      let id = els[0].id;
+      for (const el of els) if (el.getBoundingClientRect().top <= 120) id = el.id;
+      if (scrollY > 0 && innerHeight + scrollY >= document.documentElement.scrollHeight - 2) id = els[els.length - 1].id;
+      setCur(id);
+    };
+    const ended = () => { if (hold.current) hold.current.ended = true; spy(); };
+    spy();
+    addEventListener('scroll', spy, { passive: true }); addEventListener('scrollend', ended); addEventListener('resize', spy);
+    return () => { removeEventListener('scroll', spy); removeEventListener('scrollend', ended); removeEventListener('resize', spy); };
+  }, [!!view]);
+  const goTo = (ev, id) => {
+    ev.preventDefault();
+    const el = document.getElementById(id);
+    if (!el) return;
+    hold.current = { id, ended: false };
+    setCur(id);
+    el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+    setTimeout(() => { if (hold.current && hold.current.id === id) hold.current.ended = true; }, 1500);   // no scrollend when it was already there
+  };
+
+  // one write: `done` gets the answer; a 400 goes to `bad` (the field's own error) when given, any other refusal to the toast
+  const run = async (key, path, body, done, bad) => {
+    setBusy(key);
+    try { done(await postJSON(path, body)); }
+    catch (err) { if (bad && err.status === 400) bad(err.message); else toast(err.message); }
+    finally { setBusy(''); }
+  };
+  const keep = j => setView(v => ({ ...v, ...j }));
+  const off = readOnly || !!busy;
+  const top = e('div', { className: 'bd-st-top' }, e('h1', null, 'Settings'),
+    e('p', null, 'bluedoc on this computer', view ? e(F, null, ', saved in ', e(Code, null, view.server.homeDisplay), '.') : '.'));
+  if (!view) return e('div', { className: 'bd-st' }, top, loadErr && e('p', { className: 'bd-st-none' }, 'Couldn\'t load the settings: is the server running?'));
+
+  const removeBtn = (label, onClick) => e(Button, { size: 'sm', variant: 'secondary', disabled: off, 'aria-label': `Remove ${label}`, onClick }, 'Remove');
+  const addFolder = () => {
+    const t = folder.trim();
+    if (t) run('folder', '/__bluedoc/folders', { add: t }, j => { keep(j); setFolder(''); setFolderErr(''); toast('Folder added'); onFolders(); }, setFolderErr);
+  };
+
+  const ph = view.agents.planHook, phEnv = ph.source === 'env';
+  const ch = view.tools.chrome, chEnv = ch.source === 'env', chNow = ch.value || ch.found || '', chText = chrome ?? chNow;
+  const saveChrome = () => {
+    const t = chText.trim();
+    if (chEnv || readOnly || t === chNow || (!t && !ch.value)) return setChrome(null);
+    run('chrome', '/__bluedoc/settings', { chrome: t || null }, j => { keep(j); setChrome(null); setChromeMsg(null); toast(t ? 'Saved · Chrome path' : 'Saved · Chrome found by itself'); },
+      msg => setChromeMsg({ ok: false, text: msg }));
+  };
+  const testChrome = () => run('test', '/__bluedoc/chrome-test', { path: chrome != null && chText.trim() ? chText.trim() : null },
+    j => setChromeMsg(j.ok ? { ok: true, text: j.version ? `Found · ${majorOf(j.version)}` : 'Found' } : { ok: false, text: j.error }));
+  // Test's or a refused save's answer, else what the server found; a failure shows under the row
+  const chBad = !!chromeMsg && !chromeMsg.ok;
+  const chStatus = chromeMsg || (chNow ? { ok: true, text: ch.version ? `Found · ${majorOf(ch.version)}` : 'Found' } : { ok: false, text: 'Not found' });
+  const fd = view.tools.fontDirs, fdEnv = fd.source === 'env', dirs = fd.value || [];
+  const saveDirs = (next, said) => run('fonts', '/__bluedoc/settings', { fontDirs: next.length ? next : null }, j => { keep(j); setFont(''); setFontErr(''); toast(said); }, setFontErr);
+  const sv = view.server;
+  const restartNow = () => run('restart', '/__bluedoc/restart', {}, () => {
+    // the server comes back on its port with a new `started`: reload then; say how to start it after 20 s without it
+    const t0 = Date.now();
+    setRestart('wait');
+    const poll = async () => {
+      try {
+        const j = await (await fetch('/__bluedoc/ping', { cache: 'no-store' })).json();
+        if (j.started && j.started !== sv.started) return location.reload();
+      } catch { /* not back yet */ }
+      if (Date.now() - t0 > 20000) setRestart('late');
+      timer.current = setTimeout(poll, 500);
+    };
+    timer.current = setTimeout(poll, 500);
+  });
+
+  return e('div', { className: 'bd-st' }, top,
+    e('div', { className: 'bd-st-body' },
+      e('nav', { className: 'bd-st-nav', 'aria-label': 'Sections' }, SETTINGS_SECTIONS.map(([id, label]) =>
+        e('a', { key: id, href: '#' + id, 'aria-current': cur === id ? 'true' : undefined, onClick: ev => goTo(ev, id) }, label))),
+      e('div', { className: 'bd-st-secs' },
+        e(StSection, { id: 'folders', title: 'Folders', lead: 'The home page lists the docs in these folders. Removing one only hides its docs here; nothing is deleted.' },
+          view.folders.map(f => e(StRow, { key: f.path, title: f.display, tip: f.path, sub: e('span', null, plural(f.docs, 'doc') + (f.exists ? '' : ' · not found')) },
+            e(Controls, null, removeBtn(f.display, () => run('folder', '/__bluedoc/folders', { remove: f.path }, j => { keep(j); toast(`Removed ${f.display}`); onFolders(); }))))),
+          e('form', { className: 'bd-st-row add', onSubmit: ev => { ev.preventDefault(); addFolder(); } },
+            e(TextField, { className: 'bd-st-in', mono: true, value: folder, placeholder: 'A folder\'s path, e.g. ~/code/acme-shop', 'aria-label': 'Folder to add', disabled: readOnly,
+              validation: folderErr ? 'error' : undefined, autoComplete: 'off', spellCheck: false, onChange: ev => { setFolder(ev.target.value); setFolderErr(''); } }),
+            e(Button, { type: 'submit', variant: 'accent', disabled: off || !folder.trim() }, 'Add folder'),
+            folderErr && e('p', { className: 'bd-st-err', role: 'alert' }, folderErr))),
+        e(StSection, { id: 'repos', title: 'Code links', lead: 'Repo names in docs\' code links, and the folder each opens. A repo is added when a doc is built in it.' },
+          view.repos.length ? view.repos.map(r => e(StRow, { key: r.name, title: r.name, tip: r.path, sub: e('span', null, r.display + (r.exists ? '' : ' · not found')) },
+            e(Controls, null, removeBtn(r.name, () => run('repo', '/__bluedoc/repos', { remove: r.name }, j => { keep(j); toast(`Removed ${r.name}`); })))))
+            : e('div', { className: 'bd-st-row note' }, 'No code links yet.')),
+        e(StSection, { id: 'frameworks', title: 'Frameworks', lead: e(F, null, 'Component kits design boards can use (', e(Code, null, 'store: NAME'), ').') },
+          view.frameworks.map(f => e(StRow, { key: f.name, title: f.name,
+            sub: e('span', null, [f.version, plural(f.files, 'file'), bytesText(f.bytes), f.source].filter(Boolean).join(' · ')) },
+            e(Controls, null, removeBtn(f.name, () => run('fw', '/__bluedoc/frameworks', { remove: f.name }, j => { keep(j); toast(`Removed ${f.name}`); }))))),
+          e('div', { className: 'bd-st-row note' }, e('span', null, 'Add one from your agent: ', e(Code, null, 'serve.py add-framework NAME [PATH|URL]')),
+            view.presets.length > 0 && e(Controls, null, view.presets.map(p => e(Button, { key: p, size: 'sm', variant: 'secondary', disabled: off, loading: busy === 'fw:' + p,
+              onClick: () => run('fw:' + p, '/__bluedoc/frameworks', { add: p }, j => { keep(j); toast(`Added ${p}`); }) }, `Add ${p}`))))),
+        e(StSection, { id: 'agents', title: 'Agents', lead: 'What bluedoc\'s hooks do in your agents. A change applies to the next tool call.' },
+          e(StRow, { title: 'Plan mode opens plans here', className: phEnv ? 'lk' : '',
+            sub: e('span', null, phEnv ? envLine(ph, ph.value ? 'On' : 'Off') : 'Claude Code\'s plan mode opens each plan here and waits for Approve. Off by itself in CI, over SSH without a display and in bypassPermissions mode.') },
+            e(Controls, null, phEnv && e(EnvChip, { env: ph.env }),
+              // children: null, else HorizonUI's Switch, given only presentational props, draws its demo label
+              e(Switch, { checked: !!ph.value, disabled: off || phEnv, 'aria-label': 'Plan mode opens plans here', children: null,
+                onCheckedChange: v => run('plan', '/__bluedoc/settings', { planHook: v }, j => { keep(j); toast(`Saved · Plan mode ${v ? 'on' : 'off'}`); }) })))),
+        e(StSection, { id: 'tools', title: 'Tools', lead: 'Programs and folders bluedoc\'s scripts use.' },
+          e(StRow, { title: 'Chrome', className: chEnv ? 'lk' : '',
+            sub: e(F, null, e('span', null, chEnv ? envLine(ch) : 'For PDFs, decks, website snapshots and screen captures.'),
+              chBad && e('span', { className: 'bd-st-err', role: 'alert' }, chromeMsg.text)) },
+            e(Controls, { onSubmit: saveChrome }, chEnv && e(EnvChip, { env: ch.env }),
+              e('div', { className: 'bd-st-path' },
+                e(TextField, { className: 'bd-st-in', mono: true, value: chText, placeholder: 'Not found: Chrome\'s path', 'aria-label': 'Chrome', title: chText || undefined, disabled: readOnly || chEnv,
+                  validation: chBad ? 'error' : undefined, autoComplete: 'off', spellCheck: false,
+                  onChange: ev => { setChrome(ev.target.value); setChromeMsg(null); }, onBlur: saveChrome }),
+                !chBad && e('span', { className: 'bd-st-ok' + (chStatus.ok ? '' : ' no') }, chStatus.text)),
+              // pressing Test keeps the field's focus, so its text is tested, not saved first
+              e(Button, { size: 'sm', variant: 'secondary', disabled: off, loading: busy === 'test', onMouseDown: ev => ev.preventDefault(), onClick: testChrome }, 'Test'))),
+          e(StRow, { title: 'Font folders', className: fdEnv ? 'lk' : '',
+            sub: e(F, null, e('span', null, fdEnv ? envLine(fd) : e(F, null, 'Where ', e(Code, null, 'build.py'), ' looks for fonts to embed. Empty: this system\'s font folders.')),
+              fontErr && e('span', { className: 'bd-st-err', role: 'alert' }, fontErr)) },
+            e(Controls, { onSubmit: () => { const t = font.trim(); if (t) saveDirs([...dirs, t], 'Font folder added'); } }, fdEnv && e(EnvChip, { env: fd.env }),
+              e('div', { className: 'bd-st-path' },
+                e(TextField, { className: 'bd-st-in', mono: true, value: font, 'aria-label': 'Font folder to add', disabled: readOnly || fdEnv, title: fd.system.join('\n'),
+                  placeholder: dirs.length ? 'Another folder\'s path' : `System font folders (${fd.system.length})`, validation: fontErr ? 'error' : undefined, autoComplete: 'off', spellCheck: false,
+                  onChange: ev => { setFont(ev.target.value); setFontErr(''); } })),
+              e(Button, { type: 'submit', size: 'sm', variant: 'secondary', disabled: off || fdEnv || !font.trim() }, 'Add folder'))),
+          dirs.map(d => e('div', { key: d, className: 'bd-st-row sub' }, e('span', { className: 'bd-st-v', style: { flex: 1 } }, d),
+            !fdEnv && removeBtn(d, () => saveDirs(dirs.filter(x => x !== d), `Removed ${d}`))))),
+        e(StSection, { id: 'server', title: 'Server', lead: 'Set with environment variables; restart the server after changing one.' },
+          e(StRow, { title: 'Version' }, e(Controls, null, e('span', { className: 'bd-st-v' }, `${sv.version} · code ${String(sv.code).slice(0, 8)}`))),
+          e(StRow, { title: 'Address', sub: e('span', null, 'Port from ', e(Code, null, 'BLUEDOC_PORT'), ', else 8740 or the next free one.') },
+            e(Controls, null, e(EnvChip, { env: sv.portEnv }), e('span', { className: 'bd-st-v' }, sv.url))),
+          e(StRow, { title: 'Data folder', sub: e('span', null, 'From ', e(Code, null, 'BLUEDOC_HOME'), ': settings, answers, comments, attachments.') },
+            e(Controls, null, e(EnvChip, { env: sv.homeEnv }), e('span', { className: 'bd-st-v', title: sv.home }, sv.homeDisplay))),
+          e(StRow, { title: 'Running since',
+            sub: e('span', { role: 'status' }, restart === 'wait' ? e('span', { className: 'bd-st-wait' }, 'Restarting… this page reloads when the server is back.')
+              : restart === 'late' ? e(F, null, 'The server isn\'t back. Start it: ', e(Code, null, 'python3 …/serve.py start'))
+              : 'Restarting reloads this page when the server is back; open docs reconnect.') },
+            e(Controls, null, e('span', { className: 'bd-st-v' }, sinceText(sv.started)),
+              e(Button, { size: 'sm', variant: 'secondary', disabled: off || !!restart, onClick: restartNow }, 'Restart server')))))));
+}
+
 /* ---------- app ---------- */
 function readFilters() {
   const QP = new URLSearchParams(location.search);
@@ -1109,6 +1364,8 @@ function readFilters() {
   return { scope: QP.get('p') ? { slug: QP.get('p'), dir: QP.get('d') || '' } : null,
     type: TYPE_ONE[t] ? t : null, status: STATUSES.some(x => x[0] === s) ? s : null };
 }
+// the page the path names: the docs ('/') or Settings ('/settings'); the gear opens Settings with pushState, Back returns
+const pageOf = () => (location.pathname === '/settings' ? 'settings' : 'home');
 function App() {
   const [themePick, setThemePick] = useState(storedTheme);
   const [sysTheme, setSysTheme] = useState(systemTheme);
@@ -1123,11 +1380,18 @@ function App() {
   const [drawer, setDrawer] = useState(false);
   const [heroOut, setHeroOut] = useState(false);
   const [note, setNote] = useState(null);   // the toast: {text, undo?}
+  const [page, setPage] = useState(pageOf);
   const heroInput = useRef(null), topInput = useRef(null), composer = useRef(null), results = useRef(null), reload = useRef(null);
   const set = (k, v) => setSettings(s => ({ ...s, [k]: v }));
   useEffect(() => { if (!note) return undefined; const t = setTimeout(() => setNote(null), note.undo ? 8000 : 3000); return () => clearTimeout(t); }, [note]);
 
   useEffect(() => { document.documentElement.setAttribute('data-hz-theme', theme); }, [theme]);
+  useEffect(() => { document.title = (page === 'settings' ? 'Settings' : 'All docs') + ' · bluedoc'; }, [page]);
+  useEffect(() => {
+    const onPop = () => { setPage(pageOf()); setDrawer(false); };
+    addEventListener('popstate', onPop);
+    return () => removeEventListener('popstate', onPop);
+  }, []);
   useEffect(() => { store.set(HOME_KEY, JSON.stringify(settings)); }, [settings]);
   useEffect(() => {
     const onSys = () => setSysTheme(systemTheme()), onReduce = () => setReduce(reduceMQ.matches);
@@ -1155,25 +1419,28 @@ function App() {
     const t = setInterval(() => { if (document.visibilityState === 'visible') load(); }, 4000);
     return () => { alive = false; clearInterval(t); };
   }, []);
+  // the docs' search and filters live in the URL; Settings' URL is /settings alone
   useEffect(() => {
+    if (page !== 'home') return;
     const u = new URLSearchParams();
     if (q) u.set('q', q);
     if (filters.scope) { u.set('p', filters.scope.slug); if (filters.scope.dir) u.set('d', filters.scope.dir); }
     if (filters.type) u.set('t', filters.type);
     if (filters.status) u.set('s', filters.status);
     history.replaceState(null, '', location.pathname + (u.toString() ? '?' + u : ''));
-  }, [q, filters]);
+  }, [q, filters, page]);
   useEffect(() => {
+    if (!composer.current) return undefined;
     const io = new IntersectionObserver(([en]) => setHeroOut(!en.isIntersecting), { rootMargin: '-56px 0px 0px 0px' });
     io.observe(composer.current);
     return () => io.disconnect();
-  }, []);
+  }, [page]);
   const searchEl = () => (heroOut ? topInput.current : heroInput.current);
   useEffect(() => {
     const onKey = ev => {
       const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName) || document.activeElement.isContentEditable;
       if ((ev.key === '/' && !typing) || (ev.key.toLowerCase() === 'k' && (ev.metaKey || ev.ctrlKey))) {
-        ev.preventDefault(); const el = searchEl(); if (el) { el.focus(); el.select(); }
+        const el = searchEl(); if (el) { ev.preventDefault(); el.focus(); el.select(); }
       } else if (ev.key === 'Escape' && drawer) setDrawer(false);
     };
     document.addEventListener('keydown', onKey);
@@ -1201,11 +1468,19 @@ function App() {
   // the archived docs this search, type, status and folder would show if they weren't archived
   const hiddenN = showArchived ? 0 : typed.filter(d => { const st = sts.get(d.key); return st.archived && (!filters.status || st[filters.status]) && match(d, terms); }).length;
 
-  // the sidebar picks a project or folder ('all' clears every filter); the composer's chips toggle a type ('t:<id>') or
-  // a status ('s:<id>'), one of each at a time; 't:' and 's:' clear them. The Archived chip (and Show them) remembers the
-  // status it replaced, and turning it off goes back to it
-  const pick = id => {
+  // the docs or Settings, as a new history entry (Back returns)
+  const go = to => {
     setDrawer(false);
+    if (page === to) return;
+    history.pushState(null, '', to === 'settings' ? '/settings' : '/');
+    setPage(to);
+    scrollTo(0, 0);
+  };
+  // the sidebar picks a project or folder ('all' clears every filter), from Settings too; the composer's chips toggle a
+  // type ('t:<id>') or a status ('s:<id>'), one of each at a time; 't:' and 's:' clear them. The Archived chip (and Show
+  // them) remembers the status it replaced, and turning it off goes back to it
+  const pick = id => {
+    go('home');
     if (id === 'all') return setFilters({ scope: null, type: null, status: null });
     const [k, a, ...rest] = id.split(':');
     if (k === 'p') setFilters(f => ({ ...f, scope: { slug: a, dir: '' } }));
@@ -1232,6 +1507,7 @@ function App() {
   const anyFilter = !!(filters.scope || filters.type || filters.status);
   const toggleTheme = () => { const t = theme === 'dark' ? 'light' : 'dark'; store.set(THEME_KEY, t); setThemePick(t); };
   const themeBtn = e(IconButton, { size: 'sm', variant: 'ghost', label: theme === 'dark' ? 'Light theme' : 'Dark theme', icon: e(theme === 'dark' ? Icons.Sun : Icons.Moon), onClick: toggleTheme });
+  const gearBtn = e(IconButton, { size: 'sm', variant: 'ghost', label: 'Settings', icon: e(Icons.Settings), selected: page === 'settings', onClick: () => go('settings') });
   const menuBtn = e(IconButton, { size: 'sm', variant: 'ghost', className: 'bd-only-m', label: 'Projects and folders', icon: e(Icons.Menu), onClick: () => setDrawer(true) });
 
   // the rail shows icons only; HorizonUI's Sidebar would still lay out open children there, so they go
@@ -1242,12 +1518,14 @@ function App() {
   ];
   const sidebar = inDrawer => {
     const collapsed = !inDrawer && settings.rail;
-    const value = collapsed && filters.scope ? 'p:' + filters.scope.slug : scopeId;
+    // on Settings no list is current
+    const value = page === 'settings' ? '' : collapsed && filters.scope ? 'p:' + filters.scope.slug : scopeId;
+    const keys = e('span', { className: 'keys' }, gearBtn, themeBtn);
     return e(Sidebar, { key: roots.map(r => r.slug).join('|'), className: collapsed ? 'bd-rail' : '', sections: sectionsFor(collapsed), value, onValueChange: pick,
       collapsed, onCollapsedChange: c => (inDrawer ? setDrawer(false) : set('rail', c)),
       header: e(Brand, { mark: collapsed }),
-      footer: collapsed ? e('div', { className: 'bd-side-foot' }, themeBtn)
-        : e('div', { className: 'bd-side-foot' }, e(StatusDot, { status: 'success', label: 'Live' }), e('span', { className: 'sp' }), plural(roots.length, 'folder'), themeBtn) });
+      footer: collapsed ? e('div', { className: 'bd-side-foot' }, keys)
+        : e('div', { className: 'bd-side-foot' }, e(StatusDot, { status: 'success', label: 'Live' }), e('span', { className: 'sp' }), plural(roots.length, 'folder'), keys) });
   };
 
   const onSearchKey = ev => {
@@ -1318,6 +1596,10 @@ function App() {
         // or `serve.py unlock` link, or the copy kept in localStorage
         data && data.unlocked === false && e(Banner, { tone: 'warning', className: 'bd-lock', title: 'This browser can\'t save yet.', action: e(CopyUnlock) },
           'Open the link from ', e('code', null, 'serve.py unlock'), ' here (it works for an hour, in any browser).'),
+        page === 'settings' ? e(F, null,
+          e('div', { className: 'bd-top on bd-st-bar' }, menuBtn, e('span', { className: 'sp' }), themeBtn),
+          e(SettingsPage, { readOnly: !!data && data.unlocked === false, reduce, toast: text => setNote({ text }), onFolders: () => reload.current && reload.current() }))
+        : e(F, null,
         e('div', { className: 'bd-top' + (heroOut ? ' on' : ''), inert: !heroOut },
           menuBtn, e(Brand, { mark: true }), e('span', { className: 'bd-top-t', style: { fontWeight: 600, fontSize: 14 } }, 'All docs'),
           e('div', { className: 'bd-top-s' },
@@ -1353,7 +1635,7 @@ function App() {
           e(ArchiveActs.Provider, { value: acts }, e('div', { ref: results, onKeyDown: onResultsKey }, body)),
           // always in the page, so a screen reader hears the line once when it appears
           e('p', { className: 'bd-ahint', role: 'status' }, rows.length > 0 && hiddenN > 0 && (terms.length > 0 || anyFilter)
-            ? [e(ArchiveIcon, { key: 'i', size: 14 }), e('span', { key: 't' }, hiddenText()), e('span', { key: 's', 'aria-hidden': true }, '·'), e(F, { key: 'b' }, showBtn)] : null)))),
+            ? [e(ArchiveIcon, { key: 'i', size: 14 }), e('span', { key: 't' }, hiddenText()), e('span', { key: 's', 'aria-hidden': true }, '·'), e(F, { key: 'b' }, showBtn)] : null))))),
     note && e('div', { className: 'bd-toast', role: 'status' }, note.text, note.undo && e('button', { type: 'button', onClick: () => { const u = note.undo; setNote(null); u(); } }, 'Undo')),
     drawer && data && e('div', { className: 'bd-drawer', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Projects and folders' },
       e('div', { className: 'scrim', onClick: () => setDrawer(false) }), e('div', { className: 'panel' }, sidebar(true))));

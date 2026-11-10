@@ -4,7 +4,7 @@
 and a fingerprint of how, the paths it covers and the time; no git or no repo records `commit: null` with a reason and
 never fails. Staleness compares a pin with the repo now: current, then stale after a commit touching its paths, moved
 (still valid) after a commit elsewhere, stale after a reset past its commit, current again for the same uncommitted
-changes and stale for others; a missing repo or git is unknown. `build.py --check-code` and the plan gate list stale
+changes and stale for others; a missing repo or git is unknown. `build.py --check-code` and the plan-mode hook list stale
 checks under `## Stale evidence` with the commands that re-record them, and `patch --pin` makes them current again.
 In the browser, a stale item shows its warning, isn't counted as done, and Approve warns."""
 from __future__ import annotations
@@ -204,7 +204,7 @@ class Pins(unittest.TestCase):
         self.assertIn("- **Run the orders-api tests** `item:checks/unit`\n  - Unit tests: code changed since "
                       f"{first[:7]} (src/carts/savedCartRepo.ts)\n    Re-run: `pnpm --filter orders-api test`", md)
         self.assertIn(f"build.py patch {PLAN} item:checks/unit --pin --change 'Re-ran the checks after code changes'", md)
-        # the plan gate says the same, with the doc's path
+        # the plan-mode hook says the same, with the doc's path
         self.assertIn("## Stale evidence", hook.stale_evidence(self.plan))
         self.assertIn(f"build.py patch {self.plan} item:checks/unit --pin", hook.stale_evidence(self.plan))
         # re-recording keeps each entry's paths and pins it to HEAD

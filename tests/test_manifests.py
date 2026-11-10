@@ -1,7 +1,7 @@
 """The plugin manifests Codex and Copilot CLI read (their versions: test_commands): each one wires its components to
 paths inside the repo. The layout is pinned because each agent picks its manifest by where it is and what it
 declares: a root plugin.json with an Agent Plugins `$schema` makes Codex (0.163, codex-rs/core-plugins loader.rs)
-load that file and no plugin hooks at all, skipping .codex-plugin/plugin.json and the plan gate's Stop hook; Copilot
+load that file and no plugin hooks at all, skipping .codex-plugin/plugin.json and the plan-mode hook's Stop hook; Copilot
 CLI reads .plugin/plugin.json first among legacy manifests, so it gets its commands and hooks from there."""
 from __future__ import annotations
 

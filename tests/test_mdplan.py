@@ -134,7 +134,7 @@ class FromMarkdown(unittest.TestCase):
         """omp's plans start at ##: the title isn't their first section (Context)."""
         title = lambda **kw: mdplan.from_markdown(NO_TITLE, project_dir=self.project, org="Acme", **kw)["title"]  # noqa: E731
         self.assertEqual(title(stem="p", plan_file="/plans/hello-txt-plan.md"), "Hello txt plan")
-        # the gate's inline copy of an omp local:// plan says nothing; the doc it names after local://hello-txt-plan.md does
+        # the plan-mode hook's inline copy of an omp local:// plan says nothing; the doc it names after local://hello-txt-plan.md does
         self.assertEqual(title(stem="hello-txt-plan", plan_file="/h/omp/inline-0123456789ab.md"), "Hello txt plan")
         self.assertEqual(title(stem="plan-2", plan_file="/h/PLAN.md"), "Add the greeting file")
         self.assertEqual(title(stem="plan", plan_file=None), "Add the greeting file")

@@ -1,30 +1,32 @@
 #!/usr/bin/env python3
 """Agent hooks for bluedoc. Each agent's hook file runs `hook.py <agent> <event>` with the hook JSON on stdin.
 
-  hook.py claude plan    Claude Code PermissionRequest on ExitPlanMode: the plan gate
-  hook.py claude bash    Claude Code PreToolUse on Bash: lets the gate's own serve.py / build.py commands run unprompted
-  hook.py codex plan     Codex Stop: the plan gate for a turn that ends with a <proposed_plan> (codex/hooks.json)
-  hook.py copilot plan   Copilot CLI preToolUse on exit_plan_mode: the plan gate (com.github.copilot/hooks/hooks.json)
+  hook.py claude plan    Claude Code PermissionRequest on ExitPlanMode: the plan-mode hook
+  hook.py claude bash    Claude Code PreToolUse on Bash: lets the plan-mode hook's own serve.py / build.py commands run
+                         unprompted
+  hook.py codex plan     Codex Stop: the plan-mode hook for a turn that ends with a <proposed_plan> (codex/hooks.json)
+  hook.py copilot plan   Copilot CLI preToolUse on exit_plan_mode: the plan-mode hook (com.github.copilot/hooks/hooks.json)
   hook.py copilot stop   Copilot CLI agentStop: a turn that ends after the reader approved, before exit_plan_mode,
                          goes on with a prompt to call it (com.github.copilot/hooks/hooks.json)
-  hook.py agy plan       Antigravity CLI PreToolUse on write_to_file: the plan gate (antigravity/hooks.json)
+  hook.py agy plan       Antigravity CLI PreToolUse on write_to_file: the plan-mode hook (antigravity/hooks.json)
   hook.py agy note       Antigravity CLI PreInvocation: hands the approval note to the model (antigravity/hooks.json)
-  hook.py ext open       for agent extensions (omp, pi): stdin {text, planPath, cwd, sessionId, agent}; prints open_gate's
+  hook.py ext open       for agent extensions (omp, pi): stdin {text, planPath, cwd, sessionId, agent}; prints open_plan's
                          result as JSON; exits non-zero with a one-line error on stderr when it fails
   hook.py ext wait DOC   blocks on `serve.py wait DOC --kind any`, then prints {kind: approval|changes, md, rev?}
 
-The plan gate (open_gate, shared by every agent). When the agent finishes a plan, the gate shows it as a bluedoc plan
+The plan-mode hook (open_plan, shared by every agent). When the agent finishes a plan, the hook shows it as a bluedoc plan
 page and hands control back to the agent, which waits for the reader with `serve.py wait` as it does for any bluedoc doc:
   1. The plan Markdown names an existing *.bluedoc.json: that doc opens. Otherwise the plan is imported (mdplan.py)
      into $BLUEDOC_HOME/plans/<project>/<name>.bluedoc.json, or re-imported as the next rev when the agent rewrote it.
-  2. The page opens in the browser (once per plan text), and the gate turns the agent back with instructions: wait in
+  2. The page opens in the browser (once per plan text), and the hook turns the agent back with instructions: wait in
      the background, patch the doc on a change request, finish the plan again (the agent's own exit hint) after the
      approval.
-  3. When the agent finishes the same plan again and the doc's current rev is approved, the gate lets it through at once.
+  3. When the agent finishes the same plan again and the doc's current rev is approved, the hook lets it through at once.
 Both the instructions and the approval note end with `## Stale evidence` when checks' pinned evidence is stale
 (codepin.py): a warning that names the checks to re-run, never a block.
-The gate prints nothing, so the agent shows its own dialog, when BLUEDOC_PLAN_GATE=0, in CI, over SSH without a
-display, in bypassPermissions mode, and on any error (logged to $BLUEDOC_HOME/hooks/hook.log).
+The hook prints nothing, so the agent shows its own dialog, when the planHook setting is off (settings.py: env
+BLUEDOC_PLAN_HOOK=0, else Settings' switch in $BLUEDOC_HOME/settings.json), in CI, over SSH without a display, in
+bypassPermissions mode, and on any error (logged to $BLUEDOC_HOME/hooks/hook.log).
 
 Per agent and session, $BLUEDOC_HOME/hooks/<agent>/<session_id>.json records {doc, sha, url}: the doc, the sha256 of the
 plan text it was imported or opened for, and its URL. An approval removes it, so the session's next plan starts a new doc.
@@ -46,6 +48,8 @@ from urllib.parse import quote
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 sys.dont_write_bytecode = True
+import settings  # noqa: E402
+
 STATE = Path(os.environ.get("BLUEDOC_HOME") or "~/.bluedoc").expanduser().resolve()
 PLANS = STATE / "plans"
 HOOKS = STATE / "hooks"
@@ -80,8 +84,9 @@ def emit(out: dict) -> int:
 
 def no_reader(event: dict) -> str | None:
     """Why nobody can answer a page in this run, or None."""
-    if os.environ.get("BLUEDOC_PLAN_GATE", "1").strip().lower() in OFF - {""}:
-        return "BLUEDOC_PLAN_GATE=0"
+    on, _, env = settings.effective("planHook")
+    if not on:
+        return env or "the plan-mode hook is off in Settings"
     if os.environ.get("CI", "").strip().lower() not in OFF:
         return "CI"
     if (os.environ.get("SSH_CONNECTION") or os.environ.get("SSH_TTY")) and sys.platform != "darwin" \
@@ -169,7 +174,7 @@ def approved(doc: Path) -> str | None:
 
 
 def instructions(doc: Path, url: str, exit_hint: str, wait_hint: str = "Run in the background (run_in_background: true)") -> str:
-    """What the agent does after the gate opened its plan; exit_hint is how it finishes the plan again."""
+    """What the agent does after the plan-mode hook opened its plan; exit_hint is how it finishes the plan again."""
     q = lambda p: shlex.quote(str(p))  # noqa: E731
     serve, build = q(HERE / "serve.py"), q(HERE / "build.py")
     return (
@@ -186,7 +191,7 @@ def instructions(doc: Path, url: str, exit_hint: str, wait_hint: str = "Run in t
 
 
 def approval(agent: str, session_id: str, rec: dict) -> dict | None:
-    """{state: approved, doc, rev, note} when the session's gated doc is approved at its current rev (the record goes, so
+    """{state: approved, doc, rev, note} when the session's plan doc is approved at its current rev (the record goes, so
     the session's next plan starts a new doc), else None."""
     rev = approved(Path(rec["doc"])) if rec else None
     if not rev:
@@ -201,15 +206,15 @@ def approval(agent: str, session_id: str, rec: dict) -> dict | None:
     return {"state": "approved", "doc": rec["doc"], "rev": rev, "note": note}
 
 
-def open_gate(text: str, plan_path: str | None, cwd: Path, session_id: str, agent: str, mode: str = "") -> dict:
-    """The plan gate for any agent. Returns {state: skip, why}, {state: approved, doc, rev, note} when this plan text's
+def open_plan(text: str, plan_path: str | None, cwd: Path, session_id: str, agent: str, mode: str = "") -> dict:
+    """The plan-mode hook for any agent. Returns {state: skip, why}, {state: approved, doc, rev, note} when this plan text's
     doc is approved (approval()), or {state: opened, doc, url, message} after importing or re-importing the plan and
     opening its page; `message` is what the agent does next. `mode` is the agent's permission mode, for the
     bypassPermissions guard."""
     why = no_reader({"permission_mode": mode})
     if why or not text.strip():
         why = why or "empty plan"
-        log(f"plan gate skipped ({agent}): {why}")
+        log(f"plan-mode hook skipped ({agent}): {why}")
         return {"state": "skip", "why": why}
     label, exit_hint = AGENTS.get(agent, (agent, "submit the plan again"))
     sha = hashlib.sha256(text.encode()).hexdigest()
@@ -241,7 +246,7 @@ def open_gate(text: str, plan_path: str | None, cwd: Path, session_id: str, agen
     args = ["open", str(doc), "--to", label, *(["--root", str(root)] if root else []), *([] if opened else ["--browser"])]
     url = run("serve.py", *args).stdout.strip().splitlines()[-1]
     save_session(agent, session_id, {"doc": str(doc), "sha": sha, "url": url})
-    log(f"plan gate ({agent}): {'reminded' if opened else 'opened'} {doc}")
+    log(f"plan-mode hook ({agent}): {'reminded' if opened else 'opened'} {doc}")
     stale = stale_evidence(doc)
     wait_hint = "Run in the background (run_in_background: true)" if agent == "claude" else \
         "Run, in the background if you can (it blocks until the reader answers)"
@@ -252,7 +257,7 @@ def open_gate(text: str, plan_path: str | None, cwd: Path, session_id: str, agen
 def claude_plan(event: dict) -> int:
     tool_input = event.get("tool_input") or {}
     text = plan_text(tool_input)
-    g = open_gate(text, tool_input.get("planFilePath") or None, Path(event.get("cwd") or os.getcwd()).resolve(),
+    g = open_plan(text, tool_input.get("planFilePath") or None, Path(event.get("cwd") or os.getcwd()).resolve(),
                   str(event.get("session_id") or ""), "claude", str(event.get("permission_mode") or ""))
     if g["state"] == "approved":
         return emit({"hookSpecificOutput": {"hookEventName": "PermissionRequest", "decision": {
@@ -282,8 +287,8 @@ def _plan_file(agent: str, text: str) -> str:
 
 
 def claude_bash(event: dict) -> int:
-    """Allow, without a prompt, exactly the gate's commands: serve.py wait/reply and build.py patch on a doc under
-    $BLUEDOC_HOME/plans or the session's gated doc, with no shell syntax around them. Anything else: no output."""
+    """Allow, without a prompt, exactly the plan-mode hook's commands: serve.py wait/reply and build.py patch on a doc
+    under $BLUEDOC_HOME/plans or the session's plan doc, with no shell syntax around them. Anything else: no output."""
     cmd = str((event.get("tool_input") or {}).get("command") or "")
     if SHELL_META.search(cmd.replace("\\\n", " ")):
         return 0
@@ -299,11 +304,11 @@ def claude_bash(event: dict) -> int:
         return 0
     doc = Path(argv[3]).expanduser()
     doc = (doc if doc.is_absolute() else Path(event.get("cwd") or os.getcwd()) / doc).resolve()
-    gated = load_session("claude", str(event.get("session_id") or "")).get("doc")
-    if not doc.name.endswith(".bluedoc.json") or not (doc.is_relative_to(PLANS) or str(doc) == gated):
+    plan_doc = load_session("claude", str(event.get("session_id") or "")).get("doc")
+    if not doc.name.endswith(".bluedoc.json") or not (doc.is_relative_to(PLANS) or str(doc) == plan_doc):
         return 0
     return emit({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow",
-                                        "permissionDecisionReason": "bluedoc plan gate command"}})
+                                        "permissionDecisionReason": "bluedoc plan-mode hook command"}})
 
 
 PROPOSED_PLAN = re.compile(r"<proposed_plan>\s*\n?(.*?)\n?\s*</proposed_plan>", re.S)
@@ -333,7 +338,7 @@ def _codex_rollout(path: str) -> tuple[str, str]:
 
 
 def codex_plan(event: dict) -> int:
-    """Codex Stop hook. In Plan mode Codex ends its turn with the plan inside <proposed_plan>…</proposed_plan>; the gate
+    """Codex Stop hook. In Plan mode Codex ends its turn with the plan inside <proposed_plan>…</proposed_plan>; the hook
     opens it and blocks the stop, so Codex goes on with the instructions as its next prompt (or, once the reader
     approved, with the approval note). Schema: https://learn.chatgpt.com/docs/hooks (Stop: stop_hook_active,
     last_assistant_message; `decision: "block"` + `reason` continues the turn with `reason` as the prompt) and
@@ -359,8 +364,8 @@ def codex_plan(event: dict) -> int:
     sha = hashlib.sha256(text.encode()).hexdigest()
     g = approval("codex", session_id, rec) if rec and not no_reader(event) else None
     if g is None and event.get("stop_hook_active") and rec.get("sha") == sha:
-        return emit({})   # the gate already sent this plan back this turn: let the turn end, the page stays open
-    g = g or open_gate(text, None, Path(event.get("cwd") or os.getcwd()).resolve(), session_id, "codex",
+        return emit({})   # the hook already sent this plan back this turn: let the turn end, the page stays open
+    g = g or open_plan(text, None, Path(event.get("cwd") or os.getcwd()).resolve(), session_id, "codex",
                        str(event.get("permission_mode") or ""))
     if g["state"] == "skip":
         return emit({})
@@ -392,7 +397,7 @@ def copilot_plan(event: dict) -> int:
     text = plan_text({"planFilePath": str(plan_md) if plan_md.is_file() else "", "plan": args.get("summary")})
     rec = load_session("copilot", session_id)
     g = approval("copilot", session_id, rec) if rec and not no_reader({}) else None
-    g = g or open_gate(text, str(plan_md) if plan_md.is_file() else None,
+    g = g or open_plan(text, str(plan_md) if plan_md.is_file() else None,
                        Path(event.get("cwd") or os.getcwd()).resolve(), session_id, "copilot")
     if g["state"] == "opened":
         return emit({"permissionDecision": "deny", "permissionDecisionReason": g["message"]})
@@ -405,7 +410,7 @@ def copilot_plan(event: dict) -> int:
 def copilot_stop(event: dict) -> int:
     """Copilot CLI agentStop. Live runs (beta19 gpt-6-luna, beta20 mai-code-1.1-flash): the agent read the approval from
     `serve.py wait`, then ended its turn without calling exit_plan_mode again, so nothing ran until the user asked. When
-    the session's gated doc is approved at its current rev, block the stop with a prompt to call exit_plan_mode (which
+    the session's plan doc is approved at its current rev, block the stop with a prompt to call exit_plan_mode (which
     copilot_plan then allows); once only (stop_hook_active), and nothing while the reader hasn't answered. Schema:
     https://docs.github.com/en/copilot/reference/hooks-reference (agentStop input sessionId/stop_hook_active, or
     snake_case for Stop; output decision "block" with reason as the next turn's prompt)."""
@@ -417,7 +422,7 @@ def copilot_stop(event: dict) -> int:
     if not rev:
         return 0
     return emit({"decision": "block", "reason": f"The reader approved rev {rev} of {rec['doc']} in bluedoc. Call "
-                 "exit_plan_mode again now: the plan gate lets it through, then implement that rev with the reader's "
+                 "exit_plan_mode again now: the plan-mode hook lets it through, then implement that rev with the reader's "
                  "decisions and notes from the approval."})
 
 
@@ -437,7 +442,7 @@ def _agy_plan_call(event: dict) -> dict | None:
 def agy_plan(event: dict) -> int:
     """Antigravity CLI (agy) PreToolUse on write_to_file. In plan mode agy writes implementation_plan.md into the
     conversation's artifact folder with write_to_file and ArtifactMetadata.RequestFeedback true, then waits for the
-    user's review; that call is the gate. Sources: agy 1.4.0's bundled agy-customizations skill, docs/hooks.md
+    user's review; the hook takes that call. Sources: agy 1.4.0's bundled agy-customizations skill, docs/hooks.md
     (~/.gemini/antigravity-cli/builtin/skills/agy-customizations/docs/hooks.md: camelCase stdin with conversationId,
     workspacePaths, toolCall {name, args}; stdout decision allow|deny, reason, overwrite as a shallow args merge) and
     recorded `agy --mode plan` events. A denial reaches the model as the tool error ("tool call denied by pre-tool hook:
@@ -453,7 +458,7 @@ def agy_plan(event: dict) -> int:
     cwd = Path(paths[0] if paths and isinstance(paths[0], str) else Path.home()).resolve()
     rec = load_session("agy", session_id)
     g = approval("agy", session_id, rec) if rec and not no_reader({}) else None
-    g = g or open_gate(args["CodeContent"], None, cwd, session_id, "agy")
+    g = g or open_plan(args["CodeContent"], None, cwd, session_id, "agy")
     if g["state"] == "opened":
         return emit({"decision": "deny", "reason": g["message"]})
     if g["state"] == "approved":
@@ -477,7 +482,7 @@ def agy_note(event: dict) -> int:
 
 
 def ext_open(args: list[str]) -> int:
-    """hook.py ext open: stdin {text, planPath, cwd, sessionId, agent}; prints open_gate's result. An empty text reads
+    """hook.py ext open: stdin {text, planPath, cwd, sessionId, agent}; prints open_plan's result. An empty text reads
     planPath."""
     req = json.load(sys.stdin)
     agent = re.sub(r"[^a-z0-9_-]", "", str(req.get("agent") or "").lower())
@@ -485,7 +490,7 @@ def ext_open(args: list[str]) -> int:
         raise ValueError("agent is required")
     plan_path = req.get("planPath") or None
     text = req.get("text") if isinstance(req.get("text"), str) and req["text"].strip() else plan_text({"planFilePath": plan_path or ""})
-    print(json.dumps(open_gate(text, plan_path, Path(req.get("cwd") or os.getcwd()).resolve(), str(req.get("sessionId") or ""), agent)))
+    print(json.dumps(open_plan(text, plan_path, Path(req.get("cwd") or os.getcwd()).resolve(), str(req.get("sessionId") or ""), agent)))
     return 0
 
 

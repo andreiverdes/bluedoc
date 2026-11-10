@@ -126,20 +126,31 @@ def registry() -> dict[str, str]:
         return {}
 
 
+def _save_registry(reg: dict[str, str]) -> None:
+    p = _home() / "repos.json"
+    p.parent.mkdir(parents=True, exist_ok=True)
+    tmp = p.with_name(p.name + f".{os.getpid()}.tmp")
+    tmp.write_text(json.dumps(reg, indent=1, sort_keys=True) + "\n", encoding="utf-8")
+    tmp.replace(p)
+
+
 def remember(name: str, root: Path) -> None:
-    """$BLUEDOC_HOME/repos.json[name] = root, so a page finds a repo that holds no doc of its own (a plan gate's)."""
+    """$BLUEDOC_HOME/repos.json[name] = root, so a page finds a repo that holds no doc of its own (a plan-mode hook's)."""
     reg = registry()
     if reg.get(name) == str(root):
         return
     reg[name] = str(root)
-    p = _home() / "repos.json"
     try:
-        p.parent.mkdir(parents=True, exist_ok=True)
-        tmp = p.with_name(p.name + f".{os.getpid()}.tmp")
-        tmp.write_text(json.dumps(reg, indent=1, sort_keys=True) + "\n", encoding="utf-8")
-        tmp.replace(p)
+        _save_registry(reg)
     except OSError:
         pass
+
+
+def forget(name: str) -> None:
+    """Drop name from repos.json (Settings' Code links); OSError when the file can't be written."""
+    reg = registry()
+    if reg.pop(name, None) is not None:
+        _save_registry(reg)
 
 
 def repo_ref(root: Path, doc_path: Path) -> str:

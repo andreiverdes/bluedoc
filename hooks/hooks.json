@@ -1,5 +1,5 @@
 {
-  "description": "bluedoc plan gate: Claude Code's plan-mode plans open as bluedoc plan pages (hook.py; BLUEDOC_PLAN_GATE=0 turns it off)",
+  "description": "bluedoc plan-mode hook: Claude Code's plan-mode plans open as bluedoc plan pages (hook.py; BLUEDOC_PLAN_HOOK=0 or Settings turns it off)",
   "hooks": {
     "PermissionRequest": [
       {

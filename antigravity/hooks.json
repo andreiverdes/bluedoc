@@ -1,5 +1,5 @@
 {
-  "bluedoc-plan-gate": {
+  "bluedoc-plan-hook": {
     "PreToolUse": [
       {
         "matcher": "write_to_file",

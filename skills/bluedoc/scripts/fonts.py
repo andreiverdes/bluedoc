@@ -1,7 +1,8 @@
 """The fonts installed on this machine, for a storelisting's caption font (the Text tab's Typography, GET /__bluedoc/fonts).
 
 scan() walks the font folders (macOS: /System/Library/Fonts, /Library/Fonts and ~/Library/Fonts; elsewhere
-fontconfig's usual folders; BLUEDOC_FONT_DIRS, os.pathsep-separated, replaces them) and reads each TTF, OTF and TTC:
+fontconfig's usual folders; the fontDirs setting replaces them: settings.py, env BLUEDOC_FONT_DIRS) and reads each
+TTF, OTF and TTC:
 the `name` table's family and style (the typographic names 16 and 17 when present, else 1 and 2) and copyright (0),
 and the `OS/2` table's weight class, italic bit and fsType (embedding rights: 0 installable, 2 restricted, 4 preview &
 print, 8 editable; bit 9 bitmap only). A folder is read again only when its modification time changes, so a font
@@ -18,6 +19,9 @@ import sys
 import threading
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import settings  # noqa: E402
+
 FONT_TYPES = (".ttf", ".otf", ".ttc")
 MAX_FACES = 64   # faces read from one collection
 MAX_FILES = 5000   # files read from one folder tree
@@ -25,10 +29,13 @@ MAC_ROMAN = "mac_roman"
 
 
 def font_dirs() -> list[Path]:
-    """The folders to scan: BLUEDOC_FONT_DIRS, else this system's font folders."""
-    env = os.environ.get("BLUEDOC_FONT_DIRS")
-    if env is not None:
-        return [Path(p).expanduser() for p in env.split(os.pathsep) if p]
+    """The folders to scan: the fontDirs setting (BLUEDOC_FONT_DIRS, else settings.json), else system_font_dirs()."""
+    dirs = settings.effective("fontDirs")[0]
+    return [Path(p).expanduser() for p in dirs] if dirs else system_font_dirs()
+
+
+def system_font_dirs() -> list[Path]:
+    """This system's font folders."""
     home = Path.home()
     if sys.platform == "darwin":
         return [Path("/System/Library/Fonts"), Path("/Library/Fonts"), home / "Library" / "Fonts"]

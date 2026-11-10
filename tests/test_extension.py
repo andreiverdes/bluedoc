@@ -53,7 +53,7 @@ class OnPi(unittest.TestCase):
         tool = next(t for t in got["tools"] if t["name"] == "bluedoc_submit_plan")
         self.assertTrue(tool.get("promptSnippet", "").strip(), "pi omits a custom tool without promptSnippet from <tools>")
 
-    def test_the_submit_tool_is_declared_ahead_of_the_mcp_gateway(self) -> None:
+    def test_the_submit_tool_is_declared_ahead_of_the_mcp_tool(self) -> None:
         active = load_on_pi()["active"]
         self.assertEqual(active[0], "bluedoc_submit_plan", active)
         self.assertEqual(sorted(active), sorted(["read", "bash", "edit", "write", "mcp", "bluedoc_submit_plan"]))

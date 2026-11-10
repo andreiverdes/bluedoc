@@ -4972,7 +4972,7 @@ addEventListener('pointerdown', () => { lastPress = performance.now(); }, true);
 // comment not yet sent says when the agent reads it (`pend`, the caller places it)
 function noteBox(x, compact, onEnter) {
   const ph = () => x.more === 'on' ? 'What details do you need? (optional)' : x.messages().length ? 'Reply…' : 'Comment for the agent…';
-  const gated = () => !!x.fd && !x.choice && !x.custom && !x.more && !x.notePending;
+  const unanswered = () => !!x.fd && !x.choice && !x.custom && !x.more && !x.notePending;
   const ta = h('textarea', { class: 'bp-note-ta', rows: 1, maxlength: 8192, placeholder: ph(),
     'aria-label': 'Reply to the agent on: ' + String(x.it.text || '').replace(/[`*]/g, '') });
   const fit = () => {
@@ -5022,7 +5022,7 @@ function noteBox(x, compact, onEnter) {
   const view = { el, ta, pend, paint: () => {
     if (!draft && ta.value !== x.note) { ta.value = x.note; fit(); }
     fd.load(x.files, draft);
-    const off = gated();
+    const off = unanswered();
     el.classList.toggle('pv-off', off); ta.disabled = off; fd.btn.disabled = off;
     ta.placeholder = off ? 'Pick an answer to comment on it' : ph();
     if (pend) { pend.hidden = !x.notePending; pend.lastChild.textContent = `${agentName()} will read it once changes are requested.`; }

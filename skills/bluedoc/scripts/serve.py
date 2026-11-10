@@ -20,16 +20,17 @@ Usage:
                                                    NAME alone fetches a pinned preset: daisyui
   serve.py snapshot DOC.json [--rev R] [--url URL] [--page ID] [--width PX]
                                                    record a website doc's live pages as revision R's snapshots
-                                                   (default: the current rev; headless Chrome, BLUEDOC_CHROME)
+                                                   (default: the current rev; headless Chrome: the chrome setting)
   serve.py run [--port N]                          run in the foreground
 
 One server per user, on 127.0.0.1 (default port 8740; when another program holds it, `open`, `start` and `unlock` take
 the next free port up to 8759 and record it in server.json; env BLUEDOC_PORT or --port pins one, with no fallback). State lives in
 ~/.bluedoc (env BLUEDOC_HOME): roots.json (folders the home page scans), server.json (pid, port), key (mode 0600: the
 secret that writes need), state.db (SQLite, mode 0600: the reader's ticks, picks, comments and plan state per doc,
-and every reply; statedb.py) and app/<version>-<code>/ (the copy of scripts and assets the server runs from, so
-deleting or updating the install it was opened from never pulls files from under it; other versions' copies go once
-a new server is up).
+and every reply; statedb.py), settings.json (the plan-mode hook switch, Chrome's path and the font folders, which
+Settings writes; settings.py: an environment variable that is set wins over it) and app/<version>-<code>/ (the copy
+of scripts and assets the server runs from, so deleting or updating the install it was opened from never pulls files
+from under it; other versions' copies go once a new server is up).
 `open` registers the topmost ancestor folder named `docs`, else the doc's own folder, and restarts a running server
 whose version or code differs from its own. A folder inside a registered one is not added; a wider one is added
 next to the narrower ones, which keep their URLs (a doc's URL uses its deepest registered folder).
@@ -43,12 +44,24 @@ say whether the request carries the key (`unlocked`), so a page can tell the rea
 
 URLs: /                      home page: every doc under the registered folders, searchable, filtered by
                              project, folder, type and status
+      /settings              the home page's Settings: folders, code links, frameworks, the plan-mode hook,
+                             Chrome, font folders, and the server (read only, Restart)
       /<root>/<path>.bluedoc.json      the doc, rendered from its JSON on each request
       /<root>/<path>.bluedoc.json?raw=1   the JSON itself
       /<root>/<path>.<png|jpg|jpeg|gif|webp|svg|mp4|webm>   media files under the folder, for `media` blocks
       /__bluedoc/index.json  what the home page shows about every doc
-      /__bluedoc/ping?path=  server check (version, code hash, unlocked); with a doc's URL path, also who reads
-                             replies and its saved approval
+      /__bluedoc/ping?path=  server check (version, code hash, started, pid, unlocked); with a doc's URL path, also
+                             who reads replies and its saved approval
+      /__bluedoc/settings    GET: what Settings shows (settings_view; each setting's value, source env|file|default
+                             and env NAME=value). POST {planHook?, chrome?, fontDirs?} (the key) writes settings.json,
+                             null back to the default: 409 when the environment sets that setting, 400 for a bad value
+      POST /__bluedoc/folders  {add: "<folder>"} or {remove: "<listed path>"}: the home page's folders, {folders}
+      POST /__bluedoc/repos  {remove: "<name>"}: a code link name from repos.json (codepin.py), {repos}
+      POST /__bluedoc/frameworks  {remove: "<name>"} or {add: "<preset>"} (fetched as add-framework does; 502 when
+                             it can't be): {frameworks, presets}
+      POST /__bluedoc/chrome-test  {path: "<path>" or null (the setting)}: {ok, path, version} or {ok: false, error}
+      POST /__bluedoc/restart   answers, then runs this server again in the same process (same pid, port, home
+                             and app copy; restart()); ping's `started` changes
       /__bluedoc/key         the key, for a page with the key cookie (same origin, X-Bluedoc header); else 403
       /__bluedoc/state?path=<doc URL path>[&since=N]   GET the doc's reader state {version, state}; 204 when N is
                              the current version. PUT {path, import, ops: [[key, value or null]]} writes it: null
@@ -199,8 +212,10 @@ from urllib.parse import parse_qs, parse_qsl, quote, unquote, urlencode, urlspli
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import build  # noqa: E402
+import codepin  # noqa: E402
 import fonts  # noqa: E402
 import listing  # noqa: E402
+import settings  # noqa: E402
 
 try:
     import statedb  # noqa: E402
@@ -232,6 +247,8 @@ DB: "statedb.StateDB | None" = None   # opened by run()
 SECRET = ""   # the key writes need, read by run()
 TOKENS: dict[str, float] = {}   # ?key= tokens: expiry (monotonic)
 TOKENS_LOCK = threading.Lock()
+STARTED = ""   # when run() started this server (ISO 8601, local offset), for ping and Settings
+RESTART = threading.Event()   # POST /__bluedoc/restart: run() starts this server again once it stops
 
 
 # ---------- docs on disk ----------
@@ -2729,17 +2746,49 @@ def snapshot_page(html: str) -> str:
 
 
 def find_chrome() -> str | None:
-    """Chrome or Chromium for `snapshot` and deck PDFs: BLUEDOC_CHROME (None when it names nothing there), else the
-    usual places."""
-    if os.environ.get("BLUEDOC_CHROME"):
-        p = os.environ["BLUEDOC_CHROME"]
-        return p if os.path.isfile(p) else shutil.which(p)
+    """Chrome or Chromium for `snapshot`, deck and listing exports and captures: the chrome setting (settings.py:
+    BLUEDOC_CHROME, else Settings' path; None when it names no program), else the usual places."""
+    named = settings.effective("chrome")[0]
+    if named:
+        return chrome_at(named)
     for p in ("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", "/Applications/Chromium.app/Contents/MacOS/Chromium",
               "google-chrome", "google-chrome-stable", "chromium", "chromium-browser"):
         found = p if os.path.isfile(p) else shutil.which(p)
         if found:
             return found
     return None
+
+
+def chrome_at(given: str) -> str | None:
+    """The program a chrome setting names: a file that can run (a macOS .app: its executable), else a name on the
+    PATH; None for anything else."""
+    p = Path(given).expanduser()
+    if p.suffix == ".app" and p.is_dir():
+        p = p / "Contents" / "MacOS" / p.stem
+    if p.is_file():
+        return str(p) if os.access(p, os.X_OK) else None
+    return shutil.which(given)
+
+
+_chrome_versions: dict[tuple[str, int], tuple[str | None, str | None]] = {}
+
+
+def chrome_version(path: str) -> tuple[str | None, str | None]:
+    """(version, None) from `<path> --version`, or (None, why it failed); cached per path and modification time."""
+    try:
+        key = (path, os.stat(path).st_mtime_ns)
+    except OSError as e:
+        return None, f"{path}: {e.strerror or e}"
+    if key not in _chrome_versions:
+        try:
+            r = subprocess.run([path, "--version"], capture_output=True, text=True, timeout=20, stdin=subprocess.DEVNULL)
+            m = re.search(r"\d+(?:\.\d+){1,3}", r.stdout)
+            got = (m.group(0), None) if r.returncode == 0 and m else \
+                (None, (r.stderr.strip().splitlines() or [f"{path} --version printed no version"])[0])
+        except (OSError, subprocess.SubprocessError) as e:
+            got = (None, f"{path} didn't run: {e}")
+        _chrome_versions[key] = got
+    return _chrome_versions[key]
 
 
 class HeadlessChrome:
@@ -4160,7 +4209,7 @@ def make_handler(port: int, default_to: str):
             q = {k: v[0] for k, v in parse_qs(u.query).items()}
             if "key" in q and not u.path.startswith("/__bluedoc/"):
                 return self.unlock(u)
-            if u.path == "/":
+            if u.path in ("/", "/settings"):   # the home page shows Settings at /settings
                 html = HOME_HTML.read_text(encoding="utf-8").replace("__BLUEDOC_VENDOR_V__", vendor_version())
                 return self.send(200, html)
             if u.path.startswith("/__bluedoc/vendor/"):
@@ -4174,10 +4223,12 @@ def make_handler(port: int, default_to: str):
                 return self.asset(f, q) if f else self.json(404, {"error": "not found"})
             if u.path == "/__bluedoc/index.json":
                 return self.json(200, {**index(), "unlocked": self.has_key()})
+            if u.path == "/__bluedoc/settings":
+                return self.json(200, settings_view(port))
             if u.path == "/__bluedoc/ping":
                 doc = doc_for_url(q.get("path", ""))
                 return self.json(200, {"bluedoc": True, "home": "/", "version": VERSION, "code": CODE_HASH,
-                                       "unlocked": self.has_key(),
+                                       "started": STARTED, "pid": os.getpid(), "unlocked": self.has_key(),
                                        "to": INBOX.names.get(str(doc), default_to) if doc else default_to,
                                        "approval": saved_approval(doc) if doc else None})
             if u.path == "/__bluedoc/key":
@@ -4337,6 +4388,16 @@ def make_handler(port: int, default_to: str):
                 return self.listing_progress(q, q.get("cancel") == "1")
             if path == "/__bluedoc/attach":   # the body is the file itself
                 return self.attach({k: v[0] for k, v in parse_qs(urlsplit(self.path).query).items()})
+            if path == "/__bluedoc/restart":   # Settings' Restart server: any body is read and ignored
+                try:
+                    self.rfile.read(min(max(int(self.headers.get("Content-Length") or 0), 0), MAX_BODY))
+                except ValueError:
+                    pass
+                print("restarting: asked by Settings", flush=True)
+                self.json(200, {"ok": True})
+                RESTART.set()
+                threading.Thread(target=self.server.shutdown, daemon=True).start()
+                return
             data = self.body(POST_LIMITS.get(path, MAX_BODY))
             if data is None:
                 return
@@ -4384,6 +4445,19 @@ def make_handler(port: int, default_to: str):
                 self.json(200, {"ok": True})
                 threading.Thread(target=self.server.shutdown, daemon=True).start()
                 return
+            if path == "/__bluedoc/settings":
+                return self.json(*change_settings(data, port))
+            if path == "/__bluedoc/folders":
+                return self.json(*change_folders(data))
+            if path == "/__bluedoc/repos":
+                return self.json(*change_repos(data))
+            if path == "/__bluedoc/frameworks":
+                return self.json(*change_frameworks(data))
+            if path == "/__bluedoc/chrome-test":
+                given = data.get("path")
+                if given is not None and not isinstance(given, str):
+                    return self.json(400, {"error": "path: Chrome's path, or null for the current setting"})
+                return self.json(200, chrome_test(given))
             kind = REPLY_ROUTES.get(path)
             if not kind:
                 return self.json(404, {"error": "not found"})
@@ -4441,8 +4515,9 @@ def open_db() -> int:
 
 
 def run(port: int, to: str) -> int:
-    global SECRET
+    global SECRET, STARTED
     srv = ThreadingHTTPServer(("127.0.0.1", port), make_handler(port, to))
+    STARTED = dt.datetime.now().astimezone().isoformat(timespec="seconds")
     LIVE.page_port = port   # its pages may frame the live pages' proxies
     STATE.mkdir(parents=True, exist_ok=True)
     SECRET = load_key(create=True)   # kept across restarts, so a browser's cookie outlives an upgrade
@@ -4457,11 +4532,24 @@ def run(port: int, to: str) -> int:
     finally:
         srv.server_close()
         try:
-            if json.loads(SERVER_FILE.read_text()).get("pid") == os.getpid():
+            if not RESTART.is_set() and json.loads(SERVER_FILE.read_text()).get("pid") == os.getpid():
                 SERVER_FILE.unlink()
         except (OSError, ValueError):
             pass
+    if RESTART.is_set():
+        restart(port, to)
     return 0
+
+
+def restart(port: int, to: str) -> None:
+    """Run this server again in this process: same pid, port, BLUEDOC_HOME, log and app copy (this file), so a server
+    `start` or `open` detached stays detached. It starts in a later second than this one did, so a page polling ping
+    sees `started` change."""
+    time.sleep(1 - time.time() % 1)
+    sys.stdout.flush()
+    sys.stderr.flush()
+    os.execv(sys.executable, [sys.executable, str(Path(__file__).resolve()), "run", "--port", str(port),
+                              *(["--to", to] if to else [])])
 
 
 # ---------- CLI ----------
@@ -4712,10 +4800,29 @@ def add_framework(name: str, source: str | None, load: list[str], sources: list[
         print(f"add-framework: {name!r} must be lowercase letters, digits and dashes, and not "
               f"{', '.join(build.BUILTIN_FRAMEWORKS)} (they ship with bluedoc)", file=sys.stderr)
         return 2
-    preset = PRESETS.get(name) if source is None else None
-    if source is None and not preset:
+    if source is None and name not in PRESETS:
         print(f"add-framework: no preset named {name}: give a path or URL (presets: {', '.join(PRESETS)})", file=sys.stderr)
         return 2
+    try:
+        dest, manifest = copy_framework(name, source, load, sources, tailwind, label)
+    except (OSError, ValueError, urllib.error.URLError, tarfile.TarError) as e:
+        print(f"add-framework: {e}", file=sys.stderr)
+        return 1
+    listed, load = manifest["files"], manifest["load"]
+    total = sum(f["size"] for f in listed)
+    print(f"added {manifest['label']} as {name} in {dest} ({len(listed)} files, {total / 1024:.0f} KB)")
+    for f in listed:
+        print(f"  {f['path']}  {f['size']} B  sha256 {f['sha256']}")
+    print(f"loads: {', '.join(load)}" + ("; compiles Tailwind classes in each screen" if manifest["compiler"] else ""))
+    print("board: " + json.dumps({"id": name, "label": manifest["label"], "store": name}))
+    return 0
+
+
+def copy_framework(name: str, source: str | None, load: list[str], sources: list[str], tailwind: bool,
+                   label: str | None) -> tuple[Path, dict]:
+    """Copy the preset NAME (source None), a file, a folder or one URL (a file or .tgz) into frameworks_dir()/<name>/
+    with its manifest; (that folder, the manifest). Raises OSError, ValueError, URLError or TarError, leaving nothing."""
+    preset = PRESETS[name] if source is None else None
     base = build.frameworks_dir()
     base.mkdir(parents=True, exist_ok=True)
     tmp = Path(tempfile.mkdtemp(prefix=f".{name}-", dir=base))
@@ -4768,17 +4875,236 @@ def add_framework(name: str, source: str | None, load: list[str], sources: list[
         if dest.exists():
             shutil.rmtree(dest)
         tmp.rename(dest)
-    except (OSError, ValueError, urllib.error.URLError, tarfile.TarError) as e:
+    except (OSError, ValueError, urllib.error.URLError, tarfile.TarError):
         shutil.rmtree(tmp, ignore_errors=True)
-        print(f"add-framework: {e}", file=sys.stderr)
-        return 1
-    total = sum(f["size"] for f in listed)
-    print(f"added {manifest['label']} as {name} in {dest} ({len(listed)} files, {total / 1024:.0f} KB)")
-    for f in listed:
-        print(f"  {f['path']}  {f['size']} B  sha256 {f['sha256']}")
-    print(f"loads: {', '.join(load)}" + ("; compiles Tailwind classes in each screen" if manifest["compiler"] else ""))
-    print("board: " + json.dumps({"id": name, "label": manifest["label"], "store": name}))
-    return 0
+        raise
+    return dest, manifest
+
+
+# ---------- Settings (the home page at /settings) ----------
+
+def display_path(p) -> str:
+    """p with the home folder written ~."""
+    p = Path(p)
+    try:
+        rel = p.relative_to(Path.home())
+    except ValueError:
+        return str(p)
+    return "~" if rel == Path(".") else f"~/{rel.as_posix()}"
+
+
+def roots_listed() -> list[str]:
+    """roots.json as written, with folders that are gone (load_roots leaves them out)."""
+    try:
+        roots = json.loads(ROOTS_FILE.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+    return [r for r in roots if isinstance(r, str)] if isinstance(roots, list) else []
+
+
+def folders_view() -> list[dict]:
+    """Settings' Folders: each registered folder, its doc count (without registered folders inside it) and whether it
+    is still there."""
+    listed = roots_listed()
+    live = [Path(r) for r in listed if Path(r).is_dir()]
+    out = []
+    for r in listed:
+        p = Path(r)
+        docs = sum(1 for _ in walk_docs(p, inner_roots(p, live))) if p in live else 0
+        out.append({"path": r, "display": display_path(r), "docs": docs, "exists": p in live})
+    return out
+
+
+def change_folders(data: dict) -> tuple[int, dict]:
+    """POST /__bluedoc/folders {add: "<folder>"} (add_root's rules: one inside a listed folder is refused) or
+    {remove: "<a listed path>"}: (status, {folders} or {error})."""
+    add, remove = data.get("add"), data.get("remove")
+    if isinstance(add, str) and add.strip():
+        d = Path(add.strip()).expanduser()
+        if not d.is_absolute() or not d.is_dir():
+            return 400, {"error": f"No folder at {add.strip()}"}
+        d = d.resolve()
+        holder = next((r for r in load_roots() if d == r or r in d.parents), None)
+        if holder:
+            return 400, {"error": f"{display_path(d)} is already listed" if holder == d else
+                         f"{display_path(d)} is inside {display_path(holder)}, which is listed"}
+        add_root(d)
+        print(f"settings: added folder {d}", flush=True)
+    elif isinstance(remove, str) and remove:
+        listed = roots_listed()
+        if remove not in listed:
+            return 400, {"error": f"{display_path(remove)} isn't listed"}
+        save_roots([Path(r) for r in listed if r != remove])
+        print(f"settings: removed folder {remove}", flush=True)
+    else:
+        return 400, {"error": 'send {"add": "<folder>"} or {"remove": "<listed path>"}'}
+    return 200, {"folders": folders_view()}
+
+
+def repos_view() -> list[dict]:
+    """Settings' Code links: repos.json's names (codepin.registry) and the folder each opens."""
+    return [{"name": n, "path": p, "display": display_path(p), "exists": Path(p).is_dir()}
+            for n, p in sorted(codepin.registry().items(), key=lambda kv: kv[0].casefold())]
+
+
+def change_repos(data: dict) -> tuple[int, dict]:
+    """POST /__bluedoc/repos {remove: "<name>"}: (status, {repos} or {error}). A build in the repo adds it again."""
+    name = data.get("remove")
+    if not isinstance(name, str) or name not in codepin.registry():
+        return 400, {"error": f"no code link named {name}" if isinstance(name, str) else 'send {"remove": "<name>"}'}
+    codepin.forget(name)
+    print(f"settings: removed code link {name}", flush=True)
+    return 200, {"repos": repos_view()}
+
+
+def framework_version(name: str, manifest: dict, d: Path) -> str | None:
+    """A copied framework's version: a preset's from its pinned URL (NAME@x.y.z), a URL copy's from its URL, else the
+    copy's package.json; None when none says."""
+    src = str(manifest.get("source") or "")
+    if src == f"preset {name}" and name in PRESETS:
+        for url, _, _ in PRESETS[name]["fetch"]:
+            m = re.search(rf"/{re.escape(name)}@(\d[\w.+-]*)/", url)
+            if m:
+                return m.group(1)
+    m = re.search(r"@(\d[\w.+-]*)/", src) if re.match(r"(?i)^https?://", src) else None
+    if m:
+        return m.group(1)
+    try:
+        v = json.loads((d / "package.json").read_text(encoding="utf-8")).get("version")
+    except (OSError, ValueError, AttributeError):
+        return None
+    return v if isinstance(v, str) and v else None
+
+
+def frameworks_view() -> list[dict]:
+    """Settings' Frameworks: each add-framework copy with a manifest. source: "preset", else where it was copied from."""
+    base = build.frameworks_dir()
+    try:
+        dirs = sorted(d for d in base.iterdir() if d.is_dir() and build.ID_RE.match(d.name))
+    except OSError:
+        return []
+    out = []
+    for d in dirs:
+        try:
+            m = json.loads((d / "manifest.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if not isinstance(m, dict):
+            continue
+        files = [f for f in m.get("files") or [] if isinstance(f, dict)]
+        src = str(m.get("source") or "")
+        out.append({"name": d.name, "label": str(m.get("label") or d.name), "version": framework_version(d.name, m, d),
+                    "files": len(files), "bytes": sum(f.get("size") or 0 for f in files if isinstance(f.get("size"), int)),
+                    "source": "preset" if src == f"preset {d.name}" else
+                    src if re.match(r"(?i)^https?://", src) else display_path(src) if src else None})
+    return out
+
+
+def presets_left() -> list[str]:
+    """The add-framework presets not added yet."""
+    return [p for p in PRESETS if not (build.frameworks_dir() / p).is_dir()]
+
+
+def change_frameworks(data: dict) -> tuple[int, dict]:
+    """POST /__bluedoc/frameworks {remove: "<name>"} or {add: "<preset>"} (fetched as `add-framework <preset>` does;
+    502 when that fails): (status, {frameworks, presets} or {error})."""
+    add, remove = data.get("add"), data.get("remove")
+    if isinstance(remove, str) and remove:
+        d = build.frameworks_dir() / remove
+        if not build.ID_RE.match(remove) or not d.is_dir():
+            return 400, {"error": f"no framework named {remove}"}
+        try:
+            shutil.rmtree(d)
+        except OSError as e:
+            return 500, {"error": f"couldn't remove {remove}: {e}"}
+        print(f"settings: removed framework {remove}", flush=True)
+    elif isinstance(add, str) and add:
+        if add not in PRESETS:
+            return 400, {"error": f"no preset named {add} (presets: {', '.join(PRESETS)})"}
+        if add not in presets_left():
+            return 400, {"error": f"{add} is already added"}
+        try:
+            copy_framework(add, None, [], [], False, None)
+        except (OSError, ValueError, urllib.error.URLError, tarfile.TarError) as e:
+            return 502, {"error": f"couldn't fetch {add}: {e}"}
+        print(f"settings: added framework {add}", flush=True)
+    else:
+        return 400, {"error": 'send {"remove": "<name>"} or {"add": "<preset>"}'}
+    return 200, {"frameworks": frameworks_view(), "presets": presets_left()}
+
+
+def chrome_test(given: str | None) -> dict:
+    """POST /__bluedoc/chrome-test: whether the Chrome at given (None: the current setting, find_chrome) runs, with its
+    version."""
+    path = chrome_at(given) if given else find_chrome()
+    if not path:
+        return {"ok": False, "error": f"No Chrome at {given}" if given else "Chrome not found: set its path"}
+    version, why = chrome_version(path)
+    return {"ok": True, "path": path, "version": version} if version else {"ok": False, "path": path, "error": why}
+
+
+def setting_view(name: str) -> dict:
+    value, source, env = settings.effective(name)
+    return {"value": value, "source": source, "env": env}
+
+
+def settings_view(port: int) -> dict:
+    """GET /__bluedoc/settings: what the Settings page shows. Each setting's source is env, file or default; env is
+    `NAME=value` when the environment sets it (and the page locks it)."""
+    chrome = find_chrome()
+    home = Path(os.path.abspath(STATE))
+    env = lambda name: f"{name}={os.environ[name]}" if os.environ.get(name) else None  # noqa: E731
+    return {"folders": folders_view(), "repos": repos_view(), "frameworks": frameworks_view(), "presets": presets_left(),
+            "agents": {"planHook": setting_view("planHook")},
+            "tools": {"chrome": {**setting_view("chrome"), "found": chrome,
+                                 "version": chrome_version(chrome)[0] if chrome else None},
+                      "fontDirs": {**setting_view("fontDirs"), "system": [str(d) for d in fonts.system_font_dirs()]}},
+            "server": {"version": VERSION, "code": CODE_HASH, "url": f"http://127.0.0.1:{port}", "port": port,
+                       "portEnv": env("BLUEDOC_PORT"), "home": str(home), "homeDisplay": display_path(home),
+                       "homeEnv": env("BLUEDOC_HOME"), "started": STARTED, "pid": os.getpid()}}
+
+
+def change_settings(data: dict, port: int) -> tuple[int, dict]:
+    """POST /__bluedoc/settings {planHook?, chrome?, fontDirs?} into settings.json (null: back to the default):
+    (200, settings_view), 409 when the environment sets one of them, 400 for an unknown name or a bad value."""
+    unknown = [k for k in data if k not in settings.DEFAULTS]
+    if unknown or not data:
+        return 400, {"error": f"unknown setting: {', '.join(unknown)}" if unknown else "nothing to change: send planHook, chrome or fontDirs"}
+    for k in data:
+        if settings.env_text(k):
+            return 409, {"error": f"set by {settings.ENV[k]} in the environment"}
+    changes: dict = {}
+    for k, v in data.items():
+        if v is None:
+            changes[k] = None
+        elif k == "planHook":
+            if not isinstance(v, bool):
+                return 400, {"error": "planHook: true or false"}
+            changes[k] = v
+        elif k == "chrome":
+            if not isinstance(v, str) or not v.strip():
+                return 400, {"error": "chrome: Chrome's path, or null"}
+            p = Path(v.strip()).expanduser()
+            found = chrome_at(v.strip())
+            if not found:
+                return 400, {"error": f"{v.strip()} can't run (it isn't executable)" if p.is_file() else f"No Chrome at {v.strip()}"}
+            changes[k] = found
+        else:   # fontDirs
+            if not isinstance(v, list) or not all(isinstance(d, str) and d.strip() for d in v):
+                return 400, {"error": "fontDirs: a list of folders, or null"}
+            dirs = []
+            for d in v:
+                p = Path(d.strip()).expanduser()
+                if not p.is_absolute() or not p.is_dir():
+                    return 400, {"error": f"No folder at {d.strip()}"}
+                dirs.append(str(p.resolve()))
+            changes[k] = list(dict.fromkeys(dirs)) or None   # none left: this system's folders
+    try:
+        settings.save(changes)
+    except OSError as e:
+        return 500, {"error": f"couldn't write {settings.settings_file()}: {e}"}
+    print("settings: " + ", ".join(f"{k} = {json.dumps(v)}" for k, v in changes.items()), flush=True)
+    return 200, settings_view(port)
 
 
 # (an env var a harness sets in the commands it runs, its model family): who `open` names when --to gives no one

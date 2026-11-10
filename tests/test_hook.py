@@ -1,7 +1,7 @@
-"""hook.py, the plan gate, against `serve.py run`. Claude Code: a plan is imported and opened and ExitPlanMode is
+"""hook.py, the plan-mode hook, against `serve.py run`. Claude Code: a plan is imported and opened and ExitPlanMode is
 denied with instructions; the same plan stays one doc until the reader approves it, then ExitPlanMode is allowed; a
 rewritten plan becomes the next rev; a plan that names a bluedoc doc opens that doc; the guards print nothing; the Bash
-hook allows only the gate's own commands. Codex (Stop), Copilot CLI (preToolUse, agentStop) and Antigravity CLI
+hook allows only the plan-mode hook's own commands. Codex (Stop), Copilot CLI (preToolUse, agentStop) and Antigravity CLI
 (PreToolUse on write_to_file, PreInvocation) from recorded events, and `ext open` / `ext wait` for the omp and pi
 extension."""
 from __future__ import annotations
@@ -27,13 +27,13 @@ Requests have no limit.
 JSON_HDR = {"Content-Type": "application/json", "X-Bluedoc": "1"}
 
 
-class GateCase(unittest.TestCase):
+class PlanHookCase(unittest.TestCase):
     """A temp BLUEDOC_HOME, a running server and a project folder with a Markdown plan."""
 
     def setUp(self) -> None:
         self.tmp = TempHome()
         self.addCleanup(self.tmp.cleanup)
-        for k in ("CI", "BLUEDOC_PLAN_GATE", "SSH_CONNECTION", "SSH_TTY"):
+        for k in ("CI", "BLUEDOC_PLAN_HOOK", "SSH_CONNECTION", "SSH_TTY"):
             self.tmp.env.pop(k, None)
         self.tmp.env["BROWSER"] = "true"   # webbrowser runs `true` instead of opening a tab
         self.server = Server(self.tmp)
@@ -74,7 +74,7 @@ class GateCase(unittest.TestCase):
         self.assertEqual(status, 200, raw)
 
 
-class PlanGate(GateCase):
+class ClaudePlanHook(PlanHookCase):
     def test_deny_until_approved_then_allow(self) -> None:
         d = self.decision(self.hook("plan", self.plan_event()))
         self.assertEqual(d["behavior"], "deny")
@@ -116,13 +116,13 @@ class PlanGate(GateCase):
         self.assertFalse(self.plans.exists(), "nothing imported")
 
     def test_guards_print_nothing(self) -> None:
-        for name, env, over in (("off switch", {"BLUEDOC_PLAN_GATE": "0"}, {}), ("CI", {"CI": "true"}, {}),
+        for name, env, over in (("off switch", {"BLUEDOC_PLAN_HOOK": "0"}, {}), ("CI", {"CI": "true"}, {}),
                                 ("bypass mode", {}, {"permission_mode": "bypassPermissions"})):
             with self.subTest(name):
                 self.assertIsNone(self.hook("plan", self.plan_event(**over), **env))
         self.assertFalse(self.plans.exists())
 
-    def test_bash_hook_allows_only_the_gate_commands(self) -> None:
+    def test_bash_hook_allows_only_the_plan_mode_commands(self) -> None:
         self.hook("plan", self.plan_event())
         doc = self.plans / "rate-limits.bluedoc.json"
         serve, build = shlex.quote(str(SCRIPTS / "serve.py")), shlex.quote(str(SCRIPTS / "build.py"))
@@ -142,8 +142,8 @@ class PlanGate(GateCase):
                     self.assertIsNone(out)
 
 
-class OtherAgents(GateCase):
-    """The same gate behind each agent's own hook schema (recorded events, not live agents)."""
+class OtherAgents(PlanHookCase):
+    """The same plan-mode hook behind each agent's own hook schema (recorded events, not live agents)."""
 
     def run_hook(self, agent: str, event: str, payload: dict | str, *extra: str, **env: str) -> subprocess.CompletedProcess:
         return subprocess.run([sys.executable, str(SCRIPTS / "hook.py"), agent, event, *extra],
@@ -241,7 +241,7 @@ class OtherAgents(GateCase):
                 "toolArgs": {"summary": "- token bucket"}}
         stop = {"sessionId": "p3", "timestamp": 1760000000000, "cwd": str(self.project), "transcriptPath": "",
                 "stopReason": "end_turn", "stop_hook_active": False}
-        self.assertIsNone(self.out("copilot", "stop", stop), "no gate in this session")
+        self.assertIsNone(self.out("copilot", "stop", stop), "no plan doc in this session")
         self.assertEqual(self.out("copilot", "plan", plan, COPILOT_HOME=str(copilot))["permissionDecision"], "deny")
         self.assertIsNone(self.out("copilot", "stop", stop), "the reader hasn't answered")
         doc = self.plans / "plan.bluedoc.json"
@@ -297,7 +297,7 @@ class OtherAgents(GateCase):
         walkthrough = {**self.agy_plan_args(), "ArtifactMetadata": {"RequestFeedback": False, "UserFacing": True}}
         self.assertIsNone(self.out("agy", "plan", self.agy_event(walkthrough)))
         self.assertIsNone(self.out("agy", "plan", self.agy_event({"CodeContent": "hi\n", "TargetFile": "/tmp/x.txt"})))
-        self.assertIsNone(self.out("agy", "plan", self.agy_event(self.agy_plan_args()), BLUEDOC_PLAN_GATE="0"))
+        self.assertIsNone(self.out("agy", "plan", self.agy_event(self.agy_plan_args()), BLUEDOC_PLAN_HOOK="0"))
         self.assertFalse(self.plans.exists())
 
     def test_ext_open_then_wait_for_the_approval(self) -> None:
@@ -318,8 +318,8 @@ class OtherAgents(GateCase):
         self.assertEqual(json.loads(stdout), {"kind": "approval", "md": "# Plan approved\n", "rev": "1"})
         r = self.run_hook("ext", "open", req)
         self.assertEqual(json.loads(r.stdout)["state"], "approved")
-        self.assertEqual(self.run_hook("ext", "open", req, BLUEDOC_PLAN_GATE="0").stdout.strip(),
-                         json.dumps({"state": "skip", "why": "BLUEDOC_PLAN_GATE=0"}))
+        self.assertEqual(self.run_hook("ext", "open", req, BLUEDOC_PLAN_HOOK="0").stdout.strip(),
+                         json.dumps({"state": "skip", "why": "BLUEDOC_PLAN_HOOK=0"}))
 
     def test_ext_open_imports_the_text_when_the_plan_path_is_an_omp_url(self) -> None:
         # omp's plan_review_requested reports `local://x-plan.md`; from-md can't read it, so the text is imported.
