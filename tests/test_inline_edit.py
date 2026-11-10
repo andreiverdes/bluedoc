@@ -1,12 +1,13 @@
-"""Edit mode (inline-edit E1): a reader changes a screen's text in place and deletes elements, as `element` drafts.
+"""Text edits and deletions on a board (inline-edit E1): a reader changes a screen's text in place and deletes elements,
+as `element` drafts.
 
 `build.py patch el:<artboard>/<sel>` with --set text= or --delete rewrites one element in its screen file, byte for byte
 elsewhere, and leaves the artboard alone; anything else on an el: key is refused. The server keeps an `element` draft and
-drops a malformed or oversized one. In Chrome (BLUEDOC_BROWSER_TESTS=1): a double-click edits a design screen's or a
-slide's text in place, Delete hides an element, both are drafts that stay across a reload and go with Request changes as
-`patch` commands, which applied make the drafts resolved; Restore shows a deleted element again; markup typed as text
-stays text; a live page's draft comes back after its DOM is swapped (hot reload); an earlier revision has no Edit key and
-ignores forged edits."""
+drops a malformed or oversized one. In Chrome (BLUEDOC_BROWSER_TESTS=1): a double-click in View edits a design screen's
+or a slide's text in place; in Element, Delete (or Delete element in the comment box) hides the picked element; both
+are drafts that stay across a reload and go with Request changes as `patch` commands, which applied make the drafts
+resolved; Restore shows a deleted element again; markup typed as text stays text; a live page's draft comes back after
+its DOM is swapped (hot reload); an earlier revision takes no text edit and ignores forged edits."""
 from __future__ import annotations
 
 import json
@@ -218,7 +219,8 @@ def key(tab: Tab, k: str, code: int) -> None:
 
 
 class EditOnBoard:
-    """Helpers for a board in Edit mode: where an element of a frame is on the window, a click or double-click on it."""
+    """Helpers for text edits and deletions on a board: where an element of a frame is on the window, a double-click on
+    its text (View), a pick in Element."""
     tab: Tab
 
     def at(self, ab: str, part: str, css: str, fx: float = .5, fy: float = .5) -> list[float]:
@@ -238,18 +240,26 @@ class EditOnBoard:
     def frame_text(self, part: str, css: str):
         return frame_eval(self.tab, part, f"(e => e && [e.textContent.replace(/\\s+/g, ' ').trim(), getComputedStyle(e).display])(document.querySelector({json.dumps(css)}))")
 
-    def edit_text(self, ab: str, part: str, css: str, text: str) -> None:
-        """Click css and wait until the page holds it as the selection (the frame is in Edit), then double-click it,
-        type text over its selected text, Enter."""
-        self.tab.ev("BP.setMode('edit')")
+    def start_edit(self, ab: str, part: str, css: str) -> None:
+        """In View, double-click css's text and wait until its frame edits it."""
+        self.tab.ev("BP.setMode('view')")
         x, y = self.at(ab, part, css)
-        mouse(self.tab, x, y)
-        self.tab.wait_for(f"(s => s && s.ab === {json.dumps(ab)})(BP.board().editSel)")
-        x, y = self.at(ab, part, css)
+        time.sleep(0.4)   # not a double-click with an earlier one
         mouse(self.tab, x, y, 2)
         self.assertTrue(until(lambda: frame_eval(self.tab, part, "!!document.querySelector('[contenteditable]')")), "the double-click didn't start editing")
+
+    def edit_text(self, ab: str, part: str, css: str, text: str) -> None:
+        """Double-click css's text in View, type text over it (the edit starts with it selected), Enter."""
+        self.start_edit(ab, part, css)
         self.tab.browser.call("Input.insertText", {"text": text}, self.tab.session)
         key(self.tab, "Enter", 13)
+
+    def pick(self, ab: str, part: str, css: str, fx: float = .5, fy: float = .5) -> None:
+        """In Element, click css (at fx, fy of its box) and wait until the page holds it as the picked element."""
+        self.tab.ev("BP.setMode('point')")
+        x, y = self.at(ab, part, css, fx, fy)
+        mouse(self.tab, x, y)
+        self.tab.wait_for(f"(s => s && s.ab === {json.dumps(ab)})(BP.board().editSel)")
 
     def scr(self, name: str) -> str:
         """A frame_eval part for this test's screen file name."""
@@ -310,31 +320,42 @@ class EditDesign(ChromePage, EditOnBoard):
         self.assertIn("Applied in rev", t.wait_for(f"document.querySelector('.bd-cs-c[data-id={did}]')?.textContent"))
         self.assertEqual(self.browser.errors, [])
 
-    def test_delete_hides_the_element_and_restore_shows_it(self) -> None:
+    def test_delete_from_element_hides_the_element_and_restore_shows_it(self) -> None:
         t = self.tab
-        t.ev("BP.setMode('edit')")
-        x, y = self.at("today", self.scr("today.html"), '[data-bd="heart"]', .06, .1)   # the card's padding, not its text
-        mouse(t, x, y)
-        self.assertEqual(t.wait_for("BP.board().editSel && BP.board().editSel.sel"), "heart")
+        box = "document.querySelector('.bd-cmp')"
+        self.pick("today", self.scr("today.html"), '[data-bd="heart"]', .06, .1)   # the card's padding, not its text
+        self.assertEqual(t.ev("BP.board().editSel.sel"), "heart")
+        # its comment box has Delete element; with nothing typed, Delete in the box does the same
+        t.wait_for(f"!{box}.hidden && document.activeElement === {box}.querySelector('textarea') && !{box}.querySelector('.del').hidden")
         key(t, "Delete", 46)
         ds = until(self.element_drafts)
         self.assertEqual([(d["key"], d["element"]["op"], d["element"]["tag"]) for d in ds], [("el:today/heart", "delete", "div")])
+        self.assertTrue(t.ev(f"{box}.hidden"), "the comment box stayed open")
+        self.assertEqual(t.ev("BP.annotations().filter(a => a.type === 'pin').length"), 0, "the box's empty comment was kept")
         self.assertTrue(until(lambda: (self.frame_text(self.scr("today.html"), '[data-bd="heart"]') or [0, ""])[1] == "none"))
         md = t.ev("BP.changesPayload().markdown")
         self.assertIn(f"build.py patch {FIT} el:today/heart --delete --change 'Today: heart removed.' --resolves {ds[0]['id']}", md)
-        # the screen itself can't be deleted
-        x, y = self.at("today", self.scr("today.html"), '[data-bd="today"]', .01, .5)
-        mouse(t, x, y)
-        self.assertEqual(t.wait_for("BP.board().editSel && BP.board().editSel.sel"), "today")
+        # Delete element in the box
+        self.pick("today", self.scr("today.html"), '[data-bd="start-workout"]')
+        t.wait_for(f"!{box}.hidden && !{box}.querySelector('.del').hidden")
+        t.ev(f"{box}.querySelector('.del').click()")
+        self.assertTrue(until(lambda: sorted(d["key"] for d in self.element_drafts()) == ["el:today/heart", "el:today/start-workout"]))
+        self.assertTrue(t.ev(f"{box}.hidden"))
+        # the screen itself can't be deleted: no Delete element, and Delete is the field's
+        self.pick("today", self.scr("today.html"), '[data-bd="today"]', .01, .5)
+        self.assertEqual(t.ev("BP.board().editSel.sel"), "today")
+        t.wait_for(f"!{box}.hidden && document.activeElement === {box}.querySelector('textarea')")
+        self.assertTrue(t.ev(f"{box}.querySelector('.del').hidden"))
         key(t, "Delete", 46)
-        self.toast(t, "can't be deleted")
-        self.assertEqual(len(self.element_drafts()), 1)
+        time.sleep(0.3)
+        self.assertEqual(len(self.element_drafts()), 2)
+        key(t, "Escape", 27)
         # Restore on the draft's card
         t.ev("BP.comments({open: true})")
         btn = f"[...document.querySelectorAll('.bd-cs-c[data-id={ds[0]['id']}] .mt button')].find(b => b.textContent === 'Restore')"
         t.wait_for(f"!!{btn}")
         t.ev(f"{btn}.click()")
-        self.assertTrue(until(lambda: self.element_drafts() == []))
+        self.assertTrue(until(lambda: [d["key"] for d in self.element_drafts()] == ["el:today/start-workout"]))
         self.assertTrue(until(lambda: (self.frame_text(self.scr("today.html"), '[data-bd="heart"]') or [0, ""])[1] != "none"))
         self.assertEqual(self.browser.errors, [])
 
@@ -352,7 +373,7 @@ class EditDesign(ChromePage, EditOnBoard):
         self.assertIn(f'"{evil}"', t.ev("BP.changesPayload().markdown"))
         self.assertEqual(self.browser.errors, [])
 
-    def test_an_earlier_revision_has_no_edit_key_and_ignores_forged_edits(self) -> None:
+    def test_an_earlier_revision_takes_no_text_edit_and_ignores_forged_edits(self) -> None:
         t = self.tab
         self.edit_text("today", self.scr("today.html"), '[data-bd="start-workout"]', "Start run")
         until(self.element_drafts)
@@ -361,11 +382,15 @@ class EditDesign(ChromePage, EditOnBoard):
         r = self.tmp.run("build.py", "patch", self.doc, "el:today/greeting", "--change", "Today: a hand edit.")
         self.assertEqual(r.returncode, 0, r.stderr)
         t.go(f"{self.base}{self.url}?rev={rev}")
-        self.assertEqual(t.ev("document.querySelectorAll('.bd-anntb [data-m=edit]').length"), 0)
         self.assertIsNone(t.ev("BP.boardEdit()"))
         t.ev("BP.board({focus: 'today'})")
         t.wait_for("BP.board().artboards.find(a => a.id === 'today').ready", 15)
         self.assertEqual(self.frame_text(self.scr("today.html"), '[data-bd="start-workout"]')[0], "Start workout", "a draft showed on an earlier revision")
+        # a double-click on its text focuses the screen and edits nothing
+        x, y = self.at("today", self.scr("today.html"), '[data-bd="start-workout"]')
+        mouse(t, x, y, 2)
+        time.sleep(0.5)
+        self.assertFalse(frame_eval(t, self.scr("today.html"), "!!document.querySelector('[contenteditable]')"))
         # a screen that posts edit and key messages changes nothing
         frame_eval(t, self.scr("today.html"), "parent.postMessage({bd: 'edit', sel: 'start-workout', tag: 'button', base: 'Start workout', text: 'Forged'}, '*'), "
                                     "parent.postMessage({bd: 'key', k: 'delete'}, '*'), 1")
@@ -419,9 +444,9 @@ class History(ChromePage, EditOnBoard):
         home = self.board()["positions"]["today"]
         self.edit_text("today", today, '[data-bd="start-workout"]', "Start run")
         until(self.element_drafts)
-        x, y = self.at("today", today, '[data-bd="heart"]', .06, .1)
-        mouse(t, x, y)
-        self.assertEqual(t.wait_for("BP.board().editSel && BP.board().editSel.sel"), "heart")
+        self.pick("today", today, '[data-bd="heart"]', .06, .1)
+        self.assertEqual(t.ev("BP.board().editSel.sel"), "heart")
+        t.wait_for("document.activeElement === document.querySelector('.bd-cmp textarea')")
         key(t, "Delete", 46)
         until(lambda: len(self.element_drafts()) == 2)
         t.ev(f"BP.setMode('view'), BP.boardEdit({{move: {{today: [{home[0] + 480}, {home[1]}]}}}}), 1")
@@ -501,12 +526,7 @@ class History(ChromePage, EditOnBoard):
         self.assertEqual((self.board()["undo"], self.board()["redo"]), (1, 0))
         self.assertEqual(self.board()["positions"]["today"], [home[0] + 240, home[1]])
         # an element being edited in a screen
-        t.ev("BP.setMode('edit')")
-        x, y = self.at("today", today, '[data-bd="start-workout"]')
-        mouse(t, x, y)
-        t.wait_for("(s => s && s.sel === 'start-workout')(BP.board().editSel)")
-        mouse(t, x, y, 2)
-        self.assertTrue(until(lambda: frame_eval(t, today, "!!document.querySelector('[contenteditable]')")))
+        self.start_edit("today", today, '[data-bd="start-workout"]')
         t.browser.call("Input.insertText", {"text": "Go"}, t.session)
         combo(t, "z", 90, CTRL)
         time.sleep(0.3)
@@ -609,10 +629,9 @@ class EditLivePage(unittest.TestCase, EditOnBoard):
 
     def test_a_delete_comes_back_after_a_hot_reload(self) -> None:
         t, part = self.tab, self.live_part()
-        t.ev("BP.setMode('edit')")
-        x, y = self.at("home", part, "#faq h2")
-        mouse(t, x, y)
-        self.assertEqual(t.wait_for("BP.board().editSel && BP.board().editSel.sel"), "#faq>h2:nth-of-type(1)")
+        self.pick("home", part, "#faq h2")
+        self.assertEqual(t.ev("BP.board().editSel.sel"), "#faq>h2:nth-of-type(1)")
+        t.wait_for("document.activeElement === document.querySelector('.bd-cmp textarea')")
         key(t, "Delete", 46)
         ds = until(self.element_drafts)
         self.assertEqual([(d["key"], d["element"]["op"]) for d in ds], [("el:home/#faq>h2:nth-of-type(1)", "delete")])

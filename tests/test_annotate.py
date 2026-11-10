@@ -1,9 +1,10 @@
-"""The Annotate key and its bar in Chrome (BLUEDOC_BROWSER_TESTS=1): A opens the bar on Element, C M T D pick Element,
-Region, Text and Pen, Esc and V close it back to View, and A opens it again on the tool used last. Pen shows its colours
-and widths in a pill beside the tools; the pick survives a reload, a stroke is drawn in it and the drawing records it,
-and the custom colour comes from the picker. A Region drag becomes a note on the smallest element holding it (a click
-makes none). Text selected in View gets a Comment button that makes the note Text makes. At 390 px the bar is centred
-over the tray with a colour key and a width key, each opening a menu that Esc closes first."""
+"""The comment tools in the dock in Chrome (BLUEDOC_BROWSER_TESTS=1): View, Element, Region, Text and Pen are dock keys
+(no Annotate key, no A or E); C M T D pick a tool from any mode, Esc and V go back to View. Pen shows its colours and
+widths in a pill above the dock, over the tools; the pick survives a reload, a stroke is drawn in it and the drawing
+records it, and the custom colour comes from the picker. A Region drag becomes a note on the smallest element holding
+it (a click makes none). Text selected in View gets a Comment button that makes the note Text makes. At 390 px the four
+tools fold into one key with a menu above it, and with Pen on a strip above the dock holds a colour key and a width
+key, each opening a menu that Esc closes first; Custom opens the picker, inside the window."""
 from __future__ import annotations
 
 import json
@@ -12,16 +13,16 @@ import unittest
 
 from test_page_state import CHROME, ChromePage, Tab, until
 
-# the dock's mode, the Annotate key's state, whether the bar shows and its pressed tool
-STATE = """(() => { const k = document.querySelector('.bd-key.ann'), row = document.querySelector('.bd-annrow');
-  return [document.querySelector('.bd-anntb').dataset.m, k.getAttribute('aria-expanded'), !row.hidden,
-    [...row.querySelectorAll('.bd-annb.tail [data-m]')].filter(b => b.getAttribute('aria-pressed') === 'true').map(b => b.getAttribute('aria-label')).join()]; })()"""
+# the dock's mode and its pressed keys
+STATE = """(() => { const tb = document.querySelector('.bd-anntb');
+  return [tb.dataset.m, [...tb.querySelectorAll(':scope > .bd-key[data-m]')].filter(b => b.getAttribute('aria-pressed') === 'true').map(b => b.getAttribute('aria-label')).join()]; })()"""
 CENTRE = "(r => [r.left + r.width / 2, r.top + r.height / 2])(document.querySelector({}).getBoundingClientRect())"
 SHOWN = "(e => !!e && e.getClientRects().length > 0)(document.querySelector({}))"
+FOLD = ".bd-anntb > .bd-key.fold"
 
 
 @unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")
-class AnnotateBar(ChromePage):
+class CommentTools(ChromePage):
     def key(self, tab: Tab, k: str) -> None:
         code = {"Escape": (27, "Escape", ""), "Enter": (13, "Enter", "\r")}.get(k) or (ord(k.upper()), "Key" + k.upper(), k)
         for kind in ("keyDown", "keyUp"):
@@ -56,31 +57,29 @@ class AnnotateBar(ChromePage):
         t.ev("BP.sidebar({open: false}), scrollTo(0, 0)")
         return t
 
-    def test_a_opens_the_bar_on_element_the_tool_keys_switch_and_esc_returns_to_view(self) -> None:
+    def test_the_tools_are_dock_keys_their_keys_switch_and_esc_returns_to_view(self) -> None:
         t = self.page()
-        self.assertEqual(t.ev(STATE), ["view", "false", False, ""])
-        self.key(t, "a")
-        self.assertEqual(t.ev(STATE), ["point", "true", True, "Element"])
+        keys = "[...document.querySelectorAll('.bd-anntb > .bd-key')].filter(b => b.getClientRects().length).map(b => b.getAttribute('aria-label'))"
+        self.assertEqual(t.ev(keys)[:6], ["View", "Element", "Region", "Text", "Pen", "Hide comment marks"])
+        self.assertEqual(t.ev("document.querySelectorAll('.bd-key.ann, .bd-annrow, .bd-anntb > .sw').length"), 0, "the Annotate key and its bar are gone")
+        self.assertEqual(t.ev(STATE), ["view", "View"])
         for k, mode, name in (("m", "region", "Region"), ("t", "select", "Text"), ("d", "draw", "Pen"), ("c", "point", "Element"), ("d", "draw", "Pen")):
             self.key(t, k)
-            self.assertEqual(t.ev(STATE), [mode, "true", True, name], k)
+            self.assertEqual(t.ev(STATE), [mode, name], k)
         self.key(t, "Escape")
-        self.assertEqual(t.ev(STATE), ["view", "false", False, ""])
-        self.key(t, "a")   # the tool used last
-        self.assertEqual(t.ev(STATE), ["draw", "true", True, "Pen"])
+        self.assertEqual(t.ev(STATE), ["view", "View"])
+        for k in ("a", "e", "i"):   # no Annotate, Edit or Interact key here
+            self.key(t, k)
+            self.assertEqual(t.ev(STATE), ["view", "View"], k)
+        self.key(t, "t")
+        self.assertEqual(t.ev(STATE), ["select", "Text"])
         self.key(t, "v")
-        self.assertEqual(t.ev(STATE), ["view", "false", False, ""])
-        self.key(t, "t")   # a tool key opens the bar from View
-        self.assertEqual(t.ev(STATE), ["select", "true", True, "Text"])
-        self.click(t, ".bd-key.ann")   # the Annotate key closes it
-        self.assertEqual(t.ev(STATE), ["view", "false", False, ""])
-        self.click(t, ".bd-key.ann")
-        self.assertEqual(t.ev(STATE), ["select", "true", True, "Text"])
-        self.click(t, ".bd-anntb [data-m=view]")
-        self.assertEqual(t.ev(STATE), ["view", "false", False, ""])
-        # the old dock keys and swatches are gone: Element, Region, Text and Pen live in the bar only
-        self.assertEqual(t.ev("[...document.querySelectorAll('.bd-anntb > .bd-key')].map(b => b.getAttribute('aria-label')).slice(0, 2)"), ["View", "Annotate"])
-        self.assertEqual(t.ev("document.querySelectorAll('.bd-anntb > .sw').length"), 0)
+        self.assertEqual(t.ev(STATE), ["view", "View"])
+        self.click(t, ".bd-anntb > [data-m=region]")
+        self.assertEqual(t.ev(STATE), ["region", "Region"])
+        self.click(t, ".bd-anntb > [data-m=view]")
+        self.assertEqual(t.ev(STATE), ["view", "View"])
+        self.assertFalse(t.ev(SHOWN.format(json.dumps(FOLD))), "the fold key shows on phones only")
         self.assertEqual(self.browser.errors, [])
 
     def test_pen_colour_and_width_persist_and_a_drawing_records_them(self) -> None:
@@ -89,6 +88,9 @@ class AnnotateBar(ChromePage):
         self.assertFalse(t.ev(SHOWN.format(json.dumps(".bd-annb.opt"))), "the pen's pill shows with Pen only")
         self.key(t, "d")
         self.assertTrue(t.ev(SHOWN.format(json.dumps(".bd-annb.opt"))))
+        # above the dock, its left edge over Element
+        self.assertEqual(t.ev("(p => Math.round(p.left - document.querySelector('.bd-anntb > [data-m=point]').getBoundingClientRect().left))(document.querySelector('.bd-annb.opt').getBoundingClientRect())"), 1)
+        self.assertLess(t.ev("document.querySelector('.bd-annb.opt').getBoundingClientRect().bottom"), t.ev("document.querySelector('.bd-anntb').getBoundingClientRect().top"))
         self.click(t, ".bd-annb.opt [data-pen=violet]")
         self.click(t, ".bd-annb.opt [data-w='7']")
         self.assertEqual(t.ev("[localStorage.getItem('bluedoc:pen'), localStorage.getItem('bluedoc:pen-width')]"), ["violet", "7"])
@@ -171,21 +173,43 @@ class AnnotateBar(ChromePage):
         self.assertFalse(t.ev(SHOWN.format(json.dumps(".bd-selc"))))
         self.assertEqual(self.browser.errors, [])
 
-    def test_at_390_px_the_bar_is_centred_with_colour_and_width_menus(self) -> None:
+    def test_at_390_px_the_tools_fold_into_one_key_and_pen_gets_a_strip(self) -> None:
         t = self.page(390)
-        self.key(t, "a")
-        mid = "(r => r.left + r.width / 2)(document.querySelector({}).getBoundingClientRect())"
-        self.assertLessEqual(abs(t.ev(mid.format(json.dumps(".bd-annrow"))) - t.ev(mid.format(json.dumps(".bd-anntb")))), 1)
-        self.assertFalse(t.ev(SHOWN.format(json.dumps(".bd-annb.opt"))))
-        self.assertEqual(t.ev("getComputedStyle(document.querySelector('.bd-annb.tail'), '::after').display"), "none", "no tail")
-        self.assertFalse(t.ev(SHOWN.format(json.dumps(".bd-key.ann .t"))), "the Annotate key keeps its icon and caret")
-        keys = "[...document.querySelectorAll('.bd-annb .bd-key.sty')].map(k => [k.getClientRects().length > 0, k.disabled])"
-        self.assertEqual(t.ev(keys), [[True, True], [True, True]], "the colour and width keys wait for Pen")
+        shown = lambda sel: t.ev(SHOWN.format(json.dumps(sel)))   # noqa: E731
+        rect = "(r => [r.left, r.top, r.right, r.bottom].map(Math.round))(document.querySelector({}).getBoundingClientRect())"
+        box = lambda sel: t.ev(rect.format(json.dumps(sel)))   # noqa: E731
+        fold = f"(k => [k.getAttribute('aria-pressed'), k.getAttribute('aria-expanded'), k.dataset.ic])(document.querySelector({json.dumps(FOLD)}))"
+        keys = "[...document.querySelectorAll('.bd-anntb > .bd-key')].filter(b => b.getClientRects().length).map(b => b.getAttribute('aria-label'))"
+        self.assertEqual(t.ev(keys)[:3], ["View", "Comment tools", "Hide comment marks"])
+        self.assertEqual(t.ev(fold), ["false", "false", "element"], "in View the fold key shows Element's icon")
+        # its menu: the four tools above it; a pick closes it
+        self.click(t, FOLD)
+        t.wait_for(SHOWN.format(json.dumps(".bd-annb.menu")))
+        self.assertEqual(t.ev("[...document.querySelectorAll('.bd-annb.menu .bd-key')].map(b => b.getAttribute('aria-label'))"), ["Element", "Region", "Text", "Pen"])
+        self.assertLess(box(".bd-annb.menu")[3], box(FOLD)[1])
+        self.assertEqual(t.ev(fold)[1], "true")
+        self.click(t, ".bd-annb.menu [data-m=region]")
+        self.assertFalse(shown(".bd-annb.menu"))
+        self.assertEqual(t.ev(STATE), ["region", "Region"])
+        self.assertEqual(t.ev(fold), ["true", "false", "region"])
+        self.click(t, FOLD)   # Esc closes the menu first; the tool stays
+        t.wait_for(SHOWN.format(json.dumps(".bd-annb.menu")))
+        self.key(t, "Escape")
+        t.wait_for("document.querySelector('.bd-annb.menu').hidden")
+        self.assertEqual(t.ev(STATE)[0], "region")
+        # Pen: a strip above the dock, centred, with the colour key and the width key; no pill
+        self.assertFalse(shown(".bd-annb.strip"))
         self.key(t, "d")
-        self.assertEqual(t.ev(keys), [[True, False], [True, False]])
+        self.assertEqual(t.ev(fold)[2], "pencil")
+        self.assertTrue(shown(".bd-annb.strip"))
+        self.assertFalse(shown(".bd-annb.opt"))
+        s, tb = box(".bd-annb.strip"), box(".bd-anntb")
+        self.assertLessEqual(abs((s[0] + s[2]) - (tb[0] + tb[2])), 2, "the strip is centred over the dock")
+        self.assertLess(s[3], tb[1])
         self.click(t, ".bd-key.sty[aria-label='Pen colour']")
         t.wait_for(SHOWN.format(json.dumps(".bd-annpop")))
         self.assertEqual(t.ev("document.querySelectorAll('.bd-annpop .sw button').length"), 7)
+        self.assertLess(box(".bd-annpop")[3], s[1], "the menu opens above the strip")
         self.click(t, ".bd-annpop [data-pen=warn]")
         t.wait_for("document.querySelector('.bd-annpop').hidden")
         self.assertEqual(t.ev("[localStorage.getItem('bluedoc:pen'), document.querySelector('.bd-key.sty .dot').classList.contains('bd-pen-warn')]"), ["warn", True])
@@ -194,13 +218,25 @@ class AnnotateBar(ChromePage):
         self.assertEqual(t.ev("document.querySelectorAll('.bd-annpop .bd-wt button').length"), 3)
         self.key(t, "Escape")   # the menu first, the tool stays
         t.wait_for("document.querySelector('.bd-annpop').hidden")
-        self.assertEqual(t.ev(STATE)[:3], ["draw", "true", True])
+        self.assertEqual(t.ev(STATE)[0], "draw")
         self.click(t, ".bd-key.sty[aria-label='Stroke width']")
         self.click(t, ".bd-annpop [data-w='2']")
         self.assertEqual(t.ev("localStorage.getItem('bluedoc:pen-width')"), "2")
         self.assertEqual(t.ev("document.querySelector('.bd-key.sty svg.w line').getAttribute('stroke-width')"), "2")
+        # Custom: the picker takes the colour menu's place, inside the window, the hex field in its row
+        self.click(t, ".bd-key.sty[aria-label='Pen colour']")
+        t.wait_for(SHOWN.format(json.dumps(".bd-annpop .cust")))
+        self.click(t, ".bd-annpop .cust")
+        t.wait_for("document.activeElement === document.querySelector('.bd-cpick .f')")
+        p, hx = box(".bd-cpick"), box(".bd-cpick .hex")
+        self.assertEqual(p[2] - p[0], 204, "the picker keeps its width")
+        self.assertTrue(p[0] >= 0 and p[2] <= 390, p)
+        self.assertLessEqual(hx[2], p[2] - 10, "the hex row overflows the picker")
         self.key(t, "Escape")
-        self.assertEqual(t.ev(STATE), ["view", "false", False, ""])
+        t.wait_for("document.querySelector('.bd-annpop').hidden")
+        self.key(t, "Escape")
+        self.assertEqual(t.ev(STATE), ["view", "View"])
+        self.assertFalse(shown(".bd-annb.strip"))
         self.assertEqual(self.browser.errors, [])
 
 

@@ -890,23 +890,23 @@ img.bp-cmpr-img { cursor: zoom-in; }
 .bd-key.go:disabled { cursor: default; filter: none; color: var(--fg-subtle); background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: var(--shadow-hk); }
 .bd-key.go:disabled .n { background: var(--inset); box-shadow: var(--shadow-well); }
 .bd-groove { flex: none; width: 2px; height: 24px; margin: 0 2px; border-radius: 1px; background: var(--groove); }
-/* the Annotate key: a labelled key with a caret, pressed while its bar is open */
-.bd-key.ann { display: inline-flex; align-items: center; width: auto; gap: 6px; padding: 0 9px 0 11px; font-size: 13px; font-weight: 600; white-space: nowrap; }
-.bd-key.ann .bd-ic { width: 16px; height: 16px; }
-.bd-key.ann .car { width: 13px; height: 13px; color: var(--fg-subtle); transition: rotate .18s var(--ease); }
-.bd-key.ann[aria-expanded="true"] .car { rotate: 180deg; }
-/* the Annotate bar above the dock: Element, Region, Text and Pen, and while Pen is on its colours and widths in a pill to
-   the right; the dock's tray one key size down. Its left edge sits over the Annotate key (--ann-x), a tail pointing at it */
-.bd-annrow { position: absolute; left: var(--ann-x, 45px); bottom: calc(100% + 8px); display: flex; align-items: center; gap: 8px; animation: bd-annb-in .16s var(--ease); }
-.bd-annrow[hidden], .bd-annb[hidden], .bd-annpop[hidden] { display: none; }
+/* above 600 px the four tools (Element, Region, Text, Pen) sit in the dock. While Pen is on its colours and widths
+   show in a pill above the dock, its left edge over Element */
+.bd-annb[hidden], .bd-annpop[hidden] { display: none; }
 @keyframes bd-annb-in { from { opacity: 0; translate: 0 6px; } }
 .bd-annb { position: relative; display: flex; align-items: center; gap: 5px; width: max-content; padding: 6px; border-radius: 17px;
   background: linear-gradient(180deg, var(--tray-top), var(--tray-bot)); box-shadow: var(--shadow-tray), 0 2px 6px oklch(23% 0.01 264 / 0.06); }
 .bd-annb .bd-key { width: 34px; height: 34px; border-radius: 11px; }
 .bd-annb .bd-key .bd-ic { width: 17px; height: 17px; }
-.bd-annb .bd-groove { height: 20px; }
-.bd-annb.tail::after { content: ""; position: absolute; bottom: -5px; left: 24px; width: 10px; height: 10px; rotate: 45deg; border-radius: 2px; background: var(--tray-bot); }
-.bd-annb.opt { padding: 5px; border-radius: 16px; }
+.bd-annb.opt { position: absolute; left: 52px; bottom: calc(100% + 8px); padding: 5px; border-radius: 16px; animation: bd-annb-in .16s var(--ease); }
+/* ≤ 600 px: the fold key (the current tool, else Element's icon, and a caret) opens the four tools in a menu above it */
+.bd-key.fold { display: none; align-items: center; gap: 2px; width: auto; padding: 0 5px 0 7px; }
+.bd-key.fold .bd-ic { width: 16px; height: 16px; }
+.bd-key.fold .car { width: 12px; height: 12px; color: var(--fg-subtle); transition: rotate .18s var(--ease); }
+.bd-key.fold[aria-expanded="true"] .car { rotate: 180deg; }
+.bd-annb.menu { position: absolute; left: 38px; bottom: calc(100% + 8px); display: none; animation: bd-annb-in .16s var(--ease); }
+/* while Interact is on (the board's top bar) the tools pause: their keys dim */
+.bd-anntb.paused :is(.bd-key.tool, .bd-key.fold, .bd-key[data-m="link"], .bd-key[data-m="frame"]) { opacity: .45; }
 /* pen colours and widths: wells, as the dock's keys sit in */
 .bd-annb .sw, .bd-wt { display: inline-flex; align-items: center; height: 34px; border-radius: 11px; background: var(--hk-down); box-shadow: var(--shadow-well); }
 .bd-annb .sw { gap: 6px; padding: 0 9px; }
@@ -922,18 +922,19 @@ img.bp-cmpr-img { cursor: zoom-in; }
 .bd-wt button:hover { color: var(--fg); }
 .bd-wt button[aria-pressed="true"] { color: var(--fg); background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: var(--shadow-hk); }
 :is(.bd-annb .sw, .bd-wt) button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-/* ≤ 600 px: a colour key (the current colour) and a width key (the current line), Pen only, each open a menu above it */
-.bd-annb .bd-key.sty { display: none; align-items: center; width: auto; gap: 4px; padding: 0 6px 0 9px; }
-.bd-annb .sty-g { display: none; }
+/* ≤ 600 px, Pen on: a strip above the dock with a colour key (the current colour) and a width key (the current line),
+   each opening its menu above the strip */
+.bd-annb.strip { position: absolute; left: 50%; bottom: calc(100% + 8px); transform: translateX(-50%); display: none; gap: 4px; padding: 4px; border-radius: 15px; animation: bd-annb-in .16s var(--ease); }
+.bd-annb.strip .bd-key.sty { display: inline-flex; align-items: center; width: auto; height: 32px; gap: 4px; padding: 0 6px 0 9px; }
 .bd-key.sty .dot { width: 16px; height: 16px; border-radius: 50%; background: var(--pen); box-shadow: inset 0 0 0 1px oklch(0% 0 0 / .15); }
 .bd-annb .bd-key.sty .car { width: 12px; height: 12px; color: var(--fg-subtle); }
-.bd-annb .bd-key.sty:disabled { opacity: .4; }
 .bd-annpop { position: absolute; bottom: calc(100% + 8px); left: 0; z-index: 1; padding: 8px; border-radius: 14px; background: var(--raised); box-shadow: var(--shadow-3); }
 .bd-annb .bd-annpop .sw { display: grid; grid-template-columns: repeat(3, 22px); gap: 9px; height: auto; padding: 4px; background: none; box-shadow: none; }
 .bd-annb .bd-annpop .sw button { width: 22px; height: 22px; }
 .bd-annb .bd-annpop .sw button[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--raised), 0 0 0 3.5px var(--pen); }
-/* the custom colour's picker: a saturation and value square, a hue strip, the hex value and Use */
-.bd-cpick { width: 204px; display: grid; gap: 10px; padding: 10px; }
+/* the custom colour's picker: a saturation and value square, a hue strip, the hex value and Use; its one column never
+   sizes to the hex field (the field's own width is 0: it grows into its row) */
+.bd-cpick { width: 204px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; padding: 10px; }
 .bd-cpick .sv { position: relative; height: 118px; border-radius: 8px; touch-action: none; cursor: crosshair;
   background: linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, hsl(var(--hue, 270) 100% 50%)); box-shadow: inset 0 0 0 1px oklch(0% 0 0 / .1); }
 .bd-cpick .hue { position: relative; height: 12px; border-radius: 6px; touch-action: none; cursor: ew-resize; background: linear-gradient(to right, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00); }
@@ -941,39 +942,36 @@ img.bp-cmpr-img { cursor: zoom-in; }
 .bd-cpick .hue i { top: 50%; }
 .bd-cpick .hex { display: flex; align-items: center; gap: 8px; }
 .bd-cpick .hex .dot { flex: none; width: 20px; height: 20px; border-radius: 50%; background: var(--pen); box-shadow: inset 0 0 0 1px oklch(0% 0 0 / .15); }
-.bd-cpick .hex .f { flex: 1; min-width: 0; height: 28px; padding: 0 8px; border: 0; border-radius: 7px; font: 500 12.5px/1 var(--mono); color: var(--fg); background: var(--inset); box-shadow: var(--shadow-well); }
+.bd-cpick .hex .f { flex: 1; width: 0; min-width: 0; height: 28px; padding: 0 8px; border: 0; border-radius: 7px; font: 500 12.5px/1 var(--mono); color: var(--fg); background: var(--inset); box-shadow: var(--shadow-well); }
 .bd-cpick .hex .f:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .bd-cpick .hex .ok { height: 28px; padding: 0 10px; border: 0; border-radius: 7px; font: 600 12.5px/1 var(--sans); color: #fff; background: var(--accent-solid); cursor: pointer; }
 .bd-cpick .hex .ok:disabled { opacity: .5; cursor: default; }
-@media (prefers-reduced-motion: reduce) { .bd-annrow { animation: none; } .bd-key.ann .car { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .bd-annb:is(.opt, .menu, .strip) { animation: none; } .bd-key.fold .car { transition: none; } }
 @media (max-width: 600px) {
   .bd-anntb { bottom: 10px; gap: 4px; padding: 5px; border-radius: 17px; }
   .bd-key { width: 34px; height: 34px; border-radius: 11px; }
   .bd-key.go { padding: 0 6px 0 9px; gap: 6px; } .bd-key.go .l { display: none; }
-  .bd-key.ann { gap: 3px; padding: 0 6px 0 8px; } .bd-key.ann .t { display: none; }
-  /* one bar centred over the dock, no tail: the tools, then the colour and width keys */
-  .bd-annrow { left: 50%; transform: translateX(-50%); }
-  .bd-annb.tail::after, .bd-annb.opt { display: none; }
-  .bd-annb .bd-key.sty { display: inline-flex; }
-  .bd-annb .sty-g { display: block; }
+  /* the four tools fold into one key (no groove before Link); Pen's pill gives way to the strip */
+  .bd-anntb > :is(.bd-key.tool, .bd-groove.tools-g), .bd-annb.opt { display: none; }
+  .bd-key.fold { display: inline-flex; }
+  .bd-annb:is(.menu, .strip):not([hidden]) { display: flex; }
 }
-/* narrow phones: smaller keys and gaps; then a design page's dock (six modes, the eye, two end keys) drops the eye and
-   an empty Request changes count at 380 px, and Annotate's caret at 340 px, so it fits 320 px */
+/* narrow phones: smaller keys and gaps, and at 380 px an empty Request changes count goes, so every dock fits 320 px */
 @media (max-width: 420px) {
   .bd-anntb { gap: 3px; padding: 4px; }
   .bd-key { width: 32px; height: 32px; border-radius: 10px; }
   .bd-groove { margin: 0 1px; }
+  .bd-annb.menu { left: 34px; }
 }
-@media (max-width: 380px) {
-  .bd-anntb:has(.bd-key[data-m="interact"]) :is(.eye, .eye + .bd-groove) { display: none; }
-  .bd-key.go:disabled { padding: 0 9px; } .bd-key.go:disabled .n { display: none; }
-}
-@media (max-width: 340px) { .bd-key.ann { padding: 0 9px; } .bd-key.ann .car { display: none; } }
+@media (max-width: 380px) { .bd-key.go:disabled { padding: 0 9px; } .bd-key.go:disabled .n { display: none; } }
 /* HorizonUI Tooltip with Kbd chips */
 .bd-tip { position: fixed; left: 0; top: 0; z-index: 61; display: inline-flex; align-items: center; gap: 8px; max-width: min(300px, calc(100vw - 16px)); padding: 6px 8px 6px 10px; border-radius: 9px;
   background: var(--tip); color: oklch(97% 0 0); font: 500 12.5px/1.35 var(--sans); box-shadow: var(--shadow-3); pointer-events: none; animation: bd-tip-in .12s var(--ease); }
 .bd-tip[hidden] { display: none; }
 .bd-tip .k { display: inline-flex; gap: 3px; flex: none; }
+/* a text edit on the board: its keys, under the screen by the edited element */
+.bd-tip.bd-edtip:not([hidden]) { display: block; max-width: calc(100vw - 16px); white-space: nowrap; }
+.bd-edtip b { font-weight: 650; }
 @keyframes bd-tip-in { from { opacity: 0; transform: translateY(3px); } }
 .bd-kbd { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 5px; font: 500 10.5px/1 var(--mono); color: var(--fg-muted);
   background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: var(--shadow-hk); }
@@ -1081,6 +1079,9 @@ html.bd-ann-m-select .bp-cl-head { user-select: text; -webkit-user-select: text;
 .bd-cmp .ft .hint .dot { width: 3px; height: 3px; margin: 0 4px; border-radius: 50%; background: currentColor; opacity: .6; }
 .bd-cmp .ft .bp-btn { height: 28px; }
 .bd-cmp .ft .bp-btn:disabled { opacity: .5; cursor: default; }
+/* Element on a board's screen: Delete element, in the risk tint; it takes the shortcut hint's room */
+.bd-cmp .ft .bp-btn.del { padding: 0 9px; font-weight: 600; color: var(--risk-fg); background: var(--risk-tint); }
+.bd-cmp .ft .bp-btn.del[hidden], .bd-cmp .ft:has(.del:not([hidden])) .hint { display: none; }
 .bd-cmp .ar { position: absolute; display: none; width: 12px; height: 12px; background: var(--surface); }
 .bd-cmp[data-side="r"] .ar { display: block; left: -6px; clip-path: polygon(0 50%, 50% 0, 50% 100%); }
 .bd-cmp[data-side="l"] .ar { display: block; right: -6px; clip-path: polygon(100% 50%, 50% 0, 50% 100%); }
@@ -1983,7 +1984,7 @@ i.warn[hidden] { display: none; }
 .bd-ab.ghost { opacity: .6; }
 .bd-ab.ghost .bd-ab-scr { outline: calc(2px / var(--k)) dashed var(--risk); }
 .bd-ab-fr { position: absolute; left: 0; top: 0; display: block; border: 0; background: #fff; pointer-events: none; }
-.bd-board:is([data-m="interact"], [data-m="point"], [data-m="select"], [data-m="link"], [data-m="edit"]) .bd-ab-fr, :is(.bd-pres, .bd-cmpv) .bd-ab-fr { pointer-events: auto; }
+.bd-board:is([data-m="interact"], [data-m="point"], [data-m="select"], [data-m="link"]) .bd-ab-fr, :is(.bd-pres, .bd-cmpv) .bd-ab-fr { pointer-events: auto; }
 /* links: connectors over the board, faint at rest; the selected (or hovered) screen's arrows, in and out, at full
    strength with their labels. Screens never dim. Widths are in screen px (÷ --k), so arrows read the same at every zoom. */
 .bd-ab-t .rch { padding: 0 .5em; border-radius: .45em; background: var(--accent-tint); color: var(--accent-fg); font-variant-numeric: tabular-nums; }
@@ -1992,7 +1993,7 @@ i.warn[hidden] { display: none; }
 .bd-lnks.off, .bd-lnk-lbls.off { display: none; }
 .bd-lnk .ln { fill: none; stroke: var(--fg-subtle); stroke-width: calc(1.5px / var(--k)); stroke-linejoin: round; opacity: .45; }
 .bd-lnk .hit { fill: none; stroke: transparent; stroke-width: calc(14px / var(--k)); pointer-events: stroke; cursor: pointer; }
-.bd-board:is([data-m="interact"], [data-m="select"], [data-m="draw"], [data-m="region"], [data-m="frame"], [data-m="edit"]) .bd-lnk :is(.hit, .bd-lnk-dot) { pointer-events: none; }
+.bd-board:is([data-m="interact"], [data-m="select"], [data-m="draw"], [data-m="region"], [data-m="frame"]) .bd-lnk :is(.hit, .bd-lnk-dot) { pointer-events: none; }
 .bd-lnk.k-modal .ln { stroke-dasharray: calc(7px / var(--k)) calc(4px / var(--k)); }
 .bd-lnk.k-tab .ln { stroke-dasharray: 0 calc(5px / var(--k)); stroke-linecap: round; }
 .bd-lnk:is(.lit, .sel, .hov) .ln { stroke: var(--accent); stroke-width: calc(2px / var(--k)); opacity: 1; }
@@ -2207,6 +2208,10 @@ html.bd-space .bd-board .bd-ab-fr { pointer-events: none; }
 .bd-btb .zl { min-width: 38px; text-align: center; font: 500 12px var(--mono); font-variant-numeric: tabular-nums; color: var(--fg-muted); }
 .bd-btb .bd-groove { height: 20px; margin: 0 1px; }
 .bd-btb .bd-sg button { height: 24px; padding: 0 8px; }
+/* Interact (I): a toggle beside Present, filled while on */
+.bd-btb .bd-tbtn.play { display: inline-flex; align-items: center; gap: 6px; padding: 0 10px 0 8px; }
+.bd-btb .bd-tbtn.play .bd-ic { width: 13px; height: 13px; fill: currentColor; stroke: none; }
+.bd-btb .bd-tbtn.play[aria-pressed="true"] { color: #fff; background: var(--accent-solid); box-shadow: none; }
 /* a presentation's Export to…: the toolbar's primary key, filled in the accent like the tray's Request changes */
 .bd-btb .bd-tbtn.bd-expb.pri, .bd-btb .bd-tbtn.bd-expb.pri:hover:not(:disabled) { color: #fff;
   background: var(--accent-solid) linear-gradient(180deg, color-mix(in oklch, var(--accent-solid), white 8%), var(--accent-solid)); box-shadow: var(--shadow-fill); }
@@ -2848,8 +2853,7 @@ const ICONS = {
   listchecks: '<path d="m3 17 2 2 4-4M3 7l2 2 4-4M13 6h8M13 12h8M13 18h8"/>',
   reply: '<path d="M9 17l-5-5 5-5M20 18v-2a4 4 0 0 0-4-4H4"/>',
   cursor: '<path d="M4.04 4.69a.5.5 0 0 1 .65-.65l16 6.5a.5.5 0 0 1-.06.95l-6.13 1.58a2 2 0 0 0-1.43 1.43l-1.58 6.13a.5.5 0 0 1-.95.06z"/>',
-  // the Annotate key and its bar's Element and Region tools
-  annotate: '<path d="m9 11-6 6v3h9l3-3"/><path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/>',
+  // the comment tools Element and Region
   element: '<path d="M12.03 12.68a.5.5 0 0 1 .65-.65l9 3.5a.5.5 0 0 1-.03.94l-3.45 1.07a1 1 0 0 0-.66.66l-1.07 3.44a.5.5 0 0 1-.94.04z"/><path d="M5 3a2 2 0 0 0-2 2M19 3a2 2 0 0 1 2 2M5 21a2 2 0 0 1-2-2M9 3h1M9 21h2M14 3h1M3 9v1M21 9v2M3 14v1"/>',
   region: '<path d="M5 3a2 2 0 0 0-2 2M19 3a2 2 0 0 1 2 2M21 19a2 2 0 0 1-2 2M5 21a2 2 0 0 1-2-2M9 3h1M9 21h1M14 3h1M14 21h1M3 9v1M21 9v1M3 14v1M21 14v1"/>',
   pin: '<path d="M20 10c0 5-5.54 10.19-7.4 11.8a1 1 0 0 1-1.2 0C9.54 20.19 4 15 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/>',
@@ -2888,7 +2892,6 @@ const ICONS = {
   monitor: '<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>',
   globe: '<circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20M2 12h20"/>',
   frame: '<path d="M22 6H2M22 18H2M6 2v20M18 2v20"/>',
-  hand: '<path d="M18 11V6a2 2 0 0 0-4 0M14 10V4a2 2 0 0 0-4 0v2M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-6-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/>',
   present: '<path d="M2 3h20M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3M7 21l5-5 5 5"/>',
   download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>',
   variants: '<path d="M2 3v18M22 3v18"/><rect x="6" y="3" width="12" height="18" rx="2"/>',
@@ -7220,14 +7223,14 @@ async function saveBlob(r, name) {
 
 function renderBoard(b) {
   const abs = boardAbs(b), themes = (Array.isArray(b.themes) ? b.themes : []).filter(t => t && typeof t.id === 'string');
-  const B = BOARD = { b, abs, k: 1, tx: 0, ty: 0, mode: 'view', sel: null, sketch: false, reduced: REDUCE, paused: false, theme: null, touched: false, lp: false,
+  const B = BOARD = { b, abs, k: 1, tx: 0, ty: 0, mode: 'view', tool: 'view', interact: false, sel: null, sketch: false, reduced: REDUCE, paused: false, theme: null, touched: false, lp: false,
     frames: new Map(), ghosts: new Map(), twins: new Map(), twin: false, live: new Set(), rqs: new Map(), rq: null, variants: null };
   const vp = h('div', { class: 'bd-bvp', style: `--gut: ${VAR_GUT}px` });
   const stage = h('div', { class: 'bd-board', tabindex: 0, role: 'region', 'data-m': 'view',
     'aria-label': (b.title || 'Design board') + '. Drag to pan; pinch or Ctrl + scroll to zoom; F focuses the selected screen, 0 fits them all.' }, vp);
   const str = (v, n = 200) => typeof v === 'string' ? v.slice(0, n) : '';
   const rectOf = r => r && typeof r === 'object' && [r.x, r.y, r.w, r.h].every(Number.isFinite) ? { x: r.x, y: r.y, w: Math.max(0, r.w), h: Math.max(0, r.h) } : null;
-  const post = (x, m) => { try { x.fr && x.fr.contentWindow && x.fr.contentWindow.postMessage(m, '*'); } catch { /* the frame is gone */ } };
+  const post = B.post = (x, m) => { try { x.fr && x.fr.contentWindow && x.fr.contentWindow.postMessage(m, '*'); } catch { /* the frame is gone */ } };
 
   /* a website's pages: each at a width the reader picks (board.breakpoints, kept per doc in this browser), with its
      sections (source hints, versions to pick in place). Full page (the default; the reader's pick is kept per doc):
@@ -7492,14 +7495,16 @@ function renderBoard(b) {
   const deck = abs.filter(a => devOf(a) === 'slide').sort((a, c) => pos.get(a.id).y - pos.get(c.id).y || pos.get(a.id).x - pos.get(c.id).x);
 
   /* frames: at most LIVE_MAX at a time, the screens nearest the middle of the view; the others show their outline */
-  const frameMode = () => B.mode === 'link' ? 'point' : ['interact', 'point', 'select', 'draw', 'region', 'edit'].includes(B.mode) ? B.mode : 'view';
+  const frameMode = () => B.mode === 'link' ? 'point' : ['interact', 'point', 'select', 'draw', 'region'].includes(B.mode) ? B.mode : 'view';
   const themeOf = id => themes.find(t => t.id === id) || null;
   const tokensMsg = () => { const t = themeOf(B.theme); return { bd: 'tokens', theme: t && t.tokens && typeof t.tokens === 'object' ? t.tokens : null, motion: b.motion && typeof b.motion === 'object' ? b.motion : null }; };
   const viewMsg = x => ({ bd: 'view', sketch: B.sketch || x.a.fidelity === 'sketch', reduced: B.reduced, paused: B.paused });
-  // Edit reaches the board's own frames of the current revision, never an icons artboard (the server builds its sheet)
+  // text edits (a double-click on a screen's text: boardEdits' drafts) reach the board's own frames of the current
+  // revision in View, Element and Link, never an icons artboard (the server builds its sheet)
   const editable = x => !x.role && !x.twin && devOf(x.a) !== 'icons';
+  B.textEdits = x => !!B.onEditMsg && editable(x) && B.frames.get(x.a.id) === x && ['view', 'point', 'link'].includes(B.mode);
   // board: a screen on the board forwards its wheel, middle-button drags and Space to the board (frameNav)
-  const modeMsg = x => ({ bd: 'mode', mode: x.role === 'pres' ? 'interact' : x.role === 'cmp' ? 'view' : B.mode === 'edit' && !editable(x) ? 'view' : frameMode(), board: !x.role });
+  const modeMsg = x => ({ bd: 'mode', mode: x.role === 'pres' ? 'interact' : x.role === 'cmp' ? 'view' : frameMode(), board: !x.role, edit: B.textEdits(x) });
   // an iframe for record x (an artboard, its twin, or the present or compare view's copy) at revision rev (null:
   // current). A live page loads its proxy; at an earlier revision its snapshot (snapOf, at the page's width), as a
   // screen: sandboxed like one, never the live page
@@ -7521,7 +7526,7 @@ function renderBoard(b) {
     // a live page reloads (the dev server's hot reload) and follows its own links: each load is a fresh page to set up
     if (x.allow > 0 || x.live) {
       x.allow = 0; x.locSig = '';
-      // boardEdits' frameMsgs: the reader's element drafts on this artboard and the Edit selection
+      // boardEdits' frameMsgs: the reader's element drafts on this artboard and the picked or edited element
       for (const m of [modeMsg(x), tokensMsg(), viewMsg(x), ...siteMsgs(x), devOf(x.a) === 'page' && pageMsg(x), ...(B.frameMsgs ? B.frameMsgs(x) : [])]) if (m) post(x, m);
       if (x.pendingReveal) post(x, { bd: 'reveal', sel: x.pendingReveal }); x.pendingReveal = null; return;
     }
@@ -7648,19 +7653,27 @@ function renderBoard(b) {
       return;
     }
     if (x.role) return;
+    if (d.bd === 'key' && d.k === 'escape') { if (B.interact) B.setInteract(false); return; }   // Esc in a screen in Interact
     const what = [secTitle(x, d.sec), str(d.name, 60) || str(d.tag, 30)].filter(Boolean).join(' › ');
     if (d.bd === 'hover') { showHov(x, d.sel == null ? null : { rect: rectOf(d.rect), what }); return; }
     if (x.twin) return;   // the other revision's page in compare: nothing to pin or link
-    // Edit: a pick selects, an edit or a key goes to boardEdits, which takes them only from the selection's frame
+    // text edits and Element's picks are boardEdits': an edit or a key (it takes them only from the frame being edited
+    // or picked in); a frame's answer to a text edit (editing: started, or no text there); a double-click on text in
+    // Element or Link (dbl: the frame asks to edit it)
     if (d.bd === 'edit' || d.bd === 'key') { if (B.onEditMsg) B.onEditMsg(x, d); return; }
-    if (B.mode === 'edit') { if (B.onEditPick && editable(x)) B.onEditPick(x, d); return; }
+    if (typeof d.editing === 'boolean') { if (B.onEditStart) B.onEditStart(x, d); return; }
+    if (d.dbl === true) { if (B.onDblPick && B.textEdits(x)) B.onDblPick(x, d); return; }
     if (B.mode === 'link') { if (B.onLinkPick) B.onLinkPick(x, d); return; }
     if (B.mode !== 'point' && B.mode !== 'select') return;
     // a pick on the screen's body (no element under it) is about the whole screen: `artboard:<id>`
     const sel = str(d.sel), r = rectOf(d.rect);
-    if (!sel) { MARKUP.pinFrame({ el: x.el, key: 'artboard:' + x.a.id, what: '', text: str(d.text), extra: siteTarget(x, null), pos: r ? { x: clamp((r.x + r.w / 2) / x.p.w, 0, 1), y: clamp((r.y + r.h / 2) / x.p.h, 0, 1) } : { x: .5, y: .5 } }); return; }
-    if (r) x.rects[sel] = r;
-    MARKUP.pinFrame({ el: x.el, key: `el:${x.a.id}/${sel}`, what: what || sel.slice(0, 60), text: str(d.text), extra: siteTarget(x, d.sec), pos: pickPos(x, r) || { x: .5, y: .5 } });
+    if (!sel) MARKUP.pinFrame({ el: x.el, key: 'artboard:' + x.a.id, what: '', text: str(d.text), extra: siteTarget(x, null), pos: r ? { x: clamp((r.x + r.w / 2) / x.p.w, 0, 1), y: clamp((r.y + r.h / 2) / x.p.h, 0, 1) } : { x: .5, y: .5 } });
+    else {
+      if (r) x.rects[sel] = r;
+      MARKUP.pinFrame({ el: x.el, key: `el:${x.a.id}/${sel}`, what: what || sel.slice(0, 60), text: str(d.text), extra: siteTarget(x, d.sec), pos: pickPos(x, r) || { x: .5, y: .5 } });
+    }
+    // Element: the picked element, which Delete removes (after the comment box opened: it ends the last one's pick)
+    if (B.mode === 'point' && B.onElPick && editable(x)) B.onElPick(x, d);
   });
 
   /* snapshots: a live page's frame, asked through its inspector ({bd:'snapshot'}), as the current revision's snapshot
@@ -7839,7 +7852,7 @@ function renderBoard(b) {
       if (lg) { selectLink(lg.getAttribute('data-link')); return; }
       const el = at && at.closest && at.closest('.bd-ab'), id = el ? el.dataset.ab || el.dataset.ghost || el.dataset.twin : null, now = performance.now();
       selectLink(null);
-      if (id && lastTap.id === id && now - lastTap.t < 320) { focus(id); lastTap = { t: 0, id: null }; }
+      if (id && lastTap.id === id && now - lastTap.t < 320) { if (!(B.dblAt && B.dblAt(id, e))) focus(id); lastTap = { t: 0, id: null }; }   // on a screen's text: edit it
       else { lastTap = { t: now, id }; select(id); }
     },
     wheel: e => e.ctrlKey || e.metaKey ? 'zoom' : 'pan',
@@ -8061,12 +8074,16 @@ function renderBoard(b) {
   // a presentation presents from its dock's Present (B.present); its toolbar has no Present, Variants or Flows
   const presBtn = !IS_DECK && tbtn('present', presTip, () => present(B.sel));
   B.present = () => present(B.sel);
+  // Interact (I): a toggle after Present. While on, the screens take the clicks, the typing and their own scrolling,
+  // whatever the dock's tool, and the tools pause; Esc turns it off
+  const interBtn = h('button', { type: 'button', class: 'bd-tbtn txt play', 'aria-pressed': 'false', 'aria-keyshortcuts': 'I',
+    title: `Interact (I): click, type and scroll inside the ${SCREEN}s; the dock's tools pause (Esc ends it)`, onclick: () => B.setInteract(!B.interact) }, ic('play'), 'Interact');
   // Export to… (here, a presentation's primary key, and in Present's bar): a menu of the deck's exports at the revision shown and the theme picked
   // (GET /__bluedoc/deck). HTML: one file that plays anywhere, offline (serve.py deck_html). PDF: one 16:9 page per
   // slide, without speaker notes, that the server prints with headless Chrome (deck_pdf); when it has no Chrome (501),
   // the deck's print view opens in a tab of its own (format=print, sandboxed) for the browser's Save as PDF. Only
   // through serve.py: an -o file or a page on file:// has no server to build them, so the menu isn't there.
-  // Include unapplied edits (off by default; the current revision only, where Edit is): the export goes as a POST with
+  // Include unapplied edits (off by default; the current revision only, where text edits are): the export goes as a POST with
   // the slides' element drafts (B.exportDrafts), which the server puts in the slides' text as the frames show them
   const canExport = IS_DECK && SERVED && deck.length > 0;
   let pdfByPrint = false, pdfBusy = false;   // pdfByPrint: the server said it has no Chrome
@@ -8129,11 +8146,12 @@ function renderBoard(b) {
   const tb = h('div', { class: 'bd-btb', role: 'toolbar', 'aria-label': 'Board' }, lpBtn, sep(),
     tbtn('fit', `Fit all ${SCREEN}s (0)`, () => fit(true)), tbtn('minus', 'Zoom out (−)', () => zoomBy(1 / 1.4)), zoomLbl, tbtn('plus', 'Zoom in (+)', () => zoomBy(1.4)),
     tbtn('target', `Focus the selected ${SCREEN} (F, or double-click it)`, () => focusSel()), sep(),
-    !IS_DECK && [presBtn, varBtn, flowsBtn, sep()], IS_SITE && [bpSeg, bpIn, sep(), viewSeg], (!IS_SITE || abs.some(a => !isLive(a))) && [IS_SITE && sep(), fidSeg],
+    [!IS_DECK && presBtn, interBtn, !IS_DECK && [varBtn, flowsBtn], sep()], IS_SITE && [bpSeg, bpIn, sep(), viewSeg], (!IS_SITE || abs.some(a => !isLive(a))) && [IS_SITE && sep(), fidSeg],
     IS_SITE && [sep(), tabBtn], themeSel && [sep(), themeSel], expBtn && [sep(), expBtn]);
   // the motion keys (pause animations, Reduced) are hidden for now: built and painted, not shown; screens play their motion
   function paintTools() {
     lpBtn.setAttribute('aria-pressed', String(B.lp));
+    interBtn.setAttribute('aria-pressed', String(B.interact));
     fidSeg.querySelectorAll('button').forEach(bt => bt.setAttribute('aria-checked', String((bt.dataset.v === 'sketch') === B.sketch)));
     motBtn.replaceChildren(ic(B.paused ? 'play' : 'pause')); motBtn.title = B.paused ? 'Play animations' : 'Pause animations'; motBtn.setAttribute('aria-label', motBtn.title); motBtn.setAttribute('aria-pressed', String(B.paused));
     redBtn.setAttribute('aria-pressed', String(B.reduced));
@@ -8419,13 +8437,21 @@ function renderBoard(b) {
     for (const [id, el] of B.rqs) if (!keep.has(id)) { el.remove(); B.rqs.delete(id); }
   };
 
-  /* modes (the tray's): frames take the pointer in Interact, Point and Select; elsewhere a drag pans */
+  /* modes: the dock's tool (B.tool), and Interact over it (B.interact, the toolbar's toggle): B.mode is 'interact' while
+     it is on. Frames take the pointer in Interact, Element, Text and Link; elsewhere a drag pans */
   B.setMode = m => {
-    B.mode = m; stage.dataset.m = m;
+    B.tool = m; B.mode = B.interact ? 'interact' : m; stage.dataset.m = B.mode;
     for (const x of B.live) post(x, modeMsg(x));
     for (const x of B.frames.values()) x.hov.hidden = true;
-    if (m !== 'frame') cancelRq();
-    if (B.onMode) B.onMode(m);
+    if (B.mode !== 'frame') cancelRq();
+    if (B.onMode) B.onMode(B.mode);
+  };
+  B.setInteract = on => {
+    if (!!on === B.interact) return;
+    B.interact = !!on;
+    B.setMode(B.tool);
+    MARKUP.pause(B.interact);   // the dock's tools wait (a comment being written is kept)
+    paintTools();
   };
   // an `el:` pin's spot from where its frame last reported the element, as a fraction of the artboard; a `link:`
   // pin's, on its arrow's label segment
@@ -8548,8 +8574,8 @@ function renderBoard(b) {
     B.brief = h('div', { class: 'bd-sp-brief' }, tldr, main);
     lp = h('aside', { class: 'bd-lp', 'aria-label': Screens, inert: true }, head,
       h('div', { class: 'bd-lp-pane bd-lp-ui', id: 'bd-lp-screens' }, lpList, h('p', { class: 'hint' }, IS_SITE
-        ? 'Click a page to focus it, a section to go to it. Interact (I) scrolls and clicks inside the pages; Element (C) pins a comment on what you point at.'
-        : `Click a ${SCREEN} to focus it. Double-click one on the board, or press F, to do the same.`)));
+        ? 'Click a page to focus it, a section to go to it. Interact (I, in the toolbar) scrolls and clicks inside the pages; Element (C) pins a comment on what you point at; a double-click on text changes it.'
+        : `Click a ${SCREEN} to focus it. Double-click one on the board, or press F, to do the same; a double-click on its text changes the text.`)));
     shell.prepend(lp);
     placeMeta();
     const pref = store.get(LP_KEY);
@@ -8568,7 +8594,8 @@ function renderBoard(b) {
         else if ((k === 'n' || k === 'N') && pres.notes) pres.notes(); else if (k === 'Backspace' && pres.back) pres.back(); else return;
         e.preventDefault(); return;
       }
-      if (k === 'Escape') { if (cmpv) closeCompare(); else if (B.rq) cancelRq(); else if (B.variants) toggleVariants(false); else if (B.selLink || B.sel) { selectLink(null); select(null); } else return; }
+      if (k === 'Escape') { if (cmpv) closeCompare(); else if (B.rq) cancelRq(); else if (B.variants) toggleVariants(false); else if (B.interact) B.setInteract(false); else if (B.selLink || B.sel) { selectLink(null); select(null); } else return; }
+      else if (k === 'i' || k === 'I') B.setInteract(!B.interact);
       else if (k === '[') setLp(!B.lp, true);
       else if (e.shiftKey && e.code === 'Digit1') fit(true);   // Shift + 1, 2, 0 by the key, whatever it types
       else if (e.shiftKey && e.code === 'Digit2') { if (B.sel) focus(B.sel); }
@@ -8583,7 +8610,7 @@ function renderBoard(b) {
     if ('ResizeObserver' in window) new ResizeObserver(() => { if (!B.touched) fit(false); else apply(); if (cmpv) cmpv.lay(); MARKUP.relayout(); }).observe(stage);
     requestAnimationFrame(() => fit(false));
   };
-  // tests and agents: BP.board({focus, fit, sketch, present, compare, variants, flows, tap, breakpoint, section, pageView}); tap follows the presented
+  // tests and agents: BP.board({focus, fit, sketch, present, compare, variants, flows, interact, tap, breakpoint, section, pageView}); tap follows the presented
   // screen's link from that element, as a tap in its frame does
   B.api = o => {
     if (o && typeof o === 'object') {
@@ -8592,6 +8619,7 @@ function renderBoard(b) {
       if ('sketch' in o) { B.sketch = !!o.sketch; sendAll(viewMsg); paintTools(); }
       if ('variants' in o) toggleVariants(!!o.variants);
       if ('flows' in o) setFlows(!!o.flows);
+      if ('interact' in o) B.setInteract(!!o.interact);
       if (o.present) present(String(o.present)); else if (o.present === false && pres) pres.end();
       if (o.tap && pres) pres.follow(String(o.tap));
       if (o.back && pres && pres.back) pres.back();
@@ -8605,7 +8633,7 @@ function renderBoard(b) {
       if (Array.isArray(o.section)) { const s = secsOf((B.frames.get(String(o.section[0])) || {}).a).find(s => s.id === o.section[1]); if (s) revealSection(String(o.section[0]), s); }
     }
     const R = curReach();
-    return { k: B.k, mode: B.mode, selected: B.sel, panel: B.lp, theme: B.theme, sketch: B.sketch, variants: B.variants, present: !!pres, compare: !!cmpv,
+    return { k: B.k, mode: B.mode, tool: B.tool, interact: B.interact, selected: B.sel, panel: B.lp, theme: B.theme, sketch: B.sketch, variants: B.variants, present: !!pres, compare: !!cmpv,
       presented: pres && pres.state ? pres.state() : null, flows: B.flows, selectedLink: B.selLink, pageView: IS_SITE ? B.pageView : null,
       twin: B.twin, snapshots: JSON.parse(JSON.stringify(SNAPS)),
       twins: [...B.twins.values()].map(t => ({ id: t.a.id, rev: BASE.rev, x: t.p.x, y: t.p.y, w: t.p.w, h: t.p.h, shown: !t.el.classList.contains('off'), ready: t.ready,
@@ -11208,7 +11236,7 @@ if (!OLD && !BASE) {
 paintPlan();
 
 /* ---------- change requests: pins, text selections and drawings on the page ---------- */
-// The bottom toolbar switches between View (the page as usual) and the Annotate bar's tools: Element (mode `point`:
+// The bottom toolbar switches between View (the page as usual) and the comment tools: Element (mode `point`:
 // pin a note on an element), Region (`region`: a dragged box), Text (`select`: a note on selected text) and Pen
 // (`draw`: freehand strokes); View also offers a Comment button on selected text. A note anchors to the smallest
 // annotatable element, named by a key built from ids (see keyOf: `item:<checklist>/<item>`,
@@ -11370,7 +11398,7 @@ const MARKUP = (() => {
     }).join('\n\n') + (s => s && '\n' + s.trimEnd())(replyCmdsMd(ord.map(a => replyMd(`ann:${a.id}`, [], '', a.id)).join(''))) };
   }
   const api = { all: () => JSON.parse(JSON.stringify(list)), payload, approvalNotes, annotate: () => null, setMode: () => false, paint: () => {}, flush: () => {}, markSent: () => {},
-    comments: () => ({ open: false, available: false }), pinFrame: () => null, addFrame: () => null, relayout: () => {}, openIfWaiting: () => {} };
+    comments: () => ({ open: false, available: false }), pinFrame: () => null, addFrame: () => null, relayout: () => {}, openIfWaiting: () => {}, pause: () => {}, cancelDraft: () => false };
   if (OLD || BASE) return api;
 
   /* what can be annotated, and the key of each */
@@ -11656,38 +11684,57 @@ const MARKUP = (() => {
   const capG = sv('g');
   const cap = h('div', { class: 'bd-ann-cap', hidden: true }, sv('svg', { 'aria-hidden': 'true' }, capG));
   const VIEW_M = ['cursor', 'View', 'V', IS_LISTING ? 'View: scroll the platform page; drag a shot to reorder its set' : IS_DESIGN ? 'View: drag to pan the board; the screens ignore the pointer' : 'View: use the page as usual'];
-  // the Annotate bar's tools (their ids are the modes': point, region, select, draw)
+  // the comment tools (their ids are the modes': point, region, select, draw), the same on every page
   const MARK_M = { point: ['element', 'Element', 'C', IS_DESIGN ? 'Element: pin a comment on an element, inside a screen too' : 'Element: pin a comment on an element'],
     region: ['region', 'Region', 'M', 'Region: drag a box around what should change'],
     select: ['type', 'Text', 'T', 'Text: comment on some text'], draw: ['pencil', 'Pen', 'D', 'Pen: circle or mark what should change'] };
-  const ANN_M = Object.keys(MARK_M);
-  // a design's tray also has Edit (change a screen's text, delete an element: drafts), Interact (clicks go to the
-  // screens), Link (edit the arrows) and Frame (request a new screen)
-  const MODES = IS_DESIGN && !IS_LISTING ? { view: VIEW_M, interact: ['hand', 'Interact', 'I', 'Interact: click inside the screens (tabs, toggles)'], ...MARK_M,
-    edit: ['penline', 'Edit', 'E', `Edit: click an element in a ${SCREEN} to select it, double-click to change its text, Delete to remove it`],
+  const TOOLS = Object.keys(MARK_M);
+  // a board's dock also has Link (edit the arrows) and Frame (request a new screen); Interact is the board's toolbar's
+  const BOARD_M = IS_DESIGN && !IS_LISTING ? {
     link: ['route', 'Link', 'L', 'Link: click an element, then a screen, to add an arrow; drag a + knob for a gesture; drag an arrow\'s dots to change it'],
-    frame: ['frame', 'Frame', 'R', 'Frame: drag an empty frame for a new screen, then labelled boxes inside it'] } : { view: VIEW_M, ...MARK_M };
+    frame: ['frame', 'Frame', 'R', 'Frame: drag an empty frame for a new screen, then labelled boxes inside it'] } : {};
+  const MODES = { view: VIEW_M, ...MARK_M, ...BOARD_M };
   // the pen: six colours or a custom one (#rrggbb, from the picker), and a width in px; kept in this browser. Each
   // drawing records its own (`color`, `width`)
   const PENS = { risk: 'Red', warn: 'Amber', ok: 'Green', accent: 'Blue', violet: 'Violet', ink: 'Ink' }, WIDTHS = { 2: 'Thin', 4: 'Medium', 7: 'Bold' };
   const WIDTH_KEY = 'bluedoc:pen-width', CUSTOM_KEY = 'bluedoc:pen-custom', HEX = /^#[0-9a-f]{6}$/i, isHex = c => typeof c === 'string' && HEX.test(c);
   const okPen = c => !!PENS[c] || isHex(c);
-  // tool: the Annotate bar's last tool, which the Annotate key opens it on
-  let mode = 'view', tool = 'point', marksOff = false, pen = okPen(store.get(PEN_KEY)) ? store.get(PEN_KEY) : 'risk',
+  let mode = 'view', marksOff = false, pen = okPen(store.get(PEN_KEY)) ? store.get(PEN_KEY) : 'risk',
     width = WIDTHS[store.get(WIDTH_KEY)] ? +store.get(WIDTH_KEY) : 4, custom = isHex(store.get(CUSTOM_KEY)) ? store.get(CUSTOM_KEY) : null;
+  // Interact on (a board's toolbar): the tools pause, the screens take the pointer
+  const paused = () => !!(BOARD && BOARD.interact);
   // a mark in a pen's colour: a named pen's class, a custom colour on --pen
   const penCls = c => PENS[c] ? ' bd-pen-' + c : '';
   const setPen = (el, c) => { if (isHex(c)) el.style.setProperty('--pen', c); else el.style.removeProperty('--pen'); };
-  const btn = Object.fromEntries(Object.entries(MODES).map(([m, [icon, name, key, tipText]]) => {
-    const b = tipped(keyBtn('', icon, name, { 'data-m': m, 'aria-pressed': String(m === mode), 'aria-keyshortcuts': key }, () => setMode(m)), [key]);
+  // a key picks its tool (and ends Interact: the tools wait while it is on)
+  const pick = m => { closeFold(false); if (paused()) BOARD.setInteract(false); setMode(m); };
+  const modeKey = m => {
+    const [icon, name, key, tipText] = MODES[m];
+    const b = tipped(keyBtn(MARK_M[m] ? 'tool' : '', icon, name, { 'data-m': m, 'aria-pressed': String(m === mode), 'aria-keyshortcuts': key }, () => pick(m)), [key]);
     b._tip = tipText;
-    return [m, b];
-  }));
-  // the Annotate key opens its bar on the last tool, and closes it back to View
-  const toggleAnn = () => setMode(ANN_M.includes(mode) ? 'view' : tool);
-  const annBtn = tipped(keyBtn('ann', 'annotate', 'Annotate', { 'aria-pressed': 'false', 'aria-expanded': 'false', 'aria-keyshortcuts': 'A' }, toggleAnn,
-    h('span', { class: 't' }, 'Annotate'), ic('up', 'car')), ['A']);
-  annBtn._tip = 'Annotate: comment on an element, a region or some text, or draw';
+    return b;
+  };
+  const btn = Object.fromEntries(Object.keys(MODES).map(m => [m, modeKey(m)]));
+  // ≤ 600 px the four tools fold into one key, showing the current tool (else Element's icon) with a caret; it opens
+  // them in a menu above it, and a pick closes it
+  const fold = tipped(keyBtn('fold', 'element', 'Comment tools', { 'aria-haspopup': 'true', 'aria-expanded': 'false', 'aria-pressed': 'false' }, () => setFold(!foldOpen), ic('up', 'car')));
+  fold._tip = 'Comment tools: Element, Region, Text, Pen';
+  const menu = h('div', { class: 'bd-annb menu', role: 'group', 'aria-label': 'Comment tools', hidden: true }, TOOLS.map(modeKey));
+  let foldOpen = false;
+  menu.addEventListener('keydown', e => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeFold(true); } });
+  function setFold(on) {
+    foldOpen = on;
+    if (on) closePop(false);
+    paint();
+    if (on) (menu.querySelector('[aria-pressed="true"]') || menu.querySelector('button')).focus({ preventScroll: true });
+  }
+  // back: focus returns to the fold key (Esc)
+  function closeFold(back) {
+    if (!foldOpen) return false;
+    setFold(false);
+    if (back) fold.focus({ preventScroll: true });
+    return true;
+  }
   const pickPen = c => { pen = c; store.set(PEN_KEY, c); if (popFor === 'color') closePop(false); paint(); };
   const pickWidth = w => { width = w; store.set(WIDTH_KEY, String(w)); if (popFor === 'width') closePop(false); paint(); };
   const swatches = () => h('span', { class: 'sw', role: 'group', 'aria-label': 'Pen colour' }, Object.entries(PENS).map(([c, name]) =>
@@ -11696,16 +11743,13 @@ const MARKUP = (() => {
   const wLine = w => sv('line', { x1: 4, y1: 11, x2: 18, y2: 11, 'stroke-width': w });
   const widths = () => h('span', { class: 'bd-wt', role: 'group', 'aria-label': 'Stroke width' }, Object.entries(WIDTHS).map(([w, name]) =>
     h('button', { type: 'button', 'data-w': w, 'aria-label': name, title: `${name} (${w} px)`, onclick: () => pickWidth(+w) }, sv('svg', { viewBox: '0 0 22 22', 'aria-hidden': 'true' }, wLine(w)))));
-  // ≤ 600 px the colours and widths are menus: a key showing the current colour, one the current width
+  // Pen on: its colours and widths in a pill above the dock; ≤ 600 px a strip with a colour key (the current colour) and a
+  // width key (the current line), each opening its menu
   const colorDot = h('span', { class: 'dot' }), widthLine = wLine(width);
   const styKey = (label, kind, ...kids) => { const k = tipped(h('button', { type: 'button', class: 'bd-key sty', 'aria-label': label, 'aria-haspopup': 'true', 'aria-expanded': 'false', onclick: () => togglePop(kind, k) }, kids, ic('down', 'car'))); k._tip = label; return k; };
   const colorKey = styKey('Pen colour', 'color', colorDot), widthKey = styKey('Stroke width', 'width', sv('svg', { viewBox: '0 0 22 22', class: 'w', 'aria-hidden': 'true' }, widthLine));
-  const styGroove = groove(); styGroove.classList.add('sty-g');
-  const toolsBar = h('div', { class: 'bd-annb tail', role: 'toolbar', 'aria-label': 'Annotate' }, ANN_M.map(m => btn[m]), styGroove, colorKey, widthKey);
   const optBar = h('div', { class: 'bd-annb opt', role: 'toolbar', 'aria-label': 'Pen', hidden: true }, swatches(), widths());
-  const annRow = h('div', { class: 'bd-annrow', hidden: true }, toolsBar, optBar);
-  // wide windows: the bar's left edge 6 px left of the Annotate key, its tail on the key's icon (≤ 600 px: centred, CSS)
-  const placeBar = () => { if (!annRow.hidden) annRow.style.setProperty('--ann-x', annBtn.offsetLeft - 6 + 'px'); };
+  const strip = h('div', { class: 'bd-annb strip', role: 'toolbar', 'aria-label': 'Pen', hidden: true }, colorKey, widthKey);
   // the narrow menus and the custom colour's picker: one popover over the key that opened it
   const pop = h('div', { class: 'bd-annpop', hidden: true });
   let popFor = null, popAt = null;
@@ -11769,9 +11813,11 @@ const MARKUP = (() => {
   const eye = tipped(keyBtn('eye', 'eye', 'Hide comment marks', {}, () => { marksOff = !marksOff; paint(); schedule(true); }));
   const goN = h('span', { class: 'n' });
   const go = tipped(keyBtn('go', 'edit', 'Request changes', {}, () => openDlg(), h('span', { class: 'l' }, 'Request changes'), goN));
-  // the dock: View, Interact, Annotate (its bar above it), Edit, Link, Frame; the eye; Request changes and the page's last keys
-  const dockKeys = Object.keys(MODES).flatMap(m => m === ANN_M[0] ? [annBtn, annRow] : ANN_M.includes(m) ? [] : [btn[m]]);
-  const tb = h('div', { class: 'bd-anntb bd-ann-ui', role: 'toolbar', 'aria-label': 'Comment on this doc' }, dockKeys, groove(), eye, TRAY_END.length ? groove() : null, go, TRAY_END);
+  // the dock: View, the four tools (≤ 600 px: the fold key and its menu), Pen's pill and strip above it, on a board Link
+  // and Frame (after a groove the fold key does without); the eye; Request changes and the page's last keys
+  const boardKeys = Object.keys(BOARD_M).map(m => btn[m]), boardG = groove(); boardG.classList.add('tools-g');
+  const tb = h('div', { class: 'bd-anntb bd-ann-ui', role: 'toolbar', 'aria-label': 'Comment on this doc' }, btn.view, TOOLS.map(m => btn[m]), fold, menu, optBar, strip,
+    boardKeys.length ? [boardG, boardKeys] : null, groove(), eye, TRAY_END.length ? groove() : null, go, TRAY_END);
   let page = null, swallow = false, press = null, ink = null, lastUp = 0, dlg = null, hovEl = null, hovFor = null, flashT = 0;
   // the comment being written (on the page, in the composer; not in the list until saved), the one being
   // edited in its sidebar card, the selected one, the hovered one
@@ -11782,9 +11828,13 @@ const MARKUP = (() => {
   const cmpSave = h('button', { type: 'button', class: 'bp-btn primary', onclick: () => finishDraft(true) }, 'Save');
   // its files: Save keeps them with the comment, Cancel deletes their copies
   const cmpFd = fileDraft(() => { cmpSave.disabled = !cmpTa.value.trim() && !cmpFd.files.length || cmpFd.busy; placeComposer(); }, { compact: true });
+  // Element on a board's screen: Delete element removes the picked element (a board draft) and closes the box
+  const delPicked = () => { if (BOARD && BOARD.deletePicked && BOARD.deletePicked()) finishDraft(false); };
+  const cmpDel = h('button', { type: 'button', class: 'bp-btn del', hidden: true, title: 'Delete element (Delete): a board draft, as a text edit is', onclick: delPicked }, 'Delete element');
+  let cmpTyped = false;   // something was typed: Delete and Backspace are the field's
   const cmp = h('div', { class: 'bd-cmp bd-ann-ui', role: 'dialog', 'aria-label': 'New comment', hidden: true },
     h('span', { class: 'ar', 'aria-hidden': 'true' }), cmpHd, cmpTa, cmpFd.list,
-    h('div', { class: 'ft' }, cmpFd.btn, h('span', { class: 'hint', 'aria-hidden': 'true' }, kbd(MAC ? '⌘' : 'Ctrl'), kbd('↵'), ' save', h('span', { class: 'dot' }), kbd('Esc'), ' cancel'),
+    h('div', { class: 'ft' }, cmpFd.btn, cmpDel, h('span', { class: 'hint', 'aria-hidden': 'true' }, kbd(MAC ? '⌘' : 'Ctrl'), kbd('↵'), ' save', h('span', { class: 'dot' }), kbd('Esc'), ' cancel'),
       h('span', { class: 'sp' }), h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => finishDraft(false) }, 'Cancel'), cmpSave), cmpFd.input);
   cmpFd.hook(cmp, cmpTa);
 
@@ -11913,8 +11963,8 @@ const MARKUP = (() => {
   // part of the window the sidebar, the tray and the app bar leave; on narrow screens, above the tray
   function placeComposer() {
     if (!draft || cmp.hidden) return;
-    // the tray's top, or the Annotate bar's when it is open
-    const tray = Math.min(tb.getBoundingClientRect().top, annRow.hidden ? Infinity : annRow.getBoundingClientRect().top), as = SIDE.as();
+    // the tray's top, or that of Pen's pill or strip above it while it shows
+    const tray = Math.min(tb.getBoundingClientRect().top, ...[optBar, strip].map(b => b.getClientRects()[0]?.top ?? Infinity)), as = SIDE.as();
     const bottom = Math.min(innerHeight, tray, as === 'sheet' ? SIDE.el.getBoundingClientRect().top : innerHeight) - 8;
     const compact = innerWidth <= 600;
     cmp.classList.toggle('dock', compact);
@@ -12247,8 +12297,8 @@ const MARKUP = (() => {
       ? [h('span', {}, { pending: 'Nothing pending. Comments you have sent are under Open.', open: 'Nothing open. Comments you send show here until you resolve them.',
           resolved: 'Nothing resolved yet. Resolve an open comment once the agent has made the change.' }[filter] || '')]
       : [h('span', { class: 'ico' }, ic('msg')), h('b', {}, 'No comments yet'),
-        h('span', {}, 'Open Annotate and pick a tool, then click an element, drag a region, select text or draw on the page. Each comment asks the agent to change that spot. For the doc as a whole, use the general comment field below.'),
-        h('span', { class: 'keys' }, ANN_M.map(m => h('span', {}, kbd(MODES[m][2]), MODES[m][1])))]));
+        h('span', {}, 'Pick a tool in the dock, then click an element, drag a region, select text or draw on the page. Each comment asks the agent to change that spot. For the doc as a whole, use the general comment field below.'),
+        h('span', { class: 'keys' }, TOOLS.map(m => h('span', {}, kbd(MODES[m][2]), MODES[m][1])))]));
   }
   const scrollCard = li => scrollWithin(listBox, li);
   function setHot(a, fromCard) {
@@ -12327,7 +12377,7 @@ const MARKUP = (() => {
     draft = a;
     cmpHd.replaceChildren(numChip(a, onPage().length + 1), ic(TYPE_IC[a.type]), h('span', { class: 'lb', title: onLabel(a, a.target.label) }, onLabel(a, a.target.label.split(' › ').pop())));
     cmpTa.value = ''; cmpTa.placeholder = a.type === 'text' ? 'What should change in this text?' : 'What should change here?';
-    cmpSave.disabled = true; cmpSave.title = `Save (${MAC ? '⌘' : 'Ctrl'} + Enter)`; cmpFd.load([]);
+    cmpSave.disabled = true; cmpSave.title = `Save (${MAC ? '⌘' : 'Ctrl'} + Enter)`; cmpFd.load([]); cmpTyped = false;
     cmp.hidden = false; grow(cmpTa);
     hlDirty = true; schedule(true); paint();
     requestAnimationFrame(() => {
@@ -12349,6 +12399,7 @@ const MARKUP = (() => {
     if (saved) { a.note = v; Object.assign(a, filesJson(fs)); a.status = 'pending'; list.push(a); save(); cmpFd.abandon(); cmpFd.load([]); }
     else cmpFd.cancel();
     draft = null; draftBox = null; page = null; cmp.hidden = true;
+    if (BOARD && BOARD.onDraftEnd) BOARD.onDraftEnd(a.target.key);   // an element Element picked: no longer picked
     if (document.activeElement === cmpTa) cmpTa.blur();
     hlDirty = true; schedule(true); paint();
     if (saved) {
@@ -12364,11 +12415,13 @@ const MARKUP = (() => {
     return saved;
   }
   const cmpReady = () => !!cmpTa.value.trim() || cmpFd.files.length > 0;
-  cmpTa.addEventListener('input', () => { cmpSave.disabled = !cmpReady() || cmpFd.busy; grow(cmpTa); placeComposer(); });
+  cmpTa.addEventListener('input', () => { cmpTyped = true; cmpSave.disabled = !cmpReady() || cmpFd.busy; grow(cmpTa); placeComposer(); });
   cmpTa.addEventListener('keydown', e => {
     e.stopPropagation();   // page keys (modes, n/p, canvas) must not fire while typing
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); if (cmpReady()) finishDraft(true); }
     else if (e.key === 'Escape') { e.preventDefault(); finishDraft(false); }
+    // nothing typed yet: Delete or Backspace deletes the element the box is about, as Delete element does
+    else if ((e.key === 'Delete' || e.key === 'Backspace') && !e.repeat && !cmpTyped && !cmpReady() && !cmpDel.hidden) { e.preventDefault(); delPicked(); }
   });
   listBox.addEventListener('click', e => {
     const fc = e.target.closest('.bd-cs-fc'); if (fc) { if (!e.target.closest('a')) openFinding(fc._x); return; }
@@ -12397,14 +12450,20 @@ const MARKUP = (() => {
     endEdit(true); finishDraft(true); closePop(false); hideSelC();
     root.classList.remove('bd-ann-m-' + mode);
     mode = m;
-    if (ANN_M.includes(m)) tool = m;
-    if (m !== 'view') root.classList.add('bd-ann-m-' + m);
-    cap.hidden = m !== 'draw' && m !== 'region';
+    if (m !== 'view' && !paused()) root.classList.add('bd-ann-m-' + m);
+    cap.hidden = paused() || (m !== 'draw' && m !== 'region');
     if (BOARD && BOARD.setMode) BOARD.setMode(m);
     showHover(null);
     if (m !== 'view' && marksOff) { marksOff = false; schedule(true); }   // marking with the marks hidden would hide the new one too
     paint();
     return true;
+  }
+  // Interact on (a board's toolbar): the tools wait, what was being written is saved; off: the tool takes the page again
+  function pause(on) {
+    if (on) { endEdit(true); finishDraft(true); closePop(false); closeFold(false); hideSelC(); showHover(null); root.classList.remove('bd-ann-m-' + mode); }
+    else if (mode !== 'view') root.classList.add('bd-ann-m-' + mode);
+    cap.hidden = on || (mode !== 'draw' && mode !== 'region');
+    paint();
   }
   function paint() {
     const n = pending().length, ni = itemsPending().length, all = n + ni, fs = finds(), total = list.length + fs.length;
@@ -12412,30 +12471,33 @@ const MARKUP = (() => {
     goN.textContent = String(all);
     go.disabled = !all;
     go.setAttribute('aria-label', `Request changes: ${all} pending`);
-    go._tip = all ? `Review and send ${all} pending change request${all === 1 ? '' : 's'}` : 'Annotate the page, or add a general comment, to request a change';
+    go._tip = all ? `Review and send ${all} pending change request${all === 1 ? '' : 's'}` : 'Comment on the page, or add a general comment, to request a change';
     SIDE.badge(n + findsPending());
     filterBtns.forEach(b => { const f = b.dataset.f; b.setAttribute('aria-checked', String(f === filter)); b.replaceChildren(FILTERS[f], h('i', {}, String(f === 'all' ? total : by(f)))); });
     sortBtn.replaceChildren(ic(sort === 'page' ? 'doc' : 'hist'));
     sortBtn.title = sort === 'page' ? 'In page order; click for newest first' : 'Newest first; click for page order'; sortBtn.setAttribute('aria-label', sortBtn.title);
     clearRow.hidden = !list.some(a => a.status === 'resolved');   // it clears the page's comments, not the findings'
-    tb.dataset.m = mode;
-    for (const [m, b] of Object.entries(btn)) b.setAttribute('aria-pressed', String(m === mode));
-    // the Annotate bar: open while one of its tools is; Pen's colours and widths (the narrow keys, disabled) only with Pen
-    const open = ANN_M.includes(mode);
-    annBtn.setAttribute('aria-pressed', String(open)); annBtn.setAttribute('aria-expanded', String(open));
-    annRow.hidden = !open;
-    placeBar();
-    optBar.hidden = mode !== 'draw';
-    colorKey.disabled = widthKey.disabled = mode !== 'draw';
+    tb.dataset.m = mode; tb.classList.toggle('paused', paused());
+    for (const b of tb.querySelectorAll('.bd-key[data-m]')) b.setAttribute('aria-pressed', String(b.dataset.m === mode));
+    // ≤ 600 px: the fold key shows the current tool (else Element's icon), its menu open or not
+    const on = !!MARK_M[mode], fi = MODES[on ? mode : 'point'][0];
+    if (fold.dataset.ic !== fi) { fold.firstChild.replaceWith(ic(fi)); fold.dataset.ic = fi; }
+    fold.setAttribute('aria-pressed', String(on)); fold.setAttribute('aria-expanded', String(foldOpen));
+    menu.hidden = !foldOpen;
+    // Pen's colours and widths: the pill (the strip ≤ 600 px, out of the menu's way) while Pen is on and not paused
+    const penOn = mode === 'draw' && !paused();
+    optBar.hidden = !penOn; strip.hidden = !penOn || foldOpen;
     colorKey.setAttribute('aria-expanded', String(popFor === 'color')); widthKey.setAttribute('aria-expanded', String(popFor === 'width'));
-    for (const b of annRow.querySelectorAll('[data-pen]')) {
+    for (const b of tb.querySelectorAll('[data-pen]')) {
       const c = b.dataset.pen;
       b.setAttribute('aria-pressed', String(c === 'custom' ? isHex(pen) : c === pen));
       if (c === 'custom') { setPen(b, custom); b.classList.toggle('set', !!custom); }
     }
-    for (const b of annRow.querySelectorAll('[data-w]')) b.setAttribute('aria-pressed', String(+b.dataset.w === width));
+    for (const b of tb.querySelectorAll('[data-w]')) b.setAttribute('aria-pressed', String(+b.dataset.w === width));
     colorDot.className = 'dot' + penCls(pen); setPen(colorDot, pen);
     widthLine.setAttribute('stroke-width', width);
+    // the composer on an element Element picked in a board's screen: Delete element
+    cmpDel.hidden = !(draft && BOARD && BOARD.canDelete && BOARD.canDelete(draft.target.key));
     eye.replaceChildren(ic(marksOff ? 'eyeoff' : 'eye'));
     eye._tip = marksOff ? 'Show comment marks' : 'Hide comment marks'; eye.setAttribute('aria-label', eye._tip);
     layer.hidden = marksOff;
@@ -12452,6 +12514,7 @@ const MARKUP = (() => {
     if (e.type === 'pointerdown') {
       swallow = false; press = null;
       if (popFor && t && !pop.contains(t) && !popAt.contains(t)) closePop(false);   // a press outside a menu or the picker closes it
+      if (foldOpen && t && !menu.contains(t) && !fold.contains(t)) closeFold(false);   // and the tools' menu
       if (!(t && t.closest('.bd-selc'))) { selDown = true; hideSelC(); }   // a press elsewhere: a new selection, or none
       // a press outside the sidebar and the composer ends the edit or the draft (keeping what was typed) and the selection
       if (t && t !== cap && !t.closest('.bd-anntb, .bd-ann-pin, .bd-cmp, .bd-selc, dialog') && !spUi(t)) {
@@ -12461,6 +12524,7 @@ const MARKUP = (() => {
       }
     }
     if (e.type === 'pointerup' && selDown) { selDown = false; if (mode === 'view') setTimeout(showSelC, 0); }   // the selection made: its button
+    if (paused()) return;   // Interact: the page's own clicks run
     if (t && t.closest('.bp-note')) return;   // an item's comment field is for typing in every mode: no pins, no selection notes
     if (mode === 'select' && e.type === 'pointerup' && !(t && (t.closest('.bd-ann-ui') || spUi(t)))) setTimeout(fromSelection, 0);
     if ((mode !== 'point' && mode !== 'select') || !inDoc(t)) return;
@@ -12767,25 +12831,25 @@ const MARKUP = (() => {
   root.classList.add('bd-tray-on');
   for (const ty of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click', 'dblclick']) addEventListener(ty, onCapture, true);
   addEventListener('pointercancel', () => { selDown = false; }, true);   // a touch that scrolled or long-pressed: selections show their button again
-  addEventListener('pointermove', e => { if (mode === 'point' && !(e.target.closest && spUi(e.target))) showHover(e.target.closest && e.target.closest('.bp-note') ? null : targetAt(e.target)); }, { capture: true, passive: true });
+  addEventListener('pointermove', e => { if (mode === 'point' && !paused() && !(e.target.closest && spUi(e.target))) showHover(e.target.closest && e.target.closest('.bp-note') ? null : targetAt(e.target)); }, { capture: true, passive: true });
   root.addEventListener('mouseleave', () => { if (mode === 'point') showHover(null); });
   document.addEventListener('keydown', e => {
     if (e.defaultPrevented || e.isComposing || e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
     const t = e.target;
     if (t.isContentEditable || (t.closest && t.closest('input, textarea, select, [contenteditable]')) || document.querySelector('dialog[open]')) return;
     // Esc closes a menu or the picker, the Comment button, the new comment or the edit, the selection; then the tool
+    // (while Interact is on the tool stays: the board's Esc ends Interact)
     if (e.key === 'Escape') {
-      if (!closePop(true) && !hideSelC()) { if (draft) finishDraft(false); else if (editA) endEdit(false); else if (selA) select(null); else if (mode !== 'view') setMode('view'); else return; }
+      if (!closePop(true) && !closeFold(true) && !hideSelC()) { if (draft) finishDraft(false); else if (editA) endEdit(false); else if (selA) select(null); else if (mode !== 'view' && !paused()) setMode('view'); else return; }
       e.preventDefault();   // handled here: the panel's own Escape (close the drawer or sheet) waits for the next press
       return;
     }
-    const k = e.key.toLowerCase();
-    if (k === 'a') { e.preventDefault(); toggleAnn(); return; }
-    const m = { v: 'view', c: 'point', m: 'region', t: 'select', d: 'draw', ...(IS_DESIGN && !IS_LISTING ? { i: 'interact', e: 'edit', l: 'link', r: 'frame' } : {}) }[k];
-    if (m) { e.preventDefault(); setMode(m); }
+    // a tool's key: V, C, M, T, D, and on a board L and R
+    const m = Object.keys(MODES).find(m => MODES[m][2].toLowerCase() === e.key.toLowerCase());
+    if (m) { e.preventDefault(); pick(m); }
   });
   document.addEventListener('scroll', () => { schedule(false); hideSelC(); }, { capture: true, passive: true });
-  addEventListener('resize', () => { schedule(true); placeBar(); });
+  addEventListener('resize', () => schedule(true));
   if ('ResizeObserver' in window) new ResizeObserver(() => schedule(true)).observe(main);
   // DOM changes that can move or hide an anchor: rows opening, diff files switching, canvas pan and zoom.
   // Flow animation (token moves, highlight classes on the drawing) changes nothing that anchors.
@@ -12795,7 +12859,7 @@ const MARKUP = (() => {
   document.fonts?.ready.then(() => schedule(true));
   setInterval(() => { if (SIDE.shows('comments')) renderList(); }, 30000);   // "5 min ago"
   paint(); schedule(true);
-  return Object.assign(api, { annotate, setMode, paint, comments, flush, markSent, pinFrame, addFrame, drafts, openIfWaiting, relayout: () => schedule(true) });
+  return Object.assign(api, { annotate, setMode, paint, comments, flush, markSent, pinFrame, addFrame, drafts, openIfWaiting, pause, cancelDraft: () => finishDraft(false), relayout: () => schedule(true) });
 })();
 
 /* ---------- the drafts' undo history (a design's board edits, a storelisting's text edits) ---------- */
@@ -12984,7 +13048,7 @@ function boardEdits(B) {
     return true;
   };
 
-  /* element drafts (Edit): a screen's element with new text, or deleted. One draft per element, keyed el:<artboard>/<sel>
+  /* element drafts (a text edit, or Delete in Element): a screen's element with new text, or deleted. One draft per element, keyed el:<artboard>/<sel>
      as a comment on it is, payload {op: text | delete, ab, sel, tag, base, text, ord}: base is the element's text as the
      rev has it when the first draft was made (a later edit folds in and keeps it; back to the base drops the draft), ord
      its place in document order (deletes run last to first). A delete keeps an earlier edit's text, which Restore brings
@@ -13016,7 +13080,8 @@ function boardEdits(B) {
     }
   }
   const room = () => elDrafts().filter(live).length < EL_MAX || (toast(`At most ${EL_MAX} element drafts: send them with Request changes first`), false);
-  // the selection (Edit): the element a pick in a frame named, outlined in that artboard's frames
+  // the selection: the element Element picked in a frame (Delete removes it) or the one whose text is being edited,
+  // outlined with its name in that artboard's frames
   function setEditSel(s) {
     const was = B.editSel;
     B.editSel = s;
@@ -13024,16 +13089,23 @@ function boardEdits(B) {
     if (s) B.postAb(s.ab, { bd: 'select', sel: s.sel });
   }
   const clean = s => String(s).replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim();
-  B.onEditPick = (x, d) => {
+  // the element a frame's pick names, with its place, text as the rev has it, and whether it is the screen itself
+  function pickedEl(x, d) {
     const sel = typeof d.sel === 'string' ? d.sel.slice(0, 200) : '';
-    if (!sel) { setEditSel(null); return; }
+    if (!sel) return null;
     const r = d.rect && [d.rect.x, d.rect.y, d.rect.w, d.rect.h].every(Number.isFinite) ? d.rect : null;
     if (r) x.rects[sel] = r;
-    setEditSel({ ab: x.a.id, sel, tag: typeof d.tag === 'string' ? d.tag.slice(0, 20) : '', base: typeof d.base === 'string' ? clean(d.base).slice(0, TEXT_MAX) : '',
+    return { ab: x.a.id, sel, tag: typeof d.tag === 'string' ? d.tag.slice(0, 20) : '', base: typeof d.base === 'string' ? clean(d.base).slice(0, TEXT_MAX) : '',
       ord: Number.isInteger(d.ord) ? d.ord : null, root: !!d.root, sec: Number.isInteger(d.sec) ? d.sec : null, shown: typeof d.text === 'string' ? clean(d.text).slice(0, 200) : '',
-      pos: r ? { x: clamp((r.x + r.w) / x.p.w, 0, 1), y: clamp(r.y / x.p.h, 0, 1) } : null });
-    B.select(x.a.id);
-  };
+      pos: r ? { x: clamp((r.x + r.w) / x.p.w, 0, 1), y: clamp(r.y / x.p.h, 0, 1) } : null };
+  }
+  // Element: a pick in a frame picks its element (the screen's body: none), and the comment box it opened gets Delete
+  // element; the box closing ends the pick
+  B.onElPick = (x, d) => { setEditSel(pickedEl(x, d)); MARKUP.paint(); };
+  const pickKey = () => B.mode === 'point' && B.editSel && !B.editSel.root ? elKey(B.editSel.ab, B.editSel.sel) : null;
+  B.canDelete = key => !!key && pickKey() === key;
+  B.deletePicked = () => !!pickKey() && deleteSel();
+  B.onDraftEnd = key => { if (B.mode === 'point' && B.editSel && elKey(B.editSel.ab, B.editSel.sel) === key) setEditSel(null); };
   const extraOf = s => ({ extra: B.siteTarget(s.ab, s.sec), pos: s.pos ? { x: Math.round(s.pos.x * 1e4) / 1e4, y: Math.round(s.pos.y * 1e4) / 1e4 } : undefined });
   function textEdit(s, text) {
     const d = elOf(elKey(s.ab, s.sel)), base = d ? d.element.base : s.base;
@@ -13043,15 +13115,55 @@ function boardEdits(B) {
     if (!d && !room()) return;
     commit(d, elSpec({ op: 'text', ab: s.ab, sel: s.sel, tag: s.tag, base, text, ...(s.ord != null ? { ord: s.ord } : {}) }, extraOf(s)), label);
   }
+  // the picked element (never the screen itself: pickKey) goes, a draft; whether it did
   function deleteSel() {
-    const s = B.editSel; if (!s) return;
-    if (s.root) { toast(`The ${SCREEN} itself can't be deleted: select an element inside it`); return; }
+    const s = B.editSel; if (!s || s.root) return false;
     const d = elOf(elKey(s.ab, s.sel));
-    if (!d && !room()) return;
+    if (!d && !room()) return false;
     const E = { op: 'delete', ab: s.ab, sel: s.sel, tag: s.tag, base: d ? d.element.base : s.base, ...(d && d.element.text ? { text: d.element.text } : {}), ...(s.ord != null ? { ord: s.ord } : {}) };
     setEditSel(null);
     commit(d, elSpec(E, { ...extraOf(s), shown: s.shown }), `Delete ${T(s.ab)} › ${elName(E)}`);
+    return true;
   }
+  /* text edits: a double-click on a screen's text in View, Element or Link changes it in place. In View the screens
+     ignore the pointer, so the board asks the frame to edit the text at that point (dblAt); in Element and Link the
+     frame asks first (onDblPick), as the clicks before it opened a comment box or started an arrow, which go. The frame
+     answers with a pick that says whether it started (editing: false, no text there: a View double-click focuses the
+     screen), and ends with an edit (text: null when nothing changed). B.editing: the edit under way */
+  let asked = null;   // the artboard asked to start one
+  const askEdit = (x, at) => { asked = x.a.id; x.fr.focus({ preventScroll: true }); B.post(x, { bd: 'editText', ...at }); };
+  function dblAt(id, e) {
+    const x = B.frames.get(id), f = x && x.fr;
+    if (!f || !x.ready || !B.textEdits(x)) return false;
+    const r = f.getBoundingClientRect(), k = f.offsetWidth / (r.width || 1), fx = (e.clientX - r.left) * k, fy = (e.clientY - r.top) * k;
+    if (fx < 0 || fy < 0 || fx > f.offsetWidth || fy > f.offsetHeight) return false;
+    askEdit(x, { x: Math.round(fx), y: Math.round(fy) });
+    return true;
+  }
+  B.dblAt = dblAt;   // the board's own double-tap (pz) when a press doesn't move a screen
+  B.onDblPick = (x, d) => {
+    if (typeof d.sel !== 'string' || !d.sel) return;
+    MARKUP.cancelDraft(); endWire();
+    askEdit(x, { sel: d.sel.slice(0, 200) });
+  };
+  // while an edit is open, a tip under its screen, by the edited element, inside the window
+  const edTip = h('div', { class: 'bd-tip bd-edtip', role: 'status', hidden: true }, h('b', {}, 'Enter'), ' keeps it · ', h('b', {}, 'Esc'), ' undoes · a click away keeps it');
+  document.body.append(edTip);
+  function showEdTip(x, s) {
+    edTip.hidden = !s;
+    if (!s || !x.fr) return;
+    const f = x.fr.getBoundingClientRect(), k = f.width / (x.fr.offsetWidth || 1), r = x.rects[s.sel], w = edTip.offsetWidth, hh = edTip.offsetHeight;
+    edTip.style.translate = `${Math.round(clamp(f.left + (r ? r.x * k : 0), 8, innerWidth - w - 8))}px ${Math.round(clamp(f.bottom + 10, 8, innerHeight - hh - 8))}px`;
+  }
+  B.onEditStart = (x, d) => {
+    if (asked !== x.a.id) return;   // only an answer to the board's ask
+    asked = null;
+    const s = d.editing && pickedEl(x, d);
+    if (!s) { if (B.mode === 'view') B.focus(x.a.id); return; }
+    B.editing = s; setEditSel(s); showEdTip(x, s);
+  };
+  // a click on the page keeps the edit: the frame loses the focus (a press that pans may not move it)
+  addEventListener('pointerdown', () => { const f = document.activeElement; if (B.editing && f && f.tagName === 'IFRAME') f.blur(); }, true);
   // Restore on a deletion's card: the element shows again, with the text an earlier edit gave it
   B.restoreEl = id => {
     const a = elDrafts().find(x => x.id === id); if (!a || a.element.op !== 'delete') return false;
@@ -13065,21 +13177,23 @@ function boardEdits(B) {
     commit(a, null, 'Discard: ' + (a.note || a.target.label));
     return true;
   };
-  // an edit or a key from a frame: only in Edit, from the frame of the selection, for that element; undo and redo from any frame
+  // from a frame: a text edit's end, only from the frame editing that element; Delete in Element, from the frame of the
+  // picked element; undo and redo from any frame
   B.onEditMsg = (x, d) => {
     if (!editable(x)) return;
     if (d.bd === 'key') {
       if (d.k === 'undo') { undoLast(); return; }
       if (d.k === 'redo') { redoNext(); return; }
-      if (B.mode !== 'edit') return;
-      if (d.k === 'escape') { if (B.editSel) setEditSel(null); else MARKUP.setMode('view'); return; }
-      if (d.k === 'delete' && B.editSel && B.editSel.ab === x.a.id) deleteSel();
+      if (d.k === 'delete' && B.editSel && B.editSel.ab === x.a.id && B.deletePicked()) MARKUP.cancelDraft();
       return;
     }
+    const s = B.editing;
+    if (s && s.ab === x.a.id && d.sel === s.sel) {
+      B.editing = null; edTip.hidden = true;
+      if (B.editSel === s) setEditSel(null);
+      if (typeof d.text === 'string' && d.text.length <= TEXT_MAX && clean(d.text)) textEdit(s, clean(d.text));
+    }
     // the frame showed the edit at once: it gets the drafts list again either way, so a refused edit goes back
-    const s = B.editSel, ok = B.mode === 'edit' && s && s.ab === x.a.id && d.sel === s.sel && typeof d.text === 'string' && d.text.length <= TEXT_MAX;
-    const text = ok ? clean(d.text) : '';
-    if (text) textEdit(s, text);
     elSent.delete(x.a.id); sendEl();
   };
   const editable = x => !!x && !x.role && !x.twin && B.frames.get(x.a.id) === x && devOf(x.a) !== 'icons';
@@ -13114,7 +13228,6 @@ function boardEdits(B) {
     const t = a.target, src = Array.isArray(t.source) ? t.source.filter(s => typeof s === 'string') : [];
     return [`  Live page: ${x.a.url}${Number.isInteger(t.bp) ? `  At: ${t.bp} px wide` : ''}`, src.length && `  Source: ${src.map(s => '`' + s.replace(/`/g, '') + '`').join(', ')}`].filter(Boolean);
   };
-  stage.addEventListener('pointerdown', e => { if (B.mode === 'edit' && B.editSel && !e.target.closest('.bd-ab')) setEditSel(null); });
   // the `patch` commands for these drafts: the first bumps the rev, the rest add to it
   const docFile = () => {
     const p = decodeURIComponent(location.pathname.split('/').pop() || '');
@@ -13443,7 +13556,7 @@ function boardEdits(B) {
     closePop(); endWire(); B.selectLink(null);
     stage.classList.toggle('bd-linkm', m === 'link');
     if (m === 'link') knobs();
-    if (m !== 'edit' && B.editSel) setEditSel(null);
+    if (B.editSel) setEditSel(null);
   };
 
   /* moving screens: drag (Shift locks the axis, Alt turns snapping off), Shift-click and Shift-drag to select several */
@@ -13584,7 +13697,7 @@ function boardEdits(B) {
         if (sel.has(d.id)) sel.delete(d.id); else sel.add(d.id);
         const keep = [...sel]; B.select(keep.includes(B.sel) ? B.sel : keep[keep.length - 1] || null);
         sel.clear(); keep.forEach(id => sel.add(id)); paintSel();
-      } else if (lastTap.id === d.id && now - lastTap.t < 320) { B.focus(d.id); lastTap = { id: null, t: 0 }; }
+      } else if (lastTap.id === d.id && now - lastTap.t < 320) { if (!dblAt(d.id, e)) B.focus(d.id); lastTap = { id: null, t: 0 }; }   // on a screen's text: edit it
       else { lastTap = { id: d.id, t: now }; sel.clear(); B.select(d.id); paintSel(); }
       return;
     }
@@ -13615,11 +13728,11 @@ function boardEdits(B) {
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     if (e.key === 'Escape') {
       if (wire) endWire(); else if (!pop.hidden) closePop(); else if (drag) { drag = null; stage.classList.remove('dragging'); chip.hidden = true; ovClear(); placeAll(); }
-      else if (B.selLink) B.selectLink(null); else if (B.mode === 'edit' && B.editSel) setEditSel(null); else return;
+      else if (B.selLink) B.selectLink(null); else return;
       e.preventDefault(); e.stopPropagation(); return;
     }
-    // Edit: Delete or Backspace removes the selected element (a draft)
-    if (B.mode === 'edit' && B.editSel && (e.key === 'Delete' || e.key === 'Backspace')) { e.preventDefault(); e.stopPropagation(); deleteSel(); return; }
+    // Element: Delete or Backspace removes the picked element (a draft) and closes its comment box
+    if (B.mode === 'point' && B.editSel && (e.key === 'Delete' || e.key === 'Backspace')) { e.preventDefault(); e.stopPropagation(); if (B.deletePicked()) MARKUP.cancelDraft(); return; }
     if (B.selLink && (e.key === 'Delete' || e.key === 'Backspace' || e.key === 'Enter')) {
       const l = effective(B.selLink); if (!l) return;
       e.preventDefault(); e.stopPropagation();
@@ -13635,8 +13748,9 @@ function boardEdits(B) {
   }, true);
 
   /* tests and agents: BP.boardEdit({link: {key, to?, kind?, label?, from?, el?, edge?} | {key, delete: true}, move: {id: [x, y]}, tidy, undo,
-     redo, restore: <element draft id>}); the reader's text edits and deletions go through Edit in the frames. It returns the
-     drafts, positions, the history's {undo, redo, sealed} step counts and next: {undo, redo} (the steps' labels) */
+     redo, restore: <element draft id>}); the reader's text edits and deletions go through the frames (a double-click on
+     text, Delete in Element). It returns the drafts, positions, the history's {undo, redo, sealed} step counts, next:
+     {undo, redo} (the steps' labels), the picked element (editSel) and the text edit under way (editing) */
   B.edit = o => {
     if (o && typeof o === 'object') {
       if (o.link && typeof o.link.key === 'string') {
@@ -13653,7 +13767,7 @@ function boardEdits(B) {
     return { drafts: D.all().map(a => ({ id: a.id, type: a.type, key: a.target.key, status: a.status, stale: !!a.stale, note: a.note,
       ...(a.link ? { link: a.link } : a.element ? { element: a.element } : { positions: posOf(a) }) })),
       positions: Object.fromEntries(Object.entries(B.boxes()).map(([id, b]) => [id, [Math.round(b.x), Math.round(b.y)]])), ...H.size(), next: H.next(), overlaps: [...overlaps], selected: selection(),
-      editSel: B.editSel ? { ...B.editSel } : null };
+      editSel: B.editSel ? { ...B.editSel } : null, editing: B.editing ? { ...B.editing } : null };
   };
 
   settle();

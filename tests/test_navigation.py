@@ -1,13 +1,13 @@
 """One navigation in every tool, in Chrome (BLUEDOC_BROWSER_TESTS=1): a tool takes only the primary press; the wheel,
 a pinch (⌃ + wheel), Space + drag and a middle-button drag stay with the board or the diagram under the pointer.
 
-On the Acme Fit design board, in each tool (view, interact, point, select, draw, edit, link, frame), over a screen: the
-wheel pans the board, ⌃ + wheel zooms it at the pointer, Space + drag and a middle-button drag pan it, and the tool, the
-comments and the screens' places stay as they were (nav/board); in Draw the wheel over the empty board pans it
+On the Acme Fit design board, in each tool (view, point, select, draw, link, frame) and with Interact on, over a screen:
+the wheel pans the board, ⌃ + wheel zooms it at the pointer, Space + drag and a middle-button drag pan it, and the tool,
+the comments and the screens' places stay as they were (nav/board); in Draw the wheel over the empty board pans it
 (nav/draw-board); Shift + 0, 1, 2 show 100 %, fit, and focus the selected screen (nav/keys). On the Acme orders doc,
 ⌃ + wheel over its diagram zooms the diagram in Point, Select and Draw, Space + drag over it pans it in Draw without a
-stroke, and the wheel above it on the Draw layer scrolls the page (nav/doc). A website page in Viewport, in Interact:
-the wheel scrolls the page inside its frame and the board stays; ⌃ + wheel still zooms the board (nav/site)."""
+stroke, and the wheel above it on the Draw layer scrolls the page (nav/doc). A website page in Viewport, with Interact
+on: the wheel scrolls the page inside its frame and the board stays; ⌃ + wheel still zooms the board (nav/site)."""
 from __future__ import annotations
 
 import time
@@ -18,7 +18,7 @@ from test_website import SiteInChrome
 
 FIT = "acme-fit-design.bluedoc.json"
 ORDERS = "acme-orders.bluedoc.json"
-BOARD_MODES = ["view", "interact", "point", "select", "draw", "edit", "link", "frame"]
+BOARD_MODES = ["view", "interact", "point", "select", "draw", "link", "frame"]   # interact: the toolbar's toggle, over View
 CTRL, SHIFT = 2, 8
 FRAME = "document.querySelector('iframe.bd-ab-fr[data-ab=\"today\"]')"
 VIEW = "new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => r(document.querySelector('.bd-bvp').style.transform.match(/-?\\d*\\.?\\d+(e-?\\d+)?/g).map(Number)))))"
@@ -79,9 +79,9 @@ class BoardNavigation(ChromePage, Input):
         t = self.tab
         for mode in BOARD_MODES:
             with self.subTest(mode=mode):
-                t.ev("BP.setMode('view'); BP.board({focus: 'today'})")   # each tool from the same view, whatever the last one left
+                t.ev("BP.board({interact: false}); BP.setMode('view'); BP.board({focus: 'today'})")   # each tool from the same view, whatever the last one left
                 time.sleep(0.4)
-                t.ev(f"BP.setMode('{mode}')")
+                t.ev("BP.board({interact: true})" if mode == "interact" else f"BP.setMode('{mode}')")
                 time.sleep(0.3)
                 notes, places = t.ev("BP.annotations().length"), t.ev("JSON.stringify(BP.boardEdit().positions)")
                 x, y = self.screen_point()
@@ -189,7 +189,7 @@ class SiteNavigation(SiteInChrome, Input):
         t.ev("BP.board({pageView: 'viewport'})")
         t.wait_for("(a => a.h === 900 && a.page.view === 'viewport' && a.ready)(BP.board().artboards[0])", 15)
         t.ev("window.__frameY = 0; addEventListener('message', e => { if (e.data && e.data.bd === 'scroll') window.__frameY = e.data.y; })")
-        t.ev("BP.setMode('interact')")
+        t.ev("BP.board({interact: true})")
         t.wait_for("getComputedStyle(document.querySelector('.bd-ab iframe')).pointerEvents === 'auto'")
         # the board refits to the shorter frame a paint or two after Viewport reports: aim once the frame is drawn at the
         # board's painted scale and stops moving (by then the screen has its mode message too)

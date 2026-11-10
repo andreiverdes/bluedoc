@@ -3,11 +3,14 @@
    those page origins, names elements from the nearest unique id as well, roots the page's IntersectionObservers in
    the frame's own viewport and can snapshot the page. A live page's snapshot, served as a screen, loads it with
    data-ids="1": named from ids as on the live page, posting to the frame's own server like any screen.
-   Page -> frame: {bd:'mode', mode, board}, {bd:'tokens', theme, motion}, {bd:'view', sketch, reduced, paused}, {bd:'locate', sels},
-     {bd:'mode', mode}       view | interact (clicks run, taps are reported: nav) | point (the Annotate bar's Element, and
-                             Link: hover outline, a click picks) | select (Text: a selection or a click picks) | edit
-                             (below) | draw, region (Pen, Region: the page's drawing layer takes the pointer; as view)
+   Page -> frame: {bd:'mode', mode, board, edit}, {bd:'tokens', theme, motion}, {bd:'view', sketch, reduced, paused}, {bd:'locate', sels},
+     {bd:'mode', mode}       view | interact (clicks run, taps are reported: nav) | point (Element, and Link: hover
+                             outline, a click picks) | select (Text: a selection or a click picks) | draw, region (Pen,
+                             Region: the page's drawing layer takes the pointer; as view)
      (board: true for a screen on the design board: its wheel, middle-button drags and Space go to the page, below)
+     (edit: true where the reader may change the text (View, Element, Link on the board's own screens): a pick in point
+                             carries ord, base and root; a double-click on text in point asks to edit it (pick, dbl);
+                             {bd:'editText'} starts an edit; Delete or Backspace in point is forwarded)
      {bd:'sections', sels}   a website page's section selectors: hover and pick report the innermost one holding the element
      {bd:'edits', list}      list: [{sel, edits: [{sel?, text? | html?}]}]: the variants shown in place. Each edit sets the
                              text or the HTML of the element its sel finds in its section (the section itself without
@@ -19,9 +22,11 @@
                              visualViewport.height, the root's clientHeight); else (Viewport) the frame's own. The
                              frame's name ('bd-page full 900' | 'bd-page view 900') says the same before the page loads.
      {bd:'snapshot', id}     a live page only: answer with the page as one self-contained document (snapshot() below)
-     {bd:'mode', mode:'edit'}   Edit: hover outline, a click selects (pick), a double-click edits the element's one text run
-                             in place (plaintext-only), Delete or Backspace is forwarded; links don't follow, forms don't submit
-     {bd:'select', sel}      the page's selection in Edit, outlined with its name chip (null: none)
+     {bd:'editText', x, y} | {bd:'editText', sel}   edit the text at that point (frame px: View, where the screen ignores
+                             the pointer) or of that element: its one text run becomes editable in place (plaintext-only;
+                             Enter keeps, Esc undoes, a click away keeps). Answered with a pick: editing true (started),
+                             false (no text there)
+     {bd:'select', sel}      the page's picked or edited element, outlined with its name chip (null: none)
      {bd:'drafts', list}     the reader's element drafts, at most 300: [{sel, tag, base, text} | {sel, tag, base, del: true}],
                              applied after the variants on their own restore stack: a text draft sets the element's one
                              text run, a delete hides it (display: none, so later siblings' CSS paths still match), only
@@ -41,19 +46,20 @@
                                        draft's), 'changed' (another tag or text) or 'gone' (nothing there); draftsNow:
                                        the changed ones' {tag, text} as the page has them
      {bd:'hover', sel, name, tag, text, rect, sec} | {bd:'hover', sel: null}
-     {bd:'pick',  sel, name, tag, text, rect, sec, shift, at?, ord?, base?, root?}   sel null = the whole artboard; sec: the
-                           section's index or null; at: on a storelisting shot's capture, [x, y] on the UI image as
-                           fractions; in Edit, ord: the element's place in document order, base: its text without the
-                           drafts, root: a screen file's root (not to delete). A double-click to edit picks first
+     {bd:'pick',  sel, name, tag, text, rect, sec, shift, at?, ord?, base?, root?, dbl?, editing?}   sel null = the whole
+                           artboard; sec: the section's index or null; at: on a storelisting shot's capture, [x, y] on
+                           the UI image as fractions; with edit, ord: the element's place in document order, base: its
+                           text without the drafts, root: a screen file's root (not to delete); dbl: a double-click on
+                           this element's text (point); editing: the answer to {bd:'editText'}
      {bd:'nav',   names}   in interact mode, a click: the data-bd names of the clicked element and its named ancestors,
                            innermost first (at most 8). The click itself still runs. The page follows the first name
                            that has a link from this screen (its links, drafts included), so a forged name moves nothing.
      {bd:'scroll', y}      the frame scrolled (Viewport), at most once a frame
      {bd:'snapshot', id, html, external, error}   the answer to a snapshot request: html, or error when it failed
-     {bd:'edit', sel, tag, base, text, ord}   in Edit, a text edit committed (Enter, or a click away): text at most 1,000
-                           chars, whitespace collapsed; base: the text before, without the drafts
-     {bd:'key', k}         k: 'delete' | 'escape' (Edit only) | 'undo' | 'redo' (every mode), pressed in the frame outside a
-                           field or an element being edited
+     {bd:'edit', sel, tag, base, text, ord}   a text edit ended: text (at most 1,000 chars, whitespace collapsed) when it
+                           changed and was kept (Enter, or a click away), else null; base: the text before, without the drafts
+     {bd:'key', k}         k: 'delete' (point, with edit) | 'escape' (interact, on the board: the page ends Interact) |
+                           'undo' | 'redo' (every mode), pressed in the frame outside a field or an element being edited
      {bd:'wheel', x, y, dx, dy, ctrl, meta, shift}   on the board, a wheel (a pinch: ctrl) the frame doesn't keep (in
                            Interact it keeps a plain one its content can still scroll that way): the pointer in frame
                            px, the deltas and modifiers
@@ -75,10 +81,11 @@
   const targets = LIVE ? PARENTS : [/^https?:$/.test(location.protocol) ? location.protocol + '//' + location.host : '*'];
   const cap = s => (s == null ? null : String(s).replace(/\s+/g, ' ').trim().slice(0, 200));
   const post = msg => { for (const t of targets) try { parent.postMessage(msg, t); } catch (e) { /* the page went away */ } };
-  let mode = 'view', outline = null, hovered = null, sections = [], located = [], shownEdits = [], sigs = null;
+  // canEdit: the page lets the reader change this screen's text ({bd:'mode', edit})
+  let mode = 'view', canEdit = false, outline = null, hovered = null, sections = [], located = [], shownEdits = [], sigs = null;
   const changed = [];   // [element, its innerHTML before an edit], in the order the edits ran
   // the reader's element drafts ({bd:'drafts'}): the list, what applying them changed (undo closures, in order) and
-  // each one's status; the Edit selection and the element being edited
+  // each one's status; the page's picked or edited element and the element being edited
   let shownDrafts = [], draftSt = {}, draftNow = {}, selEl = null, selBox = null, editing = null;
   const drafted = [];
   const idSel = el => (el.id && typeof CSS !== 'undefined' ? '#' + CSS.escape(el.id) : null);
@@ -301,7 +308,7 @@
     Object.assign(outline.style, { display: 'block', left: r.left - 2 + 'px', top: r.top - 2 + 'px', width: r.width + 4 + 'px', height: r.height + 4 + 'px' });
   }
 
-  const active = () => mode === 'point' || mode === 'select' || mode === 'edit';
+  const active = () => mode === 'point' || mode === 'select';
   const pickable = el => el && el.nodeType === 1 && el !== doc.body && el !== root && !own(el);
   // a storelisting shot showing a capture (html.ui--capture: kits/shot.js lays the PNG over the mock-up): a point in
   // the UI slot names the slot itself, and a pick says where on the image it fell (at: [x, y], fractions)
@@ -329,9 +336,10 @@
   }
   const inEdit = e => !!editing && editing.box.contains(e.target);
   function onDown(e) {
+    if (inEdit(e)) return;   // in the text being edited: the caret moves
+    if (editing) endEdit(true);   // a press elsewhere keeps the edit
     if (mode === 'point') swallow(e);
     else if (mode === 'select') e.stopPropagation();
-    else if (mode === 'edit' && !inEdit(e)) { if (editing) endEdit(true); swallow(e); }   // no focus, no text selection
   }
   function onClick(e) {
     if (mode === 'interact') {
@@ -345,13 +353,16 @@
     if (mode === 'select' && String(getSelection() || '').trim()) return;   // the mouseup reported the selection
     if (inEdit(e)) return;   // a click inside the text being edited only moves the caret
     const ui = capUi(e), el = ui || (pickable(e.target) ? e.target : null);
-    const ed = el && mode === 'edit' ? editPick(el) : {};
+    const ed = el && mode === 'point' && canEdit ? editPick(el) : {};
     post(el ? { bd: 'pick', ...describe(el), ...(ui ? { at: atOf(ui, e) } : {}), ...ed, shift: !!e.shiftKey } : { bd: 'pick', sel: null, name: null, tag: 'body', text: null, rect: rectOf(root.getBoundingClientRect()), shift: !!e.shiftKey });
   }
+  // Element (and Link) where the text may change: a double-click on text asks the page to edit it (dbl); the page
+  // answers {bd:'editText', sel}, once the comment box or arrow the clicks before it started is gone
   function onDbl(e) {
-    if (!active()) return;
+    if (inEdit(e) || !active()) return;
     swallow(e);
-    if (mode === 'edit' && !inEdit(e)) startEdit(e.target);
+    const el = mode === 'point' && canEdit ? editTarget(e.target) : null;
+    if (el) post({ bd: 'pick', ...describe(el), ...editPick(el), dbl: true, shift: false });
   }
   function onUp(e) {
     if (mode !== 'select') return;
@@ -366,7 +377,7 @@
     post({ bd: 'pick', ...describe(el, text, range.getBoundingClientRect()), shift: !!e.shiftKey });
   }
 
-  /* Edit: the selection's outline and name chip, text edits in place, the reader's element drafts */
+  /* text edits: the picked or edited element's outline and name chip, text edits in place, the reader's element drafts */
   const norm = s => String(s).replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim();
   const ordOf = el => Array.prototype.indexOf.call(doc.body.getElementsByTagName('*'), el);
   // the element's one text run: its only direct text that isn't blank, beside children without text (icons); null when
@@ -386,7 +397,7 @@
     undoDrafts();
     try { return textOf(el); } finally { applyDrafts(); }
   }
-  // what an Edit pick adds: the element's place in document order, its text as the revision has it, and whether it is
+  // what a pick adds where the text may change: the element's place in document order, its text as the revision has it, and whether it is
   // a screen file's root (body's child: the screen itself, which can't be deleted; a live page's sections can)
   const editPick = el => ({ ord: ordOf(el), base: baseOf(el), root: !LIVE && el.parentElement === doc.body });
   function undoDrafts() {
@@ -451,7 +462,7 @@
   function paintSel() {
     if (!doc.body) return;
     if (selSel && (!selEl || !selEl.isConnected)) selEl = find(selSel);
-    const el = mode === 'edit' ? selEl : null, r = el && el.getBoundingClientRect();
+    const el = selEl, r = el && el.getBoundingClientRect();
     if (!selBox) {
       if (!r) return;
       selBox = doc.createElement('div');
@@ -468,19 +479,21 @@
     chip.textContent = name ? name + ' · ' + tag : tag + (el.id ? '#' + el.id : '');
     chip.style.top = r.top < 24 ? r.height + 6 + 'px' : '-21px';
   }
-  // a double-click: the innermost element under it with one text run becomes editable as plain text. A text run beside
-  // icons is wrapped in a span for the edit; an element whose text is split by inline marks is left alone.
-  function startEdit(target) {
+  // the text a double-click names: the innermost element under it with one text run (a text run beside icons is
+  // wrapped in a span for the edit; an element whose text is split by inline marks is left alone), else null
+  function editTarget(target) {
     let el = target && target.nodeType === 1 ? target : target && target.parentElement;
     for (; el && el !== doc.body && el !== root; el = el.parentElement) {
       if (el.namespaceURI !== 'http://www.w3.org/1999/xhtml' || own(el)) continue;
       if (runOf(el)) break;
-      for (let c = el.firstChild; c; c = c.nextSibling) if (c.nodeType === 3 && c.data.trim()) return;
+      for (let c = el.firstChild; c; c = c.nextSibling) if (c.nodeType === 3 && c.data.trim()) return null;
     }
-    if (!pickable(el) || !runOf(el)) return;
-    const sel = selOf(el); if (!sel) return;
-    const pick = editPick(el), run = runOf(el), box = doc.createElement('span'), base = pick.base;
-    post({ bd: 'pick', ...describe(el), ...pick, shift: false });   // the page selects what is edited (an icon's text: its parent)
+    return pickable(el) && runOf(el) && selOf(el) ? el : null;
+  }
+  // el's text run becomes editable as plain text; the page hears it started (a pick, editing: the page outlines it)
+  function startEdit(el) {
+    const sel = selOf(el), pick = editPick(el), run = runOf(el), box = doc.createElement('span'), base = pick.base;
+    post({ bd: 'pick', ...describe(el), ...pick, editing: true, shift: false });
     box.setAttribute('data-bd-own', 'edit');
     run.replaceWith(box); box.append(run);
     box.contentEditable = 'plaintext-only';
@@ -503,7 +516,8 @@
     const r = doc.createRange(), s = getSelection();
     r.selectNodeContents(box); s.removeAllRanges(); s.addRange(r);
   }
-  // keep: the text is committed when it changed (Enter, a click away), shown at once as a draft the page then confirms
+  // keep: the text is committed when it changed (Enter, a click away), shown at once as a draft the page then confirms;
+  // the page hears the edit ended either way (text null: nothing to keep)
   function endEdit(keep) {
     const ed = editing; if (!ed) return;
     editing = null;
@@ -511,12 +525,12 @@
     ed.box.replaceWith(ed.run);
     ed.run.data = ed.was;
     const s = getSelection(); if (s) s.removeAllRanges();
-    if (keep && text && text !== norm(ed.was)) {
-      const t = text.slice(0, 1000);   // shown at once; the page answers with the drafts list it keeps
+    const t = keep && text && text !== norm(ed.was) ? text.slice(0, 1000) : null;
+    if (t !== null) {   // shown at once; the page answers with the drafts list it keeps
       shownDrafts = [...shownDrafts.filter(d => d.sel !== ed.sel), ...(t === ed.base ? [] : [{ sel: ed.sel, tag: ed.tag, base: ed.base, text: t }])];
       applyDrafts();
-      post({ bd: 'edit', sel: ed.sel, tag: ed.tag, base: ed.base, text: t, ord: ed.ord });
     }
+    post({ bd: 'edit', sel: ed.sel, tag: ed.tag, base: ed.base, text: t, ord: ed.ord });
     stir();
   }
   /* On the board ({bd:'mode', board: true}) the screen never keeps a pinch (⌃/⌘ + wheel), a middle-button drag or
@@ -571,18 +585,26 @@
   addEventListener('keyup', e => { if (e.key === ' ' && spaceDown) { e.preventDefault(); space(false); } }, true);
   addEventListener('blur', () => space(false));
 
-  // keys pressed in the frame go to the page: Delete, Backspace and Esc in Edit, undo and redo in every mode; never
-  // while a field or an element is being edited (the browser's own undo runs there)
+  // keys pressed in the frame go to the page: Delete and Backspace in Element where the text may change (the picked
+  // element goes), undo and redo in every mode; never while a field or an element is being edited (the browser's own
+  // undo runs there)
   addEventListener('keydown', e => {
     const t = e.target;
     if (editing || e.defaultPrevented || e.isComposing || (t && t.nodeType === 1 && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)))) return;
     const mod = e.metaKey || e.ctrlKey, k = (e.key || '').toLowerCase();
     const key = mod && !e.altKey && k === 'z' ? (e.shiftKey ? 'redo' : 'undo') : e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey && k === 'y' ? 'redo'
-      : mode === 'edit' && !mod && !e.altKey ? ({ delete: 'delete', backspace: 'delete', escape: 'escape' })[k] : null;
+      : mode === 'point' && canEdit && !mod && !e.altKey ? ({ delete: 'delete', backspace: 'delete' })[k] : null;
     if (!key) return;
     e.preventDefault();
     post({ bd: 'key', k: key });
   }, true);
+  // Interact on the board: Esc the screen leaves alone (its own handlers ran first) goes to the page, which ends Interact
+  addEventListener('keydown', e => {
+    const t = e.target;
+    if (mode !== 'interact' || !onBoard || e.key !== 'Escape' || e.defaultPrevented || e.isComposing || e.metaKey || e.ctrlKey || e.altKey || e.shiftKey
+      || (t && t.nodeType === 1 && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)))) return;
+    post({ bd: 'key', k: 'escape' });
+  });
 
   function setTokens(theme, motion) {
     const out = [];
@@ -601,10 +623,16 @@
     if (e.source !== parent || !e.data || typeof e.data !== 'object') return;
     const m = e.data;
     if (m.bd === 'mode' && typeof m.mode === 'string') {
-      if (m.mode !== 'edit' && editing) endEdit(true);
-      mode = m.mode; onBoard = m.board === true;
+      if (editing && (m.mode !== mode || m.edit !== true)) endEdit(true);   // another tool, or Interact: the edit is kept
+      mode = m.mode; onBoard = m.board === true; canEdit = m.edit === true;
       if (!active()) { hovered = null; showOutline(null); }
       paintSel();
+    } else if (m.bd === 'editText') {
+      if (editing) endEdit(true);
+      const at = typeof m.sel === 'string' && m.sel.length <= 200 ? find(m.sel) : Number.isFinite(m.x) && Number.isFinite(m.y) ? doc.elementFromPoint(m.x, m.y) : null;
+      const el = canEdit ? editTarget(at) : null;
+      if (el) startEdit(el);
+      else post({ bd: 'pick', sel: null, name: null, tag: 'body', text: null, rect: rectOf(root.getBoundingClientRect()), editing: false, shift: false });
     } else if (m.bd === 'select') {
       selSel = typeof m.sel === 'string' && m.sel.length <= 200 ? m.sel : null;
       selEl = selSel ? find(selSel) : null;
