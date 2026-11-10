@@ -1461,7 +1461,7 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .bd-cm.nott .mt, .bd-cm.nott details { margin-left: 26px; }
 .bd-omit { padding: 28px 16px; text-align: center; font-size: 13.5px; color: var(--fg-subtle); }
 /* a findings section is one card: its header (the chevron under the number, the title, the answered meter and a
-   status; the findings' sizes and the PR's branches, head → base; the lead), one toolbar (Open · Done · All, Accept
+   status; the findings' sizes and the PR's branches, head → base; the lead), one toolbar (All · Open · Done, Accept
    recommended, Expand all, ⋯ with Copy and Reset, [Checklist][Diff][Merged]), then the view shown, on the inset
    colour: its findings with their code in one column, its checklist or its diff (print: Merged). While its findings
    scroll, the title row and the sizes stick under the app bar, the lead scrolls away under them and the toolbar sticks
@@ -4897,7 +4897,7 @@ const noteMd = (x, indent) => !x.notePending ? '' : (x.note ? '\n' + x.note.trim
 // (Checklist shows). A finding the filter hides shows every finding (All)
 function openItem(x) {
   const v = fviewOf(x.li);
-  if (v && !fvShows(x)) setFindingsFilter('all');
+  if (v && !fvShows(x)) setFindingsFilter(v, 'all');
   const row = itemRow(x);
   if (row === x.li) revealFindings(x.li);
   if (v && v.el.classList.contains('bd-fold')) v.fold(false, false);   // no motion: the caller scrolls to the row next
@@ -5677,7 +5677,8 @@ function flash(el) { el.classList.remove('bd-flash'); void el.offsetWidth; el.cl
 function ring(el) { el.classList.remove('bd-ring'); void el.offsetWidth; el.classList.add('bd-ring'); setTimeout(() => el.classList.remove('bd-ring'), 1700); }
 function openComment(d, c, fromOutside) {
   const src = c.item && ITEMS[c.item];
-  if (src && fviewOf(src.li) && !fvShows(src)) setFindingsFilter('all');   // its card is one the findings filter hides
+  const sv = src && fviewOf(src.li);
+  if (sv && !fvShows(src)) setFindingsFilter(sv, 'all');   // its card is one its section's filter hides
   revealFindings(d.root);   // a findings section showing its checklist switches to its diff
   d.ci = c._o;
   selectFile(d, c.file || PR_KEY);
@@ -5799,15 +5800,16 @@ function findingCode(d, c) {
 /* Findings sections: a section holding a checklist and a diff whose comments are that checklist's items is one card
    (a PR's, in a review). Its header: the title row (a chevron under the number that folds the section, the title, the
    answered meter and a status: replies waiting, Answered), then the findings' sizes and the PR's branches (head →
-   base: the diff's `headRef` and `baseRef`, else its commits), then the lead. Under it one toolbar: the filter (Open ·
-   Done · All, with counts), Accept recommended, Expand all, ⋯ (Copy, Reset) and [Checklist][Diff][Merged], which shows
+   base: the diff's `headRef` and `baseRef`, else its commits), then the lead. Under it one toolbar: the filter (All ·
+   Open · Done, with counts), Accept recommended, Expand all, ⋯ (Copy, Reset) and [Checklist][Diff][Merged], which shows
    the findings one way at a time. While the findings scroll, the title row, the sizes and the toolbar stick under the
-   app bar and the lead scrolls away under them (600px and narrower: the title row and the toolbar). The view is a
-   layout pref that every such section follows (Merged when none is saved); a link into a hidden view (an item from
+   app bar and the lead scrolls away under them (600px and narrower: the title row and the toolbar). Each section keeps
+   its own view, per doc (one never picked there follows the view last picked anywhere; Merged at first); a link into a hidden view (an item from
    Diff, a comment, a code line) shows it in that section only, and an item link stays in Merged, which holds every
    finding. Nothing folds by itself: the chevron, or a click on the title, folds the section to its title row and
    sizes. Print shows Merged, every finding. */
-const FVIEW_KEY = 'bluedoc:findings-view';
+const FVIEW_KEY = 'bluedoc:findings-view';   // the view last picked anywhere: a section's view until one is picked there
+const fviewKey = v => `bp:${docId}:__findings-view:${v.el.id}`;
 const FVIEW_NAMES = ['merged', 'checklist', 'diff'];
 const FVIEWS = [];   // { el: section, h2, chips, bar, seg, mv: the Merged view, items, view, set(view), paint(), fold(on, anim) }
 const SEV_RANK = { risk: 0, warn: 1, info: 2, todo: 3, ok: 4 };
@@ -5816,17 +5818,18 @@ const MROWS = [];   // Merged's finding rows { x, row, tick, opts, note, thread,
 const MORE_LINES = 8;   // Show more lines: lines added either side of an excerpt
 const FINDING_CIDS = new Set();   // every findings section's checklists (nested ones too), known before they draw
 /* The filter: Open (a finding with no answer, a Need more details not sent, or a reply from the agent the reader
-   hasn't answered; a progress finding not done), Done (the rest) or All. One choice for the page, every section and
-   view, kept per doc in reader state (`__findings-filter`); a first visit opens on Open. The finding the reader is on
-   (FHELD: the one they last opened, picked in or wrote in) stays shown when it leaves its filter, until they move on
-   to another. A list ends with what the filter hides, and Show (All). In Diff, a hidden finding's card goes; its code
-   stays. */
-const FFILTER_KEY = `bp:${docId}:__findings-filter`, FFILTERS = [['open', 'Open'], ['done', 'Done'], ['all', 'All']];
-let FFILTER = FFILTERS.some(f => f[0] === store.get(FFILTER_KEY)) ? store.get(FFILTER_KEY) : 'open', FHELD = null;
+   hasn't answered; a progress finding not done), Done (the rest) or All. Each findings section has its own, for its
+   every view, kept per doc and section in reader state (`__findings-filter:<section id>`); a first visit opens on
+   Open. The finding the reader is on (FHELD: the one they last opened, picked in or wrote in) stays shown when it
+   leaves its filter, until they move on to another. A list ends with what the filter hides, and Show (All). In Diff, a
+   hidden finding's card goes; its code stays. */
+const FFILTERS = [['all', 'All'], ['open', 'Open'], ['done', 'Done']];
+const ffilterKey = v => `bp:${docId}:__findings-filter:${v.el.id}`;
+let FHELD = null;
 const findingOpen = x => x.choices ? !(x.choice || x.custom) || x.more === 'on' || awaitsReader(x) : !passing(x);
-const fvShows = x => FFILTER === 'all' || x === FHELD || (FFILTER === 'open') === findingOpen(x);
+const fvShows = x => { const v = fviewOf(x.li), f = v ? v.filter : 'all'; return f === 'all' || x === FHELD || (f === 'open') === findingOpen(x); };
 function holdFinding(x) { if (FHELD !== x) { FHELD = x; paintFindings(); } }
-function setFindingsFilter(f) { FFILTER = f; FHELD = null; store.set(FFILTER_KEY, f); paintFindings(); }
+function setFindingsFilter(v, f) { v.filter = f; FHELD = null; store.set(ffilterKey(v), f); paintFindings(); }
 // every findings section's toolbar, list and cards, the Tracker's findings rows and the ask chip, from the items
 function paintFindings() {
   FVIEWS.forEach(v => v.paint());
@@ -5877,7 +5880,7 @@ function findingsView(sec, el, wraps) {
   wraps[Math.min(...cls, ...diffs)].before(mv);
   // the toolbar: the filter, Accept recommended (the section's open decisions; not on earlier revisions or in compare
   // view), Expand all, ⋯ (Copy, Reset) and the view
-  const fbtns = FFILTERS.map(([f, l]) => h('button', { type: 'button', 'data-f': f, onclick: () => setFindingsFilter(f) }, l, ' ', h('b')));
+  const fbtns = FFILTERS.map(([f, l]) => h('button', { type: 'button', 'data-f': f, onclick: () => setFindingsFilter(v, f) }, l, ' ', h('b')));
   const acc = !OLD && !BASE ? h('button', { type: 'button', class: 'bp-btn ghost', hidden: true, title: 'Pick the starred option on every open decision in these findings', onclick: () => acceptRecs(scope) }) : null;
   const expand = h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => expandFindings(v) });
   const act = (icon, label, run) => h('button', { type: 'button', role: 'menuitem', tabindex: '-1', onclick: () => { pop.close(true); run(); } }, ic(icon), h('span', { class: 'l' }, label));
@@ -5931,7 +5934,7 @@ function findingsView(sec, el, wraps) {
     // the filter's counts, and what it shows: the findings in Checklist, their excerpts in Merged (a group left empty
     // goes), their cards in Diff
     const open = items.filter(findingOpen).length, count = { open, done: items.length - open, all: items.length };
-    for (const b of fbtns) { b.setAttribute('aria-pressed', String(b.dataset.f === FFILTER)); b.lastChild.textContent = String(count[b.dataset.f]); }
+    for (const b of fbtns) { b.setAttribute('aria-pressed', String(b.dataset.f === v.filter)); b.lastChild.textContent = String(count[b.dataset.f]); }
     for (const x of items) {
       const out = !fvShows(x);
       x.li.classList.toggle('fv-out', out);
@@ -5947,10 +5950,10 @@ function findingsView(sec, el, wraps) {
     }
     for (const note of notes) {
       const k = note._xs.filter(x => !fvShows(x)).length;
-      note.hidden = !k || FFILTER === 'all';
-      if (!note.hidden) note.replaceChildren(ic(FFILTER === 'open' ? 'tick' : 'help'),
-        h('span', {}, FFILTER === 'open' ? `${k} finding${k === 1 ? '' : 's'} you answered ${k === 1 ? 'is' : 'are'} hidden · ` : `${k} open finding${k === 1 ? ' is' : 's are'} hidden · `),
-        h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => setFindingsFilter('all') }, 'Show'));
+      note.hidden = !k || v.filter === 'all';
+      if (!note.hidden) note.replaceChildren(ic(v.filter === 'open' ? 'tick' : 'help'),
+        h('span', {}, v.filter === 'open' ? `${k} finding${k === 1 ? '' : 's'} you answered ${k === 1 ? 'is' : 'are'} hidden · ` : `${k} open finding${k === 1 ? ' is' : 's are'} hidden · `),
+        h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => setFindingsFilter(v, 'all') }, 'Show'));
     }
     if (acc) { const k = openRecs(scope).length; acc.hidden = !k; if (k) acc.replaceChildren(ic('checks'), h('span', {}, h('span', { class: 'l' }, 'Accept recommended '), `(${k})`)); }
     const xs = fvOpenable(v), all = xs.length > 0 && xs.every(fvIsOpen);
@@ -5965,8 +5968,10 @@ function findingsView(sec, el, wraps) {
       chev.setAttribute('aria-expanded', String(!on)); chev.setAttribute('aria-label', on ? 'Open this section' : 'Fold this section');
     });
   } };
-  const saved = store.get(FVIEW_KEY);
-  v.set(FVIEW_NAMES.includes(saved) ? saved : 'merged');
+  // its own view and filter, as the reader left them here; a view never picked here follows the last one picked
+  const saved = store.get(fviewKey(v)), last = store.get(FVIEW_KEY), f = store.get(ffilterKey(v));
+  v.set(FVIEW_NAMES.includes(saved) ? saved : FVIEW_NAMES.includes(last) ? last : 'merged');
+  v.filter = FFILTERS.some(x => x[0] === f) ? f : 'open';
   if (!FVIEWS.length) {
     addEventListener('scroll', paintStuck, { passive: true });
     addEventListener('resize', () => FVIEWS.forEach(fvMeasure));
@@ -6009,10 +6014,9 @@ function paintStuck() {
 }
 function pickFindings(view, btn) {
   const v = FVIEWS.find(v => v.seg.contains(btn)), y = v.bar.getBoundingClientRect().top, stuck = fvStuck(v);
-  store.set(FVIEW_KEY, view);
-  FVIEWS.forEach(v => v.set(view));
-  // sections above changed too: the toolbar stays put, and while it is stuck the new view (its own padding inside)
-  // starts right under it
+  store.set(fviewKey(v), view); store.set(FVIEW_KEY, view);
+  v.set(view);
+  // the toolbar stays put, and while it is stuck the new view (its own padding inside) starts right under it
   const shown = [...v.el.children].find(c => c.matches('.fv-m, .fv-c, .fv-d') && c.getClientRects().length);
   scrollBy({ top: stuck && shown ? shown.getBoundingClientRect().top - (y + v.bar.offsetHeight) : v.bar.getBoundingClientRect().top - y, behavior: 'instant' });
   paintStuck();
@@ -14922,8 +14926,12 @@ window.BP = {
     if (FVIEW_NAMES.includes(view)) v.seg.querySelector(`[data-v="${view}"]`).click();
     return v.view;
   },
-  // the findings filter, 'open', 'done' or 'all' (the page's, every findings section's); with f, picks it as its toolbar would
-  findingsFilter: f => { if (FFILTERS.some(x => x[0] === f)) setFindingsFilter(f); return FFILTER; },
+  // a findings section's filter, 'open', 'done' or 'all' (null: not one); with f, picks it as its toolbar would
+  findingsFilter: (sectionId, f) => {
+    const v = FVIEWS.find(v => v.el.id === sectionId); if (!v) return null;
+    if (FFILTERS.some(x => x[0] === f)) setFindingsFilter(v, f);
+    return v.filter;
+  },
   // a finding's Custom answer, as typing in its field would ('' takes it back); false when the item takes none
   custom: (key, text) => { const x = ITEMS[key]; if (!x || !x.setCustom) return false; x.setCustom(text || ''); return true; },
   revisions: () => REVS.map(r => ({ rev: r.rev, date: r.date, current: !!r.current, shown: r === VIEW, changes: r.doc.changes || [] })),

@@ -13,7 +13,7 @@ diff or Merged (each finding's full row with its lines, in code order), picked b
 toolbar the browser remembers, which sticks with the section's title row and sizes while its findings scroll (a phone:
 the title row and the toolbar); picks sync across the three, Merged keeps item and line keys and item links, and links
 into a hidden view show it; a finding opens and closes whole, its details (the text, then its code) behind More
-details; the filter (Open · Done · All, kept per doc) hides an answered finding once the reader moves on, and the
+details; the filter (All · Open · Done, each section's own, kept per doc) hides an answered finding once the reader moves on, and the
 Tracker and the header chip count Open alike; Custom takes the reader's own answer into the reply; a finding's comment
 field opens once it has an answer, and says when a saved comment goes. A browser that loses the key
 cookie (Tern's WKWebView keeps none) still saves with the key the page kept in localStorage while it had the cookie.
@@ -455,7 +455,7 @@ class FindingsView(ChromePage):
     diff, picked by [Checklist][Diff][Merged] in its one toolbar and remembered per browser; a link into a hidden view
     shows it, and an item link stays in Merged. The title row, the sizes and the toolbar stick while the findings scroll
     (a phone: the title row and the toolbar). A finding opens and closes whole, its details behind More details; the
-    filter (Open · Done · All, one for the page and kept per doc) hides an answered finding once the reader moves on;
+    filter (All · Open · Done, each section's own, kept per doc) hides an answered finding once the reader moves on;
     Custom takes the reader's own answer; the comment field opens once the finding has an answer."""
 
     def setUp(self) -> None:
@@ -478,18 +478,17 @@ class FindingsView(ChromePage):
                          ["filter", "", "Accept recommended (7)", "Expand all", "more", "views"])
         self.assertEqual(a.ev("document.querySelectorAll('#pr-412 .bp-cl-h, .bd-fvbar, .bd-fvhint').length"), 0)
         a.ev("document.querySelector('#pr-412 .bd-ftb [data-v=diff]').click()")
-        self.assertEqual(self.shows(a, "#cl-t412", "#diff-diff-412", "#pr-415 .bd-mv", "#diff-diff-415"), [False, True, False, True])
+        # each section has its own view: #415 stays on Merged
+        self.assertEqual(self.shows(a, "#cl-t412", "#diff-diff-412", "#pr-415 .bd-mv", "#diff-diff-415"), [False, True, True, False])
         self.assertEqual(a.ev("[...document.querySelectorAll('#pr-412 .bd-fvseg:not(.bd-ffilt) button')].map(b => b.getAttribute('aria-pressed'))"), ["false", "true", "false"])
         self.assertEqual(a.ev("BP.progress().map(c => c.total)"), [7, 4], "the tracker lost the hidden checklists")
+        # a reload keeps each section's view; #415, never picked, follows the view last picked anywhere
         a.go(self.base + self.url)
         self.assertEqual(a.ev("[BP.findingsView('pr-412'), BP.findingsView('pr-415')]"), ["diff", "diff"])
         self.assertGreater(a.ev("BP.diffState('diff-412').lines"), 0)
-        a.ev("localStorage.setItem('bluedoc:findings-view', 'checklist')")   # a value saved before Merged existed
+        a.ev("document.querySelector('#pr-415 .bd-ftb [data-v=merged]').click()")
         a.go(self.base + self.url)
-        self.assertEqual(self.shows(a, "#cl-t412", "#diff-diff-412", "#pr-412 .bd-mv"), [True, False, False])
-        a.ev("localStorage.removeItem('bluedoc:findings-view')")
-        a.go(self.base + self.url)
-        self.assertEqual(a.ev("BP.findingsView('pr-412')"), "merged")
+        self.assertEqual(a.ev("[BP.findingsView('pr-412'), BP.findingsView('pr-415')]"), ["diff", "merged"])
 
     def test_merged_orders_the_findings_by_code(self) -> None:
         a = self.open(self.url)
@@ -560,7 +559,7 @@ class FindingsView(ChromePage):
 
     def test_a_finding_opens_and_closes_whole(self) -> None:
         a = self.open(self.url)
-        a.ev("BP.findingsFilter('all')")
+        a.ev("BP.findingsFilter('pr-415', 'all')")
         a.ev("BP.findingsView('pr-415', 'checklist')")
         li = "document.querySelector('#item-t415-retry-4xx')"
         mrow = "document.querySelector('#pr-415 .bd-mrow[data-item=\"t415/retry-4xx\"]')"
@@ -603,11 +602,11 @@ class FindingsView(ChromePage):
         counts = "[...document.querySelectorAll('#pr-415 .bd-ffilt button')].map(b => [b.textContent, b.getAttribute('aria-pressed')])"
         shown = "[...document.querySelectorAll('#cl-t415 .bp-cl-items > .bp-cl-item')].filter(li => li.checkVisibility()).map(li => li.id.slice(10))"
         note = "document.querySelector('#cl-t415 .pv-hidden')"
-        self.assertEqual(a.ev(counts), [["Open 4", "true"], ["Done 0", "false"], ["All 4", "false"]], "a first visit opens on Open")
+        self.assertEqual(a.ev(counts), [["All 4", "false"], ["Open 4", "true"], ["Done 0", "false"]], "a first visit opens on Open")
         # an answered finding stays where it is until the reader moves on
         a.ev("document.querySelector('#item-t415-double-auth .bp-cl-head').click()")
         a.ev("document.querySelector('#item-t415-double-auth .bp-opt[data-id=fix] .pk').click()")
-        self.assertEqual(a.ev(counts), [["Open 3", "true"], ["Done 1", "false"], ["All 4", "false"]])
+        self.assertEqual(a.ev(counts), [["All 4", "false"], ["Open 3", "true"], ["Done 1", "false"]])
         self.assertEqual(a.ev(shown), ["double-auth", "retry-4xx", "latency", "backoff-const"], "it left Open under the cursor")
         self.assertFalse(a.ev(f"{note}.checkVisibility()"))
         a.ev("document.querySelector('#item-t415-retry-4xx .bp-cl-head').click()")   # opening another is moving on
@@ -621,22 +620,22 @@ class FindingsView(ChromePage):
         # a reply from the agent the reader hasn't answered keeps an answered finding Open, until they write back
         a.ev("BP.findingsView('pr-412', 'checklist')")
         a.ev("BP.choose('t412/docs-stale', 'ticket')")
-        self.assertEqual(a.ev("document.querySelector('#pr-412 .bd-ffilt button').textContent"), "Open 7")
+        self.assertEqual(a.ev("document.querySelector('#pr-412 .bd-ffilt [data-f=open]').textContent"), "Open 7")
         a.ev("BP.setNote('t412/docs-stale', 'Acme: a ticket is fine')")
-        self.assertEqual(a.ev("document.querySelector('#pr-412 .bd-ffilt button').textContent"), "Open 6")
+        self.assertEqual(a.ev("document.querySelector('#pr-412 .bd-ffilt [data-f=open]').textContent"), "Open 6")
         # the Tracker and the header's chip count Open the same way
         self.assertEqual(a.ev("[...document.querySelectorAll('.bp-prog-row .c')].map(c => c.textContent)"), ["6 open", "3 open"])
         self.assertEqual(a.ev("document.querySelector('.bd-ask').textContent"), "9 questions need your answer")
-        # Show: All, for the page; the choice is kept for the doc
+        # Show: All, for that section only; each section's choice is kept for the doc
         a.ev("BP.findingsView('pr-415', 'checklist')")
         a.ev(f"{note}.querySelector('button').click()")
-        self.assertEqual(a.ev(f"[{shown}.length, {note}.checkVisibility(), [...document.querySelectorAll('.bd-ffilt [aria-pressed=true]')].map(b => b.dataset.f)]"), [4, False, ["all", "all"]])
-        self.assertEqual(until(lambda: self.state(self.url).get("__findings-filter")), "all")
+        self.assertEqual(a.ev(f"[{shown}.length, {note}.checkVisibility(), [...document.querySelectorAll('.bd-ffilt [aria-pressed=true]')].map(b => b.dataset.f)]"), [4, False, ["open", "all"]])
+        self.assertEqual(until(lambda: self.state(self.url).get("__findings-filter:pr-415")), "all")
         a.go(self.base + self.url)
-        self.assertEqual(a.ev("BP.findingsFilter()"), "all")
+        self.assertEqual(a.ev("[BP.findingsFilter('pr-412'), BP.findingsFilter('pr-415')]"), ["open", "all"])
         # Done: the answered ones, and what it hides
         a.ev("BP.findingsView('pr-415', 'checklist')")
-        a.ev("BP.findingsFilter('done')")
+        a.ev("BP.findingsFilter('pr-415', 'done')")
         self.assertEqual(a.ev(f"[{shown}, {note}.textContent]"), [["double-auth"], "3 open findings are hidden · Show"])
 
     def test_a_custom_answer_goes_in_the_payload_and_the_markdown(self) -> None:
@@ -743,7 +742,7 @@ class FindingsView(ChromePage):
 
     def test_the_header_and_toolbar_stick_while_the_findings_scroll(self) -> None:
         a = self.open(self.url)
-        a.ev("BP.findingsFilter('all')")
+        a.ev("BP.findingsFilter('pr-412', 'all'); BP.findingsFilter('pr-415', 'all')")
         parts = "['h2', '.bd-prc', '.bp-lead', '.bd-ftb'].map(s => (r => [Math.round(r.top), Math.round(r.bottom)])(document.querySelector('#pr-412 > ' + s).getBoundingClientRect()))"
         bar = "document.querySelector('#pr-412 > .bd-ftb')"
         into = "scrollTo({top: document.querySelector('#pr-412 .bd-mx[data-ci=\"3\"]').getBoundingClientRect().top + scrollY - 400, behavior: 'instant'})"
@@ -835,9 +834,9 @@ class FindingsView(ChromePage):
         self.assertEqual(a.ev("BP.findingsView('pr-415')"), "diff")
         self.assertIsNone(a.ev("localStorage.getItem('bluedoc:findings-view')"), "a link changed the remembered pick")
         # a link to a finding the filter hides shows every finding
-        a.ev("BP.choose('t412/float-cents', 'fix'); BP.findingsFilter('open')")
+        a.ev("BP.choose('t412/float-cents', 'fix'); BP.findingsFilter('pr-412', 'open')")
         a.ev("location.hash = '#item-t412-float-cents'")
-        a.wait_for("BP.findingsFilter() === 'all' && document.querySelector('#item-t412-float-cents').checkVisibility()")
+        a.wait_for("BP.findingsFilter('pr-412') === 'all' && document.querySelector('#item-t412-float-cents').checkVisibility()")
 
 
 FIT = "acme-fit-design.bluedoc.json"   # the design example: a phone flow with links, board id `main`
