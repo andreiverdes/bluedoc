@@ -292,6 +292,18 @@ class PageSync(ChromePage):
         self.assertIsNone(a.ev("document.querySelector('.bd-approve[open] .bd-ap-sum li.risk')"))
         self.assertEqual(self.browser.errors, [])
 
+    def test_sending_closes_the_answered_questions(self) -> None:
+        a = self.open(self.server.url_for(self.plan))
+        q = "(i => document.querySelector('#item-decisions-' + i))"
+        for i in ("retention", "prices"):
+            a.ev(f"{OPEN}({q}('{i}'))")
+        a.ev(f"{q}('retention').querySelector('.bp-opt[data-id=d180] .pk').click()")
+        is_open = f"['retention', 'prices'].map(i => {q}(i).classList.contains('open'))"
+        self.assertEqual(a.ev(is_open), [True, True], "a pick closed the question")
+        a.ev("BP.setNote('decisions/retention', 'Acme: 180 days is fine')")   # something for Request changes to send
+        self.send_changes(a, "")
+        self.assertEqual(a.ev(is_open), [False, True], "Request changes left the answered question open, or closed the unanswered one")
+
     def test_approve_after_an_unseen_edit_is_refused(self) -> None:
         url = self.server.url_for(self.plan)
         a = self.open(url)
@@ -613,8 +625,6 @@ class FindingsView(ChromePage):
         self.assertEqual(a.ev(shown), ["double-auth", "retry-4xx", "latency", "backoff-const"], "it left Open under the cursor")
         self.assertFalse(a.ev(f"{note}.checkVisibility()"))
         a.ev("(h => { h.click(); h.click(); })(document.querySelector('#item-t415-retry-4xx .bp-cl-head'))")   # closing then opening another is moving on
-        self.assertEqual(a.ev("['double-auth', 'retry-4xx', 'latency'].map(i => document.querySelector('#item-t415-' + i).classList.contains('open'))"), [False, True, True],
-                         "moving on left the answered finding open")
         self.assertEqual(a.ev(shown), ["retry-4xx", "latency", "backoff-const"])
         self.assertEqual(a.ev(f"{note}.checkVisibility() && {note}.textContent"), "1 finding you answered is hidden · Show")
         # Merged and Diff hide it too: its row, its card (Diff keeps the code)
