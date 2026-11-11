@@ -3402,6 +3402,7 @@ async function postReply(url, body) {
   if (BOARD && BOARD.snapLive && [REPLY.url, REPLY.changes, REPLY.approve].includes(url)) await Promise.race([BOARD.snapLive(), new Promise(r => setTimeout(r, 15000))]);
   const headers = SERVER_KEY.headers({ 'Content-Type': 'application/json', 'X-Bluedoc': '1' });
   const r = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) });
+  if (r.ok && [REPLY.url, REPLY.changes, REPLY.approve].includes(url)) { collapseAnswered(null); paintFindings(); }   // sent: the answered findings close
   if (r.ok) return r;
   const j = await r.json().catch(() => ({}));
   const key = r.status === 403 && !!(j && j.key);
@@ -5825,7 +5826,8 @@ function findingCode(d, c) {
    the lead, branches and sizes scroll away under them. Each section keeps
    its own view, per doc (one never picked there follows the view last picked anywhere; Merged at first); a link into a hidden view (an item from
    Diff, a comment, a code line) shows it in that section only, and an item link stays in Merged, which holds every
-   finding. A finding not yet answered opens on load (findingOpen); an answered one stays closed. Nothing folds by
+   finding. A finding not yet answered opens on load (findingOpen); an answered one stays closed. Moving on to another finding, or sending,
+   closes the answered ones left open (collapseAnswered). Nothing folds by
    itself: the chevron, or a click on the title, folds the section to its title row, branches and sizes. Print shows Merged, every finding. */
 const FVIEW_KEY = 'bluedoc:findings-view';   // the view last picked anywhere: a section's view until one is picked there
 const fviewKey = v => `bp:${docId}:__findings-view:${v.el.id}`;
@@ -5847,7 +5849,12 @@ const ffilterKey = v => `bp:${docId}:__findings-filter:${v.el.id}`;
 let FHELD = null;
 const findingOpen = x => x.choices ? !(x.choice || x.custom) || x.more === 'on' || awaitsReader(x) : !passing(x);
 const fvShows = x => { const v = fviewOf(x.li), f = v ? v.filter : 'all'; return f === 'all' || x === FHELD || (f === 'open') === findingOpen(x); };
-function holdFinding(x) { if (FHELD !== x) { FHELD = x; paintFindings(); } }
+// moving on to another finding (or sending) closes the answered findings left open: the one just answered, or ones
+// Expand all opened; a finding still waiting for the reader stays open
+function collapseAnswered(keep) {
+  for (const x of CHECKLISTS.flatMap(c => c.items)) if (x.fd && x !== keep && x.open && !findingOpen(x)) x.setOpen(false);
+}
+function holdFinding(x) { if (FHELD !== x) { FHELD = x; collapseAnswered(x); paintFindings(); } }
 function setFindingsFilter(v, f) { v.filter = f; FHELD = null; store.set(ffilterKey(v), f); paintFindings(); }
 // every findings section's toolbar, list and cards, the Tracker's findings rows and the ask chip, from the items
 function paintFindings() {

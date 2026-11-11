@@ -613,6 +613,8 @@ class FindingsView(ChromePage):
         self.assertEqual(a.ev(shown), ["double-auth", "retry-4xx", "latency", "backoff-const"], "it left Open under the cursor")
         self.assertFalse(a.ev(f"{note}.checkVisibility()"))
         a.ev("(h => { h.click(); h.click(); })(document.querySelector('#item-t415-retry-4xx .bp-cl-head'))")   # closing then opening another is moving on
+        self.assertEqual(a.ev("['double-auth', 'retry-4xx', 'latency'].map(i => document.querySelector('#item-t415-' + i).classList.contains('open'))"), [False, True, True],
+                         "moving on left the answered finding open")
         self.assertEqual(a.ev(shown), ["retry-4xx", "latency", "backoff-const"])
         self.assertEqual(a.ev(f"{note}.checkVisibility() && {note}.textContent"), "1 finding you answered is hidden · Show")
         # Merged and Diff hide it too: its row, its card (Diff keeps the code)
