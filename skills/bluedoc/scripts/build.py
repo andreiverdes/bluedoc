@@ -550,7 +550,7 @@ SCHEMA_CARDS = {
         ("items[].evidence", "[evidence]", "opt", "build.py schema evidence")],
         {"type": "steps", "id": "plan", "items": [{"id": "table", "title": "Add the `carts` table", "status": "todo",
                                                    "effort": "S", "files": ["db/0012.sql"]}]}),
-    "files": ("the files a plan touches, grouped by folder", [
+    "files": ("the files a plan touches, as a folder tree", [
         ("title", "inline", "opt", ""),
         ("items", "[object]", "req", ""),
         ("items[].path", "str", "req", "from the repo root"),

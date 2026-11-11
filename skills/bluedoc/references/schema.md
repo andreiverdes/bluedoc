@@ -69,7 +69,7 @@ A missing requirement is an **error** on the doc being built: a new `meta.rev` (
 | `canvas` | see below | Blueprint drawings. |
 | `diff` | see [Diff](#diff) | A code change with line comments: file list, unified diff, comment cards. Generate it with `scripts/gitdiff.py`. |
 | `steps` | `id`, `items`, `title`? | A plan's implementation order, as a numbered timeline. See [Plan blocks](#plan-blocks). |
-| `files` | `items`, `title`? | The files a plan touches, grouped by folder, each with an action badge. |
+| `files` | `items`, `title`? | The files a plan touches as a folder tree, each with its action letter. |
 | `media` | `src`, `alt`, `caption`?, `width`? | An image (opens full size on click) or a video, from a file next to the doc. |
 | `compare` | `before`, `after`, `title`? | Two panes side by side: before and after code, text or images. |
 | `board` | see [Board](#board) | A design doc's UI mockups: artboards on a pan/zoom board, each an HTML screen file. Design docs only; not inside checklist items. |
@@ -390,12 +390,12 @@ The page draws a numbered vertical timeline. Steps are the proposal, not a track
 | Field | Meaning |
 |---|---|
 | `items[].path` | Required. Path from the repo root; a step's `files` chip matches it exactly. |
-| `items[].action` | Required. `add` (badge A, green), `edit` (M, blue), `delete` (D, red), `rename` or `move` (R, amber). |
+| `items[].action` | Required. `add` (A, green), `edit` (M, blue), `delete` (D, red), `rename` or `move` (R, amber). |
 | `items[].from` | The old path; only for `rename` and `move`. |
 | `items[].why` | Required. One line on what changes in the file. |
 | `items[].step` | A step id. The row's step link jumps to that step; the build warns when no steps block has it. |
 
-Rows are grouped by folder, each with a file-type icon, the badge, the path and `why`.
+The page draws a tree of the paths: folders in the order of their first file, a folder holding only one folder sharing its row (`services/orders-api/`), files under them in the doc's order. A file's row is its action letter, its name, `from` and `why` on one line and its step's chip; the title holds the whole `why`, and clicking the row shows `from` and `why` wrapped under the name (on a phone only then). The header counts each action, over a bar of them. `title` defaults to *Changed files*.
 
 ### Media
 

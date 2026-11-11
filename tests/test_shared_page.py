@@ -195,6 +195,16 @@ class SharedPage(unittest.TestCase):
         first = self.q(t, "w.BP.board().artboards[0].id")
         self.assertEqual(self.q(t, f"(w.BP.board({{focus: {json.dumps(first)}}}), w.BP.board().selected)"), first)
         self.assertEqual(self.q(t, "JSON.stringify(w.BP.replyPayload().items)"), before)
+        # narrow, the toolbar keeps one row the same way (test_narrow.BoardToolbar); ⋯ More has no edit keys
+        self.browser.call("Emulation.setDeviceMetricsOverride", {"width": 600, "height": 900, "deviceScaleFactor": 1, "mobile": False}, t.session)
+        t.wait_for(IN.format("w.innerWidth === 600"))
+        tb = "w.document.querySelector('.bd-btb')"
+        t.wait_for(IN.format(f"!{tb}.querySelector('.bd-btb-more').hidden"))
+        self.assertAlmostEqual(*self.q(t, f"(t => [t.getBoundingClientRect().height, t.querySelector('.bd-tbtn').getBoundingClientRect().height + 8])({tb})"), delta=0.5)
+        self.q(t, f"{tb}.querySelector('.bd-btb-more > button').click()")
+        rows = self.q(t, f"[...{tb}.querySelectorAll('.bd-btb-more [role^=menuitem]')].map(r => r.textContent)")
+        self.assertTrue(rows)
+        self.assertEqual([r for r in rows if r.startswith(("Tidy up", "Nothing to", "Undo", "Redo"))], [])
         self.assert_view_only(t)
         self.assertEqual(self.asked_routes(), [])
         self.assertEqual(self.browser.errors, [])

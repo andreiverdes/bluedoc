@@ -129,6 +129,7 @@ button.bd-emo:hover, button.bd-emo[aria-expanded="true"] { background: var(--sel
 .bd-emop .rs .v { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg-subtle); text-align: right; }
 .bd-bar-r { margin-left: auto; display: flex; align-items: center; gap: 10px; flex: none; }
 .bd-overall { display: flex; align-items: center; gap: 8px; font: 500 12px var(--mono); color: var(--fg-muted); }
+.bd-overall[hidden] { display: none; }   /* nothing to track (a review, a design): no 0/0 */
 .bd-overall .bp-bar { width: 72px; }
 /* a phone: the logo without its wordmark, closer keys, then a shorter meter, then (under 381 px, beside Share and
    Export) the meter's count alone, the keys closer still and Export without its chevron, so the bar fits 320 px */
@@ -694,11 +695,11 @@ td.bd-cell-mod { background: color-mix(in oklch, var(--warn-tint) 70%, transpare
 .bp-ref:hover { color: var(--accent-fg); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--accent) 45%, transparent); }
 .bp-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
-/* plan blocks. steps: HorizonUI Timeline + ProgressSteps; files: ChangeTable rows by folder; media; compare */
-.bp-tl, .bp-files { background: var(--surface); border-radius: 14px; box-shadow: var(--shadow-1); overflow: hidden; scroll-margin-top: calc(var(--top-h) + 16px); }
-.bp-tl-h, .bp-files-h { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; padding: 12px 10px 10px 16px; }
-.bp-tl-h > .bd-ic, .bp-files-h > .bd-ic { color: var(--fg-subtle); }
-.bp-tl-h h3, .bp-files-h h3 { margin: 0; font-size: 15px; font-weight: 600; letter-spacing: -.005em; flex: 1 1 180px; line-height: 1.4; }
+/* plan blocks. steps: HorizonUI Timeline + ProgressSteps; files: a tree of the paths; media; compare */
+.bp-tl, .bp-ft { background: var(--surface); border-radius: 14px; box-shadow: var(--shadow-1); overflow: hidden; scroll-margin-top: calc(var(--top-h) + 16px); }
+.bp-tl-h { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; padding: 12px 10px 10px 16px; }
+.bp-tl-h > .bd-ic { color: var(--fg-subtle); }
+.bp-tl-h h3, .bp-ft-h h3 { margin: 0; font-size: 15px; font-weight: 600; letter-spacing: -.005em; flex: 1 1 180px; line-height: 1.4; }
 .bp-tl-h .tools { display: flex; gap: 2px; }
 .bp-tl-bar { display: flex; gap: 3px; margin: 0 16px 2px; }
 .bp-tl-bar i { flex: 1; height: 4px; border-radius: 99px; background: var(--line); }
@@ -749,31 +750,57 @@ td.bd-cell-mod { background: color-mix(in oklch, var(--warn-tint) 70%, transpare
 .bp-fchip .bd-ic { width: 13px; height: 13px; color: var(--accent-fg); }
 .bp-fchip:hover:not(:disabled) { color: var(--accent-fg); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--accent) 45%, transparent); }
 .bp-fchip:disabled { cursor: default; } .bp-fchip:disabled .bd-ic { color: var(--fg-subtle); }
-.bp-files-sum { display: inline-flex; flex-wrap: wrap; gap: 4px 10px; }
-.bp-fsum { display: inline-flex; align-items: center; gap: 5px; font: 500 12px var(--mono); color: var(--fg-muted); }
-.bp-fsum b, .bp-fbadge { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 5px; font: 700 10.5px/1 var(--mono); color: var(--accent-fg); background: var(--accent-tint); }
-.k-add :is(b, .bp-fbadge) { color: var(--ok-fg); background: var(--ok-tint); }
-.k-del :is(b, .bp-fbadge) { color: var(--risk-fg); background: var(--risk-tint); }
-.k-ren :is(b, .bp-fbadge) { color: var(--warn-fg); background: var(--warn-tint); }
-.bp-fgrp { padding-bottom: 4px; }
-.bp-fgrp + .bp-fgrp { border-top: 1px solid var(--line-soft); }
-.bp-fdir { display: flex; align-items: center; gap: 7px; padding: 9px 16px 3px; font: 500 12px/1.5 var(--mono); color: var(--fg-subtle); overflow-wrap: anywhere; }
-.bp-fdir .bd-ic { width: 14px; height: 14px; flex: none; }
-.bp-fgrp ul { list-style: none; margin: 0; padding: 0; }
-.bp-frow { display: grid; grid-template-columns: 20px 16px minmax(0, 1fr) auto; align-items: start; column-gap: 10px; padding: 7px 12px 7px 16px; scroll-margin-top: calc(var(--top-h) + 16px); transition: background .1s; }
-.bp-frow:hover { background: var(--hover); }
-.bp-frow > .bp-fbadge { width: 20px; height: 20px; border-radius: 6px; font-size: 11px; margin-top: 1px; }
-.bp-frow > .bp-fic { width: 16px; height: 16px; margin-top: 3px; color: var(--fg-subtle); }
-.bp-fmain { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
-.bp-fname { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 8px; font: 550 13px/1.65 var(--mono); color: var(--fg); overflow-wrap: anywhere; }
+/* files: the title and how many of each action, a bar of them, then the tree. A folder row folds its subtree; a file
+   row is its action letter, name, why on one line (whole in its title, wrapped under the name once the row is open)
+   and its step's chip. Rows indent 18px a level (--d) over a guide per level */
+.bp-ft-h { padding: 14px 16px 12px; border-bottom: 1px solid var(--line-soft); }
+.bp-ft-h .l1 { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 14px; }
+.bp-ft-sum { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12.5px; color: var(--fg-muted); }
+.bp-ft-sum > span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.bp-ft-sum i { width: 8px; height: 8px; border-radius: 50%; }
+.bp-ft-bar { display: flex; gap: 2px; height: 6px; margin-top: 10px; border-radius: 99px; overflow: hidden; }
+:is(.bp-ft-sum i, .bp-ft-bar i) { background: var(--accent); }
+:is(.bp-ft-sum .k-add i, .bp-ft-bar .k-add) { background: var(--ok); }
+:is(.bp-ft-sum .k-del i, .bp-ft-bar .k-del) { background: var(--risk); }
+:is(.bp-ft-sum .k-ren i, .bp-ft-bar .k-ren) { background: var(--warn); }
+.bp-ft-tree, .bp-ft-tree ul { list-style: none; margin: 0; padding: 0; }
+.bp-ft-tree { padding: 6px 0 8px; font: 13px/28px var(--mono); }
+.bp-fdir-b, .bp-frow { position: relative; padding: 0 16px 0 calc(16px + var(--d, 0) * 18px); transition: background .1s; }
+:is(.bp-fdir-b, .bp-frow)::before { content: ""; position: absolute; top: 0; bottom: 0; left: 16px; width: calc(var(--d, 0) * 18px); pointer-events: none;
+  background: linear-gradient(90deg, transparent 6px, var(--line-soft) 6px 7px, transparent 7px) 0 0 / 18px 100% repeat-x; }
+:is(.bp-fdir-b, .bp-frow):hover { background: var(--hover); }
+:is(.bp-fdir-b, .bp-fhit):focus-visible { box-shadow: none; border-radius: 0; outline: 2px solid var(--focus); outline-offset: -2px; }
+.bp-fdir-b { display: flex; align-items: center; gap: 8px; width: 100%; border: 0; background: none; font: inherit; color: var(--fg-muted); text-align: left; cursor: pointer; }
+.bp-fdir-b > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bp-fdir-b .chev { flex: none; width: 14px; height: 14px; color: var(--fg-subtle); transition: transform .15s var(--ease); }
+.bp-fdir.shut > .bp-fdir-b .chev { transform: rotate(-90deg); }
+.bp-frow { display: flex; align-items: flex-start; gap: 8px; scroll-margin-top: calc(var(--top-h) + 16px); }
+.bp-fhit { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 8px; white-space: nowrap; }
+.bp-fhit[role=button] { cursor: pointer; }
+.bp-fact { flex: none; width: 14px; text-align: center; font: 700 11px/28px var(--mono); color: var(--accent-fg); }
+.bp-frow.k-add .bp-fact { color: var(--ok-fg); } .bp-frow.k-del .bp-fact { color: var(--risk-fg); } .bp-frow.k-ren .bp-fact { color: var(--warn-fg); }
+.bp-fhit .nm { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; font-weight: 550; color: var(--fg); }
 .bp-frow.k-del .nm { color: var(--fg-muted); text-decoration: line-through; text-decoration-color: color-mix(in oklch, var(--risk) 60%, transparent); }
-.bp-fname .from { font: 400 12px var(--sans); color: var(--fg-subtle); }
-.bp-fname .from code { font-size: 11.5px; background: none; padding: 0; color: var(--fg-muted); }
-.bp-fwhy { font-size: 13.5px; line-height: 1.5; color: var(--fg-muted); }
-.bp-fstep { margin-top: 0; font-family: var(--mono); font-size: 11.5px; }
+.bp-fhit .from { flex: 0 4 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; font: 400 12px var(--sans); color: var(--fg-subtle); }
+.bp-fhit .from code { font-size: 11.5px; background: none; padding: 0; color: var(--fg-muted); }
+.bp-fwhy { flex: 1 1 0; min-width: 0; margin-left: 6px; overflow: hidden; text-overflow: ellipsis; font: 13px/28px var(--sans); color: var(--fg-muted); }
+.bp-fwhy code { font-size: 11.5px; }
+.bp-frow.open > .bp-fhit { flex-wrap: wrap; white-space: normal; }
+.bp-frow.open .nm, .bp-frow.open .from code { overflow-wrap: anywhere; }
+.bp-frow.open :is(.from, .bp-fwhy) { flex: 1 0 calc(100% - 22px); margin: -4px 0 7px 22px; line-height: 1.5; overflow: visible; }
+.bp-frow.open .from { margin-bottom: 4px; }
+.bp-fstep { flex: none; height: 22px; margin-top: 3px; font-family: var(--mono); font-size: 11.5px; }
 .bp-fstep:disabled { opacity: .55; cursor: default; }
+.bp-frow > .bd-chg-tag { margin-top: 4px; }
 .bp-frow.bd-chg-mod { background: color-mix(in oklch, var(--warn-tint) 60%, transparent); } .bp-frow.bd-chg-add { background: color-mix(in oklch, var(--ok-tint) 70%, transparent); }
 .bp-frow.bd-ghost .nm { text-decoration: line-through; color: var(--risk-fg); }
+@media (max-width: 600px) { .bp-frow:not(.open) :is(.from, .bp-fwhy) { display: none; } }
+@media print {
+  .bp-fdir > ul[hidden] { display: block !important; content-visibility: visible !important; } .bp-fdir-b .chev { transform: none !important; }
+  .bp-fhit { flex-wrap: wrap; white-space: normal; }
+  .bp-fwhy { display: block !important; flex: 1 0 calc(100% - 22px); margin: -4px 0 7px 22px; line-height: 1.5; overflow: visible; }
+  :is(.bp-ft-sum i, .bp-ft-bar i, .bp-fact) { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
 .bp-step-meta > .bd-chg-tag { order: -1; }
 .bp-media { margin: 0 auto; }
 .bp-media-fr { position: relative; border-radius: 14px; overflow: hidden; background: var(--inset); box-shadow: var(--shadow-1); }
@@ -848,12 +875,6 @@ img.bp-cmpr-img { cursor: zoom-in; }
   .bp-cmpr-g { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 0 auto; row-gap: 14px; }
   .bp-cmpr-ar b { transform: rotate(90deg); }
   .bp-step { padding: 0 4px 0 12px; column-gap: 12px; }
-  .bp-frow { padding-left: 12px; padding-right: 10px; column-gap: 8px; }
-  .bp-fdir { padding-left: 12px; }
-}
-@media (max-width: 600px) {
-  .bp-frow { grid-template-columns: 20px minmax(0, 1fr) auto; }
-  .bp-frow > .bp-fic { display: none; }
 }
 
 /* toast: HorizonUI Toaster */
@@ -2270,10 +2291,12 @@ html.bd-space .bd-board .bd-ab-fr { pointer-events: none; }
 .bd-lpop input { min-height: 30px; padding: 4px 8px; }
 .bd-lpop .ft { display: flex; justify-content: flex-end; gap: 6px; } .bd-lpop .ft.col { flex-direction: column; align-items: stretch; }
 .bd-dcount { color: var(--warn-fg); }
-/* the board's toolbar, centred in the board: panel, Fit · zoom · Focus · Tidy up, Present, Variants, Flows, fidelity, theme,
-   motion. Tight enough for one row on a 1440 px window with both panels open; narrower, it wraps in centred rows */
-.bd-btb { position: absolute; z-index: 10; transform: translateZ(0); left: 12px; right: 12px; top: 12px; width: fit-content; margin: 0 auto; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 2px; padding: 4px; border-radius: 14px;
+/* the board's toolbar, centred in the board: panel, Fit · zoom · Focus · Tidy up · Undo · Redo, Present, Variants, Flows,
+   fidelity, theme, ⋯ More. Always one row: where the board is too narrow it gives way a step at a time (fitTb): the
+   compact keys shrink (data-fit), then keys go into ⋯ (data-over) */
+.bd-btb { position: absolute; z-index: 10; transform: translateZ(0); left: 12px; right: 12px; top: 12px; width: fit-content; margin: 0 auto; display: flex; flex-wrap: nowrap; align-items: center; gap: 2px; padding: 4px; border-radius: 14px;
   background: linear-gradient(180deg, var(--tray-top), var(--tray-bot)); box-shadow: var(--shadow-tray), 0 2px 6px oklch(23% 0.01 264 / 0.06); font-size: 12.5px; }
+.bd-btb > * { flex: none; white-space: nowrap; }
 .bd-tbtn { display: inline-grid; place-items: center; height: 30px; min-width: 30px; padding: 0 6px; border: 0; border-radius: 9px; background: none; color: var(--fg-muted); font: 500 12.5px var(--sans); cursor: pointer; }
 .bd-tbtn:hover:not(:disabled) { color: var(--fg); background: var(--hover); }
 .bd-tbtn[aria-pressed="true"] { color: var(--fg); background: var(--hk-down); box-shadow: var(--shadow-hk-down); }
@@ -2283,6 +2306,21 @@ html.bd-space .bd-board .bd-ab-fr { pointer-events: none; }
 .bd-btb .zl { min-width: 38px; text-align: center; font: 500 12px var(--mono); font-variant-numeric: tabular-nums; color: var(--fg-muted); }
 .bd-btb .bd-groove { height: 20px; margin: 0 1px; }
 .bd-btb .bd-sg button { height: 24px; padding: 0 8px; }
+.bd-btb > [data-over], .bd-btb > .bd-groove[hidden], .bd-btb > .bd-btb-more[hidden] { display: none; }
+/* the compact keys (data-fit): the fidelity and a website's widths by their icons, the theme by its palette, a deck's
+   Export to… by its icon */
+.bd-btb .fid .bd-ic { display: none; }
+.bd-btb[data-fit~="fidelity"] .fid .bd-ic { display: block; }
+.bd-btb[data-fit~="fidelity"] .fid .w, .bd-btb[data-fit~="widths"] .bps .w, .bd-btb[data-fit~="theme"] .th .v, .bd-btb[data-fit~="export"] .bd-expb > span { display: none; }
+.bd-btb[data-fit~="fidelity"] .fid button, .bd-btb[data-fit~="widths"] .bps button { padding: 0 6px; }
+.bd-btb[data-fit~="theme"] .th .bd-selb { gap: 3px; padding: 0 5px 0 8px; }
+/* ⋯ More's rows: a tick for a radio or a switch, the key's icon, its label and its shortcut; a group's name over its
+   options; the custom width of a website's pages with its field */
+.bd-btb-more .bd-selm { min-width: 220px; }
+.bd-btb-more .bd-selm .hd { padding: 6px 12px 2px 30px; font-size: 11px; font-weight: 600; color: var(--fg-subtle); }
+.bd-btb-more .bd-selm .sep { flex: none; height: 1px; margin: 3px 6px; background: var(--line-soft); }
+.bd-btb-more .bd-selm .bpw { display: flex; align-items: center; gap: 8px; padding: 4px 8px 4px 30px; font-size: 12.5px; color: var(--fg-muted); }
+.bd-selm [aria-checked="true"] .ck .bd-ic { visibility: visible; }
 /* a presentation's Export to…: the toolbar's primary key, filled in the accent like the tray's Request changes */
 .bd-btb .bd-tbtn.bd-expb.pri, .bd-btb .bd-tbtn.bd-expb.pri:hover:not(:disabled) { color: #fff;
   background: var(--accent-solid) linear-gradient(180deg, color-mix(in oklch, var(--accent-solid), white 8%), var(--accent-solid)); box-shadow: var(--shadow-fill); }
@@ -2443,7 +2481,7 @@ html.bd-presenting .bp-toast { z-index: 71; bottom: 84px; }
 /* the tray centres in the board, between the panels */
 @media (min-width: 901px) { html.bd-lp-open :is(.bd-anntb, .bp-toast) { left: calc(var(--lp-w) + (100% - var(--lp-w)) / 2); } }
 @media (min-width: 1101px) { html.bd-lp-open.bd-sp-open :is(.bd-anntb, .bp-toast) { left: calc(var(--lp-w) + (100% - var(--lp-w) - var(--sp-w)) / 2); } }
-@media (max-width: 900px) { html.bd-lp-open .bd-boardblk { left: 0; } .bd-lp { width: min(var(--lp-w), 86vw); box-shadow: var(--shadow-3); } .bd-btb .th, .bd-btb .bd-sg { display: none; } }
+@media (max-width: 900px) { html.bd-lp-open .bd-boardblk { left: 0; } .bd-lp { width: min(var(--lp-w), 86vw); box-shadow: var(--shadow-3); } .bd-lst-btb .bd-sg { display: none; } }
 /* a doc page's tray beside an open right panel (fitTray): keys keep their icon and count, not their words */
 .bd-anntb.compact .bd-key :is(.t, .l) { display: none; }
 
@@ -2452,8 +2490,7 @@ html.bd-presenting .bp-toast { z-index: 71; bottom: 84px; }
 /* the toolbar: the board's (.bd-btb), one row, centred in the room the panels leave (fitLtb). Where its words don't
    fit, it sheds them a tier at a time (data-fit): 1 the view keys keep their icons, 2 Export to… its icon and the
    platforms their short names, 3 Jump to goes, 4 the drafts and Checks counts go (Comments and the Checks tab keep them) */
-.bd-lst-btb { flex-wrap: nowrap; max-width: calc(100% - 24px); }
-.bd-lst-btb > * { flex: none; white-space: nowrap; }
+.bd-lst-btb { max-width: calc(100% - 24px); }
 .bd-lst-btb .bd-sg button { display: inline-flex; align-items: center; gap: 5px; padding: 0 9px; font-weight: 600; white-space: nowrap; }
 .bd-lst-btb .bd-sg button .bd-ic { width: 15px; height: 15px; }
 .bd-lst-btb .bd-selw { margin: 0 2px; }
@@ -4038,7 +4075,7 @@ for (const p of PANELS) {
   p.el = resizeHandle({ label: p.label, title: 'Drag to change the panel width · double-click to reset', dir: p.dir, width: () => p.w,
     set: (w, save) => {
       p.user = Math.round(w); fitPanels();
-      // over the board, under its toolbar (one row or more)
+      // over the board, under its toolbar
       const r = $('.bd-boardblk')?.getBoundingClientRect(), tb = $('.bd-btb')?.getBoundingClientRect();
       showChip(p.w, r ? r.left + r.width / 2 : null, tb ? tb.bottom + 12 : null);
       if (save) { p.user = p.w; store.set(p.key, String(p.w)); }
@@ -4197,13 +4234,14 @@ const STEP_CHIP = { doing: 'info', done: 'ok', blocked: 'risk' };
 const EFFORT = { S: 'Small', M: 'Medium', L: 'Large' };
 const FILE_ACTION = { add: ['A', 'Added', 'add'], edit: ['M', 'Changed', 'edit'], delete: ['D', 'Deleted', 'del'], rename: ['R', 'Renamed', 'ren'], move: ['R', 'Moved', 'ren'] };
 const fileRowSel = p => `.bp-frow[data-path="${CSS.escape(p)}"]`;
-const dirOf = p => { p = String(p || ''); const i = p.lastIndexOf('/'); return i < 0 ? '' : p.slice(0, i); };
+// a file's row inside folded folders: open them first
+const openDirsTo = row => { for (let d = row.parentElement.closest('.bp-fdir'); d; d = d.parentElement.closest('.bp-fdir')) setDirOpen(d, true); };
 const stepFor = id => Object.values(STEPS).find(x => x.s.id === id) || null;
 // a row in a findings section lands right under its stuck header (its scroll margin), where an open finding has room;
 // anything else centres
 const rowBlock = el => el.closest('.bp-sec.fv-on') ? 'start' : 'center';
 function jumpTo(el) { el.scrollIntoView({ block: rowBlock(el), behavior: REDUCE ? 'auto' : 'smooth' }); flash(el); }
-function jumpFile(p) { const row = main.querySelector(fileRowSel(p)); if (row) jumpTo(row); return !!row; }
+function jumpFile(p) { const row = main.querySelector(fileRowSel(p)); if (row) { openDirsTo(row); jumpTo(row); } return !!row; }
 function jumpStep(id) { const x = stepFor(id); if (x) { x.setOpen(true); jumpTo(x.li); } return !!x; }
 function fileIcon(p) {
   const ext = ((String(p).match(/\.(\w+)$/) || [])[1] || '').toLowerCase();
@@ -4273,25 +4311,66 @@ function renderSteps(b) {
   root._steps = byId;
   return root;
 }
+// a file's row: its action letter, name, old path and why on one line, then its step's chip. The row (not the chip)
+// shows the old path and the whole why under the name, the only place a phone shows them
 function fileRow(f) {
-  const p = String(f.path || ''), [letter, word, k] = FILE_ACTION[f.action] || FILE_ACTION.edit;
-  return h('li', { class: 'bp-frow k-' + k, 'data-path': p },
-    h('span', { class: 'bp-fbadge', title: word }, h('span', { 'aria-hidden': 'true' }, letter), h('span', { class: 'bp-sr' }, word + ': ')),
-    fileIcon(p),
-    h('span', { class: 'bp-fmain' },
-      h('span', { class: 'bp-fname' }, h('span', { class: 'nm', title: p }, baseName(p)), f.from && h('span', { class: 'from' }, 'from ', h('code', {}, f.from))),
-      f.why && h('span', { class: 'bp-fwhy', html: inline(f.why) })),
-    f.step ? h('button', { type: 'button', class: 'bp-ref bp-fstep', 'data-step': f.step, onclick: () => jumpStep(f.step) }, ic('route'), h('span', {}, 'Step ' + f.step)) : h('span'));
+  const p = String(f.path || ''), [letter, word, k] = FILE_ACTION[f.action] || FILE_ACTION.edit, why = f.why ? plainText(f.why) : '';
+  const hit = h('div', { class: 'bp-fhit', title: why || p },
+    h('span', { class: 'bp-fact', title: word }, h('span', { 'aria-hidden': 'true' }, letter), h('span', { class: 'bp-sr' }, word + ': ')),
+    h('span', { class: 'nm' }, baseName(p)), f.from && h('span', { class: 'from' }, 'from ', h('code', {}, f.from)),
+    why && h('span', { class: 'bp-fwhy', html: inline(f.why) }));
+  const row = h('li', { class: 'bp-frow k-' + k, 'data-path': p }, hit,
+    f.step && h('button', { type: 'button', class: 'bp-ref bp-fstep', 'data-step': f.step, onclick: () => jumpStep(f.step) }, ic('route'), h('span', {}, 'Step ' + f.step)));
+  if (why || f.from) {
+    // a div, not a button: the why's Markdown may hold a link
+    const flip = () => hit.setAttribute('aria-expanded', String(row.classList.toggle('open')));
+    hit.setAttribute('role', 'button'); hit.tabIndex = 0; hit.setAttribute('aria-expanded', 'false');
+    hit.addEventListener('click', e => { if (!e.target.closest('a')) flip(); });
+    hit.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); flip(); } });
+  }
+  return row;
 }
-const dirHead = dir => h('div', { class: 'bp-fdir' }, ic('folder'), h('span', {}, dir ? dir + '/' : './'));
+// the paths as an editor's tree: folders in the order of their first file, files in the doc's order, a folder that
+// holds only one folder sharing its row ('skills/bluedoc/'). entries: { path, row }, a row fileRow's or a revision's
+// ghost of a removed file; each row gets its depth (--d)
+function fileTree(entries) {
+  const node = dir => ({ dir, dirs: new Map(), kids: [] }), top = node('');
+  for (const { path, row } of entries) {
+    let n = top;
+    for (const seg of path.split('/').slice(0, -1)) {
+      let c = n.dirs.get(seg);
+      if (!c) { c = node(n.dir ? `${n.dir}/${seg}` : seg); n.dirs.set(seg, c); n.kids.push(c); }
+      n = c;
+    }
+    n.kids.push(row);
+  }
+  const draw = (n, d) => n.kids.map(k => {
+    if (k.nodeType) { k.style.setProperty('--d', d); return k; }
+    let f = k;
+    while (f.kids.length === 1 && !f.kids[0].nodeType) f = f.kids[0];
+    const btn = h('button', { type: 'button', class: 'bp-fdir-b', 'aria-expanded': 'true', style: `--d:${d}` },
+      ic('down', 'chev'), h('span', {}, f.dir.slice(n.dir ? n.dir.length + 1 : 0) + '/'));
+    const sub = h('ul', {}, draw(f, d + 1)), li = h('li', { class: 'bp-fdir', 'data-dir': f.dir }, btn, sub);
+    btn.addEventListener('click', () => setDirOpen(li, li.classList.contains('shut')));
+    sub.addEventListener('beforematch', () => setDirOpen(li, true));
+    return li;
+  });
+  return h('ul', { class: 'bp-ft-tree' }, draw(top, 0));
+}
+function setDirOpen(li, open) {
+  li.classList.toggle('shut', !open); li.firstChild.setAttribute('aria-expanded', String(open));
+  if (open) li.lastChild.removeAttribute('hidden'); else li.lastChild.hidden = 'until-found';
+}
 function renderFiles(b) {
-  const items = Array.isArray(b.items) ? b.items : [], groups = new Map(), n = { add: 0, edit: 0, del: 0, ren: 0 };
-  for (const f of items) { const d = dirOf(f.path); if (!groups.has(d)) groups.set(d, []); groups.get(d).push(f); n[(FILE_ACTION[f.action] || FILE_ACTION.edit)[2]]++; }
-  const SUM = [['add', 'A', 'added'], ['edit', 'M', 'changed'], ['del', 'D', 'deleted'], ['ren', 'R', 'renamed or moved']];
-  return h('div', { class: 'bp-files' },
-    h('div', { class: 'bp-files-h' }, ic('folder'), h('h3', { html: inline(b.title || 'Files') }),
-      h('span', { class: 'bp-files-sum' }, SUM.filter(([k]) => n[k]).map(([k, l, w]) => h('span', { class: 'bp-fsum k-' + k, title: `${n[k]} ${w}` }, h('b', { 'aria-hidden': 'true' }, l), String(n[k]), h('span', { class: 'bp-sr' }, ' ' + w))))),
-    [...groups].map(([d, fs]) => h('div', { class: 'bp-fgrp', 'data-dir': d }, dirHead(d), h('ul', {}, fs.map(fileRow)))));
+  const items = Array.isArray(b.items) ? b.items : [], n = { add: 0, edit: 0, del: 0, ren: 0 };
+  for (const f of items) n[(FILE_ACTION[f.action] || FILE_ACTION.edit)[2]]++;
+  const SUM = [['add', 'added'], ['edit', 'changed'], ['del', 'deleted'], ['ren', 'renamed']].filter(([k]) => n[k]);
+  return h('div', { class: 'bp-ft' },
+    h('div', { class: 'bp-ft-h' },
+      h('div', { class: 'l1' }, h('h3', { html: inline(b.title || 'Changed files') }),
+        h('span', { class: 'bp-ft-sum' }, SUM.map(([k, w]) => h('span', { class: 'k-' + k }, h('i', { 'aria-hidden': 'true' }), `${n[k]} ${w}`)))),
+      SUM.length > 0 && h('div', { class: 'bp-ft-bar', 'aria-hidden': 'true' }, SUM.map(([k]) => h('i', { class: 'k-' + k, style: `flex:${n[k]}` })))),
+    fileTree(items.map(f => ({ path: String(f.path || ''), row: fileRow(f) }))));
 }
 // media: a path relative to the doc JSON's folder (served beside it) or a data: URI; never the network. The URL parser
 // drops tabs and newlines and reads `\` as `/`, so `\\host/x.png` and `/<tab>/host/x.png` are another host's file.
@@ -8423,15 +8502,15 @@ function renderBoard(b) {
   };
   mergeLinks();
 
-  /* toolbar: panel, Fit · zoom · Focus, Present, Variants, Flows, fidelity, theme, motion */
+  /* toolbar: panel, Fit · zoom · Focus, Present, Variants, Flows, fidelity, theme, ⋯ More (one row: fitTb) */
   const tbtn = (icon, label, fn, extra) => h('button', { type: 'button', class: 'bd-tbtn', 'aria-label': label, title: label, onclick: fn, ...extra }, ic(icon));
   const sep = () => h('span', { class: 'bd-groove', role: 'separator', 'aria-orientation': 'vertical' });
   const lpBtn = tbtn('panelleft', `${IS_DECK ? 'Slides' : IS_SITE ? 'Pages' : 'Screens'} ([)`, () => setLp(!B.lp, true), { 'aria-pressed': 'false' });
   zoomLbl = h('span', { class: 'zl' }, '100%');
   const varBtn = tbtn('variants', 'Variants: line up the selected screen and its variants', () => toggleVariants(), { 'aria-pressed': 'false' });
   const flowsBtn = h('button', { type: 'button', class: 'bd-tbtn txt', 'aria-pressed': 'false', title: 'Flows: every link as an arrow (off: only the selected screen\'s reach)', onclick: () => setFlows(!B.flows) }, 'Flows');
-  const fidSeg = h('div', { class: 'bd-sg', role: 'radiogroup', 'aria-label': 'Fidelity' }, [['drawn', 'As drawn', 'Each screen at the fidelity it was drawn in'], ['sketch', 'Sketch', 'Every screen hand-drawn: wobbly lines, hand font']].map(([v, l, t]) =>
-    h('button', { type: 'button', role: 'radio', 'data-v': v, title: t, onclick: () => { B.sketch = v === 'sketch'; sendAll(viewMsg); paintTools(); } }, l)));
+  const fidSeg = h('div', { class: 'bd-sg fid', role: 'radiogroup', 'aria-label': 'Fidelity' }, [['drawn', 'image', 'As drawn', 'Each screen at the fidelity it was drawn in'], ['sketch', 'pencil', 'Sketch', 'Every screen hand-drawn: wobbly lines, hand font']].map(([v, i, l, t]) =>
+    h('button', { type: 'button', role: 'radio', 'data-v': v, title: t, 'aria-label': l, onclick: () => { B.sketch = v === 'sketch'; sendAll(viewMsg); paintTools(); } }, ic(i), h('span', { class: 'w' }, l))));
   // Theme: the brief's pick, as a toolbar menu (selectMenu); picking one here picks it there (else re-skins the frames)
   const themeSel = themes.length ? selectMenu({ label: 'Theme', icon: 'palette', cls: 'th', title: VIEW_ONLY ? 'Theme: the screens in each of the brief\'s themes' : 'Theme: the brief\'s pick; changing it here picks it there',
     options: themes.map(t => ({ value: t.id, label: t.label || t.id })), value: themes[0].id,
@@ -8490,9 +8569,10 @@ function renderBoard(b) {
   if (expBtn) expBtn.querySelector('.bd-expb').classList.add('pri');
   // a website: every page at one of the board's widths, or a width the reader types
   const pageXs = () => [...B.frames.values()].filter(x => devOf(x.a) === 'page');
-  const bpWords = BPS.map(bpName), bpSeg = IS_SITE ? h('div', { class: 'bd-sg', role: 'radiogroup', 'aria-label': 'Width of every page' }, BPS.map((w, i) =>
-    h('button', { type: 'button', role: 'radio', 'data-w': w, title: `Every page ${w} px wide`, onclick: () => setAllBp(w) },
-      ic(bpIc(w)), bpWords.indexOf(bpWords[i]) === bpWords.lastIndexOf(bpWords[i]) ? bpWords[i] : String(w)))) : null;
+  const bpWords = BPS.map(bpName), bpSeg = IS_SITE ? h('div', { class: 'bd-sg bps', role: 'radiogroup', 'aria-label': 'Width of every page' }, BPS.map((w, i) => {
+    const word = bpWords.indexOf(bpWords[i]) === bpWords.lastIndexOf(bpWords[i]) ? bpWords[i] : String(w);
+    return h('button', { type: 'button', role: 'radio', 'data-w': w, title: `Every page ${w} px wide`, 'aria-label': word, onclick: () => setAllBp(w) }, ic(bpIc(w)), h('span', { class: 'w' }, word));
+  })) : null;
   const bpIn = IS_SITE ? h('input', { class: 'bd-bpw', type: 'number', min: 240, max: 3840, step: 10, placeholder: 'px', 'aria-label': 'Custom width of every page, in px', title: 'Custom width of every page (px), then Enter' }) : null;
   if (bpIn) bpIn.addEventListener('change', () => { const w = Math.round(+bpIn.value); if (w >= 240 && w <= 3840) setAllBp(w); });
   // a website: every page at its whole height (Full page) or in a window of its viewport's height that scrolls; icons
@@ -8508,11 +8588,119 @@ function renderBoard(b) {
   const twinSeg = B.twinSeg = IS_SITE && BASE ? h('div', { class: 'bd-sg bd-twinsg', role: 'radiogroup', 'aria-label': 'Compare pages', hidden: true }, [
     ['twin', 'columns', 'Side by side', `Each page beside its rev ${BASE.rev} version`], ['single', 'frame', 'Single', `Only rev ${VIEW.rev}`]].map(([v, i, l, t]) =>
     h('button', { type: 'button', role: 'radio', 'data-v': v, title: t, onclick: () => setTwin(v === 'twin', true) }, ic(i), l))) : null;
+  const focusBtn = tbtn('target', `Focus the selected ${SCREEN} (F, or double-click it)`, () => focusSel());
+  // ⋯ More, at the row's end (before a deck's Export to…): the keys the row has no room for (fitTb), as they stand when it opens
+  const moreMenu = h('div', { class: 'bd-selm', role: 'menu', 'aria-label': 'More', tabindex: '-1', hidden: true });
+  const moreBtn = h('button', { type: 'button', class: 'bd-tbtn', 'aria-haspopup': 'menu', 'aria-expanded': 'false', 'aria-label': 'More', title: 'More',
+    onclick: () => moreMenu.hidden ? morePop.open(0) : morePop.close(true) }, ic('more'));
+  const moreW = h('div', { class: 'bd-exp bd-btb-more', hidden: true }, moreBtn, moreMenu);
+  const morePop = menuPop(moreW, moreBtn, moreMenu, () => [...moreMenu.querySelectorAll('[role^="menuitem"], input')], { onOpen: fillMore });
   const tb = h('div', { class: 'bd-btb', role: 'toolbar', 'aria-label': 'Board' }, lpBtn, sep(),
     tbtn('fit', `Fit all ${SCREEN}s (0)`, () => fit(true)), tbtn('minus', 'Zoom out (−)', () => zoomBy(1 / 1.4)), zoomLbl, tbtn('plus', 'Zoom in (+)', () => zoomBy(1.4)),
-    tbtn('target', `Focus the selected ${SCREEN} (F, or double-click it)`, () => focusSel()), sep(),
+    focusBtn, sep(),
     !IS_DECK ? [presBtn, varBtn, flowsBtn, sep()] : presBtn && [presBtn, sep()], IS_SITE && [bpSeg, bpIn, sep(), viewSeg], (!IS_SITE || abs.some(a => !isLive(a))) && [IS_SITE && sep(), fidSeg],
-    IS_SITE && [sep(), tabBtn], themeSel && [sep(), themeSel], expBtn && [sep(), expBtn]);
+    IS_SITE && [sep(), tabBtn], themeSel && [sep(), themeSel], sep(), moreW, expBtn && [sep(), expBtn]);
+  /* The toolbar is one row at every width (fitTb). Where the board's room is too narrow, the row gives way a step at a
+     time, and only while it still overflows. First the compact keys shrink (TB_SHRINK): the theme to its palette and
+     chevron, a website's widths and the fidelity to their icons, a deck's Export to… to its icon. Then keys move into
+     ⋯ More, lowest priority first (TB_GIVE): Tidy up, Flows, Variants, Open page in a new tab, Focus (F), Undo and Redo
+     (⌘Z, ⇧⌘Z), the drafts count, fidelity, a website's custom width, page height and widths, theme, Present. The panel
+     key, Fit and zoom, and a deck's Export to… always stay. In ⋯ a key keeps its label and its shortcut, a segmented
+     key's options are radios */
+  const TB_SHRINK = ['theme', 'widths', 'fidelity', 'export'];
+  const TB_GIVE = ['tidy', 'flows', 'variants', 'tab', 'focus', 'history', 'drafts', 'fidelity', 'custom', 'height', 'widths', 'theme', 'present'];
+  const tbShrink = { theme: !!themeSel, widths: !!bpSeg, fidelity: tb.contains(fidSeg), export: !!expBtn };
+  // the keys that may go into ⋯ (TB_GIVE names them): name → { els: the key's elements in the row, rows: () => its rows
+  // in ⋯, each a node or { key, label, hint } for a plain key }. boardEdits adds Tidy up, Undo and Redo and the count
+  const tbKeys = new Map();
+  B.tbKey = (name, els, rows) => { tbKeys.set(name, { els: els.filter(Boolean), rows }); fitTb(); };
+  B.fitTb = () => fitTb();
+  let tbOver = new Set(), tbWords = '';
+  const icOf = el => { const s = el && el.querySelector('.bd-ic'); return s ? s.cloneNode(true) : null; };
+  // a row of ⋯: a tick (a radio's, a switch's), the key's icon, its label and its shortcut
+  const moreRow = ({ role = 'menuitem', icon = null, label, hint = null, checked = null, disabled = false, run }) => {
+    const r = h('button', { type: 'button', role, tabindex: '-1', 'aria-checked': checked == null ? null : String(checked), 'aria-disabled': disabled ? 'true' : null,
+      onclick: () => { if (disabled) return; morePop.close(true); run(); },
+      onpointermove: () => { if (!disabled && document.activeElement !== r) r.focus({ preventScroll: true }); } },
+      h('span', { class: 'ck' }, ic('tick')), icon, h('span', { class: 'l' }, label), hint && h('span', { class: 'm' }, hint));
+    return r;
+  };
+  const moreKey = (bt, label, hint) => moreRow({ icon: icOf(bt), label, hint, disabled: bt.disabled, run: () => bt.click() });
+  const moreSwitch = (bt, label) => moreRow({ role: 'menuitemcheckbox', icon: icOf(bt), label, checked: bt.getAttribute('aria-pressed') === 'true', disabled: bt.disabled, run: () => bt.click() });
+  const moreHead = name => h('div', { class: 'hd', role: 'presentation' }, name);
+  const moreRadios = (name, seg) => [moreHead(name), [...seg.querySelectorAll('button')].map(bt => {
+    const label = bt.getAttribute('aria-label') || bt.textContent;
+    return moreRow({ role: 'menuitemradio', icon: icOf(bt), label, hint: bt.dataset.w && bt.dataset.w !== label ? bt.dataset.w + ' px' : null, checked: bt.getAttribute('aria-checked') === 'true', run: () => bt.click() });
+  })];
+  // a website's custom width, in ⋯ after its widths when they are there too
+  const moreWidth = () => {
+    const inp = h('input', { class: 'bd-bpw', type: 'number', min: 240, max: 3840, step: 10, placeholder: 'px', value: bpIn.value, 'aria-label': bpIn.getAttribute('aria-label'), title: bpIn.title });
+    inp.addEventListener('change', () => { const w = Math.round(+inp.value); if (w >= 240 && w <= 3840) { morePop.close(true); setAllBp(w); } });
+    return h('label', { class: 'bpw' }, h('span', { class: 'l' }, 'Custom width'), inp);
+  };
+  B.tbKey('focus', [focusBtn], () => [{ key: focusBtn, label: `Focus the selected ${SCREEN}`, hint: 'F' }]);
+  if (presBtn) B.tbKey('present', [presBtn], () => [{ key: presBtn, label: 'Present' }]);
+  if (!IS_DECK) { B.tbKey('variants', [varBtn], () => [moreSwitch(varBtn, 'Variants')]); B.tbKey('flows', [flowsBtn], () => [moreSwitch(flowsBtn, 'Flows')]); }
+  if (tbShrink.fidelity) B.tbKey('fidelity', [fidSeg], () => moreRadios('Fidelity', fidSeg));
+  if (IS_SITE) {
+    B.tbKey('custom', [bpIn], () => tbOver.has('widths') ? [] : [moreWidth()]);
+    B.tbKey('widths', [bpSeg], () => [moreRadios('Width of every page', bpSeg), moreWidth()]);
+    B.tbKey('height', [viewSeg], () => moreRadios('Page height', viewSeg));
+    B.tbKey('tab', [tabBtn], () => [{ key: tabBtn, label: 'Open page in a new tab' }]);
+  }
+  if (themeSel) B.tbKey('theme', [themeSel], () => [moreHead('Theme'), [...themeSel.querySelectorAll('[role=option]')].map(o =>
+    moreRow({ role: 'menuitemradio', label: o.querySelector('.l').textContent, checked: o.getAttribute('aria-selected') === 'true', run: () => o.click() }))]);
+  // ⋯'s rows: its keys in the row's order; a group of options (fidelity, theme…) set off by lines. It ends above the
+  // dock and a bottom sheet, which lie over the board
+  function fillMore() {
+    const keys = [...tbKeys].filter(([n]) => tbOver.has(n)).map(([, k]) => k)
+      .sort((a, b) => a.els[0].compareDocumentPosition(b.els[0]) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1);
+    const kids = []; let group = false;
+    for (const k of keys) {
+      const rs = [k.rows()].flat(Infinity).filter(Boolean).map(r => r.nodeType ? r : moreKey(r.key, r.label, r.hint));
+      if (!rs.length) continue;
+      const g = rs[0].classList.contains('hd');
+      if (kids.length && (g || group)) kids.push(h('div', { class: 'sep', role: 'separator' }));
+      kids.push(...rs); group = g;
+    }
+    setKids(moreMenu, kids);
+    const top = moreBtn.getBoundingClientRect().bottom + 8, floor = Math.min(innerHeight, ...[...document.querySelectorAll('.bd-anntb, html.bd-sp-open .bd-sp')]
+      .map(e => e.getBoundingClientRect()).filter(r => r.height && r.top > top).map(r => r.top));
+    moreMenu.style.maxHeight = `min(60vh, 420px, ${Math.max(120, Math.round(floor - top - 8))}px)`;
+  }
+  // a groove only between two shown keys: none at either end, never two together
+  function grooves() {
+    let pending = null, seen = false;
+    for (const e of tb.children) {
+      if (e.classList.contains('bd-groove')) { e.hidden = true; if (seen) pending = e; }
+      else if (!e.hidden && !e.hasAttribute('data-over')) { if (pending) pending.hidden = false; pending = null; seen = true; }
+    }
+  }
+  // the fewest steps that fit the row in the board's room, measured (a container query can't measure the keys). The
+  // room is the board's (a ResizeObserver: the docked panels change it, not the window), less a panel that lies over it
+  // as a drawer (the left one up to 900 px, the right one up to 1100 px) where the row fits beside it; on a phone it
+  // doesn't, and the open drawer covers the row as it covers the board
+  function fitTb() {
+    const box = tb.parentElement;
+    if (!box || !tb.isConnected || !tb.getClientRects().length) return;
+    const steps = [...TB_SHRINK.filter(n => tbShrink[n]).map(n => [n, false]), ...TB_GIVE.filter(n => tbKeys.has(n) && tbKeys.get(n).els.some(e => !e.hidden)).map(n => [n, true])];
+    const was = [...tbOver].join();
+    const set = k => {
+      const fit = [], over = new Set();
+      for (const [n, goes] of steps.slice(0, k)) if (goes) over.add(n); else fit.push(n);
+      tb.dataset.fit = fit.join(' ');
+      for (const [n, key] of tbKeys) for (const e of key.els) e.toggleAttribute('data-over', over.has(n));
+      moreW.hidden = !over.size; tbOver = over;
+      grooves();
+    };
+    const fits = room => { for (let k = 0; k <= steps.length; k++) { set(k); if (tb.scrollWidth <= room) return true; } return false; };
+    const place = (l, r) => { tb.style.left = 12 + l + 'px'; tb.style.right = 12 + r + 'px'; return box.clientWidth - 24 - l - r; };
+    const at = box.getBoundingClientRect(), sp = $('.bd-sp');
+    const l = B.lp && lp && PHONE.matches ? Math.max(0, lp.offsetWidth - at.left) : 0;
+    const r = sp && !PHONE.matches && root.classList.contains('bd-sp-open') && !root.classList.contains('bd-sp-dock') ? Math.max(0, at.right - (root.clientWidth - sp.offsetWidth)) : 0;
+    if (!fits(place(l, r)) && (l || r)) fits(place(0, 0));
+    if (!moreMenu.hidden && [...tbOver].join() !== was) morePop.close(false);
+  }
   // the motion keys (pause animations, Reduced) are hidden for now: built and painted, not shown; screens play their motion
   function paintTools() {
     lpBtn.setAttribute('aria-pressed', String(B.lp));
@@ -8533,6 +8721,9 @@ function renderBoard(b) {
       twinSeg.hidden = !B.twins.size; if (twinSeg.nextElementSibling) twinSeg.nextElementSibling.hidden = !B.twins.size;   // and its groove
       twinSeg.querySelectorAll('button').forEach(bt => bt.setAttribute('aria-checked', String((bt.dataset.v === 'twin') === B.twin)));
     }
+    // the row's words changed (the theme's name, Flows shown or not): fit it again
+    const words = [themeSel ? themeSel.value : '', flowsBtn.hidden].join();
+    if (words !== tbWords) { tbWords = words; fitTb(); }
   }
   // the theme is the brief's pick (the reader's, else the recommendation): picking a pill re-skins every frame
   const themePick = () => { const x = ITEMS['brief/theme']; const id = x ? idsOf(x.choice || x.it.recommend)[0] || null : null; return themeOf(id) ? id : B.theme || (themes[0] ? themes[0].id : null); };
@@ -9010,6 +9201,13 @@ function renderBoard(b) {
   };
   const wrap = h('div', { class: 'bd-bwrap' }, stage, tb);
   B.tb = tb;
+  // the row fits the board's width; a drawer opening over the board leaves its size alone, so its class says so
+  if ('ResizeObserver' in window) new ResizeObserver(() => fitTb()).observe(wrap);
+  let drawers = '';
+  new MutationObserver(() => {
+    const d = [B.lp, ...['bd-sp-open', 'bd-sp-dock'].map(c => root.classList.contains(c))].join();
+    if (d !== drawers) { drawers = d; fitTb(); }
+  }).observe(root, { attributes: true, attributeFilter: ['class'] });
   relink();
   return wrap;
 }
@@ -10961,7 +11159,7 @@ function compareBlocks(ob, nb, secElm) {
       summary = countWords(n);
       const rows = fieldRows([['Title', o.title, b.title]]);
       if (!rows.length && CHG.length === before) continue;
-      if (rows.length) { const hd = el.querySelector('.bp-cl-h, .bp-tl-h, .bp-files-h'); if (hd) hd.after(chgBox(rows)); else el.prepend(chgBox(rows)); }   // a findings section's checklist has no header
+      if (rows.length) { const hd = el.querySelector('.bp-cl-h, .bp-tl-h, .bp-ft-h'); if (hd) hd.after(chgBox(rows)); else el.prepend(chgBox(rows)); }   // a findings section's checklist has no header
     }
     else if (b.type === 'table') compareTable(o, b, el);
     else if (b.type === 'canvas') el.append(chgBox(compareCanvas(o, b)));
@@ -11047,11 +11245,11 @@ function compareSteps(o, n, el) {
   return cnt;
 }
 function compareFiles(o, n, el) {
-  const cnt = { add: 0, mod: 0, del: 0 }, root = el.querySelector('.bp-files'); if (!root) return cnt;
+  const cnt = { add: 0, mod: 0, del: 0 }, tree = el.querySelector('.bp-ft-tree'); if (!tree) return cnt;
   const was = new Map((o.items || []).map(f => [f.path, f])), now = new Set((n.items || []).map(f => f.path)), rows = [];
   const act = f => (FILE_ACTION[f.action] || FILE_ACTION.edit)[1];
   for (const f of n.items || []) {
-    const row = root.querySelector(fileRowSel(String(f.path || ''))); if (!row) continue;
+    const row = tree.querySelector(fileRowSel(String(f.path || ''))); if (!row) continue;
     const w = was.get(f.path);
     if (!w) { cnt.add++; markChg(row, 'add', f.path); continue; }
     if (canon(w) === canon(f)) continue;
@@ -11059,15 +11257,19 @@ function compareFiles(o, n, el) {
     rows.push(...fieldRows([['Action', act(w), act(f)], ['From', w.from, f.from], ['Why', w.why, f.why], ['Step', w.step, f.step]]).map(([k, v]) => [`${baseName(String(f.path))} · ${k}`, v]));
     markChg(row, 'mod', f.path);
   }
-  for (const w of o.items || []) {
-    if (now.has(w.path)) continue;
+  // a removed file's ghost goes after the file it came after, in its folder (back if it went with the file): the tree
+  // is drawn again around the same rows
+  const olds = o.items || [], entries = (n.items || []).map(f => ({ path: String(f.path || ''), row: tree.querySelector(fileRowSel(String(f.path || ''))) })).filter(e => e.row);
+  olds.forEach((w, i) => {
+    if (now.has(w.path)) return;
     cnt.del++;
-    const ghost = fileRow(w), dir = dirOf(w.path);
-    ghost.classList.add('bd-ghost'); ghost.removeAttribute('data-path'); ghost.lastChild.replaceWith(chgTag('del'));
-    const grp = [...root.querySelectorAll('.bp-fgrp')].find(g => g.dataset.dir === dir);
-    if (grp) grp.querySelector('ul').append(ghost); else root.append(h('div', { class: 'bp-fgrp', 'data-dir': dir }, dirHead(dir), h('ul', {}, ghost)));
+    const ghost = fileRow(w);
+    ghost.classList.add('bd-ghost'); ghost.removeAttribute('data-path'); ghost.querySelector('.bp-fstep')?.remove(); ghost.append(chgTag('del'));
+    const at = olds.slice(0, i).reverse().map(p => entries.findIndex(e => e.path === String(p.path || ''))).find(j => j >= 0) ?? -1;
+    entries.splice(at + 1, 0, { path: String(w.path || ''), row: ghost });
     markChg(ghost, 'del', w.path);
-  }
+  });
+  if (cnt.del) tree.replaceWith(fileTree(entries));
   if (rows.length) el.append(chgBox(rows));
   return cnt;
 }
@@ -11915,8 +12117,8 @@ const MARKUP = (() => {
     return out.filter(Boolean).join(' › ');
   }
   // the element's own content, without UI chrome (option rows, conversations, reply boxes, buttons, change marks)
-  const CHROME = '.bp-opts, .bp-convo, .bp-cl-sum, .bp-cl-picked, .bp-cap, .bp-note, .pv-pend, .pv-ok, button:not(.bp-cl-head, .bp-step-head), input, textarea, .bd-chg-tag, .bd-chgbox, .bp-cl-noteic, .bp-cl-num, .bp-code-h, .bp-cl-h .tools, .bd-planchip, .bp-sr, .bp-fbadge, .bp-cmpr-h .lg';
-  const BLOCKY = 'div, p, li, td, th, tr, dt, dd, h1, h2, h3, h4, h5, h6, pre, blockquote, .bp-cl-text, .bp-cl-subt, .bp-chip, .bp-fmain > span';
+  const CHROME = '.bp-opts, .bp-convo, .bp-cl-sum, .bp-cl-picked, .bp-cap, .bp-note, .pv-pend, .pv-ok, button:not(.bp-cl-head, .bp-step-head), input, textarea, .bd-chg-tag, .bd-chgbox, .bp-cl-noteic, .bp-cl-num, .bp-code-h, .bp-cl-h .tools, .bd-planchip, .bp-sr, .bp-fact, .bp-cmpr-h .lg';
+  const BLOCKY = 'div, p, li, td, th, tr, dt, dd, h1, h2, h3, h4, h5, h6, pre, blockquote, .bp-cl-text, .bp-cl-subt, .bp-chip, .bp-fhit > span';
   const contentText = el => { const c = el.cloneNode(true); c.querySelectorAll(CHROME).forEach(x => x.remove()); c.querySelectorAll(BLOCKY).forEach(x => x.append(' ')); return c.textContent.replace(/\s+/g, ' ').trim(); };
   const mediaText = el => contentText(el) || el.querySelector('img')?.alt || el.querySelector('video')?.getAttribute('aria-label') || '';
   const textOf = el => cut(el.matches('.bd-lnk') ? el.getAttribute('data-label') : el instanceof SVGElement ? [...el.querySelectorAll(':scope > .bp-cover > text:not(.bp-open)')].map(t => t.textContent).join(' ')
@@ -13711,8 +13913,16 @@ function boardEdits(B) {
     }
   }
   const countBtn = h('button', { type: 'button', class: 'bd-tbtn txt bd-dcount', hidden: true, title: 'Board drafts: text edits, deletions, link edits and moves not yet in the doc. They go with Request changes.', onclick: () => MARKUP.comments({ open: true, filter: 'pending' }) });
-  function paintCount(n) { countBtn.hidden = !n; countBtn.textContent = n === 1 ? '1 draft' : `${n} drafts`; }
+  function paintCount(n) {
+    const t = n === 1 ? '1 draft' : `${n} drafts`;
+    if (countBtn.hidden === !n && countBtn.textContent === t) return;
+    countBtn.hidden = !n; countBtn.textContent = t; B.fitTb();
+  }
   B.tb.querySelector('[aria-label^="Focus the selected "]').after(...(IS_DECK ? [] : [tidyBtn]), undoBtn, redoBtn, countBtn);
+  // each of them may go into the toolbar's ⋯ More (fitTb), keeping its label and shortcut there
+  if (!IS_DECK) B.tbKey('tidy', [tidyBtn], () => [{ key: tidyBtn, label: 'Tidy up' }]);
+  B.tbKey('history', [undoBtn, redoBtn], () => [undoBtn, redoBtn].map(b => ({ key: b, label: b._tip, hint: b._keys.join(' ') })));
+  B.tbKey('drafts', [countBtn], () => [{ key: countBtn, label: countBtn.textContent }]);
   paintHist();
 
   /* Tidy up: BoardGeo's layered layout, animated, saved as one layout draft */
