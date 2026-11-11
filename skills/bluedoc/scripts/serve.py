@@ -21,6 +21,10 @@ Usage:
   serve.py snapshot DOC.json [--rev R] [--url URL] [--page ID] [--width PX]
                                                    record a website doc's live pages as revision R's snapshots
                                                    (default: the current rev; headless Chrome: the chrome setting)
+  serve.py share DOC.json                          put DOC in a secret GitHub gist (gh, signed in with the gist
+                                                   scope) and print the red notice, its https://bluedoc.ai/g/ link
+                                                   and the gist's URL; again: update the same gist (share.py)
+  serve.py unshare DOC.json                        delete DOC's gist and forget it
   serve.py run [--port N]                          run in the foreground
 
 One server per user, on 127.0.0.1 (default port 8740; when another program holds it, `open`, `start` and `unlock` take
@@ -28,7 +32,8 @@ the next free port up to 8759 and record it in server.json; env BLUEDOC_PORT or 
 ~/.bluedoc (env BLUEDOC_HOME): roots.json (folders the home page scans), server.json (pid, port), key (mode 0600: the
 secret that writes need), state.db (SQLite, mode 0600: the reader's ticks, picks, comments and plan state per doc,
 and every reply; statedb.py), settings.json (the plan-mode hook and patch-only switches, Chrome's path and the font
-folders, which Settings writes; settings.py: an environment variable that is set wins over it) and
+folders, which Settings writes; settings.py: an environment variable that is set wins over it), shares.json (mode
+0600: each doc shared as a secret gist, by its path: gist id, user, link, rev, when; share.py) and
 app/<version>-<code>/ (the copy of scripts and assets the server runs from, so deleting or updating the install it was
 opened from never pulls files from under it; other versions' copies go once a new server is up).
 `open` registers the topmost ancestor folder named `docs`, else the doc's own folder, and restarts a running server
@@ -98,6 +103,15 @@ URLs: /                      home page: every doc under the registered folders, 
                              Chrome once BP.printReady(); a design's or website's: its brief, then a page per
                              artboard), the attachment <stem>.pdf; 501 without Chrome (BLUEDOC_CHROME). The app bar's
                              Export downloads both
+      /__bluedoc/share?path=<doc URL path>   GET (the X-Bluedoc header and the key): {share: the doc's share record
+                             ({id, user, link, url, rev, at, files}, kept in shares.json) or null, rev: its meta.rev,
+                             contents: what a share puts in}. POST {path} (the key): share it as a secret gist
+                             (share.py: created, later updated in place, so the link stays): {share, created, relinked,
+                             contents, files}; 413 for a page over 10 MB, 501 without gh, 502 when gh is signed out,
+                             lacks the gist scope or fails, 400 for a presentation or a storelisting. The app bar's
+                             Export → Secret gist
+      POST /__bluedoc/unshare  {path} (the key): delete the doc's gist and forget it (also when GitHub has it no
+                             more): {ok, removed: the record, or null when it wasn't shared}
       /__bluedoc/listing?path=<doc URL path>[&format=F&rev=B&platform=P&locale=L&job=J]   a storelisting (revision
                              B's) exported, a read, no key, nothing written beside the doc; 400 for any other doc type.
                              zip (the default): the fastlane layout of every shot and asset at its store size and
@@ -226,6 +240,7 @@ import codepin  # noqa: E402
 import fonts  # noqa: E402
 import listing  # noqa: E402
 import settings  # noqa: E402
+import share  # noqa: E402
 
 try:
     import statedb  # noqa: E402
@@ -275,9 +290,10 @@ def reply_file(doc: Path, kind: str, ext: str) -> Path:
 
 
 def code_hash() -> str:
-    """Changes whenever the code a server renders with does: serve.py, statedb.py, build.py, codepin.py and the template."""
+    """Changes whenever the code a server renders with does: serve.py, statedb.py, build.py, codepin.py, share.py and
+    the template."""
     h = hashlib.sha256()
-    for f in (Path(__file__).resolve(), HERE / "statedb.py", HERE / "build.py", HERE / "codepin.py", build.TEMPLATE):
+    for f in (Path(__file__).resolve(), HERE / "statedb.py", HERE / "build.py", HERE / "codepin.py", HERE / "share.py", build.TEMPLATE):
         h.update(f.read_bytes())
     return h.hexdigest()[:12]
 
@@ -1441,11 +1457,12 @@ def md_ticks(s: str):
 
 
 def md_link(url: str, html: str) -> str:
-    """template.html mdLink."""
+    """template.html mdLink: links to another site (a web URL, or `//host`, also as `\\\\host`) open in a new tab."""
     u = safe_url(url)
     node = re.fullmatch(r"#node:([A-Za-z0-9_-]+)/([A-Za-z0-9_-]+)", u)
+    web = re.match(r"(?i)(?:https?:|[\\/]{2})", re.sub(r"[\x00-\x20]", "", u))
     extra = (f' data-node="{node[1]}/{node[2]}"' if node
-             else ' target="_blank" rel="noopener noreferrer"' if re.match(r"[Hh][Tt][Tt][Pp][Ss]?:", u) else "")
+             else ' target="_blank" rel="noopener noreferrer"' if web else "")
     return f'<a href="{md_esc(u)}"{extra}>{html}</a>'
 
 
@@ -1917,15 +1934,10 @@ def doc_export_html(doc: dict, doc_path: Path, rev: str | None = None, theme: st
     kind = build.doc_type(meta)
     if kind in EXPORT_OWN:
         raise ExportError(EXPORT_OWN[kind])
-    history = None
-    if meta.get("rev"):
-        try:
-            history = build.load_history(build.history_path(doc_path))
-        except (OSError, ValueError) as e:
-            raise ExportError(f"cannot read {build.history_path(doc_path).name}: {e}") from e
-        log = build.record(history, doc, doc_path)
-        if log.startswith("ERROR"):
-            raise ExportError(log)
+    try:
+        history = build.history_now(doc_path, doc)
+    except build.HistoryError as e:
+        raise ExportError(str(e)) from e
     try:
         page = build.standalone(doc, doc_path, history, build.TEMPLATE.read_text(encoding="utf-8"), rev=rev, problems=[])
     except ValueError as e:
@@ -1945,6 +1957,73 @@ def doc_export_pdf(html: str, chrome: str) -> bytes:
         f.write_text(html, encoding="utf-8")
         with HeadlessChrome(chrome, EXPORT_CHROME_FLAGS) as ch:
             return ch.print_pdf(f.as_uri(), ready=EXPORT_PRINT_READY, margin=EXPORT_PDF_MARGIN)
+
+
+# ---------- a doc shared as a secret gist (/__bluedoc/share, /__bluedoc/unshare, `share`, `unshare`; share.py) ----------
+
+def share_view(doc: Path) -> tuple[int, dict]:
+    """GET /__bluedoc/share: {share: the doc's share record or null, rev: its meta.rev now (null without), contents:
+    what a share puts in (share.contents)}. 400: a deck, a listing or an unreadable doc."""
+    try:
+        _, d = share.read_doc(doc)
+        what = share.contents(d, build.history_now(doc, d))
+    except share.ShareError as e:
+        return e.status, {"error": str(e)}
+    except build.HistoryError as e:
+        return 400, {"error": str(e)}
+    rev = (d.get("meta") or {}).get("rev")
+    return 200, {"share": share.record_of(doc), "rev": str(rev) if rev not in (None, "") else None, "contents": what}
+
+
+def share_doc(doc: Path) -> tuple[int, dict]:
+    """POST /__bluedoc/share: share.share's answer, or {error} with ShareError's status (413 too big, 501 no gh, 502
+    gh signed out, without the gist scope or failing, 400 a deck, a listing or an unreadable doc)."""
+    try:
+        res = share.share(doc)
+    except share.ShareError as e:
+        return e.status, {"error": str(e)}
+    print(f"shared {doc}: {res['share']['link']}", flush=True)
+    return 200, {**res, "rev": res["share"]["rev"]}
+
+
+def unshare_doc(doc: Path) -> tuple[int, dict]:
+    """POST /__bluedoc/unshare: {ok, removed: the record it had, or null when the doc wasn't shared}."""
+    try:
+        rec = share.unshare(doc)
+    except share.ShareError as e:
+        return e.status, {"error": str(e)}
+    if rec:
+        print(f"stopped sharing {doc}: gist {rec['id']} deleted", flush=True)
+    return 200, {"ok": True, "removed": rec}
+
+
+def cmd_share(doc: Path) -> int:
+    """`serve.py share`: share the doc (share.share) and print the notice in red, the link and the gist's URL."""
+    print(share.red(share.NOTICE, sys.stdout), flush=True)
+    try:
+        res = share.share(doc)
+    except share.ShareError as e:
+        print(f"not shared: {e}", file=sys.stderr)
+        return 1
+    rec = res["share"]
+    what = "created" if res["created"] else "updated"
+    if res["relinked"]:
+        what = "created anew (the old gist is gone from GitHub, so the link changed)"
+    print(f"secret gist {what}, rev {rec['rev'] or '-'}: {share.contents_line(res['contents'])}")
+    print(f"link: {rec['link']}")
+    print(f"gist: {rec['url']}")
+    return 0
+
+
+def cmd_unshare(doc: Path) -> int:
+    """`serve.py unshare`: delete the doc's gist and forget it."""
+    try:
+        rec = share.unshare(doc)
+    except share.ShareError as e:
+        print(f"still shared: {e}", file=sys.stderr)
+        return 1
+    print(f"stopped sharing: gist {rec['id']} deleted, {rec['link']} no longer opens" if rec else f"{doc.name} isn't shared")
+    return 0
 
 
 # ---------- a storelisting exported (GET /__bluedoc/listing, build.py --listing) ----------
@@ -4367,6 +4446,16 @@ def make_handler(port: int, default_to: str):
                 if not self.has_key():
                     return self.no_key()
                 return self.json(200, {"families": fonts.families()})
+            if u.path == "/__bluedoc/share":
+                # whether the doc is shared and its link: the key, as for the writes that make and delete it
+                if self.headers.get("X-Bluedoc") != "1":
+                    return self.json(403, {"error": "missing X-Bluedoc header"})
+                if not self.has_key():
+                    return self.no_key()
+                doc = doc_for_url(q.get("path", ""))
+                if not doc:
+                    return self.json(404, {"error": "not a doc under a registered folder"})
+                return self.json(*share_view(doc))
             if u.path == "/__bluedoc/wait":
                 # it consumes a reply: like the POSTs, only our own clients (a cross-site <img> or fetch can't set it)
                 if self.headers.get("X-Bluedoc") != "1":
@@ -4562,6 +4651,11 @@ def make_handler(port: int, default_to: str):
                 return self.json(*change_repos(data))
             if path == "/__bluedoc/frameworks":
                 return self.json(*change_frameworks(data))
+            if path in ("/__bluedoc/share", "/__bluedoc/unshare"):   # publishes or deletes a gist: the key, as every POST
+                doc = doc_for_url(str(data.get("path") or ""))
+                if not doc:
+                    return self.json(404, {"error": "the page's doc is not under a registered folder"})
+                return self.json(*(share_doc(doc) if path == "/__bluedoc/share" else unshare_doc(doc)))
             if path == "/__bluedoc/chrome-test":
                 given = data.get("path")
                 if given is not None and not isinstance(given, str):
@@ -5309,6 +5403,11 @@ def main() -> int:
     p.add_argument("--page", action="append", default=[], metavar="ID", help="only this live page (repeatable)")
     p.add_argument("--width", action="append", default=[], type=int, metavar="PX",
                    help="only this width (repeatable; default: the board's breakpoints)")
+    p = sub.add_parser("share", help="put the doc in a secret GitHub gist (gh) and print its bluedoc.ai link; again: "
+                       "update the same gist")
+    p.add_argument("doc", type=Path)
+    p = sub.add_parser("unshare", help="delete the doc's gist and forget it")
+    p.add_argument("doc", type=Path)
     a = ap.parse_args()
 
     if a.cmd == "run":
@@ -5360,6 +5459,10 @@ def main() -> int:
     if not doc.is_file() or not is_doc(doc):
         print(f"{a.doc}: not a {DOC_FILES} file", file=sys.stderr)
         return 2
+    if a.cmd == "share":
+        return cmd_share(doc)
+    if a.cmd == "unshare":
+        return cmd_unshare(doc)
     if a.cmd == "open":
         build.migrate_layout(doc)   # an older pretty-printed doc becomes minified; content and history unchanged
         add_root(a.root.resolve() if a.root else root_for(doc))

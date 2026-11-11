@@ -15,6 +15,7 @@ You write one `*.bluedoc.json`; the local server renders it as a page (blueprint
 4. **Validate:** `python3 <skill>/scripts/build.py <doc>`. Fix every `ERROR`; fix every `WARN` unless it is a false positive you can name. This records the revision. A passing build is the whole verification: no browser check.
 5. **Open:** `python3 <skill>/scripts/serve.py open <doc> --to <your model family>` (Claude, Codex, Copilot, Gemini, GLM…: never the user's name) starts the server if needed and prints the URL with a `?key=` token good for an hour; later edits show on reload. Give the reader that exact link (it lets their browser save) and what stays unverified. A page that says "This browser can't save yet": run `serve.py unlock` and send its link.
 6. **Wait** in the background, no timeout: `python3 <skill>/scripts/serve.py wait <doc> --kind any`. It prints `--- bluedoc <kind> (reply <id>, …) ---`, the reader's Markdown, `--- end ---`. Replies sent while nobody waits are queued; `serve.py reply <id>` reprints one.
+7. **Send a doc to someone** (only when the user asks): `python3 <skill>/scripts/serve.py share <doc>` gives a bluedoc.ai link: a secret gist, readable by anyone with the link; pass on the red notice it prints. `serve.py unshare <doc>` deletes it.
 
 | Type | Guide | When |
 |---|---|---|

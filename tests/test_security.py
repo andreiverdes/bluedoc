@@ -4,8 +4,10 @@ design type's screen sandbox.
 `build.validate` must reject the payloads; the template must not turn them into markup when a doc
 skips validation (build.build doesn't validate). The page's JSON blocks parse as served when a doc quotes
 `<!--` or `</script`. A diff ref never runs a command the repo's git config names (textconv), in a work tree or
-in a bare repo inside the docs folder. The template's pure functions (safeUrl, inline, md and the diff
-renderer's num) run under node when it is installed; the page-level checks need no node.
+in a bare repo inside the docs folder. The template's pure functions (safeUrl, inline, md, the diff renderer's num and
+mediaKind, which takes no src the URL parser reads as another host's: sec/media-host) run under node when it is
+installed; the page-level checks need no node. A shared page's data is anyone's (bluedoc.ai/g/): the SVG sprite a
+storelisting page puts in itself is drawing elements only, no handler and no link out (sec/sprite, in Chrome).
 
 Design screens: the template frames them with sandbox="allow-scripts" only (never allow-same-origin) and the screen
 route sends the sandbox CSP. With BLUEDOC_BROWSER_TESTS=1, an escape screen tries the parent page, storage, cookies,
@@ -513,6 +515,52 @@ class TemplateFunctions(unittest.TestCase):
             self.assertIsInstance(got, int, f"num({v!r}) = {got!r}")
         self.assertEqual(out[:2], [0, 12])
 
+    def test_media_on_another_host_is_no_media(self) -> None:
+        """mediaKind (sec/media-host): what the URL parser reads as another host's file, with or without a scheme and
+        with a tab or newline in it, is no image or video, so a page makes no network call for it."""
+        code = template_slice("const MEDIA_IMG = ", "function mediaMiss(")
+        far = ["//acme.test/a.png", "\\\\acme.test/a.png", "/\\acme.test/a.png", "\\/acme.test/a.mp4", "/\t/acme.test/a.png",
+               "/\n/acme.test/a.webp", " //acme.test/a.png", "https://acme.test/a.png", "da\tta:text/html,a.png"]
+        near = ["media/a.png", "./a.webp", "/acme/a.png", "media/a.mp4", "data:image/png;base64,AA=="]
+        js = ("const {code, srcs} = JSON.parse(require('fs').readFileSync(0, 'utf8'));"
+              "const mediaKind = new Function(code + '\\nreturn mediaKind;')();"
+              "process.stdout.write(JSON.stringify(srcs.map(mediaKind)));")
+        r = subprocess.run([NODE, "-e", js], input=json.dumps({"code": code, "srcs": far + near}), capture_output=True, text=True, timeout=20)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(json.loads(r.stdout), [None] * len(far) + ["img", "img", "img", "video", "img"])
+
+
+@unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")
+class HostileSprite(unittest.TestCase):
+    """safeSprite (sec/sprite): the SVG a storelisting page puts in itself (its listing data's style thumbnails) is
+    drawing elements only, with no handler and no link out of it; anything else is no sprite. The kit's own is one."""
+    SVG = '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">%s</svg>'
+    BAD = [SVG % '<image href="x" onerror="parent.__pwned = 1"/>', SVG.replace("<svg ", '<svg onload="parent.__pwned = 1" ') % "",
+           SVG % '<g onmouseover="parent.__pwned = 1"><rect width="9" height="9"/></g>', SVG % '<a href="javascript:parent.__pwned = 1"><rect/></a>',
+           SVG % '<use href="data:image/svg+xml,%3Csvg%2F%3E"/>', SVG % '<use xlink:href="javascript:1"/>',
+           SVG % '<foreignObject><div xmlns="http://www.w3.org/1999/xhtml"><img src="x" onerror="parent.__pwned = 1"/></div></foreignObject>',
+           SVG % '<set attributeName="onmouseover" to="parent.__pwned = 1"/>', SVG % "<script>parent.__pwned = 1</script>",
+           '<svg><rect/></svg>', "<svg", '<html xmlns="http://www.w3.org/1999/xhtml"/>', ""]
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.profile = Path(tempfile.mkdtemp(prefix="bluedoc-chrome-"))
+        cls.browser = Browser(cls.profile)
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        cls.browser.close()
+        shutil.rmtree(cls.profile, ignore_errors=True)
+
+    def test_only_a_drawing_is_a_sprite(self) -> None:
+        t = Tab(self.browser)
+        code = "const NS = 'http://www.w3.org/2000/svg';\n" + template_slice("const SPRITE_TAGS = ", "function renderMedia(")
+        t.ev(f"globalThis.safeSprite = new Function({json.dumps(code)} + '\\nreturn safeSprite;')(); true")
+        kit = (build.HERE.parent / "assets" / "kits" / "style-thumbs.svg").read_text(encoding="utf-8")
+        got = t.ev(f"{json.dumps(self.BAD + [kit])}.map(s => (x => x && x.querySelectorAll('symbol').length)(safeSprite(s)))")
+        self.assertEqual(got[:-1], [None] * len(self.BAD))
+        self.assertGreater(got[-1], 0, "the kit's sprite has no symbols")
+        self.assertFalse(t.ev("!!window.__pwned"))
 
 if __name__ == "__main__":
     unittest.main()

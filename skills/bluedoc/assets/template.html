@@ -244,6 +244,24 @@ button.bd-emo:hover, button.bd-emo[aria-expanded="true"] { background: var(--sel
 .bd-send .ft { display: flex; justify-content: flex-end; gap: 8px; margin: 0; padding: 14px 20px 18px; }
 .bd-send .ft .bp-btn { height: 32px; padding: 0 14px; font-size: 13px; }
 .bd-send .ft .bp-btn[hidden] { display: none; }
+/* Export → Secret gist (openShare): the share dialog. The notice in the risk colours, its first sentence bold; the link
+   with Copy; Shared · rev · when; Stop sharing at the left of the keys, in the risk colour */
+.bd-share .bd-shn { display: flex; gap: 10px; margin-bottom: 12px; padding: 10px 12px; border-radius: 10px; color: var(--risk-fg); background: var(--risk-tint);
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--risk) 45%, transparent); font-size: 13px; line-height: 1.5; }
+.bd-share .bd-shn p { margin: 0; }
+.bd-share .bd-shn b { font-weight: 650; }
+.bd-share .bd-shn .bd-ic { flex: none; width: 18px; height: 18px; margin-top: 1px; color: var(--risk); }
+.bd-share .goes { margin-bottom: 0; font-size: 13px; color: var(--fg-muted); }
+.bd-share .lnk { display: flex; gap: 8px; margin-bottom: 8px; }
+.bd-share .lnk input { flex: 1; min-width: 0; box-sizing: border-box; height: 32px; padding: 0 10px; font: 12.5px var(--mono); }
+.bd-share .lnk .bp-btn { height: 32px; padding: 0 12px; font-size: 13px; }
+.bd-share .meta { margin-top: 0; margin-bottom: 12px; font-size: 12.5px; color: var(--fg-subtle); }
+.bd-share .meta .nw { color: var(--warn-fg); font-weight: 600; }
+.bd-share .meta a { color: var(--accent-fg); }
+.bd-share .err { margin: 10px 20px 0; font-size: 13px; color: var(--risk-fg); }
+.bd-share .ft .bp-btn.stop { margin-right: auto; color: var(--risk-fg); }
+.bd-share .ft .bp-btn.stop.sure { background: var(--risk-tint); font-weight: 600; }
+.bd-share .ft .bp-btn:disabled { opacity: .6; cursor: default; }
 /* revisions: app-bar button, strip under the bar, dialog, change marks */
 .bd-rev-btn { height: 30px; padding: 0 10px; font: 500 12.5px var(--mono); }
 .bd-rev-btn.old { color: var(--warn-fg); background: var(--warn-tint); box-shadow: none; }
@@ -2804,7 +2822,15 @@ const REVS = (() => {
   out.push(cur);
   return out;
 })();
+// A shared page: the bluedoc.ai viewer (/g/#<user>/<gist id>) draws a gist's bluedoc-page.json in a frame of its
+// page and, before writing this page there, sets window.bluedocShare = {name: the doc's file stem, hash: the link's
+// #fragment}. It is an -o file in all but its URL (the viewer's): no server, reader state in localStorage, the
+// copied commands name the doc by `name`, and the revision links load the viewer's URL with the fragment, in the top
+// window.
+const SHARE = (() => { const s = window.bluedocShare; return s && typeof s === 'object' && typeof s.name === 'string' && typeof s.hash === 'string' ? { name: s.name, hash: s.hash } : null; })();
 const QP = new URLSearchParams(location.search);
+// the page's file name, which its exports and copied commands go by: its URL's last segment; a shared page's <name>.html
+const pageFile = () => SHARE ? SHARE.name + '.html' : decodeURIComponent(location.pathname.split('/').pop() || '');
 const CUR = REVS[REVS.length - 1];
 const VIEW = REVS.find(r => r.rev === QP.get('rev')) || CUR;
 const BASE = REVS.find(r => r.rev === QP.get('diff') && r !== VIEW) || null;
@@ -2927,6 +2953,7 @@ const ICONS = {
   frame: '<path d="M22 6H2M22 18H2M6 2v20M18 2v20"/>',
   present: '<path d="M2 3h20M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3M7 21l5-5 5 5"/>',
   download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>',
+  share: '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/>',
   variants: '<path d="M2 3v18M22 3v18"/><rect x="6" y="3" width="12" height="18" rx="2"/>',
   palette: '<path d="M12 22a10 10 0 1 1 10-10c0 2.8-2.2 4-4 4h-1.8a1.7 1.7 0 0 0-1.2 2.9 1.7 1.7 0 0 1-1.2 2.9Z"/><circle cx="7.5" cy="10.5" r="1"/><circle cx="10.5" cy="6.5" r="1"/><circle cx="15.5" cy="7.5" r="1"/>',
   panelleft: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/>',
@@ -2986,10 +3013,11 @@ function mdTicks(s) {
     return n < l.length ? l[n] : -1;
   };
 }
-// a link: #node: links open the canvas node, web links open in a new tab
+// a link: #node: links open the canvas node; links to another site open in a new tab: a web URL, or `//host`, which
+// the URL parser also reads from `\\host` and from either with tabs or newlines in it
 function mdLink(url, html) {
   const u = safeUrl(url), n = /^#node:([A-Za-z0-9_-]+)\/([A-Za-z0-9_-]+)$/.exec(u);
-  return `<a href="${esc(u)}"` + (n ? ` data-node="${n[1]}/${n[2]}"` : /^[Hh][Tt][Tt][Pp][Ss]?:/.test(u) ? ' target="_blank" rel="noopener noreferrer"' : '') + `>${html}</a>`;
+  return `<a href="${esc(u)}"` + (n ? ` data-node="${n[1]}/${n[2]}"` : /^(?:https?:|[\\/]{2})/i.test(String(u).replace(/[\u0000-\u0020]/g, '')) ? ' target="_blank" rel="noopener noreferrer"' : '') + `>${html}</a>`;
 }
 function inline(src) {
   const s = String(src ?? '').replace(/\u0000/g, '');   // NUL marks the placeholders below
@@ -4227,13 +4255,15 @@ function renderFiles(b) {
       h('span', { class: 'bp-files-sum' }, SUM.filter(([k]) => n[k]).map(([k, l, w]) => h('span', { class: 'bp-fsum k-' + k, title: `${n[k]} ${w}` }, h('b', { 'aria-hidden': 'true' }, l), String(n[k]), h('span', { class: 'bp-sr' }, ' ' + w))))),
     [...groups].map(([d, fs]) => h('div', { class: 'bp-fgrp', 'data-dir': d }, dirHead(d), h('ul', {}, fs.map(fileRow)))));
 }
-// media: a path relative to the doc JSON's folder (served beside it) or a data: URI; never the network
+// media: a path relative to the doc JSON's folder (served beside it) or a data: URI; never the network. The URL parser
+// drops tabs and newlines and reads `\` as `/`, so `\\host/x.png` and `/<tab>/host/x.png` are another host's file.
 const MEDIA_IMG = /\.(png|jpe?g|gif|webp|svg)$/i, MEDIA_VID = /\.(mp4|webm)$/i;
+const mediaUrl = src => String(src || '').trim().replace(/[\t\n\r]/g, '');
 function mediaKind(src) {
-  const s = String(src || '').trim();
+  const s = mediaUrl(src);
   if (/^data:image\//i.test(s)) return 'img';
   if (/^data:video\//i.test(s)) return 'video';
-  if (/^([a-z][\w+.-]*:|\/\/)/i.test(s)) return null;
+  if (/^([a-z][\w+.-]*:|[\\/]{2})/i.test(s)) return null;
   const path = s.split(/[?#]/)[0];
   return MEDIA_IMG.test(path) ? 'img' : MEDIA_VID.test(path) ? 'video' : null;
 }
@@ -4247,7 +4277,20 @@ function mediaEl(src, alt, cls, caption) {
   im.addEventListener('click', () => lightbox(im, caption));
   return im;
 }
-const missWhy = src => /^(https?:)?\/\//i.test(String(src || '').trim()) ? 'Not loaded: pages make no network calls.' : 'Not an image or video:';
+const missWhy = src => /^(https?:)?[\\/]{2}/i.test(mediaUrl(src)) ? 'Not loaded: pages make no network calls.' : 'Not an image or video:';
+// an SVG sprite from the page's data (kits/style-thumbs.svg as a storelisting's LST.thumbs) to put in the page, or null:
+// drawing elements only, no event handlers, links within the sprite. A shared page's data is anyone's, and an SVG
+// element in the page runs its handlers.
+const SPRITE_TAGS = new Set(['svg', 'defs', 'symbol', 'g', 'path', 'rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon', 'use', 'style', 'title',
+  'lineargradient', 'radialgradient', 'stop', 'clippath', 'mask', 'text', 'tspan']);
+function safeSprite(text) {
+  const ok = e => e.namespaceURI === NS && SPRITE_TAGS.has(e.localName.toLowerCase())
+    && [...e.attributes].every(a => !/^on/i.test(a.localName) && (a.localName !== 'href' || a.value.trim().startsWith('#')));
+  try {
+    const svg = new DOMParser().parseFromString(String(text || ''), 'image/svg+xml').documentElement;
+    return svg && svg.localName === 'svg' && ok(svg) && [...svg.querySelectorAll('*')].every(ok) ? svg : null;
+  } catch { return null; }
+}
 function renderMedia(b) {
   const el = mediaEl(b.src, b.alt, null, b.caption), w = +b.width > 0 ? Math.round(+b.width) : 0;
   const fr = h('div', { class: 'bp-media-fr' + (el && el.tagName === 'VIDEO' ? ' vid' : '') }, el || mediaMiss(b.src, missWhy(b.src)));
@@ -4918,7 +4961,7 @@ function pickMd(x, none) {
 }
 // the doc's JSON file, as `build.py patch` takes it: the name the page's URL (or its HTML file) gives
 const docArg = () => {
-  const p = decodeURIComponent(location.pathname.split('/').pop() || ''), f = /\.json$/i.test(p) ? p : (p.replace(/\.html?$/i, '') || 'doc') + '.bluedoc.json';
+  const p = pageFile(), f = /\.json$/i.test(p) ? p : (p.replace(/\.html?$/i, '') || 'doc') + '.bluedoc.json';
   return /^[\w@%+=:,./-]+$/.test(f) ? f : `'${f.replace(/'/g, `'\\''`)}'`;
 };
 const cutLine = (s, n) => { s = String(s ?? '').replace(/\s+/g, ' ').trim(); return s.length > n ? s.slice(0, n - 1).trimEnd() + '…' : s; };
@@ -5124,12 +5167,12 @@ function variantMd(x) {
   }
   return out.join('');
 }
-// The page can send replies itself when it is served by scripts/serve.py; otherwise it copies them.
+// The page can send replies itself when it is served by scripts/serve.py; otherwise (an -o file, a shared page) it copies them.
 // Two kinds go back: answers (ticks, picks, item comments: Send answers) and change requests to the
 // document itself (pins, selections, drawings: the bottom toolbar's Request changes).
 // `approval` is the server's saved approval (the seed's, then the ping's): {rev, at, carried} (planState)
 const REPLY = { url: null, changes: null, approve: null, approval: store.approval || null, connected: false, to: '', home: '' };
-if (/^https?:$/.test(location.protocol)) {
+if (!SHARE && /^https?:$/.test(location.protocol)) {
   const pingHeaders = SERVER_KEY.headers({});
   fetch('/__bluedoc/ping?path=' + encodeURIComponent(location.pathname), { cache: 'no-store', headers: pingHeaders }).then(r => r.ok ? r.json() : null).then(j => {
     if (!j || !j.bluedoc) return;
@@ -6905,7 +6948,8 @@ const FIDELITY = { sketch: 'Sketch', wireframe: 'Wireframe', hifi: 'Hi-fi' };
 const AB_GAP = 80, LIVE_MAX = 12, BK_MIN = 0.02, BK_MAX = 4;
 const VAR_GUT = 256;   // board px kept clear right of a website page with versions, for its versions bracket and pickers
 const SCREENS = (() => { try { const x = JSON.parse(document.getElementById('bp-screens').textContent); return x && typeof x === 'object' && !Array.isArray(x) ? x : null; } catch { return null; } })();
-const SERVED = !SCREENS && /^https?:$/.test(location.protocol);
+// served by serve.py: an -o file carries its screens (SCREENS), and a shared page is on bluedoc.ai's https
+const SERVED = !SHARE && !SCREENS && /^https?:$/.test(location.protocol);
 const LIVE_PORTS = (() => { try { const x = JSON.parse(document.getElementById('bp-live').textContent); return x && typeof x === 'object' && !Array.isArray(x) ? x : null; } catch { return null; } })();
 const isLive = a => !!a && typeof a.url === 'string';
 // a live page's dev server as serve.py keys its proxies (origin_key): scheme://host:port
@@ -7274,7 +7318,7 @@ async function saveBlob(r, name) {
   setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
 // an export's file name: the doc's file name without its suffix, then .format
-const exportName = (format, fallback) => `${decodeURIComponent(location.pathname.split('/').pop() || fallback).replace(/\.(bluedoc|blueprint)\.json$/i, '')}.${format}`;
+const exportName = (format, fallback) => `${(pageFile() || fallback).replace(/\.(bluedoc|blueprint)\.json$/i, '')}.${format}`;
 // the page's print: a board page (a design, a website) sets PRINT up (renderBoard): prepare() builds its print sheet
 // and resolves once the sheet's screens have drawn, ready() says whether they have. printDoc: print once it's ready
 const PRINT = { prepare: null, ready: () => true };
@@ -7283,11 +7327,12 @@ async function printDoc() { if (PRINT.prepare) await PRINT.prepare(); print(); }
 // their own exports) as the revision shown (?rev=) in the theme the reader picked, if any (GET /__bluedoc/export).
 // HTML file: the file `build.py -o` writes, which opens anywhere without the server. PDF: that file's print view,
 // printed by the server's headless Chrome; while it's made, its item says so; without Chrome (501) the browser's print
-// dialog for this page, then and on every later pick. Only through serve.py: an -o file or a page on file:// has no
-// server, so the key isn't there.
+// dialog for this page, then and on every later pick. Secret gist: the share dialog (openShare). Only through
+// serve.py: an -o file, a page on file:// or a shared page in bluedoc.ai's viewer has no server, so the key isn't there.
 (() => {
   if (IS_DECK || IS_LISTING || !SERVED) return;
-  const EXPORTS = [['html', 'fcode', 'HTML file', 'One file that opens in any browser, no server'], ['pdf', 'doc', 'PDF', 'Print-ready, one file']];
+  const EXPORTS = [['html', 'fcode', 'HTML file', 'One file that opens in any browser, no server'], ['pdf', 'doc', 'PDF', 'Print-ready, one file'],
+    ['gist', 'share', 'Secret gist', 'A link for the people you send it to']];
   let pdfByPrint = false, pdfBusy = false;   // pdfByPrint: the server said it has no Chrome
   const url = format => {
     const q = new URLSearchParams({ path: location.pathname, format });
@@ -7301,6 +7346,7 @@ async function printDoc() { if (PRINT.prepare) await PRINT.prepare(); print(); }
   const busy = on => { pdfBusy = on; pdfItem.setAttribute('aria-busy', String(on)); pdfSub.textContent = on ? 'Making the PDF…' : EXPORTS[1][3]; };
   function printPage() { toast('No Chrome here for a PDF: choose Save as PDF in the print dialog'); printDoc(); }
   async function run(format) {
+    if (format === 'gist') return openShare();
     if (format === 'pdf' && pdfByPrint) return printPage();
     if (format === 'pdf' && pdfBusy) return toast('Still making the PDF…');
     if (format === 'pdf') { busy(true); toast('Making the PDF…'); }
@@ -7311,6 +7357,96 @@ async function printDoc() { if (PRINT.prepare) await PRINT.prepare(); print(); }
       await saveBlob(r, exportName(format, 'doc'));
     } catch { toast('Couldn\'t export the page: the server didn\'t answer'); }
     finally { if (format === 'pdf') busy(false); }
+  }
+  /* Secret gist (share.py; GET and POST /__bluedoc/share, POST /__bluedoc/unshare, all with the key): the doc as it is
+     now, in a secret gist on the reader's GitHub account, opened at bluedoc.ai/g/. Unshared, the dialog is the
+     confirm: the red notice (who answers for this share, who can read the link), what goes in, Share / Cancel. Shared:
+     the link with Copy (copied on sharing), Shared · rev B · when, the notice and what goes in again, Share again (the
+     accent while the doc is at a newer rev: the gist changes only then) and Stop sharing (a second press deletes the
+     gist). Replies don't come back through the gist: its reader sends Markdown, as from an exported file */
+  const NOTICE = ['bluedoc isn\'t responsible for this share method or for secrets leaked through GitHub gists.',
+    'A secret gist is unlisted and not searchable, but anyone with the link can read it. Check the doc for secrets before you share.'];
+  const SH = { dlg: null, view: null, busy: false, err: '', sure: false };
+  async function shareCall(method, path, body) {
+    const headers = SERVER_KEY.headers({ 'Content-Type': 'application/json', 'X-Bluedoc': '1' });
+    const r = await fetch(path, { method, cache: 'no-store', headers, body: body ? JSON.stringify(body) : undefined });
+    const j = await r.json().catch(() => ({}));
+    if (r.status === 403 && j.key) SERVER_KEY.refused(headers);
+    if (!r.ok) throw new Error(j.error || `the server answered ${r.status}`);
+    return j;
+  }
+  const many = (n, one, more) => `${n} ${n === 1 ? one : more}`;
+  const goes = c => [many(c.revisions, 'revision', 'revisions'), many(c.diffs, 'diff with its code', 'diffs with their code'),
+    many(c.media, 'media file', 'media files'), many(c.screens, 'screen', 'screens')].join(', ');
+  function when(iso) {
+    const d = new Date(iso), s = (Date.now() - d) / 1000;
+    if (isNaN(d)) return '';
+    return s < 45 ? 'just now' : s < 3600 ? `${Math.max(1, Math.round(s / 60))} min ago` : s < 86400 ? `${Math.round(s / 3600)} h ago`
+      : d.toLocaleDateString([], { month: 'short', day: 'numeric', ...(d.getFullYear() !== new Date().getFullYear() && { year: 'numeric' }) });
+  }
+  function paintShare() {
+    const d = SH.dlg, v = SH.view, s = v && v.share, newer = !!(s && v.rev !== s.rev), busy = SH.busy;
+    const kids = [h('div', { class: 'hd' }, h('h3', { id: 'bd-sh-h' }, s ? 'Shared as a secret gist' : 'Share as a secret gist'),
+      h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Close', disabled: busy, onclick: () => d.close() }, ic('x')))];
+    if (s) {
+      kids.push(h('div', { class: 'lnk' }, h('input', { type: 'text', readonly: true, value: s.link, 'aria-label': 'Link to the shared doc', onfocus: e => e.target.select() }),
+        h('button', { type: 'button', class: 'bp-btn', onclick: () => copyText(s.link, 'Copied the link') }, ic('copy'), 'Copy')),
+        h('p', { class: 'meta' }, `Shared · rev ${s.rev || '–'} · ${when(s.at)}`,
+          newer && h('span', { class: 'nw' }, ` · the doc is at rev ${v.rev || '–'} now`), ' · ', h('a', { href: safeUrl(s.url), target: '_blank', rel: 'noopener noreferrer' }, 'Gist on GitHub')));
+    } else kids.push(h('p', { class: 'sum' }, 'Puts the doc in a secret gist on your GitHub account (through gh) and gives you a bluedoc.ai link that opens it in any browser.'));
+    kids.push(h('div', { class: 'bd-shn', role: 'note' }, ic('alert'), h('p', {}, h('b', {}, NOTICE[0]), ' ', NOTICE[1])));
+    kids.push(h('p', { class: 'goes' }, v ? `What goes in${v.rev ? `, at rev ${v.rev}` : ''}: ${goes(v.contents)}.` : SH.err ? '' : 'Reading the doc…'));
+    if (SH.err) kids.push(h('p', { class: 'err', role: 'alert' }, SH.err));
+    const go = h('button', { type: 'button', class: 'bp-btn' + (!s || newer ? ' primary' : ''), disabled: busy || !v, 'data-f': SH.sure ? null : '', onclick: () => doShare() },
+      ic('share'), busy && !SH.sure ? 'Sharing…' : s ? 'Share again' : 'Share');
+    kids.push(h('div', { class: 'ft' }, s && h('button', { type: 'button', class: 'bp-btn ghost stop' + (SH.sure ? ' sure' : ''), disabled: busy, 'data-f': SH.sure ? '' : null,
+      onclick: () => doStop() }, ic('trash'), SH.sure ? (busy ? 'Deleting…' : 'Delete the gist') : 'Stop sharing'),
+      h('button', { type: 'button', class: 'bp-btn ghost', disabled: busy, onclick: () => d.close() }, s ? 'Close' : 'Cancel'), go));
+    const had = d.contains(document.activeElement);
+    setKids(d, kids);
+    if (d.open && (had || !d.contains(document.activeElement))) (d.querySelector('[data-f]:not(:disabled)') || d.querySelector('.hd .bd-ibtn')).focus();
+  }
+  async function openShare() {
+    if (!SH.dlg) {
+      SH.dlg = h('dialog', { class: 'bd-send bd-share', 'aria-labelledby': 'bd-sh-h' });
+      SH.dlg.addEventListener('click', e => { if (e.target === SH.dlg && !SH.busy) SH.dlg.close(); });
+      SH.dlg.addEventListener('cancel', e => { if (SH.busy) e.preventDefault(); });
+      document.body.append(SH.dlg);
+    }
+    Object.assign(SH, { view: null, err: '', sure: false });
+    paintShare();
+    if (!SH.dlg.open) SH.dlg.showModal();
+    try { SH.view = await shareCall('GET', '/__bluedoc/share?' + new URLSearchParams({ path: location.pathname })); }
+    catch (e) { SH.err = `Couldn't read this doc's share: ${e.message}`; }
+    paintShare();
+  }
+  async function doShare() {
+    if (SH.busy) return;
+    Object.assign(SH, { busy: true, err: '', sure: false });
+    paintShare();
+    let link = '';
+    try {
+      const j = await shareCall('POST', '/__bluedoc/share', { path: location.pathname });
+      SH.view = { share: j.share, rev: j.rev, contents: j.contents };
+      link = j.share.link;
+    } catch (e) { SH.err = `Couldn't share: ${e.message}`; }
+    SH.busy = false;
+    paintShare();
+    if (link) { await copyText(link, 'Shared: the link is copied'); SH.dlg.querySelector('.lnk .bp-btn').focus(); }
+  }
+  async function doStop() {
+    if (SH.busy) return;
+    if (!SH.sure) { SH.sure = true; return paintShare(); }
+    SH.busy = true; SH.err = '';
+    paintShare();
+    try {
+      await shareCall('POST', '/__bluedoc/unshare', { path: location.pathname });
+      SH.view = { ...SH.view, share: null };
+      SH.dlg.close();
+      toast('Stopped sharing: the gist is deleted, the link no longer opens');
+    } catch (e) { SH.err = `Couldn't stop sharing: ${e.message}`; }
+    Object.assign(SH, { busy: false, sure: false });
+    paintShare();
   }
   const bar = document.querySelector('.bd-bar-r');
   bar.insertBefore(wrap, bar.querySelector('.bd-docm') || themeBtn);
@@ -9621,7 +9757,7 @@ function renderListing(lb) {
   }
   // a shell word, and the doc's file name as `build.py` takes it: every patch command the drafts make
   const sh = s => /^[\w@%+=:,./-]+$/.test(s) ? s : `'${s.replace(/'/g, `'\\''`)}'`;
-  const docFile = () => decodeURIComponent(location.pathname.split('/').pop() || '').replace(/\.html?$/i, '.bluedoc.json');
+  const docFile = () => pageFile().replace(/\.html?$/i, '.bluedoc.json');
   // the patch commands for the order and rows drafts: one --json for the listing block with the order and rows they
   // make, and one per variant with its order
   L.draftCommands = ds => {
@@ -10028,11 +10164,9 @@ function renderListing(lb) {
   let sprite = null;
   function thumb(id, p) {
     if (sprite === null) {
-      sprite = false;
-      try {
-        const svg = new DOMParser().parseFromString(String(LST.thumbs || ''), 'image/svg+xml').documentElement;
-        if (svg && svg.nodeName === 'svg' && !svg.querySelector('parsererror, script')) { const el = document.importNode(svg, true); el.setAttribute('aria-hidden', 'true'); el.setAttribute('class', 'bd-lst-sprite'); document.body.append(el); sprite = true; }
-      } catch { /* no thumbnails */ }
+      const svg = safeSprite(LST.thumbs);
+      if (svg) { const el = document.importNode(svg, true); el.setAttribute('aria-hidden', 'true'); el.setAttribute('class', 'bd-lst-sprite'); document.body.append(el); }
+      sprite = !!svg;
     }
     const ref = document.getElementById(`st-${id}-${p}`) ? `st-${id}-${p}` : `st-${id}`;
     return sprite && document.getElementById(ref) ? sv('svg', { class: 'th', viewBox: '0 0 60 104', 'aria-hidden': 'true' }, sv('use', { href: '#' + ref })) : h('span', { class: 'th' });
@@ -11086,8 +11220,11 @@ function revUrl(view, base) {
   if (view !== CUR) q.set('rev', view.rev);
   if (base) q.set('diff', base.rev);
   const s = q.toString();
-  return location.pathname + (s ? '?' + s : '');
+  return location.pathname + (s ? '?' + s : '') + (SHARE ? SHARE.hash : '');
 }
+// where a revision link opens: a shared page's in the top window, the viewer's, which reads its URL
+const REV_TARGET = SHARE ? '_top' : null;
+const goRev = href => { (SHARE ? window.top : window).location.href = href; };
 const revName = r => `Rev ${r.rev}`;
 let chgAt = -1, revPos = null, chgBtns = [], revTab = null;
 // scroll the Revisions tab so `el` shows
@@ -11148,15 +11285,15 @@ function buildRevTab() {
         scr.length > 0 && h('p', { class: 'rv-scr' }, h('b', {}, `${IS_DECK ? 'Slides' : 'Screens'} changed: `), scr.join(', ')),
         Array.isArray(r.doc.resolves) && r.doc.resolves.length > 0 && h('p', { class: 'rv-scr' }, `Resolves ${r.doc.resolves.length} comment${r.doc.resolves.length > 1 ? 's' : ''}`)),
       h('div', { class: 'rv-act' },
-        (r !== VIEW || BASE) && h('a', { class: 'bp-btn', href: revUrl(r, null) }, ic('eye'), 'View'),
-        prev && h('a', { class: 'bp-btn', href: revUrl(r, prev), 'aria-current': cmp ? 'page' : null }, ic('split'), `Changes from ${prev.rev}`)));
+        (r !== VIEW || BASE) && h('a', { class: 'bp-btn', href: revUrl(r, null), target: REV_TARGET }, ic('eye'), 'View'),
+        prev && h('a', { class: 'bp-btn', href: revUrl(r, prev), target: REV_TARGET, 'aria-current': cmp ? 'page' : null }, ic('split'), `Changes from ${prev.rev}`)));
     return li;
   });
   // the picker shows month and day, each option's title the full date
   const sel = (def, label) => selectMenu({ label, cls: 'rv-sel', float: true, value: def ? def.rev : null, options: REVS.map(r => ({ value: r.rev, title: r.date || null,
     label: revName(r) + (r.date ? ` · ${/^\d{4}-\d\d-\d\d$/.test(r.date) ? r.date.slice(5) : r.date}` : '') })) });
   const from = sel(BASE || (OLD ? VIEW : REVS[REVS.length - 2]), 'Compare from'), to = sel(BASE ? VIEW : CUR, 'Compare with');
-  const go = () => { const a = REVS.find(r => r.rev === from.value), b = REVS.find(r => r.rev === to.value); if (a && b && a !== b) location.href = revUrl(b, a); else toast('Pick two different revisions'); };
+  const go = () => { const a = REVS.find(r => r.rev === from.value), b = REVS.find(r => r.rev === to.value); if (a && b && a !== b) goRev(revUrl(b, a)); else toast('Pick two different revisions'); };
   const cmpSec = sec('Compare', h('div', { class: 'bd-rv-ft' }, h('div', { class: 'row' }, from, ic('next'), to),
     h('button', { type: 'button', class: 'bp-btn primary', onclick: go }, ic('split'), 'Compare')));
   if (REVS.length > 1) body.prepend(cmpSec);
@@ -11186,7 +11323,7 @@ if (REVS.length >= 1 && REVS[0].rev) {
   // an earlier revision gets its own tray of keys at the bottom, where the annotation tray is on the current
   // revision; the compare view docks its keys in the strip at the top: the one place to step through changes and to leave
   const tray = (label, ...kids) => { document.body.append(h('div', { class: 'bd-anntb bd-revtb', role: 'toolbar', 'aria-label': label }, kids)); root.classList.add('bd-tray-on'); };
-  const textKey = (cls, icon, text, tipText, keys, href) => { const k = tipped(h('button', { type: 'button', class: 'bd-key txt ' + cls, 'aria-label': text, onclick: () => { location.href = href; } }, icon && ic(icon), h('span', { class: 't' }, text)), keys); k._tip = tipText; return k; };
+  const textKey = (cls, icon, text, tipText, keys, href) => { const k = tipped(h('button', { type: 'button', class: 'bd-key txt ' + cls, 'aria-label': text, onclick: () => goRev(href) }, icon && ic(icon), h('span', { class: 't' }, text)), keys); k._tip = tipText; return k; };
   if (BASE) {
     // the author's notes for every revision after the base, up to the shown one, then the marked changes
     const a = REVS.indexOf(BASE), b = REVS.indexOf(VIEW);
@@ -11210,7 +11347,7 @@ if (REVS.length >= 1 && REVS[0].rev) {
     document.addEventListener('keydown', e => {
       if (e.defaultPrevented || e.isComposing || e.metaKey || e.ctrlKey || e.altKey || document.querySelector('dialog[open]')) return;
       const t = e.target; if (t.closest && t.closest('input, textarea, .bd-selw, [contenteditable], .bp-stage, .bd-diff')) return;
-      if (e.key === 'Escape') { if (SIDE.as() === 'drawer' || SIDE.as() === 'sheet') return; e.preventDefault(); location.href = doneUrl; }
+      if (e.key === 'Escape') { if (SIDE.as() === 'drawer' || SIDE.as() === 'sheet') return; e.preventDefault(); goRev(doneUrl); }
       else if (e.key === 'j' || e.key === 'ArrowDown') { e.preventDefault(); gotoChg(1); }
       else if (e.key === 'k' || e.key === 'ArrowUp') { e.preventDefault(); gotoChg(-1); }
     });
@@ -11225,7 +11362,7 @@ if (REVS.length >= 1 && REVS[0].rev) {
     const was = seen && seen !== CUR.rev && REVS.find(r => r.rev === seen);
     if (was) {
       const s = strip('upd', ic('hist'), h('span', { class: 't' }, 'Updated since you last opened it: ', h('b', {}, `${was.rev} → ${CUR.rev}`), CUR.date ? ` (${CUR.date})` : ''),
-        h('span', { class: 'sp' }), h('a', { class: 'bp-btn primary', href: revUrl(CUR, was) }, ic('split'), 'Show what changed'),
+        h('span', { class: 'sp' }), h('a', { class: 'bp-btn primary', href: revUrl(CUR, was), target: REV_TARGET }, ic('split'), 'Show what changed'),
         h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Dismiss', onclick: () => { s.remove(); fitStrips(); } }, ic('x')));
     }
     store.set(SEEN_KEY, CUR.rev);
@@ -13382,7 +13519,7 @@ function boardEdits(B) {
   };
   // the `patch` commands for these drafts: the first bumps the rev, the rest add to it
   const docFile = () => {
-    const p = decodeURIComponent(location.pathname.split('/').pop() || '');
+    const p = pageFile();
     return /\.json$/i.test(p) ? p : (p.replace(/\.html?$/i, '') || 'doc') + '.bluedoc.json';
   };
   const sh = s => /^[\w@%+=:,./-]+$/.test(s) ? s : `'${s.replace(/'/g, `'\\''`)}'`;

@@ -223,7 +223,8 @@ class ExportKey(ChromePage):
                 self.assertEqual(t.ev(f"[{self.BTN}.textContent, {self.BTN}.getAttribute('aria-haspopup'), {self.BTN}.parentElement.nextElementSibling.matches('.bd-docm')]"),
                                  ["Export", "menu", True], "Export, a menu button right before the ⋯ menu")
                 self.assertEqual(t.ev(f"[...{self.MENU}.querySelectorAll('[role=menuitem]')].map(b => [b.dataset.format, b.querySelector('b').textContent, b.querySelector('.t span').textContent])"),
-                                 [["html", "HTML file", "One file that opens in any browser, no server"], ["pdf", "PDF", "Print-ready, one file"]])
+                                 [["html", "HTML file", "One file that opens in any browser, no server"], ["pdf", "PDF", "Print-ready, one file"],
+                                  ["gist", "Secret gist", "A link for the people you send it to"]])
         for stem in ("acme-fit-deck", "acme-fit-listing"):
             with self.subTest(stem=stem):
                 t = self.page(stem)

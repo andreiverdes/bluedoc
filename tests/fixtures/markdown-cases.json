@@ -254,6 +254,12 @@
    "html": "<a href=\"https://acme.test\" target=\"_blank\" rel=\"noopener noreferrer\">site</a> <a href=\"acme.bluedoc.json\">doc</a> <a href=\"#node:arch/api\" data-node=\"arch/api\">api</a> <a href=\"#code:pr/src/a.ts:12\">line</a>"
   },
   {
+   "name": "links to another host without a scheme open in a new tab: //host, and /\\host as the URL parser reads it",
+   "fn": "inline",
+   "md": "[a](//acme.test/a) [b](/\\acme.test/b) [c](/acme/c)",
+   "html": "<a href=\"//acme.test/a\" target=\"_blank\" rel=\"noopener noreferrer\">a</a> <a href=\"/\\acme.test/b\" target=\"_blank\" rel=\"noopener noreferrer\">b</a> <a href=\"/acme/c\">c</a>"
+  },
+  {
    "name": "link text takes inline Markdown",
    "fn": "inline",
    "md": "[`tierFor` **docs**](https://acme.test/tier)",
