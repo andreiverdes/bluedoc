@@ -1,5 +1,5 @@
 """A doc shared as a secret GitHub gist: share.py, `serve.py share`/`unshare`, /__bluedoc/share and /__bluedoc/unshare,
-and the app bar's Export → Secret gist. A stand-in gh (fixtures/gh_standin.py, on PATH as `gh`) records every call and
+and the app bar's Share key. A stand-in gh (fixtures/gh_standin.py, on PATH as `gh`) records every call and
 keeps the gists in a temp folder: nothing reaches GitHub.
 
 The gist's three files: <stem>.bluedoc.json is the doc verbatim, <stem>.bluedoc.history.json its history with the
@@ -11,13 +11,18 @@ a gist deleted on GitHub is created anew. The share is kept in $BLUEDOC_HOME/sha
 never beside the doc. unshare DELETEs the gist and forgets it, also when GitHub has it no more, and keeps it when gh
 fails. gh missing is a 501 naming `gh auth login`, signed out or without the gist scope a 502 naming `gh auth login`
 or `gh auth refresh -s gist`, a bluedoc-page.json over 10 MB a 413 pointing to Export → HTML file, a deck a 400.
-The routes need the X-Bluedoc header and the key, the GET too (it shows the link). `serve.py share` prints the notice,
-then the link and the gist's URL. In Chrome, Export lists Secret gist; its dialog shows the red notice (the risk
+The routes need the X-Bluedoc header and the key, the GET too (it shows the link); its brief form leaves out what goes
+in. The link is https://bluedoc.ai/g/<code>, the gist id's bytes in base64url without padding (32 hex: 22 characters,
+20 hex: 14), any other id the long https://bluedoc.ai/g/#<user>/<id>; a share recorded with the long link reads the
+short one. `serve.py share` prints the notice, then the link and the gist's URL. In Chrome, the app bar has Share,
+Export, ⋯ in that order (the key: its icon alone under 900 px); a shared doc marks the key with a dot in the accent, a
+doc newer than its share in the warning colour, also on load. The key opens the dialog: the red notice (the risk
 colours, the same words as share.NOTICE) and what goes in, Share puts the link in the dialog, copied, with
 Shared · rev · just now; after a patch the dialog says the doc is newer and Share again (the accent) keeps the link;
-Stop sharing asks once more, then deletes the gist."""
+Stop sharing asks once more, then deletes the gist and unmarks the key."""
 from __future__ import annotations
 
+import base64
 import json
 import os
 import shutil
@@ -37,6 +42,36 @@ STANDIN = REPO / "tests" / "fixtures" / "gh_standin.py"
 PLAN, DESIGN = "acme-saved-carts-plan", "acme-fit-design"
 FILL_KEYS = {"__BLUEDOC_TITLE__", "__BLUEDOC_DOC__", "__BLUEDOC_HISTORY__", "__BLUEDOC_SCREENS__", "__BLUEDOC_LISTING__",
              "__BLUEDOC_STATE__", "__BLUEDOC_LIVE__", "__BLUEDOC_SNAPS__", "__BLUEDOC_PINS__"}
+
+
+def code(gist_id: str) -> str:
+    """A gist id's short-link code, worked out here apart from share.link_for: its bytes in base64url, no padding."""
+    return base64.urlsafe_b64encode(bytes.fromhex(gist_id)).rstrip(b"=").decode("ascii")
+
+
+class ShortLink(unittest.TestCase):
+    def test_a_hex_id_is_its_bytes_in_base64url(self) -> None:
+        cases = [("b21699001d737be2f6e6a242851a63da", "https://bluedoc.ai/g/shaZAB1ze-L25qJChRpj2g"),   # 32 hex: 22 characters
+                 ("6cad326836d38bd3a7ae", "https://bluedoc.ai/g/bK0yaDbTi9Onrg"),   # 20 hex (an older gist): 14
+                 ("ffff", "https://bluedoc.ai/g/__8")]
+        for gist_id, link in cases:
+            with self.subTest(gist_id=gist_id):
+                self.assertEqual(share.link_for("acme-dev", gist_id), link)
+                self.assertEqual(base64.urlsafe_b64decode(link.rsplit("/", 1)[1] + "==").hex(), gist_id, "it decodes back")
+
+    def test_any_other_id_keeps_the_long_form(self) -> None:
+        for gist_id in ("not-hex", "abc", "B21699001D737BE2F6E6A242851A63DA", ""):
+            with self.subTest(gist_id=gist_id):
+                self.assertEqual(share.link_for("acme-dev", gist_id), f"https://bluedoc.ai/g/#acme-dev/{gist_id}")
+
+    def test_a_share_recorded_with_the_long_link_reads_the_short_one(self) -> None:
+        tmp = TempHome()
+        self.addCleanup(tmp.cleanup)
+        gid, p = "b21699001d737be2f6e6a242851a63da", tmp.dir / "acme.bluedoc.json"
+        with mock.patch.dict(os.environ, {"BLUEDOC_HOME": str(tmp.home)}):
+            share._save({str(p.resolve()): {"id": gid, "user": "acme-dev", "link": f"https://bluedoc.ai/g/#acme-dev/{gid}",
+                                            "url": f"https://gist.github.com/acme-dev/{gid}", "rev": "1", "at": "", "files": []}})
+            self.assertEqual(share.record_of(p)["link"], "https://bluedoc.ai/g/shaZAB1ze-L25qJChRpj2g")
 
 
 class StandInGh:
@@ -142,7 +177,8 @@ class Gists(StandInGh, unittest.TestCase):
         meta, files = self.gist(gid)
         self.assertFalse(meta["public"])
         self.assertEqual(sorted(files), rec["files"])
-        self.assertEqual(rec["link"], f"https://bluedoc.ai/g/#acme-dev/{gid}")
+        self.assertEqual(rec["link"], f"https://bluedoc.ai/g/{code(gid)}")
+        self.assertEqual(len(code(gid)), 22)
         self.assertEqual(rec["url"], f"https://gist.github.com/acme-dev/{gid}")
         self.assertEqual(rec["rev"], load_json(p)["meta"]["rev"])
         self.assertEqual(self.shares(), {str(p): rec})
@@ -197,7 +233,7 @@ class Gists(StandInGh, unittest.TestCase):
         gid = share.share(p)["share"]["id"]
         r = self.tmp.run("serve.py", "unshare", p)
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual(r.stdout, f"stopped sharing: gist {gid} deleted, https://bluedoc.ai/g/#acme-dev/{gid} no longer opens\n")
+        self.assertEqual(r.stdout, f"stopped sharing: gist {gid} deleted, https://bluedoc.ai/g/{code(gid)} no longer opens\n")
         self.assertEqual(self.shares(), {})
 
     def test_gh_problems_say_what_to_run(self) -> None:
@@ -234,7 +270,7 @@ class Gists(StandInGh, unittest.TestCase):
         rec = self.shares()[str(p)]
         self.assertEqual(lines[0], share.NOTICE, "no colour when stdout isn't a terminal")
         self.assertEqual(lines[1], "secret gist created, rev C: 3 revisions, 0 diffs with their code, 0 media files, 11 screens")
-        self.assertEqual(lines[2:], [f"link: https://bluedoc.ai/g/#acme-dev/{rec['id']}", f"gist: https://gist.github.com/acme-dev/{rec['id']}"])
+        self.assertEqual(lines[2:], [f"link: https://bluedoc.ai/g/{code(rec['id'])}", f"gist: https://gist.github.com/acme-dev/{rec['id']}"])
         tty = type("Tty", (), {"isatty": lambda self: True})()
         with mock.patch.dict(os.environ):
             os.environ.pop("NO_COLOR", None)
@@ -275,6 +311,9 @@ class Routes(StandInGh, unittest.TestCase):
         rec = j["share"]
         self.assertEqual((j["created"], j["rev"], rec["rev"]), (True, "C", "C"))
         self.assertEqual(self.call("GET", "/__bluedoc/share", DESIGN)[1]["share"], rec)
+        url = self.server.url_for(self.doc(DESIGN))
+        status, raw = self.server.req("GET", f"/__bluedoc/share?path={quote(url)}&brief=1", headers={"X-Bluedoc": "1"})
+        self.assertEqual((status, json.loads(raw)), (200, {"share": rec, "rev": "C"}), "brief: no contents")
         status, j = self.call("POST", "/__bluedoc/share", DESIGN)
         self.assertEqual((status, j["share"]["id"], j["created"]), (200, rec["id"], False))
         status, j = self.call("POST", "/__bluedoc/unshare", DESIGN)
@@ -323,8 +362,7 @@ class Routes(StandInGh, unittest.TestCase):
 
 @unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")
 class ShareDialog(StandInGh, ChromePage):
-    BTN, MENU, DLG = ("document.querySelector('.bd-bar-r .bd-docx .bd-expb')", "document.querySelector('.bd-bar-r .bd-docx .bd-expm')",
-                      "document.querySelector('dialog.bd-share')")
+    KEY, DLG = "document.querySelector('.bd-bar-r .bd-shk')", "document.querySelector('dialog.bd-share')"
 
     def setUp(self) -> None:
         super().setUp()
@@ -332,21 +370,55 @@ class ShareDialog(StandInGh, ChromePage):
         self.gh_env()
         self.server.start()
 
-    def dialog(self, stem: str) -> Tab:
+    def page(self, stem: str) -> Tab:
         t = self.open(self.server.url_for(self.doc(stem)))
         t.ev("window.__copied = []; navigator.clipboard.writeText = s => { __copied.push(s); return Promise.resolve(); }; true")
-        t.ev(f"{self.BTN}.click()")
-        t.ev(f"{self.MENU}.querySelector('[data-format=gist]').click()")
-        t.wait_for(f"(d => d && d.open && /What goes in/.test(d.textContent))({self.DLG})")
         return t
+
+    def dialog(self, stem: str) -> Tab:
+        t = self.page(stem)
+        self.reopen(t)
+        return t
+
+    def reopen(self, t: Tab) -> None:
+        t.ev(f"{self.DLG} && {self.DLG}.open && {self.DLG}.close(); {self.KEY}.click()")
+        t.wait_for(f"(d => d && d.open && /What goes in/.test(d.textContent))({self.DLG})")
+
+    def mark(self, t: Tab) -> list:
+        """The key's data-share and whether its dot shows."""
+        return t.ev(f"[{self.KEY}.dataset.share || null, getComputedStyle({self.KEY}.querySelector('.dot')).display !== 'none']")
 
     def keys(self, t: Tab) -> list:
         return t.ev(f"[...{self.DLG}.querySelectorAll('.ft .bp-btn')].map(b => [b.textContent, b.classList.contains('primary')])")
 
-    def test_share_from_the_export_menu(self) -> None:
+    def test_the_key_sits_before_export_and_marks_a_share(self) -> None:
+        t = self.page(PLAN)
+        self.assertEqual(t.ev("[...document.querySelector('.bd-bar-r').children].filter(e => e.matches('.bd-shk, .bd-docx, .bd-docm')).map(e => e.className.split(' ').find(c => /^bd-(shk|docx|docm)$/.test(c)))"),
+                         ["bd-shk", "bd-docx", "bd-docm"], "Share · Export · ⋯")
+        self.assertEqual(t.ev(f"[{self.KEY}.textContent, {self.KEY}.hasAttribute('aria-haspopup'), {self.KEY}.getAttribute('aria-label')]"), ["Share", False, "Share"])
+        self.assertEqual(self.mark(t), [None, False])
+        self.browser.call("Emulation.setDeviceMetricsOverride", {"width": 390, "height": 800, "deviceScaleFactor": 2, "mobile": True}, t.session)
+        t.wait_for("innerWidth === 390")
+        self.assertEqual(t.ev(f"[...{self.KEY}.children].map(e => getComputedStyle(e).display)"), ["block", "none", "none"], "narrow: the icon alone")
+        # shared from the CLI: the page marks the key on load; a newer rev marks it in the warning colour
+        self.assertEqual(self.tmp.run("serve.py", "share", self.doc(PLAN)).returncode, 0)
+        t.go(t.ev("location.href"))
+        t.wait_for(f"{self.KEY}.dataset.share === 'shared'")
+        self.assertEqual(self.mark(t), ["shared", True])
+        self.assertIn("Shared as a secret gist at rev 1", t.ev(f"{self.KEY}.title"))
+        r = self.tmp.run("build.py", "patch", self.doc(PLAN), "doc", "--set", "subtitle=Saved carts, rev two")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        t.go(t.ev("location.href"))
+        t.wait_for(f"{self.KEY}.dataset.share === 'newer'")
+        accent, warn = (t.ev(f"(e => {{ e.style.color = 'var(--{v})'; document.body.append(e); const c = getComputedStyle(e).color; e.remove(); return c; }})(document.createElement('i'))")
+                        for v in ("accent", "warn"))
+        self.assertEqual(t.ev(f"getComputedStyle({self.KEY}.querySelector('.dot')).backgroundColor"), warn)
+        self.assertNotEqual(accent, warn)
+        self.assertIn("the doc is at rev 2 now", t.ev(f"{self.KEY}.title"))
+        self.assertEqual(self.browser.errors, [])
+
+    def test_share_from_the_key(self) -> None:
         t = self.dialog(PLAN)
-        self.assertEqual(t.ev(f"[...{self.MENU}.querySelectorAll('[role=menuitem]')].map(b => [b.dataset.format, b.querySelector('b').textContent, b.querySelector('.t span').textContent])")[-1],
-                         ["gist", "Secret gist", "A link for the people you send it to"])
         notice = f"{self.DLG}.querySelector('.bd-shn')"
         self.assertEqual(t.ev(f"[{notice}.querySelector('b').textContent, {notice}.textContent]"), [share.NOTICE_LEAD, share.NOTICE])
         risk = t.ev("(e => { e.style.color = 'var(--risk-fg)'; document.body.append(e); const c = getComputedStyle(e).color; e.remove(); return c; })(document.createElement('i'))")
@@ -358,7 +430,9 @@ class ShareDialog(StandInGh, ChromePage):
         link = t.wait_for(f"(i => i && i.value)({self.DLG}.querySelector('.lnk input'))", 30)
         rec = self.shares()[str(self.doc(PLAN))]
         self.assertEqual(link, rec["link"])
-        self.assertRegex(link, r"^https://bluedoc\.ai/g/#acme-dev/[0-9a-f]{32}$")
+        self.assertRegex(link, r"^https://bluedoc\.ai/g/[A-Za-z0-9_-]{22}$")
+        self.assertEqual(link, f"https://bluedoc.ai/g/{code(rec['id'])}")
+        self.assertEqual(self.mark(t), ["shared", True], "the key marks the share at once")
         self.assertIn("link is copied", self.toast(t, "shared"))
         self.assertEqual(t.ev("__copied"), [link])
         self.assertTrue(t.ev(f"{self.DLG}.querySelector('.meta').textContent.startsWith('Shared · rev 1 · just now · Gist on GitHub')"))
@@ -368,15 +442,15 @@ class ShareDialog(StandInGh, ChromePage):
         # a new rev: the dialog says so and Share again takes the accent; the link stays
         r = self.tmp.run("build.py", "patch", self.doc(PLAN), "doc", "--set", "subtitle=Saved carts, rev two")
         self.assertEqual(r.returncode, 0, r.stderr)
-        t.ev(f"{self.DLG}.close()")
-        t.ev(f"{self.BTN}.click()")
-        t.ev(f"{self.MENU}.querySelector('[data-format=gist]').click()")
+        self.reopen(t)
+        self.assertEqual(self.mark(t), ["newer", True])
         t.wait_for(f"/the doc is at rev 2 now/.test({self.DLG}.querySelector('.meta')?.textContent || '')")
         self.assertEqual(self.keys(t), [["Stop sharing", False], ["Close", False], ["Share again", True]])
         t.ev(f"{self.DLG}.querySelector('.ft .bp-btn.primary').click()")
         t.wait_for(f"/^Shared · rev 2 /.test({self.DLG}.querySelector('.meta')?.textContent || '')", 30)
         self.assertEqual(t.ev(f"{self.DLG}.querySelector('.lnk input').value"), link)
         self.assertEqual(self.shares()[str(self.doc(PLAN))]["id"], rec["id"])
+        self.assertEqual(self.mark(t), ["shared", True], "shared again: the doc's rev is the share's")
         # Stop sharing asks once more
         t.ev(f"{self.DLG}.querySelector('.ft .stop').click()")
         self.assertEqual(t.ev(f"{self.DLG}.querySelector('.ft .stop').textContent"), "Delete the gist")
@@ -385,6 +459,7 @@ class ShareDialog(StandInGh, ChromePage):
         self.assertIn("gist is deleted", self.toast(t, "stopped sharing"))
         self.assertFalse(t.ev(f"{self.DLG}.open"))
         self.assertFalse((self.ghdir / "gists" / rec["id"]).exists())
+        self.assertEqual(self.mark(t), [None, False])
         self.assertEqual(self.shares(), {})
         self.assertEqual(self.browser.errors, [])
 

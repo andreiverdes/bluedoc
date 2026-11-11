@@ -223,12 +223,12 @@ class ExportKey(ChromePage):
                 self.assertEqual(t.ev(f"[{self.BTN}.textContent, {self.BTN}.getAttribute('aria-haspopup'), {self.BTN}.parentElement.nextElementSibling.matches('.bd-docm')]"),
                                  ["Export", "menu", True], "Export, a menu button right before the ⋯ menu")
                 self.assertEqual(t.ev(f"[...{self.MENU}.querySelectorAll('[role=menuitem]')].map(b => [b.dataset.format, b.querySelector('b').textContent, b.querySelector('.t span').textContent])"),
-                                 [["html", "HTML file", "One file that opens in any browser, no server"], ["pdf", "PDF", "Print-ready, one file"],
-                                  ["gist", "Secret gist", "A link for the people you send it to"]])
+                                 [["html", "HTML file", "One file that opens in any browser, no server"], ["pdf", "PDF", "Print-ready, one file"]])
+                self.assertTrue(t.ev(f"{self.BTN}.parentElement.previousElementSibling.matches('.bd-shk')"), "Share, Export, ⋯")
         for stem in ("acme-fit-deck", "acme-fit-listing"):
             with self.subTest(stem=stem):
                 t = self.page(stem)
-                self.assertFalse(t.ev("!!document.querySelector('.bd-docx')"), "a deck and a listing keep their Export to…")
+                self.assertFalse(t.ev("!!document.querySelector('.bd-docx, .bd-shk')"), "a deck and a listing keep their Export to…, and no Share")
         self.assertEqual(self.browser.errors, [])
 
     def test_html_saves_the_file_of_the_revision_shown(self) -> None:
@@ -324,7 +324,7 @@ class ExportedFile(unittest.TestCase):
                 self.browser.call("Page.navigate", {"url": f.as_uri()}, t.session)
                 t.wait_for("document.readyState === 'complete' && !!window.BP", 20)
                 self.assertEqual(t.ev("document.title"), f"{title} · bluedoc")
-                self.assertEqual(t.ev("[document.documentElement.dataset.theme, !!document.querySelector('.bd-bar-r'), !!document.querySelector('.bd-docx')]"),
+                self.assertEqual(t.ev("[document.documentElement.dataset.theme, !!document.querySelector('.bd-bar-r'), !!document.querySelector('.bd-docx, .bd-shk')]"),
                                  ["dark", True, False])
                 self.assertEqual(t.ev("performance.getEntriesByType('resource').map(e => e.name).filter(u => !/^(data|blob|about):/.test(u))"), [])
                 board = next((b for b in build.all_blocks(load_json(doc_path)) if b.get("type") == "board"), None)

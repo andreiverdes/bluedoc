@@ -1,7 +1,7 @@
 """Phones (1.0.20): every example page fits 390, 360 and 320 px. The page is no wider than the window (a phone
-would zoom it out), and the app bar and the bottom dock sit inside it: the app bar drops the wordmark and Export's
-word and shortens its meter (under 360 px, its count alone), the dock's keys shrink, and a design page's dock drops
-the eye and an empty count.
+would zoom it out), and the app bar and the bottom dock sit inside it: the app bar drops the wordmark and Share's and
+Export's words and shortens its meter (under 381 px, its count alone, closer keys and Export without its chevron), the
+dock's keys shrink, and a design page's dock drops the eye and an empty count.
 
 Browser tests: BLUEDOC_BROWSER_TESTS=1 with Chrome (BLUEDOC_CHROME names it when it isn't in a usual place)."""
 from __future__ import annotations

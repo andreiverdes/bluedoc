@@ -87,6 +87,14 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .bd-crumb { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 13px; color: var(--fg-subtle); }
 .bd-crumb .sep { color: var(--line-strong); flex: none; }
 .bd-crumb .t { color: var(--fg-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* a shared page's chip after the title (VIEW_ONLY): plain, the line's colour; a phone, "View only"; under 381 px, its eye */
+.bd-vo { display: inline-flex; align-items: center; gap: 5px; flex: none; height: 22px; padding: 0 9px 0 7px; border-radius: 999px; font: 500 12px/1 var(--sans);
+  color: var(--fg-muted); box-shadow: inset 0 0 0 1px var(--line); white-space: nowrap; cursor: default; }
+.bd-vo .bd-ic { width: 13px; height: 13px; color: var(--fg-subtle); }
+.bd-vo .n { display: none; }
+@media (max-width: 600px) { .bd-vo .w { display: none; } .bd-vo .n { display: inline; } }
+@media (max-width: 380px) { .bd-vo { padding: 0 6px; } .bd-vo .n { display: none; } }
+@media print { .bd-vo { display: none; } }
 /* the doc's emoji and title (NAME): on the current revision of a served page the emoji is a button that opens the
    picker (.bd-emop) and the title one that turns into a field (.on) */
 .bd-emo { font-style: normal; font-weight: 400; letter-spacing: 0; flex: none; }
@@ -122,11 +130,12 @@ button.bd-emo:hover, button.bd-emo[aria-expanded="true"] { background: var(--sel
 .bd-bar-r { margin-left: auto; display: flex; align-items: center; gap: 10px; flex: none; }
 .bd-overall { display: flex; align-items: center; gap: 8px; font: 500 12px var(--mono); color: var(--fg-muted); }
 .bd-overall .bp-bar { width: 72px; }
-/* a phone: the logo without its wordmark, closer keys, then a shorter meter, then (under 360 px, beside Export) the
-   meter's count alone, so the bar fits 320 px */
+/* a phone: the logo without its wordmark, closer keys, then a shorter meter, then (under 381 px, beside Share and
+   Export) the meter's count alone, the keys closer still and Export without its chevron, so the bar fits 320 px */
 @media (max-width: 600px) { .bd-mark svg.wm { display: none; } .bd-bar-r { gap: 6px; } }
 @media (max-width: 400px) { .bd-overall { gap: 6px; } .bd-overall .bp-bar { width: 40px; } }
-@media (max-width: 359px) { .bd-overall .bp-bar { display: none; } }
+@media (max-width: 380px) { .bd-overall .bp-bar, .bd-docx .bd-tbtn.bd-expb .cv { display: none; } .bd-bar-r { gap: 4px; }
+  .bd-bar-r .bd-docx .bd-tbtn.bd-expb, .bd-bar-r .bd-tbtn.bd-shk { padding: 0 7px; } }
 .bd-ibtn { display: inline-grid; place-items: center; width: 30px; height: 30px; border: 0; border-radius: 9px; color: var(--fg-muted);
   background: linear-gradient(180deg, var(--key-top), var(--key-bot)); box-shadow: var(--shadow-key); transition: color .12s var(--ease), transform .09s; }
 .bd-ibtn:hover { color: var(--fg); }
@@ -136,6 +145,13 @@ button.bd-emo:hover, button.bd-emo[aria-expanded="true"] { background: var(--sel
 .bd-bar:has(:is(.bd-docm, .bd-docx) [aria-expanded="true"]) { z-index: 43; }   /* the open menu over the docked right panel */
 /* the app bar's Export (any doc but a presentation or a storelisting): Export to…'s key; narrow, its icon and chevron */
 @media (max-width: 900px) { .bd-docx .bd-tbtn.bd-expb > span { display: none; } .bd-docx .bd-tbtn.bd-expb { padding: 0 6px 0 8px; gap: 4px; } }
+/* the app bar's Share (before Export): Export's raised key with its icon and word, no chevron; narrow, its icon. A shared
+   doc: a dot in the accent at its corner; the doc newer than its share: the dot in the warning colour */
+.bd-tbtn.bd-shk { position: relative; }
+.bd-tbtn.bd-shk .dot { display: none; position: absolute; top: 3px; right: 3px; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 2px var(--canvas); }
+.bd-tbtn.bd-shk[data-share] .dot { display: block; }
+.bd-tbtn.bd-shk[data-share="newer"] .dot { background: var(--warn); }
+@media (max-width: 900px) { .bd-tbtn.bd-shk > .w { display: none; } .bd-bar-r .bd-tbtn.bd-shk { padding: 0 7px; } }
 .bd-revbar.arc { position: static; background: color-mix(in oklch, var(--fg) 6%, var(--canvas)); }
 .bd-revbar.arc.sug { background: color-mix(in srgb, var(--ok) 13%, var(--canvas)); }
 .bd-revbar.arc.sug .in > .bd-ic { color: var(--ok-fg); }
@@ -244,7 +260,7 @@ button.bd-emo:hover, button.bd-emo[aria-expanded="true"] { background: var(--sel
 .bd-send .ft { display: flex; justify-content: flex-end; gap: 8px; margin: 0; padding: 14px 20px 18px; }
 .bd-send .ft .bp-btn { height: 32px; padding: 0 14px; font-size: 13px; }
 .bd-send .ft .bp-btn[hidden] { display: none; }
-/* Export → Secret gist (openShare): the share dialog. The notice in the risk colours, its first sentence bold; the link
+/* the app bar's Share key (openShare): the share dialog. The notice in the risk colours, its first sentence bold; the link
    with Copy; Shared · rev · when; Stop sharing at the left of the keys, in the risk colour */
 .bd-share .bd-shn { display: flex; gap: 10px; margin-bottom: 12px; padding: 10px 12px; border-radius: 10px; color: var(--risk-fg); background: var(--risk-tint);
   box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--risk) 45%, transparent); font-size: 13px; line-height: 1.5; }
@@ -473,6 +489,8 @@ td.bd-cell-mod { background: color-mix(in oklch, var(--warn-tint) 70%, transpare
 :is(.bp-cl-item, .bd-cm) input[type=checkbox]:hover { box-shadow: inset 0 0 0 1.5px var(--fg-subtle); }
 :is(.bp-cl-item, .bd-cm) input[type=checkbox]:checked { background: var(--ok) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / 11px no-repeat; box-shadow: none; }
 :is(.bp-cl-item, .bd-cm) input[type=checkbox]:focus-visible { box-shadow: var(--focus-ring); }
+/* a shared page's tick (VIEW_ONLY): the doc's done, not a control */
+:is(.bp-cl-item, .bd-cm) input[type=checkbox]:disabled { cursor: default; pointer-events: none; }
 .bp-cl-num { font: 500 11.5px/1.95 var(--mono); color: var(--fg-subtle); min-width: 22px; flex: none; margin-top: 1px; }
 /* collapsed row: [tick] [num] title / subtitle [chip] [chevron]; the whole row except the tick toggles */
 .bp-cl-row { display: flex; align-items: flex-start; gap: 10px; padding: 0 8px 0 16px; }
@@ -597,6 +615,10 @@ td.bd-cell-mod { background: color-mix(in oklch, var(--warn-tint) 70%, transpare
   -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / contain no-repeat;
   mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / contain no-repeat; }
 .bp-opt.more .pk[aria-checked="true"] { background: var(--warn); }
+/* a shared page's radios (VIEW_ONLY): the doc's pick, not a control; a row without an explanation opens nothing */
+.bp-opt .pk:disabled { cursor: default; pointer-events: none; }
+.bp-opt.plain:has(.pk:disabled) .oh { cursor: default; }
+.bp-opt.plain:has(.pk:disabled):not(.on):hover { background: none; }
 .bp-opt .oc { flex: 1; min-width: 0; }
 .bp-opt .oh { display: flex; align-items: center; gap: 10px; width: 100%; min-width: 0; padding: 10px 14px 10px 12px; border: 0; background: none; font: inherit; line-height: 20px;
   color: inherit; text-align: left; cursor: pointer; }
@@ -2273,14 +2295,14 @@ html.bd-space .bd-board .bd-ab-fr { pointer-events: none; }
    Revisions tab's Compare pickers, a code review's File, a requested frame's Device, an arrow's Kind) is the same key,
    showing its value, over the same menu of options, the current one ticked: no native select anywhere */
 .bd-exp { position: relative; display: inline-flex; }
-.bd-tbtn:is(.bd-expb, .bd-selb) { display: inline-flex; align-items: center; gap: 6px; padding: 0 7px 0 9px; color: var(--fg); font-weight: 600; white-space: nowrap;
+.bd-tbtn:is(.bd-expb, .bd-selb, .bd-shk) { display: inline-flex; align-items: center; gap: 6px; padding: 0 7px 0 9px; color: var(--fg); font-weight: 600; white-space: nowrap;
   background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: var(--shadow-hk); }
 .bd-btb .bd-tbtn.bd-expb { padding: 0 7px 0 9px; margin-right: 4px; }
 .bd-btb .bd-tbtn.bd-selb { padding: 0 6px 0 10px; }
-.bd-tbtn:is(.bd-expb, .bd-selb):hover:not(:disabled) { color: var(--fg); background: linear-gradient(var(--hover), var(--hover)), linear-gradient(180deg, var(--hk-top), var(--hk-bot)); }
+.bd-tbtn:is(.bd-expb, .bd-selb, .bd-shk):hover:not(:disabled) { color: var(--fg); background: linear-gradient(var(--hover), var(--hover)), linear-gradient(180deg, var(--hk-top), var(--hk-bot)); }
 .bd-tbtn:is(.bd-expb, .bd-selb)[aria-expanded="true"] { background: var(--hk-down); box-shadow: var(--shadow-hk-down); }
-.bd-tbtn:is(.bd-expb, .bd-selb):focus-visible { box-shadow: var(--shadow-hk), var(--focus-ring); }
-.bd-tbtn:is(.bd-expb, .bd-selb) .bd-ic { width: 16px; height: 16px; }
+.bd-tbtn:is(.bd-expb, .bd-selb, .bd-shk):focus-visible { box-shadow: var(--shadow-hk), var(--focus-ring); }
+.bd-tbtn:is(.bd-expb, .bd-selb, .bd-shk) .bd-ic { width: 16px; height: 16px; }
 .bd-tbtn:is(.bd-expb, .bd-selb) .cv { width: 14px; height: 14px; color: var(--fg-subtle); transition: rotate .15s var(--ease); }
 .bd-tbtn:is(.bd-expb, .bd-selb)[aria-expanded="true"] .cv { rotate: 180deg; }
 .bd-tbtn.bd-selb .bd-ic:not(.cv) { color: var(--fg-muted); }
@@ -2822,12 +2844,19 @@ const REVS = (() => {
   out.push(cur);
   return out;
 })();
-// A shared page: the bluedoc.ai viewer (/g/#<user>/<gist id>) draws a gist's bluedoc-page.json in a frame of its
-// page and, before writing this page there, sets window.bluedocShare = {name: the doc's file stem, hash: the link's
-// #fragment}. It is an -o file in all but its URL (the viewer's): no server, reader state in localStorage, the
-// copied commands name the doc by `name`, and the revision links load the viewer's URL with the fragment, in the top
-// window.
+// A shared page: the bluedoc.ai viewer (/g/<code>, or the first links' /g/#<user>/<gist id>) draws a gist's
+// bluedoc-page.json in a frame of its page and, before writing this page there, sets window.bluedocShare = {name: the
+// doc's file stem, hash: an old link's #fragment, else ''}. Written by the viewer, this page has the viewer's URL, path
+// and query included. It is an -o file in all but its URL and its view-only state (VIEW_ONLY, below): no server, the
+// copied commands name the doc by `name`, and the revision links load the viewer's path with ?rev=/?diff= (and an old
+// link's fragment) in the top window.
 const SHARE = (() => { const s = window.bluedocShare; return s && typeof s === 'object' && typeof s.name === 'string' && typeof s.hash === 'string' ? { name: s.name, hash: s.hash } : null; })();
+// A shared page is view-only: the doc as its author wrote it, to read. No tray or dock, no picks, ticks, comments,
+// drafts or board edits, no rename or archive; a `choice` or `done` the doc records shows as it is, and only the doc's
+// own threads show (read-only). Each feature that writes checks VIEW_ONLY in its code, not only in its CSS, and the
+// store keeps every key but the view prefs (VIEW_PREFS) in memory. Navigation, contents, revisions and ?diff=, the
+// theme, print, links, and a board's pan, zoom, focus, theme pills, Present and Compare stay.
+const VIEW_ONLY = !!SHARE;
 const QP = new URLSearchParams(location.search);
 // the page's file name, which its exports and copied commands go by: its URL's last segment; a shared page's <name>.html
 const pageFile = () => SHARE ? SHARE.name + '.html' : decodeURIComponent(location.pathname.split('/').pop() || '');
@@ -3283,14 +3312,19 @@ const docId = DOC.id || 'doc';
 // is then the cache every read uses, plus `__outbox:<URL path>`, the writes the server has not acknowledged.
 // The outbox is the doc's URL path's, as the server keys state by file: two docs with one id (a copy, a git
 // worktree) each send only their own writes. With no seed (a `-o` export, file://, a server without sqlite3)
-// localStorage is the only store. Layout prefs (`bluedoc:*`) always stay in this browser.
+// localStorage is the only store. Layout prefs (`bluedoc:*`) always stay in this browser. A shared page (VIEW_ONLY)
+// stores only the view prefs below; every other key, reader state and the rest of the layout prefs, lives in memory
+// for the visit, and what this browser kept before (another doc of the same id, an older viewer) is never read.
+const VIEW_PREFS = new Set(['bluedoc:theme', 'bluedoc:width', 'bluedoc:design-left-w', 'bluedoc:design-right-w', 'bluedoc:comments', 'bluedoc:sp-tab',
+  'bluedoc:design-panel', 'bluedoc:listing-panel', 'bluedoc:listing-tab']);
 const store = (() => {
   let ok = true; const mem = {};
   try { localStorage.setItem('bp:probe', '1'); localStorage.removeItem('bp:probe'); } catch { ok = false; }
   // An earlier revision reads the reader's ticks, picks and comments but never writes them: its item
   // ids and `done` values differ from the current ones, and storing would clobber current progress.
-  const local = k => !ok || (OLD && k.startsWith('bp:'));
-  const get = k => local(k) && k in mem ? mem[k] : ok ? localStorage.getItem(k) : null;
+  const memOnly = k => VIEW_ONLY && !VIEW_PREFS.has(k);
+  const local = k => !ok || memOnly(k) || (OLD && k.startsWith('bp:'));
+  const get = k => local(k) && (k in mem || memOnly(k)) ? mem[k] ?? null : ok ? localStorage.getItem(k) : null;
   const put = (k, v) => { if (local(k)) mem[k] = v; else if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); };
   const keys = pre => {
     const out = new Set(Object.keys(mem).filter(k => k.startsWith(pre)));
@@ -3568,7 +3602,7 @@ const EMOJI_SET = [
 const NAME = (() => {
   const KT = `bp:${docId}:__title`, KE = `bp:${docId}:__emoji`;
   const own = { title: DOC.title || '', emoji: emojiOk(DOC.emoji) ? DOC.emoji : TYPE_EMOJI[DOC_TYPE] };
-  const edits = store.synced && !QP.has('rev') && !QP.has('diff');
+  const edits = !VIEW_ONLY && store.synced && !QP.has('rev') && !QP.has('diff');
   const mine = k => store.served ? store.get(k) : null;
   const title = () => { const v = mine(KT); return titleOk(v) ? v.trim() : own.title; };
   const emoji = () => { const v = mine(KE); return emojiOk(v) ? v : own.emoji; };
@@ -3720,16 +3754,20 @@ const NAME = (() => {
   return { part, paint, edits, own, title, emoji, setTitle, setEmoji };
 })();
 
+// a shared page says why nothing here takes a pick, a tick or a comment: a quiet chip after the title (VIEW_ONLY)
 app.append(h('header', { class: 'bd-bar' }, mark,
   h('div', { class: 'bd-crumb' }, h('span', { class: 'sep' }, '/'), NAME.part('t')),
+  VIEW_ONLY && h('span', { class: 'bd-vo', role: 'note', title: 'A shared link: you can read this doc, not answer, comment on or change it', 'aria-label': 'Shared, view only' },
+    ic('eye'), h('span', { class: 'w' }, 'Shared · view only'), h('span', { class: 'n' }, 'View only')),
   h('div', { class: 'bd-bar-r' }, overall,
     h('button', { type: 'button', class: 'bd-ibtn bd-toc-btn', 'aria-label': 'Contents', title: 'Contents', 'aria-expanded': 'false',
       onclick: e => { e.stopPropagation(); setDrawer(!side.classList.contains('drawer')); } }, ic('list')),
     themeBtn)));
 
 const eyebrow = [meta.org, meta.kind, meta.date].filter(Boolean);
-// a plan's or design's status beside the eyebrow: awaiting approval, changes requested or approved (paintPlan)
-const planChip = APPROVABLE && !OLD ? h('span', { class: 'bd-planchip', role: 'status' }) : null;
+// a plan's or design's status beside the eyebrow: awaiting approval, changes requested or approved (paintPlan); not on
+// a shared page, which approves nothing
+const planChip = APPROVABLE && !OLD && !VIEW_ONLY ? h('span', { class: 'bd-planchip', role: 'status' }) : null;
 // an archived doc says so beside the eyebrow too (ARC)
 const arcChip = NAME.edits && CUR.rev ? h('span', { class: 'bd-planchip arc', hidden: true }, ic('archive'), 'Archived') : null;
 const head = h('header', { class: 'bd-head', id: 'top' },
@@ -4345,8 +4383,9 @@ function itemKey(cid, iid) { return `bp:${docId}:${cid}:${iid}`; }
 const idsOf = v => v == null || v === '' ? [] : (Array.isArray(v) ? v : [v]).filter(s => typeof s === 'string' && s);
 const pickKey = v => [...idsOf(v)].sort().join(',');
 const recIds = x => idsOf(x.it.recommend).filter(id => x.choices.some(c => c.id === id));
-// an earlier revision (?rev=) and compare view (?diff=) are read-only: no reply boxes, no Need more details
-const RO = OLD || !!BASE;
+// an earlier revision (?rev=), compare view (?diff=) and a shared page (VIEW_ONLY) are read-only: no reply boxes, no
+// Need more details; the conversations show where there is one
+const RO = OLD || !!BASE || VIEW_ONLY;
 /* Attachments: files the reader attaches to a comment. Each is posted to the server (POST /__bluedoc/attach), which
    keeps a copy in ~/.bluedoc/attachments/<doc>/ and answers {name, path, size}; the comment carries that, and the
    reply lists each path for the agent to read. In a draft until Save (an item's box, a comment's editor): Save deletes
@@ -4522,7 +4561,8 @@ function renderChecklist(b, parent) {
     if (stored != null && (choices
       ? !stored.startsWith('=') || !stored.includes('|') || stored.slice(stored.indexOf('|') + 1) !== authorChoice || !pickOk(stored.slice(1, stored.indexOf('|')))
       : stored.startsWith('=') || (stored.length === 2 ? stored[1] !== authorDone : stored === '0' && it.done))) { store.del(key); stored = null; }
-    const cb = h('input', { type: 'checkbox', id: `cb-${cid}-${it.id}`, 'aria-label': 'Done: ' + String(it.text || '').replace(/[`*]/g, '') });
+    // a shared page's tick is the doc's `done`, never the reader's (VIEW_ONLY): the box is off
+    const cb = h('input', { type: 'checkbox', id: `cb-${cid}-${it.id}`, disabled: VIEW_ONLY, 'aria-label': 'Done: ' + String(it.text || '').replace(/[`*]/g, '') });
     // the pick: an id or null; with `multi`, the ticked ids in the options' order
     const toPick = s => multi ? choices.map(c => c.id).filter(id => s.split(',').includes(id)) : s || null;
     let choice = null;
@@ -4612,6 +4652,7 @@ function renderChecklist(b, parent) {
     };
     // files: the box's files (undefined keeps them: BP.setNote)
     entryItem.setNote = (v, from, fs = files) => {
+      if (VIEW_ONLY) return;
       note = v.trim() ? v : ''; files = filesOf(fs);
       if (note) store.set(noteKey, note); else { store.del(noteKey); store.del(noteSentKey); }
       if (files.length) store.set(filesKey, JSON.stringify(files)); else store.del(filesKey);
@@ -4646,6 +4687,7 @@ function renderChecklist(b, parent) {
     const paintMore = () => { li.classList.toggle('more', !!more); entryItem.opts.paint(); entryItem.noteView.paint(); paintPicked(); syncDiffs(); paintPlan(); };
     // Need more details asks the agent instead of picking: on, it clears the pick (the ticks)
     entryItem.setMore = on => {
+      if (VIEW_ONLY) return;
       more = on ? '1' : null;
       if (more) store.set(moreKey, more); else store.del(moreKey);
       if (on && entryItem.choice) entryItem.setChoice(null);
@@ -4656,6 +4698,7 @@ function renderChecklist(b, parent) {
     // thread is written first, in the same state write), its request is sent. On a review `what` says which part
     // went: 'answer' (the send key: the pick or tick) or 'note' (Request changes: the comment and Need more details)
     entryItem.markSent = what => {
+      if (VIEW_ONLY) return;
       if (what !== 'answer' && entryItem.notePending) {
         thread = [...thread, { md: note.trim().slice(0, 8192), rev: CUR.rev, at: new Date().toISOString(), ...filesJson(files) }].slice(-200);
         store.set(threadKey, JSON.stringify(thread)); store.del(noteKey); store.del(noteSentKey); store.del(filesKey);
@@ -4670,6 +4713,7 @@ function renderChecklist(b, parent) {
     if (choices) {
       // an id or null; with `multi` an id, a list of them or null. Picking an option turns Need more details off
       entryItem.setChoice = v => {
+        if (VIEW_ONLY) return;
         const ids = idsOf(v).filter(id => choices.some(c => c.id === id));
         choice = multi ? choices.map(c => c.id).filter(id => ids.includes(id)) : ids[0] || null;
         const s = pickStr(), dropMore = !!s && !!more;
@@ -4684,7 +4728,7 @@ function renderChecklist(b, parent) {
         if (entryItem.onChoice) entryItem.onChoice(entryItem.choice);   // a design's theme pick re-skins its screens
       };
       // Custom: the reader's words answer the finding; they drop the pick and Need more details, '' takes them back
-      if (fd && !multi) entryItem.setCustom = v => {
+      if (fd && !multi && !VIEW_ONLY) entryItem.setCustom = v => {
         custom = String(v ?? '').trim() ? String(v).slice(0, 2000) : '';
         if (custom) store.set(custKey, custom); else store.del(custKey);
         if (custom && choice) { choice = null; if (authorChoice) store.set(key, `=|${authorChoice}`); else store.del(key); }
@@ -4758,11 +4802,12 @@ function renderChecklist(b, parent) {
     entryItem.refresh();
     li.classList.toggle('done', cb.checked);
     cb.addEventListener('change', () => {
-      if (choices) return;
+      if (choices || VIEW_ONLY) return;
       if (cb.checked === !!it.done) store.del(key); else store.set(key, (cb.checked ? '1' : '0') + authorDone);
       li.classList.toggle('done', cb.checked); update();
     });
     entryItem.reset = () => {
+      if (VIEW_ONLY) return;
       store.del(key);
       if (custom) { custom = ''; store.del(custKey); }
       if (choices) { choice = authorPick(); cb.checked = !!pickStr(); entryItem.opts.paint(); paintPicked(); paintOk(); }
@@ -4791,11 +4836,11 @@ function renderChecklist(b, parent) {
   // a findings section's own checklist has no header: the section's toolbar holds its actions and the filter its counts
   const inFindings = FINDING_CIDS.has(cid) && !parent;
   // Accept recommended (N): the open decisions in this checklist and the ones nested in it (paintAccept);
-  // not on earlier revisions or in compare view
-  const acceptBtn = !OLD && !BASE && !inFindings ? h('button', { type: 'button', class: 'bp-btn ghost', hidden: true, title: 'Pick the starred option on every open decision in this checklist',
+  // not on earlier revisions, in compare view or on a shared page
+  const acceptBtn = !OLD && !BASE && !VIEW_ONLY && !inFindings ? h('button', { type: 'button', class: 'bp-btn ghost', hidden: true, title: 'Pick the starred option on every open decision in this checklist',
     onclick: () => acceptRecs(checklistScope(entry)) }) : null;
-  const ask = kind === 'decisions' ? h('span', { class: 'bp-cl-ask' }, 'Needs your answer') : null;
-  const cap = kind === 'progress' && !parent ? h('p', { class: 'bp-cl-cap' }, PICKS_WITH_CHANGES
+  const ask = kind === 'decisions' && !VIEW_ONLY ? h('span', { class: 'bp-cl-ask' }, 'Needs your answer') : null;
+  const cap = kind === 'progress' && !parent && !VIEW_ONLY ? h('p', { class: 'bp-cl-cap' }, PICKS_WITH_CHANGES
     ? `The agent marks these as the work lands. Your ticks stay on this page${APPROVABLE ? ' and don\'t change the approval' : ''}.`
     : 'Your own tracker: ticks are saved for you and go with Send answers.') : null;
   if (inFindings) root.append(list);
@@ -4803,12 +4848,12 @@ function renderChecklist(b, parent) {
     ic(kind === 'decisions' ? 'help' : 'list'), h(parent ? 'h4' : 'h3', {}, b.title || 'Checklist'), ask, count,
     h('span', { class: 'tools' }, acceptBtn, expandBtn,
       !parent && h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => copyText(checklistMd(entry), 'Copied checklist as Markdown') }, ic('copy'), 'Copy'),
-      !parent && h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => { if (!confirm('Reset this checklist?')) return; resetChecklist(entry); } }, ic('reset'), 'Reset'))),
+      !parent && !VIEW_ONLY && h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => { if (!confirm('Reset this checklist?')) return; resetChecklist(entry); } }, ic('reset'), 'Reset'))),
     ...[cap, kind !== 'decisions' && bar, list].filter(Boolean));
   const entry = { b, items, root, list, count, bar, sideRow: null, parent, paintExpand, acceptBtn, kind };
   function update() {
     const n = items.filter(passing).length, open = items.length - items.filter(x => x.cb.checked).length, recheck = items.filter(x => x.stale && x.cb.checked).length;
-    if (kind === 'decisions') { count.textContent = open ? `${open} open` : 'All answered'; ask.hidden = !open; }
+    if (kind === 'decisions') { count.textContent = open ? `${open} open` : 'All answered'; if (ask) ask.hidden = !open; }
     else count.textContent = `${n} of ${items.length}` + (recheck ? ` · ${recheck} to recheck` : '');
     bar.firstChild.style.width = (items.length ? n / items.length * 100 : 0) + '%';
     root.classList.toggle('complete', items.length > 0 && n === items.length);
@@ -4834,6 +4879,7 @@ function resetChecklist(c) {
 function checklistScope(c) { return [c, ...CHECKLISTS.filter(n => n.parent && n.parent.cid === c.b.id).flatMap(checklistScope)]; }
 const openRecs = cls => cls.flatMap(c => c.items).filter(x => x.choices && !x.choice && !x.custom && !x.more && recIds(x).length);
 function acceptRecs(cls) {
+  if (VIEW_ONLY) return 0;
   const xs = openRecs(cls);
   xs.forEach(x => x.setChoice(recIds(x)));
   if (xs.length) toast(`Accepted ${xs.length} recommendation${xs.length === 1 ? '' : 's'}`, { label: 'Undo', ms: 8000,
@@ -4869,14 +4915,15 @@ function optionRows(x, compact) {
   const ls = h('div', { class: 'ls', role: multi ? 'group' : 'radiogroup', 'aria-label': (multi ? 'Pick any: ' : 'Decision: ') + plainText(x.it.text) });
   const rows = opts.map(o => {
     const bid = 'bp-opt-' + ++OPT_N;
-    const pk = h('button', { type: 'button', role: multi ? 'checkbox' : 'radio', class: 'pk', ...(o.cust ? {} : { 'data-id': o.id }), 'aria-label': plainText(o.label) + (o.rec ? ' (recommended)' : '') }, h('i'));
+    // a shared page shows the doc's pick and takes none (VIEW_ONLY): the radio is off, the row opens its explanation
+    const pk = h('button', { type: 'button', role: multi ? 'checkbox' : 'radio', class: 'pk', disabled: VIEW_ONLY, ...(o.cust ? {} : { 'data-id': o.id }), 'aria-label': plainText(o.label) + (o.rec ? ' (recommended)' : '') }, h('i'));
     const lb = h('span', { class: 'ol', html: inline(o.label) }), yp = h('span', { class: 'yp' });
     if (o.cust) {
       const input = h('input', { type: 'text', class: 'bp-cust-in', maxlength: 2000, placeholder: 'Your own answer', 'aria-label': 'Your own answer to: ' + plainText(x.it.text) });
       const hd = h('div', { class: 'oh' }, lb, input);
       return { o, row: h('div', { class: 'bp-opt cust', 'data-id': o.id }, pk, h('div', { class: 'oc' }, hd)), pk, hd, ob: null, lb, yp, input };
     }
-    const hd = h('button', { type: 'button', class: 'oh', tabindex: '-1', ...(o.md ? { 'aria-expanded': 'false', 'aria-controls': bid } : { 'aria-hidden': 'true' }) },
+    const hd = h('button', { type: 'button', class: 'oh', tabindex: VIEW_ONLY && o.md ? '0' : '-1', ...(o.md ? { 'aria-expanded': 'false', 'aria-controls': bid } : { 'aria-hidden': 'true' }) },
       lb, o.rec && h('span', { class: 'rec' }, '★ Recommended'), o.md && h('span', { class: 'one', html: inline(oneLine(o.md)) }), yp, o.md && ic('down', 'cv'));
     const ob = o.md ? h('div', { class: 'ob bd-md', id: bid, html: md(o.md) }) : null;
     if (ob) ob.hidden = true;
@@ -4901,6 +4948,7 @@ function optionRows(x, compact) {
     if (ta && ta.isConnected) { ta.focus({ preventScroll: true }); ta.scrollIntoView({ block: 'nearest', behavior: REDUCE ? 'auto' : 'smooth' }); }
   };
   const pick = r => {
+    if (VIEW_ONLY) return;
     if (x.fd) holdFinding(x);   // the finding the reader answers stays where it is until they move on
     if (r.o.cust) { if (x.custom) x.setCustom(''); else if (r.input.value.trim()) x.setCustom(r.input.value); else r.input.focus(); return; }
     if (r.o.more) { x.setMore(!x.more); if (x.more === 'on') focusReply(); return; }
@@ -4936,7 +4984,7 @@ function optionRows(x, compact) {
         r.pk.setAttribute('aria-label', r.lb.textContent);
         r.row.title = m === 'sent' ? 'Sent to the agent; it resets when the agent posts a new revision. Click to withdraw it'
           : m ? 'Goes with Request changes; click again to take it back' : '';
-      } else r.yp.textContent = on && !multi ? 'Your pick' : '';
+      } else r.yp.textContent = on && !multi ? (VIEW_ONLY ? 'Chosen' : 'Your pick') : '';
     }
     for (const r of rows) r.pk.tabIndex = r === (tab || rows[0]) ? 0 : -1;
     el.classList.toggle('answered', cur.length > 0 || !!x.custom);
@@ -5327,7 +5375,7 @@ function updateOverall() {
 // its section's filter counts); not once the doc is approved (an approval without a pick means the recommendation), on
 // earlier revisions or in compare view
 const asksReader = x => x.fd ? findingOpen(x) : !!x.choices && !x.choice;
-const askChip = !OLD && !BASE ? h('button', { type: 'button', class: 'bd-ask', hidden: true, onclick: () => {
+const askChip = !OLD && !BASE && !VIEW_ONLY ? h('button', { type: 'button', class: 'bd-ask', hidden: true, onclick: () => {
   const x = Object.values(ITEMS).find(asksReader); if (x) jumpTo(openItem(x));
 } }) : null;
 if (askChip) head.append(askChip);
@@ -5395,8 +5443,9 @@ if (CHECKLISTS.length) {
     };
     return row;
   });
+  // Copy progress and Reset: the reader's ticks, which a shared page has none of (VIEW_ONLY)
   tocWrap.append(h('div', { class: 'bd-rail-sec' }, h('h4', { class: 'bd-rail-h' }, 'Tracker'), h('div', { class: 'bp-prog' }, rows,
-    h('div', { class: 'bp-side-tools' },
+    !VIEW_ONLY && h('div', { class: 'bp-side-tools' },
       h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => copyText(allChecklistsMd(), 'Copied progress as Markdown') }, ic('copy'), 'Copy progress'),
       h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => {
         if (!confirm('Reset all checklists in this document?')) return;
@@ -5600,8 +5649,8 @@ function commentCard(d, c, mirrors = d.mirrors, inItem = false) {
     dot = h('span', { class: 'bp-cl-dot', 'aria-hidden': 'true' });
     mirrors.push({ opts, src, card });
   } else if (src) {
-    tick = h('input', { type: 'checkbox', 'aria-label': 'Tick: ' + plainText(title) });
-    tick.addEventListener('change', () => { src.cb.checked = tick.checked; src.cb.dispatchEvent(new Event('change')); });
+    tick = h('input', { type: 'checkbox', disabled: VIEW_ONLY, 'aria-label': 'Tick: ' + plainText(title) });
+    tick.addEventListener('change', () => { if (VIEW_ONLY) return; src.cb.checked = tick.checked; src.cb.dispatchEvent(new Event('change')); });
     mirrors.push({ tick, src, card });
   }
   const detail = c.md || (!inItem && it && it.detail);   // under its row, the row's detail is right above
@@ -5975,13 +6024,14 @@ function findingsView(sec, el, wraps) {
   // the toolbar: the filter, Accept recommended (the section's open decisions; not on earlier revisions or in compare
   // view), Expand all, ⋯ (Copy, Reset) and the view
   const fbtns = FFILTERS.map(([f, l]) => h('button', { type: 'button', 'data-f': f, onclick: () => setFindingsFilter(v, f) }, l, ' ', h('b')));
-  const acc = !OLD && !BASE ? h('button', { type: 'button', class: 'bp-btn ghost', hidden: true, title: 'Pick the starred option on every open decision in these findings', onclick: () => acceptRecs(scope) }) : null;
+  const acc = !OLD && !BASE && !VIEW_ONLY ? h('button', { type: 'button', class: 'bp-btn ghost', hidden: true, title: 'Pick the starred option on every open decision in these findings', onclick: () => acceptRecs(scope) }) : null;
   const expand = h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => expandFindings(v) });
   const act = (icon, label, run) => h('button', { type: 'button', role: 'menuitem', tabindex: '-1', onclick: () => { pop.close(true); run(); } }, ic(icon), h('span', { class: 'l' }, label));
+  // ⋯: Copy, and Reset but on a shared page (VIEW_ONLY: no answers to reset)
   const acts = [act('copy', 'Copy', () => copyText(tops.map(c => checklistMd(c)).join('\n'), 'Copied the findings as Markdown')),
-    act('reset', 'Reset', () => { if (confirm('Reset your answers to these findings?')) tops.forEach(resetChecklist); })];
+    !VIEW_ONLY && act('reset', 'Reset', () => { if (confirm('Reset your answers to these findings?')) tops.forEach(resetChecklist); })].filter(Boolean);
   const menu = h('div', { class: 'bd-selm act float', role: 'menu', 'aria-label': 'More', tabindex: '-1', hidden: true }, acts);
-  const moreBtn = h('button', { type: 'button', class: 'bp-btn ghost icon', 'aria-haspopup': 'menu', 'aria-expanded': 'false', 'aria-label': 'More: Copy, Reset', title: 'More',
+  const moreBtn = h('button', { type: 'button', class: 'bp-btn ghost icon', 'aria-haspopup': 'menu', 'aria-expanded': 'false', 'aria-label': VIEW_ONLY ? 'More: Copy' : 'More: Copy, Reset', title: 'More',
     onclick: () => menu.hidden ? pop.open(0) : pop.close(true) }, ic('more'));
   const moreW = h('div', { class: 'bd-exp' }, moreBtn, menu);
   const pop = menuPop(moreW, moreBtn, menu, () => acts, { float: true });
@@ -6194,8 +6244,8 @@ function mergedRow(x, extra, code) {
   const row = h('div', { class: `bp-cl-item bd-mrow ${kind}` + (x.choices ? ' has-choices' : ''), 'data-item': `${x.cid}/${it.id}` });
   let tick = null;
   if (!x.choices) {
-    tick = h('input', { type: 'checkbox', 'aria-label': 'Done: ' + plainText(it.text) });
-    tick.addEventListener('change', () => { x.cb.checked = tick.checked; x.cb.dispatchEvent(new Event('change')); });
+    tick = h('input', { type: 'checkbox', disabled: VIEW_ONLY, 'aria-label': 'Done: ' + plainText(it.text) });
+    tick.addEventListener('change', () => { if (VIEW_ONLY) return; x.cb.checked = tick.checked; x.cb.dispatchEvent(new Event('change')); });
   }
   const ok = x.choices ? h('span', { class: 'pv-ok' }, ic('tick'), h('span')) : null;
   const chev = h('button', { type: 'button', class: 'bd-mchev pv-chev', 'aria-expanded': 'false', 'aria-label': 'Open this finding' }, ic('down'));
@@ -7327,12 +7377,12 @@ async function printDoc() { if (PRINT.prepare) await PRINT.prepare(); print(); }
 // their own exports) as the revision shown (?rev=) in the theme the reader picked, if any (GET /__bluedoc/export).
 // HTML file: the file `build.py -o` writes, which opens anywhere without the server. PDF: that file's print view,
 // printed by the server's headless Chrome; while it's made, its item says so; without Chrome (501) the browser's print
-// dialog for this page, then and on every later pick. Secret gist: the share dialog (openShare). Only through
-// serve.py: an -o file, a page on file:// or a shared page in bluedoc.ai's viewer has no server, so the key isn't there.
+// dialog for this page, then and on every later pick. Share, the key before it, opens the share dialog (openShare).
+// Only through serve.py: an -o file, a page on file:// or a shared page in bluedoc.ai's viewer has no server, so the
+// key isn't there; neither key shows there.
 (() => {
   if (IS_DECK || IS_LISTING || !SERVED) return;
-  const EXPORTS = [['html', 'fcode', 'HTML file', 'One file that opens in any browser, no server'], ['pdf', 'doc', 'PDF', 'Print-ready, one file'],
-    ['gist', 'share', 'Secret gist', 'A link for the people you send it to']];
+  const EXPORTS = [['html', 'fcode', 'HTML file', 'One file that opens in any browser, no server'], ['pdf', 'doc', 'PDF', 'Print-ready, one file']];
   let pdfByPrint = false, pdfBusy = false;   // pdfByPrint: the server said it has no Chrome
   const url = format => {
     const q = new URLSearchParams({ path: location.pathname, format });
@@ -7346,7 +7396,6 @@ async function printDoc() { if (PRINT.prepare) await PRINT.prepare(); print(); }
   const busy = on => { pdfBusy = on; pdfItem.setAttribute('aria-busy', String(on)); pdfSub.textContent = on ? 'Making the PDF…' : EXPORTS[1][3]; };
   function printPage() { toast('No Chrome here for a PDF: choose Save as PDF in the print dialog'); printDoc(); }
   async function run(format) {
-    if (format === 'gist') return openShare();
     if (format === 'pdf' && pdfByPrint) return printPage();
     if (format === 'pdf' && pdfBusy) return toast('Still making the PDF…');
     if (format === 'pdf') { busy(true); toast('Making the PDF…'); }
@@ -7358,15 +7407,29 @@ async function printDoc() { if (PRINT.prepare) await PRINT.prepare(); print(); }
     } catch { toast('Couldn\'t export the page: the server didn\'t answer'); }
     finally { if (format === 'pdf') busy(false); }
   }
-  /* Secret gist (share.py; GET and POST /__bluedoc/share, POST /__bluedoc/unshare, all with the key): the doc as it is
-     now, in a secret gist on the reader's GitHub account, opened at bluedoc.ai/g/. Unshared, the dialog is the
-     confirm: the red notice (who answers for this share, who can read the link), what goes in, Share / Cancel. Shared:
-     the link with Copy (copied on sharing), Shared · rev B · when, the notice and what goes in again, Share again (the
-     accent while the doc is at a newer rev: the gist changes only then) and Stop sharing (a second press deletes the
-     gist). Replies don't come back through the gist: its reader sends Markdown, as from an exported file */
+  /* Share (share.py; GET and POST /__bluedoc/share, POST /__bluedoc/unshare, all with the key): the app bar's key
+     before Export, its icon and word (≤ 900 px its icon), opening the share dialog: the doc as it is now, in a secret
+     gist on the reader's GitHub account, opened at its bluedoc.ai/g/ link (the server makes it: share.link_for).
+     Unshared, the dialog is the confirm: the red notice (who answers for this share, who can read the link), what goes
+     in, Share / Cancel. Shared: the link with Copy (copied on sharing), Shared · rev B · when, the notice and what goes
+     in again, Share again (the accent while the doc is at a newer rev: the gist changes only then) and Stop sharing (a
+     second press deletes the gist). The key marks a shared doc with a dot in the accent, in the warning colour while
+     the doc is newer than its share (data-share shared|newer; GET …&brief=1 on load). Nothing comes back through the
+     gist: the shared page is view-only (VIEW_ONLY) */
   const NOTICE = ['bluedoc isn\'t responsible for this share method or for secrets leaked through GitHub gists.',
     'A secret gist is unlisted and not searchable, but anyone with the link can read it. Check the doc for secrets before you share.'];
   const SH = { dlg: null, view: null, busy: false, err: '', sure: false };
+  const shareKey = h('button', { type: 'button', class: 'bd-tbtn bd-shk', onclick: () => openShare() }, ic('share'), h('span', { class: 'w' }, 'Share'), h('span', { class: 'dot', 'aria-hidden': 'true' }));
+  // the key's mark from the share and the doc's rev now ({share, rev}: the route's answer)
+  function paintKey(v) {
+    const s = v && v.share, state = !s ? '' : v.rev !== s.rev ? 'newer' : 'shared';
+    if (state) shareKey.dataset.share = state; else delete shareKey.dataset.share;
+    const say = state === 'newer' ? `Shared at rev ${s.rev || '–'}; the doc is at rev ${v.rev || '–'} now: Share again to update the link`
+      : state ? `Shared as a secret gist at rev ${s.rev || '–'}` : 'Share a link to this doc: a secret GitHub gist that opens at bluedoc.ai';
+    shareKey.title = say;
+    shareKey.setAttribute('aria-label', state ? `Share (${say})` : 'Share');
+  }
+  paintKey(null);
   async function shareCall(method, path, body) {
     const headers = SERVER_KEY.headers({ 'Content-Type': 'application/json', 'X-Bluedoc': '1' });
     const r = await fetch(path, { method, cache: 'no-store', headers, body: body ? JSON.stringify(body) : undefined });
@@ -7416,7 +7479,7 @@ async function printDoc() { if (PRINT.prepare) await PRINT.prepare(); print(); }
     Object.assign(SH, { view: null, err: '', sure: false });
     paintShare();
     if (!SH.dlg.open) SH.dlg.showModal();
-    try { SH.view = await shareCall('GET', '/__bluedoc/share?' + new URLSearchParams({ path: location.pathname })); }
+    try { SH.view = await shareCall('GET', '/__bluedoc/share?' + new URLSearchParams({ path: location.pathname })); paintKey(SH.view); }
     catch (e) { SH.err = `Couldn't read this doc's share: ${e.message}`; }
     paintShare();
   }
@@ -7428,6 +7491,7 @@ async function printDoc() { if (PRINT.prepare) await PRINT.prepare(); print(); }
     try {
       const j = await shareCall('POST', '/__bluedoc/share', { path: location.pathname });
       SH.view = { share: j.share, rev: j.rev, contents: j.contents };
+      paintKey(SH.view);
       link = j.share.link;
     } catch (e) { SH.err = `Couldn't share: ${e.message}`; }
     SH.busy = false;
@@ -7442,14 +7506,17 @@ async function printDoc() { if (PRINT.prepare) await PRINT.prepare(); print(); }
     try {
       await shareCall('POST', '/__bluedoc/unshare', { path: location.pathname });
       SH.view = { ...SH.view, share: null };
+      paintKey(SH.view);
       SH.dlg.close();
       toast('Stopped sharing: the gist is deleted, the link no longer opens');
     } catch (e) { SH.err = `Couldn't stop sharing: ${e.message}`; }
     Object.assign(SH, { busy: false, sure: false });
     paintShare();
   }
-  const bar = document.querySelector('.bd-bar-r');
-  bar.insertBefore(wrap, bar.querySelector('.bd-docm') || themeBtn);
+  const bar = document.querySelector('.bd-bar-r'), at = bar.querySelector('.bd-docm') || themeBtn;
+  bar.insertBefore(shareKey, at);
+  bar.insertBefore(wrap, at);
+  shareCall('GET', '/__bluedoc/share?' + new URLSearchParams({ path: location.pathname, brief: '1' })).then(paintKey, () => {});   // no key yet: unmarked
 })();
 
 function renderBoard(b) {
@@ -7475,7 +7542,7 @@ function renderBoard(b) {
   const BPS = IS_SITE && Array.isArray(b.breakpoints) && b.breakpoints.some(Number.isInteger) ? b.breakpoints.filter(w => Number.isInteger(w) && w >= 240 && w <= 3840) : BREAKPOINTS;
   const BP_KEY = `bluedoc:bp:${docId}`, VIEW_KEY = `bluedoc:pageview:${docId}`;
   const VP = IS_SITE && b.viewport && typeof b.viewport === 'object' && !Array.isArray(b.viewport) ? b.viewport : null;
-  B.bpw = new Map((() => { try { return Object.entries(JSON.parse(localStorage.getItem(BP_KEY) || '{}')).filter(([, w]) => Number.isInteger(w) && w >= 240 && w <= 3840); } catch { return []; } })());
+  B.bpw = new Map((() => { try { return Object.entries(JSON.parse(store.get(BP_KEY) || '{}')).filter(([, w]) => Number.isInteger(w) && w >= 240 && w <= 3840); } catch { return []; } })());
   B.pageView = store.get(VIEW_KEY) === 'viewport' ? 'viewport' : 'full'; stage.dataset.pv = B.pageView;
   const viewSize = a => pageDims(B.bpw.get(a.id) || DEVICES.page[0], VP);   // a page's width and design viewport height
   const deviceSize = a => devOf(a) === 'page' ? viewSize(a) : abSize(a);   // what present and compare show
@@ -7586,7 +7653,7 @@ function renderBoard(b) {
     if (!quiet) bpChanged();
   }
   function bpChanged() {
-    try { localStorage.setItem(BP_KEY, JSON.stringify(Object.fromEntries(B.bpw))); } catch { /* no storage: this view only */ }
+    store.set(BP_KEY, JSON.stringify(Object.fromEntries(B.bpw)));
     relayout(); relive();
   }
   function setAllBp(w) { for (const x of B.frames.values()) setBp(x.a.id, w, true); bpChanged(); if (!B.touched) fit(true); }
@@ -7680,7 +7747,7 @@ function renderBoard(b) {
     for (const s of secsOf(x.a)) {
       const it = varItem(s); if (!it || !it.choices) continue;
       const v = { s, it, r: null, pick: h('span', { class: 'pk' }), hot: { hover: false, focus: false, flash: 0 } };
-      v.btns = it.choices.map((c, i) => h('button', { type: 'button', role: 'radio', 'data-id': c.id, disabled: OLD || !!BASE, title: c.label + (c.id === it.it.recommend ? ' (recommended)' : ''),
+      v.btns = it.choices.map((c, i) => h('button', { type: 'button', role: 'radio', 'data-id': c.id, disabled: OLD || !!BASE || VIEW_ONLY, title: c.label + (c.id === it.it.recommend ? ' (recommended)' : ''),
         onclick: e => { e.stopPropagation(); it.setChoice(c.id); flashVar(v); } }, String.fromCharCode(65 + i), c.id === it.it.recommend && ic('star')));
       v.el = h('div', { class: 'bd-var', hidden: true, role: 'radiogroup', 'aria-label': `${s.title}: versions` }, ic('variants'), h('span', { class: 'l' }, s.title), h('span', { class: 'rw' }, h('span', { class: 'ch' }, v.btns), v.pick));
       v.br = h('div', { class: 'bd-var-br', hidden: true, 'aria-hidden': 'true', title: `${s.title}: ${it.choices.length} versions` });
@@ -8366,14 +8433,16 @@ function renderBoard(b) {
   const fidSeg = h('div', { class: 'bd-sg', role: 'radiogroup', 'aria-label': 'Fidelity' }, [['drawn', 'As drawn', 'Each screen at the fidelity it was drawn in'], ['sketch', 'Sketch', 'Every screen hand-drawn: wobbly lines, hand font']].map(([v, l, t]) =>
     h('button', { type: 'button', role: 'radio', 'data-v': v, title: t, onclick: () => { B.sketch = v === 'sketch'; sendAll(viewMsg); paintTools(); } }, l)));
   // Theme: the brief's pick, as a toolbar menu (selectMenu); picking one here picks it there (else re-skins the frames)
-  const themeSel = themes.length ? selectMenu({ label: 'Theme', icon: 'palette', cls: 'th', title: 'Theme: the brief\'s pick; changing it here picks it there',
+  const themeSel = themes.length ? selectMenu({ label: 'Theme', icon: 'palette', cls: 'th', title: VIEW_ONLY ? 'Theme: the screens in each of the brief\'s themes' : 'Theme: the brief\'s pick; changing it here picks it there',
     options: themes.map(t => ({ value: t.id, label: t.label || t.id })), value: themes[0].id,
-    onPick: v => { const x = ITEMS['brief/theme']; if (x && x.setChoice && !OLD) x.setChoice(v); else { B.theme = v; paintTokens(); } } }) : null;
+    // a shared page (VIEW_ONLY) picks nothing: the pill re-skins the frames, as on an earlier revision
+    onPick: v => { const x = ITEMS['brief/theme']; if (x && x.setChoice && !OLD && !VIEW_ONLY) x.setChoice(v); else { B.theme = v; paintTokens(); } } }) : null;
   const motBtn = tbtn('pause', 'Pause animations', () => { B.paused = !B.paused; sendAll(viewMsg); paintTools(); }, { 'aria-pressed': 'false' });
   const redBtn = h('button', { type: 'button', class: 'bd-tbtn txt', 'aria-pressed': 'false', title: 'Reduced motion in every screen', onclick: () => { B.reduced = !B.reduced; sendAll(viewMsg); paintTools(); } }, 'Reduced');
   const presTip = deck.length ? 'Present the slides (← →, N: notes, Esc leaves)' : 'Present: one screen at a time (a tap follows its link; Backspace goes back; ← →, Esc leaves)';
-  // a presentation presents from its dock's Present (B.present); its toolbar has no Present, Variants or Flows
-  const presBtn = !IS_DECK && tbtn('present', presTip, () => present(B.sel));
+  // a presentation presents from its dock's Present (B.present); its toolbar has no Present, Variants or Flows; a shared
+  // one (VIEW_ONLY) has no dock, so Present sits in its toolbar
+  const presBtn = (!IS_DECK || VIEW_ONLY) && tbtn('present', presTip, () => present(B.sel));
   B.present = () => present(B.sel);
   // Export to… (here, a presentation's primary key, and in Present's bar): a menu of the deck's exports at the revision shown and the theme picked
   // (GET /__bluedoc/deck). HTML: one file that plays anywhere, offline (serve.py deck_html). PDF: one 16:9 page per
@@ -8442,7 +8511,7 @@ function renderBoard(b) {
   const tb = h('div', { class: 'bd-btb', role: 'toolbar', 'aria-label': 'Board' }, lpBtn, sep(),
     tbtn('fit', `Fit all ${SCREEN}s (0)`, () => fit(true)), tbtn('minus', 'Zoom out (−)', () => zoomBy(1 / 1.4)), zoomLbl, tbtn('plus', 'Zoom in (+)', () => zoomBy(1.4)),
     tbtn('target', `Focus the selected ${SCREEN} (F, or double-click it)`, () => focusSel()), sep(),
-    !IS_DECK && [presBtn, varBtn, flowsBtn, sep()], IS_SITE && [bpSeg, bpIn, sep(), viewSeg], (!IS_SITE || abs.some(a => !isLive(a))) && [IS_SITE && sep(), fidSeg],
+    !IS_DECK ? [presBtn, varBtn, flowsBtn, sep()] : presBtn && [presBtn, sep()], IS_SITE && [bpSeg, bpIn, sep(), viewSeg], (!IS_SITE || abs.some(a => !isLive(a))) && [IS_SITE && sep(), fidSeg],
     IS_SITE && [sep(), tabBtn], themeSel && [sep(), themeSel], expBtn && [sep(), expBtn]);
   // the motion keys (pause animations, Reduced) are hidden for now: built and painted, not shown; screens play their motion
   function paintTools() {
@@ -8861,8 +8930,8 @@ function renderBoard(b) {
     B.brief = h('div', { class: 'bd-sp-brief' }, tldr, main);
     lp = h('aside', { class: 'bd-lp', 'aria-label': Screens, inert: true }, head,
       h('div', { class: 'bd-lp-pane bd-lp-ui', id: 'bd-lp-screens' }, lpList, h('p', { class: 'hint' }, IS_SITE
-        ? 'Click a page to focus it, a section to go to it. Element (C) pins a comment on what you point at; a double-click on text changes it. Present, in the toolbar, is where you click through the pages.'
-        : `Click a ${SCREEN} to focus it. Double-click one on the board, or press F, to do the same; a double-click on its text changes the text.`)));
+        ? 'Click a page to focus it, a section to go to it.' + (VIEW_ONLY ? '' : ' Element (C) pins a comment on what you point at; a double-click on text changes it.') + ' Present, in the toolbar, is where you click through the pages.'
+        : `Click a ${SCREEN} to focus it. Double-click one on the board, or press F, to do the same${VIEW_ONLY ? '.' : '; a double-click on its text changes the text.'}`)));
     shell.prepend(lp);
     placeMeta();
     const pref = store.get(LP_KEY);
@@ -11298,7 +11367,7 @@ function buildRevTab() {
     h('button', { type: 'button', class: 'bp-btn primary', onclick: go }, ic('split'), 'Compare')));
   if (REVS.length > 1) body.prepend(cmpSec);
   body.append(sec('Revisions', h('p', { class: 'bd-rvr-note' }, REVS.length > 1
-    ? 'Earlier revisions are read-only: ticks, picks and comments made there aren\'t saved.'
+    ? VIEW_ONLY ? 'Earlier revisions show the doc as it was then.' : 'Earlier revisions are read-only: ticks, picks and comments made there aren\'t saved.'
     : 'Only one revision so far. When the agent revises this doc, earlier revisions and Compare appear here.'),
     h('ol', { class: 'bd-rvs' }, items)));
   return body;
@@ -11352,10 +11421,16 @@ if (REVS.length >= 1 && REVS[0].rev) {
       else if (e.key === 'k' || e.key === 'ArrowUp') { e.preventDefault(); gotoChg(-1); }
     });
   } else if (OLD) {
-    strip('old', ic('hist'), h('span', { class: 't' }, h('b', {}, revName(VIEW)), VIEW.date ? ` of ${VIEW.date}` : '', `: an earlier revision. The current one is ${CUR.rev}; nothing you change here is saved.`));
-    tray('Earlier revision', h('span', { class: 'lbl' }, ic('hist'), h('b', {}, revName(VIEW)), h('span', { class: 'x' }, '· read-only')),
-      textKey('', 'split', `Changes since ${VIEW.rev}`, `Compare ${VIEW.rev} with the current revision, ${CUR.rev}`, null, revUrl(CUR, VIEW)), groove(),
-      textKey('go', null, 'Go to current', `Open the current revision, ${CUR.rev}`, null, revUrl(CUR, null)));
+    const keys = [textKey('', 'split', `Changes since ${VIEW.rev}`, `Compare ${VIEW.rev} with the current revision, ${CUR.rev}`, null, revUrl(CUR, VIEW)), groove(),
+      textKey('go', null, 'Go to current', `Open the current revision, ${CUR.rev}`, null, revUrl(CUR, null))];
+    const say = h('span', { class: 't' }, h('b', {}, revName(VIEW)), VIEW.date ? ` of ${VIEW.date}` : '',
+      `: an earlier revision. The current one is ${CUR.rev}${VIEW_ONLY ? '.' : '; nothing you change here is saved.'}`);
+    // a shared page has no tray (VIEW_ONLY): the keys sit at the strip's end, as compare view's do
+    if (VIEW_ONLY) strip('old', ic('hist'), say, h('div', { class: 'bd-revtb', role: 'toolbar', 'aria-label': 'Earlier revision' }, keys));
+    else {
+      strip('old', ic('hist'), say);
+      tray('Earlier revision', h('span', { class: 'lbl' }, ic('hist'), h('b', {}, revName(VIEW)), h('span', { class: 'x' }, '· read-only')), keys);
+    }
   } else {
     // the current revision: tell returning readers it changed since their last visit
     const SEEN_KEY = `bp:${docId}:__seen`, seen = store.get(SEEN_KEY);
@@ -11404,7 +11479,7 @@ function approvePayload(note, files = []) {
 }
 const approveKey = APPROVABLE ? tipped(keyBtn('txt approve', 'check', 'Approve', {}, () => openApprove())) : null;
 function paintPlan() {
-  if (!APPROVABLE || OLD) return;
+  if (!APPROVABLE || OLD || VIEW_ONLY) return;
   paintAsk();
   const p = planState(), done = p.state === 'approved', revTxt = p.approvedRev ? ` · rev ${p.approvedRev}` : '';
   // approved, but the reader has picked differently since: the agent hears it only with Request changes
@@ -11509,7 +11584,8 @@ async function doApprove() {
 }
 // after a plan's, design's or website's Request changes, the header says so for this revision
 function changesSent(p) { if (APPROVABLE) { store.set(PLAN_KEY, JSON.stringify({ rev: p.rev, state: 'changes', at: p.at })); paintPlan(); } }
-if (!OLD && !BASE) {
+// none of these on a shared page (VIEW_ONLY): it has no tray, and sends nothing
+if (!OLD && !BASE && !VIEW_ONLY) {
   if (APPROVABLE) TRAY_END.push(approveKey);
   // a presentation: Present (BOARD.present: from the selected slide)
   else if (IS_DECK) { const k = tipped(keyBtn('txt present', 'present', 'Present', {}, () => BOARD && BOARD.present(), h('span', { class: 't' }, 'Present'))); k._tip = 'Present the slides from the selected one (← →, N: notes, Esc leaves)'; TRAY_END.push(k); }
@@ -11520,6 +11596,32 @@ if (!OLD && !BASE) {
   }
 }
 paintPlan();
+
+/* A shared page's Comments tab (VIEW_ONLY; MARKUP adds it): the items whose conversation the doc carries (the agent's
+   replies), read-only. A card: its checklist, its text and the last message; a click (Enter) opens the item, where the
+   whole conversation shows without a reply box. No tab when the doc carries none. Returns how many it lists. */
+function sharedThreads() {
+  const xs = Object.values(ITEMS).filter(x => x.messages().length);
+  if (!xs.length) return 0;
+  const open = x => {
+    const row = openItem(x);
+    if (BOARD && BOARD.reveal) BOARD.reveal(row);
+    row.scrollIntoView({ block: rowBlock(row), behavior: REDUCE ? 'auto' : 'smooth' });
+    ring(row);
+  };
+  const card = x => {
+    // where it lives: a PR's findings section as #<n> (pr-<n>, in mono), else its checklist's title
+    const pr = /^pr-(\d+)$/.exec(x.li.closest('section.bp-sec')?.id || ''), c = CHECKLISTS.find(c => c.b.id === x.cid);
+    const last = x.messages().at(-1), where = pr ? '#' + pr[1] : plain(c && c.b.title || x.cid);
+    return h('li', { class: 'bd-cs-ic', tabindex: '0', 'data-item': `${x.cid}/${x.it.id}`, 'aria-label': `${where} ${plain(x.it.text)}`,
+      onclick: () => open(x), onkeydown: e => { if (e.key === 'Enter') { e.preventDefault(); open(x); } } },
+      h('div', { class: 't' }, h('span', { class: 'pr' + (pr ? '' : ' nm'), title: where }, where), h('span', { class: 'tt', html: inline(x.it.text) })),
+      h('div', { class: 'm' }, h('b', {}, (last.who === 'agent' ? agentName() : 'Reader') + ':'), ' ', plain(last.md)),
+      h('div', { class: 's' }, last.rev != null && `rev ${last.rev}`));
+  };
+  SIDE.add({ id: 'comments', label: 'Comments', body: h('div', {}, h('div', { class: 'bd-cs-l' }, h('ol', { 'aria-label': 'Comments' }, xs.map(card)))) });
+  return xs.length;
+}
 
 /* ---------- change requests: pins, text selections and drawings on the page ---------- */
 // The bottom toolbar switches between View (the page as usual) and the comment tools: Element (mode `point`:
@@ -11686,6 +11788,8 @@ const MARKUP = (() => {
   const api = { all: () => JSON.parse(JSON.stringify(list)), payload, approvalNotes, annotate: () => null, setMode: () => false, paint: () => {}, flush: () => {}, markSent: () => {},
     comments: () => ({ open: false, available: false }), pinFrame: () => null, addFrame: () => null, relayout: () => {}, openIfWaiting: () => {}, cancelDraft: () => false };
   if (OLD || BASE) return api;
+  // a shared page (VIEW_ONLY) has no tray, tools, marks or composer; its Comments tab lists the doc's own threads
+  if (VIEW_ONLY) { const n = sharedThreads(); api.comments = () => ({ open: SIDE.shows('comments'), available: n > 0 }); return api; }
 
   /* what can be annotated, and the key of each */
   const shell = $('.bd-shell');
@@ -14062,7 +14166,7 @@ function boardEdits(B) {
   settle();
   B.paintDrafts();
 }
-if (BOARD && IS_DESIGN && !OLD && !BASE && BOARD.stage) boardEdits(BOARD);
+if (BOARD && IS_DESIGN && !OLD && !BASE && !VIEW_ONLY && BOARD.stage) boardEdits(BOARD);
 if (BOARD && BOARD.afterMarkup) BOARD.afterMarkup();   // a storelisting's drafts and right-panel tabs
 
 SIDE.start();
@@ -14087,19 +14191,19 @@ window.BP = {
   approvePayload: note => approvePayload(note),
   planState,
   docType: DOC_TYPE,
-  choose: (key, choice) => { const x = ITEMS[key]; if (!x || !x.setChoice) return false; x.setChoice(choice); return true; },
+  choose: (key, choice) => { const x = ITEMS[key]; if (!x || !x.setChoice || VIEW_ONLY) return false; x.setChoice(choice); return true; },
   // picks the recommendation on every open decision (in one checklist and its nested ones, if given); returns how many
   acceptRecommended: checklistId => {
-    if (OLD || BASE) return 0;
+    if (OLD || BASE || VIEW_ONLY) return 0;
     if (checklistId == null) return acceptRecs(CHECKLISTS);
     const c = CHECKLISTS.find(c => c.b.id === checklistId);
     return c ? acceptRecs(checklistScope(c)) : 0;
   },
-  setNote: (key, text) => { const x = ITEMS[key]; if (!x) return false; x.setNote(text || ''); return true; },
+  setNote: (key, text) => { const x = ITEMS[key]; if (!x || VIEW_ONLY) return false; x.setNote(text || ''); return true; },
   // an item's conversation, oldest first: [{who: 'you' | 'agent', rev, md, at?, files?, new}] (?rev=: as it stood then)
   thread: key => { const x = ITEMS[key]; return x ? x.messages().map(m => ({ who: m.who, rev: m.rev, md: m.md, ...(m.at ? { at: m.at } : {}), ...(m.files && m.files.length ? { files: m.files } : {}), new: isNewMsg(m) })) : null; },
-  // "Need more details" on a decision item, as its toggle would; false without choices, on ?rev=/?diff= or once sent
-  moreDetails: (key, on = true) => { const x = ITEMS[key]; if (!x || !x.choices || OLD || BASE || on && x.more === 'sent') return false; x.setMore(on); return true; },
+  // "Need more details" on a decision item, as its toggle would; false without choices, on ?rev=/?diff=, on a shared page or once sent
+  moreDetails: (key, on = true) => { const x = ITEMS[key]; if (!x || !x.choices || RO || on && x.more === 'sent') return false; x.setMore(on); return true; },
   openCode: (diffId, path, line) => openCode(diffId, path, line),
   openComment: (diffId, index) => { const d = DIFFS[diffId]; const c = d && d.order[index]; if (c) openComment(d, c, true); return !!c; },
   diffState: diffId => { const d = DIFFS[diffId]; if (!d) return null; const linked = d.comments.filter(c => c.item && ITEMS[c.item]);

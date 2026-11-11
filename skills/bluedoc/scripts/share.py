@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Share a doc as a secret GitHub gist, opened at https://bluedoc.ai/g/#<user>/<gist id> (serve.py share/unshare,
+"""Share a doc as a secret GitHub gist, opened at https://bluedoc.ai/g/<code> (link_for; serve.py share/unshare,
 POST /__bluedoc/share and /__bluedoc/unshare).
 
 The gist holds three text files (gh gist create refuses binaries), made from the doc as it is now:
@@ -21,12 +21,17 @@ token without the gist scope: 502, naming `gh auth login` or `gh auth refresh -s
 Shares are recorded in $BLUEDOC_HOME/shares.json (mode 0600), keyed by the doc's resolved path: {id, user, link,
 url, rev, at, files}. Never in the doc or its folder, so a committed doc doesn't carry its link.
 
+The link (link_for): https://bluedoc.ai/g/<code>, code the gist id's bytes in base64url without padding (a 32-hex id
+is 22 characters, a 20-hex one 14); an id that isn't even-length lowercase hex keeps the long form
+https://bluedoc.ai/g/#<user>/<id>. The viewer decodes the code back to the id.
+
 Every share shows NOTICE: bluedoc isn't responsible for this share method or for secrets leaked through GitHub
 gists; a secret gist is unlisted and not searchable, but anyone with the link can read it.
 Python 3.9+ standard library only.
 """
 from __future__ import annotations
 
+import base64
 import datetime as dt
 import json
 import os
@@ -90,12 +95,19 @@ def _save(data: dict) -> None:
 
 
 def record_of(doc_path: Path) -> dict | None:
-    """The doc's share ({id, user, link, url, rev, at, files}), or None when it isn't shared."""
+    """The doc's share ({id, user, link, url, rev, at, files}), or None when it isn't shared. Its link is link_for's
+    now, so a share recorded with an older link form shows the current one."""
     r = _load().get(str(Path(doc_path).resolve()))
-    return r if isinstance(r, dict) and isinstance(r.get("id"), str) else None
+    if not (isinstance(r, dict) and isinstance(r.get("id"), str)):
+        return None
+    return {**r, "link": link_for(str(r.get("user") or ""), r["id"])}
 
 
 def link_for(user: str, gist_id: str) -> str:
+    """The doc's bluedoc.ai link: https://bluedoc.ai/g/<base64url of the id's bytes, no padding> for an even-length
+    lowercase hex id (every GitHub gist id), else https://bluedoc.ai/g/#<user>/<id>."""
+    if re.fullmatch(r"(?:[0-9a-f]{2})+", gist_id):
+        return VIEWER + base64.urlsafe_b64encode(bytes.fromhex(gist_id)).rstrip(b"=").decode("ascii")
     return f"{VIEWER}#{user}/{gist_id}"
 
 

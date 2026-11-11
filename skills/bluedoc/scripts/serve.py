@@ -103,13 +103,14 @@ URLs: /                      home page: every doc under the registered folders, 
                              Chrome once BP.printReady(); a design's or website's: its brief, then a page per
                              artboard), the attachment <stem>.pdf; 501 without Chrome (BLUEDOC_CHROME). The app bar's
                              Export downloads both
-      /__bluedoc/share?path=<doc URL path>   GET (the X-Bluedoc header and the key): {share: the doc's share record
-                             ({id, user, link, url, rev, at, files}, kept in shares.json) or null, rev: its meta.rev,
-                             contents: what a share puts in}. POST {path} (the key): share it as a secret gist
-                             (share.py: created, later updated in place, so the link stays): {share, created, relinked,
-                             contents, files}; 413 for a page over 10 MB, 501 without gh, 502 when gh is signed out,
-                             lacks the gist scope or fails, 400 for a presentation or a storelisting. The app bar's
-                             Export → Secret gist
+      /__bluedoc/share?path=<doc URL path>[&brief=1]   GET (the X-Bluedoc header and the key): {share: the doc's share
+                             record ({id, user, link: https://bluedoc.ai/g/<code> (share.link_for), url, rev, at,
+                             files}, kept in shares.json) or null, rev: its meta.rev, contents: what a share puts in};
+                             brief: without contents (the Share key's mark on load). POST {path} (the key): share it as
+                             a secret gist (share.py: created, later updated in place, so the link stays): {share,
+                             created, relinked, contents, files}; 413 for a page over 10 MB, 501 without gh, 502 when
+                             gh is signed out, lacks the gist scope or fails, 400 for a presentation or a storelisting.
+                             The app bar's Share key
       POST /__bluedoc/unshare  {path} (the key): delete the doc's gist and forget it (also when GitHub has it no
                              more): {ok, removed: the record, or null when it wasn't shared}
       /__bluedoc/listing?path=<doc URL path>[&format=F&rev=B&platform=P&locale=L&job=J]   a storelisting (revision
@@ -1961,18 +1962,20 @@ def doc_export_pdf(html: str, chrome: str) -> bytes:
 
 # ---------- a doc shared as a secret gist (/__bluedoc/share, /__bluedoc/unshare, `share`, `unshare`; share.py) ----------
 
-def share_view(doc: Path) -> tuple[int, dict]:
+def share_view(doc: Path, brief: bool = False) -> tuple[int, dict]:
     """GET /__bluedoc/share: {share: the doc's share record or null, rev: its meta.rev now (null without), contents:
-    what a share puts in (share.contents)}. 400: a deck, a listing or an unreadable doc."""
+    what a share puts in (share.contents)}; brief (&brief=1, the app bar's Share key on load) leaves contents out, so
+    nothing but the doc's JSON is read. 400: a deck, a listing or an unreadable doc."""
     try:
         _, d = share.read_doc(doc)
-        what = share.contents(d, build.history_now(doc, d))
+        what = None if brief else share.contents(d, build.history_now(doc, d))
     except share.ShareError as e:
         return e.status, {"error": str(e)}
     except build.HistoryError as e:
         return 400, {"error": str(e)}
     rev = (d.get("meta") or {}).get("rev")
-    return 200, {"share": share.record_of(doc), "rev": str(rev) if rev not in (None, "") else None, "contents": what}
+    out = {"share": share.record_of(doc), "rev": str(rev) if rev not in (None, "") else None}
+    return 200, out if brief else {**out, "contents": what}
 
 
 def share_doc(doc: Path) -> tuple[int, dict]:
@@ -4455,7 +4458,7 @@ def make_handler(port: int, default_to: str):
                 doc = doc_for_url(q.get("path", ""))
                 if not doc:
                     return self.json(404, {"error": "not a doc under a registered folder"})
-                return self.json(*share_view(doc))
+                return self.json(*share_view(doc, q.get("brief") == "1"))
             if u.path == "/__bluedoc/wait":
                 # it consumes a reply: like the POSTs, only our own clients (a cross-site <img> or fetch can't set it)
                 if self.headers.get("X-Bluedoc") != "1":
