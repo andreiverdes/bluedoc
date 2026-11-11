@@ -3160,21 +3160,44 @@ def _serve():
     return serve
 
 
-def standalone_screens(doc: dict, doc_path: Path) -> dict[str, str] | None:
+def standalone_screens(doc: dict, doc_path: Path, rev: str | None = None) -> dict[str, str] | None:
     """{artboard id: its screen as a whole document with the kit inlined} for an -o file; None for a doc without
     a board. serve.py's wrap_screen fills the shell (an icons artboard: with serve.icon_fragment, the sheet with its
-    layers inline); unreadable screens are left out (validate reported them)."""
-    texts = read_screens(doc, doc_path)
+    layers inline); unreadable screens are left out (validate reported them). rev: an earlier revision's screens, as
+    its history entry recorded them (doc is that revision's), instead of the files now."""
+    if rev is None:
+        texts = read_screens(doc, doc_path)
+    else:
+        texts = {aid: screen_source(doc_path, aid, rev) for aid in screen_paths(doc, doc_path)}
     if not texts:
         return None
     serve = _serve()
     out = {}
     for a in _artboards(doc):
         aid = a["id"]
-        text = serve.icon_fragment(doc, Path(doc_path), aid) if is_icons(a) else texts.get(aid)
+        text = serve.icon_fragment(doc, Path(doc_path), aid, rev) if is_icons(a) else texts.get(aid)
         if text is not None and aid not in out:
             out[aid] = with_screen_csp(serve.wrap_screen(doc, Path(doc_path), aid, text, inline=True))
     return out
+
+
+def standalone(doc: dict, doc_path: Path, history: dict | None, template: str, *, rev: str | None = None,
+               pins: dict | None = None, problems: list[str] | None = None) -> str:
+    """The -o file: the page with its media and diffs inline and, for a board, each screen inline (standalone_screens),
+    reader state left to localStorage. history (sync_history's, or serve.py's in memory) gives it its revisions.
+    rev, an earlier revision in history: the file as -o wrote it at that revision (its doc, the revisions up to it, its
+    recorded screens and links); the current one, or None: the doc as it is. serve.py's GET /__bluedoc/export sends
+    it. ValueError: rev isn't in history."""
+    if rev is not None and rev != str((doc.get("meta") or {}).get("rev") or ""):
+        revs = (history or {}).get("revs") or []
+        at = next((i for i, e in enumerate(revs) if isinstance(e, dict) and e.get("rev") == rev), None)
+        if at is None:
+            raise ValueError(f"no revision {rev} in the doc's history")
+        doc, history = restore(history, revs[at]), {**history, "revs": revs[:at + 1]}
+    else:
+        rev = None
+    return build(doc, template, history, Path(doc_path).resolve().parent, doc_path, problems=problems,
+                 screens=standalone_screens(doc, doc_path, rev), pins=pins, rev=rev)
 
 
 BOARD_GEO = HERE.parent / "assets" / "board-geo.js"   # the board's router and layouts, inlined into design pages
@@ -3184,7 +3207,7 @@ BOARD_GEO_SLOT = "/*__BOARD_GEO__*/"
 def build(doc: dict, template: str, history: dict | None = None, media_base: Path | None = None,
           diff_path: Path | None = None, problems: list[str] | None = None, state: dict | None = None,
           screens: dict[str, str] | None = None, live: dict[str, int] | None = None,
-          snaps: dict[str, dict[str, dict[str, int]]] | None = None, pins: dict | None = None) -> str:
+          snaps: dict[str, dict[str, dict[str, int]]] | None = None, pins: dict | None = None, rev: str | None = None) -> str:
     """The page. media_base (the doc's folder) makes it standalone: media files become data: URIs.
     diff_path (the doc's JSON file) fills its diff refs, in the doc and in earlier revisions, and gives the current
     revision its links from the screen files; their problems go into problems, or to stderr when it is None. state is
@@ -3195,12 +3218,14 @@ def build(doc: dict, template: str, history: dict | None = None, media_base: Pat
     snapshot_index) lists the live pages' snapshots, which earlier revisions show; None: none. A page with a board
     or a canvas (in any revision it carries) gets assets/board-geo.js, the connector router, at the template's
     BOARD_GEO_SLOT; other pages get nothing there. pins (codepin.evaluate: serve.py's, or -o with --check-code) is how
-    each pinned evidence entry compares with its repo now; None (an -o file, the goldens) shows the pins without it."""
+    each pinned evidence entry compares with its repo now; None (an -o file, the goldens) shows the pins without it.
+    rev (standalone's earlier revision, which doc and history end at): the board's links are the ones its history
+    entry recorded, not the screen files' now."""
     title = (shown_title(doc, (state or {}).get("state")) or "bluedoc").replace("&", "&amp;").replace("<", "&lt;")
     if "__BLUEDOC_DOC__" not in template:
         raise SystemExit("template is missing the __BLUEDOC_DOC__ placeholder")
     board = board_of(doc)
-    links = board_links(doc, Path(diff_path)) if board is not None and diff_path is not None else None
+    links = board_links(doc, Path(diff_path)) if board is not None and diff_path is not None and rev is None else None
     hist = embed_history(history, doc, links)   # before expanding and inlining: it matches blocks by their JSON
     geo = ""
     if (board is not None or has_canvas(doc, hist)) and BOARD_GEO_SLOT in template:
@@ -5005,8 +5030,7 @@ def main(argv: list[str] | None = None) -> int:
             print(line, file=sys.stderr)
     if a.out:
         a.out.parent.mkdir(parents=True, exist_ok=True)
-        page = build(doc, a.template.read_text(encoding="utf-8"), history, a.doc.resolve().parent, a.doc,
-                     screens=standalone_screens(doc, a.doc), pins=pins)
+        page = standalone(doc, a.doc, history, a.template.read_text(encoding="utf-8"), pins=pins)
         a.out.write_text(page, encoding="utf-8")
         size = a.out.stat().st_size
         print(f"wrote {a.out} ({size // 1024} KB)", file=sys.stderr)

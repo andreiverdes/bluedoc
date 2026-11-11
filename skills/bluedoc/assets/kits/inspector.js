@@ -105,7 +105,8 @@
      what it never saw (a mockup's compiled Tailwind, styles a script adds or sets). innerHeight, visualViewport.height
      and the root's clientHeight answer pin. pin 0: Viewport, every value the frame's own. */
   let pin = 0, probed = -1, mo = null, reportT = 0, stirred = true;
-  const VU = /(?<!--bd-vh)(?<!--bd-vh,)(^|[^\w./+-])(-?)(\d*\.?\d+(?:e[+-]?\d+)?)[sld]?(vh|vb|vmin|vmax)\b(?![^{};]*\{)/gi, HAS_VU = new RegExp(VU.source, 'i');
+  // -{2}, not two hyphens after '<!': an inlined copy (an export's screens, serve.py raw_text) escapes a comment opener
+  const VU = /(?<!-{2}bd-vh)(?<!-{2}bd-vh,)(^|[^\w./+-])(-?)(\d*\.?\d+(?:e[+-]?\d+)?)[sld]?(vh|vb|vmin|vmax)\b(?![^{};]*\{)/gi, HAS_VU = new RegExp(VU.source, 'i');
   const pinUnits = s => s.replace(VU, (m, pre, sign, n, unit) => {
     const u = unit.toLowerCase(), v = u === 'vh' || u === 'vb' ? 'var(--bd-vh, 1vh)' : u.slice(1) + '(1vw, var(--bd-vh, 1vh))';
     return pre + 'calc(' + sign + n + ' * ' + v + ')';

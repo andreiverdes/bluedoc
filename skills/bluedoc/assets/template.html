@@ -122,16 +122,20 @@ button.bd-emo:hover, button.bd-emo[aria-expanded="true"] { background: var(--sel
 .bd-bar-r { margin-left: auto; display: flex; align-items: center; gap: 10px; flex: none; }
 .bd-overall { display: flex; align-items: center; gap: 8px; font: 500 12px var(--mono); color: var(--fg-muted); }
 .bd-overall .bp-bar { width: 72px; }
-/* a phone: the logo without its wordmark, closer keys, then a shorter meter, so the bar fits 320 px */
+/* a phone: the logo without its wordmark, closer keys, then a shorter meter, then (under 360 px, beside Export) the
+   meter's count alone, so the bar fits 320 px */
 @media (max-width: 600px) { .bd-mark svg.wm { display: none; } .bd-bar-r { gap: 6px; } }
 @media (max-width: 400px) { .bd-overall { gap: 6px; } .bd-overall .bp-bar { width: 40px; } }
+@media (max-width: 359px) { .bd-overall .bp-bar { display: none; } }
 .bd-ibtn { display: inline-grid; place-items: center; width: 30px; height: 30px; border: 0; border-radius: 9px; color: var(--fg-muted);
   background: linear-gradient(180deg, var(--key-top), var(--key-bot)); box-shadow: var(--shadow-key); transition: color .12s var(--ease), transform .09s; }
 .bd-ibtn:hover { color: var(--fg); }
 .bd-ibtn:active { transform: translateY(.5px); }
 /* the doc's ⋯ menu (Archive / Unarchive) and the archive strips under the app bar (ARC): they scroll with the page */
 .bd-docm .bd-selm { left: auto; right: 0; min-width: 168px; }
-.bd-bar:has(.bd-docm [aria-expanded="true"]) { z-index: 43; }   /* the open menu over the docked right panel */
+.bd-bar:has(:is(.bd-docm, .bd-docx) [aria-expanded="true"]) { z-index: 43; }   /* the open menu over the docked right panel */
+/* the app bar's Export (any doc but a presentation or a storelisting): Export to…'s key; narrow, its icon and chevron */
+@media (max-width: 900px) { .bd-docx .bd-tbtn.bd-expb > span { display: none; } .bd-docx .bd-tbtn.bd-expb { padding: 0 6px 0 8px; gap: 4px; } }
 .bd-revbar.arc { position: static; background: color-mix(in oklch, var(--fg) 6%, var(--canvas)); }
 .bd-revbar.arc.sug { background: color-mix(in srgb, var(--ok) 13%, var(--canvas)); }
 .bd-revbar.arc.sug .in > .bd-ic { color: var(--ok-fg); }
@@ -1942,6 +1946,24 @@ html.bd-resizing .bd-boardblk { transition: none; }
 html:not(.bd-lp-open) .bd-rh-left, html:not(.bd-sp-dock) .bd-rh-right { display: none; }
 .bd-board-ph { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 10px; background: var(--inset); color: var(--fg-subtle); font-size: 13px; }
 .bd-board-ph .bd-ic { width: 16px; height: 16px; flex: none; }
+/* a design's or website's print (html.bd-printb; renderBoard's PRINT): the header (the left panel's), the brief (the
+   right panel's Brief tab), then the print sheet, one artboard a page; the board, the panels' furniture and the right
+   panel's other tabs don't print. The sheet waits off-screen until then */
+.bd-psheet { position: fixed; top: 0; left: -100000px; width: 720px; pointer-events: none; }
+.bd-pab h2 { margin: 0 0 2px; font: 650 16pt/1.25 var(--sans); }
+.bd-pab .m { margin: 0 0 12px; font-size: 10pt; color: var(--fg-muted); }
+.bd-pab-box { position: relative; overflow: hidden; border-radius: 4px; box-shadow: 0 0 0 1px #ccd; background: #fff; }
+.bd-pab-box iframe { position: absolute; top: 0; left: 0; border: 0; transform-origin: 0 0; }
+.bd-pab-box.ph { width: auto !important; height: auto !important; padding: 20px; color: var(--fg-muted); font-size: 11pt; }
+@media print {
+  html.bd-printb, html.bd-printb body { height: auto !important; overflow: visible !important; }
+  html.bd-printb :is(.bd-boardblk, .bd-board-ph, .bd-lp-ui, .bd-rh-p, .bd-sp-h, .bd-sp-sec:not(.bd-sp-brief)) { display: none !important; }
+  html.bd-printb :is(.bd-lp, .bd-sp) { display: block !important; position: static !important; width: auto !important; height: auto !important; max-height: none !important;
+    transform: none !important; visibility: visible !important; background: none !important; box-shadow: none !important; }
+  html.bd-printb .bd-sp-brief { display: block !important; overflow: visible !important; padding: 0 !important; font-size: inherit; }
+  html.bd-printb .bd-psheet { position: static; width: auto; }
+  .bd-pab { break-before: page; break-inside: avoid; }
+}
 /* a board outside a design doc stays a block in the column */
 .bd-bwrap { position: relative; height: 560px; overflow: hidden; border-radius: 14px; box-shadow: var(--shadow-1); }
 .bd-boardblk .bd-bwrap { height: 100%; border-radius: 0; box-shadow: none; }
@@ -3437,7 +3459,8 @@ document.addEventListener('click', e => {
 const THEME_KEY = 'bluedoc:theme';
 const darkMQ = matchMedia('(prefers-color-scheme: dark)');
 function setTheme(t) { if (t) document.documentElement.dataset.theme = t; else delete document.documentElement.dataset.theme; }
-setTheme(store.get(THEME_KEY));
+// the reader's pick, else the one an export starts in (GET /__bluedoc/export&theme= puts it on <html>), else the system's
+setTheme(store.get(THEME_KEY) || document.documentElement.dataset.theme);
 const isDark = () => (document.documentElement.dataset.theme || (darkMQ.matches ? 'dark' : 'light')) === 'dark';
 
 /* ---------- app bar, header, rails ---------- */
@@ -7184,8 +7207,9 @@ function menuPop(wrap, btn, menu, rows, { start = dir => dir > 0 ? 0 : -1, typea
 // Export to…: a menu button (WAI-ARIA menu button) of exports [[format, icon, label, description]], run(format) on a
 // pick. A click, Enter, Space or ↓ opens it on its first item, ↑ on its last; ↑ ↓ Home End move, Enter or Space picks,
 // Esc closes it back to the button, Tab or a click elsewhere closes it (menuPop). up: it opens above the button. check:
-// an option under the exports ({label, get, set}), a menuitemcheckbox that a pick turns on or off and the menu stays open
-function exportMenu(exports, run, title, up, check) {
+// an option under the exports ({label, get, set}), a menuitemcheckbox that a pick turns on or off and the menu stays open.
+// word: the key's word (the app bar's Export)
+function exportMenu(exports, run, title, up, check, word = 'Export to…') {
   const items = exports.map(([f, i, l, d]) => h('button', { type: 'button', role: 'menuitem', tabindex: '-1', 'data-format': f, onclick: () => { pop.close(true); run(f); } },
     ic(i), h('span', { class: 't' }, h('b', {}, l), h('span', {}, d))));
   const box = check && h('button', { type: 'button', role: 'menuitemcheckbox', class: 'opt', tabindex: '-1', 'aria-checked': String(!!check.get()),
@@ -7194,7 +7218,7 @@ function exportMenu(exports, run, title, up, check) {
   const menu = h('div', { class: 'bd-expm' + (up ? ' up' : ''), role: 'menu', 'aria-label': 'Export to', hidden: true }, items, box && h('div', { class: 'sep', role: 'separator' }), box);
   if (box) items.push(box);
   const btn = h('button', { type: 'button', class: 'bd-tbtn bd-expb', 'aria-haspopup': 'menu', 'aria-expanded': 'false', title,
-    onclick: () => menu.hidden ? pop.open(0) : pop.close(true) }, ic('download'), h('span', {}, 'Export to…'), ic('down', 'cv'));
+    onclick: () => menu.hidden ? pop.open(0) : pop.close(true) }, ic('download'), h('span', {}, word), ic('down', 'cv'));
   const wrap = h('div', { class: 'bd-exp' }, btn, menu);
   const pop = menuPop(wrap, btn, menu, () => items, { onOpen: paintCheck });
   return wrap;
@@ -7249,6 +7273,48 @@ async function saveBlob(r, name) {
   document.body.append(link); link.click(); link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
+// an export's file name: the doc's file name without its suffix, then .format
+const exportName = (format, fallback) => `${decodeURIComponent(location.pathname.split('/').pop() || fallback).replace(/\.(bluedoc|blueprint)\.json$/i, '')}.${format}`;
+// the page's print: a board page (a design, a website) sets PRINT up (renderBoard): prepare() builds its print sheet
+// and resolves once the sheet's screens have drawn, ready() says whether they have. printDoc: print once it's ready
+const PRINT = { prepare: null, ready: () => true };
+async function printDoc() { if (PRINT.prepare) await PRINT.prepare(); print(); }
+// Export (the app bar, before ⋯ More): any doc but a presentation or a storelisting (their toolbars' Export to… has
+// their own exports) as the revision shown (?rev=) in the theme the reader picked, if any (GET /__bluedoc/export).
+// HTML file: the file `build.py -o` writes, which opens anywhere without the server. PDF: that file's print view,
+// printed by the server's headless Chrome; while it's made, its item says so; without Chrome (501) the browser's print
+// dialog for this page, then and on every later pick. Only through serve.py: an -o file or a page on file:// has no
+// server, so the key isn't there.
+(() => {
+  if (IS_DECK || IS_LISTING || !SERVED) return;
+  const EXPORTS = [['html', 'fcode', 'HTML file', 'One file that opens in any browser, no server'], ['pdf', 'doc', 'PDF', 'Print-ready, one file']];
+  let pdfByPrint = false, pdfBusy = false;   // pdfByPrint: the server said it has no Chrome
+  const url = format => {
+    const q = new URLSearchParams({ path: location.pathname, format });
+    if (OLD) q.set('rev', VIEW.rev);
+    if (document.documentElement.dataset.theme) q.set('theme', document.documentElement.dataset.theme);
+    return '/__bluedoc/export?' + q;
+  };
+  const wrap = exportMenu(EXPORTS, run, 'Export this page as one HTML file or a PDF', false, null, 'Export');
+  wrap.classList.add('bd-docx');
+  const pdfItem = wrap.querySelector('[data-format=pdf]'), pdfSub = pdfItem.querySelector('.t span');
+  const busy = on => { pdfBusy = on; pdfItem.setAttribute('aria-busy', String(on)); pdfSub.textContent = on ? 'Making the PDF…' : EXPORTS[1][3]; };
+  function printPage() { toast('No Chrome here for a PDF: choose Save as PDF in the print dialog'); printDoc(); }
+  async function run(format) {
+    if (format === 'pdf' && pdfByPrint) return printPage();
+    if (format === 'pdf' && pdfBusy) return toast('Still making the PDF…');
+    if (format === 'pdf') { busy(true); toast('Making the PDF…'); }
+    try {
+      const r = await fetch(url(format), { cache: 'no-store' });
+      if (r.status === 501 && format === 'pdf') { pdfByPrint = true; printPage(); return; }
+      if (!r.ok) { const j = await r.json().catch(() => null); toast(`Couldn't export the page: ${(j && j.error) || r.status}`); return; }
+      await saveBlob(r, exportName(format, 'doc'));
+    } catch { toast('Couldn\'t export the page: the server didn\'t answer'); }
+    finally { if (format === 'pdf') busy(false); }
+  }
+  const bar = document.querySelector('.bd-bar-r');
+  bar.insertBefore(wrap, bar.querySelector('.bd-docm') || themeBtn);
+})();
 
 function renderBoard(b) {
   const abs = boardAbs(b), themes = (Array.isArray(b.themes) ? b.themes : []).filter(t => t && typeof t.id === 'string');
@@ -7595,6 +7661,79 @@ function renderBoard(b) {
   const sendAll = fn => { for (const x of B.live) post(x, fn(x)); };
   // boardEdits: a message to each frame of artboard id that shows the current revision (the board's and Present's)
   B.postAb = (id, m) => { for (const x of B.live) if (x.a.id === id && x.role !== 'cmp' && !x.twin) post(x, typeof m === 'function' ? m(x) : m); };
+  /* print (⌘P, Export's PDF, Chrome printing an exported file): a design or website prints as its header, its brief,
+     then every artboard in board order on a page of its own: the title, the device and size, and the screen scaled to
+     fit PRINT_W × PRINT_H (a page as tall as its document, its picked versions shown), drawn in a frame of the sheet's
+     own (the board keeps frames for the screens in view only). The shown revision's screens: an export's inline ones,
+     else the screen route; a live page's snapshot, else (the current revision) its live page. PRINT.prepare builds the
+     sheet off-screen and resolves once every frame has drawn (its first `ready`, or 4 s after its load); the sheet goes
+     after the print. A print from the browser's menu builds it then, before the frames can draw. */
+  if (!IS_DECK && !IS_LISTING) {
+    const PRINT_W = 680, PRINT_H = 840;   // CSS px that fit Letter and A4 inside the print dialog's default margins
+    let sheet = null, recs = [], waiters = [];
+    root.classList.add('bd-printb');
+    const fitRec = r => {
+      const s = Math.min(1, PRINT_W / r.w, PRINT_H / r.h);
+      Object.assign(r.box.style, { width: Math.round(r.w * s) + 'px', height: Math.round(r.h * s) + 'px' });
+      if (r.fr) { r.fr.width = r.w; r.fr.height = r.h; r.fr.style.transform = `scale(${s})`; }
+    };
+    const allReady = () => !!sheet && recs.every(r => r.ready);
+    const done = r => { if (r.ready) return; r.ready = true; if (allReady()) { const ws = waiters; waiters = []; ws.forEach(f => f()); } };
+    const sendTo = (r, m) => { try { r.fr.contentWindow.postMessage(m, '*'); } catch { /* gone */ } };
+    function printRec(a) {
+      const dev = devOf(a), page = dev === 'page', srev = OLD ? VIEW.rev : null, at = srev ?? CUR.rev;
+      const [w, vh] = page ? viewSize(a) : abSize(a);
+      const snap = isLive(a) && SERVED ? snapOf(at, a.id, w) : null, proxied = isLive(a) && !snap && srev == null && !!liveUrl(a);
+      const attrs = isLive(a) ? (snap ? { src: snapUrl(a, at, snap) } : proxied ? { src: liveUrl(a), referrerpolicy: 'no-referrer' } : null)
+        : SCREENS ? (srev == null && typeof SCREENS[a.id] === 'string' ? { srcdoc: SCREENS[a.id] } : null) : SERVED ? { src: screenUrl(a, srev, B.theme) } : null;
+      const r = { a, w, h: vh, vh, page, ready: !attrs, box: h('div', { class: 'bd-pab-box' }), fr: null };
+      const what = page ? (isLive(a) ? (snap ? `Live page · snapshot of rev ${at}` : 'Live page') : 'Web page') : DEVICE_NAME[dev] || 'Screen';
+      const el = h('section', { class: 'bd-pab', 'data-ab': a.id }, h('h2', {}, a.title || a.id),
+        h('p', { class: 'm' }, [what, page ? `${w} px wide` : `${w} × ${vh}`, FIDELITY[a.fidelity]].filter(Boolean).join(' · ')), r.box);
+      if (!attrs) {
+        r.box.classList.add('ph');
+        r.box.textContent = isLive(a) ? liveWhy(a, srev) || 'A live page: open this doc through serve.py, with the dev server running.'
+          : SCREENS ? 'An export shows the current revision\'s screens only.' : `Open this page through serve.py to see the ${SCREEN}.`;
+        return [r, el];
+      }
+      r.fr = h('iframe', { sandbox: proxied ? LIVE_SANDBOX : SCREEN_SANDBOX, tabindex: '-1', title: `${SCREEN[0].toUpperCase()}${SCREEN.slice(1)}: ${a.title || a.id}`,
+        name: page ? `bd-page full ${vh}` : null, ...attrs });
+      r.fr.addEventListener('load', () => {
+        for (const m of [tokensMsg(), { bd: 'view', sketch: B.sketch || a.fidelity === 'sketch', reduced: true, paused: false }, page && { bd: 'page', full: true, vh }, ...siteMsgs({ a })]) if (m) sendTo(r, m);
+        setTimeout(() => done(r), 4000);
+      });
+      r.box.append(r.fr); fitRec(r);
+      return [r, el];
+    }
+    // a page counts as drawn once its inspector has pinned the viewport height (Full page) and measured the document,
+    // as the board's takeHeight reads it; it grows with what loads after
+    addEventListener('message', e => {
+      const r = recs.find(y => y.fr && e.source === y.fr.contentWindow), d = e.data;
+      if (!r || !d || typeof d !== 'object' || d.bd !== 'ready') return;
+      if (r.page) {
+        if (d.vh !== r.vh || !Number.isFinite(d.h) || d.h <= 0) return;
+        r.h = clamp(Math.round(d.h), r.vh, PAGE_CAP); fitRec(r);
+      }
+      done(r);
+    });
+    function build() {
+      const made = abs.map(printRec);
+      recs = made.map(([r]) => r);
+      sheet = h('div', { class: 'bd-psheet', 'aria-hidden': 'true', inert: true }, made.map(([, el]) => el));
+      document.body.append(sheet);
+    }
+    PRINT.prepare = () => {
+      if (!sheet) build();
+      return allReady() ? Promise.resolve() : new Promise(res => { waiters.push(res); setTimeout(res, 20000); });
+    };
+    PRINT.ready = allReady;
+    addEventListener('beforeprint', () => { if (!sheet) build(); });
+    addEventListener('afterprint', () => { if (sheet) { sheet.remove(); sheet = null; recs = []; } });
+    // ⌘P / Ctrl+P: the sheet first, then the print dialog
+    document.addEventListener('keydown', e => {
+      if ((e.metaKey || e.ctrlKey) && !e.altKey && !e.shiftKey && (e.key === 'p' || e.key === 'P')) { e.preventDefault(); printDoc(); }
+    });
+  }
   function paintWarn(x) {
     const s = x.fr && x.snap, ext = s && s.external;
     const why = [x.fallback && `${x.fallback} not found: showing the plain kit`, x.navs && 'This screen tried to navigate away from its frame',
@@ -8136,8 +8275,7 @@ function renderBoard(b) {
         : await fetch(deckUrl(format), { cache: 'no-store' });
       if (r.status === 501 && format === 'pdf') { pdfByPrint = true; if (edits) toast(NO_PDF_EDITS); else printDeck(); return; }
       if (!r.ok) { const j = await r.json().catch(() => null); toast(`Couldn't export the deck: ${(j && j.error) || r.status}`); return; }
-      const stem = decodeURIComponent(location.pathname.split('/').pop() || 'deck').replace(/\.(bluedoc|blueprint)\.json$/i, '');
-      await saveBlob(r, `${stem}.${format}`);
+      await saveBlob(r, exportName(format, 'deck'));
     } catch { toast('Couldn\'t export the deck: the server didn\'t answer'); }
     finally { if (format === 'pdf') pdfBusy = false; }
   }
@@ -13796,6 +13934,9 @@ MARKUP.openIfWaiting();   // after the panel's restored state: something waiting
 /* ---------- public API (for tests and agents) ---------- */
 window.BP = {
   doc: DOC,
+  // whether the page's print has drawn; on a design or website it builds the print sheet first (PRINT.prepare), so
+  // Chrome printing this page (serve.py's PDF export) polls it before Page.printToPDF
+  printReady: () => { if (PRINT.prepare) PRINT.prepare(); return PRINT.ready(); },
   canvases: CANVASES,
   zoomTo: (canvasId, nodeKey) => focusNode(`${canvasId}/${nodeKey}`),
   fit: canvasId => CANVASES[canvasId] && CANVASES[canvasId].fit(false),

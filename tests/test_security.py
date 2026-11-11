@@ -134,15 +134,20 @@ class ScreenSandbox(unittest.TestCase):
     """Design screens and store shots are LLM HTML: the page frames them with sandbox="allow-scripts" only, and the screen route
     repeats the sandbox in its CSP, so a screen opened on its own runs with the same opaque origin. A website's live
     page alone keeps allow-same-origin, and only while it loads from its proxy's own port, never this page's origin: an
-    earlier revision's snapshot of it comes from this server's screen route, sandboxed as a screen."""
+    earlier revision's snapshot of it comes from this server's screen route, sandboxed as a screen. A design's print
+    sheet frames every artboard the same way: a live page's snapshot as a screen, its proxy only while it is current."""
 
     def test_every_screen_frame_is_sandboxed_with_scripts_only(self) -> None:
         t = template_text()
         self.assertEqual(dict(re.findall(r"\b(SCREEN_SANDBOX|LIVE_SANDBOX) = '([^']*)'", t)),
                          {"SCREEN_SANDBOX": "allow-scripts", "LIVE_SANDBOX": "allow-scripts allow-same-origin"})
-        # the board's frames, and a storelisting's shots on its platform pages
-        self.assertEqual(re.findall(r"sandbox['\"]?\s*[=:,]\s*([^,}]+)", t), ["proxied ? LIVE_SANDBOX : SCREEN_SANDBOX", "SCREEN_SANDBOX"],
+        # the board's frames, a design's print sheet, and a storelisting's shots on its platform pages
+        self.assertEqual(re.findall(r"sandbox['\"]?\s*[=:,]\s*([^,}]+)", t),
+                         ["proxied ? LIVE_SANDBOX : SCREEN_SANDBOX", "proxied ? LIVE_SANDBOX : SCREEN_SANDBOX", "SCREEN_SANDBOX"],
                          "a frame the template sandboxes some other way")
+        self.assertIn("proxied = isLive(a) && !snap && srev == null && !!liveUrl(a);", t, "the print sheet frames a snapshot with allow-same-origin")
+        self.assertIn("const attrs = isLive(a) ? (snap ? { src: snapUrl(a, at, snap) } : proxied ? { src: liveUrl(a)", t,
+                      "the print sheet's live frame loads something other than its proxy or its snapshot")
         self.assertIn("const live = isLive(x.a), page = devOf(x.a) === 'page', snap = live && rev != null && SERVED ? snapOf(rev, x.a.id, viewSize(x.a)[0]) : null;", t)
         self.assertIn("const attrs = live ? (rev != null ? (snap ? { src: snapUrl(x.a, rev, snap) } : null) : liveUrl(x.a) ? { src: liveUrl(x.a)", t,
                       "a live frame loads something other than its proxy or its snapshot")

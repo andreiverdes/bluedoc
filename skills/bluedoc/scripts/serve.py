@@ -89,6 +89,15 @@ URLs: /                      home page: every doc under the registered folders, 
                              format, theme, drafts} (the key): the same, with the page's unapplied text edits and
                              deletions in the slides (Include unapplied edits; deck_drafts). build.py --deck
                              writes the html and pdf files, without drafts (the CLI has no reader state)
+      /__bluedoc/export?path=<doc URL path>[&rev=B&theme=T&format=F]   any other doc (revision B's) exported, a read
+                             as the page is, no key; 400 for a presentation or a storelisting (their own exports above
+                             and below), a path that is no doc here, an unknown revision or format. html (the default):
+                             the file `build.py -o` writes (build.standalone: media, diffs and a board's screens inline,
+                             a website's live pages as placeholders), the attachment <stem>.html; theme light or dark
+                             is the page's theme it starts in. pdf: that file's print view (doc_export_pdf: headless
+                             Chrome once BP.printReady(); a design's or website's: its brief, then a page per
+                             artboard), the attachment <stem>.pdf; 501 without Chrome (BLUEDOC_CHROME). The app bar's
+                             Export downloads both
       /__bluedoc/listing?path=<doc URL path>[&format=F&rev=B&platform=P&locale=L&job=J]   a storelisting (revision
                              B's) exported, a read, no key, nothing written beside the doc; 400 for any other doc type.
                              zip (the default): the fastlane layout of every shot and asset at its store size and
@@ -1875,6 +1884,69 @@ def deck_pdf(html: str, chrome: str) -> bytes:
             return ch.print_pdf(f.as_uri() + "#print")
 
 
+# ---------- any other doc as one HTML file or a PDF (GET /__bluedoc/export) ----------
+# html: build.standalone, the file `build.py -o` writes (media, diffs and a board's screens inline; a website's live
+# pages are placeholders, as they need the server). pdf: that file's print view (@media print), printed by headless
+# Chrome. A presentation and a storelisting have exports of their own (/__bluedoc/deck, /__bluedoc/listing).
+
+EXPORT_FORMATS = ("html", "pdf")
+EXPORT_THEMES = ("light", "dark")   # the page's theme the file starts in; anything else: the reader's system's
+EXPORT_OWN = {"presentation": "a presentation exports from its board's Export to… (/__bluedoc/deck)",
+              "storelisting": "a storelisting exports from its Export to… (/__bluedoc/listing)"}
+# the page has drawn (window.BP, its public API, comes at the end of its script), so has its print (BP.printReady: a
+# design's or website's print sheet, every artboard's screen drawn) and its fonts have loaded
+EXPORT_PRINT_READY = ("document.readyState === 'complete' && !!window.BP && window.BP.printReady() && "
+                      "(!document.fonts || document.fonts.status === 'loaded')")
+EXPORT_PDF_MARGIN = 0.4   # inches on every side, as the print dialog's default margins
+# a design's print sheet is a sandboxed srcdoc frame per artboard; with each in a process of its own (Chrome's
+# IsolateSandboxedIframes) headless printing draws a few of them without their backgrounds and leaves the rest blank.
+# In the page's process they print whole; the sandbox (an opaque origin, scripts only) holds either way
+EXPORT_CHROME_FLAGS = ("--disable-features=IsolateSandboxedIframes",)
+
+
+class ExportError(ValueError):
+    """Why a doc can't be exported as a standalone page."""
+
+
+def doc_export_html(doc: dict, doc_path: Path, rev: str | None = None, theme: str | None = None) -> str:
+    """The doc as `build.py -o` writes it (build.standalone), from the doc on disk and its history in memory, as the
+    page shows it (the history file isn't written); rev: an earlier revision's file. theme (EXPORT_THEMES): the page's theme the
+    file starts in, until its reader picks one; else the reader's system's. ExportError: a presentation or a
+    storelisting, an unreadable history, an unknown revision."""
+    meta = doc.get("meta") if isinstance(doc.get("meta"), dict) else {}
+    kind = build.doc_type(meta)
+    if kind in EXPORT_OWN:
+        raise ExportError(EXPORT_OWN[kind])
+    history = None
+    if meta.get("rev"):
+        try:
+            history = build.load_history(build.history_path(doc_path))
+        except (OSError, ValueError) as e:
+            raise ExportError(f"cannot read {build.history_path(doc_path).name}: {e}") from e
+        log = build.record(history, doc, doc_path)
+        if log.startswith("ERROR"):
+            raise ExportError(log)
+    try:
+        page = build.standalone(doc, doc_path, history, build.TEMPLATE.read_text(encoding="utf-8"), rev=rev, problems=[])
+    except ValueError as e:
+        raise ExportError(str(e)) from e
+    if theme in EXPORT_THEMES:
+        page = re.sub(r"<html\b", f'<html data-theme="{theme}"', page, count=1)
+    return page
+
+
+def doc_export_pdf(html: str, chrome: str) -> bytes:
+    """A doc's file (doc_export_html) as a PDF: headless Chrome (EXPORT_CHROME_FLAGS) opens it over file:// and prints
+    its print view (@media print; a design's or website's: every artboard a page) once it has drawn
+    (EXPORT_PRINT_READY), backgrounds printed, at the default paper size with EXPORT_PDF_MARGIN. chrome: find_chrome's
+    path. RuntimeError or OSError: Chrome failed."""
+    with tempfile.TemporaryDirectory(prefix="bluedoc-export-") as d:
+        f = Path(d) / "doc.html"
+        f.write_text(html, encoding="utf-8")
+        with HeadlessChrome(chrome, EXPORT_CHROME_FLAGS) as ch:
+            return ch.print_pdf(f.as_uri(), ready=EXPORT_PRINT_READY, margin=EXPORT_PDF_MARGIN)
+
+
 # ---------- a storelisting exported (GET /__bluedoc/listing, build.py --listing) ----------
 # zip: the fastlane layout (listing.export_plan) of every shot and asset at its store size, rendered by headless Chrome
 # from its screen file, each PNG made 24-bit RGB and read back before it goes in, with manifest.json. folders: the same
@@ -2355,8 +2427,9 @@ HEAD_TAGS = (re.compile(rb"<head\b[^>]*>", re.I), re.compile(rb"<html\b[^>]*>", 
 # Viewport, where the fallback is the unit itself (never rewritten again: the lookbehinds, so pinning is idempotent).
 # kits/inspector.js applies the same rewrite to what the proxy never sees (a screen's compiled Tailwind, styles set by
 # script); keep the two alike. A number right after '/' or '+' is never a unit: that is base64 (a data: URI's font or
-# image, which a snapshot inlines), where "/5vh+" would otherwise match.
-VIEWPORT_UNIT = re.compile(r"(?<!--bd-vh)(?<!--bd-vh,)(^|[^\w./+-])(-?)(\d*\.?\d+(?:e[+-]?\d+)?)[sld]?(vh|vb|vmin|vmax)\b(?![^{};]*\{)", re.I)
+# image, which a snapshot inlines), where "/5vh+" would otherwise match. -{2}, not two hyphens after '<!': an inlined
+# inspector (raw_text) would get its comment opener escaped and no longer parse.
+VIEWPORT_UNIT = re.compile(r"(?<!-{2}bd-vh)(?<!-{2}bd-vh,)(^|[^\w./+-])(-?)(\d*\.?\d+(?:e[+-]?\d+)?)[sld]?(vh|vb|vmin|vmax)\b(?![^{};]*\{)", re.I)
 STYLE_ELEMENT = re.compile(r"(<style\b[^>]*>)(.*?)(</style\s*>)", re.I | re.S)
 STYLE_ATTR = re.compile(r"""(\sstyle\s*=\s*)("[^"]*"|'[^']*')""", re.I)
 # a dev server's CSS served as a JS module (Vite: /src/x.css, an Astro component's ?astro&type=style&lang.css)
@@ -2793,16 +2866,17 @@ def chrome_version(path: str) -> tuple[str | None, str | None]:
 
 
 class HeadlessChrome:
-    """Headless Chrome with a throwaway profile, driven over its DevTools WebSocket (a flat session per page)."""
+    """Headless Chrome with a throwaway profile, driven over its DevTools WebSocket (a flat session per page). flags:
+    more command-line switches (doc_export_pdf's EXPORT_CHROME_FLAGS)."""
 
-    def __init__(self, path: str) -> None:
+    def __init__(self, path: str, flags: tuple[str, ...] = ()) -> None:
         self.profile = Path(tempfile.mkdtemp(prefix="bluedoc-chrome-"))
         self.sock: socket.socket | None = None
         self.buf, self.seq = bytearray(), 0
         self.tab: tuple[str, str] | None = None   # render_shot's page: (target id, session id), kept between shots
         self.navs = 0
         self.proc = subprocess.Popen([path, "--headless=new", f"--user-data-dir={self.profile}", "--remote-debugging-port=0",
-                                      "--no-first-run", "--no-default-browser-check", "about:blank"],
+                                      "--no-first-run", "--no-default-browser-check", *flags, "about:blank"],
                                      stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         try:
             active, deadline = self.profile / "DevToolsActivePort", time.monotonic() + 30
@@ -2930,10 +3004,10 @@ class HeadlessChrome:
             raise RuntimeError("the inspector returned no snapshot")
         return got["html"], int(got.get("external") or 0)
 
-    def print_pdf(self, url: str) -> bytes:
-        """The page at url (a deck file at #print) as a PDF once it says it is ready (html[data-print-ready]), at its
-        CSS page size (@page), backgrounds printed, no margins. The page's own print() does nothing here, so the
-        view it set up for printing stays up."""
+    def print_pdf(self, url: str, ready: str = "document.documentElement.dataset.printReady === '1'", margin: float = 0) -> bytes:
+        """The page at url (a deck or listing file at #print) as a PDF once it says it is ready (ready, a JS expression:
+        by default html[data-print-ready]), at its CSS page size (@page), backgrounds printed, margin inches on every
+        side. The page's own print() does nothing here, so the view it set up for printing stays up."""
         target = self.call("Target.createTarget", {"url": "about:blank"})["targetId"]
         s = self.call("Target.attachToTarget", {"targetId": target, "flatten": True})["sessionId"]
         try:
@@ -2943,12 +3017,12 @@ class HeadlessChrome:
             self.call("Page.addScriptToEvaluateOnNewDocument", {"source": "window.print = () => {};"}, s)
             self.call("Page.navigate", {"url": url}, s)
             deadline = time.monotonic() + 60
-            while not self.eval(s, "document.documentElement.dataset.printReady === '1'"):
+            while not self.eval(s, ready):
                 if time.monotonic() > deadline:
-                    raise RuntimeError("the slides did not load")
+                    raise RuntimeError("the page did not load")
                 time.sleep(0.1)
-            got = self.call("Page.printToPDF", {"printBackground": True, "preferCSSPageSize": True, "marginTop": 0,
-                                                "marginBottom": 0, "marginLeft": 0, "marginRight": 0}, s)
+            got = self.call("Page.printToPDF", {"printBackground": True, "preferCSSPageSize": True, "marginTop": margin,
+                                                "marginBottom": margin, "marginLeft": margin, "marginRight": margin}, s)
         finally:
             self.call("Target.closeTarget", {"targetId": target})
         return base64.b64decode(got["data"])
@@ -4000,6 +4074,38 @@ def make_handler(port: int, default_to: str):
             plain = re.sub(r'[^A-Za-z0-9._ -]', "_", name)
             return self.send(200, body, ctype, headers={"Content-Disposition": f"attachment; filename=\"{plain}\"; filename*=UTF-8''{quote(name)}"})
 
+        def doc_export(self, q: dict) -> None:
+            """GET /__bluedoc/export?path=<doc URL path>[&rev=R][&theme=T][&format=F]: any doc but a presentation or a
+            storelisting exported (F: html, the default, doc_export_html: the file `build.py -o` writes; pdf,
+            doc_export_pdf; as downloads named <stem>.html or .pdf). A read: no key, as for the doc's page. 400 for a
+            path that is no doc here, a presentation or a storelisting (their own exports), an unknown revision or format;
+            501 for a PDF without Chrome."""
+            fmt = q.get("format") or "html"
+            if fmt not in EXPORT_FORMATS:
+                return self.json(400, {"error": f"format: one of {', '.join(EXPORT_FORMATS)}"})
+            doc_path = doc_for_url(q.get("path", ""))
+            if not doc_path:
+                return self.json(400, {"error": "not a doc under a registered folder"})
+            try:
+                doc = json.loads(doc_path.read_text(encoding="utf-8"))
+                if not isinstance(doc, dict):
+                    raise ExportError("the doc is not a JSON object")
+                html = doc_export_html(doc, doc_path, q.get("rev") or None, q.get("theme") or None)
+            except (OSError, ValueError) as e:   # ExportError is a ValueError
+                return self.json(400, {"error": str(e)})
+            body, ctype = html, "text/html; charset=utf-8"
+            if fmt == "pdf":
+                chrome = find_chrome()
+                if not chrome:
+                    return self.json(501, {"error": DECK_PDF_NEEDS})
+                try:
+                    body, ctype = doc_export_pdf(html, chrome), "application/pdf"
+                except (OSError, RuntimeError) as e:
+                    return self.json(500, {"error": f"Chrome couldn't print the doc: {e}"})
+            name = f"{build.doc_stem(doc_path)}.{fmt}"
+            plain = re.sub(r'[^A-Za-z0-9._ -]', "_", name)
+            return self.send(200, body, ctype, headers={"Content-Disposition": f"attachment; filename=\"{plain}\"; filename*=UTF-8''{quote(name)}"})
+
         def listing_export(self, q: dict) -> None:
             """GET /__bluedoc/listing?path=<doc URL path>[&format=zip|folders|html|pdf|print][&rev=R][&platform=P][&locale=L]
             [&job=ID]: the storelisting exported, as the attachment listing_filename names (zip: fastlane, folders: plain
@@ -4242,6 +4348,8 @@ def make_handler(port: int, default_to: str):
                 return self.listing_export(q)
             if u.path == "/__bluedoc/deck":
                 return self.deck(q)
+            if u.path == "/__bluedoc/export":
+                return self.doc_export(q)
             if u.path == "/__bluedoc/state":
                 doc = doc_for_url(q.get("path", ""))
                 if not doc:
