@@ -445,6 +445,7 @@ class ItemRequests(ChromePage):
 REVIEW = "acme-review-findings.bluedoc.json"   # sections pr-412 and pr-415: checklist t412 + diff diff-412, t415 + diff-415
 TIER_ROW = "document.querySelector('#item-t412-tier-boundary')"   # its comment (index 0) sits on src/pricing/tiers.ts:17
 # a finding's parts that show, in order (Checklist's li or a Merged row)
+OPEN = "(li => { if (!li.classList.contains('open')) li.querySelector('.bp-cl-head').click(); })"   # a finding opened, if it isn't
 PARTS = "(r => [...r.children].filter(e => e.checkVisibility()).map(e => ['bp-cl-row', 'pv-more', 'bd-dets', 'bd-mcode', 'bp-opts', 'bp-convo', 'bp-note', 'pv-pend'].find(c => e.classList.contains(c))))"
 
 
@@ -469,13 +470,13 @@ class FindingsView(ChromePage):
         a = self.open(self.url)
         self.assertEqual(a.ev("[BP.findingsView('pr-412'), BP.findingsView('pr-415'), BP.findingsView('summary')]"), ["merged", "merged", None])
         self.assertEqual(self.shows(a, "#pr-412 .bd-mv", "#cl-t412", "#diff-diff-412", "#pr-412 > .bd-ftb"), [True, False, False, True])
-        self.assertTrue(a.ev("document.querySelector('#pr-412 > .bp-lead').nextElementSibling.matches('.bd-ftb')"), "the toolbar is not right under the lead")
+        self.assertTrue(a.ev("document.querySelector('#pr-412 > .bd-prhd').nextElementSibling.matches('.bd-ftb')"), "the toolbar is not right under the header")
         self.assertFalse(a.ev("!!document.querySelector('#summary .bd-ftb')"), "a section without both got the toolbar")
         self.assertEqual(a.ev("[...document.querySelectorAll('#pr-412 .bd-ftb > .bd-fvseg:not(.bd-ffilt) button')].map(b => [b.textContent, !!b.querySelector('.bd-ic'), b.offsetHeight])"),
                          [["Checklist", True, 28], ["Diff", True, 28], ["Merged", True, 28]])
-        # one toolbar: the filter, Accept recommended, Expand all, ⋯ and the views; no checklist header, no view bar
+        # one toolbar: the filter, Accept recommended, Collapse all (every finding is unanswered, so open), ⋯ and the views; no checklist header, no view bar
         self.assertEqual(a.ev("[...document.querySelector('#pr-412 > .bd-ftb').children].filter(e => e.checkVisibility()).map(e => e.matches('.bd-ffilt') ? 'filter' : e.matches('.bd-fvseg') ? 'views' : e.matches('.bd-exp') ? 'more' : e.textContent)"),
-                         ["filter", "", "Accept recommended (7)", "Expand all", "more", "views"])
+                         ["filter", "", "Accept recommended (7)", "Collapse all", "more", "views"])
         self.assertEqual(a.ev("document.querySelectorAll('#pr-412 .bp-cl-h, .bd-fvbar, .bd-fvhint').length"), 0)
         a.ev("document.querySelector('#pr-412 .bd-ftb [data-v=diff]').click()")
         # each section has its own view: #415 stays on Merged
@@ -507,8 +508,7 @@ class FindingsView(ChromePage):
         # the full finding row, open: title, size, More details, its code, the option rows with the starred
         # recommendation, Custom and Need more details last, then the reply box
         row = f"{tier}.querySelector('.bd-mrow')"
-        a.ev(f"{row}.querySelector('.bd-mchev').click()")
-        self.assertEqual(a.ev(f"{PARTS}({row})"), ["bp-cl-row", "pv-more", "bd-mcode", "bp-opts", "bp-note"])
+        self.assertEqual(a.ev(f"{PARTS}({row})"), ["bp-cl-row", "pv-more", "bd-mcode", "bp-opts", "bp-note"], "an unanswered finding opens on load")
         self.assertEqual(a.ev("(r => [r.querySelector('.bp-cl-text').textContent, r.querySelector('.bp-chip').textContent, [...r.querySelectorAll('.bp-opt')].map(o => o.dataset.id),"
                               f" r.querySelector('.bp-opt:has(.rec)').dataset.id, r.querySelector('.bp-opt:last-child').classList.contains('more')])({row})"),
                          ["tierFor gives no tier at exactly 10 or 50 units", "blocker", ["fix", "ticket", "decline", "custom", ""], "fix", True])
@@ -563,9 +563,10 @@ class FindingsView(ChromePage):
         a.ev("BP.findingsView('pr-415', 'checklist')")
         li = "document.querySelector('#item-t415-retry-4xx')"
         mrow = "document.querySelector('#pr-415 .bd-mrow[data-item=\"t415/retry-4xx\"]')"
-        self.assertEqual(a.ev(f"{PARTS}({li})"), ["bp-cl-row"], "a finding starts closed: its head")
+        self.assertEqual(a.ev(f"[{PARTS}({li}), {li}.querySelector('.pv-more').textContent]"), [["bp-cl-row", "pv-more", "bp-opts", "bp-note"], "More details"], "an unanswered finding starts open")
         a.ev(f"{li}.querySelector('.bp-cl-head').click()")
-        self.assertEqual(a.ev(f"[{PARTS}({li}), {li}.querySelector('.pv-more').textContent]"), [["bp-cl-row", "pv-more", "bp-opts", "bp-note"], "More details"])
+        self.assertEqual(a.ev(f"{PARTS}({li})"), ["bp-cl-row"], "a click on its title closes it")
+        a.ev(f"{li}.querySelector('.bp-cl-head').click()")
         # More details: the details right under it, the text then the code, above the options
         self.assertEqual(a.ev(f"{li}.querySelectorAll('.bd-xf').length"), 0, "the code was drawn before the details showed")
         a.ev(f"{li}.querySelector('.pv-more').click()")
@@ -586,15 +587,18 @@ class FindingsView(ChromePage):
         # Merged's chevron opens it again, in Checklist too
         a.ev(f"{mrow}.querySelector('.bd-mchev').click()")
         self.assertEqual(a.ev(f"[{li}.classList.contains('open'), {mrow}.querySelector('.bd-mchev').getAttribute('aria-expanded')]"), [True, "true"])
-        # Expand all opens every finding the filter shows, then reads Collapse all, which closes them
+        # every finding open: the toolbar reads Collapse all, which closes them; then Expand all opens them
         expand = "[...document.querySelectorAll('#pr-415 > .bd-ftb > .bp-btn')][1]"
         lis = "[...document.querySelectorAll('#cl-t415 .bp-cl-items > .bp-cl-item')].map(li => li.classList.contains('open'))"
-        a.ev(f"{expand}.click()")
         self.assertEqual(a.ev(f"[{lis}, {expand}.textContent]"), [[True] * 4, "Collapse all"])
         a.ev(f"{expand}.click()")
         self.assertEqual(a.ev(f"[{lis}, {expand}.textContent]"), [[False] * 4, "Expand all"])
+        a.ev(f"{expand}.click()")
+        self.assertEqual(a.ev(f"[{lis}, {expand}.textContent]"), [[True] * 4, "Collapse all"])
+        # on load the answered finding (retry-4xx) stays closed, the rest open
+        until(lambda: self.state(self.url).get("t415:retry-4xx"))
         a.go(self.base + self.url)
-        self.assertEqual(a.ev(lis), [False] * 4, "a finding opened by itself on load")
+        self.assertEqual(a.ev(lis), [True, False, True, True], "on load: open unless answered")
 
     def test_the_filter_keeps_answered_findings_out_of_the_way(self) -> None:
         a = self.open(self.url)
@@ -604,12 +608,11 @@ class FindingsView(ChromePage):
         note = "document.querySelector('#cl-t415 .pv-hidden')"
         self.assertEqual(a.ev(counts), [["All 4", "false"], ["Open 4", "true"], ["Done 0", "false"]], "a first visit opens on Open")
         # an answered finding stays where it is until the reader moves on
-        a.ev("document.querySelector('#item-t415-double-auth .bp-cl-head').click()")
         a.ev("document.querySelector('#item-t415-double-auth .bp-opt[data-id=fix] .pk').click()")
         self.assertEqual(a.ev(counts), [["All 4", "false"], ["Open 3", "true"], ["Done 1", "false"]])
         self.assertEqual(a.ev(shown), ["double-auth", "retry-4xx", "latency", "backoff-const"], "it left Open under the cursor")
         self.assertFalse(a.ev(f"{note}.checkVisibility()"))
-        a.ev("document.querySelector('#item-t415-retry-4xx .bp-cl-head').click()")   # opening another is moving on
+        a.ev("(h => { h.click(); h.click(); })(document.querySelector('#item-t415-retry-4xx .bp-cl-head'))")   # closing then opening another is moving on
         self.assertEqual(a.ev(shown), ["retry-4xx", "latency", "backoff-const"])
         self.assertEqual(a.ev(f"{note}.checkVisibility() && {note}.textContent"), "1 finding you answered is hidden · Show")
         # Merged and Diff hide it too: its row, its card (Diff keeps the code)
@@ -642,7 +645,7 @@ class FindingsView(ChromePage):
         a = self.open(self.url)
         a.ev("BP.findingsView('pr-415', 'checklist')")
         li = "document.querySelector('#item-t415-latency')"
-        a.ev(f"{li}.querySelector('.bp-cl-head').click()")
+        a.ev(f"{OPEN}({li})")
         self.assertEqual(a.ev(f"[...{li}.querySelectorAll(':scope > .bp-opts .bp-opt')].map(o => o.dataset.id)"), ["fix", "ticket", "decline", "custom", ""], "Custom is not above Need more details")
         # typing in its field picks it
         a.ev(f"(i => {{ i.focus(); i.value = 'Ask checkout for a 10 s budget'; i.dispatchEvent(new Event('input', {{ bubbles: true }})); }})({li}.querySelector('.bp-cust-in'))")
@@ -670,7 +673,7 @@ class FindingsView(ChromePage):
         li = "document.querySelector('#item-t415-backoff-const')"
         ta = f"{li}.querySelector(':scope > .bp-note textarea')"
         field = f"[{ta}.disabled, {ta}.placeholder, {ta}.closest('.bp-note').classList.contains('pv-off')]"
-        a.ev(f"{li}.querySelector('.bp-cl-head').click()")
+        a.ev(f"{OPEN}({li})")
         self.assertEqual(a.ev(field), [True, "Pick an answer to comment on it", True])
         a.ev(f"{li}.querySelector('.bp-opt.more .pk').click()")   # Need more details is an answer
         self.assertEqual(a.ev(field), [False, "What details do you need? (optional)", False])
@@ -705,7 +708,7 @@ class FindingsView(ChromePage):
         self.assertEqual(self.tmp.run("build.py", "patch", self.docs / REVIEW, "item:t415/double-auth", "--reply", "Acme: the key is the order id.").returncode, 0)
         a.go(self.base + self.url)
         a.wait_for(f"{trk}.querySelector('.c').textContent === '3 open'")
-        self.assertEqual(a.ev(f"{rows}.map(r => r.classList.contains('open'))"), [False] * 4, "a finding opened by itself on load")
+        self.assertEqual(a.ev(f"{rows}.map(r => r.classList.contains('open'))"), [True, False, True, True], "on load: answered stays closed; a reply waiting or no answer opens")
         a.ev("scrollTo({top: document.body.scrollHeight, behavior: 'instant'})")
         a.ev(f"{trk}.click()")
         a.wait_for(f"{in_view}({rows}[0].getBoundingClientRect())")
@@ -743,25 +746,27 @@ class FindingsView(ChromePage):
     def test_the_header_and_toolbar_stick_while_the_findings_scroll(self) -> None:
         a = self.open(self.url)
         a.ev("BP.findingsFilter('pr-412', 'all'); BP.findingsFilter('pr-415', 'all')")
-        parts = "['h2', '.bd-prc', '.bp-lead', '.bd-ftb'].map(s => (r => [Math.round(r.top), Math.round(r.bottom)])(document.querySelector('#pr-412 > ' + s).getBoundingClientRect()))"
+        parts = "['h2', '.bd-prhd', '.bd-ftb'].map(s => (r => [Math.round(r.top), Math.round(r.bottom)])(document.querySelector('#pr-412 > ' + s).getBoundingClientRect()))"
         bar = "document.querySelector('#pr-412 > .bd-ftb')"
         into = "scrollTo({top: document.querySelector('#pr-412 .bd-mx[data-ci=\"3\"]').getBoundingClientRect().top + scrollY - 400, behavior: 'instant'})"
         top_h = a.ev("Math.round(parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--bar-h')))")
-        # unstuck: the chevron sits under the number; the title, sizes, branches and lead share one left edge, and the
-        # branches end where the meter does
-        geo = a.ev("(h => { const r = s => h.parentElement.querySelector(s).getBoundingClientRect(), lead = h.parentElement.querySelector(':scope > .bp-lead');"
+        # unstuck: the chevron sits under the number; the lead starts under the title; on the right the branches, then
+        # the sizes under them, end where the meter does
+        geo = a.ev("(h => { const r = s => h.parentElement.querySelector(s).getBoundingClientRect();"
                    " return [Math.round(r(':scope > h2 .bd-prchev').top - r(':scope > h2 .n').bottom) >= 0, Math.abs(r(':scope > h2 .bd-prchev').left + r(':scope > h2 .bd-prchev').width / 2 - r(':scope > h2 .n').left - r(':scope > h2 .n').width / 2) < 3,"
-                   " [r(':scope > h2 > span:not([class])').left, r('.bd-prchip').left, lead.getBoundingClientRect().left + parseFloat(getComputedStyle(lead).paddingLeft)].map(Math.round),"
-                   " Math.round(r('.bd-prref').right - r('.bd-prm').right)]; })(document.querySelector('#pr-412 > h2'))")
+                   " Math.round(r(':scope > h2 > span:not([class])').left - r(':scope > .bd-prhd > .bp-lead').left),"
+                   " [r('.bd-prref').right, r('.bd-prsz').right].map(x => Math.round(x - r('.bd-prm').right)), r('.bd-prsz').top >= r('.bd-prref').bottom,"
+                   " Math.abs(r(':scope > .bd-prhd > .bp-lead').top - r('.bd-prref').top) < 8]; })(document.querySelector('#pr-412 > h2'))")
         self.assertEqual(geo[:2], [True, True], "the chevron is not under the number")
-        self.assertEqual(len(set(geo[2])), 1, f"title, sizes and lead don't share one left edge: {geo[2]}")
-        self.assertEqual(geo[3], 0, "the branches don't end where the meter does")
-        # scrolled into the findings: the title row, the sizes and the toolbar stick; the lead went under them
+        self.assertEqual(geo[2], 0, "the lead doesn't start under the title")
+        self.assertEqual(geo[3], [0, 0], "the branches and sizes don't end where the meter does")
+        self.assertEqual(geo[4:], [True, True], "the sizes are not under the branches, beside the lead")
+        # scrolled into the findings: the title row and the toolbar stick; the header went under them
         a.ev(into)
         a.wait_for(f"{bar}.classList.contains('stuck')")
-        h2, chips, lead, tb = a.ev(parts)
-        self.assertEqual([h2[0], chips[0], tb[0]], [top_h, h2[1], chips[1]])
-        self.assertLessEqual(lead[1], tb[0])
+        h2, hd, tb = a.ev(parts)
+        self.assertEqual([h2[0], tb[0]], [top_h, h2[1]])
+        self.assertLessEqual(hd[1], tb[0])
         self.assertTrue(a.ev(f"(r => document.elementFromPoint(r.left + 40, r.top + r.height / 2)?.closest('.bd-ftb') === {bar})({bar}.getBoundingClientRect())"))
         # a view picked from the stuck toolbar keeps it there and starts the new view right under it
         a.ev(f"{bar}.querySelector('[data-v=checklist]').click()")
@@ -769,20 +774,23 @@ class FindingsView(ChromePage):
         # past the section, its header leaves with it
         a.ev("document.querySelector('#pr-415').scrollIntoView({behavior: 'instant'})")
         self.assertLess(a.ev(f"{bar}.getBoundingClientRect().bottom"), a.ev("document.querySelector('#pr-415').getBoundingClientRect().top + 1"))
-        # a phone: the title row and the toolbar stick; the sizes scroll away
+        # a phone: the lead, then the branches and the sizes, stacked on one left edge; the title row and toolbar stick
         a.browser.call("Emulation.setDeviceMetricsOverride", {"width": 390, "height": 844, "deviceScaleFactor": 1, "mobile": True}, session=a.session)
         a.ev("BP.findingsView('pr-412', 'merged')")
+        a.ev("scrollTo({top: 0, behavior: 'instant'})")
+        self.assertEqual(a.ev("(r => [r('.bd-prref').top >= r(':scope > .bd-prhd > .bp-lead').bottom, r('.bd-prsz').top >= r('.bd-prref').bottom, Math.round(r('.bd-prref').left - r(':scope > .bd-prhd > .bp-lead').left)])"
+                              "(s => document.querySelector('#pr-412').querySelector(s).getBoundingClientRect())"), [True, True, 0])
         a.ev(into)
         top_h = a.ev("Math.round(parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--bar-h')))")
         a.wait_for(f"{bar}.classList.contains('stuck')")
-        h2, chips, lead, tb = a.ev(parts)
+        h2, hd, tb = a.ev(parts)
         self.assertEqual([h2[0], tb[0]], [top_h, h2[1]])
-        self.assertLessEqual(chips[1], h2[1], "the sizes stuck on a phone")
+        self.assertLessEqual(hd[1], h2[1], "the header stuck on a phone")
 
     def test_more_details_shows_the_finding_then_its_code(self) -> None:
         a = self.open(self.url)
         a.ev("BP.findingsView('pr-412', 'checklist')")
-        a.ev(f"{TIER_ROW}.querySelector('.bp-cl-head').click()")
+        a.ev(f"{OPEN}({TIER_ROW})")
         self.assertEqual(a.ev(f"{TIER_ROW}.querySelectorAll('.bd-xf').length"), 0, "drawn before the details showed")
         a.ev(f"{TIER_ROW}.querySelector('.pv-more').click()")
         xf = f"{TIER_ROW}.querySelector('.bd-dets .bd-xf')"
@@ -791,7 +799,7 @@ class FindingsView(ChromePage):
         self.assertEqual(a.ev(f"[...{xf}.querySelectorAll('.bd-ln')].map(l => +l.dataset.n)"), list(range(14, 21)), "not ±3 lines around line 17")
         self.assertEqual(a.ev(f"[{xf}.querySelectorAll('.bd-cm').length, {xf}.querySelector('.bd-fh .bd-xgo').textContent]"), [0, "Open in Diff view"], "the code repeats the options")
         # a finding with no line: its details, no code
-        a.ev("document.querySelector('#item-t412-pr-claims .bp-cl-head').click()")
+        a.ev(f"{OPEN}(document.querySelector('#item-t412-pr-claims'))")
         a.ev("document.querySelector('#item-t412-pr-claims .pv-more').click()")
         self.assertEqual(a.ev("(x => [x.querySelectorAll('.bd-xf').length, x.querySelector('.bd-dets .bp-cl-detail').checkVisibility()])(document.querySelector('#item-t412-pr-claims'))"), [0, True])
         # Open in Diff view: Diff, that comment focused in the diff's pane
@@ -802,7 +810,7 @@ class FindingsView(ChromePage):
     def test_a_pin_in_the_finding_code_has_the_diff_key_and_shows_in_both(self) -> None:
         a = self.open(self.url)
         a.ev("BP.findingsView('pr-412', 'checklist')")
-        a.ev(f"{TIER_ROW}.querySelector('.bp-cl-head').click()")
+        a.ev(f"{OPEN}({TIER_ROW})")
         a.ev(f"{TIER_ROW}.querySelector('.pv-more').click()")
         key = "line:diff-412/src/pricing/tiers.ts:17"
         made = a.ev(f"BP.annotate({{type: 'pin', key: {json.dumps(key)}, note: 'Acme: inclusive bound'}})")

@@ -1467,14 +1467,14 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
    status; the findings' sizes and the PR's branches, head → base; the lead), one toolbar (All · Open · Done, Accept
    recommended, Expand all, ⋯ with Copy and Reset, [Checklist][Diff][Merged]), then the view shown, on the inset
    colour: its findings with their code in one column, its checklist or its diff (print: Merged). While its findings
-   scroll, the title row and the sizes stick under the app bar, the lead scrolls away under them and the toolbar sticks
-   right below (600px and narrower: the title row and the toolbar). findingsView measures the parts: --fv-t (the title
-   row), --fv-c (the sizes, while they stick), --fvbar-h (the toolbar). Folded, only the title row and the sizes show */
+   scroll, the title row sticks under the app bar, the header under it (the lead; the branches and the sizes on the
+   right) scrolls away and the toolbar sticks right below the title row. findingsView measures the parts: --fv-t (the
+   title row), --fv-c (0: nothing else sticks), --fvbar-h (the toolbar). Folded, the title row, branches and sizes show */
 .bp-sec.fv-on { --fv-t: 0px; --fv-c: 0px; --fvbar-h: 46px; --fv-stuck: calc(var(--top-h) + var(--fv-t) + var(--fv-c) + var(--fvbar-h));
   padding-top: 0; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); overflow: clip; }
 .bp-sec + .bp-sec.fv-on { border-top: 1px solid var(--line); }
 .bp-sec.fv-on + .bp-sec.fv-on { margin-top: 16px; }
-.bp-sec.fv-on > :is(h2, .bd-prc, .bp-lead, .bd-ftb) { background: var(--surface); }
+.bp-sec.fv-on > :is(h2, .bd-prhd, .bd-ftb) { background: var(--surface); }
 .bp-sec.fv-on > h2 { position: sticky; top: var(--top-h); z-index: 21; margin: 0; padding: 14px 16px 0 10px; font-size: 19px; cursor: pointer; }
 .bp-sec.fv-on > h2 > span:not([class]) { flex: 1 1 auto; min-width: 0; }
 /* the chevron sits under the number; the title, the sizes, the branches and the lead share one left edge, and the
@@ -1493,17 +1493,19 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .bd-prs.ok { color: var(--ok-fg); } .bd-prs.new { color: var(--accent-fg); }
 .bd-prs > i, .bp-prog-row .c .new > i { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
 .bp-prog-row .c .new { display: inline-flex; align-items: center; gap: 4px; color: var(--accent-fg); }
-.bd-prc { position: sticky; top: calc(var(--top-h) + var(--fv-t)); z-index: 20; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 8px 16px 8px 52px; }
+.bd-prhd { display: flex; align-items: flex-start; gap: 20px; padding: 4px 16px 10px 52px; }
+.bd-prc { flex: 0 1 auto; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; min-width: 0; max-width: 50%; margin-left: auto; }
+.bd-prsz { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
 .bd-prchip { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 999px; font: 500 12px var(--sans); color: var(--fg-muted); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); }
 .bd-prchip.risk { color: var(--risk-fg); background: var(--risk-tint); box-shadow: none; }
 .bd-prchip.warn { color: var(--warn-fg); background: var(--warn-tint); box-shadow: none; }
 /* the PR's branches, head → base, right of the sizes: a long name ends in … at 32 characters (whole in the title) */
-.bd-prref { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; min-width: 0; font-size: 12px; color: var(--fg-subtle); white-space: nowrap; }
+.bd-prref { display: inline-flex; align-items: center; gap: 6px; min-width: 0; font-size: 12px; color: var(--fg-subtle); white-space: nowrap; }
 .bd-prref code { display: inline-block; max-width: 32ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; padding: 1px 5px; border-radius: 5px; font: 11.5px var(--mono); color: var(--fg-muted); background: var(--code-bg); }
-.bp-sec.fv-on > .bp-lead { position: relative; margin: 0; padding: 0 16px 0 52px; max-width: none; font-size: 14px; }
+.bd-prhd > .bp-lead { position: relative; flex: 1 1 auto; min-width: 0; margin: 0; padding: 0; max-width: none; font-size: 14px; }
 .bd-ftb { position: sticky; top: calc(var(--top-h) + var(--fv-t) + var(--fv-c)); z-index: 19; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; row-gap: 6px;
   margin-top: 12px; padding: 8px 12px 8px 10px; border-top: 1px solid var(--line-soft); transition: box-shadow .15s; }
-.bd-prc + .bd-ftb { margin-top: 0; }
+.bd-prhd + .bd-ftb { margin-top: 0; }
 .bd-ftb.stuck { box-shadow: 0 10px 18px -14px oklch(0% 0 0 / .5); }
 .bd-ftb > .sp { flex: 1; }
 .bd-ftb > :is(.bp-btn, .bd-fvseg, .bd-exp) { flex: none; }
@@ -1531,9 +1533,9 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 @keyframes bd-fold-in { from { opacity: 0; } }
 @keyframes bd-fold-out { to { opacity: 0; } }
 @media screen {
-  .bp-sec.fv-on.bd-fold:not(.bd-anim) > :not(h2, .bd-prc) { display: none; }
-  .bp-sec.fv-on.bd-anim > :not(h2, .bd-prc) { animation: bd-fold-in .24s var(--ease) both; }
-  .bp-sec.fv-on.bd-fold.bd-anim > :not(h2, .bd-prc) { animation: bd-fold-out .18s ease-out both; }
+  .bp-sec.fv-on.bd-fold:not(.bd-anim) > :not(h2, .bd-prhd), .bp-sec.fv-on.bd-fold:not(.bd-anim) > .bd-prhd > .bp-lead { display: none; }
+  .bp-sec.fv-on.bd-anim > :not(h2, .bd-prhd) { animation: bd-fold-in .24s var(--ease) both; }
+  .bp-sec.fv-on.bd-fold.bd-anim > :not(h2, .bd-prhd) { animation: bd-fold-out .18s ease-out both; }
   .bp-sec.fv-merged > :is(.fv-c, .fv-d), .bp-sec.fv-cl > :is(.fv-d, .fv-m), .bp-sec.fv-diff > :is(.fv-c, .fv-m) { display: none; }
   /* what the filter hides: a finding (its excerpt in Merged, its card in Diff), a Merged group left empty */
   .bp-sec.fv-on .fv-out { display: none; }
@@ -1541,7 +1543,7 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
   :is(.bp-cl-item.fd, .bd-mrow):not(.open) > :not(.bp-cl-row) { display: none; }
 }
 @media print { .bd-ftb, .pv-more, .pv-hidden, .bd-xcs, .bp-sec.fv-on > :is(.fv-c, .fv-d), .bd-mmore, .bd-mv .bd-xgo, .bd-prchev, .bd-mchev, .pv-chev { display: none !important; } .bp-sec.fv-on > .fv-m { display: grid !important; }
-  .bp-sec.fv-on > :is(h2, .bd-prc) { position: static; } .bd-dets[hidden] { display: block !important; content-visibility: visible !important; } }
+  .bp-sec.fv-on > h2 { position: static; } .bd-dets[hidden] { display: block !important; content-visibility: visible !important; } }
 /* a jump into the findings lands 12px under the stuck header: the page's scroll padding (--top-h + 16px) and this */
 .bp-sec.fv-on :is(.bd-diff, .bp-cl, .bd-mv, .bp-cl-item, .bd-mrow) { scroll-margin-top: calc(var(--fv-stuck) - var(--top-h) - 4px); }
 /* a finding: closed, its head (and, answered, ✓ with the pick); open, More details, the details (in Merged then its
@@ -1631,10 +1633,11 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
   .bp-sec.fv-on > h2 > .bd-prm { margin-left: 0; gap: 6px; }
   .bp-sec.fv-on > h2 > .bd-prs { display: none; }
   .bd-meter { width: 36px; }
-  .bd-prc { position: static; padding: 2px 12px 8px 12px; }
-  .bd-prref { margin-left: 0; max-width: 100%; }
+  .bd-prhd { flex-direction: column; gap: 8px; padding: 2px 12px 8px 12px; }
+  .bd-prc { align-items: flex-start; max-width: 100%; margin-left: 0; }
+  .bd-prsz { justify-content: flex-start; }
+  .bd-prref { max-width: 100%; }
   .bd-prref code { max-width: 20ch; }
-  .bp-sec.fv-on > .bp-lead { padding: 0 12px; }
   .bd-ftb > .bd-fvseg:not(.bd-ffilt) { margin-left: auto; }
 }
 .bd-xcs { display: grid; gap: 12px; margin-top: 12px; }
@@ -5815,15 +5818,15 @@ function findingCode(d, c) {
 
 /* Findings sections: a section holding a checklist and a diff whose comments are that checklist's items is one card
    (a PR's, in a review). Its header: the title row (a chevron under the number that folds the section, the title, the
-   answered meter and a status: replies waiting, Answered), then the findings' sizes and the PR's branches (head →
-   base: the diff's `headRef` and `baseRef`, else its commits), then the lead. Under it one toolbar: the filter (All ·
+   answered meter and a status: replies waiting, Answered), then the lead under the title and, on the right, the PR's
+   branches (head → base: the diff's `headRef` and `baseRef`, else its commits) with the findings' sizes under them. Under it one toolbar: the filter (All ·
    Open · Done, with counts), Accept recommended, Expand all, ⋯ (Copy, Reset) and [Checklist][Diff][Merged], which shows
-   the findings one way at a time. While the findings scroll, the title row, the sizes and the toolbar stick under the
-   app bar and the lead scrolls away under them (600px and narrower: the title row and the toolbar). Each section keeps
+   the findings one way at a time. While the findings scroll, the title row and the toolbar stick under the app bar and
+   the lead, branches and sizes scroll away under them. Each section keeps
    its own view, per doc (one never picked there follows the view last picked anywhere; Merged at first); a link into a hidden view (an item from
    Diff, a comment, a code line) shows it in that section only, and an item link stays in Merged, which holds every
-   finding. Nothing folds by itself: the chevron, or a click on the title, folds the section to its title row and
-   sizes. Print shows Merged, every finding. */
+   finding. A finding not yet answered opens on load (findingOpen); an answered one stays closed. Nothing folds by
+   itself: the chevron, or a click on the title, folds the section to its title row, branches and sizes. Print shows Merged, every finding. */
 const FVIEW_KEY = 'bluedoc:findings-view';   // the view last picked anywhere: a section's view until one is picked there
 const fviewKey = v => `bp:${docId}:__findings-view:${v.el.id}`;
 const FVIEW_NAMES = ['merged', 'checklist', 'diff'];
@@ -5892,6 +5895,7 @@ function findingsView(sec, el, wraps) {
   diffs.forEach(i => wraps[i].classList.add('fv-d'));
   const scope = CHECKLISTS.filter(c => cids.has(c.b.id)), items = scope.flatMap(c => c.items), tops = scope.filter(c => !c.parent);
   const ds = diffs.map(i => DIFFS[blocks[i].id]).filter(Boolean);
+  for (const x of items) if (x.fd && findingOpen(x)) x.setOpen(true);
   const mv = mergedView(scope, ds);
   wraps[Math.min(...cls, ...diffs)].before(mv);
   // the toolbar: the filter, Accept recommended (the section's open decisions; not on earlier revisions or in compare
@@ -5925,14 +5929,15 @@ function findingsView(sec, el, wraps) {
   for (const x of items) if (x.it.state) { const k = String(x.it.state), s = sizes.get(k) || { n: 0, kind: x.it.stateKind || 'warn' }; s.n++; sizes.set(k, s); }
   const branch = (name, sha) => String(name || shortRef(String(sha || '')));
   const chips = h('div', { class: 'bd-prc' },
-    [...sizes].sort((a, b) => (SEV_RANK[a[1].kind] ?? 9) - (SEV_RANK[b[1].kind] ?? 9)).map(([k, s]) => h('span', { class: 'bd-prchip ' + s.kind }, `${s.n} ${k}`)),
     diffs.map(i => blocks[i]).filter(b => b.headRef || b.baseRef || b.head || b.base).map(b => {
       const hd = branch(b.headRef, b.head), bs = branch(b.baseRef, b.base);
       return h('span', { class: 'bd-prref', title: [b.headRef || b.head, b.baseRef || b.base].filter(Boolean).join(' → ') },
         hd && h('code', { class: 'hd' }, hd), hd && bs && ' → ', bs && h('code', {}, bs));
-    }));
-  h2.after(chips);
-  (el.querySelector(':scope > .bp-lead') || chips).after(bar);
+    }),
+    sizes.size ? h('span', { class: 'bd-prsz' }, [...sizes].sort((a, b) => (SEV_RANK[a[1].kind] ?? 9) - (SEV_RANK[b[1].kind] ?? 9)).map(([k, s]) => h('span', { class: 'bd-prchip ' + s.kind }, `${s.n} ${k}`))) : null);
+  const head = h('div', { class: 'bd-prhd' }, el.querySelector(':scope > .bp-lead'), chips);
+  h2.after(head);
+  head.after(bar);
   el.classList.add('fv-on');
   const v = { el, h2, chips, bar, seg, mv, items, view: null, set: view => {
     if (v.view === view) return;
@@ -6010,7 +6015,7 @@ function foldMotion(box, mark, anim, apply) {
   const a = box.bdFold = box.animate({ height: [from + 'px', to + 'px'] }, { duration: Math.round(Math.min(420, 200 + Math.abs(to - from) / 12)), easing: 'cubic-bezier(0.23, 1, 0.32, 1)' });
   a.onfinish = a.oncancel = () => { if (box.bdFold === a || !box.bdFold) { box.bdFold = null; mark.classList.remove('bd-anim'); box.classList.remove('bd-anim-box'); } };
 }
-// where the parts stick: the title row's height (--fv-t), the sizes' while they stick (--fv-c; a phone's scroll away)
+// where the parts stick: the title row's height (--fv-t), the sizes' while they stick (--fv-c: they scroll away now)
 // and the toolbar's (--fvbar-h), once it fits: too wide for one row, its views, then its actions, drop their words
 function fvMeasure(v) {
   const s = v.el.style, b = v.bar, wraps = () => b.lastElementChild.offsetTop > b.firstElementChild.offsetTop + 4;

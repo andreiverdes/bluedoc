@@ -38,7 +38,7 @@ Without `meta.review` (a codebase review by area) the key reads **Send answers**
 - A `note` callout for provenance when it matters (who posted the comments, under which login, at which heads).
 
 **One section per PR** (`id` `pr-<n>`)
-- `lead`: how many findings and of what kind, then the range: "Diff: `main` `<base>` → head `<head>`, limited to the commented files."
+- `lead`: how many findings and of what kind ("3 bugs this PR introduces, 1 test gap"). Not the diff's range: the header shows the branches from the diff's `headRef` and `baseRef`.
 - A `checklist` (`id` `t<n>`, `numbered: false`), one decision item per finding:
   - `text`: the finding as a fact in one line ("A retry can authorize the card twice"), not an instruction: the options are the instructions.
   - `sub`: `Recommend <option>: <one-line reason>.`
@@ -85,7 +85,7 @@ python3 <skill>/scripts/gitdiff.py --repo <checkout> --base <base> --head <head>
 ## Fragment
 
 ```json
-{ "id": "pr-412", "title": "#412 · bulk discount tiers", "lead": "1 bug this PR introduces, 1 nit. Diff: `main` `89efd8e` → head `62ccc86`, limited to the commented files.",
+{ "id": "pr-412", "title": "#412 · bulk discount tiers", "lead": "1 bug this PR introduces, 1 nit.",
   "blocks": [
   { "type": "checklist", "id": "t412", "title": "Findings · #412", "numbered": false, "items": [
     { "id": "tier-boundary", "text": "`tierFor` gives no tier at exactly 10 units", "sub": "Recommend Fix in PR: the spec says \"10 or more\".",

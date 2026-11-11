@@ -38,7 +38,7 @@
     {
       "id": "pr-1",
       "title": "#<<n>> · <<PR title>>",
-      "lead": "<<N findings and their kind>>. Diff: `main` `<<base>>` → head `<<head>>`, limited to the commented files.",
+      "lead": "<<N findings and their kind>>.",
       "blocks": [
         {
           "type": "checklist",
