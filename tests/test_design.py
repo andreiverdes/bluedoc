@@ -414,6 +414,26 @@ class FlowLayout(unittest.TestCase):
         self.assertEqual(at["b"][:2], (1520, 1928), "unreached: row 0 below the flow, right of w")
 
 
+class RowLayout(unittest.TestCase):
+    # phones 390 x 844, a browser 1440 x 900, BOARD_GAP 80
+    BOARD = {"artboards": [
+        {"id": "a", "device": "phone"}, {"id": "b", "device": "phone"},
+        {"id": "new", "device": "phone", "x": 0, "y": 2800}, {"id": "shared", "device": "phone"},
+        {"id": "deck", "device": "slide"}, {"id": "update", "device": "phone"},
+        {"id": "web", "device": "browser", "x": 0, "y": 5000}, {"id": "web-2", "device": "phone"},
+        {"id": "a-v", "device": "phone", "variantOf": "a"}]}
+
+    def test_x_y_start_a_row_and_the_unplaced_after_it_follow_on_it(self) -> None:
+        at = {k: v[:2] for k, v in build.board_layout(self.BOARD).items()}
+        self.assertEqual((at["a"], at["b"]), ((0, 0), (470, 0)), "the first unplaced ones: row 0, left to right")
+        self.assertEqual((at["new"], at["shared"], at["update"]), ((0, 2800), (470, 2800), (940, 2800)),
+                         "after new (x 0, y 2800) its row, the slide between skipped")
+        self.assertEqual((at["web"], at["web-2"]), ((0, 5000), (1520, 5000)), "the next x, y starts another row")
+        self.assertEqual(at["a-v"], (940, 0), "a variant still joins its source's row")
+        self.assertEqual(at["deck"], (1990, 0), "the slide column stays right of everything")
+
+
+
 class Icons(Scratch):
     DOC = scratch_doc([{"id": "app-icon", "title": "App icon", "device": "icons", "fidelity": "hifi",
                         "icon": {"bg": "#0f766e", "name": "Acme Fit"}}])

@@ -1223,9 +1223,9 @@ class NarrowWindow(ChromePage):
         t.ev("localStorage.setItem('bluedoc:width', '560')")
         t.go(t.ev("location.href"))
         t.ev("BP.sidebar({open: false}), BP.contents({open: false})")
-        # 640 px: the stripes and the paddings (16 px from 900 px down) leave 528 px, under the stored 560
-        self.size(t, 640)
-        t.wait_for(f"{self.COL} === document.documentElement.clientWidth - 80 - 32")
+        # 700 px: the stripes' bands (56 px a side) and the paddings (16 px from 900 px down) leave under the stored 560
+        self.size(t, 700)
+        t.wait_for(f"{self.COL} === document.documentElement.clientWidth - 112 - 32")
         self.centred(t)
         # 1600 px: the stored width, with its handles
         self.size(t, 1600)

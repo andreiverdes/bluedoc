@@ -1425,15 +1425,18 @@ def board_layout(board: dict, links: list[dict] | None = None) -> dict[str, tupl
     the unplaced screens the entries reach through links go where flow_places puts them. An unplaced `slide`
     artboard goes in the slide column, y 0 for the first and SLIDE_GAP below the previous one after that; the
     column's x is 0 on a board of only slides, else BOARD_GAP right of the rightmost artboard outside it. Any other
-    unplaced artboard's row is its variantOf source's y (when placed before it), else row 0, and it goes BOARD_GAP
-    right of the rightmost artboard already in that row (x 0 in an empty row). Row 0 is y 0, or FLOW_GAP_Y below
-    the flow's lowest screen when flow placed any. links: board_links(); template.html places them by the same rule."""
+    unplaced artboard joins a row and goes BOARD_GAP right of the rightmost artboard already in it (x 0 in an empty
+    row): its variantOf source's (when placed before it), else the row of the artboard before it in board order
+    (flow-placed ones and slides skipped), else row 0. So an artboard with x and y starts a row, and the unplaced ones
+    after it follow on that row until the next one with x and y. Row 0 is y 0, or FLOW_GAP_Y below the flow's lowest
+    screen when flow placed any. links: board_links(); board-geo.js's boardLayout places them by the same rule."""
     flow = flow_places(board, links)
     y0 = max((fy + fh for _, fy, _, fh in flow.values()), default=-FLOW_GAP_Y) + FLOW_GAP_Y
     at: dict[str, tuple[float, float, float, float]] = {}
     order: list[str] = []
     column: list[tuple[str, tuple[float, float]]] = []
     only_slides = True
+    row_y = None   # the row of the last artboard placed by x, y or in a row: the next unplaced one's
     for a in board.get("artboards") or []:
         if not isinstance(a, dict) or not isinstance(a.get("id"), str) or a["id"] in order:
             continue
@@ -1445,12 +1448,14 @@ def board_layout(board: dict, links: list[dict] | None = None) -> dict[str, tupl
         x, y = a.get("x"), a.get("y")
         if a["id"] in flow:
             x, y = flow[a["id"]][:2]
-        elif not _placed(a):
+        elif _placed(a):
+            row_y = y
+        else:
             if a.get("device") == "slide":
                 column.append((a["id"], size))
                 continue
             src = at.get(a.get("variantOf")) if isinstance(a.get("variantOf"), str) else None
-            y = src[1] if src else y0
+            y = row_y = src[1] if src else y0 if row_y is None else row_y
             row = [bx + bw for bx, by, bw, _ in at.values() if by == y]
             x = max(row) + BOARD_GAP if row else 0
         at[a["id"]] = (x, y, *size)

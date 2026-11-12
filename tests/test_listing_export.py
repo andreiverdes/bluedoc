@@ -563,6 +563,8 @@ class ListingPage(ChromePage):
         t = self.page(self.url)
         t.ev("window.__blobs = []; (o => { URL.createObjectURL = b => { __blobs.push(b); return o.call(URL, b); }; })(URL.createObjectURL)")
         t.ev(self.WATCH)
+        # the key's words as the toolbar's room shows them (fitLtb): shown, or its icon alone where the row is short
+        was = t.ev("getComputedStyle(document.querySelector('.bd-lst-btb .bd-lstx .bd-expb > span:not(.xp)')).display")
         self.pick_zip(t)
         t.wait_for("__xp.busyAt > 0", 2)
         self.assertLess(t.ev("__xp.busyAt - __xp.t0"), 1000, "the key shows the export at once")
@@ -583,7 +585,7 @@ class ListingPage(ChromePage):
         t.wait_for("document.querySelector('.bd-lst-btb .bd-lstx').classList.contains('ok') || !document.querySelector('.bd-lst-btb .bd-lstx.busy')", 5)
         self.assertIn("Exported", t.ev("__xp.labels"))
         self.assertIsNone(t.ev(f"{LST}.exporting"))
-        t.wait_for("(k => !k.matches('.busy, .ok, .err') && getComputedStyle(k.querySelector('.bd-expb > span:not(.xp)')).display !== 'none')(document.querySelector('.bd-lst-btb .bd-lstx'))", 5)
+        t.wait_for(f"(k => !k.matches('.busy, .ok, .err') && getComputedStyle(k.querySelector('.bd-expb > span:not(.xp)')).display === {was!r})(document.querySelector('.bd-lst-btb .bd-lstx'))", 5)
 
     def test_export_to_downloads_the_folders_zip(self) -> None:
         t = self.page(self.url)

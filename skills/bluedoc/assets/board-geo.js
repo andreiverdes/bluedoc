@@ -29,8 +29,10 @@ const BoardGeo = (() => {
   // An artboard with x and y sits there. An unplaced slide goes in the slide column (x 0 on a board of only slides,
   // else BOARD_GAP right of everything else; SLIDE_GAP between slides). On a `layout: "flow"` board the unplaced
   // screens reached from board.entry go in columns by link depth (back links ignored; a variant is reached with its
-  // source, right under it). Any other unplaced artboard joins a row: its variantOf source's (when placed before it),
-  // else the first row below the flow columns (y 0 without them), BOARD_GAP right of the row's rightmost artboard.
+  // source, right under it). Any other unplaced artboard joins a row, BOARD_GAP right of the row's rightmost artboard:
+  // its variantOf source's (when placed before it), else the row of the artboard before it in board order (flow
+  // columns and slides skipped), else the first row below the flow columns (y 0 without them). So an artboard with
+  // x and y starts a row, and the unplaced ones after it follow on that row until the next one with x and y.
   function boardLayout(board, links, size) {
     const rows = [], by = new Map();
     for (const a of board && Array.isArray(board.artboards) ? board.artboards : []) {
@@ -60,17 +62,18 @@ const BoardGeo = (() => {
       if (flow.size) y0 = bottom + FLOW_GAP_Y;
     }
     const at = new Map(), column = [];
-    let onlySlides = true;
+    let onlySlides = true, rowY = null;
     for (const r of rows) {
       const a = r.a;
       onlySlides = onlySlides && r.slide;
       let x, y;
-      if (r.placed) { x = a.x; y = a.y; }
+      if (r.placed) { x = a.x; y = a.y; rowY = y; }
       else if (r.slide) { column.push(r); continue; }
       else if (flow.has(a.id)) [x, y] = flow.get(a.id);
       else {
         const src = typeof a.variantOf === 'string' ? at.get(a.variantOf) : null;
-        y = src ? src.y : y0;
+        y = src ? src.y : rowY === null ? y0 : rowY;
+        rowY = y;
         let right = null;
         for (const p of at.values()) if (p.y === y) right = Math.max(right === null ? -Infinity : right, p.x + p.w);
         x = right === null ? 0 : right + BOARD_GAP;

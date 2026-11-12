@@ -283,7 +283,7 @@ class ListingToolbar(ChromePage):
         for w in (1440, 1100):
             self.browser.call("Emulation.setDeviceMetricsOverride", {"width": w, "height": 900, "deviceScaleFactor": 1, "mobile": False}, t.session)
             t.wait_for(f"(b => b.scrollWidth <= b.clientWidth + 1 && b.getBoundingClientRect().right <= document.querySelector('.bd-lst').getBoundingClientRect().right"
-                       f" && b.getBoundingClientRect().height < 48)(document.querySelector('{self.TB}'))")
+                       f" && b.getBoundingClientRect().height < 60)(document.querySelector('{self.TB}'))")   # one row: the 52 px pill
         self.assertEqual(self.browser.errors, [])
 
     def test_the_bracket_and_the_stripe_key_toggle_the_left_panel_and_a_reload_keeps_it(self) -> None:

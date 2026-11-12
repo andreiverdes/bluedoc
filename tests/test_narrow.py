@@ -95,7 +95,7 @@ class BoardToolbar(ChromePage):
 
     def test_an_overflowed_key_works_from_more(self) -> None:
         t = self.board("acme-fit-design.bluedoc.json")
-        self.width(t, 560)   # the left panel's drawer (280 px) leaves the row 256 px
+        self.width(t, 560)   # the left panel's drawer (240 px) leaves the row 320 px
         more = "document.querySelector('.bd-btb .bd-btb-more')"
         self.assertFalse(t.ev(f"{more}.hidden"), "a narrow board has ⋯ More")
         self.assertFalse(t.ev("document.querySelector('.bd-btb .fid').checkVisibility()"), "the fidelity went into ⋯")

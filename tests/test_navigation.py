@@ -134,7 +134,7 @@ class BoardNavigation(ChromePage, Input):
         t.ev("BP.board({focus: 'today'})")
         time.sleep(0.5)
         self.shift_digit(0)
-        self.assertEqual(t.ev("BP.board().k"), 1)
+        self.assertAlmostEqual(t.ev("BP.board().k"), 1, places=6)   # zoomBy(1 / k): k × (1 / k) may miss 1 by a float step
         self.shift_digit(1)
         self.assertAlmostEqual(t.ev("BP.board().k"), fit, places=3)
         self.shift_digit(2)

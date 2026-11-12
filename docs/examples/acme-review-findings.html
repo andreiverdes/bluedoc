@@ -74,6 +74,14 @@ code { font-family: var(--mono); font-size: .86em; background: var(--code-bg); c
 button { font: inherit; color: inherit; cursor: pointer; }
 :focus-visible { outline: none; box-shadow: var(--focus-ring); border-radius: 6px; }
 .bd-ic { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+/* scrollbars: HorizonUI ScrollArea's thumb on every scroller, the window's too: a 6 px pill in a 10 px gutter, the
+   text colour at 20 % (35 % hovered), no track, shown at rest. Chrome ignores the ::-webkit-scrollbar rules on an
+   element that sets scrollbar-width or scrollbar-color, so those two are only for browsers without them */
+::-webkit-scrollbar { width: 10px; height: 10px; background: transparent; }
+::-webkit-scrollbar-thumb { border: 2px solid transparent; border-radius: 9px; background: color-mix(in oklch, var(--fg) 20%, transparent) padding-box; }
+::-webkit-scrollbar-thumb:hover { background-color: color-mix(in oklch, var(--fg) 35%, transparent); }
+::-webkit-scrollbar-corner { background: transparent; }
+@supports not selector(::-webkit-scrollbar) { * { scrollbar-width: thin; scrollbar-color: color-mix(in oklch, var(--fg) 20%, transparent) transparent; } }
 
 /* app bar */
 .bd-bar { position: sticky; top: 0; z-index: 40; height: var(--bar-h); display: flex; align-items: center; gap: 12px; padding: 0 20px;
@@ -111,7 +119,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .bd-dsm .q input, .bd-dsm .q input:focus-visible { flex: 1; min-width: 0; height: 100%; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; color: var(--fg); font: 13.5px var(--sans); outline: none; }
 .bd-dsm .q input::placeholder { color: var(--fg-subtle); }
 .bd-dsm .q .n { flex: none; font: 500 11px var(--mono); color: var(--fg-subtle); }
-.bd-dsm .ls { min-height: 0; overflow: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+.bd-dsm .ls { min-height: 0; overflow: auto; overscroll-behavior: contain; }
 .bd-dsm .gh { padding: 8px 10px 4px; font: 600 11px var(--sans); letter-spacing: .06em; text-transform: uppercase; color: var(--fg-subtle); }
 .bd-dsm .d { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 8px; color: inherit; text-decoration: none; }
 .bd-dsm .d[aria-selected="true"] { background: var(--selected); }
@@ -155,7 +163,7 @@ button.bd-emo:hover, button.bd-emo[aria-expanded="true"] { background: var(--sel
 .bd-emop[hidden], .bd-emop [hidden] { display: none !important; }
 .bd-emop input { box-sizing: border-box; width: 100%; min-width: 0; height: 30px; padding: 0 10px; border: 0; border-radius: 8px; font: 13px var(--sans); color: var(--fg); background: var(--inset); box-shadow: inset 0 0 0 1px var(--line); }
 .bd-emop input:focus { outline: none; box-shadow: inset 0 0 0 1.5px var(--accent); }
-.bd-emop .g { min-height: 0; overflow: auto; overscroll-behavior: contain; scrollbar-width: thin; margin: 0 -4px; padding: 0 4px; }
+.bd-emop .g { min-height: 0; overflow: auto; overscroll-behavior: contain; margin: 0 -4px; padding: 0 4px; }
 .bd-emop h4 { margin: 6px 2px 2px; font: 600 11px var(--sans); letter-spacing: .04em; text-transform: uppercase; color: var(--fg-subtle); }
 .bd-emop .cat { display: grid; grid-template-columns: repeat(auto-fill, minmax(34px, 1fr)); }
 .bd-emop .cat button { height: 34px; padding: 0; border: 0; border-radius: 8px; background: none; font: 20px/1 var(--sans); cursor: pointer; }
@@ -170,28 +178,37 @@ button.bd-emo:hover, button.bd-emo[aria-expanded="true"] { background: var(--sel
 .bd-emop .rs button:is(:hover, :focus) { outline: none; background: var(--selected); }
 .bd-emop .rs .l { flex: none; }
 .bd-emop .rs .v { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg-subtle); text-align: right; }
-.bd-bar-r { margin-left: auto; display: flex; align-items: center; gap: 4px; flex: none; }
-/* Share and Export: ghost keys with their words (narrow, their icons) */
-.bd-bar-r .bd-tbtn:is(.bd-expb, .bd-shk) { height: 30px; padding: 0 10px; gap: 6px; color: var(--fg-muted); font-weight: 500; font-size: 13px; background: none; box-shadow: none; }
-.bd-bar-r .bd-tbtn:is(.bd-expb, .bd-shk):hover:not(:disabled) { color: var(--fg); background: var(--hover); }
-.bd-bar-r .bd-tbtn.bd-expb[aria-expanded="true"] { color: var(--fg); background: var(--selected); box-shadow: none; }
-.bd-bar-r .bd-tbtn:is(.bd-expb, .bd-shk):focus-visible { box-shadow: var(--focus-ring); }
-/* a phone: closer keys; under 381 px Export without its chevron, so the bar fits 320 px */
-@media (max-width: 600px) { .bd-bar-r { gap: 2px; } }
-@media (max-width: 380px) { .bd-docx .bd-tbtn.bd-expb .cv { display: none; } .bd-bar-r { gap: 0; }
-  .bd-bar-r .bd-docx .bd-tbtn.bd-expb, .bd-bar-r .bd-tbtn.bd-shk { padding: 0 7px; } }
+.bd-bar-r { margin-left: auto; display: flex; align-items: center; gap: 6px; flex: none; }
+/* Share | Export: one raised pill, HorizonUI's secondary Buttons joined as a SplitButton with a groove between; narrow,
+   their icons. Their raised look, hover, open and focus states are the select keys' (.bd-tbtn.bd-expb, below) */
+.bd-bar-r .bd-tbtn:is(.bd-expb, .bd-shk) { height: 26px; padding: 0 12px; gap: 6px; font: 500 12px/16px var(--sans); border-radius: 999px; }
+.bd-bar-r .bd-tbtn:is(.bd-expb, .bd-shk) .bd-ic { width: 14px; height: 14px; }
+.bd-bar-r .bd-tbtn.bd-expb .cv { color: inherit; }
+.bd-bar-r .bd-tbtn.bd-shk { border-radius: 999px 0 0 999px; }
+.bd-bar-r .bd-shk + .bd-docx { margin-left: -6px; }
+.bd-bar-r .bd-shk + .bd-docx::before { content: ""; flex: none; width: 1px; align-self: stretch; background: var(--groove); }
+.bd-bar-r .bd-shk + .bd-docx .bd-tbtn.bd-expb { border-radius: 0 999px 999px 0; }
+/* a phone: closer keys, as tall as the bar's other keys; under 381 px Export without its chevron, so the bar fits 320 px */
+@media (max-width: 600px) { .bd-bar-r { gap: 2px; } .bd-bar-r .bd-tbtn:is(.bd-expb, .bd-shk) { height: 30px; } .bd-bar-r .bd-shk + .bd-docx { margin-left: -2px; } }
+@media (max-width: 380px) { .bd-docx .bd-tbtn.bd-expb .cv { display: none; } .bd-bar-r { gap: 0; } .bd-bar-r .bd-shk + .bd-docx { margin-left: 0; }
+  .bd-bar-r .bd-docx .bd-tbtn.bd-expb, .bd-bar-r .bd-tbtn.bd-shk { padding: 0 8px; } }
 /* a phone's keys in the bar, for the stripes it has no room for (STRIPES): Contents (or the board's left panel) at the
    bar's left, the right panel's bottom sheet at its right, a dot while comments wait */
-.bd-bk { position: relative; flex: none; }
+.bd-bk { position: relative; flex: none; border-radius: 9px; }
+.bd-bk .bd-ic { width: 16px; height: 16px; }
+.bd-bk[aria-expanded="true"] { color: var(--fg); background: var(--hk-down); box-shadow: var(--shadow-hk-down); }
 .bd-bk .dot { position: absolute; top: 3px; right: 3px; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 2px var(--canvas); }
 .bd-bk .dot[hidden], .bd-bk[hidden] { display: none !important; }
 @media (min-width: 601px) { .bd-bk { display: none !important; } }
 @media (max-width: 600px) { .bd-bk.l { margin-left: -8px; } }
 @media print { .bd-bk { display: none !important; } }
 @media (min-width: 601px) { .bd-ph-only { display: none !important; } }
-/* ⋯: a ghost key, as Share and Export */
-.bd-bar-r .bd-docm > .bd-ibtn { background: none; box-shadow: none; }
-.bd-bar-r .bd-docm > .bd-ibtn:is(:hover, [aria-expanded="true"]) { background: var(--hover); }
+/* ⋯: HorizonUI's ghost IconButton (sm), its vertical dots; a phone, as tall as the bar's other keys */
+.bd-bar-r .bd-docm > .bd-ibtn { width: 26px; height: 26px; background: none; box-shadow: none; transition: background .12s var(--ease), color .12s var(--ease), scale .09s; }
+.bd-bar-r .bd-docm > .bd-ibtn .bd-ic { width: 14px; height: 14px; }
+.bd-bar-r .bd-docm > .bd-ibtn:is(:hover, [aria-expanded="true"]) { color: var(--fg); background: var(--hover); }
+.bd-bar-r .bd-docm > .bd-ibtn:active { transform: none; scale: .97; background: var(--selected); }
+@media (max-width: 600px) { .bd-bar-r .bd-docm > .bd-ibtn { width: 30px; height: 30px; } .bd-bar-r .bd-docm > .bd-ibtn .bd-ic { width: 16px; height: 16px; } }
 .bd-ibtn { display: inline-grid; place-items: center; width: 30px; height: 30px; border: 0; border-radius: 9px; color: var(--fg-muted);
   background: linear-gradient(180deg, var(--key-top), var(--key-bot)); box-shadow: var(--shadow-key); transition: color .12s var(--ease), transform .09s; }
 .bd-ibtn:hover { color: var(--fg); }
@@ -200,15 +217,15 @@ button.bd-emo:hover, button.bd-emo[aria-expanded="true"] { background: var(--sel
 .bd-docm .bd-selm { left: auto; right: 0; min-width: 168px; }
 .bd-bar:has(:is(.bd-docm, .bd-docx) [aria-expanded="true"]) { z-index: 43; }   /* the open menu over the docked right panel */
 /* the app bar's Export (any doc but a presentation or a storelisting): Export to…'s key; narrow, its icon and chevron */
-@media (max-width: 900px) { .bd-docx .bd-tbtn.bd-expb > span { display: none; } .bd-docx .bd-tbtn.bd-expb { padding: 0 6px 0 8px; gap: 4px; } }
+@media (max-width: 900px) { .bd-docx .bd-tbtn.bd-expb > span { display: none; } .bd-bar-r .bd-docx .bd-tbtn.bd-expb { padding: 0 8px 0 10px; gap: 4px; } }
 /* the app bar's Share (before Export): Export's raised key with its icon and word, no chevron; narrow, its icon. A shared
    doc: a dot in the accent at its corner; the doc newer than its share: the dot in the warning colour */
 .bd-tbtn.bd-shk { position: relative; }
-.bd-bar-r .bd-tbtn.bd-shk .dot { top: 2px; right: 2px; }
-.bd-tbtn.bd-shk .dot { display: none; position: absolute; top: 3px; right: 3px; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 2px var(--canvas); }
+.bd-bar-r .bd-tbtn.bd-shk .dot { top: 2px; right: 3px; }
+.bd-tbtn.bd-shk .dot { display: none; position: absolute; top: 3px; right: 3px; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 2px var(--hk-top); }
 .bd-tbtn.bd-shk[data-share] .dot { display: block; }
 .bd-tbtn.bd-shk[data-share="newer"] .dot { background: var(--warn); }
-@media (max-width: 900px) { .bd-tbtn.bd-shk > .w { display: none; } .bd-bar-r .bd-tbtn.bd-shk { padding: 0 7px; } }
+@media (max-width: 900px) { .bd-tbtn.bd-shk > .w { display: none; } .bd-bar-r .bd-tbtn.bd-shk { padding: 0 9px 0 10px; } }
 .bd-revbar.arc { position: static; background: color-mix(in oklch, var(--fg) 6%, var(--canvas)); }
 .bd-revbar.arc.sug { background: color-mix(in srgb, var(--ok) 13%, var(--canvas)); }
 .bd-revbar.arc.sug .in > .bd-ic { color: var(--ok-fg); }
@@ -216,48 +233,69 @@ button.bd-emo:hover, button.bd-emo[aria-expanded="true"] { background: var(--sel
 .bd-planchip.arc[hidden] { display: none; }
 @media print { .bd-docm, .bd-revbar.arc { display: none !important; } }
 
-/* the stripes (STRIPES), as an IDE's tool window bars: a column of keys down each side under the app bar. The left one
-   opens the left pane (a doc's Contents, its ring the tracker's progress; a board's Screens, Pages or Slides; a
-   listing's panel), the right one each section of the right pane (Brief, Comments, Revisions) and, at its foot, the
-   theme. A lit key's pane is open; it, or the pane's –, hides the pane; [ and ] toggle the last one of each side. A
-   phone (600 px and under) has none: its keys are in the app bar */
-:root { --stripe-w: 40px; --cp-w: 264px; }
-.bd-stripe { position: fixed; z-index: 43; top: var(--top-h); bottom: 0; width: var(--stripe-w); display: flex; flex-direction: column; align-items: center; gap: 4px;
-  padding: 8px 0; background: var(--canvas); }
-.bd-stripe.l { left: 0; box-shadow: inset -1px 0 0 var(--line); }
-.bd-stripe.r { right: 0; box-shadow: inset 1px 0 0 var(--line); }
+/* the stripes (STRIPES), HorizonUI's DockBar: a 44 px column of keys down each side under the app bar, 6 px from the
+   window's edge and from what it opens. The left one opens the left pane (a doc's Contents, its ring the tracker's
+   progress; a board's Screens, Pages or Slides; a listing's panel), the right one each section of the right pane
+   (Brief, Comments, Revisions) and, at its foot, the theme. A lit key's pane is open; it, or the pane's –, hides the
+   pane; [ and ] toggle the last one of each side. A phone (600 px and under) has none: its keys are in the app bar.
+   --stripe-w is a side's whole band (edge, stripe, gap); --pane-gap the gap between the panes and the page */
+:root { --stripe-w: 56px; --pane-gap: 6px; --cp-w: 264px;
+  --hover-2: light-dark(oklch(23% 0.01 264 / 0.075), oklch(100% 0 0 / 0.08));
+  /* HorizonUI's shadow-1 on its cards: the panes and the page */
+  --shadow-card: 0 0 0 1px light-dark(oklch(23% 0.01 264 / 0.055), oklch(100% 0 0 / 0.07)), inset 0 1px 0 light-dark(transparent, oklch(100% 0 0 / 0.03)),
+    0 1px 2px light-dark(oklch(23% 0.01 264 / 0.04), oklch(0% 0 0 / 0.45)), 0 2px 6px light-dark(oklch(23% 0.01 264 / 0.03), oklch(0% 0 0 / 0.25)); }
+.bd-stripe { position: fixed; z-index: 43; top: var(--top-h); bottom: 0; width: calc(var(--stripe-w) - var(--pane-gap)); display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 4px 0; background: var(--canvas); }
+.bd-stripe.l { left: 0; padding-left: var(--pane-gap); }
+.bd-stripe.r { right: 0; padding-right: var(--pane-gap); }
 .bd-stripe .sp { flex: 1; }
-.bd-sk { position: relative; flex: none; display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 8px; background: none;
-  color: var(--fg-muted); transition: background .12s, color .12s; }
+/* a key: flat until hovered; lit, it sinks (in dark a hairline keeps the sunk key's edge in sight) */
+.bd-sk { position: relative; flex: none; display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 10px; background: none;
+  color: var(--fg-muted); transition: background .12s var(--ease), color .12s var(--ease), box-shadow .12s var(--ease); }
 .bd-sk[hidden] { display: none; }
 .bd-sk:hover { color: var(--fg); background: var(--hover); }
-.bd-sk > .bd-ic { width: 18px; height: 18px; }
-.bd-sk[aria-pressed="true"] { color: var(--accent-fg); background: color-mix(in oklch, var(--accent) 18%, transparent); }
-.bd-sk .n { position: absolute; top: 1px; right: 0; min-width: 15px; max-width: 30px; height: 15px; padding: 0 4px; border-radius: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  font: 600 9.5px/15px var(--mono); text-align: center; color: #fff; background: var(--accent-solid); box-shadow: 0 0 0 2px var(--canvas); pointer-events: none; }
+.bd-sk > .bd-ic { width: 16px; height: 16px; }
+.bd-sk[aria-pressed="true"], .bd-sk[aria-pressed="true"]:hover { color: var(--fg); background: var(--hk-down); box-shadow: var(--shadow-hk-down), 0 0 0 1px light-dark(transparent, oklch(100% 0 0 / 0.09)); }
+/* a key's count (Comments' pending, Revisions' rev): HorizonUI's Counter at the key's corner */
+.bd-sk .n { position: absolute; top: -2px; right: -2px; min-width: 14px; max-width: 30px; height: 14px; padding: 0 2px; border-radius: 999px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font: 600 10px/14px var(--sans); font-variant-numeric: tabular-nums; text-align: center; color: var(--fg-muted); background: var(--hover-2); pointer-events: none; }
 .bd-sk .n[hidden] { display: none; }
-.bd-sk .n.q { color: var(--fg-muted); background: var(--surface); box-shadow: 0 0 0 2px var(--canvas), inset 0 0 0 1px var(--line-strong); }
 /* the Revisions key on an earlier revision: the warning's colours, as the strip under the bar */
 .bd-sk.old { color: var(--warn-fg); }
-.bd-sk.old[aria-pressed="true"] { background: var(--warn-tint); }
-.bd-sk.old .n { color: var(--warn-fg); background: var(--warn-tint); box-shadow: 0 0 0 2px var(--canvas), inset 0 0 0 1px color-mix(in oklch, var(--warn) 50%, transparent); }
-/* the Contents key's ring: the share of the progress items done (none tracked: no ring) */
-.bd-skr { position: absolute; inset: 2px; width: 28px; height: 28px; rotate: -90deg; fill: none; stroke-width: 2; pointer-events: none; }
+.bd-sk.old[aria-pressed="true"] { color: var(--warn-fg); background: var(--warn-tint); }
+.bd-sk.old .n { color: var(--warn-fg); background: var(--warn-tint); }
+/* the left key's ring (a doc's tracker, a board's brief picks): HorizonUI's ProgressRing, 36 px around the key (none
+   tracked: no ring); all done, in the ok colour */
+.bd-skr { position: absolute; inset: -2px; width: 36px; height: 36px; rotate: -90deg; fill: none; stroke-width: 2; pointer-events: none; }
 .bd-skr[hidden] { display: none; }
-.bd-skr .bg { stroke: var(--line); }
-.bd-skr .fg { stroke: var(--accent); stroke-linecap: round; transition: stroke-dasharray .3s var(--ease); }
+.bd-skr .bg { stroke: var(--hover-2); }
+.bd-skr .fg { stroke: var(--accent); stroke-linecap: round; transition: stroke-dasharray .26s var(--ease); }
 .bd-skr.full .fg { stroke: var(--ok); }
-.bd-sk:has(> .bd-skr:not([hidden])) > .bd-ic { width: 14px; height: 14px; }
-@media (max-width: 600px) { :root { --stripe-w: 0px; } .bd-stripe { display: none !important; } }
+@media (max-width: 600px) { :root { --stripe-w: 0px; --pane-gap: 0px; } .bd-stripe { display: none !important; } }
 @media print { .bd-stripe { display: none !important; } }
-/* a pane's header: its title (a board's Screens with their count), then – to hide it */
-.bd-pane-h { display: flex; align-items: center; gap: 8px; flex: none; height: 44px; padding: 0 8px 0 16px; }
-.bd-pane-h h2 { margin: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 600 13.5px/1.3 var(--sans); letter-spacing: -.005em; }
-.bd-pane-h .c { flex: none; font: 500 11px var(--mono); color: var(--fg-subtle); }
+/* a pane's header: HorizonUI's DockPanel header, its title (a board's Screens with their count), then – to hide it */
+.bd-pane-h { display: flex; align-items: center; gap: 4px; flex: none; height: 40px; padding: 0 8px 0 14px; }
+.bd-pane-h h2 { margin: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 600 12px/16px var(--sans); color: var(--fg); }
+.bd-pane-h .c { flex: none; margin-left: 4px; font: 500 11px var(--mono); color: var(--fg-subtle); }
 .bd-pane-h .sp { flex: 1; }
-.bd-pane-x { display: grid; place-items: center; flex: none; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 7px; background: none; color: var(--fg-subtle); }
+.bd-pane-x { display: grid; place-items: center; flex: none; width: 26px; height: 26px; padding: 0; border: 0; border-radius: 9px; background: none; color: var(--fg-muted);
+  transition: background .12s var(--ease), color .12s var(--ease), scale .09s; }
+.bd-pane-x .bd-ic { width: 14px; height: 14px; }
 .bd-pane-x:hover { color: var(--fg); background: var(--hover); }
+.bd-pane-x:active { scale: .97; background: var(--selected); }
+/* the right panel's header stays bluedoc's: the section's title and count, then – */
+.bd-sp-h { gap: 8px; height: 44px; padding: 0 8px 0 16px; }
+.bd-sp-h h2 { font: 600 13.5px/1.3 var(--sans); letter-spacing: -.005em; }
+.bd-sp-h .bd-pane-x { width: 28px; height: 28px; border-radius: 7px; color: var(--fg-subtle); }
+.bd-sp-h .bd-pane-x .bd-ic { width: 16px; height: 16px; }
 @media print { .bd-pane-h { display: none !important; } }
+/* the page's card (HorizonUI AppFrame's centre): drawn behind the column in the room between the stripes and the
+   docked panes; the window scrolls the page over it. A board is its own card (.bd-boardblk .bd-bwrap); a phone has none */
+@media (min-width: 601px) { :root:not([data-layout="board"]) body::before { content: ""; position: fixed; z-index: -1; top: var(--top-h); bottom: 0;
+  left: var(--room-l, var(--stripe-w)); right: var(--room-r, var(--stripe-w)); border-radius: 14px; background: var(--surface); box-shadow: var(--shadow-card);
+  pointer-events: none; transition: left .22s var(--ease), right .22s var(--ease); } }
+html.bd-resizing body::before { transition: none; }
+@media print { body::before { display: none !important; } }
 
 /* shell: the content column (at most --content-w) centred in the room between the stripes and the docked panes
    (--room-l, --room-r: applyWidth) */
@@ -267,13 +305,13 @@ button.bd-emo:hover, button.bd-emo[aria-expanded="true"] { background: var(--sel
 .bd-head { padding-top: 56px; }
 /* a doc's Contents pane (the rail): Contents, Tracker, Status and Related, docked beside the page where it keeps
    READ_W, else over it (html.bd-lp-open, html.bd-lp-dock: applyWidth) */
-.bp-side { position: fixed; z-index: 41; top: var(--top-h); bottom: 0; left: var(--stripe-w); width: var(--cp-w); display: flex; flex-direction: column; min-height: 0;
-  background: var(--canvas); box-shadow: inset -1px 0 0 var(--line); font-size: 13.5px;
-  transform: translateX(-100%); visibility: hidden; transition: transform .22s var(--ease), visibility 0s .22s; }
+.bp-side { position: fixed; z-index: 41; top: var(--top-h); bottom: 0; left: var(--stripe-w); width: var(--cp-w); display: flex; flex-direction: column; min-height: 0; overflow: hidden;
+  border-radius: 14px; background: var(--panel); box-shadow: var(--shadow-card); font-size: 13.5px;
+  transform: translateX(calc(-100% - var(--stripe-w))); visibility: hidden; transition: transform .22s var(--ease), visibility 0s .22s; }
 html.bd-lp-open .bp-side { transform: none; visibility: visible; transition: transform .22s var(--ease); }
 html.bd-lp-open:not(.bd-lp-dock) .bp-side { background: var(--surface); box-shadow: var(--shadow-3); }
 .bp-side-b { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 2px 12px calc(16px + var(--tray-room, 0px)); }
-@media (max-width: 600px) { .bp-side { width: min(var(--cp-w), 86vw); } }
+@media (max-width: 600px) { .bp-side { width: min(var(--cp-w), 86vw); border-radius: 0 14px 14px 0; } }
 .bd-meta { font-size: 13px; }
 .bp-side-toc + .bd-meta { margin-top: 24px; }
 
@@ -394,11 +432,13 @@ html.bd-lp-open:not(.bd-lp-dock) .bp-side { background: var(--surface); box-shad
 .bd-revbar .k { margin-left: 6px; font-weight: 600; }
 .bd-revbar .k.add { color: var(--ok-fg); } .bd-revbar .k.mod { color: var(--warn-fg); } .bd-revbar .k.del { color: var(--risk-fg); }
 .bd-revbar .bp-btn { height: 28px; }
-/* the compare view's keys, docked at the strip's end: ↑ n of N ↓, then Done */
-.bd-revbar .bd-revtb { display: flex; align-items: center; gap: 4px; margin-left: auto; }
-.bd-revbar .bd-key { width: 30px; height: 30px; border-radius: 9px; }
-.bd-revbar .bd-key.txt { width: auto; font-size: 12.5px; }
-.bd-revbar .bd-groove { height: 20px; }
+/* the compare view's keys, docked at the strip's end: ↑ n of N ↓, then Done; the top toolbars' look (.bd-btb): one
+   raised pill of flat round keys, its words keys raised pills */
+.bd-revbar .in:has(> .bd-revtb) { padding-block: 6px; }
+.bd-revbar .bd-revtb { --k: 38px; display: flex; align-items: center; gap: 6px; margin-left: auto; padding: 7px; border-radius: 999px;
+  background: linear-gradient(180deg, var(--tray-top), var(--tray-bot)); box-shadow: var(--shadow-tray), 0 2px 6px oklch(23% 0.01 264 / 0.06); }
+@media (max-width: 600px) { .bd-revbar .bd-revtb { --k: 34px; gap: 4px; padding: 5px; } }
+@media (max-width: 420px) { .bd-revbar .bd-revtb { --k: 32px; gap: 3px; padding: 4px; } }
 .bd-revbar.bd-lockbar { position: static; }
 .bd-lockbar code { font: 500 12.5px var(--mono); }
 .bd-chg { --chg: var(--warn); }
@@ -448,7 +488,7 @@ td.bd-cell-mod { background: color-mix(in oklch, var(--warn-tint) 70%, transpare
   background: var(--inset); box-shadow: inset 0 0 0 1px var(--line); transition: box-shadow .12s; }
 .bp-note-ta::placeholder { color: var(--fg-subtle); }
 .bp-note-ta:focus { outline: none; background: var(--surface); box-shadow: var(--focus-ring); }
-.bp-note .f > .bp-note-ta, .bp-note .f > .bp-note-ta:focus { display: block; width: 100%; min-height: 32px; padding: 7px 12px 3px; overflow-y: auto; scrollbar-width: thin;
+.bp-note .f > .bp-note-ta, .bp-note .f > .bp-note-ta:focus { display: block; width: 100%; min-height: 32px; padding: 7px 12px 3px; overflow-y: auto;
   background: none; box-shadow: none; border-radius: 9px 9px 0 0; }
 .bp-note .f > .bp-note-ta::placeholder { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bp-note .ft { display: flex; align-items: center; gap: 6px; min-width: 0; padding: 0 6px 6px 6px; }
@@ -484,7 +524,7 @@ td.bd-cell-mod { background: color-mix(in oklch, var(--warn-tint) 70%, transpare
 .bp-file .x:hover { background: var(--hover); color: var(--fg); }
 .bp-file .x .bd-ic { width: 13px; height: 13px; }
 .bp-files-up { font-size: 12px; color: var(--fg-subtle); }
-:is(.bp-note .f, .bd-cmp, .bd-gc .cp, .bd-msgf, .bd-cs-c .rp, :is(.bd-cs-c, .bd-gm) .ed).drop { outline: 2px dashed var(--accent); outline-offset: 2px; }
+:is(.bp-note .f, .bd-cmp, .bd-gc .cp, .bd-msgf, .bd-cs-c .rp, .bd-cs-c .ed).drop { outline: 2px dashed var(--accent); outline-offset: 2px; }
 .bp-msg .mf { grid-column: 2; margin-top: 6px; }
 .bp-cl-body > .bp-note { margin-top: 16px; }
 /* a decision's box stays under its options when the row is closed (a click in it opens the row) */
@@ -1023,46 +1063,48 @@ img.bp-cmpr-img { cursor: zoom-in; }
   --groove: linear-gradient(90deg, oklch(0% 0 0 / 0.6) 50%, oklch(100% 0 0 / 0.07) 50%);
   --tip: oklch(30% 0.005 264);
 }
-/* the tray floats centred over the page, or over the part the docked sidebar leaves */
-.bd-anntb { position: fixed; left: 50%; bottom: 16px; z-index: 50; transform: translateX(-50%); display: flex; align-items: center; gap: 6px; padding: 7px; border-radius: 20px;
+/* the tray floats centred over the page, or over the part the docked sidebar leaves. HorizonUI dock, variant C: a
+   raised pill, flat round keys (--k: 38 px; hover fills, pressed sinks), raised Request changes and Approve / Send
+   pills as tall as the keys; a key with words (a revision's Changes since) is a raised pill */
+.bd-anntb { --k: 38px; position: fixed; left: 50%; bottom: 16px; z-index: 50; transform: translateX(-50%); display: flex; align-items: center; gap: 6px; padding: 7px; border-radius: 999px;
   background: linear-gradient(180deg, var(--tray-top), var(--tray-bot)); box-shadow: var(--shadow-tray), 0 2px 6px oklch(23% 0.01 264 / 0.06); transition: left .22s var(--ease), bottom .22s var(--ease); }
-.bd-key { position: relative; display: inline-grid; place-items: center; flex: none; width: 38px; height: 38px; padding: 0; border: 0; border-radius: 12px; color: var(--fg-muted);
-  background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: var(--shadow-hk); transition: transform 90ms var(--ease), box-shadow .12s var(--ease), color .12s; }
-.bd-key:hover { color: var(--fg); background: linear-gradient(var(--hover), var(--hover)), linear-gradient(180deg, var(--hk-top), var(--hk-bot)); }
-.bd-key:active:not(:disabled), .bd-key[aria-pressed="true"] { transform: translateY(1px); color: var(--fg); background: var(--hk-down); box-shadow: var(--shadow-hk-down); }
-.bd-key:focus-visible { box-shadow: var(--shadow-hk), var(--focus-ring); }
+.bd-key { position: relative; display: inline-grid; place-items: center; flex: none; width: var(--k, 38px); height: var(--k, 38px); padding: 0; border: 0; border-radius: 999px; color: var(--fg-muted);
+  background: none; box-shadow: none; transition: background-color .12s, box-shadow .12s var(--ease), color .12s; }
+.bd-key:hover { color: var(--fg); background: var(--hover); }
+.bd-key:active:not(:disabled), .bd-key[aria-pressed="true"] { color: var(--fg); background: var(--hk-down); box-shadow: var(--shadow-hk-down); }
+.bd-key:focus-visible { box-shadow: var(--focus-ring); }
 .bd-key[aria-pressed="true"]:focus-visible { box-shadow: var(--shadow-hk-down), var(--focus-ring); }
 .bd-key .bd-ic { width: 18px; height: 18px; }
-.bd-key > .b { position: absolute; top: -5px; right: -5px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 9px; display: grid; place-items: center;
+.bd-key > .b { position: absolute; top: -3px; right: -3px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 9px; display: grid; place-items: center;
   font: 650 10.5px/1 var(--sans); font-variant-numeric: tabular-nums; color: #fff; background: var(--accent-solid); box-shadow: 0 0 0 2px var(--tray-top); pointer-events: none; }
 .bd-key > .b[hidden] { display: none; }
-.bd-key.go { display: inline-flex; align-items: center; width: auto; gap: 8px; padding: 0 8px 0 13px; font-size: 13px; font-weight: 600; color: #fff; white-space: nowrap;
+.bd-key.go { display: inline-flex; align-items: center; width: auto; gap: 8px; padding: 0 calc(var(--k, 38px) * .2) 0 14px; font-size: 13px; font-weight: 600; color: #fff; white-space: nowrap;
   background: var(--accent-solid) linear-gradient(180deg, color-mix(in oklch, var(--accent-solid), white 8%), var(--accent-solid)); box-shadow: var(--shadow-fill); }
 .bd-key.go:hover { color: #fff; filter: brightness(.95); background: var(--accent-solid) linear-gradient(180deg, color-mix(in oklch, var(--accent-solid), white 8%), var(--accent-solid)); }
-.bd-key.go:active:not(:disabled) { transform: translateY(1px) scale(.98); filter: brightness(.9); box-shadow: var(--shadow-fill); background: var(--accent-solid); }
+.bd-key.go:active:not(:disabled) { filter: brightness(.9); box-shadow: var(--shadow-fill); background: var(--accent-solid); }
+.bd-key.go:focus-visible { box-shadow: var(--shadow-fill), var(--focus-ring); }
 .bd-key.go .bd-ic { width: 16px; height: 16px; }
-.bd-key.go .n { min-width: 22px; height: 22px; padding: 0 6px; border-radius: 8px; display: grid; place-items: center; font: 650 12px/1 var(--sans); font-variant-numeric: tabular-nums;
+.bd-key.go .n { min-width: calc(var(--k, 38px) - 14px); height: calc(var(--k, 38px) - 14px); padding: 0 7px; border-radius: 999px; display: grid; place-items: center; font: 650 12px/1 var(--sans); font-variant-numeric: tabular-nums;
   background: oklch(100% 0 0 / .2); box-shadow: inset 0 1px 0 oklch(100% 0 0 / .12); }
 .bd-key.go:disabled { cursor: default; filter: none; color: var(--fg-subtle); background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: var(--shadow-hk); }
 .bd-key.go:disabled .n { background: var(--inset); box-shadow: var(--shadow-well); }
-.bd-groove { flex: none; width: 2px; height: 24px; margin: 0 2px; border-radius: 1px; background: var(--groove); }
+.bd-groove { flex: none; width: 2px; height: calc(var(--k, 38px) * .62); margin: 0 2px; border-radius: 1px; background: var(--groove); }
 /* above 600 px the four tools (Element, Region, Text, Pen) sit in the dock. While Pen is on its colours and widths
    show in a pill above the dock, its left edge over Element */
 .bd-annb[hidden], .bd-annpop[hidden] { display: none; }
 @keyframes bd-annb-in { from { opacity: 0; translate: 0 6px; } }
-.bd-annb { position: relative; display: flex; align-items: center; gap: 5px; width: max-content; padding: 6px; border-radius: 17px;
+.bd-annb { --k: 34px; position: relative; display: flex; align-items: center; gap: 5px; width: max-content; padding: 6px; border-radius: 999px;
   background: linear-gradient(180deg, var(--tray-top), var(--tray-bot)); box-shadow: var(--shadow-tray), 0 2px 6px oklch(23% 0.01 264 / 0.06); }
-.bd-annb .bd-key { width: 34px; height: 34px; border-radius: 11px; }
 .bd-annb .bd-key .bd-ic { width: 17px; height: 17px; }
-.bd-annb.opt { position: absolute; left: 64px; bottom: calc(100% + 8px); padding: 5px; border-radius: 16px; animation: bd-annb-in .16s var(--ease); }
+.bd-annb.opt { position: absolute; left: 64px; bottom: calc(100% + 8px); padding: 5px; animation: bd-annb-in .16s var(--ease); }
 /* ≤ 600 px: the fold key (the current tool, else Element's icon, and a caret) opens the four tools in a menu above it */
-.bd-key.fold { display: none; align-items: center; gap: 2px; width: auto; padding: 0 5px 0 7px; }
+.bd-key.fold { display: none; align-items: center; gap: 2px; width: auto; padding: 0 8px 0 10px; }
 .bd-key.fold .bd-ic { width: 16px; height: 16px; }
 .bd-key.fold .car { width: 12px; height: 12px; color: var(--fg-subtle); transition: rotate .18s var(--ease); }
 .bd-key.fold[aria-expanded="true"] .car { rotate: 180deg; }
 .bd-annb.menu { position: absolute; left: 48px; bottom: calc(100% + 8px); display: none; animation: bd-annb-in .16s var(--ease); }
 /* pen colours and widths: wells, as the dock's keys sit in */
-.bd-annb .sw, .bd-wt { display: inline-flex; align-items: center; height: 34px; border-radius: 11px; background: var(--hk-down); box-shadow: var(--shadow-well); }
+.bd-annb .sw, .bd-wt { display: inline-flex; align-items: center; height: 34px; border-radius: 999px; background: var(--hk-down); box-shadow: var(--shadow-well); }
 .bd-annb .sw { gap: 6px; padding: 0 9px; }
 .bd-annb .sw button { width: 18px; height: 18px; padding: 0; border: 0; border-radius: 50%; background: var(--pen); box-shadow: inset 0 0 0 1px oklch(0% 0 0 / .15); }
 .bd-annb .sw button[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--hk-down), 0 0 0 3.5px var(--pen); }
@@ -1070,7 +1112,7 @@ img.bp-cmpr-img { cursor: zoom-in; }
 .bd-annb .sw button.cust { --ring: conic-gradient(from 90deg, oklch(65% 0.22 25), oklch(80% 0.17 90), oklch(70% 0.2 150), oklch(65% 0.18 230), oklch(58% 0.22 300), oklch(65% 0.22 25)); background: var(--ring); }
 .bd-annb .sw button.cust.set { background: radial-gradient(var(--pen) 0 5px, transparent 5.5px), var(--ring); }
 .bd-wt { gap: 2px; padding: 0 4px; }
-.bd-wt button { display: grid; place-items: center; width: 30px; height: 26px; padding: 0; border: 0; border-radius: 8px; background: none; color: var(--fg-subtle); }
+.bd-wt button { display: grid; place-items: center; width: 30px; height: 26px; padding: 0; border: 0; border-radius: 999px; background: none; color: var(--fg-subtle); }
 .bd-wt button svg, .bd-annb .bd-key.sty svg.w { width: 22px; height: 22px; overflow: visible; }
 .bd-wt button line, .bd-key.sty svg.w line { stroke: currentColor; stroke-linecap: round; }
 .bd-wt button:hover { color: var(--fg); }
@@ -1078,8 +1120,8 @@ img.bp-cmpr-img { cursor: zoom-in; }
 :is(.bd-annb .sw, .bd-wt) button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 /* ≤ 600 px, Pen on: a strip above the dock with a colour key (the current colour) and a width key (the current line),
    each opening its menu above the strip */
-.bd-annb.strip { position: absolute; left: 50%; bottom: calc(100% + 8px); transform: translateX(-50%); display: none; gap: 4px; padding: 4px; border-radius: 15px; animation: bd-annb-in .16s var(--ease); }
-.bd-annb.strip .bd-key.sty { display: inline-flex; align-items: center; width: auto; height: 32px; gap: 4px; padding: 0 6px 0 9px; }
+.bd-annb.strip { position: absolute; left: 50%; bottom: calc(100% + 8px); transform: translateX(-50%); display: none; gap: 4px; padding: 4px; animation: bd-annb-in .16s var(--ease); }
+.bd-annb.strip .bd-key.sty { display: inline-flex; align-items: center; width: auto; height: 32px; gap: 4px; padding: 0 8px 0 11px; }
 .bd-key.sty .dot { width: 16px; height: 16px; border-radius: 50%; background: var(--pen); box-shadow: inset 0 0 0 1px oklch(0% 0 0 / .15); }
 .bd-annb .bd-key.sty .car { width: 12px; height: 12px; color: var(--fg-subtle); }
 .bd-annpop { position: absolute; bottom: calc(100% + 8px); left: 0; z-index: 1; padding: 8px; border-radius: 14px; background: var(--raised); box-shadow: var(--shadow-3); }
@@ -1102,9 +1144,8 @@ img.bp-cmpr-img { cursor: zoom-in; }
 .bd-cpick .hex .ok:disabled { opacity: .5; cursor: default; }
 @media (prefers-reduced-motion: reduce) { .bd-annb:is(.opt, .menu, .strip) { animation: none; } .bd-key.fold .car { transition: none; } }
 @media (max-width: 600px) {
-  .bd-anntb { bottom: 10px; gap: 4px; padding: 5px; border-radius: 17px; }
-  .bd-key { width: 34px; height: 34px; border-radius: 11px; }
-  .bd-key.go { padding: 0 6px 0 9px; gap: 6px; } .bd-key.go .l { display: none; }
+  .bd-anntb { --k: 34px; bottom: 10px; gap: 4px; padding: 5px; }
+  .bd-key.go { padding: 0 6px 0 10px; gap: 6px; } .bd-key.go .l { display: none; }
   /* the four tools fold into one key (no groove before Link); Pen's pill gives way to the strip */
   .bd-anntb > :is(.bd-key.tool, .bd-groove.tools-g), .bd-annb.opt { display: none; }
   .bd-key.fold { display: inline-flex; }
@@ -1116,8 +1157,7 @@ img.bp-cmpr-img { cursor: zoom-in; }
 .bd-anntb.folded > .bd-annb:is(.menu, .strip):not([hidden]) { display: flex; }
 /* narrow phones: smaller keys and gaps, and at 380 px an empty Request changes count goes, so every dock fits 320 px */
 @media (max-width: 420px) {
-  .bd-anntb { gap: 3px; padding: 4px; }
-  .bd-key { width: 32px; height: 32px; border-radius: 10px; }
+  .bd-anntb { --k: 32px; gap: 3px; padding: 4px; }
   .bd-groove { margin: 0 1px; }
   .bd-annb.menu { left: 41px; }
 }
@@ -1144,23 +1184,28 @@ html.bd-tray-on .bp-toast { bottom: 84px; }
 .bd-revtb .lbl .bd-ic { width: 16px; height: 16px; color: var(--fg-subtle); }
 .bd-revtb .pos { min-width: 4.6em; text-align: center; font: 500 12.5px var(--mono); color: var(--fg-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .bd-revtb .bd-twinsg[hidden], .bd-revtb .bd-twinsg[hidden] + .bd-groove { display: none; }
-.bd-revtb .bd-twinsg button { height: 30px; padding: 0 10px; font-size: 12.5px; }
-.bd-revtb .bd-twinsg .bd-ic { width: 15px; height: 15px; }
-.bd-key.txt { display: inline-flex; align-items: center; width: auto; gap: 7px; padding: 0 13px 0 11px; font-size: 13px; font-weight: 600; white-space: nowrap; }
+.bd-revtb .bd-twinsg { padding: 3px; border-radius: 999px; }
+.bd-revtb .bd-twinsg button { height: calc(var(--k, 38px) - 6px); padding: 0 14px; border-radius: 999px; font-size: 13px; }
+.bd-revtb .bd-twinsg .bd-ic { width: 16px; height: 16px; }
+.bd-key.txt { display: inline-flex; align-items: center; width: auto; gap: 8px; padding: 0 16px 0 14px; font-size: 13px; font-weight: 600; white-space: nowrap; }
+.bd-key.txt:not(.go, .approve, .present, .send.has) { color: var(--fg); background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: var(--shadow-hk); }
+.bd-key.txt:not(.go, .approve, .present, .send.has):hover { background: linear-gradient(var(--hover), var(--hover)), linear-gradient(180deg, var(--hk-top), var(--hk-bot)); }
+.bd-key.txt:not(.go, .approve, .present, .send.has):active:not(:disabled) { background: var(--hk-down); box-shadow: var(--shadow-hk-down); }
+.bd-key.txt:not(.go, .approve, .present, .send.has):focus-visible { box-shadow: var(--shadow-hk), var(--focus-ring); }
 .bd-key.txt .bd-ic { width: 16px; height: 16px; }
-.bd-key.go.txt { padding: 0 14px; }
-.bd-key:disabled:not(.go) { opacity: .45; cursor: default; transform: none; }
-@media (max-width: 600px) { .bd-revtb .lbl { padding: 0 2px 0 4px; } .bd-revtb .lbl .x, .bd-revtb .lbl .bd-ic, .bd-key.txt:not(.go) .t { display: none; } .bd-key.txt:not(.go) { padding: 0 9px; } .bd-key.go.txt { padding: 0 11px; } }
+.bd-key.go.txt { padding: 0 16px; }
+.bd-key:disabled:not(.go) { opacity: .45; cursor: default; }
+@media (max-width: 600px) { .bd-revtb .lbl { padding: 0 2px 0 4px; } .bd-revtb .lbl .x, .bd-revtb .lbl .bd-ic, .bd-key.txt:not(.go) .t { display: none; } .bd-key.txt:not(.go) { padding: 0 10px; } .bd-key.go.txt { padding: 0 12px; } }
 /* the tray's last key: Approve (green fill; once approved a settled green), a presentation's Present (green fill) or the
    send key (green fill, with its count of picks, ticks and comments not sent yet, when there is something to send) */
 .bd-key:is(.approve, .send.has, .present) { color: #fff; background: var(--ok-solid) linear-gradient(180deg, color-mix(in oklch, var(--ok-solid), white 9%), var(--ok-solid)); box-shadow: var(--shadow-fill); }
 .bd-key:is(.approve, .send.has, .present):hover { color: #fff; filter: brightness(.95); background: var(--ok-solid) linear-gradient(180deg, color-mix(in oklch, var(--ok-solid), white 9%), var(--ok-solid)); }
-.bd-key:is(.approve, .send.has, .present):active:not(:disabled) { transform: translateY(1px) scale(.98); filter: brightness(.9); box-shadow: var(--shadow-fill); background: var(--ok-solid); }
+.bd-key:is(.approve, .send.has, .present):active:not(:disabled) { filter: brightness(.9); box-shadow: var(--shadow-fill); background: var(--ok-solid); }
 .bd-key:is(.approve, .send.has, .present):focus-visible { box-shadow: var(--shadow-fill), var(--focus-ring); }
 .bd-key.approve.done:disabled { opacity: 1; cursor: default; filter: none; transform: none; color: var(--ok-fg); background: var(--ok-tint); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--ok) 38%, transparent); }
 .bd-key.approve .bd-ic { stroke-width: 2.1; }
-.bd-key.send.has { padding-right: 8px; }
-.bd-key.send .n { min-width: 22px; height: 22px; padding: 0 6px; border-radius: 8px; display: grid; place-items: center; font: 650 12px/1 var(--sans); font-variant-numeric: tabular-nums;
+.bd-key.send.has { padding-right: calc(var(--k, 38px) * .2); }
+.bd-key.send .n { min-width: calc(var(--k, 38px) - 14px); height: calc(var(--k, 38px) - 14px); padding: 0 7px; border-radius: 999px; display: grid; place-items: center; font: 650 12px/1 var(--sans); font-variant-numeric: tabular-nums;
   background: oklch(100% 0 0 / .2); box-shadow: inset 0 1px 0 oklch(100% 0 0 / .12); }
 .bd-key.send .n[hidden] { display: none; }
 .bd-pen-risk { --pen: var(--risk); } .bd-pen-accent { --pen: var(--accent); } .bd-pen-warn { --pen: var(--warn); } .bd-pen-ok { --pen: var(--ok); }
@@ -1222,6 +1267,9 @@ html.bd-ann-m-select .bp-cl-head { user-select: text; -webkit-user-select: text;
 .bd-ann-num { display: inline-grid; place-items: center; flex: none; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 10px 10px 10px 3px; font: 650 11px/1 var(--sans);
   color: #fff; background: var(--pen, var(--accent)); }
 .bd-ann-num.sent { background: var(--todo); }
+/* a general comment's chip: the speech bubble, no number (it has no mark on the page) */
+.bd-ann-num.gen { padding: 0; }
+.bd-ann-num.gen .bd-ic { width: 12px; height: 12px; }
 
 /* the composer: a new note is written here, next to its mark (HorizonUI popover), until it is saved */
 .bd-cmp { position: fixed; left: 0; top: 0; z-index: 56; width: min(320px, calc(100vw - 16px)); padding: 10px 10px 10px 12px; border-radius: 12px;
@@ -1254,9 +1302,9 @@ html.bd-ann-m-select .bp-cl-head { user-select: text; -webkit-user-select: text;
 /* right panel: one section at a time (Brief on a board, Comments, Revisions), each opened from its key on the right
    stripe; its header the section's title. Docked beside the page where the page keeps READ_W (a board: 1101 px and
    up), else over it; a bottom sheet on a phone, where the sections are tabs. JS sets html.bd-sp-open and html.bd-sp-dock. */
-.bd-sp { position: fixed; z-index: 42; top: var(--top-h); right: var(--stripe-w); bottom: 0; width: var(--sp-w); display: flex; flex-direction: column; min-height: 0;
-  background: var(--panel); box-shadow: inset 1px 0 0 var(--line); font-size: 13.5px;
-  transform: translateX(100%); visibility: hidden; transition: transform .22s var(--ease), visibility 0s .22s; }
+.bd-sp { position: fixed; z-index: 42; top: var(--top-h); right: var(--stripe-w); bottom: 0; width: var(--sp-w); display: flex; flex-direction: column; min-height: 0; overflow: hidden;
+  border-radius: 14px; background: var(--panel); box-shadow: var(--shadow-card); font-size: 13.5px;
+  transform: translateX(calc(100% + var(--stripe-w))); visibility: hidden; transition: transform .22s var(--ease), visibility 0s .22s; }
 html.bd-sp-open .bd-sp { transform: none; visibility: visible; transition: transform .22s var(--ease); }
 html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow: var(--shadow-3); }
 .bd-sp-h .n { padding: 2px 7px; border-radius: 7px; font: 600 11.5px/1.4 var(--sans); font-variant-numeric: tabular-nums; color: var(--accent-fg); background: var(--accent-tint); }
@@ -1270,10 +1318,17 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .bd-sp-tabs button { padding: 0 10px; font-size: 12.5px; }
 @media (min-width: 601px) { .bd-sp-tabs { display: none !important; } }
 @media (max-width: 600px) { .bd-sp-h:has(.bd-sp-tabs:not([hidden])) > h2 { display: none; } }
-:is(.bd-cs-c, .bd-gm) .ef .sp { flex: 1; }
+.bd-cs-c .ef .sp { flex: 1; }
 .bd-cs-f { flex: none; display: flex; align-items: center; gap: 6px; padding: 0 12px 10px; box-shadow: inset 0 -1px 0 var(--line-soft); }
 .bd-cs-f .bd-sg { flex: 1; min-width: 0; }
-.bd-cs-f .srt { flex: none; width: 28px; height: 28px; padding: 0; justify-content: center; }
+/* Sort: a ghost key, its icon and a chevron (the order is its title), opening the orders' menu */
+.bd-cs-f .bd-srt { flex: none; }
+.bd-cs-f .bd-srt .bd-tbtn.bd-selb { height: 28px; min-width: 0; gap: 2px; padding: 0 4px 0 6px; color: var(--fg-muted); background: none; box-shadow: none; }
+.bd-cs-f .bd-srt .bd-tbtn.bd-selb:is(:hover:not(:disabled), [aria-expanded="true"]) { color: var(--fg); background: var(--hover); box-shadow: none; }
+.bd-cs-f .bd-srt .bd-tbtn.bd-selb:focus-visible { box-shadow: var(--focus-ring); }
+.bd-cs-f .bd-srt .bd-selb .bd-ic { width: 14px; height: 14px; color: var(--fg-subtle); }
+.bd-cs-f .bd-srt .bd-selb .v { display: none; }
+.bd-cs-f .bd-srt .bd-selm { min-width: 240px; }
 .bd-sg { display: flex; padding: 2px; border-radius: 10px; background: var(--inset); box-shadow: var(--shadow-well); }
 .bd-sg button { flex: 1 1 auto; min-width: 0; display: inline-flex; align-items: center; justify-content: center; gap: 5px; height: 26px; padding: 0 6px; border: 0; border-radius: 8px; background: none;
   font-size: 12px; font-weight: 500; color: var(--fg-muted); white-space: nowrap; transition: background .12s, color .12s; }
@@ -1281,7 +1336,7 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .bd-sg button:is([aria-checked="true"], [aria-selected="true"]) { color: var(--fg); background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: var(--shadow-hk); }
 .bd-sg button i { font: 500 11px/1 var(--mono); font-style: normal; color: var(--fg-subtle); }
 .bd-sg button i:empty { display: none; }
-.bd-cs-l { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 10px 12px 16px; scrollbar-width: thin; position: relative; }
+.bd-cs-l { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 10px 12px 16px; position: relative; }
 .bd-cs-l ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .bd-cs-c { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 10px; padding: 10px 10px 10px 11px; border-radius: 12px; background: var(--surface);
   box-shadow: var(--shadow-1); cursor: pointer; scroll-margin: 10px; transition: box-shadow .14s var(--ease), opacity .14s; }
@@ -1364,60 +1419,13 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .bd-cs-ic .st.rc { color: var(--warn-fg); background: var(--warn-tint); }
 .bd-cs-ic .st.ok { color: var(--ok-fg); background: var(--ok-tint); }
 .bd-cs-ic.done:not(:hover, :focus-visible) { opacity: .62; box-shadow: none; background: transparent; outline: 1px solid var(--line-soft); outline-offset: -1px; }
-.bd-cs-ft { flex: 0 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 8px; padding: 10px 12px 12px; box-shadow: inset 0 1px 0 var(--line); }
+.bd-cs-ft { flex: none; display: grid; gap: 8px; padding: 10px 12px 12px; box-shadow: inset 0 1px 0 var(--line); }
 .bd-cs-ft .row { display: flex; align-items: center; gap: 6px; margin: -2px -4px 0; }
 .bd-cs-ft .row[hidden] { display: none; }
 .bd-cs-ft .row .bp-btn { height: 28px; font-size: 12.5px; }
-/* General: a chat about the whole doc at the Comments panel's foot. The reader's general comments on the right
-   (accent-tinted), the agent's replies on the left (inset, with its initial), oldest first, scrolling within a max
-   height; under them the composer */
-/* a short panel (the phone's sheet) keeps some of the comments list: the chat's bubbles give up their height first */
+/* a short panel (the phone's sheet) keeps some of the comments list above the composer */
 .bd-cs-l:has(+ .bd-cs-ft) { min-height: min(120px, 30%); }
-.bd-gc { display: flex; flex-direction: column; gap: 10px; min-height: 0; }
-.bd-gc > .gh, .bd-gc > .cp { flex: none; }
-.bd-gc .gh { display: flex; align-items: center; gap: 7px; min-width: 0; font-size: 12px; color: var(--fg-subtle); }
-.bd-gc .gh > .bd-ic { flex: none; width: 14px; height: 14px; color: var(--accent); }
-.bd-gc .gh b { flex: none; font-weight: 600; color: var(--fg); }
-.bd-gc .gh span { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.bd-gc-l { position: relative; flex: 0 1 auto; min-height: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; margin: 0 -12px; padding: 2px 12px; max-height: min(34vh, 320px);
-  overflow: auto; overscroll-behavior: contain; scrollbar-width: none; }
-.bd-gc-l::-webkit-scrollbar { display: none; }
-.bd-gc-l:empty { display: none; }
-.bd-gm { flex: none; max-width: 86%; min-width: 0; font-size: 13px; line-height: 19px; scroll-margin: 6px; }
-.bd-gm:focus { outline: none; }
-.bd-gm .bb { display: grid; gap: 6px; padding: 8px 11px; overflow-wrap: anywhere; }
-.bd-gm .bb .tx { margin: 0; white-space: pre-wrap; }
-.bd-gm.me { align-self: flex-end; }
-.bd-gm.me .bb { border-radius: 14px 14px 4px 14px; color: var(--fg); background: color-mix(in oklab, var(--accent) 20%, var(--surface)); }
-/* not sent yet: a lighter bubble with a dashed edge; a click on its text edits it */
-.bd-gm.pend .bb { background: color-mix(in oklab, var(--accent) 9%, var(--surface)); outline: 1px dashed color-mix(in oklch, var(--accent) 55%, transparent); outline-offset: -1px; cursor: text; }
-.bd-gm.flash .bb { animation: bd-gm-flash 1.2s var(--ease); }
-@keyframes bd-gm-flash { 0%, 40% { box-shadow: 0 0 0 1.5px var(--accent), 0 0 0 5px color-mix(in oklch, var(--accent) 22%, transparent); } }
-.bd-gm.edit { align-self: stretch; max-width: none; }
-.bd-gm .ed { display: grid; gap: 6px; }
-.bd-gm .ed .bp-note-ta { display: block; width: 100%; min-height: 60px; max-height: 200px; overflow: auto; }
-.bd-gm .ef { display: flex; align-items: center; gap: 6px; }
-.bd-gm .ef .hint { display: inline-flex; align-items: center; gap: 3px; font-size: 11.5px; color: var(--fg-subtle); white-space: nowrap; }
-.bd-gm .ef .bp-btn { height: 28px; }
-.bd-gm .ef .bp-btn:disabled { opacity: .5; cursor: default; }
-.bd-gm.ag { align-self: flex-start; display: flex; align-items: flex-end; gap: 8px; }
-.bd-gm.ag > div { min-width: 0; }
-.bd-gm.ag .bb { display: block; border-radius: 14px 14px 14px 4px; background: var(--inset); }
-.bd-gm.ag .bb > :first-child { margin-top: 0; } .bd-gm.ag .bb > :last-child { margin-bottom: 0; }
-.bd-gm.ag .bb p { margin: 0 0 6px; } .bd-gm.ag .bb :is(ul, ol) { margin: 0 0 6px; padding-left: 18px; }
-.bd-gm .av { display: grid; place-items: center; flex: none; width: 22px; height: 22px; margin-bottom: 23px; border-radius: 50%; font: 700 10.5px/1 var(--sans); color: #fff; background: oklch(66% 0.13 42); }
-.bd-gm .mt { display: flex; align-items: center; gap: 4px; min-height: 19px; margin-top: 4px; font-size: 11px; line-height: 15px; color: var(--fg-subtle); }
-.bd-gm.me .mt { justify-content: flex-end; }
-.bd-gm .mt .st { color: var(--warn-fg); }
-.bd-gm .mt .nw { display: inline-flex; align-items: center; gap: 4px; color: var(--fg-muted); }
-.bd-gm .mt .nw > i { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
-/* a pending bubble's Edit and Delete: shown on hover or focus (always on touch screens) */
-.bd-gm .acts { display: inline-flex; gap: 1px; margin: -4px 2px -4px 0; opacity: 0; transition: opacity .12s; }
-.bd-gm:is(:hover, :focus-within) .acts { opacity: 1; }
-@media (hover: none) { .bd-gm .acts { opacity: 1; } }
-.bd-gm .acts .bd-cs-ib { width: 22px; height: 22px; border-radius: 6px; }
-.bd-gm .acts .bd-cs-ib .bd-ic { width: 12px; height: 12px; }
-/* the composer: two lines and more, a visible accent-tinted edge; attach, the hint and a round Save */
+/* the composer at the foot (a general comment): two lines and more, a visible accent-tinted edge; attach, the hint and a round Save */
 .bd-gc .cp { display: grid; gap: 6px; padding: 10px 10px 8px 12px; border-radius: 14px; background: var(--canvas); cursor: text;
   box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--accent) 45%, var(--line)), 0 0 0 3px color-mix(in oklch, var(--accent) 12%, transparent); transition: box-shadow .12s; }
 .bd-gc .cp:focus-within { box-shadow: inset 0 0 0 1.5px var(--accent), 0 0 0 3px color-mix(in oklch, var(--accent) 22%, transparent); }
@@ -1452,9 +1460,6 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
    Row: [number tile] Revision N / first change note, ellipsized [chevron]; under it, two small buttons.
    Expanded: date, chips and every change note. */
 .bd-rvr, .bd-rvr .bd-rail-sec { min-width: 0; }
-/* the Revisions tab, the Comments list and the left panes scroll without a visible scrollbar (wheel, trackpad, keys still work) */
-.bd-rvr, .bd-cs-l, .bp-side-b, .bd-lp-pane, .bd-sp-brief { scrollbar-width: none; -ms-overflow-style: none; }
-.bd-rvr::-webkit-scrollbar, .bd-cs-l::-webkit-scrollbar, .bp-side-b::-webkit-scrollbar, .bd-lp-pane::-webkit-scrollbar, .bd-sp-brief::-webkit-scrollbar { display: none; width: 0; height: 0; }
 .bp-side-b { -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent); }
 .bd-rvs { list-style: none; margin: 0; padding: 0; border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-1); overflow: hidden; }
 .bd-rv { min-width: 0; padding: 9px 10px; }
@@ -1596,7 +1601,7 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .bd-selw.bd-fsel { display: none; }
 .bd-fsel :is(.bd-selb, .bd-selm button) { font-family: var(--mono); }
 .bd-diff-body { display: grid; grid-template-columns: 252px minmax(0, 1fr); height: var(--pane-h); }
-.bd-files { overflow: auto; border-right: 1px solid var(--line); padding: 6px; background: var(--panel); scrollbar-width: thin; }
+.bd-files { overflow: auto; border-right: 1px solid var(--line); padding: 6px; background: var(--panel); }
 .bd-files .grp { font: 600 10.5px/1 var(--sans); letter-spacing: .07em; text-transform: uppercase; color: var(--fg-subtle); padding: 10px 8px 6px; }
 .bd-file { display: grid; grid-template-columns: 14px minmax(0, 1fr) auto; column-gap: 8px; align-items: center; width: 100%; text-align: left; border: 0; background: none; padding: 6px 8px; border-radius: 8px; color: var(--fg); }
 .bd-file:hover { background: var(--hover); }
@@ -1610,7 +1615,7 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .bd-file .cnt.all { color: var(--ok-fg); background: var(--ok-tint); }
 .bd-file .cnt .bd-ic { width: 11px; height: 11px; }
 .bd-file .ch { font: 500 10.5px var(--mono); color: var(--fg-subtle); white-space: nowrap; }
-.bd-pane { position: relative; overflow: auto; min-width: 0; scrollbar-width: thin; }
+.bd-pane { position: relative; overflow: auto; min-width: 0; }
 .bd-fh { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 6px 8px 6px 14px; background: var(--surface); border-bottom: 1px solid var(--line); }
 .bd-fh .p { flex: 1; min-width: 0; font: 12px/1.45 var(--mono); color: var(--fg-subtle); overflow-wrap: anywhere; }
 .bd-fh .p b { color: var(--fg); font-weight: 600; }
@@ -1820,7 +1825,7 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
   .bp-sec.fv-on > h2 > .bd-prm { margin-left: 42px; }
   .bd-meter { width: 56px; }
   .bd-mcode { margin-left: 16px; margin-right: 12px; }
-  .bd-mcode > .bd-code { overflow-x: auto; scrollbar-width: thin; }
+  .bd-mcode > .bd-code { overflow-x: auto; }
   .bd-mlines { width: max-content; min-width: 100%; }
   .bd-mlines .bd-ln > .c { white-space: pre; overflow-wrap: normal; }
   .bd-mlbl { padding-left: 40px; }
@@ -1865,21 +1870,28 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 /* blueprint canvas */
 .bp-canvas { margin: 0; border-radius: 14px; overflow: hidden; background: var(--bp-bg); color: var(--bp-line);
   box-shadow: 0 0 0 1px #06203e, 0 2px 4px oklch(20% 0.05 255 / .12), 0 12px 32px oklch(20% 0.06 255 / .18); }
-.bp-tb { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 8px 8px 16px; background: var(--bp-deep); border-bottom: 1px solid rgba(214,233,255,.1); font: 13px var(--sans); }
-.bp-tb .ttl { font-weight: 600; color: #eef6ff; margin-right: auto; padding-right: 8px; letter-spacing: -.005em; min-width: 0; }
-.bp-tb .grp { display: inline-flex; align-items: center; gap: 2px; padding: 2px; border-radius: 10px; background: rgba(0,0,0,.22); box-shadow: inset 0 0 0 1px rgba(214,233,255,.08); }
-.bp-tb button { display: inline-grid; place-items: center; width: 30px; height: 28px; border: 0; border-radius: 8px; background: transparent; color: #c9def6; transition: background .12s, color .12s; }
-.bp-tb button .bd-ic { width: 15px; height: 15px; }
+/* the drawing's toolbar: its title, then the top toolbars' one raised pill (.bd-btb: flat round keys, --k) in the
+   drawing's blue, whatever the page's theme: Flow, play, previous and next step, a groove, zoom out and in, fit, full screen */
+.bp-tb { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 8px 8px 18px; background: var(--bp-deep); border-bottom: 1px solid rgba(214,233,255,.1); font: 13px var(--sans); }
+.bp-tb .ttl { flex: 1 1 0; min-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; color: #eef6ff; padding-right: 8px; letter-spacing: -.005em; }
+.bp-tb .grp { --k: 38px; display: inline-flex; align-items: center; gap: 6px; min-width: 0; padding: 7px; border-radius: 999px; background: linear-gradient(180deg, #11355f, #0c2a4e);
+  box-shadow: 0 0 0 1px rgba(0,0,0,.5), 0 8px 22px rgba(0,0,0,.35), inset 0 1px 0 rgba(214,233,255,.1); }
+.bp-tb .bd-groove { background: linear-gradient(90deg, rgba(0,0,0,.55) 50%, rgba(214,233,255,.1) 50%); }
+.bp-tb button { display: inline-grid; place-items: center; flex: none; width: var(--k); height: var(--k); padding: 0; border: 0; border-radius: 999px; background: transparent; color: #c9def6; transition: background .12s, color .12s; }
+.bp-tb button .bd-ic { width: 18px; height: 18px; }
 .bp-tb button:hover { background: rgba(214,233,255,.1); color: #fff; }
-.bp-tb button[aria-pressed="true"] { background: rgba(95,212,255,.16); color: var(--bp-cyan); }
+.bp-tb button[aria-pressed="true"] { background: #061a33; color: var(--bp-cyan); box-shadow: inset 0 1px 4px rgba(0,0,0,.6), inset 0 0 0 1px rgba(0,0,0,.5); }
 .bp-tb button:focus-visible { box-shadow: 0 0 0 2px rgba(95,212,255,.6); }
-/* the Flow menu (selectMenu) in the drawing's blueprint: a lit key on the deep blue, its menu in the drawing's ink */
-.bp-tb .bd-tbtn.bd-selb { width: auto; height: 28px; max-width: 240px; padding: 0 6px 0 10px; border-radius: 8px; color: #eef6ff; font-weight: 600;
-  background: linear-gradient(180deg, rgba(214,233,255,.13), rgba(214,233,255,.07)); box-shadow: inset 0 0 0 1px rgba(214,233,255,.14), inset 0 1px 0 rgba(255,255,255,.08); }
-.bp-tb .bd-tbtn.bd-selb:hover:not(:disabled) { color: #fff; background: rgba(214,233,255,.17); }
-.bp-tb .bd-tbtn.bd-selb[aria-expanded="true"] { background: rgba(0,0,0,.3); box-shadow: inset 0 1px 3px rgba(0,0,0,.4), inset 0 0 0 1px rgba(214,233,255,.1); }
+/* the Flow menu (selectMenu) in the drawing's blueprint: a raised pill on the blue, its menu in the drawing's ink */
+.bp-tb .bd-selw { min-width: 0; }
+.bp-tb .bd-tbtn.bd-selb { width: auto; height: var(--k); max-width: 240px; gap: 7px; padding: 0 10px 0 14px; border-radius: 999px; color: #eef6ff; font-weight: 600;
+  background: linear-gradient(180deg, rgba(214,233,255,.15), rgba(214,233,255,.07)); box-shadow: 0 0 0 1px rgba(0,0,0,.45), 0 2px 5px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.1); }
+.bp-tb .bd-tbtn.bd-selb:hover:not(:disabled) { color: #fff; background: linear-gradient(180deg, rgba(214,233,255,.2), rgba(214,233,255,.11)); }
+.bp-tb .bd-tbtn.bd-selb[aria-expanded="true"] { background: #061a33; box-shadow: inset 0 1px 4px rgba(0,0,0,.6), inset 0 0 0 1px rgba(0,0,0,.5); }
 .bp-tb .bd-tbtn.bd-selb:focus-visible { box-shadow: 0 0 0 2px rgba(95,212,255,.6); }
 .bp-tb .bd-tbtn.bd-selb .cv { color: var(--bp-dim); }
+@media (max-width: 600px) { .bp-tb > .grp { --k: 34px; flex: 1 1 100%; gap: 4px; padding: 5px; } .bp-tb .bd-tbtn.bd-selb { padding: 0 8px 0 12px; } }
+@media (max-width: 420px) { .bp-tb > .grp { --k: 32px; gap: 3px; padding: 4px; } .bp-tb .grp .bd-groove { margin: 0 1px; } }
 .bp-tb .bd-selm { z-index: 6; background: #0e2c52; color: #eef6ff; box-shadow: 0 0 0 1px rgba(214,233,255,.16), 0 14px 36px rgba(0,0,0,.5); }
 .bp-tb .bd-selm button { width: auto; height: auto; place-items: initial; color: inherit; }
 .bp-tb .bd-selm button:is(:hover, :focus) { background: rgba(214,233,255,.1); color: #fff; }
@@ -2009,10 +2021,9 @@ svg.anim .bp-edge.k-async { animation: bp-march 1.6s linear infinite; }
   .bp-tblock { display: none; }
   .bp-tb { padding: 8px; gap: 6px; }
   .bp-tb .ttl { flex: 1 1 100%; padding: 2px 4px 0; }
-  .bp-tb .flowgrp { flex: 1 1 0; min-width: 150px; }
-  .bp-tb .flowgrp .bd-selw { flex: 1 1 80px; min-width: 0; }
-  .bp-tb .flowgrp .bd-tbtn.bd-selb { flex: 1; min-width: 0; max-width: none; }
-  .bp-tb button { width: 28px; }
+  .bp-tb .grp { flex: 0 1 auto; }
+  .bp-tb .grp .bd-selw { flex: 1 1 80px; }
+  .bp-tb .grp .bd-tbtn.bd-selb { width: 100%; min-width: 0; max-width: none; }
   .bp-hint { max-width: calc(100% - 110px); }
   .bp-cl { --ind: 28px; }
   .bp-cl-row { padding: 0 4px 0 12px; }
@@ -2094,16 +2105,16 @@ html.bd-resizing, html.bd-resizing * { cursor: col-resize !important; user-selec
 /* design page: the board fills the window under the app bar, between the stripes and the docked panes: the left one
    (Screens) and the right one (Brief, Comments, Revisions). JS sets data-layout="board", html.bd-lp-open, html.bd-lp-dock,
    html.bd-sp-dock and the room's edges (--room-l, --room-r). */
-:root[data-layout="board"] { --lp-w: 280px; }
+:root[data-layout="board"] { --lp-w: 240px; }
 :root[data-layout="board"], :root[data-layout="board"] body { height: 100%; overflow: hidden; }
 :root[data-layout="board"] .bd-shell { display: block; padding: 0; }
 :root[data-layout="board"] :is(.bp-side, .bd-rh:not(.bd-rh-p)) { display: none !important; }
-.bd-boardblk { position: fixed; z-index: 1; top: var(--top-h); left: var(--room-l, var(--stripe-w)); right: var(--room-r, var(--stripe-w)); bottom: 0; transition: left .22s var(--ease), right .22s var(--ease); }
+.bd-boardblk { position: fixed; z-index: 1; top: var(--top-h); left: var(--room-l, var(--stripe-w)); right: var(--room-r, var(--stripe-w)); bottom: 0; margin: 0; transition: left .22s var(--ease), right .22s var(--ease); }
 html.bd-resizing .bd-boardblk { transition: none; }
 /* the panels' edges on the board take the content width's drag handles; JS sets --lp-w and --sp-w */
 .bd-rh-p { top: var(--top-h); z-index: 43; }
-.bd-rh-left { left: calc(var(--stripe-w) + var(--lp-w)); }
-.bd-rh-right { left: calc(100% - var(--stripe-w) - var(--sp-w)); }
+.bd-rh-left { left: calc(var(--stripe-w) + var(--lp-w) + var(--pane-gap) / 2); }
+.bd-rh-right { left: calc(100% - var(--stripe-w) - var(--sp-w) - var(--pane-gap) / 2); }
 html:not(.bd-lp-dock) .bd-rh-left, html:not(.bd-sp-dock) .bd-rh-right { display: none; }
 .bd-board-ph { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 10px; background: var(--inset); color: var(--fg-subtle); font-size: 13px; }
 .bd-board-ph .bd-ic { width: 16px; height: 16px; flex: none; }
@@ -2127,7 +2138,9 @@ html:not(.bd-lp-dock) .bd-rh-left, html:not(.bd-sp-dock) .bd-rh-right { display:
 }
 /* a board outside a design doc stays a block in the column */
 .bd-bwrap { position: relative; height: 560px; overflow: hidden; border-radius: 14px; box-shadow: var(--shadow-1); }
-.bd-boardblk .bd-bwrap { height: 100%; border-radius: 0; box-shadow: none; }
+/* the board fills its room as the page's card (HorizonUI AppFrame's centre); a phone's, edge to edge */
+.bd-boardblk .bd-bwrap { height: 100%; box-shadow: var(--shadow-card); }
+@media (max-width: 600px) { .bd-boardblk .bd-bwrap { border-radius: 0; box-shadow: none; } }
 /* the board paints in its own layer (z 0) under its toolbar: a browser that composites the screens' iframes apart
    (WebKit) can't lift them, or their labels, over the toolbar */
 .bd-board { position: absolute; inset: 0; z-index: 0; isolation: isolate; overflow: hidden; outline: none; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none;
@@ -2327,7 +2340,7 @@ i.warn[hidden] { display: none; }
 .bd-sec-l .v { font-size: 11px; font-weight: 600; color: var(--accent-fg); white-space: nowrap; }
 .bd-sec-l code { grid-column: 1 / -1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 11px/1.4 var(--mono); color: var(--fg-subtle); }
 .bd-btb .bd-tbtn[hidden] { display: none; }
-.bd-btb .bd-bpw { width: 64px; height: 26px; padding: 0 8px; border: 0; border-radius: 8px; background: var(--inset); box-shadow: var(--shadow-well); font: 500 12px var(--sans); color: var(--fg); }
+.bd-btb .bd-bpw { flex: none; width: 64px; height: 28px; padding: 0 10px; border: 0; border-radius: 999px; background: var(--inset); box-shadow: var(--shadow-well); font: 500 12px var(--mono); color: var(--fg); }
 .bd-btb .bd-bpw::placeholder { color: var(--fg-subtle); }
 /* requested frames (Frame mode): dashed, with their labelled boxes; the one being drawn is amber */
 .bd-rq { position: absolute; border: calc(2px / var(--k)) dashed var(--accent); border-radius: 6px; background: color-mix(in oklch, var(--accent) 6%, transparent); }
@@ -2393,27 +2406,37 @@ html.bd-space .bd-board .bd-ab-fr { pointer-events: none; }
 .bd-dcount { color: var(--warn-fg); }
 /* the board's toolbar, centred in the board: panel, Fit · zoom · Focus · Tidy up · Undo · Redo, Present, Variants, Flows,
    fidelity, theme, ⋯ More. Always one row: where the board is too narrow it gives way a step at a time (fitTb): the
-   compact keys shrink (data-fit), then keys go into ⋯ (data-over) */
-.bd-btb { position: absolute; z-index: 10; transform: translateZ(0); left: 12px; right: 12px; top: 12px; width: fit-content; margin: 0 auto; display: flex; flex-wrap: nowrap; align-items: center; gap: 2px; padding: 4px; border-radius: 14px;
-  background: linear-gradient(180deg, var(--tray-top), var(--tray-bot)); box-shadow: var(--shadow-tray), 0 2px 6px oklch(23% 0.01 264 / 0.06); font-size: 12.5px; }
+   compact keys shrink (data-fit), then keys go into ⋯ (data-over). Variant A, the dock's look carried up: one raised
+   pill as tall as the dock, flat round keys (--k), the zoom in a round-ended well, segmented controls as pills, the
+   theme, a select or Export to… a raised pill */
+.bd-btb { --k: 38px; position: absolute; z-index: 10; transform: translateZ(0); left: 12px; right: 12px; top: 12px; width: fit-content; margin: 0 auto; display: flex; flex-wrap: nowrap; align-items: center; gap: 6px; padding: 7px; border-radius: 999px;
+  background: linear-gradient(180deg, var(--tray-top), var(--tray-bot)); box-shadow: var(--shadow-tray), 0 2px 6px oklch(23% 0.01 264 / 0.06); font-size: 13px; }
 .bd-btb > * { flex: none; white-space: nowrap; }
 .bd-tbtn { display: inline-grid; place-items: center; height: 30px; min-width: 30px; padding: 0 6px; border: 0; border-radius: 9px; background: none; color: var(--fg-muted); font: 500 12.5px var(--sans); cursor: pointer; }
 .bd-tbtn:hover:not(:disabled) { color: var(--fg); background: var(--hover); }
 .bd-tbtn[aria-pressed="true"] { color: var(--fg); background: var(--hk-down); box-shadow: var(--shadow-hk-down); }
 .bd-tbtn:disabled { opacity: .4; cursor: default; }
 .bd-tbtn .bd-ic { width: 17px; height: 17px; }
-.bd-btb .bd-tbtn { min-width: 28px; padding: 0 5px; }
-.bd-btb .zl { min-width: 38px; text-align: center; font: 500 12px var(--mono); font-variant-numeric: tabular-nums; color: var(--fg-muted); }
-.bd-btb .bd-groove { height: 20px; margin: 0 1px; }
-.bd-btb .bd-sg button { height: 24px; padding: 0 8px; }
+.bd-btb .bd-tbtn { height: var(--k); min-width: var(--k); padding: 0; border-radius: 999px; font-size: 13px; }
+.bd-btb .bd-tbtn .bd-ic { width: 18px; height: 18px; }
+.bd-btb .bd-tbtn.txt { gap: 6px; padding: 0 14px; }
+.bd-btb .bd-tbtn[aria-haspopup="menu"]:not(.bd-expb, .bd-selb)[aria-expanded="true"] { color: var(--fg); background: var(--hk-down); box-shadow: var(--shadow-hk-down); }
+.bd-btb .zl { display: inline-grid; place-items: center; min-width: 58px; height: 28px; padding: 0 10px; border-radius: 999px; background: var(--inset); box-shadow: var(--shadow-well);
+  font: 500 12px var(--mono); font-variant-numeric: tabular-nums; color: var(--fg-muted); }
+.bd-btb .bd-sg { padding: 3px; border-radius: 999px; }
+.bd-btb .bd-sg button { height: calc(var(--k) - 6px); gap: 6px; padding: 0 14px; border-radius: 999px; font-size: 13px; }
+.bd-btb .bd-sg button:has(> .bd-ic:only-child) { width: calc(var(--k) - 6px); padding: 0; }
+.bd-btb .bd-sg .bd-ic { width: 16px; height: 16px; }
+@media (max-width: 600px) { .bd-btb { --k: 34px; gap: 4px; padding: 5px; } .bd-btb .zl { min-width: 50px; height: 26px; padding: 0 8px; } .bd-btb .bd-sg button { padding: 0 11px; } }
+@media (max-width: 420px) { .bd-btb { --k: 32px; gap: 3px; padding: 4px; } }
 .bd-btb > [data-over], .bd-btb > .bd-groove[hidden], .bd-btb > .bd-btb-more[hidden] { display: none; }
 /* the compact keys (data-fit): the fidelity and a website's widths by their icons, the theme by its palette, a deck's
    Export to… by its icon */
 .bd-btb .fid .bd-ic { display: none; }
 .bd-btb[data-fit~="fidelity"] .fid .bd-ic { display: block; }
 .bd-btb[data-fit~="fidelity"] .fid .w, .bd-btb[data-fit~="widths"] .bps .w, .bd-btb[data-fit~="theme"] .th .v, .bd-btb[data-fit~="export"] .bd-expb > span { display: none; }
-.bd-btb[data-fit~="fidelity"] .fid button, .bd-btb[data-fit~="widths"] .bps button { padding: 0 6px; }
-.bd-btb[data-fit~="theme"] .th .bd-selb { gap: 3px; padding: 0 5px 0 8px; }
+.bd-btb[data-fit~="fidelity"] .fid button, .bd-btb[data-fit~="widths"] .bps button { width: calc(var(--k) - 6px); padding: 0; }
+.bd-btb[data-fit~="theme"] .th .bd-selb { gap: 4px; padding: 0 8px 0 10px; }
 /* ⋯ More's rows: a tick for a radio or a switch, the key's icon, its label and its shortcut; a group's name over its
    options; the custom width of a website's pages with its field */
 .bd-btb-more .bd-selm { min-width: 220px; }
@@ -2435,8 +2458,9 @@ html.bd-space .bd-board .bd-ab-fr { pointer-events: none; }
 .bd-exp { position: relative; display: inline-flex; }
 .bd-tbtn:is(.bd-expb, .bd-selb, .bd-shk) { display: inline-flex; align-items: center; gap: 6px; padding: 0 7px 0 9px; color: var(--fg); font-weight: 600; white-space: nowrap;
   background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: var(--shadow-hk); }
-.bd-btb .bd-tbtn.bd-expb { padding: 0 7px 0 9px; margin-right: 4px; }
-.bd-btb .bd-tbtn.bd-selb { padding: 0 6px 0 10px; }
+.bd-btb .bd-tbtn:is(.bd-expb, .bd-selb) { gap: 7px; padding: 0 10px 0 12px; }
+.bd-btb .bd-tbtn:is(.bd-expb, .bd-selb) .bd-ic:not(.cv) { width: 18px; height: 18px; }
+.bd-btb .bd-tbtn.bd-expb.pri { padding: 0 12px 0 14px; }
 .bd-tbtn:is(.bd-expb, .bd-selb, .bd-shk):hover:not(:disabled) { color: var(--fg); background: linear-gradient(var(--hover), var(--hover)), linear-gradient(180deg, var(--hk-top), var(--hk-bot)); }
 .bd-tbtn:is(.bd-expb, .bd-selb)[aria-expanded="true"] { background: var(--hk-down); box-shadow: var(--shadow-hk-down); }
 .bd-tbtn:is(.bd-expb, .bd-selb, .bd-shk):focus-visible { box-shadow: var(--shadow-hk), var(--focus-ring); }
@@ -2454,7 +2478,7 @@ html.bd-space .bd-board .bd-ab-fr { pointer-events: none; }
 :is(.bd-expm, .bd-selm) button .bd-ic { width: 20px; height: 20px; color: var(--fg-muted); }
 /* a select's menu: under its key's left edge, at least as wide; its options a tick, the label and a hint (a locale's
    MT and missing counts); a long list scrolls */
-.bd-selm { left: 0; right: auto; width: max-content; min-width: max(100%, 168px); max-width: 320px; max-height: min(60vh, 420px); overflow: auto; overscroll-behavior: contain; scrollbar-width: thin; outline: none; }
+.bd-selm { left: 0; right: auto; width: max-content; min-width: max(100%, 168px); max-width: 320px; max-height: min(60vh, 420px); overflow: auto; overscroll-behavior: contain; outline: none; }
 /* a select in a panel, a dialog or the link editor (float): fixed in the window, over the dialog, where menuPop puts it */
 .bd-selm.float { position: fixed; z-index: 60; }
 .bd-selm button { gap: 8px; padding: 7px 12px 7px 6px; white-space: nowrap; }
@@ -2481,8 +2505,8 @@ html.bd-space .bd-board .bd-ab-fr { pointer-events: none; }
 .bd-expm .opt[aria-checked="true"] .bx .bd-ic { visibility: visible; }
 /* the left panel: its header (Screens and their count, Pages, Slides; a storelisting's Listing), then the artboards; a
    storelisting's, its tabs (Text, Style, Colors, Checks). Docked above 900 px, over the board below */
-.bd-lp { position: fixed; z-index: 41; top: var(--top-h); left: var(--stripe-w); bottom: 0; width: var(--lp-w); display: flex; flex-direction: column; min-height: 0;
-  background: var(--panel); box-shadow: inset -1px 0 0 var(--line); transform: translateX(-100%); visibility: hidden; transition: transform .22s var(--ease), visibility 0s .22s; }
+.bd-lp { position: fixed; z-index: 41; top: var(--top-h); left: var(--stripe-w); bottom: 0; width: var(--lp-w); display: flex; flex-direction: column; min-height: 0; overflow: hidden;
+  border-radius: 14px; background: var(--panel); box-shadow: var(--shadow-card); transform: translateX(calc(-100% - var(--stripe-w))); visibility: hidden; transition: transform .22s var(--ease), visibility 0s .22s; }
 html.bd-lp-open .bd-lp { transform: none; visibility: visible; transition: transform .22s var(--ease); }
 /* the doc's header heads the Brief (the right panel's), compact */
 .bd-sp-brief > .bd-head { max-width: none; padding: 6px 0 4px; }
@@ -2498,7 +2522,10 @@ html.bd-lp-open .bd-lp { transform: none; visibility: visible; transition: trans
 .bd-lp-own[hidden] { display: none; }
 @media (max-width: 600px) { .bd-lp .bd-pane-h > :is(h2, .c) { display: none; } }
 /* a board's brief (the doc's header, TL;DR, the sections, status): the left pane's Brief (boardLeft) */
-.bd-sp-sec.bd-sp-brief { display: block; overflow: auto; overflow-x: hidden; overscroll-behavior: contain; padding: 2px 16px calc(16px + var(--tray-room, 0px)); font-size: 14px; }
+.bd-sp-sec.bd-sp-brief { display: block; overflow: auto; overflow-x: hidden; overscroll-behavior: contain; padding: 2px 14px calc(16px + var(--tray-room, 0px)); font-size: 14px; }
+/* in the pane, the questions chip is HorizonUI's soft Button at its small size, on one line */
+.bd-sp-brief .bd-ask { height: 26px; gap: 6px; padding: 0 10px 0 8px; font: 500 12px/1 var(--sans); white-space: nowrap; }
+.bd-sp-brief .bd-ask .bd-ic { width: 14px; height: 14px; }
 .bd-sp-brief :is(.bd-tldr, main) { width: auto; max-width: none; }
 .bd-sp-brief .bd-tldr-card { margin-top: 2px; padding: 12px 14px; grid-template-columns: minmax(0, 1fr); }
 .bd-sp-brief .bd-tldr-card .ico { display: none; }
@@ -2585,6 +2612,7 @@ html.bd-presenting .bp-toast { z-index: 71; bottom: 84px; }
 .bd-cmpv[data-how="onion"] .bd-cmpv-p + .bd-cmpv-p .lb { justify-self: end; }
 .bd-cmpv[data-how="onion"] .bd-cmpv-p + .bd-cmpv-p > :not(.lb) { opacity: var(--op, .5); }
 @media (max-width: 900px) { .bd-lp { width: min(var(--lp-w), 86vw); box-shadow: var(--shadow-3); } .bd-lst-btb .bd-sg { display: none; } }
+@media (max-width: 600px) { .bd-lp { border-radius: 0 14px 14px 0; } }
 /* a tray too wide for its room (fitTray): keys keep their icon and count, not their words */
 .bd-anntb.compact .bd-key :is(.t, .l) { display: none; }
 
@@ -2594,22 +2622,19 @@ html.bd-presenting .bp-toast { z-index: 71; bottom: 84px; }
    fit, it sheds them a tier at a time (data-fit): 1 the view keys keep their icons, 2 Export to… its icon and the
    platforms their short names, 3 Jump to goes, 4 the drafts and Checks counts go (Comments and the Checks tab keep them) */
 .bd-lst-btb { max-width: calc(100% - 24px); }
-.bd-lst-btb .bd-sg button { display: inline-flex; align-items: center; gap: 5px; padding: 0 9px; font-weight: 600; white-space: nowrap; }
-.bd-lst-btb .bd-sg button .bd-ic { width: 15px; height: 15px; }
-.bd-lst-btb .bd-selw { margin: 0 2px; }
+.bd-lst-btb .bd-sg button { display: inline-flex; align-items: center; white-space: nowrap; }
 .bd-lst-btb .bd-selb .v { max-width: 150px; }
-.bd-lst-btb .bd-exp { margin-left: 2px; }
 .bd-lst-btb .bd-expb span { white-space: nowrap; }
-.bd-lst-ckb { display: inline-flex; align-items: center; gap: 4px; color: var(--ok-fg, var(--fg-muted)); }
+.bd-lst-ckb { display: inline-flex; align-items: center; gap: 5px; color: var(--ok-fg, var(--fg-muted)); }
 .bd-lst-ckb .bd-ic { width: 16px; height: 16px; }
 .bd-lst-ckb .n { font-variant-numeric: tabular-nums; font-weight: 650; }
 .bd-lst-ckb.err { color: var(--risk-fg); } .bd-lst-ckb.warn { color: var(--warn-fg); }
 .bd-lst-btb [data-p] .ls { display: none; }
-.bd-lst-btb:is([data-fit="1"], [data-fit="2"], [data-fit="3"], [data-fit="4"]) [data-view] { padding: 0 7px; }
+.bd-lst-btb:is([data-fit="1"], [data-fit="2"], [data-fit="3"], [data-fit="4"]) [data-view] { width: calc(var(--k) - 6px); padding: 0; justify-content: center; }
 .bd-lst-btb:is([data-fit="1"], [data-fit="2"], [data-fit="3"], [data-fit="4"]) [data-view] .w { display: none; }
 .bd-lst-btb:is([data-fit="2"], [data-fit="3"], [data-fit="4"]) :is(.bd-expb > span, [data-p] .lf) { display: none; }
 .bd-lst-btb:is([data-fit="2"], [data-fit="3"], [data-fit="4"]) [data-p] .ls { display: inline; }
-.bd-lst-btb:is([data-fit="2"], [data-fit="3"], [data-fit="4"]) :is(.bd-sg button[data-p]) { padding: 0 7px; }
+.bd-lst-btb:is([data-fit="2"], [data-fit="3"], [data-fit="4"]) :is(.bd-sg button[data-p]) { padding: 0 10px; }
 .bd-lst-btb:is([data-fit="2"], [data-fit="3"], [data-fit="4"]) .bd-selb .v { max-width: 96px; }
 .bd-lst-btb:is([data-fit="3"], [data-fit="4"]) .bd-lst-jump, .bd-lst-btb[data-fit="4"] :is(.bd-dcount, .bd-lst-ckb) { display: none; }
 /* a listing's Export to… menu: as wide as its longest description (ZIP (folders)'s) */
@@ -2640,9 +2665,9 @@ html.bd-presenting .bp-toast { z-index: 71; bottom: 84px; }
 .bd-lstx.err .bd-xp-bar { background: var(--risk-tint); } .bd-lstx.err .bd-xp-bar i { width: 100%; background: var(--risk); }
 .bd-lstx:is(.ok, .err) .bd-expb > .xp-x, .bd-lst-btb:is([data-fit="2"], [data-fit="3"], [data-fit="4"]) .bd-lstx .bd-expb > :is(.xp-l, .xp-x) { display: none; }
 @media (prefers-reduced-motion: reduce) { .bd-lstx .xp-spin { animation-duration: 2.4s; } .bd-lstx .bd-xp-bar.ind i { animation: none; width: 100%; opacity: .45; } }
-.bd-lst-main { position: absolute; inset: 0; overflow: auto; overscroll-behavior: contain; padding: 64px 22px 110px;
+.bd-lst-main { position: absolute; inset: 0; overflow: auto; overscroll-behavior: contain; padding: 78px 22px 110px;
   background-color: var(--canvas); background-image: radial-gradient(circle, color-mix(in oklch, var(--fg) 14%, transparent) 1px, transparent 1.3px); background-size: 24px 24px; }
-.bd-lst-sec { display: grid; grid-template-columns: 132px minmax(0, 1fr); gap: 16px; margin: 0 auto 14px; max-width: 1480px; padding: 14px 16px; scroll-margin-top: 60px;
+.bd-lst-sec { display: grid; grid-template-columns: 132px minmax(0, 1fr); gap: 16px; margin: 0 auto 14px; max-width: 1480px; padding: 14px 16px; scroll-margin-top: 74px;
   border-radius: 14px; background: var(--surface); box-shadow: var(--shadow-1); }
 .bd-lst-sec > .hd h3 { margin: 2px 0 4px; font-size: 14px; }
 .bd-lst-sec > .hd p { margin: 0; font-size: 12px; line-height: 1.45; color: var(--fg-subtle); }
@@ -2651,7 +2676,7 @@ html.bd-presenting .bp-toast { z-index: 71; bottom: 84px; }
 .bd-lst-chip { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 8px; font-size: 12px; color: var(--fg-muted); }
 .bd-lst-chip b { color: var(--fg); font-weight: 600; }
 .bd-lst-chip .bp-chip { padding: 3px 7px; font-size: 11.5px; }
-.bd-lst-tiles { display: flex; align-items: flex-start; gap: 12px; overflow-x: auto; padding: 2px 2px 6px; scrollbar-width: thin; }
+.bd-lst-tiles { display: flex; align-items: flex-start; gap: 12px; overflow-x: auto; padding: 2px 2px 6px; }
 .bd-lst-tiles.pano { gap: 0; }
 .bd-lst-tile { flex: none; display: grid; gap: 6px; }
 .bd-lst-shot { position: relative; overflow: hidden; border-radius: 6px; background: var(--inset); box-shadow: 0 0 0 1px var(--line), 0 4px 14px oklch(20% 0.02 264 / .12); }
@@ -2892,7 +2917,7 @@ html.bd-presenting .bp-toast { z-index: 71; bottom: 84px; }
 .bd-ty-pop .q::-webkit-search-cancel-button { display: none; }
 .bd-ty-pop :is(.q, .ls):focus-visible { outline: none; box-shadow: none; }
 .bd-ty-pop .sr:focus-within { box-shadow: inset 0 0 0 1px var(--focus); }
-.bd-ty-pop .ls { flex: 1 1 auto; min-height: 0; overflow: auto; outline: none; scrollbar-width: thin; }
+.bd-ty-pop .ls { flex: 1 1 auto; min-height: 0; overflow: auto; outline: none; }
 .bd-ty-pop .o { display: flex; align-items: center; gap: 4px; height: 28px; padding: 0 8px 0 2px; border-radius: 6px; cursor: default; content-visibility: auto; contain-intrinsic-size: auto 28px; }
 .bd-ty-pop .o.act { background: var(--accent); color: #fff; }
 .bd-ty-pop .o .ck { flex: none; display: grid; place-items: center; width: 18px; }
@@ -3040,6 +3065,7 @@ const ICONS = {
   undo: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',
   archive: '<rect x="2" y="3" width="20" height="5" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8M10 12h4"/>',
   more: '<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',
+  morev: '<circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/>',
   redo: '<path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/>',
   commit: '<circle cx="12" cy="12" r="3"/><path d="M3 12h6M15 12h6"/>',
   info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>',
@@ -3049,6 +3075,7 @@ const ICONS = {
   flag: '<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7"/>',
   split: '<path d="M16 3h5v5M8 3H3v5M12 22v-8.3a4 4 0 0 0-1.2-2.8L3 3M15 9l6-6"/>',
   hist: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/>',
+  sort: '<path d="m3 16 4 4 4-4M7 20V4M11 4h10M11 8h7M11 12h4"/>',
   zap: '<path d="M4 14a1 1 0 0 1-.8-1.6l9.9-10.2a.5.5 0 0 1 .9.5l-1.9 6a1 1 0 0 0 .9 1.3h7a1 1 0 0 1 .8 1.6l-9.9 10.2a.5.5 0 0 1-.9-.5l1.9-6a1 1 0 0 0-.9-1.3z"/>',
   list: '<path d="M13 5h8M13 12h8M13 19h8"/><path d="m3 17 2 2 4-4"/><rect x="3" y="4" width="6" height="6" rx="1"/>',
   check: '<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
@@ -3124,7 +3151,7 @@ const ICONS = {
   frame: '<path d="M22 6H2M22 18H2M6 2v20M18 2v20"/>',
   present: '<path d="M2 3h20M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3M7 21l5-5 5 5"/>',
   download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>',
-  share: '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/>',
+  share: '<path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8M16 6l-4-4-4 4M12 2v13"/>',
   variants: '<path d="M2 3v18M22 3v18"/><rect x="6" y="3" width="12" height="18" rx="2"/>',
   palette: '<path d="M12 22a10 10 0 1 1 10-10c0 2.8-2.2 4-4 4h-1.8a1.7 1.7 0 0 0-1.2 2.9 1.7 1.7 0 0 1-1.2 2.9Z"/><circle cx="7.5" cy="10.5" r="1"/><circle cx="10.5" cy="6.5" r="1"/><circle cx="15.5" cy="7.5" r="1"/>',
   panelleft: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/>',
@@ -3709,6 +3736,7 @@ const stripeR = h('nav', { class: 'bd-stripe r', 'aria-label': 'Right pane' }, h
 let lastPane = null;   // 'l' or 'r': the side opened last
 const PHONE_W = matchMedia('(max-width: 600px)');   // a phone: no stripes, the right panel a bottom sheet
 const stripeKey = (icon, label, keys, onclick) => { const k = tipped(h('button', { type: 'button', class: 'bd-sk', 'aria-label': label, 'aria-pressed': 'false', onclick }, ic(icon)), keys); k._tip = label; return k; };
+const RING_C = 106.81;   // a left key's ring (.bd-skr): its circumference, 2π × 17
 const themeBtn = stripeKey('moon', 'Switch light or dark theme', null, () => toggleTheme());
 themeBtn.removeAttribute('aria-pressed');
 // a phone has no stripes: the theme is in the app bar's ⋯ (ARC), else a key of its own there
@@ -3753,8 +3781,8 @@ const LEFT = (() => {
     p = o;
     for (const s of sections) {
       const ring = document.createElementNS(NS, 'svg');
-      ring.setAttribute('class', 'bd-skr'); ring.setAttribute('viewBox', '0 0 32 32'); ring.setAttribute('aria-hidden', 'true'); ring.setAttribute('hidden', '');
-      ring.innerHTML = '<circle class="bg" cx="16" cy="16" r="14"/><circle class="fg" cx="16" cy="16" r="14" stroke-dasharray="0 88"/>';
+      ring.setAttribute('class', 'bd-skr'); ring.setAttribute('viewBox', '0 0 36 36'); ring.setAttribute('aria-hidden', 'true'); ring.setAttribute('hidden', '');
+      ring.innerHTML = `<circle class="bg" cx="18" cy="18" r="17"/><circle class="fg" cx="18" cy="18" r="17" stroke-dasharray="0 ${RING_C}"/>`;
       const x = { ...s, ring, say: '' };
       x.key = stripeKey(s.icon, s.label, ['['], () => { if (open() && cur() === x.id) set(false, true); else show(x.id); });
       x.key.dataset.f = s.id; x.key.prepend(ring);
@@ -3769,7 +3797,7 @@ const LEFT = (() => {
     const x = secs.find(y => y.id === id); if (!x) return;
     x.ring.toggleAttribute('hidden', !t);
     x.ring.classList.toggle('full', t > 0 && n === t);
-    x.ring.lastChild.setAttribute('stroke-dasharray', `${t ? 88 * n / t : 0} 88`);
+    x.ring.lastChild.setAttribute('stroke-dasharray', `${t ? RING_C * n / t : 0} ${RING_C}`);
     x.say = t ? say : '';
     paint();
   }
@@ -4184,7 +4212,7 @@ const ARC = (() => {
   const thItem = h('button', { type: 'button', role: 'menuitem', tabindex: '-1', class: 'bd-ph-only', onclick: () => { pop.close(true); toggleTheme(); } }, ic('moon'), h('span', { class: 'l' }));
   const menu = h('div', { class: 'bd-selm act', role: 'menu', 'aria-label': 'Doc', tabindex: '-1', hidden: true }, item, thItem);
   const btn = h('button', { type: 'button', class: 'bd-ibtn', 'aria-haspopup': 'menu', 'aria-expanded': 'false', 'aria-label': 'More', title: 'More',
-    onclick: () => menu.hidden ? pop.open(0) : pop.close(true) }, ic('more'));
+    onclick: () => menu.hidden ? pop.open(0) : pop.close(true) }, ic('morev'));
   const wrap = h('div', { class: 'bd-exp bd-docm' }, btn, menu);
   const pop = menuPop(wrap, btn, menu, () => PHONE_W.matches ? [item, thItem] : [item],
     { onOpen: () => thItem.replaceChildren(ic(isDark() ? 'sun' : 'moon'), h('span', { class: 'l' }, isDark() ? 'Light theme' : 'Dark theme')) });
@@ -4248,13 +4276,14 @@ const cssPx = v => parseFloat(getComputedStyle(root).getPropertyValue(v)) || 0;
 let panelOpen = false;
 const DOCK_MIN = 1101;
 const stripeW = () => PHONE_W.matches ? 0 : cssPx('--stripe-w');
+const paneGap = () => PHONE_W.matches ? 0 : cssPx('--pane-gap');   // between a docked pane and the page
 const leftEl = () => IS_DESIGN ? $('.bd-lp') : side;
 const leftW = () => cssPx(IS_DESIGN ? '--lp-w' : '--cp-w');
 // which open panes dock: the right one, then the left one in the room it leaves
 function docks() {
-  const room = root.clientWidth - 2 * stripeW(), fits = w => room - w - 2 * PAGE_PAD >= READ_W;
-  const r = panelOpen && (IS_DESIGN ? innerWidth >= DOCK_MIN : innerWidth > 900 && fits(cssPx('--sp-w')));
-  const l = LEFT.open() && innerWidth > 900 && (IS_DESIGN || fits(leftW() + (r ? cssPx('--sp-w') : 0)));
+  const room = root.clientWidth - 2 * stripeW(), g = paneGap(), fits = w => room - w - 2 * PAGE_PAD >= READ_W;
+  const r = panelOpen && (IS_DESIGN ? innerWidth >= DOCK_MIN : innerWidth > 900 && fits(cssPx('--sp-w') + g));
+  const l = LEFT.open() && innerWidth > 900 && (IS_DESIGN || fits(leftW() + g + (r ? cssPx('--sp-w') + g : 0)));
   return { l, r };
 }
 const dockW = () => docks().r ? cssPx('--sp-w') : 0;
@@ -4337,8 +4366,8 @@ function applyWidth() {
   // a pane over the page hides the other side's: the one opened last stays
   if (LEFT.open() && panelOpen && !(d.l && d.r)) { if (lastPane === 'l') SIDE.setOpen(false, false); else LEFT.set(false, false); return; }
   root.classList.toggle('bd-sp-dock', d.r); root.classList.toggle('bd-lp-dock', d.l);
-  root.style.setProperty('--room-l', stripeW() + (d.l ? leftW() : 0) + 'px');
-  root.style.setProperty('--room-r', stripeW() + (d.r ? cssPx('--sp-w') : 0) + 'px');
+  root.style.setProperty('--room-l', stripeW() + (d.l ? leftW() + paneGap() : 0) + 'px');
+  root.style.setProperty('--room-r', stripeW() + (d.r ? cssPx('--sp-w') + paneGap() : 0) + 'px');
   // a design page is its board, full-bleed in the room: no column, no handles
   if (IS_DESIGN) { fitTray(); return; }
   if (userW) root.style.setProperty('--content-w', Math.min(userW, maxW()) + 'px');
@@ -7016,8 +7045,10 @@ function renderCanvas(spec) {
   const inBtn = tbBtn('Zoom in', 'plus');
   const fitBtn = tbBtn('Fit drawing', 'fit');
   const fsBtn = tbBtn('Full screen', 'full');
+  // one pill (the top toolbars' look, in the drawing's blue): Flow and its play keys, a groove, then the view keys
   const tb = h('div', { class: 'bp-tb' }, h('span', { class: 'ttl' }, spec.title || 'Drawing'),
-    h('span', { class: 'grp flowgrp' }, flowSel, playBtn, prevBtn, nextBtn), h('span', { class: 'grp' }, outBtn, inBtn, fitBtn, fsBtn));
+    h('span', { class: 'grp' }, flowSel, playBtn, prevBtn, nextBtn,
+      h('span', { class: 'bd-groove', role: 'separator', 'aria-orientation': 'vertical' }), outBtn, inBtn, fitBtn, fsBtn));
   const crumbs = h('div', { class: 'bp-crumbs' });
   const tblockZoom = h('div', {}, '100%'); const tblockLvl = h('div', {}, 'L0');
   const tblock = h('div', { class: 'bp-tblock', 'aria-hidden': 'true' },
@@ -8622,7 +8653,7 @@ function renderBoard(b) {
     return isFinite(x0) ? { x: x0, y: y0, w: Math.max(1, x1 - x0), h: Math.max(1, y1 - y0) } : { x: 0, y: 0, w: 1, h: 1 };
   }
   // the room the view leaves: the toolbar and a title bar above, the tray below (on a design page)
-  const room = () => { const W = stage.clientWidth || 800, H = stage.clientHeight || 600; return { W, H, m: 40, top: 64 + 26, bot: root.classList.contains('bd-tray-on') ? 84 : 40 }; };
+  const room = () => { const W = stage.clientWidth || 800, H = stage.clientHeight || 600; return { W, H, m: 40, top: 76 + 26, bot: root.classList.contains('bd-tray-on') ? 84 : 40 }; };
   function showBox(box, animate, maxK) {
     const { W, H, m, top, bot } = room();
     const k = clamp(Math.min((W - 2 * m) / box.w, (H - top - bot) / box.h), BK_MIN, maxK);
@@ -12986,10 +13017,11 @@ const MARKUP = (() => {
     flashT = setTimeout(() => { if (mode !== 'point' || hovEl === el) showHover(null); }, 1400);
   }
 
-  /* comments sidebar: one card per saved note, in page order or newest first; a saved note is edited in
-     its card. Hovering a card or a mark lights up the other; clicking one brings the other into view. The items' threads
+  /* comments sidebar: one card per saved note (general ones too), in page order, newest or oldest first; a saved note is
+     edited in its card. Hovering a card or a mark lights up the other; clicking one brings the other into view. The items' threads
      join it: a card per checklist item with a conversation, a comment not sent or a Need more details. */
   const FILTERS = { pending: 'Pending', open: 'Open', resolved: 'Resolved', all: 'All' }, FILTER_KEY = 'bluedoc:comments-filter';
+  const SORTS = { new: 'Newest first', old: 'Oldest first', page: 'Page order' }, SORT_KEY = 'bluedoc:comments-sort';
   // the items with something to list: a decision (a review's finding, a plan's question) or a progress item
   const threads = () => Object.values(ITEMS).filter(x => x.notePending || x.more || x.messages().length);
   // an item's status: pending (a comment or Need more details not sent), resolved (the doc carries its answer: a
@@ -12997,8 +13029,9 @@ const MARKUP = (() => {
   const threadStatus = x => x.notePending || x.more === 'on' ? 'pending' : (x.choices ? idsOf(x.it.choice).length : x.it.done === true) ? 'resolved' : 'open';
   const threadGroup = x => ({ pending: 'unsent', resolved: 'resolved' }[threadStatus(x)] || (awaitsReader(x) ? 'wait' : 'answered'));
   const threadsUnsent = () => threads().filter(x => threadStatus(x) === 'pending').length;
-  // the reader's last pick, else Pending while there are pending notes, else Open
-  let filter = FILTERS[store.get(FILTER_KEY)] ? store.get(FILTER_KEY) : pending().some(a => !isGeneral(a)) || threadsUnsent() || !onPage().length && !threads().length ? 'pending' : 'open', sort = 'page';
+  // the reader's last pick, else Pending while there are pending notes, else Open; the order, the reader's last pick, else page order
+  let filter = FILTERS[store.get(FILTER_KEY)] ? store.get(FILTER_KEY) : pending().length || threadsUnsent() || !list.length && !threads().length ? 'pending' : 'open';
+  let sort = SORTS[store.get(SORT_KEY)] ? store.get(SORT_KEY) : 'page';
   const matches = a => filter === 'all' || a.status === filter;
   function setFilter(f, remember) {
     if (remember) store.set(FILTER_KEY, f);
@@ -13011,38 +13044,37 @@ const MARKUP = (() => {
     if (!(s >= -60)) return fmtDay(iso);
     return s < 45 ? 'just now' : s < 3600 ? Math.max(1, Math.round(s / 60)) + ' min ago' : s < 86400 ? Math.round(s / 3600) + ' h ago' : s < 7 * 86400 ? Math.round(s / 86400) + ' d ago' : fmtDay(iso);
   }
-  const numChip = (a, n) => h('span', { class: 'bd-ann-num' + (a.type === 'draw' ? penCls(a.color || 'risk') : '') + (a.status === 'pending' ? '' : ' sent'), style: a.type === 'draw' && isHex(a.color) ? '--pen: ' + a.color : null }, String(n));
+  const numChip = (a, n) => isGeneral(a) ? h('span', { class: 'bd-ann-num gen' + (a.status === 'pending' ? '' : ' sent') }, ic(TYPE_IC.general))
+    : h('span', { class: 'bd-ann-num' + (a.type === 'draw' ? penCls(a.color || 'risk') : '') + (a.status === 'pending' ? '' : ' sent'), style: a.type === 'draw' && isHex(a.color) ? '--pen: ' + a.color : null }, String(n));
   const grow = ta => { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; };
-  const sortBtn = h('button', { type: 'button', class: 'bp-btn ghost srt', onclick: () => { sort = sort === 'page' ? 'new' : 'page'; paint(); } });
+  // Sort: its icon and a chevron, titled with the current order; its menu has the orders, the current one ticked
+  const sortSel = selectMenu({ label: 'Sort', aria: 'Sort comments', cls: 'bd-srt', icon: 'sort', value: sort,
+    options: Object.entries(SORTS).map(([value, label]) => ({ value, label })), onPick: v => { sort = v; store.set(SORT_KEY, v); paint(); } });
   const filterBtns = Object.keys(FILTERS).map(f => h('button', { type: 'button', role: 'radio', 'data-f': f, onclick: () => { setFilter(f, true); paint(); } }));
   const listOl = h('ol', { 'aria-label': 'Comments' });
   const emptyEl = h('div', { class: 'bd-cs-e', hidden: true });
   const listBox = h('div', { class: 'bd-cs-l' }, listOl, emptyEl);
   const clearBtn = h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => clearResolved() }, ic('trash'), 'Clear resolved');
-  // General: a chat about the whole doc at the panel's foot. renderChat draws each general comment, with the agent's
-  // replies to it, oldest first; under them the composer. What is typed is a draft until Save (⌘↵); Cancel or Esc drops
-  // it. A saved one is pending (counted, edited or deleted in its bubble) until Request changes sends it.
+  // the composer at the panel's foot: a general comment, about the whole doc. What is typed is a draft until Enter or
+  // Save makes it a pending general comment, a card in the list (Shift+Enter: a new line); Cancel or Esc drops it.
   const genTa = h('textarea', { class: 'bp-note-ta', rows: 2, placeholder: 'Message the agent about the whole doc…', 'aria-label': 'General comment about the whole doc' });
-  const genSave = h('button', { type: 'button', class: 'go', title: `Save (${MAC ? '⌘' : 'Ctrl'} + Enter)`, 'aria-label': 'Save', disabled: true,
+  const genSave = h('button', { type: 'button', class: 'go', title: 'Save (Enter)', 'aria-label': 'Save', disabled: true,
     onclick: () => { if (finishGeneral(true)) genTa.focus({ preventScroll: true }); } }, ic('arrowup'));
   const genCancel = h('button', { type: 'button', class: 'bp-btn ghost', hidden: true, onclick: () => finishGeneral(false) }, 'Cancel');
   // its files: Save keeps them with the comment, Cancel deletes their copies
   const genReady = () => !!genTa.value.trim() || genFd.files.length > 0;
   const genPaint = () => { genSave.disabled = !genReady() || genFd.busy; genCancel.hidden = !genReady() && !genFd.busy; };
   const genFd = fileDraft(genPaint, { compact: true });
-  const chatL = h('ol', { class: 'bd-gc-l', 'aria-label': 'General conversation' });
   const genCp = h('div', { class: 'cp' }, genTa, genFd.list,
     h('div', { class: 'cr' }, genFd.btn, h('span', { class: 'hint' }, `Goes with ${APPROVABLE ? 'Request changes or Approve' : 'Request changes'}`,
-      h('span', { class: 'k' }, ` · ${MAC ? '⌘' : 'Ctrl+'}↵ saves`)), genCancel, genSave), genFd.input);
-  const gen = h('div', { class: 'bd-gc' },
-    h('div', { class: 'gh' }, ic('msgsq'), h('b', {}, 'General'), h('span', {}, 'about the whole doc, not one spot')), chatL, genCp);
+      h('span', { class: 'k' }, ' · ↵ saves')), genCancel, genSave), genFd.input);
   genFd.hook(genCp, genTa);
   const clearRow = h('div', { class: 'row' }, clearBtn);
   const csBody = h('div', {},
-    h('div', { class: 'bd-cs-f' }, h('div', { class: 'bd-sg', role: 'radiogroup', 'aria-label': 'Show' }, filterBtns), sortBtn),
+    h('div', { class: 'bd-cs-f' }, h('div', { class: 'bd-sg', role: 'radiogroup', 'aria-label': 'Show' }, filterBtns), sortSel),
     listBox,
-    h('div', { class: 'bd-cs-ft' }, clearRow, gen));
-  // keep: save what was typed (Save, ⌘↵, opening Request changes); else drop it (Cancel, Esc). Returns whether one was saved.
+    h('div', { class: 'bd-cs-ft' }, clearRow, h('div', { class: 'bd-gc' }, genCp)));
+  // keep: save what was typed (Enter, Save, opening Request changes); else drop it (Cancel, Esc). Returns whether one was saved.
   function finishGeneral(keep) {
     const v = genTa.value.trim(), fs = genFd.files, saved = keep && (!!v || fs.length > 0);
     if (saved) { genFd.abandon(); genFd.load([]); } else genFd.cancel();   // saved: the files go with it; else their copies go
@@ -13051,9 +13083,10 @@ const MARKUP = (() => {
     if (!saved) return false;
     const a = generalAnn(v, fs);
     list.push(a); save();
-    paint(); chatEnd();
-    const li = bubbles.get(a.id);
-    if (li) li.classList.add('flash');
+    if (!matches(a)) setFilter('pending', false);
+    paint();
+    const li = cards.get(a.id);
+    if (li) { li._flash = performance.now() + 1200; li.classList.add('flash'); scrollCard(li); }
     return true;
   }
   genCp.addEventListener('click', e => { if (e.target === genCp) genTa.focus(); });
@@ -13061,52 +13094,9 @@ const MARKUP = (() => {
   genTa.addEventListener('input', () => { genPaint(); grow(genTa); });
   genTa.addEventListener('keydown', e => {
     e.stopPropagation();   // page keys (modes, n/p, canvas) must not fire while typing
-    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); if (finishGeneral(true)) genTa.focus({ preventScroll: true }); }
+    // Enter (⌘/Ctrl+Enter too) saves; Shift+Enter is a new line, and so is Enter while an IME composes
+    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); if (!genSave.disabled && finishGeneral(true)) genTa.focus({ preventScroll: true }); }
     else if (e.key === 'Escape') { e.preventDefault(); finishGeneral(false); }
-  });
-  // the chat's bubbles: a general comment (not sent yet: Edit and Delete, and a click on its text edits it), its
-  // conversation (the agent's replies, the reader's follow-ups) and a follow-up not sent yet. Redrawn only when one of
-  // them changes; it stays at the end when it was there.
-  const bubbles = new Map();   // general comment id -> its bubble
-  // atEnd: the reader left it scrolled to the end (where it starts); a redraw or a new height keeps it there
-  let chatSig = null, atEnd = true;
-  const chatEnd = () => { chatL.scrollTop = chatL.scrollHeight; atEnd = true; };
-  chatL.addEventListener('scroll', () => { atEnd = chatL.scrollHeight - chatL.scrollTop - chatL.clientHeight < 24; }, { passive: true });
-  if ('ResizeObserver' in window) new ResizeObserver(() => { if (atEnd) chatEnd(); }).observe(chatL);
-  const dropFollowUp = a => { dropFiles(filesOf(a.draftFiles)); delete a.draft; delete a.draftFiles; save(); paint(); };
-  function renderChat() {
-    const gs = list.filter(isGeneral).sort((a, b) => (a.at > b.at) - (a.at < b.at)), editing = editA && isGeneral(editA) ? editA : null;
-    const sig = JSON.stringify([agentName(), editing && editing.id,
-      gs.map(a => [a.id, a.note, a.files, a.status, a.rev, a.draft, a.draftFiles, annConvo(a).map(m => [m.who, m.rev, m.md, m.files, isNewMsg(m)])])]);
-    if (sig === chatSig) return;
-    const end = chatSig === null || atEnd;
-    const caret = editing && editTa && document.activeElement === editTa ? [editTa.selectionStart, editTa.selectionEnd] : null;
-    chatSig = sig; bubbles.clear();
-    const ib = (icon, label, fn) => h('button', { type: 'button', class: 'bd-cs-ib', 'aria-label': label, title: label, onclick: fn }, ic(icon));
-    const rev = r => r == null ? 'earlier' : 'rev ' + r;
-    // the reader's: the text as typed and its files; not sent yet, its keys and the state
-    const mine = (text, files, who, pend, acts) => h('li', { class: 'bd-gm me' + (pend ? ' pend' : ''), tabindex: '-1' },
-      h('div', { class: 'bb' }, text && h('p', { class: 'tx' }, text), files.length > 0 && fileChips(files)),
-      h('div', { class: 'mt' }, pend && h('span', { class: 'acts' }, acts), who, pend && [' · ', h('span', { class: 'st' }, 'not sent yet')]));
-    const agent = m => h('li', { class: 'bd-gm ag' }, h('span', { class: 'av', 'aria-hidden': 'true' }, agentName().slice(0, 1).toUpperCase()),
-      h('div', {}, h('div', { class: 'bb bd-md', html: md(m.md) }),
-        h('div', { class: 'mt' }, `${agentName()} · ${rev(m.rev)}`, isNewMsg(m) && [' · ', h('span', { class: 'nw' }, h('i'), 'New')])));
-    const rows = [];
-    for (const a of gs) {
-      const li = a === editing ? h('li', { class: 'bd-gm me edit', tabindex: '-1' }, editor(a))
-        : mine(a.note, filesOf(a.files), `You · ${rev(a.rev)}`, a.status === 'pending', [ib('pencil', 'Edit', () => startEdit(a)), ib('trash', 'Delete', () => remove(a))]);
-      li._a = a; li.dataset.id = a.id; bubbles.set(a.id, li); rows.push(li);
-      for (const m of annConvo(a)) rows.push(m.who === 'agent' ? agent(m) : mine(m.md, m.files || [], `You · ${rev(m.rev)}`, false));
-      if (followUp(a)) rows.push(mine(a.draft || '', filesOf(a.draftFiles), 'You', true, [ib('trash', 'Delete', () => dropFollowUp(a))]));
-    }
-    chatL.replaceChildren(...rows);
-    if (caret && editTa && document.activeElement !== editTa) { editTa.focus({ preventScroll: true }); editTa.setSelectionRange(...caret); }
-    if (editing && editTa) grow(editTa);
-    if (end) chatEnd();
-  }
-  chatL.addEventListener('click', e => {
-    const li = e.target.closest('.bd-gm.pend'), a = li && li._a;
-    if (a && a.status === 'pending' && e.target.closest('.bb') && !e.target.closest('button, a') && !getSelection().toString()) startEdit(a);
   });
 
   // page order: by the anchor's place in the document, then by the spot inside it
@@ -13125,10 +13115,12 @@ const MARKUP = (() => {
       return p.y - q.y || byTime(a, b);
     });
   }
-  // the page's comments (general ones are the chat's, renderChat) in page order, or newest first
+  // the list: general comments first (oldest first), then the page's in page order; or all newest or oldest first
   function shownList() {
-    const xs = list.filter(a => !isGeneral(a) && matches(a));
-    return sort === 'page' ? pageOrder(xs) : xs.sort((a, b) => (a.at < b.at) - (a.at > b.at));
+    const xs = list.filter(matches), byTime = (a, b) => (a.at > b.at) - (a.at < b.at);
+    if (sort === 'new') return xs.sort((a, b) => byTime(b, a));
+    if (sort === 'old') return xs.sort(byTime);
+    return [...xs.filter(isGeneral).sort(byTime), ...pageOrder(xs.filter(a => !isGeneral(a)))];
   }
   // the items the filter shows, by group: the agent replied (waiting for the reader) first, then not sent yet,
   // answered and resolved, each in page order; then the page's comments ("On the page" when items show too)
@@ -13198,7 +13190,7 @@ const MARKUP = (() => {
     let li = cards.get(a.id);
     if (!li) { li = h('li', { class: 'bd-cs-c', tabindex: '0', 'data-id': a.id }); cards.set(a.id, li); }
     li._a = a;
-    const n = onPage().indexOf(a) + 1, editing = a === editA;
+    const n = isGeneral(a) ? 0 : onPage().indexOf(a) + 1, editing = a === editA;
     const ms = annConvo(a), lastMsg = ms.at(-1);
     const sig = [n, a.note, JSON.stringify(a.files || null), a.status, a.rev, a.target.key, a.target.label, a.color, editing, (a.targets || []).length, !!a.stale, JSON.stringify(ms), agentName()].join('\u0001');
     if (li._sig !== sig) { li._sig = sig; fill(li, a, n, editing, ms); }
@@ -13208,7 +13200,7 @@ const MARKUP = (() => {
     // open, and the agent has the last word without resolving it: Answered in rev N
     if (s) s.textContent = a.status === 'open' ? (lastMsg && lastMsg.who === 'agent' ? `Answered in rev ${lastMsg.rev}` : 'Sent ' + ago(a.sentAt))
       : a.resolvedBy === 'agent' ? `Resolved by the agent in rev ${a.resolvedRev}` : a.resolvedBy === 'rev' ? `Applied in rev ${a.resolvedRev}` : 'Resolved ' + ago(a.resolvedAt);
-    li.setAttribute('aria-label', `Comment ${n} on ${onLabel(a, a.target.label)}`);
+    li.setAttribute('aria-label', isGeneral(a) ? 'General comment' : `Comment ${n} on ${onLabel(a, a.target.label)}`);
     return li;
   }
   function fill(li, a, n, editing, ms) {
@@ -13239,8 +13231,8 @@ const MARKUP = (() => {
       : !E ? null : del ? h('div', { class: 'eld' }, h('span', { class: 'del' }, `Deleted: ${E.tag}`), gone && [' “', cut(gone, 160), '”'])
       : h('div', { class: 'eld' }, h('s', {}, cut(E.base, 160)), h('span', { class: 'ar', 'aria-label': 'becomes' }, '→'), h('b', {}, cut(E.text, 240)));
     li.replaceChildren(numChip(a, n), h('div', { class: 'cb' },
-      h('div', { class: 'ch' }, ic(TYPE_IC[a.type]), h('span', { class: 'lb', title: onLabel(a, a.target.label) }, onLabel(a, last)), h('span', { class: 'ago' }),
-        h('span', { class: 'acts' }, ib('target', 'Show on the page', () => { select(a); reveal(a); }),
+      h('div', { class: 'ch' }, !isGeneral(a) && ic(TYPE_IC[a.type]), h('span', { class: 'lb', title: onLabel(a, a.target.label) }, isGeneral(a) ? 'General' : onLabel(a, last)), h('span', { class: 'ago' }),
+        h('span', { class: 'acts' }, !isGeneral(a) && ib('target', 'Show on the page', () => { select(a); reveal(a); }),
           a.status === 'pending' && !editing && !isDraft(a) && ib('pencil', 'Edit', () => startEdit(a)),
           a.status === 'open' && ib('check', 'Resolve', () => setStatus(a, 'resolved')),
           a.status === 'resolved' && ib('reset', 'Reopen', () => setStatus(a, 'open')),
@@ -13256,7 +13248,7 @@ const MARKUP = (() => {
   // a sent comment's reply box: what is typed is its pending follow-up (`draft`, its files `draftFiles`), saved as it
   // is typed; a file removed before it goes has its copy deleted at once
   function replyBox(a) {
-    const ta = h('textarea', { class: 'bp-note-ta', rows: 1, maxlength: 8192, placeholder: 'Reply…', 'aria-label': 'Reply on: ' + a.target.label });
+    const ta = h('textarea', { class: 'bp-note-ta', rows: 1, maxlength: 8192, placeholder: 'Reply…', 'aria-label': 'Reply on: ' + (isGeneral(a) ? 'general comment' : a.target.label) });
     ta.value = a.draft || '';
     let t = 0;
     const keep = () => { clearTimeout(t); save(); };
@@ -13325,11 +13317,11 @@ const MARKUP = (() => {
     if (caret && editTa && document.activeElement !== editTa) { editTa.focus({ preventScroll: true }); editTa.setSelectionRange(...caret); }
     if (editTa) grow(editTa);
     emptyEl.hidden = nodes.length > 0;
-    if (!nodes.length) emptyEl.replaceChildren(...(onPage().length || threads().length
+    if (!nodes.length) emptyEl.replaceChildren(...(list.length || threads().length
       ? [h('span', {}, { pending: 'Nothing pending. Comments you have sent are under Open.', open: 'Nothing open. Comments you send show here until you resolve them.',
           resolved: 'Nothing resolved yet. Resolve an open comment once the agent has made the change.' }[filter] || '')]
       : [h('span', { class: 'ico' }, ic('msg')), h('b', {}, 'No comments yet'),
-        h('span', {}, 'Pick a tool in the dock, then click an element, drag a region, select text or draw on the page. Each comment asks the agent to change that spot. For the doc as a whole, write under General below.'),
+        h('span', {}, 'Pick a tool in the dock, then click an element, drag a region, select text or draw on the page. Each comment asks the agent to change that spot. For the doc as a whole, write to the agent in the box below.'),
         h('span', { class: 'keys' }, TOOLS.map(m => h('span', {}, kbd(MODES[m][2]), MODES[m][1])))]));
   }
   const scrollCard = li => scrollWithin(listBox, li);
@@ -13344,7 +13336,7 @@ const MARKUP = (() => {
     if (editA && editA !== a) endEdit(true);
     selA = a; hlDirty = true;
     if (a && open) SIDE.show('comments');
-    if (a && !isGeneral(a) && !matches(a)) setFilter(a.status, false);
+    if (a && !matches(a)) setFilter(a.status, false);
     paint(); schedule(true);
     const li = a && cards.get(a.id);
     if (li && scroll) {
@@ -13357,9 +13349,9 @@ const MARKUP = (() => {
     if (editA && editA !== a) endEdit(true);
     editA = a; selA = a; hlDirty = true;
     SIDE.show('comments');
-    if (!isGeneral(a) && !matches(a)) setFilter('pending', false);
+    if (!matches(a)) setFilter('pending', false);
     paint(); schedule(true);
-    const li = cards.get(a.id) || bubbles.get(a.id); if (li) scrollWithin(cards.has(a.id) ? listBox : chatL, li);
+    const li = cards.get(a.id); if (li) scrollCard(li);
     requestAnimationFrame(() => { if (editA === a && editTa) { editTa.focus({ preventScroll: true }); const n = editTa.value.length; editTa.setSelectionRange(n, n); grow(editTa); } });
   }
   // keep: what was typed is saved (Save, an outside click, a mode switch); else it's dropped (Cancel, Esc). Its files
@@ -13375,7 +13367,7 @@ const MARKUP = (() => {
     const back = !!editTa && document.activeElement === editTa;
     editA = null; editTa = null; hlDirty = true;
     schedule(true); paint();
-    if (back) (cards.get(a.id) || bubbles.get(a.id))?.focus({ preventScroll: true });
+    if (back) cards.get(a.id)?.focus({ preventScroll: true });
     return saved;
   }
   const commitEdit = () => { if (editTa && (editTa.value.trim() || editFd && editFd.files.length) && !(editFd && editFd.busy)) endEdit(true); };
@@ -13392,7 +13384,7 @@ const MARKUP = (() => {
   const discard = a => { if (isDraft(a) && BOARD && BOARD.discard && BOARD.discard(a.id)) return; remove(a); };
   function clearResolved() {
     if (selA && selA.status === 'resolved') selA = null;
-    list = list.filter(a => a.status !== 'resolved' || isGeneral(a)); save(); hlDirty = true; schedule(true); paint();
+    list = list.filter(a => a.status !== 'resolved'); save(); hlDirty = true; schedule(true); paint();
   }
   // Resolve (open → resolved) and Reopen (resolved → open); sending makes pending notes open. resolvedRev, the
   // revision whose `resolves` last resolved it, stays on a reopened comment (see agentResolve)
@@ -13491,17 +13483,16 @@ const MARKUP = (() => {
     return true;
   }
   function paint() {
-    const n = pending().length, ni = itemsPending().length, all = n + ni, ts = threads(), pg = onPage(), total = pg.length + ts.length;
-    const by = s => pg.filter(a => a.status === s).length + ts.filter(x => threadStatus(x) === s).length;
+    const n = pending().length, ni = itemsPending().length, all = n + ni, ts = threads(), total = list.length + ts.length;
+    const by = s => list.filter(a => a.status === s).length + ts.filter(x => threadStatus(x) === s).length;
     goN.textContent = String(all);
     go.disabled = !all;
     go.setAttribute('aria-label', `Request changes: ${all} pending`);
     go._tip = all ? `Review and send ${all} pending change request${all === 1 ? '' : 's'}` : 'Comment on the page, or add a general comment, to request a change';
     SIDE.badge(n + threadsUnsent());
     filterBtns.forEach(b => { const f = b.dataset.f; b.setAttribute('aria-checked', String(f === filter)); b.replaceChildren(FILTERS[f], h('i', {}, String(f === 'all' ? total : by(f)))); });
-    sortBtn.replaceChildren(ic(sort === 'page' ? 'doc' : 'hist'));
-    sortBtn.title = sort === 'page' ? 'In page order; click for newest first' : 'Newest first; click for page order'; sortBtn.setAttribute('aria-label', sortBtn.title);
-    clearRow.hidden = !onPage().some(a => a.status === 'resolved');   // it clears the page's comments, not the findings' or the chat's
+    sortSel.btn.title = 'Sort: ' + SORTS[sort];
+    clearRow.hidden = !list.some(a => a.status === 'resolved');   // it clears the page's comments, not the findings'
     tb.dataset.m = mode;
     for (const b of tb.querySelectorAll('.bd-key[data-m]')) b.setAttribute('aria-pressed', String(b.dataset.m === mode));
     // ≤ 600 px: the fold key shows the current tool (else Element's icon), its menu open or not
@@ -13528,7 +13519,7 @@ const MARKUP = (() => {
     layer.hidden = marksOff;
     if (BOARD && BOARD.paintFrames) BOARD.paintFrames(list);   // a design's requested frames
     if (BOARD && BOARD.paintDrafts) BOARD.paintDrafts();   // and its link drafts and moves (boardEdits)
-    renderList(); renderChat();
+    renderList();
     if (dlg && dlg.open) dlg._paint();
     SIDE.paint();   // the tab's pending count
   }
@@ -13852,7 +13843,7 @@ const MARKUP = (() => {
   document.body.append(layer, hov, cap, cmp, selc, tb);
   requestAnimationFrame(fitTray);
   SIDE.add({ id: 'comments', label: 'Comments', icon: 'msg', body: csBody, chip: () => (n => n ? `${n} pending` : '')(pending().length + threadsUnsent()),
-    onToggle: shown => { if (!shown) endEdit(true); schedule(true); paint(); if (shown) chatEnd(); } });
+    onToggle: shown => { if (!shown) endEdit(true); schedule(true); paint(); } });
   root.classList.add('bd-tray-on');
   for (const ty of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click', 'dblclick']) addEventListener(ty, onCapture, true);
   addEventListener('pointercancel', () => { selDown = false; }, true);   // a touch that scrolled or long-pressed: selections show their button again

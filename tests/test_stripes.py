@@ -106,6 +106,32 @@ class Stripes(ChromePage):
         self.assertEqual(old.ev("BP.sidebar().section"), "revisions")
         self.assertEqual(self.browser.errors, [])
 
+    def test_the_panes_and_the_page_are_cards_between_the_stripes(self) -> None:
+        """HorizonUI's AppFrame (1.0.44): 44 px stripes 6 px in from the window's edges, the docked panes and the page's
+        card 6 px apart, none over another; Share and Export one pill."""
+        t = self.page(STATUS)
+        t.ev("BP.contents({open: true}), BP.sidebar({section: 'comments'}), 1")
+        t.wait_for("['bd-lp-dock', 'bd-sp-dock'].every(c => document.documentElement.classList.contains(c))")
+        time.sleep(0.4)   # the panes slide in
+        box = "(e => (r => [Math.round(r.left), Math.round(r.right), Math.round(r.top)])(e.getBoundingClientRect()))"
+        got = t.ev(f"""(() => {{ const W = document.documentElement.clientWidth, s = getComputedStyle(document.body, '::before');
+          return {{ W, bar: Math.round(document.querySelector('.bd-bar').getBoundingClientRect().bottom),
+            l: {box}(document.querySelector('.bd-stripe.l')), key: {box}(document.querySelector('.bd-stripe.l .bd-sk')),
+            cp: {box}(document.querySelector('.bp-side')), page: [parseFloat(s.left), W - parseFloat(s.right), parseFloat(s.top)],
+            sp: {box}(document.querySelector('.bd-sp')), r: {box}(document.querySelector('.bd-stripe.r')),
+            radius: [document.querySelector('.bp-side'), document.querySelector('.bd-sp')].map(e => getComputedStyle(e).borderRadius).concat(s.borderRadius),
+            share: {box}(document.querySelector('.bd-bar-r .bd-shk')), export: {box}(document.querySelector('.bd-bar-r .bd-docx')) }}; }})()""")
+        W, bar = got["W"], got["bar"]
+        self.assertEqual(got["l"][:2], [0, 50], "the left stripe: 6 px edge, 44 px of keys")
+        self.assertEqual(got["key"][:2], [12, 44], "a 32 px key centred in it")
+        self.assertEqual(got["cp"], [56, 320, bar], "Contents 6 px from the stripe, under the bar")
+        self.assertEqual(got["sp"][:2], [W - 56 - 344, W - 56], "the right panel 6 px from its stripe")
+        self.assertEqual(got["page"], [326, got["sp"][0] - 6, bar], "the page's card 6 px from each pane")
+        self.assertEqual(got["r"][:2], [W - 50, W])
+        self.assertEqual(got["radius"], ["14px"] * 3)
+        self.assertEqual(got["share"][1], got["export"][0], "Share and Export touch: one pill")
+        self.assertEqual(self.browser.errors, [])
+
     def test_a_board_keeps_its_brief_and_screens_on_the_left_stripe(self) -> None:
         t = self.page(FIT)
         t.wait_for("!!BP.board()", 20)

@@ -97,6 +97,16 @@ class BoardLayoutParity(unittest.TestCase):
         for e in board.get("entry") or []:
             self.assertEqual(at[e][0], 0, f"entry {e} is not in column 0")
 
+    def test_rows_started_by_x_y(self) -> None:
+        """An artboard with x, y starts a row; the unplaced ones after it follow on it until the next with x, y."""
+        board = {"artboards": [{"id": "a", "device": "phone"}, {"id": "new", "device": "phone", "x": 0, "y": 2800},
+                               {"id": "shared", "device": "phone"}, {"id": "update", "device": "phone"},
+                               {"id": "web", "device": "browser", "x": 0, "y": 5000}, {"id": "web-2", "device": "phone"}]}
+        self.assert_same([(board, None)], ["rows by x, y"])
+        at = build.board_layout(board)
+        self.assertEqual([at[k][:2] for k in ("a", "new", "shared", "update", "web", "web-2")],
+                         [(0, 0), (0, 2800), (470, 2800), (940, 2800), (0, 5000), (1520, 5000)])
+
     def test_generated_boards(self) -> None:
         cases = [generated(seed) for seed in range(300)]
         cases += [(b, None) for b, _ in cases[:20]]

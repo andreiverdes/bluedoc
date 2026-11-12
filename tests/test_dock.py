@@ -5,7 +5,11 @@ Every page's dock is View │ Element · Region · Text · Pen, on a board then 
 changes and the page's last key; at 390 px the four tools fold into one key between View and Link. On the Acme Fit
 board a double-click on a screen's text in View edits it (a draft: the toolbar's count rises), a double-click where
 there is no text focuses the screen, the toolbar has no Interact key and I does nothing: a click on a screen's link
-on the board follows nothing, while in Present the same click follows it."""
+on the board follows nothing, while in Present the same click follows it.
+
+The dock and the top toolbars share one look (1.0.44): the dock, the board's toolbar, a compare view's keys and a
+drawing's toolbar are each one pill 52 px tall, their keys round and 38 px, Request changes and Approve as tall as
+the keys, and the pressed key stands out from the others in the light theme and the dark one."""
 from __future__ import annotations
 
 import time
@@ -75,6 +79,50 @@ class DockFitsItsRoom(ChromePage):
                         self.assertTrue(got["words"], "a wide window keeps the words")
         self.assertEqual(self.browser.errors, [])
 
+
+# each shown box's [width, height, corner radius] for a selector, and a selector's first box's height
+BOXES = """(sel => [...document.querySelectorAll(sel)].filter(e => e.getClientRects().length)
+  .map(e => { const r = e.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height), parseFloat(getComputedStyle(e).borderTopLeftRadius)]; }))"""
+HEIGHT = "(sel => Math.round(document.querySelector(sel).getBoundingClientRect().height))"
+
+
+@unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")
+class BarsLook(ChromePage):
+    def round_keys(self, t: Tab, sel: str) -> None:
+        keys = t.ev(f"{BOXES}({sel!r})")
+        self.assertTrue(keys, sel)
+        for w, h, rad in keys:
+            self.assertEqual((w, h), (38, 38), sel)
+            self.assertGreaterEqual(rad, 19, f"{sel}: round")
+
+    def test_the_dock_and_the_board_toolbar_are_one_size_and_the_pressed_key_shows(self) -> None:
+        t = self.open(self.server.url_for(self.docs / FIT))
+        t.wait_for("!!document.querySelector('.bd-anntb') && !!document.querySelector('.bd-btb')", 20)
+        self.assertEqual((t.ev(f"{HEIGHT}('.bd-anntb')"), t.ev(f"{HEIGHT}('.bd-btb')")), (52, 52))
+        self.round_keys(t, ".bd-anntb > .bd-key:not(.txt, .go, .fold)")
+        self.round_keys(t, ".bd-btb > .bd-tbtn:not(.txt)")
+        self.assertEqual({h for _, h, _ in t.ev(f"{BOXES}('.bd-anntb > :is(.bd-key.go, .bd-key.approve)')")}, {38}, "the action pills are as tall as the keys")
+        bg = "(s => getComputedStyle(document.querySelector(s)).backgroundColor)"
+        for theme in ("light", "dark"):
+            with self.subTest(theme=theme):
+                t.ev(f"document.documentElement.dataset.theme = {theme!r}")
+                time.sleep(0.3)   # the keys' colours ease
+                on, off = t.ev(f"{bg}('.bd-anntb .bd-key[aria-pressed=true]')"), t.ev(f"{bg}('.bd-anntb .bd-key[data-m=region]')")
+                self.assertNotEqual(on, off, "the pressed key stands out")
+                self.assertNotEqual(on, "rgba(0, 0, 0, 0)")
+        self.assertEqual(self.browser.errors, [])
+
+    def test_a_compare_view_and_a_drawing_have_the_same_pill(self) -> None:
+        t = self.open(self.server.url_for(self.docs / "acme-status.bluedoc.json"))
+        t.go(f"{self.base}{self.server.url_for(self.docs / 'acme-status.bluedoc.json')}?diff=1")
+        t.wait_for("!!document.querySelector('.bd-revbar .bd-revtb')")
+        self.assertEqual(t.ev(f"{HEIGHT}('.bd-revbar .bd-revtb')"), 52)
+        self.round_keys(t, ".bd-revbar .bd-revtb > .bd-key:not(.txt)")
+        t = self.open(self.server.url_for(self.docs / "acme-orders.bluedoc.json"))
+        t.wait_for("!!document.querySelector('.bp-tb .grp')")
+        self.assertEqual(t.ev(f"{HEIGHT}('.bp-tb .grp')"), 52)
+        self.round_keys(t, ".bp-tb .grp > button")
+        self.assertEqual(self.browser.errors, [])
 
 
 @unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")
