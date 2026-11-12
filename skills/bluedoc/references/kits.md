@@ -60,14 +60,18 @@ child) `.slide-big` (a big number) `.slide-quote` `.slide-foot[data-n="2"]` (foo
 
 `framework: "horizon"` loads `react.js`, `horizon-ui.js` and `horizon-ui.css` before the fragment; the globals are
 `React`, `ReactDOM` and `HorizonUI`. Mount into a `data-bd` element; put `data-bd` on plain elements you create,
-since components may not forward it.
+since components may not forward it. `<html data-hz-theme>` is the board theme's `tokens.scheme` (`dark` or `light`;
+else the theme's id when it is one of those, else `light`), also when the reader switches themes: pass it to
+`HorizonProvider`, which otherwise sets `light`.
 
 ```html
 <div id="root" data-bd="dashboard"></div>
 <script>
-const e = React.createElement, { HorizonProvider, Card, Button } = HorizonUI;
-ReactDOM.createRoot(document.getElementById('root')).render(
-  e(HorizonProvider, { theme: 'light' }, e('div', { 'data-bd': 'kpis' }, e(Card, null, 'Steps'))));
+const e = React.createElement, { HorizonProvider, Card, Button } = HorizonUI, html = document.documentElement;
+const root = ReactDOM.createRoot(document.getElementById('root'));
+const draw = () => root.render(e(HorizonProvider, { theme: html.dataset.hzTheme },
+  e('div', { 'data-bd': 'kpis' }, e(Card, null, 'Steps'))));
+new MutationObserver(draw).observe(html, { attributeFilter: ['data-hz-theme'] }); draw();
 </script>
 ```
 
@@ -79,7 +83,8 @@ compiles the fragment's Tailwind utilities in the frame. Use HeroUI's classes, B
 card__description card__content card__footer`, `input`, `label`, `chip chip--success`, `alert alert--warning`,
 `tabs`, `switch`, `separator`, `avatar`, `link`. Its React components don't run. The plain kit isn't loaded (no
 `screen`, `safe`): pad with the safe-area variables. The theme's `accent` token re-skins HeroUI's `--accent`; other
-tokens reach Tailwind as `bg-[var(--bg)]`. `framework: "tailwind"` loads Tailwind's browser build alone.
+tokens reach Tailwind as `bg-[var(--bg)]`. `<html data-theme>` is the theme's scheme, as for HorizonUI, so HeroUI's
+classes draw dark or light. `framework: "tailwind"` loads Tailwind's browser build alone.
 
 ```html
 <main class="min-h-screen flex flex-col gap-4 px-4 pb-4 pt-[calc(var(--safe-top)+16px)]" data-bd="home">

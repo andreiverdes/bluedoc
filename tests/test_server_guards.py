@@ -213,6 +213,23 @@ class ScreenRouteGuards(unittest.TestCase):
         status, _, body = self.get(f"{self.base}/acme-fit-design.design/app-icon.html")
         self.assertEqual(status, 404, body[:200])
 
+    def test_the_index_lists_one_folder_with_root(self) -> None:
+        """?root=<slug>: that folder's docs only (a doc page's doc menu); an unknown slug lists none."""
+        other = self.tmp.dir / "acme-fit"
+        other.mkdir()
+        shutil.copy(self.docs / "acme-fit-deck.bluedoc.json", other / "acme-fit-deck.bluedoc.json")
+        self.assertEqual(self.tmp.run("serve.py", "add", other).returncode, 0)
+
+        def roots(query: str) -> dict:
+            status, raw = self.server.req("GET", "/__bluedoc/index.json" + query, headers={"X-Bluedoc": "1"})
+            self.assertEqual(status, 200)
+            return {r["slug"]: sorted(d["path"] for d in r["docs"]) for r in json.loads(raw)["roots"]}
+        every = roots("")
+        self.assertEqual(sorted(every), sorted([self.slug, "acme-fit"]))
+        self.assertEqual(roots("?root=acme-fit"), {"acme-fit": ["acme-fit-deck.bluedoc.json"]})
+        self.assertEqual(roots(f"?root={self.slug}"), {self.slug: every[self.slug]})
+        self.assertEqual(roots("?root=nope"), {})
+
     def test_the_home_card_draws_links(self) -> None:
         status, raw = self.server.req("GET", "/__bluedoc/index.json", headers={"X-Bluedoc": "1"})
         self.assertEqual(status, 200)

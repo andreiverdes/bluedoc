@@ -54,7 +54,8 @@ URLs: /                      home page: every doc under the registered folders, 
       /<root>/<path>.bluedoc.json      the doc, rendered from its JSON on each request
       /<root>/<path>.bluedoc.json?raw=1   the JSON itself
       /<root>/<path>.<png|jpg|jpeg|gif|webp|svg|mp4|webm>   media files under the folder, for `media` blocks
-      /__bluedoc/index.json  what the home page shows about every doc
+      /__bluedoc/index.json  what the home page shows about every doc; ?root=<slug>: one folder's only (a doc
+                             page's doc menu)
       /__bluedoc/ping?path=  server check (version, code hash, started, pid, unlocked); with a doc's URL path, also
                              who reads replies and its saved approval
       /__bluedoc/settings    GET: what Settings shows (settings_view; each setting's value, source env|file|default
@@ -840,10 +841,13 @@ def summarize(p: Path) -> dict:
     return info
 
 
-def index() -> dict:
+def index(root: str | None = None) -> dict:
+    """Every registered folder's docs as the home page lists them; root: only the folder with that slug."""
     out = []
     roots = slugs(load_roots())
     for slug, r in roots.items():
+        if root is not None and slug != root:
+            continue
         docs = []
         for p in walk_docs(r, inner_roots(r, roots.values())):
             try:
@@ -994,6 +998,8 @@ PLAIN_KIT = ("base.css", "wireframe.css")
 VENDOR_KITS = {"horizon": ("horizon-ui/horizon-ui.css", "horizon-ui/react.js", "horizon-ui/horizon-ui.js"),
                "heroui": ("heroui/heroui.min.css", "heroui/tailwind.js"), "tailwind": ("heroui/tailwind.js",)}
 TAILWIND_KITS = ("heroui", "tailwind")
+# the <html> attribute a vendored kit takes its dark or light palette from, by the CSS file that brings it
+SCHEME_ATTRS = {VENDOR / "horizon-ui/horizon-ui.css": "data-hz-theme", VENDOR / "heroui/heroui.min.css": "data-theme"}
 MOTION_VARS = {"fast": "--dur-fast", "base": "--dur-base", "slow": "--dur-slow", "ease": "--ease"}
 
 
@@ -1177,9 +1183,22 @@ def brief_pick(doc: dict, item_id: str) -> str | None:
     return None
 
 
-def screen_vars(doc: dict, board: dict, a: dict, theme: str | None) -> str:
-    """The :root declarations a screen starts with: the device's size and safe area, the theme's tokens (theme, else
-    the brief's pick, else the first theme) and the board's motion tokens."""
+def screen_theme(doc: dict, board: dict, theme: str | None) -> dict | None:
+    """The theme a screen starts in: theme, else the brief's pick, else the board's first; None without themes."""
+    themes = {t["id"]: t for t in board.get("themes") or [] if isinstance(t, dict) and isinstance(t.get("id"), str)}
+    return themes.get(theme or "") or themes.get(brief_pick(doc, "theme") or "") or next(iter(themes.values()), None)
+
+
+def theme_scheme(t: dict) -> str:
+    """dark or light: the theme's tokens.scheme, else its id when that's dark or light, else light (kits/inspector.js
+    schemeOf reads it the same way)."""
+    tokens = t.get("tokens") if isinstance(t.get("tokens"), dict) else {}
+    return next((s for s in (tokens.get("scheme"), t.get("id")) if s in ("dark", "light")), "light")
+
+
+def screen_vars(board: dict, a: dict, t: dict | None) -> str:
+    """The :root declarations a screen starts with: the device's size and safe area, theme t's tokens (screen_theme)
+    and the board's motion tokens."""
     dev = build.DEVICES.get(a.get("device")) if isinstance(a.get("device"), str) else None
     w, h = build.artboard_size(a) or (0, 0)
     top, right, bottom, left = dev["safe"] if dev else (0, 0, 0, 0)
@@ -1187,8 +1206,6 @@ def screen_vars(doc: dict, board: dict, a: dict, theme: str | None) -> str:
            "--safe-bottom": f"{bottom}px", "--safe-left": f"{left}px"}
     if a.get("device") == "watch-round":   # the inscribed square's inset from the edge: d * (1 - 1/sqrt(2)) / 2
         out["--safe-inset"] = f"{round(w * (1 - 0.5 ** 0.5) / 2)}px"
-    themes = {t["id"]: t for t in board.get("themes") or [] if isinstance(t, dict) and isinstance(t.get("id"), str)}
-    t = themes.get(theme or "") or themes.get(brief_pick(doc, "theme") or "") or next(iter(themes.values()), None)
     tokens = (t or {}).get("tokens")
     for k, v in (tokens.items() if isinstance(tokens, dict) else ()):
         if token_ok(k, v):
@@ -1278,7 +1295,8 @@ def shot_parts(doc: dict, a: dict, inline: bool) -> tuple[list[str], str, str]:
 def wrap_screen(doc: dict, doc_path: Path, artboard_id: str, fragment: str, *, inline: bool = False,
                 theme: str | None = None, deck: bool = False) -> str:
     """A screen as a whole HTML document: kits/shell.html filled with the artboard's framework (or the plain kit and
-    a notice when it's missing), its fidelity, the device's and theme's variables, the inspector, then the fragment.
+    a notice when it's missing), its fidelity, the device's and theme's variables, the theme's scheme on <html> for a
+    kit that reads one (SCHEME_ATTRS), the inspector, then the fragment.
     inline puts every file in the document (an -o file); else they load from this server. deck (a deck file's slide,
     deck_html, or an exported listing shot, listing_pages) inlines too, with DECK_FRAME_SCRIPT in the inspector's place
     and the hand font only on a sketch slide.
@@ -1305,11 +1323,14 @@ def wrap_screen(doc: dict, doc_path: Path, artboard_id: str, fragment: str, *, i
         fragment = pin_html_units(fragment)
     shot_head, shot_vars, shot_tail = shot_parts(doc, a, inline) if a.get("device") in ("shot", "asset") else ([], "", "")
     head += shot_head
+    t = screen_theme(doc, board, theme)
+    loaded = {f for _, f, _ in assets}
+    scheme = "".join(f' {attr}="{theme_scheme(t)}"' for f, attr in SCHEME_ATTRS.items() if t and f in loaded)
     inspector = KITS / "inspector.js"
     slots = {
-        "html_class": f"fid-{fidelity}" + (" shot-pending" if shot_tail else ""), "artboard": esc(artboard_id),
+        "html_class": f"fid-{fidelity}" + (" shot-pending" if shot_tail else ""), "scheme": scheme, "artboard": esc(artboard_id),
         "fallback": esc(missing or ""),
-        "title": esc(str(a.get("title") or artboard_id)), "vars": screen_vars(doc, board, a, theme) + shot_vars,
+        "title": esc(str(a.get("title") or artboard_id)), "vars": screen_vars(board, a, t) + shot_vars,
         "hand_font": (data_uri(HAND_FONT) if not deck or fidelity == "sketch" else "data:,") if inline
         else f"/__bluedoc/vendor/fonts/{HAND_FONT.name}?v={vendor_version()}",
         "inspector": DECK_FRAME_SCRIPT if deck else asset_tag("js", inspector, f"/__bluedoc/kit/inspector.js?v={kit_version()}", inline),
@@ -4411,7 +4432,7 @@ def make_handler(port: int, default_to: str):
                 f = store_file(u.path[len("/__bluedoc/fw/"):])
                 return self.asset(f, q) if f else self.json(404, {"error": "not found"})
             if u.path == "/__bluedoc/index.json":
-                return self.json(200, {**index(), "unlocked": self.has_key()})
+                return self.json(200, {**index(q.get("root")), "unlocked": self.has_key()})
             if u.path == "/__bluedoc/settings":
                 return self.json(200, settings_view(port))
             if u.path == "/__bluedoc/ping":

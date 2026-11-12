@@ -542,9 +542,10 @@ class SiteInChrome(unittest.TestCase):
         self.tab.wait_for("(b => b && b.artboards[0].ready)(BP.board())", 20)
 
     def on_frame(self, fx: float, fy: float) -> list[float]:
-        """The window point over frame px (fx, fy) of the page's frame, at the board's zoom."""
-        return self.tab.ev(f"(f => {{ const r = f.getBoundingClientRect(), k = r.width / f.width; return [r.left + {fx} * k, r.top + {fy} * k]; }})"
-                           "(document.querySelector('iframe.bd-ab-fr'))")
+        """The window point over frame px (fx, fy) of the page's frame, at the board's zoom: measured a frame on, once the
+        board has painted its view (BP.board() reports a fit at once; the board paints it on the next animation frame)."""
+        return self.tab.ev(f"new Promise(requestAnimationFrame).then(() => (f => {{ const r = f.getBoundingClientRect(), k = r.width / f.width; "
+                           f"return [r.left + {fx} * k, r.top + {fy} * k]; }})(document.querySelector('iframe.bd-ab-fr')))")
 
     def pin_at(self, fx: float, fy: float, note: str) -> dict:
         """Point mode, a click at frame px (fx, fy), the note saved: the new annotation."""

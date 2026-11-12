@@ -989,10 +989,10 @@ class BoardDrafts(ChromePage):
 
 @unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")
 class ReaderName(ChromePage):
-    """The reader renames a doc and picks its emoji on the page (rt/name): the h1 on a doc page, the app bar's crumb on a
-    board. Enter saves `__title`, Esc restores; the picker's search and Enter save `__emoji`; both hold through a reload,
-    show in the tab and the home index, and never in a reply or the doc's JSON. The picker's reset items bring the doc's
-    own back. ?rev= shows them as text."""
+    """The reader renames a doc and picks its emoji on the page (rt/name): the h1 on a doc page, the h1 in a board's Brief
+    pane (the app bar shows them as the doc menu's key). Enter saves `__title`, Esc restores; the picker's search and
+    Enter save `__emoji`; both hold through a reload, show in the tab and the home index, and never in a reply or the
+    doc's JSON. The picker's reset items bring the doc's own back. ?rev= shows them as text."""
 
     def keys(self, t: Tab, key: str, code: int) -> None:
         for kind in ("keyDown", "keyUp"):
@@ -1048,11 +1048,13 @@ class ReaderName(ChromePage):
         self.assertEqual(until(lambda: not self.stored(url) and "reset"), "reset")
         self.assertEqual(self.browser.errors, [])
 
-    def test_a_board_renamed_in_its_app_bar(self) -> None:
+    def test_a_board_renamed_in_its_brief(self) -> None:
         doc = self.docs / FIT
         url = self.server.url_for(doc)
         t = self.open(url)
-        self.rename(t, ".bd-crumb", "Acme Fit: onboarding", "rocket")
+        t.ev("BP.sidebar({section: 'brief'})")
+        t.wait_for("BP.sidebar().section === 'brief' && BP.sidebar().open")
+        self.rename(t, "#bd-sp-brief .bd-head h1", "Acme Fit: onboarding", "rocket")
         self.assertEqual(until(lambda: self.stored(url) if len(self.stored(url)) == 2 else None), {"__title": "Acme Fit: onboarding", "__emoji": "🚀"})
         t.go(self.base + url)
         self.assertEqual(t.ev("[document.title, document.querySelector('.bd-crumb').textContent]"), ["Acme Fit: onboarding · bluedoc", "/🚀Acme Fit: onboarding"])
@@ -1200,31 +1202,40 @@ class Archive(ChromePage):
 
 @unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")
 class NarrowWindow(ChromePage):
-    """A doc page in a window too narrow for a readable centred column goes wide: the column fills the window between the
-    page paddings, whatever width the reader stored, and the width handles hide; a wide window keeps the stored width."""
+    """A doc's column is centred in its room, between the stripes and the docked panes, at the reader's stored width;
+    a room narrower than that reads at the room's width. Either handle moves both edges, so the column stays centred."""
 
     COL = "Math.round(document.querySelector('.bd-shell > main').getBoundingClientRect().width)"
+    EDGES = "(r => [Math.round(r.left), Math.round(r.right)])(document.querySelector('.bd-shell > main').getBoundingClientRect())"
+    ROOM = ("(s => [parseFloat(s.getPropertyValue('--room-l')), document.documentElement.clientWidth - parseFloat(s.getPropertyValue('--room-r'))])"
+            "(getComputedStyle(document.documentElement))")
 
     def size(self, t: Tab, w: int) -> None:
         self.browser.call("Emulation.setDeviceMetricsOverride", {"width": w, "height": 900, "deviceScaleFactor": 1, "mobile": False}, t.session)
         t.wait_for(f"innerWidth === {w}")
 
-    def test_a_narrow_window_reads_edge_to_edge_and_a_wide_one_keeps_the_stored_width(self) -> None:
+    def centred(self, t: Tab) -> None:
+        (left, right), (lo, hi) = t.ev(self.EDGES), t.ev(self.ROOM)
+        self.assertLessEqual(abs((left - lo) - (hi - right)), 1, "centred in its room")
+
+    def test_a_narrow_room_reads_at_its_width_and_a_wide_one_keeps_the_stored_width(self) -> None:
         t = self.open(self.server.url_for(self.plan))
         t.ev("localStorage.setItem('bluedoc:width', '560')")
         t.go(t.ev("location.href"))
-        # 1060 px: the rail and an empty right column would leave the stored 560 px: wide, edge to edge
-        self.size(t, 1060)
-        t.wait_for("document.documentElement.dataset.layout === 'wide'")
-        self.assertEqual(t.ev(self.COL), t.ev("document.documentElement.clientWidth") - 40)
-        self.assertEqual(t.ev("[...document.querySelectorAll('.bd-rh-col')].map(h => getComputedStyle(h).display)"), ["none", "none"])
-        # 1180 px: a centred column would get 540 px, under the 640 px it takes to read: still wide
-        self.size(t, 1180)
-        t.wait_for(f"document.documentElement.dataset.layout === 'wide' && {self.COL} === document.documentElement.clientWidth - 40")
-        # 1600 px: centred, at the stored width, with its handles
+        t.ev("BP.sidebar({open: false}), BP.contents({open: false})")
+        # 640 px: the stripes and the paddings (16 px from 900 px down) leave 528 px, under the stored 560
+        self.size(t, 640)
+        t.wait_for(f"{self.COL} === document.documentElement.clientWidth - 80 - 32")
+        self.centred(t)
+        # 1600 px: the stored width, with its handles
         self.size(t, 1600)
-        t.wait_for(f"document.documentElement.dataset.layout === 'centred' && {self.COL} === 560")
+        t.wait_for(f"{self.COL} === 560")
+        self.centred(t)
         self.assertEqual(t.ev("[...document.querySelectorAll('.bd-rh-col')].map(h => getComputedStyle(h).display)"), ["block", "block"])
+        # both panes docked: still 560, centred between them
+        t.ev("BP.sidebar({open: true}), BP.contents({open: true})")
+        t.wait_for(f"document.documentElement.classList.contains('bd-lp-dock') && document.documentElement.classList.contains('bd-sp-dock') && {self.COL} === 560")
+        self.centred(t)
         self.assertEqual(self.browser.errors, [])
 
     def drag(self, t: Tab, handle: int, to: int) -> None:
@@ -1237,35 +1248,29 @@ class NarrowWindow(ChromePage):
                                                            "clickCount": 1}, t.session)
             time.sleep(0.05)
 
-    def test_the_right_handle_reaches_into_the_empty_right_side_and_the_left_one_stays_off_the_rail(self) -> None:
+    def handle_x(self, t: Tab, i: int) -> int:
+        return t.ev(f"(r => Math.round(r.left + r.width / 2))(document.querySelectorAll('.bd-rh-col')[{i}].getBoundingClientRect())")
+
+    def test_either_handle_moves_both_edges(self) -> None:
         t = self.open(self.server.url_for(self.plan))
         self.size(t, 1420)
-        t.ev("BP.sidebar({open: false})")   # no right panel docked: its room is the empty right side the column may take
-        t.wait_for("!document.documentElement.classList.contains('bd-sp-dock')")
-        edges = "(r => [Math.round(r.left), Math.round(r.right)])(document.querySelector('.bd-shell > main').getBoundingClientRect())"
-        vw = t.ev("document.documentElement.clientWidth")
-        left, right = t.wait_for(f"document.documentElement.dataset.layout === 'centred' && {edges}")
-        self.assertLessEqual(abs(left - (vw - right)), 1, "no stored width: centred")
-        rail = 20 + 248 + 32   # the page padding, the rail and the gap: the left edge while the column reaches right
-        # past the centred room, the right edge follows the pointer (the handle sits half a gap, 16 px, right of the
-        # edge, and stays under the pointer) and the left edge stays beside the rail
-        self.drag(t, 1, 1300)
-        t.wait_for(f"(e => e[0] === {rail} && Math.abs(e[1] - 1284) <= 1)({edges})")
-        self.assertLessEqual(abs(t.ev("+localStorage.getItem('bluedoc:width')") - (1284 - rail)), 1)
-        # up to the window's padding and the gap, no further
-        self.drag(t, 1, vw)
-        t.wait_for(f"(e => e[0] === {rail} && e[1] === {vw - 20 - 32})({edges})")
+        t.ev("BP.sidebar({open: false}), BP.contents({open: false})")
+        t.wait_for("!document.documentElement.classList.contains('bd-sp-dock') && !document.documentElement.classList.contains('bd-lp-dock')")
+        time.sleep(0.3)
+        w0 = t.ev(self.COL)
+        # the right handle 60 px out: the column 120 px wider, still centred
+        self.drag(t, 1, self.handle_x(t, 1) + 60)
+        t.wait_for(f"Math.abs({self.COL} - {w0 + 120}) <= 2")
+        self.centred(t)
+        self.assertLessEqual(abs(t.ev("+localStorage.getItem('bluedoc:width')") - (w0 + 120)), 2)
+        # the left handle 40 px in: 80 px narrower
+        self.drag(t, 0, self.handle_x(t, 0) + 40)
+        t.wait_for(f"Math.abs({self.COL} - {w0 + 40}) <= 2")
+        self.centred(t)
         # a reload keeps it
         t.go(t.ev("location.href"))
         self.size(t, 1420)
-        t.wait_for(f"(e => e[0] === {rail} && e[1] === {vw - 20 - 32})({edges})")
-        # the left handle never pushes the edge over the rail: dragged outward it changes nothing
-        self.drag(t, 0, 100)
-        t.wait_for(f"(e => e[0] === {rail} && e[1] === {vw - 20 - 32})({edges})")
-        # back under the centred room, both edges move again: centred
-        self.drag(t, 1, 1100)
-        left, right = t.wait_for(f"(e => e[0] > {rail} && e)({edges})")
-        self.assertLessEqual(abs(left - (vw - right)), 1)
+        t.wait_for(f"Math.abs({self.COL} - {w0 + 40}) <= 2")
         self.assertEqual(self.browser.errors, [])
 
 

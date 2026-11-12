@@ -34,7 +34,7 @@ TOOLBAR = """(() => {
   const lp = document.querySelector('.bd-lp'), drawer = innerWidth <= 900 && document.documentElement.classList.contains('bd-lp-open');
   const shown = [...t.children].filter(e => e.getClientRects().length);
   return {h: r.height, row: key.height + parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom), left: r.left, right: r.right,
-    board: [board.left, board.right], drawer: drawer ? lp.getBoundingClientRect().width : 0,
+    board: [board.left, board.right], drawer: drawer ? lp.offsetLeft + lp.offsetWidth - board.left : 0,
     out: shown.filter(e => { const b = e.getBoundingClientRect(); return b.left < r.left - .5 || b.right > r.right + .5 || b.top < r.top - .5 || b.bottom > r.bottom + .5; })
       .map(e => e.getAttribute('aria-label') || e.className),
     keys: shown.map(e => e.matches('.bd-groove') ? '|' : e.getAttribute('aria-label') || e.className)};
@@ -71,7 +71,8 @@ class BoardToolbar(ChromePage):
         """The window at w px, both panels open (on a phone, the left one a drawer over the board)."""
         self.browser.call("Emulation.setDeviceMetricsOverride", {"width": w, "height": 900, "deviceScaleFactor": 1, "mobile": w < 700}, t.session)
         t.wait_for(f"innerWidth === {w}")
-        t.ev("BP.sidebar({open: true}), BP.board().panel || document.querySelector('.bd-btb .bd-tbtn').click(), 1")
+        time.sleep(0.3)   # the page has laid itself out for the width (a pane over the board hides the other side's)
+        t.ev("BP.sidebar({open: true}), BP.board().panel || document.querySelector('.bd-stripe.l .bd-sk, .bd-bk.l').click(), 1")
         time.sleep(0.6)   # the panels slide in
 
     def test_one_row_at_every_width_with_both_panels_open(self) -> None:
@@ -94,7 +95,7 @@ class BoardToolbar(ChromePage):
 
     def test_an_overflowed_key_works_from_more(self) -> None:
         t = self.board("acme-fit-design.bluedoc.json")
-        self.width(t, 600)
+        self.width(t, 560)   # the left panel's drawer (280 px) leaves the row 256 px
         more = "document.querySelector('.bd-btb .bd-btb-more')"
         self.assertFalse(t.ev(f"{more}.hidden"), "a narrow board has ⋯ More")
         self.assertFalse(t.ev("document.querySelector('.bd-btb .fid').checkVisibility()"), "the fidelity went into ⋯")

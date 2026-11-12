@@ -15,7 +15,7 @@ deck, acme-fit-deck, is a presentation that builds clean: five hi-fi plain-kit s
 revision; `--deck` and GET /__bluedoc/deck make it one HTML file that plays offline (in headless Chrome over file://
 with BLUEDOC_BROWSER_TESTS=1), or with Chrome a PDF of one 16:9 page per slide, and refuse other doc types; the page's
 Export to… menu offers both. The server serves only screens and declared framework files, and wraps a screen whose
-framework is missing in the plain kit with a notice."""
+framework is missing in the plain kit with a notice; a HorizonUI or HeroUI screen carries its theme's scheme on <html>."""
 from __future__ import annotations
 
 import copy
@@ -1185,6 +1185,69 @@ class ShippedFrameworks(unittest.TestCase):
         for rel, sha in self.PINNED.items():
             status, body = server.req("GET", f"/__bluedoc/vendor/{rel}")
             self.assertEqual((status, hashlib.sha256(body).hexdigest()), (200, sha), rel)
+
+
+class ThemeScheme(unittest.TestCase):
+    """A screen whose kit has a dark palette (HorizonUI: data-hz-theme, HeroUI: data-theme) carries its theme's scheme
+    on <html>: tokens.scheme, else the theme's id when that's dark or light, else light; ?theme=, else the brief's
+    pick. A kit without one gets neither. In the frame, a tokens message from the page switches it."""
+
+    def setUp(self) -> None:
+        self.tmp = TempHome()
+        self.addCleanup(self.tmp.cleanup)
+        docs = self.tmp.copy_examples()
+        doc_path = docs / f"{STEM}.bluedoc.json"
+        doc = load_json(doc_path)
+        board = board_of(doc)
+        board["themes"][0]["tokens"]["scheme"] = "dark"     # indigo, the brief's pick
+        board["themes"].append({"id": "dark", "label": "Dark", "tokens": {"accent": "#5b9cf5"}})
+        item = next(it for b in build.all_blocks(doc) if b.get("type") == "checklist" for it in b["items"] if it["id"] == "theme")
+        item["choices"].append({"id": "dark", "label": "Dark", "md": "Dark."})
+        board["artboards"][1]["framework"] = "heroui"     # login
+        doc_path.write_text(json.dumps(doc, indent=1) + "\n", encoding="utf-8")
+        # the dashboard as a screen draws it: HorizonUI classes, no provider and no script of its own setting a theme
+        (docs / f"{STEM}.design" / "dashboard.html").write_text(
+            '<main class="hz-root bg-hz-canvas text-hz-fg" data-bd="main" style="min-height: 100vh; padding: 24px">'
+            '<h1 data-bd="title">Steps this week</h1></main>\n', encoding="utf-8")
+        self.assertEqual(self.tmp.run("serve.py", "add", docs).returncode, 0)
+        self.server = Server(self.tmp)
+        self.server.start()
+        self.addCleanup(self.server.stop)
+        self.base = self.server.url_for(doc_path).rsplit("/", 1)[0]
+
+    def html_tag(self, artboard: str, theme: str | None = None) -> str:
+        status, body = self.server.req("GET", f"{self.base}/{STEM}.design/{artboard}.html" + (f"?theme={theme}" if theme else ""))
+        self.assertEqual(status, 200, body[:300])
+        return re.search(r"<html\b[^>]*>", body.decode("utf-8")).group(0)
+
+    def test_the_html_carries_the_scheme(self) -> None:
+        for artboard, attr in (("dashboard", "data-hz-theme"), ("login", "data-theme")):
+            for theme, scheme in ((None, "dark"), ("indigo", "dark"), ("forest", "light"), ("dark", "dark")):
+                with self.subTest(artboard=artboard, theme=theme):
+                    self.assertIn(f' {attr}="{scheme}" ', self.html_tag(artboard, theme))
+        tag = self.html_tag("today", "indigo")   # the plain kit
+        self.assertNotIn("data-hz-theme", tag)
+        self.assertNotIn("data-theme", tag)
+
+    @unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")
+    def test_a_horizon_screen_draws_dark_and_switches(self) -> None:
+        profile = Path(tempfile.mkdtemp(prefix="bluedoc-chrome-"))
+        self.addCleanup(shutil.rmtree, profile, True)
+        browser = Browser(profile)
+        self.addCleanup(browser.close)
+        t = Tab(browser)
+        browser.call("Page.navigate", {"url": f"http://{self.server.host}{self.base}/{STEM}.design/dashboard.html"}, t.session)
+        t.wait_for("document.readyState === 'complete'")
+        # the canvas's oklch lightness: 15.5 % in HorizonUI's dark palette, 96.4 % in its light one
+        lightness = "parseFloat(getComputedStyle(document.querySelector('main')).backgroundColor.match(/oklch\\(([\\d.]+)/)[1])"
+        self.assertLess(t.ev(lightness), 0.3)
+        # what the board's theme pill posts: the theme's tokens and its id
+        for tid, tokens, scheme in (("forest", {"accent": "#15803d"}, "light"), ("indigo", {"accent": "#4f46e5", "scheme": "dark"}, "dark"),
+                                    ("forest", {"accent": "#15803d"}, "light"), ("dark", {"accent": "#5b9cf5"}, "dark")):
+            t.ev(f"window.postMessage({{bd: 'tokens', theme: {json.dumps(tokens)}, id: {json.dumps(tid)}, motion: null}}, '*')")
+            t.wait_for(f"document.documentElement.dataset.hzTheme === {json.dumps(scheme)}")
+            self.assertEqual(t.ev(lightness) < 0.3, scheme == "dark", tid)
+        self.assertEqual(browser.errors, [])
 
 
 if __name__ == "__main__":

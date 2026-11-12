@@ -3,9 +3,9 @@ page, written into a frame of the viewer's page on an http(s) origin with window
 (share/page). It asks no /__bluedoc/ route and has no Export key although its origin is http, and it is view-only
 (share/view-only): no dock, tray or bottom bar, no enabled field in the doc, no comment composer, a click on an option,
 a tick or a board's controls changes nothing and stores no key but the view prefs, and the app bar says "Shared · view
-only". The doc's own `choice` shows as chosen, and its threads (an item's `replies`) are the Comments tab, read-only.
-?diff= in the viewer's URL compares; the revision links and Done load the viewer's path in the top window, /g/<code> as
-it is and an old link with its fragment (share/rev-links); an earlier revision's keys sit in its strip, not a tray.
+only". The doc's own `choice` shows as chosen, and its threads (an item's `replies`) are the Comments section,
+read-only. It carries its current revision only (share/current): no Revisions key, and ?rev= and ?diff= in the viewer's
+URL show the current revision, with no strip or compare.
 
 Here a stand-in viewer page on a local http server writes the page as the site's viewer does
 (bluedoc-site/src/scripts/viewer.ts), and answers every /g/<code> as GitHub Pages does with its 404.html; the server
@@ -137,6 +137,9 @@ class SharedPage(unittest.TestCase):
         self.open(t, url + HASH)
         self.assertEqual(self.q(t, "[w.document.title, !!w.document.querySelector('.bd-bar-r'), !!w.document.querySelector('.bd-docx')]"),
                          ["Acme Shop: saved carts · bluedoc", True, False])
+        # no doc menu: the title is plain text, and the home key leads to the page's top
+        self.assertEqual(self.q(t, "[!!w.document.querySelector('.bd-dsw'), w.document.querySelector('.bd-crumb').textContent, w.document.querySelector('.bd-home').getAttribute('href')]"),
+                         [False, "/📋Acme Shop: saved carts", "#top"])
         self.assert_view_only(t)
         before = self.q(t, "JSON.stringify(w.BP.replyPayload().items)")
         # a click on an option's radio, on an option's row and on a progress item's tick: nothing picks or ticks
@@ -196,8 +199,8 @@ class SharedPage(unittest.TestCase):
         self.assertEqual(self.q(t, f"(w.BP.board({{focus: {json.dumps(first)}}}), w.BP.board().selected)"), first)
         self.assertEqual(self.q(t, "JSON.stringify(w.BP.replyPayload().items)"), before)
         # narrow, the toolbar keeps one row the same way (test_narrow.BoardToolbar); ⋯ More has no edit keys
-        self.browser.call("Emulation.setDeviceMetricsOverride", {"width": 600, "height": 900, "deviceScaleFactor": 1, "mobile": False}, t.session)
-        t.wait_for(IN.format("w.innerWidth === 600"))
+        self.browser.call("Emulation.setDeviceMetricsOverride", {"width": 390, "height": 900, "deviceScaleFactor": 1, "mobile": False}, t.session)
+        t.wait_for(IN.format("w.innerWidth === 390"))
         tb = "w.document.querySelector('.bd-btb')"
         t.wait_for(IN.format(f"!{tb}.querySelector('.bd-btb-more').hidden"))
         self.assertAlmostEqual(*self.q(t, f"(t => [t.getBoundingClientRect().height, t.querySelector('.bd-tbtn').getBoundingClientRect().height + 8])({tb})"), delta=0.5)
@@ -209,36 +212,17 @@ class SharedPage(unittest.TestCase):
         self.assertEqual(self.asked_routes(), [])
         self.assertEqual(self.browser.errors, [])
 
-    def test_revision_links_load_the_viewer_at_its_path(self) -> None:
+    def test_only_the_current_revision(self) -> None:
         url = self.viewer("acme-fit-design")
         origin = url.rsplit("/", 1)[0]
-        for path, frag in ((CODE_PATH, ""), ("/viewer.html", HASH)):
-            with self.subTest(link=path + frag):
+        for query in ("", "?rev=B", "?diff=B"):
+            with self.subTest(query=query):
                 t = Tab(self.browser)
-                self.open(t, origin + path + "?diff=B" + frag)
-                self.assertEqual(t.ev(IN.format("(c => c && c.from)(w.BP.compare())")), "B")
-                # the revisions panel's links open in the top window, at the viewer's path, an old link's fragment kept
-                t.ev(IN.format("w.BP.revisionsRail({open: true}) && 1"))
-                hrefs = t.ev(IN.format("[...w.document.querySelectorAll('a[href*=\"?\"]')].filter(a => /[?&](rev|diff)=/.test(a.getAttribute('href')))"
-                                       ".map(a => [a.getAttribute('href'), a.target])"))
-                self.assertTrue(hrefs, "no revision links")
-                for href, target in hrefs:
-                    self.assertEqual((href.split("?")[0], "#" in href, href.endswith(frag), target), (path, bool(frag), True, "_top"), href)
-                # Done leaves compare: the viewer's path without the query, in the top window
-                t.ev("window.__left = true")
-                t.ev(IN.format("w.document.querySelector('.bd-key[aria-label=\"Done\"]').click()"))
-                t.wait_for(f"!window.__left && document.readyState === 'complete' && !!{IN.format('w && w.BP')}", 20)
-                self.assertEqual(t.ev("location.pathname + location.search + location.hash"), path + frag)
-                self.assertIsNone(t.ev(IN.format("w.BP.compare()")))
-        # an earlier revision: no tray; Go to current sits in its strip and loads /g/<code> in the top window
-        t = Tab(self.browser)
-        self.open(t, origin + CODE_PATH + "?rev=B")
-        self.assertEqual(self.q(t, "[!!w.document.querySelector('.bd-anntb'), w.document.querySelectorAll('.bd-revbar.old .bd-key').length]"), [False, 2])
-        self.assert_view_only(t)
-        t.ev("window.__left = true")
-        self.q(t, "w.document.querySelector('.bd-revbar.old .bd-key[aria-label=\"Go to current\"]').click()")
-        t.wait_for(f"!window.__left && document.readyState === 'complete' && !!{IN.format('w && w.BP')}", 20)
-        self.assertEqual(t.ev("location.pathname + location.search"), CODE_PATH)
+                self.open(t, origin + CODE_PATH + query)
+                t.wait_for(IN.format("w.BP.board() && w.BP.board().artboards.some(a => a.ready)"), 20)
+                self.assertEqual(self.q(t, "[w.BP.compare(), w.BP.revisions().find(r => r.shown).current, w.BP.sidebar().available.includes('revisions'), "
+                                           "w.document.querySelectorAll('.bd-revbar, .bd-stripe [data-f=revisions]').length]"), [None, True, False, 0])
+                self.assert_view_only(t)
         self.assertEqual(self.asked_routes(), [])
         self.assertEqual(self.browser.errors, [])
 

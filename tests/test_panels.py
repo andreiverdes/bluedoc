@@ -1,6 +1,6 @@
-"""Where a design page's panels put things (1.0.0-beta14). The brief (TL;DR, the sections, status) is the right panel's
-Brief tab, before Comments and Revisions, on a design, a deck, a website and a storelisting; the left panel has no Brief
-and, on the first three, no tab bar. A storelisting's left panel is Text, Style, Colors and Checks: every store text
+"""Where a design page's panels put things (1.0.0-beta14). The brief (the doc's header, TL;DR, the sections, status) is
+the right panel's Brief, its key before Comments and Revisions on the right stripe, on a design, a deck, a website and a
+storelisting; the left panel has no Brief and, on the first three, no tab bar. A storelisting's left panel is Text, Style, Colors and Checks: every store text
 and caption is editable, Save makes each changed field a `listing` draft (op `field`) in the one undo history, Request
 changes sends it with its `build.py patch … field:… --set` command, and the draft resolves once the doc has the value;
 Colors is the old Brand (a stored `brand` tab opens it); the captions' Typography is a section of Text. serve.py keeps a field
@@ -48,7 +48,7 @@ class BriefInTheRightPanel(ChromePage):
         t.wait_for(ready)
         t.wait_for("!!document.querySelector('.bd-lp')")
         self.assertEqual(t.ev("document.querySelectorAll('#bd-lp-brief, .bd-lp [data-v=brief], .bd-lp .bd-tldr, .bd-lp main').length"), 0, f"{name}: Brief left the left panel")
-        tabs = t.ev("[...document.querySelectorAll('.bd-sp-tabs [data-f]')].map(b => b.dataset.f)")
+        tabs = t.ev("[...document.querySelectorAll('.bd-stripe.r [data-f]')].map(b => b.dataset.f)")
         self.assertEqual(tabs[:2], ["brief", "comments"], f"{name}: {tabs}")
         self.assertTrue(set(tabs) <= {"brief", "comments", "revisions"}, tabs)
         t.ev("BP.sidebar({section: 'brief'})")
@@ -280,16 +280,16 @@ class ListingToolbar(ChromePage):
                        f" && b.getBoundingClientRect().height < 48)(document.querySelector('{self.TB}'))")
         self.assertEqual(self.browser.errors, [])
 
-    def test_the_bracket_and_the_toolbar_key_toggle_the_left_panel_and_a_reload_keeps_it(self) -> None:
+    def test_the_bracket_and_the_stripe_key_toggle_the_left_panel_and_a_reload_keeps_it(self) -> None:
         t = self.page()
         self.assertTrue(t.ev(LST)["toolbar"]["lp"])
         t.ev("document.dispatchEvent(new KeyboardEvent('keydown', {key: '['}))")
         self.assertEqual((t.ev(LST)["toolbar"]["lp"], t.ev("document.documentElement.classList.contains('bd-lp-open')")), (False, False))
-        self.assertEqual(t.ev(f"document.querySelector('{self.TB} [aria-keyshortcuts=\"[\"]').getAttribute('aria-pressed')"), "false")
+        self.assertEqual(t.ev("document.querySelector('.bd-stripe.l .bd-sk').getAttribute('aria-pressed')"), "false")
         t.ev("window.__before = 1; location.reload()")
         t.wait_for("!window.__before && document.readyState === 'complete' && !!window.BP && !!document.querySelector('.bd-lst-sec') && !!BP.listing()")
         self.assertFalse(t.ev(LST)["toolbar"]["lp"], "a reload keeps it hidden")
-        t.ev(f"document.querySelector('{self.TB} [aria-keyshortcuts=\"[\"]').click()")
+        t.ev("document.querySelector('.bd-stripe.l .bd-sk').click()")
         self.assertTrue(t.ev(LST)["toolbar"]["lp"])
         t.ev("window.__before = 1; location.reload()")
         t.wait_for("!window.__before && document.readyState === 'complete' && !!window.BP && !!BP.listing()")

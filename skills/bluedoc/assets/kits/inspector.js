@@ -3,7 +3,7 @@
    those page origins, names elements from the nearest unique id as well, roots the page's IntersectionObservers in
    the frame's own viewport and can snapshot the page. A live page's snapshot, served as a screen, loads it with
    data-ids="1": named from ids as on the live page, posting to the frame's own server like any screen.
-   Page -> frame: {bd:'mode', mode, board, edit}, {bd:'tokens', theme, motion}, {bd:'view', sketch, reduced, paused}, {bd:'locate', sels},
+   Page -> frame: {bd:'mode', mode, board, edit}, {bd:'tokens', theme, id, motion}, {bd:'view', sketch, reduced, paused}, {bd:'locate', sels},
      {bd:'mode', mode}       view | interact (Present's screens: clicks run, taps are reported: nav) | point (Element,
                              and Link: hover outline, a click picks) | select (Text: a selection or a click picks) |
                              draw, region (Pen, Region: the page's drawing layer takes the pointer; as view)
@@ -11,6 +11,8 @@
      (edit: true where the reader may change the text (View, Element, Link on the board's own screens): a pick in point
                              carries ord, base and root; a double-click on text in point asks to edit it (pick, dbl);
                              {bd:'editText'} starts an edit; Delete or Backspace in point is forwarded)
+     {bd:'tokens', theme, id, motion}   the theme's tokens and the motion tokens as :root variables; the theme's scheme
+                             (schemeOf) on whichever of data-hz-theme and data-theme the server put on <html> (serve.py SCHEME_ATTRS)
      {bd:'sections', sels}   a website page's section selectors: hover and pick report the innermost one holding the element
      {bd:'edits', list}      list: [{sel, edits: [{sel?, text? | html?}]}]: the variants shown in place. Each edit sets the
                              text or the HTML of the element its sel finds in its section (the section itself without
@@ -591,7 +593,10 @@
     post({ bd: 'key', k: key });
   }, true);
 
-  function setTokens(theme, motion) {
+  // dark or light: tokens.scheme, else the theme's id when that's dark or light, else light (serve.py theme_scheme)
+  const schemeOf = (tokens, id) => [tokens.scheme, id].find(s => s === 'dark' || s === 'light') || 'light';
+
+  function setTokens(theme, motion, id) {
     const out = [];
     for (const [src, map] of [[theme, null], [motion, MOTION_VARS]]) {
       if (!src || typeof src !== 'object') continue;
@@ -602,6 +607,7 @@
     }
     const el = doc.getElementById('bd-tokens');
     if (el) el.textContent = out.length ? 'html:root{' + out.join(';') + '}' : '';
+    if (theme && typeof theme === 'object') for (const attr of ['data-hz-theme', 'data-theme']) if (root.hasAttribute(attr)) root.setAttribute(attr, schemeOf(theme, id));
   }
 
   addEventListener('message', e => {
@@ -626,7 +632,7 @@
     } else if (m.bd === 'drafts' && Array.isArray(m.list)) {
       setDrafts(m.list);
     } else if (m.bd === 'tokens') {
-      setTokens(m.theme, m.motion);
+      setTokens(m.theme, m.motion, m.id);
     } else if (m.bd === 'view') {
       root.classList.toggle('bd-sketch', !!m.sketch);
       root.classList.toggle('bd-reduced', !!m.reduced);
