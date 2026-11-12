@@ -44,6 +44,37 @@ class DockKeys(ChromePage):
         self.assertEqual(self.keys("acme-review-findings.bluedoc.json", 390)[:6], ["View", "|", "Comment tools", "|", "Hide comment marks", "|"])
 
 
+# the dock's box and its room: the window, less the right panel beside the page (over 900 px) and a board's left panel
+ROOM = """(() => { const t = document.querySelector('.bd-anntb').getBoundingClientRect(), r = document.documentElement, side = innerWidth > 900;
+  const lp = side && r.classList.contains('bd-lp-open') ? document.querySelector('.bd-lp').offsetWidth : 0;
+  const sp = side && r.classList.contains('bd-sp-open') ? document.querySelector('.bd-sp').offsetWidth : 0;
+  return { left: t.left, right: t.right, h: t.height, lo: lp, hi: r.clientWidth - sp,
+    words: [...document.querySelectorAll('.bd-anntb .bd-key .t')].some(e => e.checkVisibility()) }; })()"""
+
+
+@unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")
+class DockFitsItsRoom(ChromePage):
+    def test_a_resized_window_keeps_the_dock_in_one_row_inside_its_room(self) -> None:
+        """Narrowed with the panels open: the words go before the dock runs off the window or under a panel (1.0.40)."""
+        for doc in (FIT, "acme-review-findings.bluedoc.json"):
+            t = self.open(self.server.url_for(self.docs / doc))
+            t.wait_for("!!document.querySelector('.bd-anntb') && !!window.BP", 20)
+            t.ev("BP.sidebar({open: true}), document.querySelector('.bd-btb') && !BP.board().panel && document.querySelector('.bd-btb .bd-tbtn').click(), 1")
+            for w in (1440, 1180, 1100, 860, 700, 640, 610, 390):
+                with self.subTest(doc=doc, width=w):
+                    self.browser.call("Emulation.setDeviceMetricsOverride", {"width": w, "height": 900, "deviceScaleFactor": 1, "mobile": False}, t.session)
+                    t.wait_for(f"innerWidth === {w}")
+                    time.sleep(0.4)   # the dock slides to its place
+                    got = t.ev(ROOM)
+                    self.assertLess(got["h"], 60, "one row")
+                    self.assertGreaterEqual(got["left"], got["lo"] - 0.5, got)
+                    self.assertLessEqual(got["right"], got["hi"] + 0.5, got)
+                    if w == 1440:
+                        self.assertTrue(got["words"], "a wide window keeps the words")
+        self.assertEqual(self.browser.errors, [])
+
+
+
 @unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")
 class BoardTextAndPresent(ChromePage, EditOnBoard):
     def setUp(self) -> None:

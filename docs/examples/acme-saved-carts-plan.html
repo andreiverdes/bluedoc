@@ -1019,6 +1019,10 @@ img.bp-cmpr-img { cursor: zoom-in; }
   .bd-key.fold { display: inline-flex; }
   .bd-annb:is(.menu, .strip):not([hidden]) { display: flex; }
 }
+/* the same fold on a wider window whose tray doesn't fit its room even without words (fitTray: a board between both panels) */
+.bd-anntb.folded > :is(.bd-key.tool, .bd-groove.tools-g, .bd-annb.opt) { display: none; }
+.bd-anntb.folded > .bd-key.fold { display: inline-flex; }
+.bd-anntb.folded > .bd-annb:is(.menu, .strip):not([hidden]) { display: flex; }
 /* narrow phones: smaller keys and gaps, and at 380 px an empty Request changes count goes, so every dock fits 320 px */
 @media (max-width: 420px) {
   .bd-anntb { gap: 3px; padding: 4px; }
@@ -2482,7 +2486,7 @@ html.bd-presenting .bp-toast { z-index: 71; bottom: 84px; }
 @media (min-width: 901px) { html.bd-lp-open :is(.bd-anntb, .bp-toast) { left: calc(var(--lp-w) + (100% - var(--lp-w)) / 2); } }
 @media (min-width: 1101px) { html.bd-lp-open.bd-sp-open :is(.bd-anntb, .bp-toast) { left: calc(var(--lp-w) + (100% - var(--lp-w) - var(--sp-w)) / 2); } }
 @media (max-width: 900px) { html.bd-lp-open .bd-boardblk { left: 0; } .bd-lp { width: min(var(--lp-w), 86vw); box-shadow: var(--shadow-3); } .bd-lst-btb .bd-sg { display: none; } }
-/* a doc page's tray beside an open right panel (fitTray): keys keep their icon and count, not their words */
+/* a tray too wide for its room (fitTray): keys keep their icon and count, not their words */
 .bd-anntb.compact .bd-key :is(.t, .l) { display: none; }
 
 /* ---------- a storelisting's platform pages (renderListing): the floating toolbar; the left panel's Text, Style,
@@ -3957,7 +3961,7 @@ function applyWidth() {
   const dock = dockW();
   root.classList.toggle('bd-sp-dock', dock > 0);
   // a design page is its board, full-bleed between the left panel and the right one: no column, no rails
-  if (IS_DESIGN) { root.dataset.layout = 'board'; fitPanels(); return; }
+  if (IS_DESIGN) { root.dataset.layout = 'board'; fitPanels(); fitTray(); return; }
   // centred: both side columns are the same minimum width, so the column (the reader's width, narrowed to fit) sits on
   // the window's centre line, the right panel docked or not; a reader's width past that room (no panel docked) keeps
   // the left edge beside the rail and takes the right side column. Wide: the column fills the window between the
@@ -3972,18 +3976,25 @@ function applyWidth() {
   placeHandles();
   fitTray();
 }
-// A doc page's tray stays centred on the window, like its column. When it would run under the open right panel,
-// its keys drop their words (icons, counts and tooltips stay); if it still doesn't fit, it moves left just enough.
+// The tray stays in its room: the window, less a right panel open beside the page (over 900 px; under it the panel is a
+// bottom sheet) and a board's left panel. A doc page's tray is centred on the window, like its column; a board's in its
+// room. Where it doesn't fit, its keys drop their words (icons, counts and tooltips stay): beside the panel, and in a
+// window too narrow for the words but wider than the phone layout (600 px, where the tools fold). Still too wide (a
+// board between both panels), its four tools fold into one key as on a phone; past that it moves just enough to stay
+// inside the room, its right end first (it sits above the panels, and the right one ends in the comment field).
+// Measured by widths, not the tray's place: its left slides (a transition).
 function fitTray() {
   const tray = document.querySelector('.bd-anntb');
-  if (!tray || IS_DESIGN) return;
-  tray.classList.remove('compact'); tray.style.left = '';
-  if (!root.classList.contains('bd-sp-open') || innerWidth <= 900) return;
-  const edge = root.clientWidth - cssPx('--sp-w') - 12, over = () => tray.getBoundingClientRect().right - edge;
-  if (over() <= 0) return;
-  tray.classList.add('compact');
-  const r = tray.getBoundingClientRect();
-  if (r.right > edge) tray.style.left = Math.max(r.width / 2 + 12, edge - r.width / 2) + 'px';
+  if (!tray) return;
+  tray.classList.remove('compact', 'folded'); tray.style.left = '';
+  const side = innerWidth > 900, lpEl = IS_DESIGN && side && root.classList.contains('bd-lp-open') && document.querySelector('.bd-lp');
+  const lo = (lpEl ? lpEl.offsetWidth : 0) + 12;
+  const hi = root.clientWidth - (side && root.classList.contains('bd-sp-open') ? cssPx('--sp-w') : 0) - 12;
+  const mid = IS_DESIGN ? (lo + hi) / 2 : root.clientWidth / 2;
+  const fits = () => mid - tray.offsetWidth / 2 >= lo && mid + tray.offsetWidth / 2 <= hi;
+  for (const tier of ['compact', 'folded']) { if (fits()) break; tray.classList.add(tier); }
+  const w = tray.offsetWidth / 2, at = Math.min(hi - w, Math.max(lo + w, mid));
+  if (IS_DESIGN || at !== mid) tray.style.left = at + 'px';
 }
 // a drag handle on the edge of a width the reader sets (.bd-rh): drag it, or press ← → on it (Shift: bigger
 // steps); double-click it, or press Home, to reset. o = {label, title, dir: px of width per px dragged right,
