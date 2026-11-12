@@ -488,7 +488,7 @@ class ListingPage(ChromePage):
         t.ev(f"location.hash = {json.dumps(frag)}; location.reload()")
         t.wait_for("document.readyState === 'complete' && !!window.BP && !!document.querySelector('.bd-lst-sec') && !!BP.listing()")
         if side:
-            t.ev("document.documentElement.classList.contains('bd-lp-open') || document.dispatchEvent(new KeyboardEvent('keydown', {key: '['}))")
+            t.ev("(k => k.getAttribute('aria-pressed') === 'true' || k.click())(document.querySelector('.bd-stripe.l [data-f=screens]'))")
             t.ev(f"document.querySelector('.bd-lp-tabs [data-v=\"{side}\"]').click()")
             t.wait_for(f"!document.getElementById('bd-lp-{side}').hidden && document.documentElement.classList.contains('bd-lp-open')")
         return t
@@ -509,8 +509,9 @@ class ListingPage(ChromePage):
         self.assertEqual(t.ev("[...document.querySelectorAll('.bd-lp-tabs [data-v]')].map(b => b.dataset.v)"), ["text", "style", "colors", "checks"])
         self.assertEqual(t.ev("(n => [n.hidden, n.textContent, n.classList.contains('warn')])(document.querySelector('.bd-lp-tabs [data-v=checks] .n'))"), [False, str(ne), False])
         self.assertEqual(t.ev("document.querySelector('.bd-lp-tabs').getBoundingClientRect().height < 50"), True, "the four tabs keep one row")
+        self.assertEqual(t.ev("[...document.querySelectorAll('.bd-stripe.l [data-f]')].map(b => b.dataset.f)"), ["brief", "screens"])
         side = t.ev("BP.sidebar().available")
-        self.assertTrue(side and side[0] == "brief" and set(side) <= {"brief", "comments", "revisions"}, side)
+        self.assertTrue(side and set(side) <= {"comments", "revisions"}, side)
         self.assertEqual(t.ev("document.querySelectorAll('#bd-sp .bd-lst-pane, #bd-sp-style, #bd-sp-colors, #bd-sp-checks, #bd-sp-text').length"), 0)
         # a finding with a key shows its shot
         t.ev("document.querySelector('#bd-lp-checks li[data-key=\"artboard:alpha\"] button').click()")

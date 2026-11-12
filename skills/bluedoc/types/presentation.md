@@ -6,7 +6,7 @@
 python3 <skill>/scripts/build.py new presentation docs/decks/<topic>.bluedoc.json --title "…"
 ```
 
-This writes the brief, a board of three slides (`title`, `content`, `closing`) and their stub files in `<topic>.design/<id>.html`. The page is a design page: the board, the slides in the left pane, the brief in the right panel's Brief, **Request changes**, and **Present** at the end of the dock (from the selected slide); **Export to…** is the board toolbar's blue key. A deck isn't approved: its picks go with Request changes, and `wait` returns only change requests.
+This writes the brief, a board of three slides (`title`, `content`, `closing`) and their stub files in `<topic>.design/<id>.html`. The page is a design page: the board, the brief and the slides in the left pane (**Brief** and **Slides** on the left stripe), **Request changes**, and **Present** at the end of the dock (from the selected slide); **Export to…** is the board toolbar's blue key. A deck isn't approved: its picks go with Request changes, and `wait` returns only change requests.
 
 **Home card:** the slides as 16:9 frames. **Required:** exactly one `board` block of at least one artboard, every one `device: "slide"`; a phone or any other device is an error (use a design doc for screens).
 

@@ -1053,7 +1053,7 @@ class ReaderName(ChromePage):
         url = self.server.url_for(doc)
         t = self.open(url)
         t.ev("BP.sidebar({section: 'brief'})")
-        t.wait_for("BP.sidebar().section === 'brief' && BP.sidebar().open")
+        t.wait_for("!document.getElementById('bd-sp-brief').hidden && BP.board().panel")
         self.rename(t, "#bd-sp-brief .bd-head h1", "Acme Fit: onboarding", "rocket")
         self.assertEqual(until(lambda: self.stored(url) if len(self.stored(url)) == 2 else None), {"__title": "Acme Fit: onboarding", "__emoji": "🚀"})
         t.go(self.base + url)

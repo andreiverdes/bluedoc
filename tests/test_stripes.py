@@ -4,7 +4,8 @@ A doc's left stripe holds Contents, its ring the tracker's progress; the right o
 count), Revisions (the shown revision; an earlier one in the warning's colours) and, at its foot, the theme. A key opens
 its pane and lights up; the lit key closes it; [ and ] toggle the left and the right pane, not while typing. Contents is
 open by default where it docks beside a 640 px page (1440 px, not 1000 px), then as the reader leaves it, per doc. A
-board's left key opens its Screens and its toolbar has no panel key. A phone (600 px and under) has no stripes: a
+board's left stripe holds its Brief (ringed with the picks made, open on a first visit) and its Screens, one at a
+time in the left pane, and its toolbar has no panel key; a phone's drawer has them as tabs. A phone (600 px and under) has no stripes: a
 Contents key at the bar's left, a Comments key at its right opening the bottom sheet with its sections as tabs."""
 from __future__ import annotations
 
@@ -105,16 +106,50 @@ class Stripes(ChromePage):
         self.assertEqual(old.ev("BP.sidebar().section"), "revisions")
         self.assertEqual(self.browser.errors, [])
 
-    def test_a_board_opens_its_screens_from_the_left_stripe(self) -> None:
+    def test_a_board_keeps_its_brief_and_screens_on_the_left_stripe(self) -> None:
         t = self.page(FIT)
         t.wait_for("!!BP.board()", 20)
-        self.assertEqual(t.ev(f"{LKEY}.getAttribute('aria-label')"), "Screens")
+        self.assertEqual([k[0] for k in t.ev(KEYS)], ["Brief", "Screens", "Comments", "Revisions (Rev C of 3)", "Switch light or dark theme"])
         self.assertEqual(t.ev("document.querySelectorAll('.bd-btb [aria-label^=Screens], .bd-btb [aria-label^=Pages], .bd-btb [aria-label^=Slides]').length"), 0)
-        t.ev("BP.board().panel && " + LKEY + ".click()")
+        brief, screens = "document.querySelector('.bd-stripe.l [data-f=brief]')", "document.querySelector('.bd-stripe.l [data-f=screens]')"
+        # a first visit at 1440 px: the Brief open on the left, its key lit and ringed with the picks made
+        t.wait_for(f"BP.board().panel && {brief}.getAttribute('aria-pressed') === 'true' && !document.getElementById('bd-sp-brief').hidden")
+        self.assertEqual(t.ev("document.querySelector('.bd-lp .bd-pane-h h2').textContent"), "Brief")
+        ring = f"{brief}.querySelector('.bd-skr .fg').getAttribute('stroke-dasharray')"
+        self.assertFalse(t.ev(f"{brief}.querySelector('.bd-skr').hasAttribute('hidden')"))
+        self.assertRegex(t.ev(f"{brief}._tip"), r"^Brief · \d+ of \d+ picked$")
+        before = t.ev(ring)
+        t.ev("BP.acceptRecommended()")
+        t.wait_for(f"{ring} !== {before!r}")
+        # Screens takes its place; [ hides the pane and opens it again on Screens
+        t.ev(f"{screens}.click()")
+        t.wait_for(f"{screens}.getAttribute('aria-pressed') === 'true' && {brief}.getAttribute('aria-pressed') === 'false' && document.getElementById('bd-sp-brief').hidden")
+        self.assertEqual(t.ev("document.querySelector('.bd-lp .bd-pane-h h2').textContent"), "Screens")
+        self.key(t, "[", "BracketLeft", 219)
         t.wait_for("!BP.board().panel")
-        t.ev(f"{LKEY}.click()")
-        t.wait_for(f"BP.board().panel && {LKEY}.getAttribute('aria-pressed') === 'true' && !document.querySelector('.bd-lp').inert")
-        self.assertEqual([k[0] for k in t.ev(KEYS)][1:3], ["Brief", "Comments"])
+        self.key(t, "[", "BracketLeft", 219)
+        t.wait_for(f"BP.board().panel && {screens}.getAttribute('aria-pressed') === 'true'")
+        # the lit key hides it; a reload keeps it hidden, on Screens
+        t.ev(f"{screens}.click()")
+        t.wait_for("!BP.board().panel")
+        t.go(t.ev("location.href"))
+        t.wait_for("!!BP.board()", 20)
+        self.assertFalse(t.ev("BP.board().panel"))
+        t.ev(f"{brief}.click()")
+        t.wait_for(f"BP.board().panel && !document.getElementById('bd-sp-brief').hidden")
+        self.assertEqual(self.browser.errors, [])
+
+    def test_a_phone_drawer_has_brief_and_screens_tabs(self) -> None:
+        t = self.page(FIT, 390)
+        t.wait_for("!!BP.board()", 20)
+        self.assertFalse(t.ev("BP.board().panel"), "a phone: the left pane starts shut")
+        t.ev("document.querySelector('.bd-bar .bd-bk.l').click()")
+        t.wait_for("BP.board().panel")
+        tabs = "[...document.querySelectorAll('.bd-lp .bd-sp-tabs [role=tab]')].filter(b => b.checkVisibility())"
+        self.assertEqual(t.ev(f"{tabs}.map(b => [b.textContent, b.getAttribute('aria-selected')])"), [["Brief", "true"], ["Screens", "false"]])
+        t.ev(f"{tabs}[1].click()")
+        t.wait_for("document.getElementById('bd-sp-brief').hidden && !document.getElementById('bd-lp-screens').closest('.bd-lp-own').hidden")
+        self.assertEqual(t.ev("[...document.querySelectorAll('.bd-sp .bd-sp-tabs [role=tab]')].map(b => b.textContent)"), ["Comments", "Revisions"])
         self.assertEqual(self.browser.errors, [])
 
     def test_a_phone_has_bar_keys_and_a_sheet(self) -> None:

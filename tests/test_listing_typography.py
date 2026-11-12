@@ -118,7 +118,7 @@ class TypographyPanel(ChromePage):
     def page(self):
         t = self.open(self.url)
         t.wait_for("!!document.querySelector('.bd-lst-sec') && !!BP.listing()")
-        t.ev("document.documentElement.classList.contains('bd-lp-open') || document.dispatchEvent(new KeyboardEvent('keydown', {key: '['}))")
+        t.ev("(k => k.getAttribute('aria-pressed') === 'true' || k.click())(document.querySelector('.bd-stripe.l [data-f=screens]'))")
         t.ev("document.querySelector('.bd-lp-tabs [data-v=\"text\"]').click()")
         t.wait_for("!document.getElementById('bd-lp-text').hidden && document.documentElement.classList.contains('bd-lp-open')")
         t.ev(f"{TY}.scrollIntoView({{block: 'center'}})")

@@ -408,7 +408,7 @@ class BrandPage(ChromePage):
         """The listing's page with the left panel open on `side` (text, style, colors or checks)."""
         t = self.open(self.url)
         t.wait_for("!!document.querySelector('.bd-lst-sec') && !!BP.listing()")
-        t.ev("document.documentElement.classList.contains('bd-lp-open') || document.dispatchEvent(new KeyboardEvent('keydown', {key: '['}))")
+        t.ev("(k => k.getAttribute('aria-pressed') === 'true' || k.click())(document.querySelector('.bd-stripe.l [data-f=screens]'))")
         t.ev(f"document.querySelector('.bd-lp-tabs [data-v=\"{side}\"]').click()")
         t.wait_for(f"!document.getElementById('bd-lp-{side}').hidden && document.documentElement.classList.contains('bd-lp-open')")
         return t

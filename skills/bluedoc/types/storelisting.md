@@ -6,7 +6,7 @@
 python3 <skill>/scripts/build.py new storelisting docs/store/<app>.bluedoc.json --title "…"
 ```
 
-This writes the `listing` block, a board with one shot (`first`), an icon artboard and their files in `<app>.design/`. The page shows the board as two platform pages (Google Play, App Store) with a locale menu, and a left pane of tabs beside them (the left stripe's **Listing** key): Text, Style, Colors and Checks. The right panel holds Brief, Comments and Revisions, as on every design page.
+This writes the `listing` block, a board with one shot (`first`), an icon artboard and their files in `<app>.design/`. The page shows the board as two platform pages (Google Play, App Store) with a locale menu, and a left pane of tabs beside them (the left stripe's **Listing** key): Text, Style, Colors and Checks. The left pane also holds the Brief (its key above Listing's), and the right panel Comments and Revisions, as on every design page.
 
 **Home card:** a column per platform with a dot per section, coloured by its worst check. **Required:** one `listing` block and one `board` of `shot`, `asset` and `icons` artboards. Fields: `build.py schema listing` and `build.py schema artboard`; sets and checks: `## Listing` in `references/schema.md`.
 

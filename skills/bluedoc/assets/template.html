@@ -2107,7 +2107,7 @@ html.bd-resizing .bd-boardblk { transition: none; }
 html:not(.bd-lp-dock) .bd-rh-left, html:not(.bd-sp-dock) .bd-rh-right { display: none; }
 .bd-board-ph { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 10px; background: var(--inset); color: var(--fg-subtle); font-size: 13px; }
 .bd-board-ph .bd-ic { width: 16px; height: 16px; flex: none; }
-/* a design's or website's print (html.bd-printb; renderBoard's PRINT): the brief (the right panel's Brief, the doc's
+/* a design's or website's print (html.bd-printb; renderBoard's PRINT): the brief (the left pane's Brief, the doc's
    header first), then the print sheet, one artboard a page; the board, the panes' furniture and the right panel's
    other sections don't print. The sheet waits off-screen until then */
 .bd-psheet { position: fixed; top: 0; left: -100000px; width: 720px; pointer-events: none; }
@@ -2492,8 +2492,12 @@ html.bd-lp-open .bd-lp { transform: none; visibility: visible; transition: trans
 .bd-lp-pane { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 10px 12px calc(16px + var(--tray-room, 0px)); }
 .bd-lp-pane[hidden] { display: none; }
 .bd-lp-pane .hint { margin: 12px 10px 0; font-size: 12px; line-height: 1.45; color: var(--fg-subtle); }
-.bd-lp > .bd-pane-h + .bd-lp-pane { box-shadow: inset 0 1px 0 var(--line-soft); }
-/* a design page's brief (TL;DR, the sections, status): the right panel's Brief tab */
+/* the left pane's two sections (boardLeft): the Brief, and the board's own (Screens…; a listing's tabs and panes);
+   a phone's drawer names them in tabs in its header */
+.bd-lp-own { flex: 1; min-height: 0; display: flex; flex-direction: column; box-shadow: inset 0 1px 0 var(--line-soft); }
+.bd-lp-own[hidden] { display: none; }
+@media (max-width: 600px) { .bd-lp .bd-pane-h > :is(h2, .c) { display: none; } }
+/* a board's brief (the doc's header, TL;DR, the sections, status): the left pane's Brief (boardLeft) */
 .bd-sp-sec.bd-sp-brief { display: block; overflow: auto; overflow-x: hidden; overscroll-behavior: contain; padding: 2px 16px calc(16px + var(--tray-room, 0px)); font-size: 14px; }
 .bd-sp-brief :is(.bd-tldr, main) { width: auto; max-width: none; }
 .bd-sp-brief .bd-tldr-card { margin-top: 2px; padding: 12px 14px; grid-template-columns: minmax(0, 1fr); }
@@ -3718,43 +3722,58 @@ const paintTheme = () => {
 stripeR.append(themeBtn);
 darkMQ.addEventListener?.('change', paintTheme);
 paintTheme();
-// The left pane: a doc's Contents (the rail), a board's Screens, Pages or Slides, a listing's panel. Its drawer
-// registers it (use: {label, icon, open(), set(open, remember)}); the key toggles it, and on a doc its ring shows
-// the tracker's progress (progress). A phone's key sits at the app bar's left.
+// The left pane: a doc's Contents (the rail); a board's Brief and its Screens, Pages, Slides or Listing, one at a time
+// (boardLeft). Its drawer registers it (use: {open(), set(open, remember), sec?(), pick?(id, remember)} and its
+// sections [{id, label, icon}]); each section has a key on the left stripe, lit while its section shows: a press shows
+// it, the lit one hides the pane, [ toggles the pane on its last section. A key's ring shows its section's progress
+// (progress: a doc's tracker, a board's brief picks). A phone's key sits at the app bar's left.
 const LEFT = (() => {
-  let p = null, say = '';
-  const ring = document.createElementNS(NS, 'svg');
-  ring.setAttribute('class', 'bd-skr'); ring.setAttribute('viewBox', '0 0 32 32'); ring.setAttribute('aria-hidden', 'true'); ring.setAttribute('hidden', '');
-  ring.innerHTML = '<circle class="bg" cx="16" cy="16" r="14"/><circle class="fg" cx="16" cy="16" r="14" stroke-dasharray="0 88"/>';
-  const key = stripeKey('list', 'Contents', ['['], () => toggle());
+  let p = null;
+  const secs = [];
   const barKey = h('button', { type: 'button', class: 'bd-tbtn bd-bk l', 'aria-label': 'Contents', 'aria-expanded': 'false', onclick: e => { e.stopPropagation(); toggle(); } }, ic('list'));
-  key.hidden = barKey.hidden = true;
-  stripeL.append(key);
+  barKey.hidden = true;
   const open = () => !!p && p.open();
+  const cur = () => p && p.sec ? p.sec() : secs[0] && secs[0].id;
   function set(v, remember) { if (p) p.set(v, remember); }
   function toggle() { set(!open(), true); }
+  // open the pane on section id
+  function show(id, remember = true) {
+    if (!p || !secs.some(x => x.id === id)) return false;
+    if (p.pick) p.pick(id, remember);
+    set(true, remember);
+    return true;
+  }
   function paint() {
     if (!p) return;
-    const o = open();
-    key.setAttribute('aria-pressed', String(o)); barKey.setAttribute('aria-expanded', String(o));
-    key._tip = p.label + (say ? ' · ' + say : '');
+    const o = open(), c = cur();
+    for (const x of secs) { x.key.setAttribute('aria-pressed', String(o && c === x.id)); x.key._tip = x.label + (x.say ? ' · ' + x.say : ''); }
+    barKey.setAttribute('aria-expanded', String(o));
   }
-  function use(o) {
+  function use(o, sections) {
     p = o;
-    key.replaceChildren(ring, ic(o.icon)); barKey.replaceChildren(ic(o.icon));
-    key.setAttribute('aria-label', o.label); barKey.setAttribute('aria-label', o.label);
-    key.hidden = barKey.hidden = false;
+    for (const s of sections) {
+      const ring = document.createElementNS(NS, 'svg');
+      ring.setAttribute('class', 'bd-skr'); ring.setAttribute('viewBox', '0 0 32 32'); ring.setAttribute('aria-hidden', 'true'); ring.setAttribute('hidden', '');
+      ring.innerHTML = '<circle class="bg" cx="16" cy="16" r="14"/><circle class="fg" cx="16" cy="16" r="14" stroke-dasharray="0 88"/>';
+      const x = { ...s, ring, say: '' };
+      x.key = stripeKey(s.icon, s.label, ['['], () => { if (open() && cur() === x.id) set(false, true); else show(x.id); });
+      x.key.dataset.f = s.id; x.key.prepend(ring);
+      secs.push(x); stripeL.append(x.key);
+    }
+    barKey.replaceChildren(ic(sections[0].icon)); barKey.setAttribute('aria-label', sections.length > 1 ? 'Left panel' : sections[0].label);
+    barKey.hidden = false;
     paint();
   }
-  // the tracker's progress items: n of t done (title: the one list's name, when there is one); none, no ring
-  function progress(n, t, title) {
-    ring.toggleAttribute('hidden', !t);
-    ring.classList.toggle('full', t > 0 && n === t);
-    ring.lastChild.setAttribute('stroke-dasharray', `${t ? 88 * n / t : 0} 88`);
-    say = t ? (title ? `${title} ${n}/${t}` : `${n}/${t} done`) : '';
+  // section id's ring: n of t (none: no ring), say its tooltip's words
+  function progress(id, n, t, say) {
+    const x = secs.find(y => y.id === id); if (!x) return;
+    x.ring.toggleAttribute('hidden', !t);
+    x.ring.classList.toggle('full', t > 0 && n === t);
+    x.ring.lastChild.setAttribute('stroke-dasharray', `${t ? 88 * n / t : 0} 88`);
+    x.say = t ? say : '';
     paint();
   }
-  return { use, set, toggle, open, paint, progress, key, barKey, has: () => !!p };
+  return { use, set, toggle, show, open, paint, progress, barKey, sec: cur, has: id => !!p && (!id || secs.some(x => x.id === id)) };
 })();
 // the app bar's home key: a house and the wordmark; served, linkHome makes it the home page's link
 const homeKey = h('a', { class: 'bd-home', href: '#top', 'aria-label': 'bluedoc, back to top', html:
@@ -4256,13 +4275,47 @@ function setContents(v, remember) {
   }
   LEFT.paint();
 }
-if (!IS_DESIGN) LEFT.use({ label: 'Contents', icon: 'list', open: () => cpOpen, set: setContents });
+if (!IS_DESIGN) LEFT.use({ open: () => cpOpen, set: setContents }, [{ id: 'contents', label: 'Contents', icon: 'list' }]);
 function startContents() {
   if (IS_DESIGN) return;
   const pref = store.get(CP_KEY);
   if (pref) { setContents(pref === '1', false); return; }
   cpOpen = true; const d = docks().l; cpOpen = false;   // would it dock beside what is open now?
   if (d) setContents(true, false);
+}
+// A board's left pane (LEFT on a design, presentation, website or storelisting): the Brief (the doc's header, TL;DR,
+// sections and status) and the board's own section (Screens, Pages, Slides; a listing's Text, Style, Colors and
+// Checks), one at a time under a header with its title and –; a phone's drawer shows them as tabs. The pane, open or
+// not and on which section, is kept per doc (`bluedoc:left:<doc.id>`, {open, sec}); before that it is shut where the
+// browser kept the board's panel shut (oldKey), else open on the Brief where it docks (above 900 px). apply(open)
+// shows or hides the pane on the page.
+function boardLeft({ lp, brief, own, label, icon, count, oldKey, apply }) {
+  const KEY = `bluedoc:left:${docId}`;
+  const saved = (() => { try { const x = JSON.parse(store.get(KEY) || 'null'); return x && typeof x === 'object' ? x : null; } catch { return null; } })();
+  let sec = saved && saved.sec === 'own' ? 'own' : 'brief', open = false;
+  const title = h('h2'), cnt = h('span', { class: 'c' });
+  const tabs = h('div', { class: 'bd-sg bd-sp-tabs bd-lp-tabs2', role: 'tablist', 'aria-label': 'Left panel' },
+    [['brief', 'Brief'], ['own', label]].map(([v, l]) => h('button', { type: 'button', role: 'tab', 'data-f': v === 'own' ? 'screens' : v, onclick: () => pick(v, true) }, l)));
+  const ownBox = h('div', { class: 'bd-lp-own' }, own);
+  brief.classList.add('bd-sp-sec'); brief.id = 'bd-sp-brief';
+  lp.replaceChildren(h('div', { class: 'bd-pane-h' }, title, tabs, cnt, h('span', { class: 'sp' }), paneX(['['], () => set(false, true))), brief, ownBox);
+  const save = () => store.set(KEY, JSON.stringify({ open, sec }));
+  function pick(v, remember) {
+    sec = v === 'own' ? 'own' : 'brief';
+    brief.hidden = sec !== 'brief'; ownBox.hidden = sec === 'brief';
+    title.textContent = sec === 'brief' ? 'Brief' : label; cnt.textContent = sec === 'own' && count != null ? String(count) : '';
+    lp.setAttribute('aria-label', title.textContent);
+    for (const b of tabs.children) b.setAttribute('aria-selected', String((b.dataset.f === 'brief') === (sec === 'brief')));
+    if (remember) save();
+    LEFT.paint();
+  }
+  function set(v, remember) { open = !!v; apply(open); if (remember) save(); LEFT.paint(); }
+  LEFT.use({ open: () => open, set, sec: () => sec === 'own' ? 'screens' : 'brief', pick: (id, remember) => pick(id === 'brief' ? 'brief' : 'own', remember) },
+    [{ id: 'brief', label: 'Brief', icon: 'doc' }, { id: 'screens', label, icon }]);
+  pick(sec, false);
+  set(saved ? !!saved.open : store.get(oldKey) === '0' ? false : innerWidth > 900, false);
+  updateOverall();
+  return { set, show: (v, remember) => { pick(v, remember); set(true, remember); } };
 }
 // docking reflows the page: keep what the reader was looking at where it was
 const PLACES = '.bd-head, .bd-tldr-card, main section.bp-sec > h2, main .bp-lead, main .bp-block[data-bk], main .bp-cl-item, main .bd-mx, main tr[data-r]';
@@ -5761,14 +5814,20 @@ async function doSend() {
     copyText(answersMd(), replyFailed(e));
   }
 }
-// the Contents key's ring counts progress items only; decisions are counted by the chip under the title (paintAsk)
+// the Contents key's ring counts progress items only; decisions are counted by the chip under the title (paintAsk) and,
+// on a board, by the Brief key's ring
 function updateOverall() {
   paintAsk();
-  if (!CHECKLISTS.length || IS_DESIGN) return;
+  if (IS_DESIGN) {
+    const xs = Object.values(ITEMS).filter(x => x.fd || x.choices), n = xs.filter(x => !asksReader(x)).length;
+    LEFT.progress('brief', n, xs.length, `${n} of ${xs.length} picked`);
+    return;
+  }
+  if (!CHECKLISTS.length) return;
   let n = 0, t = 0;
   for (const c of CHECKLISTS) { const xs = c.items.filter(x => !x.choices); t += xs.length; n += xs.filter(passing).length; }
   const lists = CHECKLISTS.filter(c => !c.parent && c.items.some(x => !x.choices));
-  LEFT.progress(n, t, lists.length === 1 ? lists[0].b.title || '' : '');
+  LEFT.progress('contents', n, t, lists.length === 1 && lists[0].b.title ? `${lists[0].b.title} ${n}/${t}` : `${n}/${t} done`);
 }
 // "N questions need your answer" under the title, until each decision has a pick (a finding: until it leaves Open, as
 // its section's filter counts); not once the doc is approved (an approval without a pick means the recommendation), on
@@ -9390,20 +9449,19 @@ function renderBoard(b) {
     paintReach(); paintTools();
   };
 
-  /* the page around the board: the left panel (Screens), opened from the left stripe (LEFT), and the keys. Runs once
-     the document is drawn. The brief (the doc's header, TL;DR, the sections, status) is the right panel's Brief (B.brief,
-     SP_BRIEF). */
-  const LP_KEY = 'bluedoc:design-panel';
+  /* the page around the board: the left panel, its Brief (the doc's header, TL;DR, the sections, status: B.brief,
+     SP_BRIEF) and its Screens, one at a time (boardLeft), opened from the left stripe (LEFT), and the keys. Runs once
+     the document is drawn. */
+  const LP_KEY = 'bluedoc:design-panel';   // before 1.0.42 the panel's open state, for every board: read once (boardLeft)
   let lp = null, lpList = null;
-  function setLp(open, remember) {
+  function applyLp(open) {
     if (open && !B.lp) lastPane = 'l';
     B.lp = !!open; root.classList.toggle('bd-lp-open', B.lp); if (lp) lp.inert = !B.lp;
     applyWidth();   // the right panel's room changes with it
-    if (remember) store.set(LP_KEY, B.lp ? '1' : '0');
-    LEFT.paint(); paintTools(); setTimeout(() => MARKUP.relayout(), 260);
+    paintTools(); setTimeout(() => MARKUP.relayout(), 260);
   }
-  // a change mark in the brief: show the Brief tab first
-  B.reveal = el => { if (B.brief && B.brief.contains(el)) SIDE.show('brief', { remember: false }); };
+  // a change mark in the brief: show the Brief first
+  B.reveal = el => { if (B.brief && B.brief.contains(el)) LEFT.show('brief', false); };
   // a section in the Pages list: in Full page the board pans to it, in Viewport its page shows and its frame scrolls
   // there (either once the frame reports where it is, if it hasn't)
   function revealSection(id, s) {
@@ -9438,16 +9496,13 @@ function renderBoard(b) {
     // a pick in the brief, or on a page, shows that version in place
     for (const v of [...B.frames.values()].flatMap(x => x.vars)) v.it.onChoice = () => B.paintVariants();
     B.brief = h('div', { class: 'bd-sp-brief' }, head, tldr, main);
-    lp = h('aside', { class: 'bd-lp', 'aria-label': Screens, inert: true },
-      h('div', { class: 'bd-pane-h' }, h('h2', {}, Screens), h('span', { class: 'c' }, String(abs.length)), h('span', { class: 'sp' }), paneX(['['], () => setLp(false, true))),
-      h('div', { class: 'bd-lp-pane bd-lp-ui', id: 'bd-lp-screens' }, lpList, h('p', { class: 'hint' }, IS_SITE
-        ? 'Click a page to focus it, a section to go to it.' + (VIEW_ONLY ? '' : ' Element (C) pins a comment on what you point at; a double-click on text changes it.') + ' Present, in the toolbar, is where you click through the pages.'
-        : `Click a ${SCREEN} to focus it. Double-click one on the board, or press F, to do the same${VIEW_ONLY ? '.' : '; a double-click on its text changes the text.'}`)));
+    lp = h('aside', { class: 'bd-lp', 'aria-label': Screens, inert: true });
     shell.prepend(lp);
     placeMeta();
-    LEFT.use({ label: Screens, icon: IS_DECK ? 'present' : IS_SITE ? 'globe' : 'phone', open: () => B.lp, set: setLp });
-    const pref = store.get(LP_KEY);
-    setLp(pref ? pref === '1' : innerWidth > 900, false);
+    boardLeft({ lp, brief: B.brief, label: Screens, icon: IS_DECK ? 'present' : IS_SITE ? 'globe' : 'phone', count: abs.length, oldKey: LP_KEY, apply: applyLp,
+      own: h('div', { class: 'bd-lp-pane bd-lp-ui', id: 'bd-lp-screens' }, lpList, h('p', { class: 'hint' }, IS_SITE
+        ? 'Click a page to focus it, a section to go to it.' + (VIEW_ONLY ? '' : ' Element (C) pins a comment on what you point at; a double-click on text changes it.') + ' Present, in the toolbar, is where you click through the pages.'
+        : `Click a ${SCREEN} to focus it. Double-click one on the board, or press F, to do the same${VIEW_ONLY ? '.' : '; a double-click on its text changes the text.'}`)) });
     // the theme follows the brief's pick
     const tx = ITEMS['brief/theme'];
     if (tx) tx.onChoice = () => { const t = themePick(); if (t !== B.theme) { B.theme = t; paintTokens(); } else paintTools(); };
@@ -9540,7 +9595,7 @@ function renderBoard(b) {
 // shot kit (kits/shot.js) at the set's frame size, told its set, locale, place and UI image through its name ('bd-shot
 // <JSON>') and later {bd:'shot'} messages; an uploaded shot is its PNG. The left panel's Text tab has the caption font
 // first, then the platform's store text and the captions for the locale, each editable with its counter; Style, Colors
-// and Checks follow. The brief is the right panel's Brief tab.
+// and Checks follow. The brief is the left pane's Brief (boardLeft).
 // Point and Select pin comments inside a shot (el:<shot>/…) or on a field (field:<locale>/<platform>/<field>); a shot
 // dragged within its set and a section turned on are drafts ('listing' annotations) that Request changes sends with a
 // ready `build.py patch` command. bp-listing (build.py listing.page_data) carries the store rules, each shot's caption
@@ -11189,7 +11244,7 @@ function renderListing(lb) {
     x.el.scrollIntoView({ block: 'center', inline: 'center', behavior: REDUCE ? 'auto' : 'smooth' }); flashEl(x.el);
     return true;
   };
-  L.reveal = el => { if (!lp) return; if (L.brief && L.brief.contains(el)) SIDE.show('brief', { remember: false }); else if (lpText.contains(el)) { setLp(true, false); setTab('text', false); } };
+  L.reveal = el => { if (!lp) return; if (L.brief && L.brief.contains(el)) LEFT.show('brief', false); else if (lpText.contains(el)) { setLp(true, false); setTab('text', false); } };
   // compare (?diff=): shots New or Changed (their JSON, their screen's hash or a capture's: "<id>/capture/<target>/<locale>"),
   // store text and captions Changed; a re-shot capture shows the one it replaced beside it (bp-listing's oldCaptures)
   L.compare = base => {
@@ -11250,14 +11305,17 @@ function renderListing(lb) {
   };
   L.post = (m, filter) => { for (const x of L.live) if (!filter || filter(x)) post(x, m); };
 
-  /* the page around: the left panel (opened from the left stripe, LEFT), the full-bleed layer */
-  const LP_KEY = 'bluedoc:listing-panel', LP_TAB = 'bluedoc:listing-tab';
-  function setLp(open, remember) {
+  /* the page around: the left panel (boardLeft: the Brief and the listing's own tabs, opened from the left stripe,
+     LEFT), the full-bleed layer */
+  const LP_KEY = 'bluedoc:listing-panel', LP_TAB = 'bluedoc:listing-tab';   // LP_KEY: before 1.0.42 the panel's open state (boardLeft)
+  let LS = null;
+  function applyLp(open) {
     if (open && !L.lp) lastPane = 'l';
     L.lp = !!open; root.classList.toggle('bd-lp-open', L.lp); if (lp) lp.inert = !L.lp;
-    applyWidth(); if (remember) store.set(LP_KEY, L.lp ? '1' : '0');
-    LEFT.paint(); setTimeout(() => L.M && L.M.relayout(), 260);
+    applyWidth(); setTimeout(() => L.M && L.M.relayout(), 260);
   }
+  // open the listing's own tabs, or hide the panel
+  function setLp(open, remember) { if (LS) { if (open) LS.show('own', remember); else LS.set(false, remember); } }
   // the tabs; a stored tab from before (brand: Colors' old name; brief: now the right panel's) opens its successor
   const LP_TABS = [['text', 'Text'], ['style', 'Style'], ['colors', 'Colors'], ['checks', 'Checks']], LP_OLD = { brand: 'colors', brief: 'text' };
   function setTab(t, remember) {
@@ -11277,18 +11335,15 @@ function renderListing(lb) {
     lpTabs = h('div', { class: 'bd-sg bd-lst-lpt', role: 'radiogroup', 'aria-label': 'Panel' }, LP_TABS.map(([v, l]) =>
       h('button', { type: 'button', role: 'radio', 'data-v': v, 'aria-controls': 'bd-lp-' + v, onclick: () => setTab(v, true) }, l, v === 'text' && h('i', { class: 'd', 'aria-hidden': 'true' }), v === 'checks' && h('span', { class: 'n', hidden: true }))));
     L.brief = h('div', { class: 'bd-sp-brief' }, head, tldr, main);
-    lp = h('aside', { class: 'bd-lp', 'aria-label': 'Text, style, colors and checks', inert: true },
-      h('div', { class: 'bd-pane-h' }, h('h2', {}, 'Listing'), h('span', { class: 'sp' }), paneX(['['], () => setLp(false, true))), h('div', { class: 'bd-lp-tabs bd-lp-ui' }, lpTabs), lpText,
-      paneStyle, paneColors, paneChecks);
+    lp = h('aside', { class: 'bd-lp', 'aria-label': 'Text, style, colors and checks', inert: true });
     shell.prepend(lp);
     placeMeta();
+    LS = boardLeft({ lp, brief: L.brief, label: 'Listing', icon: 'panelleft', oldKey: LP_KEY, apply: applyLp,
+      own: [h('div', { class: 'bd-lp-tabs bd-lp-ui' }, lpTabs), lpText, paneStyle, paneColors, paneChecks] });
     const tab = store.get(LP_TAB), was = LP_OLD[tab] || tab;
     setTab(LP_TABS.some(([v]) => v === was) ? was : 'text', false);
     if (was !== tab) store.set(LP_TAB, was);
     paintChecks();
-    const pref = store.get(LP_KEY);
-    LEFT.use({ label: 'Listing', icon: 'panelleft', open: () => L.lp, set: setLp });
-    setLp(pref ? pref === '1' : innerWidth > 900, false);
     paintTb(); renderSections(); writeHash();
     document.addEventListener('keydown', e => {
       if (e.defaultPrevented || e.isComposing || document.querySelector('dialog[open]')) return;
@@ -11762,8 +11817,9 @@ const SIDE = (() => {
     }
     paint();
   }
-  // open on the section; with toggle, close the panel when it already shows
+  // open on the section (a board's Brief: the left pane's); with toggle, close the panel when it already shows
   function show(id, { toggle = false, remember = true } = {}) {
+    if (id === 'brief' && LEFT.has('brief')) return LEFT.show('brief', remember);
     if (toggle && shows(id)) { setOpen(false, remember); return true; }
     if (!pick(id, remember)) return false;
     setOpen(true, remember);
@@ -11809,10 +11865,9 @@ const SIDE = (() => {
   return { el, add, show, shows, setOpen, paint, start, api, sheet, as, badge, say, has: () => secs.length > 0, toggle: () => setOpen(!panelOpen, true) };
 })();
 
-// a design page's brief (the doc's header, TL;DR, the sections, status): the right panel's first section. Its parts stay
+// a board's brief (the doc's header, TL;DR, the sections, status): a section of the left pane (boardLeft). Its parts stay
 // the doc's: Point and Select pin them as on any page (MARKUP reads SP_BRIEF beside the shell)
 const SP_BRIEF = BOARD && BOARD.brief || null;
-if (SP_BRIEF) SIDE.add({ id: 'brief', label: 'Brief', icon: 'doc', at: -1, body: SP_BRIEF, later: true });
 
 // URLs and UI
 function revUrl(view, base) {
@@ -12337,7 +12392,7 @@ const MARKUP = (() => {
   const TYPES = Object.keys(SEL), ANY = Object.values(SEL).join(', ');
   const CLIPS = '.bd-pane, .bp-stage, .bp-table-wrap, .bp-side-b, .bd-board, .bd-lp-pane, .bd-sp-brief, .bd-mx > .bd-code, .bd-lst-main, .bd-lst-tiles';   // inner scrollers that clip what they hold
   const typeOf = el => el === shell ? 'doc' : TYPES.find(t => el.matches(SEL[t]));
-  // the doc's parts: the shell's, and on a design page the right panel's Brief tab (SP_BRIEF); the rest of the right
+  // the doc's parts: the shell's, and on a board the left pane's Brief (SP_BRIEF); the rest of the right
   // panel is furniture (spUi). The rail is page furniture, except its document sections (Status, Document, Related);
   // so are a design's panel tabs, Screens list and board toolbar, and a findings section's view bar
   const docAll = sel => SP_BRIEF ? [...shell.querySelectorAll(sel), ...SP_BRIEF.querySelectorAll(sel)] : [...shell.querySelectorAll(sel)];

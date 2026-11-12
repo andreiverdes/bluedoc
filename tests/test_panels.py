@@ -1,6 +1,7 @@
-"""Where a design page's panels put things (1.0.0-beta14). The brief (the doc's header, TL;DR, the sections, status) is
-the right panel's Brief, its key before Comments and Revisions on the right stripe, on a design, a deck, a website and a
-storelisting; the left panel has no Brief and, on the first three, no tab bar. A storelisting's left panel is Text, Style, Colors and Checks: every store text
+"""Where a design page's panels put things (1.0.0-beta14, 1.0.42). The brief (the doc's header, TL;DR, the sections,
+status) is the left pane's Brief, its key first on the left stripe above the board's own (Screens, Pages, Slides,
+Listing), on a design, a deck, a website and a storelisting, open there on a first visit; the right stripe holds
+Comments and Revisions. The board's own section has, on the first three, no tab bar. A storelisting's left panel is Text, Style, Colors and Checks: every store text
 and caption is editable, Save makes each changed field a `listing` draft (op `field`) in the one undo history, Request
 changes sends it with its `build.py patch … field:… --set` command, and the draft resolves once the doc has the value;
 Colors is the old Brand (a stored `brand` tab opens it); the captions' Typography is a section of Text. serve.py keeps a field
@@ -19,7 +20,7 @@ import serve
 
 STEM = "acme-fit-listing"
 LST = "BP.listing()"
-LP_OPEN = "document.documentElement.classList.contains('bd-lp-open') || document.dispatchEvent(new KeyboardEvent('keydown', {key: '['}))"
+LP_OPEN = "(k => k.getAttribute('aria-pressed') === 'true' || k.click())(document.querySelector('.bd-stripe.l [data-f=screens]'))"
 
 
 def field_draft(**listing_op) -> str:
@@ -42,27 +43,32 @@ class FieldDraftShape(unittest.TestCase):
 
 
 @unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")
-class BriefInTheRightPanel(ChromePage):
+class BriefInTheLeftPane(ChromePage):
+    BRIEF = "document.querySelector('.bd-stripe.l [data-f=brief]')"
+
     def brief_shows(self, name: str, ready: str) -> Tab:
         t = self.open(self.server.url_for(self.docs / f"{name}.bluedoc.json"))
         t.wait_for(ready)
         t.wait_for("!!document.querySelector('.bd-lp')")
-        self.assertEqual(t.ev("document.querySelectorAll('#bd-lp-brief, .bd-lp [data-v=brief], .bd-lp .bd-tldr, .bd-lp main').length"), 0, f"{name}: Brief left the left panel")
-        tabs = t.ev("[...document.querySelectorAll('.bd-stripe.r [data-f]')].map(b => b.dataset.f)")
-        self.assertEqual(tabs[:2], ["brief", "comments"], f"{name}: {tabs}")
-        self.assertTrue(set(tabs) <= {"brief", "comments", "revisions"}, tabs)
-        t.ev("BP.sidebar({section: 'brief'})")
-        t.wait_for("BP.sidebar().section === 'brief' && BP.sidebar().open && !document.getElementById('bd-sp-brief').hidden")
+        self.assertEqual(t.ev("[...document.querySelectorAll('.bd-stripe.l [data-f]')].map(b => b.dataset.f)"), ["brief", "screens"], name)
+        right = t.ev("[...document.querySelectorAll('.bd-stripe.r [data-f]')].map(b => b.dataset.f)")
+        self.assertTrue(set(right) <= {"comments", "revisions"} and right[0] == "comments", right)
+        # the first visit on a wide window opens the Brief on the left
+        t.wait_for(f"{self.BRIEF}.getAttribute('aria-pressed') === 'true' && !document.getElementById('bd-sp-brief').hidden && !!document.getElementById('bd-sp-brief').closest('.bd-lp')")
         self.assertTrue(t.ev("(b => !!b.querySelector('.bd-tldr-card') && b.querySelectorAll('main section.bp-sec').length > 0 && b.getBoundingClientRect().width > 200)"
                              "(document.getElementById('bd-sp-brief'))"), name)
         # its parts are the doc's: a comment pins on the TL;DR
         a = t.ev("BP.annotate({type: 'pin', key: 'tldr', note: 'Shorter'})")
         self.assertEqual(a and a["target"]["key"], "tldr", name)
-        # a reload keeps Brief picked
+        # the board's own section in its place, then BP.sidebar's 'brief' brings the Brief back; a reload keeps it
+        t.ev("document.querySelector('.bd-stripe.l [data-f=screens]').click()")
+        t.wait_for(f"document.getElementById('bd-sp-brief').hidden && {self.BRIEF}.getAttribute('aria-pressed') === 'false'")
+        t.ev("BP.sidebar({section: 'brief'})")
+        t.wait_for(f"!document.getElementById('bd-sp-brief').hidden && {self.BRIEF}.getAttribute('aria-pressed') === 'true'")
         t.ev("window.__before = 1; location.reload()")
         t.wait_for("!window.__before && document.readyState === 'complete' && !!window.BP")
         t.wait_for(ready)
-        t.wait_for("BP.sidebar().section === 'brief'")
+        t.wait_for(f"{self.BRIEF}.getAttribute('aria-pressed') === 'true'")
         self.assertEqual(self.browser.errors, [])
         return t
 
@@ -74,12 +80,12 @@ class BriefInTheRightPanel(ChromePage):
     def test_a_deck(self) -> None:
         t = self.brief_shows("acme-fit-deck", "!!BP.board()")
         self.assertEqual(t.ev("document.querySelectorAll('.bd-lp .bd-lp-tabs').length"), 0)
-        self.assertEqual(t.ev("document.querySelector('.bd-lp').getAttribute('aria-label')"), "Slides")
+        self.assertEqual(t.ev("document.querySelector('.bd-stripe.l [data-f=screens]').getAttribute('aria-label')"), "Slides")
 
     def test_a_website(self) -> None:
         t = self.brief_shows("acme-site", "!!BP.board()")
         self.assertEqual(t.ev("document.querySelectorAll('.bd-lp .bd-lp-tabs').length"), 0)
-        self.assertEqual(t.ev("document.querySelector('.bd-lp').getAttribute('aria-label')"), "Pages")
+        self.assertEqual(t.ev("document.querySelector('.bd-stripe.l [data-f=screens]').getAttribute('aria-label')"), "Pages")
 
     def test_a_storelisting(self) -> None:
         t = self.brief_shows(STEM, "!!document.querySelector('.bd-lst-sec') && !!BP.listing()")
