@@ -233,6 +233,8 @@ Every bluedoc feature is also a command. The prompt commands start an agent turn
 | Antigravity CLI | `/bluedoc-plan …`; each command is a skill, and an action asks the agent to run its script |
 | Codex | no commands; ask for `$bluedoc <request>`, e.g. `$bluedoc plan saved carts` |
 
+In any agent you can also just ask in words, and **bdoc** is short for bluedoc: "bdoc plan saved carts", "bdoc design the onboarding screens", "bdoc review this branch".
+
 The commands are generated from `commands/commands.json` by `tools/gen_commands.py`; edit the spec and run it, never the generated files.
 
 ## Design mockups

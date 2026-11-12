@@ -1,6 +1,6 @@
 ---
 name: bluedoc
-description: Generate self-contained HTML engineering docs (setup guides, change proposals, implementation plans, PR review findings, UI mockups, slide decks, website reviews) with zoomable blueprint canvases that open into each system's internals and play animated data/control flows, persistent checklists, plans, designs and websites the reader approves or sends back from the page, a board of sandboxed HTML screens for watch, phone, desktop, web and slides, a site's live dev-server pages with comments pointing at the source, and a code browser that pins review findings to their lines. Use when asked for an HTML doc, architecture page, system walkthrough, runbook, onboarding guide, a plan, an implementation plan, a design doc, UI mockups, wireframes, screen designs, slide decks, a website or landing page to review or edit together, "plan mode", "make a plan", "propose a plan", "peer review results", "review findings", "review comments in a bluedoc", "open threads", or "a bluedoc".
+description: Generate self-contained HTML engineering docs (setup guides, change proposals, implementation plans, PR review findings, UI mockups, slide decks, website reviews) with zoomable blueprint canvases that open into each system's internals and play animated data/control flows, persistent checklists, plans, designs and websites the reader approves or sends back from the page, a board of sandboxed HTML screens for watch, phone, desktop, web and slides, a site's live dev-server pages with comments pointing at the source, and a code browser that pins review findings to their lines. Use when asked for an HTML doc, architecture page, system walkthrough, runbook, onboarding guide, a plan, an implementation plan, a design doc, UI mockups, wireframes, screen designs, slide decks, a website or landing page to review or edit together, "plan mode", "make a plan", "propose a plan", "peer review results", "review findings", "review comments in a bluedoc", "open threads", "a bluedoc" or "bdoc" ("bdoc plan").
 ---
 
 # bluedoc
@@ -27,6 +27,8 @@ You write one `*.bluedoc.json`; the local server renders it as a page (blueprint
 | `review` | `types/review.md` | Review results (peer, agent, open PR threads), always, without being asked. |
 | `docs` | `types/docs.md` | Architecture, walkthrough, runbook, setup guide, change proposal. |
 | `other` | `types/other.md` | Anything else: status page, report, inventory. |
+
+**bdoc** is short for bluedoc: "bdoc plan …", "bdoc design …", "bdoc review …" ask for that type; "bdoc" alone, for whichever type fits the request.
 
 After `new`, never read or hand-edit the JSON: `build.py get <doc>` lists every key, `build.py get <doc> <key>` prints one object, `build.py patch <doc> <key> --set a/b/c=v` changes it, `build.py schema <block>` shows a block's fields. Once the doc has been built, bluedoc's hook refuses edit and write tools on it (patch-only edits).
 
