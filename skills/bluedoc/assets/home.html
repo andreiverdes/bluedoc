@@ -478,6 +478,27 @@ a.bd-row:hover .tx .t { color: var(--color-hz-accent-fg); }
 .bd-st-v { min-width: 0; font: 500 13px var(--font-hz-mono); color: var(--color-hz-fg-muted); overflow-wrap: anywhere; }
 .bd-st-l .bd-st-wait { color: var(--color-hz-info-fg); }
 .bd-st-none { font-size: 13px; color: var(--color-hz-fg-subtle); }
+/* Sharing: two cards, each with a head row; a project's account a key with its avatar and login (the menu: HorizonUI's
+   DropdownMenu), gh's accounts with their scope */
+.bd-sh-card + .bd-sh-card { margin-top: 16px; }
+.bd-sh-ch { display: flex; align-items: center; gap: 8px; padding: 14px 16px 10px; font-weight: 600; font-size: 14px; }
+.bd-sh-ch svg { width: 16px; height: 16px; color: var(--color-hz-fg-muted); }
+.bd-sh-ch + .bd-st-row { box-shadow: inset 0 1px 0 var(--color-hz-line-soft); }
+.bd-sh-fi { width: 16px; height: 16px; flex: none; color: var(--color-hz-fg-muted); }
+.bd-st-l .bd-sh-path { font: 11.5px var(--font-hz-mono); }
+.bd-sh-lg, .bd-sh-acct b, .bd-sh-opt b { font: 600 13px var(--font-hz-mono) !important; }
+.bd-sh-st { font-size: 12px; color: var(--color-hz-fg-muted); text-align: right; overflow-wrap: anywhere; }
+.bd-sh-acct { display: inline-flex; align-items: center; gap: 9px; width: 250px; height: 36px; padding: 0 10px 0 8px; border: 0; border-radius: 9px; font: inherit; text-align: left; cursor: pointer;
+  color: var(--color-hz-fg); background: var(--color-hz-canvas); box-shadow: inset 0 0 0 1px var(--color-hz-line); }
+.bd-sh-acct:hover:not(:disabled) { box-shadow: inset 0 0 0 1px var(--color-hz-line-strong); }
+.bd-sh-acct:focus-visible { outline: none; box-shadow: var(--hz-shadow-focus); }
+.bd-sh-acct:disabled { opacity: .55; cursor: default; }
+.bd-sh-acct b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bd-sh-acct .ask { color: var(--color-hz-fg-subtle); font-size: 13.5px; }
+.bd-sh-acct .cv { width: 14px; height: 14px; margin-left: auto; flex: none; color: var(--color-hz-fg-subtle); }
+.bd-sh-opt { display: inline-flex; align-items: center; gap: 8px; }
+.bd-sh-opt small { font-size: 12px; color: var(--color-hz-fg-subtle); }
+@media (max-width: 760px) { .bd-sh-acct { width: 100%; } .bd-sh-st { text-align: left; } }
 
 /* mobile drawer */
 .bd-drawer { position: fixed; inset: 0; z-index: 60; }
@@ -541,7 +562,7 @@ a.bd-row:hover .tx .t { color: var(--color-hz-accent-fg); }
 'use strict';
 const e = React.createElement, F = React.Fragment;
 const { useState, useEffect, useMemo, useRef, useDeferredValue } = React;
-const { HorizonProvider, Sidebar, SegmentedControl, Card, ProgressRing, EmptyState, SearchField, TextField, Switch, Tag, IconButton, Button, ToggleButton, StatusDot, Badge, Banner, Icons } = window.HorizonUI;
+const { HorizonProvider, Sidebar, SegmentedControl, Card, ProgressRing, EmptyState, SearchField, TextField, Switch, Tag, IconButton, Button, ToggleButton, StatusDot, Badge, Banner, DropdownMenu, Avatar, Icons } = window.HorizonUI;
 
 /* ---------- storage, theme, settings ---------- */
 const store = { get: k => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch {} } };
@@ -1160,7 +1181,7 @@ function folderItems(r, docs) {
 
 /* ---------- settings (/settings) ---------- */
 // this computer's bluedoc settings (GET /__bluedoc/settings); every change is one POST that saves at once
-const SETTINGS_SECTIONS = [['folders', 'Folders'], ['repos', 'Code links'], ['frameworks', 'Frameworks'], ['agents', 'Agents'], ['tools', 'Tools'], ['server', 'Server']];
+const SETTINGS_SECTIONS = [['folders', 'Folders'], ['repos', 'Code links'], ['frameworks', 'Frameworks'], ['agents', 'Agents'], ['sharing', 'Sharing'], ['tools', 'Tools'], ['server', 'Server']];
 const bytesText = n => (n < 1024 ? `${n} B` : n < 1048576 ? `${Math.round(n / 1024)} KB` : `${(n / 1048576).toFixed(1)} MB`);
 const majorOf = v => String(v || '').split('.')[0];
 function sinceText(iso) {
@@ -1189,6 +1210,49 @@ const StSection = ({ id, title, lead, children }) => e('section', { className: '
 const StRow = ({ title, sub, tip, className, children }) => e('div', { className: 'bd-st-row' + (className ? ' ' + className : '') },
   e('div', { className: 'bd-st-l' }, e('b', { title: tip }, title), sub), children);
 const Controls = ({ children, onSubmit }) => e(onSubmit ? 'form' : 'div', { className: 'bd-st-c', onSubmit: onSubmit && (ev => { ev.preventDefault(); onSubmit(); }) }, children);
+
+// Sharing (design share-account, settings): the GitHub account each project shares as, a menu of gh's usable accounts
+// and Ask on first share (none set), unusable ones off with their fix; then the accounts gh is signed in to, with
+// their scope. A pick saves at once (POST {sharing: {slug, account}}).
+const ASK_FIRST = ':ask';   // no GitHub login has a colon
+const scopeText = a => (a.usable ? 'gist scope' : `no gist scope: ${a.fix}`) + (a.active ? ' · gh\'s active account' : '');
+function SharingSection({ view, off, busy, run, keep, toast }) {
+  const sh = view.sharing || { projects: [], accounts: [], off: null };
+  const usable = sh.accounts.filter(a => a.usable), unusable = sh.accounts.filter(a => !a.usable);
+  const shown = p => (view.folders.find(f => f.path === p) || {}).display || p;
+  const pick = (p, v) => {
+    const account = v === ASK_FIRST ? null : v;
+    if (account === p.account) return;
+    run('sharing:' + p.slug, '/__bluedoc/settings', { sharing: { slug: p.slug, account } },
+      j => { keep(j); toast(account ? `Saved · ${p.name} shares as ${account}` : `Saved · ${p.name} asks on its first share`); });
+  };
+  const menu = p => e(DropdownMenu, { align: 'end',
+    trigger: e('button', { type: 'button', className: 'bd-sh-acct', disabled: off || !usable.length, 'aria-label': `${p.name} shares as: ${p.account || 'ask on first share'}` },
+      p.account ? e(F, null, e(Avatar, { name: p.account, size: 20 }), e('b', null, p.account)) : e('span', { className: 'ask' }, 'Ask on first share'),
+      e(Icons.ChevronDown, { className: 'cv' })),
+    items: [{ type: 'label', id: 'l', label: `Share ${p.name} as` },
+      { type: 'radio', id: 'r', value: p.account || ASK_FIRST, onValueChange: v => pick(p, v),
+        options: [...usable.map(a => ({ value: a.login, label: e('span', { className: 'bd-sh-opt' }, e(Avatar, { name: a.login, size: 20 }), e('b', null, a.login), a.active && e('small', null, 'gh\'s active account')) })),
+          { value: ASK_FIRST, label: 'Ask on first share' }] },
+      { type: 'separator', id: 's' },
+      ...unusable.map(a => ({ id: 'x:' + a.login, label: `${a.login} · no gist scope: ${a.fix}`, disabled: true })),
+      { id: 'n', label: 'Another account: gh auth login -s gist', icon: e(Icons.Plus), disabled: true }] });
+  const head = (icon, text) => e('div', { className: 'bd-sh-ch' }, e(icon), text);
+  return e('section', { className: 'bd-st-sec', id: 'sharing', 'aria-labelledby': 'sharing-h' },
+    e('header', null, e('h2', { id: 'sharing-h' }, 'Sharing'),
+      e('p', null, 'Share puts a doc in a secret gist on its project\'s GitHub account. A project without one asks on its first share; ', e(Code, null, 'serve.py share DOC --as LOGIN'), ' sets it too.')),
+    e('div', { className: 'bd-st-card bd-sh-card', 'data-bd': 'sharing' }, head(Icons.Share, 'The GitHub account per project'),
+      sh.projects.length ? sh.projects.map(p => e('div', { key: p.slug, className: 'bd-st-row', 'data-slug': p.slug },
+        e(Icons.Folder, { className: 'bd-sh-fi' }),
+        e('div', { className: 'bd-st-l' }, e('b', null, p.name), e('span', { className: 'bd-sh-path', title: p.path }, shown(p.path))),
+        e(Controls, null, menu(p))))
+        : e('div', { className: 'bd-st-row note' }, 'No projects yet: add a folder above.')),
+    e('div', { className: 'bd-st-card bd-sh-card', 'data-bd': 'gh-accounts' }, head(Icons.Terminal, 'Signed in to gh'),
+      sh.accounts.map(a => e('div', { key: a.login, className: 'bd-st-row', 'data-login': a.login },
+        e(Avatar, { name: a.login, size: 24 }), e('div', { className: 'bd-st-l' }, e('b', { className: 'bd-sh-lg' }, a.login)),
+        e('span', { className: 'bd-sh-st' + (a.usable ? '' : ' no') }, scopeText(a)))),
+      sh.off && e('div', { className: 'bd-st-row note', role: 'note' }, e('span', null, `Sharing is off: ${sh.off.reason}. Run `, e(Code, null, sh.off.fix), '.'))));
+}
 
 function SettingsPage({ readOnly, reduce, toast, onFolders }) {
   const [view, setView] = useState(null);
@@ -1326,6 +1390,7 @@ function SettingsPage({ readOnly, reduce, toast, onFolders }) {
             e(Controls, null, poEnv && e(EnvChip, { env: po.env }),
               e(Switch, { checked: !!po.value, disabled: off || poEnv, 'aria-label': 'Patch-only edits', children: null,
                 onCheckedChange: v => run('patch', '/__bluedoc/settings', { patchOnly: v }, j => { keep(j); toast(`Saved · Patch-only edits ${v ? 'on' : 'off'}`); }) })))),
+        e(SharingSection, { view, off, busy, run, keep, toast }),
         e(StSection, { id: 'tools', title: 'Tools', lead: 'Programs and folders bluedoc\'s scripts use.' },
           e(StRow, { title: 'Chrome', className: chEnv ? 'lk' : '',
             sub: e(F, null, e('span', null, chEnv ? envLine(ch) : 'For PDFs, decks, website snapshots and screen captures.'),

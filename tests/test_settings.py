@@ -129,7 +129,7 @@ class Routes(unittest.TestCase):
         self.addCleanup(self.tmp.cleanup)
         for k in (*ENV_NAMES, "CI", "SSH_CONNECTION", "SSH_TTY"):
             self.tmp.env.pop(k, None)
-        self.tmp.env.update(env)
+        self.tmp.env.update(env)   # Settings' sharing lists the stand-in gh's accounts (TempHome's BLUEDOC_GH)
         self.chrome = fake_chrome(self.tmp.dir)
         write_settings(self.tmp.home, {"chrome": str(self.chrome)})
         self.server = Server(self.tmp)
@@ -157,7 +157,9 @@ class Routes(unittest.TestCase):
         self.start()
         status, v = self.get("/__bluedoc/settings")
         self.assertEqual(status, 200)
-        self.assertEqual(set(v), {"folders", "repos", "frameworks", "presets", "agents", "tools", "server"})
+        self.assertEqual(set(v), {"folders", "repos", "frameworks", "presets", "agents", "tools", "sharing", "server"})
+        self.assertEqual(v["sharing"], {"projects": [], "accounts": [{"login": "acme-dev", "usable": True, "active": True, "fix": None}],
+                                        "off": None}, "the stand-in gh's one account; projects: see test_share")
         self.assertEqual(v["agents"], {"planHook": {"value": True, "source": "default", "env": None},
                                        "patchOnly": {"value": True, "source": "default", "env": None}})
         self.assertEqual(v["tools"]["chrome"], {"value": str(self.chrome), "source": "file", "env": None,

@@ -219,12 +219,15 @@ button.bd-emo:hover, button.bd-emo[aria-expanded="true"] { background: var(--sel
 /* the app bar's Export (any doc but a presentation or a storelisting): Export to…'s key; narrow, its icon and chevron */
 @media (max-width: 900px) { .bd-docx .bd-tbtn.bd-expb > span { display: none; } .bd-bar-r .bd-docx .bd-tbtn.bd-expb { padding: 0 8px 0 10px; gap: 4px; } }
 /* the app bar's Share (before Export): Export's raised key with its icon and word, no chevron; narrow, its icon. A shared
-   doc: a dot in the accent at its corner; the doc newer than its share: the dot in the warning colour */
+   doc: a dot in the accent at its corner; the doc newer than its share: the dot in the warning colour. Sharing off
+   (aria-disabled): dimmed, yet it takes the pointer and a click, which open its tooltip and the off popover */
 .bd-tbtn.bd-shk { position: relative; }
 .bd-bar-r .bd-tbtn.bd-shk .dot { top: 2px; right: 3px; }
 .bd-tbtn.bd-shk .dot { display: none; position: absolute; top: 3px; right: 3px; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 2px var(--hk-top); }
 .bd-tbtn.bd-shk[data-share] .dot { display: block; }
 .bd-tbtn.bd-shk[data-share="newer"] .dot { background: var(--warn); }
+.bd-tbtn.bd-shk[aria-disabled="true"] { color: var(--fg-subtle); opacity: .55; }
+.bd-tbtn.bd-shk[aria-disabled="true"][aria-expanded="true"] { opacity: .8; }
 @media (max-width: 900px) { .bd-tbtn.bd-shk > .w { display: none; } .bd-bar-r .bd-tbtn.bd-shk { padding: 0 9px 0 10px; } }
 .bd-revbar.arc { position: static; background: color-mix(in oklch, var(--fg) 6%, var(--canvas)); }
 .bd-revbar.arc.sug { background: color-mix(in srgb, var(--ok) 13%, var(--canvas)); }
@@ -402,24 +405,185 @@ html.bd-lp-open:not(.bd-lp-dock) .bp-side { background: var(--surface); box-shad
 .bd-send .ft { display: flex; justify-content: flex-end; gap: 8px; margin: 0; padding: 14px 20px 18px; }
 .bd-send .ft .bp-btn { height: 32px; padding: 0 14px; font-size: 13px; }
 .bd-send .ft .bp-btn[hidden] { display: none; }
-/* the app bar's Share key (openShare): the share dialog. The notice in the risk colours, its first sentence bold; the link
-   with Copy; Shared · rev · when; Stop sharing at the left of the keys, in the risk colour */
-.bd-share .bd-shn { display: flex; gap: 10px; margin-bottom: 12px; padding: 10px 12px; border-radius: 10px; color: var(--risk-fg); background: var(--risk-tint);
-  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--risk) 45%, transparent); font-size: 13px; line-height: 1.5; }
-.bd-share .bd-shn p { margin: 0; }
-.bd-share .bd-shn b { font-weight: 650; }
-.bd-share .bd-shn .bd-ic { flex: none; width: 18px; height: 18px; margin-top: 1px; color: var(--risk); }
-.bd-share .goes { margin-bottom: 0; font-size: 13px; color: var(--fg-muted); }
-.bd-share .lnk { display: flex; gap: 8px; margin-bottom: 8px; }
-.bd-share .lnk input { flex: 1; min-width: 0; box-sizing: border-box; height: 32px; padding: 0 10px; font: 12.5px var(--mono); }
-.bd-share .lnk .bp-btn { height: 32px; padding: 0 12px; font-size: 13px; }
-.bd-share .meta { margin-top: 0; margin-bottom: 12px; font-size: 12.5px; color: var(--fg-subtle); }
-.bd-share .meta .nw { color: var(--warn-fg); font-weight: 600; }
-.bd-share .meta a { color: var(--accent-fg); }
-.bd-share .err { margin: 10px 20px 0; font-size: 13px; color: var(--risk-fg); }
-.bd-share .ft .bp-btn.stop { margin-right: auto; color: var(--risk-fg); }
-.bd-share .ft .bp-btn.stop.sure { background: var(--risk-tint); font-weight: 600; }
-.bd-share .ft .bp-btn:disabled { opacity: .6; cursor: default; }
+/* the app bar's Share key (openShare): the share sheet, HorizonUI's ticket (design share-account, sheet D). No dialog box:
+   the ticket floats over the dimmed page, its two halves a card each, notched where they meet at a dashed tear line.
+   The top half: eyebrow, state badge and close; the doc's emoji tile, title, project · remote; Share as and what goes
+   in. The stub: the state's one action, Details, Stop sharing and Close, the notice its red bottom strip. A phone: the
+   ticket across the window at its bottom */
+.bd-share { --tk: light-dark(oklch(100% 0 0), oklch(32.6% 0.0055 264)); --tk-well: light-dark(oklch(94% 0.003 264), oklch(14.5% 0.003 264));
+  --tk-ink: var(--fg); --tk-on-ink: light-dark(oklch(98.5% 0 0), oklch(18% 0.004 264)); --tk-fill: oklch(51% 0.19 254); --tk-hover2: light-dark(oklch(23% 0.01 264 / 0.075), oklch(100% 0 0 / 0.08));
+  box-sizing: border-box; width: 100%; height: 100%; max-width: 100%; max-height: 100%; margin: 0; padding: 24px; border: 0; background: none; color: var(--fg);
+  overflow: auto; overscroll-behavior: contain; font: 14px/1.45 var(--sans); }
+/* the dialog fills the window, see-through (a press on it is a press outside the ticket), so nothing clips the
+   ticket's shadow; the ticket sits in its middle, at its top when taller */
+.bd-share[open] { display: flex; flex-direction: column; }
+.bd-share > .bd-tk { flex: none; width: min(500px, 100%); margin: auto; }
+.bd-share::backdrop { background: light-dark(oklch(15% 0.01 264 / .36), oklch(5% 0 0 / .55)); backdrop-filter: blur(2px); }
+.bd-share:focus { outline: none; }
+/* the ticket's shadow follows its notches */
+.bd-tk { position: relative; filter: drop-shadow(0 1px 1px rgb(0 0 0 / .12)) drop-shadow(0 22px 44px rgb(0 0 0 / .34)); }
+.bd-tk .half { position: relative; display: flex; flex-direction: column; border-radius: 14px; background: var(--tk);
+  mask: radial-gradient(circle 12px at 0 var(--y), #0000 97%, #000) left / 51% 100% no-repeat, radial-gradient(circle 12px at 100% var(--y), #0000 97%, #000) right / 51% 100% no-repeat; }
+.bd-tk .half.hd { border-bottom-left-radius: 0; border-bottom-right-radius: 0; --y: 100%; }
+.bd-tk .half.ft { overflow: hidden; border-top-left-radius: 0; border-top-right-radius: 0; --y: 0; }
+.bd-tk .perf { position: relative; z-index: 1; height: 2px; margin: -1px 20px; background: repeating-linear-gradient(90deg, var(--line-strong) 0 7px, #0000 7px 13px); }
+.bd-tk .sp { flex: 1; }
+.bd-tk .eyb { display: flex; align-items: center; gap: 7px; min-height: 36px; padding: 10px 10px 0 18px; font: 600 11px/1 var(--sans); letter-spacing: .06em; text-transform: uppercase; color: var(--fg-subtle); }
+.bd-tk .eyb > .bd-ic { width: 13px; height: 13px; color: var(--accent); }
+.bd-tk .eyb .bdg { margin-left: 4px; letter-spacing: 0; text-transform: none; }
+.bd-tk .eyb .x { width: 26px; height: 26px; border-radius: 9px; background: none; box-shadow: none; }
+.bd-tk .eyb .x:hover { background: var(--hover); }
+.bd-tk .eyb .x:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.bd-tk .eyb .x .bd-ic { width: 14px; height: 14px; }
+.bd-tk .top { display: flex; align-items: center; gap: 14px; padding: 6px 18px 12px; }
+.bd-tk .emo { display: grid; place-items: center; width: 52px; height: 52px; flex: none; border-radius: 15px; font-size: 28px; line-height: 1; background: var(--accent-tint); }
+.bd-tk .tt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.bd-tk .tt b { font: 700 20px/26px var(--sans); letter-spacing: -.01em; overflow-wrap: anywhere; }
+.bd-tk .tt span { font-size: 12px; line-height: 1.45; color: var(--fg-subtle); overflow-wrap: anywhere; }
+.bd-tk .meta2 { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; min-height: 40px; padding: 0 18px 16px; }
+/* HorizonUI Badge: a tinted pill (tone ok, warn) or an outlined one (neutral) */
+.bd-tk .bdg { display: inline-flex; flex: none; align-items: center; gap: 4px; height: 22px; padding: 0 10px; border-radius: 999px; font: 500 11px/14px var(--sans); white-space: nowrap;
+  color: var(--fg-muted); box-shadow: inset 0 0 0 1px var(--line-strong); }
+.bd-tk .bdg .bd-ic { width: 12px; height: 12px; }
+.bd-tk .bdg.ok { color: var(--ok-fg); background: var(--ok-tint); box-shadow: none; }
+.bd-tk .bdg.warn { color: var(--warn-fg); background: var(--warn-tint); box-shadow: none; }
+.bd-tk .bdg.sm { height: 16px; padding: 0 8px; }
+/* HorizonUI Avatar: the login's initials on its category colour (the login's hash picks one of eight, as HorizonUI does) */
+.bd-av { display: inline-grid; place-items: center; flex: none; width: var(--s, 20px); height: var(--s, 20px); border-radius: 50%; font: 600 calc(var(--s, 20px) * .4)/1 var(--sans);
+  color: light-dark(oklch(14% 0.006 264), oklch(18% 0.004 264)); background: var(--c); }
+.bd-av.c1 { --c: light-dark(oklch(62% 0.16 256), oklch(70% 0.14 256)); } .bd-av.c2 { --c: light-dark(oklch(60% 0.18 295), oklch(70% 0.16 295)); }
+.bd-av.c3 { --c: light-dark(oklch(66% 0.19 350), oklch(74% 0.16 350)); } .bd-av.c4 { --c: light-dark(oklch(70% 0.16 50), oklch(76% 0.14 50)); }
+.bd-av.c5 { --c: light-dark(oklch(78% 0.14 85), oklch(83% 0.12 85)); } .bd-av.c6 { --c: light-dark(oklch(64% 0.14 150), oklch(73% 0.13 150)); }
+.bd-av.c7 { --c: light-dark(oklch(66% 0.1 195), oklch(75% 0.09 195)); } .bd-av.c8 { --c: light-dark(oklch(62% 0.02 264), oklch(68% 0.02 264)); }
+/* Share as on a shared doc: a soft key (avatar, Share as over the login, ⇅) opening the account menu */
+.bd-tk .acb { display: inline-flex; align-items: center; gap: 9px; height: 40px; padding: 0 10px 0 7px; border: 0; border-radius: 10px; font: inherit; color: var(--fg); background: var(--tk-hover2); cursor: pointer; }
+.bd-tk .acb:hover:not(:disabled), .bd-tk .acb[aria-expanded="true"] { background: color-mix(in oklch, var(--fg) 13%, transparent); }
+.bd-tk .acb:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.bd-tk .acb:disabled { opacity: .45; cursor: default; }
+.bd-tk .acb > .bd-ic { width: 14px; height: 14px; color: var(--fg-subtle); }
+.bd-tk .acl { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.15; }
+.bd-tk .acl small { font-size: 11px; color: var(--fg-subtle); }
+.bd-tk .acl b, .bd-acm .l b, .bd-tk .who b, .bd-tk .mono { font: 600 13px var(--mono); }
+.bd-tk .stub { display: flex; flex-direction: column; gap: 10px; padding: 18px 18px 10px; }
+.bd-tk .cap { font: 600 11px/1.3 var(--sans); letter-spacing: .06em; text-transform: uppercase; color: var(--fg-subtle); }
+.bd-tk .cap.mt { margin-top: 4px; }
+.bd-tk .why { font-size: 12px; line-height: 1.45; color: var(--fg-subtle); }
+.bd-tk p.why { margin: 0; }
+/* the first share's Share as: HorizonUI's RadioGroup, a row per account (avatar, login, why), the pick on the accent's tint */
+.bd-tk .accs { display: grid; gap: 2px; }
+.bd-tk .acc { display: flex; align-items: flex-start; gap: 8px; padding: 7px 8px; border-radius: 9px; cursor: pointer; }
+.bd-tk .acc:has(input:checked) { background: var(--accent-tint); }
+.bd-tk .acc.off { opacity: .45; cursor: not-allowed; }
+.bd-tk .acc > span { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.bd-tk .who { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+.bd-tk .acc .why, .bd-acm .l small { overflow-wrap: anywhere; }
+.bd-tk input[type=radio] { appearance: none; flex: none; width: 16px; height: 16px; margin: 2px 0 0; border-radius: 50%; background: var(--tk-well); box-shadow: 0 0 0 1px var(--line-strong), inset 0 1px 3px oklch(0% 0 0 / .25); cursor: inherit; transition: background .12s; }
+.bd-tk input[type=radio]:checked { background: radial-gradient(circle, var(--tk-on-ink) 0 2.6px, var(--tk-ink) 3.2px); box-shadow: 0 0 0 1px oklch(0% 0 0 / .3), 0 1px 3px oklch(0% 0 0 / .3); }
+.bd-tk input[type=radio]:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.bd-tk .oth { display: flex; align-items: center; gap: 6px; padding: 0 8px; font-size: 12px; color: var(--fg-subtle); }
+.bd-tk .oth .bd-ic { width: 13px; height: 13px; }
+.bd-tk .oth code, .bd-acm .oth code { padding: 0; font: 12px var(--mono); color: var(--fg-muted); background: none; }
+/* HorizonUI Button: the accent action across the stub; a spinner while it runs */
+.bd-tk .go { display: inline-flex; align-items: center; justify-content: center; gap: 6px; width: 100%; height: 36px; margin-top: 4px; padding: 0 18px; border: 0; border-radius: 999px;
+  font: 500 14px/20px var(--sans); color: oklch(99% 0 0); background: var(--tk-fill); cursor: pointer; white-space: nowrap;
+  box-shadow: 0 0 0 1px oklch(0% 0 0 / .5), inset 0 1px 0 oklch(100% 0 0 / .18), 0 2px 5px oklch(0% 0 0 / .3); }
+.bd-tk .go:hover:not(:disabled) { filter: brightness(.95); }
+.bd-tk .go:focus-visible { outline: none; box-shadow: 0 0 0 1px oklch(0% 0 0 / .5), var(--focus-ring); }
+.bd-tk .go:disabled { opacity: .45; cursor: not-allowed; }
+.bd-tk .go .bd-ic { width: 16px; height: 16px; }
+.bd-tk .spn { flex: none; width: 14px; height: 14px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: bd-spin .7s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .bd-tk .spn { animation-duration: 2s; } }
+/* the link: HorizonUI's large mono TextField, read-only, Copy link at its end (a tick and Copied for 1.5 s) */
+.bd-tk .lnk { display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 7px 0 12px; border-radius: 10px; background: var(--tk-well);
+  box-shadow: inset 0 1px 3px light-dark(oklch(23% 0.01 264 / .12), oklch(0% 0 0 / .6)), inset 0 0 0 1px light-dark(oklch(23% 0.01 264 / .05), oklch(0% 0 0 / .45)); }
+.bd-tk .lnk:has(input:focus-visible) { box-shadow: var(--focus-ring); }
+.bd-tk .lnk input { flex: 1; min-width: 0; height: 100%; padding: 0; border: 0; outline: none; font: 14px/20px var(--mono); color: var(--fg); background: none; box-shadow: none; text-overflow: ellipsis; }
+.bd-tk .cp, .bd-tk .tb { display: inline-flex; flex: none; align-items: center; gap: 6px; height: 26px; padding: 0 12px; border: 0; border-radius: 999px; font: 500 12px/16px var(--sans); white-space: nowrap; cursor: pointer; }
+.bd-tk :is(.cp, .tb) .bd-ic { width: 14px; height: 14px; }
+.bd-tk :is(.cp, .tb):focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.bd-tk .cp { color: var(--fg); background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: var(--shadow-hk); }
+.bd-tk .cp.pri { color: oklch(99% 0 0); background: var(--tk-fill); box-shadow: 0 0 0 1px oklch(0% 0 0 / .5), inset 0 1px 0 oklch(100% 0 0 / .18); }
+.bd-tk .cp.ok { color: var(--ok-fg); background: var(--tk-hover2); box-shadow: none; }
+.bd-tk .stl { display: inline-flex; align-items: center; gap: 6px; margin: 0; font-size: 14px; }
+.bd-tk .stl i { width: 8px; height: 8px; flex: none; border-radius: 50%; background: var(--ok); }
+.bd-tk .stl.newer i { background: var(--warn); }
+.bd-tk .up { display: flex; gap: 10px; padding: 10px 12px; border-radius: 10px; font-size: 13px; background: var(--warn-tint); }
+.bd-tk .up > .bd-ic { width: 16px; height: 16px; flex: none; margin-top: 2px; color: var(--warn); }
+.bd-tk .up b { font-weight: 600; }
+/* the gist on another account than the project's: Move or Keep, HorizonUI's interactive Cards as radios */
+.bd-tk .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.bd-tk .tile { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 12px; border-radius: 14px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); cursor: pointer; }
+.bd-tk .tile:hover { background: color-mix(in oklch, var(--surface), var(--fg) 4%); }
+.bd-tk .tile:has(input:checked) { box-shadow: 0 0 0 2px var(--accent); }
+.bd-tk .tile:has(input:focus-visible) { box-shadow: inset 0 0 0 1px var(--line), var(--focus-ring); }
+.bd-tk .tile input { position: absolute; opacity: 0; pointer-events: none; }
+.bd-tk .th { display: flex; align-items: center; gap: 7px; font-size: 13px; }
+.bd-tk .th .bd-ic { width: 16px; height: 16px; }
+.bd-tk .err { margin: 0; font-size: 12.5px; line-height: 1.45; color: var(--risk-fg); }
+/* Details (HorizonUI's link Collapsible) at the left, Stop sharing and Close at the right */
+.bd-tk .acts { position: relative; min-height: 30px; margin: 0 -8px; padding-top: 2px; }
+.bd-tk .btns { position: absolute; top: 0; right: 0; display: flex; gap: 6px; }
+.bd-tk .tb { color: var(--fg-muted); background: none; }
+.bd-tk .tb:hover:not(:disabled) { color: var(--fg); background: var(--hover); }
+.bd-tk .tb:disabled { opacity: .45; cursor: default; }
+.bd-tk .tb.stop { color: var(--risk-fg); }
+.bd-tk .tb.stop.sure { color: oklch(99% 0 0); background: var(--risk); }
+.bd-tk .det { padding: 5px 0 0 8px; }
+.bd-tk .det summary { display: inline-flex; align-items: center; gap: 4px; border-radius: 6px; font-size: 12px; line-height: 16px; color: var(--fg-muted); cursor: pointer; list-style: none; }
+.bd-tk .det summary::-webkit-details-marker { display: none; }
+.bd-tk .det summary:hover { color: var(--fg); }
+.bd-tk .det summary:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.bd-tk .det summary .bd-ic { width: 14px; height: 14px; transition: rotate .15s var(--ease); }
+.bd-tk .det[open] summary .bd-ic { rotate: 90deg; }
+.bd-tk .det dl { margin: 10px 8px 2px 0; padding: 0 12px; border-radius: 10px; background: var(--panel); box-shadow: inset 0 0 0 1px var(--line); }
+.bd-tk .dr { display: grid; grid-template-columns: 88px 1fr; gap: 12px; padding: 7px 0; font-size: 12px; line-height: 1.4; border-top: 1px solid var(--line-soft); }
+.bd-tk .dr:first-child { border-top: 0; }
+.bd-tk .dr dt { color: var(--fg-subtle); }
+.bd-tk .dr dd { margin: 0; min-width: 0; color: var(--fg); overflow-wrap: anywhere; }
+.bd-tk .dr .mono { font-size: 12px; }
+.bd-tk .dr code { font: 11px var(--mono); padding: 1px 4px; border-radius: 4px; background: var(--tk-hover2); }
+.bd-tk .dr a { margin-left: 8px; color: var(--accent-fg); text-decoration: none; white-space: nowrap; }
+.bd-tk .dr a:hover { text-decoration: underline; }
+.bd-tk .dr a .bd-ic { width: 12px; height: 12px; margin-left: 3px; vertical-align: -1px; }
+.bd-tk .strip { display: flex; gap: 10px; padding: 12px 18px 14px; font-size: 12px; line-height: 1.5; color: var(--risk-fg); background: var(--risk-tint); }
+.bd-tk .strip .bd-ic { width: 15px; height: 15px; flex: none; margin-top: 2px; }
+.bd-tk .strip p { margin: 0; }
+.bd-tk .strip b { font-weight: 650; }
+/* the account menu (a shared doc's Share as): over the sheet, a row per account with its avatar and why */
+.bd-selm.bd-acm { width: max-content; max-width: min(460px, calc(100vw - 16px)); white-space: normal; }
+.bd-acm .hd { padding: 6px 10px 4px; font: 600 11px/1.3 var(--sans); color: var(--fg-subtle); }
+.bd-acm .sep { flex: none; height: 1px; margin: 3px 6px; background: var(--line-soft); }
+.bd-selm.bd-acm button { align-items: center; white-space: normal; }
+.bd-acm .l { display: flex; flex-direction: column; gap: 1px; }
+.bd-acm .l small { font: 400 12px/1.35 var(--sans); color: var(--fg-subtle); }
+.bd-acm .oth { display: flex; align-items: center; gap: 6px; padding: 7px 10px 7px 30px; font-size: 12px; color: var(--fg-subtle); }
+.bd-acm .oth .bd-ic { width: 13px; height: 13px; }
+/* sharing off: the key's popover (HorizonUI Popover) with the command that turns it on */
+.bd-shoff { position: fixed; z-index: 62; width: min(400px, calc(100vw - 16px)); padding: 14px 16px 12px; border-radius: 14px; background: var(--panel); color: var(--fg);
+  box-shadow: 0 16px 48px oklch(0% 0 0 / .42), inset 0 0 0 1px var(--line); font: 14px/20px var(--sans); outline: none; }
+.bd-shoff[hidden] { display: none; }
+.bd-shoff h4 { display: flex; align-items: center; gap: 8px; margin: 0 0 6px; font-size: 14px; font-weight: 600; }
+.bd-shoff h4 .bd-ic { width: 16px; height: 16px; color: var(--warn); }
+.bd-shoff p { margin: 0 0 10px; font-size: 13px; color: var(--fg-muted); }
+.bd-shoff .step { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 12.5px; }
+.bd-shoff .n { display: grid; place-items: center; width: 20px; height: 20px; flex: none; border-radius: 50%; font: 600 11px/1 var(--mono); color: var(--fg-muted); background: var(--inset); }
+.bd-shoff .cmd { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 6px; height: 30px; padding: 0 2px 0 10px; border-radius: 8px;
+  font: 12.5px var(--mono); background: var(--canvas); box-shadow: inset 0 0 0 1px var(--line); }
+.bd-shoff .cmd code { padding: 0; background: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bd-shoff .cmd .bd-ibtn { width: 26px; height: 26px; flex: none; background: none; box-shadow: none; }
+.bd-shoff .cmd .bd-ibtn .bd-ic { width: 14px; height: 14px; }
+.bd-shoff .cmd .bd-ibtn.ok { color: var(--ok-fg); }
+.bd-shoff .ft2 { margin: 10px 0 0; font-size: 12px; color: var(--fg-subtle); }
+.bd-shoff .ft2 code { font-size: 12px; }
+.bd-shoff .ft2 a { color: inherit; }
+@media (max-width: 600px) {
+  .bd-share { padding: 8px; }
+  .bd-share > .bd-tk { width: 100%; margin: auto 0 0; }
+  .bd-tk .top { padding-bottom: 10px; }
+  .bd-tk .tt b { font-size: 18px; line-height: 24px; }
+}
+@media (max-width: 380px) { .bd-tk .tiles { grid-template-columns: 1fr; } .bd-tk .dr { grid-template-columns: 72px 1fr; } }
+@media print { .bd-share, .bd-shoff { display: none !important; } }
 /* revisions: strip under the bar, dialog, change marks */
 .bd-revbar { position: sticky; top: var(--bar-h); z-index: 39; background: var(--panel); box-shadow: inset 0 -1px 0 var(--line); font-size: 13.5px; }
 .bd-revbar.cmp { background: color-mix(in oklch, var(--accent) 10%, var(--canvas)); }
@@ -3152,6 +3316,11 @@ const ICONS = {
   present: '<path d="M2 3h20M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3M7 21l5-5 5 5"/>',
   download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>',
   share: '<path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8M16 6l-4-4-4 4M12 2v13"/>',
+  // the share sheet: Update, Keep, Share as's menu, Open on GitHub
+  upload: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>',
+  lock: '<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+  updown: '<path d="m7 15 5 5 5-5M7 9l5-5 5 5"/>',
+  ext: '<path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>',
   variants: '<path d="M2 3v18M22 3v18"/><rect x="6" y="3" width="12" height="18" rx="2"/>',
   palette: '<path d="M12 22a10 10 0 1 1 10-10c0 2.8-2.2 4-4 4h-1.8a1.7 1.7 0 0 0-1.2 2.9 1.7 1.7 0 0 1-1.2 2.9Z"/><circle cx="7.5" cy="10.5" r="1"/><circle cx="10.5" cy="6.5" r="1"/><circle cx="15.5" cy="7.5" r="1"/>',
   panelleft: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/>',
@@ -7864,7 +8033,7 @@ async function printDoc() { if (PRINT.prepare) await PRINT.prepare(); print(); }
 // their own exports) as the revision shown (?rev=) in the theme the reader picked, if any (GET /__bluedoc/export).
 // HTML file: the file `build.py -o` writes, which opens anywhere without the server. PDF: that file's print view,
 // printed by the server's headless Chrome; while it's made, its item says so; without Chrome (501) the browser's print
-// dialog for this page, then and on every later pick. Share, the key before it, opens the share dialog (openShare).
+// dialog for this page, then and on every later pick. Share, the key before it, opens the share sheet (openShare).
 // Only through serve.py: an -o file, a page on file:// or a shared page in bluedoc.ai's viewer has no server, so the
 // key isn't there; neither key shows there.
 (() => {
@@ -7895,115 +8064,331 @@ async function printDoc() { if (PRINT.prepare) await PRINT.prepare(); print(); }
     finally { if (format === 'pdf') busy(false); }
   }
   /* Share (share.py; GET and POST /__bluedoc/share, POST /__bluedoc/unshare, all with the key): the app bar's key
-     before Export, its icon and word (≤ 900 px its icon), opening the share dialog: the doc as it is now, in a secret
-     gist on the reader's GitHub account, opened at its bluedoc.ai/g/ link (the server makes it: share.link_for).
-     Unshared, the dialog is the confirm: the red notice (who answers for this share, who can read the link), what goes
-     in, Share / Cancel. Shared: the link with Copy (copied on sharing), Shared · rev B · when, the notice and what goes
-     in again, Share again (the accent while the doc is at a newer rev: the gist changes only then) and Stop sharing (a
-     second press deletes the gist). The key marks a shared doc with a dot in the accent, in the warning colour while
-     the doc is newer than its share (data-share shared|newer; GET …&brief=1 on load). Nothing comes back through the
-     gist: the shared page is view-only (VIEW_ONLY) */
+     before Export, its icon and word (≤ 900 px its icon), opening the share sheet (design share-account, sheet D): a
+     ticket floating over the dimmed page. A share is the doc's current revision in a secret gist on its project's
+     GitHub account (the server keeps one per project and runs gh as it, never switching gh's active account), opened
+     at its bluedoc.ai/g/ link. GET answers {share, rev, contents, project, accounts, account, ask, mismatch, off}.
+     With two or more usable accounts (ask) the first share lists them as radios, the project's account picked (the
+     server's pick: the remote's owner, else gh's active one), and Share as <login> posts it (`as` sets the project's
+     account); a shared doc's Share as key opens a menu of them that sets the project's account at once (POST
+     /__bluedoc/settings). Unusable accounts show off, with their fix. Shared: the link with Copy link (copied on
+     sharing), Shared at rev · when · as; the doc newer: Update to rev N (the same gist: the link stays); the gist on
+     another account than the project's (mismatch): Move (a new gist on the project's, the old one deleted: the link
+     changes) or Keep (the gist's account updates it), picked before Update posts `move` or `keep`. Details: the
+     account, the gist, what's left out, the readers, Stop sharing (a second press deletes the gist as its account).
+     Esc or a press outside closes the sheet, not while a call runs. The key marks a shared doc with a dot in the
+     accent, in the warning colour while the doc is newer than its share (data-share shared|newer; GET …&brief=1 on
+     load). Sharing off (off: gh missing, signed out, no account with the gist scope): the key dims, its tooltip says
+     why, and a press asks again, then opens the sheet or the popover with the command that turns sharing on. Nothing
+     comes back through the gist: the shared page is view-only (VIEW_ONLY) */
   const NOTICE = ['bluedoc isn\'t responsible for this share method or for secrets leaked through GitHub gists.',
     'A secret gist is unlisted and not searchable, but anyone with the link can read it. Check the doc for secrets before you share.'];
-  const SH = { dlg: null, view: null, busy: false, err: '', sure: false };
-  const shareKey = h('button', { type: 'button', class: 'bd-tbtn bd-shk', onclick: () => openShare() }, ic('share'), h('span', { class: 'w' }, 'Share'), h('span', { class: 'dot', 'aria-hidden': 'true' }));
-  // the key's mark from the share and the doc's rev now ({share, rev}: the route's answer)
-  function paintKey(v) {
-    const s = v && v.share, state = !s ? '' : v.rev !== s.rev ? 'newer' : 'shared';
-    if (state) shareKey.dataset.share = state; else delete shareKey.dataset.share;
-    const say = state === 'newer' ? `Shared at rev ${s.rev || '–'}; the doc is at rev ${v.rev || '–'} now: Share again to update the link`
-      : state ? `Shared as a secret gist at rev ${s.rev || '–'}` : 'Share a link to this doc: a secret GitHub gist that opens at bluedoc.ai';
-    shareKey.title = say;
-    shareKey.setAttribute('aria-label', state ? `Share (${say})` : 'Share');
-  }
-  paintKey(null);
+  const ANOTHER = 'gh auth login -s gist';
+  // busy: the call running ('go' share or update, 'del' delete, 'acct' the project's account); pick: Move or Keep;
+  // acct: the first share's pick (else the project's account); det: Details open; menu: the Share as key's menu
+  const SH = { dlg: null, view: null, busy: '', err: '', sure: false, pick: '', acct: '', copied: false, det: false, menu: null, down: null };
+  let OFF = null, copyT = 0;
+  const shareKey = h('button', { type: 'button', class: 'bd-tbtn bd-shk', onclick: () => keyPress() }, ic('share'), h('span', { class: 'w' }, 'Share'), h('span', { class: 'dot', 'aria-hidden': 'true' }));
+  tipped(shareKey);
+  const viewUrl = brief => '/__bluedoc/share?' + new URLSearchParams({ path: location.pathname, ...(brief ? { brief: '1' } : {}) });
+  const offTip = () => `Sharing is off: ${OFF.reason}. Click for how to turn it on.`;
   async function shareCall(method, path, body) {
     const headers = SERVER_KEY.headers({ 'Content-Type': 'application/json', 'X-Bluedoc': '1' });
     const r = await fetch(path, { method, cache: 'no-store', headers, body: body ? JSON.stringify(body) : undefined });
     const j = await r.json().catch(() => ({}));
     if (r.status === 403 && j.key) SERVER_KEY.refused(headers);
-    if (!r.ok) throw new Error(j.error || `the server answered ${r.status}`);
+    if (!r.ok) throw Object.assign(new Error(j.error || `the server answered ${r.status}`), { status: r.status, body: j });
     return j;
   }
   const many = (n, one, more) => `${n} ${n === 1 ? one : more}`;
-  const goes = c => [many(c.revisions, 'revision', 'revisions'), many(c.diffs, 'diff with its code', 'diffs with their code'),
-    many(c.media, 'media file', 'media files'), many(c.screens, 'screen', 'screens')].join(', ');
   function when(iso) {
     const d = new Date(iso), s = (Date.now() - d) / 1000;
     if (isNaN(d)) return '';
     return s < 45 ? 'just now' : s < 3600 ? `${Math.max(1, Math.round(s / 60))} min ago` : s < 86400 ? `${Math.round(s / 3600)} h ago`
       : d.toLocaleDateString([], { month: 'short', day: 'numeric', ...(d.getFullYear() !== new Date().getFullYear() && { year: 'numeric' }) });
   }
-  function paintShare() {
-    const d = SH.dlg, v = SH.view, s = v && v.share, newer = !!(s && v.rev !== s.rev), busy = SH.busy;
-    const kids = [h('div', { class: 'hd' }, h('h3', { id: 'bd-sh-h' }, s ? 'Shared as a secret gist' : 'Share as a secret gist'),
-      h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Close', disabled: busy, onclick: () => d.close() }, ic('x')))];
-    if (s) {
-      kids.push(h('div', { class: 'lnk' }, h('input', { type: 'text', readonly: true, value: s.link, 'aria-label': 'Link to the shared doc', onfocus: e => e.target.select() }),
-        h('button', { type: 'button', class: 'bp-btn', onclick: () => copyText(s.link, 'Copied the link') }, ic('copy'), 'Copy')),
-        h('p', { class: 'meta' }, `Shared · rev ${s.rev || '–'} · ${when(s.at)}`,
-          newer && h('span', { class: 'nw' }, ` · the doc is at rev ${v.rev || '–'} now`), ' · ', h('a', { href: safeUrl(s.url), target: '_blank', rel: 'noopener noreferrer' }, 'Gist on GitHub')));
-    } else kids.push(h('p', { class: 'sum' }, 'Puts the doc in a secret gist on your GitHub account (through gh) and gives you a bluedoc.ai link that opens it in any browser.'));
-    kids.push(h('div', { class: 'bd-shn', role: 'note' }, ic('alert'), h('p', {}, h('b', {}, NOTICE[0]), ' ', NOTICE[1])));
-    kids.push(h('p', { class: 'goes' }, v ? `What goes in${v.rev ? `, at rev ${v.rev}` : ''}: ${goes(v.contents)}.` : SH.err ? '' : 'Reading the doc…'));
+  // sharing off: the key's popover. What's wrong, the command that fixes it with a copy key, and how to get gh. The key
+  // asks the server again on every press, so it opens the sheet once sharing works
+  const offPop = (() => {
+    const box = h('div', { class: 'bd-shoff', role: 'dialog', 'aria-labelledby': 'bd-shoff-h', tabindex: '-1', hidden: true });
+    let copied = 0;
+    const away = e => { if (!box.contains(e.target) && !shareKey.contains(e.target)) close(false); };
+    const moved = () => close(false);
+    function paint() {
+      const fix = OFF && OFF.fix || ANOTHER, why = OFF && OFF.reason ? OFF.reason.replace(/^gh, the GitHub CLI,/, 'gh') : 'gh can\'t share yet';
+      const cp = h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Copy the command', title: 'Copy',
+        onclick: () => {
+          copyText(fix, 'Copied the command');
+          cp.classList.add('ok'); setKids(cp, ic('tick')); clearTimeout(copied);
+          copied = setTimeout(() => { cp.classList.remove('ok'); setKids(cp, ic('copy')); }, 1500);
+        } }, ic('copy'));
+      setKids(box, h('h4', { id: 'bd-shoff-h' }, ic('info'), 'Sharing is off'),
+        h('p', {}, `bluedoc shares through gh, the GitHub CLI: ${why}.`),
+        h('div', { class: 'step' }, h('span', { class: 'n', 'aria-hidden': 'true' }, '1'), h('span', { class: 'cmd' }, h('code', {}, fix), cp)),
+        h('div', { class: 'step' }, h('span', { class: 'n', 'aria-hidden': 'true' }, '2'), h('span', {}, 'Reopen this menu: Share turns on by itself.')),
+        h('p', { class: 'ft2' }, 'No gh? ', h('code', {}, 'brew install gh'), ' or ', h('a', { href: 'https://cli.github.com', target: '_blank', rel: 'noopener noreferrer' }, 'cli.github.com')));
+      return cp;
+    }
+    function open() {
+      const cp = paint();
+      box.hidden = false; shareKey.setAttribute('aria-expanded', 'true'); shareKey._tip = null; showTip(null);
+      const r = shareKey.getBoundingClientRect(), w = box.offsetWidth;
+      box.style.left = Math.round(clamp(r.left + r.width / 2 - w / 2, 8, root.clientWidth - w - 8)) + 'px';
+      box.style.top = Math.round(r.bottom + 8) + 'px';
+      cp.focus();
+      addEventListener('pointerdown', away, true); addEventListener('resize', moved); addEventListener('scroll', moved, true);
+    }
+    function close(refocus) {
+      if (box.hidden) return;
+      box.hidden = true; shareKey.setAttribute('aria-expanded', 'false');
+      if (OFF) shareKey._tip = offTip();
+      removeEventListener('pointerdown', away, true); removeEventListener('resize', moved); removeEventListener('scroll', moved, true);
+      if (refocus) shareKey.focus();
+    }
+    box.addEventListener('keydown', e => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(true); } });
+    box.addEventListener('focusout', e => { if (e.relatedTarget && !box.contains(e.relatedTarget) && e.relatedTarget !== shareKey) close(false); });
+    document.body.append(box);
+    return { open, close, isOpen: () => !box.hidden };
+  })();
+  // the key's state from the route's answer ({share, rev, off}): off, shared, the doc newer than its share, or none
+  function paintKey(v) {
+    OFF = v && v.off || null;
+    const s = !OFF && v && v.share, state = !s ? '' : v.rev !== s.rev ? 'newer' : 'shared';
+    if (state) shareKey.dataset.share = state; else delete shareKey.dataset.share;
+    if (OFF) {
+      shareKey.setAttribute('aria-disabled', 'true'); shareKey.setAttribute('aria-haspopup', 'dialog');
+      if (!offPop.isOpen()) shareKey.setAttribute('aria-expanded', 'false');
+      shareKey._tip = offPop.isOpen() ? null : offTip();
+      shareKey.removeAttribute('title');
+      shareKey.setAttribute('aria-label', `Share (${offTip()})`);
+      return;
+    }
+    offPop.close(false);
+    ['aria-disabled', 'aria-haspopup', 'aria-expanded'].forEach(a => shareKey.removeAttribute(a));
+    shareKey._tip = null;
+    const say = state === 'newer' ? `Shared at rev ${s.rev || '–'}; the doc is at rev ${v.rev || '–'} now: Update puts it in the link`
+      : state ? `Shared as a secret gist at rev ${s.rev || '–'}` : 'Share a link to this doc: a secret GitHub gist that opens at bluedoc.ai';
+    shareKey.title = say;
+    shareKey.setAttribute('aria-label', state ? `Share (${say})` : 'Share');
+  }
+  paintKey(null);
+  async function keyPress() {
+    if (!OFF) return openShare();
+    if (offPop.isOpen()) return offPop.close(true);
+    try { paintKey(await shareCall('GET', viewUrl(true))); } catch { /* no answer: still off */ }
+    if (OFF) offPop.open(); else openShare();
+  }
+
+  // HorizonUI's Avatar: the login's initials on the category colour its hash picks
+  function avatar(login, size) {
+    let n = 0;
+    for (const ch of login) n = n * 31 + ch.codePointAt(0) >>> 0;
+    const w = login.split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+    return h('span', { class: `bd-av c${n % 8 + 1}`, style: size ? `--s: ${size}px` : null, 'aria-hidden': 'true' },
+      (w.length > 1 ? w[0][0] + w[w.length - 1][0] : (w[0] || '').slice(0, 2)).toUpperCase());
+  }
+  // why an account is there: the project's (and why the server picked it), gh's active one, or what it lacks
+  function whyOf(v, a) {
+    if (!a.usable) return a.fix ? `no gist scope: ${a.fix}` : 'no gist scope';
+    const p = v.account && v.account.login === a.login ? v.account.why : '', proj = v.project;
+    if (p === 'remote') return proj && proj.remote ? `matches ${proj.remote}, this repo's owner` : 'matches this repo\'s owner';
+    if (p === 'project') return `${proj ? proj.name : 'this project'}'s account`;
+    if (a.active) return 'gh\'s active account';
+    return p === 'only' ? 'the only account with the gist scope' : '';
+  }
+  const badge = (tone, icon, text, cls) => h('span', { class: ['bdg', tone, cls].filter(Boolean).join(' ') }, icon && ic(icon), text);
+  const spinner = () => h('span', { class: 'spn', 'aria-hidden': 'true' });
+  // the stub's action: the accent key across it, a spinner while the share runs
+  const goKey = (label, icon, off) => h('button', { type: 'button', class: 'go', 'data-k': 'go', disabled: !!off || (!!SH.busy && SH.busy !== 'go'), 'aria-busy': SH.busy === 'go' ? 'true' : null,
+    onclick: () => doShare() }, SH.busy === 'go' ? spinner() : ic(icon), SH.busy === 'go' ? 'Sharing…' : label);
+  function paintCopy(b) {
+    b.className = 'cp' + (SH.copied ? ' ok' : b.hasAttribute('data-pri') ? ' pri' : '');
+    return setKids(b, ic(SH.copied ? 'tick' : 'copy'), SH.copied ? 'Copied' : 'Copy link');
+  }
+  // copies the link; its key shows a tick and Copied for 1.5 s
+  function copyLink(link, msg) {
+    copyText(link, msg || 'Copied the link');
+    SH.copied = true; clearTimeout(copyT);
+    const now = SH.dlg.querySelector('.cp');
+    if (now) paintCopy(now);
+    copyT = setTimeout(() => { SH.copied = false; const b = SH.dlg.querySelector('.cp'); if (b) paintCopy(b); }, 1500);
+  }
+  // a shared doc's Share as: the key and its menu, the project's account checked; a pick sets it (setAccount). The
+  // menu sits in the dialog, outside the ticket's masked halves, and floats by its key (menuPop)
+  function acctKey(v, acct) {
+    const pname = v.project ? v.project.name : 'this project', rows = [];
+    const row = (a, on) => {
+      const r = h('button', { type: 'button', role: 'menuitemradio', tabindex: '-1', 'aria-checked': String(a.login === acct), 'aria-disabled': on ? null : 'true',
+        onclick: () => { if (!on) return; pop.close(true); setAccount(a.login); },
+        onpointermove: () => { if (on && document.activeElement !== r) r.focus({ preventScroll: true }); } },
+        h('span', { class: 'ck' }, ic('tick')), avatar(a.login, 22), h('span', { class: 'l' }, h('b', {}, a.login), h('small', {}, whyOf(v, a))));
+      rows.push(r);
+      return r;
+    };
+    const menu = h('div', { class: 'bd-selm float bd-acm', role: 'menu', 'aria-label': `Share ${pname} as`, tabindex: '-1', hidden: true },
+      h('div', { class: 'hd', 'aria-hidden': 'true' }, `Share ${pname} as`), v.accounts.filter(a => a.usable).map(a => row(a, true)),
+      h('div', { class: 'sep', role: 'separator' }), v.accounts.filter(a => !a.usable).map(a => row(a, false)),
+      h('div', { class: 'oth' }, ic('plus'), h('span', {}, 'Another account: ', h('code', {}, ANOTHER))));
+    const cur = () => rows.find(r => r.getAttribute('aria-checked') === 'true');
+    const btn = h('button', { type: 'button', class: 'acb', 'aria-haspopup': 'menu', 'aria-expanded': 'false', 'data-k': 'acb', disabled: !!SH.busy,
+      'aria-label': `Share as ${acct}, ${pname}'s account`, onclick: () => menu.hidden ? pop.open(cur() || 0) : pop.close(true) },
+      avatar(acct, 24), h('span', { class: 'acl' }, h('small', {}, 'Share as'), h('b', {}, acct)), ic('updown'));
+    const pop = menuPop({ contains: n => btn.contains(n) || menu.contains(n) }, btn, menu, () => rows, { float: true, start: dir => cur() || (dir > 0 ? 0 : -1) });
+    SH.menu = { el: menu, pop };
+    return btn;
+  }
+  function details(v, s, acct, mm) {
+    const pname = v.project ? v.project.name : 'this project', a = v.accounts.find(x => x.login === acct), why = a ? whyOf(v, a) : '';
+    const row = (k, dt, dd, sub) => h('div', { class: 'dr', 'data-r': k }, h('dt', {}, dt), h('dd', {}, h('div', {}, dd), sub && h('div', { class: 'why' }, sub)));
+    const det = h('details', { class: 'det', open: SH.det, ontoggle: () => { SH.det = det.open; } }, h('summary', { 'data-k': 'det' }, ic('chev'), 'Details'),
+      h('dl', {},
+        acct && row('account', 'Account', [h('b', { class: 'mono' }, acct), why && ` · ${why}`],
+          mm ? `This gist was made as ${s.user}.` : v.ask ? `Picking another under Share as changes it for ${pname}.` : null),
+        s && row('gist', 'Gist', ['Secret gist ', h('code', {}, String(s.id).slice(0, 8) + '…'), ` on ${s.user}`,
+          h('a', { href: safeUrl(s.url), target: '_blank', rel: 'noopener noreferrer' }, 'Open on GitHub', ic('ext'))], 'Unlisted and not searchable; the bluedoc.ai link opens it.'),
+        row('left-out', 'Left out', 'Earlier revisions and compare', 'A gist holds one revision; Update replaces it.'),
+        row('readers', 'Readers', 'Anyone with the link, read-only', 'They see the newest shared rev when they reload.'),
+        s && row('stop', 'Stop sharing', `Deletes the gist as ${s.user}`, 'The link stops working.')));
+    return det;
+  }
+  // the sheet from SH. focus: true puts the focus on the state's action, a data-k on that control; else it stays on
+  // the control it was on (the same data-k), or goes to the action when it was lost
+  function paintShare(focus) {
+    const d = SH.dlg, v = SH.view, s = v && v.share, busy = SH.busy, mm = !!s && v.mismatch || null;
+    const newer = !!s && v.rev !== s.rev, proj = v && v.project, pname = proj ? proj.name : 'this project';
+    const acct = v ? (!s && SH.acct) || (v.account ? v.account.login : '') : '';
+    const close = () => { if (!SH.busy) d.close(); };
+    const fk = typeof focus === 'string' ? focus : !focus && d.contains(document.activeElement) ? document.activeElement.dataset.k : '';
+    if (SH.menu) { SH.menu.pop.close(false); SH.menu = null; }
+    const head = h('div', { class: 'half hd' },
+      h('div', { class: 'eyb' }, ic('share'), h('span', { id: 'bd-sh-h' }, s ? 'Shared link' : 'Share a read-only link'),
+        s && (newer ? badge('warn', 'hist', `Link shows rev ${s.rev || '–'}`, 'st') : badge('ok', 'tick', 'Up to date', 'st')),
+        h('span', { class: 'sp' }),
+        h('button', { type: 'button', class: 'bd-ibtn x', 'aria-label': 'Close', 'data-k': 'x', disabled: !!busy, onclick: close }, ic('x'))),
+      h('div', { class: 'top' }, h('span', { class: 'emo', 'aria-hidden': 'true' }, NAME.emoji()),
+        h('div', { class: 'tt' }, h('b', {}, NAME.title() || pageFile()), proj && h('span', {}, [proj.name, proj.remote].filter(Boolean).join(' · ')))),
+      v && h('div', { class: 'meta2' }, s && v.ask && acct && acctKey(v, acct), s && h('span', { class: 'sp' }),
+        badge('', 'image', `${v.contents.media} media`, 'n'), badge('', 'monitor', many(v.contents.screens, 'screen', 'screens'), 'n')));
+    const kids = [];
+    if (!v) { if (!SH.err) kids.push(h('p', { class: 'why' }, 'Reading the doc…')); }
+    else if (!s) {
+      if (v.ask) kids.push(h('div', { class: 'cap', id: 'bd-sh-as' }, 'Share as'),
+        h('div', { class: 'accs', role: 'radiogroup', 'aria-labelledby': 'bd-sh-as' }, v.accounts.map(a => h('label', { class: 'acc' + (a.usable ? '' : ' off') },
+          h('input', { type: 'radio', name: 'bd-sh-acct', value: a.login, 'data-k': 'acct:' + a.login, checked: a.login === acct, disabled: !a.usable || !!busy,
+            onchange: () => { SH.acct = a.login; paintShare(); } }),
+          h('span', {}, h('span', { class: 'who' }, avatar(a.login), h('b', {}, a.login)), h('span', { class: 'why' }, whyOf(v, a)))))),
+        h('div', { class: 'oth' }, ic('plus'), h('span', {}, 'Another account: ', h('code', {}, ANOTHER))));
+      kids.push(goKey(v.ask && acct ? `Share as ${acct}` : 'Share', 'share', v.ask && !acct));
+    } else {
+      // the link as the design shows it, without its scheme; Copy link copies it whole
+      const lnk = h('div', { class: 'lnk' }, h('input', { type: 'text', readonly: true, value: s.link.replace(/^https:\/\//, ''), title: s.link, 'aria-label': 'Link to the shared doc', 'data-k': 'link', onfocus: e => e.target.select() }),
+        paintCopy(h('button', { type: 'button', 'data-k': 'copy', 'data-pri': !newer && !mm ? '' : null, onclick: () => copyLink(s.link) })));
+      kids.push(lnk, h('p', { class: 'stl' + (newer ? ' newer' : ''), role: 'status' }, h('i', { 'aria-hidden': 'true' }), `Shared at rev ${s.rev || '–'} · ${when(s.at)} · as ${s.user}`));
+      const up = newer ? `Update to rev ${v.rev || '–'}` : 'Share again';
+      const tile = (val, icon, title, sub, tag, tone) => h('label', { class: 'tile', 'data-pick': val },
+        h('input', { type: 'radio', name: 'bd-sh-pick', value: val, 'data-k': 'pick:' + val, checked: SH.pick === val, disabled: !!busy, onchange: () => { SH.pick = val; paintShare(); } }),
+        h('span', { class: 'th' }, ic(icon), h('b', {}, title)), h('span', { class: 'why' }, sub), badge(tone, null, tag, 'sm'));
+      if (mm) kids.push(h('div', { class: 'cap mt', id: 'bd-sh-mm' }, `This gist is on ${mm.gist}; ${pname} shares as ${mm.project}`),
+        h('div', { class: 'tiles', role: 'radiogroup', 'aria-labelledby': 'bd-sh-mm' },
+          tile('move', 'arrowr', `Move to ${mm.project}`, `New gist, ${mm.gist}’s is deleted.`, 'Link changes', 'warn'),
+          tile('keep', 'lock', `Keep on ${mm.gist}`, `Rev ${v.rev || '–'} goes into this gist.`, 'Link stays', 'ok')),
+        goKey(SH.pick ? up : `${up} · pick one first`, 'upload', !SH.pick));
+      else if (newer) kids.push(h('div', { class: 'up', role: 'note' }, ic('hist'), h('div', {}, h('b', {}, `Readers see rev ${s.rev || '–'}. The doc is at rev ${v.rev || '–'}.`),
+        h('div', { class: 'why' }, `Update puts rev ${v.rev || '–'} in the same gist; the link stays.`))), goKey(up, 'upload'));
+    }
     if (SH.err) kids.push(h('p', { class: 'err', role: 'alert' }, SH.err));
-    const go = h('button', { type: 'button', class: 'bp-btn' + (!s || newer ? ' primary' : ''), disabled: busy || !v, 'data-f': SH.sure ? null : '', onclick: () => doShare() },
-      ic('share'), busy && !SH.sure ? 'Sharing…' : s ? 'Share again' : 'Share');
-    kids.push(h('div', { class: 'ft' }, s && h('button', { type: 'button', class: 'bp-btn ghost stop' + (SH.sure ? ' sure' : ''), disabled: busy, 'data-f': SH.sure ? '' : null,
-      onclick: () => doStop() }, ic('trash'), SH.sure ? (busy ? 'Deleting…' : 'Delete the gist') : 'Stop sharing'),
-      h('button', { type: 'button', class: 'bp-btn ghost', disabled: busy, onclick: () => d.close() }, s ? 'Close' : 'Cancel'), go));
+    kids.push(h('div', { class: 'acts' }, v && details(v, s, acct, mm), h('div', { class: 'btns' },
+      s && h('button', { type: 'button', class: 'tb stop' + (SH.sure ? ' sure' : ''), 'data-k': 'stop', disabled: !!busy && busy !== 'del', 'aria-busy': busy === 'del' ? 'true' : null, onclick: () => doStop() },
+        busy === 'del' ? spinner() : ic('trash'), busy === 'del' ? 'Deleting…' : SH.sure ? 'Delete the gist' : 'Stop sharing'),
+      h('button', { type: 'button', class: 'tb cls', 'data-k': 'cls', disabled: !!busy, onclick: close }, s ? 'Close' : 'Cancel'))));
+    const foot = h('div', { class: 'half ft' }, h('div', { class: 'stub' }, kids),
+      h('div', { class: 'strip', role: 'note' }, ic('alert'), h('p', {}, h('b', {}, NOTICE[0]), ' ', NOTICE[1])));
     const had = d.contains(document.activeElement);
-    setKids(d, kids);
-    if (d.open && (had || !d.contains(document.activeElement))) (d.querySelector('[data-f]:not(:disabled)') || d.querySelector('.hd .bd-ibtn')).focus();
+    setKids(d, h('div', { class: 'bd-tk' }, head, h('div', { class: 'perf', 'aria-hidden': 'true' }), foot), SH.menu && SH.menu.el);
+    if (!d.open) return;
+    const back = fk && d.querySelector(`[data-k="${CSS.escape(fk)}"]:not(:disabled)`);
+    if (back) back.focus();
+    else if (focus || had || !d.contains(document.activeElement))
+      (['.go:not(:disabled)', '.cp', '.x'].map(q => d.querySelector(q)).find(Boolean) || d).focus();
   }
   async function openShare() {
     if (!SH.dlg) {
-      SH.dlg = h('dialog', { class: 'bd-send bd-share', 'aria-labelledby': 'bd-sh-h' });
-      SH.dlg.addEventListener('click', e => { if (e.target === SH.dlg && !SH.busy) SH.dlg.close(); });
-      SH.dlg.addEventListener('cancel', e => { if (SH.busy) e.preventDefault(); });
-      document.body.append(SH.dlg);
+      const d = SH.dlg = h('dialog', { class: 'bd-share', 'aria-labelledby': 'bd-sh-h' });
+      // a press outside the ticket (the backdrop, the room around it) closes it; a drag out of it doesn't
+      d.addEventListener('pointerdown', e => { SH.down = e.target; });
+      d.addEventListener('click', e => { if (e.target === d && SH.down === d && !SH.busy) d.close(); });
+      d.addEventListener('cancel', e => { if (SH.busy) e.preventDefault(); });
+      d.addEventListener('close', () => { if (SH.menu) SH.menu.pop.close(false); clearTimeout(copyT); SH.copied = false; });
+      document.body.append(d);
     }
-    Object.assign(SH, { view: null, err: '', sure: false });
+    offPop.close(false);
+    Object.assign(SH, { view: null, err: '', sure: false, pick: '', acct: '', copied: false, det: false });
     paintShare();
     if (!SH.dlg.open) SH.dlg.showModal();
-    try { SH.view = await shareCall('GET', '/__bluedoc/share?' + new URLSearchParams({ path: location.pathname })); paintKey(SH.view); }
+    try { SH.view = await shareCall('GET', viewUrl()); paintKey(SH.view); }
     catch (e) { SH.err = `Couldn't read this doc's share: ${e.message}`; }
-    paintShare();
+    if (SH.view && SH.view.off) { SH.view = null; SH.dlg.close(); offPop.open(); return; }
+    paintShare(true);
   }
   async function doShare() {
-    if (SH.busy) return;
-    Object.assign(SH, { busy: true, err: '', sure: false });
+    const v = SH.view, s = v && v.share, mm = !!s && v.mismatch;
+    if (SH.busy || !v || (mm && !SH.pick)) return;
+    const body = { path: location.pathname }, acct = SH.acct || (v.account ? v.account.login : '');
+    if (!s && v.ask && acct) body.as = acct;
+    if (mm) body[SH.pick] = true;
+    Object.assign(SH, { busy: 'go', err: '', sure: false });
     paintShare();
-    let link = '';
     try {
-      const j = await shareCall('POST', '/__bluedoc/share', { path: location.pathname });
-      SH.view = { share: j.share, rev: j.rev, contents: j.contents };
-      paintKey(SH.view);
-      link = j.share.link;
-    } catch (e) { SH.err = `Couldn't share: ${e.message}`; }
-    SH.busy = false;
+      const j = await shareCall('POST', '/__bluedoc/share', body);
+      Object.assign(SH, { view: j, pick: '', acct: '' });
+      paintKey(j);
+      const link = j.share && j.share.link;
+      if (link && (!s || link !== s.link)) copyLink(link, s ? 'Moved: the new link is copied' : 'Shared: the link is copied');
+      else if (j.share) toast(`Updated: readers see rev ${j.share.rev || '–'} when they reload`);
+      if (j.warning) SH.err = j.warning;   // a move's old gist that couldn't be deleted
+    } catch (e) {
+      // the project's account changed since the sheet read it: Move or Keep first
+      if (e.status === 409 && e.body && e.body.mismatch) Object.assign(SH, { view: { ...v, mismatch: e.body.mismatch }, pick: '' });
+      else SH.err = `Couldn't share: ${e.message}`;
+    }
+    SH.busy = '';
+    paintShare(true);
+  }
+  // a pick in the Share as menu: the project's account, at once; the sheet then reads the share again (a gist on the
+  // account it was made as now shows Move or Keep)
+  async function setAccount(login) {
+    const v = SH.view;
+    if (SH.busy || !v || !v.project || (v.account && v.account.login === login)) return;
+    Object.assign(SH, { busy: 'acct', err: '', pick: '', sure: false });
     paintShare();
-    if (link) { await copyText(link, 'Shared: the link is copied'); SH.dlg.querySelector('.lnk .bp-btn').focus(); }
+    try {
+      await shareCall('POST', '/__bluedoc/settings', { sharing: { slug: v.project.slug, account: login } });
+      SH.view = await shareCall('GET', viewUrl());
+      paintKey(SH.view);
+    } catch (e) { SH.err = `Couldn't change the account: ${e.message}`; }
+    SH.busy = '';
+    paintShare('acb');
   }
   async function doStop() {
     if (SH.busy) return;
-    if (!SH.sure) { SH.sure = true; return paintShare(); }
-    SH.busy = true; SH.err = '';
-    paintShare();
+    if (!SH.sure) { SH.sure = true; return paintShare('stop'); }
+    Object.assign(SH, { busy: 'del', err: '' });
+    paintShare('stop');
     try {
       await shareCall('POST', '/__bluedoc/unshare', { path: location.pathname });
-      SH.view = { ...SH.view, share: null };
+      Object.assign(SH, { view: { ...SH.view, share: null, mismatch: null }, busy: '', sure: false });
       paintKey(SH.view);
       SH.dlg.close();
       toast('Stopped sharing: the gist is deleted, the link no longer opens');
+      return;
     } catch (e) { SH.err = `Couldn't stop sharing: ${e.message}`; }
-    Object.assign(SH, { busy: false, sure: false });
-    paintShare();
+    Object.assign(SH, { busy: '', sure: false });
+    paintShare('stop');
   }
   const bar = document.querySelector('.bd-bar-r'), at = bar.querySelector('.bd-bk, .bd-docm');
   bar.insertBefore(shareKey, at);
   bar.insertBefore(wrap, at);
-  shareCall('GET', '/__bluedoc/share?' + new URLSearchParams({ path: location.pathname, brief: '1' })).then(paintKey, () => {});   // no key yet: unmarked
+  shareCall('GET', viewUrl(true)).then(paintKey, () => {});   // no answer: the key unmarked
 })();
 
 function renderBoard(b) {

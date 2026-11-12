@@ -8,6 +8,8 @@
                                 usual places; env BLUEDOC_CHROME
   fontDirs   ["<dir>"] | null   the font folders fonts.py scans instead of this system's; env BLUEDOC_FONT_DIRS
                                 (os.pathsep-separated)
+  shareAs    {"<folder>": "<login>"}   each project's GitHub account for Share, by its home-page folder's path
+                                (share.py project_account); no environment variable, Settings' Sharing card writes it
 
 An environment variable that is set (not empty) wins over the file, the file over the default. Python 3.9+ standard
 library only."""
@@ -40,6 +42,8 @@ def valid(name: str, value) -> bool:
         return isinstance(value, str) and value != ""
     if name == "fontDirs":
         return isinstance(value, list) and all(isinstance(d, str) and d for d in value)
+    if name == "shareAs":
+        return isinstance(value, dict) and all(isinstance(k, str) and k and isinstance(v, str) and v for k, v in value.items())
     return False
 
 

@@ -20,6 +20,7 @@ SKILL = REPO / "skills" / "bluedoc"
 SCRIPTS = SKILL / "scripts"
 EXAMPLES = SKILL / "examples"
 TEMPLATE = SKILL / "assets" / "template.html"
+GH_STANDIN = REPO / "tests" / "fixtures" / "gh_standin.py"
 EXPORTS = REPO / "docs" / "examples"
 EXAMPLE_STEMS = ("acme-orders", "acme-review-findings", "acme-saved-carts-plan", "acme-status", "acme-site")
 
@@ -34,7 +35,11 @@ class TempHome:
         self.dir = Path(tempfile.mkdtemp(prefix="bluedoc-test-")).resolve()
         self.home = self.dir / "home"
         self.home.mkdir()
-        self.env = {**os.environ, "BLUEDOC_HOME": str(self.home), "PYTHONDONTWRITEBYTECODE": "1"}
+        # Share talks to the stand-in gh (fixtures/gh_standin.py: acme-dev signed in with the gist scope, its gists in
+        # <dir>/gh), never the user's own; other gh calls (a review's `gh pr diff`) still find gh on PATH
+        self.env = {k: v for k, v in os.environ.items() if not k.startswith("STANDIN_GH_")}
+        self.env.update({"BLUEDOC_HOME": str(self.home), "PYTHONDONTWRITEBYTECODE": "1", "BLUEDOC_GH": str(GH_STANDIN),
+                         "STANDIN_GH_DIR": str(self.dir / "gh")})
         self.env.pop("BLUEDOC_PORT", None)
 
     def copy_examples(self, dest: str = "docs") -> Path:

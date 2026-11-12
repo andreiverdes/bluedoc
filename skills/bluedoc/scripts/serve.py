@@ -21,19 +21,24 @@ Usage:
   serve.py snapshot DOC.json [--rev R] [--url URL] [--page ID] [--width PX]
                                                    record a website doc's live pages as revision R's snapshots
                                                    (default: the current rev; headless Chrome: the chrome setting)
-  serve.py share DOC.json                          put DOC in a secret GitHub gist (gh, signed in with the gist
-                                                   scope) and print the red notice, its https://bluedoc.ai/g/ link
-                                                   and the gist's URL; again: update the same gist (share.py)
-  serve.py unshare DOC.json                        delete DOC's gist and forget it
+  serve.py share DOC.json [--as LOGIN] [--move | --keep]
+                                                   put DOC's current revision in a secret GitHub gist (gh, an
+                                                   account with the gist scope) and print the red notice, its
+                                                   https://bluedoc.ai/g/ link and the gist's URL; again: update the
+                                                   same gist (share.py). --as: share as that account and make it the
+                                                   project's; --move/--keep: a gist on another account than the
+                                                   project's moves to it (a new link) or stays (the link stays)
+  serve.py unshare DOC.json                        delete DOC's gist as the account it is on and forget it
   serve.py run [--port N]                          run in the foreground
 
 One server per user, on 127.0.0.1 (default port 8740; when another program holds it, `open`, `start` and `unlock` take
 the next free port up to 8759 and record it in server.json; env BLUEDOC_PORT or --port pins one, with no fallback). State lives in
 ~/.bluedoc (env BLUEDOC_HOME): roots.json (folders the home page scans), server.json (pid, port), key (mode 0600: the
 secret that writes need), state.db (SQLite, mode 0600: the reader's ticks, picks, comments and plan state per doc,
-and every reply; statedb.py), settings.json (the plan-mode hook and patch-only switches, Chrome's path and the font
-folders, which Settings writes; settings.py: an environment variable that is set wins over it), shares.json (mode
-0600: each doc shared as a secret gist, by its path: gist id, user, link, rev, when; share.py) and
+and every reply; statedb.py), settings.json (the plan-mode hook and patch-only switches, Chrome's path, the font
+folders and each project's sharing account, which Settings writes; settings.py: an environment variable that is set
+wins over it), shares.json (mode 0600: each doc shared as a secret gist, by its path: gist id, the account it is on,
+link, rev, when; share.py) and
 app/<version>-<code>/ (the copy of scripts and assets the server runs from, so deleting or updating the install it was
 opened from never pulls files from under it; other versions' copies go once a new server is up).
 `open` registers the topmost ancestor folder named `docs`, else the doc's own folder, and restarts a running server
@@ -59,9 +64,9 @@ URLs: /                      home page: every doc under the registered folders, 
       /__bluedoc/ping?path=  server check (version, code hash, started, pid, unlocked); with a doc's URL path, also
                              who reads replies and its saved approval
       /__bluedoc/settings    GET: what Settings shows (settings_view; each setting's value, source env|file|default
-                             and env NAME=value). POST {planHook?, patchOnly?, chrome?, fontDirs?} (the key) writes
-                             settings.json, null back to the default: 409 when the environment sets that setting, 400
-                             for a bad value
+                             and env NAME=value; sharing: each project's account and gh's accounts). POST {planHook?,
+                             patchOnly?, chrome?, fontDirs?, sharing?: {slug, account}} (the key) writes settings.json,
+                             null back to the default: 409 when the environment sets that setting, 400 for a bad value
       POST /__bluedoc/folders  {add: "<folder>"} or {remove: "<listed path>"}: the home page's folders, {folders}
       POST /__bluedoc/repos  {remove: "<name>"}: a code link name from repos.json (codepin.py), {repos}
       POST /__bluedoc/frameworks  {remove: "<name>"} or {add: "<preset>"} (fetched as add-framework does; 502 when
@@ -104,16 +109,23 @@ URLs: /                      home page: every doc under the registered folders, 
                              Chrome once BP.printReady(); a design's or website's: its brief, then a page per
                              artboard), the attachment <stem>.pdf; 501 without Chrome (BLUEDOC_CHROME). The app bar's
                              Export downloads both
-      /__bluedoc/share?path=<doc URL path>[&brief=1]   GET (the X-Bluedoc header and the key): {share: the doc's share
-                             record ({id, user, link: https://bluedoc.ai/g/<code> (share.link_for), url, rev, at,
-                             files}, kept in shares.json) or null, rev: its meta.rev, contents: what a share puts in};
-                             brief: without contents (the Share key's mark on load). POST {path} (the key): share it as
-                             a secret gist (share.py: created, later updated in place, so the link stays): {share,
-                             created, relinked, contents, files}; 413 for a page over 10 MB, 501 without gh, 502 when
-                             gh is signed out, lacks the gist scope or fails, 400 for a presentation or a storelisting.
-                             The app bar's Share key
-      POST /__bluedoc/unshare  {path} (the key): delete the doc's gist and forget it (also when GitHub has it no
-                             more): {ok, removed: the record, or null when it wasn't shared}
+      /__bluedoc/share?path=<doc URL path>[&brief=1]   GET (the X-Bluedoc header and the key): share_view's {share:
+                             the doc's share record ({id, user: the account its gist is on, link:
+                             https://bluedoc.ai/g/<code> (share.link_for), url, rev, at, files}, kept in shares.json)
+                             or null, rev: its meta.rev, contents: {media, screens}, project: {slug, name, remote},
+                             accounts: gh's [{login, usable, active, fix}], account: {login, why} it would share as,
+                             ask: whether to show Share as (2+ usable accounts), mismatch: {gist, project} or null,
+                             off: null or {reason, fix} when sharing is off}; brief: {share, rev, off} (the Share key
+                             on load, gh's accounts cached for a minute). POST {path, as?, move?, keep?} (the key):
+                             share it as a secret gist (share.py: created, later updated in place as the account it
+                             is on, so the link stays; as: that account, made the project's): the GET's answer with
+                             created, relinked, moved and warning (an old gist a move couldn't delete); 409 {error,
+                             mismatch} when the gist is on another account than the project's and neither move nor
+                             keep is set, 413 for a page over 10 MB, 501 without gh, 502 when gh is signed out, has
+                             no account with the gist scope or fails, 400 for a presentation, a storelisting or an
+                             account gh can't share as. The app bar's Share key
+      POST /__bluedoc/unshare  {path} (the key): delete the doc's gist as the account it is on and forget it (also
+                             when GitHub has it no more): {ok, removed: the record, or null when it wasn't shared}
       /__bluedoc/listing?path=<doc URL path>[&format=F&rev=B&platform=P&locale=L&job=J]   a storelisting (revision
                              B's) exported, a read, no key, nothing written beside the doc; 400 for any other doc type.
                              zip (the default): the fastlane layout of every shot and asset at its store size and
@@ -857,7 +869,7 @@ def index(root: str | None = None) -> dict:
             d["path"] = p.relative_to(r).as_posix()
             d["url"] = f"/{quote(slug)}/{quote(d['path'])}"
             docs.append(d)
-        name = r.parent.name if r.name in ("docs", "doc") and r.parent.name else r.name
+        name = project_name(r)
         out.append({"slug": slug, "name": name, "path": str(r), "docs": docs})
     return {"roots": out}
 
@@ -1983,31 +1995,55 @@ def doc_export_pdf(html: str, chrome: str) -> bytes:
 
 # ---------- a doc shared as a secret gist (/__bluedoc/share, /__bluedoc/unshare, `share`, `unshare`; share.py) ----------
 
-def share_view(doc: Path, brief: bool = False) -> tuple[int, dict]:
-    """GET /__bluedoc/share: {share: the doc's share record or null, rev: its meta.rev now (null without), contents:
-    what a share puts in (share.contents)}; brief (&brief=1, the app bar's Share key on load) leaves contents out, so
-    nothing but the doc's JSON is read. 400: a deck, a listing or an unreadable doc."""
-    try:
-        _, d = share.read_doc(doc)
-        what = None if brief else share.contents(d, build.history_now(doc, d))
-    except share.ShareError as e:
-        return e.status, {"error": str(e)}
-    except build.HistoryError as e:
-        return 400, {"error": str(e)}
-    rev = (d.get("meta") or {}).get("rev")
-    out = {"share": share.record_of(doc), "rev": str(rev) if rev not in (None, "") else None}
-    return 200, out if brief else {**out, "contents": what}
+def project_of(doc: Path) -> Path:
+    """The doc's project: the deepest home-page folder holding it, else the folder `open` would add (root_for)."""
+    doc = doc.resolve()
+    found = [r for r in load_roots() if r in doc.parents]
+    return max(found, key=lambda r: len(r.parts)) if found else root_for(doc)
 
 
-def share_doc(doc: Path) -> tuple[int, dict]:
-    """POST /__bluedoc/share: share.share's answer, or {error} with ShareError's status (413 too big, 501 no gh, 502
-    gh signed out, without the gist scope or failing, 400 a deck, a listing or an unreadable doc)."""
+def project_name(r: Path) -> str:
+    """A home-page folder's name: its parent's for a docs folder."""
+    return r.parent.name if r.name in ("docs", "doc") and r.parent.name else r.name
+
+
+def share_view(doc: Path, brief: bool = False, fresh: bool = True) -> tuple[int, dict]:
+    """GET /__bluedoc/share: share.view's answer with project: {slug, name, remote: its GitHub owner/name or null};
+    brief (&brief=1, the app bar's Share key on load): {share, rev, off} from gh's accounts cached for a minute.
+    fresh=False (after a share) takes the accounts it just read. 400: a deck, a listing or an unreadable doc."""
+    root = project_of(doc)
+    remote = None if brief else share.remote_of(root)
     try:
-        res = share.share(doc)
+        v = share.view(doc, root, remote, brief=brief, fresh=fresh and not brief)
     except share.ShareError as e:
         return e.status, {"error": str(e)}
-    print(f"shared {doc}: {res['share']['link']}", flush=True)
-    return 200, {**res, "rev": res["share"]["rev"]}
+    if brief:
+        return 200, v
+    slug = next((s for s, r in slugs(load_roots()).items() if r == root), None)
+    return 200, {**v, "project": {"slug": slug, "name": project_name(root), "remote": remote}}
+
+
+def share_doc(doc: Path, data: dict) -> tuple[int, dict]:
+    """POST /__bluedoc/share {path, as?, move?, keep?}: share_view's answer after share.share, with created, relinked,
+    moved and warning; or {error} with ShareError's status (409 with mismatch: the gist is on another account than
+    the project's; 413 too big, 501 no gh, 502 gh signed out, without a gist-scoped account or failing, 400 a deck, a
+    listing, an unreadable doc or an account gh can't share as)."""
+    as_ = data.get("as")
+    if as_ is not None and not (isinstance(as_, str) and share.LOGIN_RE.fullmatch(as_)):
+        return 400, {"error": "as: a GitHub login"}
+    root = project_of(doc)
+    try:
+        res = share.share(doc, root, share.remote_of(root), as_, move=data.get("move") is True, keep=data.get("keep") is True)
+    except share.Mismatch as e:
+        return 409, {"error": str(e), "mismatch": e.mismatch}
+    except share.ShareError as e:
+        return e.status, {"error": str(e)}
+    print(f"shared {doc} as {res['as']}: {res['share']['link']}", flush=True)
+    status, v = share_view(doc, fresh=False)
+    if status != 200:
+        return status, v
+    extra = {k: res[k] for k in ("created", "relinked", "moved", "warning") if k in res}
+    return 200, {**v, **extra}
 
 
 def unshare_doc(doc: Path) -> tuple[int, dict]:
@@ -2021,26 +2057,35 @@ def unshare_doc(doc: Path) -> tuple[int, dict]:
     return 200, {"ok": True, "removed": rec}
 
 
-def cmd_share(doc: Path) -> int:
-    """`serve.py share`: share the doc (share.share) and print the notice in red, the link and the gist's URL."""
+def cmd_share(doc: Path, as_: str | None = None, move: bool = False, keep: bool = False) -> int:
+    """`serve.py share`: share the doc (share.share, as its project's account) and print the notice in red, the link
+    and the gist's URL."""
     print(share.red(share.NOTICE, sys.stdout), flush=True)
+    root = project_of(doc)
     try:
-        res = share.share(doc)
+        res = share.share(doc, root, share.remote_of(root), as_, move=move, keep=keep)
+    except share.Mismatch as e:
+        print(f"not shared: {e}: run again with --move or --keep", file=sys.stderr)
+        return 1
     except share.ShareError as e:
         print(f"not shared: {e}", file=sys.stderr)
         return 1
     rec = res["share"]
     what = "created" if res["created"] else "updated"
-    if res["relinked"]:
+    if res["moved"]:
+        what = "moved (a new gist, the old one deleted: the link changed)"
+    elif res["relinked"]:
         what = "created anew (the old gist is gone from GitHub, so the link changed)"
-    print(f"secret gist {what}, rev {rec['rev'] or '-'}: {share.contents_line(res['contents'])}")
+    print(f"secret gist {what} as {rec['user']}, rev {rec['rev'] or '-'}: {share.contents_line(res['contents'])}")
     print(f"link: {rec['link']}")
     print(f"gist: {rec['url']}")
+    if res.get("warning"):
+        print(f"warning: {res['warning']}", file=sys.stderr)
     return 0
 
 
 def cmd_unshare(doc: Path) -> int:
-    """`serve.py unshare`: delete the doc's gist and forget it."""
+    """`serve.py unshare`: delete the doc's gist as the account it is on and forget it."""
     try:
         rec = share.unshare(doc)
     except share.ShareError as e:
@@ -4434,7 +4479,7 @@ def make_handler(port: int, default_to: str):
             if u.path == "/__bluedoc/index.json":
                 return self.json(200, {**index(q.get("root")), "unlocked": self.has_key()})
             if u.path == "/__bluedoc/settings":
-                return self.json(200, settings_view(port))
+                return self.json(200, settings_view(port, fresh=True))
             if u.path == "/__bluedoc/ping":
                 doc = doc_for_url(q.get("path", ""))
                 return self.json(200, {"bluedoc": True, "home": "/", "version": VERSION, "code": CODE_HASH,
@@ -4679,7 +4724,7 @@ def make_handler(port: int, default_to: str):
                 doc = doc_for_url(str(data.get("path") or ""))
                 if not doc:
                     return self.json(404, {"error": "the page's doc is not under a registered folder"})
-                return self.json(*(share_doc(doc) if path == "/__bluedoc/share" else unshare_doc(doc)))
+                return self.json(*(share_doc(doc, data) if path == "/__bluedoc/share" else unshare_doc(doc)))
             if path == "/__bluedoc/chrome-test":
                 given = data.get("path")
                 if given is not None and not isinstance(given, str):
@@ -5275,9 +5320,40 @@ def setting_view(name: str) -> dict:
     return {"value": value, "source": source, "env": env}
 
 
-def settings_view(port: int) -> dict:
+def sharing_view(fresh: bool = True) -> dict:
+    """Settings' Sharing: {projects: [{slug, name, path, account: its sharing account, null: asked on the first share}],
+    accounts: gh's github.com accounts (share.accounts), off: null or why sharing is off ({reason, fix})}. fresh=False
+    takes gh's accounts from the last minute."""
+    accts, off = share.sharing_state(fresh)
+    return {"projects": [{"slug": s, "name": project_name(r), "path": str(r), "account": share.project_account(r)}
+                         for s, r in slugs(load_roots()).items()],
+            "accounts": accts, "off": off}
+
+
+def sharing_change(v) -> tuple[Path, str | None] | str:
+    """POST /__bluedoc/settings' sharing {slug, account}: (the project's folder, the account as gh spells it, or None
+    to ask on the first share), or the error: an unknown slug, or an account gh can't share as."""
+    if not (isinstance(v, dict) and isinstance(v.get("slug"), str) and "account" in v
+            and (v["account"] is None or isinstance(v["account"], str) and share.LOGIN_RE.fullmatch(v["account"]))):
+        return "sharing: {slug, account: a GitHub login or null}"
+    root = slugs(load_roots()).get(v["slug"])
+    if root is None:
+        return f"no project {v['slug']}"
+    if v["account"] is None:
+        return root, None
+    accts, off = share.sharing_state(fresh=False)
+    a = next((x for x in accts if share.same(x["login"], v["account"])), None)
+    if a is None:
+        return f"{off['reason']}: run `{off['fix']}`" if off and not accts else f"gh isn't signed in as {v['account']}: run `gh auth login -s gist`"
+    if not a["usable"]:
+        return f"{a['login']} lacks the gist scope: run `{a['fix']}`"
+    return root, a["login"]
+
+
+def settings_view(port: int, fresh: bool = False) -> dict:
     """GET /__bluedoc/settings: what the Settings page shows. Each setting's source is env, file or default; env is
-    `NAME=value` when the environment sets it (and the page locks it)."""
+    `NAME=value` when the environment sets it (and the page locks it). sharing: sharing_view (fresh: gh asked again;
+    else its accounts from the last minute)."""
     chrome = find_chrome()
     home = Path(os.path.abspath(STATE))
     env = lambda name: f"{name}={os.environ[name]}" if os.environ.get(name) else None  # noqa: E731
@@ -5286,17 +5362,25 @@ def settings_view(port: int) -> dict:
             "tools": {"chrome": {**setting_view("chrome"), "found": chrome,
                                  "version": chrome_version(chrome)[0] if chrome else None},
                       "fontDirs": {**setting_view("fontDirs"), "system": [str(d) for d in fonts.system_font_dirs()]}},
+            "sharing": sharing_view(fresh),
             "server": {"version": VERSION, "code": CODE_HASH, "url": f"http://127.0.0.1:{port}", "port": port,
                        "portEnv": env("BLUEDOC_PORT"), "home": str(home), "homeDisplay": display_path(home),
                        "homeEnv": env("BLUEDOC_HOME"), "started": STARTED, "pid": os.getpid()}}
 
 
 def change_settings(data: dict, port: int) -> tuple[int, dict]:
-    """POST /__bluedoc/settings {planHook?, patchOnly?, chrome?, fontDirs?} into settings.json (null: back to the default):
-    (200, settings_view), 409 when the environment sets one of them, 400 for an unknown name or a bad value."""
+    """POST /__bluedoc/settings {planHook?, patchOnly?, chrome?, fontDirs?, sharing?: {slug, account}} into
+    settings.json (null: back to the default; sharing's account null: ask on the project's first share): (200,
+    settings_view), 409 when the environment sets one of them, 400 for an unknown name or a bad value."""
+    sharing = None
+    if "sharing" in data:
+        sharing = sharing_change(data["sharing"])
+        if isinstance(sharing, str):
+            return 400, {"error": sharing}
+        data = {k: v for k, v in data.items() if k != "sharing"}
     unknown = [k for k in data if k not in settings.DEFAULTS]
-    if unknown or not data:
-        return 400, {"error": f"unknown setting: {', '.join(unknown)}" if unknown else "nothing to change: send planHook, patchOnly, chrome or fontDirs"}
+    if unknown or not (data or sharing):
+        return 400, {"error": f"unknown setting: {', '.join(unknown)}" if unknown else "nothing to change: send planHook, patchOnly, chrome, fontDirs or sharing"}
     for k in data:
         if settings.env_text(k):
             return 409, {"error": f"set by {settings.ENV[k]} in the environment"}
@@ -5327,9 +5411,14 @@ def change_settings(data: dict, port: int) -> tuple[int, dict]:
                 dirs.append(str(p.resolve()))
             changes[k] = list(dict.fromkeys(dirs)) or None   # none left: this system's folders
     try:
-        settings.save(changes)
+        if changes:
+            settings.save(changes)
+        if sharing:
+            share.set_project_account(*sharing)
     except OSError as e:
         return 500, {"error": f"couldn't write {settings.settings_file()}: {e}"}
+    if sharing:
+        changes["sharing"] = {"path": str(sharing[0]), "account": sharing[1]}
     print("settings: " + ", ".join(f"{k} = {json.dumps(v)}" for k, v in changes.items()), flush=True)
     return 200, settings_view(port)
 
@@ -5427,10 +5516,16 @@ def main() -> int:
     p.add_argument("--page", action="append", default=[], metavar="ID", help="only this live page (repeatable)")
     p.add_argument("--width", action="append", default=[], type=int, metavar="PX",
                    help="only this width (repeatable; default: the board's breakpoints)")
-    p = sub.add_parser("share", help="put the doc in a secret GitHub gist (gh) and print its bluedoc.ai link; again: "
-                       "update the same gist")
+    p = sub.add_parser("share", help="put the doc's current revision in a secret GitHub gist (gh) and print its "
+                       "bluedoc.ai link; again: update the same gist")
     p.add_argument("doc", type=Path)
-    p = sub.add_parser("unshare", help="delete the doc's gist and forget it")
+    p.add_argument("--as", dest="as_", metavar="LOGIN", help="share as this GitHub account and make it the project's")
+    g = p.add_mutually_exclusive_group()
+    g.add_argument("--move", action="store_true", help="a gist on another account than the project's: make a new one "
+                   "on the project's account and delete the old one (the link changes)")
+    g.add_argument("--keep", action="store_true", help="a gist on another account than the project's: update it "
+                   "there (the link stays)")
+    p = sub.add_parser("unshare", help="delete the doc's gist as the account it is on and forget it")
     p.add_argument("doc", type=Path)
     a = ap.parse_args()
 
@@ -5484,7 +5579,7 @@ def main() -> int:
         print(f"{a.doc}: not a {DOC_FILES} file", file=sys.stderr)
         return 2
     if a.cmd == "share":
-        return cmd_share(doc)
+        return cmd_share(doc, a.as_, a.move, a.keep)
     if a.cmd == "unshare":
         return cmd_unshare(doc)
     if a.cmd == "open":

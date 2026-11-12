@@ -110,7 +110,7 @@ class HomeSettings(ChromePage):
         self.start()
         t = self.settings()
         self.assertEqual(t.ev("[...document.querySelectorAll('.bd-st-nav a')].map(a => a.textContent)"),
-                         ["Folders", "Code links", "Frameworks", "Agents", "Tools", "Server"])
+                         ["Folders", "Code links", "Frameworks", "Agents", "Sharing", "Tools", "Server"])
         rows = t.ev("[...document.querySelectorAll('#folders .bd-st-row:not(.add)')].map(r => [r.querySelector('b').textContent, r.querySelector('.bd-st-l span').textContent])")
         self.assertEqual([(p.split("/w/")[-1], n) for p, n in rows], [("acme-shop/docs", "2 docs"), ("acme-fit/docs", "1 doc")])
         self.assertEqual(t.ev("[...document.querySelectorAll('#repos .bd-st-row b')].map(b => b.textContent)"), ["acme-shop"])
@@ -232,6 +232,31 @@ class HomeSettings(ChromePage):
                          "Restarting… this page reloads when the server is back.")
         t.wait_for("!window.__before && location.pathname === '/settings' && !!document.querySelector('#server .bd-st-row')", 20)
         self.assertNotEqual(json.loads(self.server.req("GET", "/__bluedoc/ping")[1])["started"], started)
+        self.assertEqual(self.browser.errors, [])
+
+    def test_sharing_sets_each_project_s_account(self) -> None:
+        self.start(STANDIN_GH_ACCOUNTS="jlee-acme,jlee:active,jlee-oss:nogist")
+        t = self.settings()
+        projects = "[...document.querySelectorAll('#sharing [data-bd=sharing] .bd-st-row')]"
+        self.assertEqual(t.ev(f"{projects}.map(r => [r.querySelector('.bd-sh-path').textContent.split('/w/').pop(), r.querySelector('.bd-sh-acct').textContent])"),
+                         [["acme-shop/docs", "Ask on first share"], ["acme-fit/docs", "Ask on first share"]])
+        self.assertEqual(t.ev("[...document.querySelectorAll('#sharing [data-bd=gh-accounts] .bd-st-row')].map(r => [r.querySelector('b').textContent, r.querySelector('.bd-sh-st').textContent])"),
+                         [["jlee-acme", "gist scope"], ["jlee", "gist scope · gh's active account"], ["jlee-oss", "no gist scope: gh auth refresh -s gist -u jlee-oss"]])
+        # the menu: the usable accounts and Ask on first share as radios, the unusable one off with its fix
+        t.ev(f"{projects}[0].querySelector('.bd-sh-acct').focus()")
+        for kind in ("rawKeyDown", "keyUp"):
+            self.browser.call("Input.dispatchKeyEvent", {"type": kind, "key": "Enter", "code": "Enter", "windowsVirtualKeyCode": 13}, t.session)
+        t.wait_for("document.querySelectorAll('[role=menuitemradio]').length === 3")
+        self.assertEqual(t.ev("[...document.querySelectorAll('[role=menuitemradio]')].map(r => [r.querySelector('b')?.textContent || r.textContent, r.querySelector('small')?.textContent || '', r.getAttribute('aria-checked')])"),
+                         [["jlee-acme", "", "false"], ["jlee", "gh's active account", "false"], ["Ask on first share", "", "true"]])
+        self.assertEqual(t.ev("[...document.querySelectorAll('[role=menuitem][data-disabled]')].map(r => r.textContent)"),
+                         ["jlee-oss · no gist scope: gh auth refresh -s gist -u jlee-oss", "Another account: gh auth login -s gist"])
+        name = t.ev(f"{projects}[0].querySelector('b').textContent")
+        t.ev("document.querySelectorAll('[role=menuitemradio]')[1].click()")
+        self.assertEqual(t.wait_for("document.querySelector('.bd-toast')?.textContent"), f"Saved · {name} shares as jlee")
+        self.assertEqual(t.wait_for(f"{projects}[0].querySelector('.bd-sh-acct b')?.textContent"), "jlee")
+        saved = json.loads(self.server.req("GET", "/__bluedoc/settings", headers={"X-Bluedoc": "1"})[1])["sharing"]["projects"]
+        self.assertEqual([p["account"] for p in saved], ["jlee", None])
         self.assertEqual(self.browser.errors, [])
 
 
