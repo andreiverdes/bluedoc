@@ -1202,75 +1202,79 @@ class Archive(ChromePage):
 
 @unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")
 class NarrowWindow(ChromePage):
-    """A doc's column is centred in its room, between the stripes and the docked panes, at the reader's stored width;
-    a room narrower than that reads at the room's width. Either handle moves both edges, so the column stays centred."""
+    """A doc's column fills its room, between the stripes and the docked panes. Each docked pane takes a handle on the
+    edge it shares with the page: dragging it widens or narrows the pane, the page takes what is left, the pane stays
+    docked (the page keeps READ_W), and the width is kept."""
 
     COL = "Math.round(document.querySelector('.bd-shell > main').getBoundingClientRect().width)"
-    EDGES = "(r => [Math.round(r.left), Math.round(r.right)])(document.querySelector('.bd-shell > main').getBoundingClientRect())"
-    ROOM = ("(s => [parseFloat(s.getPropertyValue('--room-l')), document.documentElement.clientWidth - parseFloat(s.getPropertyValue('--room-r'))])"
-            "(getComputedStyle(document.documentElement))")
+    ROOM = "(s => document.documentElement.clientWidth - parseFloat(s.getPropertyValue('--room-l')) - parseFloat(s.getPropertyValue('--room-r')))(getComputedStyle(document.documentElement))"
+    PANE = "Math.round(document.querySelector('{}').getBoundingClientRect().width)"
+    DOCKED = "document.documentElement.classList.contains('bd-lp-dock') && document.documentElement.classList.contains('bd-sp-dock')"
 
     def size(self, t: Tab, w: int) -> None:
         self.browser.call("Emulation.setDeviceMetricsOverride", {"width": w, "height": 900, "deviceScaleFactor": 1, "mobile": False}, t.session)
         t.wait_for(f"innerWidth === {w}")
 
-    def centred(self, t: Tab) -> None:
-        (left, right), (lo, hi) = t.ev(self.EDGES), t.ev(self.ROOM)
-        self.assertLessEqual(abs((left - lo) - (hi - right)), 1, "centred in its room")
+    def fills(self, t: Tab, pad: int) -> None:
+        self.assertLessEqual(abs(t.ev(self.COL) - (t.ev(self.ROOM) - 2 * pad)), 1, "the column fills its room")
 
-    def test_a_narrow_room_reads_at_its_width_and_a_wide_one_keeps_the_stored_width(self) -> None:
+    def test_the_column_fills_its_room_at_any_window(self) -> None:
         t = self.open(self.server.url_for(self.plan))
-        t.ev("localStorage.setItem('bluedoc:width', '560')")
-        t.go(t.ev("location.href"))
         t.ev("BP.sidebar({open: false}), BP.contents({open: false})")
-        # 700 px: the stripes' bands (56 px a side) and the paddings (16 px from 900 px down) leave under the stored 560
+        # 700 px: the stripes' bands (56 px a side) and the paddings (16 px from 900 px down)
         self.size(t, 700)
         t.wait_for(f"{self.COL} === document.documentElement.clientWidth - 112 - 32")
-        self.centred(t)
-        # 1600 px: the stored width, with its handles
+        # 1600 px, no pane docked: no handle, the column as wide as the room
         self.size(t, 1600)
-        t.wait_for(f"{self.COL} === 560")
-        self.centred(t)
-        self.assertEqual(t.ev("[...document.querySelectorAll('.bd-rh-col')].map(h => getComputedStyle(h).display)"), ["block", "block"])
-        # both panes docked: still 560, centred between them
+        t.wait_for(f"{self.COL} > 1400")
+        self.fills(t, 20)
+        self.assertEqual(t.ev("[...document.querySelectorAll('.bd-rh')].map(h => getComputedStyle(h).display)"), ["none", "none"])
+        # both panes docked: a handle on each pane's edge, the column fills what they leave
         t.ev("BP.sidebar({open: true}), BP.contents({open: true})")
-        t.wait_for(f"document.documentElement.classList.contains('bd-lp-dock') && document.documentElement.classList.contains('bd-sp-dock') && {self.COL} === 560")
-        self.centred(t)
+        t.wait_for(self.DOCKED)
+        time.sleep(0.4)
+        self.fills(t, 20)
+        self.assertEqual(t.ev("[...document.querySelectorAll('.bd-rh')].map(h => getComputedStyle(h).display)"), ["block", "block"])
         self.assertEqual(self.browser.errors, [])
 
-    def drag(self, t: Tab, handle: int, to: int) -> None:
-        """Press the column's handle (0 left, 1 right), move the mouse to x = to, release: real pointer events. Waits first,
-        so two drags in a row aren't a double press (which resets the width)."""
+    def drag(self, t: Tab, side: str, to: int) -> None:
+        """Press a pane's handle (left or right), move the mouse to x = to, release: real pointer events. Waits first, so two
+        drags in a row aren't a double press (which resets the width)."""
         time.sleep(0.4)
-        x = t.ev(f"(r => Math.round(r.left + r.width / 2))(document.querySelectorAll('.bd-rh-col')[{handle}].getBoundingClientRect())")
+        x = self.handle_x(t, side)
         for kind, at in (("mousePressed", x), ("mouseMoved", (x + to) // 2), ("mouseMoved", to), ("mouseReleased", to)):
             self.browser.call("Input.dispatchMouseEvent", {"type": kind, "x": at, "y": 450, "button": "left", "buttons": 0 if kind == "mouseReleased" else 1,
                                                            "clickCount": 1}, t.session)
             time.sleep(0.05)
 
-    def handle_x(self, t: Tab, i: int) -> int:
-        return t.ev(f"(r => Math.round(r.left + r.width / 2))(document.querySelectorAll('.bd-rh-col')[{i}].getBoundingClientRect())")
+    def handle_x(self, t: Tab, side: str) -> int:
+        return t.ev(f"(r => Math.round(r.left + r.width / 2))(document.querySelector('.bd-rh-{side}').getBoundingClientRect())")
 
-    def test_either_handle_moves_both_edges(self) -> None:
+    def test_a_handle_resizes_its_pane_and_the_column_takes_the_rest(self) -> None:
         t = self.open(self.server.url_for(self.plan))
-        self.size(t, 1420)
-        t.ev("BP.sidebar({open: false}), BP.contents({open: false})")
-        t.wait_for("!document.documentElement.classList.contains('bd-sp-dock') && !document.documentElement.classList.contains('bd-lp-dock')")
-        time.sleep(0.3)
-        w0 = t.ev(self.COL)
-        # the right handle 60 px out: the column 120 px wider, still centred
-        self.drag(t, 1, self.handle_x(t, 1) + 60)
-        t.wait_for(f"Math.abs({self.COL} - {w0 + 120}) <= 2")
-        self.centred(t)
-        self.assertLessEqual(abs(t.ev("+localStorage.getItem('bluedoc:width')") - (w0 + 120)), 2)
-        # the left handle 40 px in: 80 px narrower
-        self.drag(t, 0, self.handle_x(t, 0) + 40)
-        t.wait_for(f"Math.abs({self.COL} - {w0 + 40}) <= 2")
-        self.centred(t)
-        # a reload keeps it
+        self.size(t, 1600)
+        t.ev("BP.sidebar({open: true}), BP.contents({open: true})")
+        t.wait_for(self.DOCKED)
+        time.sleep(0.4)
+        cp, sp, col = t.ev(self.PANE.format(".bp-side")), t.ev(self.PANE.format(".bd-sp")), t.ev(self.COL)
+        # the right pane's handle 80 px left: that pane 80 px wider, the column 80 px narrower
+        self.drag(t, "right", self.handle_x(t, "right") - 80)
+        t.wait_for(f"Math.abs({self.PANE.format('.bd-sp')} - {sp + 80}) <= 2 && Math.abs({self.COL} - {col - 80}) <= 2")
+        self.assertLessEqual(abs(t.ev("+localStorage.getItem('bluedoc:doc-right-w')") - (sp + 80)), 2)
+        # the left pane's handle 60 px right: the Contents pane 60 px wider
+        self.drag(t, "left", self.handle_x(t, "left") + 60)
+        t.wait_for(f"Math.abs({self.PANE.format('.bp-side')} - {cp + 60}) <= 2 && Math.abs({self.COL} - {col - 140}) <= 2")
+        self.fills(t, 20)
+        # far right: the pane stops where the column keeps READ_W, and both stay docked
+        self.drag(t, "left", 1500)
+        t.wait_for(f"{self.COL} <= 642")
+        self.assertGreaterEqual(t.ev(self.COL), 638)
+        self.assertTrue(t.ev(self.DOCKED))
+        # a reload keeps the widths
+        cp2 = t.ev(self.PANE.format(".bp-side"))
         t.go(t.ev("location.href"))
-        self.size(t, 1420)
-        t.wait_for(f"Math.abs({self.COL} - {w0 + 40}) <= 2")
+        self.size(t, 1600)
+        t.wait_for(f"Math.abs({self.PANE.format('.bp-side')} - {cp2}) <= 2 && Math.abs({self.PANE.format('.bd-sp')} - {sp + 80}) <= 2")
         self.assertEqual(self.browser.errors, [])
 
 

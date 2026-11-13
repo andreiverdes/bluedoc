@@ -31,7 +31,7 @@ CODE_PATH = "/g/shaZAB1ze-L25qJChRpj2g"   # the gist b21699001d737be2f6e6a242851
 FRAME = "document.getElementById('doc')"
 IN = "(w => {})(" + FRAME + " && " + FRAME + ".contentWindow)"
 # what a shared page may store: the view prefs (the template's VIEW_PREFS), never reader state
-VIEW_PREFS = {"bluedoc:theme", "bluedoc:width", "bluedoc:design-left-w", "bluedoc:design-right-w", "bluedoc:comments", "bluedoc:sp-tab",
+VIEW_PREFS = {"bluedoc:theme", "bluedoc:doc-left-w", "bluedoc:doc-right-w", "bluedoc:design-left-w", "bluedoc:design-right-w", "bluedoc:comments", "bluedoc:sp-tab",
               "bluedoc:design-panel", "bluedoc:listing-panel", "bluedoc:listing-tab"}
 # the stand-in viewer: the page into a frame, window.bluedocShare set between open() and write(), as viewer.ts does
 # (hash: an old link's fragment; a /g/<code> link's path is enough)

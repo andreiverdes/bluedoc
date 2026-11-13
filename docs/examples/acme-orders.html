@@ -59,7 +59,7 @@
   --sans: "Inter Variable", Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --mono: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   --ease: cubic-bezier(0.23, 1, 0.32, 1);
-  --content-w: 920px; --bar-h: 52px;
+  --bar-h: 52px;
   --top-h: calc(var(--bar-h) + var(--rv-h, 0px));   /* app bar plus the revision strip, when shown */
 }
 :root[data-theme="light"] { color-scheme: light; }
@@ -300,11 +300,10 @@ button.bd-emo:hover, button.bd-emo[aria-expanded="true"] { background: var(--sel
 html.bd-resizing body::before { transition: none; }
 @media print { body::before { display: none !important; } }
 
-/* shell: the content column (at most --content-w) centred in the room between the stripes and the docked panes
-   (--room-l, --room-r: applyWidth) */
+/* shell: the content column fills the room between the stripes and the docked panes (--room-l, --room-r: applyWidth) */
 .bd-shell { --pad: 20px; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto 1fr;
   padding: 0 calc(var(--room-r, var(--stripe-w)) + var(--pad)) 120px calc(var(--room-l, var(--stripe-w)) + var(--pad)); }
-.bd-head, .bd-tldr, .bd-shell > main { justify-self: center; width: 100%; max-width: var(--content-w); min-width: 0; }
+.bd-head, .bd-tldr, .bd-shell > main { width: 100%; min-width: 0; }
 .bd-head { padding-top: 56px; }
 /* a doc's Contents pane (the rail): Contents, Tracker, Status and Related, docked beside the page where it keeps
    READ_W, else over it (html.bd-lp-open, html.bd-lp-dock: applyWidth) */
@@ -2230,8 +2229,8 @@ svg.anim .bp-edge.k-async { animation: bp-march 1.6s linear infinite; }
 @container bp-opts (max-width: 360px) { .bp-opt .yp { display: none; } }   /* the tint and the filled radio still mark the pick */
 @container bp-msgs (max-width: 420px) { .bp-msg time { display: none; } }
 
-/* the column's drag handles, above 900 px: both edges move as one, so the column stays centred in its room */
-.bd-rh { position: fixed; top: var(--bar-h); bottom: 0; z-index: 30; width: 16px; margin-left: -8px; cursor: col-resize; touch-action: none; display: none; }
+/* the docked panes' drag handles, above 900 px, on the edge each shares with the page (JS sets --cp-w or --lp-w, and --sp-w) */
+.bd-rh { position: fixed; top: var(--top-h); bottom: 0; z-index: 43; width: 16px; margin-left: -8px; cursor: col-resize; touch-action: none; display: none; }
 .bd-rh::before { content: ""; position: absolute; top: 0; bottom: 0; left: 7.5px; width: 1px; background: var(--accent); opacity: 0; transition: opacity .15s; }
 .bd-rh i { position: absolute; left: 5px; top: 50%; width: 6px; height: 44px; margin-top: -22px; border-radius: 3px; background: var(--line-strong);
   box-shadow: 0 0 0 2px var(--canvas); opacity: .8; transition: background .15s, opacity .15s, height .15s, margin-top .15s; }
@@ -2250,7 +2249,6 @@ html.bd-resizing, html.bd-resizing * { cursor: col-resize !important; user-selec
   body { background: #fff; font-size: 12pt; }
   .bd-bar, .bp-side-toc, .bp-tb, .bp-hint, .bp-cl-h .tools, .bp-code-h button, .bd-rh, .bd-wchip { display: none !important; }
   .bd-shell { display: block; padding: 0; }
-  .bd-head, .bd-tldr, .bd-shell > main { max-width: none; }
   /* the Contents pane prints only its document sections, inline under the TL;DR (it follows the TL;DR in the DOM) */
   .bp-side:not(:has(.bd-meta)) { display: none !important; }
   .bp-side { position: static !important; width: auto !important; max-height: none !important; overflow: visible !important; margin: 0 !important; padding: 0 !important;
@@ -2272,12 +2270,11 @@ html.bd-resizing, html.bd-resizing * { cursor: col-resize !important; user-selec
 :root[data-layout="board"] { --lp-w: 240px; }
 :root[data-layout="board"], :root[data-layout="board"] body { height: 100%; overflow: hidden; }
 :root[data-layout="board"] .bd-shell { display: block; padding: 0; }
-:root[data-layout="board"] :is(.bp-side, .bd-rh:not(.bd-rh-p)) { display: none !important; }
+:root[data-layout="board"] .bp-side { display: none !important; }
 .bd-boardblk { position: fixed; z-index: 1; top: var(--top-h); left: var(--room-l, var(--stripe-w)); right: var(--room-r, var(--stripe-w)); bottom: 0; margin: 0; transition: left .22s var(--ease), right .22s var(--ease); }
 html.bd-resizing .bd-boardblk { transition: none; }
-/* the panels' edges on the board take the content width's drag handles; JS sets --lp-w and --sp-w */
-.bd-rh-p { top: var(--top-h); z-index: 43; }
-.bd-rh-left { left: calc(var(--stripe-w) + var(--lp-w) + var(--pane-gap) / 2); }
+.bd-rh-left { left: calc(var(--stripe-w) + var(--cp-w) + var(--pane-gap) / 2); }
+:root[data-layout="board"] .bd-rh-left { left: calc(var(--stripe-w) + var(--lp-w) + var(--pane-gap) / 2); }
 .bd-rh-right { left: calc(100% - var(--stripe-w) - var(--sp-w) - var(--pane-gap) / 2); }
 html:not(.bd-lp-dock) .bd-rh-left, html:not(.bd-sp-dock) .bd-rh-right { display: none; }
 .bd-board-ph { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 10px; background: var(--inset); color: var(--fg-subtle); font-size: 13px; }
@@ -2293,7 +2290,7 @@ html:not(.bd-lp-dock) .bd-rh-left, html:not(.bd-sp-dock) .bd-rh-right { display:
 .bd-pab-box.ph { width: auto !important; height: auto !important; padding: 20px; color: var(--fg-muted); font-size: 11pt; }
 @media print {
   html.bd-printb, html.bd-printb body { height: auto !important; overflow: visible !important; }
-  html.bd-printb :is(.bd-boardblk, .bd-board-ph, .bd-lp-ui, .bd-rh-p, .bd-sp-h, .bd-sp-sec:not(.bd-sp-brief)) { display: none !important; }
+  html.bd-printb :is(.bd-boardblk, .bd-board-ph, .bd-lp-ui, .bd-rh, .bd-sp-h, .bd-sp-sec:not(.bd-sp-brief)) { display: none !important; }
   html.bd-printb :is(.bd-lp, .bd-sp) { display: block !important; position: static !important; width: auto !important; height: auto !important; max-height: none !important;
     transform: none !important; visibility: visible !important; background: none !important; box-shadow: none !important; }
   html.bd-printb .bd-sp-brief { display: block !important; overflow: visible !important; padding: 0 !important; font-size: inherit; }
@@ -3654,7 +3651,7 @@ const docId = DOC.id || 'doc';
 // localStorage is the only store. Layout prefs (`bluedoc:*`) always stay in this browser. A shared page (VIEW_ONLY)
 // stores only the view prefs below; every other key, reader state and the rest of the layout prefs, lives in memory
 // for the visit, and what this browser kept before (another doc of the same id, an older viewer) is never read.
-const VIEW_PREFS = new Set(['bluedoc:theme', 'bluedoc:width', 'bluedoc:design-left-w', 'bluedoc:design-right-w', 'bluedoc:comments', 'bluedoc:sp-tab',
+const VIEW_PREFS = new Set(['bluedoc:theme', 'bluedoc:doc-left-w', 'bluedoc:doc-right-w', 'bluedoc:design-left-w', 'bluedoc:design-right-w', 'bluedoc:comments', 'bluedoc:sp-tab',
   'bluedoc:design-panel', 'bluedoc:listing-panel', 'bluedoc:listing-tab']);
 const store = (() => {
   let ok = true; const mem = {};
@@ -4431,16 +4428,13 @@ function placeMeta() {
   sideBody.append(metaRail);
 }
 
-/* ---------- the panes and the content width ---------- */
+/* ---------- the panes and the page's room ---------- */
 // A pane docks beside the page where the page keeps READ_W (a board: its left panel above 900 px, its right one from
 // DOCK_MIN), the right one first; else it lies over the page, and then the other side's pane hides (the one opened
-// last, lastPane, stays). The page lays out in the room between the stripes and the docked panes (--room-l, --room-r):
-// a doc's column centred there at the reader's width (narrowed to fit), a board filling it (fitPanels).
-// The width is a reader preference, shared by every bluedoc page in this browser; no stored width means the default.
-// Double-click a handle (or press Home on it) to go back to it.
-const WIDTH_KEY = 'bluedoc:width', MIN_W = 520, READ_W = 640, PAGE_PAD = 20;   // PAGE_PAD = .bd-shell side padding
+// last, lastPane, stays). The page fills the room between the stripes and the docked panes (--room-l, --room-r): a
+// doc's column, a board. The docked panes' widths are the reader's (PANELS, fitPanels).
+const READ_W = 640, PAGE_PAD = 20;   // PAGE_PAD = .bd-shell side padding
 const root = document.documentElement;
-let userW = +store.get(WIDTH_KEY) || 0;
 const cssPx = v => parseFloat(getComputedStyle(root).getPropertyValue(v)) || 0;
 let panelOpen = false;
 const DOCK_MIN = 1101;
@@ -4456,10 +4450,6 @@ function docks() {
   return { l, r };
 }
 const dockW = () => docks().r ? cssPx('--sp-w') : 0;
-// the room's width, between the stripes and the docked panes
-const roomW = () => root.clientWidth - cssPx('--room-l') - cssPx('--room-r');
-// the widest the column can be: the room between the paddings
-const maxW = () => Math.max(MIN_W, roomW() - 2 * (innerWidth > 900 ? PAGE_PAD : 16));   // .bd-shell's --pad
 // a doc's Contents: open where it docks until the reader leaves it open or shut, per doc (CP_KEY: startContents)
 const CP_KEY = `bluedoc:contents:${docId}`;
 let cpOpen = false;
@@ -4530,18 +4520,14 @@ function keepPlace(fn) {
   if (at && scrollY > 0) { const d = at.getBoundingClientRect().top - y; if (Math.abs(d) > 1) scrollBy({ top: d, behavior: 'instant' }); }
 }
 function applyWidth() {
-  if (IS_DESIGN) { root.dataset.layout = 'board'; fitPanels(); }
+  if (IS_DESIGN) root.dataset.layout = 'board';
+  fitPanels();
   const d = docks();
   // a pane over the page hides the other side's: the one opened last stays
   if (LEFT.open() && panelOpen && !(d.l && d.r)) { if (lastPane === 'l') SIDE.setOpen(false, false); else LEFT.set(false, false); return; }
   root.classList.toggle('bd-sp-dock', d.r); root.classList.toggle('bd-lp-dock', d.l);
   root.style.setProperty('--room-l', stripeW() + (d.l ? leftW() + paneGap() : 0) + 'px');
   root.style.setProperty('--room-r', stripeW() + (d.r ? cssPx('--sp-w') + paneGap() : 0) + 'px');
-  // a design page is its board, full-bleed in the room: no column, no handles
-  if (IS_DESIGN) { fitTray(); return; }
-  if (userW) root.style.setProperty('--content-w', Math.min(userW, maxW()) + 'px');
-  else root.style.removeProperty('--content-w');
-  placeHandles();
   fitTray();
 }
 // The tray stays in its room: the window between the stripes, less the panes open beside or over the page above 900 px
@@ -4599,73 +4585,58 @@ function resizeHandle(o) {
   });
   return el;
 }
-// both edges of the column move as one is dragged, so it stays centred in its room
-const handles = [-1, 1].map(dir => resizeHandle({ label: 'Content width', title: 'Drag to change the content width · double-click to reset', dir: 2 * dir,
-  width: () => main.getBoundingClientRect().width, reset: resetWidth, set: setWidth }));
-for (const el of handles) { el.classList.add('bd-rh-col'); el.setAttribute('aria-valuemin', MIN_W); }
-const wchip = h('div', { class: 'bd-wchip', 'aria-hidden': 'true' });
-document.body.append(...handles, wchip);
-function placeHandles() {
-  const r = main.getBoundingClientRect();
-  if (!r.width) return;
-  // in the gap beside the column when there is one, else on the column's edge
-  const right = root.clientWidth - cssPx('--room-r') - r.right;
-  const off = right < 2 * PAGE_PAD ? PAGE_PAD / 2 : Math.min(16, right / 2);
-  handles[0].style.left = (r.left - off) + 'px';
-  handles[1].style.left = (r.right + off) + 'px';
-  for (const el of handles) { el.setAttribute('aria-valuenow', Math.round(r.width)); el.setAttribute('aria-valuemax', maxW()); }
-}
 let chipT = 0;
-// the width being set, centred at x (default: over the column), its top at y (default: under the app bar)
+// the width being set, centred at x (default: over the page), its top at y (default: under the app bar)
+const wchip = h('div', { class: 'bd-wchip', 'aria-hidden': 'true' });
+document.body.append(wchip);
 function showChip(px, x, y) {
   wchip.innerHTML = `<b>${Math.round(px)} px</b> · double-click a handle to reset`;
   wchip.style.left = x == null ? '' : x + 'px';
   wchip.style.top = y == null ? '' : y + 'px';
   wchip.classList.add('on'); clearTimeout(chipT); chipT = setTimeout(() => wchip.classList.remove('on'), 1200);
 }
-function setWidth(w, save) {
-  userW = Math.round(Math.min(Math.max(w, MIN_W), maxW()));
-  applyWidth(); showChip(main.getBoundingClientRect().width);
-  if (save) store.set(WIDTH_KEY, String(userW));
-}
-function resetWidth() { userW = 0; store.del(WIDTH_KEY); applyWidth(); toast('Content width reset'); }
 
-// A design page's panels take the same handles on the edge each shares with the board: Screens on the left (while
-// open), Brief, Comments and Revisions on the right (while docked). Their widths are reader prefs too; each panel
-// stays within its bounds and leaves the board at least BOARD_MIN wide. A storelisting's left panel holds four tabs
-// and the Colors pane's rows: at least 300 px.
+// The docked panes take drag handles on the edge each shares with the page: the left one (a doc's Contents, a board's
+// Screens) and the right one (Brief, Comments, Revisions); the page fills what they leave. Their widths are reader
+// prefs, a doc's apart from a board's. Each pane stays within its bounds; docked, it leaves the page its least width
+// (a board: BOARD_MIN; a doc: READ_W and its paddings, so a doc's pane stays docked while it is dragged). A
+// storelisting's left panel holds four tabs and the Colors pane's rows: at least 300 px.
 const BOARD_MIN = 480;
 const PANELS = IS_DESIGN ? [
   { side: 'left', v: '--lp-w', key: 'bluedoc:design-left-w', min: IS_LISTING ? 300 : 240, max: 560, dir: 1, label: IS_LISTING ? 'Width of the left panel' : `Width of the ${SCREEN}s panel`, on: () => docks().l },
   { side: 'right', v: '--sp-w', key: 'bluedoc:design-right-w', min: 280, max: 640, dir: -1, label: 'Width of the side panel', on: () => docks().r },
-] : [];
+] : [
+  { side: 'left', v: '--cp-w', key: 'bluedoc:doc-left-w', min: 200, max: 520, dir: 1, label: 'Width of the Contents pane', on: () => root.classList.contains('bd-lp-dock') },
+  { side: 'right', v: '--sp-w', key: 'bluedoc:doc-right-w', min: 280, max: 640, dir: -1, label: 'Width of the side panel', on: () => root.classList.contains('bd-sp-dock') },
+];
 for (const p of PANELS) {
   p.user = +store.get(p.key) || 0;
   p.el = resizeHandle({ label: p.label, title: 'Drag to change the panel width · double-click to reset', dir: p.dir, width: () => p.w,
     set: (w, save) => {
-      p.user = Math.round(w); fitPanels();
-      // over the board, under its toolbar
+      p.user = Math.round(w); applyWidth();
+      // a board's: over the board, under its toolbar; a doc's: over the page
       const r = $('.bd-boardblk')?.getBoundingClientRect(), tb = $('.bd-btb')?.getBoundingClientRect();
       showChip(p.w, r ? r.left + r.width / 2 : null, tb ? tb.bottom + 12 : null);
       if (save) { p.user = p.w; store.set(p.key, String(p.w)); }
     },
-    reset: () => { p.user = 0; store.del(p.key); fitPanels(); toast('Panel width reset'); } });
-  p.el.classList.add('bd-rh-p', 'bd-rh-' + p.side); p.el.setAttribute('aria-valuemin', p.min);
+    reset: () => { p.user = 0; store.del(p.key); applyWidth(); toast('Panel width reset'); } });
+  p.el.classList.add('bd-rh-' + p.side); p.el.setAttribute('aria-valuemin', p.min);
 }
 document.body.append(...PANELS.map(p => p.el));
-// left first, then right: each at most what the other one (when docked) leaves beside BOARD_MIN between the stripes; no
-// chosen width is the CSS one
+// left first, then right: a docked one (a board's, always) at most what the other one (when docked) leaves beside the
+// page's least width between the stripes; no chosen width is the CSS one
 function fitPanels() {
+  const g = paneGap(), least = IS_DESIGN ? BOARD_MIN : READ_W + 2 * PAGE_PAD + g;
   for (const p of PANELS) if (p.w == null) p.w = p.def = cssPx(p.v);
   for (const p of PANELS) {
-    const q = PANELS.find(x => x !== p), max = Math.max(p.min, Math.min(p.max, innerWidth - 2 * stripeW() - BOARD_MIN - (q.on() ? q.w : 0)));
+    const q = PANELS.find(x => x !== p), room = root.clientWidth - 2 * stripeW() - least - (q.on() ? q.w + (IS_DESIGN ? 0 : g) : 0);
+    const max = Math.max(p.min, IS_DESIGN || p.on() ? Math.min(p.max, room) : p.max);
     p.w = Math.round(Math.min(Math.max(p.user || p.def, p.min), max));
     root.style.setProperty(p.v, p.w + 'px');
     p.el.setAttribute('aria-valuenow', p.w); p.el.setAttribute('aria-valuemax', max);
   }
 }
 addEventListener('resize', applyWidth);
-if ('ResizeObserver' in window) new ResizeObserver(placeHandles).observe(main);
 // a doc's Contents over the page: a press outside it, Esc or a link in it hides it (compare view's Esc, which leaves it,
 // sees the key as handled)
 const cpOver = () => !IS_DESIGN && cpOpen && !docks().l;
