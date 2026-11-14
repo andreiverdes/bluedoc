@@ -82,7 +82,7 @@ body { font-family: var(--font-hz-sans, Inter, system-ui, sans-serif); -webkit-f
 .bd-pr > .bd-ni > svg { width: 15px; height: 15px; }
 .bd-pr > .bd-ni > .bd-pe { --s: 15px; }
 /* a project's emoji, sized as the icon it takes the place of; a name with its icon or emoji (menus, lists) */
-.bd-pe { flex: none; display: inline-grid; place-items: center; width: var(--s, 16px); height: var(--s, 16px); overflow: hidden; font: 400 calc(var(--s, 16px) - 1px)/1 var(--font-hz-sans); }
+.bd-pe { flex: none; display: inline-grid; place-items: center; width: var(--s, 16px); height: var(--s, 16px); font: 400 calc(var(--s, 16px) * .86)/1 var(--font-hz-sans); }
 .bd-pnm { display: inline-flex; align-items: center; gap: 6px; min-width: 0; max-width: 100%; vertical-align: bottom; }
 .bd-pnm > svg { flex: none; color: var(--color-hz-fg-subtle); }
 .bd-pnm > span:last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -156,10 +156,12 @@ body { font-family: var(--font-hz-sans, Inter, system-ui, sans-serif); -webkit-f
 /* the hero: a pixel-art banner (dark and light, one per theme; assets/vendor/hero, 1672 × 523 webp, about 200 KB each)
    at the top, dissolving into the page through a dither drawn in CSS (.bd-dz below), so it meets the page
    colour with no seam. The title sits where it dissolves: padding in % is of the hero's width, like the banner's height.
-   No overflow clip: the banner is a background inside its own box, and the search field's shadow reaches past the hero. */
-.bd-hero { position: relative; isolation: isolate; display: flex; flex-direction: column; align-items: center; container: bd-hero / inline-size;
-  padding: max(170px, min(15%, 251px)) 20px 30px; box-sizing: border-box; background: var(--color-hz-canvas); }
-.bd-hero-pix { position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: min(100%, 1672px); z-index: -1; aspect-ratio: 1672 / 523; min-height: 320px; pointer-events: none;
+   The banner and the content share one grid cell, so the hero is as tall as the taller of the two: the dissolve ends
+   inside the hero, never over the docs under it. No overflow clip: the search field's shadow reaches past the hero. */
+.bd-hero { position: relative; isolation: isolate; display: grid; grid-template: auto / minmax(0, 1fr); container: bd-hero / inline-size;
+  box-sizing: border-box; background: var(--color-hz-canvas); }
+.bd-hero-in { grid-area: 1 / 1; display: flex; flex-direction: column; align-items: center; min-width: 0; padding: max(170px, min(15%, 251px)) 20px 30px; }
+.bd-hero-pix { grid-area: 1 / 1; position: relative; justify-self: center; align-self: start; width: min(100%, 1672px); z-index: -1; aspect-ratio: 1672 / 523; min-height: 320px; pointer-events: none;
   background: url(/__bluedoc/vendor/hero/hero-dark.webp?v=__BLUEDOC_VENDOR_V__) center top / cover no-repeat; }
 [data-hz-theme="light"] .bd-hero-pix { background-image: url(/__bluedoc/vendor/hero/hero-light.webp?v=__BLUEDOC_VENDOR_V__); }
 /* the dissolve, in screen pixels: 15 dither levels (1 CSS px cells on one 4 × 4 Bayer grid) cut into bands by hard-stop
@@ -715,7 +717,7 @@ button.bd-fc:hover { color: var(--color-hz-fg); }
   .bd-hero-bar { top: 6px; left: 6px; right: 6px; gap: 2px; }
   .bd-app :is(.bd-hero-bar, .bd-top, .bd-sb-foot, .bd-sb-top, .bd-st-bar) button[aria-label] { width: 40px; height: 40px; }
   .bd-hero-pix { min-height: 0; }
-  .bd-hero { padding: calc(100vw * 523 / 1672 - 6px) 12px 22px; }
+  .bd-hero-in { padding: calc(100vw * 523 / 1672 - 6px) 12px 22px; }
   .bd-hero h1 { font-size: 25px; }
   .bd-hero .lede { margin-top: 6px; font-size: 13px; }
   .bd-composer { margin-top: 16px; padding: 6px; border-radius: 16px; }
@@ -2293,12 +2295,13 @@ function App() {
       e(HorizonProvider, { theme: 'dark', className: 'bd-hero-bar' }, menuBtn, e('span', { className: 'bd-only-m' }, e(Brand)), e('span', { className: 'sp' }),
         e(IconButton, { size: 'sm', variant: 'ghost', className: 'bd-only-p', label: 'Search', icon: e(Icons.Search),
           onClick: () => { const el = heroInput.current; if (el) { el.scrollIntoView({ block: 'center', behavior: reduce ? 'auto' : 'smooth' }); el.focus({ preventScroll: true }); } } }), themeBtn),
-      e('h1', null, 'What do you want to read?'),
-      e('p', { className: 'lede' }, lede),
-      e('div', { className: 'bd-composer', ref: composer },
-        e(SearchField, { ...searchProps, ref: heroInput, size: 'lg', className: 'bd-q', placeholder: 'Search titles, sections, findings, paths', shortcut: finePointer ? [isMac ? '⌘' : 'Ctrl', 'K'] : undefined,
-          trailing: data && q ? e('span', { className: 'bd-q-n' }, countText) : null })),
-      data && !filters.hidden && statLine()),
+      e('div', { className: 'bd-hero-in' },
+        e('h1', null, 'What do you want to read?'),
+        e('p', { className: 'lede' }, lede),
+        e('div', { className: 'bd-composer', ref: composer },
+          e(SearchField, { ...searchProps, ref: heroInput, size: 'lg', className: 'bd-q', placeholder: 'Search titles, sections, findings, paths', shortcut: finePointer ? [isMac ? '⌘' : 'Ctrl', 'K'] : undefined,
+            trailing: data && q ? e('span', { className: 'bd-q-n' }, countText) : null })),
+        data && !filters.hidden && statLine())),
     e('div', { className: 'bd-wrap' },
       e('div', { className: 'bd-sec-head' }, e('h2', null, 'Docs'), data && e('span', { className: 'sub' }, countText + (terms.length ? ' · best match first' : '')),
         e('span', { className: 'sp' }), data && docs.length > 0 && toolbar()),
