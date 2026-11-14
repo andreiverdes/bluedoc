@@ -596,17 +596,24 @@ html.bd-lp-open:not(.bd-lp-dock) .bp-side { background: var(--surface); box-shad
 .bd-revbar .k { margin-left: 6px; font-weight: 600; }
 .bd-revbar .k.add { color: var(--ok-fg); } .bd-revbar .k.mod { color: var(--warn-fg); } .bd-revbar .k.del { color: var(--risk-fg); }
 .bd-revbar .bp-btn { height: 28px; }
-/* the compare view's keys, docked at the strip's end: ↑ n of N ↓, then Done; the top toolbars' look (.bd-btb): one
-   raised pill of flat round keys, its words keys raised pills */
+/* an earlier revision's keys on a shared page, docked at the strip's end: the top toolbars' look (.bd-btb), one raised
+   pill of flat round keys */
 .bd-revbar .in:has(> .bd-revtb) { padding-block: 6px; }
 .bd-revbar .bd-revtb { --k: 38px; display: flex; align-items: center; gap: 6px; margin-left: auto; padding: 7px; border-radius: 999px;
   background: linear-gradient(180deg, var(--tray-top), var(--tray-bot)); box-shadow: var(--shadow-tray), 0 2px 6px oklch(23% 0.01 264 / 0.06); }
 @media (max-width: 600px) { .bd-revbar .bd-revtb { --k: 34px; gap: 4px; padding: 5px; } }
 @media (max-width: 420px) { .bd-revbar .bd-revtb { --k: 32px; gap: 3px; padding: 4px; } }
-/* "Updated since you last opened it": one blue split button at the strip's end, as Share | Export: Show what changed,
-   a groove, Dismiss */
-.bd-revbar .in:has(> .bd-updk) { padding-block: 6px; }
-.bd-revbar .bd-updk { --k: 32px; display: flex; margin-left: auto; border-radius: 999px; box-shadow: var(--shadow-fill); }
+/* the compare view's and "Updated since you last opened it"'s keys, no tray: the compare view's ↑ and ↓ as round
+   raised keys, then one blue split button, as Share | Export: the count (or Show what changed), a groove, × */
+.bd-revbar .in:has(> :is(.bd-updk, .bd-cmpk)) { padding-block: 6px; }
+.bd-revbar .bd-cmpk { --k: 38px; display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.bd-cmpk > .bd-key.rd { color: var(--fg); background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: var(--shadow-hk); }
+.bd-cmpk > .bd-key.rd:hover:not(:disabled) { background: linear-gradient(var(--hover), var(--hover)), linear-gradient(180deg, var(--hk-top), var(--hk-bot)); }
+.bd-revbar .bd-updk { --k: 38px; display: flex; margin-left: auto; border-radius: 999px; box-shadow: var(--shadow-fill); }
+.bd-cmpk .bd-updk { margin-left: 0; }
+.bd-updk > .bd-key.lbl { cursor: default; filter: none; }
+.bd-updk .pos { min-width: 0; font: 600 13px var(--sans); color: inherit; }
+@media (max-width: 600px) { .bd-revbar :is(.bd-cmpk, .bd-updk) { --k: 34px; } .bd-revbar .bd-cmpk { gap: 6px; } .bd-updk > .bd-key.lbl > .bd-ic { display: none; } }
 .bd-updk > .bd-key.go { box-shadow: none; }
 .bd-updk > .bd-key.go:first-child { border-radius: 999px 0 0 999px; padding: 0 14px 0 12px; }
 .bd-updk > .bd-key.go.x { border-radius: 0 999px 999px 0; padding: 0 11px 0 10px; box-shadow: inset 1px 0 0 color-mix(in oklch, white 28%, transparent); }
@@ -12494,15 +12501,17 @@ if (REVS.length >= 1 && REVS[0].rev && !VIEW_ONLY) {
     compareDocs(BASE.doc, VIEW.doc);
     const n = { add: 0, mod: 0, del: 0 }; CHG.forEach(c => n[c.kind]++);
     revPos = h('span', { class: 'pos', 'aria-live': 'polite' }, CHG.length === 1 ? '1 change' : `${CHG.length} changes`);
-    const step = (icon, label, d, keys) => { const k = tipped(keyBtn('', icon, label, { disabled: !CHG.length }, () => gotoChg(d)), keys); k._tip = label; return k; };
+    const step = (icon, label, d, keys) => { const k = tipped(keyBtn('rd', icon, label, { disabled: !CHG.length }, () => gotoChg(d)), keys); k._tip = label; return k; };
     const doneUrl = revUrl(VIEW, null);
     // a website's pages: Side by side or Single, beside the change keys
-    const twinKeys = BOARD && BOARD.twinSeg ? [BOARD.twinSeg, groove()] : [];
+    const twinKeys = BOARD && BOARD.twinSeg ? [BOARD.twinSeg] : [];
+    // no tray: ↑ and ↓ as round raised keys, then one blue split button, as the Updated strip's: the count | ×
+    const leave = tipped(keyBtn('go x', 'x', 'Leave compare view', {}, () => goRev(doneUrl)), ['Esc']); leave._tip = 'Leave compare view';
     strip('cmp', ic('split'), h('span', { class: 't' }, h('b', {}, `${revName(BASE)} → ${VIEW.rev}`), ': ',
       CHG.length ? [n.add > 0 && h('span', { class: 'k add' }, `${n.add} new`), n.mod > 0 && h('span', { class: 'k mod' }, `${n.mod} changed`), n.del > 0 && h('span', { class: 'k del' }, `${n.del} removed`)] : 'no differences'),
-      h('div', { class: 'bd-revtb', role: 'toolbar', 'aria-label': 'Compare revisions' },
-        step('up', 'Previous change', -1, ['K', '↑']), revPos, step('down', 'Next change', 1, ['J', '↓']), groove(), twinKeys,
-        textKey('go', null, 'Done', 'Leave compare view', ['Esc'], doneUrl)));
+      h('div', { class: 'bd-cmpk', role: 'toolbar', 'aria-label': 'Compare revisions' },
+        step('up', 'Previous change', -1, ['K', '↑']), step('down', 'Next change', 1, ['J', '↓']), twinKeys,
+        h('div', { class: 'bd-updk' }, h('span', { class: 'bd-key go lbl' }, ic('split'), revPos), leave)));
     // Esc leaves; j/↓ and k/↑ step, unless typing, on a focused drawing, or a drawer or sheet is open (Esc closes that first)
     document.addEventListener('keydown', e => {
       if (e.defaultPrevented || e.isComposing || e.metaKey || e.ctrlKey || e.altKey || document.querySelector('dialog[open]')) return;

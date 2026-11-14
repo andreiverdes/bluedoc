@@ -115,9 +115,10 @@ class BarsLook(ChromePage):
     def test_a_compare_view_and_a_drawing_have_the_same_pill(self) -> None:
         t = self.open(self.server.url_for(self.docs / "acme-status.bluedoc.json"))
         t.go(f"{self.base}{self.server.url_for(self.docs / 'acme-status.bluedoc.json')}?diff=1")
-        t.wait_for("!!document.querySelector('.bd-revbar .bd-revtb')")
-        self.assertEqual(t.ev(f"{HEIGHT}('.bd-revbar .bd-revtb')"), 52)
-        self.round_keys(t, ".bd-revbar .bd-revtb > .bd-key:not(.txt)")
+        t.wait_for("!!document.querySelector('.bd-revbar .bd-cmpk')")
+        # the compare view's keys: round ↑ and ↓, then the count | × split button, as tall as them
+        self.round_keys(t, ".bd-revbar .bd-cmpk > .bd-key.rd")
+        self.assertEqual({h for _, h, _ in t.ev(f"{BOXES}('.bd-revbar .bd-cmpk .bd-updk > .bd-key')")}, {38})
         t = self.open(self.server.url_for(self.docs / "acme-orders.bluedoc.json"))
         t.wait_for("!!document.querySelector('.bp-tb .grp')")
         self.assertEqual(t.ev(f"{HEIGHT}('.bp-tb .grp')"), 52)
