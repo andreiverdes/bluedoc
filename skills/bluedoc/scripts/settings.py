@@ -10,6 +10,9 @@
                                 (os.pathsep-separated)
   shareAs    {"<folder>": "<login>"}   each project's GitHub account for Share, by its home-page folder's path
                                 (share.py project_account); no environment variable, Settings' Sharing card writes it
+  home       {"pinned": [...], "hidden": [...], "shown": [...]}   the home page's project list, by registered folder
+                                path: pinned to the top, hidden by the reader, and temporary folders the reader shows
+                                (serve.py index); no environment variable, the home page's project menu writes it
 
 An environment variable that is set (not empty) wins over the file, the file over the default. Python 3.9+ standard
 library only."""
@@ -24,6 +27,7 @@ ENV = {"planHook": "BLUEDOC_PLAN_HOOK", "patchOnly": "BLUEDOC_PATCH_ONLY", "chro
 DEFAULTS: dict = {"planHook": True, "patchOnly": True, "chrome": None, "fontDirs": None}
 SWITCHES = ("planHook", "patchOnly")   # true | false; the environment's 0, false, no or off is false
 OFF = {"0", "false", "no", "off"}
+HOME_LISTS = ("pinned", "hidden", "shown")   # the home key's lists of registered folder paths
 
 
 def home() -> Path:
@@ -44,6 +48,9 @@ def valid(name: str, value) -> bool:
         return isinstance(value, list) and all(isinstance(d, str) and d for d in value)
     if name == "shareAs":
         return isinstance(value, dict) and all(isinstance(k, str) and k and isinstance(v, str) and v for k, v in value.items())
+    if name == "home":
+        return isinstance(value, dict) and all(k in HOME_LISTS and isinstance(v, list) and all(isinstance(p, str) and p for p in v)
+                                               for k, v in value.items())
     return False
 
 

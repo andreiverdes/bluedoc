@@ -53,21 +53,30 @@ fetches the key (GET /__bluedoc/key) and keeps it in localStorage, for browsers 
 say whether the request carries the key (`unlocked`), so a page can tell the reader it can't save yet.
 
 URLs: /                      home page: every doc under the registered folders, searchable, filtered by
-                             project, folder, type and status
+                             project, folder, type and status (?p= ?d= ?t= ?s= ?q=; ?hidden=1 the hidden projects;
+                             ?doc=<slug>/<path> that doc's row open and scrolled into view)
+      /stats                 the home page's Statistics (?p=<slug>, ?range=7|14|30|90)
       /settings              the home page's Settings: folders, code links, frameworks, the plan-mode hook,
                              patch-only edits, Chrome, font folders, and the server (read only, Restart)
       /<root>/<path>.bluedoc.json      the doc, rendered from its JSON on each request
       /<root>/<path>.bluedoc.json?raw=1   the JSON itself
       /<root>/<path>.<png|jpg|jpeg|gif|webp|svg|mp4|webm>   media files under the folder, for `media` blocks
-      /__bluedoc/index.json  what the home page shows about every doc; ?root=<slug>: one folder's only (a doc
-                             page's doc menu)
+      /__bluedoc/index.json  what the home page shows about every doc, without its search text; ?root=<slug>: one
+                             folder's only (a doc page's doc menu). Each folder's `temp` (under /tmp), `missing`
+                             (registered folders that are gone) and `home` (settings.json's pinned, hidden and shown
+                             folders). With an ETag: 304 for a matching If-None-Match (Cache-Control: no-cache); kept
+                             between requests, rebuilt only when a doc, its folder or state.db changed (home_json)
+      /__bluedoc/search-text {docs: {"<doc url>": "<its search text>"}}, the home page's search over doc bodies;
+                             ?root= and ETag/304 as index.json
       /__bluedoc/ping?path=  server check (version, code hash, started, pid, unlocked); with a doc's URL path, also
                              who reads replies and its saved approval
       /__bluedoc/settings    GET: what Settings shows (settings_view; each setting's value, source env|file|default
                              and env NAME=value; sharing: each project's account and gh's accounts). POST {planHook?,
-                             patchOnly?, chrome?, fontDirs?, sharing?: {slug, account}} (the key) writes settings.json,
-                             null back to the default: 409 when the environment sets that setting, 400 for a bad value
+                             patchOnly?, chrome?, fontDirs?, sharing?: {slug, account}, home?: {pinned, hidden, shown}}
+                             (the key) writes settings.json, null back to the default: 409 when the environment sets
+                             that setting, 400 for a bad value
       POST /__bluedoc/folders  {add: "<folder>"} or {remove: "<listed path>"}: the home page's folders, {folders}
+      POST /__bluedoc/open-folder  {path: "<listed path>"}: shows the folder in the file manager, {ok}
       POST /__bluedoc/repos  {remove: "<name>"}: a code link name from repos.json (codepin.py), {repos}
       POST /__bluedoc/frameworks  {remove: "<name>"} or {add: "<preset>"} (fetched as add-framework does; 502 when
                              it can't be): {frameworks, presets}
@@ -274,7 +283,7 @@ PORT_SPAN = 20   # without a pinned port, the server takes the first free one of
 UNLOCK_TTL = 3600   # seconds a ?key= token stays good, for any number of opens
 COOKIE_AGE = 400 * 86400   # the key cookie's Max-Age: the most browsers keep; each page view renews it
 SKIP_DIRS = {"node_modules", "build", "dist", "target", "out", "vendor", "Pods", "DerivedData", "__pycache__"}
-MAX_DEPTH, MAX_BODY, SEARCH_CHARS = 8, 4 * 1024 * 1024, 8000   # SEARCH_CHARS keeps index.json small (~10 KB a doc)
+MAX_DEPTH, MAX_BODY, SEARCH_CHARS = 8, 4 * 1024 * 1024, 8000   # SEARCH_CHARS keeps search-text small (~10 KB a doc)
 KINDS = ("answers", "changes", "approval")
 REVIEW_EVENTS = ("COMMENT", "REQUEST_CHANGES", "APPROVE")   # an answers reply's reviewEvents: a `post` review's Post as, per PR
 REPLY_SUFFIX = {"answers": "reply", "changes": "changes", "approval": "approval"}   # pre-state.db <stem>.<suffix>.md/.json
@@ -503,20 +512,66 @@ def slugs(roots: list[Path]) -> dict[str, Path]:
     return out
 
 
-def walk_docs(root: Path, skip: set[Path] | frozenset = frozenset()):
-    """The docs under root, but not under the folders in skip (registered folders inside root, which list their own)."""
-    root_depth = len(root.parts)
-    for dirpath, dirnames, filenames in os.walk(root):
-        dirnames[:] = sorted(d for d in dirnames if not d.startswith(".") and d not in SKIP_DIRS
-                             and len(Path(dirpath, d).parts) - root_depth <= MAX_DEPTH and Path(dirpath, d) not in skip)
-        for f in sorted(filenames):
-            if f.endswith(build.DOC_SUFFIXES):
-                yield Path(dirpath, f)
+_dirs: dict[str, dict[str, tuple]] = {}   # registered folder -> {folder under it: (stamp, subfolders, doc names)}
+_dirs_lock = threading.Lock()
+RACY_NS = 2_000_000_000   # a folder changed this recently is listed again next time: a coarse clock could hide a change
+
+
+def folder_listing(d: str, old: dict, new: dict, now: int) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    """(subfolders walk_docs goes into, doc file names) of folder d, both sorted: old's when the folder's stamp (device,
+    inode, mtime) is the one it was listed at, else read again; either way kept in new. A doc added, removed or
+    renamed changes its folder's mtime; an edited doc only its own."""
+    try:
+        st = os.stat(d)
+    except OSError:
+        return (), ()
+    stamp = (st.st_dev, st.st_ino, st.st_mtime_ns)
+    hit = old.get(d)
+    if hit and hit[0] == stamp:
+        new[d] = hit
+        return hit[1], hit[2]
+    dirs, docs = [], []
+    try:
+        with os.scandir(d) as it:
+            for e in it:
+                try:
+                    if e.is_dir():   # a linked folder isn't gone into, as os.walk doesn't
+                        if not e.is_symlink() and not e.name.startswith(".") and e.name not in SKIP_DIRS:
+                            dirs.append(e.name)
+                    elif e.name.endswith(build.DOC_SUFFIXES):
+                        docs.append(e.name)
+                except OSError:
+                    continue
+    except OSError:
+        return (), ()
+    hit = (stamp if now - st.st_mtime_ns >= RACY_NS else None, tuple(sorted(dirs)), tuple(sorted(docs)))
+    new[d] = hit
+    return hit[1], hit[2]
+
+
+def walk_docs(root: Path, skip: set[Path] | frozenset = frozenset()) -> list[Path]:
+    """The docs under root (MAX_DEPTH folders deep, hidden and SKIP_DIRS folders left out), but not under the folders
+    in skip (registered folders inside root, which list their own). Each folder's listing is kept between calls and
+    read again only when the folder changed (folder_listing)."""
+    r, skips, now = str(root), {str(p) for p in skip}, time.time_ns()
+    out: list[Path] = []
+    with _dirs_lock:
+        old, new = _dirs.get(r, {}), {}
+        stack = [(r, 0)]
+        while stack:
+            d, depth = stack.pop()
+            subs, docs = folder_listing(d, old, new, now)
+            out += [Path(d, f) for f in docs]
+            if depth < MAX_DEPTH:
+                stack += [(s, depth + 1) for s in reversed([os.path.join(d, x) for x in subs]) if s not in skips]
+        _dirs[r] = new   # folders no longer under root drop out
+    return out
 
 
 def inner_roots(r: Path, roots) -> set[Path]:
-    """The registered folders inside r."""
-    return {o for o in roots if r in o.parents}
+    """The registered folders inside r (absolute paths, as roots.json holds them)."""
+    inside = os.path.join(str(r), "")
+    return {o for o in roots if str(o).startswith(inside) and o != r}
 
 
 def url_for(doc: Path) -> str | None:
@@ -769,15 +824,26 @@ def mtime(p: Path) -> float:
         return 0.0
 
 
-def summarize(p: Path) -> dict:
-    """What the home page needs about one doc, cached by the mtimes of the doc, its screen files (a design's lint and
-    card), its history (a contract problem is an error only while meta.rev is new) and its diff cache (a review
-    card's line counts). title and emoji are the ones bluedoc shows (build.shown_title, build.shown_emoji: the
-    reader's from state.db over the doc's), docTitle the doc's own."""
+def doc_key(p: Path) -> tuple:
+    """What a doc's summary depends on in files: the doc's mtime, size and inode, its screen files' and layer folders'
+    mtimes (info_key), its history's (a contract problem is an error only while meta.rev is new; revs, built, a
+    carried approval) and its diff cache's (a review card's line counts). OSError when the doc is gone."""
     import diffref   # noqa: PLC0415
     st = p.stat()
-    keyed = lambda: (st.st_mtime, info_key(p), mtime(build.history_path(p)), mtime(diffref.cache_path(p)))  # noqa: E731
-    key = keyed()
+    return (st.st_mtime_ns, st.st_size, st.st_ino, info_key(p), mtime(build.history_path(p)), mtime(diffref.cache_path(p)))
+
+
+def settled(key: tuple) -> tuple | None:
+    """A doc_key to cache by, or None (never matches) while the doc changed in the last RACY_NS: a coarse clock could
+    hide another change that soon."""
+    return key if time.time_ns() - key[0] >= RACY_NS else None
+
+
+def summarize(p: Path) -> dict:
+    """What the home page needs about one doc, its file part cached by doc_key. title and emoji are the ones bluedoc
+    shows (build.shown_title, build.shown_emoji: the reader's from state.db over the doc's), docTitle the doc's own."""
+    st = p.stat()
+    key = doc_key(p)
     hit = _cache.get(str(p))
     if hit and hit[0] == key:
         info = dict(hit[1])
@@ -798,10 +864,12 @@ def summarize(p: Path) -> dict:
                             # the author's choice as the page's pick value has it: a `multi` item's ids comma-joined, so
                             # one or more ticks (the reader's or the author's) count as decided
                             choice = it.get("choice") or ""
+                            # the item's text last: the home page's open row lists what is left to decide or tick
                             items.append([b.get("id"), it.get("id"), 1 if dec else 0,
                                           (",".join(map(str, choice)) if isinstance(choice, list) else choice) if dec
                                           else ("1" if it.get("done") else "0"),
-                                          [c.get("id") for c in it.get("choices") or []] if dec else None])
+                                          [c.get("id") for c in it.get("choices") or []] if dec else None,
+                                          str(it.get("text") or "")[:160]])
                             scan(it.get("blocks"))
             for s in doc.get("sections") or []:
                 scan(s.get("blocks"))
@@ -818,13 +886,17 @@ def summarize(p: Path) -> dict:
                 # steps not done yet: an approved doc with none open and every check ticked is all done (Archive it?)
                 "stepsOpen": sum(1 for b in build.all_blocks(doc) if b.get("type") == "steps" for it in b.get("items") or []
                                  if isinstance(it, dict) and it.get("status") != "done"),
+                # the first open steps, [title, effort, status], for the home page's open row
+                "next": [[str(it.get("title") or "")[:160], it.get("effort") or "", it.get("status") or ""]
+                         for b in build.all_blocks(doc) if b.get("type") == "steps" for it in b.get("items") or []
+                         if isinstance(it, dict) and it.get("status") != "done"][:5],
                 "text": " ".join(words)[:SEARCH_CHARS], "card": card(doc, dtype, p),
             })
         except (OSError, ValueError, TypeError, AttributeError) as e:
             info.update({"errors": 1, "firstError": f"cannot read: {e}", "type": "other", "emoji": build.TYPE_EMOJI["other"]})
         info.setdefault("docTitle", info.pop("title"))
         # the card may just have written the diff cache: key on the files as they are now
-        _cache[str(p)] = (keyed(), info)
+        _cache[str(p)] = (settled(doc_key(p)), info)
         info = dict(info)
     info["mtime"] = st.st_mtime
     info["revs"], info["built"] = history_info(p)
@@ -853,25 +925,99 @@ def summarize(p: Path) -> dict:
     return info
 
 
-def index(root: str | None = None) -> dict:
-    """Every registered folder's docs as the home page lists them; root: only the folder with that slug."""
-    out = []
+TEMP_DIRS = (Path("/tmp"), Path("/private/tmp"))
+
+
+def temp_folder(r: Path) -> bool:
+    """Whether a registered folder is a temporary one the home page hides by itself: under /tmp (or /private/tmp)."""
+    return any(r == b or b in r.parents for b in TEMP_DIRS)
+
+
+def home_lists() -> dict:
+    """settings.json's home key: the folders pinned and hidden on the home page, and the temporary ones shown."""
+    h = settings.load().get("home") or {}
+    return {k: list(h.get(k) or []) for k in settings.HOME_LISTS}
+
+
+_entries: dict[str, tuple[tuple, dict]] = {}   # doc path -> ((doc_key, state.db's generation), summarize's)
+_bodies: dict[tuple, tuple[tuple, bytes, str]] = {}   # (route, root, unlocked) -> (index_inputs', body, ETag)
+_index_lock = threading.Lock()
+
+
+def index_inputs(root: str | None) -> tuple[list, list[str], dict, tuple]:
+    """(folders [(slug, folder, [(doc, doc_key)])], missing, home, inputs): the folders index.json lists (root: only the
+    one with that slug), the registered folders that are gone, home_lists, and everything the home's JSON depends on:
+    state.db's generation (a reader's ticks, picks, archive, approval and replies), home, missing, roots.json's folders
+    and each doc's doc_key. Stats only: folders are listed again only when they changed (walk_docs)."""
+    gen = DB.generation() if DB else ()
     roots = slugs(load_roots())
+    folders = []
     for slug, r in roots.items():
         if root is not None and slug != root:
             continue
         docs = []
         for p in walk_docs(r, inner_roots(r, roots.values())):
             try:
-                d = summarize(p)
-            except OSError:
+                docs.append((p, doc_key(p)))
+            except OSError:   # gone since its folder was listed
                 continue
-            d["path"] = p.relative_to(r).as_posix()
-            d["url"] = f"/{quote(slug)}/{quote(d['path'])}"
-            docs.append(d)
-        name = project_name(r)
-        out.append({"slug": slug, "name": name, "path": str(r), "docs": docs})
-    return {"roots": out}
+        folders.append((slug, r, docs))
+    if root is None:   # a folder no longer registered: forget its listings
+        with _dirs_lock:
+            for k in set(_dirs) - {str(r) for r in roots.values()}:
+                del _dirs[k]
+    missing = [p for p in roots_listed() if not Path(p).is_dir()]
+    home = home_lists()
+    inputs = (gen, json.dumps(home, sort_keys=True), tuple(missing),
+              tuple((slug, str(r), tuple((str(p), k) for p, k in docs)) for slug, r, docs in folders))
+    return folders, missing, home, inputs
+
+
+def home_json(route: str, root: str | None = None, unlocked: bool = False) -> tuple[bytes, str]:
+    """(body, ETag) of GET /__bluedoc/index.json (route 'index') or /__bluedoc/search-text ('search'), kept until
+    index_inputs moves, so an unchanged home costs stats and no rebuild; each doc's summary is kept until its doc_key
+    or state.db's generation moves. Neither is kept while a doc is too fresh to trust its mtime (settled).
+    index: every registered folder's docs as the home page lists them (summarize, without `text`), with path and url;
+    each folder says whether it is temporary (temp_folder); missing: the registered folders that are gone; home:
+    home_lists; unlocked as given. search: {docs: {url: the doc's search text}}, docs with none left out."""
+    with _index_lock:
+        folders, missing, home, inputs = index_inputs(root)
+        slot = (route, root, unlocked and route == "index")
+        hit = _bodies.get(slot)
+        if hit and hit[0] == inputs:
+            return hit[1], hit[2]
+        gen, out, texts, seen, racy = inputs[0], [], {}, set(), False
+        for slug, r, docs in folders:
+            listed = []
+            for p, k in docs:
+                got = _entries.get(str(p))
+                if got and got[0] == (k, gen):
+                    d = got[1]
+                else:
+                    try:
+                        d = summarize(p)
+                    except OSError:
+                        continue
+                    _entries[str(p)] = ((settled(k), gen), d)
+                racy = racy or settled(k) is None
+                seen.add(str(p))
+                rel = p.relative_to(r).as_posix()
+                url = f"/{quote(slug)}/{quote(rel)}"
+                if d.get("text"):
+                    texts[url] = d["text"]
+                listed.append({**{x: v for x, v in d.items() if x != "text"}, "path": rel, "url": url})
+            out.append({"slug": slug, "name": project_name(r), "path": str(r), "temp": temp_folder(r), "docs": listed})
+        if root is None:   # docs gone or no longer listed
+            for gone in set(_entries) - seen:
+                del _entries[gone]
+        obj = ({"roots": out, "missing": [{"path": p, "display": display_path(p)} for p in missing], "home": home,
+                "unlocked": unlocked} if route == "index" else {"docs": texts})
+        body = json.dumps(obj, ensure_ascii=False).encode()
+        etag = f'"{hashlib.blake2b(body, digest_size=16).hexdigest()}"'
+        if len(_bodies) > 32:   # ?root= of many folders over time
+            _bodies.clear()
+        _bodies[slot] = (None if racy else inputs, body, etag)
+        return body, etag
 
 
 # ---------- rendering ----------
@@ -4378,6 +4524,20 @@ def make_handler(port: int, default_to: str):
         def json(self, code: int, obj) -> None:
             self.send(code, json.dumps(obj, ensure_ascii=False), "application/json; charset=utf-8")
 
+        def revalidated(self, body: bytes, etag: str) -> None:
+            """A JSON body the browser may keep but must revalidate (no-cache): 304 when If-None-Match names its ETag.
+            Its status line says HTTP/1.1 (Connection: close, as every answer here): Chromium sends If-None-Match only
+            for an ETag that came with an HTTP/1.1 response."""
+            self.protocol_version = "HTTP/1.1"
+            tags = {t.strip().removeprefix("W/") for t in (self.headers.get("If-None-Match") or "").split(",")}
+            if etag in tags or "*" in tags:
+                self.send_response(304)
+                for k, v in (("ETag", etag), ("Cache-Control", "no-cache"), ("Connection", "close")):
+                    self.send_header(k, v)
+                self.end_headers()
+                return
+            self.send(200, body, "application/json; charset=utf-8", "no-cache", {"ETag": etag, "Connection": "close"})
+
         def cookie_key(self) -> str:
             try:
                 c = SimpleCookie(self.headers.get("Cookie") or "")
@@ -4464,7 +4624,7 @@ def make_handler(port: int, default_to: str):
             q = {k: v[0] for k, v in parse_qs(u.query).items()}
             if "key" in q and not u.path.startswith("/__bluedoc/"):
                 return self.unlock(u)
-            if u.path in ("/", "/settings"):   # the home page shows Settings at /settings
+            if u.path in ("/", "/settings", "/stats"):   # the home page shows Settings at /settings, Statistics at /stats
                 html = HOME_HTML.read_text(encoding="utf-8").replace("__BLUEDOC_VENDOR_V__", vendor_version())
                 return self.send(200, html)
             if u.path.startswith("/__bluedoc/vendor/"):
@@ -4477,7 +4637,9 @@ def make_handler(port: int, default_to: str):
                 f = store_file(u.path[len("/__bluedoc/fw/"):])
                 return self.asset(f, q) if f else self.json(404, {"error": "not found"})
             if u.path == "/__bluedoc/index.json":
-                return self.json(200, {**index(q.get("root")), "unlocked": self.has_key()})
+                return self.revalidated(*home_json("index", q.get("root"), self.has_key()))
+            if u.path == "/__bluedoc/search-text":
+                return self.revalidated(*home_json("search", q.get("root")))
             if u.path == "/__bluedoc/settings":
                 return self.json(200, settings_view(port, fresh=True))
             if u.path == "/__bluedoc/ping":
@@ -4716,6 +4878,8 @@ def make_handler(port: int, default_to: str):
                 return self.json(*change_settings(data, port))
             if path == "/__bluedoc/folders":
                 return self.json(*change_folders(data))
+            if path == "/__bluedoc/open-folder":
+                return self.json(*open_folder(data))
             if path == "/__bluedoc/repos":
                 return self.json(*change_repos(data))
             if path == "/__bluedoc/frameworks":
@@ -5213,6 +5377,22 @@ def change_folders(data: dict) -> tuple[int, dict]:
     return 200, {"folders": folders_view()}
 
 
+def open_folder(data: dict) -> tuple[int, dict]:
+    """POST /__bluedoc/open-folder {path: "<a listed path>"}: the home page's Open folder shows a registered folder in
+    the system's file manager (open, xdg-open or explorer): (status, {ok} or {error})."""
+    p = data.get("path")
+    if not isinstance(p, str) or p not in roots_listed():
+        return 400, {"error": f"{display_path(p)} isn't listed" if isinstance(p, str) else 'send {"path": "<listed path>"}'}
+    if not Path(p).is_dir():
+        return 404, {"error": f"{display_path(p)} is gone"}
+    cmd = ["open", p] if sys.platform == "darwin" else ["explorer", p] if os.name == "nt" else ["xdg-open", p]
+    try:
+        subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+    except OSError as e:
+        return 500, {"error": f"couldn't open {display_path(p)}: {e}"}
+    return 200, {"ok": True}
+
+
 def repos_view() -> list[dict]:
     """Settings' Code links: repos.json's names (codepin.registry) and the folder each opens."""
     return [{"name": n, "path": p, "display": display_path(p), "exists": Path(p).is_dir()}
@@ -5369,18 +5549,29 @@ def settings_view(port: int, fresh: bool = False) -> dict:
 
 
 def change_settings(data: dict, port: int) -> tuple[int, dict]:
-    """POST /__bluedoc/settings {planHook?, patchOnly?, chrome?, fontDirs?, sharing?: {slug, account}} into
-    settings.json (null: back to the default; sharing's account null: ask on the project's first share): (200,
-    settings_view), 409 when the environment sets one of them, 400 for an unknown name or a bad value."""
+    """POST /__bluedoc/settings {planHook?, patchOnly?, chrome?, fontDirs?, sharing?: {slug, account}, home?: {pinned,
+    hidden, shown}} into settings.json (null: back to the default; sharing's account null: ask on the project's first
+    share; home: the home page's lists, each replaced whole): (200, settings_view), 409 when the environment sets one
+    of them, 400 for an unknown name or a bad value."""
     sharing = None
     if "sharing" in data:
         sharing = sharing_change(data["sharing"])
         if isinstance(sharing, str):
             return 400, {"error": sharing}
         data = {k: v for k, v in data.items() if k != "sharing"}
+    home_change = None
+    if "home" in data:
+        h = data["home"]
+        if h is not None and not settings.valid("home", h):
+            return 400, {"error": "home: {pinned, hidden, shown}, each a list of folder paths"}
+        home_change = {k: list(dict.fromkeys(v)) for k, v in (h or {}).items() if v} or None
+        data = {k: v for k, v in data.items() if k != "home"}
+        changes_home = True
+    else:
+        changes_home = False
     unknown = [k for k in data if k not in settings.DEFAULTS]
-    if unknown or not (data or sharing):
-        return 400, {"error": f"unknown setting: {', '.join(unknown)}" if unknown else "nothing to change: send planHook, patchOnly, chrome, fontDirs or sharing"}
+    if unknown or not (data or sharing or changes_home):
+        return 400, {"error": f"unknown setting: {', '.join(unknown)}" if unknown else "nothing to change: send planHook, patchOnly, chrome, fontDirs, sharing or home"}
     for k in data:
         if settings.env_text(k):
             return 409, {"error": f"set by {settings.ENV[k]} in the environment"}
@@ -5410,6 +5601,8 @@ def change_settings(data: dict, port: int) -> tuple[int, dict]:
                     return 400, {"error": f"No folder at {d.strip()}"}
                 dirs.append(str(p.resolve()))
             changes[k] = list(dict.fromkeys(dirs)) or None   # none left: this system's folders
+    if changes_home:
+        changes["home"] = home_change
     try:
         if changes:
             settings.save(changes)

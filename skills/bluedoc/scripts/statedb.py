@@ -91,6 +91,12 @@ class StateDB:
         with self.lock:
             return self.db.execute(sql, args).fetchall()
 
+    def generation(self) -> tuple[int, int]:
+        """Moves whenever the database may have changed: a commit by another connection (PRAGMA data_version) or a row
+        this one changed (total_changes), so a reader of state can keep what it derived until then."""
+        with self.lock:
+            return self.db.execute("PRAGMA data_version").fetchone()[0], self.db.total_changes
+
     # ---------- docs ----------
 
     @staticmethod

@@ -74,7 +74,7 @@ class HomeSettings(ChromePage):
     def test_the_gear_opens_settings_and_back_returns(self) -> None:
         self.start()
         t = self.home()
-        self.assertEqual(t.ev(f"{GEAR}.closest('.bd-side-foot').querySelectorAll('button').length"), 2, "the gear beside the theme key")
+        self.assertEqual(t.ev(f"{GEAR}.closest('.bd-sb-foot .keys').querySelectorAll('button').length"), 2, "the gear beside the theme key")
         self.assertNotEqual(t.ev(f"{GEAR}.getAttribute('aria-pressed')"), "true")
         t.ev(f"{GEAR}.click()")
         t.wait_for("location.pathname === '/settings' && !!document.querySelector('.bd-st h1')")
@@ -86,13 +86,13 @@ class HomeSettings(ChromePage):
         t.wait_for("location.pathname === '/' && !!document.querySelector('.bd-hero')")
         self.assertEqual(t.ev("document.querySelector('.bd-side [aria-current=page]')?.textContent"), "All docs3")
         self.assertNotEqual(t.ev(f"{GEAR}.getAttribute('aria-pressed')"), "true")
-        # a doc list from Settings goes back to the docs, filtered
+        # a project from Settings goes back to the docs, filtered
         t.ev("history.forward()")
         t.wait_for("location.pathname === '/settings'")
-        t.ev("[...document.querySelectorAll('.bd-side [data-item-id^=\"d:\"]')].pop().click()")   # acme-fit's folder
+        t.ev("[...document.querySelectorAll('.bd-side .bd-pr > .bd-ni')].find(b => b.querySelector('.n').textContent === 'acme-fit').click()")
         t.wait_for("location.pathname === '/' && !!document.querySelector('.bd-hero')")
-        self.assertTrue(t.wait_for("new URLSearchParams(location.search).get('p')"))
-        self.assertEqual(t.ev("document.querySelectorAll('.bd-cw').length"), 1, "acme-fit's one doc")
+        self.assertEqual(t.wait_for("new URLSearchParams(location.search).get('p')"), "acme-fit")
+        self.assertEqual(t.wait_for("document.querySelectorAll('.bd-tb .bd-r').length"), 1, "acme-fit's one doc")
         self.assertEqual(self.browser.errors, [])
 
     def test_the_gear_sits_in_the_phone_drawer(self) -> None:

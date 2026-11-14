@@ -22,7 +22,7 @@
   --bd-top-h: 56px;
 }
 html, body { margin: 0; background: var(--color-hz-canvas); color: var(--color-hz-fg); }
-/* no visible scrollbars anywhere on home: the page, the sidebar, the board and the widget strip still scroll (wheel, trackpad, keys) */
+/* no visible scrollbars anywhere on home: the page, the sidebar's list and the phone toolbar still scroll (wheel, trackpad, keys) */
 html, .bd-app * { scrollbar-width: none; }
 html::-webkit-scrollbar, .bd-app ::-webkit-scrollbar { display: none; width: 0; height: 0; }
 body { font-family: var(--font-hz-sans, Inter, system-ui, sans-serif); -webkit-font-smoothing: antialiased; }
@@ -37,35 +37,94 @@ body { font-family: var(--font-hz-sans, Inter, system-ui, sans-serif); -webkit-f
 .bd-md code { font: 500 .9em var(--font-hz-mono); padding: 0 4px; border-radius: 4px; background: var(--color-hz-inset); }
 .bd-app mark { background: color-mix(in oklch, var(--color-hz-warning) 34%, transparent); color: inherit; border-radius: 3px; padding: 0 1px; }
 
-/* sidebar slots */
+/* the sidebar (layout D): the brand, All docs and Statistics, then the projects: a find field, the All · Active · Pinned
+   · Hidden chips, the list in its own scroll area fading out at the bottom (a picked project shows its folders under
+   it; ⋯ on a hovered row opens its menu), and the foot on one row: Live, folders and hidden, Settings and the theme */
 .bd-brand { display: flex; align-items: center; gap: 9px; min-width: 0; padding-left: 6px; text-decoration: none; }
 .bd-brand svg { flex: none; }
 /* the wordmark: "bluedoc" in Lexend Bold (the logo's face, OFL-1.1), outlined to paths */
 .bd-brand .wm { height: 14px; width: auto; }
 .wm .b { fill: #0b2560; } .wm .d { fill: #0a6dff; }
 [data-hz-theme="dark"] .wm .b { fill: #eaf4ff; } [data-hz-theme="dark"] .wm .d { fill: #4f9bff; }
-.bd-rail .bd-brand { padding: 0; justify-content: center; }
-.bd-side-foot { display: flex; align-items: center; gap: 8px; padding-left: 6px; font-size: 12.5px; color: var(--color-hz-fg-subtle); }
-.bd-side-foot .sp { flex: 1; }
-.bd-side-foot .keys { display: flex; align-items: center; gap: 2px; }
-.bd-rail .bd-side-foot { padding: 0; justify-content: center; }
-.bd-rail .bd-side-foot .keys { flex-direction: column; }
-.bd-fl { display: inline-flex; align-items: center; gap: 8px; min-width: 0; max-width: 100%; }
-.bd-fl > span { overflow: hidden; text-overflow: ellipsis; }
+.bd-sb { width: 260px; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; padding: 10px 8px 0; background: var(--color-hz-panel);
+  box-shadow: inset -1px 0 0 var(--color-hz-line); font-size: 13.5px; }
+.bd-sb ul { list-style: none; margin: 0; padding: 0; }
+.bd-sb-top { flex: none; display: flex; align-items: center; gap: 8px; height: 36px; margin-bottom: 8px; padding-right: 2px; }
+.bd-sb-top .sp, .bd-sb .grow { flex: 1; }
+.bd-ni { display: flex; align-items: center; gap: 10px; width: 100%; height: 34px; padding: 0 10px; box-sizing: border-box; border: 0; border-radius: 8px; cursor: pointer;
+  background: none; color: var(--color-hz-fg-muted); font: 500 13.5px var(--font-hz-sans); text-align: left; text-decoration: none; }
+.bd-ni:hover { background: var(--color-hz-hover); color: var(--color-hz-fg); }
+.bd-ni:focus-visible { outline: none; box-shadow: var(--hz-shadow-focus); }
+.bd-ni[aria-current] { background: var(--color-hz-hover-2); color: var(--color-hz-fg); }
+.bd-ni > svg { flex: none; width: 16px; height: 16px; color: var(--color-hz-fg-subtle); }
+.bd-ni .n { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bd-ni .c { flex: none; font: 500 11.5px var(--font-hz-mono); color: var(--color-hz-fg-subtle); }
+.bd-cap { flex: none; margin: 16px 10px 6px; font: 500 10.5px var(--font-hz-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--color-hz-fg-subtle); }
+.bd-psq { flex: none; height: 30px; margin: 0 2px 6px; padding-inline: 9px; gap: 7px; }
+.bd-psq input { font-size: 12.5px; }
+.bd-psq svg { width: 14px; height: 14px; }
+.bd-pf { flex: none; display: flex; gap: 3px; margin: 0 2px 6px; }
+.bd-pc { display: inline-flex; align-items: center; gap: 3px; height: 22px; padding: 0 6px; border: 0; border-radius: 999px; cursor: pointer; white-space: nowrap;
+  font: 500 11px var(--font-hz-sans); color: var(--color-hz-fg-muted); background: var(--color-hz-inset); box-shadow: inset 0 0 0 1px var(--color-hz-line); }
+.bd-pc i { font: normal 500 10.5px var(--font-hz-mono); color: var(--color-hz-fg-subtle); }
+.bd-pc:hover { color: var(--color-hz-fg); }
+.bd-pc:focus-visible { outline: none; box-shadow: var(--hz-shadow-focus); }
+.bd-pc[aria-pressed="true"] { color: var(--color-hz-accent-fg); background: color-mix(in oklch, var(--color-hz-accent) 15%, var(--color-hz-surface));
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--color-hz-accent) 55%, transparent); }
+.bd-pc[aria-pressed="true"] i { color: inherit; }
+.bd-plist { flex: 1; min-height: 0; overflow: auto; margin: 0 -8px; padding: 0 8px 28px;
+  -webkit-mask-image: linear-gradient(#000 calc(100% - 48px), transparent); mask-image: linear-gradient(#000 calc(100% - 48px), transparent); }
+.bd-plist-none { padding: 10px; font-size: 12.5px; color: var(--color-hz-fg-subtle); }
+.bd-pr { position: relative; }
+.bd-pr > .bd-ni { height: 31px; }
+.bd-pr > .bd-ni > svg { width: 15px; height: 15px; }
+.bd-pr > .bd-ni .pn { width: 12px; height: 12px; margin-right: -4px; }
+.bd-mk { position: absolute; top: 4.5px; right: 6px; display: none; place-items: center; width: 24px; height: 22px; padding: 0; border: 0; border-radius: 6px; cursor: pointer;
+  color: var(--color-hz-fg); background: var(--color-hz-pressed); box-shadow: inset 0 0 0 1px var(--color-hz-line); }
+.bd-mk svg { width: 15px; height: 15px; }
+.bd-mk:focus-visible { outline: none; box-shadow: var(--hz-shadow-focus); }
+.bd-pr:is(:hover, :focus-within, .open) > .bd-mk { display: grid; }
+.bd-pr:is(:hover, :focus-within, .open) > .bd-ni :is(.c, .pn) { visibility: hidden; }
+.bd-pr.open > .bd-ni { background: var(--color-hz-hover); color: var(--color-hz-fg); }
+.bd-pmenu { min-width: 208px; }
+.bd-ni.fo { height: 29px; font-size: 13px; }
+.bd-ni.fo > svg { width: 14px; height: 14px; color: var(--color-hz-accent); }
+.bd-hp { display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 2px 0 10px; color: var(--color-hz-fg-subtle); }
+.bd-hp > svg { flex: none; width: 16px; height: 16px; opacity: .7; }
+.bd-hp .hn { flex: 1; min-width: 0; display: flex; flex-direction: column; padding: 0; border: 0; background: none; color: inherit; font: inherit; line-height: 1.25; text-align: left; cursor: pointer; }
+.bd-hp .hn:disabled { cursor: default; }
+.bd-hp .hn b { font-weight: 500; color: var(--color-hz-fg-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bd-hp .hn:not(:disabled):hover b { color: var(--color-hz-fg); }
+.bd-hp .hn small { font-size: 11.5px; color: var(--color-hz-fg-subtle); opacity: .85; }
+.bd-sb-foot { flex: none; display: flex; align-items: center; gap: 8px; height: 40px; margin: 0 -8px; padding: 0 12px 0 14px; box-shadow: inset 0 1px 0 var(--color-hz-line-soft);
+  font-size: 12.5px; color: var(--color-hz-fg-subtle); white-space: nowrap; }
+.bd-sb-foot .sp { flex: 1; }
+.bd-sb-foot .keys { display: flex; align-items: center; }
+.bd-sb-foot .hl { padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; }
+.bd-sb-foot .hl:hover { color: var(--color-hz-fg); }
+.bd-sb-foot .hl[aria-pressed="true"] { color: var(--color-hz-accent-fg); font-weight: 600; }
+.bd-sb-foot .hl:focus-visible { outline: none; border-radius: 4px; box-shadow: var(--hz-shadow-focus); }
+.bd-live { display: inline-grid; place-items: center; width: 14px; height: 14px; border-radius: 50%; outline: none; }
+.bd-live i { width: 7px; height: 7px; border-radius: 50%; background: var(--color-hz-success); }
+.bd-live:focus-visible { box-shadow: var(--hz-shadow-focus); }
+.bd-sb.rail { width: 56px; }
+.bd-sb.rail .bd-sb-top { flex-direction: column; height: auto; gap: 6px; padding: 0; }
+.bd-sb.rail .bd-brand { padding: 0; justify-content: center; }
+.bd-sb.rail .bd-ni { justify-content: center; padding: 0; }
+.bd-sb.rail .bd-sb-foot { flex-direction: column; height: auto; gap: 4px; padding: 8px 0; }
+.bd-sb.rail .bd-sb-foot .keys { flex-direction: column; }
 
-/* compact bar once the hero scrolls away */
+/* compact bar once the hero scrolls away: the search, then the docs toolbar and the count */
 .bd-top { position: sticky; top: 0; z-index: 30; height: var(--bd-top-h); margin-bottom: calc(-1 * var(--bd-top-h)); display: flex; align-items: center; gap: 12px; padding: 0 20px;
   background: color-mix(in oklch, var(--color-hz-canvas) 84%, transparent); backdrop-filter: blur(16px) saturate(1.4); -webkit-backdrop-filter: blur(16px) saturate(1.4);
   box-shadow: 0 1px 0 var(--color-hz-line); transform: translateY(-100%); opacity: 0; pointer-events: none; transition: transform var(--hz-dur-3) var(--hz-ease-out), opacity var(--hz-dur-2); }
 .bd-top.on { transform: none; opacity: 1; pointer-events: auto; }
-/* the search field, then every active filter as a removable tag, so a reader scrolled past the composer can clear one */
-.bd-top .bd-top-s { flex: 0 1 auto; display: flex; align-items: center; gap: 8px; min-width: 0; margin: 0 auto; }
-.bd-top .bd-top-q { flex: 0 1 520px; min-width: 0; }
-.bd-top .bd-top-f { flex: none; display: flex; align-items: center; gap: 6px; max-width: 45vw; overflow-x: auto; }
+.bd-top .bd-top-q { flex: 0 1 440px; min-width: 0; }
+.bd-top .sp { flex: 1; }
 .bd-top .bd-top-n { font: 500 12px var(--font-hz-mono); color: var(--color-hz-fg-subtle); white-space: nowrap; }
 
-/* the hero: a pixel-art banner (dark and light, one per theme; assets/vendor/hero, the source pixels and colours
-   unchanged) at the top, dissolving into the page through a dither drawn in CSS (.bd-dz below), so it meets the page
+/* the hero: a pixel-art banner (dark and light, one per theme; assets/vendor/hero, 1672 × 523 webp, about 200 KB each)
+   at the top, dissolving into the page through a dither drawn in CSS (.bd-dz below), so it meets the page
    colour with no seam. The title sits where it dissolves: padding in % is of the hero's width, like the banner's height.
    No overflow clip: the banner is a background inside its own box, and the search field's shadow reaches past the hero. */
 .bd-hero { position: relative; isolation: isolate; display: flex; flex-direction: column; align-items: center; container: bd-hero / inline-size;
@@ -143,31 +202,21 @@ body { font-family: var(--font-hz-sans, Inter, system-ui, sans-serif); -webkit-f
 .bd-composer .bd-q input { font-size: 16.5px; }
 .bd-composer .bd-q svg { width: 18px; height: 18px; }
 .bd-q-n { font: 500 12px var(--font-hz-mono); color: var(--color-hz-fg-subtle); white-space: nowrap; }
-/* the filters under the search field: In (the project or folder scope), Type and Status, each row a label and then
-   chips that wrap; a chip toggles its filter and stays pressed (one type and one status at a time) */
-.bd-filters { display: flex; flex-direction: column; gap: 6px; padding: 10px 4px 2px 6px; }
-.bd-frow { display: flex; align-items: flex-start; gap: 6px; min-width: 0; }
-.bd-frow .lbl { flex: none; width: 42px; font-size: 12px; line-height: 26px; color: var(--color-hz-fg-subtle); }
-.bd-frow-x { flex: 1; display: flex; flex-wrap: wrap; align-items: center; gap: 5px; min-width: 0; min-height: 26px; }
-.bd-fc { display: inline-flex; flex: none; align-items: center; gap: 5px; height: 26px; padding: 0 9px; border: 0; border-radius: 999px; cursor: pointer;
-  background: var(--color-hz-inset); box-shadow: inset 0 0 0 1px var(--color-hz-line); color: var(--color-hz-fg-muted); font: 500 12.5px var(--font-hz-sans); white-space: nowrap; }
-.bd-fc:hover { color: var(--color-hz-fg); background: var(--color-hz-hover); }
-.bd-fc:focus-visible { outline: none; box-shadow: var(--hz-shadow-focus); }
-.bd-fc svg { width: 13px; height: 13px; color: var(--t, currentColor); }
-.bd-fc .c { font: 500 11px var(--font-hz-mono); color: var(--color-hz-fg-subtle); }
-.bd-fc[aria-pressed="true"] { color: var(--color-hz-accent-fg); background: color-mix(in oklch, var(--color-hz-accent) 15%, var(--color-hz-surface));
-  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--color-hz-accent) 55%, transparent); }
-.bd-fc[aria-pressed="true"] .c { color: inherit; }
-.bd-fc[aria-pressed="true"]:focus-visible { box-shadow: var(--hz-shadow-focus); }
+/* one stat line under the search field: edits this week, decisions open, waiting on the agent, each a link */
+.bd-stat-l { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 18px 0 0; font-size: 13.5px; color: var(--color-hz-fg-subtle);
+  text-shadow: 0 0 6px var(--color-hz-canvas); }
+.bd-stat-l a { color: var(--color-hz-fg-muted); text-decoration: none; border-bottom: 1px dotted var(--color-hz-line-strong); }
+.bd-stat-l a:hover { color: var(--color-hz-fg); border-bottom-color: currentColor; }
+.bd-stat-l a:focus-visible { outline: none; border-radius: 3px; box-shadow: var(--hz-shadow-focus); }
+.bd-stat-l b { color: var(--color-hz-fg); font-weight: 600; }
 
 /* sections */
-.bd-sec-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 30px 0 14px; }
+.bd-sec-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 14px 0 12px; }
 .bd-sec-head h2 { margin: 0; font: 620 18px/1.3 var(--font-hz-sans); letter-spacing: -.015em; }
 .bd-sec-head .sub { font-size: 13px; color: var(--color-hz-fg-subtle); }
-.bd-sec-head .sub .bd-fl { vertical-align: -3px; }
 .bd-sec-head .sp { flex: 1; }
 
-/* widgets */
+/* Statistics' widgets */
 .bd-widgets { display: grid; gap: 14px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
 @container bd-wrap (max-width: 980px) { .bd-widgets { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @container bd-wrap (max-width: 540px) {
@@ -185,11 +234,12 @@ body { font-family: var(--font-hz-sans, Inter, system-ui, sans-serif); -webkit-f
 .bd-w-big .delta { flex-basis: 100%; margin-top: 2px; font: 500 11.5px var(--font-hz-mono); }
 .bd-w-big .delta.up { color: var(--color-hz-success-fg); }
 .bd-w-big .delta.down { color: var(--color-hz-fg-subtle); }
-.bd-bars { display: grid; grid-template-columns: repeat(14, minmax(0, 1fr)); gap: 4px; align-items: end; height: 86px; margin-top: 14px; }
+.bd-bars { display: grid; grid-template-columns: repeat(var(--n, 14), minmax(0, 1fr)); gap: var(--g, 4px); align-items: end; height: 86px; margin-top: 14px; }
 .bd-bars i { display: block; min-height: 3px; border-radius: 4px 4px 2px 2px; background: linear-gradient(180deg, var(--color-hz-accent), color-mix(in oklch, var(--color-hz-accent) 62%, transparent)); transform-origin: bottom; animation: bd-grow .6s var(--hz-ease-out) both; }
 .bd-bars i.zero { background: var(--color-hz-line); }
 .bd-bars i.today { background: linear-gradient(180deg, var(--bp-cyan), var(--color-hz-accent)); box-shadow: 0 0 14px -2px color-mix(in oklch, var(--bp-cyan) 70%, transparent); }
 .bd-days { display: grid; grid-template-columns: repeat(14, minmax(0, 1fr)); gap: 4px; margin-top: 6px; text-align: center; font: 500 10px var(--font-hz-mono); color: var(--color-hz-fg-subtle); }
+.bd-days.ends { display: flex; justify-content: space-between; }
 @keyframes bd-grow { from { transform: scaleY(0); } }
 .bd-ring { display: flex; align-items: center; gap: 14px; margin-top: 12px; }
 .bd-ring .tx b { display: block; font: 620 22px/1.1 var(--font-hz-sans); font-variant-numeric: tabular-nums; }
@@ -214,14 +264,36 @@ body { font-family: var(--font-hz-sans, Inter, system-ui, sans-serif); -webkit-f
 .bd-finds span { display: inline-flex; align-items: center; gap: 6px; }
 .bd-finds b { font: 600 12px var(--font-hz-mono); color: var(--color-hz-fg); }
 
-/* docs toolbar */
-.bd-tools { position: relative; z-index: 2; }
-.bd-tools .bd-tg { display: inline-flex; align-items: center; gap: 8px; }
-.bd-tools .lab { font-size: 12px; color: var(--color-hz-fg-subtle); }
+/* the docs toolbar: Type, Status and Project menus (pressed with a value, × clears it; Folder once a project is
+   picked), then Cards | Rows */
+.bd-tbar { display: flex; align-items: center; gap: 8px; }
+.bd-tbar > :last-child { margin-left: 4px; }
+.bd-fc, .bd-fc-t { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; font: 500 12.5px var(--font-hz-sans); cursor: pointer; }
+.bd-fc { height: 28px; padding: 0 8px 0 11px; box-sizing: border-box; border: 0; border-radius: 999px; background: var(--color-hz-inset); box-shadow: inset 0 0 0 1px var(--color-hz-line); color: var(--color-hz-fg-muted); }
+.bd-fc-t { padding: 0; border: 0; background: none; color: inherit; }
+button.bd-fc:hover { color: var(--color-hz-fg); }
+:is(.bd-fc, .bd-fc-t):focus-visible { outline: none; border-radius: 999px; box-shadow: var(--hz-shadow-focus); }
+.bd-fc svg { width: 13px; height: 13px; }
+.bd-fc b { font-weight: 600; color: var(--color-hz-fg); }
+.bd-fc.on { padding-right: 6px; color: var(--color-hz-accent-fg); background: color-mix(in oklch, var(--color-hz-accent) 15%, var(--color-hz-surface));
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--color-hz-accent) 55%, transparent); }
+.bd-fc.on b { color: inherit; }
+.bd-fc .x { display: grid; place-items: center; width: 18px; height: 18px; padding: 0; border: 0; border-radius: 50%; background: none; color: inherit; cursor: pointer; }
+.bd-fc .x:hover { background: color-mix(in oklch, currentColor 18%, transparent); }
+.bd-fc .x:focus-visible { outline: none; box-shadow: var(--hz-shadow-focus); }
+.bd-fc .x svg { width: 12px; height: 12px; }
+.bd-mo { display: flex; align-items: center; gap: 12px; }
+.bd-mo span:first-child { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.bd-mo .c { font: 500 11.5px var(--font-hz-mono); color: var(--color-hz-fg-subtle); }
+/* the hidden projects' notice over the table */
+.bd-nb { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; padding: 6px 6px 6px 14px; border-radius: 10px; font-size: 13px; color: var(--color-hz-fg-muted); background: var(--color-hz-info-tint); }
+.bd-nb > svg { flex: none; width: 15px; height: 15px; color: var(--color-hz-info-fg); }
+.bd-nb b { color: var(--color-hz-fg); font-weight: 600; }
+.bd-nb .sp { flex: 1; }
 
-/* grid of cards */
-.bd-grid { display: grid; gap: 18px; grid-template-columns: repeat(var(--cols, 3), minmax(0, 1fr)); }
-.bd-grid[data-cols="auto"] { grid-template-columns: repeat(auto-fill, minmax(268px, 1fr)); }
+/* Cards: the grid of doc cards, 48 at a time (Show N more) */
+.bd-grid { display: grid; gap: 18px; grid-template-columns: repeat(auto-fill, minmax(268px, 1fr)); }
+.bd-cmore { display: flex; justify-content: center; margin-top: 18px; }
 .bd-card { display: flex; flex-direction: column; min-width: 0; border-radius: var(--radius-hz-card); overflow: hidden; text-decoration: none; outline: none;
   background: var(--color-hz-surface); box-shadow: var(--hz-shadow-1); transition: transform var(--hz-dur-2) var(--hz-ease-out), box-shadow var(--hz-dur-2) var(--hz-ease-out); }
 .bd-card:hover { transform: translateY(-3px); box-shadow: var(--hz-shadow-3); }
@@ -251,8 +323,6 @@ body { font-family: var(--font-hz-sans, Inter, system-ui, sans-serif); -webkit-f
   background-size: 16px 16px, 16px 16px, auto; background-position: -1px -1px, -1px -1px, 0 0; }
 .bd-art.err { background-color: #2a1220;
   background-image: linear-gradient(rgba(255, 138, 122, .12) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 138, 122, .12) 1px, transparent 1px), linear-gradient(180deg, #3a1624, #240d18); }
-.bd-art.thumb { --pt: 9cqw; width: 64px; border-radius: 8px; background-size: 8px 8px, 8px 8px, auto; box-shadow: inset 0 0 0 1px rgba(95, 212, 255, .2); }
-.bd-art.thumb :is(.cap, .lg, .more, .bd-el-cap) { display: none; }
 .bd-pill { position: absolute; top: 12px; z-index: 1; display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 10px; border-radius: 999px; box-sizing: border-box;
   font: 600 11px/1 var(--font-hz-sans); white-space: nowrap; background: var(--pb); color: var(--pc); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pc) 20%, transparent); }
 .bd-pill .lb { overflow: hidden; text-overflow: ellipsis; }
@@ -312,7 +382,7 @@ body { font-family: var(--font-hz-sans, Inter, system-ui, sans-serif); -webkit-f
 .bd-art .cv .e.dep { stroke: var(--bp-dim); stroke-opacity: .6; stroke-dasharray: 3 3; }
 .bd-art .cv .e.replaced { stroke: var(--bp-red); stroke-dasharray: 5 3; }
 .bd-art .cv .fl { fill: none; stroke: var(--bp-cyan); stroke-width: 3px; stroke-linecap: round; stroke-dasharray: 0 14; opacity: 0; }
-:is(.bd-card, .bd-bcard, .bd-row):is(:hover, :focus-visible) .bd-art .cv .fl { opacity: 1; animation: bd-flow-s 1s linear infinite; }
+.bd-card:is(:hover, :focus-visible) .bd-art .cv .fl { opacity: 1; animation: bd-flow-s 1s linear infinite; }
 @keyframes bd-flow-s { to { stroke-dashoffset: -14; } }
 .bd-art .cv text { font-family: var(--font-hz-mono); fill: var(--bp-ice); }
 .bd-art .cv g.nodes { filter: drop-shadow(0 0 5px rgba(95, 212, 255, .28)); }
@@ -345,75 +415,137 @@ body { font-family: var(--font-hz-sans, Inter, system-ui, sans-serif); -webkit-f
 .bd-stat.err .ic svg { filter: drop-shadow(0 0 8px rgba(255, 138, 122, .45)); }
 .bd-stat .msg { font: 500 3.9cqw/1.35 var(--font-hz-mono); color: #ffc2c8; word-break: break-word; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
 
-/* list */
-.bd-list { border-radius: var(--radius-hz-card); background: var(--color-hz-surface); box-shadow: var(--hz-shadow-1); }
-.bd-row { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 1.3fr) 150px 110px 84px 92px; gap: 16px; align-items: center; padding: 9px 16px; text-decoration: none; outline: none; color: var(--color-hz-fg); }
-.bd-list > :is(.bd-row.head, .bd-cw) + .bd-cw { border-top: 1px solid var(--color-hz-line-soft); }
-a.bd-row:hover { background: var(--color-hz-hover); }
-a.bd-row:focus-visible { box-shadow: inset 0 0 0 2px var(--color-hz-accent); }
-.bd-row.head { position: sticky; top: var(--bd-top-h); z-index: 1; padding-top: 10px; padding-bottom: 10px; border-radius: var(--radius-hz-card) var(--radius-hz-card) 0 0; background: var(--color-hz-panel); }
-.bd-row.head span { font: 500 10.5px var(--font-hz-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--color-hz-fg-subtle); }
-.bd-row .c-doc { display: flex; align-items: center; gap: 12px; min-width: 0; }
-.bd-row .tx { display: flex; flex-direction: column; min-width: 0; }
-.bd-row .tx .t { font: 600 14px/1.4 var(--font-hz-sans); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-a.bd-row:hover .tx .t { color: var(--color-hz-accent-fg); }
-.bd-row .tx .s { font-size: 12.5px; color: var(--color-hz-fg-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.bd-row .c-folder, .bd-row .c-rev, .bd-row .c-edited { font-size: 12.5px; color: var(--color-hz-fg-muted); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.bd-row .c-folder .bd-loc { max-width: 100%; }
-.bd-row .c-rev { font-family: var(--font-hz-mono); font-size: 12px; }
-.bd-row .c-doc .bd-art { flex: none; }
+/* the docs table: a sticky column header and group headings (Today, This week, This month, Older), a row per doc;
+   a row opens in place (.bd-rx). No project column once a project is picked */
+.bd-tb { --cols: minmax(0, 1fr) 112px 176px 150px 88px 40px 80px; border-radius: var(--radius-hz-card); background: var(--color-hz-surface); box-shadow: var(--hz-shadow-1); }
+.bd-tb.np { --cols: minmax(0, 1fr) 112px 150px 88px 40px 80px; }
+.bd-r, .bd-hd { display: grid; grid-template-columns: var(--cols); gap: 16px; align-items: center; padding: 0 16px; }
+.bd-r { cursor: pointer; }
+.bd-hd { position: sticky; top: var(--bd-top-h); z-index: 3; height: 36px; border-radius: var(--radius-hz-card) var(--radius-hz-card) 0 0; background: var(--color-hz-panel); box-shadow: inset 0 -1px 0 var(--color-hz-line); }
+.bd-hd > * { display: flex; align-items: center; gap: 4px; min-width: 0; padding: 0; border: 0; background: none; white-space: nowrap;
+  font: 500 10.5px var(--font-hz-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--color-hz-fg-subtle); }
+.bd-hd .so { display: flex; align-items: center; gap: 4px; padding: 0; border: 0; background: none; font: inherit; letter-spacing: inherit; text-transform: inherit;
+  color: var(--color-hz-accent-fg); cursor: pointer; }
+.bd-hd .so svg { width: 12px; height: 12px; stroke-width: 2.2; }
+.bd-hd .so:focus-visible { outline: none; border-radius: 4px; box-shadow: var(--hz-shadow-focus); }
+.bd-gh { position: sticky; top: calc(var(--bd-top-h) + 36px); z-index: 2; display: flex; align-items: center; gap: 7px; width: 100%; height: 34px; padding: 0 16px 0 12px; box-sizing: border-box;
+  border: 0; background: var(--color-hz-panel); box-shadow: inset 0 -1px 0 var(--color-hz-line-soft); color: var(--color-hz-fg); font: 600 13px var(--font-hz-sans); text-align: left; cursor: pointer; }
+.bd-gh[aria-expanded="false"] { position: static; }
+.bd-gh svg { width: 14px; height: 14px; color: var(--color-hz-fg-subtle); }
+.bd-gh span { font: 500 12px var(--font-hz-mono); color: var(--color-hz-fg-subtle); }
+.bd-gh:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--color-hz-accent); }
+.bd-tb > :last-child { border-radius: 0 0 var(--radius-hz-card) var(--radius-hz-card); }
+.bd-r { height: 40px; box-shadow: inset 0 -1px 0 var(--color-hz-line-soft); font-size: 13px; white-space: nowrap; color: var(--color-hz-fg); text-decoration: none; outline: none; }
+.bd-r > * { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.bd-r:hover { background: var(--color-hz-hover); }
+.bd-r:focus-visible { box-shadow: inset 0 0 0 2px var(--color-hz-accent); }
+/* a row opens in place (the chevron turns); only its title opens the doc */
+.bd-r.open, .bd-r.open:hover { background: var(--color-hz-hover); box-shadow: inset 2px 0 0 var(--color-hz-accent); }
+.bd-ti > .cv { flex: none; width: 14px; height: 14px; margin-right: -3px; color: var(--color-hz-fg-subtle); transition: transform var(--hz-dur-2) var(--hz-ease-out); }
+.bd-r:hover .bd-ti > .cv { color: var(--color-hz-fg-muted); }
+.bd-r.open .bd-ti > .cv { transform: rotate(90deg); color: var(--color-hz-accent-fg); }
+.bd-ti a.t { color: inherit; text-decoration: none; text-underline-offset: 3px; text-decoration-thickness: 1px; border-radius: 3px; outline: none; }
+.bd-ti a.t:hover { color: var(--color-hz-accent-fg); text-decoration-line: underline; }
+.bd-ti a.t:focus-visible { box-shadow: var(--hz-shadow-focus); }
+.bd-ti { display: flex; align-items: center; gap: 9px; }
+.bd-ti > b { flex: none; width: 20px; font-weight: 400; font-size: 15px; text-align: center; }
+.bd-ti .t { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
+.bd-ti small { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; font-size: inherit; color: var(--color-hz-fg-subtle); }
+.bd-m { font: 12px var(--font-hz-mono); color: var(--color-hz-fg-muted); }
+.bd-m u { text-decoration: none; color: var(--color-hz-fg-subtle); }
+.bd-no { color: var(--color-hz-fg-subtle); }
+.bd-ty { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; height: 22px; padding: 0 9px 0 8px; box-sizing: border-box; border-radius: 999px; overflow: hidden;
+  font: 600 11.5px/1 var(--font-hz-sans); color: color-mix(in oklch, var(--t) 72%, var(--color-hz-fg)); background: color-mix(in oklch, var(--t) 15%, transparent); }
+.bd-ty::before { content: ""; flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--t); }
+.bd-sp { max-width: 100%; height: 22px; font-weight: 600; font-size: 11.5px; }
+.bd-sp .dt { flex: none; width: 7px; height: 7px; margin-right: 2px; border-radius: 50%; background: currentColor; }
+.bd-dc { display: flex; align-items: center; gap: 7px; font: 12px var(--font-hz-mono); color: var(--color-hz-fg-muted); }
+.bd-rg { flex: none; width: 14px; height: 14px; border-radius: 50%; background: conic-gradient(var(--color-hz-accent) calc(var(--p) * 1%), var(--color-hz-line-strong) 0);
+  -webkit-mask: radial-gradient(circle, #0000 3.6px, #000 4.2px); mask: radial-gradient(circle, #0000 3.6px, #000 4.2px); }
+.bd-rg.f { background: var(--color-hz-success); }
+.bd-more { display: flex; align-items: center; width: 100%; height: 36px; padding: 0 16px 0 45px; box-sizing: border-box; border: 0; background: none; cursor: pointer; text-align: left;
+  font: 500 12.5px var(--font-hz-sans); color: var(--color-hz-accent-fg); box-shadow: inset 0 -1px 0 var(--color-hz-line-soft); }
+.bd-more:hover { text-decoration: underline; }
+.bd-more:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--color-hz-accent); }
 
-/* board */
-.bd-board { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(230px, 1fr); gap: 14px; align-items: start; overflow-x: auto; padding-bottom: 10px; scroll-snap-type: x proximity; }
-.bd-col { display: flex; flex-direction: column; gap: 10px; min-height: 140px; padding: 10px; border-radius: var(--radius-hz-tray); background: var(--color-hz-panel); box-shadow: inset 0 0 0 1px var(--color-hz-line); scroll-snap-align: start; }
-.bd-col h3 { display: flex; align-items: center; gap: 8px; margin: 2px 4px; font: 600 13px var(--font-hz-sans); }
-.bd-col h3 .c { margin-left: auto; font: 500 11.5px var(--font-hz-mono); color: var(--color-hz-fg-subtle); }
-.bd-col .none { padding: 18px 8px; text-align: center; font-size: 12.5px; color: var(--color-hz-fg-subtle); border-radius: 10px; border: 1px dashed var(--color-hz-line-strong); }
-.bd-bcard { display: flex; flex-direction: column; border-radius: 12px; overflow: hidden; text-decoration: none; outline: none; background: var(--color-hz-surface); box-shadow: var(--hz-shadow-1);
-  transition: transform var(--hz-dur-2) var(--hz-ease-out), box-shadow var(--hz-dur-2) var(--hz-ease-out); }
-.bd-bcard:hover { transform: translateY(-2px); box-shadow: var(--hz-shadow-2); }
-.bd-bcard:focus-visible { box-shadow: var(--hz-shadow-focus), var(--hz-shadow-1); }
-.bd-bcard .bd-pill { top: 10px; }
-.bd-bcard .bd-pill.type { right: 10px; }
-.bd-bcard .b { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px 11px; }
-.bd-bcard .t { font: 600 13.5px/1.35 var(--font-hz-sans); color: var(--color-hz-fg); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.bd-bcard .bd-card-f { padding-top: 2px; font-size: 11.5px; }
-.bd-bcard .bd-card-f .rv { display: none; }   /* narrow column: folder, age and progress */
-.bd-bcard .bd-prog .tr { width: 40px; }
+/* an open row, under it across the table: an inset card with the decided meter and the actions, the thumbnail beside
+   the TL;DR and what is left, then the path, rev and last edit. One type scale: body 13.5/20 (TL;DR), list 13, mono 12,
+   caps label 10.5; spacing on 4 and 8 */
+.bd-rx { padding: 0 12px 12px; background: var(--color-hz-hover); box-shadow: inset 2px 0 0 var(--color-hz-accent), inset 0 -1px 0 var(--color-hz-line-soft);
+  animation: bd-rx-in var(--hz-dur-2) var(--hz-ease-out); }
+@keyframes bd-rx-in { from { opacity: 0; transform: translateY(-4px); } }
+.bd-tl { margin: 0; max-width: 72ch; font-size: 13.5px; line-height: 20px; color: var(--color-hz-fg-muted); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.bd-cap2 { font: 500 10.5px/16px var(--font-hz-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--color-hz-fg-subtle); }
+.bd-left { list-style: none; margin: 0; padding: 0; display: grid; }
+.bd-left li { display: flex; align-items: center; gap: 8px; height: 24px; min-width: 0; font-size: 13px; color: var(--color-hz-fg); }
+.bd-left li > svg { flex: none; width: 13px; height: 13px; color: var(--color-hz-fg-subtle); }
+.bd-left li.dec > svg { color: var(--color-hz-warning-fg); }
+.bd-left .t { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bd-left .z { flex: none; margin-left: auto; padding-left: 8px; font: 12px var(--font-hz-mono); color: var(--color-hz-fg-subtle); }
+.bd-left .more { padding-left: 21px; font-size: 12px; color: var(--color-hz-fg-subtle); }
+.bd-path { display: flex; align-items: center; gap: 4px; min-width: 0; font: 12px var(--font-hz-mono); color: var(--color-hz-fg-subtle); }
+.bd-path > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bd-app .bd-path .bd-copy { flex: none; width: 24px; height: 24px; }
+.bd-acts { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.bd-rx .x-card { gap: 16px; }
+.bd-rx .x-hd { display: flex; align-items: center; gap: 16px; min-height: 32px; }
+.bd-rx .x-meter { flex: 1; display: flex; align-items: center; gap: 12px; min-width: 0; font-size: 13px; color: var(--color-hz-fg-muted); }
+.bd-rx .x-meter > div:first-child { flex: none; width: 160px; }
+.bd-rx .x-meter b { color: var(--color-hz-fg); font-weight: 600; }
+.bd-rx .x-open { font: 12px var(--font-hz-mono); color: var(--color-hz-warning-fg); }
+.bd-rx .x-body { display: grid; grid-template-columns: 144px minmax(0, 1fr); gap: 16px; }
+.bd-rx .x-thumb { align-self: start; width: 144px; border-radius: 8px; overflow: hidden; box-shadow: inset 0 0 0 1px var(--color-hz-line); }
+.bd-rx .x-thumb .bd-pill { display: none; }
+.bd-rx .x-text { display: grid; gap: 8px; align-content: start; min-width: 0; }
+.bd-rx .x-text .bd-cap2 { margin-top: 4px; }
+.bd-rx .x-ft { display: flex; align-items: center; gap: 8px; min-width: 0; font: 12px var(--font-hz-mono); color: var(--color-hz-fg-subtle); white-space: nowrap; }
+.bd-rx .x-ft .bd-path { flex: 0 1 auto; }
+.bd-rx .x-dot { opacity: .6; }
 
-/* groups by folder */
-.bd-group + .bd-group { margin-top: 28px; }
-.bd-group > h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; font: 600 14px var(--font-hz-sans); }
-.bd-group > h3 .proj { color: var(--color-hz-fg-subtle); font-weight: 500; }
-.bd-group > h3 .c { font: 500 11.5px var(--font-hz-mono); color: var(--color-hz-fg-subtle); }
-.bd-group > h3 .when { margin-left: auto; font-size: 12px; font-weight: 400; color: var(--color-hz-fg-subtle); }
+/* statistics (/stats): the header with Project and the range, the four widgets, then edits by project and the oldest open decisions */
+.bd-stats-h { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 26px 0 18px; }
+.bd-stats-h h1 { margin: 0; font: 620 22px/1.2 var(--font-hz-sans); letter-spacing: -.02em; }
+.bd-stats-h .sub { font-size: 13px; color: var(--color-hz-fg-subtle); }
+.bd-stats-h .sp { flex: 1; }
+.bd-widgets.two { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 14px; }
+.bd-ebs { display: flex; flex-direction: column; margin-top: 12px; }
+.bd-eb { display: grid; grid-template-columns: 118px 1fr; align-items: center; gap: 12px; height: 29px; font: 12.5px var(--font-hz-mono); color: var(--color-hz-fg-muted); text-decoration: none; border-radius: 6px; }
+.bd-eb:hover { color: var(--color-hz-fg); }
+.bd-eb:focus-visible { outline: none; box-shadow: var(--hz-shadow-focus); }
+.bd-eb .n { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bd-eb i { display: flex; align-items: center; gap: 8px; font-style: normal; }
+.bd-eb i::before { content: ""; flex: none; height: 12px; width: var(--w); border-radius: 3px; background: color-mix(in oklch, var(--color-hz-accent) 75%, transparent); }
+.bd-ols { margin-top: 8px; }
+.bd-ol { display: grid; grid-template-columns: minmax(0, 1fr) 120px 66px 40px; align-items: center; gap: 12px; height: 36px; font-size: 13px; box-shadow: inset 0 -1px 0 var(--color-hz-line-soft); }
+.bd-ol:last-child { box-shadow: none; }
+.bd-ol .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bd-ol .m { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 12px var(--font-hz-mono); color: var(--color-hz-fg-subtle); }
+.bd-ol .w { font: 500 12px var(--font-hz-mono); color: var(--color-hz-warning-fg); white-space: nowrap; }
+.bd-ol .o { font-weight: 600; color: var(--color-hz-accent-fg); text-decoration: none; }
+.bd-ol .o:hover { text-decoration: underline; }
+
 .bd-empty { padding: 36px 0; border-radius: var(--radius-hz-card); background: var(--color-hz-surface); box-shadow: var(--hz-shadow-1); }
 .bd-empty code { font: 500 12.5px var(--font-hz-mono); padding: 1px 5px; border-radius: 5px; background: var(--color-hz-inset); white-space: nowrap; }
 
-/* archive: every card, row and board card sits in a .bd-cw with its ⋯ menu (Archive / Unarchive) and, when the doc is
-   all done, the "All done · Archive it?" line; an archived doc listed (the Archived chip) is dimmed */
+/* archive: every card sits in a .bd-cw with its ⋯ menu (Archive / Unarchive) and, when the doc is all done, the
+   "All done · Archive it?" line; an archived doc listed (the Archived status) is dimmed */
 .bd-cw { position: relative; display: flex; flex-direction: column; min-width: 0; }
 .bd-cw > .bd-card { flex: 1; }
-.bd-cw.arch > :is(.bd-card, .bd-bcard, .bd-row) { opacity: .62; }
-.bd-cw.arch:is(:hover, :focus-within) > :is(.bd-card, .bd-bcard, .bd-row) { opacity: .9; }
+.bd-cw.arch > .bd-card { opacity: .62; }
+.bd-cw.arch:is(:hover, :focus-within) > .bd-card { opacity: .9; }
 .bd-cm { position: absolute; z-index: 3; top: 9px; right: 9px; transition: transform var(--hz-dur-2) var(--hz-ease-out); }
-.bd-cw.card:hover .bd-cm { transform: translateY(-3px); }
-.bd-cw.board:hover .bd-cm { transform: translateY(-2px); }
-.bd-cw.row .bd-cm { top: 50%; right: 10px; transform: translateY(-50%); }
+.bd-cw:hover .bd-cm { transform: translateY(-3px); }
 .bd-cm-b { display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 8px; cursor: pointer; color: #dbe9ff;
   background: rgba(6, 22, 44, .78); box-shadow: inset 0 0 0 1px rgba(214, 233, 255, .16); opacity: 0; transition: opacity var(--hz-dur-2) var(--hz-ease-out); }
-.bd-cw.row .bd-cm-b { color: var(--color-hz-fg-muted); background: var(--color-hz-surface); box-shadow: var(--hz-shadow-1); }
 .bd-cm-b:hover { color: #fff; }
-.bd-cw.row .bd-cm-b:hover { color: var(--color-hz-fg); }
 .bd-cm-b:focus-visible { outline: none; box-shadow: var(--hz-shadow-focus); }
 .bd-cw:is(:hover, :focus-within) .bd-cm-b, .bd-cm.open .bd-cm-b { opacity: 1; }
-.bd-cw:is(.card, .board) .bd-pill.type { transition: right var(--hz-dur-2) var(--hz-ease-out); }
-.bd-cw.card:is(:hover, :focus-within) .bd-pill.type { right: 46px; }
-.bd-cw.board:is(:hover, :focus-within) .bd-pill.type { right: 44px; }
+.bd-cw .bd-pill.type { transition: right var(--hz-dur-2) var(--hz-ease-out); }
+.bd-cw:is(:hover, :focus-within) .bd-pill.type { right: 46px; }
 .bd-cw .bd-pill.st { max-width: calc(100% - 150px); }
 @media (hover: none) {
   .bd-cm-b { opacity: 1; }
-  .bd-cw.card .bd-pill.type { right: 46px; } .bd-cw.board .bd-pill.type { right: 44px; }
+  .bd-cw .bd-pill.type { right: 46px; }
 }
 .bd-cm-m { position: absolute; top: calc(100% + 6px); right: 0; display: grid; min-width: 150px; padding: 5px; border-radius: 10px; background: var(--color-hz-surface); box-shadow: var(--hz-shadow-3); }
 .bd-cm-m button { display: flex; align-items: center; gap: 9px; padding: 7px 10px; border: 0; border-radius: 7px; background: none; color: var(--color-hz-fg); font: 500 13px var(--font-hz-sans); text-align: left; white-space: nowrap; cursor: pointer; }
@@ -424,9 +556,7 @@ a.bd-row:hover .tx .t { color: var(--color-hz-accent-fg); }
 .bd-sug > svg { flex: none; color: var(--color-hz-success); }
 .bd-sug .t { flex: 1 0 auto; white-space: nowrap; }
 .bd-sug .acts { display: flex; gap: 2px; margin-left: auto; }
-.bd-cw.sug > :is(.bd-card, .bd-bcard) { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
-.bd-cw.sug.board .bd-sug { border-radius: 0 0 12px 12px; padding-left: 12px; }
-.bd-cw.sug.row .bd-sug { border-radius: 0; box-shadow: none; padding-left: 16px; }
+.bd-cw.sug > .bd-card { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
 /* the line under the results that says what archive hides; Show them turns on the Archived chip */
 .bd-ahint { margin: 0; }
 .bd-ahint:not(:empty) { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px 8px; margin: 18px 0 0; font-size: 13px; color: var(--color-hz-fg-muted); }
@@ -501,27 +631,27 @@ a.bd-row:hover .tx .t { color: var(--color-hz-accent-fg); }
 @media (max-width: 760px) { .bd-sh-acct { width: 100%; } .bd-sh-st { text-align: left; } }
 
 /* mobile drawer */
-.bd-drawer { position: fixed; inset: 0; z-index: 60; }
+.bd-drawer { position: fixed; inset: 0; z-index: 45; }   /* under HorizonUI's menus and dialogs (z 50) */
 .bd-drawer .scrim { position: absolute; inset: 0; background: var(--color-hz-scrim, rgba(0, 0, 0, .4)); animation: bd-fade var(--hz-dur-2) both; }
 .bd-drawer .panel { position: absolute; top: 0; bottom: 0; left: 0; box-shadow: var(--hz-shadow-4); animation: bd-slide var(--hz-dur-3) var(--hz-ease-out) both; }
 @keyframes bd-fade { from { opacity: 0; } }
 @keyframes bd-slide { from { transform: translateX(-100%); } }
 
 @media (max-width: 1100px) {
-  .bd-row { grid-template-columns: minmax(0, 3fr) minmax(0, 1.2fr) 140px 100px; }
-  .bd-row .c-rev, .bd-row .c-edited { display: none; }
+  .bd-tb, .bd-tb.np { --cols: minmax(0, 1fr) 104px 150px 88px 76px; }
+  .bd-tb :is(.c-f, .c-rv) { display: none; }
 }
 @media (max-width: 899px) {
   .bd-side { display: none; }
   .bd-only-m { display: inline-flex !important; }
   .bd-wrap { padding: 0 16px 80px; }
   .bd-top { padding: 0 12px; gap: 8px; }
-  .bd-top .bd-top-t, .bd-top .bd-top-n, .bd-top .bd-brand { display: none; }
-  .bd-top .bd-top-s { flex: 1 1 auto; }
+  .bd-top :is(.bd-top-n, .bd-tbar) { display: none; }
   .bd-top .bd-top-q { flex: 1 1 auto; }
   /* settings: no sidebar, so the bar keeps the drawer's key and the theme key, over the page */
   .bd-st-bar { display: flex; }
-  .bd-st-bar + .bd-st { padding-top: calc(var(--bd-top-h) + 20px); }
+  .bd-st-bar + :is(.bd-st, .bd-wrap) { padding-top: calc(var(--bd-top-h) + 20px); }
+  .bd-widgets.two { grid-template-columns: minmax(0, 1fr); }
 }
 /* settings on a phone: one column, no section list (the page scrolls) */
 @media (max-width: 760px) {
@@ -534,22 +664,99 @@ a.bd-row:hover .tx .t { color: var(--color-hz-accent-fg); }
   .bd-st-path, .bd-st-path .bd-st-in { flex: 1 1 100%; width: 100%; }
 }
 @media (max-width: 700px) {
-  .bd-row { grid-template-columns: minmax(0, 1fr) auto; gap: 10px; }
-  .bd-row .c-folder, .bd-row .c-prog { display: none; }
-  .bd-row.head { display: none; }
+  .bd-tb, .bd-tb.np { --cols: minmax(0, 1fr) auto 64px; }
+  .bd-tb :is(.c-ty, .c-dc) { display: none; }
+  .bd-tbar { flex-wrap: wrap; }
+  /* the open row's head and foot wrap once the table is down to three columns */
+  .bd-rx .x-hd { flex-wrap: wrap; }
+  .bd-rx .x-meter { flex: 1 0 100%; }
+  .bd-rx .x-ft { flex-wrap: wrap; white-space: normal; }
 }
-@media (max-width: 620px) {
-  .bd-grid, .bd-grid[data-cols="auto"] { grid-template-columns: minmax(0, 1fr); }
-  .bd-hide-s { display: none !important; }
-  .bd-hero { padding-top: 170px; }
-  .bd-hero .lede { font-size: 13.5px; }
-  .bd-composer .bd-q { height: 48px; }
-  /* a row of filter chips scrolls sideways, out to the composer's edge (the margins keep focus rings unclipped) */
-  .bd-frow-x { flex-wrap: nowrap; overflow-x: auto; margin: -3px -12px -3px -3px; padding: 3px 12px 3px 3px; }
+/* phones: the drawer for the sidebar, a shorter hero with the whole picture, the toolbar on one row that scrolls
+   sideways, the table as a list (title, then type · status · decisions · age; project and rev in the open row), the
+   statistics one widget a row; touch targets 40 px */
+.bd-only-p { display: none !important; }
+@media (max-width: 600px) {
+  .bd-only-p { display: inline-flex !important; }
+  .bd-grid { grid-template-columns: minmax(0, 1fr); }
+  .bd-wrap { padding: 0 12px 72px; }
+  .bd-hero-bar { top: 6px; left: 6px; right: 6px; gap: 2px; }
+  .bd-app :is(.bd-hero-bar, .bd-top, .bd-sb-foot, .bd-sb-top, .bd-st-bar) button[aria-label] { width: 40px; height: 40px; }
+  .bd-hero-pix { min-height: 0; }
+  .bd-hero { padding: calc(100vw * 523 / 1672 - 6px) 12px 22px; }
+  .bd-hero h1 { font-size: 25px; }
+  .bd-hero .lede { margin-top: 6px; font-size: 13px; }
+  .bd-composer { margin-top: 16px; padding: 6px; border-radius: 16px; }
+  .bd-composer .bd-q { height: 46px; }
+  .bd-composer .bd-q input { font-size: 16px; }
+  .bd-stat-l { gap: 2px 8px; margin-top: 14px; font-size: 13px; line-height: 1.6; }
+  .bd-top { gap: 6px; padding: 0 6px 0 4px; }
+  /* Docs, its count, then the toolbar on its own row, scrolling sideways out to the screen's edges */
+  .bd-sec-head { margin: 10px 0 10px; }
+  .bd-sec-head .sp { display: none; }
+  .bd-sec-head .bd-tbar { flex: 1 0 100%; flex-wrap: nowrap; overflow-x: auto; margin: 0 -12px; padding: 3px 12px; }
+  .bd-tbar > * { flex: none; }
+  .bd-fc { height: 40px; padding: 0 12px 0 14px; font-size: 13px; }
+  .bd-fc.on { padding-right: 4px; }
+  .bd-fc .x { width: 32px; height: 32px; }
+  .bd-tbar [role=radiogroup] { height: 40px; }
+  .bd-tbar [role=radiogroup] button { height: 34px; }
+  /* the list */
+  .bd-hd { display: flex; justify-content: space-between; height: 34px; padding: 0 14px; }
+  .bd-hd > :not(:first-child):not(:last-child) { display: none; }
+  .bd-gh { top: calc(var(--bd-top-h) + 34px); height: 40px; }
+  .bd-tb .bd-r { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 6px; height: auto; min-height: 56px; padding: 9px 12px 10px; white-space: normal; }
+  .bd-tb .bd-r > * { overflow: visible; }
+  .bd-tb .bd-r > .bd-ti { flex: 1 0 100%; align-items: flex-start; }
+  .bd-ti > .cv, .bd-ti > b { margin-top: 1px; }
+  .bd-ti .t { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; white-space: normal; line-height: 1.35; font-size: 14px; }
+  .bd-ti small { display: none; }
+  .bd-tb .bd-r > .c-ty { margin-left: 20px; }
+  .bd-tb .bd-r > :is(.c-f, .c-rv) { display: none; }
+  .bd-tb .bd-r > .c-st:has(.bd-no), .bd-tb .bd-r > .c-dc:has(.bd-no) { display: none; }
+  .bd-tb .bd-r > :is(.c-ty, .c-st, .c-dc, .c-up) { display: inline-flex; }
+  .bd-tb .bd-r > :is(.c-dc, .c-up)::before { content: "·"; margin-right: 6px; color: var(--color-hz-fg-subtle); font-family: var(--font-hz-sans); }
+  .bd-tb .bd-r :is(.bd-ty, .bd-sp) { height: 22px; padding: 0 7px 0 6px; font-size: 11px; gap: 5px; }
+  .bd-tb .bd-r .bd-dc { gap: 5px; }
+  .bd-rx { padding: 0 8px 8px; }
+  .bd-rx .x-body { grid-template-columns: minmax(0, 1fr); }
+  .bd-rx .x-thumb { width: 100%; }
+  .bd-rx .x-meter > div:first-child { width: 120px; }
+  .bd-acts > button { height: 40px; }
+  .bd-app .bd-acts > button[aria-label] { width: 40px; }
+  .bd-more { height: 44px; padding-left: 14px; }
+  .bd-nb { flex-wrap: wrap; padding: 8px 8px 8px 12px; row-gap: 4px; }
+  .bd-nb .sp { display: none; }
+  .bd-nb > button { margin-left: auto; height: 36px; }
+  /* statistics: one widget a row, the range across the page */
+  .bd-stats-h { gap: 10px; margin: 14px 0 14px; }
+  .bd-stats-h .sp { display: none; }
+  .bd-stats-h > [role=radiogroup] { flex: 1 0 100%; height: 40px; }
+  .bd-stats-h > [role=radiogroup] > button { flex: 1; height: 34px; }
+  .bd-widgets, .bd-widgets.two { grid-template-columns: minmax(0, 1fr); grid-auto-flow: row; overflow: visible; margin: 0; padding: 0; }
+  .bd-ol { grid-template-columns: minmax(0, 1fr) 66px 40px; height: 44px; }
+  .bd-ol .m { display: none; }
+  .bd-eb { grid-template-columns: 104px 1fr; height: 32px; }
+  /* the drawer: a wider sidebar with 40 px rows and chips */
+  .bd-drawer .bd-sb { width: min(320px, 88vw); }
+  .bd-sb :is(.bd-ni, .bd-pr > .bd-ni, .bd-ni.fo) { height: 40px; font-size: 14px; }
+  .bd-pf { gap: 4px; }
+  .bd-pc { flex: 1; justify-content: center; height: 36px; padding: 0 4px; font-size: 12px; }
+  .bd-psq { height: 40px; }
+  .bd-psq input { font-size: 16px; }
+  .bd-hp { height: 52px; }
+  .bd-hp > button:last-child { height: 36px; }
+  .bd-sb-foot { height: 52px; }
+}
+/* touch screens and phones: a project's ⋯ always shows, beside its count */
+@media (hover: none), (max-width: 600px) {
+  .bd-pr > .bd-ni { padding-right: 46px; }
+  .bd-pr > .bd-mk { display: grid; top: 0; right: 0; width: 40px; height: 100%; background: none; box-shadow: none; color: var(--color-hz-fg-subtle); }
+  .bd-pr:is(:hover, :focus-within, .open) > .bd-ni :is(.c, .pn) { visibility: visible; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .bd-art .cv .fl, .bd-bars i { animation: none !important; }
-  .bd-card, .bd-bcard, .bd-top { transition: none; }
+  .bd-art .cv .fl, .bd-bars i, .bd-rx { animation: none !important; }
+  .bd-card, .bd-top { transition: none; }
 }
 </style>
 </head>
@@ -562,7 +769,7 @@ a.bd-row:hover .tx .t { color: var(--color-hz-accent-fg); }
 'use strict';
 const e = React.createElement, F = React.Fragment;
 const { useState, useEffect, useMemo, useRef, useDeferredValue } = React;
-const { HorizonProvider, Sidebar, SegmentedControl, Card, ProgressRing, EmptyState, SearchField, TextField, Switch, Tag, IconButton, Button, ToggleButton, StatusDot, Badge, Banner, DropdownMenu, Avatar, Icons } = window.HorizonUI;
+const { HorizonProvider, SegmentedControl, Card, ProgressRing, ProgressBar, EmptyState, SearchField, TextField, Switch, IconButton, Button, StatusDot, Badge, Banner, DropdownMenu, Avatar, Tooltip, Dialog, Icons } = window.HorizonUI;
 
 /* ---------- storage, theme, settings ---------- */
 const store = { get: k => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch {} } };
@@ -583,16 +790,16 @@ function CopyUnlock() {
   return e(Button, { size: 'sm', variant: 'secondary', onClick: () => navigator.clipboard.writeText('serve.py unlock').then(() => setCopied(true), () => {}) },
     copied ? 'Copied' : 'Copy unlock command');
 }
-const darkMQ = matchMedia('(prefers-color-scheme: dark)'), reduceMQ = matchMedia('(prefers-reduced-motion: reduce)');
+const darkMQ = matchMedia('(prefers-color-scheme: dark)'), reduceMQ = matchMedia('(prefers-reduced-motion: reduce)'), phoneMQ = matchMedia('(max-width: 600px)');
 const finePointer = matchMedia('(pointer: fine)').matches, isMac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
 const storedTheme = () => { const t = store.get(THEME_KEY); return t === 'dark' || t === 'light' ? t : null; };
 const systemTheme = () => (darkMQ.matches ? 'dark' : 'light');
-const VIEWS = ['grid', 'list', 'board'], COLS = ['auto', '2', '3', '4', '5', '6'], SORTS = ['recent', 'name'];
+const VIEWS = ['rows', 'cards'];
+// this browser's home layout: Rows or Cards, the Updated column's direction, and the sidebar as a rail
 function loadSettings() {
   let s = {};
   try { s = JSON.parse(store.get(HOME_KEY) || '{}') || {}; } catch {}
-  return { view: VIEWS.includes(s.view) ? s.view : 'grid', cols: COLS.includes(String(s.cols)) ? String(s.cols) : 'auto',
-    sort: SORTS.includes(s.sort) ? s.sort : 'recent', group: !!s.group, rail: !!s.rail };
+  return { view: VIEWS.includes(s.view) ? s.view : 'rows', asc: s.asc === true, rail: !!s.rail };
 }
 
 /* ---------- text ---------- */
@@ -647,10 +854,9 @@ const TYPES = [['docs', 'Docs', Icons.FileText], ['review', 'Reviews', Icons.Git
 const TYPE_ONE = { docs: 'Docs', review: 'Review', plan: 'Plan', design: 'Design', presentation: 'Presentation', website: 'Website', storelisting: 'Store listing', other: 'Other' };
 const APPROVABLE = new Set(['plan', 'design', 'presentation', 'website', 'storelisting']);   // types the reader approves as a whole (Approve plan / design / presentation / website / listing)
 // Archived is last: an archived doc (the index's `archived`, set from its page or a card's ⋯ menu) counts under it alone,
-// never under the others, and the default list, the board, the counts and the widgets leave it out (statusIs)
+// never under the others, and the default list, the counts and Statistics leave it out (statusIs)
 const STATUSES = [['needs', 'Needs you', Icons.Flag], ['awaiting', 'Awaiting approval', Icons.Clipboard], ['waiting', 'Waiting on agent', Icons.Clock],
   ['approved', 'Approved', Icons.Success], ['errors', "Doesn't build", Icons.Error], ['archived', 'Archived', ArchiveIcon]];
-const BOARD = [['needs', 'Needs you', 'warning'], ['waiting', 'Waiting on agent', 'ai'], ['progress', 'In progress', 'running'], ['done', 'Done', 'success'], ['errors', "Doesn't build", 'error']];
 
 function prepare(data) {
   const out = [];
@@ -665,25 +871,27 @@ function prepare(data) {
 // Otherwise it comes from the localStorage the doc pages write (same origin).
 function progress(d) {
   let dec = 0, decided = 0, steps = 0, done = 0;
+  const open = [];   // what is left: {text, dec, n (a decision's options)}, decisions first
   const pre = `bp:${d.id || 'doc'}:`, served = d.state && typeof d.state === 'object' ? d.state : null;
   let box = {};
   if (served) try { const x = JSON.parse(store.get(pre + '__outbox') || '{}'); if (x && typeof x === 'object') box = x; } catch {}
   const value = k => !served ? store.get(pre + k) : k in box ? box[k] : served[k] ?? null;
-  for (const [cl, id, isDec, author, choiceIds] of d.items || []) {
+  for (const [cl, id, isDec, author, choiceIds, text] of d.items || []) {
     const s = value(`${cl}:${id}`);
     if (isDec) {
       dec++;
       let pick = author || '';
       if (s != null && s.startsWith('=')) { const bar = s.indexOf('|'); const c = s.slice(1, bar); if (s.slice(bar + 1) === author && (!c || c.split(',').every(x => (choiceIds || []).includes(x)))) pick = c; }
-      if (pick) decided++;
+      if (pick) decided++; else open.push({ text: text || id, dec: true, n: (choiceIds || []).length });
     } else {
       steps++;
       let on = author === '1';
       if (s != null && !s.startsWith('=') && (s.length === 2 ? s[1] === author : !(s === '0' && author === '1'))) on = s[0] === '1';
-      if (on) done++;
+      if (on) done++; else open.push({ text: text || id, dec: false });
     }
   }
-  return { dec, decided, steps, done };
+  open.sort((a, b) => b.dec - a.dec);
+  return { dec, decided, steps, done, open };
 }
 function statusOf(d) {
   const approvable = APPROVABLE.has(d.type), errors = d.errors > 0, ap = approvable && !errors && d.approval ? d.approval : null;
@@ -694,7 +902,7 @@ function statusOf(d) {
   const sent = Math.max(d.answers ? d.answers.at : 0, d.changes ? d.changes.at : 0);
   const waiting = !approved && sent > d.mtime;
   let p = progress(d);
-  if (approved) p = { ...p, decided: p.dec };   // approving settles every open pick: the agent uses its recommendation
+  if (approved) p = { ...p, decided: p.dec, open: p.open.filter(x => !x.dec) };   // approving settles every open pick: the agent uses its recommendation
   const awaiting = approvable && !errors && !waiting && !approved;
   const needs = !errors && !waiting && (awaiting || p.dec > p.decided);
   const total = p.dec + p.steps, did = p.decided + p.done;
@@ -711,10 +919,12 @@ const statusIs = (st, s) => (s === 'archived' ? st.archived : !st.archived && !!
 const inScope = (d, sc) => !sc || (d.root.slug === sc.slug && (!sc.dir || d.dir === sc.dir || d.dir.startsWith(sc.dir + '/')));
 const scopeLabel = (roots, sc) => { const r = roots.find(x => x.slug === sc.slug); return (r ? r.name : sc.slug) + (sc.dir ? ' / ' + sc.dir : ''); };
 
-/* search: every term must match; title and path weigh more than body text */
-function match(d, terms) {
+/* search: every term must match; title and path weigh more than body text (body: the doc's text from search-text,
+   '' until it has come) */
+function match(d, terms, body) {
   if (!terms.length) return { score: 0, snip: '' };
-  const fields = [[plain(d.title), 10], [d.root.name + '/' + d.path, 6], [plain(d.subtitle), 4], [(d.sections || []).join(' '), 3], [d.kind + ' ' + d.org + ' ' + TYPE_ONE[d.type], 2], [plain(d.tldr) + ' ' + plain(d.text), 1]];
+  body = plain(d.tldr) + ' ' + plain(body);
+  const fields = [[plain(d.title), 10], [d.root.name + '/' + d.path, 6], [plain(d.subtitle), 4], [(d.sections || []).join(' '), 3], [d.kind + ' ' + d.org + ' ' + TYPE_ONE[d.type], 2], [body, 1]];
   let score = 0;
   for (const t of terms) {
     let hit = 0;
@@ -723,7 +933,7 @@ function match(d, terms) {
     score += hit;
   }
   // a snippet of body text around the first term the title doesn't already show
-  const body = plain(d.tldr) + ' ' + plain(d.text), low = body.toLowerCase();
+  const low = body.toLowerCase();
   const t = terms.find(t => !plain(d.title).toLowerCase().includes(t)) || terms[0];
   const i = low.indexOf(t);
   let snip = '';
@@ -746,7 +956,11 @@ const LOGO = '<defs><linearGradient id="bd-lg" x1="0" y1="0" x2="1" y2="1"><stop
 // "bluedoc" in Lexend Bold, outlined (font units at 100 px): `.b` is "blue", `.d` is "doc"; colours in CSS (.wm)
 const WORDMARK = '<path class="b" d="M39 1.1Q35.4 1.1 32.1 0.1Q28.8-0.9 26.2-2.6Q24-4 22.4-5.8L22-0.1L7.1-0.1L7.1-74L23.2-74L23.2-47.6Q24.6-49.2 26.5-50.5Q29.1-52.2 32.2-53.2Q35.3-54.2 38.6-54.2Q45.5-54.2 50.9-50.7Q56.2-47.1 59.3-40.9Q62.4-34.6 62.4-26.6Q62.4-18.5 59.4-12.3Q56.3-6 51-2.5Q45.7 1.1 39 1.1ZM34.8-12.4Q38.4-12.4 41.1-14.2Q43.8-16 45.3-19.2Q46.7-22.3 46.7-26.6Q46.7-30.8 45.3-34Q43.8-37.2 41.1-38.9Q38.4-40.6 34.8-40.6Q31.1-40.6 28.4-38.9Q25.7-37.2 24.2-34Q22.7-30.8 22.7-26.6Q22.7-22.3 24.2-19.2Q25.7-16 28.4-14.2Q31.1-12.4 34.8-12.4ZM89 0L73 0L73-74L89-74L89 0ZM120.9 1.1Q115 1.1 110.9-1.5Q106.7-4 104.5-8.8Q102.2-13.6 102.2-20.3L102.2-53.1L118.3-53.1L118.3-22.5Q118.3-19.3 119.3-17Q120.3-14.7 122.3-13.5Q124.3-12.2 127.1-12.2Q129.2-12.2 130.9-12.9Q132.7-13.6 133.9-14.9Q135.2-16.1 135.9-17.8Q136.6-19.4 136.6-21.4L136.6-53.1L152.7-53.1L152.7 0L137.6 0L137.2-6.8Q136.6-6.1 135.9-5.4Q133.1-2.4 129.2-0.7Q125.3 1.1 120.9 1.1ZM192.3 1Q183.5 1 177-2.6Q170.5-6.1 166.9-12.3Q163.3-18.4 163.3-26.3Q163.3-32.4 165.3-37.5Q167.3-42.6 170.9-46.4Q174.5-50.1 179.5-52.2Q184.4-54.2 190.3-54.2Q195.9-54.2 200.6-52.2Q205.2-50.2 208.6-46.6Q212-43 213.8-38.1Q215.6-33.2 215.4-27.4L215.3-23.1L178.8-23.1Q179.3-21.4 180.2-19.9Q182-16.6 185.6-14.8Q189.1-13 194-13Q197.4-13 200.1-14Q202.7-15 205.8-17.4L213.3-6.8Q210.2-4.1 206.7-2.4Q203.2-0.7 199.6 0.2Q195.9 1 192.3 1ZM178.8-32.1L200.6-32.1L200.6-32.2Q200.4-34.7 199.1-36.6Q197.7-38.6 195.5-39.7Q193.3-40.8 190.5-40.8Q186.6-40.8 183.9-39.3Q181.1-37.7 179.7-34.8Q179.1-33.5 178.8-32.1Z"/>' +
   '<path class="d" d="M245.7 1.1Q238.8 1.1 233.4-2.5Q228.1-6 225-12.3Q221.9-18.5 221.9-26.5Q221.9-34.5 225-40.8Q228.1-47 233.5-50.6Q238.9-54.2 245.9-54.2Q249.5-54.2 252.8-53.1Q256.1-52 258.8-50.1Q260.2-49.1 261.4-47.9L261.4-74L277.5-74L277.5 0L262.6 0L262.2-5.8Q260.7-4.1 258.7-2.8Q256.1-1 252.8 0.1Q249.4 1.1 245.7 1.1ZM249.8-12.2Q253.5-12.2 256.2-14Q258.9-15.8 260.4-19Q261.8-22.2 261.8-26.5Q261.8-30.9 260.4-34.1Q258.9-37.3 256.2-39.1Q253.5-40.9 249.8-40.9Q246.1-40.9 243.4-39.1Q240.8-37.3 239.3-34.1Q237.8-30.9 237.8-26.5Q237.8-22.2 239.3-19Q240.8-15.8 243.4-14Q246.1-12.2 249.8-12.2ZM316 1Q307.7 1 301.3-2.6Q294.8-6.2 291-12.4Q287.3-18.6 287.3-26.6Q287.3-34.6 291-40.8Q294.8-47 301.3-50.6Q307.7-54.2 316-54.2Q324.3-54.2 330.8-50.6Q337.2-47 340.9-40.8Q344.6-34.6 344.6-26.6Q344.6-18.6 340.9-12.4Q337.2-6.2 330.8-2.6Q324.3 1 316 1ZM316-12.8Q319.6-12.8 322.4-14.6Q325.2-16.4 326.8-19.5Q328.4-22.6 328.3-26.6Q328.4-30.6 326.8-33.8Q325.2-36.9 322.4-38.7Q319.6-40.5 316-40.5Q312.4-40.5 309.5-38.7Q306.7-36.9 305.1-33.8Q303.5-30.6 303.6-26.6Q303.5-22.6 305.1-19.5Q306.7-16.4 309.5-14.6Q312.4-12.8 316-12.8ZM378.4 1Q370.7 1 364.6-2.6Q358.5-6.2 354.9-12.5Q351.4-18.7 351.4-26.6Q351.4-34.5 354.9-40.8Q358.5-47 364.6-50.6Q370.7-54.2 378.4-54.2Q385.5-54.2 391.4-51.7Q397.4-49.2 400.9-44.7L392.2-34.3Q390.8-35.9 388.9-37.3Q387-38.7 384.7-39.5Q382.4-40.3 379.9-40.3Q376.1-40.3 373.2-38.6Q370.3-36.8 368.7-33.7Q367.1-30.6 367.1-26.6Q367.1-22.8 368.8-19.7Q370.4-16.6 373.3-14.8Q376.2-13 379.9-13Q382.5-13 384.7-13.7Q386.9-14.3 388.8-15.6Q390.6-16.9 392.2-18.8L400.8-8.3Q397.4-4 391.4-1.5Q385.3 1 378.4 1Z"/>';
-const Logo = ({ size = 22 }) => e('svg', { viewBox: '0 0 48 48', width: size, height: size, 'aria-hidden': true, dangerouslySetInnerHTML: { __html: LOGO } });
+// each copy draws its own gradient: one inside a hidden sidebar would leave the others' url(#…) blank
+function Logo({ size = 22 }) {
+  const id = 'bd-lg' + React.useId().replace(/[^\w-]/g, '');
+  return e('svg', { viewBox: '0 0 48 48', width: size, height: size, 'aria-hidden': true, dangerouslySetInnerHTML: { __html: LOGO.replaceAll('bd-lg', id) } });
+}
 const Wordmark = () => e('svg', { className: 'wm', viewBox: '6 -75 396 77', 'aria-hidden': true, dangerouslySetInnerHTML: { __html: WORDMARK } });
 const Brand = ({ mark }) => e('a', { className: 'bd-brand', href: '/', 'aria-label': 'bluedoc, all docs' }, e(Logo), !mark && e(Wordmark));
 const Loc = ({ d, terms }) => e('span', { className: 'bd-loc', title: d.root.path + '/' + d.path }, e(Folder, { size: 14 }), e('span', null, ...hl(d.root.name + (d.dir ? '/' + d.dir : ''), terms)));
@@ -756,7 +970,6 @@ function Prog({ st, bare }) {
     e('span', { className: 'tr' }, e('i', { style: { width: `${st.did / st.total * 100}%` } })), !bare && `${st.did}/${st.total}`);
 }
 const revText = d => (d.rev ? `Rev ${d.rev}${d.revs > 1 ? ` of ${d.revs}` : ''}` : '');
-const PILL_TONE = { risk: 'danger', info: 'info', warn: 'warning', ok: 'success', arch: 'neutral' };
 // [tone, label] of the status pill, or null when nothing needs saying
 function statusPill(st, d) {
   if (st.archived) return ['arch', 'Archived'];
@@ -978,46 +1191,54 @@ function heroElement(d) {
   if (c.hero) return e(StatEl, { icon: c.hero.icon, value: c.hero.value, label: c.hero.label });
   return e(StatEl, { icon: c.icon, value: String(c.sections || 0), label: (c.sections === 1 ? 'section' : 'sections') });
 }
-// size: card (both pills), board (type pill; the column says the status, but an archived doc says Archived), thumb (list
-// row: element only)
-function CardHero({ d, st, size }) {
-  const pill = (size === 'card' || (size === 'board' && st.archived)) && statusPill(st, d);
-  return e('div', { className: `bd-art ${size}` + (d.errors ? ' err' : ''), 'aria-hidden': size === 'thumb' || undefined }, heroElement(d),
+// the card's and the open row's hero: the type's element, the status pill top-left, the type pill top-right
+function CardHero({ d, st }) {
+  const pill = statusPill(st, d);
+  return e('div', { className: 'bd-art' + (d.errors ? ' err' : '') }, heroElement(d),
     pill && e('span', { className: 'bd-pill st ' + pill[0], title: pill[1] }, e('span', { className: 'dot' }), e('span', { className: 'lb' }, pill[1])),
-    size !== 'thumb' && e('span', { className: 'bd-pill type t-' + d.type }, TYPE_ONE[d.type]));
+    e('span', { className: 'bd-pill type t-' + d.type }, TYPE_ONE[d.type]));
 }
 
 // the banner's dissolve layers (CSS .bd-dz): 16 bottom bands, then 16 a side shown only on wide screens
 const DZ = [...Array(16)].flatMap((_, i) => [e('i', { key: 'b' + i, className: 'bd-dz b' + (i + 1) }),
   e('i', { key: 'l' + i, className: 'bd-dz s l' + (i + 1) }), e('i', { key: 'r' + i, className: 'bd-dz s r' + (i + 1) })]);
 
-/* ---------- widgets ---------- */
+/* ---------- Statistics' widgets ---------- */
 const DAY = 86400e3;
-function Activity({ docs }) {
+// doc edits per day over the last `days` days, oldest first: a doc counts once a day it was built or saved
+function editDays(docs, days) {
   const t0 = new Date(); t0.setHours(0, 0, 0, 0);
-  const start = t0.getTime() - 13 * DAY, counts = Array(14).fill(0);
+  const start = t0.getTime() - (days - 1) * DAY, counts = Array(days).fill(0);
   for (const d of docs) {
-    const days = new Set();
+    const seen = new Set();
     for (const t of [...(d.built || []), d.mtime]) {
       const ms = t * 1000; if (ms < start) continue;
       const day = new Date(ms); day.setHours(0, 0, 0, 0);
-      days.add(Math.round((day.getTime() - start) / DAY));
+      seen.add(Math.round((day.getTime() - start) / DAY));
     }
-    days.forEach(i => { if (i >= 0 && i < 14) counts[i]++; });
+    seen.forEach(i => { if (i >= 0 && i < days) counts[i]++; });
   }
-  const max = Math.max(1, ...counts), total = counts.reduce((a, b) => a + b, 0);
-  const wk = counts.slice(7).reduce((a, b) => a + b, 0), prev = counts.slice(0, 7).reduce((a, b) => a + b, 0);
+  return { start, counts };
+}
+const sum = xs => xs.reduce((a, b) => a + b, 0);
+function Activity({ docs, days = 14 }) {
+  const all = editDays(docs, Math.max(days, 14)), counts = all.counts.slice(-days), start = all.start + (all.counts.length - days) * DAY;
+  const max = Math.max(1, ...counts), total = sum(counts);
+  const wk = sum(all.counts.slice(-7)), prev = sum(all.counts.slice(-14, -7));
   const letters = 'SMTWTFS';
   return e(Card, { title: null, description: null, className: 'bd-w' },
-    e('div', { className: 'bd-w-head' }, e(Icons.BarChart), 'Activity', e('span', { className: 'r' }, '14 days')),
+    e('div', { className: 'bd-w-head' }, e(Icons.BarChart), 'Activity', e('span', { className: 'r' }, `${days} days`)),
     e('div', { className: 'bd-w-big' }, e('b', null, total), e('span', null, total === 1 ? 'doc edit' : 'doc edits'),
       e('span', { className: 'delta ' + (wk >= prev ? 'up' : 'down') }, `${wk - prev >= 0 ? '+' : '−'}${Math.abs(wk - prev)} vs last week`)),
-    e('div', { className: 'bd-bars', role: 'img', 'aria-label': `Docs edited per day, last 14 days: ${counts.join(', ')}` }, counts.map((n, i) => {
+    e('div', { className: 'bd-bars', role: 'img', 'aria-label': `Docs edited per day, last ${days} days: ${counts.join(', ')}`,
+      style: { '--n': days, '--g': days > 30 ? '1px' : days > 14 ? '2px' : '4px' } }, counts.map((n, i) => {
       const day = new Date(start + i * DAY + DAY / 2);
-      return e('i', { key: i, className: (n ? '' : 'zero') + (i === 13 ? ' today' : ''), title: `${day.toDateString().slice(0, 10)}: ${plural(n, 'doc')}`,
-        style: { height: `${n ? Math.max(8, n / max * 100) : 4}%`, animationDelay: `${i * 25}ms` } });
+      return e('i', { key: i, className: (n ? '' : 'zero') + (i === days - 1 ? ' today' : ''), title: `${day.toDateString().slice(0, 10)}: ${plural(n, 'doc')}`,
+        style: { height: `${n ? Math.max(8, n / max * 100) : 4}%`, animationDelay: `${Math.min(i * 25, 600)}ms` } });
     })),
-    e('div', { className: 'bd-days', 'aria-hidden': true }, counts.map((_, i) => e('span', { key: i }, letters[new Date(start + i * DAY + DAY / 2).getDay()]))));
+    days <= 14 ? e('div', { className: 'bd-days', 'aria-hidden': true, style: { gridTemplateColumns: `repeat(${days}, minmax(0, 1fr))` } },
+      counts.map((_, i) => e('span', { key: i }, letters[new Date(start + i * DAY + DAY / 2).getDay()])))
+      : e('div', { className: 'bd-days ends', 'aria-hidden': true }, e('span', null, dayText(start / 1000)), e('span', null, 'Today')));
 }
 function Decisions({ docs, sts }) {
   let dec = 0, decided = 0, steps = 0, done = 0;
@@ -1062,6 +1283,28 @@ function Waiting({ docs, sts }) {
         e('span', { className: 'two' }, e('span', { className: 't', title: ownTitle(d) }, Emo(d), plain(d.title)), e('span', { className: 's' }, `${st.changesSent ? 'Changes requested' : 'Answers sent'} · ${ago(st.sent)}`))))))
       : e('div', { className: 'bd-w-empty' }, 'Nothing waiting. Answers and change requests you send from a doc wait here until the agent updates it.'));
 }
+// Statistics: each project's doc edits in the range, the most first (the top 8); a project opens its docs
+function EditsByProject({ docs, roots, days, onPick }) {
+  const xs = roots.map(r => ({ r, n: sum(editDays(docs.filter(d => d.root === r), days).counts) })).filter(x => x.n).sort((a, b) => b.n - a.n).slice(0, 8);
+  const max = Math.max(1, ...xs.map(x => x.n));
+  return e(Card, { title: null, description: null, className: 'bd-w' },
+    e('div', { className: 'bd-w-head' }, e(Icons.BarChart), 'Edits by project', e('span', { className: 'r' }, `${days} days`)),
+    xs.length ? e('div', { className: 'bd-ebs' }, xs.map(({ r, n }) => e('a', { key: r.slug, className: 'bd-eb', href: '/?p=' + encodeURIComponent(r.slug),
+      onClick: ev => { if (ev.metaKey || ev.ctrlKey) return; ev.preventDefault(); onPick(r.slug); } },
+      e('span', { className: 'n' }, r.name), e('i', { style: { '--w': `${Math.max(2, n / max * 80)}%` } }, n))))
+      : e('div', { className: 'bd-w-empty' }, `No edits in the last ${days} days.`));
+}
+// Statistics: the docs with picks left to make that were saved longest ago (open for that long, at least)
+function OldestOpen({ docs, sts }) {
+  const now = Date.now() / 1000;
+  const xs = docs.map(d => ({ d, st: sts.get(d.key) })).filter(x => x.st.needs && x.st.p.dec > x.st.p.decided).sort((a, b) => a.d.mtime - b.d.mtime).slice(0, 6);
+  return e(Card, { title: null, description: null, className: 'bd-w' },
+    e('div', { className: 'bd-w-head' }, e(Icons.Clock), 'Oldest open decisions', e('span', { className: 'r' }, 'open longest')),
+    xs.length ? e('div', { className: 'bd-ols' }, xs.map(({ d }) => e('div', { key: d.key, className: 'bd-ol' },
+      e('span', { className: 't', title: ownTitle(d) }, Emo(d), plain(d.title)), e('span', { className: 'm' }, d.root.name),
+      e('span', { className: 'w' }, `open ${Math.max(1, Math.round((now - d.mtime) / 86400))} d`), e('a', { className: 'o', href: d.url }, 'Open'))))
+      : e('div', { className: 'bd-w-empty' }, 'No open decisions.'));
+}
 
 /* ---------- doc views ---------- */
 // the pieces every view shares: CardHero, the summary lines and the footer
@@ -1075,29 +1318,141 @@ const Foot = ({ d, st, terms }) => e('div', { className: 'bd-card-f' }, e(Loc, {
   e(Prog, { st, bare: true }));
 function DocCard({ d, st, m, terms }) {
   return e('a', { className: 'bd-card', href: d.url, 'data-res': '' },
-    e(CardHero, { d, st, size: 'card' }),
+    e(CardHero, { d, st }),
     e('div', { className: 'bd-card-body' },
       e('div', { className: 'bd-card-t bd-md', title: ownTitle(d) }, Emo(d), ...md(d.title, terms)),
       e('div', { className: 'bd-card-s bd-md' }, ...summary(d, m, terms)),
       e(Foot, { d, st, terms })));
 }
-function DocRow({ d, st, m, terms }) {
-  const pill = statusPill(st, d);
-  const [tone, label] = pill ? [PILL_TONE[pill[0]], pill[1]]
-    : !st.total ? ['neutral', 'Nothing to do'] : st.did === st.total ? ['success', 'Done'] : st.did ? ['neutral', 'In progress'] : ['neutral', 'Not started'];
-  return e('a', { className: 'bd-row', href: d.url, 'data-res': '' },
-    e('span', { className: 'c-doc', title: TYPE_ONE[d.type] }, e(CardHero, { d, st, size: 'thumb' }),
-      e('span', { className: 'tx' }, e('span', { className: 't bd-md', title: ownTitle(d) }, Emo(d), ...md(d.title, terms)), e('span', { className: 's bd-md' }, ...summary(d, m, terms)))),
-    e('span', { className: 'c-folder' }, e(Loc, { d, terms })),
-    e('span', { className: 'c-status' }, e(Badge, { tone, size: 'sm', variant: 'soft' }, label)),
-    e('span', { className: 'c-prog' }, e(Prog, { st })),
-    e('span', { className: 'c-rev' }, d.rev ? revText(d).replace('Rev ', '') : '—'),
-    e('span', { className: 'c-edited' }, ago(d.mtime)));
+// the table's status: [Badge tone, label], or null when there's nothing to say
+function statusBadge(st) {
+  if (st.archived) return ['neutral', 'Archived'];
+  if (st.errors) return ['danger', "Doesn't build"];
+  if (st.approved) return ['success', 'Approved'];
+  if (st.waiting) return ['accent', 'Waiting on agent'];
+  if (st.awaiting) return ['info', 'Awaiting approval'];
+  if (st.needs) return ['warning', 'Needs you'];
+  return null;
 }
-const ListHead = () => e('div', { className: 'bd-row head', 'aria-hidden': true }, ...['Doc', 'Folder', 'Status', 'Progress', 'Rev', 'Edited'].map(t => e('span', { key: t }, t)));
-function BoardCard({ d, st, terms }) {
-  return e('a', { className: 'bd-bcard', href: d.url, 'data-res': '' }, e(CardHero, { d, st, size: 'board' }),
-    e('div', { className: 'b' }, e('div', { className: 't bd-md', title: ownTitle(d) }, Emo(d), ...md(d.title, terms)), e(Foot, { d, st, terms })));
+const StatusBadge = ({ st }) => { const b = statusBadge(st); return b ? e(Badge, { tone: b[0], variant: 'soft', className: 'bd-sp', icon: e('i', { className: 'dt' }) }, b[1]) : e('span', { className: 'bd-no' }, '—'); };
+const TypeTag = ({ d }) => e('span', { className: 'bd-ty t-' + d.type }, TYPE_ONE[d.type]);
+// decisions: decided/all with a ring; – without any
+const Dec = ({ st }) => st.p.dec ? e('span', { className: 'bd-dc' },
+  e('i', { className: 'bd-rg' + (st.p.decided === st.p.dec ? ' f' : ''), style: { '--p': Math.round(st.p.decided / st.p.dec * 100) } }), `${st.p.decided}/${st.p.dec}`)
+  : e('span', { className: 'bd-no' }, '–');
+const MONTHS = 'Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec'.split(' ');
+const dayText = t => { const d = new Date(t * 1000); return `${MONTHS[d.getMonth()]} ${d.getDate()}`; };
+// Updated: how long ago within a week, else the day
+const when = t => (Date.now() / 1000 - t < 7 * 86400 ? ago(t) : dayText(t));
+const GROUPS = [['today', 'Today'], ['week', 'This week'], ['month', 'This month'], ['older', 'Older']];
+function groupOf(t) {
+  const t0 = new Date(); t0.setHours(0, 0, 0, 0);
+  const ms = t * 1000;
+  return ms >= t0 ? 'today' : ms >= t0 - 6 * DAY ? 'week' : ms >= t0 - 29 * DAY ? 'month' : 'older';
+}
+const GROUP_CAP = 25;   // rows a group shows before "Show N more"
+// a row: a click (or Enter or Space) opens or closes it in place; only its title is a link to the doc
+function DocRow({ d, st, m, terms, folderCol, open, onOpen }) {
+  return e(F, null,
+    e('div', { className: 'bd-r' + (open ? ' open' : ''), role: 'row', tabIndex: 0, 'aria-expanded': open, 'aria-controls': open ? 'bd-rx-' + d.key : undefined,
+      'data-res': '', 'data-key': d.key, 'data-href': d.url,
+      onClick: ev => { if (!ev.target.closest('a')) onOpen(d.key); },
+      onKeyDown: ev => { if (ev.target === ev.currentTarget && (ev.key === 'Enter' || ev.key === ' ')) { ev.preventDefault(); onOpen(d.key); } } },
+      e('span', { className: 'bd-ti', role: 'cell' }, e(Icons.ChevronRight, { className: 'cv', 'aria-hidden': true }), e('b', { 'aria-hidden': true }, d.emoji || ''),
+        e('a', { className: 't bd-md', href: d.url, title: ownTitle(d) }, ...md(d.title, terms)),
+        m.snip ? e('small', null, ...hl(m.snip, terms)) : null),
+      e('span', { className: 'c-ty', role: 'cell' }, e(TypeTag, { d })),
+      folderCol && e('span', { className: 'c-f bd-m', role: 'cell', title: d.root.path + '/' + d.path }, ...hl(d.root.name, terms), e('u', null, ...hl(d.dir ? '/' + d.dir : '', terms))),
+      e('span', { className: 'c-st', role: 'cell' }, e(StatusBadge, { st })),
+      e('span', { className: 'c-dc', role: 'cell' }, e(Dec, { st })),
+      e('span', { className: 'c-rv bd-m', role: 'cell' }, d.rev || '—'),
+      e('span', { className: 'c-up bd-m', role: 'cell' }, when(d.mtime))),
+    open && e(RowDetail, { d, st }));
+}
+// the docs table: grouped by date (Updated sorts the groups and their rows), flat by best match while searching
+function DocTable({ rows, terms, folderCol, asc, onSort, openRows, onOpen, isOpen, onToggle, more, onMore }) {
+  const ch = (cls, text) => e('span', { className: cls, role: 'columnheader' }, text);
+  const head = e('div', { className: 'bd-hd', role: 'row' }, ch('', 'Doc'), ch('c-ty', 'Type'), folderCol && ch('c-f', 'Project / folder'),
+    ch('c-st', 'Status'), ch('c-dc', 'Decisions'), ch('c-rv', 'Rev'),
+    terms.length ? ch('', 'Updated')
+      : e('span', { role: 'columnheader', 'aria-sort': asc ? 'ascending' : 'descending' },
+        e('button', { type: 'button', className: 'so', onClick: onSort, title: asc ? 'Oldest first' : 'Newest first' }, 'Updated', e(asc ? Icons.ArrowUp : Icons.ArrowDown))));
+  const row = r => e(DocRow, { key: r.d.key, ...r, terms, folderCol, open: openRows.includes(r.d.key), onOpen });
+  let body;
+  if (terms.length) body = rows.map(row);
+  else {
+    const gs = new Map(GROUPS.map(([id]) => [id, []]));
+    for (const r of rows) gs.get(groupOf(r.d.mtime)).push(r);
+    body = (asc ? [...GROUPS].reverse() : GROUPS).filter(([id]) => gs.get(id).length).map(([id, label]) => {
+      const xs = gs.get(id), open = isOpen(id), cap = more[id] ? xs.length : GROUP_CAP;
+      return e(F, { key: id }, e('button', { type: 'button', className: 'bd-gh', 'aria-expanded': open, onClick: () => onToggle(id, !open) },
+        e(open ? Icons.ChevronDown : Icons.ChevronRight), e('b', null, label), e('span', null, '· ' + xs.length)),
+        open && xs.slice(0, cap).map(row),
+        open && xs.length > cap && e('button', { type: 'button', className: 'bd-more', onClick: () => onMore(id) }, `Show ${xs.length - cap} more`));
+    });
+  }
+  return e('div', { className: 'bd-tb' + (folderCol ? '' : ' np'), role: 'table', 'aria-label': 'Docs' }, head, body);
+}
+const fullTime = t => `${dayText(t)}, ${new Date(t * 1000).toTimeString().slice(0, 5)}`;
+// what is left in a doc: open decisions (with their option count), then the plan's open steps (their effort), then
+// unticked checks
+function leftOf(d, st) {
+  return [...st.p.open.filter(x => x.dec).map(x => ({ kind: 'dec', text: plain(x.text), size: x.n ? plural(x.n, 'option') : '' })),
+    ...(d.next || []).map(([t, effort, status]) => ({ kind: 'step', text: plain(t), size: [status === 'doing' && 'doing', effort].filter(Boolean).join(' · ') })),
+    ...st.p.open.filter(x => !x.dec).map(x => ({ kind: 'check', text: plain(x.text), size: '' }))];
+}
+// "2 to decide · 3 steps left": the counts of what is left, or a line saying nothing is
+function leftHead(d, st, xs) {
+  const n = k => xs.filter(x => x.kind === k).length, steps = Math.max(n('step'), d.stepsOpen || 0);
+  const parts = [n('dec') && `${n('dec')} to decide`, steps && plural(steps, 'step') + ' left', n('check') && `${n('check')} to check`].filter(Boolean);
+  return parts.length ? parts.join(' · ') : st.approved ? 'Approved · nothing left' : 'Nothing left to decide';
+}
+const LEFT_ICON = { dec: Icons.Flag, step: Icons.Circle, check: Icons.Circle };
+const LeftList = ({ xs, max = 3, sizes = true }) => xs.length > 0 && e('ul', { className: 'bd-left' },
+  xs.slice(0, max).map((x, i) => e('li', { key: i, className: x.kind }, e(LEFT_ICON[x.kind], { 'aria-hidden': true }), e('span', { className: 't', title: x.text }, x.text),
+    sizes && x.size && e('span', { className: 'z' }, x.size))),
+  xs.length > max && e('li', { className: 'more' }, `+${xs.length - max} more`));
+const Decided = ({ st, label }) => e(ProgressBar, { value: st.p.decided, max: st.p.dec, size: 'md', tone: st.p.decided === st.p.dec ? 'success' : 'accent', showValue: false,
+  label: label || undefined, 'aria-label': `${st.p.decided} of ${st.p.dec} decided` });
+function CopyPath({ path }) {
+  const [ok, setOk] = useState(false);
+  return e(IconButton, { size: 'sm', variant: 'ghost', className: 'bd-copy', label: ok ? 'Copied' : 'Copy path', icon: e(ok ? Icons.Check : Icons.Copy),
+    onClick: () => navigator.clipboard.writeText(path).then(() => { setOk(true); setTimeout(() => setOk(false), 1500); }, () => {}) });
+}
+const PathLine = ({ d }) => e('div', { className: 'bd-path', title: d.root.path + '/' + d.path }, e('span', null, d.root.name + '/' + d.path), e(CopyPath, { path: d.root.path + '/' + d.path }));
+// Open (primary), Open in new tab, and Archive or Unarchive
+function RowActions({ d, st }) {
+  const acts = React.useContext(ArchiveActs);
+  const arch = acts && d.rev ? () => acts.archive(d, !st.archived) : null, archLabel = st.archived ? 'Unarchive' : 'Archive';
+  return e('div', { className: 'bd-acts' },
+    e(Button, { size: 'sm', variant: 'accent', onClick: () => { location.href = d.url; } }, 'Open'),
+    e(Button, { size: 'sm', variant: 'secondary', leading: e(Icons.ExternalLink), onClick: () => window.open(d.url, '_blank', 'noopener') }, 'Open in new tab'),
+    arch && e(Button, { size: 'sm', variant: 'ghost', leading: e(ArchiveIcon), onClick: arch }, archLabel));
+}
+// an open row: an inset card under it, across the table; it never repeats the row's type or status pill
+function RowDetail({ d, st }) {
+  const p = st.p, xs = leftOf(d, st), tl = d.tldr || d.subtitle;
+  const tldr = tl && e('p', { className: 'bd-tl bd-md' }, ...md(tl, []));
+  const cap = e('div', { className: 'bd-cap2' }, leftHead(d, st, xs));
+  return e('div', { className: 'bd-rx', id: 'bd-rx-' + d.key, role: 'region', 'aria-label': plain(d.title) },
+    e(Card, { elevation: 0, padding: 'md', className: 'x-card',
+      header: e('div', { className: 'x-hd' },
+        p.dec ? e('div', { className: 'x-meter' }, e(Decided, { st }), e('span', { className: 'x-n' }, e('b', null, `${p.decided} of ${p.dec}`), ' decided'),
+          p.dec > p.decided && e('span', { className: 'x-open' }, `${p.dec - p.decided} open`)) : e('div', { className: 'x-meter' }, cap),
+        e(RowActions, { d, st })),
+      footer: e('div', { className: 'x-ft' }, e(PathLine, { d }), e('span', { className: 'x-dot' }, '·'), e('span', null, `rev ${d.rev || '—'}${d.revs > 1 ? ` of ${d.revs}` : ''}`),
+        e('span', { className: 'x-dot' }, '·'), e('span', null, `edited ${fullTime(d.mtime)}`)) },
+      e('div', { className: 'x-body' }, e('div', { className: 'x-thumb', 'aria-hidden': true }, e(CardHero, { d, st })),
+        e('div', { className: 'x-text' }, tldr, xs.length > 0 && cap, e(LeftList, { xs, max: 3 })))));
+}
+// a toolbar menu (Type, Status, Project, Folder): with a value it is pressed and says it, and × clears it
+function FilterMenu({ label, value, valueLabel, options, allLabel, onPick }) {
+  const items = [{ type: 'radio', id: 'r', value: value || '', onValueChange: onPick,
+    options: [{ value: '', label: allLabel }, ...options.map(o => ({ value: o.value, label: e('span', { className: 'bd-mo' }, e('span', null, o.label), o.n != null && e('span', { className: 'c' }, o.n)) }))] }];
+  const trigger = value ? e('button', { type: 'button', className: 'bd-fc-t' }, `${label}: `, e('b', null, valueLabel))
+    : e('button', { type: 'button', className: 'bd-fc' }, label, e(Icons.ChevronDown));
+  const menu = e(DropdownMenu, { align: 'start', items, trigger });
+  return value ? e('span', { className: 'bd-fc on' }, menu, e('button', { type: 'button', className: 'x', 'aria-label': `Clear ${label}`, onClick: () => onPick('') }, e(Icons.Close))) : menu;
 }
 
 /* ---------- archive on a card ---------- */
@@ -1127,57 +1482,44 @@ function CardMenu({ d, st }) {
     open && e('div', { className: 'bd-cm-m', role: 'menu', 'aria-label': plain(d.title) },
       e('button', { type: 'button', role: 'menuitem', onClick: () => { setOpen(false); acts.archive(d, !st.archived); } }, e(ArchiveIcon, { size: 15 }), label)));
 }
-// a card, row or board card (kind) with its menu and, when the doc is all done, "All done · Archive it?"
-function Wrap({ d, st, kind, children }) {
+// a card with its menu and, when the doc is all done, "All done · Archive it?"
+function Wrap({ d, st, children }) {
   const acts = React.useContext(ArchiveActs);
   const sug = !!acts && st.allDone;
-  return e('div', { className: `bd-cw ${kind}` + (st.archived ? ' arch' : '') + (sug ? ' sug' : '') }, children, e(CardMenu, { d, st }),
+  return e('div', { className: 'bd-cw' + (st.archived ? ' arch' : '') + (sug ? ' sug' : '') }, children, e(CardMenu, { d, st }),
     sug && e('div', { className: 'bd-sug', role: 'group', 'aria-label': 'All done' }, e(Icons.Success, { width: 14, height: 14 }),
       e('span', { className: 't' }, e('b', null, 'All done'), ' · Archive it?'),
       e('span', { className: 'acts' }, e(Button, { size: 'sm', variant: 'secondary', onClick: () => acts.archive(d, true) }, 'Archive'),
         e(Button, { size: 'sm', variant: 'ghost', onClick: () => acts.notNow(d) }, 'Not now'))));
 }
-function Board({ rows, terms }) {
-  return e('div', { className: 'bd-board' }, BOARD.map(([id, label, dot]) => {
-    const xs = rows.filter(r => r.st.col === id);
-    if (id === 'errors' && !xs.length) return null;
-    return e('section', { key: id, className: 'bd-col', 'aria-label': label },
-      e('h3', null, e(StatusDot, { status: dot, pulse: id === 'waiting' && xs.length > 0 }), label, e('span', { className: 'c' }, xs.length)),
-      xs.length ? xs.map(r => e(Wrap, { key: r.d.key, ...r, kind: 'board' }, e(BoardCard, { ...r, terms }))) : e('div', { className: 'none' }, 'Nothing here'));
-  }));
+// Cards: the doc cards, CARD_PAGE at a time; Show N more adds the next ones
+const CARD_PAGE = 48;
+function Cards({ rows, terms }) {
+  const [n, setN] = useState(CARD_PAGE);
+  return e(F, null, e('div', { className: 'bd-grid' }, rows.slice(0, n).map(r => e(Wrap, { key: r.d.key, ...r }, e(DocCard, { ...r, terms })))),
+    rows.length > n && e('div', { className: 'bd-cmore' }, e(Button, { variant: 'secondary', onClick: () => setN(x => x + CARD_PAGE) }, `Show ${Math.min(CARD_PAGE, rows.length - n)} more`)));
 }
-function Items({ rows, view, cols, terms }) {
-  if (view === 'list') return e('div', { className: 'bd-list' }, e(ListHead), rows.map(r => e(Wrap, { key: r.d.key, ...r, kind: 'row' }, e(DocRow, { ...r, terms }))));
-  return e('div', { className: 'bd-grid', 'data-cols': cols, style: cols === 'auto' ? null : { '--cols': cols } },
-    rows.map(r => e(Wrap, { key: r.d.key, ...r, kind: 'card' }, e(DocCard, { ...r, terms }))));
-}
-
-/* ---------- composer filters ---------- */
-// a row under the search field: its label, then its chips (or the scope tag)
-const FilterRow = ({ label, children }) => e('div', { className: 'bd-frow', role: 'group', 'aria-label': label },
-  e('span', { className: 'lbl', 'aria-hidden': true }, label), e('div', { className: 'bd-frow-x' }, children));
-// a chip that toggles one filter; pressed while it applies
-const FilterChip = ({ on, icon, label, n, className, onClick }) => e('button', { type: 'button', className: 'bd-fc' + (className ? ' ' + className : ''), 'aria-pressed': on, onClick },
-  icon, label, e('span', { className: 'c' }, n));
 
 /* ---------- sidebar data ---------- */
-function folderItems(r, docs) {
-  const counts = new Map([['', 0]]);
+// a project's folders with their doc counts, as a tree: siblings with the most docs first; depth 1 is a top folder
+function folderDirs(docs) {
+  const counts = new Map();
   for (const d of docs) {
-    counts.set('', counts.get('') + 1);
     if (!d.dir) continue;
     const parts = d.dir.split('/');
     for (let i = 1; i <= parts.length; i++) { const k = parts.slice(0, i).join('/'); counts.set(k, (counts.get(k) || 0) + 1); }
   }
-  const segs = s => (s ? s.split('/') : []);
-  const dirs = [...counts.keys()].sort((a, b) => { const x = segs(a), y = segs(b); for (let i = 0; i < Math.min(x.length, y.length); i++) { const c = x[i].localeCompare(y[i]); if (c) return c; } return x.length - y.length; });
-  const base = r.path.split(/[\\/]/).filter(Boolean).pop() || r.name;
-  return dirs.map(dir => {
-    const depth = segs(dir).length;
-    return { id: `d:${r.slug}:${dir}`, badge: String(counts.get(dir)),
-      label: e('span', { className: 'bd-fl', style: { paddingLeft: depth * 14 }, title: dir ? `${r.name}/${dir}` : r.path }, e(Folder), e('span', null, dir ? segs(dir).pop() : base)) };
-  });
+  const out = [], walk = (parent, depth) => {
+    const kids = [...counts.keys()].filter(k => k.split('/').length === depth && (depth === 1 || k.startsWith(parent + '/')));
+    kids.sort((a, b) => counts.get(b) - counts.get(a) || a.localeCompare(b));
+    for (const k of kids) { out.push({ dir: k, n: counts.get(k), depth }); walk(k, depth + 1); }
+  };
+  walk('', 1);
+  return out;
 }
+// a hidden folder's name in the sidebar: its path, or …/ and its last two folders when long
+const shortPath = p => { const parts = p.split('/').filter(Boolean); return p.length <= 20 || parts.length < 3 ? p : '…/' + parts.slice(-2).join('/'); };
+const WHY = { temp: 'Temporary folder', missing: 'Folder missing', you: 'Hidden by you' };
 
 /* ---------- settings (/settings) ---------- */
 // this computer's bluedoc settings (GET /__bluedoc/settings); every change is one POST that saves at once
@@ -1429,37 +1771,62 @@ function SettingsPage({ readOnly, reduce, toast, onFolders }) {
 }
 
 /* ---------- app ---------- */
+// the docs' filters in the URL: ?p= ?d= (project, folder), ?t= (type), ?s= (status), ?hidden=1 (the hidden projects)
 function readFilters() {
-  const QP = new URLSearchParams(location.search);
+  const QP = new URLSearchParams(location.search), home = pageOf() === 'home';
   const t = QP.get('t'), s = QP.get('s');
-  return { scope: QP.get('p') ? { slug: QP.get('p'), dir: QP.get('d') || '' } : null,
-    type: TYPE_ONE[t] ? t : null, status: STATUSES.some(x => x[0] === s) ? s : null };
+  return { scope: home && QP.get('p') ? { slug: QP.get('p'), dir: QP.get('d') || '' } : null,
+    type: TYPE_ONE[t] ? t : null, status: STATUSES.some(x => x[0] === s) ? s : null, hidden: home && QP.get('hidden') === '1' };
 }
-// the page the path names: the docs ('/') or Settings ('/settings'); the gear opens Settings with pushState, Back returns
-const pageOf = () => (location.pathname === '/settings' ? 'settings' : 'home');
+// Statistics' URL: ?p= (one project) and ?range= (7, 14, 30 or 90 days; 14 by default)
+const RANGES = ['7', '14', '30', '90'];
+function readStats() {
+  const QP = new URLSearchParams(location.search), r = QP.get('range');
+  return { slug: pageOf() === 'stats' ? QP.get('p') || '' : '', range: RANGES.includes(r) ? r : '14' };
+}
+const readSel = () => (pageOf() === 'home' && new URLSearchParams(location.search).get('doc')) || null;
+// the page the path names: the docs ('/'), Statistics ('/stats') or Settings ('/settings'); the sidebar opens them with
+// pushState, Back returns
+const PAGES = { '/stats': 'stats', '/settings': 'settings' };
+const pageOf = () => PAGES[location.pathname] || 'home';
+const PAGE_TITLE = { home: 'All docs', stats: 'Statistics', settings: 'Settings' };
 function App() {
   const [themePick, setThemePick] = useState(storedTheme);
   const [sysTheme, setSysTheme] = useState(systemTheme);
   const theme = themePick || sysTheme;
   const [reduce, setReduce] = useState(reduceMQ.matches);
+  const [phone, setPhone] = useState(phoneMQ.matches);   // ≤ 600 px: a project's menu opens below its ⋯
+  useEffect(() => { const f = () => setPhone(phoneMQ.matches); phoneMQ.addEventListener('change', f); return () => phoneMQ.removeEventListener('change', f); }, []);
   const [data, setData] = useState(null);
+  const [texts, setTexts] = useState(null);   // search-text's {url: text}, once a search asked for it
+  const [wantTexts, setWantTexts] = useState(false);
   const [tick, setTick] = useState(0);
   const [q, setQ] = useState(() => new URLSearchParams(location.search).get('q') || '');
   const dq = useDeferredValue(q);
   const [filters, setFilters] = useState(readFilters);
+  const [stats, setStats] = useState(readStats);
+  // the open rows' keys, the last opened last; ?doc= names it (and opens that row on load)
+  const [openRows, setOpenRows] = useState(() => { const s = readSel(); return s ? [s] : []; });
+  const sel = openRows[openRows.length - 1] || null;
   const [settings, setSettings] = useState(loadSettings);
   const [drawer, setDrawer] = useState(false);
   const [heroOut, setHeroOut] = useState(false);
   const [note, setNote] = useState(null);   // the toast: {text, undo?}
   const [page, setPage] = useState(pageOf);
+  const [pq, setPq] = useState('');   // Find a project
+  const [pf, setPf] = useState('all');   // the sidebar's chip: all, active or pinned (Hidden is filters.hidden)
+  const [groupOpen, setGroupOpen] = useState({});   // a date group opened or closed by the reader
+  const [more, setMore] = useState({});   // date groups showing every row
+  const [menuFor, setMenuFor] = useState(null);   // the project whose ⋯ menu is open
+  const [removing, setRemoving] = useState(null);   // {path, name}: the folder Remove folder… asks about
   const heroInput = useRef(null), topInput = useRef(null), composer = useRef(null), results = useRef(null), reload = useRef(null);
   const set = (k, v) => setSettings(s => ({ ...s, [k]: v }));
   useEffect(() => { if (!note) return undefined; const t = setTimeout(() => setNote(null), note.undo ? 8000 : 3000); return () => clearTimeout(t); }, [note]);
 
   useEffect(() => { document.documentElement.setAttribute('data-hz-theme', theme); }, [theme]);
-  useEffect(() => { document.title = (page === 'settings' ? 'Settings' : 'All docs') + ' · bluedoc'; }, [page]);
+  useEffect(() => { document.title = PAGE_TITLE[page] + ' · bluedoc'; }, [page]);
   useEffect(() => {
-    const onPop = () => { setPage(pageOf()); setDrawer(false); };
+    const onPop = () => { const s = readSel(); setPage(pageOf()); setFilters(readFilters()); setStats(readStats()); setOpenRows(s ? [s] : []); setDrawer(false); };
     addEventListener('popstate', onPop);
     return () => removeEventListener('popstate', onPop);
   }, []);
@@ -1474,15 +1841,20 @@ function App() {
     const clock = setInterval(bump, 30000);
     return () => { darkMQ.removeEventListener('change', onSys); reduceMQ.removeEventListener('change', onReduce); removeEventListener('storage', onStorage); removeEventListener('pageshow', bump); clearInterval(clock); };
   }, []);
-  // live list: poll every 4 s while visible; React keeps scroll and focus
+  // live list: index.json every 4 s while visible. The browser revalidates its copy (no-cache: the server answers 304
+  // to its ETag when nothing changed) and the same ETag changes nothing here: no parse, no render. React keeps scroll
+  // and focus when the list does change.
   useEffect(() => {
     let last = '', alive = true;
     const load = async () => {
       try {
         const sent = serverKeyHeaders();
-        const r = await fetch('/__bluedoc/index.json', { cache: 'no-store', headers: sent });
+        const r = await fetch('/__bluedoc/index.json', { cache: 'no-cache', headers: sent });
+        if (!r.ok) return;
+        const tag = r.headers.get('ETag');
+        if (tag && tag === last) return;
         const txt = await r.text();
-        if (alive && txt !== last) { last = txt; const d = JSON.parse(txt); setData(d); keepServerKey(d.unlocked, sent); }
+        if (alive && (tag || txt) !== last) { last = tag || txt; const d = JSON.parse(txt); setData(d); keepServerKey(d.unlocked, sent); }
       } catch { /* server restarting: keep the last list */ }
     };
     reload.current = load;
@@ -1490,22 +1862,39 @@ function App() {
     const t = setInterval(() => { if (document.visibilityState === 'visible') load(); }, 4000);
     return () => { alive = false; clearInterval(t); };
   }, []);
-  // the docs' search and filters live in the URL; Settings' URL is /settings alone
+  // the docs' search, filters and preview live in the URL, Statistics' project and range too; Settings' URL is /settings alone
   useEffect(() => {
-    if (page !== 'home') return;
+    if (page === 'settings') return;
     const u = new URLSearchParams();
-    if (q) u.set('q', q);
-    if (filters.scope) { u.set('p', filters.scope.slug); if (filters.scope.dir) u.set('d', filters.scope.dir); }
-    if (filters.type) u.set('t', filters.type);
-    if (filters.status) u.set('s', filters.status);
+    if (page === 'stats') {
+      if (stats.slug) u.set('p', stats.slug);
+      if (stats.range !== '14') u.set('range', stats.range);
+    } else {
+      if (q) u.set('q', q);
+      if (filters.scope) { u.set('p', filters.scope.slug); if (filters.scope.dir) u.set('d', filters.scope.dir); }
+      if (filters.type) u.set('t', filters.type);
+      if (filters.status) u.set('s', filters.status);
+      if (filters.hidden) u.set('hidden', '1');
+      if (sel) u.set('doc', sel);
+    }
     history.replaceState(null, '', location.pathname + (u.toString() ? '?' + u : ''));
-  }, [q, filters, page]);
+  }, [q, filters, page, sel, stats]);
+  // the docs' body text for search: fetched on the first search (or a q= on load), then again only when index.json
+  // changed (a new `data`); revalidated as index.json is, so an unchanged one is a 304
+  useEffect(() => { if (q.trim()) setWantTexts(true); }, [q]);
+  useEffect(() => {
+    if (!wantTexts || !data) return undefined;
+    let alive = true;
+    fetch('/__bluedoc/search-text', { cache: 'no-cache', headers: serverKeyHeaders() }).then(r => (r.ok ? r.json() : null))
+      .then(j => { if (alive && j && j.docs) setTexts(j.docs); }, () => {});
+    return () => { alive = false; };
+  }, [wantTexts, data]);
   useEffect(() => {
     if (!composer.current) return undefined;
     const io = new IntersectionObserver(([en]) => setHeroOut(!en.isIntersecting), { rootMargin: '-56px 0px 0px 0px' });
     io.observe(composer.current);
     return () => io.disconnect();
-  }, [page]);
+  }, [page, !!data]);
   const searchEl = () => (heroOut ? topInput.current : heroInput.current);
   useEffect(() => {
     const onKey = ev => {
@@ -1521,44 +1910,66 @@ function App() {
   const docs = useMemo(() => (data ? prepare(data) : []), [data]);
   const sts = useMemo(() => new Map(docs.map(d => [d.key, statusOf(d)])), [docs, tick]);
   const roots = data ? data.roots : [];
-  // archived docs are out of every view, count and widget but the Archived chip's (statusIs)
-  const live = docs.filter(d => !sts.get(d.key).archived);
+  const missing = (data && data.missing) || [];
+  // the projects the home page hides: temporary folders (under /tmp) until shown, those the reader hid, and missing ones
+  const homeL = { pinned: [], hidden: [], shown: [], ...((data && data.home) || {}) };
+  const why = r => (homeL.hidden.includes(r.path) ? 'you' : r.temp && !homeL.shown.includes(r.path) ? 'temp' : null);
+  const shownRoots = roots.filter(r => !why(r)), hidRoots = roots.filter(r => why(r));
+  const hiddenN = hidRoots.length + missing.length;
+  const shownSlugs = new Set(shownRoots.map(r => r.slug));
+  const notArch = d => !sts.get(d.key).archived;
+  // the docs a view starts from: the shown projects', the hidden ones' (Hidden), or every project's when one is picked
+  const visDocs = docs.filter(d => shownSlugs.has(d.root.slug)), hidDocs = docs.filter(d => !shownSlugs.has(d.root.slug));
+  const pool = filters.hidden ? hidDocs : filters.scope ? docs : visDocs;
+  // each project's docs (archived ones aside) and its last edit
+  const countOf = new Map(), lastOf = new Map();
+  for (const d of docs) {
+    const s = d.root.slug;
+    lastOf.set(s, Math.max(lastOf.get(s) || 0, d.mtime));
+    if (notArch(d)) countOf.set(s, (countOf.get(s) || 0) + 1);
+  }
+  const weekAgo = Date.now() / 1000 - 7 * 86400;
+  const isActive = r => (lastOf.get(r.slug) || 0) > weekAgo;
+  const pinned = new Set(homeL.pinned);
+  const byPinThenEdit = (a, b) => (pinned.has(b.path) - pinned.has(a.path)) || ((lastOf.get(b.slug) || 0) - (lastOf.get(a.slug) || 0));
+  const ordered = [...shownRoots].sort(byPinThenEdit);
+
+  // archived docs are out of every view and count but the Archived status's (statusIs)
   const showArchived = filters.status === 'archived';
-  const scoped = docs.filter(d => inScope(d, filters.scope));
+  const scoped = pool.filter(d => inScope(d, filters.scope));
   const typeN = Object.fromEntries(TYPES.map(([id]) => [id, 0]));
   for (const d of scoped) if (sts.get(d.key).archived === showArchived) typeN[d.type]++;
   const typed = filters.type ? scoped.filter(d => d.type === filters.type) : scoped;
   const statusN = Object.fromEntries(STATUSES.map(([id]) => [id, 0]));
   for (const d of typed) { const st = sts.get(d.key); for (const k in statusN) if (statusIs(st, k)) statusN[k]++; }
-  const filtered = typed.filter(d => (filters.status ? statusIs(sts.get(d.key), filters.status) : !sts.get(d.key).archived));
+  const filtered = typed.filter(d => (filters.status ? statusIs(sts.get(d.key), filters.status) : notArch(d)));
   const terms = dq.toLowerCase().split(/\s+/).filter(Boolean);
   const rows = [];
-  for (const d of filtered) { const m = match(d, terms); if (m) rows.push({ d, st: sts.get(d.key), m }); }
-  const byName = (a, b) => plain(a.d.title).localeCompare(plain(b.d.title));
-  rows.sort((a, b) => (terms.length ? b.m.score - a.m.score || b.d.mtime - a.d.mtime : settings.sort === 'name' ? byName(a, b) : b.d.mtime - a.d.mtime));
+  const bodyOf = d => (texts && texts[d.url]) || '';
+  for (const d of filtered) { const m = match(d, terms, bodyOf(d)); if (m) rows.push({ d, st: sts.get(d.key), m }); }
+  rows.sort((a, b) => (terms.length ? b.m.score - a.m.score || b.d.mtime - a.d.mtime : settings.asc ? a.d.mtime - b.d.mtime : b.d.mtime - a.d.mtime));
   // the archived docs this search, type, status and folder would show if they weren't archived
-  const hiddenN = showArchived ? 0 : typed.filter(d => { const st = sts.get(d.key); return st.archived && (!filters.status || st[filters.status]) && match(d, terms); }).length;
+  const archN = showArchived ? 0 : typed.filter(d => { const st = sts.get(d.key); return st.archived && (!filters.status || st[filters.status]) && match(d, terms, bodyOf(d)); }).length;
 
-  // the docs or Settings, as a new history entry (Back returns)
+  // the docs, Statistics or Settings, as a new history entry (Back returns)
   const go = to => {
     setDrawer(false);
     if (page === to) return;
-    history.pushState(null, '', to === 'settings' ? '/settings' : '/');
+    history.pushState(null, '', to === 'home' ? '/' : '/' + to);
     setPage(to);
     scrollTo(0, 0);
   };
-  // the sidebar picks a project or folder ('all' clears every filter), from Settings too; the composer's chips toggle a
-  // type ('t:<id>') or a status ('s:<id>'), one of each at a time; 't:' and 's:' clear them. The Archived chip (and Show
-  // them) remembers the status it replaced, and turning it off goes back to it
+  // 'all' clears every filter; 'p:<slug>' a project, 'd:<slug>:<dir>' a folder; 't:<id>' and 's:<id>' a type and a
+  // status ('t:' and 's:' clear them); 'h:1' the hidden projects, 'h:0' back to the shown ones. Each opens the docs.
   const pick = id => {
     go('home');
-    if (id === 'all') return setFilters({ scope: null, type: null, status: null });
+    if (id === 'all') { setOpenRows([]); return setFilters({ scope: null, type: null, status: null, hidden: false }); }
     const [k, a, ...rest] = id.split(':');
-    if (k === 'p') setFilters(f => ({ ...f, scope: { slug: a, dir: '' } }));
-    else if (k === 'd') setFilters(f => ({ ...f, scope: { slug: a, dir: rest.join(':') } }));
-    else if (k === 't') setFilters(f => ({ ...f, type: !a || f.type === a ? null : a }));
-    else if (k === 's') setFilters(f => (a === 'archived' && f.status === a ? { ...f, status: f.back || null, back: null }
-      : { ...f, status: !a || f.status === a ? null : a, back: a === 'archived' ? f.status : null }));
+    if (k === 'p') setFilters(f => ({ ...f, scope: a ? { slug: a, dir: '' } : null, hidden: false }));
+    else if (k === 'd') setFilters(f => ({ ...f, scope: { slug: a, dir: rest.join(':') }, hidden: false }));
+    else if (k === 't') setFilters(f => ({ ...f, type: a || null }));
+    else if (k === 's') setFilters(f => ({ ...f, status: a || null }));
+    else if (k === 'h') { setFilters(f => ({ ...f, scope: null, hidden: a === '1' })); if (a === '1') setPf('all'); }
   };
   const showThem = () => pick('s:archived');
   // archive and Not now write the doc's reader state as its page does (the server checks both keys), then reload the index
@@ -1574,90 +1985,218 @@ function App() {
       .then(() => setNote(on ? { text: `Archived “${plain(d.title)}”`, undo: () => acts.archive(d, false) } : { text: `Unarchived “${plain(d.title)}”` }), failed),
     notNow: d => write(d, [['__archive-later', d.rev]]).catch(failed),
   }), []);
-  const scopeId = filters.scope ? `d:${filters.scope.slug}:${filters.scope.dir}` : 'all';
+
+  // the projects' menu: pinned and hidden folders saved in settings.json (home), Open folder, Copy path, Remove folder…
+  const saveHome = (next, said, undo) => postJSON('/__bluedoc/settings', { home: next })
+    .then(() => reload.current && reload.current()).then(() => said && setNote({ text: said, undo }), err => setNote({ text: err.message }));
+  const without = (xs, p) => xs.filter(x => x !== p);
+  const pinRoot = (r, on) => saveHome({ ...homeL, pinned: on ? [...without(homeL.pinned, r.path), r.path] : without(homeL.pinned, r.path) }, on ? `Pinned ${r.name}` : `Unpinned ${r.name}`);
+  const showRoot = r => saveHome({ ...homeL, hidden: without(homeL.hidden, r.path), shown: r.temp ? [...without(homeL.shown, r.path), r.path] : homeL.shown }, `${r.name} is back on home`);
+  const hideRoot = r => {
+    if (filters.scope && filters.scope.slug === r.slug) setFilters(f => ({ ...f, scope: null }));
+    saveHome({ ...homeL, hidden: [...without(homeL.hidden, r.path), r.path], shown: without(homeL.shown, r.path) }, `Hid ${r.name} from home`, () => showRoot(r));
+  };
+  const openFolder = p => postJSON('/__bluedoc/open-folder', { path: p }).catch(err => setNote({ text: err.message }));
+  const copyPath = p => navigator.clipboard.writeText(p).then(() => setNote({ text: 'Copied the path' }), () => setNote({ text: 'Couldn\'t copy the path' }));
+  const removeFolder = x => postJSON('/__bluedoc/folders', { remove: x.path }).then(() => {
+    const r = roots.find(r => r.path === x.path);
+    if (r && filters.scope && filters.scope.slug === r.slug) setFilters(f => ({ ...f, scope: null }));
+    if (reload.current) reload.current();
+    setNote({ text: `Removed ${x.name}` });
+  }, err => setNote({ text: err.message }));
+
   const anyFilter = !!(filters.scope || filters.type || filters.status);
   const toggleTheme = () => { const t = theme === 'dark' ? 'light' : 'dark'; store.set(THEME_KEY, t); setThemePick(t); };
   const themeBtn = e(IconButton, { size: 'sm', variant: 'ghost', label: theme === 'dark' ? 'Light theme' : 'Dark theme', icon: e(theme === 'dark' ? Icons.Sun : Icons.Moon), onClick: toggleTheme });
   const gearBtn = e(IconButton, { size: 'sm', variant: 'ghost', label: 'Settings', icon: e(Icons.Settings), selected: page === 'settings', onClick: () => go('settings') });
   const menuBtn = e(IconButton, { size: 'sm', variant: 'ghost', className: 'bd-only-m', label: 'Projects and folders', icon: e(Icons.Menu), onClick: () => setDrawer(true) });
+  const openStats = slug => { setStats(s => ({ ...s, slug: slug || '' })); go('stats'); };
 
-  // the rail shows icons only; HorizonUI's Sidebar would still lay out open children there, so they go
-  const sectionsFor = rail => [
-    { id: 'top', items: [{ id: 'all', label: 'All docs', icon: e(Icons.Home), badge: String(live.length) }] },
-    { id: 'projects', title: 'Projects', items: roots.map(r => ({ id: 'p:' + r.slug, label: r.name, icon: e(Icons.Package), badge: String(live.filter(d => d.root === r).length), defaultOpen: true,
-      children: rail ? undefined : folderItems(r, live.filter(d => d.root === r)) })) },
-  ];
+  /* the sidebar */
+  const projectRow = r => {
+    const on = page === 'home' && !!filters.scope && filters.scope.slug === r.slug, isPinned = pinned.has(r.path);
+    const items = [
+      { id: 'pin', label: isPinned ? 'Unpin' : 'Pin to top', icon: e(isPinned ? Icons.PinOff : Icons.Pin), onSelect: () => pinRoot(r, !isPinned) },
+      { id: 'hide', label: 'Hide from home', icon: e(Icons.EyeOff), onSelect: () => hideRoot(r) },
+      { type: 'separator', id: 's1' },
+      { id: 'open', label: 'Open folder', icon: e(Icons.Folder), onSelect: () => openFolder(r.path) },
+      { id: 'copy', label: 'Copy path', icon: e(Icons.Copy), onSelect: () => copyPath(r.path) },
+      { type: 'separator', id: 's2' },
+      { id: 'rm', label: 'Remove folder…', icon: e(Icons.Close), danger: true, onSelect: () => setRemoving({ path: r.path, name: r.name }) }];
+    const dirs = on ? folderDirs(docs.filter(d => d.root === r && notArch(d))) : [];
+    return e('li', { key: r.slug, className: 'bd-pr' + (menuFor === r.slug ? ' open' : '') },
+      e('button', { type: 'button', className: 'bd-ni', 'aria-current': on && !filters.scope.dir ? 'page' : undefined, title: r.path, onClick: () => pick('p:' + r.slug) },
+        e(Icons.Package), e('span', { className: 'n' }, r.name), isPinned && e(Icons.Pin, { className: 'pn', 'aria-label': 'Pinned' }), e('span', { className: 'c' }, countOf.get(r.slug) || 0)),
+      e(DropdownMenu, { align: phone ? 'end' : 'start', side: phone ? 'bottom' : 'right', className: 'bd-pmenu', items, onOpenChange: o => setMenuFor(o ? r.slug : null),
+        trigger: e('button', { type: 'button', className: 'bd-mk', 'aria-label': `More: ${r.name}` }, e(Icons.MoreHorizontal)) }),
+      dirs.length > 0 && e('ul', null, dirs.map(x => e('li', { key: x.dir }, e('button', { type: 'button', className: 'bd-ni fo', style: { paddingLeft: 34 + (x.depth - 1) * 14 },
+        'aria-current': filters.scope.dir === x.dir ? 'page' : undefined, title: `${r.name}/${x.dir}`, onClick: () => pick(`d:${r.slug}:${x.dir}`) },
+        e(Icons.Folder), e('span', { className: 'n' }, x.dir.split('/').pop()), e('span', { className: 'c' }, x.n))))));
+  };
+  const hiddenRow = x => e('li', { key: x.path, className: 'bd-hp' }, e(x.why === 'you' ? Icons.Package : Icons.Folder),
+    e('button', { type: 'button', className: 'hn', title: x.path, disabled: !x.root, onClick: () => x.root && pick('p:' + x.root.slug) }, e('b', null, x.label), e('small', null, WHY[x.why])),
+    x.root ? e(Button, { size: 'sm', variant: 'secondary', onClick: () => showRoot(x.root) }, 'Show')
+      : e(Button, { size: 'sm', variant: 'secondary', onClick: () => setRemoving({ path: x.path, name: x.label }) }, 'Remove'));
   const sidebar = inDrawer => {
-    const collapsed = !inDrawer && settings.rail;
-    // on Settings no list is current
-    const value = page === 'settings' ? '' : collapsed && filters.scope ? 'p:' + filters.scope.slug : scopeId;
+    const rail = !inDrawer && settings.rail;
+    const nav = (key, icon, label, count, current, onClick) => e('button', { key, type: 'button', className: 'bd-ni', 'aria-current': current ? 'page' : undefined, title: rail ? label : undefined, 'aria-label': rail ? label : undefined, onClick },
+      e(icon), !rail && e('span', { className: 'n' }, label), !rail && count != null && e('span', { className: 'c' }, count));
+    const allOn = page === 'home' && !filters.scope && !filters.hidden;
     const keys = e('span', { className: 'keys' }, gearBtn, themeBtn);
-    return e(Sidebar, { key: roots.map(r => r.slug).join('|'), className: collapsed ? 'bd-rail' : '', sections: sectionsFor(collapsed), value, onValueChange: pick,
-      collapsed, onCollapsedChange: c => (inDrawer ? setDrawer(false) : set('rail', c)),
-      header: e(Brand, { mark: collapsed }),
-      footer: collapsed ? e('div', { className: 'bd-side-foot' }, keys)
-        : e('div', { className: 'bd-side-foot' }, e(StatusDot, { status: 'success', label: 'Live' }), e('span', { className: 'sp' }), plural(roots.length, 'folder'), keys) });
+    const collapse = e(IconButton, { size: 'sm', variant: 'ghost', label: inDrawer ? 'Close' : rail ? 'Expand sidebar' : 'Collapse sidebar', icon: e(Icons.PanelLeft),
+      onClick: () => (inDrawer ? setDrawer(false) : set('rail', !rail)) });
+    const top = [e('div', { key: 'top', className: 'bd-sb-top' }, e(Brand, { mark: rail }), !rail && e('span', { className: 'sp' }), collapse),
+      nav('all', Icons.Home, 'All docs', visDocs.filter(notArch).length, allOn, () => pick('all')),
+      nav('stats', Icons.BarChart, 'Statistics', null, page === 'stats', () => openStats(''))];
+    if (rail) return e('nav', { className: 'bd-sb rail', 'aria-label': 'Projects' }, top, e('span', { className: 'grow' }), e('div', { className: 'bd-sb-foot' }, keys));
+    const chip = filters.hidden ? 'hidden' : pf, pqt = pq.trim().toLowerCase();
+    const found = s => !pqt || s.toLowerCase().includes(pqt);
+    const chips = [['all', 'All', shownRoots.length], ['active', 'Active', shownRoots.filter(isActive).length], ['pinned', 'Pinned', shownRoots.filter(r => pinned.has(r.path)).length], ['hidden', 'Hidden', hiddenN]];
+    let list;
+    if (chip === 'hidden') {
+      const xs = [...hidRoots.map(r => ({ path: r.path, root: r, why: why(r), label: why(r) === 'you' ? r.name : shortPath(r.path) })),
+        ...missing.map(m => ({ path: m.path, why: 'missing', label: shortPath(m.display) }))].filter(x => found(x.label) || found(x.path))
+        .sort((a, b) => Object.keys(WHY).indexOf(a.why) - Object.keys(WHY).indexOf(b.why));
+      list = xs.length ? e('ul', null, xs.map(hiddenRow)) : e('p', { className: 'bd-plist-none' }, pqt ? 'No hidden project matches.' : 'Nothing is hidden.');
+    } else {
+      const xs = ordered.filter(r => found(r.name) && (chip !== 'active' || isActive(r)) && (chip !== 'pinned' || pinned.has(r.path)));
+      list = xs.length ? e('ul', null, xs.map(projectRow))
+        : e('p', { className: 'bd-plist-none' }, pqt ? 'No project matches.' : chip === 'pinned' ? 'Pin a project from its ⋯ menu.' : 'No project edited this week.');
+    }
+    return e('nav', { className: 'bd-sb', 'aria-label': 'Projects' }, top,
+      e('div', { className: 'bd-cap' }, 'Projects'),
+      e(TextField, { size: 'sm', className: 'bd-psq', value: pq, placeholder: 'Find a project', 'aria-label': 'Find a project', leading: e(Icons.Search), clearable: true,
+        onClear: () => setPq(''), onChange: ev => setPq(ev.target.value), autoComplete: 'off', spellCheck: false }),
+      e('div', { className: 'bd-pf', role: 'group', 'aria-label': 'Show projects' }, chips.map(([id, label, n]) => e('button', { key: id, type: 'button', className: 'bd-pc', 'aria-pressed': chip === id,
+        onClick: () => { if (id === 'hidden') pick('h:1'); else { setPf(id); if (filters.hidden) setFilters(f => ({ ...f, hidden: false })); } } }, label, e('i', null, n)))),
+      e('div', { className: 'bd-plist' }, list),
+      e('div', { className: 'bd-sb-foot' },
+        e(Tooltip, { content: 'Live', side: 'top' }, e('span', { className: 'bd-live', tabIndex: 0, role: 'img', 'aria-label': 'Live' }, e('i'))),
+        e('span', null, `${plural(shownRoots.length, 'folder')} · `,
+          e('button', { type: 'button', className: 'hl', 'aria-pressed': filters.hidden, onClick: () => pick(filters.hidden ? 'h:0' : 'h:1') }, `${hiddenN} hidden`)),
+        e('span', { className: 'sp' }), keys));
   };
 
+  /* the docs */
   const onSearchKey = ev => {
     if (ev.key === 'Escape') { if (q) { ev.preventDefault(); setQ(''); } }
-    else if (ev.key === 'Enter') { const a = results.current && results.current.querySelector('[data-res]'); if (a) location.href = a.href; }
+    else if (ev.key === 'Enter') { const a = results.current && results.current.querySelector('[data-res]'); if (a) location.href = a.dataset.href || a.href; }
     else if (ev.key === 'ArrowDown') { const a = results.current && results.current.querySelector('[data-res]'); if (a) { ev.preventDefault(); a.focus(); } }
   };
+  // arrows move between results
   const onResultsKey = ev => {
     const back = ev.key === 'ArrowUp' || ev.key === 'ArrowLeft', fwd = ev.key === 'ArrowDown' || ev.key === 'ArrowRight';
     if (!back && !fwd) return;
     const links = [...results.current.querySelectorAll('[data-res]')], i = links.indexOf(document.activeElement);
     if (i < 0) return;
     ev.preventDefault();
-    if (back && i === 0) { const el = searchEl(); if (el) el.focus(); } else links[Math.max(0, Math.min(links.length - 1, i + (fwd ? 1 : -1)))].focus();
+    if (back && i === 0) { const el = searchEl(); if (el) el.focus(); return; }
+    const to = links[Math.max(0, Math.min(links.length - 1, i + (fwd ? 1 : -1)))];
+    to.focus();
   };
   const searchProps = { value: q, onChange: ev => setQ(ev.target.value), onKeyDown: onSearchKey, 'aria-label': 'Search docs', autoComplete: 'off', spellCheck: false };
-
-  // the composer's chips: one type and one status at a time, each chip toggling its filter; a count of 0 hides a chip unless it's picked
-  const typeChips = [e(FilterChip, { key: 'all', on: !filters.type, label: 'All', n: Object.values(typeN).reduce((a, n) => a + n, 0), onClick: () => pick('t:') }),
-    ...TYPES.filter(([id]) => typeN[id] || filters.type === id).map(([id, label, I]) =>
-      e(FilterChip, { key: id, className: 't-' + id, on: filters.type === id, icon: e(I), label, n: typeN[id], onClick: () => pick('t:' + id) }))];
-  const statusChips = STATUSES.filter(([id]) => statusN[id] || filters.status === id).map(([id, label, I]) =>
-    e(FilterChip, { key: id, on: filters.status === id, icon: e(I), label, n: statusN[id], onClick: () => pick('s:' + id) }));
-  const typeDef = filters.type && TYPES.find(x => x[0] === filters.type), statusDef = filters.status && STATUSES.find(x => x[0] === filters.status);
-  const scopeTag = filters.scope && e(Tag, { key: 'p', icon: e(Folder, { size: 14 }), onRemove: () => setFilters(f => ({ ...f, scope: null })) }, scopeLabel(roots, filters.scope));
-  // the sticky bar repeats every active filter as a removable tag
-  const topTags = [scopeTag, typeDef && e(Tag, { key: 't', icon: e(typeDef[2]), onRemove: () => pick('t:') }, typeDef[1]),
-    statusDef && e(Tag, { key: 's', icon: e(statusDef[2]), onRemove: () => pick('s:') }, statusDef[1])].filter(Boolean);
-  const total = showArchived ? docs.length - live.length : live.length;
+  const total = scoped.filter(d => sts.get(d.key).archived === showArchived).length;
   const countText = !data ? 'loading…' : rows.length === total ? plural(total, showArchived ? 'archived doc' : 'doc') : `${rows.length} of ${total}`;
 
-  const needsN = live.filter(d => sts.get(d.key).needs).length;
-  const newest = live.reduce((a, d) => Math.max(a, d.mtime), 0);
+  // the hero's lede: what the view holds, and its last edit
+  const scopeLive = scoped.filter(notArch), newest = scopeLive.reduce((a, d) => Math.max(a, d.mtime), 0);
   const lede = !data ? 'Loading your docs…' : !docs.length ? 'No docs yet.'
-    : e(F, null, `${plural(live.length, 'doc')} in ${plural(roots.length, 'project')}`, needsN ? e(F, null, ' · ', e('b', null, `${needsN} need${needsN === 1 ? 's' : ''} you`)) : null, newest ? ` · updated ${ago(newest)}` : null);
-  // what archive hides from this view: under the results, or in the empty state; Show them turns on the Archived chip
-  const hiddenText = (verb = ['matches', 'match']) => `${plural(hiddenN, 'archived doc')} ${hiddenN === 1 ? verb[0] : verb[1]}`;
-  const showBtn = e('button', { type: 'button', onClick: showThem }, 'Show them');
+    : [filters.hidden ? `${plural(scopeLive.length, 'doc')} in ${plural(hiddenN, 'hidden project')}`
+      : filters.scope ? `${plural(scopeLive.length, 'doc')} in ${scopeLabel(roots, filters.scope)}`
+      : `${plural(scopeLive.length, 'doc')} in ${plural(shownRoots.length, 'project')}`, newest && `updated ${when(newest)}`].filter(Boolean).join(' · ');
+  // the stat line: edits this week (Statistics), decisions open (Needs you), waiting on the agent (Waiting on agent)
+  const statLine = () => {
+    const xs = [[sum(editDays(scopeLive, 7).counts), 'edit this week', 'edits this week', '/stats', () => openStats(filters.scope ? filters.scope.slug : '')],
+      [sum(scopeLive.map(d => { const p = sts.get(d.key).p; return Math.max(0, p.dec - p.decided); })), 'decision open', 'decisions open', '/?s=needs', () => pick('s:needs')],
+      [scopeLive.filter(d => sts.get(d.key).waiting).length, 'waiting on the agent', 'waiting on the agent', '/?s=waiting', () => pick('s:waiting')]].filter(x => x[0] > 0);
+    return xs.length > 0 && e('div', { className: 'bd-stat-l' }, xs.flatMap(([n, one, many, href, onClick], i) => [i > 0 && e('span', { key: 's' + i, 'aria-hidden': true }, '·'),
+      e('a', { key: href, href, onClick: ev => { ev.preventDefault(); onClick(); } }, e('b', null, n), ' ', n === 1 ? one : many)]));
+  };
+  // the toolbar, under Docs and in the compact bar
+  const scopeRoot = filters.scope && roots.find(r => r.slug === filters.scope.slug);
+  const toolbar = () => e('div', { className: 'bd-tbar' },
+    e(FilterMenu, { label: 'Type', value: filters.type, valueLabel: filters.type && TYPES.find(x => x[0] === filters.type)[1], allLabel: 'All types', onPick: v => pick('t:' + v),
+      options: TYPES.filter(([id]) => typeN[id] || filters.type === id).map(([id, label]) => ({ value: id, label, n: typeN[id] })) }),
+    e(FilterMenu, { label: 'Status', value: filters.status, valueLabel: filters.status && STATUSES.find(x => x[0] === filters.status)[1], allLabel: 'Any status', onPick: v => pick('s:' + v),
+      options: STATUSES.filter(([id]) => statusN[id] || filters.status === id).map(([id, label]) => ({ value: id, label, n: statusN[id] })) }),
+    e(FilterMenu, { label: 'Project', value: filters.scope && filters.scope.slug, valueLabel: scopeRoot ? scopeRoot.name : filters.scope && filters.scope.slug, allLabel: 'All projects',
+      onPick: v => pick('p:' + v), options: ordered.map(r => ({ value: r.slug, label: r.name, n: countOf.get(r.slug) || 0 })) }),
+    scopeRoot && e(FilterMenu, { label: 'Folder', value: filters.scope.dir, valueLabel: filters.scope.dir, allLabel: 'All folders', onPick: v => pick(`d:${scopeRoot.slug}:${v}`),
+      options: folderDirs(docs.filter(d => d.root === scopeRoot && notArch(d))).map(x => ({ value: x.dir, label: '  '.repeat(x.depth - 1) + x.dir.split('/').pop(), n: x.n })) }),
+    e(SegmentedControl, { size: 'md', 'aria-label': 'View', value: settings.view, onValueChange: v => set('view', v),
+      options: [{ value: 'cards', label: 'Cards', icon: e(Icons.Grid) }, { value: 'rows', label: 'Rows', icon: e(Icons.List) }] }));
 
-  // grouping by folder, ordered like the docs inside
+  // ?doc=<slug>/<path>: once the docs load, the view is Rows, that row's group opens in full and the row scrolls into view
+  const jumped = useRef(false);
+  useEffect(() => {
+    if (jumped.current || !data || page !== 'home' || !sel) return;
+    const d = docs.find(x => x.key === sel);
+    if (!d) return;
+    jumped.current = true;
+    const g = groupOf(d.mtime);
+    if (settings.view !== 'rows') set('view', 'rows');
+    setGroupOpen(o => ({ ...o, [g]: true })); setMore(m => ({ ...m, [g]: true }));
+    setTimeout(() => { const el = document.querySelector(`.bd-r[data-key="${CSS.escape(sel)}"]`); if (el) el.scrollIntoView({ block: 'center' }); }, 80);
+  }, [data]);
+  // what archive hides from this view: under the results, or in the empty state; Show them picks the Archived status
+  const archText = (verb = ['matches', 'match']) => `${plural(archN, 'archived doc')} ${archN === 1 ? verb[0] : verb[1]}`;
+  const showBtn = e('button', { type: 'button', onClick: showThem }, 'Show them');
   let body;
   if (!data) body = null;
   else if (!roots.length) body = e('div', { className: 'bd-empty' }, e(EmptyState, { icon: e(Icons.FolderOpen), title: 'No folders yet',
     description: e(F, null, 'An agent registers one when it runs ', e('code', null, 'serve.py open <doc>.bluedoc.json'), '; add one yourself with ', e('code', null, 'serve.py add <folder>'), '.'), actions: null }));
-  else if (!rows.length) body = e('div', { className: 'bd-empty' }, e(EmptyState, { size: 'sm', icon: e(Icons.Search), title: terms.length ? `Nothing matches “${dq}”` : 'No docs in this view',
-    description: hiddenN ? e('span', { className: 'bd-ahint-x' }, hiddenText(terms.length ? ['does', 'do'] : undefined), ' · ', showBtn)
-      : terms.length ? 'Try fewer or different words, or clear the filters.' : 'Clear the filters to see every doc.',
+  else if (!rows.length) body = e('div', { className: 'bd-empty' }, e(EmptyState, { size: 'sm', icon: e(Icons.Search),
+    title: terms.length ? `Nothing matches “${dq}”` : filters.hidden && !hiddenN ? 'Nothing is hidden' : 'No docs in this view',
+    description: archN ? e('span', { className: 'bd-ahint-x' }, archText(terms.length ? ['does', 'do'] : undefined), ' · ', showBtn)
+      : terms.length ? 'Try fewer or different words, or clear the filters.' : filters.hidden ? 'Temporary folders and the projects you hide show here.' : 'Clear the filters to see every doc.',
     actions: e(F, null, terms.length > 0 && e(Button, { size: 'sm', variant: 'secondary', onClick: () => setQ('') }, 'Clear search'), anyFilter && e(Button, { size: 'sm', variant: 'ghost', onClick: () => pick('all') }, 'Clear filters')) }));
-  else if (settings.view === 'board') body = e(Board, { rows, terms });
-  else if (settings.group) {
-    const groups = new Map();
-    for (const r of rows) { const k = r.d.root.slug + '/' + r.d.dir; (groups.get(k) || groups.set(k, []).get(k)).push(r); }
-    const gs = [...groups.values()].map(xs => ({ xs, d: xs[0].d, top: Math.max(...xs.map(x => x.d.mtime)), best: Math.max(...xs.map(x => x.m.score)) }));
-    gs.sort((a, b) => (terms.length ? b.best - a.best : settings.sort === 'name' ? (a.d.root.name + '/' + a.d.dir).localeCompare(b.d.root.name + '/' + b.d.dir) : b.top - a.top));
-    body = gs.map(g => e('section', { key: g.d.root.slug + '/' + g.d.dir, className: 'bd-group' },
-      e('h3', null, e(Folder), e('span', null, e('span', { className: 'proj' }, g.d.root.name + ' / '), g.d.dir || '(top level)'), e('span', { className: 'c' }, g.xs.length), e('span', { className: 'when' }, 'updated ' + ago(g.top))),
-      e(Items, { rows: g.xs, view: settings.view, cols: settings.cols, terms })));
-  } else body = e(Items, { rows, view: settings.view, cols: settings.cols, terms });
+  else if (settings.view === 'cards') body = e(Cards, { key: JSON.stringify([filters, dq]), rows, terms });
+  else body = e(DocTable, { rows, terms, folderCol: !filters.scope, asc: settings.asc, onSort: () => set('asc', !settings.asc),
+    openRows, onOpen: k => setOpenRows(xs => (xs.includes(k) ? xs.filter(x => x !== k) : [...xs, k])),
+    isOpen: id => groupOpen[id] ?? (id !== 'older' || filters.hidden), onToggle: (id, o) => setGroupOpen(g => ({ ...g, [id]: o })), more, onMore: id => setMore(m => ({ ...m, [id]: true })) });
 
-  const viewOpts = [{ value: 'grid', label: 'Grid', icon: e(Icons.Grid) }, { value: 'list', label: 'List', icon: e(Icons.List) }, { value: 'board', label: 'Board', icon: e(Icons.Layout) }];
-  const scopeText = anyFilter ? [filters.scope && scopeLabel(roots, filters.scope), typeDef && typeDef[1], statusDef && statusDef[1]].filter(Boolean).join(' · ') : 'All projects';
+  const homePage = () => e(F, null,
+    e('div', { className: 'bd-top' + (heroOut ? ' on' : ''), inert: !heroOut },
+      menuBtn,
+      e(SearchField, { ...searchProps, ref: topInput, size: 'md', className: 'bd-top-q', placeholder: 'Search titles, sections, findings, paths', shortcut: finePointer ? [isMac ? '⌘' : 'Ctrl', 'K'] : undefined }),
+      e('span', { className: 'sp' }), data && docs.length > 0 && toolbar(), e('span', { className: 'bd-top-n' }, countText)),
+    e('header', { className: 'bd-hero' },
+      e('div', { className: 'bd-hero-pix', 'aria-hidden': true }, DZ),
+      e(HorizonProvider, { theme: 'dark', className: 'bd-hero-bar' }, menuBtn, e('span', { className: 'bd-only-m' }, e(Brand)), e('span', { className: 'sp' }),
+        e(IconButton, { size: 'sm', variant: 'ghost', className: 'bd-only-p', label: 'Search', icon: e(Icons.Search),
+          onClick: () => { const el = heroInput.current; if (el) { el.scrollIntoView({ block: 'center', behavior: reduce ? 'auto' : 'smooth' }); el.focus({ preventScroll: true }); } } }), themeBtn),
+      e('h1', null, 'What do you want to read?'),
+      e('p', { className: 'lede' }, lede),
+      e('div', { className: 'bd-composer', ref: composer },
+        e(SearchField, { ...searchProps, ref: heroInput, size: 'lg', className: 'bd-q', placeholder: 'Search titles, sections, findings, paths', shortcut: finePointer ? [isMac ? '⌘' : 'Ctrl', 'K'] : undefined,
+          trailing: data && q ? e('span', { className: 'bd-q-n' }, countText) : null })),
+      data && !filters.hidden && statLine()),
+    e('div', { className: 'bd-wrap' },
+      e('div', { className: 'bd-sec-head' }, e('h2', null, 'Docs'), data && e('span', { className: 'sub' }, countText + (terms.length ? ' · best match first' : '')),
+        e('span', { className: 'sp' }), data && docs.length > 0 && toolbar()),
+      filters.hidden && e('div', { className: 'bd-nb', role: 'status' }, e(Icons.EyeOff), e('b', null, 'Showing hidden projects'), e('span', { 'aria-hidden': true }, '·'),
+        e('span', null, 'Hidden projects stay off All docs and search'), e('span', { className: 'sp' }), e(Button, { size: 'sm', variant: 'secondary', onClick: () => pick('h:0') }, 'Done')),
+      e(ArchiveActs.Provider, { value: acts }, e('div', { ref: results, onKeyDown: onResultsKey }, body)),
+      // always in the page, so a screen reader hears the line once when it appears
+      e('p', { className: 'bd-ahint', role: 'status' }, rows.length > 0 && archN > 0 && (terms.length > 0 || anyFilter)
+        ? [e(ArchiveIcon, { key: 'i', size: 14 }), e('span', { key: 't' }, archText()), e('span', { key: 's', 'aria-hidden': true }, '·'), e(F, { key: 'b' }, showBtn)] : null)));
+
+  // Statistics: the shown projects' docs (archived ones aside), or one project's
+  const statsPage = () => {
+    const r = stats.slug && roots.find(x => x.slug === stats.slug), days = Number(stats.range);
+    const sd = (r ? docs.filter(d => d.root === r) : visDocs).filter(notArch);
+    return e('div', { className: 'bd-wrap' },
+      e('div', { className: 'bd-stats-h' }, e('h1', null, 'Statistics'),
+        e('span', { className: 'sub' }, r ? `${plural(sd.length, 'doc')} in ${r.name}` : `${plural(sd.length, 'doc')} in ${plural(shownRoots.length, 'project')}`), e('span', { className: 'sp' }),
+        e(DropdownMenu, { align: 'end', trigger: e('button', { type: 'button', className: 'bd-fc' }, 'Project: ', e('b', null, r ? r.name : 'All'), e(Icons.ChevronDown)),
+          items: [{ type: 'radio', id: 'r', value: stats.slug, onValueChange: v => setStats(s => ({ ...s, slug: v })),
+            options: [{ value: '', label: 'All projects' }, ...ordered.map(x => ({ value: x.slug, label: e('span', { className: 'bd-mo' }, e('span', null, x.name), e('span', { className: 'c' }, countOf.get(x.slug) || 0)) }))] }] }),
+        e(SegmentedControl, { size: 'md', 'aria-label': 'Range', value: stats.range, onValueChange: v => setStats(s => ({ ...s, range: v })), options: RANGES.map(x => ({ value: x, label: `${x} d` })) })),
+      e('section', { className: 'bd-widgets', 'aria-label': 'Overview' },
+        e(Activity, { docs: sd, days }), e(Decisions, { docs: sd, sts }), e(ByType, { docs: sd, sts, onType: id => { if (r) setFilters(f => ({ ...f, scope: { slug: r.slug, dir: '' } })); pick('t:' + id); } }), e(Waiting, { docs: sd, sts })),
+      e('section', { className: 'bd-widgets two', 'aria-label': 'Projects and decisions' },
+        e(EditsByProject, { docs: sd, roots: r ? [r] : shownRoots, days, onPick: slug => pick('p:' + slug) }), e(OldestOpen, { docs: sd, sts })));
+  };
 
   return e(HorizonProvider, { theme, reducedMotion: reduce || undefined, className: 'bd-app' },
     e('div', { className: 'bd-shell' },
@@ -1670,44 +2209,13 @@ function App() {
         page === 'settings' ? e(F, null,
           e('div', { className: 'bd-top on bd-st-bar' }, menuBtn, e('span', { className: 'sp' }), themeBtn),
           e(SettingsPage, { readOnly: !!data && data.unlocked === false, reduce, toast: text => setNote({ text }), onFolders: () => reload.current && reload.current() }))
-        : e(F, null,
-        e('div', { className: 'bd-top' + (heroOut ? ' on' : ''), inert: !heroOut },
-          menuBtn, e(Brand, { mark: true }), e('span', { className: 'bd-top-t', style: { fontWeight: 600, fontSize: 14 } }, 'All docs'),
-          e('div', { className: 'bd-top-s' },
-            e(SearchField, { ...searchProps, ref: topInput, size: 'md', className: 'bd-top-q', placeholder: 'Search docs', shortcut: finePointer ? ['/'] : undefined }),
-            topTags.length > 0 && e('div', { className: 'bd-top-f', role: 'group', 'aria-label': 'Active filters' }, topTags)),
-          e('span', { className: 'bd-top-n' }, countText), themeBtn),
-        e('header', { className: 'bd-hero' },
-          e('div', { className: 'bd-hero-pix', 'aria-hidden': true }, DZ),
-          e(HorizonProvider, { theme: 'dark', className: 'bd-hero-bar' }, menuBtn, e('span', { className: 'bd-only-m' }, e(Brand)), e('span', { className: 'sp' }), themeBtn),
-          e('h1', null, 'What do you want to read?'),
-          e('p', { className: 'lede' }, lede),
-          e('div', { className: 'bd-composer', ref: composer },
-            e(SearchField, { ...searchProps, ref: heroInput, size: 'lg', className: 'bd-q', placeholder: 'Search titles, sections, findings, paths', shortcut: finePointer ? [isMac ? '⌘' : 'Ctrl', 'K'] : undefined,
-              trailing: data && (q || anyFilter) ? e('span', { className: 'bd-q-n' }, countText) : null }),
-            data && docs.length > 0 && e('div', { className: 'bd-filters' },
-              scopeTag && e(FilterRow, { label: 'In' }, scopeTag),
-              e(FilterRow, { label: 'Type' }, typeChips),
-              statusChips.length > 0 && e(FilterRow, { label: 'Status' }, statusChips)))),
-        e('div', { className: 'bd-wrap' },
-          // the widgets never count archived docs, so the Archived view has none
-          data && docs.length > 0 && !showArchived && e(F, null,
-            e('div', { className: 'bd-sec-head' }, e('h2', null, 'Overview'), e('span', { className: 'sub' }, scopeText)),
-            e('section', { className: 'bd-widgets', 'aria-label': 'Overview' },
-              e(Activity, { docs: filtered }), e(Decisions, { docs: filtered, sts }), e(ByType, { docs: filtered, sts, onType: id => pick('t:' + id) }), e(Waiting, { docs: filtered, sts }))),
-          e('div', { className: 'bd-sec-head bd-tools' },
-            e('h2', null, 'Docs'), data && e('span', { className: 'sub' }, countText + (terms.length ? ' · best match first' : '')),
-            e('span', { className: 'sp' }),
-            e(SegmentedControl, { size: 'sm', 'aria-label': 'View', options: viewOpts, value: settings.view, onValueChange: v => set('view', v) }),
-            settings.view === 'grid' && e('span', { className: 'bd-tg bd-hide-s' }, e('span', { className: 'lab' }, 'Columns'),
-              e(SegmentedControl, { size: 'sm', 'aria-label': 'Grid columns', options: COLS.map(c => ({ value: c, label: c === 'auto' ? 'Auto' : c })), value: settings.cols, onValueChange: v => set('cols', v) })),
-            e(SegmentedControl, { size: 'sm', 'aria-label': 'Sort', options: [{ value: 'recent', label: 'Recent', icon: e(Icons.Clock) }, { value: 'name', label: 'Name', icon: e(Icons.SortAsc) }], value: settings.sort, onValueChange: v => set('sort', v) }),
-            settings.view !== 'board' && e(ToggleButton, { size: 'sm', pressed: settings.group, onPressedChange: v => set('group', v), leading: e(Icons.FolderTree) }, 'Folders')),
-          e(ArchiveActs.Provider, { value: acts }, e('div', { ref: results, onKeyDown: onResultsKey }, body)),
-          // always in the page, so a screen reader hears the line once when it appears
-          e('p', { className: 'bd-ahint', role: 'status' }, rows.length > 0 && hiddenN > 0 && (terms.length > 0 || anyFilter)
-            ? [e(ArchiveIcon, { key: 'i', size: 14 }), e('span', { key: 't' }, hiddenText()), e('span', { key: 's', 'aria-hidden': true }, '·'), e(F, { key: 'b' }, showBtn)] : null))))),
+        : page === 'stats' ? e(F, null, e('div', { className: 'bd-top on bd-st-bar' }, menuBtn, e('span', { className: 'sp' }), themeBtn), data && statsPage())
+        : homePage())),
     note && e('div', { className: 'bd-toast', role: 'status' }, note.text, note.undo && e('button', { type: 'button', onClick: () => { const u = note.undo; setNote(null); u(); } }, 'Undo')),
+    removing && e(Dialog, { open: true, onOpenChange: o => { if (!o) setRemoving(null); }, title: `Remove ${removing.name}?`,
+      description: 'bluedoc stops listing this folder. Nothing on disk is deleted; serve.py add lists it again.', children: null,
+      footer: e(F, null, e(Button, { variant: 'ghost', onClick: () => setRemoving(null) }, 'Cancel'),
+        e(Button, { variant: 'danger', onClick: () => { const x = removing; setRemoving(null); removeFolder(x); } }, 'Remove folder')) }),
     drawer && data && e('div', { className: 'bd-drawer', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Projects and folders' },
       e('div', { className: 'scrim', onClick: () => setDrawer(false) }), e('div', { className: 'panel' }, sidebar(true))));
 }

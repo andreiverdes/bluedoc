@@ -1064,13 +1064,19 @@ class ReaderName(ChromePage):
 
 @unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")
 class Archive(ChromePage):
-    """The reader archives a doc from its page's ⋯ menu or a home card's (rt/archive): reader state `__archived` {at, rev},
-    never in a reply or the doc's JSON. The page shows a banner with Unarchive and an Archived chip; the home page leaves
-    the doc out of its views, counts and widgets, an Archived chip lists it, and a search or filter that hides it says so
-    (Show them). A rev the agent writes brings it back, said once on the page. An approved plan with every step done and
-    every check ticked offers "All done · Archive it?" on its page and card; Not now holds until the next rev."""
+    """The reader archives a doc from its page's ⋯ menu, a home row's Archive or a home card's ⋯ menu (rt/archive): reader
+    state `__archived` {at, rev}, never in a reply or the doc's JSON. The page shows a banner with Unarchive and an
+    Archived chip; the home page leaves the doc out of its views, counts and Statistics, the Archived status lists it, and
+    a search or filter that hides it says so (Show them). A rev the agent writes brings it back, said once on the page.
+    An approved plan with every step done and every check ticked offers "All done · Archive it?" on its page and card;
+    Not now holds until the next rev."""
 
     MENU = "document.querySelector('.bd-docm')"
+
+    def setUp(self) -> None:
+        super().setUp()
+        for p in self.docs.glob("*.bluedoc.json"):   # edited today: the home table opens Today, not Older
+            os.utime(p)
 
     def home(self, query: str = "") -> Tab:
         status, raw = self.server.req("POST", "/__bluedoc/unlock", b"{}", {"Content-Type": "application/json", "X-Bluedoc": "1"})
@@ -1080,8 +1086,24 @@ class Archive(ChromePage):
         t.wait_for("document.readyState === 'complete' && !!document.querySelector('.bd-fc')")
         return t
 
-    def chips(self, t: Tab) -> dict:
-        return t.ev("Object.fromEntries([...document.querySelectorAll('.bd-fc')].map(c => [c.childNodes[c.childNodes.length - 2].textContent, +c.querySelector('.c').textContent]))")
+    ALL = "+document.querySelector('.bd-side .bd-ni[aria-current] .c').textContent"
+
+    def row(self, url: str) -> str:
+        """JS for the home table's row of the doc at url."""
+        return f"document.querySelector('.bd-r[data-href=\"{url}\"]')"
+
+    def by_type(self, t: Tab) -> str:
+        """Statistics' By type count, through the sidebar and back."""
+        t.ev("[...document.querySelectorAll('.bd-side .bd-ni')].find(b => b.textContent === 'Statistics').click()")
+        n = t.wait_for("document.querySelectorAll('.bd-w-head .r')[2]?.textContent")
+        t.ev("history.back()")
+        t.wait_for("location.pathname === '/' && !!document.querySelector('.bd-fc')")
+        return n
+
+    def cards(self, t: Tab) -> None:
+        """Cards in the toolbar: this origin's home shows cards from now on."""
+        t.ev("[...document.querySelectorAll('.bd-sec-head [role=radiogroup] button')].find(b => b.textContent === 'Cards').click()")
+        t.wait_for("!!document.querySelector('.bd-grid')")
 
     def archived(self, url: str) -> dict | None:
         v = self.state(url).get("__archived")
@@ -1125,37 +1147,34 @@ class Archive(ChromePage):
     def test_the_home_page_hides_archived_docs_and_says_so(self) -> None:
         url = self.server.url_for(self.plan)
         t = self.home()
-        before = self.chips(t)
-        by_type = "document.querySelectorAll('.bd-w-head .r')[2].textContent"
-        docs = t.ev(by_type)
-        # archive from the plan's card menu
-        card = f"[...document.querySelectorAll('.bd-cw')].find(w => w.querySelector('a').getAttribute('href') === {json.dumps(url)})"
-        t.ev(f"{card}.querySelector('.bd-cm-b').click()")
-        self.assertEqual(t.wait_for("document.querySelector('.bd-cm-m [role=menuitem]')?.textContent"), "Archive")
-        t.ev("document.querySelector('.bd-cm-m [role=menuitem]').click()")
-        t.wait_for(f"!{card}")
+        before, docs = t.wait_for(self.ALL), self.by_type(t)
+        # archive from the plan's open row
+        t.ev(f"{self.row(url)}.click()")
+        t.wait_for("!!document.querySelector('.bd-rx')")
+        t.ev("[...document.querySelectorAll('.bd-rx button')].find(b => b.textContent === 'Archive').click()")
+        t.wait_for(f"!{self.row(url)}")
         self.assertEqual((self.archived(url) or {}).get("rev"), "1")
-        after = self.chips(t)
-        self.assertEqual(after.pop("Archived"), 1)
-        self.assertEqual((after["All"], after.get("Plans", 0)), (before["All"] - 1, 0))
-        self.assertEqual(t.ev(by_type), f"{int(docs.split()[0]) - 1} docs")
+        self.assertEqual(t.ev(self.ALL), before - 1)
         self.assertIn("Undo", t.ev("document.querySelector('.bd-toast').textContent"))
-        # a search and a type filter that would show it say so; Show them lists it, dimmed, with an Archived badge
+        self.assertEqual(self.by_type(t), f"{int(docs.split()[0]) - 1} docs")
+        # a search and a type filter that would show it say so; Show them lists it with an Archived badge
         t = self.home("q=saved+carts&t=plan")
         self.assertEqual(t.wait_for("document.querySelector('.bd-empty .bd-ahint-x')?.textContent"), "1 archived doc does · Show them")
         t.ev("document.querySelector('.bd-empty .bd-ahint-x button').click()")
-        t.wait_for(f"!!{card}")
-        self.assertEqual(t.ev(f"[{card}.classList.contains('arch'), {card}.querySelector('.bd-pill.st').textContent, location.search]"),
-                         [True, "Archived", "?q=saved+carts&t=plan&s=archived"])
-        # the Archived chip off goes back to the search as it was
-        t.ev("[...document.querySelectorAll('.bd-fc')].find(c => c.textContent.startsWith('Archived')).click()")
+        t.wait_for(f"!!{self.row(url)}")
+        self.assertEqual(t.ev(f"[{self.row(url)}.querySelector('.c-st').textContent, location.search]"), ["Archived", "?q=saved+carts&t=plan&s=archived"])
+        # clearing Status goes back to the search as it was
+        t.ev("document.querySelector('.bd-sec-head [aria-label=\"Clear Status\"]').click()")
         t.wait_for("location.search === '?q=saved+carts&t=plan'")
         # under the results when other docs match: a search for Acme
         t = self.home("q=acme")
         self.assertEqual(t.wait_for("document.querySelector('.bd-ahint').textContent"), "1 archived doc matches·Show them")
-        # unarchive from the card in the Archived view: back in every count, the line gone
+        # unarchive from its card's ⋯ menu in the Archived view, dimmed: back in every count, the line gone
         t = self.home("s=archived")
+        self.cards(t)
+        card = f"[...document.querySelectorAll('.bd-cw')].find(w => w.querySelector('a').getAttribute('href') === {json.dumps(url)})"
         t.wait_for(f"!!{card}")
+        self.assertEqual(t.ev(f"[{card}.classList.contains('arch'), {card}.querySelector('.bd-pill.st').textContent]"), [True, "Archived"])
         t.ev(f"{card}.querySelector('.bd-cm-b').click()")
         self.assertEqual(t.wait_for("document.querySelector('.bd-cm-m [role=menuitem]')?.textContent"), "Unarchive")
         t.ev("document.querySelector('.bd-cm-m [role=menuitem]').click()")
@@ -1163,7 +1182,7 @@ class Archive(ChromePage):
         t = self.home("q=acme")
         self.assertEqual(t.ev("document.querySelector('.bd-ahint').textContent"), "")
         t = self.home()
-        self.assertEqual(self.chips(t), before)
+        self.assertEqual(t.wait_for(self.ALL), before)
         self.assertEqual(self.browser.errors, [])
 
     def test_a_plan_all_done_offers_archive(self) -> None:
@@ -1190,6 +1209,7 @@ class Archive(ChromePage):
         t.go(self.base + url)
         self.assertEqual(t.ev("document.querySelectorAll('.bd-revbar.arc.sug').length"), 0)
         h = self.home()
+        self.cards(h)
         self.assertEqual(h.ev("document.querySelectorAll('.bd-sug').length"), 0)
         # without it the card offers it too; Archive there archives
         body = json.dumps({"path": url, "import": False, "ops": [["__archive-later", None]]}).encode()
