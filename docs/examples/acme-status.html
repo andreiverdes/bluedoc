@@ -216,7 +216,8 @@ button.bd-emo:hover, button.bd-emo[aria-expanded="true"] { background: var(--sel
 /* the doc's ⋯ menu (Archive / Unarchive) and the archive strips under the app bar (ARC): they scroll with the page */
 .bd-docm .bd-selm { left: auto; right: 0; min-width: 168px; }
 .bd-bar:has(:is(.bd-docm, .bd-docx) [aria-expanded="true"]) { z-index: 44; }   /* the open menu over the docked right panel, the stripes (43) and the pane handles (43) */
-/* the app bar's Export (any doc but a presentation or a storelisting): Export to…'s key; narrow, its icon and chevron */
+/* the app bar's Export (any doc but a presentation or a storelisting; Download on a page with no server): Export to…'s
+   key; narrow, its icon and chevron */
 @media (max-width: 900px) { .bd-docx .bd-tbtn.bd-expb > span { display: none; } .bd-bar-r .bd-docx .bd-tbtn.bd-expb { padding: 0 8px 0 10px; gap: 4px; } }
 /* the app bar's Share (before Export): Export's raised key with its icon and word, no chevron; narrow, its icon. A shared
    doc: a dot in the accent at its corner; the doc newer than its share: the dot in the warning colour. Sharing off
@@ -3181,9 +3182,15 @@ const SHARE = (() => { const s = window.bluedocShare; return s && typeof s === '
 // drafts or board edits, no rename or archive; a `choice` or `done` the doc records shows as it is, and only the doc's
 // own threads show (read-only). Each feature that writes checks VIEW_ONLY in its code, not only in its CSS, and the
 // store keeps every key but the view prefs (VIEW_PREFS) in memory. It carries its current revision only: no Revisions,
-// and ?rev= and ?diff= show that revision. Navigation, contents, the theme, print, links, and a board's pan, zoom,
-// focus, theme pills, Present and Compare stay.
+// and ?rev= and ?diff= show that revision. Navigation, contents, the theme, print, Download, links, and a board's pan,
+// zoom, focus, theme pills, Present and Compare stay.
 const VIEW_ONLY = !!SHARE;
+const SCREENS = (() => { try { const x = JSON.parse(document.getElementById('bp-screens').textContent); return x && typeof x === 'object' && !Array.isArray(x) ? x : null; } catch { return null; } })();
+// served by serve.py: an -o file carries its screens (SCREENS), and a shared page is on bluedoc.ai's https
+const SERVED = !SHARE && !SCREENS && /^https?:$/.test(location.protocol);
+// a page with no server (!SERVED: a shared page, an -o file) as it came, for Download's HTML file: taken before anything
+// here renders, sets the theme or adds a class to <html>
+const PAGE_HTML = SERVED ? '' : '<!doctype html>\n' + document.documentElement.outerHTML;
 const QP = new URLSearchParams(location.search);
 // the page's file name, which its exports and copied commands go by: its URL's last segment; a shared page's <name>.html
 const pageFile = () => SHARE ? SHARE.name + '.html' : decodeURIComponent(location.pathname.split('/').pop() || '');
@@ -7624,9 +7631,6 @@ const BEZEL = { 'watch-round': 12, 'watch-square': 10, phone: 12, tablet: 14 }; 
 const FIDELITY = { sketch: 'Sketch', wireframe: 'Wireframe', hifi: 'Hi-fi' };
 const AB_GAP = 80, LIVE_MAX = 12, BK_MIN = 0.02, BK_MAX = 4;
 const VAR_GUT = 256;   // board px kept clear right of a website page with versions, for its versions bracket and pickers
-const SCREENS = (() => { try { const x = JSON.parse(document.getElementById('bp-screens').textContent); return x && typeof x === 'object' && !Array.isArray(x) ? x : null; } catch { return null; } })();
-// served by serve.py: an -o file carries its screens (SCREENS), and a shared page is on bluedoc.ai's https
-const SERVED = !SHARE && !SCREENS && /^https?:$/.test(location.protocol);
 const LIVE_PORTS = (() => { try { const x = JSON.parse(document.getElementById('bp-live').textContent); return x && typeof x === 'object' && !Array.isArray(x) ? x : null; } catch { return null; } })();
 const isLive = a => !!a && typeof a.url === 'string';
 // a live page's dev server as serve.py keys its proxies (origin_key): scheme://host:port
@@ -7987,29 +7991,138 @@ function selectMenu({ label, options = [], value = null, onPick, title, aria, cl
   wrap.setOptions(options, value);
   return wrap;
 }
-// an export the server sent: saved as a download named name
+// an export saved as a download named name: one the server sent (a Response) or one the page made (a Blob)
 async function saveBlob(r, name) {
-  const url = URL.createObjectURL(await r.blob());
+  const url = URL.createObjectURL(r instanceof Blob ? r : await r.blob());
   const link = h('a', { href: url, download: name, style: 'display:none' });
   document.body.append(link); link.click(); link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
-// an export's file name: the doc's file name without its suffix, then .format
-const exportName = (format, fallback) => `${(pageFile() || fallback).replace(/\.(bluedoc|blueprint)\.json$/i, '')}.${format}`;
+// an export's file name: the doc's file name (a shared page's <name>.html) without its suffix, then .format
+const exportName = (format, fallback) => `${(pageFile() || fallback).replace(/\.(bluedoc|blueprint)\.json$|\.html?$/i, '')}.${format}`;
 // the page's print: a board page (a design, a website) sets PRINT up (renderBoard): prepare() builds its print sheet
 // and resolves once the sheet's screens have drawn, ready() says whether they have. printDoc: print once it's ready
 const PRINT = { prepare: null, ready: () => true };
 async function printDoc() { if (PRINT.prepare) await PRINT.prepare(); print(); }
+// The doc as Markdown (Export's and Download's Markdown), made in the page: the doc as its author wrote it, the
+// revision given (VIEW.doc), never the reader's ticks, picks or comments. # emoji title, the subtitle, org · kind · rev
+// · date, the TL;DR, then each section as ## title with its lead and its blocks; the doc's md fields go as written. A
+// checklist's items are task items ([x] done); a decision lists its choices, [x] the doc's `choice`, the recommended
+// one marked; steps carry their status; a diff its files and its comments as quotes; a canvas its nodes and edges; a
+// board its artboards. A block type it doesn't know adds nothing. The same doc gives the same text.
+function docMarkdown(doc) {
+  const m = doc.meta || {};
+  const one = s => String(s ?? '').replace(/\s*\n\s*/g, ' ').trim();   // inline md, on one line
+  const join = (...parts) => parts.flat(Infinity).filter(p => p && String(p).trim()).join('\n\n');
+  const pad = (s, n) => s.replace(/^(?=.)/gm, ' '.repeat(n));
+  const quote = s => s.split('\n').map(l => l ? '> ' + l : '>').join('\n');
+  // a list item: its line, then body under it after a blank line, indented by n
+  const item = (line, body, n = 2) => body ? `${line}\n\n${pad(body, n)}` : line;
+  // a label and its md: one line reads `label: md`; more go under it, indented by n (a list item's), else after a blank line
+  const entry = (line, md, n = 2) => {
+    md = String(md ?? '').trim();
+    return !md ? line : !/\n/.test(md) ? `${line}: ${md}` : n ? item(line, md, n) : join(line, md);
+  };
+  const fence = (code, lang) => {
+    const f = '`'.repeat(Math.max(3, ...(String(code).match(/`{3,}/g) || []).map(x => x.length + 1)));
+    return `${f}${lang || ''}\n${String(code).replace(/\n$/, '')}\n${f}`;
+  };
+  const cell = s => one(s).replace(/\\\||\|/g, x => x === '|' ? '\\|' : x);
+  const path = p => '`' + p + '`';
+  const src = (s, alt) => /^data:/i.test(s || '') ? `*${one(alt) || 'Media'}*` : `![${one(alt)}](${/[\s()]/.test(s) ? `<${s}>` : s})`;
+  const ids = v => v == null ? [] : (Array.isArray(v) ? v : [v]).map(String);
+  // every checklist item by `<checklist>/<item>`, for a diff's comments
+  const ITEMS_BY = {};
+  const walk = bs => (bs || []).forEach(b => { if (b && b.type === 'checklist') (b.items || []).forEach(it => { ITEMS_BY[`${b.id}/${it.id}`] = it; walk(it.blocks); }); });
+  (doc.sections || []).forEach(s => walk(s.blocks));
+  const evidence = ev => (ev || []).map(e => item(`- Evidence: ${one(e.label)}${e.href ? ` (${e.href})` : e.src ? ` (${e.src})` : ''}`, join(e.code && fence(e.code, e.lang), e.md))).join('\n');
+  const checkItem = (it, mark) => {
+    const picks = ids(it.choice), recs = ids(it.recommend), state = it.state ? ` (${one(it.state)})` : '';
+    const choices = Array.isArray(it.choices) && it.choices.map(c => entry(`- [${picks.includes(String(c.id)) ? 'x' : ' '}] **${one(c.label)}**${recs.includes(String(c.id)) ? ' (recommended)' : ''}`, c.md)).join('\n');
+    const line = choices ? `${mark}${one(it.text)}${state}` + (picks.length ? ` → ${picks.map(id => `**${one((it.choices.find(c => String(c.id) === id) || { label: id }).label)}**`).join(', ')}` : '')
+      : `${mark}[${it.done ? 'x' : ' '}] ${one(it.text)}${state}`;
+    return item(line, join(it.sub, it.detail, it.code && fence(it.code, it.lang), it.verify && entry('Check', it.verify, 0), choices, evidence(it.evidence), (it.blocks || []).map(b => blockMd(b, true))), mark.length);
+  };
+  const canvasScope = (s, parent) => {
+    const nodes = s.nodes || [], label = id => String(id)[0] === '@' ? (parent ? parent.label : id) : (nodes.find(n => n.id === id) || { label: id }).label;
+    const arrow = e => e.dir === 'both' ? '↔' : e.dir === 'none' ? '–' : '→';
+    return join(nodes.map(n => item(`- **${one(n.label)}**${n.sub ? ' · ' + one(n.sub) : ''}${n.state ? ` (${one(n.state)})` : ''}`,
+      join(n.md, (n.refs || []).map(one).join(', '), n.children && canvasScope(n.children, n)))).join('\n'),
+      (s.edges || []).length && 'Edges:\n' + s.edges.map(e => `- ${one(label(e.from))} ${arrow(e)} ${one(label(e.to))}${e.label ? ': ' + one(e.label) : ''}`).join('\n'));
+  };
+  const side = (s, def) => s && join(`**${one(s.label || def)}**`, s.md, s.code != null && fence(s.code, s.lang), s.src && src(s.src, s.alt));
+  const PLATFORM = { play: 'Google Play', appstore: 'App Store' }, ACTION = { add: 'A', edit: 'M', delete: 'D', rename: 'R', move: 'R' };
+  const MD = {
+    text: b => b.md,
+    callout: b => quote(join(`**${one(b.title || { note: 'Note', caution: 'Caution', warning: 'Warning', risk: 'Risk', decision: 'Decision' }[b.kind || 'note'] || b.kind)}**`, b.md)),
+    table: b => {
+      const cols = b.columns || [], row = r => `| ${cols.map((_, i) => cell(r[i])).join(' | ')} |`;
+      return join([row(cols), `|${cols.map(() => '---').join('|')}|`, ...(b.rows || []).map(row)].join('\n'), b.caption && one(b.caption));
+    },
+    code: (b, head) => join(head(b.title), fence(b.code || '', b.lang)),
+    terms: b => (b.items || []).map(t => entry(`- **${one(t.term)}**`, t.md)).join('\n'),
+    cards: b => (b.items || []).map(c => entry(`- **${one(c.title)}**${c.tag ? ` (${one(c.tag)})` : ''}`, c.md)).join('\n'),
+    checklist: (b, head) => join(head(b.title), (b.items || []).map((it, i) => checkItem(it, b.numbered === false ? '- ' : `${i + 1}. `)).join('\n')),
+    steps: (b, head) => join(head(b.title), (b.items || []).map((s, i) => item(`${i + 1}. ${one(s.title)} (${s.status || 'todo'}${s.effort ? `, effort ${s.effort}` : ''})`,
+      join(s.md, (s.files || []).length && 'Files: ' + s.files.map(path).join(', '), evidence(s.evidence)), `${i + 1}. `.length)).join('\n')),
+    diff: (b, head) => join(head(b.title || 'Code change'),
+      [b.repo, b.base && b.head && `${b.base}..${b.head}`, b.pr, b.headRef && b.baseRef && `${b.headRef} → ${b.baseRef}`, b.url].filter(Boolean).map(one).join(' · '), b.note,
+      (b.files || []).map(f => `- ${path(f.path)} (${[f.status, f.from && `from ${path(f.from)}`, f.add != null && `+${f.add} −${f.del || 0}`, f.omitted].filter(Boolean).join(', ')})`).join('\n'),
+      (b.comments || []).map(c => {
+        const it = c.item && ITEMS_BY[c.item];
+        const at = c.at || (c.file ? c.file + (c.line ? `:${c.line}${c.end && c.end !== c.line ? '-' + c.end : ''}` : '') : c.label || 'Whole change');
+        const t = it ? one(it.text) + (it.state ? ` (${one(it.state)})` : '') : one(c.title) + (c.state ? ` (${one(c.state)})` : '');
+        return quote(join(`**${one(at)}**${t ? ': ' + t : ''}`, it ? join(it.sub, it.detail) : c.md));
+      })),
+    canvas: (b, head) => join(head(b.title), b.caption && one(b.caption), canvasScope(b)),
+    files: (b, head) => join(head(b.title || 'Changed files'), (b.items || []).map(f => `- ${ACTION[f.action] || one(f.action)} ${f.from ? `${path(f.from)} → ` : ''}${path(f.path)}${f.why ? ': ' + one(f.why) : ''}`).join('\n')),
+    media: b => join(src(b.src, b.alt), b.caption && one(b.caption)),
+    compare: (b, head) => join(head(b.title), side(b.before, 'Before'), side(b.after, 'After')),
+    board: (b, head) => {
+      const abs = b.artboards || [], title = id => (abs.find(a => a.id === id) || { title: id }).title;
+      return join(head(b.title || 'Board'), abs.map(a => item(`- **${one(a.title)}** · ` + [a.device || (a.w && a.h ? `${a.w}×${a.h}` : ''), a.fidelity, a.variantOf && `variant of ${one(title(a.variantOf))}`, a.url]
+        .filter(Boolean).map(one).join(' · '), a.notes)).join('\n'));
+    },
+    listing: (b, head) => {
+      const app = b.app || {}, loc = b.defaultLocale || (b.locales || [])[0], text = (b.text || {})[loc] || {}, strings = (b.strings || {})[loc] || {};
+      return join(head('Store listing'), [app.name, app.company].filter(Boolean).map(one).join(' · '),
+        [(b.platforms || []).length && 'Platforms: ' + b.platforms.map(p => PLATFORM[p] || p).join(', '), (b.locales || []).length && 'Locales: ' + b.locales.join(', ')].filter(Boolean).join(' · '),
+        Object.keys(text).map(p => join(`**${PLATFORM[p] || p}** (${loc})`, Object.keys(text[p] || {}).map(f => entry(`- **${f}**`, String(text[p][f] ?? ''))).join('\n'))),
+        Object.keys(strings).length && join(`**Captions** (${loc})`, Object.keys(strings).map(k => entry(`- **${k}**`, String(strings[k] ?? ''))).join('\n')));
+    },
+  };
+  // a block's Markdown: a block under a checklist item titles itself in bold, a section's as ### title
+  function blockMd(b, nested) {
+    const f = b && Object.hasOwn(MD, b.type) && MD[b.type];
+    return f ? f(b, t => t ? (nested ? `**${one(t)}**` : `### ${one(t)}`) : '') || '' : '';
+  }
+  const emo = emojiOk(doc.emoji) ? doc.emoji : TYPE_EMOJI[docTypeOf(m)] || '';
+  return join(`# ${emo ? emo + ' ' : ''}${one(doc.title)}`, doc.subtitle && one(doc.subtitle),
+    [m.org, m.kind, m.rev && `rev ${m.rev}`, m.date].filter(Boolean).map(one).join(' · '), doc.tldr && entry('**TL;DR**', doc.tldr, 0),
+    (doc.sections || []).map(s => join(`## ${one(s.title)}`, s.lead && one(s.lead), (s.blocks || []).map(b => blockMd(b, false))))) + '\n';
+}
 // Export (the app bar, before ⋯ More): any doc but a presentation or a storelisting (their toolbars' Export to… has
 // their own exports) as the revision shown (?rev=) in the theme the reader picked, if any (GET /__bluedoc/export).
 // HTML file: the file `build.py -o` writes, which opens anywhere without the server. PDF: that file's print view,
 // printed by the server's headless Chrome; while it's made, its item says so; without Chrome (501) the browser's print
-// dialog for this page, then and on every later pick. Share, the key before it, opens the share sheet (openShare).
-// Only through serve.py: an -o file, a page on file:// or a shared page in bluedoc.ai's viewer has no server, so the
-// key isn't there; neither key shows there.
+// dialog for this page, then and on every later pick. Markdown: docMarkdown, made in the page, saved as <stem>.md.
+// Share, the key before it, opens the share sheet (openShare). A page with no server (an -o file, a page on file://, a
+// shared page in bluedoc.ai's viewer) has no Share, and the key is Download: HTML file, the page itself as it came
+// (PAGE_HTML, named as the page: <name>.html on a shared page); PDF, the browser's print dialog; Markdown, as above.
 (() => {
-  if (IS_DECK || IS_LISTING || !SERVED) return;
-  const EXPORTS = [['html', 'fcode', 'HTML file', 'One file that opens in any browser, no server'], ['pdf', 'doc', 'PDF', 'Print-ready, one file']];
+  if (IS_DECK || IS_LISTING) return;
+  const MD_ITEM = ['md', 'type', 'Markdown', 'The doc as text, for any editor'];
+  const saveMd = () => saveBlob(new Blob([docMarkdown(VIEW.doc)], { type: 'text/markdown' }), exportName('md', 'doc'));
+  if (!SERVED) {
+    const DL = [['html', 'fcode', 'HTML file', 'This page, one file for any browser'], ['pdf', 'doc', 'PDF', 'Your browser\'s print dialog: Save as PDF'], MD_ITEM];
+    const dl = exportMenu(DL, f => f === 'pdf' ? printDoc() : f === 'md' ? saveMd() : saveBlob(new Blob([PAGE_HTML], { type: 'text/html' }), pageFile() || 'doc.html'),
+      'Download this page as an HTML file, a PDF or Markdown', false, null, 'Download');
+    dl.classList.add('bd-docx');
+    const bar = document.querySelector('.bd-bar-r');
+    bar.insertBefore(dl, bar.querySelector('.bd-bk, .bd-docm'));
+    return;
+  }
+  const EXPORTS = [['html', 'fcode', 'HTML file', 'One file that opens in any browser, no server'], ['pdf', 'doc', 'PDF', 'Print-ready, one file'], MD_ITEM];
   let pdfByPrint = false, pdfBusy = false;   // pdfByPrint: the server said it has no Chrome
   const url = format => {
     const q = new URLSearchParams({ path: location.pathname, format });
@@ -8017,12 +8130,13 @@ async function printDoc() { if (PRINT.prepare) await PRINT.prepare(); print(); }
     if (document.documentElement.dataset.theme) q.set('theme', document.documentElement.dataset.theme);
     return '/__bluedoc/export?' + q;
   };
-  const wrap = exportMenu(EXPORTS, run, 'Export this page as one HTML file or a PDF', false, null, 'Export');
+  const wrap = exportMenu(EXPORTS, run, 'Export this page as one HTML file, a PDF or Markdown', false, null, 'Export');
   wrap.classList.add('bd-docx');
   const pdfItem = wrap.querySelector('[data-format=pdf]'), pdfSub = pdfItem.querySelector('.t span');
   const busy = on => { pdfBusy = on; pdfItem.setAttribute('aria-busy', String(on)); pdfSub.textContent = on ? 'Making the PDF…' : EXPORTS[1][3]; };
   function printPage() { toast('No Chrome here for a PDF: choose Save as PDF in the print dialog'); printDoc(); }
   async function run(format) {
+    if (format === 'md') return saveMd();
     if (format === 'pdf' && pdfByPrint) return printPage();
     if (format === 'pdf' && pdfBusy) return toast('Still making the PDF…');
     if (format === 'pdf') { busy(true); toast('Making the PDF…'); }

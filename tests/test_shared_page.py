@@ -1,6 +1,8 @@
 """A shared doc as the bluedoc.ai viewer (/g/<code>, or the first links' /g/#<user>/<gist id>) draws it: the -o file's
 page, written into a frame of the viewer's page on an http(s) origin with window.bluedocShare = {name, hash} set first
-(share/page). It asks no /__bluedoc/ route and has no Export key although its origin is http, and it is view-only
+(share/page). It asks no /__bluedoc/ route and has no Share or Export key although its origin is http: its Download
+key saves the page itself as <name>.html (it opens anywhere and draws the doc), opens the print dialog for a PDF, and
+saves the doc as <name>.md. It is view-only
 (share/view-only): no dock, tray or bottom bar, no enabled field in the doc, no comment composer, a click on an option,
 a tick or a board's controls changes nothing and stores no key but the view prefs, and the app bar says "Shared · view
 only". The doc's own `choice` shows as chosen, and its threads (an item's `replies`) are the Comments section,
@@ -22,6 +24,8 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from _support import TempHome, load_json
+from test_design import EXPORT_SPY
+from test_doc_export import TEXT_SPY, data_block
 from test_page_state import CHROME, Browser, Tab
 
 import build
@@ -135,8 +139,8 @@ class SharedPage(unittest.TestCase):
         url = self.viewer("acme-saved-carts-plan")
         t = Tab(self.browser)
         self.open(t, url + HASH)
-        self.assertEqual(self.q(t, "[w.document.title, !!w.document.querySelector('.bd-bar-r'), !!w.document.querySelector('.bd-docx')]"),
-                         ["Acme Shop: saved carts · bluedoc", True, False])
+        self.assertEqual(self.q(t, "[w.document.title, !!w.document.querySelector('.bd-bar-r'), !!w.document.querySelector('.bd-shk'), w.document.querySelector('.bd-docx .bd-expb').textContent]"),
+                         ["Acme Shop: saved carts · bluedoc", True, False, "Download"])
         # no doc menu: the title is plain text, and the home key leads to the page's top
         self.assertEqual(self.q(t, "[!!w.document.querySelector('.bd-dsw'), w.document.querySelector('.bd-crumb').textContent, w.document.querySelector('.bd-home').getAttribute('href')]"),
                          [False, "/📋Acme Shop: saved carts", "#top"])
@@ -160,6 +164,35 @@ class SharedPage(unittest.TestCase):
         self.open(t, url + HASH, reload=True)
         self.assertEqual(self.q(t, "JSON.stringify(w.BP.replyPayload().items)"), before)
         self.assertEqual(self.asked_routes(), [])
+        self.assertEqual(self.browser.errors, [])
+
+    def test_download_saves_the_page_its_pdf_and_its_markdown(self) -> None:
+        url = self.viewer("acme-saved-carts-plan")
+        t = Tab(self.browser)
+        self.open(t, url + HASH)
+        self.assertTrue(self.q(t, f"w.eval({json.dumps(EXPORT_SPY)}) && w.eval({json.dumps(TEXT_SPY)})"))
+        self.q(t, "(w.__printed = 0, w.print = () => { w.__printed++; }, 1)")
+        key = "w.document.querySelector('.bd-bar-r .bd-docx')"
+        self.assertEqual(self.q(t, f"[...{key}.querySelectorAll('[role=menuitem]')].map(b => b.dataset.format)"), ["html", "pdf", "md"])
+        for fmt in ("html", "pdf", "md"):
+            self.assertTrue(self.click(t, ".bd-bar-r .bd-docx .bd-expb"))
+            t.wait_for(IN.format(f"!{key}.querySelector('.bd-expm').hidden"))
+            self.assertTrue(self.click(t, f".bd-bar-r .bd-docx [data-format={fmt}]"))
+        saved = t.wait_for(IN.format("w.__printed === 1 && w.__saved.length === 2 && w.__saved.every(s => s.name) && w.__texts.length === 2 && w.__saved"))
+        self.assertEqual([(s["type"], s["name"]) for s in saved], [("text/html", "acme-saved-carts-plan.html"), ("text/markdown", "acme-saved-carts-plan.md")])
+        html, md = self.q(t, "[w.__texts.find(x => x.startsWith('<!doctype html>')), w.__texts.find(x => x.startsWith('# '))]")
+        self.assertEqual(data_block(html, "bp-doc"), data_block((self.site / "page.html").read_text(encoding="utf-8"), "bp-doc"))
+        self.assertEqual(md.split("\n")[0], "# 📋 Acme Shop: saved carts")
+        self.assertIn("## Open questions", md)
+        self.assertEqual(self.asked_routes(), [])
+        # the page it saved opens anywhere and draws the doc: here a file, with Download
+        f = self.tmp.dir / "acme-saved-carts-plan.html"
+        f.write_text(html, encoding="utf-8")
+        t2 = Tab(self.browser)
+        self.browser.call("Page.navigate", {"url": f.as_uri()}, t2.session)
+        t2.wait_for("document.readyState === 'complete' && !!window.BP", 20)
+        self.assertEqual(t2.ev("[document.title, document.querySelector('h1').textContent.includes('Acme Shop: saved carts'), document.querySelector('.bd-bar-r .bd-docx .bd-expb').textContent]"),
+                         ["Acme Shop: saved carts · bluedoc", True, "Download"])
         self.assertEqual(self.browser.errors, [])
 
     def test_a_review_is_view_only_and_its_threads_read_only(self) -> None:

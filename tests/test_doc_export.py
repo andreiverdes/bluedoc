@@ -8,9 +8,10 @@ the flag that keeps sandboxed frames in the page's process; the real one with BL
 BLUEDOC_CHROME without it; a design's or website's PDF has one page per artboard after its header and brief, and the
 exported file's print sheet holds every artboard in board order. A presentation, a storelisting, an unknown path,
 revision or format are a 400. In Chrome the served plan, review and design pages have Export in the app bar before
-the ⋯ menu (HTML file, PDF), a deck and a listing don't, and neither does the exported file over file://; HTML saves
-<stem>.html from the route at the revision shown; without Chrome on the server PDF opens the print dialog and says so.
-At 390 px the key keeps its icon and chevron."""
+the ⋯ menu (HTML file, PDF, Markdown), a deck and a listing don't; HTML saves <stem>.html from the route at the
+revision shown; without Chrome on the server PDF opens the print dialog and says so; Markdown saves <stem>.md, made in
+the page from the doc as written (its decisions' own `choice` ticked, not the reader's pick). The exported file over
+file:// has Download instead (HTML file: the file itself; Markdown). At 390 px the key keeps its icon and chevron."""
 from __future__ import annotations
 
 import json
@@ -32,6 +33,9 @@ STEMS = {"acme-orders": "Acme order path: checkout to pick ticket", "acme-saved-
          "acme-review-findings": "Review findings: acme-shop #412 and #415", "acme-status": "Acme shop status, week 41",
          "acme-fit-design": "Acme Fit: watch, phone and web mockups", "acme-site": "Acme Fit: marketing site, spring refresh"}
 EXPORT_FETCHES = "__fetched.map(u => new URL(u, location.href)).filter(u => u.pathname === '/__bluedoc/export')"
+# with EXPORT_SPY: the text of each blob the page saves, in __texts
+TEXT_SPY = """(() => { window.__texts = []; const mk = URL.createObjectURL;
+  URL.createObjectURL = b => { b.text().then(x => __texts.push(x)); return mk(b); }; return true; })()"""
 
 
 def data_block(html: str, block_id: str):
@@ -223,7 +227,8 @@ class ExportKey(ChromePage):
                 self.assertEqual(t.ev(f"[{self.BTN}.textContent, {self.BTN}.getAttribute('aria-haspopup'), (e => {{ while (e && !e.checkVisibility()) e = e.nextElementSibling; return !!e && e.matches('.bd-docm'); }})({self.BTN}.parentElement.nextElementSibling)]"),
                                  ["Export", "menu", True], "Export, a menu button right before the ⋯ menu (a phone's keys, hidden, between)")
                 self.assertEqual(t.ev(f"[...{self.MENU}.querySelectorAll('[role=menuitem]')].map(b => [b.dataset.format, b.querySelector('b').textContent, b.querySelector('.t span').textContent])"),
-                                 [["html", "HTML file", "One file that opens in any browser, no server"], ["pdf", "PDF", "Print-ready, one file"]])
+                                 [["html", "HTML file", "One file that opens in any browser, no server"], ["pdf", "PDF", "Print-ready, one file"],
+                                  ["md", "Markdown", "The doc as text, for any editor"]])
                 self.assertTrue(t.ev(f"{self.BTN}.parentElement.previousElementSibling.matches('.bd-shk')"), "Share, Export, ⋯")
         for stem in ("acme-fit-deck", "acme-fit-listing"):
             with self.subTest(stem=stem):
@@ -247,6 +252,31 @@ class ExportKey(ChromePage):
         t.wait_for("__saved.length && __saved[0].name")
         self.assertEqual(t.ev(EXPORT_FETCHES + ".map(u => Object.fromEntries(u.searchParams))"),
                          [{"path": t.ev("location.pathname"), "format": "html", "rev": "B", "theme": "dark"}])
+        self.assertEqual(self.browser.errors, [])
+
+    def test_markdown_saves_the_doc_as_written(self) -> None:
+        doc = load_json(self.plan)
+        questions = next(s for s in doc["sections"] if s["id"] == "questions")
+        retention = next(it for it in questions["blocks"][0]["items"] if it["id"] == "retention")
+        retention["choice"] = "d180"
+        doc["meta"]["rev"] = "2"
+        self.plan.write_text(json.dumps(doc, ensure_ascii=False), encoding="utf-8")
+        t = self.page("acme-saved-carts-plan")
+        self.assertTrue(t.ev(TEXT_SPY))
+        # the reader's own pick and tick stay out of it: the doc as its author wrote it
+        self.assertTrue(t.ev("BP.choose('decisions/retention', 'd90')"))
+        t.ev(f"{self.BTN}.click()")
+        t.ev(f"{self.MENU}.querySelector('[data-format=md]').click()")
+        saved = t.wait_for("__saved.length && __saved[0].name && __texts.length && __saved")
+        self.assertEqual([(s["type"], s["name"]) for s in saved], [("text/markdown", "acme-saved-carts-plan.md")])
+        md = t.ev("__texts[0]")
+        lines = md.split("\n")
+        self.assertEqual(lines[0], "# 📋 Acme Shop: saved carts")
+        self.assertIn("## Open questions", lines)
+        self.assertIn("  - [x] **180 days** (recommended): Covers 70 % of business reorders. Keeps about 900,000 rows, about 1.8 GB.", lines)
+        self.assertIn("  - [ ] **90 days**: About half the rows of 180 days. A customer who reorders every half year finds the cart gone.", lines)
+        self.assertIn("1. Add the `saved_carts` table (todo, effort S)", lines)
+        self.assertEqual(t.ev(EXPORT_FETCHES + ".length"), 0, "made in the page")
         self.assertEqual(self.browser.errors, [])
 
     def test_the_pdf_item_says_it_works_and_saves(self) -> None:
@@ -298,7 +328,8 @@ class ExportKey(ChromePage):
 
 @unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")
 class ExportedFile(unittest.TestCase):
-    """The exported file over file://: it draws, fetches nothing, and has no Export (no server)."""
+    """The exported file over file://: it draws, fetches nothing, and has Download instead of Export and no Share (no
+    server): its HTML file is the file itself, its Markdown <stem>.md."""
 
     @classmethod
     def setUpClass(cls) -> None:
@@ -324,8 +355,19 @@ class ExportedFile(unittest.TestCase):
                 self.browser.call("Page.navigate", {"url": f.as_uri()}, t.session)
                 t.wait_for("document.readyState === 'complete' && !!window.BP", 20)
                 self.assertEqual(t.ev("document.title"), f"{title} · bluedoc")
-                self.assertEqual(t.ev("[document.documentElement.dataset.theme, !!document.querySelector('.bd-bar-r'), !!document.querySelector('.bd-docx, .bd-shk')]"),
+                self.assertEqual(t.ev("[document.documentElement.dataset.theme, !!document.querySelector('.bd-bar-r'), !!document.querySelector('.bd-shk')]"),
                                  ["dark", True, False])
+                self.assertEqual(t.ev("(k => [k.querySelector('.bd-expb').textContent, [...k.querySelectorAll('[role=menuitem]')].map(b => b.dataset.format)])(document.querySelector('.bd-bar-r .bd-docx'))"),
+                                 ["Download", ["html", "pdf", "md"]])
+                self.assertTrue(t.ev(EXPORT_SPY) and t.ev(TEXT_SPY))
+                for fmt in ("html", "md"):
+                    t.ev(f"document.querySelector('.bd-docx .bd-expb').click(); document.querySelector('.bd-docx [data-format={fmt}]').click()")
+                saved = t.wait_for("__saved.length === 2 && __saved.every(s => s.name) && __texts.length === 2 && __saved")
+                self.assertEqual([(s["type"], s["name"]) for s in saved], [("text/html", f"{stem}.html"), ("text/markdown", f"{stem}.md")])
+                # the file as it came: the same markup, but for the whitespace between tags the parser drops
+                squash = lambda s: re.sub(r">\s+<", "><", s.strip())
+                self.assertEqual(squash(t.ev("__texts.find(x => x.startsWith('<!doctype html>'))")), squash(f.read_text(encoding="utf-8")))
+                self.assertTrue(t.ev("__texts.find(x => x.startsWith('# '))").split("\n")[0].endswith(" " + title))
                 self.assertEqual(t.ev("performance.getEntriesByType('resource').map(e => e.name).filter(u => !/^(data|blob|about):/.test(u))"), [])
                 board = next((b for b in build.all_blocks(load_json(doc_path)) if b.get("type") == "board"), None)
                 if board:   # its print: every artboard in board order, each screen drawn in the sheet's own frame

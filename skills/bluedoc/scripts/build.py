@@ -968,6 +968,9 @@ def check_media_src(rep: Report, where: str, src, base: Path | None) -> None:
         rep.err(where, f"'{src}' not found (looked for {f})")
     elif f.stat().st_size > MAX_MEDIA_BYTES:
         rep.warn(where, f"'{src}' is {f.stat().st_size / 1048576:.1f} MB (> {MAX_MEDIA_BYTES // 1048576} MB): compress or crop it; -o embeds it in the page")
+    # an image the agent drew stays an SVG: a raster with its SVG beside it was converted from it
+    if f.is_file() and f.suffix.lower() in (".png", ".jpg", ".jpeg", ".webp", ".gif") and f.with_suffix(".svg").is_file():
+        rep.warn(where, f"'{src}' has {f.with_suffix('.svg').name} beside it: use the SVG itself (src '{Path(path).with_suffix('.svg').as_posix()}'), never a PNG made from it")
 
 
 def checklist_kind(b: dict) -> str:
