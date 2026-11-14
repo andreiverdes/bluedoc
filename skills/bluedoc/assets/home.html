@@ -38,8 +38,9 @@ body { font-family: var(--font-hz-sans, Inter, system-ui, sans-serif); -webkit-f
 .bd-app mark { background: color-mix(in oklch, var(--color-hz-warning) 34%, transparent); color: inherit; border-radius: 3px; padding: 0 1px; }
 
 /* the sidebar (layout D): the brand, All docs and Statistics, then the projects: a find field, the All · Active · Pinned
-   · Hidden chips, the list in its own scroll area fading out at the bottom (a picked project shows its folders under
-   it; ⋯ on a hovered row opens its menu), and the foot on one row: Live, folders and hidden, Settings and the theme */
+   · Hidden chips, the list in its own scroll area fading out at the bottom (the pinned ones first under their caption; a
+   picked project shows its folders under it; ⋯ on a hovered row opens its menu), and the foot on one row: Live, folders
+   and hidden, Settings and the theme */
 .bd-brand { display: flex; align-items: center; gap: 9px; min-width: 0; padding-left: 6px; text-decoration: none; }
 .bd-brand svg { flex: none; }
 /* the wordmark: "bluedoc" in Lexend Bold (the logo's face, OFL-1.1), outlined to paths */
@@ -61,10 +62,10 @@ body { font-family: var(--font-hz-sans, Inter, system-ui, sans-serif); -webkit-f
 .bd-ni .c { flex: none; font: 500 11.5px var(--font-hz-mono); color: var(--color-hz-fg-subtle); }
 .bd-sb > .bd-ni + .bd-ni { margin-top: 4px; }   /* All docs, then Statistics: apart; the project rows keep their own rhythm */
 .bd-cap { flex: none; margin: 16px 10px 6px; font: 500 10.5px var(--font-hz-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--color-hz-fg-subtle); }
-.bd-psq { flex: none; height: 30px; margin: 0 2px 6px; padding-inline: 9px; gap: 7px; }
+.bd-psq { flex: none; height: 30px; margin: 0 2px 10px; padding-inline: 9px; gap: 7px; }
 .bd-psq input { font-size: 12.5px; }
 .bd-psq svg { width: 14px; height: 14px; }
-.bd-pf { flex: none; display: flex; gap: 3px; margin: 0 2px 6px; }
+.bd-pf { flex: none; display: flex; gap: 5px; margin: 0 2px 8px; }
 .bd-pc { display: inline-flex; align-items: center; gap: 3px; height: 22px; padding: 0 6px; border: 0; border-radius: 999px; cursor: pointer; white-space: nowrap;
   font: 500 11px var(--font-hz-sans); color: var(--color-hz-fg-muted); background: var(--color-hz-inset); box-shadow: inset 0 0 0 1px var(--color-hz-line); }
 .bd-pc i { font: normal 500 10.5px var(--font-hz-mono); color: var(--color-hz-fg-subtle); }
@@ -79,13 +80,41 @@ body { font-family: var(--font-hz-sans, Inter, system-ui, sans-serif); -webkit-f
 .bd-pr { position: relative; }
 .bd-pr > .bd-ni { height: 31px; }
 .bd-pr > .bd-ni > svg { width: 15px; height: 15px; }
-.bd-pr > .bd-ni .pn { width: 12px; height: 12px; margin-right: -4px; }
+.bd-pr > .bd-ni > .bd-pe { --s: 15px; }
+/* a project's emoji, sized as the icon it takes the place of; a name with its icon or emoji (menus, lists) */
+.bd-pe { flex: none; display: inline-grid; place-items: center; width: var(--s, 16px); height: var(--s, 16px); overflow: hidden; font: 400 calc(var(--s, 16px) - 1px)/1 var(--font-hz-sans); }
+.bd-pnm { display: inline-flex; align-items: center; gap: 6px; min-width: 0; max-width: 100%; vertical-align: bottom; }
+.bd-pnm > svg { flex: none; color: var(--color-hz-fg-subtle); }
+.bd-pnm > span:last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* under All and Active, the pinned projects first: their caption, then a line before the others */
+.bd-cap.bd-pcap { margin: 4px 10px 4px; }
+.bd-psep { height: 1px; margin: 6px 10px; border: 0; background: var(--color-hz-line); }
+/* the editor's anchor: the row's box, so the popover opens beside it */
+.bd-pa { position: absolute; inset: 0 0 auto; height: 31px; pointer-events: none; }
+/* the editor (Edit name and icon…): the project as it will look, Name, Icons | Emoji and its grid, Reset · Cancel · Save */
+.bd-ped { display: grid; gap: 12px; }
+.bd-ped-hd { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.bd-ped-hd .gl { flex: none; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; background: var(--color-hz-inset); box-shadow: inset 0 0 0 1px var(--color-hz-line); color: var(--color-hz-fg-muted); }
+.bd-ped-hd .tx { display: flex; flex-direction: column; min-width: 0; line-height: 1.3; }
+.bd-ped-hd b { font-weight: 600; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bd-ped-hd small { font: 11.5px var(--font-hz-mono); color: var(--color-hz-fg-subtle); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bd-ped-tabs { width: 100%; }
+.bd-ped-tabs > * { flex: 1; }
+.bd-ped-grid { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 2px; }
+.bd-ped-grid button { display: grid; place-items: center; aspect-ratio: 1; padding: 0; border: 0; border-radius: 8px; cursor: pointer; background: none; color: var(--color-hz-fg-muted); font: 400 19px/1 var(--font-hz-sans); }
+.bd-ped-grid button svg { width: 18px; height: 18px; }
+.bd-ped-grid button:hover { background: var(--color-hz-hover); color: var(--color-hz-fg); }
+.bd-ped-grid button:focus-visible { outline: none; box-shadow: var(--hz-shadow-focus); }
+.bd-ped-grid button[aria-pressed="true"] { color: var(--color-hz-accent-fg); background: color-mix(in oklch, var(--color-hz-accent) 15%, var(--color-hz-surface));
+  box-shadow: inset 0 0 0 1.5px color-mix(in oklch, var(--color-hz-accent) 70%, transparent); }
+.bd-ped-ft { display: flex; align-items: center; gap: 6px; }
+.bd-ped-ft .sp { flex: 1; }
 .bd-mk { position: absolute; top: 4.5px; right: 6px; display: none; place-items: center; width: 24px; height: 22px; padding: 0; border: 0; border-radius: 6px; cursor: pointer;
   color: var(--color-hz-fg); background: var(--color-hz-pressed); box-shadow: inset 0 0 0 1px var(--color-hz-line); }
 .bd-mk svg { width: 15px; height: 15px; }
 .bd-mk:focus-visible { outline: none; box-shadow: var(--hz-shadow-focus); }
 .bd-pr:is(:hover, :focus-within, .open) > .bd-mk { display: grid; }
-.bd-pr:is(:hover, :focus-within, .open) > .bd-ni :is(.c, .pn) { visibility: hidden; }
+.bd-pr:is(:hover, :focus-within, .open) > .bd-ni .c { visibility: hidden; }
 .bd-pr.open > .bd-ni { background: var(--color-hz-hover); color: var(--color-hz-fg); }
 .bd-pmenu { min-width: 208px; }
 .bd-ni.fo { height: 29px; font-size: 13px; }
@@ -454,6 +483,7 @@ button.bd-fc:hover { color: var(--color-hz-fg); }
 .bd-ti small { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; font-size: inherit; color: var(--color-hz-fg-subtle); }
 .bd-m { font: 12px var(--font-hz-mono); color: var(--color-hz-fg-muted); }
 .bd-m u { text-decoration: none; color: var(--color-hz-fg-subtle); }
+.c-f > svg, .c-f > .bd-pe { display: inline-grid; margin-right: 6px; vertical-align: -2px; color: var(--color-hz-fg-subtle); }
 .bd-no { color: var(--color-hz-fg-subtle); }
 .bd-ty { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; height: 22px; padding: 0 9px 0 8px; box-sizing: border-box; border-radius: 999px; overflow: hidden;
   font: 600 11.5px/1 var(--font-hz-sans); color: color-mix(in oklch, var(--t) 72%, var(--color-hz-fg)); background: color-mix(in oklch, var(--t) 15%, transparent); }
@@ -593,6 +623,7 @@ button.bd-fc:hover { color: var(--color-hz-fg); }
 .bd-st-l { flex: 1 1 0; min-width: 0; display: grid; gap: 3px; }
 .bd-st-l b { font-size: 14px; font-weight: 560; overflow-wrap: anywhere; }
 .bd-st-l span { font-size: 12.5px; line-height: 1.45; color: var(--color-hz-fg-subtle); overflow-wrap: anywhere; }
+.bd-st-l b .bd-pnm span { font: inherit; color: inherit; }
 .bd-st-c { flex: 0 1 auto; display: flex; align-items: center; gap: 10px; min-width: 0; }
 .bd-st-row.lk .bd-st-l b { color: var(--color-hz-fg-muted); }
 .bd-st-row.note { justify-content: space-between; font-size: 13px; color: var(--color-hz-fg-muted); }
@@ -753,7 +784,7 @@ button.bd-fc:hover { color: var(--color-hz-fg); }
 @media (hover: none), (max-width: 600px) {
   .bd-pr > .bd-ni { padding-right: 46px; }
   .bd-pr > .bd-mk { display: grid; top: 0; right: 0; width: 40px; height: 100%; background: none; box-shadow: none; color: var(--color-hz-fg-subtle); }
-  .bd-pr:is(:hover, :focus-within, .open) > .bd-ni :is(.c, .pn) { visibility: visible; }
+  .bd-pr:is(:hover, :focus-within, .open) > .bd-ni .c { visibility: visible; }
 }
 @media (prefers-reduced-motion: reduce) {
   .bd-art .cv .fl, .bd-bars i, .bd-rx { animation: none !important; }
@@ -770,7 +801,7 @@ button.bd-fc:hover { color: var(--color-hz-fg); }
 'use strict';
 const e = React.createElement, F = React.Fragment;
 const { useState, useEffect, useMemo, useRef, useDeferredValue } = React;
-const { HorizonProvider, SegmentedControl, Card, ProgressRing, ProgressBar, EmptyState, SearchField, TextField, Switch, IconButton, Button, StatusDot, Badge, Banner, DropdownMenu, Avatar, Tooltip, Dialog, Icons } = window.HorizonUI;
+const { HorizonProvider, SegmentedControl, Card, ProgressRing, ProgressBar, EmptyState, SearchField, TextField, FormField, Switch, IconButton, Button, StatusDot, Badge, Banner, DropdownMenu, Popover, Avatar, Tooltip, Dialog, Icons } = window.HorizonUI;
 
 /* ---------- storage, theme, settings ---------- */
 const store = { get: k => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch {} } };
@@ -859,9 +890,9 @@ const APPROVABLE = new Set(['plan', 'design', 'presentation', 'website', 'storel
 const STATUSES = [['needs', 'Needs you', Icons.Flag], ['awaiting', 'Awaiting approval', Icons.Clipboard], ['waiting', 'Waiting on agent', Icons.Clock],
   ['approved', 'Approved', Icons.Success], ['errors', "Doesn't build", Icons.Error], ['archived', 'Archived', ArchiveIcon]];
 
-function prepare(data) {
+function prepare(roots) {
   const out = [];
-  for (const r of data.roots) for (const d of r.docs) {
+  for (const r of roots) for (const d of r.docs) {
     const i = d.path.lastIndexOf('/');
     out.push({ ...d, root: r, dir: i < 0 ? '' : d.path.slice(0, i), key: r.slug + '/' + d.path, type: TYPE_ONE[d.type] ? d.type : 'other' });
   }
@@ -964,7 +995,39 @@ function Logo({ size = 22 }) {
 }
 const Wordmark = () => e('svg', { className: 'wm', viewBox: '6 -75 396 77', 'aria-hidden': true, dangerouslySetInnerHTML: { __html: WORDMARK } });
 const Brand = ({ mark }) => e('a', { className: 'bd-brand', href: '/', 'aria-label': 'bluedoc, all docs' }, e(Logo), !mark && e(Wordmark));
-const Loc = ({ d, terms }) => e('span', { className: 'bd-loc', title: d.root.path + '/' + d.path }, e(Folder, { size: 14 }), e('span', null, ...hl(d.root.name + (d.dir ? '/' + d.dir : ''), terms)));
+// a project's own icon (settings.json home.icons, the project menu's Edit name and icon…): one of PROJECT_ICONS, HorizonUI's
+// Icons and three of lucide's drawn as they draw theirs (settings.py PROJECT_ICONS keeps the same names), or an emoji
+const CartIcon = ({ size = 16, strokeWidth = 1.6, ...rest }) => e('svg', { xmlns: 'http://www.w3.org/2000/svg', width: size, height: size, viewBox: '0 0 24 24',
+  fill: 'none', stroke: 'currentColor', strokeWidth, strokeLinecap: 'round', strokeLinejoin: 'round', className: 'lucide lucide-shopping-cart', 'aria-hidden': true, focusable: 'false', ...rest },
+  e('circle', { cx: 8, cy: 21, r: 1 }), e('circle', { cx: 19, cy: 21, r: 1 }), e('path', { d: 'M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12' }));
+const BookIcon = ({ size = 16, strokeWidth = 1.6, ...rest }) => e('svg', { xmlns: 'http://www.w3.org/2000/svg', width: size, height: size, viewBox: '0 0 24 24',
+  fill: 'none', stroke: 'currentColor', strokeWidth, strokeLinecap: 'round', strokeLinejoin: 'round', className: 'lucide lucide-book-open', 'aria-hidden': true, focusable: 'false', ...rest },
+  e('path', { d: 'M12 7v14' }), e('path', { d: 'M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z' }));
+const PROJECT_ICONS = ['Package', 'Bookmark', 'Folder', 'FolderOpen', 'Layers', 'FileCode', 'Terminal', 'Database', 'Server', 'Cloud',
+  'Cpu', 'Globe', 'Compass', 'Monitor', 'Phone', 'Layout', 'Palette', 'Image', 'PenLine', 'Chart',
+  'BarChart', 'PieChart', 'Calendar', 'Mail', 'Chat', 'Users', 'Home', 'Cart', 'Book', 'Test', 'Rocket',
+  'Zap', 'Sparkles', 'Star', 'Lightbulb', 'Brain', 'Bot', 'Wand', 'Shield', 'Lock', 'Key', 'Puzzle',
+  'Plug', 'Tool', 'Target', 'Debug', 'Flag', 'GitBranch'];
+const OWN_ICONS = { Phone: ListingIcon, Cart: CartIcon, Book: BookIcon };
+const iconOf = name => OWN_ICONS[name] || Icons[name];
+const PROJECT_EMOJI = ['📦', '🚀', '🛒', '📱', '💻', '🖥️', '🌐', '🧪', '🔬', '📊', '📈', '📚', '📖', '📝', '✏️', '🎨',
+  '🎯', '🧩', '🔧', '🛠️', '⚙️', '🔒', '🛡️', '🔑', '💡', '⚡', '🔥', '⭐', '✨', '🌱', '🌳', '🍀',
+  '🌊', '☀️', '🌙', '☁️', '🏠', '🏢', '🏪', '💳', '💰', '🎵', '🎮', '📷', '🎬', '✈️', '🚗', '🐛'];
+// the first emoji in what the reader typed or pasted, else ''
+const EMOJI_RE = /\p{Extended_Pictographic}|\p{Regional_Indicator}|\u20e3/u;
+const firstEmoji = s => { for (const { segment } of new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(s)) if (EMOJI_RE.test(segment)) return segment; return ''; };
+// a project's glyph: its own icon or emoji (look), else `fallback` (the sidebar's box, the table's folder)
+function ProjGlyph({ look, fallback = Icons.Package, size }) {
+  if (look && look.emoji) return e('span', { className: 'bd-pe', 'aria-hidden': true, style: size ? { '--s': size + 'px' } : undefined }, look.emoji);
+  const I = (look && look.icon && iconOf(look.icon)) || fallback;
+  return e(I, size ? { size, 'aria-hidden': true } : { 'aria-hidden': true });
+}
+// a project's name in a menu or a list, with its own icon or emoji in front when it has one
+const ProjName = ({ r }) => (r.look ? e('span', { className: 'bd-pnm' }, e(ProjGlyph, { look: r.look, size: 14 }), e('span', null, r.name)) : r.name);
+// the roots with the reader's names and icons: name the shown one, folder the folder's own, look the icon or null
+const withLooks = (roots, home) => roots.map(r => ({ ...r, folder: r.name, name: ((home && home.names) || {})[r.path] || r.name, look: ((home && home.icons) || {})[r.path] || null }));
+const Loc = ({ d, terms }) => e('span', { className: 'bd-loc', title: d.root.path + '/' + d.path }, d.root.look ? e(ProjGlyph, { look: d.root.look, size: 14 }) : e(Folder, { size: 14 }),
+  e('span', null, ...hl(d.root.name + (d.dir ? '/' + d.dir : ''), terms)));
 function Prog({ st, bare }) {
   if (!st.total) return null;
   return e('span', { className: 'bd-prog' + (st.did === st.total ? ' full' : ''), title: `${st.p.decided}/${st.p.dec} decided, ${st.p.done}/${st.p.steps} steps done` },
@@ -1292,7 +1355,7 @@ function EditsByProject({ docs, roots, days, onPick }) {
     e('div', { className: 'bd-w-head' }, e(Icons.BarChart), 'Edits by project', e('span', { className: 'r' }, `${days} days`)),
     xs.length ? e('div', { className: 'bd-ebs' }, xs.map(({ r, n }) => e('a', { key: r.slug, className: 'bd-eb', href: '/?p=' + encodeURIComponent(r.slug),
       onClick: ev => { if (ev.metaKey || ev.ctrlKey) return; ev.preventDefault(); onPick(r.slug); } },
-      e('span', { className: 'n' }, r.name), e('i', { style: { '--w': `${Math.max(2, n / max * 80)}%` } }, n))))
+      e('span', { className: 'n' }, e(ProjName, { r })), e('i', { style: { '--w': `${Math.max(2, n / max * 80)}%` } }, n))))
       : e('div', { className: 'bd-w-empty' }, `No edits in the last ${days} days.`));
 }
 // Statistics: the docs with picks left to make that were saved longest ago (open for that long, at least)
@@ -1363,7 +1426,8 @@ function DocRow({ d, st, m, terms, folderCol, open, onOpen }) {
         e('a', { className: 't bd-md', href: d.url, title: ownTitle(d) }, ...md(d.title, terms)),
         m.snip ? e('small', null, ...hl(m.snip, terms)) : null),
       e('span', { className: 'c-ty', role: 'cell' }, e(TypeTag, { d })),
-      folderCol && e('span', { className: 'c-f bd-m', role: 'cell', title: d.root.path + '/' + d.path }, ...hl(d.root.name, terms), e('u', null, ...hl(d.dir ? '/' + d.dir : '', terms))),
+      folderCol && e('span', { className: 'c-f bd-m', role: 'cell', title: d.root.path + '/' + d.path }, d.root.look && e(ProjGlyph, { look: d.root.look, size: 13 }),
+        ...hl(d.root.name, terms), e('u', null, ...hl(d.dir ? '/' + d.dir : '', terms))),
       e('span', { className: 'c-st', role: 'cell' }, e(StatusBadge, { st })),
       e('span', { className: 'c-dc', role: 'cell' }, e(Dec, { st })),
       e('span', { className: 'c-rv bd-m', role: 'cell' }, d.rev || '—'),
@@ -1597,7 +1661,7 @@ function SharingSection({ view, off, busy, run, keep, toast }) {
       sh.off && e('div', { className: 'bd-st-row note', role: 'note' }, e('span', null, `Sharing is off: ${sh.off.reason}. Run `, e(Code, null, sh.off.fix), '.'))));
 }
 
-function SettingsPage({ readOnly, reduce, toast, onFolders }) {
+function SettingsPage({ readOnly, reduce, toast, onFolders, home }) {
   const [view, setView] = useState(null);
   const [loadErr, setLoadErr] = useState(false);
   const [busy, setBusy] = useState('');   // the write in flight; every control waits for it
@@ -1703,8 +1767,13 @@ function SettingsPage({ readOnly, reduce, toast, onFolders }) {
         e('a', { key: id, href: '#' + id, 'aria-current': cur === id ? 'true' : undefined, onClick: ev => goTo(ev, id) }, label))),
       e('div', { className: 'bd-st-secs' },
         e(StSection, { id: 'folders', title: 'Folders', lead: 'The home page lists the docs in these folders. Removing one only hides its docs here; nothing is deleted.' },
-          view.folders.map(f => e(StRow, { key: f.path, title: f.display, tip: f.path, sub: e('span', null, plural(f.docs, 'doc') + (f.exists ? '' : ' · not found')) },
-            e(Controls, null, removeBtn(f.display, () => run('folder', '/__bluedoc/folders', { remove: f.path }, j => { keep(j); toast(`Removed ${f.display}`); onFolders(); }))))),
+          view.folders.map(f => {
+            // the reader's name and icon for the folder (home.names, home.icons), its path under them
+            const nm = ((home && home.names) || {})[f.path], look = ((home && home.icons) || {})[f.path] || null;
+            return e(StRow, { key: f.path, title: nm || look ? e(ProjName, { r: { name: nm || f.display, look } }) : f.display, tip: f.path,
+              sub: e('span', null, (nm ? f.display + ' · ' : '') + plural(f.docs, 'doc') + (f.exists ? '' : ' · not found')) },
+              e(Controls, null, removeBtn(nm || f.display, () => run('folder', '/__bluedoc/folders', { remove: f.path }, j => { keep(j); toast(`Removed ${nm || f.display}`); onFolders(); }))));
+          }),
           e('form', { className: 'bd-st-row add', onSubmit: ev => { ev.preventDefault(); addFolder(); } },
             e(TextField, { className: 'bd-st-in', mono: true, value: folder, placeholder: 'A folder\'s path, e.g. ~/code/acme-shop', 'aria-label': 'Folder to add', disabled: readOnly,
               validation: folderErr ? 'error' : undefined, autoComplete: 'off', spellCheck: false, onChange: ev => { setFolder(ev.target.value); setFolderErr(''); } }),
@@ -1790,6 +1859,30 @@ const readSel = () => (pageOf() === 'home' && new URLSearchParams(location.searc
 // pushState, Back returns
 const PAGES = { '/stats': 'stats', '/settings': 'settings' };
 const pageOf = () => PAGES[location.pathname] || 'home';
+/* ---------- a project's name and icon (its ⋯ menu's Edit name and icon…) ---------- */
+// edit: {slug, name (the field; empty: the folder's own name), look ({icon} | {emoji} | null: the box), tab (icons or
+// emoji), typed (the emoji field)}. A pick shows at once, here and on the project's row; Save keeps it, Reset clears both
+function ProjectEditor({ r, edit, setEdit, onSave, onReset, onCancel }) {
+  const set = (k, v) => setEdit(x => ({ ...x, [k]: v }));
+  const look = edit.look, pick = l => set('look', l);
+  const enter = ev => { if (ev.key === 'Enter') { ev.preventDefault(); onSave(); } };
+  const cell = (key, label, on, child) => e('button', { key, type: 'button', 'aria-label': label, title: label, 'aria-pressed': on, onClick: () => pick(key.startsWith('e:') ? { emoji: key.slice(2) } : { icon: key }) }, child);
+  return e('div', { className: 'bd-ped' },
+    e('div', { className: 'bd-ped-hd' }, e('span', { className: 'gl' }, e(ProjGlyph, { look, size: 20 })),
+      e('div', { className: 'tx' }, e('b', null, edit.name.trim() || r.folder), e('small', { title: r.path }, shortPath(r.path)))),
+    e(FormField, { label: 'Name' }, e(TextField, { size: 'sm', value: edit.name, placeholder: r.folder, maxLength: 60, autoComplete: 'off', spellCheck: false,
+      onChange: ev => set('name', ev.target.value), onFocus: ev => ev.target.select(), onKeyDown: enter })),
+    e(SegmentedControl, { size: 'sm', className: 'bd-ped-tabs', 'aria-label': 'Icon or emoji', value: edit.tab, onValueChange: v => set('tab', v),
+      options: [{ value: 'icons', label: 'Icons' }, { value: 'emoji', label: 'Emoji' }] }),
+    edit.tab === 'icons'
+      ? e('div', { className: 'bd-ped-grid', role: 'group', 'aria-label': 'Icons' }, PROJECT_ICONS.map(n => cell(n, n, look ? look.icon === n : n === 'Package', e(iconOf(n)))))
+      : e(F, null,
+        e('div', { className: 'bd-ped-grid emo', role: 'group', 'aria-label': 'Emoji' }, PROJECT_EMOJI.map(x => cell('e:' + x, x, !!look && look.emoji === x, x))),
+        e(TextField, { size: 'sm', value: edit.typed, placeholder: 'Type or paste any emoji', 'aria-label': 'Any emoji', autoComplete: 'off', spellCheck: false, onKeyDown: enter,
+          onChange: ev => { const v = ev.target.value, m = firstEmoji(v); setEdit(x => ({ ...x, typed: v, look: m ? { emoji: m } : x.look })); } })),
+    e('div', { className: 'bd-ped-ft' }, e(Button, { size: 'sm', variant: 'ghost', onClick: onReset }, 'Reset'), e('span', { className: 'sp' }),
+      e(Button, { size: 'sm', variant: 'ghost', onClick: onCancel }, 'Cancel'), e(Button, { size: 'sm', variant: 'primary', onClick: onSave }, 'Save')));
+}
 const PAGE_TITLE = { home: 'All docs', stats: 'Statistics', settings: 'Settings' };
 function App() {
   const [themePick, setThemePick] = useState(storedTheme);
@@ -1819,6 +1912,8 @@ function App() {
   const [groupOpen, setGroupOpen] = useState({});   // a date group opened or closed by the reader
   const [more, setMore] = useState({});   // date groups showing every row
   const [menuFor, setMenuFor] = useState(null);   // the project whose ⋯ menu is open
+  const [edit, setEdit] = useState(null);   // the project whose name and icon are being edited (ProjectEditor's edit, and inDrawer)
+  const editNext = useRef(null);   // Edit name and icon… picked: the editor opens once its menu has closed
   const [removing, setRemoving] = useState(null);   // {path, name}: the folder Remove folder… asks about
   const heroInput = useRef(null), topInput = useRef(null), composer = useRef(null), results = useRef(null), reload = useRef(null);
   const set = (k, v) => setSettings(s => ({ ...s, [k]: v }));
@@ -1908,12 +2003,13 @@ function App() {
     return () => document.removeEventListener('keydown', onKey);
   });
 
-  const docs = useMemo(() => (data ? prepare(data) : []), [data]);
+  // the roots with the reader's names and icons (withLooks), and their docs
+  const roots = useMemo(() => (data ? withLooks(data.roots, data.home) : []), [data]);
+  const docs = useMemo(() => prepare(roots), [roots]);
   const sts = useMemo(() => new Map(docs.map(d => [d.key, statusOf(d)])), [docs, tick]);
-  const roots = data ? data.roots : [];
   const missing = (data && data.missing) || [];
   // the projects the home page hides: temporary folders (under /tmp) until shown, those the reader hid, and missing ones
-  const homeL = { pinned: [], hidden: [], shown: [], ...((data && data.home) || {}) };
+  const homeL = { pinned: [], hidden: [], shown: [], names: {}, icons: {}, ...((data && data.home) || {}) };
   const why = r => (homeL.hidden.includes(r.path) ? 'you' : r.temp && !homeL.shown.includes(r.path) ? 'temp' : null);
   const shownRoots = roots.filter(r => !why(r)), hidRoots = roots.filter(r => why(r));
   const hiddenN = hidRoots.length + missing.length;
@@ -1987,7 +2083,8 @@ function App() {
     notNow: d => write(d, [['__archive-later', d.rev]]).catch(failed),
   }), []);
 
-  // the projects' menu: pinned and hidden folders saved in settings.json (home), Open folder, Copy path, Remove folder…
+  // the projects' menu: pinned and hidden folders, names and icons saved in settings.json (home), Open folder, Copy path,
+  // Remove folder…
   const saveHome = (next, said, undo) => postJSON('/__bluedoc/settings', { home: next })
     .then(() => reload.current && reload.current()).then(() => said && setNote({ text: said, undo }), err => setNote({ text: err.message }));
   const without = (xs, p) => xs.filter(x => x !== p);
@@ -2005,6 +2102,24 @@ function App() {
     if (reload.current) reload.current();
     setNote({ text: `Removed ${x.name}` });
   }, err => setNote({ text: err.message }));
+  // a project's name and icon: a name equal to the folder's own, or empty, and the box are no entry
+  const startEdit = (r, inDrawer) => {
+    const look = homeL.icons[r.path] || null;
+    setEdit({ slug: r.slug, inDrawer, name: r.name, look, tab: look && look.emoji ? 'emoji' : 'icons', typed: '' });
+  };
+  const saveLook = (r, name, look, said, undo) => {
+    const names = { ...homeL.names }, icons = { ...homeL.icons };
+    delete names[r.path]; delete icons[r.path];
+    name = (name || '').trim();
+    if (name && name !== r.folder) names[r.path] = name;
+    if (look) icons[r.path] = look;
+    setEdit(null);
+    return saveHome({ ...homeL, names, icons }, said, undo);
+  };
+  const editedRoot = edit && roots.find(r => r.slug === edit.slug);
+  const editor = r => e(ProjectEditor, { r, edit, setEdit, onCancel: () => setEdit(null),
+    onSave: () => saveLook(r, edit.name, edit.look, `Saved ${edit.name.trim() || r.folder}`),
+    onReset: () => { const was = { name: homeL.names[r.path], look: homeL.icons[r.path] || null }; saveLook(r, '', null, `Reset ${r.folder}`, () => saveLook(r, was.name, was.look)); } });
 
   const anyFilter = !!(filters.scope || filters.type || filters.status);
   const toggleTheme = () => { const t = theme === 'dark' ? 'light' : 'dark'; store.set(THEME_KEY, t); setThemePick(t); };
@@ -2014,10 +2129,14 @@ function App() {
   const openStats = slug => { setStats(s => ({ ...s, slug: slug || '' })); go('stats'); };
 
   /* the sidebar */
-  const projectRow = r => {
+  const projectRow = (r, inDrawer) => {
     const on = page === 'home' && !!filters.scope && filters.scope.slug === r.slug, isPinned = pinned.has(r.path);
+    const editing = !!edit && edit.slug === r.slug && edit.inDrawer === inDrawer;
+    // while its editor is open, the row shows the picks
+    const v = editing ? { name: edit.name.trim() || r.folder, look: edit.look } : r;
     const items = [
       { id: 'pin', label: isPinned ? 'Unpin' : 'Pin to top', icon: e(isPinned ? Icons.PinOff : Icons.Pin), onSelect: () => pinRoot(r, !isPinned) },
+      { id: 'edit', label: 'Edit name and icon…', icon: e(Icons.PenLine), onSelect: () => { editNext.current = { r, inDrawer }; } },
       { id: 'hide', label: 'Hide from home', icon: e(Icons.EyeOff), onSelect: () => hideRoot(r) },
       { type: 'separator', id: 's1' },
       { id: 'open', label: 'Open folder', icon: e(Icons.Folder), onSelect: () => openFolder(r.path) },
@@ -2025,16 +2144,20 @@ function App() {
       { type: 'separator', id: 's2' },
       { id: 'rm', label: 'Remove folder…', icon: e(Icons.Close), danger: true, onSelect: () => setRemoving({ path: r.path, name: r.name }) }];
     const dirs = on ? folderDirs(docs.filter(d => d.root === r && notArch(d))) : [];
-    return e('li', { key: r.slug, className: 'bd-pr' + (menuFor === r.slug ? ' open' : '') },
-      e('button', { type: 'button', className: 'bd-ni', 'aria-current': on && !filters.scope.dir ? 'page' : undefined, title: r.path, onClick: () => pick('p:' + r.slug) },
-        e(Icons.Package), e('span', { className: 'n' }, r.name), isPinned && e(Icons.Pin, { className: 'pn', 'aria-label': 'Pinned' }), e('span', { className: 'c' }, countOf.get(r.slug) || 0)),
+    return e('li', { key: r.slug, className: 'bd-pr' + (menuFor === r.slug || editing ? ' open' : '') },
+      e('button', { type: 'button', className: 'bd-ni', 'aria-current': on && !filters.scope.dir ? 'page' : undefined, title: r.name === r.folder ? r.path : `${r.folder} · ${r.path}`, onClick: () => pick('p:' + r.slug) },
+        e(ProjGlyph, { look: v.look }), e('span', { className: 'n' }, v.name), e('span', { className: 'c' }, countOf.get(r.slug) || 0)),
       e(DropdownMenu, { align: phone ? 'end' : 'start', side: phone ? 'bottom' : 'right', className: 'bd-pmenu', items, onOpenChange: o => setMenuFor(o ? r.slug : null),
+        onCloseAutoFocus: ev => { const x = editNext.current; if (x) { editNext.current = null; ev.preventDefault(); startEdit(x.r, x.inDrawer); } },
         trigger: e('button', { type: 'button', className: 'bd-mk', 'aria-label': `More: ${r.name}` }, e(Icons.MoreHorizontal)) }),
+      // the editor, beside the row (a dialog on phones)
+      editing && !phone && e(Popover, { open: true, onOpenChange: o => { if (!o) setEdit(null); }, side: inDrawer ? 'bottom' : 'right', align: 'start', width: 320,
+        className: 'bd-ped-pop', 'aria-label': `Name and icon of ${r.folder}`, trigger: e('span', { className: 'bd-pa', 'aria-hidden': true }) }, editor(r)),
       dirs.length > 0 && e('ul', null, dirs.map(x => e('li', { key: x.dir }, e('button', { type: 'button', className: 'bd-ni fo', style: { paddingLeft: 34 + (x.depth - 1) * 14 },
         'aria-current': filters.scope.dir === x.dir ? 'page' : undefined, title: `${r.name}/${x.dir}`, onClick: () => pick(`d:${r.slug}:${x.dir}`) },
         e(Icons.Folder), e('span', { className: 'n' }, x.dir.split('/').pop()), e('span', { className: 'c' }, x.n))))));
   };
-  const hiddenRow = x => e('li', { key: x.path, className: 'bd-hp' }, e(x.why === 'you' ? Icons.Package : Icons.Folder),
+  const hiddenRow = x => e('li', { key: x.path, className: 'bd-hp' }, e(ProjGlyph, { look: x.root && x.root.look, fallback: x.why === 'you' ? Icons.Package : Icons.Folder }),
     e('button', { type: 'button', className: 'hn', title: x.path, disabled: !x.root, onClick: () => x.root && pick('p:' + x.root.slug) }, e('b', null, x.label), e('small', null, WHY[x.why])),
     x.root ? e(Button, { size: 'sm', variant: 'secondary', onClick: () => showRoot(x.root) }, 'Show')
       : e(Button, { size: 'sm', variant: 'secondary', onClick: () => setRemoving({ path: x.path, name: x.label }) }, 'Remove'));
@@ -2055,14 +2178,18 @@ function App() {
     const chips = [['all', 'All', shownRoots.length], ['active', 'Active', shownRoots.filter(isActive).length], ['pinned', 'Pinned', shownRoots.filter(r => pinned.has(r.path)).length], ['hidden', 'Hidden', hiddenN]];
     let list;
     if (chip === 'hidden') {
-      const xs = [...hidRoots.map(r => ({ path: r.path, root: r, why: why(r), label: why(r) === 'you' ? r.name : shortPath(r.path) })),
-        ...missing.map(m => ({ path: m.path, why: 'missing', label: shortPath(m.display) }))].filter(x => found(x.label) || found(x.path))
+      const xs = [...hidRoots.map(r => ({ path: r.path, root: r, why: why(r), label: why(r) === 'you' || r.name !== r.folder ? r.name : shortPath(r.path) })),
+        ...missing.map(m => ({ path: m.path, why: 'missing', label: shortPath(m.display) }))].filter(x => found(x.label) || found(x.path) || (x.root && found(x.root.folder)))
         .sort((a, b) => Object.keys(WHY).indexOf(a.why) - Object.keys(WHY).indexOf(b.why));
       list = xs.length ? e('ul', null, xs.map(hiddenRow)) : e('p', { className: 'bd-plist-none' }, pqt ? 'No hidden project matches.' : 'Nothing is hidden.');
     } else {
-      const xs = ordered.filter(r => found(r.name) && (chip !== 'active' || isActive(r)) && (chip !== 'pinned' || pinned.has(r.path)));
-      list = xs.length ? e('ul', null, xs.map(projectRow))
-        : e('p', { className: 'bd-plist-none' }, pqt ? 'No project matches.' : chip === 'pinned' ? 'Pin a project from its ⋯ menu.' : 'No project edited this week.');
+      // a project matches by its name and its folder's; under All and Active the pinned ones come first, under their caption
+      const xs = ordered.filter(r => (found(r.name) || found(r.folder)) && (chip !== 'active' || isActive(r)) && (chip !== 'pinned' || pinned.has(r.path)));
+      const row = r => projectRow(r, inDrawer), pins = chip === 'pinned' ? [] : xs.filter(r => pinned.has(r.path));
+      list = !xs.length ? null : pins.length ? e(F, null, e('div', { className: 'bd-cap bd-pcap' }, 'Pinned'), e('ul', { 'aria-label': 'Pinned' }, pins.map(row)),
+        xs.length > pins.length && e(F, null, e('hr', { className: 'bd-psep' }), e('ul', null, xs.slice(pins.length).map(row))))
+        : e('ul', null, xs.map(row));
+      list = list || e('p', { className: 'bd-plist-none' }, pqt ? 'No project matches.' : chip === 'pinned' ? 'Pin a project from its ⋯ menu.' : 'No project edited this week.');
     }
     return e('nav', { className: 'bd-sb', 'aria-label': 'Projects' }, top,
       e('div', { className: 'bd-cap' }, 'Projects'),
@@ -2120,8 +2247,8 @@ function App() {
       options: TYPES.filter(([id]) => typeN[id] || filters.type === id).map(([id, label]) => ({ value: id, label, n: typeN[id] })) }),
     e(FilterMenu, { label: 'Status', value: filters.status, valueLabel: filters.status && STATUSES.find(x => x[0] === filters.status)[1], allLabel: 'Any status', onPick: v => pick('s:' + v),
       options: STATUSES.filter(([id]) => statusN[id] || filters.status === id).map(([id, label]) => ({ value: id, label, n: statusN[id] })) }),
-    e(FilterMenu, { label: 'Project', value: filters.scope && filters.scope.slug, valueLabel: scopeRoot ? scopeRoot.name : filters.scope && filters.scope.slug, allLabel: 'All projects',
-      onPick: v => pick('p:' + v), options: ordered.map(r => ({ value: r.slug, label: r.name, n: countOf.get(r.slug) || 0 })) }),
+    e(FilterMenu, { label: 'Project', value: filters.scope && filters.scope.slug, valueLabel: scopeRoot ? e(ProjName, { r: scopeRoot }) : filters.scope && filters.scope.slug, allLabel: 'All projects',
+      onPick: v => pick('p:' + v), options: ordered.map(r => ({ value: r.slug, label: e(ProjName, { r }), n: countOf.get(r.slug) || 0 })) }),
     scopeRoot && e(FilterMenu, { label: 'Folder', value: filters.scope.dir, valueLabel: filters.scope.dir, allLabel: 'All folders', onPick: v => pick(`d:${scopeRoot.slug}:${v}`),
       options: folderDirs(docs.filter(d => d.root === scopeRoot && notArch(d))).map(x => ({ value: x.dir, label: '  '.repeat(x.depth - 1) + x.dir.split('/').pop(), n: x.n })) }),
     e(SegmentedControl, { size: 'md', 'aria-label': 'View', value: settings.view, onValueChange: v => set('view', v),
@@ -2189,9 +2316,9 @@ function App() {
     return e('div', { className: 'bd-wrap' },
       e('div', { className: 'bd-stats-h' }, e('h1', null, 'Statistics'),
         e('span', { className: 'sub' }, r ? `${plural(sd.length, 'doc')} in ${r.name}` : `${plural(sd.length, 'doc')} in ${plural(shownRoots.length, 'project')}`), e('span', { className: 'sp' }),
-        e(DropdownMenu, { align: 'end', trigger: e('button', { type: 'button', className: 'bd-fc' }, 'Project: ', e('b', null, r ? r.name : 'All'), e(Icons.ChevronDown)),
+        e(DropdownMenu, { align: 'end', trigger: e('button', { type: 'button', className: 'bd-fc' }, 'Project: ', e('b', null, r ? e(ProjName, { r }) : 'All'), e(Icons.ChevronDown)),
           items: [{ type: 'radio', id: 'r', value: stats.slug, onValueChange: v => setStats(s => ({ ...s, slug: v })),
-            options: [{ value: '', label: 'All projects' }, ...ordered.map(x => ({ value: x.slug, label: e('span', { className: 'bd-mo' }, e('span', null, x.name), e('span', { className: 'c' }, countOf.get(x.slug) || 0)) }))] }] }),
+            options: [{ value: '', label: 'All projects' }, ...ordered.map(x => ({ value: x.slug, label: e('span', { className: 'bd-mo' }, e('span', null, e(ProjName, { r: x })), e('span', { className: 'c' }, countOf.get(x.slug) || 0)) }))] }] }),
         e(SegmentedControl, { size: 'md', 'aria-label': 'Range', value: stats.range, onValueChange: v => setStats(s => ({ ...s, range: v })), options: RANGES.map(x => ({ value: x, label: `${x} d` })) })),
       e('section', { className: 'bd-widgets', 'aria-label': 'Overview' },
         e(Activity, { docs: sd, days }), e(Decisions, { docs: sd, sts }), e(ByType, { docs: sd, sts, onType: id => { if (r) setFilters(f => ({ ...f, scope: { slug: r.slug, dir: '' } })); pick('t:' + id); } }), e(Waiting, { docs: sd, sts })),
@@ -2209,10 +2336,12 @@ function App() {
           'Open the link from ', e('code', null, 'serve.py unlock'), ' here (it works for an hour, in any browser).'),
         page === 'settings' ? e(F, null,
           e('div', { className: 'bd-top on bd-st-bar' }, menuBtn, e('span', { className: 'sp' }), themeBtn),
-          e(SettingsPage, { readOnly: !!data && data.unlocked === false, reduce, toast: text => setNote({ text }), onFolders: () => reload.current && reload.current() }))
+          e(SettingsPage, { readOnly: !!data && data.unlocked === false, reduce, toast: text => setNote({ text }), onFolders: () => reload.current && reload.current(), home: data && data.home }))
         : page === 'stats' ? e(F, null, e('div', { className: 'bd-top on bd-st-bar' }, menuBtn, e('span', { className: 'sp' }), themeBtn), data && statsPage())
         : homePage())),
     note && e('div', { className: 'bd-toast', role: 'status' }, note.text, note.undo && e('button', { type: 'button', onClick: () => { const u = note.undo; setNote(null); u(); } }, 'Undo')),
+    edit && phone && editedRoot && e(Dialog, { open: true, onOpenChange: o => { if (!o) setEdit(null); }, title: 'Name and icon', description: null, footer: null, className: 'bd-ped-dlg' },
+      editor(editedRoot)),
     removing && e(Dialog, { open: true, onOpenChange: o => { if (!o) setRemoving(null); }, title: `Remove ${removing.name}?`,
       description: 'bluedoc stops listing this folder. Nothing on disk is deleted; serve.py add lists it again.', children: null,
       footer: e(F, null, e(Button, { variant: 'ghost', onClick: () => setRemoving(null) }, 'Cancel'),

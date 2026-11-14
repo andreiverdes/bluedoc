@@ -1,9 +1,10 @@
 """The home page (1.0.51) in a real browser: the sidebar's projects, pinned and hidden through the ⋯ menu and kept in
-settings.json (home) across a reload; the Hidden chip lists the projects home leaves out with the reason: temporary
-folders (under /tmp) and registered folders that are gone, besides the ones the reader hid. A table row opens in place
-under itself (an inset card) and only its title opens the doc; ?doc= opens that row on load. Statistics shows a
-project and a range from its URL. Search finds a doc by its body text, which the page fetches from
-/__bluedoc/search-text on the first search only.
+settings.json (home) across a reload, the pinned ones first under a Pinned caption; a project's own name and emoji
+(Edit name and icon…) kept the same way and shown in the sidebar and the docs table, Reset clearing both; the Hidden
+chip lists the projects home leaves out with the reason: temporary folders (under /tmp) and registered folders that
+are gone, besides the ones the reader hid. A table row opens in place under itself (an inset card) and only its title
+opens the doc; ?doc= opens that row on load. Statistics shows a project and a range from its URL. Search finds a doc by
+its body text, which the page fetches from /__bluedoc/search-text on the first search only.
 
 Browser tests: BLUEDOC_BROWSER_TESTS=1 with Chrome (BLUEDOC_CHROME names it when it isn't in a usual place)."""
 from __future__ import annotations
@@ -86,7 +87,7 @@ class Home(ChromePage):
         self.assertEqual(sorted(t.wait_for(PROJECTS)), ["acme-fit", "acme-shop"], "the temporary and missing folders show")
         self.assertEqual(t.ev(ALL), 3)
         self.menu(t, "acme-fit", "Pin to top")
-        t.wait_for(f"{PROJECTS}[0] === 'acme-fit' && !!document.querySelector('.bd-side .bd-pr .pn')")
+        t.wait_for(f"{PROJECTS}[0] === 'acme-fit' && document.querySelector('.bd-side .bd-pcap')?.textContent === 'Pinned'")
         self.assertEqual(self.lists().get("pinned"), [str(self.fit / "docs")])
         self.menu(t, "acme-shop", "Hide from home")
         t.wait_for(f"{PROJECTS}.length === 1")
@@ -107,6 +108,58 @@ class Home(ChromePage):
         t = self.home()
         self.assertEqual(t.wait_for(PROJECTS), ["acme-fit", "acme-shop"])
         self.assertEqual(t.ev(ALL), 3)
+        self.assertEqual(self.browser.errors, [])
+
+    def test_the_pinned_caption_shows_only_with_pins(self) -> None:
+        t = self.home()
+        t.wait_for(f"{PROJECTS}.length === 2")
+        caps = "[...document.querySelectorAll('.bd-side .bd-pcap, .bd-side .bd-psep')].map(x => x.tagName)"
+        self.assertEqual(t.ev(caps), [], "no pins: no caption, no line")
+        self.menu(t, "acme-shop", "Pin to top")
+        t.wait_for(f"{caps}.length === 2")
+        groups = "[...document.querySelectorAll('.bd-side .bd-plist ul')].map(u => [...u.querySelectorAll(':scope > .bd-pr > .bd-ni .n')].map(n => n.textContent))"
+        self.assertEqual(t.ev(f"[{caps}, {groups}]"), [["DIV", "HR"], [["acme-shop"], ["acme-fit"]]])
+        # the Pinned chip lists the pinned ones alone, without the caption
+        t.ev(f"{self.chip(t, 'Pinned')}.click()")
+        t.wait_for(f"{PROJECTS}.length === 1")
+        self.assertEqual(t.ev(f"[{caps}, {PROJECTS}]"), [[], ["acme-shop"]])
+        self.assertEqual(self.browser.errors, [])
+
+    def test_a_name_and_an_emoji_hold_through_a_reload_and_reset_clears_them(self) -> None:
+        t = self.home()
+        self.menu(t, "acme-shop", "Edit name and icon…")
+        name = ".bd-ped input[placeholder='acme-shop']"
+        self.assertEqual(t.wait_for(f"document.activeElement === document.querySelector({json.dumps(name)}) && document.activeElement.value"), "acme-shop")
+        t.ev(typed(name, "Acme Store"))
+        t.ev("[...document.querySelectorAll('.bd-ped-tabs button')].find(b => b.textContent === 'Emoji').click()")
+        t.wait_for("!!document.querySelector('.bd-ped-grid.emo')")
+        t.ev("document.querySelector('.bd-ped-grid button[aria-label=\"🛒\"]').click()")
+        # the pick shows at once on the row; Enter in Name saves
+        row = "document.querySelector('.bd-side .bd-pr:has(.bd-ped-pop, .bd-pa)')"
+        self.assertEqual(t.wait_for(f"(r => r && r.querySelector('.bd-pe')?.textContent === '🛒' && r.querySelector('.n').textContent)({row})"), "Acme Store")
+        t.ev(f"document.querySelector({json.dumps(name)}).focus()")
+        for kind in ("rawKeyDown", "keyUp"):
+            self.browser.call("Input.dispatchKeyEvent", {"type": kind, "key": "Enter", "code": "Enter", "windowsVirtualKeyCode": 13}, t.session)
+        t.wait_for("!document.querySelector('.bd-ped')")
+        path = str(self.shop / "docs")
+        h = until(lambda: self.lists().get("names") and self.lists())
+        self.assertEqual((h["names"], h["icons"]), ({path: "Acme Store"}, {path: {"emoji": "🛒"}}))
+        # a reload keeps both: the sidebar, the table's project column, and Find a project by either name
+        t = self.home()
+        side = "[...document.querySelectorAll('.bd-side .bd-pr > .bd-ni')].map(b => (b.querySelector('.bd-pe')?.textContent || '') + b.querySelector('.n').textContent)"
+        self.assertEqual(sorted(t.wait_for(f"(x => x.length === 2 && x)({side})")), ["acme-fit", "🛒Acme Store"])
+        cells = "[...document.querySelectorAll('.bd-tb .bd-r .c-f')].map(c => c.textContent).sort()"
+        self.assertEqual(t.wait_for(f"(x => x.length === 3 && x)({cells})"), ["acme-fit", "🛒Acme Store", "🛒Acme Store"])
+        for q in ("store", "shop"):
+            t.ev(typed(".bd-psq input", q))
+            self.assertEqual(t.wait_for(f"(x => x.length === 1 && x)({PROJECTS})"), ["Acme Store"])
+        t.ev(typed(".bd-psq input", ""))
+        # Reset: the folder's own name and the box again, in the file too
+        self.menu(t, "Acme Store", "Edit name and icon…")
+        t.wait_for("!!document.querySelector('.bd-ped')")
+        t.ev("[...document.querySelectorAll('.bd-ped-ft button')].find(b => b.textContent === 'Reset').click()")
+        self.assertEqual(sorted(t.wait_for(f"(x => !document.querySelector('.bd-side .bd-pe') && x)({PROJECTS})")), ["acme-fit", "acme-shop"])
+        self.assertEqual(until(lambda: "names" not in self.lists() and "icons" not in self.lists()), True)
         self.assertEqual(self.browser.errors, [])
 
     def test_hidden_lists_temporary_and_missing_folders_with_the_reason(self) -> None:

@@ -64,17 +64,18 @@ URLs: /                      home page: every doc under the registered folders, 
       /__bluedoc/index.json  what the home page shows about every doc, without its search text; ?root=<slug>: one
                              folder's only (a doc page's doc menu). Each folder's `temp` (under /tmp), `missing`
                              (registered folders that are gone) and `home` (settings.json's pinned, hidden and shown
-                             folders). With an ETag: 304 for a matching If-None-Match (Cache-Control: no-cache); kept
-                             between requests, rebuilt only when a doc, its folder or state.db changed (home_json)
+                             folders, and the reader's names and icons for them). With an ETag: 304 for a matching
+                             If-None-Match (Cache-Control: no-cache); kept between requests, rebuilt only when a doc,
+                             its folder or state.db changed (home_json)
       /__bluedoc/search-text {docs: {"<doc url>": "<its search text>"}}, the home page's search over doc bodies;
                              ?root= and ETag/304 as index.json
       /__bluedoc/ping?path=  server check (version, code hash, started, pid, unlocked); with a doc's URL path, also
                              who reads replies and its saved approval
       /__bluedoc/settings    GET: what Settings shows (settings_view; each setting's value, source env|file|default
                              and env NAME=value; sharing: each project's account and gh's accounts). POST {planHook?,
-                             patchOnly?, chrome?, fontDirs?, sharing?: {slug, account}, home?: {pinned, hidden, shown}}
-                             (the key) writes settings.json, null back to the default: 409 when the environment sets
-                             that setting, 400 for a bad value
+                             patchOnly?, chrome?, fontDirs?, sharing?: {slug, account}, home?: {pinned, hidden, shown,
+                             names, icons}} (the key) writes settings.json, null back to the default: 409 when the
+                             environment sets that setting, 400 for a bad value
       POST /__bluedoc/folders  {add: "<folder>"} or {remove: "<listed path>"}: the home page's folders, {folders}
       POST /__bluedoc/open-folder  {path: "<listed path>"}: shows the folder in the file manager, {ok}
       POST /__bluedoc/repos  {remove: "<name>"}: a code link name from repos.json (codepin.py), {repos}
@@ -934,9 +935,10 @@ def temp_folder(r: Path) -> bool:
 
 
 def home_lists() -> dict:
-    """settings.json's home key: the folders pinned and hidden on the home page, and the temporary ones shown."""
+    """settings.json's home key: the folders pinned and hidden on the home page, the temporary ones shown, and the
+    reader's names and icons for folders ({path: name}, {path: {icon} | {emoji}})."""
     h = settings.load().get("home") or {}
-    return {k: list(h.get(k) or []) for k in settings.HOME_LISTS}
+    return {**{k: list(h.get(k) or []) for k in settings.HOME_LISTS}, **{k: dict(h.get(k) or {}) for k in settings.HOME_MAPS}}
 
 
 _entries: dict[str, tuple[tuple, dict]] = {}   # doc path -> ((doc_key, state.db's generation), summarize's)
@@ -5550,9 +5552,9 @@ def settings_view(port: int, fresh: bool = False) -> dict:
 
 def change_settings(data: dict, port: int) -> tuple[int, dict]:
     """POST /__bluedoc/settings {planHook?, patchOnly?, chrome?, fontDirs?, sharing?: {slug, account}, home?: {pinned,
-    hidden, shown}} into settings.json (null: back to the default; sharing's account null: ask on the project's first
-    share; home: the home page's lists, each replaced whole): (200, settings_view), 409 when the environment sets one
-    of them, 400 for an unknown name or a bad value."""
+    hidden, shown, names, icons}} into settings.json (null: back to the default; sharing's account null: ask on the
+    project's first share; home: the home page's lists and maps, each replaced whole): (200, settings_view), 409 when
+    the environment sets one of them, 400 for an unknown name or a bad value."""
     sharing = None
     if "sharing" in data:
         sharing = sharing_change(data["sharing"])
@@ -5563,8 +5565,10 @@ def change_settings(data: dict, port: int) -> tuple[int, dict]:
     if "home" in data:
         h = data["home"]
         if h is not None and not settings.valid("home", h):
-            return 400, {"error": "home: {pinned, hidden, shown}, each a list of folder paths"}
-        home_change = {k: list(dict.fromkeys(v)) for k, v in (h or {}).items() if v} or None
+            return 400, {"error": "home: {pinned, hidden, shown}, each a list of folder paths, and {names, icons} by "
+                                  "folder path: a name of 1 to 60 characters, {icon: <a project icon>} or {emoji: <one emoji>}"}
+        home_change = {k: (dict(v) if k in settings.HOME_MAPS else list(dict.fromkeys(v)))
+                       for k, v in (h or {}).items() if v} or None
         data = {k: v for k, v in data.items() if k != "home"}
         changes_home = True
     else:

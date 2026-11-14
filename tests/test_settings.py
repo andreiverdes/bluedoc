@@ -6,7 +6,8 @@ lets an edit of a built doc through when the file turns it off, fonts.font_dirs 
 serve.find_chrome takes the file's path. Against `serve.py run`: GET /settings is the home page, GET
 /__bluedoc/settings reports each value and its source, POST /__bluedoc/settings writes the file (400 for a bad value,
 409 when the environment sets the setting, 403 without the key); folders added and removed, a code link removed, a
-framework removed, chrome-test with a stand-in Chrome, and a restart that comes back with a new `started`."""
+framework removed, chrome-test with a stand-in Chrome, and a restart that comes back with a new `started`. The home key's
+names and icons take a name of 1 to 60 characters and a known icon or one emoji."""
 from __future__ import annotations
 
 import json
@@ -28,6 +29,8 @@ import settings
 
 ENV_NAMES = ("BLUEDOC_PLAN_HOOK", "BLUEDOC_PATCH_ONLY", "BLUEDOC_CHROME", "BLUEDOC_FONT_DIRS")
 JSON_HDR = {"Content-Type": "application/json", "X-Bluedoc": "1"}
+HOME_ERROR = ("home: {pinned, hidden, shown}, each a list of folder paths, and {names, icons} by folder path: a name of 1 "
+              "to 60 characters, {icon: <a project icon>} or {emoji: <one emoji>}")
 
 
 def fake_chrome(d: Path, version: str = "131.0.6778.86") -> Path:
@@ -119,6 +122,19 @@ class Precedence(unittest.TestCase):
         self.assertEqual(list(self.tmp.home.glob("*.tmp")), [])
         write_settings(self.tmp.home, {"planHook": "no", "chrome": 3, "fontDirs": "/a", "other": 1})
         self.assertEqual(settings.load(), {}, "values of the wrong shape are the default")
+
+    def test_home_names_and_icons_take_a_short_name_a_known_icon_or_one_emoji(self) -> None:
+        ok = {"pinned": ["/w/acme-shop"], "names": {"/w/acme-shop": "Acme Shop"},
+              "icons": {"/w/acme-shop": {"emoji": "🛒"}, "/w/acme-fit": {"icon": "Rocket"}, "/w/acme-hr": {"emoji": "👩🏽‍💻"},
+                        "/w/acme-de": {"emoji": "🇩🇪"}, "/w/acme-one": {"emoji": "1️⃣"}, "/w/acme-love": {"emoji": "❤️‍🔥"}}}
+        self.assertTrue(settings.valid("home", ok))
+        for bad in ({"names": {"/w/a": ""}}, {"names": {"/w/a": "x" * 61}}, {"names": {"/w/a": " Acme"}}, {"names": {"/w/a": "a\nb"}},
+                    {"icons": {"/w/a": {"icon": "Nope"}}}, {"icons": {"/w/a": {"emoji": "🛒🛒"}}}, {"icons": {"/w/a": {"emoji": "a"}}},
+                    {"icons": {"/w/a": {"emoji": "🇩"}}}, {"icons": {"/w/a": {"icon": "Rocket", "emoji": "🛒"}}}, {"icons": {"/w/a": "🛒"}},
+                    {"colors": {}}):
+            with self.subTest(bad):
+                self.assertFalse(settings.valid("home", bad))
+        self.assertEqual(len(settings.PROJECT_ICONS), 48)
 
 
 class Routes(unittest.TestCase):
@@ -215,7 +231,9 @@ class Routes(unittest.TestCase):
                             ({"chrome": str(hosts)}, f"{hosts} can't run (it isn't executable)"),
                             ({"fontDirs": [str(self.tmp.dir / "nope")]}, f"No folder at {self.tmp.dir / 'nope'}"),
                             ({"fontDirs": "/a"}, "fontDirs: a list of folders, or null"),
-                            ({"planHook": False, "theme": "dark"}, "unknown setting: theme")):
+                            ({"planHook": False, "theme": "dark"}, "unknown setting: theme"),
+                            ({"home": {"names": {"/w/acme-shop": "x" * 61}}}, HOME_ERROR),
+                            ({"home": {"icons": {"/w/acme-shop": {"emoji": "ab"}}}}, HOME_ERROR)):
             with self.subTest(body):
                 self.assertEqual(self.post("/__bluedoc/settings", body), (400, {"error": error}))
         self.assertEqual(self.file(), {"chrome": str(self.chrome)})
