@@ -603,6 +603,14 @@ html.bd-lp-open:not(.bd-lp-dock) .bp-side { background: var(--surface); box-shad
   background: linear-gradient(180deg, var(--tray-top), var(--tray-bot)); box-shadow: var(--shadow-tray), 0 2px 6px oklch(23% 0.01 264 / 0.06); }
 @media (max-width: 600px) { .bd-revbar .bd-revtb { --k: 34px; gap: 4px; padding: 5px; } }
 @media (max-width: 420px) { .bd-revbar .bd-revtb { --k: 32px; gap: 3px; padding: 4px; } }
+/* "Updated since you last opened it": one blue split button at the strip's end, as Share | Export: Show what changed,
+   a groove, Dismiss */
+.bd-revbar .in:has(> .bd-updk) { padding-block: 6px; }
+.bd-revbar .bd-updk { --k: 32px; display: flex; margin-left: auto; border-radius: 999px; box-shadow: var(--shadow-fill); }
+.bd-updk > .bd-key.go { box-shadow: none; }
+.bd-updk > .bd-key.go:first-child { border-radius: 999px 0 0 999px; padding: 0 14px 0 12px; }
+.bd-updk > .bd-key.go.x { border-radius: 0 999px 999px 0; padding: 0 11px 0 10px; box-shadow: inset 1px 0 0 color-mix(in oklch, white 28%, transparent); }
+.bd-updk > .bd-key.go:focus-visible { box-shadow: var(--focus-ring); }
 .bd-revbar.bd-lockbar { position: static; }
 .bd-lockbar code { font: 500 12.5px var(--mono); }
 .bd-chg { --chg: var(--warn); }
@@ -12519,11 +12527,11 @@ if (REVS.length >= 1 && REVS[0].rev && !VIEW_ONLY) {
     const SEEN_KEY = `bp:${docId}:__seen`, seen = store.get(SEEN_KEY);
     const was = seen && seen !== CUR.rev && REVS.find(r => r.rev === seen);
     if (was) {
-      // its keys as the compare view's: one raised pill, Show what changed filled, then a round Dismiss
-      const shut = tipped(keyBtn('', 'x', 'Dismiss', {}, () => { showTip(null); s.remove(); fitStrips(); })); shut._tip = 'Dismiss';
+      // one blue split button, as Share | Export: Show what changed, a groove, then Dismiss
+      const shut = tipped(keyBtn('go x', 'x', 'Dismiss', {}, () => { showTip(null); s.remove(); fitStrips(); })); shut._tip = 'Dismiss';
       const s = strip('upd', ic('hist'), h('span', { class: 't' }, 'Updated since you last opened it: ', h('b', {}, `${was.rev} → ${CUR.rev}`), CUR.date ? ` (${CUR.date})` : ''),
-        h('div', { class: 'bd-revtb', role: 'toolbar', 'aria-label': 'Updated since your last visit' },
-          textKey('go', 'split', 'Show what changed', `Compare ${revName(was)} with ${CUR.rev}`, null, revUrl(CUR, was)), groove(), shut));
+        h('div', { class: 'bd-updk', role: 'group', 'aria-label': 'Updated since your last visit' },
+          textKey('go', 'split', 'Show what changed', `Compare ${revName(was)} with ${CUR.rev}`, null, revUrl(CUR, was)), shut));
     }
     store.set(SEEN_KEY, CUR.rev);
   }
