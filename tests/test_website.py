@@ -1006,7 +1006,7 @@ class SnapshotOnSendInChrome(SiteInChrome):
         until(lambda: f.is_file(), 8)   # the page records itself once it settles; that done, it takes none on its own
         shutil.rmtree(snaps, ignore_errors=True)
         t = self.tab
-        t.ev("document.querySelector('.bd-key.go').click()")
+        t.ev("document.querySelector('.bd-anntb .bd-key.go').click()")
         t.wait_for("(d => !!d && !d.querySelector('.ft .bp-btn:last-child').hidden)(document.querySelector('.bd-chgs[open]'))")
         t.ev("document.querySelector('.bd-chgs[open] .ft .bp-btn:last-child').click()")
         t.wait_for("(t => t.classList.contains('on') && t.textContent.toLowerCase().includes('change request sent'))(document.querySelector('#bp-toast'))", 20)

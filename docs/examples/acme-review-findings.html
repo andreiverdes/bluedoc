@@ -215,7 +215,7 @@ button.bd-emo:hover, button.bd-emo[aria-expanded="true"] { background: var(--sel
 .bd-ibtn:active { transform: translateY(.5px); }
 /* the doc's ⋯ menu (Archive / Unarchive) and the archive strips under the app bar (ARC): they scroll with the page */
 .bd-docm .bd-selm { left: auto; right: 0; min-width: 168px; }
-.bd-bar:has(:is(.bd-docm, .bd-docx) [aria-expanded="true"]) { z-index: 43; }   /* the open menu over the docked right panel */
+.bd-bar:has(:is(.bd-docm, .bd-docx) [aria-expanded="true"]) { z-index: 44; }   /* the open menu over the docked right panel, the stripes (43) and the pane handles (43) */
 /* the app bar's Export (any doc but a presentation or a storelisting): Export to…'s key; narrow, its icon and chevron */
 @media (max-width: 900px) { .bd-docx .bd-tbtn.bd-expb > span { display: none; } .bd-bar-r .bd-docx .bd-tbtn.bd-expb { padding: 0 8px 0 10px; gap: 4px; } }
 /* the app bar's Share (before Export): Export's raised key with its icon and word, no chevron; narrow, its icon. A shared
@@ -12405,9 +12405,11 @@ if (REVS.length >= 1 && REVS[0].rev && !VIEW_ONLY) {
     const SEEN_KEY = `bp:${docId}:__seen`, seen = store.get(SEEN_KEY);
     const was = seen && seen !== CUR.rev && REVS.find(r => r.rev === seen);
     if (was) {
+      // its keys as the compare view's: one raised pill, Show what changed filled, then a round Dismiss
+      const shut = tipped(keyBtn('', 'x', 'Dismiss', {}, () => { showTip(null); s.remove(); fitStrips(); })); shut._tip = 'Dismiss';
       const s = strip('upd', ic('hist'), h('span', { class: 't' }, 'Updated since you last opened it: ', h('b', {}, `${was.rev} → ${CUR.rev}`), CUR.date ? ` (${CUR.date})` : ''),
-        h('span', { class: 'sp' }), h('a', { class: 'bp-btn primary', href: revUrl(CUR, was), target: REV_TARGET }, ic('split'), 'Show what changed'),
-        h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Dismiss', onclick: () => { s.remove(); fitStrips(); } }, ic('x')));
+        h('div', { class: 'bd-revtb', role: 'toolbar', 'aria-label': 'Updated since your last visit' },
+          textKey('go', 'split', 'Show what changed', `Compare ${revName(was)} with ${CUR.rev}`, null, revUrl(CUR, was)), groove(), shut));
     }
     store.set(SEEN_KEY, CUR.rev);
   }

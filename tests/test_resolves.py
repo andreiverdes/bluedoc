@@ -100,7 +100,7 @@ class ResolvesOnThePage(unittest.TestCase):
         gen = t.ev("BP.annotate({type: 'general', note: 'Acme: shorter steps.'}).id")
         # Request changes → Send
         send = "[...document.querySelectorAll('.bd-chgs[open] .bp-btn.primary')].find(b => b.textContent.trim() === 'Send' && !b.hidden && !b.disabled)"
-        t.ev("document.querySelector('.bd-key.go').click()")
+        t.ev("document.querySelector('.bd-anntb .bd-key.go').click()")
         t.wait_for(f"!!{send}")
         t.ev(f"{send}.click()")
         t.wait_for("BP.annotations().filter(a => a.status === 'open').length === 2")

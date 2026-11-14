@@ -375,7 +375,7 @@ class PageSync(ChromePage):
         self.assertEqual(cookies(), [], "the save came with the cookie, not the stored key")
 
 
-GO = "document.querySelector('.bd-key.go')"   # the tray's Request changes key
+GO = "document.querySelector('.bd-anntb .bd-key.go')"   # the tray's Request changes key
 
 
 @unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")
@@ -1092,6 +1092,8 @@ class Archive(ChromePage):
         t = self.open(url)
         t.ev(f"{self.MENU}.querySelector('.bd-ibtn').click()")
         self.assertEqual(t.ev(f"{self.MENU}.querySelector('[role=menuitem]').textContent"), "Archive")
+        # its right end, over the right stripe's keys, takes the pointer: the open menu sits above the stripes
+        self.assertEqual(t.ev(f"(r => !!document.elementFromPoint(r.right - 8, r.top + r.height / 2).closest('.bd-docm'))({self.MENU}.querySelector('[role=menuitem]').getBoundingClientRect())"), True)
         t.ev(f"{self.MENU}.querySelector('[role=menuitem]').click()")
         self.toast(t, "archived")
         self.assertEqual(until(lambda: (self.archived(url) or {}).get("rev")), "1")
