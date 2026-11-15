@@ -59,7 +59,7 @@
   --sans: "Inter Variable", Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --mono: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   --ease: cubic-bezier(0.23, 1, 0.32, 1);
-  --bar-h: 52px;
+  --bar-h: 56px;
   --top-h: calc(var(--bar-h) + var(--rv-h, 0px));   /* app bar plus the revision strip, when shown */
 }
 :root[data-theme="light"] { color-scheme: light; }
@@ -89,7 +89,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   border-bottom: 1px solid var(--line); }
 /* the home key: a house and the wordmark, flat until hovered; served, it opens the home page (linkHome), else the
    page's top. A phone, the house alone */
-.bd-home { display: inline-flex; align-items: center; gap: 7px; flex: none; height: 32px; padding: 0 10px 0 8px; margin-left: -8px; border-radius: 9px;
+.bd-home { display: inline-flex; align-items: center; gap: 7px; flex: none; height: 38px; padding: 0 14px 0 12px; margin-left: -10px; border-radius: 999px;
   color: var(--fg); text-decoration: none; transition: background .12s var(--ease); }
 .bd-home:hover { background: var(--hover); }
 .bd-home .bd-ic { width: 18px; height: 18px; color: var(--accent); }
@@ -102,7 +102,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .bd-crumb .sep { color: var(--line-strong); flex: none; }
 .bd-crumb .t { color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* the doc menu's key: the doc's emoji and name and a chevron (DOC_MENU); flat until hovered or open */
-.bd-dsw { display: inline-flex; align-items: center; gap: 7px; min-width: 0; height: 32px; padding: 0 8px; margin-left: -4px; border: 0; border-radius: 9px;
+.bd-dsw { display: inline-flex; align-items: center; gap: 7px; min-width: 0; height: 38px; padding: 0 12px; margin-left: -4px; border: 0; border-radius: 999px;
   background: none; color: var(--fg); font: inherit; cursor: pointer; }
 .bd-dsw:is(:hover, [aria-expanded="true"]) { background: var(--hover); }
 .bd-dsw .cv { flex: none; width: 13px; height: 13px; color: var(--fg-subtle); transition: rotate .15s var(--ease); }
@@ -179,22 +179,24 @@ button.bd-emo:hover, button.bd-emo[aria-expanded="true"] { background: var(--sel
 .bd-emop .rs .l { flex: none; }
 .bd-emop .rs .v { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg-subtle); text-align: right; }
 .bd-bar-r { margin-left: auto; display: flex; align-items: center; gap: 6px; flex: none; }
-/* Share | Export: one raised pill, HorizonUI's secondary Buttons joined as a SplitButton with a groove between; narrow,
-   their icons. Their raised look, hover, open and focus states are the select keys' (.bd-tbtn.bd-expb, below) */
-.bd-bar-r .bd-tbtn:is(.bd-expb, .bd-shk) { height: 26px; padding: 0 12px; gap: 6px; font: 500 12px/16px var(--sans); border-radius: 999px; }
-.bd-bar-r .bd-tbtn:is(.bd-expb, .bd-shk) .bd-ic { width: 14px; height: 14px; }
-.bd-bar-r .bd-tbtn.bd-expb .cv { color: inherit; }
+/* Share | Export: one raised pill as tall as the dock's Approve (38 px), HorizonUI's secondary Buttons joined as a
+   SplitButton with the dock's groove between; narrow, their icons. Their raised look, hover, open and focus states are
+   the select keys' (.bd-tbtn.bd-expb, below) */
+.bd-bar-r .bd-tbtn:is(.bd-expb, .bd-shk) { height: 38px; padding: 0 14px 0 13px; gap: 8px; font: 600 13px/16px var(--sans); border-radius: 999px; }
+.bd-bar-r .bd-tbtn:is(.bd-expb, .bd-shk) .bd-ic { width: 16px; height: 16px; }
+.bd-bar-r .bd-tbtn.bd-expb .cv { width: 14px; height: 14px; color: var(--fg-subtle); }
 .bd-bar-r .bd-tbtn.bd-shk { border-radius: 999px 0 0 999px; }
 .bd-bar-r .bd-shk + .bd-docx { margin-left: -6px; }
-.bd-bar-r .bd-shk + .bd-docx::before { content: ""; flex: none; width: 1px; align-self: stretch; background: var(--groove); }
-.bd-bar-r .bd-shk + .bd-docx .bd-tbtn.bd-expb { border-radius: 0 999px 999px 0; }
-/* a phone: closer keys, as tall as the bar's other keys; under 381 px Export without its chevron, so the bar fits 320 px */
-@media (max-width: 600px) { .bd-bar-r { gap: 2px; } .bd-bar-r .bd-tbtn:is(.bd-expb, .bd-shk) { height: 30px; } .bd-bar-r .bd-shk + .bd-docx { margin-left: -2px; } }
+.bd-bar-r .bd-shk + .bd-docx::before { content: ""; flex: none; width: 2px; align-self: stretch; background: var(--groove); }
+.bd-bar-r .bd-shk + .bd-docx .bd-tbtn.bd-expb { border-radius: 0 999px 999px 0; padding: 0 12px 0 13px; }
+/* narrower: the dock's 34 px keys; a phone: closer keys; under 381 px Export without its chevron, so the bar fits 320 px */
+@media (max-width: 900px) { .bd-bar-r .bd-tbtn:is(.bd-expb, .bd-shk) { height: 34px; } }
+@media (max-width: 600px) { .bd-bar-r { gap: 2px; } .bd-bar-r .bd-tbtn:is(.bd-expb, .bd-shk) { height: 34px; } .bd-bar-r .bd-shk + .bd-docx { margin-left: -2px; } }
 @media (max-width: 380px) { .bd-docx .bd-tbtn.bd-expb .cv { display: none; } .bd-bar-r { gap: 0; } .bd-bar-r .bd-shk + .bd-docx { margin-left: 0; }
   .bd-bar-r .bd-docx .bd-tbtn.bd-expb, .bd-bar-r .bd-tbtn.bd-shk { padding: 0 8px; } }
 /* a phone's keys in the bar, for the stripes it has no room for (STRIPES): Contents (or the board's left panel) at the
    bar's left, the right panel's bottom sheet at its right, a dot while comments wait */
-.bd-bk { position: relative; flex: none; border-radius: 9px; }
+.bd-bk, .bd-tbtn.bd-bk { position: relative; flex: none; border-radius: 999px; }
 .bd-bk .bd-ic { width: 16px; height: 16px; }
 .bd-bk[aria-expanded="true"] { color: var(--fg); background: var(--hk-down); box-shadow: var(--shadow-hk-down); }
 .bd-bk .dot { position: absolute; top: 3px; right: 3px; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 2px var(--canvas); }
@@ -204,16 +206,17 @@ button.bd-emo:hover, button.bd-emo[aria-expanded="true"] { background: var(--sel
 @media print { .bd-bk { display: none !important; } }
 @media (min-width: 601px) { .bd-ph-only { display: none !important; } }
 /* ⋯: HorizonUI's ghost IconButton (sm), its vertical dots; a phone, as tall as the bar's other keys */
-.bd-bar-r .bd-docm > .bd-ibtn { width: 26px; height: 26px; background: none; box-shadow: none; transition: background .12s var(--ease), color .12s var(--ease), scale .09s; }
-.bd-bar-r .bd-docm > .bd-ibtn .bd-ic { width: 14px; height: 14px; }
-.bd-bar-r .bd-docm > .bd-ibtn:is(:hover, [aria-expanded="true"]) { color: var(--fg); background: var(--hover); }
-.bd-bar-r .bd-docm > .bd-ibtn:active { transform: none; scale: .97; background: var(--selected); }
-@media (max-width: 600px) { .bd-bar-r .bd-docm > .bd-ibtn { width: 30px; height: 30px; } .bd-bar-r .bd-docm > .bd-ibtn .bd-ic { width: 16px; height: 16px; } }
-.bd-ibtn { display: inline-grid; place-items: center; width: 30px; height: 30px; border: 0; border-radius: 9px; color: var(--fg-muted);
-  background: linear-gradient(180deg, var(--key-top), var(--key-bot)); box-shadow: var(--shadow-key); transition: color .12s var(--ease), transform .09s; }
+.bd-bar-r .bd-docm > .bd-ibtn { width: 38px; height: 38px; border-radius: 999px; background: none; box-shadow: none; transition: background .12s var(--ease), color .12s var(--ease); }
+.bd-bar-r .bd-docm > .bd-ibtn .bd-ic { width: 18px; height: 18px; }
+.bd-bar-r .bd-docm > .bd-ibtn:hover { color: var(--fg); background: var(--hover); }
+.bd-bar-r .bd-docm > .bd-ibtn:is(:active, [aria-expanded="true"]) { transform: none; color: var(--fg); background: var(--hk-down); box-shadow: var(--shadow-hk-down); }
+@media (max-width: 900px) { .bd-bar-r .bd-docm > .bd-ibtn { width: 34px; height: 34px; } .bd-bar-r .bd-docm > .bd-ibtn .bd-ic { width: 16px; height: 16px; } }
+.bd-ibtn { display: inline-grid; place-items: center; width: 30px; height: 30px; border: 0; border-radius: 999px; color: var(--fg-muted);
+  background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: var(--shadow-hk); transition: color .12s var(--ease), transform .09s; }
 .bd-ibtn:hover { color: var(--fg); }
 .bd-ibtn:active { transform: translateY(.5px); }
-/* the doc's ⋯ menu (Archive / Unarchive) and the archive strips under the app bar (ARC): they scroll with the page */
+/* the doc's ⋯ menu (Archive / Unarchive) and the archive strips under the app bar (ARC): they stick under it, as the
+   lock and revision strips do (fitStrips) */
 .bd-docm .bd-selm { left: auto; right: 0; min-width: 168px; }
 .bd-bar:has(:is(.bd-docm, .bd-docx) [aria-expanded="true"]) { z-index: 44; }   /* the open menu over the docked right panel, the stripes (43) and the pane handles (43) */
 /* the app bar's Export (any doc but a presentation or a storelisting; Download on a page with no server): Export to…'s
@@ -230,51 +233,80 @@ button.bd-emo:hover, button.bd-emo[aria-expanded="true"] { background: var(--sel
 .bd-tbtn.bd-shk[aria-disabled="true"] { color: var(--fg-subtle); opacity: .55; }
 .bd-tbtn.bd-shk[aria-disabled="true"][aria-expanded="true"] { opacity: .8; }
 @media (max-width: 900px) { .bd-tbtn.bd-shk > .w { display: none; } .bd-bar-r .bd-tbtn.bd-shk { padding: 0 9px 0 10px; } }
-.bd-revbar.arc { position: static; background: color-mix(in oklch, var(--fg) 6%, var(--canvas)); }
+.bd-revbar.arc { background: color-mix(in oklch, var(--fg) 6%, var(--canvas)); }
 .bd-revbar.arc.sug { background: color-mix(in srgb, var(--ok) 13%, var(--canvas)); }
 .bd-revbar.arc.sug .in > .bd-ic { color: var(--ok-fg); }
 .bd-planchip.arc { --t: var(--fg-muted); --tf: var(--fg-muted); --tt: color-mix(in oklch, var(--fg) 8%, transparent); }
 .bd-planchip.arc[hidden] { display: none; }
 @media print { .bd-docm, .bd-revbar.arc { display: none !important; } }
 
-/* the stripes (STRIPES), HorizonUI's DockBar: a 44 px column of keys down each side under the app bar, 6 px from the
-   window's edge and from what it opens. The left one opens the left pane (a doc's Contents, its ring the tracker's
-   progress; a board's Screens, Pages or Slides; a listing's panel), the right one each section of the right pane
-   (Brief, Comments, Revisions) and, at its foot, the theme. A lit key's pane is open; it, or the pane's –, hides the
-   pane; [ and ] toggle the last one of each side. A phone (600 px and under) has none: its keys are in the app bar.
-   --stripe-w is a side's whole band (edge, stripe, gap); --pane-gap the gap between the panes and the page */
-:root { --stripe-w: 56px; --pane-gap: 6px; --cp-w: 264px;
+/* the stripes (STRIPES): the dock's tray stood up – a raised pill of flat round 38 px keys floating in the middle of
+   its side's band (9 px from the window's edge and 9 px from what it opens), centred in the height under the app bar
+   and its strips. The left one opens the left pane (a doc's Contents, its ring the tracker's progress; a board's
+   Screens, Pages or Slides; a listing's panel) and, at its foot past a groove, the theme; the right one each section
+   of the right pane (Brief, Comments, Revisions). A lit key's pane is open; it, or the pane's –, hides the pane; [ and
+   ] toggle the last one of each side. A phone (600 px and under) has none: its keys are in the app bar. --stripe-w is
+   a side's whole band (edge, tray, gap); --pane-gap the gap between the panes and the page, and above them, under the
+   app bar and its strips */
+:root { --stripe-w: 70px; --stripe-in: 9px; --pane-gap: 6px; --cp-w: 264px; --pane-top: calc(var(--top-h) + var(--pane-gap));
   --hover-2: light-dark(oklch(23% 0.01 264 / 0.075), oklch(100% 0 0 / 0.08));
   /* HorizonUI's shadow-1 on its cards: the panes and the page */
   --shadow-card: 0 0 0 1px light-dark(oklch(23% 0.01 264 / 0.055), oklch(100% 0 0 / 0.07)), inset 0 1px 0 light-dark(transparent, oklch(100% 0 0 / 0.03)),
     0 1px 2px light-dark(oklch(23% 0.01 264 / 0.04), oklch(0% 0 0 / 0.45)), 0 2px 6px light-dark(oklch(23% 0.01 264 / 0.03), oklch(0% 0 0 / 0.25)); }
-.bd-stripe { position: fixed; z-index: 43; top: var(--top-h); bottom: 0; width: calc(var(--stripe-w) - var(--pane-gap)); display: flex; flex-direction: column; align-items: center; gap: 4px;
-  padding: 4px 0; background: var(--canvas); }
-.bd-stripe.l { left: 0; padding-left: var(--pane-gap); }
-.bd-stripe.r { right: 0; padding-right: var(--pane-gap); }
-.bd-stripe .sp { flex: 1; }
-/* a key: flat until hovered; lit, it sinks (in dark a hairline keeps the sunk key's edge in sight) */
-.bd-sk { position: relative; flex: none; display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 10px; background: none;
-  color: var(--fg-muted); transition: background .12s var(--ease), color .12s var(--ease), box-shadow .12s var(--ease); }
+/* centred in the viewport's height below the app bar and its strips (between --top-h and 100vh: in vh, so a board's Full
+   page frame, as tall as its page, centres it in the design's viewport, the review proxy turning vh into it); a tray
+   taller than that room is capped to it, so it starts under them rather than running over the bar */
+.bd-stripe { --k: 38px; position: fixed; z-index: 43; top: calc((100vh + var(--top-h)) / 2); translate: 0 -50%; max-height: calc(100vh - var(--top-h) - 4px); box-sizing: border-box; overflow: visible;
+  display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 7px; border-radius: 999px;
+  background: linear-gradient(180deg, var(--tray-top), var(--tray-bot)); box-shadow: var(--shadow-tray), 0 2px 6px oklch(23% 0.01 264 / 0.06); }
+/* the keys' count badges sit over the tray's edge: it only scrolls (and clips them) in a window too short for it */
+@media (max-height: 420px) { .bd-stripe { overflow-y: auto; scrollbar-width: none; } }
+.bd-stripe.l { left: var(--stripe-in); }
+.bd-stripe.r { right: var(--stripe-in); }
+.bd-stripe:not(:has(> .bd-sk:not([hidden]))) { display: none; }
+/* the groove before the theme: the dock's, laid flat; none while the theme is the left tray's only key */
+.bd-stripe > .bd-groove { width: calc(var(--k) * .62); height: 2px; margin: 2px 0; background: var(--groove-h); }
+.bd-stripe > .bd-groove:first-child { display: none; }
+/* a key: the dock's (.bd-key) – flat and round until hovered; lit, it sinks */
+.bd-sk { position: relative; flex: none; display: grid; place-items: center; width: var(--k); height: var(--k); padding: 0; border: 0; border-radius: 999px; background: none;
+  color: var(--fg-muted); transition: background-color .12s, box-shadow .12s var(--ease), color .12s; }
 .bd-sk[hidden] { display: none; }
 .bd-sk:hover { color: var(--fg); background: var(--hover); }
-.bd-sk > .bd-ic { width: 16px; height: 16px; }
-.bd-sk[aria-pressed="true"], .bd-sk[aria-pressed="true"]:hover { color: var(--fg); background: var(--hk-down); box-shadow: var(--shadow-hk-down), 0 0 0 1px light-dark(transparent, oklch(100% 0 0 / 0.09)); }
-/* a key's count (Comments' pending, Revisions' rev): HorizonUI's Counter at the key's corner */
-.bd-sk .n { position: absolute; top: -2px; right: -2px; min-width: 14px; max-width: 30px; height: 14px; padding: 0 2px; border-radius: 999px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  font: 600 10px/14px var(--sans); font-variant-numeric: tabular-nums; text-align: center; color: var(--fg-muted); background: var(--hover-2); pointer-events: none; }
+.bd-sk > .bd-ic { width: 18px; height: 18px; }
+.bd-sk:active, .bd-sk[aria-pressed="true"], .bd-sk[aria-pressed="true"]:hover { color: var(--fg); background: var(--hk-down); box-shadow: var(--shadow-hk-down); }
+.bd-sk:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.bd-sk[aria-pressed="true"]:focus-visible { box-shadow: var(--shadow-hk-down), var(--focus-ring); }
+/* a key's count: the dock's badge at the key's corner – Comments' pending in the accent, Revisions' rev a quiet one */
+.bd-sk .n { position: absolute; top: -3px; right: -3px; min-width: 17px; max-width: 34px; height: 17px; padding: 0 4px; border-radius: 9px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font: 650 10.5px/17px var(--sans); font-variant-numeric: tabular-nums; text-align: center; color: #fff; background: var(--accent-solid); box-shadow: 0 0 0 2px var(--tray-top); pointer-events: none; }
 .bd-sk .n[hidden] { display: none; }
+.bd-sk[data-f="revisions"] .n { color: var(--fg-muted); background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: 0 0 0 2px var(--tray-top), 0 0 0 1px var(--hk-ring); }
 /* the Revisions key on an earlier revision: the warning's colours, as the strip under the bar */
 .bd-sk.old { color: var(--warn-fg); }
 .bd-sk.old[aria-pressed="true"] { color: var(--warn-fg); background: var(--warn-tint); }
-.bd-sk.old .n { color: var(--warn-fg); background: var(--warn-tint); }
-/* the left key's ring (a doc's tracker, a board's brief picks): HorizonUI's ProgressRing, 36 px around the key (none
-   tracked: no ring); all done, in the ok colour */
-.bd-skr { position: absolute; inset: -2px; width: 36px; height: 36px; rotate: -90deg; fill: none; stroke-width: 2; pointer-events: none; }
+.bd-sk.old[data-f="revisions"] .n { color: var(--warn-fg); background: var(--warn-tint); }
+/* the left key's ring (a doc's tracker, a board's brief picks): HorizonUI's ProgressRing, drawn inside the key's face
+   3 px in from its edge, around the icon, so the key's raised or sunk edge stays whole (none tracked: no ring); all
+   done, in the ok colour */
+.bd-skr { position: absolute; inset: 3px; width: calc(var(--k) - 6px); height: calc(var(--k) - 6px); rotate: -90deg; fill: none; stroke-width: 2.2; pointer-events: none; }
+.bd-sk:has(> .bd-skr:not([hidden])) > .bd-ic { width: 16px; height: 16px; }
 .bd-skr[hidden] { display: none; }
 .bd-skr .bg { stroke: var(--hover-2); }
 .bd-skr .fg { stroke: var(--accent); stroke-linecap: round; transition: stroke-dasharray .26s var(--ease); }
 .bd-skr.full .fg { stroke: var(--ok); }
+/* the theme switch: a well as wide as a key and two keys tall, the sun at its top and the moon at its foot; the
+   dock's raised round key for its thumb, which slides to the current one (dark: the foot) */
+.bd-sk.bd-thsw, .bd-sk.bd-thsw:is(:hover, :active) { display: block; height: calc(var(--k) * 2 - 4px); color: var(--fg-subtle); background: var(--hk-down); box-shadow: var(--shadow-well); }
+.bd-sk.bd-thsw:focus-visible { box-shadow: var(--shadow-well), var(--focus-ring); }
+.bd-thsw .end { position: absolute; left: 0; right: 0; height: var(--k); display: grid; place-items: center; }
+.bd-thsw .end.sun { top: 0; } .bd-thsw .end.moon { bottom: 0; }
+.bd-thsw .end .bd-ic { width: 15px; height: 15px; }
+.bd-thsw .th { position: absolute; left: 3px; top: 3px; width: calc(var(--k) - 6px); height: calc(var(--k) - 6px); display: grid; place-items: center; border-radius: 999px; color: var(--fg);
+  background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: var(--shadow-hk); transition: translate .3s var(--ease), background-color .12s; }
+.bd-thsw .th .bd-ic { width: 16px; height: 16px; }
+.bd-thsw[aria-checked="true"] .th { translate: 0 calc(var(--k) - 4px); }
+.bd-thsw:hover .th { background: linear-gradient(var(--hover), var(--hover)), linear-gradient(180deg, var(--hk-top), var(--hk-bot)); }
+@media (prefers-reduced-motion: reduce) { .bd-thsw .th { transition: none; } }
 @media (max-width: 600px) { :root { --stripe-w: 0px; --pane-gap: 0px; } .bd-stripe { display: none !important; } }
 @media print { .bd-stripe { display: none !important; } }
 /* a pane's header: HorizonUI's DockPanel header, its title (a board's Screens with their count), then – to hide it */
@@ -282,7 +314,7 @@ button.bd-emo:hover, button.bd-emo[aria-expanded="true"] { background: var(--sel
 .bd-pane-h h2 { margin: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 600 12px/16px var(--sans); color: var(--fg); }
 .bd-pane-h .c { flex: none; margin-left: 4px; font: 500 11px var(--mono); color: var(--fg-subtle); }
 .bd-pane-h .sp { flex: 1; }
-.bd-pane-x { display: grid; place-items: center; flex: none; width: 26px; height: 26px; padding: 0; border: 0; border-radius: 9px; background: none; color: var(--fg-muted);
+.bd-pane-x { display: grid; place-items: center; flex: none; width: 26px; height: 26px; padding: 0; border: 0; border-radius: 999px; background: none; color: var(--fg-muted);
   transition: background .12s var(--ease), color .12s var(--ease), scale .09s; }
 .bd-pane-x .bd-ic { width: 14px; height: 14px; }
 .bd-pane-x:hover { color: var(--fg); background: var(--hover); }
@@ -290,12 +322,12 @@ button.bd-emo:hover, button.bd-emo[aria-expanded="true"] { background: var(--sel
 /* the right panel's header stays bluedoc's: the section's title and count, then – */
 .bd-sp-h { gap: 8px; height: 44px; padding: 0 8px 0 16px; }
 .bd-sp-h h2 { font: 600 13.5px/1.3 var(--sans); letter-spacing: -.005em; }
-.bd-sp-h .bd-pane-x { width: 28px; height: 28px; border-radius: 7px; color: var(--fg-subtle); }
+.bd-sp-h .bd-pane-x { width: 28px; height: 28px; border-radius: 999px; color: var(--fg-subtle); }
 .bd-sp-h .bd-pane-x .bd-ic { width: 16px; height: 16px; }
 @media print { .bd-pane-h { display: none !important; } }
 /* the page's card (HorizonUI AppFrame's centre): drawn behind the column in the room between the stripes and the
    docked panes; the window scrolls the page over it. A board is its own card (.bd-boardblk .bd-bwrap); a phone has none */
-@media (min-width: 601px) { :root:not([data-layout="board"]) body::before { content: ""; position: fixed; z-index: -1; top: var(--top-h); bottom: 0;
+@media (min-width: 601px) { :root:not([data-layout="board"]) body::before { content: ""; position: fixed; z-index: -1; top: var(--pane-top); bottom: 0;
   left: var(--room-l, var(--stripe-w)); right: var(--room-r, var(--stripe-w)); border-radius: 14px; background: var(--surface); box-shadow: var(--shadow-card);
   pointer-events: none; transition: left .22s var(--ease), right .22s var(--ease); } }
 html.bd-resizing body::before { transition: none; }
@@ -308,7 +340,7 @@ html.bd-resizing body::before { transition: none; }
 .bd-head { padding-top: 56px; }
 /* a doc's Contents pane (the rail): Contents, Tracker, Status and Related, docked beside the page where it keeps
    READ_W, else over it (html.bd-lp-open, html.bd-lp-dock: applyWidth) */
-.bp-side { position: fixed; z-index: 41; top: var(--top-h); bottom: 0; left: var(--stripe-w); width: var(--cp-w); display: flex; flex-direction: column; min-height: 0; overflow: hidden;
+.bp-side { position: fixed; z-index: 41; top: var(--pane-top); bottom: 0; left: var(--stripe-w); width: var(--cp-w); display: flex; flex-direction: column; min-height: 0; overflow: hidden;
   border-radius: 14px; background: var(--panel); box-shadow: var(--shadow-card); font-size: 13.5px;
   transform: translateX(calc(-100% - var(--stripe-w))); visibility: hidden; transition: transform .22s var(--ease), visibility 0s .22s; }
 html.bd-lp-open .bp-side { transform: none; visibility: visible; transition: transform .22s var(--ease); }
@@ -368,16 +400,39 @@ html.bd-lp-open:not(.bd-lp-dock) .bp-side { background: var(--surface); box-shad
 .bp-side .bp-prog-row .t { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; line-height: 1.4; }
 .bp-side .bp-prog-row .c { font: 500 11.5px/1.6 var(--mono); color: var(--fg-subtle); white-space: nowrap; }
 .bp-side .bp-prog-row .bp-bar { margin-top: 6px; }
-.bp-side-tools { display: flex; justify-content: space-between; gap: 4px; margin: 4px -6px -6px; padding: 4px; border-top: 1px solid var(--line-soft); }
-.bp-btn { display: inline-flex; align-items: center; gap: 6px; height: 28px; border: 0; border-radius: 9px; padding: 0 10px; font-size: 12.5px; font-weight: 500; color: var(--fg);
-  background: linear-gradient(180deg, var(--key-top), var(--key-bot)); box-shadow: var(--shadow-key); white-space: nowrap; transition: transform .09s; }
+.bp-side-tools { display: flex; justify-content: flex-start; margin: 6px -2px -2px; padding: 8px 0 0; border-top: 1px solid var(--line-soft); }
+/* a button: the dock's family – a pill; raised (the select keys' .bd-tbtn.bd-expb, the dock's word key), flat until
+   hovered (.ghost: the dock's flat key), filled (.primary: the dock's blue Go, .ok: its green Approve) */
+.bp-btn { display: inline-flex; align-items: center; gap: 6px; height: 30px; border: 0; border-radius: 999px; padding: 0 13px 0 12px; font-size: 12.5px; font-weight: 600; color: var(--fg);
+  background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: var(--shadow-hk); white-space: nowrap; text-decoration: none;
+  transition: background-color .12s, box-shadow .12s var(--ease), color .12s, filter .12s; }
+.bp-btn[hidden] { display: none; }
 .bp-btn .bd-ic { width: 14px; height: 14px; color: var(--fg-subtle); }
-.bp-btn:active { transform: translateY(.5px); }
-.bp-btn.ghost { background: none; box-shadow: none; color: var(--fg-muted); padding: 0 8px; }
-.bp-btn.ghost:hover { background: var(--hover); color: var(--fg); }
-.bp-btn.primary { background: var(--accent); color: #fff; box-shadow: 0 1px 2px oklch(20% 0.05 255 / .25), inset 0 1px 0 oklch(100% 0 0 / .15); }
-.bp-btn.primary .bd-ic { color: currentColor; }
-.bp-btn.primary:hover { background: color-mix(in oklch, var(--accent), black 8%); }
+.bp-btn:hover:not(:disabled) { background: linear-gradient(var(--hover), var(--hover)), linear-gradient(180deg, var(--hk-top), var(--hk-bot)); }
+.bp-btn:active:not(:disabled) { background: var(--hk-down); box-shadow: var(--shadow-hk-down); }
+.bp-btn:focus-visible { outline: none; box-shadow: var(--shadow-hk), var(--focus-ring); }
+.bp-btn.ghost { background: none; box-shadow: none; color: var(--fg-muted); padding: 0 11px 0 10px; }
+.bp-btn.ghost:hover:not(:disabled) { background: var(--hover); color: var(--fg); }
+.bp-btn.ghost:active:not(:disabled) { background: var(--hk-down); box-shadow: var(--shadow-hk-down); }
+.bp-btn.ghost:focus-visible { box-shadow: var(--focus-ring); }
+.bp-btn:is(.primary, .ok) { color: #fff; background: var(--accent-solid) linear-gradient(180deg, color-mix(in oklch, var(--accent-solid), white 8%), var(--accent-solid)); box-shadow: var(--shadow-fill); }
+.bp-btn.ok { background: var(--ok-solid) linear-gradient(180deg, color-mix(in oklch, var(--ok-solid), white 9%), var(--ok-solid)); }
+.bp-btn:is(.primary, .ok) .bd-ic { color: currentColor; }
+.bp-btn:is(.primary, .ok):hover:not(:disabled) { filter: brightness(.95); background: var(--accent-solid) linear-gradient(180deg, color-mix(in oklch, var(--accent-solid), white 8%), var(--accent-solid)); }
+.bp-btn.ok:hover:not(:disabled) { background: var(--ok-solid) linear-gradient(180deg, color-mix(in oklch, var(--ok-solid), white 9%), var(--ok-solid)); }
+.bp-btn:is(.primary, .ok):active:not(:disabled) { filter: brightness(.9); box-shadow: var(--shadow-fill); }
+.bp-btn:is(.primary, .ok):focus-visible { box-shadow: var(--shadow-fill), var(--focus-ring); }
+.bp-btn:is(.primary, .ok):disabled { filter: none; opacity: 1; color: var(--fg-subtle); background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: var(--shadow-hk); }
+/* buttons that belong together: one raised pill, the dock's groove between (as Share | Export); flat parts that fill
+   on hover, clipped to the pill, the focus ring inside */
+.bd-split { display: inline-flex; flex: none; align-items: stretch; border-radius: 999px; overflow: hidden; background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: var(--shadow-hk); }
+.bd-split:not(:has(> :not([hidden]))) { display: none; }
+.bd-split > .bp-btn, .bd-split > .bp-btn.ghost { border-radius: 0; background: none; box-shadow: none; color: var(--fg); }
+.bd-split > .bp-btn:not([hidden]) ~ .bp-btn { background: var(--groove) left center / 2px 60% no-repeat; padding-left: 12px; }
+.bd-split > .bp-btn:hover:not(:disabled) { background: linear-gradient(var(--hover), var(--hover)); }
+.bd-split > .bp-btn:not([hidden]) ~ .bp-btn:hover:not(:disabled) { background: var(--groove) left center / 2px 60% no-repeat, linear-gradient(var(--hover), var(--hover)); }
+.bd-split > .bp-btn:active:not(:disabled) { background: var(--hk-down); box-shadow: var(--shadow-hk-down); }
+.bd-split > .bp-btn:focus-visible { box-shadow: inset 0 0 0 2px var(--focus); }
 /* send to agent: dialog (Send answers and a review's send key, Request changes, Approve) */
 .bd-send { width: min(560px, calc(100vw - 32px)); max-height: calc(100vh - 64px); padding: 0; border: 0; border-radius: 16px; background: var(--surface); color: var(--fg); box-shadow: var(--shadow-3); }
 .bd-send::backdrop { background: oklch(15% 0.01 264 / .36); }
@@ -403,7 +458,8 @@ html.bd-lp-open:not(.bd-lp-dock) .bp-side { background: var(--surface); box-shad
 .bd-send pre { margin: 8px 0 0; max-height: 220px; overflow: auto; padding: 10px 12px; border-radius: 10px; background: var(--inset); font: 12px/1.55 var(--mono); white-space: pre-wrap; }
 .bd-send .how { margin-top: 12px; font-size: 12.5px; color: var(--fg-subtle); }
 .bd-send .ft { display: flex; justify-content: flex-end; gap: 8px; margin: 0; padding: 14px 20px 18px; }
-.bd-send .ft .bp-btn { height: 32px; padding: 0 14px; font-size: 13px; }
+.bd-send .ft .bp-btn { height: 38px; padding: 0 18px 0 16px; gap: 8px; font-size: 13px; }
+.bd-send .ft .bp-btn .bd-ic { width: 16px; height: 16px; }
 .bd-send .ft .bp-btn[hidden] { display: none; }
 /* the app bar's Share key (openShare): the share sheet, HorizonUI's ticket (design share-account, sheet D). No dialog box:
    the ticket floats over the dimmed page, its two halves a card each, notched where they meet at a dashed tear line.
@@ -431,7 +487,7 @@ html.bd-lp-open:not(.bd-lp-dock) .bp-side { background: var(--surface); box-shad
 .bd-tk .eyb { display: flex; align-items: center; gap: 7px; min-height: 36px; padding: 10px 10px 0 18px; font: 600 11px/1 var(--sans); letter-spacing: .06em; text-transform: uppercase; color: var(--fg-subtle); }
 .bd-tk .eyb > .bd-ic { width: 13px; height: 13px; color: var(--accent); }
 .bd-tk .eyb .bdg { margin-left: 4px; letter-spacing: 0; text-transform: none; }
-.bd-tk .eyb .x { width: 26px; height: 26px; border-radius: 9px; background: none; box-shadow: none; }
+.bd-tk .eyb .x { width: 26px; height: 26px; border-radius: 999px; background: none; box-shadow: none; }
 .bd-tk .eyb .x:hover { background: var(--hover); }
 .bd-tk .eyb .x:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 .bd-tk .eyb .x .bd-ic { width: 14px; height: 14px; }
@@ -595,7 +651,9 @@ html.bd-lp-open:not(.bd-lp-dock) .bp-side { background: var(--surface); box-shad
 .bd-revbar .pos { font: 500 12px var(--mono); color: var(--fg-muted); min-width: 4.5em; text-align: center; }
 .bd-revbar .k { margin-left: 6px; font-weight: 600; }
 .bd-revbar .k.add { color: var(--ok-fg); } .bd-revbar .k.mod { color: var(--warn-fg); } .bd-revbar .k.del { color: var(--risk-fg); }
-.bd-revbar .bp-btn { height: 28px; }
+.bd-revbar .bp-btn { height: 38px; padding: 0 16px 0 14px; gap: 8px; font-size: 13px; }
+.bd-revbar .bp-btn .bd-ic { width: 16px; height: 16px; }
+.bd-revbar .in:has(> .bp-btn) { padding-block: 6px; }
 /* an earlier revision's keys on a shared page, docked at the strip's end: the top toolbars' look (.bd-btb), one raised
    pill of flat round keys */
 .bd-revbar .in:has(> .bd-revtb) { padding-block: 6px; }
@@ -603,8 +661,8 @@ html.bd-lp-open:not(.bd-lp-dock) .bp-side { background: var(--surface); box-shad
   background: linear-gradient(180deg, var(--tray-top), var(--tray-bot)); box-shadow: var(--shadow-tray), 0 2px 6px oklch(23% 0.01 264 / 0.06); }
 @media (max-width: 600px) { .bd-revbar .bd-revtb { --k: 34px; gap: 4px; padding: 5px; } }
 @media (max-width: 420px) { .bd-revbar .bd-revtb { --k: 32px; gap: 3px; padding: 4px; } }
-/* the compare view's and "Updated since you last opened it"'s keys, no tray: the compare view's ↑ and ↓ as round
-   raised keys, then one blue split button, as Share | Export: the count (or Show what changed), a groove, × */
+/* the compare view's and "Updated since you last opened it"'s keys, no tray: one blue split button, as Share | Export
+   (compare: ↑ | the count | ↓, then × as a round raised key; Updated: Show what changed | ×) */
 .bd-revbar .in:has(> :is(.bd-updk, .bd-cmpk)) { padding-block: 6px; }
 .bd-revbar .bd-cmpk { --k: 38px; display: flex; align-items: center; gap: 8px; margin-left: auto; }
 .bd-cmpk > .bd-key.rd { color: var(--fg); background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: var(--shadow-hk); }
@@ -616,13 +674,22 @@ html.bd-lp-open:not(.bd-lp-dock) .bp-side { background: var(--surface); box-shad
 @media (max-width: 600px) { .bd-revbar :is(.bd-cmpk, .bd-updk) { --k: 34px; } .bd-revbar .bd-cmpk { gap: 6px; } .bd-updk > .bd-key.lbl > .bd-ic { display: none; } }
 .bd-updk > .bd-key.go { box-shadow: none; }
 .bd-updk > .bd-key.go:first-child { border-radius: 999px 0 0 999px; padding: 0 14px 0 12px; }
-.bd-updk > .bd-key.go.x { border-radius: 0 999px 999px 0; padding: 0 11px 0 10px; box-shadow: inset 1px 0 0 color-mix(in oklch, white 28%, transparent); }
+.bd-updk > .bd-key.go.x, .bd-updk > .bd-key.go.st:last-child { border-radius: 0 999px 999px 0; padding: 0 11px 0 10px; box-shadow: inset 1px 0 0 color-mix(in oklch, white 28%, transparent); }
+/* compare view: ↑ | the count | ↓, a groove before and after the count */
+.bd-updk > .bd-key.go.st:first-child { padding: 0 10px 0 12px; }
+.bd-updk > .bd-key.go.st:first-child + .lbl { border-radius: 0; padding: 0 12px; box-shadow: inset 1px 0 0 color-mix(in oklch, white 28%, transparent); }
 .bd-updk > .bd-key.go:focus-visible { box-shadow: var(--focus-ring); }
-.bd-revbar.bd-lockbar { position: static; }
 .bd-lockbar code { font: 500 12.5px var(--mono); }
 .bd-chg { --chg: var(--warn); }
 .bd-chg-add { --chg: var(--ok); } .bd-chg-del { --chg: var(--risk); }
-tr.bd-chg-add > td { background: color-mix(in oklch, var(--ok-tint) 70%, transparent); }
+/* compare view: what a revision added reads as plainly as what it changed (the amber What changed box): a green wash
+   and edge on the new row, item, step, file, block or section, beside its NEW tag; a new canvas part glows green */
+tr.bd-chg-add > td { background: color-mix(in oklch, var(--ok-tint) 80%, transparent); box-shadow: inset 0 1px 0 color-mix(in oklch, var(--ok) 30%, transparent), inset 0 -1px 0 color-mix(in oklch, var(--ok) 30%, transparent); }
+tr.bd-chg-add > td:first-child { box-shadow: inset 3px 0 0 var(--ok), inset 0 1px 0 color-mix(in oklch, var(--ok) 30%, transparent), inset 0 -1px 0 color-mix(in oklch, var(--ok) 30%, transparent); }
+li.bd-chg-add { background: color-mix(in oklch, var(--ok-tint) 70%, transparent); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--ok) 32%, transparent), inset 3px 0 0 var(--ok); }
+:is(.bp-block, .bp-sec).bd-chg-add { margin-inline: -14px; padding: 12px 14px; border-radius: 14px; background: color-mix(in oklch, var(--ok-tint) 45%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--ok) 30%, transparent); }
+.bp-sec.bd-chg-add .bp-block.bd-chg-add { margin-inline: 0; padding: 0; background: none; box-shadow: none; }
 td.bd-cell-mod { background: color-mix(in oklch, var(--warn-tint) 70%, transparent); }
 .bd-chg-flash { animation: bd-chg-flash 1.4s var(--ease); }
 @keyframes bd-chg-flash { 0%, 30% { outline: 3px solid color-mix(in oklch, var(--chg) 55%, transparent); outline-offset: 4px; } 100% { outline: 3px solid transparent; outline-offset: 4px; } }
@@ -650,8 +717,8 @@ td.bd-cell-mod { background: color-mix(in oklch, var(--warn-tint) 70%, transpare
 .bd-revnotes ul { margin: 6px 0 0; padding-left: 18px; }
 .bd-revnotes .r { font: 600 11.5px var(--mono); color: var(--fg-muted); margin-right: 8px; }
 .bd-chg-wrap { margin-top: 14px; }
-.bp-node.chg-add { filter: drop-shadow(0 0 5px #3fd17f) drop-shadow(0 0 2px #3fd17f); }
-.bp-node.chg-mod { filter: drop-shadow(0 0 5px #f5b544) drop-shadow(0 0 2px #f5b544); }
+.bp-node.chg-add { filter: drop-shadow(0 0 5px var(--ok)) drop-shadow(0 0 2px var(--ok)); }
+.bp-node.chg-mod { filter: drop-shadow(0 0 5px var(--warn)) drop-shadow(0 0 2px var(--warn)); }
 @media (max-width: 600px) { .bd-revbar .in { padding: 6px 12px; gap: 2px 6px; font-size: 13px; } .bd-revbar .in > .bd-ic { display: none; } .bd-revbar .t { flex: 1 1 100%; } }
 @media print { .bd-revbar .bd-ibtn, .bd-revbar .bp-btn, .bd-revbar .bd-revtb { display: none !important; } .bd-revbar { position: static; } }
 /* the reader's reply box on an item: one field that grows, Attach bottom-left and its Cancel and Save inside it,
@@ -792,7 +859,7 @@ td.bd-cell-mod { background: color-mix(in oklch, var(--warn-tint) 70%, transpare
 .bp-cl-h h3 { margin: 0; font-size: 15px; font-weight: 600; letter-spacing: -.005em; flex: 1 1 180px; line-height: 1.4; }
 .bp-cl-count { font: 500 12px var(--mono); color: var(--fg-subtle); white-space: nowrap; }
 .bp-cl.complete .bp-cl-count { color: var(--ok-fg); }
-.bp-cl-h .tools { display: flex; flex-wrap: wrap; gap: 2px; }
+.bp-cl-h .tools { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .bp-cl-h .tools .bp-btn[hidden] { display: none; }
 .bp-cl > .bp-bar { height: 2px; border-radius: 0; margin: 0 16px; }
 .bp-bar { height: 4px; background: var(--line); border-radius: 99px; overflow: hidden; }
@@ -1104,10 +1171,11 @@ td.bd-cell-mod { background: color-mix(in oklch, var(--warn-tint) 70%, transpare
 .bp-frow.open .nm, .bp-frow.open .from code { overflow-wrap: anywhere; }
 .bp-frow.open :is(.from, .bp-fwhy) { flex: 1 0 calc(100% - 22px); margin: -4px 0 7px 22px; line-height: 1.5; overflow: visible; }
 .bp-frow.open .from { margin-bottom: 4px; }
-.bp-fstep { flex: none; height: 22px; margin-top: 3px; font-family: var(--mono); font-size: 11.5px; }
+.bp-fstep { flex: none; height: 22px; margin-top: 3px; border-radius: 999px; font-family: var(--mono); font-size: 11.5px; }
 .bp-fstep:disabled { opacity: .55; cursor: default; }
 .bp-frow > .bd-chg-tag { margin-top: 4px; }
-.bp-frow.bd-chg-mod { background: color-mix(in oklch, var(--warn-tint) 60%, transparent); } .bp-frow.bd-chg-add { background: color-mix(in oklch, var(--ok-tint) 70%, transparent); }
+.bp-frow.bd-chg-mod { background: color-mix(in oklch, var(--warn-tint) 60%, transparent); box-shadow: inset 3px 0 0 var(--warn); }
+.bp-frow.bd-chg-add { background: color-mix(in oklch, var(--ok-tint) 70%, transparent); box-shadow: inset 3px 0 0 var(--ok); }
 .bp-frow.bd-ghost .nm { text-decoration: line-through; color: var(--risk-fg); }
 @media (max-width: 600px) { .bp-frow:not(.open) :is(.from, .bp-fwhy) { display: none; } }
 @media print {
@@ -1200,7 +1268,7 @@ img.bp-cmpr-img { cursor: zoom-in; }
 .bp-toast.on { opacity: 1; transform: translate(-50%, 0); }
 /* its action (Accept recommended's Undo) */
 .bp-toast.on.act { pointer-events: auto; padding-right: 6px; }
-.bp-toast button { height: 26px; padding: 0 10px; border: 0; border-radius: 7px; font: inherit; font-weight: 600; color: inherit; background: oklch(100% 0 0 / .14); cursor: pointer; }
+.bp-toast button { height: 26px; padding: 0 11px; border: 0; border-radius: 999px; font: inherit; font-weight: 600; color: inherit; background: oklch(100% 0 0 / .14); cursor: pointer; }
 .bp-toast button:hover { background: oklch(100% 0 0 / .22); }
 .bp-toast button:focus-visible { outline: 2px solid oklch(100% 0 0 / .7); outline-offset: 1px; }
 
@@ -1215,10 +1283,11 @@ img.bp-cmpr-img { cursor: zoom-in; }
   --shadow-well: inset 0 1px 3px oklch(23% 0.01 264 / 0.12), inset 0 0 0 1px oklch(23% 0.01 264 / 0.05);
   --shadow-fill: 0 0 0 1px oklch(0% 0 0 / 0.5), inset 0 1px 0 oklch(100% 0 0 / 0.18), 0 2px 5px oklch(0% 0 0 / 0.18);
   --groove: linear-gradient(90deg, oklch(23% 0.01 264 / 0.1) 50%, oklch(100% 0 0 / 0.9) 50%);
+  --groove-h: linear-gradient(180deg, oklch(23% 0.01 264 / 0.1) 50%, oklch(100% 0 0 / 0.9) 50%);
   --accent-solid: oklch(51% 0.19 254);
   --ok-solid: oklch(53% 0.14 152);
   --tip: oklch(22% 0.006 264);
-  --sp-w: 344px; --sp-sheet-h: min(52vh, 460px);
+  --sp-w: 320px; --sp-sheet-h: min(52vh, 460px);   /* 320: at 1440 px a board's dock keeps its words between both panels and the trays */
 }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
   --hk-top: oklch(29% 0.004 264); --hk-bot: oklch(24.5% 0.004 264); --hk-ring: oklch(0% 0 0 / 0.55); --hk-down: oklch(16.5% 0.003 264);
@@ -1229,6 +1298,7 @@ img.bp-cmpr-img { cursor: zoom-in; }
   --shadow-well: inset 0 1px 4px oklch(0% 0 0 / 0.6), inset 0 0 0 1px oklch(0% 0 0 / 0.45), 0 1px 0 oklch(100% 0 0 / 0.05);
   --shadow-fill: 0 0 0 1px oklch(0% 0 0 / 0.5), inset 0 1px 0 oklch(100% 0 0 / 0.18), 0 2px 5px oklch(0% 0 0 / 0.4);
   --groove: linear-gradient(90deg, oklch(0% 0 0 / 0.6) 50%, oklch(100% 0 0 / 0.07) 50%);
+  --groove-h: linear-gradient(180deg, oklch(0% 0 0 / 0.6) 50%, oklch(100% 0 0 / 0.07) 50%);
   --tip: oklch(30% 0.005 264);
 } }
 :root[data-theme="dark"] {
@@ -1240,6 +1310,7 @@ img.bp-cmpr-img { cursor: zoom-in; }
   --shadow-well: inset 0 1px 4px oklch(0% 0 0 / 0.6), inset 0 0 0 1px oklch(0% 0 0 / 0.45), 0 1px 0 oklch(100% 0 0 / 0.05);
   --shadow-fill: 0 0 0 1px oklch(0% 0 0 / 0.5), inset 0 1px 0 oklch(100% 0 0 / 0.18), 0 2px 5px oklch(0% 0 0 / 0.4);
   --groove: linear-gradient(90deg, oklch(0% 0 0 / 0.6) 50%, oklch(100% 0 0 / 0.07) 50%);
+  --groove-h: linear-gradient(180deg, oklch(0% 0 0 / 0.6) 50%, oklch(100% 0 0 / 0.07) 50%);
   --tip: oklch(30% 0.005 264);
 }
 /* the tray floats centred over the page, or over the part the docked sidebar leaves. HorizonUI dock, variant C: a
@@ -1389,15 +1460,20 @@ html.bd-tray-on .bp-toast { bottom: 84px; }
 .bd-key.send .n[hidden] { display: none; }
 .bd-pen-risk { --pen: var(--risk); } .bd-pen-accent { --pen: var(--accent); } .bd-pen-warn { --pen: var(--warn); } .bd-pen-ok { --pen: var(--ok); }
 .bd-pen-violet { --pen: light-dark(oklch(55% 0.21 300), oklch(70% 0.17 300)); } .bd-pen-ink { --pen: var(--fg); } .bd-pen-custom { --pen: oklch(55% 0.2 305); }
-/* the cursor rule excludes what `inDoc` excludes: the rail, a design's panel tabs, Screens list and board toolbar, and a findings section's toolbar keep their own cursors */
+/* the cursor rule excludes what `inDoc` excludes: the rail, a board's left pane (Brief, Screens, Pages: the tools are the
+   board's) and its toolbar, and a findings section's toolbar keep their own cursors */
 /* Element's cursor is set once (the shell, a panel's meta) and inherited below: set on every element, each would
    load its own copy of the image and show the arrow while it does */
 html.bd-ann-m-point .bd-shell, html.bd-ann-m-point .bd-shell .bp-side .bd-meta { cursor: var(--bd-elcur, crosshair) !important; }
-html.bd-ann-m-point .bd-shell :not(.bp-side, .bp-side :not(.bd-meta, .bd-meta *), .bd-lp-ui, .bd-lp-ui *, .bd-btb, .bd-btb *, .bd-ftb, .bd-ftb *, .bp-side .bd-meta) { cursor: inherit !important; }
-html.bd-ann-m-select .bd-shell :not(.bp-side, .bp-side :not(.bd-meta, .bd-meta *), .bd-lp-ui, .bd-lp-ui *, .bd-btb, .bd-btb *, .bd-ftb, .bd-ftb *), html.bd-ann-m-select .bd-shell { cursor: text !important; }
-html:is(.bd-ann-m-point, .bd-ann-m-select) .bd-shell :is(.bp-side, .bd-lp-ui, .bd-btb, .bd-ftb) { cursor: default; }
+html.bd-ann-m-point .bd-shell :not(.bp-side, .bp-side :not(.bd-meta, .bd-meta *), .bd-lp, .bd-lp *, .bd-lp-ui, .bd-lp-ui *, .bd-btb, .bd-btb *, .bd-ftb, .bd-ftb *, .bp-side .bd-meta) { cursor: inherit !important; }
+html.bd-ann-m-select .bd-shell :not(.bp-side, .bp-side :not(.bd-meta, .bd-meta *), .bd-lp, .bd-lp *, .bd-lp-ui, .bd-lp-ui *, .bd-btb, .bd-btb *, .bd-ftb, .bd-ftb *), html.bd-ann-m-select .bd-shell { cursor: text !important; }
+html:is(.bd-ann-m-point, .bd-ann-m-select) .bd-shell :is(.bp-side, .bd-lp, .bd-lp-ui, .bd-btb, .bd-ftb) { cursor: default; }
 html:is(.bd-ann-m-point, .bd-ann-m-select) .bd-shell .bp-note .bp-note-ta { cursor: text !important; }
 html:is(.bd-ann-m-point, .bd-ann-m-select) .bd-shell .bp-note button { cursor: default !important; }
+/* in a comment tool (html.bd-ann-m-*) the toolbars and trays, their keys and the menus they open are plain chrome: the
+   default arrow over all of them (fields keep their text cursor); the drawing layer leaves them out (capHoles) */
+html[class*="bd-ann-m-"] :is(.bd-anntb, .bd-annb, .bd-annpop, .bd-btb, .bd-ftb, .bd-lst-btb, .bd-stripe, .bd-bar, .bd-revbar, .bd-pane-h, .bd-sp-h, .bd-selm, .bd-expm, .bd-tip),
+html[class*="bd-ann-m-"] :is(.bd-anntb, .bd-annb, .bd-annpop, .bd-btb, .bd-ftb, .bd-lst-btb, .bd-stripe, .bd-bar, .bd-revbar, .bd-pane-h, .bd-sp-h, .bd-selm, .bd-expm) :not(input, textarea, [contenteditable]) { cursor: default; }
 html.bd-ann-m-select .bp-cl-head { user-select: text; -webkit-user-select: text; }
 .bd-ann-layer { position: fixed; inset: 0; z-index: 35; overflow: hidden; pointer-events: none; }
 .bd-ann-layer[hidden], .bd-ann-cap[hidden], .bd-ann-hov[hidden] { display: none; }
@@ -1459,14 +1535,19 @@ html.bd-ann-m-select .bp-cl-head { user-select: text; -webkit-user-select: text;
 .bd-cmp .lb { flex: 1; min-width: 0; font-size: 12.5px; font-weight: 600; color: var(--fg-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bd-cmp .bp-note-ta { display: block; width: 100%; min-height: 60px; max-height: 160px; overflow: auto; resize: none; }
 .bd-cmp > .bp-files-w { margin-top: 8px; }
-.bd-cmp .ft { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
+/* its foot: attach (a round key), then Cancel and Save, pills as tall as it; the shortcuts on their own quiet line under
+   them */
+.bd-cmp .ft { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; row-gap: 4px; margin-top: 10px; }
 .bd-cmp .ft .sp { flex: 1; }
-.bd-cmp .ft .hint { display: inline-flex; align-items: center; gap: 3px; font-size: 11.5px; color: var(--fg-subtle); white-space: nowrap; }
+.bd-cmp .ft .hint { order: 1; flex: 1 0 100%; display: inline-flex; align-items: center; gap: 3px; padding: 2px 2px 0; font-size: 11.5px; color: var(--fg-subtle); white-space: nowrap; }
 .bd-cmp .ft .hint .dot { width: 3px; height: 3px; margin: 0 4px; border-radius: 50%; background: currentColor; opacity: .6; }
-.bd-cmp .ft .bp-btn { height: 28px; }
+.bd-cmp .ft .bp-btn { height: 34px; padding: 0 16px; font-size: 13px; }
+.bd-cmp .ft .bp-attach, .bd-cmp .ft .bp-attach.ic { width: 34px; height: 34px; padding: 0; justify-content: center; border-radius: 999px; }
+.bd-cmp .ft .bp-attach .bd-ic { width: 17px; height: 17px; }
 .bd-cmp .ft .bp-btn:disabled { opacity: .5; cursor: default; }
-/* Element on a board's screen: Delete element, in the risk tint; it takes the shortcut hint's room */
-.bd-cmp .ft .bp-btn.del { padding: 0 9px; font-weight: 600; color: var(--risk-fg); background: var(--risk-tint); }
+/* Element on a board's screen: Delete element, a round key like attach in the risk tint, so the foot stays one row */
+.bd-cmp .ft .bp-btn.del, .bd-cmp .ft .bp-btn.del:hover { width: 34px; padding: 0; justify-content: center; border-radius: 999px; color: var(--risk-fg); background: var(--risk-tint); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--risk) 30%, transparent); }
+.bd-cmp .ft .bp-btn.del .bd-ic { width: 16px; height: 16px; }
 .bd-cmp .ft .bp-btn.del[hidden], .bd-cmp .ft:has(.del:not([hidden])) .hint { display: none; }
 .bd-cmp .ar { position: absolute; display: none; width: 12px; height: 12px; background: var(--surface); }
 .bd-cmp[data-side="r"] .ar { display: block; left: -6px; clip-path: polygon(0 50%, 50% 0, 50% 100%); }
@@ -1477,11 +1558,52 @@ html.bd-ann-m-select .bp-cl-head { user-select: text; -webkit-user-select: text;
 .bd-cmp.dock .ar { display: none; }
 .bd-cmp.dock .bp-note-ta { min-height: 44px; max-height: 96px; }
 .bd-cmp.dock .ft .hint { display: none; }
+/* ?v-cmt: the composer (and, below, a saved comment's card) in the toolbars' language. Common: the pin's number a round
+   badge, round keys, pill actions, the field one box (.fld) with its foot */
+html[data-v-cmt] .bd-cmp .hd .bd-ann-num { min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; font-size: 11.5px; }
+html[data-v-cmt] .bd-cmp .hd .lb { font-size: 13px; color: var(--fg); }
+html[data-v-cmt] .bd-cmp .ft .bp-attach { width: 34px; height: 34px; padding: 0; justify-content: center; border-radius: 999px; }
+html[data-v-cmt] .bd-cmp .ft .bp-btn { height: 34px; }
+html[data-v-cmt] .bd-cmp > .fld > .bp-files-w { margin: 6px 0 0; }
+/* A: the field a well in a raised tray; attach a round key; Cancel | Save one split pill, Save its blue end */
+html[data-v-cmt="a"] .bd-cmp { width: min(340px, calc(100vw - 16px)); padding: 8px; border-radius: 22px; background: linear-gradient(180deg, var(--tray-top), var(--tray-bot)); box-shadow: var(--shadow-tray), var(--shadow-3); }
+html[data-v-cmt="a"] .bd-cmp .ar { background: var(--tray-top); }
+html[data-v-cmt="a"] .bd-cmp .hd { margin: 2px 6px 8px 4px; }
+html[data-v-cmt="a"] .bd-cmp .fld { padding: 4px 4px 4px; border-radius: 17px; background: var(--hk-down); box-shadow: var(--shadow-well); transition: box-shadow .12s; }
+html[data-v-cmt="a"] .bd-cmp .fld:focus-within { box-shadow: var(--shadow-well), 0 0 0 2px color-mix(in oklch, var(--accent) 55%, transparent); }
+html[data-v-cmt="a"] .bd-cmp .fld .bp-note-ta, html[data-v-cmt="a"] .bd-cmp .fld .bp-note-ta:focus { min-height: 56px; padding: 6px 9px; border-radius: 13px; background: none; box-shadow: none; }
+html[data-v-cmt="a"] .bd-cmp .ft { margin-top: 2px; }
+html[data-v-cmt="a"] .bd-cmp .ft .hint { display: none; }
+html[data-v-cmt="a"] .bd-cmp .acts > .bp-btn { height: 34px; padding: 0 16px; opacity: 1; }
+html[data-v-cmt="a"] .bd-cmp .acts > .bp-btn.primary:not(:disabled) { color: #fff; background: var(--accent-solid) linear-gradient(180deg, color-mix(in oklch, var(--accent-solid), white 8%), var(--accent-solid)); }
+html[data-v-cmt="a"] .bd-cmp .acts > .bp-btn.primary:disabled { color: var(--fg-subtle); background: var(--groove) left center / 2px 60% no-repeat; box-shadow: none; }
+/* B: a chat box – the field holds the text, then attach and a round blue send key; Cancel a round × at the top; the
+   shortcuts in the keys' tooltips */
+html[data-v-cmt="b"] .bd-cmp { padding: 10px; border-radius: 22px; }
+html[data-v-cmt="b"] .bd-cmp .hd { margin: 2px 34px 10px 2px; }
+html[data-v-cmt="b"] .bd-cmp .ft .cx { position: absolute; top: 8px; right: 8px; width: 30px; height: 30px; padding: 0; justify-content: center; }
+html[data-v-cmt="b"] .bd-cmp .ft .cx .bd-ic { width: 16px; height: 16px; }
+html[data-v-cmt="b"] .bd-cmp .fld { padding: 9px 6px 6px 12px; border-radius: 20px; background: var(--inset); box-shadow: inset 0 0 0 1px var(--line); transition: box-shadow .12s; }
+html[data-v-cmt="b"] .bd-cmp .fld:focus-within { box-shadow: inset 0 0 0 1.5px var(--accent), 0 0 0 3px color-mix(in oklch, var(--accent) 18%, transparent); }
+html[data-v-cmt="b"] .bd-cmp .fld .bp-note-ta, html[data-v-cmt="b"] .bd-cmp .fld .bp-note-ta:focus { min-height: 44px; padding: 0 6px 0 0; border-radius: 0; background: none; box-shadow: none; }
+html[data-v-cmt="b"] .bd-cmp .ft { margin: 4px 0 0 -6px; }
+html[data-v-cmt="b"] .bd-cmp .ft .hint { display: none; }
+html[data-v-cmt="b"] .bd-cmp .ft .bp-btn.primary { width: 34px; padding: 0; justify-content: center; }
+html[data-v-cmt="b"] .bd-cmp .ft .bp-btn.primary .bd-ic { width: 16px; height: 16px; }
+html[data-v-cmt="b"] .bd-cmp .ft .bp-btn.primary:disabled { opacity: .6; }
+/* C: a compact card – the pin's badge heads it, the field a ruled line, pill keys at its foot */
+html[data-v-cmt="c"] .bd-cmp { padding: 12px 12px 10px 14px; border-radius: 18px; }
+html[data-v-cmt="c"] .bd-cmp .hd { margin-bottom: 6px; }
+html[data-v-cmt="c"] .bd-cmp .fld .bp-note-ta, html[data-v-cmt="c"] .bd-cmp .fld .bp-note-ta:focus { min-height: 48px; padding: 4px 0 8px; border-radius: 0; background: none; box-shadow: inset 0 -1px 0 var(--line); }
+html[data-v-cmt="c"] .bd-cmp .fld .bp-note-ta:focus { box-shadow: inset 0 -1.5px 0 var(--accent); }
+html[data-v-cmt="c"] .bd-cmp .ft { margin: 8px 0 0 -6px; }
+html[data-v-cmt="c"] .bd-cmp .ft .hint { display: none; }
+html[data-v-cmt="c"] .bd-cmp .ft .bp-btn:not(.bp-attach) { padding: 0 15px; }
 
 /* right panel: one section at a time (Brief on a board, Comments, Revisions), each opened from its key on the right
    stripe; its header the section's title. Docked beside the page where the page keeps READ_W (a board: 1101 px and
    up), else over it; a bottom sheet on a phone, where the sections are tabs. JS sets html.bd-sp-open and html.bd-sp-dock. */
-.bd-sp { position: fixed; z-index: 42; top: var(--top-h); right: var(--stripe-w); bottom: 0; width: var(--sp-w); display: flex; flex-direction: column; min-height: 0; overflow: hidden;
+.bd-sp { position: fixed; z-index: 42; top: var(--pane-top); right: var(--stripe-w); bottom: 0; width: var(--sp-w); display: flex; flex-direction: column; min-height: 0; overflow: hidden;
   border-radius: 14px; background: var(--panel); box-shadow: var(--shadow-card); font-size: 13.5px;
   transform: translateX(calc(100% + var(--stripe-w))); visibility: hidden; transition: transform .22s var(--ease), visibility 0s .22s; }
 html.bd-sp-open .bd-sp { transform: none; visibility: visible; transition: transform .22s var(--ease); }
@@ -1500,6 +1622,11 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .bd-cs-c .ef .sp { flex: 1; }
 .bd-cs-f { flex: none; display: flex; align-items: center; gap: 6px; padding: 0 12px 10px; box-shadow: inset 0 -1px 0 var(--line-soft); }
 .bd-cs-f .bd-sg { flex: 1; min-width: 0; }
+/* a segmented control that doesn't fit its row gives way to its select (fitSeg): "Open 16 ▾", as wide as the row */
+.narrow > .bd-sg, :not(.narrow) > .bd-segalt { display: none; }
+.bd-segalt { flex: 1; min-width: 0; }
+.bd-segalt > .bd-selb { flex: 1; min-width: 0; height: 30px; font-size: 12.5px; }
+.bd-segalt > .bd-selb .v { flex: 1; max-width: none; text-align: left; }
 /* Sort: a ghost key, its icon and a chevron (the order is its title), opening the orders' menu */
 .bd-cs-f .bd-srt { flex: none; }
 .bd-cs-f .bd-srt .bd-tbtn.bd-selb { height: 28px; min-width: 0; gap: 2px; padding: 0 4px 0 6px; color: var(--fg-muted); background: none; box-shadow: none; }
@@ -1508,8 +1635,8 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .bd-cs-f .bd-srt .bd-selb .bd-ic { width: 14px; height: 14px; color: var(--fg-subtle); }
 .bd-cs-f .bd-srt .bd-selb .v { display: none; }
 .bd-cs-f .bd-srt .bd-selm { min-width: 240px; }
-.bd-sg { display: flex; padding: 2px; border-radius: 10px; background: var(--inset); box-shadow: var(--shadow-well); }
-.bd-sg button { flex: 1 1 auto; min-width: 0; display: inline-flex; align-items: center; justify-content: center; gap: 5px; height: 26px; padding: 0 6px; border: 0; border-radius: 8px; background: none;
+.bd-sg { display: flex; padding: 2px; border-radius: 999px; background: var(--inset); box-shadow: var(--shadow-well); }
+.bd-sg button { flex: 1 1 auto; min-width: 0; display: inline-flex; align-items: center; justify-content: center; gap: 5px; height: 26px; padding: 0 8px; border: 0; border-radius: 999px; background: none;
   font-size: 12px; font-weight: 500; color: var(--fg-muted); white-space: nowrap; transition: background .12s, color .12s; }
 .bd-sg button:hover { color: var(--fg); }
 .bd-sg button:is([aria-checked="true"], [aria-selected="true"]) { color: var(--fg); background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: var(--shadow-hk); }
@@ -1518,7 +1645,7 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .bd-cs-l { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 10px 12px 16px; position: relative; }
 .bd-cs-l ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .bd-cs-c { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 10px; padding: 10px 10px 10px 11px; border-radius: 12px; background: var(--surface);
-  box-shadow: var(--shadow-1); cursor: pointer; scroll-margin: 10px; transition: box-shadow .14s var(--ease), opacity .14s; }
+  box-shadow: var(--shadow-1); cursor: pointer; scroll-margin: 10px; transition: box-shadow .14s var(--ease), opacity .14s, background-color .8s var(--ease); }
 .bd-cs-c > .bd-ann-num { margin-top: 1px; }
 .bd-cs-c:focus-visible { box-shadow: var(--shadow-1), var(--focus-ring); }
 .bd-cs-c.hot { box-shadow: 0 0 0 1px color-mix(in oklch, var(--accent) 50%, transparent), var(--shadow-1); }
@@ -1526,8 +1653,18 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .bd-cs-c.edit { cursor: default; }
 .bd-cs-c.sent:not(.res, .on, .hot) { opacity: .85; }
 .bd-cs-c.flash { animation: bd-cs-flash 1.2s var(--ease); }
+/* news from the agent the reader hasn't seen: the card washed in the accent with an accent edge, the new reply tinted;
+   seen, it fades back. Its filter has a blue dot */
+.bd-cs-c.fresh { background: color-mix(in oklch, var(--accent-tint) 75%, var(--surface)); opacity: 1;
+  box-shadow: 0 0 0 1.5px color-mix(in oklch, var(--accent) 60%, transparent), 0 4px 14px color-mix(in oklch, var(--accent) 14%, transparent); }
+.bd-cs-c .bp-msg.agent { transition: background-color .8s var(--ease), box-shadow .8s var(--ease); border-radius: 10px; }
+.bd-cs-c .bp-msg.agent.fresh { margin: -6px -8px 0; padding: 6px 8px; background: color-mix(in oklch, var(--accent) 14%, transparent); box-shadow: inset 2px 0 0 var(--accent); }
+.bd-cs-c .bp-msg.agent.fresh:not(:last-child) { margin-bottom: 10px; }
+.bd-sg button .fdot, .bd-segalt .bd-selb.fresh::after { display: inline-block; flex: none; width: 7px; height: 7px; margin-left: 1px; border-radius: 50%; background: var(--accent-solid); box-shadow: 0 0 0 2px color-mix(in oklch, var(--accent) 22%, transparent); }
+.bd-segalt .bd-selb.fresh { position: relative; }
+.bd-segalt .bd-selb.fresh::after { content: ""; position: absolute; top: 4px; right: 6px; }
 @keyframes bd-cs-flash { 0%, 40% { box-shadow: 0 0 0 1.5px var(--accent), 0 0 0 6px color-mix(in oklch, var(--accent) 22%, transparent); } }
-.bd-cs-c .cb { display: grid; gap: 4px; min-width: 0; }
+.bd-cs-c .cb { display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; min-width: 0; }
 .bd-cs-c .ch { display: flex; align-items: center; gap: 6px; min-width: 0; height: 22px; }
 .bd-cs-c .ch > .bd-ic { width: 14px; height: 14px; color: var(--fg-subtle); }
 .bd-cs-c .lb { flex: 1; min-width: 0; font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -1536,11 +1673,35 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .bd-cs-c:is(:hover, :focus-within, .on, .edit) .acts { display: inline-flex; }
 .bd-cs-c:is(:hover, :focus-within, .on, .edit) .ago { display: none; }
 @media (hover: none) { .bd-cs-c .acts { display: inline-flex; } .bd-cs-c .ago { display: none; } }
-.bd-cs-ib { display: inline-grid; place-items: center; width: 26px; height: 26px; padding: 0; border: 0; border-radius: 7px; background: none; color: var(--fg-subtle); }
+.bd-cs-ib { display: inline-grid; place-items: center; width: 26px; height: 26px; padding: 0; border: 0; border-radius: 999px; background: none; color: var(--fg-subtle); }
+/* ?v-cmt: a saved comment's card, to match its composer. A: a raised card, the note in a well; B: the note a chat
+   bubble under a quiet header; C: a compact card, the quote one line */
+html[data-v-cmt] .bd-cs-c > .bd-ann-num { min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; font-size: 11.5px; }
+html[data-v-cmt] .bd-cs-c .acts { gap: 2px; }
+html[data-v-cmt] .bd-cs-c .bd-cs-ib { width: 28px; height: 28px; }
+html[data-v-cmt] .bd-cs-c q { border-radius: 10px; }
+html[data-v-cmt="a"] .bd-cs-c { padding: 10px; border-radius: 18px; background: linear-gradient(180deg, var(--tray-top), var(--tray-bot)); box-shadow: var(--shadow-hk); }
+html[data-v-cmt="a"] .bd-cs-c > .bd-ann-num { box-shadow: var(--shadow-fill); }
+html[data-v-cmt="a"] .bd-cs-c .nt { margin: 2px 0 0; padding: 7px 10px; border-radius: 12px; background: var(--hk-down); box-shadow: var(--shadow-well); }
+html[data-v-cmt="a"] .bd-cs-c:not(.sent) .nt:hover { background: var(--hk-down); box-shadow: var(--shadow-well), inset 0 0 0 1px var(--line-strong); }
+html[data-v-cmt="b"] .bd-cs-c { padding: 8px 8px 10px; border-radius: 18px; background: none; box-shadow: none; }
+html[data-v-cmt="b"] .bd-cs-c:hover { background: var(--hover); }
+html[data-v-cmt="b"] .bd-cs-c .lb { font-size: 12.5px; color: var(--fg-muted); }
+html[data-v-cmt="b"] .bd-cs-c q { padding: 0 0 0 10px; border-block-width: 1px; border-radius: 0; background: none; box-shadow: inset 2px 0 0 var(--line-strong); }
+html[data-v-cmt="b"] .bd-cs-c .nt { justify-self: start; margin: 4px 0 0; padding: 8px 12px; border-radius: 18px 18px 18px 6px; background: var(--accent-tint); color: var(--fg); }
+html[data-v-cmt="b"] .bd-cs-c:not(.sent) .nt:hover { background: color-mix(in oklch, var(--accent) 20%, transparent); }
+html[data-v-cmt="c"] .bd-cs-c { padding: 9px 10px; border-radius: 16px; row-gap: 0; }
+html[data-v-cmt="c"] .bd-cs-c .cb { gap: 3px; }
+html[data-v-cmt="c"] .bd-cs-c q { -webkit-line-clamp: 1; padding: 0 9px; border-block-width: 3px; border-radius: 999px; font-size: 12px; }
+html[data-v-cmt="c"] .bd-cs-c .nt { font-size: 13px; }
+html[data-v-cmt] .bd-cs-c.hot { box-shadow: 0 0 0 1px color-mix(in oklch, var(--accent) 50%, transparent), var(--shadow-1); }
+html[data-v-cmt] .bd-cs-c:is(.on, .edit) { box-shadow: 0 0 0 1.5px var(--accent), 0 4px 14px color-mix(in oklch, var(--accent) 16%, transparent); }
 .bd-cs-ib:hover { background: var(--hover); color: var(--fg); }
 .bd-cs-ib .bd-ic { width: 14px; height: 14px; }
 .bd-cs-c .path { margin-top: -3px; font-size: 11.5px; color: var(--fg-subtle); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.bd-cs-c q { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; quotes: none; padding: 5px 8px; border-radius: 8px; background: var(--inset);
+/* the quote: three lines at most; its top and bottom room a transparent border (the background paints under it, the
+   clamp's overflow is clipped above it) so no fourth line peeks */
+.bd-cs-c q { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; quotes: none; padding: 0 8px; border-block: 5px solid transparent; border-radius: 8px; background: var(--inset);
   font-size: 12.5px; line-height: 1.45; color: var(--fg-muted); overflow-wrap: anywhere; }
 .bd-cs-c q.tx { background: color-mix(in oklch, var(--warn-tint) 80%, transparent); color: var(--fg); }
 .bd-cs-c .nt { margin: 0 -4px; padding: 1px 4px; border-radius: 6px; font-size: 13.5px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
@@ -1555,11 +1716,15 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .bd-cs-c .eld b { font-weight: 600; }
 .bd-cs-c .eld .ar { margin: 0 .35em; color: var(--fg-subtle); }
 .bd-cs-c .eld .del { color: var(--fg-muted); }
-.bd-cs-c .ed { display: grid; gap: 6px; margin-top: 2px; }
-.bd-cs-c .ed .bp-note-ta { display: block; width: 100%; min-height: 60px; max-height: 240px; overflow: auto; }
-.bd-cs-c .ef { display: flex; align-items: center; gap: 6px; }
-.bd-cs-c .ef .hint { display: inline-flex; align-items: center; gap: 3px; font-size: 11.5px; color: var(--fg-subtle); white-space: nowrap; }
-.bd-cs-c .ef .bp-btn { height: 28px; }
+/* a pending card's editor, inside the card at any width: the field the card's content width, then the composer's foot:
+   Attach, Cancel and Save (34 px pills, right-aligned), the hint on its own line under them */
+.bd-cs-c .ed { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; min-width: 0; margin-top: 2px; }
+.bd-cs-c .ed > * { min-width: 0; max-width: 100%; }
+.bd-cs-c .ed .bp-note-ta { display: block; box-sizing: border-box; width: 100%; min-height: 60px; max-height: 240px; overflow: auto; }
+.bd-cs-c .ef { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; row-gap: 4px; min-width: 0; }
+.bd-cs-c .ef .hint { order: 1; flex: 1 0 100%; display: inline-flex; align-items: center; gap: 3px; padding: 0 2px; font-size: 11.5px; color: var(--fg-subtle); white-space: nowrap; }
+.bd-cs-c .ef .bp-btn { height: 34px; padding: 0 16px; border-radius: 999px; font-size: 13px; }
+.bd-cs-c .ef .bp-attach, .bd-cs-c .ef .bp-attach.ic { width: 34px; padding: 0; justify-content: center; }
 .bd-cs-c .ef .bp-btn:disabled { opacity: .5; cursor: default; }
 /* a sent comment's conversation (the agent's replies, the reader's follow-ups) and its reply box */
 .bd-cs-c .bp-convo { margin-top: 6px; padding-top: 10px; border-top: 1px solid var(--line-soft); cursor: default; }
@@ -1567,6 +1732,21 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .bd-cs-c .rp .bp-note-ta { display: block; width: 100%; min-height: 32px; max-height: 200px; padding: 5px 34px 5px 9px; font-size: 13px; overflow-y: auto; }
 .bd-cs-c .rp > .bp-attach { position: absolute; right: 3px; top: 3px; width: 26px; height: 26px; }
 .bd-cs-c .rp > .bp-files-w { margin-top: 6px; }
+/* its foot while the reply is unsaved or edited: what it is, then Cancel and Save, the composer's 34 px pills */
+.bd-cs-c .rp > .ft { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
+.bd-cs-c .rp > .ft[hidden] { display: none; }
+.bd-cs-c .rp > .ft .sp { flex: 1; }
+.bd-cs-c .rp > .ft .un { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; color: var(--warn-fg); }
+.bd-cs-c .rp > .ft .un::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--warn); }
+.bd-cs-c .rp > .ft .bp-btn { height: 34px; padding: 0 16px; border-radius: 999px; font-size: 13px; }
+.bd-cs-c .rp > .ft .bp-btn:disabled { opacity: .5; cursor: default; }
+/* the saved follow-up, not sent yet: the thread's last message, a ringed avatar, Edit and Delete at its head's end */
+.bd-cs-c .rp-pend { margin: 10px 0 6px; padding-top: 0; border-top: 0; }
+.bd-cs-c .rp-pend[hidden] { display: none; }
+.bp-msg.unsent .av { background: none; color: oklch(64% 0.15 295); box-shadow: inset 0 0 0 1.5px currentColor; }
+.bp-msg.unsent .rv { font-style: italic; }
+.bp-msg.unsent .acts { display: inline-flex; gap: 2px; margin: -3px 0 -3px auto; }
+.bp-msg.unsent .acts .bd-cs-ib { width: 26px; height: 26px; }
 .bd-cs-c .nf { margin-top: 2px; }
 .bd-cs-e { display: grid; justify-items: center; gap: 10px; padding: 28px 12px; text-align: center; font-size: 13px; line-height: 1.5; color: var(--fg-subtle); }
 .bd-cs-e[hidden] { display: none; }
@@ -1632,57 +1812,71 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
   font-size: 13px; line-height: 18px; color: var(--fg); scroll-margin: 8px; }
 .bd-chl button:hover { background: var(--hover); }
 .bd-chl button[aria-current="true"] { background: var(--selected); }
+/* each change's row in its kind's tint: new green, changed amber, removed red; hovered, a shade more; shown, ringed */
+.bd-chl button.add { --ck: var(--ok); --ct: var(--ok-tint); } .bd-chl button.mod { --ck: var(--warn); --ct: var(--warn-tint); } .bd-chl button.del { --ck: var(--risk); --ct: var(--risk-tint); }
+.bd-chl button:is(.add, .mod, .del) { background: color-mix(in oklch, var(--ct) 60%, transparent); box-shadow: inset 2px 0 0 color-mix(in oklch, var(--ck) 70%, transparent); }
+.bd-chl button:is(.add, .mod, .del):hover { background: linear-gradient(var(--hover), var(--hover)), color-mix(in oklch, var(--ct) 60%, transparent); }
+.bd-chl button:is(.add, .mod, .del)[aria-current="true"] { background: var(--ct); box-shadow: inset 0 0 0 1.5px color-mix(in oklch, var(--ck) 60%, transparent); }
+.bd-chl li + li { margin-top: 2px; }
 .bd-chl .bd-chg-tag { height: 18px; padding: 0 6px; font-size: 10px; }
 .bd-chl .t { min-width: 0; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; }
 .bd-chl .none { padding: 8px; color: var(--fg-subtle); }
-/* the revisions list: one panel, rows split by hairlines (no card per revision).
-   Row: [number tile] Revision N / first change note, ellipsized [chevron]; under it, two small buttons.
-   Expanded: date, chips and every change note. */
+/* the Revisions tab (buildRevTab), in the toolbars' language. One grid: 28 px number keys, 12 px gaps, the panel's
+   12 px edge; one type scale: 13 px titles, 12.5 px notes, 12 px meta, 11.5 px mono numbers */
 .bd-rvr, .bd-rvr .bd-rail-sec { min-width: 0; }
 .bp-side-b { -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent); }
-.bd-rvs { list-style: none; margin: 0; padding: 0; border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-1); overflow: hidden; }
-.bd-rv { min-width: 0; padding: 9px 10px; }
-.bd-rv + .bd-rv { border-top: 1px solid var(--line-soft); }
-.bd-rv.on { background: color-mix(in oklch, var(--accent-tint) 70%, transparent); }
-.bd-rv .rv-h { display: flex; align-items: center; gap: 9px; width: 100%; padding: 0; border: 0; border-radius: 6px; background: none; text-align: left; color: inherit; font: inherit; cursor: pointer; }
-.bd-rv .rv-h:focus { outline: none; box-shadow: none; }
-.bd-rv .rv-h:focus-visible { box-shadow: var(--focus-ring); }
-.bd-rv .rv-n { flex: none; display: inline-grid; place-items: center; min-width: 26px; height: 26px; padding: 0 4px; border-radius: 7px; font: 650 11.5px var(--mono); color: var(--fg-muted);
-  background: var(--inset); box-shadow: inset 0 0 0 1px var(--line); }
-.bd-rv.on .rv-n { color: #fff; background: var(--accent); box-shadow: none; }
-.bd-rv .rv-tt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.bd-rv .rv-tt b { font-size: 13px; font-weight: 600; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.bd-rv .rv-tt .s { font-size: 12px; line-height: 1.35; color: var(--fg-subtle); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.bd-rv .rv-tt .s code { font-size: .9em; padding: 0 .25em; }
-.bd-rv .rv-h .chev { flex: none; width: 13px; height: 13px; color: var(--fg-subtle); transition: transform .15s var(--ease); }
-.bd-rv.open .rv-h .chev { transform: rotate(90deg); }
-.bd-rv .rv-more { display: none; margin: 7px 0 0 35px; }
-.bd-rv.open .rv-more { display: block; }
-.bd-rv .rv-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; font-size: 12px; color: var(--fg-subtle); }
-.bd-rv .rv-meta .bp-chip { padding: 2px 6px; font-size: 11px; }
-.bd-rv .rv-notes { margin: 5px 0 0; padding-left: 14px; font-size: 12.5px; line-height: 1.45; color: var(--fg-muted); }
-.bd-rv .rv-notes li + li { margin-top: 2px; }
-.bd-rv .rv-act { display: flex; flex-wrap: nowrap; gap: 8px; margin: 7px 0 0; }
-.bd-rv .rv-act .bp-btn { flex: 0 0 auto; height: 24px; padding: 0 8px; gap: 4px; border-radius: 7px; font-size: 12px; text-decoration: none; white-space: nowrap; }
-.bd-rv .rv-act .bp-btn .bd-ic { width: 12px; height: 12px; }
-.bd-rv .rv-act .bp-btn[aria-current] { color: var(--accent-fg); background: var(--accent-tint); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--accent) 30%, transparent); }
-.bd-rv .rv-act .bp-btn[aria-current] .bd-ic { color: currentColor; }
-/* the Compare picker: from above with, as the rail is narrow; side by side in the card */
-.bd-rv-ft { display: grid; gap: 6px; padding: 0 2px; }
-.bd-rv-ft .row { display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; align-items: center; gap: 4px; }
-.bd-rv-ft .row > .bd-ic { color: var(--fg-subtle); transform: rotate(90deg); }
-.bd-rv-ft .rv-sel { display: flex; width: 100%; min-width: 0; }
-.bd-rv-ft .rv-sel .bd-selb { flex: 1; min-width: 0; height: 32px; }
-.bd-rv-ft .rv-sel .bd-selb .v { flex: 1; max-width: none; text-align: left; }
-.bd-rv-ft .bp-btn { justify-content: center; height: 32px; font-size: 13px; }
+.bd-rvr .bd-rail-sec + .bd-rail-sec { margin-top: 18px; }
+.bd-rvr .bd-rvr-note { margin: -2px 0 10px 2px; }
+.bd-rvr .bd-rvr-sum { margin: -2px 0 8px 2px; }
+.bd-rvr .bd-chl { padding: 4px; border-radius: 14px; box-shadow: var(--shadow-card); }
+.bd-rvr .bd-chl button { border-radius: 10px; padding: 7px 8px; }
+.bd-rvr .bd-chl .bd-chg-tag { border-radius: 999px; padding: 0 8px; }
+/* Compare: a split pill – Rev 1 › Rev 2 as flat selects, the groove, then the dock's blue Go */
+.rv-cmpb { display: flex; align-items: center; min-width: 0; height: 38px; border-radius: 999px; background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: var(--shadow-hk); }
+.rv-cmpb .rv-sel { flex: 1 1 0; min-width: 0; display: flex; align-self: stretch; }
+.rv-cmpb .rv-sel .bd-selb, .rv-cmpb .rv-sel .bd-selb:hover:not(:disabled) { flex: 1; min-width: 0; height: 100%; padding: 0 8px 0 14px; gap: 6px; border-radius: 999px 0 0 999px; background: none; box-shadow: none; font: 600 13px var(--sans); }
+.rv-cmpb .rv-sel + .ar + .rv-sel .bd-selb { border-radius: 0; padding-left: 8px; }
+.rv-cmpb .rv-sel .bd-selb:hover:not(:disabled) { background: var(--hover); }
+.rv-cmpb .rv-sel .bd-selb[aria-expanded="true"] { background: var(--hk-down); box-shadow: var(--shadow-hk-down); }
+.rv-cmpb .rv-sel .bd-selb:focus-visible { box-shadow: inset 0 0 0 2px var(--focus); }
+.rv-cmpb .rv-sel .bd-selb .v { flex: 1; max-width: none; text-align: left; }
+.rv-cmpb .ar { flex: none; display: grid; place-items: center; color: var(--fg-subtle); }
+.rv-cmpb .ar .bd-ic { width: 14px; height: 14px; }
+.rv-cmpb .go { flex: none; display: inline-flex; align-items: center; gap: 7px; align-self: stretch; padding: 0 16px 0 13px; border: 0; border-radius: 0 999px 999px 0; color: #fff; font: 600 13px var(--sans); cursor: pointer;
+  background: var(--accent-solid) linear-gradient(180deg, color-mix(in oklch, var(--accent-solid), white 8%), var(--accent-solid)); box-shadow: -1px 0 0 var(--hk-ring), inset 1px 0 0 oklch(100% 0 0 / .16); }
+.rv-cmpb .go:hover { filter: brightness(.95); }
+.rv-cmpb .go:active { filter: brightness(.9); }
+.rv-cmpb .go:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.rv-cmpb .go .bd-ic { width: 16px; height: 16px; }
+/* the history: a timeline – each revision's number on a round key down one rail (the shown one filled blue, the base in
+   the warning's tint), the shown revision on a tinted card; its Changes from N | View at the row's right end */
+.rvx-l { list-style: none; margin: 0; padding: 0; }
+.rvx-l > li { position: relative; display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 12px; padding-bottom: 14px; }
+.rvx-l > li:not(:last-child)::before { content: ""; position: absolute; left: 13px; top: 32px; bottom: 2px; width: 2px; border-radius: 1px; background: var(--line); }
+.rvx-l .rv-n { flex: none; display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 999px; font: 650 11.5px var(--mono); color: var(--fg-muted);
+  background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: var(--shadow-hk); }
+.rvx-l .on .rv-n { color: #fff; background: var(--accent-solid); box-shadow: var(--shadow-fill); }
+.rvx-l .base .rv-n { color: var(--warn-fg); background: var(--warn-tint); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--warn) 40%, transparent); }
+.rvx-l .rv-b { min-width: 0; margin: -4px 0 0; padding: 4px 10px 10px; border-radius: 14px; }
+.rvx-l .on .rv-b { background: color-mix(in oklch, var(--accent-tint) 70%, transparent); }
+.rvx-l .rv-b .hd { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; min-height: 28px; }
+.rvx-l .rv-b .hd b { font-size: 13px; font-weight: 600; }
+.rvx-l .rv-b .hd .bp-chip { padding: 1px 7px; border-radius: 999px; font-size: 11px; }
+.rvx-l .rv-b .hd .dt { margin-left: auto; font: 500 11.5px var(--mono); color: var(--fg-subtle); }
+.rvx-l .rv-notes { margin: 2px 0 0; padding-left: 15px; font-size: 12.5px; line-height: 1.45; color: var(--fg-muted); }
+.rvx-l .rv-notes li + li { margin-top: 3px; }
+.rvx-l :is(.rv-none, .rv-scr) { margin: 2px 0 0; font-size: 12px; line-height: 1.45; color: var(--fg-subtle); }
+.rvx-l .rv-b > .rv-act { display: flex; width: max-content; margin: 10px 0 0 auto; }
+.rvx-l .rv-act > .bp-btn { height: 28px; padding: 0 12px 0 10px; gap: 6px; font-size: 12px; }
+.rvx-l .rv-act > .bp-btn .bd-ic { width: 13px; height: 13px; }
+.rvx-l .rv-act > .rv-chg, .rvx-l .rv-act > .rv-chg .bd-ic { color: var(--accent-fg); }
+.rvx-l .rv-act > .rv-chg[aria-current] { background: color-mix(in oklch, var(--accent-tint) 70%, transparent); }
 /* the tray, the toasts and the width chip centre in the room between the stripes and the docked panes (applyWidth) */
 :is(.bd-anntb, .bp-toast, .bd-wchip) { left: calc(var(--room-l, var(--stripe-w)) + (100% - var(--room-l, var(--stripe-w)) - var(--room-r, var(--stripe-w))) / 2); }
 @media (max-width: 600px) {
   .bd-sp { top: auto; left: 0; right: 0; width: auto; height: var(--sp-sheet-h); border-radius: 18px 18px 0 0; transform: translateY(100%); }
   .bd-sp::before { content: ""; position: absolute; left: 50%; top: 6px; width: 36px; height: 4px; margin-left: -18px; border-radius: 2px; background: var(--line-strong); }
   .bd-sp-h { height: auto; padding: 16px 8px 8px 16px; }
-  .bd-rv-ft .row { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); }
-  .bd-rv-ft .row > .bd-ic { transform: none; }
   .bd-gc .hint .k { display: none; }
   html.bd-sp-open { scroll-padding-bottom: var(--sp-sheet-h); }
   html.bd-sp-open .bd-anntb { bottom: calc(var(--sp-sheet-h) + 10px); }
@@ -1727,9 +1921,6 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .bd-ap-dec button.pk.none { padding: 2px 6px; margin: -2px -6px; border: 0; border-radius: 6px; background: none; font: inherit; font-weight: 600; color: var(--warn-fg); cursor: pointer; }
 .bd-ap-dec button.pk.none:hover { background: var(--hover); }
 .bd-ap-dec button.pk.none > .bd-ic:last-child { fill: none; stroke: currentColor; stroke-width: 2; color: inherit; }
-.bd-approve .ft .bp-btn.ok { color: #fff; background: var(--ok-solid); box-shadow: 0 1px 2px oklch(20% 0.05 152 / .25), inset 0 1px 0 oklch(100% 0 0 / .15); }
-.bd-approve .ft .bp-btn.ok .bd-ic { color: currentColor; }
-.bd-approve .ft .bp-btn.ok:hover { background: color-mix(in oklch, var(--ok-solid), black 8%); }
 .bd-approve .ft .bp-btn:disabled { opacity: .6; cursor: default; }
 @media print { .bd-anntb, .bd-ann-layer, .bd-ann-hov, .bd-ann-cap, .bd-selc, .bd-tip, .bd-sp, .bd-cmp, .bd-home { display: none !important; } html.bd-tray-on .bd-shell, :root.bd-sp-dock .bd-shell { padding: 0; } }
 
@@ -1768,10 +1959,10 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .bd-diff-note { padding: 0 16px 10px; font-size: 13px; color: var(--fg-muted); line-height: 1.5; }
 .bd-diff-note p { margin: 0; }
 .bd-diff-tb { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 10px; border-block: 1px solid var(--line); background: var(--panel); }
-.bd-seg { display: inline-flex; padding: 2px; gap: 2px; border-radius: 9px; background: var(--inset); box-shadow: inset 0 0 0 1px var(--line); }
-.bd-seg button { height: 26px; padding: 0 10px; border: 0; border-radius: 7px; background: none; font-size: 12.5px; font-weight: 500; color: var(--fg-muted); white-space: nowrap; }
+.bd-seg { display: inline-flex; padding: 2px; gap: 2px; border-radius: 999px; background: var(--hk-down); box-shadow: var(--shadow-well); }
+.bd-seg button { height: 26px; padding: 0 12px; border: 0; border-radius: 999px; background: none; font-size: 12.5px; font-weight: 600; color: var(--fg-muted); white-space: nowrap; }
 .bd-seg button:hover { color: var(--fg); }
-.bd-seg button[aria-pressed="true"] { background: linear-gradient(180deg, var(--key-top), var(--key-bot)); color: var(--fg); box-shadow: var(--shadow-key); }
+.bd-seg button[aria-pressed="true"] { background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); color: var(--fg); box-shadow: var(--shadow-hk); }
 .bd-prog { display: inline-flex; align-items: center; gap: 8px; font: 500 12px var(--mono); color: var(--fg-subtle); white-space: nowrap; }
 .bd-prog .bp-bar { width: 64px; }
 .bd-cnav { display: inline-flex; align-items: center; gap: 2px; margin-left: auto; font-size: 12.5px; color: var(--fg-muted); white-space: nowrap; }
@@ -1901,8 +2092,8 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
    then Accept recommended and Expand all (.tighter), show their icons alone, Accept its count */
 .bd-ftb.tight .bd-fvseg:not(.bd-ffilt) .l, .bd-ftb.tighter > .bp-btn .l { display: none; }
 .bd-ftb.tight .bd-fvseg:not(.bd-ffilt) button, .bd-ftb.tighter > .bp-btn:not(.icon) { padding: 0 8px; }
-.bd-fvseg { display: inline-flex; gap: 2px; padding: 2px; border-radius: 10px; background: var(--hk-down); box-shadow: var(--shadow-well); }
-.bd-fvseg button { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px 0 8px; border: 0; border-radius: 8px; background: none; font: 600 12.5px var(--sans); color: var(--fg-muted); white-space: nowrap; transition: color .12s; }
+.bd-fvseg { display: inline-flex; gap: 2px; padding: 2px; border-radius: 999px; background: var(--hk-down); box-shadow: var(--shadow-well); }
+.bd-fvseg button { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px 0 10px; border: 0; border-radius: 999px; background: none; font: 600 12.5px var(--sans); color: var(--fg-muted); white-space: nowrap; transition: color .12s; }
 .bd-fvseg button:hover { color: var(--fg); }
 .bd-fvseg button[aria-pressed="true"] { color: var(--fg); background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: var(--shadow-hk); }
 .bd-fvseg button:focus-visible { box-shadow: var(--focus-ring); }
@@ -1951,6 +2142,48 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .pv-more[hidden] { display: none; }
 .pv-more .bd-ic { width: 14px; height: 14px; }
 .bd-mrow > .pv-more { margin-left: 10px; }
+/* ?v-more: four looks for More details, each in the toolbars' language (VAR, moreKids). Every chevron turns open. */
+.pv-more .cv { transition: rotate .18s var(--ease); }
+.pv-more[aria-expanded="true"] .cv { rotate: 180deg; }
+/* A, B and C start on the finding's text column (44 px, as its options and reply box), D's key on its dot's column */
+html:is([data-v-more="a"], [data-v-more="b"]) :is(.bp-cl-item, .bd-mrow) > .pv-more { margin: 2px 0 10px 44px; }
+/* A: a raised pill in the accent's tint – the select keys' raise (Share | Export) over a soft blue fill, accent text and
+   a faint accent edge, its chevron at the end; open, it sinks */
+html[data-v-more="a"] .pv-more { --mt: color-mix(in oklch, var(--accent) 13%, transparent); height: 30px; padding: 0 10px 0 11px; gap: 7px; color: var(--accent-fg);
+  background: linear-gradient(var(--mt), var(--mt)), linear-gradient(180deg, var(--hk-top), var(--hk-bot));
+  box-shadow: var(--shadow-hk), inset 0 0 0 1px color-mix(in oklch, var(--accent) 24%, transparent); }
+html[data-v-more="a"] .pv-more:hover:not(:disabled) { --mt: color-mix(in oklch, var(--accent) 20%, transparent); }
+html[data-v-more="a"] .pv-more[aria-expanded="true"] { background: linear-gradient(var(--mt), var(--mt)), var(--hk-down); box-shadow: var(--shadow-hk-down), inset 0 0 0 1px color-mix(in oklch, var(--accent) 30%, transparent); }
+html[data-v-more="a"] .pv-more .bd-ic { color: currentColor; }
+/* B: an accent-tinted pill naming what it opens: More details | Reviewer · Reasoning · Fix ⌄ */
+html[data-v-more="b"] .pv-more { height: 30px; padding: 0 10px 0 11px; gap: 7px; color: var(--accent-fg); background: var(--accent-tint);
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--accent) 26%, transparent); }
+html[data-v-more="b"] .pv-more:hover:not(:disabled) { color: var(--accent-fg); background: color-mix(in oklch, var(--accent) 18%, transparent); }
+html[data-v-more="b"] .pv-more .bd-ic { color: currentColor; }
+html[data-v-more="b"] .pv-more .pts { display: inline-flex; align-items: center; gap: 7px; font-weight: 500; color: color-mix(in oklch, var(--accent-fg) 72%, var(--fg-muted)); }
+html[data-v-more="b"] .pv-more .pts::before { content: ""; width: 1px; height: 14px; background: color-mix(in oklch, var(--accent) 32%, transparent); }
+html[data-v-more="b"] .pv-more[aria-expanded="true"] .pts { display: none; }
+/* C: a disclosure row across the finding: › Details  Reviewer · Reasoning · Fix …  Show; a ghost bar, a hairline ring */
+html[data-v-more="c"] .pv-more { display: flex; box-sizing: border-box; height: 34px; padding: 0 14px 0 10px; gap: 8px; color: var(--fg); box-shadow: inset 0 0 0 1px var(--line); }
+html[data-v-more="c"] :is(.bp-cl-item, .bd-mrow) > .pv-more { width: calc(100% - 60px); margin: 2px 16px 10px 44px; }
+html[data-v-more="c"] .pv-more[hidden] { display: none; }
+html[data-v-more="c"] .pv-more .cv { rotate: -90deg; color: var(--fg-subtle); }
+html[data-v-more="c"] .pv-more[aria-expanded="true"] .cv { rotate: 0deg; }
+html[data-v-more="c"] .pv-more .pts { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; font-weight: 500; color: var(--fg-subtle); text-align: left; }
+html[data-v-more="c"] .pv-more .hint { margin-left: auto; font-weight: 500; color: var(--fg-subtle); }
+html[data-v-more="c"] .pv-more[aria-expanded="true"] { margin-bottom: 0; border-radius: 17px 17px 0 0; background: var(--inset); box-shadow: none; }
+html[data-v-more="c"] :is(.bp-cl-item, .bd-mrow) > .pv-more[aria-expanded="true"] + .bd-dets { margin: 0 16px 10px 44px; border-radius: 0 0 12px 12px; }
+/* D: the dock's round key, then its label; open, the key sinks as a pressed dock key does */
+html[data-v-more="d"] .pv-more, html[data-v-more="d"] .pv-more:hover:not(:disabled) { height: 32px; padding: 0 12px 0 0; gap: 10px; background: none; box-shadow: none; color: var(--fg-muted); }
+html[data-v-more="d"] :is(.bp-cl-item, .bd-mrow) > .pv-more { margin: 0 0 8px 9px; }
+html[data-v-more="d"] .pv-more:hover:not(:disabled) { color: var(--fg); }
+html[data-v-more="d"] .pv-more .k { display: grid; place-items: center; flex: none; width: 32px; height: 32px; border-radius: 999px; color: var(--fg-muted);
+  background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: var(--shadow-hk); transition: background-color .12s, box-shadow .12s var(--ease); }
+html[data-v-more="d"] .pv-more .k .bd-ic { width: 16px; height: 16px; }
+html[data-v-more="d"] .pv-more:hover .k { color: var(--fg); background: linear-gradient(var(--hover), var(--hover)), linear-gradient(180deg, var(--hk-top), var(--hk-bot)); }
+html[data-v-more="d"] .pv-more[aria-expanded="true"] .k { color: var(--fg); background: var(--hk-down); box-shadow: var(--shadow-hk-down); }
+html[data-v-more="d"] .pv-more:focus-visible { box-shadow: none; }
+html[data-v-more="d"] .pv-more:focus-visible .k { box-shadow: var(--shadow-hk), var(--focus-ring); }
 .bd-dets { margin: 2px 12px 10px 36px; padding: 10px 14px; border-radius: 10px; background: var(--inset); font-size: 14px; }
 .bd-dets[hidden] { display: none; }
 .bd-dets > * + * { margin-top: 10px; }
@@ -2120,9 +2353,10 @@ figcaption.bp-capbar .lbl { color: var(--bp-dim); }
 .bp-detail .k { display: block; margin-top: 10px; font: 600 10.5px var(--sans); letter-spacing: .08em; text-transform: uppercase; color: var(--bp-dim); }
 .bp-detail p { margin: 6px 0; }
 .bp-detail a { color: var(--bp-cyan); }
-.bp-detail .x { position: absolute; right: 10px; top: 10px; display: grid; place-items: center; width: 28px; height: 28px; background: none; border: 0; border-radius: 8px; color: var(--bp-dim); }
+.bp-detail .x { position: absolute; right: 10px; top: 10px; display: grid; place-items: center; width: 28px; height: 28px; background: none; border: 0; border-radius: 999px; color: var(--bp-dim); }
 .bp-detail .x:hover { background: rgba(214,233,255,.1); color: #fff; }
-.bp-detail .bp-btn { margin-top: 10px; background: rgba(214,233,255,.08); color: #eef6ff; box-shadow: inset 0 0 0 1px rgba(214,233,255,.16); }
+.bp-detail .bp-btn, .bp-detail .bp-btn:hover:not(:disabled) { margin-top: 10px; background: rgba(214,233,255,.08); color: #eef6ff; box-shadow: inset 0 0 0 1px rgba(214,233,255,.16); }
+.bp-detail .bp-btn:hover:not(:disabled) { background: rgba(214,233,255,.14); }
 .bp-detail .bp-btn .bd-ic { color: var(--bp-cyan); }
 .bp-detail ul { margin: 4px 0; padding-left: 20px; }
 .bp-canvas .bp-chip { color: #cfe3ff; background: rgba(214,233,255,.1); }
@@ -2246,7 +2480,7 @@ svg.anim .bp-edge.k-async { animation: bp-march 1.6s linear infinite; }
 @container bp-msgs (max-width: 420px) { .bp-msg time { display: none; } }
 
 /* the docked panes' drag handles, above 900 px, on the edge each shares with the page (JS sets --cp-w or --lp-w, and --sp-w) */
-.bd-rh { position: fixed; top: var(--top-h); bottom: 0; z-index: 43; width: 16px; margin-left: -8px; cursor: col-resize; touch-action: none; display: none; }
+.bd-rh { position: fixed; top: var(--pane-top); bottom: 0; z-index: 43; width: 16px; margin-left: -8px; cursor: col-resize; touch-action: none; display: none; }
 .bd-rh::before { content: ""; position: absolute; top: 0; bottom: 0; left: 7.5px; width: 1px; background: var(--accent); opacity: 0; transition: opacity .15s; }
 .bd-rh i { position: absolute; left: 5px; top: 50%; width: 6px; height: 44px; margin-top: -22px; border-radius: 3px; background: var(--line-strong);
   box-shadow: 0 0 0 2px var(--canvas); opacity: .8; transition: background .15s, opacity .15s, height .15s, margin-top .15s; }
@@ -2287,7 +2521,7 @@ html.bd-resizing, html.bd-resizing * { cursor: col-resize !important; user-selec
 :root[data-layout="board"], :root[data-layout="board"] body { height: 100%; overflow: hidden; }
 :root[data-layout="board"] .bd-shell { display: block; padding: 0; }
 :root[data-layout="board"] .bp-side { display: none !important; }
-.bd-boardblk { position: fixed; z-index: 1; top: var(--top-h); left: var(--room-l, var(--stripe-w)); right: var(--room-r, var(--stripe-w)); bottom: 0; margin: 0; transition: left .22s var(--ease), right .22s var(--ease); }
+.bd-boardblk { position: fixed; z-index: 1; top: var(--pane-top); left: var(--room-l, var(--stripe-w)); right: var(--room-r, var(--stripe-w)); bottom: 0; margin: 0; transition: left .22s var(--ease), right .22s var(--ease); }
 html.bd-resizing .bd-boardblk { transition: none; }
 .bd-rh-left { left: calc(var(--stripe-w) + var(--cp-w) + var(--pane-gap) / 2); }
 :root[data-layout="board"] .bd-rh-left { left: calc(var(--stripe-w) + var(--lp-w) + var(--pane-gap) / 2); }
@@ -2326,6 +2560,7 @@ html:not(.bd-lp-dock) .bd-rh-left, html:not(.bd-sp-dock) .bd-rh-right { display:
 .bd-board[data-m="frame"] { cursor: crosshair; }
 .bd-board:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); }
 .bd-bvp { position: absolute; left: 0; top: 0; transform-origin: 0 0; --k: 1; }
+.bd-world { position: absolute; left: -10000px; top: -10000px; width: 20000px; height: 20000px; pointer-events: none; }
 /* artboards: title above, device bezel around, the screen at its native size (the layer scales it) */
 .bd-ab { position: absolute; }
 .bd-ab.off, .bd-bvp.variants .bd-rq { display: none; }
@@ -2633,7 +2868,7 @@ html.bd-space .bd-board .bd-ab-fr { pointer-events: none; }
    Revisions tab's Compare pickers, a code review's File, a requested frame's Device, an arrow's Kind) is the same key,
    showing its value, over the same menu of options, the current one ticked: no native select anywhere */
 .bd-exp { position: relative; display: inline-flex; }
-.bd-tbtn:is(.bd-expb, .bd-selb, .bd-shk) { display: inline-flex; align-items: center; gap: 6px; padding: 0 7px 0 9px; color: var(--fg); font-weight: 600; white-space: nowrap;
+.bd-tbtn:is(.bd-expb, .bd-selb, .bd-shk) { display: inline-flex; align-items: center; gap: 6px; padding: 0 9px 0 12px; border-radius: 999px; color: var(--fg); font-weight: 600; white-space: nowrap;
   background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: var(--shadow-hk); }
 .bd-btb .bd-tbtn:is(.bd-expb, .bd-selb) { gap: 7px; padding: 0 10px 0 12px; }
 .bd-btb .bd-tbtn:is(.bd-expb, .bd-selb) .bd-ic:not(.cv) { width: 18px; height: 18px; }
@@ -2682,9 +2917,23 @@ html.bd-space .bd-board .bd-ab-fr { pointer-events: none; }
 .bd-expm .opt[aria-checked="true"] .bx .bd-ic { visibility: visible; }
 /* the left panel: its header (Screens and their count, Pages, Slides; a storelisting's Listing), then the artboards; a
    storelisting's, its tabs (Text, Style, Colors, Checks). Docked above 900 px, over the board below */
-.bd-lp { position: fixed; z-index: 41; top: var(--top-h); left: var(--stripe-w); bottom: 0; width: var(--lp-w); display: flex; flex-direction: column; min-height: 0; overflow: hidden;
+.bd-lp { position: fixed; z-index: 41; top: var(--pane-top); left: var(--stripe-w); bottom: 0; width: var(--lp-w); display: flex; flex-direction: column; min-height: 0; overflow: hidden;
   border-radius: 14px; background: var(--panel); box-shadow: var(--shadow-card); transform: translateX(calc(-100% - var(--stripe-w))); visibility: hidden; transition: transform .22s var(--ease), visibility 0s .22s; }
 html.bd-lp-open .bd-lp { transform: none; visibility: visible; transition: transform .22s var(--ease); }
+/* above a phone, a side pane closes by sliding off the window at its edge, under its tray (the tray, z 43, stays above
+   it), as if pushed off the screen there; it opens back in from the edge. --slide runs 0 (open) to 1 (shut): the pane
+   moves by its width and --cut (its offset from the window's edge and its shadow's room), so it shows on both sides of
+   the tray until it leaves the window. Open and still (no html.bd-slide-l or -r: paneSlides), it has no transform, so
+   the menus floating out of it (position: fixed) place against the window */
+@property --slide { syntax: '<number>'; inherits: false; initial-value: 0; }
+@media (min-width: 601px) {
+  :is(.bp-side, .bd-lp, .bd-sp) { --cut: calc(var(--stripe-w) + 12px); --slide: 1; transition: --slide .3s var(--ease), visibility 0s .3s; }
+  html.bd-lp-open :is(.bp-side, .bd-lp), html.bd-sp-open .bd-sp { --slide: 0; transition: --slide .3s var(--ease); }
+  :is(html:not(.bd-lp-open), html.bd-slide-l) :is(.bp-side, .bd-lp) { transform: translateX(calc(var(--slide) * (-100% - var(--cut)))); }
+  :is(html:not(.bd-sp-open), html.bd-slide-r) .bd-sp { transform: translateX(calc(var(--slide) * (100% + var(--cut)))); }
+  html.bd-resizing :is(.bp-side, .bd-lp, .bd-sp) { transition: none; }
+}
+@media (min-width: 601px) and (prefers-reduced-motion: reduce) { html :is(.bp-side, .bd-lp, .bd-sp) { transition: none !important; } }
 /* the doc's header heads the Brief (the right panel's), compact */
 .bd-sp-brief > .bd-head { max-width: none; padding: 6px 0 4px; }
 .bd-sp-brief > .bd-head h1 { margin: 6px 0 0; font-size: 17px; line-height: 1.3; letter-spacing: -.01em; }
@@ -2710,9 +2959,6 @@ html.bd-lp-open .bd-lp { transform: none; visibility: visible; transition: trans
 .bd-sp-brief .bp-sec + .bp-sec { margin-top: 18px; }
 .bd-sp-brief .bp-sec > h2 { font-size: 16px; }
 .bd-sp-brief .bd-meta { margin-top: 20px; }
-html.bd-ann-m-point .bd-sp-brief { cursor: var(--bd-elcur, crosshair) !important; }
-html.bd-ann-m-point .bd-sp-brief * { cursor: inherit !important; }
-html.bd-ann-m-select .bd-sp-brief *, html.bd-ann-m-select .bd-sp-brief { cursor: text !important; }
 .bd-scr-l { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
 .bd-scr-l button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; border: 0; border-radius: 10px; background: none; text-align: left; font: inherit; font-size: 13.5px; color: var(--fg); cursor: pointer; }
 .bd-scr-l button:hover { background: var(--hover); }
@@ -2726,8 +2972,7 @@ html.bd-ann-m-select .bd-sp-brief *, html.bd-ann-m-select .bd-sp-brief { cursor:
 .bd-scr-l .rc { flex: none; font-size: 11.5px; color: var(--fg-subtle); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .bd-scr-l .rc:empty { display: none; }
 /* a revision's extra lines: the screens it changed (designs), the comments it resolves */
-.bd-rv .rv-scr { margin: 6px 0 0; font-size: 12px; line-height: 1.45; color: var(--fg-muted); }
-.bd-rv .rv-scr b { font-weight: 600; color: var(--fg); }
+.rvx-l .rv-scr b { font-weight: 600; color: var(--fg); }
 /* Present: one screen on a dark stage */
 .bd-pres { position: fixed; inset: 0; z-index: 70; display: flex; flex-direction: column; align-items: center; background: oklch(14% 0.01 264); color: oklch(96% 0 0); }
 .bd-pres .box { flex: 1; min-height: 0; width: 100%; display: grid; place-items: center; padding-top: 28px; }
@@ -3207,6 +3452,13 @@ const SERVED = !SHARE && !SCREENS && /^https?:$/.test(location.protocol);
 // here renders, sets the theme or adds a class to <html>
 const PAGE_HTML = SERVED ? '' : '<!doctype html>\n' + document.documentElement.outerHTML;
 const QP = new URLSearchParams(location.search);
+// design variants for side-by-side review, by URL: ?v-more=a|b|c|d (a finding's More details), ?v-cmt=a|b|c (the
+// comment composer and its card). None: the current look. Set on <html> as data-v-*.
+const VAR = Object.fromEntries([['more', 'abcd'], ['cmt', 'abc']].map(([k, ok]) => {
+  const v = (QP.get('v-' + k) || '').toLowerCase();
+  return [k, v.length === 1 && ok.includes(v) ? v : ''];
+}));
+for (const [k, v] of Object.entries(VAR)) if (v) document.documentElement.dataset['v' + k[0].toUpperCase() + k.slice(1)] = v;
 // the page's file name, which its exports and copied commands go by: its URL's last segment; a shared page's <name>.html
 const pageFile = () => SHARE ? SHARE.name + '.html' : decodeURIComponent(location.pathname.split('/').pop() || '');
 const CUR = REVS[REVS.length - 1];
@@ -3916,26 +4168,31 @@ const REVIEW_OF = DOC_TYPE === 'review' && ['local', 'threads', 'post'].includes
 const SCREEN = IS_DECK ? 'slide' : IS_SITE ? 'page' : IS_LISTING ? 'shot' : 'screen';   // what the board's artboards are called on this page
 let BOARD = null;   // a design doc's board (renderBoard), once drawn
 /* ---------- the stripes: the panes' keys down each side ---------- */
-// Each pane has a key on a stripe (a phone: in the app bar). The left stripe holds the left pane's (LEFT); the right one
-// a key for each section of the right panel (SIDE adds them), then, at its foot, the theme. A key's tooltip names its
-// pane and its shortcut ([ or ]); a lit key's pane is open. The last pane opened wins (lastPane) where two can't both show.
-const stripeL = h('nav', { class: 'bd-stripe l', 'aria-label': 'Left pane' });
-const stripeR = h('nav', { class: 'bd-stripe r', 'aria-label': 'Right pane' }, h('span', { class: 'sp' }));
+// Each pane has a key on a stripe (a phone: in the app bar). The left stripe holds the left pane's (LEFT), then, at its
+// foot past a groove, the theme; the right one a key for each section of the right panel (SIDE adds them). A key's
+// tooltip names its pane and its shortcut ([ or ]); a lit key's pane is open. The last pane opened wins (lastPane) where
+// two can't both show.
+const themeG = h('span', { class: 'bd-groove', 'aria-hidden': 'true' });   // the left stripe's keys go before it
+const stripeL = h('nav', { class: 'bd-stripe l', 'aria-label': 'Left pane' }, themeG);
+const stripeR = h('nav', { class: 'bd-stripe r', 'aria-label': 'Right pane' });
 let lastPane = null;   // 'l' or 'r': the side opened last
 const PHONE_W = matchMedia('(max-width: 600px)');   // a phone: no stripes, the right panel a bottom sheet
 const stripeKey = (icon, label, keys, onclick) => { const k = tipped(h('button', { type: 'button', class: 'bd-sk', 'aria-label': label, 'aria-pressed': 'false', onclick }, ic(icon)), keys); k._tip = label; return k; };
 const RING_C = 106.81;   // a left key's ring (.bd-skr): its circumference, 2π × 17
-const themeBtn = stripeKey('moon', 'Switch light or dark theme', null, () => toggleTheme());
-themeBtn.removeAttribute('aria-pressed');
+// the theme: a vertical switch at the left tray's foot (role switch, "Dark theme", checked in dark): the sun at its top,
+// the moon at its foot, a raised round thumb on the current one; a click, Space or Enter turns it over (toggleTheme)
+const themeThumb = h('span', { class: 'th', 'aria-hidden': 'true' });
+const themeBtn = tipped(h('button', { type: 'button', class: 'bd-sk bd-thsw', role: 'switch', 'aria-label': 'Dark theme', 'aria-checked': 'false', onclick: () => toggleTheme() },
+  h('span', { class: 'end sun', 'aria-hidden': 'true' }, ic('sun')), h('span', { class: 'end moon', 'aria-hidden': 'true' }, ic('moon')), themeThumb), null);
 // a phone has no stripes: the theme is in the app bar's ⋯ (ARC), else a key of its own there
 const themeBk = h('button', { type: 'button', class: 'bd-tbtn bd-bk th', 'aria-label': 'Switch light or dark theme', onclick: () => toggleTheme() });
 function toggleTheme() { const t = isDark() ? 'light' : 'dark'; setTheme(t); store.set(THEME_KEY, t); paintTheme(); }
 const paintTheme = () => {
   const d = isDark();
-  themeBtn.replaceChildren(ic(d ? 'sun' : 'moon')); themeBk.replaceChildren(ic(d ? 'sun' : 'moon'));
+  themeBtn.setAttribute('aria-checked', String(d)); themeThumb.replaceChildren(ic(d ? 'moon' : 'sun')); themeBk.replaceChildren(ic(d ? 'sun' : 'moon'));
   themeBtn._tip = d ? 'Light theme' : 'Dark theme';
 };
-stripeR.append(themeBtn);
+stripeL.append(themeBtn);
 darkMQ.addEventListener?.('change', paintTheme);
 paintTheme();
 // The left pane: a doc's Contents (the rail); a board's Brief and its Screens, Pages, Slides or Listing, one at a time
@@ -3974,7 +4231,7 @@ const LEFT = (() => {
       const x = { ...s, ring, say: '' };
       x.key = stripeKey(s.icon, s.label, ['['], () => { if (open() && cur() === x.id) set(false, true); else show(x.id); });
       x.key.dataset.f = s.id; x.key.prepend(ring);
-      secs.push(x); stripeL.append(x.key);
+      secs.push(x); themeG.before(x.key);
     }
     barKey.replaceChildren(ic(sections[0].icon)); barKey.setAttribute('aria-label', sections.length > 1 ? 'Left panel' : sections[0].label);
     barKey.hidden = false;
@@ -4335,11 +4592,16 @@ const head = h('header', { class: 'bd-head', id: 'top' },
   DOC.subtitle && h('p', { class: 'bd-sub', html: inline(DOC.subtitle) }));
 NAME.paint();
 
-// the strips under the app bar: a doc page keeps its sticky revision strip in view (--rv-h); a design page's board
-// starts under every strip
+// the strips under the app bar (the lock strip, the archive strips, the revision strip, in that order from the top)
+// stick one under another; --rv-h is their height together, so the panes, the stripes and the page (a design page's
+// board) start under them
 function fitStrips() {
-  const bars = [...document.querySelectorAll('.bd-revbar')].filter(b => IS_DESIGN || getComputedStyle(b).position === 'sticky');
-  document.documentElement.style.setProperty('--rv-h', bars.reduce((n, b) => n + b.offsetHeight, 0) + 'px');
+  let at = 0;
+  for (const b of document.querySelectorAll('.bd-revbar')) {
+    b.style.top = `calc(var(--bar-h) + ${at}px)`;
+    if (IS_DESIGN || getComputedStyle(b).position === 'sticky') at += b.offsetHeight;
+  }
+  document.documentElement.style.setProperty('--rv-h', at + 'px');
 }
 addEventListener('resize', fitStrips);
 
@@ -4458,6 +4720,25 @@ function placeMeta() {
 const READ_W = 640, PAGE_PAD = 20;   // PAGE_PAD = .bd-shell side padding
 const root = document.documentElement;
 const cssPx = v => parseFloat(getComputedStyle(root).getPropertyValue(v)) || 0;
+// paneSlides: while a side pane opens or closes (html.bd-lp-open, bd-sp-open turn), html.bd-slide-l or -r keeps its
+// slide's transform on (CSS: --slide), until its --slide transition ends; an observer's microtask sets it before the
+// frame that starts the slide. Still and open, the pane has none
+(() => {
+  const was = { l: root.classList.contains('bd-lp-open'), r: root.classList.contains('bd-sp-open') }, timer = {};
+  const done = s => { clearTimeout(timer[s]); root.classList.remove('bd-slide-' + s); };
+  new MutationObserver(() => {
+    for (const s of ['l', 'r']) {
+      const on = root.classList.contains(s === 'l' ? 'bd-lp-open' : 'bd-sp-open');
+      if (on === was[s]) continue;
+      was[s] = on; root.classList.add('bd-slide-' + s);
+      clearTimeout(timer[s]); timer[s] = setTimeout(() => done(s), 600);   // no transition (reduced motion, a phone): still soon
+    }
+  }).observe(root, { attributes: true, attributeFilter: ['class'] });
+  addEventListener('transitionend', e => {
+    if (e.propertyName !== '--slide' || !e.target.matches) return;
+    if (e.target.matches('.bp-side, .bd-lp')) done('l'); else if (e.target.matches('.bd-sp')) done('r');
+  });
+})();
 let panelOpen = false;
 const DOCK_MIN = 1101;
 const stripeW = () => PHONE_W.matches ? 0 : cssPx('--stripe-w');
@@ -5405,7 +5686,7 @@ function renderChecklist(b, parent) {
         entryItem.details = on;
         if (on) body.removeAttribute('hidden'); else body.hidden = 'until-found';
         moreBtn.setAttribute('aria-expanded', String(on));
-        moreBtn.replaceChildren(ic('info'), on ? 'Hide details' : 'More details', ic(on ? 'up' : 'down'));
+        moreBtn.replaceChildren(...moreKids(on, detParts([it.detail], it.code, it.verify && !subIsCheck)));
         for (const m of entryItem.mviews || []) m.paintDet(on);
         if (on && entryItem.onOpen) entryItem.onOpen();   // a finding draws its code when its details first show (findingCode)
       };
@@ -5492,9 +5773,9 @@ function renderChecklist(b, parent) {
   if (inFindings) root.append(list);
   else root.append(h('div', { class: 'bp-cl-h' },
     ic(kind === 'decisions' ? 'help' : 'list'), h(parent ? 'h4' : 'h3', {}, b.title || 'Checklist'), ask, count,
-    h('span', { class: 'tools' }, acceptBtn, expandBtn,
+    h('span', { class: 'tools' }, acceptBtn, h('span', { class: 'bd-split' }, expandBtn,
       !parent && h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => copyText(checklistMd(entry), 'Copied checklist as Markdown') }, ic('copy'), 'Copy'),
-      !parent && !VIEW_ONLY && h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => { if (!confirm('Reset this checklist?')) return; resetChecklist(entry); } }, ic('reset'), 'Reset'))),
+      !parent && !VIEW_ONLY && h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => { if (!confirm('Reset this checklist?')) return; resetChecklist(entry); } }, ic('reset'), 'Reset')))),
     ...[cap, kind !== 'decisions' && bar, list].filter(Boolean));
   const entry = { b, items, root, list, count, bar, sideRow: null, parent, paintExpand, acceptBtn, kind };
   function update() {
@@ -5884,8 +6165,8 @@ if (!SHARE && /^https?:$/.test(location.protocol)) {
         h('span', { class: 't', html: 'This browser can\'t save yet. Open the link from <code>serve.py unlock</code> here (it works for an hour, in any browser).' }),
         h('span', { class: 'sp' }),
         h('button', { type: 'button', class: 'bp-btn', onclick: () => copyText('serve.py unlock', 'Copied: run it, then open the link it prints here') }, ic('copy'), 'Copy unlock command'))));
-      // a design page doesn't scroll: its board and panels start under every strip
-      if (IS_DESIGN) fitStrips();
+      // it sticks under the app bar, over the revision strip: the panes, the stripes and the page start under both
+      fitStrips();
     }
   }).catch(() => {});
 }
@@ -6092,12 +6373,12 @@ if (CHECKLISTS.length) {
   });
   // Copy progress and Reset: the reader's ticks, which a shared page has none of (VIEW_ONLY)
   tocWrap.append(h('div', { class: 'bd-rail-sec' }, h('h4', { class: 'bd-rail-h' }, 'Tracker'), h('div', { class: 'bp-prog' }, rows,
-    !VIEW_ONLY && h('div', { class: 'bp-side-tools' },
+    !VIEW_ONLY && h('div', { class: 'bp-side-tools' }, h('span', { class: 'bd-split' },
       h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => copyText(allChecklistsMd(), 'Copied progress as Markdown') }, ic('copy'), 'Copy progress'),
       h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => {
         if (!confirm('Reset all checklists in this document?')) return;
         CHECKLISTS.filter(c => !c.parent).forEach(resetChecklist);
-      } }, ic('reset'), 'Reset')))));
+      } }, ic('reset'), 'Reset'))))));
   CHECKLISTS.forEach(c => c.update());
 }
 Object.values(DIFFS).forEach(initDiff);
@@ -6882,6 +7163,26 @@ function mergedExcerpt(d, c, f) {
   if (!x) ex.append(h('div', { class: 'bd-cmw top' }, commentCard(d, c, [], true)));
   return ex;
 }
+// a finding's More details key (.pv-more): its words and icons for the look picked by ?v-more (VAR.more); B and C name
+// the parts it reveals – the bold leads of the details' paragraphs (Reviewer, Reasoning, Fix), Code, Check
+function detParts(mds, code, check) {
+  const out = [];
+  for (const s of mds) for (const m of String(s || '').matchAll(/(?:^|\n\s*\n)\s*\*\*([^*\n:]{1,28}):\*\*/g)) out.push(m[1].replace(/^My /, '').replace(/^./, c => c.toUpperCase()));
+  if (code) out.push('Code');
+  if (check) out.push('Check');
+  return [...new Set(out)].slice(0, 4);
+}
+function moreKids(on, parts) {
+  const word = on ? 'Hide details' : 'More details', chev = ic('down', 'cv');
+  const pts = parts.length ? h('span', { class: 'pts' }, parts.join(' · ')) : null;
+  switch (VAR.more) {
+    case 'a': return [ic('info'), word, chev];
+    case 'b': return [ic('info'), h('span', { class: 'w' }, word), pts, chev];
+    case 'c': return [chev, h('span', { class: 'w' }, 'Details'), pts, h('span', { class: 'hint' }, on ? 'Hide' : 'Show')];
+    case 'd': return [h('span', { class: 'k', 'aria-hidden': 'true' }, ic(on ? 'up' : 'info')), word];
+    default: return [ic('info'), word, ic(on ? 'up' : 'down')];
+  }
+}
 // a finding's full row: tick or decision dot, title, (closed and answered: ✓ the pick), size and a chevron; open, More
 // details (the comment, the reviewer's point, the reasoning, the fix and its check), its code, the option rows
 // (Custom and Need more details last), then its conversation and reply box. A decision opens and closes, and shows
@@ -6916,7 +7217,7 @@ function mergedRow(x, extra, code) {
   m.paintDet = on => {
     m.det = on; if (!dets) return;
     dets.hidden = !on; more.setAttribute('aria-expanded', String(on));
-    more.replaceChildren(ic('info'), on ? 'Hide details' : 'More details', ic(on ? 'up' : 'down'));
+    more.replaceChildren(...moreKids(on, detParts([extra, it.detail], it.code, it.verify && it.sub)));
   };
   // a decision is the finding's (it opens with the finding, and opening it is where the reader is); a progress row its own
   const toggle = () => { if (x.fd) { if (!x.open) holdFinding(x); x.setOpen(!x.open); } else m.paintOpen(!m.open); paintFindings(); };
@@ -9089,6 +9390,20 @@ function exportMenu(exports, run, title, up, check, word = 'Export to…') {
   const pop = menuPop(wrap, btn, menu, () => items, { onOpen: paintCheck });
   return wrap;
 }
+// a segmented control in a narrow row (a side panel's filter or tabs): where its segments don't fit (a word or a count
+// cut), the row gets .narrow and shows its stand-in instead (.bd-segalt: a select of the same choices, the current
+// one and its count on the key) until there is room again; measured on every resize of the row and when asked (the
+// counts change: the returned function)
+function fitSeg(row, seg) {
+  const check = () => {
+    if (!row.isConnected) return;
+    row.classList.remove('narrow');
+    const over = seg.scrollWidth > seg.clientWidth + 1 || [...seg.children].some(b => b.scrollWidth > b.clientWidth + 1);
+    row.classList.toggle('narrow', over);
+  };
+  if ('ResizeObserver' in window) new ResizeObserver(() => check()).observe(row);
+  return check;
+}
 // a select, drawn as Export to…'s key and menu (a WAI-ARIA select-only listbox): the button shows the current
 // option's label (label while none is current) and a chevron, the popover its options [{value, label, hint, title,
 // icon, disabled}] with the current one ticked. A click, Enter, Space, ↓ or ↑ opens it on the current option; ↑ ↓ Home End
@@ -9621,7 +9936,9 @@ function renderBoard(b) {
   const abs = boardAbs(b), themes = (Array.isArray(b.themes) ? b.themes : []).filter(t => t && typeof t.id === 'string');
   const B = BOARD = { b, abs, k: 1, tx: 0, ty: 0, mode: 'view', sel: null, sketch: false, reduced: REDUCE, paused: false, theme: null, touched: false, lp: false,
     frames: new Map(), ghosts: new Map(), twins: new Map(), twin: false, live: new Set(), rqs: new Map(), rq: null, variants: null };
-  const vp = h('div', { class: 'bd-bvp', style: `--gut: ${VAR_GUT}px` });
+  // the board's world: a fixed, empty box in board px that pans and zooms with the screens; a Region or Pen mark drawn
+  // beside them anchors to it (MARKUP: `board`), so it stays where it was drawn on the board
+  const vp = h('div', { class: 'bd-bvp', style: `--gut: ${VAR_GUT}px` }, h('div', { class: 'bd-world', 'aria-hidden': 'true' }));
   const stage = h('div', { class: 'bd-board', tabindex: 0, role: 'region', 'data-m': 'view',
     'aria-label': (b.title || 'Design board') + '. Drag to pan; pinch or Ctrl + scroll to zoom; F focuses the selected screen, 0 fits them all.' }, vp);
   const str = (v, n = 200) => typeof v === 'string' ? v.slice(0, n) : '';
@@ -11037,6 +11354,21 @@ function renderBoard(b) {
     if (el) { showBox(boxOf([{ a: {}, p: el._box }]), true, 2); return true; }
     return false;
   };
+  // a Region's or drawing's place for the agent: the box (fractions {x0, y0, x1, y1} of its anchor: the board's world,
+  // .bd-world, or a screen) in board px, and on each screen or page it falls on, its part in that frame's own px
+  const WORLD = { x: -10000, y: -10000, w: 20000, h: 20000 };   // .bd-world's box in board px
+  B.where = (key, e) => {
+    const m = /^(board)(?::[^/]*)?$|^(artboard):([^/]+)$/.exec(key || ''); if (!m || !e || !isFinite(e.x1)) return null;
+    m[1] = m[1] || m[2]; m[2] = m[3];
+    const f = m[1] === 'artboard' && B.frames.get(m[2]), o = m[1] === 'board' ? WORLD : f && { x: f.p.x, y: f.p.y, w: f.p.w, h: f.p.h };
+    if (!o) return null;
+    const r = Math.round, b = { x: o.x + e.x0 * o.w, y: o.y + e.y0 * o.h, w: (e.x1 - e.x0) * o.w, h: (e.y1 - e.y0) * o.h };
+    const on = [...B.frames.values()].filter(x => b.x < x.p.x + x.p.w && b.x + b.w > x.p.x && b.y < x.p.y + x.p.h && b.y + b.h > x.p.y).map(x => {
+      const l = Math.max(b.x, x.p.x), t = Math.max(b.y, x.p.y);
+      return { artboard: x.a.id, x: r(l - x.p.x), y: r(t - x.p.y), w: r(Math.min(b.x + b.w, x.p.x + x.p.w) - l), h: r(Math.min(b.y + b.h, x.p.y + x.p.h) - t) };
+    });
+    return { board: { x: r(b.x), y: r(b.y), w: r(b.w), h: r(b.h) }, on };
+  };
 
   /* compare view: artboards badged New, Changed (its JSON or its screen's hash), Moved (only its x, y: its old place
      outlined) or Removed (a ghost at its old place); links New, Changed (target, kind or label) or Removed (a ghost arrow) */
@@ -11141,7 +11473,7 @@ function renderBoard(b) {
     lp = h('aside', { class: 'bd-lp', 'aria-label': Screens, inert: true });
     shell.prepend(lp);
     placeMeta();
-    boardLeft({ lp, brief: B.brief, label: Screens, icon: IS_DECK ? 'present' : IS_SITE ? 'globe' : 'phone', count: abs.length, oldKey: LP_KEY, apply: applyLp,
+    boardLeft({ lp, brief: B.brief, label: Screens, icon: IS_DECK ? 'present' : IS_SITE ? 'layers' : 'phone', count: abs.length, oldKey: LP_KEY, apply: applyLp,
       own: h('div', { class: 'bd-lp-pane bd-lp-ui', id: 'bd-lp-screens' }, lpList, h('p', { class: 'hint' }, IS_SITE
         ? 'Click a page to focus it, a section to go to it.' + (VIEW_ONLY ? '' : ' Element (C) pins a comment on what you point at; a double-click on text changes it.') + ' Present, in the toolbar, is where you click through the pages.'
         : `Click a ${SCREEN} to focus it. Double-click one on the board, or press F, to do the same${VIEW_ONLY ? '.' : '; a double-click on its text changes the text.'}`)) });
@@ -13427,8 +13759,7 @@ const SIDE = (() => {
     x.key.setAttribute('aria-controls', 'bd-sp'); x.key.dataset.f = x.id; x.key.classList.toggle('old', !!x.old); x.key.append(x.n);
     secs.push(x); secs.sort((a, b) => a.at - b.at);
     tabs.replaceChildren(...secs.map(y => y.tab));
-    const end = stripeR.querySelector('.sp');
-    for (const y of secs) stripeR.insertBefore(y.key, end);
+    stripeR.append(...secs.map(y => y.key));
     el.append(s.body); if (!el.isConnected) document.body.append(el);
     sec = secs.find(y => !y.later) || secs[0]; layout(); paint();
   }
@@ -13552,52 +13883,51 @@ function screensChanged(prev, r) {
   for (const [id, x] of a) if (!b.some(y => y.id === id)) out.push(`${x.title || id} (removed)`);
   return out;
 }
-// the Revisions tab of the right panel: the Compare picker (from the second revision), in compare view
-// the marked changes, then every revision, newest first
+// the Revisions tab of the right panel, in the toolbars' language: Compare (from the second revision) as one split pill,
+// the two revisions as flat selects with an arrow between, a groove, then the dock's blue Compare; in compare view the
+// marked changes; then the history, newest first, as a timeline: each revision's number on a round key down one rail
+// (the shown one filled blue, the base in the warning's tint), its title, chips and date, its notes, and at the row's
+// right end Changes from N | View as one split pill. One grid (28 px keys, 12 px gaps) and one type scale.
 function buildRevTab() {
   const sec = (title, ...kids) => h('div', { class: 'bd-rail-sec' }, h('h4', { class: 'bd-rail-h' }, title), kids);
   const body = h('div', { class: 'bd-rvr', 'aria-label': 'Revisions' });
+  const many = REVS.length > 1;
+  let chgSec = null;
   if (BASE) {
     const n = { add: 0, mod: 0, del: 0 }; CHG.forEach(c => n[c.kind]++);
     const kinds = Object.keys(n).filter(k => n[k]).flatMap((k, i) => [i ? ' · ' : null, h('span', { class: 'k ' + k }, `${n[k]} ${{ add: 'new', mod: 'changed', del: 'removed' }[k]}`)]);
-    chgBtns = CHG.map((c, i) => h('button', { type: 'button', 'aria-current': 'false', onclick: () => showChg(i) }, chgTag(c.kind), h('span', { class: 't' }, plain(c.label))));
-    body.append(sec('Changes', h('p', { class: 'bd-rvr-sum' }, h('b', {}, `${BASE.rev} → ${VIEW.rev}`), h('span', {}, kinds.length ? kinds : 'no differences')),
-      h('ol', { class: 'bd-chl', 'aria-label': 'Changes, in page order' }, chgBtns.length ? chgBtns.map(b => h('li', {}, b)) : h('li', { class: 'none' }, 'Nothing changed between these revisions.'))));
+    chgBtns = CHG.map((c, i) => h('button', { type: 'button', class: c.kind, 'aria-current': 'false', onclick: () => showChg(i) }, chgTag(c.kind), h('span', { class: 't' }, plain(c.label))));
+    chgSec = sec('Changes', h('p', { class: 'bd-rvr-sum' }, h('b', {}, `${BASE.rev} → ${VIEW.rev}`), h('span', {}, kinds.length ? kinds : 'no differences')),
+      h('ol', { class: 'bd-chl', 'aria-label': 'Changes, in page order' }, chgBtns.length ? chgBtns.map(b => h('li', {}, b)) : h('li', { class: 'none' }, 'Nothing changed between these revisions.')));
   }
+  // the pickers show the revision, each option its month and day, its title the full date
+  const short = d => d && /^\d{4}-\d\d-\d\d$/.test(d) ? d.slice(5) : d || '';
+  const sel = (def, label) => selectMenu({ label, cls: 'rv-sel', float: true, value: def ? def.rev : null,
+    options: REVS.map(r => ({ value: r.rev, title: r.date || null, label: revName(r), hint: short(r.date) || null })) });
+  const from = sel(BASE || (OLD ? VIEW : REVS[REVS.length - 2]), 'Compare from'), to = sel(BASE ? VIEW : CUR, 'Compare with');
+  const go = () => { const a = REVS.find(r => r.rev === from.value), b = REVS.find(r => r.rev === to.value); if (a && b && a !== b) goRev(revUrl(b, a)); else toast('Pick two different revisions'); };
+  const cmpBar = many && h('div', { class: 'rv-cmpb', role: 'group', 'aria-label': 'Compare two revisions' },
+    from, h('span', { class: 'ar', 'aria-hidden': 'true' }, ic('next')), to,
+    h('button', { type: 'button', class: 'go', onclick: go }, ic('split'), h('span', {}, 'Compare')));
+  const note = h('p', { class: 'bd-rvr-note' }, many
+    ? VIEW_ONLY ? 'Earlier revisions show the doc as it was then.' : 'Earlier revisions are read-only: ticks, picks and comments made there aren\'t saved.'
+    : 'Only one revision so far. When the agent revises this doc, earlier revisions and Compare appear here.');
   const items = [...REVS].reverse().map(r => {
     const prev = REVS[REVS.indexOf(r) - 1], notes = r.doc.changes || [], cmp = !!prev && BASE === prev && VIEW === r;
     const scr = IS_DESIGN && prev ? screensChanged(prev, r) : [];
-    const sub = notes[0] ? plain(notes[0]) : (r.date || (prev ? '' : 'First revision'));
-    const li = h('li', { class: 'bd-rv' + (r === VIEW ? ' on' : '') + (r === BASE ? ' base' : '') });
-    const head = h('button', { type: 'button', class: 'rv-h', 'aria-expanded': 'false', title: notes.map(plain).join('\n') || null,
-      onclick: () => { const o = li.classList.toggle('open'); head.setAttribute('aria-expanded', String(o)); } },
+    const chg = prev && h('a', { class: 'bp-btn ghost rv-chg', href: revUrl(r, prev), target: REV_TARGET, 'aria-current': cmp ? 'page' : null }, ic('split'), `Changes from ${prev.rev}`);
+    const view = (r !== VIEW || BASE) && h('a', { class: 'bp-btn ghost', href: revUrl(r, null), target: REV_TARGET }, ic('eye'), 'View');
+    const chips = [r.current && h('span', { class: 'bp-chip ok' }, 'current'), r === VIEW && h('span', { class: 'bp-chip info' }, 'shown'), r === BASE && h('span', { class: 'bp-chip todo' }, 'base')];
+    return h('li', { class: 'rvx-i' + (r === VIEW ? ' on' : '') + (r === BASE ? ' base' : '') },
       h('span', { class: 'rv-n', 'aria-hidden': 'true' }, r.rev),
-      h('span', { class: 'rv-tt' }, h('b', {}, `Revision ${r.rev}`), h('span', { class: 's', html: notes[0] ? inline(notes[0]) : esc(sub) })),
-      ic('chev', 'chev'));
-    li.append(head,
-      h('div', { class: 'rv-more' },
-        h('div', { class: 'rv-meta' }, r.date && h('span', {}, r.date), r.built && h('span', {}, 'built ' + String(r.built).slice(0, 16).replace('T', ' ')),
-          r.current && h('span', { class: 'bp-chip ok' }, 'current'), r === VIEW && h('span', { class: 'bp-chip info' }, 'shown'), r === BASE && h('span', { class: 'bp-chip todo' }, 'base')),
-        notes.length ? h('ul', { class: 'rv-notes' }, notes.map(t => h('li', { html: inline(t) }))) : h('p', { class: 'rv-meta' }, 'No notes for this revision.'),
+      h('div', { class: 'rv-b' },
+        h('div', { class: 'hd' }, h('b', {}, `Revision ${r.rev}`), ...chips, h('span', { class: 'dt', title: r.date || null }, short(r.date))),
+        notes.length ? h('ul', { class: 'rv-notes' }, notes.map(t => h('li', { html: inline(t) }))) : h('p', { class: 'rv-none' }, prev ? 'No notes for this revision.' : 'First revision'),
         scr.length > 0 && h('p', { class: 'rv-scr' }, h('b', {}, `${IS_DECK ? 'Slides' : 'Screens'} changed: `), scr.join(', ')),
-        Array.isArray(r.doc.resolves) && r.doc.resolves.length > 0 && h('p', { class: 'rv-scr' }, `Resolves ${r.doc.resolves.length} comment${r.doc.resolves.length > 1 ? 's' : ''}`)),
-      h('div', { class: 'rv-act' },
-        (r !== VIEW || BASE) && h('a', { class: 'bp-btn', href: revUrl(r, null), target: REV_TARGET }, ic('eye'), 'View'),
-        prev && h('a', { class: 'bp-btn', href: revUrl(r, prev), target: REV_TARGET, 'aria-current': cmp ? 'page' : null }, ic('split'), `Changes from ${prev.rev}`)));
-    return li;
+        Array.isArray(r.doc.resolves) && r.doc.resolves.length > 0 && h('p', { class: 'rv-scr' }, `Resolves ${r.doc.resolves.length} comment${r.doc.resolves.length > 1 ? 's' : ''}`),
+        h('span', { class: 'bd-split rv-act' }, chg, view)));
   });
-  // the picker shows month and day, each option's title the full date
-  const sel = (def, label) => selectMenu({ label, cls: 'rv-sel', float: true, value: def ? def.rev : null, options: REVS.map(r => ({ value: r.rev, title: r.date || null,
-    label: revName(r) + (r.date ? ` · ${/^\d{4}-\d\d-\d\d$/.test(r.date) ? r.date.slice(5) : r.date}` : '') })) });
-  const from = sel(BASE || (OLD ? VIEW : REVS[REVS.length - 2]), 'Compare from'), to = sel(BASE ? VIEW : CUR, 'Compare with');
-  const go = () => { const a = REVS.find(r => r.rev === from.value), b = REVS.find(r => r.rev === to.value); if (a && b && a !== b) goRev(revUrl(b, a)); else toast('Pick two different revisions'); };
-  const cmpSec = sec('Compare', h('div', { class: 'bd-rv-ft' }, h('div', { class: 'row' }, from, ic('next'), to),
-    h('button', { type: 'button', class: 'bp-btn primary', onclick: go }, ic('split'), 'Compare')));
-  if (REVS.length > 1) body.prepend(cmpSec);
-  body.append(sec('Revisions', h('p', { class: 'bd-rvr-note' }, REVS.length > 1
-    ? VIEW_ONLY ? 'Earlier revisions show the doc as it was then.' : 'Earlier revisions are read-only: ticks, picks and comments made there aren\'t saved.'
-    : 'Only one revision so far. When the agent revises this doc, earlier revisions and Compare appear here.'),
-    h('ol', { class: 'bd-rvs' }, items)));
+  body.append(...[cmpBar && sec('Compare', cmpBar), chgSec, sec('History', note, h('ol', { class: 'rvx-l' }, items))].filter(Boolean));
   return body;
 }
 // a revision's link or change mark: show the Revisions section, or hide the panel when it shows it
@@ -13627,17 +13957,17 @@ if (REVS.length >= 1 && REVS[0].rev && !VIEW_ONLY) {
     compareDocs(BASE.doc, VIEW.doc);
     const n = { add: 0, mod: 0, del: 0 }; CHG.forEach(c => n[c.kind]++);
     revPos = h('span', { class: 'pos', 'aria-live': 'polite' }, CHG.length === 1 ? '1 change' : `${CHG.length} changes`);
-    const step = (icon, label, d, keys) => { const k = tipped(keyBtn('rd', icon, label, { disabled: !CHG.length }, () => gotoChg(d)), keys); k._tip = label; return k; };
+    const step = (icon, label, d, keys) => { const k = tipped(keyBtn('go st', icon, label, { disabled: !CHG.length }, () => gotoChg(d)), keys); k._tip = label; return k; };
     const doneUrl = revUrl(VIEW, null);
     // a website's pages: Side by side or Single, beside the change keys
     const twinKeys = BOARD && BOARD.twinSeg ? [BOARD.twinSeg] : [];
-    // no tray: ↑ and ↓ as round raised keys, then one blue split button, as the Updated strip's: the count | ×
-    const leave = tipped(keyBtn('go x', 'x', 'Leave compare view', {}, () => goRev(doneUrl)), ['Esc']); leave._tip = 'Leave compare view';
+    // no tray: one blue split button, ↑ | the count | ↓, then × as a round raised key
+    const leave = tipped(keyBtn('rd', 'x', 'Leave compare view', {}, () => goRev(doneUrl)), ['Esc']); leave._tip = 'Leave compare view';
     strip('cmp', ic('split'), h('span', { class: 't' }, h('b', {}, `${revName(BASE)} → ${VIEW.rev}`), ': ',
       CHG.length ? [n.add > 0 && h('span', { class: 'k add' }, `${n.add} new`), n.mod > 0 && h('span', { class: 'k mod' }, `${n.mod} changed`), n.del > 0 && h('span', { class: 'k del' }, `${n.del} removed`)] : 'no differences'),
       h('div', { class: 'bd-cmpk', role: 'toolbar', 'aria-label': 'Compare revisions' },
-        step('up', 'Previous change', -1, ['K', '↑']), step('down', 'Next change', 1, ['J', '↓']), twinKeys,
-        h('div', { class: 'bd-updk' }, h('span', { class: 'bd-key go lbl' }, ic('split'), revPos), leave)));
+        twinKeys,
+        h('div', { class: 'bd-updk' }, step('up', 'Previous change', -1, ['K', '↑']), h('span', { class: 'bd-key go lbl' }, ic('split'), revPos), step('down', 'Next change', 1, ['J', '↓'])), leave));
     // Esc leaves; j/↓ and k/↑ step, unless typing, on a focused drawing, or a drawer or sheet is open (Esc closes that first)
     document.addEventListener('keydown', e => {
       if (e.defaultPrevented || e.isComposing || e.metaKey || e.ctrlKey || e.altKey || document.querySelector('dialog[open]')) return;
@@ -13815,7 +14145,7 @@ async function doApprove() {
 // after a plan's, design's or website's Request changes, the header says so for this revision
 function changesSent(p) { if (APPROVABLE) { store.set(PLAN_KEY, JSON.stringify({ rev: p.rev, state: 'changes', at: p.at })); paintPlan(); } }
 // none of these on a shared page (VIEW_ONLY): it has no tray, and sends nothing
-if (!OLD && !BASE && !VIEW_ONLY) {
+if (!OLD && !VIEW_ONLY) {
   if (APPROVABLE) TRAY_END.push(approveKey);
   // a presentation: Present (BOARD.present: from the selected slide)
   else if (IS_DECK) { const k = tipped(keyBtn('txt present', 'present', 'Present', {}, () => BOARD && BOARD.present(), h('span', { class: 't' }, 'Present'))); k._tip = 'Present the slides from the selected one (← →, N: notes, Esc leaves)'; TRAY_END.push(k); }
@@ -13861,8 +14191,8 @@ function sharedThreads() {
 // `row:<section>/<block>/<row>`, `line:<diff>/<path>:<n>`, ...), and keeps its ancestors' keys, so a
 // mark whose element is hidden (a collapsed row, another diff file, a closed system) sits on the
 // nearest visible ancestor. Positions are fractions of the element's box, so marks follow reflow,
-// width changes and canvas zoom. Notes belong to the current revision: no toolbar on earlier
-// revisions or in compare view. Send answers never carries these. This carries the decision picks and item comments of a
+// width changes and canvas zoom. Notes belong to the current revision: no toolbar on earlier revisions (a compare view
+// showing the current one has it). Send answers never carries these. This carries the decision picks and item comments of a
 // plan, design, presentation, website or listing (PICKS_WITH_CHANGES: there is no Send answers there; on an approvable
 // one they also go with Approve), and on other pages only the "Need more details" items (itemsPending counts what has not gone yet).
 const MARKUP = (() => {
@@ -13901,7 +14231,7 @@ const MARKUP = (() => {
     // a sent comment's thread: the reader's follow-ups ({md, rev, at, files?}) and the one waiting in its reply box
     // (`draft`, `draftFiles`); `files`: the comment's own
     && (a.thread == null || Array.isArray(a.thread) && a.thread.length <= 200 && a.thread.every(okMsg)) && (a.draft == null || typeof a.draft === 'string')
-    && (a.files == null || okFiles(a.files)) && (a.draftFiles == null || okFiles(a.draftFiles));
+    && (a.files == null || okFiles(a.files)) && (a.draftFiles == null || okFiles(a.draftFiles)) && (a.seen == null || capStr(a.seen, 40));
   const skipBad = (where, v) => { console.warn(`bluedoc: skipped a stored comment the page can't show (${where})`, v); return false; };
   let saved = store.keys(KEY + ':').map(k => k.slice(KEY.length + 1));
   let list = saved.map(id => [id, store.get(annKey(id))]).map(([id, s]) => [id, s, parse(s)])
@@ -13956,7 +14286,12 @@ const MARKUP = (() => {
   const TYPE_IC = { pin: 'msg', text: 'type', draw: 'pencil', region: 'region', general: 'msgsq', link: 'route', layout: 'grid', listing: 'grid', element: 'penline' };
   const TYPE_WORD = { pin: 'pin', text: 'text', draw: 'drawing', region: 'region', general: 'general', link: 'link draft', layout: 'layout draft', listing: 'listing draft', element: 'element draft' };
   const excerpt = a => a.type === 'text' ? a.quote : isShape(a) && a.targets && a.targets.length ? a.targets.map(t => t.text).filter(Boolean).join(' / ') : a.target.text;
-  const pub = a => ({ id: a.id, type: a.type, note: followUp(a) ? String(a.draft || '').trim() : a.note, ...filesJson(noteFiles(a)), target: a.target, ...(isShape(a) ? { targets: a.targets || [a.target] } : {}),
+  // a region or drawing: its box as fractions of its target's box [x, y, w, h]; on a board also where that is in board
+  // px and on each screen or page it covers (BOARD.where), so the agent knows the spot, not only the key
+  const shapeBox = a => { const e = extent(a); return isFinite(e.x1) ? [e.x0, e.y0, e.x1 - e.x0, e.y1 - e.y0].map(v => Math.round(v * 1e6) / 1e6) : null; };
+  const shapePlace = a => isShape(a) && BOARD && BOARD.where ? BOARD.where(a.target.key, extent(a)) : null;
+  const pub = a => ({ id: a.id, type: a.type, note: followUp(a) ? String(a.draft || '').trim() : a.note, ...filesJson(noteFiles(a)), target: a.target,
+    ...(isShape(a) ? { targets: a.targets || [a.target], box: shapeBox(a), ...(shapePlace(a) ? { where: shapePlace(a) } : {}) } : {}),
     ...(a.type === 'text' ? { quote: a.quote } : {}), ...(a.type === 'link' ? { link: a.link } : {}), ...(a.type === 'layout' ? { layout: a.layout } : {}), ...(a.type === 'listing' ? { listing: a.listing } : {}),
     ...(a.type === 'element' ? { element: a.element } : {}), rev: a.rev, at: a.at });
   // the new message: the comment, or its follow-up; and its files
@@ -13965,6 +14300,24 @@ const MARKUP = (() => {
   // the agent's replies to a pin or general comment (the doc's `threads`), and the comment's conversation after its note
   const annReplies = a => DOC.threads && typeof DOC.threads === 'object' && Array.isArray(DOC.threads[a.id]) ? DOC.threads[a.id] : [];
   const annConvo = a => convo(a.thread, annReplies(a));
+  // what the agent did last on a comment: the rev of its newest reply, or of the revision that resolved it. `seen`: the
+  // rev of the last one the reader saw (the card in view in the panel a second, or opened). Newer: the card is
+  // highlighted and its filter tab has a dot. A comment without `seen` takes it on load: the agent's newest rev, or,
+  // when that came after the reader's last visit (SEEN_REV), that visit's rev, so it stays new until seen.
+  const agentRev = a => {
+    const rs = annReplies(a).filter(okReply).map(m => String(m.rev));
+    if (a.resolvedBy === 'agent' && a.resolvedRev) rs.push(String(a.resolvedRev));
+    return rs.sort((x, y) => revOrd(x) - revOrd(y)).at(-1) || null;
+  };
+  const unseen = a => !RO && !OLD && a.seen != null && !!agentRev(a) && revOrd(agentRev(a)) > revOrd(a.seen);
+  if (!RO && !OLD) {
+    let seenSet = false;
+    for (const a of list) {
+      const r = a.seen == null && agentRev(a); if (!r) continue;
+      a.seen = SEEN_REV && SEEN_REV !== CUR.rev && revOrd(SEEN_REV) < REVS.length && revOrd(r) > revOrd(SEEN_REV) ? SEEN_REV : r; seenSet = true;
+    }
+    if (seenSet) save();
+  }
   // a comment's message in the Markdown, "Change:" (a follow-up: "Follow-up:"), its files, then the agent's latest reply and the command that answers it
   const msgMd = (a, word, indent) => `${followUp(a) ? 'Follow-up' : word}:` + (noteText(a) ? ' ' + noteText(a).split('\n').join('\n' + indent) : '') + filesMd(noteFiles(a), indent) + replyMd(`ann:${a.id}`, annReplies(a), indent, a.id);
   // the key `patch` takes, as changes.json has it; a drawing or region over several parts names each part's key
@@ -13974,6 +14327,12 @@ const MARKUP = (() => {
   // a website pin also says where to edit (its section's source hints, else its page's) and the width it was made at
   const siteMd = t => [Number.isInteger(t.bp) && `   At: ${t.bp} px wide`,
     Array.isArray(t.source) && t.source.length && `   Source: ${t.source.filter(s => typeof s === 'string').map(s => '`' + s.replace(/`/g, '') + '`').join(', ')}`].filter(Boolean);
+  // a board region's or drawing's place: board px, and its part on each screen or page under it, in that frame's px
+  const whereMd = a => {
+    const w = shapePlace(a); if (!w) return [];
+    const bx = b => `x ${b.x}, y ${b.y}, ${b.w} × ${b.h} px`;
+    return [`   Where: on the board at ${bx(w.board)}` + (w.on.length ? '; ' + w.on.map(o => `on \`artboard:${o.artboard}\` at ${bx(o)}`).join('; ') : '; beside the screens')];
+  };
   // general comments first, under General; then the page comments, numbered
   function changesMd(items = pending()) {
     const gen = items.filter(isGeneral), pg = items.filter(a => !isGeneral(a) && !isDraft(a)), dr = items.filter(isDraft), parts = [];
@@ -13981,7 +14340,7 @@ const MARKUP = (() => {
     if (gen.length && pg.length) parts.push('## On the page');
     if (pg.length) parts.push(pg.map((a, i) => {
       const ex = cut(excerpt(a), 200);
-      return [headMd(a, i), ex && `   > ${ex}`, ...siteMd(a.target), ...(BOARD && BOARD.pinMd ? BOARD.pinMd(a) : []),
+      return [headMd(a, i), ex && `   > ${ex}`, ...siteMd(a.target), ...whereMd(a), ...(BOARD && BOARD.pinMd ? BOARD.pinMd(a) : []),
         '   ' + msgMd(a, 'Change', '   ')].filter(Boolean).join('\n');
     }).join('\n\n'));
     // a board's drafts: one line each (an element draft adds where to make it: BOARD.draftLines), then the `patch`
@@ -14012,12 +14371,14 @@ const MARKUP = (() => {
     const items = pending(), ord = [...items.filter(isGeneral), ...items.filter(a => !isGeneral(a))];
     return { annotations: ord.map(pub), notes: ord.map((a, i) => {
       const ex = cut(excerpt(a), 200);
-      return [headMd(a, i), ex && `   > ${ex}`, ...siteMd(a.target), ...(BOARD && BOARD.pinMd ? BOARD.pinMd(a) : []), '   ' + msgMd(a, 'Note', '   ')].filter(Boolean).join('\n');
+      return [headMd(a, i), ex && `   > ${ex}`, ...siteMd(a.target), ...whereMd(a), ...(BOARD && BOARD.pinMd ? BOARD.pinMd(a) : []), '   ' + msgMd(a, 'Note', '   ')].filter(Boolean).join('\n');
     }).join('\n\n') + (s => s && '\n' + s.trimEnd())(replyCmdsMd(ord.map(a => replyMd(`ann:${a.id}`, [], '', a.id)).join(''))) };
   }
   const api = { all: () => JSON.parse(JSON.stringify(list)), payload, approvalNotes, annotate: () => null, setMode: () => false, paint: () => {}, flush: () => {}, markSent: () => {},
     comments: () => ({ open: false, available: false }), pinFrame: () => null, addFrame: () => null, relayout: () => {}, openIfWaiting: () => {}, cancelDraft: () => false };
-  if (OLD || BASE) return api;
+  // an earlier revision (also compared against another) is read-only; a compare view showing the current one comments
+  // as the page does
+  if (OLD) return api;
   // a shared page (VIEW_ONLY) has no tray, tools, marks or composer; its Comments tab lists the doc's own threads
   if (VIEW_ONLY) { const n = sharedThreads(); api.comments = () => ({ open: SIDE.shows('comments'), available: n > 0 }); return api; }
 
@@ -14031,19 +14392,20 @@ const MARKUP = (() => {
     media: '.bp-media', compare: '.bp-cmpr-side[data-side]', card: '.bp-card', para: '.bp-text p, .bp-text li', artboard: '.bd-ab[data-ab], .bd-lst-shot[data-ab]', frame: '.bd-rq[data-key]', link: '.bd-lnk[data-link]',
     field: '.bd-lfield[data-field]',
     item: '.bp-cl-item[id], .bp-cl-item[data-item]', block: '.bp-cl-block, .bp-block[data-bk]', heading: '.bp-sec > h2', lead: '.bp-sec > .bp-lead', section: 'section.bp-sec[id]',
-    tldr: '.bd-tldr-card', header: '.bd-head', status: '.bd-meta' };
+    tldr: '.bd-tldr-card', header: '.bd-head', status: '.bd-meta', board: '.bd-world' };
   const KIND = { line: 'Code line', comment: 'Review comment', row: 'Table row', node: 'Drawing part', step: 'Plan step', file: 'File', media: 'Media', compare: 'Compare side',
     card: 'Card', para: 'Paragraph', artboard: 'Screen', frame: 'Requested frame', link: 'Link', field: 'Store text', item: 'Checklist item', block: 'Block', heading: 'Section title', lead: 'Section lead', section: 'Section',
-    tldr: 'TL;DR', header: 'Header', status: 'Status', doc: 'Page' };
+    tldr: 'TL;DR', header: 'Header', status: 'Status', board: 'Board', doc: 'Page' };
   const TYPES = Object.keys(SEL), ANY = Object.values(SEL).join(', ');
   const CLIPS = '.bd-pane, .bp-stage, .bp-table-wrap, .bp-side-b, .bd-board, .bd-lp-pane, .bd-sp-brief, .bd-mx > .bd-code, .bd-lst-main, .bd-lst-tiles';   // inner scrollers that clip what they hold
   const typeOf = el => el === shell ? 'doc' : TYPES.find(t => el.matches(SEL[t]));
-  // the doc's parts: the shell's, and on a board the left pane's Brief (SP_BRIEF); the rest of the right
-  // panel is furniture (spUi). The rail is page furniture, except its document sections (Status, Document, Related);
-  // so are a design's panel tabs, Screens list and board toolbar, and a findings section's view bar
+  // the doc's parts: the shell's, and on a board the left pane's Brief (SP_BRIEF), whose parts a comment can name
+  // (BP.annotate, an existing mark); the rest of the right panel is furniture (spUi). The rail is page furniture, except
+  // its document sections (Status, Document, Related); so are a board's left pane (Brief, Screens, Pages: the comment
+  // tools are the board's, the pane works as it does in View) and toolbar, and a findings section's view bar
   const docAll = sel => SP_BRIEF ? [...shell.querySelectorAll(sel), ...SP_BRIEF.querySelectorAll(sel)] : [...shell.querySelectorAll(sel)];
   const spUi = t => !!t.closest('.bd-sp') && !(SP_BRIEF && SP_BRIEF.contains(t));
-  const inDoc = t => !!t && t.nodeType === 1 && (shell.contains(t) || !!SP_BRIEF && SP_BRIEF.contains(t)) && !t.closest('.bd-lp-ui, .bd-btb, .bd-ftb, .bd-var, .bd-ab-t button, .bd-lst-ui') && (!t.closest('.bp-side') || !!t.closest('.bd-meta'));
+  const inDoc = t => !!t && t.nodeType === 1 && shell.contains(t) && !t.closest('.bd-lp, .bd-lp-ui, .bd-btb, .bd-ftb, .bd-var, .bd-ab-t button, .bd-lst-ui') && (!t.closest('.bp-side') || !!t.closest('.bd-meta'));
   const targetAt = t => inDoc(t) ? t.closest(ANY) : null;
   let itemKeys = null;
   // a checklist row, or a finding's row in Merged (data-item)
@@ -14071,6 +14433,7 @@ const MARKUP = (() => {
       case 'media': return 'media:' + pathOf(el);
       case 'compare': return `compare:${pathOf(el)}/${el.dataset.side}`;
       case 'artboard': return 'artboard:' + el.dataset.ab;
+      case 'board': return 'board:' + (BOARD && BOARD.b && BOARD.b.id || '');   // the board's world: a mark beside its screens
       case 'frame': return el.dataset.key;
       case 'link': return el.getAttribute('data-link');
       case 'field': return 'field:' + el.dataset.field;
@@ -14250,14 +14613,17 @@ const MARKUP = (() => {
     }
     return out;
   }
-  // the smallest element that holds a box (client px), with a little slack for loose circles
+  // the smallest element that holds a box (client px), with a little slack for loose circles; on a board, a box beside
+  // the screens takes the board's world (it pans and zooms with them), not the board's block or the page around it
   function anchorFor(b, items) {
-    let best = shell, area = Infinity;
+    let best = shell, area = Infinity, world = null;
     for (const [el, r] of items) {
       const T = Math.min(24, r.width / 4, r.height / 4), a = r.width * r.height;
-      if (a < area && r.left - T <= b.l && r.right + T >= b.r && r.top - T <= b.t && r.bottom + T >= b.b) { best = el; area = a; }
+      const holds = r.left - T <= b.l && r.right + T >= b.r && r.top - T <= b.t && r.bottom + T >= b.b;
+      if (holds && el.matches(SEL.board)) world = el;
+      if (a < area && holds) { best = el; area = a; }
     }
-    return best;
+    return world && best.contains(world) ? world : best;
   }
   // the leaf-most elements a box covers: most of their height, a fair part of their width
   function covered(b, items) {
@@ -14303,6 +14669,16 @@ const MARKUP = (() => {
   const hov = h('div', { class: 'bd-ann-hov', hidden: true, 'aria-hidden': 'true' }, h('b'));
   const capG = sv('g');
   const cap = h('div', { class: 'bd-ann-cap', hidden: true }, sv('svg', { 'aria-hidden': 'true' }, capG));
+  // the drawing layer covers the window, over the page and a board but under the bars, trays and panes; the toolbars
+  // that sit under it (a board's top toolbar, a findings section's, a storelisting's) are cut out of it, so over them
+  // the pointer is theirs: their cursor, hover and clicks, never the tool's
+  const CAP_HOLES = '.bd-btb, .bd-ftb, .bd-lst-btb';
+  function capHoles() {
+    if (cap.hidden) { cap.style.clipPath = ''; return; }
+    const rs = [...document.querySelectorAll(CAP_HOLES)].filter(e => e.checkVisibility()).map(e => e.getBoundingClientRect()).filter(r => r.width && r.height);
+    const d = rs.map(r => `M${r.left} ${r.top}H${r.right}V${r.bottom}H${r.left}Z`).join('');
+    cap.style.clipPath = d ? `path(evenodd, "M-1 -1H${innerWidth + 1}V${innerHeight + 1}H-1Z${d}")` : '';
+  }
   const VIEW_M = ['cursor', 'View', 'V', IS_LISTING ? 'View: scroll the platform page; drag a shot to reorder its set' : IS_DESIGN ? 'View: drag to pan the board; the screens ignore the pointer' : 'View: use the page as usual'];
   // the comment tools (their ids are the modes': point, region, select, draw), the same on every page
   const MARK_M = { point: ['element', 'Element', 'C', IS_DESIGN ? 'Element: pin a comment on an element, inside a screen too' : 'Element: pin a comment on an element'],
@@ -14447,12 +14823,21 @@ const MARKUP = (() => {
   const cmpFd = fileDraft(() => { cmpSave.disabled = !cmpTa.value.trim() && !cmpFd.files.length || cmpFd.busy; placeComposer(); }, { compact: true });
   // Element on a board's screen: Delete element removes the picked element (a board draft) and closes the box
   const delPicked = () => { if (BOARD && BOARD.deletePicked && BOARD.deletePicked()) finishDraft(false); };
-  const cmpDel = h('button', { type: 'button', class: 'bp-btn del', hidden: true, title: 'Delete element (Delete): a board draft, as a text edit is', onclick: delPicked }, 'Delete element');
+  const cmpDel = h('button', { type: 'button', class: 'bp-btn del', hidden: true, 'aria-label': 'Delete element', onclick: delPicked }, ic('trash'));
+  tipped(cmpDel, ['Del'])._tip = 'Delete element: a board draft, as a text edit is';
   let cmpTyped = false;   // something was typed: Delete and Backspace are the field's
+  // ?v-cmt (VAR.cmt): A a well in a raised tray, Cancel | Save one split pill; B a chat field (the text, then attach and
+  // a round send key inside it), Cancel a round × at the top, the hints as tooltips; C a compact card, pill keys
+  const CV = VAR.cmt;
+  const cmpCancel = h('button', { type: 'button', class: 'bp-btn ghost cx', title: CV ? 'Cancel (Esc)' : null, onclick: () => finishDraft(false) }, CV === 'b' ? ic('x') : 'Cancel');
+  if (CV === 'b') {
+    cmpSave.replaceChildren(ic('arrowup')); cmpSave.setAttribute('aria-label', 'Save'); cmpCancel.setAttribute('aria-label', 'Cancel'); cmpCancel.removeAttribute('title');
+    tipped(cmpSave, [MAC ? '⌘' : 'Ctrl', '↵'])._tip = 'Save'; tipped(cmpCancel, ['Esc'])._tip = 'Cancel';
+  }
+  const cmpHint = h('span', { class: 'hint', 'aria-hidden': 'true' }, kbd(MAC ? '⌘' : 'Ctrl'), kbd('↵'), ' save', h('span', { class: 'dot' }), kbd('Esc'), ' cancel');
+  const cmpFt = h('div', { class: 'ft' }, cmpFd.btn, cmpDel, cmpHint, h('span', { class: 'sp' }), CV === 'a' ? h('span', { class: 'bd-split acts' }, cmpCancel, cmpSave) : [cmpCancel, cmpSave]);
   const cmp = h('div', { class: 'bd-cmp bd-ann-ui', role: 'dialog', 'aria-label': 'New comment', hidden: true },
-    h('span', { class: 'ar', 'aria-hidden': 'true' }), cmpHd, cmpTa, cmpFd.list,
-    h('div', { class: 'ft' }, cmpFd.btn, cmpDel, h('span', { class: 'hint', 'aria-hidden': 'true' }, kbd(MAC ? '⌘' : 'Ctrl'), kbd('↵'), ' save', h('span', { class: 'dot' }), kbd('Esc'), ' cancel'),
-      h('span', { class: 'sp' }), h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => finishDraft(false) }, 'Cancel'), cmpSave), cmpFd.input);
+    h('span', { class: 'ar', 'aria-hidden': 'true' }), cmpHd, CV ? h('div', { class: 'fld' }, cmpTa, cmpFd.list, cmpFt) : [cmpTa, cmpFd.list, cmpFt], cmpFd.input);
   cmpFd.hook(cmp, cmpTa);
 
   /* placing marks: on scroll only boxes move; after DOM or size changes keys resolve afresh */
@@ -14510,7 +14895,7 @@ const MARKUP = (() => {
     const full = dirty; dirty = false;
     const hlNow = HL && (full || hlDirty); hlDirty = false;
     if (full) { els = new Map(); ranges = new Map(); }
-    capG.setAttribute('transform', `translate(${-scrollX},${-scrollY})`);
+    capG.setAttribute('transform', `translate(${-scrollX},${-scrollY})`); capHoles();
     const all = onPage(), keep = new Set(), stacks = new Map(), hl = { on: [], sent: [], open: [] };
     if (draft) all.push(draft);
     draftBox = null;
@@ -14647,7 +15032,10 @@ const MARKUP = (() => {
   // the reader's last pick, else Pending while there are pending notes, else Open; the order, the reader's last pick, else page order
   let filter = FILTERS[store.get(FILTER_KEY)] ? store.get(FILTER_KEY) : pending().length || threadsUnsent() || !list.length && !threads().length ? 'pending' : 'open';
   let sort = SORTS[store.get(SORT_KEY)] ? store.get(SORT_KEY) : 'page';
-  const matches = a => filter === 'all' || a.status === filter;
+  // a comment with a saved follow-up is pending again until it goes; the panel's header, its Pending filter and the
+  // dock's Request changes count the same comments (pending)
+  const stOf = a => followUp(a) ? 'pending' : a.status;
+  const matches = a => filter === 'all' || stOf(a) === filter;
   function setFilter(f, remember) {
     if (remember) store.set(FILTER_KEY, f);
     if (f === filter) return;
@@ -14666,6 +15054,12 @@ const MARKUP = (() => {
   const sortSel = selectMenu({ label: 'Sort', aria: 'Sort comments', cls: 'bd-srt', icon: 'sort', value: sort,
     options: Object.entries(SORTS).map(([value, label]) => ({ value, label })), onPick: v => { sort = v; store.set(SORT_KEY, v); paint(); } });
   const filterBtns = Object.keys(FILTERS).map(f => h('button', { type: 'button', role: 'radio', 'data-f': f, onclick: () => { setFilter(f, true); paint(); } }));
+  // where the four don't fit the panel (a narrow panel, counts of two or three digits): one select, "Open 16 ▾" (fitSeg)
+  const filterSel = selectMenu({ label: 'Show', aria: 'Show comments', cls: 'bd-segalt bd-csf-sel', float: true, value: filter, onPick: f => { setFilter(f, true); paint(); } });
+  const filterSeg = h('div', { class: 'bd-sg', role: 'radiogroup', 'aria-label': 'Show' }, filterBtns);
+  const filterRow = h('div', { class: 'bd-cs-f' }, filterSeg, filterSel, sortSel);
+  const fitFilter = fitSeg(filterRow, filterSeg);
+  let filterSig = '';
   const listOl = h('ol', { 'aria-label': 'Comments' });
   const emptyEl = h('div', { class: 'bd-cs-e', hidden: true });
   const listBox = h('div', { class: 'bd-cs-l' }, listOl, emptyEl);
@@ -14686,7 +15080,7 @@ const MARKUP = (() => {
   genFd.hook(genCp, genTa);
   const clearRow = h('div', { class: 'row' }, clearBtn);
   const csBody = h('div', {},
-    h('div', { class: 'bd-cs-f' }, h('div', { class: 'bd-sg', role: 'radiogroup', 'aria-label': 'Show' }, filterBtns), sortSel),
+    filterRow,
     listBox,
     h('div', { class: 'bd-cs-ft' }, clearRow, h('div', { class: 'bd-gc' }, genCp)));
   // keep: save what was typed (Enter, Save, opening Request changes); else drop it (Cancel, Esc). Returns whether one was saved.
@@ -14800,16 +15194,33 @@ const MARKUP = (() => {
   }
   const cards = new Map();   // id -> li
   const cardCls = (li, a) => 'bd-cs-c' + ({ open: ' sent', resolved: ' sent res' }[a.status] || '') + (a === selA ? ' on' : '') + (a === hotA ? ' hot' : '') + (a === editA ? ' edit' : '') +
-    (li._flash > performance.now() ? ' flash' : '');
+    (unseen(a) ? ' fresh' : '') + (li._flash > performance.now() ? ' flash' : '');
+  // a highlighted card seen: in view in the panel (most of it, or most of the panel) for a second
+  const seenIO = new IntersectionObserver(es => {
+    for (const e of es) {
+      const li = e.target; clearTimeout(li._seenT);
+      const inView = e.isIntersecting && (e.intersectionRatio >= .6 || e.rootBounds && e.intersectionRect.height >= e.rootBounds.height * .5);
+      if (inView && li.classList.contains('fresh')) li._seenT = setTimeout(() => { if (li.isConnected && SIDE.shows('comments') && SIDE.api().open && !document.hidden) markSeen(li._a); }, 1000);
+    }
+  }, { root: listBox, threshold: [0, .25, .5, .6, .75, 1] });
+  function markSeen(a) {
+    if (!a || !unseen(a)) return;
+    a.seen = agentRev(a); save(); paint();
+  }
   function card(a) {
     let li = cards.get(a.id);
-    if (!li) { li = h('li', { class: 'bd-cs-c', tabindex: '0', 'data-id': a.id }); cards.set(a.id, li); }
+    if (!li) { li = h('li', { class: 'bd-cs-c', tabindex: '0', 'data-id': a.id }); cards.set(a.id, li); seenIO.observe(li); }
     li._a = a;
     const n = isGeneral(a) ? 0 : onPage().indexOf(a) + 1, editing = a === editA;
     const ms = annConvo(a), lastMsg = ms.at(-1);
     const sig = [n, a.note, JSON.stringify(a.files || null), a.status, a.rev, a.target.key, a.target.label, a.color, editing, (a.targets || []).length, !!a.stale, JSON.stringify(ms), agentName()].join('\u0001');
     if (li._sig !== sig) { li._sig = sig; fill(li, a, n, editing, ms); }
+    const was = li.classList.contains('fresh');
     li.className = cardCls(li, a);
+    // the agent's replies since the reader last saw the card: tinted
+    const ag = ms.filter(m => m.who === 'agent'), fr = unseen(a);
+    li.querySelectorAll(':scope .bp-convo:not(.rp-pend) .bp-msg.agent').forEach((m, i) => m.classList.toggle('fresh', fr && !!ag[i] && revOrd(ag[i].rev) > revOrd(a.seen)));
+    if (fr && !was) { seenIO.unobserve(li); seenIO.observe(li); }   // newly highlighted while in view: time it again
     li.querySelector('.ago').textContent = ago(a.at);
     const s = li.querySelector('.sago');
     // open, and the agent has the last word without resolving it: Answered in rev N
@@ -14860,36 +15271,93 @@ const MARKUP = (() => {
       ms.length > 0 && h('div', { class: 'bp-convo compact' }, timeline(ms)),
       a.status !== 'pending' && !isDraft(a) && replyBox(a)));
   }
-  // a sent comment's reply box: what is typed is its pending follow-up (`draft`, its files `draftFiles`), saved as it
-  // is typed; a file removed before it goes has its copy deleted at once
+  // a sent comment's reply box, with the composer's foot. What is typed stays unsaved (the foot says so; it counts
+  // nowhere) until Save (↵ or ⌘↵) makes it the comment's follow-up (`draft`, its files `draftFiles`): the comment is
+  // pending again and goes with the next Request changes. The saved follow-up is the thread's last message, *You · not
+  // sent yet*, with Edit (back into the field, Cancel and Save) and Delete; the field is empty for more, which Save
+  // adds to it. Cancel (Esc) puts the field back and deletes the copies of files attached since. The unsaved text and
+  // files outlive the card's redraws (rps).
+  const rps = new Map();   // comment id -> { text, dirty, editing, fd, paint }
+  addEventListener('beforeunload', e => { if ([...rps.values()].some(s => s.dirty)) { e.preventDefault(); e.returnValue = ''; } });
   function replyBox(a) {
+    let st = rps.get(a.id);
+    if (!st) {
+      st = { text: '', dirty: false, editing: false };
+      st.fd = fileDraft(() => { st.dirty = true; st.paint(); }, { compact: true });
+      rps.set(a.id, st);
+    }
+    if (st.editing && !followUp(a)) st.editing = false;   // sent or deleted meanwhile
+    const fd = st.fd, base = () => st.editing ? a.draft || '' : '', baseFiles = () => st.editing ? filesOf(a.draftFiles) : [];
+    if (!st.dirty) { st.text = base(); fd.load(baseFiles()); }
     const ta = h('textarea', { class: 'bp-note-ta', rows: 1, maxlength: 8192, placeholder: 'Reply…', 'aria-label': 'Reply on: ' + (isGeneral(a) ? 'general comment' : a.target.label) });
-    ta.value = a.draft || '';
-    let t = 0;
-    const keep = () => { clearTimeout(t); save(); };
-    const fd = fileDraft(() => {
-      const had = followUp(a), fs = fd.files;
-      if (fs.length) a.draftFiles = filesJson(fs).files; else delete a.draftFiles;
-      fd.commit(); keep();
-      if (had !== followUp(a)) paint();   // Request changes counts it
-    }, { compact: true });
-    fd.load(filesOf(a.draftFiles));
-    ta.addEventListener('input', () => {
-      grow(ta);
-      const had = followUp(a);
-      if (ta.value.trim()) a.draft = ta.value; else delete a.draft;
-      if (had !== followUp(a)) paint();   // Request changes counts it
-      clearTimeout(t); t = setTimeout(keep, 300);
-    });
-    ta.addEventListener('blur', keep);
+    ta.value = st.text;
+    const ok = h('button', { type: 'button', class: 'bp-btn primary', title: `Save (${MAC ? '⌘' : 'Ctrl'} + Enter)`, onclick: () => commit() }, 'Save');
+    const no = h('button', { type: 'button', class: 'bp-btn ghost', title: 'Cancel (Esc)', onclick: () => cancel() }, 'Cancel');
+    const un = h('span', { class: 'un' });
+    const ft = h('div', { class: 'ft' }, un, h('span', { class: 'sp' }), no, ok);
+    const key = (icon, label, fn) => h('button', { type: 'button', class: 'bd-cs-ib', 'aria-label': label, title: label, onclick: fn }, ic(icon));
+    const pm = h('div', { class: 'bp-convo compact rp-pend' });
+    let pmSig = null;
+    st.paint = () => {
+      if (st.dirty && ta.value === base() && !fd.dirty) st.dirty = false;
+      ft.hidden = !st.dirty && !st.editing;
+      un.textContent = st.editing ? 'Editing your reply' : 'Unsaved';
+      ok.disabled = fd.busy || !st.editing && !ta.value.trim() && !fd.files.length;
+      ta.placeholder = followUp(a) && !st.editing ? 'Add to your reply…' : 'Reply…';
+      const sig = st.editing || !followUp(a) ? '' : JSON.stringify([a.draft, a.draftFiles]);
+      if (sig === pmSig) return;
+      pmSig = sig; pm.hidden = !sig;
+      const fs = filesOf(a.draftFiles), t = String(a.draft || '').trim();
+      pm.replaceChildren(...(sig ? [h('ol', { class: 'bp-msgs', 'aria-label': 'Your reply, not sent yet' }, h('li', { class: 'bp-msg you unsent' },
+        h('span', { class: 'av', 'aria-hidden': 'true' }, 'Y'),
+        h('div', { class: 'mh' }, h('b', { class: 'who' }, 'You'), h('span', { class: 'rv' }, 'not sent yet'),
+          h('span', { class: 'acts' }, key('pencil', 'Edit your reply', edit), key('trash', 'Delete your reply', drop))),
+        t && h('div', { class: 'mb bd-md', html: md(t) }),
+        fs.length > 0 && h('div', { class: 'mf' }, fileChips(fs))))] : []));
+    };
+    const settle = () => { st.dirty = false; st.editing = false; st.text = ''; ta.value = ''; fd.load([]); grow(ta); };
+    function commit() {
+      if (fd.busy || ok.disabled) return;
+      const v = ta.value.trim(), fs = fd.files;
+      fd.commit();
+      if (st.editing) {
+        if (v) a.draft = v; else delete a.draft;
+        if (fs.length) a.draftFiles = filesJson(fs).files; else delete a.draftFiles;
+      } else {
+        a.draft = [String(a.draft || '').trim(), v].filter(Boolean).join('\n\n');
+        if (!a.draft) delete a.draft;
+        const all = [...filesOf(a.draftFiles), ...fs].slice(0, FILES_MAX);
+        if (all.length) a.draftFiles = filesJson(all).files;
+      }
+      settle(); save();
+      if (!matches(a)) setFilter(stOf(a), false);
+      st.paint(); paint();
+    }
+    function cancel() {
+      if (fd.busy) return;
+      fd.cancel(); settle(); st.paint();
+    }
+    function edit() {
+      if (st.dirty && !st.editing) return void ta.focus();   // a new reply typed: Save or Cancel it first
+      st.editing = true; st.dirty = false; st.text = a.draft || ''; ta.value = st.text; fd.load(filesOf(a.draftFiles));
+      st.paint(); grow(ta); ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length);
+    }
+    function drop() {
+      if (st.editing) { fd.cancel(); settle(); }
+      dropFiles(filesOf(a.draftFiles)); delete a.draft; delete a.draftFiles;
+      save(); st.paint(); paint();
+    }
+    ta.addEventListener('input', () => { grow(ta); st.text = ta.value; st.dirty = true; st.paint(); });
     ta.addEventListener('keydown', e => {
       e.stopPropagation();   // page keys (modes, n/p, canvas) must not fire while typing
-      if (e.key === 'Escape') { e.preventDefault(); ta.blur(); }
+      if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); commit(); }
+      else if (e.key === 'Escape') { e.preventDefault(); if (st.dirty || st.editing) cancel(); else ta.blur(); }
     });
     requestAnimationFrame(() => { if (ta.value) grow(ta); });
-    const rp = h('div', { class: 'rp' }, ta, fd.btn, fd.list, fd.input);
+    const rp = h('div', { class: 'rp' }, ta, fd.btn, fd.list, ft, fd.input);
     fd.hook(rp, ta);
-    return rp;
+    st.paint();
+    return h('div', { class: 'rpw' }, pm, rp);
   }
   // a pending comment's editor: its text and files, kept across the card's redraws until Save or Cancel (endEdit)
   let editFd = null, editOk = null;
@@ -14950,8 +15418,9 @@ const MARKUP = (() => {
   function select(a, { open = false, scroll = false } = {}) {
     if (editA && editA !== a) endEdit(true);
     selA = a; hlDirty = true;
+    if (a && unseen(a)) a.seen = agentRev(a), save();   // opened: the agent's news is seen
     if (a && open) SIDE.show('comments');
-    if (a && !matches(a)) setFilter(a.status, false);
+    if (a && !matches(a)) setFilter(stOf(a), false);
     paint(); schedule(true);
     const li = a && cards.get(a.id);
     if (li && scroll) {
@@ -14989,6 +15458,7 @@ const MARKUP = (() => {
   // a comment deleted before it went takes its files' copies with it; so does a follow-up not sent yet
   function remove(a) {
     if (a === editA) { if (editFd) editFd.cancel(); editFd = null; editA = null; editTa = null; }
+    const rs = rps.get(a.id); if (rs) { rs.fd.cancel(); rps.delete(a.id); }   // its reply box's unsaved files
     dropFiles([...(a.status === 'pending' ? filesOf(a.files) : []), ...filesOf(a.draftFiles)]);
     if (a === selA) selA = null;
     if (a === hotA) setHot(null, true);
@@ -14999,7 +15469,7 @@ const MARKUP = (() => {
   const discard = a => { if (isDraft(a) && BOARD && BOARD.discard && BOARD.discard(a.id)) return; remove(a); };
   function clearResolved() {
     if (selA && selA.status === 'resolved') selA = null;
-    list = list.filter(a => a.status !== 'resolved'); save(); hlDirty = true; schedule(true); paint();
+    list = list.filter(a => a.status !== 'resolved' || followUp(a)); save(); hlDirty = true; schedule(true); paint();
   }
   // Resolve (open → resolved) and Reopen (resolved → open); sending makes pending notes open. resolvedRev, the
   // revision whose `resolves` last resolved it, stays on a reopened comment (see agentResolve)
@@ -15016,7 +15486,7 @@ const MARKUP = (() => {
     draft = a;
     cmpHd.replaceChildren(numChip(a, onPage().length + 1), ic(TYPE_IC[a.type]), h('span', { class: 'lb', title: onLabel(a, a.target.label) }, onLabel(a, a.target.label.split(' › ').pop())));
     cmpTa.value = ''; cmpTa.placeholder = a.type === 'text' ? 'What should change in this text?' : 'What should change here?';
-    cmpSave.disabled = true; cmpSave.title = `Save (${MAC ? '⌘' : 'Ctrl'} + Enter)`; cmpFd.load([]); cmpTyped = false;
+    cmpSave.disabled = true; if (CV !== 'b') cmpSave.title = `Save (${MAC ? '⌘' : 'Ctrl'} + Enter)`; cmpFd.load([]); cmpTyped = false;
     cmp.hidden = false; grow(cmpTa);
     hlDirty = true; schedule(true); paint();
     requestAnimationFrame(() => {
@@ -15090,7 +15560,7 @@ const MARKUP = (() => {
     root.classList.remove('bd-ann-m-' + mode);
     mode = m;
     if (m !== 'view') root.classList.add('bd-ann-m-' + m);
-    cap.hidden = m !== 'draw' && m !== 'region';
+    cap.hidden = m !== 'draw' && m !== 'region'; capHoles();
     if (BOARD && BOARD.setMode) BOARD.setMode(m);
     showHover(null);
     if (m !== 'view' && marksOff) { marksOff = false; schedule(true); }   // marking with the marks hidden would hide the new one too
@@ -15099,13 +15569,22 @@ const MARKUP = (() => {
   }
   function paint() {
     const n = pending().length, ni = itemsPending().length, all = n + ni, ts = threads(), total = list.length + ts.length;
-    const by = s => list.filter(a => a.status === s).length + ts.filter(x => threadStatus(x) === s).length;
+    const by = s => list.filter(a => stOf(a) === s).length + ts.filter(x => threadStatus(x) === s).length;
     goN.textContent = String(all);
     go.disabled = !all;
     go.setAttribute('aria-label', `Request changes: ${all} pending`);
     go._tip = all ? `Review and send ${all} pending change request${all === 1 ? '' : 's'}` : 'Comment on the page, or add a general comment, to request a change';
     SIDE.badge(n + threadsUnsent());
-    filterBtns.forEach(b => { const f = b.dataset.f; b.setAttribute('aria-checked', String(f === filter)); b.replaceChildren(FILTERS[f], h('i', {}, String(f === 'all' ? total : by(f)))); });
+    const fn = f => f === 'all' ? total : by(f);
+    // a blue dot on the filter holding a comment with news from the agent (unseen); the narrow select shows it on its key
+    const fresh = new Set(list.filter(unseen).map(stOf));
+    filterBtns.forEach(b => {
+      const f = b.dataset.f; b.setAttribute('aria-checked', String(f === filter));
+      b.replaceChildren(FILTERS[f], h('i', {}, String(fn(f))), ...(fresh.has(f) ? [h('span', { class: 'fdot', role: 'img', 'aria-label': 'new replies' })] : []));
+    });
+    filterSel.btn.classList.toggle('fresh', fresh.size > 0);
+    const sig = Object.keys(FILTERS).map(f => fn(f) + (fresh.has(f) ? '*' : '')).join() + filter;
+    if (sig !== filterSig) { filterSig = sig; filterSel.setOptions(Object.keys(FILTERS).map(f => ({ value: f, label: `${FILTERS[f]} ${fn(f)}`, hint: fresh.has(f) ? 'new' : null })), filter); requestAnimationFrame(fitFilter); }
     sortSel.btn.title = 'Sort: ' + SORTS[sort];
     clearRow.hidden = !list.some(a => a.status === 'resolved');   // it clears the page's comments, not the findings'
     tb.dataset.m = mode;
@@ -15204,19 +15683,22 @@ const MARKUP = (() => {
     selc.style.translate = `${Math.round(clamp(last.right - w, 8, root.clientWidth - w - 8))}px ${Math.round(y)}px`;
   }
   document.addEventListener('selectionchange', () => { if (mode === 'view' && !selDown) requestAnimationFrame(showSelC); });
-  // Pen and Region: a box (client px) anchors to the smallest element holding it and covers the parts under it
+  // Pen and Region: a box (client px) anchors to the smallest element holding it and covers the parts under it; on a
+  // board, a box beside the screens anchors to the board's world (`board`), which pans and zooms with them
   function anchorBox(a, box) {
     const items = onScreen(), el = anchorFor(box, items), cov = covered(box, items);
     Object.assign(a, { target: info(el), up: ups(el), targets: (cov.length ? cov : [el]).map(info) });
     return el.getBoundingClientRect();
   }
+  // a fraction of the anchor's box: to 1e-4, or 1e-6 of the board's world (20 000 board px: a 0.02 px step)
+  const frac = (a, v) => /^board(:|$)/.test(a.target.key) ? Math.round(v * 1e6) / 1e6 : r4(v);
   // Pen: strokes in page px while drawing; one ending within 1.5 s of the last, or before anything
   // is typed, joins the open drawing. The drawing anchors to the smallest element holding it.
   function fitDrawing(a, strokes) {
     let l = Infinity, t = Infinity, r = -Infinity, b = -Infinity;
     for (const s of strokes) for (let i = 0; i < s.length; i += 2) { l = Math.min(l, s[i] - scrollX); r = Math.max(r, s[i] - scrollX); t = Math.min(t, s[i + 1] - scrollY); b = Math.max(b, s[i + 1] - scrollY); }
     const er = anchorBox(a, { l, t, r, b });
-    a.strokes = strokes.map(s => s.map((v, i) => r4(i % 2 ? (v - scrollY - er.top) / (er.height || 1) : (v - scrollX - er.left) / (er.width || 1))));
+    a.strokes = strokes.map(s => s.map((v, i) => frac(a, i % 2 ? (v - scrollY - er.top) / (er.height || 1) : (v - scrollX - er.left) / (er.width || 1))));
   }
   // Region: a box dragged in page px; one of at least 8 × 8 px becomes a region, anchored as a drawing is
   function endRegion(k) {
@@ -15224,7 +15706,7 @@ const MARKUP = (() => {
     if (r - l < 8 || b - t < 8) return;
     const a = { id: newId(), type: 'region', status: 'pending', note: '', rev: CUR.rev, at: new Date().toISOString() };
     const er = anchorBox(a, { l, t, r, b }), fw = er.width || 1, fh = er.height || 1;
-    a.box = [r4((l - er.left) / fw), r4((t - er.top) / fh), r4((r - l) / fw), r4((b - t) / fh)];
+    a.box = [(l - er.left) / fw, (t - er.top) / fh, (r - l) / fw, (b - t) / fh].map(v => frac(a, v));
     startDraft(a);
   }
   cap.addEventListener('pointerdown', e => {
@@ -15458,7 +15940,11 @@ const MARKUP = (() => {
   document.body.append(layer, hov, cap, cmp, selc, tb);
   requestAnimationFrame(fitTray);
   SIDE.add({ id: 'comments', label: 'Comments', icon: 'msg', body: csBody, chip: () => (n => n ? `${n} pending` : '')(pending().length + threadsUnsent()),
-    onToggle: shown => { if (!shown) endEdit(true); schedule(true); paint(); } });
+    onToggle: shown => {
+      if (!shown) endEdit(true);
+      else for (const li of cards.values()) if (li.classList.contains('fresh')) { seenIO.unobserve(li); seenIO.observe(li); }   // time the highlighted cards in view
+      schedule(true); paint();
+    } });
   root.classList.add('bd-tray-on');
   for (const ty of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click', 'dblclick']) addEventListener(ty, onCapture, true);
   addEventListener('pointercancel', () => { selDown = false; }, true);   // a touch that scrolled or long-pressed: selections show their button again
@@ -16416,7 +16902,9 @@ if (BOARD && BOARD.afterMarkup) BOARD.afterMarkup();   // a storelisting's draft
 
 SIDE.start();
 startContents();   // after the right panel's: Contents opens by default where it docks beside it
-MARKUP.openIfWaiting();   // after the panel's restored state: something waiting for the reader opens it
+// a compare view opens on Revisions (the reader came to compare; the section they keep for the page stays theirs),
+// else something waiting for the reader opens its comments, after the panel's restored state
+if (BASE) SIDE.show('revisions', { remember: false }); else MARKUP.openIfWaiting();
 
 /* ---------- public API (for tests and agents) ---------- */
 window.BP = {

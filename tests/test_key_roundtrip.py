@@ -141,6 +141,7 @@ def keys_of(doc: dict, expanded: dict, doc_path=None) -> dict[str, list[str]]:
                 for k in per:
                     add("field", f"field:{loc}/strings/{k}")
         elif t == "board":
+            add("board", f"board:{b['id']}")   # a Region or drawing beside the screens, on the board's world
             for a in b.get("artboards") or []:
                 add("artboard", f"artboard:{a['id']}")
             # Frame mode drops a requested frame anywhere on the board: one key per device, at a free spot
@@ -169,7 +170,7 @@ class KeyOfForms(unittest.TestCase):
     def test_keyof_forms_are_the_known_ones(self) -> None:
         cased, bare = keyof_forms()
         self.assertEqual(cased, {"line", "comment", "row", "node", "step", "file", "media", "compare", "card", "para",
-                                 "item", "block", "heading", "lead", "section", "artboard", "frame", "link", "field"},
+                                 "item", "block", "heading", "lead", "section", "artboard", "board", "frame", "link", "field"},
                          "keyOf's cases changed: teach keys_of (this file), build.resolve_key and the docs the new form")
         self.assertEqual(bare, {"header", "tldr", "status", "doc"})
 

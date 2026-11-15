@@ -1,7 +1,7 @@
 """The stripes and their panes (1.0.41), in Chrome (BLUEDOC_BROWSER_TESTS=1).
 
-A doc's left stripe holds Contents, its ring the tracker's progress; the right one Comments (its badge the pending
-count), Revisions (the shown revision; an earlier one in the warning's colours) and, at its foot, the theme. A key opens
+A doc's left stripe holds Contents, its ring the tracker's progress, and, at its foot, the theme; the right one Comments
+(its badge the pending count) and Revisions (the shown revision; an earlier one in the warning's colours). A key opens
 its pane and lights up; the lit key closes it; [ and ] toggle the left and the right pane, not while typing. Contents is
 open by default where it docks beside a 640 px page (1440 px, not 1000 px), then as the reader leaves it, per doc. A
 board's left stripe holds its Brief (ringed with the picks made, open on a first visit) and its Screens, one at a
@@ -39,11 +39,11 @@ class Stripes(ChromePage):
         t = self.page(STATUS)
         # 1440 px: Contents and Comments open, both docked beside the page
         t.wait_for("BP.contents().as === 'dock' && BP.sidebar().as === 'dock'")
-        self.assertEqual(t.ev(KEYS), [["Contents", "true"], ["Comments", "true"], ["Revisions (Rev 2 of 2)", "false"], ["Switch light or dark theme", None]])
+        self.assertEqual(t.ev(KEYS), [["Contents", "true"], ["Dark theme", None], ["Comments", "true"], ["Revisions (Rev 2 of 2)", "false"]])
         # the Revisions key opens its section in place of Comments, and lights up instead
         t.ev(f"{RKEY}('revisions').click()")
         t.wait_for("BP.sidebar().section === 'revisions' && BP.sidebar().open")
-        self.assertEqual([k[1] for k in t.ev(KEYS)], ["true", "false", "true", None])
+        self.assertEqual([k[1] for k in t.ev(KEYS)], ["true", None, "false", "true"])
         self.assertEqual(t.ev("document.querySelector('.bd-sp-h h2').textContent"), "Revisions")
         # the lit key closes it, as does the pane's –
         t.ev(f"{RKEY}('revisions').click()")
@@ -94,10 +94,13 @@ class Stripes(ChromePage):
         self.assertTrue(t.ev(f"{RKEY}('comments').querySelector('.n').hidden"))
         t.ev("BP.annotate({type: 'pin', key: 'tldr', note: 'Shorter'})")
         t.wait_for(f"{RKEY}('comments').querySelector('.n').textContent === '1' && !{RKEY}('comments').querySelector('.n').hidden")
-        # the theme key switches the theme
-        theme = t.ev("document.documentElement.dataset.theme || ''")
-        t.ev("document.querySelector('.bd-stripe.r .bd-sk:last-of-type').click()")
-        t.wait_for(f"(document.documentElement.dataset.theme || '') !== {theme!r}")
+        # the theme switch (role switch, "Dark theme", checked in dark) switches the theme, both ways
+        sw = "document.querySelector('.bd-stripe.l [role=switch]')"
+        for _ in range(2):
+            theme = t.ev("document.documentElement.dataset.theme || ''")
+            t.ev(f"{sw}.click()")
+            t.wait_for(f"(document.documentElement.dataset.theme || '') !== {theme!r}")
+            self.assertEqual(t.ev(f"[{sw}.getAttribute('aria-label'), {sw}.getAttribute('aria-checked') === String(document.documentElement.dataset.theme === 'dark')]"), ["Dark theme", True])
         # the Revisions key shows the revision; an earlier one in the warning's colours
         self.assertEqual(t.ev(f"[{RKEY}('revisions').querySelector('.n').textContent, {RKEY}('revisions').classList.contains('old')]"), ["2", False])
         old = self.page(STATUS, query="&rev=1")
@@ -107,8 +110,9 @@ class Stripes(ChromePage):
         self.assertEqual(self.browser.errors, [])
 
     def test_the_panes_and_the_page_are_cards_between_the_stripes(self) -> None:
-        """HorizonUI's AppFrame (1.0.44): 44 px stripes 6 px in from the window's edges, the docked panes and the page's
-        card 6 px apart, none over another; Share and Export one pill."""
+        """HorizonUI's AppFrame (1.0.44), the stripes floating trays as the dock is: 52 px pills of 38 px keys in the middle of
+        their 70 px bands (9 px from the window's edge and 9 px from the docked pane), the panes and the page's card 6 px
+        under the bar and 6 px apart, none over another; Share and Export one pill as tall as the dock's keys."""
         t = self.page(STATUS)
         t.ev("BP.contents({open: true}), BP.sidebar({section: 'comments'}), 1")
         t.wait_for("['bd-lp-dock', 'bd-sp-dock'].every(c => document.documentElement.classList.contains(c))")
@@ -122,20 +126,22 @@ class Stripes(ChromePage):
             radius: [document.querySelector('.bp-side'), document.querySelector('.bd-sp')].map(e => getComputedStyle(e).borderRadius).concat(s.borderRadius),
             share: {box}(document.querySelector('.bd-bar-r .bd-shk')), export: {box}(document.querySelector('.bd-bar-r .bd-docx')) }}; }})()""")
         W, bar = got["W"], got["bar"]
-        self.assertEqual(got["l"][:2], [0, 50], "the left stripe: 6 px edge, 44 px of keys")
-        self.assertEqual(got["key"][:2], [12, 44], "a 32 px key centred in it")
-        self.assertEqual(got["cp"], [56, 320, bar], "Contents 6 px from the stripe, under the bar")
-        self.assertEqual(got["sp"][:2], [W - 56 - 344, W - 56], "the right panel 6 px from its stripe")
-        self.assertEqual(got["page"], [326, got["sp"][0] - 6, bar], "the page's card 6 px from each pane")
-        self.assertEqual(got["r"][:2], [W - 50, W])
+        self.assertEqual(got["l"][:2], [9, 61], "the left stripe: a 52 px tray, 9 px from the edge")
+        self.assertEqual(got["key"][:2], [16, 54], "a 38 px key in its 7 px padding")
+        self.assertEqual(got["cp"], [70, 334, bar + 6], "Contents 9 px from the tray, 6 px under the bar")
+        self.assertEqual(got["sp"][:2], [W - 70 - 320, W - 70], "the right panel 9 px from its tray")
+        self.assertEqual(got["page"], [340, got["sp"][0] - 6, bar + 6], "the page's card 6 px from each pane and under the bar")
+        self.assertEqual(got["r"][:2], [W - 61, W - 9])
         self.assertEqual(got["radius"], ["14px"] * 3)
         self.assertEqual(got["share"][1], got["export"][0], "Share and Export touch: one pill")
+        self.assertEqual(t.ev("[...document.querySelectorAll('.bd-bar-r :is(.bd-shk, .bd-docx .bd-expb), .bd-anntb > .bd-key')].filter(e => e.getClientRects().length)"
+                              ".map(e => Math.round(e.getBoundingClientRect().height)).every(h => h === 38)"), True, "Share | Export as tall as the dock's keys")
         self.assertEqual(self.browser.errors, [])
 
     def test_a_board_keeps_its_brief_and_screens_on_the_left_stripe(self) -> None:
         t = self.page(FIT)
         t.wait_for("!!BP.board()", 20)
-        self.assertEqual([k[0] for k in t.ev(KEYS)], ["Brief", "Screens", "Comments", "Revisions (Rev C of 3)", "Switch light or dark theme"])
+        self.assertEqual([k[0] for k in t.ev(KEYS)], ["Brief", "Screens", "Dark theme", "Comments", "Revisions (Rev C of 3)"])
         self.assertEqual(t.ev("document.querySelectorAll('.bd-btb [aria-label^=Screens], .bd-btb [aria-label^=Pages], .bd-btb [aria-label^=Slides]').length"), 0)
         brief, screens = "document.querySelector('.bd-stripe.l [data-f=brief]')", "document.querySelector('.bd-stripe.l [data-f=screens]')"
         # a first visit at 1440 px: the Brief open on the left, its key lit and ringed with the picks made

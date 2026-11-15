@@ -1243,9 +1243,9 @@ class NarrowWindow(ChromePage):
     def test_the_column_fills_its_room_at_any_window(self) -> None:
         t = self.open(self.server.url_for(self.plan))
         t.ev("BP.sidebar({open: false}), BP.contents({open: false})")
-        # 700 px: the stripes' bands (56 px a side) and the paddings (16 px from 900 px down)
+        # 700 px: the stripes' bands (70 px a side) and the paddings (16 px from 900 px down)
         self.size(t, 700)
-        t.wait_for(f"{self.COL} === document.documentElement.clientWidth - 112 - 32")
+        t.wait_for(f"{self.COL} === document.documentElement.clientWidth - 140 - 32")
         # 1600 px, no pane docked: no handle, the column as wide as the room
         self.size(t, 1600)
         t.wait_for(f"{self.COL} > 1400")

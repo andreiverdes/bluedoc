@@ -149,7 +149,7 @@ class NoNativeSelect(ChromePage):
                 t.ev("BP.revisionsRail({open: true})")
                 pick = "[...document.querySelectorAll('.bd-rvr .rv-sel')]"
                 self.assertEqual(t.ev(f"{pick}.map(s => [s.btn.getAttribute('aria-label'), s.value])"), [["Compare from", "1"], ["Compare with", "2"]])
-                self.assertRegex(t.ev(f"{pick}[0].btn.textContent"), r"^Rev 1 · \d\d-\d\d$")
+                self.assertEqual(t.ev(f"{pick}[0].btn.textContent"), "Rev 1")
                 # each option names its revision with month and day, its title the full date
                 self.assertTrue(t.ev(f"[...{pick}[0].querySelectorAll('[role=option]')].every(o => /^\\d{{4}}-\\d\\d-\\d\\d$/.test(o.title) && o.textContent.endsWith(o.title.slice(5)))"))
                 to = f"{pick}[1]"
@@ -160,7 +160,7 @@ class NoNativeSelect(ChromePage):
                 self.assertEqual(t.ev("document.activeElement.dataset.v"), "2")
                 t.ev(f"{to}.querySelector('[data-v=\"1\"]').click()")
                 self.assertEqual(t.ev(f"[{to}.value, {to}.querySelector('[role=listbox]').hidden, document.activeElement === {to}.btn]"), ["1", True, True])
-                t.ev("document.querySelector('.bd-rv-ft .bp-btn.primary').click()")
+                t.ev("document.querySelector('.rv-cmpb .go').click()")
                 self.toast(t, "pick two different revisions")
                 # ↓ opens it on rev 1, ↓ moves to rev 2, Enter picks it; Compare goes to ?diff=1
                 self.press(t, "ArrowDown")
@@ -168,7 +168,7 @@ class NoNativeSelect(ChromePage):
                 self.press(t, "ArrowDown")
                 self.press(t, "Enter")
                 self.assertEqual(t.ev(f"{to}.value"), "2")
-                t.ev("window.__bdLeft = true; document.querySelector('.bd-rv-ft .bp-btn.primary').click()")
+                t.ev("window.__bdLeft = true; document.querySelector('.rv-cmpb .go').click()")
                 t.wait_for("!window.__bdLeft && location.search === '?diff=1' && !!window.BP")
                 self.assertEqual(self.browser.errors, [])
 

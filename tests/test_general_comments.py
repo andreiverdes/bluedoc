@@ -141,6 +141,37 @@ class GeneralComments(ChromePage):
         self.assertEqual(order(), ["gen", "header", "tldr"])
         self.assertEqual(self.browser.errors, [])
 
+    def test_the_filter_turns_into_a_menu_where_its_segments_dont_fit(self) -> None:
+        """Pending · Open · Resolved · All with counts: segments while they fit the panel; past that (a narrow panel,
+        long counts) one select, "Pending 12 ▾", with the four in its menu; each works from the keyboard."""
+        a = self.open(self.server.url_for(self.plan))
+        a.ev("BP.comments({open: true})")
+        a.wait_for(f"{TA}.checkVisibility()")
+        for i in range(12):
+            a.ev(f"BP.annotate({{type: 'general', note: 'Acme: note {i}'}})")
+        row, sel = "document.querySelector('.bd-cs-f')", "document.querySelector('.bd-cs-f .bd-segalt .bd-selb')"
+        shows = f"[{row}.querySelector('.bd-sg').checkVisibility(), {sel}.checkVisibility()]"
+        a.wait_for(f"{row}.querySelector('[data-f=pending] i').textContent === '12'")
+        self.assertEqual(a.ev(shows), [True, False], "a wide panel: the segments")
+        # a narrow panel: the select, the current filter and its count on the key
+        a.ev("document.documentElement.style.setProperty('--sp-w', '240px'), 1")
+        a.wait_for(f"{row}.classList.contains('narrow')")
+        self.assertEqual(a.ev(shows), [False, True])
+        self.assertEqual(a.ev(f"{sel}.textContent"), "Pending 12")
+        # the keyboard: the key opens its menu, ↓ moves, Enter picks
+        a.ev(f"{sel}.focus()")
+        self.key(a, "Enter", 13, text="\r")
+        a.wait_for(f"{sel}.getAttribute('aria-expanded') === 'true'")
+        self.key(a, "ArrowDown", 40)
+        self.key(a, "Enter", 13, text="\r")
+        a.wait_for(f"{sel}.textContent === 'Open 0'")
+        self.assertEqual(a.ev(f"{row}.querySelector('[data-f=open]').getAttribute('aria-checked')"), "true")
+        # wide again: the segments, Open checked
+        a.ev("document.documentElement.style.removeProperty('--sp-w'), 1")
+        a.wait_for(f"!{row}.classList.contains('narrow')")
+        self.assertEqual(a.ev(shows), [True, False])
+        self.assertEqual(self.browser.errors, [])
+
 
 if __name__ == "__main__":
     unittest.main()

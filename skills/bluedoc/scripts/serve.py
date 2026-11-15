@@ -4101,7 +4101,8 @@ def stale_archive(doc: Path, state: dict) -> bool:
 
 def value_ok(key: str, value: str) -> bool:
     """False for an `__ann:<id>` value the page can't draw (template.html's MARKUP `valid`; its follow-ups `thread`:
-    thread_ok, `draft`: a string or null, `files` and `draftFiles`: files_ok or null), an `__hist` or `__hist:<step>`
+    thread_ok, `draft`: a string or null, `files` and `draftFiles`: files_ok or null, `seen`: a rev of ≤ 40 characters
+    or null), an `__hist` or `__hist:<step>`
     value that isn't the board's undo history, an item's thread, files or pick of the wrong shape (ITEM_RULE), or a
     reader key out of bounds (`__title` / `__emoji`: build.reader_title_ok, build.emoji_ok; `__archived`:
     archive_record; `__archive-later`; `__message-files`: files_ok); True for any other key."""
@@ -4133,6 +4134,7 @@ def value_ok(key: str, value: str) -> bool:
             and (a.get("note") is None or isinstance(a["note"], str)) and (a.get("up") is None or isinstance(a["up"], list))
             and (a.get("thread") is None or thread_ok(a["thread"])) and (a.get("draft") is None or isinstance(a["draft"], str))
             and all(a.get(k) is None or files_ok(a[k]) for k in ("files", "draftFiles"))
+            and (a.get("seen") is None or isinstance(a["seen"], str) and len(a["seen"]) <= 40)
             and (a.get("strokes") is None or isinstance(a["strokes"], list))
             and (a.get("type") != "region" or isinstance(a.get("box"), list) and len(a["box"]) == 4
                  and all(isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v) for v in a["box"]) and min(a["box"][2:]) >= 0)

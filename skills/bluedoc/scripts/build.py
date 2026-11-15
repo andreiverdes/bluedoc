@@ -93,7 +93,9 @@ patch keys: doc, meta, header, tldr, status, section:<sec>, heading:<sec>, lead:
   place; an element no name finds becomes a hidden gesture link), layout:<board> (--json
   '{"<artboard>": [x, y]}' sets positions). artboard:, el: and link: with no --set/--json/--html
   print the screen file and the element's selector (link: also its data-nav); with only --change
-  they record a hand edit of the screen file as the next rev.
+  they record a hand edit of the screen file as the next rev. board:<board> is a Region or drawing on the
+  board itself, beside or across its screens: with no option patch says so; the reply's Where: line gives its
+  box in board px and its part on each screen or page under it, which their artboard: keys change.
   Storelisting keys: field:<locale>/<platform>/<field> (a store text) and field:<locale>/strings/<key> (a
   caption string): --set <field>=<text> writes it, --delete drops it, no option prints it with its count and limit.
   brand:<listing id> is listing.brand: --json '{"font": …, "palette": …, "image": …}' merges it (null deletes one);
@@ -3949,6 +3951,11 @@ def resolve_key(doc: dict, key: str) -> Target:
             return Target(a, arts, i, "artboard")
         names = sel.split("/") if EL_NAMES.match(sel) else None
         return Target(a, arts, i, "element", " ".join(f'[data-bd="{n}"]' for n in names) if names else sel)
+    if kind == "board" and len(parts) == 1:   # a Region or drawing beside the screens, on the board's world
+        b = board_of(doc)
+        if not b or b.get("id") != path:
+            raise PatchError(f"no board '{path}'" + (f": the board is '{b.get('id')}'" if b else ""))
+        return Target(b, None, None, "board")
     if kind == "link" and parts and parts[0]:
         aid, _, sel = path.partition("/")
         arts = _board_artboards(doc)
@@ -4644,6 +4651,13 @@ def cmd_patch(argv: list[str]) -> int:
                      "the sections shown by the listing's block: key")
         for line in listing.section_lines(doc, a.doc, t.selector):
             print(line)
+        return 0
+    if t.kind == "board" and not (a.set or a.json is not None or a.append is not None or a.delete or a.move is not None or a.html is not None):
+        # a Region or drawing on the board itself, beside (or across) its screens: the reply's `Where:` line (changes.json:
+        # the annotation's `where`) gives its box in board px and its part on each screen or page under it
+        print(f"the board '{t.obj.get('id')}' itself ({len(t.obj.get('artboards') or [])} screens): a mark beside or across "
+              "its screens; the reply's Where: line has its box in board px and its part on each screen or page under it")
+        print(f"change those by their artboard: or el: keys (each patch takes --change), or the layout with layout:{t.obj.get('id')}")
         return 0
     if not ops and t.kind != "frame" and not (on_screen and a.change):
         if not on_screen:

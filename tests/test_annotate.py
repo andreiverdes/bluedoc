@@ -91,6 +91,7 @@ class CommentTools(ChromePage):
         # above the dock, its left edge over Element
         self.assertEqual(t.ev("(p => Math.round(p.left - document.querySelector('.bd-anntb > [data-m=point]').getBoundingClientRect().left))(document.querySelector('.bd-annb.opt').getBoundingClientRect())"), 1)
         self.assertLess(t.ev("document.querySelector('.bd-annb.opt').getBoundingClientRect().bottom"), t.ev("document.querySelector('.bd-anntb').getBoundingClientRect().top"))
+        t.wait_for("document.querySelector('.bd-annb.opt').getAnimations({subtree: true}).every(a => a.playState !== 'running')")   # the pill has settled under the pointer
         self.click(t, ".bd-annb.opt [data-pen=violet]")
         self.click(t, ".bd-annb.opt [data-w='7']")
         self.assertEqual(t.ev("[localStorage.getItem('bluedoc:pen'), localStorage.getItem('bluedoc:pen-width')]"), ["violet", "7"])
@@ -238,6 +239,105 @@ class CommentTools(ChromePage):
         self.assertEqual(t.ev(STATE), ["view", "View"])
         self.assertFalse(shown(".bd-annb.strip"))
         self.assertEqual(self.browser.errors, [])
+
+
+# the first shown match's box, rounded: [left, top, width, height]
+BOX = "(sel => (e => e && (r => [r.left, r.top, r.width, r.height].map(Math.round))(e.getBoundingClientRect()))([...document.querySelectorAll(sel)].find(e => e.checkVisibility())))"
+# the cursor of what is under a point
+CURSOR_AT = "((x, y) => (e => e ? getComputedStyle(e).cursor : null)(document.elementFromPoint(x, y)))"
+
+
+@unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")
+class BoardMarksAndToolbars(ChromePage):
+    """On a board a Region drawn beside the screens lives on the board: it pans and zooms with it (anchored to the
+    board's world, not the window). In every tool the toolbars and trays keep the default arrow, step after step."""
+    mouse, drag, save_note = CommentTools.mouse, CommentTools.drag, CommentTools.save_note
+
+    def board(self, doc: str = "acme-fit-design.bluedoc.json") -> Tab:
+        t = self.open(self.server.url_for(self.docs / doc))
+        self.browser.call("Page.bringToFront", {}, t.session)
+        t.wait_for("!!BP.board()", 20)
+        t.ev("BP.sidebar({open: false}), 1")
+        time.sleep(0.6)
+        return t
+
+    def wheel(self, t: Tab, x: float, y: float, dy: float, ctrl: bool = False) -> None:
+        self.browser.call("Input.dispatchMouseEvent", {"type": "mouseWheel", "x": x, "y": y, "deltaX": 0, "deltaY": dy, **({"modifiers": 2} if ctrl else {})}, t.session)
+
+    def test_a_region_beside_the_screens_pans_and_zooms_with_the_board(self) -> None:
+        t = self.board()
+        t.ev("BP.setMode('region')")
+        b = t.ev("(r => [r.left, r.top, r.right, r.bottom])(document.querySelector('.bd-board').getBoundingClientRect())")
+        x0, y0 = b[0] + 100, b[3] - 250   # empty board, below and left of the screens
+        self.assertFalse(t.ev(f"!!document.elementsFromPoint({x0}, {y0}).find(e => e.closest('.bd-ab'))"), "the spot isn't on a screen")
+        self.drag(t, x0, y0, x0 + 160, y0 + 110)
+        t.wait_for("!!document.querySelector('.bd-cmp:not([hidden])')")
+        self.assertEqual(t.ev("document.querySelector('.bd-cmp .lb').textContent"), "Region on Board")
+        rgn, world = f"{BOX}({json.dumps('.bd-ann-rgn')})", f"{BOX}({json.dumps('.bd-world')})"
+        before, w0 = t.wait_for(rgn), t.ev(world)
+        # a pan: the box moves with the board, by the same delta
+        self.wheel(t, b[0] + 400, b[1] + 300, 160)
+        t.wait_for(f"{world}[1] !== {w0[1]}")
+        w1 = t.ev(world)
+        after = t.wait_for(f"(r => r && r[1] !== {before[1]} && r)({rgn})", 4)
+        self.assertNotEqual(w1[1] - w0[1], 0)
+        self.assertLessEqual(abs((after[1] - before[1]) - (w1[1] - w0[1])), 1, (before, after, w0, w1))
+        self.assertEqual(after[0], before[0])
+        # a zoom: the box scales with the board
+        cx, cy = after[0] + after[2] / 2, after[1] + after[3] / 2   # zoom about the box, so it stays in view
+        for _ in range(2):
+            self.wheel(t, cx, cy, -120, ctrl=True)
+        t.wait_for(f"{world}[2] !== {w1[2]}")
+        time.sleep(0.8)   # the zoom settles
+        w2, zoomed = t.ev(world), t.wait_for(rgn)
+        k = w2[2] / w1[2]
+        self.assertLessEqual(abs(zoomed[2] - after[2] * k), 2, (after, zoomed, k))
+        self.save_note(t, "Acme: a step count card here")
+        # what goes to the agent: the key names the board, and the region's box comes with it, in board px and on the
+        # screens under it (none here: it is beside them)
+        p = t.ev("BP.changesPayload()")
+        a = next(x for x in p["annotations"] if x["type"] == "region")
+        self.assertEqual(a["target"]["key"], "board:main")   # the Acme Fit board's id
+        self.assertEqual(len(a["box"]), 4)
+        self.assertEqual(set(a["where"]), {"board", "on"})
+        self.assertEqual(a["where"]["on"], [])
+        self.assertGreater(a["where"]["board"]["w"], 100)
+        self.assertIn(f"   Where: on the board at x {a['where']['board']['x']}, y {a['where']['board']['y']}", p["markdown"])
+        # one across a screen: its part on that screen, in the screen's own px
+        t.ev("BP.board({focus: 'login'}), 1")
+        time.sleep(0.8)
+        sb = t.ev("(r => [r.left, r.top, r.right, r.bottom])(document.querySelector('.bd-ab[data-ab=login]').getBoundingClientRect())")
+        self.drag(t, sb[0] - 30, sb[1] + 10, sb[0] + (sb[2] - sb[0]) / 2, sb[1] + 40)
+        t.wait_for("!!document.querySelector('.bd-cmp:not([hidden])')")
+        self.save_note(t, "Acme: the logo sits too close to the edge")
+        p = t.ev("BP.changesPayload()")
+        a = [x for x in p["annotations"] if x["type"] == "region"][-1]
+        self.assertEqual([o["artboard"] for o in a["where"]["on"]], ["login"], a)
+        self.assertEqual(a["where"]["on"][0]["x"], 0)
+        self.assertIn("on `artboard:login` at x 0,", p["markdown"])
+        self.assertEqual(self.browser.errors, [])
+
+    def test_toolbars_keep_the_default_arrow_in_every_tool(self) -> None:
+        bars = {"dock": ".bd-anntb", "board toolbar": ".bd-btb", "left tray": ".bd-stripe.l", "right tray": ".bd-stripe.r", "app bar": ".bd-bar",
+                "pane header": ".bd-lp .bd-pane-h"}
+        t = self.board()
+        t.ev("BP.board().panel || document.querySelector('.bd-stripe.l .bd-sk').click(), 1")
+        time.sleep(0.5)
+        for mode in ("point", "region", "select", "draw", "link", "frame"):
+            self.assertTrue(t.ev(f"BP.setMode({mode!r})"), mode)
+            for name, sel in bars.items():
+                box = t.ev(f"{BOX}({json.dumps(sel)})")
+                if not box:
+                    continue
+                with self.subTest(mode=mode, bar=name):
+                    seen = []
+                    for i in range(6):   # across the bar, a pointermove each step
+                        x, y = box[0] + box[2] * (0.1 + 0.8 * i / 5), box[1] + box[3] / 2
+                        self.mouse(t, "mouseMoved", x, y)
+                        seen.append(t.ev(f"{CURSOR_AT}({x}, {y})"))
+                    self.assertEqual(set(seen), {"default"}, seen)
+        self.assertEqual(self.browser.errors, [])
+
 
 
 if __name__ == "__main__":
