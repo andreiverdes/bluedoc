@@ -682,14 +682,12 @@ html.bd-lp-open:not(.bd-lp-dock) .bp-side { background: var(--surface); box-shad
 .bd-lockbar code { font: 500 12.5px var(--mono); }
 .bd-chg { --chg: var(--warn); }
 .bd-chg-add { --chg: var(--ok); } .bd-chg-del { --chg: var(--risk); }
-/* compare view: what a revision added reads as plainly as what it changed (the amber What changed box): a green wash
-   and edge on the new row, item, step, file, block or section, beside its NEW tag; a new canvas part glows green */
-tr.bd-chg-add > td { background: color-mix(in oklch, var(--ok-tint) 80%, transparent); box-shadow: inset 0 1px 0 color-mix(in oklch, var(--ok) 30%, transparent), inset 0 -1px 0 color-mix(in oklch, var(--ok) 30%, transparent); }
-tr.bd-chg-add > td:first-child { box-shadow: inset 3px 0 0 var(--ok), inset 0 1px 0 color-mix(in oklch, var(--ok) 30%, transparent), inset 0 -1px 0 color-mix(in oklch, var(--ok) 30%, transparent); }
-li.bd-chg-add { background: color-mix(in oklch, var(--ok-tint) 70%, transparent); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--ok) 32%, transparent), inset 3px 0 0 var(--ok); }
-:is(.bp-block, .bp-sec).bd-chg-add { margin-inline: -14px; padding: 12px 14px; border-radius: 14px; background: color-mix(in oklch, var(--ok-tint) 45%, transparent);
-  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--ok) 30%, transparent); }
-.bp-sec.bd-chg-add .bp-block.bd-chg-add { margin-inline: 0; padding: 0; background: none; box-shadow: none; }
+/* compare view: what a revision added gets a soft green wash beside its NEW tag (a row, item, file, block or section;
+   no edges, no bars); a new canvas part glows green */
+tr.bd-chg-add > td { background: color-mix(in oklch, var(--ok-tint) 70%, transparent); }
+li.bd-chg-add { background: color-mix(in oklch, var(--ok-tint) 60%, transparent); border-radius: 10px; }
+:is(.bp-block, .bp-sec).bd-chg-add { margin-inline: -14px; padding: 12px 14px; border-radius: 14px; background: color-mix(in oklch, var(--ok-tint) 40%, transparent); }
+.bp-sec.bd-chg-add .bp-block.bd-chg-add { margin-inline: 0; padding: 0; background: none; }
 td.bd-cell-mod { background: color-mix(in oklch, var(--warn-tint) 70%, transparent); }
 .bd-chg-flash { animation: bd-chg-flash 1.4s var(--ease); }
 @keyframes bd-chg-flash { 0%, 30% { outline: 3px solid color-mix(in oklch, var(--chg) 55%, transparent); outline-offset: 4px; } 100% { outline: 3px solid transparent; outline-offset: 4px; } }
@@ -1174,8 +1172,7 @@ td.bd-cell-mod { background: color-mix(in oklch, var(--warn-tint) 70%, transpare
 .bp-fstep { flex: none; height: 22px; margin-top: 3px; border-radius: 999px; font-family: var(--mono); font-size: 11.5px; }
 .bp-fstep:disabled { opacity: .55; cursor: default; }
 .bp-frow > .bd-chg-tag { margin-top: 4px; }
-.bp-frow.bd-chg-mod { background: color-mix(in oklch, var(--warn-tint) 60%, transparent); box-shadow: inset 3px 0 0 var(--warn); }
-.bp-frow.bd-chg-add { background: color-mix(in oklch, var(--ok-tint) 70%, transparent); box-shadow: inset 3px 0 0 var(--ok); }
+.bp-frow.bd-chg-mod { background: color-mix(in oklch, var(--warn-tint) 60%, transparent); } .bp-frow.bd-chg-add { background: color-mix(in oklch, var(--ok-tint) 70%, transparent); }
 .bp-frow.bd-ghost .nm { text-decoration: line-through; color: var(--risk-fg); }
 @media (max-width: 600px) { .bp-frow:not(.open) :is(.from, .bp-fwhy) { display: none; } }
 @media print {
@@ -1812,12 +1809,6 @@ html[data-v-cmt] .bd-cs-c:is(.on, .edit) { box-shadow: 0 0 0 1.5px var(--accent)
   font-size: 13px; line-height: 18px; color: var(--fg); scroll-margin: 8px; }
 .bd-chl button:hover { background: var(--hover); }
 .bd-chl button[aria-current="true"] { background: var(--selected); }
-/* each change's row in its kind's tint: new green, changed amber, removed red; hovered, a shade more; shown, ringed */
-.bd-chl button.add { --ck: var(--ok); --ct: var(--ok-tint); } .bd-chl button.mod { --ck: var(--warn); --ct: var(--warn-tint); } .bd-chl button.del { --ck: var(--risk); --ct: var(--risk-tint); }
-.bd-chl button:is(.add, .mod, .del) { background: color-mix(in oklch, var(--ct) 60%, transparent); box-shadow: inset 2px 0 0 color-mix(in oklch, var(--ck) 70%, transparent); }
-.bd-chl button:is(.add, .mod, .del):hover { background: linear-gradient(var(--hover), var(--hover)), color-mix(in oklch, var(--ct) 60%, transparent); }
-.bd-chl button:is(.add, .mod, .del)[aria-current="true"] { background: var(--ct); box-shadow: inset 0 0 0 1.5px color-mix(in oklch, var(--ck) 60%, transparent); }
-.bd-chl li + li { margin-top: 2px; }
 .bd-chl .bd-chg-tag { height: 18px; padding: 0 6px; font-size: 10px; }
 .bd-chl .t { min-width: 0; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; }
 .bd-chl .none { padding: 8px; color: var(--fg-subtle); }
@@ -13896,7 +13887,7 @@ function buildRevTab() {
   if (BASE) {
     const n = { add: 0, mod: 0, del: 0 }; CHG.forEach(c => n[c.kind]++);
     const kinds = Object.keys(n).filter(k => n[k]).flatMap((k, i) => [i ? ' · ' : null, h('span', { class: 'k ' + k }, `${n[k]} ${{ add: 'new', mod: 'changed', del: 'removed' }[k]}`)]);
-    chgBtns = CHG.map((c, i) => h('button', { type: 'button', class: c.kind, 'aria-current': 'false', onclick: () => showChg(i) }, chgTag(c.kind), h('span', { class: 't' }, plain(c.label))));
+    chgBtns = CHG.map((c, i) => h('button', { type: 'button', 'aria-current': 'false', onclick: () => showChg(i) }, chgTag(c.kind), h('span', { class: 't' }, plain(c.label))));
     chgSec = sec('Changes', h('p', { class: 'bd-rvr-sum' }, h('b', {}, `${BASE.rev} → ${VIEW.rev}`), h('span', {}, kinds.length ? kinds : 'no differences')),
       h('ol', { class: 'bd-chl', 'aria-label': 'Changes, in page order' }, chgBtns.length ? chgBtns.map(b => h('li', {}, b)) : h('li', { class: 'none' }, 'Nothing changed between these revisions.')));
   }
