@@ -1057,7 +1057,9 @@ class EarlierRevisionInChrome(SiteInChrome):
     def test_an_earlier_rev_shows_its_snapshot_not_the_live_page(self) -> None:
         self.to_rev2(snapshot=True)
         self.unlocked("rev=1")
-        a = self.tab.wait_for("(a => a.ready && a)(BP.board().artboards[0])", 15)
+        # the board's `ready` is the frame's first report, which a sandboxed frame (a process of its own) can send before
+        # Chrome has sized it: vw 0, every rect 0 × 0. Its resize reports them again, laid out: wait for that
+        a = self.tab.wait_for("(a => a.ready && a.page.sections.hero && a.page.sections.hero.w > 0 && a)(BP.board().artboards[0])", 15)
         self.assertEqual(a["page"]["snapshot"], {"rev": "1", "w": 1440})
         self.assertFalse(a["page"]["proxied"])
         self.assertIn("site.design/home.html?rev=1&w=1440", a["page"]["src"])
