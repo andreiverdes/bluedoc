@@ -115,6 +115,18 @@ class AnswerCard(ChromePage):
         h = a.ev(head)
         self.assertEqual(h[:3] + h[4:], [False, True, True, False])
 
+    def test_open_in_the_query_opens_questions_answers_and_details(self) -> None:
+        url = self.server.url_for(self.plan)
+        a = self.open(url)
+        a.go(f"{self.base}{url}?open=decisions:retention:d180,decisions:prices:details,decisions:nosuch,nosuch")
+        q = lambda iid: f"document.querySelector('#item-decisions-{iid}')"
+        a.wait_for(f"{q('prices')}.querySelector('.pv-more').getAttribute('aria-expanded') === 'true'")
+        self.assertEqual(a.ev(f"[{q('retention')}.classList.contains('open'), [...{q('retention')}.querySelectorAll('.bp-opt.open')].map(r => r.dataset.id), "
+                              f"{q('retention')}.querySelector('.pv-more').getAttribute('aria-expanded'), {q('prices')}.classList.contains('open'), "
+                              f"{q('prices')}.querySelectorAll('.bp-opt.open').length, !{q('prices')}.querySelector('.bd-dets').hidden]"),
+                         [True, ["d180"], "false", True, 0, True])
+        self.assertEqual(self.browser.errors, [])
+
 
 class PatchOn(unittest.TestCase):
     def setUp(self) -> None:

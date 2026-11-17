@@ -2,8 +2,9 @@
 
 The build takes it only as a list of short id strings; `patch --resolves` rewrites it on a bump and appends with
 --no-bump, and the history keeps each revision's list (res/build). In a real browser the reply Markdown names each
-comment's id, and a reload after a patch that lists one resolves that open comment as the agent's; a pending one, an
-unknown id, and a comment the reader reopened stay as they were until a newer revision lists it again (res/page)."""
+comment's id, and a reload after a patch that lists one resolves that open comment as the agent's, a --no-bump patch
+into the comment's own revision included; a pending one, an unknown id, and a comment the reader reopened stay as
+they were until a newer revision lists it again (res/page)."""
 from __future__ import annotations
 
 import json
@@ -85,11 +86,44 @@ class ResolvesOnThePage(unittest.TestCase):
         status, raw = self.server.req("GET", f"/__bluedoc/state?path={quote(self.url)}", headers={"X-Bluedoc": "1"})
         return json.loads(json.loads(raw)["state"].get(f"__ann:{cid}") or "{}") if status == 200 else {}
 
-    def patch(self, *resolves: str) -> str:
+    def patch(self, *resolves: str, bump: bool = True) -> str:
         r = self.tmp.run("build.py", "patch", self.plan, "tldr", "--set", "tldr=Acme saves carts per account.",
-                         "--change", "Acme: say where carts live.", *[x for c in resolves for x in ("--resolves", c)])
+                         "--change", "Acme: say where carts live.", *[x for c in resolves for x in ("--resolves", c)],
+                         *([] if bump else ["--no-bump"]))
         self.assertEqual(r.returncode, 0, r.stderr)
         return load_json(self.plan)["meta"]["rev"]
+
+    def send(self, t: Tab, note: str) -> str:
+        cid = t.ev(f"BP.annotate({{type: 'pin', key: 'tldr', note: {json.dumps(note)}}}).id")
+        send = "[...document.querySelectorAll('.bd-chgs[open] .ft .pri')].find(b => b.textContent.trim() === 'Send' && !b.disabled)"
+        t.ev("document.querySelector('.bd-anntb .bd-key.go').click()")
+        t.wait_for(f"!!{send}")
+        t.ev(f"{send}.click()")
+        t.wait_for(f"BP.annotations().find(a => a.id === {json.dumps(cid)}).status === 'open'")
+        return cid
+
+    def test_a_resolve_written_into_the_comments_own_revision_counts(self) -> None:
+        # replies.md's flow: --reply … --resolves <id> --no-bump writes `resolves` into the rev the comment was sent on
+        status, raw = self.server.req("POST", "/__bluedoc/unlock", b"{}", {"Content-Type": "application/json", "X-Bluedoc": "1"})
+        self.assertEqual(status, 200, raw)
+        t = Tab(self.browser)
+        t.go(f"http://{self.server.host}{self.url}?key={json.loads(raw)['token']}")
+        rev = load_json(self.plan)["meta"]["rev"]
+        pin = self.send(t, "Acme: say where saved carts live.")
+        self.assertEqual(self.patch(pin, bump=False), rev)
+        t.go(f"http://{self.server.host}{self.url}")
+        got = {a["id"]: a for a in t.ev("BP.annotations()")}[pin]
+        self.assertEqual((got["rev"], got["status"], got.get("resolvedBy"), got.get("resolvedRev")), (rev, "resolved", "agent", rev))
+        t.ev("document.querySelector('[role=radio][data-f=\"all\"]').click()")
+        card = f"document.querySelector('li[data-id=\"{pin}\"]')"
+        self.assertEqual(t.wait_for(f"{card}?.querySelector('.sago')?.textContent"), f"Resolved by the agent in rev {rev}")
+        # reopened, the same revision doesn't resolve it again, even when it lists it once more
+        t.ev(f"{card}.querySelector('button[aria-label=\"Reopen\"]').click()")
+        self.assertEqual(until(lambda: self.stored(pin).get("status") == "open" and "open"), "open")
+        self.patch(pin, bump=False)
+        t.go(f"http://{self.server.host}{self.url}")
+        self.assertEqual({a["id"]: a for a in t.ev("BP.annotations()")}[pin]["status"], "open", "a reopened comment was resolved again by its own revision")
+        self.assertEqual(self.browser.errors, [])
 
     def test_a_listed_open_comment_resolves_once_per_revision(self) -> None:
         status, raw = self.server.req("POST", "/__bluedoc/unlock", b"{}", {"Content-Type": "application/json", "X-Bluedoc": "1"})

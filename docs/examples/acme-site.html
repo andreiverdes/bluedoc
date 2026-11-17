@@ -2358,22 +2358,23 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .bp-cl-item.fd.open > .bp-cl-row .bp-cl-noteic { display: none; }
 :is(.bp-cl-item.fd, .bd-mrow).done:not(.open) > .bp-cl-row .bp-cl-text { color: var(--fg-muted); }
 :is(.bp-cl-item.fd, .bd-mrow).done.open > .bp-cl-row .bp-cl-text { color: var(--fg); }
-/* More details: a raised row in the accent's tint (the select keys' raise over a soft blue fill, accent text and a
-   faint accent edge) from the answers' left edge to their right (a row without answers: on the same column), its
-   chevron at the end. Pressed, it reads Hide details and opens into one raised card: the row its head, the details
-   (and their code) inside it under that */
-.ac-detrow { --mt: color-mix(in oklch, var(--accent) 13%, transparent); display: flex; flex-direction: column; margin: 2px 16px 10px calc(16px + var(--ind)); border-radius: 17px;
+/* More details: a raised row (the select keys' raise, default text, a 1 px accent border inset so it adds no size)
+   from the answers' left edge to their right (a row without answers: on the same column), its chevron at the end.
+   Pressed, it reads Hide details and opens into one card in that border: the row its head, the details (and their
+   code) under it on the page's surface */
+.ac-detrow { --mt: transparent; display: flex; flex-direction: column; margin: 2px 16px 10px calc(16px + var(--ind)); border-radius: 17px;
   background: linear-gradient(var(--mt), var(--mt)), linear-gradient(180deg, var(--hk-top), var(--hk-bot));
-  box-shadow: var(--shadow-hk), inset 0 0 0 1px color-mix(in oklch, var(--accent) 24%, transparent); }
+  box-shadow: var(--shadow-hk), inset 0 0 0 1px color-mix(in oklch, var(--accent) 60%, transparent); }
 .ac-detrow[hidden] { display: none; }
-.ac-detrow:has(> .pv-more:hover:not(:disabled)) { --mt: color-mix(in oklch, var(--accent) 20%, transparent); }
+.ac-detrow:has(> .pv-more:hover:not(:disabled)) { --mt: var(--hover); }
 .pv-more, .pv-more:hover:not(:disabled) { display: flex; align-items: center; gap: 7px; height: 34px; margin: 0; padding: 0 12px 0 11px; border-radius: 17px; font-size: 12.5px;
-  color: var(--accent-fg); background: none; box-shadow: none; }
+  color: var(--fg); background: none; box-shadow: none; }
 .pv-more[hidden] { display: none; }
 .pv-more .bd-ic { width: 14px; height: 14px; color: currentColor; }
-.pv-more .cv { margin-left: auto; transition: rotate .2s var(--ease); }
+.pv-more .cv { margin-left: auto; color: var(--fg-muted); transition: rotate .2s var(--ease); }
 .pv-more[aria-expanded="true"] .cv { rotate: 180deg; }
-.bd-dets { padding: 2px 14px 14px; font-size: 14px; color: var(--fg); }
+.bd-dets { padding: 12px 14px 14px; font-size: 14px; color: var(--fg); }
+.ac-detrow > .bd-dets { margin: 0 1px 1px; border-top: 1px solid var(--line); border-radius: 0 0 16px 16px; background: var(--surface); }
 .bd-dets[hidden] { display: none; }
 .bd-dets > * + * { margin-top: 10px; }
 .bp-cl-item.fd > .bp-convo { padding: 2px 16px 12px calc(16px + var(--ind)); }
@@ -6647,7 +6648,8 @@ function optionRows(x, compact) {
     el.classList.toggle('answered', cur.length > 0 || !!x.custom);
   };
   paint();
-  return { el, more: tm && tm.row, paint };
+  // openOpt: opens an answer's explanation (?open=…:<option>), as a click on its row does
+  return { el, more: tm && tm.row, paint, openOpt: id => { const r = rows.find(q => q.o.id === id); if (r && r.ob && r.ob.hidden) setOpen(r, true); } };
 }
 /* The one-line field: an open answer's (a comment about it), asked Tell me more's, and the reply under a question's
    conversation (about the whole question). The text, then a round Attach key and a Save pill, dimmed while there is
@@ -7274,6 +7276,22 @@ const openHashItem = () => {
 };
 addEventListener('hashchange', openHashItem);
 if (/^#(item|step|details)-/.test(location.hash)) setTimeout(openHashItem, 100);
+// ?open=<checklist>:<item>[:<option>|:details],… opens those questions on load: the card, and an answer's
+// explanation or its More details (on each view that shows it: its row, Merged's, its Diff card); the page scrolls
+// to the first
+const openFromQuery = () => {
+  let first = null;
+  for (const ref of (new URLSearchParams(location.search).get('open') || '').split(',')) {
+    const [cid, iid, what] = ref.trim().split(':'), x = cid && iid && ITEMS[cid + '/' + iid];
+    if (!x) continue;
+    first ||= openItem(x);
+    if (what === 'details') { if (x.setDetails) x.setDetails(true); }
+    else if (what) for (const o of [x.opts, ...(x.mviews || []).map(m => m.opts), ...Object.values(DIFFS).flatMap(d => (d.mirrors || []).filter(m => m.src === x).map(m => m.opts))])
+      if (o && o.openOpt) o.openOpt(what);
+  }
+  if (first) first.scrollIntoView({ block: 'start' });
+};
+if (new URLSearchParams(location.search).has('open')) setTimeout(openFromQuery, 100);
 if ('IntersectionObserver' in window) {
   const io = new IntersectionObserver(es => {
     for (const e of es) if (e.isIntersecting) tocLinks.forEach(a => a.classList.toggle('on', a.getAttribute('href') === '#' + e.target.id));
@@ -15298,21 +15316,22 @@ const MARKUP = (() => {
   if (legacy != null) { const x = parse(legacy); if (Array.isArray(x)) for (const a of x) if (!valid(a) ? skipBad(KEY, a) : !list.some(b => b.id === a.id)) list.push(a); }
   list.sort((a, b) => String(a.at || '').localeCompare(String(b.at || '')));
   // A comment is pending (saved, not sent), open (sent with Request changes) or resolved (the reader
-  // marked it done, or the agent listed its id in a newer revision's `resolves`: resolvedBy 'agent').
+  // marked it done, or the agent listed its id in `resolves` of its rev or a newer one: resolvedBy 'agent').
   // Notes stored before statuses existed carry `sent: <time>` instead.
   const STATUSES = ['pending', 'open', 'resolved'];
   for (const a of list) {
     if (!STATUSES.includes(a.status)) a.status = a.sent ? 'open' : 'pending';
     if (a.sent) { a.sentAt ||= typeof a.sent === 'string' ? a.sent : a.at; delete a.sent; }
   }
-  // An open comment the agent says a later revision addresses becomes resolved, by the newest such revision.
-  // resolvedRev stays when the reader reopens it, so only a revision after that one resolves it again.
+  // An open comment the agent says a revision addresses becomes resolved, by the newest such revision: its own rev
+  // counts (a reply with --resolves --no-bump writes there). resolvedRev stays when the reader reopens it, so only a
+  // revision after that one resolves it again.
   const agentResolve = () => {
     const at = r => REVS.findIndex(x => x.rev === r), by = [];
     for (const a of list) {
       if (a.status !== 'open' || at(a.rev) < 0) continue;
-      const from = Math.max(at(a.rev), a.resolvedRev ? at(a.resolvedRev) : -1);
-      const r = REVS.slice(from + 1).reverse().find(x => Array.isArray(x.doc.resolves) && x.doc.resolves.includes(a.id));
+      const from = a.resolvedRev ? Math.max(at(a.rev), at(a.resolvedRev) + 1) : at(a.rev);
+      const r = REVS.slice(from).reverse().find(x => Array.isArray(x.doc.resolves) && x.doc.resolves.includes(a.id));
       if (r) { Object.assign(a, { status: 'resolved', resolvedBy: 'agent', resolvedRev: r.rev, resolvedAt: new Date().toISOString() }); by.push(a); }
     }
     return by.length;
@@ -18122,7 +18141,7 @@ if (BOARD && BOARD.afterMarkup) BOARD.afterMarkup();   // a storelisting's draft
 // ?v-rail (VAR.rail): A puts the stripes in the app bar, the left one after the doc's name and the right one before
 // Share; D puts both at the end of the bottom dock, after its primary (a dock of their own where the page has none);
 // G puts the stripes in the app bar, the left one leading it (the home key first); its right side reads the theme
-// switch, the right one, Share, then ⋮ (ARC's menu: Export's rows, then Archive; Export's own key goes where ⋮ is);
+// switch, Share, ⋮ (ARC's menu: Export's rows, then Archive; Export's own key goes where ⋮ is), then the right one last;
 // H also seats a board's toolbar in the bar (a phone: back on the board). B, C and F are CSS. F's, G's and H's left
 // pane, over the page, closes on Esc as the right one does (a doc's Contents: cpOver)
 (function placeRail() {
@@ -18137,7 +18156,7 @@ if (BOARD && BOARD.afterMarkup) BOARD.afterMarkup();   // a storelisting's draft
     $('.bd-crumb').before(stripeL);
     const g = groove(); g.classList.add('home');   // between the home key and the pane keys
     stripeL.prepend(homeKeyG, g);
-    r.prepend(themeBtn, stripeR);
+    r.prepend(themeBtn); r.append(stripeR);
     if (ARC.menu && x) {
       // Export's rows in ⋮, each pressing its own (the same action); above a phone only, which keeps its Export key
       const rows = [...x.querySelectorAll('.bd-expm [role="menuitem"]')].map(o => h('button', { type: 'button', role: 'menuitem', tabindex: '-1', class: 'bd-desk',
