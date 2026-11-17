@@ -387,7 +387,8 @@ class Conversation(ChromePage):
         self.assertEqual(a.ev(f"[{row}.querySelector('.ac-detrow .pv-more').textContent, !!{row}.querySelector('.ac-detrow .ac-keys')]"), ["More details", True])
         a.ev(f"{row}.querySelector('.pv-more').click()")
         self.assertEqual(a.ev(parts), ["bp-cl-row", "ac-detrow", "bd-dets", "bp-opts", "ac-more", "ac-reply"])
-        # answered, it folds to its head with ✓ and the pick
+        # answered, it folds to its head with ✓ and the pick (All: the list's Open filter would hide an answer picked by script)
+        a.ev("BP.findingsFilter('cl-decisions', 'all')")
         a.ev("BP.choose('decisions/retention', 'd180')")
         a.ev(f"{row}.querySelector('.bp-cl-head').click()")
         self.assertEqual([a.ev(parts), a.ev(f"{row}.querySelector('.pv-ok').textContent")], [["bp-cl-row"], "180 days"])
