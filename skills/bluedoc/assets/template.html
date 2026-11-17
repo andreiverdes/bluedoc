@@ -2177,7 +2177,7 @@ html[data-v-cmt] .bd-cs-c:is(.on, .edit) { box-shadow: 0 0 0 1.5px var(--accent)
   html.bd-sp-open .bd-shell { padding-bottom: calc(var(--sp-sheet-h) + 90px); }
 }
 
-@media print { .bd-anntb, .bd-ann-layer, .bd-ann-hov, .bd-ann-cap, .bd-selc, .bd-tip, .bd-sp, .bd-cmp, .bd-home { display: none !important; } html.bd-tray-on .bd-shell, :root.bd-sp-dock .bd-shell { padding: 0; } }
+@media print { .bd-anntb, .bd-ann-layer, .bd-bmk, .bd-ann-hov, .bd-ann-cap, .bd-selc, .bd-tip, .bd-sp, .bd-cmp, .bd-home { display: none !important; } html.bd-tray-on .bd-shell, :root.bd-sp-dock .bd-shell { padding: 0; } }
 
 /* code review: diff block (HorizonUI DiffReview, ChangeTable, CodeBlock syntax tokens) */
 :root {
@@ -2829,7 +2829,18 @@ html:not(.bd-lp-dock) .bd-rh-left, html:not(.bd-sp-dock) .bd-rh-right { display:
 .bd-board[data-m="frame"] { cursor: crosshair; }
 .bd-board:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); }
 .bd-bvp { position: absolute; left: 0; top: 0; transform-origin: 0 0; --k: 1; }
-.bd-world { position: absolute; left: -10000px; top: -10000px; width: 20000px; height: 20000px; pointer-events: none; }
+/* the board's marks (MARKUP on a board: B.marks): Region, Pen and pins in board px, over the screens, panning and
+   zooming with them; a pin keeps its size (1/k) and opens away from its screen's edges (fl: left of its spot, fb: below) */
+.bd-bmk { position: absolute; left: 0; top: 0; width: 0; height: 0; z-index: 6; pointer-events: none; }
+.bd-bmk[hidden] { display: none; }
+.bd-bmk .bd-ann-pin { scale: calc(1 / var(--k)); transition: none; }
+.bd-bmk .bd-ann-pin.hot { scale: calc(1.12 / var(--k)); }
+.bd-bmk .bd-ann-pin.fl { left: -26px; border-radius: 13px 13px 3px 13px; transform-origin: 100% 100%; }
+.bd-bmk .bd-ann-pin.fb { top: 0; border-radius: 3px 13px 13px 13px; transform-origin: 0 0; }
+.bd-bmk .bd-ann-pin.fl.fb { border-radius: 13px 3px 13px 13px; transform-origin: 100% 0; }
+.bd-bmk .bd-ann-rgn { border-width: calc(1.5px / var(--k)); border-radius: calc(6px / var(--k)); }
+.bd-bmk .bd-ann-rgn.hot { border-width: calc(2px / var(--k)); }
+.bd-bmk .bd-ann-ink { width: 1px; height: 1px; }
 /* artboards: title above, device bezel around, the screen at its native size (the layer scales it) */
 .bd-ab { position: absolute; }
 .bd-ab.off, .bd-bvp.variants .bd-rq { display: none; }
@@ -3258,7 +3269,7 @@ html.bd-lp-open .bd-lp { transform: none; visibility: visible; transition: trans
 .bd-pres .hint .to { color: oklch(70% 0 0); }
 .bd-pres button.hint { box-shadow: inset 0 0 0 1px oklch(42% 0.01 264); cursor: pointer; }
 .bd-pres button.hint:hover { background: oklch(32% 0.01 264); }
-html.bd-presenting :is(.bd-anntb, .bd-ann-layer, .bd-cmp, .bd-selc) { display: none !important; }
+html.bd-presenting :is(.bd-anntb, .bd-ann-layer, .bd-bmk, .bd-cmp, .bd-selc) { display: none !important; }
 .bd-psz { position: relative; flex: none; }
 .bd-pdev { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
 /* a deck: each slide as large as the window allows, its speaker notes under it (N shows or hides them) */
@@ -9693,9 +9704,10 @@ function renderBoard(b) {
   const abs = boardAbs(b), themes = (Array.isArray(b.themes) ? b.themes : []).filter(t => t && typeof t.id === 'string');
   const B = BOARD = { b, abs, k: 1, tx: 0, ty: 0, mode: 'view', sel: null, sketch: false, reduced: REDUCE, paused: false, theme: null, touched: false, lp: false,
     frames: new Map(), ghosts: new Map(), twins: new Map(), twin: false, live: new Set(), rqs: new Map(), rq: null, variants: null };
-  // the board's world: a fixed, empty box in board px that pans and zooms with the screens; a Region or Pen mark drawn
-  // beside them anchors to it (MARKUP: `board`), so it stays where it was drawn on the board
-  const vp = h('div', { class: 'bd-bvp', style: `--gut: ${VAR_GUT}px` }, h('div', { class: 'bd-world', 'aria-hidden': 'true' }));
+  // the board's marks layer (B.marks): MARKUP draws the comments made on the board there, in board px, so they pan
+  // and zoom with the screens as one
+  const marks = h('div', { class: 'bd-bmk' });
+  const vp = h('div', { class: 'bd-bvp', style: `--gut: ${VAR_GUT}px` }, marks);
   const stage = h('div', { class: 'bd-board', tabindex: 0, role: 'region', 'data-m': 'view',
     'aria-label': (b.title || 'Design board') + '. Drag to pan; pinch or Ctrl + scroll to zoom; F focuses the selected screen, 0 fits them all.' }, vp);
   const str = (v, n = 200) => typeof v === 'string' ? v.slice(0, n) : '';
@@ -9986,7 +9998,7 @@ function renderBoard(b) {
     const [w, hh] = x.role ? deviceSize(x.a) : sizeX(x), proxied = live && !snap;
     const fr = h('iframe', { sandbox: proxied ? LIVE_SANDBOX : SCREEN_SANDBOX, class: 'bd-ab-fr', 'data-ab': x.a.id, title: `${SCREEN[0].toUpperCase()}${SCREEN.slice(1)}: ` + (x.a.title || x.a.id),
       tabindex: '-1', width: w, height: hh, name: page ? frameName(x) : null, ...attrs });
-    Object.assign(x, { fr, attrs, live: proxied, snap, allow: 1, ready: false, locSig: '', sigs: null });
+    Object.assign(x, { fr, attrs, live: proxied, snap, allow: 1, ready: false, locSig: '', sigs: null, sy: 0 });
     fr.addEventListener('load', () => loaded(x, fr));
     B.live.add(x);
     return fr;
@@ -10131,7 +10143,13 @@ function renderBoard(b) {
     if (!sels.length || sig === x.locSig) return;
     x.locSig = sig; post(x, { bd: 'locate', sels });
   }
-  const pickPos = (x, r) => r ? { x: clamp((r.x + r.w) / x.p.w, 0, 1), y: clamp(r.y / x.p.h, 0, 1) } : null;
+  // a frame's scroll (frame px): a page in Viewport, a screen whose document scrolls; 0 while it isn't live (a frame
+  // mounts at the top)
+  const scrollOf = x => x.fr ? x.sy || 0 : 0;
+  const r2 = v => Math.round(v * 100) / 100;
+  // a pin's spot on an element (r: its rect, frame px): the element's top right, in the screen's px (a page's document
+  // px: Full page and Viewport alike)
+  const spotOf = (x, r) => r ? { x: r2(r.x + r.w), y: r2(r.y + scrollOf(x)) } : null;
   // what a website pin carries for the agent: its section, the source hints (the section's, else the page's) and the
   // width it was made at
   function siteTarget(x, sec) {
@@ -10167,7 +10185,7 @@ function renderBoard(b) {
     const d = e.data;
     if (!x || !d || typeof d !== 'object' || !['ready', 'hover', 'pick', 'nav', 'scroll', 'snapshot', 'edit', 'key', 'wheel', 'pan', 'space'].includes(d.bd)) return;
     if (d.bd === 'snapshot') { const f = x.live && snapAsks.get(d.id); if (f) { snapAsks.delete(d.id); f(d); } return; }
-    if (d.bd === 'scroll') { if (!x.role && Number.isFinite(d.y)) syncScroll(x, d.y); return; }
+    if (d.bd === 'scroll') { if (!x.role && Number.isFinite(d.y)) { x.sy = d.y; syncScroll(x, d.y); MARKUP.relayout(); } return; }
     if (d.bd === 'wheel' || d.bd === 'pan' || d.bd === 'space') { if (!x.role) frameNav(x, d); return; }
     if (d.bd === 'ready') {
       x.ready = true;
@@ -10177,8 +10195,10 @@ function renderBoard(b) {
       if (!x.twin && d.drafts && typeof d.drafts === 'object' && B.onDraftStatus) B.onDraftStatus(x, d.drafts, d.draftsNow && typeof d.draftsNow === 'object' ? d.draftsNow : {});
       x.fallback = str(d.fallback, 80) || null; paintWarn(x);
       if (d.rects && typeof d.rects === 'object') for (const [s, r] of Object.entries(d.rects).slice(0, 100)) x.rects[str(s)] = rectOf(r);
+      if (Number.isFinite(d.sy)) x.sy = d.sy;   // the rects are frame px: a page in Viewport scrolled by sy
       if (Array.isArray(d.sigs)) x.sigs = d.sigs.slice(0, 50).map(s => typeof s === 'string' ? s.slice(0, 16) : null);
       if (devOf(x.a) === 'page') takeHeight(x, d);
+      if (!x.twin) MARKUP.reported(x.a.id);   // its pins keep their elements' spots, for when the frame isn't live
       locate(x); paintVars(x); MARKUP.relayout(); paintSecChg(); snapSoon(x);
       const s = x.pendingSec, r = s && x.rects[secKey(s)];
       if (r) { x.pendingSec = null; showSection(x, r); }
@@ -10207,10 +10227,10 @@ function renderBoard(b) {
     if (B.mode !== 'point' && B.mode !== 'select') return;
     // a pick on the screen's body (no element under it) is about the whole screen: `artboard:<id>`
     const sel = str(d.sel), r = rectOf(d.rect);
-    if (!sel) MARKUP.pinFrame({ el: x.el, key: 'artboard:' + x.a.id, what: '', text: str(d.text), extra: siteTarget(x, null), pos: r ? { x: clamp((r.x + r.w / 2) / x.p.w, 0, 1), y: clamp((r.y + r.h / 2) / x.p.h, 0, 1) } : { x: .5, y: .5 } });
+    if (!sel) MARKUP.pinFrame({ el: x.el, key: 'artboard:' + x.a.id, what: '', text: str(d.text), extra: siteTarget(x, null), spot: r ? { x: r2(r.x + r.w / 2), y: r2(r.y + r.h / 2 + scrollOf(x)) } : null });
     else {
       if (r) x.rects[sel] = r;
-      MARKUP.pinFrame({ el: x.el, key: `el:${x.a.id}/${sel}`, what: what || sel.slice(0, 60), text: str(d.text), extra: siteTarget(x, d.sec), pos: pickPos(x, r) || { x: .5, y: .5 } });
+      MARKUP.pinFrame({ el: x.el, key: `el:${x.a.id}/${sel}`, what: what || sel.slice(0, 60), text: str(d.text), extra: siteTarget(x, d.sec), spot: spotOf(x, r) });
     }
     // Element: the picked element, which Delete removes (after the comment box opened: it ends the last one's pick)
     if (B.mode === 'point' && B.onElPick && editable(x)) B.onElPick(x, d);
@@ -10307,10 +10327,12 @@ function renderBoard(b) {
 
   /* view: pan, zoom, fit, focus */
   let raf = 0, anim = 0, liveT = 0, zoomLbl = null;
+  const PV = { k: 1, tx: 0, ty: 0 };   // the view as last painted: what the board shows (B.k, tx, ty may be a frame ahead)
   const apply = () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; paintView(); }); };
   function paintView() {
     vp.style.transform = `translate(${B.tx}px,${B.ty}px) scale(${B.k})`;
     vp.style.setProperty('--k', B.k);
+    Object.assign(PV, { k: B.k, tx: B.tx, ty: B.ty });
     if (vp.dataset.vz !== varZoom()) vp.dataset.vz = varZoom();   // the versions gutter's room on screen
     for (const m of [B.frames, B.ghosts]) for (const x of m.values()) { const w = x.p.w * B.k, z = w < 36 ? 'xs' : w < 300 ? 's' : w < 520 ? 'm' : ''; if ((x.el.dataset.tz || '') !== z) { if (z) x.el.dataset.tz = z; else delete x.el.dataset.tz; } }
     const g = 24 * B.k; stage.style.backgroundSize = `${g}px ${g}px`; stage.style.backgroundPosition = `${B.tx}px ${B.ty}px`;
@@ -10586,13 +10608,6 @@ function renderBoard(b) {
       x.liReach.textContent = [ENTRY.has(x.a.id) && 'entry', n && `→ ${n}`].filter(Boolean).join(' · ');
     }
   }
-  // a link pin's spot: the middle of its label segment, as a fraction of the arrow's box
-  const linkPinPos = key => {
-    const o = gEls.get(key); if (!o) return null;
-    const xs = o.r.points.map(p => p[0]), ys = o.r.points.map(p => p[1]), x0 = Math.min(...xs), y0 = Math.min(...ys), w = Math.max(...xs) - x0, hh = Math.max(...ys) - y0;
-    const lp = o.r.label || { x: x0, y: y0 };
-    return { x: w ? clamp((lp.x - x0) / w, 0, 1) : .5, y: hh ? clamp((lp.y - y0) / hh, 0, 1) : .5 };
-  };
   mergeLinks();
 
   /* toolbar: Fit · zoom · Focus, Present, Variants, Flows, fidelity, theme, ⋯ More (one row: fitTb); the left panel's
@@ -11092,14 +11107,6 @@ function renderBoard(b) {
     if (B.mode !== 'frame') cancelRq();
     if (B.onMode) B.onMode(B.mode);
   };
-  // an `el:` pin's spot from where its frame last reported the element, as a fraction of the artboard; a `link:`
-  // pin's, on its arrow's label segment
-  B.pinPos = key => {
-    if (key.startsWith('link:')) return linkPinPos(key);
-    if (!key.startsWith('el:')) return null;
-    const i = key.indexOf('/'), x = i > 3 && B.frames.get(key.slice(3, i)), r = x && x.rects[key.slice(i + 1)];
-    return r && r.w + r.h > 0 ? pickPos(x, r) : null;   // a hidden element (a deletion draft): the pin keeps its own spot
-  };
   // the artboard a key names (artboard:, el:), else null
   B.abFor = key => { const m = /^(?:artboard|el):([^/]+)/.exec(key); const x = m && B.frames.get(m[1]); return x ? x.el : null; };
   B.focusKey = key => {
@@ -11111,20 +11118,121 @@ function renderBoard(b) {
     if (el) { showBox(boxOf([{ a: {}, p: el._box }]), true, 2); return true; }
     return false;
   };
-  // a Region's or drawing's place for the agent: the box (fractions {x0, y0, x1, y1} of its anchor: the board's world,
-  // .bd-world, or a screen) in board px, and on each screen or page it falls on, its part in that frame's own px
-  const WORLD = { x: -10000, y: -10000, w: 20000, h: 20000 };   // .bd-world's box in board px
-  B.where = (key, e) => {
-    const m = /^(board)(?::[^/]*)?$|^(artboard):([^/]+)$/.exec(key || ''); if (!m || !e || !isFinite(e.x1)) return null;
-    m[1] = m[1] || m[2]; m[2] = m[3];
-    const f = m[1] === 'artboard' && B.frames.get(m[2]), o = m[1] === 'board' ? WORLD : f && { x: f.p.x, y: f.p.y, w: f.p.w, h: f.p.h };
-    if (!o) return null;
-    const r = Math.round, b = { x: o.x + e.x0 * o.w, y: o.y + e.y0 * o.h, w: (e.x1 - e.x0) * o.w, h: (e.y1 - e.y0) * o.h };
-    const on = [...B.frames.values()].filter(x => b.x < x.p.x + x.p.w && b.x + b.w > x.p.x && b.y < x.p.y + x.p.h && b.y + b.h > x.p.y).map(x => {
-      const l = Math.max(b.x, x.p.x), t = Math.max(b.y, x.p.y);
-      return { artboard: x.a.id, x: r(l - x.p.x), y: r(t - x.p.y), w: r(Math.min(b.x + b.w, x.p.x + x.p.w) - l), h: r(Math.min(b.y + b.h, x.p.y + x.p.h) - t) };
-    });
-    return { board: { x: r(b.x), y: r(b.y), w: r(b.w), h: r(b.h) }, on };
+
+  /* marks: the comments made on the board, which MARKUP draws in its marks layer (`marks`, board px, over the screens)
+     so they pan and zoom with it. A pin on a screen (`el:`, `artboard:`) sits on its element's spot: where the frame
+     last reported the element while it is live, else the spot kept with the pin (`spot`, in the screen's px: a page's
+     document px, the same in Full page and Viewport), else (a pin from before `spot`) its fraction of the screen
+     (`pos`), else the screen's top left. It stays on its screen: a spot scrolled out of a page in Viewport, or below a
+     page not measured yet, sits at the frame's edge, away. A Region or drawing (`board:<id>`) keeps its box in the px
+     of the screen holding most of it (`where.on[0]`), so it follows that screen, else in board px; on a page in
+     Viewport it is cut to the frame. A pin on the empty board keeps its board px (`spot`); a link's sits on its arrow's
+     label, a requested frame's in its top right. A mark that can't be placed now draws nothing: never a stand-in spot. */
+  const BM = B.marks = { layer: marks, stage, key: 'board:' + (b.id || '') };
+  BM.k = () => PV.k;
+  BM.toBoard = (cx, cy) => { const r = stage.getBoundingClientRect(); return { x: (cx - r.left - PV.tx) / PV.k, y: (cy - r.top - PV.ty) / PV.k }; };
+  BM.toClient = (x, y) => { const r = stage.getBoundingClientRect(); return { x: r.left + PV.tx + x * PV.k, y: r.top + PV.ty + y * PV.k }; };
+  const shownX = x => !!x && x.el.isConnected && !x.el.classList.contains('off');
+  // where a screen's px start on the board: its frame's top left, less its scroll
+  const originOf = x => x ? { x: x.p.x, y: x.p.y - scrollOf(x) } : { x: 0, y: 0 };
+  // a frame that scrolls cuts off what lies past it: a page in Viewport, a screen scrolled
+  const cuts = x => scrollOf(x) !== 0 || devOf(x.a) === 'page' && !fullOf(x);
+  const okXY = s => !!s && typeof s === 'object' && Number.isFinite(s.x) && Number.isFinite(s.y);
+  const boundsOf = ss => {
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const s of ss) for (let i = 0; i + 1 < s.length; i += 2) { x0 = Math.min(x0, s[i]); x1 = Math.max(x1, s[i]); y0 = Math.min(y0, s[i + 1]); y1 = Math.max(y1, s[i + 1]); }
+    return isFinite(x1) ? { x: x0, y: y0, w: x1 - x0, h: y1 - y0 } : null;
+  };
+  // a box (board px) on the screens under it: its part on each, in that screen's px, the most covered first
+  function partsOf(bx) {
+    const out = [];
+    for (const x of B.frames.values()) {
+      if (!shownX(x)) continue;
+      const p = x.p, l = Math.max(bx.x, p.x), t = Math.max(bx.y, p.y), r = Math.min(bx.x + bx.w, p.x + p.w), bt = Math.min(bx.y + bx.h, p.y + p.h);
+      if (r < l || bt < t) continue;
+      const o = originOf(x), rd = Math.round;
+      out.push({ x, n: (r - l) * (bt - t) + (r - l + bt - t) * 1e-6, part: { artboard: x.a.id, x: rd(l - o.x), y: rd(t - o.y), w: rd(r - l), h: rd(bt - t) } });
+    }
+    return out.sort((a, c) => c.n - a.n);
+  }
+  // a Region or drawing made on the board (its box in board px): its anchor (the screen holding most of it: its
+  // element, and where its px start; else the board), the screens it covers and where it is, for the agent
+  BM.shape = box => {
+    const on = partsOf(box), x = on.length ? on[0].x : null, rd = Math.round;
+    return { origin: originOf(x), el: x && x.el, els: on.map(o => o.x.el),
+      where: { board: { x: rd(box.x), y: rd(box.y), w: rd(box.w), h: rd(box.h) }, on: on.map(o => o.part) } };
+  };
+  function shapeAt(a, t, rest) {
+    let x = null, o, sx = 1, sy = 1;   // the anchor, where its px start, and (before `where`) the screen's size
+    if (a.where && typeof a.where === 'object') {
+      const id = Array.isArray(a.where.on) && a.where.on[0] && a.where.on[0].artboard;
+      if (id) { x = B.frames.get(id); if (!shownX(x)) return null; }
+      o = originOf(x);
+    } else if (t === 'artboard') {   // made inside one screen before 1.0.59: fractions of it
+      x = B.frames.get(rest); if (!shownX(x)) return null;
+      o = { x: x.p.x, y: x.p.y }; sx = x.p.w; sy = x.p.h;
+    } else return null;
+    const strokes = a.type === 'draw' ? (a.strokes || []).filter(Array.isArray).map(s => s.map((v, i) => i % 2 ? o.y + v * sy : o.x + v * sx)) : null;
+    const box = a.type === 'region' ? { x: o.x + a.box[0] * sx, y: o.y + a.box[1] * sy, w: a.box[2] * sx, h: a.box[3] * sy } : boundsOf(strokes);
+    if (!box || ![box.x, box.y, box.w, box.h].every(Number.isFinite)) return null;
+    const clip = x && cuts(x) ? x.p : null;
+    if (clip && (box.x > clip.x + clip.w || box.x + box.w < clip.x || box.y > clip.y + clip.h || box.y + box.h < clip.y)) return null;   // scrolled out of its frame
+    return { box, strokes, clip, bound: x ? x.p : null, exact: true };
+  }
+  // where a mark on the board is now, in board px: a pin's {pt, exact, bound} (bound: the box its bubble stays in), a
+  // shape's {box, strokes, clip, bound}; null when it shows nowhere now
+  BM.place = a => {
+    if (a.lost) return null;
+    const key = a.target.key, i = key.indexOf(':'), t = key.slice(0, i), rest = key.slice(i + 1);
+    if (a.type === 'region' || a.type === 'draw') return shapeAt(a, t, rest);
+    if (t === 'board') return okXY(a.spot) ? { pt: { x: a.spot.x, y: a.spot.y }, exact: true, bound: null } : null;
+    if (t === 'el' || t === 'artboard') {
+      const j = rest.indexOf('/'), x = B.frames.get(j < 0 ? rest : rest.slice(0, j)); if (!shownX(x)) return null;
+      const r = t === 'el' && x.fr && x.ready ? x.rects[rest.slice(j + 1)] : null;   // a hidden element (a deletion draft): its kept spot
+      const s = r && r.w + r.h > 0 ? spotOf(x, r) : okXY(a.spot) ? a.spot : null;
+      let fx = 0, fy = 0;   // frame px
+      if (s) { fx = s.x; fy = s.y - scrollOf(x); } else if (okXY(a.pos)) { fx = a.pos.x * x.p.w; fy = a.pos.y * x.p.h; }
+      const cx = clamp(fx, 0, x.p.w), cy = clamp(fy, 0, x.p.h);
+      return { pt: { x: x.p.x + cx, y: x.p.y + cy }, exact: Math.abs(cx - fx) <= 1 && Math.abs(cy - fy) <= 1, bound: x.p };
+    }
+    if (t === 'link') {
+      const o = gEls.get(key); if (!o || !o.g.isConnected || !o.g.checkVisibility()) return null;
+      const lp = o.r.label || { x: o.r.points[0][0], y: o.r.points[0][1] };
+      return { pt: { x: lp.x, y: lp.y }, exact: true, bound: null };
+    }
+    if (t === 'frame') {
+      const el = [...B.rqs.values()].find(e => e.dataset.key === key); if (!el || !el.checkVisibility() || !el._box) return null;
+      const p = el._box, q = okXY(a.pos) ? a.pos : { x: 1, y: 0 };
+      return { pt: { x: p.x + q.x * p.w, y: p.y + q.y * p.h }, exact: true, bound: p };
+    }
+    return null;   // a draft about the whole board (layout:): its card alone
+  };
+  // a pin's spot as its live frame reports it now (an `el:` key), else null: MARKUP keeps it with the pin
+  BM.liveSpot = a => {
+    const m = /^el:([^/]+)\/(.+)$/.exec(a.target.key), x = m && B.frames.get(m[1]);
+    const r = x && x.fr && x.ready ? x.rects[m[2]] : null;
+    return r && r.w + r.h > 0 ? spotOf(x, r) : null;
+  };
+  B.spotOf = (id, r) => { const x = B.frames.get(id); return x ? spotOf(x, r) : null; };
+  // a spot in screen id at board px q (a press on its outline or title), in the screen's px, inside its frame
+  BM.spotAt = (id, q) => { const x = B.frames.get(id); return x ? { x: r2(clamp(q.x - x.p.x, 0, x.p.w)), y: r2(clamp(q.y - x.p.y, 0, x.p.h) + scrollOf(x)) } : null; };
+  // a Region's or drawing's place for the agent: its box in board px, its part on each screen under it in that screen's px
+  BM.where = a => {
+    if (a.where && typeof a.where === 'object') return { board: a.where.board, on: Array.isArray(a.where.on) ? a.where.on : [] };
+    const q = a.target.key.startsWith('artboard:') ? shapeAt(a, 'artboard', a.target.key.slice(9)) : null;
+    return q ? BM.shape(q.box).where : null;
+  };
+  // show a mark on the board: a pin's screen around its spot (the screen's width, 800 px of it), a shape with room
+  // around it, a link's arrow, a requested frame; false when it shows nowhere
+  BM.show = a => {
+    const t = a.target.key.split(':')[0], q = BM.place(a);
+    if (a.type !== 'region' && a.type !== 'draw' && (t === 'link' || t === 'frame')) return B.focusKey(a.target.key);
+    if (!q) return false;
+    const x = q.bound && [...B.frames.values()].find(y => y.p === q.bound);
+    if (q.pt && x) { select(x.a.id); showBox({ x: x.p.x, y: Math.max(x.p.y, q.pt.y - 400), w: x.p.w, h: Math.min(x.p.h, 800) }, true, 2); }
+    else { const bx = q.box || { x: q.pt.x, y: q.pt.y, w: 0, h: 0 }; showBox({ x: bx.x - 120, y: bx.y - 120, w: bx.w + 240, h: bx.h + 240 }, true, 1); }
+    B.touched = true;
+    return true;
   };
 
   /* compare view: artboards badged New, Changed (its JSON or its screen's hash), Moved (only its x, y: its old place
@@ -13990,11 +14098,19 @@ const MARKUP = (() => {
   // pick, a brand edit, an upload, an Accept MT or a text edit (op 'field': its value and base, text or a list of text)
   // `element`: a design board's draft of one element in a screen (boardEdits): its new text, or its removal
   // `region`: a box dragged on the page (Region), `box` [x, y, w, h] as fractions of its target's box
+  // On a design board (`board:<id>`, BOARD.marks) a Region's `box` and a drawing's `strokes` are px of the screen holding
+  // most of it (`where.on[0]`: a page's document px), else board px; `where` {board: {x, y, w, h}, on: [{artboard, x,
+  // y, w, h}]} is where it was made: board px, and its part on each screen. A pin in a screen keeps its element's spot
+  // there (`spot` {x, y}, the screen's px), a pin on the empty board its board px. `lost`: a mark made on the board
+  // before 1.0.59 with a box in the board's view (its block's key), whose place is gone: its card alone
   const ANN_TYPES = ['pin', 'text', 'draw', 'region', 'general', 'link', 'layout', 'listing', 'element'];
   const DRAFT_TYPES = ['link', 'layout', 'listing', 'element'], isDraft = a => DRAFT_TYPES.includes(a.type);
   // a drawing or a region: a shape over the page, anchored to the smallest element holding it, covering `targets`
   const isShape = a => a.type === 'draw' || a.type === 'region';
   const isBox = b => Array.isArray(b) && b.length === 4 && b.every(Number.isFinite) && b[2] >= 0 && b[3] >= 0;
+  const isXY = s => !!s && typeof s === 'object' && Number.isFinite(s.x) && Number.isFinite(s.y);
+  const isRect = r => isXY(r) && Number.isFinite(r.w) && Number.isFinite(r.h);
+  const isWhere = w => !!w && typeof w === 'object' && isRect(w.board) && Array.isArray(w.on) && w.on.length <= 200 && w.on.every(o => isRect(o) && capStr(o.artboard, 200));
   // what a mark is called where it is listed: a region names the element it sits on
   const onLabel = (a, s) => a.type === 'region' ? 'Region on ' + s : s;
   const capStr = (v, n) => typeof v === 'string' && v.length <= n;
@@ -14014,7 +14130,8 @@ const MARKUP = (() => {
     // a sent comment's thread: the reader's follow-ups ({md, rev, at, files?}) and the one waiting in its reply box
     // (`draft`, `draftFiles`); `files`: the comment's own
     && (a.thread == null || Array.isArray(a.thread) && a.thread.length <= 200 && a.thread.every(okMsg)) && (a.draft == null || typeof a.draft === 'string')
-    && (a.files == null || okFiles(a.files)) && (a.draftFiles == null || okFiles(a.draftFiles)) && (a.seen == null || capStr(a.seen, 40));
+    && (a.files == null || okFiles(a.files)) && (a.draftFiles == null || okFiles(a.draftFiles)) && (a.seen == null || capStr(a.seen, 40))
+    && (a.where == null || isWhere(a.where)) && (a.spot == null || isXY(a.spot)) && (a.lost == null || a.lost === true);
   const skipBad = (where, v) => { console.warn(`bluedoc: skipped a stored comment the page can't show (${where})`, v); return false; };
   let saved = store.keys(KEY + ':').map(k => k.slice(KEY.length + 1));
   let list = saved.map(id => [id, store.get(annKey(id))]).map(([id, s]) => [id, s, parse(s)])
@@ -14069,10 +14186,10 @@ const MARKUP = (() => {
   const TYPE_IC = { pin: 'msg', text: 'type', draw: 'pencil', region: 'region', general: 'msgsq', link: 'route', layout: 'grid', listing: 'grid', element: 'penline' };
   const TYPE_WORD = { pin: 'pin', text: 'text', draw: 'drawing', region: 'region', general: 'general', link: 'link draft', layout: 'layout draft', listing: 'listing draft', element: 'element draft' };
   const excerpt = a => a.type === 'text' ? a.quote : isShape(a) && a.targets && a.targets.length ? a.targets.map(t => t.text).filter(Boolean).join(' / ') : a.target.text;
-  // a region or drawing: its box as fractions of its target's box [x, y, w, h]; on a board also where that is in board
-  // px and on each screen or page it covers (BOARD.where), so the agent knows the spot, not only the key
+  // a region or drawing: its box [x, y, w, h] (fractions of its target's box; on a board px, see above); on a board
+  // also where it is in board px and on each screen or page it covers (BOARD.marks.where), so the agent knows the spot
   const shapeBox = a => { const e = extent(a); return isFinite(e.x1) ? [e.x0, e.y0, e.x1 - e.x0, e.y1 - e.y0].map(v => Math.round(v * 1e6) / 1e6) : null; };
-  const shapePlace = a => isShape(a) && BOARD && BOARD.where ? BOARD.where(a.target.key, extent(a)) : null;
+  const shapePlace = a => isShape(a) && !a.lost && BOARD && BOARD.marks ? BOARD.marks.where(a) : null;
   const pub = a => ({ id: a.id, type: a.type, note: followUp(a) ? String(a.draft || '').trim() : a.note, ...filesJson(noteFiles(a)), target: a.target,
     ...(isShape(a) ? { targets: a.targets || [a.target], box: shapeBox(a), ...(shapePlace(a) ? { where: shapePlace(a) } : {}) } : {}),
     ...(a.type === 'text' ? { quote: a.quote } : {}), ...(a.type === 'link' ? { link: a.link } : {}), ...(a.type === 'layout' ? { layout: a.layout } : {}), ...(a.type === 'listing' ? { listing: a.listing } : {}),
@@ -14112,6 +14229,7 @@ const MARKUP = (() => {
     Array.isArray(t.source) && t.source.length && `   Source: ${t.source.filter(s => typeof s === 'string').map(s => '`' + s.replace(/`/g, '') + '`').join(', ')}`].filter(Boolean);
   // a board region's or drawing's place: board px, and its part on each screen or page under it, in that frame's px
   const whereMd = a => {
+    if (a.lost) return ['   Where: its place on the board was lost (made before marks kept board px)'];
     const w = shapePlace(a); if (!w) return [];
     const bx = b => `x ${b.x}, y ${b.y}, ${b.w} × ${b.h} px`;
     return [`   Where: on the board at ${bx(w.board)}` + (w.on.length ? '; ' + w.on.map(o => `on \`artboard:${o.artboard}\` at ${bx(o)}`).join('; ') : '; beside the screens')];
@@ -14168,7 +14286,7 @@ const MARKUP = (() => {
     }).join('\n\n') + (s => s && '\n' + s.trimEnd())(replyCmdsMd(ord.map(a => replyMd(`ann:${a.id}`, [], '', a.id)).join(''))) };
   }
   const api = { all: () => JSON.parse(JSON.stringify(list)), payload, approvalNotes, goes, annotate: () => null, setMode: () => false, paint: () => {}, flush: () => {}, markSent: () => {},
-    comments: () => ({ open: false, available: false }), pinFrame: () => null, addFrame: () => null, relayout: () => {}, openIfWaiting: () => {}, cancelDraft: () => false };
+    comments: () => ({ open: false, available: false }), pinFrame: () => null, addFrame: () => null, relayout: () => {}, reported: () => {}, openIfWaiting: () => {}, cancelDraft: () => false };
   // an earlier revision (also compared against another) is read-only; a compare view showing the current one comments
   // as the page does
   if (OLD) return api;
@@ -14177,18 +14295,21 @@ const MARKUP = (() => {
 
   /* what can be annotated, and the key of each */
   const shell = $('.bd-shell');
+  // a design board's marks (renderBoard's B.marks): every comment made on the board is drawn in its marks layer, in
+  // board px (onBoard), never on the page's layer; BLK: the board's block
+  const BM = BOARD && BOARD.marks || null, BLK = BM ? BM.stage.closest('.bp-block[data-bk]') : null;
   // a design's board adds three: an artboard (`artboard:<id>`), a requested frame (`frame:<device>@<x>,<y>`) and a
   // link's arrow (`link:<screen>/<element>`). Elements inside a screen's frame come from its inspector as
-  // `el:<id>/<path>` (pinFrame), not from here.
+  // `el:<id>/<path>` (pinFrame), not from here; a Region, drawing or pin on the board itself is `board:<id>` (BM).
   // a Merged excerpt (.bd-mx) is its comment's: `comment:` names it, and its lines are the diff's
   const SEL = { line: '.bd-ln', comment: '.bd-cm[data-ci], .bd-mx[data-ci]', row: 'tr[data-r]', node: '.bp-node[data-key]', step: '.bp-step[data-step]', file: '.bp-frow[data-path]',
     media: '.bp-media', compare: '.bp-cmpr-side[data-side]', card: '.bp-card', para: '.bp-text p, .bp-text li', artboard: '.bd-ab[data-ab], .bd-lst-shot[data-ab]', frame: '.bd-rq[data-key]', link: '.bd-lnk[data-link]',
     field: '.bd-lfield[data-field]',
     item: '.bp-cl-item[id], .bp-cl-item[data-item]', block: '.bp-cl-block, .bp-block[data-bk]', heading: '.bp-sec > h2', lead: '.bp-sec > .bp-lead', section: 'section.bp-sec[id]',
-    tldr: '.bd-tldr-card', header: '.bd-head', status: '.bd-meta', board: '.bd-world' };
+    tldr: '.bd-tldr-card', header: '.bd-head', status: '.bd-meta' };
   const KIND = { line: 'Code line', comment: 'Review comment', row: 'Table row', node: 'Drawing part', step: 'Plan step', file: 'File', media: 'Media', compare: 'Compare side',
     card: 'Card', para: 'Paragraph', artboard: 'Screen', frame: 'Requested frame', link: 'Link', field: 'Store text', item: 'Checklist item', block: 'Block', heading: 'Section title', lead: 'Section lead', section: 'Section',
-    tldr: 'TL;DR', header: 'Header', status: 'Status', board: 'Board', doc: 'Page' };
+    tldr: 'TL;DR', header: 'Header', status: 'Status', doc: 'Page' };
   const TYPES = Object.keys(SEL), ANY = Object.values(SEL).join(', ');
   const CLIPS = '.bd-pane, .bp-stage, .bp-table-wrap, .bp-side-b, .bd-board, .bd-lp-pane, .bd-sp-brief, .bd-mx > .bd-code, .bd-lst-main, .bd-lst-tiles';   // inner scrollers that clip what they hold
   const typeOf = el => el === shell ? 'doc' : TYPES.find(t => el.matches(SEL[t]));
@@ -14198,7 +14319,7 @@ const MARKUP = (() => {
   // tools are the board's, the pane works as it does in View) and toolbar, and a findings section's view bar
   const docAll = sel => SP_BRIEF ? [...shell.querySelectorAll(sel), ...SP_BRIEF.querySelectorAll(sel)] : [...shell.querySelectorAll(sel)];
   const spUi = t => !!t.closest('.bd-sp') && !(SP_BRIEF && SP_BRIEF.contains(t));
-  const inDoc = t => !!t && t.nodeType === 1 && shell.contains(t) && !t.closest('.bd-lp, .bd-lp-ui, .bd-btb, .bd-ftb, .bd-var, .bd-ab-t button, .bd-lst-ui') && (!t.closest('.bp-side') || !!t.closest('.bd-meta'));
+  const inDoc = t => !!t && t.nodeType === 1 && shell.contains(t) && !t.closest('.bd-lp, .bd-lp-ui, .bd-btb, .bd-ftb, .bd-var, .bd-ab-t button, .bd-lst-ui, .bd-bmk') && (!t.closest('.bp-side') || !!t.closest('.bd-meta'));
   const targetAt = t => inDoc(t) ? t.closest(ANY) : null;
   let itemKeys = null;
   // a checklist row, or a finding's row in Merged (data-item)
@@ -14226,7 +14347,6 @@ const MARKUP = (() => {
       case 'media': return 'media:' + pathOf(el);
       case 'compare': return `compare:${pathOf(el)}/${el.dataset.side}`;
       case 'artboard': return 'artboard:' + el.dataset.ab;
-      case 'board': return 'board:' + (BOARD && BOARD.b && BOARD.b.id || '');   // the board's world: a mark beside its screens
       case 'frame': return el.dataset.key;
       case 'link': return el.getAttribute('data-link');
       case 'field': return 'field:' + el.dataset.field;
@@ -14244,6 +14364,7 @@ const MARKUP = (() => {
     const [t, rest] = splitKey(key);
     if (t === 'doc') return shell;
     if (t === 'el') return BOARD ? BOARD.abFor(key) : null;   // drawn on its artboard
+    if (t === 'board') return BM && key === BM.key ? BLK : null;   // drawn in its marks layer
     if (t === 'item') { const x = ITEMS[rest]; return !x ? null : shown(x.li) ? x.li : (x.mrows || []).find(shown) || x.li; }   // the row that shows
     if (t === 'section') return [...main.children].find(s => s.id === rest && s.matches(SEL.section)) || null;
     if (t === 'node') { const i = rest.indexOf('/'); return CANVASES[rest.slice(0, i)]?.byKey?.[rest.slice(i + 1)]?._el || null; }
@@ -14311,13 +14432,16 @@ const MARKUP = (() => {
     : el.matches('.bd-ab') ? el.querySelector('.bd-ab-t .n')?.textContent : el.matches('.bd-lst-shot') ? el.dataset.title : el.matches('.bd-rq') ? el.querySelector('.pr')?.textContent
     : el.matches('.bd-lfield') ? el.querySelector('.v')?.value
     : el.matches('.bd-boardblk') ? [...el.querySelectorAll('.bd-ab-t .n')].map(n => n.textContent).join(' · ') : contentText(el), 300);
-  // a pin a screen's inspector picked (`el:` or `artboard:`) or a requested frame: a draft beside it, or a pending comment
+  // a pin a screen's inspector picked (`el:` or `artboard:`) or a requested frame: a draft beside it, or a pending
+  // comment. On a design board it keeps its element's spot in the screen (o.spot, BOARD.marks); on a storelisting's
+  // shot its place as fractions of the shot (o.pos)
   function pinFrame(o) {
     const a = newAnn('pin', o.el);
     if (o.key !== a.target.key) { a.up = [a.target.key, ...a.up]; a.target = { key: o.key, label: a.target.label + (o.what ? ' › ' + o.what : ''), text: cut(o.text || '', 300) }; }
     else if (o.text) a.target.text = cut(o.text, 300);
     Object.assign(a.target, o.extra || {});   // a website pin: its section, source hints and width
-    a.pos = { x: r4(clamp(+o.pos.x, 0, 1)), y: r4(clamp(+o.pos.y, 0, 1)) };
+    if (isXY(o.spot)) a.spot = { x: o.spot.x, y: o.spot.y };
+    else if (o.pos) a.pos = { x: r4(clamp(+o.pos.x, 0, 1)), y: r4(clamp(+o.pos.y, 0, 1)) };
     startDraft(a);
     return a;
   }
@@ -14333,7 +14457,7 @@ const MARKUP = (() => {
   // a design board's drafts (boardEdits): put creates one or updates it (an edit makes a sent one pending again),
   // restore puts back a copy (undo, redo), drop deletes one, resolve marks it applied by the current rev, mark sets flags
   // (stale), get is a copy of one (null: none), ok whether a stored copy is a draft the page can draw.
-  // put's text, extra (a website page's bp, section and source) and pos (the pin's spot) go on an element draft's target
+  // put's text, extra (a website page's bp, section and source) and spot (the pin's spot in its screen) go on an element draft
   const draftSaved = () => { save(); hlDirty = true; schedule(true); paint(); };
   const draftOf = id => list.find(x => x.id === id && isDraft(x)) || null;
   const drafts = {
@@ -14353,6 +14477,7 @@ const MARKUP = (() => {
       }
       if (typeof o.text === 'string') a.target.text = cut(o.text, 300);
       Object.assign(a.target, o.extra || {});
+      if (isXY(o.spot)) a.spot = { x: o.spot.x, y: o.spot.y };
       if (o.pos) a.pos = o.pos;
       a.note = o.note; a[o.type] = o[o.type];
       draftSaved();
@@ -14406,17 +14531,16 @@ const MARKUP = (() => {
     }
     return out;
   }
-  // the smallest element that holds a box (client px), with a little slack for loose circles; on a board, a box beside
-  // the screens takes the board's world (it pans and zooms with them), not the board's block or the page around it
+  // the smallest element that holds a box (client px), with a little slack for loose circles (a box on a design board
+  // is the board's: boardShape)
   function anchorFor(b, items) {
-    let best = shell, area = Infinity, world = null;
+    let best = shell, area = Infinity;
     for (const [el, r] of items) {
       const T = Math.min(24, r.width / 4, r.height / 4), a = r.width * r.height;
       const holds = r.left - T <= b.l && r.right + T >= b.r && r.top - T <= b.t && r.bottom + T >= b.b;
-      if (holds && el.matches(SEL.board)) world = el;
       if (a < area && holds) { best = el; area = a; }
     }
-    return world && best.contains(world) ? world : best;
+    return best;
   }
   // the leaf-most elements a box covers: most of their height, a fair part of their width
   function covered(b, items) {
@@ -14432,10 +14556,37 @@ const MARKUP = (() => {
     for (const s of strokes) for (let i = 0; i + 1 < s.length; i += 2) { x0 = Math.min(x0, s[i]); x1 = Math.max(x1, s[i]); y0 = Math.min(y0, s[i + 1]); y1 = Math.max(y1, s[i + 1]); }
     return { x0, y0, x1, y1 };
   };
-  // a drawing's strokes or a region's box, as fractions of its target's box
+  // a drawing's strokes or a region's box, as fractions of its target's box (on a design board: px, boardShape)
   const extent = a => a.type === 'region' ? { x0: a.box[0], y0: a.box[1], x1: a.box[0] + a.box[2], y1: a.box[1] + a.box[3] } : bounds(a.strokes || []);
   const pathD = s => { let d = ''; for (let i = 0; i + 1 < s.length; i += 2) d += (i ? 'L' : 'M') + s[i] + ' ' + s[i + 1]; return d; };
   const ellipse = () => { const s = []; for (let i = 0; i <= 48; i++) { const t = i / 48 * Math.PI * 2; s.push(r4(.5 + .52 * Math.cos(t)), r4(.5 + .56 * Math.sin(t))); } return s; };
+  // a mark made on a design board: drawn in its marks layer (BM.place), never on the page's: a Region, drawing or pin
+  // on the board itself (`board:`), in a screen (`artboard:`, `el:`), on an arrow (`link:`), a requested frame, a
+  // board draft, and a mark whose place on the board was lost
+  const onBoard = a => !!BM && !isGeneral(a) && a.type !== 'text' && (a.lost === true || /^(board|artboard|el|link|frame|layout):/.test(a.target.key));
+  // Marks made on the board before 1.0.59, on load. One anchored to the board's world (`board`, `board:<id>`, its box
+  // or strokes fractions of a 20 000 px square from board px −10 000) takes its board px and `where`. One anchored to
+  // the board's block (a box or a pin as fractions of the board's view, wherever it was panned then: a Region drawn
+  // past the world, or a pin on the empty board) can't be placed again: `lost`, its card alone, never a floating mark.
+  if (BM) {
+    const blk = BLK && keyOf(BLK), px = v => Math.round((v * 20000 - 10000) * 100) / 100, len = v => Math.round(v * 20000 * 100) / 100;
+    const world = k => /^board(:|$)/.test(k);
+    let moved = false;
+    for (const a of list) {
+      if (a.lost || a.where || isGeneral(a) || isDraft(a) || a.type === 'text') continue;
+      if (blk && a.target.key === blk && (a.type === 'pin' || isShape(a))) { a.lost = true; moved = true; continue; }
+      if (!isShape(a) || !world(a.target.key)) continue;
+      const box = a.type === 'region' ? [px(a.box[0]), px(a.box[1]), len(a.box[2]), len(a.box[3])] : null;
+      const strokes = a.type === 'draw' ? (a.strokes || []).filter(Array.isArray).map(s => s.map(px)) : null;
+      const e = box ? { x0: box[0], y0: box[1], x1: box[0] + box[2], y1: box[1] + box[3] } : bounds(strokes);
+      if (!isFinite(e.x1)) { a.lost = true; moved = true; continue; }
+      if (box) a.box = box; else a.strokes = strokes;
+      a.target = { ...a.target, key: BM.key }; a.targets = (a.targets || [a.target]).map(t => world(t.key) ? { ...t, key: BM.key } : t);
+      a.where = { board: { x: Math.round(e.x0), y: Math.round(e.y0), w: Math.round(e.x1 - e.x0), h: Math.round(e.y1 - e.y0) }, on: [] };
+      moved = true;
+    }
+    if (moved && !RO) save();
+  }
   // text: the quote's place in its element's text (the concatenated text nodes), found again later
   function offsetIn(el, node, off) { const r = document.createRange(); r.setStart(el, 0); r.setEnd(node, off); return r.toString().length; }
   function rangeAt(el, s, e) {
@@ -14668,18 +14819,24 @@ const MARKUP = (() => {
     }
     return null;
   }
+  // a mark's pin, and a drawing's ink or a region's box under the pins: on the page's layer, or a mark made on a design
+  // board in the board's marks layer (onBoard), where the board's pan and taps stay off its pin
   function markFor(a) {
     let m = marks.get(a.id);
+    const w = onBoard(a);
+    if (m && m.world !== w) { m.pin.remove(); m.ink?.remove(); m.box?.remove(); marks.delete(a.id); m = null; }
     if (!m) {
-      m = { a, ink: null, inkFor: null, box: null, flashUntil: 0 };
-      m.pin = h('button', { type: 'button', class: 'bd-ann-pin', onclick: e => { e.stopPropagation(); if (m.a === draft) cmpTa.focus(); else select(m.a, { open: true, scroll: true }); } });
+      m = { a, ink: null, inkFor: null, box: null, flashUntil: 0, world: w };
+      m.pin = h('button', { type: 'button', class: 'bd-ann-pin', 'data-ann': a.id, onclick: e => { e.stopPropagation(); if (m.a === draft) cmpTa.focus(); else select(m.a, { open: true, scroll: true }); } });
       m.pin.addEventListener('pointerenter', () => setHot(m.a, false));
       m.pin.addEventListener('pointerleave', () => setHot(null, false));
-      layer.append(m.pin); marks.set(a.id, m);
+      if (w) m.pin.addEventListener('pointerdown', e => e.stopPropagation());
+      (w ? BM.layer : layer).append(m.pin); marks.set(a.id, m);
     }
     m.a = a;
-    if (a.type === 'draw' && !m.ink) { m.ink = sv('svg', { class: 'bd-ann-ink', viewBox: '0 0 1 1', preserveAspectRatio: 'none', 'aria-hidden': 'true' }); layer.prepend(m.ink); }
-    if (a.type === 'region' && !m.box) { m.box = h('div', { class: 'bd-ann-rgn', 'aria-hidden': 'true' }); layer.prepend(m.box); }
+    const L = w ? BM.layer : layer;
+    if (a.type === 'draw' && !m.ink) { m.ink = sv('svg', { class: 'bd-ann-ink', 'data-ann': a.id, viewBox: '0 0 1 1', preserveAspectRatio: 'none', 'aria-hidden': 'true' }); L.prepend(m.ink); }
+    if (a.type === 'region' && !m.box) { m.box = h('div', { class: 'bd-ann-rgn', 'data-ann': a.id, 'aria-hidden': 'true' }); L.prepend(m.box); }
     return m;
   }
   const isOn = a => a === selA || a === editA || a === draft;
@@ -14689,7 +14846,7 @@ const MARKUP = (() => {
     const hlNow = HL && (full || hlDirty); hlDirty = false;
     if (full) { els = new Map(); ranges = new Map(); }
     capG.setAttribute('transform', `translate(${-scrollX},${-scrollY})`); capHoles();
-    const all = onPage(), keep = new Set(), stacks = new Map(), hl = { on: [], sent: [], open: [] };
+    const all = onPage(), keep = new Set(), stacks = new Map(), fan = [], hl = { on: [], sent: [], open: [] };
     if (draft) all.push(draft);
     draftBox = null;
     const vw = root.clientWidth - dockW(), now = performance.now();
@@ -14699,6 +14856,7 @@ const MARKUP = (() => {
       const m = markFor(a); keep.add(a.id);
       const off = marksOff || (a.status === 'resolved' && !showRes && a !== selA);
       if (hlNow && a.type === 'text' && !off) { const rg = rangeOf(a); if (rg && shown(cachedEl(a.target.key))) (isOn(a) || a === hotA ? hl.open : a.status !== 'pending' && a !== draft ? hl.sent : hl.on).push(rg); }
+      if (m.world) { placeOnBoard(m, a, i, off ? null : BM.place(a), fan, now); return; }
       const p = off ? null : locate(a);
       m.pin.hidden = !p;
       // a saved drawing leaves its pin; its strokes show while it is drawn, hovered, selected or edited. A region's box always shows
@@ -14708,10 +14866,7 @@ const MARKUP = (() => {
       const old = a.status === 'pending' && a.rev !== CUR.rev, st = a === draft ? '' : { open: ' sent', resolved: ' sent res' }[a.status] || '';
       m.pin.className = 'bd-ann-pin' + (a.type === 'draw' ? penCls(a.color || 'risk') : '') + st + (old ? ' old' : '') +
         (p.exact ? '' : ' away') + (isOn(a) ? ' on' : '') + (a === hotA ? ' hot' : '') + (m.flashUntil > now ? ' flash' : '');
-      setPen(m.pin, a.type === 'draw' && a.color);
-      m.pin.textContent = String(i + 1);
-      const label = `${i + 1}. ${onLabel(a, a.target.label)}${a.note ? ': ' + cut(a.note, 90) : ''}${a === draft ? ' (new)' : a.status !== 'pending' ? ` (${a.status === 'open' ? 'sent' : 'resolved'})` : old ? ` (made on rev ${a.rev})` : ''}${p.exact ? '' : ' · hidden here, click to see it'}`;
-      if (m.pin.title !== label) { m.pin.title = label; m.pin.setAttribute('aria-label', 'Comment ' + label); }
+      pinFace(m, a, i, old, p.exact);
       let x = p.x;
       if (!p.exact) { const k = stacks.get(p.el) || 0; stacks.set(p.el, k + 1); x -= k * 30; }
       x = Math.max(2, Math.min(x, vw - 30));
@@ -14739,6 +14894,57 @@ const MARKUP = (() => {
     }
     if (hovEl) showHover(hovEl);
     if (draft) placeComposer();
+  }
+  // a pin's colour, number and name
+  function pinFace(m, a, i, old, exact) {
+    setPen(m.pin, a.type === 'draw' && a.color);
+    m.pin.textContent = String(i + 1);
+    const label = `${i + 1}. ${onLabel(a, a.target.label)}${a.note ? ': ' + cut(a.note, 90) : ''}${a === draft ? ' (new)' : a.status !== 'pending' ? ` (${a.status === 'open' ? 'sent' : 'resolved'})` : old ? ` (made on rev ${a.rev})` : ''}${exact ? '' : ' · hidden here, click to see it'}`;
+    if (m.pin.title !== label) { m.pin.title = label; m.pin.setAttribute('aria-label', 'Comment ' + label); }
+  }
+  // a mark on a design board (BM.place: q, in board px), in the board's marks layer: it pans and zooms with the board,
+  // its pin keeping its size. The pin's bubble opens up and right of its spot, else left of it by its screen's right
+  // edge (fl) or below it by its top (fb), so it stays on its screen; pins on one spot (within 14 px on screen) fan out
+  // 22 px apart, the lower number staying. A region's box always shows, a drawing's ink while it is on or hovered; on a
+  // page in Viewport both are cut to the frame.
+  const cutBox = (b, c) => { const x = Math.max(b.x, c.x), y = Math.max(b.y, c.y); return { x, y, w: Math.max(0, Math.min(b.x + b.w, c.x + c.w) - x), h: Math.max(0, Math.min(b.y + b.h, c.y + c.h) - y) }; };
+  const polyOf = (c, ox, oy) => { const l = c.x - ox, t = c.y - oy, r = l + c.w, b = t + c.h; return `polygon(${l}px ${t}px, ${r}px ${t}px, ${r}px ${b}px, ${l}px ${b}px)`; };
+  function placeOnBoard(m, a, i, q, fan, now) {
+    m.pin.hidden = !q;
+    if (m.ink) m.ink.style.display = q && q.strokes && (isOn(a) || a === hotA) ? '' : 'none';
+    if (m.box) m.box.style.display = q && q.box ? '' : 'none';
+    if (!q) return;
+    const k = BM.k(), u = 1 / k, old = a.status === 'pending' && a.rev !== CUR.rev, st = a === draft ? '' : { open: ' sent', resolved: ' sent res' }[a.status] || '';
+    const v = q.box ? q.clip ? cutBox(q.box, q.clip) : q.box : null;   // the part of a shape that shows
+    const pt = v ? { x: v.x + v.w - 6 * u, y: v.y + 6 * u } : q.pt, b = q.bound;
+    const fl = !!b && pt.x + 26 * u > b.x + b.w && pt.x - 26 * u >= b.x, fb = !!b && pt.y - 26 * u < b.y && pt.y + 26 * u <= b.y + b.h;
+    const near = fan.find(f => Math.abs(f.x - pt.x) * k < 14 && Math.abs(f.y - pt.y) * k < 14);
+    const n = near ? ++near.n : (fan.push({ x: pt.x, y: pt.y, n: 0 }), 0), x = pt.x + (fl ? -n : n) * 22 * u;
+    m.pin.className = 'bd-ann-pin' + (a.type === 'draw' ? penCls(a.color || 'risk') : '') + st + (old ? ' old' : '') + (q.exact ? '' : ' away') + (fl ? ' fl' : '') + (fb ? ' fb' : '') +
+      (isOn(a) ? ' on' : '') + (a === hotA ? ' hot' : '') + (m.flashUntil > now ? ' flash' : '');
+    pinFace(m, a, i, old, q.exact);
+    m.pin.style.translate = `${x}px ${pt.y}px`;
+    if (a === draft) draftBox = boardMarkBox(v, x, pt.y, fl, fb);
+    if (m.box && q.box) {
+      const bx = q.box, bst = m.box.style;
+      bst.transform = `translate(${bx.x}px,${bx.y}px)`; bst.width = Math.max(0, bx.w) + 'px'; bst.height = Math.max(0, bx.h) + 'px';
+      bst.clipPath = q.clip ? polyOf(q.clip, bx.x, bx.y) : '';
+      m.box.className = 'bd-ann-rgn' + st + (a === hotA || isOn(a) ? ' hot' : '');
+    }
+    if (m.ink && q.strokes && m.ink.style.display !== 'none') {
+      const d = q.strokes.map(pathD), sig = d.join('|'), ist = m.ink.style;
+      if (m.inkFor !== sig) { m.inkFor = sig; m.ink.replaceChildren(...d.map(s => sv('path', { d: s }))); }
+      ist.transform = ''; ist.clipPath = q.clip ? polyOf(q.clip, 0, 0) : '';
+      m.ink.setAttribute('class', `bd-ann-ink${penCls(a.color || 'risk')}${st}${a === hotA || isOn(a) ? ' hot' : ''}`);
+      setPen(m.ink, a.color); ist.setProperty('--pw', (WIDTHS[a.width] ? a.width : 3) + 'px');
+    }
+  }
+  // a new board mark's box in the window, for the composer: its pin (as it opens), and the shape's part that shows
+  function boardMarkBox(v, x, y, fl, fb) {
+    const p = BM.toClient(x, y), pin = { l: fl ? p.x - 26 : p.x, t: fb ? p.y : p.y - 26, r: fl ? p.x : p.x + 26, b: fb ? p.y + 26 : p.y };
+    if (!v) return { ...pin, side: true };
+    const p0 = BM.toClient(v.x, v.y), p1 = BM.toClient(v.x + v.w, v.y + v.h);
+    return { l: Math.min(p0.x, pin.l), t: Math.min(p0.y, pin.t), r: Math.max(p1.x, pin.r), b: Math.max(p1.y, pin.b), side: true };
   }
   // the new mark's box on screen: the pin, plus the selection or the drawing it belongs to
   function markBox(a, p, x) {
@@ -14906,7 +15112,7 @@ const MARKUP = (() => {
     const at = new Map(xs.map(a => {
       let el = null;
       for (const k of [a.target.key, ...(a.up || [])]) if ((el = cachedEl(k))) break;
-      const y = a.type === 'pin' ? a.pos?.y ?? .5 : isShape(a) ? extent(a).y0 : el ? (a.off || 0) / (el.textContent.length || 1) : 0;
+      const y = a.type === 'pin' ? a.spot?.y ?? a.pos?.y ?? .5 : isShape(a) ? extent(a).y0 : el ? (a.off || 0) / (el.textContent.length || 1) : 0;
       return [a, { el, y }];
     }));
     const byTime = (a, b) => (a.at > b.at) - (a.at < b.at);
@@ -15007,7 +15213,7 @@ const MARKUP = (() => {
     li._a = a;
     const n = isGeneral(a) ? 0 : onPage().indexOf(a) + 1, editing = a === editA;
     const ms = annConvo(a), lastMsg = ms.at(-1);
-    const sig = [n, a.note, JSON.stringify(a.files || null), a.status, a.rev, a.target.key, a.target.label, a.color, editing, (a.targets || []).length, !!a.stale, JSON.stringify(ms), agentName()].join('\u0001');
+    const sig = [n, a.note, JSON.stringify(a.files || null), a.status, a.rev, a.target.key, a.target.label, a.color, editing, (a.targets || []).length, !!a.stale, !!a.lost, JSON.stringify(ms), agentName()].join('\u0001');
     if (li._sig !== sig) { li._sig = sig; fill(li, a, n, editing, ms); }
     const was = li.classList.contains('fresh');
     li.className = cardCls(li, a);
@@ -15034,6 +15240,8 @@ const MARKUP = (() => {
     const ib = (icon, label, fn) => h('button', { type: 'button', class: 'bd-cs-ib', 'aria-label': label, title: label, onclick: fn }, ic(icon));
     const mt = [];
     if (isShape(a) && a.targets && a.targets.length > 1) mt.push(h('span', {}, 'Covers ' + a.targets.map(t => t.label.split(' › ').pop()).join(' · ')));
+    // a mark made on a board before its place was kept in board px: no mark, this note
+    if (a.lost) mt.push(h('span', { class: 'old lost' }, 'Position lost; reply or re-pin'));
     if (a.status !== 'pending') mt.push(h('span', { class: 'sago' }));
     else if (a.rev !== CUR.rev) mt.push(h('span', { class: 'old' }, `Made on rev ${a.rev}`));
     // a board draft whose link or element a newer rev changed some other way: the board follows the rev until it is re-applied
@@ -15052,7 +15260,7 @@ const MARKUP = (() => {
       : h('div', { class: 'eld' }, h('s', {}, cut(E.base, 160)), h('span', { class: 'ar', 'aria-label': 'becomes' }, '→'), h('b', {}, cut(E.text, 240)));
     li.replaceChildren(numChip(a, n), h('div', { class: 'cb' },
       h('div', { class: 'ch' }, !isGeneral(a) && ic(TYPE_IC[a.type]), h('span', { class: 'lb', title: onLabel(a, a.target.label) }, isGeneral(a) ? 'General' : onLabel(a, last)), h('span', { class: 'ago' }),
-        h('span', { class: 'acts' }, !isGeneral(a) && ib('target', 'Show on the page', () => { select(a); reveal(a); }),
+        h('span', { class: 'acts' }, !isGeneral(a) && !a.lost && ib('target', 'Show on the page', () => { select(a); reveal(a); }),
           a.status === 'pending' && !editing && !isDraft(a) && ib('pencil', 'Edit', () => startEdit(a)),
           a.status === 'open' && ib('check', 'Resolve', () => setStatus(a, 'resolved')),
           a.status === 'resolved' && ib('reset', 'Reopen', () => setStatus(a, 'open')),
@@ -15404,7 +15612,7 @@ const MARKUP = (() => {
     cmpDel.hidden = !(draft && BOARD && BOARD.canDelete && BOARD.canDelete(draft.target.key));
     eye.replaceChildren(ic(marksOff ? 'eyeoff' : 'eye'));
     eye._tip = marksOff ? 'Show comment marks' : 'Hide comment marks'; eye.setAttribute('aria-label', eye._tip);
-    layer.hidden = marksOff;
+    layer.hidden = marksOff; if (BM) BM.layer.hidden = marksOff;
     if (BOARD && BOARD.paintFrames) BOARD.paintFrames(list);   // a design's requested frames
     if (BOARD && BOARD.paintDrafts) BOARD.paintDrafts();   // and its link drafts and moves (boardEdits)
     renderList();
@@ -15437,14 +15645,25 @@ const MARKUP = (() => {
       return;
     }
     e.preventDefault(); e.stopPropagation();
-    if (e.type === 'pointerdown' && e.button === 0) press = { el: targetAt(t), x: e.clientX, y: e.clientY };
+    if (e.type === 'pointerdown' && e.button === 0) press = { el: targetAt(t), t, x: e.clientX, y: e.clientY };
     if (e.type !== 'click' || e.button !== 0) return;
     const p = press; press = null;
     if (swallow) { swallow = false; return; }
+    const x = p ? p.x : e.clientX, y = p ? p.y : e.clientY, at = p ? p.t : t;
+    if (BM && at && BM.stage.contains(at) && !at.closest('.bd-lnk[data-link], .bd-rq[data-key]')) { boardPin(at, x, y); return; }
     const el = p ? p.el : targetAt(t); if (!el) return;
-    const x = p ? p.x : e.clientX, y = p ? p.y : e.clientY;
     const r = el.getBoundingClientRect(), a = newAnn('pin', el);
     a.pos = { x: r4(clamp((x - r.left) / (r.width || 1), 0, 1)), y: r4(clamp((y - r.top) / (r.height || 1), 0, 1)) };
+    startDraft(a);
+  }
+  // Element on a design board outside a screen's frame (its frames pick through their inspector: pinFrame): on a screen's
+  // outline or title (a frame not live), that screen at the spot in it; on the empty board, the board (`board:<id>`) at
+  // that spot in board px
+  const r2 = v => Math.round(v * 100) / 100;
+  function boardPin(t, cx, cy) {
+    const ab = t.closest('.bd-ab[data-ab]'), q = BM.toBoard(cx, cy), a = newAnn('pin', ab || BLK);
+    if (ab) { const s = BM.spotAt(ab.dataset.ab, q); if (s) a.spot = s; }
+    else { Object.assign(a, { target: { key: BM.key, label: labelOf(BLK), text: '' }, up: [keyOf(BLK), ...ups(BLK)] }); a.spot = { x: r2(q.x), y: r2(q.y) }; }
     startDraft(a);
   }
   // Text, and the Comment button by a selection in View (force)
@@ -15477,30 +15696,50 @@ const MARKUP = (() => {
     selc.style.translate = `${Math.round(clamp(last.right - w, 8, root.clientWidth - w - 8))}px ${Math.round(y)}px`;
   }
   document.addEventListener('selectionchange', () => { if (mode === 'view' && !selDown) requestAnimationFrame(showSelC); });
-  // Pen and Region: a box (client px) anchors to the smallest element holding it and covers the parts under it; on a
-  // board, a box beside the screens anchors to the board's world (`board`), which pans and zooms with them
+  // Pen and Region: a box (client px) anchors to the smallest element holding it and covers the parts under it
   function anchorBox(a, box) {
     const items = onScreen(), el = anchorFor(box, items), cov = covered(box, items);
     Object.assign(a, { target: info(el), up: ups(el), targets: (cov.length ? cov : [el]).map(info) });
     return el.getBoundingClientRect();
   }
-  // a fraction of the anchor's box: to 1e-4, or 1e-6 of the board's world (20 000 board px: a 0.02 px step)
-  const frac = (a, v) => /^board(:|$)/.test(a.target.key) ? Math.round(v * 1e6) / 1e6 : r4(v);
+  // on a design board (a box whose middle or first point is on the board, over a screen's frame or not) it is the
+  // board's (`board:<id>`), named by the screen holding most of it: `where` says where it is in board px and on each
+  // screen; its box or strokes go in the px of that screen (they follow it), else board px (BM.shape). bx: board px;
+  // the anchor's origin out
+  const onBoardAt = (x, y) => { const el = !!BM && document.elementsFromPoint(x, y).find(e => e !== cap && !cap.contains(e)); return !!el && BM.stage.contains(el); };
+  function boardShape(a, bx) {
+    const s = BM.shape(bx), on = s.el || BLK;
+    Object.assign(a, { target: { key: BM.key, label: labelOf(on), text: s.el ? textOf(s.el) : '' }, up: [keyOf(BLK), ...ups(BLK)], where: s.where });
+    a.targets = s.els.length ? s.els.map(info) : [a.target];
+    return s.origin;
+  }
   // Pen: strokes in page px while drawing; one ending within 1.5 s of the last, or before anything
   // is typed, joins the open drawing. The drawing anchors to the smallest element holding it.
   function fitDrawing(a, strokes) {
     let l = Infinity, t = Infinity, r = -Infinity, b = -Infinity;
     for (const s of strokes) for (let i = 0; i < s.length; i += 2) { l = Math.min(l, s[i] - scrollX); r = Math.max(r, s[i] - scrollX); t = Math.min(t, s[i + 1] - scrollY); b = Math.max(b, s[i + 1] - scrollY); }
+    if (onBoardAt((l + r) / 2, (t + b) / 2) || onBoardAt(strokes[0][0] - scrollX, strokes[0][1] - scrollY)) {
+      const ss = strokes.map(s => { const out = []; for (let i = 0; i + 1 < s.length; i += 2) { const q = BM.toBoard(s[i] - scrollX, s[i + 1] - scrollY); out.push(q.x, q.y); } return out; });
+      const e = bounds(ss), o = boardShape(a, { x: e.x0, y: e.y0, w: e.x1 - e.x0, h: e.y1 - e.y0 });
+      a.strokes = ss.map(s => s.map((v, i) => r2(v - (i % 2 ? o.y : o.x))));
+      return;
+    }
+    delete a.where;
     const er = anchorBox(a, { l, t, r, b });
-    a.strokes = strokes.map(s => s.map((v, i) => frac(a, i % 2 ? (v - scrollY - er.top) / (er.height || 1) : (v - scrollX - er.left) / (er.width || 1))));
+    a.strokes = strokes.map(s => s.map((v, i) => r4(i % 2 ? (v - scrollY - er.top) / (er.height || 1) : (v - scrollX - er.left) / (er.width || 1))));
   }
   // Region: a box dragged in page px; one of at least 8 × 8 px becomes a region, anchored as a drawing is
   function endRegion(k) {
     const l = Math.min(k.x0, k.x1) - scrollX, t = Math.min(k.y0, k.y1) - scrollY, r = Math.max(k.x0, k.x1) - scrollX, b = Math.max(k.y0, k.y1) - scrollY;
     if (r - l < 8 || b - t < 8) return;
     const a = { id: newId(), type: 'region', status: 'pending', note: '', rev: CUR.rev, at: new Date().toISOString() };
-    const er = anchorBox(a, { l, t, r, b }), fw = er.width || 1, fh = er.height || 1;
-    a.box = [(l - er.left) / fw, (t - er.top) / fh, (r - l) / fw, (b - t) / fh].map(v => frac(a, v));
+    if (onBoardAt((l + r) / 2, (t + b) / 2) || onBoardAt(k.x0 - scrollX, k.y0 - scrollY)) {
+      const p0 = BM.toBoard(l, t), p1 = BM.toBoard(r, b), bx = { x: p0.x, y: p0.y, w: p1.x - p0.x, h: p1.y - p0.y }, o = boardShape(a, bx);
+      a.box = [bx.x - o.x, bx.y - o.y, bx.w, bx.h].map(r2);
+    } else {
+      const er = anchorBox(a, { l, t, r, b }), fw = er.width || 1, fh = er.height || 1;
+      a.box = [(l - er.left) / fw, (t - er.top) / fh, (r - l) / fw, (b - t) / fh].map(r4);
+    }
     startDraft(a);
   }
   cap.addEventListener('pointerdown', e => {
@@ -15646,6 +15885,17 @@ const MARKUP = (() => {
   function reveal(a) {
     if (isGeneral(a)) return;   // about the whole doc: nothing on the page to show
     if (marksOff) { marksOff = false; paint(); }
+    // a mark on a design board: the board shows it (a lost one, or a draft about the whole board, has nothing to show)
+    if (onBoard(a)) {
+      if (!BM.show(a)) return;
+      const r = BM.stage.getBoundingClientRect();
+      if (r.bottom < 0 || r.top > innerHeight) BM.stage.scrollIntoView({ block: 'center', behavior: REDUCE ? 'auto' : 'smooth' });   // a board in a doc's column
+      setTimeout(() => {
+        const m = marks.get(a.id); if (m) m.flashUntil = performance.now() + 1300;
+        schedule(true); setTimeout(() => schedule(false), 1350);
+      }, REDUCE ? 30 : 450);
+      return;
+    }
     let canvas = false;
     for (const k of [a.target.key, ...(a.up || [])].reverse()) canvas = openKey(k) || canvas;
     setTimeout(() => {
@@ -15668,7 +15918,9 @@ const MARKUP = (() => {
     }, canvas ? 700 : 60);
   }
 
-  /* tests and agents: BP.annotate({type, key, note, quote?, pos?, strokes?, color?, width?, box?}) or ({type: 'general', note}), BP.comments({open}) */
+  /* tests and agents: BP.annotate({type, key, note, quote?, pos?, spot?, strokes?, color?, width?, box?}) or ({type:
+     'general', note}), BP.comments({open}). On a design board, `board:<id>` takes a Region's box and a drawing's strokes
+     in board px, a pin's spot in board px; a pin in a screen (`artboard:`, `el:`) its spot in the screen's px */
   function annotate(spec) {
     if (spec && spec.type === 'general') {
       const note = String(spec.note || '').trim(); if (!note) return null;
@@ -15678,13 +15930,24 @@ const MARKUP = (() => {
     }
     if (!spec || !TYPE_IC[spec.type] || !spec.key) return null;
     const el = elOf(String(spec.key)); if (!el) return null;
-    const a = newAnn(spec.type, el);
+    const a = newAnn(spec.type, el), board = !!BM && String(spec.key) === BM.key;
     a.note = String(spec.note || '').trim();
-    if (spec.type === 'pin') a.pos = { x: r4(clamp(+(spec.pos?.x ?? .5), 0, 1)), y: r4(clamp(+(spec.pos?.y ?? .5), 0, 1)) };
-    else if (spec.type === 'text') {
+    if (board && spec.type !== 'text') Object.assign(a, { target: { key: BM.key, label: labelOf(BLK), text: '' }, up: [keyOf(BLK), ...ups(BLK)] });
+    if (spec.type === 'pin') {
+      if (isXY(spec.spot)) a.spot = { x: +spec.spot.x, y: +spec.spot.y };
+      else if (board) return null;
+      else a.pos = { x: r4(clamp(+(spec.pos?.x ?? .5), 0, 1)), y: r4(clamp(+(spec.pos?.y ?? .5), 0, 1)) };
+    } else if (spec.type === 'text') {
       const q = String(spec.quote || ''), off = q ? el.textContent.indexOf(q) : -1;
       if (off < 0) return null;
       Object.assign(a, { quote: q.trim(), raw: q, off });
+    } else if (board) {
+      if (spec.type === 'draw') { a.color = okPen(spec.color) ? spec.color : pen; a.width = WIDTHS[spec.width] ? +spec.width : width; }
+      const ss = spec.type === 'draw' ? (Array.isArray(spec.strokes) && spec.strokes.length ? spec.strokes : [ellipse().map(v => v * 300)]) : null;
+      const e = ss ? bounds(ss) : null, bx = ss ? { x: e.x0, y: e.y0, w: e.x1 - e.x0, h: e.y1 - e.y0 } : (([x, y, w, hh]) => ({ x, y, w, h: hh }))(isBox(spec.box) ? spec.box : [0, 0, 400, 300]);
+      if (![bx.x, bx.y, bx.w, bx.h].every(Number.isFinite)) return null;
+      const o = boardShape(a, bx);
+      if (ss) a.strokes = ss.map(s => s.map((v, i) => r2(v - (i % 2 ? o.y : o.x)))); else a.box = [bx.x - o.x, bx.y - o.y, bx.w, bx.h].map(r2);
     } else {
       if (spec.type === 'region') a.box = isBox(spec.box) ? spec.box.map(r4) : [.05, .05, .9, .9];
       else {
@@ -15755,14 +16018,28 @@ const MARKUP = (() => {
   addEventListener('resize', () => schedule(true));
   if ('ResizeObserver' in window) new ResizeObserver(() => schedule(true)).observe(main);
   // DOM changes that can move or hide an anchor: rows opening, diff files switching, canvas pan and zoom.
-  // Flow animation (token moves, highlight classes on the drawing) changes nothing that anchors.
+  // Flow animation (token moves, highlight classes on the drawing) changes nothing that anchors, nor do the board's marks
   new MutationObserver(recs => {
-    if (recs.some(r => !(r.target.closest && r.target.closest('.bp-tokens')) && !(r.target instanceof SVGElement && r.attributeName === 'class'))) schedule(true);
+    if (recs.some(r => !(r.target.closest && r.target.closest('.bp-tokens, .bd-bmk')) && !(r.target instanceof SVGElement && r.attributeName === 'class'))) schedule(true);
   }).observe(app, { subtree: true, childList: true, attributes: true, attributeFilter: ['class', 'hidden', 'open', 'transform', 'style'] });
   document.fonts?.ready.then(() => schedule(true));
   setInterval(() => { if (SIDE.shows('comments')) renderList(); }, 30000);   // "5 min ago"
   paint(); schedule(true);
-  return Object.assign(api, { annotate, setMode, paint, comments, flush, markSent, pinFrame, addFrame, drafts, openIfWaiting, cancelDraft: () => finishDraft(false), relayout: () => schedule(true) });
+  // a design board's frame reported where its pinned elements are: each pin on one keeps its element's spot, where it
+  // sits while the frame isn't live (BM.place)
+  function reported(id) {
+    if (!BM) return;
+    const pre = `el:${id}/`;
+    let moved = false;
+    for (const a of draft ? [...list, draft] : list) {
+      if (!a.target.key.startsWith(pre)) continue;
+      const s = BM.liveSpot(a);
+      if (!s || a.spot && Math.abs(a.spot.x - s.x) < .5 && Math.abs(a.spot.y - s.y) < .5) continue;
+      a.spot = s; if (a !== draft) moved = true;
+    }
+    if (moved && !RO) save();
+  }
+  return Object.assign(api, { annotate, setMode, paint, comments, flush, markSent, pinFrame, addFrame, drafts, openIfWaiting, reported, cancelDraft: () => finishDraft(false), relayout: () => schedule(true) });
 })();
 
 /* ---------- the drafts' undo history (a design's board edits, a storelisting's text edits) ---------- */
@@ -15968,7 +16245,7 @@ function boardEdits(B) {
   const elNote = (E, shown) => E.op === 'delete' ? `Delete ${T(E.ab)} › ${elName(E)} (${E.tag}${shown || E.base ? ': ' + q(shown || E.base) : ''})`
     : `Text in ${T(E.ab)} › ${elName(E)}: ${q(E.base)} → ${q(E.text)}`;
   const elSpec = (E, x) => ({ type: 'element', key: elKey(E.ab, E.sel), label: `${T(E.ab)} › ${elName(E)}`, note: elNote(E, x && x.shown), element: E,
-    text: E.op === 'delete' && x && x.shown ? x.shown : E.base, extra: x ? x.extra : undefined, pos: x ? x.pos : undefined });
+    text: E.op === 'delete' && x && x.shown ? x.shown : E.base, extra: x ? x.extra : undefined, spot: x ? x.spot : undefined });
   // the drafts a frame of artboard id shows
   const elList = id => elDrafts().filter(a => live(a) && a.element.ab === id).map(({ element: E }) => E.op === 'delete'
     ? { sel: E.sel, tag: E.tag, base: E.base, del: true } : { sel: E.sel, tag: E.tag, base: E.base, text: E.text });
@@ -16000,7 +16277,7 @@ function boardEdits(B) {
     if (r) x.rects[sel] = r;
     return { ab: x.a.id, sel, tag: typeof d.tag === 'string' ? d.tag.slice(0, 20) : '', base: typeof d.base === 'string' ? clean(d.base).slice(0, TEXT_MAX) : '',
       ord: Number.isInteger(d.ord) ? d.ord : null, root: !!d.root, sec: Number.isInteger(d.sec) ? d.sec : null, shown: typeof d.text === 'string' ? clean(d.text).slice(0, 200) : '',
-      pos: r ? { x: clamp((r.x + r.w) / x.p.w, 0, 1), y: clamp(r.y / x.p.h, 0, 1) } : null };
+      spot: r ? B.spotOf(x.a.id, r) : null };
   }
   // Element: a pick in a frame picks its element (the screen's body: none), and the comment box it opened gets Delete
   // element; the box closing ends the pick
@@ -16009,7 +16286,7 @@ function boardEdits(B) {
   B.canDelete = key => !!key && pickKey() === key;
   B.deletePicked = () => !!pickKey() && deleteSel();
   B.onDraftEnd = key => { if (B.mode === 'point' && B.editSel && elKey(B.editSel.ab, B.editSel.sel) === key) setEditSel(null); };
-  const extraOf = s => ({ extra: B.siteTarget(s.ab, s.sec), pos: s.pos ? { x: Math.round(s.pos.x * 1e4) / 1e4, y: Math.round(s.pos.y * 1e4) / 1e4 } : undefined });
+  const extraOf = s => ({ extra: B.siteTarget(s.ab, s.sec), spot: s.spot || undefined });
   function textEdit(s, text) {
     const d = elOf(elKey(s.ab, s.sel)), base = d ? d.element.base : s.base;
     if (d && d.element.op === 'delete') return;   // hidden: nothing to edit

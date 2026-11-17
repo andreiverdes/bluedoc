@@ -249,8 +249,8 @@ CURSOR_AT = "((x, y) => (e => e ? getComputedStyle(e).cursor : null)(document.el
 
 @unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")
 class BoardMarksAndToolbars(ChromePage):
-    """On a board a Region drawn beside the screens lives on the board: it pans and zooms with it (anchored to the
-    board's world, not the window). In every tool the toolbars and trays keep the default arrow, step after step."""
+    """On a board a Region drawn beside the screens lives on the board: it pans and zooms with it (in the board's marks
+    layer, in board px, not the window). In every tool the toolbars and trays keep the default arrow, step after step."""
     mouse, drag, save_note = CommentTools.mouse, CommentTools.drag, CommentTools.save_note
 
     def board(self, doc: str = "acme-fit-design.bluedoc.json") -> Tab:
@@ -273,7 +273,7 @@ class BoardMarksAndToolbars(ChromePage):
         self.drag(t, x0, y0, x0 + 160, y0 + 110)
         t.wait_for("!!document.querySelector('.bd-cmp:not([hidden])')")
         self.assertEqual(t.ev("document.querySelector('.bd-cmp .lb').textContent"), "Region on Board")
-        rgn, world = f"{BOX}({json.dumps('.bd-ann-rgn')})", f"{BOX}({json.dumps('.bd-world')})"
+        rgn, world = f"{BOX}({json.dumps('.bd-bmk .bd-ann-rgn')})", f"{BOX}({json.dumps('.bd-ab[data-ab=login]')})"   # a screen: the board's pan and zoom
         before, w0 = t.wait_for(rgn), t.ev(world)
         # a pan: the box moves with the board, by the same delta
         self.wheel(t, b[0] + 400, b[1] + 300, 160)
@@ -285,12 +285,12 @@ class BoardMarksAndToolbars(ChromePage):
         self.assertEqual(after[0], before[0])
         # a zoom: the box scales with the board
         cx, cy = after[0] + after[2] / 2, after[1] + after[3] / 2   # zoom about the box, so it stays in view
+        k1 = t.ev("BP.board().k")
         for _ in range(2):
             self.wheel(t, cx, cy, -120, ctrl=True)
         t.wait_for(f"{world}[2] !== {w1[2]}")
         time.sleep(0.8)   # the zoom settles
-        w2, zoomed = t.ev(world), t.wait_for(rgn)
-        k = w2[2] / w1[2]
+        zoomed, k = t.wait_for(rgn), t.ev("BP.board().k") / k1
         self.assertLessEqual(abs(zoomed[2] - after[2] * k), 2, (after, zoomed, k))
         self.save_note(t, "Acme: a step count card here")
         # what goes to the agent: the key names the board, and the region's box comes with it, in board px and on the
