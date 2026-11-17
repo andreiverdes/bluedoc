@@ -172,7 +172,7 @@ class Conversation(ChromePage):
         a.ev("BP.choose('decisions/prices', 'notice')")
         a.ev(f"{more}.querySelector('.ac-tmm').click()")
         self.assertEqual(a.ev(f"[{item('prices')}.choice, {item('prices')}.more, {more}.querySelector('.ac-tmm').getAttribute('aria-checked'), {row}.classList.contains('more'),"
-                              f" {row}.classList.contains('open'), document.activeElement === {more}.querySelector('textarea')]"), [None, True, "true", True, True, True])
+                              f" {row}.classList.contains('open'), document.activeElement === {row}.querySelector(':scope > .ac-reply textarea')]"), [None, True, "true", True, True, True])
         approve = "document.querySelector('.bd-key.approve').disabled"
         self.assertTrue(a.ev(approve))
         a.ev(f"{row}.querySelector('.bp-opt[data-id=silent] .pk').click()")
@@ -384,9 +384,11 @@ class Conversation(ChromePage):
         row = "document.querySelector('#item-decisions-retention')"
         parts = f"[...{row}.children].filter(e => e.checkVisibility()).map(e => e.classList[0])"
         self.assertEqual(a.ev(parts), ["bp-cl-row", "ac-detrow", "bp-opts", "ac-more", "ac-reply"], "an unanswered question opens on load")
-        self.assertEqual(a.ev(f"[{row}.querySelector('.ac-detrow .pv-more').textContent, !!{row}.querySelector('.ac-detrow .ac-keys')]"), ["More details", True])
+        # More details: a row (no keyboard hint); pressed, the details show inside it
+        card = f"[...{row}.querySelector('.ac-detrow').children].filter(e => e.checkVisibility()).map(e => e.classList[0])"
+        self.assertEqual(a.ev(f"[{row}.querySelector('.ac-detrow .pv-more').textContent, !!{row}.querySelector('.ac-keys'), {card}]"), ["More details", False, ["bp-btn"]])
         a.ev(f"{row}.querySelector('.pv-more').click()")
-        self.assertEqual(a.ev(parts), ["bp-cl-row", "ac-detrow", "bd-dets", "bp-opts", "ac-more", "ac-reply"])
+        self.assertEqual([a.ev(parts), a.ev(card)], [["bp-cl-row", "ac-detrow", "bp-opts", "ac-more", "ac-reply"], ["bp-btn", "bd-dets"]])
         # answered, it folds to its head with ✓ and the pick (All: the list's Open filter would hide an answer picked by script)
         a.ev("BP.findingsFilter('cl-decisions', 'all')")
         a.ev("BP.choose('decisions/retention', 'd180')")

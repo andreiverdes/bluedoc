@@ -313,11 +313,15 @@ button.bd-emo:hover, button.bd-emo[aria-expanded="true"] { background: var(--sel
    app bar, the left one after the doc's name (the theme a sideways switch), the right one before Share; B: slim rails
    flush to the window's edges, 30 px keys from the top, the theme at the left one's foot; C: compact trays over the
    page's edges, a small raised handle until the pointer comes (a dot on the right one while comments wait); D: the
-   panes' keys lead the bottom dock, the theme in the app bar's ⋯; F: the trays stay where they are, over the page,
-   and both panes open over it beside them as raised trays, the page keeping the window's width (railOver). Every key
-   keeps its badge, ring and arrow cursor; a phone keeps its bar keys */
+   panes' keys end the bottom dock, after its primary, the theme in the app bar's ⋯; F: the trays stay where they
+   are, over the page, and both panes open over it beside them as raised trays, the page keeping the window's width
+   (railOver); G: the app bar holds every key, the left pane's keys in a tray at its left edge (after the home key and
+   wordmark) then the doc's name, and at its right Share | Export | Archive as one pill, the theme (a sideways switch)
+   and the right pane's keys in a tray; a board's panes open over it as F's, a doc's dock and push it; H: G with a
+   board's toolbar in the app bar too (H sets data-v-rail to "g h": every G rule matches ~="g"). Every key keeps its
+   badge, ring and arrow cursor; a phone keeps its bar keys */
 @media (min-width: 601px) {
-  html:is([data-v-rail="a"], [data-v-rail="c"], [data-v-rail="d"]) { --stripe-w: var(--pane-gap); }
+  html:is([data-v-rail="a"], [data-v-rail="c"], [data-v-rail="d"], [data-v-rail~="g"]) { --stripe-w: var(--pane-gap); }
   html[data-v-rail="b"] { --stripe-w: 40px; }
 }
 html[data-v-rail] :is(.bd-stripe, .bd-stripe *) { cursor: default; }
@@ -327,10 +331,10 @@ html[data-v-rail="a"] .bd-stripe { --k: 32px; position: relative; z-index: auto;
 html[data-v-rail="a"] .bd-stripe.l { left: auto; margin-left: -2px; }
 html[data-v-rail="a"] .bd-stripe.r { right: auto; margin-right: 6px; }
 html[data-v-rail="a"] .bd-stripe > .bd-groove { width: 2px; height: calc(var(--k) * .62); margin: 0 3px; background: var(--groove); }
-html[data-v-rail="a"] .bd-sk.bd-thsw { width: calc(var(--k) * 2 - 4px); height: var(--k); }
-html[data-v-rail="a"] .bd-thsw .end { top: 0; bottom: 0; left: 0; right: auto; width: var(--k); height: auto; }
-html[data-v-rail="a"] .bd-thsw .end.moon { left: auto; right: 0; }
-html[data-v-rail="a"] .bd-thsw[aria-checked="true"] .th { translate: calc(var(--k) - 4px) 0; }
+html:is([data-v-rail="a"], [data-v-rail~="g"]) .bd-sk.bd-thsw { width: calc(var(--k) * 2 - 4px); height: var(--k); }
+html:is([data-v-rail="a"], [data-v-rail~="g"]) .bd-thsw .end { top: 0; bottom: 0; left: 0; right: auto; width: var(--k); height: auto; }
+html:is([data-v-rail="a"], [data-v-rail~="g"]) .bd-thsw .end.moon { left: auto; right: 0; }
+html:is([data-v-rail="a"], [data-v-rail~="g"]) .bd-thsw[aria-checked="true"] .th { translate: calc(var(--k) - 4px) 0; }
 /* B */
 html[data-v-rail="b"] .bd-stripe { --k: 30px; top: var(--top-h); bottom: 0; translate: none; max-height: none; width: var(--stripe-w); gap: 4px; padding: 8px 0 12px; border-radius: 0; background: none; box-shadow: none; }
 html[data-v-rail="b"] .bd-stripe.l { left: 0; }
@@ -363,11 +367,49 @@ html[data-v-rail="d"] .bd-stripe > :is(.bd-thsw, .bd-groove) { display: none; }
 html[data-v-rail="d"] .bd-docm .bd-selm > .bd-ph-only { display: flex !important; }
 html[data-v-rail="d"] .bd-bar-r > .bd-bk.th:not([hidden]) { display: inline-grid !important; width: 38px; height: 38px; }
 @media (max-width: 600px) { .bd-rail-g { display: none; } }
-/* F: html:root outweighs the panes' own over-the-page look (html.bd-lp-open:not(.bd-lp-dock) …), opening or closing */
+/* F, and G on a board page: html:root outweighs the panes' own over-the-page look (html.bd-lp-open:not(.bd-lp-dock) …),
+   opening or closing */
 @media (min-width: 601px) {
-  html:root[data-v-rail="f"] :is(.bp-side, .bd-lp, .bd-sp) { bottom: 8px; border-radius: 22px; background: linear-gradient(180deg, var(--tray-top), var(--tray-bot));
-    box-shadow: var(--shadow-tray), var(--shadow-3); }
+  html:root:is([data-v-rail="f"], [data-v-rail~="g"][data-layout="board"]) :is(.bp-side, .bd-lp, .bd-sp) { bottom: 8px; border-radius: 22px;
+    background: linear-gradient(180deg, var(--tray-top), var(--tray-bot)); box-shadow: var(--shadow-tray), var(--shadow-3); }
 }
+/* G: the stripes are raised trays in the bar (the dock's, 34 px keys), the left one leading the bar with the home key
+   first (.bd-homek: the bar's own .bd-home stays a phone's); the doc's name follows the left tray, its title ellipsed
+   where the bar runs short, and the bar's middle stays empty. The right side reads the theme switch, the right tray,
+   Share (a whole pill) and ⋮ (ARC's menu: Export's rows, then Archive), where Export's own key goes. On a board the
+   panes over it keep their drag handles (.bd-rh), as docked ones do */
+@media (min-width: 601px) {
+  html[data-v-rail~="g"] .bd-bar .bd-stripe { --k: 34px; position: static; z-index: auto; top: auto; translate: none; max-height: none; flex: none; flex-direction: row; gap: 2px;
+    padding: 3px; overflow: visible; }
+  html[data-v-rail~="g"] .bd-bar .bd-stripe.l { margin-left: -6px; }
+  html[data-v-rail~="g"] .bd-bar .bd-stripe.r { margin: 0 2px; }
+  html[data-v-rail~="g"] .bd-bar .bd-stripe > .bd-groove { display: none; }
+  html[data-v-rail~="g"] .bd-bar .bd-stripe > .bd-groove.home { display: block; width: 2px; height: calc(var(--k) * .62); margin: 0 3px; background: var(--groove); }
+  html[data-v-rail~="g"] .bd-bar-r > .bd-thsw { --k: 38px; margin: 0 2px; }
+  html[data-v-rail~="g"] .bd-bar > .bd-home { display: none; }
+  html[data-v-rail~="g"] .bd-sk.bd-homek { display: inline-flex; align-items: center; gap: 7px; width: auto; padding: 0 12px 0 10px; color: var(--fg); text-decoration: none; }
+  html[data-v-rail~="g"] .bd-sk.bd-homek > .bd-ic { width: 16px; height: 16px; color: var(--accent); }
+  html[data-v-rail~="g"] .bd-sk.bd-homek > svg.wm { width: auto; height: 13px; }
+  /* the name's pill whole: the crumb clips its overflow, so it keeps the pill's edge inside its padding */
+  html[data-v-rail~="g"] .bd-crumb { flex: 0 1 auto; margin-left: -4px; padding-left: 4px; }
+  html[data-v-rail~="g"] .bd-crumb > .bd-dsw { margin-left: 0; }
+  html[data-v-rail~="g"] .bd-crumb > .sep { display: none; }
+  html[data-v-rail~="g"] .bd-bar-r:has(> .bd-docm) > .bd-docx { display: none; }
+  html[data-v-rail~="g"] .bd-bar-r:has(> .bd-docm) .bd-tbtn.bd-shk { border-radius: 999px; }
+  html[data-v-rail~="g"] .bd-docm .bd-selm > .grp { padding: 6px 12px 2px; font: 600 11px/16px var(--sans); letter-spacing: .04em; text-transform: uppercase; color: var(--fg-subtle); }
+  html[data-v-rail~="g"] .bd-docm .bd-selm > .sep { height: 1px; margin: 4px 8px; background: var(--line); }
+  /* H: a board's toolbar (.bd-btb, placeRail) sits in the bar's middle, centred in the window, a tray as tall as the
+     stripes'; fitTb gives it its room there */
+  html[data-v-rail~="h"] .bd-bar > .bd-btb { --k: 34px; top: 8px; left: 0; right: 0; gap: 4px; padding: 3px; }
+  /* too little room for it: Share drops its word, as at 900 px (fitTb) */
+  html[data-v-rail~="h"] .bd-bar-r.bd-tight .bd-tbtn.bd-shk > .w { display: none; }
+  html[data-v-rail~="h"] .bd-bar-r.bd-tight .bd-tbtn.bd-shk { padding: 0 9px 0 10px; }
+}
+@media (min-width: 901px) {
+  html[data-v-rail~="g"][data-layout="board"].bd-lp-open .bd-rh-left, html[data-v-rail~="g"][data-layout="board"].bd-sp-open .bd-rh-right { display: block; }
+}
+@media (max-width: 600px) { .bd-bar-r > .bd-thsw, .bd-docm .bd-desk { display: none !important; } }
+html[data-v-rail~="g"] :is(.bd-bar-r > .bd-thsw, .bd-bar-r > .bd-thsw *, .bd-bar-r .bd-tbtn.bd-shk, .bd-bar-r .bd-tbtn.bd-shk *, .bd-homek, .bd-homek *) { cursor: default; }
 /* a pane's header: HorizonUI's DockPanel header, its title (a board's Screens with their count), then – to hide it */
 .bd-pane-h { display: flex; align-items: center; gap: 4px; flex: none; height: 40px; padding: 0 8px 0 14px; }
 .bd-pane-h h2 { margin: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 600 12px/16px var(--sans); color: var(--fg); }
@@ -696,8 +738,8 @@ html.bd-lp-open:not(.bd-lp-dock) .bp-side { background: var(--surface); box-shad
 .bd-tk .det summary::-webkit-details-marker { display: none; }
 .bd-tk .det summary:hover { color: var(--fg); }
 .bd-tk .det summary:focus-visible { outline: none; box-shadow: var(--focus-ring); }
-.bd-tk .det summary .bd-ic { width: 14px; height: 14px; transition: rotate .15s var(--ease); }
-.bd-tk .det[open] summary .bd-ic { rotate: 90deg; }
+.bd-tk .det summary .bd-ic { width: 14px; height: 14px; transition: rotate .2s var(--ease); }
+.bd-tk .det[open]:not([data-shut]) summary .bd-ic { rotate: 90deg; }   /* data-shut: closing (fold), still open */
 .bd-tk .det dl { margin: 10px 8px 2px 0; padding: 0 12px; border-radius: 10px; background: var(--panel); box-shadow: inset 0 0 0 1px var(--line); }
 .bd-tk .dr { display: grid; grid-template-columns: 88px 1fr; gap: 12px; padding: 7px 0; font-size: 12px; line-height: 1.4; border-top: 1px solid var(--line-soft); }
 .bd-tk .dr:first-child { border-top: 0; }
@@ -996,7 +1038,7 @@ td.bd-cell-mod { background: color-mix(in oklch, var(--warn-tint) 70%, transpare
 .bp-cl-item:is(.open, .empty) .bp-cl-text, .bp-cl-item:is(.open, .empty) .bp-cl-subt > span { white-space: normal; overflow: visible; }
 .bp-cl-item.done .bp-cl-text, .bp-cl-item.done .bp-cl-text code { color: var(--fg-subtle); }
 .bp-cl-head > .bp-chip { margin-top: 2px; flex: none; }
-.bp-cl-chev { width: 16px; height: 16px; flex: none; margin-top: 4px; color: var(--fg-subtle); transition: transform .18s var(--ease); }
+.bp-cl-chev { width: 16px; height: 16px; flex: none; margin-top: 4px; color: var(--fg-subtle); transition: transform .2s var(--ease); }
 .bp-cl-item.open .bp-cl-chev { transform: rotate(90deg); }
 .bp-cl-item.empty .bp-cl-chev { visibility: hidden; }
 @media print { .bp-note:not(:has(.bp-note-ta:not(:placeholder-shown))) { display: none; } .bp-note .ft { display: none !important; } .bp-note-ta { resize: none !important; } }
@@ -1120,7 +1162,7 @@ td.bd-cell-mod { background: color-mix(in oklch, var(--warn-tint) 70%, transpare
 .bp-opt.plain .ol { flex: 1 1 auto; }
 .bp-opt .yp { flex: none; margin-left: auto; font-size: 12px; color: var(--fg-subtle); white-space: nowrap; }
 .bp-opt .yp:empty { display: none; }
-.bp-opt .cv { flex: none; width: 16px; height: 16px; margin-left: auto; color: var(--fg-subtle); transition: transform .18s var(--ease); }
+.bp-opt .cv { flex: none; width: 16px; height: 16px; margin-left: auto; color: var(--fg-subtle); transition: transform .2s var(--ease); }
 /* the one-line explanation fills the row; open (it hides), "Your pick" and the chevron go right */
 .bp-opt:not(.open) .one ~ :is(.yp, .cv), .bp-opt .yp:not(:empty) + .cv { margin-left: 0; }
 .bp-opt.open .cv { transform: rotate(180deg); }
@@ -1129,17 +1171,8 @@ td.bd-cell-mod { background: color-mix(in oklch, var(--warn-tint) 70%, transpare
 .bp-opt .ob[hidden] { display: none; }
 .bp-opt .ob > :first-child { margin-top: 0; } .bp-opt .ob > :last-child { margin-bottom: 0; }
 .bp-opt .ob p { margin: 0 0 8px; } .bp-opt .ob :is(ul, ol) { margin: 0 0 8px; padding-left: 20px; }
-/* More details, with the keyboard keys at the right end of its row */
-.ac-detrow { display: flex; align-items: center; gap: 12px; margin: -2px 16px 8px 30px; }
-.ac-detrow[hidden] { display: none; }
-.ac-detrow > .pv-more { margin: 0; }
-.bd-mrow > .ac-detrow { margin-left: 10px; }
-.ac-keys { display: inline-flex; align-items: center; gap: 5px; margin-left: auto; font-size: 12px; color: var(--fg-subtle); white-space: nowrap; cursor: default; }
-@media (max-width: 600px), (hover: none) { .ac-keys { display: none; } }
-/* an open answer's own one-line field, under its explanation; asked Tell me more's, under its pill */
+/* an open answer's own one-line field, under its explanation */
 .bp-opt .ob .ac-in { margin: 10px 0 2px; }
-.ac-more > .ac-in { margin: 8px 0 0; }
-.ac-more > .ac-in[hidden] { display: none; }
 /* the one-line field (the reply field, an answer's, and Other's in the list): the text, then a round Attach key and a
    Save pill; it grows only when the text wraps */
 .ac-line { display: flex; align-items: flex-end; gap: 4px; min-height: 36px; padding: 3px 4px 3px 12px; border-radius: 18px; background: var(--inset); box-shadow: var(--shadow-well); cursor: text; box-sizing: border-box; }
@@ -1206,13 +1239,13 @@ td.bd-cell-mod { background: color-mix(in oklch, var(--warn-tint) 70%, transpare
 .bp-opts.compact :is(.ol, .ob), .bd-sp-brief .bp-opt :is(.ol, .ob) { font-size: 13px; }
 .bp-opts.compact .one, .bd-sp-brief .bp-opt .one { font-size: 12.5px; }
 .bp-opts.compact .ob, .bd-sp-brief .bp-opt .ob { padding: 0 12px 10px 10px; }
-.bd-sp-brief .ac-keys { display: none; }
 /* the Brief pane is narrow: a question's ✓ pick or amber chip goes under its title, the chevron stays beside it */
 .bd-sp-brief .bp-cl-item.fd > .bp-cl-row .bp-cl-head { flex-wrap: wrap; row-gap: 4px; }
 .bd-sp-brief .bp-cl-item.fd > .bp-cl-row .bp-cl-main { flex: 1 1 calc(100% - 40px); }
 .bd-sp-brief .bp-cl-item.fd > .bp-cl-row .bp-cl-head > :is(.pv-ok, .ac-chip, .bp-chip, .bp-cl-picked) { order: 3; max-width: calc(100% - 30px); margin: 0; }
 .bd-sp-brief .bp-cl-item.fd > .bp-cl-row .pv-chev { order: 2; }
-@media print { .ac-more:not(.on), .ac-reply, .ac-keys, .bp-opt .ob .ac-in, .ac-more > .ac-in, .ac-line .ac-att, .ac-line .ac-go { display: none !important; } .bp-opt .ob[hidden] { display: block; } .bp-opt .one { display: none; } }
+@media print { .ac-more:not(.on), .ac-reply, .bp-opt .ob .ac-in, .ac-line .ac-att, .ac-line .ac-go { display: none !important; } .bp-opt .ob[hidden] { display: block; } .bp-opt .one { display: none; }
+  .ac-detrow { background: none !important; box-shadow: none !important; } }
 /* several answers: "2 picked" or "Asking for more" beside the title */
 .bp-cl-picked { flex: none; margin-top: 3px; font-size: 12.5px; color: var(--fg-subtle); white-space: nowrap; }
 .bp-cl-picked:empty { display: none; }
@@ -1333,7 +1366,7 @@ td.bd-cell-mod { background: color-mix(in oklch, var(--warn-tint) 70%, transpare
 :is(.bp-fdir-b, .bp-fhit):focus-visible { box-shadow: none; border-radius: 0; outline: 2px solid var(--focus); outline-offset: -2px; }
 .bp-fdir-b { display: flex; align-items: center; gap: 8px; width: 100%; border: 0; background: none; font: inherit; color: var(--fg-muted); text-align: left; cursor: pointer; }
 .bp-fdir-b > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.bp-fdir-b .chev { flex: none; width: 14px; height: 14px; color: var(--fg-subtle); transition: transform .15s var(--ease); }
+.bp-fdir-b .chev { flex: none; width: 14px; height: 14px; color: var(--fg-subtle); transition: transform .2s var(--ease); }
 .bp-fdir.shut > .bp-fdir-b .chev { transform: rotate(-90deg); }
 .bp-frow { display: flex; align-items: flex-start; gap: 8px; scroll-margin-top: calc(var(--top-h) + 16px); }
 .bp-fhit { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 8px; white-space: nowrap; }
@@ -1857,47 +1890,6 @@ html.bd-ann-m-select .bp-cl-head { user-select: text; -webkit-user-select: text;
 .bd-cmp.dock .ar { display: none; }
 .bd-cmp.dock .bp-note-ta { min-height: 44px; max-height: 96px; }
 .bd-cmp.dock .ft .hint { display: none; }
-/* ?v-cmt: the composer (and, below, a saved comment's card) in the toolbars' language. Common: the pin's number a round
-   badge, round keys, pill actions, the field one box (.fld) with its foot */
-html[data-v-cmt] .bd-cmp .hd .bd-ann-num { min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; font-size: 11.5px; }
-html[data-v-cmt] .bd-cmp .hd .lb { font-size: 13px; color: var(--fg); }
-html[data-v-cmt] .bd-cmp .ft .bp-attach { width: 34px; height: 34px; padding: 0; justify-content: center; border-radius: 999px; }
-html[data-v-cmt] .bd-cmp .ft .bp-btn { height: 34px; }
-html[data-v-cmt] .bd-cmp > .fld > .bp-files-w { margin: 6px 0 0; }
-/* A: the field a well in a raised tray; attach a round key; Cancel | Save one split pill, Save its blue end */
-html[data-v-cmt="a"] .bd-cmp { width: min(340px, calc(100vw - 16px)); padding: 8px; border-radius: 22px; background: linear-gradient(180deg, var(--tray-top), var(--tray-bot)); box-shadow: var(--shadow-tray), var(--shadow-3); }
-html[data-v-cmt="a"] .bd-cmp .ar { background: var(--tray-top); }
-html[data-v-cmt="a"] .bd-cmp .hd { margin: 2px 6px 8px 4px; }
-html[data-v-cmt="a"] .bd-cmp .fld { padding: 4px 4px 4px; border-radius: 17px; background: var(--hk-down); box-shadow: var(--shadow-well); transition: box-shadow .12s; }
-html[data-v-cmt="a"] .bd-cmp .fld:focus-within { box-shadow: var(--shadow-well), 0 0 0 2px color-mix(in oklch, var(--accent) 55%, transparent); }
-html[data-v-cmt="a"] .bd-cmp .fld .bp-note-ta, html[data-v-cmt="a"] .bd-cmp .fld .bp-note-ta:focus { min-height: 56px; padding: 6px 9px; border-radius: 13px; background: none; box-shadow: none; }
-html[data-v-cmt="a"] .bd-cmp .ft { margin-top: 2px; }
-html[data-v-cmt="a"] .bd-cmp .ft .hint { display: none; }
-html[data-v-cmt="a"] .bd-cmp .acts > .bp-btn { height: 34px; padding: 0 16px; opacity: 1; }
-html[data-v-cmt="a"] .bd-cmp .acts > .bp-btn.primary:not(:disabled) { color: #fff; background: var(--accent-solid) linear-gradient(180deg, color-mix(in oklch, var(--accent-solid), white 8%), var(--accent-solid)); }
-html[data-v-cmt="a"] .bd-cmp .acts > .bp-btn.primary:disabled { color: var(--fg-subtle); background: var(--groove) left center / 2px 60% no-repeat; box-shadow: none; }
-/* B: a chat box – the field holds the text, then attach and a round blue send key; Cancel a round × at the top; the
-   shortcuts in the keys' tooltips */
-html[data-v-cmt="b"] .bd-cmp { padding: 10px; border-radius: 22px; }
-html[data-v-cmt="b"] .bd-cmp .hd { margin: 2px 34px 10px 2px; }
-html[data-v-cmt="b"] .bd-cmp .ft .cx { position: absolute; top: 8px; right: 8px; width: 30px; height: 30px; padding: 0; justify-content: center; }
-html[data-v-cmt="b"] .bd-cmp .ft .cx .bd-ic { width: 16px; height: 16px; }
-html[data-v-cmt="b"] .bd-cmp .fld { padding: 9px 6px 6px 12px; border-radius: 20px; background: var(--inset); box-shadow: inset 0 0 0 1px var(--line); transition: box-shadow .12s; }
-html[data-v-cmt="b"] .bd-cmp .fld:focus-within { box-shadow: inset 0 0 0 1.5px var(--accent), 0 0 0 3px color-mix(in oklch, var(--accent) 18%, transparent); }
-html[data-v-cmt="b"] .bd-cmp .fld .bp-note-ta, html[data-v-cmt="b"] .bd-cmp .fld .bp-note-ta:focus { min-height: 44px; padding: 0 6px 0 0; border-radius: 0; background: none; box-shadow: none; }
-html[data-v-cmt="b"] .bd-cmp .ft { margin: 4px 0 0 -6px; }
-html[data-v-cmt="b"] .bd-cmp .ft .hint { display: none; }
-html[data-v-cmt="b"] .bd-cmp .ft .bp-btn.primary { width: 34px; padding: 0; justify-content: center; }
-html[data-v-cmt="b"] .bd-cmp .ft .bp-btn.primary .bd-ic { width: 16px; height: 16px; }
-html[data-v-cmt="b"] .bd-cmp .ft .bp-btn.primary:disabled { opacity: .6; }
-/* C: a compact card – the pin's badge heads it, the field a ruled line, pill keys at its foot */
-html[data-v-cmt="c"] .bd-cmp { padding: 12px 12px 10px 14px; border-radius: 18px; }
-html[data-v-cmt="c"] .bd-cmp .hd { margin-bottom: 6px; }
-html[data-v-cmt="c"] .bd-cmp .fld .bp-note-ta, html[data-v-cmt="c"] .bd-cmp .fld .bp-note-ta:focus { min-height: 48px; padding: 4px 0 8px; border-radius: 0; background: none; box-shadow: inset 0 -1px 0 var(--line); }
-html[data-v-cmt="c"] .bd-cmp .fld .bp-note-ta:focus { box-shadow: inset 0 -1.5px 0 var(--accent); }
-html[data-v-cmt="c"] .bd-cmp .ft { margin: 8px 0 0 -6px; }
-html[data-v-cmt="c"] .bd-cmp .ft .hint { display: none; }
-html[data-v-cmt="c"] .bd-cmp .ft .bp-btn:not(.bp-attach) { padding: 0 15px; }
 
 /* right panel: one section at a time (Brief on a board, Comments, Revisions), each opened from its key on the right
    stripe; its header the section's title. Docked beside the page where the page keeps READ_W (a board: 1101 px and
@@ -1973,28 +1965,6 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .bd-cs-c:is(:hover, :focus-within, .on, .edit) .ago { display: none; }
 @media (hover: none) { .bd-cs-c .acts { display: inline-flex; } .bd-cs-c .ago { display: none; } }
 .bd-cs-ib { display: inline-grid; place-items: center; width: 26px; height: 26px; padding: 0; border: 0; border-radius: 999px; background: none; color: var(--fg-subtle); }
-/* ?v-cmt: a saved comment's card, to match its composer. A: a raised card, the note in a well; B: the note a chat
-   bubble under a quiet header; C: a compact card, the quote one line */
-html[data-v-cmt] .bd-cs-c > .bd-ann-num { min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; font-size: 11.5px; }
-html[data-v-cmt] .bd-cs-c .acts { gap: 2px; }
-html[data-v-cmt] .bd-cs-c .bd-cs-ib { width: 28px; height: 28px; }
-html[data-v-cmt] .bd-cs-c q { border-radius: 10px; }
-html[data-v-cmt="a"] .bd-cs-c { padding: 10px; border-radius: 18px; background: linear-gradient(180deg, var(--tray-top), var(--tray-bot)); box-shadow: var(--shadow-hk); }
-html[data-v-cmt="a"] .bd-cs-c > .bd-ann-num { box-shadow: var(--shadow-fill); }
-html[data-v-cmt="a"] .bd-cs-c .nt { margin: 2px 0 0; padding: 7px 10px; border-radius: 12px; background: var(--hk-down); box-shadow: var(--shadow-well); }
-html[data-v-cmt="a"] .bd-cs-c:not(.sent) .nt:hover { background: var(--hk-down); box-shadow: var(--shadow-well), inset 0 0 0 1px var(--line-strong); }
-html[data-v-cmt="b"] .bd-cs-c { padding: 8px 8px 10px; border-radius: 18px; background: none; box-shadow: none; }
-html[data-v-cmt="b"] .bd-cs-c:hover { background: var(--hover); }
-html[data-v-cmt="b"] .bd-cs-c .lb { font-size: 12.5px; color: var(--fg-muted); }
-html[data-v-cmt="b"] .bd-cs-c q { padding: 0 0 0 10px; border-block-width: 1px; border-radius: 0; background: none; box-shadow: inset 2px 0 0 var(--line-strong); }
-html[data-v-cmt="b"] .bd-cs-c .nt { justify-self: start; margin: 4px 0 0; padding: 8px 12px; border-radius: 18px 18px 18px 6px; background: var(--accent-tint); color: var(--fg); }
-html[data-v-cmt="b"] .bd-cs-c:not(.sent) .nt:hover { background: color-mix(in oklch, var(--accent) 20%, transparent); }
-html[data-v-cmt="c"] .bd-cs-c { padding: 9px 10px; border-radius: 16px; row-gap: 0; }
-html[data-v-cmt="c"] .bd-cs-c .cb { gap: 3px; }
-html[data-v-cmt="c"] .bd-cs-c q { -webkit-line-clamp: 1; padding: 0 9px; border-block-width: 3px; border-radius: 999px; font-size: 12px; }
-html[data-v-cmt="c"] .bd-cs-c .nt { font-size: 13px; }
-html[data-v-cmt] .bd-cs-c.hot { box-shadow: 0 0 0 1px color-mix(in oklch, var(--accent) 50%, transparent), var(--shadow-1); }
-html[data-v-cmt] .bd-cs-c:is(.on, .edit) { box-shadow: 0 0 0 1.5px var(--accent), 0 4px 14px color-mix(in oklch, var(--accent) 16%, transparent); }
 .bd-cs-ib:hover { background: var(--hover); color: var(--fg); }
 .bd-cs-ib .bd-ic { width: 14px; height: 14px; }
 .bd-cs-c .path { margin-top: -3px; font-size: 11.5px; color: var(--fg-subtle); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -2315,7 +2285,7 @@ html[data-v-cmt] .bd-cs-c:is(.on, .edit) { box-shadow: 0 0 0 1.5px var(--accent)
 .bp-sec.fv-on > h2 > .bd-prs:empty { display: none; }
 :is(.bd-prchev, .bd-mchev) { flex: none; display: grid; place-items: center; width: 26px; height: 26px; padding: 0; border: 0; border-radius: 7px; background: none; color: var(--fg-subtle); cursor: pointer; }
 :is(.bd-prchev, .bd-mchev):hover { background: var(--hover); color: var(--fg); }
-.bd-prchev .bd-ic { transform: rotate(90deg); transition: transform .18s var(--ease); }
+.bd-prchev .bd-ic { transform: rotate(90deg); transition: transform .2s var(--ease); }
 .bd-prchev[aria-expanded="false"] .bd-ic { transform: none; }
 .bd-prm { flex: none; display: inline-flex; align-items: center; gap: 8px; font: 500 12px var(--mono); letter-spacing: 0; color: var(--fg-subtle); }
 .bd-meter { width: 96px; height: 4px; border-radius: 2px; background: var(--line); overflow: hidden; }
@@ -2359,15 +2329,9 @@ html[data-v-cmt] .bd-cs-c:is(.on, .edit) { box-shadow: 0 0 0 1.5px var(--accent)
 .bd-ffilt button b { min-width: 18px; padding: 1px 5px; border-radius: 6px; font: 600 11px/1.4 var(--mono); color: var(--fg-muted); background: var(--inset); }
 .bd-ffilt button[aria-pressed="true"] b { color: var(--accent-fg); background: var(--accent-tint); }
 .bp-sec.fv-on > :is(.fv-m, .fv-c, .fv-d) { margin: 0; padding: 12px; background: var(--inset); }
-/* a section's fold in motion (foldMotion): the box clips while its height eases; what folds away stays drawn and
-   fades out, what opens fades in */
-.bd-anim-box { overflow: clip; }
-@keyframes bd-fold-in { from { opacity: 0; } }
-@keyframes bd-fold-out { to { opacity: 0; } }
 @media screen {
-  .bp-sec.fv-on.bd-fold:not(.bd-anim) > :not(h2, .bd-prhd), .bp-sec.fv-on.bd-fold:not(.bd-anim) > .bd-prhd > .bp-lead { display: none; }
-  .bp-sec.fv-on.bd-anim > :not(h2, .bd-prhd) { animation: bd-fold-in .24s var(--ease) both; }
-  .bp-sec.fv-on.bd-fold.bd-anim > :not(h2, .bd-prhd) { animation: bd-fold-out .18s ease-out both; }
+  /* a folded section is its title (fold eases it) */
+  .bp-sec.fv-on.bd-fold > :not(h2, .bd-prhd), .bp-sec.fv-on.bd-fold > .bd-prhd > .bp-lead { display: none; }
   .bp-sec.fv-merged > :is(.fv-c, .fv-d), .bp-sec.fv-cl > :is(.fv-d, .fv-m), .bp-sec.fv-diff > :is(.fv-c, .fv-m) { display: none; }
   /* what the filter hides: a question (a finding's excerpt in Merged, its card in Diff), a Merged group left empty */
   :is(.bp-sec.fv-on, .bp-cl) .fv-out { display: none; }
@@ -2383,7 +2347,7 @@ html[data-v-cmt] .bd-cs-c:is(.on, .edit) { box-shadow: 0 0 0 1.5px var(--accent)
 :is(.bp-cl-item.fd, .bd-mrow) > .bp-cl-row :is(.bp-cl-head, .bd-mhead) { cursor: pointer; }
 :is(.bp-cl-item.fd, .bd-mrow):not(.open) > .bp-cl-row { padding-bottom: 2px; }
 .pv-chev { flex: none; display: grid; place-items: center; width: 22px; height: 22px; margin-left: 2px; color: var(--fg-subtle); }
-.pv-chev .bd-ic { width: 16px; height: 16px; transition: transform .18s var(--ease); }
+.pv-chev .bd-ic { width: 16px; height: 16px; transition: transform .2s var(--ease); }
 .open > .bp-cl-row .pv-chev .bd-ic { transform: rotate(180deg); }
 .bd-mchev.pv-chev { width: 22px; height: 22px; margin: 9px 0 0 2px; border-radius: 6px; }
 .pv-ok { display: none; flex: none; align-items: center; gap: 4px; max-width: 40%; margin-top: 2px; padding: 2px 8px 2px 6px; border-radius: 999px; font: 600 11.5px/1.4 var(--sans); color: var(--ok-fg); background: var(--ok-tint); }
@@ -2393,67 +2357,24 @@ html[data-v-cmt] .bd-cs-c:is(.on, .edit) { box-shadow: 0 0 0 1.5px var(--accent)
 .bp-cl-item.fd.open > .bp-cl-row .bp-cl-noteic { display: none; }
 :is(.bp-cl-item.fd, .bd-mrow).done:not(.open) > .bp-cl-row .bp-cl-text { color: var(--fg-muted); }
 :is(.bp-cl-item.fd, .bd-mrow).done.open > .bp-cl-row .bp-cl-text { color: var(--fg); }
-.pv-more { margin: -2px 0 8px 30px; height: 26px; font-size: 12.5px; color: var(--fg-muted); }
-.pv-more[hidden] { display: none; }
-.pv-more .bd-ic { width: 14px; height: 14px; }
-.bd-mrow > .pv-more { margin-left: 10px; }
-/* ?v-more: four looks for More details, each in the toolbars' language (VAR, moreKids). Every chevron turns open. */
-.pv-more .cv { transition: rotate .18s var(--ease); }
-.pv-more[aria-expanded="true"] .cv { rotate: 180deg; }
-/* A, B and C start on the finding's text column (44 px, as its options and reply box), D's key on its dot's column */
-html:is([data-v-more="a"], [data-v-more="b"]) :is(.bp-cl-item, .bd-mrow) > .pv-more { margin: 2px 0 10px 44px; }
-/* A: a raised pill in the accent's tint – the select keys' raise (Share | Export) over a soft blue fill, accent text and
-   a faint accent edge, its chevron at the end; open, it sinks */
-html[data-v-more="a"] .pv-more { --mt: color-mix(in oklch, var(--accent) 13%, transparent); height: 30px; padding: 0 10px 0 11px; gap: 7px; color: var(--accent-fg);
+/* More details: a raised row in the accent's tint (the select keys' raise over a soft blue fill, accent text and a
+   faint accent edge) from the answers' left edge to their right (a row without answers: on the same column), its
+   chevron at the end. Pressed, it reads Hide details and opens into one raised card: the row its head, the details
+   (and their code) inside it under that */
+.ac-detrow { --mt: color-mix(in oklch, var(--accent) 13%, transparent); display: flex; flex-direction: column; margin: 2px 16px 10px calc(16px + var(--ind)); border-radius: 17px;
   background: linear-gradient(var(--mt), var(--mt)), linear-gradient(180deg, var(--hk-top), var(--hk-bot));
   box-shadow: var(--shadow-hk), inset 0 0 0 1px color-mix(in oklch, var(--accent) 24%, transparent); }
-html[data-v-more="a"] .pv-more:hover:not(:disabled) { --mt: color-mix(in oklch, var(--accent) 20%, transparent); }
-html[data-v-more="a"] .pv-more[aria-expanded="true"] { background: linear-gradient(var(--mt), var(--mt)), var(--hk-down); box-shadow: var(--shadow-hk-down), inset 0 0 0 1px color-mix(in oklch, var(--accent) 30%, transparent); }
-html[data-v-more="a"] .pv-more .bd-ic { color: currentColor; }
-/* B: an accent-tinted pill naming what it opens: More details | Reviewer · Reasoning · Fix ⌄ */
-html[data-v-more="b"] .pv-more { height: 30px; padding: 0 10px 0 11px; gap: 7px; color: var(--accent-fg); background: var(--accent-tint);
-  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--accent) 26%, transparent); }
-html[data-v-more="b"] .pv-more:hover:not(:disabled) { color: var(--accent-fg); background: color-mix(in oklch, var(--accent) 18%, transparent); }
-html[data-v-more="b"] .pv-more .bd-ic { color: currentColor; }
-html[data-v-more="b"] .pv-more .pts { display: inline-flex; align-items: center; gap: 7px; font-weight: 500; color: color-mix(in oklch, var(--accent-fg) 72%, var(--fg-muted)); }
-html[data-v-more="b"] .pv-more .pts::before { content: ""; width: 1px; height: 14px; background: color-mix(in oklch, var(--accent) 32%, transparent); }
-html[data-v-more="b"] .pv-more[aria-expanded="true"] .pts { display: none; }
-/* C: a disclosure row across the finding: › Details  Reviewer · Reasoning · Fix …  Show; a ghost bar, a hairline ring */
-html[data-v-more="c"] .pv-more { display: flex; box-sizing: border-box; height: 34px; padding: 0 14px 0 10px; gap: 8px; color: var(--fg); box-shadow: inset 0 0 0 1px var(--line); }
-html[data-v-more="c"] :is(.bp-cl-item, .bd-mrow) > .pv-more { width: calc(100% - 60px); margin: 2px 16px 10px 44px; }
-html[data-v-more="c"] .pv-more[hidden] { display: none; }
-html[data-v-more="c"] .pv-more .cv { rotate: -90deg; color: var(--fg-subtle); }
-html[data-v-more="c"] .pv-more[aria-expanded="true"] .cv { rotate: 0deg; }
-html[data-v-more="c"] .pv-more .pts { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; font-weight: 500; color: var(--fg-subtle); text-align: left; }
-html[data-v-more="c"] .pv-more .hint { margin-left: auto; font-weight: 500; color: var(--fg-subtle); }
-html[data-v-more="c"] .pv-more[aria-expanded="true"] { margin-bottom: 0; border-radius: 17px 17px 0 0; background: var(--inset); box-shadow: none; }
-html[data-v-more="c"] :is(.bp-cl-item, .bd-mrow) > .pv-more[aria-expanded="true"] + .bd-dets { margin: 0 16px 10px 44px; border-radius: 0 0 12px 12px; }
-/* a finding with answers: the row as wide as the answers' box, from its left edge; the keys' hint on a line above it */
-html[data-v-more="c"] .ac-detrow { flex-wrap: wrap; row-gap: 4px; margin-left: calc(16px + var(--ind)); }
-html[data-v-more="c"] .ac-detrow > .pv-more { flex: 1 0 100%; }
-html[data-v-more="c"] .ac-detrow > .ac-keys { order: -1; }
-html[data-v-more="c"] .ac-detrow:has(> .pv-more[aria-expanded="true"]) { margin-bottom: 0; }
-html[data-v-more="c"] .ac-detrow:has(> .pv-more[aria-expanded="true"]) + .bd-dets { margin: 0 16px 10px calc(16px + var(--ind)); border-radius: 0 0 12px 12px; }
-@media (max-width: 900px) {
-  html[data-v-more="c"] .ac-detrow { margin: -2px 12px 8px; }
-  html[data-v-more="c"] .ac-detrow:has(> .pv-more[aria-expanded="true"]) { margin-bottom: 0; }
-  html[data-v-more="c"] .ac-detrow:has(> .pv-more[aria-expanded="true"]) + .bd-dets { margin: 0 12px 10px; }
-}
-/* D: the dock's round key, then its label; open, the key sinks as a pressed dock key does */
-html[data-v-more="d"] .pv-more, html[data-v-more="d"] .pv-more:hover:not(:disabled) { height: 32px; padding: 0 12px 0 0; gap: 10px; background: none; box-shadow: none; color: var(--fg-muted); }
-html[data-v-more="d"] :is(.bp-cl-item, .bd-mrow) > .pv-more { margin: 0 0 8px 9px; }
-html[data-v-more="d"] .pv-more:hover:not(:disabled) { color: var(--fg); }
-html[data-v-more="d"] .pv-more .k { display: grid; place-items: center; flex: none; width: 32px; height: 32px; border-radius: 999px; color: var(--fg-muted);
-  background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: var(--shadow-hk); transition: background-color .12s, box-shadow .12s var(--ease); }
-html[data-v-more="d"] .pv-more .k .bd-ic { width: 16px; height: 16px; }
-html[data-v-more="d"] .pv-more:hover .k { color: var(--fg); background: linear-gradient(var(--hover), var(--hover)), linear-gradient(180deg, var(--hk-top), var(--hk-bot)); }
-html[data-v-more="d"] .pv-more[aria-expanded="true"] .k { color: var(--fg); background: var(--hk-down); box-shadow: var(--shadow-hk-down); }
-html[data-v-more="d"] .pv-more:focus-visible { box-shadow: none; }
-html[data-v-more="d"] .pv-more:focus-visible .k { box-shadow: var(--shadow-hk), var(--focus-ring); }
-.bd-dets { margin: 2px 12px 10px 36px; padding: 10px 14px; border-radius: 10px; background: var(--inset); font-size: 14px; }
+.ac-detrow[hidden] { display: none; }
+.ac-detrow:has(> .pv-more:hover:not(:disabled)) { --mt: color-mix(in oklch, var(--accent) 20%, transparent); }
+.pv-more, .pv-more:hover:not(:disabled) { display: flex; align-items: center; gap: 7px; height: 34px; margin: 0; padding: 0 12px 0 11px; border-radius: 17px; font-size: 12.5px;
+  color: var(--accent-fg); background: none; box-shadow: none; }
+.pv-more[hidden] { display: none; }
+.pv-more .bd-ic { width: 14px; height: 14px; color: currentColor; }
+.pv-more .cv { margin-left: auto; transition: rotate .2s var(--ease); }
+.pv-more[aria-expanded="true"] .cv { rotate: 180deg; }
+.bd-dets { padding: 2px 14px 14px; font-size: 14px; color: var(--fg); }
 .bd-dets[hidden] { display: none; }
 .bd-dets > * + * { margin-top: 10px; }
-.bd-mrow > .bd-dets { margin-left: 16px; margin-right: 16px; }
 .bp-cl-item.fd > .bp-convo { padding: 2px 16px 12px calc(16px + var(--ind)); }
 /* a question's conversation: one per question, under its answers, a timeline as in Revisions (a 2 px connector from
    each avatar down to the next, none after the last). A message about an answer other than the answer now names it;
@@ -2508,7 +2429,6 @@ html[data-v-more="d"] .pv-more:focus-visible .k { box-shadow: var(--shadow-hk), 
   .bd-mlines { width: max-content; min-width: 100%; }
   .bd-mlines .bd-ln > .c { white-space: pre; overflow-wrap: normal; }
   .bd-mlbl { padding-left: 40px; }
-  .bd-dets { margin-left: 12px; }
 }
 /* a phone: the title row and the toolbar stick; the sizes and the lead scroll away. The title takes one line, the
    chevron goes before the number, the toolbar's actions keep their icons */
@@ -2710,7 +2630,7 @@ svg.anim .bp-edge.k-async { animation: bp-march 1.6s linear infinite; }
   .bp-cl-body { padding: 0 12px 12px 12px; }
   .bp-opts, .bp-cl-sum, .bp-cl-item > .bp-note, .bp-cl-item.fd > .bp-convo, .bd-mrow > :is(.bp-note, .bp-convo), :is(.bp-cl-item, .bd-mrow) > .ac-reply { padding: 0 12px 12px 12px; }
   :is(.bp-cl-item, .bd-mrow) > .ac-more { margin: 2px 12px 14px 12px; }
-  :is(.bp-cl-item, .bd-mrow) > .ac-detrow { margin-left: 12px; }
+  :is(.bp-cl-item, .bd-mrow) > .ac-detrow { margin: 2px 12px 10px; }
   .bp-opts.compact { padding: 8px 0 0; }
   .bp-cl-num { display: none; }
   .bp-cl-head { flex-wrap: wrap; row-gap: 4px; }
@@ -3732,14 +3652,16 @@ const SERVED = !SHARE && !SCREENS && /^https?:$/.test(location.protocol);
 // here renders, sets the theme or adds a class to <html>
 const PAGE_HTML = SERVED ? '' : '<!doctype html>\n' + document.documentElement.outerHTML;
 const QP = new URLSearchParams(location.search);
-// design variants for side-by-side review, by URL: ?v-more=a|b|c|d (a finding's More details), ?v-cmt=a|b|c (the
-// comment composer and its card), ?v-rail=a|b|c|d|f (where the stripes' keys sit: placeRail). None: the current look.
-// Set on <html> as data-v-*.
-const VAR = Object.fromEntries([['more', 'abcd'], ['cmt', 'abc'], ['rail', 'abcdf']].map(([k, ok]) => {
+// design variants for side-by-side review, by URL: ?v-rail=a|b|c|d|f|g|h (where the stripes' keys sit: placeRail).
+// None: the current look. Set on <html> as data-v-*.
+const VAR = Object.fromEntries([['rail', 'abcdfgh']].map(([k, ok]) => {
   const v = (QP.get('v-' + k) || '').toLowerCase();
   return [k, v.length === 1 && ok.includes(v) ? v : ''];
 }));
 for (const [k, v] of Object.entries(VAR)) if (v) document.documentElement.dataset['v' + k[0].toUpperCase() + k.slice(1)] = v;
+// ?v-rail=h is G and more: its <html> says both, so G's rules hold for H (CSS [data-v-rail~="g"])
+if (VAR.rail === 'h') document.documentElement.dataset.vRail = 'g h';
+const RAIL_BAR = VAR.rail === 'g' || VAR.rail === 'h';   // every key in the app bar
 // the page's file name, which its exports and copied commands go by: its URL's last segment; a shared page's <name>.html
 const pageFile = () => SHARE ? SHARE.name + '.html' : decodeURIComponent(location.pathname.split('/').pop() || '');
 const CUR = REVS[REVS.length - 1];
@@ -3749,6 +3671,80 @@ const OLD = VIEW !== CUR;   // an earlier revision: read-only, nothing is stored
 const DOC = OLD ? JSON.parse(JSON.stringify(VIEW.doc)) : JSON.parse(DOC_SRC);
 const NS = 'http://www.w3.org/2000/svg';
 const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
+/* ---------- folding: every expand and collapse eases (fold) ---------- */
+// fold(owner, parts, apply, late): apply() flips the DOM (a class, a hidden attribute); parts are what it shows or
+// hides. Opening, each part that comes into view grows from nothing (height, padding, margins, borders, opacity);
+// closing, each part that leaves stays drawn (pinned: its display, inline) while it shrinks to nothing, then the
+// CSS hides it. State and DOM change at once; `late` (a <details>, whose closed content no inline style can keep
+// drawn) applies a close when the shrink lands instead. A fold started mid-motion takes over from where the parts are
+// (owner keeps the one under way; a late close it cuts short never applies). parts null: the owner itself eases from
+// its height to its new one (Show more lines). Instant with reduced motion, before the page settles, or off screen;
+// no inline style stays once it lands.
+const FOLD = { ms: 200, live: false, reduce: matchMedia('(prefers-reduced-motion: reduce)') };
+addEventListener('load', () => setTimeout(() => { FOLD.live = true; }, 0));
+const FOLD_EDGE = ['paddingTop', 'paddingBottom', 'marginTop', 'marginBottom', 'borderTopWidth', 'borderBottomWidth'];
+const foldBox = el => {
+  const cs = getComputedStyle(el), b = { boxSizing: 'border-box', overflow: 'clip', height: el.getBoundingClientRect().height + 'px', opacity: cs.opacity };
+  for (const p of FOLD_EDGE) b[p] = cs[p];
+  return b;
+};
+const foldShut = b => ({ ...b, ...Object.fromEntries(FOLD_EDGE.map(p => [p, '0px'])), height: '0px', opacity: 0 });
+const foldDrawn = el => !!el && el.isConnected && el.hidden !== 'until-found' && el.getClientRects().length > 0;
+function fold(owner, parts, apply, late = false) {
+  const was = owner._fold;
+  const go = FOLD.live && !FOLD.reduce.matches && owner.isConnected && owner.getClientRects().length > 0;
+  if (!parts) {
+    const from = go ? owner.getBoundingClientRect().height : -1;
+    if (was) was.stop();
+    apply();
+    const to = from < 0 ? from : owner.getBoundingClientRect().height;
+    if (Math.abs(to - from) >= 1) foldRun(owner, [[owner, [{ height: from + 'px', overflow: 'clip' }, { height: to + 'px', overflow: 'clip' }]]]);
+    return;
+  }
+  const before = go ? new Map(parts.filter(foldDrawn).map(el => [el, { box: foldBox(el), display: getComputedStyle(el).display }])) : null;
+  if (was) was.stop();
+  if (late && before && before.size) { foldRun(owner, [...before].map(([el, b]) => [el, [b.box, foldShut(b.box)]]), [], apply); return; }
+  apply();
+  if (!before) return;
+  const steps = [], pins = [];
+  for (const el of parts) {
+    const b = before.get(el), shown = foldDrawn(el);
+    if (shown && !b) { const end = foldBox(el); steps.push([el, [foldShut(end), end]]); }
+    else if (!shown && b) {
+      pins.push([el, el.style.display, el.style.contentVisibility]);
+      el.style.display = b.display; el.style.contentVisibility = 'visible';
+      steps.push([el, [b.box, foldShut(b.box)]]);
+    } else if (shown && b && was) { const end = foldBox(el); if (end.height !== b.box.height) steps.push([el, [b.box, end]]); }
+  }
+  foldRun(owner, steps, pins);
+}
+// runs a fold's animations together; when they land (or a new fold stops them) the pinned parts get their own style back
+function foldRun(owner, steps, pins = [], done = null) {
+  const anims = steps.map(([el, kf]) => el.animate(kf, { duration: FOLD.ms, easing: getComputedStyle(document.documentElement).getPropertyValue('--ease').trim() || 'ease' }));
+  let over = false;
+  const f = { stop() {
+    if (over) return;
+    over = true;
+    anims.forEach(a => a.cancel());
+    for (const [el, d, cv] of pins) {
+      if (d) el.style.display = d; else el.style.removeProperty('display');
+      if (cv) el.style.contentVisibility = cv; else el.style.removeProperty('content-visibility');
+      if (!el.style.cssText.trim()) el.removeAttribute('style');
+    }
+    if (owner._fold === f) owner._fold = null;
+  } };
+  owner._fold = f;
+  Promise.all(anims.map(a => a.finished)).then(() => { if (owner._fold !== f) return; f.stop(); if (done) done(); }, () => {});
+}
+// a <details> folds as any expander does: its summary's press eases its content open or shut
+document.addEventListener('click', e => {
+  const s = e.target.closest && e.target.closest('summary'), d = s && s.parentElement;
+  if (!d || d.tagName !== 'DETAILS' || s !== d.firstElementChild || e.defaultPrevented) return;
+  e.preventDefault();
+  const want = d._fold ? !d._want : !d.open;
+  d._want = want; d.toggleAttribute('data-shut', !want);   // a closing one's chevron turns now, with its content
+  fold(d, [...d.children].filter(c => c !== s), () => { d.open = want; d.removeAttribute('data-shut'); }, !want);
+});
 const MAC = /Mac|iP(hone|ad|od)/.test(navigator.platform || navigator.userAgent);
 const $ = (q, r = document) => r.querySelector(q);
 
@@ -4536,6 +4532,11 @@ const homeKey = h('a', { class: 'bd-home', href: '#top', 'aria-label': 'bluedoc,
   '<svg class="wm" viewBox="6 -75 396 77" aria-hidden="true"><path class="b" d="M39 1.1Q35.4 1.1 32.1 0.1Q28.8-0.9 26.2-2.6Q24-4 22.4-5.8L22-0.1L7.1-0.1L7.1-74L23.2-74L23.2-47.6Q24.6-49.2 26.5-50.5Q29.1-52.2 32.2-53.2Q35.3-54.2 38.6-54.2Q45.5-54.2 50.9-50.7Q56.2-47.1 59.3-40.9Q62.4-34.6 62.4-26.6Q62.4-18.5 59.4-12.3Q56.3-6 51-2.5Q45.7 1.1 39 1.1ZM34.8-12.4Q38.4-12.4 41.1-14.2Q43.8-16 45.3-19.2Q46.7-22.3 46.7-26.6Q46.7-30.8 45.3-34Q43.8-37.2 41.1-38.9Q38.4-40.6 34.8-40.6Q31.1-40.6 28.4-38.9Q25.7-37.2 24.2-34Q22.7-30.8 22.7-26.6Q22.7-22.3 24.2-19.2Q25.7-16 28.4-14.2Q31.1-12.4 34.8-12.4ZM89 0L73 0L73-74L89-74L89 0ZM120.9 1.1Q115 1.1 110.9-1.5Q106.7-4 104.5-8.8Q102.2-13.6 102.2-20.3L102.2-53.1L118.3-53.1L118.3-22.5Q118.3-19.3 119.3-17Q120.3-14.7 122.3-13.5Q124.3-12.2 127.1-12.2Q129.2-12.2 130.9-12.9Q132.7-13.6 133.9-14.9Q135.2-16.1 135.9-17.8Q136.6-19.4 136.6-21.4L136.6-53.1L152.7-53.1L152.7 0L137.6 0L137.2-6.8Q136.6-6.1 135.9-5.4Q133.1-2.4 129.2-0.7Q125.3 1.1 120.9 1.1ZM192.3 1Q183.5 1 177-2.6Q170.5-6.1 166.9-12.3Q163.3-18.4 163.3-26.3Q163.3-32.4 165.3-37.5Q167.3-42.6 170.9-46.4Q174.5-50.1 179.5-52.2Q184.4-54.2 190.3-54.2Q195.9-54.2 200.6-52.2Q205.2-50.2 208.6-46.6Q212-43 213.8-38.1Q215.6-33.2 215.4-27.4L215.3-23.1L178.8-23.1Q179.3-21.4 180.2-19.9Q182-16.6 185.6-14.8Q189.1-13 194-13Q197.4-13 200.1-14Q202.7-15 205.8-17.4L213.3-6.8Q210.2-4.1 206.7-2.4Q203.2-0.7 199.6 0.2Q195.9 1 192.3 1ZM178.8-32.1L200.6-32.1L200.6-32.2Q200.4-34.7 199.1-36.6Q197.7-38.6 195.5-39.7Q193.3-40.8 190.5-40.8Q186.6-40.8 183.9-39.3Q181.1-37.7 179.7-34.8Q179.1-33.5 178.8-32.1Z"/>' +
   '<path class="d" d="M245.7 1.1Q238.8 1.1 233.4-2.5Q228.1-6 225-12.3Q221.9-18.5 221.9-26.5Q221.9-34.5 225-40.8Q228.1-47 233.5-50.6Q238.9-54.2 245.9-54.2Q249.5-54.2 252.8-53.1Q256.1-52 258.8-50.1Q260.2-49.1 261.4-47.9L261.4-74L277.5-74L277.5 0L262.6 0L262.2-5.8Q260.7-4.1 258.7-2.8Q256.1-1 252.8 0.1Q249.4 1.1 245.7 1.1ZM249.8-12.2Q253.5-12.2 256.2-14Q258.9-15.8 260.4-19Q261.8-22.2 261.8-26.5Q261.8-30.9 260.4-34.1Q258.9-37.3 256.2-39.1Q253.5-40.9 249.8-40.9Q246.1-40.9 243.4-39.1Q240.8-37.3 239.3-34.1Q237.8-30.9 237.8-26.5Q237.8-22.2 239.3-19Q240.8-15.8 243.4-14Q246.1-12.2 249.8-12.2ZM316 1Q307.7 1 301.3-2.6Q294.8-6.2 291-12.4Q287.3-18.6 287.3-26.6Q287.3-34.6 291-40.8Q294.8-47 301.3-50.6Q307.7-54.2 316-54.2Q324.3-54.2 330.8-50.6Q337.2-47 340.9-40.8Q344.6-34.6 344.6-26.6Q344.6-18.6 340.9-12.4Q337.2-6.2 330.8-2.6Q324.3 1 316 1ZM316-12.8Q319.6-12.8 322.4-14.6Q325.2-16.4 326.8-19.5Q328.4-22.6 328.3-26.6Q328.4-30.6 326.8-33.8Q325.2-36.9 322.4-38.7Q319.6-40.5 316-40.5Q312.4-40.5 309.5-38.7Q306.7-36.9 305.1-33.8Q303.5-30.6 303.6-26.6Q303.5-22.6 305.1-19.5Q306.7-16.4 309.5-14.6Q312.4-12.8 316-12.8ZM378.4 1Q370.7 1 364.6-2.6Q358.5-6.2 354.9-12.5Q351.4-18.7 351.4-26.6Q351.4-34.5 354.9-40.8Q358.5-47 364.6-50.6Q370.7-54.2 378.4-54.2Q385.5-54.2 391.4-51.7Q397.4-49.2 400.9-44.7L392.2-34.3Q390.8-35.9 388.9-37.3Q387-38.7 384.7-39.5Q382.4-40.3 379.9-40.3Q376.1-40.3 373.2-38.6Q370.3-36.8 368.7-33.7Q367.1-30.6 367.1-26.6Q367.1-22.8 368.8-19.7Q370.4-16.6 373.3-14.8Q376.2-13 379.9-13Q382.5-13 384.7-13.7Q386.9-14.3 388.8-15.6Q390.6-16.9 392.2-18.8L400.8-8.3Q397.4-4 391.4-1.5Q385.3 1 378.4 1Z"/></svg>' });
 
+// ?v-rail=g, h: the home key and wordmark as the left tray's first key (placeRail), with its tooltip; linkHome keeps it
+// in step with the bar's
+const homeKeyG = RAIL_BAR ? tipped(h('a', { class: 'bd-sk bd-homek', href: '#top', 'aria-label': 'bluedoc, back to top', html: homeKey.innerHTML }), null) : null;
+if (homeKeyG) homeKeyG._tip = 'Back to top';
+
 /* ---------- the doc's emoji and title, as the reader names them ---------- */
 // The reader may give a doc their own title and emoji (reader state `__title`, `__emoji`; serve.py checks them and lists
 // the doc under them on the home page). The header, the app bar's crumb and the tab show the reader's over the doc's own
@@ -4946,7 +4947,9 @@ const ARC = (() => {
   const btn = h('button', { type: 'button', class: 'bd-ibtn', 'aria-haspopup': 'menu', 'aria-expanded': 'false', 'aria-label': 'More', title: 'More',
     onclick: () => menu.hidden ? pop.open(0) : pop.close(true) }, ic('morev'));
   const wrap = h('div', { class: 'bd-exp bd-docm' }, btn, menu);
-  const pop = menuPop(wrap, btn, menu, () => PHONE_W.matches || VAR.rail === 'd' ? [item, thItem] : [item],
+  // ?v-rail=g, h: the menu also holds Export's rows (placeRail fills `extra`), above a phone only
+  const extra = [];
+  const pop = menuPop(wrap, btn, menu, () => [...(PHONE_W.matches ? [] : extra), ...(PHONE_W.matches || VAR.rail === 'd' ? [item, thItem] : [item])],
     { onOpen: () => thItem.replaceChildren(ic(isDark() ? 'sun' : 'moon'), h('span', { class: 'l' }, isDark() ? 'Light theme' : 'Dark theme')) });
   document.querySelector('.bd-bar-r').append(wrap);
   themeBk.hidden = true;
@@ -4965,7 +4968,7 @@ const ARC = (() => {
     else setStrip(null);
   }
   paint();
-  return { paint() { ready = true; paint(); } };
+  return { paint() { ready = true; paint(); }, menu, item, extra, close: () => pop.close(true) };
 })();
 const tldr = h('div', { class: 'bd-tldr' }, DOC.tldr && h('div', { class: 'bd-tldr-card' },
   h('span', { class: 'ico' }, ic('zap')), h('span', { class: 'lbl' }, 'TL;DR'), h('div', { class: 'body bd-md', html: md(DOC.tldr) })));
@@ -5027,8 +5030,9 @@ const stripeW = () => PHONE_W.matches ? 0 : cssPx('--stripe-w');
 const paneGap = () => PHONE_W.matches ? 0 : cssPx('--pane-gap');   // between a docked pane and the page
 const leftEl = () => IS_DESIGN ? $('.bd-lp') : side;
 const leftW = () => cssPx(IS_DESIGN ? '--lp-w' : '--cp-w');
-// ?v-rail=f: both panes lie over the page, which keeps the window's width, and stay until a key, [ ], – or Esc
-const railOver = () => VAR.rail === 'f' && !PHONE_W.matches;
+// ?v-rail=f, and g on a board page: both panes lie over the page, which keeps the window's width, and stay until a
+// key, [ ], – or Esc (g on a doc: its panes dock and push the page, as without ?v-rail)
+const railOver = () => (VAR.rail === 'f' || RAIL_BAR && IS_DESIGN) && !PHONE_W.matches;
 // which open panes dock: the right one, then the left one in the room it leaves
 function docks() {
   if (railOver()) return { l: false, r: false };
@@ -5118,6 +5122,7 @@ function applyWidth() {
   root.style.setProperty('--room-l', s + (d.l ? leftW() + paneGap() : 0) + 'px');
   root.style.setProperty('--room-r', s + (d.r ? cssPx('--sp-w') + paneGap() : 0) + 'px');
   fitTray();
+  if (railOver() && BOARD && BOARD.fitTb) BOARD.fitTb();   // a pane over the board, dragged wider: the toolbar steps aside
 }
 // The tray stays in its room: the window between the stripes, less the panes open beside or over the page above 900 px
 // (below, a pane lies over the tray's row as a drawer or a sheet), centred under the column (a board: in the board). Where it doesn't fit, its keys
@@ -5410,8 +5415,8 @@ function renderSteps(b) {
     const x = { s, n: i + 1, li, head, body, meta, empty: false };
     x.setOpen = open => {
       if (x.empty) return;
-      li.classList.toggle('open', open); head.setAttribute('aria-expanded', String(open));
-      if (open) body.removeAttribute('hidden'); else body.hidden = 'until-found';
+      head.setAttribute('aria-expanded', String(open));
+      fold(li, [body], () => { li.classList.toggle('open', open); if (open) body.removeAttribute('hidden'); else body.hidden = 'until-found'; });
       paintExpand();
     };
     // nothing to expand: the row is just its title
@@ -5458,7 +5463,7 @@ function fileRow(f) {
     f.step && h('button', { type: 'button', class: 'bp-ref bp-fstep', 'data-step': f.step, onclick: () => jumpStep(f.step) }, ic('route'), h('span', {}, 'Step ' + f.step)));
   if (why || f.from) {
     // a div, not a button: the why's Markdown may hold a link
-    const flip = () => hit.setAttribute('aria-expanded', String(row.classList.toggle('open')));
+    const flip = () => fold(row, null, () => hit.setAttribute('aria-expanded', String(row.classList.toggle('open'))));
     hit.setAttribute('role', 'button'); hit.tabIndex = 0; hit.setAttribute('aria-expanded', 'false');
     hit.addEventListener('click', e => { if (!e.target.closest('a')) flip(); });
     hit.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); flip(); } });
@@ -5493,8 +5498,8 @@ function fileTree(entries) {
   return h('ul', { class: 'bp-ft-tree' }, draw(top, 0));
 }
 function setDirOpen(li, open) {
-  li.classList.toggle('shut', !open); li.firstChild.setAttribute('aria-expanded', String(open));
-  if (open) li.lastChild.removeAttribute('hidden'); else li.lastChild.hidden = 'until-found';
+  li.firstChild.setAttribute('aria-expanded', String(open));
+  fold(li, [li.lastChild], () => { li.classList.toggle('shut', !open); if (open) li.lastChild.removeAttribute('hidden'); else li.lastChild.hidden = 'until-found'; });
 }
 function renderFiles(b) {
   const items = Array.isArray(b.items) ? b.items : [], n = { add: 0, edit: 0, del: 0, ren: 0 };
@@ -6162,8 +6167,9 @@ function renderChecklist(b, parent) {
     const stale = !choices && ownerStale(`item:${cid}/${it.id}`);
     // The reader's saved comments wait until a send (Request changes, Approve, Send answers) appends them to the item's
     // thread (`:thread`) and empties their fields: the reply under the conversation, about the whole question (`:note`,
-    // its files `:files`), and on a question the fields inside its answers, by what they are about – an answer's id,
-    // `custom` (Other) or `more` (Tell me more): `:notes`, {about: {md, files?}}
+    // its files `:files`), and on a question the fields inside its answers, by what they are about – an answer's id or
+    // `custom` (Other): `:notes`, {about: {md, files?}}. Tell me more has no field of its own (the reply field asks
+    // while it is on); a `more` entry an earlier page saved still loads and goes with the next send
     const noteKey = key + ':note', noteSentKey = key + ':note-sent', threadKey = key + ':thread', filesKey = key + ':files', notesKey = key + ':notes';
     const abouts = card ? [...choices.map(c => c.id), 'custom', 'more'] : [];
     let note = store.get(noteKey) || '';
@@ -6351,13 +6357,12 @@ function renderChecklist(b, parent) {
       paintPicked(); paintOk();
     }
     if (card) {
-      // a question, open: More details (the keyboard keys at the end of its row; the details, then the code, under it),
-      // the answers with Other last, Tell me more, the conversation, then the reply field
+      // a question, open: More details (pressed, the details, then the code, inside it), the answers with Other last,
+      // Tell me more, the conversation, then the reply field
       const moreBtn = h('button', { type: 'button', class: 'bp-btn ghost pv-more', 'aria-expanded': 'false', 'aria-controls': bodyId, onclick: () => entryItem.setDetails(!entryItem.details) });
-      const keys = RO ? null : answerKeys();
-      const detRow = h('div', { class: 'ac-detrow' }, moreBtn, keys);
+      const detRow = h('div', { class: 'ac-detrow' }, moreBtn, body);
       entryItem.moreBtn = moreBtn;
-      li.append(detRow, body, entryItem.opts.el);
+      li.append(detRow, entryItem.opts.el);
       if (entryItem.opts.more) li.append(entryItem.opts.more);
       if (!RO || entryItem.messages().length) li.append(entryItem.thread.el);
       if (!RO) li.append(entryItem.noteView.el);
@@ -6365,14 +6370,15 @@ function renderChecklist(b, parent) {
       entryItem.open = false; entryItem.details = false;
       entryItem.setOpen = open => {
         entryItem.open = open;
-        li.classList.toggle('open', open); head.setAttribute('aria-expanded', String(open));
+        head.setAttribute('aria-expanded', String(open));
+        fold(li, [...li.children].slice(1), () => li.classList.toggle('open', open));
         for (const m of entryItem.mviews || []) m.paintOpen(open);
       };
       entryItem.setDetails = on => {
         entryItem.details = on;
-        if (on) body.removeAttribute('hidden'); else body.hidden = 'until-found';
+        fold(detRow, [body], () => { if (on) body.removeAttribute('hidden'); else body.hidden = 'until-found'; });
         moreBtn.setAttribute('aria-expanded', String(on));
-        moreBtn.replaceChildren(...moreKids(on, detParts([it.detail], it.code, it.verify && !subIsCheck)));
+        moreBtn.replaceChildren(...moreKids(on));
         for (const m of entryItem.mviews || []) m.paintDet(on);
         if (on && entryItem.onOpen) entryItem.onOpen();   // a finding draws its code when its details first show (findingCode)
       };
@@ -6387,16 +6393,16 @@ function renderChecklist(b, parent) {
       paintConvo();
       li.append(body);
       entryItem.setOpen = open => {
-        li.classList.toggle('open', open); head.setAttribute('aria-expanded', String(open));
-        if (open) body.removeAttribute('hidden'); else body.hidden = 'until-found';
+        head.setAttribute('aria-expanded', String(open));
+        fold(li, [body, sum], () => { li.classList.toggle('open', open); if (open) body.removeAttribute('hidden'); else body.hidden = 'until-found'; });
         if (open && entryItem.onOpen) entryItem.onOpen();   // a progress finding draws its code on first open (findingCode)
       };
     }
     entryItem.refresh = () => {
-      // a question: More details shows while it has details (its row stays for the keyboard keys)
+      // a question: More details shows while it has details
       if (card) {
         entryItem.moreBtn.hidden = ![...body.children].some(c => !c.hidden);
-        entryItem.detRow.hidden = entryItem.moreBtn.hidden && !entryItem.detRow.querySelector('.ac-keys');
+        entryItem.detRow.hidden = entryItem.moreBtn.hidden;
         return;
       }
       // nothing to expand (no details, no conversation, no box in the body): the row is just the tick's label, and
@@ -6530,11 +6536,6 @@ const MORE_LABEL = 'Tell me more';
 // an explanation's first line, for a closed row (list markers and headings off; CSS cuts it to one line)
 const oneLine = s => String(s || '').split('\n').map(l => l.replace(/^\s*(?:[-*+]\s+|\d+[.)]\s+|#+\s+|>\s?)/, '').trim()).find(Boolean) || '';
 let OPT_N = 0;
-// the keyboard keys, at the right end of a question's More details row
-function answerKeys() {
-  const k = s => h('kbd', { class: 'bd-kbd' }, s);
-  return h('span', { class: 'ac-keys', 'aria-hidden': 'true' }, k('↑'), k('↓'), h('span', {}, 'move ·'), k('Space'), h('span', {}, 'picks ·'), k('→'), h('span', {}, 'opens the answer'));
-}
 function optionRows(x, compact) {
   const multi = x.multi, recs = recIds(x), fields = !RO;
   const opts = [...x.choices.map(c => ({ id: c.id, label: c.label, md: typeof c.md === 'string' && c.md.trim() ? c.md : '', rec: recs.includes(c.id) })),
@@ -6561,7 +6562,8 @@ function optionRows(x, compact) {
   });
   ls.append(...rows.map(r => r.row));
   const el = h('div', { class: 'bp-opts' + (compact ? ' compact' : '') }, h('div', { class: 'box' }, ls));
-  // Tell me more: its radio, its icon, the label, what it does, and once sent "Asked · rev N"; asked, its field
+  // Tell me more: its radio, its icon, the label, what it does, and once sent "Asked · rev N"; asked, the reply field
+  // under the conversation asks what the reader needs to know
   const tm = fields ? (() => {
     const sub = h('span', { class: 'sub' }), chip = h('span', { class: 'ac-chip warn', hidden: true });
     const pk = h('button', { type: 'button', class: 'ac-tmm', role: multi ? 'checkbox' : 'radio', 'aria-checked': 'false', 'aria-label': MORE_LABEL },
@@ -6573,8 +6575,7 @@ function optionRows(x, compact) {
   const fieldOf = r => {
     if (!r.fv) {
       const a = r.o.id;
-      r.fv = lineField(x, a, a === 'more' ? { placeholder: 'What do you need to know?', hint: 'Goes with your response.' }
-        : { placeholder: `Comment on ${plainText(r.o.label)}…`, hint: () => aboutNow(x, a) ? 'Goes with your response.' : `Shows in the conversation as On ${aboutLabel(x, a)}; it picks nothing.` });
+      r.fv = lineField(x, a, { placeholder: `Comment on ${plainText(r.o.label)}…`, hint: () => aboutNow(x, a) ? 'Goes with your response.' : `Shows in the conversation as On ${aboutLabel(x, a)}; it picks nothing.` });
       (r.ob || r.row).append(r.fv.el);
     }
     return r.fv;
@@ -6584,18 +6585,19 @@ function optionRows(x, compact) {
     if (!r.ob) return;
     if (on) rows.forEach(q => { if (q !== r) setOpen(q, false); });
     if (on && fields) fieldOf(r).paint();
-    r.row.classList.toggle('open', on); r.hd.setAttribute('aria-expanded', String(on)); r.ob.hidden = !on;
+    r.hd.setAttribute('aria-expanded', String(on));
+    fold(r.row, [r.ob], () => { r.row.classList.toggle('open', on); r.ob.hidden = !on; });
     r.row.classList.toggle('peek', on && r.pk.getAttribute('aria-checked') !== 'true');
   };
-  const focusField = r => {
-    const ta = r.fv && r.fv.ta;
+  const focusTa = ta => {
     if (ta && ta.isConnected && ta.offsetParent) { ta.focus({ preventScroll: true }); ta.scrollIntoView({ block: 'nearest', behavior: REDUCE ? 'auto' : 'smooth' }); }
   };
+  const focusField = r => focusTa(r.fv && r.fv.ta);
   const pick = r => {
     if (VIEW_ONLY) return;
     holdFinding(x);   // the question the reader answers stays where it is until they move on
     if (r.o.cust) { if (x.custom) x.setCustom(''); else if (r.input.value.trim()) x.setCustom(r.input.value); else r.input.focus(); return; }
-    if (r.o.more) { x.setMore(!x.more); if (x.more) focusField(r); return; }
+    if (r.o.more) { x.setMore(!x.more); if (x.more) focusTa(el.parentElement && el.parentElement.querySelector(':scope > .ac-reply .ac-line-ta')); return; }
     const cur = idsOf(x.choice), on = !cur.includes(r.o.id);
     if (multi) x.setChoice(on ? [...cur, r.o.id] : cur.filter(id => id !== r.o.id));
     else x.setChoice(on ? r.o.id : null);
@@ -6638,8 +6640,6 @@ function optionRows(x, compact) {
       tm.chip.hidden = m !== 'sent'; tm.chip.textContent = m === 'sent' ? `Asked · rev ${CUR.rev}` : '';
       tm.pk.title = m === 'sent' ? 'Sent to the agent; it resets when the agent posts a new revision. Click to withdraw it'
         : m ? 'Goes with Request changes; click again to take it back' : '';
-      if (m) fieldOf(tm).paint();
-      if (tm.fv) tm.fv.el.hidden = !m;
       if (m && !tab) tab = tm;
     }
     for (const r of nav) r.pk.tabIndex = r === (tab || rows[0]) ? 0 : -1;
@@ -6654,9 +6654,10 @@ function optionRows(x, compact) {
    text back. Save puts the message in the conversation at once, marked not sent; it stays here, still editable (Save
    again updates it; emptied, Save deletes it), until a send (Request changes, Approve, Send answers) moves it into the
    conversation and empties the field. Files: Attach, a drop or a pasted screenshot. */
+// placeholder: words, or a function of the item, asked again on each paint
 function lineField(x, about, { placeholder = 'Reply…', hint = '', cls = 'ac-in' } = {}) {
   let draft = false;
-  const ta = h('textarea', { class: 'ac-line-ta', rows: 1, maxlength: 8192, placeholder,
+  const ta = h('textarea', { class: 'ac-line-ta', rows: 1, maxlength: 8192,
     'aria-label': (about ? `Comment on ${aboutLabel(x, about)}: ` : 'Reply to the agent on: ') + plainText(x.it.text) });
   const fd = fileDraft(() => { draft = true; paintFt(); }, { compact: true });
   fd.btn.className = 'ac-att'; fd.btn.replaceChildren(ic('clip'));
@@ -6686,6 +6687,7 @@ function lineField(x, about, { placeholder = 'Reply…', hint = '', cls = 'ac-in
     if (!draft && ta.value !== d.md) ta.value = d.md;
     fd.load(d.files, draft);
     if (hintEl) hintEl.lastChild.textContent = typeof hint === 'function' ? hint() : hint;
+    ta.placeholder = typeof placeholder === 'function' ? placeholder() : placeholder;
     paintFt();
   } };
   ta.addEventListener('input', () => { holdFinding(x); draft = true; paintFt(); });
@@ -6697,8 +6699,10 @@ function lineField(x, about, { placeholder = 'Reply…', hint = '', cls = 'ac-in
   view.paint();
   return view;
 }
-// a question's reply field, under its conversation: about the whole question
-const replyField = (x, compact) => lineField(x, '', { placeholder: 'Reply…', hint: 'A reply here is about the whole question.', cls: 'ac-reply' + (compact ? ' compact' : '') });
+// a question's reply field, under its conversation: about the whole question; while Tell me more is on and not sent,
+// it asks what the reader needs to know
+const replyField = (x, compact) => lineField(x, '', { placeholder: () => x.more === 'on' ? 'What do you need to know? (optional)' : 'Reply…', hint: 'A reply here is about the whole question.',
+  cls: 'ac-reply' + (compact ? ' compact' : '') });
 const choiceLabel = (x, id) => { const c = x.choices && x.choices.find(c => c.id === id); return c ? c.label.replace(/[`*]/g, '') : id; };
 // what a closed question shows after ✓: its pick's label, or Other
 const okLabel = x => [...idsOf(x.choice).map(id => choiceLabel(x, id)), ...(x.custom ? ['Other'] : [])].join(', ');
@@ -6950,6 +6954,7 @@ if (!SHARE && /^https?:$/.test(location.protocol)) {
 // served with a dashboard: the home key leads to it (a page the server seeded from the start; else once the ping says so)
 function linkHome(href) {
   homeKey.href = href; homeKey.title = 'All docs'; homeKey.setAttribute('aria-label', 'bluedoc: all docs');
+  if (homeKeyG) { homeKeyG.href = href; homeKeyG._tip = 'All docs'; homeKeyG.setAttribute('aria-label', 'bluedoc: all docs'); }
 }
 // The keys that end the bottom tray after Request changes: TRAY_END, filled where the tray's keys are made, below.
 // Approve on a plan, design or website (their picks go with it); Present on a presentation; nothing on a listing (its
@@ -7249,16 +7254,25 @@ linkPlanBlocks();
 const codeHash = () => { if (location.hash.startsWith('#code:')) openCodeLink(decodeURIComponent(location.hash.slice(6))); };
 if (location.hash.startsWith('#code:')) { if ('scrollRestoration' in history) history.scrollRestoration = 'manual'; setTimeout(codeHash, 300); }
 addEventListener('hashchange', codeHash);
-// #item-<checklist>-<item> and #step-<steps>-<step> (from canvases, tables, shared links) open that row before the browser scrolls to it
-const itemFromHash = hash => { const el = hash.startsWith('#item-') && document.getElementById(decodeURIComponent(hash.slice(1))); return el && Object.values(ITEMS).find(x => x.li === el); };
+// #item-<checklist>-<item> and #step-<steps>-<step> (from canvases, tables, shared links) open that row before the browser scrolls to it;
+// #details-<checklist>-<item> opens a question's row with its More details pressed
+const itemFromHash = hash => {
+  const id = hash.startsWith('#item-') ? hash.slice(1) : hash.startsWith('#details-') ? 'item-' + hash.slice(9) : '';
+  const el = id && document.getElementById(decodeURIComponent(id));
+  return el && Object.values(ITEMS).find(x => x.li === el);
+};
 const stepFromHash = hash => { const el = hash.startsWith('#step-') && document.getElementById(decodeURIComponent(hash.slice(1))); return el && el._step; };
 const openHashItem = () => {
   const x = itemFromHash(location.hash), s = !x && stepFromHash(location.hash);
-  if (x) { const row = openItem(x); row.scrollIntoView({ block: 'center' }); flash(row); }
+  if (x) {
+    const row = openItem(x);
+    if (location.hash.startsWith('#details-') && x.setDetails) x.setDetails(true);
+    row.scrollIntoView({ block: 'center' }); flash(row);
+  }
   else if (s) { s.setOpen(true); s.li.scrollIntoView({ block: 'center' }); flash(s.li); }
 };
 addEventListener('hashchange', openHashItem);
-if (/^#(item|step)-/.test(location.hash)) setTimeout(openHashItem, 100);
+if (/^#(item|step|details)-/.test(location.hash)) setTimeout(openHashItem, 100);
 if ('IntersectionObserver' in window) {
   const io = new IntersectionObserver(es => {
     for (const e of es) if (e.isIntersecting) tocLinks.forEach(a => a.classList.toggle('on', a.getAttribute('href') === '#' + e.target.id));
@@ -7842,12 +7856,17 @@ function paintQuestions(v) {
   for (const b of v.fbtns) { b.setAttribute('aria-pressed', String(b.dataset.f === v.filter)); b.lastChild.textContent = String(count[b.dataset.f]); }
   for (const x of items) {
     const out = !fvShows(x);
-    x.li.classList.toggle('fv-out', out);
-    for (const r of x.mrows || []) (r.parentElement.classList.contains('bd-mx') ? r.parentElement : r).classList.toggle('fv-out', out);
+    // the filter's folds ease too: what it hides now shrinks away, what it shows now grows in
+    if (x.li.classList.contains('fv-out') !== out) fold(x.li, [x.li], () => x.li.classList.toggle('fv-out', out));
+    for (const r of x.mrows || []) {
+      const e = r.parentElement.classList.contains('bd-mx') ? r.parentElement : r;
+      if (e.classList.contains('fv-out') !== out) fold(e, [e], () => e.classList.toggle('fv-out', out));
+    }
   }
   for (const note of v.notes) {
     const k = note._xs.filter(x => !fvShows(x)).length;
-    note.hidden = !k || v.filter === 'all';
+    const off = !k || v.filter === 'all';
+    if (note.hidden !== off) fold(note, [note], () => { note.hidden = off; });
     if (!note.hidden) note.replaceChildren(ic(v.filter === 'open' ? 'tick' : 'help'),
       h('span', {}, v.filter === 'open' ? `${k} ${noun}${k === 1 ? '' : 's'} you answered ${k === 1 ? 'is' : 'are'} hidden · ` : `${k} open ${noun}${k === 1 ? ' is' : 's are'} hidden · `),
       h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => setFindingsFilter(v, 'all') }, 'Show'));
@@ -7926,7 +7945,8 @@ function findingsView(sec, el, wraps) {
       if (d.fnav) d.fnav.paint();
     }
   }, measure: () => fvMeasure(v), fold: (on, anim = true) => {
-    foldMotion(el, el, anim, () => {
+    // its parts under the title fold (none when the caller scrolls next: then at once)
+    fold(el, anim ? [...el.querySelectorAll(':scope > :not(h2, .bd-prhd), :scope > .bd-prhd > .bp-lead')] : [], () => {
       el.classList.toggle('bd-fold', on);
       chev.setAttribute('aria-expanded', String(!on)); chev.setAttribute('aria-label', on ? 'Open this section' : 'Fold this section');
     });
@@ -7937,21 +7957,6 @@ function findingsView(sec, el, wraps) {
   if (!FVIEWS.length) addEventListener('scroll', paintStuck, { passive: true });
   FVIEWS.push(v);
   if (fvSizes) [h2, chips].forEach(e => fvSizes.observe(e));
-}
-// a section's fold, eased: `apply` flips it; `box` then runs from its old height to its new one, clipped, while
-// `mark` carries .bd-anim, which keeps the parts folding away drawn (fading out, or in) until it lands. A fold
-// started mid-motion starts from where the box is. Instant with reduced motion, off screen, or `anim` false (the
-// caller scrolls next)
-function foldMotion(box, mark, anim, apply) {
-  const from = anim && !REDUCE && box.getClientRects().length ? box.getBoundingClientRect().height : -1;
-  if (box.bdFold) { box.bdFold.cancel(); box.bdFold = null; mark.classList.remove('bd-anim'); box.classList.remove('bd-anim-box'); }
-  apply();
-  if (from < 0) return;
-  const to = box.getBoundingClientRect().height;
-  if (Math.abs(to - from) < 1) return;
-  mark.classList.add('bd-anim'); box.classList.add('bd-anim-box');
-  const a = box.bdFold = box.animate({ height: [from + 'px', to + 'px'] }, { duration: Math.round(Math.min(420, 200 + Math.abs(to - from) / 12)), easing: 'cubic-bezier(0.23, 1, 0.32, 1)' });
-  a.onfinish = a.oncancel = () => { if (box.bdFold === a || !box.bdFold) { box.bdFold = null; mark.classList.remove('bd-anim'); box.classList.remove('bd-anim-box'); } };
 }
 // a toolbar too wide for one row: its views, then its actions, drop their words
 function fitBar(b) {
@@ -8035,7 +8040,7 @@ function mergedExcerpt(d, c, f) {
     const hit = rows.map(r => covers(c, r.lo, r.ln)), first = hit.indexOf(true), last = hit.lastIndexOf(true), lang = fileLang(f.path);
     let ctx = FIND_CTX;
     const lines = h('div', { class: 'bd-mlines' });
-    const more = h('button', { type: 'button', class: 'bd-mmore', title: `${MORE_LINES} more lines above and below`, onclick: () => { ctx += MORE_LINES; draw(); } }, ic('unfold'), 'Show more lines');
+    const more = h('button', { type: 'button', class: 'bd-mmore', title: `${MORE_LINES} more lines above and below`, onclick: () => fold(lines, null, () => { ctx += MORE_LINES; draw(); }) }, ic('unfold'), 'Show more lines');
     const draw = () => {
       const a = Math.max(0, first - ctx), b = Math.min(rows.length - 1, last + ctx);
       let html = '';
@@ -8054,25 +8059,9 @@ function mergedExcerpt(d, c, f) {
   if (!x) ex.append(h('div', { class: 'bd-cmw top' }, commentCard(d, c, [], true)));
   return ex;
 }
-// a finding's More details key (.pv-more): its words and icons for the look picked by ?v-more (VAR.more); B and C name
-// the parts it reveals – the bold leads of the details' paragraphs (Reviewer, Reasoning, Fix), Code, Check
-function detParts(mds, code, check) {
-  const out = [];
-  for (const s of mds) for (const m of String(s || '').matchAll(/(?:^|\n\s*\n)\s*\*\*([^*\n:]{1,28}):\*\*/g)) out.push(m[1].replace(/^My /, '').replace(/^./, c => c.toUpperCase()));
-  if (code) out.push('Code');
-  if (check) out.push('Check');
-  return [...new Set(out)].slice(0, 4);
-}
-function moreKids(on, parts) {
-  const word = on ? 'Hide details' : 'More details', chev = ic('down', 'cv');
-  const pts = parts.length ? h('span', { class: 'pts' }, parts.join(' · ')) : null;
-  switch (VAR.more) {
-    case 'a': return [ic('info'), word, chev];
-    case 'b': return [ic('info'), h('span', { class: 'w' }, word), pts, chev];
-    case 'c': return [chev, h('span', { class: 'w' }, 'Details'), pts, h('span', { class: 'hint' }, on ? 'Hide' : 'Show')];
-    case 'd': return [h('span', { class: 'k', 'aria-hidden': 'true' }, ic(on ? 'up' : 'info')), word];
-    default: return [ic('info'), word, ic(on ? 'up' : 'down')];
-  }
+// a finding's More details key (.pv-more): its words and icons, closed or open
+function moreKids(on) {
+  return [ic('info'), on ? 'Hide details' : 'More details', ic('down', 'cv')];
 }
 // a finding's full row: tick or decision dot, title, (closed and answered: ✓ the pick), size and a chevron; open, More
 // details (the comment, the reviewer's point, the reasoning, the fix and its check), its code, the option rows
@@ -8098,19 +8087,20 @@ function mergedRow(x, extra, code) {
     it.verify && it.sub && h('div', { class: 'bp-cl-verify' }, ic('check'), h('span', {}, h('b', {}, 'Check'), h('span', { html: inline(it.verify) })))].filter(Boolean);
   const dets = parts.length ? h('div', { class: 'bd-dets', role: 'region', 'aria-label': 'Details: ' + plainText(it.text) }, parts) : null;
   const more = dets && h('button', { type: 'button', class: 'bp-btn ghost pv-more', 'aria-expanded': 'false' });
-  // a question's More details row ends with the keyboard keys
-  const top = x.choices ? (more || !RO) && h('div', { class: 'ac-detrow' }, more, !RO && answerKeys()) : more;
+  // More details and, pressed, the details inside it
+  const top = dets && h('div', { class: 'ac-detrow' }, more, dets);
   const opts = x.choices ? optionRows(x) : null, thread = threadView(x, true), note = RO ? null : x.choices ? replyField(x) : noteBox(x);
-  row.append(...[top, dets, code, opts && opts.el, opts && opts.more, thread.el, note && note.el].filter(Boolean));
+  row.append(...[top, code, opts && opts.el, opts && opts.more, thread.el, note && note.el].filter(Boolean));
   const m = { x, row, tick, opts, note, thread, ok, open: false, det: false };
   m.paintOpen = on => {
-    m.open = on; row.classList.toggle('open', on);
+    m.open = on; fold(row, [...row.children].slice(1), () => row.classList.toggle('open', on));
     chev.setAttribute('aria-expanded', String(on)); chev.setAttribute('aria-label', on ? 'Close this finding' : 'Open this finding');
   };
   m.paintDet = on => {
     m.det = on; if (!dets) return;
-    dets.hidden = !on; more.setAttribute('aria-expanded', String(on));
-    more.replaceChildren(...moreKids(on, detParts([extra, it.detail], it.code, it.verify && it.sub)));
+    more.setAttribute('aria-expanded', String(on));
+    fold(dets.parentElement, [dets], () => { dets.hidden = !on; });
+    more.replaceChildren(...moreKids(on));
   };
   // a decision is the finding's (it opens with the finding, and opening it is where the reader is); a progress row its own
   const toggle = () => { if (x.fd) { if (!x.open) holdFinding(x); x.setOpen(!x.open); } else m.paintOpen(!m.open); paintFindings(); };
@@ -10802,11 +10792,38 @@ function renderBoard(b) {
       grooves();
     };
     const fits = room => { for (let k = 0; k <= steps.length; k++) { set(k); if (tb.scrollWidth <= room) return true; } return false; };
-    const place = (l, r) => { tb.style.left = 12 + l + 'px'; tb.style.right = 12 + r + 'px'; return box.clientWidth - 24 - l - r; };
-    const at = box.getBoundingClientRect(), sp = $('.bd-sp'), d = docks();
-    const l = B.lp && lp && !d.l ? Math.max(0, stripeW() + lp.offsetWidth - at.left) : 0;
-    const r = sp && panelOpen && !d.r && !SIDE.sheet() ? Math.max(0, at.right - (root.clientWidth - stripeW() - sp.offsetWidth)) : 0;
-    if (!fits(place(l, r)) && (l || r)) fits(place(0, 0));
+    // ?v-rail=h: the row sits in the app bar between the doc's name and the bar's right keys, centred in the window
+    // where it can be. To fit it drops its words, then Share drops its own (.bd-tight), then the name
+    // gives way down to its least (an ellipsis); from 1100 px up it then leaves the window's centre for the room it
+    // has, below that (or still too wide) its keys go into ⋯ More
+    if (box.classList.contains('bd-bar')) {
+      const crumb = $('.bd-crumb'), barR = $('.bd-bar-r'), W = box.clientWidth;
+      tb.style.left = tb.style.right = ''; crumb.style.maxWidth = ''; barR.classList.remove('bd-tight');
+      const c = crumb.getBoundingClientRect(), natural = c.width, least = Math.min(natural, 120);
+      const give = steps.findIndex(s => s[1]), shrinks = give < 0 ? steps.length : give;
+      const free = nameW => [c.left + nameW + 12, barR.getBoundingClientRect().left - 12];
+      const centred = nameW => { const [lo, hi] = free(nameW), w = tb.scrollWidth; return (W - w) / 2 >= lo && (W + w) / 2 <= hi; };
+      const anywhere = nameW => { const [lo, hi] = free(nameW); return tb.scrollWidth <= hi - lo; };
+      const tryUpTo = (to, ok) => { for (let k = 0; k <= to; k++) { set(k); if (ok()) return true; } return false; };
+      // after the last label step: Share's word, then the name
+      let ok = tryUpTo(shrinks, () => centred(natural)), nudge = false;
+      if (!ok) { barR.classList.add('bd-tight'); ok = centred(natural) || centred(least); }
+      if (!ok && W >= 1100) ok = nudge = tryUpTo(shrinks, () => anywhere(least));
+      if (!ok) ok = tryUpTo(steps.length, () => centred(least));
+      if (!ok) nudge = tryUpTo(steps.length, () => anywhere(least));
+      let x = (W - tb.offsetWidth) / 2;
+      if (nudge) { const [lo, hi] = free(least); x = Math.min(Math.max(x, lo), hi - tb.offsetWidth); tb.style.left = x + 'px'; tb.style.right = 'auto'; }
+      if (x - 12 - c.left < natural) crumb.style.maxWidth = Math.max(0, x - 12 - c.left) + 'px';
+    } else {
+      const place = (l, r) => { tb.style.left = 12 + l + 'px'; tb.style.right = 12 + r + 'px'; return box.clientWidth - 24 - l - r; };
+      const at = box.getBoundingClientRect(), sp = $('.bd-sp'), d = docks();
+      const l = B.lp && lp && !d.l ? Math.max(0, stripeW() + lp.offsetWidth - at.left) : 0;
+      const r = sp && panelOpen && !d.r && !SIDE.sheet() ? Math.max(0, at.right - (root.clientWidth - stripeW() - sp.offsetWidth)) : 0;
+      // ?v-rail=g: the row stays centred in the window, as clear of the wider pane on both sides, giving way before it
+      // moves; where it can't fit even so, it moves beside the panes, then over them
+      const m = Math.max(l, r), centred = RAIL_BAR && m > 0 && fits(place(m, m));
+      if (!centred && !fits(place(l, r)) && (l || r)) fits(place(0, 0));
+    }
     if (!moreMenu.hidden && [...tbOver].join() !== was) morePop.close(false);
   }
   // the motion keys (pause animations, Reduced) are hidden for now: built and painted, not shown; screens play their motion
@@ -13605,7 +13622,7 @@ function showTip(el) {
     tip.hidden = false;
     const r = el.getBoundingClientRect(), w = tip.offsetWidth, th = tip.offsetHeight;
     // a stripe's key: beside it, toward the page (?v-rail a and d lay them in a row: above or below, as any key's)
-    const st = VAR.rail !== 'a' && VAR.rail !== 'd' && el.closest('.bd-stripe');
+    const st = VAR.rail !== 'a' && VAR.rail !== 'd' && !el.closest('.bd-bar') && el.closest('.bd-stripe');
     if (st) {
       tip.style.left = Math.round(st.classList.contains('l') ? r.right + 10 : r.left - w - 10) + 'px';
       tip.style.top = Math.round(clamp(r.top + r.height / 2 - th / 2, 8, innerHeight - th - 8)) + 'px';
@@ -14770,18 +14787,11 @@ const MARKUP = (() => {
   const cmpDel = h('button', { type: 'button', class: 'bp-btn del', hidden: true, 'aria-label': 'Delete element', onclick: delPicked }, ic('trash'));
   tipped(cmpDel, ['Del'])._tip = 'Delete element: a board draft, as a text edit is';
   let cmpTyped = false;   // something was typed: Delete and Backspace are the field's
-  // ?v-cmt (VAR.cmt): A a well in a raised tray, Cancel | Save one split pill; B a chat field (the text, then attach and
-  // a round send key inside it), Cancel a round × at the top, the hints as tooltips; C a compact card, pill keys
-  const CV = VAR.cmt;
-  const cmpCancel = h('button', { type: 'button', class: 'bp-btn ghost cx', title: CV ? 'Cancel (Esc)' : null, onclick: () => finishDraft(false) }, CV === 'b' ? ic('x') : 'Cancel');
-  if (CV === 'b') {
-    cmpSave.replaceChildren(ic('arrowup')); cmpSave.setAttribute('aria-label', 'Save'); cmpCancel.setAttribute('aria-label', 'Cancel'); cmpCancel.removeAttribute('title');
-    tipped(cmpSave, [MAC ? '⌘' : 'Ctrl', '↵'])._tip = 'Save'; tipped(cmpCancel, ['Esc'])._tip = 'Cancel';
-  }
+  const cmpCancel = h('button', { type: 'button', class: 'bp-btn ghost cx', onclick: () => finishDraft(false) }, 'Cancel');
   const cmpHint = h('span', { class: 'hint', 'aria-hidden': 'true' }, kbd(MAC ? '⌘' : 'Ctrl'), kbd('↵'), ' save', h('span', { class: 'dot' }), kbd('Esc'), ' cancel');
-  const cmpFt = h('div', { class: 'ft' }, cmpFd.btn, cmpDel, cmpHint, h('span', { class: 'sp' }), CV === 'a' ? h('span', { class: 'bd-split acts' }, cmpCancel, cmpSave) : [cmpCancel, cmpSave]);
+  const cmpFt = h('div', { class: 'ft' }, cmpFd.btn, cmpDel, cmpHint, h('span', { class: 'sp' }), cmpCancel, cmpSave);
   const cmp = h('div', { class: 'bd-cmp bd-ann-ui', role: 'dialog', 'aria-label': 'New comment', hidden: true },
-    h('span', { class: 'ar', 'aria-hidden': 'true' }), cmpHd, CV ? h('div', { class: 'fld' }, cmpTa, cmpFd.list, cmpFt) : [cmpTa, cmpFd.list, cmpFt], cmpFd.input);
+    h('span', { class: 'ar', 'aria-hidden': 'true' }), cmpHd, cmpTa, cmpFd.list, cmpFt, cmpFd.input);
   cmpFd.hook(cmp, cmpTa);
 
   /* placing marks: on scroll only boxes move; after DOM or size changes keys resolve afresh */
@@ -15488,7 +15498,7 @@ const MARKUP = (() => {
     draft = a;
     cmpHd.replaceChildren(numChip(a, onPage().length + 1), ic(TYPE_IC[a.type]), h('span', { class: 'lb', title: onLabel(a, a.target.label) }, onLabel(a, a.target.label.split(' › ').pop())));
     cmpTa.value = ''; cmpTa.placeholder = a.type === 'text' ? 'What should change in this text?' : 'What should change here?';
-    cmpSave.disabled = true; if (CV !== 'b') cmpSave.title = `Save (${MAC ? '⌘' : 'Ctrl'} + Enter)`; cmpFd.load([]); cmpTyped = false;
+    cmpSave.disabled = true; cmpSave.title = `Save (${MAC ? '⌘' : 'Ctrl'} + Enter)`; cmpFd.load([]); cmpTyped = false;
     cmp.hidden = false; grow(cmpTa);
     hlDirty = true; schedule(true); paint();
     requestAnimationFrame(() => {
@@ -16965,21 +16975,49 @@ if (BOARD && IS_DESIGN && !OLD && !BASE && !VIEW_ONLY && BOARD.stage) boardEdits
 if (BOARD && BOARD.afterMarkup) BOARD.afterMarkup();   // a storelisting's drafts and right-panel tabs
 
 // ?v-rail (VAR.rail): A puts the stripes in the app bar, the left one after the doc's name and the right one before
-// Share; D puts both at the head of the bottom dock (a dock of their own where the page has none). B, C and F are CSS;
-// F's left pane, over the page, closes on Esc as the right one does (a doc's Contents: cpOver)
+// Share; D puts both at the end of the bottom dock, after its primary (a dock of their own where the page has none);
+// G puts the stripes in the app bar, the left one leading it (the home key first); its right side reads the theme
+// switch, the right one, Share, then ⋮ (ARC's menu: Export's rows, then Archive; Export's own key goes where ⋮ is);
+// H also seats a board's toolbar in the bar (a phone: back on the board). B, C and F are CSS. F's, G's and H's left
+// pane, over the page, closes on Esc as the right one does (a doc's Contents: cpOver)
 (function placeRail() {
-  if (VAR.rail === 'f') document.addEventListener('keydown', e => {
+  if (VAR.rail === 'f' || RAIL_BAR) document.addEventListener('keydown', e => {
     if (e.key !== 'Escape' || e.defaultPrevented || !railOver() || !LEFT.open() || document.querySelector('dialog[open]')) return;
     const t = e.target; if (t.isContentEditable || (t.closest && t.closest('input, textarea, select, [contenteditable]'))) return;
     e.preventDefault(); LEFT.set(false, true);
   });
   if (VAR.rail === 'a') { $('.bd-crumb').after(stripeL); $('.bd-bar-r').prepend(stripeR); }
+  else if (RAIL_BAR) {
+    const r = $('.bd-bar-r'), x = r.querySelector('.bd-docx');
+    $('.bd-crumb').before(stripeL);
+    const g = groove(); g.classList.add('home');   // between the home key and the pane keys
+    stripeL.prepend(homeKeyG, g);
+    r.prepend(themeBtn, stripeR);
+    if (ARC.menu && x) {
+      // Export's rows in ⋮, each pressing its own (the same action); above a phone only, which keeps its Export key
+      const rows = [...x.querySelectorAll('.bd-expm [role="menuitem"]')].map(o => h('button', { type: 'button', role: 'menuitem', tabindex: '-1', class: 'bd-desk',
+        onclick: () => { ARC.close(); o.click(); } }, o.querySelector('svg').cloneNode(true), h('span', { class: 'l' }, o.querySelector('b').textContent)));
+      ARC.extra.push(...rows);
+      ARC.menu.prepend(h('div', { class: 'grp bd-desk', role: 'presentation' }, 'Export'), ...rows, h('div', { class: 'sep bd-desk', role: 'separator' }));
+    }
+    if (VAR.rail === 'h' && BOARD && BOARD.tb) {
+      const tb = BOARD.tb, wrap = tb.parentElement, bar = $('.bd-bar');
+      const seat = () => {
+        if (PHONE_W.matches) { if (tb.parentElement !== wrap) wrap.append(tb); $('.bd-crumb').style.maxWidth = ''; }
+        else if (tb.parentElement !== bar) bar.insertBefore(tb, r);
+        tb.style.left = tb.style.right = '';
+        BOARD.fitTb();
+      };
+      seat();
+      PHONE_W.addEventListener('change', seat);
+    }
+  }
   else if (VAR.rail === 'd') {
     let dock = [...document.querySelectorAll('.bd-anntb')].find(t => !t.hidden);
     if (!dock) { dock = h('div', { class: 'bd-anntb', role: 'toolbar', 'aria-label': 'Panes' }); document.body.append(dock); root.classList.add('bd-tray-on'); }
     const g = dock.childElementCount ? groove() : null;
     if (g) g.classList.add('bd-rail-g');   // a phone, where the stripes hide, has none
-    dock.prepend(...[stripeL, stripeR, g].filter(Boolean));
+    dock.append(...[g, stripeL, stripeR].filter(Boolean));
   }
 })();
 SIDE.start();

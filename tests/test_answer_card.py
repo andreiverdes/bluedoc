@@ -51,13 +51,21 @@ class AnswerCard(ChromePage):
         pill = f"{Q}.querySelector('.ac-more .ac-tmm')"
         a.ev(f"{Q}.querySelector('.bp-opt[data-id=d180] .pk').click()")
         a.ev(f"{pill}.click()")
+        # Tell me more has no field of its own: the reply field under the conversation asks, and what is written there
+        # is about the whole question
+        reply = f"{Q}.querySelector(':scope > .ac-reply textarea')"
         self.assertEqual(a.ev(f"[{pill}.getAttribute('aria-checked'), {Q}.querySelector('.ac-more').classList.contains('on'), BP.thread && null, "
-                              f"{Q}.querySelector('.bp-opt.on') === null, {Q}.querySelector('.ac-more textarea').placeholder, "
+                              f"{Q}.querySelector('.bp-opt.on') === null, !!{Q}.querySelector('.ac-more textarea'), {reply}.placeholder, "
                               f"{Q}.querySelector('.bp-cl-head .ac-chip').hidden]"),
-                         ["true", True, None, True, "What do you need to know?", False])
+                         ["true", True, None, True, False, "What do you need to know? (optional)", False])
         self.assertIn("`item:decisions/retention` → **Tell me more**", a.ev("BP.changesPayload().markdown"))
+        a.ev(f"(t => {{ t.focus(); t.value = 'Acme: what would 180 days cost?'; t.dispatchEvent(new InputEvent('input')); "
+             f"t.dispatchEvent(new KeyboardEvent('keydown', {{ key: 'Enter', bubbles: true }})); }})({reply})")
+        msgs = f"[...{Q}.querySelectorAll('.ac-convo .bp-msg')].map(m => [m.classList.contains('unsent'), m.querySelector('.ac-on')?.textContent || ''])"
+        self.assertEqual(a.ev(msgs), [[True, ""]], "no On Tell me more: it is about the whole question")
+        self.assertNotIn("On **Tell me more**", a.ev("BP.changesPayload().markdown"))
         a.ev(f"{Q}.querySelector('.bp-opt[data-id=d90] .pk').click()")   # an answer clears it
-        self.assertEqual(a.ev(f"[{pill}.getAttribute('aria-checked'), {Q}.querySelector('.bp-opt.on').dataset.id]"), ["false", "d90"])
+        self.assertEqual(a.ev(f"[{pill}.getAttribute('aria-checked'), {Q}.querySelector('.bp-opt.on').dataset.id, {reply}.placeholder]"), ["false", "d90", "Reply…"])
         # several answers: a checkbox that clears the ticks and Other
         g = "document.querySelector('#item-decisions-guests')"
         a.ev(f"{g}.querySelector('.bp-opt[data-id=accounts] .pk').click(); BP.custom('decisions/guests', 'Support, for business buyers')")

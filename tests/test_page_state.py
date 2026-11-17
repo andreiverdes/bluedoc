@@ -153,12 +153,16 @@ class Browser:
 
 
 class Tab:
-    def __init__(self, browser: Browser) -> None:
+    def __init__(self, browser: Browser, motion: bool = False) -> None:
         self.browser = browser
         target = browser.call("Target.createTarget", {"url": "about:blank"})["targetId"]
         self.session = browser.call("Target.attachToTarget", {"targetId": target, "flatten": True})["sessionId"]
         browser.call("Runtime.enable", session=self.session)
         browser.call("Emulation.setDeviceMetricsOverride", {"width": 1440, "height": 900, "deviceScaleFactor": 1, "mobile": False},
+                     session=self.session)
+        # the page's folds (fold) ease over 200 ms; a test reads each step's end at once, so it runs with reduced motion
+        # (instant) unless it asks to see the motion
+        browser.call("Emulation.setEmulatedMedia", {"features": [{"name": "prefers-reduced-motion", "value": "no-preference" if motion else "reduce"}]},
                      session=self.session)
 
     def ev(self, expr: str):
@@ -418,7 +422,7 @@ class ItemRequests(ChromePage):
         self.assertEqual(self.count(a), [False, "1"])
         self.assertTrue(a.ev(approve), "Approve stays enabled while an item asks for more")
         self.assertEqual(a.ev(f"[{row}.classList.contains('more'), {more}.querySelector('.ac-tmm').getAttribute('aria-checked'),"
-                              f" document.activeElement === {more}.querySelector('textarea')]"), [True, "true", True])
+                              f" document.activeElement === {row}.querySelector(':scope > .ac-reply textarea')]"), [True, "true", True])
         self.send_changes(a, "1 Tell me more")
         self.assertIn("`item:decisions/prices` → **Tell me more**", self.reply(self.plan))
         answers = json.loads(self.reply(self.plan, "--json"))["answers"]
@@ -526,9 +530,10 @@ class FindingsView(ChromePage):
         self.assertEqual(a.ev("(r => [r.querySelector('.bp-cl-text').textContent, r.querySelector('.bp-chip').textContent, [...r.querySelectorAll('.bp-opt')].map(o => o.dataset.id),"
                               f" r.querySelector('.bp-opt:has(.rec)').dataset.id, r.querySelector('.bp-opt:last-child').classList.contains('cust')])({row})"),
                          ["tierFor gives no tier at exactly 10 or 50 units", "blocker", ["fix", "ticket", "decline", "custom"], "fix", True])
-        # More details: the reviewer's point, the reasoning, the fix and its check, between it and the code
+        # More details: the reviewer's point, the reasoning, the fix and its check, inside it (the code under it)
         a.ev(f"{row}.querySelector('.pv-more').click()")
-        self.assertEqual(a.ev(f"[{row}.querySelector('.pv-more').textContent, {PARTS}({row})]"), ["Hide details", ["bp-cl-row", "ac-detrow", "bd-dets", "bd-mcode", "bp-opts", "ac-more", "ac-reply"]])
+        self.assertEqual(a.ev(f"[{row}.querySelector('.pv-more').textContent, {PARTS}({row}), {PARTS}({row}.querySelector('.ac-detrow'))]"),
+                         ["Hide details", ["bp-cl-row", "ac-detrow", "bd-mcode", "bp-opts", "ac-more", "ac-reply"], ["pv-more", "bd-dets"]])
         body = a.ev(f"{row}.querySelector('.bd-dets').textContent")
         for part in ("Reviewer:", "My reasoning:", "Fix:", "Verify:"):
             self.assertIn(part, body or "")
@@ -581,14 +586,16 @@ class FindingsView(ChromePage):
         a.ev(f"{li}.querySelector('.bp-cl-head').click()")
         self.assertEqual(a.ev(f"{PARTS}({li})"), ["bp-cl-row"], "a click on its title closes it")
         a.ev(f"{li}.querySelector('.bp-cl-head').click()")
-        # More details: the details right under it, the text then the code, above the options
+        # More details: the details inside it, the text then the code, above the options
         self.assertEqual(a.ev(f"{li}.querySelectorAll('.bd-xf').length"), 0, "the code was drawn before the details showed")
         a.ev(f"{li}.querySelector('.pv-more').click()")
-        self.assertEqual(a.ev(f"[{PARTS}({li}), {li}.querySelector('.pv-more').textContent]"), [["bp-cl-row", "ac-detrow", "bd-dets", "bp-opts", "ac-more", "ac-reply"], "Hide details"])
+        self.assertEqual(a.ev(f"[{PARTS}({li}), {PARTS}({li}.querySelector('.ac-detrow')), {li}.querySelector('.pv-more').textContent]"),
+                         [["bp-cl-row", "ac-detrow", "bp-opts", "ac-more", "ac-reply"], ["pv-more", "bd-dets"], "Hide details"])
         self.assertEqual(a.ev(f"[...{li}.querySelector('.bd-dets').children].filter(e => e.checkVisibility()).map(e => e.className.split(' ')[0])"), ["bp-cl-detail", "bd-xcs"])
         # the finding is one: Merged shows it open, its details too
         a.ev("BP.findingsView('pr-415', 'merged')")
-        self.assertEqual(a.ev(f"{PARTS}({mrow})"), ["bp-cl-row", "ac-detrow", "bd-dets", "bd-mcode", "bp-opts", "ac-more", "ac-reply"])
+        self.assertEqual(a.ev(f"[{PARTS}({mrow}), {PARTS}({mrow}.querySelector('.ac-detrow'))]"),
+                         [["bp-cl-row", "ac-detrow", "bd-mcode", "bp-opts", "ac-more", "ac-reply"], ["pv-more", "bd-dets"]])
         a.ev("BP.findingsView('pr-415', 'checklist')")
         # a pick leaves it open, and its head shows ✓ and the pick, open or closed; a click on its title closes all of it
         a.ev(f"{li}.querySelector('.bp-opt[data-id=fix] .pk').click()")
@@ -1326,6 +1333,44 @@ class Drawings(ChromePage):
         cx, cy = a.ev("(r => [r.left + 40, r.top + 20])(document.querySelector('.bd-cs-c').getBoundingClientRect())")
         self.mouse(a, "mouseMoved", cx, cy)
         a.wait_for(f"{self.INK}.join() === 'true'")
+        self.assertEqual(self.browser.errors, [])
+
+
+@unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")
+class Folds(ChromePage):
+    """Every expand and collapse eases (fold): closing a question, its height runs through the values between open and
+    shut over about 200 ms, and no inline style stays on its parts once it lands; with reduced motion it is at once."""
+
+    # close an open question by its title, sample its height each frame for 400 ms, then read it once the fold landed
+    CLOSE = """(async () => {
+      const li = document.querySelector('#item-decisions-retention'), hs = [], t0 = performance.now();
+      li.querySelector('.bp-cl-head').click();
+      while (performance.now() - t0 < 400) { hs.push(Math.round(li.getBoundingClientRect().height)); await new Promise(r => requestAnimationFrame(r)); }
+      await new Promise(r => setTimeout(r, 300));
+      return { hs, open: li.classList.contains('open'), opts: li.querySelector('.bp-opts').checkVisibility(),
+               styled: [...li.children].filter(e => e.style.length).length };
+    })()"""
+
+    def tab(self, motion: bool) -> Tab:
+        status, raw = self.server.req("POST", "/__bluedoc/unlock", b"{}", {"Content-Type": "application/json", "X-Bluedoc": "1"})
+        self.assertEqual(status, 200, raw)
+        t = Tab(self.browser, motion)
+        t.go(f"{self.base}{self.server.url_for(self.plan)}?key={json.loads(raw)['token']}")
+        t.wait_for("document.querySelector('#item-decisions-retention').classList.contains('open')")
+        time.sleep(0.3)   # the page settles before its folds ease
+        return t
+
+    def test_a_fold_eases_and_leaves_no_inline_style(self) -> None:
+        r = self.tab(True).ev(self.CLOSE)
+        hs, top, end = r["hs"], r["hs"][0], r["hs"][-1]
+        self.assertGreater(top, end, "the question did not close")
+        self.assertTrue(any(end < x < top for x in hs), f"no height between open and shut: {hs}")
+        self.assertEqual([r["open"], r["opts"], r["styled"]], [False, False, 0])
+
+    def test_reduced_motion_folds_at_once(self) -> None:
+        r = self.tab(False).ev(self.CLOSE)
+        self.assertEqual(len(set(r["hs"])), 1, f"it eased: {r['hs']}")
+        self.assertEqual([r["open"], r["opts"], r["styled"]], [False, False, 0])
         self.assertEqual(self.browser.errors, [])
 
 
