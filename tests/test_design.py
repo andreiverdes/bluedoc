@@ -1255,7 +1255,9 @@ class ThemeScheme(unittest.TestCase):
         self.addCleanup(shutil.rmtree, profile, True)
         browser = Browser(profile)
         self.addCleanup(browser.close)
-        t = Tab(browser)
+        # full motion: HorizonUI's reduced-motion rule gives every property a 1 ms transition, so a switch read at once
+        # would land mid-way (an oklab blend); with motion the canvas has no transition and switches at once
+        t = Tab(browser, True)
         browser.call("Page.navigate", {"url": f"http://{self.server.host}{self.base}/{STEM}.design/dashboard.html"}, t.session)
         t.wait_for("document.readyState === 'complete'")
         # the canvas's oklch lightness: 15.5 % in HorizonUI's dark palette, 96.4 % in its light one

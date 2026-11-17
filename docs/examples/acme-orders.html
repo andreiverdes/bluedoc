@@ -1793,12 +1793,13 @@ html.bd-tray-on .bp-toast { bottom: 84px; }
 .bd-pen-risk { --pen: var(--risk); } .bd-pen-accent { --pen: var(--accent); } .bd-pen-warn { --pen: var(--warn); } .bd-pen-ok { --pen: var(--ok); }
 .bd-pen-violet { --pen: light-dark(oklch(55% 0.21 300), oklch(70% 0.17 300)); } .bd-pen-ink { --pen: var(--fg); } .bd-pen-custom { --pen: oklch(55% 0.2 305); }
 /* the cursor rule excludes what `inDoc` excludes: the rail, a board's left pane (Brief, Screens, Pages: the tools are the
-   board's) and its toolbar, and a findings section's toolbar keep their own cursors */
+   board's) and its toolbar, a findings section's toolbar, and a board's marks layer (its pins keep their pointer, as the
+   page's layer's do) keep their own cursors */
 /* Element's cursor is set once (the shell, a panel's meta) and inherited below: set on every element, each would
    load its own copy of the image and show the arrow while it does */
 html.bd-ann-m-point .bd-shell, html.bd-ann-m-point .bd-shell .bp-side .bd-meta { cursor: var(--bd-elcur, crosshair) !important; }
-html.bd-ann-m-point .bd-shell :not(.bp-side, .bp-side :not(.bd-meta, .bd-meta *), .bd-lp, .bd-lp *, .bd-lp-ui, .bd-lp-ui *, .bd-btb, .bd-btb *, .bd-ftb, .bd-ftb *, .bp-side .bd-meta) { cursor: inherit !important; }
-html.bd-ann-m-select .bd-shell :not(.bp-side, .bp-side :not(.bd-meta, .bd-meta *), .bd-lp, .bd-lp *, .bd-lp-ui, .bd-lp-ui *, .bd-btb, .bd-btb *, .bd-ftb, .bd-ftb *), html.bd-ann-m-select .bd-shell { cursor: text !important; }
+html.bd-ann-m-point .bd-shell :not(.bp-side, .bp-side :not(.bd-meta, .bd-meta *), .bd-lp, .bd-lp *, .bd-lp-ui, .bd-lp-ui *, .bd-btb, .bd-btb *, .bd-ftb, .bd-ftb *, .bd-bmk *, .bp-side .bd-meta) { cursor: inherit !important; }
+html.bd-ann-m-select .bd-shell :not(.bp-side, .bp-side :not(.bd-meta, .bd-meta *), .bd-lp, .bd-lp *, .bd-lp-ui, .bd-lp-ui *, .bd-btb, .bd-btb *, .bd-ftb, .bd-ftb *, .bd-bmk *), html.bd-ann-m-select .bd-shell { cursor: text !important; }
 html:is(.bd-ann-m-point, .bd-ann-m-select) .bd-shell :is(.bp-side, .bd-lp, .bd-lp-ui, .bd-btb, .bd-ftb) { cursor: default; }
 html:is(.bd-ann-m-point, .bd-ann-m-select) .bd-shell :is(.bp-note .bp-note-ta, .ac-line .ac-line-ta) { cursor: text !important; }
 html:is(.bd-ann-m-point, .bd-ann-m-select) .bd-shell :is(.bp-note, .ac-line) button { cursor: default !important; }
@@ -11246,11 +11247,22 @@ function renderBoard(b) {
       ext && `${ext} image${ext > 1 ? 's were' : ' was'} too large to keep in this snapshot: ${ext > 1 ? 'they load' : 'it loads'} from the dev server and may show the current site`].filter(Boolean).join('. ');
     for (const w of [x.warn, x.liWarn]) if (w) { w.hidden = !why; w.title = why; }
   }
+  // the element a screen's frame reports under the pointer (Element, Link): its outline and label on the screen. hovX:
+  // the frame that shows one
+  let hovX = null;
   function showHov(x, o) {
-    if (!o || !o.rect) { x.hov.hidden = true; return; }
+    if (!o || !o.rect) { x.hov.hidden = true; if (hovX === x) hovX = null; return; }
     Object.assign(x.hov.style, { left: o.rect.x + 'px', top: o.rect.y + 'px', width: o.rect.w + 'px', height: o.rect.h + 'px' });
     x.hov.firstChild.textContent = o.what; x.hov.hidden = false;
+    if (hovX && hovX !== x) { const y = hovX; showHov(y, null); post(y, { bd: 'leave' }); }
+    hovX = x;
   }
+  // A frame never hears the pointer leave it (no mouseleave reaches its document), so the page, seeing the pointer
+  // anywhere outside it, takes the label off and has the frame drop its own outline
+  document.addEventListener('pointermove', e => {
+    if (!hovX || e.target === hovX.fr) return;
+    const x = hovX; showHov(x, null); post(x, { bd: 'leave' });
+  }, { capture: true, passive: true });
   // the `el:` keys pinned on a screen, and a page's sections, so its frame reports where they are now
   function locate(x) {
     const pre = `el:${x.a.id}/`;
@@ -11331,7 +11343,9 @@ function renderBoard(b) {
     }
     if (x.role) return;
     const what = [secTitle(x, d.sec), str(d.name, 60) || str(d.tag, 30)].filter(Boolean).join(' › ');
-    if (d.bd === 'hover') { showHov(x, d.sel == null ? null : { rect: rectOf(d.rect), what }); return; }
+    // the pointer is on an element in this frame: the page's own Element outline (the board, the screen) gives way to
+    // the frame's (none under it, a click is about the whole screen: the screen's outline may stay)
+    if (d.bd === 'hover') { if (d.sel != null) MARKUP.unhover(); showHov(x, d.sel == null ? null : { rect: rectOf(d.rect), what }); return; }
     if (x.twin) return;   // the other revision's page in compare: nothing to pin or link
     // text edits and Element's picks are boardEdits': an edit or a key (it takes them only from the frame being edited
     // or picked in); a frame's answer to a text edit (editing: started, or no text there); a double-click on text in
@@ -15429,7 +15443,8 @@ const MARKUP = (() => {
     }).join('\n\n') + (s => s && '\n' + s.trimEnd())(replyCmdsMd(ord.map(a => replyMd(`ann:${a.id}`, [], '', a.id)).join(''))) };
   }
   const api = { all: () => JSON.parse(JSON.stringify(list)), payload, approvalNotes, goes, annotate: () => null, setMode: () => false, paint: () => {}, flush: () => {}, markSent: () => {},
-    comments: () => ({ open: false, available: false }), pinFrame: () => null, addFrame: () => null, relayout: () => {}, reported: () => {}, openIfWaiting: () => {}, cancelDraft: () => false };
+    comments: () => ({ open: false, available: false }), pinFrame: () => null, addFrame: () => null, relayout: () => {}, reported: () => {}, openIfWaiting: () => {}, cancelDraft: () => false,
+    unhover: () => {} };
   // an earlier revision (also compared against another) is read-only; a compare view showing the current one comments
   // as the page does
   if (OLD) return api;
@@ -15758,8 +15773,9 @@ const MARKUP = (() => {
   const cap = h('div', { class: 'bd-ann-cap', hidden: true }, sv('svg', { 'aria-hidden': 'true' }, capG));
   // the drawing layer covers the window, over the page and a board but under the bars, trays and panes; the toolbars
   // that sit under it (a board's top toolbar, a findings section's, a storelisting's) are cut out of it, so over them
-  // the pointer is theirs: their cursor, hover and clicks, never the tool's
-  const CAP_HOLES = '.bd-btb, .bd-ftb, .bd-lst-btb';
+  // the pointer is theirs: their cursor, hover and clicks, never the tool's. So are a board's pins (its marks layer is
+  // under it too), as the page's pins over it are: their pointer, hover and click
+  const CAP_HOLES = '.bd-btb, .bd-ftb, .bd-lst-btb, .bd-bmk .bd-ann-pin';
   function capHoles() {
     if (cap.hidden) { cap.style.clipPath = ''; return; }
     const rs = [...document.querySelectorAll(CAP_HOLES)].filter(e => e.checkVisibility()).map(e => e.getBoundingClientRect()).filter(r => r.width && r.height);
@@ -15981,7 +15997,7 @@ const MARKUP = (() => {
     const full = dirty; dirty = false;
     const hlNow = HL && (full || hlDirty); hlDirty = false;
     if (full) { els = new Map(); ranges = new Map(); }
-    capG.setAttribute('transform', `translate(${-scrollX},${-scrollY})`); capHoles();
+    capG.setAttribute('transform', `translate(${-scrollX},${-scrollY})`);
     const all = onPage(), keep = new Set(), stacks = new Map(), fan = [], hl = { on: [], sent: [], open: [] };
     if (draft) all.push(draft);
     draftBox = null;
@@ -16025,6 +16041,7 @@ const MARKUP = (() => {
       }
     });
     for (const [id, m] of marks) if (!keep.has(id)) { m.pin.remove(); m.ink?.remove(); m.box?.remove(); marks.delete(id); }
+    capHoles();   // after the board's pins are placed: they are holes too
     if (hlNow) for (const [name, rs] of [['bd-ann', hl.on], ['bd-ann-sent', hl.sent], ['bd-ann-on', hl.open]]) {
       if (rs.length) CSS.highlights.set(name, new Highlight(...rs)); else CSS.highlights.delete(name);
     }
@@ -17134,7 +17151,8 @@ const MARKUP = (() => {
   root.classList.add('bd-tray-on');
   for (const ty of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click', 'dblclick']) addEventListener(ty, onCapture, true);
   addEventListener('pointercancel', () => { selDown = false; }, true);   // a touch that scrolled or long-pressed: selections show their button again
-  addEventListener('pointermove', e => { if (mode === 'point' && !(e.target.closest && spUi(e.target))) showHover(e.target.closest && e.target.closest('.bp-note, .ac-line') ? null : targetAt(e.target)); }, { capture: true, passive: true });
+  // a screen's frame (the iframe itself, at its edge) outlines its own elements: none of the page's over it
+  addEventListener('pointermove', e => { if (mode === 'point' && !(e.target.closest && spUi(e.target))) showHover(e.target.closest && e.target.closest('.bp-note, .ac-line, .bd-ab-fr') ? null : targetAt(e.target)); }, { capture: true, passive: true });
   root.addEventListener('mouseleave', () => { if (mode === 'point') showHover(null); });
   document.addEventListener('keydown', e => {
     if (e.defaultPrevented || e.isComposing || e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
@@ -17175,7 +17193,8 @@ const MARKUP = (() => {
     }
     if (moved && !RO) save();
   }
-  return Object.assign(api, { annotate, setMode, paint, comments, flush, markSent, pinFrame, addFrame, drafts, openIfWaiting, reported, cancelDraft: () => finishDraft(false), relayout: () => schedule(true) });
+  return Object.assign(api, { annotate, setMode, paint, comments, flush, markSent, pinFrame, addFrame, drafts, openIfWaiting, reported, cancelDraft: () => finishDraft(false), relayout: () => schedule(true),
+    unhover: () => { if (hovEl) showHover(null); } });
 })();
 
 /* ---------- the drafts' undo history (a design's board edits, a storelisting's text edits) ---------- */
