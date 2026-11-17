@@ -35,9 +35,10 @@
                              where the element still has its tag and base text. A live page applies them again after
                              DOM changes (hot reload), at most once a frame
    Frame -> page, exactly 11 types, strings capped at 200 chars (but a snapshot's html and an edit's text):
-     {bd:'ready', w, h, vw, vh, byFrame, fallback, rects, navs, named, sigs, drafts, draftsNow}   on load, on resize, on scroll, after each
+     {bd:'ready', w, h, vw, vh, sy, byFrame, fallback, rects, navs, named, sigs, drafts, draftsNow}   on load, on resize, on scroll, after each
                                        locate and on any change of the document's size (fonts, images, DOM); vw: the
-                                       frame's width; vh: the pinned height (null: none). h: the document's height;
+                                       frame's width; vh: the pinned height (null: none); sy: its scroll, as rects are
+                                       frame px. h: the document's height;
                                        pinned, the height the frame should take (at least vh). byFrame: nothing in the
                                        document changed since the last report, only the frame. navs: {name: rect | null}
                                        for up to 50 [data-nav] elements (null: hidden, a gesture link); named: the same
@@ -293,7 +294,7 @@
   function ready(rects) {
     if (stirred || !sigs) sigs = sections.map(s => sigOf(query(s)));
     post({ bd: 'ready', w: Math.max(root.scrollWidth, doc.body ? doc.body.scrollWidth : 0), h: pin ? pageHeight() : Math.max(root.scrollHeight, doc.body ? doc.body.scrollHeight : 0),
-      vw: innerWidth, vh: pin || null, byFrame: !stirred, fallback: cap(root.getAttribute('data-bd-fallback')) || null, rects: rects || {}, navs: namedRects('[data-nav]', 50), named: namedRects('[data-bd]', 100), sigs,
+      vw: innerWidth, vh: pin || null, sy: Math.round(scrollY), byFrame: !stirred, fallback: cap(root.getAttribute('data-bd-fallback')) || null, rects: rects || {}, navs: namedRects('[data-nav]', 50), named: namedRects('[data-bd]', 100), sigs,
       drafts: draftSt, draftsNow: draftNow });
     stirred = false;
     paintSel();
