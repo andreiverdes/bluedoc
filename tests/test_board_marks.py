@@ -14,7 +14,7 @@ import re
 import time
 import unittest
 
-from test_page_state import CHROME, ChromePage, Tab
+from test_page_state import CHROME, ChromePage, Tab, until
 from test_website import SiteInChrome, site_doc, board_of
 
 DESIGN = "acme-fit-design.bluedoc.json"
@@ -194,7 +194,7 @@ class BoardMarks(Marks, ChromePage):
         self.near([a["spot"]["x"], a["spot"]["y"]], [r[0] + r[2], r[1]], 4)   # the picked element's top right (the outline hugs the hovered one)
         pa = t.wait_for(PIN.replace("{}", a["id"]))
         self.assertTrue(pa["world"], "the pin is in the board's marks layer")
-        self.near([pa["x"], pa["y"]], [L["r"][0] + (r[0] + r[2]) * L["s"], L["r"][1] + r[1] * L["s"]], 2)
+        self.near([pa["x"], pa["y"]], [L["r"][0] + a["spot"]["x"] * L["s"], L["r"][1] + a["spot"]["y"] * L["s"]], 1)
         # its bubble opens into the screen, away from its right edge
         self.assertIn(" fl", pa["cls"])
         # a second pin on the same element fans out beside the first, both numbers readable
@@ -214,12 +214,16 @@ class BoardMarks(Marks, ChromePage):
         q = t.ev(PIN.replace("{}", a["id"]))
         self.near(q["at"], [p[0] + a["spot"]["x"], p[1] + a["spot"]["y"]], 0.01)
         self.assertNotIn("away", q["cls"])
-        # again after a reload, the frame not live yet: the stored spot, never the screen's title or the board's corner
+        # again after a reload, the frame not live yet: the stored spot, never the screen's title or the board's corner.
+        # The page sends its writes 300 ms after the last one: reload once the server holds both pins with their spots
+        url = self.server.url_for(self.docs / DESIGN)
+        self.assertTrue(until(lambda: all('"spot"' in self.state(url).get(f"__ann:{x['id']}", "") for x in (a, b)) and not t.ev(
+            "Object.keys(localStorage).some(k => k.includes('__outbox') && localStorage.getItem(k) !== '{}')")), "the pins never reached the server")
         t.go(t.ev("location.href"))
         t.wait_for("!!BP.board()", 20)
         t.ev("BP.board({focus: 'dashboard'}), 1")
+        t.wait_for("!BP.board().artboards.find(a => a.id === 'login').live", 10)   # the first fit may have mounted it: it leaves on the next relive
         self.settle(t)
-        self.assertFalse(t.ev("BP.board().artboards.find(a => a.id === 'login').live"))
         q = t.wait_for(PIN.replace("{}", a["id"]))
         self.near(q["at"], [p[0] + a["spot"]["x"], p[1] + a["spot"]["y"]], 0.01)
         self.assertTrue(p[0] <= q["at"][0] <= p[0] + p[2] and p[1] <= q["at"][1] <= p[1] + p[3], q)
