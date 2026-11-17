@@ -364,8 +364,8 @@ class Conversation(ChromePage):
         a = self.open(url)
         row = "document.querySelector('#item-decisions-retention')"
         box = f"{row}.querySelector(':scope > .ac-reply')"
-        state = f"(b => [b.querySelector('.ac-go').disabled, b.querySelector('.ac-hint').textContent])({box})"
-        self.assertEqual(a.ev(state), [True, "A reply here is about the whole question."], "Save is dimmed while empty")
+        state = f"(b => [b.querySelector('.ac-go').disabled, !b.querySelector('.ac-hint')])({box})"
+        self.assertEqual(a.ev(state), [True, True], "Save is dimmed while empty; the reply field has no hint")
         a.ev(f"{box}.querySelector('textarea').focus()")
         self.browser.call("Input.insertText", {"text": "Acme: how big is it?"}, a.session)
         self.assertEqual(a.ev(state)[0], False)

@@ -375,9 +375,10 @@ html[data-v-rail="d"] .bd-bar-r > .bd-bk.th:not([hidden]) { display: inline-grid
 }
 /* G: the stripes are raised trays in the bar (the dock's, 34 px keys), the left one leading the bar with the home key
    first (.bd-homek: the bar's own .bd-home stays a phone's); the doc's name follows the left tray, its title ellipsed
-   where the bar runs short, and the bar's middle stays empty. The right side reads the theme switch, the right tray,
-   Share (a whole pill) and ⋮ (ARC's menu: Export's rows, then Archive), where Export's own key goes. On a board the
-   panes over it keep their drag handles (.bd-rh), as docked ones do */
+   where the bar runs short, and the bar's middle stays empty. The right side reads Share | ⋮ (one split pill, a
+   groove between; ⋮ is ARC's menu: Export's rows, then Archive, where Export's own key goes), the theme switch, then
+   the right tray (in that order by `order`). On a board the panes over it keep their drag handles (.bd-rh), as docked
+   ones do */
 @media (min-width: 601px) {
   html[data-v-rail~="g"] .bd-bar .bd-stripe { --k: 34px; position: static; z-index: auto; top: auto; translate: none; max-height: none; flex: none; flex-direction: row; gap: 2px;
     padding: 3px; overflow: visible; }
@@ -395,7 +396,16 @@ html[data-v-rail="d"] .bd-bar-r > .bd-bk.th:not([hidden]) { display: inline-grid
   html[data-v-rail~="g"] .bd-crumb > .bd-dsw { margin-left: 0; }
   html[data-v-rail~="g"] .bd-crumb > .sep { display: none; }
   html[data-v-rail~="g"] .bd-bar-r:has(> .bd-docm) > .bd-docx { display: none; }
-  html[data-v-rail~="g"] .bd-bar-r:has(> .bd-docm) .bd-tbtn.bd-shk { border-radius: 999px; }
+  html[data-v-rail~="g"] .bd-bar-r:has(> .bd-docm) > .bd-tbtn.bd-shk { order: 1; border-radius: 999px 0 0 999px; }
+  html[data-v-rail~="g"] .bd-bar-r > .bd-docm { order: 2; }
+  html[data-v-rail~="g"] .bd-bar-r:has(> .bd-shk:not([hidden])) > .bd-docm { margin-left: -6px; }
+  html[data-v-rail~="g"] .bd-bar-r:has(> .bd-shk:not([hidden])) > .bd-docm::before { content: ""; flex: none; width: 2px; align-self: stretch; background: var(--groove); }
+  html[data-v-rail~="g"] .bd-bar-r:has(> .bd-shk:not([hidden])) > .bd-docm > .bd-ibtn { width: 36px; border-radius: 0 999px 999px 0;
+    background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: var(--shadow-hk); }
+  html[data-v-rail~="g"] .bd-bar-r:has(> .bd-shk:not([hidden])) > .bd-docm > .bd-ibtn:hover { background: linear-gradient(var(--hover), var(--hover)), linear-gradient(180deg, var(--hk-top), var(--hk-bot)); }
+  html[data-v-rail~="g"] .bd-bar-r:has(> .bd-shk:not([hidden])) > .bd-docm > .bd-ibtn:is(:active, [aria-expanded="true"]) { background: var(--hk-down); box-shadow: var(--shadow-hk-down); }
+  html[data-v-rail~="g"] .bd-bar-r > .bd-thsw { order: 3; }
+  html[data-v-rail~="g"] .bd-bar-r > .bd-stripe.r { order: 4; }
   html[data-v-rail~="g"] .bd-docm .bd-selm > .grp { padding: 6px 12px 2px; font: 600 11px/16px var(--sans); letter-spacing: .04em; text-transform: uppercase; color: var(--fg-subtle); }
   html[data-v-rail~="g"] .bd-docm .bd-selm > .sep { height: 1px; margin: 4px 8px; background: var(--line); }
   /* H: a board's toolbar (.bd-btb, placeRail) sits in the bar's middle, centred in the window, a tray as tall as the
@@ -409,7 +419,7 @@ html[data-v-rail="d"] .bd-bar-r > .bd-bk.th:not([hidden]) { display: inline-grid
   html[data-v-rail~="g"][data-layout="board"].bd-lp-open .bd-rh-left, html[data-v-rail~="g"][data-layout="board"].bd-sp-open .bd-rh-right { display: block; }
 }
 @media (max-width: 600px) { .bd-bar-r > .bd-thsw, .bd-docm .bd-desk { display: none !important; } }
-html[data-v-rail~="g"] :is(.bd-bar-r > .bd-thsw, .bd-bar-r > .bd-thsw *, .bd-bar-r .bd-tbtn.bd-shk, .bd-bar-r .bd-tbtn.bd-shk *, .bd-homek, .bd-homek *) { cursor: default; }
+html[data-v-rail~="g"] :is(.bd-bar-r > .bd-thsw, .bd-bar-r > .bd-thsw *, .bd-bar-r .bd-tbtn.bd-shk, .bd-bar-r .bd-tbtn.bd-shk *, .bd-bar-r > .bd-docm > .bd-ibtn, .bd-bar-r > .bd-docm > .bd-ibtn *, .bd-homek, .bd-homek *) { cursor: default; }
 /* a pane's header: HorizonUI's DockPanel header, its title (a board's Screens with their count), then – to hide it */
 .bd-pane-h { display: flex; align-items: center; gap: 4px; flex: none; height: 40px; padding: 0 8px 0 14px; }
 .bd-pane-h h2 { margin: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 600 12px/16px var(--sans); color: var(--fg); }
@@ -1192,6 +1202,7 @@ td.bd-cell-mod { background: color-mix(in oklch, var(--warn-tint) 70%, transpare
 :is(.ac-att, .ac-go):focus-visible { outline: none; box-shadow: var(--focus-ring); }
 :is(.ac-in, .ac-reply) > .bp-files-w { margin-top: 6px; }
 .ac-hint { display: flex; align-items: center; gap: 6px; margin: 6px 0 0; font-size: 12px; line-height: 1.4; color: var(--fg-subtle); }
+.ac-hint[hidden] { display: none; }
 .ac-hint .bd-ic { flex: none; width: 13px; height: 13px; }
 /* Other, the last answer: its field is the one-line field, compact, so the row is as tall as the others */
 .bp-opt.cust .oh { display: flex; align-items: center; gap: 10px; width: 100%; padding: 6px 12px; cursor: default; }
@@ -6577,7 +6588,7 @@ function optionRows(x, compact) {
   const fieldOf = r => {
     if (!r.fv) {
       const a = r.o.id;
-      r.fv = lineField(x, a, { placeholder: `Comment on ${plainText(r.o.label)}…`, hint: () => aboutNow(x, a) ? 'Goes with your response.' : `Shows in the conversation as On ${aboutLabel(x, a)}; it picks nothing.` });
+      r.fv = lineField(x, a, { placeholder: `Comment on ${plainText(r.o.label)}…`, hint: () => aboutNow(x, a) ? 'Goes with your response.' : '' });
       (r.ob || r.row).append(r.fv.el);
     }
     return r.fv;
@@ -6657,7 +6668,7 @@ function optionRows(x, compact) {
    text back. Save puts the message in the conversation at once, marked not sent; it stays here, still editable (Save
    again updates it; emptied, Save deletes it), until a send (Request changes, Approve, Send answers) moves it into the
    conversation and empties the field. Files: Attach, a drop or a pasted screenshot. */
-// placeholder: words, or a function of the item, asked again on each paint
+// placeholder: words, or a function of the item, asked again on each paint; hint the same (none: no hint line)
 function lineField(x, about, { placeholder = 'Reply…', hint = '', cls = 'ac-in' } = {}) {
   let draft = false;
   const ta = h('textarea', { class: 'ac-line-ta', rows: 1, maxlength: 8192,
@@ -6689,7 +6700,7 @@ function lineField(x, about, { placeholder = 'Reply…', hint = '', cls = 'ac-in
     const d = x.draft(about);
     if (!draft && ta.value !== d.md) ta.value = d.md;
     fd.load(d.files, draft);
-    if (hintEl) hintEl.lastChild.textContent = typeof hint === 'function' ? hint() : hint;
+    if (hintEl) { const t = typeof hint === 'function' ? hint() : hint; hintEl.hidden = !t; hintEl.lastChild.textContent = t; }
     ta.placeholder = typeof placeholder === 'function' ? placeholder() : placeholder;
     paintFt();
   } };
@@ -6704,7 +6715,7 @@ function lineField(x, about, { placeholder = 'Reply…', hint = '', cls = 'ac-in
 }
 // a question's reply field, under its conversation: about the whole question; while Tell me more is on and not sent,
 // it asks what the reader needs to know
-const replyField = (x, compact) => lineField(x, '', { placeholder: () => x.more === 'on' ? 'What do you need to know? (optional)' : 'Reply…', hint: 'A reply here is about the whole question.',
+const replyField = (x, compact) => lineField(x, '', { placeholder: () => x.more === 'on' ? 'What do you need to know? (optional)' : 'Reply…',
   cls: 'ac-reply' + (compact ? ' compact' : '') });
 const choiceLabel = (x, id) => { const c = x.choices && x.choices.find(c => c.id === id); return c ? c.label.replace(/[`*]/g, '') : id; };
 // what a closed question shows after ✓: its pick's label, or Other
@@ -17014,8 +17025,9 @@ if (BOARD && BOARD.afterMarkup) BOARD.afterMarkup();   // a storelisting's draft
 
 // ?v-rail (VAR.rail): A puts the stripes in the app bar, the left one after the doc's name and the right one before
 // Share; D puts both at the end of the bottom dock, after its primary (a dock of their own where the page has none);
-// G puts the stripes in the app bar, the left one leading it (the home key first); its right side reads the theme
-// switch, Share, ⋮ (ARC's menu: Export's rows, then Archive; Export's own key goes where ⋮ is), then the right one last;
+// G puts the stripes in the app bar, the left one leading it (the home key first); its right side reads Share | ⋮
+// (one split pill; ⋮ is ARC's menu: Export's rows, then Archive; Export's own key goes where ⋮ is), the theme switch,
+// then the right one last (CSS `order`; the DOM in the same order for the keyboard);
 // H also seats a board's toolbar in the bar (a phone: back on the board). B, C and F are CSS. F's, G's and H's left
 // pane, over the page, closes on Esc as the right one does (a doc's Contents: cpOver)
 (function placeRail() {
@@ -17030,7 +17042,7 @@ if (BOARD && BOARD.afterMarkup) BOARD.afterMarkup();   // a storelisting's draft
     $('.bd-crumb').before(stripeL);
     const g = groove(); g.classList.add('home');   // between the home key and the pane keys
     stripeL.prepend(homeKeyG, g);
-    r.prepend(themeBtn); r.append(stripeR);
+    r.append(themeBtn, stripeR);
     if (ARC.menu && x) {
       // Export's rows in ⋮, each pressing its own (the same action); above a phone only, which keeps its Export key
       const rows = [...x.querySelectorAll('.bd-expm [role="menuitem"]')].map(o => h('button', { type: 'button', role: 'menuitem', tabindex: '-1', class: 'bd-desk',

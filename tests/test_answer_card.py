@@ -23,8 +23,8 @@ class AnswerCard(ChromePage):
         url = self.server.url_for(self.plan)
         a = self.open(url)
         a.ev(f"{Q}.querySelector('.bp-opt[data-id=d90] .oh').click()")   # opened, not picked
-        self.assertEqual(a.ev(f"[{Q}.querySelector('.bp-opt[data-id=d90]').className, {Q}.querySelector('.bp-opt[data-id=d90] .ac-hint').textContent]"),
-                         ["bp-opt open peek", "Shows in the conversation as On 90 days; it picks nothing."])
+        self.assertEqual(a.ev(f"[{Q}.querySelector('.bp-opt[data-id=d90]').className, {Q}.querySelector('.bp-opt[data-id=d90] .ac-hint').hidden]"),
+                         ["bp-opt open peek", True], "an answer not picked: no hint under its field")
         field = f"{Q}.querySelector('.bp-opt[data-id=d90] textarea')"
         a.ev(f"(t => {{ t.focus(); t.value = 'Acme: why not 90 days?'; t.dispatchEvent(new InputEvent('input')); "
              f"t.dispatchEvent(new KeyboardEvent('keydown', {{ key: 'Enter', bubbles: true }})); }})({field})")
