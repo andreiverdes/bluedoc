@@ -176,9 +176,19 @@ def skill_version() -> str:
 MAX_REPLY_MD, MAX_REPLY_REV = 8192, 40
 
 BLOCK_TYPES = {"text", "callout", "table", "code", "terms", "cards", "checklist", "canvas", "diff", "steps", "files", "media", "compare",
-               "board", "listing"}
+               "chart", "board", "listing"}
 FILE_STATUSES = {"added", "modified", "deleted", "renamed", "context"}
-ITEM_BLOCK_TYPES = {"text", "callout", "table", "code", "terms", "cards", "checklist", "files", "media", "compare"}
+ITEM_BLOCK_TYPES = {"text", "callout", "table", "code", "terms", "cards", "checklist", "files", "media", "compare", "chart"}
+# a chart block: the page draws it from these numbers in HorizonUI's look. Each kind reads one data list (CHART_DATA:
+# its field and the fewest and most entries); line and bar plot `series` over the `x` labels (CHART_X: how many);
+# colours are tones (the page's theme tokens), never hex
+CHART_KINDS = ("stat", "line", "bar", "hbar", "donut", "progress")
+CHART_DATA = {"stat": ("stats", 1, 4), "line": ("series", 1, 4), "bar": ("series", 1, 4), "hbar": ("items", 1, 20),
+              "donut": ("items", 2, 8), "progress": ("items", 1, 12)}
+CHART_X = {"line": (2, 60), "bar": (1, 24)}
+CHART_SPARK = (2, 60)
+CHART_TONES = ("accent", "success", "warning", "danger", "violet", "teal", "rose", "lime", "cyan", "muted")
+CHART_TRENDS = ("up", "down", "flat")
 MAX_TITLE, MAX_SUB = 90, 120   # characters that fit the collapsed checklist row
 MAX_CHOICES, MAX_CHOICE_LABEL = 6, 28
 # a skeleton placeholder: <<words>>, with no space right inside the brackets and at least one letter or
@@ -461,6 +471,11 @@ BLOCK_SHAPES = {
     "steps": {"id": str, "items": [{"id": str, "title": str, "status": str, "effort": str, "refs": [str],
                                     "evidence": EVIDENCE_SHAPE}]},
     "files": {"items": [{"path": str, "action": str, "step": str}]},
+    "chart": {"kind": str, "title": str, "unit": str, "sub": str, "caption": str, "x": [str],
+              "series": [{"id": str, "label": str, "values": [NUMBER], "tone": str}],
+              "items": [{"label": str, "value": NUMBER, "max": NUMBER, "unit": str, "note": str, "tone": str}],
+              "stats": [{"label": str, "value": NUMBER, "unit": str, "delta": str, "trend": str, "good": str,
+                         "spark": [NUMBER]}]},
     "board": {"id": str, "targets": [str], "framework": str, "entry": [str], "layout": str, "viewport": dict,
               "frameworks": [{"id": str, "label": str, "files": [str], "store": str}],
               "themes": [{"id": str, "label": str, "tokens": dict}], "motion": dict,
@@ -575,6 +590,27 @@ SCHEMA_CARDS = {
         ("title", "inline", "opt", "")],
         {"type": "compare", "before": {"label": "Today", "lang": "http", "code": "GET /v1/cart"},
          "after": {"label": "Proposed", "lang": "http", "code": "GET /v1/saved-carts"}}),
+    "chart": ("numbers the page draws as a chart: stat cards, line, bars, ranked bars, donut, progress rows; never an image", [
+        ("kind", "str", "req", CHART_KINDS),
+        ("title", "inline", "req", "what it shows and over when"),
+        ("unit", "inline", "opt", "the values' unit (ms, %, orders); a unit of 3 characters or fewer also follows each value"),
+        ("sub", "inline", "opt", "beside the title instead of the unit (a period: Oct 1-14)"),
+        ("caption", "inline", "opt", "under it: what's shaded, the source"),
+        ("x", "[inline]", "opt", ["line, bar: the labels along x, line ", f"{CHART_X['line'][0]}-{CHART_X['line'][1]}",
+                                  ", bar ", f"{CHART_X['bar'][0]}-{CHART_X['bar'][1]}", "; stat: each spark's, for its tooltip"]),
+        ("series", "[object]", "opt", "line, bar: 1-4 {label, values: one number per x, tone?, id?}; the legend toggles them"),
+        ("series[].area", "bool", "opt", "line: shade under it"),
+        ("stacked", "bool", "opt", "bar: stack the series (default side by side)"),
+        ("items", "[object]", "opt", "hbar 1-20, donut 2-8, progress 1-12: {label, value >= 0, tone?}; hbar sorts them"),
+        ("items[].max,unit,note", "", "opt", "progress: the whole (required), this row's unit, words instead of the %"),
+        ("stats", "[object]", "opt", "stat: 1-4 cards {label, value, unit?, delta?, trend?, good?, spark?}"),
+        ("stats[].delta,trend,good", "str", "opt", ["the change, shown in a pill (+4.1%); trend ", CHART_TRENDS,
+                                                    ", default from delta's sign; good: the better way, up|down, default up"]),
+        ("stats[].spark", "[number]", "opt", f"{CHART_SPARK[0]}-{CHART_SPARK[1]} numbers, oldest first"),
+        ("tone", "str", "opt", ["series, items: ", CHART_TONES, "; default in turn"])],
+        {"type": "chart", "kind": "line", "title": "Orders per day", "unit": "orders", "x": ["Mon", "Tue", "Wed"],
+         "series": [{"label": "Week 41", "values": [2510, 2630, 2702], "area": True},
+                    {"label": "Week 40", "values": [2440, 2480, 2530], "tone": "muted"}]}),
     "board": ("design, presentation, website, storelisting: artboards on a pan/zoom board", [
         ("id", "id", "req", ""),
         ("artboards", "[artboard]", "req", "build.py schema artboard"),
@@ -2330,6 +2366,107 @@ def _ref_candidates(doc: dict) -> list[dict]:
     return [b for b in all_blocks(doc) if b.get("type") == "diff" and "files" not in b]
 
 
+def chart_slug(label: str) -> str:
+    """A chart series' default id, as the page derives it: its label in lower case, runs of other characters a dash."""
+    return re.sub(r"[^a-z0-9]+", "-", str(label).lower()).strip("-") or "s"
+
+
+def validate_chart(rep: Report, bw: str, b: dict) -> None:
+    """A chart block past its shape check (kind and title present): a known kind reading its one data list with as many
+    entries as it draws, x labels and values in step, finite numbers (none below 0 where a bar or ring starts at 0),
+    tones from the palette."""
+    kind = b["kind"]
+    if kind not in CHART_KINDS:
+        rep.err(bw + ".kind", f"'{kind}' is no chart kind: {'|'.join(CHART_KINDS)}")
+        return
+    field, lo, hi = CHART_DATA[kind]
+    for other in sorted({f for f, _, _ in CHART_DATA.values()} - {field}):
+        if b.get(other) is not None:
+            rep.err(f"{bw}.{other}", f"a {kind} chart reads '{field}', not '{other}'")
+    if b.get("x") is not None and kind not in ("line", "bar", "stat"):
+        rep.err(bw + ".x", f"a {kind} chart has no x labels: each entry of '{field}' has its own label")
+    if b.get("stacked") is not None and (kind != "bar" or not isinstance(b["stacked"], bool)):
+        rep.err(bw + ".stacked", "true or false, on a bar chart only")
+    data = b.get(field)
+    if not isinstance(data, list) or not lo <= len(data) <= hi:
+        has = f"; it has {len(data)}" if isinstance(data, list) else ""
+        rep.err(f"{bw}.{field}", f"a {kind} chart draws {lo} to {hi} entries in '{field}'{has}")
+        return
+
+    def tone(w: str, x: dict) -> None:
+        if x.get("tone") is not None and x["tone"] not in CHART_TONES:
+            rep.err(w + ".tone", f"'{x['tone']}' is no tone: {'|'.join(CHART_TONES)} (the theme's colours, never hex)")
+
+    def nums(w: str, vals: list, positive: bool) -> None:
+        bad = [str(j) for j, v in enumerate(vals) if not _is_num(v)]
+        if bad:
+            rep.err(w, f"not a finite number at {', '.join(bad[:5])}")
+        elif positive and any(v < 0 for v in vals):
+            rep.err(w, f"a {kind} chart starts at 0: no value below it")
+
+    x = b.get("x")
+    if kind in ("line", "bar"):
+        xl, xh = CHART_X[kind]
+        if not isinstance(x, list) or not xl <= len(x) <= xh:
+            has = f"; it has {len(x)}" if isinstance(x, list) else ""
+            rep.err(bw + ".x", f"a {kind} chart takes {xl} to {xh} labels along x{has}")
+            return
+        ids: set[str] = set()
+        for i, s in enumerate(data):
+            sw = f"{bw}.series[{i}]"
+            if not need(rep, sw, s, "label", "values"):
+                continue
+            if s.get("id") is not None:
+                check_id(rep, sw + ".id", s["id"])
+            sid = s.get("id") or chart_slug(s["label"])
+            if sid in ids:
+                rep.err(sw, f"two series share the id '{sid}': give one its own 'id'")
+            ids.add(sid)
+            if len(s["values"]) != len(x):
+                rep.err(sw + ".values", f"{len(s['values'])} values for {len(x)} x labels: one value per label")
+            nums(sw + ".values", s["values"], kind == "bar")
+            if s.get("area") is not None and (kind != "line" or not isinstance(s["area"], bool)):
+                rep.err(sw + ".area", "true or false, on a line chart's series only")
+            tone(sw, s)
+            lint_text(rep, sw + ".label", s.get("label"))
+    elif kind == "stat":
+        for i, st in enumerate(data):
+            sw = f"{bw}.stats[{i}]"
+            if not need(rep, sw, st, "label", "value"):
+                continue
+            nums(sw + ".value", [st["value"]], False)
+            if st.get("trend") is not None and st["trend"] not in CHART_TRENDS:
+                rep.err(sw + ".trend", f"'{st['trend']}': one of {'|'.join(CHART_TRENDS)}")
+            if st.get("good") is not None and st["good"] not in ("up", "down"):
+                rep.err(sw + ".good", f"'{st['good']}': the better way, up or down")
+            spark = st.get("spark")
+            if spark is not None:
+                sl, sh = CHART_SPARK
+                if not sl <= len(spark) <= sh:
+                    rep.err(sw + ".spark", f"{sl} to {sh} numbers; it has {len(spark)}")
+                elif isinstance(x, list) and len(x) != len(spark):
+                    rep.err(sw + ".spark", f"{len(spark)} numbers for {len(x)} x labels: one per label")
+                nums(sw + ".spark", spark, False)
+            lint_text(rep, sw + ".label", st.get("label"))
+    else:
+        for i, it in enumerate(data):
+            iw = f"{bw}.items[{i}]"
+            if not need(rep, iw, it, "label", "value", *(("max",) if kind == "progress" else ())):
+                continue
+            nums(iw + ".value", [it["value"]], True)
+            if kind == "progress":
+                if _is_num(it["max"]) and it["max"] <= 0:
+                    rep.err(iw + ".max", "the whole the value counts towards: above 0")
+            else:
+                for k in ("max", "unit", "note"):
+                    if it.get(k) is not None:
+                        rep.err(f"{iw}.{k}", f"'{k}' is for progress rows, not a {kind} chart")
+            tone(iw, it)
+            lint_text(rep, iw + ".label", it.get("label"))
+        if kind == "donut" and all(_is_num(it.get("value")) for it in data) and not sum(it["value"] for it in data) > 0:
+            rep.err(bw + ".items", "a donut's parts add up to 0: nothing to draw")
+
+
 def validate(doc: dict, doc_path: Path | None = None, *, allow_remote: bool = False, write_cache: bool = True) -> Report:
     """doc_path, when given, is the doc's JSON file: media srcs are checked against its folder, diff refs
     expand relative to it and the type contract is a warning only while the doc is the revision its history
@@ -2735,6 +2872,11 @@ def _validate(rep: Report, doc: dict, doc_path: Path | None, *, allow_remote: bo
                         rep.warn(sw_, "an image side needs 'alt'")
                 lint_text(rep, sw_ + ".md", sd.get("md"))
                 lint_text(rep, sw_ + ".label", sd.get("label"))
+        elif t == "chart":
+            if need(rep, bw, b, *BLOCK_REQUIRED[t]):
+                validate_chart(rep, bw, b)
+            for k in ("title", "unit", "sub", "caption"):
+                lint_text(rep, f"{bw}.{k}", b.get(k))
         elif t == "board":
             if doc_type(doc.get("meta") or {}) not in BOARD_TYPES:
                 rep.err(bw, "a board block is for design, presentation, website and storelisting docs: set meta.type to one of them")
