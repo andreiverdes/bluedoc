@@ -72,6 +72,7 @@ A missing requirement is an **error** on the doc being built: a new `meta.rev` (
 | `files` | `items`, `title`? | The files a plan touches as a folder tree, each with its action letter. |
 | `media` | `src`, `alt`, `caption`?, `width`? | An image (opens full size on click) or a video, from a file next to the doc. |
 | `compare` | `before`, `after`, `title`? | Two panes side by side: before and after code, text or images. |
+| `chart` | `kind`, `title`, then `x` + `series`, `items` or `stats` | Numbers the page draws as a chart: stat cards, line and area, bars, ranked bars, donut, progress rows. See [Chart](#chart). |
 | `board` | see [Board](#board) | A design doc's UI mockups: artboards on a pan/zoom board, each an HTML screen file. Design docs only; not inside checklist items. |
 | `listing` | see [Listing](#listing) | A storelisting's store text, locales, captions, brand and style. Storelisting docs only; not inside checklist items. |
 
@@ -433,7 +434,7 @@ The page draws a tree of the paths: folders in the order of their first file, a 
 | `width` | The most pixels wide it shows. |
 
 - `png`, `jpg`, `jpeg`, `gif`, `webp` and `svg` render as an image; clicking opens it full size in a lightbox. `mp4` and `webm` render as a video with controls, muted, `playsinline`.
-- An image the agent draws (a diagram, a mockup, a chart) is an SVG and goes in as the `.svg`: never convert it to PNG. PNG and JPG are for images the agent was given or captured (screenshots, photos). The build warns on a PNG, JPG, WebP or GIF with an SVG of the same name beside it.
+- An image the agent draws (a diagram, a mockup) is an SVG and goes in as the `.svg`: never convert it to PNG. A chart is never an image: it is a [`chart`](#chart) block. PNG and JPG are for images the agent was given or captured (screenshots, photos). The build warns on a PNG, JPG, WebP or GIF with an SVG of the same name beside it.
 - `http(s)` and other URLs with a scheme, and absolute paths, are build errors: pages make no network calls. Save the file next to the doc.
 - The build checks that the file exists and warns above 2 MB.
 - On the server the page uses `src` as written. It resolves against the doc's URL `/<root>/<dir>/<name>.bluedoc.json`, and the server serves media files under its registered roots.
@@ -456,6 +457,43 @@ The page draws a tree of the paths: folders in the order of their first file, a 
 | `src`, `alt` | An image, with the same path rules as `media`. Give `alt` with every `src`; the build warns without it. |
 
 Each side needs one of `md`, `code` or `src` and shows whichever is present. The panes sit side by side and stack at ≤ 900 px.
+
+## Chart
+
+A chart in a doc is a `chart` block: the doc holds the numbers and the page draws them in HorizonUI's look (its Stat, Sparkline, ProgressBar and ProgressRing, and lines, bars and the donut in the same strokes, radii and tokens), as SVG and HTML in the page itself. It follows the light and dark theme, reads on a 390 px phone, prints, and draws the same in a shared page and a `build.py -o` file: nothing to download. Never draw a chart as an image, an SVG or a canvas.
+
+```json
+{ "type": "chart", "kind": "line", "title": "Checkout latency, p50 and p95", "unit": "ms",
+  "x": ["Oct 1", "Oct 2", "Oct 3"],
+  "series": [ { "id": "p50", "label": "p50", "values": [195, 197, 193], "area": true },
+              { "id": "p95", "label": "p95", "values": [398, 402, 395], "tone": "warning" } ],
+  "caption": "Daily. Shaded: p50. Source: acme-shop APM." }
+```
+
+| Field | Meaning |
+|---|---|
+| `kind` | Required. `stat`, `line`, `bar`, `hbar` (ranked bars), `donut` or `progress`. |
+| `title` | Required. Inline md: what it shows and over when. |
+| `unit` | The values' unit (`ms`, `%`, `orders`), beside the title. A unit of 3 characters or fewer also follows each value in tooltips (`430 ms`, `1.2%`); a donut's total reads `216 docs`. |
+| `sub` | Inline md beside the title instead of the unit: a period (`Oct 1–14`), a date. |
+| `caption` | Inline md under the chart: what's shaded, the source. |
+| `x` | `line` and `bar`: the labels along x, 2 to 60 for a line, 1 to 24 for bars. `stat`: the sparklines' labels, shown in their tooltips. |
+| `series` | `line` and `bar`: 1 to 4 `{label, values, tone?, id?}`, `values` one number per `x` label. `id` (default: the label in lower case, other characters as `-`) is unique in the block; the compare view matches series by it. A line's `area: true` shades under it. Bars never go below 0. |
+| `stacked` | `bar`: stack the series instead of setting them side by side. |
+| `items` | `hbar` (1 to 20), `donut` (2 to 8), `progress` (1 to 12): `{label, value, tone?}`, values 0 or more. A progress row adds `max` (required, above 0), `unit` (this row's) and `note` (words instead of the percent: `0.3 short`). |
+| `stats` | `stat`: 1 to 4 cards `{label, value, unit?, delta?, trend?, good?, spark?}`. |
+| `tone` | A series' or item's colour, from the theme: `accent`, `success`, `warning`, `danger`, `violet`, `teal`, `rose`, `lime`, `cyan` or `muted`. Default: in turn. Never hex. |
+
+Per kind:
+
+- **`stat`**: a row of cards (2 per row on a phone), each the value and its unit, the change in a pill and a sparkline. `delta` is the change as written (`+4.1%`, `-20 ms`, `0.0%`); `trend` (`up`, `down`, `flat`) defaults to its sign (none: `flat`), and the pill shows an arrow and the change without its sign. `good` (`up`, default, or `down`: lower is better, as latency) colours the pill and the sparkline green when the change went the good way, red when not. `spark`: 2 to 60 numbers, oldest first; with `x` one per label.
+- **`line`**: 1 to 4 series over `x` with a value axis, gridlines and a legend; `area` shades under a series.
+- **`bar`**: vertical bars per `x` label, side by side or `stacked`; where side by side they would be under 8 px wide (a phone) they stack. The tooltip adds the total.
+- **`hbar`**: horizontal bars sorted by value, biggest first, the value at each bar's end; the tooltip adds the share of the total.
+- **`donut`**: parts biggest first round a ring from the top, the total in the middle, a two-column legend with each part's count and share.
+- **`progress`**: a row per item, `value of max unit` and the percent done; a row at its `max` turns green and reads `Done`. `tone` and `note` override both.
+
+On the page, hovering (or focusing the chart and pressing ← →) shows the values at a point: the x label and each series' value, a bar's total, a part's share. The legend's pills hide and show a series (a donut's rows a part), and the axis and shares follow; the choice isn't kept. Every number is also in a table for screen readers, in the Markdown export (a table) and in the compare view: a changed chart is marked Changed, its What changed box listing each moved value at its x label (the old struck through, the new beside it) and the series, parts or cards added or removed. A comment on a chart names it by its block key (`block:<section>/<n>`). The build checks the kind, one value per `x` label, the counts above, finite numbers, and the tones.
 
 ## Board
 

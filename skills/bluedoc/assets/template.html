@@ -1347,6 +1347,126 @@ img.bp-cmpr-img { cursor: zoom-in; }
 .bp-cmpr-code { flex: 1; margin: 0; padding: 12px 14px; overflow-x: auto; color: var(--fg); font: 12.5px/1.65 var(--mono); background: var(--panel); }
 .bp-cmpr-code code { background: none; padding: 0; font-size: inherit; color: inherit; overflow-wrap: normal; }
 .bp-cmpr-b + .bp-cmpr-code { border-top: 1px solid var(--line-soft); }
+/* chart: numbers drawn in HorizonUI's look (its Stat, Sparkline, ProgressBar and ProgressRing; lines, bars and the donut
+   in the same strokes, radii and tokens). A tone class (.ch-<tone>) sets --c from the theme; narrow plots follow the
+   chart's own width (a container), so a chart in a pane or on a phone reads the same */
+.bp-chart { --ch-violet: light-dark(oklch(55% 0.17 300), oklch(68% 0.15 300)); --ch-teal: light-dark(oklch(55% 0.11 172), oklch(68% 0.13 172));
+  --ch-rose: light-dark(oklch(56% 0.17 20), oklch(70% 0.15 20)); --ch-lime: light-dark(oklch(58% 0.15 128), oklch(76% 0.16 128)); --ch-cyan: light-dark(oklch(57% 0.12 210), oklch(72% 0.13 205));
+  container-type: inline-size; position: relative; margin: 0; padding: 16px 18px 14px; border-radius: 14px; background: var(--surface); box-shadow: var(--shadow-1); }
+.bp-chart.bare { padding: 0; background: none; box-shadow: none; }
+@media (max-width: 600px) { .bp-chart:not(.bare) { padding: 14px 14px 12px; } }
+.ch-accent { --c: var(--accent); } .ch-success { --c: var(--ok); } .ch-warning { --c: var(--warn); } .ch-danger { --c: var(--risk); } .ch-muted { --c: var(--todo); }
+.ch-violet { --c: var(--ch-violet); } .ch-teal { --c: var(--ch-teal); } .ch-rose { --c: var(--ch-rose); } .ch-lime { --c: var(--ch-lime); } .ch-cyan { --c: var(--ch-cyan); }
+.bp-ch-h { display: flex; flex-wrap: wrap; align-items: center; column-gap: 10px; row-gap: 6px; min-height: 24px; margin-bottom: 12px; }
+.bp-ch-h .t { font: 600 14px/1.3 var(--sans); color: var(--fg); }
+.bp-ch-h .u { font: 500 11.5px var(--mono); color: var(--fg-subtle); }
+.bp-ch-h .u:empty { display: none; }
+.bp-ch-lg { display: flex; flex-wrap: wrap; gap: 2px; margin: -2px -6px -2px auto; }
+.bp-ch-li { display: inline-flex; align-items: center; gap: 7px; height: 24px; padding: 0 8px; border: 0; border-radius: 999px; background: none; font: 12.5px/1 var(--sans); color: var(--fg-muted); cursor: pointer; }
+.bp-ch-li:hover { background: var(--hover); color: var(--fg); }
+:is(.bp-ch-li, .bp-ch-dli, .bp-ch-plot, .bp-ch-spw):focus-visible { outline: none; box-shadow: var(--focus-ring); }
+:is(.bp-ch-li, .bp-ch-tip .r, .bp-ch-dli) i { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
+.bp-ch-li.ln i { width: 12px; height: 3px; border-radius: 2px; }
+:is(.bp-ch-li, .bp-ch-dli)[aria-pressed="false"] { color: var(--fg-subtle); }
+:is(.bp-ch-li, .bp-ch-dli)[aria-pressed="false"] i { background: none; box-shadow: inset 0 0 0 1.5px var(--fg-subtle); }
+.bp-ch-li[aria-pressed="false"], .bp-ch-dli[aria-pressed="false"] em { text-decoration: line-through; }
+.bp-ch-cap { margin: 10px 0 0; font-size: 12.5px; line-height: 1.45; color: var(--fg-subtle); }
+.bp-ch-plot { position: relative; border-radius: 8px; }
+.bp-ch-plot > svg { display: block; width: 100%; height: auto; overflow: visible; }
+.bp-ch-plot text { font: 500 10.5px var(--mono); fill: var(--fg-subtle); font-variant-numeric: tabular-nums; }
+.bp-ch-plot text.on { fill: var(--fg); font-weight: 600; } .bp-ch-plot text.off { opacity: 0; }
+.bp-ch-plot .gl { stroke: var(--line); stroke-width: 1; shape-rendering: crispEdges; }
+.bp-ch-plot .ax { stroke: var(--line-strong); stroke-width: 1; shape-rendering: crispEdges; }
+.bp-ch-plot .xh { stroke: var(--line-strong); stroke-width: 1; }
+.bp-ch-plot .band { fill: var(--hover); }
+.bp-ch-plot .ln { fill: none; stroke: var(--c); stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.bp-ch-plot .dot { fill: var(--c); }
+.bp-ch-plot .hdot { fill: var(--c); stroke: var(--surface); stroke-width: 2; }
+.bp-ch-plot g[data-x], .bp-ch-ring circle, .bp-ch-eb i::before, .bp-ch-pb :is(.h, .tr i), .bp-ch-dli { transition: opacity .12s, stroke-width .12s; }
+.bp-ch-plot .dim { opacity: .35; }
+.bp-ch-tip { position: absolute; z-index: 5; min-width: 132px; padding: 7px 10px 8px; border-radius: 9px; background: var(--tip); color: oklch(97% 0 0); box-shadow: var(--shadow-3);
+  font: 12px/16px var(--sans); white-space: nowrap; pointer-events: none; }
+.bp-ch-tip[hidden] { display: none; }
+.bp-ch-tip b { display: block; margin-bottom: 4px; font-weight: 600; }
+.bp-ch-tip .r { display: flex; align-items: center; gap: 7px; height: 19px; }
+.bp-ch-tip .r span { margin-left: auto; padding-left: 16px; font: 500 11.5px var(--mono); font-variant-numeric: tabular-nums; }
+.bp-ch-tip .r.t { margin-top: 4px; padding-top: 4px; height: 23px; border-top: 1px solid oklch(97% 0 0 / 0.16); }
+.bp-ch-tip s { text-decoration: none; color: oklch(97% 0 0 / 0.66); }
+/* stat cards: HorizonUI's Stat */
+.bp-ch-sg { position: relative; display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); gap: 14px; }
+.bp-ch-st { position: relative; display: flex; flex-direction: column; gap: 8px; min-width: 0; padding: 16px; border-radius: 14px; background: var(--surface); box-shadow: var(--shadow-1); }
+.bp-ch-sl { font: 500 11px/14px var(--mono); text-transform: uppercase; letter-spacing: .12em; color: var(--fg-subtle); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bp-ch-sv { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 8px; row-gap: 4px; }
+.bp-ch-sv b { font: 600 26px/32px var(--sans); font-variant-numeric: tabular-nums; color: var(--fg); }
+.bp-ch-sv u { text-decoration: none; font-size: 12px; line-height: 16px; color: var(--fg-muted); }
+.bp-ch-dp { display: inline-flex; align-items: center; gap: 2px; height: 20px; margin-left: auto; padding: 0 8px; border-radius: 999px; background: var(--hover); color: var(--fg-muted);
+  font: 500 11px/14px var(--sans); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.bp-ch-dp svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.bp-ch-dp svg.down { transform: rotate(180deg); }
+.bp-ch-dp.ok { color: var(--ok-fg); } .bp-ch-dp.bad { color: var(--risk-fg); }
+.bp-ch-spw { border-radius: 4px; }
+.bp-ch-sp { display: block; width: 100%; height: 32px; overflow: visible; color: var(--c); }
+.bp-ch-sp :is(.sl, .end, .xh, .hr, .hd) { fill: none; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.bp-ch-sp .sl { stroke: currentColor; stroke-width: 1.5; } .bp-ch-sp .end { stroke: currentColor; stroke-width: 5; }
+.bp-ch-sp .xh { stroke: var(--line-strong); stroke-width: 1; stroke-linecap: butt; }
+.bp-ch-sp .hr { stroke: var(--surface); stroke-width: 10; } .bp-ch-sp .hd { stroke: currentColor; stroke-width: 6; }
+.bp-ch-sg > .bp-ch-tip { min-width: 0; }
+@container (max-width: 640px) {
+  .bp-ch-sg { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .bp-ch-st { padding: 12px 12px 10px; } .bp-ch-sv b { font-size: 22px; line-height: 28px; }
+}
+@container (max-width: 640px) { .bp-ch-sg.one { grid-template-columns: minmax(0, 1fr); } }
+/* ranked bars: a label column, then the bar and its value */
+.bp-ch-hb { display: flex; flex-direction: column; }
+.bp-ch-eb { display: grid; grid-template-columns: var(--lw, 128px) minmax(0, 1fr); align-items: center; gap: 12px; height: 29px; margin: 0 -8px; padding: 0 8px; border-radius: 8px;
+  font: 12.5px var(--mono); color: var(--fg-muted); }
+.bp-ch-eb > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bp-ch-eb i { display: flex; align-items: center; gap: 8px; font-style: normal; font-variant-numeric: tabular-nums; }
+.bp-ch-eb i::before { content: ""; flex: none; height: 12px; width: calc(var(--w) * 0.82); border-radius: 3px; background: color-mix(in oklch, var(--c) 75%, transparent); }
+.bp-ch-eb.on { background: var(--hover); color: var(--fg); } .bp-ch-eb.on i::before { background: var(--c); }
+.bp-ch-eb.dim i::before { opacity: .35; } .bp-ch-eb.dim :is(span, i) { color: var(--fg-subtle); }
+@container (max-width: 520px) {
+  .bp-ch-lg { flex-basis: 100%; margin: 0 0 0 -8px; }
+  .bp-ch-eb { grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: 16px 7px; row-gap: 5px; height: auto; padding: 2px 8px 5px; }
+  .bp-ch-eb i { display: contents; } .bp-ch-eb i::before { grid-column: 1 / -1; grid-row: 2; height: 7px; width: var(--w); }
+}
+/* donut: HorizonUI's ProgressRing look, the total in the middle, a two-column legend of counts and shares */
+.bp-ch-dn { display: flex; align-items: center; gap: 56px; }
+.bp-ch-ring { position: relative; flex: none; width: 184px; height: 184px; }
+.bp-ch-ring svg { display: block; width: 100%; height: 100%; transform: rotate(-90deg); overflow: visible; }
+.bp-ch-ring circle { fill: none; stroke: var(--c); stroke-width: 20; }
+.bp-ch-ring circle.on { stroke-width: 26; } .bp-ch-ring circle.dim { opacity: .35; } .bp-ch-ring circle.trk { stroke: var(--selected); }
+.bp-ch-ring .c { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; pointer-events: none; }
+.bp-ch-ring .c b { font: 600 26px/30px var(--sans); font-variant-numeric: tabular-nums; color: var(--fg); }
+.bp-ch-ring .c span { font-size: 12px; line-height: 16px; color: var(--fg-subtle); }
+.bp-ch-dl { flex: 1; min-width: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(var(--rows), auto); grid-auto-flow: column; column-gap: 28px; }
+.bp-ch-dli { display: flex; align-items: center; gap: 9px; min-width: 0; height: 33px; margin: 0 -8px; padding: 0 8px; border: 0; border-radius: 8px; background: none; color: var(--fg);
+  font: 13px var(--sans); text-align: left; white-space: nowrap; box-shadow: inset 0 -1px 0 var(--line-soft); cursor: pointer; }
+.bp-ch-dli em { min-width: 0; font-style: normal; overflow: hidden; text-overflow: ellipsis; }
+.bp-ch-dli span { margin-left: auto; font: 500 11.5px var(--mono); color: var(--fg-subtle); font-variant-numeric: tabular-nums; }
+.bp-ch-dli.on { background: var(--hover); box-shadow: none; } .bp-ch-dli.on span { color: var(--fg); }
+.bp-ch-dli.dim { opacity: .45; }
+@container (max-width: 560px) {
+  .bp-ch-dn { flex-direction: column; gap: 14px; } .bp-ch-ring { width: 132px; height: 132px; }
+  .bp-ch-dl { align-self: stretch; column-gap: 14px; } .bp-ch-dli { height: 28px; gap: 7px; font-size: 12.5px; } .bp-ch-dli span { font-size: 11px; }
+}
+/* progress rows: HorizonUI's ProgressBar per row */
+.bp-ch-pr { display: flex; flex-direction: column; gap: 16px; }
+.bp-ch-pb { position: relative; display: flex; flex-direction: column; gap: 7px; margin: -6px -8px; padding: 6px 8px; border-radius: 8px; }
+.bp-ch-pb .h { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; font-size: 13px; line-height: 16px; }
+.bp-ch-pb .l { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg-muted); }
+.bp-ch-pb .v { font: 500 12px var(--mono); color: var(--fg); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.bp-ch-pb .v s { margin-left: 8px; text-decoration: none; color: var(--fg-subtle); }
+.bp-ch-pb .v s.ok { color: var(--ok-fg); } .bp-ch-pb .v s.wn { color: var(--warn-fg); } .bp-ch-pb .v s.bad { color: var(--risk-fg); }
+.bp-ch-pb .tr { height: 6px; border-radius: 999px; background: var(--selected); overflow: hidden; }
+.bp-ch-pb .tr i { display: block; width: var(--w); height: 100%; border-radius: 999px; background: var(--c); }
+.bp-ch-pb.on { background: var(--hover); } .bp-ch-pb.on .l { color: var(--fg); }
+.bp-ch-pb.dim .tr i { opacity: .4; } .bp-ch-pb.dim .h { opacity: .6; }
+@media (prefers-reduced-motion: reduce) { .bp-chart * { transition: none !important; } }
+@media print {
+  .bp-chart { break-inside: avoid; } .bp-ch-tip { display: none !important; }
+  .bp-chart, .bp-chart * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
 /* md text (md(), every md field: class bd-md) beyond paragraphs and flat lists: headings sized under the section and
    block titles, nested and task lists, quotes, rules, and tables and code blocks in the table and code blocks' look */
 .bd-md .bd-mh { display: block; margin: 16px 0 6px; font-family: var(--sans); font-weight: 600; line-height: 1.35; letter-spacing: 0; text-transform: none; color: var(--fg); }
@@ -5065,6 +5185,7 @@ const RENDER = {
   files: b => renderFiles(b),
   media: b => renderMedia(b),
   compare: b => renderCompare(b),
+  chart: b => renderChart(b),
   board: b => IS_LISTING ? h('div', { class: 'bd-board-ph' }, ic('frame'), h('span', {}, 'The shots of this section are on the platform pages.')) : renderBoard(b),
   listing: b => renderListing(b),
 };
@@ -5371,6 +5492,339 @@ function renderCompare(b) {
   return h('div', { class: 'bp-cmpr' },
     b.title && h('div', { class: 'bp-cmpr-t' }, ic('split'), h('h3', { html: inline(b.title) })),
     h('div', { class: 'bp-cmpr-g' }, side(b.before, 'before'), h('span', { class: 'bp-cmpr-ar', 'aria-hidden': 'true' }, h('b', {}, ic('arrowr'))), side(b.after, 'after')));
+}
+/* ---------- charts ---------- */
+// A chart block (kind stat|line|bar|hbar|donut|progress), drawn in the page from the doc's numbers in HorizonUI's look:
+// SVG for lines, bars and the ring, HTML for stat cards, ranked bars and progress rows, in theme tones only (.ch-<tone>
+// sets --c). Hover, or focus and the arrow keys, shows a point's values in a tooltip; the legend hides and shows a
+// series or a part (the reader's, never kept). Lines and bars draw at the plot's width and again when it changes. A
+// visually hidden table holds every number for screen readers; the Markdown export and compare view read the same.
+const CH_KINDS = ['stat', 'line', 'bar', 'hbar', 'donut', 'progress'];
+const CH_TONES = ['accent', 'success', 'warning', 'danger', 'violet', 'teal', 'rose', 'lime', 'cyan', 'muted'];
+const CH_SERIES = ['accent', 'success', 'warning', 'violet'], CH_PARTS = ['violet', 'teal', 'accent', 'rose', 'lime', 'warning', 'cyan', 'muted'];
+let chSeq = 0;
+const chTone = (t, i, order) => 'ch-' + (CH_TONES.includes(t) ? t : order[i % order.length]);
+const chSlug = s => String(s ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 's';
+const chNum = v => typeof v === 'number' && isFinite(v) ? v : 0;
+const chDec = vs => Math.min(3, Math.max(0, ...vs.map(v => (/\.(\d+)$/.exec(String(v)) || ['', ''])[1].length)));
+const chFmt = (v, d = chDec([v])) => chNum(v).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
+// a value with its unit: a unit of 3 characters or fewer follows it (430 ms, 1.2%); a longer one stays in the heading
+const chU = (s, u) => !u || u.length > 3 || /\s/.test(u) ? s : u === '%' ? s + '%' : `${s} ${u}`;
+const chCap = u => u && (u.length > 3 || /\s/.test(u)) ? u[0].toUpperCase() + u.slice(1) : 'Value';
+const chPct = (v, t) => { const p = t > 0 ? v / t * 100 : 0; return p > 0 && p < 1 ? '<1%' : Math.round(p) + '%'; };
+// one value's count with its unit, whatever its length (35 docs, 1.2%): a ranked bar's or a part's tooltip
+const chCount = (v, u) => !u ? chFmt(v) : u === '%' ? chFmt(v) + '%' : `${chFmt(v)} ${u}`;
+const r1 = v => Math.round(v * 10) / 10;
+function chTick(v) { const a = Math.abs(v), f = (x, s) => +x.toFixed(1) + s; return a >= 1e9 ? f(v / 1e9, 'B') : a >= 1e6 ? f(v / 1e6, 'M') : a >= 1e3 ? f(v / 1e3, 'k') : String(+v.toFixed(2)); }
+// a value axis over lo..hi in about n steps of 1, 1.5, 2, 2.5, 3, 4, 5, 6 or 8 × 10^k, from a tick at or under lo
+function chScale(lo, hi, n = 3) {
+  if (!(hi > lo)) hi = lo + 1;
+  const raw = (hi - lo) / n, p = 10 ** Math.floor(Math.log10(raw));
+  const step = [1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10].map(m => m * p).find(s => s >= raw * (1 - 1e-9));
+  const a = Math.floor(lo / step + 1e-9) * step, b = Math.ceil(hi / step - 1e-9) * step, ticks = [];
+  for (let v = a; v <= b + step / 2; v += step) ticks.push(+v.toPrecision(12));
+  return { lo: a, hi: b, ticks };
+}
+// a bar's outline from its top left: rt the top corners' radius, rb the bottom's
+function barPath(x, y, w, hh, rt, rb) {
+  rt = Math.min(rt, w / 2, hh); rb = Math.min(rb, w / 2, Math.max(0, hh - rt));
+  const R = r1, X = R(x), Y = R(y), X2 = R(x + w), Y2 = R(y + hh);
+  return `M${X} ${R(y + hh - rb)}V${R(y + rt)}Q${X} ${Y} ${R(x + rt)} ${Y}H${R(x + w - rt)}Q${X2} ${Y} ${X2} ${R(y + rt)}V${R(y + hh - rb)}Q${X2} ${Y2} ${R(x + w - rb)} ${Y2}H${R(x + rb)}Q${X} ${Y2} ${X} ${R(y + hh - rb)}Z`;
+}
+// the block's numbers, read defensively (an earlier revision may hold anything): x labels, series with their id, decimals
+// and tone, items, stat cards
+function chartData(b) {
+  const kind = b.kind, list = k => (Array.isArray(b[k]) ? b[k] : []).filter(o => o && typeof o === 'object');
+  const series = list('series').map((s, i) => {
+    const vals = (Array.isArray(s.values) ? s.values : []).map(chNum);
+    return { id: String(s.id || chSlug(s.label)), label: String(s.label ?? ''), vals, dec: chDec(vals), tone: chTone(s.tone, i, CH_SERIES), area: kind === 'line' && s.area === true };
+  });
+  const items = list('items').map((it, i) => ({ i, label: String(it.label ?? ''), v: chNum(it.value), max: chNum(it.max), unit: typeof it.unit === 'string' ? it.unit : null,
+    note: it.note == null ? null : String(it.note), tone: it.tone }));
+  return { kind, x: Array.isArray(b.x) ? b.x.map(String) : [], series, items, stats: list('stats'), unit: typeof b.unit === 'string' ? b.unit : '' };
+}
+// the chart as a table of text: its columns and a row per x label, part or card (the hidden table, Markdown, compare)
+function chartRows(b) {
+  const d = chartData(b), u = d.unit;
+  if (d.kind === 'line' || d.kind === 'bar') return { cols: ['', ...d.series.map(s => s.label)], rows: d.x.map((xl, i) => [xl, ...d.series.map(s => chU(chFmt(s.vals[i] ?? 0, s.dec), u))]) };
+  if (d.kind === 'stat') return { cols: ['', 'Value', 'Change'], rows: d.stats.map(st => [String(st.label ?? ''), `${chFmt(st.value)}${typeof st.unit === 'string' && st.unit ? ' ' + st.unit : ''}`, String(st.delta ?? '')]) };
+  if (d.kind === 'progress') return { cols: ['', 'Value', 'Of'], rows: d.items.map(it => { const dec = chDec([it.v, it.max]), un = it.unit ?? u; return [it.label, chFmt(it.v, dec), chFmt(it.max, dec) + (un ? ' ' + un : '')]; }) };
+  const total = d.items.reduce((a, it) => a + it.v, 0);
+  return { cols: ['', chCap(u), 'Share'], rows: d.items.map(it => [it.label, chU(chFmt(it.v), u), chPct(it.v, total)]) };
+}
+// a tooltip in box (positioned): a title, rows {tone, label, value} and a last {t: true} total row; its left edge 14 px
+// right of x and its top at y, or where that would leave the box (or alt.force) its right edge at alt.x and its top at
+// alt.y (default: 14 px left of x, at y)
+function chTip(box) {
+  const tip = h('div', { class: 'bp-ch-tip', role: 'status', 'aria-live': 'polite', hidden: true });
+  box.append(tip);
+  return {
+    show(title, rows, x, y, alt = {}) {
+      setKids(tip, title && h('b', {}, title), rows.map(r => h('div', { class: 'r' + (r.t ? ' t' : '') + (r.tone ? ' ' + r.tone : '') }, r.t ? h('s', {}, r.label) : [h('i'), r.label], h('span', {}, r.value))));
+      tip.hidden = false;
+      const tw = tip.offsetWidth, th = tip.offsetHeight, W = box.clientWidth, flip = alt.force || x + 14 + tw > W;
+      tip.style.left = Math.max(0, Math.min(W - tw, flip ? (alt.x ?? x - 14) - tw : x + 14)) + 'px';
+      tip.style.top = Math.max(0, Math.min(flip ? alt.y ?? y : y, box.clientHeight - th)) + 'px';
+    },
+    hide() { tip.hidden = true; },
+  };
+}
+// what a plot's tooltip points at: the target the pointer is over (at(e), -1 for none), or with the plot focused the
+// arrow keys, Home and End (count() targets) and Esc; show(i) draws it, show(-1) clears it
+function chNav(el, count, at, show) {
+  let cur = -1;
+  const set = i => { if (i !== cur) { cur = i; show(i); } };
+  el.addEventListener('pointermove', e => set(at(e)));
+  el.addEventListener('pointerdown', e => set(at(e)));
+  el.addEventListener('pointerleave', e => { if (e.pointerType !== 'touch') set(-1); });
+  el.addEventListener('focus', () => { if (cur < 0 && el.matches(':focus-visible')) set(0); });
+  el.addEventListener('focusout', e => { if (!el.contains(e.relatedTarget)) set(-1); });
+  el.addEventListener('keydown', e => {
+    const n = count(), k = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
+    if (k && n) { e.preventDefault(); set(cur < 0 ? (k > 0 ? 0 : n - 1) : Math.max(0, Math.min(n - 1, cur + k))); }
+    else if ((e.key === 'Home' || e.key === 'End') && n) { e.preventDefault(); set(e.key === 'Home' ? 0 : n - 1); }
+    else if (e.key === 'Escape' && cur >= 0) { e.stopPropagation(); set(-1); }
+  });
+  return { redraw() { const i = cur; cur = -1; if (i >= 0) set(Math.min(i, count() - 1)); } };
+}
+const chPlot = (title, extra) => h('div', { class: 'bp-ch-plot' + (extra ? ' ' + extra : ''), tabindex: '0', role: 'group', 'aria-label': `${plainText(title) || 'Chart'}: arrow keys step through the values` });
+// line and bar: the value axis with its gridlines, the x labels (every k-th where they would touch), lines (and the
+// area under those with `area`) or bars side by side (stacked with `stacked`, or where side by side they would be under
+// 8 px wide: a phone); the hovered x gets a crosshair and dots, or a band behind its bars, its label in bold
+function chXY(b, d, head) {
+  const kind = d.kind, n = d.x.length, S = d.series, off = new Set(), uid = 'bdch' + ++chSeq, plot = chPlot(b.title), tip = chTip(plot);
+  const svg = sv('svg', { 'aria-hidden': 'true' });
+  plot.prepend(svg);
+  if (S.length > 1) head.append(h('div', { class: 'bp-ch-lg' }, S.map(s => h('button', { type: 'button', class: `bp-ch-li ${s.tone}${kind === 'line' ? ' ln' : ''}`, 'aria-pressed': 'true', 'data-series': s.id,
+    title: `Show or hide ${s.label}`, onclick: e => { const was = off.has(s.id); if (was) off.delete(s.id); else off.add(s.id); e.currentTarget.setAttribute('aria-pressed', String(was)); draw(true); } }, h('i'), s.label))));
+  let g = null;
+  const stop = (o, a) => sv('stop', { offset: o, style: 'stop-color:var(--c)', 'stop-opacity': a });
+  function draw(force) {
+    const W = Math.round(plot.clientWidth);
+    if (!W || (g && W === g.W && !force)) return;
+    const H = W < 520 ? 210 : 236, base = H - 24, top = 8, vis = S.filter(s => !off.has(s.id)), k = vis.length;
+    const stacked = kind === 'bar' && k > 1 && (b.stacked === true || ((W - 40) / Math.max(1, n) * .56 - 4 * (k - 1)) / k < 8);
+    let lo = 0, hi = 0;
+    for (let i = 0; i < n; i++) {
+      if (stacked) hi = Math.max(hi, vis.reduce((a, s) => a + Math.max(0, s.vals[i] || 0), 0));
+      else for (const s of vis) { lo = Math.min(lo, s.vals[i] || 0); hi = Math.max(hi, s.vals[i] || 0); }
+    }
+    const sc = chScale(lo, hi), L = Math.max(36, Math.ceil(14 + 6.4 * Math.max(...sc.ticks.map(t => chTick(t).length))));
+    const yOf = v => top + (base - top) * (1 - (v - sc.lo) / (sc.hi - sc.lo)), yz = yOf(Math.max(sc.lo, 0));
+    const x0 = L + 14, x1 = W - 10, slot = (W - L) / Math.max(1, n);
+    const xs = d.x.map((_, i) => kind === 'line' ? (n > 1 ? x0 + (x1 - x0) * i / (n - 1) : (x0 + x1) / 2) : L + slot * (i + .5));
+    const defs = sv('defs', {}), kids = [defs];
+    for (const t of sc.ticks) { const y = Math.round(yOf(t)) + .5; kids.push(sv('line', { class: t === 0 ? 'ax' : 'gl', x1: L, x2: W, y1: y, y2: y }), sv('text', { x: L - 8, y: y + 3.5, 'text-anchor': 'end' }, chTick(t))); }
+    const lw = Math.max(0, ...d.x.map(s => s.length)) * 6.4 + 12, every = Math.max(1, Math.ceil(lw / (kind === 'line' ? (n > 1 ? (x1 - x0) / (n - 1) : W) : slot)));
+    const labels = d.x.map((t, i) => i % every ? null : sv('text', { x: r1(xs[i]), y: H - 6, 'text-anchor': 'middle' }, t));
+    const under = sv('g', {}), over = sv('g', {}), groups = [];
+    kids.push(...labels.filter(Boolean), under);
+    let gw = 0;
+    if (kind === 'line') {
+      const pts = s => xs.map((x, i) => `${r1(x)} ${r1(yOf(s.vals[i] || 0))}`);
+      for (const s of vis.filter(s => s.area)) {
+        defs.append(sv('linearGradient', { id: `${uid}-a-${s.id}`, class: s.tone, x1: 0, y1: 0, x2: 0, y2: 1 }, stop(0, .28), stop(1, 0)));
+        kids.push(sv('path', { class: 'area', d: `M${pts(s).join(' L')} L${r1(xs[n - 1])} ${r1(yz)} L${r1(xs[0])} ${r1(yz)} Z`, fill: `url(#${uid}-a-${s.id})` }));
+      }
+      for (const s of vis) groups.push(sv('g', { class: s.tone, 'data-series': s.id }, sv('path', { class: 'ln', d: 'M' + pts(s).join(' L') }),
+        sv('circle', { class: 'dot', cx: r1(xs[n - 1]), cy: r1(yOf(s.vals[n - 1] || 0)), r: 2.5 })));
+    } else {
+      for (const s of vis) defs.append(sv('linearGradient', { id: `${uid}-b-${s.id}`, class: s.tone, x1: 0, y1: 0, x2: 0, y2: 1 }, stop(0, 1), stop(1, .62)));
+      const bw = stacked ? Math.min(32, slot * .5) : Math.max(2, Math.min(22, (slot * .56 - 4 * (k - 1)) / Math.max(1, k)));
+      gw = stacked ? bw : k * bw + 4 * (k - 1);
+      for (let i = 0; i < n; i++) {
+        const gr = sv('g', { 'data-x': i }), left = xs[i] - gw / 2, last = vis.reduce((a, s, j) => (s.vals[i] || 0) > 0 ? j : a, -1);
+        let cum = 0;
+        vis.forEach((s, j) => {
+          const v = s.vals[i] || 0, fill = `url(#${uid}-b-${s.id})`;
+          if (stacked) {
+            if (v <= 0) return;
+            const y0 = yOf(cum) - (cum > 0 ? 2 : 0), y1 = yOf(cum + v);
+            cum += v;
+            if (y0 - y1 > .5) gr.append(sv('path', { 'data-series': s.id, d: barPath(left, y1, bw, y0 - y1, j === last ? 4 : 2, 2), fill }));
+          } else if (v) {
+            const ya = Math.min(yOf(v), yz), yb = Math.max(yOf(v), yz);
+            gr.append(sv('path', { 'data-series': s.id, d: barPath(left + j * (bw + 4), ya, bw, Math.max(.5, yb - ya), v > 0 ? 4 : 2, v > 0 ? 2 : 4), fill }));
+          }
+        });
+        groups.push(gr);
+      }
+    }
+    kids.push(...groups, over);
+    setKids(svg, kids);
+    for (const [a, v] of [['viewBox', `0 0 ${W} ${H}`], ['width', W], ['height', H]]) svg.setAttribute(a, v);
+    g = { W, H, base, top, xs, yOf, vis, labels, lw, under, over, groups, gw, L, x0, x1, slot };
+    nav.redraw();
+  }
+  function show(i) {
+    if (!g) return;
+    g.under.replaceChildren(); g.over.replaceChildren();
+    g.labels.forEach(t => t && t.classList.remove('on', 'off'));
+    g.groups.forEach(x => x.classList.remove('dim'));
+    if (i < 0 || i >= n) { tip.hide(); return; }
+    const x = g.xs[i];
+    if (g.labels[i]) g.labels[i].classList.add('on');
+    else {
+      g.labels.forEach((t, j) => t && Math.abs(g.xs[j] - x) < g.lw && t.classList.add('off'));
+      g.over.append(sv('text', { class: 'on', x: r1(x), y: g.H - 6, 'text-anchor': 'middle' }, d.x[i]));
+    }
+    let tx = x, ty, alt;
+    if (kind === 'line') {
+      g.under.append(sv('line', { class: 'xh', x1: Math.round(x) + .5, x2: Math.round(x) + .5, y1: g.top - 4, y2: g.base }));
+      for (const s of g.vis) g.over.append(sv('circle', { class: 'hdot ' + s.tone, cx: r1(x), cy: r1(g.yOf(s.vals[i] || 0)), r: 4 }));
+      ty = Math.min(g.base, ...g.vis.map(s => g.yOf(s.vals[i] || 0))) + 8;
+    } else {
+      const bw = Math.min(g.slot - 6, g.gw + 44);
+      g.under.append(sv('rect', { class: 'band', x: r1(x - bw / 2), y: 4, width: r1(bw), height: g.base - 4, rx: 8 }));
+      g.groups.forEach((gr, j) => gr.classList.toggle('dim', j !== i));
+      tx = x + bw / 2 - 10; ty = Math.min(g.base, ...g.vis.map(s => g.yOf(s.vals[i] || 0))) + 2; alt = { x: x - bw / 2 - 4 };
+    }
+    const rows = g.vis.map(s => ({ tone: s.tone, label: s.label, value: chU(chFmt(s.vals[i] || 0, s.dec), d.unit) }));
+    if (kind === 'bar' && g.vis.length > 1) rows.push({ t: true, label: 'Total', value: chU(chFmt(g.vis.reduce((a, s) => a + (s.vals[i] || 0), 0), Math.max(...g.vis.map(s => s.dec))), d.unit) });
+    tip.show(d.x[i], rows, tx, ty, alt);
+  }
+  const at = e => {
+    if (!g) return -1;
+    const px = e.clientX - svg.getBoundingClientRect().left;
+    if (px < g.L - 6) return -1;
+    const i = kind === 'line' ? Math.round((px - g.x0) / ((g.x1 - g.x0) / Math.max(1, n - 1))) : Math.floor((px - g.L) / g.slot);
+    return Math.max(0, Math.min(n - 1, i));
+  };
+  const nav = chNav(plot, () => n, at, show);
+  if ('ResizeObserver' in window) new ResizeObserver(() => draw()).observe(plot); else requestAnimationFrame(() => draw());
+  return plot;
+}
+// stat cards: HorizonUI's Stat, a value, its unit, the change in a pill (green when it went the good way, red when not)
+// and a sparkline whose points show in a tooltip
+function chStats(d) {
+  const grid = h('div', { class: 'bp-ch-sg' + (d.stats.length === 1 ? ' one' : ''), style: `--n:${d.stats.length}` });
+  d.stats.forEach((st, si) => {
+    const unit = typeof st.unit === 'string' ? st.unit : '', delta = st.delta == null ? '' : String(st.delta).trim();
+    const trend = ['up', 'down', 'flat'].includes(st.trend) ? st.trend : /^\+/.test(delta) ? 'up' : /^[-−–]/.test(delta) ? 'down' : 'flat';
+    const mood = trend === 'flat' ? 'flat' : trend === (st.good === 'down' ? 'down' : 'up') ? 'ok' : 'bad';
+    const shown = trend === 'flat' ? delta : delta.replace(/^[+\-−–]\s*/, ''), label = String(st.label ?? '');
+    const card = h('div', { class: 'bp-ch-st', 'data-stat': si }, h('div', { class: 'bp-ch-sl', title: label }, label),
+      h('div', { class: 'bp-ch-sv' }, h('b', {}, chFmt(st.value)), unit && h('u', {}, unit),
+        delta && h('span', { class: 'bp-ch-dp ' + mood, title: `${{ up: 'Up', down: 'Down', flat: 'Change' }[trend]}: ${shown}` },
+          trend !== 'flat' && sv('svg', { viewBox: '0 0 24 24', 'aria-hidden': 'true', class: trend }, sv('path', { d: 'M12 19V5M5 12l7-7 7 7' })), shown)));
+    const sp = (Array.isArray(st.spark) ? st.spark : []).map(chNum);
+    if (sp.length >= 2) {
+      const lo = Math.min(...sp), hi = Math.max(...sp), m = sp.length - 1, X = i => 3 + 154 * i / m, Y = v => hi === lo ? 16 : 29 - 26 * (v - lo) / (hi - lo);
+      const line = sp.map((v, i) => `${r1(X(i))} ${r1(Y(v))}`).join(' L'), id = 'bdch' + ++chSeq, hov = sv('g', {}), dec = chDec(sp);
+      const wrap = h('div', { class: 'bp-ch-spw', tabindex: '0', role: 'group', 'aria-label': `${label}: arrow keys step through the trend` },
+        sv('svg', { class: 'bp-ch-sp ' + (mood === 'bad' ? 'ch-danger' : 'ch-success'), viewBox: '0 0 160 32', preserveAspectRatio: 'none', 'aria-hidden': 'true' },
+          sv('defs', {}, sv('linearGradient', { id, x1: 0, y1: 0, x2: 0, y2: 1 }, sv('stop', { offset: 0, 'stop-color': 'currentColor', 'stop-opacity': .28 }), sv('stop', { offset: 1, 'stop-color': 'currentColor', 'stop-opacity': 0 }))),
+          sv('path', { d: `M${line} L157 32 L3 32 Z`, fill: `url(#${id})` }), sv('path', { class: 'sl', d: 'M' + line }),
+          sv('path', { class: 'end', d: `M${r1(X(m))} ${r1(Y(sp[m]))}h0` }), hov));
+      const tip = chTip(grid), tone = mood === 'bad' ? 'ch-danger' : 'ch-success';
+      const show = i => {
+        hov.replaceChildren();
+        if (i < 0) { tip.hide(); return; }
+        const x = r1(X(i)), y = r1(Y(sp[i]));
+        hov.append(sv('path', { class: 'xh', d: `M${x} -6V32` }), sv('path', { class: 'hr', d: `M${x} ${y}h0` }), sv('path', { class: 'hd', d: `M${x} ${y}h0` }));
+        tip.show(d.x.length === sp.length ? d.x[i] : '', [{ tone, label, value: chU(chFmt(sp[i], dec), unit) }], card.offsetLeft + wrap.offsetLeft + X(i) / 160 * wrap.clientWidth, card.offsetTop + wrap.offsetTop - 8);
+      };
+      chNav(wrap, () => sp.length, e => { const r = wrap.getBoundingClientRect(); return r.width ? Math.max(0, Math.min(m, Math.round(((e.clientX - r.left) / r.width * 160 - 3) / 154 * m))) : -1; }, show);
+      card.append(wrap);
+    }
+    grid.append(card);
+  });
+  return grid;
+}
+// ranked bars: one row per item, biggest first, its value at the bar's end; the hovered row lit with its share
+function chRanked(b, d) {
+  const rows = d.items.slice().sort((a, c) => c.v - a.v || a.i - c.i), max = Math.max(0, ...rows.map(r => r.v)) || 1, total = rows.reduce((a, r) => a + r.v, 0);
+  const lw = Math.min(200, Math.max(64, Math.ceil(Math.max(0, ...rows.map(r => r.label.length)) * 7.6 + 4)));
+  const plot = chPlot(b.title, 'bp-ch-hb'), tip = chTip(plot);
+  plot.style.setProperty('--lw', lw + 'px');
+  const els = rows.map((r, j) => h('div', { class: 'bp-ch-eb ' + chTone(r.tone, 0, ['accent']), 'data-item': j },
+    h('span', { title: r.label }, r.label), h('i', { style: `--w:${r1(r.v / max * 100)}%` }, chU(chFmt(r.v), d.unit))));
+  plot.append(...els);
+  chNav(plot, () => rows.length, e => { const el = e.target.closest('.bp-ch-eb'); return el ? +el.dataset.item : -1; }, j => {
+    els.forEach((el, k) => { el.classList.toggle('on', k === j); el.classList.toggle('dim', j >= 0 && k !== j); });
+    if (j < 0) { tip.hide(); return; }
+    const el = els[j], bar = el.querySelector('i'), r = rows[j], end = bar.offsetLeft + bar.offsetWidth * r.v / max * .82 + 16 + chU(chFmt(r.v), d.unit).length * 7.5;
+    tip.show(r.label, [{ tone: chTone(r.tone, 0, ['accent']), label: 'Count', value: chCount(r.v, d.unit) }, { t: true, label: 'Share', value: chPct(r.v, total) }],
+      end, el.offsetTop - 6, { x: Math.min(plot.clientWidth, end + 8), y: el.offsetTop + el.offsetHeight + 2 });
+  });
+  return plot;
+}
+// donut: HorizonUI's ProgressRing look, parts biggest first round the ring from the top, the total in the middle; its
+// legend (two columns, each part's count and share) hides and shows a part, and the shares follow
+function chDonut(b, d, aside) {
+  const parts = d.items.slice().sort((a, c) => c.v - a.v || a.i - c.i).map((p, j) => ({ ...p, tone: chTone(p.tone, j, CH_PARTS) }));
+  const off = new Set(), R = 79, C = 2 * Math.PI * R, ring = sv('svg', { viewBox: '0 0 184 184', 'aria-hidden': 'true' });
+  const tb = h('b'), wrap = h('div', { class: 'bp-ch-ring' }, ring, h('div', { class: 'c' }, tb, h('span', {}, d.unit || 'total')));
+  const legend = h('div', { class: 'bp-ch-dl', style: `--rows:${Math.ceil(parts.length / 2)}` });
+  const plot = chPlot(b.title, 'bp-ch-dn'), tip = chTip(plot);
+  plot.prepend(wrap, legend);
+  let geo = [], total = 0;
+  function draw() {
+    const vis = parts.filter((p, j) => !off.has(j) && p.v > 0), gap = vis.length > 1 ? 2 : 0;
+    total = vis.reduce((a, p) => a + p.v, 0);
+    let pos = 0;
+    geo = parts.map((p, j) => {
+      if (off.has(j) || !(p.v > 0)) return null;
+      const len = p.v / total * C, c = sv('circle', { class: p.tone, 'data-part': j, cx: 92, cy: 92, r: R, 'stroke-dasharray': `${r1(Math.max(.5, len - gap))} ${r1(C)}`, 'stroke-dashoffset': r1(-pos) });
+      pos += len;
+      return { c, mid: pos - len / 2 };
+    });
+    setKids(ring, vis.length ? geo.map(x => x && x.c) : sv('circle', { class: 'trk', cx: 92, cy: 92, r: R }));
+    const dec = chDec(parts.map(p => p.v));
+    tb.textContent = chFmt(total, dec);
+    if (aside) aside.textContent = d.unit ? `${chFmt(total, dec)} ${d.unit}` : '';
+    setKids(legend, parts.map((p, j) => h('button', { type: 'button', class: 'bp-ch-dli ' + p.tone, 'data-part': j, 'aria-pressed': String(!off.has(j)), title: `Show or hide ${p.label}`,
+      onclick: () => { if (off.has(j)) off.delete(j); else off.add(j); draw(); legend.children[j].focus(); } },
+      h('i'), h('em', {}, p.label), h('span', {}, `${chFmt(p.v, dec)} · ${off.has(j) ? '–' : chPct(p.v, total)}`))));
+    nav.redraw();
+  }
+  const nav = chNav(plot, () => parts.length, e => { const el = e.target.closest('[data-part]'); return el ? +el.dataset.part : -1; }, j => {
+    geo.forEach((x, k) => x && (x.c.classList.toggle('on', k === j), x.c.classList.toggle('dim', j >= 0 && k !== j)));
+    [...legend.children].forEach((el, k) => { el.classList.toggle('on', k === j); el.classList.toggle('dim', j >= 0 && k !== j); });
+    if (j < 0) { tip.hide(); return; }
+    const p = parts[j], s = wrap.clientWidth / 184, a = geo[j] ? geo[j].mid / C * 2 * Math.PI - Math.PI / 2 : 0, row = legend.children[j];
+    const [x, y] = geo[j] ? [wrap.offsetLeft + (92 + Math.cos(a) * R) * s, wrap.offsetTop + (92 + Math.sin(a) * R) * s - 20] : [row.offsetLeft + row.offsetWidth - 24, row.offsetTop];
+    tip.show(p.label, [{ tone: p.tone, label: 'Count', value: chCount(p.v, d.unit) }, { t: true, label: 'Share', value: off.has(j) ? 'hidden' : chPct(p.v, total) }], x, y,
+      { x: x - 10, force: !!geo[j] && Math.cos(a) > 0 });
+  });
+  draw();
+  return plot;
+}
+// progress rows: HorizonUI's ProgressBar per item, `value of max` and the share done (Done in green at the whole,
+// else the item's note in its tone)
+function chProgress(b, d) {
+  const plot = chPlot(b.title, 'bp-ch-pr'), tip = chTip(plot);
+  const rows = d.items.map(it => {
+    const done = it.v >= it.max && it.max > 0, tone = CH_TONES.includes(it.tone) ? 'ch-' + it.tone : done ? 'ch-success' : 'ch-accent';
+    const dec = chDec([it.v, it.max]), unit = it.unit ?? d.unit, pct = it.max > 0 ? Math.min(100, it.v / it.max * 100) : 0;
+    const note = it.note ?? (done ? 'Done' : chPct(it.v, it.max)), mood = it.note != null || done ? { 'ch-success': 'ok', 'ch-warning': 'wn', 'ch-danger': 'bad' }[tone] : '';
+    const of = `${chFmt(it.v, dec)} of ${chFmt(it.max, dec)}${unit ? ' ' + unit : ''}`;
+    return { it, tone, dec, pct, of, el: h('div', { class: 'bp-ch-pb ' + tone, 'data-item': it.i },
+      h('div', { class: 'h' }, h('span', { class: 'l', title: it.label }, it.label), h('span', { class: 'v' }, of, h('s', { class: mood || null }, note))),
+      h('div', { class: 'tr' }, h('i', { style: `--w:${r1(pct)}%` }))) };
+  });
+  plot.append(...rows.map(r => r.el));
+  chNav(plot, () => rows.length, e => { const el = e.target.closest('.bp-ch-pb'); return el ? rows.findIndex(r => r.el === el) : -1; }, j => {
+    rows.forEach((r, k) => { r.el.classList.toggle('on', k === j); r.el.classList.toggle('dim', j >= 0 && k !== j); });
+    if (j < 0) { tip.hide(); return; }
+    const r = rows[j];
+    tip.show(r.it.label, [{ tone: r.tone, label: 'Ready', value: r.of }, { tone: 'ch-muted', label: 'To go', value: chFmt(Math.max(0, r.it.max - r.it.v), r.dec) }, { t: true, label: 'Complete', value: chPct(r.it.v, r.it.max) }],
+      Math.min(plot.clientWidth - 40, r.el.offsetLeft + r.el.offsetWidth * r.pct / 100), r.el.offsetTop + r.el.offsetHeight - 6);
+  });
+  return plot;
+}
+function renderChart(b) {
+  const d = chartData(b), kind = d.kind;
+  if (!CH_KINDS.includes(kind)) return h('div', { class: 'bp-callout risk' }, ic('octagon'), h('span', { class: 'lbl' }, 'Unknown chart'), h('div', {}, `Kind "${kind}" is none of ${CH_KINDS.join(', ')}.`));
+  const sub = typeof b.sub === 'string' && b.sub ? b.sub : null;
+  const aside = h('span', { class: 'u', html: sub ? inline(sub) : null }, sub ? null : d.unit);
+  const head = h('div', { class: 'bp-ch-h' }, h('span', { class: 't', html: inline(b.title || '') }), aside);
+  const body = kind === 'line' || kind === 'bar' ? chXY(b, d, head) : kind === 'stat' ? chStats(d) : kind === 'hbar' ? chRanked(b, d) : kind === 'donut' ? chDonut(b, d, sub ? null : aside) : chProgress(b, d);
+  const t = chartRows(b);
+  return h('figure', { class: 'bp-chart' + (kind === 'stat' ? ' bare' : ''), 'data-kind': kind, 'aria-label': plainText(b.title) || 'Chart' }, head, body,
+    b.caption && h('figcaption', { class: 'bp-ch-cap', html: inline(b.caption) }),
+    h('table', { class: 'bp-sr' }, h('thead', {}, h('tr', {}, t.cols.map(c => h('th', { scope: 'col' }, c)))),
+      h('tbody', {}, t.rows.map(r => h('tr', {}, r.map((c, i) => i ? h('td', {}, c) : h('th', { scope: 'row' }, c)))))));
 }
 // after the whole page is drawn: file chips with no row to go to, and step chips' numbers
 function linkPlanBlocks() {
@@ -8761,6 +9215,7 @@ function docMarkdown(doc) {
     files: (b, head) => join(head(b.title || 'Changed files'), (b.items || []).map(f => `- ${ACTION[f.action] || one(f.action)} ${f.from ? `${path(f.from)} → ` : ''}${path(f.path)}${f.why ? ': ' + one(f.why) : ''}`).join('\n')),
     media: b => join(src(b.src, b.alt), b.caption && one(b.caption)),
     compare: (b, head) => join(head(b.title), side(b.before, 'Before'), side(b.after, 'After')),
+    chart: (b, head) => { const t = chartRows(b), row = r => `| ${r.map(cell).join(' | ')} |`; return join(head(b.title), [row(t.cols), `|${t.cols.map(() => '---').join('|')}|`, ...t.rows.map(row)].join('\n'), b.caption && one(b.caption)); },
     board: (b, head) => {
       const abs = b.artboards || [], title = id => (abs.find(a => a.id === id) || { title: id }).title;
       return join(head(b.title || 'Board'), abs.map(a => item(`- **${one(a.title)}** · ` + [a.device || (a.w && a.h ? `${a.w}×${a.h}` : ''), a.fidelity, a.variantOf && `variant of ${one(title(a.variantOf))}`, a.url]
@@ -12658,6 +13113,7 @@ function blockText(b) {
       s.md, (s.files || []).length && 'Files: ' + s.files.join(', ')].filter(Boolean).join('\n'))].filter(Boolean).join('\n');
     case 'files': return [b.title, ...(b.items || []).map(f => `${(FILE_ACTION[f.action] || FILE_ACTION.edit)[0]} ${f.path}${f.from ? ` (from ${f.from})` : ''}${f.why ? `: ${f.why}` : ''}`)].filter(Boolean).join('\n');
     case 'media': return [b.caption, b.alt, b.src].filter(Boolean).join('\n');
+    case 'chart': { const t = chartRows(b); return [b.title, ...t.rows.map(r => `${r[0]}: ${r.slice(1).filter(Boolean).join(' · ')}`), b.caption].filter(Boolean).join('\n'); }
     case 'compare': { const side = (s, d) => s ? [s.label || d, s.md, s.code, s.src].filter(Boolean).join('\n') : ''; return [b.title, side(b.before, 'Before'), side(b.after, 'After')].filter(Boolean).join('\n\n'); }
     case 'board': return [b.title, ...boardAbs(b).map(a => `- ${a.title || a.id} (${a.device || `${a.w} × ${a.h}`}, ${a.fidelity || ''})`)].filter(Boolean).join('\n');
     case 'listing': return [(b.app || {}).name, (b.platforms || []).join(', '), (b.locales || []).join(', ')].filter(Boolean).join('\n');
@@ -12667,7 +13123,7 @@ function blockText(b) {
 const mediaLabel = b => { const t = plain(b.caption || b.alt).replace(/\s+/g, ' ').trim(); return t.length > 48 ? t.slice(0, 47).trimEnd() + '…' : t || 'Media'; };
 const blockLabel = b => ({ text: 'Text', callout: b.title || `${(b.kind || 'note')[0].toUpperCase()}${(b.kind || 'note').slice(1)} callout`, table: 'Table',
   code: b.title || 'Code', terms: 'Terms', cards: 'Cards', checklist: b.title || 'Checklist', canvas: b.title || 'Drawing', diff: b.title || 'Code change',
-  steps: b.title || 'Steps', files: b.title || 'Files', media: b.type === 'media' ? mediaLabel(b) : '', compare: b.title || 'Compare', board: b.title || 'Board', listing: 'Store listing' }[b.type] || b.type);
+  steps: b.title || 'Steps', files: b.title || 'Files', media: b.type === 'media' ? mediaLabel(b) : '', compare: b.title || 'Compare', chart: b.title || 'Chart', board: b.title || 'Board', listing: 'Store listing' }[b.type] || b.type);
 
 const CHG = [];   // every marked change, in page order once sorted
 const CHG_WORD = { add: 'New', mod: 'Changed', del: 'Removed' };
@@ -12740,6 +13196,7 @@ function compareBlocks(ob, nb, secElm) {
     else if (b.type === 'table') compareTable(o, b, el);
     else if (b.type === 'canvas') el.append(chgBox(compareCanvas(o, b)));
     else if (b.type === 'diff') el.append(chgBox(compareDiff(o, b)));
+    else if (b.type === 'chart') el.append(chgBox(compareChart(o, b)));
     else el.append(chgBox([['Text', wordDiff(blockText(o), blockText(b))]]));
     el.prepend(chgHead('mod', blockLabel(b), summary));
     // a list or table whose rows carry their own marks counts as those rows, not once more
@@ -12867,6 +13324,48 @@ function compareTable(o, n, el) {
     markChg(tr, 'mod', 'Row ' + plain(b[0]));
   }
   if (rows.length) el.append(chgBox(rows));
+}
+// a chart's What changed: its fields, then each series (by id), part or stat card (by label) that is new, removed or
+// changed; a series with the values that moved at their x labels (12, then how many more)
+function compareChart(o, n) {
+  const A = chartData(o), B = chartData(n), u = B.unit;
+  const rows = fieldRows([['Title', o.title, n.title], ['Kind', o.kind, n.kind], ['Unit', o.unit, n.unit], ['Beside the title', o.sub, n.sub],
+    ['Caption', o.caption, n.caption], ['X labels', A.x, B.x], ['Stacked', o.stacked ? 'yes' : 'no', n.stacked ? 'yes' : 'no']]);
+  const num = (v, un = u) => chU(chFmt(v), un);
+  const moved = (a, b, un) => a == null ? INS(num(b, un)) : b == null ? DEL(num(a, un)) : `${DEL(num(a, un))} ${INS(num(b, un))}`;
+  const some = list => (list.length > 12 ? [...list.slice(0, 12), esc(`${list.length - 12} more`)] : list).join(', ');
+  const was = new Map(A.series.map(s => [s.id, s]));
+  for (const s of B.series) {
+    const w = was.get(s.id);
+    was.delete(s.id);
+    if (!w) { rows.push(['New series', `${esc(s.label)}: ${INS(s.vals.map(v => num(v)).join(', '))}`]); continue; }
+    const ch = B.x.map((xl, i) => { const j = A.x.indexOf(xl), a = j < 0 ? null : w.vals[j] ?? null, b = s.vals[i] ?? null; return a === b ? null : `${esc(xl)} ${moved(a, b)}`; }).filter(Boolean);
+    if (w.label !== s.label) ch.unshift(wordDiff(w.label, s.label));
+    if (ch.length) rows.push([s.label, some(ch)]);
+  }
+  for (const w of was.values()) rows.push(['Removed series', `${esc(w.label)}: ${DEL(w.vals.map(v => num(v)).join(', '))}`]);
+  const byLabel = xs => new Map(xs.map(x => [String(x.label ?? ''), x]));
+  const old = byLabel(A.items);
+  for (const it of B.items) {
+    const w = old.get(it.label), un = it.unit ?? u;
+    old.delete(it.label);
+    if (!w) { rows.push(['New', `${esc(it.label)}: ${INS(num(it.v, un))}`]); continue; }
+    const ch = [w.v !== it.v && moved(w.v, it.v, un), w.max !== it.max && `of ${moved(w.max, it.max, un)}`, (w.note ?? '') !== (it.note ?? '') && wordDiff(w.note ?? '', it.note ?? '')].filter(Boolean);
+    if (ch.length) rows.push([it.label, ch.join(', ')]);
+  }
+  for (const w of old.values()) rows.push(['Removed', `${esc(w.label)}: ${DEL(num(w.v, w.unit ?? A.unit))}`]);
+  const cards = byLabel(A.stats);
+  for (const st of B.stats) {
+    const lb = String(st.label ?? ''), w = cards.get(lb);
+    cards.delete(lb);
+    if (!w) { rows.push(['New card', `${esc(lb)}: ${INS(num(st.value, st.unit))}`]); continue; }
+    const ch = [chNum(w.value) !== chNum(st.value) && moved(chNum(w.value), chNum(st.value), st.unit),
+      String(w.delta ?? '') !== String(st.delta ?? '') && `change ${wordDiff(String(w.delta ?? ''), String(st.delta ?? ''))}`, canon(w.spark) !== canon(st.spark) && 'trend line'].filter(Boolean);
+    if (ch.length) rows.push([lb, ch.join(', ')]);
+  }
+  for (const w of cards.values()) rows.push(['Removed card', `${esc(String(w.label ?? ''))}: ${DEL(num(w.value, w.unit))}`]);
+  if (!rows.length) rows.push(['Look', esc('Tones or shading')]);
+  return rows;
 }
 function compareCanvas(o, n) {
   const walk = (scope, pre, nodes, edges, flows) => {

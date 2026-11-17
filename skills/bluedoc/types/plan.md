@@ -10,7 +10,7 @@
 | Section | Holds |
 |---|---|
 | Goal (`tldr`) | What ships, for whom, in how many steps, and how many questions need a pick. |
-| Context | The current state and why it has to change: a canvas of today's system, or short text with `path:line` anchors. |
+| Context | The current state and why it has to change: a canvas of today's system, or short text with `path:line` anchors; a `chart` for the numbers that make the case (latency over time, error share). |
 | Approach | The proposal: a canvas with new parts `state: "proposed"` and removed ones `removed`; a `compare` block for before/after (API response, schema, UI); `media` blocks for mockups or wireframes. |
 | Steps | One `steps` block in implementation order. Each step is one reviewable change: imperative title, `effort` S/M/L, `md` with the detail, the `files` it touches, `refs` to the canvas. |
 | Files | One `files` block: every path the plan adds, edits, deletes, renames or moves, with `why` and the `step` that touches it. |
@@ -62,4 +62,4 @@
       { "id": "email", "label": "Guests, by email link", "md": "An email token flow and a mail template, about 3 more days." } ] } ] }
 ```
 
-Field cards: `build.py schema steps`, `files`, `compare`, `media` (each `build.py schema <block>`).
+Field cards: `build.py schema steps`, `files`, `compare`, `media`, `chart` (each `build.py schema <block>`).

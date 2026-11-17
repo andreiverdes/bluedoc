@@ -7,7 +7,7 @@
 
 ## Layout
 
-Free. Start with a `tldr` that states the answer, then one section per question the reader brings, most urgent first. Pick blocks by the shape of the content: a table for 2+ items sharing 2+ attributes, a checklist for anything to do, decision items for anything to choose, `cards` for options side by side, callouts for risk.
+Free. Start with a `tldr` that states the answer, then one section per question the reader brings, most urgent first. Pick blocks by the shape of the content: a table for 2+ items sharing 2+ attributes, a `chart` for numbers over time, shares of a whole, rankings, progress or headline stats (`build.py schema chart`; never a drawn image), a checklist for anything to do, decision items for anything to choose, `cards` for options side by side, callouts for risk.
 
 ## `hero`
 
