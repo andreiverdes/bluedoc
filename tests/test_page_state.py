@@ -224,11 +224,11 @@ class ChromePage(unittest.TestCase):
                             "(document.querySelector('#bp-toast'))")
 
     def send_changes(self, tab: Tab, says: str) -> None:
-        """Request changes through the dialog; its count line says `says`."""
+        """Request changes through the dialog; what it lists (its sections' names, counts and counts in words) says `says`."""
         tab.ev(f"{GO}.click()")
-        tab.wait_for("(d => !!d && !d.querySelector('.ft .bp-btn:last-child').hidden)(document.querySelector('.bd-chgs[open]'))")
-        self.assertIn(says, tab.ev("document.querySelector('.bd-chgs[open] .cnt').textContent"))
-        tab.ev("document.querySelector('.bd-chgs[open] .ft .bp-btn:last-child').click()")
+        tab.wait_for("(d => !!d && !d.querySelector('.ft .cp').hidden)(document.querySelector('.bd-chgs[open]'))")   # connected: Send
+        self.assertIn(says, tab.ev("[...document.querySelectorAll('.bd-chgs[open] .sd-sh > *')].map(e => e.textContent).join(' · ')"))
+        tab.ev("document.querySelector('.bd-chgs[open] .ft .pri').click()")
         self.toast(tab, "change request sent")
 
     def reply(self, doc: Path, *flags: str) -> str:
@@ -279,17 +279,19 @@ class PageSync(ChromePage):
         key = "document.querySelector('.bd-key.approve')"
         self.assertFalse(a.ev(f"{key}.disabled"), "the key stays on")
         a.ev(f"{key}.click()")
-        a.wait_for("!!document.querySelector('.bd-approve[open] .bp-btn.ok')")
-        self.assertTrue(a.ev("document.querySelector('.bd-approve[open] .bp-btn.ok').disabled"))
-        self.assertIn("You can't approve yet", a.ev("document.querySelector('.bd-approve[open] .bd-ap-sum li.risk').textContent"))
-        # an unanswered question is a button that opens it
-        a.ev("document.querySelector('.bd-approve[open] button.pk.none').click()")
+        a.wait_for("!!document.querySelector('.bd-approve[open] .ft .pri')")
+        self.assertTrue(a.ev("document.querySelector('.bd-approve[open] .ft .pri').disabled"))
+        self.assertIn("3 questions have no answer", a.ev("document.querySelector('.bd-approve[open] .sd-alert').textContent"))
+        self.assertEqual(a.ev("[...document.querySelectorAll('.bd-approve[open] .sd-chip.need')].length"), 3)
+        # an unanswered question is Answer it, a key that opens it
+        self.assertEqual(a.ev("document.querySelector('.bd-approve[open] button.sd-dec.go .sd-chip.need').textContent"), "Answer it")
+        a.ev("document.querySelector('.bd-approve[open] button.sd-dec.go').click()")
         self.assertFalse(a.ev("!!document.querySelector('.bd-approve[open]')"))
         a.ev("BP.acceptRecommended('decisions')")
         a.ev(f"{key}.click()")
-        a.wait_for("!!document.querySelector('.bd-approve[open] .bp-btn.ok')")
-        self.assertFalse(a.ev("document.querySelector('.bd-approve[open] .bp-btn.ok').disabled"))
-        self.assertIsNone(a.ev("document.querySelector('.bd-approve[open] .bd-ap-sum li.risk')"))
+        a.wait_for("!!document.querySelector('.bd-approve[open] .ft .pri')")
+        self.assertFalse(a.ev("document.querySelector('.bd-approve[open] .ft .pri').disabled"))
+        self.assertIsNone(a.ev("document.querySelector('.bd-approve[open] .sd-alert, .bd-approve[open] .sd-dec.go')"))
         self.assertEqual(self.browser.errors, [])
 
     def test_sending_closes_the_answered_questions(self) -> None:
@@ -311,8 +313,8 @@ class PageSync(ChromePage):
         self.assertEqual(r.returncode, 0, r.stderr)
         a.ev("BP.acceptRecommended('decisions')")   # a plan is approved with every question answered
         a.ev("document.querySelector('.bd-key.approve').click()")
-        a.wait_for("!!document.querySelector('.bd-approve[open] .bp-btn.ok')")
-        a.ev("document.querySelector('.bd-approve[open] .bp-btn.ok').click()")
+        a.wait_for("!!document.querySelector('.bd-approve[open] .ft .pri')")
+        a.ev("document.querySelector('.bd-approve[open] .ft .pri').click()")
         self.toast(a, "reload")
         self.assertEqual(a.ev("document.querySelector('#bp-toast button')?.textContent"), "Reload")
         ping = json.loads(self.server.req("GET", f"/__bluedoc/ping?path={quote(url)}", headers={"X-Bluedoc": "1"})[1])
@@ -323,8 +325,8 @@ class PageSync(ChromePage):
         a = self.open(url)
         a.ev("BP.acceptRecommended('decisions')")   # a plan is approved with every question answered
         a.ev("document.querySelector('.bd-key.approve').click()")
-        a.wait_for("!!document.querySelector('.bd-approve[open] .bp-btn.ok')")
-        a.ev("document.querySelector('.bd-approve[open] .bp-btn.ok').click()")
+        a.wait_for("!!document.querySelector('.bd-approve[open] .ft .pri')")
+        a.ev("document.querySelector('.bd-approve[open] .ft .pri').click()")
         self.toast(a, "approved")
         chip = "[document.querySelector('.bd-planchip').textContent, document.querySelector('.bd-key.approve').disabled, BP.planState().state]"
         self.assertEqual(a.ev(chip), ["Approved · rev 1", True, "approved"])
@@ -394,7 +396,7 @@ class ItemRequests(ChromePage):
         self.assertEqual(self.count(a), [True, "0"])
         a.ev("BP.setNote('decisions/retention', 'Say what 180 days costs in storage.')")
         self.assertEqual(self.count(a), [False, "1"])
-        self.send_changes(a, "1 comment on items")
+        self.send_changes(a, "Comments · 1")
         self.assertEqual(self.count(a), [True, "0"])
         decisions = self.reply(self.plan).split("## Decisions", 1)[1]
         self.assertIn("`item:decisions/retention`", decisions)
@@ -417,7 +419,7 @@ class ItemRequests(ChromePage):
         self.assertTrue(a.ev(approve), "Approve stays enabled while an item asks for more")
         self.assertEqual(a.ev(f"[{row}.classList.contains('more'), {more}.querySelector('.ac-tmm').getAttribute('aria-checked'),"
                               f" document.activeElement === {more}.querySelector('textarea')]"), [True, "true", True])
-        self.send_changes(a, "1 question asking for more")
+        self.send_changes(a, "1 Tell me more")
         self.assertIn("`item:decisions/prices` → **Tell me more**", self.reply(self.plan))
         answers = json.loads(self.reply(self.plan, "--json"))["answers"]
         self.assertEqual([(x["item"], x["choice"]) for x in answers if x.get("more")], [("prices", None)], "Tell me more kept the pick")
@@ -428,7 +430,7 @@ class ItemRequests(ChromePage):
         self.assertTrue(a.ev("BP.moreDetails('decisions/prices', false)"))
         self.assertFalse(a.ev(approve), "withdrawing the request left Approve disabled")
         a.ev(f"{more}.querySelector('.ac-tmm').click()")
-        self.send_changes(a, "1 question asking for more")
+        self.send_changes(a, "1 Tell me more")
         # the agent answers with a new rev: the pill is back to off
         self.assertTrue(until(lambda: self.state(url).get("decisions:prices:more", "").startswith("sent@")))
         r = self.tmp.run("build.py", "patch", self.plan, "item:decisions/prices", "--set", "detail=Acme shows the saved price and the current one.")
@@ -449,7 +451,7 @@ class ItemRequests(ChromePage):
         self.assertEqual([(x["item"], x.get("more")) for x in p["answers"]], [("tier-boundary", True), ("float-cents", None)])
         self.assertIn("`item:t412/tier-boundary` → **Tell me more**", p["markdown"])
         self.assertIn("  > Fine as a ticket.", p["markdown"])
-        self.send_changes(a, "1 comment on findings, 1 question asking for more")
+        self.send_changes(a, "Comments · 1 · Picks · 1 · 1 Tell me more")
         self.assertIn("→ **Tell me more**", self.reply(self.docs / "acme-review-findings.bluedoc.json"))
         self.assertEqual(self.count(a), [True, "0"])
 
@@ -916,7 +918,7 @@ class BoardDrafts(ChromePage):
             other.close()
             shutil.rmtree(profile, ignore_errors=True)
         # Request changes: one `layout:main` item with the command that writes it
-        self.send_changes(a, "1 pending comment")
+        self.send_changes(a, "Comments · 1")
         md = self.reply(self.doc)
         self.assertIn(f"- ({drafts[0]['id']}) `layout:main` Move 1 screen: ", md)
         self.assertIn(f"build.py patch {FIT} layout:main --json '{json.dumps({'login': now}, separators=(',', ':'))}'", md)

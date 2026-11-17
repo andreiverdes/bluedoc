@@ -93,7 +93,7 @@ class GeneralComments(ChromePage):
         a.wait_for("BP.annotations().length === 3")
         self.assertEqual(a.ev(f"[{CP}.querySelectorAll('.bp-file').length, BP.annotations().at(-1).files.map(f => f.name)]"), [0, ["cart.png"]])
         # sent with Request changes: Open; the agent's reply shows in its card
-        self.send_changes(a, "3 pending comments")
+        self.send_changes(a, "Comments · 3")
         self.assertEqual(self.counts(a), {"pending": 0, "open": 3, "resolved": 0, "all": 3})
         until(lambda: '"open"' in (self.state(url).get(f"__ann:{gid}") or ""))
         r = self.tmp.run("build.py", "patch", self.plan, f"ann:{gid}", "--reply", "Done: steps 2 and 3 are one now.")

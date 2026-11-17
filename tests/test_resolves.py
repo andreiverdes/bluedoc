@@ -99,7 +99,7 @@ class ResolvesOnThePage(unittest.TestCase):
         pin = t.ev("BP.annotate({type: 'pin', key: 'tldr', note: 'Acme: say where saved carts live.'}).id")
         gen = t.ev("BP.annotate({type: 'general', note: 'Acme: shorter steps.'}).id")
         # Request changes → Send
-        send = "[...document.querySelectorAll('.bd-chgs[open] .bp-btn.primary')].find(b => b.textContent.trim() === 'Send' && !b.hidden && !b.disabled)"
+        send = "[...document.querySelectorAll('.bd-chgs[open] .ft .pri')].find(b => b.textContent.trim() === 'Send' && !b.disabled)"
         t.ev("document.querySelector('.bd-anntb .bd-key.go').click()")
         t.wait_for(f"!!{send}")
         t.ev(f"{send}.click()")

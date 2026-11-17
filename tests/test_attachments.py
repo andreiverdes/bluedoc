@@ -131,7 +131,7 @@ class AttachPage(ChromePage):
         a.ev(f"{save}.click()")
         self.assertTrue(until(lambda: self.folder() == ["cart.png"]), self.folder())
         # sent: the message carries the file, the box is empty, the reply lists its full path
-        self.send_changes(a, "1 comment on items")
+        self.send_changes(a, "Comments · 1")
         msg = self.thread_files(a)
         self.assertEqual([f["name"] for f in msg], ["cart.png"])
         self.assertEqual(self.chips(a, box), [])

@@ -260,8 +260,8 @@ class StaleOnThePage(ChromePage):
         tab.ev("document.querySelector('.bd-key.approve').click()")
         tab.wait_for("!!document.querySelector('dialog.bd-approve[open]')")
         self.assertIn("1 check has stale evidence: the code changed since it ran",
-                      tab.ev("document.querySelector('dialog.bd-approve[open] .bd-ap-sum').textContent"))
-        self.assertFalse(tab.ev("document.querySelector('dialog.bd-approve[open] .ft .bp-btn.ok').disabled"))
+                      tab.ev("document.querySelector('dialog.bd-approve[open] .sd-alert').textContent"))
+        self.assertFalse(tab.ev("document.querySelector('dialog.bd-approve[open] .ft .pri').disabled"))
         approval = tab.ev("BP.approvePayload('').markdown")
         self.assertIn("## Stale evidence\n\n1 check has stale evidence", approval)
         self.assertIn("build.py patch acme-saved-carts-plan.bluedoc.json item:checks/unit --pin", approval)

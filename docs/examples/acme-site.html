@@ -433,34 +433,83 @@ html.bd-lp-open:not(.bd-lp-dock) .bp-side { background: var(--surface); box-shad
 .bd-split > .bp-btn:not([hidden]) ~ .bp-btn:hover:not(:disabled) { background: var(--groove) left center / 2px 60% no-repeat, linear-gradient(var(--hover), var(--hover)); }
 .bd-split > .bp-btn:active:not(:disabled) { background: var(--hk-down); box-shadow: var(--shadow-hk-down); }
 .bd-split > .bp-btn:focus-visible { box-shadow: inset 0 0 0 2px var(--focus); }
-/* send to agent: dialog (Send answers and a review's send key, Request changes, Approve) */
-.bd-send { width: min(560px, calc(100vw - 32px)); max-height: calc(100vh - 64px); padding: 0; border: 0; border-radius: 16px; background: var(--surface); color: var(--fg); box-shadow: var(--shadow-3); }
+/* the send dialog (sendDialog: Approve, Request changes, Send answers and a review's send key). Its title and rev, a
+   sentence on what the agent does, what goes (the decisions as the answer card's chips, the comments as the
+   conversation's timeline, Post as), the note (the one-line field), then Copy and the primary key, the toolbar's pills */
+.bd-send { width: min(560px, calc(100vw - 32px)); max-height: calc(100dvh - 64px); padding: 0; border: 0; border-radius: 16px; background: var(--surface); color: var(--fg); box-shadow: var(--shadow-3); cursor: default; }
+.bd-send[open] { display: flex; flex-direction: column; }
 .bd-send::backdrop { background: oklch(15% 0.01 264 / .36); }
-.bd-send > * { margin: 0 20px; }
-.bd-send .hd { display: flex; align-items: center; gap: 10px; margin: 0; padding: 16px 14px 4px 20px; }
-.bd-send .hd h3 { flex: 1; margin: 0; font-size: 16px; font-weight: 600; }
-.bd-send .sum { margin-top: 2px; margin-bottom: 12px; font-size: 13.5px; color: var(--fg-muted); }
-/* a review of someone else's PR: Post as, the GitHub review event, above the message */
-.bd-send .bd-postas { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; font-size: 13px; font-weight: 500; color: var(--fg-muted); }
-.bd-send .bd-postas .bd-sg { flex: 1; }
-/* several PRs: a row each, its title then its own Post as */
-.bd-send .bd-postas.many { display: grid; gap: 8px; }
-.bd-send .bd-postas.many .r { display: flex; align-items: center; gap: 12px; min-width: 0; }
-.bd-send .bd-postas.many .t { flex: 0 1 42%; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg); font-weight: 600; }
-.bd-send textarea { display: block; box-sizing: border-box; width: calc(100% - 40px); min-height: 84px; }
-/* a dialog's message to the agent and its files: Attach under the field, the chips between */
-.bd-send .bd-msgf textarea { width: 100%; }
-.bd-send .bd-msgf > .bp-files-w { margin-top: 8px; }
-.bd-send .bd-msgf > .ft { justify-content: flex-start; padding: 6px 0 0; }
-.bd-send .bd-msgf > .ft .bp-btn { height: 28px; padding: 0 8px; font-size: 12.5px; }
-.bd-send details { margin-top: 10px; }
-.bd-send summary { cursor: pointer; font-size: 13px; font-weight: 500; color: var(--accent-fg); width: max-content; }
-.bd-send pre { margin: 8px 0 0; max-height: 220px; overflow: auto; padding: 10px 12px; border-radius: 10px; background: var(--inset); font: 12px/1.55 var(--mono); white-space: pre-wrap; }
-.bd-send .how { margin-top: 12px; font-size: 12.5px; color: var(--fg-subtle); }
-.bd-send .ft { display: flex; justify-content: flex-end; gap: 8px; margin: 0; padding: 14px 20px 18px; }
-.bd-send .ft .bp-btn { height: 38px; padding: 0 18px 0 16px; gap: 8px; font-size: 13px; }
-.bd-send .ft .bp-btn .bd-ic { width: 16px; height: 16px; }
-.bd-send .ft .bp-btn[hidden] { display: none; }
+.bd-send .hd { flex: none; display: flex; align-items: center; gap: 8px; padding: 16px 12px 2px 20px; }
+.bd-send .hd h3 { min-width: 0; margin: 0; font-size: 16px; font-weight: 600; }
+.bd-send .hd .rev { flex: none; height: 20px; padding: 0 8px; border-radius: 999px; font: 600 11.5px/20px var(--sans); color: var(--fg-muted); background: var(--inset); white-space: nowrap; }
+.bd-send .hd .x { --k: 32px; margin-left: auto; }
+.bd-send .intro { flex: none; margin: 2px 20px 14px; font-size: 13.5px; line-height: 1.5; color: var(--fg-muted); }
+/* what goes: its sections scroll together when the window is short; each box scrolls after about six rows */
+.sd-body { flex: 0 1 auto; min-height: 0; overflow: auto; }
+.sd-body:empty { display: none; }
+.sd-sec { margin: 0 20px 14px; }
+.sd-sh { display: flex; align-items: baseline; gap: 8px; margin: 0 0 6px; }
+.sd-sh h4 { margin: 0; font: 600 11px/1.4 var(--sans); letter-spacing: .07em; text-transform: uppercase; color: var(--fg-subtle); white-space: nowrap; }
+.sd-sh .c { margin-left: auto; font-size: 12px; color: var(--fg-subtle); text-align: right; }
+.sd-box { max-height: 246px; overflow: hidden auto; border-radius: 10px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); }
+/* a decision: the question, then its answer as the answer card's chip */
+.sd-dec { display: flex; align-items: flex-start; gap: 12px; width: 100%; box-sizing: border-box; margin: 0; padding: 9px 12px; border: 0; border-top: 1px solid var(--line); background: none; font: inherit; color: inherit; text-align: left; }
+.sd-dec:first-child { border-top: 0; }
+.sd-dec .q { flex: 1; min-width: 0; font-size: 13.5px; line-height: 20px; overflow-wrap: anywhere; }
+.sd-dec .q small { display: block; font-size: 12px; line-height: 17px; color: var(--fg-subtle); }
+.sd-dec.go { cursor: pointer; }
+.sd-dec.go:hover { background: var(--hover); }
+.sd-dec.go:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--focus); }
+.sd-chip { flex: none; display: inline-flex; align-items: center; gap: 4px; max-width: 46%; height: 22px; margin-top: -1px; padding: 0 9px 0 7px; border-radius: 999px; box-sizing: border-box;
+  font: 600 12px/22px var(--sans); white-space: nowrap; color: var(--ok-fg); background: var(--ok-tint); }
+.sd-chip > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.sd-chip .bd-ic { flex: none; width: 13px; height: 13px; stroke-width: 2.4; }
+.sd-chip.rec { color: var(--fg-muted); background: var(--inset); }
+.sd-chip.rec .bd-ic { color: var(--warn-fg); stroke-width: 2; }
+.sd-chip:is(.ask, .need) { color: var(--warn-fg); background: var(--warn-tint); }
+.sd-chip.need { padding: 0 5px 0 9px; }
+/* the comments that go, as the conversation draws them: a timeline, each with what it is on */
+.sd-cm { padding: 10px 12px 12px; }
+.sd-cm .bp-msg { padding-bottom: 12px; }
+.sd-cm .bp-msg:last-child { padding-bottom: 0; }
+.sd-cm .bp-msg .mh { font-size: 13px; }
+.sd-cm .bp-msg .mb { font-size: 13.5px; }
+.sd-cm .bp-msg .mb p { margin: 0; }
+.sd-cm .ac-on { max-width: 100%; box-sizing: border-box; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; }
+.sd-cm .bp-msg:not(:last-child)::before { content: ""; position: absolute; left: 7px; top: 22px; bottom: 2px; width: 2px; border-radius: 1px; background: var(--line); }
+/* a review of someone else's PR: Post as, the GitHub review event; several PRs: a row each, its title then its own */
+.bd-postas { display: flex; align-items: center; gap: 12px; font-size: 13px; font-weight: 500; color: var(--fg-muted); }
+.bd-postas .bd-sg { flex: 1; }
+.bd-postas.many { display: grid; gap: 8px; }
+.bd-postas.many .r { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.bd-postas.many .t { flex: 0 1 42%; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg); font-weight: 600; }
+/* a line that needs the reader (a plan held for an answer, stale evidence) */
+.sd-alert { display: flex; gap: 8px; align-items: flex-start; margin: 0 20px 14px; font-size: 13px; line-height: 1.45; color: var(--warn-fg); }
+.sd-alert .bd-ic { flex: none; width: 15px; height: 15px; margin-top: 1px; }
+/* the note: the answer card's one-line field, Attach inline, no send key of its own; its files a row above the text */
+.sd-note { flex: none; margin: 0 20px; }
+.sd-note .ac-line { padding-left: 14px; }
+.sd-note .ac-line.files { flex-wrap: wrap; row-gap: 6px; padding-top: 6px; }
+.sd-note .ac-line > .bp-files-w { flex: 0 0 100%; margin-left: -8px; }
+.sd-note .ac-line.files .ac-line-ta { flex: 1 1 200px; }
+.sd-note .bp-file { border-radius: 999px; background: var(--inset); }
+.sd-note .bp-file .nm { height: 24px; border-radius: 999px; }
+.sd-note .bp-file .x { border-radius: 50%; }
+.sd-note .hint { margin: 6px 2px 0; font-size: 12px; color: var(--fg-subtle); }
+.sd-note .hint kbd { margin: 0 1px; }
+/* the footer: Copy (grey) at the left, the primary key (green Approve, blue Send) at the right; held, the toolbar's
+   disabled pill */
+.bd-send .ft { flex: none; display: flex; align-items: center; gap: 8px; padding: 14px 16px 16px 20px; }
+.bd-send .ft .sp { flex: 1; }
+.bd-send .ft .bd-key[hidden] { display: none; }
+.bd-send .ft .bd-key.pri:disabled { cursor: default; filter: none; opacity: 1; color: var(--fg-subtle); background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: var(--shadow-hk); }
+@media (max-width: 600px) {
+  .bd-send .ft .bd-key.txt .t { display: inline; }
+  .bd-send .ft .bd-key.txt { padding: 0 16px 0 14px; }
+  .sd-dec { flex-direction: column; gap: 4px; }
+  .sd-chip { max-width: 100%; }
+}
+@media (max-width: 600px), (hover: none) { .sd-note .hint { display: none; } }
 /* the app bar's Share key (openShare): the share sheet, HorizonUI's ticket (design share-account, sheet D). No dialog box:
    the ticket floats over the dimmed page, its two halves a card each, notched where they meet at a dashed tear line.
    The top half: eyebrow, state badge and close; the doc's emoji tile, title, project · remote; Share as and what goes
@@ -768,7 +817,7 @@ td.bd-cell-mod { background: color-mix(in oklch, var(--warn-tint) 70%, transpare
 .bp-file .x:hover { background: var(--hover); color: var(--fg); }
 .bp-file .x .bd-ic { width: 13px; height: 13px; }
 .bp-files-up { font-size: 12px; color: var(--fg-subtle); }
-:is(.bp-note .f, .bd-cmp, .bd-gc .cp, .bd-msgf, .bd-cs-c .rp, .bd-cs-c .ed).drop { outline: 2px dashed var(--accent); outline-offset: 2px; }
+:is(.bp-note .f, .bd-cmp, .bd-gc .cp, .bd-cs-c .rp, .bd-cs-c .ed).drop { outline: 2px dashed var(--accent); outline-offset: 2px; }
 .bp-msg .mf { grid-column: 2; margin-top: 6px; }
 .bp-cl-body > .bp-note { margin-top: 16px; }
 /* a decision's box stays under its options when the row is closed (a click in it opens the row) */
@@ -1039,6 +1088,7 @@ td.bd-cell-mod { background: color-mix(in oklch, var(--warn-tint) 70%, transpare
 .ac-line-ta { flex: 1; min-width: 0; min-height: 20px; margin: 0 0 5px; padding: 0; border: 0; outline: none; resize: none; field-sizing: content; max-height: 160px;
   font: 13.5px/20px var(--sans); color: var(--fg); background: none; }
 .ac-line-ta::placeholder { color: var(--fg-subtle); }
+.ac-line-ta:focus-visible { box-shadow: none; }   /* the line draws the focus ring */
 .ac-att { flex: none; display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 50%; color: var(--fg-subtle); background: none; cursor: pointer; }
 .ac-att:hover:not(:disabled) { color: var(--fg); background: var(--hover); }
 .ac-att:disabled { opacity: .4; cursor: default; }
@@ -1505,20 +1555,21 @@ html.bd-tray-on .bp-toast { bottom: 84px; }
 .bd-revtb .bd-twinsg button { height: calc(var(--k, 38px) - 6px); padding: 0 14px; border-radius: 999px; font-size: 13px; }
 .bd-revtb .bd-twinsg .bd-ic { width: 16px; height: 16px; }
 .bd-key.txt { display: inline-flex; align-items: center; width: auto; gap: 8px; padding: 0 16px 0 14px; font-size: 13px; font-weight: 600; white-space: nowrap; }
-.bd-key.txt:not(.go, .approve, .present, .send.has) { color: var(--fg); background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: var(--shadow-hk); }
-.bd-key.txt:not(.go, .approve, .present, .send.has):hover { background: linear-gradient(var(--hover), var(--hover)), linear-gradient(180deg, var(--hk-top), var(--hk-bot)); }
-.bd-key.txt:not(.go, .approve, .present, .send.has):active:not(:disabled) { background: var(--hk-down); box-shadow: var(--shadow-hk-down); }
-.bd-key.txt:not(.go, .approve, .present, .send.has):focus-visible { box-shadow: var(--shadow-hk), var(--focus-ring); }
+.bd-key.txt:not(.go, .ok, .approve, .present, .send.has) { color: var(--fg); background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: var(--shadow-hk); }
+.bd-key.txt:not(.go, .ok, .approve, .present, .send.has):hover { background: linear-gradient(var(--hover), var(--hover)), linear-gradient(180deg, var(--hk-top), var(--hk-bot)); }
+.bd-key.txt:not(.go, .ok, .approve, .present, .send.has):active:not(:disabled) { background: var(--hk-down); box-shadow: var(--shadow-hk-down); }
+.bd-key.txt:not(.go, .ok, .approve, .present, .send.has):focus-visible { box-shadow: var(--shadow-hk), var(--focus-ring); }
 .bd-key.txt .bd-ic { width: 16px; height: 16px; }
 .bd-key.go.txt { padding: 0 16px; }
 .bd-key:disabled:not(.go) { opacity: .45; cursor: default; }
 @media (max-width: 600px) { .bd-revtb .lbl { padding: 0 2px 0 4px; } .bd-revtb .lbl .x, .bd-revtb .lbl .bd-ic, .bd-key.txt:not(.go) .t { display: none; } .bd-key.txt:not(.go) { padding: 0 10px; } .bd-key.go.txt { padding: 0 12px; } }
 /* the tray's last key: Approve (green fill; once approved a settled green), a presentation's Present (green fill) or the
-   send key (green fill, with its count of picks, ticks and comments not sent yet, when there is something to send) */
-.bd-key:is(.approve, .send.has, .present) { color: #fff; background: var(--ok-solid) linear-gradient(180deg, color-mix(in oklch, var(--ok-solid), white 9%), var(--ok-solid)); box-shadow: var(--shadow-fill); }
-.bd-key:is(.approve, .send.has, .present):hover { color: #fff; filter: brightness(.95); background: var(--ok-solid) linear-gradient(180deg, color-mix(in oklch, var(--ok-solid), white 9%), var(--ok-solid)); }
-.bd-key:is(.approve, .send.has, .present):active:not(:disabled) { filter: brightness(.9); box-shadow: var(--shadow-fill); background: var(--ok-solid); }
-.bd-key:is(.approve, .send.has, .present):focus-visible { box-shadow: var(--shadow-fill), var(--focus-ring); }
+   send key (green fill, with its count of picks, ticks and comments not sent yet, when there is something to send); the
+   approve dialog's primary key (.ok) */
+.bd-key:is(.approve, .ok, .send.has, .present) { color: #fff; background: var(--ok-solid) linear-gradient(180deg, color-mix(in oklch, var(--ok-solid), white 9%), var(--ok-solid)); box-shadow: var(--shadow-fill); }
+.bd-key:is(.approve, .ok, .send.has, .present):hover { color: #fff; filter: brightness(.95); background: var(--ok-solid) linear-gradient(180deg, color-mix(in oklch, var(--ok-solid), white 9%), var(--ok-solid)); }
+.bd-key:is(.approve, .ok, .send.has, .present):active:not(:disabled) { filter: brightness(.9); box-shadow: var(--shadow-fill); background: var(--ok-solid); }
+.bd-key:is(.approve, .ok, .send.has, .present):focus-visible { box-shadow: var(--shadow-fill), var(--focus-ring); }
 .bd-key.approve.done:disabled { opacity: 1; cursor: default; filter: none; transform: none; color: var(--ok-fg); background: var(--ok-tint); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--ok) 38%, transparent); }
 .bd-key.approve .bd-ic { stroke-width: 2.1; }
 .bd-key.send.has { padding-right: calc(var(--k, 38px) * .2); }
@@ -1945,44 +1996,6 @@ html[data-v-cmt] .bd-cs-c:is(.on, .edit) { box-shadow: 0 0 0 1.5px var(--accent)
   html.bd-sp-open .bd-shell { padding-bottom: calc(var(--sp-sheet-h) + 90px); }
 }
 
-/* Request changes dialog: count, preview, Copy and Send */
-.bd-chgs[open] { display: flex; flex-direction: column; }
-.bd-chgs[open] > * { flex: none; }
-.bd-chgs .cnt { margin-top: -4px; margin-bottom: 12px; font-size: 13.5px; }
-.bd-chgs .cnt .old { color: var(--warn-fg); }
-.bd-chgs details { margin-top: 10px; min-height: 0; }
-.bd-chgs details[open] { flex: 0 1 auto; display: flex; flex-direction: column; }
-.bd-chgs pre { max-height: 260px; }
-.bd-chgs .ft .sp { flex: 1; }
-.bd-chgs .ft .bp-btn:disabled { opacity: .5; cursor: default; }
-/* Approve dialog: note, what goes with it, the decisions, Copy and Approve */
-.bd-approve[open] { display: flex; flex-direction: column; }
-.bd-approve[open] > * { flex: none; }
-.bd-ap-sum { list-style: none; padding: 0; margin-top: 12px; display: grid; gap: 6px; font-size: 13.5px; color: var(--fg-muted); }
-.bd-ap-sum[hidden] { display: none; }
-.bd-ap-sum li { display: flex; gap: 8px; align-items: flex-start; line-height: 1.45; }
-.bd-ap-sum .bd-ic { width: 15px; height: 15px; margin-top: 1px; color: var(--fg-subtle); }
-.bd-ap-sum li.warn .bd-ic { color: var(--warn); }
-/* a plan with a question unanswered: Approve is held and this says why */
-.bd-ap-sum li.risk { color: var(--risk-fg); } .bd-ap-sum li.risk .bd-ic { color: var(--risk); }
-.bd-ap-dec { margin-top: 14px; min-height: 0; }
-.bd-approve[open] > .bd-ap-dec { flex: 0 1 auto; display: flex; flex-direction: column; }
-.bd-ap-dec[hidden] { display: none !important; }
-.bd-ap-dec h4 { margin: 0 0 4px; font: 600 11px/1.4 var(--sans); letter-spacing: .07em; text-transform: uppercase; color: var(--fg-subtle); }
-.bd-ap-dec ul { list-style: none; margin: 0; padding: 0 10px; overflow: auto; border-radius: 10px; background: var(--inset); max-height: 240px; }
-.bd-ap-dec li { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 2px 12px; padding: 8px 0; font-size: 13.5px; line-height: 1.45; }
-.bd-ap-dec li + li { border-top: 1px solid var(--line); }
-.bd-ap-dec .t { flex: 1 1 200px; min-width: 0; }
-.bd-ap-dec .pk { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 5px; font-weight: 600; color: var(--accent-fg); }
-.bd-ap-dec .pk .bd-ic { width: 13px; height: 13px; stroke-width: 2.4; }
-.bd-ap-dec .pk .rec { font-weight: 400; color: var(--fg-subtle); }
-.bd-ap-dec .pk.none { font-weight: 500; color: var(--fg-subtle); }
-.bd-ap-dec .pk.none .bd-ic { fill: currentColor; stroke: none; color: var(--warn); }
-/* on a plan: a button that closes the dialog and opens the question */
-.bd-ap-dec button.pk.none { padding: 2px 6px; margin: -2px -6px; border: 0; border-radius: 6px; background: none; font: inherit; font-weight: 600; color: var(--warn-fg); cursor: pointer; }
-.bd-ap-dec button.pk.none:hover { background: var(--hover); }
-.bd-ap-dec button.pk.none > .bd-ic:last-child { fill: none; stroke: currentColor; stroke-width: 2; color: inherit; }
-.bd-approve .ft .bp-btn:disabled { opacity: .6; cursor: default; }
 @media print { .bd-anntb, .bd-ann-layer, .bd-ann-hov, .bd-ann-cap, .bd-selc, .bd-tip, .bd-sp, .bd-cmp, .bd-home { display: none !important; } html.bd-tray-on .bd-shell, :root.bd-sp-dock .bd-shell { padding: 0; } }
 
 /* code review: diff block (HorizonUI DiffReview, ChangeTable, CodeBlock syntax tokens) */
@@ -5484,6 +5497,8 @@ const isNewMsg = m => m.who === 'agent' && !RO && !!SEEN_REV && SEEN_REV !== CUR
 // the agent that opened the page: the model family `serve.py open --to` gave (Claude, Codex…), else Agent; the
 // Markdown and the page's conversations both name it so
 const agentName = () => REPLY.to || 'Agent';
+// the same in a sentence: its name, else "the agent" ("The agent" to start one)
+const agentWho = cap => REPLY.to || (cap ? 'The agent' : 'the agent');
 const aboutOf = m => okAbout(m.about) && m.about ? m.about : null;
 function convo(mine, theirs) {
   const upto = OLD ? revOrd(VIEW.rev) : Infinity;
@@ -6404,7 +6419,7 @@ const SEND_AS = {
   local: ['listchecks', 'Apply decisions', 'Apply your decisions', 'The agent fixes the findings you marked to fix in your working tree, files the tickets, drops the declines and reports back.'],
   threads: ['reply', 'Reply and fix', 'Reply and fix on your PR', 'The agent fixes the findings you marked to fix on your branch, then replies on each thread and resolves the fixed ones.'],
   post: ['pr', 'Post review', 'Post review to the PR', 'The agent posts one GitHub review on the PR, with a comment per finding you marked Post.'],
-}[REVIEW_OF] || ['send', 'Send answers', 'Send your answers to the agent', ''];
+}[REVIEW_OF] || ['send', 'Send answers', 'Send your answers', ''];
 // a post review (someone else's PR, or your own you asked a review of): the GitHub review event each PR posts as (the
 // send dialog's Post as, one per PR), the payload's reviewEvents. Its PRs are its pr-<n> sections; without any, the page is one
 const POST_AS = [['COMMENT', 'Comment'], ['REQUEST_CHANGES', 'Request changes'], ['APPROVE', 'Approve']];
@@ -6422,18 +6437,13 @@ function answersMd() {
     : 'Post as:\n' + POST_PRS.map(p => `- ${p.title}: ${postLabel(postAs[p.id])}`).join('\n');
   return md.slice(0, i) + how + '\n\n' + md.slice(i);
 }
-function replyCounts() {
-  const all = Object.values(ITEMS), dec = all.filter(x => x.choices);
-  return { decisions: dec.length, decided: dec.filter(x => x.choice || x.custom).length, steps: all.length - dec.length,
-    ticked: all.filter(x => !x.choices && x.cb.checked).length, notes: all.filter(x => x.notePending).length,
-    // the items with a pick, tick or comment Send hasn't sent yet (a review's comments: Request changes)
-    unsent: all.filter(x => !NOTES_WITH_CHANGES && x.notePending || x.answerPending).length };
-}
+// the items with a pick, tick or comment Send hasn't sent yet (a review's comments: Request changes)
+const unsentCount = () => Object.values(ITEMS).filter(x => !NOTES_WITH_CHANGES && x.notePending || x.answerPending).length;
 function paintSend() {
   ARC.paint();   // a tick may finish the doc: All done · Archive it?
   if (approveDlg && approveDlg.open) approveDlg._paint();
   if (!sendBtn) return;
-  const n = replyCounts().unsent;
+  const n = unsentCount();
   sendBtn.classList.toggle('has', n > 0);
   sendBtn._n.hidden = !n; sendBtn._n.textContent = String(n);
   sendBtn.setAttribute('aria-label', n ? `${SEND_AS[1]}: ${n} not sent` : SEND_AS[1]);
@@ -6441,56 +6451,147 @@ function paintSend() {
   sendBtn._tip = n ? `${n} ${what[n === 1 ? 0 : 1]} not sent yet` : `Nothing new to send: ${NOTES_WITH_CHANGES ? 'pick an answer' : 'pick, tick or comment on an item'}`;
   if (sendDlg && sendDlg.open) sendDlg._paint();
 }
+/* The send dialog: one for every send, Approve, Request changes, Send answers and a review's send key. The title and the
+   rev, a sentence on what the agent does (`intro`), what goes (`body`: sdSec sections and sdAlert lines), the note,
+   then Copy (grey, at the left) and the primary key (o.tone: `ok` green, `go` blue). The note is the answer card's
+   one-line field: the text, the round Attach key, its files a row above the text; it has no send key of its own: the
+   primary sends and ⌘/Ctrl+Enter presses it. Copy's tooltip says what it gives. A page no agent is connected to (an -o
+   file, a page whose ping failed) has no send: the primary copies (o.copyLabel) and Copy hides. Esc and a press beside
+   it close it; it holds the focus while open (showModal).
+   o: {cls, title, tone, icon, label, copyLabel, placeholder(), noteLabel, note, noteFiles, onNote(text), onFiles(files),
+   connected(), send(), copyOut() (the primary when not connected), copy() (the grey key)} */
+function sendDialog(o) {
+  const id = 'bd-sd-' + o.cls;
+  const ta = h('textarea', { class: 'ac-line-ta', rows: 1, maxlength: 8192, 'aria-label': o.noteLabel });
+  ta.value = o.note || '';
+  // the note's files are kept as they change, like its text; a removed one's copy goes at once
+  const fd = fileDraft(() => { if (o.onFiles) o.onFiles(fd.files); fd.commit(); paintNote(); }, { compact: true });
+  fd.load(o.noteFiles || []);
+  fd.btn.className = 'ac-att'; fd.btn.replaceChildren(ic('clip'));
+  fd.btn.setAttribute('aria-label', 'Attach'); fd.btn.title = 'Attach files: the agent gets a copy of each, by its path';
+  const line = h('div', { class: 'ac-line' }, fd.list, ta, fd.btn);
+  fd.hook(line, ta);
+  // a press on the field's padding (not its keys or chips) puts the caret in the text
+  line.addEventListener('mousedown', e => { if (e.target !== ta && !e.target.closest('button')) { e.preventDefault(); ta.focus(); } });
+  const paintNote = () => { line.classList.toggle('dirty', !!ta.value.trim()); line.classList.toggle('files', !fd.list.hidden); };
+  ta.addEventListener('input', () => { if (o.onNote) o.onNote(ta.value); paintNote(); });
+  ta.addEventListener('keydown', e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); if (!pri.disabled) pri.click(); } });
+  const intro = h('p', { class: 'intro', id: id + '-d' }), body = h('div', { class: 'sd-body' });
+  const copy = h('button', { type: 'button', class: 'bd-key txt cp', title: 'Copy the same text, to paste into a chat', onclick: () => o.copy() }, ic('copy'), h('span', { class: 't' }, 'Copy'));
+  const pri = h('button', { type: 'button', class: 'bd-key txt pri ' + o.tone, onclick: () => o.connected() ? o.send() : o.copyOut() });
+  const dlg = h('dialog', { class: 'bd-send ' + o.cls, 'aria-labelledby': id, 'aria-describedby': id + '-d' },
+    h('div', { class: 'hd' }, h('h3', { id }, o.title), CUR.rev && h('span', { class: 'rev' }, 'rev ' + CUR.rev),
+      h('button', { type: 'button', class: 'bd-key x', 'aria-label': 'Close', title: 'Close (Esc)', onclick: () => dlg.close() }, ic('x'))),
+    intro, body,
+    h('div', { class: 'sd-note' }, line, h('p', { class: 'hint' }, 'Goes with it. ', kbd(MAC ? '⌘' : 'Ctrl'), kbd('↵'), ' sends.'), fd.input),
+    h('div', { class: 'ft' }, copy, h('span', { class: 'sp' }), pri));
+  document.body.append(dlg);
+  // a press on the backdrop closes it (its margins are the dialog's own box: those don't)
+  dlg.addEventListener('click', e => {
+    const r = dlg.getBoundingClientRect();
+    if (e.target === dlg && (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom)) dlg.close();
+  });
+  const S = { dlg, ta, fd, intro, body, pri,
+    // the keys: held (the primary off, `why` its tooltip); not connected, the primary copies and Copy goes
+    paint({ held = false, why = '' } = {}) {
+      const on = o.connected();
+      copy.hidden = !on;
+      pri.replaceChildren(ic(on ? o.icon : 'copy'), h('span', { class: 't' }, on ? o.label : o.copyLabel));
+      pri.disabled = held;
+      pri.title = held ? why : on ? `Sends it to ${agentWho()}` : 'This page isn\'t connected to an agent: copy it, then paste it into the chat';
+      ta.placeholder = o.placeholder();
+      paintNote();
+    },
+    // the note went: the field is empty again (its files' copies stay: the agent reads them)
+    clear() { ta.value = ''; fd.load([]); paintNote(); },
+    show() { dlg.showModal(); ta.focus(); } };
+  dlg._S = S;
+  return S;
+}
+// a section of what goes: its name and count, the counts in words at its right, then its box
+const sdSec = (name, n, says, box) => h('div', { class: 'sd-sec', 'data-sec': name.split(/[ ,]/)[0].toLowerCase() },
+  h('div', { class: 'sd-sh' }, h('h4', {}, n == null ? name : `${name} · ${n}`), says && h('span', { class: 'c' }, says)), box);
+const sdAlert = text => h('p', { class: 'sd-alert' }, ic('alert'), h('span', {}, text));
+// where a review's finding sits: its PR's number (its section pr-<n>)
+const prOf = x => (/^pr-(\d+)$/.exec(x.li.closest('section.bp-sec')?.id || '') || [])[1];
+const itemText = x => (prOf(x) ? `#${prOf(x)} · ` : '') + plainText(x.it.text);
+// A decision as it goes: the question, then its answer as the answer card's chip: ✓ the pick (Other: its words), Tell
+// me more or a request for a new option (amber), or no pick: on an approval ★ the recommendation the agent uses (grey),
+// on a plan held for an answer Answer it › (amber: the row is a key that opens the question, `answer`), else No pick. The
+// second line: the recommendation a pick differs from, the pick it changed from (the approved one, or the author's), or
+// what no pick means
+function sdDec(x, { approve = false, answer = null } = {}) {
+  const ids = idsOf(x.choice), picked = ids.length > 0 || !!x.custom, rec = recLabels(x);
+  const label = [...ids.map(id => choiceLabel(x, id)), ...(x.custom ? ['Other: ' + cutLine(x.custom, 120)] : [])].join(', ');
+  const was = picked && x.pickChanged ? (APPROVABLE ? (planState().picks || {})[`${x.cid}/${x.it.id}`] : x.it.choice) : null;
+  const sub = x.more ? ''
+    : picked ? (idsOf(was).length ? `Changed from ${idsOf(was).map(id => choiceLabel(x, id)).join(', ')}`
+      : rec && ids.length && !x.custom && pickKey(x.choice) !== pickKey(recIds(x)) ? `Recommended: ${rec}` : '')
+    : approve && !answer ? (rec ? `No pick: ${agentWho()} uses its recommendation` : '') : rec ? `Recommended: ${rec}` : '';
+  const chip = x.more ? h('span', { class: 'sd-chip ask' }, ic('help'), h('span', {}, MORE_LABEL))
+    : x.request ? h('span', { class: 'sd-chip ask', title: label }, ic('help'), h('span', {}, label))
+    : picked ? h('span', { class: 'sd-chip', title: label }, ic('tick'), h('span', {}, label))
+    : answer ? h('span', { class: 'sd-chip need' }, h('span', {}, 'Answer it'), ic('chev'))
+    : approve && rec ? h('span', { class: 'sd-chip rec', title: rec }, ic('star'), h('span', {}, rec))
+    : h('span', { class: 'sd-chip rec' }, h('span', {}, 'No pick'));
+  const q = h('span', { class: 'q' }, h('span', { html: (prOf(x) ? `#${prOf(x)} · ` : '') + inline(x.it.text) }), sub && h('small', {}, sub));
+  return answer && !picked && !x.more ? h('button', { type: 'button', class: 'sd-dec go', 'data-item': `${x.cid}/${x.it.id}`, title: 'Answer it', onclick: () => answer(x) }, q, chip)
+    : h('div', { class: 'sd-dec', 'data-item': `${x.cid}/${x.it.id}` }, q, chip);
+}
+// a progress item as it goes: ✓ Done, or Not done
+const sdStep = x => h('div', { class: 'sd-dec', 'data-item': `${x.cid}/${x.it.id}` }, h('span', { class: 'q', html: inline(x.it.text) }),
+  passing(x) ? h('span', { class: 'sd-chip' }, ic('tick'), h('span', {}, 'Done')) : h('span', { class: 'sd-chip rec' }, h('span', {}, 'Not done')));
+// the decisions' counts in words: "5 picked · 1 Tell me more · 1 left to Claude"
+function decSays(xs, none) {
+  const more = xs.filter(x => x.more).length, picked = xs.filter(x => !x.more && (idsOf(x.choice).length || x.custom)).length, left = xs.length - more - picked;
+  return [picked && `${picked} picked`, more && `${more} ${MORE_LABEL}`, left && `${left} ${none}`].filter(Boolean).join(' · ');
+}
+// The comments that go, as the conversation draws them: a timeline, each message led by what it is on ({kind, on, md,
+// files}): the page's (MARKUP.goes) and those saved in items' fields (itemComments)
+function sdComments(cs) {
+  return h('div', { class: 'sd-box' }, h('div', { class: 'sd-cm' }, h('ol', { class: 'bp-msgs', 'aria-label': 'Comments' }, cs.map(c => {
+    const mb = h('div', { class: 'mb bd-md', html: md(c.md || '') }), on = h('span', { class: 'ac-on' }, c.on);
+    (mb.firstElementChild && mb.firstElementChild.tagName === 'P' ? mb.firstElementChild : mb).prepend(on);
+    return h('li', { class: 'bp-msg you' }, h('span', { class: 'av', 'aria-hidden': 'true' }, 'Y'),
+      h('div', { class: 'mh' }, h('b', { class: 'who' }, 'You'), h('span', { class: 'rv' }, c.kind)), mb,
+      c.files.length > 0 && h('div', { class: 'mf' }, fileChips(c.files)));
+  }))));
+}
+// the comments saved in items' fields that go with a send: each on its item (and the answer, when it is about one)
+const itemComments = xs => xs.filter(x => x.notePending).flatMap(x => x.drafts().map(d => ({ kind: x.fd ? 'finding' : x.choices ? 'question' : 'item',
+  on: 'On ' + cutLine(itemText(x), 56) + (d.about ? ' › ' + aboutLabel(x, d.about) : ''), md: d.md.trim(), files: d.files })));
 function openSend() {
   if (!sendDlg) {
-    const msg = h('textarea', { class: 'bp-note-ta', rows: 3, placeholder: 'Anything else for the agent? (optional)' });
-    msg.value = store.get(MSG_KEY) || '';
-    msg.addEventListener('input', () => { if (msg.value.trim()) store.set(MSG_KEY, msg.value); else store.del(MSG_KEY); pre.textContent = answersMd(); });
-    msg.addEventListener('keydown', e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); doSend(); } });
-    // its files are kept as they change, like its text; a removed one's copy goes at once
-    const fd = fileDraft(() => {
-      const fs = fd.files;
-      if (fs.length) store.set(MSG_FILES_KEY, JSON.stringify(filesJson(fs).files)); else store.del(MSG_FILES_KEY);
-      fd.commit(); pre.textContent = answersMd();
-    });
-    fd.load(msgFiles());
-    const field = h('div', { class: 'bd-msgf' }, msg, fd.list, h('div', { class: 'ft' }, fd.btn), fd.input);
-    fd.hook(field, msg);
-    const summary = h('p', { class: 'sum' });
-    const how = h('p', { class: 'how' });
-    const pre = h('pre', {});
+    // the message is stored as it changes (`__message`, its files `__message-files`), and stays after a send
+    const S = sendDialog({ cls: 'bd-sendans', title: SEND_AS[2], tone: 'go', icon: SEND_AS[0], label: REVIEW_OF ? SEND_AS[1] : 'Send', copyLabel: 'Copy',
+      placeholder: () => `Anything else for ${agentWho()}? (optional)`, noteLabel: 'Message to the agent', note: store.get(MSG_KEY) || '', noteFiles: msgFiles(),
+      onNote: v => { if (v.trim()) store.set(MSG_KEY, v); else store.del(MSG_KEY); },
+      onFiles: fs => { if (fs.length) store.set(MSG_FILES_KEY, JSON.stringify(filesJson(fs).files)); else store.del(MSG_FILES_KEY); },
+      connected: () => !!REPLY.url, send: () => doSend(), copyOut: () => doSend(),
+      copy: () => { copyText(answersMd(), 'Copied: paste it into the chat with the agent'); sendDlg.close(); } });
+    sendDlg = S.dlg;
     // Post as: as GitHub's Submit review asks, one per PR: Request changes on one, Approve another
     const segs = POST_PRS.map(p => h('div', { class: 'bd-sg', role: 'radiogroup', 'aria-label': POST_PRS.length > 1 ? `Post ${p.title} as` : 'Post as', 'data-pr': p.id || '' },
       POST_AS.map(([v, l]) => h('button', { type: 'button', role: 'radio', 'data-v': v, onclick: () => { postAs[p.id || ''] = v; sendDlg._paint(); } }, l))));
-    const postBox = !segs.length ? null : segs.length === 1 ? h('div', { class: 'bd-postas' }, h('span', {}, 'Post as'), segs[0])
-      : h('div', { class: 'bd-postas many' }, h('span', { class: 'h' }, 'Post as, per PR'),
-        POST_PRS.map((p, i) => h('div', { class: 'r' }, h('span', { class: 't', title: p.title }, p.title), segs[i])));
-    const send = h('button', { type: 'button', class: 'bp-btn primary', onclick: () => doSend() }, ic('send'), 'Send');
-    const copy = h('button', { type: 'button', class: 'bp-btn', onclick: () => { copyText(answersMd(), 'Copied: paste it into the chat with the agent'); sendDlg.close(); } }, ic('copy'), 'Copy');
-    sendDlg = h('dialog', { class: 'bd-send', 'aria-labelledby': 'bd-send-h' },
-      h('div', { class: 'hd' }, h('h3', { id: 'bd-send-h' }, SEND_AS[2]), h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Close', onclick: () => sendDlg.close() }, ic('x'))),
-      summary, postBox, field, h('details', {}, h('summary', {}, 'Preview'), pre), how, h('div', { class: 'ft' }, copy, send));
-    document.body.append(sendDlg);
-    sendDlg.addEventListener('click', e => { if (e.target === sendDlg) sendDlg.close(); });
+    const postSec = !segs.length ? null : segs.length === 1 ? sdSec('Post as', null, '', h('div', { class: 'bd-postas' }, segs[0]))
+      : sdSec('Post as, per PR', null, '', h('div', { class: 'bd-postas many' }, POST_PRS.map((p, i) => h('div', { class: 'r' }, h('span', { class: 't', title: p.title }, p.title), segs[i]))));
     sendDlg._paint = () => {
-      const c = replyCounts();
-      const parts = [];
-      if (c.decisions) parts.push(`${c.decided} of ${c.decisions} decision${c.decisions === 1 ? '' : 's'} made`);
-      if (c.steps) parts.push(`${c.ticked} of ${c.steps} step${c.steps === 1 ? '' : 's'} ticked`);
-      if (!NOTES_WITH_CHANGES) parts.push(`${c.notes} comment${c.notes === 1 ? '' : 's'}`);
-      else if (c.notes) parts.push(`${c.notes} comment${c.notes === 1 ? '' : 's'} on findings ${c.notes === 1 ? 'goes' : 'go'} with Request changes`);
-      summary.textContent = [SEND_AS[3], parts.join(' · ')].filter(Boolean).join(' ');
+      const all = Object.values(ITEMS), dec = all.filter(x => x.choices), steps = all.filter(x => !x.choices);
+      // a review's send key carries the picks and ticks: its comments on findings wait for Request changes
+      const notes = NOTES_WITH_CHANGES ? [] : itemComments(all), later = NOTES_WITH_CHANGES ? all.filter(x => x.notePending).length : 0;
+      S.intro.textContent = (SEND_AS[3] ? SEND_AS[3].replace(/^The agent/, agentWho(true)) : `${agentWho(true)} acts on your picks, ticks and comments.`)
+        + (later ? ` ${later} comment${later === 1 ? '' : 's'} on findings ${later === 1 ? 'goes' : 'go'} with Request changes.` : '');
+      setKids(S.body,
+        dec.length > 0 && sdSec(DOC_TYPE === 'review' ? 'Findings' : 'Decisions', dec.length, decSays(dec, 'no pick'), h('div', { class: 'sd-box' }, dec.map(x => sdDec(x)))),
+        steps.length > 0 && sdSec('Steps', steps.length, `${steps.filter(passing).length} done`, h('div', { class: 'sd-box' }, steps.map(sdStep))),
+        notes.length > 0 && sdSec('Comments', notes.length, '', sdComments(notes)),
+        postSec);
       segs.forEach(g => g.querySelectorAll('button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.v === postAs[g.dataset.pr]))));
-      send.hidden = !REPLY.url;
-      copy.classList.toggle('primary', !REPLY.url);
-      how.textContent = REPLY.url ? `Send delivers this to ${REPLY.to || 'the agent that opened this page'}. Copy gives you the same text to paste.`
-        : 'This page isn\'t connected to an agent. Copy the text and paste it into the chat. (Pages opened through serve.py can send directly.)';
-      pre.textContent = answersMd();
+      S.paint();
     };
   }
   sendDlg._paint();
-  sendDlg.showModal();
-  sendDlg.querySelector('textarea').focus();
+  sendDlg._S.show();
 }
 async function doSend() {
   if (!REPLY.url) { copyText(answersMd(), 'Copied: paste it into the chat with the agent'); sendDlg && sendDlg.close(); return; }
@@ -14292,54 +14393,35 @@ function openApprove() {
   if (planState().state === 'approved' || Object.values(ITEMS).some(x => x.more || x.request)) return;
   MARKUP.flush();
   if (!approveDlg) {
-    const note = h('textarea', { class: 'bp-note-ta', rows: 2, placeholder: 'A note for the agent (optional)', 'aria-label': 'Note with the approval' });
-    note.addEventListener('keydown', e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); doApprove(); } });
-    // the note's files: a removed one's copy goes at once
-    const fd = fileDraft(() => fd.commit());
-    const field = h('div', { class: 'bd-msgf' }, note, fd.list, h('div', { class: 'ft' }, fd.btn), fd.input);
-    fd.hook(field, note);
-    const sum = h('ul', { class: 'bd-ap-sum' }), decs = h('ul', {}), decBox = h('div', { class: 'bd-ap-dec' }, h('h4', {}, 'Decisions'), decs), how = h('p', { class: 'how' });
-    const copy = h('button', { type: 'button', class: 'bp-btn', onclick: () => copyText(approvePayload(note.value, fd.files).markdown, 'Copied: paste it into the chat with the agent') }, ic('copy'), 'Copy');
-    const ok = h('button', { type: 'button', class: 'bp-btn ok', onclick: () => doApprove() }, ic('tick'), 'Approve');
-    approveDlg = h('dialog', { class: 'bd-send bd-approve', 'aria-labelledby': 'bd-ap-h' },
-      h('div', { class: 'hd' }, h('h3', { id: 'bd-ap-h' }, `Approve this ${AP_NOUN}${revWord}`), h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Close', onclick: () => approveDlg.close() }, ic('x'))),
-      h('p', { class: 'sum' }, IS_DESIGN ? 'The agent builds the design as drawn, every screen at this revision, with the decisions below.' : 'The agent goes ahead with the plan as written and the decisions below.'), field, sum, decBox, how, h('div', { class: 'ft' }, copy, ok));
-    document.body.append(approveDlg);
-    approveDlg.addEventListener('click', e => { if (e.target === approveDlg) approveDlg.close(); });
-    Object.assign(approveDlg, { _note: note, _files: fd, _ok: ok });
+    const S = sendDialog({ cls: 'bd-approve', title: `Approve this ${AP_NOUN}`, tone: 'ok', icon: 'check', label: 'Approve', copyLabel: 'Copy approval',
+      placeholder: () => `A note for ${agentWho()} (optional)`, noteLabel: 'Note with the approval',
+      connected: () => !!REPLY.approve, send: () => doApprove(), copyOut: () => doApprove(),
+      copy: () => copyText(approvePayload(S.ta.value, S.fd.files).markdown, 'Copied: paste it into the chat with the agent') });
+    approveDlg = S.dlg;
+    // a plan's unanswered question: the dialog closes and the question opens
+    const answer = x => { approveDlg.close(); const row = openItem(x); row.scrollIntoView({ behavior: REDUCE ? 'auto' : 'smooth', block: 'center' }); flash(row); };
     approveDlg._paint = () => {
-      const pend = MARKUP.approvalNotes().annotations.length, dec = Object.values(ITEMS).filter(x => x.choices), open = dec.filter(x => !idsOf(x.choice).length && !x.custom).length;
-      // a plan waits for every answer: Approve stays off and says why
-      const held = IS_PLAN && open > 0;
-      ok.disabled = held;
-      ok.title = held ? `${open} question${open === 1 ? ' has' : 's have'} no answer yet` : '';
-      const line = (icon, cls, text) => h('li', { class: cls }, ic(icon), h('span', {}, text));
-      sum.replaceChildren(...[
-        pend && line('msg', '', pend === 1 ? '1 pending comment goes with it as a note' : `${pend} pending comments go with it as notes`),
-        held && line('alert', 'risk', `You can't approve yet: ${open} question${open === 1 ? ' has' : 's have'} no answer. A plan is approved with every question answered: pick one for each below, or use Accept recommended on its list.`),
-        open && !held && line('alert', 'warn', `${open} open question${open === 1 ? ' has' : 's have'} no pick; the agent will use its recommendation`),
-        staleOwners().length && line('alert', 'warn', `${staleOwners().length} check${staleOwners().length === 1 ? ' has' : 's have'} stale evidence: the code changed since ${staleOwners().length === 1 ? 'it' : 'they'} ran. The approval asks the agent to re-run ${staleOwners().length === 1 ? 'it' : 'them'}`),
-      ].filter(Boolean));
-      sum.hidden = !sum.childElementCount;
-      decBox.hidden = !dec.length;
-      decs.replaceChildren(...dec.map(x => {
-        const rec = recLabels(x);
-        return h('li', {}, h('span', { class: 't', html: inline(x.it.text) }),
-          x.choice || x.custom ? h('span', { class: 'pk' }, ic('tick'), okLabel(x), x.choice && !x.custom && rec && pickKey(x.choice) !== pickKey(recIds(x)) && h('span', { class: 'rec' }, `recommended: ${rec}`))
-            : IS_PLAN ? h('button', { type: 'button', class: 'pk none go', title: 'Answer it', onclick: () => { approveDlg.close(); const row = openItem(x); row.scrollIntoView({ behavior: REDUCE ? 'auto' : 'smooth', block: 'center' }); flash(row); } }, rec ? [ic('star'), `No pick · ${rec}`] : 'No pick', ic('chev'))
-            : h('span', { class: 'pk none' }, rec ? [ic('star'), `No pick · ${rec}`] : 'No pick'));
-      }));
-      how.textContent = REPLY.approve ? `Approve sends this to ${REPLY.to || 'the agent that opened this page'}. Copy gives you the same text to paste.`
-        : 'This page isn\'t connected to an agent. Approve copies the approval for you to paste into the chat. (Pages opened through serve.py send it directly.)';
+      const all = Object.values(ITEMS), dec = all.filter(x => x.choices), open = dec.filter(x => !idsOf(x.choice).length && !x.custom).length;
+      // a plan waits for every answer: Approve is held and says why; elsewhere no pick leaves it to the agent
+      const held = IS_PLAN && open > 0, cs = [...MARKUP.goes(), ...itemComments(all)], stale = staleOwners().length;
+      const at = CUR.rev ? ` at rev ${CUR.rev}` : '', wd = dec.length ? ', with these decisions' : '';
+      S.intro.textContent = IS_SITE ? `${agentWho(true)} applies every page as drawn${at} to the site's source${wd}.`
+        : IS_DESIGN ? `${agentWho(true)} builds every screen as drawn${at}${wd}.` : `${agentWho(true)} builds the plan as written${wd}.`;
+      setKids(S.body,
+        dec.length > 0 && sdSec('Decisions', dec.length, decSays(dec, held ? 'unanswered' : `left to ${agentWho()}`),
+          h('div', { class: 'sd-box' }, dec.map(x => sdDec(x, { approve: true, answer: held ? answer : null })))),
+        held && sdAlert(`${open === 1 ? 'One question has' : `${open} questions have`} no answer. A plan is approved with every question answered.`),
+        cs.length > 0 && sdSec('Comments', cs.length, 'they go as notes', sdComments(cs)),
+        stale > 0 && sdAlert(`${stale} check${stale === 1 ? ' has' : 's have'} stale evidence: the code changed since ${stale === 1 ? 'it' : 'they'} ran. The approval asks ${agentWho()} to re-run ${stale === 1 ? 'it' : 'them'}.`));
+      S.paint({ held, why: `${open} question${open === 1 ? ' has' : 's have'} no answer yet` });
     };
   }
   approveDlg._paint();
-  approveDlg.showModal();
-  approveDlg._note.focus();
+  approveDlg._S.show();
 }
 async function doApprove() {
   if (IS_PLAN && Object.values(ITEMS).some(x => x.choices && !idsOf(x.choice).length && !x.custom)) return;   // the dialog says why
-  const dlg = approveDlg, p = approvePayload(dlg ? dlg._note.value : '', dlg ? dlg._files.files : []);
+  const S = approveDlg && approveDlg._S, dlg = approveDlg, p = approvePayload(S ? S.ta.value : '', S ? S.fd.files : []);
   const done = () => {
     const pick = a => idsOf(a.choice).length ? a.choice : a.recommend;
     const picks = Object.fromEntries(p.answers.filter(a => idsOf(pick(a)).length).map(a => [`${a.checklist}/${a.item}`, pick(a)]));
@@ -14347,11 +14429,11 @@ async function doApprove() {
     store.set(PLAN_KEY, JSON.stringify({ rev: p.rev, state: 'approved', at: p.at, picks }));
     MARKUP.markSent(p.annotations.map(a => a.id), p.at);
     Object.values(ITEMS).forEach(x => x.markSent()); MARKUP.paint();
-    if (dlg) { dlg._note.value = ''; dlg._files.load([]); dlg.close(); }   // the files went with it: their copies stay
+    if (S) { S.clear(); dlg.close(); }   // the files went with it: their copies stay
     paintPlan();
   };
   if (!REPLY.approve) { copyText(p.markdown, 'Approved and copied: paste it into the chat with the agent'); done(); return; }
-  if (dlg) dlg._ok.disabled = true;
+  if (S) S.pri.disabled = true;
   try {
     await postReply(REPLY.approve, p);
     done();
@@ -14360,7 +14442,7 @@ async function doApprove() {
     // the doc (or a design's screen) changed after this page loaded: approving it would cover what the reader hasn't seen
     if (e.reload) { if (dlg) dlg.close(); toast(`This ${AP_NOUN} changed since you opened it. Reload to read the current version, then approve.`, { label: 'Reload', ms: 60000, run: () => location.reload() }); return; }
     copyText(p.markdown, replyFailed(e));
-  } finally { if (dlg && dlg.open) dlg._paint(); else if (dlg) dlg._ok.disabled = false; }
+  } finally { if (dlg && dlg.open) dlg._paint(); else if (S) S.pri.disabled = false; }
 }
 // after a plan's, design's or website's Request changes, the header says so for this revision
 function changesSent(p) { if (APPROVABLE) { store.set(PLAN_KEY, JSON.stringify({ rev: p.rev, state: 'changes', at: p.at })); paintPlan(); } }
@@ -14553,8 +14635,10 @@ const MARKUP = (() => {
     const bx = b => `x ${b.x}, y ${b.y}, ${b.w} × ${b.h} px`;
     return [`   Where: on the board at ${bx(w.board)}` + (w.on.length ? '; ' + w.on.map(o => `on \`artboard:${o.artboard}\` at ${bx(o)}`).join('; ') : '; beside the screens')];
   };
-  // general comments first, under General; then the page comments, numbered
-  function changesMd(items = pending()) {
+  // the Request changes dialog's note and its files (openDlg sets it): under the title, as an approval's note is
+  let chgNote = () => ({ note: '', files: [] });
+  // the note, then the general comments first, under General; then the page comments, numbered
+  function changesMd(items = pending(), n = chgNote()) {
     const gen = items.filter(isGeneral), pg = items.filter(a => !isGeneral(a) && !isDraft(a)), dr = items.filter(isDraft), parts = [];
     if (gen.length) parts.push('## General\n\n' + gen.map(a => `- (${a.id}) ` + (followUp(a) ? msgMd(a, '', '  ') : noteText(a).split('\n').join('\n  ') + filesMd(noteFiles(a), '  ') + replyMd(`ann:${a.id}`, annReplies(a), '  ', a.id))).join('\n'));
     if (gen.length && pg.length) parts.push('## On the page');
@@ -14576,16 +14660,24 @@ const MARKUP = (() => {
     const stale = staleEvidenceMd().trimEnd();
     if (stale) parts.push(stale);
     const body = parts.join('\n\n');
-    return `# Change requests: ${DOC.title || docId}${CUR.rev ? ` (rev ${CUR.rev})` : ''}, ${new Date().toISOString().slice(0, 10)}\n\n` + body + '\n' + replyCmdsMd(body);
+    const noteMdx = (n.note + filesMd(n.files, '')).trim();
+    return `# Change requests: ${DOC.title || docId}${CUR.rev ? ` (rev ${CUR.rev})` : ''}, ${new Date().toISOString().slice(0, 10)}\n\n` + (noteMdx ? noteMdx + '\n\n' : '') + body + '\n' + replyCmdsMd(body);
   }
-  // `message` repeats the general comments for agents that read only it. The decision picks of a plan, design,
-  // presentation, website or listing go along as `answers`; elsewhere `answers` holds the "Need more details" items
-  // and, on a review, the findings with a comment (itemsPending)
+  // `message` repeats the general comments for agents that read only it; `note` and `noteFiles` are the dialog's note
+  // (when there is one). The decision picks of a plan, design, presentation, website or listing go along as `answers`;
+  // elsewhere `answers` holds the "Need more details" items and, on a review, the findings with a comment (itemsPending)
   function payload() {
-    const items = pending(), answers = PICKS_WITH_CHANGES ? answerItems() : answerItems(itemsPending());
+    const items = pending(), answers = PICKS_WITH_CHANGES ? answerItems() : answerItems(itemsPending()), n = chgNote();
     return { kind: 'changes', doc: docId, rev: CUR.rev, title: DOC.title || '', path: location.pathname, at: new Date().toISOString(),
-      message: items.filter(isGeneral).map(noteText).join('\n\n'), annotations: items.map(pub), ...(answers.length ? { answers } : {}), markdown: changesMd(items) };
+      message: items.filter(isGeneral).map(noteText).join('\n\n'), ...(n.note ? { note: n.note } : {}), ...(n.files.length ? { noteFiles: filesJson(n.files).files } : {}),
+      annotations: items.map(pub), ...(answers.length ? { answers } : {}), markdown: changesMd(items, n) };
   }
+  // what goes, as the send dialogs list it: each pending comment ({kind, on, md, files}), general ones first; one made on
+  // an earlier revision says which
+  const shortOn = a => cut(String(a.target && (a.target.label || a.target.key) || '').split(' › ').slice(-2).join(' › '), 60);
+  const goes = () => { const items = pending(); return [...items.filter(isGeneral), ...items.filter(a => !isGeneral(a))].map(a => ({
+    kind: (followUp(a) ? 'follow-up' : TYPE_WORD[a.type] || a.type) + (a.rev != null && String(a.rev) !== String(CUR.rev) ? ` · rev ${a.rev}` : ''),
+    on: isGeneral(a) ? 'Whole doc' : 'On ' + shortOn(a), md: noteText(a), files: noteFiles(a) })); };
   // the pending comments that go with a plan's approval, as notes: general ones first
   function approvalNotes() {
     const items = pending(), ord = [...items.filter(isGeneral), ...items.filter(a => !isGeneral(a))];
@@ -14594,7 +14686,7 @@ const MARKUP = (() => {
       return [headMd(a, i), ex && `   > ${ex}`, ...siteMd(a.target), ...whereMd(a), ...(BOARD && BOARD.pinMd ? BOARD.pinMd(a) : []), '   ' + msgMd(a, 'Note', '   ')].filter(Boolean).join('\n');
     }).join('\n\n') + (s => s && '\n' + s.trimEnd())(replyCmdsMd(ord.map(a => replyMd(`ann:${a.id}`, [], '', a.id)).join(''))) };
   }
-  const api = { all: () => JSON.parse(JSON.stringify(list)), payload, approvalNotes, annotate: () => null, setMode: () => false, paint: () => {}, flush: () => {}, markSent: () => {},
+  const api = { all: () => JSON.parse(JSON.stringify(list)), payload, approvalNotes, goes, annotate: () => null, setMode: () => false, paint: () => {}, flush: () => {}, markSent: () => {},
     comments: () => ({ open: false, available: false }), pinFrame: () => null, addFrame: () => null, relayout: () => {}, openIfWaiting: () => {}, cancelDraft: () => false };
   // an earlier revision (also compared against another) is read-only; a compare view showing the current one comments
   // as the page does
@@ -15980,40 +16072,33 @@ const MARKUP = (() => {
   };
   cap.addEventListener('pointerup', endInk); cap.addEventListener('pointercancel', endInk);
 
-  /* the dialog: the count, the Markdown that goes, Copy and Send (the comments themselves are in the sidebar) */
+  /* the dialog (sendDialog): the comments that go (edited in the Comments panel) and the picks, a note, Copy and Send */
   function openDlg() {
     endEdit(true); finishDraft(true); finishGeneral(true);
     if (!pending().length && !itemsPending().length) return;
     if (!dlg) {
-      const pre = h('pre', {}), cnt = h('p', { class: 'cnt' }), how = h('p', { class: 'how' });
-      const copy = h('button', { type: 'button', class: 'bp-btn', onclick: () => { copyText(changesMd(), 'Copied: paste it into the chat with the agent'); dlg.close(); } }, ic('copy'), 'Copy');
-      const send = h('button', { type: 'button', class: 'bp-btn primary', onclick: () => sendChanges() }, ic('send'), 'Send');
-      dlg = h('dialog', { class: 'bd-send bd-chgs', 'aria-labelledby': 'bd-chgs-h' },
-        h('div', { class: 'hd' }, h('h3', { id: 'bd-chgs-h' }, PICKS_WITH_CHANGES ? `Request changes to this ${AP_NOUN}` : 'Request changes to this doc'), h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Close', onclick: () => dlg.close() }, ic('x'))),
-        h('p', { class: 'sum' }, PICKS_WITH_CHANGES ? `Change requests ask the agent to revise the ${AP_NOUN}. Your decision picks and comments on items go with them.`
-          : NOTES_WITH_CHANGES ? `Change requests ask the agent to edit the document. Your comments on findings and Tell me more requests go with them; your picks go with ${SEND_AS[1]}.`
-          : 'Change requests ask the agent to edit the document. Tell me more requests go with them; your other decisions and comments on items go with Send answers.'),
-        cnt, h('details', { open: true }, h('summary', {}, 'Preview'), pre), how, h('div', { class: 'ft' }, copy, send));
-      document.body.append(dlg);
-      dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });
+      const S = sendDialog({ cls: 'bd-chgs', title: 'Request changes', tone: 'go', icon: 'send', label: 'Send', copyLabel: 'Copy',
+        placeholder: () => `A note for ${agentWho()} (optional)`, noteLabel: 'Note with the change request',
+        connected: () => !!REPLY.changes, send: () => sendChanges(), copyOut: () => sendChanges(),
+        copy: () => { copyText(changesMd(), 'Copied: paste it into the chat with the agent'); dlg.close(); } });
+      dlg = S.dlg;
+      chgNote = () => ({ note: S.ta.value.trim(), files: S.fd.files });
       dlg._paint = () => {
-        const open = pending(), old = open.filter(a => a.rev !== CUR.rev).length, gn = open.filter(isGeneral).length, xs = itemsPending();
-        // a comment on a Tell me more item goes with that request: it counts once, as the request
-        const nn = xs.filter(x => NOTES_WITH_CHANGES && x.notePending && x.more !== 'on').length, nm = xs.filter(x => x.more === 'on' || x.requestPending).length, np = xs.filter(x => PICKS_WITH_CHANGES && x.pickPending && !x.requestPending).length;
-        const what = [open.length && `${open.length} pending comment${open.length === 1 ? '' : 's'}${gn ? `, ${gn} general` : ''}`,
-          nn && `${nn} comment${nn === 1 ? '' : 's'} on ${PICKS_WITH_CHANGES ? 'items' : 'findings'}`, nm && `${nm} question${nm === 1 ? '' : 's'} asking for more`,
-          np && `${np} pick${np === 1 ? '' : 's'} ${APPROVABLE ? 'changed since approval' : 'changed'}`].filter(Boolean).join(', ');
-        cnt.replaceChildren(h('b', {}, what), open.length + nn + nm + np === 1 ? ' goes with this request' : ' go with this request',
-          ...(old ? [' (', h('span', { class: 'old' }, `${old} made on an earlier revision`), ')'] : []), open.length ? '. Edit or delete them in the Comments sidebar.' : '.');
-        send.hidden = !REPLY.changes; send.disabled = copy.disabled = !open.length && !xs.length;
-        copy.classList.toggle('primary', !REPLY.changes);
-        how.textContent = REPLY.changes ? `Send delivers this to ${REPLY.to || 'the agent that opened this page'}. Copy gives you the same text to paste.`
-          : 'This page isn\'t connected to an agent. Copy the text and paste it into the chat. (Pages opened through serve.py can send directly.)';
-        pre.textContent = changesMd();
+        // what goes besides the comments: on a plan, design, presentation, website or listing every decision and item
+        // comment; elsewhere the items asking for more and (a review) the findings' comments (itemsPending)
+        const xs = itemsPending(), its = PICKS_WITH_CHANGES ? Object.values(ITEMS) : xs;
+        const cs = [...goes(), ...itemComments(its)], picks = its.filter(x => x.choices && (PICKS_WITH_CHANGES || x.more === 'on' || x.requestPending));
+        S.intro.textContent = PICKS_WITH_CHANGES ? `${agentWho(true)} revises the ${AP_NOUN} from your comments and picks${APPROVABLE ? ', then asks again' : ''}.`
+          : NOTES_WITH_CHANGES ? `${agentWho(true)} answers your comments on the findings and makes the changes they ask for. Your picks go with ${SEND_AS[1]}.`
+          : `${agentWho(true)} edits the doc from your comments${picks.length ? ' and tells you more where you asked' : ''}.` + (CHECKLISTS.length ? ` Your other answers go with ${SEND_AS[1]}.` : '');
+        setKids(S.body,
+          cs.length > 0 && sdSec('Comments', cs.length, pending().length ? 'edit them in Comments' : '', sdComments(cs)),
+          picks.length > 0 && sdSec('Picks', picks.length, decSays(picks, 'no pick'), h('div', { class: 'sd-box' }, picks.map(x => sdDec(x)))));
+        S.paint({ held: !pending().length && !xs.length, why: 'Nothing to send' });
       };
     }
     dlg._paint();
-    dlg.showModal();
+    dlg._S.show();
   }
   async function sendChanges() {
     const xs = itemsPending(), p = payload();
@@ -16024,7 +16109,7 @@ const MARKUP = (() => {
       markSent(p.annotations.map(x => x.id), p.at);
       // a review's Request changes sends its findings' comments, not their picks (the send key's)
       (PICKS_WITH_CHANGES ? Object.values(ITEMS) : xs).forEach(x => x.markSent(DOC_TYPE === 'review' ? 'note' : undefined)); paint();
-      if (dlg) dlg.close();
+      if (dlg) { dlg._S.clear(); dlg.close(); }
       changesSent(p);
       toast(`Change request sent to ${REPLY.to || 'the agent'}`);
     } catch (e) {

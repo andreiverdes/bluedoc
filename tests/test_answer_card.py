@@ -40,7 +40,7 @@ class AnswerCard(ChromePage):
         self.assertEqual(a.ev(msgs), [[True, ""]])
         self.assertEqual(a.ev(f"{Q}.querySelector('.bp-opt[data-id=d90] .ac-hint').textContent"), "Goes with your response.")
         a.ev(f"{Q}.querySelector('.bp-opt[data-id=d180] .pk').click()")
-        self.send_changes(a, "1 comment on items")
+        self.send_changes(a, "Comments · 1")
         thread = until(lambda: json.loads((self.state(url) or {}).get("decisions:retention:thread") or "[]"))
         self.assertEqual([(m["md"], m.get("about")) for m in thread], [("Acme: why not 90 days?", "d90")])
         self.assertEqual(a.ev(f"{field}.value"), "", "sending clears the field")
@@ -100,7 +100,8 @@ class AnswerCard(ChromePage):
         self.assertTrue(a.ev("BP.custom('brief/framework', 'Svelte with our own tokens')"))
         self.assertEqual(a.ev(head), [True, False, False, "Asking for more", True], "a request is amber, not ✓, and holds Approve")
         self.assertIn("→ **Other**: Svelte with our own tokens (a request:", a.ev("BP.changesPayload().markdown"))
-        self.send_changes(a, "question asking for more")
+        self.send_changes(a, "Picks · 3")
+        self.assertEqual(a.ev("document.querySelector('.bd-chgs .sd-dec[data-item=\"brief/framework\"] .sd-chip').className"), "sd-chip ask", "a request shows amber")
         self.assertEqual(a.ev(head)[3], "Asked · rev " + a.ev("BP.planState().rev"))
         a.ev("BP.choose('brief/framework', 'horizon')")   # picking the option it becomes takes the request back
         h = a.ev(head)

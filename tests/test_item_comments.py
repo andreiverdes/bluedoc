@@ -46,7 +46,7 @@ class ItemComments(ChromePage):
         self.assertIn("saved cart", text.lower())
         self.assertEqual(a.ev("[...document.querySelectorAll('.bd-cs-f [data-f]')].map(b => b.textContent)"), ["Pending1", "Open0", "Resolved0", "All1"])
         # sent with Request changes: Open, You answered
-        self.send_changes(a, "1 comment on items")
+        self.send_changes(a, "Comments · 1")
         p = self.panel(a, "open")
         self.assertEqual(p["items"], [{"item": "decisions/retention", "group": "answered", "status": "open"}])
         self.assertEqual(self.face(a, "decisions/retention")[2:], ["You: Why not 90 days?", "Answered"])
@@ -90,8 +90,8 @@ class ItemComments(ChromePage):
         self.assertEqual([a.ev("BP.comments().open"), a.ev("BP.comments().filter")], [True, "pending"])
         # Send answers sends it: Open; a rev that marks the item done resolves it
         a.ev(f"{SEND}.click()")
-        a.wait_for("!document.querySelector('.bd-send[open] .ft .primary').hidden")
-        a.ev("document.querySelector('.bd-send[open] .ft .bp-btn.primary').click()")
+        a.wait_for("!document.querySelector('.bd-send[open] .ft .cp').hidden")
+        a.ev("document.querySelector('.bd-send[open] .ft .pri').click()")
         self.toast(a, "sent to")
         self.assertEqual(self.panel(a, "open")["items"], [{"item": "local-seed-checks/brokers", "group": "answered", "status": "open"}])
         self.patch(doc, "item:local-seed-checks/brokers", "--json", '{"done": true}')
