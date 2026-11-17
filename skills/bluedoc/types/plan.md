@@ -14,7 +14,7 @@
 | Approach | The proposal: a canvas with new parts `state: "proposed"` and removed ones `removed`; a `compare` block for before/after (API response, schema, UI); `media` blocks for mockups or wireframes. |
 | Steps | One `steps` block in implementation order. Each step is one reviewable change: imperative title, `effort` S/M/L, `md` with the detail, the `files` it touches, `refs` to the canvas. |
 | Files | One `files` block: every path the plan adds, edits, deletes, renames or moves, with `why` and the `step` that touches it. |
-| Open questions | A decision list (`numbered: false`): one item per choice the reader must make, each with `choices`. `text` is the question; `sub` is "Recommend <option>: <reason>."; each option's `md` explains it. |
+| Open questions | A decision list (`numbered: false`): one item per choice the reader must make, each with `choices`. `text` is the question; `sub` is "Recommend <option>: <reason>."; each option's `md` explains it. The page gives it a review's findings header: the answered count, the Open · Done · All filter, Accept recommended, Expand all, and Copy and Reset under ⋯. |
 | Risks | A table: Risk, Likelihood, Impact, Mitigation. |
 | Verification | A progress list: plain steps, each with `verify` (and `code` when there's a command): how you'll show the plan worked. |
 

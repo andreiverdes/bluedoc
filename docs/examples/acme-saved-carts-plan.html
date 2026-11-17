@@ -400,7 +400,6 @@ html.bd-lp-open:not(.bd-lp-dock) .bp-side { background: var(--surface); box-shad
 .bp-side .bp-prog-row .t { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; line-height: 1.4; }
 .bp-side .bp-prog-row .c { font: 500 11.5px/1.6 var(--mono); color: var(--fg-subtle); white-space: nowrap; }
 .bp-side .bp-prog-row .bp-bar { margin-top: 6px; }
-.bp-side-tools { display: flex; justify-content: flex-start; margin: 6px -2px -2px; padding: 8px 0 0; border-top: 1px solid var(--line-soft); }
 /* a button: the dock's family – a pill; raised (the select keys' .bd-tbtn.bd-expb, the dock's word key), flat until
    hovered (.ghost: the dock's flat key), filled (.primary: the dock's blue Go, .ok: its green Approve) */
 .bp-btn { display: inline-flex; align-items: center; gap: 6px; height: 30px; border: 0; border-radius: 999px; padding: 0 13px 0 12px; font-size: 12.5px; font-weight: 600; color: var(--fg);
@@ -914,11 +913,14 @@ td.bd-cell-mod { background: color-mix(in oklch, var(--warn-tint) 70%, transpare
 .bp-cl.nested .bp-cl-body { padding-left: calc(14px + var(--ind)); padding-right: 14px; }
 .bp-cl-verify { font-size: 13.5px; color: var(--fg-muted); display: flex; gap: 8px; align-items: flex-start; line-height: 1.5; }
 .bp-cl-verify .bd-ic { width: 15px; height: 15px; color: var(--ok); margin-top: 2px; }
-/* the two kinds of checklist: a decision list asks the reader (question icon, "Needs your answer", N open), a progress
-   list tracks work (its bar, and a caption saying whose ticks they are) */
+/* the two kinds of checklist: a decision list asks the reader (a findings section's header: the title, the answered
+   meter, the toolbar), a progress list tracks work (its bar, and a caption saying whose ticks they are). A nested
+   decision list and the Brief pane's keep the short header (question icon, "Needs your answer", N open) */
 .bp-cl.k-decisions { box-shadow: var(--shadow-1); }
 .bp-cl.k-decisions > .bp-cl-h > .bd-ic { color: var(--accent-fg); }
 .bp-cl.k-decisions .bp-cl-count { color: var(--accent-fg); }
+.bp-cl-h > .bd-prs:empty { display: none; }
+.bp-cl > .bd-ftb { position: static; margin-top: 0; }
 .bp-cl-ask { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 999px; font: 600 11.5px/1 var(--sans); color: var(--accent-fg); background: var(--accent-tint); white-space: nowrap; }
 .bp-cl-ask[hidden] { display: none; }
 .bp-cl-cap { margin: -4px 16px 8px; font-size: 12.5px; line-height: 1.45; color: var(--fg-subtle); }
@@ -2175,8 +2177,8 @@ html[data-v-cmt] .bd-cs-c:is(.on, .edit) { box-shadow: 0 0 0 1.5px var(--accent)
   .bp-sec.fv-on.bd-anim > :not(h2, .bd-prhd) { animation: bd-fold-in .24s var(--ease) both; }
   .bp-sec.fv-on.bd-fold.bd-anim > :not(h2, .bd-prhd) { animation: bd-fold-out .18s ease-out both; }
   .bp-sec.fv-merged > :is(.fv-c, .fv-d), .bp-sec.fv-cl > :is(.fv-d, .fv-m), .bp-sec.fv-diff > :is(.fv-c, .fv-m) { display: none; }
-  /* what the filter hides: a finding (its excerpt in Merged, its card in Diff), a Merged group left empty */
-  .bp-sec.fv-on .fv-out { display: none; }
+  /* what the filter hides: a question (a finding's excerpt in Merged, its card in Diff), a Merged group left empty */
+  :is(.bp-sec.fv-on, .bp-cl) .fv-out { display: none; }
   /* a closed finding is its head */
   :is(.bp-cl-item.fd, .bd-mrow):not(.open) > :not(.bp-cl-row) { display: none; }
 }
@@ -5852,7 +5854,7 @@ function renderChecklist(b, parent) {
     };
     head.addEventListener('click', () => {
       // a question opens or closes whole, answered or not; opening a finding is where the reader is
-      if (card) { if (fd && !entryItem.open) holdFinding(entryItem); entryItem.setOpen(!entryItem.open); if (fd) paintFindings(); return; }
+      if (card) { const fv = entryItem.fv; if (!entryItem.open) holdFinding(entryItem); entryItem.setOpen(!entryItem.open); if (fv) paintFindings(); return; }
       if (li.classList.contains('empty')) { cb.click(); return; }   // nothing to show: the row ticks
       entryItem.setOpen(!li.classList.contains('open'));
     });
@@ -5894,24 +5896,27 @@ function renderChecklist(b, parent) {
     expandBtn.hidden = !all.length;
   };
   list.addEventListener('click', e => { if (e.target.closest('.bp-cl-head')) paintExpand(); });
-  // a findings section's own checklist has no header: the section's toolbar holds its actions and the filter its counts
+  // a findings section's own checklist has no header: the section's toolbar holds its actions and the filter its counts.
+  // A decision list's header is a findings section's (questionView); a nested one's and the Brief pane's keep this one
   const inFindings = FINDING_CIDS.has(cid) && !parent;
+  const asks = kind === 'decisions' && !parent && !inFindings && !IS_DESIGN;
   // Accept recommended (N): the open decisions in this checklist and the ones nested in it (paintAccept);
   // not on earlier revisions, in compare view or on a shared page
-  const acceptBtn = !OLD && !BASE && !VIEW_ONLY && !inFindings ? h('button', { type: 'button', class: 'bp-btn ghost', hidden: true, title: 'Pick the starred option on every open decision in this checklist',
+  const acceptBtn = !OLD && !BASE && !VIEW_ONLY && !inFindings && !asks ? h('button', { type: 'button', class: 'bp-btn ghost', hidden: true, title: 'Pick the starred option on every open decision in this checklist',
     onclick: () => acceptRecs(checklistScope(entry)) }) : null;
-  const ask = kind === 'decisions' && !VIEW_ONLY ? h('span', { class: 'bp-cl-ask' }, 'Needs your answer') : null;
+  const ask = kind === 'decisions' && !asks && !VIEW_ONLY ? h('span', { class: 'bp-cl-ask' }, 'Needs your answer') : null;
   const cap = kind === 'progress' && !parent && !VIEW_ONLY ? h('p', { class: 'bp-cl-cap' }, PICKS_WITH_CHANGES
     ? `The agent marks these as the work lands. Your ticks stay on this page${APPROVABLE ? ' and don\'t change the approval' : ''}.`
     : 'Your own tracker: ticks are saved for you and go with Send answers.') : null;
+  const entry = { b, items, root, list, count, bar, sideRow: null, parent, paintExpand, acceptBtn, kind };
   if (inFindings) root.append(list);
+  else if (asks) { const v = questionView(entry); root.append(v.head, v.bar, list); }
   else root.append(h('div', { class: 'bp-cl-h' },
     ic(kind === 'decisions' ? 'help' : 'list'), h(parent ? 'h4' : 'h3', {}, b.title || 'Checklist'), ask, count,
     h('span', { class: 'tools' }, acceptBtn, h('span', { class: 'bd-split' }, expandBtn,
       !parent && h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => copyText(checklistMd(entry), 'Copied checklist as Markdown') }, ic('copy'), 'Copy'),
       !parent && !VIEW_ONLY && h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => { if (!confirm('Reset this checklist?')) return; resetChecklist(entry); } }, ic('reset'), 'Reset')))),
     ...[cap, kind !== 'decisions' && bar, list].filter(Boolean));
-  const entry = { b, items, root, list, count, bar, sideRow: null, parent, paintExpand, acceptBtn, kind };
   function update() {
     const n = items.filter(passing).length, open = items.length - items.filter(x => x.cb.checked).length, recheck = items.filter(x => x.stale && x.cb.checked).length;
     if (kind === 'decisions') { count.textContent = open ? `${open} open` : 'All answered'; if (ask) ask.hidden = !open; }
@@ -6033,7 +6038,7 @@ function optionRows(x, compact) {
   };
   const pick = r => {
     if (VIEW_ONLY) return;
-    if (x.fd) holdFinding(x);   // the finding the reader answers stays where it is until they move on
+    holdFinding(x);   // the question the reader answers stays where it is until they move on
     if (r.o.cust) { if (x.custom) x.setCustom(''); else if (r.input.value.trim()) x.setCustom(r.input.value); else r.input.focus(); return; }
     if (r.o.more) { x.setMore(!x.more); if (x.more) focusField(r); return; }
     const cur = idsOf(x.choice), on = !cur.includes(r.o.id);
@@ -6046,7 +6051,7 @@ function optionRows(x, compact) {
     if (r.o.more) continue;
     if (r.input) {
       r.hd.addEventListener('click', e => { if (e.target !== r.input) r.input.focus(); });
-      r.input.addEventListener('input', () => { if (x.fd) holdFinding(x); x.setCustom(r.input.value); });
+      r.input.addEventListener('input', () => { holdFinding(x); x.setCustom(r.input.value); });
       // page keys (modes, n/p) must not fire while typing; Enter and Esc leave the field (its words are the answer)
       r.input.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter' && !e.shiftKey || e.key === 'Escape') { e.preventDefault(); r.input.blur(); } });
     } else r.hd.addEventListener('click', () => r.ob ? setOpen(r, r.ob.hidden) : pick(r));
@@ -6128,7 +6133,7 @@ function lineField(x, about, { placeholder = 'Reply…', hint = '', cls = 'ac-in
     if (hintEl) hintEl.lastChild.textContent = typeof hint === 'function' ? hint() : hint;
     paintFt();
   } };
-  ta.addEventListener('input', () => { if (x.fd) holdFinding(x); draft = true; paintFt(); });
+  ta.addEventListener('input', () => { holdFinding(x); draft = true; paintFt(); });
   ta.addEventListener('keydown', e => {
     e.stopPropagation();   // page keys (modes, n/p, canvas) must not fire while typing
     if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); save(); }
@@ -6184,7 +6189,7 @@ const noteMd = (x, indent) => !x.notePending ? '' : x.drafts().map((d, i) => [d.
 // (Checklist shows). A finding the filter hides shows every finding (All)
 function openItem(x) {
   const v = fviewOf(x.li);
-  if (v && !fvShows(x)) setFindingsFilter(v, 'all');
+  if (x.fv && !fvShows(x)) setFindingsFilter(x.fv, 'all');
   const row = itemRow(x);
   if (row === x.li) revealFindings(x.li);
   if (v && v.el.classList.contains('bd-fold')) v.fold(false, false);   // no motion: the caller scrolls to the row next
@@ -6193,7 +6198,7 @@ function openItem(x) {
     if (owner && !owner.li.classList.contains('empty')) owner.setOpen(true);
   }
   if (!x.fd) for (const m of x.mviews || []) m.paintOpen(true);
-  if (x.fd) holdFinding(x);
+  holdFinding(x);
   CHECKLISTS.forEach(c => c.paintExpand());
   paintFindings();
   return row;
@@ -6283,7 +6288,7 @@ function noteBox(x, compact) {
     ta.placeholder = ph();
     paintFt();
   } };
-  ta.addEventListener('input', () => { if (x.fd) holdFinding(x); fit(); draft = true; saved.hidden = true; paintFt(); });
+  ta.addEventListener('input', () => { holdFinding(x); fit(); draft = true; saved.hidden = true; paintFt(); });
   ta.addEventListener('keydown', e => {
     e.stopPropagation();   // page keys (modes, n/p, canvas) must not fire while typing
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); if (draft) save(); }
@@ -6588,14 +6593,8 @@ if (CHECKLISTS.length) {
     };
     return row;
   });
-  // Copy progress and Reset: the reader's ticks, which a shared page has none of (VIEW_ONLY)
-  tocWrap.append(h('div', { class: 'bd-rail-sec' }, h('h4', { class: 'bd-rail-h' }, 'Tracker'), h('div', { class: 'bp-prog' }, rows,
-    !VIEW_ONLY && h('div', { class: 'bp-side-tools' }, h('span', { class: 'bd-split' },
-      h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => copyText(allChecklistsMd(), 'Copied progress as Markdown') }, ic('copy'), 'Copy progress'),
-      h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => {
-        if (!confirm('Reset all checklists in this document?')) return;
-        CHECKLISTS.filter(c => !c.parent).forEach(resetChecklist);
-      } }, ic('reset'), 'Reset'))))));
+  // each list's own header holds its Copy and Reset
+  tocWrap.append(h('div', { class: 'bd-rail-sec' }, h('h4', { class: 'bd-rail-h' }, 'Tracker'), h('div', { class: 'bp-prog' }, rows)));
   CHECKLISTS.forEach(c => c.update());
 }
 Object.values(DIFFS).forEach(initDiff);
@@ -7098,28 +7097,30 @@ const shortRef = r => /^[0-9a-f]{12,40}$/i.test(r) ? r.slice(0, 7) : r;
 const MROWS = [];   // Merged's finding rows { x, row, tick, opts, note, thread, ok, open, paintOpen(on), paintDet(on) }, repainted by syncDiffs
 const MORE_LINES = 8;   // Show more lines: lines added either side of an excerpt
 const FINDING_CIDS = new Set();   // every findings section's checklists (nested ones too), known before they draw
-/* The filter: Open (a finding with no answer, a Need more details not sent, or a reply from the agent the reader
-   hasn't answered; a progress finding not done), Done (the rest) or All. Each findings section has its own, for its
-   every view, kept per doc and section in reader state (`__findings-filter:<section id>`); a first visit opens on
-   Open. The finding the reader is on (FHELD: the one they last opened, picked in or wrote in) stays shown when it
-   leaves its filter, until they move on to another. A list ends with what the filter hides, and Show (All). In Diff, a
-   hidden finding's card goes; its code stays. */
+/* The filter: Open (a question with no answer, a Need more details not sent, or a reply from the agent the reader
+   hasn't answered; a progress item not done), Done (the rest) or All. Each findings section and each decision list
+   (questionView) has its own, for its every view, kept per doc and list in reader state (`__findings-filter:<section
+   or list id>`); a first visit opens on Open. The question the reader is on (FHELD: the one they last opened, picked
+   in or wrote in) stays shown when it leaves its filter, until they move on to another. A list ends with what the
+   filter hides, and Show (All). In Diff, a hidden finding's card goes; its code stays. */
 const FFILTERS = [['all', 'All'], ['open', 'Open'], ['done', 'Done']];
 const ffilterKey = v => `bp:${docId}:__findings-filter:${v.el.id}`;
+const QVIEWS = [];   // every toolbar with the filter: the findings sections' (FVIEWS) and the decision lists'
 let FHELD = null;
 const findingOpen = x => x.choices ? !(x.choice || x.custom) || x.more === 'on' || awaitsReader(x) : !passing(x);
-const fvShows = x => { const v = fviewOf(x.li), f = v ? v.filter : 'all'; return f === 'all' || x === FHELD || (f === 'open') === findingOpen(x); };
+const fvShows = x => { const f = x.fv ? x.fv.filter : 'all'; return f === 'all' || x === FHELD || (f === 'open') === findingOpen(x); };
 // Request changes, Approve or Send answers closes every answered question left open (a decision or a finding, on any
 // doc); one still waiting for the reader (no answer, Need more details, an agent reply unanswered) stays open
 function collapseAnswered() {
   for (const x of CHECKLISTS.flatMap(c => c.items))
     if (x.choices && x.li.classList.contains('open') && (x.choice || x.custom) && x.more !== 'on' && !awaitsReader(x)) x.setOpen(false);
 }
-function holdFinding(x) { if (FHELD !== x) { FHELD = x; paintFindings(); } }
+// a question in a list with the filter (a finding, a decision list's)
+function holdFinding(x) { if (x.card && x.fv && FHELD !== x) { FHELD = x; paintFindings(); } }
 function setFindingsFilter(v, f) { v.filter = f; FHELD = null; store.set(ffilterKey(v), f); paintFindings(); }
-// every findings section's toolbar, list and cards, the Tracker's findings rows and the ask chip, from the items
+// every toolbar, list and card with the filter, the Tracker's findings rows and the ask chip, from the items
 function paintFindings() {
-  FVIEWS.forEach(v => v.paint());
+  QVIEWS.forEach(v => v.paint());
   for (const c of CHECKLISTS) if (c.sideRow && c.items.some(x => x.fd)) c.sideRow();
   paintAsk();
 }
@@ -7156,43 +7157,101 @@ function expandFindings(v) {
   }
   paintFindings();
 }
-function findingsView(sec, el, wraps) {
-  const { cls, diffs, cids } = findingScope(sec), blocks = sec.blocks || [];
-  if (!diffs.length) return;
-  cls.forEach(i => wraps[i].classList.add('fv-c'));
-  diffs.forEach(i => wraps[i].classList.add('fv-d'));
-  const scope = CHECKLISTS.filter(c => cids.has(c.b.id)), items = scope.flatMap(c => c.items), tops = scope.filter(c => !c.parent);
-  const ds = diffs.map(i => DIFFS[blocks[i].id]).filter(Boolean);
-  for (const x of items) if (x.fd && findingOpen(x)) x.setOpen(true);
-  const mv = mergedView(scope, ds);
-  wraps[Math.min(...cls, ...diffs)].before(mv);
-  // the toolbar: the filter, Accept recommended (the section's open decisions; not on earlier revisions or in compare
-  // view), Expand all, ⋯ (Copy, Reset) and the view
-  const fbtns = FFILTERS.map(([f, l]) => h('button', { type: 'button', 'data-f': f, onclick: () => setFindingsFilter(v, f) }, l, ' ', h('b')));
-  const acc = !OLD && !BASE && !VIEW_ONLY ? h('button', { type: 'button', class: 'bp-btn ghost', hidden: true, title: 'Pick the starred option on every open decision in these findings', onclick: () => acceptRecs(scope) }) : null;
-  const expand = h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => expandFindings(v) });
+// The toolbar of a list of questions, a findings section's or a decision list's (one component): the filter (All · Open ·
+// Done, with counts), Accept recommended (the list's open decisions; not on earlier revisions, in compare view or on a
+// shared page), Expand all, ⋯ (Copy, and Reset but on a shared page) and, given, `views`. With it the answered meter
+// and the status for the title row (v.meter, v.status), and what the filter hides at the end of each top list
+// (v.notes). `scope`: the checklists, nested ones too; `noun`: what the toolbar's words call an item
+const hiddenNote = (tag, xs) => { const n = h(tag, { class: 'pv-hidden', hidden: true }); n._xs = xs; return n; };
+function questionBar(v, scope, noun, views) {
+  const tops = scope.filter(c => !c.parent), items = v.items = scope.flatMap(c => c.items);
+  for (const x of items) x.fv = v;
+  v.noun = noun;
+  v.fbtns = FFILTERS.map(([f, l]) => h('button', { type: 'button', 'data-f': f, onclick: () => setFindingsFilter(v, f) }, l, ' ', h('b')));
+  v.acc = !OLD && !BASE && !VIEW_ONLY ? h('button', { type: 'button', class: 'bp-btn ghost', hidden: true, title: `Pick the starred option on every open decision in these ${noun}s`, onclick: () => acceptRecs(scope) }) : null;
+  v.expand = h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => expandFindings(v) });
   const act = (icon, label, run) => h('button', { type: 'button', role: 'menuitem', tabindex: '-1', onclick: () => { pop.close(true); run(); } }, ic(icon), h('span', { class: 'l' }, label));
-  // ⋯: Copy, and Reset but on a shared page (VIEW_ONLY: no answers to reset)
-  const acts = [act('copy', 'Copy', () => copyText(tops.map(c => checklistMd(c)).join('\n'), 'Copied the findings as Markdown')),
-    !VIEW_ONLY && act('reset', 'Reset', () => { if (confirm('Reset your answers to these findings?')) tops.forEach(resetChecklist); })].filter(Boolean);
+  const acts = [act('copy', 'Copy', () => copyText(tops.map(c => checklistMd(c)).join('\n'), `Copied the ${noun}s as Markdown`)),
+    !VIEW_ONLY && act('reset', 'Reset', () => { if (confirm(`Reset your answers to these ${noun}s?`)) tops.forEach(resetChecklist); })].filter(Boolean);
   const menu = h('div', { class: 'bd-selm act float', role: 'menu', 'aria-label': 'More', tabindex: '-1', hidden: true }, acts);
   const moreBtn = h('button', { type: 'button', class: 'bp-btn ghost icon', 'aria-haspopup': 'menu', 'aria-expanded': 'false', 'aria-label': VIEW_ONLY ? 'More: Copy' : 'More: Copy, Reset', title: 'More',
     onclick: () => menu.hidden ? pop.open(0) : pop.close(true) }, ic('more'));
   const moreW = h('div', { class: 'bd-exp' }, moreBtn, menu);
   const pop = menuPop(moreW, moreBtn, menu, () => acts, { float: true });
+  v.bar = h('div', { class: 'bd-ftb' }, h('div', { class: 'bd-fvseg bd-ffilt', role: 'group', 'aria-label': `Show ${noun}s` }, v.fbtns), h('span', { class: 'sp' }), v.acc, v.expand, moreW, views);
+  // what the filter hides, at the end of each list: "2 findings you answered are hidden · Show"
+  v.notes = tops.map(c => { const n = hiddenNote('li', checklistScope(c).flatMap(s => s.items)); c.list.append(n); return n; });
+  v.meter = h('span', { class: 'bd-prm' }, h('span', { class: 'bd-meter' }, h('i')), h('span', { class: 'c' }));
+  v.status = h('span', { class: 'bd-prs' });
+  const f = store.get(ffilterKey(v));
+  v.filter = FFILTERS.some(x => x[0] === f) ? f : 'open';
+  if (!QVIEWS.length) addEventListener('resize', () => QVIEWS.forEach(q => q.measure()));
+  QVIEWS.push(v);
+  if (fvSizes) fvSizes.observe(v.bar);
+}
+// the toolbar's part of a repaint: the meter and status, the filter's counts and what it shows, Accept, Expand all
+function paintQuestions(v) {
+  const { items, noun } = v, n = items.filter(x => x.cb.checked).length, fresh = items.filter(x => x.fresh).length, done = items.length > 0 && n === items.length;
+  v.meter.lastChild.textContent = `${n} of ${items.length}`;
+  v.meter.firstChild.firstChild.style.width = (items.length ? n / items.length * 100 : 0) + '%';
+  v.meter.firstChild.classList.toggle('full', done);
+  v.status.className = 'bd-prs' + (fresh ? ' new' : done ? ' ok' : '');
+  v.status.replaceChildren(...(fresh ? [h('i'), `${fresh} ${fresh === 1 ? 'reply' : 'replies'}`] : done ? ['Answered'] : []));
+  const open = items.filter(findingOpen).length, count = { open, done: items.length - open, all: items.length };
+  for (const b of v.fbtns) { b.setAttribute('aria-pressed', String(b.dataset.f === v.filter)); b.lastChild.textContent = String(count[b.dataset.f]); }
+  for (const x of items) {
+    const out = !fvShows(x);
+    x.li.classList.toggle('fv-out', out);
+    for (const r of x.mrows || []) (r.parentElement.classList.contains('bd-mx') ? r.parentElement : r).classList.toggle('fv-out', out);
+  }
+  for (const note of v.notes) {
+    const k = note._xs.filter(x => !fvShows(x)).length;
+    note.hidden = !k || v.filter === 'all';
+    if (!note.hidden) note.replaceChildren(ic(v.filter === 'open' ? 'tick' : 'help'),
+      h('span', {}, v.filter === 'open' ? `${k} ${noun}${k === 1 ? '' : 's'} you answered ${k === 1 ? 'is' : 'are'} hidden · ` : `${k} open ${noun}${k === 1 ? ' is' : 's are'} hidden · `),
+      h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => setFindingsFilter(v, 'all') }, 'Show'));
+  }
+  const acc = v.acc;
+  if (acc) { const k = openRecs(v.scope).length; acc.hidden = !k; if (k) acc.replaceChildren(ic('checks'), h('span', {}, h('span', { class: 'l' }, 'Accept recommended '), `(${k})`)); }
+  const xs = fvOpenable(v), all = xs.length > 0 && xs.every(fvIsOpen);
+  v.expand.hidden = !xs.length;
+  v.expand.replaceChildren(ic(all ? 'up' : 'down'), h('span', { class: 'l' }, all ? 'Collapse all' : 'Expand all'));
+  v.expand.title = all ? `Close every ${noun} shown` : `Open every ${noun} shown`;
+  const fit = v.bar.textContent + (acc && acc.hidden);
+  if (fit !== v.fit) { v.fit = fit; if (v.el.isConnected) v.measure(); }   // the toolbar's words changed: does it still fit one row?
+}
+// A decision list's header is a findings section's, in the list's card: the title row (the title, the answered meter
+// and a status: replies waiting, Answered), then the same toolbar, without the views
+function questionView(c) {
+  const v = { el: c.root, scope: checklistScope(c) };
+  questionBar(v, v.scope, 'question');
+  v.head = h('div', { class: 'bp-cl-h' }, h('h3', {}, c.b.title || 'Checklist'), v.meter, v.status);
+  v.paint = () => paintQuestions(v);
+  v.measure = () => fitBar(v.bar);
+  return v;
+}
+function findingsView(sec, el, wraps) {
+  const { cls, diffs, cids } = findingScope(sec), blocks = sec.blocks || [];
+  if (!diffs.length) return;
+  cls.forEach(i => wraps[i].classList.add('fv-c'));
+  diffs.forEach(i => wraps[i].classList.add('fv-d'));
+  const scope = CHECKLISTS.filter(c => cids.has(c.b.id)), items = scope.flatMap(c => c.items);
+  const ds = diffs.map(i => DIFFS[blocks[i].id]).filter(Boolean);
+  for (const x of items) if (x.fd && findingOpen(x)) x.setOpen(true);
+  const mv = mergedView(scope, ds);
+  wraps[Math.min(...cls, ...diffs)].before(mv);
+  // the toolbar (questionBar) with the views; Merged's list ends with what the filter hides too
   const vbtn = (view, icon, label) => h('button', { type: 'button', 'data-v': view, title: label, onclick: e => pickFindings(view, e.currentTarget) }, ic(icon), h('span', { class: 'l' }, label));
   const seg = h('div', { class: 'bd-fvseg', role: 'group', 'aria-label': 'Show the findings as' },
     vbtn('checklist', 'list', 'Checklist'), vbtn('diff', 'pr', 'Diff'), vbtn('merged', 'layers', 'Merged'));
-  const bar = h('div', { class: 'bd-ftb' }, h('div', { class: 'bd-fvseg bd-ffilt', role: 'group', 'aria-label': 'Show findings' }, fbtns), h('span', { class: 'sp' }), acc, expand, moreW, seg);
-  // what the filter hides, at the end of each list (Checklist, Merged): "2 findings you answered are hidden · Show"
-  const hiddenNote = (tag, xs) => { const n = h(tag, { class: 'pv-hidden', hidden: true }); n._xs = xs; return n; };
-  const notes = [...tops.map(c => { const n = hiddenNote('li', checklistScope(c).flatMap(s => s.items)); c.list.append(n); return n; }), hiddenNote('div', items)];
-  mv.append(notes.at(-1));
+  const v = { el, scope, seg, mv, view: null };
+  questionBar(v, scope, 'finding', seg);
+  const bar = v.bar, mnote = hiddenNote('div', items);
+  v.notes.push(mnote); mv.append(mnote);
   // the header: the chevron (under the number) and the meter in the title row, then the sizes and the branches
   const h2 = el.querySelector(':scope > h2');
   const chev = h('button', { type: 'button', class: 'bd-prchev', 'aria-expanded': 'true', 'aria-label': 'Fold this section', onclick: e => { e.stopPropagation(); v.fold(!el.classList.contains('bd-fold')); } }, ic('chev'));
-  const meter = h('span', { class: 'bd-prm' }, h('span', { class: 'bd-meter' }, h('i')), h('span', { class: 'c' })), status = h('span', { class: 'bd-prs' });
-  h2.prepend(chev); h2.append(meter, status);
+  h2.prepend(chev); h2.append(v.meter, v.status);
   h2.addEventListener('click', e => { if (!/\bbd-ann-m-/.test(root.className) && !e.target.closest('a, button') && !String(getSelection())) v.fold(!el.classList.contains('bd-fold')); });
   const sizes = new Map();
   for (const x of items) if (x.it.state) { const k = String(x.it.state), s = sizes.get(k) || { n: 0, kind: x.it.stateKind || 'warn' }; s.n++; sizes.set(k, s); }
@@ -7208,28 +7267,15 @@ function findingsView(sec, el, wraps) {
   h2.after(head);
   head.after(bar);
   el.classList.add('fv-on');
-  const v = { el, h2, chips, bar, seg, mv, items, view: null, set: view => {
+  Object.assign(v, { h2, chips, set: view => {
     if (v.view === view) return;
     v.view = view;
     el.classList.toggle('fv-merged', view === 'merged'); el.classList.toggle('fv-cl', view === 'checklist'); el.classList.toggle('fv-diff', view === 'diff');
     for (const b of seg.children) b.setAttribute('aria-pressed', String(b.dataset.v === view));
     if (view === 'diff') diffs.forEach(i => paneShown(DIFFS[blocks[i].id]));
   }, paint: () => {
-    const n = items.filter(x => x.cb.checked).length, fresh = items.filter(x => x.fresh).length, done = items.length > 0 && n === items.length;
-    meter.lastChild.textContent = `${n} of ${items.length}`;
-    meter.firstChild.firstChild.style.width = (items.length ? n / items.length * 100 : 0) + '%';
-    meter.firstChild.classList.toggle('full', done);
-    status.className = 'bd-prs' + (fresh ? ' new' : done ? ' ok' : '');
-    status.replaceChildren(...(fresh ? [h('i'), `${fresh} ${fresh === 1 ? 'reply' : 'replies'}`] : done ? ['Answered'] : []));
-    // the filter's counts, and what it shows: the findings in Checklist, their excerpts in Merged (a group left empty
-    // goes), their cards in Diff
-    const open = items.filter(findingOpen).length, count = { open, done: items.length - open, all: items.length };
-    for (const b of fbtns) { b.setAttribute('aria-pressed', String(b.dataset.f === v.filter)); b.lastChild.textContent = String(count[b.dataset.f]); }
-    for (const x of items) {
-      const out = !fvShows(x);
-      x.li.classList.toggle('fv-out', out);
-      for (const r of x.mrows || []) (r.parentElement.classList.contains('bd-mx') ? r.parentElement : r).classList.toggle('fv-out', out);
-    }
+    paintQuestions(v);
+    // what the filter hides beyond the lists: a Merged group left empty, a card in Diff
     for (const g of mv.querySelectorAll(':scope > .bd-mg')) {
       const parts = g.querySelectorAll(':scope > .bd-mx, :scope > .bd-mrow');
       g.classList.toggle('fv-out', parts.length > 0 && [...parts].every(p => p.classList.contains('fv-out')));
@@ -7238,36 +7284,18 @@ function findingsView(sec, el, wraps) {
       for (const m of d.mirrors) m.card.closest('.bd-cmw')?.classList.toggle('fv-out', !fvShows(m.src));
       if (d.fnav) d.fnav.paint();
     }
-    for (const note of notes) {
-      const k = note._xs.filter(x => !fvShows(x)).length;
-      note.hidden = !k || v.filter === 'all';
-      if (!note.hidden) note.replaceChildren(ic(v.filter === 'open' ? 'tick' : 'help'),
-        h('span', {}, v.filter === 'open' ? `${k} finding${k === 1 ? '' : 's'} you answered ${k === 1 ? 'is' : 'are'} hidden · ` : `${k} open finding${k === 1 ? ' is' : 's are'} hidden · `),
-        h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => setFindingsFilter(v, 'all') }, 'Show'));
-    }
-    if (acc) { const k = openRecs(scope).length; acc.hidden = !k; if (k) acc.replaceChildren(ic('checks'), h('span', {}, h('span', { class: 'l' }, 'Accept recommended '), `(${k})`)); }
-    const xs = fvOpenable(v), all = xs.length > 0 && xs.every(fvIsOpen);
-    expand.hidden = !xs.length;
-    expand.replaceChildren(ic(all ? 'up' : 'down'), h('span', { class: 'l' }, all ? 'Collapse all' : 'Expand all'));
-    expand.title = all ? 'Close every finding shown' : 'Open every finding shown';
-    const fit = bar.textContent + (acc && acc.hidden);
-    if (fit !== v.fit) { v.fit = fit; if (el.isConnected) fvMeasure(v); }   // the toolbar's words changed: does it still fit one row?
-  }, fold: (on, anim = true) => {
+  }, measure: () => fvMeasure(v), fold: (on, anim = true) => {
     foldMotion(el, el, anim, () => {
       el.classList.toggle('bd-fold', on);
       chev.setAttribute('aria-expanded', String(!on)); chev.setAttribute('aria-label', on ? 'Open this section' : 'Fold this section');
     });
-  } };
-  // its own view and filter, as the reader left them here; a view never picked here follows the last one picked
-  const saved = store.get(fviewKey(v)), last = store.get(FVIEW_KEY), f = store.get(ffilterKey(v));
+  } });
+  // its own view, as the reader left it here; a view never picked here follows the last one picked
+  const saved = store.get(fviewKey(v)), last = store.get(FVIEW_KEY);
   v.set(FVIEW_NAMES.includes(saved) ? saved : FVIEW_NAMES.includes(last) ? last : 'merged');
-  v.filter = FFILTERS.some(x => x[0] === f) ? f : 'open';
-  if (!FVIEWS.length) {
-    addEventListener('scroll', paintStuck, { passive: true });
-    addEventListener('resize', () => FVIEWS.forEach(fvMeasure));
-  }
+  if (!FVIEWS.length) addEventListener('scroll', paintStuck, { passive: true });
   FVIEWS.push(v);
-  if (fvSizes) [h2, chips, bar].forEach(e => fvSizes.observe(e));
+  if (fvSizes) [h2, chips].forEach(e => fvSizes.observe(e));
 }
 // a section's fold, eased: `apply` flips it; `box` then runs from its old height to its new one, clipped, while
 // `mark` carries .bd-anim, which keeps the parts folding away drawn (fading out, or in) until it lands. A fold
@@ -7284,18 +7312,23 @@ function foldMotion(box, mark, anim, apply) {
   const a = box.bdFold = box.animate({ height: [from + 'px', to + 'px'] }, { duration: Math.round(Math.min(420, 200 + Math.abs(to - from) / 12)), easing: 'cubic-bezier(0.23, 1, 0.32, 1)' });
   a.onfinish = a.oncancel = () => { if (box.bdFold === a || !box.bdFold) { box.bdFold = null; mark.classList.remove('bd-anim'); box.classList.remove('bd-anim-box'); } };
 }
-// where the parts stick: the title row's height (--fv-t), the sizes' while they stick (--fv-c: they scroll away now)
-// and the toolbar's (--fvbar-h), once it fits: too wide for one row, its views, then its actions, drop their words
-function fvMeasure(v) {
-  const s = v.el.style, b = v.bar, wraps = () => b.lastElementChild.offsetTop > b.firstElementChild.offsetTop + 4;
+// a toolbar too wide for one row: its views, then its actions, drop their words
+function fitBar(b) {
+  const wraps = () => b.lastElementChild.offsetTop > b.firstElementChild.offsetTop + 4;
   b.classList.remove('tight', 'tighter');
   if (wraps()) b.classList.add('tight');
   if (wraps()) b.classList.add('tighter');
+}
+// where the parts stick: the title row's height (--fv-t), the sizes' while they stick (--fv-c: they scroll away now)
+// and the toolbar's (--fvbar-h), once it fits
+function fvMeasure(v) {
+  const s = v.el.style;
+  fitBar(v.bar);
   s.setProperty('--fv-t', v.h2.offsetHeight + 'px');
   s.setProperty('--fv-c', (getComputedStyle(v.chips).position === 'sticky' ? v.chips.offsetHeight : 0) + 'px');
-  s.setProperty('--fvbar-h', b.offsetHeight + 'px');
+  s.setProperty('--fvbar-h', v.bar.offsetHeight + 'px');
 }
-const fvSizes = 'ResizeObserver' in window ? new ResizeObserver(() => FVIEWS.forEach(fvMeasure)) : null;
+const fvSizes = 'ResizeObserver' in window ? new ResizeObserver(() => QVIEWS.forEach(v => v.measure())) : null;
 // a toolbar stuck under the header gets a bottom edge
 let stuckRaf = 0;
 const fvStuck = v => { const t = parseFloat(getComputedStyle(v.bar).top) || 0, r = v.bar.getBoundingClientRect(); return r.height > 0 && Math.abs(r.top - t) < 1 && v.el.getBoundingClientRect().top < t - 1; };
@@ -17171,9 +17204,10 @@ window.BP = {
     if (FVIEW_NAMES.includes(view)) v.seg.querySelector(`[data-v="${view}"]`).click();
     return v.view;
   },
-  // a findings section's filter, 'open', 'done' or 'all' (null: not one); with f, picks it as its toolbar would
+  // a findings section's or a decision list's (`cl-<id>`) filter, 'open', 'done' or 'all' (null: not one); with f,
+  // picks it as its toolbar would
   findingsFilter: (sectionId, f) => {
-    const v = FVIEWS.find(v => v.el.id === sectionId); if (!v) return null;
+    const v = QVIEWS.find(v => v.el.id === sectionId); if (!v) return null;
     if (FFILTERS.some(x => x[0] === f)) setFindingsFilter(v, f);
     return v.filter;
   },

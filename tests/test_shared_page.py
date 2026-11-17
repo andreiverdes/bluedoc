@@ -155,10 +155,12 @@ class SharedPage(unittest.TestCase):
                          [False, 0, False, False, None])
         self.assertEqual(self.q(t, "JSON.stringify(w.BP.replyPayload().items)"), before)
         self.assertEqual(self.q(t, "[...w.document.querySelectorAll('.bp-cl-item input[type=checkbox]')].filter(e => e.checked).length"), 0)
-        # no Need more details, Custom, Accept recommended, Reset or Copy progress; no Comments tab: the doc has no threads
-        self.assertEqual(self.q(t, "[w.document.querySelectorAll('.bp-opt.more, .bp-opt.cust, .bp-side-tools').length, "
+        # no Need more details, Custom, Accept recommended or Reset (the decision list's ⋯ holds Copy alone); no
+        # Comments tab: the doc has no threads
+        self.assertEqual(self.q(t, "[w.document.querySelectorAll('.bp-opt.more, .bp-opt.cust').length, "
                                    "[...w.document.querySelectorAll('button')].filter(b => /^(Reset|Accept recommended)/.test(b.textContent.trim())).length, "
-                                   "w.BP.sidebar().available.includes('comments')]"), [0, 0, False])
+                                   "w.document.querySelector('#cl-decisions .bd-ftb [aria-haspopup=menu]').getAttribute('aria-label'), "
+                                   "w.BP.sidebar().available.includes('comments')]"), [0, 0, "More: Copy", False])
         self.assert_view_only(t)
         # a reload shows the doc as it is: the clicks above left nothing behind
         self.open(t, url + HASH, reload=True)
