@@ -12,6 +12,7 @@ import time
 import unittest
 
 from test_page_state import CHROME, ChromePage, Tab, until
+from test_inline_edit import frame_eval
 
 # the dock's mode and its pressed keys
 STATE = """(() => { const tb = document.querySelector('.bd-anntb');
@@ -250,7 +251,10 @@ CURSOR_AT = "((x, y) => (e => e ? getComputedStyle(e).cursor : null)(document.el
 @unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")
 class BoardMarksAndToolbars(ChromePage):
     """On a board a Region drawn beside the screens lives on the board: it pans and zooms with it (in the board's marks
-    layer, in board px, not the window). In every tool the toolbars and trays keep the default arrow, step after step."""
+    layer, in board px, not the window). In every tool the toolbars and trays keep the default arrow, step after step.
+    Element shows its cursor and outlines the element under the pointer, with its label, on a doc page and inside a
+    board's screen, and a click pins a comment there; a pin in the board's marks layer keeps the pointer in every tool
+    (out of the drawing layer, a click opens its comment), as the page's pins do."""
     mouse, drag, save_note = CommentTools.mouse, CommentTools.drag, CommentTools.save_note
 
     def board(self, doc: str = "acme-fit-design.bluedoc.json") -> Tab:
@@ -336,6 +340,88 @@ class BoardMarksAndToolbars(ChromePage):
                         self.mouse(t, "mouseMoved", x, y)
                         seen.append(t.ev(f"{CURSOR_AT}({x}, {y})"))
                     self.assertEqual(set(seen), {"default"}, seen)
+        self.assertEqual(self.browser.errors, [])
+
+    def test_element_shows_its_cursor_and_outline_on_the_page_and_in_a_screen_and_board_pins_keep_the_pointer(self) -> None:
+        el_cur = 'url("data:image/svg+xml,'
+        hov = "(h => h && !h.hidden ? [(r => [r.left, r.top, r.width, r.height].map(Math.round))(h.getBoundingClientRect()), h.textContent] : null)(document.querySelector({}))"
+        # a doc page: a section title, clear of the app bar and the dock
+        t = self.open(self.server.url_for(self.plan))
+        self.browser.call("Page.bringToFront", {}, t.session)
+        t.ev("BP.sidebar({open: false}), scrollTo(0, 0)")
+        self.assertTrue(t.ev("BP.setMode('point')"))
+        h2 = t.wait_for("(e => e && (r => [r.left, r.top, r.width, r.height])(e.getBoundingClientRect()))([...document.querySelectorAll('.bp-sec > h2')]"
+                        ".find(e => e.checkVisibility() && e.getBoundingClientRect().top > 100 && e.getBoundingClientRect().bottom < innerHeight - 140))")
+        x, y = h2[0] + min(40, h2[2] / 2), h2[1] + h2[3] / 2
+        self.mouse(t, "mouseMoved", x - 2, y - 2)
+        self.mouse(t, "mouseMoved", x, y)
+        self.assertTrue(t.ev(f"{CURSOR_AT}({x}, {y})").startswith(el_cur))
+        box, label = t.wait_for(hov.format(json.dumps(".bd-ann-hov")))
+        self.assertEqual(label, "Section title")
+        for got, want in zip(box, [h2[0] - 3, h2[1] - 3, h2[2] + 6, h2[3] + 6]):
+            self.assertLessEqual(abs(got - want), 1, (box, h2))
+        self.mouse(t, "mousePressed", x, y, 1)
+        self.mouse(t, "mouseReleased", x, y)
+        self.assertTrue(t.wait_for("(c => !c.hidden && c.querySelector('.lb').textContent)(document.querySelector('.bd-cmp'))"))
+        # a board's screen: its frame shows Element's cursor and outlines the element, the board labels it
+        t = self.board()
+        t.wait_for("(a => a && a.ready)(BP.board().artboards.find(a => a.id === 'login'))", 20)
+        t.ev("BP.board({focus: 'login'}), 1")
+        time.sleep(0.8)
+        self.assertTrue(t.ev("BP.setMode('point')"))
+        screen = f"{self.server.host}*acme-fit-design.design/login.html"
+        fr = until(lambda: frame_eval(t, screen, "(e => e && (r => [r.left, r.top, r.width, r.height])(e.getBoundingClientRect()))"
+                                                 "([...document.querySelectorAll('button')].find(b => b.textContent.trim() === 'Sign in'))"))
+        self.assertTrue(fr, "the screen has no Sign in key")
+        f = t.ev("(f => (r => [r.left, r.top, r.width / f.offsetWidth])(f.getBoundingClientRect()))(document.querySelector('iframe.bd-ab-fr[data-ab=login]'))")
+        fx, fy = fr[0] + fr[2] / 2, fr[1] + fr[3] / 2
+        x, y = f[0] + fx * f[2], f[1] + fy * f[2]
+        # the frame has Element's mode once its cursor shows (Element's, not the key's own pointer); then a move outlines
+        cur = until(lambda: frame_eval(t, screen, f"(c => c.startsWith({json.dumps(el_cur)}) && c)(getComputedStyle(document.elementFromPoint({fx}, {fy})).cursor)"))
+        self.assertTrue(cur, frame_eval(t, screen, f"getComputedStyle(document.elementFromPoint({fx}, {fy})).cursor"))
+
+        page_hov, screen_hov = hov.format(json.dumps(".bd-ann-hov")), hov.format(json.dumps(".bd-ab[data-ab=login] .bd-ab-hov"))
+        frame_ol = "(o => o && o.style.display === 'block' && (r => [r.left, r.top, r.width, r.height])(o.getBoundingClientRect()))(document.getElementById('bd-inspect'))"
+        bezel = f[0] - 4   # the screen's edge, beside its frame: the page outlines the screen
+
+        def outlined():
+            self.mouse(t, "mouseMoved", bezel, y)
+            self.mouse(t, "mouseMoved", x - 2, y - 2)
+            self.mouse(t, "mouseMoved", x, y)
+            return frame_eval(t, screen, frame_ol)
+        self.mouse(t, "mouseMoved", bezel, y)
+        self.assertEqual(t.wait_for(page_hov)[1], "Screen")
+        ol = until(outlined)
+        self.assertTrue(ol, "no outline in the screen")
+        for got, want in zip(ol, [fr[0] - 2, fr[1] - 2, fr[2] + 4, fr[3] + 4]):
+            self.assertLessEqual(abs(got - want), 1, (ol, fr))
+        self.assertTrue(t.wait_for(screen_hov)[1])
+        # in the frame the page's own outline (the screen's, as the pointer crossed its edge) is gone
+        self.assertTrue(t.wait_for(f"!{page_hov}"))
+        # out of it, the screen's label and the frame's outline go; the page outlines the screen again
+        self.mouse(t, "mouseMoved", bezel, y)
+        self.assertTrue(t.wait_for(f"!{screen_hov}"))
+        self.assertTrue(until(lambda: frame_eval(t, screen, f"!{frame_ol}")), "the frame kept its outline")
+        self.assertEqual(t.wait_for(page_hov)[1], "Screen")
+        self.assertTrue(until(outlined))
+        self.mouse(t, "mousePressed", x, y, 1)
+        self.mouse(t, "mouseReleased", x, y)
+        self.save_note(t, "Acme: Sign in, bolder")
+        n = len(t.ev("BP.annotations()"))
+        # its pin, in the board's marks layer: the pointer in every tool (Region's and Pen's layer leaves it out), and in
+        # Element a click opens its comment
+        pin = t.wait_for(f"{BOX}('.bd-bmk .bd-ann-pin')")
+        px, py = pin[0] + pin[2] / 2, pin[1] + pin[3] / 2
+        for mode in ("point", "select", "region", "draw"):
+            self.assertTrue(t.ev(f"BP.setMode({mode!r})"), mode)
+            self.mouse(t, "mouseMoved", px, py)
+            self.assertEqual(t.ev(f"{CURSOR_AT}({px}, {py})"), "pointer", mode)
+        self.assertTrue(t.ev("BP.setMode('point')"))
+        self.mouse(t, "mousePressed", px, py, 1)
+        self.mouse(t, "mouseReleased", px, py)
+        time.sleep(0.3)
+        self.assertTrue(t.ev("document.querySelector('.bd-cmp').hidden"), "a click on a pin made a new comment")
+        self.assertEqual(len(t.ev("BP.annotations()")), n)
         self.assertEqual(self.browser.errors, [])
 
 

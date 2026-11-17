@@ -28,6 +28,8 @@
                              the pointer) or of that element: its one text run becomes editable in place (plaintext-only;
                              Enter keeps, Esc undoes, a click away keeps). Answered with a pick: editing true (started),
                              false (no text there)
+     {bd:'leave'}            the pointer is outside the frame now (the page saw it there; no mouseleave reaches this
+                             document): the hover outline goes, as on leaving
      {bd:'select', sel}      the page's picked or edited element, outlined with its name chip (null: none)
      {bd:'drafts', list}     the reader's element drafts, at most 300: [{sel, tag, base, text} | {sel, tag, base, del: true}],
                              applied after the variants on their own restore stack: a text draft sets the element's one
@@ -659,6 +661,8 @@
       const id = m.id;
       snapshot().then(r => post({ bd: 'snapshot', id, html: r.html, external: r.external }),
         err => post({ bd: 'snapshot', id, error: cap(err && err.message || err) || 'failed' }));
+    } else if (m.bd === 'leave') {
+      onLeave();
     }
   });
   // Viewport: the frame's own scroll, at most once a frame (compare scrolls the other revision's frame along)
