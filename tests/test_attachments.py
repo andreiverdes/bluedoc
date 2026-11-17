@@ -90,7 +90,7 @@ class AttachRoute(unittest.TestCase):
 
 @unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")
 class AttachPage(ChromePage):
-    BOX = "document.querySelector('#item-decisions-retention > .bp-note')"
+    BOX = "document.querySelector('#item-decisions-retention > .ac-reply')"
 
     def folder(self) -> list[str]:
         d = self.tmp.home / "attachments" / "acme-saved-carts-plan"
@@ -109,12 +109,13 @@ class AttachPage(ChromePage):
     def test_files_on_an_item_are_a_draft_until_saved_then_go_with_the_comment(self) -> None:
         url = self.server.url_for(self.plan)
         a = self.open(url)
-        box, save, cancel = self.BOX, f"{self.BOX}.querySelector('.acts .primary')", f"{self.BOX}.querySelector('.acts .ghost')"
+        box, save = self.BOX, f"{self.BOX}.querySelector('.ac-go')"
+        cancel = f"{self.BOX}.querySelector('textarea').dispatchEvent(new KeyboardEvent('keydown', {{ key: 'Escape', bubbles: true }}))"
         self.assertFalse(a.ev("!!document.querySelector('.bp-note .hint')"), "the old hint is gone")
         # Cancel deletes what it added
         self.attach(a, box, "draft.txt")
         self.assertEqual(self.folder(), ["draft.txt"])
-        a.ev(f"{cancel}.click()")
+        a.ev(cancel)   # Esc puts the saved comment back
         self.assertTrue(until(lambda: self.folder() == []), self.folder())
         self.assertEqual(self.chips(a, box), [])
         # files alone make a comment: Save keeps them over a reload

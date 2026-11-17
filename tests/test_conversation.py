@@ -4,9 +4,11 @@ A reply sent with Request changes leaves the item's box and becomes the reader's
 on; the box is empty after a reload (conv/send). The agent's `build.py patch … --reply` lands between the reader's
 messages by rev, marked New, and opens its item; `?rev=` shows the thread as it stood then, read-only (conv/order).
 A comment sent before threads (`:note` with a matching `:note-sent`) becomes the first message, "earlier"
-(conv/migrate). Options are Accordion rows: a click on the row or → opens the explanation, the radio picks, ↑ ↓ move,
-Space picks; an option without `md` is its label (opt/rows). Need more details is the last row: it clears the pick
-(with `multi`, the ticks) and an option turns it off (opt/more). A `multi` decision stores its ticks and sends them as
+(conv/migrate). Answers are Accordion rows: a click on the row or → opens the explanation and its field, the radio
+picks and opens, ↑ ↓ move, Space picks; an option without `md` is its label (opt/rows). Tell me more is a pill under
+the answers: it clears the pick (with `multi`, the ticks) and an answer turns it off (opt/more). The reply field saves
+with Enter into the conversation; a question's detail sits behind More details (card/reply, card/details). A `multi`
+decision stores its ticks and sends them as
 `choice: [ids]` and `→ **A**, **B**` (opt/multi). A pin's follow-up goes out under its id with the agent's reply quoted
 and reopens a resolved comment (conv/pin)."""
 from __future__ import annotations
@@ -59,7 +61,7 @@ class Conversation(ChromePage):
     def test_a_sent_reply_becomes_a_message_and_the_box_empties(self) -> None:
         url = self.server.url_for(self.plan)
         a = self.open(url)
-        box = "document.querySelector('#item-decisions-retention .bp-note textarea')"
+        box = "document.querySelector('#item-decisions-retention .ac-reply textarea')"
         a.ev("BP.setNote('decisions/retention', 'Acme: what does 180 days cost in storage?')")
         self.assertEqual(self.count(a), [False, "1"])
         self.send_changes(a, "1 comment on items")
@@ -75,7 +77,7 @@ class Conversation(ChromePage):
         a.go(self.base + url)
         self.assertEqual(self.thread(a, "decisions/retention"), [("you", "1", "Acme: what does 180 days cost in storage?")])
         self.assertEqual([a.ev(f"{box}.value"), self.count(a)], ["", [True, "0"]])
-        self.assertEqual(a.ev("document.querySelector('#item-decisions-retention .bp-cl-sum').textContent"), "1 message")
+        self.assertEqual(a.ev("document.querySelectorAll('#item-decisions-retention .ac-convo .bp-msg').length"), 1)
 
     def test_an_agent_reply_sits_between_two_messages_and_rev_shows_the_thread_then(self) -> None:
         url = self.server.url_for(self.plan)
@@ -107,7 +109,7 @@ class Conversation(ChromePage):
             with self.subTest(rev=rev):
                 a.go(f"{self.base}{url}?rev={rev}")
                 self.assertEqual(len(self.thread(a, "decisions/retention")), n)
-                self.assertEqual(a.ev(f"[!!{row}.querySelector('textarea'), !!{row}.querySelector('.bp-opt.more')]"), [False, False])
+                self.assertEqual(a.ev(f"[!!{row}.querySelector('textarea'), !!{row}.querySelector('.ac-more')]"), [False, False])
 
     def test_an_old_sent_comment_becomes_the_first_message(self) -> None:
         url = self.server.url_for(self.plan)
@@ -121,7 +123,7 @@ class Conversation(ChromePage):
         self.assertEqual(a.ev("document.querySelector('#item-decisions-retention .bp-msg .rv').textContent"), "earlier")
         # a comment changed after it went is still a draft: it stays in the box and counts as pending
         self.assertEqual(self.thread(a, "decisions/prices"), [])
-        self.assertEqual(a.ev("document.querySelector('#item-decisions-prices .bp-note textarea').value"), draft)
+        self.assertEqual(a.ev("document.querySelector('#item-decisions-prices .ac-reply textarea').value"), draft)
         self.assertEqual(self.count(a), [False, "1"])
         s = until(lambda: (s := self.state(url)) and "decisions:retention:note" not in s and s)
         self.assertNotIn("decisions:retention:note-sent", s)
@@ -136,15 +138,16 @@ class Conversation(ChromePage):
         row = "document.querySelector('#item-decisions-retention')"
         opt = lambda i: f"{row}.querySelector('.bp-opt[data-id={i}]')"  # noqa: E731
         pick = "BP.replyPayload().items.find(i => i.item === 'retention').choice"
-        # a click on the row opens its explanation (one row at a time); it doesn't pick
+        # a click on the row opens its explanation and its field (one row at a time); it doesn't pick
         a.ev(f"{opt('d90')}.querySelector('.oh').click()")
-        self.assertEqual(a.ev(f"[{opt('d90')}.querySelector('.ob').checkVisibility(), {opt('d90')}.querySelector('.one').checkVisibility(), {pick}]"), [True, False, None])
+        self.assertEqual(a.ev(f"[{opt('d90')}.querySelector('.ob').checkVisibility(), {opt('d90')}.querySelector('.one').checkVisibility(), {pick}, !!{opt('d90')}.querySelector('.ob .ac-line')]"),
+                         [True, False, None, True])
         a.ev(f"{opt('d180')}.querySelector('.oh').click()")
         self.assertEqual(a.ev(f"[{opt('d90')}.classList.contains('open'), {opt('d180')}.classList.contains('open')]"), [False, True])
-        # the radio picks: tint, Your pick
+        # the radio picks and opens the answer: tint, Your pick
         a.ev(f"{opt('d90')}.querySelector('.pk').click()")
-        self.assertEqual(a.ev(f"[{pick}, {opt('d90')}.classList.contains('on'), {opt('d90')}.querySelector('.yp').textContent, {row}.classList.contains('done')]"),
-                         ["d90", True, "Your pick", True])
+        self.assertEqual(a.ev(f"[{pick}, {opt('d90')}.classList.contains('on'), {opt('d90')}.classList.contains('open'), {opt('d90')}.querySelector('.yp').textContent, {row}.classList.contains('done')]"),
+                         ["d90", True, True, "Your pick", True])
         # keys: ↓ moves, Space picks, → opens, ← closes
         a.ev(f"{opt('d90')}.querySelector('.pk').focus()")
         self.press(a, "ArrowDown")
@@ -155,39 +158,39 @@ class Conversation(ChromePage):
         self.assertFalse(a.ev(f"{opt('d180')}.querySelector('.ob').checkVisibility()"))
         self.press(a, "ArrowRight")
         self.assertTrue(a.ev(f"{opt('d180')}.querySelector('.ob').checkVisibility()"))
-        # without md: the label alone, and a click on it picks
-        self.assertEqual(a.ev(f"[{opt('forever')}.classList.contains('plain'), !!{opt('forever')}.querySelector('.cv, .one, .ob')]"), [True, False])
-        a.ev(f"{opt('forever')}.querySelector('.oh').click()")
+        # without md: the label alone, no one-line explanation; its chevron opens its field, the radio picks
+        self.assertEqual(a.ev(f"[{opt('forever')}.classList.contains('plain'), !!{opt('forever')}.querySelector('.one'), !!{opt('forever')}.querySelector('.cv')]"), [True, False, True])
+        a.ev(f"{opt('forever')}.querySelector('.pk').click()")
         self.assertEqual(a.ev(pick), "forever")
 
-    def test_need_more_details_clears_the_pick_and_the_ticks(self) -> None:
+    def test_tell_me_more_clears_the_pick_and_the_ticks(self) -> None:
         url = self.server.url_for(self.plan)
         a = self.open(url)
         row = "document.querySelector('#item-decisions-prices')"
-        more = f"{row}.querySelector('.bp-opt.more')"
+        more = f"{row}.querySelector('.ac-more')"
         item = lambda i: f"BP.replyPayload().items.find(x => x.item === '{i}')"  # noqa: E731
         a.ev("BP.choose('decisions/prices', 'notice')")
-        a.ev(f"{more}.querySelector('.pk').click()")
-        self.assertEqual(a.ev(f"[{item('prices')}.choice, {item('prices')}.more, {more}.querySelector('.pk').getAttribute('aria-checked'), {row}.classList.contains('more'),"
-                              f" {row}.classList.contains('open'), document.activeElement === {row}.querySelector('.bp-note textarea')]"), [None, True, "true", True, True, True])
+        a.ev(f"{more}.querySelector('.ac-tmm').click()")
+        self.assertEqual(a.ev(f"[{item('prices')}.choice, {item('prices')}.more, {more}.querySelector('.ac-tmm').getAttribute('aria-checked'), {row}.classList.contains('more'),"
+                              f" {row}.classList.contains('open'), document.activeElement === {more}.querySelector('textarea')]"), [None, True, "true", True, True, True])
         approve = "document.querySelector('.bd-key.approve').disabled"
         self.assertTrue(a.ev(approve))
         a.ev(f"{row}.querySelector('.bp-opt[data-id=silent] .pk').click()")
         self.assertEqual(a.ev(f"[{item('prices')}.choice, !!{item('prices')}.more, {row}.classList.contains('more')]"), ["silent", False, False])
-        a.ev(f"{more}.querySelector('.pk').click()")
-        self.send_changes(a, "1 request for more details")
-        self.assertIn("`item:decisions/prices` → **Need more details**", self.reply(self.plan))
-        self.assertEqual(a.ev(f"[{more}.querySelector('.ol').textContent, {approve}]"), ["Details requested", True])
+        a.ev(f"{more}.querySelector('.ac-tmm').click()")
+        self.send_changes(a, "1 question asking for more")
+        self.assertIn("`item:decisions/prices` → **Tell me more**", self.reply(self.plan))
+        self.assertEqual(a.ev(f"[{more}.querySelector('.ac-chip').textContent, {approve}]"), ["Asked · rev 1", True])
         # several answers: a checkbox that clears the ticks; a tick turns it off
         g = "document.querySelector('#item-decisions-guests')"
-        head = f"{g}.querySelector('.bp-cl-picked').textContent"
+        head = f"[{g}.querySelector('.bp-cl-picked').textContent, {g}.querySelector('.bp-cl-head .ac-chip').hidden]"
         for i in ("accounts", "business"):
             a.ev(f"{g}.querySelector('.bp-opt[data-id={i}] .pk').click()")
-        self.assertEqual(a.ev(f"[{head}, {item('guests')}.choice, {g}.querySelector('.bp-opt.more .pk').getAttribute('role')]"), ["2 picked", ["accounts", "business"], "checkbox"])
-        a.ev(f"{g}.querySelector('.bp-opt.more .pk').click()")
-        self.assertEqual(a.ev(f"[{head}, {item('guests')}.choice, {item('guests')}.more, {g}.querySelectorAll('.bp-opt.on').length]"), ["Asking for more", [], True, 1])
+        self.assertEqual(a.ev(f"[{head}, {item('guests')}.choice, {g}.querySelector('.ac-tmm').getAttribute('role')]"), [["2 picked", True], ["accounts", "business"], "checkbox"])
+        a.ev(f"{g}.querySelector('.ac-tmm').click()")
+        self.assertEqual(a.ev(f"[{head}, {item('guests')}.choice, {item('guests')}.more, {g}.querySelectorAll('.bp-opt.on').length]"), [["", False], [], True, 0])
         a.ev(f"{g}.querySelector('.bp-opt[data-id=support] .pk').click()")
-        self.assertEqual(a.ev(f"[{head}, {item('guests')}.choice, !!{item('guests')}.more]"), ["1 picked", ["support"], False])
+        self.assertEqual(a.ev(f"[{head}, {item('guests')}.choice, !!{item('guests')}.more]"), [["1 picked", True], ["support"], False])
 
     def test_several_answers_are_stored_and_sent_as_a_list(self) -> None:
         url = self.server.url_for(self.plan)
@@ -356,54 +359,38 @@ class Conversation(ChromePage):
         for kind in ("keyDown", "keyUp"):
             self.browser.call("Input.dispatchKeyEvent", {"type": kind, "key": "Enter", "code": "Enter", "windowsVirtualKeyCode": 13, **({"text": "\r"} if kind == "keyDown" else {})}, tab.session)
 
-    def test_a_closed_decision_shows_its_box_and_a_click_into_it_opens_the_row(self) -> None:
+    def test_the_reply_field_saves_with_enter_into_the_conversation(self) -> None:
         url = self.server.url_for(self.plan)
         a = self.open(url)
         row = "document.querySelector('#item-decisions-retention')"
-        box = f"{row}.querySelector(':scope > .bp-note')"
-        state = f"(b => [{row}.classList.contains('open'), b.checkVisibility(), [...b.querySelectorAll('.acts button')].map(x => x.disabled)])({box})"
-        self.assertEqual(a.ev(state), [False, True, [True, True]])
-        # a Tab into the field leaves the row closed
+        box = f"{row}.querySelector(':scope > .ac-reply')"
+        state = f"(b => [b.querySelector('.ac-go').disabled, b.querySelector('.ac-hint').textContent])({box})"
+        self.assertEqual(a.ev(state), [True, "A reply here is about the whole question."], "Save is dimmed while empty")
         a.ev(f"{box}.querySelector('textarea').focus()")
-        self.assertFalse(a.ev(f"{row}.classList.contains('open')"))
-        a.ev("document.activeElement.blur()")
-        # a click opens it; the details grow above the box, which stays under the pointer
-        x, y = a.ev(f"(t => {{ t.scrollIntoView({{block: 'center', behavior: 'instant'}}); const r = t.getBoundingClientRect(); return [r.x + 30, r.y + r.height / 2]; }})({box}.querySelector('textarea'))")
-        for kind, buttons in (("mouseMoved", 0), ("mousePressed", 1), ("mouseReleased", 0)):
-            self.browser.call("Input.dispatchMouseEvent", {"type": kind, "x": x, "y": y, "button": "left", "buttons": buttons, "clickCount": 1}, a.session)
-        a.wait_for(f"{row}.classList.contains('open')")
-        self.assertLess(abs(a.ev(f"{box}.querySelector('textarea').getBoundingClientRect().top + {box}.querySelector('textarea').getBoundingClientRect().height / 2") - y), 3)
-        self.assertTrue(a.ev(f"document.activeElement === {box}.querySelector('textarea')"))
-        # Cancel and Save are enabled while the text differs from the saved comment
         self.browser.call("Input.insertText", {"text": "Acme: how big is it?"}, a.session)
-        self.assertEqual(a.ev(state)[2], [False, False])
-        a.ev(f"{box}.querySelector('.acts .primary').click()")
-        self.assertEqual(a.ev(state)[2], [True, True])
+        self.assertEqual(a.ev(state)[0], False)
+        self.press_enter(a)
+        self.assertEqual(a.ev(state)[0], True)
+        self.assertEqual(a.ev(f"[...{row}.querySelectorAll('.ac-convo .bp-msg')].map(m => [m.classList.contains('unsent'), m.querySelector('.mb').textContent])"),
+                         [[True, "Acme: how big is it?"]])
         self.assertEqual(until(lambda: (self.state(url) or {}).get("decisions:retention:note")), "Acme: how big is it?")
+        # Esc puts the saved text back
+        self.browser.call("Input.insertText", {"text": " Twice?"}, a.session)
+        a.ev(f"{box}.querySelector('textarea').dispatchEvent(new KeyboardEvent('keydown', {{ key: 'Escape', bubbles: true }}))")
+        self.assertEqual(a.ev(f"{box}.querySelector('textarea').value"), "Acme: how big is it?")
 
-    def test_a_decision_with_no_details_has_nothing_to_open_until_its_first_message(self) -> None:
-        doc = load_json(self.plan)
-        guests = next(it for s in doc["sections"] for b in s.get("blocks", []) if b.get("type") == "checklist"
-                      for it in b.get("items", []) if it["id"] == "guests")
-        del guests["detail"]
-        self.plan.write_text(json.dumps(doc))
-        url = self.server.url_for(self.plan)
-        a = self.open(url)
-        row, other = "document.querySelector('#item-decisions-guests')", "document.querySelector('#item-decisions-retention')"
-        look = "(r => [r.classList.contains('empty'), r.classList.contains('open'), r.querySelector('.bp-cl-body').textContent])"
-        self.assertEqual(a.ev(f"{look}({row})"), [True, False, ""])
-        # a click on the question or into the box opens nothing
-        a.ev(f"{row}.querySelector('.bp-cl-head').click(); {row}.querySelector(':scope > .bp-note textarea').dispatchEvent(new InputEvent('input'))")
-        self.assertEqual(a.ev(f"{look}({row})"), [True, False, ""])
-        # a decision with details still opens to them, under their caption
-        a.ev(f"{other}.querySelector('.bp-cl-head').click()")
-        self.assertEqual(a.ev(f"[{other}.classList.contains('open'), {other}.querySelector('.bp-cl-body > .bp-cap').textContent]"), [True, "Details"])
-        # its first message gives it a conversation to open
-        a.ev("BP.setNote('decisions/guests', 'Acme: guests too?')")
-        self.send_changes(a, "1 comment on items")
-        self.assertFalse(a.ev(f"{row}.classList.contains('empty')"))
+    def test_a_question_s_detail_is_behind_more_details(self) -> None:
+        a = self.open(self.server.url_for(self.plan))
+        row = "document.querySelector('#item-decisions-retention')"
+        parts = f"[...{row}.children].filter(e => e.checkVisibility()).map(e => e.classList[0])"
+        self.assertEqual(a.ev(parts), ["bp-cl-row", "ac-detrow", "bp-opts", "ac-more", "ac-reply"], "an unanswered question opens on load")
+        self.assertEqual(a.ev(f"[{row}.querySelector('.ac-detrow .pv-more').textContent, !!{row}.querySelector('.ac-detrow .ac-keys')]"), ["More details", True])
+        a.ev(f"{row}.querySelector('.pv-more').click()")
+        self.assertEqual(a.ev(parts), ["bp-cl-row", "ac-detrow", "bd-dets", "bp-opts", "ac-more", "ac-reply"])
+        # answered, it folds to its head with ✓ and the pick
+        a.ev("BP.choose('decisions/retention', 'd180')")
         a.ev(f"{row}.querySelector('.bp-cl-head').click()")
-        self.assertEqual(a.ev(f"[{row}.classList.contains('open'), {row}.querySelector('.bp-convo').checkVisibility()]"), [True, True])
+        self.assertEqual([a.ev(parts), a.ev(f"{row}.querySelector('.pv-ok').textContent")], [["bp-cl-row"], "180 days"])
 
 
 if __name__ == "__main__":

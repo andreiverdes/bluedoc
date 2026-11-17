@@ -89,7 +89,7 @@ URLs: /                      home page: every doc under the registered folders, 
                              the current version. PUT {path, import, ops: [[key, value or null]]} writes it: null
                              deletes, an import adds only keys the server lacks. Both need the X-Bluedoc header, the
                              PUT also the key. An `__ann:<id>` value the page can't draw is dropped from a PUT and
-                             left out of a read; an item's `:thread` or pick of the wrong shape answers 400 and is
+                             left out of a read; an item's `:thread`, `:notes` or pick of the wrong shape answers 400 and is
                              left out of a read.
       /__bluedoc/vendor/<path>  files under assets/vendor (HorizonUI, HeroUI, Tailwind's browser build, the Sketch font)
       /<root>/<dir>/<stem>.design/<artboard>.html[?rev=B&theme=T]   a design, presentation or website doc's screen: the
@@ -4047,23 +4047,40 @@ def remove_attachment(doc: Path, file: str) -> bool:
 
 
 # the reader's side of an item's conversation, `<checklist>:<item>:thread`: the messages they sent, oldest first, each
-# {md, rev (the rev it was sent on; null: sent before threads existed), at, files?}; an annotation's follow-ups
-# (`thread` in its `__ann:<id>` value) are the same. A message with files may have no text. The agent's side is the
-# doc's (items' `replies`, `threads`).
+# {md, rev (the rev it was sent on; null: sent before threads existed), at, files?, about?}; `about` names the answer a
+# message written in that answer's field is about (an option id, `custom` for Other, `more` for Tell me more). An
+# annotation's follow-ups (`thread` in its `__ann:<id>` value) are the same. A message with files may have no text. The
+# agent's side is the doc's (items' `replies`, `threads`). A question's comments saved in its answers' fields and not
+# sent yet are `<checklist>:<item>:notes`: {<about>: {md, files?}}.
 THREAD_MAX = 200
+ABOUT_MAX = 200   # an `about`: the option ids a doc may use are much shorter
 ITEM_RULE = {"thread": f'[{{"md": <up to {build.MAX_REPLY_MD} characters, at least 1 without files>, "rev": <1 to {MAX_ARCHIVE_REV} characters> or '
-                       f'null, "at": <ISO 8601 time>, "files"?: {FILES_RULE}}}, …], at most {THREAD_MAX}',
+                       f'null, "at": <ISO 8601 time>, "files"?: {FILES_RULE}, "about"?: <1 to {ABOUT_MAX} characters>}}, …], at most {THREAD_MAX}',
+             "notes": f'{{"<option id, custom or more>": {{"md": <up to {build.MAX_REPLY_MD} characters, at least 1 without files>, "files"?: {FILES_RULE}}}, …}}',
              "pick": "=<option id>|<author's id>, or with several answers =<ids>|<author's ids>, each comma-joined",
              "files": FILES_RULE}
 PICK_IDS = re.compile(r"[^,|]+(?:,[^,|]+)*")
 
 
+def about_ok(a) -> bool:
+    return isinstance(a, str) and 0 < len(a) <= ABOUT_MAX
+
+
 def thread_ok(t) -> bool:
     return isinstance(t, list) and len(t) <= THREAD_MAX and all(
-        isinstance(e, dict) and {"md", "rev", "at"} <= set(e) <= {"md", "rev", "at", "files"} and isinstance(e["md"], str)
+        isinstance(e, dict) and {"md", "rev", "at"} <= set(e) <= {"md", "rev", "at", "files", "about"} and isinstance(e["md"], str)
         and len(e["md"]) <= build.MAX_REPLY_MD and (e["rev"] is None or archive_rev_ok(e["rev"])) and iso_time_ok(e["at"])
         and ("files" not in e or files_ok(e["files"]) and len(e["files"]) > 0) and (len(e["md"]) > 0 or bool(e.get("files")))
+        and ("about" not in e or about_ok(e["about"]))
         for e in t)
+
+
+def notes_ok(n) -> bool:
+    return isinstance(n, dict) and 0 < len(n) <= THREAD_MAX and all(
+        about_ok(k) and isinstance(e, dict) and "md" in e and set(e) <= {"md", "files"} and isinstance(e["md"], str)
+        and len(e["md"]) <= build.MAX_REPLY_MD and ("files" not in e or files_ok(e["files"]) and len(e["files"]) > 0)
+        and (len(e["md"]) > 0 or bool(e.get("files")))
+        for k, e in n.items())
 
 
 def pick_ok(value: str) -> bool:
@@ -4074,16 +4091,16 @@ def pick_ok(value: str) -> bool:
 
 
 def item_rule(key: str) -> str | None:
-    """Which of ITEM_RULE a reader key's value must follow: 'thread' for `<checklist>:<item>:thread`, 'files' for
-    `<checklist>:<item>:files` and `__message-files`, 'pick' for `<checklist>:<item>` (when its value is a pick); None
-    for any other key."""
+    """Which of ITEM_RULE a reader key's value must follow: 'thread' for `<checklist>:<item>:thread`, 'notes' for
+    `<checklist>:<item>:notes`, 'files' for `<checklist>:<item>:files` and `__message-files`, 'pick' for
+    `<checklist>:<item>` (when its value is a pick); None for any other key."""
     if key == MESSAGE_FILES:
         return "files"
     if key.startswith("__"):
         return None
     n = key.count(":")
     if n == 2:
-        return "thread" if key.endswith(":thread") else "files" if key.endswith(":files") else None
+        return {"thread": "thread", "notes": "notes", "files": "files"}.get(key.rsplit(":", 1)[1])
     return "pick" if n == 1 else None
 
 
@@ -4109,9 +4126,9 @@ def value_ok(key: str, value: str) -> bool:
     if key in READER_KEYS:
         return READER_KEYS[key](value)
     rule = item_rule(key)
-    if rule == "thread":
+    if rule in ("thread", "notes"):
         try:
-            return thread_ok(json.loads(value))
+            return (thread_ok if rule == "thread" else notes_ok)(json.loads(value))
         except ValueError:
             return False
     if rule == "files":
@@ -4903,9 +4920,11 @@ def make_handler(port: int, default_to: str):
                 return self.json(404, {"error": "not found"})
             if kind == "approval":
                 ok = data.get("decision") == "approved" and all(isinstance(data.get(k, []), list) for k in ("answers", "annotations"))
-                # an item still asking for more details blocks approval (the page disables Approve; this backs it)
-                if ok and any(isinstance(a, dict) and a.get("more") for a in data.get("answers", [])):
-                    return self.json(409, {"error": "an item asks for more details: send that request or withdraw it, then approve"})
+                # an item still asking for more (Tell me more, or Other on a brief's framework or theme: a request for a
+                # new option) blocks approval (the page disables Approve; this backs it)
+                if ok and any(isinstance(a, dict) and (a.get("more") or a.get("checklist") == "brief" and a.get("item") in ("framework", "theme")
+                                                       and a.get("choice") == "custom") for a in data.get("answers", [])):
+                    return self.json(409, {"error": "an item asks for more: send that request or withdraw it, then approve"})
             else:
                 ok = isinstance(data.get("items" if kind == "answers" else "annotations"), list)
                 # a post review (meta.review "post"): the GitHub review event the reader picked for each PR

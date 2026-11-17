@@ -115,13 +115,13 @@ class FindingComments(ChromePage):
         self.assertEqual([x["item"] for x in p["items"]], ["t412/boundary-tests", "t415/latency"])
         self.assertEqual(len(p["cards"]), 1)
         self.assertEqual(a.ev(f"(c => [c.querySelector('.m').textContent, c.querySelector('.st').textContent])({self.card('t412/boundary-tests')})"),
-                         ["You: Need more details: Which thresholds, and is 50 inclusive?", "Goes with Request changes"])
+                         ["You: Tell me more: Which thresholds, and is 50 inclusive?", "Goes with Request changes"])
         p = self.panel(a, "resolved")
         self.assertEqual([(x["item"], x["group"]) for x in p["items"]], [("t412/docs-stale", "resolved")])
         self.assertEqual(a.ev(f"{self.card('t412/docs-stale')}.querySelector('.s').textContent"), "Resolved→ Ticket")
         self.assertEqual(self.panel(a, "all")["groups"], ["wait", "unsent", "answered", "resolved", "page"])
         # Request changes takes the two comments and the pin: the pending findings move to You answered
-        self.send_changes(a, "1 pending comment, 1 comment on findings, 1 request for more details")
+        self.send_changes(a, "1 pending comment, 1 comment on findings, 1 question asking for more")
         p = self.panel(a, "open")
         self.assertEqual([(x["item"], x["group"]) for x in p["items"]],
                          [("t415/retry-4xx", "wait"), ("t412/boundary-tests", "answered"), ("t415/double-auth", "answered"), ("t415/latency", "answered")])

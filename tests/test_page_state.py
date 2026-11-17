@@ -406,51 +406,51 @@ class ItemRequests(ChromePage):
         a.ev("BP.setNote('decisions/retention', 'Say what 180 days costs a month.')")
         self.assertEqual(self.count(a), [False, "1"])
 
-    def test_need_more_details_on_a_plan(self) -> None:
+    def test_tell_me_more_on_a_plan(self) -> None:
         url = self.server.url_for(self.plan)
         a = self.open(url)
         row = "document.querySelector('#item-decisions-prices')"
-        more = f"{row}.querySelector('.bp-opt.more')"
-        a.ev(f"BP.choose('decisions/prices', 'notice'); {more}.querySelector('.pk').click()")
+        more = f"{row}.querySelector('.ac-more')"
+        a.ev(f"BP.choose('decisions/prices', 'notice'); {more}.querySelector('.ac-tmm').click()")
         approve = "document.querySelector('.bd-key.approve').disabled"
         self.assertEqual(self.count(a), [False, "1"])
-        self.assertTrue(a.ev(approve), "Approve stays enabled while an item asks for more details")
-        self.assertEqual(a.ev(f"[{row}.classList.contains('more'), {more}.querySelector('.pk').getAttribute('aria-checked'),"
-                              f" document.activeElement === {row}.querySelector('.bp-note textarea')]"), [True, "true", True])
-        self.send_changes(a, "1 request for more details")
-        self.assertIn("`item:decisions/prices` → **Need more details**", self.reply(self.plan))
+        self.assertTrue(a.ev(approve), "Approve stays enabled while an item asks for more")
+        self.assertEqual(a.ev(f"[{row}.classList.contains('more'), {more}.querySelector('.ac-tmm').getAttribute('aria-checked'),"
+                              f" document.activeElement === {more}.querySelector('textarea')]"), [True, "true", True])
+        self.send_changes(a, "1 question asking for more")
+        self.assertIn("`item:decisions/prices` → **Tell me more**", self.reply(self.plan))
         answers = json.loads(self.reply(self.plan, "--json"))["answers"]
-        self.assertEqual([(x["item"], x["choice"]) for x in answers if x.get("more")], [("prices", None)], "Need more details kept the pick")
+        self.assertEqual([(x["item"], x["choice"]) for x in answers if x.get("more")], [("prices", None)], "Tell me more kept the pick")
         self.assertEqual(self.count(a), [True, "0"])
-        self.assertEqual(a.ev(f"{more}.querySelector('.ol').textContent"), "Details requested")
+        self.assertEqual(a.ev(f"{more}.querySelector('.ac-chip').textContent"), "Asked · rev 1")
         # sent: Approve still waits on it; withdrawing it is the reader's way out
-        self.assertTrue(a.ev(approve), "Approve enabled while a sent details request is unanswered")
+        self.assertTrue(a.ev(approve), "Approve enabled while a sent request is unanswered")
         self.assertTrue(a.ev("BP.moreDetails('decisions/prices', false)"))
         self.assertFalse(a.ev(approve), "withdrawing the request left Approve disabled")
-        a.ev(f"{more}.querySelector('.pk').click()")
-        self.send_changes(a, "1 request for more details")
-        # the agent answers with a new rev: the toggle is back to off
+        a.ev(f"{more}.querySelector('.ac-tmm').click()")
+        self.send_changes(a, "1 question asking for more")
+        # the agent answers with a new rev: the pill is back to off
         self.assertTrue(until(lambda: self.state(url).get("decisions:prices:more", "").startswith("sent@")))
         r = self.tmp.run("build.py", "patch", self.plan, "item:decisions/prices", "--set", "detail=Acme shows the saved price and the current one.")
         self.assertEqual(r.returncode, 0, r.stderr)
         a.go(self.base + url)
-        self.assertEqual(a.ev(f"[{row}.classList.contains('more'), {more}.querySelector('.ol').textContent]"), [False, "Need more details"])
+        self.assertEqual(a.ev(f"[{row}.classList.contains('more'), {more}.classList.contains('on'), {more}.querySelector('.ac-chip').hidden]"), [False, False, True])
         self.assertEqual(self.count(a), [True, "0"])
         self.assertFalse(a.ev(approve), "Approve still disabled after the agent's new rev answered the request")
 
-    def test_need_more_details_on_a_review(self) -> None:
+    def test_tell_me_more_on_a_review(self) -> None:
         url = self.server.url_for(self.docs / "acme-review-findings.bluedoc.json")
         a = self.open(url)
         a.ev("BP.setNote('t412/float-cents', 'Fine as a ticket.')")   # a review's finding comments go with Request changes too
         self.assertEqual(self.count(a), [False, "1"])
-        a.ev("document.querySelector('#item-t412-tier-boundary .bp-opt.more .pk').click()")
+        a.ev("document.querySelector('#item-t412-tier-boundary .ac-tmm').click()")
         self.assertEqual(self.count(a), [False, "2"])
         p = a.ev("BP.changesPayload()")
         self.assertEqual([(x["item"], x.get("more")) for x in p["answers"]], [("tier-boundary", True), ("float-cents", None)])
-        self.assertIn("`item:t412/tier-boundary` → **Need more details**", p["markdown"])
+        self.assertIn("`item:t412/tier-boundary` → **Tell me more**", p["markdown"])
         self.assertIn("  > Fine as a ticket.", p["markdown"])
-        self.send_changes(a, "1 comment on findings, 1 request for more details")
-        self.assertIn("→ **Need more details**", self.reply(self.docs / "acme-review-findings.bluedoc.json"))
+        self.send_changes(a, "1 comment on findings, 1 question asking for more")
+        self.assertIn("→ **Tell me more**", self.reply(self.docs / "acme-review-findings.bluedoc.json"))
         self.assertEqual(self.count(a), [True, "0"])
 
 
@@ -458,7 +458,7 @@ REVIEW = "acme-review-findings.bluedoc.json"   # sections pr-412 and pr-415: che
 TIER_ROW = "document.querySelector('#item-t412-tier-boundary')"   # its comment (index 0) sits on src/pricing/tiers.ts:17
 # a finding's parts that show, in order (Checklist's li or a Merged row)
 OPEN = "(li => { if (!li.classList.contains('open')) li.querySelector('.bp-cl-head').click(); })"   # a finding opened, if it isn't
-PARTS = "(r => [...r.children].filter(e => e.checkVisibility()).map(e => ['bp-cl-row', 'pv-more', 'bd-dets', 'bd-mcode', 'bp-opts', 'bp-convo', 'bp-note', 'pv-pend'].find(c => e.classList.contains(c))))"
+PARTS = "(r => [...r.children].filter(e => e.checkVisibility()).map(e => ['bp-cl-row', 'ac-detrow', 'pv-more', 'bd-dets', 'bd-mcode', 'bp-opts', 'ac-more', 'bp-convo', 'ac-reply', 'bp-note'].find(c => e.classList.contains(c))))"
 
 
 @unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")
@@ -469,7 +469,7 @@ class FindingsView(ChromePage):
     shows it, and an item link stays in Merged. The title row, the sizes and the toolbar stick while the findings scroll
     (a phone: the title row and the toolbar). A finding opens and closes whole, its details behind More details; the
     filter (All · Open · Done, each section's own, kept per doc) hides an answered finding once the reader moves on;
-    Custom takes the reader's own answer; the comment field opens once the finding has an answer."""
+    Other takes the reader's own answer; the reply field takes a comment any time."""
 
     def setUp(self) -> None:
         super().setUp()
@@ -517,16 +517,16 @@ class FindingsView(ChromePage):
         tier = "document.querySelector('#pr-412 .bd-mx[data-ci=\"0\"]')"
         self.assertEqual(a.ev(f"[...{tier}.querySelectorAll('.bd-ln')].map(l => +l.dataset.n)"), list(range(14, 21)), "not ±3 lines around line 17")
         self.assertEqual(a.ev(f"[...{tier}.querySelectorAll('.bd-ln.hit')].map(l => +l.dataset.n)"), [17])
-        # the full finding row, open: title, size, More details, its code, the option rows with the starred
-        # recommendation, Custom and Need more details last, then the reply box
+        # the full finding row, open: title, size, More details (the keys at its end), its code, the answers with the
+        # starred recommendation and Other last, Tell me more, then the reply field
         row = f"{tier}.querySelector('.bd-mrow')"
-        self.assertEqual(a.ev(f"{PARTS}({row})"), ["bp-cl-row", "pv-more", "bd-mcode", "bp-opts", "bp-note"], "an unanswered finding opens on load")
+        self.assertEqual(a.ev(f"{PARTS}({row})"), ["bp-cl-row", "ac-detrow", "bd-mcode", "bp-opts", "ac-more", "ac-reply"], "an unanswered finding opens on load")
         self.assertEqual(a.ev("(r => [r.querySelector('.bp-cl-text').textContent, r.querySelector('.bp-chip').textContent, [...r.querySelectorAll('.bp-opt')].map(o => o.dataset.id),"
-                              f" r.querySelector('.bp-opt:has(.rec)').dataset.id, r.querySelector('.bp-opt:last-child').classList.contains('more')])({row})"),
-                         ["tierFor gives no tier at exactly 10 or 50 units", "blocker", ["fix", "ticket", "decline", "custom", ""], "fix", True])
+                              f" r.querySelector('.bp-opt:has(.rec)').dataset.id, r.querySelector('.bp-opt:last-child').classList.contains('cust')])({row})"),
+                         ["tierFor gives no tier at exactly 10 or 50 units", "blocker", ["fix", "ticket", "decline", "custom"], "fix", True])
         # More details: the reviewer's point, the reasoning, the fix and its check, between it and the code
         a.ev(f"{row}.querySelector('.pv-more').click()")
-        self.assertEqual(a.ev(f"[{row}.querySelector('.pv-more').textContent, {PARTS}({row})]"), ["Hide details", ["bp-cl-row", "pv-more", "bd-dets", "bd-mcode", "bp-opts", "bp-note"]])
+        self.assertEqual(a.ev(f"[{row}.querySelector('.pv-more').textContent, {PARTS}({row})]"), ["Hide details", ["bp-cl-row", "ac-detrow", "bd-dets", "bd-mcode", "bp-opts", "ac-more", "ac-reply"]])
         body = a.ev(f"{row}.querySelector('.bd-dets').textContent")
         for part in ("Reviewer:", "My reasoning:", "Fix:", "Verify:"):
             self.assertIn(part, body or "")
@@ -554,15 +554,15 @@ class FindingsView(ChromePage):
         self.assertTrue(a.ev(f"{row}.classList.contains('done')"))
         self.assertEqual(a.ev("BP.findingsView('pr-412', 'diff')"), "diff")
         self.assertEqual(a.ev("document.querySelector('#diff-diff-412 .bd-cm[data-ci=\"0\"] [aria-checked=true]')?.dataset.id"), "ticket")
-        # the other way: a pick in the checklist, then Need more details (it clears the pick) and a reply show on the Merged row
+        # the other way: a pick in the checklist, then Tell me more (it clears the pick) and a reply show on the Merged row
         a.ev("BP.findingsView('pr-412', 'checklist')")
         a.ev(f"{TIER_ROW}.querySelector(':scope > .bp-opts .bp-opt[data-id=decline] .pk').click()")
         a.ev("BP.findingsView('pr-412', 'merged')")
         self.assertEqual(a.ev(f"{row}.querySelector('.pk[aria-checked=true]')?.dataset.id"), "decline")
         a.ev("BP.moreDetails('t412/tier-boundary')")
         a.ev("BP.setNote('t412/tier-boundary', 'Acme: the spec owner agrees')")
-        self.assertEqual(a.ev(f"[[...{row}.querySelectorAll('.pk[aria-checked=true]')].map(b => b.dataset.id), {row}.classList.contains('more'), {row}.querySelector('.bp-note textarea').value]"),
-                         [[""], True, "Acme: the spec owner agrees"])
+        self.assertEqual(a.ev(f"[[...{row}.querySelectorAll('.pk[aria-checked=true]')].map(b => b.dataset.id), {row}.classList.contains('more'), {row}.querySelector('.ac-tmm').getAttribute('aria-checked'), {row}.querySelector('.ac-reply textarea').value]"),
+                         [[], True, "true", "Acme: the spec owner agrees"])
         # Accept recommended in the toolbar picks the starred option on the open decisions, not on one asking for more
         acc = "document.querySelector('#pr-412 > .bd-ftb > .bp-btn')"
         self.assertEqual(a.ev(f"{acc}.textContent"), "Accept recommended (6)")
@@ -575,18 +575,18 @@ class FindingsView(ChromePage):
         a.ev("BP.findingsView('pr-415', 'checklist')")
         li = "document.querySelector('#item-t415-retry-4xx')"
         mrow = "document.querySelector('#pr-415 .bd-mrow[data-item=\"t415/retry-4xx\"]')"
-        self.assertEqual(a.ev(f"[{PARTS}({li}), {li}.querySelector('.pv-more').textContent]"), [["bp-cl-row", "pv-more", "bp-opts", "bp-note"], "More details"], "an unanswered finding starts open")
+        self.assertEqual(a.ev(f"[{PARTS}({li}), {li}.querySelector('.pv-more').textContent]"), [["bp-cl-row", "ac-detrow", "bp-opts", "ac-more", "ac-reply"], "More details"], "an unanswered finding starts open")
         a.ev(f"{li}.querySelector('.bp-cl-head').click()")
         self.assertEqual(a.ev(f"{PARTS}({li})"), ["bp-cl-row"], "a click on its title closes it")
         a.ev(f"{li}.querySelector('.bp-cl-head').click()")
         # More details: the details right under it, the text then the code, above the options
         self.assertEqual(a.ev(f"{li}.querySelectorAll('.bd-xf').length"), 0, "the code was drawn before the details showed")
         a.ev(f"{li}.querySelector('.pv-more').click()")
-        self.assertEqual(a.ev(f"[{PARTS}({li}), {li}.querySelector('.pv-more').textContent]"), [["bp-cl-row", "pv-more", "bd-dets", "bp-opts", "bp-note"], "Hide details"])
+        self.assertEqual(a.ev(f"[{PARTS}({li}), {li}.querySelector('.pv-more').textContent]"), [["bp-cl-row", "ac-detrow", "bd-dets", "bp-opts", "ac-more", "ac-reply"], "Hide details"])
         self.assertEqual(a.ev(f"[...{li}.querySelector('.bd-dets').children].filter(e => e.checkVisibility()).map(e => e.className.split(' ')[0])"), ["bp-cl-detail", "bd-xcs"])
         # the finding is one: Merged shows it open, its details too
         a.ev("BP.findingsView('pr-415', 'merged')")
-        self.assertEqual(a.ev(f"{PARTS}({mrow})"), ["bp-cl-row", "pv-more", "bd-dets", "bd-mcode", "bp-opts", "bp-note"])
+        self.assertEqual(a.ev(f"{PARTS}({mrow})"), ["bp-cl-row", "ac-detrow", "bd-dets", "bd-mcode", "bp-opts", "ac-more", "ac-reply"])
         a.ev("BP.findingsView('pr-415', 'checklist')")
         # a pick leaves it open, and its head shows ✓ and the pick, open or closed; a click on its title closes all of it
         a.ev(f"{li}.querySelector('.bp-opt[data-id=fix] .pk').click()")
@@ -653,21 +653,21 @@ class FindingsView(ChromePage):
         a.ev("BP.findingsFilter('pr-415', 'done')")
         self.assertEqual(a.ev(f"[{shown}, {note}.textContent]"), [["double-auth"], "3 open findings are hidden · Show"])
 
-    def test_a_custom_answer_goes_in_the_payload_and_the_markdown(self) -> None:
+    def test_an_other_answer_goes_in_the_payload_and_the_markdown(self) -> None:
         a = self.open(self.url)
         a.ev("BP.findingsView('pr-415', 'checklist')")
         li = "document.querySelector('#item-t415-latency')"
         a.ev(f"{OPEN}({li})")
-        self.assertEqual(a.ev(f"[...{li}.querySelectorAll(':scope > .bp-opts .bp-opt')].map(o => o.dataset.id)"), ["fix", "ticket", "decline", "custom", ""], "Custom is not above Need more details")
+        self.assertEqual(a.ev(f"[...{li}.querySelectorAll(':scope > .bp-opts .bp-opt')].map(o => o.dataset.id)"), ["fix", "ticket", "decline", "custom"], "Other is not the last answer")
         # typing in its field picks it
-        a.ev(f"(i => {{ i.focus(); i.value = 'Ask checkout for a 10 s budget'; i.dispatchEvent(new Event('input', {{ bubbles: true }})); }})({li}.querySelector('.bp-cust-in'))")
+        a.ev(f"(i => {{ i.focus(); i.value = 'Ask checkout for a 10 s budget'; i.dispatchEvent(new Event('input', {{ bubbles: true }})); }})({li}.querySelector('.bp-opt.cust textarea'))")
         self.assertEqual(a.ev(f"[{li}.querySelector('.bp-opt.cust .pk').getAttribute('aria-checked'), {li}.classList.contains('done'), BP.progress()[1].done]"), ["true", True, 1])
         item = next(x for x in a.ev("BP.replyPayload().items") if x["item"] == "latency")
         self.assertEqual((item["choice"], item["custom"]), ("custom", "Ask checkout for a 10 s budget"))
-        self.assertIn("`item:t415/latency` → **Custom**: Ask checkout for a 10 s budget", a.ev("BP.replyPayload().markdown"))
+        self.assertIn("`item:t415/latency` → **Other**: Ask checkout for a 10 s budget", a.ev("BP.replyPayload().markdown"))
         # Merged's row holds it too; Accept recommended leaves it; it holds through a reload
         mrow = "document.querySelector('#pr-415 .bd-mrow[data-item=\"t415/latency\"]')"
-        self.assertEqual(a.ev(f"[{mrow}.querySelector('.bp-opt.cust').classList.contains('on'), {mrow}.querySelector('.bp-cust-in').value]"), [True, "Ask checkout for a 10 s budget"])
+        self.assertEqual(a.ev(f"[{mrow}.querySelector('.bp-opt.cust').classList.contains('on'), {mrow}.querySelector('.bp-opt.cust textarea').value]"), [True, "Ask checkout for a 10 s budget"])
         a.ev("document.querySelector('#pr-415 > .bd-ftb > .bp-btn').click()")
         self.assertEqual(a.ev("BP.replyPayload().items.find(x => x.item === 'latency').choice"), "custom")
         until(lambda: self.state(self.url).get("t415:latency:custom"))
@@ -677,29 +677,19 @@ class FindingsView(ChromePage):
         a.ev("BP.findingsView('pr-415', 'checklist')")
         a.ev(f"{li}.querySelector('.bp-opt[data-id=ticket] .pk').click()")
         self.assertEqual(a.ev("(x => [x.choice, 'custom' in x])(BP.replyPayload().items.find(x => x.item === 'latency'))"), ["ticket", False])
-        self.assertEqual(a.ev(f"[{li}.querySelector('.bp-opt.cust .pk').getAttribute('aria-checked'), {li}.querySelector('.bp-cust-in').value]"), ["false", ""])
+        self.assertEqual(a.ev(f"[{li}.querySelector('.bp-opt.cust .pk').getAttribute('aria-checked'), {li}.querySelector('.bp-opt.cust textarea').value]"), ["false", ""])
 
-    def test_the_comment_field_opens_once_the_finding_has_an_answer(self) -> None:
+    def test_a_finding_takes_a_comment_before_an_answer(self) -> None:
         a = self.open(self.url)
         a.ev("BP.findingsView('pr-415', 'checklist')")
         li = "document.querySelector('#item-t415-backoff-const')"
-        ta = f"{li}.querySelector(':scope > .bp-note textarea')"
-        field = f"[{ta}.disabled, {ta}.placeholder, {ta}.closest('.bp-note').classList.contains('pv-off')]"
+        ta = f"{li}.querySelector(':scope > .ac-reply textarea')"
         a.ev(f"{OPEN}({li})")
-        self.assertEqual(a.ev(field), [True, "Pick an answer to comment on it", True])
-        a.ev(f"{li}.querySelector('.bp-opt.more .pk').click()")   # Need more details is an answer
-        self.assertEqual(a.ev(field), [False, "What details do you need? (optional)", False])
-        a.ev(f"{li}.querySelector('.bp-opt.more .pk').click()")
-        self.assertEqual(a.ev(field)[0], True)
-        a.ev(f"{li}.querySelector('.bp-opt[data-id=decline] .pk').click()")
-        self.assertEqual(a.ev(field), [False, "Comment for the agent…", False])
-        # a saved comment, not sent: under its field, its left edge the field's
-        pend = f"{li}.querySelector(':scope > .pv-pend')"
-        self.assertFalse(a.ev(f"{pend}.checkVisibility()"))
+        self.assertEqual(a.ev(f"[{ta}.disabled, {ta}.placeholder]"), [False, "Reply…"], "the reply field needs no answer first")
         a.ev("BP.setNote('t415/backoff-const', 'Acme: name it RETRY_BACKOFF_MS')")
-        self.assertTrue(a.ev(f"{pend}.checkVisibility() && {pend}.textContent.endsWith(' will read it once changes are requested.')"))
-        self.assertEqual(a.ev(f"(n => [n.getBoundingClientRect().top >= {li}.querySelector(':scope > .bp-note').getBoundingClientRect().bottom - 8, getComputedStyle(n).paddingLeft === getComputedStyle({li}.querySelector(':scope > .bp-note')).paddingLeft])({pend})"),
-                         [True, True])
+        # saved, not sent: in the conversation at once, and the field keeps it
+        self.assertEqual(a.ev(f"[...{li}.querySelectorAll(':scope > .ac-convo .bp-msg.unsent .mb')].map(m => m.textContent)"), ["Acme: name it RETRY_BACKOFF_MS"])
+        self.assertEqual(a.ev(f"{ta}.value"), "Acme: name it RETRY_BACKOFF_MS")
 
     def test_a_tracker_row_leads_to_the_first_finding_that_needs_the_reader(self) -> None:
         a = self.open(self.url)

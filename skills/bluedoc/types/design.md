@@ -61,7 +61,7 @@ A framework that isn't on disk yet is still an option: put the `add-framework` c
 | `el:<id>/<path>` under `## Board drafts` | An element draft: the reader changed its text (a double-click on it) or deleted it (Element, Delete). Run the command given (`patch <doc> el:… --set 'text="…"'` or `--delete`, text edits first, deletes last to first): it rewrites that one element in `<stem>.design/<id>.html`, plain text only. |
 | `artboard:<id>` | The whole screen, or a drawing or region over it: edit the file; or `--set device=…`, `--set fidelity=hifi`, `--set x=… --set y=…`. |
 | `frame:<device>@<x>,<y>` | A requested new screen; the note holds the prompt and its labelled boxes. `build.py patch <doc> <key> --set id=settings --set title=Settings` adds the artboard and a stub file; write the screen there, keeping the boxes' labels as `data-bd` names. |
-| `item:brief/<item>` | A pick or note on the brief: apply it to every screen it touches. Answer a question in the note with `build.py patch <doc> item:brief/<item> --reply "…"`. |
+| `item:brief/<item>` | A pick or note on the brief: apply it to every screen it touches. Answer a question in the note with `build.py patch <doc> item:brief/<item> --reply "…"` (`--on <option id>` when it is about one answer). **Other** on `framework` or `theme` (`→ **Other**: <text> (a request: …)`) is a request: add it as an option the build knows, with its `md`, leave the item unpicked and keep the screens on the recommendation; Approve waits until the reader picks it. Other on an open question is their answer. |
 
 Several patches for one reply: bump on the first, `--no-bump` on the rest. Send `<url>?diff=<previous rev>`: changed screens are marked and open side by side.
 

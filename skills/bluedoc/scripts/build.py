@@ -25,7 +25,7 @@ Usage:
                                     adds an app icon with stub layers; presentation: a deck of three stub slides;
                                     website: a home page, live from --url (a loopback dev server) or a stub file)
   build.py patch doc.json KEY [--set f=v|a/b/f=v ...] [--json OBJ] [--append OBJ [--at N]] [--move N] [--delete]
-                              [--html FILE|-] [--reply MD] [--change LINE ...] [--resolves ID ...] [--no-bump] [--pin]
+                              [--html FILE|-] [--reply MD [--on ID]] [--change LINE ...] [--resolves ID ...] [--no-bump] [--pin]
                               [--repo DIR] [--paths PATH ...]
                                     change one object by its annotator key, bump meta.rev, validate, record
   build.py get doc.json [KEY]       print the object KEY names as one line of JSON; no KEY: the outline, one line per
@@ -119,6 +119,9 @@ patch keys: doc, meta, header, tldr, status, section:<sec>, heading:<sec>, lead:
   {rev, md} to the item's `replies`, ann:<comment id> (a pin or general comment, by the id the reply Markdown shows)
   to the doc's `threads[<id>]`. rev is the rev the patch writes (the bumped one; with --no-bump the current one). It
   goes with --resolves, --change and --no-bump, and on an item: key with --set/--json; ann: takes no other option.
+  --on ID (with --reply on a question) names the answer the reply is about: one of the item's option ids, or custom
+  (the reader's Other); it is stored as the reply's `about` and the page marks the reply "On <answer>". Without it
+  the reply is about the whole question. An id the item doesn't have is an error.
 
 Explanations: on a doc whose history file says which bluedoc created it (`created`, written into every new history
 file) or that has no history yet, every option (`choices[].md`) needs its explanation: an error names the item and
@@ -611,7 +614,7 @@ SCHEMA_CARDS = {
         ("done,evidence", "", "opt", "progress items: initial tick; schema evidence"),
         ("choices", "[object]", "opt", ["2-", str(MAX_CHOICES), " {id, label <=28, md}: a decision"]),
         ("multi,recommend,choice", "", "opt", "several answers; starred id; pre-picked id"),
-        ("replies", "[object]", "opt", "{rev, md}: patch --reply writes them")],
+        ("replies", "[object]", "opt", "{rev, md, about?}: patch --reply [--on <option id>] writes them")],
         {"id": "ttl", "text": "Keep carts how long?", "recommend": "d90", "choices": [
             {"id": "d90", "label": "90 days", "md": "Half the rows."}, {"id": "ever", "label": "Forever", "md": "No sweeper."}]}),
     "evidence": ("proof a step or progress item landed", [
@@ -2446,8 +2449,9 @@ def _validate(rep: Report, doc: dict, doc_path: Path | None, *, allow_remote: bo
     rev_now = str((doc.get("meta") or {}).get("rev") or "")
     known_revs = {str(r.get("rev")) for r in hist["revs"] if isinstance(r, dict)} | {rev_now} if hist is not None else None
 
-    def check_replies(where: str, replies) -> None:
-        """The agent's answers in a conversation: [{rev, md}], md block Markdown; a rev the history lacks warns."""
+    def check_replies(where: str, replies, abouts: list[str] | None = None) -> None:
+        """The agent's answers in a conversation: [{rev, md, about?}], md block Markdown; a rev the history lacks warns.
+        abouts: on a decision item, the answers a reply may name (`about`, what `patch --reply --on` writes)."""
         if replies is None:
             return
         if not isinstance(replies, list) or not replies:
@@ -2455,9 +2459,12 @@ def _validate(rep: Report, doc: dict, doc_path: Path | None, *, allow_remote: bo
             return
         for i, r in enumerate(replies):
             rw = f"{where}[{i}]"
-            if not isinstance(r, dict) or set(r) - {"rev", "md"}:
-                rep.err(rw, '{"rev": "<meta.rev>", "md": "<answer>"}: build.py patch <doc> <key> --reply "…" writes it')
+            if not isinstance(r, dict) or set(r) - {"rev", "md", *(("about",) if abouts else ())}:
+                rep.err(rw, '{"rev": "<meta.rev>", "md": "<answer>"' + (', "about": "<option id>"' if abouts else '')
+                        + '}: build.py patch <doc> <key> --reply "…"' + (' [--on <option id>]' if abouts else '') + ' writes it')
                 continue
+            if "about" in r and r["about"] not in abouts:
+                rep.err(rw + ".about", f"the answer this reply is about: one of {', '.join(abouts)}")
             rev, md = r.get("rev"), r.get("md")
             if not (isinstance(rev, str) and 0 < len(rev) <= MAX_REPLY_REV):
                 rep.err(rw + ".rev", f"the meta.rev it was written in: 1 to {MAX_REPLY_REV} characters")
@@ -2573,7 +2580,8 @@ def _validate(rep: Report, doc: dict, doc_path: Path | None, *, allow_remote: bo
                         rep.err(iw + ".evidence", "a decision item is answered by 'choice'; evidence belongs on steps and progress items")
                 elif it.get("recommend") or it.get("choice") or it.get("multi") is not None:
                     rep.err(iw, "'recommend', 'choice' and 'multi' need 'choices'")
-                check_replies(iw + ".replies", it.get("replies"))
+                ids = [c.get("id") for c in choices if isinstance(c, dict) and isinstance(c.get("id"), str)] if isinstance(choices, list) else []
+                check_replies(iw + ".replies", it.get("replies"), ids + ["custom"] if ids else None)   # a reply on Other: custom
                 title = re.sub(r"`([^`]*)`", r"\1", it.get("text", ""))
                 if len(title) > MAX_TITLE:
                     rep.warn(iw + ".text", f"{len(title)} characters: the collapsed row shows one line (about {MAX_TITLE}); "
@@ -4581,6 +4589,9 @@ def cmd_patch(argv: list[str]) -> int:
     ap.add_argument("--reply", metavar="MD", help="item:<checklist>/<item> and ann:<comment id> keys: answer the reader's "
                     "comment in its conversation: append {rev: the new meta.rev, md} to the item's `replies` (ann: to "
                     "the doc's `threads[<id>]`); one per call, block Markdown")
+    ap.add_argument("--on", metavar="ID", help="with --reply on a question (an item with choices): the answer the reply is "
+                    "about, an option id (or custom, the reader's Other); stored as the reply's `about`, the page marks "
+                    "the reply On <that answer>. Without it, the reply is about the whole question")
     a = ap.parse_args(argv)
     ops = bool(a.set or a.json is not None or a.append is not None or a.delete or a.html is not None or a.pin
                or a.reply is not None or a.move is not None)
@@ -4591,6 +4602,8 @@ def cmd_patch(argv: list[str]) -> int:
     if a.move is not None and (a.delete or a.set or a.json is not None or a.append is not None or a.html is not None
                                or a.pin or a.reply is not None):
         ap.error("--move goes alone")
+    if a.on is not None and a.reply is None:
+        ap.error("--on goes with --reply")
     try:
         raw = a.doc.read_text(encoding="utf-8")
         doc = json.loads(raw)
@@ -4608,7 +4621,7 @@ def cmd_patch(argv: list[str]) -> int:
     if a.reply is not None and t.kind not in ("item", "ann"):
         ap.error("--reply takes an item:<checklist>/<item> or ann:<comment id> key")
     if t.kind == "ann" and (a.reply is None or a.set or a.json is not None or a.append is not None or a.html is not None
-                            or a.pin or a.repo or a.paths):
+                            or a.pin or a.repo or a.paths or a.on is not None):
         ap.error('an ann: key takes --reply "<answer>" (with --change, --resolves, --no-bump): the reply to that comment')
     on_screen = t.kind in ("artboard", "element", "link")
     if a.html is not None and t.kind not in ("artboard", "element"):
@@ -4747,7 +4760,16 @@ def cmd_patch(argv: list[str]) -> int:
                 into = t.obj.setdefault("replies", [])
             if not isinstance(into, list):
                 raise PatchError(f"{a.key}: its replies are not a list of {{rev, md}}")
-            into.append({"rev": rev1, "md": a.reply})
+            on = {}
+            if a.on is not None:   # the answer the reply is about: an option of this question's, or custom (Other)
+                choices = t.obj.get("choices") if isinstance(t.obj, dict) else None
+                ids = [c["id"] for c in choices if isinstance(c, dict) and isinstance(c.get("id"), str)] if isinstance(choices, list) else []
+                if not ids:
+                    raise PatchError(f"--on names an answer: {a.key} is not a question (it has no choices)")
+                if a.on not in ids + ["custom"]:
+                    raise PatchError(f"--on {a.on}: not an answer of {a.key}; one of {', '.join(ids)}, or custom (the reader's Other)")
+                on = {"about": a.on}
+            into.append({"rev": rev1, "md": a.reply, **on})
     except PatchError as e:
         print(f"patch: {e}", file=sys.stderr)
         return 2

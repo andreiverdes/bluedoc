@@ -968,10 +968,11 @@ td.bd-cell-mod { background: color-mix(in oklch, var(--warn-tint) 70%, transpare
 .bp-cl-item .bp-code { box-shadow: 0 0 0 1px var(--line); }
 .bp-cl-item .bp-code-h { height: 30px; }
 .bp-refs { display: flex; gap: 6px; flex-wrap: wrap; }
-/* decision items: the dot left of the title; the options as Accordion rows under it (approved design, variant A):
-   one bordered list with hairline dividers, a row per option (radio, or a checkbox with `multi`; the label; muted
-   ★ Recommended; the explanation cut to one line; a chevron). A row opens to the whole explanation; the pick has a
-   faint tint, an accent edge and "Your pick". Need more details is the last row */
+/* a question (approved design "One answer card for every question", card A): the dot left of the title; its answers
+   as Accordion rows under it: one bordered list with hairline dividers, a row per answer (radio, or a checkbox with
+   `multi`; the label; muted ★ Recommended; the explanation cut to one line; a chevron). A row opens to the whole
+   explanation and its own field; the pick has a soft tint, the filled radio and "Your pick", no edge. Other is the
+   last row; Tell me more a raised pill under the list */
 .bp-cl-dot { flex: none; width: 18px; height: 18px; margin-top: 13px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--line-strong); }
 .bp-cl-item.done .bp-cl-dot, .bd-cm.done .bp-cl-dot { background: var(--ok) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / 11px no-repeat; box-shadow: none; }
 .bd-cm .hd > .bp-cl-dot { margin-top: 2px; }
@@ -982,7 +983,7 @@ td.bd-cell-mod { background: color-mix(in oklch, var(--warn-tint) 70%, transpare
 .bp-opt:first-child { border-top: 0; }
 .bp-opt:not(.on):hover { background: var(--hover); }
 .bp-opt.on { background: color-mix(in oklch, var(--accent-tint) 80%, transparent); }
-.bp-opt.more.on { background: color-mix(in oklch, var(--warn-tint) 80%, transparent); }
+.bp-opt.peek { background: var(--hover); }
 .bp-opt .pk { position: relative; flex: none; display: grid; place-items: center; width: 16px; height: 16px; margin: 12px 0 0 14px; padding: 0; border: 0; border-radius: 50%;
   background: var(--inset); box-shadow: inset 0 0 0 1.5px var(--line-strong); cursor: pointer; transition: background .12s, box-shadow .12s; }
 .bp-opt .pk::after { content: ''; position: absolute; inset: -12px -10px -12px -14px; }   /* a bigger target */
@@ -995,7 +996,6 @@ td.bd-cell-mod { background: color-mix(in oklch, var(--warn-tint) 70%, transpare
 .bp-opt .pk[role="checkbox"] > i { width: 10px; height: 10px; border-radius: 0; background: var(--surface);
   -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / contain no-repeat;
   mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / contain no-repeat; }
-.bp-opt.more .pk[aria-checked="true"] { background: var(--warn); }
 /* a shared page's radios (VIEW_ONLY): the doc's pick, not a control; a row without an explanation opens nothing */
 .bp-opt .pk:disabled { cursor: default; pointer-events: none; }
 .bp-opt.plain:has(.pk:disabled) .oh { cursor: default; }
@@ -1004,7 +1004,6 @@ td.bd-cell-mod { background: color-mix(in oklch, var(--warn-tint) 70%, transpare
 .bp-opt .oh { display: flex; align-items: center; gap: 10px; width: 100%; min-width: 0; padding: 10px 14px 10px 12px; border: 0; background: none; font: inherit; line-height: 20px;
   color: inherit; text-align: left; cursor: pointer; }
 .bp-opt .ol { flex: 0 1 auto; min-width: 0; font-size: 14px; font-weight: 500; color: var(--fg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.bp-opt.more:not(.on) .ol { color: var(--fg-muted); }
 .bp-opt .rec { flex: none; font-size: 12px; font-weight: 500; color: var(--warn-fg); white-space: nowrap; }
 .bp-opt .one { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; color: var(--fg-muted); }
 .bp-opt .one code { font-size: .9em; }
@@ -1020,8 +1019,75 @@ td.bd-cell-mod { background: color-mix(in oklch, var(--warn-tint) 70%, transpare
 .bp-opt .ob[hidden] { display: none; }
 .bp-opt .ob > :first-child { margin-top: 0; } .bp-opt .ob > :last-child { margin-bottom: 0; }
 .bp-opt .ob p { margin: 0 0 8px; } .bp-opt .ob :is(ul, ol) { margin: 0 0 8px; padding-left: 20px; }
-.bp-opts .keys { display: flex; align-items: center; gap: 6px; padding: 8px 14px; border-top: 1px solid var(--line); font-size: 12px; color: var(--fg-subtle); }
-@media (max-width: 600px), (hover: none) { .bp-opts .keys { display: none; } }
+/* More details, with the keyboard keys at the right end of its row */
+.ac-detrow { display: flex; align-items: center; gap: 12px; margin: -2px 16px 8px 30px; }
+.ac-detrow[hidden] { display: none; }
+.ac-detrow > .pv-more { margin: 0; }
+.bd-mrow > .ac-detrow { margin-left: 10px; }
+.ac-keys { display: inline-flex; align-items: center; gap: 5px; margin-left: auto; font-size: 12px; color: var(--fg-subtle); white-space: nowrap; cursor: default; }
+@media (max-width: 600px), (hover: none) { .ac-keys { display: none; } }
+/* an open answer's own one-line field, under its explanation; asked Tell me more's, under its pill */
+.bp-opt .ob .ac-in { margin: 10px 0 2px; }
+.ac-more > .ac-in { margin: 8px 0 0; }
+.ac-more > .ac-in[hidden] { display: none; }
+/* the one-line field (the reply field, an answer's, and Other's in the list): the text, then a round Attach key and a
+   Save pill; it grows only when the text wraps */
+.ac-line { display: flex; align-items: flex-end; gap: 4px; min-height: 36px; padding: 3px 4px 3px 12px; border-radius: 18px; background: var(--inset); box-shadow: var(--shadow-well); cursor: text; box-sizing: border-box; }
+.ac-line.dirty { background: var(--surface); }
+.ac-line:focus-within { box-shadow: inset 0 0 0 1.5px var(--accent), 0 0 0 3px color-mix(in oklch, var(--accent) 22%, transparent); }
+.ac-line.drop { outline: 2px dashed var(--accent); outline-offset: 2px; }
+.ac-line-ta { flex: 1; min-width: 0; min-height: 20px; margin: 0 0 5px; padding: 0; border: 0; outline: none; resize: none; field-sizing: content; max-height: 160px;
+  font: 13.5px/20px var(--sans); color: var(--fg); background: none; }
+.ac-line-ta::placeholder { color: var(--fg-subtle); }
+.ac-att { flex: none; display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 50%; color: var(--fg-subtle); background: none; cursor: pointer; }
+.ac-att:hover:not(:disabled) { color: var(--fg); background: var(--hover); }
+.ac-att:disabled { opacity: .4; cursor: default; }
+.ac-att .bd-ic { width: 15px; height: 15px; }
+.ac-go { flex: none; height: 28px; padding: 0 12px; border: 0; border-radius: 999px; font: 600 13px/28px var(--sans); color: #fff; background: var(--accent-solid); cursor: pointer; }
+.ac-go:disabled { opacity: .4; cursor: default; }
+:is(.ac-att, .ac-go):focus-visible { outline: none; box-shadow: var(--focus-ring); }
+:is(.ac-in, .ac-reply) > .bp-files-w { margin-top: 6px; }
+.ac-hint { display: flex; align-items: center; gap: 6px; margin: 6px 0 0; font-size: 12px; line-height: 1.4; color: var(--fg-subtle); }
+.ac-hint .bd-ic { flex: none; width: 13px; height: 13px; }
+/* Other, the last answer: its field is the one-line field, compact, so the row is as tall as the others */
+.bp-opt.cust .oh { display: flex; align-items: center; gap: 10px; width: 100%; padding: 6px 12px; cursor: default; }
+.bp-opt.cust .ac-other { flex: 1; min-width: 0; align-items: center; min-height: 28px; padding: 0 12px; border-radius: 14px; }
+.bp-opt.cust .ac-other .ac-line-ta { margin: 0; font-size: 13px; }
+.bp-opt.cust .yp:not(:empty) { margin-left: 0; }
+.bp-opts.compact .bp-opt.cust .oh { padding: 4px 12px 4px 10px; }
+/* Tell me more: not an answer, but in the same choice group. A full-width raised pill under the answers box, a gap
+   away, in the toolbar keys' family; it leads with the group's radio (a checkbox with several answers). Asked, amber */
+.ac-more { margin: 2px 16px 18px calc(16px + var(--ind)); }
+.bp-cl.nested .ac-more { margin-left: calc(14px + var(--ind)); margin-right: 14px; }
+.ac-tmm { display: flex; align-items: center; gap: 10px; width: 100%; min-width: 0; height: 40px; padding: 0 16px 0 14px; border: 0; border-radius: 999px;
+  font: inherit; line-height: 20px; color: var(--fg); text-align: left; cursor: pointer;
+  background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: var(--shadow-hk); }
+.ac-tmm:hover { background: linear-gradient(var(--hover), var(--hover)), linear-gradient(180deg, var(--hk-top), var(--hk-bot)); }
+.ac-tmm:focus-visible { outline: none; box-shadow: var(--shadow-hk), var(--focus-ring); }
+.ac-more.on .ac-tmm { background: linear-gradient(var(--warn-tint), var(--warn-tint)), linear-gradient(180deg, var(--hk-top), var(--hk-bot)); }
+.ac-tmm > .bd-ic { flex: none; width: 16px; height: 16px; color: var(--fg-muted); }
+.ac-more.on .ac-tmm > .bd-ic { color: var(--warn-fg); }
+.ac-tmm .l { flex: none; font-size: 14px; font-weight: 600; }
+.ac-tmm .sub { flex: 1; min-width: 0; font-size: 13px; color: var(--fg-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ac-pk { flex: none; display: grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; background: var(--inset); box-shadow: inset 0 0 0 1.5px var(--line-strong); }
+.ac-pk > i { width: 6px; height: 6px; border-radius: 50%; background: var(--surface); transform: scale(0); transition: transform .12s var(--ease); }
+.ac-pk.box { border-radius: 4px; }
+.ac-more.on .ac-pk { background: var(--warn); box-shadow: none; }
+.ac-more.on .ac-pk > i { transform: none; }
+.ac-chip { flex: none; display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 8px; border-radius: 999px; font: 600 11.5px/1 var(--sans); white-space: nowrap; }
+.ac-chip[hidden] { display: none; }
+.ac-chip.warn { color: var(--warn-fg); background: var(--warn-tint); }
+.bp-cl-head > .ac-chip { margin-top: 3px; }
+.ac-more.compact { margin: 8px 0 0 28px; }
+.ac-more.compact .ac-tmm { height: 34px; padding: 0 12px 0 12px; }
+.ac-more.compact .ac-tmm .l { font-size: 13px; }
+.ac-more.compact .ac-tmm .sub { font-size: 12.5px; }
+/* the reply field, under the conversation: about the whole question */
+.ac-reply { padding: 0 16px 14px calc(16px + var(--ind)); }
+.bp-cl.nested .ac-reply { padding-left: calc(14px + var(--ind)); padding-right: 14px; }
+.bd-mrow > .ac-reply { padding: 0 16px 12px calc(16px + var(--ind)); }
+.ac-reply.compact { margin: 10px 0 0 28px; padding: 0; }
+.bd-cm.nott > .ac-reply.compact { margin-left: 26px; }
 /* compact: a diff card, a design's Brief tab */
 .bp-opts.compact { padding: 8px 0 0 28px; margin: 0; }
 .bp-opts.compact .oh, .bd-sp-brief .bp-opt .oh { padding: 7px 12px 7px 10px; gap: 8px; }
@@ -1029,12 +1095,16 @@ td.bd-cell-mod { background: color-mix(in oklch, var(--warn-tint) 70%, transpare
 .bp-opts.compact :is(.ol, .ob), .bd-sp-brief .bp-opt :is(.ol, .ob) { font-size: 13px; }
 .bp-opts.compact .one, .bd-sp-brief .bp-opt .one { font-size: 12.5px; }
 .bp-opts.compact .ob, .bd-sp-brief .bp-opt .ob { padding: 0 12px 10px 10px; }
-.bd-sp-brief .bp-opts .keys { display: none; }
-@media print { .bp-opt.more:not(.on), .bp-opts .keys { display: none; } .bp-opt .ob[hidden] { display: block; } .bp-opt .one { display: none; } }
+.bd-sp-brief .ac-keys { display: none; }
+/* the Brief pane is narrow: a question's ✓ pick or amber chip goes under its title, the chevron stays beside it */
+.bd-sp-brief .bp-cl-item.fd > .bp-cl-row .bp-cl-head { flex-wrap: wrap; row-gap: 4px; }
+.bd-sp-brief .bp-cl-item.fd > .bp-cl-row .bp-cl-main { flex: 1 1 calc(100% - 40px); }
+.bd-sp-brief .bp-cl-item.fd > .bp-cl-row .bp-cl-head > :is(.pv-ok, .ac-chip, .bp-chip, .bp-cl-picked) { order: 3; max-width: calc(100% - 30px); margin: 0; }
+.bd-sp-brief .bp-cl-item.fd > .bp-cl-row .pv-chev { order: 2; }
+@media print { .ac-more:not(.on), .ac-reply, .ac-keys, .bp-opt .ob .ac-in, .ac-more > .ac-in, .ac-line .ac-att, .ac-line .ac-go { display: none !important; } .bp-opt .ob[hidden] { display: block; } .bp-opt .one { display: none; } }
 /* several answers: "2 picked" or "Asking for more" beside the title */
 .bp-cl-picked { flex: none; margin-top: 3px; font-size: 12.5px; color: var(--fg-subtle); white-space: nowrap; }
 .bp-cl-picked:empty { display: none; }
-.bp-cl-picked.ask { color: var(--warn-fg); }
 /* an open row's parts: Details, then Conversation (HorizonUI's Timeline: avatar node, name, rev, time, text) */
 .bp-cap { font-size: 11px; font-weight: 500; letter-spacing: .07em; text-transform: uppercase; color: var(--fg-subtle); }
 .bp-cl-body > .bp-cap, .bp-cl-body > .bp-convo { margin-top: 20px; }
@@ -1068,7 +1138,7 @@ td.bd-cell-mod { background: color-mix(in oklch, var(--warn-tint) 70%, transpare
 .bp-cl-sum[hidden], .bp-cl-item.open > .bp-cl-sum { display: none; }
 .bp-cl-sum > .bd-ic { width: 14px; height: 14px; }
 .bp-cl-sum:hover > span:first-of-type { color: var(--fg-muted); }
-.bp-cl-item.more:not(.done) .bp-cl-dot, .bd-cm.more:not(.done) .bp-cl-dot { box-shadow: inset 0 0 0 1.5px var(--warn); background: var(--warn-tint); }
+.bp-cl-item.more:not(.done) .bp-cl-dot, .bd-cm.more:not(.done) .bp-cl-dot { box-shadow: none; background: var(--warn); }   /* asking for more: amber */
 .bp-cl-item.has-choices.done .bp-cl-text { color: var(--fg); }
 .bp-ref { display: inline-flex; align-items: center; gap: 5px; height: 24px; font: 500 12px var(--sans); border: 0; color: var(--fg-muted); background: var(--inset); box-shadow: inset 0 0 0 1px var(--line); border-radius: 7px; padding: 0 8px; transition: color .12s, box-shadow .12s; }
 .bp-ref .bd-ic { width: 13px; height: 13px; color: var(--accent-fg); }
@@ -1465,8 +1535,8 @@ html.bd-ann-m-point .bd-shell, html.bd-ann-m-point .bd-shell .bp-side .bd-meta {
 html.bd-ann-m-point .bd-shell :not(.bp-side, .bp-side :not(.bd-meta, .bd-meta *), .bd-lp, .bd-lp *, .bd-lp-ui, .bd-lp-ui *, .bd-btb, .bd-btb *, .bd-ftb, .bd-ftb *, .bp-side .bd-meta) { cursor: inherit !important; }
 html.bd-ann-m-select .bd-shell :not(.bp-side, .bp-side :not(.bd-meta, .bd-meta *), .bd-lp, .bd-lp *, .bd-lp-ui, .bd-lp-ui *, .bd-btb, .bd-btb *, .bd-ftb, .bd-ftb *), html.bd-ann-m-select .bd-shell { cursor: text !important; }
 html:is(.bd-ann-m-point, .bd-ann-m-select) .bd-shell :is(.bp-side, .bd-lp, .bd-lp-ui, .bd-btb, .bd-ftb) { cursor: default; }
-html:is(.bd-ann-m-point, .bd-ann-m-select) .bd-shell .bp-note .bp-note-ta { cursor: text !important; }
-html:is(.bd-ann-m-point, .bd-ann-m-select) .bd-shell .bp-note button { cursor: default !important; }
+html:is(.bd-ann-m-point, .bd-ann-m-select) .bd-shell :is(.bp-note .bp-note-ta, .ac-line .ac-line-ta) { cursor: text !important; }
+html:is(.bd-ann-m-point, .bd-ann-m-select) .bd-shell :is(.bp-note, .ac-line) button { cursor: default !important; }
 /* in a comment tool (html.bd-ann-m-*) the toolbars and trays, their keys and the menus they open are plain chrome: the
    default arrow over all of them (fields keep their text cursor); the drawing layer leaves them out (capHoles) */
 html[class*="bd-ann-m-"] :is(.bd-anntb, .bd-annb, .bd-annpop, .bd-btb, .bd-ftb, .bd-lst-btb, .bd-stripe, .bd-bar, .bd-revbar, .bd-pane-h, .bd-sp-h, .bd-selm, .bd-expm, .bd-tip),
@@ -2180,24 +2250,25 @@ html[data-v-more="d"] .pv-more:focus-visible .k { box-shadow: var(--shadow-hk), 
 .bd-dets > * + * { margin-top: 10px; }
 .bd-mrow > .bd-dets { margin-left: 16px; margin-right: 16px; }
 .bp-cl-item.fd > .bp-convo { padding: 2px 16px 12px calc(16px + var(--ind)); }
-.pv-pend { margin: -6px 0 0; padding: 0 16px 14px calc(16px + var(--ind)); font: 500 12.5px/1.4 var(--sans); color: var(--warn-fg); }
-.pv-pend[hidden] { display: none; }
-.pv-pend .bd-ic { width: 13px; height: 13px; margin-right: 6px; vertical-align: -2px; }
-.bd-cm > .pv-pend { margin: 6px 0 0; padding: 0 0 0 28px; }
-/* the comment field waits for an answer */
-.bp-note.pv-off { opacity: .5; pointer-events: none; }
+/* a question's conversation: one per question, under its answers, a timeline as in Revisions (a 2 px connector from
+   each avatar down to the next, none after the last). A message about an answer other than the answer now names it;
+   an unread reply from the agent is a soft tint and "New", no edge; a comment just saved comes in with a short rise */
+.ac-convo .bp-msg .mb p { margin: 0; }
+.ac-convo .bp-msg .mb p + :is(p, ul, ol) { margin-top: 6px; }
+.ac-on { display: inline-block; margin-right: 6px; padding: 1px 7px; border-radius: 999px; font: 600 11.5px/1.5 var(--sans); color: var(--fg-muted);
+  background: var(--inset); white-space: nowrap; vertical-align: 1px; }
+.ac-convo .bp-msg.new { margin: -6px -8px 0; padding: 6px 8px 16px; border-radius: 10px; background: color-mix(in oklch, var(--accent-tint) 60%, transparent); }
+.ac-convo .bp-msg.new:last-child { margin-bottom: -6px; padding-bottom: 6px; }
+.ac-convo .bp-msg:not(:last-child)::before { content: ""; position: absolute; left: 7px; top: 22px; bottom: 2px; width: 2px; border-radius: 1px; background: var(--line); }
+.ac-convo .bp-msg.new:not(:last-child)::before { left: 15px; top: 28px; }
+@keyframes ac-msg-in { from { opacity: 0; transform: translateY(6px); } }
+.ac-convo .bp-msg.in { animation: ac-msg-in .24s var(--ease) both; }
+@media (prefers-reduced-motion: reduce) { .ac-convo .bp-msg.in { animation: none; } }
 /* what the filter hides, said once at the end of the list */
 .pv-hidden { display: flex; align-items: center; gap: 8px; padding: 12px 16px; font: 500 13px var(--sans); color: var(--fg-subtle); }
 .pv-hidden .bd-ic { width: 15px; height: 15px; color: var(--ok-fg); }
 .pv-hidden[hidden] { display: none; }
 .bd-mv > .pv-hidden { padding: 0 4px; }
-/* Custom: the reader's own answer, above Need more details; typing in its field picks it */
-.bp-opt.cust .oh { display: flex; align-items: center; gap: 10px; width: 100%; cursor: default; }
-.bp-cust-in { flex: 1; min-width: 0; height: 30px; padding: 0 10px; border: 0; border-radius: 8px; font: 13.5px var(--sans); color: var(--fg); background: var(--inset); box-shadow: var(--shadow-well); outline: none; }
-.bp-cust-in::placeholder { color: var(--fg-subtle); }
-.bp-opt.cust:not(.on) .bp-cust-in { background: transparent; box-shadow: inset 0 0 0 1px var(--line-soft); }
-.bp-opt.cust .bp-cust-in:focus { box-shadow: var(--focus-ring); }
-.bp-opts.compact .bp-cust-in { height: 28px; font-size: 13px; }
 /* Merged: whole-change findings, then each file's commented ranges in line order (the full finding row with the lines
    under its details), then the findings not tied to code */
 .bd-mv { --ind: 28px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin: 18px 0; }
@@ -2432,13 +2503,15 @@ svg.anim .bp-edge.k-async { animation: bp-march 1.6s linear infinite; }
   .bp-cl { --ind: 28px; }
   .bp-cl-row { padding: 0 4px 0 12px; }
   .bp-cl-body { padding: 0 12px 12px 12px; }
-  .bp-opts, .bp-cl-sum, .bp-cl-item > :is(.bp-note, .pv-pend), .bp-cl-item.fd > .bp-convo, .bd-mrow > :is(.bp-note, .bp-convo) { padding: 0 12px 12px 12px; }
+  .bp-opts, .bp-cl-sum, .bp-cl-item > .bp-note, .bp-cl-item.fd > .bp-convo, .bd-mrow > :is(.bp-note, .bp-convo), :is(.bp-cl-item, .bd-mrow) > .ac-reply { padding: 0 12px 12px 12px; }
+  :is(.bp-cl-item, .bd-mrow) > .ac-more { margin: 2px 12px 14px 12px; }
+  :is(.bp-cl-item, .bd-mrow) > .ac-detrow { margin-left: 12px; }
   .bp-opts.compact { padding: 8px 0 0; }
   .bp-cl-num { display: none; }
   .bp-cl-head { flex-wrap: wrap; row-gap: 4px; }
   .bp-cl-main { flex: 1 1 calc(100% - 30px); }
   .bp-cl-head > .bp-chip { order: 3; margin-top: 0; font-size: 11.5px; padding: 3px 7px; }
-  .bp-cl-head > .pv-ok { order: 3; max-width: calc(100% - 90px); margin: 0; }   /* answered: ✓ the pick, then the size, under the title */
+  .bp-cl-head > :is(.pv-ok, .ac-chip) { order: 3; max-width: calc(100% - 90px); margin: 0; }   /* answered: ✓ the pick, then the size, under the title */
   .bp-cl-item.fd > .bp-cl-row .bp-cl-main { flex-basis: calc(100% - 40px); }   /* a finding's chevron stays beside its title */
   .bp-terms { grid-template-columns: minmax(0, 1fr); }
   .bp-terms dt { border-right: 0; border-bottom: 0; padding-bottom: 2px; background: none; }
@@ -3524,6 +3597,7 @@ const ICONS = {
   chev: '<path d="m9 18 6-6-6-6"/>',
   code: '<path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/>',
   msg: '<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>',
+  msgq: '<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"/>',
   msgsq: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
   panel: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M15 3v18"/>',
   panelon: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4Z" fill="currentColor"/>',
@@ -5392,12 +5466,15 @@ function fileDraft(onChange, { compact = false } = {}) {
     } };
 }
 /* Conversations: an item's, a pin's or a general comment's messages. The reader's sent ones are reader state (an
-   item's `:thread`, an annotation's `thread`: {md, rev, at, files?}; rev null: sent before threads, "earlier"); the
-   agent's are the doc's (the item's `replies`, the doc's `threads[<comment id>]`: {rev, md}). By rev, then time; on one
-   rev the agent's replies come before what the reader sent on it. ?rev= shows the thread as it stood at that rev. */
+   item's `:thread`, an annotation's `thread`: {md, rev, at, files?, about?}; rev null: sent before threads, "earlier");
+   the agent's are the doc's (the item's `replies`, the doc's `threads[<comment id>]`: {rev, md, about?}). `about` names
+   the answer a message is about (an answer's id, `custom` for Other, `more` for Tell me more); none, the whole
+   question. By rev, then time; on one rev the agent's replies come before what the reader sent on it. ?rev= shows the
+   thread as it stood at that rev. */
+const okAbout = a => a == null || typeof a === 'string' && !!a && a.length <= 200;
 const okMsg = m => !!m && typeof m === 'object' && typeof m.md === 'string' && m.md.length <= 8192
   && (m.files == null || okFiles(m.files) && m.files.length > 0) && (m.md.length >= 1 || !!m.files)
-  && (m.rev === null || typeof m.rev === 'string' && m.rev.length <= 40) && typeof m.at === 'string';
+  && (m.rev === null || typeof m.rev === 'string' && m.rev.length <= 40) && typeof m.at === 'string' && okAbout(m.about);
 const okReply = r => !!r && typeof r === 'object' && typeof r.md === 'string' && !!r.md.trim() && r.rev != null;
 const revOrd = r => { if (r == null) return -1; const i = REVS.findIndex(x => x.rev === String(r)); return i < 0 ? REVS.length : i; };
 // the rev the reader last opened (the revision strip's `__seen`, read before this visit rewrites it): the agent's
@@ -5407,36 +5484,50 @@ const isNewMsg = m => m.who === 'agent' && !RO && !!SEEN_REV && SEEN_REV !== CUR
 // the agent that opened the page: the model family `serve.py open --to` gave (Claude, Codex…), else Agent; the
 // Markdown and the page's conversations both name it so
 const agentName = () => REPLY.to || 'Agent';
+const aboutOf = m => okAbout(m.about) && m.about ? m.about : null;
 function convo(mine, theirs) {
   const upto = OLD ? revOrd(VIEW.rev) : Infinity;
-  const ms = [...(Array.isArray(theirs) ? theirs : []).filter(okReply).map((m, i) => ({ who: 'agent', rev: String(m.rev), md: m.md, i })),
-    ...(Array.isArray(mine) ? mine : []).map((m, i) => ({ who: 'you', rev: m.rev, md: m.md, at: m.at, files: filesOf(m.files), i }))];
+  const ms = [...(Array.isArray(theirs) ? theirs : []).filter(okReply).map((m, i) => ({ who: 'agent', rev: String(m.rev), md: m.md, about: aboutOf(m), i })),
+    ...(Array.isArray(mine) ? mine : []).map((m, i) => ({ who: 'you', rev: m.rev, md: m.md, at: m.at, files: filesOf(m.files), about: aboutOf(m), i }))];
   const tie = (a, b) => a.who !== b.who ? (a.who === 'agent' ? -1 : 1) : a.who === 'you' && a.at !== b.at ? (a.at < b.at ? -1 : 1) : a.i - b.i;
   return ms.filter(m => revOrd(m.rev) <= upto).sort((a, b) => revOrd(a.rev) - revOrd(b.rev) || tie(a, b));
 }
+// an answer by what a message is about: its label, Other or Tell me more
+const aboutLabel = (x, a) => a === 'custom' ? 'Other' : a === 'more' ? MORE_LABEL : choiceLabel(x, a);
+// whether a message is about the question's answer now (it shows unmarked): the pick (a tick), Other while it holds the
+// reader's words, Tell me more while it is asked
+const aboutNow = (x, a) => !a || (a === 'more' ? !!x.more : a === 'custom' ? !!x.custom : !x.more && idsOf(x.choice).includes(a));
 const fmtAt = s => { const d = new Date(s); return isNaN(d) ? '' : `${d.getDate()} ${d.toLocaleString('en', { month: 'short' })}, ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
 // HorizonUI's Timeline: an avatar node, the name (You, or the agent), the rev, the time the reader sent it, the text,
-// the files it carried
-function timeline(ms) {
+// the files it carried. With the question (x), a message about an answer other than its answer now names it ("On 90
+// days"); a saved comment not sent yet (unsent) reads "not sent"
+function timeline(ms, x) {
   return h('ol', { class: 'bp-msgs', 'aria-label': 'Conversation' }, ms.map(m => {
-    const name = m.who === 'you' ? 'You' : agentName(), nw = isNewMsg(m);
-    return h('li', { class: 'bp-msg ' + m.who + (nw ? ' new' : '') },
+    const name = m.who === 'you' ? 'You' : agentName(), nw = !m.unsent && isNewMsg(m);
+    const on = x && m.about && !aboutNow(x, m.about) ? h('span', { class: 'ac-on' }, 'On ' + aboutLabel(x, m.about)) : null;
+    const mb = (m.md || on) && h('div', { class: 'mb bd-md', html: md(m.md || '') });
+    if (on) (mb.firstElementChild && mb.firstElementChild.tagName === 'P' ? mb.firstElementChild : mb).prepend(on);
+    return h('li', { class: 'bp-msg ' + m.who + (nw ? ' new' : '') + (m.unsent ? ' unsent' : '') + (m.in ? ' in' : '') },
       h('span', { class: 'av', 'aria-hidden': 'true' }, name.slice(0, 1).toUpperCase()),
-      h('div', { class: 'mh' }, h('b', { class: 'who' }, name), h('span', { class: 'rv' }, m.rev == null ? 'earlier' : 'rev ' + m.rev),
-        nw && h('span', { class: 'nw' }, h('i'), 'New'), m.at && m.rev != null && h('time', { datetime: m.at }, fmtAt(m.at))),
-      m.md && h('div', { class: 'mb bd-md', html: md(m.md) }),
-      m.files && m.files.length > 0 && h('div', { class: 'mf' }, fileChips(m.files)));
+      h('div', { class: 'mh' }, h('b', { class: 'who' }, name), h('span', { class: 'rv' }, m.unsent ? 'not sent' : m.rev == null ? 'earlier' : 'rev ' + m.rev),
+        nw && h('span', { class: 'nw' }, h('i'), 'New'), !m.unsent && m.at && m.rev != null && h('time', { datetime: m.at }, fmtAt(m.at))),
+      mb, m.files && m.files.length > 0 && h('div', { class: 'mf' }, fileChips(m.files)));
   }));
 }
-// an item's conversation, every message, nothing folded: in its open row, its diff cards and Merged (compact), in sync
+// an item's conversation, every message, nothing folded: in its open row, its diff cards and Merged (compact), in
+// sync. A question's (one per question, under its answers) also shows the reader's saved comments not sent yet, last;
+// one just saved comes in with a short entrance (none with reduced motion)
 function threadView(x, compact) {
-  const el = h('div', { class: 'bp-convo' + (compact ? ' compact' : '') });
-  let sig = null;
+  const el = h('div', { class: 'bp-convo' + (x.card ? ' ac-convo' : '') + (compact ? ' compact' : '') });
+  let sig = null, shown = null;
   const paint = () => {
-    const ms = x.messages(), s = JSON.stringify([agentName(), ms.map(m => [m.who, m.rev, m.md, m.at, isNewMsg(m), m.files])]);
+    const ms = [...x.messages(), ...(x.card ? x.drafts().map(d => ({ who: 'you', unsent: true, rev: CUR.rev, md: d.md, files: d.files, about: d.about || null })) : [])];
+    const s = JSON.stringify([agentName(), ms.map(m => [m.who, m.rev, m.md, m.at, !m.unsent && isNewMsg(m), m.files, m.about, !!m.unsent, !!m.about && aboutNow(x, m.about)])]);
     if (s === sig) return;
-    sig = s; el.hidden = !ms.length;
-    el.replaceChildren(...(ms.length ? [h('div', { class: 'bp-cap' }, 'Conversation'), timeline(ms)] : []));
+    const now = new Set(ms.filter(m => m.unsent).map(m => m.about || ''));
+    if (shown && !REDUCE) for (const m of ms) if (m.unsent && !shown.has(m.about || '')) m.in = true;
+    sig = s; shown = now; el.hidden = !ms.length;
+    el.replaceChildren(...(ms.length ? [h('div', { class: 'bp-cap' }, 'Conversation'), timeline(ms, x.card ? x : null)] : []));
   };
   paint();
   return { el, paint };
@@ -5462,9 +5553,10 @@ function renderChecklist(b, parent) {
     const key = itemKey(cid, it.id);
     const choices = Array.isArray(it.choices) && it.choices.length ? it.choices : null;
     const multi = !!choices && it.multi === true;
-    // a decision in a findings section (a finding) opens and closes whole, its details behind More details; one with a
-    // single answer also takes a Custom answer, the reader's own words (`:custom`)
-    const fd = !!choices && FINDING_CIDS.has(cid), custKey = key + ':custom';
+    // every decision is an answer card (the review finding's, approved design "One answer card for every question"): it
+    // opens and closes whole, its details behind More details, Other its last answer and Tell me more under them. One
+    // in a findings section is also a finding (the filter, Merged, Diff)
+    const card = !!choices, fd = card && FINDING_CIDS.has(cid), custKey = key + ':custom';
     const authorDone = it.done ? '1' : '0';
     // the author's pick as stored: its id, or (multi) its ids comma-joined
     const authorChoice = choices ? idsOf(it.choice).slice(0, multi ? undefined : 1).join(',') : '';
@@ -5486,9 +5578,13 @@ function renderChecklist(b, parent) {
     let choice = null;
     if (choices) { choice = toPick(stored != null ? stored.slice(1, stored.indexOf('|')) : authorChoice); cb.hidden = true; cb.tabIndex = -1; }
     const pickStr = () => multi ? choice.join(',') : choice || '';
-    // a Custom answer stands in for a pick: one of them, never both
-    let custom = fd && !multi && !pickStr() ? store.get(custKey) || '' : '';
+    // Other: the reader's own answer (`:custom`, label Other). With one answer it stands in for a pick, never both; with
+    // several it is one more tick
+    let custom = card && (multi || !pickStr()) ? store.get(custKey) || '' : '';
     if (!custom && store.get(custKey) != null) store.del(custKey);
+    // Other on a design's or website's framework or theme is a request: the agent adds it as an option next rev, and
+    // Approve waits until the reader picks it there, as it does for Tell me more
+    const reqKind = card && cid === 'brief' && (it.id === 'framework' || it.id === 'theme') && IS_DESIGN;
     if (choices) cb.checked = !!pickStr() || !!custom;
     else cb.checked = stored == null ? !!it.done : stored[0] === '1';
     // subtitle: the author's `sub`, else the check (what "done" looks like), else nothing
@@ -5501,17 +5597,18 @@ function renderChecklist(b, parent) {
       it.verify && !subIsCheck && h('div', { class: 'bp-cl-verify' }, ic('check'), h('span', {}, h('b', {}, 'Check'), h('span', { html: inline(it.verify) }))),
       it.refs && it.refs.length && h('div', { class: 'bp-refs' }, it.refs.map(r => h('button', { type: 'button', class: 'bp-ref', onclick: () => focusNode(r) }, ic('target'), refLabel(r)))),
       !choices && evidenceBlock(evList(it), `item:${cid}/${it.id}`)].filter(Boolean);
-    // the question's details show only while the row is open, under its options; a finding's, behind More details
-    // above its options
-    const body = fd ? h('div', { class: 'bd-dets', id: bodyId, role: 'region', 'aria-label': 'Details: ' + plainText(it.text) }, details)
-      : h('div', { class: 'bp-cl-body', id: bodyId, role: 'region', 'aria-label': String(it.text || '').replace(/[`*]/g, '') },
-        choices && details.length > 0 && h('div', { class: 'bp-cap' }, 'Details'), details);
+    // a progress item's details show only while its row is open; a question's, behind More details above its answers
+    const body = card ? h('div', { class: 'bd-dets', id: bodyId, role: 'region', 'aria-label': 'Details: ' + plainText(it.text) }, details)
+      : h('div', { class: 'bp-cl-body', id: bodyId, role: 'region', 'aria-label': String(it.text || '').replace(/[`*]/g, '') }, details);
     // a progress item whose evidence is stale (the code changed since its check ran) needs a recheck: its tick shows
     // amber and the counts leave it out until the agent re-records the evidence
     const stale = !choices && ownerStale(`item:${cid}/${it.id}`);
-    // The reader's reply box holds a draft (`:note`, its files `:files`); sending it (Request changes, Approve, Send
-    // answers) appends it to the item's thread (`:thread`) and empties the box
-    const noteKey = key + ':note', noteSentKey = key + ':note-sent', threadKey = key + ':thread', filesKey = key + ':files';
+    // The reader's saved comments wait until a send (Request changes, Approve, Send answers) appends them to the item's
+    // thread (`:thread`) and empties their fields: the reply under the conversation, about the whole question (`:note`,
+    // its files `:files`), and on a question the fields inside its answers, by what they are about – an answer's id,
+    // `custom` (Other) or `more` (Tell me more): `:notes`, {about: {md, files?}}
+    const noteKey = key + ':note', noteSentKey = key + ':note-sent', threadKey = key + ':thread', filesKey = key + ':files', notesKey = key + ':notes';
+    const abouts = card ? [...choices.map(c => c.id), 'custom', 'more'] : [];
     let note = store.get(noteKey) || '';
     let files = (() => { try { return filesOf(JSON.parse(store.get(filesKey) || '[]')); } catch { return []; } })();
     let thread = (() => { try { const v = JSON.parse(store.get(threadKey) || '[]'); return Array.isArray(v) ? v.filter(okMsg).slice(-200) : []; } catch { return []; } })();
@@ -5520,17 +5617,30 @@ function renderChecklist(b, parent) {
       thread = [...thread, { md: note.trim().slice(0, 8192), rev: null, at: new Date().toISOString() }].slice(-200);
       store.set(threadKey, JSON.stringify(thread)); store.del(noteKey); store.del(noteSentKey); note = '';
     }
+    const side = (() => {
+      try {
+        const v = JSON.parse(store.get(notesKey) || '{}');
+        return new Map(Object.entries(v && typeof v === 'object' && !Array.isArray(v) ? v : {}).filter(([k, d]) => abouts.includes(k) && d && typeof d.md === 'string'
+          && d.md.length <= 8192 && (d.files == null || okFiles(d.files)) && (!!d.md.trim() || filesOf(d.files).length > 0)).map(([k, d]) => [k, { md: d.md, files: filesOf(d.files) }]));
+      } catch { return new Map(); }
+    })();
+    if (!side.size && store.get(notesKey) != null) store.del(notesKey);
+    const saveSide = () => side.size ? store.set(notesKey, JSON.stringify(Object.fromEntries([...side].map(([k, d]) => [k, { md: d.md, ...filesJson(d.files) }])))) : store.del(notesKey);
+    // every saved comment, the answers' in their order (Other, Tell me more last), then the reply about the whole question
+    const draftList = () => [...abouts.filter(a => side.has(a)).map(a => ({ about: a, md: side.get(a).md, files: side.get(a).files.slice() })),
+      ...(note || files.length ? [{ about: '', md: note, files: files.slice() }] : [])];
     const replies = Array.isArray(it.replies) ? it.replies.filter(okReply) : [];
-    // "Need more details" on a decision item: '1' until sent, then `sent@<rev>`; a newer rev drops it
+    // Tell me more on a question: '1' until sent, then `sent@<rev>`; a newer rev drops it
     const moreKey = key + ':more';
     let more = store.get(moreKey);
     if (more != null && (!choices || more !== '1' && more !== 'sent@' + CUR.rev)) { store.del(moreKey); more = null; }
     body.hidden = 'until-found';  // find-in-page still reaches collapsed content where supported
-    // several answers: "2 picked" or "Asking for more" beside the title
+    // several answers: "2 picked" beside the title; asking for more, an amber chip says so
     const picked = multi ? h('span', { class: 'bp-cl-picked' }) : null;
-    // a finding's head: once answered and closed, ✓ with the pick; its chevron points down, up while open
-    const okChip = fd ? h('span', { class: 'pv-ok' }, ic('tick'), h('span')) : null;
-    const head = h('button', { type: 'button', class: 'bp-cl-head', 'aria-expanded': 'false', ...(fd ? {} : { 'aria-controls': bodyId }) },
+    const askChip = card ? h('span', { class: 'ac-chip warn', hidden: true }, 'Asking for more') : null;
+    // a question's head: once answered, ✓ with the pick; its chevron points down, up while open
+    const okChip = card && !multi ? h('span', { class: 'pv-ok' }, ic('tick'), h('span')) : null;
+    const head = h('button', { type: 'button', class: 'bp-cl-head', 'aria-expanded': 'false', ...(card ? {} : { 'aria-controls': bodyId }) },
       numbered && h('span', { class: 'bp-cl-num' }, String(i + 1).padStart(2, '0')),
       h('span', { class: 'bp-cl-main' },
         h('span', { class: 'bp-cl-text', html: inline(it.text) }),
@@ -5538,55 +5648,74 @@ function renderChecklist(b, parent) {
       okChip,
       it.state && h('span', { class: 'bp-chip ' + (it.stateKind || 'warn') }, it.state),
       stale && h('span', { class: 'bp-chip warn bp-recheck', title: 'Its evidence is stale: the code changed since the check ran. It doesn\'t count as done until it is re-checked' }, ic('reset'), 'Needs recheck'),
-      picked,
+      picked, askChip,
       h('span', { class: 'bp-cl-noteic', title: 'A reply waits in the box' }, ic('msg')),
-      fd ? h('span', { class: 'pv-chev' }, ic('down')) : ic('chev', 'bp-cl-chev'));
+      card ? h('span', { class: 'pv-chev' }, ic('down')) : ic('chev', 'bp-cl-chev'));
     const dot = choices && h('span', { class: 'bp-cl-dot', 'aria-hidden': 'true' });
-    const li = h('li', { class: 'bp-cl-item' + (choices ? ' has-choices' : '') + (fd ? ' fd' : '') + (stale ? ' stale' : ''), id: `item-${cid}-${it.id}` }, h('div', { class: 'bp-cl-row' }, cb, dot, head));
+    const li = h('li', { class: 'bp-cl-item' + (choices ? ' has-choices fd' : '') + (stale ? ' stale' : ''), id: `item-${cid}-${it.id}` }, h('div', { class: 'bp-cl-row' }, cb, dot, head));
     // a pick changed after approval: pending until Request changes sends it (`:pick-sent` holds the pick it sent)
     const pickSentKey = key + ':pick-sent';
     // a page with Send answers: the answer as it sends it, '=<pick>' or the tick; `:sent` holds the one it last sent
     // while that differs from the author's
     const sentKey = key + ':sent', answerStr = () => choices ? '=' + pickStr() + (custom ? '~' + custom : '') : cb.checked ? '1' : '0', authorAnswer = choices ? '=' + authorChoice : authorDone;
-    const entryItem = { it, cb, li, cid, body, head, choices, multi, fd, stale, get note() { return note; }, get files() { return files.slice(); },
-      // the reader's own answer (Custom), '' when none
+    const custSentKey = key + ':custom-sent';
+    const entryItem = { it, cb, li, cid, body, head, choices, multi, card, fd, stale, get note() { return note; }, get files() { return files.slice(); },
+      // the reader's own answer (Other), '' when none
       get custom() { return custom; },
+      // Other on a brief's framework or theme: a request for a new option, not an answer the build can use
+      get request() { return reqKind && !!custom; },
+      // `:custom-sent` holds "<rev it went on>\n<the words sent>"
+      get requestPending() { return reqKind && !!custom && (store.get(custSentKey) || '').split('\n').slice(1).join('\n') !== custom; },
       // the pick: an id or null; with `multi`, the ticked ids (null when none)
       get choice() { return multi ? (choice.length ? choice.slice() : null) : choice; },
-      // every reply in the box is a draft: sending moves it, with its files, into the thread
-      get notePending() { return !!note || files.length > 0; },
+      // a saved comment waits until a send moves it, with its files, into the thread
+      get notePending() { return !!note || files.length > 0 || side.size > 0; },
+      // a saved comment by what it is about ('' the whole question); {md: '', files: []} when none
+      draft: about => about ? (d => d ? { md: d.md, files: d.files.slice() } : { md: '', files: [] })(side.get(about)) : { md: note, files: files.slice() },
+      drafts: draftList,
       get more() { return more === '1' ? 'on' : more ? 'sent' : null; },
       get pickChanged() { return !!choices && pickDiffers(entryItem); },
-      get pickPending() { return entryItem.pickChanged && store.get(pickSentKey) !== pickStr(); },
+      get pickPending() { return entryItem.pickChanged && store.get(pickSentKey) !== pickKey(idsOf(answerChoice(entryItem))) + (custom ? '~' + custom : ''); },
       // a pick or tick Send answers hasn't sent yet
       get answerPending() { return !PICKS_WITH_CHANGES && answerStr() !== (store.get(sentKey) ?? authorAnswer); },
       messages: () => convo(thread, replies),
       fresh: replies.some(r => isNewMsg({ who: 'agent', rev: String(r.rev) })) };
     const paintOk = () => { if (okChip) { okChip.lastChild.textContent = okLabel(entryItem); okChip.title = okChip.lastChild.textContent; } };
+    // the head: asking for more (Tell me more, or Other on a brief's framework or theme: a request for a new option) is
+    // amber, its dot and its chip (a request sent: "Asked · rev N"); else ✓ once answered
     const paintPicked = () => {
-      if (!picked) return;
-      picked.classList.toggle('ask', !!more);
-      picked.textContent = more ? 'Asking for more' : choice.length ? `${choice.length} picked` : '';
+      const req = entryItem.request, sent = req && !entryItem.requestPending ? (store.get(custSentKey) || '').split('\n')[0] : '';
+      li.classList.toggle('more', !!more || req); li.classList.toggle('done', cb.checked && !req);
+      if (askChip) { askChip.hidden = !more && !req; askChip.textContent = sent ? `Asked · rev ${sent}` : 'Asking for more'; }
+      if (picked) picked.textContent = !more && choice.length + (custom ? 1 : 0) ? `${choice.length + (custom ? 1 : 0)} picked` : '';
     };
-    // files: the box's files (undefined keeps them: BP.setNote)
-    entryItem.setNote = (v, from, fs = files) => {
-      if (VIEW_ONLY) return;
-      note = v.trim() ? v : ''; files = filesOf(fs);
-      if (note) store.set(noteKey, note); else { store.del(noteKey); store.del(noteSentKey); }
-      if (files.length) store.set(filesKey, JSON.stringify(files)); else store.del(filesKey);
+    // a saved comment changed: every field showing the item's comments, its conversation (a saved comment shows there
+    // at once, not sent yet), its diff cards and Merged rows
+    const paintNotes = () => {
       li.classList.toggle('has-note', entryItem.notePending);
-      if (from !== entryItem.noteView) entryItem.noteView.paint();
+      entryItem.noteView.paint();
+      if (entryItem.opts) entryItem.opts.paint();
+      entryItem.thread.paint();
+    };
+    // v: the comment ('' deletes it), fs: its files (undefined keeps them: BP.setNote), about: what it is about ('' the
+    // whole question, else an answer's id, `custom` or `more`)
+    entryItem.setNote = (v, from, fs, about = '') => {
+      if (VIEW_ONLY || about && !abouts.includes(about)) return;
+      const text = String(v ?? '').trim() ? String(v).slice(0, 8192) : '';
+      if (!about) {
+        note = text; files = filesOf(fs === undefined ? files : fs);
+        if (note) store.set(noteKey, note); else { store.del(noteKey); store.del(noteSentKey); }
+        if (files.length) store.set(filesKey, JSON.stringify(files)); else store.del(filesKey);
+      } else {
+        const f = filesOf(fs === undefined ? entryItem.draft(about).files : fs);
+        if (text || f.length) side.set(about, { md: text, files: f }); else side.delete(about);
+        saveSide();
+      }
+      paintNotes();
       syncDiffs(); paintSend(); MARKUP.paint();
     };
-    // a decision's box shows while its row is closed too: a click into it (or typing) opens the row, the details
-    // grow above it and the page scrolls with them, so the box stays under the pointer
-    entryItem.noteView = noteBox(entryItem, false, choices && !fd && (() => {
-      if (li.classList.contains('open') || li.classList.contains('empty')) return;
-      const ta = entryItem.noteView.ta, y = ta.getBoundingClientRect().top;
-      entryItem.setOpen(true); CHECKLISTS.forEach(c => c.paintExpand());
-      const dy = ta.getBoundingClientRect().top - y;
-      if (dy) scrollerOf(ta).scrollBy({ top: dy, behavior: 'instant' });
-    }));
+    // a question's reply field sits under its conversation, about the whole question; a progress item keeps its box
+    entryItem.noteView = card ? replyField(entryItem) : noteBox(entryItem, false);
     entryItem.thread = threadView(entryItem);
     const sum = h('div', { class: 'bp-cl-sum', title: 'Show the conversation' });
     sum.addEventListener('click', () => { entryItem.setOpen(true); CHECKLISTS.forEach(c => c.paintExpand()); });
@@ -5595,15 +5724,15 @@ function renderChecklist(b, parent) {
       entryItem.thread.paint();
       sum.hidden = !ms.length;
       sum.replaceChildren(...(ms.length ? convoLine(ms) : []));
-      // a first message gives a decision with no details a row to open
+      // a first message gives a progress item with no details a row to open
       if (entryItem.refresh) { entryItem.refresh(); CHECKLISTS.forEach(c => c.paintExpand()); }
-      if (fd) entryItem.noteView.paint();   // its placeholder, and the agent's name under a comment not yet sent
+      entryItem.noteView.paint();
     };
     entryItem.paintConvo = paintConvo;
     li.classList.toggle('has-note', entryItem.notePending);
-    li.classList.toggle('more', !!more);
-    const paintMore = () => { li.classList.toggle('more', !!more); entryItem.opts.paint(); entryItem.noteView.paint(); paintPicked(); syncDiffs(); paintPlan(); };
-    // Need more details asks the agent instead of picking: on, it clears the pick (the ticks)
+    paintPicked();
+    const paintMore = () => { li.classList.toggle('more', !!more); paintNotes(); paintPicked(); syncDiffs(); paintPlan(); };
+    // Tell me more asks the agent instead of picking: on, it clears the pick (the ticks and Other)
     entryItem.setMore = on => {
       if (VIEW_ONLY) return;
       more = on ? '1' : null;
@@ -5612,61 +5741,70 @@ function renderChecklist(b, parent) {
       if (on && custom) entryItem.setCustom('');
       paintMore(); paintSend(); MARKUP.paint();
     };
-    // the item went to the agent (Request changes, Approve, Send answers): its reply and files join the thread (the
-    // thread is written first, in the same state write), its request is sent. On a review `what` says which part
-    // went: 'answer' (the send key: the pick or tick) or 'note' (Request changes: the comment and Need more details)
+    // the item went to the agent (Request changes, Approve, Send answers): its saved comments and their files join the
+    // thread, each with what it is about (the thread is written first, in the same state write), its request is sent.
+    // On a review `what` says which part went: 'answer' (the send key: the pick or tick) or 'note' (Request changes:
+    // the comments and Tell me more)
     entryItem.markSent = what => {
       if (VIEW_ONLY) return;
       if (what !== 'answer' && entryItem.notePending) {
-        thread = [...thread, { md: note.trim().slice(0, 8192), rev: CUR.rev, at: new Date().toISOString(), ...filesJson(files) }].slice(-200);
-        store.set(threadKey, JSON.stringify(thread)); store.del(noteKey); store.del(noteSentKey); store.del(filesKey);
-        note = ''; files = []; li.classList.remove('has-note'); entryItem.noteView.paint(); paintConvo(); syncDiffs();
+        const at = new Date().toISOString();
+        thread = [...thread, ...draftList().map(d => ({ md: d.md.trim().slice(0, 8192), rev: CUR.rev, at, ...filesJson(d.files), ...(d.about ? { about: d.about } : {}) }))].slice(-200);
+        store.set(threadKey, JSON.stringify(thread)); store.del(noteKey); store.del(noteSentKey); store.del(filesKey); store.del(notesKey);
+        note = ''; files = []; side.clear(); paintNotes(); paintConvo(); syncDiffs();
       }
       if (what !== 'answer' && more === '1') { more = 'sent@' + CUR.rev; store.set(moreKey, more); paintMore(); }
+      if (what !== 'answer' && entryItem.request) { store.set(custSentKey, CUR.rev + '\n' + custom); paintPicked(); }
       if (what === 'note') return;
-      if (entryItem.pickChanged) store.set(pickSentKey, pickStr());
+      if (entryItem.pickChanged) store.set(pickSentKey, pickKey(idsOf(answerChoice(entryItem))) + (custom ? '~' + custom : ''));
       if (!PICKS_WITH_CHANGES) { const s = answerStr(); if (s === authorAnswer) store.del(sentKey); else store.set(sentKey, s); }
     };
     const authorPick = () => toPick(authorChoice);
     if (choices) {
-      // an id or null; with `multi` an id, a list of them or null. Picking an option turns Need more details off
+      // what an answer change repaints: the answers (every list of them), the head, the conversation's On chips
+      const paintAnswer = () => { entryItem.opts.paint(); paintPicked(); paintOk(); entryItem.thread.paint(); };
+      // an id or null; with `multi` an id, a list of them or null. Picking an answer turns Tell me more off, and with
+      // one answer Other too
       entryItem.setChoice = v => {
         if (VIEW_ONLY) return;
         const ids = idsOf(v).filter(id => choices.some(c => c.id === id));
         choice = multi ? choices.map(c => c.id).filter(id => ids.includes(id)) : ids[0] || null;
         const s = pickStr(), dropMore = !!s && !!more;
-        if (s && custom) { custom = ''; store.del(custKey); }
+        if (s && custom && !multi) { custom = ''; store.del(custKey); }
         cb.checked = !!s || !!custom;
         if (s === authorChoice) store.del(key); else store.set(key, `=${s}|${authorChoice}`);
         if (dropMore) { more = null; store.del(moreKey); li.classList.remove('more'); }
-        li.classList.toggle('done', cb.checked); entryItem.opts.paint(); paintPicked(); paintOk(); update();
-        if (dropMore || fd) entryItem.noteView.paint();
-        if (dropMore) { paintPlan(); MARKUP.paint(); }
+        paintAnswer(); update();
+        if (dropMore) { paintNotes(); paintPlan(); MARKUP.paint(); }
         else if (PICKS_WITH_CHANGES && !OLD) { paintPlan(); MARKUP.paint(); }   // a pick Request changes carries: its count, a plan's chip
         if (entryItem.onChoice) entryItem.onChoice(entryItem.choice);   // a design's theme pick re-skins its screens
       };
-      // Custom: the reader's words answer the finding; they drop the pick and Need more details, '' takes them back
-      if (fd && !multi && !VIEW_ONLY) entryItem.setCustom = v => {
+      // Other: the reader's words answer the question; they drop Tell me more and, with one answer, the pick; ''
+      // takes them back
+      if (!VIEW_ONLY) entryItem.setCustom = v => {
         custom = String(v ?? '').trim() ? String(v).slice(0, 2000) : '';
         if (custom) store.set(custKey, custom); else store.del(custKey);
-        if (custom && choice) { choice = null; if (authorChoice) store.set(key, `=|${authorChoice}`); else store.del(key); }
-        if (custom && more) { more = null; store.del(moreKey); li.classList.remove('more'); }
+        if (custom && choice && !multi) { choice = null; if (authorChoice) store.set(key, `=|${authorChoice}`); else store.del(key); }
+        const dropMore = !!custom && !!more;
+        if (dropMore) { more = null; store.del(moreKey); li.classList.remove('more'); }
         cb.checked = !!pickStr() || !!custom;
-        li.classList.toggle('done', cb.checked); entryItem.opts.paint(); paintOk(); entryItem.noteView.paint(); update(); MARKUP.paint();
+        paintAnswer(); if (dropMore) paintNotes(); update(); paintPlan(); MARKUP.paint();
       };
       entryItem.opts = optionRows(entryItem);
       paintPicked(); paintOk();
     }
-    if (fd) {
-      // a finding, open: More details (the details under it, then its code), the options, the conversation, the reply
-      // box and, under it, a comment that waits to be sent
+    if (card) {
+      // a question, open: More details (the keyboard keys at the end of its row; the details, then the code, under it),
+      // the answers with Other last, Tell me more, the conversation, then the reply field
       const moreBtn = h('button', { type: 'button', class: 'bp-btn ghost pv-more', 'aria-expanded': 'false', 'aria-controls': bodyId, onclick: () => entryItem.setDetails(!entryItem.details) });
+      const keys = RO ? null : answerKeys();
+      const detRow = h('div', { class: 'ac-detrow' }, moreBtn, keys);
       entryItem.moreBtn = moreBtn;
-      li.append(moreBtn, body, entryItem.opts.el);
+      li.append(detRow, body, entryItem.opts.el);
+      if (entryItem.opts.more) li.append(entryItem.opts.more);
       if (!RO || entryItem.messages().length) li.append(entryItem.thread.el);
-      if (!RO) li.append(entryItem.noteView.el, entryItem.noteView.pend);
-      paintConvo();
-      // the finding's own state, painted on each of its rows (this one, Merged's: `x.mviews`)
+      if (!RO) li.append(entryItem.noteView.el);
+      // the question's own state, painted on each of its rows (this one, Merged's: `x.mviews`)
       entryItem.open = false; entryItem.details = false;
       entryItem.setOpen = open => {
         entryItem.open = open;
@@ -5682,16 +5820,15 @@ function renderChecklist(b, parent) {
         if (on && entryItem.onOpen) entryItem.onOpen();   // a finding draws its code when its details first show (findingCode)
       };
       entryItem.setDetails(false);
+      entryItem.detRow = detRow;
+      paintConvo();
     } else {
-      if (choices) li.append(entryItem.opts.el);
       li.append(sum);
-      // open: the details, then the conversation (read-only views: only when there is one), then the reply box (a
-      // decision's sits under the row's body, shown open or closed)
+      // open: the details, then the conversation (read-only views: only when there is one), then the reply box
       if (!RO || entryItem.messages().length) body.append(entryItem.thread.el);
-      if (!RO && !choices) body.append(entryItem.noteView.el);
+      if (!RO) body.append(entryItem.noteView.el);
       paintConvo();
       li.append(body);
-      if (!RO && choices) li.append(entryItem.noteView.el);
       entryItem.setOpen = open => {
         li.classList.toggle('open', open); head.setAttribute('aria-expanded', String(open));
         if (open) body.removeAttribute('hidden'); else body.hidden = 'until-found';
@@ -5699,26 +5836,32 @@ function renderChecklist(b, parent) {
       };
     }
     entryItem.refresh = () => {
-      // a finding: More details shows while it has details
-      if (fd) { entryItem.moreBtn.hidden = ![...body.children].some(c => !c.hidden); return; }
+      // a question: More details shows while it has details (its row stays for the keyboard keys)
+      if (card) {
+        entryItem.moreBtn.hidden = ![...body.children].some(c => !c.hidden);
+        entryItem.detRow.hidden = entryItem.moreBtn.hidden && !entryItem.detRow.querySelector('.ac-keys');
+        return;
+      }
       // nothing to expand (no details, no conversation, no box in the body): the row is just the tick's label, and
       // keyboard focus stays on the tick
       const empty = ![...body.children].some(c => !c.hidden);
       if (empty && li.classList.contains('open')) entryItem.setOpen(false);
       li.classList.toggle('empty', empty);
-      // a decision's head stays readable: its question names the options under it (a progress row's tick carries the text)
-      if (empty) { head.removeAttribute('aria-expanded'); head.removeAttribute('aria-controls'); head.tabIndex = -1; if (!choices) head.setAttribute('aria-hidden', 'true'); }
+      if (empty) { head.removeAttribute('aria-expanded'); head.removeAttribute('aria-controls'); head.tabIndex = -1; head.setAttribute('aria-hidden', 'true'); }
       else { head.setAttribute('aria-expanded', String(li.classList.contains('open'))); head.setAttribute('aria-controls', bodyId); head.removeAttribute('tabindex'); head.removeAttribute('aria-hidden'); }
     };
     head.addEventListener('click', () => {
-      // a finding opens or closes whole, answered or not; opening it is where the reader is
-      if (fd) { if (!entryItem.open) holdFinding(entryItem); entryItem.setOpen(!entryItem.open); paintFindings(); return; }
-      if (li.classList.contains('empty')) { if (!choices) cb.click(); return; }   // nothing to show: the row ticks
+      // a question opens or closes whole, answered or not; opening a finding is where the reader is
+      if (card) { if (fd && !entryItem.open) holdFinding(entryItem); entryItem.setOpen(!entryItem.open); if (fd) paintFindings(); return; }
+      if (li.classList.contains('empty')) { cb.click(); return; }   // nothing to show: the row ticks
       entryItem.setOpen(!li.classList.contains('open'));
     });
-    body.addEventListener('beforematch', () => { if (fd) { entryItem.setOpen(true); entryItem.setDetails(true); } else entryItem.setOpen(true); });
+    body.addEventListener('beforematch', () => { entryItem.setOpen(true); if (card) entryItem.setDetails(true); });
+    // a question outside the findings opens on load while it needs the reader (no answer, Tell me more not sent, a
+    // reply they haven't answered); answered, it shows its head with ✓ and the pick. Read-only views show every one open
+    if (card && !fd) entryItem.setOpen(RO || !(pickStr() || custom) || more === '1' || entryItem.fresh || awaitsReader(entryItem));
     entryItem.refresh();
-    li.classList.toggle('done', cb.checked);
+    paintPicked();
     cb.addEventListener('change', () => {
       if (choices || VIEW_ONLY) return;
       if (cb.checked === !!it.done) store.del(key); else store.set(key, (cb.checked ? '1' : '0') + authorDone);
@@ -5811,25 +5954,31 @@ function paintAccept() {
     if (n) c.acceptBtn.replaceChildren(ic('checks'), `Accept recommended (${n})`);
   }
 }
-/* The options of a decision as Accordion rows (approved design, variant A): one bordered list, a row per option with
-   its radio (a checkbox with `multi`), its label, ★ Recommended, its explanation cut to one line and a chevron; a
-   click on the row or → opens the whole explanation, the radio or checkbox picks. An option without `md` is its label
-   alone. A finding with one answer has Custom above Need more details: the reader's own answer in a field, which
-   typing picks (its radio picks what the field holds, or focuses it; picked, it takes the answer back). Need more
-   details is the last row, with a fixed explanation (not on ?rev=/?diff=, which send nothing): with
-   one answer it is a radio in the group, with several a checkbox; on, it clears the pick (the ticks), and picking an
-   option turns it off. Sent, it reads "Details requested" until a newer rev; a click withdraws it. ↑ ↓ move, Space
-   picks, → ← open and close. The same item can have several lists (its row, a diff card, Merged): each repaints
-   from the item (paint). */
-const MORE_MD = 'None of these yet: say what\'s missing in your reply, and the agent answers before you pick.';
+/* A question's answers (approved design "One answer card for every question", card A): one bordered list, a row per
+   answer with its radio (a checkbox with `multi`), its label, ★ Recommended, its explanation cut to one line and a
+   chevron. Picking an answer opens it; a click on the row (or →) opens one without picking it. Open, an answer shows
+   its explanation, then its own one-line field: a comment about that answer, which goes with the response under the
+   pick and, on another answer, asks about it and picks nothing. An answer without `md` is its label alone (its field
+   still opens it). Other is the last answer: the reader's own words in a compact field, which typing picks (its radio
+   picks what the field holds, or focuses it; picked, it takes the answer back); with several answers it is one more
+   tick. Tell me more sits apart, a raised pill under the list in the same choice group (its radio leads it, a checkbox
+   with several answers): on, it clears the answers, and an answer clears it; sent, it stays amber with "Asked · rev N"
+   until a newer rev, and a click withdraws it. Asked, it has its own field. ?rev=/?diff= send nothing: no fields, no
+   Tell me more; a shared page has no Other either. ↑ ↓ move (Tell me more last), Space picks, → ← open and close. The
+   same item can have several lists (its row, a diff card, Merged): each repaints from the item (paint). */
+const MORE_LABEL = 'Tell me more';
 // an explanation's first line, for a closed row (list markers and headings off; CSS cuts it to one line)
 const oneLine = s => String(s || '').split('\n').map(l => l.replace(/^\s*(?:[-*+]\s+|\d+[.)]\s+|#+\s+|>\s?)/, '').trim()).find(Boolean) || '';
 let OPT_N = 0;
+// the keyboard keys, at the right end of a question's More details row
+function answerKeys() {
+  const k = s => h('kbd', { class: 'bd-kbd' }, s);
+  return h('span', { class: 'ac-keys', 'aria-hidden': 'true' }, k('↑'), k('↓'), h('span', {}, 'move ·'), k('Space'), h('span', {}, 'picks ·'), k('→'), h('span', {}, 'opens the answer'));
+}
 function optionRows(x, compact) {
-  const multi = x.multi, recs = recIds(x);
+  const multi = x.multi, recs = recIds(x), fields = !RO;
   const opts = [...x.choices.map(c => ({ id: c.id, label: c.label, md: typeof c.md === 'string' && c.md.trim() ? c.md : '', rec: recs.includes(c.id) })),
-    ...(x.setCustom ? [{ id: 'custom', label: 'Custom', cust: true }] : []),
-    ...(RO ? [] : [{ id: '', label: 'Need more details', md: MORE_MD, more: true }])];
+    ...(x.setCustom && !RO ? [{ id: 'custom', label: 'Other', cust: true }] : [])];
   const ls = h('div', { class: 'ls', role: multi ? 'group' : 'radiogroup', 'aria-label': (multi ? 'Pick any: ' : 'Decision: ') + plainText(x.it.text) });
   const rows = opts.map(o => {
     const bid = 'bp-opt-' + ++OPT_N;
@@ -5837,91 +5986,173 @@ function optionRows(x, compact) {
     const pk = h('button', { type: 'button', role: multi ? 'checkbox' : 'radio', class: 'pk', disabled: VIEW_ONLY, ...(o.cust ? {} : { 'data-id': o.id }), 'aria-label': plainText(o.label) + (o.rec ? ' (recommended)' : '') }, h('i'));
     const lb = h('span', { class: 'ol', html: inline(o.label) }), yp = h('span', { class: 'yp' });
     if (o.cust) {
-      const input = h('input', { type: 'text', class: 'bp-cust-in', maxlength: 2000, placeholder: 'Your own answer', 'aria-label': 'Your own answer to: ' + plainText(x.it.text) });
-      const hd = h('div', { class: 'oh' }, lb, input);
-      return { o, row: h('div', { class: 'bp-opt cust', 'data-id': o.id }, pk, h('div', { class: 'oc' }, hd)), pk, hd, ob: null, lb, yp, input };
+      const input = h('textarea', { class: 'ac-line-ta', rows: 1, maxlength: 2000, placeholder: multi ? 'Another answer' : 'Your own answer', 'aria-label': 'Your own answer to: ' + plainText(x.it.text) });
+      const line = h('div', { class: 'ac-line ac-other' }, input);
+      const hd = h('div', { class: 'oh' }, lb, line, yp);
+      return { o, row: h('div', { class: 'bp-opt cust', 'data-id': o.id }, pk, h('div', { class: 'oc' }, hd)), pk, hd, ob: null, lb, yp, input, line };
     }
-    const hd = h('button', { type: 'button', class: 'oh', tabindex: VIEW_ONLY && o.md ? '0' : '-1', ...(o.md ? { 'aria-expanded': 'false', 'aria-controls': bid } : { 'aria-hidden': 'true' }) },
-      lb, o.rec && h('span', { class: 'rec' }, '★ Recommended'), o.md && h('span', { class: 'one', html: inline(oneLine(o.md)) }), yp, o.md && ic('down', 'cv'));
-    const ob = o.md ? h('div', { class: 'ob bd-md', id: bid, html: md(o.md) }) : null;
+    const opens = !!o.md || fields;
+    const hd = h('button', { type: 'button', class: 'oh', tabindex: VIEW_ONLY && o.md ? '0' : '-1', ...(opens ? { 'aria-expanded': 'false', 'aria-controls': bid } : { 'aria-hidden': 'true' }) },
+      lb, o.rec && h('span', { class: 'rec' }, '★ Recommended'), o.md && h('span', { class: 'one', html: inline(oneLine(o.md)) }), yp, opens && ic('down', 'cv'));
+    const ob = opens ? h('div', { class: 'ob bd-md', id: bid, html: o.md ? md(o.md) : '' }) : null;
     if (ob) ob.hidden = true;
-    const row = h('div', { class: 'bp-opt' + (o.more ? ' more' : '') + (o.md ? '' : ' plain'), 'data-id': o.id }, pk, h('div', { class: 'oc' }, hd, ob));
-    return { o, row, pk, hd, ob, lb, yp };
+    const row = h('div', { class: 'bp-opt' + (o.md ? '' : ' plain'), 'data-id': o.id }, pk, h('div', { class: 'oc' }, hd, ob));
+    return { o, row, pk, hd, ob, lb, yp, fv: null };
   });
   ls.append(...rows.map(r => r.row));
-  const k = s => h('kbd', { class: 'bd-kbd' }, s);
-  const keys = !RO && !compact ? h('div', { class: 'keys', 'aria-hidden': 'true' }, k('↑'), k('↓'), h('span', {}, 'move ·'), k('Space'), h('span', {}, 'picks ·'), k('→'), h('span', {}, 'opens the explanation')) : null;
-  const el = h('div', { class: 'bp-opts' + (compact ? ' compact' : '') }, h('div', { class: 'box' }, ls, keys));
-  // one row open at a time
+  const el = h('div', { class: 'bp-opts' + (compact ? ' compact' : '') }, h('div', { class: 'box' }, ls));
+  // Tell me more: its radio, its icon, the label, what it does, and once sent "Asked · rev N"; asked, its field
+  const tm = fields ? (() => {
+    const sub = h('span', { class: 'sub' }), chip = h('span', { class: 'ac-chip warn', hidden: true });
+    const pk = h('button', { type: 'button', class: 'ac-tmm', role: multi ? 'checkbox' : 'radio', 'aria-checked': 'false', 'aria-label': MORE_LABEL },
+      h('span', { class: 'ac-pk' + (multi ? ' box' : ''), 'aria-hidden': 'true' }, h('i')), ic('msgq'), h('span', { class: 'l' }, MORE_LABEL), sub, chip);
+    return { o: { id: 'more', label: MORE_LABEL, more: true }, pk, sub, chip, row: h('div', { class: 'ac-more' + (compact ? ' compact' : '') }, pk), ob: null, fv: null };
+  })() : null;
+  const nav = tm ? [...rows, tm] : rows;
+  // an open answer's field (and asked Tell me more's), made when it first shows
+  const fieldOf = r => {
+    if (!r.fv) {
+      const a = r.o.id;
+      r.fv = lineField(x, a, a === 'more' ? { placeholder: 'What do you need to know?', hint: 'Goes with your response.' }
+        : { placeholder: `Comment on ${plainText(r.o.label)}…`, hint: () => aboutNow(x, a) ? 'Goes with your response.' : `Shows in the conversation as On ${aboutLabel(x, a)}; it picks nothing.` });
+      (r.ob || r.row).append(r.fv.el);
+    }
+    return r.fv;
+  };
+  // one row open at a time; one opened without a pick has a soft hover tint
   const setOpen = (r, on) => {
     if (!r.ob) return;
     if (on) rows.forEach(q => { if (q !== r) setOpen(q, false); });
+    if (on && fields) fieldOf(r).paint();
     r.row.classList.toggle('open', on); r.hd.setAttribute('aria-expanded', String(on)); r.ob.hidden = !on;
+    r.row.classList.toggle('peek', on && r.pk.getAttribute('aria-checked') !== 'true');
   };
-  // Need more details on: the reply box says what is missing (the card's, else the row's, opened)
-  const focusReply = () => {
-    const host = el.closest('.bd-cm, .bd-mrow');
-    if (!host && x.setOpen) { x.setOpen(true); CHECKLISTS.forEach(c => c.paintExpand()); }
-    const ta = host ? host.querySelector('.bp-note textarea') : x.noteView && x.noteView.ta;
-    if (ta && ta.isConnected) { ta.focus({ preventScroll: true }); ta.scrollIntoView({ block: 'nearest', behavior: REDUCE ? 'auto' : 'smooth' }); }
+  const focusField = r => {
+    const ta = r.fv && r.fv.ta;
+    if (ta && ta.isConnected && ta.offsetParent) { ta.focus({ preventScroll: true }); ta.scrollIntoView({ block: 'nearest', behavior: REDUCE ? 'auto' : 'smooth' }); }
   };
   const pick = r => {
     if (VIEW_ONLY) return;
     if (x.fd) holdFinding(x);   // the finding the reader answers stays where it is until they move on
     if (r.o.cust) { if (x.custom) x.setCustom(''); else if (r.input.value.trim()) x.setCustom(r.input.value); else r.input.focus(); return; }
-    if (r.o.more) { x.setMore(!x.more); if (x.more === 'on') focusReply(); return; }
-    const cur = idsOf(x.choice);
-    if (multi) x.setChoice(cur.includes(r.o.id) ? cur.filter(id => id !== r.o.id) : [...cur, r.o.id]);
-    else x.setChoice(x.choice === r.o.id ? null : r.o.id);
+    if (r.o.more) { x.setMore(!x.more); if (x.more) focusField(r); return; }
+    const cur = idsOf(x.choice), on = !cur.includes(r.o.id);
+    if (multi) x.setChoice(on ? [...cur, r.o.id] : cur.filter(id => id !== r.o.id));
+    else x.setChoice(on ? r.o.id : null);
+    if (on) setOpen(r, true);   // picking an answer opens it: its explanation, then its field
   };
-  for (const r of rows) {
+  for (const r of nav) {
     r.pk.addEventListener('click', () => pick(r));
+    if (r.o.more) continue;
     if (r.input) {
       r.hd.addEventListener('click', e => { if (e.target !== r.input) r.input.focus(); });
-      r.input.addEventListener('input', () => { holdFinding(x); x.setCustom(r.input.value); });
-      r.input.addEventListener('keydown', e => e.stopPropagation());   // page keys (modes, n/p) must not fire while typing
+      r.input.addEventListener('input', () => { if (x.fd) holdFinding(x); x.setCustom(r.input.value); });
+      // page keys (modes, n/p) must not fire while typing; Enter and Esc leave the field (its words are the answer)
+      r.input.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter' && !e.shiftKey || e.key === 'Escape') { e.preventDefault(); r.input.blur(); } });
     } else r.hd.addEventListener('click', () => r.ob ? setOpen(r, r.ob.hidden) : pick(r));
   }
-  ls.addEventListener('keydown', e => {
-    const i = rows.findIndex(r => r.pk === document.activeElement); if (i < 0 || e.metaKey || e.ctrlKey || e.altKey) return;
+  const onKey = e => {
+    const i = nav.findIndex(r => r.pk === document.activeElement); if (i < 0 || e.metaKey || e.ctrlKey || e.altKey) return;
     const step = { ArrowDown: 1, ArrowUp: -1 }[e.key];
-    if (step) { e.preventDefault(); rows[(i + step + rows.length) % rows.length].pk.focus(); }
-    else if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { e.preventDefault(); setOpen(rows[i], e.key === 'ArrowRight'); }
-  });
+    if (step) { e.preventDefault(); nav[(i + step + nav.length) % nav.length].pk.focus(); }
+    else if ((e.key === 'ArrowRight' || e.key === 'ArrowLeft') && nav[i].ob) { e.preventDefault(); setOpen(nav[i], e.key === 'ArrowRight'); }
+  };
+  ls.addEventListener('keydown', onKey);
+  if (tm) tm.pk.addEventListener('keydown', onKey);
   const paint = () => {
     const cur = idsOf(x.choice), m = x.more;
     let tab = null;
     for (const r of rows) {
-      const on = r.o.cust ? !!x.custom : r.o.more ? !!m : cur.includes(r.o.id);
+      const on = r.o.cust ? !!x.custom : cur.includes(r.o.id);
       r.pk.setAttribute('aria-checked', String(on));
       r.row.classList.toggle('on', on);
+      r.row.classList.toggle('peek', !on && r.row.classList.contains('open'));
       if (on && !tab) tab = r;
-      if (r.o.cust) { if (document.activeElement !== r.input) r.input.value = x.custom; }
-      else if (r.o.more) {
-        r.lb.textContent = m === 'sent' ? 'Details requested' : 'Need more details';
-        r.pk.setAttribute('aria-label', r.lb.textContent);
-        r.row.title = m === 'sent' ? 'Sent to the agent; it resets when the agent posts a new revision. Click to withdraw it'
-          : m ? 'Goes with Request changes; click again to take it back' : '';
-      } else r.yp.textContent = on && !multi ? (VIEW_ONLY ? 'Chosen' : 'Your pick') : '';
+      if (r.o.cust) { if (document.activeElement !== r.input) r.input.value = x.custom; r.line.classList.toggle('dirty', !!r.input.value.trim()); }
+      r.yp.textContent = on && !multi ? (VIEW_ONLY ? 'Chosen' : 'Your pick') : '';
+      if (r.fv) r.fv.paint();
     }
-    for (const r of rows) r.pk.tabIndex = r === (tab || rows[0]) ? 0 : -1;
+    if (tm) {
+      tm.row.classList.toggle('on', !!m); tm.pk.setAttribute('aria-checked', String(!!m));
+      tm.sub.textContent = m ? `${agentName()} answers in the next rev.` : `None of these yet: ${agentName()} answers before you pick.`;
+      tm.chip.hidden = m !== 'sent'; tm.chip.textContent = m === 'sent' ? `Asked · rev ${CUR.rev}` : '';
+      tm.pk.title = m === 'sent' ? 'Sent to the agent; it resets when the agent posts a new revision. Click to withdraw it'
+        : m ? 'Goes with Request changes; click again to take it back' : '';
+      if (m) fieldOf(tm).paint();
+      if (tm.fv) tm.fv.el.hidden = !m;
+      if (m && !tab) tab = tm;
+    }
+    for (const r of nav) r.pk.tabIndex = r === (tab || rows[0]) ? 0 : -1;
     el.classList.toggle('answered', cur.length > 0 || !!x.custom);
   };
   paint();
-  return { el, paint };
+  return { el, more: tm && tm.row, paint };
 }
+/* The one-line field: an open answer's (a comment about it), asked Tell me more's, and the reply under a question's
+   conversation (about the whole question). The text, then a round Attach key and a Save pill, dimmed while there is
+   nothing new to save; it grows only when the text wraps. Enter saves (Shift+Enter breaks the line), Esc puts the saved
+   text back. Save puts the message in the conversation at once, marked not sent; it stays here, still editable (Save
+   again updates it; emptied, Save deletes it), until a send (Request changes, Approve, Send answers) moves it into the
+   conversation and empties the field. Files: Attach, a drop or a pasted screenshot. */
+function lineField(x, about, { placeholder = 'Reply…', hint = '', cls = 'ac-in' } = {}) {
+  let draft = false;
+  const ta = h('textarea', { class: 'ac-line-ta', rows: 1, maxlength: 8192, placeholder,
+    'aria-label': (about ? `Comment on ${aboutLabel(x, about)}: ` : 'Reply to the agent on: ') + plainText(x.it.text) });
+  const fd = fileDraft(() => { draft = true; paintFt(); }, { compact: true });
+  fd.btn.className = 'ac-att'; fd.btn.replaceChildren(ic('clip'));
+  fd.btn.setAttribute('aria-label', 'Attach'); fd.btn.title = 'Attach files: the agent gets a copy of each, by its path';
+  const go = h('button', { type: 'button', class: 'ac-go', title: 'Save (Enter) · Esc cancels', disabled: true, onclick: () => save() }, 'Save');
+  const line = h('div', { class: 'ac-line' }, ta, fd.btn, go);
+  const hintEl = hint ? h('p', { class: 'ac-hint' }, ic('msg'), h('span')) : null;
+  const el = h('div', { class: cls }, line, fd.list, hintEl, fd.input);
+  fd.hook(line, ta);
+  // a press on the field's padding (not its keys) puts the caret in the text
+  line.addEventListener('mousedown', e => { if (e.target !== ta && !e.target.closest('button')) { e.preventDefault(); ta.focus(); } });
+  const paintFt = () => {
+    if (draft && ta.value === x.draft(about).md && !fd.dirty) draft = false;
+    line.classList.toggle('dirty', !!ta.value.trim());
+    go.disabled = !draft || fd.busy;
+  };
+  function save() {
+    if (fd.busy || !draft) return;   // an upload still running: its file joins the draft first
+    fd.commit(); draft = false;   // first: the copies this draft dropped go, before setNote repaints the item's other fields
+    x.setNote(ta.value, view, fd.files, about);
+    ta.value = x.draft(about).md; paintFt();
+  }
+  function cancel() { if (fd.busy) return; draft = false; ta.value = x.draft(about).md; fd.cancel(); paintFt(); }
+  // another field for the item saved, or a send emptied it: show it, unless this one holds a draft
+  const view = { el, ta, paint: () => {
+    const d = x.draft(about);
+    if (!draft && ta.value !== d.md) ta.value = d.md;
+    fd.load(d.files, draft);
+    if (hintEl) hintEl.lastChild.textContent = typeof hint === 'function' ? hint() : hint;
+    paintFt();
+  } };
+  ta.addEventListener('input', () => { if (x.fd) holdFinding(x); draft = true; paintFt(); });
+  ta.addEventListener('keydown', e => {
+    e.stopPropagation();   // page keys (modes, n/p, canvas) must not fire while typing
+    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); save(); }
+    else if (e.key === 'Escape') { e.preventDefault(); if (draft) cancel(); else ta.blur(); }
+  });
+  view.paint();
+  return view;
+}
+// a question's reply field, under its conversation: about the whole question
+const replyField = (x, compact) => lineField(x, '', { placeholder: 'Reply…', hint: 'A reply here is about the whole question.', cls: 'ac-reply' + (compact ? ' compact' : '') });
 const choiceLabel = (x, id) => { const c = x.choices && x.choices.find(c => c.id === id); return c ? c.label.replace(/[`*]/g, '') : id; };
-// what a closed finding shows after ✓: its Custom answer, else its pick's label(s)
-const okLabel = x => x.custom || idsOf(x.choice).map(id => choiceLabel(x, id)).join(', ');
+// what a closed question shows after ✓: its pick's label, or Other
+const okLabel = x => [...idsOf(x.choice).map(id => choiceLabel(x, id)), ...(x.custom ? ['Other'] : [])].join(', ');
 // the ids `patch` takes, beside the text the reader saw: `item:<checklist>/<item>` and the picked choice's id (several
 // answers: their labels, `→ **Lyon**, **Porto**`)
 const itemKeyMd = x => `\`item:${x.cid}/${x.it.id}\``;
 const choiceMd = x => x.multi ? idsOf(x.choice).map(id => `**${choiceLabel(x, id)}**`).join(', ') : `**${choiceLabel(x, x.choice)}** (\`${x.choice}\`)`;
 const recLabels = x => recIds(x).map(id => choiceLabel(x, id)).join(', ');
-// a decision in the Markdown: the pick, and the recommendation when it differs; none: "(<none>; recommended: …)"; a
-// Custom answer: its words
+// Other in the Markdown: its words (on a brief's framework or theme, a request for a new option)
+const otherMd = x => `**Other**: ${cutLine(x.custom, 2000)}` + (x.request ? ' (a request: add it as an option, then the reader picks it)' : '');
+// a decision in the Markdown: the pick, and the recommendation when it differs; none: "(<none>; recommended: …)"; an
+// Other answer: its words (with several answers, after the ticked ones)
 function pickMd(x, none) {
-  if (x.custom) return ` → **Custom**: ${cutLine(x.custom, 2000)}`;
+  if (x.custom) return ` → ${x.choice ? choiceMd(x) + ', ' : ''}${otherMd(x)}`;
   const rec = recLabels(x);
   return x.choice ? ` → ${choiceMd(x)}` + (rec && pickKey(x.choice) !== pickKey(recIds(x)) ? ` (recommended: ${rec})` : '') : rec ? ` (${none}; recommended: ${rec})` : ` (${none})`;
 }
@@ -5933,17 +6164,21 @@ const docArg = () => {
 const cutLine = (s, n) => { s = String(s ?? '').replace(/\s+/g, ' ').trim(); return s.length > n ? s.slice(0, n - 1).trimEnd() + '…' : s; };
 // under a comment that goes to the agent: its latest reply there, quoted as context, then a short target line
 // (`→ <key> · <comment id>`); replyCmdsMd adds the command templates once, at the end of the Markdown
-function replyMd(ref, replies, indent, id) {
-  const last = (Array.isArray(replies) ? replies : []).filter(okReply).at(-1);
-  return (last ? `\n${indent}> ${agentName()}, rev ${last.rev}: ${cutLine(last.md, 300)}` : '') + `\n${indent}→ ${ref}` + (id ? ` · ${id}` : '');
+function replyMd(ref, replies, indent, id, x) {
+  const last = (Array.isArray(replies) ? replies : []).filter(okReply).at(-1), on = last && x && aboutOf(last);
+  return (last ? `\n${indent}> ${agentName()}, rev ${last.rev}${on ? `, on **${aboutLabel(x, on)}**` : ''}: ${cutLine(last.md, 300)}` : '') + `\n${indent}→ ${ref}` + (id ? ` · ${id}` : '');
 }
 const replyCmdsMd = md => !/^\s*→ /m.test(md) ? '' : `\n## Answering\n\n\`\`\`sh\n`
-  + `build.py patch ${docArg()} <key> --reply "…" --resolves <id> --no-bump\n`
+  + `build.py patch ${docArg()} <key> --reply "…" --resolves <id> --no-bump   # --on <option id>: the answer it is about\n`
   + `build.py patch ${docArg()} <key> --set a/b=v --resolves <id>   # or --json '{…}'\n\`\`\`\n`;
-// an item's new message in the Markdown: quoted, its files' paths, then the context and the command (a blank line
-// keeps the quotes apart)
-const noteMd = (x, indent) => !x.notePending ? '' : (x.note ? '\n' + x.note.trim().split('\n').map(l => `${indent}  > ${l}`).join('\n') : '')
-  + filesMd(x.files, indent + '  ') + '\n' + replyMd(`item:${x.cid}/${x.it.id}`, x.it.replies, indent + '  ');
+// an item's new messages in the Markdown: each quoted, its files' paths (a comment written in an answer's field other
+// than the answer now names it: "On **90 days**: …"), then the context and the command (a blank line keeps the quotes
+// apart). The comments on the answer now come first, then those on other answers, then the reply on the whole question
+const noteMd = (x, indent) => !x.notePending ? '' : x.drafts().map((d, i) => [d.about === '' ? 2 : aboutNow(x, d.about) ? 0 : 1, i, d]).sort((a, b) => a[0] - b[0] || a[1] - b[1]).map(([, , d]) => {
+  const ls = d.md.trim() ? d.md.trim().split('\n') : [];
+  if (d.about && !aboutNow(x, d.about)) ls[0] = `On **${aboutLabel(x, d.about)}**:` + (ls.length ? ' ' + ls[0] : '');
+  return (ls.length ? '\n' + ls.map(l => `${indent}  > ${l}`).join('\n') : '') + filesMd(d.files, indent + '  ');
+}).join('') + '\n' + replyMd(`item:${x.cid}/${x.it.id}`, x.it.replies, indent + '  ', '', x);
 // opens an item's row (and every collapsed item it sits inside, its folded section) and returns the row to scroll to:
 // in a findings section showing Merged, its first row there (the view stays); showing Diff, the checklist's row
 // (Checklist shows). A finding the filter hides shows every finding (All)
@@ -5963,7 +6198,7 @@ function openItem(x) {
   paintFindings();
   return row;
 }
-// notes: with "Need more details" and the comments waiting in item boxes (a review's send key leaves them to Request
+// notes: with Tell me more and the comments waiting in items' fields (a review's send key leaves them to Request
 // changes)
 function checklistMd(c, indent = '', notes = true) {
   const lines = c.items.map(x => {
@@ -5991,24 +6226,17 @@ function allChecklistsMd(notes = true) {
 // Send answers' message to the agent, and its files
 const MSG_KEY = `bp:${docId}:__message`, MSG_FILES_KEY = `bp:${docId}:__message-files`;
 const msgFiles = () => { try { return filesOf(JSON.parse(store.get(MSG_FILES_KEY) || '[]')); } catch { return []; } };
-// An item's reply box: in its row, on its diff comment cards and in Merged; they stay in sync on Save. It holds
-// the draft (`:note`) until the next send moves it into the conversation. Auto-height needs layout: a box that is not
-// shown (a closed row, another diff file) measures 0, so fit waits until it is.
+// A progress item's reply box: in its row, on its diff comment cards and in Merged; they stay in sync on Save. It
+// holds the draft (`:note`) until the next send moves it into the conversation (a question's reply is a lineField).
+// Auto-height needs layout: a box that is not shown (a closed row, another diff file) measures 0, so fit waits until it is.
 const noteFit = 'ResizeObserver' in window ? new ResizeObserver(es => es.forEach(e => e.target._fit && e.target._fit())) : null;
 // the element that scrolls an element: its nearest scrolling ancestor, or the page
 function scrollerOf(el) {
   for (let p = el.parentElement; p; p = p.parentElement) if (p.scrollHeight > p.clientHeight && /auto|scroll/.test(getComputedStyle(p).overflowY)) return p;
   return document.scrollingElement;
 }
-// when the last press was: a focus right after one is a click into the field (a Tab into it is not)
-let lastPress = -1e9;
-addEventListener('pointerdown', () => { lastPress = performance.now(); }, true);
-// onEnter: called when the reader clicks into the field or types in it (a decision row opens). A finding's field opens
-// once it has an answer (a pick, Custom or Need more details): until then it is dimmed and says so. Under it, a saved
-// comment not yet sent says when the agent reads it (`pend`, the caller places it)
-function noteBox(x, compact, onEnter) {
-  const ph = () => x.more === 'on' ? 'What details do you need? (optional)' : x.messages().length ? 'Reply…' : 'Comment for the agent…';
-  const unanswered = () => !!x.fd && !x.choice && !x.custom && !x.more && !x.notePending;
+function noteBox(x, compact) {
+  const ph = () => x.messages().length ? 'Reply…' : 'Comment for the agent…';
   const ta = h('textarea', { class: 'bp-note-ta', rows: 1, maxlength: 8192, placeholder: ph(),
     'aria-label': 'Reply to the agent on: ' + String(x.it.text || '').replace(/[`*]/g, '') });
   const fit = () => {
@@ -6032,14 +6260,9 @@ function noteBox(x, compact, onEnter) {
   const ft = h('div', { class: 'ft' }, fd.btn, saved, acts);
   const f = h('div', { class: 'f' }, ta, fd.list, ft);
   const el = h('div', { class: 'bp-note' + (compact ? ' compact' : '') }, f, fd.input);
-  const pend = x.fd ? h('p', { class: 'pv-pend', hidden: true }, ic('msg'), h('span')) : null;
   fd.hook(f, ta);
   // a press on the field's padding or footer (not its buttons) puts the caret in the text
   f.addEventListener('mousedown', e => { if (e.target !== ta && !e.target.closest('button')) { e.preventDefault(); ta.focus(); } });
-  if (onEnter) {
-    ta.addEventListener('focus', () => { if (performance.now() - lastPress < 800) onEnter(); });
-    ta.addEventListener('input', () => onEnter());
-  }
   const paintFt = () => {
     if (draft && ta.value === x.note && !fd.dirty) draft = false;
     el.classList.toggle('dirty', draft); saveBtn.disabled = cancelBtn.disabled = !draft || fd.busy;
@@ -6053,15 +6276,11 @@ function noteBox(x, compact, onEnter) {
     paintFt();
   }
   function cancel() { if (fd.busy) return; draft = false; ta.value = x.note; fd.cancel(); fit(); paintFt(); }
-  // another box for the item saved, or a send emptied it: show it, unless this one holds a draft. "Need more
-  // details" on: ask what is missing
-  const view = { el, ta, pend, paint: () => {
+  // another box for the item saved, or a send emptied it: show it, unless this one holds a draft
+  const view = { el, ta, paint: () => {
     if (!draft && ta.value !== x.note) { ta.value = x.note; fit(); }
     fd.load(x.files, draft);
-    const off = unanswered();
-    el.classList.toggle('pv-off', off); ta.disabled = off; fd.btn.disabled = off;
-    ta.placeholder = off ? 'Pick an answer to comment on it' : ph();
-    if (pend) { pend.hidden = !x.notePending; pend.lastChild.textContent = `${agentName()} will read it once changes are requested.`; }
+    ta.placeholder = ph();
     paintFt();
   } };
   ta.addEventListener('input', () => { if (x.fd) holdFinding(x); fit(); draft = true; saved.hidden = true; paintFt(); });
@@ -6075,16 +6294,21 @@ function noteBox(x, compact, onEnter) {
   requestAnimationFrame(fit);
   return view;
 }
-// one entry per checklist item: its tick or pick, "Need more details" and the reader's new message (Send answers,
-// a plan's Approve and Request changes, and the items Request changes carries elsewhere). Several answers: `choice` is
-// the list of ticked ids; a Custom answer: `choice: "custom"` and its words in `custom`. notes false (a review's send
-// key): the pick or tick alone
-const answerItems = (xs = Object.values(ITEMS), notes = true) => xs.map(x => ({
-  checklist: x.cid, item: x.it.id, text: x.it.text,
-  ...(x.choices ? { choice: x.custom ? 'custom' : x.multi ? x.choice || [] : x.choice || null, ...(x.custom ? { custom: x.custom.trim() } : {}), recommend: x.it.recommend || null } : { done: x.cb.checked }),
-  ...(notes && x.more ? { more: true } : {}),
-  ...(notes && x.note ? { note: x.note.trim() } : {}), ...(notes ? filesJson(x.files) : {}),
-}));
+// a question's answer as the JSON carries it: the pick's id or null; several answers, the list of ticked ids; Other:
+// "custom" (with several answers, one more id in the list), its words in `custom`
+const answerChoice = x => x.custom ? (x.multi ? [...idsOf(x.choice), 'custom'] : 'custom') : x.multi ? x.choice || [] : x.choice || null;
+// one entry per checklist item: its tick or pick, Tell me more (`more`) and the reader's saved comments (Send answers,
+// a plan's Approve and Request changes, and the items Request changes carries elsewhere): `note` and `files` the reply
+// about the whole question; `comments` [{about, md, files?}] the ones written in an answer's field (`about`: its id,
+// `custom` for Other, `more` for Tell me more). notes false (a review's send key): the pick or tick alone
+const answerItems = (xs = Object.values(ITEMS), notes = true) => xs.map(x => {
+  const cs = notes ? x.drafts().filter(d => d.about) : [];
+  return { checklist: x.cid, item: x.it.id, text: x.it.text,
+    ...(x.choices ? { choice: answerChoice(x), ...(x.custom ? { custom: x.custom.trim() } : {}), recommend: x.it.recommend || null } : { done: x.cb.checked }),
+    ...(notes && x.more ? { more: true } : {}),
+    ...(notes && x.note ? { note: x.note.trim() } : {}), ...(notes ? filesJson(x.files) : {}),
+    ...(cs.length ? { comments: cs.map(d => ({ about: d.about, md: d.md.trim(), ...filesJson(d.files) })) } : {}) };
+});
 // an item whose newest message is the agent's and the reader hasn't answered (a finding's, a question's, a step's)
 function awaitsReader(x) { const last = x.messages().at(-1); return !!last && last.who === 'agent' && !x.notePending; }
 function replyPayload() {
@@ -6096,25 +6320,27 @@ function replyPayload() {
     markdown: answersMd(),
   };
 }
-// What Request changes carries besides the pending annotations: decision items marked "Need more details"
-// and not sent yet (every page with the tray), replies waiting in item boxes (a plan, design, presentation, website,
-// listing or review: NOTES_WITH_CHANGES) and, but for a review, changed picks not sent yet (PICKS_WITH_CHANGES)
-const itemsPending = () => Object.values(ITEMS).filter(x => x.more === 'on' || NOTES_WITH_CHANGES && x.notePending || PICKS_WITH_CHANGES && x.pickPending);
+// What Request changes carries besides the pending annotations: questions asking for more (Tell me more, an Other
+// request on a brief) not sent yet (every page with the tray), comments waiting in items' fields (a plan, design,
+// presentation, website, listing or review: NOTES_WITH_CHANGES) and, but for a review, changed picks not sent yet
+// (PICKS_WITH_CHANGES)
+const itemsPending = () => Object.values(ITEMS).filter(x => x.more === 'on' || x.requestPending || NOTES_WITH_CHANGES && x.notePending || PICKS_WITH_CHANGES && x.pickPending);
 // Whether a decision's pick is one the agent hasn't heard: on an approved plan, design or website, one that differs from
 // the approved one (an item approved without a pick means its recommendation; items the approval didn't carry, added
 // since, don't count); on a presentation or listing, which has no approval, one that differs from the author's
 function pickDiffers(x) {
-  if (!APPROVABLE) return PICKS_WITH_CHANGES && pickKey(x.choice) !== pickKey(x.it.choice);
+  const now = idsOf(answerChoice(x));
+  if (!APPROVABLE) return PICKS_WITH_CHANGES && pickKey(now) !== pickKey(x.it.choice);
   const p = planState(), k = `${x.cid}/${x.it.id}`;
   if (p.state !== 'approved' || !p.picks || !(k in p.picks)) return false;
-  return pickKey(x.choice || x.it.recommend) !== pickKey(p.picks[k]);
+  return pickKey(now.length ? now : x.it.recommend) !== pickKey(p.picks[k]);
 }
 // FNV-1a of a comment: what `:note-sent` kept of the one that went, before threads (migrated on load)
 const noteHash = s => { let n = 0x811c9dc5; for (let i = 0; i < s.length; i++) n = Math.imul(n ^ s.charCodeAt(i), 0x01000193); return (n >>> 0).toString(36); };
-// "Need more details" in the Markdown (it clears the pick)
-const moreMd = () => ' → **Need more details**';
+// Tell me more in the Markdown (it clears the pick)
+const moreMd = () => ' → **Tell me more**';
 // a plan's decisions (and comments on its other items) as Markdown, for Approve and Request changes; other
-// pages' Request changes passes only its "Need more details" items
+// pages' Request changes passes only its items that ask for more or have comments (itemsPending)
 function decisionsMd(xs = Object.values(ITEMS).filter(x => x.choices || x.notePending)) {
   return xs.map(x => {
     let line = `- ${x.it.text} ${itemKeyMd(x)}`;
@@ -6576,15 +6802,15 @@ function commentCard(d, c, mirrors = d.mirrors, inItem = false) {
   card.append(...[
     h('div', { class: 'hd' }, tick ? h('label', { class: 'tk' }, tick) : dot || ic('msg'), h('div', { class: 'tt', html: inline(title) }),
       ((it && it.state) || c.state) && h('span', { class: 'bp-chip ' + kind }, c.state || it.state)),
-    opts && opts.el,
+    opts && opts.el, opts && opts.more,
     h('div', { class: 'mt' }, h('span', {}, where),
       src && !inItem && h('a', { href: `#item-${src.cid}-${it.id}`, onclick: e => { e.preventDefault(); const row = openItem(src); row.scrollIntoView({ behavior: REDUCE ? 'auto' : 'smooth', block: 'center' }); flash(row); } }, 'Checklist item', ic('chev'))),
     detail && h('details', {}, h('summary', {}, 'Details'), h('div', { class: 'bd bd-md', html: md(detail) }))].filter(Boolean));
   if (src && !inItem) {
-    // the item's conversation and reply box, compact and in sync with its row (read-only views: the conversation
-    // only)
-    const tv = threadView(src, true), nv = RO ? null : noteBox(src, true);
-    card.append(tv.el, ...(nv ? [nv.el, nv.pend].filter(Boolean) : []));
+    // the item's conversation and reply field (a progress item's box), compact and in sync with its row (read-only
+    // views: the conversation only)
+    const tv = threadView(src, true), nv = RO ? null : src.choices ? replyField(src, true) : noteBox(src, true);
+    card.append(tv.el, ...(nv ? [nv.el] : []));
     mirrors.push({ note: nv, thread: tv, src, card });
   }
   return card;
@@ -7198,8 +7424,10 @@ function mergedRow(x, extra, code) {
     it.verify && it.sub && h('div', { class: 'bp-cl-verify' }, ic('check'), h('span', {}, h('b', {}, 'Check'), h('span', { html: inline(it.verify) })))].filter(Boolean);
   const dets = parts.length ? h('div', { class: 'bd-dets', role: 'region', 'aria-label': 'Details: ' + plainText(it.text) }, parts) : null;
   const more = dets && h('button', { type: 'button', class: 'bp-btn ghost pv-more', 'aria-expanded': 'false' });
-  const opts = x.choices ? optionRows(x) : null, thread = threadView(x, true), note = RO ? null : noteBox(x);
-  row.append(...[more, dets, code, opts && opts.el, thread.el, note && note.el, note && note.pend].filter(Boolean));
+  // a question's More details row ends with the keyboard keys
+  const top = x.choices ? (more || !RO) && h('div', { class: 'ac-detrow' }, more, !RO && answerKeys()) : more;
+  const opts = x.choices ? optionRows(x) : null, thread = threadView(x, true), note = RO ? null : x.choices ? replyField(x) : noteBox(x);
+  row.append(...[top, dets, code, opts && opts.el, opts && opts.more, thread.el, note && note.el].filter(Boolean));
   const m = { x, row, tick, opts, note, thread, ok, open: false, det: false };
   m.paintOpen = on => {
     m.open = on; row.classList.toggle('open', on);
@@ -7308,7 +7536,7 @@ const NAV = (() => {
   let space = false, used = false, drag = null, eat = false;
   const fingers = new Map();   // touches that began on a drawing layer: pointerId -> {pointerId, clientX, clientY}
   const elOf = t => t && t.nodeType === 1 ? t : null;
-  const field = t => t.isContentEditable || !!t.closest('input, textarea, select, [contenteditable], .bp-note');
+  const field = t => t.isContentEditable || !!t.closest('input, textarea, select, [contenteditable], .bp-note, .ac-line');
   const CONTROL = 'button, a[href], summary, [role="button"], [role="radio"], [role="checkbox"], [role="option"], [role="menuitem"], [role="menuitemcheckbox"], [role="tab"], [role="switch"]';
   // the stage under a point, through the drawing layers
   function at(x, y) {
@@ -14045,22 +14273,23 @@ function paintPlan() {
     planChip.title = moved.length ? `You approved rev ${p.approvedRev} with other picks. Send ${moved.length === 1 ? 'this one' : 'these'} with Request changes, or pick the approved option again`
       : p.state === 'stale' ? `You approved rev ${p.approvedRev}; it has changed since, so this rev needs your approval again` : '';
   }
-  // a plan can't be approved while an item asks for more details: send it and wait for the agent's rev, or withdraw it
-  const asking = done ? [] : Object.values(ITEMS).filter(x => x.more);
+  // a plan can't be approved while a question asks for more (Tell me more, or Other on a brief's framework or theme, a
+  // request for a new option): send it and wait for the agent's rev, or withdraw it
+  const asking = done ? [] : Object.values(ITEMS).filter(x => x.more || x.request);
   approveKey.disabled = done || asking.length > 0; approveKey.classList.toggle('done', done);
   approveKey.replaceChildren(ic(done ? 'tick' : 'check'), h('span', { class: 't' }, done ? 'Approved' + revTxt : 'Approve'));
   approveKey.setAttribute('aria-label', done ? 'Approved' + revTxt : `Approve this ${AP_NOUN}`);
   // a plan is approved with every question answered: the key stays on; its dialog says which aren't and holds Approve
-  const unanswered = IS_PLAN && !done ? Object.values(ITEMS).filter(x => x.choices && !idsOf(x.choice).length).length : 0;
+  const unanswered = IS_PLAN && !done ? Object.values(ITEMS).filter(x => x.choices && !idsOf(x.choice).length && !x.custom).length : 0;
   approveKey._tip = unanswered ? `${unanswered} question${unanswered === 1 ? ' needs' : 's need'} an answer before you can approve this plan`
-    : asking.length ? `${asking.length} item${asking.length === 1 ? ' asks' : 's ask'} for more details: ${asking.some(x => x.more === 'on') ? 'send it with Request changes and wait for the agent\'s next revision, or turn it off' : 'wait for the agent\'s next revision, or withdraw the request'}`
+    : asking.length ? `${asking.length} question${asking.length === 1 ? ' asks' : 's ask'} for more: ${asking.some(x => x.more === 'on' || x.requestPending) ? 'send it with Request changes and wait for the agent\'s next revision, or take it back' : 'wait for the agent\'s next revision, or withdraw the request'}`
     : IS_SITE ? `Approve this website${revWord}, every page and pick in it: the agent applies it to the site's source`
     : IS_DESIGN ? `Approve this design${revWord}, every screen in it: the agent builds it with your picks` : `Approve this plan${revWord}: the agent goes ahead with it and your picks`;
   if (done && approveDlg && approveDlg.open) approveDlg.close();
   ARC.paint();
 }
 function openApprove() {
-  if (planState().state === 'approved' || Object.values(ITEMS).some(x => x.more)) return;
+  if (planState().state === 'approved' || Object.values(ITEMS).some(x => x.more || x.request)) return;
   MARKUP.flush();
   if (!approveDlg) {
     const note = h('textarea', { class: 'bp-note-ta', rows: 2, placeholder: 'A note for the agent (optional)', 'aria-label': 'Note with the approval' });
@@ -14079,7 +14308,7 @@ function openApprove() {
     approveDlg.addEventListener('click', e => { if (e.target === approveDlg) approveDlg.close(); });
     Object.assign(approveDlg, { _note: note, _files: fd, _ok: ok });
     approveDlg._paint = () => {
-      const pend = MARKUP.approvalNotes().annotations.length, dec = Object.values(ITEMS).filter(x => x.choices), open = dec.filter(x => !idsOf(x.choice).length).length;
+      const pend = MARKUP.approvalNotes().annotations.length, dec = Object.values(ITEMS).filter(x => x.choices), open = dec.filter(x => !idsOf(x.choice).length && !x.custom).length;
       // a plan waits for every answer: Approve stays off and says why
       const held = IS_PLAN && open > 0;
       ok.disabled = held;
@@ -14096,7 +14325,7 @@ function openApprove() {
       decs.replaceChildren(...dec.map(x => {
         const rec = recLabels(x);
         return h('li', {}, h('span', { class: 't', html: inline(x.it.text) }),
-          x.choice ? h('span', { class: 'pk' }, ic('tick'), idsOf(x.choice).map(id => choiceLabel(x, id)).join(', '), rec && pickKey(x.choice) !== pickKey(recIds(x)) && h('span', { class: 'rec' }, `recommended: ${rec}`))
+          x.choice || x.custom ? h('span', { class: 'pk' }, ic('tick'), okLabel(x), x.choice && !x.custom && rec && pickKey(x.choice) !== pickKey(recIds(x)) && h('span', { class: 'rec' }, `recommended: ${rec}`))
             : IS_PLAN ? h('button', { type: 'button', class: 'pk none go', title: 'Answer it', onclick: () => { approveDlg.close(); const row = openItem(x); row.scrollIntoView({ behavior: REDUCE ? 'auto' : 'smooth', block: 'center' }); flash(row); } }, rec ? [ic('star'), `No pick · ${rec}`] : 'No pick', ic('chev'))
             : h('span', { class: 'pk none' }, rec ? [ic('star'), `No pick · ${rec}`] : 'No pick'));
       }));
@@ -14109,7 +14338,7 @@ function openApprove() {
   approveDlg._note.focus();
 }
 async function doApprove() {
-  if (IS_PLAN && Object.values(ITEMS).some(x => x.choices && !idsOf(x.choice).length)) return;   // the dialog says why
+  if (IS_PLAN && Object.values(ITEMS).some(x => x.choices && !idsOf(x.choice).length && !x.custom)) return;   // the dialog says why
   const dlg = approveDlg, p = approvePayload(dlg ? dlg._note.value : '', dlg ? dlg._files.files : []);
   const done = () => {
     const pick = a => idsOf(a.choice).length ? a.choice : a.recommend;
@@ -14499,7 +14728,7 @@ const MARKUP = (() => {
     return out.filter(Boolean).join(' › ');
   }
   // the element's own content, without UI chrome (option rows, conversations, reply boxes, buttons, change marks)
-  const CHROME = '.bp-opts, .bp-convo, .bp-cl-sum, .bp-cl-picked, .bp-cap, .bp-note, .pv-pend, .pv-ok, button:not(.bp-cl-head, .bp-step-head), input, textarea, .bd-chg-tag, .bd-chgbox, .bp-cl-noteic, .bp-cl-num, .bp-code-h, .bp-cl-h .tools, .bd-planchip, .bp-sr, .bp-fact, .bp-cmpr-h .lg';
+  const CHROME = '.bp-opts, .ac-detrow, .ac-more, .ac-reply, .bp-convo, .bp-cl-sum, .bp-cl-picked, .bp-cap, .bp-note, .pv-ok, .ac-chip, button:not(.bp-cl-head, .bp-step-head), input, textarea, .bd-chg-tag, .bd-chgbox, .bp-cl-noteic, .bp-cl-num, .bp-code-h, .bp-cl-h .tools, .bd-planchip, .bp-sr, .bp-fact, .bp-cmpr-h .lg';
   const BLOCKY = 'div, p, li, td, th, tr, dt, dd, h1, h2, h3, h4, h5, h6, pre, blockquote, .bp-cl-text, .bp-cl-subt, .bp-chip, .bp-fhit > span';
   const contentText = el => { const c = el.cloneNode(true); c.querySelectorAll(CHROME).forEach(x => x.remove()); c.querySelectorAll(BLOCKY).forEach(x => x.append(' ')); return c.textContent.replace(/\s+/g, ' ').trim(); };
   const mediaText = el => contentText(el) || el.querySelector('img')?.alt || el.querySelector('video')?.getAttribute('aria-label') || '';
@@ -15148,18 +15377,19 @@ const MARKUP = (() => {
   }
   // the key that carries an item's unsent comment on this page, as the routing has it: a review's and a presentation's
   // or listing's Request changes, a plan's, design's or website's Request changes or Approve, elsewhere the send key
-  // (Need more details also goes with Request changes there)
+  // (Tell me more also goes with Request changes there)
   const carrier = x => NOTES_WITH_CHANGES ? (APPROVABLE ? 'Request changes or Approve' : 'Request changes')
     : x.more === 'on' ? `Request changes or ${SEND_AS[1]}` : SEND_AS[1];
   // an item's card: where it lives and its text, the last message (who: text, two lines) and its state; answered and
-  // resolved ones are quieter. Not sent yet, the message is the reader's comment (or Need more details)
+  // resolved ones are quieter. Not sent yet, the message is the reader's saved comments (or Tell me more)
   function itemCard(x) {
-    const k = `${x.cid}/${x.it.id}`, g = threadGroup(x), last = x.messages().at(-1), fs = x.files.length;
+    const k = `${x.cid}/${x.it.id}`, g = threadGroup(x), last = x.messages().at(-1);
     let li = icards.get(k);
     if (!li) { li = h('li', { tabindex: '0', 'data-item': k }); li._x = x; icards.set(k, li); }
     const unsent = g === 'unsent', who = unsent || !last || last.who === 'you' ? 'You' : agentName();
-    const text = unsent ? [x.more === 'on' && 'Need more details', x.note.trim() || fs && `${fs} file${fs === 1 ? '' : 's'}`].filter(Boolean).join(': ')
-      : last ? last.md : 'Need more details';   // listed with no message: a Need more details it sent
+    const said = x.drafts().map(d => (d.about && !aboutNow(x, d.about) ? `On ${aboutLabel(x, d.about)}: ` : '') + (d.md.trim() || `${d.files.length} file${d.files.length === 1 ? '' : 's'}`)).join(' · ');
+    const text = unsent ? [x.more === 'on' && MORE_LABEL, said].filter(Boolean).join(': ')
+      : last ? last.md : MORE_LABEL;   // listed with no message: a Tell me more it sent
     const [cls, word, at] = g === 'wait' ? ['you', 'Waiting for you', `rev ${last.rev}`]
       : g === 'unsent' ? ['rc', `Goes with ${carrier(x)}`, '']
       : g === 'resolved' ? ['ok', 'Resolved', x.choices ? '→ ' + idsOf(x.it.choice).map(id => choiceLabel(x, id)).join(', ') : 'done']
@@ -15625,7 +15855,7 @@ const MARKUP = (() => {
       }
     }
     if (e.type === 'pointerup' && selDown) { selDown = false; if (mode === 'view') setTimeout(showSelC, 0); }   // the selection made: its button
-    if (t && t.closest('.bp-note')) return;   // an item's comment field is for typing in every mode: no pins, no selection notes
+    if (t && t.closest('.bp-note, .ac-line')) return;   // an item's comment field is for typing in every mode: no pins, no selection notes
     if (mode === 'select' && e.type === 'pointerup' && !(t && (t.closest('.bd-ann-ui') || spUi(t)))) setTimeout(fromSelection, 0);
     if ((mode !== 'point' && mode !== 'select') || !inDoc(t)) return;
     if (mode === 'select') {
@@ -15667,7 +15897,7 @@ const MARKUP = (() => {
     if (mode !== 'view' || selDown || !s || !s.rangeCount || s.isCollapsed || !s.toString().trim() || (act && act.closest('input, textarea, [contenteditable]'))) { hideSelC(); return; }
     let c = s.getRangeAt(0).commonAncestorContainer; if (c.nodeType !== 1) c = c.parentElement;
     const rs = [...s.getRangeAt(0).getClientRects()].filter(r => r.width), last = rs[rs.length - 1];
-    if (!last || !inDoc(c) || c.closest('.bp-note, dialog, [contenteditable]')) { hideSelC(); return; }
+    if (!last || !inDoc(c) || c.closest('.bp-note, .ac-line, dialog, [contenteditable]')) { hideSelC(); return; }
     selc.hidden = false;
     const w = selc.offsetWidth, hh = selc.offsetHeight, floor = Math.min(tb.getBoundingClientRect().top, innerHeight) - 8;
     const y = last.bottom + 8 + hh <= floor ? last.bottom + 8 : Math.max(cssPx('--top-h') + 8, rs[0].top - hh - 8);
@@ -15704,7 +15934,7 @@ const MARKUP = (() => {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
     e.preventDefault();
     // a press on an item's comment field goes to the field, not into a drawing
-    const under = document.elementsFromPoint(e.clientX, e.clientY).find(el => el !== cap && !cap.contains(el)), note = under && under.closest('.bp-note');
+    const under = document.elementsFromPoint(e.clientX, e.clientY).find(el => el !== cap && !cap.contains(el)), note = under && under.closest('.bp-note, .ac-line');
     if (note) { const b = under.closest('button'); if (b) b.click(); else setTimeout(() => note.querySelector('textarea').focus({ preventScroll: true })); return; }   // after the press's own focus change
     if (mode === 'region') {
       endEdit(true); finishDraft(true);
@@ -15761,17 +15991,17 @@ const MARKUP = (() => {
       dlg = h('dialog', { class: 'bd-send bd-chgs', 'aria-labelledby': 'bd-chgs-h' },
         h('div', { class: 'hd' }, h('h3', { id: 'bd-chgs-h' }, PICKS_WITH_CHANGES ? `Request changes to this ${AP_NOUN}` : 'Request changes to this doc'), h('button', { type: 'button', class: 'bd-ibtn', 'aria-label': 'Close', onclick: () => dlg.close() }, ic('x'))),
         h('p', { class: 'sum' }, PICKS_WITH_CHANGES ? `Change requests ask the agent to revise the ${AP_NOUN}. Your decision picks and comments on items go with them.`
-          : NOTES_WITH_CHANGES ? `Change requests ask the agent to edit the document. Your comments on findings and "Need more details" requests go with them; your picks go with ${SEND_AS[1]}.`
-          : 'Change requests ask the agent to edit the document. "Need more details" requests go with them; your other decisions and comments on items go with Send answers.'),
+          : NOTES_WITH_CHANGES ? `Change requests ask the agent to edit the document. Your comments on findings and Tell me more requests go with them; your picks go with ${SEND_AS[1]}.`
+          : 'Change requests ask the agent to edit the document. Tell me more requests go with them; your other decisions and comments on items go with Send answers.'),
         cnt, h('details', { open: true }, h('summary', {}, 'Preview'), pre), how, h('div', { class: 'ft' }, copy, send));
       document.body.append(dlg);
       dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });
       dlg._paint = () => {
         const open = pending(), old = open.filter(a => a.rev !== CUR.rev).length, gn = open.filter(isGeneral).length, xs = itemsPending();
-        // a comment on a Need more details item is that request's text: it counts once, as the request
-        const nn = xs.filter(x => NOTES_WITH_CHANGES && x.notePending && x.more !== 'on').length, nm = xs.filter(x => x.more === 'on').length, np = xs.filter(x => PICKS_WITH_CHANGES && x.pickPending).length;
+        // a comment on a Tell me more item goes with that request: it counts once, as the request
+        const nn = xs.filter(x => NOTES_WITH_CHANGES && x.notePending && x.more !== 'on').length, nm = xs.filter(x => x.more === 'on' || x.requestPending).length, np = xs.filter(x => PICKS_WITH_CHANGES && x.pickPending && !x.requestPending).length;
         const what = [open.length && `${open.length} pending comment${open.length === 1 ? '' : 's'}${gn ? `, ${gn} general` : ''}`,
-          nn && `${nn} comment${nn === 1 ? '' : 's'} on ${PICKS_WITH_CHANGES ? 'items' : 'findings'}`, nm && `${nm} request${nm === 1 ? '' : 's'} for more details`,
+          nn && `${nn} comment${nn === 1 ? '' : 's'} on ${PICKS_WITH_CHANGES ? 'items' : 'findings'}`, nm && `${nm} question${nm === 1 ? '' : 's'} asking for more`,
           np && `${np} pick${np === 1 ? '' : 's'} ${APPROVABLE ? 'changed since approval' : 'changed'}`].filter(Boolean).join(', ');
         cnt.replaceChildren(h('b', {}, what), open.length + nn + nm + np === 1 ? ' goes with this request' : ' go with this request',
           ...(old ? [' (', h('span', { class: 'old' }, `${old} made on an earlier revision`), ')'] : []), open.length ? '. Edit or delete them in the Comments sidebar.' : '.');
@@ -15939,7 +16169,7 @@ const MARKUP = (() => {
   root.classList.add('bd-tray-on');
   for (const ty of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click', 'dblclick']) addEventListener(ty, onCapture, true);
   addEventListener('pointercancel', () => { selDown = false; }, true);   // a touch that scrolled or long-pressed: selections show their button again
-  addEventListener('pointermove', e => { if (mode === 'point' && !(e.target.closest && spUi(e.target))) showHover(e.target.closest && e.target.closest('.bp-note') ? null : targetAt(e.target)); }, { capture: true, passive: true });
+  addEventListener('pointermove', e => { if (mode === 'point' && !(e.target.closest && spUi(e.target))) showHover(e.target.closest && e.target.closest('.bp-note, .ac-line') ? null : targetAt(e.target)); }, { capture: true, passive: true });
   root.addEventListener('mouseleave', () => { if (mode === 'point') showHover(null); });
   document.addEventListener('keydown', e => {
     if (e.defaultPrevented || e.isComposing || e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
@@ -16924,10 +17154,12 @@ window.BP = {
     const c = CHECKLISTS.find(c => c.b.id === checklistId);
     return c ? acceptRecs(checklistScope(c)) : 0;
   },
-  setNote: (key, text) => { const x = ITEMS[key]; if (!x || VIEW_ONLY) return false; x.setNote(text || ''); return true; },
-  // an item's conversation, oldest first: [{who: 'you' | 'agent', rev, md, at?, files?, new}] (?rev=: as it stood then)
-  thread: key => { const x = ITEMS[key]; return x ? x.messages().map(m => ({ who: m.who, rev: m.rev, md: m.md, ...(m.at ? { at: m.at } : {}), ...(m.files && m.files.length ? { files: m.files } : {}), new: isNewMsg(m) })) : null; },
-  // "Need more details" on a decision item, as its toggle would; false without choices, on ?rev=/?diff=, on a shared page or once sent
+  // saves an item's comment as its field's Save would: about '' (default) the whole question, else an answer's id,
+  // `custom` (Other) or `more` (Tell me more); false when the item takes none
+  setNote: (key, text, about = '') => { const x = ITEMS[key]; if (!x || VIEW_ONLY || about && !(x.choices && [...x.choices.map(c => c.id), 'custom', 'more'].includes(about))) return false; x.setNote(text || '', null, undefined, about); return true; },
+  // an item's conversation, oldest first: [{who: 'you' | 'agent', rev, md, at?, files?, about?, new}] (?rev=: as it stood then)
+  thread: key => { const x = ITEMS[key]; return x ? x.messages().map(m => ({ who: m.who, rev: m.rev, md: m.md, ...(m.at ? { at: m.at } : {}), ...(m.files && m.files.length ? { files: m.files } : {}), ...(m.about ? { about: m.about } : {}), new: isNewMsg(m) })) : null; },
+  // Tell me more on a question, as its pill would; false without choices, on ?rev=/?diff=, on a shared page or once sent
   moreDetails: (key, on = true) => { const x = ITEMS[key]; if (!x || !x.choices || RO || on && x.more === 'sent') return false; x.setMore(on); return true; },
   openCode: (diffId, path, line) => openCode(diffId, path, line),
   openComment: (diffId, index) => { const d = DIFFS[diffId]; const c = d && d.order[index]; if (c) openComment(d, c, true); return !!c; },
@@ -16945,7 +17177,7 @@ window.BP = {
     if (FFILTERS.some(x => x[0] === f)) setFindingsFilter(v, f);
     return v.filter;
   },
-  // a finding's Custom answer, as typing in its field would ('' takes it back); false when the item takes none
+  // a question's Other answer, as typing in its field would ('' takes it back); false when the item takes none
   custom: (key, text) => { const x = ITEMS[key]; if (!x || !x.setCustom) return false; x.setCustom(text || ''); return true; },
   revisions: () => REVS.map(r => ({ rev: r.rev, date: r.date, current: !!r.current, shown: r === VIEW, changes: r.doc.changes || [] })),
   compare: () => BASE && { from: BASE.rev, to: VIEW.rev, changes: CHG.map(c => ({ kind: c.kind, label: plain(c.label) })) },
