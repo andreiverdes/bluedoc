@@ -161,6 +161,8 @@ class SharedPage(unittest.TestCase):
                                    "[...w.document.querySelectorAll('button')].filter(b => /^(Reset|Accept recommended)/.test(b.textContent.trim())).length, "
                                    "w.document.querySelector('#cl-decisions .bd-ftb [aria-haspopup=menu]').getAttribute('aria-label'), "
                                    "w.BP.sidebar().available.includes('comments')]"), [0, 0, "More: Copy", False])
+        # the app bar's right side holds the theme switch alone: no groove after it
+        self.assertEqual(self.q(t, "[...w.document.querySelectorAll('.bd-bar-r .bd-groove')].filter(g => g.checkVisibility()).length"), 0)
         self.assert_view_only(t)
         # a reload shows the doc as it is: the clicks above left nothing behind
         self.open(t, url + HASH, reload=True)

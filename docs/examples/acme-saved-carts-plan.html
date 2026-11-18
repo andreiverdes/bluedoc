@@ -260,6 +260,10 @@ button.bd-emo:hover, button.bd-emo[aria-expanded="true"] { background: var(--sel
 .bd-stripe.l { margin-left: -6px; }
 .bd-stripe:not(:has(> .bd-sk:not([hidden]))) { display: none; }
 .bd-stripe > .bd-groove, .bd-shtray > .bd-groove { flex: none; width: 2px; height: calc(var(--k) * .62); margin: 0 3px; background: var(--groove); }
+/* a groove only between keys: none after the theme switch when the right stripe shows no key (a shared page), nor a
+   second one beside an empty stripe in the tray */
+.bd-stripe.r:not(:has(> .bd-sk:not([hidden], .bd-thsw))) > .bd-groove,
+.bd-shtray:not(:has(> .bd-stripe.r > .bd-sk:not([hidden], .bd-thsw))) > .bd-stripe.r + .bd-groove { display: none; }
 /* a key: the dock's (.bd-key) – flat and round until hovered; lit, it sinks */
 .bd-sk { position: relative; flex: none; display: grid; place-items: center; width: var(--k); height: var(--k); padding: 0; border: 0; border-radius: 999px; background: none;
   color: var(--fg-muted); transition: background-color .12s, box-shadow .12s var(--ease), color .12s; }
