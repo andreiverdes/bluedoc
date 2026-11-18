@@ -7949,7 +7949,7 @@ const FINDING_CIDS = new Set();   // every findings section's checklists (nested
 /* The filter: Open (a question with no answer, a Need more details not sent, or a reply from the agent the reader
    hasn't answered; a progress item not done), Done (the rest) or All. Each findings section and each decision list
    (questionView) has its own, for its every view, kept per doc and list in reader state (`__findings-filter:<section
-   or list id>`); a first visit opens on Open. The question the reader is on (FHELD: the one they last opened, picked
+   or list id>`); a first visit opens a findings section on Open, a decision list on All. The question the reader is on (FHELD: the one they last opened, picked
    in or wrote in) stays shown when it leaves its filter, until they move on to another. A list ends with what the
    filter hides, and Show (All). In Diff, a hidden finding's card goes; its code stays. */
 const FFILTERS = [['all', 'All'], ['open', 'Open'], ['done', 'Done']];
@@ -8033,7 +8033,7 @@ function questionBar(v, scope, noun, views) {
   v.meter = h('span', { class: 'bd-prm' }, h('span', { class: 'bd-meter' }, h('i')), h('span', { class: 'c' }));
   v.status = h('span', { class: 'bd-prs' });
   const f = store.get(ffilterKey(v));
-  v.filter = FFILTERS.some(x => x[0] === f) ? f : 'open';
+  v.filter = FFILTERS.some(x => x[0] === f) ? f : noun === 'finding' ? 'open' : 'all';   // a first visit: a findings section on Open, a decision list on All
   if (!QVIEWS.length) addEventListener('resize', () => QVIEWS.forEach(q => q.measure()));
   QVIEWS.push(v);
   if (fvSizes) fvSizes.observe(v.bar);
@@ -9328,12 +9328,14 @@ function menuPop(wrap, btn, menu, rows, { start = dir => dir > 0 ? 0 : -1, typea
 // an option under the exports ({label, get, set}), a menuitemcheckbox that a pick turns on or off and the menu stays open.
 // word: the key's word (the app bar's Export)
 function exportMenu(exports, run, title, up, check, word = 'Export to…') {
-  const items = exports.map(([f, i, l, d]) => h('button', { type: 'button', role: 'menuitem', tabindex: '-1', 'data-format': f, onclick: () => { pop.close(true); run(f); } },
-    ic(i), h('span', { class: 't' }, h('b', {}, l), h('span', {}, d))));
+  // a null in exports: a divider there
+  const kids = exports.map(e => e ? h('button', { type: 'button', role: 'menuitem', tabindex: '-1', 'data-format': e[0], onclick: () => { pop.close(true); run(e[0]); } },
+    ic(e[1]), h('span', { class: 't' }, h('b', {}, e[2]), h('span', {}, e[3]))) : h('div', { class: 'sep', role: 'separator' }));
+  const items = kids.filter(k => k.tagName === 'BUTTON');
   const box = check && h('button', { type: 'button', role: 'menuitemcheckbox', class: 'opt', tabindex: '-1', 'aria-checked': String(!!check.get()),
     onclick: () => { check.set(!check.get()); paintCheck(); } }, h('span', { class: 'bx', 'aria-hidden': 'true' }, ic('tick')), h('span', {}, check.label));
   const paintCheck = () => { if (box) box.setAttribute('aria-checked', String(!!check.get())); };
-  const menu = h('div', { class: 'bd-expm' + (up ? ' up' : ''), role: 'menu', 'aria-label': 'Export to', hidden: true }, items, box && h('div', { class: 'sep', role: 'separator' }), box);
+  const menu = h('div', { class: 'bd-expm' + (up ? ' up' : ''), role: 'menu', 'aria-label': 'Export to', hidden: true }, kids, box && h('div', { class: 'sep', role: 'separator' }), box);
   if (box) items.push(box);
   const btn = h('button', { type: 'button', class: 'bd-tbtn bd-expb', 'aria-haspopup': 'menu', 'aria-expanded': 'false', title,
     onclick: () => menu.hidden ? pop.open(0) : pop.close(true) }, ic('download'), h('span', {}, word), ic('down', 'cv'));
@@ -9615,6 +9617,19 @@ const COPY_SHEET = SHARE && SHARE.link && !IS_DECK && !IS_LISTING ? (() => {
   }
   return { key, open, saveZip: () => saveZip(), zipItem: SHARE.files ? ['zip', 'archive', 'bluedoc file (.zip)', 'The doc with its media and screens, for serve.py import'] : null, local, agentLine, cmd };
 })() : null;
+// a shared page's gist on GitHub, from its address as bluedoc.ai's viewer reads it (viewer.ts sourceOf): an old link's
+// #<user>/<gist id> (SHARE.hash), else /g/<code>, the gist id's bytes in base64url without padding (idOfCode: 10 to 32
+// bytes, written canonically); null on any other page or address (an -o file, a #url= link)
+function gistUrl() {
+  if (!VIEW_ONLY) return null;
+  const old = /^#?([A-Za-z0-9][A-Za-z0-9-]{0,38})\/([0-9a-fA-F]{20,64})$/.exec(SHARE.hash);
+  if (old) return `https://gist.github.com/${old[1]}/${old[2].toLowerCase()}`;
+  const m = /\/g\/([A-Za-z0-9_-]{14,43})\/?$/.exec(location.pathname);
+  if (!m) return null;
+  let bin; try { bin = atob(m[1].replace(/-/g, '+').replace(/_/g, '/')); } catch { return null; }
+  if (btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '') !== m[1]) return null;
+  return 'https://gist.github.com/' + [...bin].map(c => c.charCodeAt(0).toString(16).padStart(2, '0')).join('');
+}
 // Export (the app bar, before ⋯ More): any doc but a presentation or a storelisting (their toolbars' Export to… has
 // their own exports) as the revision shown (?rev=) in the theme the reader picked, if any (GET /__bluedoc/export).
 // HTML file: the file `build.py -o` writes, which opens anywhere without the server. PDF: that file's print view,
@@ -9628,9 +9643,12 @@ const COPY_SHEET = SHARE && SHARE.link && !IS_DECK && !IS_LISTING ? (() => {
   const MD_ITEM = ['md', 'type', 'Markdown', 'The doc as text, for any editor'];
   const saveMd = () => saveBlob(new Blob([docMarkdown(VIEW.doc)], { type: 'text/markdown' }), exportName('md', 'doc'));
   if (!SERVED) {
+    // a shared page whose address names its gist: a divider, then Copy gist link (the gist on GitHub)
+    const gist = gistUrl();
     const DL = [['html', 'fcode', 'HTML file', 'This page, one file for any browser'], ['pdf', 'doc', 'PDF', 'Your browser\'s print dialog: Save as PDF'], MD_ITEM];
     if (COPY_SHEET && COPY_SHEET.zipItem) DL.push(COPY_SHEET.zipItem);
-    const dl = exportMenu(DL, f => f === 'pdf' ? printDoc() : f === 'md' ? saveMd() : f === 'zip' ? COPY_SHEET.saveZip() : saveBlob(new Blob([PAGE_HTML], { type: 'text/html' }), pageFile() || 'doc.html'),
+    if (gist) DL.push(null, ['gist', 'copy', 'Copy gist link', 'The gist on GitHub']);
+    const dl = exportMenu(DL, f => f === 'gist' ? copyText(gist, 'Copied') : f === 'pdf' ? printDoc() : f === 'md' ? saveMd() : f === 'zip' ? COPY_SHEET.saveZip() : saveBlob(new Blob([PAGE_HTML], { type: 'text/html' }), pageFile() || 'doc.html'),
       'Download this page as an HTML file, a PDF or Markdown', false, null, 'Download');
     dl.classList.add('bd-docx');
     const bar = document.querySelector('.bd-bar-r'), at = bar.querySelector('.bd-bk, .bd-docm');   // in G's Share tray: the tray's child
