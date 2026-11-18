@@ -14,7 +14,9 @@ It answers as gh does:
   gh auth token [--hostname H] [--user L]   the account's token; exit 1 when gh has no such account
   gh api user [--jq .login]          the login
   gh api user/memberships/orgs/<org> [--jq .state]   active when the account is a member, else 404
-  gh api gists/<id>                  the gist's JSON; 404 (gh: Not Found (HTTP 404), exit 1) when there is none
+  gh api gists/<id>                  the gist's JSON, any account's (as GitHub reads a secret gist by its id), with an
+                                     ETag (its files' hash); 404 (gh: Not Found (HTTP 404), exit 1) when there is none.
+                                     -H "If-None-Match: <etag>" naming the current one answers 304, no body, exit 0
   gh api -X POST gists --input -     creates a gist from {description, public, files: {name: {content}}} on stdin
                                      (201 and its JSON)
   gh api -X PATCH gists/<id> --input -   applies {description, files: {name: {content} | null}} from stdin; 404 for
@@ -30,6 +32,7 @@ that status and those headers (`message=<text>` sets the body's message; else "A
 nothing written. Deletes and reads are never refused."""
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import secrets
@@ -106,7 +109,7 @@ def status(accts: list[dict]) -> None:
     print(text, end="")
 
 
-REASONS = {200: "OK", 201: "Created", 204: "No Content", 403: "Forbidden", 404: "Not Found", 422: "Unprocessable Entity",
+REASONS = {200: "OK", 201: "Created", 204: "No Content", 304: "Not Modified", 403: "Forbidden", 404: "Not Found", 422: "Unprocessable Entity",
            429: "Too Many Requests", 500: "Internal Server Error"}
 
 
@@ -167,10 +170,14 @@ def main(argv: list[str]) -> None:
         print(who)
         return
     if argv[:1] == ["api"]:
-        method, path, rest, i, include = "GET", None, argv[1:], 0, False
+        method, path, rest, i, include, given = "GET", None, argv[1:], 0, False, {}
         while i < len(rest):
             if rest[i] in ("-X", "--method"):
                 method, i = rest[i + 1], i + 2
+            elif rest[i] in ("-H", "--header"):
+                k, _, v = rest[i + 1].partition(":")
+                given[k.strip().lower()] = v.strip()
+                i += 2
             elif rest[i] in ("--input", "--jq"):
                 i += 2
             elif rest[i] in ("-i", "--include"):
@@ -226,7 +233,14 @@ def main(argv: list[str]) -> None:
                 else:
                     (d / "files" / name).write_text(f["content"], encoding="utf-8")
             (d / "meta.json").write_text(json.dumps(meta), encoding="utf-8")
-        answer(200, view(gid), include)
+            answer(200, view(gid), include)
+            return
+        body = view(gid)
+        etag = '"' + hashlib.sha256(json.dumps(body["files"], sort_keys=True).encode()).hexdigest()[:32] + '"'
+        if given.get("if-none-match") == etag:
+            answer(304, None, include, {"ETag": etag})
+            return
+        answer(200, body, include, {"ETag": etag})
         return
     fail(f"stand-in gh: unknown command {argv}")
 

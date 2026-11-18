@@ -7,7 +7,8 @@ saves the doc as <name>.md. It is view-only
 a tick or a board's controls changes nothing and stores no key but the view prefs, and the app bar says "Shared · view
 only". The doc's own `choice` shows as chosen, and its threads (an item's `replies`) are the Comments section,
 read-only. It carries its current revision only (share/current): no Revisions key, and ?rev= and ?diff= in the viewer's
-URL show the current revision, with no strip or compare.
+URL show the current revision, with no strip or compare. With the gist's link and files, Make a copy (beside Download)
+opens its sheet, and Download has a bluedoc file (.zip) that `serve.py import` takes.
 
 A share may carry the reader's answers (share.answers_slot, the page's __BLUEDOC_ANSWERS__ slot): they show read-only
 as the share account's, apart from the doc's own: "<login>'s answer" beside the picked option, Other's words in a row
@@ -27,6 +28,7 @@ import shutil
 import tempfile
 import threading
 import unittest
+import zipfile
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -37,6 +39,7 @@ from test_doc_export import TEXT_SPY, data_block
 from test_page_state import CHROME, Browser, Tab
 
 import build
+import importer
 import share
 
 HASH = "#acme-dev/0123456789abcdef0123"
@@ -219,6 +222,51 @@ class SharedPage(unittest.TestCase):
         t2.wait_for("document.readyState === 'complete' && !!window.BP", 20)
         self.assertEqual(t2.ev("[document.title, document.querySelector('h1').textContent.includes('Acme Shop: saved carts'), document.querySelector('.bd-bar-r .bd-docx .bd-expb').textContent]"),
                          ["Acme Shop: saved carts · bluedoc", True, "Download"])
+        self.assertEqual(self.browser.errors, [])
+
+    def test_make_a_copy_and_the_bluedoc_file(self) -> None:
+        """With the gist's link and files (viewer.ts hands them over), Make a copy beside Download opens its sheet: Open in
+        my bluedoc links to the local import page in a new tab, then the agent's line and the command; Download's
+        bluedoc file (.zip) holds the doc verbatim and its media byte for byte, and `serve.py import` takes it."""
+        stem = "acme-saved-carts-plan"
+        self.viewer(stem)
+        link = "https://bluedoc.ai/g/shaZAB1ze-L25qJChRpj2g"
+        files = {f"{stem}.bluedoc.json": (self.docs / f"{stem}.bluedoc.json").read_text(encoding="utf-8")}
+        (self.site / "viewer.html").write_text(VIEWER.replace("hash: location.pathname", "link: %s, by: 'acme-dev', files: %s, hash: location.pathname")
+                                               % (json.dumps(stem), json.dumps(link), json.dumps(files)), encoding="utf-8")
+        t = Tab(self.browser)
+        self.open(t, f"http://127.0.0.1:{self.httpd.server_address[1]}/viewer.html")
+        self.assertEqual(self.q(t, "[...w.document.querySelector('.bd-bar-r').children].map(e => e.className).filter(c => /bd-mkc|bd-docx/.test(c))"),
+                         ["bd-tbtn bd-mkc", "bd-exp bd-docx"], "Make a copy, then Download")
+        self.assertTrue(self.click(t, ".bd-bar-r .bd-mkc"))
+        sheet = t.wait_for(IN.format("(d => d && d.open && {href: d.querySelector('a.go').href, target: d.querySelector('a.go').target, "
+                                     "lines: [...d.querySelectorAll('.lnk input')].map(i => i.value), text: d.innerText})(w.document.querySelector('dialog.bd-mkcs'))"))
+        self.assertEqual((sheet["href"], sheet["target"]), ("http://127.0.0.1:8740/__bluedoc/import?src=shaZAB1ze-L25qJChRpj2g", "_blank"))
+        self.assertEqual(sheet["lines"], [f"import this bluedoc: {link}", f"python3 <skill>/scripts/serve.py import {link}"])
+        self.assertIn("acme-dev's plan", sheet["text"])
+        self.assertIn("changes don't go back to acme-dev", sheet["text"])
+        self.q(t, "w.document.querySelector('dialog.bd-mkcs').close()")
+        self.assertTrue(self.q(t, "(w.__zip = null, (mk => { w.URL.createObjectURL = b => { w.__zip = b; return mk.call(w.URL, b); }; })(w.URL.createObjectURL), "
+                                  "w.HTMLAnchorElement.prototype.click = function () { w.__zipName = this.download; }, true)"))
+        self.assertTrue(self.click(t, ".bd-bar-r .bd-docx .bd-expb"))
+        self.assertEqual(self.q(t, "[...w.document.querySelectorAll('.bd-docx [role=menuitem]')].map(b => b.dataset.format)"), ["html", "pdf", "md", "zip"])
+        self.assertTrue(self.click(t, ".bd-bar-r .bd-docx [data-format=zip]"))
+        name, data = t.wait_for(IN.format("w.__zip && new Promise(ok => { const r = new FileReader(); r.onload = () => ok([w.__zipName, r.result.split(',')[1]]); r.readAsDataURL(w.__zip); })"))
+        self.assertEqual(name, f"{stem}.zip")
+        zp = self.tmp.dir / name
+        zp.write_bytes(base64.b64decode(data))
+        with zipfile.ZipFile(zp) as z:
+            self.assertIsNone(z.testzip(), "every CRC holds")
+            got = {i.filename: z.read(i) for i in z.infolist()}
+        media = sorted(share._media_srcs(load_json(self.docs / f"{stem}.bluedoc.json"), set()))
+        self.assertEqual(sorted(got), sorted([f"{stem}.bluedoc.json", "bluedoc-share.json", *media]))
+        self.assertEqual(got[f"{stem}.bluedoc.json"].decode(), files[f"{stem}.bluedoc.json"])
+        for m in media:
+            self.assertEqual(got[m], (self.docs / m).read_bytes(), m)
+        self.assertEqual(json.loads(got["bluedoc-share.json"]), {"by": "acme-dev", "link": link})
+        out = importer.write(importer.load(str(zp)), self.tmp.dir / "copy")
+        self.assertEqual(load_json(out["path"])["meta"]["copiedFrom"]["by"], "acme-dev")
+        self.assertEqual(self.asked_routes(), [])
         self.assertEqual(self.browser.errors, [])
 
     def test_a_review_is_view_only_and_its_threads_read_only(self) -> None:

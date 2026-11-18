@@ -5,7 +5,8 @@ signed-in accounts: nothing reaches GitHub.
 
 The gist holds the current revision only: <stem>.bluedoc.json, the doc verbatim, and bluedoc-page.json, the contract's
 object whose fill, with board-geo.js put back at its slot, makes exactly the page `build.py -o` writes for the doc
-without its history (no history file, no earlier revisions), a design's 11 screens inline.
+without its history (no history file, no earlier revisions), a design's 11 screens inline; a design also gets
+bluedoc-screens.json, its screen files' and icon layers' text by path, under the same 10 MB cap.
 
 Accounts: the github.com accounts `gh auth status` lists, usable with the gist scope or a fine-grained token, else
 off with `gh auth refresh -s gist -u <login>`. One usable account shares as itself; with two or more the share sheet
@@ -179,7 +180,8 @@ class Bundle(StandInGh, unittest.TestCase):
             with self.subTest(stem=stem):
                 p = self.doc(stem)
                 files, doc, what = share.gist_files(p)
-                self.assertEqual(sorted(files), sorted([f"{stem}.bluedoc.json", "bluedoc-page.json"]), "no history file")
+                screens_file = ["bluedoc-screens.json"] if screens else []
+                self.assertEqual(sorted(files), sorted([f"{stem}.bluedoc.json", "bluedoc-page.json", *screens_file]), "no history file")
                 self.assertEqual(files[f"{stem}.bluedoc.json"], p.read_text(encoding="utf-8"), "the doc, verbatim")
                 page = json.loads(files["bluedoc-page.json"])
                 self.assertEqual(sorted(page), ["bluedoc", "boardGeo", "fill", "name", "rev", "title", "version"])
@@ -198,6 +200,21 @@ class Bundle(StandInGh, unittest.TestCase):
         self.assertFalse(page["boardGeo"], "a doc without a board or a canvas")
         self.assertEqual(build.fill_page(template, {**page["fill"], build.BOARD_GEO_SLOT: ""}),
                          build.standalone(load_json(status), status, None, template, problems=[]))
+
+    def test_a_design_s_screen_sources_go_in_bluedoc_screens_json(self) -> None:
+        p = self.doc(DESIGN)
+        doc = load_json(p)
+        files = share.gist_files(p)[0]
+        screens = json.loads(files["bluedoc-screens.json"])
+        want = {f.relative_to(p.parent).as_posix(): f.read_text(encoding="utf-8") for f in build.screen_paths(doc, p).values() if f.is_file()}
+        self.assertEqual(screens, want, "every screen file and icon layer, by its path from the doc's folder, as its text")
+        self.assertTrue(any(k.endswith(".html") for k in screens) and all(not k.startswith(("/", "..")) for k in screens))
+        self.assertNotIn("bluedoc-screens.json", share.gist_files(self.doc(PLAN))[0], "a doc without screen files has none")
+        with mock.patch.object(share, "MAX_PAGE_BYTES", len(files["bluedoc-page.json"].encode()) + 10), \
+                mock.patch.object(share, "screens_file", return_value="x" * (len(files["bluedoc-page.json"].encode()) + 11)), \
+                self.assertRaises(share.ShareError) as cm:
+            share.gist_files(p)
+        self.assertEqual(cm.exception.status, 413, "the screens' file is held to the same 10 MB")
 
     def test_a_doc_without_a_rev(self) -> None:
         p = self.doc(PLAN)

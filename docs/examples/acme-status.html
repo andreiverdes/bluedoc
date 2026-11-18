@@ -182,17 +182,17 @@ button.bd-emo:hover, button.bd-emo[aria-expanded="true"] { background: var(--sel
 /* Share | Export: one raised pill as tall as the dock's Approve (38 px), HorizonUI's secondary Buttons joined as a
    SplitButton with the dock's groove between; narrow, their icons. Their raised look, hover, open and focus states are
    the select keys' (.bd-tbtn.bd-expb, below) */
-.bd-bar-r .bd-tbtn:is(.bd-expb, .bd-shk) { height: 38px; padding: 0 14px 0 13px; gap: 8px; font: 600 13px/16px var(--sans); border-radius: 999px; }
-.bd-bar-r .bd-tbtn:is(.bd-expb, .bd-shk) .bd-ic { width: 16px; height: 16px; }
+.bd-bar-r .bd-tbtn:is(.bd-expb, .bd-shk, .bd-mkc) { height: 38px; padding: 0 14px 0 13px; gap: 8px; font: 600 13px/16px var(--sans); border-radius: 999px; }
+.bd-bar-r .bd-tbtn:is(.bd-expb, .bd-shk, .bd-mkc) .bd-ic { width: 16px; height: 16px; }
 .bd-bar-r .bd-tbtn.bd-expb .cv { width: 14px; height: 14px; color: var(--fg-subtle); }
-.bd-bar-r .bd-tbtn.bd-shk { border-radius: 999px 0 0 999px; }
-.bd-bar-r .bd-shk + .bd-docx { margin-left: -6px; }
-.bd-bar-r .bd-shk + .bd-docx::before { content: ""; flex: none; width: 2px; align-self: stretch; background: var(--groove); }
-.bd-bar-r .bd-shk + .bd-docx .bd-tbtn.bd-expb { border-radius: 0 999px 999px 0; padding: 0 12px 0 13px; }
+.bd-bar-r .bd-tbtn:is(.bd-shk, .bd-mkc) { border-radius: 999px 0 0 999px; }
+.bd-bar-r :is(.bd-shk, .bd-mkc) + .bd-docx { margin-left: -6px; }
+.bd-bar-r :is(.bd-shk, .bd-mkc) + .bd-docx::before { content: ""; flex: none; width: 2px; align-self: stretch; background: var(--groove); }
+.bd-bar-r :is(.bd-shk, .bd-mkc) + .bd-docx .bd-tbtn.bd-expb { border-radius: 0 999px 999px 0; padding: 0 12px 0 13px; }
 /* narrower: the dock's 34 px keys; a phone: closer keys; under 381 px Export without its chevron, so the bar fits 320 px */
-@media (max-width: 900px) { .bd-bar-r .bd-tbtn:is(.bd-expb, .bd-shk) { height: 34px; } }
-@media (max-width: 600px) { .bd-bar-r { gap: 2px; } .bd-bar-r .bd-tbtn:is(.bd-expb, .bd-shk) { height: 34px; } .bd-bar-r .bd-shk + .bd-docx { margin-left: -2px; } }
-@media (max-width: 380px) { .bd-docx .bd-tbtn.bd-expb .cv { display: none; } .bd-bar-r { gap: 0; } .bd-bar-r .bd-shk + .bd-docx { margin-left: 0; }
+@media (max-width: 900px) { .bd-bar-r .bd-tbtn:is(.bd-expb, .bd-shk, .bd-mkc) { height: 34px; } }
+@media (max-width: 600px) { .bd-bar-r { gap: 2px; } .bd-bar-r .bd-tbtn:is(.bd-expb, .bd-shk, .bd-mkc) { height: 34px; } .bd-bar-r :is(.bd-shk, .bd-mkc) + .bd-docx { margin-left: -2px; } }
+@media (max-width: 380px) { .bd-docx .bd-tbtn.bd-expb .cv { display: none; } .bd-bar-r { gap: 0; } .bd-bar-r :is(.bd-shk, .bd-mkc) + .bd-docx { margin-left: 0; }
   .bd-bar-r .bd-docx .bd-tbtn.bd-expb, .bd-bar-r .bd-tbtn.bd-shk { padding: 0 8px; } }
 /* a phone's keys in the bar, for the trays it has no room for (STRIPES): Contents (or the board's left panel) at the
    bar's left, the right panel's bottom sheet at its right, a dot while comments wait */
@@ -232,7 +232,7 @@ button.bd-emo:hover, button.bd-emo[aria-expanded="true"] { background: var(--sel
 .bd-tbtn.bd-shk:is([data-share="newer"], [data-share="queued"], [data-share="paused"]) .dot { background: var(--warn); }
 .bd-tbtn.bd-shk[aria-disabled="true"] { color: var(--fg-subtle); opacity: .55; }
 .bd-tbtn.bd-shk[aria-disabled="true"][aria-expanded="true"] { opacity: .8; }
-@media (max-width: 900px) { .bd-tbtn.bd-shk > .w { display: none; } .bd-bar-r .bd-tbtn.bd-shk { padding: 0 9px 0 10px; } }
+@media (max-width: 900px) { .bd-tbtn:is(.bd-shk, .bd-mkc) > .w { display: none; } .bd-bar-r .bd-tbtn:is(.bd-shk, .bd-mkc) { padding: 0 9px 0 10px; } }
 .bd-revbar.arc { background: color-mix(in oklch, var(--fg) 6%, var(--canvas)); }
 .bd-revbar.arc.sug { background: color-mix(in srgb, var(--ok) 13%, var(--canvas)); }
 .bd-revbar.arc.sug .in > .bd-ic { color: var(--ok-fg); }
@@ -349,7 +349,7 @@ button.bd-emo:hover, button.bd-emo[aria-expanded="true"] { background: var(--sel
   .bd-shtray > :is(.bd-groove, .bd-thsw) { display: none; }
 }
 @media print { .bd-stripe { display: none !important; } }
-:is(.bd-stripe, .bd-stripe *, .bd-bar .bd-thsw, .bd-bar .bd-thsw *, .bd-bar-r .bd-tbtn.bd-shk, .bd-bar-r .bd-tbtn.bd-shk *, .bd-bar-r .bd-docm > .bd-ibtn, .bd-bar-r .bd-docm > .bd-ibtn *) { cursor: default; }
+:is(.bd-stripe, .bd-stripe *, .bd-bar .bd-thsw, .bd-bar .bd-thsw *, .bd-bar-r .bd-tbtn:is(.bd-shk, .bd-mkc), .bd-bar-r .bd-tbtn:is(.bd-shk, .bd-mkc) *, .bd-bar-r .bd-docm > .bd-ibtn, .bd-bar-r .bd-docm > .bd-ibtn *) { cursor: default; }
 /* a pane's header: HorizonUI's DockPanel header, its title (a board's Screens with their count), then – to hide it */
 .bd-pane-h { display: flex; align-items: center; gap: 4px; flex: none; height: 40px; padding: 0 8px 0 14px; }
 .bd-pane-h h2 { margin: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 600 12px/16px var(--sans); color: var(--fg); }
@@ -712,6 +712,23 @@ html.bd-lp-open:not(.bd-lp-dock) .bp-side { background: var(--surface); box-shad
 .bd-tk .strip { display: flex; gap: 10px; padding: 12px 18px 14px; font-size: 12px; line-height: 1.5; color: var(--risk-fg); background: var(--risk-tint); }
 .bd-tk .strip .bd-ic { width: 15px; height: 15px; flex: none; margin-top: 2px; }
 .bd-tk .strip p { margin: 0; }
+/* Make a copy (a shared page) and Review (a copy's): the share sheet's ticket; a quiet note at the foot */
+.bd-tk .note { margin: 0; padding: 10px 18px 14px; font-size: 12px; line-height: 1.5; color: var(--fg-subtle); border-top: 1px solid var(--line-soft); }
+.bd-tk a.go { text-decoration: none; box-sizing: border-box; }
+.bd-tk .lnk input { font-size: 13px; }
+.bd-tk .rvl { display: grid; padding: 0 12px; border-radius: 10px; background: var(--panel); box-shadow: inset 0 0 0 1px var(--line); }
+.bd-tk .rvr { display: flex; align-items: center; gap: 10px; min-height: 42px; border-top: 1px solid var(--line-soft); }
+.bd-tk .rvr:first-child { border-top: 0; }
+.bd-tk .rvr .l { flex: 1; min-width: 0; font-size: 13px; overflow-wrap: anywhere; }
+.bd-tk .rvl .why { padding: 12px 0; }
+/* a copy's origin under its title: the sharer's avatar, where it came from, Use these answers */
+.bd-origin { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; margin: 10px 0 0; font-size: 13.5px; color: var(--fg-muted); }
+.bd-origin b { font-weight: 600; color: var(--fg); }
+.bd-origin .bp-btn { height: 32px; padding: 0 14px 0 12px; gap: 6px; font-size: 13px; }
+.bd-origin .bp-btn .bd-ic { width: 15px; height: 15px; }
+.bd-revbar.upd.new { background: color-mix(in oklch, var(--warn) 14%, var(--canvas)); }
+.bd-revbar.upd.rv { background: color-mix(in oklch, var(--accent) 9%, var(--canvas)); }
+.bd-revbar a.bp-btn { text-decoration: none; }
 .bd-tk .strip b { font-weight: 650; }
 /* the account menu (a shared doc's Share as): over the sheet, a row per account with its avatar and why */
 .bd-selm.bd-acm { width: max-content; max-width: min(460px, calc(100vw - 16px)); white-space: normal; }
@@ -3051,15 +3068,15 @@ html.bd-space .bd-board .bd-ab-fr { pointer-events: none; }
    Revisions tab's Compare pickers, a code review's File, a requested frame's Device, an arrow's Kind) is the same key,
    showing its value, over the same menu of options, the current one ticked: no native select anywhere */
 .bd-exp { position: relative; display: inline-flex; }
-.bd-tbtn:is(.bd-expb, .bd-selb, .bd-shk) { display: inline-flex; align-items: center; gap: 6px; padding: 0 9px 0 12px; border-radius: 999px; color: var(--fg); font-weight: 600; white-space: nowrap;
+.bd-tbtn:is(.bd-expb, .bd-selb, .bd-shk, .bd-mkc) { display: inline-flex; align-items: center; gap: 6px; padding: 0 9px 0 12px; border-radius: 999px; color: var(--fg); font-weight: 600; white-space: nowrap;
   background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: var(--shadow-hk); }
 .bd-btb .bd-tbtn:is(.bd-expb, .bd-selb) { gap: 7px; padding: 0 10px 0 12px; }
 .bd-btb .bd-tbtn:is(.bd-expb, .bd-selb) .bd-ic:not(.cv) { width: 18px; height: 18px; }
 .bd-btb .bd-tbtn.bd-expb.pri { padding: 0 12px 0 14px; }
-.bd-tbtn:is(.bd-expb, .bd-selb, .bd-shk):hover:not(:disabled) { color: var(--fg); background: linear-gradient(var(--hover), var(--hover)), linear-gradient(180deg, var(--hk-top), var(--hk-bot)); }
+.bd-tbtn:is(.bd-expb, .bd-selb, .bd-shk, .bd-mkc):hover:not(:disabled) { color: var(--fg); background: linear-gradient(var(--hover), var(--hover)), linear-gradient(180deg, var(--hk-top), var(--hk-bot)); }
 .bd-tbtn:is(.bd-expb, .bd-selb)[aria-expanded="true"] { background: var(--hk-down); box-shadow: var(--shadow-hk-down); }
-.bd-tbtn:is(.bd-expb, .bd-selb, .bd-shk):focus-visible { box-shadow: var(--shadow-hk), var(--focus-ring); }
-.bd-tbtn:is(.bd-expb, .bd-selb, .bd-shk) .bd-ic { width: 16px; height: 16px; }
+.bd-tbtn:is(.bd-expb, .bd-selb, .bd-shk, .bd-mkc):focus-visible { box-shadow: var(--shadow-hk), var(--focus-ring); }
+.bd-tbtn:is(.bd-expb, .bd-selb, .bd-shk, .bd-mkc) .bd-ic { width: 16px; height: 16px; }
 .bd-tbtn:is(.bd-expb, .bd-selb) .cv { width: 14px; height: 14px; color: var(--fg-subtle); transition: rotate .15s var(--ease); }
 .bd-tbtn:is(.bd-expb, .bd-selb)[aria-expanded="true"] .cv { rotate: 180deg; }
 .bd-tbtn.bd-selb .bd-ic:not(.cv) { color: var(--fg-muted); }
@@ -3620,7 +3637,17 @@ const REVS = (() => {
 // and query included. It is an -o file in all but its URL and its view-only state (VIEW_ONLY, below): no server, the
 // copied commands name the doc by `name`, and the revision links load the viewer's path with ?rev=/?diff= (and an old
 // link's fragment) in the top window.
-const SHARE = (() => { const s = window.bluedocShare; return s && typeof s === 'object' && typeof s.name === 'string' && typeof s.hash === 'string' ? { name: s.name, hash: s.hash } : null; })();
+// The viewer also hands over, for Make a copy and Download's bluedoc file: link (the doc's https://bluedoc.ai/g/ link),
+// by (the gist's account) and files ({gist file name: text}: the doc verbatim and bluedoc-screens.json); a local file
+// the viewer draws has none of them.
+const SHARE = (() => {
+  const s = window.bluedocShare;
+  if (!(s && typeof s === 'object' && typeof s.name === 'string' && typeof s.hash === 'string')) return null;
+  const link = typeof s.link === 'string' && /^https:\/\/bluedoc\.ai\/g\/(#[A-Za-z0-9-]{1,39}\/[0-9A-Za-z]{1,64}|[A-Za-z0-9_-]{2,64})$/.test(s.link) ? s.link : null;
+  const by = typeof s.by === 'string' && /^[A-Za-z0-9][A-Za-z0-9-]{0,38}$/.test(s.by) ? s.by : null;
+  const files = s.files && typeof s.files === 'object' && !Array.isArray(s.files) && Object.values(s.files).every(v => typeof v === 'string') ? s.files : null;
+  return { name: s.name, hash: s.hash, link, by, files: files && typeof files[s.name + '.bluedoc.json'] === 'string' ? files : null };
+})();
 // A shared page is view-only: the doc as its author wrote it, to read. No tray or dock, no picks, ticks, comments,
 // drafts or board edits, no rename or archive; a `choice` or `done` the doc records shows as it is, and only the doc's
 // own threads show (read-only). Each feature that writes checks VIEW_ONLY in its code, not only in its CSS, and the
@@ -3633,7 +3660,11 @@ const VIEW_ONLY = !!SHARE;
 // value}}. They show as theirs and read-only: "<by>'s answer" beside a picked option (apart from the doc's `choice`),
 // "Done · <by>" on a tick, their comments in the Comments tab. Their attachments carry no path: an image may carry
 // its data (src), the rest say "not shared". null anywhere else, and for an older bundle without the slot.
-const ANSWERS = VIEW_ONLY ? (() => {
+// A copy of a shared doc (serve.py import: meta.copiedFrom) gets its sharer's answers in the same slot from the server
+// (copies.json): THEIRS, drawn as theirs beside the reader's own picks; ANS is whichever the page has.
+const COPIED = (() => { const c = (PRISTINE.meta || {}).copiedFrom; return !VIEW_ONLY && c && typeof c === 'object' && typeof c.by === 'string' && /^[A-Za-z0-9][A-Za-z0-9-]{0,38}$/.test(c.by)
+  ? { by: c.by, rev: typeof c.rev === 'string' ? c.rev : null, at: typeof c.at === 'string' ? c.at : '' } : null; })();
+const SLOT_ANSWERS = VIEW_ONLY || COPIED ? (() => {
   try {
     const x = JSON.parse(document.getElementById('bp-answers')?.textContent || 'null');
     const str = v => typeof v === 'string' && v.length <= 200;
@@ -3642,6 +3673,7 @@ const ANSWERS = VIEW_ONLY ? (() => {
     return { by: x.by, at: x.at, rev: x.rev, state: x.state };
   } catch { return null; }
 })() : null;
+const ANSWERS = VIEW_ONLY ? SLOT_ANSWERS : null, THEIRS = COPIED ? SLOT_ANSWERS : null, ANS = ANSWERS || THEIRS;
 // who the reader's messages are from: You, or on a shared page the account that shared them
 const YOU = ANSWERS ? ANSWERS.by : 'You';
 const ansJson = k => { try { return ANSWERS && k in ANSWERS.state ? JSON.parse(ANSWERS.state[k]) : null; } catch { return null; } };
@@ -4978,6 +5010,110 @@ const ARC = (() => {
   paint();
   return { paint() { ready = true; paint(); }, menu, item, extra, close: () => pop.close(true) };
 })();
+
+/* ---------- a copy of a shared doc: where it came from, the sharer's updates, their answers ---------- */
+// A doc `serve.py import` wrote carries meta.copiedFrom {by, rev, at} (COPIED). Under the title: "Copied from
+// acme-dev's plan, rev 3 · 2 days ago · your rev 4". The server (GET /__bluedoc/upstream, importer.status) checks the
+// gist at most every 15 minutes while the page is open; a newer rev shows a strip under the app bar: "<by> updated
+// this to rev 5 · N blocks changed" with Compare (?theirs=1&diff=<this rev>: the sharer's rev drawn over this one),
+// Pull (a three-way merge into a new rev of the copy) and Later (until a newer rev). Parts both changed after a Pull
+// stay the reader's and are listed under Review, each with Take theirs. The sharer's answers (THEIRS) show beside
+// the reader's own picks; Use these answers writes them as the reader's. A page on ?rev=/?diff= shows the line only.
+function loginAvatar(login, size) {
+  let n = 0;
+  for (const ch of login) n = n * 31 + ch.codePointAt(0) >>> 0;
+  const w = login.split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+  return h('span', { class: `bd-av c${n % 8 + 1}`, style: size ? `--s: ${size}px` : null, 'aria-hidden': 'true' },
+    (w.length > 1 ? w[0][0] + w[w.length - 1][0] : (w[0] || '').slice(0, 2)).toUpperCase());
+}
+const agoText = iso => {
+  const d = new Date(iso), s = (Date.now() - d) / 1000;
+  if (isNaN(d)) return '';
+  return s < 45 ? 'just now' : s < 3600 ? `${Math.max(1, Math.round(s / 60))} min ago` : s < 86400 ? `${Math.round(s / 3600)} h ago`
+    : s < 86400 * 14 ? `${Math.round(s / 86400)} day${Math.round(s / 86400) === 1 ? '' : 's'} ago` : d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+};
+const THEIRS_VIEW = store.served && QP.get('theirs') === '1';
+const UPSTREAM = COPIED || THEIRS_VIEW ? (() => {
+  const kind = docTypeOf(PRISTINE.meta || {}), noun = kind === 'other' ? 'doc' : kind;
+  const live = store.served && !OLD && !THEIRS_VIEW;
+  async function call(method, body) {
+    const q = method === 'GET' ? '?' + new URLSearchParams({ path: location.pathname, ...(body || {}) }) : '';
+    const headers = SERVER_KEY.headers({ 'Content-Type': 'application/json', 'X-Bluedoc': '1' });
+    const r = await fetch('/__bluedoc/upstream' + q, { method, cache: 'no-store', headers, body: method === 'POST' ? JSON.stringify({ path: location.pathname, ...body }) : undefined });
+    const j = await r.json().catch(() => ({}));
+    if (r.status === 403 && j.key) SERVER_KEY.refused(headers);
+    if (!r.ok) throw new Error(j.error || `the server answered ${r.status}`);
+    return j;
+  }
+  const useKey = live && THEIRS && h('button', { type: 'button', class: 'bp-btn', onclick: async () => {
+    try { const j = await call('POST', { action: 'answers' }); toast(`Used ${THEIRS.by}'s answers: ${j.used} now yours`); setTimeout(() => location.reload(), 600); }
+    catch (e) { toast(`Couldn't use the answers: ${e.message}`); }
+  } }, ic('tick'), 'Use these answers');
+  const line = COPIED && h('div', { class: 'bd-origin', role: 'note' }, loginAvatar(COPIED.by, 22),
+    h('span', { class: 't' }, 'Copied from ', h('b', {}, `${COPIED.by}'s ${noun}`), COPIED.rev ? `, rev ${COPIED.rev}` : '',
+      COPIED.at ? ` · ${agoText(COPIED.at)}` : '', CUR.rev && CUR.rev !== COPIED.rev ? ` · your rev ${CUR.rev}` : '',
+      THEIRS ? ` · ${THEIRS.by}'s answers show as theirs` : ''), useKey);
+  if (line) head.append(line);
+  // Pull: the merge as a new rev of the copy; the page opens on it (with Review when parts both changed)
+  async function doPull(key) {
+    key.disabled = true; key.lastChild.textContent = 'Pulling…';
+    try {
+      const j = await call('POST', { action: 'pull' });
+      toast(`Pulled: your rev ${j.rev}` + (j.review.length ? ` · ${j.review.length} to review` : ''));
+      setTimeout(() => { location.href = location.pathname; }, 700);
+    } catch (e) { toast(`Couldn't pull: ${e.message}`); key.disabled = false; key.lastChild.textContent = 'Pull'; }
+  }
+  const bar = document.querySelector('.bd-bar');
+  const strip = (cls, kids, label) => { const el = h('div', { class: 'bd-revbar upd ' + cls, role: 'region', 'aria-label': label }, h('div', { class: 'in' }, kids)); bar.after(el); fitStrips(); return el; };
+  if (THEIRS_VIEW) {
+    const pull = h('button', { type: 'button', class: 'bp-btn primary', onclick: () => doPull(pull) }, ic('download'), h('span', {}, 'Pull'));
+    strip('cmp', [ic('download'), h('span', { class: 't' }, h('b', {}, 'The sharer\'s newer rev'), ' · marked against your copy'), h('span', { class: 'sp' }),
+      h('a', { class: 'bp-btn', href: location.pathname }, ic('undo'), 'Back to your copy'), pull], 'Compare');
+    return null;
+  }
+  if (!live) return null;
+  let review = null;
+  function reviewSheet(entries) {
+    const dlg = h('dialog', { class: 'bd-share bd-rvw', 'aria-labelledby': 'bd-rvw-h' });
+    const rows = h('div', { class: 'rvl' });
+    const paint = list => setKids(rows, list.length ? list.map(x => h('div', { class: 'rvr' }, h('span', { class: 'l' }, x.label),
+      h('button', { type: 'button', class: 'cp', onclick: async ev => {
+        ev.currentTarget.disabled = true;
+        try { const j = await call('POST', { action: 'take', id: x.id }); paint(j.review); toast(`Took ${COPIED.by}'s version`); dlg.dataset.changed = '1'; }
+        catch (e) { toast(`Couldn't take theirs: ${e.message}`); ev.currentTarget.disabled = false; }
+      } }, ic('download'), 'Take theirs'))) : h('p', { class: 'why' }, 'Nothing left to review.'));
+    paint(entries);
+    setKids(dlg, h('div', { class: 'bd-tk' }, h('div', { class: 'half hd' },
+      h('div', { class: 'eyb' }, ic('list'), h('span', { id: 'bd-rvw-h' }, 'Review'), h('span', { class: 'sp' }),
+        h('button', { type: 'button', class: 'bd-ibtn x', 'aria-label': 'Close', onclick: () => dlg.close() }, ic('x'))),
+      h('div', { class: 'top' }, h('div', { class: 'tt' }, h('b', {}, 'You both changed these'),
+        h('span', {}, `The pull kept yours. Take theirs puts ${COPIED.by}'s version in.`)))),
+      h('div', { class: 'perf', 'aria-hidden': 'true' }),
+      h('div', { class: 'half ft' }, h('div', { class: 'stub' }, rows,
+        h('div', { class: 'acts' }, h('div', { class: 'btns' }, h('button', { type: 'button', class: 'tb cls', onclick: () => dlg.close() }, 'Done')))))));
+    dlg.addEventListener('close', () => { if (dlg.dataset.changed) location.reload(); dlg.remove(); });
+    document.body.append(dlg);
+    dlg.showModal();
+  }
+  function paint(c) {
+    document.querySelectorAll('.bd-revbar.upd').forEach(e => e.remove());
+    if (!c) return fitStrips();
+    if (c.review && c.review.length) strip('rv', [ic('list'), h('span', { class: 't' }, h('b', {}, `Review · ${c.review.length}`),
+      ` ${c.review.length === 1 ? 'part' : 'parts'} you and ${c.by} both changed: the pull kept yours`),
+      h('button', { type: 'button', class: 'bp-btn', onclick: () => reviewSheet(c.review) }, 'Review')], 'Review');
+    if (c.newer) {
+      const pull = h('button', { type: 'button', class: 'bp-btn primary', onclick: () => doPull(pull) }, ic('download'), h('span', {}, 'Pull'));
+      strip('new', [loginAvatar(c.by, 22), h('span', { class: 't' }, h('b', {}, `${c.by} updated this to rev ${c.newer.rev || '–'}`),
+        c.newer.changed ? ` · ${c.newer.changed} change${c.newer.changed === 1 ? '' : 's'}` : ''),
+        h('span', { class: 'sp' }),
+        h('a', { class: 'bp-btn', href: `${location.pathname}?theirs=1&diff=${encodeURIComponent(CUR.rev || 'yours')}` }, ic('split'), 'Compare'), pull,
+        h('button', { type: 'button', class: 'bp-btn', onclick: async () => { try { await call('POST', { action: 'later' }); paint({ ...c, newer: null }); } catch (e) { toast(e.message); } } }, 'Later')], 'Update');
+    }
+    fitStrips();
+  }
+  call('GET').then(j => { review = j.copy; paint(review); }).catch(() => {});
+  return { paint, reviewSheet };
+})() : null;
 const tldr = h('div', { class: 'bd-tldr' }, DOC.tldr && h('div', { class: 'bd-tldr-card' },
   h('span', { class: 'ico' }, ic('zap')), h('span', { class: 'lbl' }, 'TL;DR'), h('div', { class: 'body bd-md', html: md(DOC.tldr) })));
 
@@ -6198,8 +6334,8 @@ function renderChecklist(b, parent) {
     let thread = (() => { try { const v = JSON.parse(store.get(threadKey) || '[]'); return Array.isArray(v) ? v.filter(okMsg).slice(-200) : []; } catch { return []; } })();
     // a shared page's answers on this item (ANSWERS): the pick (ids), Other's words, Tell me more, the tick, apart from
     // the doc's `choice` and `done`; and the files of a saved reply (pending), which carry no path
-    const ans = ANSWERS ? (() => {
-      const v = ANSWERS.state[`${cid}:${it.id}`], st = k => String(ANSWERS.state[`${cid}:${it.id}:${k}`] || '').trim();
+    const ans = ANS ? (() => {
+      const v = ANS.state[`${cid}:${it.id}`], st = k => String(ANS.state[`${cid}:${it.id}:${k}`] || '').trim();
       const pick = choices && typeof v === 'string' && v.startsWith('=') ? v.slice(1).split('|')[0].split(',').filter(id => choices.some(c => c.id === id)) : [];
       const a = { pick, custom: choices ? st('custom').slice(0, 2000) : '', more: !!choices && !!st('more'), tick: !choices && typeof v === 'string' && v[0] === '1' };
       return a.pick.length || a.custom || a.more || a.tick ? a : null;
@@ -6239,8 +6375,8 @@ function renderChecklist(b, parent) {
         h('span', { class: 'bp-cl-text', html: inline(it.text) }),
         subMd && h('span', { class: 'bp-cl-subt' + (subIsCheck ? ' check' : '') }, subIsCheck && ic('check'), h('span', { html: inline(subMd) }))),
       okChip,
-      ans && (card ? h('span', { class: 'bp-chip info bd-ansc', title: `${YOU} answered this in the shared link` }, `${YOU} answered`)
-        : ans.tick && h('span', { class: 'bp-chip ok bd-ansc', title: `${YOU} marked this done` }, ic('tick'), `Done · ${YOU}`)),
+      ans && (card ? h('span', { class: 'bp-chip info bd-ansc', title: `${ANS.by} answered this in the shared link` }, `${ANS.by} answered`)
+        : ans.tick && h('span', { class: 'bp-chip ok bd-ansc', title: `${ANS.by} marked this done` }, ic('tick'), `Done · ${ANS.by}`)),
       it.state && h('span', { class: 'bp-chip ' + (it.stateKind || 'warn') }, it.state),
       stale && h('span', { class: 'bp-chip warn bp-recheck', title: 'Its evidence is stale: the code changed since the check ran. It doesn\'t count as done until it is re-checked' }, ic('reset'), 'Needs recheck'),
       picked, askChip,
@@ -6568,8 +6704,8 @@ const MORE_LABEL = 'Tell me more';
 // an explanation's first line, for a closed row (list markers and headings off; CSS cuts it to one line)
 const oneLine = s => String(s || '').split('\n').map(l => l.replace(/^\s*(?:[-*+]\s+|\d+[.)]\s+|#+\s+|>\s?)/, '').trim()).find(Boolean) || '';
 // a shared page's reader on an answer: "<login>'s answer" (bare: the login), a pill with their initial
-const ansPill = bare => h('span', { class: 'bd-ansby', title: `${YOU}'s answer in this shared link` },
-  h('i', { 'aria-hidden': 'true' }, YOU.slice(0, 1).toUpperCase()), bare ? YOU : `${YOU}'s answer`);
+const ansPill = bare => h('span', { class: 'bd-ansby', title: `${ANS.by}'s answer in ${THEIRS ? 'the link this copy came from' : 'this shared link'}` },
+  h('i', { 'aria-hidden': 'true' }, ANS.by.slice(0, 1).toUpperCase()), bare ? ANS.by : `${ANS.by}'s answer`);
 let OPT_N = 0;
 function optionRows(x, compact) {
   const multi = x.multi, recs = recIds(x), fields = !RO;
@@ -9373,6 +9509,112 @@ function docMarkdown(doc) {
     [m.org, m.kind, m.rev && `rev ${m.rev}`, m.date].filter(Boolean).map(one).join(' · '), doc.tldr && entry('**TL;DR**', doc.tldr, 0),
     (doc.sections || []).map(s => join(`## ${one(s.title)}`, s.lead && one(s.lead), (s.blocks || []).map(b => blockMd(b, false))))) + '\n';
 }
+/* ---------- Make a copy: a shared page's way into the reader's own bluedoc (importer.py) ---------- */
+// A shared page with its gist link (SHARE.link) has a Make a copy key before Download. Its sheet, a ticket like Share's:
+// Open in my bluedoc, a link to the local server's import page (http://127.0.0.1:8740/__bluedoc/import?src=<code>) in
+// a new tab, which shows what it would write and saves after a press; then, for a reader without a server running,
+// the line to paste to their agent and the serve.py import command, each with Copy. A plain link, not a fetch: a
+// public site's fetch to localhost asks for Local Network Access. With the gist's files (SHARE.files), Download also
+// has "bluedoc file (.zip)": the doc verbatim, its media (their bytes from this page's data: URIs, matched to the doc's
+// srcs by place), its screen files (bluedoc-screens.json), bluedoc-share.json {by, link} and bluedoc-answers.json (the
+// sharer's answers), a store-only zip made here, which `serve.py import` takes.
+const COPY_SHEET = SHARE && SHARE.link && !IS_DECK && !IS_LISTING ? (() => {
+  const by = SHARE.by || (ANSWERS && ANSWERS.by) || '', link = SHARE.link;
+  const code = link.slice('https://bluedoc.ai/g/'.length).replace(/^#/, '');
+  const local = `http://127.0.0.1:8740/__bluedoc/import?src=${encodeURIComponent(code)}`;
+  const agentLine = `import this bluedoc: ${link}`, cmd = `python3 <skill>/scripts/serve.py import ${link}`;
+  const kind = docTypeOf(PRISTINE.meta || {});
+  const whose = by ? `${by}'s ${kind === 'other' ? 'doc' : kind}` : `a shared ${kind === 'other' ? 'doc' : kind}`;
+  const key = h('button', { type: 'button', class: 'bd-tbtn bd-mkc', onclick: () => open() }, ic('copy'), h('span', { class: 'w' }, 'Make a copy'));
+  key.title = 'Copy this doc into your own bluedoc to work on it';
+  let dlg = null;
+  const media = (() => { const n = new Set(); const walk = x => { if (Array.isArray(x)) x.forEach(walk); else if (x && typeof x === 'object') {
+    if (x.type === 'media' && typeof x.src === 'string' && x.src.startsWith('data:')) n.add(x.src); Object.values(x).forEach(walk); } }; walk(PRISTINE); return n.size; })();
+  function copyRow(text, label, k) {
+    const b = h('button', { type: 'button', class: 'cp', 'data-k': k, onclick: () => {
+      copyText(text, label); b.classList.add('ok'); setKids(b, ic('tick'), 'Copied');
+      setTimeout(() => { b.classList.remove('ok'); setKids(b, ic('copy'), 'Copy'); }, 1500);
+    } }, ic('copy'), 'Copy');
+    return h('div', { class: 'lnk' }, h('input', { type: 'text', readonly: true, value: text, title: text, 'aria-label': label, onfocus: e => e.target.select() }), b);
+  }
+  function open() {
+    if (!dlg) {
+      dlg = h('dialog', { class: 'bd-share bd-mkcs', 'aria-labelledby': 'bd-mkc-h' });
+      let down = null;
+      dlg.addEventListener('pointerdown', e => { down = e.target; });
+      dlg.addEventListener('click', e => { if (e.target === dlg && down === dlg) dlg.close(); });
+      document.body.append(dlg);
+    }
+    const close = () => dlg.close();
+    const nAns = ANSWERS ? Object.keys(ANSWERS.state).length : 0;
+    setKids(dlg, h('div', { class: 'bd-tk' },
+      h('div', { class: 'half hd' },
+        h('div', { class: 'eyb' }, ic('copy'), h('span', { id: 'bd-mkc-h' }, 'Make a copy'), h('span', { class: 'sp' }),
+          h('button', { type: 'button', class: 'bd-ibtn x', 'aria-label': 'Close', onclick: close }, ic('x'))),
+        h('div', { class: 'top' }, h('span', { class: 'emo', 'aria-hidden': 'true' }, NAME.emoji()),
+          h('div', { class: 'tt' }, h('b', {}, NAME.title() || pageFile()), h('span', {}, [whose, CUR.rev && `rev ${CUR.rev}`].filter(Boolean).join(' · ')))),
+        h('div', { class: 'meta2' }, h('span', { class: 'bdg n' }, ic('image'), `${media} media`),
+          ANSWERS && nAns > 0 && h('span', { class: 'bdg n' }, ic('msg'), `${ANSWERS.by}'s answers included`))),
+      h('div', { class: 'perf', 'aria-hidden': 'true' }),
+      h('div', { class: 'half ft' }, h('div', { class: 'stub' },
+        h('a', { class: 'go', href: local, target: '_blank', rel: 'noopener', 'data-k': 'open' }, ic('ext'), 'Open in my bluedoc'),
+        h('p', { class: 'why' }, 'Opens 127.0.0.1:8740 in a new tab. It shows what it will write and saves only when you press Save.'),
+        h('div', { class: 'cap mt' }, 'No bluedoc running? Ask your agent'),
+        copyRow(agentLine, 'Copied: paste it to your agent', 'line'),
+        h('div', { class: 'cap' }, 'Or run it yourself'),
+        copyRow(cmd, 'Copied the command', 'cmd'),
+        h('div', { class: 'acts' }, h('div', { class: 'btns' }, h('button', { type: 'button', class: 'tb cls', onclick: close }, 'Close')))),
+        h('p', { class: 'note' }, `Needs bluedoc installed. The copy is yours: changes don't go back${by ? ` to ${by}` : ''}.`))));
+    if (!dlg.open) dlg.showModal();
+    dlg.querySelector('.go').focus();
+  }
+  // the zip: store-only (no compression), CRC-32 per file, UTF-8 names
+  const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ c >>> 1 : c >>> 1; t[n] = c >>> 0; } return t; })();
+  const crc32 = b => { let c = 0xffffffff; for (let i = 0; i < b.length; i++) c = CRC[(c ^ b[i]) & 255] ^ c >>> 8; return (c ^ 0xffffffff) >>> 0; };
+  function zipOf(files) {
+    const enc = new TextEncoder(), parts = [], dir = [];
+    let off = 0;
+    for (const [name, data] of files) {
+      const nb = enc.encode(name), crc = crc32(data), hd = new DataView(new ArrayBuffer(30));
+      [[0, 0x04034b50, 4], [4, 20, 2], [6, 0x800, 2], [14, crc, 4], [18, data.length, 4], [22, data.length, 4], [26, nb.length, 2]].forEach(([o, v, n]) => n === 4 ? hd.setUint32(o, v, true) : hd.setUint16(o, v, true));
+      const cd = new DataView(new ArrayBuffer(46));
+      [[0, 0x02014b50, 4], [4, 20, 2], [6, 20, 2], [8, 0x800, 2], [16, crc, 4], [20, data.length, 4], [24, data.length, 4], [28, nb.length, 2], [42, off, 4]].forEach(([o, v, n]) => n === 4 ? cd.setUint32(o, v, true) : cd.setUint16(o, v, true));
+      parts.push(hd, nb, data); dir.push(cd, nb);
+      off += 30 + nb.length + data.length;
+    }
+    const size = dir.reduce((n, x) => n + x.byteLength, 0), end = new DataView(new ArrayBuffer(22));
+    [[0, 0x06054b50, 4], [8, files.length, 2], [10, files.length, 2], [12, size, 4], [16, off, 4]].forEach(([o, v, n]) => n === 4 ? end.setUint32(o, v, true) : end.setUint16(o, v, true));
+    return new Blob([...parts, ...dir, end], { type: 'application/zip' });
+  }
+  const bytesOf = uri => { const m = /^data:[^;,]*;base64,(.*)$/s.exec(uri); if (!m) return null; const b = atob(m[1]), out = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) out[i] = b.charCodeAt(i); return out; };
+  // {relative src: data: URI}: the doc's srcs beside this page's inline data at the same place (importer._media_pairs)
+  function mediaPairs(d, p, out) {
+    if (Array.isArray(d) && Array.isArray(p)) { d.forEach((x, i) => mediaPairs(x, p[i], out)); return out; }
+    if (!d || !p || typeof d !== 'object' || typeof p !== 'object') return out;
+    const pairs = d.type === 'media' ? [[d.src, p.src]] : [];
+    if (d.type === 'compare') ['before', 'after'].forEach(k => d[k] && p[k] && pairs.push([d[k].src, p[k].src]));
+    if (Array.isArray(d.evidence) && Array.isArray(p.evidence)) d.evidence.forEach((e, i) => e && p.evidence[i] && pairs.push([e.src, p.evidence[i].src]));
+    for (const [src, uri] of pairs)
+      if (typeof src === 'string' && src && !/^([a-zA-Z][a-zA-Z0-9+.-]*:|\/)/.test(src) && typeof uri === 'string' && uri.startsWith('data:')) out.set(src.split(/[?#]/)[0], uri);
+    for (const k of Object.keys(d)) if (k in p) mediaPairs(d[k], p[k], out);
+    return out;
+  }
+  async function saveZip() {
+    const enc = new TextEncoder(), name = SHARE.name + '.bluedoc.json', text = SHARE.files[name];
+    const files = [[name, enc.encode(text)]];
+    let doc = null;
+    try { doc = JSON.parse(text); } catch { /* the doc alone */ }
+    if (doc) for (const [src, uri] of mediaPairs(doc, PRISTINE, new Map())) { const b = bytesOf(uri); if (b && !/(^|\/)\.\.(\/|$)/.test(src)) files.push([src, b]); }
+    try {
+      const sc = JSON.parse(SHARE.files['bluedoc-screens.json'] || 'null');
+      if (sc && typeof sc === 'object') for (const [p, t] of Object.entries(sc)) if (typeof t === 'string' && !/(^|\/)\.\.(\/|$)/.test(p)) files.push([p, enc.encode(t)]);
+    } catch { /* a share from before the screens' file */ }
+    files.push(['bluedoc-share.json', enc.encode(JSON.stringify({ by: SHARE.by, link }) + '\n')]);
+    if (ANSWERS) files.push(['bluedoc-answers.json', enc.encode(JSON.stringify(ANSWERS) + '\n')]);
+    await saveBlob(zipOf(files), SHARE.name + '.zip');
+  }
+  return { key, open, saveZip: () => saveZip(), zipItem: SHARE.files ? ['zip', 'archive', 'bluedoc file (.zip)', 'The doc with its media and screens, for serve.py import'] : null, local, agentLine, cmd };
+})() : null;
 // Export (the app bar, before ⋯ More): any doc but a presentation or a storelisting (their toolbars' Export to… has
 // their own exports) as the revision shown (?rev=) in the theme the reader picked, if any (GET /__bluedoc/export).
 // HTML file: the file `build.py -o` writes, which opens anywhere without the server. PDF: that file's print view,
@@ -9387,11 +9629,13 @@ function docMarkdown(doc) {
   const saveMd = () => saveBlob(new Blob([docMarkdown(VIEW.doc)], { type: 'text/markdown' }), exportName('md', 'doc'));
   if (!SERVED) {
     const DL = [['html', 'fcode', 'HTML file', 'This page, one file for any browser'], ['pdf', 'doc', 'PDF', 'Your browser\'s print dialog: Save as PDF'], MD_ITEM];
-    const dl = exportMenu(DL, f => f === 'pdf' ? printDoc() : f === 'md' ? saveMd() : saveBlob(new Blob([PAGE_HTML], { type: 'text/html' }), pageFile() || 'doc.html'),
+    if (COPY_SHEET && COPY_SHEET.zipItem) DL.push(COPY_SHEET.zipItem);
+    const dl = exportMenu(DL, f => f === 'pdf' ? printDoc() : f === 'md' ? saveMd() : f === 'zip' ? COPY_SHEET.saveZip() : saveBlob(new Blob([PAGE_HTML], { type: 'text/html' }), pageFile() || 'doc.html'),
       'Download this page as an HTML file, a PDF or Markdown', false, null, 'Download');
     dl.classList.add('bd-docx');
     const bar = document.querySelector('.bd-bar-r'), at = bar.querySelector('.bd-bk, .bd-docm');   // in G's Share tray: the tray's child
     if (at) at.before(dl); else bar.append(dl);
+    if (COPY_SHEET) dl.before(COPY_SHEET.key);
     return;
   }
   const EXPORTS = [['html', 'fcode', 'HTML file', 'One file that opens in any browser, no server'], ['pdf', 'doc', 'PDF', 'Print-ready, one file'], MD_ITEM];
@@ -9577,14 +9821,7 @@ function docMarkdown(doc) {
     if (OFF) offPop.open(); else openShare();
   }
 
-  // HorizonUI's Avatar: the login's initials on the category colour its hash picks
-  function avatar(login, size) {
-    let n = 0;
-    for (const ch of login) n = n * 31 + ch.codePointAt(0) >>> 0;
-    const w = login.split(/[^\p{L}\p{N}]+/u).filter(Boolean);
-    return h('span', { class: `bd-av c${n % 8 + 1}`, style: size ? `--s: ${size}px` : null, 'aria-hidden': 'true' },
-      (w.length > 1 ? w[0][0] + w[w.length - 1][0] : (w[0] || '').slice(0, 2)).toUpperCase());
-  }
+  const avatar = loginAvatar;
   // why an account is there: the project's (and why the server picked it), gh's active one, or what it lacks
   function whyOf(v, a) {
     if (!a.usable) return a.fix ? `no gist scope: ${a.fix}` : 'no gist scope';

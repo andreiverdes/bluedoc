@@ -245,6 +245,7 @@ NODE_STATES = {"live", "local", "proposed", "unverified", "removed", "replaced"}
 EDGE_KINDS = {"data", "control", "async", "power", "dep", "replaced"}
 PORTS = {"@left", "@right", "@top", "@bottom"}
 ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
+LOGIN = re.compile(r"[A-Za-z0-9][A-Za-z0-9-]{0,38}")   # a GitHub login (meta.copiedFrom.by)
 # design docs: one board block of artboards; each artboard's HTML is a body fragment in <stem>.design/<id>.html
 # device -> CSS px size and the safe area the kit exposes [top, right, bottom, left]; serve.py and the page read this
 # table (watch-round: the kit derives --safe-inset, the inscribed square, from the diameter)
@@ -704,6 +705,7 @@ SCHEMA_CARDS = {
         ("sections", "[object]", "req", "{id, title, lead, blocks}"),
         ("meta", "object", "opt", "{org, kind, dwg, rev, date, type, review}"),
         ("meta.review", "str", "opt", [REVIEW_OF, "; review docs only (new review --of): the send key, Apply decisions | Post review | Reply and fix"]),
+        ("meta.copiedFrom", "object", "opt", "{by, rev, at}: serve.py import writes it; leave it as it is"),
         ("subtitle,tldr", "md", "opt", "one sentence; the answer in 1-3"),
         ("emoji", "str", "opt", "one emoji"),
         ("state,links", "[object]", "opt", ["{label, kind ", STATE_KINDS, "}; {label, href}"]),
@@ -2555,6 +2557,12 @@ def _validate(rep: Report, doc: dict, doc_path: Path | None, *, allow_remote: bo
         hint = f"'{review}' is now '{REVIEW_RENAMED[review]}'" if review in REVIEW_RENAMED else f"'{review}' not in {list(REVIEW_OF)}"
         rep.err("doc.meta.review", f"{hint}: local (your own change, no PR), threads (peers' comments on your own PR), "
                                    "post (someone else's PR, or a review of your own PR you were asked for)")
+    cf = (doc.get("meta") or {}).get("copiedFrom")
+    if cf is not None and not (isinstance(cf, dict) and isinstance(cf.get("by"), str) and LOGIN.fullmatch(cf["by"])
+                               and (cf.get("rev") is None or isinstance(cf.get("rev"), str) and len(cf["rev"]) <= 40)
+                               and (cf.get("at") is None or isinstance(cf.get("at"), str) and len(cf["at"]) <= 40)
+                               and set(cf) <= {"by", "rev", "at"}):
+        rep.err("doc.meta.copiedFrom", "{by: the sharer's GitHub login, rev, at}: serve.py import writes it; leave it as it is")
     for i, s in enumerate(doc.get("state") or []):
         if s.get("kind") and s["kind"] not in STATE_KINDS:
             rep.err(f"doc.state[{i}]", f"kind '{s['kind']}' not in {sorted(STATE_KINDS)}")
@@ -3370,7 +3378,8 @@ def standalone(doc: dict, doc_path: Path, history: dict | None, template: str, *
 
 BOARD_GEO = HERE.parent / "assets" / "board-geo.js"   # the board's router and layouts, inlined into design pages
 BOARD_GEO_SLOT = "/*__BOARD_GEO__*/"
-# the reader's answers a shared page shows (share.answers_slot): only a gist's bluedoc-page.json fills it; served pages
+# the reader's answers a shared page shows (share.answers_slot): a gist's bluedoc-page.json fills it, and serve.py on a
+# copy of a shared doc (its sharer's, from copies.json); other served pages
 # and -o files carry null
 ANSWERS_SLOT = "__BLUEDOC_ANSWERS__"
 
@@ -3392,7 +3401,7 @@ def page_fill(doc: dict, history: dict | None = None, media_base: Path | None = 
               diff_path: Path | None = None, problems: list[str] | None = None, state: dict | None = None,
               screens: dict[str, str] | None = None, live: dict[str, int] | None = None,
               snaps: dict[str, dict[str, dict[str, int]]] | None = None, pins: dict | None = None,
-              rev: str | None = None) -> dict[str, str]:
+              rev: str | None = None, answers: dict | None = None) -> dict[str, str]:
     """{template placeholder: its text} for the page (build's arguments, without the template): the __BLUEDOC_*__
     values and, at BOARD_GEO_SLOT, assets/board-geo.js (board_geo_text) for a page with a board or a canvas (in any
     revision it carries), else ''. fill_page puts them in a template."""
@@ -3427,7 +3436,8 @@ def page_fill(doc: dict, history: dict | None = None, media_base: Path | None = 
             "__BLUEDOC_LIVE__": _script_json(live) if live is not None else "null",
             "__BLUEDOC_SNAPS__": _script_json(snaps) if snaps is not None else "null",
             "__BLUEDOC_LISTING__": _script_json(lst) if lst is not None else "null",
-            "__BLUEDOC_PINS__": _script_json(pins) if pins is not None else "null", ANSWERS_SLOT: "null", BOARD_GEO_SLOT: geo}
+            "__BLUEDOC_PINS__": _script_json(pins) if pins is not None else "null",
+            ANSWERS_SLOT: _script_json(answers) if answers else "null", BOARD_GEO_SLOT: geo}
 
 
 def fill_page(template: str, fill: dict[str, str]) -> str:
@@ -3439,7 +3449,8 @@ def fill_page(template: str, fill: dict[str, str]) -> str:
 def build(doc: dict, template: str, history: dict | None = None, media_base: Path | None = None,
           diff_path: Path | None = None, problems: list[str] | None = None, state: dict | None = None,
           screens: dict[str, str] | None = None, live: dict[str, int] | None = None,
-          snaps: dict[str, dict[str, dict[str, int]]] | None = None, pins: dict | None = None, rev: str | None = None) -> str:
+          snaps: dict[str, dict[str, dict[str, int]]] | None = None, pins: dict | None = None, rev: str | None = None,
+          answers: dict | None = None) -> str:
     """The page: template filled with page_fill. media_base (the doc's folder) makes it standalone: media files become
     data: URIs. diff_path (the doc's JSON file) fills its diff refs, in the doc and in earlier revisions, and gives the
     current revision its links from the screen files; their problems go into problems, or to stderr when it is None.
@@ -3452,9 +3463,10 @@ def build(doc: dict, template: str, history: dict | None = None, media_base: Pat
     BOARD_GEO_SLOT; other pages get nothing there. pins (codepin.evaluate: serve.py's, or -o with --check-code) is how
     each pinned evidence entry compares with its repo now; None (an -o file, the goldens) shows the pins without it.
     rev (standalone's earlier revision, which doc and history end at): the board's links are the ones its history
-    entry recorded, not the screen files' now."""
+    entry recorded, not the screen files' now. answers: a copy's sharer's answers (importer.py; serve.py fills them
+    from copies.json), at ANSWERS_SLOT; None leaves it null."""
     check_template(template)
-    return fill_page(template, page_fill(doc, history, media_base, diff_path, problems, state, screens, live, snaps, pins, rev))
+    return fill_page(template, page_fill(doc, history, media_base, diff_path, problems, state, screens, live, snaps, pins, rev, answers))
 
 
 def history_now(doc_path: Path, doc: dict) -> dict | None:

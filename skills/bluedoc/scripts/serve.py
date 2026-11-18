@@ -38,6 +38,13 @@ Usage:
                                                    reader's answers go (share.ANSWER_KINDS; remembered for the doc);
                                                    --resume: lift the pause (the reader's call)
   serve.py unshare DOC.json                        delete DOC's gist as the account it is on and forget it
+  serve.py import LINK | GIST-URL | FILE.zip [--to DIR]
+                                                   copy a shared doc into this repo (default docs/plans/ for a
+                                                   plan, else docs/<type>/; a name taken gets -2) with its media
+                                                   and screens, register it and print its URL (importer.py): gh
+                                                   reads the gist when signed in, else GitHub's API without a
+                                                   token (60 requests an hour per IP). The copy says who shared
+                                                   it; its page offers the sharer's updates (Compare, Pull)
   serve.py run [--port N]                          run in the foreground
 
 One server per user, on 127.0.0.1 (default port 8740; when another program holds it, `open`, `start` and `unlock` take
@@ -281,6 +288,7 @@ import build  # noqa: E402
 import codepin  # noqa: E402
 import fonts  # noqa: E402
 import gistbudget  # noqa: E402
+import importer  # noqa: E402
 import listing  # noqa: E402
 import settings  # noqa: E402
 import share  # noqa: E402
@@ -334,10 +342,10 @@ def reply_file(doc: Path, kind: str, ext: str) -> Path:
 
 def code_hash() -> str:
     """Changes whenever the code a server renders with does: serve.py, statedb.py, build.py, codepin.py, share.py,
-    gistbudget.py and the template."""
+    gistbudget.py, importer.py, the template and the home page (which also holds the import page)."""
     h = hashlib.sha256()
     for f in (Path(__file__).resolve(), HERE / "statedb.py", HERE / "build.py", HERE / "codepin.py", HERE / "share.py",
-              HERE / "gistbudget.py", build.TEMPLATE):
+              HERE / "gistbudget.py", HERE / "importer.py", build.TEMPLATE, HERE.parent / "assets" / "home.html"):
         h.update(f.read_bytes())
     return h.hexdigest()[:12]
 
@@ -1121,19 +1129,24 @@ def page_csp(html: str) -> str:
             + frames + "base-uri 'none'; form-action 'self'; frame-ancestors 'none'")
 
 
-def render(p: Path) -> tuple[int, str]:
-    """(status, HTML) of the doc's page; any failure, even on JSON of the wrong shape, comes back as an error page."""
+def render(p: Path, theirs: bool = False) -> tuple[int, str]:
+    """(status, HTML) of the doc's page; any failure, even on JSON of the wrong shape, comes back as an error page.
+    theirs: a copy's Compare (?theirs=1): the sharer's newer rev as the current one, the copy's as the revision
+    before it (theirs_history), so ?diff= shows what they changed."""
     try:
-        return _render(p)
+        return _render(p, theirs)
     except Exception as e:   # noqa: BLE001 — the page names the problem instead of the connection dropping
         return 422, error_page(p, [f"cannot render: {type(e).__name__}: {e}"])
 
 
-def _render(p: Path) -> tuple[int, str]:
+def _render(p: Path, theirs: bool = False) -> tuple[int, str]:
     try:
         doc = json.loads(p.read_text(encoding="utf-8"))
     except (OSError, ValueError) as e:
         return 500, error_page(p, [f"cannot read: {e}"])
+    copy = importer.copy_of(p)
+    if theirs:
+        return theirs_page(p, doc, copy)
     shown = build.approval_hash(doc, p)   # the JSON (and screen files) this page shows, which an approval must match
     # validate expands diff refs on a copy (cache, local git, then gh) and so warms the cache build.build reads;
     # it also applies the type contract, as errors only while meta.rev is new
@@ -1158,7 +1171,27 @@ def _render(p: Path) -> tuple[int, str]:
                             state=state and {**state, "docHash": shown, "approval": saved_approval(p)},
                             live=LIVE.for_doc(doc),
                             snaps=build.snapshot_index(p) if build.doc_type(doc.get("meta") or {}) == "website" else None,
-                            pins=evidence_pins(doc, p))
+                            pins=evidence_pins(doc, p), answers=(copy or {}).get("answers"))
+
+
+def theirs_page(p: Path, doc: dict, copy: dict | None) -> tuple[int, str]:
+    """A copy's Compare: the sharer's newer rev (importer.theirs_doc) drawn as the current revision, with the copy as
+    it is now as the one revision before it, so the page's ?diff=<the copy's rev> marks what the sharer changed. Read
+    only: nothing is written (the page on ?diff= takes no edits)."""
+    theirs = importer.theirs_doc(p)
+    if theirs is None:
+        return 404, error_page(p, ["no newer rev from the sharer to compare with: the page checks for one when it opens"])
+    mine_rev = str((doc.get("meta") or {}).get("rev") or "")
+    by = (copy or {}).get("user") or "sharer"
+    theirs = {**theirs, "meta": {**(theirs.get("meta") or {}), "rev": f"{by}-{(theirs.get('meta') or {}).get('rev') or 'new'}"}}
+    if theirs["meta"]["rev"] == mine_rev:
+        theirs["meta"]["rev"] += "-theirs"
+    history = build.load_history(Path("/nonexistent"))
+    build.record(history, {**doc, "meta": {**(doc.get("meta") or {}), "rev": mine_rev or "yours"}}, p)
+    build.record(history, theirs, p)
+    state = page_state(p)   # the copy's reader state, so the page is served; ?diff= keeps it from writing
+    return 200, build.build(theirs, build.TEMPLATE.read_text(encoding="utf-8"), history, diff_path=p, problems=[],
+                            state=state and {**state, "docHash": None, "approval": None})
 
 
 def evidence_pins(doc: dict, p: Path) -> dict | None:
@@ -4434,6 +4467,127 @@ INBOX = Inbox()
 
 # ---------- HTTP ----------
 
+IMPORT_FROM = ("bluedoc.ai", "www.bluedoc.ai")   # the sites whose links open the import page
+IMPORT_TTL = 600.0
+_imports: dict[str, tuple[float, dict]] = {}   # src -> (when, bundle): what the import page showed, for its Save
+_imports_lock = threading.Lock()
+
+
+def import_bundle(src: str, fresh: bool = False) -> dict:
+    """importer.load(src), kept IMPORT_TTL so Save writes what the page showed. A .zip is the CLI's alone."""
+    s = importer.parse_source(src)
+    if s["kind"] != "gist":
+        raise importer.ImportFailed("the import page takes a shared link; import a .zip with `serve.py import`")
+    key = s["id"]
+    with _imports_lock:
+        hit = _imports.get(key)
+        if hit and not fresh and time.monotonic() - hit[0] < IMPORT_TTL:
+            return hit[1]
+    b = importer.load(key)
+    with _imports_lock:
+        _imports[key] = (time.monotonic(), b)
+    return b
+
+
+def import_folders(doc: dict, roots: list[Path]) -> list[dict]:
+    """The folders a copy may go to: each home page folder's docs/plans/ (docs/<type>/; a folder named docs: its
+    plans/), the one last used first. [{root, name, dir, display}]."""
+    t = build.doc_type(doc.get("meta") or {})
+    sub = "plans" if t == "plan" else t
+    last = importer._load().get("__lastRoot")
+    out = []
+    for r in roots:
+        if not r.is_dir():
+            continue
+        d = r / sub if r.name in ("docs", "doc") else r / "docs" / sub
+        out.append({"root": str(r), "name": project_name(r), "dir": str(d), "display": display_path(str(d)) + "/"})
+    out.sort(key=lambda f: f["root"] != last)
+    return out
+
+
+def import_save(data: dict) -> tuple[int, dict]:
+    """POST /__bluedoc/import {src, root}: write the copy the page showed into root's folder (import_folders), register
+    it, and answer {url, path, files, warnings}. root must be a home page folder."""
+    try:
+        b = import_bundle(str(data.get("src") or ""))
+    except importer.ImportFailed as e:
+        return e.status, {"error": str(e)}
+    pick = next((f for f in import_folders(b["doc"], load_roots()) if f["root"] == data.get("root")), None)
+    if pick is None:
+        return 400, {"error": "root: one of the home page's folders"}
+    try:
+        res = importer.write(b, Path(pick["dir"]))
+    except importer.ImportFailed as e:
+        return e.status, {"error": str(e)}
+    except OSError as e:
+        return 500, {"error": f"cannot write the copy: {e}"}
+    with importer.LOCK:
+        all_ = importer._load()
+        all_["__lastRoot"] = pick["root"]
+        importer._save(all_)
+    with _imports_lock:
+        _imports.pop((b.get("source") or {}).get("id"), None)
+    print(f"imported {b['by']}'s {res['path'].name} into {res['path'].parent}", flush=True)
+    return 200, {"url": url_for(res["path"]), "path": str(res["path"]), "files": res["files"], "warnings": res["warnings"]}
+
+
+def upstream_action(doc: Path, data: dict) -> tuple[int, dict]:
+    """POST /__bluedoc/upstream {path, action}: pull (merge the sharer's newest rev in as a new rev), later (hide the
+    strip until a newer rev), take {id} (Review's Take theirs), answers (Use these answers: the sharer's picks and
+    ticks into this reader's state)."""
+    action = data.get("action")
+    try:
+        if action == "pull":
+            return 200, importer.pull(doc)
+        if action == "later":
+            r = importer.copy_of(doc)
+            if not r:
+                return 404, {"error": "not a copy here"}
+            importer.update(doc, later=(r.get("latest") or {}).get("rev"))
+            return 200, {"ok": True}
+        if action == "take":
+            return 200, importer.take_theirs(doc, str(data.get("id") or ""))
+        if action == "answers":
+            if not DB:
+                return 503, {"error": "this server's Python has no sqlite3"}
+            ops = [(k, v) for k, v in importer.answer_ops(doc) if value_ok(k, v)]
+            if not ops:
+                return 404, {"error": "no answers to use"}
+            version = DB.apply(str(doc), doc_id(doc), ops, False)
+            return 200, {"ok": True, "used": len(ops), "version": version}
+    except importer.ImportFailed as e:
+        return e.status, {"error": str(e)}
+    return 400, {"error": "action: pull, later, take or answers"}
+
+
+def cmd_import(src: str, to: Path | None) -> int:
+    """`serve.py import`: fetch (gh, else anonymously), check, write into --to (default: the repo's docs/plans/ or
+    docs/<type>/), register and print the copy's URL, as `open` does."""
+    try:
+        b = importer.load(src)
+        folder = (to.expanduser().resolve() if to else importer.default_dir(b["doc"]))
+        res = importer.write(b, folder)
+    except importer.ImportFailed as e:
+        print(f"import: {e}", file=sys.stderr)
+        return 1
+    doc = res["path"]
+    add_root(root_for(doc))
+    for w in res["warnings"]:
+        print(f"WARN  {w}", file=sys.stderr)
+    rev = f", rev {b['rev']}" if b["rev"] else ""
+    print(f"copied {b['by']}'s {build.doc_type(b['doc'].get('meta') or {})}{rev} to {doc} "
+          f"({len(res['files'])} file{'s' if len(res['files']) != 1 else ''} written"
+          + (f", {len(res['same'])} already there" if res["same"] else "") + ")")
+    if b.get("answers"):
+        print(f"{b['by']}'s answers show on the page as theirs; Use these answers makes them yours")
+    print("work on it as on any doc; changes don't go back: to send them, share the copy")
+    if not ensure_started(DEFAULT_PORT, pinned=PORT_PINNED):
+        return 1
+    reg = call("/__bluedoc/register", {"doc": str(doc), "to": ""})[1]
+    print(base() + reg["url"] + (f"?key={reg['token']}" if reg.get("token") else ""))
+    return 0
+
+
 def make_handler(port: int, default_to: str):
     hosts = {f"127.0.0.1:{port}", f"localhost:{port}"}
     cookie = f"bluedoc_key_{port}"   # cookies ignore the port: name it so servers on other ports keep their own
@@ -4772,6 +4926,34 @@ def make_handler(port: int, default_to: str):
                 return None
             return data
 
+        def import_page(self) -> None:
+            """GET /__bluedoc/import?src=<code>: the home page app's import page, which reads /__bluedoc/import.json
+            and writes nothing. A link from bluedoc.ai's Make a copy, or one typed or pasted (no Referer), or this
+            server's own pages; any other site's Referer is refused."""
+            ref = self.headers.get("Referer")
+            if ref:
+                r = urlsplit(ref)
+                if not (r.scheme == "https" and r.hostname in IMPORT_FROM or r.netloc in hosts):
+                    return self.send(403, "<!doctype html><title>Not from bluedoc.ai</title><p>This import link came from another "
+                                          "site, so bluedoc won't open it. Open the shared doc on bluedoc.ai and press Make a copy.")
+            html = HOME_HTML.read_text(encoding="utf-8").replace("__BLUEDOC_VENDOR_V__", vendor_version())
+            return self.send(200, html, headers={"Referrer-Policy": "no-referrer"})
+
+        def import_preview(self, q: dict) -> None:
+            """GET /__bluedoc/import.json?src=<link or code>[&root=<a home page folder>]: what Save would write, read
+            from GitHub now (import_bundle), and the folders it may go to: our own page only (X-Bluedoc), no key."""
+            if self.headers.get("X-Bluedoc") != "1":
+                return self.json(403, {"error": "missing X-Bluedoc header"})
+            try:
+                b = import_bundle(q.get("src", ""))
+                roots = load_roots()
+                folders = import_folders(b["doc"], roots)
+                pick = next((f for f in folders if f["root"] == q.get("root")), folders[0] if folders else None)
+                view = importer.preview(b, Path(pick["dir"])) if pick else importer.preview(b, importer.default_dir(b["doc"], Path.home()))
+            except importer.ImportFailed as e:
+                return self.json(e.status, {"error": str(e)})
+            return self.json(200, {**view, "folders": folders, "root": pick and pick["root"], "unlocked": self.has_key()})
+
         def do_HEAD(self):
             self.do_GET()
 
@@ -4808,6 +4990,21 @@ def make_handler(port: int, default_to: str):
                                        "approval": saved_approval(doc) if doc else None})
             if u.path == "/__bluedoc/key":
                 return self.page_key()
+            if u.path == "/__bluedoc/import":
+                return self.import_page()
+            if u.path == "/__bluedoc/import.json":
+                return self.import_preview(q)
+            if u.path == "/__bluedoc/upstream":
+                # a copy's origin and the sharer's updates: the key, as copies.json holds the gist's link
+                if self.headers.get("X-Bluedoc") != "1":
+                    return self.json(403, {"error": "missing X-Bluedoc header"})
+                if not self.has_key():
+                    return self.no_key()
+                doc = doc_for_url(q.get("path", ""))
+                if not doc:
+                    return self.json(404, {"error": "not a doc under a registered folder"})
+                st = importer.status(doc, fresh=q.get("fresh") == "1")
+                return self.json(200, {"copy": st})
             if u.path == "/__bluedoc/url":
                 return self.json(200, {"url": url_for(Path(q.get("doc", "")))})
             if u.path == "/__bluedoc/listing/progress":
@@ -4890,7 +5087,7 @@ def make_handler(port: int, default_to: str):
                 return self.send(404, "<!doctype html><title>Not found</title><p>No bluedoc at this address. <a href='/'>All docs</a></p>")
             if q.get("raw"):
                 return self.send(200, doc.read_bytes(), "application/json; charset=utf-8")
-            code, html = render(doc)
+            code, html = render(doc, theirs=q.get("theirs") == "1")
             return self.send(code, html)
 
         def attach(self, q: dict) -> None:
@@ -5048,6 +5245,15 @@ def make_handler(port: int, default_to: str):
                 return self.json(*change_repos(data))
             if path == "/__bluedoc/frameworks":
                 return self.json(*change_frameworks(data))
+            if path == "/__bluedoc/import":   # Save and open: the import page's own POST, with the key, as every POST
+                if self.headers.get("Sec-Fetch-Site") not in (None, "same-origin"):
+                    return self.json(403, {"error": "only the import page on this server saves a copy"})
+                return self.json(*import_save(data))
+            if path == "/__bluedoc/upstream":
+                doc = doc_for_url(str(data.get("path") or ""))
+                if not doc:
+                    return self.json(404, {"error": "not a doc under a registered folder"})
+                return self.json(*upstream_action(doc, data))
             if path in ("/__bluedoc/share", "/__bluedoc/unshare"):   # publishes or deletes a gist: the key, as every POST
                 # the page names its doc by its URL path; `serve.py share` (the CLI, with the key) by its file
                 doc = doc_for_url(str(data.get("path") or "")) if "doc" not in data else cli_doc(data.get("doc"))
@@ -5898,6 +6104,11 @@ def main() -> int:
                    "updates go out again on the account, this doc's first")
     p = sub.add_parser("unshare", help="delete the doc's gist as the account it is on and forget it")
     p.add_argument("doc", type=Path)
+    p = sub.add_parser("import", help="copy a shared doc (a bluedoc.ai/g/ link, a gist URL or a Download .zip) into "
+                       "this repo's docs, register it and print its URL")
+    p.add_argument("src", help="https://bluedoc.ai/g/<code>, a gist URL, or a bluedoc file (.zip)")
+    p.add_argument("--to", type=Path, help="the folder to write into (default: docs/plans/ for a plan, else docs/<type>/, "
+                   "under the current repo's root)")
     a = ap.parse_args()
 
     if a.cmd == "run":
@@ -5944,6 +6155,8 @@ def main() -> int:
         return 0
     if a.cmd == "snapshot":
         return cmd_snapshot(a.doc, a.rev, a.url, a.page, a.width)
+    if a.cmd == "import":
+        return cmd_import(a.src, a.to)
 
     doc = a.doc.resolve()
     if not doc.is_file() or not is_doc(doc):

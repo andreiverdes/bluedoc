@@ -535,6 +535,28 @@ button.bd-fc:hover { color: var(--color-hz-fg); }
 .bd-rx .x-ft .bd-path { flex: 0 1 auto; }
 .bd-rx .x-dot { opacity: .6; }
 
+/* the import page (/__bluedoc/import): the bar with the brand, one card in the middle */
+.bd-imp-bar { display: flex; align-items: center; gap: 14px; height: 56px; padding: 0 20px; box-shadow: 0 1px 0 var(--color-hz-line); background: var(--color-hz-surface); }
+.bd-imp-t { font: 600 15px var(--font-hz-sans); color: var(--color-hz-fg); }
+.bd-imp { box-sizing: border-box; width: min(640px, 100%); margin: 0 auto; padding: 40px 20px; }
+.bd-imp-wait { color: var(--color-hz-fg-subtle); }
+.bd-imp-card h1 { display: flex; align-items: center; gap: 10px; margin: 0 0 6px; font: 650 19px/1.3 var(--font-hz-sans); letter-spacing: -.01em; }
+.bd-imp-sub { margin: 0 0 14px; font-size: 13.5px; color: var(--color-hz-fg-muted); }
+.bd-imp-files { margin: 0 0 14px; padding: 4px 14px; list-style: none; border-radius: 10px; background: var(--color-hz-canvas); box-shadow: inset 0 0 0 1px var(--color-hz-line); }
+.bd-imp-files li { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; font: 13px var(--font-hz-mono); border-top: 1px solid var(--color-hz-line); }
+.bd-imp-files li:first-child { border-top: 0; }
+.bd-imp-files li span:first-child { min-width: 0; overflow-wrap: anywhere; }
+.bd-imp-files .n { flex: none; color: var(--color-hz-fg-subtle); }
+.bd-imp-files .same { color: var(--color-hz-fg-subtle); }
+.bd-imp-fl { margin: 6px 0 8px; font: 600 13px var(--font-hz-sans); }
+.bd-imp-row { display: flex; align-items: center; gap: 10px; }
+.bd-imp-row > :not(code) { flex: none; }
+.bd-imp-row button > span { display: inline-flex; align-items: center; gap: 6px; }
+.bd-imp-row button svg { flex: none; width: 14px; height: 14px; }
+.bd-imp-path { flex: 1; min-width: 0; padding: 9px 12px; border-radius: 9px; font: 13px var(--font-hz-mono); overflow-wrap: anywhere; background: var(--color-hz-canvas); box-shadow: inset 0 0 0 1px var(--color-hz-line); }
+.bd-imp-card .hz-banner, .bd-imp-card [role=alert] { margin-top: 12px; }
+.bd-imp-acts { display: flex; justify-content: flex-end; gap: 8px; margin-top: 22px; }
+.bd-imp-note { margin: 14px 0 0; font-size: 12px; color: var(--color-hz-fg-subtle); }
 /* statistics (/stats): the header with Project and the range, the four widgets, then edits by project and the oldest open decisions */
 .bd-stats-h { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 26px 0 18px; }
 .bd-stats-h h1 { margin: 0; font: 620 22px/1.2 var(--font-hz-sans); letter-spacing: -.02em; }
@@ -2353,7 +2375,63 @@ function App() {
       e('div', { className: 'scrim', onClick: () => setDrawer(false) }), e('div', { className: 'panel' }, sidebar(true))));
 }
 
-ReactDOM.createRoot(document.getElementById('app')).render(e(App));
+/* ---------- the import page: /__bluedoc/import?src=<code> (importer.py, serve.py import_page) ---------- */
+// bluedoc.ai's Make a copy opens it in a new tab. It reads what the copy would write (GET /__bluedoc/import.json: the
+// gist read now, nothing written) and shows the sharer, the doc, every file with its size and the sharer's answers;
+// the folder is one of the home page's projects (docs/plans/ in it, docs/<type>/ for other types), the one used last
+// first. Save and open posts it with this browser's key and opens the copy; a browser without the key says so.
+function ImportPage() {
+  const [theme] = useState(() => storedTheme() || systemTheme());
+  const src = new URLSearchParams(location.search).get('src') || '';
+  const [view, setView] = useState(null), [err, setErr] = useState(''), [root, setRoot] = useState(null), [busy, setBusy] = useState(false);
+  const load = r => {
+    const sent = serverKeyHeaders();
+    fetch('/__bluedoc/import.json?' + new URLSearchParams({ src, ...(r ? { root: r } : {}) }), { cache: 'no-store', headers: { 'X-Bluedoc': '1', ...sent } })
+      .then(async res => { const j = await res.json().catch(() => ({})); if (!res.ok) throw new Error(j.error || `the server answered ${res.status}`); return j; })
+      .then(j => { setView(j); setRoot(j.root); setErr(''); keepServerKey(j.unlocked, sent); }, x => setErr(x.message));
+  };
+  useEffect(() => { document.title = 'Import · bluedoc'; document.documentElement.setAttribute('data-hz-theme', theme); load(null); }, []);
+  const save = async () => {
+    setBusy(true);
+    try {
+      const res = await fetch('/__bluedoc/import', { method: 'POST', cache: 'no-store', headers: { 'Content-Type': 'application/json', 'X-Bluedoc': '1', ...serverKeyHeaders() },
+        body: JSON.stringify({ src, root }) });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(j.key ? 'This browser can\'t save yet: open the link from serve.py unlock here, then press Save again.' : j.error || `the server answered ${res.status}`);
+      location.href = j.url;
+    } catch (x) { setErr(x.message); setBusy(false); }
+  };
+  const kb = n => n < 1024 ? `${n} B` : n < 1048576 ? `${Math.round(n / 1024)} KB` : `${(n / 1048576).toFixed(1)} MB`;
+  const v = view, folder = v && v.folders.find(f => f.root === root);
+  const noun = v ? (v.type === 'other' ? 'doc' : TYPE_ONE[v.type].toLowerCase()) : 'doc';
+  const answers = v && v.answers && [v.answers.picks && plural(v.answers.picks, 'pick'), v.answers.comments && plural(v.answers.comments, 'comment')].filter(Boolean).join(', ');
+  const items = v ? [{ type: 'radio', id: 'f', value: root || '', onValueChange: r => { setRoot(r); load(r); },
+    options: v.folders.map(f => ({ value: f.root, label: e('span', { className: 'bd-mo' }, e('span', null, f.name), e('span', { className: 'c' }, f.display)) })) }] : [];
+  return e(HorizonProvider, { theme, reducedMotion: reduceMQ.matches || undefined, className: 'bd-app bd-imp-app' },
+    e('div', { className: 'bd-imp-bar' }, e(Brand), e('span', { className: 'bd-imp-t' }, 'Import')),
+    e('main', { className: 'bd-imp' },
+      !v && !err && e('p', { className: 'bd-imp-wait' }, 'Reading the shared doc…'),
+      !v && err && e(Banner, { tone: 'danger', title: 'Couldn\'t read the shared doc' }, err),
+      v && e(Card, { title: null, description: null, className: 'bd-imp-card' },
+        e('h1', null, e(Avatar, { name: v.by, size: 24 }), `Save a copy of ${v.by}'s ${noun}?`),
+        e('p', { className: 'bd-imp-sub' }, [`${v.emoji} ${v.title}`, v.rev && `rev ${v.rev}`, v.at && `shared ${ago(Date.parse(v.at) / 1000)}`].filter(Boolean).join(' · ')),
+        e('ul', { className: 'bd-imp-files', 'aria-label': 'Files it writes' }, v.files.map(f => e('li', { key: f.path }, e('span', null, f.path), e('span', { className: 'n' }, kb(f.size)))),
+          v.same.map(p => e('li', { key: 's:' + p, className: 'same' }, e('span', null, p), e('span', { className: 'n' }, 'already there')))),
+        answers && e('p', { className: 'bd-imp-sub' }, `${v.by}'s answers: ${answers}, shown as theirs.`),
+        v.warnings.map(w => e(Banner, { key: w, tone: 'warning', title: null }, w)),
+        e('div', { className: 'bd-imp-fl' }, 'Folder'),
+        v.folders.length ? e('div', { className: 'bd-imp-row' }, e('code', { className: 'bd-imp-path' }, folder ? folder.display : ''),
+          e(DropdownMenu, { align: 'end', items, trigger: e(Button, { variant: 'secondary' }, 'Change folder', e(Icons.ChevronDown)) }))
+          : e(Banner, { tone: 'warning', title: 'No project here yet.' }, 'Run ', e('code', null, 'serve.py add <folder>'), ' or open a doc from it, then reload this page.'),
+        v.unlocked === false && e(Banner, { tone: 'warning', className: 'bd-lock', title: 'This browser can\'t save yet.', action: e(CopyUnlock) },
+          'Open the link from ', e('code', null, 'serve.py unlock'), ' here, then come back.'),
+        err && e(Banner, { tone: 'danger', title: 'Not saved' }, err),
+        e('div', { className: 'bd-imp-acts' }, e(Button, { variant: 'ghost', onClick: () => { location.href = '/'; } }, 'Cancel'),
+          e(Button, { variant: 'primary', disabled: busy || !folder, onClick: save }, busy ? 'Saving…' : 'Save and open')),
+        e('p', { className: 'bd-imp-note' }, `Nothing is written until you press Save. The copy is yours: changes don't go back to ${v.by}.`))));
+}
+
+ReactDOM.createRoot(document.getElementById('app')).render(e(location.pathname === '/__bluedoc/import' ? ImportPage : App));
 })();
 </script>
 </body>

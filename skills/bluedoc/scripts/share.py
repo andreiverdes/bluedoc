@@ -2,7 +2,7 @@
 """Share a doc as a secret GitHub gist, opened at https://bluedoc.ai/g/<code> (link_for; serve.py share/unshare,
 GET/POST /__bluedoc/share and POST /__bluedoc/unshare).
 
-A share holds the doc's current revision only, in two text files:
+A share holds the doc's current revision only, in two or three text files:
   <stem>.bluedoc.json           the doc, verbatim
   bluedoc-page.json             what the bluedoc.ai viewer fills the template with:
       {"bluedoc": "share/1", "version": <bluedoc version>, "name": <stem>, "title": <shown title>, "rev": <meta.rev or
@@ -12,7 +12,9 @@ A share holds the doc's current revision only, in two text files:
       which the viewer fills from its own copy, and the answers slot (__BLUEDOC_ANSWERS__, answers_slot): the
       reader's answers the share carries, {by: the share's login, at, rev, state: {reader state key: value}}, or
       null. The shared page shows them read-only as <by>'s.
-A bluedoc-page.json over MAX_PAGE_BYTES (10 MB) is refused (413): Export → HTML file sends the doc instead.
+  bluedoc-screens.json          a doc with screen files (a design's screens, icon layers): {path from the doc's
+      folder: the file's text} (screens_file), so `serve.py import` writes their sources back; none without them
+A bluedoc-page.json or bluedoc-screens.json over MAX_PAGE_BYTES (10 MB) is refused (413): Export → HTML file sends the doc instead.
 
 Answers (answers_of): by kind, ANSWER_KINDS: picks (a question's pick, Other's words, Tell me more), ticks (done
 marks), comments (item threads, and the pins, regions and general comment that are sent, with their threads), pending
@@ -83,6 +85,7 @@ import settings  # noqa: E402
 
 FORMAT = "share/1"
 PAGE_FILE = "bluedoc-page.json"
+SCREENS_FILE = "bluedoc-screens.json"   # a design's screen sources, for a copy (screens_file)
 MAX_PAGE_BYTES = 10 * 1024 * 1024   # a gist file's raw limit
 VIEWER = "https://bluedoc.ai/g/"
 # the notice every share shows (template.html's share sheet says the same; tests/test_share_sheet.py holds them equal)
@@ -235,7 +238,30 @@ def gist_files(doc_path: Path, answers: dict | None = None) -> tuple[dict[str, s
     if size > MAX_PAGE_BYTES:
         raise ShareError(f"the shared page would be {size / 1048576:.1f} MB, over the 10 MB a gist file can hold: "
                          "send Export → HTML file instead", 413)
-    return {gist_name(doc_path): text, PAGE_FILE: page}, doc, contents(doc)
+    files = {gist_name(doc_path): text, PAGE_FILE: page}
+    screens = screens_file(doc, doc_path)
+    if screens is not None:
+        size = len(screens.encode("utf-8"))
+        if size > MAX_PAGE_BYTES:
+            raise ShareError(f"the screens' sources would be {size / 1048576:.1f} MB, over the 10 MB a gist file can hold: "
+                             "send Export → HTML file instead", 413)
+        files[SCREENS_FILE] = screens
+    return files, doc, contents(doc)
+
+
+def screens_file(doc: dict, doc_path: Path) -> str | None:
+    """bluedoc-screens.json's text, {path from the doc's folder: the file's text} for each screen file and icon layer
+    (build.screen_paths) that reads as text, so a copy (importer.py) gets their sources back; None without any."""
+    folder, out = Path(doc_path).parent, {}
+    for f in build.screen_paths(doc, doc_path).values():
+        text = build._read_text(f)
+        try:
+            rel = f.resolve().relative_to(folder.resolve()).as_posix()
+        except ValueError:
+            continue
+        if text is not None:
+            out[rel] = text
+    return json.dumps(out, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n" if out else None
 
 
 # ---------- the reader's answers ----------
