@@ -199,7 +199,7 @@ class SharedPage(unittest.TestCase):
         self.assertTrue(self.q(t, f"w.eval({json.dumps(EXPORT_SPY)}) && w.eval({json.dumps(TEXT_SPY)})"))
         self.q(t, "(w.__printed = 0, w.print = () => { w.__printed++; }, 1)")
         key = "w.document.querySelector('.bd-bar-r .bd-docx')"
-        self.assertEqual(self.q(t, f"[...{key}.querySelectorAll('[role=menuitem]')].map(b => b.dataset.format)"), ["html", "pdf", "md"])
+        self.assertEqual(self.q(t, f"[...{key}.querySelectorAll('[role=menuitem]')].map(b => b.dataset.format)"), ["html", "pdf", "md", "gist"])
         for fmt in ("html", "pdf", "md"):
             self.assertTrue(self.click(t, ".bd-bar-r .bd-docx .bd-expb"))
             t.wait_for(IN.format(f"!{key}.querySelector('.bd-expm').hidden"))
@@ -219,6 +219,28 @@ class SharedPage(unittest.TestCase):
         t2.wait_for("document.readyState === 'complete' && !!window.BP", 20)
         self.assertEqual(t2.ev("[document.title, document.querySelector('h1').textContent.includes('Acme Shop: saved carts'), document.querySelector('.bd-bar-r .bd-docx .bd-expb').textContent]"),
                          ["Acme Shop: saved carts · bluedoc", True, "Download"])
+        self.assertEqual(self.browser.errors, [])
+
+    def test_download_copies_the_gist_link(self) -> None:
+        """At /g/<code> and at an old link's #<user>/<id>, Download's last row (after a divider) copies the gist's URL;
+        at an address naming no gist, the row isn't there."""
+        url = self.viewer("acme-saved-carts-plan")
+        base = url.rsplit("/", 1)[0]
+        key = "w.document.querySelector('.bd-bar-r .bd-docx')"
+        for at, want in ((base + CODE_PATH, "https://gist.github.com/b21699001d737be2f6e6a242851a63da"),
+                         (url + HASH, "https://gist.github.com/acme-dev/0123456789abcdef0123")):
+            t = Tab(self.browser)
+            self.open(t, at)
+            self.q(t, "(w.__copied = [], w.navigator.clipboard.writeText = s => { w.__copied.push(s); return Promise.resolve(); }, 1)")
+            self.assertTrue(self.q(t, f"{key}.querySelector('[data-format=gist]').previousElementSibling.matches('.sep')"))
+            self.assertTrue(self.click(t, ".bd-bar-r .bd-docx .bd-expb"))
+            t.wait_for(IN.format(f"!{key}.querySelector('.bd-expm').hidden"))
+            self.assertTrue(self.click(t, ".bd-bar-r .bd-docx [data-format=gist]"))
+            self.assertEqual(t.wait_for(IN.format("w.__copied.length && w.__copied")), [want])
+            self.assertIn("Copied", self.q(t, "w.document.body.innerText"))
+        t = Tab(self.browser)
+        self.open(t, url)
+        self.assertEqual(self.q(t, f"[{key}.querySelectorAll('[role=menuitem]').length, !!{key}.querySelector('[data-format=gist], .sep')]"), [3, False])
         self.assertEqual(self.browser.errors, [])
 
     def test_a_review_is_view_only_and_its_threads_read_only(self) -> None:
