@@ -1,11 +1,12 @@
-"""The stripes and their panes (1.0.41), in Chrome (BLUEDOC_BROWSER_TESTS=1).
+"""The stripes and their panes (1.0.41; in the app bar since 1.0.62), in Chrome (BLUEDOC_BROWSER_TESTS=1).
 
-A doc's left stripe holds Contents, its ring the tracker's progress, and, at its foot, the theme; the right one Comments
-(its badge the pending count) and Revisions (the shown revision; an earlier one in the warning's colours). A key opens
-its pane and lights up; the lit key closes it; [ and ] toggle the left and the right pane, not while typing. Contents is
-open by default where it docks beside a 640 px page (1440 px, not 1000 px), then as the reader leaves it, per doc. A
-board's left stripe holds its Brief (ringed with the picks made, open on a first visit) and its Screens, one at a
-time in the left pane, and its toolbar has no panel key; a phone's drawer has them as tabs. A phone (600 px and under) has no stripes: a
+The app bar holds every key: the left stripe, a raised tray at its left edge, the home key then a doc's Contents (its
+ring the tracker's progress); its right side one tray: Share │ the theme │ Comments (its badge the pending count) and
+Revisions (the shown revision; an earlier one in the warning's colours) │ ⋮. A key opens its pane and lights up; the lit
+key closes it; [ and ] toggle the left and the right pane, not while typing. Contents is open by default where it docks
+beside a 640 px page (1440 px, not 940 px), then as the reader leaves it, per doc. A board's left stripe holds its Brief
+(ringed with the picks made, open on a first visit) and its Screens, one at a time in the left pane, which lies over the
+board, and its toolbar has no panel key; a phone's drawer has them as tabs. A phone (600 px and under) has no trays: a
 Contents key at the bar's left, a Comments key at its right opening the bottom sheet with its sections as tabs."""
 from __future__ import annotations
 
@@ -16,8 +17,8 @@ import unittest
 from test_page_state import CHROME, ChromePage, Tab
 
 STATUS, FIT = "acme-status.bluedoc.json", "acme-fit-design.bluedoc.json"
-KEYS = "[...document.querySelectorAll('.bd-stripe .bd-sk')].filter(k => !k.hidden).map(k => [k.getAttribute('aria-label'), k.getAttribute('aria-pressed')])"
-LKEY, RKEY = "document.querySelector('.bd-stripe.l .bd-sk')", "(f => document.querySelector(`.bd-stripe.r .bd-sk[data-f=${f}]`))"
+KEYS = "[...document.querySelectorAll('.bd-bar .bd-sk:not(.bd-homek)')].filter(k => !k.hidden).map(k => [k.getAttribute('aria-label'), k.getAttribute('aria-pressed')])"
+LKEY, RKEY = "document.querySelector('.bd-stripe.l .bd-sk[data-f]')", "(f => document.querySelector(`.bd-stripe.r .bd-sk[data-f=${f}]`))"
 
 
 @unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")
@@ -69,9 +70,9 @@ class Stripes(ChromePage):
         self.assertEqual(self.browser.errors, [])
 
     def test_contents_opens_where_it_docks_and_is_remembered(self) -> None:
-        t = self.page(STATUS, 1000)
+        t = self.page(STATUS, 940)
         t.wait_for("!!window.BP")
-        self.assertEqual(t.ev("BP.contents()"), {"open": False, "as": None}, "1000 px: it wouldn't dock")
+        self.assertEqual(t.ev("BP.contents()"), {"open": False, "as": None}, "940 px: it wouldn't dock")
         t.ev(f"{LKEY}.click()")
         t.wait_for("BP.contents().as === 'drawer'")
         # a reload keeps it open (over the page)
@@ -95,7 +96,7 @@ class Stripes(ChromePage):
         t.ev("BP.annotate({type: 'pin', key: 'tldr', note: 'Shorter'})")
         t.wait_for(f"{RKEY}('comments').querySelector('.n').textContent === '1' && !{RKEY}('comments').querySelector('.n').hidden")
         # the theme switch (role switch, "Dark theme", checked in dark) switches the theme, both ways
-        sw = "document.querySelector('.bd-stripe.l [role=switch]')"
+        sw = "document.querySelector('.bd-bar [role=switch]')"
         for _ in range(2):
             theme = t.ev("document.documentElement.dataset.theme || ''")
             t.ev(f"{sw}.click()")
@@ -109,33 +110,42 @@ class Stripes(ChromePage):
         self.assertEqual(old.ev("BP.sidebar().section"), "revisions")
         self.assertEqual(self.browser.errors, [])
 
-    def test_the_panes_and_the_page_are_cards_between_the_stripes(self) -> None:
-        """HorizonUI's AppFrame (1.0.44), the stripes floating trays as the dock is: 52 px pills of 38 px keys in the middle of
-        their 70 px bands (9 px from the window's edge and 9 px from the docked pane), the panes and the page's card 6 px
-        under the bar and 6 px apart, none over another; Share and Export one pill as tall as the dock's keys."""
+    def test_the_trays_lead_and_end_the_app_bar_and_the_panes_are_cards(self) -> None:
+        """HorizonUI's AppFrame (1.0.44) under one app bar (1.0.62): its trays 40 px tall of 34 px keys, the left one 14 px
+        from the window's left edge and the right one 14 px from its right; the panes and the page's card 6 px from the
+        window's edges, 6 px under the bar and 6 px apart, none over another."""
         t = self.page(STATUS)
         t.ev("BP.contents({open: true}), BP.sidebar({section: 'comments'}), 1")
         t.wait_for("['bd-lp-dock', 'bd-sp-dock'].every(c => document.documentElement.classList.contains(c))")
         time.sleep(0.4)   # the panes slide in
-        box = "(e => (r => [Math.round(r.left), Math.round(r.right), Math.round(r.top)])(e.getBoundingClientRect()))"
+        box = "(e => (r => [Math.round(r.left), Math.round(r.right), Math.round(r.height)])(e.getBoundingClientRect()))"
         got = t.ev(f"""(() => {{ const W = document.documentElement.clientWidth, s = getComputedStyle(document.body, '::before');
           return {{ W, bar: Math.round(document.querySelector('.bd-bar').getBoundingClientRect().bottom),
-            l: {box}(document.querySelector('.bd-stripe.l')), key: {box}(document.querySelector('.bd-stripe.l .bd-sk')),
+            l: {box}(document.querySelector('.bd-stripe.l')), r: {box}(document.querySelector('.bd-shtray')),
+            first: document.querySelector('.bd-stripe.l > *').matches('.bd-homek'), crumb: {box}(document.querySelector('.bd-crumb')),
             cp: {box}(document.querySelector('.bp-side')), page: [parseFloat(s.left), W - parseFloat(s.right), parseFloat(s.top)],
-            sp: {box}(document.querySelector('.bd-sp')), r: {box}(document.querySelector('.bd-stripe.r')),
-            radius: [document.querySelector('.bp-side'), document.querySelector('.bd-sp')].map(e => getComputedStyle(e).borderRadius).concat(s.borderRadius),
-            share: {box}(document.querySelector('.bd-bar-r .bd-shk')), export: {box}(document.querySelector('.bd-bar-r .bd-docx')) }}; }})()""")
+            sp: {box}(document.querySelector('.bd-sp')), top: Math.round(document.querySelector('.bp-side').getBoundingClientRect().top),
+            keys: [...document.querySelectorAll('.bd-bar :is(.bd-stripe.l .bd-sk, .bd-shtray :is(.bd-sk, .bd-shk, .bd-docm > .bd-ibtn))')].map(e => Math.round(e.getBoundingClientRect().height)),
+            right: [...document.querySelector('.bd-shtray').querySelectorAll(':scope > *, :scope > .bd-stripe > *')].filter(e => e.getClientRects().length && e.getBoundingClientRect().width)
+              .map(e => e.matches('.bd-groove') ? '|' : e.getAttribute('aria-label') || e.querySelector('[aria-label]').getAttribute('aria-label')),
+            radius: [document.querySelector('.bp-side'), document.querySelector('.bd-sp')].map(e => getComputedStyle(e).borderRadius).concat(s.borderRadius) }}; }})()""")
         W, bar = got["W"], got["bar"]
-        self.assertEqual(got["l"][:2], [9, 61], "the left stripe: a 52 px tray, 9 px from the edge")
-        self.assertEqual(got["key"][:2], [16, 54], "a 38 px key in its 7 px padding")
-        self.assertEqual(got["cp"], [70, 334, bar + 6], "Contents 9 px from the tray, 6 px under the bar")
-        self.assertEqual(got["sp"][:2], [W - 70 - 320, W - 70], "the right panel 9 px from its tray")
-        self.assertEqual(got["page"], [340, got["sp"][0] - 6, bar + 6], "the page's card 6 px from each pane and under the bar")
-        self.assertEqual(got["r"][:2], [W - 61, W - 9])
+        self.assertEqual([got["l"][0], got["l"][2]], [14, 40], "the left tray: 14 px from the edge, 40 px tall")
+        self.assertEqual([W - got["r"][1], got["r"][2]], [14, 40], "the right tray: 14 px from the edge, 40 px tall")
+        self.assertTrue(got["first"], "the home key leads the left tray")
+        self.assertGreater(got["crumb"][0], got["l"][1], "the doc's name after the left tray")
+        self.assertEqual(set(got["keys"]), {34}, "34 px keys in both trays")
+        self.assertEqual(got["right"], ["Share", "|", "Dark theme", "|", "Comments", "Revisions (Rev 2 of 2)", "|", "More"])
+        self.assertEqual([got["cp"][0], got["top"]], [6, bar + 6], "Contents 6 px from the window's edge, 6 px under the bar")
+        self.assertEqual(got["sp"][:2], [W - 6 - 320, W - 6], "the right panel 6 px from the window's edge")
+        self.assertEqual(got["page"], [got["cp"][1] + 6, got["sp"][0] - 6, bar + 6], "the page's card 6 px from each pane and under the bar")
         self.assertEqual(got["radius"], ["14px"] * 3)
-        self.assertEqual(got["share"][1], got["export"][0], "Share and Export touch: one pill")
-        self.assertEqual(t.ev("[...document.querySelectorAll('.bd-bar-r :is(.bd-shk, .bd-docx .bd-expb), .bd-anntb > .bd-key')].filter(e => e.getClientRects().length)"
-                              ".map(e => Math.round(e.getBoundingClientRect().height)).every(h => h === 38)"), True, "Share | Export as tall as the dock's keys")
+        # ⋮ holds Export's rows, then Archive; Export's own key is not shown above a phone
+        self.assertFalse(t.ev("!!document.querySelector('.bd-shtray .bd-docx').getClientRects().length"))
+        t.ev("document.querySelector('.bd-shtray .bd-docm > .bd-ibtn').click()")
+        t.wait_for("!document.querySelector('.bd-docm .bd-selm').hidden")
+        self.assertEqual(t.ev("[...document.querySelectorAll('.bd-docm .bd-selm > *')].filter(e => e.getClientRects().length).map(e => e.matches('.sep') ? '' : e.textContent.trim())"),
+                         ["Export", "HTML file", "PDF", "Markdown", "", "Archive"])
         self.assertEqual(self.browser.errors, [])
 
     def test_a_board_keeps_its_brief_and_screens_on_the_left_stripe(self) -> None:
@@ -147,6 +157,10 @@ class Stripes(ChromePage):
         # a first visit at 1440 px: the Brief open on the left, its key lit and ringed with the picks made
         t.wait_for(f"BP.board().panel && {brief}.getAttribute('aria-pressed') === 'true' && !document.getElementById('bd-sp-brief').hidden")
         self.assertEqual(t.ev("document.querySelector('.bd-lp .bd-pane-h h2').textContent"), "Brief")
+        # the panes lie over the board, which keeps the window's width (6 px from each edge)
+        self.assertEqual(t.ev("[...['bd-lp-dock', 'bd-sp-dock'].map(c => document.documentElement.classList.contains(c)), "
+                              "(r => [Math.round(r.left), Math.round(innerWidth - r.right)])(document.querySelector('.bd-boardblk').getBoundingClientRect())]"),
+                         [False, False, [6, 6]])
         ring = f"{brief}.querySelector('.bd-skr .fg').getAttribute('stroke-dasharray')"
         self.assertFalse(t.ev(f"{brief}.querySelector('.bd-skr').hasAttribute('hidden')"))
         self.assertRegex(t.ev(f"{brief}._tip"), r"^Brief · \d+ of \d+ picked$")
@@ -167,6 +181,11 @@ class Stripes(ChromePage):
         t.go(t.ev("location.href"))
         t.wait_for("!!BP.board()", 20)
         self.assertFalse(t.ev("BP.board().panel"))
+        # Esc closes the left pane over the board
+        t.ev(f"{brief}.click()")
+        t.wait_for("BP.board().panel")
+        t.ev("document.dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape', bubbles: true})), 1")
+        t.wait_for("!BP.board().panel")
         t.ev(f"{brief}.click()")
         t.wait_for(f"BP.board().panel && !document.getElementById('bd-sp-brief').hidden")
         self.assertEqual(self.browser.errors, [])

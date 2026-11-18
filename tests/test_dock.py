@@ -48,10 +48,10 @@ class DockKeys(ChromePage):
         self.assertEqual(self.keys("acme-review-findings.bluedoc.json", 390)[:6], ["View", "|", "Comment tools", "|", "Hide comment marks", "|"])
 
 
-# the dock's box and its room: the window between the stripes, less the panes open beside or over the page (over 900 px):
-# the left one (a doc's Contents, a board's left panel) and the right one
+# the dock's box and its room: the window less its 6 px edges (none on a phone) and the panes open beside or over the
+# page (over 900 px): the left one (a doc's Contents, a board's left panel) and the right one
 ROOM = """(() => { const t = document.querySelector('.bd-anntb').getBoundingClientRect(), r = document.documentElement, side = innerWidth > 900;
-  const st = innerWidth > 600 ? 40 : 0;
+  const st = innerWidth > 600 ? 6 : 0;
   const lp = side && r.classList.contains('bd-lp-open') ? document.querySelector(BP.board() ? '.bd-lp' : '.bp-side').offsetWidth : 0;
   const sp = side && r.classList.contains('bd-sp-open') ? document.querySelector('.bd-sp').offsetWidth : 0;
   return { left: t.left, right: t.right, h: t.height, lo: st + lp, hi: r.clientWidth - st - sp,
@@ -65,7 +65,7 @@ class DockFitsItsRoom(ChromePage):
         for doc in (FIT, "acme-review-findings.bluedoc.json"):
             t = self.open(self.server.url_for(self.docs / doc))
             t.wait_for("!!document.querySelector('.bd-anntb') && !!window.BP", 20)
-            t.ev("BP.sidebar({open: true}), document.querySelector('.bd-btb') ? BP.board().panel || document.querySelector('.bd-stripe.l .bd-sk').click() : BP.contents({open: true}), 1")
+            t.ev("BP.sidebar({open: true}), document.querySelector('.bd-btb') ? BP.board().panel || document.querySelector('.bd-stripe.l .bd-sk[data-f]').click() : BP.contents({open: true}), 1")
             for w in (1440, 1180, 1100, 860, 700, 640, 610, 390):
                 with self.subTest(doc=doc, width=w):
                     self.browser.call("Emulation.setDeviceMetricsOverride", {"width": w, "height": 900, "deviceScaleFactor": 1, "mobile": False}, t.session)

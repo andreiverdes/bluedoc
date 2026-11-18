@@ -271,7 +271,9 @@ class BoardMarksAndToolbars(ChromePage):
     def test_a_region_beside_the_screens_pans_and_zooms_with_the_board(self) -> None:
         t = self.board()
         t.ev("BP.setMode('region')")
-        b = t.ev("(r => [r.left, r.top, r.right, r.bottom])(document.querySelector('.bd-board').getBoundingClientRect())")
+        # the board's room clear of the left pane, which lies over the board
+        b = t.ev("(r => [Math.max(r.left, document.documentElement.classList.contains('bd-lp-open') ? document.querySelector('.bd-lp').getBoundingClientRect().right : 0), r.top, r.right, r.bottom])"
+                 "(document.querySelector('.bd-board').getBoundingClientRect())")
         x0, y0 = b[0] + 100, b[3] - 250   # empty board, below and left of the screens
         self.assertFalse(t.ev(f"!!document.elementsFromPoint({x0}, {y0}).find(e => e.closest('.bd-ab'))"), "the spot isn't on a screen")
         self.drag(t, x0, y0, x0 + 160, y0 + 110)
@@ -325,7 +327,7 @@ class BoardMarksAndToolbars(ChromePage):
         bars = {"dock": ".bd-anntb", "board toolbar": ".bd-btb", "left tray": ".bd-stripe.l", "right tray": ".bd-stripe.r", "app bar": ".bd-bar",
                 "pane header": ".bd-lp .bd-pane-h"}
         t = self.board()
-        t.ev("BP.board().panel || document.querySelector('.bd-stripe.l .bd-sk').click(), 1")
+        t.ev("BP.board().panel || document.querySelector('.bd-stripe.l .bd-sk[data-f]').click(), 1")
         time.sleep(0.5)
         for mode in ("point", "region", "select", "draw", "link", "frame"):
             self.assertTrue(t.ev(f"BP.setMode({mode!r})"), mode)

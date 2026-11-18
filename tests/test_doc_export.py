@@ -224,8 +224,9 @@ class ExportKey(ChromePage):
         for stem in ("acme-saved-carts-plan", "acme-review-findings", "acme-fit-design"):
             with self.subTest(stem=stem):
                 t = self.page(stem)
-                self.assertEqual(t.ev(f"[{self.BTN}.textContent, {self.BTN}.getAttribute('aria-haspopup'), (e => {{ while (e && !e.checkVisibility()) e = e.nextElementSibling; return !!e && e.matches('.bd-docm'); }})({self.BTN}.parentElement.nextElementSibling)]"),
-                                 ["Export", "menu", True], "Export, a menu button right before the ⋯ menu (a phone's keys, hidden, between)")
+                self.assertEqual(t.ev(f"[{self.BTN}.textContent, {self.BTN}.getAttribute('aria-haspopup'), {self.BTN}.checkVisibility(), "
+                                      "[...document.querySelectorAll('.bd-docm [role=menuitem].bd-desk')].map(b => b.textContent)]"),
+                                 ["Export", "menu", False, ["HTML file", "PDF", "Markdown"]], "Export, a menu button a phone shows; above it, its rows lead ⋮")
                 self.assertEqual(t.ev(f"[...{self.MENU}.querySelectorAll('[role=menuitem]')].map(b => [b.dataset.format, b.querySelector('b').textContent, b.querySelector('.t span').textContent])"),
                                  [["html", "HTML file", "One file that opens in any browser, no server"], ["pdf", "PDF", "Print-ready, one file"],
                                   ["md", "Markdown", "The doc as text, for any editor"]])

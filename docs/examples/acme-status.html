@@ -194,7 +194,7 @@ button.bd-emo:hover, button.bd-emo[aria-expanded="true"] { background: var(--sel
 @media (max-width: 600px) { .bd-bar-r { gap: 2px; } .bd-bar-r .bd-tbtn:is(.bd-expb, .bd-shk) { height: 34px; } .bd-bar-r .bd-shk + .bd-docx { margin-left: -2px; } }
 @media (max-width: 380px) { .bd-docx .bd-tbtn.bd-expb .cv { display: none; } .bd-bar-r { gap: 0; } .bd-bar-r .bd-shk + .bd-docx { margin-left: 0; }
   .bd-bar-r .bd-docx .bd-tbtn.bd-expb, .bd-bar-r .bd-tbtn.bd-shk { padding: 0 8px; } }
-/* a phone's keys in the bar, for the stripes it has no room for (STRIPES): Contents (or the board's left panel) at the
+/* a phone's keys in the bar, for the trays it has no room for (STRIPES): Contents (or the board's left panel) at the
    bar's left, the right panel's bottom sheet at its right, a dot while comments wait */
 .bd-bk, .bd-tbtn.bd-bk { position: relative; flex: none; border-radius: 999px; }
 .bd-bk .bd-ic { width: 16px; height: 16px; }
@@ -218,7 +218,7 @@ button.bd-emo:hover, button.bd-emo[aria-expanded="true"] { background: var(--sel
 /* the doc's ⋯ menu (Archive / Unarchive) and the archive strips under the app bar (ARC): they stick under it, as the
    lock and revision strips do (fitStrips) */
 .bd-docm .bd-selm { left: auto; right: 0; min-width: 168px; }
-.bd-bar:has(:is(.bd-docm, .bd-docx) [aria-expanded="true"]) { z-index: 44; }   /* the open menu over the docked right panel, the stripes (43) and the pane handles (43) */
+.bd-bar:has(:is(.bd-docm, .bd-docx) [aria-expanded="true"]) { z-index: 44; }   /* the open menu over the docked right panel and the pane handles (43) */
 /* the app bar's Export (any doc but a presentation or a storelisting; Download on a page with no server): Export to…'s
    key; narrow, its icon and chevron */
 @media (max-width: 900px) { .bd-docx .bd-tbtn.bd-expb > span { display: none; } .bd-bar-r .bd-docx .bd-tbtn.bd-expb { padding: 0 8px 0 10px; gap: 4px; } }
@@ -240,33 +240,26 @@ button.bd-emo:hover, button.bd-emo[aria-expanded="true"] { background: var(--sel
 .bd-planchip.arc[hidden] { display: none; }
 @media print { .bd-docm, .bd-revbar.arc { display: none !important; } }
 
-/* the stripes (STRIPES): the dock's tray stood up – a raised pill of flat round 38 px keys floating in the middle of
-   its side's band (9 px from the window's edge and 9 px from what it opens), centred in the height under the app bar
-   and its strips. The left one opens the left pane (a doc's Contents, its ring the tracker's progress; a board's
-   Screens, Pages or Slides; a listing's panel) and, at its foot past a groove, the theme; the right one each section
-   of the right pane (Brief, Comments, Revisions). A lit key's pane is open; it, or the pane's –, hides the pane; [ and
-   ] toggle the last one of each side. A phone (600 px and under) has none: its keys are in the app bar. --stripe-w is
-   a side's whole band (edge, tray, gap); --pane-gap the gap between the panes and the page, and above them, under the
-   app bar and its strips */
-:root { --stripe-w: 70px; --stripe-in: 9px; --pane-gap: 6px; --cp-w: 264px; --pane-top: calc(var(--top-h) + var(--pane-gap));
+/* the stripes (STRIPES): raised trays in the app bar (the dock's tray, 34 px keys). The left one leads the bar: the
+   home key and wordmark (.bd-homek: the bar's own .bd-home stays a phone's), a groove, then the left pane's keys (a
+   doc's Contents, its ring the tracker's progress; a board's Screens, Pages or Slides; a listing's panel); the doc's
+   name follows it, its title ellipsed where the bar runs short, and the bar's middle stays empty. The right side is
+   one tray (.bd-shtray, the stripes' look), as far from the window's right edge as the left tray is from its left:
+   Share (its key with its word) │ the theme switch │ the right stripe's keys, one per section of the right pane
+   (Brief, Comments, Revisions; the stripe is display: contents there) │ the round ⋮ key (ARC's menu: Export's rows,
+   then Archive, where Export's own key goes). A lit key's pane is open; it, or the pane's –, hides the pane; [ and ]
+   toggle the last one of each side. A phone (600 px and under) has no trays: its keys are in the app bar.
+   --pane-gap is the gap between the panes and the page, the window's edges, and the app bar and its strips */
+:root { --pane-gap: 6px; --cp-w: 264px; --pane-top: calc(var(--top-h) + var(--pane-gap));
   --hover-2: light-dark(oklch(23% 0.01 264 / 0.075), oklch(100% 0 0 / 0.08));
   /* HorizonUI's shadow-1 on its cards: the panes and the page */
   --shadow-card: 0 0 0 1px light-dark(oklch(23% 0.01 264 / 0.055), oklch(100% 0 0 / 0.07)), inset 0 1px 0 light-dark(transparent, oklch(100% 0 0 / 0.03)),
     0 1px 2px light-dark(oklch(23% 0.01 264 / 0.04), oklch(0% 0 0 / 0.45)), 0 2px 6px light-dark(oklch(23% 0.01 264 / 0.03), oklch(0% 0 0 / 0.25)); }
-/* centred in the viewport's height below the app bar and its strips (between --top-h and 100vh: in vh, so a board's Full
-   page frame, as tall as its page, centres it in the design's viewport, the review proxy turning vh into it); a tray
-   taller than that room is capped to it, so it starts under them rather than running over the bar */
-.bd-stripe { --k: 38px; position: fixed; z-index: 43; top: calc((100vh + var(--top-h)) / 2); translate: 0 -50%; max-height: calc(100vh - var(--top-h) - 4px); box-sizing: border-box; overflow: visible;
-  display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 7px; border-radius: 999px;
+.bd-stripe, .bd-shtray { --k: 34px; flex: none; display: flex; align-items: center; gap: 2px; padding: 3px; border-radius: 999px;
   background: linear-gradient(180deg, var(--tray-top), var(--tray-bot)); box-shadow: var(--shadow-tray), 0 2px 6px oklch(23% 0.01 264 / 0.06); }
-/* the keys' count badges sit over the tray's edge: it only scrolls (and clips them) in a window too short for it */
-@media (max-height: 420px) { .bd-stripe { overflow-y: auto; scrollbar-width: none; } }
-.bd-stripe.l { left: var(--stripe-in); }
-.bd-stripe.r { right: var(--stripe-in); }
+.bd-stripe.l { margin-left: -6px; }
 .bd-stripe:not(:has(> .bd-sk:not([hidden]))) { display: none; }
-/* the groove before the theme: the dock's, laid flat; none while the theme is the left tray's only key */
-.bd-stripe > .bd-groove { width: calc(var(--k) * .62); height: 2px; margin: 2px 0; background: var(--groove-h); }
-.bd-stripe > .bd-groove:first-child { display: none; }
+.bd-stripe > .bd-groove, .bd-shtray > .bd-groove { flex: none; width: 2px; height: calc(var(--k) * .62); margin: 0 3px; background: var(--groove); }
 /* a key: the dock's (.bd-key) – flat and round until hovered; lit, it sinks */
 .bd-sk { position: relative; flex: none; display: grid; place-items: center; width: var(--k); height: var(--k); padding: 0; border: 0; border-radius: 999px; background: none;
   color: var(--fg-muted); transition: background-color .12s, box-shadow .12s var(--ease), color .12s; }
@@ -294,132 +287,65 @@ button.bd-emo:hover, button.bd-emo[aria-expanded="true"] { background: var(--sel
 .bd-skr .bg { stroke: var(--hover-2); }
 .bd-skr .fg { stroke: var(--accent); stroke-linecap: round; transition: stroke-dasharray .26s var(--ease); }
 .bd-skr.full .fg { stroke: var(--ok); }
-/* the theme switch: a well as wide as a key and two keys tall, the sun at its top and the moon at its foot; the
-   dock's raised round key for its thumb, which slides to the current one (dark: the foot) */
-.bd-sk.bd-thsw, .bd-sk.bd-thsw:is(:hover, :active) { display: block; height: calc(var(--k) * 2 - 4px); color: var(--fg-subtle); background: var(--hk-down); box-shadow: var(--shadow-well); }
+/* the home key: the house in the accent and the wordmark */
+.bd-sk.bd-homek { display: inline-flex; align-items: center; gap: 7px; width: auto; padding: 0 12px 0 10px; color: var(--fg); text-decoration: none; }
+.bd-sk.bd-homek > .bd-ic { width: 16px; height: 16px; color: var(--accent); }
+.bd-sk.bd-homek > svg.wm { width: auto; height: 13px; }
+/* the theme switch: a well two keys wide less 4 px, the sun at its left and the moon at its right; the dock's raised
+   round key for its thumb, which slides to the current one (dark: the right) */
+.bd-sk.bd-thsw, .bd-sk.bd-thsw:is(:hover, :active) { display: block; width: calc(var(--k) * 2 - 4px); height: var(--k); color: var(--fg-subtle); background: var(--hk-down); box-shadow: var(--shadow-well); }
 .bd-sk.bd-thsw:focus-visible { box-shadow: var(--shadow-well), var(--focus-ring); }
-.bd-thsw .end { position: absolute; left: 0; right: 0; height: var(--k); display: grid; place-items: center; }
-.bd-thsw .end.sun { top: 0; } .bd-thsw .end.moon { bottom: 0; }
+.bd-thsw .end { position: absolute; top: 0; bottom: 0; width: var(--k); display: grid; place-items: center; }
+.bd-thsw .end.sun { left: 0; } .bd-thsw .end.moon { right: 0; }
 .bd-thsw .end .bd-ic { width: 15px; height: 15px; }
 .bd-thsw .th { position: absolute; left: 3px; top: 3px; width: calc(var(--k) - 6px); height: calc(var(--k) - 6px); display: grid; place-items: center; border-radius: 999px; color: var(--fg);
   background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: var(--shadow-hk); transition: translate .3s var(--ease), background-color .12s; }
 .bd-thsw .th .bd-ic { width: 16px; height: 16px; }
-.bd-thsw[aria-checked="true"] .th { translate: 0 calc(var(--k) - 4px); }
+.bd-thsw[aria-checked="true"] .th { translate: calc(var(--k) - 4px) 0; }
 .bd-thsw:hover .th { background: linear-gradient(var(--hover), var(--hover)), linear-gradient(180deg, var(--hk-top), var(--hk-bot)); }
 @media (prefers-reduced-motion: reduce) { .bd-thsw .th { transition: none; } }
-@media (max-width: 600px) { :root { --stripe-w: 0px; --pane-gap: 0px; } .bd-stripe { display: none !important; } }
-@media print { .bd-stripe { display: none !important; } }
-/* ?v-rail: places for the stripes' keys that give their bands to the page (VAR, placeRail). A: two raised trays in the
-   app bar, the left one after the doc's name (the theme a sideways switch), the right one before Share; B: slim rails
-   flush to the window's edges, 30 px keys from the top, the theme at the left one's foot; C: compact trays over the
-   page's edges, a small raised handle until the pointer comes (a dot on the right one while comments wait); D: the
-   panes' keys end the bottom dock, after its primary, the theme in the app bar's ⋯; F: the trays stay where they
-   are, over the page, and both panes open over it beside them as raised trays, the page keeping the window's width
-   (railOver); G: the app bar holds every key, the left pane's keys in a tray at its left edge (after the home key and
-   wordmark) then the doc's name, and at its right Share | Export | Archive as one pill, the theme (a sideways switch)
-   and the right pane's keys in a tray; a board's panes open over it as F's, a doc's dock and push it; H: G with a
-   board's toolbar in the app bar too (H sets data-v-rail to "g h": every G rule matches ~="g"). Every key keeps its
-   badge, ring and arrow cursor; a phone keeps its bar keys */
+/* the name's pill whole: the crumb clips its overflow, so it keeps the pill's edge inside its padding */
 @media (min-width: 601px) {
-  html:is([data-v-rail="a"], [data-v-rail="c"], [data-v-rail="d"], [data-v-rail~="g"]) { --stripe-w: var(--pane-gap); }
-  html[data-v-rail="b"] { --stripe-w: 40px; }
+  .bd-bar > .bd-home { display: none; }
+  .bd-crumb { flex: 0 1 auto; margin-left: -4px; padding-left: 4px; }
+  .bd-crumb > .bd-dsw { margin-left: 0; }
+  .bd-crumb > .sep { display: none; }
 }
-html[data-v-rail] :is(.bd-stripe, .bd-stripe *) { cursor: default; }
-html:is([data-v-rail="a"], [data-v-rail="b"], [data-v-rail="c"]) .bd-sk > .bd-ic { width: 16px; height: 16px; }
-/* A */
-html[data-v-rail="a"] .bd-stripe { --k: 32px; position: relative; z-index: auto; top: auto; translate: none; max-height: none; flex: none; flex-direction: row; gap: 2px; padding: 3px; overflow: visible; }
-html[data-v-rail="a"] .bd-stripe.l { left: auto; margin-left: -2px; }
-html[data-v-rail="a"] .bd-stripe.r { right: auto; margin-right: 6px; }
-html[data-v-rail="a"] .bd-stripe > .bd-groove { width: 2px; height: calc(var(--k) * .62); margin: 0 3px; background: var(--groove); }
-html:is([data-v-rail="a"], [data-v-rail~="g"]) .bd-sk.bd-thsw { width: calc(var(--k) * 2 - 4px); height: var(--k); }
-html:is([data-v-rail="a"], [data-v-rail~="g"]) .bd-thsw .end { top: 0; bottom: 0; left: 0; right: auto; width: var(--k); height: auto; }
-html:is([data-v-rail="a"], [data-v-rail~="g"]) .bd-thsw .end.moon { left: auto; right: 0; }
-html:is([data-v-rail="a"], [data-v-rail~="g"]) .bd-thsw[aria-checked="true"] .th { translate: calc(var(--k) - 4px) 0; }
-/* B */
-html[data-v-rail="b"] .bd-stripe { --k: 30px; top: var(--top-h); bottom: 0; translate: none; max-height: none; width: var(--stripe-w); gap: 4px; padding: 8px 0 12px; border-radius: 0; background: none; box-shadow: none; }
-html[data-v-rail="b"] .bd-stripe.l { left: 0; }
-html[data-v-rail="b"] .bd-stripe.r { right: 0; }
-html[data-v-rail="b"] .bd-stripe > .bd-groove { display: none; }
-html[data-v-rail="b"] .bd-stripe > .bd-thsw { margin-top: auto; }
-html[data-v-rail="b"] .bd-sk .n, html[data-v-rail="b"] .bd-sk[data-f="revisions"] .n { box-shadow: 0 0 0 2px var(--canvas); }
-html[data-v-rail="b"] .bd-sk[data-f="revisions"] .n { box-shadow: 0 0 0 2px var(--canvas), 0 0 0 1px var(--hk-ring); }
-/* C */
-html[data-v-rail="c"] .bd-stripe { --k: 32px; top: calc(var(--pane-top) + 72px); translate: none; max-height: calc(100vh - var(--pane-top) - 88px); gap: 4px; padding: 5px;
-  transition: left .22s var(--ease), right .22s var(--ease); }
-html[data-v-rail="c"] .bd-stripe.l { left: calc(var(--room-l, var(--stripe-w)) + 8px); }
-html[data-v-rail="c"] .bd-stripe.r { right: calc(var(--room-r, var(--stripe-w)) + 8px); }
-html[data-v-rail="c"].bd-lp-open:not(.bd-lp-dock) .bd-stripe.l { left: calc(var(--stripe-w) + var(--cp-w) + 8px); }
-html[data-v-rail="c"][data-layout="board"].bd-lp-open:not(.bd-lp-dock) .bd-stripe.l { left: calc(var(--stripe-w) + var(--lp-w) + 8px); }
-html[data-v-rail="c"].bd-sp-open:not(.bd-sp-dock) .bd-stripe.r { right: calc(var(--stripe-w) + var(--sp-w) + 8px); }
-html[data-v-rail="c"].bd-resizing .bd-stripe { transition: none; }
-@media (min-width: 601px) and (hover: hover) {
-  html[data-v-rail="c"] .bd-stripe::before { content: ""; position: absolute; inset: -12px -14px; }   /* the reach that opens it */
-  html[data-v-rail="c"] .bd-stripe:not(:hover, :has(:focus-visible)) { width: 8px; height: 48px; padding: 0; gap: 0; background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: var(--shadow-hk); }
-  html[data-v-rail="c"] .bd-stripe:not(:hover, :has(:focus-visible)) > * { display: none; }
-  html[data-v-rail="c"] .bd-stripe.r:not(:hover, :has(:focus-visible)):has(> .bd-sk:not([data-f="revisions"], [hidden]) > .n:not([hidden]))::after { content: ""; position: absolute; top: -4px; left: -1px;
-    width: 10px; height: 10px; border-radius: 50%; background: var(--accent-solid); box-shadow: 0 0 0 2px var(--canvas); }
-  html[data-v-rail="c"] .bd-stripe:is(:hover, :has(:focus-visible)) > * { animation: bd-rail-in .16s var(--ease) both; }
-}
-@keyframes bd-rail-in { from { opacity: 0; scale: .8; } }
-/* D */
-html[data-v-rail="d"] .bd-stripe { display: contents; }
-html[data-v-rail="d"] .bd-stripe > :is(.bd-thsw, .bd-groove) { display: none; }
-html[data-v-rail="d"] .bd-docm .bd-selm > .bd-ph-only { display: flex !important; }
-html[data-v-rail="d"] .bd-bar-r > .bd-bk.th:not([hidden]) { display: inline-grid !important; width: 38px; height: 38px; }
-@media (max-width: 600px) { .bd-rail-g { display: none; } }
-/* F, and G on a board page: html:root outweighs the panes' own over-the-page look (html.bd-lp-open:not(.bd-lp-dock) …),
-   opening or closing */
+/* the right tray, above a phone: its keys the stripes' (html:root: the weight its rules need over the bar's Share and
+   ⋮); its right edge 6 px past the bar's padding, as the left tray's left edge */
 @media (min-width: 601px) {
-  html:root:is([data-v-rail="f"], [data-v-rail~="g"][data-layout="board"]) :is(.bp-side, .bd-lp, .bd-sp) { bottom: 8px; border-radius: 22px;
+  .bd-bar-r > .bd-stripe.r { order: 1; margin: 0 -6px 0 2px; }
+  .bd-bar-r > .bd-shtray { order: 2; margin: 0 -6px 0 2px; }
+  .bd-shtray > .bd-docx { display: none; }
+  .bd-shtray > .bd-stripe.r { display: contents; }
+  html:root .bd-shtray > .bd-tbtn.bd-shk, html:root .bd-shtray > .bd-tbtn.bd-shk:hover:not(:disabled) { height: var(--k); padding: 0 12px 0 10px; gap: 7px;
+    border-radius: 999px; color: var(--fg); background: none; box-shadow: none; }
+  html:root .bd-shtray > .bd-tbtn.bd-shk:hover:not(:disabled) { background: var(--hover); }
+  html:root .bd-shtray > .bd-tbtn.bd-shk:is(:active, [aria-expanded="true"]) { background: var(--hk-down); box-shadow: var(--shadow-hk-down); }
+  html:root .bd-shtray > .bd-docm > .bd-ibtn { width: var(--k); height: var(--k); }
+  .bd-docm .bd-selm > .grp { padding: 6px 12px 2px; font: 600 11px/16px var(--sans); letter-spacing: .04em; text-transform: uppercase; color: var(--fg-subtle); }
+  .bd-docm .bd-selm > .sep { height: 1px; margin: 4px 8px; background: var(--line); }
+}
+@media (min-width: 601px) and (max-width: 900px) { html:root .bd-shtray > .bd-tbtn.bd-shk { width: var(--k); padding: 0; } }
+/* a board you pan: its panes lie over it as raised trays (html.bd-panes-over: panesOver; html:root and the layout
+   outweigh the panes' own over-the-page look, html.bd-lp-open:not(.bd-lp-dock) …, opening or closing), keeping their
+   drag handles (.bd-rh) as docked ones do */
+@media (min-width: 601px) {
+  html:root.bd-panes-over[data-layout="board"] :is(.bp-side, .bd-lp, .bd-sp) { bottom: 8px; border-radius: 22px;
     background: linear-gradient(180deg, var(--tray-top), var(--tray-bot)); box-shadow: var(--shadow-tray), var(--shadow-3); }
 }
-/* G: the stripes are raised trays in the bar (the dock's, 34 px keys), the left one leading the bar with the home key
-   first (.bd-homek: the bar's own .bd-home stays a phone's); the doc's name follows the left tray, its title ellipsed
-   where the bar runs short, and the bar's middle stays empty. The right side reads Share | ⋮ (one split pill, a
-   groove between; ⋮ is ARC's menu: Export's rows, then Archive, where Export's own key goes), the theme switch, then
-   the right tray (in that order by `order`). On a board the panes over it keep their drag handles (.bd-rh), as docked
-   ones do */
-@media (min-width: 601px) {
-  html[data-v-rail~="g"] .bd-bar .bd-stripe { --k: 34px; position: static; z-index: auto; top: auto; translate: none; max-height: none; flex: none; flex-direction: row; gap: 2px;
-    padding: 3px; overflow: visible; }
-  html[data-v-rail~="g"] .bd-bar .bd-stripe.l { margin-left: -6px; }
-  html[data-v-rail~="g"] .bd-bar .bd-stripe.r { margin: 0 2px; }
-  html[data-v-rail~="g"] .bd-bar .bd-stripe > .bd-groove { display: none; }
-  html[data-v-rail~="g"] .bd-bar .bd-stripe > .bd-groove.home { display: block; width: 2px; height: calc(var(--k) * .62); margin: 0 3px; background: var(--groove); }
-  html[data-v-rail~="g"] .bd-bar-r > .bd-thsw { --k: 38px; margin: 0 2px; }
-  html[data-v-rail~="g"] .bd-bar > .bd-home { display: none; }
-  html[data-v-rail~="g"] .bd-sk.bd-homek { display: inline-flex; align-items: center; gap: 7px; width: auto; padding: 0 12px 0 10px; color: var(--fg); text-decoration: none; }
-  html[data-v-rail~="g"] .bd-sk.bd-homek > .bd-ic { width: 16px; height: 16px; color: var(--accent); }
-  html[data-v-rail~="g"] .bd-sk.bd-homek > svg.wm { width: auto; height: 13px; }
-  /* the name's pill whole: the crumb clips its overflow, so it keeps the pill's edge inside its padding */
-  html[data-v-rail~="g"] .bd-crumb { flex: 0 1 auto; margin-left: -4px; padding-left: 4px; }
-  html[data-v-rail~="g"] .bd-crumb > .bd-dsw { margin-left: 0; }
-  html[data-v-rail~="g"] .bd-crumb > .sep { display: none; }
-  html[data-v-rail~="g"] .bd-bar-r:has(> .bd-docm) > .bd-docx { display: none; }
-  html[data-v-rail~="g"] .bd-bar-r:has(> .bd-docm) > .bd-tbtn.bd-shk { order: 1; border-radius: 999px 0 0 999px; }
-  html[data-v-rail~="g"] .bd-bar-r > .bd-docm { order: 2; }
-  html[data-v-rail~="g"] .bd-bar-r:has(> .bd-shk:not([hidden])) > .bd-docm { margin-left: -6px; }
-  html[data-v-rail~="g"] .bd-bar-r:has(> .bd-shk:not([hidden])) > .bd-docm::before { content: ""; flex: none; width: 2px; align-self: stretch; background: var(--groove); }
-  html[data-v-rail~="g"] .bd-bar-r:has(> .bd-shk:not([hidden])) > .bd-docm > .bd-ibtn { width: 36px; border-radius: 0 999px 999px 0;
-    background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: var(--shadow-hk); }
-  html[data-v-rail~="g"] .bd-bar-r:has(> .bd-shk:not([hidden])) > .bd-docm > .bd-ibtn:hover { background: linear-gradient(var(--hover), var(--hover)), linear-gradient(180deg, var(--hk-top), var(--hk-bot)); }
-  html[data-v-rail~="g"] .bd-bar-r:has(> .bd-shk:not([hidden])) > .bd-docm > .bd-ibtn:is(:active, [aria-expanded="true"]) { background: var(--hk-down); box-shadow: var(--shadow-hk-down); }
-  html[data-v-rail~="g"] .bd-bar-r > .bd-thsw { order: 3; }
-  html[data-v-rail~="g"] .bd-bar-r > .bd-stripe.r { order: 4; }
-  html[data-v-rail~="g"] .bd-docm .bd-selm > .grp { padding: 6px 12px 2px; font: 600 11px/16px var(--sans); letter-spacing: .04em; text-transform: uppercase; color: var(--fg-subtle); }
-  html[data-v-rail~="g"] .bd-docm .bd-selm > .sep { height: 1px; margin: 4px 8px; background: var(--line); }
-  /* H: a board's toolbar (.bd-btb, placeRail) sits in the bar's middle, centred in the window, a tray as tall as the
-     stripes'; fitTb gives it its room there */
-  html[data-v-rail~="h"] .bd-bar > .bd-btb { --k: 34px; top: 8px; left: 0; right: 0; gap: 4px; padding: 3px; }
-  /* too little room for it: Share drops its word, as at 900 px (fitTb) */
-  html[data-v-rail~="h"] .bd-bar-r.bd-tight .bd-tbtn.bd-shk > .w { display: none; }
-  html[data-v-rail~="h"] .bd-bar-r.bd-tight .bd-tbtn.bd-shk { padding: 0 9px 0 10px; }
-}
 @media (min-width: 901px) {
-  html[data-v-rail~="g"][data-layout="board"].bd-lp-open .bd-rh-left, html[data-v-rail~="g"][data-layout="board"].bd-sp-open .bd-rh-right { display: block; }
+  html.bd-panes-over.bd-lp-open .bd-rh-left, html.bd-panes-over.bd-sp-open .bd-rh-right { display: block; }
 }
-@media (max-width: 600px) { .bd-bar-r > .bd-thsw, .bd-docm .bd-desk { display: none !important; } }
-html[data-v-rail~="g"] :is(.bd-bar-r > .bd-thsw, .bd-bar-r > .bd-thsw *, .bd-bar-r .bd-tbtn.bd-shk, .bd-bar-r .bd-tbtn.bd-shk *, .bd-bar-r > .bd-docm > .bd-ibtn, .bd-bar-r > .bd-docm > .bd-ibtn *, .bd-homek, .bd-homek *) { cursor: default; }
+/* a phone: no trays (their keys in the bar: .bd-bk, ARC's menu); the right tray's keys stay in the bar as they were */
+@media (max-width: 600px) {
+  :root { --pane-gap: 0px; }
+  .bd-stripe, .bd-docm .bd-desk { display: none !important; }
+  .bd-shtray { display: contents; }
+  .bd-shtray > :is(.bd-groove, .bd-thsw) { display: none; }
+}
+@media print { .bd-stripe { display: none !important; } }
+:is(.bd-stripe, .bd-stripe *, .bd-bar .bd-thsw, .bd-bar .bd-thsw *, .bd-bar-r .bd-tbtn.bd-shk, .bd-bar-r .bd-tbtn.bd-shk *, .bd-bar-r .bd-docm > .bd-ibtn, .bd-bar-r .bd-docm > .bd-ibtn *) { cursor: default; }
 /* a pane's header: HorizonUI's DockPanel header, its title (a board's Screens with their count), then – to hide it */
 .bd-pane-h { display: flex; align-items: center; gap: 4px; flex: none; height: 40px; padding: 0 8px 0 14px; }
 .bd-pane-h h2 { margin: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 600 12px/16px var(--sans); color: var(--fg); }
@@ -436,24 +362,24 @@ html[data-v-rail~="g"] :is(.bd-bar-r > .bd-thsw, .bd-bar-r > .bd-thsw *, .bd-bar
 .bd-sp-h .bd-pane-x { width: 28px; height: 28px; border-radius: 999px; color: var(--fg-subtle); }
 .bd-sp-h .bd-pane-x .bd-ic { width: 16px; height: 16px; }
 @media print { .bd-pane-h { display: none !important; } }
-/* the page's card (HorizonUI AppFrame's centre): drawn behind the column in the room between the stripes and the
+/* the page's card (HorizonUI AppFrame's centre): drawn behind the column in the room between the window's edges and the
    docked panes; the window scrolls the page over it. A board is its own card (.bd-boardblk .bd-bwrap); a phone has none */
 @media (min-width: 601px) { :root:not([data-layout="board"]) body::before { content: ""; position: fixed; z-index: -1; top: var(--pane-top); bottom: 0;
-  left: var(--room-l, var(--stripe-w)); right: var(--room-r, var(--stripe-w)); border-radius: 14px; background: var(--surface); box-shadow: var(--shadow-card);
+  left: var(--room-l, var(--pane-gap)); right: var(--room-r, var(--pane-gap)); border-radius: 14px; background: var(--surface); box-shadow: var(--shadow-card);
   pointer-events: none; transition: left .22s var(--ease), right .22s var(--ease); } }
 html.bd-resizing body::before { transition: none; }
 @media print { body::before { display: none !important; } }
 
-/* shell: the content column fills the room between the stripes and the docked panes (--room-l, --room-r: applyWidth) */
+/* shell: the content column fills the room between the window's edges and the docked panes (--room-l, --room-r: applyWidth) */
 .bd-shell { --pad: 20px; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto 1fr;
-  padding: 0 calc(var(--room-r, var(--stripe-w)) + var(--pad)) 120px calc(var(--room-l, var(--stripe-w)) + var(--pad)); }
+  padding: 0 calc(var(--room-r, var(--pane-gap)) + var(--pad)) 120px calc(var(--room-l, var(--pane-gap)) + var(--pad)); }
 .bd-head, .bd-tldr, .bd-shell > main { width: 100%; min-width: 0; }
 .bd-head { padding-top: 56px; }
 /* a doc's Contents pane (the rail): Contents, Tracker, Status and Related, docked beside the page where it keeps
    READ_W, else over it (html.bd-lp-open, html.bd-lp-dock: applyWidth) */
-.bp-side { position: fixed; z-index: 41; top: var(--pane-top); bottom: 0; left: var(--stripe-w); width: var(--cp-w); display: flex; flex-direction: column; min-height: 0; overflow: hidden;
+.bp-side { position: fixed; z-index: 41; top: var(--pane-top); bottom: 0; left: var(--pane-gap); width: var(--cp-w); display: flex; flex-direction: column; min-height: 0; overflow: hidden;
   border-radius: 14px; background: var(--panel); box-shadow: var(--shadow-card); font-size: 13.5px;
-  transform: translateX(calc(-100% - var(--stripe-w))); visibility: hidden; transition: transform .22s var(--ease), visibility 0s .22s; }
+  transform: translateX(calc(-100% - var(--pane-gap))); visibility: hidden; transition: transform .22s var(--ease), visibility 0s .22s; }
 html.bd-lp-open .bp-side { transform: none; visibility: visible; transition: transform .22s var(--ease); }
 html.bd-lp-open:not(.bd-lp-dock) .bp-side { background: var(--surface); box-shadow: var(--shadow-3); }
 .bp-side-b { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 2px 12px calc(16px + var(--tray-room, 0px)); }
@@ -1625,7 +1551,6 @@ img.bp-cmpr-img { cursor: zoom-in; }
   --shadow-well: inset 0 1px 3px oklch(23% 0.01 264 / 0.12), inset 0 0 0 1px oklch(23% 0.01 264 / 0.05);
   --shadow-fill: 0 0 0 1px oklch(0% 0 0 / 0.5), inset 0 1px 0 oklch(100% 0 0 / 0.18), 0 2px 5px oklch(0% 0 0 / 0.18);
   --groove: linear-gradient(90deg, oklch(23% 0.01 264 / 0.1) 50%, oklch(100% 0 0 / 0.9) 50%);
-  --groove-h: linear-gradient(180deg, oklch(23% 0.01 264 / 0.1) 50%, oklch(100% 0 0 / 0.9) 50%);
   --accent-solid: oklch(51% 0.19 254);
   --ok-solid: oklch(53% 0.14 152);
   --tip: oklch(22% 0.006 264);
@@ -1640,7 +1565,6 @@ img.bp-cmpr-img { cursor: zoom-in; }
   --shadow-well: inset 0 1px 4px oklch(0% 0 0 / 0.6), inset 0 0 0 1px oklch(0% 0 0 / 0.45), 0 1px 0 oklch(100% 0 0 / 0.05);
   --shadow-fill: 0 0 0 1px oklch(0% 0 0 / 0.5), inset 0 1px 0 oklch(100% 0 0 / 0.18), 0 2px 5px oklch(0% 0 0 / 0.4);
   --groove: linear-gradient(90deg, oklch(0% 0 0 / 0.6) 50%, oklch(100% 0 0 / 0.07) 50%);
-  --groove-h: linear-gradient(180deg, oklch(0% 0 0 / 0.6) 50%, oklch(100% 0 0 / 0.07) 50%);
   --tip: oklch(30% 0.005 264);
 } }
 :root[data-theme="dark"] {
@@ -1652,7 +1576,6 @@ img.bp-cmpr-img { cursor: zoom-in; }
   --shadow-well: inset 0 1px 4px oklch(0% 0 0 / 0.6), inset 0 0 0 1px oklch(0% 0 0 / 0.45), 0 1px 0 oklch(100% 0 0 / 0.05);
   --shadow-fill: 0 0 0 1px oklch(0% 0 0 / 0.5), inset 0 1px 0 oklch(100% 0 0 / 0.18), 0 2px 5px oklch(0% 0 0 / 0.4);
   --groove: linear-gradient(90deg, oklch(0% 0 0 / 0.6) 50%, oklch(100% 0 0 / 0.07) 50%);
-  --groove-h: linear-gradient(180deg, oklch(0% 0 0 / 0.6) 50%, oklch(100% 0 0 / 0.07) 50%);
   --tip: oklch(30% 0.005 264);
 }
 /* the tray floats centred over the page, or over the part the docked sidebar leaves. HorizonUI dock, variant C: a
@@ -1903,12 +1826,13 @@ html.bd-ann-m-select .bp-cl-head { user-select: text; -webkit-user-select: text;
 .bd-cmp.dock .bp-note-ta { min-height: 44px; max-height: 96px; }
 .bd-cmp.dock .ft .hint { display: none; }
 
-/* right panel: one section at a time (Brief on a board, Comments, Revisions), each opened from its key on the right
-   stripe; its header the section's title. Docked beside the page where the page keeps READ_W (a board: 1101 px and
-   up), else over it; a bottom sheet on a phone, where the sections are tabs. JS sets html.bd-sp-open and html.bd-sp-dock. */
-.bd-sp { position: fixed; z-index: 42; top: var(--pane-top); right: var(--stripe-w); bottom: 0; width: var(--sp-w); display: flex; flex-direction: column; min-height: 0; overflow: hidden;
+/* right panel: one section at a time (Brief on a board, Comments, Revisions), each opened from its key in the right
+   tray; its header the section's title. Docked beside a doc's page where the page keeps READ_W (a storelisting's from
+   1101 px), else over it (a board you pan: always over it); a bottom sheet on a phone, where the sections are tabs. JS
+   sets html.bd-sp-open and html.bd-sp-dock. */
+.bd-sp { position: fixed; z-index: 42; top: var(--pane-top); right: var(--pane-gap); bottom: 0; width: var(--sp-w); display: flex; flex-direction: column; min-height: 0; overflow: hidden;
   border-radius: 14px; background: var(--panel); box-shadow: var(--shadow-card); font-size: 13.5px;
-  transform: translateX(calc(100% + var(--stripe-w))); visibility: hidden; transition: transform .22s var(--ease), visibility 0s .22s; }
+  transform: translateX(calc(100% + var(--pane-gap))); visibility: hidden; transition: transform .22s var(--ease), visibility 0s .22s; }
 html.bd-sp-open .bd-sp { transform: none; visibility: visible; transition: transform .22s var(--ease); }
 html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow: var(--shadow-3); }
 .bd-sp-h .n { padding: 2px 7px; border-radius: 7px; font: 600 11.5px/1.4 var(--sans); font-variant-numeric: tabular-nums; color: var(--accent-fg); background: var(--accent-tint); }
@@ -2146,8 +2070,8 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .rvx-l .rv-act > .bp-btn .bd-ic { width: 13px; height: 13px; }
 .rvx-l .rv-act > .rv-chg, .rvx-l .rv-act > .rv-chg .bd-ic { color: var(--accent-fg); }
 .rvx-l .rv-act > .rv-chg[aria-current] { background: color-mix(in oklch, var(--accent-tint) 70%, transparent); }
-/* the tray, the toasts and the width chip centre in the room between the stripes and the docked panes (applyWidth) */
-:is(.bd-anntb, .bp-toast, .bd-wchip) { left: calc(var(--room-l, var(--stripe-w)) + (100% - var(--room-l, var(--stripe-w)) - var(--room-r, var(--stripe-w))) / 2); }
+/* the tray, the toasts and the width chip centre in the room between the window's edges and the docked panes (applyWidth) */
+:is(.bd-anntb, .bp-toast, .bd-wchip) { left: calc(var(--room-l, var(--pane-gap)) + (100% - var(--room-l, var(--pane-gap)) - var(--room-r, var(--pane-gap))) / 2); }
 @media (max-width: 600px) {
   .bd-sp { top: auto; left: 0; right: 0; width: auto; height: var(--sp-sheet-h); border-radius: 18px 18px 0 0; transform: translateY(100%); }
   .bd-sp::before { content: ""; position: absolute; left: 50%; top: 6px; width: 36px; height: 4px; margin-left: -18px; border-radius: 2px; background: var(--line-strong); }
@@ -2716,18 +2640,18 @@ html.bd-resizing, html.bd-resizing * { cursor: col-resize !important; user-selec
   .bp-cl-text, .bp-cl-subt > span { white-space: normal !important; overflow: visible !important; }
 }
 
-/* design page: the board fills the window under the app bar, between the stripes and the docked panes: the left one
-   (Screens) and the right one (Brief, Comments, Revisions). JS sets data-layout="board", html.bd-lp-open, html.bd-lp-dock,
-   html.bd-sp-dock and the room's edges (--room-l, --room-r). */
+/* design page: the board fills the window under the app bar, the left pane (Screens) and the right one (Brief,
+   Comments, Revisions) over it (a storelisting's dock beside it). JS sets data-layout="board", html.bd-lp-open,
+   html.bd-lp-dock, html.bd-sp-dock and the room's edges (--room-l, --room-r). */
 :root[data-layout="board"] { --lp-w: 240px; }
 :root[data-layout="board"], :root[data-layout="board"] body { height: 100%; overflow: hidden; }
 :root[data-layout="board"] .bd-shell { display: block; padding: 0; }
 :root[data-layout="board"] .bp-side { display: none !important; }
-.bd-boardblk { position: fixed; z-index: 1; top: var(--pane-top); left: var(--room-l, var(--stripe-w)); right: var(--room-r, var(--stripe-w)); bottom: 0; margin: 0; transition: left .22s var(--ease), right .22s var(--ease); }
+.bd-boardblk { position: fixed; z-index: 1; top: var(--pane-top); left: var(--room-l, var(--pane-gap)); right: var(--room-r, var(--pane-gap)); bottom: 0; margin: 0; transition: left .22s var(--ease), right .22s var(--ease); }
 html.bd-resizing .bd-boardblk { transition: none; }
-.bd-rh-left { left: calc(var(--stripe-w) + var(--cp-w) + var(--pane-gap) / 2); }
-:root[data-layout="board"] .bd-rh-left { left: calc(var(--stripe-w) + var(--lp-w) + var(--pane-gap) / 2); }
-.bd-rh-right { left: calc(100% - var(--stripe-w) - var(--sp-w) - var(--pane-gap) / 2); }
+.bd-rh-left { left: calc(var(--pane-gap) * 1.5 + var(--cp-w)); }
+:root[data-layout="board"] .bd-rh-left { left: calc(var(--pane-gap) * 1.5 + var(--lp-w)); }
+.bd-rh-right { left: calc(100% - var(--pane-gap) * 1.5 - var(--sp-w)); }
 html:not(.bd-lp-dock) .bd-rh-left, html:not(.bd-sp-dock) .bd-rh-right { display: none; }
 .bd-board-ph { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 10px; background: var(--inset); color: var(--fg-subtle); font-size: 13px; }
 .bd-board-ph .bd-ic { width: 16px; height: 16px; flex: none; }
@@ -3129,18 +3053,17 @@ html.bd-space .bd-board .bd-ab-fr { pointer-events: none; }
 .bd-expm .opt[aria-checked="true"] .bx { background: var(--accent-solid); box-shadow: none; }
 .bd-expm .opt[aria-checked="true"] .bx .bd-ic { visibility: visible; }
 /* the left panel: its header (Screens and their count, Pages, Slides; a storelisting's Listing), then the artboards; a
-   storelisting's, its tabs (Text, Style, Colors, Checks). Docked above 900 px, over the board below */
-.bd-lp { position: fixed; z-index: 41; top: var(--pane-top); left: var(--stripe-w); bottom: 0; width: var(--lp-w); display: flex; flex-direction: column; min-height: 0; overflow: hidden;
-  border-radius: 14px; background: var(--panel); box-shadow: var(--shadow-card); transform: translateX(calc(-100% - var(--stripe-w))); visibility: hidden; transition: transform .22s var(--ease), visibility 0s .22s; }
+   storelisting's, its tabs (Text, Style, Colors, Checks). Over the board you pan; a storelisting's docks above 900 px */
+.bd-lp { position: fixed; z-index: 41; top: var(--pane-top); left: var(--pane-gap); bottom: 0; width: var(--lp-w); display: flex; flex-direction: column; min-height: 0; overflow: hidden;
+  border-radius: 14px; background: var(--panel); box-shadow: var(--shadow-card); transform: translateX(calc(-100% - var(--pane-gap))); visibility: hidden; transition: transform .22s var(--ease), visibility 0s .22s; }
 html.bd-lp-open .bd-lp { transform: none; visibility: visible; transition: transform .22s var(--ease); }
-/* above a phone, a side pane closes by sliding off the window at its edge, under its tray (the tray, z 43, stays above
-   it), as if pushed off the screen there; it opens back in from the edge. --slide runs 0 (open) to 1 (shut): the pane
-   moves by its width and --cut (its offset from the window's edge and its shadow's room), so it shows on both sides of
-   the tray until it leaves the window. Open and still (no html.bd-slide-l or -r: paneSlides), it has no transform, so
-   the menus floating out of it (position: fixed) place against the window */
+/* above a phone, a side pane closes by sliding off the window at its edge, as if pushed off the screen there; it
+   opens back in from the edge. --slide runs 0 (open) to 1 (shut): the pane moves by its width and --cut (its offset
+   from the window's edge and its shadow's room) until it leaves the window. Open and still (no html.bd-slide-l or -r:
+   paneSlides), it has no transform, so the menus floating out of it (position: fixed) place against the window */
 @property --slide { syntax: '<number>'; inherits: false; initial-value: 0; }
 @media (min-width: 601px) {
-  :is(.bp-side, .bd-lp, .bd-sp) { --cut: calc(var(--stripe-w) + 12px); --slide: 1; transition: --slide .3s var(--ease), visibility 0s .3s; }
+  :is(.bp-side, .bd-lp, .bd-sp) { --cut: calc(var(--pane-gap) + 12px); --slide: 1; transition: --slide .3s var(--ease), visibility 0s .3s; }
   html.bd-lp-open :is(.bp-side, .bd-lp), html.bd-sp-open .bd-sp { --slide: 0; transition: --slide .3s var(--ease); }
   :is(html:not(.bd-lp-open), html.bd-slide-l) :is(.bp-side, .bd-lp) { transform: translateX(calc(var(--slide) * (-100% - var(--cut)))); }
   :is(html:not(.bd-sp-open), html.bd-slide-r) .bd-sp { transform: translateX(calc(var(--slide) * (100% + var(--cut)))); }
@@ -3665,16 +3588,6 @@ const SERVED = !SHARE && !SCREENS && /^https?:$/.test(location.protocol);
 // here renders, sets the theme or adds a class to <html>
 const PAGE_HTML = SERVED ? '' : '<!doctype html>\n' + document.documentElement.outerHTML;
 const QP = new URLSearchParams(location.search);
-// design variants for side-by-side review, by URL: ?v-rail=a|b|c|d|f|g|h (where the stripes' keys sit: placeRail).
-// None: the current look. Set on <html> as data-v-*.
-const VAR = Object.fromEntries([['rail', 'abcdfgh']].map(([k, ok]) => {
-  const v = (QP.get('v-' + k) || '').toLowerCase();
-  return [k, v.length === 1 && ok.includes(v) ? v : ''];
-}));
-for (const [k, v] of Object.entries(VAR)) if (v) document.documentElement.dataset['v' + k[0].toUpperCase() + k.slice(1)] = v;
-// ?v-rail=h is G and more: its <html> says both, so G's rules hold for H (CSS [data-v-rail~="g"])
-if (VAR.rail === 'h') document.documentElement.dataset.vRail = 'g h';
-const RAIL_BAR = VAR.rail === 'g' || VAR.rail === 'h';   // every key in the app bar
 // the page's file name, which its exports and copied commands go by: its URL's last segment; a shared page's <name>.html
 const pageFile = () => SHARE ? SHARE.name + '.html' : decodeURIComponent(location.pathname.split('/').pop() || '');
 const CUR = REVS[REVS.length - 1];
@@ -4458,24 +4371,24 @@ const AP_TITLE = AP_NOUN[0].toUpperCase() + AP_NOUN.slice(1);
 const REVIEW_OF = DOC_TYPE === 'review' && ['local', 'threads', 'post'].includes(meta.review) ? meta.review : null;
 const SCREEN = IS_DECK ? 'slide' : IS_SITE ? 'page' : IS_LISTING ? 'shot' : 'screen';   // what the board's artboards are called on this page
 let BOARD = null;   // a design doc's board (renderBoard), once drawn
-/* ---------- the stripes: the panes' keys down each side ---------- */
-// Each pane has a key on a stripe (a phone: in the app bar). The left stripe holds the left pane's (LEFT), then, at its
-// foot past a groove, the theme; the right one a key for each section of the right panel (SIDE adds them). A key's
-// tooltip names its pane and its shortcut ([ or ]); a lit key's pane is open. The last pane opened wins (lastPane) where
-// two can't both show.
-const themeG = h('span', { class: 'bd-groove', 'aria-hidden': 'true' });   // the left stripe's keys go before it
-const stripeL = h('nav', { class: 'bd-stripe l', 'aria-label': 'Left pane' }, themeG);
+/* ---------- the stripes: the panes' keys, in trays in the app bar ---------- */
+// Each pane has a key on a stripe, a raised tray in the app bar (a phone: no trays, its keys in the bar). The left
+// stripe leads the bar: the home key, a groove, then the left pane's keys (LEFT); the right one holds a key for each
+// section of the right panel (SIDE adds them) and sits in the bar's right tray (barTrays), after Share and the theme.
+// A key's tooltip names its pane and its shortcut ([ or ]); a lit key's pane is open. The last pane opened wins
+// (lastPane) where two can't both show.
+const stripeL = h('nav', { class: 'bd-stripe l', 'aria-label': 'Left pane' });
 const stripeR = h('nav', { class: 'bd-stripe r', 'aria-label': 'Right pane' });
 let lastPane = null;   // 'l' or 'r': the side opened last
-const PHONE_W = matchMedia('(max-width: 600px)');   // a phone: no stripes, the right panel a bottom sheet
+const PHONE_W = matchMedia('(max-width: 600px)');   // a phone: no trays, the right panel a bottom sheet
 const stripeKey = (icon, label, keys, onclick) => { const k = tipped(h('button', { type: 'button', class: 'bd-sk', 'aria-label': label, 'aria-pressed': 'false', onclick }, ic(icon)), keys); k._tip = label; return k; };
 const RING_C = 106.81;   // a left key's ring (.bd-skr): its circumference, 2π × 17
-// the theme: a vertical switch at the left tray's foot (role switch, "Dark theme", checked in dark): the sun at its top,
-// the moon at its foot, a raised round thumb on the current one; a click, Space or Enter turns it over (toggleTheme)
+// the theme: a sideways switch in the bar's right tray (role switch, "Dark theme", checked in dark): the sun at its left,
+// the moon at its right, a raised round thumb on the current one; a click, Space or Enter turns it over (toggleTheme)
 const themeThumb = h('span', { class: 'th', 'aria-hidden': 'true' });
 const themeBtn = tipped(h('button', { type: 'button', class: 'bd-sk bd-thsw', role: 'switch', 'aria-label': 'Dark theme', 'aria-checked': 'false', onclick: () => toggleTheme() },
   h('span', { class: 'end sun', 'aria-hidden': 'true' }, ic('sun')), h('span', { class: 'end moon', 'aria-hidden': 'true' }, ic('moon')), themeThumb), null);
-// a phone has no stripes: the theme is in the app bar's ⋯ (ARC), else a key of its own there
+// a phone has no trays: the theme is in the app bar's ⋯ (ARC), else a key of its own there
 const themeBk = h('button', { type: 'button', class: 'bd-tbtn bd-bk th', 'aria-label': 'Switch light or dark theme', onclick: () => toggleTheme() });
 function toggleTheme() { const t = isDark() ? 'light' : 'dark'; setTheme(t); store.set(THEME_KEY, t); paintTheme(); }
 const paintTheme = () => {
@@ -4483,7 +4396,6 @@ const paintTheme = () => {
   themeBtn.setAttribute('aria-checked', String(d)); themeThumb.replaceChildren(ic(d ? 'moon' : 'sun')); themeBk.replaceChildren(ic(d ? 'sun' : 'moon'));
   themeBtn._tip = d ? 'Light theme' : 'Dark theme';
 };
-stripeL.append(themeBtn);
 darkMQ.addEventListener?.('change', paintTheme);
 paintTheme();
 // The left pane: a doc's Contents (the rail); a board's Brief and its Screens, Pages, Slides or Listing, one at a time
@@ -4522,7 +4434,7 @@ const LEFT = (() => {
       const x = { ...s, ring, say: '' };
       x.key = stripeKey(s.icon, s.label, ['['], () => { if (open() && cur() === x.id) set(false, true); else show(x.id); });
       x.key.dataset.f = s.id; x.key.prepend(ring);
-      secs.push(x); themeG.before(x.key);
+      secs.push(x); stripeL.append(x.key);
     }
     barKey.replaceChildren(ic(sections[0].icon)); barKey.setAttribute('aria-label', sections.length > 1 ? 'Left panel' : sections[0].label);
     barKey.hidden = false;
@@ -4545,10 +4457,10 @@ const homeKey = h('a', { class: 'bd-home', href: '#top', 'aria-label': 'bluedoc,
   '<svg class="wm" viewBox="6 -75 396 77" aria-hidden="true"><path class="b" d="M39 1.1Q35.4 1.1 32.1 0.1Q28.8-0.9 26.2-2.6Q24-4 22.4-5.8L22-0.1L7.1-0.1L7.1-74L23.2-74L23.2-47.6Q24.6-49.2 26.5-50.5Q29.1-52.2 32.2-53.2Q35.3-54.2 38.6-54.2Q45.5-54.2 50.9-50.7Q56.2-47.1 59.3-40.9Q62.4-34.6 62.4-26.6Q62.4-18.5 59.4-12.3Q56.3-6 51-2.5Q45.7 1.1 39 1.1ZM34.8-12.4Q38.4-12.4 41.1-14.2Q43.8-16 45.3-19.2Q46.7-22.3 46.7-26.6Q46.7-30.8 45.3-34Q43.8-37.2 41.1-38.9Q38.4-40.6 34.8-40.6Q31.1-40.6 28.4-38.9Q25.7-37.2 24.2-34Q22.7-30.8 22.7-26.6Q22.7-22.3 24.2-19.2Q25.7-16 28.4-14.2Q31.1-12.4 34.8-12.4ZM89 0L73 0L73-74L89-74L89 0ZM120.9 1.1Q115 1.1 110.9-1.5Q106.7-4 104.5-8.8Q102.2-13.6 102.2-20.3L102.2-53.1L118.3-53.1L118.3-22.5Q118.3-19.3 119.3-17Q120.3-14.7 122.3-13.5Q124.3-12.2 127.1-12.2Q129.2-12.2 130.9-12.9Q132.7-13.6 133.9-14.9Q135.2-16.1 135.9-17.8Q136.6-19.4 136.6-21.4L136.6-53.1L152.7-53.1L152.7 0L137.6 0L137.2-6.8Q136.6-6.1 135.9-5.4Q133.1-2.4 129.2-0.7Q125.3 1.1 120.9 1.1ZM192.3 1Q183.5 1 177-2.6Q170.5-6.1 166.9-12.3Q163.3-18.4 163.3-26.3Q163.3-32.4 165.3-37.5Q167.3-42.6 170.9-46.4Q174.5-50.1 179.5-52.2Q184.4-54.2 190.3-54.2Q195.9-54.2 200.6-52.2Q205.2-50.2 208.6-46.6Q212-43 213.8-38.1Q215.6-33.2 215.4-27.4L215.3-23.1L178.8-23.1Q179.3-21.4 180.2-19.9Q182-16.6 185.6-14.8Q189.1-13 194-13Q197.4-13 200.1-14Q202.7-15 205.8-17.4L213.3-6.8Q210.2-4.1 206.7-2.4Q203.2-0.7 199.6 0.2Q195.9 1 192.3 1ZM178.8-32.1L200.6-32.1L200.6-32.2Q200.4-34.7 199.1-36.6Q197.7-38.6 195.5-39.7Q193.3-40.8 190.5-40.8Q186.6-40.8 183.9-39.3Q181.1-37.7 179.7-34.8Q179.1-33.5 178.8-32.1Z"/>' +
   '<path class="d" d="M245.7 1.1Q238.8 1.1 233.4-2.5Q228.1-6 225-12.3Q221.9-18.5 221.9-26.5Q221.9-34.5 225-40.8Q228.1-47 233.5-50.6Q238.9-54.2 245.9-54.2Q249.5-54.2 252.8-53.1Q256.1-52 258.8-50.1Q260.2-49.1 261.4-47.9L261.4-74L277.5-74L277.5 0L262.6 0L262.2-5.8Q260.7-4.1 258.7-2.8Q256.1-1 252.8 0.1Q249.4 1.1 245.7 1.1ZM249.8-12.2Q253.5-12.2 256.2-14Q258.9-15.8 260.4-19Q261.8-22.2 261.8-26.5Q261.8-30.9 260.4-34.1Q258.9-37.3 256.2-39.1Q253.5-40.9 249.8-40.9Q246.1-40.9 243.4-39.1Q240.8-37.3 239.3-34.1Q237.8-30.9 237.8-26.5Q237.8-22.2 239.3-19Q240.8-15.8 243.4-14Q246.1-12.2 249.8-12.2ZM316 1Q307.7 1 301.3-2.6Q294.8-6.2 291-12.4Q287.3-18.6 287.3-26.6Q287.3-34.6 291-40.8Q294.8-47 301.3-50.6Q307.7-54.2 316-54.2Q324.3-54.2 330.8-50.6Q337.2-47 340.9-40.8Q344.6-34.6 344.6-26.6Q344.6-18.6 340.9-12.4Q337.2-6.2 330.8-2.6Q324.3 1 316 1ZM316-12.8Q319.6-12.8 322.4-14.6Q325.2-16.4 326.8-19.5Q328.4-22.6 328.3-26.6Q328.4-30.6 326.8-33.8Q325.2-36.9 322.4-38.7Q319.6-40.5 316-40.5Q312.4-40.5 309.5-38.7Q306.7-36.9 305.1-33.8Q303.5-30.6 303.6-26.6Q303.5-22.6 305.1-19.5Q306.7-16.4 309.5-14.6Q312.4-12.8 316-12.8ZM378.4 1Q370.7 1 364.6-2.6Q358.5-6.2 354.9-12.5Q351.4-18.7 351.4-26.6Q351.4-34.5 354.9-40.8Q358.5-47 364.6-50.6Q370.7-54.2 378.4-54.2Q385.5-54.2 391.4-51.7Q397.4-49.2 400.9-44.7L392.2-34.3Q390.8-35.9 388.9-37.3Q387-38.7 384.7-39.5Q382.4-40.3 379.9-40.3Q376.1-40.3 373.2-38.6Q370.3-36.8 368.7-33.7Q367.1-30.6 367.1-26.6Q367.1-22.8 368.8-19.7Q370.4-16.6 373.3-14.8Q376.2-13 379.9-13Q382.5-13 384.7-13.7Q386.9-14.3 388.8-15.6Q390.6-16.9 392.2-18.8L400.8-8.3Q397.4-4 391.4-1.5Q385.3 1 378.4 1Z"/></svg>' });
 
-// ?v-rail=g, h: the home key and wordmark as the left tray's first key (placeRail), with its tooltip; linkHome keeps it
-// in step with the bar's
-const homeKeyG = RAIL_BAR ? tipped(h('a', { class: 'bd-sk bd-homek', href: '#top', 'aria-label': 'bluedoc, back to top', html: homeKey.innerHTML }), null) : null;
-if (homeKeyG) homeKeyG._tip = 'Back to top';
+// the home key and wordmark as the left tray's first key (barTrays), with its tooltip; linkHome keeps it in step with
+// the bar's (a phone's, which has no trays)
+const homeKeyT = tipped(h('a', { class: 'bd-sk bd-homek', href: '#top', 'aria-label': 'bluedoc, back to top', html: homeKey.innerHTML }), null);
+homeKeyT._tip = 'Back to top';
 
 /* ---------- the doc's emoji and title, as the reader names them ---------- */
 // The reader may give a doc their own title and emoji (reader state `__title`, `__emoji`; serve.py checks them and lists
@@ -4872,9 +4784,10 @@ app.append(h('header', { class: 'bd-bar' }, homeKey,
   VIEW_ONLY && h('span', { class: 'bd-vo', role: 'note', title: 'A shared link: you can read this doc, not answer, comment on or change it', 'aria-label': 'Shared, view only' },
     ic('eye'), h('span', { class: 'w' }, 'Shared · view only'), h('span', { class: 'n' }, 'View only')),
   h('div', { class: 'bd-bar-r' }, themeBk)));
-// a phone's left key leads the bar; the stripes sit under it, down the window's sides
+// a phone's left key leads the bar; above a phone the left stripe does (its home key and groove: barTrays), before
+// the doc's name, and the right stripe joins the bar's right tray (barTrays)
 $('.bd-bar').prepend(LEFT.barKey);
-app.append(stripeL, stripeR);
+$('.bd-crumb').before(stripeL); $('.bd-bar-r').prepend(stripeR);
 
 const eyebrow = [meta.org, meta.kind, meta.date].filter(Boolean);
 // a plan's or design's status beside the eyebrow: awaiting approval, changes requested or approved (paintPlan); not on
@@ -4889,7 +4802,7 @@ const head = h('header', { class: 'bd-head', id: 'top' },
 NAME.paint();
 
 // the strips under the app bar (the lock strip, the archive strips, the revision strip, in that order from the top)
-// stick one under another; --rv-h is their height together, so the panes, the stripes and the page (a design page's
+// stick one under another; --rv-h is their height together, so the panes and the page (a design page's
 // board) start under them
 function fitStrips() {
   let at = 0;
@@ -4954,15 +4867,15 @@ const ARC = (() => {
   }
   const item = h('button', { type: 'button', role: 'menuitem', tabindex: '-1', onclick: () => { pop.close(true); if (archived()) unarchive(); else archive(); } },
     ic('archive'), h('span', { class: 'l' }));
-  // a phone has no stripes: its theme switch is here (themeBk stays hidden)
+  // a phone has no trays: its theme switch is here (themeBk stays hidden)
   const thItem = h('button', { type: 'button', role: 'menuitem', tabindex: '-1', class: 'bd-ph-only', onclick: () => { pop.close(true); toggleTheme(); } }, ic('moon'), h('span', { class: 'l' }));
   const menu = h('div', { class: 'bd-selm act', role: 'menu', 'aria-label': 'Doc', tabindex: '-1', hidden: true }, item, thItem);
   const btn = h('button', { type: 'button', class: 'bd-ibtn', 'aria-haspopup': 'menu', 'aria-expanded': 'false', 'aria-label': 'More', title: 'More',
     onclick: () => menu.hidden ? pop.open(0) : pop.close(true) }, ic('morev'));
   const wrap = h('div', { class: 'bd-exp bd-docm' }, btn, menu);
-  // ?v-rail=g, h: the menu also holds Export's rows (placeRail fills `extra`), above a phone only
+  // the menu also holds Export's rows (barTrays fills `extra`), above a phone only
   const extra = [];
-  const pop = menuPop(wrap, btn, menu, () => [...(PHONE_W.matches ? [] : extra), ...(PHONE_W.matches || VAR.rail === 'd' ? [item, thItem] : [item])],
+  const pop = menuPop(wrap, btn, menu, () => [...(PHONE_W.matches ? [] : extra), ...(PHONE_W.matches ? [item, thItem] : [item])],
     { onOpen: () => thItem.replaceChildren(ic(isDark() ? 'sun' : 'moon'), h('span', { class: 'l' }, isDark() ? 'Light theme' : 'Dark theme')) });
   document.querySelector('.bd-bar-r').append(wrap);
   themeBk.hidden = true;
@@ -5011,9 +4924,9 @@ function placeMeta() {
 }
 
 /* ---------- the panes and the page's room ---------- */
-// A pane docks beside the page where the page keeps READ_W (a board: its left panel above 900 px, its right one from
-// DOCK_MIN), the right one first; else it lies over the page, and then the other side's pane hides (the one opened
-// last, lastPane, stays). The page fills the room between the stripes and the docked panes (--room-l, --room-r): a
+// A doc's pane docks beside the page where the page keeps READ_W (above 900 px), the right one first; else it lies over
+// the page, and then the other side's pane hides (the one opened last, lastPane, stays); a board's lie over it (panesOver).
+// The page fills the room between the window's edges and the docked panes (--room-l, --room-r): a
 // doc's column, a board. The docked panes' widths are the reader's (PANELS, fitPanels).
 const READ_W = 640, PAGE_PAD = 20;   // PAGE_PAD = .bd-shell side padding
 const root = document.documentElement;
@@ -5039,17 +4952,19 @@ const cssPx = v => parseFloat(getComputedStyle(root).getPropertyValue(v)) || 0;
 })();
 let panelOpen = false;
 const DOCK_MIN = 1101;
-const stripeW = () => PHONE_W.matches ? 0 : cssPx('--stripe-w');
-const paneGap = () => PHONE_W.matches ? 0 : cssPx('--pane-gap');   // between a docked pane and the page
+const paneGap = () => PHONE_W.matches ? 0 : cssPx('--pane-gap');   // between a pane and the page, and the window's edge
 const leftEl = () => IS_DESIGN ? $('.bd-lp') : side;
 const leftW = () => cssPx(IS_DESIGN ? '--lp-w' : '--cp-w');
-// ?v-rail=f, and g on a board page: both panes lie over the page, which keeps the window's width, and stay until a
-// key, [ ], – or Esc (g on a doc: its panes dock and push the page, as without ?v-rail)
-const railOver = () => (VAR.rail === 'f' || RAIL_BAR && IS_DESIGN) && !PHONE_W.matches;
+// a board you pan (a design, website or presentation; above a phone): both panes lie over it, which keeps the window's
+// width, and stay until a key, [ ], – or Esc (html.bd-panes-over). A doc's dock and push its column where they fit; a
+// storelisting's, a page that scrolls, dock beside it (its left one above 900 px, its right one from DOCK_MIN)
+const PANES_OVER = IS_DESIGN && !IS_LISTING;
+if (PANES_OVER) root.classList.add('bd-panes-over');
+const panesOver = () => PANES_OVER && !PHONE_W.matches;
 // which open panes dock: the right one, then the left one in the room it leaves
 function docks() {
-  if (railOver()) return { l: false, r: false };
-  const room = root.clientWidth - 2 * stripeW(), g = paneGap(), fits = w => room - w - 2 * PAGE_PAD >= READ_W;
+  if (panesOver()) return { l: false, r: false };
+  const g = paneGap(), room = root.clientWidth - 2 * g, fits = w => room - w - 2 * PAGE_PAD >= READ_W;
   const r = panelOpen && (IS_DESIGN ? innerWidth >= DOCK_MIN : innerWidth > 900 && fits(cssPx('--sp-w') + g));
   const l = LEFT.open() && innerWidth > 900 && (IS_DESIGN || fits(leftW() + g + (r ? cssPx('--sp-w') + g : 0)));
   return { l, r };
@@ -5128,16 +5043,16 @@ function applyWidth() {
   if (IS_DESIGN) root.dataset.layout = 'board';
   fitPanels();
   const d = docks();
-  // a pane over the page hides the other side's: the one opened last stays (?v-rail=f: both stay)
-  if (LEFT.open() && panelOpen && !(d.l && d.r) && !railOver()) { if (lastPane === 'l') SIDE.setOpen(false, false); else LEFT.set(false, false); return; }
+  // a pane over a doc's page hides the other side's: the one opened last stays (a board's: both stay)
+  if (LEFT.open() && panelOpen && !(d.l && d.r) && !panesOver()) { if (lastPane === 'l') SIDE.setOpen(false, false); else LEFT.set(false, false); return; }
   root.classList.toggle('bd-sp-dock', d.r); root.classList.toggle('bd-lp-dock', d.l);
-  const s = railOver() ? paneGap() : stripeW();   // ?v-rail=f: the stripes float over the page
-  root.style.setProperty('--room-l', s + (d.l ? leftW() + paneGap() : 0) + 'px');
-  root.style.setProperty('--room-r', s + (d.r ? cssPx('--sp-w') + paneGap() : 0) + 'px');
+  const s = paneGap();
+  root.style.setProperty('--room-l', s + (d.l ? leftW() + s : 0) + 'px');
+  root.style.setProperty('--room-r', s + (d.r ? cssPx('--sp-w') + s : 0) + 'px');
   fitTray();
-  if (railOver() && BOARD && BOARD.fitTb) BOARD.fitTb();   // a pane over the board, dragged wider: the toolbar steps aside
+  if (panesOver() && BOARD && BOARD.fitTb) BOARD.fitTb();   // a pane over the board, dragged wider: the toolbar steps aside
 }
-// The tray stays in its room: the window between the stripes, less the panes open beside or over the page above 900 px
+// The tray stays in its room: the window, less the panes open beside or over the page above 900 px
 // (below, a pane lies over the tray's row as a drawer or a sheet), centred under the column (a board: in the board). Where it doesn't fit, its keys
 // drop their words (icons, counts and tooltips stay): beside a pane, and in a window too narrow for the words but wider
 // than the phone layout (600 px, where the tools fold). Still too wide (a board between both panels), its four tools
@@ -5148,7 +5063,7 @@ function fitTray() {
   const tray = document.querySelector('.bd-anntb');
   if (!tray) return;
   tray.classList.remove('compact', 'folded'); tray.style.left = '';
-  const wide = innerWidth > 900, s = stripeW(), lp = wide && LEFT.open() && leftEl();
+  const wide = innerWidth > 900, s = paneGap(), lp = wide && LEFT.open() && leftEl();
   const lo = s + (lp ? lp.offsetWidth : 0) + 12;
   const hi = root.clientWidth - s - (wide && panelOpen ? cssPx('--sp-w') : 0) - 12;
   const mid = (cssPx('--room-l') + root.clientWidth - cssPx('--room-r')) / 2;
@@ -5231,12 +5146,12 @@ for (const p of PANELS) {
 }
 document.body.append(...PANELS.map(p => p.el));
 // left first, then right: a docked one (a board's, always) at most what the other one (when docked) leaves beside the
-// page's least width between the stripes; no chosen width is the CSS one
+// page's least width; no chosen width is the CSS one
 function fitPanels() {
   const g = paneGap(), least = IS_DESIGN ? BOARD_MIN : READ_W + 2 * PAGE_PAD + g;
   for (const p of PANELS) if (p.w == null) p.w = p.def = cssPx(p.v);
   for (const p of PANELS) {
-    const q = PANELS.find(x => x !== p), room = root.clientWidth - 2 * stripeW() - least - (q.on() ? q.w + (IS_DESIGN ? 0 : g) : 0);
+    const q = PANELS.find(x => x !== p), room = root.clientWidth - 2 * g - least - (q.on() ? q.w + (IS_DESIGN ? 0 : g) : 0);
     const max = Math.max(p.min, IS_DESIGN || p.on() ? Math.min(p.max, room) : p.max);
     p.w = Math.round(Math.min(Math.max(p.user || p.def, p.min), max));
     root.style.setProperty(p.v, p.w + 'px');
@@ -5247,9 +5162,9 @@ addEventListener('resize', applyWidth);
 // a doc's Contents over the page: a press outside it, Esc or a link in it hides it (compare view's Esc, which leaves it,
 // sees the key as handled)
 const cpOver = () => !IS_DESIGN && cpOpen && !docks().l;
-document.addEventListener('pointerdown', e => { if (cpOver() && !railOver() && !side.contains(e.target) && !e.target.closest('.bd-stripe, .bd-bk')) setContents(false, true); });
+document.addEventListener('pointerdown', e => { if (cpOver() && !side.contains(e.target) && !e.target.closest('.bd-stripe, .bd-bk')) setContents(false, true); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && !e.defaultPrevented && cpOver()) { e.preventDefault(); setContents(false, true); } });
-side.addEventListener('click', e => { if (e.target.closest('a') && cpOver() && !railOver()) setContents(false, true); });
+side.addEventListener('click', e => { if (e.target.closest('a') && cpOver()) setContents(false, true); });
 // [ and ] toggle the left pane and the right panel (its last section) on every page, but not while typing
 document.addEventListener('keydown', e => {
   if (e.defaultPrevented || e.isComposing || e.metaKey || e.ctrlKey || e.altKey || document.querySelector('dialog[open]') || root.classList.contains('bd-presenting')) return;
@@ -6960,7 +6875,7 @@ if (!SHARE && /^https?:$/.test(location.protocol)) {
         h('span', { class: 't', html: 'This browser can\'t save yet. Open the link from <code>serve.py unlock</code> here (it works for an hour, in any browser).' }),
         h('span', { class: 'sp' }),
         h('button', { type: 'button', class: 'bp-btn', onclick: () => copyText('serve.py unlock', 'Copied: run it, then open the link it prints here') }, ic('copy'), 'Copy unlock command'))));
-      // it sticks under the app bar, over the revision strip: the panes, the stripes and the page start under both
+      // it sticks under the app bar, over the revision strip: the panes and the page start under both
       fitStrips();
     }
   }).catch(() => {});
@@ -6968,7 +6883,7 @@ if (!SHARE && /^https?:$/.test(location.protocol)) {
 // served with a dashboard: the home key leads to it (a page the server seeded from the start; else once the ping says so)
 function linkHome(href) {
   homeKey.href = href; homeKey.title = 'All docs'; homeKey.setAttribute('aria-label', 'bluedoc: all docs');
-  if (homeKeyG) { homeKeyG.href = href; homeKeyG._tip = 'All docs'; homeKeyG.setAttribute('aria-label', 'bluedoc: all docs'); }
+  homeKeyT.href = href; homeKeyT._tip = 'All docs'; homeKeyT.setAttribute('aria-label', 'bluedoc: all docs');
 }
 // The keys that end the bottom tray after Request changes: TRAY_END, filled where the tray's keys are made, below.
 // Approve on a plan, design or website (their picks go with it); Present on a presentation; nothing on a listing (its
@@ -9362,8 +9277,8 @@ function docMarkdown(doc) {
     const dl = exportMenu(DL, f => f === 'pdf' ? printDoc() : f === 'md' ? saveMd() : saveBlob(new Blob([PAGE_HTML], { type: 'text/html' }), pageFile() || 'doc.html'),
       'Download this page as an HTML file, a PDF or Markdown', false, null, 'Download');
     dl.classList.add('bd-docx');
-    const bar = document.querySelector('.bd-bar-r');
-    bar.insertBefore(dl, bar.querySelector('.bd-bk, .bd-docm'));
+    const bar = document.querySelector('.bd-bar-r'), at = bar.querySelector('.bd-bk, .bd-docm');   // in G's Share tray: the tray's child
+    if (at) at.before(dl); else bar.append(dl);
     return;
   }
   const EXPORTS = [['html', 'fcode', 'HTML file', 'One file that opens in any browser, no server'], ['pdf', 'doc', 'PDF', 'Print-ready, one file'], MD_ITEM];
@@ -9714,9 +9629,8 @@ function docMarkdown(doc) {
     Object.assign(SH, { busy: '', sure: false });
     paintShare('stop');
   }
-  const bar = document.querySelector('.bd-bar-r'), at = bar.querySelector('.bd-bk, .bd-docm');
-  bar.insertBefore(shareKey, at);
-  bar.insertBefore(wrap, at);
+  const bar = document.querySelector('.bd-bar-r'), at = bar.querySelector('.bd-bk, .bd-docm');   // in G's Share tray: the tray's child
+  if (at) at.before(shareKey, wrap); else bar.append(shareKey, wrap);
   shareCall('GET', viewUrl(true)).then(paintKey, () => {});   // no answer: the key unmarked
 })();
 
@@ -10392,20 +10306,27 @@ function renderBoard(b) {
     for (const x of xs) { const bz = BEZEL[devOf(x.a)] || 0, bar = devOf(x.a) === 'page' ? PAGE_BAR : 0; x0 = Math.min(x0, x.p.x - bz); y0 = Math.min(y0, x.p.y - bz - bar); x1 = Math.max(x1, x.p.x + x.p.w + bz + gutOf(x.a)); y1 = Math.max(y1, x.p.y + x.p.h + bz); }
     return isFinite(x0) ? { x: x0, y: y0, w: Math.max(1, x1 - x0), h: Math.max(1, y1 - y0) } : { x: 0, y: 0, w: 1, h: 1 };
   }
-  // the room the view leaves: the toolbar and a title bar above, the tray below (on a design page)
-  const room = () => { const W = stage.clientWidth || 800, H = stage.clientHeight || 600; return { W, H, m: 40, top: 76 + 26, bot: root.classList.contains('bd-tray-on') ? 84 : 40 }; };
+  // the room the view leaves: the toolbar and a title bar above, the tray below (on a design page), and beside, the
+  // panes open over the board (l, r: what they cover of it, a gap included; none where they would leave it too narrow)
+  const room = () => {
+    const W = stage.clientWidth || 800, H = stage.clientHeight || 600, at = stage.getBoundingClientRect(), g = paneGap(), sp = $('.bd-sp');
+    let l = panesOver() && B.lp && lp ? Math.max(0, g + lp.offsetWidth + g - at.left) : 0;
+    let r = panesOver() && sp && panelOpen ? Math.max(0, at.right - (root.clientWidth - g - sp.offsetWidth - g)) : 0;
+    if (W - l - r < 360) l = r = 0;
+    return { W, H, m: 40, top: 76 + 26, bot: root.classList.contains('bd-tray-on') ? 84 : 40, l, r };
+  };
   function showBox(box, animate, maxK) {
-    const { W, H, m, top, bot } = room();
-    const k = clamp(Math.min((W - 2 * m) / box.w, (H - top - bot) / box.h), BK_MIN, maxK);
-    go(k, W / 2 - (box.x + box.w / 2) * k, top + (H - top - bot) / 2 - (box.y + box.h / 2) * k, animate);
+    const { W, H, m, top, bot, l, r } = room();
+    const k = clamp(Math.min((W - l - r - 2 * m) / box.w, (H - top - bot) / box.h), BK_MIN, maxK);
+    go(k, l + (W - l - r) / 2 - (box.x + box.w / 2) * k, top + (H - top - bot) / 2 - (box.y + box.h / 2) * k, animate);
   }
   // a section of a page in Full page (r: its rect in the frame): the page's width (with its twin in compare) and its
   // versions gutter across the view (at most 100%), the section in the middle, or its top at the top when it is taller
   function showSection(x, r) {
     const t = twinOf(x.a), x0 = t ? t.p.x : x.p.x, w = x.p.x + x.p.w + gutOf(x.a) - x0;
-    const { W, H, m, top, bot } = room(), k = clamp((W - 2 * m) / w, BK_MIN, 1), y = x.p.y + r.y, avail = H - top - bot;
+    const { W, H, m, top, bot, l, r: rp } = room(), k = clamp((W - l - rp - 2 * m) / w, BK_MIN, 1), y = x.p.y + r.y, avail = H - top - bot;
     select(x.a.id); B.touched = true;
-    go(k, W / 2 - (x0 + w / 2) * k, r.h * k <= avail ? top + avail / 2 - (y + r.h / 2) * k : top - y * k, true);
+    go(k, l + (W - l - rp) / 2 - (x0 + w / 2) * k, r.h * k <= avail ? top + avail / 2 - (y + r.h / 2) * k : top - y * k, true);
   }
   const rqXs = () => B.variants ? [] : [...B.rqs.values()].map(el => ({ a: {}, p: el._box }));
   const fit = animate => showBox(boxOf([...shownXs(), ...rqXs()]), animate, 1);
@@ -10818,9 +10739,9 @@ function renderBoard(b) {
     }
   }
   // the fewest steps that fit the row in the board's room, measured (a container query can't measure the keys). The
-  // room is the board's (a ResizeObserver: the docked panes change it, not the window), less a pane that lies over it
-  // (the left one up to 900 px, the right one up to 1100 px) where the row fits beside it; else the pane covers the
-  // row as it covers the board
+  // row stays centred in the window, as clear of the wider pane over the board on both sides, giving way before it
+  // moves; where it can't fit even so, it moves beside the panes, then over them (a ResizeObserver: the window, a
+  // pane opening or dragged wider)
   function fitTb() {
     const box = tb.parentElement;
     if (!box || !tb.isConnected || !tb.getClientRects().length) return;
@@ -10835,38 +10756,12 @@ function renderBoard(b) {
       grooves();
     };
     const fits = room => { for (let k = 0; k <= steps.length; k++) { set(k); if (tb.scrollWidth <= room) return true; } return false; };
-    // ?v-rail=h: the row sits in the app bar between the doc's name and the bar's right keys, centred in the window
-    // where it can be. To fit it drops its words, then Share drops its own (.bd-tight), then the name
-    // gives way down to its least (an ellipsis); from 1100 px up it then leaves the window's centre for the room it
-    // has, below that (or still too wide) its keys go into ⋯ More
-    if (box.classList.contains('bd-bar')) {
-      const crumb = $('.bd-crumb'), barR = $('.bd-bar-r'), W = box.clientWidth;
-      tb.style.left = tb.style.right = ''; crumb.style.maxWidth = ''; barR.classList.remove('bd-tight');
-      const c = crumb.getBoundingClientRect(), natural = c.width, least = Math.min(natural, 120);
-      const give = steps.findIndex(s => s[1]), shrinks = give < 0 ? steps.length : give;
-      const free = nameW => [c.left + nameW + 12, barR.getBoundingClientRect().left - 12];
-      const centred = nameW => { const [lo, hi] = free(nameW), w = tb.scrollWidth; return (W - w) / 2 >= lo && (W + w) / 2 <= hi; };
-      const anywhere = nameW => { const [lo, hi] = free(nameW); return tb.scrollWidth <= hi - lo; };
-      const tryUpTo = (to, ok) => { for (let k = 0; k <= to; k++) { set(k); if (ok()) return true; } return false; };
-      // after the last label step: Share's word, then the name
-      let ok = tryUpTo(shrinks, () => centred(natural)), nudge = false;
-      if (!ok) { barR.classList.add('bd-tight'); ok = centred(natural) || centred(least); }
-      if (!ok && W >= 1100) ok = nudge = tryUpTo(shrinks, () => anywhere(least));
-      if (!ok) ok = tryUpTo(steps.length, () => centred(least));
-      if (!ok) nudge = tryUpTo(steps.length, () => anywhere(least));
-      let x = (W - tb.offsetWidth) / 2;
-      if (nudge) { const [lo, hi] = free(least); x = Math.min(Math.max(x, lo), hi - tb.offsetWidth); tb.style.left = x + 'px'; tb.style.right = 'auto'; }
-      if (x - 12 - c.left < natural) crumb.style.maxWidth = Math.max(0, x - 12 - c.left) + 'px';
-    } else {
-      const place = (l, r) => { tb.style.left = 12 + l + 'px'; tb.style.right = 12 + r + 'px'; return box.clientWidth - 24 - l - r; };
-      const at = box.getBoundingClientRect(), sp = $('.bd-sp'), d = docks();
-      const l = B.lp && lp && !d.l ? Math.max(0, stripeW() + lp.offsetWidth - at.left) : 0;
-      const r = sp && panelOpen && !d.r && !SIDE.sheet() ? Math.max(0, at.right - (root.clientWidth - stripeW() - sp.offsetWidth)) : 0;
-      // ?v-rail=g: the row stays centred in the window, as clear of the wider pane on both sides, giving way before it
-      // moves; where it can't fit even so, it moves beside the panes, then over them
-      const m = Math.max(l, r), centred = RAIL_BAR && m > 0 && fits(place(m, m));
-      if (!centred && !fits(place(l, r)) && (l || r)) fits(place(0, 0));
-    }
+    const place = (l, r) => { tb.style.left = 12 + l + 'px'; tb.style.right = 12 + r + 'px'; return box.clientWidth - 24 - l - r; };
+    const at = box.getBoundingClientRect(), sp = $('.bd-sp'), g = paneGap(), d = docks();
+    const l = B.lp && lp && !d.l ? Math.max(0, g + lp.offsetWidth - at.left) : 0;
+    const r = sp && panelOpen && !d.r && !SIDE.sheet() ? Math.max(0, at.right - (root.clientWidth - g - sp.offsetWidth)) : 0;
+    const m = Math.max(l, r), centred = m > 0 && fits(place(m, m));
+    if (!centred && !fits(place(l, r)) && (l || r)) fits(place(0, 0));
     if (!moreMenu.hidden && [...tbOver].join() !== was) morePop.close(false);
   }
   // the motion keys (pause animations, Reduced) are hidden for now: built and painted, not shown; screens play their motion
@@ -13664,13 +13559,6 @@ function showTip(el) {
     tip.replaceChildren(h('span', {}, el._tip), ...(el._keys ? [h('span', { class: 'k' }, el._keys.map(kbd))] : []));
     tip.hidden = false;
     const r = el.getBoundingClientRect(), w = tip.offsetWidth, th = tip.offsetHeight;
-    // a stripe's key: beside it, toward the page (?v-rail a and d lay them in a row: above or below, as any key's)
-    const st = VAR.rail !== 'a' && VAR.rail !== 'd' && !el.closest('.bd-bar') && el.closest('.bd-stripe');
-    if (st) {
-      tip.style.left = Math.round(st.classList.contains('l') ? r.right + 10 : r.left - w - 10) + 'px';
-      tip.style.top = Math.round(clamp(r.top + r.height / 2 - th / 2, 8, innerHeight - th - 8)) + 'px';
-      return;
-    }
     tip.style.left = Math.round(clamp(r.left + r.width / 2 - w / 2, 8, root.clientWidth - w - 8)) + 'px';
     tip.style.top = Math.round(r.top - th - 10 < 8 || el.closest('.bd-revbar') ? r.bottom + 10 : r.top - th - 10) + 'px';
   }, performance.now() - tipWarm < 400 ? 0 : 450);
@@ -13786,8 +13674,8 @@ const SIDE = (() => {
     pick(store.get(TAB_KEY), false);
     const comments = secs.some(x => x.id === 'comments');
     barKey.replaceChildren(ic(comments ? 'msg' : 'panel'), barDot); barKey.setAttribute('aria-label', comments ? 'Comments' : 'Side panel');
-    const bar = document.querySelector('.bd-bar-r');
-    bar?.insertBefore(barKey, bar.querySelector('.bd-bk.th, .bd-docm'));
+    const bar = document.querySelector('.bd-bar-r'), at = bar && bar.querySelector('.bd-bk.th, .bd-docm');   // in G's Share tray: the tray's child
+    if (at) at.before(barKey); else bar?.append(barKey);
     // Esc closes the panel over the page
     document.addEventListener('keydown', e => {
       if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey || document.querySelector('dialog[open]')) return;
@@ -15027,8 +14915,8 @@ const MARKUP = (() => {
     const compact = innerWidth <= 600;
     cmp.classList.toggle('dock', compact);
     if (compact) { cmp.style.translate = ''; cmp.style.setProperty('--cmp-b', Math.round(innerHeight - bottom) + 'px'); return; }
-    const top = cssPx('--top-h') + 8, right = (as === 'dock' || as === 'drawer' ? SIDE.el.getBoundingClientRect().left : root.clientWidth - stripeW()) - 8;
-    const left = (LEFT.open() ? leftEl().getBoundingClientRect().right : stripeW()) + 8;
+    const top = cssPx('--top-h') + 8, right = (as === 'dock' || as === 'drawer' ? SIDE.el.getBoundingClientRect().left : root.clientWidth - paneGap()) - 8;
+    const left = (LEFT.open() ? leftEl().getBoundingClientRect().right : paneGap()) + 8;
     const w = cmp.offsetWidth, hh = cmp.offsetHeight, B = draftBox;
     if (!B) return;   // the mark is hidden for now: stay where it was
     const fitsX = x => x >= left && x + w <= right, fitsY = y => y >= top && y + hh <= bottom;
@@ -17023,51 +16911,35 @@ function boardEdits(B) {
 if (BOARD && IS_DESIGN && !OLD && !BASE && !VIEW_ONLY && BOARD.stage) boardEdits(BOARD);
 if (BOARD && BOARD.afterMarkup) BOARD.afterMarkup();   // a storelisting's drafts and right-panel tabs
 
-// ?v-rail (VAR.rail): A puts the stripes in the app bar, the left one after the doc's name and the right one before
-// Share; D puts both at the end of the bottom dock, after its primary (a dock of their own where the page has none);
-// G puts the stripes in the app bar, the left one leading it (the home key first); its right side reads Share | ⋮
-// (one split pill; ⋮ is ARC's menu: Export's rows, then Archive; Export's own key goes where ⋮ is), the theme switch,
-// then the right one last (CSS `order`; the DOM in the same order for the keyboard);
-// H also seats a board's toolbar in the bar (a phone: back on the board). B, C and F are CSS. F's, G's and H's left
-// pane, over the page, closes on Esc as the right one does (a doc's Contents: cpOver)
-(function placeRail() {
-  if (VAR.rail === 'f' || RAIL_BAR) document.addEventListener('keydown', e => {
-    if (e.key !== 'Escape' || e.defaultPrevented || !railOver() || !LEFT.open() || document.querySelector('dialog[open]')) return;
+// The app bar's trays (above a phone): the left stripe leads the bar, the home key first, then a groove and the left
+// pane's keys; its right side is one tray (.bd-shtray): Share │ the theme switch │ the right stripe's keys (display:
+// contents) │ ⋮ (ARC's menu: Export's rows, then Archive; Export's own key goes where ⋮ is), the DOM in that order for
+// the keyboard. The tray holds everything from Share to ⋮ in order (Export, the phone keys; the rest goes after them,
+// so Share and Export stay side by side): a phone, where it is display: contents, keeps its bar as it is. No Share (a
+// presentation, a storelisting): the tray starts at the theme switch; no ⋮ either (a shared page): the right stripe,
+// led by the theme switch. A board's left pane, over it, closes on Esc as the right one does (a doc's Contents: cpOver)
+(function barTrays() {
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape' || e.defaultPrevented || !panesOver() || !LEFT.open() || document.querySelector('dialog[open]')) return;
     const t = e.target; if (t.isContentEditable || (t.closest && t.closest('input, textarea, select, [contenteditable]'))) return;
     e.preventDefault(); LEFT.set(false, true);
   });
-  if (VAR.rail === 'a') { $('.bd-crumb').after(stripeL); $('.bd-bar-r').prepend(stripeR); }
-  else if (RAIL_BAR) {
-    const r = $('.bd-bar-r'), x = r.querySelector('.bd-docx');
-    $('.bd-crumb').before(stripeL);
-    const g = groove(); g.classList.add('home');   // between the home key and the pane keys
-    stripeL.prepend(homeKeyG, g);
-    r.append(themeBtn, stripeR);
-    if (ARC.menu && x) {
-      // Export's rows in ⋮, each pressing its own (the same action); above a phone only, which keeps its Export key
-      const rows = [...x.querySelectorAll('.bd-expm [role="menuitem"]')].map(o => h('button', { type: 'button', role: 'menuitem', tabindex: '-1', class: 'bd-desk',
-        onclick: () => { ARC.close(); o.click(); } }, o.querySelector('svg').cloneNode(true), h('span', { class: 'l' }, o.querySelector('b').textContent)));
-      ARC.extra.push(...rows);
-      ARC.menu.prepend(h('div', { class: 'grp bd-desk', role: 'presentation' }, 'Export'), ...rows, h('div', { class: 'sep bd-desk', role: 'separator' }));
-    }
-    if (VAR.rail === 'h' && BOARD && BOARD.tb) {
-      const tb = BOARD.tb, wrap = tb.parentElement, bar = $('.bd-bar');
-      const seat = () => {
-        if (PHONE_W.matches) { if (tb.parentElement !== wrap) wrap.append(tb); $('.bd-crumb').style.maxWidth = ''; }
-        else if (tb.parentElement !== bar) bar.insertBefore(tb, r);
-        tb.style.left = tb.style.right = '';
-        BOARD.fitTb();
-      };
-      seat();
-      PHONE_W.addEventListener('change', seat);
-    }
-  }
-  else if (VAR.rail === 'd') {
-    let dock = [...document.querySelectorAll('.bd-anntb')].find(t => !t.hidden);
-    if (!dock) { dock = h('div', { class: 'bd-anntb', role: 'toolbar', 'aria-label': 'Panes' }); document.body.append(dock); root.classList.add('bd-tray-on'); }
-    const g = dock.childElementCount ? groove() : null;
-    if (g) g.classList.add('bd-rail-g');   // a phone, where the stripes hide, has none
-    dock.append(...[g, stripeL, stripeR].filter(Boolean));
+  const r = $('.bd-bar-r'), x = r.querySelector('.bd-docx');
+  const gr = cls => { const e = groove(); e.classList.add(cls); return e; };
+  stripeL.prepend(homeKeyT, gr('home'));   // the groove between the home key and the pane keys
+  const s = r.querySelector(':scope > .bd-shk'), m = ARC.menu && ARC.menu.closest('.bd-docm');
+  if (m && m.parentElement === r) {
+    const tray = h('div', { class: 'bd-shtray' }), first = s || m;
+    first.before(tray);
+    for (let n = first; n;) { const nx = n.nextSibling; tray.append(n); if (n === m) break; n = nx; }
+    m.before(...(s ? [gr('sh')] : []), themeBtn, gr('sh'), stripeR, gr('sh'));
+  } else { stripeR.prepend(themeBtn, gr('th')); r.prepend(stripeR); }
+  if (ARC.menu && x) {
+    // Export's rows in ⋮, each pressing its own (the same action); above a phone only, which keeps its Export key
+    const rows = [...x.querySelectorAll('.bd-expm [role="menuitem"]')].map(o => h('button', { type: 'button', role: 'menuitem', tabindex: '-1', class: 'bd-desk',
+      onclick: () => { ARC.close(); o.click(); } }, o.querySelector('svg').cloneNode(true), h('span', { class: 'l' }, o.querySelector('b').textContent)));
+    ARC.extra.push(...rows);
+    ARC.menu.prepend(h('div', { class: 'grp bd-desk', role: 'presentation' }, 'Export'), ...rows, h('div', { class: 'sep bd-desk', role: 'separator' }));
   }
 })();
 SIDE.start();

@@ -116,8 +116,8 @@ class ShareSheet(ChromePage):
 
     def test_the_key_sits_before_export_and_marks_a_share(self) -> None:
         t = self.page(view())
-        self.assertEqual(t.ev("[...document.querySelector('.bd-bar-r').children].filter(e => e.matches('.bd-shk, .bd-docx, .bd-docm')).map(e => e.className.split(' ').find(c => /^bd-(shk|docx|docm)$/.test(c)))"),
-                         ["bd-shk", "bd-docx", "bd-docm"], "Share · Export · ⋯")
+        self.assertEqual(t.ev("[...document.querySelector('.bd-bar-r .bd-shtray').children].filter(e => e.matches('.bd-shk, .bd-docx, .bd-docm')).map(e => e.className.split(' ').find(c => /^bd-(shk|docx|docm)$/.test(c)))"),
+                         ["bd-shk", "bd-docx", "bd-docm"], "Share · Export · ⋮, in the right tray (Export's key a phone's)")
         self.assertEqual(t.ev(f"[{KEY}.textContent, {KEY}.hasAttribute('aria-disabled'), {KEY}.getAttribute('aria-label'), {KEY}.dataset.share || null]"),
                          ["Share", False, "Share", None])
         t = self.page(view(share=gist(rev="2")), 390, 800)

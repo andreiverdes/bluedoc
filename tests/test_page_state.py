@@ -1112,10 +1112,12 @@ class Archive(ChromePage):
         url, raw = self.server.url_for(self.plan), self.plan.read_bytes()
         t = self.open(url)
         t.ev(f"{self.MENU}.querySelector('.bd-ibtn').click()")
-        self.assertEqual(t.ev(f"{self.MENU}.querySelector('[role=menuitem]').textContent"), "Archive")
-        # its right end, over the right stripe's keys, takes the pointer: the open menu sits above the stripes
-        self.assertEqual(t.ev(f"(r => !!document.elementFromPoint(r.right - 8, r.top + r.height / 2).closest('.bd-docm'))({self.MENU}.querySelector('[role=menuitem]').getBoundingClientRect())"), True)
-        t.ev(f"{self.MENU}.querySelector('[role=menuitem]').click()")
+        # ⋮ holds Export's rows (above a phone), then Archive
+        arc = f"{self.MENU}.querySelector('[role=menuitem]:not(.bd-desk, .bd-ph-only)')"
+        self.assertEqual(t.ev(f"{arc}.textContent"), "Archive")
+        # its right end, over the right tray's keys, takes the pointer: the open menu sits above the bar's trays
+        self.assertEqual(t.ev(f"(r => !!document.elementFromPoint(r.right - 8, r.top + r.height / 2).closest('.bd-docm'))({arc}.getBoundingClientRect())"), True)
+        t.ev(f"{arc}.click()")
         self.toast(t, "archived")
         self.assertEqual(until(lambda: (self.archived(url) or {}).get("rev")), "1")
         t.go(self.base + url)
@@ -1129,7 +1131,7 @@ class Archive(ChromePage):
         self.assertEqual(until(lambda: self.archived(url) is None and "gone"), "gone")
         self.assertEqual(t.ev("[document.querySelectorAll('.bd-revbar.arc').length, document.querySelector('.bd-planchip.arc').hidden]"), [0, True])
         # archived again, then the agent writes rev 2: back, said once
-        t.ev(f"{self.MENU}.querySelector('[role=menuitem]').click()")
+        t.ev(f"{self.MENU}.querySelector('[role=menuitem]:not(.bd-desk, .bd-ph-only)').click()")
         self.assertEqual(until(lambda: (self.archived(url) or {}).get("rev")), "1")
         r = self.tmp.run("build.py", "patch", self.plan, "step:steps/0/table", "--set", "status=done", "--change", "Acme: the table is in.")
         self.assertEqual(r.returncode, 0, r.stderr)
@@ -1223,7 +1225,7 @@ class Archive(ChromePage):
 
 @unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")
 class NarrowWindow(ChromePage):
-    """A doc's column fills its room, between the stripes and the docked panes. Each docked pane takes a handle on the
+    """A doc's column fills its room, between the window's 6 px edges and the docked panes. Each docked pane takes a handle on the
     edge it shares with the page: dragging it widens or narrows the pane, the page takes what is left, the pane stays
     docked (the page keeps READ_W), and the width is kept."""
 
@@ -1242,9 +1244,9 @@ class NarrowWindow(ChromePage):
     def test_the_column_fills_its_room_at_any_window(self) -> None:
         t = self.open(self.server.url_for(self.plan))
         t.ev("BP.sidebar({open: false}), BP.contents({open: false})")
-        # 700 px: the stripes' bands (70 px a side) and the paddings (16 px from 900 px down)
+        # 700 px: the window's 6 px edges and the paddings (16 px from 900 px down)
         self.size(t, 700)
-        t.wait_for(f"{self.COL} === document.documentElement.clientWidth - 140 - 32")
+        t.wait_for(f"{self.COL} === document.documentElement.clientWidth - 12 - 32")
         # 1600 px, no pane docked: no handle, the column as wide as the room
         self.size(t, 1600)
         t.wait_for(f"{self.COL} > 1400")
