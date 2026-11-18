@@ -14,13 +14,20 @@ It answers as gh does:
   gh auth token [--hostname H] [--user L]   the account's token; exit 1 when gh has no such account
   gh api user [--jq .login]          the login
   gh api user/memberships/orgs/<org> [--jq .state]   active when the account is a member, else 404
-  gh gist create --desc D FILE…      a secret gist of the files in the working folder (a NUL byte: refused as a
-                                     binary, as gh does); prints https://gist.github.com/<user>/<id>
   gh api gists/<id>                  the gist's JSON; 404 (gh: Not Found (HTTP 404), exit 1) when there is none
+  gh api -X POST gists --input -     creates a gist from {description, public, files: {name: {content}}} on stdin
+                                     (201 and its JSON)
   gh api -X PATCH gists/<id> --input -   applies {description, files: {name: {content} | null}} from stdin; 404 for
                                      an account that doesn't own it, as GitHub answers
-  gh api -X DELETE gists/<id>        deletes it; 404 when there is none or another account owns it
-STANDIN_GH_FAIL: when the call's words contain it, gh fails with an HTTP 500."""
+  gh api -X DELETE gists/<id>        deletes it (204); 404 when there is none or another account owns it
+`gh api -i` prints the status line and the headers, a blank line, then the body, as gh does, also when the call fails
+(the error then on stderr, `gh: <message> (HTTP <status>)`, exit 1). Each answer carries x-ratelimit-limit 5000 and
+x-ratelimit-remaining 4999.
+STANDIN_GH_FAIL: when the call's words contain it, gh fails with an HTTP 500.
+STANDIN_GH_REFUSE: `<status>[:<name>=<value>,…]`, e.g. `429:retry-after=300` or
+`403:x-ratelimit-remaining=0,x-ratelimit-reset=<epoch>`: every gist create (POST) and update (PATCH) is refused with
+that status and those headers (`message=<text>` sets the body's message; else "API rate limit exceeded for user"),
+nothing written. Deletes and reads are never refused."""
 from __future__ import annotations
 
 import json
@@ -99,6 +106,40 @@ def status(accts: list[dict]) -> None:
     print(text, end="")
 
 
+REASONS = {200: "OK", 201: "Created", 204: "No Content", 403: "Forbidden", 404: "Not Found", 422: "Unprocessable Entity",
+           429: "Too Many Requests", 500: "Internal Server Error"}
+
+
+def answer(code: int, body: dict | None, include: bool, headers: dict | None = None) -> None:
+    """GitHub's answer as gh prints it: with -i the status line and headers first; an error also on stderr, exit 1."""
+    if include:
+        hs = {"Content-Type": "application/json; charset=utf-8", "X-Ratelimit-Limit": "5000", "X-Ratelimit-Remaining": "4999",
+              **(headers or {})}
+        sys.stdout.write(f"HTTP/2.0 {code} {REASONS.get(code, '')}\r\n" + "".join(f"{k}: {v}\r\n" for k, v in hs.items()) + "\r\n")
+    if body is not None:
+        sys.stdout.write(json.dumps(body) + "\n")
+    sys.stdout.flush()
+    if code >= 400:
+        msg = (body or {}).get("message") or REASONS.get(code, "error")
+        fail(f"gh: {msg} (HTTP {code})")
+
+
+def refusal() -> tuple[int, dict, str] | None:
+    """STANDIN_GH_REFUSE as (status, headers, message), or None."""
+    spec = os.environ.get("STANDIN_GH_REFUSE")
+    if not spec:
+        return None
+    code, _, rest = spec.partition(":")
+    headers, message = {}, "API rate limit exceeded for user"
+    for part in filter(None, rest.split(",")):
+        k, _, v = part.partition("=")
+        if k == "message":
+            message = v
+        else:
+            headers[k] = v
+    return int(code), headers, message
+
+
 def main(argv: list[str]) -> None:
     data = sys.stdin.read() if "--input" in argv else None
     STATE.mkdir(parents=True, exist_ok=True)
@@ -125,40 +166,15 @@ def main(argv: list[str]) -> None:
     if argv[:2] == ["api", "user"]:
         print(who)
         return
-    if argv[:2] == ["gist", "create"]:
-        if not me["gist"]:
-            fail("gh: Not Found (HTTP 404)")
-        args, desc, public = argv[2:], "", False
-        names = []
-        i = 0
-        while i < len(args):
-            if args[i] in ("--desc", "-d"):
-                desc, i = args[i + 1], i + 2
-            elif args[i] in ("--public", "-p"):
-                public, i = True, i + 1
-            else:
-                names.append(args[i])
-                i += 1
-        gid = secrets.token_hex(16)
-        d = gist_dir(gid)
-        (d / "files").mkdir(parents=True)
-        for n in names:
-            raw = Path(n).read_bytes()
-            if b"\0" in raw:
-                shutil.rmtree(d)
-                fail(f"failed to collect files for posting: binary file contents not supported: {n}")
-            (d / "files" / Path(n).name).write_bytes(raw)
-        (d / "meta.json").write_text(json.dumps({"description": desc, "public": public, "owner": who}), encoding="utf-8")
-        sys.stderr.write(f"- Creating gist with multiple files\n✓ Created {'public' if public else 'secret'} gist {names[0]}\n")
-        print(f"https://gist.github.com/{who}/{gid}")
-        return
     if argv[:1] == ["api"]:
-        method, path, rest, i = "GET", None, argv[1:], 0
+        method, path, rest, i, include = "GET", None, argv[1:], 0, False
         while i < len(rest):
             if rest[i] in ("-X", "--method"):
                 method, i = rest[i + 1], i + 2
             elif rest[i] in ("--input", "--jq"):
                 i += 2
+            elif rest[i] in ("-i", "--include"):
+                include, i = True, i + 1
             else:
                 path, i = rest[i], i + 1
         if path and path.startswith("user/memberships/orgs/"):
@@ -168,17 +184,37 @@ def main(argv: list[str]) -> None:
                 fail("gh: Not Found (HTTP 404)")
             print("active" if "--jq" in argv else json.dumps({"state": "active", "organization": {"login": org}}))
             return
+        not_found = {"message": "Not Found", "documentation_url": "https://docs.github.com/rest"}
+        refuse = refusal() if method in ("POST", "PATCH") else None
+        if refuse:
+            code, headers, message = refuse
+            answer(code, {"message": message, "documentation_url": "https://docs.github.com/rest/overview/rate-limits-for-the-rest-api"},
+                   include, headers)
+        if method == "POST" and path == "gists":
+            if not me["gist"]:
+                answer(404, not_found, include)
+            body = json.loads(data or "{}")
+            gid = secrets.token_hex(16)
+            d = gist_dir(gid)
+            (d / "files").mkdir(parents=True)
+            for name, f in (body.get("files") or {}).items():
+                (d / "files" / name).write_text(f["content"], encoding="utf-8")
+            (d / "meta.json").write_text(json.dumps({"description": body.get("description", ""), "public": body.get("public") is True,
+                                                     "owner": who}), encoding="utf-8")
+            answer(201, view(gid), include, {"Location": f"https://api.github.com/gists/{gid}"})
+            return
         if not path or not path.startswith("gists/"):
             fail(f"stand-in gh: no {method} {path}")
         gid = path.split("/", 1)[1]
         d = gist_dir(gid)
         if not d.is_dir():
-            fail("gh: Not Found (HTTP 404)")
+            answer(404, not_found, include)
         meta = json.loads((d / "meta.json").read_text(encoding="utf-8"))
         if method in ("DELETE", "PATCH") and (meta["owner"] != who or not me["gist"]):
-            fail("gh: Not Found (HTTP 404)")
+            answer(404, not_found, include)
         if method == "DELETE":
             shutil.rmtree(d)
+            answer(204, None, include)
             return
         if method == "PATCH":
             body = json.loads(data or "{}")
@@ -190,7 +226,7 @@ def main(argv: list[str]) -> None:
                 else:
                     (d / "files" / name).write_text(f["content"], encoding="utf-8")
             (d / "meta.json").write_text(json.dumps(meta), encoding="utf-8")
-        print(json.dumps(view(gid)))
+        answer(200, view(gid), include)
         return
     fail(f"stand-in gh: unknown command {argv}")
 

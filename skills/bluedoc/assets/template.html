@@ -229,7 +229,7 @@ button.bd-emo:hover, button.bd-emo[aria-expanded="true"] { background: var(--sel
 .bd-bar-r .bd-tbtn.bd-shk .dot { top: 2px; right: 3px; }
 .bd-tbtn.bd-shk .dot { display: none; position: absolute; top: 3px; right: 3px; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 2px var(--hk-top); }
 .bd-tbtn.bd-shk[data-share] .dot { display: block; }
-.bd-tbtn.bd-shk[data-share="newer"] .dot { background: var(--warn); }
+.bd-tbtn.bd-shk:is([data-share="newer"], [data-share="queued"], [data-share="paused"]) .dot { background: var(--warn); }
 .bd-tbtn.bd-shk[aria-disabled="true"] { color: var(--fg-subtle); opacity: .55; }
 .bd-tbtn.bd-shk[aria-disabled="true"][aria-expanded="true"] { opacity: .8; }
 @media (max-width: 900px) { .bd-tbtn.bd-shk > .w { display: none; } .bd-bar-r .bd-tbtn.bd-shk { padding: 0 9px 0 10px; } }
@@ -655,6 +655,25 @@ html.bd-lp-open:not(.bd-lp-dock) .bp-side { background: var(--surface); box-shad
 .bd-tk .up { display: flex; gap: 10px; padding: 10px 12px; border-radius: 10px; font-size: 13px; background: var(--warn-tint); }
 .bd-tk .up > .bd-ic { width: 16px; height: 16px; flex: none; margin-top: 2px; color: var(--warn); }
 .bd-tk .up b { font-weight: 600; }
+/* Include my answers: what goes out, then a row per kind (its name, what it is, how many the doc has) with the page's
+   switch: the theme switch's well and raised thumb, small; on, the well takes the action's blue and the thumb is white */
+.bd-tk .ans { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+.bd-tk .ans .ah { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 10px; }
+.bd-tk .ans .ah .why { margin-left: auto; }
+.bd-tk .kds { display: grid; padding: 0 12px; border-radius: 10px; background: var(--panel); box-shadow: inset 0 0 0 1px var(--line); }
+.bd-tk .kd { display: flex; align-items: center; gap: 10px; min-height: 38px; border-top: 1px solid var(--line-soft); cursor: pointer; }
+.bd-tk .kd:first-child { border-top: 0; }
+.bd-tk .kl { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; padding: 5px 0; line-height: 1.25; }
+.bd-tk .kl b { font-size: 13px; font-weight: 550; }
+.bd-tk .kl small { font-size: 11.5px; color: var(--fg-subtle); }
+.bd-tk .kn { flex: none; font: 500 12px var(--mono); color: var(--fg-subtle); }
+.bd-tk .sw { position: relative; flex: none; width: 34px; height: 20px; padding: 0; border: 0; border-radius: 999px; background: var(--hk-down); box-shadow: var(--shadow-well); cursor: pointer; transition: background-color .15s; }
+.bd-tk .sw i { position: absolute; left: 2px; top: 2px; width: 16px; height: 16px; border-radius: 50%; background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: var(--shadow-hk); transition: translate .2s var(--ease); }
+.bd-tk .sw[aria-checked="true"] { background: var(--tk-fill); }
+.bd-tk .sw[aria-checked="true"] i { translate: 14px 0; background: linear-gradient(180deg, oklch(100% 0 0), oklch(96% 0.002 264)); }
+.bd-tk .sw:focus-visible { outline: none; box-shadow: var(--shadow-well), var(--focus-ring); }
+.bd-tk .sw:disabled { opacity: .45; cursor: default; }
+@media (prefers-reduced-motion: reduce) { .bd-tk .sw, .bd-tk .sw i { transition: none; } }
 /* the gist on another account than the project's: Move or Keep, HorizonUI's interactive Cards as radios */
 .bd-tk .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .bd-tk .tile { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 12px; border-radius: 14px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); cursor: pointer; }
@@ -1111,6 +1130,29 @@ td.bd-cell-mod { background: color-mix(in oklch, var(--warn-tint) 70%, transpare
 .bp-opt .ob[hidden] { display: none; }
 .bp-opt .ob > :first-child { margin-top: 0; } .bp-opt .ob > :last-child { margin-bottom: 0; }
 .bp-opt .ob p { margin: 0 0 8px; } .bp-opt .ob :is(ul, ol) { margin: 0 0 8px; padding-left: 20px; }
+/* a shared page's reader on an answer (ANSWERS): a quiet pill with their initial, "<login>'s answer", after the doc's
+   "Chosen"; Other's words in a row of their own; Tell me more under the list */
+.bd-ansby { display: inline-flex; flex: none; align-items: center; gap: 5px; height: 22px; padding: 0 9px 0 3px; border-radius: 999px; font: 500 12px/1 var(--sans);
+  color: var(--accent-fg, var(--accent)); background: var(--accent-tint); white-space: nowrap; }
+.bd-ansby > i { display: grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; font: 700 9.5px/1 var(--sans); font-style: normal; color: #fff; background: var(--accent-solid, var(--accent)); }
+.bp-opt:not(.open) .one ~ .bd-ansby { margin-left: 0; }
+.bp-opt .yp:empty + .bd-ansby, .bp-opt .ol + .bd-ansby { margin-left: auto; }
+.bp-opt.bd-ansother .oh { cursor: default; }
+.bp-opt.bd-ansother .ol { flex: none; }
+.bp-opt.bd-ansother .one { color: var(--fg); white-space: normal; }
+.bd-ansmore { display: flex; align-items: center; gap: 8px; margin: 0; padding: 9px 14px 9px 12px; border-top: 1px solid var(--line); font-size: 13px; color: var(--warn-fg); }
+.bd-ansmore > .bd-ic { width: 15px; height: 15px; flex: none; }
+.bd-ansmore .bd-ansby { margin-left: auto; }
+.bp-chip.bd-ansc { white-space: nowrap; }
+.bp-chip.bd-ansc .bd-ic { width: 12px; height: 12px; }
+/* a shared attachment: an image the share carried, a thumbnail; the rest a chip that isn't a link, and how many */
+.bd-shf { display: flex; flex-direction: column; gap: 6px; }
+.bd-shimgs { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.bd-shimgs li { width: 120px; height: 84px; border-radius: 8px; overflow: hidden; background: var(--inset); box-shadow: inset 0 0 0 1px var(--line); }
+.bd-shimgs img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.bp-file.off .nm { cursor: default; color: var(--fg-muted); }
+.bp-file.off .nm:hover .t { text-decoration: none; }
+.bd-shfn { margin: 0; font-size: 12px; color: var(--fg-subtle); }
 /* an open answer's own one-line field, under its explanation */
 .bp-opt .ob .ac-in { margin: 10px 0 2px; }
 /* the one-line field (the reply field, an answer's, and Other's in the list): the text, then a round Attach key and a
@@ -3547,6 +3589,7 @@ html.bd-presenting .bp-toast { z-index: 71; bottom: 84px; }
 <script type="application/json" id="bp-snaps">__BLUEDOC_SNAPS__</script>
 <script type="application/json" id="bp-listing">__BLUEDOC_LISTING__</script>
 <script type="application/json" id="bp-pins">__BLUEDOC_PINS__</script>
+<script type="application/json" id="bp-answers">__BLUEDOC_ANSWERS__</script>
 <script>
 (() => {
 'use strict';
@@ -3585,6 +3628,27 @@ const SHARE = (() => { const s = window.bluedocShare; return s && typeof s === '
 // and ?rev= and ?diff= show that revision. Navigation, contents, the theme, print, Download, links, and a board's pan,
 // zoom, focus, theme pills, Present and Compare stay.
 const VIEW_ONLY = !!SHARE;
+// A shared page may carry the reader's answers (bp-answers, a gist's bluedoc-page.json fills it: share.py
+// answers_slot): {by: the share's GitHub login, at, rev, state: {reader state key without the bp:<id>: prefix: its
+// value}}. They show as theirs and read-only: "<by>'s answer" beside a picked option (apart from the doc's `choice`),
+// "Done · <by>" on a tick, their comments in the Comments tab. Their attachments carry no path: an image may carry
+// its data (src), the rest say "not shared". null anywhere else, and for an older bundle without the slot.
+const ANSWERS = VIEW_ONLY ? (() => {
+  try {
+    const x = JSON.parse(document.getElementById('bp-answers')?.textContent || 'null');
+    const str = v => typeof v === 'string' && v.length <= 200;
+    if (!x || typeof x !== 'object' || !str(x.by) || !/^[A-Za-z0-9][A-Za-z0-9-]{0,38}$/.test(x.by) || !str(x.at) || !(x.rev === null || str(x.rev))
+      || !x.state || typeof x.state !== 'object' || Array.isArray(x.state) || !Object.values(x.state).every(v => typeof v === 'string')) return null;
+    return { by: x.by, at: x.at, rev: x.rev, state: x.state };
+  } catch { return null; }
+})() : null;
+// who the reader's messages are from: You, or on a shared page the account that shared them
+const YOU = ANSWERS ? ANSWERS.by : 'You';
+const ansJson = k => { try { return ANSWERS && k in ANSWERS.state ? JSON.parse(ANSWERS.state[k]) : null; } catch { return null; } };
+// a shared attachment {name, size, src?}: what a gist carries of the reader's file (no path)
+const okShared = f => !!f && typeof f === 'object' && typeof f.name === 'string' && !!f.name && Number.isSafeInteger(f.size)
+  && (f.src == null || typeof f.src === 'string' && /^data:image\/(png|jpeg|gif|webp);base64,[A-Za-z0-9+/=]+$/.test(f.src));
+const sharedOf = v => Array.isArray(v) ? v.filter(okShared).slice(0, 10) : [];
 const SCREENS = (() => { try { const x = JSON.parse(document.getElementById('bp-screens').textContent); return x && typeof x === 'object' && !Array.isArray(x) ? x : null; } catch { return null; } })();
 // served by serve.py: an -o file carries its screens (SCREENS), and a shared page is on bluedoc.ai's https
 const SERVED = !SHARE && !SCREENS && /^https?:$/.test(location.protocol);
@@ -4295,6 +4359,20 @@ const store = (() => {
     del: k => { if (get(k) == null) return; put(k, null); queue(k, null); },
   };
 })();
+// a shared page's answers: the reader's item threads and saved comments go where the page reads them (memory only, as
+// every key there), each attachment as shared ({name, size, src?}); picks and ticks are drawn apart (renderChecklist)
+if (ANSWERS) for (const [k, v] of Object.entries(ANSWERS.state)) {
+  const what = k.split(':')[2];
+  if (k.startsWith('__') || !['thread', 'note', 'notes'].includes(what)) continue;
+  const x = what === 'note' ? v : ansJson(k);
+  if (what === 'thread' && Array.isArray(x)) store.set(`bp:${docId}:${k}`, JSON.stringify(x.map(m => {
+    const { files, ...rest } = m && typeof m === 'object' ? m : {};
+    return { ...rest, shared: sharedOf(files) };
+  })));
+  else if (what === 'notes' && x && typeof x === 'object') store.set(`bp:${docId}:${k}`, JSON.stringify(Object.fromEntries(Object.entries(x)
+    .map(([a, d]) => [a, { md: String(d && d.md || ''), shared: sharedOf(d && d.files) }]))));
+  else if (what === 'note' && typeof x === 'string') store.set(`bp:${docId}:${k}`, x);
+}
 
 // Send answers, Request changes and Approve post through this. It throws on a failed request; `key` marks a
 // browser the server doesn't take writes from yet, `reload` a doc that changed since this page loaded. A website's
@@ -5894,6 +5972,17 @@ function fileChips(files, onRemove) {
       ic(/\.(png|jpe?g|gif|webp|avif|heic|bmp|svg|tiff?)$/i.test(f.name) ? 'fimg' : 'file'), h('span', { class: 't' }, f.name), h('span', { class: 'sz' }, fileSize(f.size))),
     onRemove && h('button', { type: 'button', class: 'x', 'aria-label': 'Remove ' + f.name, title: 'Remove', onclick: () => onRemove(f) }, ic('x')))));
 }
+// a shared page's attachments ({name, size, src?}: no path): an image the share carried as a thumbnail, the rest a
+// chip that says it isn't shared, then how many weren't
+function sharedChips(files) {
+  const left = files.filter(f => !f.src).length;
+  return h('div', { class: 'bd-shf' }, files.some(f => f.src) && h('ul', { class: 'bd-shimgs', 'aria-label': 'Attached images' }, files.filter(f => f.src).map(f =>
+    h('li', { title: `${f.name} · ${fileSize(f.size)}` }, h('img', { src: f.src, alt: f.name, loading: 'lazy' })))),
+    left > 0 && h('ul', { class: 'bp-files', 'aria-label': 'Files not shared' }, files.filter(f => !f.src).map(f => h('li', { class: 'bp-file off' },
+      h('span', { class: 'nm', title: 'Not in the shared link' }, ic(/\.(png|jpe?g|gif|webp|avif|heic|bmp|svg|tiff?)$/i.test(f.name) ? 'fimg' : 'file'),
+        h('span', { class: 't' }, f.name), h('span', { class: 'sz' }, fileSize(f.size)))))),
+    left > 0 && h('p', { class: 'bd-shfn' }, `${left} file${left === 1 ? '' : 's'} not shared`));
+}
 const attachUrl = q => '/__bluedoc/attach?' + new URLSearchParams({ path: location.pathname, ...q });
 async function uploadFile(file) {
   const r = await fetch(attachUrl({ name: file.name || 'file' }), { method: 'POST', body: file,
@@ -5965,7 +6054,7 @@ function fileDraft(onChange, { compact = false } = {}) {
    thread as it stood at that rev. */
 const okAbout = a => a == null || typeof a === 'string' && !!a && a.length <= 200;
 const okMsg = m => !!m && typeof m === 'object' && typeof m.md === 'string' && m.md.length <= 8192
-  && (m.files == null || okFiles(m.files) && m.files.length > 0) && (m.md.length >= 1 || !!m.files)
+  && (m.files == null || okFiles(m.files) && m.files.length > 0) && (m.md.length >= 1 || !!m.files || sharedOf(m.shared).length > 0)
   && (m.rev === null || typeof m.rev === 'string' && m.rev.length <= 40) && typeof m.at === 'string' && okAbout(m.about);
 const okReply = r => !!r && typeof r === 'object' && typeof r.md === 'string' && !!r.md.trim() && r.rev != null;
 const revOrd = r => { if (r == null) return -1; const i = REVS.findIndex(x => x.rev === String(r)); return i < 0 ? REVS.length : i; };
@@ -5982,7 +6071,7 @@ const aboutOf = m => okAbout(m.about) && m.about ? m.about : null;
 function convo(mine, theirs) {
   const upto = OLD ? revOrd(VIEW.rev) : Infinity;
   const ms = [...(Array.isArray(theirs) ? theirs : []).filter(okReply).map((m, i) => ({ who: 'agent', rev: String(m.rev), md: m.md, about: aboutOf(m), i })),
-    ...(Array.isArray(mine) ? mine : []).map((m, i) => ({ who: 'you', rev: m.rev, md: m.md, at: m.at, files: filesOf(m.files), about: aboutOf(m), i }))];
+    ...(Array.isArray(mine) ? mine : []).map((m, i) => ({ who: 'you', rev: m.rev, md: m.md, at: m.at, files: filesOf(m.files), shared: sharedOf(m.shared), about: aboutOf(m), i }))];
   const tie = (a, b) => a.who !== b.who ? (a.who === 'agent' ? -1 : 1) : a.who === 'you' && a.at !== b.at ? (a.at < b.at ? -1 : 1) : a.i - b.i;
   return ms.filter(m => revOrd(m.rev) <= upto).sort((a, b) => revOrd(a.rev) - revOrd(b.rev) || tie(a, b));
 }
@@ -5997,7 +6086,7 @@ const fmtAt = s => { const d = new Date(s); return isNaN(d) ? '' : `${d.getDate(
 // days"); a saved comment not sent yet (unsent) reads "not sent"
 function timeline(ms, x) {
   return h('ol', { class: 'bp-msgs', 'aria-label': 'Conversation' }, ms.map(m => {
-    const name = m.who === 'you' ? 'You' : agentName(), nw = !m.unsent && isNewMsg(m);
+    const name = m.who === 'you' ? YOU : agentName(), nw = !m.unsent && isNewMsg(m);
     const on = x && m.about && !aboutNow(x, m.about) ? h('span', { class: 'ac-on' }, 'On ' + aboutLabel(x, m.about)) : null;
     const mb = (m.md || on) && h('div', { class: 'mb bd-md', html: md(m.md || '') });
     if (on) (mb.firstElementChild && mb.firstElementChild.tagName === 'P' ? mb.firstElementChild : mb).prepend(on);
@@ -6005,7 +6094,7 @@ function timeline(ms, x) {
       h('span', { class: 'av', 'aria-hidden': 'true' }, name.slice(0, 1).toUpperCase()),
       h('div', { class: 'mh' }, h('b', { class: 'who' }, name), h('span', { class: 'rv' }, m.unsent ? 'not sent' : m.rev == null ? 'earlier' : 'rev ' + m.rev),
         nw && h('span', { class: 'nw' }, h('i'), 'New'), !m.unsent && m.at && m.rev != null && h('time', { datetime: m.at }, fmtAt(m.at))),
-      mb, m.files && m.files.length > 0 && h('div', { class: 'mf' }, fileChips(m.files)));
+      mb, m.files && m.files.length > 0 && h('div', { class: 'mf' }, fileChips(m.files)), m.shared && m.shared.length > 0 && h('div', { class: 'mf' }, sharedChips(m.shared)));
   }));
 }
 // an item's conversation, every message, nothing folded: in its open row, its diff cards and Merged (compact), in
@@ -6015,8 +6104,8 @@ function threadView(x, compact) {
   const el = h('div', { class: 'bp-convo' + (x.card ? ' ac-convo' : '') + (compact ? ' compact' : '') });
   let sig = null, shown = null;
   const paint = () => {
-    const ms = [...x.messages(), ...(x.card ? x.drafts().map(d => ({ who: 'you', unsent: true, rev: CUR.rev, md: d.md, files: d.files, about: d.about || null })) : [])];
-    const s = JSON.stringify([agentName(), ms.map(m => [m.who, m.rev, m.md, m.at, !m.unsent && isNewMsg(m), m.files, m.about, !!m.unsent, !!m.about && aboutNow(x, m.about)])]);
+    const ms = [...x.messages(), ...(x.card ? x.drafts().map(d => ({ who: 'you', unsent: true, rev: CUR.rev, md: d.md, files: d.files, shared: d.shared, about: d.about || null })) : [])];
+    const s = JSON.stringify([agentName(), ms.map(m => [m.who, m.rev, m.md, m.at, !m.unsent && isNewMsg(m), m.files, m.shared, m.about, !!m.unsent, !!m.about && aboutNow(x, m.about)])]);
     if (s === sig) return;
     const now = new Set(ms.filter(m => m.unsent).map(m => m.about || ''));
     if (shown && !REDUCE) for (const m of ms) if (m.unsent && !shown.has(m.about || '')) m.in = true;
@@ -6107,6 +6196,15 @@ function renderChecklist(b, parent) {
     let note = store.get(noteKey) || '';
     let files = (() => { try { return filesOf(JSON.parse(store.get(filesKey) || '[]')); } catch { return []; } })();
     let thread = (() => { try { const v = JSON.parse(store.get(threadKey) || '[]'); return Array.isArray(v) ? v.filter(okMsg).slice(-200) : []; } catch { return []; } })();
+    // a shared page's answers on this item (ANSWERS): the pick (ids), Other's words, Tell me more, the tick, apart from
+    // the doc's `choice` and `done`; and the files of a saved reply (pending), which carry no path
+    const ans = ANSWERS ? (() => {
+      const v = ANSWERS.state[`${cid}:${it.id}`], st = k => String(ANSWERS.state[`${cid}:${it.id}:${k}`] || '').trim();
+      const pick = choices && typeof v === 'string' && v.startsWith('=') ? v.slice(1).split('|')[0].split(',').filter(id => choices.some(c => c.id === id)) : [];
+      const a = { pick, custom: choices ? st('custom').slice(0, 2000) : '', more: !!choices && !!st('more'), tick: !choices && typeof v === 'string' && v[0] === '1' };
+      return a.pick.length || a.custom || a.more || a.tick ? a : null;
+    })() : null;
+    const noteShared = ANSWERS ? sharedOf(ansJson(`${cid}:${it.id}:files`)) : [];
     // before threads a sent comment stayed in the box, its hash in `:note-sent`: it becomes the first message, "earlier"
     if (note.trim() && store.get(noteSentKey) === noteHash(note)) {
       thread = [...thread, { md: note.trim().slice(0, 8192), rev: null, at: new Date().toISOString() }].slice(-200);
@@ -6116,14 +6214,14 @@ function renderChecklist(b, parent) {
       try {
         const v = JSON.parse(store.get(notesKey) || '{}');
         return new Map(Object.entries(v && typeof v === 'object' && !Array.isArray(v) ? v : {}).filter(([k, d]) => abouts.includes(k) && d && typeof d.md === 'string'
-          && d.md.length <= 8192 && (d.files == null || okFiles(d.files)) && (!!d.md.trim() || filesOf(d.files).length > 0)).map(([k, d]) => [k, { md: d.md, files: filesOf(d.files) }]));
+          && d.md.length <= 8192 && (d.files == null || okFiles(d.files)) && (!!d.md.trim() || filesOf(d.files).length > 0)).map(([k, d]) => [k, { md: d.md, files: filesOf(d.files), shared: sharedOf(d.shared) }]));
       } catch { return new Map(); }
     })();
     if (!side.size && store.get(notesKey) != null) store.del(notesKey);
     const saveSide = () => side.size ? store.set(notesKey, JSON.stringify(Object.fromEntries([...side].map(([k, d]) => [k, { md: d.md, ...filesJson(d.files) }])))) : store.del(notesKey);
     // every saved comment, the answers' in their order (Other, Tell me more last), then the reply about the whole question
-    const draftList = () => [...abouts.filter(a => side.has(a)).map(a => ({ about: a, md: side.get(a).md, files: side.get(a).files.slice() })),
-      ...(note || files.length ? [{ about: '', md: note, files: files.slice() }] : [])];
+    const draftList = () => [...abouts.filter(a => side.has(a)).map(a => ({ about: a, md: side.get(a).md, files: side.get(a).files.slice(), shared: side.get(a).shared })),
+      ...(note || files.length ? [{ about: '', md: note, files: files.slice(), shared: noteShared }] : [])];
     const replies = Array.isArray(it.replies) ? it.replies.filter(okReply) : [];
     // Tell me more on a question: '1' until sent, then `sent@<rev>`; a newer rev drops it
     const moreKey = key + ':more';
@@ -6141,6 +6239,8 @@ function renderChecklist(b, parent) {
         h('span', { class: 'bp-cl-text', html: inline(it.text) }),
         subMd && h('span', { class: 'bp-cl-subt' + (subIsCheck ? ' check' : '') }, subIsCheck && ic('check'), h('span', { html: inline(subMd) }))),
       okChip,
+      ans && (card ? h('span', { class: 'bp-chip info bd-ansc', title: `${YOU} answered this in the shared link` }, `${YOU} answered`)
+        : ans.tick && h('span', { class: 'bp-chip ok bd-ansc', title: `${YOU} marked this done` }, ic('tick'), `Done · ${YOU}`)),
       it.state && h('span', { class: 'bp-chip ' + (it.stateKind || 'warn') }, it.state),
       stale && h('span', { class: 'bp-chip warn bp-recheck', title: 'Its evidence is stale: the code changed since the check ran. It doesn\'t count as done until it is re-checked' }, ic('reset'), 'Needs recheck'),
       picked, askChip,
@@ -6154,7 +6254,7 @@ function renderChecklist(b, parent) {
     // while that differs from the author's
     const sentKey = key + ':sent', answerStr = () => choices ? '=' + pickStr() + (custom ? '~' + custom : '') : cb.checked ? '1' : '0', authorAnswer = choices ? '=' + authorChoice : authorDone;
     const custSentKey = key + ':custom-sent';
-    const entryItem = { it, cb, li, cid, body, head, choices, multi, card, fd, stale, get note() { return note; }, get files() { return files.slice(); },
+    const entryItem = { it, cb, li, cid, body, head, choices, multi, card, fd, stale, ans, get note() { return note; }, get files() { return files.slice(); },
       // the reader's own answer (Other), '' when none
       get custom() { return custom; },
       // Other on a brief's framework or theme: a request for a new option, not an answer the build can use
@@ -6296,7 +6396,7 @@ function renderChecklist(b, parent) {
       entryItem.moreBtn = moreBtn;
       li.append(detRow, entryItem.opts.el);
       if (entryItem.opts.more) li.append(entryItem.opts.more);
-      if (!RO || entryItem.messages().length) li.append(entryItem.thread.el);
+      if (!RO || entryItem.messages().length || ANSWERS && draftList().length) li.append(entryItem.thread.el);
       if (!RO) li.append(entryItem.noteView.el);
       // the question's own state, painted on each of its rows (this one, Merged's: `x.mviews`)
       entryItem.open = false; entryItem.details = false;
@@ -6467,6 +6567,9 @@ function paintAccept() {
 const MORE_LABEL = 'Tell me more';
 // an explanation's first line, for a closed row (list markers and headings off; CSS cuts it to one line)
 const oneLine = s => String(s || '').split('\n').map(l => l.replace(/^\s*(?:[-*+]\s+|\d+[.)]\s+|#+\s+|>\s?)/, '').trim()).find(Boolean) || '';
+// a shared page's reader on an answer: "<login>'s answer" (bare: the login), a pill with their initial
+const ansPill = bare => h('span', { class: 'bd-ansby', title: `${YOU}'s answer in this shared link` },
+  h('i', { 'aria-hidden': 'true' }, YOU.slice(0, 1).toUpperCase()), bare ? YOU : `${YOU}'s answer`);
 let OPT_N = 0;
 function optionRows(x, compact) {
   const multi = x.multi, recs = recIds(x), fields = !RO;
@@ -6486,14 +6589,20 @@ function optionRows(x, compact) {
     }
     const opens = !!o.md || fields;
     const hd = h('button', { type: 'button', class: 'oh', tabindex: VIEW_ONLY && o.md ? '0' : '-1', ...(opens ? { 'aria-expanded': 'false', 'aria-controls': bid } : { 'aria-hidden': 'true' }) },
-      lb, o.rec && h('span', { class: 'rec' }, '★ Recommended'), o.md && h('span', { class: 'one', html: inline(oneLine(o.md)) }), yp, opens && ic('down', 'cv'));
+      lb, o.rec && h('span', { class: 'rec' }, '★ Recommended'), o.md && h('span', { class: 'one', html: inline(oneLine(o.md)) }), yp,
+      x.ans && x.ans.pick.includes(o.id) && ansPill(), opens && ic('down', 'cv'));
     const ob = opens ? h('div', { class: 'ob bd-md', id: bid, html: o.md ? md(o.md) : '' }) : null;
     if (ob) ob.hidden = true;
     const row = h('div', { class: 'bp-opt' + (o.md ? '' : ' plain'), 'data-id': o.id }, pk, h('div', { class: 'oc' }, hd, ob));
     return { o, row, pk, hd, ob, lb, yp, fv: null };
   });
   ls.append(...rows.map(r => r.row));
-  const el = h('div', { class: 'bp-opts' + (compact ? ' compact' : '') }, h('div', { class: 'box' }, ls));
+  // a shared page: the words its reader gave as Other, as a row of their own, and their Tell me more (x.ans)
+  if (x.ans && x.ans.custom) ls.append(h('div', { class: 'bp-opt plain cust bd-ansother', 'data-id': 'custom' },
+    h('button', { type: 'button', role: multi ? 'checkbox' : 'radio', class: 'pk', disabled: true, 'aria-checked': 'false', 'aria-label': 'Other' }, h('i')),
+    h('div', { class: 'oc' }, h('div', { class: 'oh' }, h('span', { class: 'ol' }, 'Other'), h('span', { class: 'one' }, x.ans.custom), ansPill()))));
+  const el = h('div', { class: 'bp-opts' + (compact ? ' compact' : '') }, h('div', { class: 'box' }, ls,
+    x.ans && x.ans.more && h('p', { class: 'bd-ansmore' }, ic('msgq'), h('span', {}, 'Asked for more'), ansPill(true))));
   // Tell me more: its radio, its icon, the label, what it does, and once sent "Asked · rev N"; asked, the reply field
   // under the conversation asks what the reader needs to know
   const tm = fields ? (() => {
@@ -9328,17 +9437,41 @@ function docMarkdown(doc) {
      accent, in the warning colour while the doc is newer than its share (data-share shared|newer; GET …&brief=1 on
      load). Sharing off (off: gh missing, signed out, no account with the gist scope): the key dims, its tooltip says
      why, and a press asks again, then opens the sheet or the popover with the command that turns sharing on. Nothing
-     comes back through the gist: the shared page is view-only (VIEW_ONLY) */
+     comes back through the gist: the shared page is view-only (VIEW_ONLY).
+     The budget (gistbudget.py): at most 90 gist updates an hour per GitHub account, one a minute per doc. A share that
+     doesn't fit waits (202, `queued` {at, why: hour | spacing | retry | paused, login}) and the server sends the doc as
+     it is then: the badge says Queued, the state line when the next update goes and why ("Updated 2 min ago · next
+     update in 6 min: GitHub allows about 100 updates an hour"; a first share: the link shows here when it goes out),
+     the key is a disabled "Queued: rev N at 15:42", and the sheet repaints each minute while open (reading the share
+     again once the time has passed). GitHub refused 4 in a row (why paused, or the account's `budget.paused`):
+     Paused, what happened, and Resume updates (POST {resume: true}). An update the queue couldn't send says why
+     (`error`). Details has the hour's count (`budget`: "37 of 90 this hour on <login>").
+     Include my answers: one switch per kind (picks, ticks, sent comments, pending and drafts, attached images) with how
+     many the doc has and what goes out; the first three on until the reader picks. The pick is reader state
+     (`__share-answers`, kinds comma-joined), each share posts it as `answers`, and the sheet reads the share again
+     with &answers= to know whether they changed since the share: Update answers */
   const NOTICE = ['bluedoc isn\'t responsible for this share method or for secrets leaked through GitHub gists.',
     'A secret gist is unlisted and not searchable, but anyone with the link can read it. Check the doc for secrets before you share.'];
   const ANOTHER = 'gh auth login -s gist';
-  // busy: the call running ('go' share or update, 'del' delete, 'acct' the project's account); pick: Move or Keep;
-  // acct: the first share's pick (else the project's account); det: Details open; menu: the Share as key's menu
-  const SH = { dlg: null, view: null, busy: '', err: '', sure: false, pick: '', acct: '', copied: false, det: false, menu: null, down: null };
+  // the reader's answers a share carries, by kind (share.py ANSWER_KINDS): its switch's name, what it is, how a count
+  // of it reads; and the ones that go until the reader picks
+  const KINDS = [['picks', 'Picks', 'Answers, Other, Tell me more', ['pick', 'picks']], ['ticks', 'Ticks', 'Done marks', ['tick', 'ticks']],
+    ['comments', 'Sent comments', 'Threads, pins, regions', ['comment', 'comments']], ['pending', 'Pending and drafts', 'Saved, not sent yet', ['pending comment', 'pending comments']],
+    ['images', 'Attached images', 'In comments, up to 1.5 MB', ['image', 'images']]];
+  const KIND_DEFAULT = ['picks', 'ticks', 'comments'], KINDS_KEY = `bp:${docId}:__share-answers`;
+  // busy: the call running ('go' share or update, 'resume', 'del' delete, 'acct' the project's account); pick: Move or
+  // Keep; acct: the first share's pick (else the project's account); det: Details open; menu: the Share as key's menu;
+  // kinds: the answers that go (null: none read yet); tick: the minute's repaint while open; ask: the latest read
+  const SH = { dlg: null, view: null, busy: '', err: '', sure: false, pick: '', acct: '', copied: false, det: false, menu: null, down: null, kinds: null, tick: 0, ask: 0 };
   let OFF = null, copyT = 0;
   const shareKey = h('button', { type: 'button', class: 'bd-tbtn bd-shk', onclick: () => keyPress() }, ic('share'), h('span', { class: 'w' }, 'Share'), h('span', { class: 'dot', 'aria-hidden': 'true' }));
   tipped(shareKey);
-  const viewUrl = brief => '/__bluedoc/share?' + new URLSearchParams({ path: location.pathname, ...(brief ? { brief: '1' } : {}) });
+  const viewUrl = (brief, kinds) => '/__bluedoc/share?' + new URLSearchParams({ path: location.pathname, ...(brief ? { brief: '1' } : {}), ...(kinds ? { answers: kinds.join(',') } : {}) });
+  const kindsOf = v => {
+    const s = store.get(KINDS_KEY);
+    if (s != null) return s.split(',').filter(k => KINDS.some(([id]) => id === k));
+    return v && v.answers && Array.isArray(v.answers.kinds) ? v.answers.kinds : KIND_DEFAULT;
+  };
   const offTip = () => `Sharing is off: ${OFF.reason}. Click for how to turn it on.`;
   async function shareCall(method, path, body) {
     const headers = SERVER_KEY.headers({ 'Content-Type': 'application/json', 'X-Bluedoc': '1' });
@@ -9355,6 +9488,19 @@ function docMarkdown(doc) {
     return s < 45 ? 'just now' : s < 3600 ? `${Math.max(1, Math.round(s / 60))} min ago` : s < 86400 ? `${Math.round(s / 3600)} h ago`
       : d.toLocaleDateString([], { month: 'short', day: 'numeric', ...(d.getFullYear() !== new Date().getFullYear() && { year: 'numeric' }) });
   }
+  // a queued update's time: 15:42, and "in 6 min" (at least 1)
+  const clockAt = iso => { const d = new Date(iso); return isNaN(d) ? '' : `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
+  const inMin = iso => `in ${Math.max(1, Math.round((new Date(iso) - Date.now()) / 60000))} min`;
+  const LIMIT_SAYS = 'GitHub allows about 100 updates an hour';
+  // why a queued update waits, as the sheet says it
+  const waitWhy = why => why === 'spacing' ? 'one update a minute per doc' : why === 'retry' ? 'GitHub asked to wait' : LIMIT_SAYS;
+  // what holds the doc's next update: {paused, login} (its queued update's account, or the account it goes out as, was
+  // refused 4 in a row), {queued, at, why, login}, or null
+  const holdOf = v => {
+    const q = v && v.queued, b = v && v.budget;
+    if (q && q.why === 'paused' || !q && b && b.paused) return { paused: true, login: (q && q.login) || b.login };
+    return q && q.at ? { queued: true, at: q.at, why: q.why, login: q.login } : null;
+  };
   // sharing off: the key's popover. What's wrong, the command that fixes it with a copy key, and how to get gh. The key
   // asks the server again on every press, so it opens the sheet once sharing works
   const offPop = (() => {
@@ -9398,10 +9544,12 @@ function docMarkdown(doc) {
     document.body.append(box);
     return { open, close, isOpen: () => !box.hidden };
   })();
-  // the key's state from the route's answer ({share, rev, off}): off, shared, the doc newer than its share, or none
+  // the key's state from the route's answer ({share, rev, off, queued}): off, paused, queued, shared, the doc newer than
+  // its share, or none
   function paintKey(v) {
     OFF = v && v.off || null;
-    const s = !OFF && v && v.share, state = !s ? '' : v.rev !== s.rev ? 'newer' : 'shared';
+    const s = !OFF && v && v.share, q = !OFF && v && v.queued;
+    const state = q ? (q.why === 'paused' ? 'paused' : 'queued') : !s ? '' : v.rev !== s.rev ? 'newer' : 'shared';
     if (state) shareKey.dataset.share = state; else delete shareKey.dataset.share;
     if (OFF) {
       shareKey.setAttribute('aria-disabled', 'true'); shareKey.setAttribute('aria-haspopup', 'dialog');
@@ -9414,7 +9562,9 @@ function docMarkdown(doc) {
     offPop.close(false);
     ['aria-disabled', 'aria-haspopup', 'aria-expanded'].forEach(a => shareKey.removeAttribute(a));
     shareKey._tip = null;
-    const say = state === 'newer' ? `Shared at rev ${s.rev || '–'}; the doc is at rev ${v.rev || '–'} now: Update puts it in the link`
+    const say = state === 'paused' ? `Updates are paused: GitHub refused 4 in a row on ${q.login}. Open to resume`
+      : state === 'queued' ? `Queued: rev ${v.rev || '–'} goes out at ${clockAt(q.at)} (${inMin(q.at)}); ${LIMIT_SAYS}`
+      : state === 'newer' ? `Shared at rev ${s.rev || '–'}; the doc is at rev ${v.rev || '–'} now: Update puts it in the link`
       : state ? `Shared as a secret gist at rev ${s.rev || '–'}` : 'Share a link to this doc: a secret GitHub gist that opens at bluedoc.ai';
     shareKey.title = say;
     shareKey.setAttribute('aria-label', state ? `Share (${say})` : 'Share');
@@ -9446,9 +9596,11 @@ function docMarkdown(doc) {
   }
   const badge = (tone, icon, text, cls) => h('span', { class: ['bdg', tone, cls].filter(Boolean).join(' ') }, icon && ic(icon), text);
   const spinner = () => h('span', { class: 'spn', 'aria-hidden': 'true' });
-  // the stub's action: the accent key across it, a spinner while the share runs
-  const goKey = (label, icon, off) => h('button', { type: 'button', class: 'go', 'data-k': 'go', disabled: !!off || (!!SH.busy && SH.busy !== 'go'), 'aria-busy': SH.busy === 'go' ? 'true' : null,
-    onclick: () => doShare() }, SH.busy === 'go' ? spinner() : ic(icon), SH.busy === 'go' ? 'Sharing…' : label);
+  // the stub's action: the accent key across it, a spinner while its call runs (busy: which call is its; Resume
+  // updates' is 'resume')
+  const goKey = (label, icon, off, busy = 'go') => h('button', { type: 'button', class: 'go', 'data-k': 'go', disabled: !!off || (!!SH.busy && SH.busy !== busy),
+    'aria-busy': SH.busy === busy ? 'true' : null, onclick: () => busy === 'resume' ? doResume() : doShare() },
+    SH.busy === busy ? spinner() : ic(icon), SH.busy === busy ? (busy === 'resume' ? 'Resuming…' : 'Sharing…') : label);
   function paintCopy(b) {
     b.className = 'cp' + (SH.copied ? ' ok' : b.hasAttribute('data-pri') ? ' pri' : '');
     return setKids(b, ic(SH.copied ? 'tick' : 'copy'), SH.copied ? 'Copied' : 'Copy link');
@@ -9492,6 +9644,8 @@ function docMarkdown(doc) {
       h('dl', {},
         acct && row('account', 'Account', [h('b', { class: 'mono' }, acct), why && ` · ${why}`],
           mm ? `This gist was made as ${s.user}.` : v.ask ? `Picking another under Share as changes it for ${pname}.` : null),
+        v.budget && row('budget', 'Updates', `${v.budget.used} of ${v.budget.limit} this hour on ${v.budget.login}`,
+          `${LIMIT_SAYS}; bluedoc sends at most ${v.budget.limit}, one a minute per doc.`),
         s && row('gist', 'Gist', ['Secret gist ', h('code', {}, String(s.id).slice(0, 8) + '…'), ` on ${s.user}`,
           h('a', { href: safeUrl(s.url), target: '_blank', rel: 'noopener noreferrer' }, 'Open on GitHub', ic('ext'))], 'Unlisted and not searchable; the bluedoc.ai link opens it.'),
         row('left-out', 'Left out', 'Earlier revisions and compare', 'A gist holds one revision; Update replaces it.'),
@@ -9499,18 +9653,35 @@ function docMarkdown(doc) {
         s && row('stop', 'Stop sharing', `Deletes the gist as ${s.user}`, 'The link stops working.')));
     return det;
   }
+  // Include my answers: what goes out, then a switch per kind with how many the doc has (setKind); none on a view
+  // without answers
+  function answersBox(v) {
+    const a = v.answers;
+    if (!a || !a.counts) return null;
+    const on = SH.kinds || a.kinds || KIND_DEFAULT, c = a.counts;
+    const goes = KINDS.filter(([id]) => on.includes(id) && c[id] > 0), one = goes.length === 1 && c[goes[0][0]] === 1;
+    const say = (goes.length ? `${goes.map(([id, , , n]) => many(c[id], n[0], n[1])).join(', ')} go${one ? 'es' : ''} out` : 'None of your answers go out')
+      + (goes.length && a.notShared ? ` · ${many(a.notShared, 'file', 'files')} not shared` : '');
+    return h('div', { class: 'ans' }, h('div', { class: 'ah' }, h('span', { class: 'cap', id: 'bd-sh-ans' }, 'Include my answers'), h('span', { class: 'why' }, say)),
+      h('div', { class: 'kds', role: 'group', 'aria-labelledby': 'bd-sh-ans' }, KINDS.map(([id, label, what]) => h('label', { class: 'kd', 'data-kind': id },
+        h('span', { class: 'kl' }, h('b', {}, label), h('small', {}, what)), h('span', { class: 'kn', title: 'On this doc' }, String(c[id] || 0)),
+        h('button', { type: 'button', role: 'switch', class: 'sw', 'aria-checked': String(on.includes(id)), 'aria-label': label, 'data-k': 'kind:' + id, disabled: !!SH.busy,
+          onclick: () => setKind(id) }, h('i', { 'aria-hidden': 'true' }))))));
+  }
   // the sheet from SH. focus: true puts the focus on the state's action, a data-k on that control; else it stays on
   // the control it was on (the same data-k), or goes to the action when it was lost
   function paintShare(focus) {
     const d = SH.dlg, v = SH.view, s = v && v.share, busy = SH.busy, mm = !!s && v.mismatch || null;
     const newer = !!s && v.rev !== s.rev, proj = v && v.project, pname = proj ? proj.name : 'this project';
     const acct = v ? (!s && SH.acct) || (v.account ? v.account.login : '') : '';
+    const hold = holdOf(v), changed = !!s && !newer && !!(v.answers && v.answers.changed);
     const close = () => { if (!SH.busy) d.close(); };
     const fk = typeof focus === 'string' ? focus : !focus && d.contains(document.activeElement) ? document.activeElement.dataset.k : '';
     if (SH.menu) { SH.menu.pop.close(false); SH.menu = null; }
+    const state = hold ? (hold.paused ? badge('warn', 'pause', 'Paused', 'st') : badge('warn', 'hist', 'Queued', 'st'))
+      : s && (newer ? badge('warn', 'hist', `Link shows rev ${s.rev || '–'}`, 'st') : changed ? badge('warn', 'hist', 'Answers changed', 'st') : badge('ok', 'tick', 'Up to date', 'st'));
     const head = h('div', { class: 'half hd' },
-      h('div', { class: 'eyb' }, ic('share'), h('span', { id: 'bd-sh-h' }, s ? 'Shared link' : 'Share a read-only link'),
-        s && (newer ? badge('warn', 'hist', `Link shows rev ${s.rev || '–'}`, 'st') : badge('ok', 'tick', 'Up to date', 'st')),
+      h('div', { class: 'eyb' }, ic('share'), h('span', { id: 'bd-sh-h' }, s ? 'Shared link' : 'Share a read-only link'), state,
         h('span', { class: 'sp' }),
         h('button', { type: 'button', class: 'bd-ibtn x', 'aria-label': 'Close', 'data-k': 'x', disabled: !!busy, onclick: close }, ic('x'))),
       h('div', { class: 'top' }, h('span', { class: 'emo', 'aria-hidden': 'true' }, NAME.emoji()),
@@ -9518,37 +9689,51 @@ function docMarkdown(doc) {
       v && h('div', { class: 'meta2' }, s && v.ask && acct && acctKey(v, acct), s && h('span', { class: 'sp' }),
         badge('', 'image', `${v.contents.media} media`, 'n'), badge('', 'monitor', many(v.contents.screens, 'screen', 'screens'), 'n')));
     const kids = [];
+    // an update that waits: the key says its rev and time, disabled; paused: what happened, and Resume updates
+    const note = (icon, b, why) => h('div', { class: 'up', role: 'note' }, ic(icon), h('div', {}, h('b', {}, b), h('div', { class: 'why' }, why)));
+    const paused = () => note('pause', `GitHub refused 4 updates in a row on ${hold.login}.`, 'Nothing goes out until you resume.');
+    const holdKey = () => hold.paused ? goKey('Resume updates', 'play', false, 'resume') : goKey(`Queued: rev ${v.rev || '–'} at ${clockAt(hold.at)}`, 'hist', true);
+    const line = (text, warn) => h('p', { class: 'stl' + (warn ? ' newer' : ''), role: 'status' }, h('i', { 'aria-hidden': 'true' }), text);
     if (!v) { if (!SH.err) kids.push(h('p', { class: 'why' }, 'Reading the doc…')); }
     else if (!s) {
-      if (v.ask) kids.push(h('div', { class: 'cap', id: 'bd-sh-as' }, 'Share as'),
+      if (hold) kids.push(...(hold.paused ? [paused()] : [line(`Not shared yet · goes out ${inMin(hold.at)}: ${waitWhy(hold.why)}`, true),
+        h('p', { class: 'why' }, 'The link shows here when it goes out.')]));
+      else if (v.ask) kids.push(h('div', { class: 'cap', id: 'bd-sh-as' }, 'Share as'),
         h('div', { class: 'accs', role: 'radiogroup', 'aria-labelledby': 'bd-sh-as' }, v.accounts.map(a => h('label', { class: 'acc' + (a.usable ? '' : ' off') },
           h('input', { type: 'radio', name: 'bd-sh-acct', value: a.login, 'data-k': 'acct:' + a.login, checked: a.login === acct, disabled: !a.usable || !!busy,
             onchange: () => { SH.acct = a.login; paintShare(); } }),
           h('span', {}, h('span', { class: 'who' }, avatar(a.login), h('b', {}, a.login)), h('span', { class: 'why' }, whyOf(v, a)))))),
         h('div', { class: 'oth' }, ic('plus'), h('span', {}, 'Another account: ', h('code', {}, ANOTHER))));
-      kids.push(goKey(v.ask && acct ? `Share as ${acct}` : 'Share', 'share', v.ask && !acct));
+      kids.push(answersBox(v), hold ? holdKey() : goKey(v.ask && acct ? `Share as ${acct}` : 'Share', 'share', v.ask && !acct));
     } else {
       // the link as the design shows it, without its scheme; Copy link copies it whole
       const lnk = h('div', { class: 'lnk' }, h('input', { type: 'text', readonly: true, value: s.link.replace(/^https:\/\//, ''), title: s.link, 'aria-label': 'Link to the shared doc', 'data-k': 'link', onfocus: e => e.target.select() }),
-        paintCopy(h('button', { type: 'button', 'data-k': 'copy', 'data-pri': !newer && !mm ? '' : null, onclick: () => copyLink(s.link) })));
-      kids.push(lnk, h('p', { class: 'stl' + (newer ? ' newer' : ''), role: 'status' }, h('i', { 'aria-hidden': 'true' }), `Shared at rev ${s.rev || '–'} · ${when(s.at)} · as ${s.user}`));
+        paintCopy(h('button', { type: 'button', 'data-k': 'copy', 'data-pri': !newer && !mm && !hold && !changed ? '' : null, onclick: () => copyLink(s.link) })));
+      kids.push(lnk, line(hold && hold.queued ? `Updated ${when(s.at)} · next update ${inMin(hold.at)}: ${waitWhy(hold.why)}`
+        : `Shared at rev ${s.rev || '–'} · ${when(s.at)} · as ${s.user}`, newer || !!hold || changed));
       const up = newer ? `Update to rev ${v.rev || '–'}` : 'Share again';
       const tile = (val, icon, title, sub, tag, tone) => h('label', { class: 'tile', 'data-pick': val },
         h('input', { type: 'radio', name: 'bd-sh-pick', value: val, 'data-k': 'pick:' + val, checked: SH.pick === val, disabled: !!busy, onchange: () => { SH.pick = val; paintShare(); } }),
         h('span', { class: 'th' }, ic(icon), h('b', {}, title)), h('span', { class: 'why' }, sub), badge(tone, null, tag, 'sm'));
-      if (mm) kids.push(h('div', { class: 'cap mt', id: 'bd-sh-mm' }, `This gist is on ${mm.gist}; ${pname} shares as ${mm.project}`),
+      if (hold) kids.push(hold.paused && paused(), answersBox(v), holdKey());
+      else if (mm) kids.push(h('div', { class: 'cap mt', id: 'bd-sh-mm' }, `This gist is on ${mm.gist}; ${pname} shares as ${mm.project}`),
         h('div', { class: 'tiles', role: 'radiogroup', 'aria-labelledby': 'bd-sh-mm' },
           tile('move', 'arrowr', `Move to ${mm.project}`, `New gist, ${mm.gist}’s is deleted.`, 'Link changes', 'warn'),
           tile('keep', 'lock', `Keep on ${mm.gist}`, `Rev ${v.rev || '–'} goes into this gist.`, 'Link stays', 'ok')),
-        goKey(SH.pick ? up : `${up} · pick one first`, 'upload', !SH.pick));
-      else if (newer) kids.push(h('div', { class: 'up', role: 'note' }, ic('hist'), h('div', {}, h('b', {}, `Readers see rev ${s.rev || '–'}. The doc is at rev ${v.rev || '–'}.`),
-        h('div', { class: 'why' }, `Update puts rev ${v.rev || '–'} in the same gist; the link stays.`))), goKey(up, 'upload'));
+        answersBox(v), goKey(SH.pick ? up : `${up} · pick one first`, 'upload', !SH.pick));
+      else if (newer) kids.push(note('hist', `Readers see rev ${s.rev || '–'}. The doc is at rev ${v.rev || '–'}.`, `Update puts rev ${v.rev || '–'} in the same gist; the link stays.`),
+        answersBox(v), goKey(up, 'upload'));
+      else if (changed) kids.push(note('hist', 'Your answers changed since the share.', 'Update puts them in the same gist; the link stays.'), answersBox(v), goKey('Update answers', 'upload'));
+      else kids.push(answersBox(v));
     }
     if (SH.err) kids.push(h('p', { class: 'err', role: 'alert' }, SH.err));
+    else if (v && v.error) kids.push(h('p', { class: 'err', role: 'alert' }, `The queued update didn't go: ${v.error}`));
     kids.push(h('div', { class: 'acts' }, v && details(v, s, acct, mm), h('div', { class: 'btns' },
       s && h('button', { type: 'button', class: 'tb stop' + (SH.sure ? ' sure' : ''), 'data-k': 'stop', disabled: !!busy && busy !== 'del', 'aria-busy': busy === 'del' ? 'true' : null, onclick: () => doStop() },
         busy === 'del' ? spinner() : ic('trash'), busy === 'del' ? 'Deleting…' : SH.sure ? 'Delete the gist' : 'Stop sharing'),
-      h('button', { type: 'button', class: 'tb cls', 'data-k': 'cls', disabled: !!busy, onclick: close }, s ? 'Close' : 'Cancel'))));
+      !s && hold && h('button', { type: 'button', class: 'tb stop', 'data-k': 'stop', disabled: !!busy && busy !== 'del', 'aria-busy': busy === 'del' ? 'true' : null, onclick: () => doStop() },
+        busy === 'del' ? spinner() : ic('x'), 'Don\'t share'),
+      h('button', { type: 'button', class: 'tb cls', 'data-k': 'cls', disabled: !!busy, onclick: close }, s || hold ? 'Close' : 'Cancel'))));
     const foot = h('div', { class: 'half ft' }, h('div', { class: 'stub' }, kids),
       h('div', { class: 'strip', role: 'note' }, ic('alert'), h('p', {}, h('b', {}, NOTICE[0]), ' ', NOTICE[1])));
     const had = d.contains(document.activeElement);
@@ -9566,17 +9751,59 @@ function docMarkdown(doc) {
       d.addEventListener('pointerdown', e => { SH.down = e.target; });
       d.addEventListener('click', e => { if (e.target === d && SH.down === d && !SH.busy) d.close(); });
       d.addEventListener('cancel', e => { if (SH.busy) e.preventDefault(); });
-      d.addEventListener('close', () => { if (SH.menu) SH.menu.pop.close(false); clearTimeout(copyT); SH.copied = false; });
+      d.addEventListener('close', () => { if (SH.menu) SH.menu.pop.close(false); clearTimeout(copyT); clearInterval(SH.tick); SH.copied = false; });
       document.body.append(d);
     }
     offPop.close(false);
-    Object.assign(SH, { view: null, err: '', sure: false, pick: '', acct: '', copied: false, det: false });
+    Object.assign(SH, { view: null, err: '', sure: false, pick: '', acct: '', copied: false, det: false, kinds: null });
     paintShare();
     if (!SH.dlg.open) SH.dlg.showModal();
-    try { SH.view = await shareCall('GET', viewUrl()); paintKey(SH.view); }
-    catch (e) { SH.err = `Couldn't read this doc's share: ${e.message}`; }
+    clearInterval(SH.tick);
+    SH.tick = setInterval(minute, 60000);
+    const ask = ++SH.ask;
+    try { const j = await shareCall('GET', viewUrl()); if (ask !== SH.ask) return; SH.view = j; paintKey(j); }
+    catch (e) { if (ask !== SH.ask) return; SH.err = `Couldn't read this doc's share: ${e.message}`; }
     if (SH.view && SH.view.off) { SH.view = null; SH.dlg.close(); offPop.open(); return; }
+    SH.kinds = SH.view && SH.view.answers ? kindsOf(SH.view) : null;
     paintShare(true);
+  }
+  // each minute while the sheet is open: its times again ("in 5 min", "3 min ago"); once a queued update's time has
+  // passed, the share read again (the server has sent it, or says why it still waits)
+  async function minute() {
+    if (!SH.dlg || !SH.dlg.open) { clearInterval(SH.tick); return; }
+    const hold = holdOf(SH.view);
+    if (!SH.busy && hold && hold.queued && new Date(hold.at) <= Date.now()) {
+      const ask = ++SH.ask;
+      try {
+        const j = await shareCall('GET', viewUrl(false, SH.kinds));
+        if (ask === SH.ask && SH.dlg.open && !SH.busy) { SH.view = j; paintKey(j); }
+      } catch { /* the next minute asks again */ }
+    }
+    if (SH.dlg.open && !SH.busy) paintShare();
+  }
+  // a switch in Include my answers: the kinds that go, remembered for the doc (reader state, `__share-answers`), then
+  // the share read again with them for what that changes (Update answers); the latest read wins
+  async function setKind(id) {
+    const v = SH.view;
+    if (SH.busy || !v || !v.answers) return;
+    const was = SH.kinds || v.answers.kinds;
+    const kinds = KINDS.map(([k]) => k).filter(k => k === id ? !was.includes(k) : was.includes(k));
+    SH.kinds = kinds;
+    store.set(KINDS_KEY, kinds.join(','));
+    paintShare('kind:' + id);
+    const ask = ++SH.ask;
+    try {
+      const j = await shareCall('GET', viewUrl(false, kinds));
+      if (ask === SH.ask && SH.dlg.open && !SH.busy) { SH.view = j; paintKey(j); paintShare(); }
+    } catch { /* the switch stands; the next read says what it changes */ }
+  }
+  // what a share's answer says: queued (when it goes), paused, a new link (copied), or the same one updated
+  function shared(j, was, done) {
+    const hold = holdOf(j), link = j.share && j.share.link;
+    if (hold && hold.paused) SH.err = `Not sent: GitHub refused 4 updates in a row on ${hold.login}. Resume updates sends it.`;
+    else if (hold) toast(was ? `Queued: rev ${j.rev || '–'} goes out at ${clockAt(hold.at)}` : `Queued: it goes out at ${clockAt(hold.at)}; the link shows here then`);
+    else if (link && (!was || link !== was.link)) copyLink(link, was ? 'Moved: the new link is copied' : `${done}: the link is copied`);
+    else if (j.share) toast(`${done}: readers see rev ${j.share.rev || '–'} when they reload`);
   }
   async function doShare() {
     const v = SH.view, s = v && v.share, mm = !!s && v.mismatch;
@@ -9584,21 +9811,37 @@ function docMarkdown(doc) {
     const body = { path: location.pathname }, acct = SH.acct || (v.account ? v.account.login : '');
     if (!s && v.ask && acct) body.as = acct;
     if (mm) body[SH.pick] = true;
+    if (v.answers) body.answers = SH.kinds || v.answers.kinds;
     Object.assign(SH, { busy: 'go', err: '', sure: false });
     paintShare();
     try {
       const j = await shareCall('POST', '/__bluedoc/share', body);
       Object.assign(SH, { view: j, pick: '', acct: '' });
       paintKey(j);
-      const link = j.share && j.share.link;
-      if (link && (!s || link !== s.link)) copyLink(link, s ? 'Moved: the new link is copied' : 'Shared: the link is copied');
-      else if (j.share) toast(`Updated: readers see rev ${j.share.rev || '–'} when they reload`);
+      shared(j, s, s ? 'Updated' : 'Shared');
       if (j.warning) SH.err = j.warning;   // a move's old gist that couldn't be deleted
     } catch (e) {
       // the project's account changed since the sheet read it: Move or Keep first
       if (e.status === 409 && e.body && e.body.mismatch) Object.assign(SH, { view: { ...v, mismatch: e.body.mismatch }, pick: '' });
       else SH.err = `Couldn't share: ${e.message}`;
     }
+    SH.busy = '';
+    paintShare(true);
+  }
+  // Resume updates: the pause lifted on the account (POST {resume}); the doc's update goes now, or waits for the budget
+  async function doResume() {
+    const v = SH.view, s = v && v.share;
+    if (SH.busy || !v) return;
+    const body = { path: location.pathname, resume: true };
+    if (v.answers) body.answers = SH.kinds || v.answers.kinds;
+    Object.assign(SH, { busy: 'resume', err: '', sure: false });
+    paintShare();
+    try {
+      const j = await shareCall('POST', '/__bluedoc/share', body);
+      SH.view = j;
+      paintKey(j);
+      shared(j, s, 'Resumed');
+    } catch (e) { SH.err = `Couldn't resume: ${e.message}`; }
     SH.busy = '';
     paintShare(true);
   }
@@ -9617,17 +9860,19 @@ function docMarkdown(doc) {
     SH.busy = '';
     paintShare('acb');
   }
+  // Stop sharing: a second press deletes the gist; a first share still queued (no gist yet) goes at once
   async function doStop() {
     if (SH.busy) return;
-    if (!SH.sure) { SH.sure = true; return paintShare('stop'); }
+    const s = SH.view && SH.view.share;
+    if (s && !SH.sure) { SH.sure = true; return paintShare('stop'); }
     Object.assign(SH, { busy: 'del', err: '' });
     paintShare('stop');
     try {
       await shareCall('POST', '/__bluedoc/unshare', { path: location.pathname });
-      Object.assign(SH, { view: { ...SH.view, share: null, mismatch: null }, busy: '', sure: false });
+      Object.assign(SH, { view: { ...SH.view, share: null, mismatch: null, queued: null }, busy: '', sure: false });
       paintKey(SH.view);
       SH.dlg.close();
-      toast('Stopped sharing: the gist is deleted, the link no longer opens');
+      toast(s ? 'Stopped sharing: the gist is deleted, the link no longer opens' : 'Not shared: the queued share is dropped');
       return;
     } catch (e) { SH.err = `Couldn't stop sharing: ${e.message}`; }
     Object.assign(SH, { busy: '', sure: false });
@@ -14001,11 +14246,14 @@ if (!OLD && !VIEW_ONLY) {
 paintPlan();
 
 /* A shared page's Comments tab (VIEW_ONLY; MARKUP adds it): the items whose conversation the doc carries (the agent's
-   replies), read-only. A card: its checklist, its text and the last message; a click (Enter) opens the item, where the
-   whole conversation shows without a reply box. No tab when the doc carries none. Returns how many it lists. */
-function sharedThreads() {
-  const xs = Object.values(ITEMS).filter(x => x.messages().length);
-  if (!xs.length) return 0;
+   replies) or the shared answers do (their reader's messages, and saved ones not sent when the share carries them),
+   read-only; then `extra`, the shared reader's pins, regions and general comments (MARKUP's cards). A card: its
+   checklist, its text and the last message; a click (Enter) opens the item, where the whole conversation shows without
+   a reply box. No tab when there is none. Returns how many it lists. */
+function sharedThreads(extra = []) {
+  const msgs = x => [...x.messages(), ...(ANSWERS ? x.drafts().map(d => ({ who: 'you', unsent: true, md: d.md, rev: null })) : [])];
+  const xs = Object.values(ITEMS).filter(x => msgs(x).length);
+  if (!xs.length && !extra.length) return 0;
   const open = x => {
     const row = openItem(x);
     if (BOARD && BOARD.reveal) BOARD.reveal(row);
@@ -14015,15 +14263,15 @@ function sharedThreads() {
   const card = x => {
     // where it lives: a PR's findings section as #<n> (pr-<n>, in mono), else its checklist's title
     const pr = /^pr-(\d+)$/.exec(x.li.closest('section.bp-sec')?.id || ''), c = CHECKLISTS.find(c => c.b.id === x.cid);
-    const last = x.messages().at(-1), where = pr ? '#' + pr[1] : plain(c && c.b.title || x.cid);
+    const last = msgs(x).at(-1), where = pr ? '#' + pr[1] : plain(c && c.b.title || x.cid);
     return h('li', { class: 'bd-cs-ic', tabindex: '0', 'data-item': `${x.cid}/${x.it.id}`, 'aria-label': `${where} ${plain(x.it.text)}`,
       onclick: () => open(x), onkeydown: e => { if (e.key === 'Enter') { e.preventDefault(); open(x); } } },
       h('div', { class: 't' }, h('span', { class: 'pr' + (pr ? '' : ' nm'), title: where }, where), h('span', { class: 'tt', html: inline(x.it.text) })),
-      h('div', { class: 'm' }, h('b', {}, (last.who === 'agent' ? agentName() : 'Reader') + ':'), ' ', plain(last.md)),
-      h('div', { class: 's' }, last.rev != null && `rev ${last.rev}`));
+      h('div', { class: 'm' }, h('b', {}, (last.who === 'agent' ? agentName() : ANSWERS ? YOU : 'Reader') + ':'), ' ', plain(last.md)),
+      h('div', { class: 's' }, last.unsent ? 'not sent' : last.rev != null && `rev ${last.rev}`));
   };
-  SIDE.add({ id: 'comments', label: 'Comments', icon: 'msg', body: h('div', {}, h('div', { class: 'bd-cs-l' }, h('ol', { 'aria-label': 'Comments' }, xs.map(card)))) });
-  return xs.length;
+  SIDE.add({ id: 'comments', label: 'Comments', icon: 'msg', body: h('div', {}, h('div', { class: 'bd-cs-l' }, h('ol', { 'aria-label': 'Comments' }, xs.map(card), extra))) });
+  return xs.length + extra.length;
 }
 
 /* ---------- change requests: pins, text selections and drawings on the page ---------- */
@@ -14244,8 +14492,35 @@ const MARKUP = (() => {
   // an earlier revision (also compared against another) is read-only; a compare view showing the current one comments
   // as the page does
   if (OLD) return api;
-  // a shared page (VIEW_ONLY) has no tray, tools, marks or composer; its Comments tab lists the doc's own threads
-  if (VIEW_ONLY) { const n = sharedThreads(); api.comments = () => ({ open: SIDE.shows('comments'), available: n > 0 }); return api; }
+  // a shared page (VIEW_ONLY) has no tray, tools, marks or composer; its Comments tab lists the doc's own threads and
+  // the shared reader's comments (ANSWERS), read-only cards: pins, text notes, drawings, regions and the general comment
+  // with their status, note, files and conversation, and the Send answers message when the share carries it
+  if (VIEW_ONLY) {
+    const shared = ANSWERS ? Object.keys(ANSWERS.state).filter(k => k.startsWith('__ann:')).map(ansJson)
+      .filter(a => a && typeof a === 'object' && typeof a.id === 'string' && ANN_TYPES.includes(a.type) && !isDraft(a) && isTarget(a.target))
+      .sort((a, b) => String(a.at || '').localeCompare(String(b.at || ''))) : [];
+    const roCard = (icon, label, path, quote, who, note, files, ms) => h('li', { class: 'bd-cs-c sent bd-cs-ro', 'aria-label': label },
+      h('span', { class: 'bd-ann-num gen sent' }, ic(icon)),
+      h('div', { class: 'cb' }, h('div', { class: 'ch' }, h('span', { class: 'lb', title: label }, label)),
+        path && h('div', { class: 'path' }, path), quote && h('q', {}, cut(quote, 240)),
+        h('div', { class: 'mt' }, h('span', {}, who)), note && h('p', { class: 'nt' }, note),
+        files.length > 0 && h('div', { class: 'nf' }, sharedChips(files)),
+        ms.length > 0 && h('div', { class: 'bp-convo compact' }, timeline(ms))));
+    const cards = shared.map(a => {
+      const segs = a.target.label.split(' › '), last = segs.pop(), ex = a.type === 'text' ? a.quote : a.target.key === 'doc' ? '' : a.target.text;
+      const ms = convo((Array.isArray(a.thread) ? a.thread : []).map(m => ({ ...m, files: undefined, shared: sharedOf(m && m.files) })).filter(okMsg), annReplies(a));
+      const draft = typeof a.draft === 'string' ? a.draft.trim() : '';
+      if (draft || sharedOf(a.draftFiles).length) ms.push({ who: 'you', unsent: true, rev: CUR.rev, md: draft, shared: sharedOf(a.draftFiles) });
+      const st = a.status === 'resolved' ? 'Resolved' : a.status === 'pending' ? 'Not sent' : 'Sent';
+      return roCard(TYPE_IC[a.type] || 'msg', isGeneral(a) ? 'General' : onLabel(a, last), segs.join(' › '), typeof ex === 'string' ? ex : '',
+        `${YOU} · ${st}${a.at ? ' · ' + fmtAt(a.at) : ''}`, typeof a.note === 'string' ? a.note : '', sharedOf(a.files), ms);
+    });
+    const msg = ANSWERS ? String(ANSWERS.state.__message || '').trim() : '';
+    if (msg || ANSWERS && sharedOf(ansJson('__message-files')).length) cards.push(roCard('msgsq', 'Message', '', '', `${YOU} · Not sent`, msg, sharedOf(ansJson('__message-files')), []));
+    const n = sharedThreads(cards);
+    api.comments = () => ({ open: SIDE.shows('comments'), available: n > 0 });
+    return api;
+  }
 
   /* what can be annotated, and the key of each */
   const shell = $('.bd-shell');

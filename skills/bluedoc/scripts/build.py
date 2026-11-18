@@ -3370,6 +3370,9 @@ def standalone(doc: dict, doc_path: Path, history: dict | None, template: str, *
 
 BOARD_GEO = HERE.parent / "assets" / "board-geo.js"   # the board's router and layouts, inlined into design pages
 BOARD_GEO_SLOT = "/*__BOARD_GEO__*/"
+# the reader's answers a shared page shows (share.answers_slot): only a gist's bluedoc-page.json fills it; served pages
+# and -o files carry null
+ANSWERS_SLOT = "__BLUEDOC_ANSWERS__"
 
 
 def check_template(template: str) -> None:
@@ -3424,7 +3427,7 @@ def page_fill(doc: dict, history: dict | None = None, media_base: Path | None = 
             "__BLUEDOC_LIVE__": _script_json(live) if live is not None else "null",
             "__BLUEDOC_SNAPS__": _script_json(snaps) if snaps is not None else "null",
             "__BLUEDOC_LISTING__": _script_json(lst) if lst is not None else "null",
-            "__BLUEDOC_PINS__": _script_json(pins) if pins is not None else "null", BOARD_GEO_SLOT: geo}
+            "__BLUEDOC_PINS__": _script_json(pins) if pins is not None else "null", ANSWERS_SLOT: "null", BOARD_GEO_SLOT: geo}
 
 
 def fill_page(template: str, fill: dict[str, str]) -> str:
@@ -5012,6 +5015,12 @@ def cmd_patch(argv: list[str]) -> int:
                 print(f"send the reader: {serve.base()}{url}?diff={rev0}")
         except Exception:
             pass
+    # a shared doc: one line on its link (shares.json and gist-budget.json only, no gh call), so an agent shares once a
+    # round, not after each patch
+    import share
+    line = share.patch_line(Path(a.doc), rev1)
+    if line:
+        print(line)
     return 0
 
 

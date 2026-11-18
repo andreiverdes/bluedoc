@@ -9,11 +9,19 @@ only". The doc's own `choice` shows as chosen, and its threads (an item's `repli
 read-only. It carries its current revision only (share/current): no Revisions key, and ?rev= and ?diff= in the viewer's
 URL show the current revision, with no strip or compare.
 
+A share may carry the reader's answers (share.answers_slot, the page's __BLUEDOC_ANSWERS__ slot): they show read-only
+as the share account's, apart from the doc's own: "<login>'s answer" beside the picked option, Other's words in a row
+of their own, "Asked for more", "Done · <login>" on a tick (the box stays the doc's), their messages in the item's
+conversation with an image the share carried and "N files not shared", and their sent pins and comments as cards in
+the Comments tab. No attachment's path is in the page; a bundle without the slot shows none.
+
 Here a stand-in viewer page on a local http server writes the page as the site's viewer does
 (bluedoc-site/src/scripts/viewer.ts), and answers every /g/<code> as GitHub Pages does with its 404.html; the server
-records every path asked. Runs with BLUEDOC_BROWSER_TESTS=1."""
+records every path asked and sends nothing the browser may cache (a reload reads the page written since). Runs with
+BLUEDOC_BROWSER_TESTS=1."""
 from __future__ import annotations
 
+import base64
 import json
 import shutil
 import tempfile
@@ -29,6 +37,7 @@ from test_doc_export import TEXT_SPY, data_block
 from test_page_state import CHROME, Browser, Tab
 
 import build
+import share
 
 HASH = "#acme-dev/0123456789abcdef0123"
 CODE_PATH = "/g/shaZAB1ze-L25qJChRpj2g"   # the gist b21699001d737be2f6e6a242851a63da
@@ -54,6 +63,12 @@ fetch('/page.html').then(r => r.text()).then(html => {
 class Recorder(SimpleHTTPRequestHandler):
     def log_message(self, *args) -> None:
         pass
+
+    def end_headers(self) -> None:
+        # never cached: page.html is rewritten within a test, often in the same second, and the handler's
+        # Last-Modified has whole seconds, so a reload would get 304 and the page before
+        self.send_header("Cache-Control", "no-store")
+        super().end_headers()
 
     def do_GET(self) -> None:
         self.server.paths.append(self.path)
@@ -87,11 +102,18 @@ class SharedPage(unittest.TestCase):
         self.addCleanup(self.httpd.shutdown)
         self.browser.errors.clear()
 
-    def viewer(self, stem: str) -> str:
-        """The stand-in viewer for the doc's -o page; its URL without the fragment."""
+    def viewer(self, stem: str, answers: dict | None = None, edit=None) -> str:
+        """The stand-in viewer for the doc's -o page, with answers (share.answers_slot's object) in its
+        __BLUEDOC_ANSWERS__ slot as a share's bluedoc-page.json carries them; edit(doc) changes the doc first. Its URL
+        without the fragment."""
         doc_path = self.docs / f"{stem}.bluedoc.json"
         doc = load_json(doc_path)
-        page = build.standalone(doc, doc_path, build.history_now(doc_path, doc), build.TEMPLATE.read_text(encoding="utf-8"))
+        if edit:
+            edit(doc)
+            doc_path.write_text(build.dump_doc(doc), encoding="utf-8")
+        fill = build.standalone_fill(doc, doc_path, build.history_now(doc_path, doc), problems=[])
+        fill[build.ANSWERS_SLOT] = build._script_json(answers) if answers else "null"
+        page = build.fill_page(build.TEMPLATE.read_text(encoding="utf-8"), fill)
         (self.site / "page.html").write_text(page, encoding="utf-8")
         (self.site / "viewer.html").write_text(VIEWER % json.dumps(stem), encoding="utf-8")
         return f"http://127.0.0.1:{self.httpd.server_address[1]}/viewer.html"
@@ -261,6 +283,64 @@ class SharedPage(unittest.TestCase):
                                            "w.document.querySelectorAll('.bd-revbar, .bd-stripe [data-f=revisions]').length]"), [None, True, False, 0])
                 self.assert_view_only(t)
         self.assertEqual(self.asked_routes(), [])
+        self.assertEqual(self.browser.errors, [])
+
+    def test_the_reader_s_answers_show_read_only_as_theirs(self) -> None:
+        # the reader's state.db rows as a share carries them (share.answers_slot): picks, ticks, sent comments, an image
+        att = self.tmp.dir / ".bluedoc" / "attachments" / "acme"
+        att.mkdir(parents=True)
+        png = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==")
+        (att / "1a2b-cart.png").write_bytes(png)
+        (att / "3c4d-terms.pdf").write_bytes(b"%PDF-1.4")
+        files = [{"name": "cart.png", "path": str(att / "1a2b-cart.png"), "size": len(png)}, {"name": "terms.pdf", "path": str(att / "3c4d-terms.pdf"), "size": 8}]
+        at = "2026-11-18T10:00:00.000Z"
+        pin = {"id": "c1", "type": "pin", "status": "open", "note": "This total looks wrong", "target": {"key": "item:decisions/prices", "label": "Open questions › Prices"},
+               "rev": "1", "at": at, "sentAt": at, "thread": [{"md": "Still wrong after the fix", "rev": "1", "at": at}]}
+        state = {"decisions:retention": "=d180|d90", "decisions:prices:custom": "Ask finance first", "decisions:guests:more": "1", "checks:unit": "10",
+                 "decisions:retention:thread": json.dumps([{"md": "180 days matches finance", "rev": "1", "at": at, "files": files}]),
+                 "__ann:c1": json.dumps(pin), "decisions:prices:note": "Not sent yet"}
+
+        def choose_d90(doc: dict) -> None:   # the doc records its own choice: shown apart from the reader's
+            next(it for b in build.all_blocks(doc) if b.get("id") == "decisions" for it in b["items"] if it["id"] == "retention")["choice"] = "d90"
+        choose_d90(doc := load_json(self.docs / "acme-saved-carts-plan.bluedoc.json"))
+        slot, _ = share.answers_slot(state, doc, ["picks", "ticks", "comments", "images"], "acme-dev")
+        t = Tab(self.browser)
+        self.open(t, self.viewer("acme-saved-carts-plan", slot, choose_d90) + HASH)
+        self.assert_view_only(t)
+        # the pick: beside its option, apart from the doc's choice, which stays chosen
+        self.assertEqual(self.q(t, "[...w.document.querySelectorAll('#item-decisions-retention .bp-opt')].map(o => [o.dataset.id, o.classList.contains('on'), "
+                                   "o.querySelector('.yp').textContent, o.querySelector('.bd-ansby')?.textContent || null])"),
+                         [["d90", True, "Chosen", None], ["d180", False, "", "Aacme-dev's answer"], ["forever", False, "", None]])
+        self.assertEqual(self.q(t, "w.BP.replyPayload().items.find(x => x.item === 'retention').choice"), "d90", "the doc's, not the reader's")
+        # Other's words, Tell me more, the tick
+        self.assertEqual(self.q(t, "(o => [o.querySelector('.ol').textContent, o.querySelector('.one').textContent, o.querySelector('.pk').disabled])"
+                                   "(w.document.querySelector('#item-decisions-prices .bd-ansother'))"), ["Other", "Ask finance first", True])
+        self.assertEqual(self.q(t, "w.document.querySelector('#item-decisions-guests .bd-ansmore').textContent"), "Asked for moreAacme-dev")
+        self.assertEqual(self.q(t, "[w.document.querySelector('#item-checks-unit .bd-ansc').textContent, w.document.querySelector('#cb-checks-unit').checked]"),
+                         ["Done · acme-dev", False], "the tick is theirs; the box stays the doc's")
+        # their message in the item's conversation, as theirs, with the image and the file that wasn't shared
+        convo = "w.document.querySelector('#item-decisions-retention .bp-convo')"
+        self.assertEqual(self.q(t, f"[...{convo}.querySelectorAll('.bp-msg .who')].map(e => e.textContent)"), ["acme-dev"])
+        self.assertEqual(self.q(t, f"[{convo}.querySelector('.bd-shimgs img').getAttribute('src').slice(0, 22), {convo}.querySelector('.bp-file.off .t').textContent, "
+                                   f"{convo}.querySelector('.bd-shfn').textContent]"), ["data:image/png;base64,", "terms.pdf", "1 file not shared"])
+        self.assertEqual(self.q(t, "w.document.querySelectorAll('#item-decisions-prices .bp-msg.unsent').length"), 0, "pending stays out")
+        # the Comments tab: the item and the pin, read-only
+        self.q(t, "w.BP.sidebar({section: 'comments'}) && 1")
+        cards = self.q(t, "[...w.document.querySelectorAll('#bd-sp-comments .bd-cs-l > ol > li')].map(li => li.dataset.item || li.querySelector('.lb').textContent)")
+        self.assertEqual(cards, ["decisions/retention", "Prices"])
+        pin = "w.document.querySelector('#bd-sp-comments .bd-cs-ro')"
+        self.assertEqual(self.q(t, f"[{pin}.querySelector('.mt').textContent.startsWith('acme-dev · Sent'), {pin}.querySelector('.nt').textContent, "
+                                   f"{pin}.querySelector('.bp-msg .who').textContent, {pin}.querySelectorAll('textarea, button:not(:disabled)').length]"),
+                         [True, "This total looks wrong", "acme-dev", 0])
+        page = (self.site / "page.html").read_text(encoding="utf-8")
+        self.assertNotIn("/.bluedoc/", json.dumps(data_block(page, "bp-answers")), "no attachment's path")
+        self.assertNotIn(str(self.tmp.dir), page)
+        self.assert_view_only(t)
+        self.assertEqual(self.asked_routes(), [])
+        self.assertEqual(self.browser.errors, [])
+        # an older bundle without answers: none show
+        self.open(t, self.viewer("acme-saved-carts-plan") + HASH, reload=True)
+        self.assertEqual(self.q(t, "w.document.querySelectorAll('.bd-ansby, .bd-ansc, .bd-ansother, .bd-ansmore').length"), 0)
         self.assertEqual(self.browser.errors, [])
 
 

@@ -29,26 +29,29 @@ gist's URL."""
 from __future__ import annotations
 
 import base64
+import http.client
 import json
 import os
 import shutil
 import stat
 import subprocess
+import time
 import unittest
 from pathlib import Path
 from unittest import mock
-from urllib.parse import quote
+from urllib.parse import quote, urlsplit
 
-from _support import Server, TempHome, load_json
+from _support import Server, TempHome, free_port, load_json
 
 import build
+import gistbudget
 import settings
 import share
 
 NO_GH = {"BLUEDOC_GH": "/nonexistent/gh"}   # no gh to run
 PLAN, DESIGN, STATUS = "acme-saved-carts-plan", "acme-fit-design", "acme-status"
 FILL_KEYS = {"__BLUEDOC_TITLE__", "__BLUEDOC_DOC__", "__BLUEDOC_HISTORY__", "__BLUEDOC_SCREENS__", "__BLUEDOC_LISTING__",
-             "__BLUEDOC_STATE__", "__BLUEDOC_LIVE__", "__BLUEDOC_SNAPS__", "__BLUEDOC_PINS__"}
+             "__BLUEDOC_STATE__", "__BLUEDOC_LIVE__", "__BLUEDOC_SNAPS__", "__BLUEDOC_PINS__", "__BLUEDOC_ANSWERS__"}
 # acme-work: a member of acme-corp; acme-dev: gh's active one; acme-oss: no gist scope
 THREE = "acme-work,acme-dev:active,acme-oss:nogist"
 GIT_ENV = {"GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1"}
@@ -108,15 +111,29 @@ class StandInGh:
         self.gh_env()
 
     def gh_env(self) -> None:
-        """TempHome's stand-in gh (BLUEDOC_GH) in os.environ too, its gists in <tmp>/gh, one account (acme-dev)."""
+        """TempHome's stand-in gh (BLUEDOC_GH) in os.environ too, its gists in <tmp>/gh, one account (acme-dev); writes
+        without share.py's second between them."""
         self.ghdir = Path(self.tmp.env["STANDIN_GH_DIR"])
         self.tmp.env.pop("GH_TOKEN", None)
         patch = mock.patch.dict(os.environ, {k: self.tmp.env[k] for k in ("BLUEDOC_GH", "STANDIN_GH_DIR", "BLUEDOC_HOME")})
         patch.start()
         self.addCleanup(patch.stop)
-        for k in ("STANDIN_GH_ACCOUNTS", "STANDIN_GH_ORGS", "STANDIN_GH_AUTH", "STANDIN_GH_USER", "STANDIN_GH_FAIL", "GH_TOKEN"):
+        for k in ("STANDIN_GH_ACCOUNTS", "STANDIN_GH_ORGS", "STANDIN_GH_AUTH", "STANDIN_GH_USER", "STANDIN_GH_FAIL",
+                  "STANDIN_GH_REFUSE", "GH_TOKEN"):
             os.environ.pop(k, None)
+        gap = mock.patch.object(share, "WRITE_GAP", 0)
+        gap.start()
+        self.addCleanup(gap.stop)
         self.forget()
+
+    def forget_budget(self) -> None:
+        """An empty gist-budget.json: the hour's updates and each doc's minute forgotten (the server reads it afresh)."""
+        gistbudget.budget_file().unlink(missing_ok=True)
+
+    def cli_server(self) -> None:
+        """`serve.py share` starts a server as `open` does: on a free port of its own (BLUEDOC_PORT), stopped after."""
+        self.tmp.env["BLUEDOC_PORT"] = str(free_port())
+        self.addCleanup(lambda: self.tmp.run("serve.py", "stop"))
 
     def forget(self) -> None:
         """Empty share.py's caches of gh's accounts and of org memberships."""
@@ -145,8 +162,10 @@ class StandInGh:
         f = share.shares_file()
         return load_json(f) if f.is_file() else {}
 
-    def share_as(self, stem: str, **kw) -> dict:
-        """share.share of the doc in the examples' project (self.docs)."""
+    def share_as(self, stem: str, budget: bool = False, **kw) -> dict:
+        """share.share of the doc in the examples' project (self.docs); the budget forgotten first unless budget."""
+        if not budget:
+            self.forget_budget()
         return share.share(self.doc(stem), self.docs, kw.pop("remote", None), **kw)
 
 
@@ -241,7 +260,7 @@ class Accounts(StandInGh, unittest.TestCase):
 
     def test_the_brief_answer_reads_gh_once_a_minute(self) -> None:
         p = self.doc(PLAN)
-        self.assertEqual(share.view(p, brief=True), {"share": None, "rev": "1", "off": None})
+        self.assertEqual(share.view(p, brief=True), {"share": None, "rev": "1", "off": None, "queued": None})
         share.view(p, brief=True)
         self.assertEqual(len(self.calls()), 1, "cached")
         share.view(p)
@@ -311,11 +330,13 @@ class Gists(StandInGh, unittest.TestCase):
         rec, gid = res["share"], res["share"]["id"]
         self.assertTrue(res["created"])
         self.assertEqual([(c["argv"][:2], c["as"]) for c in self.calls()],
-                         [(["auth", "status"], None), (["auth", "token"], None), (["gist", "create"], "acme-dev")])
+                         [(["auth", "status"], None), (["auth", "token"], None), (["api", "-i"], "acme-dev")])
         self.assertEqual(self.calls()[1]["argv"], ["auth", "token", "--hostname", "github.com", "--user", "acme-dev"])
-        create = self.calls()[2]["argv"]
-        self.assertNotIn("--public", create)
-        self.assertEqual(create[2:4], ["--desc", "bluedoc: Acme Shop: saved carts"])
+        create = self.calls()[2]
+        self.assertEqual(create["argv"], ["api", "-i", "-X", "POST", "gists", "--input", "-"], "GitHub's answer read, headers too")
+        body = json.loads(create["stdin"])
+        self.assertEqual((body["description"], body["public"], sorted(body["files"])),
+                         ("bluedoc: Acme Shop: saved carts", False, [f"{PLAN}.bluedoc.json", "bluedoc-page.json"]))
         meta, files = self.gist(gid)
         self.assertFalse(meta["public"])
         self.assertEqual(sorted(files), rec["files"])
@@ -342,7 +363,7 @@ class Gists(StandInGh, unittest.TestCase):
         self.assertEqual([(c["argv"], c["as"]) for c in later],
                          [(["auth", "status", "--hostname", "github.com"], None),
                           (["auth", "token", "--hostname", "github.com", "--user", "acme-dev"], None),
-                          (["api", f"gists/{gid}"], "acme-dev"), (["api", "-X", "PATCH", f"gists/{gid}", "--input", "-"], "acme-dev")])
+                          (["api", f"gists/{gid}"], "acme-dev"), (["api", "-i", "-X", "PATCH", f"gists/{gid}", "--input", "-"], "acme-dev")])
         body = json.loads(later[3]["stdin"])
         self.assertEqual(body["description"], "bluedoc: Acme Shop: saved carts")
         self.assertIsNone(body["files"]["stale.txt"], "a file the share no longer has goes")
@@ -368,7 +389,7 @@ class Gists(StandInGh, unittest.TestCase):
         # Stop sharing: as the account the gist is on
         rec = share.unshare(self.doc(PLAN))
         self.assertEqual(rec["id"], gid)
-        self.assertEqual((self.calls()[-1]["argv"], self.calls()[-1]["as"]), (["api", "-X", "DELETE", f"gists/{gid}"], "acme-work"))
+        self.assertEqual((self.calls()[-1]["argv"], self.calls()[-1]["as"]), (["api", "-i", "-X", "DELETE", f"gists/{gid}"], "acme-work"))
         self.assertFalse((self.ghdir / "gists" / gid).exists())
 
     def test_as_sets_the_project_account(self) -> None:
@@ -424,8 +445,8 @@ class Gists(StandInGh, unittest.TestCase):
         self.assertEqual(new["user"], "acme-work")
         self.assertNotEqual((new["id"], new["link"]), (old["id"], old["link"]))
         self.assertNotIn("kept", new)
-        self.assertEqual([(c["argv"][:3], c["as"]) for c in self.calls()[n:] if c["argv"][0] in ("gist", "api")],
-                         [(["gist", "create", "--desc"], "acme-work"), (["api", "-X", "DELETE"], "acme-dev")])
+        self.assertEqual([(c["argv"][:5], c["as"]) for c in self.calls()[n:] if c["argv"][0] in ("gist", "api") and "-i" in c["argv"]],
+                         [(["api", "-i", "-X", "POST", "gists"], "acme-work"), (["api", "-i", "-X", "DELETE", f"gists/{old['id']}"], "acme-dev")])
         self.assertFalse((self.ghdir / "gists" / old["id"]).exists())
         self.assertEqual(self.gist(new["id"])[0]["owner"], "acme-work")
         self.assertIsNone(share.view(p, self.docs)["mismatch"])
@@ -445,7 +466,10 @@ class Gists(StandInGh, unittest.TestCase):
         p = self.doc(PLAN)
         gid = self.share_as(PLAN)["share"]["id"]
         data = self.shares()
-        self.assertEqual(set(data[str(p)]), {"id", "user", "link", "url", "rev", "at", "files"})
+        self.assertEqual(set(data[str(p)]), {"id", "user", "link", "url", "rev", "at", "files", "answers", "answersHash"})
+        for k in ("answers", "answersHash"):   # as a share made before accounts recorded it
+            del data[str(p)][k]
+        share._save(data)
         self.sign_in("acme-work:active,acme-dev")
         v = share.view(p, self.docs)
         self.assertEqual((v["account"], v["mismatch"]), ({"login": "acme-dev", "why": "project"}, None))
@@ -471,7 +495,7 @@ class Gists(StandInGh, unittest.TestCase):
         gid = self.share_as(PLAN)["share"]["id"]
         rec = share.unshare(p)
         self.assertEqual(rec["id"], gid)
-        self.assertEqual((self.calls()[-1]["argv"], self.calls()[-1]["as"]), (["api", "-X", "DELETE", f"gists/{gid}"], "acme-dev"))
+        self.assertEqual((self.calls()[-1]["argv"], self.calls()[-1]["as"]), (["api", "-i", "-X", "DELETE", f"gists/{gid}"], "acme-dev"))
         self.assertFalse((self.ghdir / "gists" / gid).exists())
         self.assertEqual(self.shares(), {})
         self.assertIsNone(share.unshare(p), "not shared: nothing to do")
@@ -496,10 +520,10 @@ class Gists(StandInGh, unittest.TestCase):
 
     def test_gh_failures_say_what_happened(self) -> None:
         p = self.doc(PLAN)
-        with mock.patch.dict(os.environ, {"STANDIN_GH_FAIL": "gist create"}), self.assertRaises(share.ShareError) as cm:
+        with mock.patch.dict(os.environ, {"STANDIN_GH_FAIL": "POST"}), self.assertRaises(share.ShareError) as cm:
             self.share_as(PLAN)
         self.assertEqual(cm.exception.status, 502)
-        self.assertIn("gh gist create failed: gh: Server Error (HTTP 500)", str(cm.exception))
+        self.assertIn("gh api -X failed: gh: Server Error (HTTP 500)", str(cm.exception))
         self.assertEqual(self.shares(), {})
         gid = self.share_as(PLAN)["share"]["id"]
         with mock.patch.dict(os.environ, {"STANDIN_GH_FAIL": "DELETE"}), self.assertRaises(share.ShareError):
@@ -514,6 +538,7 @@ class Gists(StandInGh, unittest.TestCase):
         self.assertEqual([c["argv"][:2] for c in self.calls()], [["auth", "status"]], "gh checked, nothing created")
 
     def test_the_cli_prints_the_notice_and_the_link(self) -> None:
+        self.cli_server()
         p = self.doc(DESIGN)
         r = self.tmp.run("serve.py", "share", p, timeout=120)
         self.assertEqual(r.returncode, 0, r.stderr)
@@ -521,33 +546,350 @@ class Gists(StandInGh, unittest.TestCase):
         rec = self.shares()[str(p)]
         self.assertEqual(lines[0], share.NOTICE, "no colour when stdout isn't a terminal")
         self.assertEqual(lines[1], "secret gist created as acme-dev, rev C: 0 media files, 11 screens")
-        self.assertEqual(lines[2:], [f"link: https://bluedoc.ai/g/{code(rec['id'])}", f"gist: https://gist.github.com/acme-dev/{rec['id']}"])
+        self.assertEqual(lines[2:], [f"link: https://bluedoc.ai/g/{code(rec['id'])}", f"gist: https://gist.github.com/acme-dev/{rec['id']}",
+                                     "budget: 1 of 90 used in the last hour on acme-dev; GitHub allows about 100 gist updates an hour"])
+        self.assertIn(f"shared {p} as acme-dev: {rec['link']}", (self.tmp.home / "server.log").read_text(encoding="utf-8"),
+                      "it went through the server, which counts the account's updates")
         tty = type("Tty", (), {"isatty": lambda self: True})()
         with mock.patch.dict(os.environ):
             os.environ.pop("NO_COLOR", None)
             self.assertEqual(share.red(share.NOTICE, tty), f"\x1b[1;31m{share.NOTICE}\x1b[0m", "red on a terminal")
             os.environ["NO_COLOR"] = "1"
             self.assertEqual(share.red(share.NOTICE, tty), share.NOTICE)
+        self.forget_budget()
         r = self.tmp.run("serve.py", "share", p, timeout=120)
         self.assertIn("secret gist updated as acme-dev", r.stdout)
-        # --as makes another account the project's: the gist on acme-dev waits for --move or --keep
+        # --as makes another account the project's: the gist on acme-dev waits for --move or --keep. The server shares
+        # with the gh it started with: a new sign-in, a new server
         self.sign_in(THREE)
+        self.tmp.run("serve.py", "stop")
         r = self.tmp.run("serve.py", "share", p, "--as", "acme-work", timeout=120)
         self.assertEqual(r.returncode, 1)
         self.assertIn("the gist is on acme-dev and this project shares as acme-work", r.stderr)
         self.assertIn("run again with --move or --keep", r.stderr)
         self.assertEqual(share.project_account(self.docs), "acme-work", "serve.py share finds the project: the doc's folder")
+        self.forget_budget()
         r = self.tmp.run("serve.py", "share", p, "--keep", timeout=120)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn("secret gist updated as acme-dev", r.stdout)
+        self.forget_budget()
         r = self.tmp.run("serve.py", "share", p, "--as", "acme-work", "--move", timeout=120)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn("secret gist moved (a new gist, the old one deleted: the link changed) as acme-work", r.stdout)
         self.assertEqual(self.tmp.run("serve.py", "share", p, "--move", "--keep").returncode, 2)
+        self.assertEqual(self.tmp.run("serve.py", "share", p, "--answers", "picks,secrets").returncode, 2)
         self.tmp.env["STANDIN_GH_ACCOUNTS"] = "acme-dev:nogist"
+        self.tmp.run("serve.py", "stop")
         r = self.tmp.run("serve.py", "share", p, timeout=120)
         self.assertEqual(r.returncode, 1)
         self.assertIn("gh auth refresh -s gist -u acme-dev", r.stderr)
+
+
+class Budget(StandInGh, unittest.TestCase):
+    """The budget around share.share, against a fake clock (gistbudget.clock) and the stand-in gh refusing
+    (STANDIN_GH_REFUSE); send() is what the server's queue does when an update is due."""
+
+    def setUp(self) -> None:
+        self.gh_setup()
+        self.now = float(int(time.time()))
+        c = mock.patch.object(gistbudget, "clock", lambda: self.now)
+        c.start()
+        self.addCleanup(c.stop)
+
+    def send(self, stem: str) -> dict:
+        """The queue sending the doc's queued update (serve.send_queued without the server)."""
+        q = share.queued_of(self.doc(stem))
+        self.assertIsNotNone(q, "a queued update")
+        return share.share(self.doc(stem), self.docs, None, q.get("as"), move=q.get("move") is True, keep=q.get("keep") is True,
+                           answers=q.get("answers"), from_queue=True)
+
+    def wait(self, res: dict) -> float | None:
+        """Seconds until a queued answer's update goes out (None: paused)."""
+        at = share._epoch(res["queued"]["at"])
+        return None if at is None else at - self.now
+
+    def writes(self) -> list:
+        return [c["argv"] for c in self.calls() if c["argv"][:2] == ["api", "-i"]]
+
+    def test_github_s_refusals_set_the_wait_and_the_fourth_pauses(self) -> None:
+        p = self.doc(PLAN)
+        gid = self.share_as(PLAN)["share"]["id"]
+        rev_shared = self.shares()[str(p)]["rev"]
+        # 429 with retry-after 300: the update waits 300 s, read with -i; the link keeps its rev
+        self.now += 61
+        os.environ["STANDIN_GH_REFUSE"] = "429:retry-after=300"
+        res = share.share(p, self.docs)
+        self.assertEqual((res["queued"]["why"], self.wait(res)), ("retry", 300))
+        self.assertEqual(self.writes()[-1], ["api", "-i", "-X", "PATCH", f"gists/{gid}", "--input", "-"])
+        self.assertEqual(json.loads(self.gist(gid)[1]["bluedoc-page.json"])["rev"], rev_shared)
+        self.assertEqual(share.view(p, self.docs)["queued"]["why"], "retry")
+        # a share while it waits makes no gh call
+        n = len(self.calls())
+        self.assertEqual(share.share(p, self.docs)["queued"]["why"], "retry")
+        self.assertEqual(len(self.calls()), n)
+        # at its time a 403 with x-ratelimit-remaining 0: it waits for the reset
+        self.now += 300
+        os.environ["STANDIN_GH_REFUSE"] = f"403:x-ratelimit-remaining=0,x-ratelimit-reset={int(self.now) + 900}"
+        self.assertEqual(self.wait(self.send(PLAN)), 900)
+        # then GitHub takes it: sent, the queue empty, the run of refusals over
+        self.now += 900
+        del os.environ["STANDIN_GH_REFUSE"]
+        self.assertEqual(self.send(PLAN)["share"]["id"], gid)
+        self.assertIsNone(share.queued_of(p))
+        self.assertEqual(gistbudget.status("acme-dev")["refusals"], 0)
+        # no header: 1 min, then 2, then 4; the 4th in a row pauses the account
+        self.now += 3600
+        os.environ["STANDIN_GH_REFUSE"] = "403"   # GitHub's secondary limit: "API rate limit exceeded" alone
+        waits = [self.wait(share.share(p, self.docs))]
+        for _ in range(3):
+            self.now += waits[-1]
+            waits.append(self.wait(self.send(PLAN)))
+        self.assertEqual(waits, [60, 120, 240, None])
+        v = share.view(p, self.docs)
+        self.assertEqual((v["queued"]["why"], v["queued"]["at"], v["budget"]["paused"]), ("paused", None, True))
+        # paused: time passes, shares make no gh call, nothing goes out (the server's queue skips a paused account)
+        self.now += 7200
+        n = len(self.calls())
+        self.assertEqual(share.share(p, self.docs)["queued"]["why"], "paused")
+        self.assertEqual(gistbudget.due("acme-dev", str(p)), (None, "paused"))
+        self.assertEqual(len(self.calls()), n)
+        # the reader resumes: it goes out
+        del os.environ["STANDIN_GH_REFUSE"]
+        self.assertEqual(share.resume(p), "acme-dev")
+        self.assertNotIn("queued", self.send(PLAN))
+        self.assertIsNone(share.queued_of(p))
+
+    def test_another_403_stays_an_error(self) -> None:
+        self.share_as(PLAN)
+        self.now += 61
+        os.environ["STANDIN_GH_REFUSE"] = "403:message=Resource not accessible by integration,x-ratelimit-remaining=4000"
+        with self.assertRaises(share.ShareError) as cm:
+            share.share(self.doc(PLAN), self.docs)
+        self.assertEqual(cm.exception.status, 502)
+        self.assertIn("gh api -X failed: gh: Resource not accessible by integration (HTTP 403)", str(cm.exception))
+        self.assertIsNone(share.queued_of(self.doc(PLAN)))
+        self.assertEqual(gistbudget.status("acme-dev")["refusals"], 0)
+
+    def test_past_90_an_update_waits_and_goes_out_with_the_newest_rev(self) -> None:
+        p = self.doc(PLAN)
+        gid = self.share_as(PLAN)["share"]["id"]
+        for i in range(89):   # with the share above: 90 in the hour, the oldest 1000 s ago
+            gistbudget.sent("acme-dev", f"/elsewhere/{i}.bluedoc.json", now=self.now - 1000 + i)
+        self.now += 120
+        n = len(self.writes())
+        res = share.share(p, self.docs)
+        self.assertEqual((res["queued"]["why"], self.wait(res), res["budget"]["used"]), ("hour", 3600 - 1000 - 120, 90))
+        for _ in range(4):   # more shares while it waits: no gh call
+            self.assertEqual(share.share(p, self.docs)["queued"]["why"], "hour")
+        self.assertEqual(len(self.writes()), n)
+        # two patches meanwhile: each says so, and the update carries them
+        for sub in ("rev two", "rev three"):
+            r = self.tmp.run("build.py", "patch", p, "doc", "--set", f"subtitle=Saved carts, {sub}")
+            self.assertEqual(r.returncode, 0, r.stderr)
+            rev = load_json(p)["meta"]["rev"]
+            self.assertRegex(r.stdout.splitlines()[-1], rf"^rev {rev} is queued for \d\d:\d\d and carries this patch \(90 of 90 used this hour\)$")
+        self.now += self.wait(share.view(p, self.docs))
+        res = self.send(PLAN)
+        self.assertEqual((res["share"]["id"], res["share"]["rev"]), (gid, rev))
+        self.assertEqual(len(self.writes()), n + 1, "one update for five shares and two patches")
+        self.assertEqual(json.loads(self.gist(gid)[1]["bluedoc-page.json"])["rev"], rev, "the newest rev went out")
+        # a doc's minute: the next share of it waits 60 s, another doc's goes at once (the hour has room again)
+        self.now += 1
+        self.assertEqual(self.wait(share.share(p, self.docs)), 59)
+        self.assertNotIn("queued", share.share(self.doc(STATUS), self.docs))
+
+    def test_a_delete_never_waits(self) -> None:
+        p = self.doc(PLAN)
+        gid = self.share_as(PLAN)["share"]["id"]
+        for i in range(89):
+            gistbudget.sent("acme-dev", f"/elsewhere/{i}", now=self.now - i)
+        self.assertEqual(share.unshare(p)["id"], gid)
+        self.assertEqual(self.writes()[-1], ["api", "-i", "-X", "DELETE", f"gists/{gid}"])
+        self.assertEqual(gistbudget.status("acme-dev")["used"], 91, "logged all the same")
+
+    def test_unshare_forgets_a_first_share_that_waits(self) -> None:
+        for i in range(90):
+            gistbudget.sent("acme-dev", f"/elsewhere/{i}", now=self.now - i)
+        res = share.share(self.doc(STATUS), self.docs)
+        self.assertEqual((res["queued"]["why"], res["share"]), ("hour", None))
+        self.assertIsNone(share.record_of(self.doc(STATUS)), "no gist yet")
+        self.assertEqual(share.queued_lines(res)[-1], "link: made when it goes out; the Share sheet shows it then")
+        self.assertIsNone(share.unshare(self.doc(STATUS)))
+        self.assertEqual(self.shares(), {})
+
+    def test_patch_says_the_link_s_rev_and_the_budget(self) -> None:
+        p = self.doc(PLAN)
+        self.share_as(PLAN)
+        n = len(self.calls())
+        r = self.tmp.run("build.py", "patch", p, "doc", "--set", "subtitle=Saved carts, rev two")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(r.stdout.splitlines()[-1], f"shared as acme-dev at rev 1: run serve.py share {p} once this round is done "
+                                                    "(1 of 90 used this hour)")
+        for _ in range(4):
+            gistbudget.refused("acme-dev")
+        r = self.tmp.run("build.py", "patch", p, "doc", "--set", "subtitle=Saved carts, rev three", "--no-bump")
+        self.assertEqual(r.stdout.splitlines()[-1], "shared as acme-dev: updates are paused (GitHub refused 4 in a row): tell the user")
+        r = self.tmp.run("build.py", "patch", self.doc(STATUS), "doc", "--set", "subtitle=Week 41", "--no-bump")
+        self.assertFalse([x for x in r.stdout.splitlines() if "shared" in x or "queued" in x], "a doc that isn't shared: no line")
+        self.assertEqual(len(self.calls()), n, "patch reads two files: no gh call")
+
+    def test_the_cli_says_queued_with_exit_0_and_paused_with_exit_1(self) -> None:
+        self.cli_server()
+        p = self.doc(STATUS)
+        self.assertEqual(self.tmp.run("serve.py", "share", p, timeout=120).returncode, 0)
+        rec = self.shares()[str(p)]
+        # within the doc's minute: queued, exit 0, with what to do next
+        r = self.tmp.run("serve.py", "share", p, timeout=120)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        lines = r.stdout.splitlines()[1:]
+        self.assertRegex(lines[0], r"^queued: rev 2 goes out at \d\d:\d\d \(in 1 min\) as acme-dev, with the doc as it is then "
+                                   r"\(one update a minute per doc\)$")
+        self.assertEqual(lines[1:], ["budget: 1 of 90 used in the last hour on acme-dev; GitHub allows about 100 gist updates an hour",
+                                     "done: don't share again for this round; later patches go out with it",
+                                     f"link: {rec['link']} (shows rev 2 until then)"])
+        # paused: tell the user, exit 1
+        for _ in range(4):
+            gistbudget.refused("acme-dev")
+        r = self.tmp.run("serve.py", "share", p, timeout=120)
+        self.assertEqual(r.returncode, 1)
+        self.assertEqual(r.stderr.strip().splitlines()[-1], "not sent: GitHub refused 4 updates in a row on acme-dev; tell the user: "
+                                                             "Resume updates in the Share sheet sends it")
+        # --resume (the reader's): the queued update goes out now
+        self.forget_budget()
+        for _ in range(4):
+            gistbudget.refused("acme-dev")
+        r = self.tmp.run("serve.py", "share", p, "--resume", timeout=120)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("resumed: gist updates go out again on acme-dev", r.stdout)
+        self.assertIn("secret gist updated as acme-dev, rev 2", r.stdout)
+        self.assertFalse(gistbudget.status("acme-dev")["paused"])
+        self.assertIsNone(share.queued_of(p))
+
+
+ONE_PX_PNG = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==")
+AT = "2026-11-18T10:00:00.000Z"
+
+
+class Answers(StandInGh, unittest.TestCase):
+    """What a share carries of the reader's answers: bluedoc-page.json's __BLUEDOC_ANSWERS__ in the stand-in's gist."""
+
+    def setUp(self) -> None:
+        self.gh_setup()
+        # the reader's attachments where the server keeps them: under a .bluedoc folder
+        att = self.tmp.dir / ".bluedoc" / "attachments" / "acme"
+        att.mkdir(parents=True)
+        (att / "1a2b3c4d-cart.png").write_bytes(ONE_PX_PNG)
+        (att / "5e6f7a8b-terms.pdf").write_bytes(b"%PDF-1.4 acme")
+        self.png = {"name": "cart.png", "path": str(att / "1a2b3c4d-cart.png"), "size": len(ONE_PX_PNG)}
+        self.pdf = {"name": "terms.pdf", "path": str(att / "5e6f7a8b-terms.pdf"), "size": 13}
+        pin = {"id": "c1", "type": "pin", "status": "open", "note": "This total looks wrong", "files": [self.png],
+               "target": {"key": "item:decisions/prices", "label": "Prices"}, "rev": "1", "at": AT, "sentAt": AT,
+               "thread": [{"md": "Still wrong", "rev": "1", "at": AT}], "draft": "And the tax line", "draftFiles": [self.pdf]}
+        general = {"id": "c2", "type": "general", "status": "pending", "note": "Not sent yet", "target": {"key": "doc", "label": "Whole doc"},
+                   "rev": "1", "at": AT}
+        element = {"id": "c3", "type": "element", "status": "open", "target": {"key": "el:x", "label": "x"}, "rev": "1", "at": AT,
+                   "element": {"op": "text", "ab": "a", "sel": "h1", "tag": "h1", "base": "Cart", "text": "Basket"}}
+        self.state = {"decisions:retention": "=d180|", "decisions:prices:custom": "Ask finance first", "decisions:guests:more": "1",
+                      "checks:unit": "10", "checks:limit": "01",
+                      "decisions:retention:thread": json.dumps([{"md": "180 days matches finance", "rev": "1", "at": AT, "files": [self.png, self.pdf]}]),
+                      "__ann:c1": json.dumps(pin), "__ann:c2": json.dumps(general), "__ann:c3": json.dumps(element),
+                      "decisions:prices:note": "Check with legal", "decisions:prices:notes": json.dumps({"notice": {"md": "7 days?", "files": [self.png]}}),
+                      "decisions:guests:files": json.dumps([self.pdf]), "__message": "Overall fine", "__message-files": json.dumps([self.png]),
+                      "__title": "My carts", "__emoji": "🛒", "__planstate": "approved", "__seen": "1", "__hist": "{}"}
+
+    def gist_answers(self, kinds) -> tuple[dict | None, dict]:
+        """Share PLAN with these kinds: (the slot's object, the gist's files)."""
+        res = self.share_as(PLAN, answers=kinds, state=self.state)
+        _, files = self.gist(res["share"]["id"])
+        return json.loads(json.loads(files["bluedoc-page.json"])["fill"]["__BLUEDOC_ANSWERS__"]), files
+
+    def test_answers_by_default_picks_ticks_and_sent_comments(self) -> None:
+        slot, files = self.gist_answers(None)
+        self.assertEqual(sorted(slot), ["at", "by", "rev", "state"])
+        self.assertEqual((slot["by"], slot["rev"]), ("acme-dev", "1"))
+        self.assertEqual(sorted(slot["state"]), ["__ann:c1", "checks:unit", "decisions:guests:more", "decisions:prices:custom",
+                                                 "decisions:retention", "decisions:retention:thread"])
+        self.assertTrue(all(isinstance(v, str) for v in slot["state"].values()), "the state keys' own grammar: string values")
+        pin = json.loads(slot["state"]["__ann:c1"])
+        self.assertEqual((pin["note"], pin["thread"][0]["md"], pin["files"]), ("This total looks wrong", "Still wrong", [{"name": "cart.png", "size": len(ONE_PX_PNG)}]))
+        self.assertNotIn("draft", pin, "a follow-up not sent stays")
+        self.assertEqual(json.loads(slot["state"]["decisions:retention:thread"])[0]["files"],
+                         [{"name": "cart.png", "size": len(ONE_PX_PNG)}, {"name": "terms.pdf", "size": 13}], "no path, no data")
+        for text in files.values():
+            for leak in ("/.bluedoc/", str(self.tmp.dir), "My carts", "Not sent yet", "Check with legal", "Overall fine", "Basket"):
+                self.assertNotIn(leak, text)
+        self.assertNotIn('"path"', json.dumps(slot), "no attachment carries its path")
+        self.assertEqual(self.shares()[str(self.doc(PLAN))]["answers"], ["picks", "ticks", "comments"])
+
+    def test_answers_each_switch_takes_its_kind(self) -> None:
+        want = {"picks": {"decisions:retention", "decisions:prices:custom", "decisions:guests:more"}, "ticks": {"checks:unit"},
+                "comments": {"decisions:retention:thread", "__ann:c1"},
+                "pending": {"__ann:c2", "decisions:prices:note", "decisions:prices:notes", "decisions:guests:files", "__message", "__message-files"}}
+        for kind, keys in want.items():
+            with self.subTest(kind=kind):
+                slot, _ = self.gist_answers([kind])
+                self.assertEqual(set(slot["state"]), keys)
+        # comments and pending: the sent comment carries its follow-up draft
+        slot, _ = self.gist_answers(["comments", "pending"])
+        pin = json.loads(slot["state"]["__ann:c1"])
+        self.assertEqual((pin["draft"], pin["draftFiles"]), ("And the tax line", [{"name": "terms.pdf", "size": 13}]))
+        self.assertIsNone(self.gist_answers(["images"])[0], "images alone carry nothing: they ride on the other kinds")
+
+    def test_answers_images_go_as_data_within_the_cap(self) -> None:
+        slot, files = self.gist_answers(["comments", "images"])
+        msg = json.loads(slot["state"]["decisions:retention:thread"])[0]
+        uri = "data:image/png;base64," + base64.b64encode(ONE_PX_PNG).decode("ascii")
+        self.assertEqual(msg["files"], [{"name": "cart.png", "size": len(ONE_PX_PNG), "src": uri}, {"name": "terms.pdf", "size": 13}],
+                         "a PDF isn't shared")
+        self.assertNotIn("/.bluedoc/", files["bluedoc-page.json"])
+        with mock.patch.object(share, "IMAGES_MAX", len(ONE_PX_PNG)):   # room for one copy: the pin's goes, the message's doesn't
+            slot, _ = self.gist_answers(["comments", "images"])
+        srcs = [f.get("src") for f in json.loads(slot["state"]["__ann:c1"])["files"] + json.loads(slot["state"]["decisions:retention:thread"])[0]["files"]]
+        self.assertEqual(srcs, [uri, None, None])
+        v = share.view(self.doc(PLAN), self.docs, state=self.state, kinds=["comments", "images"])
+        self.assertEqual((v["answers"]["counts"], v["answers"]["notShared"]),
+                         ({"picks": 3, "ticks": 1, "comments": 3, "pending": 5, "images": 1}, 1))
+
+    def test_no_answers_leaves_the_slot_null_and_changes_show(self) -> None:
+        res = self.share_as(PLAN, answers=[], state=self.state)
+        page = json.loads(self.gist(res["share"]["id"])[1]["bluedoc-page.json"])
+        self.assertEqual(page["fill"]["__BLUEDOC_ANSWERS__"], "null")
+        v = share.view(self.doc(PLAN), self.docs, state=self.state, kinds=[])
+        self.assertFalse(v["answers"]["changed"])
+        self.assertTrue(share.view(self.doc(PLAN), self.docs, state=self.state)["answers"]["changed"], "the defaults would add them")
+        self.share_as(PLAN, state=self.state)
+        self.assertFalse(share.view(self.doc(PLAN), self.docs, state=self.state)["answers"]["changed"])
+        later = {**self.state, "checks:cross-device": "10"}
+        self.assertTrue(share.view(self.doc(PLAN), self.docs, state=later)["answers"]["changed"], "a new tick: Update answers")
+
+    def test_answers_through_the_server_are_remembered_per_doc(self) -> None:
+        self.cli_server()
+        p = self.doc(PLAN)
+        r = self.tmp.run("serve.py", "open", p)   # starts the server, registers the folder
+        self.assertEqual(r.returncode, 0, r.stderr)
+        url = urlsplit(r.stdout.strip()).path
+        port = int(self.tmp.env["BLUEDOC_PORT"])
+        key = (self.tmp.home / "key").read_text(encoding="utf-8").strip()
+        ops = [[k, v] for k, v in self.state.items() if not k.startswith("__hist")]
+        c = http.client.HTTPConnection("127.0.0.1", port, timeout=10)
+        c.request("PUT", "/__bluedoc/state", json.dumps({"path": url, "import": False, "ops": ops}),
+                  {"Host": f"127.0.0.1:{port}", "X-Bluedoc": "1", "X-Bluedoc-Key": key, "Content-Type": "application/json"})
+        self.assertEqual(c.getresponse().status, 200)
+        c.close()
+        r = self.tmp.run("serve.py", "share", p, "--answers", "ticks", timeout=120)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        gid = self.shares()[str(p)]["id"]
+        slot = json.loads(json.loads(self.gist(gid)[1]["bluedoc-page.json"])["fill"]["__BLUEDOC_ANSWERS__"])
+        self.assertEqual(set(slot["state"]), {"checks:unit"})
+        # remembered: the next share without a flag carries ticks again; --no-answers, none
+        self.forget_budget()
+        self.tmp.run("serve.py", "share", p, timeout=120)
+        self.assertEqual(self.shares()[str(p)]["answers"], ["ticks"])
+        self.forget_budget()
+        r = self.tmp.run("serve.py", "share", p, "--no-answers", timeout=120)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(json.loads(self.gist(gid)[1]["bluedoc-page.json"])["fill"]["__BLUEDOC_ANSWERS__"], "null")
+        self.assertNotIn("/.bluedoc/", "".join(self.gist(gid)[1].values()))
 
 
 class Routes(StandInGh, unittest.TestCase):
@@ -563,12 +905,15 @@ class Routes(StandInGh, unittest.TestCase):
         self.tmp.env.update(env)
         self.server.start()
 
-    def call(self, method: str, route: str, stem: str, key: bool = True, **body) -> tuple[int, dict]:
+    def call(self, method: str, route: str, stem: str, key: bool = True, budget: bool = False, **body) -> tuple[int, dict]:
+        """One share route on the doc; a share POST forgets the budget first (the minute per doc) unless budget."""
         url = self.server.url_for(self.doc(stem))
         h = {"X-Bluedoc": "1", "Content-Type": "application/json", **({} if key else {"X-Bluedoc-Key": "wrong"})}
         if method == "GET":
             status, raw = self.server.req("GET", f"{route}?path={quote(url)}", headers=h)
         else:
+            if route == "/__bluedoc/share" and not budget:
+                self.forget_budget()
             status, raw = self.server.req("POST", route, json.dumps({"path": url, **body}).encode(), h)
         self.assertNotIn(b"gho_standin_", raw, "no token in an answer")
         return status, json.loads(raw)
@@ -584,9 +929,12 @@ class Routes(StandInGh, unittest.TestCase):
         project = {"slug": "acme-shop", "name": "acme-shop", "remote": None}
         status, j = self.call("GET", "/__bluedoc/share", DESIGN)
         self.assertEqual(status, 200, j)
-        self.assertEqual(j, {"share": None, "rev": "C", "off": None, "contents": {"media": 0, "screens": 11}, "project": project,
+        self.assertEqual(j, {"share": None, "rev": "C", "off": None, "queued": None, "contents": {"media": 0, "screens": 11}, "project": project,
                              "accounts": [acct("acme-dev", active=True)], "account": {"login": "acme-dev", "why": "only"},
-                             "ask": False, "mismatch": None})
+                             "ask": False, "mismatch": None, "error": None,
+                             "budget": {"login": "acme-dev", "used": 0, "limit": 90, "next": None, "retryAt": None, "paused": False},
+                             "answers": {"kinds": ["picks", "ticks", "comments"], "notShared": 0, "changed": False,
+                                         "counts": {"picks": 0, "ticks": 0, "comments": 0, "pending": 0, "images": 0}}})
         status, j = self.call("POST", "/__bluedoc/share", DESIGN)
         self.assertEqual(status, 200, j)
         rec = j["share"]
@@ -594,7 +942,7 @@ class Routes(StandInGh, unittest.TestCase):
         self.assertEqual(self.call("GET", "/__bluedoc/share", DESIGN)[1]["share"], rec)
         url = self.server.url_for(self.doc(DESIGN))
         status, raw = self.server.req("GET", f"/__bluedoc/share?path={quote(url)}&brief=1", headers={"X-Bluedoc": "1"})
-        self.assertEqual((status, json.loads(raw)), (200, {"share": rec, "rev": "C", "off": None}), "brief")
+        self.assertEqual((status, json.loads(raw)), (200, {"share": rec, "rev": "C", "off": None, "queued": None}), "brief")
         status, j = self.call("POST", "/__bluedoc/share", DESIGN)
         self.assertEqual((status, j["share"]["id"], j["created"]), (200, rec["id"], False))
         status, j = self.call("POST", "/__bluedoc/unshare", DESIGN)
@@ -652,7 +1000,7 @@ class Routes(StandInGh, unittest.TestCase):
                 self.restart(**env)
                 url = self.server.url_for(self.doc(PLAN))
                 status, raw = self.server.req("GET", f"/__bluedoc/share?path={quote(url)}&brief=1", headers={"X-Bluedoc": "1"})
-                self.assertEqual((status, json.loads(raw)), (200, {"share": None, "rev": "1", "off": off}))
+                self.assertEqual((status, json.loads(raw)), (200, {"share": None, "rev": "1", "off": off, "queued": None}))
                 _, j = self.call("GET", "/__bluedoc/share", PLAN)
                 self.assertEqual((j["off"], j["accounts"], j["account"], j["ask"]), (off, [], None, False))
                 self.assertEqual(self.settings()[1]["sharing"]["off"], off)
@@ -687,6 +1035,62 @@ class Routes(StandInGh, unittest.TestCase):
         status, j = self.call("POST", "/__bluedoc/share", PLAN)
         self.assertEqual(status, 413)
         self.assertRegex(j["error"], r"would be 1\d\.\d MB, over the 10 MB a gist file can hold: send Export → HTML file instead")
+        self.assertEqual(self.shares(), {})
+
+    def wait_for(self, check, timeout: float = 15) -> None:
+        end = time.monotonic() + timeout
+        while not check():
+            if time.monotonic() > end:
+                self.fail(f"not within {timeout} s: {(self.tmp.dir / 'server.log').read_text(encoding='utf-8')[-2000:]}")
+            time.sleep(0.2)
+
+    def doc_minute_ends_in(self, stem: str, seconds: float) -> None:
+        """The doc's last update as if it went out (60 - seconds) s ago."""
+        f = gistbudget.budget_file()
+        data = json.loads(f.read_text(encoding="utf-8"))
+        data["acme-dev"]["docs"][str(self.doc(stem))] = time.time() - 60 + seconds
+        f.write_text(json.dumps(data), encoding="utf-8")
+
+    def test_the_server_s_queue_sends_an_update_when_it_is_due(self) -> None:
+        p = self.doc(PLAN)
+        status, j = self.call("POST", "/__bluedoc/share", PLAN)
+        self.assertEqual(status, 200, j)
+        gid = j["share"]["id"]
+        self.doc_minute_ends_in(PLAN, 3)
+        status, j = self.call("POST", "/__bluedoc/share", PLAN, budget=True)
+        self.assertEqual((status, j["queued"]["why"], j["queued"]["login"], j["share"]["id"]), (202, "spacing", "acme-dev", gid))
+        self.assertEqual(self.call("GET", "/__bluedoc/share", PLAN)[1]["queued"]["why"], "spacing")
+        r = self.tmp.run("build.py", "patch", p, "doc", "--set", "subtitle=Saved carts, rev two")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        rev = load_json(p)["meta"]["rev"]
+        self.wait_for(lambda: self.shares()[str(p)].get("rev") == rev and "queued" not in self.shares()[str(p)])
+        self.assertEqual(json.loads(self.gist(gid)[1]["bluedoc-page.json"])["rev"], rev, "the doc as it was when it went out")
+        self.assertIn(f"shared {p} as acme-dev (queued)", (self.tmp.dir / "server.log").read_text(encoding="utf-8"))
+        # a queued update a stopped server left: the next server sends it on start
+        self.server.stop()
+        data = self.shares()
+        data[str(p)]["queued"] = {"login": "acme-dev", "at": time.time(), "why": "hour", "answers": ["picks", "ticks", "comments"]}
+        share._save(data)
+        self.forget_budget()
+        self.tmp.run("build.py", "patch", p, "doc", "--set", "subtitle=Saved carts, rev three")
+        rev = load_json(p)["meta"]["rev"]
+        self.server.start()
+        self.wait_for(lambda: self.shares()[str(p)].get("rev") == rev and "queued" not in self.shares()[str(p)])
+
+    def test_resume_through_the_route_sends_the_queued_update(self) -> None:
+        p = self.doc(PLAN)
+        gid = self.call("POST", "/__bluedoc/share", PLAN)[1]["share"]["id"]
+        self.forget_budget()
+        for _ in range(4):
+            gistbudget.refused("acme-dev")
+        status, j = self.call("POST", "/__bluedoc/share", PLAN, budget=True)
+        self.assertEqual((status, j["queued"]["why"], j["budget"]["paused"]), (202, "paused", True))
+        _, raw = self.server.req("GET", f"/__bluedoc/share?path={quote(self.server.url_for(p))}&brief=1", headers={"X-Bluedoc": "1"})
+        self.assertEqual(json.loads(raw)["queued"]["why"], "paused", "the key knows on load")
+        status, j = self.call("POST", "/__bluedoc/share", PLAN, budget=True, resume=True)
+        self.assertEqual((status, j["share"]["id"], j["queued"], j["budget"]["paused"]), (200, gid, None, False))
+        self.assertEqual(self.call("POST", "/__bluedoc/share", PLAN, answers=["secrets"])[0], 400)
+        self.assertEqual(self.call("POST", "/__bluedoc/unshare", PLAN)[0], 200)
         self.assertEqual(self.shares(), {})
 
 

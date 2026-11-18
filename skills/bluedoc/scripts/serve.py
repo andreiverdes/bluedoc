@@ -21,13 +21,22 @@ Usage:
   serve.py snapshot DOC.json [--rev R] [--url URL] [--page ID] [--width PX]
                                                    record a website doc's live pages as revision R's snapshots
                                                    (default: the current rev; headless Chrome: the chrome setting)
-  serve.py share DOC.json [--as LOGIN] [--move | --keep]
+  serve.py share DOC.json [--as LOGIN] [--move | --keep] [--answers KINDS | --no-answers] [--resume]
                                                    put DOC's current revision in a secret GitHub gist (gh, an
                                                    account with the gist scope) and print the red notice, its
                                                    https://bluedoc.ai/g/ link and the gist's URL; again: update the
-                                                   same gist (share.py). --as: share as that account and make it the
-                                                   project's; --move/--keep: a gist on another account than the
-                                                   project's moves to it (a new link) or stays (the link stays)
+                                                   same gist (share.py). It goes through the server (started as
+                                                   `open` does), which counts the account's gist updates
+                                                   (gistbudget.py: 90 an hour, one a minute per doc) and runs gh as
+                                                   the server was started (after switching gh accounts, restart
+                                                   it): an update that doesn't fit is queued and the CLI says when
+                                                   it goes out (exit 0: share no more this round); paused after 4
+                                                   refusals in a row, it says to tell the user (exit 1). --as: share
+                                                   as that account and make it the project's; --move/--keep: a gist
+                                                   on another account than the project's moves to it (a new link)
+                                                   or stays (the link stays); --answers/--no-answers: which of the
+                                                   reader's answers go (share.ANSWER_KINDS; remembered for the doc);
+                                                   --resume: lift the pause (the reader's call)
   serve.py unshare DOC.json                        delete DOC's gist as the account it is on and forget it
   serve.py run [--port N]                          run in the foreground
 
@@ -38,7 +47,8 @@ secret that writes need), state.db (SQLite, mode 0600: the reader's ticks, picks
 and every reply; statedb.py), settings.json (the plan-mode hook and patch-only switches, Chrome's path, the font
 folders and each project's sharing account, which Settings writes; settings.py: an environment variable that is set
 wins over it), shares.json (mode 0600: each doc shared as a secret gist, by its path: gist id, the account it is on,
-link, rev, when; share.py) and
+link, rev, when, the answers it carries, an update that waits; share.py), gist-budget.json (mode 0600: each GitHub
+account's gist updates in the last hour, GitHub's retry time, refusals, pause; gistbudget.py) and
 app/<version>-<code>/ (the copy of scripts and assets the server runs from, so deleting or updating the install it was
 opened from never pulls files from under it; other versions' copies go once a new server is up).
 `open` registers the topmost ancestor folder named `docs`, else the doc's own folder, and restarts a running server
@@ -119,23 +129,31 @@ URLs: /                      home page: every doc under the registered folders, 
                              Chrome once BP.printReady(); a design's or website's: its brief, then a page per
                              artboard), the attachment <stem>.pdf; 501 without Chrome (BLUEDOC_CHROME). The app bar's
                              Export downloads both
-      /__bluedoc/share?path=<doc URL path>[&brief=1]   GET (the X-Bluedoc header and the key): share_view's {share:
-                             the doc's share record ({id, user: the account its gist is on, link:
-                             https://bluedoc.ai/g/<code> (share.link_for), url, rev, at, files}, kept in shares.json)
-                             or null, rev: its meta.rev, contents: {media, screens}, project: {slug, name, remote},
+      /__bluedoc/share?path=<doc URL path>[&brief=1][&answers=KINDS]   GET (the X-Bluedoc header and the key):
+                             share_view's {share: the doc's share record ({id, user: the account its gist is on, link:
+                             https://bluedoc.ai/g/<code> (share.link_for), url, rev, at, files, answers, answersHash},
+                             kept in shares.json) or null, rev: its meta.rev, queued: {at, why: hour|spacing|retry|
+                             paused, login} or null, contents: {media, screens}, project: {slug, name, remote},
                              accounts: gh's [{login, usable, active, fix}], account: {login, why} it would share as,
                              ask: whether to show Share as (2+ usable accounts), mismatch: {gist, project} or null,
-                             off: null or {reason, fix} when sharing is off}; brief: {share, rev, off} (the Share key
-                             on load, gh's accounts cached for a minute). POST {path, as?, move?, keep?} (the key):
-                             share it as a secret gist (share.py: created, later updated in place as the account it
-                             is on, so the link stays; as: that account, made the project's): the GET's answer with
-                             created, relinked, moved and warning (an old gist a move couldn't delete); 409 {error,
-                             mismatch} when the gist is on another account than the project's and neither move nor
-                             keep is set, 413 for a page over 10 MB, 501 without gh, 502 when gh is signed out, has
-                             no account with the gist scope or fails, 400 for a presentation, a storelisting or an
-                             account gh can't share as. The app bar's Share key
+                             off: null or {reason, fix} when sharing is off, budget: {login, used, limit, next,
+                             retryAt, paused}, error: why the last queued update didn't go, answers: {kinds, counts,
+                             notShared, changed}}; &answers=: the Share sheet's switches (accounts from the last
+                             minute); brief: {share, rev, off, queued} (the Share key on load, gh's accounts cached for
+                             a minute). POST {path, as?, move?, keep?, answers?, resume?} (the key; `serve.py share`
+                             names its doc as {doc: <absolute path>}): share it as a secret gist (share.py: created,
+                             later updated in place as the account it is on, so the link stays; as: that account,
+                             made the project's; answers: the kinds of the reader's answers that go, remembered as
+                             reader state; resume: lift the account's pause and send the queued update): the GET's
+                             answer with created, relinked, moved and warning (an old gist a move couldn't delete);
+                             202 with the GET's answer, queued set, when the update waits for the budget or GitHub;
+                             409 {error, mismatch} when the gist is on another account than the project's and
+                             neither move nor keep is set, 413 for a page over 10 MB, 501 without gh, 502 when gh is
+                             signed out, has no account with the gist scope or fails, 400 for a presentation, a
+                             storelisting or an account gh can't share as. The app bar's Share key
       POST /__bluedoc/unshare  {path} (the key): delete the doc's gist as the account it is on and forget it (also
-                             when GitHub has it no more): {ok, removed: the record, or null when it wasn't shared}
+                             when GitHub has it no more), and any update of it that waits: {ok, removed: the record,
+                             or null when it wasn't shared}
       /__bluedoc/listing?path=<doc URL path>[&format=F&rev=B&platform=P&locale=L&job=J]   a storelisting (revision
                              B's) exported, a read, no key, nothing written beside the doc; 400 for any other doc type.
                              zip (the default): the fastlane layout of every shot and asset at its store size and
@@ -262,6 +280,7 @@ sys.path.insert(0, str(HERE))
 import build  # noqa: E402
 import codepin  # noqa: E402
 import fonts  # noqa: E402
+import gistbudget  # noqa: E402
 import listing  # noqa: E402
 import settings  # noqa: E402
 import share  # noqa: E402
@@ -314,10 +333,11 @@ def reply_file(doc: Path, kind: str, ext: str) -> Path:
 
 
 def code_hash() -> str:
-    """Changes whenever the code a server renders with does: serve.py, statedb.py, build.py, codepin.py, share.py and
-    the template."""
+    """Changes whenever the code a server renders with does: serve.py, statedb.py, build.py, codepin.py, share.py,
+    gistbudget.py and the template."""
     h = hashlib.sha256()
-    for f in (Path(__file__).resolve(), HERE / "statedb.py", HERE / "build.py", HERE / "codepin.py", HERE / "share.py", build.TEMPLATE):
+    for f in (Path(__file__).resolve(), HERE / "statedb.py", HERE / "build.py", HERE / "codepin.py", HERE / "share.py",
+              HERE / "gistbudget.py", build.TEMPLATE):
         h.update(f.read_bytes())
     return h.hexdigest()[:12]
 
@@ -601,6 +621,14 @@ def file_for_url(path: str) -> Path | None:
 def doc_for_url(path: str) -> Path | None:
     p = file_for_url(path)
     return p if p and is_doc(p) else None
+
+
+def cli_doc(path) -> Path | None:
+    """A doc the CLI names by its absolute path (`serve.py share`, which has the key), wherever it is."""
+    if not (isinstance(path, str) and os.path.isabs(path)):
+        return None
+    p = Path(path).resolve()
+    return p if p.is_file() and is_doc(p) else None
 
 
 def media_for_url(path: str) -> Path | None:
@@ -2155,14 +2183,22 @@ def project_name(r: Path) -> str:
     return r.parent.name if r.name in ("docs", "doc") and r.parent.name else r.name
 
 
-def share_view(doc: Path, brief: bool = False, fresh: bool = True) -> tuple[int, dict]:
+def reader_state(doc: Path) -> dict:
+    """The doc's reader state from state.db, as the page reads it ({} without sqlite3)."""
+    s = page_state(doc)
+    return s["state"] if s else {}
+
+
+def share_view(doc: Path, brief: bool = False, fresh: bool = True, kinds: list[str] | None = None) -> tuple[int, dict]:
     """GET /__bluedoc/share: share.view's answer with project: {slug, name, remote: its GitHub owner/name or null};
-    brief (&brief=1, the app bar's Share key on load): {share, rev, off} from gh's accounts cached for a minute.
-    fresh=False (after a share) takes the accounts it just read. 400: a deck, a listing or an unreadable doc."""
+    brief (&brief=1, the app bar's Share key on load): {share, rev, off, queued} from gh's accounts cached for a
+    minute. fresh=False (after a share) takes the accounts it just read. kinds: the answers the sheet's switches pick
+    (&answers=), else the reader state's. 400: a deck, a listing or an unreadable doc."""
     root = project_of(doc)
     remote = None if brief else share.remote_of(root)
     try:
-        v = share.view(doc, root, remote, brief=brief, fresh=fresh and not brief)
+        v = share.view(doc, root, remote, brief=brief, fresh=fresh and not brief, state=None if brief else reader_state(doc),
+                       kinds=kinds)
     except share.ShareError as e:
         return e.status, {"error": str(e)}
     if brief:
@@ -2171,31 +2207,107 @@ def share_view(doc: Path, brief: bool = False, fresh: bool = True) -> tuple[int,
     return 200, {**v, "project": {"slug": slug, "name": project_name(root), "remote": remote}}
 
 
+# The gist queue: every share goes through share.share, which sends at once or, past the budget (gistbudget.py), marks
+# the doc queued in shares.json. This server's thread (gist_queue) sends each queued update when it is due, reading the
+# doc and its reader state as they are then; it sleeps until the next one is due, and a share, a resume or an unshare
+# wakes it (GIST_WAKE). On start it sends whatever is due. A paused account waits for a resume.
+GIST_WAKE = threading.Event()
+
+
+def send_queued(doc: Path, q: dict) -> dict | None:
+    """Send the doc's queued update now (share.share from_queue): its result, or None when it couldn't go (the doc is
+    gone, a mismatch since, gh failing): it waits no more and the sheet shows why. The answers that go are the ones the
+    reader state picks now (the Share sheet's switches while it waited), else the queued share's."""
+    root = project_of(doc)
+    state = reader_state(doc)
+    kinds = share.kinds_of(state) if isinstance(state.get(share.ANSWERS_KEY), str) else q.get("answers")
+    try:
+        res = share.share(doc, root, share.remote_of(root), q.get("as"), move=q.get("move") is True, keep=q.get("keep") is True,
+                          answers=kinds, state=state, from_queue=True)
+    except share.ShareError as e:
+        share.drop_failed(doc, str(e))
+        print(f"queued share of {doc} not sent: {e}", flush=True)
+        return None
+    if res.get("share") and not res.get("queued"):
+        print(f"shared {doc} as {res['as']} (queued): {res['share']['link']}", flush=True)
+    return res
+
+
+def send_due() -> float | None:
+    """Send every queued update that is due; the epoch the next one is due, or None (none queued, or all paused)."""
+    def due(doc: Path, q: dict) -> float | None:
+        return gistbudget.due(q["login"], str(doc))[0] if q.get("login") else gistbudget.clock()
+    for doc, q in share.queued_docs():
+        at = due(doc, q)
+        if at is not None and at <= gistbudget.clock():
+            send_queued(doc, q)
+    times = [t for t in (due(d, q) for d, q in share.queued_docs()) if t is not None]
+    return min(times) if times else None
+
+
+def gist_queue() -> None:
+    while True:
+        try:
+            nxt = send_due()
+        except Exception as e:   # one bad entry mustn't stop the queue: it says so and tries again in a minute
+            print(f"gist queue: {e}", flush=True)
+            nxt = gistbudget.clock() + 60
+        GIST_WAKE.wait(None if nxt is None else min(3600.0, max(1.0, nxt - gistbudget.clock())))
+        GIST_WAKE.clear()
+
+
 def share_doc(doc: Path, data: dict) -> tuple[int, dict]:
-    """POST /__bluedoc/share {path, as?, move?, keep?}: share_view's answer after share.share, with created, relinked,
-    moved and warning; or {error} with ShareError's status (409 with mismatch: the gist is on another account than
-    the project's; 413 too big, 501 no gh, 502 gh signed out, without a gist-scoped account or failing, 400 a deck, a
-    listing, an unreadable doc or an account gh can't share as)."""
+    """POST /__bluedoc/share {path, as?, move?, keep?, answers?: the kinds that go (share.ANSWER_KINDS; else the reader
+    state's), resume?}: share_view's answer after share.share, with created, relinked, moved and warning; 202 with
+    share_view's answer (queued set) when the update waits for the budget or GitHub; or {error} with ShareError's
+    status (409 with mismatch: the gist is on another account than the project's; 413 too big, 501 no gh, 502 gh
+    signed out, without a gist-scoped account or failing, 400 a deck, a listing, an unreadable doc or an account gh
+    can't share as). answers is remembered as the doc's reader state (share.ANSWERS_KEY). resume lifts the pause on
+    the account the doc goes out as, and sends a queued update now."""
     as_ = data.get("as")
     if as_ is not None and not (isinstance(as_, str) and share.LOGIN_RE.fullmatch(as_)):
         return 400, {"error": "as: a GitHub login"}
+    state = reader_state(doc)
+    kinds = share.kinds_of(state)
+    if data.get("answers") is not None:
+        kinds = share.parse_kinds(data["answers"]) if isinstance(data["answers"], list) else None
+        if kinds is None:
+            return 400, {"error": f"answers: a list of {', '.join(share.ANSWER_KINDS)}"}
+        if DB and state.get(share.ANSWERS_KEY) != ",".join(kinds):
+            DB.apply(str(doc), doc_id(doc), [(share.ANSWERS_KEY, ",".join(kinds))], False)
     root = project_of(doc)
     try:
-        res = share.share(doc, root, share.remote_of(root), as_, move=data.get("move") is True, keep=data.get("keep") is True)
+        q = share.queued_of(doc)
+        if data.get("resume") is True:
+            who = share.resume(doc, (share.view(doc, root, None).get("account") or {}).get("login"))
+            print(f"gist updates resumed on {who}", flush=True)
+            if q is not None:
+                q = {**q, "answers": kinds}
+                res = send_queued(doc, q)
+                if res is None:
+                    return 502, {"error": (share._load().get(str(doc)) or {}).get("error") or "the queued update didn't go"}
+        if data.get("resume") is not True or q is None:
+            res = share.share(doc, root, share.remote_of(root), as_, move=data.get("move") is True, keep=data.get("keep") is True,
+                              answers=kinds, state=state)
     except share.Mismatch as e:
         return 409, {"error": str(e), "mismatch": e.mismatch}
     except share.ShareError as e:
         return e.status, {"error": str(e)}
-    print(f"shared {doc} as {res['as']}: {res['share']['link']}", flush=True)
+    GIST_WAKE.set()
+    if res.get("queued"):
+        print(f"share of {doc} queued: {res['queued']['why']} until {res['queued']['at']}", flush=True)
+    else:
+        print(f"shared {doc} as {res['as']}: {res['share']['link']}", flush=True)
     status, v = share_view(doc, fresh=False)
     if status != 200:
         return status, v
     extra = {k: res[k] for k in ("created", "relinked", "moved", "warning") if k in res}
-    return 200, {**v, **extra}
+    return (202 if res.get("queued") else 200), {**v, **extra}
 
 
 def unshare_doc(doc: Path) -> tuple[int, dict]:
-    """POST /__bluedoc/unshare: {ok, removed: the record it had, or null when the doc wasn't shared}."""
+    """POST /__bluedoc/unshare: {ok, removed: the record it had, or null when the doc wasn't shared}. A queued update
+    goes with it."""
     try:
         rec = share.unshare(doc)
     except share.ShareError as e:
@@ -2205,28 +2317,49 @@ def unshare_doc(doc: Path) -> tuple[int, dict]:
     return 200, {"ok": True, "removed": rec}
 
 
-def cmd_share(doc: Path, as_: str | None = None, move: bool = False, keep: bool = False) -> int:
-    """`serve.py share`: share the doc (share.share, as its project's account) and print the notice in red, the link
-    and the gist's URL."""
+def cmd_share(doc: Path, as_: str | None = None, move: bool = False, keep: bool = False, answers: list[str] | None = None,
+              resume: bool = False) -> int:
+    """`serve.py share`: print the notice in red, then share the doc through the server (started as `open` does), so
+    one process counts the account's gist updates: the link and the gist's URL; queued: when it goes out, the hour's
+    count, and that nothing more is needed (exit 0); paused: tell the user (exit 1)."""
     print(share.red(share.NOTICE, sys.stdout), flush=True)
-    root = project_of(doc)
+    if not ensure_started(DEFAULT_PORT, pinned=PORT_PINNED):
+        return 1
+    body = {"doc": str(doc), **({"as": as_} if as_ else {}), **({"move": True} if move else {}), **({"keep": True} if keep else {}),
+            **({"answers": answers} if answers is not None else {}), **({"resume": True} if resume else {})}
     try:
-        res = share.share(doc, root, share.remote_of(root), as_, move=move, keep=keep)
-    except share.Mismatch as e:
-        print(f"not shared: {e}: run again with --move or --keep", file=sys.stderr)
+        _, res = call("/__bluedoc/share", body, timeout=share.GH_TIMEOUT * 4)
+    except urllib.error.HTTPError as e:
+        try:
+            j = json.loads(e.read() or b"{}")
+        except ValueError:
+            j = {}
+        err = j.get("error") or f"the server answered {e.code}"
+        print(f"not shared: {err}" + (": run again with --move or --keep" if e.code == 409 and j.get("mismatch") else ""), file=sys.stderr)
         return 1
-    except share.ShareError as e:
-        print(f"not shared: {e}", file=sys.stderr)
+    except (urllib.error.URLError, OSError) as e:
+        print(f"not shared: the bluedoc server didn't answer ({e})", file=sys.stderr)
         return 1
+    if resume:
+        print(f"resumed: gist updates go out again on {(res.get('budget') or {}).get('login') or 'the account'}")
+    q = res.get("queued")
+    if q:
+        if q.get("why") == "paused":
+            print(f"not sent: {share.paused_text(q.get('login') or '')}", file=sys.stderr)
+            return 1
+        for line in share.queued_lines(res):
+            print(line)
+        return 0
     rec = res["share"]
-    what = "created" if res["created"] else "updated"
-    if res["moved"]:
+    what = "created" if res.get("created") else "updated"
+    if res.get("moved"):
         what = "moved (a new gist, the old one deleted: the link changed)"
-    elif res["relinked"]:
+    elif res.get("relinked"):
         what = "created anew (the old gist is gone from GitHub, so the link changed)"
     print(f"secret gist {what} as {rec['user']}, rev {rec['rev'] or '-'}: {share.contents_line(res['contents'])}")
     print(f"link: {rec['link']}")
     print(f"gist: {rec['url']}")
+    print(share.budget_line(res.get("budget")))
     if res.get("warning"):
         print(f"warning: {res['warning']}", file=sys.stderr)
     return 0
@@ -3963,10 +4096,14 @@ def archive_record(value) -> dict | None:
     return a
 
 
-READER_KEYS.update({ARCHIVED: lambda v: archive_record(v) is not None, ARCHIVE_LATER: archive_rev_ok})
+# what a share carries of the reader's answers (the Share sheet's Include my answers, `serve.py share --answers`):
+# the kinds comma-joined, "" for none (share.ANSWERS_KEY, share.parse_kinds). Reader-only, like `__title`
+READER_KEYS.update({ARCHIVED: lambda v: archive_record(v) is not None, ARCHIVE_LATER: archive_rev_ok,
+                    share.ANSWERS_KEY: lambda v: share.parse_kinds(v) is not None})
 READER_KEY_RULE = {"__title": f"a title of 1 to {build.MAX_READER_TITLE} characters on one line", "__emoji": "one emoji",
                    ARCHIVED: f'{{"at": <ISO 8601 time>, "rev": <1 to {MAX_ARCHIVE_REV} characters>}}',
-                   ARCHIVE_LATER: f"a rev of 1 to {MAX_ARCHIVE_REV} characters"}
+                   ARCHIVE_LATER: f"a rev of 1 to {MAX_ARCHIVE_REV} characters",
+                   share.ANSWERS_KEY: f"some of {', '.join(share.ANSWER_KINDS)}, comma-joined (\"\" for none)"}
 
 # Attachments: files the reader attaches to a comment. The page posts each one (POST /__bluedoc/attach); the server
 # keeps a copy in ~/.bluedoc/attachments/<doc>/ and answers {name, path, size}, which the comment carries: an item's
@@ -4707,7 +4844,13 @@ def make_handler(port: int, default_to: str):
                 doc = doc_for_url(q.get("path", ""))
                 if not doc:
                     return self.json(404, {"error": "not a doc under a registered folder"})
-                return self.json(*share_view(doc, q.get("brief") == "1"))
+                # &answers=<kinds>: the sheet's switches, before the reader state has them (accounts from the last minute);
+                # blank: none
+                given = parse_qs(u.query, keep_blank_values=True).get("answers")
+                kinds = share.parse_kinds(given[0]) if given else None
+                if given and kinds is None:
+                    return self.json(400, {"error": f"answers: some of {', '.join(share.ANSWER_KINDS)}, comma-joined"})
+                return self.json(*share_view(doc, q.get("brief") == "1", fresh=not given, kinds=kinds))
             if u.path == "/__bluedoc/wait":
                 # it consumes a reply: like the POSTs, only our own clients (a cross-site <img> or fetch can't set it)
                 if self.headers.get("X-Bluedoc") != "1":
@@ -4906,9 +5049,11 @@ def make_handler(port: int, default_to: str):
             if path == "/__bluedoc/frameworks":
                 return self.json(*change_frameworks(data))
             if path in ("/__bluedoc/share", "/__bluedoc/unshare"):   # publishes or deletes a gist: the key, as every POST
-                doc = doc_for_url(str(data.get("path") or ""))
+                # the page names its doc by its URL path; `serve.py share` (the CLI, with the key) by its file
+                doc = doc_for_url(str(data.get("path") or "")) if "doc" not in data else cli_doc(data.get("doc"))
                 if not doc:
-                    return self.json(404, {"error": "the page's doc is not under a registered folder"})
+                    return self.json(404, {"error": "the page's doc is not under a registered folder" if "doc" not in data
+                                           else f"doc: a {DOC_FILES} file"})
                 return self.json(*(share_doc(doc, data) if path == "/__bluedoc/share" else unshare_doc(doc)))
             if path == "/__bluedoc/chrome-test":
                 given = data.get("path")
@@ -4982,6 +5127,7 @@ def run(port: int, to: str) -> int:
     SECRET = load_key(create=True)   # kept across restarts, so a browser's cookie outlives an upgrade
     queued = open_db()
     SERVER_FILE.write_text(json.dumps({"pid": os.getpid(), "port": port}) + "\n", encoding="utf-8")
+    threading.Thread(target=gist_queue, name="gist-queue", daemon=True).start()   # sends the gist updates that are due
     print(f"bluedoc {VERSION or '(no version)'} (code {CODE_HASH}) on http://127.0.0.1:{port}/ "
           f"(folders: {', '.join(map(str, load_roots())) or 'none yet'}; {queued} undelivered repl{'y' if queued == 1 else 'ies'} queued)", flush=True)
     try:
@@ -5743,6 +5889,13 @@ def main() -> int:
                    "on the project's account and delete the old one (the link changes)")
     g.add_argument("--keep", action="store_true", help="a gist on another account than the project's: update it "
                    "there (the link stays)")
+    g = p.add_mutually_exclusive_group()
+    g.add_argument("--answers", metavar="KINDS", help=f"the reader's answers that go, comma-joined: some of "
+                   f"{', '.join(share.ANSWER_KINDS)} (default: what the Share sheet last picked for the doc, else "
+                   f"{','.join(share.DEFAULT_ANSWERS)}); remembered for the doc")
+    g.add_argument("--no-answers", action="store_true", help="the doc alone, none of the reader's answers; remembered")
+    p.add_argument("--resume", action="store_true", help="the reader's own call after GitHub refused 4 updates in a row: "
+                   "updates go out again on the account, this doc's first")
     p = sub.add_parser("unshare", help="delete the doc's gist as the account it is on and forget it")
     p.add_argument("doc", type=Path)
     a = ap.parse_args()
@@ -5797,7 +5950,11 @@ def main() -> int:
         print(f"{a.doc}: not a {DOC_FILES} file", file=sys.stderr)
         return 2
     if a.cmd == "share":
-        return cmd_share(doc, a.as_, a.move, a.keep)
+        kinds = [] if a.no_answers else share.parse_kinds(a.answers) if a.answers is not None else None
+        if a.answers is not None and kinds is None:
+            print(f"--answers: some of {', '.join(share.ANSWER_KINDS)}, comma-joined", file=sys.stderr)
+            return 2
+        return cmd_share(doc, a.as_, a.move, a.keep, kinds, a.resume)
     if a.cmd == "unshare":
         return cmd_unshare(doc)
     if a.cmd == "open":

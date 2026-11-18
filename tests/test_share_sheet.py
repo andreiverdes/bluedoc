@@ -11,10 +11,19 @@ Copy link, which shows a tick and Copied for 1.5 s; Share as is a key whose menu
 The doc newer: Link shows rev N and Update to rev M posts the same gist. The gist on another account than the
 project's: Update waits for Move or Keep, then posts the pick. Stop sharing deletes the gist on the second press.
 Sharing off: the key dims, its tooltip says why, a press opens the popover with the fix, and once sharing works the
-next press opens the sheet. Esc and a press outside close the sheet; an error stays in it; a phone fits it."""
+next press opens the sheet. Esc and a press outside close the sheet; an error stays in it; a phone fits it.
+
+The budget (gistbudget.py): an update that waits shows Queued, when it goes and why, a disabled "Queued: rev N at
+15:42" key, and the hour's count in Details; the sheet repaints each minute and reads the share again once that time
+has passed. A first share that waits says so, and the link shows when it goes out. A paused account shows Paused and
+Resume updates, which posts `resume`. Include my answers: a switch per kind with how many the doc has (picks, ticks
+and sent comments on until the reader picks), what goes out, the pick remembered for the doc (`__share-answers`) and
+posted with the share; answers changed since the share show Update answers."""
 from __future__ import annotations
 
+import datetime as dt
 import json
+import time
 import unittest
 
 from test_page_state import CHROME, ChromePage, Tab
@@ -26,13 +35,17 @@ KEY, SHEET = "document.querySelector('.bd-bar-r .bd-shk')", "document.querySelec
 LINK = "https://bluedoc.ai/g/Zl8DoBqtTsiT7pgCtn11Bw"
 OFF = {"reason": "gh, the GitHub CLI, isn't signed in to GitHub", "fix": "gh auth login -s gist"}
 
-# The routes as the server answers them, on a view the test sets: GET (brief: share, rev, off), the share POST (409
-# with the mismatch until `move` or `keep`; `as` sets the project's account; a new gist, or the same one updated to the
-# view's rev), unshare, and the settings POST {sharing}. Every call is in __share.calls; __share.fail makes them 502.
+# The routes as the server answers them, on a view the test sets: GET (brief: share, rev, off, queued; &answers=: the
+# view's answers with those kinds, changed when they differ from the share's), the share POST (409 with the mismatch
+# until `move` or `keep`; `as` sets the project's account; __share.queue set: 202 with the doc queued as it says;
+# `resume`: the queued update goes; else a new gist, or the same one updated to the view's rev, with the answers it
+# posts), unshare, and the settings POST {sharing}. Every call is in __share.calls; __share.fail makes them 502. The
+# sheet's minute repaint (its setInterval of 60 s) is __share.minute, for a test to run.
 STUB = r"""
 window.__share = (() => {
-  const S = { view: null, calls: [], fail: null, delay: 0, n: 0 };
-  const real = window.fetch.bind(window);
+  const S = { view: null, calls: [], fail: null, delay: 0, n: 0, queue: null, sharedKinds: 'picks,ticks,comments', minute: null };
+  const real = window.fetch.bind(window), every = window.setInterval.bind(window);
+  window.setInterval = (fn, ms, ...a) => { if (ms === 60000) S.minute = fn; return every(fn, ms, ...a); };
   const answer = (j, status = 200) => new Promise(r => setTimeout(() => r(new Response(JSON.stringify(j), { status, headers: { 'Content-Type': 'application/json' } })), S.delay));
   const gist = user => { const id = (++S.n).toString(16).padStart(32, 'b');
     return { id, user, link: 'https://bluedoc.ai/g/New' + S.n, url: `https://gist.github.com/${user}/${id}`, rev: S.view.rev, at: new Date().toISOString() }; };
@@ -40,21 +53,30 @@ window.__share = (() => {
     const url = new URL(typeof input === 'string' ? input : input.url, location.href), m = (init.method || 'GET').toUpperCase(), p = url.pathname;
     const body = init.body ? JSON.parse(init.body) : null;
     if (!(p === '/__bluedoc/share' || p === '/__bluedoc/unshare' || (p === '/__bluedoc/settings' && body && body.sharing))) return real(input, init);
-    S.calls.push({ m, p, brief: url.searchParams.get('brief'), body });
+    S.calls.push({ m, p, brief: url.searchParams.get('brief'), answers: url.searchParams.get('answers'), body });
     if (S.fail) return answer({ error: S.fail }, 502);
     const v = S.view;
-    if (m === 'GET') return answer(url.searchParams.get('brief') ? { share: v.share, rev: v.rev, off: v.off } : v);
+    if (m === 'GET') {
+      const k = url.searchParams.get('answers');
+      if (k !== null && v.answers) v.answers = { ...v.answers, kinds: k ? k.split(',') : [], changed: !!v.share && k !== S.sharedKinds };
+      return answer(url.searchParams.get('brief') ? { share: v.share, rev: v.rev, off: v.off, queued: v.queued || null } : v);
+    }
     if (p === '/__bluedoc/settings') {
       v.account = { login: body.sharing.account, why: 'project' };
       v.mismatch = v.share && v.share.user !== body.sharing.account ? { gist: v.share.user, project: body.sharing.account } : null;
       return answer({ ok: true });
     }
-    if (p === '/__bluedoc/unshare') { const removed = v.share; v.share = null; v.mismatch = null; return answer({ ok: true, removed }); }
+    if (p === '/__bluedoc/unshare') { const removed = v.share; v.share = null; v.mismatch = null; v.queued = null; return answer({ ok: true, removed }); }
     if (v.mismatch && !body.move && !body.keep) return answer({ error: 'Pick Move or Keep', mismatch: v.mismatch }, 409);
     if (body.as) v.account = { login: body.as, why: 'project' };
+    if (S.queue && !body.resume) { v.queued = S.queue; return answer(v, 202); }
+    if (body.resume && v.budget) v.budget = { ...v.budget, paused: false };
+    v.queued = null;
     if (!v.share || body.move) v.share = gist(v.account.login);
     else v.share = { ...v.share, rev: v.rev, at: new Date().toISOString() };
     v.mismatch = null;
+    if (body.answers) S.sharedKinds = body.answers.join(',');
+    if (v.answers) v.answers = { ...v.answers, changed: false };
     return answer(v);
   };
   return S;
@@ -78,6 +100,20 @@ def view(**kw) -> dict:
 def gist(user: str = "jlee-acme", rev: str = "2") -> dict:
     return {"id": "659f3c1a" + "0" * 24, "user": user, "link": LINK, "url": f"https://gist.github.com/{user}/659f3c1a", "rev": rev,
             "at": "2026-11-09T10:00:00Z"}
+
+
+# a doc's answers as the GET gives them: the kinds that go, how many of each the doc has, and whether they changed
+ANS = {"kinds": ["picks", "ticks", "comments"], "counts": {"picks": 3, "ticks": 2, "comments": 4, "pending": 1, "images": 2}, "notShared": 0, "changed": False}
+SWITCHES = f"[...{SHEET}.querySelectorAll('.kd [role=switch]')].map(s => s.getAttribute('aria-checked') === 'true')"
+
+
+def soon(minutes: float) -> str:
+    """An ISO 8601 time `minutes` from now (10 s more, so "in N min" rounds to N)."""
+    return (dt.datetime.now(dt.timezone.utc) + dt.timedelta(minutes=minutes, seconds=10)).isoformat(timespec="seconds")
+
+
+def budget(used: int = 90, paused: bool = False) -> dict:
+    return {"login": "jlee-acme", "used": used, "limit": 90, "next": soon(6), "retryAt": None, "paused": paused}
 
 
 @unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")
@@ -331,7 +367,8 @@ class ShareSheet(ChromePage):
         self.assertTrue(t.ev(f"{SHEET}.open"))
 
     def test_a_phone_fits_the_sheet(self) -> None:
-        for v in (view(), view(share=gist(user="jlee", rev="1"), mismatch={"gist": "jlee", "project": "jlee-acme"})):
+        for v in (view(answers=ANS), view(share=gist(user="jlee", rev="1"), mismatch={"gist": "jlee", "project": "jlee-acme"}, answers=ANS),
+                  view(share=gist(rev="1"), queued={"at": None, "why": "paused", "login": "jlee-acme"}, budget=budget(paused=True), answers=ANS)):
             t = self.page(v, 390, 800)
             self.sheet(t)
             t.ev(f"{SHEET}.querySelector('.det summary').click()")
@@ -340,6 +377,135 @@ class ShareSheet(ChromePage):
             self.assertLessEqual(box[1], 390)
             self.assertEqual(t.ev(f"[...{SHEET}.querySelectorAll('.bd-tk *')].filter(e => e.getBoundingClientRect().right > {box[1]} + 0.5).length"), 0)
             self.assertGreaterEqual(t.ev(f"{SHEET}.getBoundingClientRect().bottom"), 799, "the sheet at the window's foot")
+
+    def test_include_my_answers_has_a_switch_per_kind_remembered_for_the_doc(self) -> None:
+        t = self.page(view(answers=ANS))
+        self.sheet(t)
+        self.assertEqual(t.ev(f"[...{SHEET}.querySelectorAll('.kd')].map(r => [r.querySelector('b').textContent, r.querySelector('small').textContent, r.querySelector('.kn').textContent])"),
+                         [["Picks", "Answers, Other, Tell me more", "3"], ["Ticks", "Done marks", "2"], ["Sent comments", "Threads, pins, regions", "4"],
+                          ["Pending and drafts", "Saved, not sent yet", "1"], ["Attached images", "In comments, up to 1.5 MB", "2"]])
+        self.assertEqual(t.ev(SWITCHES), [True, True, True, False, False], "picks, ticks and sent comments until the reader picks")
+        self.assertEqual([self.q(t, ".ans .cap"), self.q(t, ".ans .ah .why")], ["Include my answers", "3 picks, 2 ticks, 4 comments go out"])
+        self.assertEqual(self.q(t, ".ans + .go"), "Share as jlee-acme", "the switches sit over the action")
+        # a switch: off at once, the line says so, the focus stays on it, and the share is read again with the pick
+        t.ev(f"{SHEET}.querySelector('[data-k=\"kind:ticks\"]').click()")
+        self.assertEqual(t.ev(SWITCHES), [True, False, True, False, False])
+        self.assertEqual(self.q(t, ".ans .ah .why"), "3 picks, 4 comments go out")
+        t.wait_for("__share.calls.some(c => c.m === 'GET' && c.answers === 'picks,comments')")
+        self.assertTrue(t.ev(f"document.activeElement === {SHEET}.querySelector('[data-k=\"kind:ticks\"]')"))
+        # a press on its row turns it too
+        t.ev(f"{SHEET}.querySelector('.kd[data-kind=pending] .kl').click()")
+        self.assertEqual(t.ev(SWITCHES), [True, False, True, True, False])
+        self.assertEqual(self.q(t, ".ans .ah .why"), "3 picks, 4 comments, 1 pending comment go out")
+        # the share posts them
+        t.ev(f"{SHEET}.querySelector('.go').click()")
+        t.wait_for(f"!!{SHEET}.querySelector('.lnk input')")
+        self.assertEqual(self.posts(t), [["/__bluedoc/share", {"path": t.ev("location.pathname"), "as": "jlee-acme", "answers": ["picks", "comments", "pending"]}]])
+        self.assertEqual(self.q(t, ".eyb .bdg"), "Up to date")
+        # remembered for the doc: its reader state
+        url = self.server.url_for(self.docs / f"{STATUS}.bluedoc.json")
+        for _ in range(100):
+            if self.state(url).get("__share-answers") == "picks,comments,pending":
+                break
+            time.sleep(0.1)
+        self.assertEqual(self.state(url).get("__share-answers"), "picks,comments,pending")
+        # one more after the share: the answers changed, and Update answers puts them in the same gist
+        t.ev(f"{SHEET}.querySelector('[data-k=\"kind:images\"]').click()")
+        t.wait_for(f"{SHEET}.querySelector('.eyb .bdg')?.textContent === 'Answers changed'")
+        self.assertEqual([self.q(t, ".up b"), self.q(t, ".up .why"), self.q(t, ".go")],
+                         ["Your answers changed since the share.", "Update puts them in the same gist; the link stays.", "Update answers"])
+        t.ev(f"{SHEET}.querySelector('.go').click()")
+        t.wait_for(f"{SHEET}.querySelector('.eyb .bdg')?.textContent === 'Up to date'")
+        self.assertEqual(self.posts(t)[-1], ["/__bluedoc/share", {"path": t.ev("location.pathname"), "answers": ["picks", "comments", "pending", "images"]}])
+        self.assertIn("readers see rev 2", self.toast(t, "updated"))
+        self.assertIsNone(self.q(t, ".go"))
+        # another page of the doc opens with the pick
+        t = self.page(view(answers=ANS))
+        self.sheet(t)
+        self.assertEqual(t.ev(SWITCHES), [True, False, True, True, True])
+        self.assertEqual(self.browser.errors, [])
+
+    def test_a_queued_update_says_when_it_goes_and_repaints_each_minute(self) -> None:
+        at = soon(6)
+        t = self.page(view(share={**gist(rev="1"), "at": soon(-2)}, account={"login": "jlee-acme", "why": "project"},
+                           queued={"at": at, "why": "hour", "login": "jlee-acme"}, budget=budget(), answers=ANS))
+        hhmm = t.ev(f"(d => String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'))(new Date({json.dumps(at)}))")
+        self.assertEqual(t.wait_for(f"{KEY}.dataset.share"), "queued")
+        self.assertEqual(t.ev(f"{KEY}.title"), f"Queued: rev 2 goes out at {hhmm} (in 6 min); GitHub allows about 100 updates an hour")
+        self.sheet(t)
+        self.assertEqual(self.q(t, ".eyb .bdg"), "Queued")
+        self.assertEqual(self.q(t, ".stl"), "Updated 2 min ago · next update in 6 min: GitHub allows about 100 updates an hour")
+        self.assertEqual([self.q(t, ".go"), self.q(t, ".go", "disabled")], [f"Queued: rev 2 at {hhmm}", True])
+        self.assertEqual(self.q(t, ".cp", "className"), "cp", "the link stays, not the action")
+        t.ev(f"{SHEET}.querySelector('.det summary').click()")
+        self.assertEqual([self.q(t, "[data-r=budget] dt"), self.q(t, "[data-r=budget] dd > div"), self.q(t, "[data-r=budget] .why")],
+                         ["Updates", "90 of 90 this hour on jlee-acme", "GitHub allows about 100 updates an hour; bluedoc sends at most 90, one a minute per doc."])
+        # a minute on: the countdown again, no call (the time hasn't passed)
+        calls = t.ev("__share.calls.length")
+        t.ev("(n => { Date.now = () => n + 60000; })(Date.now()); __share.minute(); true")
+        t.wait_for(f"{SHEET}.querySelector('.stl').textContent.includes('next update in 5 min')")
+        self.assertEqual(t.ev("__share.calls.length"), calls)
+        self.assertTrue(t.ev(f"{SHEET}.querySelector('.det').open"), "Details stays open")
+        # past its time: the sheet reads the share again, which the server has sent
+        t.ev("__share.view.queued = null; __share.view.share = {...__share.view.share, rev: '2', at: new Date().toISOString()}; "
+             "(n => { Date.now = () => n + 7 * 60000; })(Date.now()); __share.minute(); true")
+        t.wait_for(f"{SHEET}.querySelector('.eyb .bdg')?.textContent === 'Up to date'")
+        self.assertIsNone(self.q(t, ".go"))
+        self.assertEqual(t.wait_for(f"{KEY}.dataset.share"), "shared")
+        self.assertEqual(self.posts(t), [], "the sheet never shares by itself")
+        self.assertEqual(self.browser.errors, [])
+
+    def test_a_first_share_that_waits_says_so_and_its_link_shows_when_it_goes_out(self) -> None:
+        t = self.page(view(account={"login": "jlee-acme", "why": "only"}, accounts=[ACME], ask=False, budget=budget(), answers=ANS))
+        self.sheet(t)
+        at = soon(6)
+        t.ev(f"__share.queue = {json.dumps({'at': at, 'why': 'hour', 'login': 'jlee-acme'})}; true")
+        hhmm = t.ev(f"(d => String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'))(new Date({json.dumps(at)}))")
+        t.ev(f"{SHEET}.querySelector('.go').click()")
+        self.assertEqual(self.toast(t, "queued"), f"Queued: it goes out at {hhmm}; the link shows here then")
+        self.assertEqual(t.ev("__copied"), [], "no link yet")
+        self.assertEqual([self.q(t, ".eyb > span"), self.q(t, ".eyb .bdg")], ["Share a read-only link", "Queued"])
+        self.assertEqual(self.q(t, ".stl"), "Not shared yet · goes out in 6 min: GitHub allows about 100 updates an hour")
+        self.assertEqual(self.q(t, ".stl + .why"), "The link shows here when it goes out.")
+        self.assertEqual([self.q(t, ".go"), self.q(t, ".go", "disabled"), self.q(t, ".stop"), self.q(t, ".cls")], [f"Queued: rev 2 at {hhmm}", True, "Don't share", "Close"])
+        self.assertIsNone(self.q(t, ".lnk"))
+        self.assertEqual(t.wait_for(f"{KEY}.dataset.share"), "queued")
+        # it goes out: the next minute past its time shows the link
+        t.ev("__share.queue = null; __share.view.queued = null; __share.view.share = {id: 'b'.repeat(32), user: 'jlee-acme', link: 'https://bluedoc.ai/g/Sent', "
+             "url: 'https://gist.github.com/jlee-acme/b', rev: '2', at: new Date().toISOString()}; (n => { Date.now = () => n + 7 * 60000; })(Date.now()); __share.minute(); true")
+        t.wait_for(f"!!{SHEET}.querySelector('.lnk input')")
+        self.assertEqual([self.q(t, ".lnk input", "title"), self.q(t, ".eyb .bdg")], ["https://bluedoc.ai/g/Sent", "Up to date"])
+        self.assertEqual(self.browser.errors, [])
+
+    def test_a_first_share_that_waits_can_be_dropped(self) -> None:
+        t = self.page(view(queued={"at": soon(3), "why": "spacing", "login": "jlee-acme"}, budget=budget(12), answers=ANS))
+        self.sheet(t)
+        self.assertEqual(self.q(t, ".stl"), "Not shared yet · goes out in 3 min: one update a minute per doc")
+        t.ev(f"{SHEET}.querySelector('.stop').click()")
+        self.assertIn("queued share is dropped", self.toast(t, "not shared"))
+        self.assertEqual(self.posts(t), [["/__bluedoc/unshare", {"path": t.ev("location.pathname")}]], "one press: there is no gist to delete")
+        self.assertIsNone(t.ev(f"{KEY}.dataset.share || null"))
+
+    def test_paused_updates_resume_from_the_sheet(self) -> None:
+        t = self.page(view(share=gist(rev="1"), account={"login": "jlee-acme", "why": "project"}, queued={"at": None, "why": "paused", "login": "jlee-acme"},
+                           budget=budget(40, paused=True), answers=ANS))
+        self.assertEqual(t.wait_for(f"{KEY}.dataset.share"), "paused")
+        self.assertEqual(t.ev(f"{KEY}.title"), "Updates are paused: GitHub refused 4 in a row on jlee-acme. Open to resume")
+        warn = t.ev("(e => { e.style.color = 'var(--warn)'; document.body.append(e); const c = getComputedStyle(e).color; e.remove(); return c; })(document.createElement('i'))")
+        self.assertEqual(t.ev(f"getComputedStyle({KEY}.querySelector('.dot')).backgroundColor"), warn)
+        self.sheet(t)
+        self.assertEqual(self.q(t, ".eyb .bdg"), "Paused")
+        self.assertEqual([self.q(t, ".up b"), self.q(t, ".up .why")], ["GitHub refused 4 updates in a row on jlee-acme.", "Nothing goes out until you resume."])
+        self.assertEqual([self.q(t, ".go"), self.q(t, ".go", "disabled")], ["Resume updates", False])
+        self.assertTrue(t.ev(f"document.activeElement === {SHEET}.querySelector('.go')"), "the focus on Resume updates")
+        t.ev(f"{SHEET}.querySelector('.det summary').click()")
+        self.assertEqual(self.q(t, "[data-r=budget] dd > div"), "40 of 90 this hour on jlee-acme")
+        t.ev(f"{SHEET}.querySelector('.go').click()")
+        self.assertIn("readers see rev 2", self.toast(t, "resumed"))
+        self.assertEqual(self.posts(t), [["/__bluedoc/share", {"path": t.ev("location.pathname"), "resume": True, "answers": ["picks", "ticks", "comments"]}]])
+        self.assertEqual(self.q(t, ".eyb .bdg"), "Up to date")
+        self.assertEqual(t.wait_for(f"{KEY}.dataset.share"), "shared")
+        self.assertEqual(self.browser.errors, [])
 
 
 if __name__ == "__main__":
