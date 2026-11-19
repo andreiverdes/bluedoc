@@ -2666,7 +2666,7 @@ svg.anim .bp-edge.k-async { animation: bp-march 1.6s linear infinite; }
   .bp-opt .ol { white-space: normal; }
   .bp-opt .one { order: 5; flex: 1 1 100%; }
   .bp-opt .oh > :is(.yp, .cv) { margin-left: auto !important; }
-  .bp-opt .oh > .yp:not(:empty) + .cv { margin-left: 0 !important; }
+  .bp-opt .oh > :is(.yp:not(:empty), .bd-ansby) + .cv { margin-left: 0 !important; }   /* a shared answer's pill: the chevron right after it */
 }
 @container bp-opts (max-width: 360px) { .bp-opt .yp { display: none; } }   /* the tint and the filled radio still mark the pick */
 @container bp-msgs (max-width: 420px) { .bp-msg time { display: none; } }
@@ -3661,10 +3661,11 @@ const VIEW_ONLY = !!SHARE;
 // A shared page may carry the reader's answers (bp-answers, a gist's bluedoc-page.json fills it: share.py
 // answers_slot): {by: the share's GitHub login, at, rev, state: {reader state key without the bp:<id>: prefix: its
 // value}}. They show as theirs and read-only: "<by>'s answer" beside a picked option (apart from the doc's `choice`),
-// "Done · <by>" on a tick, their comments in the Comments tab. Their attachments carry no path: an image may carry
-// its data (src), the rest say "not shared". null anywhere else, and for an older bundle without the slot.
+// "Done · <by>" on a tick, on every row of the item (ansChip, ansPill), their comments in the Comments tab; they count
+// as answered there (isDone). Their attachments carry no path: an image may carry its data (src), the rest say "not
+// shared". null anywhere else, and for an older bundle without the slot.
 // A copy of a shared doc (serve.py import: meta.copiedFrom) gets its sharer's answers in the same slot from the server
-// (copies.json): THEIRS, drawn as theirs beside the reader's own picks; ANS is whichever the page has.
+// (copies.json): THEIRS, drawn as theirs beside the reader's own picks and not counted; ANS is whichever the page has.
 const COPIED = (() => { const c = (PRISTINE.meta || {}).copiedFrom; return !VIEW_ONLY && c && typeof c === 'object' && typeof c.by === 'string' && /^[A-Za-z0-9][A-Za-z0-9-]{0,38}$/.test(c.by)
   ? { by: c.by, rev: typeof c.rev === 'string' ? c.rev : null, at: typeof c.at === 'string' ? c.at : '' } : null; })();
 const SLOT_ANSWERS = VIEW_ONLY || COPIED ? (() => {
@@ -4959,7 +4960,7 @@ const ARC = (() => {
   // approved, every step done, every check ticked (a stale check isn't done) and not put off for this rev; the approval
   // settles open picks
   const allDone = () => ready && APPROVABLE && store.get(KL) !== CUR.rev && planState().state === 'approved'
-    && steps.every(s => s.status === 'done') && Object.values(ITEMS).every(x => x.choices || (x.cb.checked && !x.stale));
+    && steps.every(s => s.status === 'done') && Object.values(ITEMS).every(x => x.choices || passing(x));
   const bar = document.querySelector('.bd-bar');
   const setStrip = (key, cls, kids) => {
     if (key === shown) return;
@@ -5508,7 +5509,7 @@ function staleEvidenceMd() {
     + lines.join('\n') + '\n\n```sh\n' + cmds.join('\n') + '\n```\n';
 }
 // a progress item passes when it is ticked and its evidence isn't stale (a stale one needs a recheck)
-const passing = x => x.cb.checked && !x.stale;
+const passing = x => isDone(x) && !x.stale;
 // one line per evidence entry, for compare view's "What changed": a re-recorded pin shows as its new commit
 const evText = x => evList(x).map(e => [e.label, e.md, e.code, e.src, e.href, pinShort(e) && '@ ' + pinShort(e) + (e.pin.dirty ? ' + changes' : '')].filter(Boolean).join(' · '));
 
@@ -6378,8 +6379,7 @@ function renderChecklist(b, parent) {
         h('span', { class: 'bp-cl-text', html: inline(it.text) }),
         subMd && h('span', { class: 'bp-cl-subt' + (subIsCheck ? ' check' : '') }, subIsCheck && ic('check'), h('span', { html: inline(subMd) }))),
       okChip,
-      ans && (card ? h('span', { class: 'bp-chip info bd-ansc', title: `${ANS.by} answered this in the shared link` }, `${ANS.by} answered`)
-        : ans.tick && h('span', { class: 'bp-chip ok bd-ansc', title: `${ANS.by} marked this done` }, ic('tick'), `Done · ${ANS.by}`)),
+      ansChip(ans, card),
       it.state && h('span', { class: 'bp-chip ' + (it.stateKind || 'warn') }, it.state),
       stale && h('span', { class: 'bp-chip warn bp-recheck', title: 'Its evidence is stale: the code changed since the check ran. It doesn\'t count as done until it is re-checked' }, ic('reset'), 'Needs recheck'),
       picked, askChip,
@@ -6419,7 +6419,7 @@ function renderChecklist(b, parent) {
     // amber, its dot and its chip (a request sent: "Asked · rev N"); else ✓ once answered
     const paintPicked = () => {
       const req = entryItem.request, sent = req && !entryItem.requestPending ? (store.get(custSentKey) || '').split('\n')[0] : '';
-      li.classList.toggle('more', !!more || req); li.classList.toggle('done', cb.checked && !req);
+      li.classList.toggle('more', !!more || req || ansMore(entryItem)); li.classList.toggle('done', isDone(entryItem) && !req);
       if (askChip) { askChip.hidden = !more && !req; askChip.textContent = sent ? `Asked · rev ${sent}` : 'Asking for more'; }
       if (picked) picked.textContent = !more && choice.length + (custom ? 1 : 0) ? `${choice.length + (custom ? 1 : 0)} picked` : '';
     };
@@ -6650,7 +6650,7 @@ function renderChecklist(b, parent) {
       !parent && !VIEW_ONLY && h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => { if (!confirm('Reset this checklist?')) return; resetChecklist(entry); } }, ic('reset'), 'Reset')))),
     ...[cap, kind !== 'decisions' && bar, list].filter(Boolean));
   function update() {
-    const n = items.filter(passing).length, open = items.length - items.filter(x => x.cb.checked).length, recheck = items.filter(x => x.stale && x.cb.checked).length;
+    const n = items.filter(passing).length, open = items.length - items.filter(isDone).length, recheck = items.filter(x => x.stale && isDone(x)).length;
     if (kind === 'decisions') { count.textContent = open ? `${open} open` : 'All answered'; if (ask) ask.hidden = !open; }
     else count.textContent = `${n} of ${items.length}` + (recheck ? ` · ${recheck} to recheck` : '');
     bar.firstChild.style.width = (items.length ? n / items.length * 100 : 0) + '%';
@@ -6709,6 +6709,15 @@ const oneLine = s => String(s || '').split('\n').map(l => l.replace(/^\s*(?:[-*+
 // a shared page's reader on an answer: "<login>'s answer" (bare: the login), a pill with their initial
 const ansPill = bare => h('span', { class: 'bd-ansby', title: `${ANS.by}'s answer in ${THEIRS ? 'the link this copy came from' : 'this shared link'}` },
   h('i', { 'aria-hidden': 'true' }, ANS.by.slice(0, 1).toUpperCase()), bare ? ANS.by : `${ANS.by}'s answer`);
+// the sharer's answer on an item's head (its `ans`), on each of its rows (its checklist row, Merged's, a diff card):
+// "<login> answered" on a question (card), "Done · <login>" on a tick
+const ansChip = (ans, card) => ans && (card ? h('span', { class: 'bp-chip info bd-ansc', title: `${ANS.by} answered this in ${THEIRS ? 'the link this copy came from' : 'the shared link'}` }, `${ANS.by} answered`)
+  : ans.tick && h('span', { class: 'bp-chip ok bd-ansc', title: `${ANS.by} marked this done` }, ic('tick'), `Done · ${ANS.by}`));
+// A shared page (ANSWERS) shows the doc as its sharer left it: their pick, Other or tick counts as answered (the
+// filters and their counts, the Tracker, the bars, the status, ✓ on the head) and their Tell me more as asking. A copy
+// (THEIRS) counts only the reader's own answers
+const isDone = x => x.cb.checked || !!(ANSWERS && x.ans && (x.ans.tick || x.ans.pick.length || x.ans.custom));
+const ansMore = x => !!(ANSWERS && x.ans && x.ans.more);
 let OPT_N = 0;
 function optionRows(x, compact) {
   const multi = x.multi, recs = recIds(x), fields = !RO;
@@ -6890,8 +6899,9 @@ function lineField(x, about, { placeholder = 'Reply…', hint = '', cls = 'ac-in
 const replyField = (x, compact) => lineField(x, '', { placeholder: () => x.more === 'on' ? 'What do you need to know? (optional)' : 'Reply…',
   cls: 'ac-reply' + (compact ? ' compact' : '') });
 const choiceLabel = (x, id) => { const c = x.choices && x.choices.find(c => c.id === id); return c ? c.label.replace(/[`*]/g, '') : id; };
-// what a closed question shows after ✓: its pick's label, or Other
-const okLabel = x => [...idsOf(x.choice).map(id => choiceLabel(x, id)), ...(x.custom ? ['Other'] : [])].join(', ');
+// what a closed question shows after ✓: its pick's label, or Other; none, on a shared page, its sharer's (isDone)
+const okLabel = x => [...idsOf(x.choice).map(id => choiceLabel(x, id)), ...(x.custom ? ['Other'] : [])].join(', ')
+  || (ANSWERS && x.ans ? [...x.ans.pick.map(id => choiceLabel(x, id)), ...(x.ans.custom ? ['Other'] : [])].join(', ') : '');
 // the ids `patch` takes, beside the text the reader saw: `item:<checklist>/<item>` and the picked choice's id (several
 // answers: their labels, `→ **Lyon**, **Porto**`)
 const itemKeyMd = x => `\`item:${x.cid}/${x.it.id}\``;
@@ -7616,7 +7626,7 @@ function paintFiles(d) {
   const rows = [];
   const pr = commentsIn(d, PR_KEY);
   const fileRow = (key, name, dir, st, cs, extra) => {
-    const ticked = cs.filter(c => c.item && ITEMS[c.item] && ITEMS[c.item].cb.checked).length;
+    const ticked = cs.filter(c => c.item && ITEMS[c.item] && isDone(ITEMS[c.item])).length;
     const linked = cs.filter(c => c.item && ITEMS[c.item]).length;
     return h('button', { type: 'button', class: 'bd-file', 'data-key': key, 'aria-current': String(d.sel === key), title: key === PR_KEY ? name : key, onclick: () => selectFile(d, key) },
       h('span', { class: 'st ' + st }, st === 'PR' ? ic('msg') : st), h('span', { class: 'nm' }, name),
@@ -7656,7 +7666,7 @@ function commentCard(d, c, mirrors = d.mirrors, inItem = false) {
   }
   const detail = c.md || (!inItem && it && it.detail);   // under its row, the row's detail is right above
   card.append(...[
-    h('div', { class: 'hd' }, tick ? h('label', { class: 'tk' }, tick) : dot || ic('msg'), h('div', { class: 'tt', html: inline(title) }),
+    h('div', { class: 'hd' }, tick ? h('label', { class: 'tk' }, tick) : dot || ic('msg'), h('div', { class: 'tt', html: inline(title) }), src && ansChip(src.ans, !!src.choices),
       ((it && it.state) || c.state) && h('span', { class: 'bp-chip ' + kind }, c.state || it.state)),
     opts && opts.el, opts && opts.more,
     h('div', { class: 'mt' }, h('span', {}, where),
@@ -7853,18 +7863,18 @@ function syncDiffs() {
       if (m.opts) m.opts.paint();
       if (m.note) m.note.paint();
       if (m.thread) m.thread.paint();
-      m.card.classList.toggle('done', m.src.cb.checked); m.card.classList.toggle('more', !!m.src.more);
+      m.card.classList.toggle('done', isDone(m.src)); m.card.classList.toggle('more', !!m.src.more || ansMore(m.src));
     }
     const linked = d.comments.filter(c => c.item && ITEMS[c.item]);
     if (linked.length && d.progTxt) {
-      const n = linked.filter(c => ITEMS[c.item].cb.checked).length;
+      const n = linked.filter(c => isDone(ITEMS[c.item])).length;
       d.progTxt.textContent = `${n}/${linked.length}`;
       d.progBar.firstChild.style.width = (n / linked.length * 100) + '%';
       d.progBar.classList.toggle('full', n === linked.length);
     }
     d.files_?.querySelectorAll('.bd-file').forEach(btn => {
       const cs = commentsIn(d, btn.dataset.key).filter(c => c.item && ITEMS[c.item]);
-      btn.querySelector('.cnt')?.classList.toggle('all', cs.length > 0 && cs.every(c => ITEMS[c.item].cb.checked));
+      btn.querySelector('.cnt')?.classList.toggle('all', cs.length > 0 && cs.every(c => isDone(ITEMS[c.item])));
     });
   }
   for (const m of MROWS) {
@@ -7873,7 +7883,7 @@ function syncDiffs() {
     if (m.note) m.note.paint();
     m.thread.paint();
     if (m.ok) { m.ok.lastChild.textContent = okLabel(m.x); m.ok.title = m.ok.lastChild.textContent; }
-    m.row.classList.toggle('done', m.x.cb.checked); m.row.classList.toggle('more', !!m.x.more);
+    m.row.classList.toggle('done', isDone(m.x)); m.row.classList.toggle('more', !!m.x.more || ansMore(m.x));
   }
   paintFindings();
 }
@@ -7957,14 +7967,15 @@ const FINDING_CIDS = new Set();   // every findings section's checklists (nested
 /* The filter: Open (a question with no answer, a Need more details not sent, or a reply from the agent the reader
    hasn't answered; a progress item not done), Done (the rest) or All. Each findings section and each decision list
    (questionView) has its own, for its every view, kept per doc and list in reader state (`__findings-filter:<section
-   or list id>`); a first visit opens a findings section on Open, a decision list on All. The question the reader is on (FHELD: the one they last opened, picked
+   or list id>`); a first visit opens a findings section on Open (on All on a shared page carrying its sharer's answers,
+   which count as the reader's there: isDone), a decision list on All. The question the reader is on (FHELD: the one they last opened, picked
    in or wrote in) stays shown when it leaves its filter, until they move on to another. A list ends with what the
    filter hides, and Show (All). In Diff, a hidden finding's card goes; its code stays. */
 const FFILTERS = [['all', 'All'], ['open', 'Open'], ['done', 'Done']];
 const ffilterKey = v => `bp:${docId}:__findings-filter:${v.el.id}`;
 const QVIEWS = [];   // every toolbar with the filter: the findings sections' (FVIEWS) and the decision lists'
 let FHELD = null;
-const findingOpen = x => x.choices ? !(x.choice || x.custom) || x.more === 'on' || awaitsReader(x) : !passing(x);
+const findingOpen = x => x.choices ? !isDone(x) || x.more === 'on' || ansMore(x) || awaitsReader(x) : !passing(x);
 const fvShows = x => { const f = x.fv ? x.fv.filter : 'all'; return f === 'all' || x === FHELD || (f === 'open') === findingOpen(x); };
 // Request changes, Approve or Send answers closes every answered question left open (a decision or a finding, on any
 // doc); one still waiting for the reader (no answer, Need more details, an agent reply unanswered) stays open
@@ -8041,14 +8052,16 @@ function questionBar(v, scope, noun, views) {
   v.meter = h('span', { class: 'bd-prm' }, h('span', { class: 'bd-meter' }, h('i')), h('span', { class: 'c' }));
   v.status = h('span', { class: 'bd-prs' });
   const f = store.get(ffilterKey(v));
-  v.filter = FFILTERS.some(x => x[0] === f) ? f : noun === 'finding' ? 'open' : 'all';   // a first visit: a findings section on Open, a decision list on All
+  // a first visit: a findings section on Open, a decision list on All; a shared page carrying its sharer's answers
+  // (ANSWERS) on All, where the answers are
+  v.filter = FFILTERS.some(x => x[0] === f) ? f : noun === 'finding' && !ANSWERS ? 'open' : 'all';
   if (!QVIEWS.length) addEventListener('resize', () => QVIEWS.forEach(q => q.measure()));
   QVIEWS.push(v);
   if (fvSizes) fvSizes.observe(v.bar);
 }
 // the toolbar's part of a repaint: the meter and status, the filter's counts and what it shows, Accept, Expand all
 function paintQuestions(v) {
-  const { items, noun } = v, n = items.filter(x => x.cb.checked).length, fresh = items.filter(x => x.fresh).length, done = items.length > 0 && n === items.length;
+  const { items, noun } = v, n = items.filter(isDone).length, fresh = items.filter(x => x.fresh).length, done = items.length > 0 && n === items.length;
   v.meter.lastChild.textContent = `${n} of ${items.length}`;
   v.meter.firstChild.firstChild.style.width = (items.length ? n / items.length * 100 : 0) + '%';
   v.meter.firstChild.classList.toggle('full', done);
@@ -8070,7 +8083,7 @@ function paintQuestions(v) {
     const off = !k || v.filter === 'all';
     if (note.hidden !== off) fold(note, [note], () => { note.hidden = off; });
     if (!note.hidden) note.replaceChildren(ic(v.filter === 'open' ? 'tick' : 'help'),
-      h('span', {}, v.filter === 'open' ? `${k} ${noun}${k === 1 ? '' : 's'} you answered ${k === 1 ? 'is' : 'are'} hidden · ` : `${k} open ${noun}${k === 1 ? ' is' : 's are'} hidden · `),
+      h('span', {}, v.filter === 'open' ? `${k} ${noun}${k === 1 ? '' : 's'} ${ANSWERS ? 'answered' : 'you answered'} ${k === 1 ? 'is' : 'are'} hidden · ` : `${k} open ${noun}${k === 1 ? ' is' : 's are'} hidden · `),
       h('button', { type: 'button', class: 'bp-btn ghost', onclick: () => setFindingsFilter(v, 'all') }, 'Show'));
   }
   const acc = v.acc;
@@ -8282,7 +8295,7 @@ function mergedRow(x, extra, code) {
   const head = h('div', { class: 'bd-mhead' },
     h('span', { class: 'bp-cl-main' }, h('span', { class: 'bp-cl-text', html: inline(it.text) }),
       subMd && h('span', { class: 'bp-cl-subt' + (it.sub ? '' : ' check') }, !it.sub && ic('check'), h('span', { html: inline(subMd) }))),
-    ok, it.state && h('span', { class: 'bp-chip ' + kind }, it.state));
+    ok, ansChip(x.ans, !!x.choices), it.state && h('span', { class: 'bp-chip ' + kind }, it.state));
   row.append(h('div', { class: 'bp-cl-row' }, tick, x.choices && h('span', { class: 'bp-cl-dot', 'aria-hidden': 'true' }), head, chev));
   const parts = [extra && h('div', { class: 'bp-cl-detail bd-md', html: md(extra) }), it.detail && h('div', { class: 'bp-cl-detail bd-md', html: md(it.detail) }),
     it.code && codeBlock(it.code, it.lang || 'sh'),
@@ -18653,7 +18666,7 @@ window.BP = {
   openCode: (diffId, path, line) => openCode(diffId, path, line),
   openComment: (diffId, index) => { const d = DIFFS[diffId]; const c = d && d.order[index]; if (c) openComment(d, c, true); return !!c; },
   diffState: diffId => { const d = DIFFS[diffId]; if (!d) return null; const linked = d.comments.filter(c => c.item && ITEMS[c.item]);
-    return { file: d.sel === PR_KEY ? null : d.sel, comment: d.ci, comments: d.comments.length, cards: d.pane.querySelectorAll('.bd-cm').length, lines: d.pane.querySelectorAll('.bd-ln').length, ticked: linked.filter(c => ITEMS[c.item].cb.checked).length, linked: linked.length }; },
+    return { file: d.sel === PR_KEY ? null : d.sel, comment: d.ci, comments: d.comments.length, cards: d.pane.querySelectorAll('.bd-cm').length, lines: d.pane.querySelectorAll('.bd-ln').length, ticked: linked.filter(c => isDone(ITEMS[c.item])).length, linked: linked.length }; },
   // a findings section's view, 'merged', 'checklist' or 'diff' (null: not one); with view, picks it as its toggle would
   findingsView: (sectionId, view) => {
     const v = FVIEWS.find(v => v.el.id === sectionId); if (!v) return null;

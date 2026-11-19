@@ -412,6 +412,53 @@ class SharedPage(unittest.TestCase):
         self.assertEqual(self.q(t, "w.document.querySelectorAll('.bd-ansby, .bd-ansc, .bd-ansother, .bd-ansmore').length"), 0)
         self.assertEqual(self.browser.errors, [])
 
+    def test_a_review_s_answers_show_in_every_view_and_count_as_answered(self) -> None:
+        # the sharer picked on three findings of PR 412 and gave Other's words on one of PR 415's
+        state = {"t412:tier-boundary": "=fix|", "t412:float-cents": "=ticket|", "t412:tiers-map": "=decline|", "t415:latency:custom": "Measure it first"}
+        slot, _ = share.answers_slot(state, load_json(self.docs / "acme-review-findings.bluedoc.json"), ["picks"], "acme-dev")
+        t = Tab(self.browser)
+        self.open(t, self.viewer("acme-review-findings", slot) + HASH)
+        self.assert_view_only(t)
+        # Merged, the default: an answered finding's head reads ✓ the pick and "acme-dev answered", shown (All: the
+        # page shows the doc as the sharer left it)
+        self.assertEqual(self.q(t, "[w.BP.findingsView('pr-412'), w.BP.findingsFilter('pr-412'), w.BP.findingsFilter('pr-415')]"), ["merged", "all", "all"])
+        row = "w.document.querySelector('#pr-412 .bd-mrow[data-item=\"t412/tier-boundary\"]')"
+        self.assertEqual(self.q(t, f"(r => [r.classList.contains('done'), r.querySelector('.bd-ansc').checkVisibility(), r.querySelector('.bd-ansc').textContent, "
+                                   "r.querySelector('.pv-ok').checkVisibility(), r.querySelector('.pv-ok').textContent])" f"({row})"),
+                         [True, True, "acme-dev answered", True, "Fix in PR"])
+        self.assertEqual(self.q(t, "[...w.document.querySelectorAll('.bd-mrow .bd-ansc')].filter(e => e.checkVisibility()).map(e => e.closest('.bd-mrow').dataset.item)"),
+                         ["t412/tiers-map", "t412/tier-boundary", "t412/float-cents", "t415/latency"])
+        # open, the pill sits on the picked option; Other's words in a row of their own
+        self.assertTrue(self.click(t, "#pr-412 .bd-mrow[data-item='t412/tier-boundary'] .bd-mchev"))
+        t.wait_for(IN.format(f"{row}.classList.contains('open')"))
+        self.assertEqual(self.q(t, f"[...{row}.querySelectorAll('.bd-ansby')].filter(e => e.checkVisibility()).map(e => [e.closest('.bp-opt').dataset.id, e.textContent])"),
+                         [["fix", "Aacme-dev's answer"]])
+        self.assertTrue(self.click(t, "#pr-415 .bd-mrow[data-item='t415/latency'] .bd-mchev"))
+        t.wait_for(IN.format("(o => !!o && o.checkVisibility())(w.document.querySelector('#pr-415 .bd-mrow[data-item=\"t415/latency\"] .bd-ansother'))"))
+        # their answers count: the filter's Open and Done, Open hides them, the Tracker and the doc's box stays the doc's
+        counts = "(s => [...w.document.querySelectorAll(`#${s} .bd-ffilt [data-f]`)].map(b => b.textContent))"
+        self.assertEqual(self.q(t, f"[{counts}('pr-412'), {counts}('pr-415')]"), [["All 7", "Open 4", "Done 3"], ["All 4", "Open 3", "Done 1"]])
+        self.assertEqual(self.q(t, "[...w.document.querySelectorAll('.bp-prog-row .t .c')].map(e => e.textContent)"), ["4 open", "3 open"])
+        self.assertEqual(self.q(t, "(w.BP.findingsFilter('pr-412', 'open'), [...w.document.querySelectorAll('#pr-412 .bd-mrow')].filter(e => e.checkVisibility()).map(e => e.dataset.item))"),
+                         ["t412/pr-claims", "t412/savings-coupon", "t412/boundary-tests", "t412/docs-stale"])
+        self.assertEqual(self.q(t, "w.document.querySelector('#pr-412 .bd-mv .pv-hidden').textContent"), "3 findings answered are hidden · Show")
+        self.assertEqual(self.q(t, "w.BP.replyPayload().items.find(x => x.item === 'tier-boundary').choice"), None, "the doc's, not the sharer's")
+        self.q(t, "w.BP.findingsFilter('pr-412', 'all') && 1")
+        # Diff: the finding's card carries the chip, ✓ (its dot) and the pill
+        self.assertEqual(self.q(t, "w.BP.findingsView('pr-412', 'diff')"), "diff")
+        t.wait_for(IN.format("[...Array(7).keys()].some(i => (w.BP.openComment('diff-412', i), "
+                             "!!w.document.querySelector('#pr-412 .bd-cm:has(a[href=\"#item-t412-tier-boundary\"])')?.checkVisibility()))"))
+        card = "w.document.querySelector('#pr-412 .bd-cm:has(a[href=\"#item-t412-tier-boundary\"])')"
+        self.assertEqual(self.q(t, f"(c => [c.classList.contains('done'), c.querySelector('.hd .bd-ansc').checkVisibility(), c.querySelector('.hd .bd-ansc').textContent, "
+                                   "[...c.querySelectorAll('.bd-ansby')].filter(e => e.checkVisibility()).map(e => e.closest('.bp-opt').dataset.id)])" f"({card})"),
+                         [True, True, "acme-dev answered", ["fix"]])
+        # Checklist still draws them
+        self.assertEqual(self.q(t, "w.BP.findingsView('pr-412', 'checklist')"), "checklist")
+        self.assertEqual(self.q(t, "(e => [e.checkVisibility(), e.textContent])(w.document.querySelector('#item-t412-tier-boundary .bd-ansc'))"), [True, "acme-dev answered"])
+        self.assert_view_only(t)
+        self.assertEqual(self.asked_routes(), [])
+        self.assertEqual(self.browser.errors, [])
+
 
 if __name__ == "__main__":
     unittest.main()
