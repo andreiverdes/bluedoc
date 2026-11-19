@@ -5027,10 +5027,10 @@ def cmd_patch(argv: list[str]) -> int:
                 print(f"send the reader: {serve.base()}{url}?diff={rev0}")
         except Exception:
             pass
-    # a shared doc: one line on its link (shares.json and gist-budget.json only, no gh call), so an agent shares once a
-    # round, not after each patch
+    # a shared doc: one line on its link (shares.json and gist-budget.json only, no gh call): it stays at its rev until
+    # the user updates the share
     import share
-    line = share.patch_line(Path(a.doc), rev1)
+    line = share.patch_line(Path(a.doc))
     if line:
         print(line)
     return 0

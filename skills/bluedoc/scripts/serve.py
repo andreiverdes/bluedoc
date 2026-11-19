@@ -29,8 +29,8 @@ Usage:
                                                    `open` does), which counts the account's gist updates
                                                    (gistbudget.py: 90 an hour, one a minute per doc) and runs gh as
                                                    the server was started (after switching gh accounts, restart
-                                                   it): an update that doesn't fit is queued and the CLI says when
-                                                   it goes out (exit 0: share no more this round); paused after 4
+                                                   it): an update that doesn't fit is queued with the rev it was
+                                                   asked for, and the CLI says when it goes out (exit 0); paused after 4
                                                    refusals in a row, it says to tell the user (exit 1). --as: share
                                                    as that account and make it the project's; --move/--keep: a gist
                                                    on another account than the project's moves to it (a new link)
@@ -54,7 +54,8 @@ secret that writes need), state.db (SQLite, mode 0600: the reader's ticks, picks
 and every reply; statedb.py), settings.json (the plan-mode hook and patch-only switches, Chrome's path, the font
 folders and each project's sharing account, which Settings writes; settings.py: an environment variable that is set
 wins over it), shares.json (mode 0600: each doc shared as a secret gist, by its path: gist id, the account it is on,
-link, rev, when, the answers it carries, an update that waits; share.py), gist-budget.json (mode 0600: each GitHub
+link, rev, when, the answers it carries, an update that waits; share.py), share-queue/ (mode 0600: the files of each
+update that waits, the doc as it was when the share was asked for; share.py), gist-budget.json (mode 0600: each GitHub
 account's gist updates in the last hour, GitHub's retry time, refusals, pause; gistbudget.py) and
 app/<version>-<code>/ (the copy of scripts and assets the server runs from, so deleting or updating the install it was
 opened from never pulls files from under it; other versions' copies go once a new server is up).
@@ -140,7 +141,8 @@ URLs: /                      home page: every doc under the registered folders, 
                              share_view's {share: the doc's share record ({id, user: the account its gist is on, link:
                              https://bluedoc.ai/g/<code> (share.link_for), url, rev, at, files, answers, answersHash},
                              kept in shares.json) or null, rev: its meta.rev, queued: {at, why: hour|spacing|retry|
-                             paused, login} or null, contents: {media, screens}, project: {slug, name, remote},
+                             paused, login, rev: the rev it carries} or null, contents: {media, screens}, project:
+                             {slug, name, remote},
                              accounts: gh's [{login, usable, active, fix}], account: {login, why} it would share as,
                              ask: whether to show Share as (2+ usable accounts), mismatch: {gist, project} or null,
                              off: null or {reason, fix} when sharing is off, budget: {login, used, limit, next,
@@ -2241,16 +2243,18 @@ def share_view(doc: Path, brief: bool = False, fresh: bool = True, kinds: list[s
 
 
 # The gist queue: every share goes through share.share, which sends at once or, past the budget (gistbudget.py), marks
-# the doc queued in shares.json. This server's thread (gist_queue) sends each queued update when it is due, reading the
-# doc and its reader state as they are then; it sleeps until the next one is due, and a share, a resume or an unshare
-# wakes it (GIST_WAKE). On start it sends whatever is due. A paused account waits for a resume.
+# the doc queued in shares.json with its files as they were when the share was asked for (share.pin_file). This
+# server's thread (gist_queue) sends each queued update when it is due, with the reader state as it is then; it sleeps
+# until the next one is due, and a share, a resume or an unshare wakes it (GIST_WAKE). On start it sends whatever is
+# due. A paused account waits for a resume.
 GIST_WAKE = threading.Event()
 
 
 def send_queued(doc: Path, q: dict) -> dict | None:
-    """Send the doc's queued update now (share.share from_queue): its result, or None when it couldn't go (the doc is
-    gone, a mismatch since, gh failing): it waits no more and the sheet shows why. The answers that go are the ones the
-    reader state picks now (the Share sheet's switches while it waited), else the queued share's."""
+    """Send the doc's queued update now (share.share from_queue: the rev it carries): its result, or None when it
+    couldn't go (the doc is gone, a mismatch since, gh failing): it waits no more and the sheet shows why. The answers
+    that go are the ones the reader state picks now (the Share sheet's switches while it waited), else the queued
+    share's."""
     root = project_of(doc)
     state = reader_state(doc)
     kinds = share.kinds_of(state) if isinstance(state.get(share.ANSWERS_KEY), str) else q.get("answers")

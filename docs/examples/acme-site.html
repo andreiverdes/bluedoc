@@ -223,13 +223,15 @@ button.bd-emo:hover, button.bd-emo[aria-expanded="true"] { background: var(--sel
    key; narrow, its icon and chevron */
 @media (max-width: 900px) { .bd-docx .bd-tbtn.bd-expb > span { display: none; } .bd-bar-r .bd-docx .bd-tbtn.bd-expb { padding: 0 8px 0 10px; gap: 4px; } }
 /* the app bar's Share (before Export): Export's raised key with its icon and word, no chevron; narrow, its icon. A shared
-   doc: a dot in the accent at its corner; the doc newer than its share: the dot in the warning colour. Sharing off
-   (aria-disabled): dimmed, yet it takes the pointer and a click, which open its tooltip and the off popover */
+   doc: a dot in the accent at its corner; an update that waits or is paused: the dot in the warning colour. The doc
+   newer than its share: the key reads Update and carries the Revisions key's pill (.n, below) in the warning's colours,
+   "3 → 5", for the dot; narrow, on its icon. Sharing off (aria-disabled): dimmed, yet it takes the pointer and a
+   click, which open its tooltip and the off popover */
 .bd-tbtn.bd-shk { position: relative; }
 .bd-bar-r .bd-tbtn.bd-shk .dot { top: 2px; right: 3px; }
 .bd-tbtn.bd-shk .dot { display: none; position: absolute; top: 3px; right: 3px; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 2px var(--hk-top); }
-.bd-tbtn.bd-shk[data-share] .dot { display: block; }
-.bd-tbtn.bd-shk:is([data-share="newer"], [data-share="queued"], [data-share="paused"]) .dot { background: var(--warn); }
+.bd-tbtn.bd-shk[data-share]:not([data-share="newer"]) .dot { display: block; }
+.bd-tbtn.bd-shk:is([data-share="queued"], [data-share="paused"]) .dot { background: var(--warn); }
 .bd-tbtn.bd-shk[aria-disabled="true"] { color: var(--fg-subtle); opacity: .55; }
 .bd-tbtn.bd-shk[aria-disabled="true"][aria-expanded="true"] { opacity: .8; }
 @media (max-width: 900px) { .bd-tbtn:is(.bd-shk, .bd-mkc) > .w { display: none; } .bd-bar-r .bd-tbtn:is(.bd-shk, .bd-mkc) { padding: 0 9px 0 10px; } }
@@ -274,14 +276,16 @@ button.bd-emo:hover, button.bd-emo[aria-expanded="true"] { background: var(--sel
 .bd-sk:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 .bd-sk[aria-pressed="true"]:focus-visible { box-shadow: var(--shadow-hk-down), var(--focus-ring); }
 /* a key's count: the dock's badge at the key's corner – Comments' pending in the accent, Revisions' rev a quiet one */
-.bd-sk .n { position: absolute; top: -3px; right: -3px; min-width: 17px; max-width: 34px; height: 17px; padding: 0 4px; border-radius: 9px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+.bd-sk .n, .bd-shk .n { position: absolute; top: -3px; right: -3px; min-width: 17px; max-width: 34px; height: 17px; padding: 0 4px; border-radius: 9px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   font: 650 10.5px/17px var(--sans); font-variant-numeric: tabular-nums; text-align: center; color: #fff; background: var(--accent-solid); box-shadow: 0 0 0 2px var(--tray-top); pointer-events: none; }
-.bd-sk .n[hidden] { display: none; }
-.bd-sk[data-f="revisions"] .n { color: var(--fg-muted); background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: 0 0 0 2px var(--tray-top), 0 0 0 1px var(--hk-ring); }
-/* the Revisions key on an earlier revision: the warning's colours, as the strip under the bar */
+.bd-sk .n[hidden], .bd-shk .n[hidden] { display: none; }
+.bd-sk[data-f="revisions"] .n, .bd-shk .n { color: var(--fg-muted); background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: 0 0 0 2px var(--tray-top), 0 0 0 1px var(--hk-ring); }
+/* the Revisions key on an earlier revision: the warning's colours, as the strip under the bar; so the Share key's
+   pill (Update: the shared rev → the doc's), wide enough for both */
 .bd-sk.old { color: var(--warn-fg); }
 .bd-sk.old[aria-pressed="true"] { color: var(--warn-fg); background: var(--warn-tint); }
-.bd-sk.old[data-f="revisions"] .n { color: var(--warn-fg); background: var(--warn-tint); }
+.bd-sk.old[data-f="revisions"] .n, .bd-shk .n { color: var(--warn-fg); background: var(--warn-tint); }
+.bd-shk .n { top: -8px; max-width: 72px; }   /* above the word (or the icon), clear of it */
 /* the left key's ring (a doc's tracker, a board's brief picks): HorizonUI's ProgressRing, drawn inside the key's face
    3 px in from its edge, around the icon, so the key's raised or sunk edge stays whole (none tracked: no ring); all
    done, in the ok colour */
@@ -2280,7 +2284,9 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .bp-sec.fv-on > h2 > span:not([class]) { flex: 1 1 auto; min-width: 0; }
 /* the chevron sits under the number; the title, the sizes, the branches and the lead share one left edge, and the
    branches end where the meter does (an empty status takes no room) */
-.bp-sec.fv-on > h2 > .bd-prchev { position: absolute; left: 12px; top: 44px; }
+.bp-sec.fv-on > h2 > .bd-prchev { position: absolute; left: 12px; top: 44px; transition: opacity .12s; }
+/* the lead scrolled away under the stuck title row, the chevron would draw over the toolbar: it goes (paintStuck) */
+.bp-sec.fv-on > h2 > .bd-prchev.off { opacity: 0; pointer-events: none; }
 .bp-sec.fv-on > h2 > .bd-prs:empty { display: none; }
 :is(.bd-prchev, .bd-mchev) { flex: none; display: grid; place-items: center; width: 26px; height: 26px; padding: 0; border: 0; border-radius: 7px; background: none; color: var(--fg-subtle); cursor: pointer; }
 :is(.bd-prchev, .bd-mchev):hover { background: var(--hover); color: var(--fg); }
@@ -2295,14 +2301,16 @@ html.bd-sp-open:not(.bd-sp-dock) .bd-sp { background: var(--surface); box-shadow
 .bd-prs > i, .bp-prog-row .c .new > i { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
 .bp-prog-row .c .new { display: inline-flex; align-items: center; gap: 4px; color: var(--accent-fg); }
 .bd-prhd { display: flex; align-items: flex-start; gap: 20px; padding: 4px 16px 10px 52px; }
-.bd-prc { flex: 0 1 auto; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; min-width: 0; max-width: 50%; margin-left: auto; }
+/* the branches and the sizes: as wide as they need, up to half the header; a branch too long for that ends in … */
+.bd-prc { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; min-width: 0; max-width: 50%; margin-left: auto; }
 .bd-prsz { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
 .bd-prchip { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 999px; font: 500 12px var(--sans); color: var(--fg-muted); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); }
 .bd-prchip.risk { color: var(--risk-fg); background: var(--risk-tint); box-shadow: none; }
 .bd-prchip.warn { color: var(--warn-fg); background: var(--warn-tint); box-shadow: none; }
 /* the PR's branches, head → base, right of the sizes: a long name ends in … at 32 characters (whole in the title) */
-.bd-prref { display: inline-flex; align-items: center; gap: 6px; min-width: 0; font-size: 12px; color: var(--fg-subtle); white-space: nowrap; }
-.bd-prref code { display: inline-block; max-width: 32ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; padding: 1px 5px; border-radius: 5px; font: 11.5px var(--mono); color: var(--fg-muted); background: var(--code-bg); }
+.bd-prref { display: inline-flex; align-items: center; gap: 6px; min-width: 0; max-width: 100%; font-size: 12px; color: var(--fg-subtle); white-space: nowrap; }
+.bd-prref code { display: inline-block; min-width: 0; max-width: 32ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; padding: 1px 5px; border-radius: 5px; font: 11.5px var(--mono); color: var(--fg-muted); background: var(--code-bg); }
+.bd-prref code.hd { flex-shrink: 8; }   /* short of room, the head branch gives way first */
 .bd-prhd > .bp-lead { position: relative; flex: 1 1 auto; min-width: 0; margin: 0; padding: 0; max-width: none; font-size: 14px; }
 .bd-ftb { position: sticky; top: calc(var(--top-h) + var(--fv-t) + var(--fv-c)); z-index: 19; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; row-gap: 6px;
   margin-top: 12px; padding: 8px 12px 8px 10px; border-top: 1px solid var(--line-soft); transition: box-shadow .15s; }
@@ -8142,7 +8150,7 @@ function findingsView(sec, el, wraps) {
   h2.after(head);
   head.after(bar);
   el.classList.add('fv-on');
-  Object.assign(v, { h2, chips, set: view => {
+  Object.assign(v, { h2, chips, chev, set: view => {
     if (v.view === view) return;
     v.view = view;
     el.classList.toggle('fv-merged', view === 'merged'); el.classList.toggle('fv-cl', view === 'checklist'); el.classList.toggle('fv-diff', view === 'diff');
@@ -8188,13 +8196,16 @@ function fvMeasure(v) {
   s.setProperty('--fv-t', v.h2.offsetHeight + 'px');
   s.setProperty('--fv-c', (getComputedStyle(v.chips).position === 'sticky' ? v.chips.offsetHeight : 0) + 'px');
   s.setProperty('--fvbar-h', v.bar.offsetHeight + 'px');
+  paintStuck();
 }
 const fvSizes = 'ResizeObserver' in window ? new ResizeObserver(() => QVIEWS.forEach(v => v.measure())) : null;
-// a toolbar stuck under the header gets a bottom edge
+// a toolbar stuck under the header gets a bottom edge; the chevron under the number goes while it would draw over the
+// toolbar (the lead scrolled away under the stuck title row)
 let stuckRaf = 0;
 const fvStuck = v => { const t = parseFloat(getComputedStyle(v.bar).top) || 0, r = v.bar.getBoundingClientRect(); return r.height > 0 && Math.abs(r.top - t) < 1 && v.el.getBoundingClientRect().top < t - 1; };
+const fvChevOver = v => { const b = v.bar.getBoundingClientRect(), c = v.chev.getBoundingClientRect(); return b.height > 0 && c.height > 0 && c.bottom > b.top && c.top < b.bottom; };
 function paintStuck() {
-  if (!stuckRaf) stuckRaf = requestAnimationFrame(() => { stuckRaf = 0; FVIEWS.forEach(v => v.bar.classList.toggle('stuck', fvStuck(v))); });
+  if (!stuckRaf) stuckRaf = requestAnimationFrame(() => { stuckRaf = 0; FVIEWS.forEach(v => { v.bar.classList.toggle('stuck', fvStuck(v)); v.chev.classList.toggle('off', fvChevOver(v)); }); });
 }
 function pickFindings(view, btn) {
   const v = FVIEWS.find(v => v.seg.contains(btn)), y = v.bar.getBoundingClientRect().top, stuck = fvStuck(v);
@@ -10842,19 +10853,24 @@ function gistUrl() {
      another account than the project's (mismatch): Move (a new gist on the project's, the old one deleted: the link
      changes) or Keep (the gist's account updates it), picked before Update posts `move` or `keep`. Details: the
      account, the gist, what's left out, the readers, Stop sharing (a second press deletes the gist as its account).
-     Esc or a press outside closes the sheet, not while a call runs. The key marks a shared doc with a dot in the
-     accent, in the warning colour while the doc is newer than its share (data-share shared|newer; GET …&brief=1 on
-     load). Sharing off (off: gh missing, signed out, no account with the gist scope): the key dims, its tooltip says
-     why, and a press asks again, then opens the sheet or the popover with the command that turns sharing on. Nothing
-     comes back through the gist: the shared page is view-only (VIEW_ONLY).
+     Esc or a press outside closes the sheet, not while a call runs. Only a press of the sheet's Share, Update or Resume
+     updates writes the gist: a shared doc's sheet opens on Copy link (a first share's on Share), and a held Enter or
+     Space (its repeats) presses nothing in it. The key marks a shared doc with a dot in the accent (data-share shared;
+     GET …&brief=1 on load); while the doc is newer than its share (newer) it reads Update, its icon kept, with the
+     Revisions key's pill in the warning's colours on it: "3 → 5", the shared rev to the doc's (≤ 900 px on the icon
+     alone); a press opens the sheet as ever. Queued or paused: the dot in the warning colour. Sharing off (off: gh
+     missing, signed out, no account with the gist scope): the key dims, its tooltip says why, and a press asks again,
+     then opens the sheet or the popover with the command that turns sharing on. Nothing comes back through the gist:
+     the shared page is view-only (VIEW_ONLY).
      The budget (gistbudget.py): at most 90 gist updates an hour per GitHub account, one a minute per doc. A share that
-     doesn't fit waits (202, `queued` {at, why: hour | spacing | retry | paused, login}) and the server sends the doc as
-     it is then: the badge says Queued, the state line when the next update goes and why ("Updated 2 min ago · next
-     update in 6 min: GitHub allows about 100 updates an hour"; a first share: the link shows here when it goes out),
-     the key is a disabled "Queued: rev N at 15:42", and the sheet repaints each minute while open (reading the share
-     again once the time has passed). GitHub refused 4 in a row (why paused, or the account's `budget.paused`):
-     Paused, what happened, and Resume updates (POST {resume: true}). An update the queue couldn't send says why
-     (`error`). Details has the hour's count (`budget`: "37 of 90 this hour on <login>").
+     doesn't fit waits (202, `queued` {at, why: hour | spacing | retry | paused, login, rev}) and the server sends it
+     with the rev it was asked for (rev; a patch since waits for the next Update): the badge says Queued, the state line
+     when the next update goes and why ("Updated 2 min ago · next update in 6 min: GitHub allows about 100 updates an
+     hour"; a first share: the link shows here when it goes out), the key is a disabled "Queued: rev N at 15:42", and
+     the sheet repaints each minute while open (reading the share again once the time has passed). GitHub refused 4 in
+     a row (why paused, or the account's `budget.paused`): Paused, what happened, and Resume updates (POST {resume:
+     true}). An update the queue couldn't send says why (`error`). Details has the hour's count (`budget`: "37 of 90
+     this hour on <login>").
      Include my answers: one switch per kind (picks, ticks, sent comments, pending and drafts, attached images) with how
      many the doc has and what goes out; the first three on until the reader picks. The pick is reader state
      (`__share-answers`, kinds comma-joined), each share posts it as `answers`, and the sheet reads the share again
@@ -10873,7 +10889,10 @@ function gistUrl() {
   // kinds: the answers that go (null: none read yet); tick: the minute's repaint while open; ask: the latest read
   const SH = { dlg: null, view: null, busy: '', err: '', sure: false, pick: '', acct: '', copied: false, det: false, menu: null, down: null, kinds: null, tick: 0, ask: 0 };
   let OFF = null, copyT = 0;
-  const shareKey = h('button', { type: 'button', class: 'bd-tbtn bd-shk', onclick: () => keyPress() }, ic('share'), h('span', { class: 'w' }, 'Share'), h('span', { class: 'dot', 'aria-hidden': 'true' }));
+  // the key: its icon, its word (Share, or Update while the doc is newer than its share), the dot, and the pill (the
+  // Revisions key's .n) with the shared rev and the doc's while newer
+  const keyWord = h('span', { class: 'w' }, 'Share'), keyRevs = h('span', { class: 'n', 'aria-hidden': 'true', hidden: true });
+  const shareKey = h('button', { type: 'button', class: 'bd-tbtn bd-shk', onclick: () => keyPress() }, ic('share'), keyWord, h('span', { class: 'dot', 'aria-hidden': 'true' }), keyRevs);
   tipped(shareKey);
   const viewUrl = (brief, kinds) => '/__bluedoc/share?' + new URLSearchParams({ path: location.pathname, ...(brief ? { brief: '1' } : {}), ...(kinds ? { answers: kinds.join(',') } : {}) });
   const kindsOf = v => {
@@ -10904,11 +10923,11 @@ function gistUrl() {
   // why a queued update waits, as the sheet says it
   const waitWhy = why => why === 'spacing' ? 'one update a minute per doc' : why === 'retry' ? 'GitHub asked to wait' : LIMIT_SAYS;
   // what holds the doc's next update: {paused, login} (its queued update's account, or the account it goes out as, was
-  // refused 4 in a row), {queued, at, why, login}, or null
+  // refused 4 in a row), {queued, at, why, login, rev: the rev it carries}, or null
   const holdOf = v => {
     const q = v && v.queued, b = v && v.budget;
     if (q && q.why === 'paused' || !q && b && b.paused) return { paused: true, login: (q && q.login) || b.login };
-    return q && q.at ? { queued: true, at: q.at, why: q.why, login: q.login } : null;
+    return q && q.at ? { queued: true, at: q.at, why: q.why, login: q.login, rev: q.rev || v.rev } : null;
   };
   // sharing off: the key's popover. What's wrong, the command that fixes it with a copy key, and how to get gh. The key
   // asks the server again on every press, so it opens the sheet once sharing works
@@ -10954,12 +10973,15 @@ function gistUrl() {
     return { open, close, isOpen: () => !box.hidden };
   })();
   // the key's state from the route's answer ({share, rev, off, queued}): off, paused, queued, shared, the doc newer than
-  // its share, or none
+  // its share (Update, its pill "3 → 5"), or none
   function paintKey(v) {
     OFF = v && v.off || null;
     const s = !OFF && v && v.share, q = !OFF && v && v.queued;
     const state = q ? (q.why === 'paused' ? 'paused' : 'queued') : !s ? '' : v.rev !== s.rev ? 'newer' : 'shared';
     if (state) shareKey.dataset.share = state; else delete shareKey.dataset.share;
+    const revs = state === 'newer' ? `${s.rev || '–'} → ${v.rev || '–'}` : '';
+    keyWord.textContent = revs ? 'Update' : 'Share';
+    keyRevs.textContent = revs; keyRevs.hidden = !revs;
     if (OFF) {
       shareKey.setAttribute('aria-disabled', 'true'); shareKey.setAttribute('aria-haspopup', 'dialog');
       if (!offPop.isOpen()) shareKey.setAttribute('aria-expanded', 'false');
@@ -10972,11 +10994,11 @@ function gistUrl() {
     ['aria-disabled', 'aria-haspopup', 'aria-expanded'].forEach(a => shareKey.removeAttribute(a));
     shareKey._tip = null;
     const say = state === 'paused' ? `Updates are paused: GitHub refused 4 in a row on ${q.login}. Open to resume`
-      : state === 'queued' ? `Queued: rev ${v.rev || '–'} goes out at ${clockAt(q.at)} (${inMin(q.at)}); ${LIMIT_SAYS}`
-      : state === 'newer' ? `Shared at rev ${s.rev || '–'}; the doc is at rev ${v.rev || '–'} now: Update puts it in the link`
+      : state === 'queued' ? `Queued: rev ${q.rev || v.rev || '–'} goes out at ${clockAt(q.at)} (${inMin(q.at)}); ${LIMIT_SAYS}`
+      : revs ? `Update the share: rev ${revs}`
       : state ? `Shared as a secret gist at rev ${s.rev || '–'}` : 'Share a link to this doc: a secret GitHub gist that opens at bluedoc.ai';
     shareKey.title = say;
-    shareKey.setAttribute('aria-label', state ? `Share (${say})` : 'Share');
+    shareKey.setAttribute('aria-label', revs ? say : state ? `Share (${say})` : 'Share');
   }
   paintKey(null);
   async function keyPress() {
@@ -11094,7 +11116,7 @@ function gistUrl() {
     // an update that waits: the key says its rev and time, disabled; paused: what happened, and Resume updates
     const note = (icon, b, why) => h('div', { class: 'up', role: 'note' }, ic(icon), h('div', {}, h('b', {}, b), h('div', { class: 'why' }, why)));
     const paused = () => note('pause', `GitHub refused 4 updates in a row on ${hold.login}.`, 'Nothing goes out until you resume.');
-    const holdKey = () => hold.paused ? goKey('Resume updates', 'play', false, 'resume') : goKey(`Queued: rev ${v.rev || '–'} at ${clockAt(hold.at)}`, 'hist', true);
+    const holdKey = () => hold.paused ? goKey('Resume updates', 'play', false, 'resume') : goKey(`Queued: rev ${hold.rev || '–'} at ${clockAt(hold.at)}`, 'hist', true);
     const line = (text, warn) => h('p', { class: 'stl' + (warn ? ' newer' : ''), role: 'status' }, h('i', { 'aria-hidden': 'true' }), text);
     if (!v) { if (!SH.err) kids.push(h('p', { class: 'why' }, 'Reading the doc…')); }
     else if (!s) {
@@ -11153,6 +11175,8 @@ function gistUrl() {
       d.addEventListener('pointerdown', e => { SH.down = e.target; });
       d.addEventListener('click', e => { if (e.target === d && SH.down === d && !SH.busy) d.close(); });
       d.addEventListener('cancel', e => { if (SH.busy) e.preventDefault(); });
+      // a held Enter or Space (the press that opened the sheet, repeating) presses nothing in it: Update writes the gist
+      d.addEventListener('keydown', e => { if (e.repeat && (e.key === 'Enter' || e.key === ' ')) e.preventDefault(); });
       d.addEventListener('close', () => { if (SH.menu) SH.menu.pop.close(false); clearTimeout(copyT); clearInterval(SH.tick); SH.copied = false; });
       document.body.append(d);
     }
@@ -11167,7 +11191,8 @@ function gistUrl() {
     catch (e) { if (ask !== SH.ask) return; SH.err = `Couldn't read this doc's share: ${e.message}`; }
     if (SH.view && SH.view.off) { SH.view = null; SH.dlg.close(); offPop.open(); return; }
     SH.kinds = SH.view && SH.view.answers ? kindsOf(SH.view) : null;
-    paintShare(true);
+    // a shared doc opens on Copy link, never on Update; a first share on Share, a paused one on Resume updates
+    paintShare(SH.view && SH.view.share && !holdOf(SH.view) ? 'copy' : true);
   }
   // each minute while the sheet is open: its times again ("in 5 min", "3 min ago"); once a queued update's time has
   // passed, the share read again (the server has sent it, or says why it still waits)
@@ -11203,7 +11228,7 @@ function gistUrl() {
   function shared(j, was, done) {
     const hold = holdOf(j), link = j.share && j.share.link;
     if (hold && hold.paused) SH.err = `Not sent: GitHub refused 4 updates in a row on ${hold.login}. Resume updates sends it.`;
-    else if (hold) toast(was ? `Queued: rev ${j.rev || '–'} goes out at ${clockAt(hold.at)}` : `Queued: it goes out at ${clockAt(hold.at)}; the link shows here then`);
+    else if (hold) toast(was ? `Queued: rev ${hold.rev || '–'} goes out at ${clockAt(hold.at)}` : `Queued: it goes out at ${clockAt(hold.at)}; the link shows here then`);
     else if (link && (!was || link !== was.link)) copyLink(link, was ? 'Moved: the new link is copied' : `${done}: the link is copied`);
     else if (j.share) toast(`${done}: readers see rev ${j.share.rev || '–'} when they reload`);
   }

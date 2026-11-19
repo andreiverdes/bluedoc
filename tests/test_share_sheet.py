@@ -2,10 +2,13 @@
 /__bluedoc/share, /__bluedoc/unshare and the settings POST that sets a project's account (STUB, put in the page before
 its script runs), so no gh runs and nothing reaches GitHub.
 
-The key sits before Export (its icon alone under 900 px) and marks a shared doc with a dot in the accent, a doc newer
-than its share in the warning colour, also on load. The sheet is a ticket over the dimmed page with the notice
-(share.NOTICE) as its red bottom strip. A first share with two usable accounts lists them as radios (an unusable one
-off with its fix, and how to add another), the project's account picked, the focus on Share as <login>, which posts
+The key sits before Export (its icon alone under 900 px) and marks a shared doc with a dot in the accent, also on load;
+a doc newer than its share makes it Update with the Revisions key's pill, "3 → 5", in the warning's colours (on the
+icon alone under 900 px), and a press still only opens the sheet. Nothing but a press of the sheet's Update writes the
+gist: the sheet opens on Copy link and a held Enter's repeats press nothing. The sheet is a ticket over the dimmed
+page with the notice (share.NOTICE) as its red bottom strip. A first share with two usable accounts lists them as
+radios (an unusable one off with its fix, and how to add another), the project's account picked, the focus on Share
+as <login>, which posts
 `as`; ↓ picks the next. With one usable account there is no picker and nothing goes as `as`. Shared: the link with
 Copy link, which shows a tick and Copied for 1.5 s; Share as is a key whose menu sets the project's account at once.
 The doc newer: Link shows rev N and Update to rev M posts the same gist. The gist on another account than the
@@ -157,14 +160,73 @@ class ShareSheet(ChromePage):
         self.assertEqual(t.ev(f"[{KEY}.textContent, {KEY}.hasAttribute('aria-disabled'), {KEY}.getAttribute('aria-label'), {KEY}.dataset.share || null]"),
                          ["Share", False, "Share", None])
         t = self.page(view(share=gist(rev="2")), 390, 800)
-        self.assertEqual(t.ev(f"[...{KEY}.children].map(e => getComputedStyle(e).display)"), ["block", "none", "block"], "narrow: the icon and the dot")
+        self.assertEqual(t.ev(f"[...{KEY}.children].map(e => getComputedStyle(e).display)"), ["block", "none", "block", "none"], "narrow: the icon and the dot")
         self.assertEqual(t.wait_for(f"{KEY}.dataset.share"), "shared")
         self.assertIn("Shared as a secret gist at rev 2", t.ev(f"{KEY}.title"))
-        t = self.page(view(share=gist(rev="1")))
-        self.assertEqual(t.wait_for(f"{KEY}.dataset.share"), "newer")
-        warn = t.ev("(e => { e.style.color = 'var(--warn)'; document.body.append(e); const c = getComputedStyle(e).color; e.remove(); return c; })(document.createElement('i'))")
-        self.assertEqual(t.ev(f"getComputedStyle({KEY}.querySelector('.dot')).backgroundColor"), warn)
-        self.assertIn("the doc is at rev 2 now", t.ev(f"{KEY}.title"))
+        self.assertEqual(self.browser.errors, [])
+
+    def test_a_doc_newer_than_its_share_makes_the_key_update_with_the_revs_pill(self) -> None:
+        warn_tint = "(e => { e.style.backgroundColor = 'var(--warn-tint)'; document.body.append(e); const c = getComputedStyle(e).backgroundColor; e.remove(); return c; })(document.createElement('i'))"
+        rect = "(r => ({top: r.top, bottom: r.bottom, left: r.left, right: r.right}))(document.querySelector(%s).getBoundingClientRect())"
+        style = "(s => [s.display, s.height, s.fontSize, s.fontWeight, s.borderRadius])(getComputedStyle(document.querySelector(%s)))"
+        for width in (1440, 800):
+            t = self.page(view(share=gist(rev="3"), rev="5"), width, 900)
+            self.assertEqual(t.wait_for(f"{KEY}.dataset.share"), "newer")
+            self.assertEqual(t.ev(f"[{KEY}.querySelector('.w').textContent, {KEY}.querySelector('.n').textContent, {KEY}.title, {KEY}.getAttribute('aria-label')]"),
+                             ["Update", "3 → 5", "Update the share: rev 3 → 5", "Update the share: rev 3 → 5"])
+            self.assertTrue(t.ev(f"!!{KEY}.querySelector('svg')"), "its icon stays")
+            self.assertEqual(t.ev(style % "'.bd-shk .n'"), t.ev(style % "'.bd-sk[data-f=revisions] .n'"), "the Revisions key's pill")
+            self.assertEqual(t.ev(f"getComputedStyle({KEY}.querySelector('.n')).backgroundColor"), t.ev(warn_tint), "in the warning's colours")
+            self.assertEqual(t.ev(f"getComputedStyle({KEY}.querySelector('.dot')).display"), "none", "the pill for the dot")
+            pill, under = t.ev(rect % "'.bd-shk .n'"), t.ev(rect % ("'.bd-shk .w'" if width > 900 else "'.bd-shk svg'"))
+            self.assertLessEqual(pill["bottom"], under["top"] + 1, "above the word, or the icon, clear of it")
+            self.assertTrue(pill["left"] < under["right"] and pill["right"] > under["left"], "over it")
+            if width < 900:
+                self.assertEqual(t.ev(f"getComputedStyle({KEY}.querySelector('.w')).display"), "none", "narrow: the icon and the pill")
+        # a press opens the sheet as ever: it doesn't update
+        self.sheet(t)
+        self.assertEqual([self.q(t, ".eyb .bdg"), self.q(t, ".go")], ["Link shows rev 3", "Update to rev 5"])
+        self.assertEqual(self.posts(t), [])
+        self.assertEqual(self.browser.errors, [])
+
+    def test_only_a_press_of_update_writes_the_gist(self) -> None:
+        # shared at rev 1, the doc at rev 2: the key pressed and the sheet dismissed, again and again, by pointer and by
+        # keyboard, a held Enter's repeats too, never update the gist; a press of Update does
+        t = self.page(view(share=gist(rev="1"), account={"login": "jlee-acme", "why": "project"}, answers=ANS))
+        t.wait_for(f"{KEY}.dataset.share === 'newer'")
+        opened = f"(d => d && d.open && !!d.querySelector('.acts .det'))({SHEET})"
+        for close in ("esc", "outside", "close"):
+            t.ev(f"{KEY}.click()")
+            t.wait_for(opened)
+            self.assertTrue(t.ev(f"document.activeElement === {SHEET}.querySelector('.cp')"), "a shared doc opens on Copy link, not Update")
+            if close == "esc":
+                self.key(t, "Escape", "Escape", 27)
+            elif close == "outside":
+                self.click_at(t, 20, 600)
+            else:
+                t.ev(f"{SHEET}.querySelector('[data-k=cls]').click()")
+            t.wait_for(f"!{SHEET}.open")
+        enter = {"key": "Enter", "code": "Enter", "windowsVirtualKeyCode": 13}
+
+        def press(repeat: bool = False) -> None:   # Enter on the focused element: its keydown and keypress
+            for kind in ("rawKeyDown", "char"):
+                self.browser.call("Input.dispatchKeyEvent", {"type": kind, **enter, **({"text": "\r"} if kind == "char" else {}), "autoRepeat": repeat}, t.session)
+        t.ev(f"{KEY}.focus()")
+        press()
+        t.wait_for(opened)
+        self.assertTrue(t.ev(f"document.activeElement === {SHEET}.querySelector('.cp')"))
+        t.ev(f"{SHEET}.querySelector('.go').focus()")   # even on Update, the held key's repeats press nothing
+        for _ in range(3):
+            press(True)
+        self.browser.call("Input.dispatchKeyEvent", {"type": "keyUp", **enter}, t.session)
+        time.sleep(0.3)
+        self.assertEqual(self.posts(t), [])
+        self.assertEqual([self.q(t, ".go"), t.ev(f"{KEY}.dataset.share")], ["Update to rev 2", "newer"])
+        # a press of Update: it updates
+        press()
+        t.wait_for(f"{SHEET}.querySelector('.eyb .bdg')?.textContent === 'Up to date'")
+        self.assertEqual(self.posts(t), [["/__bluedoc/share", {"path": t.ev("location.pathname"), "answers": ANS["kinds"]}]])
+        self.assertEqual(t.ev(f"[{KEY}.dataset.share, {KEY}.querySelector('.w').textContent, {KEY}.querySelector('.n').hidden]"), ["shared", "Share", True])
         self.assertEqual(self.browser.errors, [])
 
     def test_a_first_share_with_two_accounts_preselects_the_project_s_and_shares_as_it(self) -> None:
@@ -427,11 +489,13 @@ class ShareSheet(ChromePage):
 
     def test_a_queued_update_says_when_it_goes_and_repaints_each_minute(self) -> None:
         at = soon(6)
-        t = self.page(view(share={**gist(rev="1"), "at": soon(-2)}, account={"login": "jlee-acme", "why": "project"},
-                           queued={"at": at, "why": "hour", "login": "jlee-acme"}, budget=budget(), answers=ANS))
+        # Update pressed at rev 2, the doc patched to 3 since: the queued update carries rev 2
+        t = self.page(view(share={**gist(rev="1"), "at": soon(-2)}, rev="3", account={"login": "jlee-acme", "why": "project"},
+                           queued={"at": at, "why": "hour", "login": "jlee-acme", "rev": "2"}, budget=budget(), answers=ANS))
         hhmm = t.ev(f"(d => String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'))(new Date({json.dumps(at)}))")
         self.assertEqual(t.wait_for(f"{KEY}.dataset.share"), "queued")
         self.assertEqual(t.ev(f"{KEY}.title"), f"Queued: rev 2 goes out at {hhmm} (in 6 min); GitHub allows about 100 updates an hour")
+        self.assertEqual(t.ev(f"[{KEY}.querySelector('.w').textContent, {KEY}.querySelector('.n').hidden]"), ["Share", True], "queued: no Update key")
         self.sheet(t)
         self.assertEqual(self.q(t, ".eyb .bdg"), "Queued")
         self.assertEqual(self.q(t, ".stl"), "Updated 2 min ago · next update in 6 min: GitHub allows about 100 updates an hour")
@@ -446,12 +510,13 @@ class ShareSheet(ChromePage):
         t.wait_for(f"{SHEET}.querySelector('.stl').textContent.includes('next update in 5 min')")
         self.assertEqual(t.ev("__share.calls.length"), calls)
         self.assertTrue(t.ev(f"{SHEET}.querySelector('.det').open"), "Details stays open")
-        # past its time: the sheet reads the share again, which the server has sent
+        # past its time: the sheet reads the share again, which the server has sent at rev 2: the doc at 3 is newer
         t.ev("__share.view.queued = null; __share.view.share = {...__share.view.share, rev: '2', at: new Date().toISOString()}; "
              "(n => { Date.now = () => n + 7 * 60000; })(Date.now()); __share.minute(); true")
-        t.wait_for(f"{SHEET}.querySelector('.eyb .bdg')?.textContent === 'Up to date'")
-        self.assertIsNone(self.q(t, ".go"))
-        self.assertEqual(t.wait_for(f"{KEY}.dataset.share"), "shared")
+        t.wait_for(f"{SHEET}.querySelector('.eyb .bdg')?.textContent === 'Link shows rev 2'")
+        self.assertEqual(self.q(t, ".go"), "Update to rev 3")
+        self.assertEqual(t.wait_for(f"{KEY}.dataset.share"), "newer")
+        self.assertEqual(t.ev(f"{KEY}.querySelector('.n').textContent"), "2 → 3")
         self.assertEqual(self.posts(t), [], "the sheet never shares by itself")
         self.assertEqual(self.browser.errors, [])
 

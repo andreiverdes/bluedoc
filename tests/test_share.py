@@ -687,33 +687,67 @@ class Budget(StandInGh, unittest.TestCase):
         self.assertIsNone(share.queued_of(self.doc(PLAN)))
         self.assertEqual(gistbudget.status("acme-dev")["refusals"], 0)
 
-    def test_past_90_an_update_waits_and_goes_out_with_the_newest_rev(self) -> None:
+    def test_past_90_an_update_waits_and_goes_out_with_the_rev_it_was_asked_for(self) -> None:
         p = self.doc(PLAN)
         gid = self.share_as(PLAN)["share"]["id"]
         for i in range(89):   # with the share above: 90 in the hour, the oldest 1000 s ago
             gistbudget.sent("acme-dev", f"/elsewhere/{i}.bluedoc.json", now=self.now - 1000 + i)
+        r = self.tmp.run("build.py", "patch", p, "doc", "--set", "subtitle=Saved carts, rev two")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        asked = load_json(p)["meta"]["rev"]
         self.now += 120
         n = len(self.writes())
-        res = share.share(p, self.docs)
-        self.assertEqual((res["queued"]["why"], self.wait(res), res["budget"]["used"]), ("hour", 3600 - 1000 - 120, 90))
+        res = share.share(p, self.docs)   # Update pressed at `asked`
+        self.assertEqual((res["queued"]["why"], self.wait(res), res["budget"]["used"], res["queued"]["rev"]), ("hour", 3600 - 1000 - 120, 90, asked))
+        self.assertEqual(stat.S_IMODE(share.pin_file(p).stat().st_mode), 0o600, "its files wait beside shares.json, private")
         for _ in range(4):   # more shares while it waits: no gh call
             self.assertEqual(share.share(p, self.docs)["queued"]["why"], "hour")
         self.assertEqual(len(self.writes()), n)
-        # two patches meanwhile: each says so, and the update carries them
-        for sub in ("rev two", "rev three"):
+        # two patches meanwhile: each says the update waits without it; the link stays where the user put it
+        for sub in ("rev three", "rev four"):
             r = self.tmp.run("build.py", "patch", p, "doc", "--set", f"subtitle=Saved carts, {sub}")
             self.assertEqual(r.returncode, 0, r.stderr)
-            rev = load_json(p)["meta"]["rev"]
-            self.assertRegex(r.stdout.splitlines()[-1], rf"^rev {rev} is queued for \d\d:\d\d and carries this patch \(90 of 90 used this hour\)$")
+            self.assertRegex(r.stdout.splitlines()[-1], rf"^rev {asked} is queued for \d\d:\d\d; this patch waits for the user's next update "
+                                                        r"\(90 of 90 used this hour\)$")
+        rev = load_json(p)["meta"]["rev"]
+        self.assertNotEqual(rev, asked)
+        self.assertEqual(share.view(p, self.docs)["queued"]["rev"], asked)
         self.now += self.wait(share.view(p, self.docs))
         res = self.send(PLAN)
-        self.assertEqual((res["share"]["id"], res["share"]["rev"]), (gid, rev))
+        self.assertEqual((res["share"]["id"], res["share"]["rev"]), (gid, asked))
         self.assertEqual(len(self.writes()), n + 1, "one update for five shares and two patches")
-        self.assertEqual(json.loads(self.gist(gid)[1]["bluedoc-page.json"])["rev"], rev, "the newest rev went out")
+        page = json.loads(self.gist(gid)[1]["bluedoc-page.json"])
+        self.assertEqual((page["rev"], json.loads(self.gist(gid)[1][f"{PLAN}.bluedoc.json"])["meta"]["rev"]), (asked, asked),
+                         "the rev the user pressed Update at went out, not the patches since")
+        self.assertFalse(share.pin_file(p).exists(), "sent: its files go")
+        v = share.view(p, self.docs)
+        self.assertEqual((v["share"]["rev"], v["rev"], v["queued"]), (asked, rev, None), "the doc is newer than its share again")
         # a doc's minute: the next share of it waits 60 s, another doc's goes at once (the hour has room again)
         self.now += 1
         self.assertEqual(self.wait(share.share(p, self.docs)), 59)
         self.assertNotIn("queued", share.share(self.doc(STATUS), self.docs))
+
+    def test_a_share_while_one_waits_puts_the_doc_as_it_is_now_in_it(self) -> None:
+        p = self.doc(PLAN)
+        gid = self.share_as(PLAN)["share"]["id"]
+        self.now += 10
+        first = share.share(p, self.docs)["queued"]
+        self.assertEqual((first["why"], first["rev"]), ("spacing", "1"))
+        self.assertEqual(self.tmp.run("build.py", "patch", p, "doc", "--set", "subtitle=Saved carts, rev two").returncode, 0)
+        rev = load_json(p)["meta"]["rev"]
+        self.assertEqual(share.share(p, self.docs)["queued"]["rev"], rev, "asked again: the doc as it is now")
+        self.now += 60
+        self.assertEqual(self.send(PLAN)["share"]["rev"], rev)
+        self.assertEqual(json.loads(self.gist(gid)[1]["bluedoc-page.json"])["rev"], rev)
+        # dropped: unshare (and a queued update the queue couldn't send) leave no files behind
+        self.now += 10
+        share.share(p, self.docs)
+        self.assertTrue(share.pin_file(p).exists())
+        share.drop_failed(p, "gh failed")
+        self.assertFalse(share.pin_file(p).exists())
+        share.share(p, self.docs)
+        share.unshare(p)
+        self.assertFalse(share.pin_file(p).exists())
 
     def test_a_delete_never_waits(self) -> None:
         p = self.doc(PLAN)
@@ -740,8 +774,8 @@ class Budget(StandInGh, unittest.TestCase):
         n = len(self.calls())
         r = self.tmp.run("build.py", "patch", p, "doc", "--set", "subtitle=Saved carts, rev two")
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual(r.stdout.splitlines()[-1], f"shared as acme-dev at rev 1: run serve.py share {p} once this round is done "
-                                                    "(1 of 90 used this hour)")
+        self.assertEqual(r.stdout.splitlines()[-1], "shared as acme-dev at rev 1: the link stays there until the user updates it "
+                                                    "(1 of 90 used this hour)", "never tells the agent to share")
         for _ in range(4):
             gistbudget.refused("acme-dev")
         r = self.tmp.run("build.py", "patch", p, "doc", "--set", "subtitle=Saved carts, rev three", "--no-bump")
@@ -755,14 +789,13 @@ class Budget(StandInGh, unittest.TestCase):
         p = self.doc(STATUS)
         self.assertEqual(self.tmp.run("serve.py", "share", p, timeout=120).returncode, 0)
         rec = self.shares()[str(p)]
-        # within the doc's minute: queued, exit 0, with what to do next
+        # within the doc's minute: queued with the rev asked for, exit 0, with what to do next
         r = self.tmp.run("serve.py", "share", p, timeout=120)
         self.assertEqual(r.returncode, 0, r.stderr)
         lines = r.stdout.splitlines()[1:]
-        self.assertRegex(lines[0], r"^queued: rev 2 goes out at \d\d:\d\d \(in 1 min\) as acme-dev, with the doc as it is then "
-                                   r"\(one update a minute per doc\)$")
+        self.assertRegex(lines[0], r"^queued: rev 2 goes out at \d\d:\d\d \(in 1 min\) as acme-dev \(one update a minute per doc\)$")
         self.assertEqual(lines[1:], ["budget: 1 of 90 used in the last hour on acme-dev; GitHub allows about 100 gist updates an hour",
-                                     "done: don't share again for this round; later patches go out with it",
+                                     "done: it goes out by itself; later patches wait for the user's next update",
                                      f"link: {rec['link']} (shows rev 2 until then)"])
         # paused: tell the user, exit 1
         for _ in range(4):
@@ -1077,13 +1110,21 @@ class Routes(StandInGh, unittest.TestCase):
         status, j = self.call("POST", "/__bluedoc/share", PLAN, budget=True)
         self.assertEqual((status, j["queued"]["why"], j["queued"]["login"], j["share"]["id"]), (202, "spacing", "acme-dev", gid))
         self.assertEqual(self.call("GET", "/__bluedoc/share", PLAN)[1]["queued"]["why"], "spacing")
+        asked = load_json(p)["meta"]["rev"]
+        self.assertEqual(self.call("GET", "/__bluedoc/share", PLAN)[1]["queued"]["rev"], asked)
+        # a patch while it waits isn't in it: the server sends the rev the share was asked for
         r = self.tmp.run("build.py", "patch", p, "doc", "--set", "subtitle=Saved carts, rev two")
         self.assertEqual(r.returncode, 0, r.stderr)
         rev = load_json(p)["meta"]["rev"]
-        self.wait_for(lambda: self.shares()[str(p)].get("rev") == rev and "queued" not in self.shares()[str(p)])
-        self.assertEqual(json.loads(self.gist(gid)[1]["bluedoc-page.json"])["rev"], rev, "the doc as it was when it went out")
+        self.assertNotEqual(rev, asked)
+        self.wait_for(lambda: "queued" not in self.shares()[str(p)])
+        self.assertEqual(self.shares()[str(p)]["rev"], asked)
+        self.assertEqual(json.loads(self.gist(gid)[1]["bluedoc-page.json"])["rev"], asked, "the doc as it was when the share was asked for")
         self.assertIn(f"shared {p} as acme-dev (queued)", (self.tmp.dir / "server.log").read_text(encoding="utf-8"))
-        # a queued update a stopped server left: the next server sends it on start
+        _, v = self.call("GET", "/__bluedoc/share", PLAN)
+        self.assertEqual((v["share"]["rev"], v["rev"]), (asked, rev), "the doc newer than its share: the key's Update")
+        # a queued update a stopped server left: the next server sends it on start (one an older bluedoc queued, with no
+        # files kept: the doc as it is)
         self.server.stop()
         data = self.shares()
         data[str(p)]["queued"] = {"login": "acme-dev", "at": time.time(), "why": "hour", "answers": ["picks", "ticks", "comments"]}

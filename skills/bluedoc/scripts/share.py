@@ -42,14 +42,15 @@ runs `gh api -i -X DELETE gists/<id>` as the gist's account and forgets the shar
 
 The budget (gistbudget.py): GitHub allows about 100 gist updates an hour per account; bluedoc sends at most 90, one a
 minute per doc. A create or update that doesn't fit, or that GitHub refuses for its rate limit (a 403 or 429 naming
-it, retry-after, x-ratelimit-remaining: 0), waits: the doc's shares.json entry is marked `queued` and serve.py's queue
-sends it when it is due, with the doc as it is then. A share while one waits makes no gh call. GitHub's retry time
-wins; 4 refusals in a row pause the account until the reader resumes (resume). Deletes are counted but never wait.
+it, retry-after, x-ratelimit-remaining: 0), waits: the doc's shares.json entry is marked `queued`, its files are kept
+as the doc was when the share was asked for (pin_file), and serve.py's queue sends them when it is due: a patch while
+it waits isn't in it. A share while one waits makes no gh call. GitHub's retry time wins; 4 refusals in a row pause
+the account until the reader resumes (resume). Deletes are counted but never wait.
 
 Shares are recorded in $BLUEDOC_HOME/shares.json (mode 0600), keyed by the doc's resolved path: {id, user (the account
 the gist is on), link, url, rev, at, files, answers (the kinds it carries), answersHash, kept? (the project account it
-was kept from), queued? (an update that waits), error? (why the queue couldn't send it)}. Never in the doc or its
-folder, so a committed doc doesn't carry its link.
+was kept from), queued? (an update that waits), error? (why the queue couldn't send it)}; a queued update's files in
+$BLUEDOC_HOME/share-queue/ (mode 0600). Never in the doc or its folder, so a committed doc doesn't carry its link.
 
 The link (link_for): https://bluedoc.ai/g/<code>, code the gist id's bytes in base64url without padding (a 32-hex id
 is 22 characters, a 20-hex one 14); an id that isn't even-length lowercase hex keeps the long form
@@ -67,7 +68,6 @@ import hashlib
 import json
 import os
 import re
-import shlex
 import shutil
 import subprocess
 import sys
@@ -141,12 +141,16 @@ def _load() -> dict:
 
 
 def _save(data: dict) -> None:
-    f = shares_file()
+    _write_private(shares_file(), json.dumps(data, ensure_ascii=False, indent=1) + "\n")
+
+
+def _write_private(f: Path, text: str) -> None:
+    """text into f at once (a temp file renamed over it), mode 0600, its folder made."""
     f.parent.mkdir(parents=True, exist_ok=True)
     tmp = f.with_name(f.name + ".tmp")
     fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
     with os.fdopen(fd, "w", encoding="utf-8") as out:
-        out.write(json.dumps(data, ensure_ascii=False, indent=1) + "\n")
+        out.write(text)
     tmp.replace(f)
 
 
@@ -228,17 +232,29 @@ def bundle(doc: dict, doc_path: Path, answers: dict | None = None) -> dict:
             "title": build.shown_title(doc, None), "rev": rev_of(doc), "boardGeo": bool(geo), "fill": fill}
 
 
-def gist_files(doc_path: Path, answers: dict | None = None) -> tuple[dict[str, str], dict, dict]:
-    """({file name: text} for the gist, the doc, contents()). answers: the answers slot (answers_slot), or None.
-    ShareError: an unreadable doc, a deck or a listing (400), a bluedoc-page.json over MAX_PAGE_BYTES (413)."""
-    doc_path = Path(doc_path).resolve()
-    text, doc = read_doc(doc_path)
-    page = json.dumps(bundle(doc, doc_path, answers), ensure_ascii=False, separators=(",", ":")) + "\n"
-    size = len(page.encode("utf-8"))
+def _page_text(page: dict) -> str:
+    """bluedoc-page.json's text. ShareError (413): over MAX_PAGE_BYTES."""
+    text = json.dumps(page, ensure_ascii=False, separators=(",", ":")) + "\n"
+    size = len(text.encode("utf-8"))
     if size > MAX_PAGE_BYTES:
         raise ShareError(f"the shared page would be {size / 1048576:.1f} MB, over the 10 MB a gist file can hold: "
                          "send Export → HTML file instead", 413)
-    files = {gist_name(doc_path): text, PAGE_FILE: page}
+    return text
+
+
+def gist_files(doc_path: Path, answers: dict | None = None, pinned: dict | None = None) -> tuple[dict[str, str], dict, dict]:
+    """({file name: text} for the gist, the doc, contents()). answers: the answers slot (answers_slot), or None.
+    pinned: a queued update's files (pinned_of), sent as they are with this answers slot; else the doc as it is now.
+    ShareError: an unreadable doc, a deck or a listing (400), a bluedoc-page.json over MAX_PAGE_BYTES (413)."""
+    doc_path = Path(doc_path).resolve()
+    if pinned is not None:
+        files = dict(pinned["files"])
+        doc, page = json.loads(files[gist_name(doc_path)]), json.loads(files[PAGE_FILE])
+        page["fill"][build.ANSWERS_SLOT] = build._script_json(answers) if answers else "null"
+        files[PAGE_FILE] = _page_text(page)
+        return files, doc, contents(doc)
+    text, doc = read_doc(doc_path)
+    files = {gist_name(doc_path): text, PAGE_FILE: _page_text(bundle(doc, doc_path, answers))}
     screens = screens_file(doc, doc_path)
     if screens is not None:
         size = len(screens.encode("utf-8"))
@@ -707,11 +723,12 @@ def budget_of(login: str | None) -> dict | None:
 
 def queued_view(q: dict | None, doc_path: Path) -> dict | None:
     """A queued update as the routes give it: {at: when it goes out (ISO 8601, null while paused), why: hour | spacing |
-    retry | paused, login: the account it goes out as}, from the budget as it is now (gistbudget.due)."""
+    retry | paused, login: the account it goes out as, rev: the rev it carries}, from the budget as it is now
+    (gistbudget.due)."""
     if not q:
         return None
     at, why = gistbudget.due(q["login"], str(doc_path)) if q.get("login") else (q.get("at"), q.get("why"))
-    return {"at": _iso(at), "why": why or q.get("why"), "login": q.get("login")}
+    return {"at": _iso(at), "why": why or q.get("why"), "login": q.get("login"), "rev": q.get("rev")}
 
 
 def view(doc_path: Path, project: Path | None = None, remote: str | None = None, brief: bool = False,
@@ -820,9 +837,36 @@ def _delete(gist_id: str, token: str | None, login: str | None) -> None:
 
 # ---------- the queue ----------
 # A share that doesn't fit the budget waits in its shares.json entry as `queued`: {at: when it may go (epoch; null while
-# paused), why, login, as, move, keep, answers: the kinds}. A first share's entry is that alone, with no gist id yet.
-# A share while queued makes no gh call: it updates what the queued one carries and how. serve.py's queue sends it
-# when it is due (share(…, from_queue=True)), reading the doc as it is then; an error there is kept as `error`.
+# paused), why, login, as, move, keep, answers: the kinds, rev: the rev it carries}. A first share's entry is that
+# alone, with no gist id yet. Its files wait beside shares.json (pin_file): the doc as it was when the share was asked
+# for, so a patch while it waits isn't in it; serve.py's queue sends those when it is due (share(…, from_queue=True)),
+# with the reader's answers as they are then; an error there is kept as `error`. A share while queued makes no gh
+# call: it puts the doc as it is now in the queued one, and updates what it carries and how.
+
+def pin_file(doc_path: Path) -> Path:
+    """Where the doc's queued update keeps its files: $BLUEDOC_HOME/share-queue/<hash of the doc's path>.json."""
+    return shares_file().parent / "share-queue" / (hashlib.sha256(str(Path(doc_path).resolve()).encode("utf-8")).hexdigest()[:32] + ".json")
+
+
+def pinned_of(doc_path: Path) -> dict | None:
+    """The doc's queued update's files: {rev, files: gist_files' without the answers}, or None."""
+    try:
+        p = json.loads(pin_file(doc_path).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    return p if isinstance(p, dict) and isinstance(p.get("files"), dict) else None
+
+
+def _pin(doc_path: Path) -> str | None:
+    """Keep the doc as it is now for its queued update (pin_file, mode 0600): the rev it carries."""
+    files, doc, _ = gist_files(doc_path)
+    _write_private(pin_file(doc_path), json.dumps({"rev": rev_of(doc), "files": files}, ensure_ascii=False) + "\n")
+    return rev_of(doc)
+
+
+def _unpin(doc_path: Path) -> None:
+    pin_file(doc_path).unlink(missing_ok=True)
+
 
 def queued_of(doc_path: Path) -> dict | None:
     q = (_load().get(str(Path(doc_path).resolve())) or {}).get("queued")
@@ -855,6 +899,7 @@ def drop_failed(doc_path: Path, error: str) -> None:
     """The queue couldn't send the doc's update: it waits no more, and the sheet says why."""
     with LOCK:
         _set_entry(Path(doc_path).resolve(), queued=None, error=error)
+        _unpin(doc_path)
 
 
 def _queued(doc_path: Path, doc: dict, rec: dict | None, q: dict) -> dict:
@@ -873,9 +918,11 @@ def share(doc_path: Path, project: Path | None = None, remote: str | None = None
     whether the gist is new, relinked: whether the link changed (a gist gone from GitHub, or moved), moved, as: the
     account it went out as, contents, files: {name: bytes}, answers: answers_of's counts, warning?: an old gist a move
     couldn't delete}; or, when the update doesn't fit the budget (or GitHub refused it for its rate limit), it waits:
-    {queued: queued_view, share: the record as it was, as, budget, contents, rev}. A share while one waits makes no gh
-    call. A deck or a listing is refused first, then gh is checked, then the files are made (the size check).
-    from_queue: serve.py's queue sending a queued update. ShareError: see the module docstring."""
+    {queued: queued_view, share: the record as it was, as, budget, contents, rev}: it carries the doc as it is now
+    (_pin), and a share while one waits puts the doc as it is now in it, with no gh call. A deck or a listing is
+    refused first, then gh is checked, then the files are made (the size check). from_queue: serve.py's queue sending
+    a queued update: its pinned files (pinned_of), the doc as it was when it was asked for. ShareError: see the module
+    docstring."""
     doc_path = Path(doc_path).resolve()
     _, doc = read_doc(doc_path)
     if move and keep:
@@ -884,9 +931,9 @@ def share(doc_path: Path, project: Path | None = None, remote: str | None = None
     if not from_queue:
         with LOCK:
             q = queued_of(doc_path)
-            if q is not None:   # one waits already: it goes out with the doc as it is then, carrying what this one asks
-                q = {**q, "answers": kinds, **({"as": as_} if as_ else {}), **({"move": True, "keep": False} if move else {}),
-                     **({"keep": True, "move": False} if keep else {})}
+            if q is not None:   # one waits already: it goes out with the doc as it is now, carrying what this one asks
+                q = {**q, "answers": kinds, "rev": _pin(doc_path), **({"as": as_} if as_ else {}),
+                     **({"move": True, "keep": False} if move else {}), **({"keep": True, "move": False} if keep else {})}
                 _set_entry(doc_path, queued=q)
                 return _queued(doc_path, doc, record_of(doc_path), q)
     accts, off = sharing_state()
@@ -922,13 +969,19 @@ def share(doc_path: Path, project: Path | None = None, remote: str | None = None
                 if kept is not None and not kept["usable"]:
                     raise ShareError(f"{kept['login']}, the account the gist is on, lacks the gist scope: run `{kept['fix']}`")
         wait = {"as": as_, "move": move, "keep": keep, "answers": kinds, "login": login}
+        pin = pinned_of(doc_path) if from_queue else None
+
+        def held() -> str | None:   # the rev a queued update carries: the files it waits with, else the doc as it is now
+            return pin["rev"] if pin else _pin(doc_path)
         at, why = gistbudget.due(login, str(doc_path))
         if at is None or at > gistbudget.clock():
-            q = {**wait, "at": at, "why": why}
+            q = {**wait, "at": at, "why": why, "rev": held()}
             _set_entry(doc_path, queued=q, error=None, **({} if old else {"user": login}))
             return _queued(doc_path, doc, old, q)
+        if pin:
+            doc = json.loads(pin["files"][gist_name(doc_path)])
         slot, ahash = answers_slot(state, doc, kinds, login)
-        files, doc, what = gist_files(doc_path, slot)
+        files, doc, what = gist_files(doc_path, slot, pin)
         desc = f"bluedoc: {build.shown_title(doc, None) or build.doc_stem(doc_path)}"
         token = token_for(login)
         gist = _gist(old["id"], token) if old and not moving else None
@@ -941,7 +994,7 @@ def share(doc_path: Path, project: Path | None = None, remote: str | None = None
                 gist_id, user, url = _create(files, desc, login, token)
         except RateLimited as e:
             b = gistbudget.refused(login, e.headers)
-            q = {**wait, "at": None if b["paused"] else b["retryAt"], "why": "paused" if b["paused"] else "retry"}
+            q = {**wait, "at": None if b["paused"] else b["retryAt"], "why": "paused" if b["paused"] else "retry", "rev": held()}
             _set_entry(doc_path, queued=q, error=None, **({} if old else {"user": login}))
             return _queued(doc_path, doc, old, q)
         gistbudget.sent(login, str(doc_path))
@@ -951,6 +1004,7 @@ def share(doc_path: Path, project: Path | None = None, remote: str | None = None
         data = _load()
         data[str(doc_path)] = rec
         _save(data)
+        _unpin(doc_path)
         if moving:
             try:
                 _delete(old["id"], token_for(owner), owner)
@@ -982,12 +1036,14 @@ def unshare(doc_path: Path) -> dict | None:
         rec = record_of(doc_path)
         if rec is None:
             _set_entry(doc_path, queued=None, error=None, user=None)   # a first share that waited: forgotten
+            _unpin(doc_path)
             return None
         login = str(rec.get("user") or "")
         _delete(rec["id"], token_for(login) if login else None, login)
         data = _load()
         data.pop(str(doc_path), None)
         _save(data)
+        _unpin(doc_path)
     return rec
 
 
@@ -1037,18 +1093,19 @@ def queued_lines(res: dict) -> list[str]:
     q, rec = res["queued"], res.get("share")
     why = {"retry": "GitHub asked to wait", "spacing": "one update a minute per doc",
            "hour": f"{gistbudget.BUDGET} updates an hour per account"}.get(q.get("why") or "", "")
-    lines = [f"queued: rev {res.get('rev') or '-'} goes out at {at_text(q.get('at'))} as {q.get('login')}, with the doc as it "
-             f"is then" + (f" ({why})" if why else ""),
+    lines = [f"queued: rev {q.get('rev') or res.get('rev') or '-'} goes out at {at_text(q.get('at'))} as {q.get('login')}"
+             + (f" ({why})" if why else ""),
              budget_line(res.get("budget")),
-             "done: don't share again for this round; later patches go out with it"]
+             "done: it goes out by itself; later patches wait for the user's next update"]
     lines.append(f"link: {rec['link']} (shows rev {rec.get('rev') or '-'} until then)" if rec
                  else "link: made when it goes out; the Share sheet shows it then")
     return [x for x in lines if x]
 
 
-def patch_line(doc_path: Path, rev: str | None) -> str | None:
+def patch_line(doc_path: Path) -> str | None:
     """build.py patch's line on a shared doc (shares.json and gist-budget.json only, no gh call): the link's rev and the
-    hour's count, or the queued update this patch goes out with, or the pause; None when the doc isn't shared."""
+    hour's count, or the queued update (which this patch isn't in), or the pause; None when the doc isn't shared. The
+    link changes only when the user updates the share."""
     raw = _load().get(str(Path(doc_path).resolve()))
     if not isinstance(raw, dict):
         return None
@@ -1062,6 +1119,5 @@ def patch_line(doc_path: Path, rev: str | None) -> str | None:
         return f"shared as {login}: updates are paused (GitHub refused {gistbudget.PAUSE_AFTER} in a row): tell the user"
     if q:
         at = gistbudget.due(login, str(Path(doc_path).resolve()))[0]
-        return f"rev {rev or '-'} is queued for {at_text(_iso(at)).split(' ')[0]} and carries this patch ({count})"
-    return (f"shared as {login} at rev {raw.get('rev') or '-'}: run serve.py share {shlex.quote(str(doc_path))} once "
-            f"this round is done ({count})")
+        return f"rev {q.get('rev') or '-'} is queued for {at_text(_iso(at)).split(' ')[0]}; this patch waits for the user's next update ({count})"
+    return f"shared as {login} at rev {raw.get('rev') or '-'}: the link stays there until the user updates it ({count})"

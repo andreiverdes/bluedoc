@@ -779,6 +779,14 @@ class FindingsView(ChromePage):
         self.assertEqual([h2[0], tb[0]], [top_h, h2[1]])
         self.assertLessEqual(hd[1], tb[0])
         self.assertTrue(a.ev(f"(r => document.elementFromPoint(r.left + 40, r.top + r.height / 2)?.closest('.bd-ftb') === {bar})({bar}.getBoundingClientRect())"))
+        # the fold chevron under the number would draw over the stuck toolbar's All: it goes, and comes back at the top
+        chev = "document.querySelector('#pr-412 > h2 .bd-prchev')"
+        a.wait_for(f"{chev}.classList.contains('off')")
+        self.assertEqual(a.ev(f"getComputedStyle({chev}).pointerEvents"), "none")
+        a.ev("scrollTo({top: 0, behavior: 'instant'})")
+        a.wait_for(f"!{chev}.classList.contains('off')")
+        a.ev(into)
+        a.wait_for(f"{bar}.classList.contains('stuck') && {chev}.classList.contains('off')")
         # a view picked from the stuck toolbar keeps it there and starts the new view right under it
         a.ev(f"{bar}.querySelector('[data-v=checklist]').click()")
         self.assertEqual(a.ev(f"(r => [Math.round(r.top), document.querySelector('#cl-t412').getBoundingClientRect().top - r.bottom <= 14])({bar}.getBoundingClientRect())"), [tb[0], True])
@@ -797,6 +805,20 @@ class FindingsView(ChromePage):
         h2, hd, tb = a.ev(parts)
         self.assertEqual([h2[0], tb[0]], [top_h, h2[1]])
         self.assertLessEqual(hd[1], h2[1], "the header stuck on a phone")
+
+    def test_a_long_branch_name_ends_in_its_column_beside_the_lead(self) -> None:
+        a = self.open(self.url)
+        a.ev("(s => { s.querySelector('.bd-prref code.hd').textContent = 'feature/ACME-782-flutter-standalone-checkout-flow';"
+             " s.querySelector('.bd-prhd > .bp-lead').textContent = 'Two things to fix before merge: the cart total after sign-in and the "
+             "commented-out retry in the checkout client, then rerun the suite and fix CI. 3 major, 1 minor, 1 nit.'; })(document.querySelector('#pr-412'))")
+        hits = ("(s => { const a = s.querySelector('.bd-prhd > .bp-lead').getBoundingClientRect(), hd = s.querySelector('.bd-prref code.hd');"
+                " return [[...s.querySelectorAll('.bd-prref code, .bd-prchip')].filter(e => { const b = e.getBoundingClientRect();"
+                " return b.left < a.right && b.right > a.left && b.top < a.bottom && b.bottom > a.top; }).length,"
+                " hd.scrollWidth > hd.clientWidth, s.querySelector('.bd-prref').getBoundingClientRect().right <= s.querySelector('.bd-prhd').getBoundingClientRect().right]; })"
+                "(document.querySelector('#pr-412'))")
+        for w in (1440, 1100, 900, 700):
+            a.browser.call("Emulation.setDeviceMetricsOverride", {"width": w, "height": 900, "deviceScaleFactor": 1, "mobile": False}, session=a.session)
+            self.assertEqual(a.ev(hits), [0, True, True], f"at {w}px the branches draw over the lead or don't end in …")
 
     def test_more_details_shows_the_finding_then_its_code(self) -> None:
         a = self.open(self.url)
