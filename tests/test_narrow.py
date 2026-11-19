@@ -59,6 +59,33 @@ class Narrow(ChromePage):
                     self.assertEqual(got["out"], [], "keys past the window's edge")
         self.assertEqual(self.browser.errors, [])
 
+    def test_a_folded_question_with_a_reply_keeps_its_chevron_beside_the_title(self) -> None:
+        """At 860 px (the narrow layout, where a question's head wraps), a folded question with a reply waiting shows
+        the reply's icon and its chevron on the title's row, not the chevron on a line of its own."""
+        t = self.open(self.server.url_for(self.docs / "acme-saved-carts-plan.bluedoc.json"))
+        t.wait_for("!!window.BP && !!document.querySelector('#item-decisions-retention .pv-chev')", 20)
+        self.browser.call("Emulation.setDeviceMetricsOverride", {"width": 860, "height": 900, "deviceScaleFactor": 1, "mobile": False}, t.session)
+        t.ev("BP.setNote('decisions/retention', 'Acme: why not 90 days?')")
+        li = "document.querySelector('#item-decisions-retention')"
+        t.wait_for(f"{li}.classList.contains('has-note')")
+        if t.ev(f"{li}.classList.contains('open')"):
+            t.ev(f"{li}.querySelector('.bp-cl-head').click()")
+        t.wait_for(f"!{li}.classList.contains('open')")
+        top = "(s => Math.round(document.querySelector('#item-decisions-retention ' + s).getBoundingClientRect().top))"
+        title, note, chev = (t.ev(f"{top}('{s}')") for s in (".bp-cl-text", ".bp-cl-noteic", ".pv-chev"))
+        self.assertLess(abs(chev - title), 12, "the chevron sits on the title's row")
+        self.assertLess(abs(note - title), 12, "the reply's icon sits on the title's row")
+        self.assertEqual(self.browser.errors, [])
+
+    def test_the_compact_share_key_centres_its_icon(self) -> None:
+        """Between 601 and 900 px Share drops its word: its icon sits in the middle of the round key."""
+        t = self.open(self.server.url_for(self.docs / "acme-status.bluedoc.json"))
+        t.wait_for("!!document.querySelector('.bd-shtray > .bd-shk svg')", 20)
+        self.browser.call("Emulation.setDeviceMetricsOverride", {"width": 860, "height": 800, "deviceScaleFactor": 1, "mobile": False}, t.session)
+        off = t.wait_for("(k => { const b = k.getBoundingClientRect(), i = k.querySelector('svg').getBoundingClientRect(); "
+                         "return b.width < 40 && [Math.round(i.left + i.width / 2 - b.left - b.width / 2)]; })(document.querySelector('.bd-shtray > .bd-shk'))")
+        self.assertEqual(off, [0])
+
 
 @unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")
 class BoardToolbar(ChromePage):

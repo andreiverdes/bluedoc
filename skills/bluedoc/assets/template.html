@@ -330,7 +330,7 @@ button.bd-emo:hover, button.bd-emo[aria-expanded="true"] { background: var(--sel
   .bd-docm .bd-selm > .grp { padding: 6px 12px 2px; font: 600 11px/16px var(--sans); letter-spacing: .04em; text-transform: uppercase; color: var(--fg-subtle); }
   .bd-docm .bd-selm > .sep { height: 1px; margin: 4px 8px; background: var(--line); }
 }
-@media (min-width: 601px) and (max-width: 900px) { html:root .bd-shtray > .bd-tbtn.bd-shk { width: var(--k); padding: 0; } }
+@media (min-width: 601px) and (max-width: 900px) { html:root .bd-shtray > .bd-tbtn.bd-shk { width: var(--k); padding: 0; gap: 0; justify-content: center; } }
 /* a board you pan: its panes lie over it as raised trays (html.bd-panes-over: panesOver; html:root and the layout
    outweigh the panes' own over-the-page look, html.bd-lp-open:not(.bd-lp-dock) …, opening or closing), keeping their
    drag handles (.bd-rh) as docked ones do */
@@ -2638,6 +2638,9 @@ svg.anim .bp-edge.k-async { animation: bp-march 1.6s linear infinite; }
   .bp-cl-head > .bp-chip { order: 3; margin-top: 0; font-size: 11.5px; padding: 3px 7px; }
   .bp-cl-head > :is(.pv-ok, .ac-chip) { order: 3; max-width: calc(100% - 90px); margin: 0; }   /* answered: ✓ the pick, then the size, under the title */
   .bp-cl-item.fd > .bp-cl-row .bp-cl-main { flex-basis: calc(100% - 40px); }   /* a finding's chevron stays beside its title */
+  /* a reply waiting in the box: its icon and the chevron both stay beside the title */
+  .bp-cl-item.has-note > .bp-cl-row .bp-cl-main { flex-basis: calc(100% - 56px); }
+  .bp-cl-item.fd.has-note:not(.open) > .bp-cl-row .bp-cl-main { flex-basis: calc(100% - 66px); }
   .bp-terms { grid-template-columns: minmax(0, 1fr); }
   .bp-terms dt { border-right: 0; border-bottom: 0; padding-bottom: 2px; background: none; }
   .bp-terms dd { padding-top: 0; }
@@ -6832,6 +6835,11 @@ function optionRows(x, compact) {
    text back. Save puts the message in the conversation at once, marked not sent; it stays here, still editable (Save
    again updates it; emptied, Save deletes it), until a send (Request changes, Approve, Send answers) moves it into the
    conversation and empties the field. Files: Attach, a drop or a pasted screenshot. */
+// a one-line field grows with its text up to 160 px: CSS field-sizing where the browser has it (Chrome), else its
+// height follows its scrollHeight as it is typed in or focused (Safari, Firefox)
+const FIELD_SIZING = typeof CSS !== 'undefined' && !!CSS.supports && CSS.supports('field-sizing', 'content');
+const fitLine = ta => { if (FIELD_SIZING || !ta) return; ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight, 160) + 'px'; };
+if (!FIELD_SIZING) for (const ev of ['input', 'focusin']) document.addEventListener(ev, e => { if (e.target.matches && e.target.matches('.ac-line-ta')) fitLine(e.target); });
 // placeholder: words, or a function of the item, asked again on each paint; hint the same (none: no hint line)
 function lineField(x, about, { placeholder = 'Reply…', hint = '', cls = 'ac-in' } = {}) {
   let draft = false;
