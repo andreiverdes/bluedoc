@@ -121,9 +121,9 @@ class Conversation(ChromePage):
         a = self.open(url)
         self.assertEqual(self.thread(a, "decisions/retention"), [("you", None, old)])
         self.assertEqual(a.ev("document.querySelector('#item-decisions-retention .bp-msg .rv').textContent"), "earlier")
-        # a comment changed after it went is still a draft: it stays in the box and counts as pending
+        # a comment changed after it went is still a draft: a message not sent yet, and it counts as pending
         self.assertEqual(self.thread(a, "decisions/prices"), [])
-        self.assertEqual(a.ev("document.querySelector('#item-decisions-prices .ac-reply textarea').value"), draft)
+        self.assertEqual(a.ev("[...document.querySelectorAll('#item-decisions-prices .bp-msg.unsent .mb')].map(m => m.textContent)"), [draft])
         self.assertEqual(self.count(a), [False, "1"])
         s = until(lambda: (s := self.state(url)) and "decisions:retention:note" not in s and s)
         self.assertNotIn("decisions:retention:note-sent", s)
@@ -374,10 +374,11 @@ class Conversation(ChromePage):
         self.assertEqual(a.ev(f"[...{row}.querySelectorAll('.ac-convo .bp-msg')].map(m => [m.classList.contains('unsent'), m.querySelector('.mb').textContent])"),
                          [[True, "Acme: how big is it?"]])
         self.assertEqual(until(lambda: (self.state(url) or {}).get("decisions:retention:note")), "Acme: how big is it?")
-        # Esc puts the saved text back
-        self.browser.call("Input.insertText", {"text": " Twice?"}, a.session)
+        self.assertEqual(a.ev(f"{box}.querySelector('textarea').value"), "", "saved, the field is empty")
+        # Esc drops what was typed; the saved reply stays as it was
+        self.browser.call("Input.insertText", {"text": "Twice?"}, a.session)
         a.ev(f"{box}.querySelector('textarea').dispatchEvent(new KeyboardEvent('keydown', {{ key: 'Escape', bubbles: true }}))")
-        self.assertEqual(a.ev(f"{box}.querySelector('textarea').value"), "Acme: how big is it?")
+        self.assertEqual(a.ev(f"[{box}.querySelector('textarea').value, BP.changesPayload().answers.find(x => x.item === 'retention').note]"), ["", "Acme: how big is it?"])
 
     def test_a_question_s_detail_is_behind_more_details(self) -> None:
         a = self.open(self.server.url_for(self.plan))

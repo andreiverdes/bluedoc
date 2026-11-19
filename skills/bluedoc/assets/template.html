@@ -223,18 +223,25 @@ button.bd-emo:hover, button.bd-emo[aria-expanded="true"] { background: var(--sel
    key; narrow, its icon and chevron */
 @media (max-width: 900px) { .bd-docx .bd-tbtn.bd-expb > span { display: none; } .bd-bar-r .bd-docx .bd-tbtn.bd-expb { padding: 0 8px 0 10px; gap: 4px; } }
 /* the app bar's Share (before Export): Export's raised key with its icon and word, no chevron; narrow, its icon. A shared
-   doc: a dot in the accent at its corner; an update that waits or is paused: the dot in the warning colour. The doc
-   newer than its share: the key reads Update and carries the Revisions key's pill (.n, below) in the warning's colours,
-   "3 → 5", for the dot; narrow, on its icon. Sharing off (aria-disabled): dimmed, yet it takes the pointer and a
-   click, which open its tooltip and the off popover */
+   doc: a dot in the accent at its corner; paused: the dot in the warning colour. The doc newer than its share: the key
+   reads Update and carries the revs in a small mono well inside it (the theme switch's well), "21 → 22", the arrow
+   subtle, no dot; its update queued: Queued and the time it goes, "15:42" (the dot only on the narrow key). Narrow:
+   the icon and the well, the old rev hidden and the arrow turned up, "↑ 22". Sharing off (aria-disabled): dimmed, yet
+   it takes the pointer and a click, which open its tooltip and the off popover */
 .bd-tbtn.bd-shk { position: relative; }
 .bd-bar-r .bd-tbtn.bd-shk .dot { top: 2px; right: 3px; }
 .bd-tbtn.bd-shk .dot { display: none; position: absolute; top: 3px; right: 3px; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 2px var(--hk-top); }
-.bd-tbtn.bd-shk[data-share]:not([data-share="newer"]) .dot { display: block; }
+.bd-tbtn.bd-shk:is([data-share="shared"], [data-share="queued"], [data-share="paused"]) .dot { display: block; }
 .bd-tbtn.bd-shk:is([data-share="queued"], [data-share="paused"]) .dot { background: var(--warn); }
+.bd-tbtn.bd-shk .rv { display: inline-flex; align-items: center; gap: 3px; height: 20px; margin-right: -5px; padding: 0 7px; border-radius: 999px; white-space: nowrap;
+  font: 600 11px/20px var(--mono); font-variant-numeric: tabular-nums; color: var(--fg-muted); background: var(--hk-down); box-shadow: var(--shadow-well); }
+.bd-tbtn.bd-shk .rv[hidden] { display: none; }
+.bd-tbtn.bd-shk .rv .ar { color: var(--fg-subtle); }
+@media (min-width: 901px) { .bd-tbtn.bd-shk[data-share="queued"] .dot { display: none; } }
 .bd-tbtn.bd-shk[aria-disabled="true"] { color: var(--fg-subtle); opacity: .55; }
 .bd-tbtn.bd-shk[aria-disabled="true"][aria-expanded="true"] { opacity: .8; }
-@media (max-width: 900px) { .bd-tbtn:is(.bd-shk, .bd-mkc) > .w { display: none; } .bd-bar-r .bd-tbtn:is(.bd-shk, .bd-mkc) { padding: 0 9px 0 10px; } }
+@media (max-width: 900px) { .bd-tbtn:is(.bd-shk, .bd-mkc) > .w { display: none; } .bd-bar-r .bd-tbtn:is(.bd-shk, .bd-mkc) { padding: 0 9px 0 10px; }
+  .bd-tbtn.bd-shk .rv { margin-right: 0; padding: 0 6px; } .bd-tbtn.bd-shk .rv .from { display: none; } .bd-tbtn.bd-shk .rv .ar { display: inline-block; rotate: -90deg; } }
 .bd-revbar.arc { background: color-mix(in oklch, var(--fg) 6%, var(--canvas)); }
 .bd-revbar.arc.sug { background: color-mix(in srgb, var(--ok) 13%, var(--canvas)); }
 .bd-revbar.arc.sug .in > .bd-ic { color: var(--ok-fg); }
@@ -276,16 +283,14 @@ button.bd-emo:hover, button.bd-emo[aria-expanded="true"] { background: var(--sel
 .bd-sk:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 .bd-sk[aria-pressed="true"]:focus-visible { box-shadow: var(--shadow-hk-down), var(--focus-ring); }
 /* a key's count: the dock's badge at the key's corner – Comments' pending in the accent, Revisions' rev a quiet one */
-.bd-sk .n, .bd-shk .n { position: absolute; top: -3px; right: -3px; min-width: 17px; max-width: 34px; height: 17px; padding: 0 4px; border-radius: 9px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+.bd-sk .n { position: absolute; top: -3px; right: -3px; min-width: 17px; max-width: 34px; height: 17px; padding: 0 4px; border-radius: 9px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   font: 650 10.5px/17px var(--sans); font-variant-numeric: tabular-nums; text-align: center; color: #fff; background: var(--accent-solid); box-shadow: 0 0 0 2px var(--tray-top); pointer-events: none; }
-.bd-sk .n[hidden], .bd-shk .n[hidden] { display: none; }
-.bd-sk[data-f="revisions"] .n, .bd-shk .n { color: var(--fg-muted); background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: 0 0 0 2px var(--tray-top), 0 0 0 1px var(--hk-ring); }
-/* the Revisions key on an earlier revision: the warning's colours, as the strip under the bar; so the Share key's
-   pill (Update: the shared rev → the doc's), wide enough for both */
+.bd-sk .n[hidden] { display: none; }
+.bd-sk[data-f="revisions"] .n { color: var(--fg-muted); background: linear-gradient(180deg, var(--hk-top), var(--hk-bot)); box-shadow: 0 0 0 2px var(--tray-top), 0 0 0 1px var(--hk-ring); }
+/* the Revisions key on an earlier revision: the warning's colours, as the strip under the bar */
 .bd-sk.old { color: var(--warn-fg); }
 .bd-sk.old[aria-pressed="true"] { color: var(--warn-fg); background: var(--warn-tint); }
-.bd-sk.old[data-f="revisions"] .n, .bd-shk .n { color: var(--warn-fg); background: var(--warn-tint); }
-.bd-shk .n { top: -8px; max-width: 72px; }   /* above the word (or the icon), clear of it */
+.bd-sk.old[data-f="revisions"] .n { color: var(--warn-fg); background: var(--warn-tint); }
 /* the left key's ring (a doc's tracker, a board's brief picks): HorizonUI's ProgressRing, drawn inside the key's face
    3 px in from its edge, around the icon, so the key's raised or sunk edge stays whole (none tracked: no ring); all
    done, in the ok colour */
@@ -334,7 +339,8 @@ button.bd-emo:hover, button.bd-emo[aria-expanded="true"] { background: var(--sel
   .bd-docm .bd-selm > .grp { padding: 6px 12px 2px; font: 600 11px/16px var(--sans); letter-spacing: .04em; text-transform: uppercase; color: var(--fg-subtle); }
   .bd-docm .bd-selm > .sep { height: 1px; margin: 4px 8px; background: var(--line); }
 }
-@media (min-width: 601px) and (max-width: 900px) { html:root .bd-shtray > .bd-tbtn.bd-shk { width: var(--k); padding: 0; gap: 0; justify-content: center; } }
+@media (min-width: 601px) and (max-width: 900px) { html:root .bd-shtray > .bd-tbtn.bd-shk { width: var(--k); padding: 0; gap: 0; justify-content: center; }
+  html:root .bd-shtray > .bd-tbtn.bd-shk:has(> .rv:not([hidden])) { width: auto; padding: 0 8px 0 9px; gap: 6px; } }
 /* a board you pan: its panes lie over it as raised trays (html.bd-panes-over: panesOver; html:root and the layout
    outweigh the panes' own over-the-page look, html.bd-lp-open:not(.bd-lp-dock) …, opening or closing), keeping their
    drag handles (.bd-rh) as docked ones do */
@@ -5011,11 +5017,10 @@ const ARC = (() => {
     item.querySelector('.l').textContent = r ? 'Unarchive' : 'Archive';
     arcChip.hidden = !r;
     arcChip.title = r ? `Archived on ${day(r.at)}` : '';
-    // the actions sit right after the words: a docked right panel covers the strip's far end (it scrolls away under the
-    // app bar, so the panel doesn't start below it)
+    // the actions sit at the strip's right end, as the revision strip's keys do (`.sp` takes the room between)
     if (r) setStrip('a' + r.at, '', [ic('archive'), h('span', { class: 't' }, h('b', {}, `Archived on ${day(r.at)}`), ' · it\'s hidden from the home page\'s views.'),
-      h('button', { type: 'button', class: 'bp-btn', onclick: unarchive }, ic('undo'), 'Unarchive')]);
-    else if (allDone()) setStrip('s', 'sug', [ic('checks'), h('span', { class: 't' }, h('b', {}, 'All done'), ' · Archive it?'),
+      h('span', { class: 'sp' }), h('button', { type: 'button', class: 'bp-btn', onclick: unarchive }, ic('undo'), 'Unarchive')]);
+    else if (allDone()) setStrip('s', 'sug', [ic('checks'), h('span', { class: 't' }, h('b', {}, 'All done'), ' · Archive it?'), h('span', { class: 'sp' }),
       h('button', { type: 'button', class: 'bp-btn primary', onclick: archive }, ic('archive'), 'Archive'), h('button', { type: 'button', class: 'bp-btn', onclick: notNow }, 'Not now')]);
     else setStrip(null);
   }
@@ -6231,17 +6236,23 @@ const aboutNow = (x, a) => !a || (a === 'more' ? !!x.more : a === 'custom' ? !!x
 const fmtAt = s => { const d = new Date(s); return isNaN(d) ? '' : `${d.getDate()} ${d.toLocaleString('en', { month: 'short' })}, ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
 // HorizonUI's Timeline: an avatar node, the name (You, or the agent), the rev, the time the reader sent it, the text,
 // the files it carried. With the question (x), a message about an answer other than its answer now names it ("On 90
-// days"); a saved comment not sent yet (unsent) reads "not sent"
+// days"); a saved comment not sent yet (unsent) reads "not sent", with Edit (back into its field: editDraft) and Delete
+// at its head's end
 function timeline(ms, x) {
+  const key = (icon, label, fn) => h('button', { type: 'button', class: 'bd-cs-ib', 'aria-label': label, title: label, onclick: fn }, ic(icon));
   return h('ol', { class: 'bp-msgs', 'aria-label': 'Conversation' }, ms.map(m => {
     const name = m.who === 'you' ? YOU : agentName(), nw = !m.unsent && isNewMsg(m);
     const on = x && m.about && !aboutNow(x, m.about) ? h('span', { class: 'ac-on' }, 'On ' + aboutLabel(x, m.about)) : null;
     const mb = (m.md || on) && h('div', { class: 'mb bd-md', html: md(m.md || '') });
     if (on) (mb.firstElementChild && mb.firstElementChild.tagName === 'P' ? mb.firstElementChild : mb).prepend(on);
+    // an answer's comment is edited in its field; one about Other or Tell me more (an earlier page's) has none
+    const a = m.about || '', acts = m.unsent && x && x.setEditing && !RO && h('span', { class: 'acts' },
+      (!a || x.choices.some(c => c.id === a)) && key('pencil', 'Edit your comment', e => editDraft(x, a, e.currentTarget)),
+      key('trash', 'Delete your comment', () => { dropFiles(x.draft(a).files); x.setNote('', null, [], a); }));
     return h('li', { class: 'bp-msg ' + m.who + (nw ? ' new' : '') + (m.unsent ? ' unsent' : '') + (m.in ? ' in' : '') },
       h('span', { class: 'av', 'aria-hidden': 'true' }, name.slice(0, 1).toUpperCase()),
       h('div', { class: 'mh' }, h('b', { class: 'who' }, name), h('span', { class: 'rv' }, m.unsent ? 'not sent' : m.rev == null ? 'earlier' : 'rev ' + m.rev),
-        nw && h('span', { class: 'nw' }, h('i'), 'New'), !m.unsent && m.at && m.rev != null && h('time', { datetime: m.at }, fmtAt(m.at))),
+        nw && h('span', { class: 'nw' }, h('i'), 'New'), !m.unsent && m.at && m.rev != null && h('time', { datetime: m.at }, fmtAt(m.at)), acts),
       mb, m.files && m.files.length > 0 && h('div', { class: 'mf' }, fileChips(m.files)), m.shared && m.shared.length > 0 && h('div', { class: 'mf' }, sharedChips(m.shared)));
   }));
 }
@@ -6252,7 +6263,7 @@ function threadView(x, compact) {
   const el = h('div', { class: 'bp-convo' + (x.card ? ' ac-convo' : '') + (compact ? ' compact' : '') });
   let sig = null, shown = null;
   const paint = () => {
-    const ms = [...x.messages(), ...(x.card ? x.drafts().map(d => ({ who: 'you', unsent: true, rev: CUR.rev, md: d.md, files: d.files, shared: d.shared, about: d.about || null })) : [])];
+    const ms = [...x.messages(), ...(x.card ? x.drafts().filter(d => !(x.editing && x.editing.has(d.about))).map(d => ({ who: 'you', unsent: true, rev: CUR.rev, md: d.md, files: d.files, shared: d.shared, about: d.about || null })) : [])];
     const s = JSON.stringify([agentName(), ms.map(m => [m.who, m.rev, m.md, m.at, !m.unsent && isNewMsg(m), m.files, m.shared, m.about, !!m.unsent, !!m.about && aboutNow(x, m.about)])]);
     if (s === sig) return;
     const now = new Set(ms.filter(m => m.unsent).map(m => m.about || ''));
@@ -6456,6 +6467,21 @@ function renderChecklist(b, parent) {
       paintNotes();
       syncDiffs(); paintSend(); MARKUP.paint();
     };
+    // a saved comment back in its field (lineField's Edit) leaves the conversation until it is saved again or kept
+    entryItem.editing = new Set();
+    entryItem.setEditing = (about, on) => {
+      if (on) entryItem.editing.add(about); else entryItem.editing.delete(about);
+      entryItem.thread.paint(); syncDiffs();
+      for (const m of entryItem.mviews || []) m.thread.paint();
+    };
+    // fields holding text typed and not saved (lineField): Request changes counts them, and every send saves them
+    // first (saveTyped), so what the reader wrote goes with it
+    entryItem.typed = new Set();
+    entryItem.setTyped = (view, on) => {
+      const had = entryItem.typed.size > 0;
+      if (on) entryItem.typed.add(view); else entryItem.typed.delete(view);
+      if (had !== entryItem.typed.size > 0) MARKUP.paint();
+    };
     // a question's reply field sits under its conversation, about the whole question; a progress item keeps its box
     entryItem.noteView = card ? replyField(entryItem) : noteBox(entryItem, false);
     entryItem.thread = threadView(entryItem);
@@ -6485,8 +6511,8 @@ function renderChecklist(b, parent) {
     };
     // the item went to the agent (Request changes, Approve, Send answers): its saved comments and their files join the
     // thread, each with what it is about (the thread is written first, in the same state write), its request is sent.
-    // On a review `what` says which part went: 'answer' (the send key: the pick or tick) or 'note' (Request changes:
-    // the comments and Tell me more)
+    // Where the send key and Request changes split an item (a review's, a question's off a plan: noteWithChanges) `what`
+    // says which part went: 'answer' (the send key: the pick or tick) or 'note' (Request changes: the comments and Tell me more)
     entryItem.markSent = what => {
       if (VIEW_ONLY) return;
       if (what !== 'answer' && entryItem.notePending) {
@@ -6843,15 +6869,19 @@ function optionRows(x, compact) {
     el.classList.toggle('answered', cur.length > 0 || !!x.custom);
   };
   paint();
+  // an answer's field, its row opened (editDraft); null for one without a field
+  el._x = x;
+  el._field = id => { const r = fields && rows.find(q => q.o.id === id && q.ob); if (!r) return null; if (r.ob.hidden) setOpen(r, true); return fieldOf(r); };
   // openOpt: opens an answer's explanation (?open=…:<option>), as a click on its row does
   return { el, more: tm && tm.row, paint, openOpt: id => { const r = rows.find(q => q.o.id === id); if (r && r.ob && r.ob.hidden) setOpen(r, true); } };
 }
 /* The one-line field: an open answer's (a comment about it), asked Tell me more's, and the reply under a question's
    conversation (about the whole question). The text, then a round Attach key and a Save pill, dimmed while there is
-   nothing new to save; it grows only when the text wraps. Enter saves (Shift+Enter breaks the line), Esc puts the saved
-   text back. Save puts the message in the conversation at once, marked not sent; it stays here, still editable (Save
-   again updates it; emptied, Save deletes it), until a send (Request changes, Approve, Send answers) moves it into the
-   conversation and empties the field. Files: Attach, a drop or a pasted screenshot. */
+   nothing new to save; it grows only when the text wraps. Enter saves (Shift+Enter breaks the line), Esc drops what was
+   typed. Save puts the message in the conversation at once, marked not sent, and empties the field, which then adds to
+   it (Save again appends). The message's Edit puts it back in the field (it leaves the conversation meanwhile; Save
+   replaces it, emptied deletes it, Esc keeps it as it was), its Delete drops it; a send (Request changes, Approve,
+   Send answers) moves it into the conversation. Files: Attach, a drop or a pasted screenshot. */
 // a one-line field grows with its text up to 160 px: CSS field-sizing where the browser has it (Chrome), else its
 // height follows its scrollHeight as it is typed in or focused (Safari, Firefox)
 const FIELD_SIZING = typeof CSS !== 'undefined' && !!CSS.supports && CSS.supports('field-sizing', 'content');
@@ -6859,7 +6889,8 @@ const fitLine = ta => { if (FIELD_SIZING || !ta) return; ta.style.height = 'auto
 if (!FIELD_SIZING) for (const ev of ['input', 'focusin']) document.addEventListener(ev, e => { if (e.target.matches && e.target.matches('.ac-line-ta')) fitLine(e.target); });
 // placeholder: words, or a function of the item, asked again on each paint; hint the same (none: no hint line)
 function lineField(x, about, { placeholder = 'Reply…', hint = '', cls = 'ac-in' } = {}) {
-  let draft = false;
+  // draft: the field holds what Save hasn't saved; editing: Edit put the saved comment in it, and Save replaces it
+  let draft = false, editing = false;
   const ta = h('textarea', { class: 'ac-line-ta', rows: 1, maxlength: 8192,
     'aria-label': (about ? `Comment on ${aboutLabel(x, about)}: ` : 'Reply to the agent on: ') + plainText(x.it.text) });
   const fd = fileDraft(() => { draft = true; paintFt(); }, { compact: true });
@@ -6872,35 +6903,62 @@ function lineField(x, about, { placeholder = 'Reply…', hint = '', cls = 'ac-in
   fd.hook(line, ta);
   // a press on the field's padding (not its keys) puts the caret in the text
   line.addEventListener('mousedown', e => { if (e.target !== ta && !e.target.closest('button')) { e.preventDefault(); ta.focus(); } });
+  // what the field shows when nothing is typed: the saved comment while editing it, else nothing
+  const base = () => editing ? x.draft(about) : { md: '', files: [] };
+  const setEditing = on => { if (editing !== on) { editing = on; x.setEditing(about, on); } };
   const paintFt = () => {
-    if (draft && ta.value === x.draft(about).md && !fd.dirty) draft = false;
+    if (draft && ta.value === base().md && !fd.dirty) draft = false;
     line.classList.toggle('dirty', !!ta.value.trim());
     go.disabled = !draft || fd.busy;
+    x.setTyped(view, draft);
   };
   function save() {
     if (fd.busy || !draft) return;   // an upload still running: its file joins the draft first
     fd.commit(); draft = false;   // first: the copies this draft dropped go, before setNote repaints the item's other fields
-    x.setNote(ta.value, view, fd.files, about);
-    ta.value = x.draft(about).md; paintFt();
+    const d = x.draft(about), was = editing;
+    setEditing(false);   // first: setNote's repaint empties this field
+    if (was) x.setNote(ta.value, view, fd.files, about);
+    else x.setNote([d.md.trim(), ta.value.trim()].filter(Boolean).join('\n\n'), view, [...d.files, ...fd.files].slice(0, FILES_MAX), about);
+    ta.value = ''; fd.load([]); paintFt(); fitLine(ta);
   }
-  function cancel() { if (fd.busy) return; draft = false; ta.value = x.draft(about).md; fd.cancel(); paintFt(); }
+  function cancel() { if (fd.busy) return; draft = false; fd.cancel(); setEditing(false); ta.value = ''; fd.load([]); paintFt(); fitLine(ta); }
   // another field for the item saved, or a send emptied it: show it, unless this one holds a draft
-  const view = { el, ta, paint: () => {
+  const view = { el, ta, about, save, paint: () => {
     const d = x.draft(about);
-    if (!draft && ta.value !== d.md) ta.value = d.md;
-    fd.load(d.files, draft);
+    if (editing && !d.md && !d.files.length) { if (draft) fd.cancel(); draft = false; setEditing(false); }   // sent or deleted meanwhile
+    const b = base();
+    if (!draft && ta.value !== b.md) ta.value = b.md;
+    fd.load(b.files, draft);
     if (hintEl) { const t = typeof hint === 'function' ? hint() : hint; hintEl.hidden = !t; hintEl.lastChild.textContent = t; }
     ta.placeholder = typeof placeholder === 'function' ? placeholder() : placeholder;
     paintFt();
-  } };
+  },
+    // the message's Edit: the saved comment back in the field (a new one typed here: Save or Esc it first)
+    edit: () => {
+      if (!draft || editing) {
+        draft = false; setEditing(true);
+        const d = x.draft(about); ta.value = d.md; fd.load(d.files); paintFt(); fitLine(ta);
+      }
+      ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length);
+    } };
+  el._x = x; el._view = view;
   ta.addEventListener('input', () => { holdFinding(x); draft = true; paintFt(); });
   ta.addEventListener('keydown', e => {
     e.stopPropagation();   // page keys (modes, n/p, canvas) must not fire while typing
     if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); save(); }
-    else if (e.key === 'Escape') { e.preventDefault(); if (draft) cancel(); else ta.blur(); }
+    else if (e.key === 'Escape') { e.preventDefault(); if (draft || editing) cancel(); else ta.blur(); }
   });
   view.paint();
   return view;
+}
+// a saved comment's Edit (in the conversation, `key`): the field it was written in, the nearest one to the key, takes it
+// back; an answer's row opens to show its field
+function editDraft(x, about, key) {
+  for (let p = key.parentElement; p; p = p.parentElement) {
+    const opts = about && [...p.querySelectorAll('.bp-opts')].find(e => e._x === x);
+    const f = opts ? opts._field(about) : !about && [...p.querySelectorAll('.ac-reply')].map(e => e._view).find(v => v && v.el._x === x);
+    if (opts || f) { if (f) f.edit(); return; }
+  }
 }
 // a question's reply field, under its conversation: about the whole question; while Tell me more is on and not sent,
 // it asks what the reader needs to know
@@ -6966,15 +7024,15 @@ function openItem(x) {
   paintFindings();
   return row;
 }
-// notes: with Tell me more and the comments waiting in items' fields (a review's send key leaves them to Request
-// changes)
-function checklistMd(c, indent = '', notes = true) {
+// notes(x): with Tell me more and the comments waiting in the item's fields (Send answers leaves those Request changes
+// carries to it: noteWithChanges)
+function checklistMd(c, indent = '', notes = () => true) {
   const lines = c.items.map(x => {
     const sub = CHECKLISTS.filter(n => n.parent && n.parent.cid === c.b.id && n.parent.iid === x.it.id);
     let line = `${indent}- [${passing(x) ? 'x' : ' '}] ${x.it.text} ${itemKeyMd(x)}` + (x.stale ? ' (needs recheck: its evidence is stale)' : '');
-    if (notes && x.more) line += moreMd(x);
+    if (notes(x) && x.more) line += moreMd(x);
     else if (x.choices) line += pickMd(x, 'no decision');
-    const quoted = notes ? noteMd(x, indent) : '';
+    const quoted = notes(x) ? noteMd(x, indent) : '';
     const ev = x.choices ? [] : evList(x.it);
     return line + quoted + (ev.length ? '\n' + evidenceMd(ev, indent, `item:${x.cid}/${x.it.id}`) : '') + sub.map(n => '\n' + checklistMd(n, indent + '  ', notes).trimEnd()).join('');
   });
@@ -6983,7 +7041,7 @@ function checklistMd(c, indent = '', notes = true) {
   return `## ${c.b.title || c.b.id} (${n}/${c.items.length})\n` + lines.join('\n') + '\n';
 }
 // decision lists first: what needs the agent's attention, then the progress lists in page order
-function allChecklistsMd(notes = true) {
+function allChecklistsMd(notes = () => true) {
   const msg = (store.get(MSG_KEY) || '').trim(), fs = msgFiles(), top = CHECKLISTS.filter(c => !c.parent);
   return `# ${DOC.title} — progress ${new Date().toISOString().slice(0, 10)}\n\n` + (msg || fs.length ? `${msg}${filesMd(fs, '').replace(/^\n/, msg ? '\n' : '')}\n\n` : '')
     + [...top.filter(c => c.kind === 'decisions'), ...top.filter(c => c.kind !== 'decisions')].map(c => checklistMd(c, '', notes)).join('\n')
@@ -7065,16 +7123,26 @@ function noteBox(x, compact) {
 // a question's answer as the JSON carries it: the pick's id or null; several answers, the list of ticked ids; Other:
 // "custom" (with several answers, one more id in the list), its words in `custom`
 const answerChoice = x => x.custom ? (x.multi ? [...idsOf(x.choice), 'custom'] : 'custom') : x.multi ? x.choice || [] : x.choice || null;
+// Whether Request changes carries an item's saved comments (else the send key does): every item's on a plan, design,
+// presentation, website, listing or review (NOTES_WITH_CHANGES); elsewhere a question's, which asks the agent as Tell
+// me more does. Send answers keeps the picks, the ticks and the progress items' comments
+const noteWithChanges = x => NOTES_WITH_CHANGES || x.card;
+// text typed in a question's field and not saved yet (a field still on the page): Request changes counts it too
+const typing = x => !!x.typed && [...x.typed].some(v => v.el.isConnected);
+// before a send opens its dialog (Request changes, Approve, Send answers, a review's send key): what is typed in the
+// questions' fields is saved, as their Save does, so the dialog shows it and it goes; Tell me more never goes without it
+const saveTyped = () => { for (const x of Object.values(ITEMS)) for (const v of [...(x.typed || [])]) if (v.el.isConnected) v.save(); };
 // one entry per checklist item: its tick or pick, Tell me more (`more`) and the reader's saved comments (Send answers,
 // a plan's Approve and Request changes, and the items Request changes carries elsewhere): `note` and `files` the reply
 // about the whole question; `comments` [{about, md, files?}] the ones written in an answer's field (`about`: its id,
-// `custom` for Other, `more` for Tell me more). notes false (a review's send key): the pick or tick alone
-const answerItems = (xs = Object.values(ITEMS), notes = true) => xs.map(x => {
-  const cs = notes ? x.drafts().filter(d => d.about) : [];
+// `custom` for Other, `more` for Tell me more). notes(x) false (the send key on an item Request changes carries the
+// comments of: noteWithChanges): the pick or tick alone
+const answerItems = (xs = Object.values(ITEMS), notes = () => true) => xs.map(x => {
+  const n = notes(x), cs = n ? x.drafts().filter(d => d.about) : [];
   return { checklist: x.cid, item: x.it.id, text: x.it.text,
     ...(x.choices ? { choice: answerChoice(x), ...(x.custom ? { custom: x.custom.trim() } : {}), recommend: x.it.recommend || null } : { done: x.cb.checked }),
-    ...(notes && x.more ? { more: true } : {}),
-    ...(notes && x.note ? { note: x.note.trim() } : {}), ...(notes ? filesJson(x.files) : {}),
+    ...(n && x.more ? { more: true } : {}),
+    ...(n && x.note ? { note: x.note.trim() } : {}), ...(n ? filesJson(x.files) : {}),
     ...(cs.length ? { comments: cs.map(d => ({ about: d.about, md: d.md.trim(), ...filesJson(d.files) })) } : {}) };
 });
 // an item whose newest message is the agent's and the reader hasn't answered (a finding's, a question's, a step's)
@@ -7084,15 +7152,17 @@ function replyPayload() {
     kind: 'answers', doc: docId, rev: CUR.rev, title: DOC.title || '', path: location.pathname, at: new Date().toISOString(),
     message: (store.get(MSG_KEY) || '').trim(), ...(msgFiles().length ? { messageFiles: filesJson(msgFiles()).files } : {}),
     ...(POST_PRS.length ? { reviewEvents: POST_PRS.map(p => ({ section: p.id, title: p.title, event: postAs[p.id || ''] })) } : {}),
-    items: answerItems(Object.values(ITEMS), DOC_TYPE !== 'review'),   // a review's send key carries the picks; its comments and requests go with Request changes
+    // the pick or tick alone where Request changes carries the comments and Tell me more: a review's every item, a
+    // question elsewhere (noteWithChanges); a plan, design, presentation, website or listing has no send key
+    items: answerItems(Object.values(ITEMS), x => DOC_TYPE !== 'review' && (PICKS_WITH_CHANGES || !x.card)),
     markdown: answersMd(),
   };
 }
 // What Request changes carries besides the pending annotations: questions asking for more (Tell me more, an Other
-// request on a brief) not sent yet (every page with the tray), comments waiting in items' fields (a plan, design,
-// presentation, website, listing or review: NOTES_WITH_CHANGES) and, but for a review, changed picks not sent yet
-// (PICKS_WITH_CHANGES)
-const itemsPending = () => Object.values(ITEMS).filter(x => x.more === 'on' || x.requestPending || NOTES_WITH_CHANGES && x.notePending || PICKS_WITH_CHANGES && x.pickPending);
+// request on a brief) not sent yet (every page with the tray), comments waiting in items' fields (a question's on every
+// page, typed or saved; any item's on a plan, design, presentation, website, listing or review: noteWithChanges) and,
+// but for a review, changed picks not sent yet (PICKS_WITH_CHANGES)
+const itemsPending = () => Object.values(ITEMS).filter(x => x.more === 'on' || x.requestPending || noteWithChanges(x) && x.notePending || typing(x) || PICKS_WITH_CHANGES && x.pickPending);
 // Whether a decision's pick is one the agent hasn't heard: on an approved plan, design or website, one that differs from
 // the approved one (an item approved without a pick means its recommendation; items the approval didn't carry, added
 // since, don't count); on a presentation or listing, which has no approval, one that differs from the author's
@@ -7182,17 +7252,17 @@ const POST_PRS = REVIEW_OF !== 'post' ? [] : (xs => xs.length ? xs : [{ id: null
 const postAs = Object.fromEntries(POST_PRS.map(p => [p.id || '', 'COMMENT']));
 if (POST_PRS.length > 1) SEND_AS.splice(2, 2, 'Post reviews to the PRs', 'The agent posts one GitHub review per PR, with a comment per finding you marked Post.');
 const postLabel = v => POST_AS.find(p => p[0] === v)[1];
-// what Send sends: the checklists, and on a post review how to post each PR, under the title; a review's comments on
-// findings go with Request changes instead
+// what Send sends: the checklists, and on a post review how to post each PR, under the title; the comments Request
+// changes carries (noteWithChanges: a question's, a review's) and Tell me more go with it instead
 function answersMd() {
-  const md = allChecklistsMd(!NOTES_WITH_CHANGES), i = md.indexOf('\n\n') + 2;
+  const md = allChecklistsMd(x => !noteWithChanges(x)), i = md.indexOf('\n\n') + 2;
   if (!POST_PRS.length) return md;
   const how = POST_PRS.length === 1 ? `Post as: ${postLabel(postAs[POST_PRS[0].id || ''])}`
     : 'Post as:\n' + POST_PRS.map(p => `- ${p.title}: ${postLabel(postAs[p.id])}`).join('\n');
   return md.slice(0, i) + how + '\n\n' + md.slice(i);
 }
-// the items with a pick, tick or comment Send hasn't sent yet (a review's comments: Request changes)
-const unsentCount = () => Object.values(ITEMS).filter(x => !NOTES_WITH_CHANGES && x.notePending || x.answerPending).length;
+// the items with a pick, tick or comment Send hasn't sent yet (a question's comments, a review's: Request changes)
+const unsentCount = () => Object.values(ITEMS).filter(x => !noteWithChanges(x) && x.notePending || x.answerPending).length;
 function paintSend() {
   ARC.paint();   // a tick may finish the doc: All done · Archive it?
   if (approveDlg && approveDlg.open) approveDlg._paint();
@@ -7201,8 +7271,8 @@ function paintSend() {
   sendBtn.classList.toggle('has', n > 0);
   sendBtn._n.hidden = !n; sendBtn._n.textContent = String(n);
   sendBtn.setAttribute('aria-label', n ? `${SEND_AS[1]}: ${n} not sent` : SEND_AS[1]);
-  const what = NOTES_WITH_CHANGES ? ['pick or tick', 'picks or ticks'] : ['pick, tick or comment', 'picks, ticks or comments'];
-  sendBtn._tip = n ? `${n} ${what[n === 1 ? 0 : 1]} not sent yet` : `Nothing new to send: ${NOTES_WITH_CHANGES ? 'pick an answer' : 'pick, tick or comment on an item'}`;
+  const what = NOTES_WITH_CHANGES ? ['pick or tick', 'picks or ticks'] : ['pick, tick or step comment', 'picks, ticks or step comments'];
+  sendBtn._tip = n ? `${n} ${what[n === 1 ? 0 : 1]} not sent yet` : `Nothing new to send: ${NOTES_WITH_CHANGES ? 'pick an answer' : 'pick, tick or comment on a step'}`;
   if (sendDlg && sendDlg.open) sendDlg._paint();
 }
 /* The send dialog: one for every send, Approve, Request changes, Send answers and a review's send key. The title and the
@@ -7315,6 +7385,7 @@ function sdComments(cs) {
 const itemComments = xs => xs.filter(x => x.notePending).flatMap(x => x.drafts().map(d => ({ kind: x.fd ? 'finding' : x.choices ? 'question' : 'item',
   on: 'On ' + cutLine(itemText(x), 56) + (d.about ? ' › ' + aboutLabel(x, d.about) : ''), md: d.md.trim(), files: d.files })));
 function openSend() {
+  saveTyped();
   if (!sendDlg) {
     // the message is stored as it changes (`__message`, its files `__message-files`), and stays after a send
     const S = sendDialog({ cls: 'bd-sendans', title: SEND_AS[2], tone: 'go', icon: SEND_AS[0], label: REVIEW_OF ? SEND_AS[1] : 'Send', copyLabel: 'Copy',
@@ -7331,10 +7402,13 @@ function openSend() {
       : sdSec('Post as, per PR', null, '', h('div', { class: 'bd-postas many' }, POST_PRS.map((p, i) => h('div', { class: 'r' }, h('span', { class: 't', title: p.title }, p.title), segs[i]))));
     sendDlg._paint = () => {
       const all = Object.values(ITEMS), dec = all.filter(x => x.choices), steps = all.filter(x => !x.choices);
-      // a review's send key carries the picks and ticks: its comments on findings wait for Request changes
-      const notes = NOTES_WITH_CHANGES ? [] : itemComments(all), later = NOTES_WITH_CHANGES ? all.filter(x => x.notePending).length : 0;
+      // the send key carries the picks and ticks (and a progress item's comments): a question's comments and Tell me
+      // more (a review's every comment) wait for Request changes
+      const notes = itemComments(all.filter(x => !noteWithChanges(x))), later = all.filter(x => noteWithChanges(x) && x.notePending).length;
+      const asks = all.filter(x => x.more === 'on').length;
       S.intro.textContent = (SEND_AS[3] ? SEND_AS[3].replace(/^The agent/, agentWho(true)) : `${agentWho(true)} acts on your picks, ticks and comments.`)
-        + (later ? ` ${later} comment${later === 1 ? '' : 's'} on findings ${later === 1 ? 'goes' : 'go'} with Request changes.` : '');
+        + (later ? ` ${later} comment${later === 1 ? '' : 's'} on ${DOC_TYPE === 'review' ? 'findings' : 'questions'} ${later === 1 ? 'goes' : 'go'} with Request changes.` : '')
+        + (asks ? ` ${asks === 1 ? 'Tell me more goes' : `${asks} Tell me more requests go`} with Request changes${later ? ' too' : ''}.` : '');
       setKids(S.body,
         dec.length > 0 && sdSec(DOC_TYPE === 'review' ? 'Findings' : 'Decisions', dec.length, decSays(dec, 'no pick'), h('div', { class: 'sd-box' }, dec.map(x => sdDec(x)))),
         steps.length > 0 && sdSec('Steps', steps.length, `${steps.filter(passing).length} done`, h('div', { class: 'sd-box' }, steps.map(sdStep))),
@@ -7351,7 +7425,7 @@ async function doSend() {
   if (!REPLY.url) { copyText(answersMd(), 'Copied: paste it into the chat with the agent'); sendDlg && sendDlg.close(); return; }
   try {
     await postReply(REPLY.url, replyPayload());
-    Object.values(ITEMS).forEach(x => x.markSent(NOTES_WITH_CHANGES ? 'answer' : undefined)); MARKUP.paint(); paintSend();
+    Object.values(ITEMS).forEach(x => x.markSent(noteWithChanges(x) ? 'answer' : undefined)); MARKUP.paint(); paintSend();
     sendDlg && sendDlg.close();
     toast(`Sent to ${REPLY.to || 'the agent'}`);
   } catch (e) {
@@ -9731,10 +9805,12 @@ function gistUrl() {
      updates writes the gist: a shared doc's sheet opens on Copy link (a first share's on Share), and a held Enter or
      Space (its repeats) presses nothing in it. The key marks a shared doc with a dot in the accent (data-share shared;
      GET …&brief=1 on load); while the doc is newer than its share (newer) it reads Update, its icon kept, with the
-     Revisions key's pill in the warning's colours on it: "3 → 5", the shared rev to the doc's (≤ 900 px on the icon
-     alone); a press opens the sheet as ever. Queued or paused: the dot in the warning colour. Sharing off (off: gh
-     missing, signed out, no account with the gist scope): the key dims, its tooltip says why, and a press asks again,
-     then opens the sheet or the popover with the command that turns sharing on. Nothing comes back through the gist:
+     revs in a small mono well inside it (the theme switch's well): "21 → 22", the shared rev to the doc's, no dot
+     (≤ 900 px: the icon and "↑ 22"); a press opens the sheet as ever. Queued: it reads Queued with the time the
+     update goes in the well, "15:42" (≤ 900 px: the icon, the well and the dot in the warning colour). Paused: the
+     dot in the warning colour. Sharing off (off: gh missing, signed out, no account with the gist scope): the key
+     dims, its tooltip says why, and a press asks again, then opens the sheet or the popover with the command that
+     turns sharing on. Nothing comes back through the gist:
      the shared page is view-only (VIEW_ONLY).
      The budget (gistbudget.py): at most 90 gist updates an hour per GitHub account, one a minute per doc. A share that
      doesn't fit waits (202, `queued` {at, why: hour | spacing | retry | paused, login, rev}) and the server sends it
@@ -9763,9 +9839,9 @@ function gistUrl() {
   // kinds: the answers that go (null: none read yet); tick: the minute's repaint while open; ask: the latest read
   const SH = { dlg: null, view: null, busy: '', err: '', sure: false, pick: '', acct: '', copied: false, det: false, menu: null, down: null, kinds: null, tick: 0, ask: 0 };
   let OFF = null, copyT = 0;
-  // the key: its icon, its word (Share, or Update while the doc is newer than its share), the dot, and the pill (the
-  // Revisions key's .n) with the shared rev and the doc's while newer
-  const keyWord = h('span', { class: 'w' }, 'Share'), keyRevs = h('span', { class: 'n', 'aria-hidden': 'true', hidden: true });
+  // the key: its icon, its word (Share; Update while the doc is newer than its share; Queued while its update waits),
+  // the dot, and the well (.rv): the shared rev → the doc's while newer, the time it goes while queued
+  const keyWord = h('span', { class: 'w' }, 'Share'), keyRevs = h('span', { class: 'rv', hidden: true });
   const shareKey = h('button', { type: 'button', class: 'bd-tbtn bd-shk', onclick: () => keyPress() }, ic('share'), keyWord, h('span', { class: 'dot', 'aria-hidden': 'true' }), keyRevs);
   tipped(shareKey);
   const viewUrl = (brief, kinds) => '/__bluedoc/share?' + new URLSearchParams({ path: location.pathname, ...(brief ? { brief: '1' } : {}), ...(kinds ? { answers: kinds.join(',') } : {}) });
@@ -9846,16 +9922,18 @@ function gistUrl() {
     document.body.append(box);
     return { open, close, isOpen: () => !box.hidden };
   })();
-  // the key's state from the route's answer ({share, rev, off, queued}): off, paused, queued, shared, the doc newer than
-  // its share (Update, its pill "3 → 5"), or none
+  // the key's state from the route's answer ({share, rev, off, queued}): off, paused, queued (Queued, "15:42"), shared,
+  // the doc newer than its share (Update, "21 → 22"), or none
   function paintKey(v) {
     OFF = v && v.off || null;
     const s = !OFF && v && v.share, q = !OFF && v && v.queued;
     const state = q ? (q.why === 'paused' ? 'paused' : 'queued') : !s ? '' : v.rev !== s.rev ? 'newer' : 'shared';
     if (state) shareKey.dataset.share = state; else delete shareKey.dataset.share;
-    const revs = state === 'newer' ? `${s.rev || '–'} → ${v.rev || '–'}` : '';
-    keyWord.textContent = revs ? 'Update' : 'Share';
-    keyRevs.textContent = revs; keyRevs.hidden = !revs;
+    const newer = state === 'newer', at = state === 'queued' ? clockAt(q.at) : '';
+    keyWord.textContent = newer ? 'Update' : at ? 'Queued' : 'Share';
+    if (newer) setKids(keyRevs, h('span', { class: 'from' }, s.rev || '–'), h('span', { class: 'ar' }, '→'), h('span', { class: 'to' }, v.rev || '–'));
+    else keyRevs.textContent = at;
+    keyRevs.hidden = !newer && !at;
     if (OFF) {
       shareKey.setAttribute('aria-disabled', 'true'); shareKey.setAttribute('aria-haspopup', 'dialog');
       if (!offPop.isOpen()) shareKey.setAttribute('aria-expanded', 'false');
@@ -9869,10 +9947,11 @@ function gistUrl() {
     shareKey._tip = null;
     const say = state === 'paused' ? `Updates are paused: GitHub refused 4 in a row on ${q.login}. Open to resume`
       : state === 'queued' ? `Queued: rev ${q.rev || v.rev || '–'} goes out at ${clockAt(q.at)} (${inMin(q.at)}); ${LIMIT_SAYS}`
-      : revs ? `Update the share: rev ${revs}`
+      : newer ? `Update the link to rev ${v.rev || '–'} (it shows rev ${s.rev || '–'})`
       : state ? `Shared as a secret gist at rev ${s.rev || '–'}` : 'Share a link to this doc: a secret GitHub gist that opens at bluedoc.ai';
-    shareKey.title = say;
-    shareKey.setAttribute('aria-label', revs ? say : state ? `Share (${say})` : 'Share');
+    // Update and Queued say it in the page's tooltip (tipped), as the bar's other keys; the rest keep title
+    if (newer || at) { shareKey._tip = say; shareKey.removeAttribute('title'); } else shareKey.title = say;
+    shareKey.setAttribute('aria-label', newer || at ? say : state ? `Share (${say})` : 'Share');
   }
   paintKey(null);
   async function keyPress() {
@@ -14478,7 +14557,7 @@ function paintPlan() {
 }
 function openApprove() {
   if (planState().state === 'approved' || Object.values(ITEMS).some(x => x.more || x.request)) return;
-  MARKUP.flush();
+  MARKUP.flush(); saveTyped();
   if (!approveDlg) {
     const S = sendDialog({ cls: 'bd-approve', title: `Approve this ${AP_NOUN}`, tone: 'ok', icon: 'check', label: 'Approve', copyLabel: 'Copy approval',
       placeholder: () => `A note for ${agentWho()} (optional)`, noteLabel: 'Note with the approval',
@@ -15680,10 +15759,10 @@ const MARKUP = (() => {
     return { num: false, text: cut(full, 24), full };
   }
   // the key that carries an item's unsent comment on this page, as the routing has it: a review's and a presentation's
-  // or listing's Request changes, a plan's, design's or website's Request changes or Approve, elsewhere the send key
-  // (Tell me more also goes with Request changes there)
+  // or listing's Request changes, a plan's, design's or website's Request changes or Approve, elsewhere a question's
+  // Request changes (noteWithChanges) and a progress item's the send key
   const carrier = x => NOTES_WITH_CHANGES ? (APPROVABLE ? 'Request changes or Approve' : 'Request changes')
-    : x.more === 'on' ? `Request changes or ${SEND_AS[1]}` : SEND_AS[1];
+    : noteWithChanges(x) ? 'Request changes' : SEND_AS[1];
   // an item's card: where it lives and its text, the last message (who: text, two lines) and its state; answered and
   // resolved ones are quieter. Not sent yet, the message is the reader's saved comments (or Tell me more)
   function itemCard(x) {
@@ -16319,7 +16398,7 @@ const MARKUP = (() => {
 
   /* the dialog (sendDialog): the comments that go (edited in the Comments panel) and the picks, a note, Copy and Send */
   function openDlg() {
-    endEdit(true); finishDraft(true); finishGeneral(true);
+    endEdit(true); finishDraft(true); finishGeneral(true); saveTyped();
     if (!pending().length && !itemsPending().length) return;
     if (!dlg) {
       const S = sendDialog({ cls: 'bd-chgs', title: 'Request changes', tone: 'go', icon: 'send', label: 'Send', copyLabel: 'Copy',
@@ -16352,8 +16431,9 @@ const MARKUP = (() => {
     try {
       await postReply(REPLY.changes, p);
       markSent(p.annotations.map(x => x.id), p.at);
-      // a review's Request changes sends its findings' comments, not their picks (the send key's)
-      (PICKS_WITH_CHANGES ? Object.values(ITEMS) : xs).forEach(x => x.markSent(DOC_TYPE === 'review' ? 'note' : undefined)); paint();
+      // off a plan, design, presentation, website or listing it sends the comments and Tell me more, not the picks (the
+      // send key's)
+      (PICKS_WITH_CHANGES ? Object.values(ITEMS) : xs).forEach(x => x.markSent(PICKS_WITH_CHANGES ? undefined : 'note')); paint();
       if (dlg) { dlg._S.clear(); dlg.close(); }
       changesSent(p);
       toast(`Change request sent to ${REPLY.to || 'the agent'}`);

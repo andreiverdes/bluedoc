@@ -1,8 +1,11 @@
 """The answer card (approved design "One answer card for every question") in a real browser, and `patch --reply --on`.
 
 A comment saved in an answer's field shows in the question's conversation at once, not sent, marked "On <answer>"
-while that answer isn't the pick; it goes out with `about` in the JSON and `On **<answer>**:` in the Markdown, and
-stays in the thread with its `about` (card/about). Tell me more is a pill in the answers' choice group: it clears
+while that answer isn't the pick, and the field empties; it goes out with `about` in the JSON and `On **<answer>**:`
+in the Markdown, and stays in the thread with its `about` (card/about). On a docs page a question's saved comment is a
+change request: it counts on Request changes, not Send answers, which keeps the pick; Save again adds to it, the
+message's Edit puts it back in the field (card/save); text typed and never saved counts on Request changes too, and a
+send saves it first, so it goes, with Tell me more (card/typed). Tell me more is a pill in the answers' choice group: it clears
 the pick and a pick clears it (card/more). Other is labelled Other and stored as `:custom` / `choice: "custom"`
 (card/other). Accept recommended skips questions answered with Other or Tell me more (card/accept). The agent's
 `--reply --on <option>` is checked against the item's options and shows its chip (card/on)."""
@@ -15,6 +18,9 @@ from _support import TempHome, load_json
 from test_page_state import CHROME, GO, ChromePage, until
 
 Q = "document.querySelector('#item-decisions-retention')"
+# a docs page's tray: Request changes [disabled, its count], then Send answers' count
+TRAY = ("[(b => [b.disabled, b.querySelector('.n').textContent])(document.querySelector('.bd-anntb .bd-key.go')),"
+        " (b => b._n.hidden ? '0' : b._n.textContent)(document.querySelector('.bd-anntb .bd-key.send'))]")
 
 
 @unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")
@@ -30,7 +36,7 @@ class AnswerCard(ChromePage):
              f"t.dispatchEvent(new KeyboardEvent('keydown', {{ key: 'Enter', bubbles: true }})); }})({field})")
         msgs = f"[...{Q}.querySelectorAll('.ac-convo .bp-msg')].map(m => [m.classList.contains('unsent'), m.querySelector('.ac-on')?.textContent || ''])"
         self.assertEqual(a.ev(msgs), [[True, "On 90 days"]], "Save puts the message in the conversation at once")
-        self.assertEqual(a.ev(f"{field}.value"), "Acme: why not 90 days?", "it stays in its field until sent")
+        self.assertEqual(a.ev(f"{field}.value"), "", "Save empties the field: the message shows once, in the conversation")
         self.assertIsNone(a.ev("BP.replyPayload().items.find(x => x.item === 'retention').choice"), "a comment on an answer picks nothing")
         p = a.ev("BP.changesPayload()")
         self.assertEqual([x.get("comments") for x in p["answers"] if x["item"] == "retention"], [[{"about": "d90", "md": "Acme: why not 90 days?"}]])
@@ -45,6 +51,85 @@ class AnswerCard(ChromePage):
         self.assertEqual([(m["md"], m.get("about")) for m in thread], [("Acme: why not 90 days?", "d90")])
         self.assertEqual(a.ev(f"{field}.value"), "", "sending clears the field")
         self.assertEqual(a.ev(msgs), [[False, "On 90 days"]])
+
+    def docs_page(self) -> tuple:
+        """The example plan's questions on a docs page (Request changes and Send answers): (its JSON path, its URL)."""
+        doc = load_json(self.plan)
+        doc["id"], doc["meta"]["type"], doc["meta"]["kind"] = "acme-carts-proposal", "docs", "Change proposal"
+        path = self.docs / "acme-carts-proposal.bluedoc.json"
+        path.write_text(json.dumps(doc), encoding="utf-8")
+        r = self.tmp.run("build.py", path)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        return path, self.server.url_for(path)
+
+    def test_a_saved_comment_on_a_docs_question_is_a_change_request(self) -> None:
+        # a docs page has Request changes and Send answers: a question's comment (and Tell me more) goes with Request
+        # changes, its pick with Send answers; Save empties the field and the comment shows once, not sent
+        path, url = self.docs_page()
+        a = self.open(url)
+        reply = f"{Q}.querySelector(':scope > .ac-reply textarea')"
+        tray = TRAY
+        msgs = f"[...{Q}.querySelectorAll('.ac-convo .bp-msg')].map(m => [m.querySelector('.rv').textContent, m.querySelector('.mb').textContent])"
+        save = lambda text: a.ev(f"(t => {{ t.focus(); t.value = {json.dumps(text)}; t.dispatchEvent(new InputEvent('input')); "
+                                 f"t.dispatchEvent(new KeyboardEvent('keydown', {{ key: 'Enter', bubbles: true }})); }})({reply})")
+        self.assertEqual(a.ev(tray), [[True, "0"], "0"])
+        save("Acme: how does the mobile app read it?")
+        self.assertEqual(a.ev(f"{reply}.value"), "", "Save empties the field")
+        self.assertEqual(a.ev(msgs), [["not sent", "Acme: how does the mobile app read it?"]], "the comment shows once, not sent")
+        self.assertEqual(a.ev(tray), [[False, "1"], "0"], "a question's comment counts on Request changes, not Send answers")
+        save("Acme: and the receipt?")   # Save again adds to it
+        self.assertEqual(a.ev("BP.changesPayload().answers.map(x => [x.item, x.note])"),
+                         [["retention", "Acme: how does the mobile app read it?\n\nAcme: and the receipt?"]])
+        # Edit puts it back in the field (out of the conversation meanwhile); Save replaces it
+        a.ev(f"{Q}.querySelector('.bp-msg.unsent [aria-label=\"Edit your comment\"]').click()")
+        self.assertEqual(a.ev(f"[{reply}.value, {Q}.querySelectorAll('.bp-msg.unsent').length]"),
+                         ["Acme: how does the mobile app read it?\n\nAcme: and the receipt?", 0])
+        save("Acme: how does the mobile app read it?")
+        self.assertEqual(a.ev(msgs), [["not sent", "Acme: how does the mobile app read it?"]])
+        # Tell me more counts once with it; a pick (it clears Tell me more) counts on Send answers
+        a.ev(f"{Q}.querySelector('.ac-tmm').click()")
+        self.assertEqual(a.ev(tray), [[False, "1"], "0"])
+        self.assertEqual(until(lambda: self.state(url).get("decisions:retention:more")), "1", "not sent yet")
+        a.ev(f"{Q}.querySelector('.ac-tmm').click()")
+        a.ev(f"{Q}.querySelector('.bp-opt[data-id=d90] .pk').click()")
+        self.assertEqual(a.ev(tray), [[False, "1"], "1"])
+        self.assertNotIn("how does the mobile app", a.ev("JSON.stringify(BP.replyPayload())"), "Send answers carries the pick alone")
+        # Request changes sends the comment; the pick stays for Send answers
+        self.send_changes(a, "Comments · 1")
+        self.assertIn("  > Acme: how does the mobile app read it?", self.reply(path))
+        thread = until(lambda: json.loads((self.state(url) or {}).get("decisions:retention:thread") or "[]"))
+        self.assertEqual([m["md"] for m in thread], ["Acme: how does the mobile app read it?"])
+        self.assertEqual(a.ev(tray), [[True, "0"], "1"])
+        self.assertEqual(a.ev(msgs), [["rev 1", "Acme: how does the mobile app read it?"]])
+        self.assertEqual(self.browser.errors, [])
+
+    def test_text_typed_but_not_saved_goes_with_the_send(self) -> None:
+        # Tell me more, then its question typed in "What do you need to know?" and never saved: Request changes counts
+        # it, its dialog shows it, and it goes with Tell me more (card/typed)
+        path, url = self.docs_page()
+        a = self.open(url)
+        type_in = lambda q, text: a.ev(f"(t => {{ t.focus(); t.value = {json.dumps(text)}; t.dispatchEvent(new InputEvent('input')); }})"
+                                       f"({q}.querySelector(':scope > .ac-reply textarea'))")
+        a.ev(f"{Q}.querySelector('.ac-tmm').click()")
+        type_in(Q, "Acme: how does the mobile app read it?")
+        prices = "document.querySelector('#item-decisions-prices')"
+        type_in(prices, "Acme: which price shows first?")   # no Tell me more: the typed comment alone counts
+        self.assertEqual(a.ev(TRAY), [[False, "2"], "0"])
+        a.ev(f"{GO}.click()")   # the dialog shows both, then sends them
+        a.wait_for("(d => !!d && !d.querySelector('.ft .cp').hidden)(document.querySelector('.bd-chgs[open]'))")
+        said = a.ev("[...document.querySelectorAll('.bd-chgs[open] .sd-cm .mb')].map(m => m.textContent)")
+        self.assertEqual([s.endswith(t) for s, t in zip(said, ["Acme: how does the mobile app read it?", "Acme: which price shows first?"])], [True, True], said)
+        a.ev("document.querySelector('.bd-chgs[open] .ft .pri').click()")
+        self.toast(a, "change request sent")
+        md = self.reply(path)
+        self.assertIn("`item:decisions/retention` → **Tell me more**\n  > Acme: how does the mobile app read it?", md)
+        self.assertIn("  > Acme: which price shows first?", md)
+        for iid, text in (("retention", "Acme: how does the mobile app read it?"), ("prices", "Acme: which price shows first?")):
+            thread = until(lambda: json.loads((self.state(url) or {}).get(f"decisions:{iid}:thread") or "[]"))
+            self.assertEqual([m["md"] for m in thread], [text])
+        self.assertEqual(a.ev(f"[{Q}.querySelector(':scope > .ac-reply textarea').value, {prices}.querySelector(':scope > .ac-reply textarea').value]"), ["", ""])
+        self.assertEqual(a.ev(TRAY), [[True, "0"], "0"])
+        self.assertEqual(self.browser.errors, [])
 
     def test_tell_me_more_is_in_the_choice_group(self) -> None:
         a = self.open(self.server.url_for(self.plan))

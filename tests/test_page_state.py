@@ -568,7 +568,7 @@ class FindingsView(ChromePage):
         self.assertEqual(a.ev(f"{row}.querySelector('.pk[aria-checked=true]')?.dataset.id"), "decline")
         a.ev("BP.moreDetails('t412/tier-boundary')")
         a.ev("BP.setNote('t412/tier-boundary', 'Acme: the spec owner agrees')")
-        self.assertEqual(a.ev(f"[[...{row}.querySelectorAll('.pk[aria-checked=true]')].map(b => b.dataset.id), {row}.classList.contains('more'), {row}.querySelector('.ac-tmm').getAttribute('aria-checked'), {row}.querySelector('.ac-reply textarea').value]"),
+        self.assertEqual(a.ev(f"[[...{row}.querySelectorAll('.pk[aria-checked=true]')].map(b => b.dataset.id), {row}.classList.contains('more'), {row}.querySelector('.ac-tmm').getAttribute('aria-checked'), {row}.querySelector('.bp-msg.unsent .mb')?.textContent]"),
                          [[], True, "true", "Acme: the spec owner agrees"])
         # Accept recommended in the toolbar picks the starred option on the open decisions, not on one asking for more
         acc = "document.querySelector('#pr-412 > .bd-ftb > .bp-btn')"
@@ -696,9 +696,9 @@ class FindingsView(ChromePage):
         a.ev(f"{OPEN}({li})")
         self.assertEqual(a.ev(f"[{ta}.disabled, {ta}.placeholder]"), [False, "Reply…"], "the reply field needs no answer first")
         a.ev("BP.setNote('t415/backoff-const', 'Acme: name it RETRY_BACKOFF_MS')")
-        # saved, not sent: in the conversation at once, and the field keeps it
+        # saved, not sent: in the conversation at once, and the field is empty
         self.assertEqual(a.ev(f"[...{li}.querySelectorAll(':scope > .ac-convo .bp-msg.unsent .mb')].map(m => m.textContent)"), ["Acme: name it RETRY_BACKOFF_MS"])
-        self.assertEqual(a.ev(f"{ta}.value"), "Acme: name it RETRY_BACKOFF_MS")
+        self.assertEqual(a.ev(f"{ta}.value"), "")
 
     def test_a_tracker_row_leads_to_the_first_finding_that_needs_the_reader(self) -> None:
         a = self.open(self.url)
@@ -1226,6 +1226,10 @@ class Archive(ChromePage):
         for it in checks["items"]:
             t.ev(f"document.querySelector('#item-checks-{it['id']} input[type=checkbox]').click()")
         self.assertEqual(t.wait_for("document.querySelector('.bd-revbar.arc.sug')?.textContent"), "All done · Archive it?ArchiveNot now")
+        # its keys sit at the strip's right end, as the revision strip's do: Not now ends at the row's padding
+        gap = t.ev("(() => { const i = document.querySelector('.bd-revbar.arc.sug .in'), b = i.lastElementChild;"
+                   " return i.getBoundingClientRect().right - parseFloat(getComputedStyle(i).paddingRight) - b.getBoundingClientRect().right; })()")
+        self.assertLess(abs(gap), 1.5, gap)
         # Not now holds for this rev, on the page and the card
         t.ev("document.querySelector('.bd-revbar.arc.sug .bp-btn:last-child').click()")
         self.assertEqual(until(lambda: self.state(url).get("__archive-later")), "2")

@@ -5,8 +5,9 @@ and characters that would break a path or a Markdown code span; it needs the key
 name and at most 50 MB (route). DELETE removes only a file directly in that doc's folder (route). Reader state takes
 `:files` and `__message-files` lists and thread messages of files alone, and refuses other shapes (state).
 
-In Chrome: files attached to a decision's box are a draft: Save keeps them over a reload, Cancel deletes the copies it
-added, a chip removed from a saved comment loses its copy on Save; Request changes moves them into the message, and the
+In Chrome: files attached to a decision's box are a draft: Save moves them onto the message not sent yet (its chips)
+and empties the box, and they stay over a reload; Cancel deletes the copies it added; a chip removed from the saved
+comment (its Edit puts it back in the box) loses its copy on Save; Request changes moves them into the message, and the
 reply Markdown lists each path under the comment (page/item). A pin's composer deletes its copies on Cancel (page/pin)."""
 from __future__ import annotations
 
@@ -118,18 +119,23 @@ class AttachPage(ChromePage):
         a.ev(cancel)   # Esc puts the saved comment back
         self.assertTrue(until(lambda: self.folder() == []), self.folder())
         self.assertEqual(self.chips(a, box), [])
-        # files alone make a comment: Save keeps them over a reload
+        # files alone make a comment: Save puts them on the message not sent yet, empties the box, and keeps them over a reload
+        pending = "document.querySelector('#item-decisions-retention > .ac-convo .bp-msg.unsent')"
         self.attach(a, box, "reorders.csv", "cart.png")
         a.ev(f"{save}.click()")
         files = json.loads(until(lambda: (self.state(url) or {}).get("decisions:retention:files")))
         self.assertEqual([f["name"] for f in files], ["reorders.csv", "cart.png"])
+        self.assertEqual([self.chips(a, pending), self.chips(a, box)], [["reorders.csv", "cart.png"], []])
         a.go(self.base + url)
+        self.assertEqual([self.chips(a, pending), self.chips(a, box)], [["reorders.csv", "cart.png"], []])
+        # a saved chip removed (Edit puts the comment back in the box): its copy stays until Save
+        a.ev(f"{pending}.querySelector('[aria-label=\"Edit your comment\"]').click()")
         self.assertEqual(self.chips(a, box), ["reorders.csv", "cart.png"])
-        # a saved chip removed: its copy stays until Save
         a.ev(f"{box}.querySelector('.bp-file .x').click()")
         self.assertEqual(self.folder(), ["cart.png", "reorders.csv"])
         a.ev(f"{save}.click()")
         self.assertTrue(until(lambda: self.folder() == ["cart.png"]), self.folder())
+        self.assertEqual([self.chips(a, pending), self.chips(a, box)], [["cart.png"], []])
         # sent: the message carries the file, the box is empty, the reply lists its full path
         self.send_changes(a, "Comments · 1")
         msg = self.thread_files(a)
