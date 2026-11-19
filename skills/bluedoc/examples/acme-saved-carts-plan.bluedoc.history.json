@@ -4,7 +4,7 @@
   {
    "rev": "1",
    "date": "2026-10-10",
-   "built": "2026-10-20T19:47:48+00:00",
+   "built": "2026-11-19T20:50:16+00:00",
    "head": {
     "id": "acme-saved-carts-plan",
     "title": "Acme Shop: saved carts",
@@ -81,7 +81,7 @@
     {
      "id": "questions",
      "title": "Open questions",
-     "lead": "Pick an answer for each question, several for *Who can save a cart?*; my recommendation is starred. Your picks go with **Approve plan** or **Request changes**.",
+     "lead": "Pick an answer for each question, several for *Who can save a cart?*; my recommendation is starred. Your picks go with **Approve** or **Request changes**.",
      "blocks": [
       "8e316d044d91814d"
      ]

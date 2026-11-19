@@ -1022,7 +1022,8 @@ class SnapshotOnSendInChrome(SiteInChrome):
 @unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")
 class EarlierRevisionInChrome(SiteInChrome):
     """At rev 2, rev 1 of the live page shows its snapshot (never the live page), labelled Snapshot · rev 1; without
-    one, a placeholder that says so; compare (?diff=1) shows rev 1 beside rev 2, the changed hero outlined on both."""
+    one, a placeholder that says so; compare (?diff=1) shows rev 1 beside rev 2, the changed hero outlined on both and,
+    though only the site's source changed, counted in the compare strip and the Revisions tab as Home · Hero."""
 
     def unlocked(self, query: str) -> None:
         status, raw = self.server.req("POST", "/__bluedoc/unlock", b"{}", {"Content-Type": "application/json", "X-Bluedoc": "1"})
@@ -1093,6 +1094,12 @@ class EarlierRevisionInChrome(SiteInChrome):
         self.assertEqual(self.tab.ev("document.querySelectorAll('.bd-ab .bd-sec-chg:not([hidden])').length"), 2)
         self.assertEqual(self.tab.ev("[...document.querySelectorAll('.bd-sec-l button.chg')].map(b => b.dataset.sec)"), ["hero"])
         self.assertEqual(self.frame_eval("home.html?rev=1", "document.getElementById('hero-title').textContent"), "Rev one headline")
+        # only the site's source changed (the page's JSON is the same): the compare strip and the Revisions tab count
+        # it, named with its changed section
+        self.assertEqual(self.tab.wait_for("BP.compare().changes.length && BP.compare().changes"), [{"kind": "mod", "label": "Home · Hero"}])
+        self.assertEqual(self.tab.ev("document.querySelector('.bd-revbar.cmp .t').textContent"), "Rev 1 → 2: 1 changed")
+        self.assertEqual(self.tab.ev("document.querySelector('.bd-cmpk .pos').textContent"), "1 change")
+        self.assertEqual(self.tab.ev("[...document.querySelectorAll('.bd-chl button')].map(b => b.textContent)"), ["ChangedHome · Hero"])
         # the same breakpoint and height mode on both; Single drops the twin
         self.tab.ev("BP.board({breakpoint: 390})")
         b = self.tab.wait_for("(b => b.twins[0].w === 390 && b.artboards[0].w === 390 && b)(BP.board())", 15)

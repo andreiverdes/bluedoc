@@ -207,6 +207,10 @@ CALLOUT_KINDS = {"note", "caution", "warning", "risk", "decision"}
 STATE_KINDS = {"ok", "warn", "risk", "info", "todo"}
 RESOLVES_ID = re.compile(r"[A-Za-z0-9_-]{1,40}")   # a reader comment's id, as `resolves` lists it (the page writes c<base36>)
 DOC_TYPES = {"docs", "review", "plan", "design", "presentation", "website", "storelisting", "other"}   # meta.type: the home page's grouping; unset = derived from meta.kind
+# the types the reader approves as a whole: the page's Approve key, the home page's Awaiting approval and serve.py's
+# /__bluedoc/approve all follow this (serve.py puts each doc's `approvable` in the home page's index; template.html's
+# APPROVABLE_TYPES must equal it, test_end_keys checks). A presentation's and a storelisting's picks go with Request changes
+APPROVABLE_TYPES = ("plan", "design", "website")
 # the types whose page is one board (a presentation: of slides only; a website: of pages only; a storelisting: of shots,
 # assets and an icon, shown as platform pages by its listing block)
 BOARD_TYPES = ("design", "presentation", "website", "storelisting")

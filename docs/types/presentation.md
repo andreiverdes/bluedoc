@@ -19,7 +19,7 @@ Slide decks on a board: one HTML slide per artboard, 16:9, with speaker notes, t
 - **Theme re-skin and Sketch.** The brief's theme pick re-skins every slide at once; **Sketch** redraws the deck hand-drawn for a rough first pass.
 - **Comments on a slide.** Point at an element to comment on it: the key is `el:<slide>/<name>`, from the element's `data-bd` name, so the agent edits that element in that file. `artboard:<id>` keys a whole slide. Notes collect in the **Comments** tab; a comment the agent lists in a revision's `resolves` turns Resolved.
 - **Revisions and compare.** Each build records the slides' HTML in the doc's history file. The **Revisions** tab compares a slide with an earlier revision side by side or as an onion skin.
-- **Request changes or Approve presentation.** As on plans and designs, the agent waits for **Approve presentation** on the current revision; an edit to any slide file asks for approval again. On the home page presentations have their own type, count toward **Awaiting approval** and **Approved**, and their card draws the deck's slides.
+- **Request changes.** A deck isn't approved: your picks and comments go with **Request changes**, and once it's right you export it. On the home page presentations have their own type, and their card draws the deck's slides.
 - **Sandbox.** Each slide runs in an `<iframe sandbox="allow-scripts">` with no network, as design screens do.
 
 ## How an agent makes one

@@ -5,7 +5,8 @@ code, quotes, rules, GFM tables (alignment, no outer pipes, `\\|`, a pipe in cod
 code spans, strong, em, strike, `_` in snake_case, links, autolinks, bare URLs, escapes, and XSS attempts. Python runs
 them always, node when it is installed, and headless Chrome (BLUEDOC_BROWSER_TESTS=1), where a 50 KB adversarial string
 of each kind renders in under 200 ms and the reply of a checklist item draws its table. The linter reads a table's
-cells and skips fenced code."""
+cells and skips fenced code. Compare view's text diffs (wordDiff) read Markdown as the page shows it: code spans as
+code, each paragraph its own block with no blank line struck or added, a link as its text; code stays as written."""
 from __future__ import annotations
 
 import json
@@ -88,6 +89,30 @@ class SharedCases(unittest.TestCase):
                 serve.md_html(src)
                 serve.md_inline(src)
                 self.assertLess(time.perf_counter() - t, 2.0, f"{name}: Python took over 2 s on 50 KB")
+
+
+@unittest.skipUnless(NODE, "node not installed")
+class DiffReadsMarkdown(unittest.TestCase):
+    def diff(self, a: str, b: str, code: bool = False) -> str:
+        src = RENDERER + template_slice("const canon = x =>", "// Align two lists")
+        js = ("const {code, a, b, isCode} = JSON.parse(require('fs').readFileSync(0, 'utf8'));"
+              "const wordDiff = new Function(code + '\\nreturn wordDiff;')();"
+              "process.stdout.write(JSON.stringify(wordDiff(a, b, isCode)));")
+        out = subprocess.run([NODE, "-e", js], input=json.dumps({"code": src, "a": a, "b": b, "isCode": code}),
+                             capture_output=True, text=True, timeout=30)
+        self.assertEqual(out.returncode, 0, out.stderr)
+        return json.loads(out.stdout)
+
+    def test_a_details_diff_shows_code_spans_and_paragraphs_not_their_marks(self) -> None:
+        was = "Reviewer: `docs/pricing.md:11` is stale.\n\nFix: replace line 11.\n\nVerify: `grep -n bulk docs/pricing.md`."
+        now = "Reviewer: `docs/pricing.md:11` is stale.\n\nFix: a [ticket](https://acme.example/t/88) for **PRICING-88**."
+        self.assertEqual(self.diff(was, now),
+                         "<p>Reviewer: <code>docs/pricing.md:11</code> is stale.</p>"
+                         "<p><del>Fix: replace line 11.</del><ins>Fix: a ticket for PRICING-88.</ins></p>"
+                         "<p><del>Verify: <code>grep -n bulk docs/pricing.md</code>.</del></p>")
+        self.assertEqual(self.diff("Run `make up`.", "Run `make up` first."), "Run <code>make up</code><ins> first</ins>.")
+        # code keeps its backticks and blank lines
+        self.assertEqual(self.diff("echo `date`\n\nexit 0", "echo `date`\n\nexit 1", code=True), "echo `date`\n\nexit <del>0</del><ins>1</ins>")
 
 
 class LintReadsMarkdown(unittest.TestCase):

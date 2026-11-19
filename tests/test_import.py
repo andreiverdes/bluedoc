@@ -520,13 +520,25 @@ class CopyPage(Served, unittest.TestCase):
         t2 = self.tab(self.url + "?theirs=1&diff=2")
         self.assertIn("The sharer's newer rev", t2.wait_for("document.querySelector('.bd-revbar.upd.cmp')?.textContent"))
         self.assertIn("Carts last 180 days", t2.ev("document.body.innerText"))
+        # the sharer's rev (acme-dev-2) by name where there's room, by their initials on the round key and the Revisions
+        # key, and as Theirs on the Compare picker
+        self.assertEqual(t2.ev("[...document.querySelectorAll('.rvx-i .rv-n')].map(e => e.textContent)"), ["AD", "2"])
+        self.assertEqual(t2.ev("document.querySelector('.rvx-i.on .hd b').textContent"), "acme-dev's rev 2")
+        self.assertEqual(t2.ev("document.querySelector('.bd-stripe.r .bd-sk[data-f=revisions] .n').textContent"), "AD")
+        self.assertEqual(t2.ev("[...document.querySelectorAll('.rv-cmpb .rv-sel .v')].map(e => e.textContent)"), ["Rev 2", "Theirs"])
+        self.assertEqual(t2.ev("[...document.querySelector('.rv-cmpb .rv-sel .bd-selm').children].map(e => e.querySelector('.l').textContent)"), ["Rev 2", "acme-dev's rev 2"])
+        self.assertEqual(t2.ev("[...document.querySelectorAll('.rv-cmpb .rv-sel .v, .rvx-i .rv-n')].filter(e => e.scrollWidth > e.clientWidth).length"), 0, "none cut")
         t.ev("[...document.querySelectorAll('.bd-revbar.upd.new .bp-btn')].find(b => b.textContent === 'Pull').click()")
         t.wait_for("document.querySelector('.bd-revbar.upd.rv')?.textContent.includes('Review · 1')", 15)
+        self.assertIn("Updated since you last opened it: 2 → 3", t.ev("[...document.querySelectorAll('.bd-revbar.upd')].map(e => e.textContent).join('|')"),
+                      "the copy's strips leave the page's own")
         self.assertEqual(load_json(self.copy)["meta"]["rev"], "3")
         t.ev("document.querySelector('.bd-revbar.upd.rv .bp-btn').click()")
         self.assertEqual(t.wait_for("[...document.querySelectorAll('dialog.bd-rvw .rvr .l')].map(e => e.textContent)"), ["Approach: its lead"])
         t.ev("document.querySelector('dialog.bd-rvw .rvr .cp').click()")
         t.wait_for("document.querySelector('dialog.bd-rvw .rvl')?.textContent.includes('Nothing left')")
+        # the toast goes into the top layer after the modal Review, so it shows above its backdrop
+        self.assertTrue(t.ev("(t => t.textContent.includes(\"Took acme-dev's version\") && t.matches(':popover-open'))(document.getElementById('bp-toast'))"))
         self.assertEqual(load_json(self.copy)["sections"][1]["lead"], "Carts last 180 days, then go.")
         self.assertEqual(self.browser.errors, [])
 

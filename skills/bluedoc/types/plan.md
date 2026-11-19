@@ -1,6 +1,6 @@
 # Plan
 
-**When:** whenever you would hand the user a plan before implementing (plan mode, "make a plan", "propose a plan", a design doc) and they can open a browser. Save it as `docs/plans/<topic>.bluedoc.json` unless the repo keeps plans elsewhere. `build.py new plan` sets `meta.kind: "Plan"`, so the page shows a status chip (Awaiting approval, Changes requested, Approved · rev X, Changes since approved rev X) and an **Approve plan** key. Plans have no Send answers: the reader's picks travel with **Approve plan** or **Request changes**.
+**When:** whenever you would hand the user a plan before implementing (plan mode, "make a plan", "propose a plan", a design doc) and they can open a browser. Save it as `docs/plans/<topic>.bluedoc.json` unless the repo keeps plans elsewhere. `build.py new plan` sets `meta.kind: "Plan"`, so the page shows a status chip (Awaiting approval, Changes requested, Approved · rev X, Changes since approved rev X) and an **Approve** key. Plans have no Send answers: the reader's picks travel with **Approve** or **Request changes**.
 
 **Home card:** a step timeline (a status dot and an effort bar per step) and the A/M/D/R file counts.
 **Required** (an error on a new rev, a warning on older ones): a `steps` block and a `files` block.

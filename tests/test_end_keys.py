@@ -3,20 +3,22 @@
 The build: meta.review is post, threads or local, on a review doc only (an ERROR otherwise; 1.0.19's theirs and mine
 name their new words); a review of a PR needs one, and a post review's findings offer only Post and Don't post (the
 type's contract); `build.py new review --of` writes it, --of post with Post / Don't post options, and the doc card
-lists it. The server: an approval for a presentation or storelisting is refused (400); an
+lists it. The server: an approval for any type but build.APPROVABLE_TYPES (a plan, design or website) is refused
+(400), the home page's index marks the approvable docs and the page's own list is the same; an
 answers reply's reviewEvents give each PR COMMENT, REQUEST_CHANGES or APPROVE (else 400) and `reply`/`wait` print them in the
 header. The browser tests (BLUEDOC_BROWSER_TESTS=1): each page type's dock ends as types/review.md and schema.md's
 tray table say (Approve on a plan, design and website; Present on a deck, whose toolbar's last key is a blue Export
 to…; nothing on a listing; the send key named by meta.review; Send answers elsewhere with a checklist; Request changes
-alone without one); the send key counts what hasn't gone; a `post` review's dialog posts each PR as the reader picked."""
+alone without one); the home page's Awaiting approval lists approvable docs only; the send key counts what hasn't gone; a `post` review's dialog posts each PR as the reader picked."""
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import unittest
 
-from _support import EXAMPLES, TempHome, load_json
-from test_page_state import CHROME, ChromePage
+from _support import EXAMPLES, TempHome, load_json, template_text
+from test_page_state import CHROME, ChromePage, Tab
 
 import build
 
@@ -109,7 +111,8 @@ class Server(unittest.TestCase):
         return self.server.req("POST", route, json.dumps(body).encode(), JSON)
 
     def test_a_deck_or_listing_approval_is_refused(self) -> None:
-        for stem, says in (("acme-fit-deck", b"a presentation isn't approved"), ("acme-fit-listing", b"a storelisting isn't approved")):
+        for stem, says in (("acme-fit-deck", b"a presentation isn't approved"), ("acme-fit-listing", b"a storelisting isn't approved"),
+                           ("acme-orders", b"a docs page isn't approved")):
             path = self.docs / f"{stem}.bluedoc.json"
             doc = load_json(path)
             body = {"decision": "approved", "path": self.server.url_for(path), "docHash": build.approval_hash(doc, path),
@@ -117,6 +120,16 @@ class Server(unittest.TestCase):
             status, raw = self.post("/__bluedoc/approve", body)
             self.assertEqual(status, 400, raw)
             self.assertIn(says, raw)
+
+    def test_one_list_of_approvable_types(self) -> None:
+        """build.APPROVABLE_TYPES: the index's `approvable` (the home page's Awaiting approval) and the page's own
+        APPROVABLE_TYPES (its Approve key) follow it."""
+        index = json.loads(self.server.req("GET", "/__bluedoc/index.json", headers={"X-Bluedoc": "1"})[1])
+        got = {d["type"]: d["approvable"] for r in index["roots"] for d in r["docs"]}
+        self.assertEqual(got, {t: t in ("plan", "design", "website") for t in got})
+        self.assertEqual(set(build.APPROVABLE_TYPES), {"plan", "design", "website"})
+        m = re.search(r"^const APPROVABLE_TYPES = new Set\(\[([^\]]*)\]\);$", template_text(), re.M)
+        self.assertEqual(set(re.findall(r"'([a-z]+)'", m.group(1))), set(build.APPROVABLE_TYPES))
 
     def test_review_event_is_checked_and_printed(self) -> None:
         path = review_of(self.docs, "post")
@@ -152,6 +165,20 @@ class Dock(ChromePage):
             self.assertEqual(t.ev(END), keys, stem)
             self.assertEqual(t.ev("document.querySelectorAll('.bd-anntb .bd-key.acc').length"), 0, stem)
         self.assertEqual(self.browser.errors, [])
+
+    def test_the_home_awaits_approval_on_approvable_docs_only(self) -> None:
+        status, raw = self.server.req("POST", "/__bluedoc/unlock", b"{}", JSON)
+        self.assertEqual(status, 200, raw)
+        t = Tab(self.browser)
+        self.browser.call("Page.navigate", {"url": f"{self.base}/?key={json.loads(raw)['token']}&s=awaiting"}, t.session)
+        t.wait_for("document.readyState === 'complete' && !!document.querySelector('.bd-fc')")
+        rows = "document.body.innerText"
+        t.wait_for(f"{rows}.includes('Acme Shop: saved carts')")
+        listed = t.ev(rows)
+        for title in ("Acme Shop: saved carts", "Acme Fit: watch, phone and web mockups", "Acme Fit: marketing site"):
+            self.assertIn(title, listed)
+        for title in ("Q3 launch review deck", "store listing"):
+            self.assertNotIn(title, listed)
 
     def test_the_deck_presents_from_its_dock_and_exports_from_its_toolbar(self) -> None:
         t = self.open(self.server.url_for(self.docs / "acme-fit-deck.bluedoc.json"))

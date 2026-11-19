@@ -551,6 +551,26 @@ class UploadAndPinInChrome(ChromePage):
         t.wait_for(f"{LST}.drafts.length === 0")
         self.assertIn("upload", [tag for x in t.ev(LST)["tiles"] if x["set"] == "appstore/iphone-69" for tag in x["tags"]])
 
+    def test_an_upload_and_a_locale_switch_keep_the_frames_and_the_strip_in_view(self) -> None:
+        """The page draws its sections again after an upload and a locale switch: the frames in view stay (no white
+        frame while new ones load) and the set's strip stays where it was."""
+        free_a_slot(self.doc_path, "appstore/iphone-69")
+        t = self.page("#appstore")
+        t.wait_for(f"{LST}.slots.some(s => s.set === 'appstore/iphone-69')")
+        strip = "[...document.querySelectorAll('.bd-lst-tiles')].find(r => r.dataset.set === 'appstore/iphone-69' && r.dataset.variant === 'default')"
+        t.ev("document.querySelector('.bd-lst-upslot[data-set=\"appstore/iphone-69\"]').scrollIntoView({block: 'center', inline: 'nearest'})")
+        shown = f"[...{strip}.querySelectorAll('.bd-lst-shot > iframe')].filter(f => (r => r.right > 0 && r.left < innerWidth)(f.parentElement.getBoundingClientRect()))"
+        t.wait_for(f"{shown}.length > 1")
+        time.sleep(1.5)   # their documents load
+        for step in (f"{DROP}({json.dumps(self.media + 'good.png')}, 'appstore/iphone-69')", "BP.listing({locale: 'es-ES'})"):
+            left = t.ev(f"window.__frames = {shown}; {strip}.scrollLeft")
+            self.assertGreater(left, 0, "the strip is scrolled to its end")
+            t.ev(step)
+            t.wait_for(f"{LST}.locale === 'es-ES'" if "locale" in step else f"{LST}.drafts.length === 1")
+            self.assertEqual(t.ev("__frames.filter(f => !f.isConnected).length"), 0, f"frames loaded again after {step[:30]}")
+            self.assertEqual(t.ev(f"{strip}.scrollLeft"), left, "the strip stays where it was")
+        self.assertEqual(self.browser.errors, [])
+
     def test_an_upload_in_the_ads_view_is_a_step_that_undoes_and_redoes_with_its_file(self) -> None:
         (self.docs / "media" / "ad.png").write_bytes(png(1200, 628))
         t = self.page("#play")

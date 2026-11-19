@@ -56,6 +56,9 @@ class FindingComments(ChromePage):
         self.assertEqual(self.keys(a), ["1", ""], "the comment counts on Request changes, not on the send key")
         a.ev("BP.choose('t412/float-cents', 'fix')")
         self.assertEqual(self.keys(a), ["1", "1"], "the pick counts on the send key")
+        # the picked answer's comment field says where its comment goes: Request changes, not the send key
+        a.ev("document.querySelector('#item-t412-float-cents .bp-opt[data-id=fix] .oh').click()")
+        self.assertEqual(a.ev("document.querySelector('#item-t412-float-cents .bp-opt[data-id=fix] .ac-hint').textContent"), "Goes with Request changes.")
         p = a.ev("BP.changesPayload()")
         self.assertEqual([(x["item"], x.get("note")) for x in p["answers"]], [("float-cents", "Round per line, then sum.")])
         self.assertIn("`item:t412/float-cents`", p["markdown"])

@@ -908,7 +908,6 @@ const ArchiveIcon = ({ size = 16, strokeWidth = 1.6, ...rest }) => e('svg', { xm
 const TYPES = [['docs', 'Docs', Icons.FileText], ['review', 'Reviews', Icons.GitPullRequest], ['plan', 'Plans', Icons.ListChecks], ['design', 'Designs', Icons.Palette],
   ['presentation', 'Presentations', PresentationIcon], ['website', 'Websites', Icons.Globe], ['storelisting', 'Store listings', ListingIcon], ['other', 'Other', Icons.StickyNote]];
 const TYPE_ONE = { docs: 'Docs', review: 'Review', plan: 'Plan', design: 'Design', presentation: 'Presentation', website: 'Website', storelisting: 'Store listing', other: 'Other' };
-const APPROVABLE = new Set(['plan', 'design', 'presentation', 'website', 'storelisting']);   // types the reader approves as a whole (Approve plan / design / presentation / website / listing)
 // Archived is last: an archived doc (the index's `archived`, set from its page or a card's ⋯ menu) counts under it alone,
 // never under the others, and the default list, the counts and Statistics leave it out (statusIs)
 const STATUSES = [['needs', 'Needs you', Icons.Flag], ['awaiting', 'Awaiting approval', Icons.Clipboard], ['waiting', 'Waiting on agent', Icons.Clock],
@@ -950,8 +949,10 @@ function progress(d) {
   return { dec, decided, steps, done, open };
 }
 function statusOf(d) {
-  const approvable = APPROVABLE.has(d.type), errors = d.errors > 0, ap = approvable && !errors && d.approval ? d.approval : null;
-  // a plan, design, presentation or website is approved for the rev the reader approved, and for a later one whose changes are all progress
+  // approvable: the index's (serve.py, from build.APPROVABLE_TYPES: a plan, design or website; a presentation's or a
+  // storelisting's picks go with Request changes)
+  const approvable = !!d.approvable, errors = d.errors > 0, ap = approvable && !errors && d.approval ? d.approval : null;
+  // an approvable doc is approved for the rev the reader approved, and for a later one whose changes are all progress
   // (the server's `carried`: steps marked done, picks carried over); any other change asks again ("Changes since")
   const approved = !!ap && (ap.carried === true || String(ap.rev ?? '') === String(d.rev ?? ''));
   const staleRev = ap && !approved ? String(ap.rev ?? '') : null;

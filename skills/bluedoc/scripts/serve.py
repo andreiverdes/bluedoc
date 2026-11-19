@@ -918,6 +918,7 @@ def summarize(p: Path) -> dict:
                 "id": doc.get("id"), "docTitle": doc.get("title") or build.doc_stem(p), "subtitle": doc.get("subtitle") or "",
                 "emoji": build.shown_emoji(doc, None),
                 "tldr": doc.get("tldr") or "", "kind": meta.get("kind") or "", "type": dtype, "org": meta.get("org") or "",
+                "approvable": dtype in build.APPROVABLE_TYPES,   # the home page's Awaiting approval and Approved
                 "rev": str(meta.get("rev") or ""), "date": meta.get("date") or "",
                 "sections": [s.get("title") or "" for s in doc.get("sections") or []],
                 # a storelisting's store-rule errors aren't "doesn't build": its card shows them (card()'s storeErrors)
@@ -1178,14 +1179,17 @@ def _render(p: Path, theirs: bool = False) -> tuple[int, str]:
 
 def theirs_page(p: Path, doc: dict, copy: dict | None) -> tuple[int, str]:
     """A copy's Compare: the sharer's newer rev (importer.theirs_doc) drawn as the current revision, with the copy as
-    it is now as the one revision before it, so the page's ?diff=<the copy's rev> marks what the sharer changed. Read
-    only: nothing is written (the page on ?diff= takes no edits)."""
+    it is now as the one revision before it, so the page's ?diff=<the copy's rev> marks what the sharer changed. Its rev
+    is "<login>-<their rev>", apart from the copy's; meta.theirs {by, rev} lets the page name it (acme-dev's rev 2) and
+    mark it with the login's initials where a rev's room is small. Read only: nothing is written (the page on ?diff=
+    takes no edits)."""
     theirs = importer.theirs_doc(p)
     if theirs is None:
         return 404, error_page(p, ["no newer rev from the sharer to compare with: the page checks for one when it opens"])
     mine_rev = str((doc.get("meta") or {}).get("rev") or "")
     by = (copy or {}).get("user") or "sharer"
-    theirs = {**theirs, "meta": {**(theirs.get("meta") or {}), "rev": f"{by}-{(theirs.get('meta') or {}).get('rev') or 'new'}"}}
+    n = str((theirs.get("meta") or {}).get("rev") or "new")
+    theirs = {**theirs, "meta": {**(theirs.get("meta") or {}), "rev": f"{by}-{n}", "theirs": {"by": by, "rev": n}}}
     if theirs["meta"]["rev"] == mine_rev:
         theirs["meta"]["rev"] += "-theirs"
     history = build.load_history(Path("/nonexistent"))
@@ -3933,19 +3937,22 @@ def save_listing_upload(doc: Path, data: dict) -> tuple[int, dict]:
                  "colour": info.get("colour"), "bytes": len(png), "replaced": replaced}
 
 
-# a presentation and a storelisting aren't approved: their picks go with Request changes (types/presentation.md,
-# types/storelisting.md)
+# only build.APPROVABLE_TYPES are approved; a presentation's and a storelisting's picks go with Request changes
+# (types/presentation.md, types/storelisting.md), and NOT_APPROVED says what to do instead
 NOT_APPROVED = {"presentation": "a presentation isn't approved: send Request changes, or present or export it",
                 "storelisting": "a storelisting isn't approved: send Request changes, or export it"}
 
 
 def approval_refused(doc: Path) -> str | None:
-    """Why the doc takes no approval (NOT_APPROVED by its type), or None."""
+    """Why the doc takes no approval (its type isn't in build.APPROVABLE_TYPES), or None."""
     try:
         d = json.loads(doc.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return None
-    return NOT_APPROVED.get(build.doc_type(d.get("meta") or {})) if isinstance(d, dict) else None
+    if not isinstance(d, dict):
+        return None
+    dtype = build.doc_type(d.get("meta") or {})
+    return None if dtype in build.APPROVABLE_TYPES else NOT_APPROVED.get(dtype, f"a {dtype} page isn't approved")
 
 
 def plan_unanswered(doc: Path, answers) -> bool:

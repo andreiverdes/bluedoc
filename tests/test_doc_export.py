@@ -237,6 +237,16 @@ class ExportKey(ChromePage):
                 self.assertFalse(t.ev("!!document.querySelector('.bd-docx, .bd-shk')"), "a deck and a listing keep their Export to…, and no Share")
         self.assertEqual(self.browser.errors, [])
 
+    def test_the_pointer_focuses_the_row_it_moves_over(self) -> None:
+        # ⋮ opens with its first row (HTML file) focused; moving the mouse over PDF moves the focus there, one row lit
+        t = self.page("acme-saved-carts-plan")
+        t.ev("document.querySelector('.bd-docm > .bd-ibtn').click()")
+        self.assertEqual(t.ev("document.activeElement.textContent"), "HTML file")
+        x, y = t.ev("(r => [r.x + r.width / 2, r.y + r.height / 2])([...document.querySelectorAll('.bd-docm [role=menuitem]')].find(b => b.textContent === 'PDF').getBoundingClientRect())")
+        self.browser.call("Input.dispatchMouseEvent", {"type": "mouseMoved", "x": x, "y": y}, t.session)
+        self.assertEqual(t.ev("[...document.querySelectorAll('.bd-docm [role=menuitem]')].filter(b => b.matches(':hover, :focus')).map(b => b.textContent)"), ["PDF"])
+        self.assertEqual(self.browser.errors, [])
+
     def test_html_saves_the_file_of_the_revision_shown(self) -> None:
         t = self.page("acme-saved-carts-plan")
         t.ev(f"{self.BTN}.click()")

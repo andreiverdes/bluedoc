@@ -6,7 +6,9 @@ Revisions (the shown revision; an earlier one in the warning's colours) │ ⋮.
 key closes it; [ and ] toggle the left and the right pane, not while typing. Contents is open by default where it docks
 beside a 640 px page (1440 px, not 940 px), then as the reader leaves it, per doc. A board's left stripe holds its Brief
 (ringed with the picks made, open on a first visit) and its Screens, one at a time in the left pane, which lies over the
-board, and its toolbar has no panel key; a phone's drawer has them as tabs. A phone (600 px and under) has no trays: a
+board, and its toolbar has no panel key; a phone's drawer has them as tabs. A board's compare view of a screen (?diff=)
+lays its keys out beside the panes over the board (at 1000 px the left one closes for it, Revisions stays), and Esc
+closes the view before a pane, a pane before compare view. A phone (600 px and under) has no trays: a
 Contents key at the bar's left, a Comments key at its right opening the bottom sheet with its sections as tabs."""
 from __future__ import annotations
 
@@ -188,6 +190,40 @@ class Stripes(ChromePage):
         t.wait_for("!BP.board().panel")
         t.ev(f"{brief}.click()")
         t.wait_for(f"BP.board().panel && !document.getElementById('bd-sp-brief').hidden")
+        self.assertEqual(self.browser.errors, [])
+
+    def test_a_compare_view_sits_beside_the_panes_over_the_board(self) -> None:
+        # Today's screen changes in rev D; ?diff=C opens on Revisions with the Brief open on the left
+        html = self.docs / "acme-fit-design.design" / "today.html"
+        new = self.tmp.dir / "today.html"
+        new.write_text(html.read_text(encoding="utf-8").replace("Today", "Today!", 1), encoding="utf-8")
+        r = self.tmp.run("build.py", "patch", self.docs / FIT, "artboard:today", "--html", new, "--change", "Today: a new title")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        # each of the view's keys (the slider too) is the topmost thing at its centre: none under a pane
+        keys = ("[...document.querySelectorAll('.bd-cmpv .hd :is(button, input:not([hidden]))')].map(k => (r => "
+                "[k.getAttribute('aria-label') || k.textContent, k.contains(document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2))])"
+                "(k.getBoundingClientRect()))")
+        for width, left in ((1440, True), (1000, False)):
+            t = self.page(FIT, width, "&diff=C")
+            t.wait_for("!!BP.board() && BP.board().panel && BP.sidebar().open && BP.sidebar().section === 'revisions'", 20)
+            t.ev("BP.board({compare: 'today'}), document.querySelector('.bd-cmpv [data-v=onion]').click()")
+            t.wait_for("BP.board().compare")
+            # 1440 px: both panes stay, the view's keys and screens between them; 1000 px leaves it too little room
+            # beside both: the left pane closes, Revisions stays
+            self.assertEqual((t.ev("BP.board().panel"), t.ev("BP.sidebar().open")), (left, True), width)
+            self.assertEqual(t.ev(keys), [["Opacity of Rev D over Rev C", True], ["Side by side", True], ["Onion skin", True], ["Close (Esc)", True]], width)
+            # Esc (a real key: the panes' Esc waits for a handled one) closes the view, not a pane or compare view; the
+            # next Esc closes a pane
+            def esc() -> None:
+                for kind in ("rawKeyDown", "keyUp"):
+                    self.browser.call("Input.dispatchKeyEvent", {"type": kind, "key": "Escape", "code": "Escape", "windowsVirtualKeyCode": 27}, t.session)
+            esc()
+            t.wait_for("!BP.board().compare")
+            self.assertEqual((t.ev("BP.board().panel"), t.ev("BP.sidebar().open"), t.ev("location.search.includes('diff=C')")), (left, True, True), width)
+            esc()
+            t.wait_for("!BP.sidebar().open || !BP.board().panel")
+            self.assertTrue(t.ev("location.search.includes('diff=C')"))
+            t.ev("localStorage.clear()")   # the next width opens as a first visit: both panes
         self.assertEqual(self.browser.errors, [])
 
     def test_a_phone_drawer_has_brief_and_screens_tabs(self) -> None:

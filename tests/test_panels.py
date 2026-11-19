@@ -91,6 +91,32 @@ class BriefInTheLeftPane(ChromePage):
         t = self.brief_shows(STEM, "!!document.querySelector('.bd-lst-sec') && !!BP.listing()")
         self.assertEqual(t.ev("[...document.querySelectorAll('.bd-lp-tabs [data-v]')].map(b => b.dataset.v)"), ["text", "style", "colors", "checks"])
 
+    def test_the_picks_fit_the_brief_at_its_default_and_least_widths(self) -> None:
+        """The deck's Picks in the Brief: the header's Expand · Copy · Reset inside it, and Forest's comment field and
+        Other's field wide enough for their words, at the pane's default width and at its least (240 px)."""
+        url = self.server.url_for(self.docs / "acme-fit-deck.bluedoc.json")
+        t = self.open(url)
+        fits = "(h => h.scrollWidth <= h.clientWidth + 0.5)(document.querySelector('#bd-sp-brief #cl-brief .bp-cl-h'))"
+        labels = "[...document.querySelectorAll('#bd-sp-brief #cl-brief .bp-cl-h .tools .bd-split > .bp-btn')].map(b => b.getBoundingClientRect().width > 50)"
+        item = "document.querySelector('#bd-sp-brief #item-brief-theme')"
+        fields = (f"[...{item}.querySelectorAll('.bp-opt .ob:not([hidden]) .ac-line-ta, .bp-opt.cust .ac-line-ta')]"
+                  ".filter(e => e.checkVisibility()).map(e => Math.round(e.getBoundingClientRect().width))")
+        for width in (None, 240):
+            if width:
+                t.ev(f"localStorage.setItem('bluedoc:design-left-w', '{width}'); window.__before = 1; location.reload()")
+                t.wait_for("!window.__before && document.readyState === 'complete' && !!window.BP")
+            t.wait_for("!!BP.board() && !document.getElementById('bd-sp-brief').hidden && !!document.querySelector('#bd-sp-brief #cl-brief .bp-cl-h')")
+            self.assertTrue(t.ev(fits), f"the Picks toolbar sticks out at {width or 'the default width'}")
+            if not width:
+                self.assertEqual(t.ev(labels), [True, True, True], "Expand, Copy and Reset keep their labels at the default width")
+            t.ev(f"[...{item}.querySelectorAll('*')].find(e => !e.children.length && e.textContent.trim() === 'Which theme?').click()")
+            t.wait_for(f"!!{item}.querySelector('.bp-opt .ol')?.checkVisibility()")
+            t.ev(f"[...{item}.querySelectorAll('.bp-opt .ol')].find(e => e.textContent.trim() === 'Forest').closest('button').click()")
+            got = t.wait_for(f"(w => w.length === 2 && w)({fields})")
+            # a few words a line at the least width (it was a word a line), a line's worth at the default
+            self.assertTrue(all(w >= (100 if width else 180) for w in got), f"Forest's comment and Other's field at {width or 'the default width'}: {got} px")
+        self.assertEqual(self.browser.errors, [])
+
 
 @unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")
 class ListingLeftPanel(ChromePage):

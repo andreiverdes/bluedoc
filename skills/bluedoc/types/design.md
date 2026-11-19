@@ -6,7 +6,7 @@
 python3 <skill>/scripts/build.py new design docs/design/<topic>.bluedoc.json --title "…" --target watch,mobile,web [--framework heroui]
 ```
 
-This writes the brief, a board with one wireframe artboard per target, and one stub screen file each in `<topic>.design/<target>.html`. The page shows the board full width, the brief and the screens in the left pane over it, one at a time (**Brief** and **Screens** in the app bar's left tray; the Brief opens first, ringed with the decisions picked), **Request changes** and **Approve design**, as on plans.
+This writes the brief, a board with one wireframe artboard per target, and one stub screen file each in `<topic>.design/<target>.html`. The page shows the board full width, the brief and the screens in the left pane over it, one at a time (**Brief** and **Screens** in the app bar's left tray; the Brief opens first, ringed with the decisions picked), **Request changes** and **Approve**, as on plans.
 
 **Home card:** the board's outline. **Required:** exactly one `board` block with at least one artboard.
 

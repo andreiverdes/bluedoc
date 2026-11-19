@@ -14,7 +14,8 @@ toolbar the browser remembers, which sticks with the section's title row and siz
 the title row and the toolbar); picks sync across the three, Merged keeps item and line keys and item links, and links
 into a hidden view show it; a finding opens and closes whole, its details (the text, then its code) behind More
 details; the filter (All · Open · Done, each section's own, kept per doc) hides an answered finding once the reader moves on, and the
-Tracker and the header chip count Open alike; Custom takes the reader's own answer into the reply; a finding's comment
+Tracker, the header chip and the section's status (Answered only once nothing is Open) count Open alike; a send keeps
+the reader's place while the answered questions fold; Custom takes the reader's own answer into the reply; a finding's comment
 field opens once it has an answer, and says when a saved comment goes. A browser that loses the key
 cookie (Tern's WKWebView keeps none) still saves with the key the page kept in localStorage while it had the cookie.
 The reader renames a doc and picks its emoji in its header or app bar: they hold through a reload and show in the tab
@@ -310,6 +311,31 @@ class PageSync(ChromePage):
         self.send_changes(a, "")
         self.assertEqual(a.ev(is_open), [False, True], "Request changes left the answered question open, or closed the unanswered one")
 
+    def test_sending_keeps_the_readers_place_while_answered_questions_fold(self) -> None:
+        # the answered question above the one asking for more folds as Request changes sends: the one the reader is on
+        # stays where it is on every frame of the fold (the fold eases here: no reduced motion)
+        status, raw = self.server.req("POST", "/__bluedoc/unlock", b"{}", {"Content-Type": "application/json", "X-Bluedoc": "1"})
+        self.assertEqual(status, 200, raw)
+        a = Tab(self.browser, motion=True)
+        a.go(f"{self.base}{self.server.url_for(self.plan)}?key={json.loads(raw)['token']}")
+        q = "document.querySelector('#item-decisions-prices')"
+        a.ev("BP.choose('decisions/retention', 'd180'); BP.choose('decisions/guests', ['accounts', 'business']); BP.moreDetails('decisions/prices')")
+        self.assertTrue(a.ev("document.querySelector('#item-decisions-retention').classList.contains('open')"))
+        a.ev(f"scrollTo({{top: {q}.getBoundingClientRect().top + scrollY - 76, behavior: 'instant'}})")
+        a.ev(f"{GO}.click()")
+        a.wait_for("(d => !!d && !d.querySelector('.ft .cp').hidden)(document.querySelector('.bd-chgs[open]'))")
+        time.sleep(0.3)   # the dialog's own entrance lands
+        # each frame's place, read after the page's own frame callbacks (a timer schedules the next read last)
+        a.ev(f"(() => {{ window.__tops = []; const t0 = performance.now(); const f = () => {{ __tops.push({q}.getBoundingClientRect().top);"
+             " if (performance.now() - t0 < 1500) setTimeout(() => requestAnimationFrame(f)); }; requestAnimationFrame(f); })()")
+        a.ev("document.querySelector('.bd-chgs[open] .ft .pri').click()")
+        self.toast(a, "change request sent")
+        a.wait_for("!document.querySelector('#item-decisions-retention').classList.contains('open')")
+        time.sleep(1.6)
+        tops = a.ev("__tops")
+        self.assertGreater(len(tops), 10)
+        self.assertLessEqual(max(tops) - min(tops), 2, f"the question moved under the reader: {sorted(set(round(t) for t in tops))}")
+
     def test_approve_after_an_unseen_edit_is_refused(self) -> None:
         url = self.server.url_for(self.plan)
         a = self.open(url)
@@ -421,6 +447,9 @@ class ItemRequests(ChromePage):
         approve = "document.querySelector('.bd-key.approve').disabled"
         self.assertEqual(self.count(a), [False, "1"])
         self.assertTrue(a.ev(approve), "Approve stays enabled while an item asks for more")
+        # asking for more answers the question for now: the tip says so first, though the other two have no answer
+        self.assertEqual(a.ev("document.querySelector('.bd-key.approve')._tip"),
+                         "1 question asks for more: send it with Request changes and wait for the agent's next revision, or take it back")
         self.assertEqual(a.ev(f"[{row}.classList.contains('more'), {more}.querySelector('.ac-tmm').getAttribute('aria-checked'),"
                               f" document.activeElement === {row}.querySelector(':scope > .ac-reply textarea')]"), [True, "true", True])
         self.send_changes(a, "1 Tell me more")
@@ -661,6 +690,16 @@ class FindingsView(ChromePage):
         a.ev("BP.findingsView('pr-415', 'checklist')")
         a.ev("BP.findingsFilter('pr-415', 'done')")
         self.assertEqual(a.ev(f"[{shown}, {note}.textContent]"), [["double-auth"], "3 open findings are hidden · Show"])
+
+    def test_the_header_says_answered_only_once_nothing_is_open(self) -> None:
+        # the meter counts answers; Answered agrees with the filter: a reply from the agent the reader hasn't answered
+        # (docs-stale's) keeps it Open, so the header doesn't say Answered until they write back
+        a = self.open(self.url)
+        head = "['.bd-prm', '.bd-prs', '.bd-ffilt [data-f=open]'].map(s => document.querySelector('#pr-412 ' + s).textContent)"
+        a.ev("[...document.querySelectorAll('#pr-412 .bd-ftb button')].find(b => b.textContent.startsWith('Accept')).click()")
+        self.assertEqual(a.ev(head), ["7 of 7", "", "Open 1"])
+        a.ev("BP.setNote('t412/docs-stale', 'Acme: a ticket is fine')")
+        self.assertEqual(a.ev(head), ["7 of 7", "Answered", "Open 0"])
 
     def test_an_other_answer_goes_in_the_payload_and_the_markdown(self) -> None:
         a = self.open(self.url)

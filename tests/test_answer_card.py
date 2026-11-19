@@ -6,8 +6,9 @@ in the Markdown, and stays in the thread with its `about` (card/about). On a doc
 change request: it counts on Request changes, not Send answers, which keeps the pick; Save again adds to it, the
 message's Edit puts it back in the field (card/save); text typed and never saved counts on Request changes too, and a
 send saves it first, so it goes, with Tell me more (card/typed). Tell me more is a pill in the answers' choice group: it clears
-the pick and a pick clears it (card/more). Other is labelled Other and stored as `:custom` / `choice: "custom"`
-(card/other). Accept recommended skips questions answered with Other or Tell me more (card/accept). The agent's
+the pick and a pick clears it (card/more). Other is labelled Other and stored as `:custom` / `choice: "custom"`, and
+answers the question as a pick does: the chip under the title counts it (card/other). Accept recommended skips
+questions answered with Other or Tell me more (card/accept). The agent's
 `--reply --on <option>` is checked against the item's options and shows its chip (card/on)."""
 from __future__ import annotations
 
@@ -44,7 +45,7 @@ class AnswerCard(ChromePage):
         # picked, the same comment is about the answer now: unmarked, and the pick's field reads so
         a.ev(f"{Q}.querySelector('.bp-opt[data-id=d90] .pk').click()")
         self.assertEqual(a.ev(msgs), [[True, ""]])
-        self.assertEqual(a.ev(f"{Q}.querySelector('.bp-opt[data-id=d90] .ac-hint').textContent"), "Goes with your response.")
+        self.assertEqual(a.ev(f"{Q}.querySelector('.bp-opt[data-id=d90] .ac-hint').textContent"), "Goes with Request changes or Approve.")
         a.ev(f"{Q}.querySelector('.bp-opt[data-id=d180] .pk').click()")
         self.send_changes(a, "Comments · 1")
         thread = until(lambda: json.loads((self.state(url) or {}).get("decisions:retention:thread") or "[]"))
@@ -163,10 +164,13 @@ class AnswerCard(ChromePage):
         url = self.server.url_for(self.plan)
         a = self.open(url)
         row = f"{Q}.querySelector('.bp-opt.cust')"
+        ask = "(c => c.hidden ? '' : c.textContent)(document.querySelector('.bd-ask'))"
         self.assertEqual(a.ev(f"[{row}.querySelector('.ol').textContent, {row}.dataset.id, {Q}.querySelector('.bp-opts .bp-opt:last-child') === {row}]"),
                          ["Other", "custom", True])
+        self.assertEqual(a.ev(ask), "3 questions need your answer")
         a.ev(f"(t => {{ t.focus(); t.value = '365 days for business accounts'; t.dispatchEvent(new InputEvent('input')); t.blur(); }})({row}.querySelector('textarea'))")
         self.assertEqual(a.ev(f"[{row}.querySelector('.pk').getAttribute('aria-checked'), {Q}.querySelector('.pv-ok').textContent]"), ["true", "Other"])
+        self.assertEqual(a.ev(ask), "2 questions need your answer", "Other answers the question: the chip steps down as a pick does")
         self.assertEqual(until(lambda: (self.state(url) or {}).get("decisions:retention:custom")), "365 days for business accounts")
         item = a.ev("BP.changesPayload().answers.find(x => x.item === 'retention')")
         self.assertEqual([item["choice"], item["custom"]], ["custom", "365 days for business accounts"])
