@@ -3,7 +3,7 @@
 A request without ?view (a page of an earlier version) is 409 {error, code}; every answer carries X-Bluedoc-Code;
 /__bluedoc/search-text is gone (404). index.json answers with an ETag and 304 to a matching If-None-Match over
 HTTP/1.1 (Cache-Control: no-cache); the key (unlocked) and the query are part of it. Slices page by offset and limit
-with `next`; ?view=rows leaves `card` out, ?view=menu carries the menu's fields only; ?p= one folder. What it says
+with `next`; rows and cards carry each doc's `card` (an open row draws it), ?view=menu carries the menu's fields only; ?p= one folder. What it says
 follows every change within a sweep: a doc edited, added, renamed or deleted, a subfolder made or removed, a folder
 added or removed through Settings, a registered folder gone (missing) and back. Rows survive a restart and answer the
 first request; the indexer then reads nothing that didn't change. Stage 1 runs no git and opens no screen or capture
@@ -103,7 +103,11 @@ class HomeIndex(unittest.TestCase):
         q = f"p={self.slug}"
         whole = self.server.index(q, "rows")
         self.assertEqual((whole["total"], whole["next"]), (8, None))
-        self.assertTrue(all("card" not in d for d in whole["docs"]), "rows carry no card")
+        # an open row draws the card's hero: rows carry the same card numbers as cards do
+        cards = {d["url"]: d for d in self.server.index(q, "cards")["docs"]}
+        self.assertEqual({d["url"]: d.get("card") for d in whole["docs"]}, {u: d["card"] for u, d in cards.items()})
+        orders = next(d for d in whole["docs"] if d["path"].startswith("acme-orders"))
+        self.assertTrue(orders["card"].get("nodes"), orders["card"])
         mtimes = [d["mtime"] for d in whole["docs"]]
         self.assertEqual(mtimes, sorted(mtimes, reverse=True), "newest first")
         got, offset = [], 0

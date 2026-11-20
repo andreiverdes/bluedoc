@@ -549,7 +549,7 @@ class IndexDB:
             d.setdefault("archived", None)
             d.update({"url": url, "root": r["slug"], "path": rel, "dir": dr, "title": ov.get("title") or s.get("docTitle"),
                       "emoji": ov.get("emoji") or s.get("emoji"), "errors": errors, "firstError": first or "", "st": st})
-            if view == "cards":
+            if view in ("cards", "rows"):   # an open row draws the card's hero too
                 card = dict(s.get("card") or {})
                 if card2:
                     card.update(json.loads(card2))
