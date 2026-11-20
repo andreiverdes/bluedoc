@@ -55,9 +55,11 @@ def now() -> str:
 
 
 class StateDB:
-    def __init__(self, path: Path, create: bool = True) -> None:
+    def __init__(self, path: Path, create: bool = True, on_change=None) -> None:
         """Open path; without it, create it (mode 0600, schema) when create is set, else raise FileNotFoundError.
-        `created` tells whether this call made the file."""
+        `created` tells whether this call made the file. on_change(doc path), when given, is called after each
+        committed write of a doc's state or replies (serve.py refreshes the doc's index row)."""
+        self.on_change = on_change
         self.created = not path.exists()
         if self.created:
             if not create:
@@ -96,6 +98,16 @@ class StateDB:
         this one changed (total_changes), so a reader of state can keep what it derived until then."""
         with self.lock:
             return self.db.execute("PRAGMA data_version").fetchone()[0], self.db.total_changes
+
+    def _changed(self, path: str) -> None:
+        if self.on_change:
+            self.on_change(path)
+
+    def versions(self) -> dict[str, str]:
+        """{doc path: '<version>:<newest reply id>'} of every doc with a row: what a reader of state compares to see
+        another process's writes."""
+        return {p: f"{v}:{r or 0}" for p, v, r in self._read(
+            "SELECT d.path, d.version, (SELECT MAX(id) FROM replies WHERE doc = d.id) FROM docs d")}
 
     # ---------- docs ----------
 
@@ -153,16 +165,20 @@ class StateDB:
             if changed:
                 c.execute("UPDATE docs SET version = version + 1 WHERE id = ?", (doc,))
             return c.execute("SELECT version FROM docs WHERE id = ?", (doc,)).fetchone()[0]
-        return self._write(run)
+        version = self._write(run)
+        self._changed(path)
+        return version
 
     # ---------- replies ----------
 
     def add_reply(self, path: str, doc_id: str | None, kind: str, rev: str, payload: str, markdown: str,
                   doc_hash: str | None = None, at: str | None = None, delivered: str | None = None) -> int:
         """Store a reply; its id. It stays queued for `wait` (delivered NULL) unless delivered is given."""
-        return self._write(lambda c: c.execute(
+        rid = self._write(lambda c: c.execute(
             "INSERT INTO replies (doc, kind, rev, at, doc_hash, payload, markdown, delivered) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
             (self._doc(c, path, doc_id), kind, rev, at or now(), doc_hash, payload, markdown, delivered)).lastrowid)
+        self._changed(path)
+        return rid
 
     def undelivered(self, path: str | None = None, kind: str = "any") -> list[dict]:
         """Queued replies, oldest first: one doc path's, or every doc's when path is None; kind 'any' takes all kinds."""

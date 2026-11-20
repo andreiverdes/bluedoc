@@ -244,8 +244,13 @@ class Route(unittest.TestCase):
         for fmt in ("zip", "folders", "pdf", "print"):
             self.get(path=self.url, format=fmt)
         after = tree(self.docs, self.tmp.home)
-        self.assertEqual({k: v for k, v in after.items() if not k.endswith(("state.db", "state.db-wal", "state.db-shm", "server.log"))},
-                         {k: v for k, v in before.items() if not k.endswith(("state.db", "state.db-wal", "state.db-shm", "server.log"))})
+
+        def written(files: dict) -> dict:
+            """Files the export could have written: not state.db, the server's log or the home's index cache, which
+            the server's background indexer writes on its own."""
+            return {k: v for k, v in files.items() if not k.endswith(("state.db", "state.db-wal", "state.db-shm", "server.log"))
+                    and not re.search(r"/index-\d+\.db(-wal|-shm|\.lock)?$", k)}
+        self.assertEqual(written(after), written(before))
 
     def test_progress_needs_a_known_job(self) -> None:
         self.assertEqual(self.server.req("GET", "/__bluedoc/listing/progress?job=nosuchjob1")[0], 404)

@@ -62,16 +62,17 @@ def free_port() -> int:
 
 
 class Server:
-    """`serve.py run` on a free port with tmp's BLUEDOC_HOME; start() again after stop() is a restart."""
+    """`serve.py run` on a free port with tmp's BLUEDOC_HOME; start() again after stop() is a restart. scripts: another
+    install's scripts folder (an earlier version), this repo's by default; port: keep another server's port."""
 
-    def __init__(self, tmp: TempHome) -> None:
-        self.tmp, self.port = tmp, free_port()
+    def __init__(self, tmp: TempHome, scripts: Path | None = None, port: int | None = None) -> None:
+        self.tmp, self.port, self.scripts = tmp, port or free_port(), scripts or SCRIPTS
         self.host = f"127.0.0.1:{self.port}"
         self.proc: subprocess.Popen | None = None
 
     def start(self) -> None:
         self.log = open(self.tmp.dir / "server.log", "a")
-        self.proc = subprocess.Popen([sys.executable, str(SCRIPTS / "serve.py"), "run", "--port", str(self.port)],
+        self.proc = subprocess.Popen([sys.executable, str(self.scripts / "serve.py"), "run", "--port", str(self.port)],
                                      env=self.tmp.env, cwd=self.tmp.dir, stdout=self.log, stderr=subprocess.STDOUT,
                                      stdin=subprocess.DEVNULL)
         deadline = time.monotonic() + 10
@@ -120,6 +121,47 @@ class Server:
 
     def url_for(self, doc: Path) -> str:
         return json.loads(self.req("GET", f"/__bluedoc/url?doc={quote(str(doc))}", headers={"X-Bluedoc": "1"})[1])["url"]
+
+    def index_counts(self) -> dict:
+        """ping's `index`: {docs, summarized, validated, bytes}."""
+        return json.loads(self.req("GET", "/__bluedoc/ping", headers={"X-Bluedoc": "1"})[1])["index"]
+
+    def indexed(self, timeout: float = 30, fresh: bool = False) -> dict:
+        """Wait until the indexer has summarized and validated every listed doc (ping's index counts); the counts.
+        fresh: after a change on disk or in state.db by hand, wait instead for a sweep that started after now to have
+        written its summaries (validation may follow later)."""
+        deadline = time.monotonic() + timeout
+        start = time.time()
+        if fresh:
+            self.req("GET", "/__bluedoc/index.json?view=menu&limit=1", headers={"X-Bluedoc": "1"})   # sweeps every 2 s
+        while True:
+            n = self.index_counts()
+            if (n["swept"] >= start and n["summarized"] == n["docs"] if fresh
+                    else n["summarized"] == n["validated"] == n["docs"]):
+                return n
+            if time.monotonic() > deadline:
+                raise AssertionError(f"not indexed in {timeout} s: {n}")
+            time.sleep(0.05)
+
+    def index(self, query: str = "", view: str = "cards") -> dict:
+        """GET /__bluedoc/index.json?view=<view>&<query> as JSON (asserting 200); 200 rows unless query sets a limit."""
+        limit = "" if "limit=" in query else "&limit=200"
+        status, raw = self.req("GET", f"/__bluedoc/index.json?view={view}{limit}" + ("&" + query if query else ""),
+                               headers={"X-Bluedoc": "1"})
+        if status != 200:
+            raise AssertionError(f"index.json answered {status}: {raw[:300]!r}")
+        return json.loads(raw)
+
+    def docs(self, view: str = "cards", wait: bool = True, fresh: bool = False) -> list[dict]:
+        """Every registered folder's docs as index.json lists them, archived ones too (each folder picked with ?p=, so
+        temporary and hidden ones count), once indexed (fresh: see indexed) unless wait is False."""
+        if wait:
+            self.indexed(fresh=fresh)
+        out = []
+        for r in self.index("", view)["roots"]:
+            for s in ("", "&s=archived"):
+                out += self.index("p=" + quote(r["slug"]) + s, view)["docs"]
+        return out
 
 
 def load_json(p: Path):

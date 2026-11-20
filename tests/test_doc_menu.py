@@ -1,8 +1,10 @@
 """The app bar's left side (rt/app-bar): the home key (a house and the wordmark) links to the home page when served and
 to the page's top elsewhere, and the doc's name is the doc menu's key on a served page. The menu lists the docs of the
-page's folder only (index.json?root=), newest first, archived ones left out, this doc ticked and lit; its search field
-takes the focus, typing filters by title (case and accents aside), ↑ ↓ move, Enter opens the lit doc, Esc closes back to
-the key and a press outside closes it. An -o file has no menu: its title is plain text. Runs with BLUEDOC_BROWSER_TESTS=1."""
+page's folder only (index.json?view=menu&p=), newest first, archived ones left out, this doc ticked and lit, each with
+the server's status (`st`); its search field takes the focus, typing filters by title (case and accents aside), ↑ ↓
+move, Enter opens the lit doc, Esc closes back to the key and a press outside closes it. An -o file has no menu: its
+title is plain text. A page pinged by one code and answered by another says bluedoc was updated (a strip with Reload,
+never a reload by itself); a menu answered 409 says it in place of its list. Runs with BLUEDOC_BROWSER_TESTS=1."""
 from __future__ import annotations
 
 import json
@@ -84,6 +86,8 @@ class DocMenu(ChromePage):
         self.assertEqual(t.ev(f"{OPTIONS}.find(o => o.getAttribute('href').endsWith('acme-saved-carts-plan.bluedoc.json')).querySelector('small').textContent"),
                          "Plan · awaiting approval")
         self.assertEqual(t.ev("document.querySelector('.bd-dsm .ft .all').getAttribute('href')"), "/")
+        # the same code served the page and the menu: nothing says bluedoc was updated
+        self.assertEqual(t.ev("document.querySelector('.bd-updbar')"), None)
         # ↓ and ↑ move the light
         self.keys(t, "ArrowDown", 40)
         self.assertEqual(self.lit(t), self.title(shown[1]))
@@ -129,6 +133,40 @@ class DocMenu(ChromePage):
                               "document.querySelectorAll('.bd-crumb button, .bd-crumb [tabindex]').length, document.querySelector('.bd-home').getAttribute('href')]"),
                          [False, "/📄" + doc["title"], 0, "#top"])
         self.assertEqual(self.browser.errors, [])
+
+    def wrapped(self, url: str, js: str) -> Tab:
+        """A tab on url whose page runs js first (before its own script): a fetch wrapper standing in for a server change."""
+        t = Tab(self.browser)
+        self.browser.call("Page.enable", {}, t.session)
+        self.browser.call("Page.addScriptToEvaluateOnNewDocument", {"source": js}, t.session)
+        t.go(url)
+        return t
+
+    def test_a_page_pinged_by_other_code_says_bluedoc_was_updated(self) -> None:
+        # the ping answers as the code before an upgrade did; the menu's load then carries the server's X-Bluedoc-Code
+        t = self.wrapped(self.base + self.server.url_for(self.doc("acme-status")), """
+          const f = window.fetch;
+          window.fetch = (u, o) => f(u, o).then(r => String(u).includes('/__bluedoc/ping') ? r.json().then(j => new Response(JSON.stringify({ ...j, code: 'old' }), { status: 200, headers: r.headers })) : r);""")
+        t.wait_for("!!window.BP")
+        self.open_menu(t)
+        strip = "document.querySelector('.bd-updbar')"
+        self.assertEqual(t.wait_for(f"{strip}?.querySelector('.t').textContent"), "bluedoc was updated")
+        self.assertEqual(t.ev(f"{strip}.querySelector('button').textContent"), "Reload")
+        # the list itself still works, and the page doesn't reload by itself
+        t.ev("window.__bdStay = true")
+        time.sleep(1)
+        self.assertEqual(t.ev("window.__bdStay"), True)
+        self.assertEqual(self.browser.errors, [])
+
+    def test_a_menu_answered_409_says_bluedoc_was_updated(self) -> None:
+        # a menu that asks as 1.1.0 did (no view) gets the new server's 409
+        t = self.wrapped(self.base + self.server.url_for(self.doc("acme-status")), """
+          const f = window.fetch;
+          window.fetch = (u, o) => f(String(u).includes('/index.json') ? String(u).replace('view=menu&', '') : u, o);""")
+        t.ev("document.querySelector('.bd-dsw').click()")
+        none = "document.querySelector('.bd-dsm .none')"
+        self.assertEqual(t.wait_for(f"(s => s && s.includes('updated') && s)({none}?.textContent)"), "bluedoc was updated · Reload")
+        self.assertEqual(t.ev(f"[{OPTIONS}.length, {none}.querySelector('button').textContent]"), [0, "Reload"])
 
 
 if __name__ == "__main__":

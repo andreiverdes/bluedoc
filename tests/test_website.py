@@ -376,9 +376,7 @@ class Example(unittest.TestCase):
         server = Server(self.tmp)
         server.start()
         self.addCleanup(server.stop)
-        status, raw = server.req("GET", "/__bluedoc/index.json", headers={"X-Bluedoc": "1"})
-        self.assertEqual(status, 200)
-        doc = next(d for r in json.loads(raw)["roots"] for d in r["docs"] if d["path"].endswith(f"{STEM}.bluedoc.json"))
+        doc = next(d for d in server.docs() if d["path"].endswith(f"{STEM}.bluedoc.json"))
         self.assertEqual(doc["type"], "website")
         self.assertEqual(doc["card"], {"count": 2, "sections": 7, "live": 1,
                                        "pages": [{"sections": 5, "live": False, "fidelity": "hifi"},

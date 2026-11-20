@@ -171,7 +171,7 @@ class SeveralAnswers(unittest.TestCase):
         d = load_json(path)
         item(d, "decisions", "guests")["choice"] = ["accounts", "support"]
         write_json(path, d)
-        row = next(x for x in serve.summarize(path)["items"] if x[:2] == ["decisions", "guests"])
+        row = next(x for x in serve.summary_of(path)["summary"]["items"] if x[:2] == ["decisions", "guests"])
         self.assertEqual(row[3:5], ["accounts,support", ["accounts", "business", "support", "email"]])
         picks = serve.approved_picks({"answers": [{"checklist": "decisions", "item": "guests", "choice": ["email", "accounts"]},
                                                   {"checklist": "decisions", "item": "retention", "choice": None, "recommend": "d180"}]})

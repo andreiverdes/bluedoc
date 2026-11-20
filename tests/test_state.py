@@ -12,6 +12,7 @@ with build.py's. A reader's `__archived` record is exactly {at, rev}; it holds f
 doc back (unarchivedBy) and the next write drops the record."""
 from __future__ import annotations
 
+import datetime as dt
 import json
 import re
 import shutil
@@ -24,6 +25,11 @@ from _support import EXAMPLES, Server, TempHome
 import build
 
 JSON = {"Content-Type": "application/json", "X-Bluedoc": "1"}
+
+
+def epoch(iso: str) -> float:
+    """An archive record's time as index.json carries it: epoch seconds."""
+    return dt.datetime.fromisoformat(iso.replace("Z", "+00:00")).timestamp()
 
 
 class State(unittest.TestCase):
@@ -99,12 +105,35 @@ class State(unittest.TestCase):
         seed = self.seed(self.url)
         self.assertEqual({"version": seed["version"], "state": seed["state"]}, got)
         self.assertNotIn("</script><script>alert(2)", self.req("GET", self.url)[1].decode())
-        # the home page's card progress: tick and pick values only
-        index = json.loads(self.req("GET", "/__bluedoc/index.json")[1])
-        cards = {d["path"]: d for r in index["roots"] for d in r["docs"]}
-        self.assertEqual(cards[self.doc.name]["state"], {self.item: "1"})
-        self.assertEqual(cards[self.plan.name]["state"], {})
+        # the home page's card progress: the server's status counts the tick
+        cards = {d["path"]: d for d in self.server.docs()}
+        self.assertEqual((cards[self.doc.name]["st"]["done"], cards[self.plan.name]["st"]["done"]), (1, 0))
         self.assertEqual(stat.S_IMODE((self.tmp.home / "state.db").stat().st_mode), 0o600)
+
+    def test_each_write_shows_in_the_next_index(self) -> None:
+        """A tick, an archive, an answer and an approval each change the doc's row in the very next index.json: the
+        save refreshes the row's reader overlay and status (state.db's on_change), with no sweep in between."""
+        self.server.indexed()
+        slug = self.plan_url.split("/")[1]
+
+        def row(path) -> dict:
+            return next(d for d in self.server.index(f"p={slug}&s=archived")["docs"] + self.server.index(f"p={slug}")["docs"]
+                        if d["path"] == path.name)
+        before = row(self.doc)["st"]["done"]
+        self.assertEqual(self.put([[self.item, "1"]])[0], 200)
+        self.assertEqual(row(self.doc)["st"]["done"], before + 1, "a tick")
+        rev = str(json.loads(self.doc.read_text(encoding="utf-8"))["meta"]["rev"])
+        self.assertEqual(self.put([["__archived", json.dumps({"at": "2026-01-01T00:00:00Z", "rev": rev})]])[0], 200)
+        self.assertIsNotNone(row(self.doc)["archived"], "an archive")
+        self.assertTrue(row(self.doc)["st"]["archived"])
+        answers = {"path": self.plan_url, "rev": "A", "items": [], "markdown": "# Answers: Acme\n"}
+        self.assertEqual(self.req("POST", "/__bluedoc/reply", json.dumps(answers).encode(), JSON)[0], 200)
+        got = row(self.plan)
+        self.assertEqual((got["answers"]["rev"], got["st"]["waiting"], got["st"]["col"]), ("A", True, "waiting"), "an answer")
+        plan_rev = str(json.loads(self.plan.read_text(encoding="utf-8"))["meta"]["rev"])
+        self.assertEqual(self.approve(self.approval_body(plan_rev))[0], 200)
+        got = row(self.plan)
+        self.assertEqual((got["approval"]["rev"], got["st"]["approved"], got["st"]["col"]), (plan_rev, True, "done"), "an approval")
 
     def test_import_adds_only_missing_keys(self) -> None:
         self.put([[self.item, "1"]])
@@ -145,8 +174,8 @@ class State(unittest.TestCase):
         return json.loads(self.req("GET", f"/__bluedoc/ping?path={quote(self.plan_url)}", headers={"X-Bluedoc": "1"})[1])["approval"]
 
     def card(self) -> dict:
-        """The plan as index.json lists it."""
-        return next(d for r in json.loads(self.req("GET", "/__bluedoc/index.json")[1])["roots"] for d in r["docs"] if d["path"] == self.plan.name)
+        """The plan as index.json lists it, once a sweep after now has read the files."""
+        return next(d for d in self.server.docs(fresh=True) if d["path"] == self.plan.name)
 
     def approve(self, body: dict) -> tuple[int, bytes]:
         return self.req("POST", "/__bluedoc/approve", json.dumps(body).encode(), JSON)
@@ -251,7 +280,7 @@ class State(unittest.TestCase):
         self.assertEqual((card["archived"], "unarchivedBy" in card, "archiveLater" in card, card["stepsOpen"]), (None, False, False, 7))
         for at in ("2026-10-18T09:00:00Z", "2026-10-18T11:00:00.123+02:00"):
             self.assertEqual(self.put([["__archived", json.dumps({"at": at, "rev": "1"})], ["__archive-later", "1"]], path=self.plan_url)[0], 200)
-            self.assertEqual((self.card()["archived"], self.card()["archiveLater"]), (at, "1"))
+            self.assertEqual((self.card()["archived"], self.card()["archiveLater"]), (epoch(at), "1"))
         self.assertEqual(self.plan.read_bytes(), raw, "archiving changed the doc's JSON")
         # a rev the agent writes brings it back; a write of another key drops the stale record
         self.patch("step:steps/0/table", "--set", "status=done", "--change", "Acme: the table is in.")
@@ -263,9 +292,9 @@ class State(unittest.TestCase):
         self.assertNotIn("unarchivedBy", self.card())
         # archived again at rev 2, then unarchived with null
         self.put([["__archived", json.dumps({"at": "2026-10-18T12:00:00Z", "rev": "2"})]], path=self.plan_url)
-        self.assertEqual(self.card()["archived"], "2026-10-18T12:00:00Z")
+        self.assertEqual(self.card()["archived"], epoch("2026-10-18T12:00:00Z"))
         self.put([["__seen", None]], path=self.plan_url)
-        self.assertEqual(self.card()["archived"], "2026-10-18T12:00:00Z", "a write dropped a record that still holds")
+        self.assertEqual(self.card()["archived"], epoch("2026-10-18T12:00:00Z"), "a write dropped a record that still holds")
         self.assertEqual(self.put([["__archived", None]], path=self.plan_url)[0], 200)
         self.assertIsNone(self.card()["archived"])
         self.assertNotIn("__archive", self.plan.read_text(encoding="utf-8"))
@@ -371,8 +400,7 @@ class ReplyFileImport(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(json.loads(raw)["message"]["markdown"], "# Change requests: Acme\n")
         self.assertEqual(wait(orders)[0], 204, "a delivered reply was queued again")
-        index = json.loads(server.req("GET", "/__bluedoc/index.json")[1])
-        cards = {d["path"]: d for r in index["roots"] for d in r["docs"]}
+        cards = {d["path"]: d for d in server.docs()}
         self.assertEqual(cards[plan.name]["changes"]["rev"], "A")
         self.assertEqual(cards[orders.name]["answers"]["rev"], "A")
         # a restart doesn't import the files again

@@ -58,10 +58,12 @@ link, rev, when, the answers it carries, an update that waits; share.py), share-
 update that waits, the doc as it was when the share was asked for; share.py), gist-budget.json (mode 0600: each GitHub
 account's gist updates in the last hour, GitHub's retry time, refusals, pause; gistbudget.py) and
 app/<version>-<code>/ (the copy of scripts and assets the server runs from, so deleting or updating the install it was
-opened from never pulls files from under it; other versions' copies go once a new server is up).
+opened from never pulls files from under it; other versions' copies go once a new server is up), index-<schema>.db
+(the home's index, indexdb.py: a cache, built again when deleted).
 `open` registers the topmost ancestor folder named `docs`, else the doc's own folder, and restarts a running server
-whose version or code differs from its own. A folder inside a registered one is not added; a wider one is added
-next to the narrower ones, which keep their URLs (a doc's URL uses its deepest registered folder).
+unless it runs this very code or a newer version (keep_running). `status` adds the index's counts. A folder inside a
+registered one is not added; a wider one is added next to the narrower ones, which keep their URLs (a doc's URL uses
+its deepest registered folder).
 
 Writes need the key: in the X-Bluedoc-Key header (the CLI reads the key file; a page sends the copy it keeps in
 localStorage) or in the bluedoc_key_<port> cookie (HttpOnly, SameSite=Strict). `open` and `unlock` print a link with
@@ -79,14 +81,16 @@ URLs: /                      home page: every doc under the registered folders, 
       /<root>/<path>.bluedoc.json      the doc, rendered from its JSON on each request
       /<root>/<path>.bluedoc.json?raw=1   the JSON itself
       /<root>/<path>.<png|jpg|jpeg|gif|webp|svg|mp4|webm>   media files under the folder, for `media` blocks
-      /__bluedoc/index.json  what the home page shows about every doc, without its search text; ?root=<slug>: one
-                             folder's only (a doc page's doc menu). Each folder's `temp` (under /tmp), `missing`
-                             (registered folders that are gone) and `home` (settings.json's pinned, hidden and shown
-                             folders, and the reader's names and icons for them). With an ETag: 304 for a matching
-                             If-None-Match (Cache-Control: no-cache); kept between requests, rebuilt only when a doc,
-                             its folder or state.db changed (home_json)
-      /__bluedoc/search-text {docs: {"<doc url>": "<its search text>"}}, the home page's search over doc bodies;
-                             ?root= and ETag/304 as index.json
+      /__bluedoc/index.json  ?view=rows|cards|menu: one slice of the home's view from index.db (indexdb.py), sorted as
+                             the view sorts (?sort=old: oldest first; with ?q=: best match first), ?offset= and
+                             ?limit= (at most 200; 25 rows, 48 cards, 200 menu rows by default), filtered by the
+                             home's ?p= ?d= ?t= ?s= ?hidden=1 ?q=; ?tz= the browser's getTimezoneOffset() for the
+                             date groups; ?doc=<slug>/<path> extends the first slice through that doc. {docs, total,
+                             next, groups, facets {types, statuses, dirs, archived}, roots, hero, index, indexing
+                             (until every listed doc has a row), code, missing, home, unlocked}. With an ETag: 304
+                             for a matching If-None-Match before any query. Without ?view: 409 {error, code} (a page
+                             of an earlier version: reload)
+      /__bluedoc/stats       ?p= ?range= ?tz=: Statistics' widgets, SQL over index.db (indexdb.IndexDB.stats)
       /__bluedoc/ping?path=  server check (version, code hash, started, pid, unlocked); with a doc's URL path, also
                              who reads replies and its saved approval
       /__bluedoc/settings    GET: what Settings shows (settings_view; each setting's value, source env|file|default
@@ -299,6 +303,10 @@ try:
     import statedb  # noqa: E402
 except ImportError:   # a Python built without sqlite3: pages render without reader state, replies are refused
     statedb = None
+try:
+    import indexdb  # noqa: E402
+except ImportError:   # no sqlite3 either: the home lists nothing
+    indexdb = None
 
 HOME_HTML = HERE.parent / "assets" / "home.html"
 VENDOR = HERE.parent / "assets" / "vendor"
@@ -344,10 +352,10 @@ def reply_file(doc: Path, kind: str, ext: str) -> Path:
 
 def code_hash() -> str:
     """Changes whenever the code a server renders with does: serve.py, statedb.py, build.py, codepin.py, share.py,
-    gistbudget.py, importer.py, the template and the home page (which also holds the import page)."""
+    gistbudget.py, importer.py, indexdb.py, the template and the home page (which also holds the import page)."""
     h = hashlib.sha256()
     for f in (Path(__file__).resolve(), HERE / "statedb.py", HERE / "build.py", HERE / "codepin.py", HERE / "share.py",
-              HERE / "gistbudget.py", HERE / "importer.py", build.TEMPLATE, HERE.parent / "assets" / "home.html"):
+              HERE / "gistbudget.py", HERE / "importer.py", HERE / "indexdb.py", build.TEMPLATE, HERE.parent / "assets" / "home.html"):
         h.update(f.read_bytes())
     return h.hexdigest()[:12]
 
@@ -671,72 +679,48 @@ def scope_flows(scope: dict) -> int:
     return len(scope.get("flows") or []) + sum(scope_flows(k) for k in kids)
 
 
-def canvas_card(canvas: dict) -> dict:
-    nodes, at = [], {}
-    good = [n for n in canvas["nodes"] if isinstance(n, dict) and "id" in n]
-    links = [e for e in canvas.get("edges") or [] if isinstance(e, dict)]
-    for n, (x, y, w, h) in zip(good, build.canvas_layout({"nodes": good, "edges": links})):
-        kids = len((n.get("children") or {}).get("nodes") or [])
-        at[n["id"]] = len(nodes)
-        node = {"x": round(x), "y": round(y), "w": round(w), "h": round(h), "label": str(n.get("label") or "")[:40]}
-        node.update({k: n[k] for k in ("kind", "state") if n.get(k)})
-        if kids:
-            node["c"] = kids
-        nodes.append(node)
-    edges, edge_at = [], {}
-    for e in canvas.get("edges") or []:
-        if isinstance(e, dict) and e.get("from") in at and e.get("to") in at:
-            edge_at[str(e.get("id") or f"{e['from']}->{e['to']}")] = len(edges)
-            edges.append([at[e["from"]], at[e["to"]], e.get("kind") or ""])
-    play: list[int] = []
-    flow = next((f for f in canvas.get("flows") or [] if isinstance(f, dict)), None)
-    for step in (flow or {}).get("steps") or []:
-        if isinstance(step, dict):
-            for eid in ([step["edge"]] if step.get("edge") else []) + list(step.get("edges") or []):
-                i = edge_at.get(str(eid))
-                if i is not None and i not in play:
-                    play.append(i)
-    out = {"nodes": nodes, "edges": edges, "levels": scope_depth(canvas), "flows": scope_flows(canvas)}
-    if play:
-        out["play"] = play
-    return out
+def ref_counts(diffs: list[dict], doc_path: Path) -> dict | None:
+    """{add, del} of a review's ref diffs from its diff cache alone: no git, no gh. None when a ref names a branch or
+    tag (its cache key needs git) or isn't cached yet; stage 2 counts it (indexdb.validate_doc)."""
+    import diffref   # noqa: PLC0415 (lazy: only reviews with refs need it)
+    refs = [b for b in diffs if diffref.is_ref(b)]
+    if not refs:
+        return {"add": 0, "del": 0}
+    entries, _ = diffref.load_cache(diffref.cache_path(doc_path))
+    doc_dir, files = doc_path.resolve().parent, []
+    for b in refs:
+        if b.get("repo") and not all(diffref.SHA_RE.match(str(b.get(k) or "")) for k in ("base", "head")):
+            return None
+        entry = entries.get(diffref.cache_key(b, doc_dir))
+        if not entry:
+            return None
+        files += [f for f in diffref.parse_diff(entry.get("diff") or "")
+                  if not (b.get("exclude") and diffref.path_matches(str(f.get("path") or ""), b["exclude"]))]
+    return indexdb.diff_counts([{"files": files}])
 
 
-def card(doc: dict, dtype: str, doc_path: Path) -> dict:
-    """What the home card's hero draws, and nothing else, so the index stays small.
-    review: add, del, files, prs, findings = {blocker, major, minor, nit}, from the expanded diffs (cache and local
-    git only, never gh). plan: steps = [status, effort] per step (first 24); files = counts per action (move counts
-    as rename); decisions = {total, decided} over decision items, decided only when the author carried picks over.
-    docs: kind, levels, flows and the first canvas's root drawing: nodes with x, y = top-left in canvas units, placed
-    as the page places them (build.canvas_layout), c = child count; edges = [from, to, kind] by node index; play = the
-    edges the first root flow walks.
-    design: count = artboards, artboards = the first 12 as {x, y, w, h, device, fidelity}, placed by
-    build.board_layout (with the board's links, for `layout: "flow"`) and shifted so the board's top-left is 0, 0;
-    links = [i, j] by artboard index, one per pair of those 12 that a link joins (at most 24; none for `back`).
-    presentation: count = slides, notes = slides with speaker notes, slides = the fidelity of the first 9 in deck
-    order (as Present plays them: top to bottom, then left to right).
-    website: count = pages, sections = their sections, live = pages shown from a dev server, pages = the first 4 as
-    {sections (at most 8), live, fidelity}.
-    storelisting: platforms = {platform: [{row, sets: [[set, shots]], level}]}: each platform page's text, Shared and
-    device sections (listing.sections, default locale), how many shots each set has and the worst check on it (ok,
-    warn, err: listing.store_checks); storeErrors = the store-rule errors, which the card shows as dots, not as a
-    doc that doesn't build.
-    A doc whose type has none of that: its `hero`, else {icon: 'doc', sections: N}."""
+def card_numbers(doc: dict, dtype: str, doc_path: Path) -> dict:
+    """The numbers the home card's hero template draws for the doc's type, read from its JSON alone (stage 1: no
+    layout, no git, no screen or capture file).
+    review: files, prs, findings = {blocker, major, minor, nit}; add and del from inline diffs and the diff cache,
+    else null until stage 2 counts them. plan: steps = [status, effort] per step (first 24); files = counts per action
+    (move counts as rename); decisions = {total, decided} over decision items, decided only when the author carried
+    picks over. docs: kind, nodes (the first canvas's root nodes), edges, levels, flows and labels (the first 6 root
+    nodes'). design: count = artboards, devices = {device: count}, hifi = hi-fi artboards. presentation: count =
+    slides, notes = slides with speaker notes, hifi. website: count = pages, sections = their sections, live = pages
+    shown from a dev server, pages = the first 4 as {sections (at most 8), live, fidelity}. storelisting: platforms =
+    {platform: {sets, shots}}; each row's check level and storeErrors come from stage 2. A doc whose type has none of
+    that: its `hero`, else {icon: 'doc', sections: N}."""
     blocks = list(build.all_blocks(doc))
     if dtype == "review":
         diffs = [b for b in blocks if b.get("type") == "diff"]
         if diffs:
-            import diffref   # noqa: PLC0415 (lazy: the index only needs it for reviews)
-            if any(diffref.is_ref(b) for b in diffs):
-                expanded, _ = diffref.expanded_copy(doc, doc_path, allow_remote=False)
-                diffs = [b for b in build.all_blocks(expanded) if b.get("type") == "diff"]
-            add = dele = files = 0
-            for f in (f for b in diffs for f in b.get("files") or [] if isinstance(f, dict) and f.get("status") != "context"):
-                n_add, n_del = f.get("add"), f.get("del")
-                if n_add is None or n_del is None:
-                    lines = [ln for hk in f.get("hunks") or [] if not hk.get("context") for ln in hk.get("lines") or []]
-                    n_add, n_del = sum(ln.startswith("+") for ln in lines), sum(ln.startswith("-") for ln in lines)
-                add, dele, files = add + int(n_add), dele + int(n_del), files + 1
+            import diffref   # noqa: PLC0415
+            inline = indexdb.diff_counts([b for b in diffs if not diffref.is_ref(b)])
+            refs = ref_counts(diffs, doc_path)
+            files = sum(1 for b in diffs if not diffref.is_ref(b) for f in b.get("files") or []
+                        if isinstance(f, dict) and f.get("status") != "context")
+            files += sum(len(b.get("paths") or []) for b in diffs if diffref.is_ref(b))
             findings = {k: 0 for k in build.FINDING_SIZES}
             for b in blocks:
                 if b.get("type") == "checklist":
@@ -744,7 +728,8 @@ def card(doc: dict, dtype: str, doc_path: Path) -> dict:
                         if isinstance(it, dict) and it.get("state") in findings:
                             findings[it["state"]] += 1
             prs = len({str(d.get("pr") or d.get("id") or i) for i, d in enumerate(diffs)})
-            return {"add": add, "del": dele, "files": files, "prs": prs, "findings": findings}
+            return {"add": inline["add"] + refs["add"] if refs else None, "del": inline["del"] + refs["del"] if refs else None,
+                    "files": files, "prs": prs, "findings": findings}
     elif dtype == "plan":
         steps = [[str(it.get("status") or "todo"), str(it.get("effort") or "")]
                  for b in blocks if b.get("type") == "steps" for it in b.get("items") or [] if isinstance(it, dict)]
@@ -766,37 +751,23 @@ def card(doc: dict, dtype: str, doc_path: Path) -> dict:
     elif dtype == "docs":
         canvas = next((b for b in blocks if b.get("type") == "canvas" and b.get("nodes")), None)
         if canvas:
-            return {"kind": str((doc.get("meta") or {}).get("kind") or ""), **canvas_card(canvas)}
-    elif dtype == "design":
+            nodes = [n for n in canvas["nodes"] if isinstance(n, dict) and "id" in n]
+            ids = {n["id"] for n in nodes}
+            edges = [e for e in canvas.get("edges") or [] if isinstance(e, dict) and e.get("from") in ids and e.get("to") in ids]
+            return {"kind": str((doc.get("meta") or {}).get("kind") or ""), "nodes": len(nodes), "edges": len(edges),
+                    "levels": scope_depth(canvas), "flows": scope_flows(canvas),
+                    "labels": [str(n.get("label") or "")[:40] for n in nodes[:6]]}
+    elif dtype in ("design", "presentation"):
         board = build.board_of(doc)
-        links = build.board_links(doc, doc_path) if board else []
-        layout = build.board_layout(board, links) if board else {}
-        if layout:
-            x0, y0 = min(v[0] for v in layout.values()), min(v[1] for v in layout.values())
-            info = {a["id"]: a for a in board.get("artboards") or [] if isinstance(a, dict)}
-            arts, at = [], {}
-            for aid, (x, y, w, h) in list(layout.items())[:12]:
-                a = info.get(aid) or {}
-                at[aid] = len(arts)
-                arts.append({"x": round(x - x0), "y": round(y - y0), "w": round(w), "h": round(h),
-                             "device": str(a.get("device") or ""), "fidelity": str(a.get("fidelity") or "")})
-            pairs: dict[frozenset, list[int]] = {}   # one line per pair of screens, whichever way and however many links
-            for ln in links:
-                i, j = at.get(ln.get("from")), at.get(ln.get("to"))
-                if i is not None and j is not None and i != j:
-                    pairs.setdefault(frozenset((i, j)), [i, j])
-            out = {"count": len(layout), "artboards": arts}
-            if pairs:
-                out["links"] = list(pairs.values())[:24]
-            return out
-    elif dtype == "presentation":
-        board = build.board_of(doc)
-        layout = build.board_layout(board) if board else {}
-        if layout:
-            info = {a["id"]: a for a in board.get("artboards") or [] if isinstance(a, dict)}
-            order = sorted(layout, key=lambda aid: (layout[aid][1], layout[aid][0]))
-            return {"count": len(order), "notes": sum(bool((info.get(aid) or {}).get("notes")) for aid in order),
-                    "slides": [str((info.get(aid) or {}).get("fidelity") or "") for aid in order[:9]]}
+        arts = [a for a in (board or {}).get("artboards") or [] if isinstance(a, dict)]
+        if arts:
+            hifi = sum(a.get("fidelity") == "hifi" for a in arts)
+            if dtype == "presentation":
+                return {"count": len(arts), "notes": sum(bool(a.get("notes")) for a in arts), "hifi": hifi}
+            devices: dict[str, int] = {}
+            for a in arts:
+                devices[str(a.get("device") or "")] = devices.get(str(a.get("device") or ""), 0) + 1
+            return {"count": len(arts), "devices": devices, "hifi": hifi}
     elif dtype == "website":
         pages = build._artboards(doc)
         if pages:
@@ -811,49 +782,30 @@ def card(doc: dict, dtype: str, doc_path: Path) -> dict:
             rules = listing.load_rules()
             loc = lb.get("defaultLocale") or next(iter(lb.get("locales") or []), None)
             known = {p["id"] for p in rules["platforms"]}
-            plats = [p for p in lb.get("platforms") or [] if p in known]
-            found = listing.store_checks(doc, doc_path, rules)
-
-            def level(p: str, section: str) -> str:
-                ls = {f["level"] for f in found if f["section"] == section and (not f["platforms"] or p in f["platforms"])}
-                return "err" if "err" in ls else "warn" if ls else "ok"
-            return {"platforms": {p: [{"row": r, "sets": [], "level": level(p, r)} for r in ("text", "shared")]
-                                  + [{"row": s["row"], "sets": [[x["set"], len(x["shots"])] for x in s["sets"]], "level": level(p, s["row"])}
-                                     for s in listing.sections(lb, listing.shots_of(doc), rules, p, loc)] for p in plats},
-                    "storeErrors": sum(f["level"] == "err" for f in found)}
+            out = {}
+            for p in [p for p in lb.get("platforms") or [] if p in known]:
+                secs = listing.sections(lb, listing.shots_of(doc), rules, p, loc)
+                out[p] = {"sets": sum(len(s["sets"]) for s in secs), "shots": sum(len(x["shots"]) for s in secs for x in s["sets"])}
+            return {"platforms": out}
     hero = doc.get("hero")
     if isinstance(hero, dict) and hero.get("value") is not None:
         return {"hero": {k: str(hero[k]) for k in ("icon", "value", "label") if hero.get(k) is not None}}
     return {"icon": "doc", "sections": len(doc.get("sections") or [])}
 
 
-_cache: dict[str, tuple[tuple, dict]] = {}
-_hist_cache: dict[str, tuple[float, tuple[int, list[int]]]] = {}
-
-
 def history_info(p: Path) -> tuple[int, list[int]]:
     """(revision count, when each revision was built as epoch seconds) from the doc's history file."""
-    hp = build.history_path(p)
     try:
-        m = hp.stat().st_mtime
-    except OSError:
-        return 0, []
-    hit = _hist_cache.get(str(hp))
-    if hit and hit[0] == m:
-        return hit[1]
-    try:
-        revs = json.loads(hp.read_text(encoding="utf-8")).get("revs") or []
-        built = []
-        for r in revs:
-            try:
-                built.append(int(dt.datetime.fromisoformat(r["built"]).timestamp()))
-            except (KeyError, TypeError, ValueError):
-                pass
-        res = (len(revs), built)
+        revs = json.loads(build.history_path(p).read_text(encoding="utf-8")).get("revs") or []
     except (OSError, ValueError, AttributeError):
-        res = (0, [])
-    _hist_cache[str(hp)] = (m, res)
-    return res
+        return 0, []
+    built = []
+    for r in revs:
+        try:
+            built.append(int(dt.datetime.fromisoformat(r["built"]).timestamp()))
+        except (KeyError, TypeError, ValueError):
+            pass
+    return len(revs), built
 
 
 def mtime(p: Path) -> float:
@@ -863,106 +815,153 @@ def mtime(p: Path) -> float:
         return 0.0
 
 
-def doc_key(p: Path) -> tuple:
-    """What a doc's summary depends on in files: the doc's mtime, size and inode, its screen files' and layer folders'
-    mtimes (info_key), its history's (a contract problem is an error only while meta.rev is new; revs, built, a
-    carried approval) and its diff cache's (a review card's line counts). OSError when the doc is gone."""
+def screens_of(doc: dict, p: Path) -> list[str]:
+    """The files besides the doc that its summary and approval depend on: its screen files, its icons artboards'
+    layer folders and a store listing's captures.json (as doc_info stats them)."""
+    screens = [str(x) for x in build.screen_paths(doc, p).values()]
+    board = build.board_of(doc)
+    screens += [str(build.icon_dir(p, a)) for a in (board or {}).get("artboards") or []
+                if build.is_icons(a) and isinstance(a.get("id"), str) and build.ID_RE.match(a["id"])]
+    if listing.listing_of(doc):
+        screens.append(str(listing.listing_dir(p) / "captures" / "captures.json"))
+    return screens
+
+
+def doc_key(p: Path, screens: list[str]) -> list:
+    """What a doc's index row depends on in files: the doc's mtime, size and inode, the mtimes of its screens
+    (stored with the row, so a sweep parses no JSON), its history's and its diff cache's. OSError when the doc is
+    gone."""
     import diffref   # noqa: PLC0415
     st = p.stat()
-    return (st.st_mtime_ns, st.st_size, st.st_ino, info_key(p), mtime(build.history_path(p)), mtime(diffref.cache_path(p)))
+    return [st.st_mtime_ns, st.st_size, st.st_ino, [mtime(Path(s)) for s in screens], mtime(build.history_path(p)),
+            mtime(diffref.cache_path(p))]
 
 
-def settled(key: tuple) -> tuple | None:
-    """A doc_key to cache by, or None (never matches) while the doc changed in the last RACY_NS: a coarse clock could
-    hide another change that soon."""
+def settled(key: list) -> list | None:
+    """A doc_key to store, or None (read again next sweep) while the doc changed in the last RACY_NS: a coarse clock
+    could hide another change that soon."""
     return key if time.time_ns() - key[0] >= RACY_NS else None
 
 
-def summarize(p: Path) -> dict:
-    """What the home page needs about one doc, its file part cached by doc_key. title and emoji are the ones bluedoc
-    shows (build.shown_title, build.shown_emoji: the reader's from state.db over the doc's), docTitle the doc's own."""
-    st = p.stat()
-    key = doc_key(p)
-    hit = _cache.get(str(p))
-    if hit and hit[0] == key:
-        info = dict(hit[1])
-    else:
-        info = {"title": build.doc_stem(p), "errors": 0}
-        try:
-            doc = json.loads(p.read_text(encoding="utf-8"))
-            rep = build.validate(doc, p)
-            meta = doc.get("meta") or {}
-            dtype = build.doc_type(meta)
-            items = []
+def checklist_rows(doc: dict) -> list:
+    """Each checklist item as [checklist id, item id, 1 for a decision, the author's choice (a `multi` item's ids
+    comma-joined) or tick ('1'/'0'), a decision's option ids, its text]: what status_of reads."""
+    items = []
 
-            def scan(blocks):
-                for b in blocks or []:
-                    if b.get("type") == "checklist":
-                        for it in b.get("items") or []:
-                            dec = bool(it.get("choices"))
-                            # the author's choice as the page's pick value has it: a `multi` item's ids comma-joined, so
-                            # one or more ticks (the reader's or the author's) count as decided
-                            choice = it.get("choice") or ""
-                            # the item's text last: the home page's open row lists what is left to decide or tick
-                            items.append([b.get("id"), it.get("id"), 1 if dec else 0,
-                                          (",".join(map(str, choice)) if isinstance(choice, list) else choice) if dec
-                                          else ("1" if it.get("done") else "0"),
-                                          [c.get("id") for c in it.get("choices") or []] if dec else None,
-                                          str(it.get("text") or "")[:160]])
-                            scan(it.get("blocks"))
-            for s in doc.get("sections") or []:
-                scan(s.get("blocks"))
-            words: list[str] = []
-            text_of(doc, words)
-            info.update({
-                "id": doc.get("id"), "docTitle": doc.get("title") or build.doc_stem(p), "subtitle": doc.get("subtitle") or "",
-                "emoji": build.shown_emoji(doc, None),
-                "tldr": doc.get("tldr") or "", "kind": meta.get("kind") or "", "type": dtype, "org": meta.get("org") or "",
-                "approvable": dtype in build.APPROVABLE_TYPES,   # the home page's Awaiting approval and Approved
-                "rev": str(meta.get("rev") or ""), "date": meta.get("date") or "",
-                "sections": [s.get("title") or "" for s in doc.get("sections") or []],
-                # a storelisting's store-rule errors aren't "doesn't build": its card shows them (card()'s storeErrors)
-                "items": items, "errors": len(rep.blocking), "firstError": rep.blocking[0] if rep.blocking else "",
-                # steps not done yet: an approved doc with none open and every check ticked is all done (Archive it?)
-                "stepsOpen": sum(1 for b in build.all_blocks(doc) if b.get("type") == "steps" for it in b.get("items") or []
-                                 if isinstance(it, dict) and it.get("status") != "done"),
-                # the first open steps, [title, effort, status], for the home page's open row
-                "next": [[str(it.get("title") or "")[:160], it.get("effort") or "", it.get("status") or ""]
-                         for b in build.all_blocks(doc) if b.get("type") == "steps" for it in b.get("items") or []
-                         if isinstance(it, dict) and it.get("status") != "done"][:5],
-                "text": " ".join(words)[:SEARCH_CHARS], "card": card(doc, dtype, p),
-            })
-        except (OSError, ValueError, TypeError, AttributeError) as e:
-            info.update({"errors": 1, "firstError": f"cannot read: {e}", "type": "other", "emoji": build.TYPE_EMOJI["other"]})
-        info.setdefault("docTitle", info.pop("title"))
-        # the card may just have written the diff cache: key on the files as they are now
-        _cache[str(p)] = (settled(doc_key(p)), info)
-        info = dict(info)
-    info["mtime"] = st.st_mtime
-    info["revs"], info["built"] = history_info(p)
-    reader = {}
-    if DB:
-        path = str(p.resolve())
-        for kind, row in DB.latest(path).items():
-            at = dt.datetime.fromisoformat(row["at"]).timestamp()
-            if kind != "approval":
-                info[kind] = {"at": at, "rev": row["rev"]}
-            elif ap := approval_of(p, row):   # None: approved other content of this rev, awaiting again
-                info[kind] = {"at": at, "rev": ap["rev"], "carried": ap["carried"]}
-        reader = DB.state(path)[1]
-        # the home card's progress: the reader's tick and pick values (<checklist>:<item>), {} when there are none
-        info["state"] = {k: v for k, v in reader.items() if k.count(":") == 1 and not k.startswith("__")}
-    info["title"] = build.shown_title({"title": info["docTitle"]}, reader)
+    def scan(blocks):
+        for b in blocks or []:
+            if b.get("type") == "checklist":
+                for it in b.get("items") or []:
+                    dec = bool(it.get("choices"))
+                    choice = it.get("choice") or ""
+                    items.append([b.get("id"), it.get("id"), 1 if dec else 0,
+                                  (",".join(map(str, choice)) if isinstance(choice, list) else choice) if dec
+                                  else ("1" if it.get("done") else "0"),
+                                  [c.get("id") for c in it.get("choices") or []] if dec else None,
+                                  str(it.get("text") or "")[:160]])
+                    scan(it.get("blocks"))
+    for s in doc.get("sections") or []:
+        scan(s.get("blocks"))
+    return items
+
+
+def summary_of(p: Path) -> dict:
+    """Stage 1 of a doc, from its JSON and history alone (no validation, layout, git or screen file):
+    {summary, search, screens, approval_hash, edits}. summary is what the home draws: docTitle (the doc's own
+    title), emoji (the doc's), items (checklist_rows), next (the first open steps), card (card_numbers), revs,
+    mtime…; a doc that can't be read has errors 1 and its firstError already. search: the FTS columns. edits: its
+    history's built times and its mtime."""
+    st = p.stat()
+    revs, built = history_info(p)
+    try:
+        doc = json.loads(p.read_text(encoding="utf-8"))
+        if not isinstance(doc, dict):
+            raise ValueError("not a JSON object")
+        meta = doc.get("meta") or {}
+        dtype = build.doc_type(meta)
+        steps = [it for b in build.all_blocks(doc) if b.get("type") == "steps" for it in b.get("items") or [] if isinstance(it, dict)]
+        open_steps = [it for it in steps if it.get("status") != "done"]
+        words: list[str] = []
+        text_of(doc, words)
+        summary = {
+            "id": doc.get("id"), "docTitle": doc.get("title") or build.doc_stem(p), "subtitle": doc.get("subtitle") or "",
+            "emoji": build.shown_emoji(doc, None), "tldr": doc.get("tldr") or "", "kind": meta.get("kind") or "",
+            "type": dtype, "org": meta.get("org") or "",
+            "approvable": dtype in build.APPROVABLE_TYPES,   # the home page's Awaiting approval and Approved
+            "rev": str(meta.get("rev") or ""), "date": meta.get("date") or "",
+            "sections": [s.get("title") or "" for s in doc.get("sections") or []],
+            "items": checklist_rows(doc),
+            # steps not done yet: an approved doc with none open and every check ticked is all done (Archive it?)
+            "stepsOpen": len(open_steps), "stepsTotal": len(steps),
+            # the first open steps, [title, effort, status], for the home page's open row
+            "next": [[str(it.get("title") or "")[:160], it.get("effort") or "", it.get("status") or ""] for it in open_steps[:5]],
+            "card": card_numbers(doc, dtype, p),
+        }
+        screens = screens_of(doc, p)
+        text = " ".join(words)[:SEARCH_CHARS]
+    except (OSError, ValueError, TypeError, AttributeError, KeyError) as e:
+        summary = {"docTitle": build.doc_stem(p), "errors": 1, "firstError": f"cannot read: {e}", "type": "other",
+                   "emoji": build.TYPE_EMOJI["other"], "items": [], "approvable": False, "rev": "", "stepsOpen": 0,
+                   "stepsTotal": 0, "next": [], "card": {"icon": "doc", "sections": 0}}
+        screens, text = [], ""
+    summary.update({"mtime": st.st_mtime, "revs": revs})
+    plain = indexdb.plain
+    search = {"title": plain(summary["docTitle"]), "subtitle": plain(summary.get("subtitle")),
+              "sections": " ".join(summary.get("sections") or []),
+              "meta": f"{summary.get('kind') or ''} {summary.get('org') or ''} {indexdb.TYPE_ONE.get(summary['type'], 'Other')}",
+              "body": plain(summary.get("tldr")) + " " + plain(text)}
+    return {"summary": summary, "search": search, "screens": screens, "edits": [*built, st.st_mtime]}
+
+
+def overlay_of(p: Path, summary: dict) -> tuple[dict, str | None]:
+    """(the reader overlay of a doc, its reader version): from state.db, the newest answers, changes and approval
+    (approval_of: None once it no longer holds), the reader's ticks and picks (state), the shown title and the
+    reader's emoji, archived (the time the reader archived this rev, else None), unarchivedBy and archiveLater. The
+    version is state.db's '<docs.version>:<newest reply id>', so the indexer sees another process's writes."""
+    doc_title = summary.get("docTitle") or ""
+    ov: dict = {"title": doc_title}
+    if not DB:
+        return ov, None
+    path = str(p.resolve())
+    latest = DB.latest(path)
+    version, reader = DB.state(path)
+    for kind, row in latest.items():
+        at = dt.datetime.fromisoformat(row["at"]).timestamp()
+        if kind != "approval":
+            ov[kind] = {"at": at, "rev": row["rev"]}
+        elif ap := approval_of(p, row):   # None: approved other content of this rev, awaiting again
+            ov[kind] = {"at": at, "rev": ap["rev"], "carried": ap["carried"]}
+    ov["state"] = {k: v for k, v in reader.items() if k.count(":") == 1 and not k.startswith("__")}
+    ov["title"] = build.shown_title({"title": doc_title}, reader)
     if build.emoji_ok(reader.get("__emoji")):
-        info["emoji"] = reader["__emoji"]
-    # archived: the time the reader archived this rev, else null; unarchivedBy: the rev the agent wrote since an archive
-    rec, rev = archive_record(reader.get(ARCHIVED)), info.get("rev") or ""
-    info["archived"] = rec["at"] if rec and rec["rev"] == rev else None
+        ov["emoji"] = reader["__emoji"]
+    rev = str(summary.get("rev") or "")
+    rec = archive_record(reader.get(ARCHIVED))
+    ov["archived"] = rec["at"] if rec and rec["rev"] == rev else None
+    if isinstance(ov["archived"], str):
+        try:
+            ov["archived"] = dt.datetime.fromisoformat(ov["archived"].replace("Z", "+00:00")).timestamp()
+        except ValueError:
+            ov["archived"] = time.time()
     if rec and rec["rev"] != rev:
-        info["unarchivedBy"] = rev
+        ov["unarchivedBy"] = rev
     if reader.get(ARCHIVE_LATER) == rev:
-        info["archiveLater"] = rev
-    return info
+        ov["archiveLater"] = rev
+    return ov, f"{version}:{max((r['id'] for r in latest.values()), default=0)}"
+
+
+def refresh_overlay(path: str) -> None:
+    """state.db's on_change: the doc's index row takes its new overlay and status in the same request."""
+    if not INDEX:
+        return
+    row = INDEX.row(path)
+    if row is None:
+        return
+    try:
+        ov, ver = overlay_of(Path(path), row["summary"])
+        INDEX.put_overlay(path, ov, ver)
+    except Exception as e:   # noqa: BLE001 (the save stands; the next sweep's reader pass retries)
+        print(f"index: overlay of {path}: {e}", file=sys.stderr, flush=True)
 
 
 TEMP_DIRS = (Path("/tmp"), Path("/private/tmp"))
@@ -980,85 +979,354 @@ def home_lists() -> dict:
     return {**{k: list(h.get(k) or []) for k in settings.HOME_LISTS}, **{k: dict(h.get(k) or {}) for k in settings.HOME_MAPS}}
 
 
-_entries: dict[str, tuple[tuple, dict]] = {}   # doc path -> ((doc_key, state.db's generation), summarize's)
-_bodies: dict[tuple, tuple[tuple, bytes, str]] = {}   # (route, root, unlocked) -> (index_inputs', body, ETag)
-_index_lock = threading.Lock()
+def roots_info(home: dict) -> list[dict]:
+    """Every registered folder as the index's queries take it: {slug, path, name (the folder's), label (the reader's
+    name for it, else name), temp, shown (on the home page unless picked: not hidden, and not temporary unless
+    shown)}."""
+    out = []
+    for slug, r in slugs(load_roots()).items():
+        temp, path = temp_folder(r), str(r)
+        out.append({"slug": slug, "path": path, "name": project_name(r), "label": (home.get("names") or {}).get(path) or project_name(r),
+                    "temp": temp, "shown": path not in home.get("hidden", []) and (not temp or path in home.get("shown", []))})
+    return out
 
 
-def index_inputs(root: str | None) -> tuple[list, list[str], dict, tuple]:
-    """(folders [(slug, folder, [(doc, doc_key)])], missing, home, inputs): the folders index.json lists (root: only the
-    one with that slug), the registered folders that are gone, home_lists, and everything the home's JSON depends on:
-    state.db's generation (a reader's ticks, picks, archive, approval and replies), home, missing, roots.json's folders
-    and each doc's doc_key. Stats only: folders are listed again only when they changed (walk_docs)."""
-    gen = DB.generation() if DB else ()
-    roots = slugs(load_roots())
-    folders = []
-    for slug, r in roots.items():
-        if root is not None and slug != root:
-            continue
-        docs = []
-        for p in walk_docs(r, inner_roots(r, roots.values())):
+# ---------- the indexer: index.db's one writer ----------
+
+try:
+    import fcntl
+except ImportError:   # Windows: no flock; one server per home
+    fcntl = None
+
+INDEX_BATCH = 25   # stage 1 commits this many docs at a time, so a cold build fills the first page within a second
+VALIDATE_TIMEOUT = 30.0
+
+
+class Indexer:
+    """One thread per server, started by run(). It sweeps the registered folders stat-only (walk_docs, doc_key from
+    each row's stored screens), summarizes changed and new docs newest first, shown folders before hidden and
+    temporary ones (stage 1, INDEX_BATCH a commit), then validates one doc at a time in a niced worker process while
+    stage 1 has nothing queued (stage 2, written compare-and-set on the file key). Docs no longer listed lose their
+    rows. A sweep runs every 2 s while a page asked in the last minute, else every 30 s; a request wakes it when the
+    last sweep is over 2 s old. Only the server holding index-<schema>.db.lock (flock) writes; others read."""
+
+    def __init__(self, idx: indexdb.IndexDB) -> None:
+        self.idx = idx
+        self.wake = threading.Event()
+        self.asked = self.last_sweep = 0.0
+        self.listed: dict[str, tuple[Path, Path, bool]] | None = None   # path -> (folder, doc, shown)
+        self.queue: list[str] = []
+        self.failed: dict[str, str] = {}   # path -> the file key validation timed out on
+        self.lockf = None
+        self.leader = False
+        self.proc: subprocess.Popen | None = None
+        self.state_gen = None
+        self.done_once = False
+        self._progress: tuple = (None, None)
+        self.started_sweep = 0.0   # when the running sweep started (time.time())
+        self.swept = 0.0   # when the last sweep whose stage 1 is written started: ping's index.swept
+
+    # ---------- leadership ----------
+
+    def take_lock(self) -> bool:
+        if self.leader:
+            return True
+        if fcntl is None:
+            self.leader = True
+            return True
+        f = open(str(self.idx.path) + ".lock", "a")
+        try:
+            fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError:
+            f.close()
+            return False
+        self.lockf, self.leader = f, True
+        return True
+
+    @staticmethod
+    def lock_free(path: Path) -> bool:
+        if fcntl is None or not path.exists():
+            return True
+        try:
+            with open(path, "a") as f:
+                fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                fcntl.flock(f, fcntl.LOCK_UN)
+            return True
+        except OSError:
+            return False
+
+    # ---------- what requests ask ----------
+
+    def ask(self) -> None:
+        """A home page or doc menu asked: sweep every 2 s for the next minute, and now when the last sweep is old."""
+        now = time.monotonic()
+        self.asked = now
+        if now - self.last_sweep > 2:
+            self.wake.set()
+
+    def progress(self) -> dict:
+        """{docs, summarized, validated, rows}: the docs listed (the last sweep's, this server's or the leader's), those
+        stage 1 wrote with this code, those validated, and the rows of listed docs; kept until the index moves."""
+        gen = self.idx.generation()
+        if self._progress[0] == gen and self.listed is not None:
+            return self._progress[1]
+        paths = set(self.listed) if self.listed is not None else None
+        c = self.idx.counts(CODE_HASH, paths)
+        total = len(paths) if paths is not None else (self.idx.meta("listed") or c["rows"])
+        out = {"docs": total, "summarized": c["summarized"], "validated": c["validated"], "rows": c["rows"]}
+        self._progress = (gen, out)
+        return out
+
+    # ---------- the loop ----------
+
+    def start(self) -> None:
+        if self.take_lock():
             try:
-                docs.append((p, doc_key(p)))
-            except OSError:   # gone since its folder was listed
-                continue
-        folders.append((slug, r, docs))
-    if root is None:   # a folder no longer registered: forget its listings
-        with _dirs_lock:
-            for k in set(_dirs) - {str(r) for r in roots.values()}:
+                self.sweep()   # stat-only: the first request knows how many docs there are
+            except Exception as e:   # noqa: BLE001
+                print(f"index: sweep failed: {e}", file=sys.stderr, flush=True)
+        threading.Thread(target=self.run, name="indexer", daemon=True).start()
+
+    def run(self) -> None:
+        while True:
+            if self.take_lock():
+                try:
+                    self.cycle()
+                except Exception:   # noqa: BLE001 (the next cycle tries again)
+                    import traceback   # noqa: PLC0415
+                    traceback.print_exc()
+            busy = time.monotonic() - self.asked < 60
+            self.wake.wait(2 if busy else 30)
+            self.wake.clear()
+
+    def cycle(self) -> None:
+        if time.monotonic() - self.last_sweep >= 1 or self.listed is None:
+            self.sweep()
+        while self.queue:
+            batch, self.queue = self.queue[:INDEX_BATCH], self.queue[INDEX_BATCH:]
+            self.summarize(batch)
+        self.swept = self.started_sweep
+        self.reader_pass()
+        if not self.done_once:
+            self.done_once = True
+            self.idx.drop_other_schemas(self.lock_free)
+        while self.validate_next():
+            if self.wake.is_set() and time.monotonic() - self.last_sweep > 2:
+                self.sweep()
+                if self.queue:
+                    self.wake.set()   # stage 1 first: the next cycle starts at once
+                    return
+                self.swept = self.started_sweep
+                self.wake.clear()
+
+    def sweep(self) -> None:
+        """List every registered folder's docs and queue the ones whose file key or code differs from their row's;
+        drop the rows of docs no longer listed."""
+        self.last_sweep, self.started_sweep = time.monotonic(), time.time()
+        home = home_lists()
+        roots = roots_info(home)
+        rows = self.idx.keys()
+        regs = {r["path"]: r for r in roots}
+        listed: dict[str, tuple[Path, Path, bool]] = {}
+        all_roots = [Path(r["path"]) for r in roots]
+        for r in roots:
+            folder = Path(r["path"])
+            for p in walk_docs(folder, inner_roots(folder, all_roots)):
+                listed.setdefault(str(p), (folder, p, r["shown"]))
+        with _dirs_lock:   # folders no longer registered: forget their listings
+            for k in set(_dirs) - set(regs):
                 del _dirs[k]
-    missing = [p for p in roots_listed() if not Path(p).is_dir()]
-    home = home_lists()
-    inputs = (gen, json.dumps(home, sort_keys=True), tuple(missing),
-              tuple((slug, str(r), tuple((str(p), k) for p, k in docs)) for slug, r, docs in folders))
-    return folders, missing, home, inputs
-
-
-def home_json(route: str, root: str | None = None, unlocked: bool = False) -> tuple[bytes, str]:
-    """(body, ETag) of GET /__bluedoc/index.json (route 'index') or /__bluedoc/search-text ('search'), kept until
-    index_inputs moves, so an unchanged home costs stats and no rebuild; each doc's summary is kept until its doc_key
-    or state.db's generation moves. Neither is kept while a doc is too fresh to trust its mtime (settled).
-    index: every registered folder's docs as the home page lists them (summarize, without `text`), with path and url;
-    each folder says whether it is temporary (temp_folder); missing: the registered folders that are gone; home:
-    home_lists; unlocked as given. search: {docs: {url: the doc's search text}}, docs with none left out."""
-    with _index_lock:
-        folders, missing, home, inputs = index_inputs(root)
-        slot = (route, root, unlocked and route == "index")
-        hit = _bodies.get(slot)
-        if hit and hit[0] == inputs:
-            return hit[1], hit[2]
-        gen, out, texts, seen, racy = inputs[0], [], {}, set(), False
-        for slug, r, docs in folders:
-            listed = []
-            for p, k in docs:
-                got = _entries.get(str(p))
-                if got and got[0] == (k, gen):
-                    d = got[1]
+        queued: list[tuple] = []
+        for path, (folder, p, shown) in listed.items():
+            row = rows.get(path)
+            try:
+                if row is None or row[0] is None or row[2] != CODE_HASH or row[8] != str(folder):
+                    m = p.stat().st_mtime
                 else:
-                    try:
-                        d = summarize(p)
-                    except OSError:
+                    key = doc_key(p, json.loads(row[1]))
+                    if json.dumps(key) == row[0]:
                         continue
-                    _entries[str(p)] = ((settled(k), gen), d)
-                racy = racy or settled(k) is None
-                seen.add(str(p))
-                rel = p.relative_to(r).as_posix()
-                url = f"/{quote(slug)}/{quote(rel)}"
-                if d.get("text"):
-                    texts[url] = d["text"]
-                listed.append({**{x: v for x, v in d.items() if x != "text"}, "path": rel, "url": url})
-            out.append({"slug": slug, "name": project_name(r), "path": str(r), "temp": temp_folder(r), "docs": listed})
-        if root is None:   # docs gone or no longer listed
-            for gone in set(_entries) - seen:
-                del _entries[gone]
-        obj = ({"roots": out, "missing": [{"path": p, "display": display_path(p)} for p in missing], "home": home,
-                "unlocked": unlocked} if route == "index" else {"docs": texts})
-        body = json.dumps(obj, ensure_ascii=False).encode()
-        etag = f'"{hashlib.blake2b(body, digest_size=16).hexdigest()}"'
-        if len(_bodies) > 32:   # ?root= of many folders over time
-            _bodies.clear()
-        _bodies[slot] = (None if racy else inputs, body, etag)
-        return body, etag
+                    m = key[0] / 1e9
+            except OSError:
+                continue
+            queued.append((not shown, -m, path))
+        self.listed = listed
+        self.queue = [x[2] for x in sorted(queued)]
+        gone = set(rows) - set(listed)
+        if gone:
+            self.idx.drop(gone)
+        if self.idx.meta("listed") != len(listed):
+            self.idx.set_meta(listed=len(listed))
+
+    def summarize(self, paths: list[str]) -> None:
+        """Stage 1 for paths in one transaction: file key, read and summarize, file key again; a doc that changed
+        mid-read goes back on the queue."""
+        out = []
+        for path in paths:
+            folder, p, _ = self.listed[path]
+            try:
+                st = p.stat()
+                info = summary_of(p)
+                key = doc_key(p, info["screens"])
+            except OSError:
+                continue
+            if key[:3] != [st.st_mtime_ns, st.st_size, st.st_ino]:   # changed mid-read: the next sweep reads it again
+                continue
+            rel = p.relative_to(folder).as_posix()
+            info["search"]["path"] = rel
+            ov, ver = overlay_of(p, info["summary"])
+            out.append({"path": path, "root": str(folder), "rel": rel, "dir": rel.rpartition("/")[0], "file_key":
+                        json.dumps(key) if settled(key) else None, "screens": info["screens"], "summary": info["summary"],
+                        "search": info["search"], "edits": info["edits"], "overlay": ov, "reader_ver": ver})
+        if out:
+            for path in self.idx.put_summary(out, CODE_HASH):   # a save landed meanwhile: its overlay over the new summary
+                refresh_overlay(path)
+
+    def reader_pass(self) -> None:
+        """After another process wrote state.db (its data_version moved): refresh the rows whose reader version
+        differs from state.db's."""
+        if not DB:
+            return
+        gen = DB.generation()
+        if gen == self.state_gen:
+            return
+        self.state_gen = gen
+        versions = DB.versions()
+        for path, row in self.idx.keys().items():
+            want = versions.get(str(Path(path).resolve()), "0:0")
+            if (row[6] or "0:0") != want:
+                refresh_overlay(path)
+
+    def validate_next(self) -> bool:
+        """Validate the newest doc whose validation is missing or of other code or file key; False when none is left."""
+        rows = self.idx.keys()
+        todo = sorted(((-r[5], path, r[0]) for path, r in rows.items()
+                       if r[0] is not None and (r[3] != r[0] or r[4] != CODE_HASH) and self.failed.get(path) != r[0]))
+        if not todo:
+            return False
+        _, path, key = todo[0]
+        got = self.validate(path)
+        if got is None:   # over VALIDATE_TIMEOUT: errors stay unknown until the doc changes
+            self.failed[path] = key
+            return True
+        self.idx.put_validation(path, key, CODE_HASH, int(got.get("errors") or 0), got.get("firstError") or "", got.get("card"))
+        return True
+
+    def validate(self, path: str) -> dict | None:
+        """indexdb.validate_doc in the worker process (started on first use, nice 10); None after VALIDATE_TIMEOUT,
+        when the worker is killed and starts again with the next doc."""
+        if self.proc is None or self.proc.poll() is not None:
+            self.proc = subprocess.Popen([sys.executable, str(HERE / "indexdb.py"), "worker"], stdin=subprocess.PIPE,
+                                         stdout=subprocess.PIPE, stderr=None, text=True, bufsize=1)
+        try:
+            self.proc.stdin.write(json.dumps({"path": path}) + "\n")
+            self.proc.stdin.flush()
+            ready, _, _ = select.select([self.proc.stdout], [], [], VALIDATE_TIMEOUT)
+            line = self.proc.stdout.readline() if ready else ""
+        except OSError:
+            line = ""
+        if not line:
+            self.proc.kill()
+            self.proc.wait()
+            self.proc = None
+            return None
+        return json.loads(line)
+
+
+INDEX: indexdb.IndexDB | None = None
+INDEXER: Indexer | None = None
+
+
+def open_index() -> None:
+    """Open index.db into INDEX and start its indexer; without sqlite3 the home lists nothing (open_db said why)."""
+    global INDEX, INDEXER
+    if indexdb is None:
+        return
+    INDEX = indexdb.IndexDB(STATE)
+    INDEXER = Indexer(INDEX)
+    INDEXER.start()
+
+
+def index_progress() -> dict | None:
+    """ping's `index`: {docs, summarized, validated, bytes} (bytes: index.db's size with its WAL), or None without it."""
+    if not INDEXER:
+        return None
+    p = INDEXER.progress()
+    size = sum(Path(str(INDEX.path) + s).stat().st_size for s in ("", "-wal") if Path(str(INDEX.path) + s).exists())
+    return {"docs": p["docs"], "summarized": p["summarized"], "validated": p["validated"], "bytes": size,
+            "swept": INDEXER.swept}
+
+
+INDEX_VIEWS = ("rows", "cards", "menu")
+INDEX_LIMITS = {"rows": 25, "cards": 48, "menu": 200}
+
+
+def index_query(q: dict, home: dict) -> indexdb.Query:
+    try:
+        tz = int(q.get("tz") or 0)
+    except ValueError:
+        tz = 0
+    return indexdb.Query(roots_info(home), p=q.get("p") or "", d=q.get("d") or "", t=q.get("t") or "", s=q.get("s") or "",
+                         hidden=q.get("hidden") == "1", q=q.get("q") or "", sort=q.get("sort") or "new", tz=max(-840, min(840, tz)))
+
+
+def index_etag(q: dict, unlocked: bool, route: str) -> str:
+    """What an index.json or stats answer depends on: both databases' generations, settings.json's home lists,
+    roots.json, the query, unlocked, the browser's day and this code."""
+    try:
+        roots = ROOTS_FILE.read_bytes()
+    except OSError:
+        roots = b""
+    try:
+        tz = int(q.get("tz") or 0)
+    except ValueError:
+        tz = 0
+    day = int(time.time() - tz * 60) // 86400
+    parts = (route, INDEX.generation(), DB.generation() if DB else (), json.dumps(home_lists(), sort_keys=True), roots,
+             sorted(q.items()), unlocked, day, CODE_HASH)
+    return f'"{hashlib.blake2b(repr(parts).encode(), digest_size=16).hexdigest()}"'
+
+
+def index_json(q: dict, unlocked: bool) -> bytes:
+    """GET /__bluedoc/index.json?view=rows|cards|menu: one slice of the view from index.db (indexdb.IndexDB.page)
+    with its counts, the folders, the indexer's progress (index; indexing until every listed doc has a row), code,
+    missing, home and unlocked."""
+    home = home_lists()
+    query = index_query(q, home)
+    view = q["view"]
+    try:
+        offset, limit = int(q.get("offset") or 0), int(q.get("limit") or INDEX_LIMITS[view])
+    except ValueError:
+        offset, limit = 0, INDEX_LIMITS[view]
+    doc = None
+    if q.get("doc") and "/" in q["doc"]:
+        slug, rel = q["doc"].split("/", 1)
+        r = query.by_slug.get(slug)
+        doc = (r["path"], rel) if r else None
+    out = INDEX.page(query, view, offset, limit, doc)
+    prog = INDEXER.progress()
+    for r in out["roots"]:
+        r.pop("label", None)
+    out.update({"index": {k: prog[k] for k in ("docs", "summarized", "validated")}, "code": CODE_HASH,
+                "missing": [{"path": p, "display": display_path(p)} for p in roots_listed() if not Path(p).is_dir()],
+                "home": home, "unlocked": unlocked})
+    if prog["rows"] < prog["docs"]:
+        out["indexing"] = {"done": prog["rows"], "total": prog["docs"]}
+    return json.dumps(out, ensure_ascii=False).encode()
+
+
+def stats_json(q: dict) -> bytes:
+    """GET /__bluedoc/stats?p=&range=&tz=: Statistics' widgets from index.db (indexdb.IndexDB.stats)."""
+    query = index_query({"p": q.get("p") or "", "tz": q.get("tz")}, home_lists())
+    try:
+        days = max(1, min(366, int(q.get("range") or 14)))
+    except ValueError:
+        days = 14
+    out = INDEX.stats(query, days)
+    prog = INDEXER.progress()
+    if prog["rows"] < prog["docs"]:
+        out["indexing"] = {"done": prog["rows"], "total": prog["docs"]}
+    return json.dumps(out, ensure_ascii=False).encode()
 
 
 # ---------- rendering ----------
@@ -4607,6 +4875,11 @@ def make_handler(port: int, default_to: str):
     class H(BaseHTTPRequestHandler):
         server_version = "bluedoc"
 
+        def send_response(self, code: int, message: str | None = None) -> None:
+            """Every answer says which code serves it (X-Bluedoc-Code), so a page can tell bluedoc was updated."""
+            super().send_response(code, message)
+            self.send_header("X-Bluedoc-Code", CODE_HASH)
+
         def log_message(self, *_):
             pass
 
@@ -4847,8 +5120,23 @@ def make_handler(port: int, default_to: str):
         def json(self, code: int, obj) -> None:
             self.send(code, json.dumps(obj, ensure_ascii=False), "application/json; charset=utf-8")
 
-        def revalidated(self, body: bytes, etag: str) -> None:
-            """A JSON body the browser may keep but must revalidate (no-cache): 304 when If-None-Match names its ETag.
+        def index_route(self, path: str, q: dict) -> None:
+            """GET /__bluedoc/index.json and /__bluedoc/stats from index.db; a request without ?view (a page of an
+            earlier version) gets 409, and every request wakes the indexer without waiting for it."""
+            stats = path.endswith("/stats")
+            if not stats and q.get("view") not in INDEX_VIEWS:
+                return self.json(409, {"error": "bluedoc was updated: reload", "code": CODE_HASH})
+            if INDEX is None:
+                return self.json(503, {"error": "this server's Python has no sqlite3 module: the home can't list docs; "
+                                                "run bluedoc with a Python that has it"})
+            INDEXER.ask()
+            unlocked = False if stats else self.has_key()
+            etag = index_etag(q, unlocked, "stats" if stats else "index")
+            return self.revalidated((lambda: stats_json(q)) if stats else (lambda: index_json(q, unlocked)), etag)
+
+        def revalidated(self, body, etag: str) -> None:
+            """A JSON body (bytes, or a function making them, called only for a 200) the browser may keep but must
+            revalidate (no-cache): 304 when If-None-Match names its ETag.
             Its status line says HTTP/1.1 (Connection: close, as every answer here): Chromium sends If-None-Match only
             for an ETag that came with an HTTP/1.1 response."""
             self.protocol_version = "HTTP/1.1"
@@ -4859,7 +5147,8 @@ def make_handler(port: int, default_to: str):
                     self.send_header(k, v)
                 self.end_headers()
                 return
-            self.send(200, body, "application/json; charset=utf-8", "no-cache", {"ETag": etag, "Connection": "close"})
+            self.send(200, body() if callable(body) else body, "application/json; charset=utf-8", "no-cache",
+                      {"ETag": etag, "Connection": "close"})
 
         def cookie_key(self) -> str:
             try:
@@ -4987,16 +5276,15 @@ def make_handler(port: int, default_to: str):
             if u.path.startswith("/__bluedoc/fw/"):
                 f = store_file(u.path[len("/__bluedoc/fw/"):])
                 return self.asset(f, q) if f else self.json(404, {"error": "not found"})
-            if u.path == "/__bluedoc/index.json":
-                return self.revalidated(*home_json("index", q.get("root"), self.has_key()))
-            if u.path == "/__bluedoc/search-text":
-                return self.revalidated(*home_json("search", q.get("root")))
+            if u.path in ("/__bluedoc/index.json", "/__bluedoc/stats"):
+                return self.index_route(u.path, q)
             if u.path == "/__bluedoc/settings":
                 return self.json(200, settings_view(port, fresh=True))
             if u.path == "/__bluedoc/ping":
                 doc = doc_for_url(q.get("path", ""))
                 return self.json(200, {"bluedoc": True, "home": "/", "version": VERSION, "code": CODE_HASH,
                                        "started": STARTED, "pid": os.getpid(), "unlocked": self.has_key(),
+                                       "index": index_progress(),
                                        "to": INBOX.names.get(str(doc), default_to) if doc else default_to,
                                        "approval": saved_approval(doc) if doc else None})
             if u.path == "/__bluedoc/key":
@@ -5327,7 +5615,7 @@ def open_db() -> int:
         print("warning: this Python has no sqlite3 module: pages render without reader state (it stays in each browser) "
               "and replies are refused (Copy still works)", file=sys.stderr, flush=True)
         return 0
-    DB = statedb.StateDB(STATE_DB)
+    DB = statedb.StateDB(STATE_DB, on_change=refresh_overlay)
     if DB.created:
         imported = import_reply_files(load_roots())
         if imported:
@@ -5343,6 +5631,7 @@ def run(port: int, to: str) -> int:
     STATE.mkdir(parents=True, exist_ok=True)
     SECRET = load_key(create=True)   # kept across restarts, so a browser's cookie outlives an upgrade
     queued = open_db()
+    open_index()
     SERVER_FILE.write_text(json.dumps({"pid": os.getpid(), "port": port}) + "\n", encoding="utf-8")
     threading.Thread(target=gist_queue, name="gist-queue", daemon=True).start()   # sends the gist updates that are due
     print(f"bluedoc {VERSION or '(no version)'} (code {CODE_HASH}) on http://127.0.0.1:{port}/ "
@@ -5481,13 +5770,32 @@ def prune_copies(keep: Path) -> None:
         shutil.rmtree(d, ignore_errors=True)
 
 
+def version_tuple(v) -> tuple[int, ...] | None:
+    """'1.10.0' as (1, 10, 0); None for an empty or non-numeric version."""
+    try:
+        return tuple(int(x) for x in str(v).split(".")) if v else None
+    except ValueError:
+        return None
+
+
+def keep_running(info: dict) -> bool:
+    """Whether `open` keeps the running server: it runs this very code (whatever its version string says), or a
+    newer version than this client's. A newer client, the same version with other code (a dev build), or a version
+    that isn't numbers on either side replaces it."""
+    if info.get("code") == CODE_HASH:
+        return True
+    theirs, mine = version_tuple(info.get("version")), version_tuple(VERSION)
+    return theirs is not None and mine is not None and theirs > mine
+
+
 def ensure_started(port: int, pinned: bool = False) -> bool:
-    """Start the server unless one runs this very code; one that runs another version or code is replaced. Unless the
-    port is pinned (--port, BLUEDOC_PORT), a port another program holds is skipped for the next free one of PORT_SPAN,
-    the port the last server used first, so open tabs and the key cookie carry over; server.json records the one used."""
+    """Start the server unless one runs (keep_running) this very code or a newer version; any other is replaced.
+    Unless the port is pinned (--port, BLUEDOC_PORT), a port another program holds is skipped for the next free one of
+    PORT_SPAN, the port the last server used first, so open tabs and the key cookie carry over; server.json records
+    the one used."""
     last = last_port()   # read before a restart: the stopping server removes server.json
     info = server_info()
-    if info and (info.get("version"), info.get("code")) == (VERSION, CODE_HASH):
+    if info and keep_running(info):
         return True
     if info:
         print(f"restarting the bluedoc server: it ran {info.get('version') or 'an unknown version'} (code {info.get('code') or '?'}), "
@@ -6138,7 +6446,12 @@ def main() -> int:
         print("stopped")
         return 0
     if a.cmd == "status":
-        print(f"running at {base()}/" if alive() else "not running")
+        info = server_info()
+        print(f"running at {base()}/" if info else "not running")
+        ix = (info or {}).get("index")
+        if ix:
+            print(f"index: {ix['docs']} docs, {ix['summarized']} summarized, {ix['validated']} validated "
+                  f"({ix['bytes'] / 1048576:.1f} MB)")
         for r in load_roots():
             print(f"  {r}")
         return 0

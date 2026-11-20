@@ -132,6 +132,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .bd-dsm .d .dt { flex: none; font: 500 11px var(--mono); color: var(--fg-subtle); }
 .bd-dsm .d .ck { flex: none; width: 15px; height: 15px; color: var(--accent); stroke-width: 2.4; }
 .bd-dsm .none { margin: 0; padding: 14px 10px; color: var(--fg-subtle); }
+.bd-dsm .none .rl { padding: 0; border: 0; background: none; color: var(--accent-fg, var(--accent)); font: inherit; font-weight: 600; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
 .bd-dsm .ft { display: flex; align-items: center; gap: 14px; padding: 9px 10px 4px; margin-top: 6px; border-top: 1px solid var(--line-soft); font-size: 11.5px; color: var(--fg-subtle); }
 .bd-dsm .ft .all { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; border-radius: 6px; color: var(--accent-fg, var(--accent)); font-weight: 500; text-decoration: none; }
 .bd-dsm .ft .all:hover { text-decoration: underline; }
@@ -4345,6 +4346,7 @@ const store = (() => {
     const headers = SERVER_KEY.headers({ 'Content-Type': 'application/json', 'X-Bluedoc': '1' });
     const r = await fetch('/__bluedoc/state', { method: 'PUT', keepalive, headers,
       body: JSON.stringify({ path: location.pathname, import: imp, ops }) });
+    UPDATED.check(r);
     if (!r.ok) {
       const j = await r.json().catch(() => ({}));
       if (r.status === 403 && j && j.key) { SERVER_KEY.refused(headers); throw blocked('key'); }
@@ -4813,20 +4815,43 @@ const NAME = (() => {
   return { part, paint, edits, own, title, emoji, setTitle, setEmoji };
 })();
 
+/* ---------- bluedoc was updated: the server now runs other code than the one this page pinged at load ---------- */
+// Every answer carries X-Bluedoc-Code; the doc menu's load and each state save compare it with the ping's `code`. On a
+// mismatch a quiet strip under the bar says so with a Reload key. The page never reloads by itself: a comment draft
+// may be unsaved.
+const UPDATED = (() => {
+  let code = null, strip = null;
+  function show() {
+    if (strip) return;
+    strip = h('div', { class: 'bd-revbar bd-updbar', role: 'status' }, h('div', { class: 'in' }, ic('info'),
+      h('span', { class: 't' }, 'bluedoc was updated'), h('span', { class: 'sp' }),
+      h('button', { type: 'button', class: 'bp-btn', onclick: () => location.reload() }, 'Reload')));
+    const after = document.querySelector('.bd-lockbar') || document.querySelector('.bd-bar');
+    if (after) { after.after(strip); fitStrips(); }
+  }
+  return {
+    seen: c => { if (typeof c === 'string' && c) code = code || c; },
+    check: r => { const c = r && r.headers && r.headers.get('X-Bluedoc-Code'); if (c && code && c !== code) show(); return !!strip; },
+    show,
+  };
+})();
+
 /* ---------- the doc menu: the app bar's doc name opens the other docs of its project ---------- */
 // Served (not a shared page or an -o file), the app bar's emoji and doc name are a key with a chevron. It opens the docs
-// of the folder the page is under (the registered folder whose slug is the URL's first segment: index.json?root=),
-// newest first, each with its type's icon, title, status line (its type, and what the home card's status says) and
-// date; archived ones are left out as on the home page, but for this doc, which is ticked. The list loads on the first
-// open, and again on an open 30 s after it last did. The search field takes the focus: typing filters by title (case
-// and accents aside), ↑ ↓ move, Enter opens, Esc closes back to the key; Tab, a press outside or the window losing
-// focus closes it. Its foot links to every project (/). A phone: the menu spans the window under the bar.
+// of the folder the page is under (the registered folder whose slug is the URL's first segment:
+// index.json?view=menu&p=<slug>), newest first, each with its type's icon, title, status line (its type, and what the
+// server's status says: `st`) and date; archived ones are left out as on the home page, but for this doc, which is
+// ticked. The list loads on the first open, and again on an open 30 s after it last did. A 409 or an answer without
+// docs is a server of other code: the list says bluedoc was updated, with Reload. The search field takes the focus:
+// typing filters by title (case and accents aside), ↑ ↓ move, Enter opens, Esc closes back to the key; Tab, a press
+// outside or the window losing focus closes it. Its foot links to every project (/). A phone: the menu spans the
+// window under the bar.
 const DOC_MENU = store.served && !VIEW_ONLY ? (() => {
   const TYPE_ONE = { docs: 'Docs', review: 'Review', plan: 'Plan', design: 'Design', presentation: 'Presentation', website: 'Website', storelisting: 'Store listing', other: 'Other' };
   const TYPE_IC = { docs: 'doc', review: 'pr', plan: 'listchecks', design: 'palette', presentation: 'present', website: 'globe', storelisting: 'phone', other: 'file' };
   const ROOT = decodeURIComponent(location.pathname.split('/')[1] || ''), HERE = decodeURIComponent(location.pathname);
   const fold = s => String(s || '').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
-  let root = null, loadedAt = 0, loading = null, failed = false, shown = [], hi = -1;
+  let root = null, loadedAt = 0, loading = null, failed = false, stale = false, shown = [], hi = -1;
   const input = h('input', { type: 'text', role: 'combobox', 'aria-autocomplete': 'list', 'aria-expanded': 'true', 'aria-controls': 'bd-dsm-ls', 'aria-label': 'Search the docs',
     autocomplete: 'off', spellcheck: 'false', oninput: () => paint(true) });
   const count = h('b', { class: 'n' });
@@ -4837,25 +4862,18 @@ const DOC_MENU = store.served && !VIEW_ONLY ? (() => {
   const btn = h('button', { type: 'button', class: 'bd-dsw', 'aria-haspopup': 'dialog', 'aria-expanded': 'false', title: 'Docs in this project',
     onclick: () => (menu.hidden ? open() : close(false)) }, NAME.part('t', true), ic('down', 'cv'));
   const isHere = d => { try { return decodeURIComponent(d.url) === HERE; } catch { return false; } };
-  // what the home card's status pill says (home.html statusPill), in a few words; a plan adds its steps done
+  // what the home card's status pill says (home.html statusPill, from the server's `st`), in a few words; an approved
+  // plan adds its steps done
   function said(d) {
-    const words = [TYPE_ONE[d.type] || TYPE_ONE.other], st = (() => {
-      if (d.archived) return 'archived';
-      if (d.errors > 0) return "doesn't build";
-      const ap = d.approvable && d.approval, approved = !!ap && (ap.carried === true || String(ap.rev ?? '') === String(d.rev ?? ''));
-      const steps = d.type === 'plan' && d.card && Array.isArray(d.card.steps) && d.card.steps.length ? d.card.steps : null;
-      if (approved) return 'approved' + (steps ? `, ${steps.filter(s => s[0] === 'done').length} of ${steps.length} steps done` : '');
-      if (Math.max(d.answers ? d.answers.at : 0, d.changes ? d.changes.at : 0) > d.mtime)
-        return d.changes && (!d.answers || d.changes.at >= d.answers.at) ? 'changes requested' : 'answers sent';
-      if (d.approvable) return 'awaiting approval';
-      // decisions without a pick: the reader's (=<ids>|<author's>) over the author's
-      const state = d.state && typeof d.state === 'object' ? d.state : {};
-      const open = (d.items || []).filter(([cl, id, dec, author]) => {
-        if (!dec) return false;
-        const v = state[`${cl}:${id}`];
-        return typeof v === 'string' && v[0] === '=' ? !v.slice(1).split('|')[0] : !author;
-      }).length;
-      return open ? `${open} to decide` : '';
+    const s = d.st || {}, words = [TYPE_ONE[d.type] || TYPE_ONE.other], st = (() => {
+      if (s.archived || d.archived) return 'archived';
+      if (s.errors || d.errors > 0) return "doesn't build";
+      const steps = d.type === 'plan' && Array.isArray(d.planSteps) && d.planSteps[1] ? d.planSteps : null;
+      if (s.approved) return 'approved' + (steps ? `, ${steps[0]} of ${steps[1]} steps done` : '');
+      if (s.waiting) return s.changesSent ? 'changes requested' : 'answers sent';
+      if (s.awaiting) return 'awaiting approval';
+      const open = (s.dec || 0) - (s.decided || 0);
+      return s.needs && open > 0 ? `${open} to decide` : '';
     })();
     return [...words, st].filter(Boolean).join(' · ');
   }
@@ -4865,9 +4883,13 @@ const DOC_MENU = store.served && !VIEW_ONLY ? (() => {
   const docs = () => (root ? root.docs : []).filter(d => !d.archived || isHere(d)).sort((a, b) => b.mtime - a.mtime);
   function load() {
     if (loading) return loading;
-    loading = fetch('/__bluedoc/index.json?root=' + encodeURIComponent(ROOT), { cache: 'no-store' }).then(r => (r.ok ? r.json() : Promise.reject(r.status)))
-      .then(j => { root = (j.roots || [])[0] || { name: ROOT, docs: [] }; loadedAt = Date.now(); failed = false; },
-        () => { failed = !root; })
+    loading = fetch('/__bluedoc/index.json?view=menu&limit=200&p=' + encodeURIComponent(ROOT), { cache: 'no-store', headers: SERVER_KEY.headers({ 'X-Bluedoc': '1' }) })
+      .then(r => { UPDATED.check(r); if (r.status === 409) { stale = true; return Promise.reject(r.status); } return r.ok ? r.json() : Promise.reject(r.status); })
+      .then(j => {
+        if (!Array.isArray(j.docs)) { stale = true; return; }
+        const r = (j.roots || []).find(x => x.slug === ROOT);
+        root = { name: r ? (((j.home || {}).names || {})[r.path] || r.name) : ROOT, docs: j.docs }; loadedAt = Date.now(); failed = false; stale = false;
+      }, () => { failed = !root; })
       .finally(() => { loading = null; });
     return loading;
   }
@@ -4893,8 +4915,9 @@ const DOC_MENU = store.served && !VIEW_ONLY ? (() => {
         ic(TYPE_IC[d.type] || 'file'), h('span', { class: 'tx' }, h('span', { class: 'l' }, d.title), h('small', {}, said(d))),
         cur ? ic('tick', 'ck') : h('span', { class: 'dt', title: t.toLocaleString() }, day(d.mtime)));
     });
-    setKids(list, [h('div', { class: 'gh', 'aria-hidden': 'true' }, name), ...rows,
-      !rows.length && h('p', { class: 'none' }, !root ? (failed ? 'Couldn\'t load the docs.' : 'Loading…') : q ? 'No doc matches.' : 'No docs here.')].filter(Boolean));
+    const none = stale ? h('p', { class: 'none' }, 'bluedoc was updated · ', h('button', { type: 'button', class: 'rl', onclick: () => location.reload() }, 'Reload'))
+      : !rows.length && h('p', { class: 'none' }, !root ? (failed ? 'Couldn\'t load the docs.' : 'Loading…') : q ? 'No doc matches.' : 'No docs here.');
+    setKids(list, [h('div', { class: 'gh', 'aria-hidden': 'true' }, name), ...(stale ? [] : rows), none].filter(Boolean));
     const here = shown.findIndex(isHere);
     mark(rows.length ? (typed || here < 0 ? 0 : here) : -1, true);
   }
@@ -7262,6 +7285,7 @@ if (!SHARE && /^https?:$/.test(location.protocol)) {
     if (!j || !j.bluedoc) return;
     Object.assign(REPLY, { url: '/__bluedoc/reply', changes: '/__bluedoc/changes', approve: '/__bluedoc/approve', approval: j.approval && typeof j.approval === 'object' ? j.approval : null,
       connected: true, to: j.to || '', home: j.home || '' });
+    UPDATED.seen(j.code);
     if (REPLY.home) linkHome(REPLY.home);
     paintSend(); paintPlan(); MARKUP.paint();
     if (REPLY.to) { Object.values(ITEMS).forEach(x => x.paintConvo()); syncDiffs(); }   // the agent's name in the conversations

@@ -213,41 +213,35 @@ class ScreenRouteGuards(unittest.TestCase):
         status, _, body = self.get(f"{self.base}/acme-fit-design.design/app-icon.html")
         self.assertEqual(status, 404, body[:200])
 
-    def test_the_index_lists_one_folder_with_root(self) -> None:
-        """?root=<slug>: that folder's docs only (a doc page's doc menu); an unknown slug lists none."""
+    def test_the_index_lists_one_folder_with_p(self) -> None:
+        """?p=<slug>: that folder's docs only (a doc page's doc menu); an unknown slug lists none."""
         other = self.tmp.dir / "acme-fit"
         other.mkdir()
         shutil.copy(self.docs / "acme-fit-deck.bluedoc.json", other / "acme-fit-deck.bluedoc.json")
         self.assertEqual(self.tmp.run("serve.py", "add", other).returncode, 0)
+        self.server.indexed(fresh=True)
 
-        def roots(query: str) -> dict:
-            status, raw = self.server.req("GET", "/__bluedoc/index.json" + query, headers={"X-Bluedoc": "1"})
-            self.assertEqual(status, 200)
-            return {r["slug"]: sorted(d["path"] for d in r["docs"]) for r in json.loads(raw)["roots"]}
-        every = roots("")
-        self.assertEqual(sorted(every), sorted([self.slug, "acme-fit"]))
-        self.assertEqual(roots("?root=acme-fit"), {"acme-fit": ["acme-fit-deck.bluedoc.json"]})
-        self.assertEqual(roots(f"?root={self.slug}"), {self.slug: every[self.slug]})
-        self.assertEqual(roots("?root=nope"), {})
+        def paths(query: str) -> list[str]:
+            return sorted(d["path"] for d in self.server.index(query, "menu")["docs"])
+        self.assertEqual(sorted(r["slug"] for r in self.server.index("", "menu")["roots"]), sorted([self.slug, "acme-fit"]))
+        self.assertEqual(paths("p=acme-fit"), ["acme-fit-deck.bluedoc.json"])
+        self.assertEqual(len(paths(f"p={self.slug}")), 8)
+        self.assertEqual(paths("p=nope"), [])
 
-    def test_the_home_card_draws_links(self) -> None:
-        status, raw = self.server.req("GET", "/__bluedoc/index.json", headers={"X-Bluedoc": "1"})
-        self.assertEqual(status, 200)
-        doc = next(d for r in json.loads(raw)["roots"] for d in r["docs"] if d["path"].endswith("acme-fit-design.bluedoc.json"))
-        card = doc["card"]
-        self.assertTrue(card.get("links"), card)
-        n = len(card["artboards"])
-        self.assertLessEqual(len(card["links"]), 24)
-        self.assertEqual(len({frozenset(p) for p in card["links"]}), len(card["links"]), "one line per pair")
-        for i, j in card["links"]:
-            self.assertTrue(0 <= i < n and 0 <= j < n and i != j, (i, j))
+    def test_the_design_card_counts_screens_by_device(self) -> None:
+        """A design card's template draws its screens by device: count, devices and the hi-fi ones, from the JSON."""
+        doc = json.loads((self.docs / "acme-fit-design.bluedoc.json").read_text(encoding="utf-8"))
+        arts = serve.build.board_of(doc)["artboards"]
+        devices: dict = {}
+        for a in arts:
+            devices[a["device"]] = devices.get(a["device"], 0) + 1
+        card = next(d for d in self.server.docs() if d["path"].endswith("acme-fit-design.bluedoc.json"))["card"]
+        self.assertEqual(card, {"count": len(arts), "devices": devices, "hifi": sum(a["fidelity"] == "hifi" for a in arts)})
 
     def test_a_presentation_is_a_board_page_with_a_deck_card(self) -> None:
-        status, raw = self.server.req("GET", "/__bluedoc/index.json", headers={"X-Bluedoc": "1"})
-        self.assertEqual(status, 200)
-        doc = next(d for r in json.loads(raw)["roots"] for d in r["docs"] if d["path"].endswith("acme-fit-deck.bluedoc.json"))
+        doc = next(d for d in self.server.docs() if d["path"].endswith("acme-fit-deck.bluedoc.json"))
         self.assertEqual(doc["type"], "presentation")
-        self.assertEqual(doc["card"], {"count": 5, "notes": 4, "slides": ["hifi"] * 5})
+        self.assertEqual(doc["card"], {"count": 5, "notes": 4, "hifi": 5})
         status, _, body = self.get(f"{self.base}/acme-fit-deck.design/actives.html")
         self.assertEqual(status, 200, body[:200])
 
@@ -435,20 +429,56 @@ class ServerCopy(unittest.TestCase):
         self.addCleanup(lambda: subprocess.run([sys.executable, str(SCRIPTS / "serve.py"), "stop"], env=self.env,
                                                capture_output=True, timeout=30))
 
-    def install(self, name: str, mark: str = "") -> Path:
+    def install(self, name: str, mark: str = "", version: str | None = None) -> Path:
         root = self.tmp.dir / name
         shutil.copytree(REPO / ".claude-plugin", root / ".claude-plugin")
         shutil.copytree(SKILL, root / "skills" / "bluedoc", ignore=shutil.ignore_patterns("examples", "__pycache__"))
         if mark:
             with open(root / "skills" / "bluedoc" / "assets" / "template.html", "a") as f:
                 f.write(mark)
+        if version is not None:
+            pj = root / ".claude-plugin" / "plugin.json"
+            pj.write_text(json.dumps({**json.loads(pj.read_text(encoding="utf-8")), "version": version}), encoding="utf-8")
         return root / "skills" / "bluedoc" / "scripts" / "serve.py"
 
     def open(self, script: Path) -> str:
         r = subprocess.run([sys.executable, str(script), "open", str(self.docs / "acme-status.bluedoc.json"), "--to", "none"],
                            env=self.env, cwd=self.tmp.dir, capture_output=True, text=True, timeout=60)
         self.assertEqual(r.returncode, 0, r.stderr)
+        self.stderr = r.stderr
         return r.stdout.strip()
+
+    def ping(self, url: str) -> dict:
+        u = urlsplit(url)
+        return json.loads(self.get(f"{u.scheme}://{u.netloc}/__bluedoc/ping")[1])
+
+    def test_open_keeps_a_server_of_the_same_code_or_a_newer_version(self) -> None:
+        """A version-only bump keeps the server; a newer version with other code replaces it; an older client uses the
+        newer server as it is; the same version with other code (a dev build) replaces it."""
+        url = self.open(self.install("a", version="1.1.0"))
+        pid = self.ping(url)["pid"]
+        url = self.open(self.install("b", version="1.1.1"))
+        self.assertEqual((self.ping(url)["pid"], self.ping(url)["version"]), (pid, "1.1.0"), "a version-only bump restarted it")
+        self.assertNotIn("restarting", self.stderr)
+        url = self.open(self.install("c", "<!-- c -->", version="1.10.0"))
+        newer = self.ping(url)
+        self.assertNotEqual(newer["pid"], pid, "a newer client kept the old server")
+        self.assertEqual(newer["version"], "1.10.0")
+        url = self.open(self.install("d", "<!-- d -->", version="1.9.2"))   # 1.9.2 is older than 1.10.0
+        self.assertEqual(self.ping(url)["pid"], newer["pid"], "an older client downgraded the server")
+        self.assertNotIn("restarting", self.stderr)
+        url = self.open(self.install("e", "<!-- e -->", version="1.10.0"))
+        self.assertNotEqual(self.ping(url)["pid"], newer["pid"], "the same version with other code kept the server")
+        self.assertIn("restarting", self.stderr)
+
+    def test_versions_compare_as_numbers(self) -> None:
+        with mock.patch.object(serve, "VERSION", "1.9.2"), mock.patch.object(serve, "CODE_HASH", "mine"):
+            self.assertTrue(serve.keep_running({"version": "1.10.0", "code": "x"}))
+            self.assertFalse(serve.keep_running({"version": "1.9.1", "code": "x"}))
+            self.assertFalse(serve.keep_running({"version": "1.9.2", "code": "x"}))
+            self.assertTrue(serve.keep_running({"version": "0.1", "code": "mine"}))
+            self.assertFalse(serve.keep_running({"version": "", "code": "x"}))
+            self.assertFalse(serve.keep_running({"version": "2.0-beta", "code": "x"}))
 
     def get(self, url: str) -> tuple[int, bytes]:
         u = urlsplit(url)

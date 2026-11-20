@@ -349,19 +349,26 @@ class Served(unittest.TestCase):
         cls.server.stop()
         cls.tmp.cleanup()
 
-    def test_the_home_card_counts_each_sets_shots(self) -> None:
-        status, raw = self.server.req("GET", "/__bluedoc/index.json", headers={"X-Bluedoc": "1"})
-        self.assertEqual(status, 200)
-        d = next(d for r in json.loads(raw)["roots"] for d in r["docs"] if d["path"].endswith(f"{STEM}.bluedoc.json"))
+    def test_the_home_card_counts_each_platforms_shots(self) -> None:
+        """Stage 1 counts each platform's sets and shots from the JSON; stage 2 (the validation worker) adds the worst
+        check level of the text, shared and shot rows and the store-rule errors, which aren't "doesn't build"."""
+        d = next(d for d in self.server.docs() if d["path"].endswith(f"{STEM}.bluedoc.json"))
         self.assertEqual(d["type"], "storelisting")
         doc = load_json(self.docs / f"{STEM}.bluedoc.json")
         lb, rules = listing.listing_of(doc), listing.load_rules()
         found = listing.store_checks(doc, self.docs / f"{STEM}.bluedoc.json", rules)
-        want = {p: [[r, []] for r in ("text", "shared")] + [[r["row"], [[s["set"], len(s["shots"])] for s in r["sets"]]]
-                    for r in listing.sections(lb, listing.shots_of(doc), rules, p, lb["locales"][0])] for p in lb["platforms"]}
+        secs = {p: listing.sections(lb, listing.shots_of(doc), rules, p, lb["locales"][0]) for p in lb["platforms"]}
         card = d["card"]
-        self.assertEqual({p: [[r["row"], r["sets"]] for r in rows] for p, rows in card["platforms"].items()}, want)
-        self.assertTrue(all(r["level"] in ("ok", "warn", "err") for rows in card["platforms"].values() for r in rows))
+        self.assertEqual(card["platforms"], {p: {"sets": sum(len(r["sets"]) for r in rows),
+                                                 "shots": sum(len(s["shots"]) for r in rows for s in r["sets"])} for p, rows in secs.items()})
+
+        def level(p: str, row: str) -> str:
+            ls = {f["level"] for f in found if f["section"] == row and (not f["platforms"] or p in f["platforms"])}
+            return "err" if "err" in ls else "warn" if ls else "ok"
+        for p, rows in secs.items():
+            shots = [level(p, r["row"]) for r in rows]
+            self.assertEqual(card["levels"][p], {"text": level(p, "text"), "shared": level(p, "shared"),
+                                                 "shots": "err" if "err" in shots else "warn" if "warn" in shots else "ok"})
         self.assertEqual(card["storeErrors"], sum(f["level"] == "err" for f in found))
         self.assertEqual(d["errors"], 0)
 

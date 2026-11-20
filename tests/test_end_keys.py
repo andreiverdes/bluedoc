@@ -124,8 +124,8 @@ class Server(unittest.TestCase):
     def test_one_list_of_approvable_types(self) -> None:
         """build.APPROVABLE_TYPES: the index's `approvable` (the home page's Awaiting approval) and the page's own
         APPROVABLE_TYPES (its Approve key) follow it."""
-        index = json.loads(self.server.req("GET", "/__bluedoc/index.json", headers={"X-Bluedoc": "1"})[1])
-        got = {d["type"]: d["approvable"] for r in index["roots"] for d in r["docs"]}
+        got = {d["type"]: d["approvable"] for d in self.server.docs()}
+        self.assertEqual(len(got), 8, "every type listed")
         self.assertEqual(got, {t: t in ("plan", "design", "website") for t in got})
         self.assertEqual(set(build.APPROVABLE_TYPES), {"plan", "design", "website"})
         m = re.search(r"^const APPROVABLE_TYPES = new Set\(\[([^\]]*)\]\);$", template_text(), re.M)

@@ -323,9 +323,13 @@ button.bd-fc:hover { color: var(--color-hz-fg); }
 .bd-nb b { color: var(--color-hz-fg); font-weight: 600; }
 .bd-nb .sp { flex: 1; }
 
-/* Cards: the grid of doc cards, 48 at a time (Show N more) */
+/* Cards: the grid of doc cards, a slice of 48 at a time as the page scrolls */
 .bd-grid { display: grid; gap: 18px; grid-template-columns: repeat(auto-fill, minmax(268px, 1fr)); }
-.bd-cmore { display: flex; justify-content: center; margin-top: 18px; }
+/* the next slice's line (Loading… while it loads, else empty and short) and the list's end line */
+.bd-more-l { display: flex; align-items: center; justify-content: center; min-height: 1px; font: 500 12.5px var(--font-hz-sans); color: var(--color-hz-fg-subtle); }
+.bd-more-l:not(:empty) { height: 44px; }
+.bd-more-l.r:not(:empty) { justify-content: flex-start; height: 36px; padding: 0 16px 0 45px; box-shadow: inset 0 -1px 0 var(--color-hz-line-soft); }
+.bd-end { margin: 18px 0 0; text-align: center; font-size: 12.5px; color: var(--color-hz-fg-subtle); }
 .bd-card { display: flex; flex-direction: column; min-width: 0; border-radius: var(--radius-hz-card); overflow: hidden; text-decoration: none; outline: none;
   background: var(--color-hz-surface); box-shadow: var(--hz-shadow-1); transition: transform var(--hz-dur-2) var(--hz-ease-out), box-shadow var(--hz-dur-2) var(--hz-ease-out); }
 .bd-card:hover { transform: translateY(-3px); box-shadow: var(--hz-shadow-3); }
@@ -496,10 +500,7 @@ button.bd-fc:hover { color: var(--color-hz-fg); }
 .bd-rg { flex: none; width: 14px; height: 14px; border-radius: 50%; background: conic-gradient(var(--color-hz-accent) calc(var(--p) * 1%), var(--color-hz-line-strong) 0);
   -webkit-mask: radial-gradient(circle, #0000 3.6px, #000 4.2px); mask: radial-gradient(circle, #0000 3.6px, #000 4.2px); }
 .bd-rg.f { background: var(--color-hz-success); }
-.bd-more { display: flex; align-items: center; width: 100%; height: 36px; padding: 0 16px 0 45px; box-sizing: border-box; border: 0; background: none; cursor: pointer; text-align: left;
-  font: 500 12.5px var(--font-hz-sans); color: var(--color-hz-accent-fg); box-shadow: inset 0 -1px 0 var(--color-hz-line-soft); }
-.bd-more:hover { text-decoration: underline; }
-.bd-more:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--color-hz-accent); }
+.bd-lsg .rw.na i { background: var(--bp-dim); box-shadow: none; opacity: .55; }
 
 /* an open row, under it across the table: an inset card with the decided meter and the actions, the thumbnail beside
    the TL;DR and what is left, then the path, rev and last edit. One type scale: body 13.5/20 (TL;DR), list 13, mono 12,
@@ -780,7 +781,7 @@ button.bd-fc:hover { color: var(--color-hz-fg); }
   .bd-rx .x-meter > div:first-child { width: 120px; }
   .bd-acts > button { height: 40px; }
   .bd-app .bd-acts > button[aria-label] { width: 40px; }
-  .bd-more { height: 44px; padding-left: 14px; }
+  .bd-more-l.r:not(:empty) { height: 44px; padding-left: 14px; }
   .bd-nb { flex-wrap: wrap; padding: 8px 8px 8px 12px; row-gap: 4px; }
   .bd-nb .sp { display: none; }
   .bd-nb > button { margin-left: auto; height: 36px; }
@@ -824,7 +825,7 @@ button.bd-fc:hover { color: var(--color-hz-fg); }
 (() => {
 'use strict';
 const e = React.createElement, F = React.Fragment;
-const { useState, useEffect, useMemo, useRef, useDeferredValue } = React;
+const { useState, useEffect, useMemo, useRef } = React;
 const { HorizonProvider, SegmentedControl, Card, ProgressRing, ProgressBar, EmptyState, SearchField, TextField, FormField, Switch, IconButton, Button, StatusDot, Badge, Banner, DropdownMenu, Popover, Avatar, Tooltip, Dialog, Icons } = window.HorizonUI;
 
 /* ---------- storage, theme, settings ---------- */
@@ -909,97 +910,24 @@ const TYPES = [['docs', 'Docs', Icons.FileText], ['review', 'Reviews', Icons.Git
   ['presentation', 'Presentations', PresentationIcon], ['website', 'Websites', Icons.Globe], ['storelisting', 'Store listings', ListingIcon], ['other', 'Other', Icons.StickyNote]];
 const TYPE_ONE = { docs: 'Docs', review: 'Review', plan: 'Plan', design: 'Design', presentation: 'Presentation', website: 'Website', storelisting: 'Store listing', other: 'Other' };
 // Archived is last: an archived doc (the index's `archived`, set from its page or a card's ⋯ menu) counts under it alone,
-// never under the others, and the default list, the counts and Statistics leave it out (statusIs)
+// never under the others, and the default list, the counts and Statistics leave it out (the server's facets)
 const STATUSES = [['needs', 'Needs you', Icons.Flag], ['awaiting', 'Awaiting approval', Icons.Clipboard], ['waiting', 'Waiting on agent', Icons.Clock],
   ['approved', 'Approved', Icons.Success], ['errors', "Doesn't build", Icons.Error], ['archived', 'Archived', ArchiveIcon]];
 
-function prepare(roots) {
-  const out = [];
-  for (const r of roots) for (const d of r.docs) {
-    const i = d.path.lastIndexOf('/');
-    out.push({ ...d, root: r, dir: i < 0 ? '' : d.path.slice(0, i), key: r.slug + '/' + d.path, type: TYPE_ONE[d.type] ? d.type : 'other' });
-  }
-  return out;
+// a row of index.json as the views draw it: its project (roots[], with the reader's name and icon), its key
+// (<slug>/<path>, as ?doc= names it) and its status. The server computes the status (serve.py status_of: the file,
+// its validation and state.db); `errors` null is a doc not validated yet, which has no badge until its result lands.
+function prep(d, rootOf) {
+  const root = rootOf.get(d.root) || { slug: d.root, name: d.root, folder: d.root, path: '', look: null };
+  const i = d.path.lastIndexOf('/');
+  return { ...d, root, dir: d.dir ?? (i < 0 ? '' : d.path.slice(0, i)), key: d.root + '/' + d.path, type: TYPE_ONE[d.type] ? d.type : 'other', st: stOf(d) };
 }
-// Reader progress: served with state.db, index.json carries each doc's tick and pick values (`state`),
-// the same in every browser, and this browser's unsent writes (the doc's `__outbox`) go on top.
-// Otherwise it comes from the localStorage the doc pages write (same origin).
-function progress(d) {
-  let dec = 0, decided = 0, steps = 0, done = 0;
-  const open = [];   // what is left: {text, dec, n (a decision's options)}, decisions first
-  const pre = `bp:${d.id || 'doc'}:`, served = d.state && typeof d.state === 'object' ? d.state : null;
-  let box = {};
-  if (served) try { const x = JSON.parse(store.get(pre + '__outbox') || '{}'); if (x && typeof x === 'object') box = x; } catch {}
-  const value = k => !served ? store.get(pre + k) : k in box ? box[k] : served[k] ?? null;
-  for (const [cl, id, isDec, author, choiceIds, text] of d.items || []) {
-    const s = value(`${cl}:${id}`);
-    if (isDec) {
-      dec++;
-      let pick = author || '';
-      if (s != null && s.startsWith('=')) { const bar = s.indexOf('|'); const c = s.slice(1, bar); if (s.slice(bar + 1) === author && (!c || c.split(',').every(x => (choiceIds || []).includes(x)))) pick = c; }
-      if (pick) decided++; else open.push({ text: text || id, dec: true, n: (choiceIds || []).length });
-    } else {
-      steps++;
-      let on = author === '1';
-      if (s != null && !s.startsWith('=') && (s.length === 2 ? s[1] === author : !(s === '0' && author === '1'))) on = s[0] === '1';
-      if (on) done++; else open.push({ text: text || id, dec: false });
-    }
-  }
-  open.sort((a, b) => b.dec - a.dec);
-  return { dec, decided, steps, done, open };
+function stOf(d) {
+  const s = d.st || {};
+  const p = { dec: s.dec || 0, decided: s.decided || 0, steps: s.steps || 0, done: s.done || 0, open: Array.isArray(s.open) ? s.open : [] };
+  return { ...s, p, total: p.dec + p.steps, did: p.decided + p.done, errors: d.errors > 0, archived: !!s.archived, sent: s.sent || 0 };
 }
-function statusOf(d) {
-  // approvable: the index's (serve.py, from build.APPROVABLE_TYPES: a plan, design or website; a presentation's or a
-  // storelisting's picks go with Request changes)
-  const approvable = !!d.approvable, errors = d.errors > 0, ap = approvable && !errors && d.approval ? d.approval : null;
-  // an approvable doc is approved for the rev the reader approved, and for a later one whose changes are all progress
-  // (the server's `carried`: steps marked done, picks carried over); any other change asks again ("Changes since")
-  const approved = !!ap && (ap.carried === true || String(ap.rev ?? '') === String(d.rev ?? ''));
-  const staleRev = ap && !approved ? String(ap.rev ?? '') : null;
-  const sent = Math.max(d.answers ? d.answers.at : 0, d.changes ? d.changes.at : 0);
-  const waiting = !approved && sent > d.mtime;
-  let p = progress(d);
-  if (approved) p = { ...p, decided: p.dec, open: p.open.filter(x => !x.dec) };   // approving settles every open pick: the agent uses its recommendation
-  const awaiting = approvable && !errors && !waiting && !approved;
-  const needs = !errors && !waiting && (awaiting || p.dec > p.decided);
-  const total = p.dec + p.steps, did = p.decided + p.done;
-  // board column: in progress = partly done; done = all done, approved, or nothing left to decide
-  const col = errors ? 'errors' : approved ? 'done' : waiting ? 'waiting' : needs ? 'needs' : did > 0 && did < total ? 'progress' : 'done';
-  // archived holds for the rev the reader archived (serve.py drops it once the agent writes a later one); all done: approved
-  // with every step done and every check ticked, so the card offers "All done · Archive it?" unless put off for this rev
-  const archived = !!d.archived;
-  const allDone = approved && !archived && !!d.rev && d.archiveLater !== d.rev && !(d.stepsOpen > 0) && p.steps === p.done;
-  return { p, total, did, errors, waiting, needs, awaiting, approved, staleRev, col, sent, archived, allDone,
-    changesSent: !!(waiting && d.changes && (!d.answers || d.changes.at >= d.answers.at)) };
-}
-const statusIs = (st, s) => (s === 'archived' ? st.archived : !st.archived && !!st[s]);
-const inScope = (d, sc) => !sc || (d.root.slug === sc.slug && (!sc.dir || d.dir === sc.dir || d.dir.startsWith(sc.dir + '/')));
 const scopeLabel = (roots, sc) => { const r = roots.find(x => x.slug === sc.slug); return (r ? r.name : sc.slug) + (sc.dir ? ' / ' + sc.dir : ''); };
-
-/* search: every term must match; title and path weigh more than body text (body: the doc's text from search-text,
-   '' until it has come) */
-function match(d, terms, body) {
-  if (!terms.length) return { score: 0, snip: '' };
-  body = plain(d.tldr) + ' ' + plain(body);
-  const fields = [[plain(d.title), 10], [d.root.name + '/' + d.path, 6], [plain(d.subtitle), 4], [(d.sections || []).join(' '), 3], [d.kind + ' ' + d.org + ' ' + TYPE_ONE[d.type], 2], [body, 1]];
-  let score = 0;
-  for (const t of terms) {
-    let hit = 0;
-    for (const [f, w] of fields) if (f && f.toLowerCase().includes(t)) hit += w;
-    if (!hit) return null;
-    score += hit;
-  }
-  // a snippet of body text around the first term the title doesn't already show
-  const low = body.toLowerCase();
-  const t = terms.find(t => !plain(d.title).toLowerCase().includes(t)) || terms[0];
-  const i = low.indexOf(t);
-  let snip = '';
-  if (i >= 0) {
-    const a = Math.max(0, body.lastIndexOf(' ', Math.max(0, i - 36)) + 1), b = Math.min(body.length, i + t.length + 160);
-    snip = (a > 0 ? '…' : '') + body.slice(a, b) + (b < body.length ? '…' : '');
-  }
-  return { score, snip };
-}
 
 /* ---------- small pieces ---------- */
 const Folder = ({ size = 16 }) => e('svg', { className: 'bd-folder', viewBox: '0 0 24 24', width: size, height: size, 'aria-hidden': true },
@@ -1070,134 +998,97 @@ function statusPill(st, d) {
   return null;
 }
 
-/* ---------- card hero: one frame, one element per type ---------- */
-const S = { live: 'live', local: 'local', proposed: 'proposed', unverified: 'unverified', removed: 'removed', replaced: 'replaced' };
-// a right-angle line between two node outlines, as the page routes canvas edges (here without the routing round
-// other nodes): out of a's side facing b, across at the middle of the gap, into b's facing side, corners rounded
-function edgePath(a, b) {
-  const gx = Math.max(b.x - a.x - a.w, a.x - b.x - b.w), gy = Math.max(b.y - a.y - a.h, a.y - b.y - b.h), across = gx >= gy;
-  const [U, V, W, H] = across ? ['x', 'y', 'w', 'h'] : ['y', 'x', 'h', 'w'];   // u runs from a to b, v across it
-  const s = Math.sign(b[U] + b[W] / 2 - a[U] - a[W] / 2) || 1;
-  // on the facing sides, level with each other where they overlap, else each at its middle
-  const lo = Math.max(a[V], b[V]), hi = Math.min(a[V] + a[H], b[V] + b[H]);
-  const v0 = hi > lo ? (lo + hi) / 2 : a[V] + a[H] / 2, v3 = hi > lo ? v0 : b[V] + b[H] / 2;
-  const u0 = s > 0 ? a[U] + a[W] : a[U], u3 = s > 0 ? b[U] : b[U] + b[W], m = (u0 + u3) / 2;
-  const pts = (v0 === v3 ? [[u0, v0], [u3, v3]] : [[u0, v0], [m, v0], [m, v3], [u3, v3]]).map(([u, v]) => across ? [u, v] : [v, u]);
-  let d = `M${pts[0][0]},${pts[0][1]}`;
-  for (let k = 1; k < pts.length - 1; k++) {
-    const [p, c, q] = [pts[k - 1], pts[k], pts[k + 1]];
-    const li = Math.abs(c[0] - p[0]) + Math.abs(c[1] - p[1]), lo2 = Math.abs(q[0] - c[0]) + Math.abs(q[1] - c[1]), r = Math.min(12, li / 2, lo2 / 2);
-    const ix = Math.sign(c[0] - p[0]), iy = Math.sign(c[1] - p[1]), ox = Math.sign(q[0] - c[0]), oy = Math.sign(q[1] - c[1]);
-    d += ` L${c[0] - ix * r},${c[1] - iy * r} A${r},${r} 0 0 ${ix * oy - iy * ox > 0 ? 1 : 0} ${c[0] + ox * r},${c[1] + oy * r}`;
-  }
-  return d + ` L${pts[pts.length - 1][0]},${pts[pts.length - 1][1]}`;
-}
-function nodeShape(n, cls) {
-  const { w, h } = n, k = n.kind || 'service', ns = 'non-scaling-stroke';
-  switch (k) {
-    case 'store': case 'db': case 'cache': case 'stream': {
-      const r = Math.min(12, h / 6);
-      return e(F, null, e('path', { className: cls, vectorEffect: ns, d: `M0,${r} A${w / 2},${r} 0 0 1 ${w},${r} V${h - r} A${w / 2},${r} 0 0 1 0,${h - r} Z` }),
-        e('path', { className: cls, vectorEffect: ns, style: { fill: 'none' }, d: `M0,${r} A${w / 2},${r} 0 0 0 ${w},${r}` }));
-    }
-    case 'queue': return e(F, null, e('rect', { className: cls, vectorEffect: ns, width: w, height: h, rx: 4 }),
-      ...[16, 28, 40].map(dx => e('line', { key: dx, className: cls, vectorEffect: ns, x1: w - dx, y1: 8, x2: w - dx, y2: h - 8 })));
-    case 'device': case 'hardware': { const c = 12; return e('polygon', { className: cls, vectorEffect: ns, points: `${c},0 ${w - c},0 ${w},${c} ${w},${h - c} ${w - c},${h} ${c},${h} 0,${h - c} 0,${c}` }); }
-    case 'actor': case 'user': case 'person': case 'port': return e('rect', { className: cls, vectorEffect: ns, width: w, height: h, rx: Math.min(h / 2, 30) });
-    case 'client': case 'app': case 'ui': return e(F, null, e('rect', { className: cls, vectorEffect: ns, width: w, height: h, rx: 6 }),
-      e('line', { className: cls, vectorEffect: ns, x1: 0, y1: 16, x2: w, y2: 16 }));
-    case 'external': case 'cloud': return e('rect', { className: cls + ' ext', vectorEffect: ns, width: w, height: h, rx: 14 });
-    case 'note': return e('path', { className: cls, vectorEffect: ns, d: `M0,0 H${w - 16} L${w},16 V${h} H0 Z` });
-    default: return e('rect', { className: cls, vectorEffect: ns, width: w, height: h, rx: 6 });
-  }
-}
+/* ---------- card hero: one frame, one template per type, filled with the index's numbers (serve.py card_numbers) ---------- */
+// docs: up to 6 labelled boxes (the first root labels) on a fixed 3 × 2 grid, chained in reading order (along the top,
+// down the right, back along the bottom); on hover the chain runs. kind · levels · flows under it.
+const DRW_W = 150, DRW_H = 64, DRW_GX = 46, DRW_GY = 52;
+const DRW_AT = [[0, 0], [1, 0], [2, 0], [2, 1], [1, 1], [0, 1]];
 function CanvasArt({ c }) {
-  const nodes = c.nodes;
-  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-  for (const n of nodes) { x0 = Math.min(x0, n.x); y0 = Math.min(y0, n.y); x1 = Math.max(x1, n.x + n.w); y1 = Math.max(y1, n.y + n.h); }
-  const pad = Math.max(30, (x1 - x0) * 0.04);
-  const vb = [x0 - pad, y0 - pad, x1 - x0 + 2 * pad, y1 - y0 + 2 * pad];
-  const paths = c.edges.filter(([a, b]) => nodes[a] && nodes[b]).map(([a, b, k], i) => ({ i, k: k || 'data', d: edgePath(nodes[a], nodes[b]) }));
-  // on hover the first root flow runs; a drawing without flows runs its data and async edges
-  const play = c.play ? new Set(c.play) : null;
-  return e('svg', { className: 'cv', viewBox: vb.join(' '), preserveAspectRatio: 'xMidYMid meet', 'aria-hidden': true },
-    e('g', null, paths.map(x => e('path', { key: x.i, className: 'e ' + x.k, vectorEffect: 'non-scaling-stroke', d: x.d }))),
-    e('g', null, paths.filter(x => (play ? play.has(x.i) : x.k === 'data' || x.k === 'async')).map(x => e('path', { key: x.i, className: 'fl', vectorEffect: 'non-scaling-stroke', d: x.d }))),
-    e('g', { className: 'nodes' }, nodes.map((n, i) => {
-      const label = n.label || '', fs = Math.max(15, Math.min(n.h * 0.3, 30, (n.w - 18) / Math.max(1, label.length * 0.62)));
-      const fit = Math.floor((n.w - 14) / (fs * 0.62)), text = label.length > fit ? label.slice(0, Math.max(1, fit - 1)) + '…' : label;
-      const kids = Math.min(n.c || 0, 4), kw = (n.w - 24 - (kids - 1) * 8) / Math.max(1, kids);
-      return e('g', { key: i, transform: `translate(${n.x},${n.y})` },
-        nodeShape(n, 'n ' + (S[n.state] || '')),
-        kids > 0 && Array.from({ length: kids }, (_, j) => e('rect', { key: j, className: 'kid', vectorEffect: 'non-scaling-stroke', x: 12 + j * (kw + 8), y: n.h * 0.56, width: kw, height: n.h * 0.3, rx: 3 })),
-        e('text', { x: n.w / 2, y: kids ? n.h * 0.32 : n.h / 2, fontSize: fs, textAnchor: 'middle', dominantBaseline: 'central' }, text));
+  const labels = (c.labels || []).slice(0, 6), n = Math.max(1, Math.min(6, labels.length || c.nodes || 1)), ns = 'non-scaling-stroke';
+  const at = i => ({ x: DRW_AT[i][0] * (DRW_W + DRW_GX), y: DRW_AT[i][1] * (DRW_H + DRW_GY) });
+  const cols = n > 2 ? 3 : n, rows = n > 3 ? 2 : 1, w = cols * DRW_W + (cols - 1) * DRW_GX, hh = rows * DRW_H + (rows - 1) * DRW_GY, pad = 20;
+  const lines = [];
+  for (let i = 1; i < n; i++) {
+    const a = at(i - 1), b = at(i);
+    lines.push(a.y === b.y ? `M${Math.min(a.x, b.x) + DRW_W},${a.y + DRW_H / 2}H${Math.max(a.x, b.x)}` : `M${a.x + DRW_W / 2},${a.y + DRW_H}V${b.y}`);
+  }
+  return e('svg', { className: 'cv', viewBox: [-pad, -pad, w + 2 * pad, hh + 2 * pad].join(' '), preserveAspectRatio: 'xMidYMid meet', 'aria-hidden': true },
+    e('g', null, lines.map((d, i) => e('path', { key: i, className: 'e data', vectorEffect: ns, d }))),
+    e('g', null, lines.map((d, i) => e('path', { key: i, className: 'fl', vectorEffect: ns, d }))),
+    e('g', { className: 'nodes' }, Array.from({ length: n }, (_, i) => {
+      const p = at(i), label = String(labels[i] || ''), fit = 12, text = label.length > fit ? label.slice(0, fit - 1) + '…' : label;
+      return e('g', { key: i, transform: `translate(${p.x},${p.y})` }, e('rect', { className: 'n', vectorEffect: ns, width: DRW_W, height: DRW_H, rx: 6 }),
+        text && e('text', { x: DRW_W / 2, y: DRW_H / 2, fontSize: 17, textAnchor: 'middle', dominantBaseline: 'central' }, text));
     })));
 }
 function DrawingEl({ c }) {
   const cap = [c.kind, c.levels && plural(c.levels, 'level'), c.flows && plural(c.flows, 'flow')].filter(Boolean).join(' · ');
   return e(F, null, e('div', { className: 'bd-drw' + (cap ? ' capd' : '') }, e(CanvasArt, { c })), cap && e('div', { className: 'bd-el-cap' }, cap));
 }
-// design: the board's outline, as serve.py card() places the first 12 artboards (top-left 0, 0, board px); a slide
-// is its 16:9 rectangle with left-aligned text lines. Links between them are thin right-angle lines under the outlines.
+// design: up to 8 tiles shaped by device (phone tall, desktop wide), in the order of the board's device mix, the
+// hi-fi share solid and the rest dashed; a slide is its 16:9 rectangle with left-aligned text lines
 const DEVICE_WORD = { 'watch-round': 'watch', 'watch-square': 'watch', phone: 'phone', tablet: 'tablet', desktop: 'desktop', browser: 'web', slide: 'presentation', icons: 'app icon' };
-const DEVICE_RX = { 'watch-square': 44, phone: 48, tablet: 28, desktop: 10, browser: 10, slide: 4 };
-const DEVICE_BAR = { desktop: 32, browser: 72 };
-// a link line between two outlines' facing sides: straight where they overlap across the gap, else out of a's side
-// toward b and one bend into b's top or bottom; null when the outlines overlap
-function linkPath(a, b) {
-  const ax2 = a.x + a.w, ay2 = a.y + a.h, bx2 = b.x + b.w, by2 = b.y + b.h;
-  const lo = (p, q, r, s) => [Math.max(p, r), Math.min(q, s)];
-  if (b.x >= ax2 || a.x >= bx2) {
-    const right = b.x >= ax2, sx = right ? ax2 : a.x, ex = right ? b.x : bx2, [o1, o2] = lo(a.y, ay2, b.y, by2);
-    if (o2 > o1) return `M${sx} ${(o1 + o2) / 2}H${ex}`;
-    const y = a.y + a.h / 2, x = b.x + b.w / 2;
-    return `M${sx} ${y}H${x}V${b.y >= ay2 ? b.y : by2}`;
-  }
-  if (b.y >= ay2 || a.y >= by2) {
-    const [o1, o2] = lo(a.x, ax2, b.x, bx2);
-    return `M${(o1 + o2) / 2} ${b.y >= ay2 ? ay2 : a.y}V${b.y >= ay2 ? b.y : by2}`;
-  }
-  return null;
-}
+const DEVICE_RX = { 'watch-square': 14, phone: 12, tablet: 10, desktop: 5, browser: 5, slide: 3 };
+const DEVICE_BAR = { desktop: 10, browser: 14 };
+const DEVICE_WH = { phone: [56, 112], tablet: [96, 124], desktop: [176, 110], browser: [176, 110], slide: [160, 90], 'watch-round': [56, 56], 'watch-square': [56, 64], icons: [64, 64] };
+const TILE_GAP = 18, TILE_ROW = 420;
 function DesignArt({ c }) {
-  const abs = c.artboards, ns = 'non-scaling-stroke';
-  let x1 = 0, y1 = 0;
-  for (const a of abs) { x1 = Math.max(x1, a.x + a.w); y1 = Math.max(y1, a.y + a.h); }
-  const pad = Math.max(40, x1 * 0.04);
-  const lines = (c.links || []).slice(0, 24).map(([i, j]) => abs[i] && abs[j] ? linkPath(abs[i], abs[j]) : null);
-  return e('svg', { className: 'cv dsn', viewBox: [-pad, -pad, x1 + 2 * pad, y1 + 2 * pad].join(' '), preserveAspectRatio: 'xMidYMid meet', 'aria-hidden': true },
-    lines.some(Boolean) && e('g', { className: 'lks' }, lines.map((d, i) => d && e('path', { key: i, className: 'lk', vectorEffect: ns, d }))),
-    e('g', { className: 'abs' }, abs.map((a, i) => {
-      const cls = 'ab' + (a.fidelity === 'hifi' ? '' : ' lo'), round = a.device === 'watch-round', slide = a.device === 'slide';
-      const bar = DEVICE_BAR[a.device], lh = Math.max(8, Math.min(a.w, a.h) * 0.05), top = (bar || 0) + a.h * (round ? 0.38 : slide ? 0.16 : 0.1);
+  const devs = Object.entries(c.devices || {}).filter(([, k]) => k > 0), tiles = [];
+  for (const [dev, k] of devs) for (let i = 0; i < k && tiles.length < 8; i++) tiles.push(dev);
+  if (!tiles.length) for (let i = 0; i < Math.min(8, c.count || 1); i++) tiles.push('');
+  const solid = c.count ? Math.round(tiles.length * Math.min(1, (c.hifi || 0) / c.count)) : 0, ns = 'non-scaling-stroke';
+  // rows of tiles, each at most TILE_ROW wide, every row centred; a row is as tall as its tallest tile
+  const rows = [[]];
+  let x = 0;
+  for (const dev of tiles) {
+    const [w] = DEVICE_WH[dev] || [100, 100];
+    if (rows[rows.length - 1].length && x + w > TILE_ROW) { rows.push([]); x = 0; }
+    rows[rows.length - 1].push(dev); x += w + TILE_GAP;
+  }
+  const widths = rows.map(r => r.reduce((s, d) => s + (DEVICE_WH[d] || [100])[0], 0) + (r.length - 1) * TILE_GAP);
+  const W = Math.max(...widths), out = [];
+  let y = 0, k = 0;
+  rows.forEach((r, ri) => {
+    let tx = (W - widths[ri]) / 2;
+    const rh = Math.max(...r.map(d => (DEVICE_WH[d] || [0, 100])[1]));
+    for (const dev of r) {
+      const [w, h] = DEVICE_WH[dev] || [100, 100], ty = y + (rh - h) / 2, round = dev === 'watch-round', slide = dev === 'slide', bar = DEVICE_BAR[dev];
+      const cls = 'ab' + (k < solid ? '' : ' lo'), lh = Math.max(4, Math.min(w, h) * 0.06), top = (bar || 0) + h * (round ? 0.38 : slide ? 0.16 : 0.12);
       const lx = slide ? 0.08 : 0.15, lw = slide ? 0.84 : 0.7;
-      return e('g', { key: i, transform: `translate(${a.x},${a.y})` },
-        round ? e('ellipse', { className: cls, vectorEffect: ns, cx: a.w / 2, cy: a.h / 2, rx: a.w / 2, ry: a.h / 2 })
-          : e('rect', { className: cls, vectorEffect: ns, width: a.w, height: a.h, rx: DEVICE_RX[a.device] ?? 6 }),
-        bar && e('line', { className: 'bar', vectorEffect: ns, x1: 0, y1: bar, x2: a.w, y2: bar }),
-        [1, 1, 0.6].map((f, j) => e('rect', { key: j, className: 'ln', x: a.w * lx, y: top + j * lh * 2.2, width: a.w * lw * f, height: lh, rx: lh / 2 })));
-    })));
+      out.push(e('g', { key: k, transform: `translate(${tx},${ty})` },
+        round ? e('ellipse', { className: cls, vectorEffect: ns, cx: w / 2, cy: h / 2, rx: w / 2, ry: h / 2 })
+          : e('rect', { className: cls, vectorEffect: ns, width: w, height: h, rx: DEVICE_RX[dev] ?? 4 }),
+        bar && e('line', { className: 'bar', vectorEffect: ns, x1: 0, y1: bar, x2: w, y2: bar }),
+        [1, 1, 0.6].map((f, j) => e('rect', { key: j, className: 'ln', x: w * lx, y: top + j * lh * 2.2, width: w * lw * f, height: lh, rx: lh / 2 }))));
+      tx += w + TILE_GAP; k++;
+    }
+    y += rh + TILE_GAP;
+  });
+  const pad = 16;
+  return e('svg', { className: 'cv dsn', viewBox: [-pad, -pad, W + 2 * pad, y - TILE_GAP + 2 * pad].join(' '), preserveAspectRatio: 'xMidYMid meet', 'aria-hidden': true },
+    e('g', { className: 'abs' }, out));
 }
 function DesignEl({ c }) {
-  const words = [...new Set(c.artboards.map(a => DEVICE_WORD[a.device] || 'custom'))];
-  const noun = c.artboards.every(a => a.device === 'slide') ? 'slide' : 'screen';
+  const devs = Object.keys(c.devices || {}), words = [...new Set(devs.map(d => DEVICE_WORD[d] || 'custom'))];
+  const noun = devs.length && devs.every(d => d === 'slide') ? 'slide' : 'screen';
   return e(F, null, e('div', { className: 'bd-drw capd' }, e(DesignArt, { c })),
     e('div', { className: 'bd-el-cap' }, [plural(c.count, noun), ...words].join(' · ')));
 }
-// presentation: the deck's first 9 slides (serve.py card()) as 16:9 rectangles in deck order, three to a row (two for
-// up to four slides), the last row centred; the first is a title slide (centred title and byline), the others a
-// heading, text lines and a picture. Dashed below hi-fi, as on a design board.
+// presentation: up to 9 slides as 16:9 rectangles, three to a row (two for up to four slides), the last row centred;
+// the first is a title slide (centred title and byline), the others a heading, text lines and a picture. The hi-fi
+// share is drawn solid, the rest dashed, as on a design board.
 const SLIDE_W = 160, SLIDE_H = 90, SLIDE_GAP = 20;
 const TITLE_LINES = [[0.2, 0.38, 0.6, 9], [0.32, 0.58, 0.36, 5]], CONTENT_LINES = [[0.08, 0.16, 0.5, 8], [0.08, 0.42, 0.4, 5], [0.08, 0.55, 0.36, 5], [0.08, 0.68, 0.28, 5]];
 function DeckArt({ c }) {
-  const n = c.slides.length, cols = n > 4 ? 3 : n > 1 ? 2 : 1, rows = Math.ceil(n / cols), ns = 'non-scaling-stroke', pad = 16;
+  const n = Math.max(1, Math.min(9, c.count || 1)), solid = c.count ? Math.round(n * Math.min(1, (c.hifi || 0) / c.count)) : 0;
+  const cols = n > 4 ? 3 : n > 1 ? 2 : 1, rows = Math.ceil(n / cols), ns = 'non-scaling-stroke', pad = 16;
   const w = cols * SLIDE_W + (cols - 1) * SLIDE_GAP, hh = rows * SLIDE_H + (rows - 1) * SLIDE_GAP;
   return e('svg', { className: 'cv dsn', viewBox: [-pad, -pad, w + 2 * pad, hh + 2 * pad].join(' '), preserveAspectRatio: 'xMidYMid meet', 'aria-hidden': true },
-    e('g', { className: 'abs' }, c.slides.map((fid, i) => {
+    e('g', { className: 'abs' }, Array.from({ length: n }, (_, i) => {
       const row = Math.floor(i / cols), inRow = Math.min(cols, n - row * cols);
       const x = (i % cols + (cols - inRow) / 2) * (SLIDE_W + SLIDE_GAP), y = row * (SLIDE_H + SLIDE_GAP);
       return e('g', { key: i, transform: `translate(${x},${y})` },
-        e('rect', { className: 'ab' + (fid === 'hifi' ? '' : ' lo'), vectorEffect: ns, width: SLIDE_W, height: SLIDE_H, rx: 4 }),
+        e('rect', { className: 'ab' + (i < solid ? '' : ' lo'), vectorEffect: ns, width: SLIDE_W, height: SLIDE_H, rx: 4 }),
         (i ? CONTENT_LINES : TITLE_LINES).map(([lx, ly, lw, lh], j) => e('rect', { key: j, className: 'ln', x: SLIDE_W * lx, y: SLIDE_H * ly, width: SLIDE_W * lw, height: lh, rx: lh / 2 })),
         i > 0 && e('rect', { className: 'ln', x: SLIDE_W * 0.6, y: SLIDE_H * 0.42, width: SLIDE_W * 0.32, height: SLIDE_H * 0.36, rx: 3 }));
     })));
@@ -1206,8 +1097,8 @@ function DeckEl({ c }) {
   return e(F, null, e('div', { className: 'bd-drw capd' }, e(DeckArt, { c })),
     e('div', { className: 'bd-el-cap' }, [plural(c.count, 'slide'), c.notes > 0 && `${c.notes} with notes`].filter(Boolean).join(' · ')));
 }
-// website: the first 4 pages (serve.py card()) side by side as browser windows, each with its sections as bands down
-// the page (at most 8); a live page has a green dot in its bar. Dashed below hi-fi, as on a design board.
+// website: the first 4 pages side by side as browser windows, each with its sections as bands down the page (at most
+// 8); a live page has a green dot in its bar. Dashed below hi-fi, as on a design board.
 const PAGE_W = 160, PAGE_H = 112, PAGE_GAP = 24, PAGE_BAR = 16;
 function SiteArt({ c }) {
   const n = c.pages.length, ns = 'non-scaling-stroke', pad = 16, w = n * PAGE_W + (n - 1) * PAGE_GAP;
@@ -1225,19 +1116,22 @@ function SiteEl({ c }) {
   return e(F, null, e('div', { className: 'bd-drw capd' }, e(SiteArt, { c })),
     e('div', { className: 'bd-el-cap' }, [plural(c.count, 'page'), plural(c.sections, 'section'), c.live > 0 && `${c.live} live`].filter(Boolean).join(' · ')));
 }
-// storelisting: a column per platform page (serve.py card()'s platforms), a row per section (text, Shared, each device
-// row) with a dot for its worst check (ok, warn, err); the caption counts the shots and the store-rule errors
+// storelisting: a column per platform with fixed rows (Text, Shared, Shots); each row's dot is its worst check (ok,
+// warn, err) once validation has run (`levels`), none before. The caption counts the shots and the store-rule errors.
 const PLATFORM_WORD = { play: 'Google Play', appstore: 'App Store' };
-const ROW_WORD = { text: 'Text', shared: 'Shared' };
+const LISTING_ROWS = [['text', 'Text'], ['shared', 'Shared'], ['shots', 'Shots']];
 function ListingEl({ c }) {
-  const plats = Object.entries(c.platforms), shots = plats.reduce((n, [, rows]) => n + rows.reduce((m, r) => m + r.sets.reduce((k, s) => k + (s[1] || 0), 0), 0), 0);
-  return e(F, null, e('div', { className: 'bd-el bd-lsg capd' }, plats.map(([p, rows]) => e('div', { key: p, className: 'pc' }, e('b', null, PLATFORM_WORD[p] || p),
-    rows.slice(0, 7).map(r => e('span', { key: r.row, className: 'rw ' + r.level }, e('i'), ROW_WORD[r.row] || r.row[0].toUpperCase() + r.row.slice(1)))))),
+  const plats = Object.entries(c.platforms), shots = plats.reduce((n, [, p]) => n + (p.shots || 0), 0), levels = c.levels || null;
+  return e(F, null, e('div', { className: 'bd-el bd-lsg capd' }, plats.map(([p, x]) => e('div', { key: p, className: 'pc' }, e('b', null, PLATFORM_WORD[p] || p),
+    LISTING_ROWS.map(([row, word]) => {
+      const lv = levels && levels[p] && levels[p][row];
+      return e('span', { key: row, className: 'rw ' + (lv || 'na') }, e('i'), row === 'shots' ? plural(x.sets || 0, 'set') : word);
+    })))),
     e('div', { className: 'bd-el-cap' }, [plural(plats.length, 'platform'), plural(shots, 'shot'), c.storeErrors > 0 && plural(c.storeErrors, 'store error')].filter(Boolean).join(' · ')));
 }
 const SIZES = ['blocker', 'major', 'minor', 'nit'];
 function ReviewEl({ c }) {
-  const f = c.findings || {}, add = `+${c.add || 0}`, del = `−${c.del || 0}`, dots = [];
+  const f = c.findings || {}, add = c.add == null ? '+–' : `+${c.add}`, del = c.del == null ? '−–' : `−${c.del}`, dots = [];
   for (const k of SIZES) for (let i = 0; i < (f[k] || 0) && dots.length < 12; i++) dots.push(e('i', { key: k + i, className: k }));
   return e('div', { className: 'bd-el bd-rev' },
     e('div', { className: 'loc', style: { '--n': add.length + del.length } }, e('b', { className: 'a' }, add), e('b', { className: 'd' }, del)),
@@ -1266,17 +1160,17 @@ function StatEl({ icon, value, label }) {
 }
 const ErrorEl = ({ d }) => e('div', { className: 'bd-el bd-stat err' }, e('span', { className: 'ic' }, e(Icons.Error)),
   e('div', { className: 'v' }, e('div', { className: 'msg' }, d.firstError || "doesn't build")));
-// the index's card fields say which element the doc gets (serve.py card()); none of them is ever blank
+// the doc's type picks its template (serve.py card_numbers fills it); a doc that doesn't build shows its first error
 function heroElement(d) {
   const c = d.card || {};
-  if (d.errors) return e(ErrorEl, { d });
-  if (c.nodes && c.nodes.length) return e(DrawingEl, { c });
-  if (c.steps) return e(PlanEl, { c });
-  if (c.slides && c.slides.length) return e(DeckEl, { c });
-  if (c.pages && c.pages.length) return e(SiteEl, { c });
-  if (c.platforms && Object.keys(c.platforms).length) return e(ListingEl, { c });
-  if (c.artboards && c.artboards.length) return e(DesignEl, { c });
-  if ('add' in c) return e(ReviewEl, { c });
+  if (d.errors > 0) return e(ErrorEl, { d });
+  if (d.type === 'review' && ('add' in c || 'files' in c)) return e(ReviewEl, { c });
+  if (d.type === 'plan' && c.steps) return e(PlanEl, { c });
+  if (d.type === 'docs' && (c.nodes || (c.labels && c.labels.length))) return e(DrawingEl, { c });
+  if (d.type === 'design' && c.count) return e(DesignEl, { c });
+  if (d.type === 'presentation' && c.count) return e(DeckEl, { c });
+  if (d.type === 'website' && c.pages && c.pages.length) return e(SiteEl, { c });
+  if (d.type === 'storelisting' && c.platforms && Object.keys(c.platforms).length) return e(ListingEl, { c });
   if (c.hero) return e(StatEl, { icon: c.hero.icon, value: c.hero.value, label: c.hero.label });
   return e(StatEl, { icon: c.icon, value: String(c.sections || 0), label: (c.sections === 1 ? 'section' : 'sections') });
 }
@@ -1292,28 +1186,15 @@ function CardHero({ d, st }) {
 const DZ = [...Array(16)].flatMap((_, i) => [e('i', { key: 'b' + i, className: 'bd-dz b' + (i + 1) }),
   e('i', { key: 'l' + i, className: 'bd-dz s l' + (i + 1) }), e('i', { key: 'r' + i, className: 'bd-dz s r' + (i + 1) })]);
 
-/* ---------- Statistics' widgets ---------- */
+/* ---------- Statistics' widgets: each draws its part of GET /__bluedoc/stats (SQL over the index, per request) ---------- */
 const DAY = 86400e3;
-// doc edits per day over the last `days` days, oldest first: a doc counts once a day it was built or saved
-function editDays(docs, days) {
-  const t0 = new Date(); t0.setHours(0, 0, 0, 0);
-  const start = t0.getTime() - (days - 1) * DAY, counts = Array(days).fill(0);
-  for (const d of docs) {
-    const seen = new Set();
-    for (const t of [...(d.built || []), d.mtime]) {
-      const ms = t * 1000; if (ms < start) continue;
-      const day = new Date(ms); day.setHours(0, 0, 0, 0);
-      seen.add(Math.round((day.getTime() - start) / DAY));
-    }
-    seen.forEach(i => { if (i >= 0 && i < days) counts[i]++; });
-  }
-  return { start, counts };
-}
 const sum = xs => xs.reduce((a, b) => a + b, 0);
-function Activity({ docs, days = 14 }) {
-  const all = editDays(docs, Math.max(days, 14)), counts = all.counts.slice(-days), start = all.start + (all.counts.length - days) * DAY;
+// activity.counts: docs edited per day, oldest first, over max(days, 14) days from activity.start (the first day's
+// local midnight); a doc counts once a day it was built or saved
+function Activity({ a, days }) {
+  const all = a.counts || [], counts = all.slice(-days), start = a.start * 1000 + (all.length - counts.length) * DAY;
   const max = Math.max(1, ...counts), total = sum(counts);
-  const wk = sum(all.counts.slice(-7)), prev = sum(all.counts.slice(-14, -7));
+  const wk = sum(all.slice(-7)), prev = sum(all.slice(-14, -7));
   const letters = 'SMTWTFS';
   return e(Card, { title: null, description: null, className: 'bd-w' },
     e('div', { className: 'bd-w-head' }, e(Icons.BarChart), 'Activity', e('span', { className: 'r' }, `${days} days`)),
@@ -1329,32 +1210,26 @@ function Activity({ docs, days = 14 }) {
       counts.map((_, i) => e('span', { key: i }, letters[new Date(start + i * DAY + DAY / 2).getDay()])))
       : e('div', { className: 'bd-days ends', 'aria-hidden': true }, e('span', null, dayText(start / 1000)), e('span', null, 'Today')));
 }
-function Decisions({ docs, sts }) {
-  let dec = 0, decided = 0, steps = 0, done = 0;
-  const open = [];
-  for (const d of docs) {
-    const st = sts.get(d.key); dec += st.p.dec; decided += st.p.decided; steps += st.p.steps; done += st.p.done;
-    if (st.needs) open.push({ d, n: st.p.dec - st.p.decided, awaiting: st.awaiting });
-  }
-  open.sort((a, b) => b.n - a.n || b.d.mtime - a.d.mtime);
+const where = (d, rootOf) => { const r = rootOf.get(d.root); return (r ? r.name : d.root) + (d.dir ? '/' + d.dir : ''); };
+function Decisions({ s, rootOf }) {
+  const { dec = 0, decided = 0, steps = 0, done = 0, open = [] } = s;
   const pct = dec ? Math.round(decided / dec * 100) : 0;
   return e(Card, { title: null, description: null, className: 'bd-w' },
     e('div', { className: 'bd-w-head' }, e(Icons.Target), 'Decisions', e('span', { className: 'r' }, `${dec - decided} open`)),
     e('div', { className: 'bd-ring' },
       e(ProgressRing, { size: 68, stroke: 6, value: pct, tone: dec && decided === dec ? 'success' : 'accent', label: 'Decided' }),
       e('div', { className: 'tx' }, e('b', null, `${decided} of ${dec}`), e('span', null, 'decided'), steps > 0 && e('span', { style: { display: 'block' } }, `${done} of ${steps} steps done`))),
-    open.length ? e('ul', { className: 'bd-wl' }, open.slice(0, 3).map(({ d, n, awaiting }) => e('li', { key: d.key },
-      e('a', { href: d.url }, e(awaiting ? Icons.Clipboard : Icons.Flag, { width: 14, height: 14, style: { color: 'var(--color-hz-warning-fg)', flex: 'none' } }),
+    open.length ? e('ul', { className: 'bd-wl' }, open.slice(0, 3).map(d => e('li', { key: d.url },
+      e('a', { href: d.url }, e(d.awaiting ? Icons.Clipboard : Icons.Flag, { width: 14, height: 14, style: { color: 'var(--color-hz-warning-fg)', flex: 'none' } }),
         e('span', { className: 'two' }, e('span', { className: 't', title: ownTitle(d) }, Emo(d), plain(d.title)),
-          e('span', { className: 's' }, `${awaiting ? 'Awaiting approval' + (n ? `, ${n} open` : '') : `${n} to decide`} · ${d.root.name}${d.dir ? '/' + d.dir : ''}`))))))
+          e('span', { className: 's' }, `${d.awaiting ? 'Awaiting approval' + (d.n ? `, ${d.n} open` : '') : `${d.n} to decide`} · ${where(d, rootOf)}`))))))
       : e('div', { className: 'bd-w-empty' }, dec ? 'Every decision here is made.' : 'No decisions in these docs.'));
 }
-function ByType({ docs, sts, onType }) {
-  const n = Object.fromEntries(TYPES.map(([id]) => [id, 0])), f = { blocker: 0, major: 0, minor: 0, nit: 0 };
-  for (const d of docs) { n[d.type]++; const cf = (d.card || {}).findings; if (cf) for (const k in f) f[k] += cf[k] || 0; }
-  const total = docs.length || 1, anyF = Object.values(f).some(Boolean);
+function ByType({ types, findings, onType }) {
+  const n = Object.fromEntries(TYPES.map(([id]) => [id, (types || {})[id] || 0])), f = { blocker: 0, major: 0, minor: 0, nit: 0, ...(findings || {}) };
+  const all = sum(Object.values(n)), total = all || 1, anyF = Object.values(f).some(Boolean);
   return e(Card, { title: null, description: null, className: 'bd-w' },
-    e('div', { className: 'bd-w-head' }, e(Icons.PieChart), 'By type', e('span', { className: 'r' }, plural(docs.length, 'doc'))),
+    e('div', { className: 'bd-w-head' }, e(Icons.PieChart), 'By type', e('span', { className: 'r' }, plural(all, 'doc'))),
     e('div', { className: 'bd-stack', role: 'img', 'aria-label': TYPES.map(([id, l]) => `${l} ${n[id]}`).join(', ') },
       TYPES.filter(([id]) => n[id]).map(([id]) => e('i', { key: id, className: 't-' + id, style: { flex: n[id] } }))),
     e('ul', { className: 'bd-wl' }, TYPES.map(([id, label]) => e('li', { key: id },
@@ -1363,34 +1238,33 @@ function ByType({ docs, sts, onType }) {
     anyF && e('div', { className: 'bd-finds', title: 'Review findings by size' }, ['blocker', 'major', 'minor', 'nit'].map(k =>
       e('span', { key: k }, e('i', { className: 'bd-dot', style: { background: `var(--bd-f-${k})` } }), e('b', null, f[k]), k))));
 }
-function Waiting({ docs, sts }) {
-  const xs = docs.map(d => ({ d, st: sts.get(d.key) })).filter(x => x.st.waiting).sort((a, b) => b.st.sent - a.st.sent);
+function Waiting({ w }) {
+  const xs = w.docs || [];
   return e(Card, { title: null, description: null, className: 'bd-w' },
-    e('div', { className: 'bd-w-head' }, e(Icons.Inbox), 'Waiting on agent', e('span', { className: 'r' }, String(xs.length))),
-    xs.length ? e('ul', { className: 'bd-wl' }, xs.slice(0, 4).map(({ d, st }) => e('li', { key: d.key },
+    e('div', { className: 'bd-w-head' }, e(Icons.Inbox), 'Waiting on agent', e('span', { className: 'r' }, String(w.n || 0))),
+    xs.length ? e('ul', { className: 'bd-wl' }, xs.slice(0, 4).map(d => e('li', { key: d.url },
       e('a', { href: d.url }, e(StatusDot, { status: 'ai', pulse: true }),
-        e('span', { className: 'two' }, e('span', { className: 't', title: ownTitle(d) }, Emo(d), plain(d.title)), e('span', { className: 's' }, `${st.changesSent ? 'Changes requested' : 'Answers sent'} · ${ago(st.sent)}`))))))
+        e('span', { className: 'two' }, e('span', { className: 't', title: ownTitle(d) }, Emo(d), plain(d.title)), e('span', { className: 's' }, `${d.changesSent ? 'Changes requested' : 'Answers sent'} · ${ago(d.sent)}`))))))
       : e('div', { className: 'bd-w-empty' }, 'Nothing waiting. Answers and change requests you send from a doc wait here until the agent updates it.'));
 }
-// Statistics: each project's doc edits in the range, the most first (the top 8); a project opens its docs
-function EditsByProject({ docs, roots, days, onPick }) {
-  const xs = roots.map(r => ({ r, n: sum(editDays(docs.filter(d => d.root === r), days).counts) })).filter(x => x.n).sort((a, b) => b.n - a.n).slice(0, 8);
-  const max = Math.max(1, ...xs.map(x => x.n));
+// each project's doc edits in the range, the most first (the top 8); a project opens its docs
+function EditsByProject({ xs, rootOf, days, onPick }) {
+  const rows = (xs || []).filter(x => x.n).slice(0, 8), max = Math.max(1, ...rows.map(x => x.n));
   return e(Card, { title: null, description: null, className: 'bd-w' },
     e('div', { className: 'bd-w-head' }, e(Icons.BarChart), 'Edits by project', e('span', { className: 'r' }, `${days} days`)),
-    xs.length ? e('div', { className: 'bd-ebs' }, xs.map(({ r, n }) => e('a', { key: r.slug, className: 'bd-eb', href: '/?p=' + encodeURIComponent(r.slug),
-      onClick: ev => { if (ev.metaKey || ev.ctrlKey) return; ev.preventDefault(); onPick(r.slug); } },
-      e('span', { className: 'n' }, e(ProjName, { r })), e('i', { style: { '--w': `${Math.max(2, n / max * 80)}%` } }, n))))
+    rows.length ? e('div', { className: 'bd-ebs' }, rows.map(({ slug, n }) => { const r = rootOf.get(slug) || { slug, name: slug, look: null };
+      return e('a', { key: slug, className: 'bd-eb', href: '/?p=' + encodeURIComponent(slug),
+        onClick: ev => { if (ev.metaKey || ev.ctrlKey) return; ev.preventDefault(); onPick(slug); } },
+        e('span', { className: 'n' }, e(ProjName, { r })), e('i', { style: { '--w': `${Math.max(2, n / max * 80)}%` } }, n)); }))
       : e('div', { className: 'bd-w-empty' }, `No edits in the last ${days} days.`));
 }
-// Statistics: the docs with picks left to make that were saved longest ago (open for that long, at least)
-function OldestOpen({ docs, sts }) {
+// the docs with picks left to make that were saved longest ago (open for that long, at least)
+function OldestOpen({ xs, rootOf }) {
   const now = Date.now() / 1000;
-  const xs = docs.map(d => ({ d, st: sts.get(d.key) })).filter(x => x.st.needs && x.st.p.dec > x.st.p.decided).sort((a, b) => a.d.mtime - b.d.mtime).slice(0, 6);
   return e(Card, { title: null, description: null, className: 'bd-w' },
     e('div', { className: 'bd-w-head' }, e(Icons.Clock), 'Oldest open decisions', e('span', { className: 'r' }, 'open longest')),
-    xs.length ? e('div', { className: 'bd-ols' }, xs.map(({ d }) => e('div', { key: d.key, className: 'bd-ol' },
-      e('span', { className: 't', title: ownTitle(d) }, Emo(d), plain(d.title)), e('span', { className: 'm' }, d.root.name),
+    xs && xs.length ? e('div', { className: 'bd-ols' }, xs.slice(0, 6).map(d => e('div', { key: d.url, className: 'bd-ol' },
+      e('span', { className: 't', title: ownTitle(d) }, Emo(d), plain(d.title)), e('span', { className: 'm' }, (rootOf.get(d.root) || { name: d.root }).name),
       e('span', { className: 'w' }, `open ${Math.max(1, Math.round((now - d.mtime) / 86400))} d`), e('a', { className: 'o', href: d.url }, 'Open'))))
       : e('div', { className: 'bd-w-empty' }, 'No open decisions.'));
 }
@@ -1434,12 +1308,19 @@ const dayText = t => { const d = new Date(t * 1000); return `${MONTHS[d.getMonth
 // Updated: how long ago within a week, else the day
 const when = t => (Date.now() / 1000 - t < 7 * 86400 ? ago(t) : dayText(t));
 const GROUPS = [['today', 'Today'], ['week', 'This week'], ['month', 'This month'], ['older', 'Older']];
-function groupOf(t) {
-  const t0 = new Date(); t0.setHours(0, 0, 0, 0);
-  const ms = t * 1000;
-  return ms >= t0 ? 'today' : ms >= t0 - 6 * DAY ? 'week' : ms >= t0 - 29 * DAY ? 'month' : 'older';
+// The next slice's trigger: a quiet line after the last loaded row. When it comes within a viewport of the window the
+// page asks for the next slice (onNear); while it loads the line says Loading…. `at` (the rows loaded) re-arms it.
+function Sentinel({ onNear, loading, at, row }) {
+  const ref = useRef(null), near = useRef(onNear);
+  near.current = onNear;
+  useEffect(() => {
+    if (!ref.current || loading) return undefined;
+    const io = new IntersectionObserver(([en]) => { if (en.isIntersecting) near.current(); }, { rootMargin: '100% 0px' });
+    io.observe(ref.current);
+    return () => io.disconnect();
+  }, [loading, at]);
+  return e('div', { ref, className: 'bd-more-l' + (row ? ' r' : ''), role: 'status', 'aria-live': 'polite' }, loading ? 'Loading…' : '');
 }
-const GROUP_CAP = 25;   // rows a group shows before "Show N more"
 // a row: a click (or Enter or Space) opens or closes it in place; only its title is a link to the doc
 function DocRow({ d, st, m, terms, folderCol, open, onOpen }) {
   return e(F, null,
@@ -1459,8 +1340,10 @@ function DocRow({ d, st, m, terms, folderCol, open, onOpen }) {
       e('span', { className: 'c-up bd-m', role: 'cell' }, when(d.mtime))),
     open && e(RowDetail, { d, st }));
 }
-// the docs table: grouped by date (Updated sorts the groups and their rows), flat by best match while searching
-function DocTable({ rows, terms, folderCol, asc, onSort, openRows, onOpen, isOpen, onToggle, more, onMore }) {
+// the docs table: grouped by date (Updated sorts the groups and their rows), flat by best match while searching.
+// groups: [{id, label, n (the group's full count, from the server), open, rows (loaded), more (rows left to load)}];
+// a group with rows left ends with its Sentinel. Flat (search): rows, and the list's Sentinel comes after the table.
+function DocTable({ rows, groups, terms, folderCol, asc, onSort, openRows, onOpen, onToggle, tail }) {
   const ch = (cls, text) => e('span', { className: cls, role: 'columnheader' }, text);
   const head = e('div', { className: 'bd-hd', role: 'row' }, ch('', 'Doc'), ch('c-ty', 'Type'), folderCol && ch('c-f', 'Project / folder'),
     ch('c-st', 'Status'), ch('c-dc', 'Decisions'), ch('c-rv', 'Rev'),
@@ -1468,19 +1351,10 @@ function DocTable({ rows, terms, folderCol, asc, onSort, openRows, onOpen, isOpe
       : e('span', { role: 'columnheader', 'aria-sort': asc ? 'ascending' : 'descending' },
         e('button', { type: 'button', className: 'so', onClick: onSort, title: asc ? 'Oldest first' : 'Newest first' }, 'Updated', e(asc ? Icons.ArrowUp : Icons.ArrowDown))));
   const row = r => e(DocRow, { key: r.d.key, ...r, terms, folderCol, open: openRows.includes(r.d.key), onOpen });
-  let body;
-  if (terms.length) body = rows.map(row);
-  else {
-    const gs = new Map(GROUPS.map(([id]) => [id, []]));
-    for (const r of rows) gs.get(groupOf(r.d.mtime)).push(r);
-    body = (asc ? [...GROUPS].reverse() : GROUPS).filter(([id]) => gs.get(id).length).map(([id, label]) => {
-      const xs = gs.get(id), open = isOpen(id), cap = more[id] ? xs.length : GROUP_CAP;
-      return e(F, { key: id }, e('button', { type: 'button', className: 'bd-gh', 'aria-expanded': open, onClick: () => onToggle(id, !open) },
-        e(open ? Icons.ChevronDown : Icons.ChevronRight), e('b', null, label), e('span', null, '· ' + xs.length)),
-        open && xs.slice(0, cap).map(row),
-        open && xs.length > cap && e('button', { type: 'button', className: 'bd-more', onClick: () => onMore(id) }, `Show ${xs.length - cap} more`));
-    });
-  }
+  const body = !groups ? rows.map(row) : groups.filter(g => g.n > 0).map(g => e(F, { key: g.id },
+    e('button', { type: 'button', className: 'bd-gh', 'aria-expanded': g.open, onClick: () => onToggle(g.id, !g.open) },
+      e(g.open ? Icons.ChevronDown : Icons.ChevronRight), e('b', null, g.label), e('span', null, '· ' + g.n)),
+    g.open && g.rows.map(row), g.open && g.more && tail(g.id)));
   return e('div', { className: 'bd-tb' + (folderCol ? '' : ' np'), role: 'table', 'aria-label': 'Docs' }, head, body);
 }
 const fullTime = t => `${dayText(t)}, ${new Date(t * 1000).toTimeString().slice(0, 5)}`;
@@ -1582,22 +1456,18 @@ function Wrap({ d, st, children }) {
       e('span', { className: 'acts' }, e(Button, { size: 'sm', variant: 'secondary', onClick: () => acts.archive(d, true) }, 'Archive'),
         e(Button, { size: 'sm', variant: 'ghost', onClick: () => acts.notNow(d) }, 'Not now'))));
 }
-// Cards: the doc cards, CARD_PAGE at a time; Show N more adds the next ones
-const CARD_PAGE = 48;
-function Cards({ rows, terms }) {
-  const [n, setN] = useState(CARD_PAGE);
-  return e(F, null, e('div', { className: 'bd-grid' }, rows.slice(0, n).map(r => e(Wrap, { key: r.d.key, ...r }, e(DocCard, { ...r, terms })))),
-    rows.length > n && e('div', { className: 'bd-cmore' }, e(Button, { variant: 'secondary', onClick: () => setN(x => x + CARD_PAGE) }, `Show ${Math.min(CARD_PAGE, rows.length - n)} more`)));
-}
+// Cards: the loaded slices of doc cards (48 a slice); the list's Sentinel after the grid loads the next
+const Cards = ({ rows, terms }) => e('div', { className: 'bd-grid' }, rows.map(r => e(Wrap, { key: r.d.key, ...r }, e(DocCard, { ...r, terms }))));
 
 /* ---------- sidebar data ---------- */
-// a project's folders with their doc counts, as a tree: siblings with the most docs first; depth 1 is a top folder
-function folderDirs(docs) {
+// a project's folders with their doc counts (index.json facets.dirs: each folder's own docs), as a tree: a folder
+// counts the docs under it too; siblings with the most docs first; depth 1 is a top folder
+function folderDirs(dirs) {
   const counts = new Map();
-  for (const d of docs) {
-    if (!d.dir) continue;
-    const parts = d.dir.split('/');
-    for (let i = 1; i <= parts.length; i++) { const k = parts.slice(0, i).join('/'); counts.set(k, (counts.get(k) || 0) + 1); }
+  for (const { dir, n } of dirs || []) {
+    if (!dir) continue;
+    const parts = dir.split('/');
+    for (let i = 1; i <= parts.length; i++) { const k = parts.slice(0, i).join('/'); counts.set(k, (counts.get(k) || 0) + n); }
   }
   const out = [], walk = (parent, depth) => {
     const kids = [...counts.keys()].filter(k => k.split('/').length === depth && (depth === 1 || k.startsWith(parent + '/')));
@@ -1916,18 +1786,22 @@ function App() {
   const [reduce, setReduce] = useState(reduceMQ.matches);
   const [phone, setPhone] = useState(phoneMQ.matches);   // ≤ 600 px: a project's menu opens below its ⋯
   useEffect(() => { const f = () => setPhone(phoneMQ.matches); phoneMQ.addEventListener('change', f); return () => phoneMQ.removeEventListener('change', f); }, []);
-  const [data, setData] = useState(null);
-  const [texts, setTexts] = useState(null);   // search-text's {url: text}, once a search asked for it
-  const [wantTexts, setWantTexts] = useState(false);
+  const [data, setData] = useState(null);   // the view's last index.json answer: roots, facets, groups, hero, index, …
+  const [slots, setSlots] = useState([]);   // the view's loaded rows by offset, in its order; a hole is a row not loaded
+  const [busy, setBusy] = useState([]);   // the ranges (a date group's id, or 'all') whose next slice is loading
+  const [sdata, setSdata] = useState(null);   // Statistics' numbers (GET /__bluedoc/stats)
   const [tick, setTick] = useState(0);
   const [q, setQ] = useState(() => new URLSearchParams(location.search).get('q') || '');
-  const dq = useDeferredValue(q);
+  // search waits 150 ms after the last key, then asks the server
+  const [dq, setDq] = useState(q);
+  useEffect(() => { const t = setTimeout(() => setDq(q), 150); return () => clearTimeout(t); }, [q]);
   const [filters, setFilters] = useState(readFilters);
   const [stats, setStats] = useState(readStats);
   // the open rows' keys, the last opened last; ?doc= names it (and opens that row on load)
   const [openRows, setOpenRows] = useState(() => { const s = readSel(); return s ? [s] : []; });
   const sel = openRows[openRows.length - 1] || null;
-  const [settings, setSettings] = useState(loadSettings);
+  // ?doc= opens a row: the view is Rows
+  const [settings, setSettings] = useState(() => ({ ...loadSettings(), ...(readSel() ? { view: 'rows' } : {}) }));
   const [drawer, setDrawer] = useState(false);
   const [heroOut, setHeroOut] = useState(false);
   const [note, setNote] = useState(null);   // the toast: {text, undo?}
@@ -1935,7 +1809,6 @@ function App() {
   const [pq, setPq] = useState('');   // Find a project
   const [pf, setPf] = useState('all');   // the sidebar's chip: all, active or pinned (Hidden is filters.hidden)
   const [groupOpen, setGroupOpen] = useState({});   // a date group opened or closed by the reader
-  const [more, setMore] = useState({});   // date groups showing every row
   const [menuFor, setMenuFor] = useState(null);   // the project whose ⋯ menu is open
   const [edit, setEdit] = useState(null);   // the project whose name and icon are being edited (ProjectEditor's edit, and inDrawer)
   const editNext = useRef(null);   // Edit name and icon… picked: the editor opens once its menu has closed
@@ -1947,41 +1820,138 @@ function App() {
   useEffect(() => { document.documentElement.setAttribute('data-hz-theme', theme); }, [theme]);
   useEffect(() => { document.title = PAGE_TITLE[page] + ' · bluedoc'; }, [page]);
   useEffect(() => {
-    const onPop = () => { const s = readSel(); setPage(pageOf()); setFilters(readFilters()); setStats(readStats()); setOpenRows(s ? [s] : []); setDrawer(false); };
+    const onPop = () => { const s = readSel(), q0 = new URLSearchParams(location.search).get('q') || ''; restore.current = true;
+      setPage(pageOf()); setFilters(readFilters()); setStats(readStats()); setQ(q0); setDq(q0); setOpenRows(s ? [s] : []); setDrawer(false); };
     addEventListener('popstate', onPop);
     return () => removeEventListener('popstate', onPop);
   }, []);
   useEffect(() => { store.set(HOME_KEY, JSON.stringify(settings)); }, [settings]);
   useEffect(() => {
     const onSys = () => setSysTheme(systemTheme()), onReduce = () => setReduce(reduceMQ.matches);
-    const bump = () => setTick(t => t + 1);
-    // progress (or its unsent part) lives in this browser's storage: repaint when another tab changes it or this tab comes back
-    const onStorage = ev => { if (ev.key === THEME_KEY) setThemePick(storedTheme()); bump(); };
+    const bump = () => setTick(t => t + 1);   // "N min ago" moves on
+    const onStorage = ev => { if (ev.key === THEME_KEY) setThemePick(storedTheme()); };
     darkMQ.addEventListener('change', onSys); reduceMQ.addEventListener('change', onReduce);
     addEventListener('storage', onStorage); addEventListener('pageshow', bump);
     const clock = setInterval(bump, 30000);
     return () => { darkMQ.removeEventListener('change', onSys); reduceMQ.removeEventListener('change', onReduce); removeEventListener('storage', onStorage); removeEventListener('pageshow', bump); clearInterval(clock); };
   }, []);
-  // live list: index.json every 4 s while visible. The browser revalidates its copy (no-cache: the server answers 304
-  // to its ETag when nothing changed) and the same ETag changes nothing here: no parse, no render. React keeps scroll
-  // and focus when the list does change.
+  // The view's rows come from the server a slice at a time (index.json?view=…&offset=&limit=): 25 rows or 48 cards,
+  // the next when the list's end comes within a viewport (Sentinel). `slots` holds them by offset in the view's one
+  // global order, so a closed date group's rows are skipped by offset (its count is known) and a group goes on across
+  // slices under one header. Every 4 s while visible the page asks again for what it shows, offset by offset: the
+  // browser revalidates (no-cache: a 304 to the ETag) and an unchanged first answer stops there.
+  const view = settings.view, terms = dq.toLowerCase().split(/\s+/).filter(Boolean);
+  const flat = view === 'cards' || terms.length > 0, PAGE = view === 'cards' ? 48 : 25;
+  const qkey = useMemo(() => {
+    const u = new URLSearchParams({ view });
+    if (filters.scope) { u.set('p', filters.scope.slug); if (filters.scope.dir) u.set('d', filters.scope.dir); }
+    if (filters.type) u.set('t', filters.type);
+    if (filters.status) u.set('s', filters.status);
+    if (filters.hidden) u.set('hidden', '1');
+    if (dq.trim()) u.set('q', dq.trim());
+    else if (settings.asc && view === 'rows') u.set('sort', 'old');
+    u.set('tz', String(new Date().getTimezoneOffset()));
+    return u.toString();
+  }, [view, filters, dq, settings.asc]);
+  const cur = useRef({ key: '', slots: [], tag: '', code: null, data: null });
+  const restore = useRef(true);   // the next first load restores this URL's loaded rows and scroll (load, Back, forward)
+  const posKey = () => 'bluedoc:pos:' + location.pathname + location.search;
+  // one request; null when the server didn't answer 200. A new `code` is new bluedoc: reload (the home holds no drafts;
+  // the URL keeps the view and sessionStorage the position)
+  const get = async (key, offset, limit, extra) => {
+    const sent = serverKeyHeaders();
+    let r;
+    try { r = await fetch(`/__bluedoc/index.json?${key}&offset=${offset}&limit=${limit}${extra || ''}`, { cache: 'no-cache', headers: { 'X-Bluedoc': '1', ...sent } }); }
+    catch { return null; }   // server restarting: keep the last list
+    if (!r.ok) return null;
+    const j = await r.json();
+    if (j.code && cur.current.code && j.code !== cur.current.code) { location.reload(); return null; }
+    if (j.code) cur.current.code = j.code;
+    keepServerKey(j.unlocked, sent);
+    return { j, tag: r.headers.get('ETag') || '' };
+  };
+  // the loaded runs of offsets [[offset, length]]; asked for in requests of at most 200 rows
+  const runsOf = xs => { const out = []; xs.forEach((d, i) => { if (!d) return; const last = out[out.length - 1]; if (last && last[0] + last[1] === i) last[1]++; else out.push([i, 1]); }); return out; };
+  const fetchRuns = async (key, runs, extra) => {
+    const out = [];
+    let head = null, tag = '';
+    for (const [o, n] of runs) for (let i = o; i < o + n; i += 200) {
+      const r = await get(key, i, Math.min(200, o + n - i), i === runs[0][0] ? extra : '');
+      if (!r) return null;
+      if (!head) tag = r.tag;
+      head = r.j;
+      r.j.docs.forEach((d, k) => { out[i + k] = d; });
+    }
+    return { head, tag, slots: out };
+  };
+  const commit = (key, res) => {
+    if (cur.current.key !== key) return;
+    const { docs, ...head } = res.head;
+    const xs = res.slots.slice(0, head.total);
+    Object.assign(cur.current, { slots: xs, tag: res.tag, data: head });
+    setSlots(xs); setData(head);
+  };
+  // the first slices of a view: this URL's runs from sessionStorage (restore), else one slice; ?doc= extends it through that doc
   useEffect(() => {
-    let last = '', alive = true;
-    const load = async () => {
-      try {
-        const sent = serverKeyHeaders();
-        const r = await fetch('/__bluedoc/index.json', { cache: 'no-cache', headers: sent });
-        if (!r.ok) return;
-        const tag = r.headers.get('ETag');
-        if (tag && tag === last) return;
-        const txt = await r.text();
-        if (alive && (tag || txt) !== last) { last = tag || txt; const d = JSON.parse(txt); setData(d); keepServerKey(d.unlocked, sent); }
-      } catch { /* server restarting: keep the last list */ }
-    };
-    reload.current = load;
-    load();
-    const t = setInterval(() => { if (document.visibilityState === 'visible') load(); }, 4000);
-    return () => { alive = false; clearInterval(t); };
+    let alive = true, saved = null;
+    if (restore.current) { try { saved = JSON.parse(sessionStorage.getItem(posKey()) || 'null'); } catch {} }
+    const doc = restore.current ? readSel() : null;
+    restore.current = false;
+    // another view: its rows only, never the last view's while the first slice loads
+    Object.assign(cur.current, { key: qkey, slots: [], tag: '' });
+    setSlots([]);
+    setBusy(['all']);
+    const runs = saved && Array.isArray(saved.runs) && saved.runs.length ? saved.runs : [[0, PAGE]];
+    fetchRuns(qkey, runs, doc ? '&doc=' + encodeURIComponent(doc) : '').then(res => {
+      if (!alive) return;
+      setBusy([]);
+      if (!res) return;
+      commit(qkey, res);
+      if (saved && typeof saved.y === 'number') requestAnimationFrame(() => requestAnimationFrame(() => scrollTo(0, saved.y)));
+    });
+    return () => { alive = false; };
+  }, [qkey]);
+  // the poll: what is shown, again; force (after a write) skips the unchanged-first-answer shortcut
+  const poll = async force => {
+    const key = cur.current.key, runs = runsOf(cur.current.slots);
+    if (!key) return;
+    if (!runs.length) runs.push([0, PAGE]);
+    if (!force) {
+      const first = await get(key, runs[0][0], Math.min(200, runs[0][1]));
+      if (!first || first.tag && first.tag === cur.current.tag) return;
+    }
+    const res = await fetchRuns(key, runs);
+    if (res) commit(key, res);
+  };
+  useEffect(() => {
+    reload.current = () => poll(true);
+    const t = setInterval(() => { if (document.visibilityState === 'visible') poll(false); }, 4000);
+    return () => clearInterval(t);
+  }, []);
+  // the next slice of a range (a date group, or the whole list): from its first offset not loaded yet
+  const loadMore = async (id, start, n) => {
+    const key = cur.current.key, xs = cur.current.slots;
+    let i = start;
+    while (i < start + n && xs[i]) i++;
+    if (i >= start + n || busy.length) return;
+    setBusy([id]);
+    const r = await get(key, i, Math.min(PAGE, start + n - i));
+    setBusy([]);
+    if (!r || cur.current.key !== key) return;
+    const next = cur.current.slots.slice();
+    r.j.docs.forEach((d, k) => { next[i + k] = d; });
+    const { docs, ...head } = r.j;
+    Object.assign(cur.current, { slots: next.slice(0, head.total), data: head });
+    setSlots(cur.current.slots); setData(head);
+  };
+  // this URL's loaded runs and scroll, for Back, forward and reload
+  useEffect(() => {
+    if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+    let t = 0;
+    const save = () => { try { sessionStorage.setItem(posKey(), JSON.stringify({ runs: runsOf(cur.current.slots), y: scrollY })); } catch {} };
+    const onScroll = () => { clearTimeout(t); t = setTimeout(save, 150); };
+    addEventListener('scroll', onScroll, { passive: true }); addEventListener('pagehide', save);
+    return () => { removeEventListener('scroll', onScroll); removeEventListener('pagehide', save); clearTimeout(t); };
   }, []);
   // the docs' search, filters and preview live in the URL, Statistics' project and range too; Settings' URL is /settings alone
   useEffect(() => {
@@ -2000,16 +1970,17 @@ function App() {
     }
     history.replaceState(null, '', location.pathname + (u.toString() ? '?' + u : ''));
   }, [q, filters, page, sel, stats]);
-  // the docs' body text for search: fetched on the first search (or a q= on load), then again only when index.json
-  // changed (a new `data`); revalidated as index.json is, so an unchanged one is a 304
-  useEffect(() => { if (q.trim()) setWantTexts(true); }, [q]);
+  // another page, project or range: none of the last numbers while the new ones load
+  useEffect(() => { setSdata(null); }, [page, stats.slug, stats.range]);
+  // Statistics' numbers: SQL over the index per request, again when the list's answer moves (a new `data`)
   useEffect(() => {
-    if (!wantTexts || !data) return undefined;
+    if (page !== 'stats') return undefined;
     let alive = true;
-    fetch('/__bluedoc/search-text', { cache: 'no-cache', headers: serverKeyHeaders() }).then(r => (r.ok ? r.json() : null))
-      .then(j => { if (alive && j && j.docs) setTexts(j.docs); }, () => {});
+    const u = new URLSearchParams({ p: stats.slug, range: stats.range, tz: String(new Date().getTimezoneOffset()) });
+    fetch('/__bluedoc/stats?' + u, { cache: 'no-cache', headers: { 'X-Bluedoc': '1', ...serverKeyHeaders() } }).then(r => (r.ok ? r.json() : null))
+      .then(j => { if (alive && j) setSdata(j); }, () => {});
     return () => { alive = false; };
-  }, [wantTexts, data]);
+  }, [page, stats.slug, stats.range, data]);
   useEffect(() => {
     if (!composer.current) return undefined;
     const io = new IntersectionObserver(([en]) => setHeroOut(!en.isIntersecting), { rootMargin: '-56px 0px 0px 0px' });
@@ -2028,50 +1999,45 @@ function App() {
     return () => document.removeEventListener('keydown', onKey);
   });
 
-  // the roots with the reader's names and icons (withLooks), and their docs
+  // the roots with the reader's names and icons (withLooks), each with its doc count (archived ones aside) and last edit
   const roots = useMemo(() => (data ? withLooks(data.roots, data.home) : []), [data]);
-  const docs = useMemo(() => prepare(roots), [roots]);
-  const sts = useMemo(() => new Map(docs.map(d => [d.key, statusOf(d)])), [docs, tick]);
+  const rootOf = useMemo(() => new Map(roots.map(r => [r.slug, r])), [roots]);
   const missing = (data && data.missing) || [];
   // the projects the home page hides: temporary folders (under /tmp) until shown, those the reader hid, and missing ones
   const homeL = { pinned: [], hidden: [], shown: [], names: {}, icons: {}, ...((data && data.home) || {}) };
   const why = r => (homeL.hidden.includes(r.path) ? 'you' : r.temp && !homeL.shown.includes(r.path) ? 'temp' : null);
   const shownRoots = roots.filter(r => !why(r)), hidRoots = roots.filter(r => why(r));
   const hiddenN = hidRoots.length + missing.length;
-  const shownSlugs = new Set(shownRoots.map(r => r.slug));
-  const notArch = d => !sts.get(d.key).archived;
-  // the docs a view starts from: the shown projects', the hidden ones' (Hidden), or every project's when one is picked
-  const visDocs = docs.filter(d => shownSlugs.has(d.root.slug)), hidDocs = docs.filter(d => !shownSlugs.has(d.root.slug));
-  const pool = filters.hidden ? hidDocs : filters.scope ? docs : visDocs;
-  // each project's docs (archived ones aside) and its last edit
-  const countOf = new Map(), lastOf = new Map();
-  for (const d of docs) {
-    const s = d.root.slug;
-    lastOf.set(s, Math.max(lastOf.get(s) || 0, d.mtime));
-    if (notArch(d)) countOf.set(s, (countOf.get(s) || 0) + 1);
-  }
+  const countOf = new Map(roots.map(r => [r.slug, r.count || 0])), lastOf = new Map(roots.map(r => [r.slug, r.last || 0]));
   const weekAgo = Date.now() / 1000 - 7 * 86400;
   const isActive = r => (lastOf.get(r.slug) || 0) > weekAgo;
   const pinned = new Set(homeL.pinned);
   const byPinThenEdit = (a, b) => (pinned.has(b.path) - pinned.has(a.path)) || ((lastOf.get(b.slug) || 0) - (lastOf.get(a.slug) || 0));
   const ordered = [...shownRoots].sort(byPinThenEdit);
+  const anyDocs = roots.some(r => r.count) || (data && data.total > 0);
 
-  // archived docs are out of every view and count but the Archived status's (statusIs)
+  // the server's counts: types over the scope, statuses over the typed set, archived matches for the hint
+  const facets = (data && data.facets) || {};
   const showArchived = filters.status === 'archived';
-  const scoped = pool.filter(d => inScope(d, filters.scope));
-  const typeN = Object.fromEntries(TYPES.map(([id]) => [id, 0]));
-  for (const d of scoped) if (sts.get(d.key).archived === showArchived) typeN[d.type]++;
-  const typed = filters.type ? scoped.filter(d => d.type === filters.type) : scoped;
-  const statusN = Object.fromEntries(STATUSES.map(([id]) => [id, 0]));
-  for (const d of typed) { const st = sts.get(d.key); for (const k in statusN) if (statusIs(st, k)) statusN[k]++; }
-  const filtered = typed.filter(d => (filters.status ? statusIs(sts.get(d.key), filters.status) : notArch(d)));
-  const terms = dq.toLowerCase().split(/\s+/).filter(Boolean);
-  const rows = [];
-  const bodyOf = d => (texts && texts[d.url]) || '';
-  for (const d of filtered) { const m = match(d, terms, bodyOf(d)); if (m) rows.push({ d, st: sts.get(d.key), m }); }
-  rows.sort((a, b) => (terms.length ? b.m.score - a.m.score || b.d.mtime - a.d.mtime : settings.asc ? a.d.mtime - b.d.mtime : b.d.mtime - a.d.mtime));
-  // the archived docs this search, type, status and folder would show if they weren't archived
-  const archN = showArchived ? 0 : typed.filter(d => { const st = sts.get(d.key); return st.archived && (!filters.status || st[filters.status]) && match(d, terms, bodyOf(d)); }).length;
+  const typeN = Object.fromEntries(TYPES.map(([id]) => [id, (facets.types || {})[id] || 0]));
+  const statusN = Object.fromEntries(STATUSES.map(([id]) => [id, (facets.statuses || {})[id] || 0]));
+  const archN = showArchived ? 0 : facets.archived || 0;
+  const total = (data && data.total) || 0;
+  const indexing = data && data.indexing && data.indexing.done < data.indexing.total ? data.indexing : null;
+  // the loaded rows as the views draw them
+  const items = useMemo(() => slots.map(d => d && { d: prep(d, rootOf), m: { snip: d.snip || '' } }).map(x => x && { ...x, st: x.d.st }), [slots, rootOf]);
+  // the ranges the list loads by: the date groups in the view's order with their full counts, else the whole list
+  const isOpen = id => groupOpen[id] ?? (id !== 'older' || filters.hidden);
+  const hasHole = (start, n) => { for (let i = start; i < start + n; i++) if (!items[i]) return true; return false; };
+  let ranges;
+  if (flat || !data) ranges = [{ id: 'all', label: '', start: 0, n: total, open: true }];
+  else {
+    let s = 0;
+    ranges = (settings.asc ? [...GROUPS].reverse() : GROUPS).map(([id, label]) => { const n = (data.groups || {})[id] || 0, r = { id, label, start: s, n, open: isOpen(id) }; s += n; return r; });
+  }
+  for (const r of ranges) { r.rows = items.slice(r.start, r.start + r.n).filter(Boolean); r.more = hasHole(r.start, r.n); }
+  const rows = ranges.filter(r => r.open).flatMap(r => r.rows);
+  const complete = ranges.every(r => !r.n || (r.open && !r.more));
 
   // the docs, Statistics or Settings, as a new history entry (Back returns)
   const go = to => {
@@ -2168,7 +2134,7 @@ function App() {
       { id: 'copy', label: 'Copy path', icon: e(Icons.Copy), onSelect: () => copyPath(r.path) },
       { type: 'separator', id: 's2' },
       { id: 'rm', label: 'Remove folder…', icon: e(Icons.Close), danger: true, onSelect: () => setRemoving({ path: r.path, name: r.name }) }];
-    const dirs = on ? folderDirs(docs.filter(d => d.root === r && notArch(d))) : [];
+    const dirs = on ? folderDirs(facets.dirs) : [];
     return e('li', { key: r.slug, className: 'bd-pr' + (menuFor === r.slug || editing ? ' open' : '') },
       e('button', { type: 'button', className: 'bd-ni', 'aria-current': on && !filters.scope.dir ? 'page' : undefined, title: r.name === r.folder ? r.path : `${r.folder} · ${r.path}`, onClick: () => pick('p:' + r.slug) },
         e(ProjGlyph, { look: v.look }), e('span', { className: 'n' }, v.name), e('span', { className: 'c' }, countOf.get(r.slug) || 0)),
@@ -2195,7 +2161,7 @@ function App() {
     const collapse = e(IconButton, { size: 'sm', variant: 'ghost', label: inDrawer ? 'Close' : rail ? 'Expand sidebar' : 'Collapse sidebar', icon: e(Icons.PanelLeft),
       onClick: () => (inDrawer ? setDrawer(false) : set('rail', !rail)) });
     const top = [e('div', { key: 'top', className: 'bd-sb-top' }, e(Brand, { mark: rail }), !rail && e('span', { className: 'sp' }), collapse),
-      nav('all', Icons.Home, 'All docs', visDocs.filter(notArch).length, allOn, () => pick('all')),
+      nav('all', Icons.Home, 'All docs', sum(shownRoots.map(r => countOf.get(r.slug) || 0)), allOn, () => pick('all')),
       nav('stats', Icons.BarChart, 'Statistics', null, page === 'stats', () => openStats(''))];
     if (rail) return e('nav', { className: 'bd-sb rail', 'aria-label': 'Projects' }, top, e('span', { className: 'grow' }), e('div', { className: 'bd-sb-foot' }, keys));
     const chip = filters.hidden ? 'hidden' : pf, pqt = pq.trim().toLowerCase();
@@ -2248,20 +2214,24 @@ function App() {
     to.focus();
   };
   const searchProps = { value: q, onChange: ev => setQ(ev.target.value), onKeyDown: onSearchKey, 'aria-label': 'Search docs', autoComplete: 'off', spellCheck: false };
-  const total = scoped.filter(d => sts.get(d.key).archived === showArchived).length;
-  const countText = !data ? 'loading…' : rows.length === total ? plural(total, showArchived ? 'archived doc' : 'doc') : `${rows.length} of ${total}`;
+  // the view's count: its matches, of the scope's docs (Type's counts) when a filter or search narrows them; partial
+  // while the index fills
+  const scopeN = sum(Object.values(typeN));
+  const countText = !data ? 'loading…' : (total === scopeN ? plural(total, showArchived ? 'archived doc' : 'doc') : `${total} of ${scopeN}`)
+    + (indexing ? ` · ${indexing.done} of ${indexing.total} indexed` : '');
 
-  // the hero's lede: what the view holds, and its last edit
-  const scopeLive = scoped.filter(notArch), newest = scopeLive.reduce((a, d) => Math.max(a, d.mtime), 0);
-  const lede = !data ? 'Loading your docs…' : !docs.length ? 'No docs yet.'
-    : [filters.hidden ? `${plural(scopeLive.length, 'doc')} in ${plural(hiddenN, 'hidden project')}`
-      : filters.scope ? `${plural(scopeLive.length, 'doc')} in ${scopeLabel(roots, filters.scope)}`
-      : `${plural(scopeLive.length, 'doc')} in ${plural(shownRoots.length, 'project')}`, newest && `updated ${when(newest)}`].filter(Boolean).join(' · ');
+  // the hero's lede: what the view holds, and its last edit (index.json's hero: the scope's docs, archived ones aside)
+  const hero = (data && data.hero) || {};
+  const lede = !data ? 'Loading your docs…' : !anyDocs && !indexing ? 'No docs yet.'
+    : [filters.hidden ? `${plural(hero.docs || 0, 'doc')} in ${plural(hiddenN, 'hidden project')}`
+      : filters.scope ? `${plural(hero.docs || 0, 'doc')} in ${scopeLabel(roots, filters.scope)}`
+      : `${plural(hero.docs || 0, 'doc')} in ${plural(shownRoots.length, 'project')}`, hero.newest && `updated ${when(hero.newest)}`,
+    indexing && `indexing ${indexing.done} of ${indexing.total}`].filter(Boolean).join(' · ');
   // the stat line: edits this week (Statistics), decisions open (Needs you), waiting on the agent (Waiting on agent)
   const statLine = () => {
-    const xs = [[sum(editDays(scopeLive, 7).counts), 'edit this week', 'edits this week', '/stats', () => openStats(filters.scope ? filters.scope.slug : '')],
-      [sum(scopeLive.map(d => { const p = sts.get(d.key).p; return Math.max(0, p.dec - p.decided); })), 'decision open', 'decisions open', '/?s=needs', () => pick('s:needs')],
-      [scopeLive.filter(d => sts.get(d.key).waiting).length, 'waiting on the agent', 'waiting on the agent', '/?s=waiting', () => pick('s:waiting')]].filter(x => x[0] > 0);
+    const xs = [[hero.editsWeek || 0, 'edit this week', 'edits this week', '/stats', () => openStats(filters.scope ? filters.scope.slug : '')],
+      [hero.decisionsOpen || 0, 'decision open', 'decisions open', '/?s=needs', () => pick('s:needs')],
+      [hero.waiting || 0, 'waiting on the agent', 'waiting on the agent', '/?s=waiting', () => pick('s:waiting')]].filter(x => x[0] > 0);
     return xs.length > 0 && e('div', { className: 'bd-stat-l' }, xs.flatMap(([n, one, many, href, onClick], i) => [i > 0 && e('span', { key: 's' + i, 'aria-hidden': true }, '·'),
       e('a', { key: href, href, onClick: ev => { ev.preventDefault(); onClick(); } }, e('b', null, n), ' ', n === 1 ? one : many)]));
   };
@@ -2275,44 +2245,51 @@ function App() {
     e(FilterMenu, { label: 'Project', value: filters.scope && filters.scope.slug, valueLabel: scopeRoot ? e(ProjName, { r: scopeRoot }) : filters.scope && filters.scope.slug, allLabel: 'All projects',
       onPick: v => pick('p:' + v), options: ordered.map(r => ({ value: r.slug, label: e(ProjName, { r }), n: countOf.get(r.slug) || 0 })) }),
     scopeRoot && e(FilterMenu, { label: 'Folder', value: filters.scope.dir, valueLabel: filters.scope.dir, allLabel: 'All folders', onPick: v => pick(`d:${scopeRoot.slug}:${v}`),
-      options: folderDirs(docs.filter(d => d.root === scopeRoot && notArch(d))).map(x => ({ value: x.dir, label: '  '.repeat(x.depth - 1) + x.dir.split('/').pop(), n: x.n })) }),
+      options: folderDirs(facets.dirs).map(x => ({ value: x.dir, label: '  '.repeat(x.depth - 1) + x.dir.split('/').pop(), n: x.n })) }),
     e(SegmentedControl, { size: 'md', 'aria-label': 'View', value: settings.view, onValueChange: v => set('view', v),
       options: [{ value: 'cards', label: 'Cards', icon: e(Icons.Grid) }, { value: 'rows', label: 'Rows', icon: e(Icons.List) }] }));
 
-  // ?doc=<slug>/<path>: once the docs load, the view is Rows, that row's group opens in full and the row scrolls into view
+  // ?doc=<slug>/<path>: the first answer reaches that row (the server extends the slice through it); the view is Rows,
+  // its group opens and the row scrolls into view
   const jumped = useRef(false);
   useEffect(() => {
     if (jumped.current || !data || page !== 'home' || !sel) return;
-    const d = docs.find(x => x.key === sel);
-    if (!d) return;
+    const i = items.findIndex(x => x && x.d.key === sel);
     jumped.current = true;
-    const g = groupOf(d.mtime);
-    if (settings.view !== 'rows') set('view', 'rows');
-    setGroupOpen(o => ({ ...o, [g]: true })); setMore(m => ({ ...m, [g]: true }));
+    if (i < 0) return;
+    const g = ranges.find(r => i >= r.start && i < r.start + r.n);
+    if (g && g.id !== 'all') setGroupOpen(o => ({ ...o, [g.id]: true }));
     setTimeout(() => { const el = document.querySelector(`.bd-r[data-key="${CSS.escape(sel)}"]`); if (el) el.scrollIntoView({ block: 'center' }); }, 80);
   }, [data]);
   // what archive hides from this view: under the results, or in the empty state; Show them picks the Archived status
   const archText = (verb = ['matches', 'match']) => `${plural(archN, 'archived doc')} ${archN === 1 ? verb[0] : verb[1]}`;
   const showBtn = e('button', { type: 'button', onClick: showThem }, 'Show them');
   let body;
+  // the next slice's trigger after a range's last loaded row (a group's in the table, else the list's)
+  const tail = id => { const r = ranges.find(x => x.id === id);
+    return e(Sentinel, { key: 'more-' + id, row: id !== 'all', loading: busy.includes(id), at: r.rows.length, onNear: () => loadMore(id, r.start, r.n) }); };
+  const end = !data || !rows.length ? null : !complete ? (ranges[0].id === 'all' && ranges[0].more ? tail('all') : null)
+    : e('p', { className: 'bd-end' }, indexing && terms.length ? 'Still indexing: more may match' : `All ${plural(total, showArchived ? 'archived doc' : 'doc')} shown`);
   if (!data) body = null;
   else if (!roots.length) body = e('div', { className: 'bd-empty' }, e(EmptyState, { icon: e(Icons.FolderOpen), title: 'No folders yet',
     description: e(F, null, 'An agent registers one when it runs ', e('code', null, 'serve.py open <doc>.bluedoc.json'), '; add one yourself with ', e('code', null, 'serve.py add <folder>'), '.'), actions: null }));
-  else if (!rows.length) body = e('div', { className: 'bd-empty' }, e(EmptyState, { size: 'sm', icon: e(Icons.Search),
+  else if (!rows.length && busy.includes('all')) body = e('div', { className: 'bd-more-l', role: 'status' }, 'Loading…');
+  else if (!total) body = e('div', { className: 'bd-empty' }, e(EmptyState, { size: 'sm', icon: e(Icons.Search),
     title: terms.length ? `Nothing matches “${dq}”` : filters.hidden && !hiddenN ? 'Nothing is hidden' : 'No docs in this view',
     description: archN ? e('span', { className: 'bd-ahint-x' }, archText(terms.length ? ['does', 'do'] : undefined), ' · ', showBtn)
+      : indexing ? `Still indexing: ${indexing.done} of ${indexing.total} docs so far.`
       : terms.length ? 'Try fewer or different words, or clear the filters.' : filters.hidden ? 'Temporary folders and the projects you hide show here.' : 'Clear the filters to see every doc.',
     actions: e(F, null, terms.length > 0 && e(Button, { size: 'sm', variant: 'secondary', onClick: () => setQ('') }, 'Clear search'), anyFilter && e(Button, { size: 'sm', variant: 'ghost', onClick: () => pick('all') }, 'Clear filters')) }));
-  else if (settings.view === 'cards') body = e(Cards, { key: JSON.stringify([filters, dq]), rows, terms });
-  else body = e(DocTable, { rows, terms, folderCol: !filters.scope, asc: settings.asc, onSort: () => set('asc', !settings.asc),
+  else if (view === 'cards') body = e(F, null, e(Cards, { rows, terms }), end);
+  else body = e(F, null, e(DocTable, { rows, groups: flat ? null : ranges, terms, folderCol: !filters.scope, asc: settings.asc, onSort: () => set('asc', !settings.asc),
     openRows, onOpen: k => setOpenRows(xs => (xs.includes(k) ? xs.filter(x => x !== k) : [...xs, k])),
-    isOpen: id => groupOpen[id] ?? (id !== 'older' || filters.hidden), onToggle: (id, o) => setGroupOpen(g => ({ ...g, [id]: o })), more, onMore: id => setMore(m => ({ ...m, [id]: true })) });
+    onToggle: (id, o) => setGroupOpen(g => ({ ...g, [id]: o })), tail }), end);
 
   const homePage = () => e(F, null,
     e('div', { className: 'bd-top' + (heroOut ? ' on' : ''), inert: !heroOut },
       menuBtn,
       e(SearchField, { ...searchProps, ref: topInput, size: 'md', className: 'bd-top-q', placeholder: 'Search titles, sections, findings, paths', shortcut: finePointer ? [isMac ? '⌘' : 'Ctrl', 'K'] : undefined }),
-      e('span', { className: 'sp' }), data && docs.length > 0 && toolbar(), e('span', { className: 'bd-top-n' }, countText)),
+      e('span', { className: 'sp' }), data && anyDocs && toolbar(), e('span', { className: 'bd-top-n' }, countText)),
     e('header', { className: 'bd-hero' },
       e('div', { className: 'bd-hero-pix', 'aria-hidden': true }, DZ),
       e(HorizonProvider, { theme: 'dark', className: 'bd-hero-bar' }, menuBtn, e('span', { className: 'bd-only-m' }, e(Brand)), e('span', { className: 'sp' }),
@@ -2327,7 +2304,7 @@ function App() {
         data && !filters.hidden && statLine())),
     e('div', { className: 'bd-wrap' },
       e('div', { className: 'bd-sec-head' }, e('h2', null, 'Docs'), data && e('span', { className: 'sub' }, countText + (terms.length ? ' · best match first' : '')),
-        e('span', { className: 'sp' }), data && docs.length > 0 && toolbar()),
+        e('span', { className: 'sp' }), data && anyDocs && toolbar()),
       filters.hidden && e('div', { className: 'bd-nb', role: 'status' }, e(Icons.EyeOff), e('b', null, 'Showing hidden projects'), e('span', { 'aria-hidden': true }, '·'),
         e('span', null, 'Hidden projects stay off All docs and search'), e('span', { className: 'sp' }), e(Button, { size: 'sm', variant: 'secondary', onClick: () => pick('h:0') }, 'Done')),
       e(ArchiveActs.Provider, { value: acts }, e('div', { ref: results, onKeyDown: onResultsKey }, body)),
@@ -2335,21 +2312,23 @@ function App() {
       e('p', { className: 'bd-ahint', role: 'status' }, rows.length > 0 && archN > 0 && (terms.length > 0 || anyFilter)
         ? [e(ArchiveIcon, { key: 'i', size: 14 }), e('span', { key: 't' }, archText()), e('span', { key: 's', 'aria-hidden': true }, '·'), e(F, { key: 'b' }, showBtn)] : null)));
 
-  // Statistics: the shown projects' docs (archived ones aside), or one project's
+  // Statistics: the shown projects' docs (archived ones aside), or one project's: /__bluedoc/stats
   const statsPage = () => {
-    const r = stats.slug && roots.find(x => x.slug === stats.slug), days = Number(stats.range);
-    const sd = (r ? docs.filter(d => d.root === r) : visDocs).filter(notArch);
+    const r = stats.slug && roots.find(x => x.slug === stats.slug), days = Number(stats.range), s = sdata;
+    const n = s ? s.docs : 0;
     return e('div', { className: 'bd-wrap' },
       e('div', { className: 'bd-stats-h' }, e('h1', null, 'Statistics'),
-        e('span', { className: 'sub' }, r ? `${plural(sd.length, 'doc')} in ${r.name}` : `${plural(sd.length, 'doc')} in ${plural(shownRoots.length, 'project')}`), e('span', { className: 'sp' }),
+        e('span', { className: 'sub' }, !s ? 'Loading…' : (r ? `${plural(n, 'doc')} in ${r.name}` : `${plural(n, 'doc')} in ${plural(s.projects ?? shownRoots.length, 'project')}`)
+          + (s && s.indexing && s.indexing.done < s.indexing.total ? ` · ${s.indexing.done} of ${s.indexing.total} indexed` : '')), e('span', { className: 'sp' }),
         e(DropdownMenu, { align: 'end', trigger: e('button', { type: 'button', className: 'bd-fc' }, 'Project: ', e('b', null, r ? e(ProjName, { r }) : 'All'), e(Icons.ChevronDown)),
-          items: [{ type: 'radio', id: 'r', value: stats.slug, onValueChange: v => setStats(s => ({ ...s, slug: v })),
+          items: [{ type: 'radio', id: 'r', value: stats.slug, onValueChange: v => setStats(x => ({ ...x, slug: v })),
             options: [{ value: '', label: 'All projects' }, ...ordered.map(x => ({ value: x.slug, label: e('span', { className: 'bd-mo' }, e('span', null, e(ProjName, { r: x })), e('span', { className: 'c' }, countOf.get(x.slug) || 0)) }))] }] }),
-        e(SegmentedControl, { size: 'md', 'aria-label': 'Range', value: stats.range, onValueChange: v => setStats(s => ({ ...s, range: v })), options: RANGES.map(x => ({ value: x, label: `${x} d` })) })),
-      e('section', { className: 'bd-widgets', 'aria-label': 'Overview' },
-        e(Activity, { docs: sd, days }), e(Decisions, { docs: sd, sts }), e(ByType, { docs: sd, sts, onType: id => { if (r) setFilters(f => ({ ...f, scope: { slug: r.slug, dir: '' } })); pick('t:' + id); } }), e(Waiting, { docs: sd, sts })),
-      e('section', { className: 'bd-widgets two', 'aria-label': 'Projects and decisions' },
-        e(EditsByProject, { docs: sd, roots: r ? [r] : shownRoots, days, onPick: slug => pick('p:' + slug) }), e(OldestOpen, { docs: sd, sts })));
+        e(SegmentedControl, { size: 'md', 'aria-label': 'Range', value: stats.range, onValueChange: v => setStats(x => ({ ...x, range: v })), options: RANGES.map(x => ({ value: x, label: `${x} d` })) })),
+      s && e('section', { className: 'bd-widgets', 'aria-label': 'Overview' },
+        e(Activity, { a: s.activity || {}, days }), e(Decisions, { s: s.decisions || {}, rootOf }),
+        e(ByType, { types: s.types, findings: s.findings, onType: id => { if (r) setFilters(f => ({ ...f, scope: { slug: r.slug, dir: '' } })); pick('t:' + id); } }), e(Waiting, { w: s.waiting || {} })),
+      s && e('section', { className: 'bd-widgets two', 'aria-label': 'Projects and decisions' },
+        e(EditsByProject, { xs: s.byProject, rootOf, days, onPick: slug => pick('p:' + slug) }), e(OldestOpen, { xs: s.oldest, rootOf })));
   };
 
   return e(HorizonProvider, { theme, reducedMotion: reduce || undefined, className: 'bd-app' },

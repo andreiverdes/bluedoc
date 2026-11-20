@@ -1070,8 +1070,7 @@ class ReaderName(ChromePage):
         self.keys(t, "Enter", 13)
 
     def card(self, doc: Path) -> dict:
-        index = json.loads(self.server.req("GET", "/__bluedoc/index.json")[1])
-        return next(d for r in index["roots"] for d in r["docs"] if d["path"] == doc.name)
+        return next(d for d in self.server.docs() if d["path"] == doc.name)
 
     def stored(self, url: str) -> dict:
         return {k: v for k, v in self.state(url).items() if k in ("__title", "__emoji")}
@@ -1137,6 +1136,7 @@ class Archive(ChromePage):
         super().setUp()
         for p in self.docs.glob("*.bluedoc.json"):   # edited today: the home table opens Today, not Older
             os.utime(p)
+        self.server.indexed(fresh=True)   # the index has the new mtimes before a home page asks for them
 
     def home(self, query: str = "") -> Tab:
         status, raw = self.server.req("POST", "/__bluedoc/unlock", b"{}", {"Content-Type": "application/json", "X-Bluedoc": "1"})
@@ -1460,8 +1460,7 @@ class UrlKeptByAWiderFolder(unittest.TestCase):
         body = json.dumps({"path": url, "import": False, "ops": [[NOTE_KEY, "kept"]]}).encode()
         headers = {"Content-Type": "application/json", "X-Bluedoc": "1", "Origin": f"http://{server.host}"}
         self.assertEqual(server.req("PUT", "/__bluedoc/state", body, headers)[0], 200)
-        index = json.loads(server.req("GET", "/__bluedoc/index.json")[1])
-        self.assertEqual(sum(d["path"].endswith(plan.name) for r in index["roots"] for d in r["docs"]), 1, "the plan is listed twice")
+        self.assertEqual(sum(d["path"].endswith(plan.name) for d in server.docs()), 1, "the plan is listed twice")
 
 
 if __name__ == "__main__":

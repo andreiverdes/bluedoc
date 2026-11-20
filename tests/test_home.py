@@ -1,17 +1,21 @@
-"""The home page (1.0.51) in a real browser: the sidebar's projects, pinned and hidden through the ⋯ menu and kept in
+"""The home page in a real browser: the sidebar's projects, pinned and hidden through the ⋯ menu and kept in
 settings.json (home) across a reload, the pinned ones first under a Pinned caption; a project's own name and emoji
 (Edit name and icon…) kept the same way and shown in the sidebar and the docs table, Reset clearing both; the Hidden
 chip lists the projects home leaves out with the reason: temporary folders (under /tmp) and registered folders that
 are gone, besides the ones the reader hid. A table row opens in place under itself (an inset card) and only its title
-opens the doc; ?doc= opens that row on load. Statistics shows a project and a range from its URL. Search finds a doc by
-its body text, which the page fetches from /__bluedoc/search-text on the first search only.
+opens the doc; ?doc= opens that row on load. Statistics shows a project and a range from its URL (/__bluedoc/stats).
+Search asks the server (index.json?q=) and shows its snippet; there is no search-text request. The list comes a slice
+at a time: scrolling to its end loads the next slice under the same date group, the counts are the server's full
+ones, the end says so, and Back restores the slices loaded and the scroll. A new `code` in index.json reloads the home.
 
 Browser tests: BLUEDOC_BROWSER_TESTS=1 with Chrome (BLUEDOC_CHROME names it when it isn't in a usual place)."""
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import tempfile
+import time
 import unittest
 from pathlib import Path
 
@@ -21,7 +25,8 @@ from test_page_state import CHROME, ChromePage, Tab, until
 
 PROJECTS = "[...document.querySelectorAll('.bd-side .bd-pr > .bd-ni .n')].map(n => n.textContent)"
 ALL = "+document.querySelector('.bd-side .bd-ni[aria-current] .c')?.textContent"
-SEARCHED = "performance.getEntriesByType('resource').filter(r => r.name.includes('/__bluedoc/search-text')).length"
+REQUESTS = "performance.getEntriesByType('resource').map(r => r.name).filter(n => n.includes('/__bluedoc/'))"
+ROWS = "document.querySelectorAll('.bd-tb .bd-r').length"
 
 
 @unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")
@@ -78,9 +83,8 @@ class Home(ChromePage):
         return (json.loads(p.read_text(encoding="utf-8")) if p.is_file() else {}).get("home") or {}
 
     def key_of(self, name: str) -> str:
-        """A doc's <slug>/<path>, as ?doc= names it."""
-        index = json.loads(self.server.req("GET", "/__bluedoc/index.json", headers={"X-Bluedoc": "1"})[1])
-        return next(f"{r['slug']}/{d['path']}" for r in index["roots"] for d in r["docs"] if d["path"].endswith(name) and r["path"] == str(self.shop / "docs"))
+        """A doc's <slug>/<path>, as ?doc= names it: its URL without the leading /."""
+        return self.server.url_for(self.shop / "docs" / name).lstrip("/")
 
     def test_pin_hide_and_show_hold_through_a_reload(self) -> None:
         t = self.home()
@@ -227,14 +231,15 @@ class Home(ChromePage):
         t.ev("[...document.querySelectorAll('.bd-side .bd-ni')].find(b => b.textContent === 'Statistics').click()")
         t.wait_for("location.pathname === '/stats' && !!document.querySelector('.bd-stats-h')")
         heads = "[...document.querySelectorAll('.bd-w-head')].map(h => [h.childNodes[1].textContent, h.querySelector('.r').textContent])"
-        self.assertEqual(t.ev("document.querySelector('.bd-stats-h .sub').textContent"), "3 docs in 2 projects")
+        self.assertEqual(t.wait_for("(s => s !== 'Loading…' && s)(document.querySelector('.bd-stats-h .sub').textContent)"), "3 docs in 2 projects")
+        self.assertTrue(any("/__bluedoc/stats?" in n for n in t.ev(REQUESTS)))
         self.assertEqual(t.wait_for(heads)[0], ["Activity", "14 days"])
         self.assertEqual(sorted(t.ev("[...document.querySelectorAll('.bd-eb .n')].map(n => n.textContent)")), ["acme-fit", "acme-shop"])
         # the range: 30 days, in the URL
         t.ev("[...document.querySelectorAll('.bd-stats-h [role=radiogroup] button')].find(b => b.textContent === '30 d').click()")
         t.wait_for("location.search === '?range=30'")
+        self.assertEqual(t.wait_for("document.querySelectorAll('.bd-bars i').length === 30 && document.querySelectorAll('.bd-bars i').length"), 30)
         self.assertEqual(t.ev(heads)[0], ["Activity", "30 days"])
-        self.assertEqual(t.ev("document.querySelectorAll('.bd-bars i').length"), 30)
         # one project from the URL
         self.browser.call("Page.navigate", {"url": f"{self.base}/stats?p=acme-fit&range=7"}, t.session)
         t.wait_for("document.querySelector('.bd-stats-h .sub')?.textContent === '1 doc in acme-fit'")
@@ -243,19 +248,118 @@ class Home(ChromePage):
         self.assertEqual(t.ev(f"{heads}.find(h => h[0] === 'By type')[1]"), "1 doc")
         self.assertEqual(self.browser.errors, [])
 
-    def test_search_finds_a_doc_by_its_body_text(self) -> None:
+    def test_search_asks_the_server_and_shows_its_snippet(self) -> None:
         t = self.home()
-        t.wait_for("document.querySelectorAll('.bd-tb .bd-r').length === 3")
-        self.assertEqual(t.ev(SEARCHED), 0, "search-text before any search")
+        t.wait_for(f"{ROWS} === 3")
         t.ev(typed(".bd-composer input", "cold cache"))   # only in acme-status's Incidents table
         hits = "[...document.querySelectorAll('.bd-tb .bd-r')].map(r => [r.querySelector('a.t').textContent, r.querySelector('small mark')?.textContent])"
         found = t.wait_for(f"(x => x.length === 1 && x[0][1] && x)({hits})")
         self.assertTrue(found[0][0].endswith("Acme shop status, week 41"), found)
         self.assertEqual(found[0][1].lower(), "cold")
-        self.assertEqual(t.ev(SEARCHED), 1)
-        # q= on load fetches it at once
+        reqs = t.ev(REQUESTS)
+        self.assertFalse(any("search-text" in n for n in reqs), reqs)
+        self.assertTrue(any("q=cold+cache" in n for n in reqs), reqs)
+        # q= on load asks at once
         t = self.home("q=cold+cache")
         self.assertEqual(t.wait_for(f"(x => x.length === 1 && x)({hits})")[0][0].endswith("Acme shop status, week 41"), True)
+        self.assertEqual(self.browser.errors, [])
+
+    def test_a_new_code_reloads_the_home(self) -> None:
+        # the page's first index.json answer says other code, as one from before an upgrade would; the next answer
+        # (the 4 s poll) has the server's own, and the home reloads itself
+        t = Tab(self.browser)
+        self.browser.call("Page.enable", {}, t.session)
+        self.browser.call("Page.addScriptToEvaluateOnNewDocument", {"source": """
+          if (!sessionStorage.getItem('bd-test-old')) { sessionStorage.setItem('bd-test-old', '1'); const f = window.fetch; let n = 0;
+            window.fetch = (u, o) => f(u, o).then(r => String(u).includes('/index.json') && !n++ ? r.json().then(j => new Response(JSON.stringify({ ...j, code: 'old' }), { status: 200, headers: r.headers })) : r); }
+          else window.__bdReloaded = true;"""}, t.session)
+        self.browser.call("Page.navigate", {"url": f"{self.base}/"}, t.session)
+        t.wait_for("window.__bdReloaded === true && document.querySelectorAll('.bd-tb .bd-r').length === 3", timeout=15)
+        self.assertEqual(self.browser.errors, [])
+
+
+@unittest.skipUnless(CHROME, "set BLUEDOC_BROWSER_TESTS=1 to run the browser tests (BLUEDOC_CHROME: Chrome's path)")
+class HomeSlices(ChromePage):
+    """60 docs in one project, all edited in the last hour: one date group (Today) across three slices of rows, two of cards."""
+    N = 60
+
+    def setUp(self) -> None:
+        self.tmp = TempHome()
+        self.addCleanup(self.tmp.cleanup)
+        self.docs = self.tmp.dir / "w" / "many" / "docs"
+        self.docs.mkdir(parents=True)
+        src = json.loads((EXAMPLES / "acme-orders.bluedoc.json").read_text(encoding="utf-8"))
+        now = time.time()
+        for i in range(self.N):
+            p = self.docs / f"doc-{i:02}.bluedoc.json"
+            p.write_text(json.dumps({**src, "id": f"doc-{i:02}", "title": f"Doc {i:02}"}), encoding="utf-8")
+            os.utime(p, (now - 30 * (i + 1),) * 2)   # doc-00 newest
+        self.assertEqual(self.tmp.run("serve.py", "add", self.docs).returncode, 0)
+        self.server = Server(self.tmp)
+        self.server.start()
+        self.addCleanup(self.server.stop)
+        self.server.indexed()
+        self.base = f"http://{self.server.host}"
+        self.browser.errors.clear()
+
+    def tab(self, url: str = "/") -> Tab:
+        t = Tab(self.browser)
+        self.browser.call("Emulation.setDeviceMetricsOverride", {"width": 1280, "height": 800, "deviceScaleFactor": 1, "mobile": False}, t.session)
+        self.browser.call("Page.navigate", {"url": self.base + url}, t.session)
+        t.wait_for("document.readyState === 'complete' && !!document.querySelector('.bd-fc')")
+        return t
+
+    def titles(self, t: Tab) -> list:
+        return t.ev("[...document.querySelectorAll('.bd-tb .bd-r a.t, .bd-grid .bd-card-t')].map(a => a.textContent)")
+
+    def test_scrolling_to_the_end_loads_the_next_slice_under_one_group(self) -> None:
+        t = self.tab()
+        # the first answer is one slice of 25; the next follows once the list's end is within a viewport
+        self.assertGreaterEqual(t.wait_for(f"{ROWS} >= 25 && {ROWS}"), 25)
+        # the group's header has the full count from the server, not the rows loaded
+        self.assertEqual(t.ev("[...document.querySelectorAll('.bd-gh')].map(g => g.textContent)"), [f"Today· {self.N}"])
+        self.assertEqual(t.ev("document.querySelector('.bd-sec-head .sub').textContent"), f"{self.N} docs")
+        self.assertEqual(t.ev("document.querySelector('.bd-end')"), None)
+        self.assertLess(t.ev(ROWS), self.N)
+        for _ in range(4):
+            t.ev("scrollTo(0, document.documentElement.scrollHeight)")
+            if until(lambda: t.ev(ROWS) == self.N, 2):
+                break
+        self.assertEqual(t.ev(ROWS), self.N)
+        # newest first across slices, each doc once, still one group, and the end line
+        self.assertEqual(self.titles(t), [f"Doc {i:02}" for i in range(self.N)])
+        self.assertEqual(t.ev("document.querySelectorAll('.bd-gh').length"), 1)
+        self.assertEqual(t.wait_for("document.querySelector('.bd-end')?.textContent"), f"All {self.N} docs shown")
+        slices = [n for n in t.ev(REQUESTS) if "/index.json?" in n and ("offset=25&" in n or "offset=50&" in n)]
+        self.assertEqual(len(slices), 2, slices)
+        self.assertEqual(self.browser.errors, [])
+
+    def test_cards_load_48_then_the_rest(self) -> None:
+        t = self.tab()
+        t.ev("[...document.querySelectorAll('.bd-sec-head [role=radiogroup] button')].find(b => b.textContent === 'Cards').click()")
+        cards = "document.querySelectorAll('.bd-grid .bd-card').length"
+        t.wait_for(f"{cards} === 48")
+        t.ev("scrollTo(0, document.documentElement.scrollHeight)")
+        t.wait_for(f"{cards} === {self.N}")
+        self.assertEqual(len(set(self.titles(t))), self.N)
+        self.assertEqual(self.browser.errors, [])
+
+    def test_back_restores_the_slices_and_the_scroll(self) -> None:
+        t = self.tab()
+        t.wait_for(f"{ROWS} >= 50")
+        t.ev("document.querySelectorAll('.bd-tb .bd-r')[45].scrollIntoView({ block: 'center' })")
+        time.sleep(1)   # the next slice lands; the position saves 150 ms after the scroll ends
+        n, y = t.ev(ROWS), t.ev("scrollY")
+        self.assertGreater(y, 1200)
+        t.ev("document.querySelectorAll('.bd-tb .bd-r')[45].querySelector('a.t').click()")
+        t.wait_for("location.pathname.endsWith('.bluedoc.json') && document.readyState === 'complete'")
+        t.ev("history.back()")
+        t.wait_for(f"location.pathname === '/' && {ROWS} >= {n}", timeout=15)
+        self.assertLess(abs(t.wait_for(f"(y => Math.abs(y - {y}) < 4 && y)(scrollY)") - y), 4)
+        # a reload asks for the rows loaded in one request (offset 0, as many as were loaded) and scrolls back too
+        t.ev("location.reload()")
+        t.wait_for(f"performance.getEntriesByType('resource').some(r => r.name.includes('offset=0&limit={n}')) && {ROWS} === {n}", timeout=15)
+        self.assertLess(abs(t.wait_for(f"(y => Math.abs(y - {y}) < 4 && y)(scrollY)") - y), 4)
         self.assertEqual(self.browser.errors, [])
 
 
